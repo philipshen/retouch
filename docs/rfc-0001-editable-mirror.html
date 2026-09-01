@@ -111,7 +111,7 @@
     <tr><td>Status:</td><td>Draft</td></tr>
     <tr><td>Author:</td><td>P. Shen</td></tr>
     <tr><td>Created:</td><td>2026-09-01</td></tr>
-    <tr><td>Revised:</td><td>2026-09-01 (rev 11)</td></tr>
+    <tr><td>Revised:</td><td>2026-09-01 (rev 12)</td></tr>
     <tr><td>Companion:</td><td>Prior-Art Survey (docs/prior-art-survey.html), 2026-09-01</td></tr>
     <tr><td>Decisions:</td><td>docs/decisions/ (DR-0001 … DR-0007); index in docs/decisions/README.md</td></tr>
   </table>
@@ -483,7 +483,7 @@
         <tr><td>iii. Selection ID in the shell URL (<code>?sel=&lt;id&gt;</code>)</td><td>Shareable deep link to one element; stable under attribute edits because IDs are structural (R-10); reserves a query name in the shell's namespace only. A natural later feature.</td></tr>
       </table></div>
     </dd>
-    <dt>Provisional</dt><dd>Scheme 1 with (a) and (i), plus frame-bust detection without blocking. Scheme 2 is the closest competitor; it loses on reserving a query name across all routes and on stripping. Pending decision.</dd>
+    <dt>Status</dt><dd>Resolved (rev 12): scheme 1 (prefix path) with mechanism (a) (observe the iframe location; the agent wraps <code>pushState</code>/<code>replaceState</code>) and option (i) (no selection persistence in v1), plus frame-bust detection without blocking. All four proposed rules above are normative. Scheme 2 was the closest competitor; it lost on reserving a query name across all routes and on stripping. Option (iii), a selection ID in the shell URL, is noted for later (DR-0007).</dd>
   </dl></div>
 </div>
 
@@ -779,6 +779,7 @@
     <tr><td class="id">9</td><td class="id">2026-09-01</td><td>Added OQ-B5 (iframe under a reserved route versus in-page injection versus different origin), resolved as the iframe route with the comparison recorded; in-page noted as a possible later toolbar mode. Added OQ-B6 (URL mapping: path forwarding, following navigation, reload, frame busting) as open with proposed rules.</td></tr>
     <tr><td class="id">10</td><td class="id">2026-09-01</td><td>Moved the documents into the <code>editable-mirror</code> repository (<code>docs/</code>) and introduced decision records DR-0001 … DR-0007 under <code>docs/decisions/</code>, each recording the alternatives and arguments behind revs 2–9; added editing rule 8 requiring a decision record per trade-off. Expanded OQ-B6 with the full alternative set (seven URL schemes, three navigation-following mechanisms, three selection-persistence options) and a provisional recommendation. No positions changed.</td></tr>
     <tr><td class="id">11</td><td class="id">2026-09-01</td><td>Resolved OQ-G3: the product is named Retouch; CLI <code>npx retouch</code>; the route prefix is <code>/rt/</code>, configurable, replacing <code>/__mirror</code> throughout. Added the "route prefix" term. Resolved OQ-B1 residual (c) with the configurable prefix and a HEAD-probe collision warning. DR-0008.</td></tr>
+    <tr><td class="id">12</td><td class="id">2026-09-01</td><td>Resolved OQ-B6: prefix-path scheme (<code>/rt/&lt;app path&gt;</code> with query and hash passed through), navigation followed by observing the iframe location with <code>pushState</code>/<code>replaceState</code> wrapped by the agent, no selection persistence in v1, frame busting detected but not blocked. DR-0007 accepted.</td></tr>
   </table>
 </div>
 
@@ -794,7 +795,7 @@
 </ol>
 
 <footer>
-  <p>RFC-0001 rev 11 · Draft · Repository: <code>~/Developer/retouch</code>. The markdown mirror of this document is <code>docs/rfc-0001-editable-mirror.md</code>; this HTML version is canonical because it carries the figures. Decision records: <code>docs/decisions/</code>.</p>
+  <p>RFC-0001 rev 12 · Draft · Repository: <code>~/Developer/retouch</code>. The markdown mirror of this document is <code>docs/rfc-0001-editable-mirror.md</code>; this HTML version is canonical because it carries the figures. Decision records: <code>docs/decisions/</code>.</p>
 </footer>
 
 </div>

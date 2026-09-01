@@ -1,6 +1,6 @@
 # DR-0007: How the mirror URL maps to the app URL
 
-- Status: Open
+- Status: Accepted (RFC rev 12)
 - Date: 2026-09-01
 - RFC: OQ-B6
 
@@ -46,4 +46,14 @@ Scheme 1 with (a) and (i). Scheme 2 is the closest competitor and reads well; it
 
 ## Decision
 
-Pending.
+Scheme 1 (prefix path, now `/rt/` per DR-0008), mechanism (a), option (i), frame-bust detection without blocking. The four rules in OQ-B6 are normative:
+
+1. Everything after `/rt` (path, query, hash) loads in the iframe unchanged.
+2. The shell observes the iframe's `location` and rewrites its own URL to `/rt` + the new location; the agent wraps `pushState` and `replaceState` to report SPA navigations.
+3. A reload rebuilds the shell and the frame; application state survives; editor selection is not persisted in v1.
+4. If the application navigates the top window out of the frame, the shell detects the unload and shows a message.
+
+## Consequences
+
+- Option (iii), a selection ID in the shell URL (`/rt/about?sel=<id>`), is a natural later feature: structural IDs make such links stable across attribute edits.
+- Wrapping `history` methods is a dev-only global patch inside the app page; it is applied by the agent and removed on unload.

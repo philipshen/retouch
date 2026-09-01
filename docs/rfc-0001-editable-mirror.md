@@ -7,7 +7,7 @@
 | Author | P. Shen |
 | Created | 2026-09-01 |
 | Product | Retouch — CLI `npx retouch`; route prefix `/rt/` (configurable); decided rev 11 (OQ-G3, DR-0008) |
-| Revised | 2026-09-01 (rev 11) |
+| Revised | 2026-09-01 (rev 12) |
 | Companion | Prior-Art Survey (`docs/prior-art-survey.html`), 2026-09-01 |
 | Decisions | `docs/decisions/` (DR-0001 … DR-0007); index in `docs/decisions/README.md` |
 
@@ -225,7 +225,7 @@ Each question states its options, the criteria that decide it, and a provisional
   | ii. `sessionStorage` keyed by page | Survives reload; not shareable. |
   | iii. Selection ID in the shell URL (`?sel=<id>`) | Shareable deep link to one element; stable under attribute edits because IDs are structural (R-10); reserves a query name in the shell's namespace only. A natural later feature. |
 
-- Provisional: scheme 1 with (a) and (i), plus frame-bust detection without blocking. Scheme 2 is the closest competitor; it loses on reserving a query name across all routes and on stripping. Pending decision.
+- Status: resolved (rev 12): scheme 1 (prefix path) with mechanism (a) (observe the iframe location; the agent wraps `pushState`/`replaceState`) and option (i) (no selection persistence in v1), plus frame-bust detection without blocking. All four proposed rules above are normative. Scheme 2 was the closest competitor; it lost on reserving a query name across all routes and on stripping. Option (iii), a selection ID in the shell URL, is noted for later (DR-0007).
 
 ### 6.3 Identity and mapping
 
@@ -377,6 +377,7 @@ Malicious code already running on the dev origin (a compromised dependency or a 
 | 9 | 2026-09-01 | Added OQ-B5 (iframe under a reserved route versus in-page injection versus different origin), resolved as the iframe route with the comparison recorded; in-page noted as a possible later toolbar mode. Added OQ-B6 (URL mapping: path forwarding, following navigation, reload, frame busting) as open with proposed rules. |
 | 10 | 2026-09-01 | Moved the documents into the `editable-mirror` repository (`docs/`) and introduced decision records DR-0001 … DR-0007 under `docs/decisions/`, each recording the alternatives and arguments behind revs 2–9; added editing rule 8 requiring a decision record per trade-off. Expanded OQ-B6 with the full alternative set (seven URL schemes, three navigation-following mechanisms, three selection-persistence options) and a provisional recommendation. No positions changed. |
 | 11 | 2026-09-01 | Resolved OQ-G3: the product is named Retouch; CLI `npx retouch`; the route prefix is `/rt/`, configurable, replacing `/__mirror` throughout. Added the "route prefix" term. Resolved OQ-B1 residual (c) with the configurable prefix and a HEAD-probe collision warning. DR-0008. |
+| 12 | 2026-09-01 | Resolved OQ-B6: prefix-path scheme (`/rt/<app path>` with query and hash passed through), navigation followed by observing the iframe location with `pushState`/`replaceState` wrapped by the agent, no selection persistence in v1, frame busting detected but not blocked. DR-0007 accepted. |
 
 ## 10. References
 
