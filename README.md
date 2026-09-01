@@ -1,8 +1,8 @@
-# Editable Mirror
+# Retouch
 
-Working repository for the design of an open-source library: point it at a running web app, get a Figma-grade editable mirror at `/__mirror`, and have every edit written back to source code deterministically. No model in the write path.
+Working repository for the design of an open-source library: point it at a running web app, get a Figma-grade editable mirror at `/rt/`, and have every edit written back to source code deterministically. No model in the write path.
 
-Status: design phase. No code yet. The architecture is specified in RFC-0001.
+Status: design phase. No code yet. The architecture is specified in RFC-0001, "The Editable Mirror". The product name is Retouch (`npx retouch`; route prefix `/rt/`, configurable).
 
 ## Layout
 
@@ -16,8 +16,7 @@ Status: design phase. No code yet. The architecture is specified in RFC-0001.
 
 ## How the documents are maintained
 
-- The RFC is normative and follows the editing rules in its own "Note to AI assistants" block: RFC 2119 key words, stable identifiers (R-*n*, OQ-*xn*, Figure *n*), a revision-history row for every substantive change, inline-SVG figures only.
-- Every revision that resolves or changes a trade-off gets a decision record in `docs/decisions/`. The revision-history row names it.
+- The RFC is normative and follows the editing rules in its own "Note to AI assistants" block: RFC 2119 key words, stable identifiers (R-*n*, OQ-*xn*, Figure *n*), a revision-history row for every substantive change, inline-SVG figures only, and a decision record for every trade-off.
 - Editing order: change the HTML, mirror the change into the markdown, add or update the decision record, bump the revision.
 - Publishing: `sh scripts/artifact-body.sh docs/rfc-0001-editable-mirror.html > <scratch>/editable-mirror-architecture.html`, then republish that file with the Artifact tool (same path keeps the same URL).
 

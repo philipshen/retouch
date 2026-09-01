@@ -107,10 +107,11 @@
   <table>
     <tr><td>RFC:</td><td>0001</td></tr>
     <tr><td>Title:</td><td>The Editable Mirror</td></tr>
+    <tr><td>Product:</td><td>Retouch — CLI <code>npx retouch</code>; route prefix <code>/rt/</code> (configurable); decided rev 11 (OQ-G3, DR-0008)</td></tr>
     <tr><td>Status:</td><td>Draft</td></tr>
     <tr><td>Author:</td><td>P. Shen</td></tr>
     <tr><td>Created:</td><td>2026-09-01</td></tr>
-    <tr><td>Revised:</td><td>2026-09-01 (rev 10)</td></tr>
+    <tr><td>Revised:</td><td>2026-09-01 (rev 11)</td></tr>
     <tr><td>Companion:</td><td>Prior-Art Survey (docs/prior-art-survey.html), 2026-09-01</td></tr>
     <tr><td>Decisions:</td><td>docs/decisions/ (DR-0001 … DR-0007); index in docs/decisions/README.md</td></tr>
   </table>
@@ -145,11 +146,12 @@
     <tr><td class="term">host application</td><td>The user's web application whose source files are the write target.</td></tr>
     <tr><td class="term">mirror</td><td>The instance of the host application rendered inside the editor for manipulation. The mirror is served from the same dev server and origin as the host application.</td></tr>
     <tr><td class="term">mirror process</td><td><i>Hardened mode only (deferred, rev 6).</i> A separate process that serves the editor shell on its own port and hosts the token and writer, so that none of them share an origin or process with host-application code. In the MVP these live in the dev-server process.</td></tr>
-    <tr><td class="term">editor shell</td><td>The document served at the mirror route (<code>/__mirror</code>) by the plugin, on the host application's own origin. It hosts the overlay and embeds the host application in a same-origin iframe.</td></tr>
+    <tr><td class="term">route prefix</td><td>The reserved path under which the plugin serves the editor shell and the writer endpoint: <code>/rt/</code> by default, configurable per project. <code>/rt/&lt;app path&gt;</code> mirrors <code>/&lt;app path&gt;</code> (OQ-B6).</td></tr>
+    <tr><td class="term">editor shell</td><td>The document served under the route prefix by the plugin, on the host application's own origin. It hosts the overlay and embeds the host application in a same-origin iframe.</td></tr>
     <tr><td class="term">overlay</td><td>Editing chrome (selection outlines, handles, guides, panels) rendered by the editor shell above the iframe. The overlay owns all pointer input while edit mode is active.</td></tr>
     <tr><td class="term">agent</td><td>A script injected into the host application's frame. It performs hit-testing, geometry queries, DOM mutation, and text-editing activation, and answers RPC requests from the editor shell. It holds no credential, has no file access, and never originates ops.</td></tr>
     <tr><td class="term">session token</td><td>A random secret generated when the dev server starts, delivered to the editor shell and held in a closure (never in storage or URLs), and required on every op the writer accepts.</td></tr>
-    <tr><td class="term">launch mode</td><td><code>npx mirror</code> boots the host application's own dev server, with the plugin appended, on the project's usual port. No repository changes.</td></tr>
+    <tr><td class="term">launch mode</td><td><code>npx retouch</code> boots the host application's own dev server, with the plugin appended, on the project's usual port. No repository changes.</td></tr>
     <tr><td class="term">config mode</td><td>The plugin is registered in the project's build config (one line). The mirror route is then available whenever the dev server runs.</td></tr>
     <tr><td class="term">attach mode</td><td><i>Hardened mode only (deferred, rev 6).</i> A separate mirror process discovers and connects to a running dev server that has the plugin.</td></tr>
     <tr><td class="term">stamp</td><td>The build-time transform that attaches an element ID to each eligible JSX element in compiled output. Source files are never modified by stamping.</td></tr>
@@ -196,11 +198,11 @@
 <h2 id="s5">5. System overview</h2>
 
 <h3 id="s5-1">5.1 Components</h3>
-<p>The MVP is one process and one origin. The bundler plugin runs inside the project's own dev server and provides four things: the stamper (structural IDs on compiled JSX, agent injection into served HTML), the mirror route serving the editor shell at <code>/__mirror</code>, the index (built by parsing project files from disk, R-10), and the writer. The shell embeds the host application in a same-origin iframe, so the application keeps its cookies, storage, and pinned CORS and redirect configuration, and the shell may read the iframe's DOM directly. Figure&nbsp;1 shows the topology. The plugin reaches the dev server either by launch mode (<code>npx mirror</code>, no repository changes) or by config mode (one registered plugin); OQ-B1 covers the mechanics. The two-process hardened mode of rev 5 is deferred (R-8, §8.3).</p>
+<p>The MVP is one process and one origin. The bundler plugin runs inside the project's own dev server and provides four things: the stamper (structural IDs on compiled JSX, agent injection into served HTML), the mirror route serving the editor shell at <code>/rt</code>, the index (built by parsing project files from disk, R-10), and the writer. The shell embeds the host application in a same-origin iframe, so the application keeps its cookies, storage, and pinned CORS and redirect configuration, and the shell may read the iframe's DOM directly. Figure&nbsp;1 shows the topology. The plugin reaches the dev server either by launch mode (<code>npx retouch</code>, no repository changes) or by config mode (one registered plugin); OQ-B1 covers the mechanics. The two-process hardened mode of rev 5 is deferred (R-8, §8.3).</p>
 
 <figure>
   <div class="figbox">
-  <svg viewBox="0 0 840 400" role="img" aria-label="System topology, one process and one origin. In the browser on localhost:3000, the shell page at /__mirror holds the overlay, op log, and session token, and embeds a same-origin iframe containing the host app and the injected agent; the shell accesses the iframe DOM directly and through the agent. The dev-server process runs the bundler plugin, which contains the writer with Host, token, and op-grammar checks, the stamper producing structural IDs, and the index parsed from disk. The shell posts ops with the token to the writer; the writer writes source files; on change the plugin recompiles and re-indexes and pushes an HMR update into the iframe." font-family="Georgia, serif" font-size="12">
+  <svg viewBox="0 0 840 400" role="img" aria-label="System topology, one process and one origin. In the browser on localhost:3000, the shell page at /rt holds the overlay, op log, and session token, and embeds a same-origin iframe containing the host app and the injected agent; the shell accesses the iframe DOM directly and through the agent. The dev-server process runs the bundler plugin, which contains the writer with Host, token, and op-grammar checks, the stamper producing structural IDs, and the index parsed from disk. The shell posts ops with the token to the writer; the writer writes source files; on change the plugin recompiles and re-indexes and pushes an HMR update into the iframe." font-family="Georgia, serif" font-size="12">
     <defs>
       <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
         <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
@@ -228,7 +230,7 @@
     </g>
     <g fill="currentColor">
       <text x="26" y="38" font-style="italic">browser · origin localhost:3000</text>
-      <text x="48" y="72" font-weight="bold">shell page · route /__mirror</text>
+      <text x="48" y="72" font-weight="bold">shell page · route /rt</text>
       <text x="66" y="106" font-weight="bold">overlay</text>
       <text x="66" y="122" font-size="11">selection, handles,</text>
       <text x="66" y="136" font-size="11">guides, op log</text>
@@ -243,7 +245,7 @@
       <text x="236" y="304" font-size="11">geometry, DOM patch;</text>
       <text x="236" y="318" font-size="11">never originates ops</text>
       <text x="482" y="38" font-style="italic">dev-server process · :3000</text>
-      <text x="482" y="52" font-size="11" font-style="italic">(npx mirror launch, or plugin registered in config)</text>
+      <text x="482" y="52" font-size="11" font-style="italic">(npx retouch launch, or plugin registered in config)</text>
       <text x="504" y="82" font-weight="bold">bundler plugin</text>
       <text x="516" y="116" font-weight="bold">writer</text>
       <text x="516" y="134" font-size="11">Host + token check</text>
@@ -385,16 +387,16 @@
   <div class="oq-head"><span class="id">OQ-B1</span><span class="q">How does the mirror process obtain an instrumented dev-server process?</span></div>
   <div class="oq-body"><dl>
     <dt>Status</dt><dd>Resolved for the MVP (rev 6): one process, one origin. Options 1 and 5 below are adopted as config mode and launch mode respectively; they are the same plugin with two ways of registering it. Option 4 (parallel port) is withdrawn: it changes the application's origin for no MVP benefit. Option 2 is withdrawn (cross-origin for no reason). Option 3 survives only as the inspect-only fallback of OQ-A2. The rev 5 trust split (separate mirror process, attach mode) is deferred to hardened mode (R-8, §8.3).</dd>
-    <dt>Options (retained for history)</dt><dd><ol><li>Dev-server middleware: the bundler plugin serves the shell at a reserved route (<code>/__mirror</code>) on the user's own dev server; the iframe is same-origin (Figure&nbsp;1). Requires one plugin registration in the project's build config.</li><li>A separate editor process on its own port, cross-origin to the app.</li><li>A CLI proxy wrapping an unmodified dev server.</li><li>Parallel dev-server instance: a CLI boots a second instance of the project's own dev server (Vite's programmatic API, loading the project's config file and appending the mirror plugin) on its own port. The shell and the app iframe are both served by that instance, so same-origin is preserved. The user's primary dev server and build config are untouched; the pattern is the one Vitest and Storybook use to embed a project's Vite config. Additional capability: the instance owns its module graph, so unsaved ops can be served as virtual modules, rendering the op log's state through real HMR without disk writes (cross-reference OQ-F1).</li><li>Same-port launcher: a CLI (<code>npx mirror</code>) boots the project's own dev server itself — the project's config file loaded programmatically, the mirror plugin appended — and binds the project's usual port, replacing the primary dev server for the session. Origin identity with normal development is exact, so cookies, localStorage, CORS allowlists, and redirect URIs all match. Zero repository changes. Retains option 4's module-graph ownership and virtual-module capability. Injection mechanism: for Vite, the same programmatic embed as option 4; for other Node toolchains, process-level loader-hook preloading (<code>NODE_OPTIONS --import</code>), the mechanism APM auto-instrumentation agents use, which is version-sensitive per toolchain [UNVERIFIED for Turbopack].</li></ol></dd>
+    <dt>Options (retained for history)</dt><dd><ol><li>Dev-server middleware: the bundler plugin serves the shell at a reserved route (<code>/rt</code>) on the user's own dev server; the iframe is same-origin (Figure&nbsp;1). Requires one plugin registration in the project's build config.</li><li>A separate editor process on its own port, cross-origin to the app.</li><li>A CLI proxy wrapping an unmodified dev server.</li><li>Parallel dev-server instance: a CLI boots a second instance of the project's own dev server (Vite's programmatic API, loading the project's config file and appending the mirror plugin) on its own port. The shell and the app iframe are both served by that instance, so same-origin is preserved. The user's primary dev server and build config are untouched; the pattern is the one Vitest and Storybook use to embed a project's Vite config. Additional capability: the instance owns its module graph, so unsaved ops can be served as virtual modules, rendering the op log's state through real HMR without disk writes (cross-reference OQ-F1).</li><li>Same-port launcher: a CLI (<code>npx retouch</code>) boots the project's own dev server itself — the project's config file loaded programmatically, the mirror plugin appended — and binds the project's usual port, replacing the primary dev server for the session. Origin identity with normal development is exact, so cookies, localStorage, CORS allowlists, and redirect URIs all match. Zero repository changes. Retains option 4's module-graph ownership and virtual-module capability. Injection mechanism: for Vite, the same programmatic embed as option 4; for other Node toolchains, process-level loader-hook preloading (<code>NODE_OPTIONS --import</code>), the mechanism APM auto-instrumentation agents use, which is version-sensitive per toolchain [UNVERIFIED for Turbopack].</li></ol></dd>
     <dt>Modes (MVP)</dt><dd>
       <div class="tablewrap"><table class="spec">
         <tr><th>Mode</th><th>Repository changes</th><th>Origin</th><th>Mechanism</th></tr>
-        <tr><td>launch (<code>npx mirror</code>)</td><td>none</td><td>the app's usual origin; the user's own <code>npm run dev</code> does not run at the same time</td><td>Vite: programmatic embed of the project's config with the plugin appended (the Vitest/Storybook pattern). Other Node toolchains: loader-hook preloading via <code>NODE_OPTIONS --import</code>, the APM auto-instrumentation mechanism [UNVERIFIED for Turbopack].</td></tr>
+        <tr><td>launch (<code>npx retouch</code>)</td><td>none</td><td>the app's usual origin; the user's own <code>npm run dev</code> does not run at the same time</td><td>Vite: programmatic embed of the project's config with the plugin appended (the Vitest/Storybook pattern). Other Node toolchains: loader-hook preloading via <code>NODE_OPTIONS --import</code>, the APM auto-instrumentation mechanism [UNVERIFIED for Turbopack].</td></tr>
         <tr><td>config</td><td>one line</td><td>the app's usual origin; the mirror route is always available</td><td>None at run time.</td></tr>
       </table></div>
     </dd>
     <dt>Facts carried forward</dt><dd>Cookies are not isolated by port (RFC 6265 §8.5); localStorage and Origin-checked requests are. Both MVP modes keep the application on its usual origin, so no continuity caveat applies.</dd>
-    <dt>Residual open items</dt><dd>(a) Per-toolchain launch injection outside plain Vite, including frameworks that wrap Vite with their own CLI (SvelteKit, Astro, Remix), each of which needs its own embed path; config mode is the fallback. (b) Port-busy policy for launch mode (the user's server already holds the port): fail with instructions, never take over. (c) Route-collision policy when the app defines <code>/__mirror</code>. (d) Fault isolation: every plugin hook MUST catch its own errors and serve the module unstamped with a warning, so a plugin defect degrades the mirror rather than the dev server.</dd>
+    <dt>Residual open items</dt><dd>(a) Per-toolchain launch injection outside plain Vite, including frameworks that wrap Vite with their own CLI (SvelteKit, Astro, Remix), each of which needs its own embed path; config mode is the fallback. (b) Port-busy policy for launch mode (the user's server already holds the port): fail with instructions, never take over. (c) Route collision, resolved rev 11: the prefix is configurable (default <code>rt</code>); at mount, launch mode sends a HEAD request for the prefix to the application and warns if the application answers it, since a two-letter prefix has a higher collision probability than a long one (DR-0008). (d) Fault isolation: every plugin hook MUST catch its own errors and serve the module unstamped with a warning, so a plugin defect degrades the mirror rather than the dev server.</dd>
     <dt>Provisional</dt><dd>Both modes ship. Launch is the zero-configuration default; config mode is for teams and for toolchains without maintained launch injection.</dd>
   </dl></div>
 </div>
@@ -432,7 +434,7 @@
     <dt>Status</dt><dd>Resolved (rev 9): option A. The decision was implicit in revs 2–8 and is recorded here explicitly.</dd>
     <dt>Options</dt><dd>
       <div class="tablewrap"><table class="spec">
-        <tr><th></th><th>A. Reserved route, iframe (<code>/__mirror/…</code>)</th><th>B. In-page (editor injected into the app's own pages, no iframe)</th><th>C. Different origin</th></tr>
+        <tr><th></th><th>A. Reserved route, iframe (<code>/rt/…</code>)</th><th>B. In-page (editor injected into the app's own pages, no iframe)</th><th>C. Different origin</th></tr>
         <tr><td>Origin continuity</td><td>exact</td><td>exact</td><td>partial: cookies yes; localStorage, CORS allowlists, OAuth redirects no</td></tr>
         <tr><td>Repository changes</td><td>none (launch) or one line</td><td>none or one line</td><td>none</td></tr>
         <tr><td>Panel space</td><td>the app has its own viewport; panels sit beside it</td><td>panels cover the app, or shrink it and perturb the measured layout</td><td>own viewport</td></tr>
@@ -450,21 +452,21 @@
 <div class="oq" id="oq-b6">
   <div class="oq-head"><span class="id">OQ-B6</span><span class="q">How does the mirror URL map to the application URL?</span></div>
   <div class="oq-body"><dl>
-    <dt>Context</dt><dd>Under OQ-B5 option A, <code>/__mirror/about</code> shows the editable <code>/about</code>. Three behaviors need rules: path forwarding, following in-app navigation, and reload/deep links.</dd>
+    <dt>Context</dt><dd>Under OQ-B5 option A, <code>/rt/about</code> shows the editable <code>/about</code>. Three behaviors need rules: path forwarding, following in-app navigation, and reload/deep links.</dd>
     <dt>Proposed rules</dt><dd><ol>
-      <li><b>Path forwarding.</b> The shell takes everything after <code>/__mirror</code> (path, query, hash) and loads it in the iframe unchanged. Hash routers and query-string state therefore work.</li>
-      <li><b>Following navigation.</b> In interact mode the user navigates inside the app. The shell observes the iframe's <code>location</code> (same origin) and rewrites its own URL to <code>/__mirror</code> + the new location, so reload and bookmarks work. Because <code>pushState</code>/<code>replaceState</code> fire no event across frames, the agent wraps both and reports them.</li>
-      <li><b>Reload and deep links.</b> A reload of <code>/__mirror/x</code> rebuilds the shell and loads <code>/x</code> in the frame. Application state survives (shared storage). Editor selection is not persisted in v1.</li>
+      <li><b>Path forwarding.</b> The shell takes everything after <code>/rt</code> (path, query, hash) and loads it in the iframe unchanged. Hash routers and query-string state therefore work.</li>
+      <li><b>Following navigation.</b> In interact mode the user navigates inside the app. The shell observes the iframe's <code>location</code> (same origin) and rewrites its own URL to <code>/rt</code> + the new location, so reload and bookmarks work. Because <code>pushState</code>/<code>replaceState</code> fire no event across frames, the agent wraps both and reports them.</li>
+      <li><b>Reload and deep links.</b> A reload of <code>/rt/x</code> rebuilds the shell and loads <code>/x</code> in the frame. Application state survives (shared storage). Editor selection is not persisted in v1.</li>
       <li><b>Frame busting.</b> If the application navigates the top window out of the frame (frame-buster scripts, <code>window.top.location</code> writes), the shell detects the unload and shows a message. It does not fight it.</li>
     </ol></dd>
     <dt>Alternatives (full set in DR-0007)</dt><dd>
       <div class="tablewrap"><table class="spec">
         <tr><th>Shell URL scheme</th><th>Example</th><th>Assessment</th></tr>
-        <tr><td>1. Prefix path</td><td><code>/__mirror/about?id=7#x</code></td><td>App path, query, and hash pass through unencoded; prefix-match routing; one reserved prefix. Collision policy needed for app routes under <code>/__mirror</code>.</td></tr>
+        <tr><td>1. Prefix path</td><td><code>/rt/about?id=7#x</code></td><td>App path, query, and hash pass through unencoded; prefix-match routing; one reserved prefix. Collision policy needed for app routes under <code>/rt</code>.</td></tr>
         <tr><td>2. Query flag on the app's URL</td><td><code>/about?id=7&amp;__mirror</code></td><td>Reads as "append the flag to any page". Reserves a query name across every route; must be stripped when forwarding; server inspects the query on every HTML request.</td></tr>
-        <tr><td>3. Query parameter carrying the app URL</td><td><code>/__mirror?u=%2Fabout%3Fid%3D7</code></td><td>No collision issue; the app URL and its own query and hash must be percent-encoded.</td></tr>
-        <tr><td>4. Hash carrying the app URL</td><td><code>/__mirror#/about</code></td><td>Client-only; collides with the app's own hash state, requiring a second encoding.</td></tr>
-        <tr><td>5. Fixed shell URL, no mapping</td><td><code>/__mirror</code></td><td>No reload, deep link, or bookmark to a page.</td></tr>
+        <tr><td>3. Query parameter carrying the app URL</td><td><code>/rt?u=%2Fabout%3Fid%3D7</code></td><td>No collision issue; the app URL and its own query and hash must be percent-encoded.</td></tr>
+        <tr><td>4. Hash carrying the app URL</td><td><code>/rt#/about</code></td><td>Client-only; collides with the app's own hash state, requiring a second encoding.</td></tr>
+        <tr><td>5. Fixed shell URL, no mapping</td><td><code>/rt</code></td><td>No reload, deep link, or bookmark to a page.</td></tr>
         <tr><td>6. Subdomain</td><td><code>mirror.localhost:3000/about</code></td><td>A different host is a different origin: breaks cookies and storage; rejected as in OQ-B5 option C.</td></tr>
         <tr><td>7. Extension / DevTools panel</td><td>no URL</td><td>A different product and distribution model; out of scope.</td></tr>
       </table></div>
@@ -716,7 +718,7 @@
 <div class="oq" id="oq-g3">
   <div class="oq-head"><span class="id">OQ-G3</span><span class="q">Name.</span></div>
   <div class="oq-body"><dl>
-    <dt>Status</dt><dd>Unresolved. "Mirror" is the working metaphor.</dd>
+    <dt>Status</dt><dd>Resolved (rev 11): <b>Retouch</b>. CLI <code>npx retouch</code>; route prefix <code>/rt/</code>, configurable. Chosen for the metaphor (small, careful edits to a finished picture) and because the two-letter abbreviation is neither an ISO 639-1 language code (locale prefixes such as <code>/en/</code> are a common route class) nor a common route. Candidates and checks are in DR-0008. "Mirror" remains the name of the concept in this RFC.</dd>
   </dl></div>
 </div>
 
@@ -726,7 +728,7 @@
     <tr><th>ID</th><th>Scope</th><th>Exit criteria</th><th>Resolves</th></tr>
     <tr>
       <td class="id">P0</td>
-      <td>Single-process topology (§5.1) in launch mode on Vite: <code>npx mirror</code> boots the project's dev server with the plugin; stamper emits structural IDs; writer builds the index from disk; shell at <code>/__mirror</code>; same-origin iframe; click → co-highlight → display file and AST path. Writer accepts and validates ops but performs no write.</td>
+      <td>Single-process topology (§5.1) in launch mode on Vite: <code>npx retouch</code> boots the project's dev server with the plugin; stamper emits structural IDs; writer builds the index from disk; shell at <code>/rt</code>; same-origin iframe; click → co-highlight → display file and AST path. Writer accepts and validates ops but performs no write.</td>
       <td>Mapping correct on a reference project of ≥200 components including mapped lists and shared components; stamper and writer IDs agree on every element. Budget B measured: scripted single-class write → HMR repaint → re-index, p50/p95 reported. Geometry sync sustains 60&nbsp;Hz during a scripted drag. ID stability: a class edit leaves all IDs in the file unchanged; inserting a sibling changes exactly the later siblings' IDs. Security check (R-9): a page on another origin cannot POST an op (preflight rejected); a request with a non-loopback <code>Host</code> is rejected; an op without the token is rejected; the app retains its cookies and localStorage inside the iframe.</td>
       <td>OQ-B1 launch viability; R-10 in practice; OQ-B4 geometry-sync cost; R-9 enforceability.</td>
     </tr>
@@ -771,11 +773,12 @@
     <tr><td class="id">3</td><td class="id">2026-09-01</td><td>Added OQ-B1 option 4 (parallel dev-server instance on its own port, same-origin, zero project-config changes, virtual-module capability); revised OQ-B1 criteria and provisional to a per-framework split; cross-referenced the virtual-module capability in OQ-F1. No other positions changed.</td></tr>
     <tr><td class="id">4</td><td class="id">2026-09-01</td><td>Corrected OQ-B1: cookies are not port-isolated (RFC 6265 §8.5), narrowing option 4's origin cost to localStorage/IndexedDB, Origin-header checks, and pinned redirect URIs. Added OQ-B1 option 5 (same-port launcher: boots the project's dev server with the plugin on its usual port; zero repository changes, exact origin continuity) with a launch-mode comparison table; provisional updated to option 5 default, option 4 coexistence, option 1 committed/fallback. Noted in §4.1 that plugin registration can be performed by a launcher at boot time.</td></tr>
     <tr><td class="id">5</td><td class="id">2026-09-01</td><td>Adopted the trust-split topology: added R-8 (the token, shell, and writer never share an origin, process, or port with application code; the agent holds no credential and never originates ops; the writer validates op grammar). Redrew Figure 1 for two processes and two origins (cross-origin, same-site iframe). Added terminology: mirror process, session token, launch mode, attach mode. Withdrew OQ-B1 options 1, 2, 4, 5 and reframed OQ-B1 as launch versus attach; resolved OQ-B4. Rewrote §8 with a threat model, controls, and residual risk. Extended P0 with security and cross-frame-latency exit criteria.</td></tr>
-    <tr><td class="id">6</td><td class="id">2026-09-01</td><td>Reverted the MVP to one process and one origin (shell at <code>/__mirror</code> on the dev server; launch mode <code>npx mirror</code> or config mode); deferred the rev 5 trust split to a hardened mode (R-8 marked deferred; attach mode and mirror process deferred with it). Added R-9 (cheap writer controls: op grammar with a prop exclusion list, Host check, custom header + token, JSX-only targets, agent never originates ops) and R-10 (structural IDs: <code>hash(file path, AST path)</code>; writer builds its index from disk; no transported manifest). Resolved OQ-C1 by R-10; amended OQ-B1, OQ-B4, OQ-C3, OQ-D1, OQ-F1 (Tailwind-JIT sub-question) accordingly. Redrew Figure 1; updated Figure 2 steps 4–9 and §5.3. Rewrote §8 with the MVP threat model, controls, deferred hardened mode, and residual risk. Updated P0 exit criteria.</td></tr>
+    <tr><td class="id">6</td><td class="id">2026-09-01</td><td>Reverted the MVP to one process and one origin (shell at <code>/rt</code> on the dev server; launch mode <code>npx retouch</code> or config mode); deferred the rev 5 trust split to a hardened mode (R-8 marked deferred; attach mode and mirror process deferred with it). Added R-9 (cheap writer controls: op grammar with a prop exclusion list, Host check, custom header + token, JSX-only targets, agent never originates ops) and R-10 (structural IDs: <code>hash(file path, AST path)</code>; writer builds its index from disk; no transported manifest). Resolved OQ-C1 by R-10; amended OQ-B1, OQ-B4, OQ-C3, OQ-D1, OQ-F1 (Tailwind-JIT sub-question) accordingly. Redrew Figure 1; updated Figure 2 steps 4–9 and §5.3. Rewrote §8 with the MVP threat model, controls, deferred hardened mode, and residual risk. Updated P0 exit criteria.</td></tr>
     <tr><td class="id">7</td><td class="id">2026-09-01</td><td>Resolved OQ-E1 (flow-respecting; no detach in v1; reparenting refused), OQ-E2 (tiered gesture set: tier 1 = text, color/typography, padding/margin/gap; tier 2 = resize, reorder, marquee, delete, duplicate; tier 3 refused), and OQ-D3 (always snap to the project's Tailwind scale; gestures never produce arbitrary values).</td></tr>
     <tr><td class="id">8</td><td class="id">2026-09-01</td><td>Added R-11 (write integrity: preview never writes; parse and format before write; atomic rename; one op one file; content-hash precondition; no version-control operations; invertible ops). Resolved OQ-F1: continuous debounced commits with a session-diff view; preview by inline style plus a Tailwind safelist of producible classes; reconciliation by class-list check after HMR. Withdrew the virtual-module idea. Extended P1 exit criteria with write-integrity tests.</td></tr>
     <tr><td class="id">9</td><td class="id">2026-09-01</td><td>Added OQ-B5 (iframe under a reserved route versus in-page injection versus different origin), resolved as the iframe route with the comparison recorded; in-page noted as a possible later toolbar mode. Added OQ-B6 (URL mapping: path forwarding, following navigation, reload, frame busting) as open with proposed rules.</td></tr>
     <tr><td class="id">10</td><td class="id">2026-09-01</td><td>Moved the documents into the <code>editable-mirror</code> repository (<code>docs/</code>) and introduced decision records DR-0001 … DR-0007 under <code>docs/decisions/</code>, each recording the alternatives and arguments behind revs 2–9; added editing rule 8 requiring a decision record per trade-off. Expanded OQ-B6 with the full alternative set (seven URL schemes, three navigation-following mechanisms, three selection-persistence options) and a provisional recommendation. No positions changed.</td></tr>
+    <tr><td class="id">11</td><td class="id">2026-09-01</td><td>Resolved OQ-G3: the product is named Retouch; CLI <code>npx retouch</code>; the route prefix is <code>/rt/</code>, configurable, replacing <code>/__mirror</code> throughout. Added the "route prefix" term. Resolved OQ-B1 residual (c) with the configurable prefix and a HEAD-probe collision warning. DR-0008.</td></tr>
   </table>
 </div>
 
@@ -791,7 +794,7 @@
 </ol>
 
 <footer>
-  <p>RFC-0001 rev 10 · Draft · Repository: <code>~/Developer/editable-mirror</code>. The markdown mirror of this document is <code>docs/rfc-0001-editable-mirror.md</code>; this HTML version is canonical because it carries the figures. Decision records: <code>docs/decisions/</code>.</p>
+  <p>RFC-0001 rev 11 · Draft · Repository: <code>~/Developer/retouch</code>. The markdown mirror of this document is <code>docs/rfc-0001-editable-mirror.md</code>; this HTML version is canonical because it carries the figures. Decision records: <code>docs/decisions/</code>.</p>
 </footer>
 
 </div>
