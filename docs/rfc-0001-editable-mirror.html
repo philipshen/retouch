@@ -463,7 +463,7 @@
       <div class="tablewrap"><table class="spec">
         <tr><th>Shell URL scheme</th><th>Example</th><th>Assessment</th></tr>
         <tr><td>1. Prefix path</td><td><code>/rt/about?id=7#x</code></td><td>App path, query, and hash pass through unencoded; prefix-match routing; one reserved prefix. Collision policy needed for app routes under <code>/rt</code>.</td></tr>
-        <tr><td>2. Query flag on the app's URL</td><td><code>/about?id=7&amp;__mirror</code></td><td>Reads as "append the flag to any page". Reserves a query name across every route; must be stripped when forwarding; server inspects the query on every HTML request.</td></tr>
+        <tr><td>2. Query flag on the app's URL</td><td><code>/about?id=7&amp;rt</code></td><td>Reads as "append the flag to any page". Reserves a query name across every route; must be stripped when forwarding; server inspects the query on every HTML request.</td></tr>
         <tr><td>3. Query parameter carrying the app URL</td><td><code>/rt?u=%2Fabout%3Fid%3D7</code></td><td>No collision issue; the app URL and its own query and hash must be percent-encoded.</td></tr>
         <tr><td>4. Hash carrying the app URL</td><td><code>/rt#/about</code></td><td>Client-only; collides with the app's own hash state, requiring a second encoding.</td></tr>
         <tr><td>5. Fixed shell URL, no mapping</td><td><code>/rt</code></td><td>No reload, deep link, or bookmark to a page.</td></tr>

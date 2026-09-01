@@ -206,7 +206,7 @@ Each question states its options, the criteria that decide it, and a provisional
   | Shell URL scheme | Example | Assessment |
   |---|---|---|
   | 1. Prefix path | `/rt/about?id=7#x` | App path, query, and hash pass through unencoded; prefix-match routing; one reserved prefix. Collision policy needed for app routes under `/rt`. |
-  | 2. Query flag on the app's URL | `/about?id=7&__mirror` | Reads as "append the flag to any page". Reserves a query name across every route; must be stripped when forwarding; server inspects the query on every HTML request. |
+  | 2. Query flag on the app's URL | `/about?id=7&rt` | Reads as "append the flag to any page". Reserves a query name across every route; must be stripped when forwarding; server inspects the query on every HTML request. |
   | 3. Query parameter carrying the app URL | `/rt?u=%2Fabout%3Fid%3D7` | No collision issue; the app URL and its own query and hash must be percent-encoded. |
   | 4. Hash carrying the app URL | `/rt#/about` | Client-only; collides with the app's own hash state, requiring a second encoding. |
   | 5. Fixed shell URL, no mapping | `/rt` | No reload, deep link, or bookmark to a page. |
