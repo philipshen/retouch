@@ -111,7 +111,7 @@
     <tr><td>Status:</td><td>Draft</td></tr>
     <tr><td>Author:</td><td>P. Shen</td></tr>
     <tr><td>Created:</td><td>2026-09-01</td></tr>
-    <tr><td>Revised:</td><td>2026-09-01 (rev 14)</td></tr>
+    <tr><td>Revised:</td><td>2026-09-01 (rev 15)</td></tr>
     <tr><td>Companion:</td><td>Prior-Art Survey (docs/prior-art-survey.html), 2026-09-01</td></tr>
     <tr><td>Decisions:</td><td>docs/decisions/ (DR-0001 … DR-0007); index in docs/decisions/README.md</td></tr>
   </table>
@@ -709,8 +709,8 @@
 <div class="oq" id="oq-f2">
   <div class="oq-head"><span class="id">OQ-F2</span><span class="q">Is the v1 operator a developer on localhost, or does v1 include remote non-developer editing?</span></div>
   <div class="oq-body"><dl>
-    <dt>Context</dt><dd>The motivating user (§2) is often not the person running the dev server. Remote editing requires transport (tunnel or shared environment), authentication on the mirror route, and plausibly PR-mediated writes rather than direct file writes. Each is a significant security and product surface (R-7).</dd>
-    <dt>Provisional</dt><dd>v1: developer on localhost. The op log and writer interfaces are designed so that a review-mediated remote mode is an additional writer backend, not a redesign.</dd>
+    <dt>Status</dt><dd>Resolved (rev 15, DR-0011): the v1 operator is a solo developer on localhost. Writes go to the local working tree under R-9/R-11; no auth beyond R-9. Remote non-developer editing is the first post-MVP milestone; it requires transport, a token on the shell route (R-7), branch isolation with review-mediated writes, and triggers the hardened mode (§8.3). The op log and writer interfaces are shaped so that the remote mode is an additional writer backend, not a redesign.</dd>
+    <dt>Context (recorded)</dt><dd>The motivating user (§2) is often not the person running the dev server, which is why the remote shape is a milestone rather than discarded.</dd>
   </dl></div>
 </div>
 
@@ -805,6 +805,7 @@
     <tr><td class="id">12</td><td class="id">2026-09-01</td><td>Resolved OQ-B6: prefix-path scheme (<code>/rt/&lt;app path&gt;</code> with query and hash passed through), navigation followed by observing the iframe location with <code>pushState</code>/<code>replaceState</code> wrapped by the agent, no selection persistence in v1, frame busting detected but not blocked. DR-0007 accepted.</td></tr>
     <tr><td class="id">13</td><td class="id">2026-09-01</td><td>Adopted the Figma component model for shared components: added R-12 (instance scope by default; explicit edit-main and detach; lift to prop with the generated <code>cn()</code> shape; detach as a two-file transaction; refusal without an instance ID) and the terms component definition, component instance, instance ID, lift, detach. Resolved OQ-C2 (usage sites stamped by the <code>data-rt-i</code> prop) and OQ-E3 (b). Amended R-11 (d) with the detach exception. Moved all component features into tier 1 (OQ-E2). DR-0009.</td></tr>
     <tr><td class="id">14</td><td class="id">2026-09-01</td><td>OQ-E4 given provisional rules pending hands-on validation: suppress dismissal events in edit mode; hover styles deferred; HMR during a drag re-anchors by structural ID (absorbing the OQ-B2 sub-question). Added a route field to the settled position. P1 gains the hands-on validation pass. DR-0010 records that this decision point is to be felt out, not decided on paper.</td></tr>
+    <tr><td class="id">15</td><td class="id">2026-09-01</td><td>Resolved OQ-F2: the v1 operator is a solo developer on localhost; remote non-developer editing is the first post-MVP milestone and the trigger for the hardened mode. DR-0011.</td></tr>
   </table>
 </div>
 
@@ -820,7 +821,7 @@
 </ol>
 
 <footer>
-  <p>RFC-0001 rev 14 · Draft · Repository: <code>~/Developer/retouch</code>. The markdown mirror of this document is <code>docs/rfc-0001-editable-mirror.md</code>; this HTML version is canonical because it carries the figures. Decision records: <code>docs/decisions/</code>.</p>
+  <p>RFC-0001 rev 15 · Draft · Repository: <code>~/Developer/retouch</code>. The markdown mirror of this document is <code>docs/rfc-0001-editable-mirror.md</code>; this HTML version is canonical because it carries the figures. Decision records: <code>docs/decisions/</code>.</p>
 </footer>
 
 </div>

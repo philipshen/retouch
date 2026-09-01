@@ -7,7 +7,7 @@
 | Author | P. Shen |
 | Created | 2026-09-01 |
 | Product | Retouch — CLI `npx retouch`; route prefix `/rt/` (configurable); decided rev 11 (OQ-G3, DR-0008) |
-| Revised | 2026-09-01 (rev 14) |
+| Revised | 2026-09-01 (rev 15) |
 | Companion | Prior-Art Survey (`docs/prior-art-survey.html`), 2026-09-01 |
 | Decisions | `docs/decisions/` (DR-0001 … DR-0007); index in `docs/decisions/README.md` |
 
@@ -332,8 +332,8 @@ Each question states its options, the criteria that decide it, and a provisional
 - Note: interacts with OQ-F2: a non-developer remote editor may require branch isolation, which would be a writer backend, not a change to this decision.
 
 **OQ-F2. Is the v1 operator a developer on localhost, or does v1 include remote non-developer editing?**
-- Context: the motivating user (§2) is often not the person running the dev server. Remote editing requires transport (tunnel or shared environment), authentication on the mirror route, and plausibly PR-mediated writes. Each is a significant security and product surface (R-7).
-- Provisional: v1 is a developer on localhost. The op log and writer interfaces are designed so that a review-mediated remote mode is an additional writer backend, not a redesign.
+- Status: resolved (rev 15, DR-0011): the v1 operator is a solo developer on localhost. Writes go to the local working tree under R-9/R-11; no auth beyond R-9. Remote non-developer editing is the first post-MVP milestone; it requires transport, a token on the shell route (R-7), branch isolation with review-mediated writes, and triggers the hardened mode (§8.3). The op log and writer interfaces are shaped so that the remote mode is an additional writer backend, not a redesign.
+- Context (recorded): the motivating user (§2) is often not the person running the dev server, which is why the remote shape is a milestone rather than discarded.
 
 **OQ-F3. Concurrent editors?**
 - Position: out of scope for v1: single writer, file-watcher conflict detection (§5.3). Survey verdict: production multiplayer on source is text-level CRDT (Yjs; Zed's buffer design); AST-level CRDT has no production precedent (PAS §3). The op log is the natural unit of a future CRDT mapping; no v1 decision forecloses it.
@@ -400,6 +400,7 @@ Malicious code already running on the dev origin (a compromised dependency or a 
 | 12 | 2026-09-01 | Resolved OQ-B6: prefix-path scheme (`/rt/<app path>` with query and hash passed through), navigation followed by observing the iframe location with `pushState`/`replaceState` wrapped by the agent, no selection persistence in v1, frame busting detected but not blocked. DR-0007 accepted. |
 | 13 | 2026-09-01 | Adopted the Figma component model for shared components: added R-12 (instance scope by default; explicit edit-main and detach; lift to prop with the generated `cn()` shape; detach as a two-file transaction; refusal without an instance ID) and the terms component definition, component instance, instance ID, lift, detach. Resolved OQ-C2 (usage sites stamped by the `data-rt-i` prop) and OQ-E3 (b). Amended R-11 (d) with the detach exception. Moved all component features into tier 1 (OQ-E2). DR-0009. |
 | 14 | 2026-09-01 | OQ-E4 given provisional rules pending hands-on validation: suppress dismissal events in edit mode; hover styles deferred; HMR during a drag re-anchors by structural ID (absorbing the OQ-B2 sub-question). Added a route field to the settled position. P1 gains the hands-on validation pass. DR-0010 records that this decision point is to be felt out, not decided on paper. |
+| 15 | 2026-09-01 | Resolved OQ-F2: the v1 operator is a solo developer on localhost; remote non-developer editing is the first post-MVP milestone and the trigger for the hardened mode. DR-0011. |
 
 ## 10. References
 
