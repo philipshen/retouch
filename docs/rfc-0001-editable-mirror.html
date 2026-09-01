@@ -111,7 +111,7 @@
     <tr><td>Status:</td><td>Draft</td></tr>
     <tr><td>Author:</td><td>P. Shen</td></tr>
     <tr><td>Created:</td><td>2026-09-01</td></tr>
-    <tr><td>Revised:</td><td>2026-09-01 (rev 13)</td></tr>
+    <tr><td>Revised:</td><td>2026-09-01 (rev 14)</td></tr>
     <tr><td>Companion:</td><td>Prior-Art Survey (docs/prior-art-survey.html), 2026-09-01</td></tr>
     <tr><td>Decisions:</td><td>docs/decisions/ (DR-0001 … DR-0007); index in docs/decisions/README.md</td></tr>
   </table>
@@ -412,7 +412,7 @@
   <div class="oq-body"><dl>
     <dt>Options</dt><dd><ol><li>Live application; an edit-mode toggle routes pointer input to the overlay instead of the app.</li><li>Live application with a freeze control suspending rAF and timers.</li><li>An inert DOM snapshot (rrweb-style), with edits replayed against source.</li></ol></dd>
     <dt>Criteria</dt><dd>Option 3 loses framework state and is overwritten on remount; the survey classifies the rrweb replica as unsuitable for editing (PAS §4). Option 2's suspension is not implementable reliably across timer sources. Determining factor: whether option 1's motion under selection (carousels, animations) is tolerable in practice.</dd>
-    <dt>Provisional</dt><dd>Option 1. Unresolved sub-question: specified behavior when an HMR update changes rendered output during an in-progress drag (abort the gesture, or re-anchor and continue).</dd>
+    <dt>Provisional</dt><dd>Option 1. The HMR-during-drag sub-question is carried by OQ-E4 rule 3 (re-anchor by structural ID; provisional pending hands-on validation).</dd>
   </dl></div>
 </div>
 
@@ -681,8 +681,14 @@
 <div class="oq" id="oq-e4">
   <div class="oq-head"><span class="id">OQ-E4</span><span class="q">How is application state reached and held while editing?</span></div>
   <div class="oq-body"><dl>
-    <dt>Position</dt><dd>Two modes. Interact mode: pointer events reach the application unmodified. Edit mode: the overlay consumes all pointer input; the application receives none. Mode switching MUST NOT remount the iframe.</dd>
-    <dt>Open</dt><dd>Elements that exist only under interaction (open dropdowns, hover states, modals): whether edit mode pins currently-open transient state (e.g. by suppressing pointerleave/blur dispatch), and how routes are switched from the editor without losing the mode.</dd>
+    <dt>Status</dt><dd><b>Provisional, pending hands-on validation (rev 14, DR-0010).</b> The user declined to decide on paper: the right behavior must be felt in use. The rules below are the P1 defaults; P1 includes a hands-on pass whose findings amend this question. Until then no row here is normative.</dd>
+    <dt>Position (settled)</dt><dd>Two modes. Interact mode: pointer events reach the application unmodified. Edit mode: the overlay consumes all pointer input; the application receives none. Mode switching MUST NOT remount the iframe. The shell has a route field: entering a path navigates the frame and keeps the current mode.</dd>
+    <dt>Provisional rules</dt><dd><ol>
+      <li><b>Transient state.</b> In edit mode the agent suppresses the events that dismiss transient UI: <code>pointerleave</code>, <code>pointerout</code>, <code>blur</code>, <code>focusout</code>, and document-level <code>click</code>/<code>pointerdown</code> (click-outside handlers). An open dropdown, modal, or tooltip therefore holds while it is edited. Alternatives: pin nothing (states that dismiss on blur are unreachable); or a full event freeze (breaks the app's own timers and animations).</li>
+      <li><b>Hover styles.</b> Deferred from v1. Hover is not application state, so rule 1 cannot hold it, and page scripts cannot force <code>:hover</code> (only the DevTools protocol can). The later candidate is Tailwind-specific: compile <code>hover:</code> variants to a toggleable class for preview only.</li>
+      <li><b>HMR during a drag (OQ-B2 sub-question).</b> Re-anchor the gesture to the element by structural ID and continue; abort only if the ID is gone. Under continuous commits (OQ-F1) a mid-drag HMR is normally the library's own previous write, and structural IDs are stable across it (R-10).</li>
+    </ol></dd>
+    <dt>What to observe in P1</dt><dd>Whether suppressed dismissal makes edit mode feel stuck (a dropdown that will not close until the mode toggles); whether apps with unusual dismissal logic still close; whether re-anchoring produces visible jumps; how often hover-only styling is what the user wanted to edit.</dd>
   </dl></div>
 </div>
 
@@ -753,7 +759,7 @@
       <td class="id">P1</td>
       <td>One gesture end to end: select, padding drag, Tailwind class write via recast, formatter pass, undo. Op coalescing and debounced commit.</td>
       <td>Budget A ≤ 16.7&nbsp;ms per frame during drag, with the inline-style preview and the safelist in place. One-line diff per coalesced edit. Undo restores byte-identical source. Zero diff on untouched constructs across the Utopia round-trip corpus. Write integrity (R-11): killing the process during a write leaves the file byte-identical to either the old or the new content; an op whose result fails to parse writes nothing; an op with a stale content hash is rejected.</td>
-      <td>OQ-D1, OQ-C3, OQ-F1 mechanics; OQ-D3 compiler sub-question.</td>
+      <td>OQ-D1, OQ-C3, OQ-F1 mechanics; OQ-D3 compiler sub-question. Hands-on validation of the OQ-E4 provisional rules (transient state, HMR re-anchoring), recorded as an amendment to OQ-E4 and DR-0010.</td>
     </tr>
     <tr>
       <td class="id">P2</td>
@@ -798,6 +804,7 @@
     <tr><td class="id">11</td><td class="id">2026-09-01</td><td>Resolved OQ-G3: the product is named Retouch; CLI <code>npx retouch</code>; the route prefix is <code>/rt/</code>, configurable, replacing <code>/__mirror</code> throughout. Added the "route prefix" term. Resolved OQ-B1 residual (c) with the configurable prefix and a HEAD-probe collision warning. DR-0008.</td></tr>
     <tr><td class="id">12</td><td class="id">2026-09-01</td><td>Resolved OQ-B6: prefix-path scheme (<code>/rt/&lt;app path&gt;</code> with query and hash passed through), navigation followed by observing the iframe location with <code>pushState</code>/<code>replaceState</code> wrapped by the agent, no selection persistence in v1, frame busting detected but not blocked. DR-0007 accepted.</td></tr>
     <tr><td class="id">13</td><td class="id">2026-09-01</td><td>Adopted the Figma component model for shared components: added R-12 (instance scope by default; explicit edit-main and detach; lift to prop with the generated <code>cn()</code> shape; detach as a two-file transaction; refusal without an instance ID) and the terms component definition, component instance, instance ID, lift, detach. Resolved OQ-C2 (usage sites stamped by the <code>data-rt-i</code> prop) and OQ-E3 (b). Amended R-11 (d) with the detach exception. Moved all component features into tier 1 (OQ-E2). DR-0009.</td></tr>
+    <tr><td class="id">14</td><td class="id">2026-09-01</td><td>OQ-E4 given provisional rules pending hands-on validation: suppress dismissal events in edit mode; hover styles deferred; HMR during a drag re-anchors by structural ID (absorbing the OQ-B2 sub-question). Added a route field to the settled position. P1 gains the hands-on validation pass. DR-0010 records that this decision point is to be felt out, not decided on paper.</td></tr>
   </table>
 </div>
 
@@ -813,7 +820,7 @@
 </ol>
 
 <footer>
-  <p>RFC-0001 rev 13 · Draft · Repository: <code>~/Developer/retouch</code>. The markdown mirror of this document is <code>docs/rfc-0001-editable-mirror.md</code>; this HTML version is canonical because it carries the figures. Decision records: <code>docs/decisions/</code>.</p>
+  <p>RFC-0001 rev 14 · Draft · Repository: <code>~/Developer/retouch</code>. The markdown mirror of this document is <code>docs/rfc-0001-editable-mirror.md</code>; this HTML version is canonical because it carries the figures. Decision records: <code>docs/decisions/</code>.</p>
 </footer>
 
 </div>

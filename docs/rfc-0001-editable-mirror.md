@@ -7,7 +7,7 @@
 | Author | P. Shen |
 | Created | 2026-09-01 |
 | Product | Retouch — CLI `npx retouch`; route prefix `/rt/` (configurable); decided rev 11 (OQ-G3, DR-0008) |
-| Revised | 2026-09-01 (rev 13) |
+| Revised | 2026-09-01 (rev 14) |
 | Companion | Prior-Art Survey (`docs/prior-art-survey.html`), 2026-09-01 |
 | Decisions | `docs/decisions/` (DR-0001 … DR-0007); index in `docs/decisions/README.md` |
 
@@ -175,7 +175,7 @@ Each question states its options, the criteria that decide it, and a provisional
 **OQ-B2. Is the mirror the live application or a frozen scene?**
 - Options: (1) live application; an edit-mode toggle routes pointer input to the overlay. (2) Live application with a freeze control suspending rAF and timers. (3) An inert DOM snapshot (rrweb-style) with edits replayed against source.
 - Criteria: option 3 loses framework state and is overwritten on remount (PAS §4). Option 2's suspension is not implementable reliably across timer sources. Determining factor: whether option 1's motion under selection (carousels, animations) is tolerable in practice.
-- Provisional: option 1. Unresolved sub-question: specified behavior when an HMR update changes rendered output during an in-progress drag (abort the gesture, or re-anchor and continue).
+- Provisional: option 1. The HMR-during-drag sub-question is carried by OQ-E4 rule 3 (re-anchor by structural ID; provisional pending hands-on validation).
 
 **OQ-B3. Single full-viewport mirror, or a pan/zoom canvas with multiple breakpoints?**
 - Options: (1) single viewport at 1:1. (2) Pan/zoom canvas, one frame. (3) Canvas with multiple device-width frames (Onlook's model).
@@ -316,8 +316,10 @@ Each question states its options, the criteria that decide it, and a provisional
   Edit targets by op type: text through `{children}` → usage site; classes → usage site by lift (or by `className` when forwarded), or the definition through "Edit main"; props → usage site. Any instance-level op without an instance ID in the DOM is refused with the reason. Components from `node_modules` have no editable definition; their usage sites remain editable through props.
 
 **OQ-E4. How is application state reached and held while editing?**
-- Position: two modes. Interact mode: pointer events reach the application unmodified. Edit mode: the overlay consumes all pointer input. Mode switching MUST NOT remount the iframe.
-- Open: elements that exist only under interaction (open dropdowns, hover states, modals): whether edit mode pins currently-open transient state (e.g. by suppressing pointerleave/blur dispatch), and how routes are switched from the editor without losing the mode.
+- Status: **provisional, pending hands-on validation (rev 14, DR-0010).** The user declined to decide on paper: the right behavior must be felt in use. The rules below are the P1 defaults; P1 includes a hands-on pass whose findings amend this question. Until then no row here is normative.
+- Position (settled): two modes. Interact mode: pointer events reach the application unmodified. Edit mode: the overlay consumes all pointer input; the application receives none. Mode switching MUST NOT remount the iframe. The shell has a route field: entering a path navigates the frame and keeps the current mode.
+- Provisional rules: (1) **Transient state.** In edit mode the agent suppresses the events that dismiss transient UI: `pointerleave`, `pointerout`, `blur`, `focusout`, and document-level `click`/`pointerdown` (click-outside handlers). An open dropdown, modal, or tooltip therefore holds while it is edited. Alternatives: pin nothing (states that dismiss on blur are unreachable); or a full event freeze (breaks the app's own timers and animations). (2) **Hover styles.** Deferred from v1. Hover is not application state, so rule 1 cannot hold it, and page scripts cannot force `:hover` (only the DevTools protocol can). The later candidate is Tailwind-specific: compile `hover:` variants to a toggleable class for preview only. (3) **HMR during a drag (OQ-B2 sub-question).** Re-anchor the gesture to the element by structural ID and continue; abort only if the ID is gone. Under continuous commits (OQ-F1) a mid-drag HMR is normally the library's own previous write, and structural IDs are stable across it (R-10).
+- What to observe in P1: whether suppressed dismissal makes edit mode feel stuck (a dropdown that will not close until the mode toggles); whether apps with unusual dismissal logic still close; whether re-anchoring produces visible jumps; how often hover-only styling is what the user wanted to edit.
 
 ### 6.6 Product and workflow
 
@@ -353,7 +355,7 @@ Each question states its options, the criteria that decide it, and a provisional
 | ID | Scope | Exit criteria | Resolves |
 |---|---|---|---|
 | P0 | Single-process topology (§5.1) in launch mode on Vite: `npx retouch` boots the project's dev server with the plugin; stamper emits structural IDs; writer builds the index from disk; shell at `/rt`; same-origin iframe; click → co-highlight → display file and AST path. Writer accepts and validates ops but performs no write. | Mapping correct on a reference project of ≥200 components including mapped lists and shared components; stamper and writer IDs agree on every element. Budget B measured: scripted single-class write → HMR repaint → re-index, p50/p95 reported. Geometry sync sustains 60 Hz during a scripted drag. ID stability: a class edit leaves all IDs in the file unchanged; inserting a sibling changes exactly the later siblings' IDs. Security check (R-9): a page on another origin cannot POST an op (preflight rejected); a request with a non-loopback `Host` is rejected; an op without the token is rejected; the app retains its cookies and localStorage inside the iframe. | OQ-B1 launch viability; R-10 in practice; OQ-B4 geometry-sync cost; R-9 enforceability. |
-| P1 | One gesture end to end: select, padding drag, Tailwind class write via recast, formatter pass, undo. Op coalescing and debounced commit. | Budget A ≤ 16.7 ms per frame during drag, with the inline-style preview and the safelist in place. One-line diff per coalesced edit. Undo restores byte-identical source. Zero diff on untouched constructs across the Utopia round-trip corpus. Write integrity (R-11): killing the process during a write leaves the file byte-identical to either the old or the new content; an op whose result fails to parse writes nothing; an op with a stale content hash is rejected. | OQ-D1, OQ-C3, OQ-F1 mechanics; OQ-D3 compiler sub-question. |
+| P1 | One gesture end to end: select, padding drag, Tailwind class write via recast, formatter pass, undo. Op coalescing and debounced commit. | Budget A ≤ 16.7 ms per frame during drag, with the inline-style preview and the safelist in place. One-line diff per coalesced edit. Undo restores byte-identical source. Zero diff on untouched constructs across the Utopia round-trip corpus. Write integrity (R-11): killing the process during a write leaves the file byte-identical to either the old or the new content; an op whose result fails to parse writes nothing; an op with a stale content hash is rejected. | OQ-D1, OQ-C3, OQ-F1 mechanics; OQ-D3 compiler sub-question. Hands-on validation of the OQ-E4 provisional rules (transient state, HMR re-anchoring), recorded as an amendment to OQ-E4 and DR-0010. |
 | P2 | Design annex for OQ-E1: the complete normative gesture-to-mutation table, including every refusal case and its user-facing reason. | Table reviewed and ratified; each row has a test fixture. | OQ-E1, OQ-E2. |
 
 Packaging (OQ-G1) is decided after P1; earlier decomposition would freeze interfaces that P0/P1 exist to inform.
@@ -397,6 +399,7 @@ Malicious code already running on the dev origin (a compromised dependency or a 
 | 11 | 2026-09-01 | Resolved OQ-G3: the product is named Retouch; CLI `npx retouch`; the route prefix is `/rt/`, configurable, replacing `/__mirror` throughout. Added the "route prefix" term. Resolved OQ-B1 residual (c) with the configurable prefix and a HEAD-probe collision warning. DR-0008. |
 | 12 | 2026-09-01 | Resolved OQ-B6: prefix-path scheme (`/rt/<app path>` with query and hash passed through), navigation followed by observing the iframe location with `pushState`/`replaceState` wrapped by the agent, no selection persistence in v1, frame busting detected but not blocked. DR-0007 accepted. |
 | 13 | 2026-09-01 | Adopted the Figma component model for shared components: added R-12 (instance scope by default; explicit edit-main and detach; lift to prop with the generated `cn()` shape; detach as a two-file transaction; refusal without an instance ID) and the terms component definition, component instance, instance ID, lift, detach. Resolved OQ-C2 (usage sites stamped by the `data-rt-i` prop) and OQ-E3 (b). Amended R-11 (d) with the detach exception. Moved all component features into tier 1 (OQ-E2). DR-0009. |
+| 14 | 2026-09-01 | OQ-E4 given provisional rules pending hands-on validation: suppress dismissal events in edit mode; hover styles deferred; HMR during a drag re-anchors by structural ID (absorbing the OQ-B2 sub-question). Added a route field to the settled position. P1 gains the hands-on validation pass. DR-0010 records that this decision point is to be felt out, not decided on paper. |
 
 ## 10. References
 

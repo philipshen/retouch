@@ -15,3 +15,4 @@ Format: Status · Date · RFC references · Context · Options considered · Dec
 | [DR-0007](0007-url-mapping.md) | How the mirror URL maps to the app URL | Accepted (rev 12) | OQ-B6 |
 | [DR-0008](0008-name-and-route-prefix.md) | Name and route prefix: Retouch, `/rt/` | Accepted (rev 11) | OQ-G3, OQ-B1 (c) |
 | [DR-0009](0009-component-model.md) | The component model: instances, lift to prop, detach | Accepted (rev 13) | R-12, OQ-C2, OQ-E3, OQ-E2 |
+| [DR-0010](0010-app-state-while-editing.md) | Reaching and holding app state while editing | **Provisional, to be felt out in P1** (rev 14) | OQ-E4, OQ-B2 |
