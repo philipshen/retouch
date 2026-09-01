@@ -7,7 +7,7 @@
 | Author | P. Shen |
 | Created | 2026-09-01 |
 | Product | Retouch — CLI `npx retouch`; route prefix `/rt/` (configurable); decided rev 11 (OQ-G3, DR-0008) |
-| Revised | 2026-09-01 (rev 12) |
+| Revised | 2026-09-01 (rev 13) |
 | Companion | Prior-Art Survey (`docs/prior-art-survey.html`), 2026-09-01 |
 | Decisions | `docs/decisions/` (DR-0001 … DR-0007); index in `docs/decisions/README.md` |
 
@@ -51,6 +51,11 @@ Code-generating tools produce working frontends for users who cannot comfortably
 | element ID | A structural ID: `hash(relative file path, AST path)`. A pure function of source, so the plugin and the writer compute it independently (R-10). |
 | source span | A (file path, byte range) pair addressing one JSX element in pre-transform source. Obtained by the writer by parsing the file at write time. |
 | index | The writer's map from element ID to (file path, AST path), built by parsing project source from disk and updated on file change. Replaces the transported manifest of revs 2–5. |
+| component definition | The file and function that declare a component (Figma: main component). Edits to it change every instance. |
+| component instance | A usage site of a component, e.g. `<Button …>` in a page (Figma: instance). Its overrides are its props. |
+| instance ID | A structural ID for a usage site, passed to the component at build time as the prop `data-rt-i`. It reaches the DOM only if the component forwards props to a DOM element. |
+| lift | The op that exposes a literal value inside a definition as a prop with the old value as its default, and sets a new value at one usage site (Figma: expose a component property). |
+| detach | The op that makes one usage site independent of its definition, by duplicating the definition module or by inlining its JSX (Figma: detach instance). |
 | operation (op) | A typed, serializable description of one edit, e.g. `setClasses`, `setText`, `setProp`, `insertChild`, `removeChild`, `reorderChild`. The op log is the unit of undo, redo, and replay. |
 | write-back | Application of an op to source files by the rewriter. |
 | re-derivation | Regeneration of the manifest and remapping of live element IDs after any source change, including the library's own writes. |
@@ -71,7 +76,8 @@ Fixed by the survey's findings. Each cites its section in the Prior-Art Survey (
 | R-8 | *Deferred to hardened mode (rev 6); not required for the MVP.* The session token, the editor shell, and the writer MUST NOT share an origin, a process, or a port with host-application code. | Added rev 5 against in-page malicious code. Deferred because a malicious npm package already has machine access at install time and in the dev-server process; the split defends only against remote scripts and dev-time XSS, which does not justify a second process in the MVP (§8.3). The interfaces stay RPC-shaped so the split can be added without a rewrite. |
 | R-9 | The writer MUST accept only typed ops and MUST validate every op against its type's value grammar before applying it: class tokens matching the project's Tailwind grammar; text written as escaped JSX text; prop values as literals, with `href`, `src`, `srcset`, `action`, `formaction`, `on*`, and `dangerouslySetInnerHTML` excluded. The writer MUST reject requests whose `Host` header is not a loopback name, MUST require a custom request header and the session token on every op, and MUST write only to files that parse as JSX/TSX. The agent MUST NOT originate ops. | These controls are cheap and are needed for determinism regardless. Together they bound any misuse of the endpoint to cosmetic JSX edits with no code execution, and block all remote attackers (CSRF, DNS rebinding). Added rev 6. |
 | R-10 | Element IDs MUST be a pure function of source: `hash(relative file path, AST path)`. The writer MUST build its index by parsing project files from disk and MUST NOT accept mapping data from the plugin or the browser. | Removes the transported manifest (a forgeable input), keeps IDs stable across attribute and text edits, yields fresh byte spans at write time, and makes all instances of one callsite share one ID (OQ-E3). Added rev 6. |
-| R-11 | Write integrity. (a) Preview MUST NOT write: gesture feedback is applied to the mirror DOM only (inline styles, class attributes) and is discarded on failure. (b) The writer MUST re-parse the edited text and run the project's formatter before writing, and MUST NOT write if either fails. (c) Writes MUST be atomic: write to a temporary file in the same directory, then rename. (d) Each op MUST touch exactly one file. (e) Every op MUST carry the content hash of the file version it was computed against, and the writer MUST reject on mismatch (§5.3). (f) The library MUST NOT perform version-control operations. (g) Every op MUST be invertible, and undo MUST restore byte-identical content. | The codebase is never in a state the user did not author: at every instant a source file is either its previous content or a parsed, formatted, single-op successor. Added rev 8. |
+| R-11 | Write integrity. (a) Preview MUST NOT write: gesture feedback is applied to the mirror DOM only (inline styles, class attributes) and is discarded on failure. (b) The writer MUST re-parse the edited text and run the project's formatter before writing, and MUST NOT write if either fails. (c) Writes MUST be atomic: write to a temporary file in the same directory, then rename. (d) Each op MUST touch exactly one file, with one exception: detach (R-12) is a two-file transaction. (e) Every op MUST carry the content hash of the file version it was computed against, and the writer MUST reject on mismatch (§5.3). (f) The library MUST NOT perform version-control operations. (g) Every op MUST be invertible, and undo MUST restore byte-identical content. | The codebase is never in a state the user did not author: at every instant a source file is either its previous content or a parsed, formatted, single-op successor. Added rev 8. |
+| R-12 | Component model. (a) An edit made on a component instance MUST target the usage site by default; editing the definition and detaching MUST be explicit actions. (b) Lift MUST add a destructured prop with the previous literal as its default, rewrite the definition's class attribute to `cn(<static literal>, <prop identifiers…>)`, and set the prop at the usage site; the writer MAY edit a `cn()` call only when it matches this generated shape. (c) Lift MUST be refused unless the value is a literal in the definition and the component's parameter shape is on the supported list. (d) Detach MUST create the new file before editing the usage site and MUST remove the new file if the usage edit fails. Inline detach MUST be refused unless the definition is a pure JSX-return function with no hooks, state, or logic. (e) Instance-level ops MUST be refused with a reason when the instance ID is absent from the DOM. | The Figma component model (main, instance, overrides, properties, detach) mapped onto code, with every step deterministic. Added rev 13; DR-0009. |
 
 ### 4.1 Why R-1 cannot be relaxed to a framework-only dependency
 
@@ -235,9 +241,9 @@ Each question states its options, the criteria that decide it, and a provisional
 - Former criteria (superseded): Budget B was to decide between options 2/3 and option 1. Structural IDs remove the dependency: the ID does not change on the library's own attribute edits, so Budget B no longer gates identity. It still bounds the commit rate to one file (OQ-C3).
 
 **OQ-C2. Which JSX nodes are stamped?**
-- Options: (1) host elements only; component instances opaque. (2) Host elements and component usage sites, with instance resolution (a component instance's stamp does not appear in the rendered DOM; the mapping is recovered by relating the child's root element to the parent's call site, per Onlook's algorithm, PAS §1).
-- Criteria: option 1 cannot express "edit this instance's props," which OQ-E3 requires. Constraint either way: never stamp Fragments or components that do not accept arbitrary props (LocatorJS defect, PAS §2).
-- Provisional: option 1 for P0; option 2 required before OQ-E3 is implementable.
+- Status: resolved (rev 13): option 2, by a data prop. The stamper adds `data-rt-i="<instance ID>"` to every component usage site. React ignores unknown props on function components; if the component forwards props to its root DOM element, the element carries both the definition's ID and the instance ID. Fragments are never stamped. When the instance ID is absent from the DOM (props not forwarded), instance-level ops are refused (R-12 e). Later option: inject the instance ID through context at compile time so it reaches the DOM for every function component regardless of forwarding.
+- Options (retained for history): (1) host elements only; component instances opaque. (2) Host elements and component usage sites, with instance resolution (a component instance's stamp does not appear in the rendered DOM; the mapping is recovered by relating the child's root element to the parent's call site, per Onlook's algorithm, PAS §1).
+- Criteria (recorded): option 1 cannot express "edit this instance's props," which OQ-E3 requires. Constraint either way: never stamp Fragments or components that do not accept arbitrary props (LocatorJS defect, PAS §2). The data-prop mechanism is chosen over Onlook's DOM/AST walk because it is a pure function of source (consistent with R-10) and needs no runtime inference.
 
 **OQ-C3. What is the authoritative state during the commit gap (steps 4–9)?**
 - Options: (1) the op log: DOM shows optimistic state; disk is authoritative only after step 8; queued ops replay against each new manifest generation. (2) Synchronous commits: the overlay blocks further gestures until step 9 completes.
@@ -287,7 +293,7 @@ Each question states its options, the criteria that decide it, and a provisional
 
 **OQ-E2. What is the v1 gesture set?**
 - Status: resolved (rev 7): tiered as below. Tier 1 is the MVP. Tier 2 follows. Tier 3 is refused in v1 with a reason (R-6).
-- Tier 1 (MVP): click select; literal text edit (copy); color and typography via the class-level style panel; padding, margin, and gap adjustment by drag or by panel.
+- Tier 1 (MVP): click select; literal text edit (copy); color and typography via the class-level style panel; padding, margin, and gap adjustment by drag or by panel; and the whole component model of OQ-E3 (instance highlight and co-highlight, instance text, lift to prop, edit main component, detach by duplicate and by inline). Rev 13: the component features were moved from tier 2 to tier 1 at the user's direction.
 - Tier 2: edge resize (`w-*`/`h-*`); reorder within the same flex/grid parent; marquee select; delete; duplicate; radius and shadow in the panel.
 - Tier 3 (refused in v1): reparenting; element insertion; rotation; multi-select group operations; image replacement.
 - Recorded rationale: copy, color, and spacing are the "small detailed changes" of §2; moving elements is lower priority. Insertion remains the boundary between "adjust an existing page" and "page builder" and is not planned.
@@ -295,7 +301,19 @@ Each question states its options, the criteria that decide it, and a provisional
 **OQ-E3. What is the edit unit when one source location renders many DOM nodes?**
 - Context: (a) mapped lists: one callsite, N sibling instances; a per-instance style edit has no deterministic code expression. (b) Shared components: an edit may target the usage site or the definition.
 - Position for (a): edit-all is the only deterministic option. On selection, the overlay MUST co-highlight all DOM nodes sharing the element ID before any edit is applied (v0's model, PAS §1).
-- Open for (b): whether v1 permits definition edits at all; their blast radius includes pages not currently rendered, so the co-highlight guarantee cannot be given. Options: usage-site-only in v1; or both, with definition edits gated behind an explicit scope switch and a listing of affected files.
+- Resolved for (b) (rev 13, R-12, DR-0009): shared components follow the Figma component model.
+
+  | Figma | Retouch |
+  |---|---|
+  | Main component | The definition file. Edits change every instance. Explicit action "Edit main component"; the overlay shows the count of files that use the component. |
+  | Instance | A usage site. Distinct outline; all instances on the page co-highlight. Default click scope. |
+  | Override | A prop at the usage site: `children` text, `className` when the definition applies it to its root (static check), any declared prop. |
+  | Component property | A prop declared in the definition with a default. |
+  | Expose property | Lift (R-12 b): e.g. `className="bg-blue-500 px-4"` becomes `({ bg = "bg-blue-500", … })` and `className={cn("px-4", bg)}`; the usage site gets `bg="bg-red-500"`. The prop name is suggested from the property and confirmed by the user. |
+  | Detach instance | Duplicate module (always available: copy the definition file under a new component name, rewire this usage site's import) or inline (pure JSX-return definitions only). Two-file transaction (R-11 d exception). |
+  | Reset overrides | Remove the usage site's props. |
+
+  Edit targets by op type: text through `{children}` → usage site; classes → usage site by lift (or by `className` when forwarded), or the definition through "Edit main"; props → usage site. Any instance-level op without an instance ID in the DOM is refused with the reason. Components from `node_modules` have no editable definition; their usage sites remain editable through props.
 
 **OQ-E4. How is application state reached and held while editing?**
 - Position: two modes. Interact mode: pointer events reach the application unmodified. Edit mode: the overlay consumes all pointer input. Mode switching MUST NOT remount the iframe.
@@ -378,6 +396,7 @@ Malicious code already running on the dev origin (a compromised dependency or a 
 | 10 | 2026-09-01 | Moved the documents into the `editable-mirror` repository (`docs/`) and introduced decision records DR-0001 … DR-0007 under `docs/decisions/`, each recording the alternatives and arguments behind revs 2–9; added editing rule 8 requiring a decision record per trade-off. Expanded OQ-B6 with the full alternative set (seven URL schemes, three navigation-following mechanisms, three selection-persistence options) and a provisional recommendation. No positions changed. |
 | 11 | 2026-09-01 | Resolved OQ-G3: the product is named Retouch; CLI `npx retouch`; the route prefix is `/rt/`, configurable, replacing `/__mirror` throughout. Added the "route prefix" term. Resolved OQ-B1 residual (c) with the configurable prefix and a HEAD-probe collision warning. DR-0008. |
 | 12 | 2026-09-01 | Resolved OQ-B6: prefix-path scheme (`/rt/<app path>` with query and hash passed through), navigation followed by observing the iframe location with `pushState`/`replaceState` wrapped by the agent, no selection persistence in v1, frame busting detected but not blocked. DR-0007 accepted. |
+| 13 | 2026-09-01 | Adopted the Figma component model for shared components: added R-12 (instance scope by default; explicit edit-main and detach; lift to prop with the generated `cn()` shape; detach as a two-file transaction; refusal without an instance ID) and the terms component definition, component instance, instance ID, lift, detach. Resolved OQ-C2 (usage sites stamped by the `data-rt-i` prop) and OQ-E3 (b). Amended R-11 (d) with the detach exception. Moved all component features into tier 1 (OQ-E2). DR-0009. |
 
 ## 10. References
 
