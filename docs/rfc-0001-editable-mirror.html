@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<title>RFC-0001: The Editable Mirror</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #FFFFFF;
+    --ink: #1A1A1A;
+    --ink-2: #3D3D3D;
+    --muted: #6B6B6B;
+    --line: #C9C9C9;
+    --line-soft: #E4E4E4;
+    --accent: #1A4E8A;
+    --surface: #F6F6F4;
+    --code-bg: #F0F0EE;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #191A1C;
+      --ink: #E6E6E4;
+      --ink-2: #C6C6C3;
+      --muted: #8F8F8C;
+      --line: #4A4B4E;
+      --line-soft: #2C2D30;
+      --accent: #7FA9D8;
+      --surface: #202124;
+      --code-bg: #26272A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #191A1C;
+    --ink: #E6E6E4;
+    --ink-2: #C6C6C3;
+    --muted: #8F8F8C;
+    --line: #4A4B4E;
+    --line-soft: #2C2D30;
+    --accent: #7FA9D8;
+    --surface: #202124;
+    --code-bg: #26272A;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  .page { max-width: 820px; margin: 0 auto; padding: 48px 26px 96px; }
+
+  a { color: var(--accent); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .rfc-head { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px; border-bottom: 2px solid var(--ink); padding-bottom: 16px; }
+  .rfc-head table { border-collapse: collapse; }
+  .rfc-head td { padding: 1px 0; vertical-align: top; }
+  .rfc-head td:first-child { width: 110px; color: var(--muted); }
+  h1 { font-size: 27px; font-weight: 700; line-height: 1.2; margin: 14px 0 16px; }
+
+  .ai-note { border: 1px solid var(--line); background: var(--surface); padding: 14px 18px; margin: 26px 0; font-size: 14px; }
+  .ai-note h2 { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 8px; border: none; padding: 0; }
+  .ai-note ol { margin: 0 0 0 22px; }
+  .ai-note li { margin: 4px 0; }
+
+  h2 { font-size: 20px; font-weight: 700; margin: 42px 0 12px; padding-top: 16px; border-top: 1px solid var(--line-soft); }
+  h3 { font-size: 16.5px; font-weight: 700; margin: 28px 0 8px; }
+  h4 { font-size: 15px; font-weight: 700; font-style: italic; margin: 20px 0 6px; }
+
+  p { margin: 9px 0; text-wrap: pretty; }
+  ul, ol { margin: 9px 0 9px 26px; }
+  li { margin: 5px 0; }
+
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.85em; background: var(--code-bg); padding: 1px 4px; border-radius: 3px; }
+
+  .tablewrap { overflow-x: auto; margin: 12px 0; }
+  table.spec { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
+  table.spec th { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; text-align: left; padding: 7px 12px; border-bottom: 2px solid var(--line); color: var(--ink-2); }
+  table.spec td { padding: 7px 12px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  table.spec td.id, table.spec td.term { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; white-space: nowrap; }
+
+  .oq { margin: 26px 0; border: 1px solid var(--line-soft); }
+  .oq-head { display: flex; gap: 12px; align-items: baseline; padding: 9px 14px; background: var(--surface); border-bottom: 1px solid var(--line-soft); }
+  .oq-head .id { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px; color: var(--accent); white-space: nowrap; }
+  .oq-head .q { font-weight: 700; font-size: 15.5px; }
+  .oq-body { padding: 4px 14px 12px; font-size: 15px; }
+  .oq-body dt { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-top: 10px; }
+  .oq-body dd { margin: 3px 0 0 0; }
+  .oq-body dd ol { margin-top: 2px; }
+
+  figure { margin: 22px 0; }
+  figure svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+  figcaption { font-size: 13.5px; color: var(--muted); margin-top: 8px; max-width: 68ch; }
+  figcaption b { color: var(--ink-2); }
+  .figbox { border: 1px solid var(--line-soft); padding: 18px 12px 10px; overflow-x: auto; }
+
+  footer { margin-top: 56px; padding-top: 16px; border-top: 2px solid var(--ink); font-size: 13.5px; color: var(--muted); }
+</style>
+
+<div class="page">
+
+<div class="rfc-head">
+  <table>
+    <tr><td>RFC:</td><td>0001</td></tr>
+    <tr><td>Title:</td><td>The Editable Mirror</td></tr>
+    <tr><td>Status:</td><td>Draft</td></tr>
+    <tr><td>Author:</td><td>P. Shen</td></tr>
+    <tr><td>Created:</td><td>2026-09-01</td></tr>
+    <tr><td>Revised:</td><td>2026-09-01 (rev 10)</td></tr>
+    <tr><td>Companion:</td><td>Prior-Art Survey (docs/prior-art-survey.html), 2026-09-01</td></tr>
+    <tr><td>Decisions:</td><td>docs/decisions/ (DR-0001 … DR-0007); index in docs/decisions/README.md</td></tr>
+  </table>
+  <h1>RFC-0001: The Editable Mirror</h1>
+</div>
+
+<div class="ai-note">
+  <h2>Note to AI assistants editing this document</h2>
+  <ol>
+    <li>This is a normative engineering RFC. The key words MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY are used per RFC&nbsp;2119/8174 and carry that meaning only; do not use them decoratively.</li>
+    <li>Write declarative, falsifiable statements. Prohibited: marketing language, hedging qualifiers ("arguably", "essentially", "beautifully"), rhetorical questions, em-dash asides, emoji, exclamation marks, and unattributed superlatives.</li>
+    <li>Quantities carry units. Latency targets carry percentiles. "Fast", "clean", and "simple" are not specifications; replace them with measurable criteria or delete them.</li>
+    <li>Identifiers are stable: requirements are R-<i>n</i>, open questions are OQ-<i>xn</i>, figures are Figure&nbsp;<i>n</i>. Never renumber. Mark removed items <i>Withdrawn</i> with a one-line reason.</li>
+    <li>Every claim about an external system cites the Prior-Art Survey or a primary source, or is marked [UNVERIFIED].</li>
+    <li>Diagrams are inline SVG, self-contained (no scripts, no external references), themed via <code>currentColor</code>. Each figure has a caption and is referenced from body text. Add a diagram only where it shows a mechanism prose cannot state as briefly.</li>
+    <li>Record every substantive change in Section 9 (Revision History) with date and summary.</li>
+    <li>Every revision that resolves or changes a trade-off has a decision record in <code>docs/decisions/</code> (DR-<i>n</i>) listing all alternatives considered and the arguments as made; the revision-history row names it. Records are never rewritten after acceptance; a reversal gets a new record that supersedes the old one.</li>
+  </ol>
+</div>
+
+<h2 id="s1">1. Abstract</h2>
+<p>This RFC specifies the architecture of an open-source library that mounts an editable mirror of a running web application at a reserved route on that application's own development server. A user manipulates the mirror through direct-manipulation gestures (select, reorder, resize, spacing adjustment, text edit). Each gesture is translated into a typed edit operation and applied to the application's source files by a deterministic rewriter. No machine-learning model participates in the mapping or write path.</p>
+<p>Section 4 fixes six design constraints established by the companion Prior-Art Survey. Section 5 specifies the system decomposition. Section 6 enumerates the open questions that block detailed design, each with options and decision criteria. Section 7 defines the prototypes whose measurements resolve them.</p>
+
+<h2 id="s2">2. Motivation</h2>
+<p>Code-generating tools produce working frontends for users who cannot comfortably edit the generated source. The smallest changes (spacing, order, copy, color) today require either editing unfamiliar code or re-prompting a model, which is slow, non-deterministic, and can regress unrelated code. The survey establishes that (a) every major AI application builder shipped a deterministic "visual edit" fast path during 2025–2026, confirming demand, and (b) no implementation exists as an embeddable library that attaches to an existing project: all shipped systems either own the development environment (Onlook, Utopia, Codux) or are bound to a hosted builder (Lovable, v0, Replit). This RFC targets that gap.</p>
+
+<h2 id="s3">3. Terminology</h2>
+<div class="tablewrap">
+  <table class="spec">
+    <tr><th>Term</th><th>Definition</th></tr>
+    <tr><td class="term">host application</td><td>The user's web application whose source files are the write target.</td></tr>
+    <tr><td class="term">mirror</td><td>The instance of the host application rendered inside the editor for manipulation. The mirror is served from the same dev server and origin as the host application.</td></tr>
+    <tr><td class="term">mirror process</td><td><i>Hardened mode only (deferred, rev 6).</i> A separate process that serves the editor shell on its own port and hosts the token and writer, so that none of them share an origin or process with host-application code. In the MVP these live in the dev-server process.</td></tr>
+    <tr><td class="term">editor shell</td><td>The document served at the mirror route (<code>/__mirror</code>) by the plugin, on the host application's own origin. It hosts the overlay and embeds the host application in a same-origin iframe.</td></tr>
+    <tr><td class="term">overlay</td><td>Editing chrome (selection outlines, handles, guides, panels) rendered by the editor shell above the iframe. The overlay owns all pointer input while edit mode is active.</td></tr>
+    <tr><td class="term">agent</td><td>A script injected into the host application's frame. It performs hit-testing, geometry queries, DOM mutation, and text-editing activation, and answers RPC requests from the editor shell. It holds no credential, has no file access, and never originates ops.</td></tr>
+    <tr><td class="term">session token</td><td>A random secret generated when the dev server starts, delivered to the editor shell and held in a closure (never in storage or URLs), and required on every op the writer accepts.</td></tr>
+    <tr><td class="term">launch mode</td><td><code>npx mirror</code> boots the host application's own dev server, with the plugin appended, on the project's usual port. No repository changes.</td></tr>
+    <tr><td class="term">config mode</td><td>The plugin is registered in the project's build config (one line). The mirror route is then available whenever the dev server runs.</td></tr>
+    <tr><td class="term">attach mode</td><td><i>Hardened mode only (deferred, rev 6).</i> A separate mirror process discovers and connects to a running dev server that has the plugin.</td></tr>
+    <tr><td class="term">stamp</td><td>The build-time transform that attaches an element ID to each eligible JSX element in compiled output. Source files are never modified by stamping.</td></tr>
+    <tr><td class="term">AST path</td><td>The sequence of steps from a file's root node to one JSX element through the syntax tree, e.g. <code>FunctionDeclaration[Card] → ReturnStatement → JSXElement → children[2] → children[1]</code>. It passes through expressions (map callbacks, conditionals) as ordinary tree steps.</td></tr>
+    <tr><td class="term">element ID</td><td>A structural ID: <code>hash(relative file path, AST path)</code>. It is a pure function of source, so the plugin and the writer compute it independently (R-10).</td></tr>
+    <tr><td class="term">source span</td><td>A (file path, byte range) pair addressing one JSX element in pre-transform source. Obtained by the writer by parsing the file at write time.</td></tr>
+    <tr><td class="term">index</td><td>The writer's map from element ID to (file path, AST path), built by parsing project source from disk and updated on file change. It replaces the transported manifest of revs 2–5.</td></tr>
+    <tr><td class="term">operation (op)</td><td>A typed, serializable description of one edit, e.g. <code>setClasses</code>, <code>setText</code>, <code>setProp</code>, <code>insertChild</code>, <code>removeChild</code>, <code>reorderChild</code>. The op log is the unit of undo, redo, and replay.</td></tr>
+    <tr><td class="term">write-back</td><td>Application of an op to source files by the rewriter.</td></tr>
+    <tr><td class="term">re-derivation</td><td>Regeneration of the manifest and remapping of live element IDs after any source change, including the library's own writes.</td></tr>
+  </table>
+</div>
+
+<h2 id="s4">4. Design constraints (normative)</h2>
+<p>The following requirements are fixed by the survey's findings. Each cites its section in the Prior-Art Survey (PAS).</p>
+<div class="tablewrap">
+  <table class="spec">
+    <tr><th>ID</th><th>Requirement</th><th>Rationale</th></tr>
+    <tr><td class="id">R-1</td><td>DOM-to-source mapping MUST be produced by build-time instrumentation. The system MUST NOT read framework internals (React fibers, devtools hooks) for mapping.</td><td>React 19 removed <code>fiber._debugSource</code> and <code>findFiberByHostInstance</code>; every runtime-inspection tool broke (PAS §2). Build-time stamping is the only mechanism with a support guarantee the library itself controls.</td></tr>
+    <tr><td class="id">R-2</td><td>Write-back MUST edit the authoring representation (JSX attributes, literal children, literal props) via AST- or byte-offset-based rewriting. The system MUST NOT write to compiled output, generated CSS, or CSS files addressed by selector. After write-back, running the project's configured formatter MUST be an identity operation.</td><td>Selector-to-element mapping is many-to-many; no surveyed deterministic system writes CSS files (PAS §3). Formatter idempotence prevents write-back and format-on-save from fighting.</td></tr>
+    <tr><td class="id">R-3</td><td>Every edit MUST be expressed as a typed op. The overlay applies an optimistic DOM patch and appends to the op log; the disk write is the commit. Ops MUST be invertible (undo) and replayable against a re-derived manifest.</td><td>Onlook and Lovable converged on the two-track model independently (PAS §1, §3). Replayability is required by re-derivation (§5.3).</td></tr>
+    <tr><td class="id">R-4</td><td>Style ops in v1 target the element's Tailwind class attribute. Class conflict resolution MUST follow tailwind-merge semantics (per-property class groups, variant-aware, last-wins).</td><td>A class string is a single-attribute write target with a pure value-to-class function; all surveyed writers converged on it (PAS §3).</td></tr>
+    <tr><td class="id">R-5</td><td>The overlay MUST NOT insert elements into the host document's flow. Text editing uses per-element <code>contenteditable="plaintext-only"</code> with <code>beforeinput</code> interception, committed on blur or Escape. The system MUST NOT use <code>document.execCommand</code> or document-level <code>designMode</code>.</td><td>Overlay-in-flow perturbs the layout being measured. <code>execCommand</code> is deprecated; <code>designMode</code> has no commit boundary and makes injected UI editable (PAS §4).</td></tr>
+    <tr><td class="id">R-6</td><td>If an op cannot be applied deterministically, the system MUST refuse the gesture and state the reason and source location. The system MUST NOT fall back to best-effort rewriting.</td><td>Gutenberg's validate-and-flag model is the proven pattern for coexisting with hand edits (PAS §1). Refusal preserves the core guarantee.</td></tr>
+    <tr><td class="id">R-7</td><td>The library MUST refuse to mount when <code>NODE_ENV=production</code>, MUST bind to localhost by default, MUST restrict writes to files under the project root, and MUST NOT load third-party origins into the mirror.</td><td>The mirror is a code-writing surface; Hypothesis Via documents the abuse mode of open mirrors (PAS §4).</td></tr>
+    <tr><td class="id">R-8</td><td><i>Deferred to hardened mode (rev 6); not required for the MVP.</i> The session token, the editor shell, and the writer MUST NOT share an origin, a process, or a port with host-application code.</td><td>Added rev 5 against in-page malicious code. Deferred because a malicious npm package already has machine access at install time and in the dev-server process; the split defends only against remote scripts and dev-time XSS, which does not justify a second process in the MVP (§8.3). The interfaces stay RPC-shaped so the split can be added without a rewrite.</td></tr>
+    <tr><td class="id">R-9</td><td>The writer MUST accept only typed ops and MUST validate every op against its type's value grammar before applying it: class tokens matching the project's Tailwind grammar; text written as escaped JSX text; prop values as literals, with <code>href</code>, <code>src</code>, <code>srcset</code>, <code>action</code>, <code>formaction</code>, <code>on*</code>, and <code>dangerouslySetInnerHTML</code> excluded. The writer MUST reject requests whose <code>Host</code> header is not a loopback name, MUST require a custom request header and the session token on every op, and MUST write only to files that parse as JSX/TSX. The agent MUST NOT originate ops.</td><td>These controls are cheap and are needed for determinism regardless. Together they bound any misuse of the endpoint to cosmetic JSX edits with no code execution, and block all remote attackers (CSRF, DNS rebinding). Added rev 6.</td></tr>
+    <tr><td class="id">R-10</td><td>Element IDs MUST be a pure function of source: <code>hash(relative file path, AST path)</code>. The writer MUST build its index by parsing project files from disk and MUST NOT accept mapping data from the plugin or the browser.</td><td>Removes the transported manifest (a forgeable input), keeps IDs stable across attribute and text edits, yields fresh byte spans at write time, and makes all instances of one callsite share one ID (OQ-E3). Added rev 6.</td></tr>
+    <tr><td class="id">R-11</td><td>Write integrity. (a) Preview MUST NOT write: gesture feedback is applied to the mirror DOM only (inline styles, class attributes) and is discarded on failure. (b) The writer MUST re-parse the edited text and run the project's formatter before writing, and MUST NOT write if either fails. (c) Writes MUST be atomic: write to a temporary file in the same directory, then rename. (d) Each op MUST touch exactly one file. (e) Every op MUST carry the content hash of the file version it was computed against, and the writer MUST reject on mismatch (§5.3). (f) The library MUST NOT perform version-control operations. (g) Every op MUST be invertible, and undo MUST restore byte-identical content.</td><td>The codebase is never in a state the user did not author: at every instant a source file is either its previous content or a parsed, formatted, single-op successor. Added rev 8.</td></tr>
+  </table>
+</div>
+
+<h3 id="s4-1">4.1 Why R-1 cannot be relaxed to a framework-only dependency</h3>
+<p>R-1 raises the question of whether element-level mapping can be obtained from React alone, with no hook into the project's build. Five alternatives were examined; each fails to produce span-level mapping on current React.</p>
+<ol>
+  <li><b>Fiber inspection (<code>_debugSource</code>).</b> Removed in React 19 (PR #28265). It worked on React ≤ 18 only because those toolchains already ran the <code>jsx-source</code> Babel transform in dev presets, i.e. it was build-time instrumentation that happened to be pre-installed, not a runtime capability of React.</li>
+  <li><b><code>jsx-dev-runtime</code> interception.</b> Through React 19.1, <code>jsxDEV</code> still receives source metadata in development; aliasing the runtime module could capture it without a custom transform. React 19.2 removed the parameter entirely (PAS §2). Rejected as a foundation: it is pinned to a version window that has already closed.</li>
+  <li><b>Owner stacks (<code>captureOwnerStack</code> / <code>_debugStack</code>, React 19.1+).</b> Requires no build hook: a synthesized error stack is symbolicated against source maps fetched at runtime. Its granularity is the component owner chain; frames resolve inside component function bodies, and multiple JSX elements produced by one component cannot be distinguished (PAS §2). Sufficient for file-level "open in editor"; insufficient for span-level deterministic write-back.</li>
+  <li><b>Source maps alone.</b> They map generated-JS positions to source positions but provide no path from a DOM node to a generated-JS position. A runtime hook is still required to obtain that position, and after item 1 none exists for host elements.</li>
+  <li><b>Static DOM–AST matching.</b> Parse source from disk (file-system access only, no build hook) and match the rendered DOM against the JSX tree structurally (tag names, literal class strings, literal text). Deterministic where the match is unique; ambiguous exactly where precision matters (mapped lists, conditionals, dynamic classes). No surveyed system ships it. Retained as a candidate inspect-grade fallback under OQ-A2, not as a write path.</li>
+</ol>
+<p>Conclusion: R-1 stands. The dependency is, however, narrower than "requires Vite." The library does not require adopting a build system; it requires registering one transform and one middleware in the build configuration the project already has. A JSX project has a compile step by definition, so the true prerequisite is "a build the user can add one plugin to," which for the v1 target (OQ-A1) is one line in <code>vite.config.ts</code> — and the registration need not be a file edit at all: the mirror process can perform it at boot time (launch mode, OQ-B1), making zero repository configuration possible. The framework-only variant that is possible without any build hook — component-level mapping via owner stacks — supports inspection, not editing, and is recorded under OQ-A2 option 2.</p>
+
+<h2 id="s5">5. System overview</h2>
+
+<h3 id="s5-1">5.1 Components</h3>
+<p>The MVP is one process and one origin. The bundler plugin runs inside the project's own dev server and provides four things: the stamper (structural IDs on compiled JSX, agent injection into served HTML), the mirror route serving the editor shell at <code>/__mirror</code>, the index (built by parsing project files from disk, R-10), and the writer. The shell embeds the host application in a same-origin iframe, so the application keeps its cookies, storage, and pinned CORS and redirect configuration, and the shell may read the iframe's DOM directly. Figure&nbsp;1 shows the topology. The plugin reaches the dev server either by launch mode (<code>npx mirror</code>, no repository changes) or by config mode (one registered plugin); OQ-B1 covers the mechanics. The two-process hardened mode of rev 5 is deferred (R-8, §8.3).</p>
+
+<figure>
+  <div class="figbox">
+  <svg viewBox="0 0 840 400" role="img" aria-label="System topology, one process and one origin. In the browser on localhost:3000, the shell page at /__mirror holds the overlay, op log, and session token, and embeds a same-origin iframe containing the host app and the injected agent; the shell accesses the iframe DOM directly and through the agent. The dev-server process runs the bundler plugin, which contains the writer with Host, token, and op-grammar checks, the stamper producing structural IDs, and the index parsed from disk. The shell posts ops with the token to the writer; the writer writes source files; on change the plugin recompiles and re-indexes and pushes an HMR update into the iframe." font-family="Georgia, serif" font-size="12">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+      </marker>
+    </defs>
+    <g fill="none" stroke="currentColor">
+      <!-- browser boundary -->
+      <rect x="16" y="16" width="400" height="376" stroke-dasharray="6 4"/>
+      <!-- shell page -->
+      <rect x="36" y="52" width="360" height="130"/>
+      <rect x="56" y="86" width="150" height="80"/>
+      <rect x="226" y="86" width="150" height="80"/>
+      <!-- iframe -->
+      <rect x="36" y="232" width="360" height="146"/>
+      <rect x="56" y="268" width="150" height="94"/>
+      <rect x="226" y="268" width="150" height="94"/>
+      <!-- dev-server process -->
+      <rect x="472" y="16" width="352" height="250" stroke-dasharray="6 4"/>
+      <rect x="492" y="62" width="312" height="184"/>
+      <rect x="506" y="96" width="140" height="130"/>
+      <rect x="660" y="96" width="130" height="60"/>
+      <rect x="660" y="166" width="130" height="60"/>
+      <!-- source files (disk) -->
+      <rect x="520" y="300" width="200" height="48"/>
+    </g>
+    <g fill="currentColor">
+      <text x="26" y="38" font-style="italic">browser · origin localhost:3000</text>
+      <text x="48" y="72" font-weight="bold">shell page · route /__mirror</text>
+      <text x="66" y="106" font-weight="bold">overlay</text>
+      <text x="66" y="122" font-size="11">selection, handles,</text>
+      <text x="66" y="136" font-size="11">guides, op log</text>
+      <text x="236" y="106" font-weight="bold">session token</text>
+      <text x="236" y="122" font-size="11">held in a closure;</text>
+      <text x="236" y="136" font-size="11">custom header on ops</text>
+      <text x="48" y="252" font-weight="bold">iframe · same origin (direct DOM access)</text>
+      <text x="66" y="288" font-weight="bold">host app</text>
+      <text x="66" y="304" font-size="11">stamped DOM,</text>
+      <text x="66" y="318" font-size="11">app state, HMR client</text>
+      <text x="236" y="288" font-weight="bold">agent</text>
+      <text x="236" y="304" font-size="11">geometry, DOM patch;</text>
+      <text x="236" y="318" font-size="11">never originates ops</text>
+      <text x="482" y="38" font-style="italic">dev-server process · :3000</text>
+      <text x="482" y="52" font-size="11" font-style="italic">(npx mirror launch, or plugin registered in config)</text>
+      <text x="504" y="82" font-weight="bold">bundler plugin</text>
+      <text x="516" y="116" font-weight="bold">writer</text>
+      <text x="516" y="134" font-size="11">Host + token check</text>
+      <text x="516" y="148" font-size="11">op grammar check</text>
+      <text x="516" y="162" font-size="11">parse file → span</text>
+      <text x="516" y="176" font-size="11">AST edit → format</text>
+      <text x="516" y="190" font-size="11">→ write</text>
+      <text x="670" y="116" font-weight="bold">stamper</text>
+      <text x="670" y="132" font-size="11">structural IDs;</text>
+      <text x="670" y="146" font-size="11">agent injection</text>
+      <text x="670" y="186" font-weight="bold">index</text>
+      <text x="670" y="202" font-size="11">id → file, AST path</text>
+      <text x="670" y="216" font-size="11">parsed from disk</text>
+      <text x="530" y="320" font-weight="bold" font-size="11.5">source files</text>
+      <text x="530" y="336" font-size="10.5">project root only (R-7)</text>
+    </g>
+    <g fill="none" stroke="currentColor">
+      <!-- shell <-> iframe -->
+      <line x1="300" y1="182" x2="300" y2="232" marker-end="url(#arr)" marker-start="url(#arr)"/>
+      <!-- shell -> writer -->
+      <line x1="396" y1="110" x2="506" y2="110" marker-end="url(#arr)"/>
+      <!-- writer -> source files -->
+      <line x1="576" y1="226" x2="576" y2="300" marker-end="url(#arr)"/>
+      <!-- source files -> plugin (recompile, re-index) -->
+      <line x1="700" y1="300" x2="700" y2="246" marker-end="url(#arr)"/>
+      <!-- plugin -> iframe (HMR) -->
+      <line x1="492" y1="240" x2="396" y2="240" marker-end="url(#arr)"/>
+    </g>
+    <g fill="currentColor" font-size="11" font-style="italic">
+      <text x="310" y="211">DOM access · agent RPC</text>
+      <text x="451" y="100" text-anchor="middle">POST op + token</text>
+      <text x="451" y="128" text-anchor="middle">+ custom header</text>
+      <text x="584" y="268">writes</text>
+      <text x="708" y="278">on change: recompile,</text>
+      <text x="708" y="292">re-index</text>
+      <text x="444" y="234" text-anchor="middle">HMR update</text>
+    </g>
+  </svg>
+  </div>
+  <figcaption><b>Figure 1.</b> System topology (rev 6, MVP). One dev-server process serves the host application, the shell, and the writer on one origin. The plugin never sends mapping data anywhere: the stamper computes structural IDs from source, and the writer independently rebuilds the same IDs from disk (R-10). The shell reads the iframe DOM directly and uses the agent for patches. The writer's file write triggers recompilation and re-indexing; HMR updates the iframe.</figcaption>
+</figure>
+
+<h3 id="s5-2">5.2 The edit cycle</h3>
+<p>Figure&nbsp;2 specifies the edit cycle for a single gesture. Steps 1–4 complete without touching disk and bound perceived latency; steps 5–9 are the commit path. Step 4 carries the session token and the custom header (R-9). The cycle defines the two latency budgets that Prototype&nbsp;P0 must measure (§7).</p>
+
+<figure>
+  <div class="figbox">
+  <svg viewBox="0 0 840 330" role="img" aria-label="Sequence of one edit: the overlay resolves a gesture to an op, the agent applies an optimistic DOM patch, the op is appended to the log, then posted to the writer, which resolves the element ID through the manifest, rewrites and formats the source file; the bundler recompiles, emits a new manifest, and the HMR update replaces the optimistic patch; the overlay remaps its selection to the new manifest." font-family="Georgia, serif" font-size="12">
+    <defs>
+      <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+      </marker>
+    </defs>
+    <!-- lifelines -->
+    <g fill="currentColor" font-weight="bold" text-anchor="middle">
+      <text x="100" y="28">shell (overlay)</text>
+      <text x="300" y="28">agent / DOM</text>
+      <text x="500" y="28">writer</text>
+      <text x="700" y="28">bundler</text>
+    </g>
+    <g stroke="currentColor" stroke-dasharray="3 4" fill="none">
+      <line x1="100" y1="38" x2="100" y2="310"/>
+      <line x1="300" y1="38" x2="300" y2="310"/>
+      <line x1="500" y1="38" x2="500" y2="310"/>
+      <line x1="700" y1="38" x2="700" y2="310"/>
+    </g>
+    <g stroke="currentColor" fill="none">
+      <line x1="100" y1="62" x2="300" y2="62" marker-end="url(#arr2)"/>
+      <line x1="300" y1="94" x2="100" y2="94" marker-end="url(#arr2)"/>
+      <line x1="100" y1="126" x2="500" y2="126" marker-end="url(#arr2)"/>
+      <line x1="500" y1="190" x2="700" y2="190" marker-end="url(#arr2)"/>
+      <line x1="700" y1="254" x2="300" y2="254" marker-end="url(#arr2)"/>
+      <line x1="700" y1="286" x2="100" y2="286" marker-end="url(#arr2)"/>
+    </g>
+    <g fill="currentColor" font-size="11">
+      <text x="110" y="56">1. gesture → op;  2. apply optimistic DOM patch</text>
+      <text x="110" y="88">3. patched geometry; op appended to log</text>
+      <text x="110" y="120">4. POST op + token + header  (the commit; async from UI)</text>
+      <text x="510" y="150">5. validate op; index: id → (file, AST path); parse → span</text>
+      <text x="510" y="164">6. AST/offset rewrite; project formatter</text>
+      <text x="510" y="184">7. write file</text>
+      <text x="430" y="248">8. recompile + re-index; HMR update replaces optimistic patch</text>
+      <text x="110" y="280">9. confirm selection (IDs unchanged unless siblings moved)</text>
+    </g>
+    <!-- latency braces -->
+    <g stroke="currentColor" fill="none">
+      <path d="M 84 56 L 76 56 L 76 96 L 84 96"/>
+      <path d="M 84 120 L 76 120 L 76 292 L 84 292"/>
+    </g>
+    <g fill="currentColor" font-size="10.5" font-style="italic" text-anchor="end">
+      <text x="72" y="74">budget A</text>
+      <text x="72" y="86">(frame)</text>
+      <text x="72" y="200">budget B</text>
+      <text x="72" y="212">(commit)</text>
+    </g>
+  </svg>
+  </div>
+  <figcaption><b>Figure 2.</b> One edit cycle. Budget A (steps 1–3) is the perceived latency of the gesture and must fit one frame at 60&nbsp;Hz (16.7&nbsp;ms). Budget B (steps 4–9) is the commit round trip; it bounds how quickly a second edit to the same file can commit (OQ-C3). Step 8 is critical for correctness: the HMR-rendered DOM replaces the optimistic patch, and any visual difference between the two indicates a defective op-to-code mapping.</figcaption>
+</figure>
+
+<h3 id="s5-3">5.3 Re-derivation</h3>
+<p>Any source change can change the index: the library's own writes (step 7), the user's editor, or version-control operations. Because IDs are structural (R-10), an attribute or text edit leaves every ID in the file unchanged; only inserting, removing, or reordering JSX nodes changes the IDs of the nodes after them. The writer re-parses a file on every write, so byte spans are always fresh. Staleness is therefore about the file, not the ID: each op carries the content hash of the file version the shell last saw, and the writer MUST fail closed on mismatch, after which the shell re-reads and re-submits. When the op that caused a structural change is the library's own, the writer returns the old-to-new ID mapping so the shell keeps its selection. External changes detected by the file watcher additionally surface a conflict notice instead of silently remapping (R-6).</p>
+
+<h2 id="s6">6. Open questions</h2>
+<p>Each open question below states its options, the criteria that decide it, and a provisional position where the survey supports one. A provisional position is a default for prototyping, not a decision. Three questions gate the majority of detailed design and SHOULD be resolved first: <a href="#oq-e1">OQ-E1</a>, <a href="#oq-c1">OQ-C1</a>, <a href="#oq-f1">OQ-F1</a>.</p>
+
+<h3>6.1 Scope</h3>
+
+<div class="oq" id="oq-a1">
+  <div class="oq-head"><span class="id">OQ-A1</span><span class="q">Which build tools, frameworks, and styling systems does v1 support?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Options</dt><dd><ol><li>Vite + React + Tailwind only.</li><li>(1) plus Next.js (webpack/turbopack) at launch.</li><li>Framework-agnostic mapping from the start, following the code-inspector-plugin bundler matrix.</li></ol></dd>
+    <dt>Criteria</dt><dd>Share of target users covered per unit of stamper/writer surface area; each additional bundler multiplies transform-plugin maintenance (PAS §2).</dd>
+    <dt>Provisional</dt><dd>Option 1. The mapping layer's interfaces (element ID, source span, manifest) are framework-neutral so that Vue (sourcemap tracing) and Svelte (<code>__svelte_meta</code>) can be added without interface changes.</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-a2">
+  <div class="oq-head"><span class="id">OQ-A2</span><span class="q">Is any capability offered for applications whose build cannot be instrumented?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Options</dt><dd><ol><li>None; the bundler plugin is a hard prerequisite.</li><li>A localhost-only CLI proxy that injects the agent (select-and-inspect only; write-back is impossible without the manifest).</li><li>A general rewriting proxy for arbitrary sites.</li></ol></dd>
+    <dt>Criteria</dt><dd>Option 3 is rejected on survey evidence: CSP stripping, cookie emulation, and service-worker neutralization are required; the mature implementations are AGPL; the abuse profile is documented by Hypothesis Via (PAS §4). The open question is only whether option 2's inspect-only mode justifies its maintenance cost.</dd>
+    <dt>Provisional</dt><dd>Option 1 for v1.</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-a3">
+  <div class="oq-head"><span class="id">OQ-A3</span><span class="q">Does the mirror exist outside the dev server (preview or production builds)?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Options</dt><dd><ol><li>Dev server only.</li><li>(1) plus a read-only annotated preview build for review and commenting.</li><li>Editing against a deployed site through a connected local checkout.</li></ol></dd>
+    <dt>Criteria</dt><dd>Write-back requires source on disk and a rebuild channel; options 2–3 add distribution and auth surfaces (interacts with OQ-F2, R-7).</dd>
+    <dt>Provisional</dt><dd>Option 1. Option 2 is additive and is not blocked by any v1 decision.</dd>
+  </dl></div>
+</div>
+
+<h3>6.2 Mirror architecture</h3>
+
+<div class="oq" id="oq-b1">
+  <div class="oq-head"><span class="id">OQ-B1</span><span class="q">How does the mirror process obtain an instrumented dev-server process?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Status</dt><dd>Resolved for the MVP (rev 6): one process, one origin. Options 1 and 5 below are adopted as config mode and launch mode respectively; they are the same plugin with two ways of registering it. Option 4 (parallel port) is withdrawn: it changes the application's origin for no MVP benefit. Option 2 is withdrawn (cross-origin for no reason). Option 3 survives only as the inspect-only fallback of OQ-A2. The rev 5 trust split (separate mirror process, attach mode) is deferred to hardened mode (R-8, §8.3).</dd>
+    <dt>Options (retained for history)</dt><dd><ol><li>Dev-server middleware: the bundler plugin serves the shell at a reserved route (<code>/__mirror</code>) on the user's own dev server; the iframe is same-origin (Figure&nbsp;1). Requires one plugin registration in the project's build config.</li><li>A separate editor process on its own port, cross-origin to the app.</li><li>A CLI proxy wrapping an unmodified dev server.</li><li>Parallel dev-server instance: a CLI boots a second instance of the project's own dev server (Vite's programmatic API, loading the project's config file and appending the mirror plugin) on its own port. The shell and the app iframe are both served by that instance, so same-origin is preserved. The user's primary dev server and build config are untouched; the pattern is the one Vitest and Storybook use to embed a project's Vite config. Additional capability: the instance owns its module graph, so unsaved ops can be served as virtual modules, rendering the op log's state through real HMR without disk writes (cross-reference OQ-F1).</li><li>Same-port launcher: a CLI (<code>npx mirror</code>) boots the project's own dev server itself — the project's config file loaded programmatically, the mirror plugin appended — and binds the project's usual port, replacing the primary dev server for the session. Origin identity with normal development is exact, so cookies, localStorage, CORS allowlists, and redirect URIs all match. Zero repository changes. Retains option 4's module-graph ownership and virtual-module capability. Injection mechanism: for Vite, the same programmatic embed as option 4; for other Node toolchains, process-level loader-hook preloading (<code>NODE_OPTIONS --import</code>), the mechanism APM auto-instrumentation agents use, which is version-sensitive per toolchain [UNVERIFIED for Turbopack].</li></ol></dd>
+    <dt>Modes (MVP)</dt><dd>
+      <div class="tablewrap"><table class="spec">
+        <tr><th>Mode</th><th>Repository changes</th><th>Origin</th><th>Mechanism</th></tr>
+        <tr><td>launch (<code>npx mirror</code>)</td><td>none</td><td>the app's usual origin; the user's own <code>npm run dev</code> does not run at the same time</td><td>Vite: programmatic embed of the project's config with the plugin appended (the Vitest/Storybook pattern). Other Node toolchains: loader-hook preloading via <code>NODE_OPTIONS --import</code>, the APM auto-instrumentation mechanism [UNVERIFIED for Turbopack].</td></tr>
+        <tr><td>config</td><td>one line</td><td>the app's usual origin; the mirror route is always available</td><td>None at run time.</td></tr>
+      </table></div>
+    </dd>
+    <dt>Facts carried forward</dt><dd>Cookies are not isolated by port (RFC 6265 §8.5); localStorage and Origin-checked requests are. Both MVP modes keep the application on its usual origin, so no continuity caveat applies.</dd>
+    <dt>Residual open items</dt><dd>(a) Per-toolchain launch injection outside plain Vite, including frameworks that wrap Vite with their own CLI (SvelteKit, Astro, Remix), each of which needs its own embed path; config mode is the fallback. (b) Port-busy policy for launch mode (the user's server already holds the port): fail with instructions, never take over. (c) Route-collision policy when the app defines <code>/__mirror</code>. (d) Fault isolation: every plugin hook MUST catch its own errors and serve the module unstamped with a warning, so a plugin defect degrades the mirror rather than the dev server.</dd>
+    <dt>Provisional</dt><dd>Both modes ship. Launch is the zero-configuration default; config mode is for teams and for toolchains without maintained launch injection.</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-b2">
+  <div class="oq-head"><span class="id">OQ-B2</span><span class="q">Is the mirror the live application or a frozen scene?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Options</dt><dd><ol><li>Live application; an edit-mode toggle routes pointer input to the overlay instead of the app.</li><li>Live application with a freeze control suspending rAF and timers.</li><li>An inert DOM snapshot (rrweb-style), with edits replayed against source.</li></ol></dd>
+    <dt>Criteria</dt><dd>Option 3 loses framework state and is overwritten on remount; the survey classifies the rrweb replica as unsuitable for editing (PAS §4). Option 2's suspension is not implementable reliably across timer sources. Determining factor: whether option 1's motion under selection (carousels, animations) is tolerable in practice.</dd>
+    <dt>Provisional</dt><dd>Option 1. Unresolved sub-question: specified behavior when an HMR update changes rendered output during an in-progress drag (abort the gesture, or re-anchor and continue).</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-b3">
+  <div class="oq-head"><span class="id">OQ-B3</span><span class="q">Single full-viewport mirror, or a pan/zoom canvas with multiple breakpoints?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Options</dt><dd><ol><li>Single viewport at 1:1 scale.</li><li>Pan/zoom canvas hosting one frame.</li><li>Canvas hosting multiple device-width frames (Onlook's model).</li></ol></dd>
+    <dt>Criteria</dt><dd>Options 2–3 require zoom-aware geometry throughout (snap thresholds and drag deltas divide by zoom; PAS §4). Cost of retrofitting zoom later versus carrying unused generality.</dd>
+    <dt>Provisional</dt><dd>Option 1 shipped first, with all geometry code written against a <code>(zoom, pan)</code> transform fixed at identity, so options 2–3 do not require rework.</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-b4">
+  <div class="oq-head"><span class="id">OQ-B4</span><span class="q">Does editing chrome render in the editor shell or inside the iframe?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Status</dt><dd>Resolved (rev 5, amended rev 6). Editing chrome renders in the shell; the agent measures and mutates. Option 2 (chrome inside the iframe) is withdrawn: chrome in the app document perturbs the layout being measured (R-5). Rev 6 amendment: with a same-origin iframe the shell MAY read the iframe DOM directly for hit-testing and geometry, but all mutation and all reads that the hardened mode would need cross-origin go through the agent's RPC-shaped interface, so the two-process split can be added later without a rewrite.</dd>
+    <dt>Options (retained for history)</dt><dd><ol><li>Chrome in the shell (parent document), above the iframe; the agent only measures and mutates.</li><li>Chrome injected into the iframe alongside the app.</li></ol></dd>
+    <dt>Consequences</dt><dd>Continuous geometry sync is required (gBCR + ResizeObserver + MutationObserver + IntersectionObserver gating, batched per frame, per PAS §4); in the MVP it runs in the shell against the same-origin iframe. The RPC surface starts as a subset of Onlook's preload API.</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-b5">
+  <div class="oq-head"><span class="id">OQ-B5</span><span class="q">Is the editor an iframe host under a reserved route, or injected into the application's own pages?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Status</dt><dd>Resolved (rev 9): option A. The decision was implicit in revs 2–8 and is recorded here explicitly.</dd>
+    <dt>Options</dt><dd>
+      <div class="tablewrap"><table class="spec">
+        <tr><th></th><th>A. Reserved route, iframe (<code>/__mirror/…</code>)</th><th>B. In-page (editor injected into the app's own pages, no iframe)</th><th>C. Different origin</th></tr>
+        <tr><td>Origin continuity</td><td>exact</td><td>exact</td><td>partial: cookies yes; localStorage, CORS allowlists, OAuth redirects no</td></tr>
+        <tr><td>Repository changes</td><td>none (launch) or one line</td><td>none or one line</td><td>none</td></tr>
+        <tr><td>Panel space</td><td>the app has its own viewport; panels sit beside it</td><td>panels cover the app, or shrink it and perturb the measured layout</td><td>own viewport</td></tr>
+        <tr><td>App crash or full reload</td><td>shell and op log survive; the frame reloads</td><td>editor and op log die with the page</td><td>shell survives</td></tr>
+        <tr><td>URL forwarding</td><td>required (OQ-B6)</td><td>not needed</td><td>required</td></tr>
+        <tr><td>Multi-breakpoint canvas (OQ-B3, later)</td><td>possible</td><td>not possible</td><td>possible</td></tr>
+        <tr><td>Precedent (PAS §1, §4)</td><td>Onlook, Plasmic, Builder, Puck, all CMS visual editors</td><td>VisBug, stagewise: toolbars, not full editors</td><td>Onlook cloud; rev 5 hardened mode</td></tr>
+      </table></div>
+    </dd>
+    <dt>Criteria</dt><dd>C fell on origin continuity and MVP process count (revs 4–6; retained as hardened mode). B is viable for R-5 (chrome in a fixed-position shadow-DOM host outside the flow) but loses on panel space, isolation from application failures, and the breakpoint canvas. The survey's split confirms it: in-page suits toolbars; every full editor with panels uses an iframe.</dd>
+    <dt>Note</dt><dd>B remains a candidate for a later lightweight "toolbar mode" (quick text and color edits in-page) sharing the same ops and writer.</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-b6">
+  <div class="oq-head"><span class="id">OQ-B6</span><span class="q">How does the mirror URL map to the application URL?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Context</dt><dd>Under OQ-B5 option A, <code>/__mirror/about</code> shows the editable <code>/about</code>. Three behaviors need rules: path forwarding, following in-app navigation, and reload/deep links.</dd>
+    <dt>Proposed rules</dt><dd><ol>
+      <li><b>Path forwarding.</b> The shell takes everything after <code>/__mirror</code> (path, query, hash) and loads it in the iframe unchanged. Hash routers and query-string state therefore work.</li>
+      <li><b>Following navigation.</b> In interact mode the user navigates inside the app. The shell observes the iframe's <code>location</code> (same origin) and rewrites its own URL to <code>/__mirror</code> + the new location, so reload and bookmarks work. Because <code>pushState</code>/<code>replaceState</code> fire no event across frames, the agent wraps both and reports them.</li>
+      <li><b>Reload and deep links.</b> A reload of <code>/__mirror/x</code> rebuilds the shell and loads <code>/x</code> in the frame. Application state survives (shared storage). Editor selection is not persisted in v1.</li>
+      <li><b>Frame busting.</b> If the application navigates the top window out of the frame (frame-buster scripts, <code>window.top.location</code> writes), the shell detects the unload and shows a message. It does not fight it.</li>
+    </ol></dd>
+    <dt>Alternatives (full set in DR-0007)</dt><dd>
+      <div class="tablewrap"><table class="spec">
+        <tr><th>Shell URL scheme</th><th>Example</th><th>Assessment</th></tr>
+        <tr><td>1. Prefix path</td><td><code>/__mirror/about?id=7#x</code></td><td>App path, query, and hash pass through unencoded; prefix-match routing; one reserved prefix. Collision policy needed for app routes under <code>/__mirror</code>.</td></tr>
+        <tr><td>2. Query flag on the app's URL</td><td><code>/about?id=7&amp;__mirror</code></td><td>Reads as "append the flag to any page". Reserves a query name across every route; must be stripped when forwarding; server inspects the query on every HTML request.</td></tr>
+        <tr><td>3. Query parameter carrying the app URL</td><td><code>/__mirror?u=%2Fabout%3Fid%3D7</code></td><td>No collision issue; the app URL and its own query and hash must be percent-encoded.</td></tr>
+        <tr><td>4. Hash carrying the app URL</td><td><code>/__mirror#/about</code></td><td>Client-only; collides with the app's own hash state, requiring a second encoding.</td></tr>
+        <tr><td>5. Fixed shell URL, no mapping</td><td><code>/__mirror</code></td><td>No reload, deep link, or bookmark to a page.</td></tr>
+        <tr><td>6. Subdomain</td><td><code>mirror.localhost:3000/about</code></td><td>A different host is a different origin: breaks cookies and storage; rejected as in OQ-B5 option C.</td></tr>
+        <tr><td>7. Extension / DevTools panel</td><td>no URL</td><td>A different product and distribution model; out of scope.</td></tr>
+      </table></div>
+      <div class="tablewrap"><table class="spec">
+        <tr><th>Following navigation</th><th>Assessment</th></tr>
+        <tr><td>a. Observe the iframe's <code>location</code>; agent wraps <code>pushState</code>/<code>replaceState</code></td><td>Cross-browser; a small deterministic dev-only patch.</td></tr>
+        <tr><td>b. Navigation API (<code>navigate</code> event)</td><td>No patching; Chromium only as of 2026 [UNVERIFIED for other engines].</td></tr>
+        <tr><td>c. Do not follow</td><td>URL bar goes stale; reload lands on the wrong page.</td></tr>
+      </table></div>
+      <div class="tablewrap"><table class="spec">
+        <tr><th>Selection persistence</th><th>Assessment</th></tr>
+        <tr><td>i. None in v1</td><td>Simplest; reload loses the selection.</td></tr>
+        <tr><td>ii. <code>sessionStorage</code> keyed by page</td><td>Survives reload; not shareable.</td></tr>
+        <tr><td>iii. Selection ID in the shell URL (<code>?sel=&lt;id&gt;</code>)</td><td>Shareable deep link to one element; stable under attribute edits because IDs are structural (R-10); reserves a query name in the shell's namespace only. A natural later feature.</td></tr>
+      </table></div>
+    </dd>
+    <dt>Provisional</dt><dd>Scheme 1 with (a) and (i), plus frame-bust detection without blocking. Scheme 2 is the closest competitor; it loses on reserving a query name across all routes and on stripping. Pending decision.</dd>
+  </dl></div>
+</div>
+
+<h3>6.3 Identity and mapping</h3>
+
+<div class="oq" id="oq-c1">
+  <div class="oq-head"><span class="id">OQ-C1</span><span class="q">Where does the element ID live, and what invalidates it?</span></div>
+  <div class="oq-body">
+    <dl>
+      <dt>Status</dt><dd>Resolved (rev 6) by R-10: structural IDs, <code>hash(relative file path, AST path)</code>, computed independently by the stamper and the writer. Nothing is written into source (unlike option 1); nothing is transported from the build (unlike options 2–3). An attribute or text edit does not change the ID. A structural edit changes the IDs of later siblings; the writer returns the old-to-new mapping for its own ops (§5.3). Costs accepted: an initial full-project parse at startup (order of one second for hundreds of files; incremental afterwards) and ~10-character hashed attributes in the DOM. Options 1–3 are retained below for history; Figure&nbsp;3 remains as background on the trade they represented.</dd>
+      <dt>Options (retained for history)</dt><dd><ol>
+        <li><b>Persistent:</b> IDs are written into the user's JSX as attributes and committed (Onlook's <code>data-oid</code>). Stable across sessions, edits, and refactors; visible in every diff; the library modifies files the user did not edit.</li>
+        <li><b>Ephemeral:</b> IDs exist only in compiled output; the manifest maps ID to file/line/column. Repository is untouched; every write-back invalidates all IDs in the written file.</li>
+        <li><b>Ephemeral with byte-offset manifest:</b> as (2), but spans are byte ranges enabling offset-based rewriting (magic-string). Strictest determinism; invalidation identical to (2); unshipped by any surveyed system.</li>
+      </ol></dd>
+      <dt>Former criteria (superseded)</dt><dd>Budget B was to decide between options 2/3 and option 1. Structural IDs remove the dependency: the ID does not change on the library's own attribute edits, so Budget B no longer gates identity. It still bounds the commit rate to one file (OQ-C3).</dd>
+    </dl>
+
+    <figure>
+      <div class="figbox">
+      <svg viewBox="0 0 820 250" role="img" aria-label="Comparison of persistent and ephemeral ID strategies. Persistent: the ID is stored inside the source file itself and survives a write-back. Ephemeral: the source file is clean; the build emits a manifest mapping IDs to spans, and a write-back invalidates the manifest, which must be regenerated by the next compile." font-family="Georgia, serif" font-size="12">
+        <defs>
+          <marker id="arr3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+          </marker>
+        </defs>
+        <g fill="currentColor" font-weight="bold">
+          <text x="20" y="30">Option 1 — persistent (Onlook)</text>
+          <text x="430" y="30">Options 2/3 — ephemeral + manifest</text>
+        </g>
+        <g fill="none" stroke="currentColor">
+          <line x1="405" y1="14" x2="405" y2="240" stroke-dasharray="3 5"/>
+          <!-- left: source file with id inside -->
+          <rect x="20" y="48" width="180" height="76"/>
+          <rect x="34" y="82" width="152" height="30"/>
+          <!-- left DOM -->
+          <rect x="255" y="48" width="120" height="76"/>
+          <line x1="200" y1="86" x2="255" y2="86" marker-end="url(#arr3)"/>
+          <!-- write-back arrow loop -->
+          <path d="M 315 124 L 315 176 L 110 176 L 110 128" marker-end="url(#arr3)"/>
+          <!-- right: clean source -->
+          <rect x="430" y="48" width="150" height="76"/>
+          <!-- right: build + manifest -->
+          <rect x="630" y="48" width="170" height="40"/>
+          <rect x="630" y="100" width="170" height="40"/>
+          <line x1="580" y1="68" x2="630" y2="68" marker-end="url(#arr3)"/>
+          <line x1="715" y1="88" x2="715" y2="100" marker-end="url(#arr3)"/>
+          <!-- right write-back invalidates -->
+          <path d="M 715 140 L 715 188 L 505 188 L 505 128" marker-end="url(#arr3)"/>
+          <path d="M 505 48 L 505 20 L 715 20 L 715 44" stroke-dasharray="4 3" marker-end="url(#arr3)"/>
+        </g>
+        <g fill="currentColor" font-size="11">
+          <text x="30" y="66">source file  (modified)</text>
+          <text x="42" y="101" font-family="'SF Mono',Menlo,monospace" font-size="10.5">&lt;div data-oid="a1"&gt;</text>
+          <text x="265" y="66">rendered DOM</text>
+          <text x="265" y="84" font-family="'SF Mono',Menlo,monospace" font-size="10.5">data-oid="a1"</text>
+          <text x="212" y="78" font-style="italic">build</text>
+          <text x="150" y="168" font-style="italic">write-back: ID unchanged, mapping intact</text>
+          <text x="440" y="66">source file</text>
+          <text x="440" y="84" font-style="italic" font-size="11">(untouched)</text>
+          <text x="640" y="64">compiled output</text>
+          <text x="640" y="80" font-family="'SF Mono',Menlo,monospace" font-size="10.5">data-mid="a1"</text>
+          <text x="640" y="116">manifest, gen N</text>
+          <text x="640" y="132" font-family="'SF Mono',Menlo,monospace" font-size="10.5">a1 → file, span</text>
+          <text x="594" y="60" font-style="italic">build</text>
+          <text x="540" y="200" font-style="italic">write-back: all spans in file stale →</text>
+          <text x="540" y="214" font-style="italic">manifest gen N+1 required before next write</text>
+          <text x="530" y="14" font-style="italic">recompile regenerates</text>
+        </g>
+      </svg>
+      </div>
+      <figcaption><b>Figure 3.</b> The OQ-C1 trade. On the left, the mapping key is stored in the artifact being edited, so a write-back cannot invalidate it; the cost is a modified repository. On the right, the repository is untouched, but every write-back stales the manifest for that file; correctness then depends on the generation check in §5.3 and on Budget B being small.</figcaption>
+    </figure>
+  </div>
+</div>
+
+<div class="oq" id="oq-c2">
+  <div class="oq-head"><span class="id">OQ-C2</span><span class="q">Which JSX nodes are stamped?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Options</dt><dd><ol><li>Host elements only (<code>div</code>, <code>img</code>, …); component instances are opaque.</li><li>Host elements and component usage sites, with instance resolution (a component instance's stamp does not appear in the rendered DOM; the mapping is recovered by relating the child's root element to the parent's call site, per Onlook's algorithm, PAS §1).</li></ol></dd>
+    <dt>Criteria</dt><dd>Option 1 cannot express "edit this instance's props," which OQ-E3 requires. Constraint either way: never stamp Fragments or components that do not accept arbitrary props (LocatorJS defect, PAS §2).</dd>
+    <dt>Provisional</dt><dd>Option 1 for P0; option 2 required before OQ-E3 is implementable.</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-c3">
+  <div class="oq-head"><span class="id">OQ-C3</span><span class="q">What is the authoritative state during the commit gap (Figure 2, steps 4–9)?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Options</dt><dd><ol><li>The op log: the DOM shows optimistic state; disk is authoritative only after step 8; queued ops replay against each new manifest generation.</li><li>Synchronous commits: the overlay blocks further gestures until step 9 completes.</li></ol></dd>
+    <dt>Criteria</dt><dd>Option 2 caps gesture rate at 1/Budget&nbsp;B, which is unusable for slider-like interactions (a padding drag emits many increments). Option 1 requires op composition rules (consecutive <code>setClasses</code> on one element coalesce into one write).</dd>
+    <dt>Provisional</dt><dd>Option 1 with op coalescing and a debounced commit (interval to be set empirically in P1; initial value 150&nbsp;ms after last gesture). Under R-10 the replay is trivial for attribute and text ops (IDs unchanged); only structural ops need the writer's old-to-new mapping (§5.3).</dd>
+  </dl></div>
+</div>
+
+<h3>6.4 Write-back mechanics</h3>
+
+<div class="oq" id="oq-d1">
+  <div class="oq-head"><span class="id">OQ-D1</span><span class="q">Which rewriting mechanism does the writer use?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Options</dt><dd><ol><li>recast: AST mutation with reprint limited to modified subtrees.</li><li>Full-file reparse and regenerate, normalized by the formatter (Onlook's method).</li><li>magic-string offset edits (requires OQ-C1 option 3).</li></ol></dd>
+    <dt>Criteria</dt><dd>Diff minimality (R-2's spirit: a one-class edit produces a one-line diff), correctness on the Utopia round-trip corpus (comments, conditionals, template literals; PAS §1), and dependency weight.</dd>
+    <dt>Provisional</dt><dd>Under R-10 the writer parses the target file at write time and so always holds fresh byte spans; options 1 and 3 are both viable and option 3 no longer needs a build-time offset manifest. P1 chooses between recast (structural ops) and magic-string (attribute and text ops), possibly both. Acceptance test either way: the writer run against the Utopia corpus produces zero changes on untouched constructs.</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-d2">
+  <div class="oq-head"><span class="id">OQ-D2</span><span class="q">How is R-2's formatter-idempotence requirement met across formatter configurations?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Options</dt><dd><ol><li>Detect and invoke the repository's configured formatter (Prettier or Biome) on written files.</li><li>Emit minimal diffs and invoke no formatter.</li><li>Refuse repositories without a detectable formatter.</li></ol></dd>
+    <dt>Provisional</dt><dd>Option 1 when a formatter is configured, option 2 otherwise. The formatter is resolved from the project's own dependencies, never bundled, so version drift cannot produce churn.</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-d3">
+  <div class="oq-head"><span class="id">OQ-D3</span><span class="q">When a gesture yields a continuous value, is it written as a theme token or an arbitrary value?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Context</dt><dd>A resize yields 137&nbsp;px. Candidate writes: <code>w-[137px]</code> (exact) or <code>w-32</code> (nearest token, 128&nbsp;px, error 9&nbsp;px).</dd>
+    <dt>Options</dt><dd><ol><li>Always exact (arbitrary values).</li><li>Snap to the project's resolved Tailwind scale within a tolerance; arbitrary beyond it. Tolerance is a user-visible setting; the overlay's snapping guides use the same tolerance so what the user sees is what is written.</li><li>Always snap.</li></ol></dd>
+    <dt>Status</dt><dd>Resolved (rev 7): option 3, always snap. Drag gestures write only values on the project's resolved Tailwind scale; the overlay's snap guides show only those values, so what the user sees is what is written. Arbitrary values are never produced by a gesture. Consequence: the set of classes a gesture can produce is finite, which makes preview rendering solvable by a safelist (OQ-F1). Note on scale resolution: Tailwind v4 derives spacing from a single <code>--spacing</code> multiplier (any integer step is valid); v3 uses the configured steps only; the plugin resolves the scale from the project's version and configuration.</dd>
+    <dt>Criteria (recorded)</dt><dd>Code idiomaticity over pixel fidelity; the target user prefers idiomatic code.</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-d4">
+  <div class="oq-head"><span class="id">OQ-D4</span><span class="q">What happens on elements styled outside Tailwind (CSS Modules, styled-components, inherited stylesheets)?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Options</dt><dd><ol><li>Selectable and inspectable; style edits refused with the reason and the defining file (R-6).</li><li>Style edits written as inline <code>style</code> attributes.</li><li>Attempt CSS-file write-back.</li></ol></dd>
+    <dt>Criteria</dt><dd>Option 3 violates R-2 and is excluded. Option 2 is deterministic but changes the specificity structure of the element and produces code the target user cannot maintain.</dd>
+    <dt>Provisional</dt><dd>Option 1. v1's editable style surface is exactly: Tailwind class attributes, pre-existing inline styles, literal props, and literal text children.</dd>
+  </dl></div>
+</div>
+
+<h3>6.5 Editing semantics</h3>
+
+<div class="oq" id="oq-e1">
+  <div class="oq-head"><span class="id">OQ-E1</span><span class="q">What code mutation does each spatial gesture denote?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Status</dt><dd>Resolved (rev 7): option 1, flow-respecting, with no "detach" action in v1. Reparenting (drop into a different parent) is refused in v1 with a reason. The mapping table under option 1 is the normative seed of the OQ-E1 design annex (P2). Priority order for implementation is fixed by OQ-E2.</dd>
+    <dt>Context</dt><dd>A pointer drag is a screen-space delta; source code expresses layout as flow (flex, grid, spacing). This is the point at which every surveyed competitor abandons determinism and delegates to a model (PAS §1). A deterministic system must fix a total function from (gesture, target state) to (mutation | refusal).</dd>
+    <dt>Options</dt><dd><ol>
+      <li><b>Flow-respecting:</b> gestures denote flow mutations only. Initial mapping table (to be completed in the OQ-E1 design annex):
+        <div class="tablewrap"><table class="spec">
+          <tr><th>Gesture</th><th>Precondition (computed state)</th><th>Mutation</th></tr>
+          <tr><td>drag element, drop within same parent</td><td>parent <code>display</code> is <code>flex</code> or <code>grid</code></td><td><code>reorderChild(parent, from, to)</code></td></tr>
+          <tr><td>drag on inter-item gap</td><td>parent is flex/grid</td><td><code>setClasses(parent, gap-*)</code></td></tr>
+          <tr><td>drag element edge</td><td>element sized by <code>w-*</code>/<code>h-*</code> or unsized</td><td><code>setClasses(el, w-*/h-*)</code></td></tr>
+          <tr><td>drag inside element near edge</td><td>—</td><td><code>setClasses(el, p*-*)</code></td></tr>
+          <tr><td>modifier + drag element</td><td>—</td><td><code>setClasses(el, m*-*)</code></td></tr>
+          <tr><td>drag, drop in different parent</td><td>—</td><td>refused in v1 (reparenting)</td></tr>
+        </table></div></li>
+      <li><b>Freeform:</b> any drag becomes absolute positioning or a transform.</li>
+      <li><b>Hybrid:</b> flow-respecting default plus an explicit per-element "detach" action enabling absolute positioning.</li>
+    </ol></dd>
+    <dt>Criteria (recorded)</dt><dd>Option 2 produces the positioning-heavy code the target user is escaping and interacts badly with responsive layout; the survey records no deterministic system shipping it. Option 3 is deferred: revisit only if refusals in usability testing concentrate on gestures that "detach" would satisfy.</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-e2">
+  <div class="oq-head"><span class="id">OQ-E2</span><span class="q">What is the v1 gesture set?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Status</dt><dd>Resolved (rev 7): tiered as below. Tier 1 is the MVP. Tier 2 follows. Tier 3 is refused in v1 with a reason (R-6).</dd>
+    <dt>Tier 1 (MVP)</dt><dd>click select; literal text edit (copy); color and typography via the class-level style panel; padding, margin, and gap adjustment by drag or by panel.</dd>
+    <dt>Tier 2</dt><dd>edge resize (<code>w-*</code>/<code>h-*</code>); reorder within the same flex/grid parent; marquee select; delete; duplicate; radius and shadow in the panel.</dd>
+    <dt>Tier 3 (refused in v1)</dt><dd>reparenting; element insertion; rotation; multi-select group operations; image replacement.</dd>
+    <dt>Recorded rationale</dt><dd>Copy, color, and spacing are the "small detailed changes" of §2; moving elements is lower priority. Insertion remains the boundary between "adjust an existing page" and "page builder" and is not planned.</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-e3">
+  <div class="oq-head"><span class="id">OQ-E3</span><span class="q">What is the edit unit when one source location renders many DOM nodes?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Context</dt><dd>Two cases. (a) Mapped lists: one callsite, N sibling instances; a per-instance style edit has no deterministic code expression. (b) Shared components: an edit may target the usage site (this instance's props/classes) or the definition (all instances everywhere).</dd>
+    <dt>Position for (a)</dt><dd>Edit-all is the only deterministic option. On selection, the overlay MUST co-highlight all DOM nodes sharing the element ID before any edit is applied (v0's model, PAS §1).</dd>
+    <dt>Open for (b)</dt><dd>Whether v1 permits definition edits at all: their blast radius includes pages not currently rendered, so the co-highlight guarantee cannot be given. Options: usage-site-only in v1; or both, with definition edits gated behind an explicit scope switch and a listing of affected files.</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-e4">
+  <div class="oq-head"><span class="id">OQ-E4</span><span class="q">How is application state reached and held while editing?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Position</dt><dd>Two modes. Interact mode: pointer events reach the application unmodified. Edit mode: the overlay consumes all pointer input; the application receives none. Mode switching MUST NOT remount the iframe.</dd>
+    <dt>Open</dt><dd>Elements that exist only under interaction (open dropdowns, hover states, modals): whether edit mode pins currently-open transient state (e.g. by suppressing pointerleave/blur dispatch), and how routes are switched from the editor without losing the mode.</dd>
+  </dl></div>
+</div>
+
+<h3>6.6 Product and workflow</h3>
+
+<div class="oq" id="oq-f1">
+  <div class="oq-head"><span class="id">OQ-F1</span><span class="q">When do edits reach disk?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Status</dt><dd>Resolved (rev 8): option 1, continuous. Coalesced ops commit on a debounce (initial value 150&nbsp;ms after the last gesture, OQ-C3). A session-diff view shows the aggregate change since the session started. Options 2–3 are withdrawn: the mirror MUST NOT diverge from disk.</dd>
+    <dt>Preview before commit (resolved rev 8)</dt><dd>Two mechanisms, both without any write. (1) Inline-style preview: during a gesture the agent applies the value as an inline style on the mirror DOM node; after HMR confirms the committed class, the agent removes it; on write failure the shell reverts the optimistic patch. (2) Safelist: because gestures produce only scale values (OQ-D3), the set of producible classes is finite; the plugin registers that set with Tailwind in development (<code>@source inline(...)</code> in v4, <code>safelist</code> in v3), so every producible class has CSS before it appears in any source file. Consequence: the virtual-module and client-side-compiler ideas of revs 3–6 are not needed.</dd>
+    <dt>Reconciliation (resolved rev 8)</dt><dd>After the HMR update, the agent checks that the target element's class list contains the written token (or that its text equals the written text). If so, it removes the inline preview. If not, it reports a mapping defect and reverts. No visual comparison is required.</dd>
+    <dt>Options (retained for history)</dt><dd><ol><li>Continuous: coalesced ops commit on a debounce (per OQ-C3); undo inverts and re-commits.</li><li>Session buffer: ops accumulate in the mirror; an explicit Save writes once; the mirror diverges from disk until saved.</li><li>(2) plus version-control integration: a save is a commit, or the session runs on a branch.</li></ol></dd>
+    <dt>Criteria</dt><dd>Option 1 keeps mirror and disk convergent (small conflict window, simple OQ-C3) but emits many small writes and file-watcher events. Option 2 yields one reviewable diff but its conflict window grows with session length, and the divergent mirror cannot benefit from HMR confirmation (Figure&nbsp;2 step 8) until save. The virtual-module idea of revs 3–6 (serving unsaved ops as module overrides) is withdrawn with option 2; the safelist above covers preview rendering.</dd>
+    <dt>Note</dt><dd>Interacts with OQ-F2: a non-developer remote editor may require branch isolation, which would be a writer backend, not a change to this decision.</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-f2">
+  <div class="oq-head"><span class="id">OQ-F2</span><span class="q">Is the v1 operator a developer on localhost, or does v1 include remote non-developer editing?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Context</dt><dd>The motivating user (§2) is often not the person running the dev server. Remote editing requires transport (tunnel or shared environment), authentication on the mirror route, and plausibly PR-mediated writes rather than direct file writes. Each is a significant security and product surface (R-7).</dd>
+    <dt>Provisional</dt><dd>v1: developer on localhost. The op log and writer interfaces are designed so that a review-mediated remote mode is an additional writer backend, not a redesign.</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-f3">
+  <div class="oq-head"><span class="id">OQ-F3</span><span class="q">Concurrent editors?</span></div>
+  <div class="oq-body"><dl>
+    <dt>Position</dt><dd>Out of scope for v1: single writer, file-watcher conflict detection (§5.3). Survey verdict: production multiplayer on source is text-level CRDT (Yjs; Zed's buffer design); AST-level CRDT has no production precedent (PAS §3). The op log is the natural unit of a future CRDT mapping; no v1 decision forecloses it.</dd>
+  </dl></div>
+</div>
+
+<h3>6.7 Packaging and identity</h3>
+
+<div class="oq" id="oq-g1">
+  <div class="oq-head"><span class="id">OQ-G1</span><span class="q">Package decomposition and overlay implementation technology.</span></div>
+  <div class="oq-body"><dl>
+    <dt>Proposed decomposition</dt><dd><code>core</code> (op vocabulary, manifest format, writer), <code>vite-plugin</code> (stamper, manifest builder, middleware, editor mount), <code>agent</code> (in-frame runtime), <code>overlay</code> (editor UI), <code>snap</code> (guides/snapping engine, standalone: no maintained equivalent has existed since moveable's dormancy, PAS §4).</dd>
+    <dt>Open</dt><dd>Overlay technology: React (fast to build; imposes a runtime) versus framework-free web components (heavier to build; no host conflicts). Monorepo timing.</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-g2">
+  <div class="oq-head"><span class="id">OQ-G2</span><span class="q">License.</span></div>
+  <div class="oq-body"><dl>
+    <dt>Options</dt><dd>MIT or Apache-2.0 (adds an explicit patent grant; Onlook's choice). Constraint either way: no AGPL dependencies (stagewise, Scramjet, wombat, Webstudio are reference-only; PAS §4).</dd>
+  </dl></div>
+</div>
+
+<div class="oq" id="oq-g3">
+  <div class="oq-head"><span class="id">OQ-G3</span><span class="q">Name.</span></div>
+  <div class="oq-body"><dl>
+    <dt>Status</dt><dd>Unresolved. "Mirror" is the working metaphor.</dd>
+  </dl></div>
+</div>
+
+<h2 id="s7">7. Prototype plan</h2>
+<div class="tablewrap">
+  <table class="spec">
+    <tr><th>ID</th><th>Scope</th><th>Exit criteria</th><th>Resolves</th></tr>
+    <tr>
+      <td class="id">P0</td>
+      <td>Single-process topology (§5.1) in launch mode on Vite: <code>npx mirror</code> boots the project's dev server with the plugin; stamper emits structural IDs; writer builds the index from disk; shell at <code>/__mirror</code>; same-origin iframe; click → co-highlight → display file and AST path. Writer accepts and validates ops but performs no write.</td>
+      <td>Mapping correct on a reference project of ≥200 components including mapped lists and shared components; stamper and writer IDs agree on every element. Budget B measured: scripted single-class write → HMR repaint → re-index, p50/p95 reported. Geometry sync sustains 60&nbsp;Hz during a scripted drag. ID stability: a class edit leaves all IDs in the file unchanged; inserting a sibling changes exactly the later siblings' IDs. Security check (R-9): a page on another origin cannot POST an op (preflight rejected); a request with a non-loopback <code>Host</code> is rejected; an op without the token is rejected; the app retains its cookies and localStorage inside the iframe.</td>
+      <td>OQ-B1 launch viability; R-10 in practice; OQ-B4 geometry-sync cost; R-9 enforceability.</td>
+    </tr>
+    <tr>
+      <td class="id">P1</td>
+      <td>One gesture end to end: select, padding drag, Tailwind class write via recast, formatter pass, undo. Op coalescing and debounced commit.</td>
+      <td>Budget A ≤ 16.7&nbsp;ms per frame during drag, with the inline-style preview and the safelist in place. One-line diff per coalesced edit. Undo restores byte-identical source. Zero diff on untouched constructs across the Utopia round-trip corpus. Write integrity (R-11): killing the process during a write leaves the file byte-identical to either the old or the new content; an op whose result fails to parse writes nothing; an op with a stale content hash is rejected.</td>
+      <td>OQ-D1, OQ-C3, OQ-F1 mechanics; OQ-D3 compiler sub-question.</td>
+    </tr>
+    <tr>
+      <td class="id">P2</td>
+      <td>Design annex for OQ-E1: the complete normative gesture-to-mutation table, including every refusal case and its user-facing reason.</td>
+      <td>Table reviewed and ratified; each row has a test fixture.</td>
+      <td>OQ-E1, OQ-E2.</td>
+    </tr>
+  </table>
+</div>
+<p>Packaging (OQ-G1) is decided after P1; earlier decomposition would freeze interfaces that P0/P1 exist to inform.</p>
+
+<h2 id="s8">8. Security considerations</h2>
+<h3>8.1 Threat model (MVP)</h3>
+<p>In scope: remote attackers reaching the dev server's endpoints from other origins (CSRF from a visited web page, DNS rebinding), and non-targeted misuse. Out of scope for the MVP: malicious code already executing in the host application's page or dev-server process. Rationale: a malicious npm package already has full machine access at install time (lifecycle scripts) and in the dev-server process (config, plugins, SSR), so the mirror's endpoint adds no capability such code lacks; the narrower attackers that the endpoint would newly enable (remote scripts loaded into the dev page, dev-time XSS) are addressed by the hardened mode (§8.3). The developer's own machine and browser are trusted.</p>
+<h3>8.2 Controls (MVP, R-9)</h3>
+<ol>
+  <li><b>Op grammar validation.</b> Before applying an op, the writer checks: class tokens match the Tailwind class grammar resolved from the project's configuration; text values are written as JSX text with <code>{</code>, <code>}</code>, <code>&lt;</code>, <code>&gt;</code> escaped as entities; prop values are literals only and the prop name is not in the excluded set (<code>href</code>, <code>src</code>, <code>srcset</code>, <code>action</code>, <code>formaction</code>, <code>on*</code>, <code>dangerouslySetInnerHTML</code>); the element ID resolves in the writer's own index (R-10) to a file that parses as JSX/TSX; every resolved path is within the project root after symlink resolution (R-7). Consequence: no request, however crafted, can cause code execution or write outside JSX attribute and text positions.</li>
+  <li><b>Host validation.</b> The plugin's middleware rejects requests whose <code>Host</code> header is not a loopback name, defeating DNS rebinding.</li>
+  <li><b>Custom header and session token.</b> Ops require a custom request header (which forces a CORS preflight, so no other origin can send one) and the session token: ≥128 bits from a CSPRNG, generated at server start, delivered to the shell page and held in a closure, never in storage or URLs. Simple-request POSTs (form-encoded or <code>text/plain</code>) are rejected regardless of body.</li>
+  <li><b>Agent never originates ops.</b> Only user gestures in the shell create ops. This costs nothing and keeps the hardened mode's contract intact.</li>
+  <li><b>Baseline (R-7).</b> Production refusal, loopback bind, project-root confinement, no third-party origins. A token becomes mandatory on the shell route itself, in addition to the writer, under any OQ-F2 remote mode.</li>
+</ol>
+<h3>8.3 Hardened mode (deferred, R-8)</h3>
+<p>A separate mirror process on its own port serves the shell and hosts the token and writer; the application runs on its usual port in its own process; the iframe becomes cross-origin, same-site (cookies and the application's storage unaffected); all DOM access goes through the agent's RPC; the writer accepts requests from the shell origin only. This closes the in-page adversary: application code cannot read the token or reach the writer, and can only spoof agent replies during a live user gesture, an effect bounded by control 1. The MVP keeps the agent interface RPC-shaped and the writer endpoint origin-checked so that this mode is an addition, not a rewrite. Trigger for building it: any OQ-F2 remote mode, or a demonstrated in-page abuse.</p>
+<h3>8.4 Residual risk (MVP)</h3>
+<p>Malicious code already running on the dev origin (a compromised dependency or a dev-time XSS) can obtain the token by patching the shell page and can submit ops. Under control 1 the effect is limited to cosmetic JSX edits (class strings, escaped text, literal non-URL props) that appear in the developer's diff. No code execution and no writes outside JSX positions are possible. Accepted for the MVP.</p>
+
+<h2 id="s9">9. Revision history</h2>
+<div class="tablewrap">
+  <table class="spec">
+    <tr><th>Rev</th><th>Date</th><th>Change</th></tr>
+    <tr><td class="id">1</td><td class="id">2026-09-01</td><td>Initial draft: settled constraints and open-question list, derived from the Prior-Art Survey.</td></tr>
+    <tr><td class="id">2</td><td class="id">2026-09-01</td><td>Reformatted as a normative RFC: added the AI editing note, terminology, requirement IDs (R-1…R-7), the §4.1 analysis of alternatives to build-time instrumentation, system overview with Figures 1–3, per-question decision criteria, measurable prototype exit criteria, and security considerations. No positions changed.</td></tr>
+    <tr><td class="id">3</td><td class="id">2026-09-01</td><td>Added OQ-B1 option 4 (parallel dev-server instance on its own port, same-origin, zero project-config changes, virtual-module capability); revised OQ-B1 criteria and provisional to a per-framework split; cross-referenced the virtual-module capability in OQ-F1. No other positions changed.</td></tr>
+    <tr><td class="id">4</td><td class="id">2026-09-01</td><td>Corrected OQ-B1: cookies are not port-isolated (RFC 6265 §8.5), narrowing option 4's origin cost to localStorage/IndexedDB, Origin-header checks, and pinned redirect URIs. Added OQ-B1 option 5 (same-port launcher: boots the project's dev server with the plugin on its usual port; zero repository changes, exact origin continuity) with a launch-mode comparison table; provisional updated to option 5 default, option 4 coexistence, option 1 committed/fallback. Noted in §4.1 that plugin registration can be performed by a launcher at boot time.</td></tr>
+    <tr><td class="id">5</td><td class="id">2026-09-01</td><td>Adopted the trust-split topology: added R-8 (the token, shell, and writer never share an origin, process, or port with application code; the agent holds no credential and never originates ops; the writer validates op grammar). Redrew Figure 1 for two processes and two origins (cross-origin, same-site iframe). Added terminology: mirror process, session token, launch mode, attach mode. Withdrew OQ-B1 options 1, 2, 4, 5 and reframed OQ-B1 as launch versus attach; resolved OQ-B4. Rewrote §8 with a threat model, controls, and residual risk. Extended P0 with security and cross-frame-latency exit criteria.</td></tr>
+    <tr><td class="id">6</td><td class="id">2026-09-01</td><td>Reverted the MVP to one process and one origin (shell at <code>/__mirror</code> on the dev server; launch mode <code>npx mirror</code> or config mode); deferred the rev 5 trust split to a hardened mode (R-8 marked deferred; attach mode and mirror process deferred with it). Added R-9 (cheap writer controls: op grammar with a prop exclusion list, Host check, custom header + token, JSX-only targets, agent never originates ops) and R-10 (structural IDs: <code>hash(file path, AST path)</code>; writer builds its index from disk; no transported manifest). Resolved OQ-C1 by R-10; amended OQ-B1, OQ-B4, OQ-C3, OQ-D1, OQ-F1 (Tailwind-JIT sub-question) accordingly. Redrew Figure 1; updated Figure 2 steps 4–9 and §5.3. Rewrote §8 with the MVP threat model, controls, deferred hardened mode, and residual risk. Updated P0 exit criteria.</td></tr>
+    <tr><td class="id">7</td><td class="id">2026-09-01</td><td>Resolved OQ-E1 (flow-respecting; no detach in v1; reparenting refused), OQ-E2 (tiered gesture set: tier 1 = text, color/typography, padding/margin/gap; tier 2 = resize, reorder, marquee, delete, duplicate; tier 3 refused), and OQ-D3 (always snap to the project's Tailwind scale; gestures never produce arbitrary values).</td></tr>
+    <tr><td class="id">8</td><td class="id">2026-09-01</td><td>Added R-11 (write integrity: preview never writes; parse and format before write; atomic rename; one op one file; content-hash precondition; no version-control operations; invertible ops). Resolved OQ-F1: continuous debounced commits with a session-diff view; preview by inline style plus a Tailwind safelist of producible classes; reconciliation by class-list check after HMR. Withdrew the virtual-module idea. Extended P1 exit criteria with write-integrity tests.</td></tr>
+    <tr><td class="id">9</td><td class="id">2026-09-01</td><td>Added OQ-B5 (iframe under a reserved route versus in-page injection versus different origin), resolved as the iframe route with the comparison recorded; in-page noted as a possible later toolbar mode. Added OQ-B6 (URL mapping: path forwarding, following navigation, reload, frame busting) as open with proposed rules.</td></tr>
+    <tr><td class="id">10</td><td class="id">2026-09-01</td><td>Moved the documents into the <code>editable-mirror</code> repository (<code>docs/</code>) and introduced decision records DR-0001 … DR-0007 under <code>docs/decisions/</code>, each recording the alternatives and arguments behind revs 2–9; added editing rule 8 requiring a decision record per trade-off. Expanded OQ-B6 with the full alternative set (seven URL schemes, three navigation-following mechanisms, three selection-persistence options) and a provisional recommendation. No positions changed.</td></tr>
+  </table>
+</div>
+
+<h2 id="s10">10. References</h2>
+<ol>
+  <li><cite>The Editable Mirror — Prior-Art Survey</cite>, 2026-09-01 (docs/prior-art-survey.html). All PAS citations refer to its sections: §1 landscape, §2 mapping, §3 write-back, §4 mirror and editing.</li>
+  <li>Decision records DR-0001 … DR-0007, docs/decisions/. Each records the alternatives and arguments behind a revision.</li>
+  <li>React PR #28265 (removal of <code>_debugSource</code>); issues #31981, #32574.</li>
+  <li>Onlook, <code>packages/parser</code> (Apache-2.0): stamping, per-op writers, instance resolution.</li>
+  <li>Lovable, "Visual Edits" engineering post: compile-time IDs, client-side AST, deterministic fast path.</li>
+  <li>WordPress Gutenberg block serialization and validation documentation.</li>
+  <li>RFC 2119, RFC 8174 (key words).</li>
+</ol>
+
+<footer>
+  <p>RFC-0001 rev 10 · Draft · Repository: <code>~/Developer/editable-mirror</code>. The markdown mirror of this document is <code>docs/rfc-0001-editable-mirror.md</code>; this HTML version is canonical because it carries the figures. Decision records: <code>docs/decisions/</code>.</p>
+</footer>
+
+</div>
+
+</html>

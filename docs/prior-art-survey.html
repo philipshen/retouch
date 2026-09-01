@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Editable Mirror</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Spline+Sans+Mono:wght@400;500&display=swap">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #FBFBFA;
+    --surface: #F2F3F1;
+    --surface-2: #E9EBE8;
+    --ink: #191D21;
+    --ink-2: #4A5259;
+    --muted: #7A828A;
+    --line: #DDE0DC;
+    --accent: #0B72CE;
+    --accent-ink: #0864B4;
+    --accent-soft: #E3F0FB;
+    --good: #1F7A4D;
+    --good-soft: #E1F1E8;
+    --warn: #8A6400;
+    --warn-soft: #F5EDD2;
+    --bad: #B3352E;
+    --bad-soft: #F8E6E4;
+    --code-bg: #EEF0ED;
+    --display: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+    --body: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --mono: "Spline Sans Mono", "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15181B;
+      --surface: #1D2126;
+      --surface-2: #252A30;
+      --ink: #E8EAEC;
+      --ink-2: #B4BBC2;
+      --muted: #828A92;
+      --line: #2E343B;
+      --accent: #4DA3EE;
+      --accent-ink: #6FB6F5;
+      --accent-soft: #16283A;
+      --good: #4CBB82;
+      --good-soft: #16301F;
+      --warn: #D9AE3E;
+      --warn-soft: #33290F;
+      --bad: #E0716B;
+      --bad-soft: #3A1E1C;
+      --code-bg: #21262C;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15181B;
+    --surface: #1D2126;
+    --surface-2: #252A30;
+    --ink: #E8EAEC;
+    --ink-2: #B4BBC2;
+    --muted: #828A92;
+    --line: #2E343B;
+    --accent: #4DA3EE;
+    --accent-ink: #6FB6F5;
+    --accent-soft: #16283A;
+    --good: #4CBB82;
+    --good-soft: #16301F;
+    --warn: #D9AE3E;
+    --warn-soft: #33290F;
+    --bad: #E0716B;
+    --bad-soft: #3A1E1C;
+    --code-bg: #21262C;
+  }
+
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.65;
+  }
+
+  a { color: var(--accent-ink); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+  a:hover { border-bottom-color: var(--accent); }
+  a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+  .page { max-width: 1020px; margin: 0 auto; padding: 0 28px 96px; }
+
+  /* ---------- header ---------- */
+  header.masthead { padding: 72px 0 40px; border-bottom: 2px solid var(--ink); margin-bottom: 8px; }
+  .kicker {
+    font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent-ink); margin-bottom: 18px;
+  }
+  h1 {
+    font-family: var(--display); font-weight: 800; font-size: clamp(40px, 6vw, 64px);
+    line-height: 1.02; letter-spacing: -0.02em; text-wrap: balance; margin-bottom: 20px;
+  }
+  .standfirst { font-size: 20px; color: var(--ink-2); max-width: 62ch; text-wrap: pretty; }
+  .standfirst em { font-style: italic; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 10px 28px; margin-top: 26px; font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+
+  /* ---------- verdict ---------- */
+  .verdict { margin: 40px 0 8px; padding: 26px 28px; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 6px; }
+  .verdict h2 { font-family: var(--display); font-size: 15px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-ink); margin-bottom: 12px; }
+  .verdict p { max-width: 72ch; }
+  .verdict p + p { margin-top: 10px; }
+
+  /* ---------- TOC ---------- */
+  nav.toc { margin: 34px 0 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 6px 28px; }
+  nav.toc a { display: flex; gap: 12px; align-items: baseline; padding: 7px 4px; font-family: var(--display); font-weight: 500; font-size: 15px; color: var(--ink); border-bottom: 1px solid var(--line); }
+  nav.toc a:hover { color: var(--accent-ink); border-bottom-color: var(--accent); }
+  nav.toc .n { font-family: var(--mono); font-size: 12px; color: var(--accent-ink); }
+
+  /* ---------- sections ---------- */
+  section { margin-top: 72px; }
+  .sec-head { display: flex; align-items: baseline; gap: 16px; border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 26px; }
+  .sec-head .n { font-family: var(--mono); font-size: 15px; color: var(--accent-ink); }
+  h2.sec-title { font-family: var(--display); font-weight: 700; font-size: clamp(26px, 3.4vw, 34px); letter-spacing: -0.015em; text-wrap: balance; }
+  h3 { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: -0.01em; margin: 40px 0 12px; text-wrap: balance; }
+  h4 { font-family: var(--display); font-weight: 700; font-size: 16px; margin: 26px 0 8px; }
+  p, ul, ol { max-width: 72ch; }
+  p + p { margin-top: 12px; }
+  ul, ol { padding-left: 22px; margin: 12px 0; }
+  li { margin: 7px 0; text-wrap: pretty; }
+  li::marker { color: var(--muted); }
+  strong { font-weight: 600; }
+
+  code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+
+  .lede { font-size: 18.5px; color: var(--ink-2); max-width: 68ch; margin-bottom: 20px; }
+
+  /* ---------- chips ---------- */
+  .chip {
+    display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 500;
+    letter-spacing: .06em; padding: 2px 8px; border-radius: 999px; vertical-align: 1px; white-space: nowrap;
+  }
+  .chip.alive { background: var(--good-soft); color: var(--good); }
+  .chip.dormant { background: var(--warn-soft); color: var(--warn); }
+  .chip.dead { background: var(--bad-soft); color: var(--bad); }
+  .chip.closed { background: var(--surface-2); color: var(--ink-2); }
+  .chip.lic { background: var(--accent-soft); color: var(--accent-ink); }
+
+  /* ---------- tables ---------- */
+  .tablewrap { overflow-x: auto; margin: 18px 0 8px; border: 1px solid var(--line); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 14.5px; }
+  th {
+    font-family: var(--display); font-weight: 700; font-size: 12.5px; letter-spacing: .05em; text-transform: uppercase;
+    text-align: left; color: var(--ink-2); background: var(--surface); padding: 10px 14px; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0;
+  }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td.name { font-family: var(--display); font-weight: 700; font-size: 14px; white-space: nowrap; }
+  td .sub { display: block; font-family: var(--body); font-weight: 400; color: var(--muted); font-size: 12.5px; white-space: normal; }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 13px; white-space: nowrap; }
+  .tablenote { font-size: 13px; color: var(--muted); margin: 8px 2px 0; max-width: none; }
+
+  /* ---------- cards / callouts ---------- */
+  .callout { margin: 22px 0; padding: 18px 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+  .callout.key { border-left: 4px solid var(--accent); }
+  .callout.risk { border-left: 4px solid var(--bad); }
+  .callout h4 { margin: 0 0 8px; }
+  .callout p { font-size: 15.5px; }
+
+  .deepdive { margin: 26px 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .deepdive > .dd-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; padding: 14px 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .deepdive > .dd-head .t { font-family: var(--display); font-weight: 800; font-size: 18px; }
+  .deepdive > .dd-body { padding: 16px 20px 18px; }
+  .deepdive p { font-size: 15.5px; }
+  .deepdive ul { font-size: 15.5px; }
+  .dd-take { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); font-size: 15px; }
+  .dd-take .lbl { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-ink); margin-right: 8px; }
+
+  /* ---------- pipeline ---------- */
+  .pipeline { counter-reset: step; margin: 24px 0; display: grid; gap: 12px; }
+  .step { display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding: 16px 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    font-family: var(--mono); font-size: 18px; font-weight: 500; color: var(--accent-ink);
+    display: flex; align-items: flex-start; justify-content: center; padding-top: 2px;
+    border-right: 1px solid var(--line);
+  }
+  .step h4 { margin: 0 0 6px; }
+  .step p { font-size: 15px; max-width: none; }
+
+  /* ---------- footer ---------- */
+  footer { margin-top: 80px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--muted); }
+  footer p { max-width: none; }
+
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    header.masthead { padding-top: 48px; }
+    .step { grid-template-columns: 32px 1fr; gap: 12px; }
+  }
+</style>
+
+<div class="page">
+
+<header class="masthead">
+  <div class="kicker">Prior-art survey · open-source library concept</div>
+  <h1>The Editable Mirror</h1>
+  <p class="standfirst">Point a library at your website and get a Figma-grade editable mirror at a URL path — drag, align, retype — with every change written back to the real source code <em>deterministically</em>, no AI in the loop. This report surveys who has tried, what actually works, and which parts you can take.</p>
+  <div class="meta-row">
+    <span>Research date 2026-09-01</span>
+    <span>3 parallel research tracks · ~60 projects examined</span>
+    <span>GitHub/npm stats verified live unless flagged</span>
+  </div>
+</header>
+
+<div class="verdict">
+  <h2>The verdict up front</h2>
+  <p><strong>The niche is real and open.</strong> Every deterministic visual-edit system that exists today either owns the whole dev environment (Onlook, Utopia, Codux) or is locked inside a hosted AI builder (Lovable, v0, Replit, Bolt). Nothing ships as <em>"npm install, mount an editable mirror at <code>/edit</code>, point it at your already-running app."</em> That exact quadrant — embeddable, deterministic, bring-your-own-dev-server — is empty, and 2025–26 market behavior (every major AI builder shipping a deterministic "visual edits" fast path; users revolting when v0 put simple edits back behind AI credits) says demand is proven.</p>
+  <p><strong>The pipeline is also proven.</strong> Onlook, Lovable, and Codux independently converged on the same architecture: stamp stable IDs onto JSX at build time → resolve the clicked DOM node to a source span → apply a typed AST mutation → reprint with the project's own Prettier → let HMR close the loop. You would not be inventing the mechanism, you would be unbundling it into a library. One hard platform fact shapes everything: <strong>React 19 deleted <code>_debugSource</code></strong>, killing all runtime DOM→source inspection — build-time instrumentation is now the only durable substrate.</p>
+</div>
+
+<nav class="toc" aria-label="Contents">
+  <a href="#landscape"><span class="n">01</span> The landscape: who has tried this</a>
+  <a href="#mapping"><span class="n">02</span> Mapping a DOM node back to source</a>
+  <a href="#writeback"><span class="n">03</span> Writing code back deterministically</a>
+  <a href="#mirror"><span class="n">04</span> The mirror &amp; the editing feel</a>
+  <a href="#failures"><span class="n">05</span> Failure modes to design for</a>
+  <a href="#blueprint"><span class="n">06</span> The gap, the blueprint, the parts bin</a>
+</nav>
+
+<!-- ================= SECTION 1 ================= -->
+<section id="landscape">
+  <div class="sec-head"><span class="n">01</span><h2 class="sec-title">The landscape: who has tried this</h2></div>
+  <p class="lede">Roughly sixty projects fall into four camps. Only the first camp writes back to real source code. The others own the data model, and their source code is an export artifact — a fundamentally different product, however similar the canvas looks.</p>
+
+  <h3>Camp 1 — visual edits that land in your actual source</h3>
+
+  <div class="deepdive">
+    <div class="dd-head"><span class="t">Onlook</span><span class="chip lic">Apache-2.0</span><span class="chip alive">ACTIVE · 26.6k ★</span></div>
+    <div class="dd-body">
+      <p>The closest existing thing to the idea — an open-source "Cursor for designers": a Figma-like canvas over a real React + Tailwind app with deterministic write-back (AI chat is a separate, additional path). Verified from source: a Babel pass (<a href="https://github.com/onlook-dev/onlook/tree/main/packages/parser/src">packages/parser</a>) injects a persistent <code>data-oid</code> attribute into every JSX element <em>in your files</em>; an index maps oid → (file, AST span). Each edit type has its own deterministic writer module — <code>style.ts</code> (Tailwind merge), <code>text.ts</code>, <code>insert/remove/move/group/layout/image</code> — then Prettier normalizes. Edits are two-track: instant optimistic DOM mutation in the iframe, plus the same change as an AST patch that HMR confirms. Its in-frame agent exposes a ~40-method postMessage RPC (via Penpal) that is effectively a published spec of what an editing agent must do.</p>
+      <p class="dd-take"><span class="lbl">Where it falls short of the idea</span> It owns the whole environment — your code loads into its CodeSandbox-based cloud container; you cannot point it at an existing running site. React/Next + Tailwind only. It persists <code>data-oid</code> noise into your repo. It is a hosted product, not an embeddable library.</p>
+    </div>
+  </div>
+
+  <div class="deepdive">
+    <div class="dd-head"><span class="t">Lovable "Visual Edits"</span><span class="chip closed">PROPRIETARY</span><span class="chip alive">ACTIVE</span></div>
+    <div class="dd-body">
+      <p>The best published blueprint of the exact write-back pipeline (<a href="https://lovable.dev/blog/visual-edits">engineering post</a>). A custom Vite plugin (<code>lovable-tagger</code>, visible on npm) assigns stable per-element IDs at compile time. The whole project syncs into the browser as a Babel/SWC AST. Simple edits — text, color, spacing, Tailwind classes — are declarative client-side AST mutations applied optimistically to the DOM, with a client-side Tailwind generator reading the project's config so new classes render before saving. Explicitly deterministic ("not AI") and explicitly anti-regex. Complex structural edits escalate to the agent.</p>
+      <p class="dd-take"><span class="lbl">Lesson</span> The hybrid is the shipped consensus: deterministic fast path for property-level edits, AI escape hatch for structure. Locked inside their hosted builder — the mechanism is free to copy, the product is not reusable.</p>
+    </div>
+  </div>
+
+  <div class="deepdive">
+    <div class="dd-head"><span class="t">v0 Design Mode · Replit Visual Editor · Bolt</span><span class="chip closed">PROPRIETARY</span><span class="chip alive">ACTIVE</span></div>
+    <div class="dd-body">
+      <p>The 2025–26 convergence: every major AI app builder shipped a visual-edit mode. v0's <a href="https://v0.app/docs/design-mode">Design Mode</a> applies typography/color/spacing edits without AI or credits, snaps values to the project's Tailwind scale, understands shadcn/ui, and serializes each session into a normal reviewable diff. Its sharpest UX idea: selecting an element <em>co-highlights every element rendered from the same code</em> and edits them together — the honest answer to one-source-many-instances. Replit's docs likewise confirm simple edits "update the source code directly without consuming AI credits." Bolt's inspector, by contrast, only feeds selection context to the LLM.</p>
+      <p class="dd-take"><span class="lbl">Market signal</span> When a v0 redesign put simple edits back behind AI credits, users revolted publicly. People specifically want the deterministic, free, instant path — the premise of this library.</p>
+    </div>
+  </div>
+
+  <div class="deepdive">
+    <div class="dd-head"><span class="t">Utopia</span><span class="chip lic">MIT</span><span class="chip dead">DEAD · 3.8k ★</span></div>
+    <div class="dd-body">
+      <p>The maximalist attempt: a browser IDE where the canvas <em>runs the actual React app</em> (parsed, transpiled, evaluated in-browser), with a formatting-preserving parser-printer giving full two-way sync between canvas and code, and VS Code embedded. Design values worth adopting verbatim: "whatever Utopia doesn't understand, it leaves as-is" and "allergic reactions to unnecessary code changes." Effectively dead since late 2024; utopia.app now serves a contact form.</p>
+      <p class="dd-take"><span class="lbl">Mineable</span> Its parser-printer test suites (<code>parser-printer-code-preservation.spec.ts</code> and friends) are a ready-made spec of JSX round-trip edge cases — comments, conditionals, arbitrary expressions, UID stability. MIT, free to mine. Also a warning: owning a whole in-browser toolchain is enormous.</p>
+    </div>
+  </div>
+
+  <div class="deepdive">
+    <div class="dd-head"><span class="t">Codux (Wix)</span><span class="chip closed">CLOSED</span><span class="chip dead">DISCONTINUED</span></div>
+    <div class="dd-body">
+      <p>Wix's desktop visual IDE for React: real project files, git, two-way sync through a typed "ASTModification" API over the TypeScript AST. Notably, their compile transformers mapped each React Fiber to the syntax node that created it — including <em>which expression, loop, or condition</em> — i.e. they instrumented expressions, not just elements, to explain rendered output from mapped lists and conditionals. Discontinued; codux.com now redirects to Dazl, an AI generation product.</p>
+      <p class="dd-take"><span class="lbl">Lesson</span> Commercial validation of AST-modification write-back — and a second successor (after Tempo's pivot) abandoning the deterministic lane for AI generation, leaving it emptier.</p>
+    </div>
+  </div>
+
+  <h4>Smaller and adjacent entries</h4>
+  <ul>
+    <li><strong>Impulse</strong> <span class="chip lic">MIT</span> <span class="chip dead">DEAD 2023</span> — the lightest-weight variant ever shipped: an in-browser editor injected into your dev app that toggled Tailwind classes and wrote JSX files directly via the browser File System Access API. No server, no SaaS, deterministic. 458 stars, abandoned — but the architecture sketch is exactly "library-weight."</li>
+    <li><strong>stagewise</strong> <span class="chip lic">AGPL-3.0</span> <span class="chip alive">ACTIVE · 6.8k ★</span> — proved the injection UX the mirror wants: <code>npx stagewise</code> proxies your running dev server and injects a toolbar into the proxied page, zero app changes. But its write path is prompting AI agents, not deterministic edits, and it has since pivoted to a full agentic IDE.</li>
+    <li><strong>Tempo Labs</strong> <span class="chip closed">PIVOTED</span> — YC-funded "Figma-like editor for real React code," pivoted to an agent factory in 2025. Another vacancy in the lane.</li>
+    <li><strong>Pinegrow</strong> <span class="chip closed">PROPRIETARY</span> <span class="chip alive">ACTIVE</span> — long-lived desktop app that opens and saves plain HTML/CSS files directly, with a Tailwind visual editor add-on. Proof that deterministic file-level visual editing sells; not component-aware.</li>
+    <li><strong>Figma Make, local-codebase beta (2026)</strong> — connect your repo, select elements in the live app, an agent edits code locally. Same thesis, agent-mediated, top-of-market demand proof.</li>
+  </ul>
+
+  <h3>Camp 2 — the editor owns the truth; code is an export</h3>
+  <p>These look like the idea on a screenshot but are structurally different: the canonical document is a proprietary schema, and your source is either never touched or generated one-way.</p>
+  <div class="tablewrap">
+    <table>
+      <tr><th>Project</th><th>Status</th><th>Where edits live</th><th>Worth taking</th></tr>
+      <tr><td class="name">Plasmic<span class="sub">~7k ★, MIT SDKs / AGPL platform</span></td><td><span class="chip alive">ACTIVE</span></td><td>Studio's proprietary model; codegen overwrites generated files each sync, never your JSX</td><td>The "blackbox" owned-vs-generated file contract; the <code>/plasmic-host</code> trick — the user-origin iframe pulls the editor runtime into itself, so component access is same-origin</td></tr>
+      <tr><td class="name">Builder.io<span class="sub">8.8k ★ SDKs, MIT</span></td><td><span class="chip alive">ACTIVE</span></td><td>JSON content documents in Builder's cloud; 2025's "Fusion" writes real code via PRs but with AI in the loop</td><td>Typed component-registration contract; its productized X-Frame-Options escape ladder (extension → hosted proxy → allowlist)</td></tr>
+      <tr><td class="name">Webstudio<span class="sub">8.9k ★, AGPL</span></td><td><span class="chip alive">ACTIVE</span></td><td>Typed site schema in Postgres; one-way React export</td><td>The best open production visual-CSS editor engine — full property coverage, breakpoints, tokens (ideas only; AGPL)</td></tr>
+      <tr><td class="name">Makeswift<span class="sub">runtime MIT, builder hosted</span></td><td><span class="chip alive">ACTIVE</span></td><td>Makeswift's cloud data, fetched at runtime by your Next.js app</td><td>The cleanest "builder iframes your real running app and overlays editing chrome" architecture — directly relevant to the mirror</td></tr>
+      <tr><td class="name">TeleportHQ<span class="sub">1.1k ★, MIT generators</span></td><td><span class="chip alive">ACTIVE</span></td><td>UIDL — an open framework-agnostic UI IR; one-way codegen to React/Vue/Angular</td><td>The most complete open UI-IR design to study; explicitly no code→IR parser</td></tr>
+      <tr><td class="name">Framer<span class="sub">hosted</span></td><td><span class="chip alive">ACTIVE</span></td><td>Hosted canvas model; no code export at all</td><td>Nothing mechanically; it is the UX bar for canvas feel</td></tr>
+    </table>
+  </div>
+
+  <h3>Camp 3 — embeddable editor shells (JSON out, no source)</h3>
+  <ul>
+    <li><strong>Puck</strong> <span class="chip lic">MIT</span> <span class="chip alive">ACTIVE · 13.2k ★</span> — best-in-class embeddable React editor: registered components with typed fields, drag/drop with slots, inline text editing, overlay portals, same-origin iframe preview with host-style syncing. Emits a JSON data payload you persist. The editor <em>shell</em> is plausibly reusable as the mirror's UI layer.</li>
+    <li><strong>GrapesJS</strong> <span class="chip lic">BSD-3</span> <span class="chip alive">ACTIVE · 26.2k ★</span> — the largest OSS builder framework, and the only one that ingests arbitrary existing HTML (lossily, into its own component model; export replaces source). Proof that point-at-existing-markup ingestion is tractable at the DOM level.</li>
+    <li><strong>Craft.js</strong> <span class="chip lic">MIT</span> <span class="chip dormant">DORMANT · 8.7k ★</span> — headless editor-state engine; its query/actions API (<code>setProp</code>, add, move, undo history) is a clean reference for a deterministic edit-operation log — exactly the shape a code writer wants to consume.</li>
+    <li><strong>Silex</strong> <span class="chip lic">AGPL</span> <span class="chip alive">ACTIVE</span> — GrapesJS-based libre builder; notable for targeting files a developer keeps in git (11ty), and for shipping an MCP server inside the editor.</li>
+  </ul>
+
+  <h3>Camp 4 — the mass-market proof: WordPress Gutenberg</h3>
+  <div class="callout key">
+    <h4>Deterministic visual→text round-trip already runs ~41% of the web</h4>
+    <p>Gutenberg serializes visual edits into HTML comments with inline JSON attributes (<code>&lt;!-- wp:image {...} --&gt;…&lt;!-- /wp:image --&gt;</code>), parsed back by a formal grammar. Three of its rules transfer directly: <strong>(a)</strong> each attribute lives in exactly one place — either the JSON or "sourced" from the markup itself, never duplicated; <strong>(b)</strong> on load, the editor re-runs each block's pure <code>save()</code> and validates it against the stored markup, surfacing mismatches as recoverable "invalid blocks" instead of silently clobbering hand edits — the proven pattern for coexisting with humans editing the same artifact; <strong>(c)</strong> a spec'd grammar keeps parsing testable. Determinism came from owning the file format; a JSX editor can't own the format, but can adopt all three disciplines.</p>
+  </div>
+</section>
+
+<!-- ================= SECTION 2 ================= -->
+<section id="mapping">
+  <div class="sec-head"><span class="n">02</span><h2 class="sec-title">Mapping a DOM node back to source</h2></div>
+  <p class="lede">The whole idea stands or falls on one primitive: click a rendered element, get the exact source span that produced it. The history here has a hard break in it.</p>
+
+  <h3>The React 19 extinction event</h3>
+  <p>For years, every click-to-source tool free-rode on one mechanism: Babel's dev transform injected <code>__source={fileName, lineNumber, columnNumber}</code> into every JSX element, and React exposed it as <code>fiber._debugSource</code>. <a href="https://github.com/facebook/react/pull/28265">React PR #28265</a> removed it in React 19 (with <code>findFiberByHostInstance</code>), and 19.2's <code>jsxDEV</code> no longer receives source at all. This broke LocatorJS's runtime mode, click-to-component, react-dev-inspector, code-inspector's fiber path — the issues (<a href="https://github.com/facebook/react/issues/31981">#31981</a>, <a href="https://github.com/facebook/react/issues/32574">#32574</a>) remain open with no blessed replacement. The official direction, Owner Stacks (<code>captureOwnerStack()</code>), identifies the component usage chain via error-stack symbolication — not the clicked element's JSX callsite — and the community verdict is "hacky or fragile."</p>
+  <div class="callout risk">
+    <h4>Design consequence</h4>
+    <p>Never depend on framework internals. Everything still working in 2026 — Onlook, Lovable, code-inspector-plugin, LocatorJS's plugin mode — stamps elements <strong>at compile time</strong>. A bundler plugin you control is the only durable substrate, and it conveniently bounds "any website" to "any site whose build you can instrument," which is what every working system quietly accepts.</p>
+  </div>
+
+  <h3>The stamping state of the art</h3>
+  <div class="tablewrap">
+    <table>
+      <tr><th>Tool</th><th>Status</th><th>Mechanism</th><th>Coverage</th></tr>
+      <tr><td class="name">code-inspector-plugin<span class="sub">MIT · 3k ★</span></td><td><span class="chip alive">ACTIVE</span></td><td>Build plugin injects source-path data attributes; Alt+Shift hover mask; opens IDE via <code>launch-ide</code></td><td>The widest matrix anywhere: webpack/vite/rspack/esbuild/turbopack/farm/mako × react/vue/preact/solid/qwik/svelte/astro — the best open catalog of per-bundler injection code</td></tr>
+      <tr><td class="name">LocatorJS<span class="sub">MIT (npm) · 1.8k ★</span></td><td><span class="chip alive">ACTIVE</span></td><td>Babel plugin assigns per-expression IDs surfaced as <code>data-locatorjs-id</code>; runtime overlay reads them</td><td>React/Preact/Solid; known bug: stamping Fragments (which reject arbitrary props) — only stamp real elements</td></tr>
+      <tr><td class="name">Onlook <code>data-oid</code><span class="sub">Apache-2.0</span></td><td><span class="chip alive">ACTIVE</span></td><td>IDs written <em>into your source files</em> and persisted; survive rebuilds, moves, HMR</td><td>React/Next; pollutes the repo — the price of stability</td></tr>
+      <tr><td class="name">lovable-tagger<span class="sub">npm, dev-only</span></td><td><span class="chip alive">ACTIVE</span></td><td>Vite plugin tags emitted elements only; repo stays clean; IDs recomputed per build</td><td>The ephemeral counterpoint to Onlook's persistence</td></tr>
+      <tr><td class="name">vite-plugin-vue-tracer<span class="sub">antfu, MIT</span></td><td><span class="chip alive">ACTIVE</span></td><td>Resolves locations via Vite's internal source maps — <strong>no DOM attributes at all</strong></td><td>Vue; the cleanest design when you control the compiler</td></tr>
+      <tr><td class="name">Svelte <code>__svelte_meta</code><span class="sub">built-in</span></td><td><span class="chip alive">ACTIVE</span></td><td>Dev mode attaches <code>{loc: {file, line, column}}</code> to <em>every DOM node</em> natively</td><td>The best framework story — the mapping layer is free on Svelte</td></tr>
+    </table>
+  </div>
+
+  <h4>Persistent vs ephemeral IDs — the unresolved trade-off</h4>
+  <p>Onlook persists IDs into source: stable across sessions and edits, ugly in the repo. Lovable and code-inspector stamp only the build output: clean repo, but <code>file:line</code> drifts the moment you write an edit back, so IDs must be recomputed after every write. A promising best-of-both (not shipped anywhere yet): ephemeral IDs whose build-time manifest stores <strong>byte offsets</strong> per element — enabling surgical <code>magic-string</code> writes — recomputed per build, with stale IDs treated as fatal.</p>
+
+  <h3>The cleverest trick in the field: stega</h3>
+  <p>Sanity's visual editing (MIT, active) pairs <strong>Content Source Maps</strong> (JSON mapping each query-result field to its document path) with <strong>stega</strong>: the client appends the mapping, encoded as invisible zero-width unicode (a base-4 alphabet of U+200B/C/D and U+FEFF), <em>inside every rendered string</em>. An overlay then scans DOM text nodes, decodes, and draws click-to-edit affordances — mapping that survives any DOM transformation because it travels inside the content. The encoder is <code>@vercel/stega</code> (MPL-2.0); Vercel and Netlify visual editing build on the same pattern. Known hazards are documented: broken string comparisons, corrupted slugs/URLs, payload bloat.</p>
+  <p><strong>Transferable idea:</strong> stega-encode <code>file:line</code> into rendered strings and you get zero-build-integration mapping for text nodes — a complement to attribute stamping, covering only text but requiring nothing from the bundler.</p>
+
+  <h3>A browser-blessed convention you can ride</h3>
+  <p>Chrome DevTools' Automatic Workspace Folders (default since M-136) has dev pages advertise their source root at <code>/.well-known/appspecific/com.chrome.devtools.json</code>; Vite, Angular CLI, and Astro already serve it. A mirror library can consume the same endpoint to discover the project root with zero configuration. Meanwhile Chrome Workspaces itself marks the outer boundary of browser-native write-back: CSS edits persist to mapped files (even through Sass source maps), but DOM/Elements-panel changes explicitly do not, and CSSOM-created rules (CSS-in-JS) have no text source to save to. Chrome drew the line at "edit the authoring representation or don't persist" — this library's entire value is crossing that line via the AST instead.</p>
+</section>
+
+<!-- ================= SECTION 3 ================= -->
+<section id="writeback">
+  <div class="sec-head"><span class="n">03</span><h2 class="sec-title">Writing code back deterministically</h2></div>
+  <p class="lede">"Deterministic" has a formal name: this is a bidirectional lens, and the shipped systems all work because they restrict themselves to lenses that are trivially well-behaved — editing literals, class strings, and child order. Nobody attempts general program inversion, and neither should this library.</p>
+
+  <h3>The toolchain (all MIT, all alive)</h3>
+  <div class="tablewrap">
+    <table>
+      <tr><th>Library</th><th>Last publish</th><th>Role in the pipeline</th></tr>
+      <tr><td class="name">recast</td><td class="num">2026-08</td><td>Lossless reprint: keeps a shadow copy of the original source and reprints <em>only mutated subtrees</em>, preserving quotes, indentation, and comments elsewhere — minimal diffs, review-friendly</td></tr>
+      <tr><td class="name">magic-string</td><td class="num">2026-08</td><td>Surgical string edits by byte offset, zero reformat risk — the strongest option <em>if</em> the annotation manifest records exact ranges</td></tr>
+      <tr><td class="name">jscodeshift</td><td class="num">2026-07</td><td>Codemod runner over recast; batch transforms</td></tr>
+      <tr><td class="name">ts-morph</td><td class="num">2026-04</td><td>Type-aware TS manipulation — e.g. answering "does this component forward <code>className</code>?"</td></tr>
+      <tr><td class="name">tailwind-merge</td><td class="num">2026-05</td><td>Deterministic class conflict resolution: classes bucketed per CSS property, variant-aware, last-wins — the semantics every Tailwind writer leans on</td></tr>
+    </table>
+  </div>
+  <p class="tablenote">The Prettier recipe, per Prettier's own guidance: never codemod through Prettier's parser API. Edit via AST or string, then run the <em>project's own</em> Prettier version and config on the changed file — a later format-on-save is then a no-op. Onlook vendors a prettier step for exactly this.</p>
+
+  <h3>How the two shipped systems actually write</h3>
+  <ul>
+    <li><strong>Onlook</strong> (verified in source): plain Babel parse, mutate, then <code>generate(ast, {retainLines: true})</code> — a full-file reprint with line retention, normalized by Prettier. They accepted losing byte-exact formatting. Tailwind edits: if <code>className</code> is a string literal → merge via their tailwind-merge wrapper; if it's a <code>cn(...)</code>/<code>clsx(...)</code> call → push a new string-literal argument; else insert the attribute. Known gap: template-literal classNames. Layout drags are written as flex/grid utility classes, not inline styles. Moves are tracked with sentinel <code>key</code> prefixes.</li>
+    <li><strong>Lovable</strong>: the same vocabulary, executed client-side against the synced AST, with a client-side Tailwind JIT reading the project config so unsaved edits render instantly. Save → write file → HMR.</li>
+  </ul>
+
+  <h3>Why every writer targets Tailwind</h3>
+  <p>A className string is a single deterministic write target: one attribute per element, value→class is (mostly) a pure function, conflict resolution is delegated to tailwind-merge semantics, and arbitrary values (<code>w-[137px]</code>) guarantee any drag result is expressible. Writing to CSS files instead reintroduces the genuinely hard problems — selector→element mapping is many-to-many, plus specificity and cascade reasoning — which is why nobody deterministic does it except Chrome-with-sourcemaps. The design tension to own: snap to the project's theme scale first, fall back to arbitrary values only when needed (v0 already does this). Conveniently, the target audience — AI-generated frontends — is overwhelmingly React + Tailwind.</p>
+
+  <h3>The theory, for load-bearing confidence</h3>
+  <p>The academic frame is <strong>bidirectional lenses</strong> (Foster/Pierce): a get/put pair obeying round-trip laws — precisely the guarantee "this visual edit maps to exactly one code edit, and re-rendering reproduces what you saw." <strong>Sketch-n-Sketch</strong> (Chugh et al., UChicago) is the deep exploration: it runs programs <em>in reverse</em>, tracing rendered values to source literals and inverting constant computations ("output-directed programming"). Its transferable core: <em>literal provenance is the tractable deterministic kernel; everything else is ambiguous and needs policy.</em> The shipped products are, in effect, Sketch-n-Sketch restricted to the kernel — which is exactly why they work.</p>
+</section>
+
+<!-- ================= SECTION 4 ================= -->
+<section id="mirror">
+  <div class="sec-head"><span class="n">04</span><h2 class="sec-title">The mirror &amp; the editing feel</h2></div>
+  <p class="lede">Two more subsystems make or break the product: how the editable mirror hosts the real page, and whether manipulating it feels like Figma. Both have rich prior art — and one surprising dead zone.</p>
+
+  <h3>Hosting the page: the architecture menu</h3>
+  <ul>
+    <li><strong>Iframe + cooperating in-frame agent over typed postMessage RPC</strong> — what every serious editor uses (Onlook, Plasmic, Builder, all the CMS bridges). Two protocols worth copying wholesale: Onlook's ~40-method preload API (<code>getElementAtLoc</code>, <code>updateStyle</code>, <code>startDrag</code>, <code>editText</code>, <code>captureScreenshot</code>…) and Sanity's <code>@sanity/comlink</code> handshake (state machine, heartbeats, origin validation).</li>
+    <li><strong>Dev-server middleware mounting the editor at a path</strong> — a Vite/Next plugin serving the editor at <code>/__mirror</code>, iframing the app <em>same-origin</em>. Same-origin by construction kills the entire cross-origin pain list: X-Frame-Options, CSP frame-ancestors, cookie partitioning, postMessage origin dances. And the plugin is the same place the ID-stamping transform lives. <strong>This is the least-served quadrant in the whole survey.</strong></li>
+    <li><strong>CLI proxy</strong> (<code>npx mirror</code> à la stagewise) — proxy the running dev server, inject the agent script, for projects you can't add a plugin to. stagewise proved the UX then pivoted away.</li>
+    <li><strong>Full rewriting proxies for arbitrary sites</strong> — Ultraviolet, Scramjet (Rust/WASM JS rewriter on OXC, emits source maps), and Webrecorder's wombat are existence proofs that same-origin mirroring of <em>any</em> site is possible, and equally proof of the cost: CSP stripping, client-side cookie jars, neutralizing the target's own service worker, WebSocket tunneling. All the good code is AGPL. And Hypothesis Via is the decade-long cautionary tale — they shut their open proxy down because attackers used it to launder phishing URLs. Verdict: keep at most a thin localhost-only fallback; refuse third-party origins.</li>
+    <li><strong>rrweb</strong> — the wrong mirror for editing (its replica is inert by design: no framework state, edits clobbered by the next mutation batch), but its Mirror id-map and syncit's tiny <code>{action, id}</code> reverse-control messages are the proven template if a second-pane/second-machine mirror mode is ever wanted.</li>
+  </ul>
+
+  <div class="callout key">
+    <h4>Nobody has solved the one problem the mirror URL actually implies</h4>
+    <p>Extensive search found <strong>no OSS project that mirrors a live Vite/Next dev server, with working HMR, under a URL path</strong>. HMR websocket URLs are built from <code>location</code>, native ESM resolves against <code>location.origin</code>, and dev servers assume they own the root. The dev-server-plugin architecture sidesteps the problem (same origin, same server); a proxy architecture hits it head-on. Decide this early — it is the deepest technical fork in the project.</p>
+  </div>
+
+  <h3>The "feels really good" layer</h3>
+  <p>The editing physics are a genuinely open flank. The feature-complete OSS implementation of Figma-style handles — <strong>moveable</strong> and the Scena ecosystem (snappable with element guidelines, equal-spacing gap snapping, distance labels, group transforms, warp) — has been <strong>dormant since December 2023</strong> with ~450 open issues, while still serving ~611k weekly downloads. Nothing maintained replaced it; working smart-guide engines now live only inside editors.</p>
+  <ul>
+    <li><strong>Excalidraw's snapping engine</strong> (<code>packages/excalidraw/snapping.ts</code>, MIT) — the best modern reference: corner/center point snaps, equal-spacing gap snaps, an 8px threshold scaled by zoom, references from visible non-selected elements, per-drag caching.</li>
+    <li><strong>interact.js</strong> (MIT, alive) — the cleanest published architecture: headless, events-not-mutations, with snapping/restriction/aspect as composable modifier pipelines. Events-not-mutations fits a source-writing editor perfectly — the editor decides whether a "move" becomes a transform, a flex-order change, or a code edit.</li>
+    <li><strong>selecto</strong> — the standard marquee↔handles hand-off contract (press on selected → group drag; press on empty → marquee). <strong>VisBug</strong> (Apache-2.0) — per-tool module + hotkey architecture, dependency-free guides and measurement via <code>getBoundingClientRect</code> + 1px line elements, shadow-DOM-piercing hit testing.</li>
+    <li><strong>Overlay chrome</strong>: never inside the app's DOM — a custom element or portal outside <code>body</code> (Sanity mounts <code>&lt;sanity-visual-editing&gt;</code> exactly there), geometry synced via gBCR + ResizeObserver + MutationObserver, IntersectionObserver gating (Sanity only attaches to ≥30%-visible elements). Floating UI's <code>autoUpdate</code> + virtual elements solve toolbar anchoring across the iframe boundary. Text editing: per-element <code>contenteditable</code> (prefer <code>plaintext-only</code>), commit on blur/Escape, <code>beforeinput</code> interception — never <code>execCommand</code> (deprecated), never whole-page <code>designMode</code> (no commit boundary; your own UI becomes editable).</li>
+  </ul>
+  <p>A maintained, standalone smart-guides/snap engine would be valuable to the ecosystem independent of the mirror — a natural first extraction and adoption wedge.</p>
+</section>
+
+<!-- ================= SECTION 5 ================= -->
+<section id="failures">
+  <div class="sec-head"><span class="n">05</span><h2 class="sec-title">Failure modes to design for</h2></div>
+  <p class="lede">Each of these has a named precedent. Determinism means having an explicit policy for every one — including "refuse."</p>
+  <ul>
+    <li><strong>Mapped lists</strong> — N DOM nodes from one JSX callsite; a per-instance edit is inexpressible. Detect duplicate IDs and either edit all instances or refuse. v0's co-highlighting is the honest UI; Codux's expression-level instrumentation is the deep fix.</li>
+    <li><strong>Dynamic classNames</strong> — template literals (Onlook's known bug), <code>clsx(cond &amp;&amp; …)</code>, prop-driven styles. The only safe move is appending a literal (Onlook pushes an argument into <code>cn()</code>); conditional branches are untouchable.</li>
+    <li><strong>Third-party components</strong> — the annotator never saw their source; only the local usage site is editable, and whether <code>className</code> is forwarded is unknowable without type info (ts-morph can check).</li>
+    <li><strong>Non-Tailwind styling</strong> — CSS files/modules/styled-components reintroduce selector→element ambiguity. Reasonable v1 scope: Tailwind + inline style + literal props, which matches the AI-generated-frontend audience.</li>
+    <li><strong>Dynamic text</strong> — literal JSX text is safe; props/CMS/i18n text is not. Sanity's stega shows the deterministic answer for CMS text is a different pipeline (map to the content store, not the code).</li>
+    <li><strong>Concurrent hand edits</strong> — the file changed between annotation and write. Re-parse and re-resolve IDs before every write; treat stale ephemeral IDs as fatal; adopt Gutenberg's validate-then-flag recovery rather than silent clobbering. Figma-style multiplayer on source is text-level CRDT territory (Yjs; Zed's buffers) — punt in v1.</li>
+    <li><strong>Framework drift</strong> — never touch fibers (React 19 proved why). Happy corollary: the build-time architecture ports to Vue via sourcemap tracing and to Svelte via <code>__svelte_meta</code> essentially for free.</li>
+  </ul>
+</section>
+
+<!-- ================= SECTION 6 ================= -->
+<section id="blueprint">
+  <div class="sec-head"><span class="n">06</span><h2 class="sec-title">The gap, the blueprint, the parts bin</h2></div>
+
+  <h3>The open gap, precisely</h3>
+  <ul>
+    <li><strong>Packaging.</strong> No embeddable open-source library exists — everything deterministic owns the dev environment or lives in a hosted builder. "npm install → editable mirror at a path on your own dev server" is unoccupied.</li>
+    <li><strong>"Any website" ingestion.</strong> Only GrapesJS (lossy) and AI cloners touch it. Every working deterministic system requires instrumenting the build — honestly scoping the promise to "any site whose build you can instrument" is both necessary and sufficient for the target user.</li>
+    <li><strong>Framework breadth.</strong> Every deterministic write-back system is React+Tailwind only. code-inspector-plugin proves the mapping layer generalizes; nobody has built write-back on top for Vue/Svelte/Solid.</li>
+    <li><strong>Deterministic structural layout.</strong> The proven surface is text, classes, spacing, reorder. Drag-to-reflow for arbitrary code is where every competitor escalates to AI — the hard open problem and the sharpest differentiator if cracked (even partially, e.g. within flex/grid containers only).</li>
+    <li><strong>Editing physics.</strong> The Scena/moveable void: no maintained standalone smart-guides engine since 2023.</li>
+  </ul>
+
+  <h3>The convergent blueprint</h3>
+  <p>Assembled from what Onlook, Lovable, Codux, and the mapping tools independently converged on — no step is speculative:</p>
+  <div class="pipeline">
+    <div class="step"><div><h4>Instrument at build</h4><p>A Vite plugin (then webpack/turbopack via code-inspector's matrix) stamps every JSX host element with a stable ID → manifest of file + AST span (ideally byte offsets). Dev-only; repo stays clean. Discover the project root via <code>com.chrome.devtools.json</code>.</p></div></div>
+    <div class="step"><div><h4>Mount the mirror same-origin</h4><p>The same plugin serves the editor at <code>/__mirror</code>, iframing the app same-origin. An injected in-frame agent speaks a typed RPC (Onlook's preload API is the spec; comlink's handshake is the transport pattern). CLI-proxy fallback for uninstrumentable projects, localhost-only.</p></div></div>
+    <div class="step"><div><h4>Figma-grade overlay</h4><p>Selection chrome outside the app's DOM; marquee↔handles per selecto's contract; snapping from Excalidraw's math in an interact.js-style modifier pipeline; guides and measurements per VisBug; <code>contenteditable="plaintext-only"</code> for text.</p></div></div>
+    <div class="step"><div><h4>Two-track edits</h4><p>Every gesture applies instantly as an optimistic DOM mutation <em>and</em> is recorded as a typed operation (the Craft.js-shaped log): <code>setClasses</code>, <code>setText</code>, <code>setProp</code>, <code>insert</code>, <code>remove</code>, <code>reorder</code>. Undo/redo falls out of the log.</p></div></div>
+    <div class="step"><div><h4>Deterministic write-back</h4><p>Resolve ID → file + span; apply the operation via recast (minimal diffs) or magic-string (exact offsets); Tailwind values snap to the project scale, arbitrary values as fallback, conflicts via tailwind-merge semantics; run the project's own Prettier; HMR repaints the mirror and confirms the loop.</p></div></div>
+    <div class="step"><div><h4>Validate, never clobber</h4><p>Gutenberg's discipline: re-derive after every write, treat stale IDs as fatal, surface conflicts with recovery UI. Refusal with a reason ("this element comes from a list rendered at <code>Card.tsx:12</code>") is a feature, not a failure.</p></div></div>
+  </div>
+
+  <h3>The parts bin</h3>
+  <div class="tablewrap">
+    <table>
+      <tr><th>Asset</th><th>License</th><th>Take</th></tr>
+      <tr><td class="name">Onlook packages/parser</td><td><span class="chip lic">Apache-2.0</span></td><td>The whole ID pipeline, per-edit-type AST writers, instance-resolution algorithm, ~40-method in-frame RPC spec</td></tr>
+      <tr><td class="name">code-inspector-plugin</td><td><span class="chip lic">MIT</span></td><td>Per-bundler, per-framework injection code — the multi-framework mapping layer</td></tr>
+      <tr><td class="name">Utopia test corpus</td><td><span class="chip lic">MIT</span></td><td>JSX round-trip edge-case spec (format preservation, comments, conditionals, UID stability)</td></tr>
+      <tr><td class="name">recast · magic-string · tailwind-merge</td><td><span class="chip lic">MIT</span></td><td>The write path, off the shelf</td></tr>
+      <tr><td class="name">Excalidraw snapping.ts · interact.js · VisBug</td><td><span class="chip lic">MIT / Apache</span></td><td>Snap math · modifier-pipeline architecture · guides/measurement tools</td></tr>
+      <tr><td class="name">Sanity visual-editing + @vercel/stega</td><td><span class="chip lic">MIT / MPL-2.0</span></td><td>Overlay controller (observer stack, visibility gating), comlink handshake, stega text mapping</td></tr>
+      <tr><td class="name">Puck</td><td><span class="chip lic">MIT</span></td><td>Editor-shell UX: overlay portals, iframe style syncing, typed field panels</td></tr>
+      <tr><td class="name">Lovable blog · Gutenberg docs</td><td><span class="chip lic">public</span></td><td>The pipeline blueprint · the serialize-validate-recover discipline</td></tr>
+      <tr><td class="name">Avoid vendoring</td><td><span class="chip dead">AGPL</span></td><td>stagewise, Scramjet, wombat/wabac, Webstudio — ideas only, no code reuse</td></tr>
+    </table>
+  </div>
+
+  <h3>Positioning in one line</h3>
+  <p>Onlook proved the mechanism inside a walled product; Lovable, v0, and Replit proved the demand inside theirs; React 19 forced everyone onto the build-time architecture this library would need anyway; and the embeddable, framework-spanning, bring-your-own-dev-server version — the <em>library</em> — is still nobody's.</p>
+</section>
+
+<footer>
+  <p><strong>Verification notes.</strong> GitHub stars, npm publish dates, and repo activity were checked live on 2026-09-01. Verified against actual source: Onlook's parser and preload API, VisBug's tools, LocatorJS, rrweb internals, React PR #28265 and issues #31981/#32574, Chrome Workspaces docs, Sanity's STEGA docs. Reported but unverified (flagged in context): Codux internals (article paywalled; from excerpts), v0/Replit/Bolt/Tempo write-back internals, Vercel/Netlify toolbar injection points, and all "no X exists" negative claims — extensive search found nothing, which is not proof.</p>
+  <p style="margin-top:8px;">Compiled by Claude Code from three parallel research tracks: competitor landscape · browser overlay &amp; mirroring technology · deterministic DOM→source mapping and code rewriting.</p>
+</footer>
+
+</div>
+
+</html>
