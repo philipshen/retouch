@@ -7,7 +7,7 @@
 | Author | P. Shen |
 | Created | 2026-09-01 |
 | Product | Retouch — CLI `npx retouch`; route prefix `/rt/` (configurable); decided rev 11 (OQ-G3, DR-0008) |
-| Revised | 2026-09-01 (rev 15) |
+| Revised | 2026-09-01 (rev 16) |
 | Companion | Prior-Art Survey (`docs/prior-art-survey.html`), 2026-09-01 |
 | Decisions | `docs/decisions/` (DR-0001 … DR-0007); index in `docs/decisions/README.md` |
 
@@ -141,19 +141,19 @@ Each question states its options, the criteria that decide it, and a provisional
 ### 6.1 Scope
 
 **OQ-A1. Which build tools, frameworks, and styling systems does v1 support?**
-- Options: (1) Vite + React + Tailwind only. (2) Add Next.js (webpack/turbopack) at launch. (3) Framework-agnostic mapping from the start, following the code-inspector-plugin bundler matrix.
-- Criteria: share of target users covered per unit of stamper/writer surface area; each additional bundler multiplies transform-plugin maintenance (PAS §2).
-- Provisional: option 1. The mapping-layer interfaces (element ID, source span, manifest) are framework-neutral so that Vue (sourcemap tracing) and Svelte (`__svelte_meta`) can be added without interface changes.
+- Status: resolved (rev 16, DR-0012): option 2. v1 supports Vite + React + Tailwind (launch and config modes) **and** Next.js + React + Tailwind (config mode: the stamper attaches as a loader via `next.config` `turbopack.rules`, with a webpack-plugin fallback; code-inspector-plugin demonstrates Turbopack loader support, PAS §2 — our own loader needs a spike [UNVERIFIED until P0b]). Launch mode for Next remains deferred (OQ-B1 a). Reason for including Next: the first dogfood targets are the author's two production frontends, both Next 16 + React 19 + Tailwind v4 with Turbopack dev. The Tailwind scale resolver MUST handle both v4 configuration styles (CSS `@theme` and a config file). Vue (sourcemap tracing) and Svelte (`__svelte_meta`) remain later additions with no interface changes.
+- Options (retained for history): (1) Vite + React + Tailwind only. (2) Add Next.js (webpack/turbopack) at launch. (3) Framework-agnostic mapping from the start, following the code-inspector-plugin bundler matrix.
+- Criteria (recorded): share of target users covered per unit of stamper/writer surface area; each additional bundler multiplies transform-plugin maintenance (PAS §2). Option 1 was the provisional until the dogfood targets turned out to be Next.
 
 **OQ-A2. Is any capability offered for applications whose build cannot be instrumented?**
 - Options: (1) none; the bundler plugin is a hard prerequisite. (2) A localhost-only CLI proxy that injects the agent (select-and-inspect only; write-back is impossible without the manifest). (3) A general rewriting proxy for arbitrary sites.
-- Criteria: option 3 is rejected on survey evidence (CSP stripping, cookie emulation, service-worker neutralization required; mature implementations are AGPL; abuse profile documented by Hypothesis Via, PAS §4). The open question is only whether option 2's inspect-only mode justifies its maintenance cost.
-- Provisional: option 1 for v1.
+- Status: resolved (rev 16): option 1 for v1. Option 2's inspect-only proxy remains a possible later fallback.
+- Criteria (recorded): option 3 is rejected on survey evidence (CSP stripping, cookie emulation, service-worker neutralization required; mature implementations are AGPL; abuse profile documented by Hypothesis Via, PAS §4).
 
 **OQ-A3. Does the mirror exist outside the dev server (preview or production builds)?**
 - Options: (1) dev server only. (2) Plus a read-only annotated preview build for review and commenting. (3) Editing against a deployed site through a connected local checkout.
-- Criteria: write-back requires source on disk and a rebuild channel; options 2–3 add distribution and auth surfaces (interacts with OQ-F2, R-7).
-- Provisional: option 1. Option 2 is additive and not blocked by any v1 decision.
+- Status: resolved (rev 16): option 1, dev server only. Option 2 (a read-only annotated preview build) is additive and not blocked by any v1 decision.
+- Criteria (recorded): write-back requires source on disk and a rebuild channel; options 2–3 add distribution and auth surfaces (interacts with OQ-F2, R-7).
 
 ### 6.2 Mirror architecture
 
@@ -258,8 +258,8 @@ Each question states its options, the criteria that decide it, and a provisional
 - Provisional: under R-10 the writer parses the target file at write time and so always holds fresh byte spans; options 1 and 3 are both viable and option 3 no longer needs a build-time offset manifest. P1 chooses between recast (structural ops) and magic-string (attribute and text ops), possibly both. Acceptance test either way: the writer run against the Utopia corpus produces zero changes on untouched constructs.
 
 **OQ-D2. How is R-2's formatter-idempotence requirement met across formatter configurations?**
-- Options: (1) detect and invoke the repository's configured formatter (Prettier or Biome) on written files. (2) Emit minimal diffs and invoke no formatter. (3) Refuse repositories without a detectable formatter.
-- Provisional: option 1 when a formatter is configured, option 2 otherwise. The formatter is resolved from the project's own dependencies, never bundled.
+- Status: resolved (rev 16): option 1 when a formatter is configured, option 2 otherwise. The formatter is resolved from the project's own dependencies, never bundled. Note: the dogfood applications configure no formatter, so option 2 is exercised first.
+- Options (retained for history): (1) detect and invoke the repository's configured formatter (Prettier or Biome) on written files. (2) Emit minimal diffs and invoke no formatter. (3) Refuse repositories without a detectable formatter.
 
 **OQ-D3. When a gesture yields a continuous value, is it written as a theme token or an arbitrary value?**
 - Context: a resize yields 137 px. Candidate writes: `w-[137px]` (exact) or `w-32` (nearest token, 128 px, error 9 px).
@@ -269,8 +269,8 @@ Each question states its options, the criteria that decide it, and a provisional
 
 **OQ-D4. What happens on elements styled outside Tailwind (CSS Modules, styled-components, inherited stylesheets)?**
 - Options: (1) selectable and inspectable; style edits refused with the reason and the defining file (R-6). (2) Style edits written as inline `style` attributes. (3) CSS-file write-back.
-- Criteria: option 3 violates R-2 and is excluded. Option 2 is deterministic but changes the element's specificity structure and produces code the target user cannot maintain.
-- Provisional: option 1. v1's editable style surface is exactly: Tailwind class attributes, pre-existing inline styles, literal props, and literal text children.
+- Status: resolved (rev 16): option 1. v1's editable style surface is exactly: Tailwind class attributes, pre-existing inline styles, literal props, and literal text children. Everything else is selectable and inspectable, with edits refused per R-6.
+- Criteria (recorded): option 3 violates R-2 and is excluded. Option 2 is deterministic but changes the element's specificity structure and produces code the target user cannot maintain.
 
 ### 6.5 Editing semantics
 
@@ -345,7 +345,8 @@ Each question states its options, the criteria that decide it, and a provisional
 - Open: overlay technology (React versus framework-free web components); monorepo timing.
 
 **OQ-G2. License.**
-- Options: MIT or Apache-2.0 (adds an explicit patent grant; Onlook's choice). Constraint either way: no AGPL dependencies (stagewise, Scramjet, wombat, Webstudio are reference-only; PAS §4).
+- Status: resolved (rev 16): MIT. Maximizes adoption for a library; none of the planned reuse requires Apache-2.0's patent grant. Constraint unchanged: no AGPL dependencies (stagewise, Scramjet, wombat, Webstudio are reference-only; PAS §4).
+- Options (retained for history): MIT or Apache-2.0 (adds an explicit patent grant; Onlook's choice).
 
 **OQ-G3. Name.**
 - Status: resolved (rev 11): **Retouch**. CLI `npx retouch`; route prefix `/rt/`, configurable. Chosen for the metaphor (small, careful edits to a finished picture) and because the two-letter abbreviation is neither an ISO 639-1 language code (locale prefixes such as `/en/` are a common route class) nor a common route. Candidates and checks are in DR-0008. "Mirror" remains the name of the concept in this RFC.
@@ -356,7 +357,9 @@ Each question states its options, the criteria that decide it, and a provisional
 |---|---|---|---|
 | P0 | Single-process topology (§5.1) in launch mode on Vite: `npx retouch` boots the project's dev server with the plugin; stamper emits structural IDs; writer builds the index from disk; shell at `/rt`; same-origin iframe; click → co-highlight → display file and AST path. Writer accepts and validates ops but performs no write. | Mapping correct on a reference project of ≥200 components including mapped lists and shared components; stamper and writer IDs agree on every element. Budget B measured: scripted single-class write → HMR repaint → re-index, p50/p95 reported. Geometry sync sustains 60 Hz during a scripted drag. ID stability: a class edit leaves all IDs in the file unchanged; inserting a sibling changes exactly the later siblings' IDs. Security check (R-9): a page on another origin cannot POST an op (preflight rejected); a request with a non-loopback `Host` is rejected; an op without the token is rejected; the app retains its cookies and localStorage inside the iframe. | OQ-B1 launch viability; R-10 in practice; OQ-B4 geometry-sync cost; R-9 enforceability. |
 | P1 | One gesture end to end: select, padding drag, Tailwind class write via recast, formatter pass, undo. Op coalescing and debounced commit. | Budget A ≤ 16.7 ms per frame during drag, with the inline-style preview and the safelist in place. One-line diff per coalesced edit. Undo restores byte-identical source. Zero diff on untouched constructs across the Utopia round-trip corpus. Write integrity (R-11): killing the process during a write leaves the file byte-identical to either the old or the new content; an op whose result fails to parse writes nothing; an op with a stale content hash is rejected. | OQ-D1, OQ-C3, OQ-F1 mechanics; OQ-D3 compiler sub-question. Hands-on validation of the OQ-E4 provisional rules (transient state, HMR re-anchoring), recorded as an amendment to OQ-E4 and DR-0010. |
-| P2 | Design annex for OQ-E1: the complete normative gesture-to-mutation table, including every refusal case and its user-facing reason. | Table reviewed and ratified; each row has a test fixture. | OQ-E1, OQ-E2. |
+| P2 | Design annex for OQ-E1: the complete normative gesture-to-mutation table, including every refusal case and its user-facing reason, now including the component actions (lift, detach, edit main) and their refusals (R-12). | Table reviewed and ratified; each row has a test fixture. | OQ-E1, OQ-E2, R-12. |
+| P0b | Next.js stamping spike: the stamper attached as a loader via `next.config` `turbopack.rules` on a Next 16 + Tailwind v4 application (config mode), repeating P0's mapping checks. | P0's mapping and ID-stability criteria hold under Turbopack; the loader path is confirmed or the webpack fallback is adopted. | OQ-A1's Next path; the [UNVERIFIED] Turbopack loader claim. |
+| P3 | Dogfood on the author's two Next 16 + React 19 + Tailwind v4 applications: the internal tool first, then the public site. Dev servers only (A3, R-7). Includes the OQ-E4 hands-on pass on real pages. | A tier-1 edit of each kind lands as a reviewable diff in each application with zero unrelated changes; OQ-E4 findings recorded in DR-0010. | OQ-E4 amendments; real-world validation of R-9…R-12. |
 
 Packaging (OQ-G1) is decided after P1; earlier decomposition would freeze interfaces that P0/P1 exist to inform.
 
@@ -401,6 +404,7 @@ Malicious code already running on the dev origin (a compromised dependency or a 
 | 13 | 2026-09-01 | Adopted the Figma component model for shared components: added R-12 (instance scope by default; explicit edit-main and detach; lift to prop with the generated `cn()` shape; detach as a two-file transaction; refusal without an instance ID) and the terms component definition, component instance, instance ID, lift, detach. Resolved OQ-C2 (usage sites stamped by the `data-rt-i` prop) and OQ-E3 (b). Amended R-11 (d) with the detach exception. Moved all component features into tier 1 (OQ-E2). DR-0009. |
 | 14 | 2026-09-01 | OQ-E4 given provisional rules pending hands-on validation: suppress dismissal events in edit mode; hover styles deferred; HMR during a drag re-anchors by structural ID (absorbing the OQ-B2 sub-question). Added a route field to the settled position. P1 gains the hands-on validation pass. DR-0010 records that this decision point is to be felt out, not decided on paper. |
 | 15 | 2026-09-01 | Resolved OQ-F2: the v1 operator is a solo developer on localhost; remote non-developer editing is the first post-MVP milestone and the trigger for the hardened mode. DR-0011. |
+| 16 | 2026-09-01 | Closed the remaining open questions. OQ-A1 amended and resolved: v1 adds Next.js (config mode, Turbopack loader) alongside Vite, because the dogfood targets are two Next 16 + Tailwind v4 applications. OQ-A2 (no uninstrumented-build support), OQ-A3 (dev only), OQ-D2 (delegate to the project's formatter, minimal diffs otherwise), OQ-D4 (non-Tailwind styles refused), and OQ-G2 (MIT) resolved as provisionally stated. Added P0b (Turbopack stamping spike) and P3 (dogfood) to §7. DR-0012. No open questions remain; OQ-E4 stays provisional by design (DR-0010) and OQ-G1 (packaging) is deferred until after P1 by design. |
 
 ## 10. References
 
