@@ -97,6 +97,28 @@ function handle(req, res, ctx) {
     });
   }
 
+  if (p === '/rt/__api/upload' && req.method === 'POST') {
+    requireToken(req, ctx.token);
+    return readBinary(req, 10_000_000, (buf) => {
+      if (!buf) return json(res, 413, { ok: false, error: 'file too large (max 10 MB)' });
+      if (!fs.existsSync(path.join(ctx.appRoot, 'public'))) {
+        return json(res, 409, {
+          ok: false,
+          refused: true,
+          reason: 'This app has no public/ directory for static assets.',
+        });
+      }
+      const rawName = url.searchParams.get('name') || 'image';
+      const safe =
+        rawName.toLowerCase().replace(/[^a-z0-9._-]/g, '-').replace(/^[.-]+/, '').slice(-80) || 'image';
+      const dir = path.join(ctx.appRoot, 'public', 'rt-assets');
+      fs.mkdirSync(dir, { recursive: true });
+      const name = Date.now().toString(36) + '-' + safe;
+      fs.writeFileSync(path.join(dir, name), buf);
+      return json(res, 200, { ok: true, src: '/rt-assets/' + name });
+    });
+  }
+
   if (req.method === 'GET' && (p === '/rt' || p.startsWith('/rt/'))) {
     const html = fs
       .readFileSync(path.join(SHELL_DIR, 'index.html'), 'utf8')
@@ -133,6 +155,19 @@ function serveAsset(name, res) {
     'cache-control': 'no-store',
   });
   res.end(fs.readFileSync(file));
+}
+
+function readBinary(req, maxBytes, cb) {
+  const chunks = [];
+  let size = 0;
+  let over = false;
+  req.on('data', (c) => {
+    size += c.length;
+    if (size > maxBytes) { over = true; req.destroy(); return; }
+    chunks.push(c);
+  });
+  req.on('end', () => cb(over ? null : Buffer.concat(chunks)));
+  req.on('close', () => { if (over) cb(null); });
 }
 
 function readBody(req, cb) {

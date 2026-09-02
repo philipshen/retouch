@@ -18,3 +18,4 @@ Format: Status · Date · RFC references · Context · Options considered · Dec
 | [DR-0010](0010-app-state-while-editing.md) | Reaching and holding app state while editing | **Provisional, to be felt out in P1** (rev 14) | OQ-E4, OQ-B2 |
 | [DR-0011](0011-v1-operator.md) | The v1 operator: solo developer on localhost | Accepted (rev 15) | OQ-F2 |
 | [DR-0012](0012-v1-scope-and-license.md) | v1 scope confirmation, Next.js inclusion, MIT license | Accepted (rev 16) | OQ-A1…A3, OQ-D2, OQ-D4, OQ-G2 |
+| [DR-0013](0013-images-and-colors.md) | Image swap (R-9 amendment) and Figma-style color pickers | Accepted (rev 17) | R-9, OQ-E2, OQ-D3 |

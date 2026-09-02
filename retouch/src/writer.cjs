@@ -47,6 +47,14 @@ function describeElement(resolved) {
     }
   }
 
+  const srcAttr = findAttr(node, 'src');
+  let src = null;
+  let srcDynamic = false;
+  if (srcAttr) {
+    if (srcAttr.value && srcAttr.value.type === 'StringLiteral') src = srcAttr.value.value;
+    else srcDynamic = true;
+  }
+
   const textInfo = literalTextRange(node, source);
   return {
     id: element.id,
@@ -56,6 +64,8 @@ function describeElement(resolved) {
     hash: resolved.hash,
     className,
     classNameDynamic,
+    src,
+    srcDynamic,
     text: textInfo ? textInfo.text : null,
     textDynamic: textInfo ? false : hasChildren(node),
   };
@@ -137,6 +147,30 @@ function applyOp(resolved, op) {
       );
     }
     ms.overwrite(range.start, range.end, escapeJsxText(op.text));
+  } else if (op.type === 'setSrc') {
+    // Image swap (R-9 amendment, rev 17): src is settable ONLY as a
+    // root-relative project path — no scheme, no host, no traversal — which
+    // preserves the injection-safety intent of the src exclusion.
+    if (typeof op.src !== 'string') return refuse('setSrc needs a string.');
+    if (
+      op.src.length > 500 ||
+      !/^\/[A-Za-z0-9_\-./]+$/.test(op.src) ||
+      op.src.startsWith('//') ||
+      op.src.split('/').includes('..')
+    ) {
+      return refuse('Image paths must be root-relative project paths (e.g. /rt-assets/x.png).');
+    }
+    const tag = tagOf(node);
+    if (!/^(img|source|video|image)$/i.test(tag) && !/Image$/.test(tag)) {
+      return refuse('setSrc applies to image elements only.');
+    }
+    const attr = findAttr(node, 'src');
+    if (!attr || !attr.value || attr.value.type !== 'StringLiteral') {
+      return refuse(
+        `src here is not a literal string (an imported image or an expression); it cannot be swapped deterministically (${resolved.relPath}).`
+      );
+    }
+    ms.overwrite(attr.value.start, attr.value.end, JSON.stringify(op.src));
   } else {
     return refuse(`Unknown op type: ${op.type}`);
   }
