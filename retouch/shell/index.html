@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Retouch</title>
+<link rel="stylesheet" href="/rt/__assets/shell.css">
+<script>window.__RT_TOKEN = "__RETOUCH_TOKEN__";</script>
+</head>
+<body>
+<div id="toolbar">
+  <span id="logo">Retouch</span>
+  <button id="modeBtn" class="mode-edit" title="Toggle edit / interact (Esc clears selection)">Edit mode</button>
+  <input id="routeInput" type="text" spellcheck="false" placeholder="/">
+  <button id="undoBtn" title="Undo (Cmd+Z)">Undo</button>
+  <span id="status"></span>
+</div>
+<div id="main">
+  <div id="frameWrap">
+    <iframe id="app" title="Your app"></iframe>
+    <div id="overlayLayer"></div>
+  </div>
+  <div id="panel">
+    <div id="panelEmpty">Click an element to select it.<br><br>
+      <span class="hint">Blue outline = element. Purple outline = component instance.
+      All instances of the same source highlight together.</span></div>
+    <div id="panelBody" hidden></div>
+  </div>
+</div>
+<div id="toasts"></div>
+<script src="/rt/__assets/shell.js"></script>
+</body>
+</html>
