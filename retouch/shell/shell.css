@@ -32,6 +32,8 @@ body { background: var(--bg); color: var(--ink); font-family: var(--font); font-
 .box .tagchip { position: absolute; top: -20px; left: -2px; background: var(--accent); color: #0c1015;
   font: 600 10.5px var(--mono); padding: 1px 6px; border-radius: 3px; white-space: nowrap; }
 .box.instance .tagchip { background: var(--instance); }
+.box.editing { border-color: var(--ok); border-style: solid; }
+.box.editing .tagchip { background: var(--ok); }
 
 #panel { width: 320px; border-left: 1px solid var(--line); background: var(--panel);
   overflow-y: auto; padding: 14px; }

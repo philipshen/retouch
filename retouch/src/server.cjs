@@ -101,7 +101,7 @@ function handle(req, res, ctx) {
     const html = fs
       .readFileSync(path.join(SHELL_DIR, 'index.html'), 'utf8')
       .replace('__RETOUCH_TOKEN__', ctx.token);
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
     return res.end(html);
   }
 
@@ -128,7 +128,10 @@ function serveAsset(name, res) {
     return res.end();
   }
   const types = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html' };
-  res.writeHead(200, { 'content-type': types[path.extname(file)] || 'application/octet-stream' });
+  res.writeHead(200, {
+    'content-type': types[path.extname(file)] || 'application/octet-stream',
+    'cache-control': 'no-store',
+  });
   res.end(fs.readFileSync(file));
 }
 

@@ -16,6 +16,7 @@ const SPACING_STEPS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11,
 
 let mode = 'edit'; // 'edit' | 'interact'
 let sel = null; // { hostId, instanceId, scope: 'host'|'instance', info }
+let editing = null; // { el, id, info, original } during inline text editing
 let hoverEl = null;
 let undoStack = [];
 let lastAppPath = null;
@@ -44,27 +45,57 @@ function doc() { return iframe.contentDocument; }
 function hookFrame(d, w) {
   const suppress = (e) => {
     if (mode !== 'edit') return;
+    if (editing && editing.el.contains(e.target)) return; // let the text being edited behave
     e.stopPropagation();
   };
   // Selection: capture-phase click; prevent the app from reacting (OQ-E4).
   d.addEventListener('click', (e) => {
     if (mode !== 'edit') return;
+    if (editing) {
+      if (editing.el.contains(e.target)) return;
+      commitInlineEdit(); // clicking away commits (R-5)
+    }
     e.preventDefault();
     e.stopPropagation();
     const t = e.target.closest && e.target.closest('[data-rt], [data-rt-i]');
     if (t) select(t);
     else clearSelection();
   }, true);
+  // Double-click starts inline text editing in place (R-5: plaintext-only).
+  d.addEventListener('dblclick', (e) => {
+    if (mode !== 'edit') return;
+    if (editing) {
+      if (editing.el.contains(e.target)) return;
+      commitInlineEdit(); // moving to another element commits the current one
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    const t = e.target.closest && e.target.closest('[data-rt], [data-rt-i]');
+    if (t) startInlineEdit(t, e);
+  }, true);
   d.addEventListener('mousemove', (e) => {
     if (mode !== 'edit') { hoverEl = null; return; }
     hoverEl = (e.target.closest && e.target.closest('[data-rt], [data-rt-i]')) || null;
   }, true);
   // Block app interaction + transient-state dismissal in edit mode (E4 rule 1).
-  for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'dblclick',
-    'pointerleave', 'pointerout', 'mouseleave', 'mouseout', 'focusout', 'blur', 'submit']) {
+  for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup',
+    'pointerleave', 'pointerout', 'mouseleave', 'mouseout', 'submit']) {
     d.addEventListener(type, suppress, true);
   }
+  d.addEventListener('focusout', (e) => {
+    if (editing && e.target === editing.el) { commitInlineEdit(); return; }
+    suppress(e);
+  }, true);
+  d.addEventListener('blur', suppress, true);
   d.addEventListener('keydown', (e) => {
+    if (editing) {
+      e.stopPropagation(); // typing stays native; app shortcuts stay out
+      if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
+        e.preventDefault();
+        commitInlineEdit();
+      }
+      return;
+    }
     if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); e.stopPropagation(); undo(); }
   }, true);
 
@@ -131,6 +162,70 @@ function clearSelection() {
   panelEmpty.hidden = false;
 }
 
+/* ---------- inline text editing ---------- */
+async function startInlineEdit(el, evt) {
+  const { hostId, instanceId } = idsOf(el);
+  let editId = null;
+  let info = null;
+  let reason = null;
+  // Try the host stamp first, then the instance (text through {children}
+  // lives at the usage site — R-12 / OQ-E3).
+  for (const id of [hostId, instanceId].filter(Boolean)) {
+    const res = await api('GET', '/rt/__api/resolve?id=' + id);
+    if (res && res.ok) {
+      if (res.element.text !== null) { editId = id; info = res.element; break; }
+      if (!reason && res.element.textDynamic) {
+        reason = 'The text of this element is dynamic; it cannot be edited in place (R-6).';
+      }
+    }
+  }
+  sel = { hostId, instanceId, scope: editId && editId === instanceId ? 'instance' : 'host', info };
+  if (!editId) {
+    await loadScope();
+    toast(reason || 'No editable text here.', 'err');
+    return;
+  }
+  renderPanel();
+  editing = { el, id: editId, info, original: el.textContent };
+  el.setAttribute('contenteditable', 'plaintext-only');
+  if (el.contentEditable !== 'plaintext-only') el.setAttribute('contenteditable', 'true');
+  el.focus();
+  try {
+    const d = doc();
+    const range = d.caretRangeFromPoint(evt.clientX, evt.clientY);
+    if (range) {
+      const s = d.getSelection();
+      s.removeAllRanges();
+      s.addRange(range);
+    }
+  } catch {}
+}
+
+async function commitInlineEdit() {
+  if (!editing) return;
+  const { el, id, info, original } = editing;
+  editing = null;
+  el.removeAttribute('contenteditable');
+  const text = el.textContent;
+  if (text === original) return;
+  const res = await api('POST', '/rt/__api/op', { type: 'setText', id, text, fileHash: info.hash });
+  if (res && res.ok) {
+    undoStack.push({ type: 'setText', id, text: original });
+    info.text = text;
+    info.hash = res.hash;
+    for (const m of matchingEls(id)) if (m !== el) m.textContent = text;
+    if (sel && sel.info && sel.info.id === id) {
+      sel.info.text = text;
+      sel.info.hash = res.hash;
+      renderPanel();
+    }
+    toast('Saved', 'ok');
+  } else {
+    el.textContent = original;
+    toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
+  }
+}
+
 /* ---------- overlays ---------- */
 function paintLoop() {
   overlayLayer.textContent = '';
@@ -145,7 +240,8 @@ function paintLoop() {
       first = false;
     }
   }
-  if (d && hoverEl && hoverEl.isConnected && mode === 'edit') drawBox(hoverEl, 'hover', !!hoverEl.getAttribute('data-rt-i'), null);
+  if (d && editing && editing.el.isConnected) drawBox(editing.el, 'editing', false, 'text ⏎');
+  if (d && hoverEl && hoverEl.isConnected && mode === 'edit' && !editing) drawBox(hoverEl, 'hover', !!hoverEl.getAttribute('data-rt-i'), null);
   requestAnimationFrame(paintLoop);
 }
 
