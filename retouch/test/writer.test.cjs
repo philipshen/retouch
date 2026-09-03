@@ -175,6 +175,28 @@ test('setChildren refuses a formatting tag outside the vocabulary', () => {
   assert.ok(r.refused);
 });
 
+test('setTag rewrites the opening and closing tag names', () => {
+  const { el, resolved } = pick(index, root, 'Card.tsx', 'h2');
+  assert.strictEqual(require('./helpers.cjs').writer.describeElement(resolved).canSetTag, true);
+  const r = writer.applyOp(resolved, { type: 'setTag', id: el.id, tag: 'h1', fileHash: resolved.hash });
+  assert.ok(r.ok, JSON.stringify(r));
+  const now = read(root, 'Card.tsx');
+  assert.match(now, /<h1 className="text-lg font-bold">Hello world<\/h1>/);
+  assert.ok(!/<h2/.test(now));
+});
+
+test('setTag refuses a component and an unsupported tag', () => {
+  const { el, resolved } = pick(index, root, 'Card.tsx', 'Button');
+  assert.ok(writer.applyOp(resolved, { type: 'setTag', id: el.id, tag: 'h1', fileHash: resolved.hash }).refused);
+  const h2 = pick(index, root, 'Card.tsx', 'h2');
+  assert.ok(writer.applyOp(h2.resolved, { type: 'setTag', id: h2.el.id, tag: 'script', fileHash: h2.resolved.hash }).refused);
+});
+
+test('describeElement.canSetTag is false for a component instance', () => {
+  const { resolved } = pick(index, root, 'Card.tsx', 'Button');
+  assert.strictEqual(writer.describeElement(resolved).canSetTag, false);
+});
+
 test('atomic write leaves no temp files behind', () => {
   const fs = require('node:fs');
   const { el, resolved } = pick(index, root, 'Card.tsx', 'h2');

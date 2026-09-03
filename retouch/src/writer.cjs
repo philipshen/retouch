@@ -47,6 +47,11 @@ function describeElement(resolved) {
     }
   }
 
+  const canSetTag =
+    node.openingElement.name.type === 'JSXIdentifier' &&
+    /^[a-z]/.test(node.openingElement.name.name) &&
+    !!node.closingElement;
+
   const srcAttr = findAttr(node, 'src');
   let src = null;
   let srcDynamic = false;
@@ -66,6 +71,7 @@ function describeElement(resolved) {
     classNameDynamic,
     src,
     srcDynamic,
+    canSetTag,
     text: textInfo ? textInfo.text : null,
     textDynamic: textInfo ? false : hasChildren(node),
     mixedText:
@@ -243,6 +249,24 @@ function applyOp(resolved, op) {
     if (builtStr.trim() === '') return refuse('The edit removed all content; delete the element instead.');
     if (builtStr.length > 50000) return refuse('The edit is too large.');
     ms.overwrite(node.openingElement.end, node.closingElement.start, builtStr);
+  } else if (op.type === 'setTag') {
+    // Typography: change a text element's tag (h1..h4, p, span). Deterministic
+    // tag rewrite of the opening and closing names. Host (lowercase) text tags
+    // only — never a component or a self-closing element.
+    const TEXT_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'div', 'blockquote', 'label']);
+    if (typeof op.tag !== 'string' || !TEXT_TAGS.has(op.tag)) {
+      return refuse('Unsupported target tag.');
+    }
+    const open = node.openingElement.name;
+    if (open.type !== 'JSXIdentifier' || !/^[a-z]/.test(open.name)) {
+      return refuse('Only plain HTML text elements can change tag; this is a component.');
+    }
+    if (!node.closingElement) {
+      return refuse('This element has no closing tag and cannot change tag.');
+    }
+    ms.overwrite(open.start, open.end, op.tag);
+    const close = node.closingElement.name;
+    ms.overwrite(close.start, close.end, op.tag);
   } else if (op.type === 'setSrc') {
     // Image swap (R-9 amendment, rev 17): src is settable ONLY as a
     // root-relative project path — no scheme, no host, no traversal — which

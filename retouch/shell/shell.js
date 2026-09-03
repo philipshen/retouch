@@ -139,11 +139,35 @@ function idsOf(el) {
   return { hostId: el.getAttribute('data-rt'), instanceId: el.getAttribute('data-rt-i') };
 }
 
-async function select(el) {
-  const { hostId, instanceId } = idsOf(el);
-  const scope = instanceId ? 'instance' : 'host';
-  sel = { hostId, instanceId, scope, info: null };
-  await loadScope();
+// Classification pass: resolve a clicked DOM node to the nearest ancestor
+// (itself first) that maps to source right now. A stamped id can fail to
+// resolve — its file changed and its structural id shifted, or the DOM is a
+// frame that has not reloaded yet — so we climb rather than error. Returns
+// { el, info } or null. This is the single gate for what is selectable.
+async function classify(node) {
+  let el = node && node.closest ? node.closest('[data-rt], [data-rt-i]') : null;
+  while (el) {
+    const { hostId, instanceId } = idsOf(el);
+    for (const id of [instanceId, hostId]) {
+      if (!id || !/^[0-9a-f]{10}$/.test(id)) continue;
+      const res = await api('GET', '/rt/__api/resolve?id=' + id);
+      if (res && res.ok) return { el, info: res.element, hostId, instanceId };
+    }
+    el = el.parentElement ? el.parentElement.closest('[data-rt], [data-rt-i]') : null;
+  }
+  return null;
+}
+
+async function select(node) {
+  const c = await classify(node);
+  if (!c) return clearSelection();
+  sel = {
+    hostId: c.hostId,
+    instanceId: c.instanceId,
+    scope: c.instanceId && c.info.id === c.instanceId ? 'instance' : 'host',
+    info: c.info,
+  };
+  renderPanel();
 }
 
 function activeId() {
@@ -155,10 +179,7 @@ async function loadScope() {
   const id = activeId();
   if (!id) return clearSelection();
   const res = await api('GET', '/rt/__api/resolve?id=' + id);
-  if (!res || !res.ok) {
-    renderPanelError(res && res.error ? res.error : 'This element could not be resolved to source.');
-    return;
-  }
+  if (!res || !res.ok) return clearSelection();
   sel.info = res.element;
   renderPanel();
 }
@@ -170,28 +191,25 @@ function clearSelection() {
 }
 
 /* ---------- inline text editing ---------- */
-async function startInlineEdit(el, evt, quiet) {
-  const { hostId, instanceId } = idsOf(el);
-  let editId = null;
-  let info = null;
-  let reason = null;
-  // Try the host stamp first, then the instance (text through {children}
-  // lives at the usage site — R-12 / OQ-E3).
-  for (const id of [hostId, instanceId].filter(Boolean)) {
-    const res = await api('GET', '/rt/__api/resolve?id=' + id);
-    if (res && res.ok) {
-      if (res.element.text !== null || res.element.mixedText) { editId = id; info = res.element; break; }
-      if (!reason && res.element.textDynamic) {
-        reason = 'The text of this element is dynamic; it cannot be edited in place (R-6).';
-      }
+async function startInlineEdit(node, evt, quiet) {
+  const c = await classify(node);
+  if (!c) return clearSelection(); // nothing editable here — no error
+  const { el, info } = c;
+  sel = {
+    hostId: c.hostId,
+    instanceId: c.instanceId,
+    scope: c.instanceId && info.id === c.instanceId ? 'instance' : 'host',
+    info,
+  };
+  // Only literal or rich text can be edited in place; otherwise just select.
+  if (info.text === null && !info.mixedText) {
+    renderPanel();
+    if (!quiet && info.textDynamic) {
+      toast('The text of this element is dynamic; it cannot be edited in place (R-6).', 'err');
     }
-  }
-  sel = { hostId, instanceId, scope: editId && editId === instanceId ? 'instance' : 'host', info };
-  if (!editId) {
-    await loadScope();
-    if (!quiet) toast(reason || 'No editable text here.', 'err');
     return;
   }
+  const editId = info.id;
   renderPanel();
   editing = {
     el,
@@ -384,16 +402,6 @@ function drawBox(el, cls, isInstance, label) {
 }
 
 /* ---------- panel ---------- */
-function renderPanelError(msg) {
-  panelEmpty.hidden = true;
-  panelBody.hidden = false;
-  panelBody.innerHTML = '';
-  const p = document.createElement('p');
-  p.className = 'refused';
-  p.textContent = msg;
-  panelBody.appendChild(p);
-}
-
 function renderPanel() {
   const info = sel.info;
   panelEmpty.hidden = true;
@@ -426,10 +434,55 @@ function renderPanel() {
     panelBody.appendChild(scopes);
   }
 
-  // Classes
+  // First-class, Figma-like sections: Typography, Fill, Text color, Image.
+  if (info.canSetTag) panelBody.appendChild(typographySection(info));
+  panelBody.appendChild(colorSection('Fill', 'bg', info));
+  panelBody.appendChild(colorSection('Text color', 'text', info));
+  if (info.src !== null || info.srcDynamic) panelBody.appendChild(imageSection(info));
+
+  // Text
+  const tsec = document.createElement('div');
+  tsec.className = 'sec';
+  tsec.innerHTML = '<h3>Text</h3>';
+  if (info.text !== null) {
+    const ta = document.createElement('textarea');
+    ta.id = 'textEdit';
+    ta.value = info.text;
+    tsec.appendChild(ta);
+    const btn = document.createElement('button');
+    btn.id = 'textApply';
+    btn.textContent = 'Apply text';
+    btn.onclick = () => setText(ta.value);
+    tsec.appendChild(document.createElement('br'));
+    tsec.appendChild(btn);
+  } else if (info.mixedText) {
+    const p = document.createElement('p');
+    p.style.color = 'var(--muted)';
+    p.textContent = 'Rich text. Click the element and edit it in place. Select text, then Cmd+B or Cmd+I.';
+    tsec.appendChild(p);
+  } else if (info.textDynamic) {
+    const p = document.createElement('p');
+    p.className = 'refused';
+    p.textContent = sel.scope === 'host' && sel.instanceId
+      ? 'Text here is dynamic (it may come from the component instance — switch scope).'
+      : 'The text of this element is dynamic (R-6).';
+    tsec.appendChild(p);
+  } else {
+    const p = document.createElement('p');
+    p.style.color = 'var(--muted)';
+    p.textContent = 'No text content.';
+    tsec.appendChild(p);
+  }
+  panelBody.appendChild(tsec);
+
+  // Advanced: raw CSS class manipulation, collapsed by default (not tier 1).
+  const adv = document.createElement('details');
+  adv.className = 'sec advanced';
+  const sum = document.createElement('summary');
+  sum.textContent = 'Advanced (CSS classes)';
+  adv.appendChild(sum);
   const csec = document.createElement('div');
-  csec.className = 'sec';
-  csec.innerHTML = '<h3>Classes</h3>';
+  csec.className = 'advbody';
   if (info.classNameDynamic) {
     const p = document.createElement('p');
     p.className = 'refused';
@@ -469,47 +522,61 @@ function renderPanel() {
     }
     csec.appendChild(steppers);
   }
-  panelBody.appendChild(csec);
+  adv.appendChild(csec);
+  panelBody.appendChild(adv);
+}
 
-  // Figma-style pickers: Fill, Text color; image swap where applicable.
-  panelBody.appendChild(colorSection('Fill', 'bg', info));
-  panelBody.appendChild(colorSection('Text color', 'text', info));
-  if (info.src !== null || info.srcDynamic) panelBody.appendChild(imageSection(info));
-
-  // Text
-  const tsec = document.createElement('div');
-  tsec.className = 'sec';
-  tsec.innerHTML = '<h3>Text</h3>';
-  if (info.text !== null) {
-    const ta = document.createElement('textarea');
-    ta.id = 'textEdit';
-    ta.value = info.text;
-    tsec.appendChild(ta);
-    const btn = document.createElement('button');
-    btn.id = 'textApply';
-    btn.textContent = 'Apply text';
-    btn.onclick = () => setText(ta.value);
-    tsec.appendChild(document.createElement('br'));
-    tsec.appendChild(btn);
-  } else if (info.mixedText) {
-    const p = document.createElement('p');
-    p.style.color = 'var(--muted)';
-    p.textContent = 'Rich text. Click the element and edit it in place. Select text for bold and italic.';
-    tsec.appendChild(p);
-  } else if (info.textDynamic) {
-    const p = document.createElement('p');
-    p.className = 'refused';
-    p.textContent = sel.scope === 'host' && sel.instanceId
-      ? 'Text here is dynamic (it may come from the component instance — switch scope).'
-      : 'The text of this element is dynamic (R-6).';
-    tsec.appendChild(p);
-  } else {
-    const p = document.createElement('p');
-    p.style.color = 'var(--muted)';
-    p.textContent = 'No text content.';
-    tsec.appendChild(p);
+// Typography: Figma-like text-role presets that rewrite the element's tag.
+const TYPE_PRESETS = [
+  ['H1', 'h1'], ['H2', 'h2'], ['H3', 'h3'], ['H4', 'h4'], ['Body', 'p'],
+];
+function typographySection(info) {
+  const sec = document.createElement('div');
+  sec.className = 'sec';
+  sec.innerHTML = '<h3>Typography</h3>';
+  const row = document.createElement('div');
+  row.className = 'typerow';
+  for (const [label, tag] of TYPE_PRESETS) {
+    const b = document.createElement('button');
+    b.className = 'typebtn' + (info.tag === tag ? ' active' : '');
+    b.textContent = label;
+    b.onclick = () => setTag(tag);
+    row.appendChild(b);
   }
-  panelBody.appendChild(tsec);
+  sec.appendChild(row);
+  if (!TYPE_PRESETS.some(([, t]) => t === info.tag)) {
+    const cur = document.createElement('div');
+    cur.className = 'filepath';
+    cur.textContent = 'Current: <' + info.tag + '>';
+    sec.appendChild(cur);
+  }
+  return sec;
+}
+
+async function setTag(tag) {
+  if (!sel || !sel.info || sel.info.tag === tag) return;
+  const info = sel.info;
+  const prev = info.tag;
+  const res = await api('POST', '/rt/__api/op', { type: 'setTag', id: info.id, tag, fileHash: info.hash });
+  if (res && res.ok) {
+    undoStack.push({ type: 'setTag', id: info.id, tag: prev });
+    info.tag = tag;
+    info.hash = res.hash;
+    toast('Saved', 'ok');
+    reloadFrame(); // a tag change is structural; remount clean
+    renderPanel();
+  } else {
+    toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
+  }
+}
+
+// Undo path: resolve the element fresh and set its tag by id.
+async function applyTag(id, tag) {
+  const r = await api('GET', '/rt/__api/resolve?id=' + id);
+  if (!r || !r.ok) return toast('Cannot resolve the element for undo', 'err');
+  const res = await api('POST', '/rt/__api/op', { type: 'setTag', id, tag, fileHash: r.element.hash });
+  if (res && res.ok) { toast('Saved', 'ok'); reloadFrame(); }
+  else toast((res && res.reason) || (res && res.error) || 'Undo failed', 'err');
 }
 
 function makeStepper(prefix, tokens) {
@@ -824,6 +891,7 @@ async function undo() {
   else if (op.type === 'setText') await setText(op.text, true);
   else if (op.type === 'setSrc') await setSrc(op.src, true);
   else if (op.type === 'setChildren') await applyChildren(op.id, op.children);
+  else if (op.type === 'setTag') await applyTag(op.id, op.tag);
   renderPanel();
 }
 
