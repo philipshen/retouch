@@ -1,0 +1,138 @@
+'use strict';
+// Integration test: boots the real sidecar against a temp app and drives
+// the HTTP API exactly as the shell does — resolve, op, upload, and the R-9
+// security checks. No browser, no Next build; runs in well under a second.
+
+const { test, before, after } = require('node:test');
+const assert = require('node:assert');
+const fs = require('node:fs');
+const path = require('node:path');
+const http = require('node:http');
+const { makeApp, cleanup, SRC } = require('./helpers.cjs');
+const { startServer } = require(path.join(SRC, 'server.cjs'));
+
+const APP = `export function Page() {
+  return (
+    <main className="p">
+      <h2 className="text-lg">Hello</h2>
+      <img src="/a.png" />
+    </main>
+  );
+}
+`;
+
+let root, server, port, token;
+
+before(async () => {
+  root = makeApp({ 'app/Page.tsx': APP, 'public/.keep': '' });
+  // The sidecar prints its token; capture it by reading the shell HTML.
+  const origLog = console.log;
+  console.log = () => {};
+  port = 3900 + Math.floor(Math.random() * 90);
+  server = startServer({ appRoot: root, port });
+  console.log = origLog;
+  await waitReady(port);
+  const shell = await req(port, 'GET', '/rt');
+  token = /__RETOUCH_TOKEN__|__RT_TOKEN = "([0-9a-f]+)"/.exec(shell.body)[1];
+});
+
+after(() => {
+  if (server.retouchIndex) server.retouchIndex.close();
+  server.close();
+  cleanup(root);
+});
+
+function req(port, method, p, { body, headers } = {}) {
+  return new Promise((resolve, reject) => {
+    const r = http.request({ host: '127.0.0.1', port, method, path: p, headers: headers || {} }, (res) => {
+      let b = '';
+      res.on('data', (c) => (b += c));
+      res.on('end', () => resolve({ status: res.statusCode, body: b }));
+    });
+    r.on('error', reject);
+    if (body) r.write(body);
+    r.end();
+  });
+}
+
+async function waitReady(port) {
+  for (let i = 0; i < 50; i++) {
+    try {
+      const r = await req(port, 'GET', '/rt/__api/health');
+      if (r.status === 200) return;
+    } catch {}
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  throw new Error('sidecar did not start');
+}
+
+const AUTH = () => ({ 'x-retouch-token': token, 'content-type': 'application/json' });
+
+async function firstIdOfTag(tag) {
+  const src = fs.readFileSync(path.join(root, 'app/Page.tsx'), 'utf8');
+  const { collectElements } = require(path.join(SRC, 'id.cjs'));
+  const el = collectElements(src, 'app/Page.tsx').elements.find(
+    (e) => e.node.openingElement.name.name === tag
+  );
+  return el.id;
+}
+
+test('health needs no token', async () => {
+  const r = await req(port, 'GET', '/rt/__api/health');
+  assert.strictEqual(r.status, 200);
+});
+
+test('resolve without the token is rejected', async () => {
+  const id = await firstIdOfTag('h2');
+  const r = await req(port, 'GET', '/rt/__api/resolve?id=' + id);
+  assert.notStrictEqual(r.status, 200);
+});
+
+test('resolve with the token returns the element description', async () => {
+  const id = await firstIdOfTag('h2');
+  const r = await req(port, 'GET', '/rt/__api/resolve?id=' + id, { headers: AUTH() });
+  const el = JSON.parse(r.body).element;
+  assert.strictEqual(el.className, 'text-lg');
+  assert.strictEqual(el.text, 'Hello');
+});
+
+test('a non-loopback Host header is rejected (anti DNS-rebind)', async () => {
+  const id = await firstIdOfTag('h2');
+  const r = await req(port, 'GET', '/rt/__api/resolve?id=' + id, {
+    headers: { ...AUTH(), host: 'evil.example.com' },
+  });
+  assert.strictEqual(r.status, 403);
+});
+
+test('a class op writes back and reports a new hash', async () => {
+  const id = await firstIdOfTag('h2');
+  const got = JSON.parse((await req(port, 'GET', '/rt/__api/resolve?id=' + id, { headers: AUTH() })).body);
+  const r = await req(port, 'POST', '/rt/__api/op', {
+    headers: AUTH(),
+    body: JSON.stringify({ type: 'setClasses', id, classes: 'text-xl', fileHash: got.element.hash }),
+  });
+  const out = JSON.parse(r.body);
+  assert.ok(out.ok);
+  assert.match(fs.readFileSync(path.join(root, 'app/Page.tsx'), 'utf8'), /className="text-xl"/);
+});
+
+test('an op without the token is rejected', async () => {
+  const id = await firstIdOfTag('img');
+  const r = await req(port, 'POST', '/rt/__api/op', {
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ type: 'setSrc', id, src: '/x.png', fileHash: 'x' }),
+  });
+  assert.notStrictEqual(r.status, 200);
+});
+
+test('upload stores under public/rt-assets and returns a root-relative src', async () => {
+  const png = Buffer.from('89504e470d0a1a0a', 'hex');
+  const r = await req(port, 'POST', '/rt/__api/upload?name=logo.png', {
+    headers: { 'x-retouch-token': token, 'content-type': 'image/png' },
+    body: png,
+  });
+  const out = JSON.parse(r.body);
+  assert.ok(out.ok);
+  assert.match(out.src, /^\/rt-assets\//);
+  assert.ok(fs.existsSync(path.join(root, 'public', out.src.replace(/^\//, ''))));
+});

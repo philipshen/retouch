@@ -65,7 +65,7 @@ class Index {
     const { elements } = collectElements(source, relPath);
     const element = elements.find((e) => e.id === id);
     if (!element) return null;
-    return { file: absFile, relPath, source, hash: contentHash(source), element };
+    return { file: absFile, relPath, source, hash: contentHash(source), element, elements };
   }
 
   watch() {
@@ -87,6 +87,13 @@ class Index {
       });
     } catch (err) {
       console.warn(`[retouch] file watching unavailable: ${err.message}`);
+    }
+  }
+
+  close() {
+    if (this.watcher) {
+      this.watcher.close();
+      this.watcher = null;
     }
   }
 }

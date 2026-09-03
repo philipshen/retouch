@@ -35,6 +35,12 @@ body { background: var(--bg); color: var(--ink); font-family: var(--font); font-
 .box.editing { border-color: var(--ok); border-style: solid; }
 .box.editing .tagchip { background: var(--ok); }
 
+#fmtbar { position: absolute; z-index: 50; display: flex; gap: 2px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 7px; padding: 3px; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
+#fmtbar button { width: 26px; height: 26px; background: none; border: 0; border-radius: 5px;
+  color: var(--ink); font-weight: 700; font-size: 13px; cursor: pointer; }
+#fmtbar button:hover { background: #2f333a; }
+
 #panel { width: 320px; border-left: 1px solid var(--line); background: var(--panel);
   overflow-y: auto; padding: 14px; }
 #panelEmpty { color: var(--muted); line-height: 1.5; padding-top: 12px; }

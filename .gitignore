@@ -1,6 +1,4 @@
-# The backbone clone used as the dogfood target (P3); never committed here.
-/unplastic-backbone/
-
+unplastic-backbone/
 node_modules/
 *.log
 .DS_Store

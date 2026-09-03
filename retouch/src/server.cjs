@@ -46,6 +46,7 @@ function startServer({ appRoot, port }) {
     const appPort = process.env.PORT || 3000;
     console.log(`[retouch] mirror ready — open http://localhost:${appPort}/rt (sidecar :${port})`);
   });
+  server.retouchIndex = index; // lets tests close the file watcher
   return server;
 }
 

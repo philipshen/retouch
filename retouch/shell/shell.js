@@ -16,7 +16,8 @@ const SPACING_STEPS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11,
 
 let mode = 'edit'; // 'edit' | 'interact'
 let sel = null; // { hostId, instanceId, scope: 'host'|'instance', info }
-let editing = null; // { el, id, info, original } during inline text editing
+let editing = null; // { el, id, info, original, originalHTML, snapshot, originalTree } during inline text editing
+let fmtbar = null; // floating B/I toolbar shown over a text selection
 let hoverEl = null;
 let undoStack = [];
 let lastAppPath = null;
@@ -89,9 +90,16 @@ function hookFrame(d, w) {
     suppress(e);
   }, true);
   d.addEventListener('blur', suppress, true);
+  d.addEventListener('selectionchange', updateFmtbar);
   d.addEventListener('keydown', (e) => {
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'i')) {
+        e.preventDefault(); // never let the browser's own rich-edit commands run (R-5)
+        toggleWrap(e.key === 'b' ? 'strong' : 'em');
+        updateFmtbar();
+        return;
+      }
       if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
         e.preventDefault();
         commitInlineEdit();
@@ -175,7 +183,7 @@ async function startInlineEdit(el, evt, quiet) {
   for (const id of [hostId, instanceId].filter(Boolean)) {
     const res = await api('GET', '/rt/__api/resolve?id=' + id);
     if (res && res.ok) {
-      if (res.element.text !== null) { editId = id; info = res.element; break; }
+      if (res.element.text !== null || res.element.mixedText) { editId = id; info = res.element; break; }
       if (!reason && res.element.textDynamic) {
         reason = 'The text of this element is dynamic; it cannot be edited in place (R-6).';
       }
@@ -188,7 +196,20 @@ async function startInlineEdit(el, evt, quiet) {
     return;
   }
   renderPanel();
-  editing = { el, id: editId, info, original: el.textContent };
+  editing = {
+    el,
+    id: editId,
+    info,
+    original: el.textContent,
+    originalHTML: el.innerHTML,
+    snapshot: new Map(),
+    originalTree: null,
+  };
+  for (const c of el.querySelectorAll('[data-rt], [data-rt-i]')) {
+    const cid = c.getAttribute('data-rt') || c.getAttribute('data-rt-i');
+    if (cid) editing.snapshot.set(cid, c.textContent);
+  }
+  editing.originalTree = serializeChildren(el, editing.snapshot);
   el.setAttribute('contenteditable', 'plaintext-only');
   if (el.contentEditable !== 'plaintext-only') el.setAttribute('contenteditable', 'true');
   el.focus();
@@ -205,27 +226,154 @@ async function startInlineEdit(el, evt, quiet) {
 
 async function commitInlineEdit() {
   if (!editing) return;
-  const { el, id, info, original } = editing;
+  const ed = editing;
   editing = null;
-  el.removeAttribute('contenteditable');
-  const text = el.textContent;
-  if (text === original) return;
-  const res = await api('POST', '/rt/__api/op', { type: 'setText', id, text, fileHash: info.hash });
+  ed.el.removeAttribute('contenteditable');
+  hideFmtbar();
+  const children = serializeChildren(ed.el, ed.snapshot);
+  if (JSON.stringify(children) === JSON.stringify(ed.originalTree)) return;
+
+  // A pure-text element with a pure-text result uses setText (smaller diff).
+  // An element whose SOURCE has mixed children must use setChildren even when
+  // the edited result is now all text (e.g. the user deleted a styled span),
+  // because setText only rewrites a literal-text-only children range.
+  let op;
+  if (!ed.info.mixedText && children.every((c) => c.t === 'text')) {
+    op = { type: 'setText', id: ed.id, text: children.map((c) => c.value).join(''), fileHash: ed.info.hash };
+  } else {
+    op = { type: 'setChildren', id: ed.id, children, fileHash: ed.info.hash };
+  }
+  // Structural edits change child node identities that the app framework
+  // tracks by reference. Letting React (dev Fast Refresh) reconcile against
+  // our hand-mutated DOM crashes its committer (removeChild NotFoundError),
+  // so a structural commit reloads the frame after the write: React remounts
+  // clean from the new source. Text-only commits keep the smooth HMR path.
+  const structural = op.type === 'setChildren';
+  const res = await api('POST', '/rt/__api/op', op);
   if (res && res.ok) {
-    undoStack.push({ type: 'setText', id, text: original });
-    info.text = text;
-    info.hash = res.hash;
-    for (const m of matchingEls(id)) if (m !== el) m.textContent = text;
-    if (sel && sel.info && sel.info.id === id) {
-      sel.info.text = text;
+    undoStack.push({ type: 'setChildren', id: ed.id, children: ed.originalTree });
+    ed.info.hash = res.hash;
+    if (op.type === 'setText') {
+      ed.info.text = op.text;
+      for (const m of matchingEls(ed.id)) if (m !== ed.el) m.textContent = op.text;
+    }
+    if (structural) reloadFrame();
+    else if (sel && sel.info && sel.info.id === ed.id) {
       sel.info.hash = res.hash;
       renderPanel();
     }
     toast('Saved', 'ok');
   } else {
-    el.textContent = original;
+    ed.el.innerHTML = ed.originalHTML;
     toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
   }
+}
+
+// Reload the iframe to its current path, preserving scroll where possible.
+function reloadFrame() {
+  try {
+    const w = iframe.contentWindow;
+    const y = w.scrollY;
+    const done = () => {
+      iframe.removeEventListener('load', done);
+      try { iframe.contentWindow.scrollTo(0, y); } catch {}
+    };
+    iframe.addEventListener('load', done);
+    w.location.reload();
+  } catch {
+    iframe.src = iframe.src;
+  }
+}
+
+// DOM -> op children tree. Implemented in serialize.js (loaded first) so it
+// can be unit-tested in Node against a fake DOM.
+const serializeChildren = window.RetouchSerialize.serializeChildren;
+
+async function applyChildren(id, children) {
+  const r = await api('GET', '/rt/__api/resolve?id=' + id);
+  if (!r || !r.ok) return toast('Cannot resolve the element for undo', 'err');
+  const res = await api('POST', '/rt/__api/op', { type: 'setChildren', id, children, fileHash: r.element.hash });
+  if (res && res.ok) toast('Saved', 'ok');
+  else toast((res && res.reason) || (res && res.error) || 'Undo failed', 'err');
+}
+
+/* ---------- formatting toolbar (bold / italic on selection) ---------- */
+function ensureFmtbar() {
+  if (fmtbar) return fmtbar;
+  fmtbar = document.createElement('div');
+  fmtbar.id = 'fmtbar';
+  fmtbar.hidden = true;
+  for (const [label, tag] of [['B', 'strong'], ['I', 'em']]) {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.title = (tag === 'strong' ? 'Bold' : 'Italic') + ' (Cmd+' + label + ')';
+    if (tag === 'em') b.style.fontStyle = 'italic';
+    b.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleWrap(tag);
+      updateFmtbar();
+    });
+    fmtbar.appendChild(b);
+  }
+  document.getElementById('frameWrap').appendChild(fmtbar);
+  return fmtbar;
+}
+
+function hideFmtbar() {
+  if (fmtbar) fmtbar.hidden = true;
+}
+
+function updateFmtbar() {
+  const bar = ensureFmtbar();
+  const d = doc();
+  if (!editing || !d) return hideFmtbar();
+  const s = d.getSelection();
+  if (!s || !s.rangeCount || s.isCollapsed) return hideFmtbar();
+  const r = s.getRangeAt(0);
+  if (!editing.el.contains(r.commonAncestorContainer)) return hideFmtbar();
+  const rect = r.getBoundingClientRect();
+  bar.hidden = false;
+  bar.style.left = Math.max(4, rect.left) + 'px';
+  bar.style.top = Math.max(4, rect.top - 38) + 'px';
+}
+
+function toggleWrap(tag) {
+  const d = doc();
+  if (!d || !editing) return;
+  const s = d.getSelection();
+  if (!s || !s.rangeCount) return;
+  const r = s.getRangeAt(0);
+  if (r.collapsed) return;
+  // Toggle off: the selection sits inside an unstamped wrapper of this tag.
+  const cac = r.commonAncestorContainer;
+  const start = cac.nodeType === 1 ? cac : cac.parentElement;
+  const selector = tag === 'strong' ? 'strong,b' : tag === 'em' ? 'em,i' : tag;
+  const existing = start && start.closest(selector);
+  if (
+    existing &&
+    existing !== editing.el &&
+    editing.el.contains(existing) &&
+    !existing.getAttribute('data-rt') &&
+    !existing.getAttribute('data-rt-i')
+  ) {
+    const parent = existing.parentNode;
+    while (existing.firstChild) parent.insertBefore(existing.firstChild, existing);
+    parent.removeChild(existing);
+    return;
+  }
+  const w = d.createElement(tag);
+  try {
+    r.surroundContents(w);
+  } catch {
+    const frag = r.extractContents();
+    w.appendChild(frag);
+    r.insertNode(w);
+  }
+  s.removeAllRanges();
+  const nr = d.createRange();
+  nr.selectNodeContents(w);
+  s.addRange(nr);
 }
 
 /* ---------- overlays ---------- */
@@ -378,12 +526,17 @@ function renderPanel() {
     btn.onclick = () => setText(ta.value);
     tsec.appendChild(document.createElement('br'));
     tsec.appendChild(btn);
+  } else if (info.mixedText) {
+    const p = document.createElement('p');
+    p.style.color = 'var(--muted)';
+    p.textContent = 'Rich text. Click the element and edit it in place. Select text for bold and italic.';
+    tsec.appendChild(p);
   } else if (info.textDynamic) {
     const p = document.createElement('p');
     p.className = 'refused';
     p.textContent = sel.scope === 'host' && sel.instanceId
       ? 'Text here is dynamic (it may come from the component instance — switch scope).'
-      : 'The text of this element is dynamic or mixed with other elements (R-6).';
+      : 'The text of this element is dynamic (R-6).';
     tsec.appendChild(p);
   } else {
     const p = document.createElement('p');
@@ -705,6 +858,7 @@ async function undo() {
   if (op.type === 'setClasses') await setClasses(op.classes, true);
   else if (op.type === 'setText') await setText(op.text, true);
   else if (op.type === 'setSrc') await setSrc(op.src, true);
+  else if (op.type === 'setChildren') await applyChildren(op.id, op.children);
   renderPanel();
 }
 

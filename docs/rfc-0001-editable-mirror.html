@@ -111,7 +111,7 @@
     <tr><td>Status:</td><td>Draft</td></tr>
     <tr><td>Author:</td><td>P. Shen</td></tr>
     <tr><td>Created:</td><td>2026-09-01</td></tr>
-    <tr><td>Revised:</td><td>2026-09-02 (rev 17)</td></tr>
+    <tr><td>Revised:</td><td>2026-09-02 (rev 18)</td></tr>
     <tr><td>Companion:</td><td>Prior-Art Survey (docs/prior-art-survey.html), 2026-09-01</td></tr>
     <tr><td>Decisions:</td><td>docs/decisions/ (DR-0001 … DR-0007); index in docs/decisions/README.md</td></tr>
   </table>
@@ -821,6 +821,7 @@
     <tr><td class="id">15</td><td class="id">2026-09-01</td><td>Resolved OQ-F2: the v1 operator is a solo developer on localhost; remote non-developer editing is the first post-MVP milestone and the trigger for the hardened mode. DR-0011.</td></tr>
     <tr><td class="id">16</td><td class="id">2026-09-01</td><td>Closed the remaining open questions. OQ-A1 amended and resolved: v1 adds Next.js (config mode, Turbopack loader) alongside Vite, because the dogfood targets are two Next 16 + Tailwind v4 applications. OQ-A2 (no uninstrumented-build support), OQ-A3 (dev only), OQ-D2 (delegate to the project's formatter, minimal diffs otherwise), OQ-D4 (non-Tailwind styles refused), and OQ-G2 (MIT) resolved as provisionally stated. Added P0b (Turbopack stamping spike) and P3 (dogfood) to §7. DR-0012. No open questions remain; OQ-E4 stays provisional by design (DR-0010) and OQ-G1 (packaging) is deferred until after P1 by design.</td></tr>
     <tr><td class="id">17</td><td class="id">2026-09-02</td><td>Amended R-9: <code>src</code> is settable through a dedicated image-swap op restricted to root-relative project paths on image elements with literal <code>src</code>; uploads land in <code>public/rt-assets/</code>. Moved image swap from tier 3 to tier 1 and added Fill and text-color pickers to tier 1 (OQ-E2). DR-0013 records the trade-offs and one known implementation deviation from R-11 (g) (text undo collapses multi-line JSX text; rendering-identical, fix planned).</td></tr>
+    <tr><td class="id">18</td><td class="id">2026-09-02</td><td>Added rich in-place text editing (DR-0014): a new <code>setChildren</code> op edits mixed text/element children through a constrained tree (escaped text, kept stamped descendants written as verbatim source slices, and a fixed <code>strong/em/u/s</code> formatting vocabulary); enables seamless deletion of styled runs, editing around inline styling, and bold/italic on a selection. A structural commit reloads the iframe to avoid a React reconciliation crash. Recorded the test strategy: a fast Node unit + HTTP-integration suite (default) and an opt-in browser e2e suite.</td></tr>
   </table>
 </div>
 
@@ -836,7 +837,7 @@
 </ol>
 
 <footer>
-  <p>RFC-0001 rev 17 · Draft · Repository: <code>~/Developer/retouch</code>. The markdown mirror of this document is <code>docs/rfc-0001-editable-mirror.md</code>; this HTML version is canonical because it carries the figures. Decision records: <code>docs/decisions/</code>.</p>
+  <p>RFC-0001 rev 18 · Draft · Repository: <code>~/Developer/retouch</code>. The markdown mirror of this document is <code>docs/rfc-0001-editable-mirror.md</code>; this HTML version is canonical because it carries the figures. Decision records: <code>docs/decisions/</code>.</p>
 </footer>
 
 </div>

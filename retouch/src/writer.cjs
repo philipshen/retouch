@@ -68,6 +68,10 @@ function describeElement(resolved) {
     srcDynamic,
     text: textInfo ? textInfo.text : null,
     textDynamic: textInfo ? false : hasChildren(node),
+    mixedText:
+      !textInfo &&
+      childrenAreMappable(node) &&
+      (node.children || []).some((c) => c.type === 'JSXText' && c.value.trim() !== ''),
   };
 }
 
@@ -103,6 +107,50 @@ function literalTextRange(node, source) {
     .replace(/&#125;/g, '}')
     .trim();
   return { start, end, text };
+}
+
+// Rich in-place editing (DR-0014): the fixed formatting vocabulary.
+const WRAP_TAGS = new Set(['strong', 'em', 'u', 's']);
+
+// True when every significant child is JSXText or JSXElement — the shape
+// rich editing can map back to source. Expressions refuse (R-6).
+function childrenAreMappable(node) {
+  if (!node.closingElement) return false;
+  const significant = (node.children || []).filter(
+    (c) => !(c.type === 'JSXText' && c.value.trim() === '')
+  );
+  if (significant.length === 0) return false;
+  return significant.every((c) => c.type === 'JSXText' || c.type === 'JSXElement');
+}
+
+function validateChildrenTree(children, depth) {
+  if (!Array.isArray(children)) return 'setChildren needs a children array.';
+  if (depth > 8) return 'Nesting too deep.';
+  for (const c of children) {
+    if (!c || typeof c !== 'object') return 'Bad node.';
+    if (c.t === 'text') {
+      if (typeof c.value !== 'string' || c.value.length > 10000) return 'Bad text node.';
+    } else if (c.t === 'wrap') {
+      if (!WRAP_TAGS.has(c.tag)) return `Formatting tag not allowed: ${String(c.tag)}`;
+      const err = validateChildrenTree(c.children, depth + 1);
+      if (err) return err;
+    } else if (c.t === 'keep') {
+      if (!/^[0-9a-f]{10}$/.test(c.id || '')) return 'Bad keep id.';
+      if (c.children) {
+        const err = validateChildrenTree(c.children, depth + 1);
+        if (err) return err;
+      }
+    } else {
+      return 'Unknown node type.';
+    }
+  }
+  return null;
+}
+
+function refuseError(msg) {
+  const e = new Error(msg);
+  e.refusal = msg;
+  return e;
 }
 
 // op: { type, id, fileHash, ... }. `resolved` comes from Index.resolve(id).
@@ -147,6 +195,54 @@ function applyOp(resolved, op) {
       );
     }
     ms.overwrite(range.start, range.end, escapeJsxText(op.text));
+  } else if (op.type === 'setChildren') {
+    // Rich in-place editing (DR-0014). The tree is constrained: escaped
+    // text, kept stamped descendants written as verbatim source slices,
+    // and the fixed WRAP_TAGS vocabulary. No attributes, no expressions.
+    const treeErr = validateChildrenTree(op.children, 0);
+    if (treeErr) return refuse(treeErr);
+    if (!childrenAreMappable(node)) {
+      return refuse(
+        `The children of this element include expressions (${resolved.relPath}); they cannot be edited deterministically.`
+      );
+    }
+    const descendants = new Map();
+    for (const el of resolved.elements) {
+      if (el.node.start > node.openingElement.end && el.node.end < node.closingElement.start) {
+        descendants.set(el.id, el.node);
+      }
+    }
+    const source = resolved.source;
+    const build = (children) =>
+      children
+        .map((c) => {
+          if (c.t === 'text') return escapeJsxText(c.value);
+          if (c.t === 'wrap') return `<${c.tag}>${build(c.children)}</${c.tag}>`;
+          const kept = descendants.get(c.id);
+          if (!kept) {
+            throw refuseError('A kept element is not a descendant of the target in source; the edit cannot be mapped.');
+          }
+          if (!c.children) return source.slice(kept.start, kept.end);
+          if (!childrenAreMappable(kept)) {
+            throw refuseError('A styled child whose text was edited contains expressions; it cannot be edited deterministically.');
+          }
+          return (
+            source.slice(kept.start, kept.openingElement.end) +
+            build(c.children) +
+            source.slice(kept.closingElement.start, kept.end)
+          );
+        })
+        .join('');
+    let builtStr;
+    try {
+      builtStr = build(op.children);
+    } catch (e) {
+      if (e.refusal) return refuse(e.refusal);
+      throw e;
+    }
+    if (builtStr.trim() === '') return refuse('The edit removed all content; delete the element instead.');
+    if (builtStr.length > 50000) return refuse('The edit is too large.');
+    ms.overwrite(node.openingElement.end, node.closingElement.start, builtStr);
   } else if (op.type === 'setSrc') {
     // Image swap (R-9 amendment, rev 17): src is settable ONLY as a
     // root-relative project path — no scheme, no host, no traversal — which
