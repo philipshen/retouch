@@ -17,7 +17,6 @@ const SPACING_STEPS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11,
 let mode = 'edit'; // 'edit' | 'interact'
 let sel = null; // { hostId, instanceId, scope: 'host'|'instance', info }
 let editing = null; // { el, id, info, original, originalHTML, snapshot, originalTree } during inline text editing
-let fmtbar = null; // floating B/I toolbar shown over a text selection
 let hoverEl = null;
 let undoStack = [];
 let lastAppPath = null;
@@ -90,14 +89,12 @@ function hookFrame(d, w) {
     suppress(e);
   }, true);
   d.addEventListener('blur', suppress, true);
-  d.addEventListener('selectionchange', updateFmtbar);
   d.addEventListener('keydown', (e) => {
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'i')) {
         e.preventDefault(); // never let the browser's own rich-edit commands run (R-5)
         toggleWrap(e.key === 'b' ? 'strong' : 'em');
-        updateFmtbar();
         return;
       }
       if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
@@ -229,7 +226,6 @@ async function commitInlineEdit() {
   const ed = editing;
   editing = null;
   ed.el.removeAttribute('contenteditable');
-  hideFmtbar();
   const children = serializeChildren(ed.el, ed.snapshot);
   if (JSON.stringify(children) === JSON.stringify(ed.originalTree)) return;
 
@@ -297,47 +293,7 @@ async function applyChildren(id, children) {
   else toast((res && res.reason) || (res && res.error) || 'Undo failed', 'err');
 }
 
-/* ---------- formatting toolbar (bold / italic on selection) ---------- */
-function ensureFmtbar() {
-  if (fmtbar) return fmtbar;
-  fmtbar = document.createElement('div');
-  fmtbar.id = 'fmtbar';
-  fmtbar.hidden = true;
-  for (const [label, tag] of [['B', 'strong'], ['I', 'em']]) {
-    const b = document.createElement('button');
-    b.textContent = label;
-    b.title = (tag === 'strong' ? 'Bold' : 'Italic') + ' (Cmd+' + label + ')';
-    if (tag === 'em') b.style.fontStyle = 'italic';
-    b.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      toggleWrap(tag);
-      updateFmtbar();
-    });
-    fmtbar.appendChild(b);
-  }
-  document.getElementById('frameWrap').appendChild(fmtbar);
-  return fmtbar;
-}
-
-function hideFmtbar() {
-  if (fmtbar) fmtbar.hidden = true;
-}
-
-function updateFmtbar() {
-  const bar = ensureFmtbar();
-  const d = doc();
-  if (!editing || !d) return hideFmtbar();
-  const s = d.getSelection();
-  if (!s || !s.rangeCount || s.isCollapsed) return hideFmtbar();
-  const r = s.getRangeAt(0);
-  if (!editing.el.contains(r.commonAncestorContainer)) return hideFmtbar();
-  const rect = r.getBoundingClientRect();
-  bar.hidden = false;
-  bar.style.left = Math.max(4, rect.left) + 'px';
-  bar.style.top = Math.max(4, rect.top - 38) + 'px';
-}
-
+/* ---------- bold / italic on selection (Cmd+B / Cmd+I) ---------- */
 function toggleWrap(tag) {
   const d = doc();
   if (!d || !editing) return;
