@@ -58,10 +58,12 @@ function hookFrame(d, w) {
     e.preventDefault();
     e.stopPropagation();
     const t = e.target.closest && e.target.closest('[data-rt], [data-rt-i]');
-    if (t) select(t);
+    // Single click selects AND, when the element has editable literal text,
+    // enters in-place editing directly (user decision, 2026-09-02).
+    if (t) startInlineEdit(t, e, true);
     else clearSelection();
   }, true);
-  // Double-click starts inline text editing in place (R-5: plaintext-only).
+  // Double-click also starts inline text editing (kept as a fallback).
   d.addEventListener('dblclick', (e) => {
     if (mode !== 'edit') return;
     if (editing) {
@@ -163,7 +165,7 @@ function clearSelection() {
 }
 
 /* ---------- inline text editing ---------- */
-async function startInlineEdit(el, evt) {
+async function startInlineEdit(el, evt, quiet) {
   const { hostId, instanceId } = idsOf(el);
   let editId = null;
   let info = null;
@@ -182,7 +184,7 @@ async function startInlineEdit(el, evt) {
   sel = { hostId, instanceId, scope: editId && editId === instanceId ? 'instance' : 'host', info };
   if (!editId) {
     await loadScope();
-    toast(reason || 'No editable text here.', 'err');
+    if (!quiet) toast(reason || 'No editable text here.', 'err');
     return;
   }
   renderPanel();
