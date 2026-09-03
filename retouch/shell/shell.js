@@ -358,8 +358,17 @@ function toggleWrap(tag) {
     !existing.getAttribute('data-rt-i')
   ) {
     const parent = existing.parentNode;
-    while (existing.firstChild) parent.insertBefore(existing.firstChild, existing);
+    const moved = [...existing.childNodes];
+    for (const child of moved) parent.insertBefore(child, existing);
     parent.removeChild(existing);
+    // Keep the just-unwrapped text selected so the highlight and toolbar stay.
+    if (moved.length) {
+      s.removeAllRanges();
+      const nr = d.createRange();
+      nr.setStartBefore(moved[0]);
+      nr.setEndAfter(moved[moved.length - 1]);
+      s.addRange(nr);
+    }
     return;
   }
   const w = d.createElement(tag);

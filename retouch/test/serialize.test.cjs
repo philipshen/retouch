@@ -77,6 +77,12 @@ test('nested formatting is preserved', () => {
   ]);
 });
 
+test('un-wrapping a bold run leaves plain text runs (adjacent text merges in the writer)', () => {
+  // After un-bold, the DOM is the surrounding text plus the freed inner text.
+  const tree = serializeChildren(el('h1', [text('Plain start'), text(' rest')]));
+  assert.deepStrictEqual(tree, [{ t: 'text', value: 'Plain start' }, { t: 'text', value: ' rest' }]);
+});
+
 test('empty text nodes are dropped', () => {
   const tree = serializeChildren(el('p', [text(''), text('x')]));
   assert.deepStrictEqual(tree, [{ t: 'text', value: 'x' }]);
