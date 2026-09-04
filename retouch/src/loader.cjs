@@ -4,7 +4,10 @@
 // any error serves the module unstamped and warns; the loader must never
 // break the dev server (OQ-B1 residual d).
 
-const { stamp } = require('./stamp.cjs');
+// The build integration is decoupled from the language via the adapter.
+// (RETOUCH_ADAPTER lets a non-React toolchain select its adapter's stamp.)
+const adapter = require('./adapter.cjs').getAdapter(process.env.RETOUCH_ADAPTER || 'react');
+const stamp = adapter.stamp;
 
 module.exports = function retouchLoader(source, inputMap) {
   const callback = this.async();

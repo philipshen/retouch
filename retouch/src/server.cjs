@@ -9,24 +9,24 @@ const http = require('node:http');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { Index } = require('./indexer.cjs');
-const { applyOp, describeElement } = require('./writer.cjs');
 
 const SHELL_DIR = path.join(__dirname, '..', 'shell');
 const HOST_RE = /^(localhost|127\.0\.0\.1)(:\d+)?$/;
 const TOKEN_HEADER = 'x-retouch-token';
 
-function startServer({ appRoot, port }) {
+function startServer({ appRoot, port, adapter }) {
+  adapter = adapter || require('./adapter.cjs').defaultAdapter();
   const token = crypto.randomBytes(16).toString('hex');
-  const index = new Index(appRoot);
+  const index = new Index(appRoot, adapter);
   const fileCount = index.scanAll();
   index.watch();
   console.log(
-    `[retouch] indexed ${fileCount} JSX files under ${appRoot} (${index.idToFile.size} elements)`
+    `[retouch] adapter=${adapter.name}; indexed ${fileCount} files under ${appRoot} (${index.idToFile.size} elements)`
   );
 
   const server = http.createServer((req, res) => {
     try {
-      handle(req, res, { index, token, appRoot });
+      handle(req, res, { index, token, appRoot, adapter });
     } catch (err) {
       res.writeHead(err.statusCode || 500, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: err.message }));
@@ -68,7 +68,7 @@ function handle(req, res, ctx) {
     if (!/^[0-9a-f]{10}$/.test(id)) return json(res, 400, { ok: false, error: 'bad id' });
     const resolved = ctx.index.resolve(id);
     if (!resolved) return json(res, 404, { ok: false, error: 'unknown id' });
-    return json(res, 200, { ok: true, element: describeElement(resolved) });
+    return json(res, 200, { ok: true, element: ctx.adapter.describe(resolved) });
   }
 
   if (p === '/rt/__api/op' && req.method === 'POST') {
@@ -91,7 +91,7 @@ function handle(req, res, ctx) {
       if (!resolved.file.startsWith(ctx.appRoot + path.sep)) {
         return json(res, 400, { ok: false, error: 'path outside project root' });
       }
-      const result = applyOp(resolved, op);
+      const result = ctx.adapter.applyOp(resolved, op);
       // Keep the index fresh immediately (the watcher would also catch it).
       if (result.ok) ctx.index.indexFile(resolved.file);
       return json(res, result.ok ? 200 : 409, result);

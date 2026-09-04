@@ -5,13 +5,15 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { collectElements, contentHash } = require('./id.cjs');
 
 const SKIP_DIRS = new Set(['node_modules', '.next', '.git', 'dist', 'build', 'out', 'public', 'coverage', '.turbo', '.vercel']);
 
 class Index {
-  constructor(appRoot) {
+  // `adapter` is the language adapter (see src/adapter.cjs). The Index knows
+  // nothing about JSX; it only calls adapter.matches / collect / contentHash.
+  constructor(appRoot, adapter) {
     this.appRoot = appRoot;
+    this.adapter = adapter || require('./adapter.cjs').defaultAdapter();
     this.idToFile = new Map(); // id -> absolute file path
     this.fileIds = new Map(); // absolute file path -> Set(id)
     this.errors = new Map(); // file -> message
@@ -19,7 +21,7 @@ class Index {
 
   scanAll() {
     const files = [];
-    walk(this.appRoot, files);
+    walk(this.appRoot, files, this.adapter);
     for (const f of files) this.indexFile(f);
     return files.length;
   }
@@ -38,7 +40,7 @@ class Index {
     }
     const relPath = path.relative(this.appRoot, absFile).split(path.sep).join('/');
     try {
-      const { elements } = collectElements(source, relPath);
+      const { elements } = this.adapter.collect(source, relPath);
       const ids = new Set();
       for (const el of elements) {
         this.idToFile.set(el.id, absFile);
@@ -62,20 +64,21 @@ class Index {
     if (!absFile) return null;
     const source = fs.readFileSync(absFile, 'utf8');
     const relPath = path.relative(this.appRoot, absFile).split(path.sep).join('/');
-    const { elements } = collectElements(source, relPath);
+    const { elements } = this.adapter.collect(source, relPath);
     const element = elements.find((e) => e.id === id);
     if (!element) return null;
-    return { file: absFile, relPath, source, hash: contentHash(source), element, elements };
+    return { file: absFile, relPath, source, hash: this.adapter.contentHash(source), element, elements };
   }
 
   watch() {
     const pending = new Map();
     try {
       this.watcher = fs.watch(this.appRoot, { recursive: true }, (_evt, rel) => {
-        if (!rel || !/\.(tsx|jsx)$/.test(rel)) return;
+        if (!rel) return;
         const parts = rel.split(path.sep);
         if (parts.some((p) => SKIP_DIRS.has(p))) return;
         const abs = path.join(this.appRoot, rel);
+        if (!this.adapter.matches(abs)) return;
         clearTimeout(pending.get(abs));
         pending.set(
           abs,
@@ -98,7 +101,7 @@ class Index {
   }
 }
 
-function walk(dir, out) {
+function walk(dir, out, adapter) {
   let entries;
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -109,8 +112,8 @@ function walk(dir, out) {
     if (e.name.startsWith('.') && e.name !== '.') continue;
     if (e.isDirectory()) {
       if (SKIP_DIRS.has(e.name)) continue;
-      walk(path.join(dir, e.name), out);
-    } else if (/\.(tsx|jsx)$/.test(e.name)) {
+      walk(path.join(dir, e.name), out, adapter);
+    } else if (adapter.matches(path.join(dir, e.name))) {
       out.push(path.join(dir, e.name));
     }
   }

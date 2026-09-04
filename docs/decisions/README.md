@@ -20,3 +20,4 @@ Format: Status · Date · RFC references · Context · Options considered · Dec
 | [DR-0012](0012-v1-scope-and-license.md) | v1 scope confirmation, Next.js inclusion, MIT license | Accepted (rev 16) | OQ-A1…A3, OQ-D2, OQ-D4, OQ-G2 |
 | [DR-0013](0013-images-and-colors.md) | Image swap (R-9 amendment) and Figma-style color pickers | Accepted (rev 17) | R-9, OQ-E2, OQ-D3 |
 | [DR-0014](0014-rich-text-editing.md) | Rich in-place text editing (setChildren, bold/italic, seamless delete) | Accepted (rev 18) | R-5, R-6, OQ-E2 |
+| [DR-0015](0015-adapter-abstraction.md) | Language-adapter seam; Liquid plan (two axes: adapter + integration) | Accepted (rev 19); React done | R-1, R-10, OQ-A1 |

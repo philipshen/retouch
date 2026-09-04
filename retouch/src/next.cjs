@@ -23,7 +23,8 @@ function withRetouch(nextConfig = {}, opts = {}) {
   if (!globalThis[STARTED]) {
     globalThis[STARTED] = true;
     const { startServer } = require('./server.cjs');
-    startServer({ appRoot, port });
+    const adapter = require('./adapter.cjs').getAdapter('react');
+    startServer({ appRoot, port, adapter });
   }
 
   const loaderPath = require.resolve('./loader.cjs');
