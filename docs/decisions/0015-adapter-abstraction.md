@@ -1,6 +1,6 @@
 # DR-0015: The language-adapter abstraction
 
-- Status: Accepted (RFC rev 19). Step 1 (React adapter behind the seam) done; Liquid adapter and Shopify integration follow.
+- Status: Accepted (RFC rev 19). Step 1 (React adapter behind the seam) and step 2 (Liquid adapter) done; the Shopify-CLI proxy integration follows.
 - Date: 2026-09-04
 - RFC: R-1, R-10, OQ-A1; enables non-React targets (Liquid, Vue, Svelte)
 
@@ -72,6 +72,14 @@ The same interface fits Liquid:
 | `{% for %}` loops | one source, N nodes — the mapped-list case; edit-all + co-highlight |
 | `{% render 'snippet' %}` | like a component instance (later) |
 | section settings | merchant data, not source; refuse in v1 (later map to settings_data.json) |
+
+Status of the Liquid adapter (`src/adapters/liquid.cjs`): built and unit-tested.
+It has its own tolerant HTML+Liquid tokenizer (no external parser). It stamps
+HTML tags, resolves by structural ID, and supports `setClasses`, `setText`, and
+`setTag`. It refuses dynamic classes (`class` containing `{% %}`/`{{ }}`) and
+dynamic or mixed text (R-6). Text writes escape `{`/`}` to entities so an edit
+can never inject Liquid. It parses and stamps real moses sections (smoke test).
+Not yet: `setChildren` rich text, `setSrc`, and snippet-instance mapping.
 
 The one real difference is the integration: Shopify renders `.liquid` remotely,
 so the Liquid build integration is a proxy in front of `shopify theme dev`

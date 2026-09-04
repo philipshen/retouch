@@ -43,7 +43,8 @@ function getAdapter(name) {
   return a;
 }
 
-// The default adapter (React/JSX) is registered on require.
+// The built-in adapters are registered on require.
 register(require('./adapters/react.cjs'));
+register(require('./adapters/liquid.cjs'));
 
 module.exports = { register, getAdapter, defaultAdapter: () => getAdapter('react') };
