@@ -24,8 +24,9 @@ Status: v0.1 built and working against the dogfood target (2026-09-02). The arch
 
 | Path | What it is |
 |---|---|
-| `retouch/` | The library (v0.1, config mode for Next.js). `src/` = stamper, loader, indexer, writer, sidecar, `withRetouch`; `shell/` = the editor UI (vanilla JS, no build step). |
-| `unplastic-backbone/` | A local clone of the dogfood target (git-ignored; never committed here). |
+| `retouch/` | The library. `src/` = the core (indexer, sidecar, loader) plus `adapter.cjs` and `adapters/` (the swappable language adapters); `shell/` = the editor UI (vanilla JS, no build step). |
+| `unplastic-backbone/` | Test repo 1: a Next.js + React + Tailwind app (the React adapter target). Git-ignored; never committed here. |
+| `moses/` | Test repo 2: a Shopify Liquid theme (Tailwind). The target for the Liquid adapter. Git-ignored. |
 
 ### Running the dogfood
 
