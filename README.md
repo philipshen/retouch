@@ -38,6 +38,21 @@ open http://localhost:3400/rt             # the editable mirror of http://localh
 
 The clone's only durable changes are `next.config.ts` (one wrapped export) and the `retouch` dependency (a symlink, so library edits apply on the next dev-server restart). Edits made in the mirror land in the clone's working tree; inspect them with `git -C unplastic-backbone diff`.
 
+### Running the Shopify (Liquid) dogfood
+
+```sh
+cd retouch
+node bin/retouch.cjs shopify ../moses     # or: retouch shopify ../moses
+open http://localhost:9400/rt             # the editable mirror of the theme
+```
+
+Safety: this serves an **isolated development theme** (unpublished) through
+`shopify theme dev`. It never touches the live or any named theme, and it
+refuses `--live` / `push` / `--theme` flags. Stamping never modifies the
+original theme source — it stamps a throwaway copy that `shopify theme dev`
+serves; edits made in the mirror are written back to the real `.liquid` files
+under `moses/`. Requires the Shopify CLI, authenticated to the store.
+
 ## Current state
 
 See the RFC's revision history and `docs/decisions/README.md` for the index of decisions. v0.1 implements: Turbopack/webpack stamping (structural IDs, R-10), the same-origin mirror at `/rt` via a sidecar and one rewrite, select + co-highlight, class chips and spacing steppers, literal text editing, continuous one-line-diff commits with undo, and the R-9 controls (token, custom header, Host check, op grammar). Not yet implemented: the component model's lift/detach/edit-main actions, drag gestures, the Tailwind safelist preview, launch mode (`npx retouch`), and the Vite plugin.

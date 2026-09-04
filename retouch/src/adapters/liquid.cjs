@@ -177,10 +177,13 @@ function collect(source, relPath) {
   return { elements };
 }
 
-function stamp(source, filePath /* , appRoot */) {
+function stamp(source, filePath, appRoot) {
   if (!matches(filePath)) return null;
   if (!source.includes('<')) return null;
-  const { elements } = collect(source, filePath);
+  // The ID must be computed from the SAME relative path the writer's index
+  // uses, or the stamped DOM and the index disagree.
+  const relPath = appRoot ? path.relative(appRoot, filePath).split(path.sep).join('/') : filePath;
+  const { elements } = collect(source, relPath);
   if (elements.length === 0) return null;
   const ms = new MagicString(source);
   for (const el of elements) ms.appendLeft(el.nameEnd, ` data-rt="${el.id}"`);

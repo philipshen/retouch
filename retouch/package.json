@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "An editable mirror of your running app at /rt — Figma-grade edits written back to source deterministically.",
   "license": "MIT",
+  "bin": {
+    "retouch": "bin/retouch.cjs"
+  },
   "scripts": {
     "test": "node --test 'test/**/*.test.cjs'",
     "test:e2e": "node test/e2e/run.cjs"

@@ -1,6 +1,6 @@
 # DR-0015: The language-adapter abstraction
 
-- Status: Accepted (RFC rev 19). Step 1 (React adapter behind the seam) and step 2 (Liquid adapter) done; the Shopify-CLI proxy integration follows.
+- Status: Accepted (RFC rev 19). Steps 1–3 done: React adapter behind the seam, Liquid adapter, and the Shopify-CLI proxy integration.
 - Date: 2026-09-04
 - RFC: R-1, R-10, OQ-A1; enables non-React targets (Liquid, Vue, Svelte)
 
@@ -82,10 +82,28 @@ can never inject Liquid. It parses and stamps real moses sections (smoke test).
 Not yet: `setChildren` rich text, `setSrc`, and snippet-instance mapping.
 
 The one real difference is the integration: Shopify renders `.liquid` remotely,
-so the Liquid build integration is a proxy in front of `shopify theme dev`
-(stamp local files → theme dev pushes/renders → proxy injects the shell and
-serves `/rt` → writer edits the local `.liquid` file → theme dev hot-reloads),
-not a bundler plugin.
+so the Liquid build integration is a proxy in front of `shopify theme dev`, not
+a bundler plugin. Built as `src/shopify.cjs` + `bin/retouch.cjs`
+(`retouch shopify <dir>`):
+
+1. Stamp a throwaway COPY of the theme (the original source is never modified);
+   a file watcher re-stamps on change.
+2. `shopify theme dev --path <copy>` serves the copy through an **isolated
+   development theme** — unpublished, never the live or any named theme. The
+   integration refuses `--live` / `push` / `--theme` flags (user safety
+   requirement).
+3. The sidecar runs in proxy mode: `/rt*` is the mirror; everything else is
+   proxied to `shopify theme dev`, one origin. The writer's index is over the
+   ORIGINAL theme, so edits land in the real `.liquid` files and IDs match the
+   stamps (both computed from the same theme-relative path).
+
+Verified against the real moses theme (76 files, 692 elements): a stamped
+`<div>` resolves to `sections/404.liquid` with its literal Tailwind classes.
+Proxy passthrough, stamp-copy, and the safety guard are unit-tested with a fake
+upstream (no store needed). Known limitation: the theme-dev live-reload
+websocket does not traverse the proxy, so structural edits rely on the mirror's
+own frame reload; the write→re-stamp→theme-dev-sync loop is a couple of seconds,
+slower than Vite HMR.
 
 ## Consequences
 

@@ -10,11 +10,15 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { Index } = require('./indexer.cjs');
 
+// Hop-by-hop headers must not be forwarded when proxying.
+const HOP = new Set(['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
+  'te', 'trailer', 'transfer-encoding', 'upgrade']);
+
 const SHELL_DIR = path.join(__dirname, '..', 'shell');
 const HOST_RE = /^(localhost|127\.0\.0\.1)(:\d+)?$/;
 const TOKEN_HEADER = 'x-retouch-token';
 
-function startServer({ appRoot, port, adapter }) {
+function startServer({ appRoot, port, adapter, proxyTo }) {
   adapter = adapter || require('./adapter.cjs').defaultAdapter();
   const token = crypto.randomBytes(16).toString('hex');
   const index = new Index(appRoot, adapter);
@@ -26,7 +30,7 @@ function startServer({ appRoot, port, adapter }) {
 
   const server = http.createServer((req, res) => {
     try {
-      handle(req, res, { index, token, appRoot, adapter });
+      handle(req, res, { index, token, appRoot, adapter, proxyTo });
     } catch (err) {
       res.writeHead(err.statusCode || 500, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: err.message }));
@@ -128,8 +132,38 @@ function handle(req, res, ctx) {
     return res.end(html);
   }
 
+  // Proxy mode (Liquid/Shopify): everything that is not a /rt path is forwarded
+  // to the upstream renderer (shopify theme dev), so the mirror and the theme
+  // share one origin. The stamped theme already carries data-rt in its render.
+  if (ctx.proxyTo) return proxy(req, res, ctx.proxyTo);
+
   res.writeHead(404);
   res.end('not found');
+}
+
+function proxy(req, res, upstream) {
+  const target = new URL(req.url, upstream);
+  const headers = {};
+  for (const [k, v] of Object.entries(req.headers)) {
+    if (!HOP.has(k.toLowerCase())) headers[k] = v;
+  }
+  headers.host = target.host;
+  const up = http.request(
+    { hostname: target.hostname, port: target.port || 80, path: target.pathname + target.search, method: req.method, headers },
+    (ur) => {
+      const out = {};
+      for (const [k, v] of Object.entries(ur.headers)) {
+        if (!HOP.has(k.toLowerCase())) out[k] = v;
+      }
+      res.writeHead(ur.statusCode || 502, out);
+      ur.pipe(res);
+    }
+  );
+  up.on('error', () => {
+    if (!res.headersSent) res.writeHead(502, { 'content-type': 'text/plain' });
+    res.end('retouch: upstream renderer not reachable. Is `shopify theme dev` running?');
+  });
+  req.pipe(up);
 }
 
 function requireToken(req, token) {
