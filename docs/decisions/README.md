@@ -21,3 +21,7 @@ Format: Status · Date · RFC references · Context · Options considered · Dec
 | [DR-0013](0013-images-and-colors.md) | Image swap (R-9 amendment) and Figma-style color pickers | Accepted (rev 17) | R-9, OQ-E2, OQ-D3 |
 | [DR-0014](0014-rich-text-editing.md) | Rich in-place text editing (setChildren, bold/italic, seamless delete) | Accepted (rev 18) | R-5, R-6, OQ-E2 |
 | [DR-0015](0015-adapter-abstraction.md) | Language-adapter seam; Liquid plan (two axes: adapter + integration) | Accepted (rev 19); React done | R-1, R-10, OQ-A1 |
+| [DR-0016](0016-command-wrapper.md) | Machine-wide installation and arbitrary startup commands | Accepted (rev 20) | §5.1, OQ-B1, OQ-G1 |
+| [DR-0017](0017-liquid-string-origins.md) | Trace Liquid strings to their stored source | Accepted (rev 21) | R-1, R-6, R-10, R-11 |
+| [DR-0018](0018-inline-edit-whitespace.md) | Preserve layout during inline text editing | Accepted (rev 22) | R-5 |
+| [DR-0019](0019-max-width-drag.md) | Max-width dragging with Tailwind snapping | Accepted (rev 23) | OQ-E1, OQ-D3, R-6 |

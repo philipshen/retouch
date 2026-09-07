@@ -28,6 +28,18 @@ Status: v0.1 built and working against the dogfood target (2026-09-02). The arch
 | `unplastic-backbone/` | Test repo 1: a Next.js + React + Tailwind app (the React adapter target). Git-ignored; never committed here. |
 | `moses/` | Test repo 2: a Shopify Liquid theme (Tailwind). The target for the Liquid adapter. Git-ignored. |
 
+### Machine-wide command wrapper
+
+Retouch can run your existing startup command without a project dependency or config edit:
+
+```sh
+retouch -- npm run dev
+retouch -- make everything
+retouch -- ./scripts/start-local.sh
+```
+
+Automatic integration currently targets Next.js 16.2.x, verified on 16.2.5 with Turbopack and webpack. See [installation, startup boundaries, and verification](docs/cli.md). Homebrew formula generation is included; no public tap has been published.
+
 ### Running the dogfood
 
 ```sh
@@ -41,10 +53,19 @@ The clone's only durable changes are `next.config.ts` (one wrapped export) and t
 ### Running the Shopify (Liquid) dogfood
 
 ```sh
-cd retouch
-node bin/retouch.cjs shopify ../moses     # or: retouch shopify ../moses
+retouch shopify ./moses --store=exm5rs-kz.myshopify.com
+# From a source checkout: node retouch/bin/retouch.cjs shopify ./moses --store=exm5rs-kz.myshopify.com
 open http://localhost:9400/rt             # the editable mirror of the theme
 ```
+
+For Moses, install the theme dependencies with `cd moses && pnpm install --frozen-lockfile`,
+and keep `pnpm dev:css` running in a separate terminal. Retouch synchronizes the
+compiled CSS, JSON, assets, and Liquid edits into the served copy. A new Tailwind
+class needs that CSS build before its styling can appear.
+
+`RETOUCH_PROXY_PORT` and `RETOUCH_THEME_PORT` configure the two local ports.
+Pass the store explicitly; Retouch ignores theme environment configuration to
+prevent it from selecting an existing theme.
 
 Safety: this serves an **isolated development theme** (unpublished) through
 `shopify theme dev`. It never touches the live or any named theme, and it
@@ -55,4 +76,4 @@ under `moses/`. Requires the Shopify CLI, authenticated to the store.
 
 ## Current state
 
-See the RFC's revision history and `docs/decisions/README.md` for the index of decisions. v0.1 implements: Turbopack/webpack stamping (structural IDs, R-10), the same-origin mirror at `/rt` via a sidecar and one rewrite, select + co-highlight, class chips and spacing steppers, literal text editing, continuous one-line-diff commits with undo, and the R-9 controls (token, custom header, Host check, op grammar). Not yet implemented: the component model's lift/detach/edit-main actions, drag gestures, the Tailwind safelist preview, launch mode (`npx retouch`), and the Vite plugin.
+See the RFC's revision history and `docs/decisions/README.md` for the index of decisions. v0.1 implements: Turbopack/webpack stamping (structural IDs, R-10), the same-origin mirror at `/rt` via a sidecar and one rewrite, select + co-highlight, class chips and spacing steppers, literal text editing, continuous one-line-diff commits with undo, and the R-9 controls (token, custom header, Host check, op grammar). Not yet implemented: the component model's lift/detach/edit-main actions, drag gestures, the Tailwind safelist preview, the Vite plugin.

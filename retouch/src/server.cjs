@@ -18,13 +18,13 @@ const SHELL_DIR = path.join(__dirname, '..', 'shell');
 const HOST_RE = /^(localhost|127\.0\.0\.1)(:\d+)?$/;
 const TOKEN_HEADER = 'x-retouch-token';
 
-function startServer({ appRoot, port, adapter, proxyTo }) {
+function startServer({ appRoot, port, adapter, proxyTo, quiet = false }) {
   adapter = adapter || require('./adapter.cjs').defaultAdapter();
   const token = crypto.randomBytes(16).toString('hex');
   const index = new Index(appRoot, adapter);
   const fileCount = index.scanAll();
   index.watch();
-  console.log(
+  if (!quiet) console.log(
     `[retouch] adapter=${adapter.name}; indexed ${fileCount} files under ${appRoot} (${index.idToFile.size} elements)`
   );
 
@@ -47,8 +47,8 @@ function startServer({ appRoot, port, adapter, proxyTo }) {
   });
 
   server.listen(port, '127.0.0.1', () => {
-    const appPort = process.env.PORT || 3000;
-    console.log(`[retouch] mirror ready — open http://localhost:${appPort}/rt (sidecar :${port})`);
+    const appPort = proxyTo ? server.address().port : process.env.PORT || 3000;
+    if (!quiet) console.log(`[retouch] mirror ready — open http://localhost:${appPort}/rt (sidecar :${server.address().port})`);
   });
   server.retouchIndex = index; // lets tests close the file watcher
   return server;
@@ -72,6 +72,7 @@ function handle(req, res, ctx) {
     if (!/^[0-9a-f]{10}$/.test(id)) return json(res, 400, { ok: false, error: 'bad id' });
     const resolved = ctx.index.resolve(id);
     if (!resolved) return json(res, 404, { ok: false, error: 'unknown id' });
+    resolved.context = renderContext(url.searchParams.get('context'));
     return json(res, 200, { ok: true, element: ctx.adapter.describe(resolved) });
   }
 
@@ -84,6 +85,7 @@ function handle(req, res, ctx) {
       } catch {
         return json(res, 400, { ok: false, error: 'bad json' });
       }
+      if (!op || typeof op !== 'object' || Array.isArray(op)) return json(res, 400, { ok: false, error: 'bad op' });
       if (!/^[0-9a-f]{10}$/.test(op.id || '')) return json(res, 400, { ok: false, error: 'bad id' });
       const resolved = ctx.index.resolve(op.id);
       if (!resolved)
@@ -95,7 +97,13 @@ function handle(req, res, ctx) {
       if (!resolved.file.startsWith(ctx.appRoot + path.sep)) {
         return json(res, 400, { ok: false, error: 'path outside project root' });
       }
-      const result = ctx.adapter.applyOp(resolved, op);
+      let result;
+      try {
+        resolved.context = renderContext(op.context);
+        result = ctx.adapter.applyOp(resolved, op);
+      } catch (err) {
+        return json(res, err.statusCode || 500, { ok: false, error: err.message });
+      }
       // Keep the index fresh immediately (the watcher would also catch it).
       if (result.ok) ctx.index.indexFile(resolved.file);
       return json(res, result.ok ? 200 : 409, result);
@@ -142,7 +150,11 @@ function handle(req, res, ctx) {
 }
 
 function proxy(req, res, upstream) {
-  const target = new URL(req.url, upstream);
+  const target = new URL(upstream);
+  // Treat even a //host/path request as a path on the fixed renderer.
+  const requested = new URL(req.url, 'http://localhost');
+  target.pathname = req.url.startsWith('//') ? req.url.split('?')[0] : requested.pathname;
+  target.search = requested.search;
   const headers = {};
   for (const [k, v] of Object.entries(req.headers)) {
     if (!HOP.has(k.toLowerCase())) headers[k] = v;
@@ -155,6 +167,17 @@ function proxy(req, res, upstream) {
       for (const [k, v] of Object.entries(ur.headers)) {
         if (!HOP.has(k.toLowerCase())) out[k] = v;
       }
+      // The hosted storefront denies framing. This loopback-only mirror must
+      // permit its own same-origin editor, while still denying other origins.
+      out['x-frame-options'] = 'SAMEORIGIN';
+      if (out['content-security-policy']) {
+        out['content-security-policy'] = String(out['content-security-policy'])
+          .replace(/frame-ancestors\s+[^;]*/gi, "frame-ancestors 'self'");
+      }
+      if (out.location) {
+        const redirect = new URL(out.location, target);
+        if (redirect.origin === target.origin) out.location = redirect.pathname + redirect.search + redirect.hash;
+      }
       res.writeHead(ur.statusCode || 502, out);
       ur.pipe(res);
     }
@@ -164,6 +187,20 @@ function proxy(req, res, upstream) {
     res.end('retouch: upstream renderer not reachable. Is `shopify theme dev` running?');
   });
   req.pipe(up);
+}
+
+function renderContext(input) {
+  if (!input) return null;
+  if (typeof input === 'string') {
+    if (input.length > 4096) throw Object.assign(new Error('Context too large'), { statusCode: 400 });
+    try { input = JSON.parse(input); } catch { throw Object.assign(new Error('Bad context'), { statusCode: 400 }); }
+  }
+  const context = {};
+  for (const key of ['section', 'block', 'template', 'locale', 'origin', 'tag']) {
+    if (typeof input?.[key] === 'string' && input[key].length <= 256) context[key] = input[key];
+  }
+  if (Array.isArray(input?.blocks)) context.blocks = input.blocks.filter(v => typeof v === 'string' && v.length <= 256).slice(0, 30);
+  return context;
 }
 
 function requireToken(req, token) {

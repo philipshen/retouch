@@ -15,7 +15,7 @@ module.exports = function retouchLoader(source, inputMap) {
     if (process.env.NODE_ENV === 'production') {
       return callback(null, source, inputMap);
     }
-    const appRoot = process.env.RETOUCH_APP_ROOT || this.rootContext || process.cwd();
+    const appRoot = (this.getOptions ? this.getOptions().appRoot : undefined) || process.env.RETOUCH_APP_ROOT || this.rootContext || process.cwd();
     const result = stamp(source, this.resourcePath, appRoot);
     if (!result) return callback(null, source, inputMap);
     return callback(null, result.code, result.map);

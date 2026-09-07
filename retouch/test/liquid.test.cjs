@@ -133,3 +133,24 @@ test('parses real moses sections without throwing and stamps them', { skip: !fs.
   }
   assert.ok(stamped > 0, 'stamped at least one real section');
 });
+
+test('Alpine-managed text is dynamic and cannot be overwritten', () => {
+  const source = '<span x-text="width">&nbsp;</span>';
+  const el = elByTag(source, 'span');
+  const resolved = resolvedFor(source, el);
+  assert.strictEqual(liquid.describe(resolved).textDynamic, true);
+  assert.strictEqual(liquid.describe(resolved).text, null);
+  assert.ok(liquid.applyOp(resolved, { type: 'setText', text: 'wrong' }).refused);
+});
+
+test('Liquid does not advertise unsupported rich-text editing', () => {
+  const source = '<p>Hello <strong>world</strong></p>';
+  const info = liquid.describe(resolvedFor(source, elByTag(source, 'p')));
+  assert.strictEqual(info.canSetChildren, false);
+  assert.strictEqual(info.mixedText, false);
+});
+
+test('Liquid doc examples remain unstamped', () => {
+  const source = '{% doc %}<p>Example</p>{% enddoc %}<p>Real</p>';
+  assert.strictEqual(liquid.collect(source, 'x.liquid').elements.length, 1);
+});

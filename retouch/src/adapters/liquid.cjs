@@ -2,17 +2,19 @@
 // The Liquid language adapter (RFC-0001 DR-0015). Parses Shopify `.liquid`
 // theme files with a tolerant HTML+Liquid tokenizer, stamps HTML elements with
 // structural IDs, and rewrites classes / literal text / tags deterministically.
-// Dynamic regions ({% %} and {{ }}) are opaque and never edited (R-6).
+// Traceable strings write to their backing values; unsupported expressions
+// remain opaque (R-6, DR-0017).
 
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const MagicString = require('magic-string');
 const { twMerge } = require('tailwind-merge');
+const sources = require('../liquid-sources.cjs');
 
 const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
   'link', 'meta', 'param', 'source', 'track', 'wbr']);
-const RAW_LIQUID = new Set(['comment', 'raw', 'schema', 'javascript', 'stylesheet']);
+const RAW_LIQUID = new Set(['comment', 'doc', 'raw', 'schema', 'javascript', 'stylesheet']);
 const RAW_HTML = new Set(['script', 'style']);
 const SKIP_TAGS = new Set(['script', 'style', 'svg', 'path', 'template']);
 const TEXT_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'div', 'blockquote', 'label', 'a', 'li']);
@@ -72,7 +74,7 @@ function parse(source) {
       continue;
     }
     const ch = source[i];
-    if (ch === '<' && /[a-zA-Z]/.test(source[i + 1] || '')) {
+    if (ch === '<' && (/[a-zA-Z]/.test(source[i + 1] || '') || source.startsWith('{{', i + 1))) {
       const tag = readOpenTag(source, i);
       pushChild(tag);
       if (RAW_HTML.has(tag.tag)) {
@@ -117,11 +119,16 @@ function parse(source) {
 function readOpenTag(source, start) {
   const N = source.length;
   let j = start + 1;
-  while (j < N && /[a-zA-Z0-9:-]/.test(source[j])) j++;
+  const dynamicTag = source.startsWith('{{', j);
+  if (dynamicTag) {
+    const end = source.indexOf('}}', j);
+    j = end < 0 ? N : end + 2;
+  } else while (j < N && /[a-zA-Z0-9:-]/.test(source[j])) j++;
   const tag = source.slice(start + 1, j).toLowerCase();
   const nameEnd = j;
   let k = j;
   let classAttr = null;
+  let textBinding = false;
   let selfClosing = false;
   let openEnd = N;
   while (k < N) {
@@ -153,13 +160,14 @@ function readOpenTag(source, start) {
         value = source.slice(valueStart, valueEnd);
       }
     }
+    if (['x-text', 'x-html', 'v-text', 'v-html'].includes(attrName)) textBinding = true;
     if (attrName === 'class') {
       classAttr = { valueStart, valueEnd, value, dynamic: /\{[%{]/.test(value || '') };
     }
   }
   return {
-    tag, kind: 'host', tagStart: start, nameEnd, openEnd, selfClosing,
-    classAttr, childrenStart: openEnd, children: [],
+    tag, dynamicTag, kind: 'host', tagStart: start, nameEnd, openEnd, selfClosing,
+    classAttr, textBinding, childrenStart: openEnd, children: [],
   };
 }
 
@@ -179,49 +187,57 @@ function collect(source, relPath) {
 
 function stamp(source, filePath, appRoot) {
   if (!matches(filePath)) return null;
-  if (!source.includes('<')) return null;
   // The ID must be computed from the SAME relative path the writer's index
   // uses, or the stamped DOM and the index disagree.
   const relPath = appRoot ? path.relative(appRoot, filePath).split(path.sep).join('/') : filePath;
   const { elements } = collect(source, relPath);
-  if (elements.length === 0) return null;
+  const plan = sources.plan(source, relPath);
+  if (elements.length === 0 && plan.injections.length === 0) return null;
   const ms = new MagicString(source);
-  for (const el of elements) ms.appendLeft(el.nameEnd, ` data-rt="${el.id}"`);
+  for (const injection of plan.injections) ms.appendLeft(injection.at, injection.text);
+  for (const el of elements) {
+    const binding = sources.textBinding(source, el, plan);
+    const origin = binding ? ` data-rt-origin="{{ ${binding.code} | escape }}"` : '';
+    ms.appendLeft(el.nameEnd, ` data-rt="${el.id}" data-rt-section="{{ section.id | escape }}" data-rt-block="{{ block.id | escape }}" data-rt-block-type="{{ block.type | escape }}" data-rt-template="{{ template.name | escape }}{% if template.suffix %}.{{ template.suffix | escape }}{% endif %}" data-rt-locale="{{ request.locale.iso_code | escape }}"${origin}`);
+  }
   return { code: ms.toString(), map: ms.generateMap({ hires: true, source: filePath }) };
 }
 
 function literalText(node, source) {
-  if (node.closeStart == null) return null;
+  if (node.closeStart == null || node.textBinding) return null;
   const inner = source.slice(node.childrenStart, node.childrenEnd);
   if (/[<]|\{[%{]/.test(inner)) return null; // nested tag or liquid → not literal
   const text = inner.trim();
   return text === '' ? null : text;
 }
 
-function hasElementChildren(node) {
-  return node.children && node.children.length > 0;
-}
-
 function describe(resolved) {
   const node = resolved.element;
   const source = resolved.source;
-  const text = literalText(node, source);
+  let text = literalText(node, source);
+  const traced = text === null && !node.textBinding ? sources.resolve(resolved) : null;
+  if (traced?.target) text = traced.target.value;
   const inner = node.closeStart != null ? source.slice(node.childrenStart, node.childrenEnd) : '';
   const hasLiquid = /\{[%{]/.test(inner);
   return {
     id: node.id,
     kind: 'host',
-    tag: node.tag,
+    tag: node.dynamicTag ? (resolved.context?.tag || node.tag) : node.tag,
     file: resolved.relPath,
     hash: resolved.hash,
     className: node.classAttr && !node.classAttr.dynamic ? node.classAttr.value : null,
     classNameDynamic: !!(node.classAttr && node.classAttr.dynamic),
+    classNameReason: node.classAttr?.dynamic ? 'Classes come from Liquid expressions. Editing those expressions is not supported yet.' : null,
     src: null,
     srcDynamic: false,
     canSetTag: TEXT_TAGS.has(node.tag) && node.closeStart != null,
     text,
-    textDynamic: text === null && hasLiquid,
-    mixedText: text === null && hasElementChildren(node) && !hasLiquid && /\S/.test(inner.replace(/<[^>]*>/g, '')),
+    textDynamic: text === null && (hasLiquid || node.textBinding),
+    textSource: traced?.descriptor || null,
+    textReason: traced?.reason || null,
+    context: resolved.context || null,
+    canSetChildren: false,
+    mixedText: false,
   };
 }
 
@@ -252,9 +268,10 @@ function applyOp(resolved, op) {
   } else if (op.type === 'setText') {
     if (typeof op.text !== 'string') return refuse('setText needs a string.');
     const text = literalText(node, resolved.source);
-    if (text === null) return refuse(`This element's text is dynamic or mixed (${resolved.relPath}); it cannot be edited in place.`);
+    if (text === null) return sources.write(resolved, op);
     ms.overwrite(node.childrenStart, node.childrenEnd, escapeText(op.text));
   } else if (op.type === 'setTag') {
+    if (node.dynamicTag) return refuse('The tag is selected by Liquid; edit its setting instead.');
     if (!TEXT_TAGS.has(op.tag)) return refuse('Unsupported target tag.');
     if (node.closeStart == null) return refuse('This element has no closing tag and cannot change tag.');
     ms.overwrite(node.tagStart + 1, node.nameEnd, op.tag);

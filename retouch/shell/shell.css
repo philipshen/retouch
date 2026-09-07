@@ -109,3 +109,12 @@ details.advanced > summary:hover { color: var(--ink); }
   border-radius: 6px; padding: 8px 14px; font-size: 12.5px; max-width: 460px; }
 .toast.err { border-left-color: var(--danger); }
 .toast.ok { border-left-color: var(--ok); }
+
+.max-width-handle { position:absolute; z-index:5; width:16px; height:28px; padding:0;
+  border:1px solid #fff; border-radius:4px; background:var(--accent); color:#101214;
+  cursor:ew-resize; touch-action:none; font-size:12px; box-shadow:0 1px 5px #0008; }
+.max-width-handle:focus-visible { outline:2px solid white; outline-offset:3px; }
+.max-width-popup { position:absolute; z-index:6; pointer-events:none; padding:8px 11px;
+  border:1px solid var(--accent); border-radius:6px; background:#15191f; color:#fff;
+  font:12px var(--mono); box-shadow:0 3px 12px #0005; white-space:nowrap; }
+.max-width-shield { position:absolute; inset:0; z-index:4; cursor:ew-resize; }

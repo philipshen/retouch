@@ -7,7 +7,7 @@
 | Author | P. Shen |
 | Created | 2026-09-01 |
 | Product | Retouch — CLI `npx retouch`; route prefix `/rt/` (configurable); decided rev 11 (OQ-G3, DR-0008) |
-| Revised | 2026-09-02 (rev 18) |
+| Revised | 2026-09-06 (rev 23) |
 | Companion | Prior-Art Survey (`docs/prior-art-survey.html`), 2026-09-01 |
 | Decisions | `docs/decisions/` (DR-0001 … DR-0007); index in `docs/decisions/README.md` |
 
@@ -70,7 +70,7 @@ Fixed by the survey's findings. Each cites its section in the Prior-Art Survey (
 | R-2 | Write-back MUST edit the authoring representation (JSX attributes, literal children, literal props) via AST- or byte-offset-based rewriting. The system MUST NOT write to compiled output, generated CSS, or CSS files addressed by selector. After write-back, running the project's configured formatter MUST be an identity operation. | Selector-to-element mapping is many-to-many; no surveyed deterministic system writes CSS files (PAS §3). Formatter idempotence prevents write-back and format-on-save from fighting. |
 | R-3 | Every edit MUST be expressed as a typed op. The overlay applies an optimistic DOM patch and appends to the op log; the disk write is the commit. Ops MUST be invertible (undo) and replayable against a re-derived manifest. | Onlook and Lovable converged on the two-track model independently (PAS §1, §3). Replayability is required by re-derivation (§5.3). |
 | R-4 | Style ops in v1 target the element's Tailwind class attribute. Class conflict resolution MUST follow tailwind-merge semantics (per-property class groups, variant-aware, last-wins). | A class string is a single-attribute write target with a pure value-to-class function; all surveyed writers converged on it (PAS §3). |
-| R-5 | The overlay MUST NOT insert elements into the host document's flow. Text editing uses per-element `contenteditable="plaintext-only"` with `beforeinput` interception, committed on blur or Escape. The system MUST NOT use `document.execCommand` or document-level `designMode`. | Overlay-in-flow perturbs the layout being measured. `execCommand` is deprecated; `designMode` has no commit boundary and makes injected UI editable (PAS §4). |
+| R-5 | The overlay MUST NOT insert elements into the host document's flow. Text editing uses per-element `contenteditable="true"` with plain-text paste and native-formatting interception, preserving author whitespace rules (DR-0018), committed on blur or Escape. The system MUST NOT use `document.execCommand` or document-level `designMode`. | Overlay-in-flow perturbs the layout being measured. `execCommand` is deprecated; `designMode` has no commit boundary and makes injected UI editable (PAS §4). |
 | R-6 | If an op cannot be applied deterministically, the system MUST refuse the gesture and state the reason and source location. The system MUST NOT fall back to best-effort rewriting. | Gutenberg's validate-and-flag model is the proven pattern for coexisting with hand edits (PAS §1). Refusal preserves the core guarantee. |
 | R-7 | The library MUST refuse to mount when `NODE_ENV=production`, MUST bind to localhost by default, MUST restrict writes to files under the project root, and MUST NOT load third-party origins into the mirror. | The mirror is a code-writing surface; Hypothesis Via documents the abuse mode of open mirrors (PAS §4). |
 | R-8 | *Deferred to hardened mode (rev 6); not required for the MVP.* The session token, the editor shell, and the writer MUST NOT share an origin, a process, or a port with host-application code. | Added rev 5 against in-page malicious code. Deferred because a malicious npm package already has machine access at install time and in the dev-server process; the split defends only against remote scripts and dev-time XSS, which does not justify a second process in the MVP (§8.3). The interfaces stay RPC-shaped so the split can be added without a rewrite. |
@@ -94,6 +94,8 @@ Conclusion: R-1 stands. The dependency is, however, narrower than "requires Vite
 ## 5. System overview
 
 ### 5.1 Components
+
+**Command-wrapper sessions (rev 20).** Revision 20 supersedes the single-process and launcher-owned startup descriptions below for command-wrapper sessions (DR-0016). Launch mode MUST execute the user-supplied command and arguments without reconstructing project startup. A loopback session manager MUST allocate a separate writer and token per canonical application root and MUST reject registration outside its startup root. Supported build integrations MUST instrument development compilation and MUST leave production compilation unchanged. Next automatic interception is version-gated; unsupported versions and incompatible configuration MUST fail with a diagnostic. Individual stamping errors retain the unstamped-source fallback. The editor and app remain same-origin through application rewrites; this process separation does not implement deferred hardened mode. Environment filters, containers, and remote hosts require explicit integration or running Retouch inside the source environment. Initial browser verification covers Next 16.2.5 with Turbopack and webpack; broader framework support remains unimplemented.
 
 The MVP is one process and one origin. The bundler plugin runs inside the project's own dev server and provides four things: the stamper (structural IDs on compiled JSX, agent injection into served HTML), the mirror route serving the editor shell at `/rt`, the index (built by parsing project files from disk, R-10), and the writer. The shell embeds the host application in a same-origin iframe, so the application keeps its cookies, storage, and pinned CORS and redirect configuration, and the shell may read the iframe's DOM directly. Figure 1 (HTML version) shows the topology. The plugin reaches the dev server either by launch mode (`npx retouch`, no repository changes) or by config mode (one registered plugin); OQ-B1 covers the mechanics. The two-process hardened mode of rev 5 is deferred (R-8, §8.3).
 
@@ -133,6 +135,8 @@ Figure 2 (HTML version) specifies the cycle for a single gesture. Step 4 carries
 ### 5.3 Re-derivation
 
 Any source change can change the index: the library's own writes (step 7), the user's editor, or version-control operations. Because IDs are structural (R-10), an attribute or text edit leaves every ID in the file unchanged; only inserting, removing, or reordering JSX nodes changes the IDs of the nodes after them. The writer re-parses a file on every write, so byte spans are always fresh. Staleness is therefore about the file, not the ID: each op carries the content hash of the file version the shell last saw, and the writer MUST fail closed on mismatch, after which the shell re-reads and re-submits. When the op that caused a structural change is the library's own, the writer returns the old-to-new ID mapping so the shell keeps its selection. External changes detected by the file watcher additionally surface a conflict notice instead of silently remapping (R-6).
+
+Liquid string origins (rev 21, DR-0017). Build-time instrumentation MAY carry executed-assignment markers and rendered section, block, template, and locale context. The writer MUST re-derive reachable origins from local source and MUST resolve a unique backing value before offering an indirect text edit. It MUST NOT select destinations by matching displayed text or accepting browser-supplied file paths. Indirect writes MUST validate the markup hash and backing-source identity and hash, preserve expression wiring, and expose the destination in the inspector. Ambiguous or unsupported expressions remain refusals under R-6.
 
 ## 6. Open questions
 
@@ -284,6 +288,7 @@ Each question states its options, the criteria that decide it, and a provisional
   | drag element, drop within same parent | parent `display` is `flex` or `grid` | `reorderChild(parent, from, to)` |
   | drag on inter-item gap | parent is flex/grid | `setClasses(parent, gap-*)` |
   | drag element edge | element sized by `w-*`/`h-*` or unsized | `setClasses(el, w-*/h-*)` |
+  | drag the Max width handle (DR-0019) | literal editable classes | `setClasses(el, max-w-*)`, snapped to named Tailwind container sizes; preserve other variant scopes |
   | drag inside element near edge | — | `setClasses(el, p*-*)` |
   | modifier + drag element | — | `setClasses(el, m*-*)` |
   | drag, drop in different parent | — | refused in v1 (reparenting) |
@@ -406,6 +411,12 @@ Malicious code already running on the dev origin (a compromised dependency or a 
 | 15 | 2026-09-01 | Resolved OQ-F2: the v1 operator is a solo developer on localhost; remote non-developer editing is the first post-MVP milestone and the trigger for the hardened mode. DR-0011. |
 | 16 | 2026-09-01 | Closed the remaining open questions. OQ-A1 amended and resolved: v1 adds Next.js (config mode, Turbopack loader) alongside Vite, because the dogfood targets are two Next 16 + Tailwind v4 applications. OQ-A2 (no uninstrumented-build support), OQ-A3 (dev only), OQ-D2 (delegate to the project's formatter, minimal diffs otherwise), OQ-D4 (non-Tailwind styles refused), and OQ-G2 (MIT) resolved as provisionally stated. Added P0b (Turbopack stamping spike) and P3 (dogfood) to §7. DR-0012. No open questions remain; OQ-E4 stays provisional by design (DR-0010) and OQ-G1 (packaging) is deferred until after P1 by design. |
 | 17 | 2026-09-02 | Amended R-9: `src` is settable through a dedicated image-swap op restricted to root-relative project paths on image elements with literal `src`; uploads land in `public/rt-assets/`. Moved image swap from tier 3 to tier 1 and added Fill and text-color pickers to tier 1 (OQ-E2). DR-0013 records the trade-offs and one known implementation deviation from R-11 (g) (text undo collapses multi-line JSX text; rendering-identical, fix planned). |
+| 18 | 2026-09-02 | Rich in-place text editing, setChildren operations, and formatting controls. DR-0014. |
+| 19 | 2026-09-04 | Recorded existing language-adapter and Shopify integration decision DR-0015. |
+| 20 | 2026-09-04 | Command-wrapper launch mode and machine-wide packaging: execute the existing startup command, register one sidecar per application, compose development config through a version-gated hook, retain explicit config integration. DR-0016. |
+| 21 | 2026-09-05 | Trace Liquid string variables, locale keys, and template settings to their local backing values; stamp dynamic tag names; preserve source hashes and instance context. DR-0017. |
+| 22 | 2026-09-05 | Preserve layout during text focus; replace plaintext-only with controlled rich editing and plain-text paste. DR-0018. |
+| 23 | 2026-09-06 | Add max-width edge dragging with named Tailwind snapping, an explicit property popup, local preview, release commit, and cancellation. DR-0019. |
 
 ## 10. References
 

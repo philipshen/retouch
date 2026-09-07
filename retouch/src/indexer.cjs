@@ -67,7 +67,7 @@ class Index {
     const { elements } = this.adapter.collect(source, relPath);
     const element = elements.find((e) => e.id === id);
     if (!element) return null;
-    return { file: absFile, relPath, source, hash: this.adapter.contentHash(source), element, elements };
+    return { appRoot: this.appRoot, file: absFile, relPath, source, hash: this.adapter.contentHash(source), element, elements };
   }
 
   watch() {

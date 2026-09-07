@@ -3,3 +3,5 @@ moses/
 node_modules/
 *.log
 .DS_Store
+
+/retouch/artifacts/

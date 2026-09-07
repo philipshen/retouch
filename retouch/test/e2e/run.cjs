@@ -54,7 +54,7 @@ async function check(name, fn) {
       h1.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       setTimeout(() => res(h1.getAttribute('contenteditable')), 400);
     }));
-    if (editable !== 'plaintext-only') throw new Error('not editable: ' + editable);
+    if (editable !== 'true') throw new Error('not editable: ' + editable);
     await page.keyboard.press('Escape');
   });
 

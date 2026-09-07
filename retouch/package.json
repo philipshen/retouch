@@ -8,7 +8,9 @@
   },
   "scripts": {
     "test": "node --test 'test/**/*.test.cjs'",
-    "test:e2e": "node test/e2e/run.cjs"
+    "test:e2e": "node test/e2e/run.cjs",
+    "test:launch": "node test/launch/verify.cjs",
+    "release:local": "node scripts/release.cjs"
   },
   "main": "./src/index.cjs",
   "exports": {
@@ -21,5 +23,17 @@
     "@babel/traverse": "^7.26.0",
     "magic-string": "^0.30.0",
     "tailwind-merge": "^3.0.0"
-  }
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "shell/",
+    "scripts/homebrew-formula.cjs",
+    "README.md",
+    "LICENSE",
+    "npm-shrinkwrap.json"
+  ]
 }

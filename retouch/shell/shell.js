@@ -28,6 +28,7 @@ routeInput.value = appPath;
 
 iframe.addEventListener('load', () => {
   try {
+    if (!iframe.contentDocument || iframe.contentWindow.location.origin !== location.origin) return;
     hookFrame(iframe.contentDocument, iframe.contentWindow);
     onNavigated();
   } catch (err) {
@@ -89,6 +90,33 @@ function hookFrame(d, w) {
     suppress(e);
   }, true);
   d.addEventListener('blur', suppress, true);
+  d.addEventListener('paste', (e) => {
+    if (!editing || !editing.el.contains(e.target)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const selection = d.getSelection();
+    if (!selection?.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    if (!editing.el.contains(range.commonAncestorContainer)) return;
+    range.deleteContents();
+    const text = d.createTextNode(e.clipboardData?.getData('text/plain') || '');
+    range.insertNode(text);
+    range.setStartAfter(text);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }, true);
+  d.addEventListener('drop', (e) => {
+    if (!editing || !editing.el.contains(e.target)) return;
+    // Do not let native rich HTML drops bypass the plain-text paste path.
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+  d.addEventListener('beforeinput', (e) => {
+    if (editing && editing.el.contains(e.target) && e.inputType.startsWith('format')) {
+      e.preventDefault();
+    }
+  }, true);
   d.addEventListener('keydown', (e) => {
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
@@ -119,6 +147,7 @@ function hookFrame(d, w) {
 function pollNavigation() {
   try {
     const loc = iframe.contentWindow.location;
+    if (loc.origin !== location.origin) return;
     const p = loc.pathname + loc.search + loc.hash;
     if (p !== lastAppPath) onNavigated();
   } catch {}
@@ -127,6 +156,7 @@ function pollNavigation() {
 function onNavigated() {
   try {
     const loc = iframe.contentWindow.location;
+    if (loc.origin !== location.origin) return;
     const p = loc.pathname + loc.search + loc.hash;
     lastAppPath = p;
     routeInput.value = p;
@@ -137,6 +167,28 @@ function onNavigated() {
 /* ---------- selection ---------- */
 function idsOf(el) {
   return { hostId: el.getAttribute('data-rt'), instanceId: el.getAttribute('data-rt-i') };
+}
+
+function renderContext(el) {
+  if (!el.hasAttribute('data-rt-template')) return null;
+  const blocks = [];
+  for (let node = el; node; node = node.parentElement) {
+    const block = node.getAttribute('data-rt-block');
+    if (block && !blocks.includes(block)) blocks.unshift(block);
+  }
+  return { section: el.dataset.rtSection, block: el.dataset.rtBlock, blocks,
+    template: el.dataset.rtTemplate, locale: el.dataset.rtLocale,
+    origin: el.dataset.rtOrigin, tag: el.tagName.toLowerCase() };
+}
+function resolveUrl(id, context) {
+  return '/rt/__api/resolve?id=' + id + (context ? '&context=' + encodeURIComponent(JSON.stringify(context)) : '');
+}
+function sourcePayload(info) {
+  return { context: info.context, sourceId: info.textSource?.id, sourceHash: info.textSource?.hash };
+}
+function updateSource(info, result) {
+  info.hash = result.hash;
+  if (info.textSource && result.sourceHash) info.textSource.hash = result.sourceHash;
 }
 
 // Classification pass: resolve a clicked DOM node to the nearest ancestor
@@ -150,7 +202,7 @@ async function classify(node) {
     const { hostId, instanceId } = idsOf(el);
     for (const id of [instanceId, hostId]) {
       if (!id || !/^[0-9a-f]{10}$/.test(id)) continue;
-      const res = await api('GET', '/rt/__api/resolve?id=' + id);
+      const res = await api('GET', resolveUrl(id, renderContext(el)));
       if (res && res.ok) return { el, info: res.element, hostId, instanceId };
     }
     el = el.parentElement ? el.parentElement.closest('[data-rt], [data-rt-i]') : null;
@@ -178,7 +230,7 @@ function activeId() {
 async function loadScope() {
   const id = activeId();
   if (!id) return clearSelection();
-  const res = await api('GET', '/rt/__api/resolve?id=' + id);
+  const res = await api('GET', resolveUrl(id, sel?.info?.context));
   if (!res || !res.ok) return clearSelection();
   sel.info = res.element;
   renderPanel();
@@ -209,6 +261,7 @@ async function startInlineEdit(node, evt, quiet) {
     }
     return;
   }
+  if (info.textSource && info.textSource.format !== 'text') { renderPanel(); return; }
   const editId = info.id;
   renderPanel();
   editing = {
@@ -225,8 +278,10 @@ async function startInlineEdit(node, evt, quiet) {
     if (cid) editing.snapshot.set(cid, c.textContent);
   }
   editing.originalTree = serializeChildren(el, editing.snapshot);
-  el.setAttribute('contenteditable', 'plaintext-only');
-  if (el.contentEditable !== 'plaintext-only') el.setAttribute('contenteditable', 'true');
+  // plaintext-only forces pre-wrap in Chromium even over author !important
+  // styles, exposing template indentation. Keep native layout; paste is plain
+  // text through the frame hook below.
+  el.setAttribute('contenteditable', 'true');
   el.focus();
   try {
     const d = doc();
@@ -263,13 +318,16 @@ async function commitInlineEdit() {
   // so a structural commit reloads the frame after the write: React remounts
   // clean from the new source. Text-only commits keep the smooth HMR path.
   const structural = op.type === 'setChildren';
+  Object.assign(op, sourcePayload(ed.info));
   const res = await api('POST', '/rt/__api/op', op);
   if (res && res.ok) {
-    undoStack.push({ type: 'setChildren', id: ed.id, children: ed.originalTree });
-    ed.info.hash = res.hash;
+    undoStack.push(op.type === 'setText'
+      ? { type: 'setText', id: ed.id, text: ed.info.textSource ? ed.info.text : ed.original, context: ed.info.context, sourceId: ed.info.textSource?.id }
+      : { type: 'setChildren', id: ed.id, children: ed.originalTree });
+    updateSource(ed.info, res);
     if (op.type === 'setText') {
       ed.info.text = op.text;
-      for (const m of matchingEls(ed.id)) if (m !== ed.el) m.textContent = op.text;
+      for (const m of (ed.info.textSource ? [] : matchingEls(ed.id))) if (m !== ed.el) m.textContent = op.text;
     }
     if (structural) reloadFrame();
     else if (sel && sel.info && sel.info.id === ed.id) {
@@ -315,6 +373,7 @@ async function applyChildren(id, children) {
 function toggleWrap(tag) {
   const d = doc();
   if (!d || !editing) return;
+  if (editing.info.canSetChildren === false) return toast('Rich text formatting is not supported for Liquid yet.', 'err');
   const s = d.getSelection();
   if (!s || !s.rangeCount) return;
   const r = s.getRangeAt(0);
@@ -369,6 +428,7 @@ function paintLoop() {
     const els = d.querySelectorAll(`[${attr}="${id}"]`);
     let first = true;
     for (const el of els) {
+      if (!inTextScope(el, sel.info)) continue;
       drawBox(el, first ? 'sel' : 'co', sel.scope === 'instance', first ? labelFor() : null);
       first = false;
     }
@@ -376,6 +436,16 @@ function paintLoop() {
   if (d && editing && editing.el.isConnected) drawBox(editing.el, 'editing', false, 'text ⏎');
   if (d && hoverEl && hoverEl.isConnected && mode === 'edit' && !editing) drawBox(hoverEl, 'hover', !!hoverEl.getAttribute('data-rt-i'), null);
   requestAnimationFrame(paintLoop);
+}
+
+function inTextScope(el, info) {
+  const source = info.textSource;
+  const context = info.context;
+  if (!source || !context) return true;
+  if (source.kind === 'locale') return el.dataset.rtLocale === context.locale;
+  if (source.kind !== 'setting' || source.scope === 'theme') return true;
+  return el.dataset.rtSection === context.section && el.dataset.rtTemplate === context.template &&
+    (source.scope !== 'block' || el.dataset.rtBlock === context.block);
 }
 
 function labelFor() {
@@ -444,6 +514,17 @@ function renderPanel() {
   const tsec = document.createElement('div');
   tsec.className = 'sec';
   tsec.innerHTML = '<h3>Text</h3>';
+  if (info.textSource) {
+    const provenance = document.createElement('p');
+    provenance.className = 'filepath';
+    provenance.textContent = (info.textSource.kind === 'locale' ? 'Shared translation: ' : 'Text source: ') + info.textSource.file + ' · ' + info.textSource.path;
+    tsec.appendChild(provenance);
+    if (info.textSource.format !== 'text') {
+      const label = document.createElement('p');
+      label.textContent = info.textSource.format === 'html' ? 'Edit the stored HTML below.' : 'Edit the stored translation; keep its placeholders.';
+      tsec.appendChild(label);
+    }
+  }
   if (info.text !== null) {
     const ta = document.createElement('textarea');
     ta.id = 'textEdit';
@@ -465,7 +546,7 @@ function renderPanel() {
     p.className = 'refused';
     p.textContent = sel.scope === 'host' && sel.instanceId
       ? 'Text here is dynamic (it may come from the component instance — switch scope).'
-      : 'The text of this element is dynamic (R-6).';
+      : (info.textReason || 'The text of this element is dynamic (R-6).');
     tsec.appendChild(p);
   } else {
     const p = document.createElement('p');
@@ -486,7 +567,7 @@ function renderPanel() {
   if (info.classNameDynamic) {
     const p = document.createElement('p');
     p.className = 'refused';
-    p.textContent = 'className here is a dynamic expression; Retouch edits literal class strings only (R-6).';
+    p.textContent = info.classNameReason || 'className here is a dynamic expression; Retouch edits literal class strings only (R-6).';
     csec.appendChild(p);
   } else {
     const chips = document.createElement('div');
@@ -524,6 +605,15 @@ function renderPanel() {
   }
   adv.appendChild(csec);
   panelBody.appendChild(adv);
+  const sizing = document.createElement('div');
+  sizing.className = 'sec';
+  const title = document.createElement('h3');title.textContent = 'Max width';
+  const hint = document.createElement('p');hint.className = 'hint';
+  hint.textContent = info.classNameDynamic
+    ? 'Max-width dragging is unavailable here because the class attribute contains expressions. Select a container with literal classes.'
+    : 'Drag the right-edge ↔ handle to snap the maximum width to a Tailwind size. The popup shows the exact class being changed.';
+  sizing.append(title, hint);panelBody.appendChild(sizing);
+
 }
 
 // Typography: Figma-like text-role presets that rewrite the element's tag.
@@ -667,7 +757,7 @@ function colorSection(title, kind, info) {
   if (info.classNameDynamic) {
     const p = document.createElement('p');
     p.className = 'refused';
-    p.textContent = 'className is dynamic (R-6).';
+    p.textContent = info.classNameReason || 'className is dynamic (R-6).';
     sec.appendChild(p);
     return sec;
   }
@@ -842,6 +932,7 @@ async function setClasses(classes, isUndo) {
     toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
     loadScope();
   }
+  return !!res?.ok;
 }
 
 async function setText(text, isUndo) {
@@ -850,12 +941,12 @@ async function setText(text, isUndo) {
   const prev = info.text;
   optimisticText(text);
   const res = await api('POST', '/rt/__api/op', {
-    type: 'setText', id: info.id, text, fileHash: info.fileHash || info.hash,
+    type: 'setText', id: info.id, text, fileHash: info.fileHash || info.hash, ...sourcePayload(info),
   });
   if (res && res.ok) {
-    if (!isUndo) undoStack.push({ type: 'setText', id: info.id, text: prev });
+    if (!isUndo) undoStack.push({ type: 'setText', id: info.id, text: prev, context: info.context, sourceId: info.textSource?.id });
     info.text = text;
-    info.hash = res.hash;
+    updateSource(info, res);
     toast('Saved', 'ok');
   } else {
     optimisticText(prev);
@@ -875,16 +966,18 @@ function optimisticClasses(classes) {
 }
 
 function optimisticText(text) {
+  if (sel.info.textSource) return;
   for (const el of matchingEls(sel.info.id)) el.textContent = text;
 }
 
 async function undo() {
   const op = undoStack.pop();
   if (!op) return toast('Nothing to undo');
-  if (!sel || !sel.info || sel.info.id !== op.id) {
+  if (op.type === 'setText' || !sel || !sel.info || sel.info.id !== op.id) {
     // Re-resolve the op's element so the write path stays identical.
-    const res = await api('GET', '/rt/__api/resolve?id=' + op.id);
+    const res = await api('GET', resolveUrl(op.id, op.context));
     if (!res || !res.ok) return toast('Undo target no longer resolves', 'err');
+    if (op.sourceId && res.element.textSource?.id !== op.sourceId) return toast('The original string source changed; undo was not applied.', 'err');
     sel = { hostId: op.id, instanceId: null, scope: 'host', info: res.element };
   }
   if (op.type === 'setClasses') await setClasses(op.classes, true);
@@ -933,3 +1026,16 @@ function toast(msg, cls) {
   setTimeout(() => t.remove(), cls === 'err' ? 6000 : 1800);
   statusEl.textContent = msg;
 }
+
+
+RetouchMaxWidth.mount({
+  container: overlayLayer.parentElement,
+  getTarget() {
+    if (mode !== 'edit' || !sel || sel.info.classNameDynamic) return null;
+    const el = editing?.el || matchingEls(activeId()).find(el => inTextScope(el, sel.info));
+    return el ? { el, info: sel.info } : null;
+  },
+  beforeDrag: commitInlineEdit,
+  save: classes => setClasses(classes),
+  notify: message => toast(message, 'err'),
+});

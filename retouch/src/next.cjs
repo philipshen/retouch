@@ -11,10 +11,14 @@ const path = require('node:path');
 
 const DEFAULT_PORT = 3901;
 const STARTED = Symbol.for('retouch.sidecar.started');
+const COMPOSED = Symbol.for('retouch.next.composed');
 
 function withRetouch(nextConfig = {}, opts = {}) {
   // R-7: never active in production.
   if (process.env.NODE_ENV === 'production') return nextConfig;
+
+  // The automatic hook composes after Next has evaluated this config.
+  if (process.env.RETOUCH_SESSION_URL) return nextConfig;
 
   const port = opts.port || Number(process.env.RETOUCH_PORT) || DEFAULT_PORT;
   const appRoot = opts.appRoot || process.cwd();
@@ -27,22 +31,35 @@ function withRetouch(nextConfig = {}, opts = {}) {
     startServer({ appRoot, port, adapter });
   }
 
+  return composeNext(nextConfig, { port, appRoot });
+}
+
+function composeNext(nextConfig = {}, { port, appRoot }) {
+  if (nextConfig[COMPOSED]) return nextConfig;
+  if (nextConfig.basePath || nextConfig.assetPrefix) throw new Error('[retouch] Launch integration currently requires an empty basePath and assetPrefix');
+  assertRouteAvailable(appRoot);
   const loaderPath = require.resolve('./loader.cjs');
   // No `as`: with `as` set to the same extension, Turbopack re-resolves
   // imports with a doubled extension (x.tsx.tsx). Omitting it keeps the
   // module's type and chains into the normal TSX pipeline.
-  const loaderRule = { loaders: [loaderPath] };
+  const loader = { loader: loaderPath, options: { appRoot } };
+  const loaderRule = { loaders: [loader] };
+  const rules = { ...nextConfig.turbopack?.rules };
+  for (const pattern of ['*.tsx', '*.jsx']) {
+    const previous = rules[pattern];
+    if (previous && (Array.isArray(previous) || !Array.isArray(previous.loaders))) {
+      throw new Error(`[retouch] Cannot safely compose Turbopack rule ${pattern}; use a supported loader rule object`);
+    }
+    rules[pattern] = previous ? { ...previous, loaders: [...previous.loaders, loader] } : loaderRule;
+  }
 
   return {
     ...nextConfig,
+    [COMPOSED]: true,
 
     turbopack: {
       ...(nextConfig.turbopack || {}),
-      rules: {
-        ...((nextConfig.turbopack && nextConfig.turbopack.rules) || {}),
-        '*.tsx': loaderRule,
-        '*.jsx': loaderRule,
-      },
+      rules,
     },
 
     webpack(cfg, ctx) {
@@ -50,7 +67,7 @@ function withRetouch(nextConfig = {}, opts = {}) {
         test: /\.(tsx|jsx)$/,
         exclude: /node_modules/,
         enforce: 'pre',
-        use: [{ loader: loaderPath }],
+        use: [loader],
       });
       return nextConfig.webpack ? nextConfig.webpack(cfg, ctx) : cfg;
     },
@@ -61,11 +78,35 @@ function withRetouch(nextConfig = {}, opts = {}) {
         { source: '/rt/:path*', destination: `http://127.0.0.1:${port}/rt/:path*` },
       ];
       const prev = nextConfig.rewrites ? await nextConfig.rewrites() : [];
+      const existing = Array.isArray(prev) ? prev : [...(prev.beforeFiles || []), ...(prev.afterFiles || []), ...(prev.fallback || [])];
+      if (existing.some(rule => /^\/rt(?:\/|$|:)/.test(rule.source))) throw new Error('[retouch] Existing rewrite reserves /rt; remove the conflict before enabling Retouch');
       if (Array.isArray(prev)) return [...mine, ...prev];
       return { ...prev, beforeFiles: [...mine, ...(prev.beforeFiles || [])] };
     },
   };
 }
 
-module.exports = { withRetouch };
+function assertRouteAvailable(appRoot) {
+  const fs = require('node:fs');
+  for (const base of ['app', 'src/app', 'pages', 'src/pages']) {
+    const dir = path.join(appRoot, base);
+    if (!fs.existsSync(dir)) continue;
+    const scan = current => {
+      for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+        if (entry.name === 'rt' || /^rt\.(jsx?|tsx?)$/.test(entry.name)) throw new Error('[retouch] Application reserves /rt; remove the route conflict before enabling Retouch');
+        if (entry.isDirectory() && /^\(.*\)$/.test(entry.name)) scan(path.join(current, entry.name));
+      }
+    };
+    scan(dir);
+  }
+}
+
+// Explicit opt-in for startup environments where preload inheritance is not
+// available. Return the unchanged config when no session is enabled.
+async function withRetouchSession(nextConfig = {}, opts = {}) {
+  if (!process.env.RETOUCH_SESSION_URL || process.env.NODE_ENV === 'production') return nextConfig;
+  return require('./session-client.cjs').connectNext(nextConfig, opts.appRoot || process.cwd());
+}
+
+module.exports = { withRetouch, composeNext, withRetouchSession };
 module.exports.default = withRetouch;
