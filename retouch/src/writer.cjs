@@ -8,6 +8,25 @@ const path = require('node:path');
 const MagicString = require('magic-string');
 const { twMerge } = require('tailwind-merge');
 const { parseSource, contentHash } = require('./id.cjs');
+const traverse = require('@babel/traverse').default;
+
+function imageSource(attr, source) {
+  if (!attr?.value) return null;
+  if (attr.value.type === 'StringLiteral') return { value: attr.value.value };
+  if (attr.value.type === 'JSXExpressionContainer' && attr.value.expression.type === 'StringLiteral') return { value: attr.value.expression.value };
+  if (attr.value.type === 'JSXExpressionContainer' && attr.value.expression.type === 'Identifier') {
+    const name = attr.value.expression.name;
+    let imported;
+    traverse(parseSource(source), { JSXAttribute(p) {
+      if (p.node.start !== attr.start) return;
+      const binding = p.scope.getBinding(name);
+      if (binding?.kind === 'module') imported = binding.path.parentPath.node;
+      p.stop();
+    } });
+    if (imported && /\.(png|jpe?g|webp|gif|avif|svg)$/i.test(imported.source.value)) return { value: imported.source.value, imported: true };
+  }
+  return null;
+}
 
 // Class tokens: no whitespace and nothing that can escape a double-quoted
 // JSX attribute or open markup (R-9).
@@ -53,10 +72,13 @@ function describeElement(resolved) {
     !!node.closingElement;
 
   const srcAttr = findAttr(node, 'src');
+  const image = imageSource(srcAttr, source);
+  const authoredSrcSet = findAttr(node, 'srcSet');
+  const picture = resolved.elements?.some(e => tagOf(e.node) === 'picture' && e.node.start < node.start && e.node.end > node.end);
   let src = null;
   let srcDynamic = false;
   if (srcAttr) {
-    if (srcAttr.value && srcAttr.value.type === 'StringLiteral') src = srcAttr.value.value;
+    if (image) src = image.value;
     else srcDynamic = true;
   }
 
@@ -71,6 +93,9 @@ function describeElement(resolved) {
     classNameDynamic,
     src,
     srcDynamic,
+    srcImported: !!image?.imported,
+    canSetSrc: !!image && !authoredSrcSet && !picture && (/^(img|source|video|image)$/i.test(tagOf(node)) || /Image$/.test(tagOf(node))),
+    srcReason: authoredSrcSet || picture ? 'This image has authored responsive sources. Editing those choices is deferred.' : null,
     canSetTag,
     text: textInfo ? textInfo.text : null,
     textDynamic: textInfo ? false : hasChildren(node),
@@ -268,6 +293,7 @@ function applyOp(resolved, op) {
     const close = node.closingElement.name;
     ms.overwrite(close.start, close.end, op.tag);
   } else if (op.type === 'setSrc') {
+    if (findAttr(node, 'srcSet') || resolved.elements?.some(e => tagOf(e.node) === 'picture' && e.node.start < node.start && e.node.end > node.end)) return refuse('This image has authored responsive sources; editing them is deferred.');
     // Image swap (R-9 amendment, rev 17): src is settable ONLY as a
     // root-relative project path — no scheme, no host, no traversal — which
     // preserves the injection-safety intent of the src exclusion.
@@ -285,10 +311,18 @@ function applyOp(resolved, op) {
       return refuse('setSrc applies to image elements only.');
     }
     const attr = findAttr(node, 'src');
-    if (!attr || !attr.value || attr.value.type !== 'StringLiteral') {
+    const priorImage = imageSource(attr, resolved.source);
+    if (!priorImage) {
       return refuse(
-        `src here is not a literal string (an imported image or an expression); it cannot be swapped deterministically (${resolved.relPath}).`
+        `src here is not a literal or a static image import; it cannot be swapped deterministically (${resolved.relPath}).`
       );
+    }
+    if (priorImage.imported && /Image$/.test(tag) && !findAttr(node, 'fill')) {
+      for (const dimension of ['width', 'height']) if (!findAttr(node, dimension)) {
+        const value = op.dimensions?.[dimension];
+        if (!Number.isFinite(value) || value <= 0 || value > 100000) return refuse('This imported image needs its rendered width and height to preserve its layout.');
+        ms.appendLeft(node.openingElement.name.end, ` ${dimension}={${Math.round(value)}}`);
+      }
     }
     ms.overwrite(attr.value.start, attr.value.end, JSON.stringify(op.src));
   } else {

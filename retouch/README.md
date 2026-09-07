@@ -107,3 +107,14 @@ Nested block instances keep separate text sources even when they use one snippet
 Stored richtext HTML and translation templates are editable in the inspector;
 plain stored strings can also be edited inline. Expressions without a unique local
 source remain read-only. Run the theme's CSS watcher for new Tailwind classes.
+
+## Design inspector
+
+The left inspector includes explicit positioning and anchors, Alt/Option-hover
+padding and spacing measurements, image browsing/uploads, typography classes and
+font previews, fill/text colors, shadows, and opacity. Local React components
+have a live preview and props panel, shared-definition editing, and module
+detachment with exact undo. New style controls preserve existing breakpoint
+classes; media-query editing remains deferred. See the
+[inspector guide](https://github.com/philipshen/retouch/blob/main/docs/inspector.md)
+for supported source patterns and browser verification.

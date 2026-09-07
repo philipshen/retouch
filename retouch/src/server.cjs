@@ -9,6 +9,7 @@ const http = require('node:http');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { Index } = require('./indexer.cjs');
+const components = require('./components.cjs');
 
 // Hop-by-hop headers must not be forwarded when proxying.
 const HOP = new Set(['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
@@ -23,6 +24,7 @@ function startServer({ appRoot, port, adapter, proxyTo, quiet = false }) {
   const token = crypto.randomBytes(16).toString('hex');
   const index = new Index(appRoot, adapter);
   const fileCount = index.scanAll();
+  const undoEntries = new Map();
   index.watch();
   if (!quiet) console.log(
     `[retouch] adapter=${adapter.name}; indexed ${fileCount} files under ${appRoot} (${index.idToFile.size} elements)`
@@ -30,7 +32,7 @@ function startServer({ appRoot, port, adapter, proxyTo, quiet = false }) {
 
   const server = http.createServer((req, res) => {
     try {
-      handle(req, res, { index, token, appRoot, adapter, proxyTo });
+      handle(req, res, { index, token, appRoot, adapter, proxyTo, undoEntries });
     } catch (err) {
       res.writeHead(err.statusCode || 500, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: err.message }));
@@ -65,6 +67,24 @@ function handle(req, res, ctx) {
 
   if (p.startsWith('/rt/__assets/')) return serveAsset(p.slice('/rt/__assets/'.length), res);
   if (p === '/rt/__api/health') return json(res, 200, { ok: true });
+  if (p === '/rt/__api/images' && req.method === 'GET') {
+    requireToken(req, ctx.token);
+    const liquid = ctx.adapter.name === 'liquid';
+    const dir = path.join(ctx.appRoot, liquid ? 'assets' : 'public');
+    const images = [];
+    function scan(folder, prefix) {
+      if (images.length >= 500 || !fs.existsSync(folder)) return;
+      for (const entry of fs.readdirSync(folder, { withFileTypes: true })) {
+        if (entry.name.startsWith('.') || entry.isSymbolicLink()) continue;
+        const name = prefix + entry.name;
+        if (entry.isDirectory()) scan(path.join(folder, entry.name), name + '/');
+        else if (/\.(png|jpe?g|gif|webp|avif|svg)$/i.test(name)) images.push({ src: name, name: entry.name });
+        if (images.length >= 500) break;
+      }
+    }
+    if (fs.existsSync(dir) && fs.realpathSync(dir).startsWith(fs.realpathSync(ctx.appRoot) + path.sep)) scan(dir, liquid ? '/assets/' : '/');
+    return json(res, 200, { ok: true, images });
+  }
 
   if (p === '/rt/__api/resolve' && req.method === 'GET') {
     requireToken(req, ctx.token);
@@ -76,9 +96,20 @@ function handle(req, res, ctx) {
     return json(res, 200, { ok: true, element: ctx.adapter.describe(resolved) });
   }
 
+  if (p === '/rt/__api/component' && req.method === 'GET') {
+    requireToken(req, ctx.token);
+    const id = url.searchParams.get('id') || '';
+    if (!/^[0-9a-f]{10}$/.test(id)) return json(res, 400, { ok: false, error: 'bad id' });
+    const resolved = ctx.index.resolve(id);
+    if (!resolved || ctx.adapter.name !== 'react') return json(res, 409, { ok: false, reason: 'Select a local React component instance.' });
+    const result = components.describe(resolved);
+    return json(res, result.ok ? 200 : 409, result);
+  }
+
   if (p === '/rt/__api/op' && req.method === 'POST') {
     requireToken(req, ctx.token);
     return readBody(req, (body) => {
+      try {
       let op;
       try {
         op = JSON.parse(body);
@@ -86,6 +117,28 @@ function handle(req, res, ctx) {
         return json(res, 400, { ok: false, error: 'bad json' });
       }
       if (!op || typeof op !== 'object' || Array.isArray(op)) return json(res, 400, { ok: false, error: 'bad op' });
+      if (op.type === 'undo') {
+        const entry = ctx.undoEntries.get(op.undoId);
+        if (!entry) return json(res, 409, { ok: false, reason: 'This undo is no longer available.' });
+        const current = fs.readFileSync(entry.file, 'utf8');
+        if (ctx.adapter.contentHash(current) !== entry.hash) return json(res, 409, { ok: false, reason: 'The file changed after this edit. Undo was not applied.' });
+        if (entry.createdFile) {
+          if (!fs.existsSync(entry.createdFile) || ctx.adapter.contentHash(fs.readFileSync(entry.createdFile, 'utf8')) !== entry.createdHash) return json(res, 409, { ok: false, reason: 'The detached module changed. Undo was not applied.' });
+          if (hasDetachedReference(ctx.appRoot, entry)) return json(res, 409, { ok: false, reason: 'Another file now refers to the detached module. Undo was not applied.' });
+        }
+        const tmp = entry.file + '.retouch-' + crypto.randomBytes(8).toString('hex') + '.tmp';
+        fs.writeFileSync(tmp, entry.source); fs.renameSync(tmp, entry.file);
+        if (entry.createdFile) {
+          try { fs.unlinkSync(entry.createdFile); }
+          catch (err) {
+            fs.writeFileSync(tmp, current); fs.renameSync(tmp, entry.file);
+            return json(res, 409, { ok: false, reason: 'Could not remove the detached module; the usage was restored. ' + err.message });
+          }
+          ctx.index.indexFile(entry.createdFile);
+        }
+        ctx.index.indexFile(entry.file); ctx.undoEntries.delete(op.undoId);
+        return json(res, 200, { ok: true, hash: ctx.adapter.contentHash(entry.source) });
+      }
       if (!/^[0-9a-f]{10}$/.test(op.id || '')) return json(res, 400, { ok: false, error: 'bad id' });
       const resolved = ctx.index.resolve(op.id);
       if (!resolved)
@@ -100,13 +153,28 @@ function handle(req, res, ctx) {
       let result;
       try {
         resolved.context = renderContext(op.context);
-        result = ctx.adapter.applyOp(resolved, op);
+        result = op.type === 'detachComponent' && ctx.adapter.name === 'react' ? components.detach(resolved, op) : ctx.adapter.applyOp(resolved, op);
       } catch (err) {
         return json(res, err.statusCode || 500, { ok: false, error: err.message });
       }
       // Keep the index fresh immediately (the watcher would also catch it).
-      if (result.ok) ctx.index.indexFile(resolved.file);
+      if (result.ok) {
+        ctx.index.indexFile(resolved.file);
+        const updated = fs.readFileSync(resolved.file, 'utf8');
+        if (updated !== resolved.source) {
+          result.undoId = crypto.randomBytes(16).toString('hex');
+          ctx.undoEntries.set(result.undoId, { file: resolved.file, source: resolved.source, hash: ctx.adapter.contentHash(updated), createdFile: result.createdFile, createdHash: result.createdHash });
+          if (ctx.undoEntries.size > 100) ctx.undoEntries.delete(ctx.undoEntries.keys().next().value);
+        }
+        if (result.createdFile) ctx.index.indexFile(result.createdFile);
+        delete result.createdFile; delete result.createdHash;
+        const fresh = ctx.index.resolve(op.id);
+        if (fresh) result.element = ctx.adapter.describe(fresh);
+      }
       return json(res, result.ok ? 200 : 409, result);
+      } catch (err) {
+        return json(res, 409, { ok: false, refused: true, reason: 'The source operation could not complete: ' + err.message });
+      }
     });
   }
 
@@ -114,21 +182,25 @@ function handle(req, res, ctx) {
     requireToken(req, ctx.token);
     return readBinary(req, 10_000_000, (buf) => {
       if (!buf) return json(res, 413, { ok: false, error: 'file too large (max 10 MB)' });
-      if (!fs.existsSync(path.join(ctx.appRoot, 'public'))) {
+      const liquid = ctx.adapter.name === 'liquid';
+      const assetRoot = path.join(ctx.appRoot, liquid ? 'assets' : 'public');
+      if (!fs.existsSync(assetRoot)) {
         return json(res, 409, {
           ok: false,
           refused: true,
-          reason: 'This app has no public/ directory for static assets.',
+          reason: `This app has no ${liquid ? 'assets' : 'public'}/ directory for static assets.`,
         });
       }
       const rawName = url.searchParams.get('name') || 'image';
       const safe =
         rawName.toLowerCase().replace(/[^a-z0-9._-]/g, '-').replace(/^[.-]+/, '').slice(-80) || 'image';
-      const dir = path.join(ctx.appRoot, 'public', 'rt-assets');
+      const dir = liquid ? assetRoot : path.join(assetRoot, 'rt-assets');
+      if (!fs.realpathSync(assetRoot).startsWith(fs.realpathSync(ctx.appRoot) + path.sep)) return json(res, 409, { ok: false, reason: 'Asset directory is outside the project.' });
       fs.mkdirSync(dir, { recursive: true });
-      const name = Date.now().toString(36) + '-' + safe;
+      if (!fs.realpathSync(dir).startsWith(fs.realpathSync(ctx.appRoot) + path.sep)) return json(res, 409, { ok: false, reason: 'Asset directory is outside the project.' });
+      const name = 'rt-' + crypto.randomBytes(6).toString('hex') + '-' + safe;
       fs.writeFileSync(path.join(dir, name), buf);
-      return json(res, 200, { ok: true, src: '/rt-assets/' + name });
+      return json(res, 200, { ok: true, src: (liquid ? '/assets/' : '/rt-assets/') + name });
     });
   }
 
@@ -147,6 +219,21 @@ function handle(req, res, ctx) {
 
   res.writeHead(404);
   res.end('not found');
+}
+
+function hasDetachedReference(root, entry) {
+  const stem = path.basename(entry.createdFile, path.extname(entry.createdFile));
+  const skip = new Set(['node_modules', 'dist', 'build', 'out', 'public', 'coverage']);
+  function scan(dir) {
+    for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (item.name.startsWith('.') || item.isSymbolicLink() || skip.has(item.name)) continue;
+      const file = path.join(dir, item.name);
+      if (item.isDirectory()) { if (scan(file)) return true; }
+      else if (/\.[cm]?[jt]sx?$/.test(item.name) && file !== entry.file && file !== entry.createdFile && fs.readFileSync(file, 'utf8').includes(stem)) return true;
+    }
+    return false;
+  }
+  return scan(root);
 }
 
 function proxy(req, res, upstream) {

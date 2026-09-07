@@ -68,6 +68,34 @@ async function waitReady(port) {
 
 const AUTH = () => ({ 'x-retouch-token': token, 'content-type': 'application/json' });
 
+test('style undo restores exact source and refuses to overwrite a later external edit', async () => {
+  const file = path.join(root, 'app/Page.tsx');
+  const original = fs.readFileSync(file, 'utf8');
+  const id = await firstIdOfTag('h2');
+  const run = async body => JSON.parse((await req(port, 'POST', '/rt/__api/op', { body: JSON.stringify(body), headers: AUTH() })).body);
+  const resolved = JSON.parse((await req(port, 'GET', '/rt/__api/resolve?id=' + id, { headers: AUTH() })).body).element;
+  const saved = await run({ type: 'setClasses', id, classes: 'opacity-[0.4] shadow-lg', fileHash: resolved.hash });
+  assert.ok(saved.undoId);
+  assert.ok((await run({ type: 'undo', undoId: saved.undoId })).ok);
+  assert.strictEqual(fs.readFileSync(file, 'utf8'), original);
+  const second = await run({ type: 'setClasses', id, classes: 'opacity-[0.6]', fileHash: resolved.hash });
+  fs.appendFileSync(file, '\n// external change\n');
+  const changed = fs.readFileSync(file, 'utf8');
+  assert.strictEqual((await run({ type: 'undo', undoId: second.undoId })).ok, false);
+  assert.strictEqual(fs.readFileSync(file, 'utf8'), changed);
+  fs.unlinkSync(file);
+  assert.strictEqual((await run({ type: 'undo', undoId: second.undoId })).ok, false, 'missing source refuses without stopping the server');
+  fs.writeFileSync(file, original);
+});
+
+test('image browser lists project assets and requires authentication', async () => {
+  fs.writeFileSync(path.join(root, 'public', 'sample.svg'), '<svg/>');
+  const denied = await req(port, 'GET', '/rt/__api/images');
+  assert.strictEqual(denied.status, 401);
+  const result = await req(port, 'GET', '/rt/__api/images', { headers: AUTH() });
+  assert.ok(JSON.parse(result.body).images.some(image => image.src === '/sample.svg'));
+});
+
 async function firstIdOfTag(tag) {
   const src = fs.readFileSync(path.join(root, 'app/Page.tsx'), 'utf8');
   const { collectElements } = require(path.join(SRC, 'id.cjs'));

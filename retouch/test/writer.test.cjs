@@ -1,6 +1,8 @@
 'use strict';
 const { test, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert');
+const fs = require('node:fs');
+const path = require('node:path');
 const { Index, writer, makeApp, cleanup, pick, read, id } = require('./helpers.cjs');
 
 const CARD = `import { Button } from './Button';
@@ -25,6 +27,23 @@ beforeEach(() => {
   index.scanAll();
 });
 afterEach(() => cleanup(root));
+
+test('image replacement accepts static imports but does not mistake shadowed props for imports', () => {
+  const original = `import photo from './photo.png';\nexport const Image = () => <img src={photo} />;`;
+  fs.writeFileSync(path.join(root, 'Photo.tsx'), original);
+  index.scanAll();
+  const { resolved } = pick(index, root, 'Photo.tsx', 'img');
+  assert.strictEqual(writer.describeElement(resolved).srcImported, true);
+  assert.ok(writer.applyOp(resolved, { type: 'setSrc', src: '/other.png', fileHash: resolved.hash }).ok);
+  assert.match(read(root, 'Photo.tsx'), /<img src="\/other.png"/);
+  const shadow = `import photo from './photo.png';\nexport const Image = ({photo}) => <img src={photo} />;`;
+  fs.writeFileSync(path.join(root, 'Photo.tsx'), shadow);
+  index.scanAll();
+  const next = pick(index, root, 'Photo.tsx', 'img').resolved;
+  assert.strictEqual(writer.describeElement(next).canSetSrc, false);
+  assert.ok(writer.applyOp(next, { type: 'setSrc', src: '/other.png', fileHash: next.hash }).refused);
+  assert.strictEqual(read(root, 'Photo.tsx'), shadow);
+});
 
 test('setClasses merges via tailwind-merge (last wins per property)', () => {
   const { el, resolved } = pick(index, root, 'Card.tsx', 'h2');

@@ -128,6 +128,8 @@ function readOpenTag(source, start) {
   const nameEnd = j;
   let k = j;
   let classAttr = null;
+  let srcAttr = null;
+  let srcSet = false;
   let textBinding = false;
   let selfClosing = false;
   let openEnd = N;
@@ -164,10 +166,12 @@ function readOpenTag(source, start) {
     if (attrName === 'class') {
       classAttr = { valueStart, valueEnd, value, dynamic: /\{[%{]/.test(value || '') };
     }
+    if (attrName === 'src') srcAttr = { valueStart, valueEnd, value };
+    if (attrName === 'srcset') srcSet = true;
   }
   return {
     tag, dynamicTag, kind: 'host', tagStart: start, nameEnd, openEnd, selfClosing,
-    classAttr, textBinding, childrenStart: openEnd, children: [],
+    classAttr, srcAttr, srcSet, textBinding, childrenStart: openEnd, children: [],
   };
 }
 
@@ -219,6 +223,9 @@ function describe(resolved) {
   if (traced?.target) text = traced.target.value;
   const inner = node.closeStart != null ? source.slice(node.childrenStart, node.childrenEnd) : '';
   const hasLiquid = /\{[%{]/.test(inner);
+  const asset = node.srcAttr?.value?.match(/^\s*\{\{\s*['"]([\w.\/-]+)['"]\s*\|\s*asset_url\s*\}\}\s*$/);
+  const srcDynamic = !!node.srcAttr && /\{[%{]/.test(node.srcAttr.value || '') && !asset;
+  const picture = resolved.elements?.some(e => e.tag === 'picture' && e.tagStart < node.tagStart && e.closeStart > node.openEnd);
   return {
     id: node.id,
     kind: 'host',
@@ -228,8 +235,10 @@ function describe(resolved) {
     className: node.classAttr && !node.classAttr.dynamic ? node.classAttr.value : null,
     classNameDynamic: !!(node.classAttr && node.classAttr.dynamic),
     classNameReason: node.classAttr?.dynamic ? 'Classes come from Liquid expressions. Editing those expressions is not supported yet.' : null,
-    src: null,
-    srcDynamic: false,
+    src: asset ? '/assets/' + asset[1] : srcDynamic ? null : node.srcAttr?.value ?? null,
+    srcDynamic,
+    canSetSrc: !!node.srcAttr && !node.srcSet && !picture && !srcDynamic && ['img','source','image'].includes(node.tag),
+    srcReason: node.srcSet || picture ? 'This image has authored responsive sources. Editing those choices is deferred.' : null,
     canSetTag: TEXT_TAGS.has(node.tag) && node.closeStart != null,
     text,
     textDynamic: text === null && (hasLiquid || node.textBinding),
@@ -265,6 +274,12 @@ function applyOp(resolved, op) {
     } else if (merged !== '') {
       ms.appendLeft(node.nameEnd, ` class="${merged}"`);
     }
+  } else if (op.type === 'setSrc') {
+    const info = describe(resolved);
+    if (!info.canSetSrc) return refuse('This image source is computed by Liquid. Select an image with a literal source or asset_url.');
+    if (typeof op.src !== 'string' || op.src.length > 500 || !/^\/[A-Za-z0-9_\-./]+$/.test(op.src) || op.src.startsWith('//') || op.src.split('/').includes('..')) return refuse('Image paths must be root-relative project paths.');
+    const value = op.src.startsWith('/assets/') ? `{{ '${op.src.slice(8)}' | asset_url }}` : op.src;
+    ms.overwrite(node.srcAttr.valueStart, node.srcAttr.valueEnd, value);
   } else if (op.type === 'setText') {
     if (typeof op.text !== 'string') return refuse('setText needs a string.');
     const text = literalText(node, resolved.source);
@@ -301,6 +316,6 @@ module.exports = {
   contentHash,
   describe,
   applyOp,
-  capabilities: { classAttr: 'class', ops: ['setClasses', 'setText', 'setTag'] },
+  capabilities: { classAttr: 'class', ops: ['setClasses', 'setText', 'setTag', 'setSrc'] },
   _parse: parse, // exported for tests
 };

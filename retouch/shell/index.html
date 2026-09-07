@@ -23,14 +23,15 @@
   <div id="panel">
     <div id="panelEmpty">Click an element to select it.<br>
       Clicking text edits it in place (Enter or Escape saves).<br><br>
-      <span class="hint">Blue outline = element. Purple outline = component instance.
+      <span class="hint">Hold Alt / Option and hover to measure padding and spacing.<br><br>Blue outline = element. Purple outline = component instance.
       All instances of the same source highlight together.</span></div>
-    <div id="panelBody" hidden></div>
+    <fieldset id="panelBody" hidden aria-label="Element properties"></fieldset>
   </div>
 </div>
 <div id="toasts"></div>
 <script src="/rt/__assets/serialize.js"></script>
 <script src="/rt/__assets/max-width.js"></script>
+<script src="/rt/__assets/inspector.js"></script>
 <script src="/rt/__assets/shell.js"></script>
 </body>
 </html>

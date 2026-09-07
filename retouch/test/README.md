@@ -19,6 +19,14 @@ whole suite. Run it constantly.
 These are the guardrail. Keep coverage high here; the logic is pure and cheap
 to test.
 
+`inspector.test.cjs` checks base-class preservation and anchor geometry.
+`components.test.cjs` covers local export resolution, props/defaults, module
+detachment, source-hash refusals, rollback, and guarded two-file undo.
+
+The disposable Next/Tailwind fixture in `test/fixtures/inspector` drives
+`test/e2e/inspector.cjs` and `test/e2e/components.cjs`. Setup and coverage are in
+[the inspector guide](../../docs/inspector.md#verification).
+
 ## Browser end-to-end suite — `npm run test:e2e` (opt-in, slow)
 
 Drives the real editor shell in a headless browser (Playwright) against a

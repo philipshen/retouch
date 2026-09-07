@@ -25,3 +25,4 @@ Format: Status · Date · RFC references · Context · Options considered · Dec
 | [DR-0017](0017-liquid-string-origins.md) | Trace Liquid strings to their stored source | Accepted (rev 21) | R-1, R-6, R-10, R-11 |
 | [DR-0018](0018-inline-edit-whitespace.md) | Preserve layout during inline text editing | Accepted (rev 22) | R-5 |
 | [DR-0019](0019-max-width-drag.md) | Max-width dragging with Tailwind snapping | Accepted (rev 23) | OQ-E1, OQ-D3, R-6 |
+| [DR-0020](0020-design-inspector.md) | Left design inspector, anchors, and component workspace | Accepted (rev 24) | OQ-E1, OQ-E2, OQ-D3, R-6, R-9, R-11, R-12 |

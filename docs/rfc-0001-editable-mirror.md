@@ -7,7 +7,7 @@
 | Author | P. Shen |
 | Created | 2026-09-01 |
 | Product | Retouch — CLI `npx retouch`; route prefix `/rt/` (configurable); decided rev 11 (OQ-G3, DR-0008) |
-| Revised | 2026-09-06 (rev 23) |
+| Revised | 2026-09-07 (rev 24) |
 | Companion | Prior-Art Survey (`docs/prior-art-survey.html`), 2026-09-01 |
 | Decisions | `docs/decisions/` (DR-0001 … DR-0007); index in `docs/decisions/README.md` |
 
@@ -137,6 +137,12 @@ Figure 2 (HTML version) specifies the cycle for a single gesture. Step 4 carries
 Any source change can change the index: the library's own writes (step 7), the user's editor, or version-control operations. Because IDs are structural (R-10), an attribute or text edit leaves every ID in the file unchanged; only inserting, removing, or reordering JSX nodes changes the IDs of the nodes after them. The writer re-parses a file on every write, so byte spans are always fresh. Staleness is therefore about the file, not the ID: each op carries the content hash of the file version the shell last saw, and the writer MUST fail closed on mismatch, after which the shell re-reads and re-submits. When the op that caused a structural change is the library's own, the writer returns the old-to-new ID mapping so the shell keeps its selection. External changes detected by the file watcher additionally surface a conflict notice instead of silently remapping (R-6).
 
 Liquid string origins (rev 21, DR-0017). Build-time instrumentation MAY carry executed-assignment markers and rendered section, block, template, and locale context. The writer MUST re-derive reachable origins from local source and MUST resolve a unique backing value before offering an indirect text edit. It MUST NOT select destinations by matching displayed text or accepting browser-supplied file paths. Indirect writes MUST validate the markup hash and backing-source identity and hash, preserve expression wiring, and expose the destination in the inspector. Ambiguous or unsupported expressions remain refusals under R-6.
+
+### 5.4 Design inspector amendment (rev 24)
+
+The inspector MUST appear on the left. It MUST expose positioning, base-class anchors, Alt/Option-hover padding and spacing measurements, image replacement, typography class selection with a rendered sample, component inspection and detach, fill and text color, shadows, and opacity. Positioning MAY explicitly become absolute while preserving the measured element bounds in its existing containing block; this supersedes the OQ-E1 deferral of an explicit absolute control. Anchor and custom appearance controls MAY generate measured or entered arbitrary values, extending OQ-D3 for these panel controls. The new controls MUST preserve existing breakpoint and state classes and MUST NOT add a media-query editor.
+
+Component inspection MUST show the definition and source prop values/defaults. Its isolated live canvas MUST retain the current application's context. Detachment MUST copy the module beside its dependencies and rewire only the selected usage, with hashes guarding both source files and rollback on a failed usage write. Snapshot undo MUST refuse if the edited source, copied module, or other references prevent restoring the original state. Unsupported source forms MUST report their limitation under R-6. [DR-0020](decisions/0020-design-inspector.md) and [the inspector guide](inspector.md) define the implemented source patterns and verification commands.
 
 ## 6. Open questions
 
@@ -417,6 +423,7 @@ Malicious code already running on the dev origin (a compromised dependency or a 
 | 21 | 2026-09-05 | Trace Liquid string variables, locale keys, and template settings to their local backing values; stamp dynamic tag names; preserve source hashes and instance context. DR-0017. |
 | 22 | 2026-09-05 | Preserve layout during text focus; replace plaintext-only with controlled rich editing and plain-text paste. DR-0018. |
 | 23 | 2026-09-06 | Add max-width edge dragging with named Tailwind snapping, an explicit property popup, local preview, release commit, and cancellation. DR-0019. |
+| 24 | 2026-09-07 | Add the left design inspector, explicit positioning and anchors, Alt/Option measurements, typography classes and previews, image browsing and replacement, appearance controls, and a live component workspace with module detachment and exact undo. Preserve existing breakpoint styles and defer media-query editing. DR-0020. |
 
 ## 10. References
 

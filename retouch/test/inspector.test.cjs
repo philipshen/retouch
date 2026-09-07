@@ -1,0 +1,24 @@
+'use strict';
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const { base, replace, nearestAnchor, anchorClasses } = require('../shell/inspector.js');
+const { twMerge } = require('tailwind-merge');
+
+test('base edits preserve breakpoint and state variants, including arbitrary values', () => {
+  assert.equal(base('md:left-[calc(50%-20px)]'), null);
+  assert.equal(base('text-[color:var(--ink)]'), 'text-[color:var(--ink)]');
+  assert.equal(replace('opacity-50 md:opacity-20 hover:opacity-100', t=>t.startsWith('opacity-'),'opacity-[0.4]'), 'md:opacity-20 hover:opacity-100 opacity-[0.4]');
+  assert.equal(replace('opacity-50! md:opacity-20', t=>t.startsWith('opacity-'),'opacity-[0.4]'), 'md:opacity-20 !opacity-[0.4]');
+});
+test('anchor conversion preserves unrelated and responsive styles and pins existing bounds', () => {
+  const g = { x: 420, y: 20, width: 160, height: 80, parentWidth: 600, parentHeight: 300 };
+  assert.equal(nearestAnchor(g.x,g.width,g.parentWidth), 'end');
+  assert.equal(nearestAnchor(220,160,600), 'center');
+  assert.equal(nearestAnchor(20,160,600), 'start');
+  const result = twMerge(anchorClasses('relative w-full h-auto mt-4 p-6 text-red-500 md:relative md:w-1/2 md:top-5 hover:opacity-50',g,'end','start'));
+  for(const token of ['absolute','right-[20px]','top-[20px]','w-[160px]','h-[80px]','m-0','p-6','text-red-500','md:relative','md:w-1/2','md:top-5','hover:opacity-50']) assert.ok(result.split(' ').includes(token),token);
+  assert.ok(!result.split(' ').includes('relative'));
+  const stretch=anchorClasses(result,g,'stretch','center');
+  assert.match(stretch,/left-\[420px\] right-\[20px\] w-auto/);
+  assert.match(stretch,/top-\[calc\(50%-130px\)\] bottom-auto h-\[80px\]/);
+});

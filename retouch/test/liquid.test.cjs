@@ -28,6 +28,21 @@ function resolvedFor(source, el, file = 'x.liquid') {
   return { element: el, elements: liquid.collect(source, 'x.liquid').elements, source, relPath: file, file, hash: liquid.contentHash(source) };
 }
 
+test('Liquid image sources swap literal asset_url values without touching responsive rules', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(),'retouch-liquid-image-'));
+  const file = path.join(root,'image.liquid');
+  const source = `<img src="{{ 'first.png' | asset_url }}" alt="Product" class="w-full md:w-1/2">`;
+  try {
+    fs.writeFileSync(file,source);
+    const resolved=resolvedFor(source,elByTag(source,'img'),file);
+    assert.strictEqual(liquid.describe(resolved).src,'/assets/first.png');
+    assert.ok(liquid.applyOp(resolved,{type:'setSrc',src:'/assets/second.png',fileHash:resolved.hash}).ok);
+    assert.strictEqual(fs.readFileSync(file,'utf8'),source.replace('first.png','second.png'));
+    const dynamic=`<img src="{{ product.image | image_url }}">`;
+    assert.strictEqual(liquid.describe(resolvedFor(dynamic,elByTag(dynamic,'img'))).canSetSrc,false);
+  } finally { fs.rmSync(root,{recursive:true,force:true}); }
+});
+
 test('matches only .liquid', () => {
   assert.ok(liquid.matches('/t/sections/hero.liquid'));
   assert.ok(!liquid.matches('/t/x.tsx'));

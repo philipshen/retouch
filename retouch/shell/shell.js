@@ -18,7 +18,17 @@ let mode = 'edit'; // 'edit' | 'interact'
 let sel = null; // { hostId, instanceId, scope: 'host'|'instance', info }
 let editing = null; // { el, id, info, original, originalHTML, snapshot, originalTree } during inline text editing
 let hoverEl = null;
+let measuring = false;
 let undoStack = [];
+let undoBusy = false;
+let classificationSerial = 0;
+let panelTasks = 0;
+function busyPanel(start) {
+  panelTasks += start ? 1 : -1;
+  panelBody.disabled = panelTasks > 0;
+  panelBody.inert = panelTasks > 0;
+  panelBody.setAttribute('aria-busy', String(panelTasks > 0));
+}
 let lastAppPath = null;
 
 /* ---------- boot ---------- */
@@ -78,8 +88,13 @@ function hookFrame(d, w) {
   }, true);
   d.addEventListener('mousemove', (e) => {
     if (mode !== 'edit') { hoverEl = null; return; }
+    measuring = e.altKey;
     hoverEl = (e.target.closest && e.target.closest('[data-rt], [data-rt-i]')) || null;
   }, true);
+  d.addEventListener('mouseleave', () => { hoverEl = null; }, true);
+  d.addEventListener('keydown', (e) => { if (e.key === 'Alt') measuring = true; }, true);
+  d.addEventListener('keyup', (e) => { if (!e.altKey) measuring = false; }, true);
+  w.addEventListener('blur', () => { measuring = false; });
   // Block app interaction + transient-state dismissal in edit mode (E4 rule 1).
   for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup',
     'pointerleave', 'pointerout', 'mouseleave', 'mouseout', 'submit']) {
@@ -197,6 +212,16 @@ function updateSource(info, result) {
 // frame that has not reloaded yet — so we climb rather than error. Returns
 // { el, info } or null. This is the single gate for what is selectable.
 async function classify(node) {
+  const serial = ++classificationSerial;
+  busyPanel(true);
+  try {
+    const result = await classifyNode(node);
+    return serial === classificationSerial ? result : { superseded: true };
+  } finally {
+    busyPanel(false);
+  }
+}
+async function classifyNode(node) {
   let el = node && node.closest ? node.closest('[data-rt], [data-rt-i]') : null;
   while (el) {
     const { hostId, instanceId } = idsOf(el);
@@ -212,6 +237,7 @@ async function classify(node) {
 
 async function select(node) {
   const c = await classify(node);
+  if (c?.superseded) return;
   if (!c) return clearSelection();
   sel = {
     hostId: c.hostId,
@@ -245,6 +271,7 @@ function clearSelection() {
 /* ---------- inline text editing ---------- */
 async function startInlineEdit(node, evt, quiet) {
   const c = await classify(node);
+  if (c?.superseded) return;
   if (!c) return clearSelection(); // nothing editable here — no error
   const { el, info } = c;
   sel = {
@@ -343,18 +370,37 @@ async function commitInlineEdit() {
 
 // Reload the iframe to its current path, preserving scroll where possible.
 function reloadFrame() {
-  try {
-    const w = iframe.contentWindow;
-    const y = w.scrollY;
+  return new Promise(resolve => {
+    const y = iframe.contentWindow?.scrollY || 0;
+    let timeout;
     const done = () => {
-      iframe.removeEventListener('load', done);
+      clearTimeout(timeout); iframe.removeEventListener('load', done);
       try { iframe.contentWindow.scrollTo(0, y); } catch {}
+      resolve();
     };
     iframe.addEventListener('load', done);
-    w.location.reload();
-  } catch {
-    iframe.src = iframe.src;
+    timeout = setTimeout(done, 8000);
+    try { iframe.contentWindow.location.reload(); } catch { iframe.src = iframe.src; }
+  });
+}
+
+// A source write can finish before the framework invalidates its rendered
+// module. Reloading immediately can miss HMR and strand an old render.
+async function refreshWrittenElement(info, matches) {
+  const location = iframe.contentWindow.location.href;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    if (iframe.contentWindow.location.href !== location) return;
+    try {
+      const response = await fetch(location, { cache: 'no-store' });
+      if (response.ok) {
+        const html = new DOMParser().parseFromString(await response.text(), 'text/html');
+        const el = html.querySelector(`[data-rt="${info.id}"], [data-rt-i="${info.id}"]`);
+        if (el && matches(el)) { await reloadFrame(); return; }
+      }
+    } catch {}
+    await new Promise(resolve => setTimeout(resolve, 150));
   }
+  await reloadFrame();
 }
 
 // DOM -> op children tree. Implemented in serialize.js (loaded first) so it
@@ -435,6 +481,7 @@ function paintLoop() {
   }
   if (d && editing && editing.el.isConnected) drawBox(editing.el, 'editing', false, 'text ⏎');
   if (d && hoverEl && hoverEl.isConnected && mode === 'edit' && !editing) drawBox(hoverEl, 'hover', !!hoverEl.getAttribute('data-rt-i'), null);
+  if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
   requestAnimationFrame(paintLoop);
 }
 
@@ -488,6 +535,9 @@ function renderPanel() {
   file.className = 'filepath';
   file.textContent = info.file;
   head.appendChild(file);
+  if ((info.className || '').split(/\s+/).some(t => RetouchInspector.base(t) === null)) {
+    RetouchInspector.note(head, 'Editing base styles. Existing breakpoint and state styles may override them.');
+  }
   panelBody.appendChild(head);
 
   // Scope switch when both IDs exist (R-12 a: instance is the default).
@@ -504,11 +554,22 @@ function renderPanel() {
     panelBody.appendChild(scopes);
   }
 
-  // First-class, Figma-like sections: Typography, Fill, Text color, Image.
-  if (info.canSetTag) panelBody.appendChild(typographySection(info));
+  const componentTarget = matchingEls(activeId())[0]?.closest('[data-rt-i]');
+  const componentId = sel.instanceId || componentTarget?.getAttribute('data-rt-i');
+  if (componentId) panelBody.appendChild(componentSection(componentId));
+  if (info.kind === 'instance' && !info.canSetSrc) {
+    RetouchInspector.note(panelBody, 'Instance props are listed above. Edit the definition for shared styles, or detach this usage for independent styles.');
+    return;
+  }
+
+  const target = editing?.el || matchingEls(activeId()).find(el => inTextScope(el, info));
+  panelBody.appendChild(RetouchInspector.position(info, target, setClasses, message => toast(message, 'err')));
+  panelBody.appendChild(RetouchInspector.appearance(info, target, setClasses));
+  if (info.src !== null || info.srcDynamic) panelBody.appendChild(imageSection(info));
+  if (info.canSetTag || target?.textContent?.trim()) panelBody.appendChild(RetouchInspector.typography(info, target, setClasses, setTag));
   panelBody.appendChild(colorSection('Fill', 'bg', info));
   panelBody.appendChild(colorSection('Text color', 'text', info));
-  if (info.src !== null || info.srcDynamic) panelBody.appendChild(imageSection(info));
+  panelBody.appendChild(RetouchInspector.effects(info, target, setClasses, message => toast(message, 'err')));
 
   // Text
   const tsec = document.createElement('div');
@@ -616,44 +677,115 @@ function renderPanel() {
 
 }
 
-// Typography: Figma-like text-role presets that rewrite the element's tag.
-const TYPE_PRESETS = [
-  ['H1', 'h1'], ['H2', 'h2'], ['H3', 'h3'], ['H4', 'h4'], ['Body', 'p'],
-];
-function typographySection(info) {
-  const sec = document.createElement('div');
-  sec.className = 'sec';
-  sec.innerHTML = '<h3>Typography</h3>';
-  const row = document.createElement('div');
-  row.className = 'typerow';
-  for (const [label, tag] of TYPE_PRESETS) {
-    const b = document.createElement('button');
-    b.className = 'typebtn' + (info.tag === tag ? ' active' : '');
-    b.textContent = label;
-    b.onclick = () => setTag(tag);
-    row.appendChild(b);
-  }
-  sec.appendChild(row);
-  if (!TYPE_PRESETS.some(([, t]) => t === info.tag)) {
-    const cur = document.createElement('div');
-    cur.className = 'filepath';
-    cur.textContent = 'Current: <' + info.tag + '>';
-    sec.appendChild(cur);
-  }
+function componentSection(id) {
+  const sec = RetouchInspector.section('Component');
+  sec.classList.add('component-section');
+  const description = RetouchInspector.note(sec, 'Loading definition…');
+  api('GET', '/rt/__api/component?id=' + id).then(component => {
+    if (!sec.isConnected) return;
+    if (!component?.ok) { description.textContent = component?.reason || 'Definition unavailable.'; return; }
+    description.textContent = component.name + ' · ' + component.file;
+    if (component.detached) sec.querySelector('h3').textContent = 'Detached component';
+    const actions = document.createElement('div'); actions.className = 'component-actions';
+    actions.append(RetouchInspector.button('View component', () => openComponent(id, component)));
+    const edit = RetouchInspector.button('Edit definition', () => editDefinition(id, component));
+    edit.disabled = !component.definitionId; actions.append(edit);
+    const detach = RetouchInspector.button('Detach instance', () => detachInstance(id, component, detach));
+    detach.disabled = !component.canDetach; if (!component.detached) actions.append(detach); sec.append(actions);
+    RetouchInspector.note(sec, `${matchingEls(id).length} rendered instance${matchingEls(id).length === 1 ? '' : 's'} at this usage. ${component.detached ? 'This module is independent of the original component.' : 'Definition edits are shared.'}`);
+    if (component.props.length) sec.append(propTable(component.props));
+  });
   return sec;
+}
+function propTable(props) {
+  const table = document.createElement('table'); table.className = 'component-props';
+  const thead = document.createElement('thead'); const header = document.createElement('tr');
+  for (const text of ['Prop', 'This instance', 'Default']) { const th=document.createElement('th');th.textContent=text;header.append(th); }
+  thead.append(header); table.append(thead);
+  const body=document.createElement('tbody');
+  for(const prop of props){const row=document.createElement('tr');for(const value of [prop.name,prop.value,prop.default]){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}body.append(row);}
+  table.append(body);return table;
+}
+async function editDefinition(instanceId, component) {
+  if (!component.definitionId) return;
+  const response = await api('GET', resolveUrl(component.definitionId));
+  if (!response?.ok) return toast('The definition changed. Re-select the component.', 'err');
+  sel = { hostId: component.definitionId, instanceId, scope: 'host', info: response.element };
+  renderPanel(); toast(component.detached ? 'Editing detached definition' : 'Editing shared definition', 'ok');
+}
+async function detachInstance(id, component, button) {
+  button.disabled = true;
+  try {
+    const usage = await api('GET', resolveUrl(id));
+    if (!usage?.ok) return toast('The usage no longer resolves.', 'err');
+    const result = await api('POST', '/rt/__api/op', { type: 'detachComponent', id, fileHash: usage.element.hash, definitionHash: component.hash });
+    if (!result?.ok) return toast(result?.reason || result?.error || 'Detach failed', 'err');
+    undoStack.push({ type: 'detachComponent', id, undoId: result.undoId });
+    const detached = await api('GET', '/rt/__api/component?id=' + id);
+    if (detached?.ok) {
+      await refreshWrittenElement(usage.element, el => el.getAttribute('data-rt') === detached.definitionId);
+      await editDefinition(id, detached);
+    }
+    toast('Detached to ' + result.detachedFile, 'ok');
+  } finally { button.disabled = false; }
+}
+function openComponent(id, component) {
+  const modal = document.createElement('dialog');modal.className = 'component-modal';
+  const header = document.createElement('header');
+  const title = document.createElement('h2');title.textContent = component.name;
+  const close = RetouchInspector.button('Close',()=>modal.close());header.append(title,close);modal.append(header);
+  RetouchInspector.note(modal, component.file, 'filepath');
+  const content=document.createElement('div');content.className='component-workspace';
+  const canvas=document.createElement('div');canvas.className='component-canvas';
+  RetouchInspector.note(canvas,'Live preview · current instance props');
+  const preview=document.createElement('iframe');preview.title='Component preview';canvas.append(preview);
+  const sidebar=document.createElement('div');sidebar.className='component-details';
+  const h=document.createElement('h3');h.textContent='Props';sidebar.append(h,propTable(component.props));
+  RetouchInspector.note(sidebar,'Values show the usage source. Expressions keep their application context.');
+  const details=document.createElement('details');const summary=document.createElement('summary');summary.textContent='Component definition';
+  const code=document.createElement('pre');code.textContent=component.source;details.append(summary,code);sidebar.append(details);
+  const edit=RetouchInspector.button('Edit definition',()=>{modal.close();editDefinition(id,component);});edit.disabled=!component.definitionId;sidebar.append(edit);
+  content.append(canvas,sidebar);modal.append(content);document.body.append(modal);
+  let stop;
+  preview.onload=()=>{
+    try {
+      const d=preview.contentDocument;
+      // Keep the actual mounted component, its providers, and HMR alive. Hide
+      // surrounding layout in this separate frame instead of cloning markup.
+      const isolate=()=>{
+        const el=d.querySelector(`[data-rt-i="${id}"]`);if(!el)return;
+        let child=el;
+        for(let parent=el.parentElement;parent;parent=parent.parentElement){
+          for(const sibling of parent.children)if(sibling!==child&&!['STYLE','LINK','SCRIPT','HEAD'].includes(sibling.tagName))sibling.style.setProperty('display','none','important');
+          if(parent!==d.documentElement)for(const [p,v] of Object.entries({display:'block',position:'static',width:'auto',height:'auto','min-height':'0',margin:'0',padding:parent===d.body?'32px':'0',transform:'none',overflow:'visible'}))parent.style.setProperty(p,v,'important');
+          child=parent;
+        }
+        el.style.setProperty('margin','0','important');
+      };
+      isolate(); const observer=new MutationObserver(isolate);observer.observe(d.body,{childList:true,subtree:true});stop=()=>observer.disconnect();
+      d.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();},true);
+    }catch{RetouchInspector.note(canvas,'Preview could not attach to this page.');}
+  };
+  preview.src=iframe.contentWindow.location.href;
+  modal.addEventListener('close',()=>{stop?.();modal.remove();});
+  modal.showModal();close.focus();
 }
 
 async function setTag(tag) {
+  busyPanel(true);
+  try { return await writeTag(tag); } finally { busyPanel(false); }
+}
+async function writeTag(tag) {
   if (!sel || !sel.info || sel.info.tag === tag) return;
   const info = sel.info;
   const prev = info.tag;
   const res = await api('POST', '/rt/__api/op', { type: 'setTag', id: info.id, tag, fileHash: info.hash });
   if (res && res.ok) {
-    undoStack.push({ type: 'setTag', id: info.id, tag: prev });
+    undoStack.push({ type: 'setTag', id: info.id, tag: prev, undoId: res.undoId });
     info.tag = tag;
     info.hash = res.hash;
     toast('Saved', 'ok');
-    reloadFrame(); // a tag change is structural; remount clean
+    await refreshWrittenElement(info, el => el.tagName.toLowerCase() === tag);
     renderPanel();
   } else {
     toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
@@ -731,7 +863,7 @@ const PALETTE = {
 function colorTokenRe(kind) {
   return new RegExp(
     '^' + kind + '-(?:(?:' + COLOR_NAMES.join('|') + ')-(?:' + SHADES.join('|') +
-    ')|white|black|transparent|current|inherit|\\[[^\\]]+\\])(?:/\\d{1,3})?$'
+    ')|white|black|transparent|current|inherit|\\[(?:#[0-9a-fA-F]+|(?:color:|rgb|hsl|oklch|oklab|lab|lch)[^\\]]*)\\])(?:/\\d{1,3})?$'
   );
 }
 
@@ -764,15 +896,18 @@ function colorSection(title, kind, info) {
   const tokens = (info.className || '').split(/\s+/).filter(Boolean);
   const re = colorTokenRe(kind);
   const current = tokens.find((t) => re.test(t)) || null;
+  const target = matchingEls(info.id)[0];
+  const computed = target && target.ownerDocument.defaultView.getComputedStyle(target)[kind === 'bg' ? 'backgroundColor' : 'color'];
 
   const row = document.createElement('div');
   row.className = 'colorrow';
   const sw = document.createElement('button');
   sw.className = 'swatch' + (current ? '' : ' empty');
-  if (current) sw.style.background = swatchColor(current);
+  sw.setAttribute('aria-label', 'Choose ' + title.toLowerCase());
+  if (computed || current) { sw.style.background = computed || swatchColor(current); sw.classList.remove('empty'); }
   const label = document.createElement('span');
   label.className = 'colorlabel';
-  label.textContent = current || 'default';
+  label.textContent = current || computed || 'default';
   row.appendChild(sw);
   row.appendChild(label);
   if (current) {
@@ -786,6 +921,7 @@ function colorSection(title, kind, info) {
   sec.appendChild(row);
 
   const pal = buildPalette(kind, tokens, current);
+  if (computed && current) RetouchInspector.note(sec, computed, 'computed-value');
   pal.hidden = true;
   sec.appendChild(pal);
   sw.onclick = () => { pal.hidden = !pal.hidden; };
@@ -809,10 +945,11 @@ function buildPalette(kind, tokens, current) {
   const hex = document.createElement('input');
   hex.className = 'hexinput';
   hex.placeholder = '#hex ⏎';
+  hex.setAttribute('aria-label', kind === 'bg' ? 'Fill hex color' : 'Text hex color');
   hex.onkeydown = (e) => {
     if (e.key === 'Enter') {
       const v = hex.value.trim().replace(/^#?/, '#');
-      if (/^#[0-9a-fA-F]{3,8}$/.test(v)) applyColor(tokens, current, `${kind}-[${v.toLowerCase()}]`);
+      if (/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(v)) applyColor(tokens, current, `${kind}-[${v.toLowerCase()}]`);
       else toast('Enter a hex color like #1a4e8a', 'err');
     }
   };
@@ -843,21 +980,37 @@ function imageSection(info) {
   const h = document.createElement('h3');
   h.textContent = 'Image';
   sec.appendChild(h);
-  if (info.srcDynamic) {
+  if (info.srcDynamic || info.canSetSrc === false) {
     const p = document.createElement('p');
     p.className = 'refused';
-    p.textContent = 'src here is an imported image or an expression; it cannot be swapped deterministically (R-6).';
+    p.textContent = info.srcReason || 'This image source is computed. Literal sources, static image imports, and Liquid asset_url images can be swapped.';
     sec.appendChild(p);
     return sec;
   }
   const img = document.createElement('img');
   img.className = 'imgthumb';
-  img.src = info.src;
+  const target = matchingEls(info.id)[0];
+  img.src = target?.currentSrc || target?.src || info.src;
+  img.alt = 'Selected image';
   sec.appendChild(img);
   const pathEl = document.createElement('div');
   pathEl.className = 'filepath';
   pathEl.textContent = info.src;
   sec.appendChild(pathEl);
+  const pathInput = document.createElement('input'); pathInput.type = 'text'; pathInput.placeholder = '/images/example.png'; pathInput.value = info.srcImported ? '' : info.src;
+  RetouchInspector.field(sec, 'Image path', pathInput);
+  sec.append(RetouchInspector.button('Apply image path', () => setSrc(pathInput.value.trim(), false, info)));
+  const assets = document.createElement('div'); assets.className = 'image-assets'; assets.hidden = true;
+  const browse = RetouchInspector.button('Browse project images', async () => {
+    assets.hidden = !assets.hidden; if (assets.hidden || assets.childElementCount) return;
+    const result = await api('GET', '/rt/__api/images');
+    if (!result?.ok) return toast(result?.error || 'Could not list images', 'err');
+    for (const asset of result.images) {
+      const b = RetouchInspector.button(asset.name, () => setSrc(asset.src, false, info)); b.title = asset.src; assets.append(b);
+    }
+    if (!result.images.length) RetouchInspector.note(assets, 'No project images found. Choose a file to upload.');
+  });
+  sec.append(browse, assets);
   const pick = document.createElement('button');
   pick.id = 'imgPick';
   pick.textContent = 'Choose image…';
@@ -882,38 +1035,46 @@ function imageSection(info) {
       res = { ok: false, error: err.message };
     }
     if (!res.ok) return toast(res.reason || res.error || 'Upload failed', 'err');
-    setSrc(res.src);
+    setSrc(res.src, false, info);
   };
   sec.appendChild(pick);
   sec.appendChild(fileIn);
   return sec;
 }
 
-async function setSrc(src, isUndo) {
-  if (!sel || !sel.info) return;
-  const info = sel.info;
+async function setSrc(src, isUndo, info = sel?.info) {
+  busyPanel(true);
+  try { return await writeSrc(src, isUndo, info); } finally { busyPanel(false); }
+}
+async function writeSrc(src, isUndo, info) {
+  if (!info) return;
   const prev = info.src;
-  for (const el of matchingEls(info.id)) {
-    if (el.tagName === 'IMG') { el.removeAttribute('srcset'); el.src = src; }
-  }
-  const res = await api('POST', '/rt/__api/op', { type: 'setSrc', id: info.id, src, fileHash: info.hash });
+  const target = matchingEls(info.id)[0];
+  const dimensions = target ? { width: Number(target.getAttribute('width')) || target.naturalWidth, height: Number(target.getAttribute('height')) || target.naturalHeight } : undefined;
+  const res = await api('POST', '/rt/__api/op', { type: 'setSrc', id: info.id, src, fileHash: info.hash, dimensions });
   if (res && res.ok) {
-    if (!isUndo) undoStack.push({ type: 'setSrc', id: info.id, src: prev });
+    if (!isUndo) undoStack.push({ type: 'setSrc', id: info.id, src: prev, undoId: res.undoId });
     info.src = src;
+    info.srcImported = false;
     info.hash = res.hash;
     toast('Saved', 'ok');
-    renderPanel();
+    await refreshWrittenElement(info, el => {
+      const value = new URL(el.getAttribute('src') || '', location.origin);
+      return value.pathname === src || value.searchParams.get('url') === src || (src.startsWith('/assets/') && value.pathname.endsWith('/' + src.slice(8)));
+    });
+    if (sel?.info === info) renderPanel();
   } else {
-    for (const el of matchingEls(info.id)) {
-      if (el.tagName === 'IMG') el.src = prev;
-    }
     toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
-    loadScope();
+    if (sel?.info === info) loadScope();
   }
 }
 
 /* ---------- ops ---------- */
 async function setClasses(classes, isUndo) {
+  busyPanel(true);
+  try { return await writeClasses(classes, isUndo); } finally { busyPanel(false); }
+}
+async function writeClasses(classes, isUndo) {
   if (!sel || !sel.info) return;
   const info = sel.info;
   const prev = info.className || '';
@@ -922,8 +1083,8 @@ async function setClasses(classes, isUndo) {
     type: 'setClasses', id: info.id, classes, fileHash: info.fileHash || info.hash,
   });
   if (res && res.ok) {
-    if (!isUndo) undoStack.push({ type: 'setClasses', id: info.id, classes: prev });
-    info.className = classes;
+    if (!isUndo) undoStack.push({ type: 'setClasses', id: info.id, classes: prev, undoId: res.undoId });
+    info.className = res.element?.className ?? classes;
     info.hash = res.hash;
     toast('Saved', 'ok');
     renderPanel();
@@ -971,8 +1132,33 @@ function optimisticText(text) {
 }
 
 async function undo() {
-  const op = undoStack.pop();
+  if (undoBusy) return;
+  undoBusy = true; undoBtn.disabled = true;
+  try { await undoNext(); } finally { undoBusy = false; undoBtn.disabled = false; }
+}
+async function undoNext() {
+  const op = undoStack[undoStack.length - 1];
   if (!op) return toast('Nothing to undo');
+  if (op.undoId) {
+    const result = await api('POST', '/rt/__api/op', { type: 'undo', undoId: op.undoId });
+    if (!result?.ok) return toast(result?.reason || result?.error || 'Undo failed', 'err');
+    undoStack.pop();
+    const fresh = await api('GET', resolveUrl(op.id, op.context));
+    if (fresh?.ok) { sel = { hostId: op.id, instanceId: null, scope: 'host', info: fresh.element }; renderPanel(); }
+    else clearSelection();
+    if (fresh?.ok) {
+      const info = fresh.element;
+      const component = op.type === 'detachComponent' ? await api('GET', '/rt/__api/component?id=' + op.id) : null;
+      await refreshWrittenElement(info, el => {
+        if (component?.ok) return el.getAttribute('data-rt') === component.definitionId;
+        if (op.type === 'setSrc') return el.getAttribute('src') === info.src || new URL(el.getAttribute('src') || '', location.origin).searchParams.get('url') === info.src;
+        if (op.type === 'setTag') return el.tagName.toLowerCase() === info.tag;
+        return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
+      });
+    } else await reloadFrame();
+    toast('Undone', 'ok'); return;
+  }
+  undoStack.pop();
   if (op.type === 'setText' || !sel || !sel.info || sel.info.id !== op.id) {
     // Re-resolve the op's element so the write path stays identical.
     const res = await api('GET', resolveUrl(op.id, op.context));
@@ -1000,9 +1186,13 @@ routeInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') iframe.src = routeInput.value || '/';
 });
 window.addEventListener('keydown', (e) => {
+  if (document.querySelector('dialog[open]')) return;
+  if (e.key === 'Alt') measuring = true;
   if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); undo(); }
   if (e.key === 'Escape') clearSelection();
 });
+window.addEventListener('keyup', (e) => { if (!e.altKey) measuring = false; });
+window.addEventListener('blur', () => { measuring = false; });
 
 /* ---------- util ---------- */
 async function api(method, url, body) {
@@ -1031,7 +1221,7 @@ function toast(msg, cls) {
 RetouchMaxWidth.mount({
   container: overlayLayer.parentElement,
   getTarget() {
-    if (mode !== 'edit' || !sel || sel.info.classNameDynamic) return null;
+    if (mode !== 'edit' || !sel || sel.info.classNameDynamic || sel.info.kind === 'instance') return null;
     const el = editing?.el || matchingEls(activeId()).find(el => inTextScope(el, sel.info));
     return el ? { el, info: sel.info } : null;
   },
