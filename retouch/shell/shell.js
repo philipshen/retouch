@@ -39,6 +39,9 @@ routeInput.value = appPath;
 iframe.addEventListener('load', () => {
   try {
     if (!iframe.contentDocument || iframe.contentWindow.location.origin !== location.origin) return;
+    classificationSerial++;
+    if (editing?.el.ownerDocument !== iframe.contentDocument) editing = null;
+    hoverEl = null;
     hookFrame(iframe.contentDocument, iframe.contentWindow);
     onNavigated();
   } catch (err) {
@@ -62,6 +65,7 @@ function hookFrame(d, w) {
   // Selection: capture-phase click; prevent the app from reacting (OQ-E4).
   d.addEventListener('click', (e) => {
     if (mode !== 'edit') return;
+    if (panelTasks > 0) { e.preventDefault(); e.stopPropagation(); return; }
     if (editing) {
       if (editing.el.contains(e.target)) return;
       commitInlineEdit(); // clicking away commits (R-5)
@@ -185,21 +189,17 @@ function idsOf(el) {
 }
 
 function renderContext(el) {
-  if (!el.hasAttribute('data-rt-template')) return null;
-  const blocks = [];
-  for (let node = el; node; node = node.parentElement) {
-    const block = node.getAttribute('data-rt-block');
-    if (block && !blocks.includes(block)) blocks.unshift(block);
-  }
-  return { section: el.dataset.rtSection, block: el.dataset.rtBlock, blocks,
-    template: el.dataset.rtTemplate, locale: el.dataset.rtLocale,
-    origin: el.dataset.rtOrigin, tag: el.tagName.toLowerCase() };
+  const attributes = node => Object.fromEntries([...node.attributes].filter(a=>a.name.startsWith('data-rt-')).map(a=>[a.name,a.value]));
+  const ancestors = [];
+  for (let node=el.parentElement;node&&ancestors.length<30;node=node.parentElement) ancestors.push(attributes(node));
+  return {attributes:attributes(el),ancestors,tag:el.tagName.toLowerCase(),className:el.getAttribute('class')||'',src:el.getAttribute('src')};
 }
 function resolveUrl(id, context) {
   return '/rt/__api/resolve?id=' + id + (context ? '&context=' + encodeURIComponent(JSON.stringify(context)) : '');
 }
-function sourcePayload(info) {
-  return { context: info.context, sourceId: info.textSource?.id, sourceHash: info.textSource?.hash };
+function componentUrl(id,context) {return resolveUrl(id,context).replace('/resolve?','/component?');}
+function sourcePayload(info, source=info.textSource) {
+  return { context: info.context, sourceId: source?.id, sourceHash: source?.hash };
 }
 function updateSource(info, result) {
   info.hash = result.hash;
@@ -221,14 +221,29 @@ async function classify(node) {
     busyPanel(false);
   }
 }
+function isStandaloneText(el, info) {
+  if(!info || (info.text==null && !info.mixedText))return false;
+  if(!/^(H[1-6]|P|SPAN|LABEL|BLOCKQUOTE|DIV)$/.test(el.tagName))return false;
+  return !!el.textContent.trim() && [...el.querySelectorAll('*')].every(child=>
+    /^(SPAN|STRONG|EM|B|I|U|S|DEL|BR|A|CODE|SMALL|SUB|SUP)$/.test(child.tagName));
+}
 async function classifyNode(node) {
   let el = node && node.closest ? node.closest('[data-rt], [data-rt-i]') : null;
   while (el) {
     const { hostId, instanceId } = idsOf(el);
+    let inlineComponent=false;
+    if(hostId && instanceId) {
+      const host=await api('GET',resolveUrl(hostId,renderContext(el)));
+      if(host?.ok && isStandaloneText(el,host.element)) {
+        const usage=await api('GET',resolveUrl(instanceId,renderContext(el)));
+        return {el,info:{...host.element,textLeaf:true},hostId,instanceId:usage?.element?.inlineComponent?null:instanceId};
+      }
+    }
     for (const id of [instanceId, hostId]) {
       if (!id || !/^[0-9a-f]{10}$/.test(id)) continue;
       const res = await api('GET', resolveUrl(id, renderContext(el)));
-      if (res && res.ok) return { el, info: res.element, hostId, instanceId };
+      if(res?.ok && res.element.inlineComponent){inlineComponent=true;continue;}
+      if (res && res.ok) return { el, info: res.element, hostId, instanceId:inlineComponent?null:instanceId };
     }
     el = el.parentElement ? el.parentElement.closest('[data-rt], [data-rt-i]') : null;
   }
@@ -288,21 +303,26 @@ async function startInlineEdit(node, evt, quiet) {
     }
     return;
   }
-  if (info.textSource && info.textSource.format !== 'text') { renderPanel(); return; }
+  if (info.textSource && info.textSource.format !== 'text' && !info.richText) { renderPanel(); return; }
   const editId = info.id;
   renderPanel();
+  const originalHTML=el.innerHTML;
+  if (info.richText) {
+    try { RetouchRichTextSource.prepare(el,info.richText); }
+    catch(err) { toast(err.message,'err');return; }
+  }
   editing = {
     el,
     id: editId,
     info,
     original: el.textContent,
-    originalHTML: el.innerHTML,
+    originalHTML,
     snapshot: new Map(),
     originalTree: null,
   };
-  for (const c of el.querySelectorAll('[data-rt], [data-rt-i]')) {
-    const cid = c.getAttribute('data-rt') || c.getAttribute('data-rt-i');
-    if (cid) editing.snapshot.set(cid, c.textContent);
+  for (const c of el.querySelectorAll('[data-rt], [data-rt-i], [data-rt-keep]')) {
+    const cid = c.getAttribute('data-rt-keep') || c.getAttribute('data-rt') || c.getAttribute('data-rt-i');
+    if (cid) editing.snapshot.set(cid, {html:c.innerHTML});
   }
   editing.originalTree = serializeChildren(el, editing.snapshot);
   // plaintext-only forces pre-wrap in Chromium even over author !important
@@ -327,7 +347,7 @@ async function commitInlineEdit() {
   editing = null;
   ed.el.removeAttribute('contenteditable');
   const children = serializeChildren(ed.el, ed.snapshot);
-  if (JSON.stringify(children) === JSON.stringify(ed.originalTree)) return;
+  if (JSON.stringify(children) === JSON.stringify(ed.originalTree)) { if(ed.info.richText)ed.el.innerHTML=ed.originalHTML;return; }
 
   // A pure-text element with a pure-text result uses setText (smaller diff).
   // An element whose SOURCE has mixed children must use setChildren even when
@@ -336,6 +356,7 @@ async function commitInlineEdit() {
   let op;
   if (!ed.info.mixedText && children.every((c) => c.t === 'text')) {
     op = { type: 'setText', id: ed.id, text: children.map((c) => c.value).join(''), fileHash: ed.info.hash };
+    if(ed.info.textSource?.format==='text')op.text=RetouchRichTextSource.storedText(op.text,ed.original,ed.info.text);
   } else {
     op = { type: 'setChildren', id: ed.id, children, fileHash: ed.info.hash };
   }
@@ -349,14 +370,14 @@ async function commitInlineEdit() {
   const res = await api('POST', '/rt/__api/op', op);
   if (res && res.ok) {
     undoStack.push(op.type === 'setText'
-      ? { type: 'setText', id: ed.id, text: ed.info.textSource ? ed.info.text : ed.original, context: ed.info.context, sourceId: ed.info.textSource?.id }
-      : { type: 'setChildren', id: ed.id, children: ed.originalTree });
+      ? { type: 'setText', id: ed.id, text: ed.info.textSource ? ed.info.text : ed.original, undoId: res.undoId, context: ed.info.context, sourceId: ed.info.textSource?.id }
+      : { type: 'setChildren', id: ed.id, children: ed.originalTree, undoId: res.undoId, context: ed.info.context });
     updateSource(ed.info, res);
     if (op.type === 'setText') {
       ed.info.text = op.text;
       for (const m of (ed.info.textSource ? [] : matchingEls(ed.id))) if (m !== ed.el) m.textContent = op.text;
     }
-    if (structural) reloadFrame();
+    if (structural || window.__RT_RENDERING?.reloadAfterWrite) reloadFrame();
     else if (sel && sel.info && sel.info.id === ed.id) {
       sel.info.hash = res.hash;
       renderPanel();
@@ -371,10 +392,32 @@ async function commitInlineEdit() {
 // Reload the iframe to its current path, preserving scroll where possible.
 function reloadFrame() {
   return new Promise(resolve => {
+    classificationSerial++;
+    editing = null;
+    hoverEl = null;
     const y = iframe.contentWindow?.scrollY || 0;
-    let timeout;
-    const done = () => {
+    let timeout, finished = false;
+    const done = async () => {
+      if (finished) return;
+      finished = true;
       clearTimeout(timeout); iframe.removeEventListener('load', done);
+      // Development renderers can retain a stylesheet URL after recompiling
+      // its contents. Revalidate local CSS after a source write, even if the
+      // host application's asset cache treats that URL as immutable.
+      const revision = Date.now().toString(36);
+      try {
+        await Promise.all([...(window.__RT_RENDERING?.revalidateStyles ? iframe.contentDocument.querySelectorAll('link[rel="stylesheet"]') : [])].map(link => {
+          const url = new URL(link.href);
+          if (url.origin !== location.origin) return;
+          return new Promise(ready => {
+            let timer;
+            const complete = () => { clearTimeout(timer); link.removeEventListener('load',complete); link.removeEventListener('error',complete); ready(); };
+            link.addEventListener('load',complete); link.addEventListener('error',complete);
+            timer = setTimeout(complete,4000);
+            url.searchParams.set('__rt_revision',revision); link.href = url.href;
+          });
+        }));
+      } catch {}
       try { iframe.contentWindow.scrollTo(0, y); } catch {}
       resolve();
     };
@@ -394,7 +437,7 @@ async function refreshWrittenElement(info, matches) {
       const response = await fetch(location, { cache: 'no-store' });
       if (response.ok) {
         const html = new DOMParser().parseFromString(await response.text(), 'text/html');
-        const el = html.querySelector(`[data-rt="${info.id}"], [data-rt-i="${info.id}"]`);
+        const el = matchingInDocument(html,info.id,info)[0];
         if (el && matches(el)) { await reloadFrame(); return; }
       }
     } catch {}
@@ -419,7 +462,7 @@ async function applyChildren(id, children) {
 function toggleWrap(tag) {
   const d = doc();
   if (!d || !editing) return;
-  if (editing.info.canSetChildren === false) return toast('Rich text formatting is not supported for Liquid yet.', 'err');
+  if (editing.info.canSetChildren === false) return toast('This source cannot preserve rich text formatting.', 'err');
   const s = d.getSelection();
   if (!s || !s.rangeCount) return;
   const r = s.getRangeAt(0);
@@ -465,56 +508,81 @@ function toggleWrap(tag) {
 }
 
 /* ---------- overlays ---------- */
+const hoverDescriptions = new WeakMap();
+function hoverDescription(el) {
+  let entry=hoverDescriptions.get(el);
+  if(!entry || (!entry.pending && Date.now()-entry.updated>2000)) {
+    entry={info:entry?.info || null,pending:true,updated:Date.now()};
+    hoverDescriptions.set(el,entry);
+    classifyNode(el).then(result=>{
+      entry.info=result?.info || {unresolved:true};entry.pending=false;entry.updated=Date.now();
+    });
+  }
+  return entry.info;
+}
+function outlineKind(el, info) {
+  if(info?.kind==='instance' && !info.inlineComponent)return 'instance';
+  if(!info)return null;
+  return !info.unresolved && (info.classNameDynamic===false || info.text!=null || info.canSetChildren || info.canSetSrc || info.canSetTag) ? 'editable' : 'readonly';
+}
+const componentBadge=document.createElement('div');
+componentBadge.className='component-badge';componentBadge.hidden=true;
+componentBadge.innerHTML='<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0 11.5 3.5 8 7 4.5 3.5ZM3.5 4.5 7 8 3.5 11.5 0 8ZM12.5 4.5 16 8 12.5 11.5 9 8ZM8 9 11.5 12.5 8 16 4.5 12.5Z"/></svg><span>component</span><button type="button" title="detach" aria-label="detach"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="m6 2-4 6 6 6m4-12 4 6-4 6M9 1 7 15" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>';
+overlayLayer.parentElement.appendChild(componentBadge);
+let badgeTarget=null;
+componentBadge.querySelector('button').onclick=async()=>{
+  const target=badgeTarget;if(!target)return;
+  const button=componentBadge.querySelector('button');button.disabled=true;
+  try {
+    await commitInlineEdit();
+    const context=renderContext(target.el);
+    const component=await api('GET',componentUrl(target.id,context));
+    if(!component?.ok || !component.canDetach)return toast(component?.reason || 'This component cannot be detached.','err');
+    await detachInstance(target.id,component,button,context);
+  } finally {button.disabled=false;}
+};
 function paintLoop() {
   overlayLayer.textContent = '';
   const d = doc();
-  if (d && sel) {
-    const id = activeId();
-    const attr = sel.scope === 'instance' && sel.instanceId ? 'data-rt-i' : 'data-rt';
-    const els = d.querySelectorAll(`[${attr}="${id}"]`);
-    let first = true;
-    for (const el of els) {
-      if (!inTextScope(el, sel.info)) continue;
-      drawBox(el, first ? 'sel' : 'co', sel.scope === 'instance', first ? labelFor() : null);
-      first = false;
+  let badge=null;
+  if (d && sel && mode==='edit') {
+    const id=activeId();
+    let first=true;
+    for(const el of matchingInDocument(d,id,sel.info)) {
+      if(!inTextScope(el,sel.info))continue;
+      const kind=outlineKind(el,sel.info);
+      drawBox(el,first?'sel':'co',kind);
+      if(first && kind==='instance')badge={el,id:el.getAttribute('data-rt-i') || id};
+      first=false;
     }
   }
-  if (d && editing && editing.el.isConnected) drawBox(editing.el, 'editing', false, 'text ⏎');
-  if (d && hoverEl && hoverEl.isConnected && mode === 'edit' && !editing) drawBox(hoverEl, 'hover', !!hoverEl.getAttribute('data-rt-i'), null);
+  if(d && editing?.el.isConnected)drawBox(editing.el,'editing',outlineKind(editing.el,editing.info));
+  if(d && hoverEl?.isConnected && mode==='edit' && !editing) {
+    const kind=outlineKind(hoverEl,hoverDescription(hoverEl));
+    if(kind)drawBox(hoverEl,'hover',kind);
+    if(kind==='instance')badge={el:hoverEl,id:hoverEl.getAttribute('data-rt-i')};
+  }
+  // Keep the badge mounted so pointer/focus events survive animation frames.
+  if(componentBadge.matches(':hover') || componentBadge.contains(document.activeElement))badge=badgeTarget;
+  if(mode!=='edit' || !badge?.el.isConnected)badge=null;
+  badgeTarget=badge;componentBadge.hidden=!badge;
+  if(badge){const r=badge.el.getBoundingClientRect();componentBadge.style.left=Math.max(0,r.left)+'px';componentBadge.style.top=Math.max(0,r.top-22)+'px';}
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
   requestAnimationFrame(paintLoop);
 }
 
 function inTextScope(el, info) {
-  const source = info.textSource;
-  const context = info.context;
-  if (!source || !context) return true;
-  if (source.kind === 'locale') return el.dataset.rtLocale === context.locale;
-  if (source.kind !== 'setting' || source.scope === 'theme') return true;
-  return el.dataset.rtSection === context.section && el.dataset.rtTemplate === context.template &&
-    (source.scope !== 'block' || el.dataset.rtBlock === context.block);
+  return Object.entries(info.renderScope || {}).every(([name,value])=>el.getAttribute(name)===value);
 }
-
-function labelFor() {
-  if (!sel || !sel.info) return null;
-  return (sel.scope === 'instance' ? '⟐ ' : '') + sel.info.tag;
-}
-
-function drawBox(el, cls, isInstance, label) {
+function drawBox(el, cls, kind) {
   const r = el.getBoundingClientRect();
   if (r.width === 0 && r.height === 0) return;
   const b = document.createElement('div');
-  b.className = 'box ' + cls + (isInstance ? ' instance' : '');
+  b.className = 'box ' + cls + ' ' + kind;
   b.style.left = r.left + 'px';
   b.style.top = r.top + 'px';
   b.style.width = r.width + 'px';
   b.style.height = r.height + 'px';
-  if (label) {
-    const chip = document.createElement('span');
-    chip.className = 'tagchip';
-    chip.textContent = label;
-    b.appendChild(chip);
-  }
   overlayLayer.appendChild(b);
 }
 
@@ -529,7 +597,7 @@ function renderPanel() {
   head.className = 'sec';
   const badge = document.createElement('span');
   badge.className = 'kindbadge' + (info.kind === 'instance' ? ' instance' : '');
-  badge.textContent = info.kind === 'instance' ? 'instance' : '<' + info.tag + '>';
+  badge.textContent = info.kind === 'instance' ? 'component' : '<' + info.tag + '>';
   head.appendChild(badge);
   const file = document.createElement('div');
   file.className = 'filepath';
@@ -539,6 +607,21 @@ function renderPanel() {
     RetouchInspector.note(head, 'Editing base styles. Existing breakpoint and state styles may override them.');
   }
   panelBody.appendChild(head);
+
+  if(info.components?.length) {
+    const label=document.createElement('label');label.textContent='Component scope';
+    const select=document.createElement('select');select.setAttribute('aria-label','Component scope');
+    const prompt=document.createElement('option');prompt.value='';prompt.textContent='Choose a containing component';select.append(prompt);
+    for(const component of info.components){const option=document.createElement('option');option.value=component.id;option.textContent=component.label;select.append(option);}
+    select.value=info.components.some(c=>c.id===info.id)?info.id:'';
+    select.onchange=async()=>{
+      if(!select.value)return;
+      const result=await api('GET',resolveUrl(select.value,info.context));
+      if(result?.ok){sel={...sel,scope:'instance',instanceId:select.value,info:result.element};renderPanel();}
+      else toast('This component no longer resolves. Re-select it.','err');
+    };
+    label.append(select);head.append(label);
+  }
 
   // Scope switch when both IDs exist (R-12 a: instance is the default).
   if (sel.hostId && sel.instanceId) {
@@ -556,13 +639,13 @@ function renderPanel() {
 
   const componentTarget = matchingEls(activeId())[0]?.closest('[data-rt-i]');
   const componentId = sel.instanceId || componentTarget?.getAttribute('data-rt-i');
-  if (componentId) panelBody.appendChild(componentSection(componentId));
+  if (componentId && !info.textLeaf) panelBody.appendChild(componentSection(componentId));
   if (info.kind === 'instance' && !info.canSetSrc) {
     RetouchInspector.note(panelBody, 'Instance props are listed above. Edit the definition for shared styles, or detach this usage for independent styles.');
     return;
   }
 
-  const target = editing?.el || matchingEls(activeId()).find(el => inTextScope(el, info));
+  const target = (editing?.el.ownerDocument === doc() ? editing.el : null) || matchingEls(activeId()).find(el => inTextScope(el, info));
   panelBody.appendChild(RetouchInspector.position(info, target, setClasses, message => toast(message, 'err')));
   panelBody.appendChild(RetouchInspector.appearance(info, target, setClasses));
   if (info.src !== null || info.srcDynamic) panelBody.appendChild(imageSection(info));
@@ -580,7 +663,11 @@ function renderPanel() {
     provenance.className = 'filepath';
     provenance.textContent = (info.textSource.kind === 'locale' ? 'Shared translation: ' : 'Text source: ') + info.textSource.file + ' · ' + info.textSource.path;
     tsec.appendChild(provenance);
-    if (info.textSource.format !== 'text') {
+    if (info.richText) {
+      const hint=document.createElement('p');
+      hint.textContent='Edit in place. Select text, then Cmd+B or Cmd+I. Preserved placeholders stay connected to their source.';
+      tsec.appendChild(hint);
+    } else if (info.textSource.format !== 'text') {
       const label = document.createElement('p');
       label.textContent = info.textSource.format === 'html' ? 'Edit the stored HTML below.' : 'Edit the stored translation; keep its placeholders.';
       tsec.appendChild(label);
@@ -628,7 +715,7 @@ function renderPanel() {
   if (info.classNameDynamic) {
     const p = document.createElement('p');
     p.className = 'refused';
-    p.textContent = info.classNameReason || 'className here is a dynamic expression; Retouch edits literal class strings only (R-6).';
+    p.textContent = info.classNameReason || 'This class value has no editable source.';
     csec.appendChild(p);
   } else {
     const chips = document.createElement('div');
@@ -672,7 +759,7 @@ function renderPanel() {
   const hint = document.createElement('p');hint.className = 'hint';
   hint.textContent = info.classNameDynamic
     ? 'Max-width dragging is unavailable here because the class attribute contains expressions. Select a container with literal classes.'
-    : 'Drag the right-edge ↔ handle to snap the maximum width to a Tailwind size. The popup shows the exact class being changed.';
+    : 'Drag horizontally from any selection edge to snap the maximum width to a Tailwind size. The popup shows the exact class being changed.';
   sizing.append(title, hint);panelBody.appendChild(sizing);
 
 }
@@ -681,8 +768,9 @@ function componentSection(id) {
   const sec = RetouchInspector.section('Component');
   sec.classList.add('component-section');
   const description = RetouchInspector.note(sec, 'Loading definition…');
-  api('GET', '/rt/__api/component?id=' + id).then(component => {
+  api('GET', componentUrl(id,sel?.info?.context)).then(component => {
     if (!sec.isConnected) return;
+    if(component?.inlineComponent){sec.remove();return;}
     if (!component?.ok) { description.textContent = component?.reason || 'Definition unavailable.'; return; }
     description.textContent = component.name + ' · ' + component.file;
     if (component.detached) sec.querySelector('h3').textContent = 'Detached component';
@@ -692,7 +780,9 @@ function componentSection(id) {
     edit.disabled = !component.definitionId; actions.append(edit);
     const detach = RetouchInspector.button('Detach instance', () => detachInstance(id, component, detach));
     detach.disabled = !component.canDetach; if (!component.detached) actions.append(detach); sec.append(actions);
-    RetouchInspector.note(sec, `${matchingEls(id).length} rendered instance${matchingEls(id).length === 1 ? '' : 's'} at this usage. ${component.detached ? 'This module is independent of the original component.' : 'Definition edits are shared.'}`);
+    const count=matchingInDocument(doc(),id,component).length;
+    RetouchInspector.note(sec, `${count} rendered instance${count === 1 ? '' : 's'} at this usage. ${component.detached ? 'This module is independent of the original component.' : 'Definition edits are shared.'}`);
+    if(!component.canDetach&&!component.detached&&component.reason)RetouchInspector.note(sec,component.reason);
     if (component.props.length) sec.append(propTable(component.props));
   });
   return sec;
@@ -708,20 +798,22 @@ function propTable(props) {
 }
 async function editDefinition(instanceId, component) {
   if (!component.definitionId) return;
-  const response = await api('GET', resolveUrl(component.definitionId));
+  const roots=matchingInDocument(doc(),instanceId,component);
+  const target=roots.map(root=>root.getAttribute('data-rt')===component.definitionId?root:root.querySelector(`[data-rt="${component.definitionId}"]`)).find(Boolean);
+  const response = await api('GET', resolveUrl(component.definitionId, target?renderContext(target):sel?.info?.context));
   if (!response?.ok) return toast('The definition changed. Re-select the component.', 'err');
   sel = { hostId: component.definitionId, instanceId, scope: 'host', info: response.element };
   renderPanel(); toast(component.detached ? 'Editing detached definition' : 'Editing shared definition', 'ok');
 }
-async function detachInstance(id, component, button) {
+async function detachInstance(id, component, button, context=sel?.info?.context) {
   button.disabled = true;
   try {
-    const usage = await api('GET', resolveUrl(id));
+    const usage = await api('GET', resolveUrl(id,context));
     if (!usage?.ok) return toast('The usage no longer resolves.', 'err');
-    const result = await api('POST', '/rt/__api/op', { type: 'detachComponent', id, fileHash: usage.element.hash, definitionHash: component.hash });
+    const result = await api('POST', '/rt/__api/op', { type: 'detachComponent', id, fileHash: usage.element.hash, definitionHash: component.hash, context:usage.element.context });
     if (!result?.ok) return toast(result?.reason || result?.error || 'Detach failed', 'err');
-    undoStack.push({ type: 'detachComponent', id, undoId: result.undoId });
-    const detached = await api('GET', '/rt/__api/component?id=' + id);
+    undoStack.push({ type: 'detachComponent', id, undoId: result.undoId, context:usage.element.context });
+    const detached = await api('GET', componentUrl(id,usage.element.context));
     if (detached?.ok) {
       await refreshWrittenElement(usage.element, el => el.getAttribute('data-rt') === detached.definitionId);
       await editDefinition(id, detached);
@@ -752,15 +844,25 @@ function openComponent(id, component) {
       const d=preview.contentDocument;
       // Keep the actual mounted component, its providers, and HMR alive. Hide
       // surrounding layout in this separate frame instead of cloning markup.
+      // A constructed stylesheet leaves React-owned DOM attributes intact
+      // even when its hydration completes after the frame load event.
+      const sheet=new preview.contentWindow.CSSStyleSheet();
+      d.adoptedStyleSheets=[...d.adoptedStyleSheets,sheet];
+      const selector=node=>{
+        const parts=[];
+        for(let n=node;n&&n!==d.documentElement;n=n.parentElement)parts.unshift(n.tagName.toLowerCase()+':nth-child('+([...n.parentElement.children].indexOf(n)+1)+')');
+        return 'html'+(parts.length?' > '+parts.join(' > '):'');
+      };
       const isolate=()=>{
-        const el=d.querySelector(`[data-rt-i="${id}"]`);if(!el)return;
+        const el=matchingInDocument(d,id,component)[0];if(!el)return;
+        const rules=[];
         let child=el;
         for(let parent=el.parentElement;parent;parent=parent.parentElement){
-          for(const sibling of parent.children)if(sibling!==child&&!['STYLE','LINK','SCRIPT','HEAD'].includes(sibling.tagName))sibling.style.setProperty('display','none','important');
-          if(parent!==d.documentElement)for(const [p,v] of Object.entries({display:'block',position:'static',width:'auto',height:'auto','min-height':'0',margin:'0',padding:parent===d.body?'32px':'0',transform:'none',overflow:'visible'}))parent.style.setProperty(p,v,'important');
+          for(const sibling of parent.children)if(sibling!==child&&!['STYLE','LINK','SCRIPT','HEAD'].includes(sibling.tagName))rules.push(selector(sibling)+'{display:none!important}');
+          if(parent!==d.documentElement)rules.push(selector(parent)+'{'+Object.entries({display:'block',position:'static',width:'auto',height:'auto','min-height':'0',margin:'0',padding:parent===d.body?'32px':'0',transform:'none',overflow:'visible'}).map(([p,v])=>p+':'+v+'!important').join(';')+'}');
           child=parent;
         }
-        el.style.setProperty('margin','0','important');
+        rules.push(selector(el)+'{margin:0!important}');sheet.replaceSync(rules.join('\n'));
       };
       isolate(); const observer=new MutationObserver(isolate);observer.observe(d.body,{childList:true,subtree:true});stop=()=>observer.disconnect();
       d.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();},true);
@@ -779,11 +881,12 @@ async function writeTag(tag) {
   if (!sel || !sel.info || sel.info.tag === tag) return;
   const info = sel.info;
   const prev = info.tag;
-  const res = await api('POST', '/rt/__api/op', { type: 'setTag', id: info.id, tag, fileHash: info.hash });
+  const res = await api('POST', '/rt/__api/op', { type: 'setTag', id: info.id, tag, fileHash: info.hash, ...sourcePayload(info,info.tagSource) });
   if (res && res.ok) {
-    undoStack.push({ type: 'setTag', id: info.id, tag: prev, undoId: res.undoId });
+    undoStack.push({ type: 'setTag', id: info.id, tag: prev, undoId: res.undoId, context:info.context });
     info.tag = tag;
     info.hash = res.hash;
+    if (res.element?.tagSource) info.tagSource=res.element.tagSource;
     toast('Saved', 'ok');
     await refreshWrittenElement(info, el => el.tagName.toLowerCase() === tag);
     renderPanel();
@@ -983,7 +1086,7 @@ function imageSection(info) {
   if (info.srcDynamic || info.canSetSrc === false) {
     const p = document.createElement('p');
     p.className = 'refused';
-    p.textContent = info.srcReason || 'This image source is computed. Literal sources, static image imports, and Liquid asset_url images can be swapped.';
+    p.textContent = info.srcReason || 'This image source is computed. Choose an image with an editable source.';
     sec.appendChild(p);
     return sec;
   }
@@ -1046,22 +1149,25 @@ async function setSrc(src, isUndo, info = sel?.info) {
   busyPanel(true);
   try { return await writeSrc(src, isUndo, info); } finally { busyPanel(false); }
 }
+function imageMatches(el,src,matcher) {
+  const value=new URL(el.getAttribute('src')||'',location.origin);
+  return value.href===new URL(src||'',location.origin).href || value.searchParams.get('url')===src ||
+    !!matcher?.pathnameSuffix&&value.pathname.endsWith(matcher.pathnameSuffix);
+}
 async function writeSrc(src, isUndo, info) {
   if (!info) return;
   const prev = info.src;
   const target = matchingEls(info.id)[0];
   const dimensions = target ? { width: Number(target.getAttribute('width')) || target.naturalWidth, height: Number(target.getAttribute('height')) || target.naturalHeight } : undefined;
-  const res = await api('POST', '/rt/__api/op', { type: 'setSrc', id: info.id, src, fileHash: info.hash, dimensions });
+  const res = await api('POST', '/rt/__api/op', { type: 'setSrc', id: info.id, src, fileHash: info.hash, dimensions, context:info.context });
   if (res && res.ok) {
-    if (!isUndo) undoStack.push({ type: 'setSrc', id: info.id, src: prev, undoId: res.undoId });
+    if (!isUndo) undoStack.push({ type: 'setSrc', id: info.id, src: prev, undoId: res.undoId, context:info.context });
     info.src = src;
     info.srcImported = false;
     info.hash = res.hash;
     toast('Saved', 'ok');
-    await refreshWrittenElement(info, el => {
-      const value = new URL(el.getAttribute('src') || '', location.origin);
-      return value.pathname === src || value.searchParams.get('url') === src || (src.startsWith('/assets/') && value.pathname.endsWith('/' + src.slice(8)));
-    });
+    info.srcMatch=res.element?.srcMatch;
+    await refreshWrittenElement(info, el => imageMatches(el,src,info.srcMatch));
     if (sel?.info === info) renderPanel();
   } else {
     toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
@@ -1080,12 +1186,13 @@ async function writeClasses(classes, isUndo) {
   const prev = info.className || '';
   optimisticClasses(classes);
   const res = await api('POST', '/rt/__api/op', {
-    type: 'setClasses', id: info.id, classes, fileHash: info.fileHash || info.hash,
+    type: 'setClasses', id: info.id, classes, fileHash: info.fileHash || info.hash, context: info.context,
   });
   if (res && res.ok) {
-    if (!isUndo) undoStack.push({ type: 'setClasses', id: info.id, classes: prev, undoId: res.undoId });
+    if (!isUndo) undoStack.push({ type: 'setClasses', id: info.id, classes: prev, undoId: res.undoId, context: info.context });
     info.className = res.element?.className ?? classes;
     info.hash = res.hash;
+    if (window.__RT_RENDERING?.reloadAfterWrite) await refreshWrittenElement(info, el => info.className.split(/\s+/).filter(Boolean).every(token => el.classList.contains(token)));
     toast('Saved', 'ok');
     renderPanel();
   } else {
@@ -1105,7 +1212,7 @@ async function setText(text, isUndo) {
     type: 'setText', id: info.id, text, fileHash: info.fileHash || info.hash, ...sourcePayload(info),
   });
   if (res && res.ok) {
-    if (!isUndo) undoStack.push({ type: 'setText', id: info.id, text: prev, context: info.context, sourceId: info.textSource?.id });
+    if (!isUndo) undoStack.push({ type: 'setText', id: info.id, text: prev, undoId: res.undoId, context: info.context, sourceId: info.textSource?.id });
     info.text = text;
     updateSource(info, res);
     toast('Saved', 'ok');
@@ -1119,7 +1226,21 @@ async function setText(text, isUndo) {
 function matchingEls(id) {
   const d = doc();
   if (!d) return [];
-  return [...d.querySelectorAll(`[data-rt="${id}"], [data-rt-i="${id}"]`)];
+  return matchingInDocument(d,id,sel?.info?.id===id?sel.info:null);
+}
+function matchingInDocument(d,id,info) {
+  if(!d)return [];
+  const direct=[...d.querySelectorAll(`[data-rt="${id}"], [data-rt-i="${id}"]`)];
+  if(direct.length){
+    const attrs=info?.context?.attributes;
+    if(attrs){const preferred=el=>Object.entries(attrs).every(([name,value])=>el.getAttribute(name)===value);direct.sort((a,b)=>Number(preferred(b))-Number(preferred(a)));}
+    return direct;
+  }
+  const scope=info?.renderScope;
+  if(!scope||!Object.keys(scope).length)return [];
+  const matches=[...d.querySelectorAll('[data-rt], [data-rt-i]')].filter(el=>Object.entries(scope).every(([name,value])=>el.getAttribute(name)===value));
+  const set=new Set(matches);
+  return matches.filter(el=>{for(let parent=el.parentElement;parent;parent=parent.parentElement)if(set.has(parent))return false;return true;});
 }
 
 function optimisticClasses(classes) {
@@ -1148,11 +1269,15 @@ async function undoNext() {
     else clearSelection();
     if (fresh?.ok) {
       const info = fresh.element;
-      const component = op.type === 'detachComponent' ? await api('GET', '/rt/__api/component?id=' + op.id) : null;
+      const component = op.type === 'detachComponent' ? await api('GET', componentUrl(op.id,op.context)) : null;
       await refreshWrittenElement(info, el => {
         if (component?.ok) return el.getAttribute('data-rt') === component.definitionId;
-        if (op.type === 'setSrc') return el.getAttribute('src') === info.src || new URL(el.getAttribute('src') || '', location.origin).searchParams.get('url') === info.src;
+        if (op.type === 'setSrc') return imageMatches(el,info.src,info.srcMatch);
         if (op.type === 'setTag') return el.tagName.toLowerCase() === info.tag;
+        if (op.type === 'setClasses' && !info.classNameDynamic) {
+          const tokens = value => (value || '').split(/\s+/).filter(Boolean).sort().join(' ');
+          return tokens(el.getAttribute('class')) === tokens(info.className);
+        }
         return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
       });
     } else await reloadFrame();

@@ -26,3 +26,10 @@ Format: Status · Date · RFC references · Context · Options considered · Dec
 | [DR-0018](0018-inline-edit-whitespace.md) | Preserve layout during inline text editing | Accepted (rev 22) | R-5 |
 | [DR-0019](0019-max-width-drag.md) | Max-width dragging with Tailwind snapping | Accepted (rev 23) | OQ-E1, OQ-D3, R-6 |
 | [DR-0020](0020-design-inspector.md) | Left design inspector, anchors, and component workspace | Accepted (rev 24) | OQ-E1, OQ-E2, OQ-D3, R-6, R-9, R-11, R-12 |
+| [DR-0021](0021-right-inspector.md) | Right inspector | Accepted (rev 25) | DR-0020 panel placement |
+| [DR-0022](0022-adapter-edit-plans.md) | Adapter edit plans and renderer capabilities | Accepted (rev 26); parity in progress | DR-0015, DR-0020 |
+| [DR-0020](0020-invisible-resize-edges.md) | Invisible max-width edge targets | Accepted (rev 24) | OQ-E1 |
+| [DR-0021](0021-component-usage-and-selection.md) | Single-use source editing and component selection chrome | Accepted (rev 25) | R-6, R-12 |
+| [DR-0022](0022-text-before-renderer.md) | Select standalone text before its shared renderer | Accepted | R-12 |
+| [DR-0023](0023-canvas-zoom.md) | Single-site canvas zoom with neutral gray surroundings | Accepted (rev 27) | OQ-B3 |
+| [DR-0024](0024-pinch-and-page-coverage.md) | Pinch zoom with increased vertical page coverage | Accepted (rev 28) | OQ-B3 |

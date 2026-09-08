@@ -27,6 +27,7 @@ class Index {
   }
 
   indexFile(absFile) {
+    this.componentUsage = null;
     const old = this.fileIds.get(absFile);
     if (old) for (const id of old) this.idToFile.delete(id);
     this.fileIds.delete(absFile);
@@ -78,6 +79,7 @@ class Index {
         const parts = rel.split(path.sep);
         if (parts.some((p) => SKIP_DIRS.has(p))) return;
         const abs = path.join(this.appRoot, rel);
+        this.componentUsage = null;
         if (!this.adapter.matches(abs)) return;
         clearTimeout(pending.get(abs));
         pending.set(

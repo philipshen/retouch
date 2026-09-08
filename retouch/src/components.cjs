@@ -140,7 +140,7 @@ function describe(resolved) {
     return {ok:true,name:def.name,file:rel,hash:contentHash(def.source),source:def.source.slice(def.fn.start,def.fn.end),props:[...props.values()],definitionId:host?.id||null,detached,canDetach:!detached};
   }catch(err){return refuse(err.message);}
 }
-function detach(resolved,op) {
+function planDetach(resolved,op) {
   resolved = { ...resolved, appRoot: fs.realpathSync(resolved.appRoot), file: fs.realpathSync(resolved.file) };
   if(op.fileHash!==resolved.hash)return refuse('The usage file changed. Re-select the instance and retry.');
   let def;try{def=definition(resolved);}catch(err){return refuse(err.message);}
@@ -165,19 +165,25 @@ function detach(resolved,op) {
   ms.append(`\nimport ${importText} from ${JSON.stringify(spec)};\n`);
   const next=ms.toString();
   try{parseSource(next);parseSource(moduleSource);}catch(err){return refuse('Detached code did not parse: '+err.message);}
-  const tmp=resolved.file+'.retouch-'+resolved.element.id+'.tmp';
-  let created=false;
-  try {
-    if(fs.realpathSync(path.dirname(copy))!==fs.realpathSync(resolved.appRoot))contained(resolved.appRoot,path.dirname(copy));
-    fs.writeFileSync(copy,moduleSource,{flag:'wx'});
-    created=true;
-    fs.writeFileSync(tmp,next);
-    fs.renameSync(tmp,resolved.file);
-  } catch(err) {
-    if(fs.existsSync(tmp))fs.unlinkSync(tmp);
-    if(created&&fs.existsSync(copy)&&fs.readFileSync(copy,'utf8')===moduleSource)fs.unlinkSync(copy);
-    return refuse('Could not detach the component: '+err.message);
-  }
-  return {ok:true,hash:contentHash(next),createdFile:copy,createdHash:contentHash(moduleSource),detachedFile:path.relative(resolved.appRoot,copy).split(path.sep).join('/'),name:alias};
+  return {ok:true,hash:contentHash(next),createdFile:copy,createdHash:contentHash(moduleSource),detachedFile:path.relative(resolved.appRoot,copy).split(path.sep).join('/'),name:alias,
+    edits:[{file:copy,before:null,after:moduleSource},{file:resolved.file,before:resolved.source,after:next}]};
 }
-module.exports={describe,detach};
+function detach(resolved,op) {
+  return require('./transactions.cjs').applyPlan(resolved.appRoot, planDetach(resolved,op));
+}
+function hasReference(root, file, excluded) {
+  const stem = path.basename(file, path.extname(file));
+  const skip = new Set(['node_modules', 'dist', 'build', 'out', 'public', 'coverage']);
+  function scan(dir) {
+    for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (item.name.startsWith('.') || item.isSymbolicLink() || skip.has(item.name)) continue;
+      const candidate = path.join(dir, item.name);
+      if (item.isDirectory()) { if (scan(candidate)) return true; }
+      else if (/\.[cm]?[jt]sx?$/.test(item.name) && !excluded.includes(candidate) && fs.readFileSync(candidate, 'utf8').includes(stem)) return true;
+    }
+    return false;
+  }
+  return scan(root);
+}
+
+module.exports={describe,detach,planDetach,hasReference};

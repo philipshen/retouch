@@ -111,7 +111,7 @@
     <tr><td>Status:</td><td>Draft</td></tr>
     <tr><td>Author:</td><td>P. Shen</td></tr>
     <tr><td>Created:</td><td>2026-09-01</td></tr>
-    <tr><td>Revised:</td><td>2026-09-07 (rev 24)</td></tr>
+    <tr><td>Revised:</td><td>2026-09-07 (rev 28)</td></tr>
     <tr><td>Companion:</td><td>Prior-Art Survey (docs/prior-art-survey.html), 2026-09-01</td></tr>
     <tr><td>Decisions:</td><td>docs/decisions/ (DR-0001 … DR-0007); index in docs/decisions/README.md</td></tr>
   </table>
@@ -358,9 +358,12 @@
 
 <p>Liquid string origins (rev 21, DR-0017). Build-time instrumentation MAY carry executed-assignment markers and rendered section, block, template, and locale context. The writer MUST re-derive reachable origins from local source and MUST resolve a unique backing value before offering an indirect text edit. It MUST NOT select destinations by matching displayed text or accepting browser-supplied file paths. Indirect writes MUST validate the markup hash and backing-source identity and hash, preserve expression wiring, and expose the destination in the inspector. Ambiguous or unsupported expressions remain refusals under R-6.</p>
 
-<h3>5.4 Design inspector amendment (rev 24)</h3>
-<p>The inspector MUST appear on the left. It MUST expose positioning, base-class anchors, Alt/Option-hover padding and spacing measurements, image replacement, typography class selection with a rendered sample, component inspection and detach, fill and text color, shadows, and opacity. Positioning MAY explicitly become absolute while preserving the measured element bounds in its existing containing block; this supersedes the OQ-E1 deferral of an explicit absolute control. Anchor and custom appearance controls MAY generate measured or entered arbitrary values, extending OQ-D3 for these panel controls. The new controls MUST preserve existing breakpoint and state classes and MUST NOT add a media-query editor.</p>
+<h3>5.4 Design inspector amendment (revs 24–25)</h3>
+<p>The inspector MUST appear on the right (rev 25, DR-0021). It MUST expose positioning, base-class anchors, Alt/Option-hover padding and spacing measurements, image replacement, typography class selection with a rendered sample, component inspection and detach, fill and text color, shadows, and opacity. Positioning MAY explicitly become absolute while preserving the measured element bounds in its existing containing block; this supersedes the OQ-E1 deferral of an explicit absolute control. Anchor and custom appearance controls MAY generate measured or entered arbitrary values, extending OQ-D3 for these panel controls. The new controls MUST preserve existing breakpoint and state classes and MUST NOT add a media-query editor.</p>
 <p>Component inspection MUST show the definition and source prop values/defaults. Its isolated live canvas MUST retain the current application's context. Detachment MUST copy the module beside its dependencies and rewire only the selected usage, with hashes guarding both source files and rollback on a failed usage write. Snapshot undo MUST refuse if the edited source, copied module, or other references prevent restoring the original state. Unsupported source forms MUST report their limitation under R-6. <a href="decisions/0020-design-inspector.md">DR-0020</a> and <a href="inspector.md">the inspector guide</a> define the implemented source patterns and verification commands.</p>
+
+<h3>5.5 Adapter edit plans (rev 26)</h3>
+<p>Adapters MUST return source-edit plans for typed operations. The shared transaction layer MUST validate file versions and containment and MUST retain exact snapshots for undo, including backing data files and created modules. Component mapping, source references, and asset locations MUST be exposed through adapter contracts. The shell MUST treat renderer context as opaque metadata. Rendering integrations MUST declare reload and stylesheet revalidation requirements separately from source-language adapters. Liquid parity remains in progress (DR-0022).</p>
 
 <h2 id="s6">6. Open questions</h2>
 <p>Each open question below states its options, the criteria that decide it, and a provisional position where the survey supports one. A provisional position is a default for prototyping, not a decision. Three questions gate the majority of detailed design and SHOULD be resolved first: <a href="#oq-e1">OQ-E1</a>, <a href="#oq-c1">OQ-C1</a>, <a href="#oq-f1">OQ-F1</a>.</p>
@@ -428,7 +431,7 @@
   <div class="oq-body"><dl>
     <dt>Options</dt><dd><ol><li>Single viewport at 1:1 scale.</li><li>Pan/zoom canvas hosting one frame.</li><li>Canvas hosting multiple device-width frames (Onlook's model).</li></ol></dd>
     <dt>Criteria</dt><dd>Options 2–3 require zoom-aware geometry throughout (snap thresholds and drag deltas divide by zoom; PAS §4). Cost of retrofitting zoom later versus carrying unused generality.</dd>
-    <dt>Provisional</dt><dd>Option 1 shipped first, with all geometry code written against a <code>(zoom, pan)</code> transform fixed at identity, so options 2–3 do not require rework.</dd>
+    <dt>Resolved (rev 27, DR-0023)</dt><dd>Option 2. One site frame with 25–200% pinch zoom and a neutral gray canvas. Zoom preserves layout width, increases vertical page coverage when zooming out, and scales pointer deltas before Tailwind snapping (DR-0024, rev 28).</dd>
   </dl></div>
 </div>
 
@@ -835,7 +838,13 @@
     <tr><td class="id">21</td><td class="id">2026-09-05</td><td>Trace Liquid string variables, locale keys, and template settings to their local backing values; stamp dynamic tag names; preserve source hashes and instance context. DR-0017.</td></tr>
     <tr><td class="id">22</td><td class="id">2026-09-05</td><td>Preserve layout during text focus; replace plaintext-only with controlled rich editing and plain-text paste. DR-0018.</td></tr>
     <tr><td class="id">23</td><td class="id">2026-09-06</td><td>Add max-width edge dragging with named Tailwind snapping, an explicit property popup, local preview, release commit, and cancellation. DR-0019.</td></tr>
+    <tr><td class="id">24</td><td class="id">2026-09-07</td><td>Replace the visible max-width button with invisible continuous edge targets and hover cursors. DR-0020.</td></tr>
+    <tr><td class="id">25</td><td class="id">2026-09-07</td><td>Treat single-use components as inline source edits; use red/blue/purple selection states, component badges with detach, and directional resize cursors. DR-0021.</td></tr>
     <tr><td class="id">24</td><td class="id">2026-09-07</td><td>Add the left design inspector, explicit positioning and anchors, Alt/Option measurements, typography classes and previews, image browsing and replacement, appearance controls, and a live component workspace with module detachment and exact undo. Preserve existing breakpoint styles and defer media-query editing. DR-0020.</td></tr>
+    <tr><td class="id">25</td><td class="id">2026-09-07</td><td>Move the design inspector to the right of the live page at the user's request, superseding DR-0020 panel placement. DR-0021.</td></tr>
+    <tr><td class="id">26</td><td class="id">2026-09-07</td><td>Introduce shared edit-plan transactions, adapter-owned component and asset mappings, opaque renderer context, and declarative refresh capabilities. Liquid parity remains in progress. DR-0022.</td></tr>
+    <tr><td class="id">27</td><td class="id">2026-09-07</td><td>Add single-site canvas zoom, neutral gray surroundings, constant-size editor affordances, and scale-aware resize dragging. DR-0023.</td></tr>
+    <tr><td class="id">28</td><td class="id">2026-09-07</td><td>Replace manual zoom controls with pinch gestures; reveal more vertical page content while preserving viewport-height section sizing. DR-0024.</td></tr>
 </table>
 </div>
 
@@ -851,7 +860,7 @@
 </ol>
 
 <footer>
-  <p>RFC-0001 rev 24 · Draft · Repository: <code>~/Developer/retouch</code>. The markdown mirror of this document is <code>docs/rfc-0001-editable-mirror.md</code>; this HTML version is canonical because it carries the figures. Decision records: <code>docs/decisions/</code>.</p>
+  <p>RFC-0001 rev 28 · Draft · Repository: <code>~/Developer/retouch</code>. The markdown mirror of this document is <code>docs/rfc-0001-editable-mirror.md</code>; this HTML version is canonical because it carries the figures. Decision records: <code>docs/decisions/</code>.</p>
 </footer>
 
 </div>

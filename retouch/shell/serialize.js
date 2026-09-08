@@ -14,14 +14,17 @@
     var nodes = el.childNodes || [];
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
+      if (n.__rtKeep) { out.push({ t: 'keep', id: n.__rtKeep }); continue; }
       if (n.nodeType === 3) {
         if (n.textContent) out.push({ t: 'text', value: n.textContent });
         continue;
       }
       if (n.nodeType !== 1) continue;
-      var id = (n.getAttribute && (n.getAttribute('data-rt') || n.getAttribute('data-rt-i'))) || null;
+      var id = (n.getAttribute && (n.getAttribute('data-rt-keep') || n.getAttribute('data-rt') || n.getAttribute('data-rt-i'))) || null;
       if (id && snapshot && snapshot.has(id)) {
-        if (n.textContent === snapshot.get(id)) out.push({ t: 'keep', id: id });
+        var before = snapshot.get(id);
+        var unchanged = typeof before === 'string' ? n.textContent === before : n.innerHTML === before.html;
+        if (unchanged) out.push({ t: 'keep', id: id });
         else out.push({ t: 'keep', id: id, children: serializeChildren(n, snapshot) });
         continue;
       }

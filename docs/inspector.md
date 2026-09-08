@@ -1,6 +1,8 @@
 # Design inspector
 
-The inspector sits on the left of the live page. Select an element in Edit mode.
+The inspector sits on the right of the live page. Select an element in Edit mode.
+Liquid parity work and its remaining verification gates are tracked in
+[the parity checklist](liquid-parity.md).
 
 | Control | Behavior |
 |---|---|

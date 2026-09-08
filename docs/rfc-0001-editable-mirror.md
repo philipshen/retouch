@@ -7,7 +7,7 @@
 | Author | P. Shen |
 | Created | 2026-09-01 |
 | Product | Retouch — CLI `npx retouch`; route prefix `/rt/` (configurable); decided rev 11 (OQ-G3, DR-0008) |
-| Revised | 2026-09-07 (rev 24) |
+| Revised | 2026-09-07 (rev 28) |
 | Companion | Prior-Art Survey (`docs/prior-art-survey.html`), 2026-09-01 |
 | Decisions | `docs/decisions/` (DR-0001 … DR-0007); index in `docs/decisions/README.md` |
 
@@ -138,11 +138,15 @@ Any source change can change the index: the library's own writes (step 7), the u
 
 Liquid string origins (rev 21, DR-0017). Build-time instrumentation MAY carry executed-assignment markers and rendered section, block, template, and locale context. The writer MUST re-derive reachable origins from local source and MUST resolve a unique backing value before offering an indirect text edit. It MUST NOT select destinations by matching displayed text or accepting browser-supplied file paths. Indirect writes MUST validate the markup hash and backing-source identity and hash, preserve expression wiring, and expose the destination in the inspector. Ambiguous or unsupported expressions remain refusals under R-6.
 
-### 5.4 Design inspector amendment (rev 24)
+### 5.4 Design inspector amendment (revs 24–25)
 
-The inspector MUST appear on the left. It MUST expose positioning, base-class anchors, Alt/Option-hover padding and spacing measurements, image replacement, typography class selection with a rendered sample, component inspection and detach, fill and text color, shadows, and opacity. Positioning MAY explicitly become absolute while preserving the measured element bounds in its existing containing block; this supersedes the OQ-E1 deferral of an explicit absolute control. Anchor and custom appearance controls MAY generate measured or entered arbitrary values, extending OQ-D3 for these panel controls. The new controls MUST preserve existing breakpoint and state classes and MUST NOT add a media-query editor.
+The inspector MUST appear on the right (rev 25, DR-0021). It MUST expose positioning, base-class anchors, Alt/Option-hover padding and spacing measurements, image replacement, typography class selection with a rendered sample, component inspection and detach, fill and text color, shadows, and opacity. Positioning MAY explicitly become absolute while preserving the measured element bounds in its existing containing block; this supersedes the OQ-E1 deferral of an explicit absolute control. Anchor and custom appearance controls MAY generate measured or entered arbitrary values, extending OQ-D3 for these panel controls. The new controls MUST preserve existing breakpoint and state classes and MUST NOT add a media-query editor.
 
 Component inspection MUST show the definition and source prop values/defaults. Its isolated live canvas MUST retain the current application's context. Detachment MUST copy the module beside its dependencies and rewire only the selected usage, with hashes guarding both source files and rollback on a failed usage write. Snapshot undo MUST refuse if the edited source, copied module, or other references prevent restoring the original state. Unsupported source forms MUST report their limitation under R-6. [DR-0020](decisions/0020-design-inspector.md) and [the inspector guide](inspector.md) define the implemented source patterns and verification commands.
+
+### 5.5 Adapter edit plans (rev 26)
+
+Adapters MUST return source-edit plans for typed operations. The shared transaction layer MUST validate file versions and containment and MUST retain exact snapshots for undo, including backing data files and created modules. Component mapping, source references, and asset locations MUST be exposed through adapter contracts. The shell MUST treat renderer context as opaque metadata. Rendering integrations MUST declare reload and stylesheet revalidation requirements separately from source-language adapters. Liquid parity remains in progress (DR-0022).
 
 ## 6. Open questions
 
@@ -190,7 +194,7 @@ Each question states its options, the criteria that decide it, and a provisional
 **OQ-B3. Single full-viewport mirror, or a pan/zoom canvas with multiple breakpoints?**
 - Options: (1) single viewport at 1:1. (2) Pan/zoom canvas, one frame. (3) Canvas with multiple device-width frames (Onlook's model).
 - Criteria: options 2–3 require zoom-aware geometry throughout (snap thresholds and drag deltas divide by zoom; PAS §4).
-- Provisional: option 1 shipped first, with all geometry code written against a `(zoom, pan)` transform fixed at identity, so options 2–3 require no rework.
+- Resolved (rev 27, DR-0023): option 2. One site frame with 25–200% pinch zoom and a neutral gray canvas. Zoom preserves layout width, increases vertical page coverage when zooming out, and scales pointer deltas before Tailwind snapping (DR-0024, rev 28).
 
 **OQ-B4. Does editing chrome render in the editor shell or inside the iframe?**
 - Status: resolved (rev 5, amended rev 6). Editing chrome renders in the shell; the agent measures and mutates. Option 2 (chrome inside the iframe) is withdrawn: chrome in the app document perturbs the layout being measured (R-5). Rev 6 amendment: with a same-origin iframe the shell MAY read the iframe DOM directly for hit-testing and geometry, but all mutation and all reads that the hardened mode would need cross-origin go through the agent's RPC-shaped interface, so the two-process split can be added later without a rewrite.
@@ -423,7 +427,13 @@ Malicious code already running on the dev origin (a compromised dependency or a 
 | 21 | 2026-09-05 | Trace Liquid string variables, locale keys, and template settings to their local backing values; stamp dynamic tag names; preserve source hashes and instance context. DR-0017. |
 | 22 | 2026-09-05 | Preserve layout during text focus; replace plaintext-only with controlled rich editing and plain-text paste. DR-0018. |
 | 23 | 2026-09-06 | Add max-width edge dragging with named Tailwind snapping, an explicit property popup, local preview, release commit, and cancellation. DR-0019. |
+| 24 | 2026-09-07 | Replace the visible max-width button with invisible continuous edge targets and hover cursors. DR-0020. |
+| 25 | 2026-09-07 | Treat single-use components as inline source edits; use red/blue/purple selection states, component badges with detach, and directional resize cursors. DR-0021. |
 | 24 | 2026-09-07 | Add the left design inspector, explicit positioning and anchors, Alt/Option measurements, typography classes and previews, image browsing and replacement, appearance controls, and a live component workspace with module detachment and exact undo. Preserve existing breakpoint styles and defer media-query editing. DR-0020. |
+| 25 | 2026-09-07 | Move the design inspector to the right of the live page at the user's request, superseding DR-0020 panel placement. DR-0021. |
+| 26 | 2026-09-07 | Introduce shared edit-plan transactions, adapter-owned component and asset mappings, opaque renderer context, and declarative refresh capabilities. Liquid parity remains in progress. DR-0022. |
+| 27 | 2026-09-07 | Add single-site canvas zoom, neutral gray surroundings, constant-size editor affordances, and scale-aware resize dragging. DR-0023. |
+| 28 | 2026-09-07 | Replace manual zoom controls with pinch gestures; reveal more vertical page content while preserving viewport-height section sizing. DR-0024. |
 
 ## 10. References
 

@@ -55,6 +55,12 @@ test('an edited stamped child keeps its id and recurses', () => {
   const tree = serializeChildren(el('h1', [span]), snap);
   assert.deepStrictEqual(tree[0], { t: 'keep', id: '0123456789', children: [{ t: 'text', value: 'CHANGED' }] });
 });
+test('formatting inside a preserved span is serialized even when its text is unchanged',()=>{
+  const span=el('span',[el('strong',[text('same')])],{'data-rt-keep':'0123456789'});
+  span.innerHTML='<strong>same</strong>';
+  const snapshot=new Map([['0123456789',{html:'same'}]]);
+  assert.deepStrictEqual(serializeChildren(el('p',[span]),snapshot),[{t:'keep',id:'0123456789',children:[{t:'wrap',tag:'strong',children:[{t:'text',value:'same'}]}]}]);
+});
 
 test('deleting a stamped span leaves only surrounding text', () => {
   // The span node is simply absent from childNodes after deletion.

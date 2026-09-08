@@ -158,11 +158,11 @@ test('Alpine-managed text is dynamic and cannot be overwritten', () => {
   assert.ok(liquid.applyOp(resolved, { type: 'setText', text: 'wrong' }).refused);
 });
 
-test('Liquid does not advertise unsupported rich-text editing', () => {
+test('Liquid advertises rich-text editing for literal mixed markup', () => {
   const source = '<p>Hello <strong>world</strong></p>';
   const info = liquid.describe(resolvedFor(source, elByTag(source, 'p')));
-  assert.strictEqual(info.canSetChildren, false);
-  assert.strictEqual(info.mixedText, false);
+  assert.strictEqual(info.canSetChildren, true);
+  assert.strictEqual(info.mixedText, true);
 });
 
 test('Liquid doc examples remain unstamped', () => {

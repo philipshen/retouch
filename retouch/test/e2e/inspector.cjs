@@ -34,7 +34,7 @@ const read = () => fs.readFileSync(file,'utf8');
  try {
    await reset();
    const panel=await page.locator('#panel').boundingBox(), app=await page.locator('#app').boundingBox();
-   assert.ok(panel.x+panel.width<=app.x+1,'inspector is on the left');
+   assert.ok(app.x+app.width<=panel.x+1,'inspector is on the right');
    await select('#anchor-target');
    const before=await rect('#anchor-target');
    await page.getByLabel('Positioning',{exact:true}).selectOption('absolute');
@@ -45,6 +45,8 @@ const read = () => fs.readFileSync(file,'utf8');
    await select('#anchor-target');
    await page.getByLabel('Horizontal anchor',{exact:true}).selectOption('end');
    await until(()=>/right-\[[\d.]+px\]/.test(read()),'right anchor source');
+   const authoredRight=Number(/right-\[([\d.]+)px\]/.exec(read())[1]);
+   await until(async()=>{const c=await rect('#anchor-target'),p=await rect('#anchor-parent');return Math.abs(p.right-c.right-authoredRight)<1;},'right anchor CSS before measuring resize');
    let child=await rect('#anchor-target'), parent=await rect('#anchor-parent');
    const right=parent.right-child.right;
    await page.setViewportSize({width:1520,height:900});
@@ -69,7 +71,7 @@ const read = () => fs.readFileSync(file,'utf8');
    await page.screenshot({path:'/tmp/retouch-inspector-anchors.png'});
    for(let n=0;n<4;n++) {const prior=read();await page.getByRole('button',{name:'Undo',exact:true}).click();await until(()=>read()!==prior,'undo source');await frame.locator('#anchor-target').waitFor();}
    assert.equal(read(),original,'anchor undo restores exact bytes');
-   console.log('PASS left panel, absolute bounds, right/center/stretch anchors, resize, preserved variants, exact undo');
+   console.log('PASS right panel, absolute bounds, right/center/stretch anchors, resize, preserved variants, exact undo');
 
    await reset();await select('h1');
    await page.getByLabel('Typography class',{exact:true}).selectOption('type-caption');

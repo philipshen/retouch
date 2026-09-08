@@ -12,12 +12,13 @@ async function until(fn,label){for(let i=0;i<120;i++){if(await fn())return;await
 (async()=>{
  const browser=await chromium.launch({headless:true});const page=await browser.newPage({viewport:{width:1440,height:1000}});
  const errors=[];page.on('pageerror',e=>errors.push(e.message));const frame=page.frameLocator('#app');
+ page.on('console',message=>{if(message.type()==='error')errors.push(message.text());});
  let createdFile;
  try{
    await page.goto((process.env.RT_E2E_URL||'http://localhost:3491')+'/rt');
    await frame.locator('article').first().click({position:{x:8,y:8}});
    await page.getByRole('button',{name:'View component',exact:true}).waitFor();
-   assert.equal(await page.locator('.kindbadge').textContent(),'instance');
+   assert.equal(await page.locator('.kindbadge').textContent(),'component');
    assert.match(await page.locator('.component-props').textContent(),/First card/);
    await page.getByRole('button',{name:'View component',exact:true}).click();
    const modal=page.locator('dialog');await modal.waitFor();
