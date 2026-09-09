@@ -895,7 +895,7 @@ function renderPanelContents() {
     const pointField=info.svgGeometry.fields.find(field=>field.name==='points');
     if(pointField&&pointField.editable!==false&&RetouchSVGPoints.parse(pointField.value)?.length>=2){const editPoints=RetouchInspector.button('Edit vector points',()=>editSVGPoints(info));editPoints.dataset.canvasTool='vertices';geometry.append(editPoints);}
     for(const field of info.svgGeometry.fields){const input=document.createElement('input');input.type='text';input.value=field.value??'';input.placeholder=field.editable===false?'Dynamic value':'Default';input.disabled=field.editable===false;if(field.reason)input.title=field.reason;input.onchange=()=>setSVGGeometry(field.name,input.value.trim()||null);RetouchInspector.field(geometry,'Shape '+field.label,input);const reset=RetouchInspector.button('Reset shape '+field.label.toLowerCase(),()=>setSVGGeometry(field.name,null));reset.disabled=field.value===null||field.editable===false;geometry.append(reset);}
-    RetouchInspector.note(geometry,pointField?'Edit vector points, then drag a handle or click one and use arrow keys. Shift moves 10 units. Enter saves keyboard changes; Escape cancels. Points are shared across screen sizes.':'Geometry is shared across screen sizes. Values use SVG coordinates, px or %. The SVG viewport and page CSS can affect the rendered result.');panelBody.append(geometry);
+    RetouchInspector.note(geometry,pointField?'Drag points or use arrow keys (Shift: 10 units). Click + to add a point; Delete removes the selected point. Done or Enter saves; Escape cancels. Points are shared across screen sizes.':'Geometry is shared across screen sizes. Values use SVG coordinates, px or %. The SVG viewport and page CSS can affect the rendered result.');panelBody.append(geometry);
   }
   if(info.svgInsertion){
     const shapes=RetouchInspector.section('Add shape'),buttons=document.createElement('div');buttons.className='stack-presets';
@@ -1882,7 +1882,7 @@ async function editSVGPoints(info){
   stopDrawing=RetouchSVGVertices.mount({target,points,frame:iframe,canvas:canvasSurface,
     onCommit:value=>{if(sel?.info===info)setSVGGeometry('points',value);},
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
-  if(stopDrawing)toast('Drag a point. Shift locks an axis. Arrow keys move 1 SVG unit; Shift moves 10. Enter applies; Escape cancels.','ok');
+  if(stopDrawing)toast('Drag a point or use arrow keys. Click + to add; Delete removes a point. Done or Enter saves; Escape cancels.','ok');
 }
 function drawShape(preset,info){
   if(panelTasks||undoBusy||sourceRequests||editing)return;

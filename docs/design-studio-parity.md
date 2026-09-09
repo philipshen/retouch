@@ -15,7 +15,7 @@ changing those files. The original checkout may continue to evolve independently
 | --- | --- | --- |
 | Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Bounded canvas zoom/scrolling and linked screen comparisons exist. HTML supports multi-selection, range selection, gray/page marquee gestures and framing a consecutive sibling selection. HTML/React canvas locks include batch undo and editor-reload persistence within a live project session. Full document/pages/sections, guides, complete snapping/grouping, durable lock identity and cross-renderer equivalence remain. |
 | Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. HTML multi-selection, shared CSS and group duplicate/delete/reparenting exist; cross-context clipboard and broader source structures remain. |
-| Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. HTML/React polygons and polylines now support direct vertex dragging and keyboard movement with source undo. Full path/pen authoring, vertex insertion/deletion, boolean operations, arbitrary masks and a shared geometry model remain. |
+| Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. HTML/React polygons and polylines now support direct vertex dragging and keyboard movement with source undo. Vertex insertion/deletion also have browser/source verification. Full path/pen authoring, boolean operations, arbitrary masks and a shared geometry model remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. HTML absolute placement now supports edge, center, stretch and proportional anchors with screen-scoped writes. Transformed constraints, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML supports linear/radial gradient stacks with draggable stops, shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. Font browsing, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
@@ -2964,3 +2964,36 @@ This edits existing straight-segment vectors. Creation, adding/removing vertices
 Bézier paths and handles, vector networks, boolean operations and masks remain.
 No native app was launched; this work does not establish full Figma parity or
 trusted Mac distribution.
+
+### 2026-09-09 — Add and remove SVG vertices
+
+Edge midpoint controls now insert a vertex into the pending vector preview. The
+new point takes keyboard focus and can immediately move. Polygon closing edges
+receive insertion controls; open polylines do not gain an unintended closing
+edge. Delete/Backspace and a Delete point button remove the focused vertex, with
+minimums of three polygon points and two polyline endpoints. Done and Cancel are
+visible in a wrapping action bar above the transient help message. Enter on an
+insertion button activates that button; Enter on a point applies the edit.
+Uncommitted changes remain outside the site DOM and source.
+
+WebKit/React initially failed to reopen the editor after redo. The trace
+`/private/tmp/retouch-svg-topology-react-webkit-trace.log` shows matching source
+and attribute values, an unchanged transform, and four base points, while
+animatedPoints retained three points. The editor now checks actual SMIL animation
+targets rather than relying on that stale list. Actual points animations still
+refuse editing with a specific message; attribute/matrix changes still cancel.
+The original failure and diagnostic logs are retained.
+
+Final HTML/React × Chromium/WebKit workflows all pass in
+`/private/tmp/retouch-svg-topology-{html,react}-{chromium,webkit}-final.log`.
+They cover transformed dragging at 50/100/200 percent zoom, keyboard insertion on
+a polygon's closing edge, removal/minimum counts, no closing-edge insertion for
+open lines, Done/Cancel, exact source undo/redo and reopening, unchanged source
+during previews, and actual-animation refusal. Visual inspection of
+`/private/tmp/retouch-svg-topology-html-webkit-final.png` confirms the insertion
+control, point handles and accessible action buttons are visible.
+
+This extends existing straight-segment vectors; freeform creation, Bézier path
+authoring, vector networks, booleans and masks remain unfinished. Native app
+launches remain paused. Full Figma Design parity, arbitrary-site editing and
+trusted Mac distribution are not established by these checks.
