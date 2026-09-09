@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 229 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 230 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -738,3 +738,28 @@ window after a fresh launch and session. A process sample established AppKit
 execution, not visual usability. The test process was stopped. Public release,
 notarization, trusted Gatekeeper launch and Intel runtime verification remain
 outstanding. See `desktop/README.md` for the exact archive hash and evidence.
+
+
+### HTML gradient fill stacks
+
+The inspector now authors stacked linear/radial background gradients with previews,
+angle/center controls, color stops, percentage positions, insertion/removal and
+front-to-back ordering. Stops sort by position after edits. Source validation
+supports eight fills and sixteen stops per fill, retains responsive scopes, and
+refuses conflicting important background shorthand. Existing unsupported image
+backgrounds are identified and require explicit clearing before replacement.
+
+All 230 unit tests pass. Chromium and WebKit verify gradient creation, angle,
+stop insertion/color, radial type/center, fill stacking/reordering, independent
+tablet styling, inherited reset and exact undo of nine edits. Screenshots and
+DOM width checks establish that the controls fit the inspector. Chromium exposed
+a detached-node timing issue in the earlier shadow layout check; the scroll and
+measurement now execute together on one attached DOM node. Canvas handles, conic
+and repeating gradients, arbitrary background images, and Figma pixel equivalence
+remain unfinished.
+
+Native startup investigation in this turn ruled out early delegate release: the
+optimized Swift SIL retains Studio until after NSApplication.run returns. CUA
+still reported cgWindowNotFound on a fresh launch, and the owned test process was
+stopped. No speculative native source change was made. The last Mac ZIP predates
+these gradient changes.

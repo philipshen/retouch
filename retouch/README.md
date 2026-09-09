@@ -149,6 +149,14 @@ order. Reset removes the selected screen's override; Clear removes that filter
 stack at the selected scope. Multiple authored blur functions or unsupported
 filter expressions require clearing the stack before using the blur control.
 
+The **Gradient fills** section creates stacked linear or radial gradients with
+live previews. Edit angle or center, add/remove color stops, change their colors
+and percentage positions, and move fills forward. Up to eight fills with sixteen
+stops each are supported. Clear removes background images at the current screen
+scope; Reset restores inherited styling. Existing image URLs and unsupported
+gradient expressions are identified before replacement. Canvas gradient handles,
+conic/repeating gradients and arbitrary image-fill editing remain open.
+
 The **Shadows** section edits up to 16 stacked drop or inner shadows, with X/Y
 offset, blur, spread and CSS color controls. Move a shadow up to bring it forward.
 Clear hides shadows at the selected screen scope; Reset removes that override

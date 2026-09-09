@@ -174,3 +174,18 @@ test('HTML blur preserves filter order and validates supported filter stacks',()
  assert.equal(edit(original.replace('class="title"','style="-webkit-backdrop-filter:blur(2px) !important"'),0,'blur(4px)','backdrop-filter').refused,true);
  assert.equal(css.valid('mix-blend-mode','multiply;display:none'),false);assert.equal(css.valid('isolation','normal'),false);
 });
+
+test('HTML gradient stacks preserve stops and responsive scopes and refuse malformed source',()=>{
+ const {parseGradients,serializeGradients}=require('../shell/html-css-values.js');
+ const value='linear-gradient(90deg, rgba(255, 0, 0, 0.5) 0%, #fff 50%, blue 100%), radial-gradient(ellipse at 25% 75%, red 0%, transparent 100%)';
+ const fills=parseGradients(value);assert.equal(fills.length,2);assert.equal(fills[0].stops.length,3);assert.equal(fills[1].x,25);
+ assert.deepEqual(parseGradients(serializeGradients(fills)),fills);
+ assert.equal(parseGradients('linear-gradient(to right, red, blue)')[0].angle,90);
+ assert.equal(parseGradients('radial-gradient(at 25% 75%, red 0%, blue 100%)')[0].x,25);
+ for(const invalid of ['url(https://example.com)','linear-gradient(90deg,red 0%)','linear-gradient(90deg,red 100%,blue 0%)','linear-gradient(90deg,red 0%,blue 101%)','linear-gradient(90deg,red 0%,blue 100%);display:none','linear-gradient(to top right, red, blue)','radial-gradient(ellipse at 101% 50%,red,blue)','linear-gradient(90deg,var(--x),blue)','linear-gradient(90deg,red</style>,blue)',Array(9).fill('linear-gradient(red, blue)').join(',')])assert.equal(css.valid('background-image',invalid),false,invalid);
+ let source=edit(original,0,value,'background-image').edits[0].after;
+ source=edit(source,768,'none','background-image').edits[0].after;
+ assert.deepEqual(css.describe(resolve(source)).cssRules,{0:{'background-image':value},768:{'background-image':'none'}});
+ source=edit(source,768,null,'background-image').edits[0].after;assert.equal(css.describe(resolve(source)).cssRules[768],undefined);
+ for(const property of ['background-image','background-color'])assert.equal(edit(original.replace('class="title"','style="background:red !important"'),0,property==='background-color'?'blue':value,property).refused,true);
+});

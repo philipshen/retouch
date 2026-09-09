@@ -6,6 +6,7 @@
  const lengths=new Set([...fields.map(([p])=>p).filter(p=>!options[p]&&!p.endsWith('color')),'flex-basis','row-gap','column-gap',...families['border-width']]);
  const colors=new Set(['color','background-color','border-color']);
  function valid(property,value){
+  if(property==='background-image')return value===null||parseGradients(value)!==null;
   if(['filter','backdrop-filter'].includes(property))return value===null||parseFilters(value)!==null;
   if(property==='box-shadow')return value===null||parseShadows(value)!==null;
   if(value===null)return ['flex-grow','flex-shrink','grid-template-columns','grid-template-rows','grid-column','grid-row','opacity','rotate','object-position'].includes(property)||lengths.has(property)||colors.has(property)||Object.hasOwn(options,property);
@@ -88,12 +89,47 @@
   if(!found&&amount)result.push(`blur(${amount}px)`);
   return result.join(' ')||'none';
  }
+ function splitLayers(value){
+  const parts=[];let depth=0,start=0;
+  for(let i=0;i<value.length;i++){if(value[i]==='(')depth++;if(value[i]===')'&&--depth<0)return null;if(value[i]===','&&!depth){parts.push(value.slice(start,i).trim());start=i+1;}}
+  if(depth)return null;parts.push(value.slice(start).trim());return parts;
+ }
+ function parseGradients(value){
+  if(typeof value!=='string'||!value.trim()||value.length>8192)return null;
+  if(value.trim()==='none')return [];
+  const layers=splitLayers(value);if(!layers||layers.length>8)return null;
+  const result=[];
+  for(const layer of layers){
+   const match=/^(linear|radial)-gradient\((.*)\)$/.exec(layer);if(!match)return null;
+   const args=splitLayers(match[2]);if(!args)return null;
+   const gradient={type:match[1],angle:180,x:50,y:50,shape:'ellipse',stops:[]};
+   if(gradient.type==='linear'){
+    const angle=/^(-?(?:\d*\.)?\d+)deg$/.exec(args[0]);
+    const directions={'to top':0,'to right':90,'to bottom':180,'to left':270};
+    if(angle){gradient.angle=Number(angle[1]);args.shift();if(Math.abs(gradient.angle)>360)return null;}
+    else if(Object.hasOwn(directions,args[0]))gradient.angle=directions[args.shift()];
+   }else {
+    const radial=/^(ellipse|circle)(?: at ((?:\d*\.)?\d+)% ((?:\d*\.)?\d+)%)?$/.exec(args[0].startsWith('at ')?'ellipse '+args[0]:args[0]);
+    if(radial){gradient.shape=radial[1];gradient.x=Number(radial[2]??50);gradient.y=Number(radial[3]??50);args.shift();if(gradient.x>100||gradient.y>100)return null;}
+   }
+   if(args.length<2||args.length>16)return null;
+   for(let i=0;i<args.length;i++){
+    const stop=/^(.*?)\s+((?:\d*\.)?\d+)%$/.exec(args[i]);
+    const color=stop?stop[1]:args[i],position=stop?Number(stop[2]):i===0?0:i===args.length-1?100:null;
+    if(position===null||position>100||!valid('color',color)||gradient.stops.length&&position<gradient.stops.at(-1).position)return null;
+    gradient.stops.push({color,position});
+   }
+   result.push(gradient);
+  }
+  return result;
+ }
+ function serializeGradients(gradients){return gradients.length?gradients.map(g=>`${g.type}-gradient(${g.type==='linear'?g.angle+'deg':g.shape+' at '+g.x+'% '+g.y+'%'}, ${g.stops.map(s=>s.color+' '+s.position+'%').join(', ')})`).join(', '):'none';}
  function affected(property){
   if(property==='border')return sides.flatMap(side=>['width','style','color'].map(part=>'border-'+side+'-'+part));
   if(/^border-(top|right|bottom|left)$/.test(property))return ['width','style','color'].map(part=>property+'-'+part);
   if(property==='border-color'||property==='border-style')return sides.map(side=>'border-'+side+'-'+property.slice(7));
   return families[property]||[property];
  }
- function overlaps(a,b){if(a==='-webkit-backdrop-filter')a='backdrop-filter';if(b==='-webkit-backdrop-filter')b='backdrop-filter';return a==='all'||b==='all'||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')||b==='border'&&a.startsWith('border-')||a==='font'&&['font-family','font-weight','font-style','font-size','line-height'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
- return {options,fields,families,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur};
+ function overlaps(a,b){if(a==='-webkit-backdrop-filter')a='backdrop-filter';if(b==='-webkit-backdrop-filter')b='backdrop-filter';return a==='all'||b==='all'||a==='background'&&b.startsWith('background-')||b==='background'&&a.startsWith('background-')||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')||b==='border'&&a.startsWith('border-')||a==='font'&&['font-family','font-weight','font-style','font-size','line-height'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
+ return {options,fields,families,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients};
 });

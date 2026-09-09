@@ -1,6 +1,6 @@
 (function(){
  const I=RetouchInspector;
- const {options,fields,valid,parseShadows,serializeShadows,parseFilters,withBlur}=RetouchHTMLCSSValues;
+ const {options,fields,valid,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients}=RetouchHTMLCSSValues;
  function mount(info,el,width,save){
   const sec=I.section('CSS properties');
   if(info.cssReason||!el||!Number.isInteger(width)){I.note(sec,info.cssReason||'Choose a pixel screen scope.','refused');return sec;}
@@ -54,6 +54,32 @@
   const clear=I.button('Clear shadows',()=>save('box-shadow','none',width));clear.disabled=shadows?.length===0;effects.append(clear);
   const resetShadows=I.button('Reset shadows',()=>save('box-shadow',null,width));resetShadows.disabled=!Object.hasOwn(own,'box-shadow');effects.append(resetShadows);
   I.note(effects,'Shadows are stacked from front to back. Reset restores this screen size’s inherited styling.');
+  const fills=I.section('Gradient fills'),gradients=parseGradients(own['background-image']??css.backgroundImage);
+  const writeGradients=next=>{const value=serializeGradients(next);if(valid('background-image',value)&&CSS.supports('background-image',value))save('background-image',value,width);};
+  if(gradients===null)I.note(fills,'The existing background image cannot be represented by these gradient controls. Clear background images to start a new fill.');
+  else {
+   gradients.forEach((gradient,index)=>{
+    const group=document.createElement('fieldset');group.className='gradient-controls';const legend=document.createElement('legend');legend.textContent='Fill '+(index+1);group.append(legend);
+    const preview=document.createElement('div');preview.className='gradient-preview';preview.style.backgroundImage=serializeGradients([gradient]);preview.setAttribute('aria-label','Fill '+(index+1)+' preview');group.append(preview);
+    const update=next=>writeGradients(gradients.map((g,i)=>i===index?next:g));
+    const type=document.createElement('select');for(const value of ['linear','radial']){const option=document.createElement('option');option.value=value;option.textContent=value==='linear'?'Linear':'Radial';type.append(option);}type.value=gradient.type;type.onchange=()=>update({...gradient,type:type.value});I.field(group,'Type',type).setAttribute('aria-label','Fill '+(index+1)+' type');
+    for(const [key,label,max]of gradient.type==='linear'?[['angle','Angle (°)',360]]:[['x','Center X (%)',100],['y','Center Y (%)',100]]){
+     const input=document.createElement('input');input.type='number';input.min=key==='angle'?-360:0;input.max=max;input.step='any';input.value=gradient[key];input.onchange=()=>{if(input.value!==''&&input.checkValidity())update({...gradient,[key]:Number(input.value)});};I.field(group,label,input).setAttribute('aria-label','Fill '+(index+1)+' '+label);
+    }
+    gradient.stops.forEach((stop,stopIndex)=>{
+     const prefix='Fill '+(index+1)+' stop '+(stopIndex+1),color=document.createElement('input');color.value=stop.color;color.oninput=()=>color.setCustomValidity('');color.onchange=()=>{const value=color.value.trim();if(!valid('color',value)||!CSS.supports('color',value)){color.setCustomValidity('Enter a CSS color.');color.reportValidity();return;}update({...gradient,stops:gradient.stops.map((s,i)=>i===stopIndex?{...s,color:value}:s)});};I.field(group,'Stop '+(stopIndex+1)+' color',color).setAttribute('aria-label',prefix+' color');
+     const position=document.createElement('input');position.type='number';position.min=0;position.max=100;position.step='any';position.value=stop.position;position.onchange=()=>{if(position.value!==''&&position.checkValidity())update({...gradient,stops:gradient.stops.map((s,i)=>i===stopIndex?{...s,position:Number(position.value)}:s).sort((a,b)=>a.position-b.position)});};I.field(group,'Position (%)',position).setAttribute('aria-label',prefix+' position (%)');
+     const remove=I.button('Remove stop '+(stopIndex+1),()=>update({...gradient,stops:gradient.stops.filter((_,i)=>i!==stopIndex)}));remove.setAttribute('aria-label','Remove '+prefix.toLowerCase());remove.disabled=gradient.stops.length<=2;group.append(remove);
+    });
+    const addStop=I.button('Add stop',()=>{let gap=0;for(let i=1;i<gradient.stops.length-1;i++)if(gradient.stops[i+1].position-gradient.stops[i].position>gradient.stops[gap+1].position-gradient.stops[gap].position)gap=i;const stops=[...gradient.stops];stops.splice(gap+1,0,{color:'#ffffff',position:(stops[gap].position+stops[gap+1].position)/2});update({...gradient,stops});});addStop.setAttribute('aria-label','Add stop to fill '+(index+1));addStop.disabled=gradient.stops.length>=16;group.append(addStop);
+    group.append(I.button('Remove fill '+(index+1),()=>writeGradients(gradients.filter((_,i)=>i!==index))));
+    if(index>0)group.append(I.button('Move fill '+(index+1)+' up',()=>{const next=[...gradients];[next[index-1],next[index]]=[next[index],next[index-1]];writeGradients(next);}));fills.append(group);
+   });
+   const add=I.button('Add gradient',()=>writeGradients([...gradients,{type:'linear',angle:90,x:50,y:50,shape:'ellipse',stops:[{color:'#6366f1',position:0},{color:'#ec4899',position:100}]}]));add.disabled=gradients.length>=8;fills.append(add);
+  }
+  const clearFills=I.button('Clear background images',()=>save('background-image','none',width));clearFills.disabled=gradients?.length===0;fills.append(clearFills);
+  const resetFills=I.button('Reset gradient fills',()=>save('background-image',null,width));resetFills.disabled=!Object.hasOwn(own,'background-image');fills.append(resetFills);
+  I.note(fills,'Fills stack from front to back over the background color. Stop positions are percentages.');
   const parentCSS=el.parentElement&&el.ownerDocument.defaultView.getComputedStyle(el.parentElement),isFlexItem=parentCSS&&['flex','inline-flex'].includes(parentCSS.display);
   const flex=I.section('Flex sizing');
   if(isFlexItem){
@@ -92,7 +118,7 @@
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);target.append(reset);
   }
   I.note(sec,'Values use CSS units. Reset removes this size’s override and restores the page’s styling.');
-  const container=document.createElement('div');container.append(appearance,blur,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);container.append(typography,sec);return container;
+  const container=document.createElement('div');container.append(appearance,fills,blur,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);container.append(typography,sec);return container;
  }
  window.RetouchHTMLCSS={mount};
 })();

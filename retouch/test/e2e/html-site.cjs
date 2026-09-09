@@ -227,7 +227,7 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await page.getByRole('button',{name:'Add shadow',exact:true}).click();await wait(async()=>(await shadowValue()).includes('4px 8px'),'base shadow');await settled();
   await page.getByLabel('Shadow 1 Blur (px)',{exact:true}).fill('12');await page.getByLabel('Shadow 1 Blur (px)',{exact:true}).press('Tab');await wait(async()=>(await shadowValue()).includes('4px 12px'),'shadow blur');await settled();
   const baseShadow=await shadowValue();
-  const shadowGroup=page.locator('.shadow-controls').first();await shadowGroup.scrollIntoViewIfNeeded();assert.equal(await shadowGroup.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true,'shadow controls fit panel');
+  const shadowGroup=page.locator('.shadow-controls').first();assert.equal(await shadowGroup.evaluate(el=>{el.scrollIntoView({block:'nearest'});return el.scrollWidth<=el.clientWidth+1;}),true,'shadow controls fit panel');
   if(process.env.RT_E2E_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_SCREENSHOT});
   await size('768x1024');await page.getByLabel('Style screen scope').selectOption('min-[768px]:');
   await page.getByRole('button',{name:'Add shadow',exact:true}).click();await wait(async()=>await page.getByLabel('Shadow 2 type',{exact:true}).count()===1,'second shadow');await settled();
@@ -257,6 +257,24 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await page.getByRole('button',{name:'Clear layer filters',exact:true}).click();await wait(async()=>await effect('filter')==='none','clear layer filters');await settled();
   for(let i=0;i<7;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'blur and blending exact undo');await wait(async()=>await effect('filter')==='contrast(0.8)','authored filter restored');
+  await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await settled();
+  await size('390x844');await page.getByLabel('Style screen scope').selectOption('');
+  await page.getByRole('button',{name:'Add gradient',exact:true}).click();await wait(async()=>(await effect('background-image')).startsWith('linear-gradient(90deg'),'add gradient');await settled();
+  await page.getByLabel('Fill 1 Angle (°)',{exact:true}).fill('45');await page.getByLabel('Fill 1 Angle (°)',{exact:true}).press('Tab');await wait(async()=>(await effect('background-image')).startsWith('linear-gradient(45deg'),'gradient angle');await settled();
+  await page.getByLabel('Add stop to fill 1',{exact:true}).click();await wait(async()=>await page.getByLabel('Fill 1 stop 3 color',{exact:true}).count()===1,'gradient stop');await settled();
+  await page.getByLabel('Fill 1 stop 2 color',{exact:true}).fill('#00ff00');await page.getByLabel('Fill 1 stop 2 color',{exact:true}).press('Tab');await wait(async()=>(await effect('background-image')).includes('rgb(0, 255, 0) 50%'),'gradient stop color');await settled();
+  const baseGradient=await effect('background-image');
+  const fillGroup=page.locator('.gradient-controls').first();assert.equal(await fillGroup.evaluate(el=>{el.scrollIntoView({block:'nearest'});return el.scrollWidth<=el.clientWidth+1;}),true,'gradient controls fit panel');
+  if(process.env.RT_E2E_GRADIENT_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_GRADIENT_SCREENSHOT});
+  await size('768x1024');await page.getByLabel('Style screen scope').selectOption('min-[768px]:');
+  await page.getByLabel('Fill 1 type',{exact:true}).selectOption('radial');await wait(async()=>(await effect('background-image')).startsWith('radial-gradient('),'radial gradient');await settled();
+  await page.getByLabel('Fill 1 Center X (%)',{exact:true}).fill('25');await page.getByLabel('Fill 1 Center X (%)',{exact:true}).press('Tab');await wait(async()=>(await effect('background-image')).includes('25% 50%'),'radial center');await settled();
+  await page.getByRole('button',{name:'Add gradient',exact:true}).click();await wait(async()=>await page.getByLabel('Fill 2 type',{exact:true}).count()===1,'second gradient');await settled();
+  await page.getByRole('button',{name:'Move fill 2 up',exact:true}).click();await wait(async()=>(await effect('background-image')).startsWith('linear-gradient(90deg'),'gradient stack ordering');await settled();
+  await size('390x844');await wait(async()=>await effect('background-image')===baseGradient,'base gradient unchanged');
+  await size('768x1024');await page.getByRole('button',{name:'Reset gradient fills',exact:true}).click();await wait(async()=>await effect('background-image')===baseGradient,'gradient reset inheritance');await settled();
+  for(let i=0;i<9;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
+  await wait(()=>read()===original,'gradient exact undo');
   assert.deepEqual(errors,[]);console.log(engine+': PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
