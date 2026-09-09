@@ -700,6 +700,7 @@ function paintLoop() {
     Object.assign(marqueeSurface.style,{left:area.left+canvasSurface.clientLeft+'px',top:area.top+canvasSurface.clientTop+'px',width:canvasSurface.clientWidth+'px',height:canvasSurface.clientHeight+'px'});
     box.className='selection-marquee';Object.assign(box.style,{left:frame.left-area.left-canvasSurface.clientLeft+rect.left*scale+'px',top:frame.top-area.top-canvasSurface.clientTop+rect.top*scale+'px',width:rect.width*scale+'px',height:rect.height*scale+'px'});marqueeSurface.append(box);
   }
+  document.getElementById('zoomSelection').disabled=!sel||!!panelTasks||undoBusy||!!sourceRequests;
   layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[]);
   requestAnimationFrame(paintLoop);
 }
@@ -1740,6 +1741,18 @@ function lockShortcut(e){
   if(elements.length)void setLayerLocks(elements,!elements.every(el=>layerLocks.direct(el)));
   return true;
 }
+
+document.getElementById('zoomSelection').onclick=async e=>{
+  if(!sel||panelTasks||undoBusy||sourceRequests)return;
+  const button=e.currentTarget;
+  await commitInlineEdit();if(!sel||panelTasks||undoBusy||sourceRequests)return;stopDrawing?.();
+  const elements=sel.multiple?sel.multiple.flatMap(info=>matchingEls(info.id)):matchingEls(activeId());
+  busyPanel(true);button.setAttribute('aria-busy','true');
+  try{
+    const result=await window.RetouchZoom.toSelection(elements);
+    if(!result.ok)toast(result.reason,'err');else if(result.clipped)toast('Some selected layers extend beyond the current screen viewport.');
+  }catch(error){toast(error.message,'err');}finally{button.setAttribute('aria-busy','false');busyPanel(false);}
+};
 
 let layerClipboard=null;
 const layers = RetouchLayers.mount({

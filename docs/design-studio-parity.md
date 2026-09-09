@@ -2600,3 +2600,28 @@ usable native editing, trusted launch, notarization, public distribution, upgrad
 or Intel runtime. The older-source Developer ID build was polled and remained live
 waiting for local signing interaction. Full Figma parity and arbitrary-site
 source authoring remain unfinished.
+
+## Zoom to selection
+
+The screen toolbar now offers Zoom to selection for single or multiple selected
+source layers. It reveals the selection, fits its bounds within the existing
+1–200% zoom limits and pans the bounded canvas. Responsive viewport dimensions
+stay fixed. In Fit workspace mode, the current actual viewport dimensions become
+a fixed screen before zooming, preserving the site's current media-query layout.
+The action cancels canvas tools and reports busy state while revealing the layers.
+It does not write source or add a source history entry.
+
+Chromium and WebKit pass offscreen single/group selection, preserved workspace and
+fixed responsive dimensions, pan recovery from 50/100/200%, and unchanged source.
+The test waits for the completed reveal and verifies actual visible bounds; the
+zoom number alone can already equal the desired value before panning finishes.
+Screenshot `/private/tmp/retouch-zoom-selection.png` was inspected. Logs:
+`/private/tmp/retouch-zoom-selection-{chromium-final,webkit-final,unit}.log`.
+All 334 unit/HTTP tests pass. The existing HTML screen-resize workflow passes in
+Chromium and React lock/marquee/group editing passes in WebKit; logs
+`/private/tmp/retouch-zoom-selection-{screen-regression,react-regression}.log`.
+
+Selections spanning more than the current screen viewport are reported as partially
+outside it. Complete reveal through arbitrary nested clipping/scroll containers,
+zoom beyond 200%, full Figma parity and trusted Mac distribution remain unfinished.
+The latest Mac archive predates this control.

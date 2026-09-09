@@ -75,6 +75,26 @@
     const fit=screen?Math.min((canvas.clientWidth-48)/width,(canvas.clientHeight-48)/height,1):1;
     change(fit,p.x,p.y);layout();canvas.scrollLeft=0;canvas.scrollTop=endPadding-(screen?24:0);w?.scrollTo(scroll.x,scroll.y);
   });
+  async function toSelection(elements){
+    const w=frame.contentWindow,d=frame.contentDocument;
+    const visible=elements.filter(el=>el?.isConnected&&el.ownerDocument===d&&el.getBoundingClientRect().width>0&&el.getBoundingClientRect().height>0&&!['hidden','collapse'].includes(w.getComputedStyle(el).visibility));
+    if(!visible.length)return {ok:false,reason:'The selection has no visible bounds.'};
+    window.dispatchEvent(new Event('retouch:before-zoom'));
+    if(!screen){
+      const viewport={width:w.innerWidth,height:w.innerHeight};
+      if(![viewport.width,viewport.height].every(value=>value>=240&&value<=7680))return {ok:false,reason:'Choose a screen size before zooming to this selection.'};
+      window.RetouchScreens.set(viewport);
+    }
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    if(visible.some(el=>!el.isConnected)||frame.contentDocument!==d)return {ok:false,reason:'The page changed before the selection could be revealed.'};
+    visible[0].scrollIntoView({block:'center',inline:'center',behavior:'instant'});
+    const bounds=()=>{const rects=visible.map(el=>el.getBoundingClientRect()),left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top));return {left,top,width:Math.max(...rects.map(r=>r.right))-left,height:Math.max(...rects.map(r=>r.bottom))-top};};
+    let rect=bounds();const p=center();change(Math.min((canvas.clientWidth-64)/rect.width,(canvas.clientHeight-64)/rect.height,2),p.x,p.y);layout();
+    rect=bounds();w.scrollTo({left:w.scrollX+rect.left+rect.width/2-w.innerWidth/2,top:w.scrollY+rect.top+rect.height/2-w.innerHeight/2,behavior:'instant'});
+    rect=bounds();canvas.scrollLeft=stage.offsetLeft+(rect.left+rect.width/2)*scale-canvas.clientWidth/2;canvas.scrollTop=endPadding+(rect.top+rect.height/2)*scale-canvas.clientHeight/2;
+    return {ok:true,clipped:rect.left<0||rect.top<0||rect.left+rect.width>w.innerWidth||rect.top+rect.height>w.innerHeight};
+  }
+  window.RetouchZoom={toSelection};
   function scrollPage(e,inFrame){
     if(!e.deltaY || e.shiftKey || Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
     const w=frame.contentWindow,d=frame.contentDocument,root=d?.scrollingElement;

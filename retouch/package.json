@@ -17,6 +17,7 @@
     "test:e2e:react-svg": "node test/e2e/react-svg-geometry.cjs",
     "test:launch": "node test/launch/verify.cjs",
     "release:local": "node scripts/release.cjs",
+    "test:e2e:zoom-selection": "node test/e2e/zoom-selection.cjs",
     "test:e2e:locked-overlay": "node test/e2e/locked-overlay.cjs",
     "test:e2e:layer-locks": "node test/e2e/layer-locks.cjs",
     "test:e2e:layer-interactions": "node test/e2e/layer-interactions.cjs"
