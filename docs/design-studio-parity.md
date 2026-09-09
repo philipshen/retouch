@@ -4591,3 +4591,30 @@ Logs: `/private/tmp/retouch-jpeg-options-chromium.log` and
 
 Text/font rasterization, symbols, arbitrary HTML-layer exports and full asset
 parity remain unfinished. Native launches remain paused.
+
+### Local-font SVG text in raster export (2026-09-09)
+
+PNG/JPEG export now permits SVG text using locally available fonts. Snapshots
+include kerning, variation/optical settings, direction and writing-mode properties
+alongside existing typography styles. Text referencing a family registered in
+the page's FontFaceSet is refused until font embedding is implemented, including
+text inside imported definitions. Family parsing preserves quoted commas.
+foreignObject and textPath raster export remain explicitly unsupported.
+
+Chromium and WebKit compared the exported PNG's isolated TEST glyph region against
+a screenshot of the actual source SVG using Arial bold 20px. Thresholded ink
+counts and bounds matched within each engine: Chromium 357 pixels, bounds
+[10,60,10,24]; WebKit 367 pixels, bounds [10,59,10,24]. The crop excludes nearby
+gradients/images. Raster scale, JPEG/background/quality, asset embedding and
+source-preservation flows also passed. Logs:
+`/private/tmp/retouch-raster-text-chromium-final.log` and
+`/private/tmp/retouch-raster-text-webkit-final.log`. Quoted-comma page-font refusal
+passed both engines in `retouch-raster-text-family-fixed.log` and
+`retouch-raster-text-family-webkit.log` under `/private/tmp`. The initial comma
+fixture accidentally included literal quotes in the FontFace family; its failed
+log is retained as `retouch-raster-text-family.log`. All 375 unit tests passed
+in `/private/tmp/retouch-raster-text-unit.log`. RT_E2E_TEXT=1 enables the glyph fixture.
+
+This proves the tested local font, not every system font, script or text layout.
+Web-font embedding, text outlines/paths, symbols and arbitrary-layer export remain
+unfinished. Native launches remain paused.

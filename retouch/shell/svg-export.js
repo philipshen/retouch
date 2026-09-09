@@ -1,6 +1,6 @@
 (function(root){
  'use strict';
- const properties=['x','y','width','height','cx','cy','r','rx','ry','d','color','fill','fill-opacity','fill-rule','stroke','stroke-width','stroke-opacity','stroke-linecap','stroke-linejoin','stroke-miterlimit','stroke-dasharray','stroke-dashoffset','opacity','display','visibility','clip-path','clip-rule','mask','filter','marker-start','marker-mid','marker-end','stop-color','stop-opacity','flood-color','flood-opacity','lighting-color','paint-order','vector-effect','shape-rendering','text-rendering','image-rendering','font-family','font-size','font-weight','font-style','font-stretch','font-variant','font-variant-numeric','font-feature-settings','letter-spacing','word-spacing','text-anchor','dominant-baseline','alignment-baseline','text-decoration','white-space','transform','transform-origin','transform-box'];
+ const properties=['x','y','width','height','cx','cy','r','rx','ry','d','color','fill','fill-opacity','fill-rule','stroke','stroke-width','stroke-opacity','stroke-linecap','stroke-linejoin','stroke-miterlimit','stroke-dasharray','stroke-dashoffset','opacity','display','visibility','clip-path','clip-rule','mask','filter','marker-start','marker-mid','marker-end','stop-color','stop-opacity','flood-color','flood-opacity','lighting-color','paint-order','vector-effect','shape-rendering','text-rendering','image-rendering','font-family','font-size','font-weight','font-style','font-stretch','font-variant','font-variant-numeric','font-feature-settings','font-kerning','font-variation-settings','font-optical-sizing','direction','unicode-bidi','writing-mode','text-orientation','letter-spacing','word-spacing','text-anchor','dominant-baseline','alignment-baseline','text-decoration','white-space','transform','transform-origin','transform-box'];
  function snapshot(target){
   const svg=target?.closest('svg');if(!svg)throw Error('Select an SVG canvas or a shape inside it.');
   if(svg.querySelector('use'))throw Error('Export of linked SVG symbol instances is not supported yet.');
@@ -83,7 +83,15 @@
   if(!['png','jpeg'].includes(format))throw Error('Choose PNG or JPEG.');
   if(![1,2,3,4].includes(scale))throw Error('Choose an image scale from 1× to 4×.');
   const result=snapshot(target),parsed=new DOMParser().parseFromString(result.text,'image/svg+xml');
-  if(parsed.querySelector('text,foreignObject'))throw Error('Raster export with text or embedded HTML is not supported yet.');
+  if(parsed.querySelector('foreignObject'))throw Error('Raster export with embedded HTML is not supported yet.');
+  if(parsed.querySelector('textPath'))throw Error('Raster export with text paths is not supported yet.');
+  const normalize=family=>family.trim().replace(/^["']|["']$/g,'').toLowerCase();
+  const families=value=>{const result=[];let part='',quote='',escape=false;for(const char of value){if(escape){part+=char;escape=false;continue;}if(char==='\\'){part+=char;escape=true;continue;}if(quote){part+=char;if(char===quote)quote='';continue;}if(char==='"'||char==="'"){quote=char;part+=char;}else if(char===','){result.push(normalize(part));part='';}else part+=char;}result.push(normalize(part));return result;};
+  const pageFonts=new Set([...target.ownerDocument.fonts].map(face=>normalize(face.family)));
+  for(const text of parsed.querySelectorAll('text,tspan')){
+   const names=families(text.style.fontFamily);
+   if(names.some(family=>pageFonts.has(family)))throw Error('This text references a page font. Font embedding is not supported yet.');
+  }
   const width=Math.ceil(result.width*scale),height=Math.ceil(result.height*scale);
   if(width>16384||height>16384||width*height>32000000)throw Error('Choose a smaller scale: Raster exports support up to 32 million pixels and 16,384 pixels per side.');
   await embedImages(parsed,target);result.text=new XMLSerializer().serializeToString(parsed.documentElement);
