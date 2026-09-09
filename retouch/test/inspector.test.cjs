@@ -100,3 +100,15 @@ test('class writers allow quoted axis values without allowing injected declarati
  assert.equal(valid('md:![font-variation-settings:"wght"_537.5,_"GRAD"_-12]'),true);
  for(const token of ['[font-variation-settings:"wght"_850;color:red]','[font-variation-settings:"weight"_850]','[font-variation-settings:"wght"_NaN]','[font-variation-settings:"wght"_850]"onclick="x'])assert.equal(valid(token),false,token);
 });
+test('canonical typography property classes replace cleanly while preserving unrelated scopes and colors',()=>{
+ const I=require('../shell/inspector.js');
+ for(const [predicate,property,value,replacement]of [
+  ['fontSizeToken','font-size','32px','text-[40px]'],['fontWeightToken','font-weight','700','font-[500]'],['letterSpacingToken','letter-spacing','2px','tracking-[1px]'],['textAlignToken','text-align','center','text-left'],['fontStyleToken','font-style','oblique','not-italic'],['decorationToken','text-decoration-line','underline_line-through','no-underline'],['caseToken','text-transform','uppercase','normal-case']
+ ]){
+  const token='!['+property+':'+value+']',other='md:'+token,classes=token+' text-red-500 p-4 '+other;
+  assert.equal(I.replace(classes,I[predicate],replacement),'text-red-500 p-4 '+other+' !'+replacement);
+  assert.equal(I.replace(classes,I[predicate],''),'text-red-500 p-4 '+other);
+ }
+ const encoded=Object.values(require('../src/text-style-classes.cjs').encode({'font-family':'serif','font-size':'32px','font-weight':'700','font-style':'oblique','font-optical-sizing':'auto','font-variation-settings':'normal','font-variant-numeric':'tabular-nums','line-height':'1.4','letter-spacing':'2px','text-align':'center','text-decoration-line':'underline line-through','text-transform':'uppercase'}));
+ assert.equal(I.replace(encoded.join(' ')+' p-4 hover:text-red-500',I.textOverrideToken,''),'p-4 hover:text-red-500');
+});

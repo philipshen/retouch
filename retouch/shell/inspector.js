@@ -392,7 +392,14 @@
   const fontFamilyToken=t=>/^(?:font-(?:sans|serif|mono)|font-\[family-name:.*\]|\[font-family:.*\])$/.test(t);
   const isTextLayer=tag=>/^(h[1-6]|p|span|a|label|blockquote|li|button)$/.test(tag);
   const lineHeightToken=t=>/^(?:leading-.+|\[line-height:.+\])$/.test(t);
-  const fontWeightToken=t=>/^font-(?:thin|extralight|light|normal|medium|semibold|bold|extrabold|black|\[\d+(?:\.\d+)?\])$/.test(t);
+  const fontWeightToken=t=>/^\[font-weight:.+\]$/.test(t)||/^font-(?:thin|extralight|light|normal|medium|semibold|bold|extrabold|black|\[\d+(?:\.\d+)?\])$/.test(t);
+  const fontSizeToken=t=>/^\[font-size:.+\]$/.test(t)||/^text-(?:xs|sm|base|lg|[2-9]?xl|\[(?:length:)?[-.\d][^\]]*\])(?:\/.*)?$/.test(t);
+  const letterSpacingToken=t=>/^(?:-?tracking-.+|\[letter-spacing:.+\])$/.test(t);
+  const textAlignToken=t=>/^(?:text-(?:left|center|right|justify|start|end)|\[text-align:.+\])$/.test(t);
+  const fontStyleToken=t=>/^(?:italic|not-italic|\[font-style:.+\])$/.test(t);
+  const decorationToken=t=>/^(?:underline|line-through|overline|no-underline|\[text-decoration-line:.+\])$/.test(t);
+  const caseToken=t=>/^(?:uppercase|lowercase|capitalize|normal-case|\[text-transform:.+\])$/.test(t);
+  const textOverrideToken=t=>[fontSizeToken,fontWeightToken,fontFamilyToken,lineHeightToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,opticalToken,variationToken,numericToken].some(match=>match(t));
   function fontWeightClass(value){return typeof value==='number'&&Number.isFinite(value)&&value>=1&&value<=1000?`font-[${value}]`:null;}
   function fontFamilies(d,current){
     const found=new Map([['system-ui','System UI'],['sans-serif','Sans serif'],['serif','Serif'],['monospace','Monospace']]);
@@ -495,7 +502,7 @@
         });
         note(sec,current.length?'Applied: '+current.join(' '):'Styles from this page’s loaded CSS.');
       } else note(sec,info.styleScope ? 'Use size and weight below for breakpoint typography. Named project styles currently apply through base styles.' : 'No named typography styles found in the loaded CSS.');
-      const controls=[['Font size',/^text-(?:xs|sm|base|lg|[2-9]?xl|\[(?:length:)?[-.\d][^\]]*\])(?:\/.*)?$/,[['text-sm','Small'],['text-base','Body'],['text-lg','Large'],['text-2xl','Heading'],['text-4xl','Display']]],
+      const controls=[['Font size',{test:fontSizeToken},[['text-sm','Small'],['text-base','Body'],['text-lg','Large'],['text-2xl','Heading'],['text-4xl','Display']]],
         ['Font weight',{test:fontWeightToken},[['font-normal','Regular'],['font-medium','Medium'],['font-semibold','Semibold'],['font-bold','Bold']]]];
       // Project text styles can live outside CSS layers and outrank utilities.
       // An explicit property override must still win without dropping the style's
@@ -513,16 +520,16 @@
       if(css.lineHeight==='normal'){lineHeight.value='';lineHeight.placeholder='Automatic';relativeLineHeight.placeholder='Automatic';}
       sec.append(button('Automatic line height',()=>change(lineHeightToken,'[line-height:normal]')));
       const resetLineHeight=button('Reset line height',()=>save(replace(info.className,lineHeightToken,'')));resetLineHeight.disabled=!tokens(info.className).map(base).some(t=>t&&lineHeightToken(t));sec.append(resetLineHeight);
-      relativeNumber(sec,'Letter spacing (%)',(parseFloat(css.letterSpacing)||0)/parseFloat(css.fontSize)*100,-100,1000,v=>change(t=>/^-?tracking-/.test(t),`tracking-[${Math.round(v*1e6)/1e8}em]`)).title='Relative to this layer’s font size.';
-      number(sec,'Letter spacing (px)',parseFloat(css.letterSpacing)||0,-100,100,v=>change(t=>/^-?tracking-/.test(t),`tracking-[${v}px]`));
-      select(sec,'Text alignment',['left','center','right','justify','start','end'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.textAlign,v=>change(t=>/^text-(left|center|right|justify|start|end)$/.test(t),'text-'+v));
-      select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(t=>t==='italic'||t==='not-italic',v==='italic'?'italic':'not-italic'));
-      select(sec,'Text decoration',[['none','None'],['underline','Underline'],['line-through','Strikethrough'],['overline','Overline']],css.textDecorationLine,v=>change(t=>['underline','line-through','overline','no-underline'].includes(t),v==='none'?'no-underline':v));
-      select(sec,'Text case',[['none','As written'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']],css.textTransform,v=>change(t=>['uppercase','lowercase','capitalize','normal-case'].includes(t),v==='none'?'normal-case':v));
+      relativeNumber(sec,'Letter spacing (%)',(parseFloat(css.letterSpacing)||0)/parseFloat(css.fontSize)*100,-100,1000,v=>change(letterSpacingToken,`tracking-[${Math.round(v*1e6)/1e8}em]`)).title='Relative to this layer’s font size.';
+      number(sec,'Letter spacing (px)',parseFloat(css.letterSpacing)||0,-100,100,v=>change(letterSpacingToken,`tracking-[${v}px]`));
+      select(sec,'Text alignment',['left','center','right','justify','start','end'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.textAlign,v=>change(textAlignToken,'text-'+v));
+      select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(fontStyleToken,v==='italic'?'italic':'not-italic'));
+      select(sec,'Text decoration',[['none','None'],['underline','Underline'],['line-through','Strikethrough'],['overline','Overline']],css.textDecorationLine,v=>change(decorationToken,v==='none'?'no-underline':v));
+      select(sec,'Text case',[['none','As written'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']],css.textTransform,v=>change(caseToken,v==='none'?'normal-case':v));
       opticalTypography(sec,css,value=>change(opticalToken,`[font-optical-sizing:${value}]`),()=>save(replace(info.className,opticalToken,'')),tokens(info.className).map(base).some(t=>t&&opticalToken(t)));
       variationTypography(sec,css,value=>change(variationToken,`[font-variation-settings:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,variationToken,'')),tokens(info.className).map(base).some(t=>t&&variationToken(t)),el);
       numericTypography(sec,css.fontVariantNumeric,value=>change(numericToken,`[font-variant-numeric:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,numericToken,'')),tokens(info.className).map(base).some(t=>t&&numericToken(t)));
-      const textOverride=t=>opticalToken(t)||variationToken(t)||numericToken(t)||lineHeightToken(t)||fontFamilyToken(t)||controls.some(([,re])=>re.test(t)) || /^(?:leading-|tracking-|-tracking-|text-(?:left|center|right|justify|start|end)$)/.test(t) || ['italic','not-italic','underline','line-through','overline','no-underline','uppercase','lowercase','capitalize','normal-case'].includes(t);
+      const textOverride=textOverrideToken;
       const reset=button('Reset text overrides',()=>save(replace(info.className,textOverride,'')));
       reset.disabled=!tokens(info.className).map(base).some(t=>t!==null&&textOverride(t));sec.append(reset);
 
@@ -563,6 +570,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

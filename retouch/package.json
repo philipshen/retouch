@@ -58,7 +58,8 @@
     "test:e2e:layer-locks": "node test/e2e/layer-locks.cjs",
     "test:e2e:layer-interactions": "node test/e2e/layer-interactions.cjs",
     "test:e2e:text-styles": "RT_E2E_TEXT_STYLES=1 node test/e2e/page-fonts.cjs",
-    "test:e2e:text-style-classes": "node test/e2e/text-style-classes.cjs"
+    "test:e2e:text-style-classes": "node test/e2e/text-style-classes.cjs",
+    "test:e2e:canonical-typography": "RT_E2E_CANONICAL_TEXT=1 RT_E2E_RENDERER=${RT_E2E_RENDERER:-react} node test/e2e/page-fonts.cjs"
   },
   "main": "./src/index.cjs",
   "exports": {

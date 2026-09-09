@@ -5584,3 +5584,28 @@ existing inspector edits/reset predicates to recognize canonical property tokens
 so manual edits do not leave competing declarations. Dynamic class expressions,
 non-Tailwind projects and live Shopify rendering are not covered here. Full parity
 remains unfinished. Native launches remain paused.
+
+### Inspector edits for canonical typography classes
+
+Class-based typography controls now recognize canonical font-size, font-weight,
+letter-spacing, text-align, font-style, text-decoration-line and text-transform
+properties alongside ordinary utilities. Manual edits replace the corresponding
+canonical token while preserving important priority and other scopes. Reset text
+overrides uses shared predicates covering all 12 encoded typography properties.
+Existing family, line-height, optical sizing, variation and numeric property
+recognition remains in use. Unrelated colors and layout classes are retained.
+
+All 415 unit tests passed, exit 0:
+/private/tmp/retouch-canonical-edits-units.log. React and local Liquid passed in
+Chromium and WebKit, all four processes exit 0:
+/private/tmp/retouch-canonical-edits-{react,liquid}-{chromium,webkit}.log.
+Browser coverage starts with canonical property classes, edits each of the seven
+newly recognized properties, checks computed styles and removal of old tokens,
+verifies exact undo for each edit, then resets all text overrides and undoes it.
+No page errors. Run test:e2e:canonical-typography with the fixture environment;
+it defaults to React and accepts RT_E2E_RENDERER=liquid. Syntax/diff checks passed.
+
+This prepares existing controls for linked styles; React/Liquid source links,
+propagation and override metadata are still unfinished. Dynamic class expressions,
+non-Tailwind styling and live Shopify are not verified by these fixtures. The
+full-parity goal remains active. Native launches remain paused.
