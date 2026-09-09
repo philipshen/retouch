@@ -71,3 +71,14 @@ test('HTML image framing accepts fit modes and bounded focal points',()=>{
  source=edit(source,768,null,'object-position').edits[0].after;
  assert.deepEqual(css.describe(resolve(source)).cssRules[768],{'object-fit':'cover'});
 });
+
+test('HTML opacity and rotation persist without replacing authored transforms',()=>{
+ for(const [property,value]of [['opacity','0.25'],['opacity','1'],['rotate','-45deg']])assert.equal(css.valid(property,value),true);
+ for(const [property,value]of [['opacity','1.5'],['opacity','-1'],['rotate','361deg'],['rotate','45deg;display:none']])assert.equal(css.valid(property,value),false);
+ const input=original.replace('class="title"','class="title" style="transform:translateX(10px)"');
+ let source=edit(input,0,'0.25','opacity').edits[0].after;
+ source=edit(source,768,'45deg','rotate').edits[0].after;
+ assert.ok(source.includes('style="transform:translateX(10px)"'));
+ assert.deepEqual(css.describe(resolve(source)).cssRules,{0:{opacity:'0.25'},768:{rotate:'45deg'}});
+ source=edit(source,768,null,'rotate').edits[0].after;assert.deepEqual(css.describe(resolve(source)).cssRules,{0:{opacity:'0.25'}});
+});

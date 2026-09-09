@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 211 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 212 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -465,3 +465,18 @@ All 211 tests pass. Browser checks verify tablet fit and position overrides,
 phone inheritance, reset and exact undo through the HTML source writer. These
 are CSS frame controls; destructive bitmap cropping, masks and image effects
 remain open.
+
+
+### HTML layer opacity and rotation
+
+An Appearance section exposes opacity percentages and rotation degrees for HTML
+layers. The writer stores validated opacity and individual rotate declarations
+in the selected responsive scope, leaving authored transform declarations intact.
+The inspector identifies composition with an existing transform; resets remove
+only the selected property override.
+
+All 212 tests pass. Writer checks cover ranges, injection refusal, source
+transform preservation and reset. Browser checks verify computed tablet opacity
+and rotation, phone inheritance, reset and exact source restoration. This does
+not provide full transform matrices, arbitrary transform origins, 3D transforms
+or full Figma effects parity.

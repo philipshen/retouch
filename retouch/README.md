@@ -137,6 +137,10 @@ saved changes reload the preview, and undo/redo restores source snapshots.
 Choose a trusted local web directory. Hidden files, package manifests and paths
 outside that directory are not served.
 
+The **Appearance** section sets opacity in percent and rotation in degrees.
+Both follow the selected screen scope and support reset. Rotation combines with
+existing transform rules rather than replacing them.
+
 The CSS properties panel edits dimensions, flex direction/wrapping, gap, padding,
 typography, colors and borders. Padding and margin support one to four values
 and individual edges; gap supports row/column values. Negative margins and letter

@@ -6,8 +6,10 @@
  const lengths=new Set([...fields.map(([p])=>p).filter(p=>!options[p]&&!p.endsWith('color')),'row-gap','column-gap',...families['border-width']]);
  const colors=new Set(['color','background-color','border-color']);
  function valid(property,value){
-  if(value===null)return property==='object-position'||lengths.has(property)||colors.has(property)||Object.hasOwn(options,property);
+  if(value===null)return ['opacity','rotate','object-position'].includes(property)||lengths.has(property)||colors.has(property)||Object.hasOwn(options,property);
   if(typeof value!=='string'||!value||value.length>150)return false;
+  if(property==='opacity')return /^(?:\d*\.)?\d+$/.test(value)&&Number(value)>=0&&Number(value)<=1;
+  if(property==='rotate')return /^-?(?:\d*\.)?\d+deg$/.test(value)&&Math.abs(parseFloat(value))<=360;
   if(property==='object-position'){const parts=value.split(/\s+/);return parts.length===2&&parts.every(p=>/^(?:\d*\.)?\d+%$/.test(p)&&parseFloat(p)>=0&&parseFloat(p)<=100);}
   if(Object.hasOwn(options,property))return options[property].includes(value);
   if(colors.has(property))return /^(?:#(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})|[a-z]+|(?:rgb|rgba|hsl|hsla)\([\d.%,\s/]+\))$/i.test(value);

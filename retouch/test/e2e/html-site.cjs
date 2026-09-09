@@ -42,6 +42,17 @@ const {chromium}=require(path.join(fixture,'node_modules/playwright'));
   await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).paddingLeft)==='0px','padding reset');await settled();
   for(let i=0;i<4;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'spacing exact undo');
+  await page.getByLabel('Style screen scope').selectOption('min-[768px]:');
+  for(const [label,value,property,expected]of [['Opacity (%)','50','opacity','0.5'],['Rotation (°)','45','rotate','45deg']]){
+   const control=page.getByLabel(label,{exact:true});await control.fill(value);await control.press('Tab');
+   await wait(async()=>await app.locator('h1').evaluate((el,p)=>getComputedStyle(el).getPropertyValue(p),property)===expected,'appearance '+property);await settled();
+  }
+  await size('390x844');await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).opacity)==='1','appearance base inheritance');
+  await size('768x1024');await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).rotate)==='45deg','rotation tablet override');
+  await page.getByRole('button',{name:'Reset rotate',exact:true}).click();await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).rotate)==='none','rotation reset');await settled();
+  for(let i=0;i<3;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
+  await wait(()=>read()===original,'appearance exact undo');
+
   await page.locator('#panelBody textarea').fill('Saved & clear');await page.getByRole('button',{name:'Apply text',exact:true}).click();
   await wait(async()=>await app.locator('h1').textContent()==='Saved & clear','text rendered');assert.ok(fs.readFileSync(file,'utf8').includes('Saved &amp; clear'));
   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>fs.readFileSync(file,'utf8')===original,'text undo');
