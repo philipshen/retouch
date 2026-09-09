@@ -17,6 +17,12 @@
     return roots;
   }
   function canNest(source,target){return !!source&&!!target&&source!==target&&source.parentElement!==target&&!source.contains(target)&&['BODY','DIV','MAIN','SECTION','ARTICLE','ASIDE','HEADER','FOOTER','NAV','FORM','LI','TD','TH','BLOCKQUOTE'].includes(target.tagName);}
+  function placement(source,target,fraction){
+    if(!source||!target||source===target||source.contains(target))return null;
+    if(fraction>=.25&&fraction<=.75&&canNest(source,target))return 'inside';
+    if(!target.parentElement?.hasAttribute('data-rt')||['HTML','BODY'].includes(target.tagName))return null;
+    return fraction<.5?'before':'after';
+  }
   function mount({host,onSelect,onAction,getClipboard=()=>null,dragEnabled=false,onMove}) {
     const header=document.createElement('h2');header.textContent='Layers';
     const search=document.createElement('input');search.type='search';search.placeholder='Find a layer…';search.setAttribute('aria-label','Find a layer');
@@ -30,7 +36,8 @@
     const reason=document.createElement('p');reason.className='layer-reason';
     host.append(header,search,tree,empty,actions,reason);
     let d=null,observer=null,timer=null,selected=null,rows=[],collapsed=new WeakSet(),lastCapabilities=null,isBusy=false,dragged=null;
-    function endDrag(){dragged=null;for(const row of rows)row.button.classList.remove('drop-target','dragging');}
+    function clearTargets(){for(const row of rows)row.button.classList.remove('drop-target','drop-before','drop-after');}
+    function endDrag(){dragged=null;clearTargets();for(const row of rows)row.button.classList.remove('dragging');}
     function render() {
       const focused=rows.find(r=>r.button===document.activeElement)?.item.el;
       tree.replaceChildren();rows=[];
@@ -53,9 +60,10 @@
           b.onclick=()=>onSelect(item.el);
           b.draggable=dragEnabled&&!['HTML','BODY'].includes(item.el.tagName);
           b.ondragstart=e=>{if(isBusy||!b.draggable){e.preventDefault();return;}dragged=item.el;e.dataTransfer.setData('text/plain','retouch-layer:'+item.el.getAttribute('data-rt'));e.dataTransfer.effectAllowed='move';b.classList.add('dragging');};
-          b.ondragover=e=>{if(!isBusy&&canNest(dragged,item.el)){e.preventDefault();e.dataTransfer.dropEffect='move';b.classList.add('drop-target');}};
-          b.ondragleave=()=>b.classList.remove('drop-target');
-          b.ondrop=e=>{if(!isBusy&&canNest(dragged,item.el)){e.preventDefault();const source=dragged;endDrag();onMove?.(source,item.el);}};
+          const dropPosition=e=>{const box=b.getBoundingClientRect();return isBusy?null:placement(dragged,item.el,(e.clientY-box.top)/box.height);};
+          b.ondragover=e=>{clearTargets();const position=dropPosition(e);if(position){e.preventDefault();e.dataTransfer.dropEffect='move';b.classList.add(position==='inside'?'drop-target':'drop-'+position);}};
+          b.ondragleave=clearTargets;
+          b.ondrop=e=>{const position=dropPosition(e);if(position){e.preventDefault();const source=dragged;endDrag();onMove?.(source,item.el,position);}};
           b.ondragend=endDrag;
           b.onkeydown=async e=>{
             if(e.key==='F2'){e.preventDefault();if(!isBusy){if(selected!==item.el)await onSelect(item.el);onAction('renameElement');}return;}

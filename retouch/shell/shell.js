@@ -1531,11 +1531,11 @@ let layerClipboard=null;
 const layers = RetouchLayers.mount({
   getClipboard:()=>layerClipboard,
   dragEnabled:window.__RT_RENDERING?.layerReparenting===true,
-  onMove:async(source,destination)=>{
+  onMove:async(source,destination,position)=>{
     if(panelTasks||undoBusy||sourceRequests||!source.isConnected||!destination.isConnected)return;
     await commitInlineEdit();await select(source);
     if(!sel?.info.structure?.canReparent)return toast(sel?.info.structure?.reason||'This layer cannot be moved into another container.','err');
-    await moveLayerInto(sel.info,destination.getAttribute('data-rt'));
+    await moveLayerInto(sel.info,destination.getAttribute('data-rt'),position);
   },
   host:document.getElementById('layersPanel'),
   onSelect:async el=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await select(el);el.scrollIntoView({block:'nearest',inline:'nearest'});},
@@ -1552,10 +1552,10 @@ function chooseLayerParent(info){
   modal.append(RetouchInspector.button('Move layer',()=>{const destinationId=picker.value;close();moveLayerInto(info,destinationId);}),RetouchInspector.button('Cancel',close));
   modal.addEventListener('cancel',()=>modal.remove());document.body.append(modal);modal.showModal();picker.focus();
 }
-async function moveLayerInto(info,destinationId){
+async function moveLayerInto(info,destinationId,position='inside'){
   busyPanel(true);
   try{
-    const result=await api('POST','/rt/__api/op',{type:'reparentElement',id:info.id,fileHash:info.hash,destinationId});
+    const result=await api('POST','/rt/__api/op',{type:'reparentElement',id:info.id,fileHash:info.hash,destinationId,position});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not move layer','err');
     editorHistory.record({type:'structure',id:result.parentId,undoId:result.undoId});await reloadFrame();
     const fresh=await api('GET',resolveUrl(result.movedId));if(fresh?.ok){sel={hostId:result.movedId,instanceId:null,scope:'host',info:fresh.element};renderPanel();}

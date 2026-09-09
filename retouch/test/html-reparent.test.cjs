@@ -18,3 +18,30 @@ test('HTML reparenting refuses cycles, stale source, unknown targets and parser-
  const nested=resolve('<html><body><main><form><p>Form</p></form><section><form></form></section></main></body></html>','form');
  assert.equal(html.planOp(nested,{type:'reparentElement',destinationId:nested.elements.filter(e=>e.tag==='form')[1].id}).refused,true);
 });
+test('HTML layer placement reorders siblings and moves between parents in both directions',()=>{
+ for(const position of ['before','after'])for(const markup of [
+  '<main><h1>Title</h1><p>Anchor</p><aside></aside></main>',
+  '<main><p>Anchor</p><aside></aside><h1>Title</h1></main>',
+  '<main><section><h1>Title</h1></section><aside><p>Anchor</p></aside></main>',
+  '<main><aside><p>Anchor</p></aside><section><h1>Title</h1></section></main>'
+ ]){
+  const source='<html><body>'+markup+'</body></html>',resolved=resolve(source,'h1'),target=resolved.elements.find(e=>e.tag==='p');
+  const result=html.planOp(resolved,{type:'reparentElement',destinationId:target.id,position});assert.equal(result.ok,true,result.reason);
+  const fresh=resolve(result.edits[0].after,'h1'),anchor=fresh.elements.find(e=>e.tag==='p');
+  assert.equal(fresh.element.node.parentNode,anchor.node.parentNode);
+  const siblings=anchor.node.parentNode.childNodes.filter(n=>n.tagName),index=siblings.indexOf(anchor.node);
+  assert.equal(siblings[index+(position==='before'?-1:1)],fresh.element.node);
+  assert.equal(result.movedId,fresh.element.id);
+ }
+});
+test('HTML relative placement supports list siblings and refuses invalid placements',()=>{
+ const resolved=resolve('<html><body><main><ul><li>First</li><li>Second</li></ul><p>Outside</p></main></body></html>','li');
+ const target=resolved.elements.filter(e=>e.tag==='li')[1];
+ assert.equal(html.planOp(resolved,{type:'reparentElement',destinationId:target.id,position:'after'}).ok,true);
+ for(const [destinationId,position] of [[target.id,'invalid'],[resolved.element.id,'before'],[resolved.elements.find(e=>e.tag==='ul').id,'inside']]){
+  // Moving a list item inside its current parent is also refused.
+  assert.equal(html.planOp(resolved,{type:'reparentElement',destinationId,position}).refused,true);
+ }
+ const outer=resolve('<html><body><main><section><p>Nested</p></section><aside></aside></main></body></html>','section');
+ assert.equal(html.planOp(outer,{type:'reparentElement',destinationId:outer.elements.find(e=>e.tag==='p').id,position:'after'}).refused,true);
+});

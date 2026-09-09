@@ -259,3 +259,6 @@ details.advanced > summary:hover { color: var(--ink); }
 .layer-item[draggable="true"] { cursor:grab; }
 .layer-item.dragging { opacity:.5; }
 .layer-item.drop-target { outline:2px solid var(--accent); background:#19344d; }
+
+.layer-item.drop-before { box-shadow:inset 0 2px var(--accent); }
+.layer-item.drop-after { box-shadow:inset 0 -2px var(--accent); }

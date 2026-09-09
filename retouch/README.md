@@ -195,7 +195,9 @@ duplicated. Undo restores exact source snapshots.
 
 Drag an HTML layer onto a container row in **Layers**, or use **Move into…**,
 to append it inside that container in the same document. Valid drop targets are
-highlighted while dragging. Linked styles remain attached, and Undo/Redo restores the
+highlighted while dragging. Drop near the top or bottom edge of a row to place
+the layer before or after it; a line shows the insertion position. This also
+works between parents in the same document. Linked styles remain attached, and Undo/Redo restores the
 source. Moving into the layer itself or its descendants is refused.
 
 Rich markup editing, cross-document moves and remote-site capture remain open.

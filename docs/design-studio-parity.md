@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 225 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 227 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -669,3 +669,19 @@ All 225 unit tests pass. Chromium and WebKit browser checks perform a real layer
 drag into a new frame, undo the move, then undo frame creation and compare the
 source with its original bytes. This does not add drag-based sibling placement,
 cross-document moves or native package verification.
+
+
+### Placing HTML layers before or after another layer
+
+Dragging near a row's top or bottom edge now inserts before or after that layer,
+with a line indicating the position. The center of a content-container row still
+nests the layer. Relative placement works within a parent and between parents,
+including literal list siblings. The source planner validates both source and
+anchor regions, rejects cycles, and verifies the moved node's actual parent
+location after parsing.
+
+All 227 unit tests pass. New writer checks cover before/after moves in both source
+directions, moves between parents, list siblings and invalid placements. Chromium
+and WebKit browser checks drag a heading after and then before a paragraph, undo
+both operations, and verify the original source bytes. Cross-document placement,
+multi-layer dragging and dynamic-template structural editing remain open.
