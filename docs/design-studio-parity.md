@@ -25,7 +25,7 @@ changing those files. The original checkout may continue to evolve independently
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload exists; complete export and import pipeline remains. |
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. HTML has responsive CSS, structural edits and batch selection operations. Arbitrary remote-site capture/authoring, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
-| Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. A direct width handle supports live resizing, cancel and keyboard steps. Full editable multi-canvas views, height/corner resizing and cross-framework parity remain. |
+| Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Full editable multi-canvas views and corner resizing and cross-framework parity remain. |
 | Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop; interaction with the latest packaged source (4670764) remains unverified after cgWindowNotFound. Newer editor changes are not yet packaged. File flows, Intel runtime and broader lifecycle verification remain. |
 | Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. Development build is ad hoc signed. Local cask install/uninstall passed. Developer ID signing/notarization, publishing, upgrades and quarantined launch remain unverified. |
 | Ease of use | New user can open a site, select/edit, compare screens, undo and retain work without learning implementation details | Controls have labels and basic defaults. Whole-workflow usability validation remains. |
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 269 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 270 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1234,3 +1234,19 @@ changes, preview-only persistence during drag, cancellation, keyboard, reload
 persistence, zoom and unchanged source/scope. The screenshot was inspected.
 Height/corner resizing, editable comparison canvases and full parity remain
 unfinished.
+
+
+### Direct viewport height resizing
+
+The bottom edge now exposes a height slider using the same pointer transaction
+as the width handle. Both axes share cancellation, persistence, bounds and
+keyboard behavior. Height uses vertical movement adjusted for zoom, preserving
+width. Fit workspace starts height dragging from the rendered viewport height
+so a zoomed preview keeps its edge position when entering a fixed size.
+Pointer release also consumes the final pointer position before saving.
+
+All 270 unit tests pass. Chromium and WebKit verify both axes, live height media
+queries and 100vh geometry, independent width, Escape cancellation, keyboard
+steps, reload persistence and restoring Fit workspace. Source and style scope
+remain unchanged. Corner resizing, editable comparison canvases, cross-framework
+coverage and full Figma/native parity remain unfinished.

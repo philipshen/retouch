@@ -335,3 +335,8 @@ Escape cancels. Focus the handle and use Left/Right for 1 px steps, Shift for
 without changing the screen's CSS pixels. Preview resizing does not write source
 or change the style scope. If the edge is outside the workspace, zoom out or
 use the width field.
+
+The bottom-edge handle resizes preview height with the same release-to-save
+and Escape-to-cancel behavior. Up/Down keys step 1 px; Shift steps 10 px.
+Height resizing updates viewport units and height media queries while keeping
+width fixed. Both edge handles operate in CSS pixels at any canvas zoom.
