@@ -5409,3 +5409,30 @@ React Chromium and local Liquid WebKit catalog regressions also passed. All four
 processes exited 0; logs: /private/tmp/retouch-text-style-links-final-
 {html-chromium,html-webkit,react-chromium,liquid-webkit}.log. No browser page errors.
 Syntax and diff checks passed. No native app launches were performed.
+
+### Override-aware HTML text-style refresh planner
+
+Added a file-level planner for refreshing every matching text-style link and
+screen scope in an HTML source document. Untouched declarations follow the new
+style, obsolete matching declarations are removed, local differences and resets
+are preserved, and newly introduced properties respect existing local values.
+Each refreshed link records the new applied baseline. Detected overrides are
+stored explicitly, so a coincidental match with a later library value does not
+silently convert them into inherited properties on the following update.
+Reapplying a style clears those recorded overrides. Malformed link metadata and
+externally modified managed CSS refuse the plan; no files are written by planning.
+Multiple scopes compose into one before/after edit for the file.
+
+This planner is not yet called by catalog mutation. The UI continues to state
+that propagation is unavailable. Next work must compose catalog and all affected
+file plans into one transaction, expose update controls, and integrate shared
+undo. Project-wide coverage, browser propagation and React/Liquid support are
+not established by this step. Local edits identical to an existing baseline
+cannot be inferred as intentional overrides from values alone.
+
+All 400 unit tests passed, exit 0:
+/private/tmp/retouch-text-style-refresh-final-units.log. New cases cover scoped
+updates, manual edits and resets, removed/added declarations, unrelated style
+identities, corrupt managed CSS, idempotence, successive updates and coincidental
+override matches. Syntax and diff checks passed. No browser UI changed and no
+native launches occurred. Full parity remains unfinished.

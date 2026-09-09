@@ -8,8 +8,9 @@ function links(resolved){
  if(raw.length>128*1024)throw Error('The layer text style links are too large.');
  const input=JSON.parse(raw);if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).length>32)throw Error('Invalid layer text style links.');
  for(const [width,value]of Object.entries(input)){
-  if(!/^(0|[1-9]\d*)$/.test(width)||Number(width)>7680||!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!['id','properties'].includes(key)))throw Error('Invalid layer text style link.');
-  catalog.validate({version:1,styles:[{...value,name:'Linked style'}]});
+  if(!/^(0|[1-9]\d*)$/.test(width)||Number(width)>7680||!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(key=>!['id','properties','overrides'].includes(key)))throw Error('Invalid layer text style link.');
+  catalog.validate({version:1,styles:[{id:value.id,properties:value.properties,name:'Linked style'}]});
+  if(value.overrides!==undefined&&(!Array.isArray(value.overrides)||value.overrides.length>catalog.properties.length||new Set(value.overrides).size!==value.overrides.length||value.overrides.some(property=>!catalog.properties.includes(property))))throw Error('Invalid text style overrides.');
  }
  return input;
 }
@@ -19,10 +20,23 @@ function plan(resolved,op,style){
   if(op.fileHash&&op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the element.');
   if(!Number.isInteger(op.width)||op.width<0||op.width>7680)return refuse('Choose a supported screen width.');
   const current=links(resolved);let source=resolved.source;
-  if(op.type==='applyTextStyle'){
+  if(op.type==='applyTextStyle'||op.type==='refreshTextStyle'){
    const validated=catalog.validate({version:1,styles:[style]}).styles[0];
-   const applied=css.plan(resolved,{width:op.width,changes:validated.properties});if(!applied.ok)return applied;
-   source=applied.edits[0]?.after||source;current[op.width]={id:validated.id,properties:validated.properties};
+   let changes=validated.properties,overrides=[];
+   if(op.type==='refreshTextStyle'){
+    const baseline=current[op.width];if(!baseline||baseline.id!==validated.id)return refuse('The layer is no longer linked to this text style.');
+    const state=css.describe(resolved);if(state.cssReason)return refuse(state.cssReason);
+    const own=state.cssRules[op.width]||{},retained=new Set(baseline.overrides||[]);changes={};
+    for(const property of new Set([...Object.keys(baseline.properties),...Object.keys(validated.properties)])){
+     // Missing formerly applied values are explicit local resets. Newly added
+     // style properties apply only if the layer has no local value for them.
+     if(retained.has(property))continue;
+     if(Object.hasOwn(baseline.properties,property)?own[property]===baseline.properties[property]:!Object.hasOwn(own,property))changes[property]=validated.properties[property]??null;else retained.add(property);
+    }
+    overrides=[...retained].sort();
+   }
+   if(Object.keys(changes).length){const applied=css.plan(resolved,{width:op.width,changes});if(!applied.ok)return applied;source=applied.edits[0]?.after||source;}
+   current[op.width]={id:validated.id,properties:validated.properties,...(overrides.length?{overrides}:{})};
    if(Object.keys(current).length>32)return refuse('A layer supports up to 32 text style scopes.');
   }else if(op.type==='detachTextStyle')delete current[op.width];else return refuse('Unsupported text style operation.');
   const element=html.collect(source,resolved.relPath).elements.find(e=>e.id===resolved.element.id);if(!element)return refuse('The layer changed during text style application.');
@@ -32,4 +46,20 @@ function plan(resolved,op,style){
   const after=out.toString();return {ok:true,hash:html.contentHash(after),edits:after===resolved.source?[]:[{file:resolved.file,before:resolved.source,after}]};
  }catch(error){return refuse(error.message);}
 }
-module.exports={links,describe,plan};
+function planFile(file,relPath,before,style){
+ try{
+  catalog.validate({version:1,styles:[style]});let source=before,updated=0;
+  const targets=[];
+  for(const element of html.collect(source,relPath).elements){
+   const state=links({element});for(const [width,link]of Object.entries(state))if(link.id===style.id)targets.push({id:element.id,width:Number(width)});
+  }
+  for(const target of targets){
+   const element=html.collect(source,relPath).elements.find(item=>item.id===target.id);
+   if(!element)return refuse('A linked layer could not be resolved.');
+   const result=plan({file,relPath,source,hash:html.contentHash(source),element},{type:'refreshTextStyle',width:target.width},style);
+   if(!result.ok)return result;source=result.edits[0]?.after||source;updated++;
+  }
+  return {ok:true,updated,edits:source===before?[]:[{file,before,after:source}]};
+ }catch(error){return refuse(error.message);}
+}
+module.exports={links,describe,plan,planFile};
