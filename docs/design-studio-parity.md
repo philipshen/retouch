@@ -1416,3 +1416,18 @@ drawing, exact source preservation during preview/cancel, and committed centered
 ellipses and diagonal lines with undo/redo at 50% canvas zoom in a transformed
 group. The previous four-shape creation and cancellation checks also pass.
 HTML drawing, vector path tools and cross-renderer parity remain unfinished.
+
+
+### Desktop package refreshed through b78aed9
+
+The universal Mac app now packages the current drawing and responsive-canvas
+work. The actual generated cask installed successfully in an isolated app
+directory; all 73 packaged source files matched the checkout. Archive SHA-256,
+arm64/x86_64 architectures, strict ad hoc signature and retained quarantine were
+verified. Bundled launcher and HTML startup/health/shutdown self-tests passed.
+The app was uninstalled and temporary tap/trust/developer-mode state cleaned up.
+The artifact and receipt are recorded in desktop/README.md.
+
+Native UI inspection still returns cgWindowNotFound, so current native
+interaction remains unverified. No public tap, notarized release, trusted
+Gatekeeper launch, Intel runtime or upgrade verification is claimed.

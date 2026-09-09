@@ -3,7 +3,7 @@
 A native AppKit window hosts the same Retouch editor used in the browser.
 macOS 13 or later; universal Apple Silicon and Intel binary.
 
-The latest local artifact packages editor commit `1701d24`. Its bundled launcher,
+The latest local artifact packages editor commit `b78aed9`. Its bundled launcher,
 source inventory, universal architectures, strict ad hoc signature and isolated
 Homebrew install/uninstall were verified. Native interaction with this artifact
 is still unverified (`cgWindowNotFound`); earlier UI checks below apply to older
@@ -120,7 +120,7 @@ command-free startup, automatic connection, persistent CSS editing, exact undo
 and Stop releasing the listening port. Bundled launch self-tests also cover a
 folder path containing spaces and shell punctuation and dynamic port discovery.
 
-## Current local package (1701d24)
+## Earlier local package (1701d24)
 
 The current editor bundle includes inline SVG geometry, paint, creation,
 duplication, deletion and stacking; width/height preview handles; and selection
@@ -193,3 +193,27 @@ could not find the window after a normal macOS launch. This narrows the observed
 boundary to window activation/visibility to the desktop tools; it does not prove
 the precise cause or a usable native editor. A delayed activation experiment
 produced the same state and was not retained. Diagnostic processes exited cleanly.
+
+
+## Current local package (b78aed9)
+
+This bundle adds corner resizing, interrupted-gesture cancellation, visible zoom
+and Fit screen controls, low-zoom marquee fixes, and direct SVG shape drawing
+with Shift/Option constraints to the earlier package.
+
+Archive: `/private/tmp/retouch-desktop-drawing-20260909/Retouch-0.1.0-mac.zip`
+
+SHA-256: `f5a81edb8535e851545b209bc50cb84112e5dd0853a15b3dac24f78edd36de60`.
+The generated local cask and `verification.json` accompany the archive. All 73
+packaged source files matched the checkout after actual cask installation.
+The installed app contains arm64 and x86_64, passes strict signature verification
+and retains quarantine. Bundled self-tests passed launcher argument/working
+directory/exit behavior, HTML startup, dynamic port discovery, health and Stop.
+
+Homebrew installed and uninstalled the app in an isolated directory. The
+temporary tap, cask trust entry and app directory were removed, the native
+process was stopped, and Homebrew developer mode was restored to disabled.
+Native UI inspection again returned `cgWindowNotFound`; these checks do not
+prove usable native interaction, trusted Gatekeeper launch, Intel execution or
+upgrade behavior. The archive is an ad hoc development build, not a published
+notarized release.
