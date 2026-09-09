@@ -57,6 +57,22 @@
     for(const part of document.subpaths){if(!part||!Array.isArray(part.nodes)||(total+=part.nodes.length)>512)return null;const d=serialize(part.nodes,part.closed);if(!d)return null;parts.push(d);}
     return parts.join(' ');
   }
+  function editContour(document,index,action){
+    if(!serializeCompound(document)||!Number.isInteger(index)||index<0||index>=document.subpaths.length)return null;
+    const subpaths=document.subpaths.map(part=>({closed:part.closed,nodes:part.nodes.map(p=>translate(p,0,0))})),part=subpaths[index];let selected=index;
+    if(action==='duplicate'){subpaths.splice(index+1,0,{closed:part.closed,nodes:part.nodes.map(p=>translate(p,10,10))});selected++;}
+    else if(action==='delete'){if(subpaths.length===1)return null;subpaths.splice(index,1);selected=Math.min(index,subpaths.length-1);}
+    else if(action==='reverse'){
+      const ordered=part.closed?[part.nodes[0],...part.nodes.slice(1).reverse()]:[...part.nodes].reverse();
+      part.nodes=ordered.map(p=>({...corner(p),...(p.out?{in:{...p.out}}:{}),...(p.in?{out:{...p.in}}:{})}));
+    }else if(action==='open'||action==='close'){
+      part.closed=action==='close';
+      // Opening removes the closing edge. Closing joins the endpoints with a
+      // straight segment; do not keep invisible endpoint handles in the model.
+      delete part.nodes[0].in;delete part.nodes.at(-1).out;
+    }else return null;
+    return serializeCompound({subpaths})?{subpaths,selected}:null;
+  }
   function equivalentCompound(a,b){return !!a&&!!b&&a.subpaths.length===b.subpaths.length&&a.subpaths.every((p,i)=>equivalent(p,b.subpaths[i]));}
   const midpoint=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
   function segmentMiddle(a,b){const ab=midpoint(a,a.out||a),bc=midpoint(a.out||a,b.in||b),cd=midpoint(b.in||b,b);return midpoint(midpoint(ab,bc),midpoint(bc,cd));}
@@ -92,5 +108,5 @@
     return (!next.in||coordinate(next.in))&&(!next.out||coordinate(next.out))?next:null;
   }
   function equivalent(a,b){return !!a&&!!b&&a.closed===b.closed&&a.nodes.length===b.nodes.length&&a.nodes.every((p,i)=>['','in','out'].every(key=>{const x=key?p[key]:p,y=key?b.nodes[i][key]:b.nodes[i];return !x&&!y||x&&y&&Math.abs(x.x-y.x)<1e-6&&Math.abs(x.y-y.y)<1e-6;}));}
-  const api={serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,split,segmentMiddle,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
+  const api={serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,split,segmentMiddle,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
 })(typeof window==='object'?window:globalThis);

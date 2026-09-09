@@ -50,11 +50,11 @@
     const status=root.document.createElement('span');status.setAttribute('role','status');
     status.style.cssText='font:12px system-ui;color:#e5e7eb;';toolbar.append(status);
     function action(label,fn){const b=root.document.createElement('button');b.type='button';b.textContent=label;b.onclick=fn;Object.assign(b.style,{padding:'6px 10px',minHeight:'28px',border:'1px solid #454951',borderRadius:'4px',background:'#2b2e33',color:'#e5e7eb',font:'12px system-ui',cursor:'pointer'});toolbar.append(b);return b;}
-    let handleMode,contourPicker;
-    if(subpaths?.length>1){
+    let handleMode,contourPicker,deleteContourButton,duplicateContourButton,closureButton;
+    if(subpaths){
       const label=root.document.createElement('label');label.textContent='Contour ';label.style.cssText='font:12px system-ui;color:#e5e7eb;';
       contourPicker=root.document.createElement('select');contourPicker.setAttribute('aria-label','Path contour');contourPicker.style.cssText='padding:6px;background:#2b2e33;color:#e5e7eb;border:1px solid #454951;border-radius:4px;';
-      subpaths.forEach((part,i)=>{const option=root.document.createElement('option');option.value=String(i);option.textContent=`${i+1} of ${subpaths.length} · ${part.closed?'Closed':'Open'}`;contourPicker.append(option);});
+
       contourPicker.onchange=()=>selectContour(Number(contourPicker.value));label.append(contourPicker);toolbar.append(label);
     }
     function selectContour(index){
@@ -69,11 +69,32 @@
       for(const [value,text] of [['independent','Independent'],['aligned','Aligned'],['mirrored','Mirrored']]){const option=root.document.createElement('option');option.value=value;option.textContent=text;handleMode.append(option);}
       handleMode.value=handleMovement;handleMode.style.cssText='padding:6px;background:#2b2e33;color:#e5e7eb;border:1px solid #454951;border-radius:4px;';handleMode.onchange=()=>{handleMovement=handleMode.value;};label.append(handleMode);toolbar.append(label);
     }
+    if(subpaths){
+      duplicateContourButton=action('Duplicate contour',()=>restructure('duplicate'));duplicateContourButton.title='Copy this contour with a 10-unit SVG offset';
+      deleteContourButton=action('Delete contour',()=>restructure('delete'));deleteContourButton.title='Remove this contour, keeping the rest of the path';
+      action('Reverse contour',()=>restructure('reverse')).title='Reverse drawing direction. This can change holes with the nonzero fill rule.';
+      closureButton=action('Close contour',()=>restructure(closed?'open':'close'));
+    }
+    function restructure(action){
+      if(drag||!verify())return;
+      const result=root.RetouchSVGPath.editContour({subpaths},contour,action);
+      if(!result){announce('This contour change would exceed path limits or leave an invalid path.');return;}
+      subpaths.splice(0,subpaths.length,...result.subpaths);selectContour(result.selected);
+      announce({duplicate:'Contour duplicated. Done saves; Escape cancels.',delete:'Contour removed from preview. Done saves; Escape cancels.',reverse:'Contour direction reversed. Done saves; Escape cancels.',open:'Closing edge removed. Done saves; Escape cancels.',close:'Endpoints joined. Done saves; Escape cancels.'}[action]);
+    }
     const removeButton=action('Delete point',removePoint);
     action('Done',commit);action('Cancel',cancel);surface.append(toolbar);
     function announce(message){status.textContent=message||`${activeHandle?activeHandle==='in'?'Incoming handle on point':'Outgoing handle on point':'Point'} ${active+1} of ${vertices.length}`;removeButton.disabled=vertices.length<=minimum;removeButton.style.opacity=removeButton.disabled?'.5':'1';}
     const totalPoints=()=>subpaths?subpaths.reduce((sum,part)=>sum+part.nodes.length,0):vertices.length;
+    function refreshContours(){
+      if(!contourPicker)return;contourPicker.replaceChildren();
+      subpaths.forEach((part,i)=>{const option=root.document.createElement('option');option.value=String(i);option.textContent=`${i+1} of ${subpaths.length} · ${part.closed?'Closed':'Open'}`;contourPicker.append(option);});contourPicker.value=String(contour);
+      deleteContourButton.disabled=subpaths.length===1;duplicateContourButton.disabled=subpaths.length>=128||totalPoints()+vertices.length>512;
+      closureButton.textContent=closed?'Open contour':'Close contour';closureButton.title=closed?'Remove the edge from the last anchor to the first':'Join the last anchor to the first with a straight edge';
+      for(const button of [deleteContourButton,duplicateContourButton])button.style.opacity=button.disabled?'.5':'1';
+    }
     function rebuild(){
+      refreshContours();
       for(const b of [...handles,...insertions,...curveHandles.map(h=>h.button)])b.remove();handles=[];insertions=[];curveHandles=[];
       vertices.forEach((_,i)=>{
         const b=root.document.createElement('button');b.type='button';b.dataset.vertex=String(i);b.setAttribute('aria-label','Vector point '+(i+1));

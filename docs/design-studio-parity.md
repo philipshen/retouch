@@ -3193,3 +3193,45 @@ drawing commands immediately after Z without a new moveto, creating/removing who
 contours, vector networks, booleans and masks remain open. Native launches remain
 paused; no desktop build or launch occurred. Full Figma Design parity, unrestricted
 site authoring and trusted Mac distribution remain incomplete.
+
+
+### 2026-09-09 — Whole-contour restructuring
+
+Path editing now offers Duplicate contour, Delete contour, Reverse contour and
+Open/Close contour. Duplication copies anchors and handles with a 10-unit SVG
+offset and selects the copy. Deletion keeps at least one contour; the existing
+layer deletion action handles removing the final path. Reversal swaps incoming
+and outgoing handles and preserves cubic geometry. Closed contours retain their
+starting anchor, while open contours exchange endpoints. Reversal can change
+holes under the nonzero fill rule.
+
+Opening removes the closing edge and its endpoint handles. Closing joins the
+endpoints with a straight edge. The buttons describe these effects and report
+pending changes. All actions update the preview and contour picker, preserve
+unselected contours, enforce document limits and commit through one source undo
+operation. Escape discards pending restructuring.
+
+All 352 unit tests pass in `/private/tmp/retouch-contour-actions-unit-final.log`.
+The initial reversal test used incorrect reverse-edge indices; its failure is
+retained in `/private/tmp/retouch-contour-actions-unit.log`. Corrected geometric
+sampling and reverse-twice assertions pass without changing the implementation.
+All four browser workflows pass in
+`/private/tmp/retouch-contour-actions-html-chromium.log`,
+`/private/tmp/retouch-contour-actions-react-webkit.log`,
+`/private/tmp/retouch-contour-actions-html-webkit-svg-contour-actions.log`, and
+`/private/tmp/retouch-contour-actions-react-chromium-svg-contour-actions.log`.
+They verify nonzero cutout reversal, reversed cubic samples, copied handle
+coordinates, whole-contour deletion, closing-edge length changes, final-contour
+protection, isolated previews and exact undo/redo. They also run compound editing
+at 50/100/200 percent zoom through nested transforms. Existing curve/handle-mode
+regressions pass in
+`/private/tmp/retouch-contour-actions-html-chromium-svg-handle-modes.log` and
+`/private/tmp/retouch-contour-actions-react-webkit-svg-handle-modes.log`.
+The inspected `/private/tmp/retouch-contour-actions-html-chromium.png` shows the
+copied contour selected and all contour actions visible in the wrapped toolbar.
+
+Drawing new contours into an existing path, arcs, vector networks, boolean/mask
+operations and the remaining Figma Design requirements are still open. The
+preview uses outlines; fill-rule changes are rendered by the site after commit.
+Native launches remain paused. This source change does not establish trusted Mac
+distribution or arbitrary-site authoring.

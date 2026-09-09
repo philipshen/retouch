@@ -72,3 +72,24 @@ for(const kind of ['html','react'])test(kind+' compound geometry edits preserve 
   const collect=s=>kind==='html'?html.collect(s,relPath).elements:ids.collectElements(s,relPath).elements,elements=collect(source),tag=e=>kind==='html'?e.tag:ids.jsxElementName(e.node),r={source,elements,element:elements.find(e=>tag(e)==='path'),hash:kind==='html'?html.contentHash(source):ids.contentHash(source),file:'/tmp/'+relPath,relPath};
   const result=adapter.planOp(r,{type:'setSVGGeometry',property:'d',value:after,fileHash:r.hash});assert.equal(result.ok,true,result.reason);assert.equal(result.edits[0].after,source.replace(before,after));assert.deepEqual(collect(result.edits[0].after).map(e=>e.id),elements.map(e=>e.id));
 });
+
+test('Contour restructuring deep-copies duplicates, preserves other contours and validates limits',()=>{
+  const doc=path.parseCompound('M0 0H60V60H0Z M10 10V50H50V10Z'),before=JSON.stringify(doc),copy=path.editContour(doc,1,'duplicate');
+  assert.equal(copy.selected,2);assert.deepEqual(copy.subpaths.slice(0,2),doc.subpaths);assert.deepEqual(copy.subpaths[2].nodes,doc.subpaths[1].nodes.map(p=>path.translate(p,10,10)));
+  assert.deepEqual(path.editContour(copy,2,'delete').subpaths,doc.subpaths);assert.equal(path.editContour({subpaths:[doc.subpaths[0]]},0,'delete'),null);
+  assert.equal(path.editContour(doc,0,'unknown'),null);assert.equal(path.editContour(doc,-1,'reverse'),null);
+  assert.equal(path.editContour({subpaths:[{closed:false,nodes:[{x:99999,y:0},{x:100000,y:0}]}]},0,'duplicate'),null);
+  assert.equal(JSON.stringify(doc),before);
+});
+test('Reversing cubic contours preserves geometry and reversing twice restores exact nodes',()=>{
+  const evaluate=(a,b,t)=>{const u=1-t,c=a.out||a,d=b.in||b;return{x:u*u*u*a.x+3*u*u*t*c.x+3*u*t*t*d.x+t*t*t*b.x,y:u*u*u*a.y+3*u*u*t*c.y+3*u*t*t*d.y+t*t*t*b.y};};
+  for(const closed of [false,true]){
+    const doc={subpaths:[{nodes,closed}]},reversed=path.editContour(doc,0,'reverse');assert.deepEqual(path.editContour(reversed,0,'reverse').subpaths,doc.subpaths);
+    const r=reversed.subpaths[0].nodes;
+    for(let i=0;i<(closed?2:1);i++)for(let j=0;j<=20;j++){const a=nodes[i],b=nodes[(i+1)%2],ra=closed?r[(1-i+2)%2]:r[0],rb=closed?r[(2-i)%2]:r[1],p=evaluate(a,b,j/20),q=evaluate(ra,rb,1-j/20);assert.ok(Math.hypot(p.x-q.x,p.y-q.y)<1e-9);}
+  }
+});
+test('Opening removes only closing handles and closing makes a straight connection',()=>{
+  const doc={subpaths:[{nodes,closed:true}]},opened=path.editContour(doc,0,'open').subpaths[0];assert.equal(opened.closed,false);assert.equal(opened.nodes[0].in,undefined);assert.equal(opened.nodes[1].out,undefined);assert.deepEqual(opened.nodes[0].out,nodes[0].out);assert.deepEqual(opened.nodes[1].in,nodes[1].in);
+  const closed=path.editContour({subpaths:[opened]},0,'close').subpaths[0];assert.equal(closed.closed,true);assert.equal(closed.nodes[0].in,undefined);assert.equal(closed.nodes[1].out,undefined);
+});
