@@ -15,7 +15,7 @@ changing those files. The original checkout may continue to evolve independently
 | --- | --- | --- |
 | Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Bounded canvas zoom/scrolling and linked screen comparisons exist. HTML supports multi-selection, range selection, gray/page marquee gestures and framing a consecutive sibling selection. HTML/React canvas locks include batch undo and editor-reload persistence within a live project session. Full document/pages/sections, guides, complete snapping/grouping, durable lock identity and cross-renderer equivalence remain. |
 | Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. HTML multi-selection, shared CSS and group duplicate/delete/reparenting exist; cross-context clipboard and broader source structures remain. |
-| Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. Full vector authoring, boolean operations, arbitrary masks and a shared geometry model remain. |
+| Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. HTML/React polygons and polylines now support direct vertex dragging and keyboard movement with source undo. Full path/pen authoring, vertex insertion/deletion, boolean operations, arbitrary masks and a shared geometry model remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. HTML absolute placement now supports edge, center, stretch and proportional anchors with screen-scoped writes. Transformed constraints, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML supports linear/radial gradient stacks with draggable stops, shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. Font browsing, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
@@ -26,7 +26,7 @@ changing those files. The original checkout may continue to evolve independently
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. HTML has responsive CSS, structural edits and batch selection operations. Arbitrary remote-site capture/authoring, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Corner resizing also supports Shift-locked proportions. Fully editable comparison canvases and cross-framework parity remain. |
-| Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop; The latest local ad hoc bundle packages a88e45e and matches all 87 packaged source files, including React/HTML selection and lock tools. Current native interaction remains unverified; its quarantined self-test timed out without output. File flows, Intel runtime and broader lifecycle verification remain. |
+| Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop; The latest recorded ad hoc bundle packages d9cd994 and retains a failed browser/native-launch receipt; see desktop/README.md. Native launches are paused at the user's request. Current native interaction remains unverified. File flows, Intel runtime and broader lifecycle verification remain. |
 | Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. Development build is ad hoc signed. Local cask install/uninstall passed. Developer ID signing/notarization, publishing, upgrades and quarantined launch remain unverified. |
 | Ease of use | New user can open a site, select/edit, compare screens, undo and retain work without learning implementation details | Controls have labels and basic defaults. Whole-workflow usability validation remains. |
 
@@ -2932,3 +2932,35 @@ Native launch testing remains paused at the user's request. No native app was
 launched for this work. The d9cd994 archive retains its original failed receipt;
 these source changes do not validate that archive. Full Figma Design parity,
 arbitrary-site support and trusted Mac distribution remain incomplete.
+
+### 2026-09-09 — Direct polygon and polyline vertex editing
+
+The SVG geometry inspector now offers Edit vector points for literal polygon and
+polyline point lists in HTML and React. Handles map pointer movement through the
+SVG screen transform and editor zoom; nested translation, rotation and nonuniform
+scaling are covered. Clicking a handle selects it for arrow-key movement (one
+SVG unit, or ten with Shift). Drag release or Enter commits through the existing
+source transaction/history path. Shift-drag constrains an SVG-coordinate axis.
+The outline preview stays outside the site's DOM; untouched point values retain
+JavaScript numeric precision. Canvas padding exposes edge handles without changing
+the site viewport or zoom. Repeated tool activation supersedes a pending launch.
+
+Escape, screen/viewport changes, scrolling and source/rendered geometry changes
+cancel the preview. File hashes protect source commits; dynamic JSX values remain
+uneditable and a source vector rendered multiple times is refused by the canvas
+entry point. Point lists validate numeric syntax, complete coordinate pairs,
+finite values, coordinate bounds and a 512-point editing limit.
+
+All four HTML/React × Chromium/WebKit browser cases pass source movement at
+50/100/200 percent zoom, click-to-select keyboard edits, exact undo/redo, and
+Escape/screen/stale-preview cancellation, plus repeated activation. Logs are
+`/private/tmp/retouch-svg-vertices-{html,react}-{chromium,webkit}-complete.log`.
+The inspected screenshot `/private/tmp/retouch-svg-vertices-final.png` shows the
+transformed triangle, isolated moving outline and visible handles. All 337 unit
+tests pass in `/private/tmp/retouch-svg-vertices-unit-final.log`, including source
+identity preservation and malformed/dynamic/stale point-list refusal.
+
+This edits existing straight-segment vectors. Creation, adding/removing vertices,
+Bézier paths and handles, vector networks, boolean operations and masks remain.
+No native app was launched; this work does not establish full Figma parity or
+trusted Mac distribution.

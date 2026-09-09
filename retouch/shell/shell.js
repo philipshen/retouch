@@ -892,8 +892,10 @@ function renderPanelContents() {
   const target = (editing?.el.ownerDocument === doc() ? editing.el : null) || matchingEls(activeId()).find(el => inTextScope(el, info));
   if(info.svgGeometry){
     const geometry=RetouchInspector.section('SVG geometry');
+    const pointField=info.svgGeometry.fields.find(field=>field.name==='points');
+    if(pointField&&pointField.editable!==false&&RetouchSVGPoints.parse(pointField.value)?.length>=2){const editPoints=RetouchInspector.button('Edit vector points',()=>editSVGPoints(info));editPoints.dataset.canvasTool='vertices';geometry.append(editPoints);}
     for(const field of info.svgGeometry.fields){const input=document.createElement('input');input.type='text';input.value=field.value??'';input.placeholder=field.editable===false?'Dynamic value':'Default';input.disabled=field.editable===false;if(field.reason)input.title=field.reason;input.onchange=()=>setSVGGeometry(field.name,input.value.trim()||null);RetouchInspector.field(geometry,'Shape '+field.label,input);const reset=RetouchInspector.button('Reset shape '+field.label.toLowerCase(),()=>setSVGGeometry(field.name,null));reset.disabled=field.value===null||field.editable===false;geometry.append(reset);}
-    RetouchInspector.note(geometry,'Geometry is shared across screen sizes. Values use SVG coordinates, px or %. The SVG viewport and page CSS can affect the rendered result.');panelBody.append(geometry);
+    RetouchInspector.note(geometry,pointField?'Edit vector points, then drag a handle or click one and use arrow keys. Shift moves 10 units. Enter saves keyboard changes; Escape cancels. Points are shared across screen sizes.':'Geometry is shared across screen sizes. Values use SVG coordinates, px or %. The SVG viewport and page CSS can affect the rendered result.');panelBody.append(geometry);
   }
   if(info.svgInsertion){
     const shapes=RetouchInspector.section('Add shape'),buttons=document.createElement('div');buttons.className='stack-presets';
@@ -1855,6 +1857,32 @@ async function moveLayerInto(info,destinationId,position='inside'){
     const fresh=await api('GET',resolveUrl(result.movedId));if(fresh?.ok){sel={hostId:result.movedId,instanceId:null,scope:'host',info:fresh.element};renderPanel();}
     toast('Layer moved','ok');
   }finally{busyPanel(false);}
+}
+async function editSVGPoints(info){
+  if(panelTasks||undoBusy||sourceRequests||editing)return;
+  stopDrawing?.();
+  const targets=matchingEls(info.id),field=info.svgGeometry?.fields.find(field=>field.name==='points'),points=RetouchSVGPoints.parse(field?.value);
+  if(targets.length!==1)return toast('Select a vector rendered once to edit its points.','err');
+  if(!points||points.length<2||field.editable===false)return;
+  const target=targets[0];
+  if(target.getAttribute('points')!==field.value)return toast('The vector changed. Re-select it before editing.','err');
+  if(mode!=='edit')modeBtn.click();canvasPan.cancel();
+  // Keep handles away from the clipped canvas edge without changing site size or zoom.
+  const f=iframe.getBoundingClientRect(),c=canvasSurface.getBoundingClientRect(),r=target.getBoundingClientRect(),scale=f.width/iframe.contentWindow.innerWidth;
+  const left=f.left+r.left*scale,top=f.top+r.top*scale,right=f.left+r.right*scale,bottom=f.top+r.bottom*scale;
+  if(r.width*scale+24<c.width)canvasSurface.scrollLeft+=left<c.left+12?left-c.left-12:right>c.right-12?right-c.right+12:0;
+  if(r.height*scale+24<c.height)canvasSurface.scrollTop+=top<c.top+12?top-c.top-12:bottom>c.bottom-12?bottom-c.bottom+12:0;
+  let cancelled=false;
+  const cancelPending=()=>{cancelled=true;if(stopDrawing===cancelPending)stopDrawing=null;};
+  stopDrawing=cancelPending;
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  if(cancelled)return;
+  stopDrawing=null;
+  if(sel?.info!==info||mode!=='edit'||panelTasks||undoBusy||sourceRequests||editing||!target.isConnected)return;
+  stopDrawing=RetouchSVGVertices.mount({target,points,frame:iframe,canvas:canvasSurface,
+    onCommit:value=>{if(sel?.info===info)setSVGGeometry('points',value);},
+    onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
+  if(stopDrawing)toast('Drag a point. Shift locks an axis. Arrow keys move 1 SVG unit; Shift moves 10. Enter applies; Escape cancels.','ok');
 }
 function drawShape(preset,info){
   if(panelTasks||undoBusy||sourceRequests||editing)return;
