@@ -328,3 +328,6 @@ details.advanced > summary:hover { color: var(--ink); }
 .relative-field .inspector-field { flex: 1; min-width: 0; }
 .relative-field input { width: 92px; }
 .relative-field > button { flex-shrink: 0; font-size: 11px; padding: 6px; }
+
+.numeric-typography { margin: 12px 0; font-size: 12px; }
+.numeric-typography > summary { cursor: pointer; color: var(--muted); }

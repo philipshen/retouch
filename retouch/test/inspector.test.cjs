@@ -73,3 +73,15 @@ test('line-height overrides replace automatic and explicit spacing without chang
  assert.equal(replace('text-lg [line-height:normal]',lineHeightToken,'leading-[45px]'),'text-lg leading-[45px]');
  assert.equal(replace('text-lg leading-[45px]',lineHeightToken,''),'text-lg');
 });
+
+test('numeric font features combine independent groups and reject conflicts',()=>{
+ const v=require('../shell/html-css-values.js'),{numericToken}=require('../shell/inspector.js');
+ assert.equal(v.numericChange('oldstyle-nums ordinal','Number width','tabular-nums'),'oldstyle-nums ordinal tabular-nums');
+ assert.equal(v.numericChange('tabular-nums oldstyle-nums','Number width','proportional-nums'),'oldstyle-nums proportional-nums');
+ assert.equal(v.numericChange('ordinal','Ordinals',''),'normal');
+ for(const value of ['normal ordinal','tabular-nums proportional-nums','ordinal ordinal','url(x)','', 'lining-nums oldstyle-nums'])assert.equal(v.valid('font-variant-numeric',value),false,value);
+ assert.equal(v.valid('font-variant-numeric',null),true);
+ assert.equal(v.valid('font-variant-numeric','oldstyle-nums tabular-nums diagonal-fractions ordinal slashed-zero'),true);
+ assert.equal(v.overlaps('font','font-variant-numeric'),true);assert.equal(v.overlaps('font-variant-numeric','font-variant'),true);
+ assert.equal(replace('font-bold tabular-nums ordinal md:oldstyle-nums',numericToken,'[font-variant-numeric:normal]'),'font-bold md:oldstyle-nums [font-variant-numeric:normal]');
+});

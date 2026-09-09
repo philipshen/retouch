@@ -58,6 +58,33 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===expected);await settled();}await wait(async()=>await spacing()===initial);assert.equal(read(),original);
    console.log(engine+' '+kind+': PASS percentage letter spacing scales with font size, negative tablet override, phone isolation and exact undo');
   }
+  if(process.env.RT_E2E_NUMERIC){
+   const numeric=()=>app.locator('h1').evaluate(el=>getComputedStyle(el).fontVariantNumeric),initial=await numeric();
+   const same=(actual,expected)=>actual.split(' ').sort().join(' ')===expected.split(' ').sort().join(' ');
+   const change=async(label,value,expected)=>{snapshots.push(read());await page.getByLabel(label,{exact:true}).selectOption(value);await wait(()=>read()!==snapshots.at(-1));await settled();await wait(async()=>same(await numeric(),expected));assert.equal(await page.locator('.numeric-typography').getAttribute('open'),'');};
+   await page.getByLabel('Style screen scope').selectOption('');await settled();
+   if(process.env.RT_E2E_VARIABLE_FONT){snapshots.push(read());const weight=page.getByLabel(kind==='html'?'Font weight (CSS)':'Font weight (1–1000)',{exact:true});await weight.fill('400');await weight.press('Tab');await wait(()=>read()!==snapshots.at(-1));await settled();await wait(()=>app.locator('h1').evaluate(el=>getComputedStyle(el).fontWeight==='400'));}
+   await page.getByText('Number formatting',{exact:true}).click();
+   const digitWidths=()=>app.locator('h1').evaluate(async el=>{const d=el.ownerDocument;await d.fonts.ready;const css=d.defaultView.getComputedStyle(el),probe=d.createElement('span');probe.style.cssText='position:absolute;visibility:hidden;white-space:pre;';for(const property of ['font-family','font-size','font-weight','font-variant-numeric'])probe.style.setProperty(property,css.getPropertyValue(property));d.body.append(probe);try{return ['111111','888888'].map(text=>{probe.textContent=text;return probe.getBoundingClientRect().width;});}finally{probe.remove();}});
+   await change('Number width','tabular-nums','tabular-nums');
+   if(process.env.RT_E2E_VARIABLE_FONT){const widths=await digitWidths();assert.ok(Math.abs(widths[0]-widths[1])<.1,JSON.stringify(widths));console.log('TABULAR DIGIT WIDTHS',JSON.stringify(widths));}
+
+   if(process.env.RT_E2E_VARIABLE_FONT){await change('Number width','proportional-nums','proportional-nums');const widths=await digitWidths();assert.ok(Math.abs(widths[0]-widths[1])>.5,JSON.stringify(widths));console.log('PROPORTIONAL DIGIT WIDTHS',JSON.stringify(widths));await change('Number width','tabular-nums','tabular-nums');}
+   await change('Number style','oldstyle-nums','tabular-nums oldstyle-nums');
+   await change('Fractions','diagonal-fractions','tabular-nums oldstyle-nums diagonal-fractions');
+   await change('Ordinals','ordinal','tabular-nums oldstyle-nums diagonal-fractions ordinal');
+   await change('Zero style','slashed-zero','tabular-nums oldstyle-nums diagonal-fractions ordinal slashed-zero');
+   if(process.env.RT_E2E_NUMERIC_SCREENSHOT){await page.getByLabel('Zero style',{exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:process.env.RT_E2E_NUMERIC_SCREENSHOT});}
+   const baseNumeric=await numeric();
+   await page.getByLabel('Style screen scope').selectOption(kind==='html'?'min-[768px]:':'md:');await settled();
+   await change('Number width','proportional-nums','proportional-nums oldstyle-nums diagonal-fractions ordinal slashed-zero');
+
+   await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await settled();await wait(async()=>same(await numeric(),baseNumeric));
+   await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();
+   snapshots.push(read());await page.getByRole('button',{name:'Reset number formatting',exact:true}).click();await wait(()=>read()!==snapshots.at(-1));await settled();await wait(async()=>same(await numeric(),baseNumeric));
+   while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===expected);await settled();}await wait(async()=>same(await numeric(),initial));assert.equal(read(),original);
+   console.log(engine+' '+kind+': PASS numeric feature composition, open controls survive edits, responsive isolation, reset and exact undo');
+  }
   if(process.env.RT_E2E_PANEL_TAB){
    await page.getByLabel('Style screen scope').selectOption('');await settled();
    const before=read(),input=page.getByLabel('Line height (%)',{exact:true}),next=page.getByRole('button',{name:'Use relative line height',exact:true});

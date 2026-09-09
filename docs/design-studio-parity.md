@@ -4289,3 +4289,36 @@ under `/private/tmp`). Added a held network write and explicit click into layer
 search to verify pending focus is cancelled; HTML and WebKit Liquid passed in
 `retouch-panel-tab-{html,liquid}-cancel.log`. React final validation is recorded in
 `/private/tmp/retouch-panel-tab-react-final.log`. Native launches remain paused.
+
+### Numeric font features (2026-09-09)
+
+Added shared Number formatting controls for number width (tabular/proportional),
+figure style (lining/old style), diagonal/stacked fractions, ordinals, and slashed
+zero across HTML, React and local Liquid. Changing one group preserves the others.
+The disclosure stays open through saves. Reset removes the active screen scope's
+numeric override; React/Liquid text reset also includes these properties. Named
+numeric Tailwind utilities are replaced together to avoid conflicting declarations,
+and typography previews copy numeric features. HTML validation rejects duplicate
+or conflicting groups and detects font/font-variant shorthand overlap.
+
+Property semantics follow [CSS Fonts 4 numerical formatting](https://drafts.csswg.org/css-fonts-4/#font-variant-numeric-prop).
+Fonts may not provide every requested glyph feature; the UI states this limitation.
+Feature availability discovery, arbitrary OpenType tags and complete typography
+parity remain unfinished.
+
+375 unit tests passed in `/private/tmp/retouch-numeric-unit-final.log`; focused
+inspector tests passed again after adding the value-length bound in
+`/private/tmp/retouch-numeric-inspector-final.log`. Chromium HTML/React and WebKit
+local Liquid passed composition, responsive isolation, reset, disclosure retention
+and exact undo (`retouch-numeric-{html,react,liquid}.log` under `/private/tmp`).
+Chromium React and WebKit HTML also verified actual digit layout using bundled
+Geist at weight 400: tabular six-one/six-eight widths 115.203125/115.203125px,
+proportional widths 67.328125/115.96875px, with only number width changing between
+measurements. Logs: `/private/tmp/retouch-numeric-glyph-react-final.log` and
+`/private/tmp/retouch-numeric-glyph-html-final.log`.
+
+Initial glyph checks at weight 700 failed strict equality. FontTools inspection
+confirmed the font's tabular one/eight advances are 636/638 units there and 600/600
+at weight 400; failed logs remain. The corrected proof explicitly selects 400
+and undoes that source edit too. Inspected `/private/tmp/retouch-numeric.png`.
+Native launches remain paused; no desktop verification attempted.
