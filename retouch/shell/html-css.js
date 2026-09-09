@@ -1,6 +1,6 @@
 (function(){
  const I=RetouchInspector;
- const {options,fields,valid,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients}=RetouchHTMLCSSValues;
+ const {options,fields,stackLayout,flexAlignment,valid,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients}=RetouchHTMLCSSValues;
  function stopRail({gradient,index,info,el,preview,gradients,update}){
   const rail=document.createElement('div');rail.className='gradient-stop-rail';rail.dataset.gradientSource=info.id;rail.dataset.gradientIndex=index;
   rail.setAttribute('role','group');rail.setAttribute('aria-label','Fill '+(index+1)+' stop positions');
@@ -47,6 +47,19 @@
   const sec=I.section('CSS properties');
   if(info.cssReason||!el||!Number.isInteger(width)){I.note(sec,info.cssReason||'Choose a pixel screen scope.','refused');return sec;}
   const css=el.ownerDocument.defaultView.getComputedStyle(el),own=info.cssRules?.[width]||{};
+  const layout=I.section('Layout');
+  if(info.structure?.canInsert){
+   const stacks=document.createElement('div');stacks.className='stack-presets';
+   for(const [axis,label]of [['horizontal','Horizontal stack'],['vertical','Vertical stack']]){const changes=stackLayout(axis,css.writingMode),button=I.button(label,()=>save(changes,null,width));button.setAttribute('aria-pressed',String(['flex','inline-flex'].includes(css.display)&&css.flexDirection===changes['flex-direction']&&css.flexWrap==='nowrap'));stacks.append(button);}layout.append(stacks);
+   if(['flex','inline-flex'].includes(css.display)&&css.flexWrap==='nowrap'){
+    const align=document.createElement('div');align.className='layout-alignment';align.setAttribute('role','group');align.setAttribute('aria-label','Align children');
+    for(let y=0;y<3;y++)for(let x=0;x<3;x++){
+     const label='Align children '+['top','middle','bottom'][y]+' '+['left','center','right'][x],changes=flexAlignment(x,y,css),button=I.button('•',()=>save(changes,null,width));button.setAttribute('aria-label',label);button.title=label;button.setAttribute('aria-pressed',String(css.justifyContent===changes['justify-content']&&css.alignItems===changes['align-items']));align.append(button);
+    }
+    layout.append(align);
+   }
+   I.note(layout,'Arrange children at this screen size. Alignment uses the available space inside the container. Each action is one undo step.');
+  }
   const appearance=I.section('Appearance'),typography=I.section('Typography');
   for(const [property,label,min,max,unit]of [['opacity','Opacity (%)',0,100,''],['rotate','Rotation (°)',-360,360,'deg']]){
    const raw=own[property]??css.getPropertyValue(property),input=document.createElement('input');input.type='number';input.min=min;input.max=max;input.step='any';
@@ -161,7 +174,7 @@
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);target.append(reset);
   }
   I.note(sec,'Values use CSS units. Reset removes this size’s override and restores the page’s styling.');
-  const container=document.createElement('div');container.append(appearance,fills,blur,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);container.append(typography,sec);return container;
+  const container=document.createElement('div');if(info.structure?.canInsert)container.append(layout);container.append(appearance,fills,blur,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);container.append(typography,sec);return container;
  }
  function mountSelection(infos,elements,width,save){
   const section=I.section('Shared styles');

@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 244 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 247 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -931,3 +931,22 @@ The selected frame and layer actions were inspected in a Chromium screenshot.
 This creates a real block container. It can change CSS selector matching,
 margin collapse and flex/grid layout; pixel-preserving Figma groups, arbitrary
 cross-parent grouping and frame operations in other renderers remain unfinished.
+
+
+### Direct stack and alignment controls
+
+The HTML container inspector now starts with a Layout section. Horizontal stack
+and Vertical stack set display, direction and no-wrap in one screen-scoped edit.
+A nine-position control aligns children within single-line flex containers by
+physical screen position, accounting for writing mode, text direction and reversed
+flex direction. Existing gaps, margins and child sizing remain authored; alignment
+needs available container space. Wrapped flex and grid keep their existing CSS
+controls rather than presenting an inaccurate physical alignment grid.
+
+All 247 unit tests pass, including axis mapping and atomic responsive changes.
+Chromium and WebKit cover independent tablet/base layouts and exact stack/alignment
+undo. Geometry checks exercise nine horizontal, vertical, reversed and RTL
+fixtures, with child bounding boxes checked at opposite corners and along both
+stack axes. A Chromium screenshot confirms the visible controls and selected state.
+Full auto-layout parity, pixel-preserving groups and other renderer support remain
+unfinished.

@@ -6,9 +6,9 @@ if(!['chromium','webkit'].includes(engine))throw Error('RT_E2E_BROWSER must be c
 const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
 (async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-flex-writing-'));
- const cases=[['horizontal-tb','row','width','height'],['horizontal-tb','column','height','width'],['vertical-rl','row','height','width'],['vertical-lr','column','width','height'],['vertical-rl','row-reverse','height','width'],['vertical-rl','column-reverse','width','height']];
- const originals=cases.map(([writing,direction],i)=>{
-  const source=`<html><head></head><body><main style="display:flex;flex-direction:${direction};writing-mode:${writing};align-items:flex-start;width:600px;height:600px"><div style="width:100px;height:40px">Text</div><div style="width:100px;height:40px">Sibling</div></main></body></html>`;
+ const cases=[['horizontal-tb','row','width','height'],['horizontal-tb','column','height','width'],['vertical-rl','row','height','width'],['vertical-lr','column','width','height'],['vertical-rl','row-reverse','height','width'],['vertical-rl','column-reverse','width','height'],['horizontal-tb','row','width','height','rtl'],['horizontal-tb','column','height','width','rtl'],['vertical-rl','row','height','width','rtl']];
+ const originals=cases.map(([writing,direction,axis,cross,textDirection='ltr'],i)=>{
+  const source=`<html><head></head><body><main style="display:flex;flex-direction:${direction};writing-mode:${writing};direction:${textDirection};align-items:flex-start;width:600px;height:600px"><div style="width:100px;height:40px">Text</div><div style="width:100px;height:40px">Sibling</div></main></body></html>`;
   fs.writeFileSync(path.join(root,`case-${i}.html`),source);return source;
  });
  const server=require('../../src/html-site.cjs').start({root,port:0,quiet:true});await once(server,'listening');
@@ -33,7 +33,19 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
    assert.ok(await layer.evaluate((el,axis)=>el.getBoundingClientRect()[axis],axis)<fillSize,'hug follows content along main axis');
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===filled);
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===originals[index]);
+   await page.getByRole('treeitem',{name:'main',exact:true}).click();await settled();
+   for(const corner of ['top left','bottom right']){
+    await page.getByRole('button',{name:'Align children '+corner,exact:true}).click();await settled();
+    await wait(async()=>await app.locator('main').evaluate((el,corner)=>{const p=el.getBoundingClientRect(),boxes=[...el.children].map(c=>c.getBoundingClientRect());return corner==='top left'?Math.abs(Math.min(...boxes.map(b=>b.left))-p.left)<1&&Math.abs(Math.min(...boxes.map(b=>b.top))-p.top)<1:Math.abs(Math.max(...boxes.map(b=>b.right))-p.right)<1&&Math.abs(Math.max(...boxes.map(b=>b.bottom))-p.bottom)<1;},corner));
+    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===originals[index]);
+   }
+   for(const orientation of ['Horizontal','Vertical']){
+    await page.getByRole('button',{name:orientation+' stack',exact:true}).click();await settled();
+    await wait(async()=>await app.locator('main').evaluate((el,orientation)=>{const [a,b]=[...el.children].map(c=>c.getBoundingClientRect());return orientation==='Horizontal'?Math.abs(a.top-b.top)<1&&(a.right<=b.left+1||b.right<=a.left+1):Math.abs(a.left-b.left)<1&&(a.bottom<=b.top+1||b.bottom<=a.top+1);},orientation));
+    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===originals[index]);
+   }
+
   }
-  assert.deepEqual(errors,[]);console.log(engine+': PASS horizontal, vertical and reversed flex fill/hug dimensions, cross-size preservation and exact one-step undo');
+  assert.deepEqual(errors,[]);console.log(engine+': PASS horizontal, vertical, reversed and RTL flex sizing, physical stack/alignment geometry and exact one-step undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

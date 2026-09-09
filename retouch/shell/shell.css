@@ -280,3 +280,8 @@ details.advanced > summary:hover { color: var(--ink); }
 .selection-marquee { position:absolute; border:1px solid var(--accent); background:rgba(80,170,255,.13); pointer-events:none; box-sizing:border-box; }
 
 .selection-marquee-surface { position:fixed; overflow:hidden; pointer-events:none; z-index:30; }
+
+.stack-presets { display:flex; gap:6px; flex-wrap:wrap; }
+.stack-presets button[aria-pressed="true"], .layout-alignment button[aria-pressed="true"] { background:var(--accent); color:#071727; }
+.layout-alignment { display:grid; grid-template-columns:repeat(3,32px); gap:4px; margin:10px 0; width:max-content; }
+.layout-alignment button { width:32px; height:28px; padding:0; font-size:20px; }
