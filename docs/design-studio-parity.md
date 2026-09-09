@@ -5732,3 +5732,33 @@ catalog mutations or the update UI; browser propagation remains unverified.
 Font shorthands/coupled utility conflicts still refuse where ownership cannot be
 preserved safely. Liquid links and full parity remain unfinished. Native launches
 remain paused.
+
+### Transactional project-wide React text-style updates
+
+React's Update style from this layer and direct catalog updates now compose the
+catalog and linked JSX/TSX files into one shared undo transaction. A fresh source
+inventory includes components never opened/imported in the current preview and
+excludes hidden paths, symlinks, node_modules, dist/build/out, public and coverage.
+The existing limits now apply to 1,000 source files and 32 MiB aggregate source.
+Malformed source refuses the complete plan. Local overrides remain recorded and
+preserved by the React file planner. Catalog-triggered preview refresh fetches
+fresh selected-element metadata and uses renderer-revision confirmation.
+
+All 428 unit/integration tests passed, exit 0:
+/private/tmp/retouch-react-project-styles-units.log. Real HTTP coverage updates two
+React components plus catalog and restores all bytes with one shared undo. Project
+planning covers unopened components and malformed-source refusal. React Chromium
+and WebKit browser flows passed, exit 0:
+/private/tmp/retouch-react-project-styles-final-{chromium,webkit}.log. They edit a
+linked layer to 48px through the inspector, update the style, verify propagation
+to an unopened component with the local edit preserved, undo the library update,
+then undo the local edit with exact source and catalog restoration. HTML Chromium
+regression also passed (/private/tmp/retouch-react-project-html-regression.log).
+The first browser fixture used a DOM-only inline style that survived HMR and
+invalidated its rendered-undo expectation; the final fixture uses actual source
+edits. Syntax/diff checks passed.
+
+Coverage is JSX/TSX under this adapter's source conventions, not arbitrary JS,
+external packages or all CSS systems. Dynamic expressions and unsupported linked
+markup still refuse. React inherited-link UI, Liquid links, collaboration and the
+broader full-parity goal remain unfinished. Native launches stay paused.

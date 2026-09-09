@@ -1648,10 +1648,19 @@ window.RetouchTextStyleRequest=async operation=>{
     const result=await api('POST','/rt/__api/text-styles',operation);
     if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save text styles');
     if(result.undoId)editorHistory.record({type:'textStyleCatalog',id:info?.id,context:info?.context,undoId:result.undoId});
-    if(result.updated){await reloadFrame();if(sel)renderPanel();}
+    if(result.updated){
+      const fresh=info?await api('GET',resolveUrl(info.id,info.context)):null;
+      if(fresh?.ok&&sel?.info.id===info.id){sel.info=fresh.element;await refreshTextStyleElement(fresh.element);}else await reloadFrame();
+      if(sel)renderPanel();
+    }
     return result;
   }finally{busyPanel(false);}
 };
+async function refreshTextStyleElement(info){
+  if(info.classTextStyles)await refreshWrittenElement(info,el=>{
+    try{return JSON.stringify(JSON.parse(el.getAttribute('data-rt-text-styles')||'{}'))===JSON.stringify(info.textStyleLinks||{})&&(info.className||'').split(/\s+/).filter(Boolean).every(token=>el.classList.contains(token));}catch{return false;}
+  });else await reloadFrame();
+}
 async function writeTextStyle(type,width,extra={}){
   if(!sel)return;const info=sel.info;busyPanel(true);
   try{
@@ -1660,9 +1669,7 @@ async function writeTextStyle(type,width,extra={}){
     if(result.undoId)editorHistory.record({type:'setCSS',id:info.id,undoId:result.undoId});
     if(sel?.info.id===info.id){
       sel.info=result.element;
-      if(result.element.classTextStyles)await refreshWrittenElement(result.element,el=>{
-        try{return JSON.stringify(JSON.parse(el.getAttribute('data-rt-text-styles')||'{}'))===JSON.stringify(result.element.textStyleLinks||{})&&(result.element.className||'').split(/\s+/).filter(Boolean).every(token=>el.classList.contains(token));}catch{return false;}
-      });else await reloadFrame();
+      await refreshTextStyleElement(result.element);
       renderPanel();
     }toast('Saved','ok');
   }finally{busyPanel(false);}

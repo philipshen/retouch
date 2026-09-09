@@ -1,21 +1,28 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path');
-const catalog=require('./text-styles.cjs'),linked=require('./html-text-styles.cjs');
+const catalog=require('./text-styles.cjs');
+function reactInventory(root){
+ const pages=[],skip=new Set(['node_modules','dist','build','out','public','coverage']);let truncated=false;
+ function walk(directory){for(const entry of fs.readdirSync(directory,{withFileTypes:true})){if(entry.name.startsWith('.')||entry.isSymbolicLink()||skip.has(entry.name))continue;const file=path.join(directory,entry.name);if(entry.isDirectory())walk(file);else if(entry.isFile()&&/\.(jsx|tsx)$/.test(entry.name)){pages.push({path:path.relative(root,file).split(path.sep).join('/')});if(pages.length>1000){truncated=true;return;}}if(truncated)return;}}
+ walk(root);return {pages:pages.sort((a,b)=>a.path.localeCompare(b.path)),truncated};
+}
 // Compose the complete project change before any source or catalog write.
 // Use the HTML site's page inventory, including pages not visited in the editor.
-function plan(root,operation){
+function plan(root,operation,renderer='html'){
  try{
+  if(!['html','react'].includes(renderer))throw Error('Unsupported text style renderer.');
+  const linked=require(renderer==='react'?'./jsx-text-styles.cjs':'./html-text-styles.cjs');
   if(operation?.type!=='update')throw Error('Use a text style update operation.');
   const before=catalog.read(root),change=catalog.planChange(root,operation);
   const previous=before.styles.find(style=>style.id===operation.id),next=change.result.styles.find(style=>style.id===operation.id);
   if(JSON.stringify(previous.properties)===JSON.stringify(next.properties))return {...change,updated:0,pages:0};
-  const inventory=require('./html-pages.cjs').list(root);
-  if(inventory.truncated)throw Error('This project exceeds the 1,000-page text style update limit. No changes were saved.');
+  const inventory=renderer==='react'?reactInventory(root):require('./html-pages.cjs').list(root);
+  if(inventory.truncated)throw Error('This project exceeds the 1,000-file text style update limit. No changes were saved.');
   let bytes=0,updated=0,pages=0;const edits=[...change.edits];
   for(const page of inventory.pages){
    const file=path.join(root,page.path),stat=fs.lstatSync(file);
    if(!stat.isFile()||stat.isSymbolicLink())throw Error('A project page is no longer a regular file. Reload before updating.');
-   bytes+=stat.size;if(bytes>32*1024*1024)throw Error('Project HTML exceeds the 32 MB text style update limit. No changes were saved.');
+   bytes+=stat.size;if(bytes>32*1024*1024)throw Error('Project source exceeds the 32 MB text style update limit. No changes were saved.');
    const source=fs.readFileSync(file,'utf8'),planned=linked.planFile(file,page.path,source,next);
    if(!planned.ok)throw Error(page.path+': '+planned.reason);
    edits.push(...planned.edits);updated+=planned.updated;if(planned.updated)pages++;

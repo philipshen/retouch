@@ -31,3 +31,21 @@ test('HTML catalog API propagates direct property updates and records one shared
  const response=await fetch(url+'/rt/__api/text-styles',{method:'POST',headers,body:JSON.stringify(operation)});assert.equal(response.status,200);const result=await response.json();assert.equal(result.updated,2);assert.ok(result.undoId);assert.notDeepEqual(snapshot(root),before);
  const undo=await fetch(url+'/rt/__api/op',{method:'POST',headers,body:JSON.stringify({type:'undo',undoId:result.undoId})});assert.equal(undo.status,200);assert.deepEqual(snapshot(root),before);
 });
+function reactFixture(t){
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-react-update-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+ const saved=catalog.change(root,{type:'create',revision:null,name:'React Body',properties:{'font-size':'20px','font-weight':'400'}}),adapter=require('../src/adapters/react.cjs'),planner=require('../src/jsx-text-styles.cjs');
+ for(const relPath of ['Page.jsx','components/Unvisited.tsx']){const file=path.join(root,relPath),source='export default function Text(){return <p className="p-4">Text</p>}';fs.mkdirSync(path.dirname(file),{recursive:true});const result=planner.plan({file,relPath,source,hash:adapter.contentHash(source),element:adapter.collect(source,relPath).elements[0]},{type:'applyTextStyle',scope:''},saved.styles[0]);assert.equal(result.ok,true,result.reason);fs.writeFileSync(file,result.edits[0].after);}
+ const snapshot=()=>Object.fromEntries(['.retouch/text-styles.json','Page.jsx','components/Unvisited.tsx'].map(name=>[name,fs.readFileSync(path.join(root,name),'utf8')]));
+ return {root,adapter,snapshot,operation:{type:'update',revision:saved.revision,id:saved.id,name:'React Body',properties:{'font-size':'30px','font-weight':'700'}}};
+}
+test('React project updates include unopened components and refuse malformed source before writing',t=>{
+ const {root,snapshot,operation}=reactFixture(t),before=snapshot();fs.mkdirSync(path.join(root,'node_modules'));fs.writeFileSync(path.join(root,'node_modules/ignored.jsx'),'invalid JSX');
+ const plan=update.plan(root,operation,'react');assert.equal(plan.ok,true,plan.reason);assert.equal(plan.updated,2);assert.equal(plan.edits.length,3);assert.deepEqual(snapshot(),before);
+ fs.writeFileSync(path.join(root,'broken.tsx'),'export default function (');const refused=update.plan(root,operation,'react');assert.equal(refused.ok,false);assert.deepEqual(snapshot(),before);
+});
+test('React catalog HTTP update commits linked components and catalog with exact shared undo',async t=>{
+ const {root,adapter,snapshot,operation}=reactFixture(t),before=snapshot(),server=require('../src/server.cjs').startServer({appRoot:root,adapter,port:0,quiet:true});t.after(async()=>{server.retouchIndex.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));});if(!server.listening)await require('node:events').once(server,'listening');
+ const url='http://localhost:'+server.address().port,shell=await(await fetch(url+'/rt')).text(),token=/__RT_TOKEN = "([0-9a-f]+)"/.exec(shell)[1],headers={'x-retouch-token':token,'content-type':'application/json'};
+ const response=await fetch(url+'/rt/__api/text-styles',{method:'POST',headers,body:JSON.stringify(operation)});assert.equal(response.status,200);const result=await response.json();assert.equal(result.updated,2);assert.ok(result.undoId);assert.ok(snapshot()['components/Unvisited.tsx'].includes('![font-size:30px]'));
+ const undo=await fetch(url+'/rt/__api/op',{method:'POST',headers,body:JSON.stringify({type:'undo',undoId:result.undoId})});assert.equal(undo.status,200);assert.deepEqual(snapshot(),before);
+});

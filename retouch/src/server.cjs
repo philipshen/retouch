@@ -86,7 +86,7 @@ function handle(req, res, ctx) {
       if(!bytes)return json(res,413,{ok:false,reason:'Text style requests must be 512 KB or smaller.'});
       let operation;try{operation=JSON.parse(bytes.toString('utf8'));}catch{return json(res,400,{ok:false,reason:'Invalid text style JSON.'});}
       try{
-        const plan=operation?.type==='update'&&ctx.adapter.capabilities?.ops?.includes('setCSS')?require('./text-style-update.cjs').plan(ctx.appRoot,operation):library.planChange(ctx.appRoot,operation);
+        const plan=operation?.type==='update'&&(ctx.adapter.capabilities?.ops?.includes('setCSS')||ctx.adapter.name==='react')?require('./text-style-update.cjs').plan(ctx.appRoot,operation,ctx.adapter.name==='react'?'react':'html'):library.planChange(ctx.appRoot,operation);
         if(!plan.ok)return json(res,409,plan);
         const applied=library.commitPlan(ctx.appRoot,plan);
         for(const edit of applied.edits)if(ctx.adapter.matches(edit.file))ctx.index.indexFile(edit.file);
@@ -190,8 +190,8 @@ function handle(req, res, ctx) {
         resolved.context = renderContext(op.context);
         if (op.type === 'updateTextStyle') {
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source layer changed. Re-select it before updating the style.'});
-          if (!ctx.adapter.capabilities?.ops?.includes('setCSS')) return json(res,409,{ok:false,reason:'Linked text style updates are not available for this renderer yet.'});
-          result=applyPlan(ctx.appRoot,require('./text-style-update.cjs').plan(ctx.appRoot,{type:'update',revision:op.libraryRevision,id:op.styleId,name:op.name,properties:op.properties}));
+          if (!ctx.adapter.capabilities?.ops?.includes('setCSS')&&ctx.adapter.name!=='react') return json(res,409,{ok:false,reason:'Linked text style updates are not available for this renderer yet.'});
+          result=applyPlan(ctx.appRoot,require('./text-style-update.cjs').plan(ctx.appRoot,{type:'update',revision:op.libraryRevision,id:op.styleId,name:op.name,properties:op.properties},ctx.adapter.name==='react'?'react':'html'));
         } else if (op.type === 'applyTextStyle' || op.type === 'detachTextStyle' || op.type === 'resetTextStyle') {
           const reactStyles=ctx.adapter.name==='react';
           if (!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!reactStyles) return json(res,409,{ok:false,reason:'Linked text style application is not available for this renderer yet.'});
