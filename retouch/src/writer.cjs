@@ -84,6 +84,7 @@ function describeElement(resolved) {
 
   const textInfo = literalTextRange(node, source);
   return {
+    svgPaint: {reason:node.openingElement.attributes.some(a=>a.type==='JSXSpreadAttribute')?'Spread props may control this layer’s classes.':null},
     svgInsertion: require('./jsx-svg-insert.cjs').describe(resolved),
     svgGeometry: require('./jsx-svg-geometry.cjs').describe(resolved),
     id: element.id,

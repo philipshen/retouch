@@ -401,3 +401,12 @@ Release creates a JSX shape in one undo step; Escape discards the preview. The
 change applies to every rendered instance of that source container. Containers
 with spread props, explicit children props or injected HTML are not supported.
 SVG drawing directly into an HTML/JSX layout container remains unfinished.
+
+
+React SVG layers in Tailwind projects now expose **SVG paint** controls for fill,
+stroke, stroke width, line ends, line joins and dash patterns. Choose a screen
+scope before editing to create a breakpoint override. Reset removes that scope's
+paint utility and reveals the inherited CSS or original SVG attribute. Dynamic
+class expressions, spread-controlled classes and inline property overrides are
+protected. These controls require Tailwind; general React CSS authoring and SVG
+paint servers/gradients remain unfinished.

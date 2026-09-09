@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 279 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 281 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1484,3 +1484,26 @@ the overlay screenshot was inspected.
 
 React SVG paint/structural tools, JSX-layout drawing, vector path tools and
 cross-framework parity remain incomplete. The native archive predates this work.
+
+
+### Responsive React SVG paint
+
+React SVG layers now expose fill, stroke, stroke width, line ends, line joins
+and dash-pattern controls through the existing scoped Tailwind class writer.
+The utility editor distinguishes stroke color from width, preserves unrelated
+classes/variants and important flags, and removes only the selected scope's
+property on reset. Dynamic class expressions, spread-controlled classes and
+inline property overrides are protected in the inspector. Original SVG
+presentation attributes remain in source beneath these CSS overrides.
+
+All 281 unit tests pass, including utility classification, screen-scope
+preservation, reset, important flags and invalid value rejection. The real Next
+fixture now includes Tailwind 4.1.13 and verifies all six computed properties,
+base fill versus a 768px override, phone/tablet switching, scoped reset and exact
+source restoration in Chromium and WebKit. Its existing geometry, preset/drawing
+and history checks also pass. A selection assertion was corrected to wait for
+the selected layer and inspector to settle. The paint screenshot was inspected.
+
+These controls require Tailwind. General React CSS authoring, SVG paint servers
+and gradients, structural SVG tools and cross-framework parity remain
+incomplete. The desktop archive predates these controls.
