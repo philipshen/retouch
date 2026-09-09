@@ -4495,3 +4495,25 @@ passed in `/private/tmp/retouch-svg-shared-unit.log`. Run with
 Definitions in other documents are still external links. Symbol expansion, embedded
 fonts/images, full animation snapshots and complete export parity remain unfinished.
 Native app launches remain paused.
+
+### PNG export of SVG canvases (2026-09-09)
+
+Added Export PNG and a 1×–4× scale picker beside SVG export. PNG rasterizes the
+computed-style SVG snapshot, including collected local definitions, at the chosen
+output dimensions and downloads a scale-suffixed filename. Alpha is preserved.
+Output is bounded to 32 million pixels and 16,384px per side. The scale choice
+survives inspector rebuilds within the current editor session. Source is unchanged.
+
+Chromium and WebKit downloaded PNG files at 1×, 2× and 4× and independently
+decoded them to verify dimensions, exact colored pixels on both sides of a scaled
+edge, filename suffixes and transparency. SVG export checks still pass. Logs:
+`/private/tmp/retouch-png-chromium.log`, `/private/tmp/retouch-png-webkit.log`.
+The extended Chromium check verifies refusal of external image dependencies and
+oversized output before allocation (`/private/tmp/retouch-png-bounds.log`). Invalid
+scales and SVG text also fail explicitly. All 375 unit tests passed in
+`/private/tmp/retouch-png-unit.log`. Reusable script: `npm run test:e2e:png-export`
+with RT_INSPECTOR_FIXTURE set.
+
+PNG currently refuses SVG text/foreignObject and nonembedded external resources;
+font/image embedding, symbol expansion and full asset fidelity remain unfinished.
+This exports SVG canvases, not arbitrary HTML layers. Native launches remain paused.

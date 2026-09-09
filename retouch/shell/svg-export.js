@@ -49,6 +49,27 @@
   copy.setAttribute('xmlns','http://www.w3.org/2000/svg');copy.setAttribute('width',String(width));copy.setAttribute('height',String(height));copy.style.width=width+'px';copy.style.height=height+'px';
   return {text:new XMLSerializer().serializeToString(copy),width,height,name:(svg.getAttribute('aria-label')||svg.id||'retouch-canvas').replace(/[^\p{L}\p{N}_-]+/gu,'-').slice(0,80)||'retouch-canvas'};
  }
- function download(target){const result=snapshot(target),url=URL.createObjectURL(new Blob([result.text],{type:'image/svg+xml'})),link=document.createElement('a');link.href=url;link.download=result.name+'.svg';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);return result;}
- root.RetouchSVGExport={snapshot,download};
+ function save(blob,name){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+ function download(target){const result=snapshot(target);save(new Blob([result.text],{type:'image/svg+xml'}),result.name+'.svg');return result;}
+ async function png(target,scale=1){
+  if(![1,2,3,4].includes(scale))throw Error('Choose a PNG scale from 1× to 4×.');
+  const result=snapshot(target),parsed=new DOMParser().parseFromString(result.text,'image/svg+xml');
+  if(parsed.querySelector('text,foreignObject'))throw Error('PNG export with text or embedded HTML is not supported yet.');
+  for(const node of parsed.querySelectorAll('*')){
+   const urls=[...(node.getAttribute('style')||'').matchAll(/url\(["']?([^"')]+)["']?\)/g)].map(match=>match[1]);
+   if(node.localName!=='a')for(const attr of node.attributes)if(attr.localName==='href')urls.push(attr.value);
+   if(urls.some(url=>!url.startsWith('#')&&!url.startsWith('data:')))throw Error('Embed linked images and external SVG resources before exporting PNG.');
+  }
+  const width=Math.ceil(result.width*scale),height=Math.ceil(result.height*scale);
+  if(width>16384||height>16384||width*height>32000000)throw Error('Choose a smaller scale: PNG exports support up to 32 million pixels and 16,384 pixels per side.');
+  const url=URL.createObjectURL(new Blob([result.text],{type:'image/svg+xml'}));
+  try{
+   const image=new Image();image.src=url;await image.decode();
+   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d');if(!context)throw Error('Could not create the PNG canvas.');context.drawImage(image,0,0,width,height);
+   const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(Error('Could not encode PNG.')),'image/png'));
+   return {...result,width,height,blob};
+  }finally{URL.revokeObjectURL(url);}
+ }
+ async function downloadPNG(target,scale=1){const result=await png(target,scale);save(result.blob,result.name+(scale===1?'':'@'+scale+'x')+'.png');return result;}
+ root.RetouchSVGExport={snapshot,download,png,downloadPNG};
 })(window);
