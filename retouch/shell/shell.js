@@ -893,7 +893,7 @@ function renderPanelContents() {
   if(info.svgGeometry){
     const geometry=RetouchInspector.section('SVG geometry');
     const pointField=info.svgGeometry.fields.find(field=>['points','d'].includes(field.name));
-    if(pointField&&pointField.editable!==false&&(pointField.name==='d'?RetouchSVGPath.parse(pointField.value)?.nodes:RetouchSVGPoints.parse(pointField.value))?.length>=2){const editPoints=RetouchInspector.button('Edit vector points',()=>editSVGPoints(info));editPoints.dataset.canvasTool='vertices';geometry.append(editPoints);}
+    if(pointField&&pointField.editable!==false&&(pointField.name==='d'?RetouchSVGPath.parseCompound(pointField.value)?.subpaths[0].nodes:RetouchSVGPoints.parse(pointField.value))?.length>=2){const editPoints=RetouchInspector.button('Edit vector points',()=>editSVGPoints(info));editPoints.dataset.canvasTool='vertices';geometry.append(editPoints);}
     for(const field of info.svgGeometry.fields){const input=document.createElement('input');input.type='text';input.value=field.value??'';input.placeholder=field.editable===false?'Dynamic value':'Default';input.disabled=field.editable===false;if(field.reason)input.title=field.reason;input.onchange=()=>setSVGGeometry(field.name,input.value.trim()||null);RetouchInspector.field(geometry,'Shape '+field.label,input);const reset=RetouchInspector.button('Reset shape '+field.label.toLowerCase(),()=>setSVGGeometry(field.name,null));reset.disabled=field.value===null||field.editable===false;geometry.append(reset);}
     RetouchInspector.note(geometry,pointField?'Drag points or use arrow keys (Shift: 10 units). Click + to add a point; Delete removes the selected point. Done or Enter saves; Escape cancels. Points are shared across screen sizes.':'Geometry is shared across screen sizes. Values use SVG coordinates, px or %. The SVG viewport and page CSS can affect the rendered result.');panelBody.append(geometry);
   }
@@ -1878,11 +1878,11 @@ async function prepareVectorCanvas(info,target){
 async function editSVGPoints(info){
   if(panelTasks||undoBusy||sourceRequests||editing)return;
   stopDrawing?.();
-  const targets=matchingEls(info.id),field=info.svgGeometry?.fields.find(field=>['points','d'].includes(field.name)),pathData=field?.name==='d'?RetouchSVGPath.parse(field.value):null,points=pathData?.nodes||RetouchSVGPoints.parse(field?.value);
+  const targets=matchingEls(info.id),field=info.svgGeometry?.fields.find(field=>['points','d'].includes(field.name)),pathData=field?.name==='d'?RetouchSVGPath.parseCompound(field.value):null,points=pathData?.subpaths[0].nodes||RetouchSVGPoints.parse(field?.value);
   if(targets.length!==1)return toast('Select a vector rendered once to edit its points.','err');
   if(!points||points.length<2||field.editable===false)return;
   const target=targets[0];
-  if(field.name==='d'?!RetouchSVGPath.equivalent(pathData,RetouchSVGPath.parse(target.getAttribute('d'))):target.getAttribute(field.name)!==field.value)return toast('The vector changed. Re-select it before editing.','err');
+  if(field.name==='d'?!RetouchSVGPath.equivalentCompound(pathData,RetouchSVGPath.parseCompound(target.getAttribute('d'))):target.getAttribute(field.name)!==field.value)return toast('The vector changed. Re-select it before editing.','err');
   if(!await prepareVectorCanvas(info,target))return;
   stopDrawing=RetouchSVGVertices.mount({target,points,pathData,frame:iframe,canvas:canvasSurface,
     onCommit:value=>{if(sel?.info===info)setSVGGeometry(field.name,value);},

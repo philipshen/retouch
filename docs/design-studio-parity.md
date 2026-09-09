@@ -3156,3 +3156,40 @@ buttons, movement selector and curve controls without clipped toolbar actions.
 
 Full vector networks, compound paths/arcs, booleans/masks, the wider Figma Design
 scope, arbitrary-site authoring and trusted Mac distribution remain incomplete.
+
+
+### 2026-09-09 — Compound SVG contour editing
+
+The path model now accepts multiple supported subpaths in one SVG d attribute.
+It preserves contour order, winding, closure and relative moveto origins after
+open or closed contours. The editor uses the complete document for source and CSS
+geometry checks. HTML and JSX writes retain surrounding source identities, paint
+and fill-rule attributes. The single-contour API remains available for Pen and
+geometry helpers.
+
+A Contour picker and clickable secondary contour outlines choose which anchors
+to edit. Pending changes survive switches, all contours receive preview outlines,
+and Done commits the complete path in one source operation. Escape discards the
+whole pending edit. The shared 512-anchor limit applies across all contours, with
+at most 128 contours. Deletion refuses a degenerate remaining contour before
+mutating the preview.
+
+All 349 unit tests pass in `/private/tmp/retouch-compound-unit.log`. Compound
+browser workflows pass in `/private/tmp/retouch-compound-html-chromium.log`,
+`/private/tmp/retouch-compound-react-webkit.log`,
+`/private/tmp/retouch-compound-html-webkit-svg-compound.log`, and
+`/private/tmp/retouch-compound-react-chromium-svg-compound.log`.
+These verify even-odd holes, untouched outer/neighboring contours, open curve
+handles, picker and outline selection, isolated pending edits across contours,
+50/100/200 percent zoom through nested transforms, cancellation and exact source
+undo/redo. The inspected `/private/tmp/retouch-compound-html-chromium.png` shows
+the selected hole, secondary outlines and wrapped but fully visible toolbar.
+Single-contour creation/handle-mode regressions pass in
+`/private/tmp/retouch-compound-html-chromium-svg-handle-modes.log` and
+`/private/tmp/retouch-compound-react-webkit-svg-handle-modes.log`.
+
+Supported contours still use M/L/H/V/C/S/Q/T/Z. Arcs, move-only/degenerate contours,
+drawing commands immediately after Z without a new moveto, creating/removing whole
+contours, vector networks, booleans and masks remain open. Native launches remain
+paused; no desktop build or launch occurred. Full Figma Design parity, unrestricted
+site authoring and trusted Mac distribution remain incomplete.

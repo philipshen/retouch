@@ -12,7 +12,7 @@
     if(closed){if(nodes.at(-1).out||nodes[0].in)d+=' '+segment(nodes.at(-1),nodes[0]);d+=' Z';}
     return d;
   }
-  function parse(text){
+  function parseCompound(text){
     if(typeof text!=='string'||text.length>100000)return null;
     const tokens=[],number=/[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?/iy;
     let i=0;
@@ -24,11 +24,17 @@
       else{if(typeof tokens.at(-1)==='number'&&!separated&&!/[+\-.]/.test(text[i]))return null;number.lastIndex=i;const match=number.exec(text);if(!match)return null;tokens.push(Number(match[0]));i=number.lastIndex;}
       if(tokens.length>4096)return null;
     }
-    const nodes=[];let at=0,command=null,previous=null,quadratic=null,closed=false;
+    const subpaths=[];let nodes=[],at=0,command=null,previous=null,quadratic=null,closed=false;
+    function finish(){
+      if(closed&&nodes.length>2){const first=nodes[0],last=nodes.at(-1);if(first.x===last.x&&first.y===last.y){if(last.in)first.in=last.in;nodes.pop();}}
+      if(!serialize(nodes,closed))return false;subpaths.push({nodes,closed});return subpaths.length<=128;
+    }
     function numbers(count){const v=tokens.slice(at,at+count);if(v.length!==count||v.some(n=>typeof n!=='number'||!Number.isFinite(n)))return null;at+=count;return v;}
     while(at<tokens.length){
       if(typeof tokens[at]==='string')command=tokens[at++];
-      if(!command||closed)return null;const op=command.toUpperCase(),relative=command!==op,a=nodes.at(-1)||{x:0,y:0};
+      if(!command)return null;const op=command.toUpperCase(),relative=command!==op,a=(closed?nodes[0]:nodes.at(-1))||{x:0,y:0};
+      if(op==='M'&&nodes.length){if(!finish())return null;nodes=[];closed=false;previous=null;quadratic=null;}
+      if(closed)return null;
       if(!nodes.length&&op!=='M')return null;
       if(op==='Z'){closed=true;command=null;continue;}
       const count={M:2,L:2,H:1,V:1,C:6,S:4,Q:4,T:2}[op];if(!count)return null;const v=numbers(count);if(!v)return null;
@@ -42,9 +48,16 @@
       if(!['Q','T'].includes(op))quadratic=null;previous=op;
       if(nodes.length>513)return null;
     }
-    if(closed&&nodes.length>2){const first=nodes[0],last=nodes.at(-1);if(first.x===last.x&&first.y===last.y){if(last.in)first.in=last.in;nodes.pop();}}
-    return serialize(nodes,closed)?{nodes,closed}:null;
+    if(!finish())return null;return serializeCompound({subpaths})?{subpaths}:null;
   }
+  function parse(text){const result=parseCompound(text);return result?.subpaths.length===1?result.subpaths[0]:null;}
+  function serializeCompound(document){
+    if(!document||!Array.isArray(document.subpaths)||!document.subpaths.length||document.subpaths.length>128)return null;
+    let total=0;const parts=[];
+    for(const part of document.subpaths){if(!part||!Array.isArray(part.nodes)||(total+=part.nodes.length)>512)return null;const d=serialize(part.nodes,part.closed);if(!d)return null;parts.push(d);}
+    return parts.join(' ');
+  }
+  function equivalentCompound(a,b){return !!a&&!!b&&a.subpaths.length===b.subpaths.length&&a.subpaths.every((p,i)=>equivalent(p,b.subpaths[i]));}
   const midpoint=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
   function segmentMiddle(a,b){const ab=midpoint(a,a.out||a),bc=midpoint(a.out||a,b.in||b),cd=midpoint(b.in||b,b);return midpoint(midpoint(ab,bc),midpoint(bc,cd));}
   function split(nodes,index,closed){
@@ -79,5 +92,5 @@
     return (!next.in||coordinate(next.in))&&(!next.out||coordinate(next.out))?next:null;
   }
   function equivalent(a,b){return !!a&&!!b&&a.closed===b.closed&&a.nodes.length===b.nodes.length&&a.nodes.every((p,i)=>['','in','out'].every(key=>{const x=key?p[key]:p,y=key?b.nodes[i][key]:b.nodes[i];return !x&&!y||x&&y&&Math.abs(x.x-y.x)<1e-6&&Math.abs(x.y-y.y)<1e-6;}));}
-  const api={serialize,curved,parse,split,segmentMiddle,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
+  const api={serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,split,segmentMiddle,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
 })(typeof window==='object'?window:globalThis);

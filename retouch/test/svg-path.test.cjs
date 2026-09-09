@@ -55,3 +55,20 @@ test('Corner and smooth conversion handle interior points, endpoints and two-anc
   const loop=path.smooth(nodes,0,true);assert.deepEqual(loop,nodes[0]);
   assert.equal(path.smooth(line,-1),null);
 });
+
+test('Compound paths preserve contour order, closure and relative moveto origins',()=>{
+  const d='M10 20h80v60h-80z m20 20h40v20h-40z M150 20q20 30 40 0t40 0',doc=path.parseCompound(d);
+  assert.equal(doc.subpaths.length,3);assert.deepEqual(doc.subpaths.map(p=>p.closed),[true,true,false]);assert.deepEqual(doc.subpaths[1].nodes[0],{x:30,y:40});
+  assert.equal(path.parse(d),null);assert.ok(path.equivalentCompound(doc,path.parseCompound(path.serializeCompound(doc))));
+  assert.deepEqual(path.parseCompound('m10 20l30 10m20 30l10 0').subpaths[1].nodes[0],{x:60,y:60});
+  const unchanged=JSON.parse(JSON.stringify(doc.subpaths[0]));doc.subpaths[1].nodes[0]=path.translate(doc.subpaths[1].nodes[0],3,4);assert.deepEqual(doc.subpaths[0],unchanged);
+  for(const bad of ['M0 0M10 10L20 20','M0 0L10 10 M2 2A1 1 0 0 0 3 3','M0 0L10 10Z L20 20'])assert.equal(path.parseCompound(bad),null,bad);
+  assert.equal(path.serializeCompound({subpaths:Array(129).fill(doc.subpaths[0])}),null);
+  assert.equal(path.serializeCompound({subpaths:Array(128).fill({nodes:Array.from({length:5},(_,i)=>({x:i,y:i})),closed:false})}),null);
+});
+for(const kind of ['html','react'])test(kind+' compound geometry edits preserve holes, paint and surrounding source identity',()=>{
+  const before='M0 0H100V100H0Z M20 20V80H80V20Z',after='M0 0H100V100H0Z M25 20V80H80V20Z';
+  const source=kind==='html'?'<svg><path d="'+before+'" fill-rule="evenodd" fill="red"/><circle r="5"/></svg>':'export default()=> <svg><path d="'+before+'" fillRule="evenodd" fill="red"/><circle r="5"/></svg>',adapter=kind==='html'?html:react,relPath=kind==='html'?'index.html':'page.jsx';
+  const collect=s=>kind==='html'?html.collect(s,relPath).elements:ids.collectElements(s,relPath).elements,elements=collect(source),tag=e=>kind==='html'?e.tag:ids.jsxElementName(e.node),r={source,elements,element:elements.find(e=>tag(e)==='path'),hash:kind==='html'?html.contentHash(source):ids.contentHash(source),file:'/tmp/'+relPath,relPath};
+  const result=adapter.planOp(r,{type:'setSVGGeometry',property:'d',value:after,fileHash:r.hash});assert.equal(result.ok,true,result.reason);assert.equal(result.edits[0].after,source.replace(before,after));assert.deepEqual(collect(result.edits[0].after).map(e=>e.id),elements.map(e=>e.id));
+});
