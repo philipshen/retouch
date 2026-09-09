@@ -5007,3 +5007,36 @@ this endpoint is their transport boundary, not an automatic discovery feature.
 Parser CPU behavior under adversarial inputs and disconnected/slow body streams
 were not stress-tested. Full parity remains incomplete; native launches remain
 paused.
+
+### Declared variable-font inspection in the typography inspector
+
+The shared HTML/React/Liquid typography inspector can list readable @font-face
+URLs for the selected element's primary computed family and inspect a chosen
+file. Browser fetch uses normal CORS and same-origin credentials, a 15-second
+combined timeout and a 16 MB body limit; the authenticated sidecar parses axes.
+The inspector shows names, tags, ranges and defaults, bounds existing axis inputs,
+and applies an axis default through the existing responsive source-write/undo
+path. Inspection itself never changes source. A bounded metadata cache keyed by
+page origin and URL survives iframe reloads, expires after five minutes, and is
+refreshed explicitly. Failed reinspection clears old metadata/ranges and supports
+retry. The font-axis npm browser command includes discovery coverage.
+
+The actual Geist WOFF2 fixture yielded Weight 100–900, default 400. HTML, React
+and local Liquid fixture flows passed on Chromium and WebKit, including range
+validation, default application, cached metadata across source reloads, responsive
+isolation and exact undo. Logs: /private/tmp/retouch-font-discovery-html-fixed-
+{chromium,webkit}.log and /private/tmp/retouch-font-discovery-{react,liquid}-
+{chromium,webkit}.log. Additional HTML browser runs injected a metadata error and
+verified cleared bounds, no source changes, and successful retry on both engines:
+/private/tmp/retouch-font-discovery-recovery-{chromium,webkit}.log. All 382 unit
+tests passed (/private/tmp/retouch-font-discovery-units.log). All successful runs
+exited 0. Two initial class-adapter Chromium runs failed before browser launch
+because the WebKit-only browser cache path was supplied; corrected runs passed.
+The inspector screenshot /private/tmp/retouch-font-discovery.png was inspected.
+
+Declared files do not prove the font used for each glyph. Local sources, fallback
+fonts, unreadable cross-origin stylesheets, shadow-root styles, escaped CSS names
+and URLs, and full conditional stylesheet semantics remain incomplete. Metadata
+can be stale until reinspection/expiry. This is fixture verification, not live
+Shopify verification or full Figma parity. Native app launches remain paused;
+trusted macOS distribution and broad arbitrary-site parity remain unverified.

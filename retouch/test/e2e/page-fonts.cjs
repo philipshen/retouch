@@ -53,6 +53,18 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    await write(async()=>{const input=page.getByLabel('Weight axis',{exact:true});await input.fill('850');await input.press('Tab');},/850/);const heavyWidth=await extent();
    if(process.env.RT_E2E_VARIABLE_FONT)assert.ok(Math.abs(heavyWidth-lightWidth)>.01,JSON.stringify({lightWidth,heavyWidth}));
    if(process.env.RT_E2E_FONT_AXES_SCREENSHOT){await page.getByLabel('Weight axis',{exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:process.env.RT_E2E_FONT_AXES_SCREENSHOT});}
+   if(process.env.RT_E2E_FONT_DISCOVERY){
+    const beforeInspect=read();let requests=0;const listener=request=>{if(request.url().endsWith('/rt/__api/font-axes'))requests++;};page.on('request',listener);
+    await page.getByRole('button',{name:'Inspect declared font axes',exact:true}).click();await wait(async()=>/Weight \(wght\): 100 to 900 · default 400/.test(await page.getByLabel('Declared font axes',{exact:true}).textContent()));assert.equal(requests,1);page.off('request',listener);assert.equal(read(),beforeInspect);
+    const weightInput=page.getByLabel('Weight axis',{exact:true});assert.equal(await weightInput.getAttribute('min'),'100');assert.equal(await weightInput.getAttribute('max'),'900');
+    if(process.env.RT_E2E_FONT_DISCOVERY_SCREENSHOT){await page.getByRole('button',{name:'Use Weight default',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:process.env.RT_E2E_FONT_DISCOVERY_SCREENSHOT});}
+    await weightInput.fill('950');await weightInput.press('Tab');assert.equal(await weightInput.evaluate(node=>node.checkValidity()),false);assert.equal(read(),beforeInspect);await weightInput.fill('850');await weightInput.press('Tab');await settled();
+    await write(()=>page.getByRole('button',{name:'Use Weight default',exact:true}).click(),/400/);const beforeDefault=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===beforeDefault);await settled();await wait(async()=>/850/.test(await axes()));assert.equal(await page.getByLabel('Weight axis',{exact:true}).getAttribute('max'),'900');
+    const beforeFailure=read(),failureRoute='**/rt/__api/font-axes';await page.route(failureRoute,route=>route.fulfill({status:422,contentType:'application/json',body:JSON.stringify({ok:false,reason:'Font metadata could not be read.'})}));
+    await page.getByRole('button',{name:'Inspect declared font axes',exact:true}).click();await wait(async()=>/Font metadata could not be read/.test(await page.getByLabel('Declared font axes',{exact:true}).textContent()));assert.equal(read(),beforeFailure);assert.equal(await page.getByLabel('Weight axis',{exact:true}).getAttribute('max'),'10000');assert.equal(await page.getByRole('button',{name:'Use Weight default',exact:true}).count(),0);
+    await page.unroute(failureRoute);await page.getByRole('button',{name:'Inspect declared font axes',exact:true}).click();await wait(async()=>await page.getByLabel('Weight axis',{exact:true}).getAttribute('max')==='900');assert.equal(read(),beforeFailure);
+    console.log(engine+' '+kind+': PASS declared font discovery, metadata request, range validation, default application, cached metadata, failure recovery and exact undo');
+   }
    await write(()=>page.getByLabel('Add font axis',{exact:true}).selectOption('wdth'),/wdth/);assert.match(await axes(),/850/);
    await write(()=>page.getByRole('button',{name:'Remove Width axis',exact:true}).click(),/850/);assert.doesNotMatch(await axes(),/wdth/);
    const beforeCustom=read();await page.getByLabel('Add font axis',{exact:true}).selectOption('custom');assert.equal(read(),beforeCustom);

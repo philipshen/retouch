@@ -147,16 +147,17 @@
     const reset=button('Reset number formatting',onReset);reset.disabled=!canReset;details.append(reset);
   }
   const variationToken=t=>/^\[font-variation-settings:.+\]$/.test(t);
-  function variationTypography(parent,css,onChange,onReset,canReset){
+  function variationTypography(parent,css,onChange,onReset,canReset,d){
     const values=root.RetouchHTMLCSSValues,axes=values.parseVariations(css.fontVariationSettings);
     const details=document.createElement('details');details.open=variationExpanded;details.ontoggle=()=>{if(details.isConnected)variationExpanded=details.open;};
     const summary=document.createElement('summary');summary.textContent='Variable font axes';details.append(summary);parent.append(details);
+    const axisInputs=new Map();
     const labels={wght:'Weight',wdth:'Width',opsz:'Optical size',slnt:'Slant',ital:'Italic'};
     const defaults={wght:parseFloat(css.fontWeight)||400,wdth:100,opsz:parseFloat(css.fontSize)||16,slnt:0,ital:0};
     if(axes){
       const write=next=>onChange(values.serializeVariations(next));
       for(const [tag,value]of axes){
-        number(details,(labels[tag]||tag)+' axis',value,-10000,10000,next=>write(axes.map(axis=>axis[0]===tag?[tag,next]:axis)));
+        axisInputs.set(tag,number(details,(labels[tag]||tag)+' axis',value,-10000,10000,next=>write(axes.map(axis=>axis[0]===tag?[tag,next]:axis))));
         details.append(button('Remove '+(labels[tag]||tag)+' axis',()=>write(axes.filter(axis=>axis[0]!==tag))));
       }
       const custom=document.createElement('div');custom.hidden=true;
@@ -174,6 +175,31 @@
       note(custom,'Tags are case-sensitive. Use the tag and range documented by the font designer.');details.append(custom);
 
     }else note(details,'This axis syntax cannot be edited here yet. Reset removes the current override.');
+    if(d&&root.RetouchFontMetadata){
+      const metadata=root.RetouchFontMetadata,declared=metadata.sources(d,css.fontFamily),results=document.createElement('div');results.setAttribute('aria-label','Declared font axes');
+      if(declared.files.length){
+        let selected=metadata.selection(d,declared.family);if(!declared.files.some(file=>file.url===selected))selected=declared.files[0].url;
+        const choose=select(details,'Declared font file',declared.files.map(file=>[file.url,file.label]),selected,value=>{selected=value;metadata.selection(d,declared.family,value);render();});
+        const inspect=button('Inspect declared font axes',async()=>{
+          inspect.disabled=true;choose.disabled=true;results.textContent='Reading font axes…';
+          try{const found=await metadata.inspect(d,selected);if(details.isConnected)render(found);}catch(error){if(details.isConnected){render();results.textContent=error.message;}}finally{inspect.disabled=false;choose.disabled=false;}
+        });
+        function render(inspected){
+          results.replaceChildren();for(const input of axisInputs.values()){input.min=-10000;input.max=10000;input.title='';}
+          const found=inspected||metadata.peek(d,selected);if(!found)return;
+          if(!found.length)note(results,'This declared file has no variable axes.');
+          for(const axis of found){
+            note(results,axis.name+' ('+axis.tag+'): '+axis.min+' to '+axis.max+' · default '+axis.default+(axis.hidden?' · hidden axis':''));
+            const compatible=/^[A-Za-z0-9]{4}$/.test(axis.tag)&&axis.min>=-10000&&axis.max<=10000;
+            if(compatible&&axisInputs.has(axis.tag)){const input=axisInputs.get(axis.tag);input.min=axis.min;input.max=axis.max;input.title='Declared font range; default '+axis.default;}
+            if(compatible&&axes&&(axes.length<16||axes.some(entry=>entry[0]===axis.tag))){const use=button('Use '+axis.name+' default',()=>{const next=new Map(axes);next.set(axis.tag,axis.default);onChange(values.serializeVariations([...next]));});results.append(use);}
+          }
+        }
+        details.append(inspect,results);render();
+        note(details,'Metadata is from the last inspection of this declared file. Inspect again after changing the font file. Local fonts and fallback glyphs may differ.');
+      }else note(details,'No readable font-file declaration found for '+declared.family+'.');
+      if(declared.partial)note(details,'Some stylesheets could not be inspected.');
+    }
     note(details,'Only axes supported by this font affect its appearance. Axis overrides take precedence over basic typography controls.');
     const reset=button('Reset font axes',onReset);reset.disabled=!canReset;details.append(reset);
   }
@@ -435,7 +461,7 @@
       select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(t=>t==='italic'||t==='not-italic',v==='italic'?'italic':'not-italic'));
       select(sec,'Text decoration',[['none','None'],['underline','Underline'],['line-through','Strikethrough'],['overline','Overline']],css.textDecorationLine,v=>change(t=>['underline','line-through','overline','no-underline'].includes(t),v==='none'?'no-underline':v));
       select(sec,'Text case',[['none','As written'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']],css.textTransform,v=>change(t=>['uppercase','lowercase','capitalize','normal-case'].includes(t),v==='none'?'normal-case':v));
-      variationTypography(sec,css,value=>change(variationToken,`[font-variation-settings:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,variationToken,'')),tokens(info.className).map(base).some(t=>t&&variationToken(t)));
+      variationTypography(sec,css,value=>change(variationToken,`[font-variation-settings:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,variationToken,'')),tokens(info.className).map(base).some(t=>t&&variationToken(t)),d);
       numericTypography(sec,css.fontVariantNumeric,value=>change(numericToken,`[font-variant-numeric:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,numericToken,'')),tokens(info.className).map(base).some(t=>t&&numericToken(t)));
       const textOverride=t=>variationToken(t)||numericToken(t)||lineHeightToken(t)||fontFamilyToken(t)||controls.some(([,re])=>re.test(t)) || /^(?:leading-|tracking-|-tracking-|text-(?:left|center|right|justify|start|end)$)/.test(t) || ['italic','not-italic','underline','line-through','overline','no-underline','uppercase','lowercase','capitalize','normal-case'].includes(t);
       const reset=button('Reset text overrides',()=>save(replace(info.className,textOverride,'')));
