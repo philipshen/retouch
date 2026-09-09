@@ -5514,3 +5514,25 @@ HTML/React/local-Liquid x Chromium/WebKit, all six processes exit 0:
 They exercise create/undo/redo, rename/undo/redo and delete/undo/redo, plus the
 existing HTML apply/detach, cross-page update and screen isolation flows. Syntax
 and diff checks passed. No native launches occurred. Full parity remains open.
+
+### Linked text-style override visibility and reset
+
+HTML's Saved text styles inspector now reports the number of local overrides in
+the active screen scope and offers Reset text style overrides. The count includes
+differing values, explicit property resets and retained overrides discovered by
+previous library updates. Reset uses the current catalog revision and source
+hash, restores the linked style's declarations, removes retained properties no
+longer defined by the style, and clears override metadata in one undoable source
+operation. Other scopes and unrelated local properties are preserved. The action
+is disabled when no overrides exist or the referenced style is unavailable.
+
+All 411 unit tests passed, exit 0:
+/private/tmp/retouch-style-overrides-units.log. Scope-isolation and obsolete-
+property reset cases are covered directly. HTML Chromium and WebKit browser runs
+exited 0 (/private/tmp/retouch-style-overrides-{chromium,webkit}.log): edit a linked
+paragraph from 32px to 40px through the inspector, observe one override, reset to
+32px, observe no overrides and disabled reset, then undo reset and edit with exact
+source restoration. Existing catalog history, propagation and responsive cases
+also pass. Syntax/diff checks passed. Overrides identical to the original style
+cannot be inferred as intentional from source values alone. React/Liquid linked
+styles and full parity remain unfinished; native launches remain paused.

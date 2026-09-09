@@ -14,15 +14,23 @@ function links(resolved){
  }
  return input;
 }
-function describe(resolved){try{return {textStyleLinks:links(resolved)};}catch{return {textStyleLinkReason:'This layer has invalid text style links.'};}}
+function describe(resolved){try{
+ const state=links(resolved),rules=css.describe(resolved);if(rules.cssReason)throw Error(rules.cssReason);
+ const overrides=Object.fromEntries(Object.entries(state).map(([width,link])=>[width,[...new Set([...(link.overrides||[]),...Object.keys(link.properties).filter(property=>rules.cssRules[width]?.[property]!==link.properties[property])])].sort()]));
+ return {textStyleLinks:state,textStyleOverrides:overrides};
+}catch{return {textStyleLinkReason:'This layer has invalid text style links or managed CSS.'};}}
 function plan(resolved,op,style){
  try{
   if(op.fileHash&&op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the element.');
   if(!Number.isInteger(op.width)||op.width<0||op.width>7680)return refuse('Choose a supported screen width.');
   const current=links(resolved);let source=resolved.source;
-  if(op.type==='applyTextStyle'||op.type==='refreshTextStyle'){
+  if(op.type==='applyTextStyle'||op.type==='refreshTextStyle'||op.type==='resetTextStyle'){
    const validated=catalog.validate({version:1,styles:[style]}).styles[0];
    let changes=validated.properties,overrides=[];
+   if(op.type==='resetTextStyle'){
+    const baseline=current[op.width];if(!baseline||baseline.id!==validated.id)return refuse('The layer is no longer linked to this text style.');
+    changes={...validated.properties};for(const property of [...Object.keys(baseline.properties),...(baseline.overrides||[])])if(!Object.hasOwn(changes,property))changes[property]=null;
+   }
    if(op.type==='refreshTextStyle'){
     const baseline=current[op.width];if(!baseline||baseline.id!==validated.id)return refuse('The layer is no longer linked to this text style.');
     const state=css.describe(resolved);if(state.cssReason)return refuse(state.cssReason);

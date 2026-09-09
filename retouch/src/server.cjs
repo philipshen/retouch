@@ -192,10 +192,10 @@ function handle(req, res, ctx) {
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source layer changed. Re-select it before updating the style.'});
           if (!ctx.adapter.capabilities?.ops?.includes('setCSS')) return json(res,409,{ok:false,reason:'Linked text style updates are not available for this renderer yet.'});
           result=applyPlan(ctx.appRoot,require('./text-style-update.cjs').plan(ctx.appRoot,{type:'update',revision:op.libraryRevision,id:op.styleId,name:op.name,properties:op.properties}));
-        } else if (op.type === 'applyTextStyle' || op.type === 'detachTextStyle') {
+        } else if (op.type === 'applyTextStyle' || op.type === 'detachTextStyle' || op.type === 'resetTextStyle') {
           if (!ctx.adapter.capabilities?.ops?.includes('setCSS')) return json(res,409,{ok:false,reason:'Linked text style application is not available for this renderer yet.'});
           let style;
-          if (op.type === 'applyTextStyle') {
+          if (op.type === 'applyTextStyle' || op.type === 'resetTextStyle') {
             const library=require('./text-styles.cjs').read(ctx.appRoot);
             if(op.libraryRevision!==library.revision)return json(res,409,{ok:false,reason:'Text styles changed. Reload the library before applying.'});
             style=library.styles.find(item=>item.id===op.styleId);

@@ -32,7 +32,13 @@
    picker.disabled=!library.styles.length;
    if(!library.styles.length)I.note(controls,'No saved styles yet. Save this layer’s typography to start your library.');
    const style=library.styles.find(style=>style.id===selected);
-   if(options.link){I.note(controls,'Linked style: '+(library.styles.find(item=>item.id===options.link.id)?.name||'Unavailable style'));controls.append(I.button('Detach text style',()=>run(()=>options.detach(),'Text style detached.')));}
+   if(options.link){
+    const linkedStyle=library.styles.find(item=>item.id===options.link.id),overrides=options.overrides||[];
+    I.note(controls,'Linked style: '+(linkedStyle?.name||'Unavailable style'));
+    I.note(controls,overrides.length?overrides.length+' local '+(overrides.length===1?'override':'overrides')+' in this screen scope.':'No local overrides in this screen scope.');
+    if(options.reset){const reset=I.button('Reset text style overrides',()=>run(()=>options.reset(options.link.id,library.revision),'Text style overrides reset.'));reset.disabled=!linkedStyle||!overrides.length;controls.append(reset);}
+    controls.append(I.button('Detach text style',()=>run(()=>options.detach(),'Text style detached.')));
+   }
    const name=document.createElement('input');name.type='text';name.maxLength=80;name.value=style?.name||'';name.placeholder='Heading, Body, Caption…';I.field(controls,'Text style name',name);
    function label(){if(!name.value.trim()){name.setCustomValidity('Give the text style a name.');name.reportValidity();return null;}return name.value.trim();}
    name.oninput=()=>name.setCustomValidity('');

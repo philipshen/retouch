@@ -77,3 +77,18 @@ test('coverage checks distinguish actual links from examples in comments and scr
  const source=apply(original).edits[0].after.replace('</body>','<!-- <template data-rt-text-styles="bad"></template> --><script>const example=\'<span data-rt-text-styles="bad">\';</script></body>');
  const result=linked.planFile('/tmp/index.html','index.html',source,{...style,properties:{'font-size':'48px'}});assert.equal(result.ok,true);assert.equal(result.updated,1);
 });
+test('override descriptions detect edits and resets and reset affects only its selected scope',()=>{
+ let source=apply(apply(original).edits[0].after,768).edits[0].after;
+ source=css.plan(resolve(source),{width:0,property:'font-size',value:'44px'}).edits[0].after;
+ source=css.plan(resolve(source),{width:768,changes:{'font-size':'40px','font-family':null}}).edits[0].after;
+ assert.deepEqual(linked.describe(resolve(source)).textStyleOverrides,{0:['font-size'],768:['font-family','font-size']});
+ const reset=linked.plan(resolve(source),{type:'resetTextStyle',width:768},style);assert.equal(reset.ok,true);const after=reset.edits[0].after;
+ assert.equal(css.describe(resolve(after)).cssRules[0]['font-size'],'44px');assert.deepEqual(css.describe(resolve(after)).cssRules[768],style.properties);assert.deepEqual(linked.describe(resolve(after)).textStyleOverrides,{0:['font-size'],768:[]});
+ assert.equal(linked.plan(resolve(original),{type:'resetTextStyle',width:0},style).ok,false);
+});
+test('reset clears retained overrides for properties removed from a style',()=>{
+ let source=apply(original).edits[0].after;source=css.plan(resolve(source),{width:0,property:'font-weight',value:'900'}).edits[0].after;
+ const next={...style,properties:{'font-size':'48px'}};source=linked.planFile('/tmp/index.html','index.html',source,next).edits[0].after;
+ assert.deepEqual(linked.describe(resolve(source)).textStyleOverrides[0],['font-weight']);
+ const after=linked.plan(resolve(source),{type:'resetTextStyle',width:0},next).edits[0].after;assert.deepEqual(css.describe(resolve(after)).cssRules[0],next.properties);assert.deepEqual(linked.describe(resolve(after)).textStyleOverrides[0],[]);
+});
