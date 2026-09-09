@@ -15,7 +15,7 @@ changing those files. The original checkout may continue to evolve independently
 | --- | --- | --- |
 | Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Bounded canvas zoom/scrolling and linked screen comparisons exist. HTML supports multi-selection, range selection, gray/page marquee gestures and framing a consecutive sibling selection. Full document/pages/sections, guides, snapping, pixel-preserving groups, locking/hiding and cross-renderer equivalence remain. |
 | Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. HTML multi-selection, shared CSS and group duplicate/delete/reparenting exist; cross-context clipboard and broader source structures remain. |
-| Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive geometry and responsive solid fill/stroke controls are verified. Full vector authoring, boolean operations, arbitrary masks and a shared geometry model remain. |
+| Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. Full vector authoring, boolean operations, arbitrary masks and a shared geometry model remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. Full constraints, absolute-child authoring, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML supports linear/radial gradient stacks with draggable stops, shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. Font browsing, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 258 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 261 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1149,3 +1149,22 @@ All 258 unit tests pass. Chromium and WebKit verify computed fill/stroke styles,
 phone/tablet inheritance, reset and exact undo alongside SVG geometry checks.
 The paint screenshot was inspected. This covers solid paint and simple strokes;
 gradient/pattern references, vector creation and full parity remain unfinished.
+
+
+### Create SVG primitives
+
+Add shape now inserts rectangles, circles, ellipses and lines into HTML content
+containers or explicitly closed SVG roots/groups. HTML insertion creates a
+200 × 200 SVG viewport and selects the shape. Existing SVG insertion uses its
+viewBox origin/dimensions or numeric width/height, with a 200-unit fallback.
+One transaction creates the viewport and shape together; history restores the
+original parent selection on undo and the new shape selection on redo. Existing
+HTML insertion now uses this same selection-aware history behavior.
+
+All 261 unit tests pass. Chromium and WebKit verify all four new-viewport
+presets, insertion into an existing SVG, visible geometry, exact source undo/redo
+and selection restoration. Source tests cover translated icon viewBoxes, groups,
+stale hashes, templates and unsupported containers. The creation screenshot was
+inspected. The broader HTML workflow also passes in both engines after the
+shared insertion-history change. Drawing by drag, vector path authoring, SVG structural actions,
+transform-aware placement and full parity remain unfinished.

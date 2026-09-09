@@ -806,6 +806,11 @@ function renderPanelContents() {
     const input=document.createElement('input');input.id='layerNameInput';input.type='text';input.maxLength=200;input.value=info.layerName||'';input.placeholder='Use the page’s element label';
     RetouchInspector.field(naming,'Layer name',input);input.onchange=()=>renameLayer(input.value);
     RetouchInspector.note(naming,'Names appear in the editor without changing page text or accessibility labels. Clear to use the original label.');panelBody.append(naming);
+    if(info.svgInsertion){
+      const shapes=RetouchInspector.section('Add shape'),buttons=document.createElement('div');buttons.className='stack-presets';
+      for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Add '+preset,()=>insertLayer(preset,info,'insertSVG')));
+      shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Adds a shape in a new 200 × 200 canvas.':'Adds a shape inside this SVG canvas or group.');panelBody.append(shapes);
+    }
     if(info.svgGeometry){
       const geometry=RetouchInspector.section('SVG geometry');
       for(const field of info.svgGeometry.fields){const input=document.createElement('input');input.type='text';input.value=field.value??'';input.placeholder='Default';input.onchange=()=>setSVGGeometry(field.name,input.value.trim()||null);RetouchInspector.field(geometry,'Shape '+field.label,input);const reset=RetouchInspector.button('Reset shape '+field.label.toLowerCase(),()=>setSVGGeometry(field.name,null));reset.disabled=field.value===null;geometry.append(reset);}
@@ -1638,12 +1643,13 @@ async function moveLayerInto(info,destinationId,position='inside'){
     toast('Layer moved','ok');
   }finally{busyPanel(false);}
 }
-async function insertLayer(preset,info){
+async function insertLayer(preset,info,type='insertElement'){
+  if(panelTasks||undoBusy||sourceRequests)return;
   busyPanel(true);
   try{
-    const result=await api('POST','/rt/__api/op',{type:'insertElement',id:info.id,fileHash:info.fileHash||info.hash,preset});
+    const result=await api('POST','/rt/__api/op',{type,id:info.id,fileHash:info.fileHash||info.hash,preset});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not add layer','err');
-    editorHistory.record({type:'structure',id:info.id,undoId:result.undoId});
+    editorHistory.record({type:'structureSelection',id:info.id,selectionBefore:[info.id],selectionAfter:[result.createdId],undoId:result.undoId});
     await reloadFrame();
     const fresh=await api('GET',resolveUrl(result.createdId));
     if(fresh?.ok){sel={hostId:result.createdId,instanceId:null,scope:'host',info:fresh.element};renderPanel();}

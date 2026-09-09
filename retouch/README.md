@@ -297,10 +297,17 @@ Inline SVG roots, groups and common paths/shapes now appear in Layers. Rectangle
 circles, ellipses and lines expose **SVG geometry** coordinates/sizes with reset
 and source-preserving undo. Attributes use SVG coordinates, px or percentages and
 are shared across screen sizes; the viewport and authored CSS can affect rendering.
-Definitions, SVG text and foreign content are not indexed yet. Shape creation,
-path/pen editing and SVG structural drag/drop remain unfinished.
+Definitions, SVG text and foreign content are not indexed yet. Path/pen editing
+and SVG structural drag/drop remain unfinished.
 
 **SVG paint** edits fill, stroke, stroke width, line ends, line joins and dash
 patterns at the selected screen scope. Use `none` for no fill or stroke. Reset
 removes that scope's override; undo restores exact source. Solid CSS colors and
 `currentColor` are supported; SVG gradient/pattern references are not editable yet.
+
+Select an HTML content container or an explicitly closed SVG canvas/group to use
+**Add shape**: rectangle, circle, ellipse or line. HTML containers get a new
+200 × 200 SVG canvas; existing SVGs use their viewBox (or numeric dimensions) to
+size the shape. The new shape is selected for geometry and paint editing. Undo
+and redo restore both source and selection. Group transforms and page styles
+still affect rendering; drawing a shape directly by dragging is not implemented.
