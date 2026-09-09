@@ -32,3 +32,13 @@ test('positioned class edits retain important geometry, proportional anchors and
  const scaled=I.anchorClasses('absolute left-[20px] top-[30px] w-[80px] h-[40px]',g,'scale','scale');assert.equal(I.inferredAnchor(scaled,'x'),'scale');assert.equal(I.inferredAnchor(scaled,'y'),'scale');assert.match(scaled,/left-\[5%\]/);assert.match(scaled,/h-\[20%\]/);
  assert.match(I.anchorClasses('opacity-90',g,'end','start','right-[20px]!'),/!right-\[300px\]/);assert.equal(I.inferredAnchor('opacity-50','x','right-[20px]'),'end');assert.equal(I.inferredAnchor('left-[20px] right-auto','x','right-[20px]'),'start');assert.throws(()=>I.axisClasses({...g,parentWidth:0},'x','scale'));
 });
+
+test('page font encoding preserves underscores and font weights while rejecting executable CSS',()=>{
+ const I=require('../shell/inspector.js');
+ assert.equal(I.fontFamilyClass('"Page Face", serif'),'[font-family:"Page_Face",_serif]');
+ assert.equal(I.fontFamilyClass('Studio_Test, serif'),String.raw`[font-family:Studio\_Test,_serif]`);
+ for(const value of ['Arial; color:red','url(test)','var(--font)','"Unclosed','Arial,'])assert.equal(I.fontFamilyClass(value),null);
+ assert.equal(I.replace('font-serif font-bold md:font-mono',I.fontFamilyToken,I.fontFamilyClass('serif')),'font-bold md:font-mono [font-family:serif]');
+ const d={fonts:[{family:'"Page Face"'}],querySelectorAll:()=>[{textContent:'Hello'}],defaultView:{getComputedStyle:()=>({fontFamily:'Georgia, serif'})}};
+ assert.deepEqual(I.fontFamilies(d,'monospace').map(([value])=>value),['system-ui','sans-serif','serif','monospace','"Page Face"','Georgia, serif']);
+});

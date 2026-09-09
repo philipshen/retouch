@@ -32,6 +32,16 @@ function imageSource(attr, source) {
 // JSX attribute or open markup (R-9).
 const CLASS_TOKEN_RE = /^[^\s"'`\\<>{}]+$/u;
 
+// Font-family arbitrary properties need quoted names and Tailwind's literal
+// underscore escape. Keep that grammar narrow; serialize as a JSX attribute,
+// whose backslashes are literal. Preserve raw selector ampersands for Tailwind
+// scanning; escape only entity-like sequences and the attribute delimiter.
+function fontFamilyToken(token){
+  const match=/^(?:[^\s"'`\\<>{}]*:)?!?\[font-family:(.*)\]!?$/u.exec(token);
+  return !!match&&token.length<=1000&&match[1].split(',').every(part=>/^(?:(?:[\p{L}\p{N}_-]|\\_)+|"(?:[\p{L}\p{N}_-]|\\_)+"|'(?:[\p{L}\p{N}_-]|\\_)+')$/u.test(part));
+}
+function jsxClassLiteral(value){const quote=value.includes('"')&&!value.includes("'")?"'":'"';return quote+value.replace(/&(?=(?:#[xX][0-9a-fA-F]+|#[0-9]+|[A-Za-z][A-Za-z0-9]*);)/g,'&amp;').replace(new RegExp(quote,'g'),quote==='"'?'&quot;':'&#39;')+quote;}
+
 function refuse(reason) {
   return { ok: false, refused: true, reason };
 }
@@ -178,7 +188,7 @@ function planOp(resolved, op) {
     if (typeof op.classes !== 'string') return refuse('setClasses needs a string.');
     const tokens = op.classes.split(/\s+/).filter(Boolean);
     for (const t of tokens) {
-      if (!CLASS_TOKEN_RE.test(t)) return refuse(`Class token not allowed: ${JSON.stringify(t)}`);
+      if (!CLASS_TOKEN_RE.test(t)&&!fontFamilyToken(t)) return refuse(`Class token not allowed: ${JSON.stringify(t)}`);
     }
     const merged = twMerge(tokens.join(' '));
     const attr = findAttr(node, 'className');
@@ -191,11 +201,11 @@ function planOp(resolved, op) {
       if (merged === '') {
         ms.remove(attr.start - 1, attr.end); // include the preceding space
       } else {
-        ms.overwrite(attr.value.start, attr.value.end, JSON.stringify(merged));
+        ms.overwrite(attr.value.start, attr.value.end, jsxClassLiteral(merged));
       }
     } else {
       if (merged !== '') {
-        ms.appendLeft(node.openingElement.name.end, ` className=${JSON.stringify(merged)}`);
+        ms.appendLeft(node.openingElement.name.end, ` className=${jsxClassLiteral(merged)}`);
       }
     }
   } else if (op.type === 'setText') {

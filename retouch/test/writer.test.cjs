@@ -229,3 +229,17 @@ test('every write leaves the file parseable', () => {
   writer.applyOp(resolved, { type: 'setText', id: el.id, text: 'New heading', fileHash: resolved.hash });
   assert.doesNotThrow(() => id.collectElements(read(root, 'Card.tsx'), 'Card.tsx'));
 });
+
+test('font-family tokens round-trip quoted names and escaped underscores through JSX attributes',()=>{
+ const {resolved}=pick(index,root,'Card.tsx','h2'),classes=String.raw`font-bold md:![font-family:"Page_Face",Studio\_Test,serif]`;
+ const result=writer.applyOp(resolved,{type:'setClasses',classes,fileHash:resolved.hash});assert.ok(result.ok,JSON.stringify(result));index.scanAll();const next=pick(index,root,'Card.tsx','h2').resolved;assert.strictEqual(writer.describeElement(next).className,classes);assert.match(read(root,'Card.tsx'),/className='font-bold md:!\[font-family:"Page_Face"/);
+ for(const value of [String.raw`[font-family:A\22B]`,'[font-family:"A;opacity:0"]','[font-family:"A"><script>]'])assert.ok(writer.planOp(next,{type:'setClasses',classes:value,fileHash:next.hash}).refused);
+});
+
+// Tailwind scans raw source: encoding an ordinary selector ampersand changes it.
+test('class writes preserve raw arbitrary selectors and round-trip entity-like tokens',()=>{
+ const {resolved}=pick(index,root,'Card.tsx','h2'),classes='[&:hover]:opacity-50 custom-&copy;';
+ const result=writer.applyOp(resolved,{type:'setClasses',classes,fileHash:resolved.hash});assert.ok(result.ok);index.scanAll();
+ assert.strictEqual(writer.describeElement(pick(index,root,'Card.tsx','h2').resolved).className,classes);
+ assert.ok(read(root,'Card.tsx').includes('[&:hover]:opacity-50'));
+});

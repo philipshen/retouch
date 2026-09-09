@@ -244,6 +244,19 @@
     }));
     return sec;
   }
+  function fontFamilyClass(value){
+    if(typeof value!=='string'||!value.trim()||value.length>500||!value.split(',').every(part=>/^(?:[\p{L}\p{N}_-]+(?: +[\p{L}\p{N}_-]+)*|"[\p{L}\p{N} _-]+"|'[\p{L}\p{N} _-]+')$/u.test(part.trim())))return null;
+    return '[font-family:'+value.trim().replace(/'/g,'"').replace(/_/g,'\\_').replace(/ /g,'_')+']';
+  }
+  const fontFamilyToken=t=>/^(?:font-(?:sans|serif|mono)|font-\[family-name:.*\]|\[font-family:.*\])$/.test(t);
+  function fontFamilies(d,current){
+    const found=new Map([['system-ui','System UI'],['sans-serif','Sans serif'],['serif','Serif'],['monospace','Monospace']]);
+    function add(value,label){value=value?.trim();if(value&&fontFamilyClass(value)&&!found.has(value)&&found.size<100)found.set(value,label||value.replace(/["']/g,''));}
+    add(current);let count=0;
+    for(const face of d.fonts||[]){add(face.family);if(++count>=200)break;}
+    for(const el of [...d.querySelectorAll('body *')].slice(0,300)){if(el.textContent?.trim())add(d.defaultView.getComputedStyle(el).fontFamily);}
+    return [...found];
+  }
   function typography(info, el, save, changeTag) {
     const sec=section('Typography'); if(!el)return sec;
     const d=el.ownerDocument, css=d.defaultView.getComputedStyle(el);
@@ -273,6 +286,8 @@
       // other font properties. Scope wrapping is handled by the shell afterward.
       const styled=[...el.classList].some(t=>names.includes(t));
       const change=(match,value)=>save(replace(info.className,match,styled?'!'+value:value));
+      select(sec,'Page font',fontFamilies(d,css.fontFamily),css.fontFamily,value=>{const token=fontFamilyClass(value);if(token)change(fontFamilyToken,token);});
+      const resetFamily=button('Reset font family',()=>save(replace(info.className,fontFamilyToken,'')));resetFamily.disabled=!tokens(info.className).map(base).some(t=>t&&fontFamilyToken(t));sec.append(resetFamily);
       for(const [label,re,choices] of controls)select(sec,label,[['','Inherited / custom'],...choices],tokens(info.className).map(base).find(t=>re.test(t))||'',value=>{if(value)change(t=>re.test(t),value);});
       number(sec,'Font size (px)',parseFloat(css.fontSize),1,1000,v=>change(t=>controls[0][1].test(t),`text-[${v}px]`));
       const lineHeight=number(sec,'Line height (px)',parseFloat(css.lineHeight),0,2000,v=>change(t=>t.startsWith('leading-'),`leading-[${v}px]`));
@@ -282,7 +297,7 @@
       select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(t=>t==='italic'||t==='not-italic',v==='italic'?'italic':'not-italic'));
       select(sec,'Text decoration',[['none','None'],['underline','Underline'],['line-through','Strikethrough'],['overline','Overline']],css.textDecorationLine,v=>change(t=>['underline','line-through','overline','no-underline'].includes(t),v==='none'?'no-underline':v));
       select(sec,'Text case',[['none','As written'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']],css.textTransform,v=>change(t=>['uppercase','lowercase','capitalize','normal-case'].includes(t),v==='none'?'normal-case':v));
-      const textOverride=t=>controls.some(([,re])=>re.test(t)) || /^(?:leading-|tracking-|-tracking-|text-(?:left|center|right|justify|start|end)$)/.test(t) || ['italic','not-italic','underline','line-through','overline','no-underline','uppercase','lowercase','capitalize','normal-case'].includes(t);
+      const textOverride=t=>fontFamilyToken(t)||controls.some(([,re])=>re.test(t)) || /^(?:leading-|tracking-|-tracking-|text-(?:left|center|right|justify|start|end)$)/.test(t) || ['italic','not-italic','underline','line-through','overline','no-underline','uppercase','lowercase','capitalize','normal-case'].includes(t);
       const reset=button('Reset text overrides',()=>save(replace(info.className,textOverride,'')));
       reset.disabled=!tokens(info.className).map(base).some(t=>t!==null&&textOverride(t));sec.append(reset);
 
@@ -323,6 +338,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,position,appearance,effects,typography,measurements,section,field,note,button,select};
+  const api={base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,position,appearance,effects,typography,measurements,section,field,note,button,select};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

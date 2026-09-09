@@ -18,7 +18,7 @@ changing those files. The original checkout may continue to evolve independently
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. HTML/React polygons and polylines now support direct vertex dragging and keyboard movement with source undo. Vertex insertion/deletion and Pen creation of straight segments and cubic curves in existing SVG canvases have browser/source verification. Compound SVG paths now support cubic handles, arcs, contour operations, multi-point and marquee selection, and canvas-axis alignment/distribution with source history. Vector networks, boolean operations, arbitrary masks and complete transforms remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. HTML absolute placement now supports edge, center, stretch and proportional anchors with screen-scoped writes. Transformed constraints, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML supports linear/radial gradient stacks with draggable stops, shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
-| Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. Font browsing, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
+| Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A page-font picker now discovers declared and used families, with React/HTML browser coverage. Full font browsing, Liquid complex-family serialization, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | Existing React and Liquid component inspection/detach; full creation/variants/library workflows remain. Live Shopify proof is incomplete. |
 | Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Not implemented or verified. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
@@ -3745,3 +3745,49 @@ Shadow-root styles, unreadable CSS, supports/container/state conditions and
 complete per-property provenance remain open, along with the broader Figma,
 arbitrary-site and trusted Mac distribution requirements. Browser contexts were
 closed after the checks; native app launches remained paused.
+
+
+### 2026-09-09 — Page font selection and JSX class serialization
+
+Typography now offers a Page font selector for generic families, the selected
+layer's supported current family, declared document fonts and families used in
+the page. React family overrides preserve named typography classes and weight,
+use the selected responsive scope, and have a dedicated reset. Static HTML uses
+the existing responsive CSS writer. The picker scans up to 200 declared font
+faces and 300 document elements, with at most 100 choices; it does not enumerate
+installed fonts or prove that every declared face has loaded or supplied glyphs.
+
+The JSX writer now narrowly admits quoted font-family tokens and the escaped
+underscores Tailwind needs for literal underscores. JSX attribute serialization
+keeps those backslashes literal and chooses a delimiter that leaves generated
+double-quoted font names visible to Tailwind's source scanner. Ordinary selector
+ampersands stay raw; entity-like sequences are escaped for JSX round-trip safety.
+Injection-like family tokens remain refused.
+
+All 366 unit tests pass in
+`/private/tmp/retouch-page-fonts-unit-verified.log`. The new
+`test:e2e:page-fonts` harness passes React on Chromium and WebKit in
+`/private/tmp/retouch-page-fonts-react-chromium-regression.log` and
+`/private/tmp/retouch-page-fonts-react-webkit-regression.log`. It verifies declared
+and used family choices, quoted stacks, literal underscores, weight and named
+style retention, responsive isolation, preview, reset, exact source undo, and
+continued hover-selector compilation after font writes. Static HTML passes in
+`/private/tmp/retouch-page-fonts-html-chromium-verified.log` and
+`/private/tmp/retouch-page-fonts-html-webkit-verified.log` (before the later
+React-only hover assertion was added). Screenshot
+`/private/tmp/retouch-page-fonts-react-final.png` was inspected: the active scope,
+font value, sample, reset and typography controls are visible in the inspector.
+All browser runs exited successfully and cleaned their temporary fixtures.
+
+Earlier failing logs are retained: the first React check observed CSS before HMR
+settled, later checks exposed writer rejection of escaped underscores, and the
+writer-era check observed the reset before computed styles settled. The final
+harness waits for both source and rendered family and verifies exact undo.
+
+The shared Liquid inspector can expose these choices, but its separate writer
+still refuses quoted or escaped family tokens. That requires equivalent Liquid
+serialization and rendering verification; this entry does not claim Shopify
+font parity. Font search/previews across a full catalog, font loading states,
+variable axes, richer text editing and other Figma Design requirements remain.
+The broader goal is incomplete. Native app launches remain paused; no macOS
+app, native diagnostics or installed-cask launch checks were run.
