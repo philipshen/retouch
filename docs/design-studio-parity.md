@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 218 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 220 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -544,3 +544,19 @@ copy/paste, insertion position and exact undo. Keyboard tests wait for asynchron
 layer selection before issuing shortcuts. This is a local source clipboard;
 system-clipboard interchange, cross-parent paste and durable copied fragments
 remain open.
+
+
+### HTML text and frame creation
+
+The Layers panel now offers Add Text and Add Frame for explicit HTML content
+containers, including empty containers. Text starts as an editable paragraph;
+frames start as visible div containers with a minimum height and dashed border.
+The new layer is selected immediately and can be styled or contain more layers.
+Insertion validates the resulting parse tree, preserves all existing source
+identities and uses the shared source transaction/history path.
+
+All 220 tests pass. Writer tests cover empty/populated containers, stable IDs,
+stale hashes and unsupported parent contexts. Browser checks create text, create
+a visible frame, insert/edit text inside it and undo to exact original source.
+Arbitrary shape insertion, general reparenting and equivalent creation in other
+source adapters remain open.

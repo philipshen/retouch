@@ -147,6 +147,18 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   const targetRow=page.getByRole('treeitem',{name:'p · Unedited sibling',exact:true});await targetRow.click();await wait(async()=>await page.getByRole('button',{name:'Paste layer',exact:true}).isEnabled(),'paste ready');await wait(async()=>await targetRow.getAttribute('aria-selected')==='true'&&await page.locator('#layersPanel').getAttribute('aria-busy')!=='true','paste selection settled');await targetRow.press('Control+v');
   await wait(async()=>await app.locator('h1').count()===2,'keyboard layer paste');await settled();
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'keyboard paste undo');
+
+  await page.getByRole('treeitem',{name:'main',exact:true}).click();await page.getByRole('button',{name:'Add text',exact:true}).click();
+  await wait(async()=>await app.locator('main > p').last().textContent()==='New text','create text');await settled();
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'create text undo');
+  await page.getByRole('treeitem',{name:'main',exact:true}).click();await page.getByRole('button',{name:'Add frame',exact:true}).click();
+  await wait(async()=>await app.locator('main > div[aria-label="Frame"]').count()===1,'create frame');await settled();
+  assert.ok(await app.locator('div[aria-label="Frame"]').evaluate(el=>el.getBoundingClientRect().height)>=100);
+  await page.getByRole('button',{name:'Add text',exact:true}).click();await wait(async()=>await app.locator('div[aria-label="Frame"] > p').textContent()==='New text','create text inside frame');await settled();
+  await page.locator('#panelBody textarea').fill('Inside my frame');await page.getByRole('button',{name:'Apply text',exact:true}).click();
+  await wait(async()=>await app.locator('div[aria-label="Frame"] > p').textContent()==='Inside my frame','edit new text');await settled();
+  for(let i=0;i<3;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
+  await wait(()=>read()===original,'new frame and text exact undo');
   assert.deepEqual(errors,[]);console.log('PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

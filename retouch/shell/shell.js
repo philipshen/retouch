@@ -1521,10 +1521,23 @@ const layers = RetouchLayers.mount({
   onSelect:async el=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await select(el);el.scrollIntoView({block:'nearest',inline:'nearest'});},
   onAction:action=>structureAction(action),
 });
+async function insertLayer(preset,info){
+  busyPanel(true);
+  try{
+    const result=await api('POST','/rt/__api/op',{type:'insertElement',id:info.id,fileHash:info.fileHash||info.hash,preset});
+    if(!result?.ok)return toast(result?.reason||result?.error||'Could not add layer','err');
+    editorHistory.record({type:'structure',id:info.id,undoId:result.undoId});
+    await reloadFrame();
+    const fresh=await api('GET',resolveUrl(result.createdId));
+    if(fresh?.ok){sel={hostId:result.createdId,instanceId:null,scope:'host',info:fresh.element};renderPanel();}
+    toast('Layer added','ok');
+  }finally{busyPanel(false);}
+}
 async function structureAction(action) {
   if(!sel || panelTasks || undoBusy)return;
   await commitInlineEdit();
   const info=sel?.info;if(!info)return;
+  if(action==='insertText'||action==='insertFrame')return insertLayer(action==='insertText'?'text':'frame',info);
   const target=matchingEls(info.id).find(el=>inTextScope(el,info));
   if(!target?.parentElement)return;
   const siblings=[...target.parentElement.children];

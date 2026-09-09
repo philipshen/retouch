@@ -23,7 +23,7 @@
     const empty=document.createElement('p');empty.className='layer-empty';
     const actions=document.createElement('div');actions.className='layer-actions';
     const actionButtons={};
-    for(const [action,name] of [['copyElement','Copy layer'],['pasteElement','Paste layer'],['duplicateElement','Duplicate layer'],['before','Move layer up'],['after','Move layer down'],['deleteElement','Delete layer']]) {
+    for(const [action,name] of [['insertText','Add text'],['insertFrame','Add frame'],['copyElement','Copy layer'],['pasteElement','Paste layer'],['duplicateElement','Duplicate layer'],['before','Move layer up'],['after','Move layer down'],['deleteElement','Delete layer']]) {
       const b=document.createElement('button');b.textContent=name;b.disabled=true;b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
     }
     const reason=document.createElement('p');reason.className='layer-reason';
@@ -96,6 +96,7 @@
       const capabilities=JSON.stringify([!!info,s,busy,copied,compatible]);
       if(capabilities===lastCapabilities)return;
       lastCapabilities=capabilities;
+      for(const action of ['insertText','insertFrame']){actionButtons[action].hidden=s?.canInsert===undefined;actionButtons[action].disabled=busy||!s?.canInsert;actionButtons[action].title=s?.insertReason||'Insert inside the selected container.';}
       actionButtons.copyElement.disabled=busy||!s?.canDuplicate;
       actionButtons.pasteElement.disabled=busy||!s?.canPaste||!compatible;
       actionButtons.pasteElement.title=!copied?'Copy a layer first.':!compatible?'Paste requires an unchanged copied sibling in this source parent.':'Paste after the selected layer.';
@@ -103,7 +104,7 @@
       actionButtons.deleteElement.disabled=busy||!s?.canDelete;
       actionButtons.before.disabled=busy||!s?.canMoveBefore;
       actionButtons.after.disabled=busy||!s?.canMoveAfter;
-      reason.textContent=info?(s?.reason || (!s?.canDuplicate?'Duplicate is unavailable for a layer with an authored ID, key, or ref.':'')):'Select a layer to organize it.';
+      reason.textContent=info?(s?.canInsert&&!s?.canDuplicate?'Add text or a frame inside this container.':s?.reason || (!s?.canDuplicate?'Duplicate is unavailable for a layer with an authored ID, key, or ref.':'')):'Select a layer to organize it.';
     }
     return {attach,selection};
   }

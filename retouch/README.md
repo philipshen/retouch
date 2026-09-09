@@ -166,6 +166,11 @@ thumbnail previews, or **Choose image…** to upload into `rt-assets`. Undo rest
 the image reference; uploaded files remain in the folder for reuse. Hidden files,
 dependency directories and symlinks are excluded from the image list.
 
+Select an HTML content container and choose **Add text** or **Add frame**. The
+new layer is selected immediately; a frame can contain further text and frames.
+New frames start with a visible dashed border and minimum height, which can be
+restyled through the inspector. Creation participates in Undo/Redo.
+
 The Layers panel can copy, paste, duplicate, move and delete complete literal HTML
 siblings. Copy/Paste uses an editor-local clipboard; Ctrl/Cmd+C and Ctrl/Cmd+V
 work when a layer row is focused. Paste inserts after the selected sibling and
