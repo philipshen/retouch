@@ -114,21 +114,26 @@ folder path containing spaces and shell punctuation and dynamic port discovery.
 
 ## Current editor packaging verification
 
-A fresh universal build from source commit `54ccdbe` includes HTML layer placement,
-responsive shadows, blur and blending. The bundled launcher self-tests passed
-(command exit propagation, literal folder paths, dynamic-port discovery, health
-and shutdown). Its ZIP was installed and uninstalled through a temporary local
-cask in an isolated app directory. The installed app passed strict ad hoc
-signature verification and all 61 packaged source files matched that checkout.
-The temporary tap and installed test app were removed; quarantine was preserved.
+A fresh universal build from source commit `4670764` includes HTML multi-selection,
+marquee selection from the bounded gray canvas, frame selection/removal, gradient
+stops, and responsive stack/wrapping/alignment controls. The bundled launcher
+self-tests passed: command exit propagation, literal folder paths, dynamic-port
+discovery, editor health and shutdown.
 
-The artifact is `/private/tmp/retouch-desktop-effects-build/Retouch-0.1.0-mac.zip`,
-with SHA-256 `b29b8ec1758ec26c06ee9a7b4f9976eebc375bb287a95eb1e3271f73e29cc3c6`.
+Its ZIP was installed and uninstalled through a temporary local cask in an
+isolated app directory. The installed app passed strict ad hoc signature
+verification, contained both arm64 and x86_64 architectures, and all 66 packaged
+source files matched the checkout. Quarantine was preserved. The temporary tap,
+installed test app and app process were removed; Homebrew developer mode was
+restored to its previous disabled state.
+
+The artifact is `/private/tmp/retouch-desktop-layout-build/Retouch-0.1.0-mac.zip`,
+with SHA-256 `582a777892541fa473eccb8f5f8fd9e3d0ea71e4f9d07fc03bfdb99c1f9b80a8`.
 A generated local cask and per-file `verification.json` receipt accompany it.
 These are local development artifacts, not a published or notarized release.
 
-Native interaction with this build remains unverified: the CUA tool repeatedly
-reported `cgWindowNotFound`, including after a fresh process and tool session.
-Process sampling showed the AppKit event loop, but did not establish a visible
-usable editor. The test process was stopped. Earlier native UI results do not
-prove interaction with the current bundle.
+Native interaction with this build remains unverified: opening the fresh app
+through CUA returned `cgWindowNotFound`. Its owned process was stopped. Browser
+WebKit results and earlier native UI passes do not establish a usable native
+editor for this bundle. Intel runtime and trusted Gatekeeper launch also remain
+unverified.

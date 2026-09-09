@@ -967,3 +967,21 @@ Screen-scoped wrapping changes apply at tablet size while the phone retains its
 original wrapping, and each edit undoes to exact source. The new fixture is part
 of test:e2e:html; its screenshot was inspected. This extends flex auto-layout,
 while full Figma parity, other renderers and native release remain incomplete.
+
+
+### Native bundle refreshed through wrapping controls
+
+Source commit `4670764` was built as a universal Mac app with a staged, locked
+production dependency installation. Bundled native launcher tests passed command
+exit/working-directory handling, literal HTML folder paths, dynamic-port discovery,
+health and shutdown. The exact ZIP installed successfully through a temporary
+local Homebrew cask. Strict signature verification passed, both architectures
+were present, and all 66 packaged source files matched the checkout. Quarantine
+was preserved. The temporary cask/app/tap and owned app process were removed,
+and Homebrew developer mode remains disabled.
+
+The archive and per-file receipt are in `/private/tmp/retouch-desktop-layout-build`;
+see desktop/README.md for the exact SHA-256. Native CUA opening still returned
+cgWindowNotFound, so interactive use of this bundle is unverified. This proves
+local build and cask installation, not public distribution, notarization, Intel
+runtime or full native UI parity.
