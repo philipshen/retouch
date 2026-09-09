@@ -1,6 +1,7 @@
 (function(root){
  'use strict';
  function rectangle(a,b){return {left:Math.min(a.x,b.x),top:Math.min(a.y,b.y),width:Math.abs(b.x-a.x),height:Math.abs(b.y-a.y)};}
+ function moved(a,b,scale=1){return Math.hypot(b.x-a.x,b.y-a.y)*scale>=4;}
  function enclosed(rect,box){return box.width>0&&box.height>0&&box.left>=rect.left&&box.top>=rect.top&&box.right<=rect.left+rect.width&&box.bottom<=rect.top+rect.height;}
  function pick(d,rect){
   const candidates=[...d.querySelectorAll('body [data-rt]')].filter(el=>{
@@ -24,11 +25,11 @@
    const allowed=outer?[surface,root.document.getElementById('canvasExtent'),root.document.getElementById('siteStage')].includes(e.target):['HTML','BODY'].includes(e.target.tagName);
    if(state||!enabled()||e.button!==0||!allowed||(outer&&(!frame.getBoundingClientRect().width||!w.innerWidth)))return;
    e.preventDefault();e.stopImmediatePropagation();const start=point(e,outer),capture=outer?surface:d.documentElement;
-   state={pointerId:e.pointerId,start,last:start,rawLast:{x:e.clientX,y:e.clientY},outer,capture,moved:false,append:e.shiftKey||e.metaKey||e.ctrlKey};capture.setPointerCapture(e.pointerId);
+   state={pointerId:e.pointerId,start,last:start,rawLast:{x:e.clientX,y:e.clientY},outer,capture,scale:frame?frame.getBoundingClientRect().width/w.innerWidth:1,moved:false,append:e.shiftKey||e.metaKey||e.ctrlKey};capture.setPointerCapture(e.pointerId);
   }
   function move(e,outer){
    if(!state||outer!==state.outer||e.pointerId!==state.pointerId)return;e.preventDefault();e.stopImmediatePropagation();state.last=point(e,outer);state.rawLast={x:e.clientX,y:e.clientY};
-   if(Math.hypot(state.last.x-state.start.x,state.last.y-state.start.y)>=4)state.moved=true;
+   if(moved(state.start,state.last,state.scale))state.moved=true;
    if(state.moved)onChange(rectangle(state.start,state.last));
   }
   function up(e,outer){if(state&&outer===state.outer&&e.pointerId===state.pointerId){move(e,outer);finish(true);}}
@@ -43,9 +44,10 @@
    listen(outer?surface:eventDocument,'pointerdown',e=>down(e,outer),true);listen(eventDocument,'click',e=>click(e,outer),true);listen(capture,'lostpointercapture',cancel);
    listen(eventWindow,'pointermove',e=>move(e,outer),true);listen(eventWindow,'pointerup',e=>up(e,outer),true);listen(eventWindow,'pointercancel',cancel,true);listen(eventWindow,'keydown',escape,true);listen(eventWindow,'resize',cancel);listen(eventWindow,'pagehide',cancel);listen(eventWindow,'blur',blur);
   }
+  listen(root,'retouch:before-zoom',cancel);listen(root,'retouch:screen',cancel);
   bind(w,d,d.documentElement,false);
   if(surface&&frame)bind(root,root.document,surface,true);else{listen(root,'keydown',escape,true);listen(root,'blur',blur);}
   return ()=>{cancel();cleanup.forEach(remove=>remove());};
  }
- const api={rectangle,enclosed,clip,pick,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchMarquee=api;
+ const api={rectangle,moved,enclosed,clip,pick,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchMarquee=api;
 })(typeof window==='object'?window:globalThis);

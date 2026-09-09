@@ -156,8 +156,8 @@ or Cmd/Ctrl+A while a row is focused, selects the displayed design layers. With
 a search active, it selects matching rows rather than their context ancestors;
 collapsed children and the HTML/body document roots are excluded.
 Drag from empty HTML page background or the surrounding gray canvas to surround
-layers with a marquee. Only
-fully enclosed layers are selected, and an enclosed parent represents its
+layers with a marquee. Drag at least four screen pixels to begin, at any zoom.
+Changing zoom or screen size cancels an active marquee. Only fully enclosed layers are selected, and an enclosed parent represents its
 children. Shift adds to the current selection; Escape cancels. Marquee selection
 does not write source or enlarge the bounded canvas scroll area. Starting a
 marquee on content is not implemented yet. The **Shared styles** inspector shows
