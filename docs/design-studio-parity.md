@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 220 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 221 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -560,3 +560,16 @@ stale hashes and unsupported parent contexts. Browser checks create text, create
 a visible frame, insert/edit text inside it and undo to exact original source.
 Arbitrary shape insertion, general reparenting and equivalent creation in other
 source adapters remain open.
+
+
+### HTML grid frame controls
+
+Grid/inline-grid containers expose equal-track row/column counts, and children
+of those containers expose row/column spans. Controls use bounded counts of 1–24,
+persist responsive CSS and reset each property independently. Authored track
+syntax is identified as authored/automatic until replaced; choosing a count
+explicitly creates equal tracks. Inline grid shorthand conflicts are recognized.
+
+All 221 tests pass. Browser checks verify a two-column layout through actual
+child positions, a spanning child, phone inheritance and exact undo. Arbitrary
+track sizing, named grid areas, subgrid and draggable grid guides remain open.

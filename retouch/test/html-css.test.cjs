@@ -121,3 +121,12 @@ test('Duplicating styled HTML subtrees copies responsive rules to independent id
  assert.equal(css.describe({...resolve(edited.edits[0].after),element:fresh[0]}).cssRules[0].width,'240px');
  assert.equal(css.describe({...resolve(edited.edits[0].after),element:fresh[1]}).cssRules[0].width,'160px');
 });
+
+test('HTML grid tracks and child spans are bounded and reset independently',()=>{
+ for(const [property,value]of [['grid-template-columns','repeat(3, minmax(0, 1fr))'],['grid-row','span 2 / span 2']])assert.equal(css.valid(property,value),true);
+ for(const [property,value]of [['grid-template-columns','repeat(999, minmax(0, 1fr))'],['grid-column','span 2 / span 3'],['grid-row','span 0 / span 0'],['grid-template-columns','repeat(2, url(x))']])assert.equal(css.valid(property,value),false);
+ let source=edit(original,768,'repeat(3, minmax(0, 1fr))','grid-template-columns').edits[0].after;
+ source=edit(source,768,'span 2 / span 2','grid-row').edits[0].after;
+ source=edit(source,768,null,'grid-row').edits[0].after;
+ assert.deepEqual(css.describe(resolve(source)).cssRules[768],{'grid-template-columns':'repeat(3, minmax(0, 1fr))'});
+});

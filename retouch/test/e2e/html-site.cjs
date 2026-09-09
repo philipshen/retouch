@@ -159,6 +159,17 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await wait(async()=>await app.locator('div[aria-label="Frame"] > p').textContent()==='Inside my frame','edit new text');await settled();
   for(let i=0;i<3;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'new frame and text exact undo');
+
+  await size('768x1024');await page.getByRole('treeitem',{name:'main',exact:true}).click();await page.getByLabel('Style screen scope').selectOption('min-[768px]:');
+  await page.getByLabel('Display (CSS)',{exact:true}).selectOption('grid');await wait(async()=>await app.locator('main').evaluate(el=>getComputedStyle(el).display)==='grid','grid display');await settled();
+  const columns=page.getByLabel('Grid columns',{exact:true});await columns.fill('2');await columns.press('Tab');
+  await wait(async()=>await app.locator('main').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length)===2,'grid columns');await settled();
+  const lefts=await app.locator('main > *').evaluateAll(els=>els.map(el=>el.getBoundingClientRect().left));assert.ok(lefts[1]>lefts[0]);assert.equal(lefts[2],lefts[0]);
+  await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();const span=page.getByLabel('Column span',{exact:true});await span.fill('2');await span.press('Tab');
+  await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).gridColumnStart)==='span 2','grid child span');await settled();
+  await size('390x844');await wait(async()=>await app.locator('main').evaluate(el=>getComputedStyle(el).display)==='block','grid phone inheritance');
+  for(let i=0;i<3;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
+  await wait(()=>read()===original,'grid exact undo');
   assert.deepEqual(errors,[]);console.log('PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
