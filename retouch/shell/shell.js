@@ -7,6 +7,8 @@ const iframe = document.getElementById('app');
 const overlayLayer = document.getElementById('overlayLayer');
 const modeBtn = document.getElementById('modeBtn');
 const routeInput = document.getElementById('routeInput');
+const pagePicker = document.getElementById('pagePicker');
+const pagePickerLabel = document.getElementById('pagePickerLabel');
 const undoBtn = document.getElementById('undoBtn');
 const redoBtn = document.getElementById('redoBtn');
 const statusEl = document.getElementById('status');
@@ -40,6 +42,7 @@ function syncHistoryControls() {
   redoBtn.disabled = busy || !editorHistory.canRedo;
   undoBtn.setAttribute('aria-busy',String(busy));
   redoBtn.setAttribute('aria-busy',String(busy));
+  pagePicker.disabled = busy;routeInput.disabled = busy;
   panelBody.disabled = busy;panelBody.inert = busy;
   panelBody.setAttribute('aria-busy',String(busy));
 }
@@ -59,6 +62,7 @@ iframe.addEventListener('load', () => {
     hookFrame(iframe.contentDocument, iframe.contentWindow);
     layers.attach(iframe.contentDocument);
     onNavigated();
+    refreshPages();
     if (sel) renderPanel();
   } catch (err) {
     toast('Could not attach to the app frame: ' + err.message, 'err');
@@ -207,12 +211,31 @@ function onNavigated() {
     const loc = iframe.contentWindow.location;
     if (loc.origin !== location.origin) return;
     const p = loc.pathname + loc.search + loc.hash;
+    if(lastAppPath && lastAppPath!==p)clearSelection();
     lastAppPath = p;
+    pagePicker.value=loc.pathname;
     window.dispatchEvent(new CustomEvent('retouch:route'));
     routeInput.value = p;
     history.replaceState(null, '', '/rt' + (p === '/' ? '' : p));
   } catch {}
 }
+
+let pageListRequest=0;
+async function refreshPages(){
+  const request=++pageListRequest,result=await api('GET','/rt/__api/pages');
+  if(request!==pageListRequest||!result?.ok)return;
+  pagePickerLabel.hidden=!result.available;if(!result.available)return;
+  const current=iframe.contentWindow.location.pathname;pagePicker.replaceChildren();
+  const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='Choose a page';pagePicker.append(placeholder);
+  for(const page of result.pages){const option=document.createElement('option');option.value=page.url;option.textContent=page.path;pagePicker.append(option);}
+  pagePicker.value=current;pagePicker.title=result.truncated?'Showing the first 1000 pages. Use Page URL for other pages.':'Choose a project page';
+}
+async function navigatePage(url){
+  if(panelTasks||undoBusy||sourceRequests)return;
+  await commitInlineEdit();clearSelection();iframe.src=url||'/';
+}
+pagePicker.onchange=()=>{if(pagePicker.value)navigatePage(pagePicker.value);};
+document.getElementById('refreshPages').onclick=refreshPages;
 
 /* ---------- selection ---------- */
 function idsOf(el) {
@@ -1418,7 +1441,7 @@ modeBtn.onclick = () => {
 undoBtn.onclick = () => undo();
 redoBtn.onclick = () => redo();
 routeInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') iframe.src = routeInput.value || '/';
+  if (e.key === 'Enter') navigatePage(routeInput.value || '/');
 });
 window.addEventListener('keydown', (e) => {
   if (document.querySelector('dialog[open]')) return;

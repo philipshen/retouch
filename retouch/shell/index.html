@@ -12,7 +12,8 @@
 <div id="toolbar">
   <span id="logo">Retouch</span>
   <button id="modeBtn" class="mode-edit" title="Toggle edit / interact (Esc clears selection)">Edit mode</button>
-  <input id="routeInput" type="text" spellcheck="false" placeholder="/">
+  <span id="pagePickerLabel" hidden><label>Page <select id="pagePicker" aria-label="Project page"></select></label> <button id="refreshPages" aria-label="Refresh page list" title="Refresh page list">↻</button></span>
+  <input aria-label="Page URL" id="routeInput" type="text" spellcheck="false" placeholder="/">
   <button id="undoBtn" title="Undo (Cmd/Ctrl+Z)" disabled>Undo</button>
   <button id="redoBtn" title="Redo (Cmd/Ctrl+Shift+Z)" disabled>Redo</button>
   <span id="status"></span>

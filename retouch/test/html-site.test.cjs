@@ -42,3 +42,17 @@ test('HTML image assets list root files with encoded URLs and upload into a cont
   assert.equal((await upload('escape.svg')).status,409);assert.deepEqual(fs.readdirSync(outside),['outside.svg']);
  }finally{server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});fs.rmSync(outside,{recursive:true,force:true});}
 });
+
+test('HTML page catalog uses navigable encoded routes and excludes private or reserved trees',async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-html-pages-'));
+ for(const file of ['index.html','index.htm','about us.html','guide/index.htm','.hidden/private.html','node_modules/demo.html','rt/index.html']){fs.mkdirSync(path.dirname(path.join(root,file)),{recursive:true});fs.writeFileSync(path.join(root,file),'<h1>'+file+'</h1>');}
+ fs.symlinkSync(path.join(root,'guide'),path.join(root,'alias'));
+ const server=start({root,port:0,quiet:true});await once(server,'listening');const base='http://127.0.0.1:'+server.address().port;
+ try{
+  assert.equal((await fetch(base+'/rt/__api/pages')).status,401);
+  const shell=await (await fetch(base+'/rt')).text(),token=/__RT_TOKEN = "([a-f0-9]+)"/.exec(shell)[1];
+  const result=await (await fetch(base+'/rt/__api/pages',{headers:{'x-retouch-token':token}})).json();
+  assert.equal(result.available,true);assert.deepEqual(result.pages.map(p=>p.url).sort(),['/','/about%20us.html','/guide/','/index.htm']);
+  for(const page of result.pages)assert.equal((await fetch(base+page.url)).status,200,page.path);
+ }finally{server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
+});

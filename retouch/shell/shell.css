@@ -246,3 +246,6 @@ details.advanced > summary:hover { color: var(--ink); }
 
 #screenComparisons > .control-button { margin-bottom: 14px; }
 .compare-header > span { flex: 1; min-width: 0; }
+
+#pagePickerLabel { white-space: nowrap; color: var(--muted); }
+#pagePicker { max-width: 210px; background: #141518; color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 5px; }

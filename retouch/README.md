@@ -128,7 +128,9 @@ for supported source patterns and browser verification.
 retouch html ./my-web-directory --port=9400
 ```
 
-Open `http://localhost:9400/rt` to select and edit literal HTML text, supported HTML
+Open `http://localhost:9400/rt`. Use the **Page** picker to switch between HTML
+documents, and its refresh button to discover newly added files. The **Page URL**
+field also accepts a route directly. Select and edit literal HTML text, supported HTML
 tags and plain image paths. Existing CSS and scripts are served as authored;
 saved changes reload the preview, and undo/redo restores source snapshots.
 Choose a trusted local web directory. Hidden files, package manifests and paths

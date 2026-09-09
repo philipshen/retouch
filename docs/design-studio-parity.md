@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 208 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 209 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -419,3 +419,20 @@ refusal of an upload directory symlink outside the project. The full suite passe
 selection, upload, rendered replacement and exact source undo. Uploaded files
 remain reusable after undoing their reference; asset deletion and responsive
 picture/source-set authoring remain open.
+
+
+### Local HTML page navigation
+
+The editor toolbar now lists HTML documents from the selected web folder. Nested
+index files map to directory URLs, alternate index files remain reachable, and
+filenames are URL encoded. Refresh discovers newly added pages. The authenticated
+catalog omits hidden/dependency directories, symlinks and the editor's reserved
+`rt` tree; it returns at most 1000 entries and identifies truncation. Other
+renderers keep direct URL navigation without an unsupported page menu.
+
+Page navigation commits active inline edits and clears the previous selection.
+All 209 tests pass. HTTP checks verify encoded routes, directory indexes and
+catalog boundaries. Browser checks create and discover a second page, navigate
+to it, edit its source without changing the first page, undo exactly and return
+home. Page creation/deletion in the UI, remote capture and framework route
+catalogs remain open.

@@ -64,6 +64,17 @@ const {chromium}=require(path.join(fixture,'node_modules/playwright'));
   const saved=fs.readdirSync(path.join(root,'rt-assets'));assert.equal(saved.length,1);assert.equal(fs.readFileSync(path.join(root,'rt-assets',saved[0]),'utf8'),upload);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'uploaded source undo');
   assert.equal(fs.readdirSync(path.join(root,'rt-assets')).length,1,'uploaded asset retained for reuse');
-  assert.deepEqual(errors,[]);console.log('PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload and exact undo');
+  const secondFile=path.join(root,'about us.html'),secondOriginal='<html><body><h1>About this site</h1></body></html>';
+  fs.writeFileSync(secondFile,secondOriginal);await page.getByRole('button',{name:'Refresh page list',exact:true}).click();
+  await wait(async()=>await page.locator('#pagePicker option[value="/about%20us.html"]').count()===1,'new page catalog');
+  await page.getByLabel('Project page',{exact:true}).selectOption('/about%20us.html');
+  await wait(async()=>await app.locator('h1').textContent()==='About this site','page navigation');
+  await page.getByRole('treeitem',{name:'h1 · About this site',exact:true}).click();
+  await page.locator('#panelBody textarea').fill('Edited about page');await page.getByRole('button',{name:'Apply text',exact:true}).click();
+  await wait(()=>fs.readFileSync(secondFile,'utf8').includes('Edited about page'),'second page edit');await settled();
+  assert.equal(read(),original,'first page unchanged');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>fs.readFileSync(secondFile,'utf8')===secondOriginal,'second page undo');
+  await page.getByLabel('Project page',{exact:true}).selectOption('/');await wait(async()=>await app.locator('h1').textContent()==='Hello HTML','return to home');
+  assert.deepEqual(errors,[]);console.log('PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
