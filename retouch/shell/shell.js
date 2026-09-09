@@ -1610,7 +1610,7 @@ async function showHistoryPage(route){
 async function restoreHistory(direction,op) {
   if(op.type==='layerLock'){
     await showHistoryPage(op.route);
-    const result=layerLocks.restore(op.lockChange,direction);
+    const result=layerLocks.restoreMany(op.lockChanges||[op.lockChange],direction);
     if(result.ok){clearSelection();hoverEl=null;layers.refresh();toast(direction==='undo'?'Undone':'Redone','ok');}
     return result;
   }
@@ -1725,10 +1725,11 @@ const layers = RetouchLayers.mount({
   onLock:async(el,value)=>{
     if(panelTasks||undoBusy||sourceRequests)return;
     await commitInlineEdit();stopDrawing?.();
-    const lockChange=layerLocks.change(el,value);if(!lockChange)return;
-    editorHistory.record({type:'layerLock',undoId:'lock:'+crypto.randomUUID(),route:lockChange.route,lockChange});hoverEl=null;
+    const lockChanges=layerLocks.changeMany(Array.isArray(el)?el:[el],value);if(!lockChanges.length)return;
+    editorHistory.record({type:'layerLock',undoId:'lock:'+crypto.randomUUID(),route:lockChanges[0].route,lockChanges});hoverEl=null;
     if(value)clearSelection();
-    toast(value?'Layer locked on the canvas. Select it in Layers to edit.':'Layer unlocked.','ok');
+    layers.refresh();
+    toast(value?'Selection locked on the canvas. Select it in Layers to edit.':'Selection unlocked.','ok');
   },
   getClipboard:()=>layerClipboard,
   dragEnabled:window.__RT_RENDERING?.layerReparenting===true,

@@ -34,6 +34,13 @@
     for(const [action,name] of [['insertText','Add text'],['insertFrame','Add frame'],['copyElement','Copy layer'],['pasteElement','Paste layer'],['reparentElement','Move into…'],['frameSelection','Frame selection'],['removeFrame','Remove frame'],['duplicateElement','Duplicate layer'],['before','Move layer up'],['after','Move layer down'],['first','Send to back'],['last','Bring to front'],['deleteElement','Delete layer']]) {
       const b=document.createElement('button');b.textContent=name;b.disabled=true;b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
     }
+    const lockSelection=document.createElement('button'),unlockSelection=document.createElement('button');
+    lockSelection.textContent='Lock selection';unlockSelection.textContent='Unlock selection';
+    lockSelection.hidden=unlockSelection.hidden=!locks||!onLock;
+    lockSelection.disabled=unlockSelection.disabled=true;
+    lockSelection.onclick=()=>onLock([...selectedSet],true);unlockSelection.onclick=()=>onLock([...selectedSet],false);
+    unlockSelection.title='Remove direct locks from selected layers. Inherited locks must be removed from their parent.';
+    actions.append(lockSelection,unlockSelection);
     const reason=document.createElement('p');reason.className='layer-reason';
     const multiEnabled=multiSelectEnabled&&typeof onSelectMany==='function',selectAll=document.createElement('button');selectAll.textContent='Select visible layers';selectAll.className='layer-select-all';selectAll.hidden=!multiEnabled;
     host.append(header,search,selectAll,tree,empty,actions,reason);
@@ -137,6 +144,8 @@
         if(!rows.some(r=>r.button.tabIndex===0)&&rows[0])rows[0].button.tabIndex=0;
         rows.find(r=>r.item.el===el)?.button.scrollIntoView({block:'nearest'});
       }
+      lockSelection.disabled=busy||![...selectedSet].some(el=>!locks?.direct(el));
+      unlockSelection.disabled=busy||![...selectedSet].some(el=>locks?.direct(el));
       const s=info?.structure;
       const copied=getClipboard();
       const compatible=!!copied&&copied.file===info?.file&&copied.parentId===s?.parentId&&copied.hash===(info?.fileHash||info?.hash);

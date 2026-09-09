@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 330 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 331 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -2470,3 +2470,24 @@ This uses the browser's same-document hit stack; it does not add source mapping
 inside cross-origin frames or closed shadow roots. Full arbitrary-site authoring,
 lock persistence, remaining Figma features and trusted desktop distribution remain
 unfinished. The latest packaged app predates the lock work.
+
+## Selection-wide lock and unlock
+
+The Layers action area now offers Lock selection and Unlock selection. Each action
+records only changed source identities in one history entry, deduplicating repeated
+rendered instances. Mixed selections preserve pre-existing locks when undone;
+unlocking only removes direct locks, with inherited locks still controlled by the
+parent. Empty/no-op changes add no history entry. Batch history validates all
+members before restoring any member, so a conflicting lock cannot cause a partial
+undo. Single-row lock controls use the same batch path.
+
+The HTML workflow passes in Chromium and WebKit for two-layer lock/unlock, one-step
+undo/redo, and mixed-state restoration, alongside the existing route/source-history
+checks. All 331 unit/HTTP tests pass, including all-or-nothing conflicting restores
+and invalid-member handling. Logs:
+`/private/tmp/retouch-batch-locks-{chromium,webkit,unit}.log`.
+The real React workflow also passes batch lock/undo and subsequent marquee/group
+editing in WebKit: `/private/tmp/retouch-batch-locks-react-webkit.log`.
+
+Lock persistence and durable source identity remain unfinished; the latest Mac
+archive still predates the lock features. Full parity remains the active goal.

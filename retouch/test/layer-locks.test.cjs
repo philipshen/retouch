@@ -16,3 +16,10 @@ test('lock history records changes and refuses conflicting state without modifyi
  route='/a';assert.equal(locks.direct(a),false);assert.equal(locks.restore(change,'redo').ok,true);locks.set(a,false);
  assert.equal(locks.restore(change,'undo').ok,false);assert.equal(locks.direct(a),false);
 });
+test('batch lock history preserves mixed state and refuses the entire conflicting restore',()=>{
+ const locks=create(),a=node('a'),b=node('b');locks.set(a,true);
+ const changes=locks.changeMany([a,b,b],true);assert.equal(changes.length,1);assert.equal(changes[0].id,'b');assert.equal(locks.restoreMany(changes,'undo').ok,true);assert.equal(locks.direct(a),true);assert.equal(locks.direct(b),false);
+ locks.set(a,false);const both=locks.changeMany([a,b],true);locks.set(b,false);assert.equal(locks.restoreMany(both,'undo').ok,false);assert.equal(locks.direct(a),true,'no partial restore before a conflicting member');
+ locks.set(b,true);assert.equal(locks.restoreMany(both,'undo').ok,true);assert.equal(locks.direct(a),false);assert.equal(locks.direct(b),false);
+ assert.deepEqual(locks.changeMany([a,node(null)],true),[]);assert.equal(locks.direct(a),false,'invalid member prevents every change');
+});
