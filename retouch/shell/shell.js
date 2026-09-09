@@ -902,7 +902,7 @@ function renderPanelContents() {
     for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Add '+preset,()=>insertLayer(preset,info,'insertSVG')));
     if(!info.svgInsertion.createsViewport)for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Draw '+preset,()=>drawShape(preset,info)));
     if(info.svgInsertion.pen)buttons.append(RetouchInspector.button('Pen',()=>drawVector(info)));
-    shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Adds a shape in a new 200 × 200 canvas.':'Choose Draw and drag a shape, or Pen and click to place straight segments. In Pen, click the first point to close; Enter finishes an open line. Shift constrains direction. Escape cancels.');panelBody.append(shapes);
+    shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Adds a shape in a new 200 × 200 canvas.':'Choose Draw and drag a shape, or Pen: click for straight segments, drag for curves. In Pen, click the first point to close; Enter finishes an open line. Shift constrains direction. Escape cancels.');panelBody.append(shapes);
   }
   if(info.cssAuthoring){
     const naming=RetouchInspector.section('Layer');
@@ -1895,9 +1895,9 @@ async function drawVector(info){
   if(targets.length!==1)return toast('Select an SVG container rendered once to draw into.','err');
   if(!await prepareVectorCanvas(info,targets[0]))return;
   stopDrawing=RetouchSVGPen.mount({target:targets[0],frame:iframe,canvas:canvasSurface,
-    onCommit:(points,closed)=>insertLayer(closed?'polygon':'polyline',info,'insertSVG',{points}),
+    onCommit:(points,closed,nodes)=>insertLayer(nodes?'path':closed?'polygon':'polyline',info,'insertSVG',nodes?{nodes,closed}:{points}),
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
-  if(stopDrawing)toast('Click to place points. Shift constrains direction. Click the first point to close, or Enter to finish a line. Backspace removes the last point; Escape cancels.','ok');
+  if(stopDrawing)toast('Click for corners; drag for curves. Shift constrains direction. Click the first point to close, or Enter to finish a line. Backspace removes the last point; Escape cancels.','ok');
 }
 function drawShape(preset,info){
   if(panelTasks||undoBusy||sourceRequests||editing)return;

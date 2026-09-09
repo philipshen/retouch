@@ -2,6 +2,10 @@
 const MagicString=require('magic-string'),insertion=require('./html-insert.cjs');
 const namespace='http://www.w3.org/2000/svg';
 const presets=['rectangle','circle','ellipse','line'];
+function pathShape(nodes,closed){
+ const d=require('../shell/svg-path.js').serialize(nodes,closed);
+ return d?'<path d="'+d+'" fill="'+(closed?'#a5b4fc':'none')+'" stroke="#6366f1" stroke-width="2"/>':null;
+}
 function drawnShape(preset,points){
  if(['polygon','polyline'].includes(preset)){
   const minimum=preset==='polygon'?3:2;
@@ -36,10 +40,11 @@ function describe(resolved){
 }
 function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason}),cap=describe(resolved);
- if(!cap||!presets.includes(op.preset)&&!['polygon','polyline'].includes(op.preset))return refuse('Select a content container, SVG canvas or group to add a shape.');
+ if(!cap||!presets.includes(op.preset)&&!['polygon','polyline','path'].includes(op.preset))return refuse('Select a content container, SVG canvas or group to add a shape.');
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the container.');
  if(['polygon','polyline'].includes(op.preset)&&op.points===undefined)return refuse('Place vector points before creating a line or polygon.');
- const drawn=op.points===undefined?null:drawnShape(op.preset,op.points);
+ const drawn=op.preset==='path'?pathShape(op.nodes,op.closed):op.points===undefined?null:drawnShape(op.preset,op.points);
+ if(op.preset==='path'&&(cap.createsViewport||!drawn))return refuse('Draw valid path anchors and handles inside an SVG canvas or group.');
  if(op.points!==undefined&&(cap.createsViewport||!drawn))return refuse('Draw a nonempty shape inside an existing SVG canvas or group.');
  const html=require('./adapters/html.cjs'),el=resolved.element,offset=el.location.endTag.startOffset;
  const opening=cap.createsViewport?'<svg width="200" height="200" viewBox="0 0 200 200" aria-label="Shapes">':'';
@@ -50,4 +55,4 @@ function plan(resolved,op){
  if(next.length!==before.length+(cap.createsViewport?2:1)||!created||created.node.namespaceURI!==namespace||created.node.parentNode!==container?.node||cap.createsViewport&&container.node.parentNode!==parent?.node||before.some(e=>!next.some(n=>n.id===e.id&&n.tag===e.tag&&n.location.startOffset===e.location.startOffset+(e.location.startOffset>=offset?content.length:0))))return refuse('The shape would change the surrounding document structure.');
  return {ok:true,hash:html.contentHash(after),parentId:el.id,createdId:created.id,structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
 }
-module.exports={describe,plan,drawnShape,shape};
+module.exports={describe,plan,drawnShape,shape,pathShape};

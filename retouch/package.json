@@ -14,6 +14,7 @@
     "test:e2e:react-selection-geometry": "node test/e2e/react-selection-geometry.cjs",
     "test:e2e:react-selection": "node test/e2e/react-selection.cjs",
     "test:e2e:react-position": "node test/e2e/react-position.cjs",
+    "test:e2e:svg-curves": "RT_E2E_PEN=1 RT_E2E_CURVES=1 node test/e2e/svg-vertices.cjs",
     "test:e2e:svg-pen": "RT_E2E_PEN=1 node test/e2e/svg-vertices.cjs",
     "test:e2e:svg-vertices": "node test/e2e/svg-vertices.cjs",
     "test:e2e:react-svg": "node test/e2e/react-svg-geometry.cjs",

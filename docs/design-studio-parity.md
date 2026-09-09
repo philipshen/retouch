@@ -15,7 +15,7 @@ changing those files. The original checkout may continue to evolve independently
 | --- | --- | --- |
 | Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Bounded canvas zoom/scrolling and linked screen comparisons exist. HTML supports multi-selection, range selection, gray/page marquee gestures and framing a consecutive sibling selection. HTML/React canvas locks include batch undo and editor-reload persistence within a live project session. Full document/pages/sections, guides, complete snapping/grouping, durable lock identity and cross-renderer equivalence remain. |
 | Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. HTML multi-selection, shared CSS and group duplicate/delete/reparenting exist; cross-context clipboard and broader source structures remain. |
-| Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. HTML/React polygons and polylines now support direct vertex dragging and keyboard movement with source undo. Vertex insertion/deletion and straight-segment Pen creation in existing SVG canvases have browser/source verification. Full curved-path authoring, boolean operations, arbitrary masks and a shared geometry model remain. |
+| Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. HTML/React polygons and polylines now support direct vertex dragging and keyboard movement with source undo. Vertex insertion/deletion and Pen creation of straight segments and cubic curves in existing SVG canvases have browser/source verification. Full curved-path authoring, boolean operations, arbitrary masks and a shared geometry model remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. HTML absolute placement now supports edge, center, stretch and proportional anchors with screen-scoped writes. Transformed constraints, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML supports linear/radial gradient stacks with draggable stops, shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. Font browsing, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
@@ -3043,3 +3043,43 @@ Pen currently creates straight segments inside existing SVG containers. Curves,
 Bézier handles, vector networks, booleans, masks and unrestricted canvas/document
 authoring remain. Native launches stayed paused; no desktop build or launch was
 performed. Full Figma parity and trusted Mac distribution remain incomplete.
+
+### 2026-09-09 — Bézier curve creation with Pen
+
+Pen now places an anchor on pointer-down. Clicking leaves a corner; dragging
+creates paired incoming/outgoing handles, with a live cubic path and visible
+control lines. Backspace removes the last anchor and its handles. Open paths
+finish with Enter or Finish path. Curved shapes can close with two distinct
+anchors; the closing segment uses the final outgoing and first incoming handles.
+Straight drawings retain polygon/polyline output. Curved drawings become SVG
+paths through the same HTML/JSX insertion and history path.
+
+A shared serializer validates anchors/handles and emits only numeric M/L/C/Z
+commands. It covers mixed straight/curved segments and independent handle values;
+the current pen gesture creates mirrored handles. Source tests cover bounds,
+malformed or injected values, missing/sparse nodes, stale hashes, surrounding
+identity preservation and JSX strokeWidth output. All 342 unit tests pass in
+`/private/tmp/retouch-svg-curves-unit.log`.
+
+Four browser/renderer combinations pass visible curvature and path-length
+checks at 50/100/200 percent zoom, two-anchor curved closure, preview-to-source
+identity, Backspace/Escape and exact undo/redo:
+`/private/tmp/retouch-svg-curves-html-chromium.log`,
+`/private/tmp/retouch-svg-curves-react-webkit.log`,
+`/private/tmp/retouch-curves-html-webkit-svg-curves.log`,
+`/private/tmp/retouch-curves-react-chromium-svg-curves.log`.
+The inspected `/private/tmp/retouch-svg-curves.png` shows the curved preview,
+control lines and both handles on the active anchor.
+
+The straight-line regression initially compared against click-event coordinates;
+anchors now originate from pointer-down, whose coordinates can differ from the
+subsequent compatibility click. The test now captures the delivered pointer-down
+position without loosening its geometric tolerance. Straight creation, point
+editing, cancellation and undo/redo pass in
+`/private/tmp/retouch-curves-html-chromium-svg-pen.log` and
+`/private/tmp/retouch-curves-react-webkit-svg-pen.log`.
+
+This establishes curve creation, not complete vector authoring. Editing saved
+path anchors/handles, independent handle controls, path conversion/import, vector
+networks, booleans and masks remain. Native launches stayed paused. Full Figma
+Design parity, arbitrary-site support and trusted Mac distribution remain open.

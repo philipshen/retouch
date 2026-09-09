@@ -5,13 +5,13 @@
     const w=target.ownerDocument.defaultView,viewport=target.tagName.toLowerCase()==='svg'?target:target.ownerSVGElement;
     const surface=root.document.createElement('div');surface.className='svg-pen-surface';surface.setAttribute('role','group');surface.setAttribute('aria-label','Draw vector');surface.tabIndex=0;
     Object.assign(surface.style,{position:'fixed',zIndex:40,cursor:'crosshair',touchAction:'none',overflow:'hidden'});
-    const drawing=root.document.createElementNS(ns,'svg'),preview=root.document.createElementNS(ns,'polyline');
+    const drawing=root.document.createElementNS(ns,'svg'),preview=root.document.createElementNS(ns,'path');
     Object.assign(drawing.style,{position:'absolute',inset:'0',width:'100%',height:'100%',pointerEvents:'none'});
-    preview.style.cssText='fill:none!important;stroke:#6366f1!important;stroke-width:2!important;';preview.setAttribute('vector-effect','non-scaling-stroke');drawing.append(preview);surface.append(drawing);
+    preview.style.cssText='fill:none!important;stroke:#6366f1!important;stroke-width:2!important;';preview.setAttribute('vector-effect','non-scaling-stroke');const tangents=root.document.createElementNS(ns,'g');drawing.append(preview,tangents);surface.append(drawing);
     const toolbar=root.document.createElement('div');toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label','Pen actions');
     Object.assign(toolbar.style,{position:'absolute',left:'12px',bottom:'72px',maxWidth:'calc(100% - 24px)',display:'flex',flexWrap:'wrap',gap:'8px',alignItems:'center',padding:'8px',background:'#202226',border:'1px solid #6366f1',borderRadius:'6px',zIndex:2,cursor:'default'});
     const status=root.document.createElement('span');status.setAttribute('role','status');status.style.cssText='font:12px system-ui;color:#e5e7eb;';toolbar.append(status);surface.append(toolbar);
-    const points=[],dots=[],cleanup=[],initial=target.getScreenCTM(),revision=target.getAttribute('data-rt-revision');let hover=null,ended=false,raf;
+    const points=[],dots=[],cleanup=[],initial=target.getScreenCTM(),revision=target.getAttribute('data-rt-revision');let hover=null,ended=false,raf,drag=null;
     function listen(el,type,fn,options){el.addEventListener(type,fn,options);cleanup.push(()=>el.removeEventListener(type,fn,options));}
     function cancel(){if(ended)return;ended=true;root.cancelAnimationFrame(raf);cleanup.forEach(fn=>fn());surface.remove();onEnd();}
     function current(){const m=target.getScreenCTM();return target.isConnected&&target.getAttribute('data-rt-revision')===revision&&m&&initial&&['a','b','c','d','e','f'].every(key=>Math.abs(m[key]-initial[key])<1e-6);}
@@ -19,41 +19,58 @@
     function action(label,fn){const b=root.document.createElement('button');b.type='button';b.textContent=label;b.onclick=fn;Object.assign(b.style,{padding:'6px 10px',minHeight:'28px',border:'1px solid #454951',borderRadius:'4px',background:'#2b2e33',color:'#e5e7eb',font:'12px system-ui',cursor:'pointer'});toolbar.append(b);return b;}
     const finishButton=action('Finish line',()=>finish(false)),closeButton=action('Close shape',()=>finish(true)),backButton=action('Remove last point',back);action('Cancel',cancel);
     function update(){
-      status.textContent=points.length+' points · Click to draw';
-      for(const [button,disabled]of [[finishButton,points.length<2],[closeButton,points.length<3],[backButton,!points.length]]){button.disabled=disabled;button.style.opacity=disabled?'.5':'1';}
+      status.textContent=points.length+' points · Click or drag';
+      finishButton.textContent=root.RetouchSVGPath.curved(points)?'Finish path':'Finish line';
+      for(const [button,disabled]of [[finishButton,points.length<2],[closeButton,!root.RetouchSVGPath.serialize(points,true)],[backButton,!points.length]]){button.disabled=disabled;button.style.opacity=disabled?'.5':'1';}
       for(const dot of dots)dot.remove();dots.length=0;
       points.forEach((_,i)=>{const dot=root.document.createElement(i?'span':'button');
-        if(!i){dot.type='button';dot.setAttribute('aria-label','Close vector at first point');dot.title='Close the shape';dot.disabled=points.length<3;dot.onclick=()=>finish(true);}
+        if(!i){dot.type='button';dot.setAttribute('aria-label','Close vector at first point');dot.title='Close the shape';dot.disabled=!root.RetouchSVGPath.serialize(points,true);dot.onclick=()=>finish(true);}
         Object.assign(dot.style,{position:'absolute',width:'12px',height:'12px',padding:'0',boxSizing:'border-box',border:'2px solid #6366f1',background:'white',borderRadius:'50%',pointerEvents:i?'none':'auto',cursor:'crosshair'});surface.append(dot);dots.push(dot);
       });paint();
     }
-    function point(event){
+    function point(event,last=points.at(-1)){
       const f=frame.getBoundingClientRect(),scale=f.width/w.innerWidth;
       let p=new w.DOMPoint((event.clientX-f.left)/scale,(event.clientY-f.top)/scale).matrixTransform(initial.inverse());
       if(!Number.isFinite(p.x)||!Number.isFinite(p.y)||Math.abs(p.x)>100000||Math.abs(p.y)>100000)throw Error('Keep points within supported SVG coordinates.');
-      const last=points.at(-1);
       if(event.shiftKey&&last){const dx=p.x-last.x,dy=p.y-last.y,angle=Math.round(Math.atan2(dy,dx)/(Math.PI/4))*Math.PI/4,length=Math.hypot(dx,dy);p={x:last.x+Math.cos(angle)*length,y:last.y+Math.sin(angle)*length};}
       return {x:Math.round(p.x*1e6)/1e6,y:Math.round(p.y*1e6)/1e6};
     }
     function paint(){
       const f=frame.getBoundingClientRect(),r=surface.getBoundingClientRect(),scale=f.width/w.innerWidth,m=initial;
-      preview.setAttribute('points',root.RetouchSVGPoints.format(hover&&points.length?[...points,hover]:points));
+      preview.setAttribute('d',root.RetouchSVGPath.serialize(hover&&points.length&&!drag?[...points,hover]:points)||'');
       preview.setAttribute('transform',`matrix(${m.a*scale} ${m.b*scale} ${m.c*scale} ${m.d*scale} ${m.e*scale+f.left-r.left} ${m.f*scale+f.top-r.top})`);
       points.forEach((p,i)=>{const q=new w.DOMPoint(p.x,p.y).matrixTransform(m);Object.assign(dots[i].style,{left:f.left+q.x*scale-r.left-6+'px',top:f.top+q.y*scale-r.top-6+'px'});});
+      tangents.replaceChildren();const anchor=points.at(-1);
+      if(anchor){
+        const screen=p=>{const q=new w.DOMPoint(p.x,p.y).matrixTransform(m);return{x:f.left+q.x*scale-r.left,y:f.top+q.y*scale-r.top};},a=screen(anchor);
+        for(const key of ['in','out'])if(anchor[key]){const b=screen(anchor[key]),line=root.document.createElementNS(ns,'line'),dot=root.document.createElementNS(ns,'circle');line.setAttribute('x1',a.x);line.setAttribute('y1',a.y);line.setAttribute('x2',b.x);line.setAttribute('y2',b.y);line.style.cssText='stroke:#8b5cf6!important;stroke-width:1!important;';dot.setAttribute('cx',b.x);dot.setAttribute('cy',b.y);dot.setAttribute('r','4');dot.setAttribute('data-pen-handle',key);dot.style.cssText='fill:white!important;stroke:#8b5cf6!important;stroke-width:1.5!important;';tangents.append(line,dot);}
+      }
     }
     function finish(closed){
       if(!verify())return;
-      const distinct=new Set(points.map(p=>p.x+','+p.y));if(distinct.size<(closed?3:2)){status.textContent=closed?'Place at least three different points.':'Place at least two different points.';return;}
-      const value=points.flatMap(p=>[p.x,p.y]);cancel();onCommit(value,closed);
+      if(drag)return;
+      if(!root.RetouchSVGPath.serialize(points,closed)){status.textContent=closed?'Place at least three different points.':'Place at least two different points.';return;}
+      const value=points.flatMap(p=>[p.x,p.y]),nodes=root.RetouchSVGPath.curved(points)?points.map(p=>({...p})):null;cancel();onCommit(value,closed,nodes);
     }
-    function back(){if(!points.length||!verify())return;points.pop();hover=null;update();surface.focus({preventScroll:true});}
-    listen(surface,'click',event=>{
-      if(event.target.closest('button')||toolbar.contains(event.target)||event.button!==0)return;
+    function back(){if(drag||!points.length||!verify())return;points.pop();hover=null;update();surface.focus({preventScroll:true});}
+    listen(surface,'pointerdown',event=>{
+      if(event.target.closest('button')||toolbar.contains(event.target)||event.button!==0||drag)return;
       event.preventDefault();event.stopImmediatePropagation();if(!inside(event)||!verify())return;
       if(points.length>=512){status.textContent='Finish this vector before adding more points.';return;}
-      try{const p=point(event),last=points.at(-1);if(last&&Math.hypot(p.x-last.x,p.y-last.y)<1e-6)return;points.push(p);hover=null;update();surface.focus({preventScroll:true});}catch(error){onError(error.message);}
+      try{const p=point(event),last=points.at(-1);if(last&&Math.hypot(p.x-last.x,p.y-last.y)<1e-6)return;points.push(p);drag={id:event.pointerId,x:event.clientX,y:event.clientY,curved:false};hover=null;surface.setPointerCapture(event.pointerId);update();surface.focus({preventScroll:true});}catch(error){onError(error.message);}
     });
-    listen(surface,'pointermove',event=>{if(toolbar.contains(event.target))return;if(!inside(event)){hover=null;paint();return;}try{hover=point(event);paint();}catch{hover=null;}});
+    function move(event){
+      if(drag){
+        if(event.pointerId!==drag.id||!verify())return;
+        try{const anchor=points.at(-1),p=point(event,anchor);drag.curved ||= Math.hypot(event.clientX-drag.x,event.clientY-drag.y)>=3;
+          if(drag.curved){const incoming={x:2*anchor.x-p.x,y:2*anchor.y-p.y};if(Math.abs(incoming.x)>100000||Math.abs(incoming.y)>100000)throw Error('Keep curve handles within supported SVG coordinates.');anchor.out=p;anchor.in=incoming;update();}
+        }catch(error){cancel();onError(error.message);}return;
+      }
+      if(toolbar.contains(event.target))return;if(!inside(event)){hover=null;paint();return;}try{hover=point(event);paint();}catch{hover=null;}
+    }
+    listen(surface,'pointermove',move);
+    listen(surface,'pointerup',event=>{if(!drag||event.pointerId!==drag.id)return;event.preventDefault();event.stopImmediatePropagation();move(event);if(ended)return;drag=null;hover=null;if(surface.hasPointerCapture(event.pointerId))surface.releasePointerCapture(event.pointerId);paint();});
+    listen(surface,'pointercancel',cancel);listen(surface,'lostpointercapture',()=>{if(drag)cancel();});
     listen(surface,'dblclick',event=>{if(event.target.closest('button')||toolbar.contains(event.target))return;event.preventDefault();event.stopImmediatePropagation();finish(false);});
     listen(surface,'keydown',event=>{
       if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();cancel();}

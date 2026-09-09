@@ -10,10 +10,10 @@ function describe(resolved){
 }
 function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason});
- if(!describe(resolved)||!presets.includes(op.preset)&&!['polygon','polyline'].includes(op.preset))return refuse('Select an explicitly closed JSX SVG canvas or group without spread or children props.');
+ if(!describe(resolved)||!presets.includes(op.preset)&&!['polygon','polyline','path'].includes(op.preset))return refuse('Select an explicitly closed JSX SVG canvas or group without spread or children props.');
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the SVG container.');
  if(['polygon','polyline'].includes(op.preset)&&op.points===undefined)return refuse('Place vector points before creating a line or polygon.');
- const drawn=op.points===undefined?null:svg.drawnShape(op.preset,op.points);if(op.points!==undefined&&!drawn)return refuse('Draw a nonempty shape with bounded SVG coordinates.');
+ const drawn=op.preset==='path'?svg.pathShape(op.nodes,op.closed):op.points===undefined?null:svg.drawnShape(op.preset,op.points);if(op.preset==='path'&&!drawn)return refuse('Draw valid path anchors and handles.');if(op.points!==undefined&&!drawn)return refuse('Draw a nonempty shape with bounded SVG coordinates.');
  const view=viewport(resolved).node,attrs=view.openingElement.attributes.filter(a=>a.type==='JSXAttribute').map(a=>({name:a.name.name,value:literal(a)})).filter(a=>a.value!==undefined&&a.value!==null);
  const content=(drawn||svg.shape({element:{node:{tagName:'svg',namespaceURI:'http://www.w3.org/2000/svg',attrs}}},op.preset)).replace(/stroke-width=/g,'strokeWidth=');
  const node=resolved.element.node,offset=node.closingElement.start,out=new MagicString(resolved.source);out.appendLeft(offset,content);const after=out.toString(),before=resolved.elements||ids.collectElements(resolved.source,resolved.relPath).elements,next=ids.collectElements(after,resolved.relPath).elements,created=next.find(e=>e.node.start===offset),parent=next.find(e=>e.id===resolved.element.id);
