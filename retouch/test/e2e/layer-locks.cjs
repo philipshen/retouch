@@ -22,6 +22,18 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   await page.getByRole('button',{name:'Unlock main · Frame',exact:true}).click();await page.getByRole('button',{name:'Lock div · B',exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Unlock div · A',exact:true}).count(),1,'child retains its independent lock');
   await item('div · A').click();await wait(async()=>JSON.stringify(await selected())===JSON.stringify(['div · A']));assert.equal(await page.locator('#panelBody').isVisible(),true,'tree can deliberately select locked layers');
   await page.getByRole('button',{name:'Unlock div · A',exact:true}).click();await page.getByRole('button',{name:'Lock div · A',exact:true}).waitFor();await item('div · B').click();await a.click({modifiers:['Shift']});await wait(async()=>(await selected()).length===2);
-  assert.equal(fs.readFileSync(file,'utf8'),original);assert.deepEqual(errors,[]);console.log(engine+': PASS layer locks exclude canvas click/text/modifier/marquee, inherit through frames, survive iframe reload, retain child locks, allow deliberate tree selection and leave source unchanged');
+  assert.equal(fs.readFileSync(file,'utf8'),original);
+  const read=()=>fs.readFileSync(file,'utf8'),ready=()=>wait(async()=>await page.locator('#panelBody').getAttribute('aria-busy')==='false'),undo=page.getByRole('button',{name:'Undo',exact:true}),redo=page.getByRole('button',{name:'Redo',exact:true});
+  await item('div · A').click();await ready();await page.getByLabel('Width (CSS)',{exact:true}).fill('100px');await page.getByLabel('Width (CSS)',{exact:true}).press('Tab');await wait(()=>read()!==original);await ready();const changed=read();
+  const writes=[];page.on('request',r=>{if(r.method()==='POST'&&r.url().endsWith('/rt/__api/op'))writes.push(r.postDataJSON());});
+  await page.getByRole('button',{name:'Lock div · A',exact:true}).click();await page.getByRole('button',{name:'Unlock div · A',exact:true}).waitFor();
+  await app.locator('body').evaluate(()=>history.pushState(null,'','#history-route'));await page.getByRole('button',{name:'Lock div · A',exact:true}).waitFor();
+  await undo.click();await page.getByRole('button',{name:'Lock div · A',exact:true}).waitFor();await wait(async()=>await app.locator('body').evaluate(()=>location.hash)==='');await ready();assert.equal(read(),changed);assert.deepEqual(writes,[],'lock undo does not invoke source undo');
+  await undo.click();await wait(()=>read()===original);await ready();assert.equal(writes.length,1);assert.equal(writes[0].type,'undo');
+  await redo.click();await wait(()=>read()===changed);await ready();await redo.click();await page.getByRole('button',{name:'Unlock div · A',exact:true}).waitFor();assert.equal(read(),changed);assert.equal(writes.length,2,'lock redo does not invoke source redo');
+  await page.keyboard.press('Meta+z');await page.getByRole('button',{name:'Lock div · A',exact:true}).waitFor();await ready();
+  await page.getByRole('button',{name:'Lock div · B',exact:true}).click();await page.getByRole('button',{name:'Unlock div · B',exact:true}).waitFor();assert.equal(await redo.isDisabled(),true,'new lock invalidates redo');
+  await undo.click();await page.getByRole('button',{name:'Lock div · B',exact:true}).waitFor();await ready();await undo.click();await wait(()=>read()===original);await ready();
+  assert.deepEqual(errors,[]);console.log(engine+': PASS layer locks exclude canvas click/text/modifier/marquee, inherit through frames, survive iframe reload, retain child locks, allow deliberate tree selection and share ordered source/lock undo, redo, route restoration and branch invalidation');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

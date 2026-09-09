@@ -1609,6 +1609,12 @@ async function showHistoryPage(route){
   });
 }
 async function restoreHistory(direction,op) {
+  if(op.type==='layerLock'){
+    await showHistoryPage(op.route);
+    const result=layerLocks.restore(op.lockChange,direction);
+    if(result.ok){clearSelection();hoverEl=null;layers.refresh();toast(direction==='undo'?'Undone':'Redone','ok');}
+    return result;
+  }
   const result=await api('POST','/rt/__api/op',{type:direction,undoId:op.undoId});
   if(!result?.ok)return result;
   // Source history has already moved. A renderer failure must not leave the
@@ -1720,7 +1726,8 @@ const layers = RetouchLayers.mount({
   onLock:async(el,value)=>{
     if(panelTasks||undoBusy||sourceRequests)return;
     await commitInlineEdit();stopDrawing?.();
-    layerLocks.set(el,value);hoverEl=null;
+    const lockChange=layerLocks.change(el,value);if(!lockChange)return;
+    editorHistory.record({type:'layerLock',undoId:'lock:'+crypto.randomUUID(),route:lockChange.route,lockChange});hoverEl=null;
     if(value)clearSelection();
     toast(value?'Layer locked on the canvas. Select it in Layers to edit.':'Layer unlocked.','ok');
   },

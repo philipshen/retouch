@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 329 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 330 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -2411,8 +2411,8 @@ active canvas tools. Source files and runtime DOM attributes/styles are unchange
 Locks belong to the current editor session and page route, keyed by source host
 or instance IDs. They survive iframe reloads and route round trips; a child's
 independent lock survives unlocking its parent. They are not persisted across an
-editor reload, do not yet participate in undo/redo, and are not a source-write
-permission boundary. Source structural changes may shift IDs; durable document
+editor reload and are not a source-write permission boundary. Lock undo/redo
+was added in the following increment. Source structural changes may shift IDs; durable document
 identity and lock persistence remain unfinished.
 
 The real React marquee workflow passes in Chromium and WebKit with locked-layer
@@ -2425,3 +2425,25 @@ All 329 unit/HTTP tests pass; existing layer-interaction regression passes.
 Logs: `/private/tmp/retouch-layer-locks-{chromium,webkit,react-chromium,react-webkit,unit,interactions}.log`.
 Screenshot `/private/tmp/retouch-layer-locks.png` was inspected. The latest Mac
 archive predates this feature.
+
+## Ordered lock and source history
+
+Lock/unlock changes now record entries in the existing shared history controller.
+Undo and Redo restore the entry's route and editor lock state without invoking the
+source operation API. Source edits and lock changes therefore reverse in one
+chronological order. No-op locks add no entry; conflicting lock state refuses a
+restore and retains the entry for retry. New lock changes invalidate redo through
+the same controller used by source edits. Restoring locks clears selection and
+refreshes inherited lock indicators.
+
+The extended HTML lock workflow passes in Chromium and WebKit. It interleaves a
+real source width edit with locks, checks exact source bytes and source API request
+counts, follows a lock undo across routes, and verifies toolbar/keyboard undo,
+redo and branch invalidation. All 330 unit/HTTP tests pass, including route-isolated
+lock restoration and conflicting-state refusal. Logs:
+`/private/tmp/retouch-lock-history-{chromium,webkit,unit}.log`.
+The real React lock/marquee/group-edit workflow also passes in WebKit; log
+`/private/tmp/retouch-lock-history-react-webkit.log`.
+
+Session persistence, durable source identity, full Figma parity and trusted Mac
+distribution remain unfinished. The packaged Mac app predates lock support.
