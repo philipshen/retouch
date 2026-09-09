@@ -1470,7 +1470,8 @@ async function restoreHistory(direction,op) {
         return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
       });
     } else await reloadFrame();
-    if(sel&&op.selectionIds){const selected=await Promise.all(op.selectionIds.map(id=>api('GET',resolveUrl(id))));if(selected.every(result=>result?.ok))sel.multiple=selected.map(result=>result.element);}
+    const selectionIds=direction==='undo'?op.selectionBefore||op.selectionIds:op.selectionAfter||op.selectionIds;
+    if(sel&&selectionIds)await restoreLayerSelection(selectionIds);
     if (sel) renderPanel();
 
   } catch(error){toast('Source restored; preview refresh failed: '+error.message,'err');}
@@ -1593,9 +1594,25 @@ async function insertLayer(preset,info){
     toast('Layer added','ok');
   }finally{busyPanel(false);}
 }
+async function restoreLayerSelection(ids){
+  const selected=await Promise.all(ids.map(id=>api('GET',resolveUrl(id))));
+  if(!selected.length||selected.some(result=>!result?.ok))return;
+  const infos=selected.map(result=>result.element),first=infos[0];sel={hostId:first.id,instanceId:null,scope:'host',info:first,multiple:infos.length>1?infos:undefined};
+}
+async function structureSelection(action){
+  const selection=sel.multiple,info=sel.info;busyPanel(true);
+  try{
+    const type=action==='duplicateElement'?'duplicateSelection':'deleteSelection';
+    const result=await api('POST','/rt/__api/op',{type,id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash});
+    if(!result?.ok)return toast(result?.reason||result?.error||'Could not update selected layers','err');
+    editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:selection.map(item=>item.id),selectionAfter:result.selectionIds,undoId:result.undoId});
+    await reloadFrame();await restoreLayerSelection(result.selectionIds);if(sel)renderPanel();
+    toast(result.rootCount+' layer'+(result.rootCount===1?'':'s')+(action==='duplicateElement'?' duplicated':' deleted'),'ok');
+  }finally{busyPanel(false);}
+}
 async function structureAction(action) {
-  if(sel?.multiple?.length>1)return toast('Choose one layer for structural edits.','err');
-  if(!sel || panelTasks || undoBusy)return;
+  if(!sel || panelTasks || undoBusy || sourceRequests)return;
+  if(sel.multiple?.length>1){if(['duplicateElement','deleteElement'].includes(action))return structureSelection(action);return toast('Choose one layer for this structural edit.','err');}
   await commitInlineEdit();
   const info=sel?.info;if(!info)return;
   if(action==='reparentElement')return chooseLayerParent(info);

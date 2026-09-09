@@ -154,9 +154,12 @@ Select several HTML layers with **Shift-click** in Layers or on the canvas
 common values and marks differing values as Mixed. Changes and resets apply to
 all selected layers at the chosen screen scope in one undo step. If any layer
 refuses the change, the entire edit is refused. Up to 100 layers in one HTML
-body are supported. Group structural operations and shared gradient/shadow
-controls remain unfinished; single-layer structural actions are disabled while
-a group is selected. A plain click returns to one layer.
+body are supported. **Duplicate layers** and **Delete layers** apply to the
+selection in one undo step. Selecting a parent and its child handles the subtree
+once. Copies get independent responsive styles, and undo restores the selection.
+Keyboard Duplicate/Delete also apply to the selected group. Reparenting groups,
+group clipboard and shared gradient/shadow controls remain unfinished. A plain
+click returns to one layer.
 
 The **Gradient fills** section creates stacked linear or radial gradients with
 live previews. Edit angle or center, add/remove color stops, change their colors

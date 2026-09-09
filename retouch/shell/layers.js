@@ -66,10 +66,10 @@
           b.ondrop=e=>{const position=dropPosition(e);if(position){e.preventDefault();const source=dragged;endDrag();onMove?.(source,item.el,position);}};
           b.ondragend=endDrag;
           b.onkeydown=async e=>{
-            if(e.key==='F2'){e.preventDefault();if(!isBusy){if(selected!==item.el)await onSelect(item.el);onAction('renameElement');}return;}
-            if((e.metaKey||e.ctrlKey)&&['c','v'].includes(e.key.toLowerCase())){e.preventDefault();if(!isBusy){if(selected!==item.el)await onSelect(item.el);onAction(e.key.toLowerCase()==='c'?'copyElement':'pasteElement');}return;}
-            if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='d'){e.preventDefault();if(!isBusy){if(selected!==item.el)await onSelect(item.el);onAction('duplicateElement');}return;}
-            if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();if(!isBusy){if(selected!==item.el)await onSelect(item.el);onAction('deleteElement');}return;}
+            if(e.key==='F2'){e.preventDefault();if(!isBusy){if(!selectedSet.has(item.el))await onSelect(item.el);onAction('renameElement');}return;}
+            if((e.metaKey||e.ctrlKey)&&['c','v'].includes(e.key.toLowerCase())){e.preventDefault();if(!isBusy){if(!selectedSet.has(item.el))await onSelect(item.el);onAction(e.key.toLowerCase()==='c'?'copyElement':'pasteElement');}return;}
+            if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='d'){e.preventDefault();if(!isBusy){if(!selectedSet.has(item.el))await onSelect(item.el);onAction('duplicateElement');}return;}
+            if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();if(!isBusy){if(!selectedSet.has(item.el))await onSelect(item.el);onAction('deleteElement');}return;}
             const index=rows.findIndex(r=>r.button===b);
             if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)) {
               e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?rows.length-1:index+(e.key==='ArrowDown'?1:-1);
@@ -114,6 +114,7 @@
       const capabilities=JSON.stringify([!!info,s,busy,copied,compatible,selectedSet.size]);
       if(capabilities===lastCapabilities)return;
       lastCapabilities=capabilities;
+      actionButtons.duplicateElement.textContent=selectedSet.size>1?'Duplicate layers':'Duplicate layer';actionButtons.deleteElement.textContent=selectedSet.size>1?'Delete layers':'Delete layer';
       for(const action of ['insertText','insertFrame']){actionButtons[action].hidden=s?.canInsert===undefined;actionButtons[action].disabled=busy||!s?.canInsert;actionButtons[action].title=s?.insertReason||'Insert inside the selected container.';}
       actionButtons.reparentElement.hidden=s?.canReparent===undefined;actionButtons.reparentElement.disabled=busy||!s?.canReparent;
       actionButtons.copyElement.disabled=busy||!s?.canDuplicate;
@@ -123,7 +124,7 @@
       actionButtons.deleteElement.disabled=busy||!s?.canDelete;
       actionButtons.before.disabled=busy||!s?.canMoveBefore;
       actionButtons.after.disabled=busy||!s?.canMoveAfter;
-      if(selectedSet.size>1){for(const button of Object.values(actionButtons))button.disabled=true;reason.textContent=selectedSet.size+' layers selected. Shared styles are available in the inspector.';return;}
+      if(selectedSet.size>1){for(const button of Object.values(actionButtons))button.disabled=true;actionButtons.duplicateElement.disabled=busy;actionButtons.deleteElement.disabled=busy;reason.textContent=selectedSet.size+' layers selected. Duplicate and delete apply to the selection.';return;}
       reason.textContent=info?(s?.canInsert&&!s?.canDuplicate?'Add text or a frame inside this container.':s?.reason || (!s?.canDuplicate?'Duplicate is unavailable for a layer with an authored ID, key, or ref.':'')):'Select a layer to organize it.';
     }
     return {attach,selection};

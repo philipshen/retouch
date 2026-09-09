@@ -14,7 +14,7 @@ changing those files. The original checkout may continue to evolve independently
 | Area | Required outcome | Current evidence and remaining work |
 | --- | --- | --- |
 | Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Existing single-site zoom/selection/resize plus a linked phone/tablet/desktop comparison rail. Most document and multi-selection operations still absent or unaudited. |
-| Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. HTML multi-selection and shared CSS editing now exist; group structural editing, cross-context clipboard and broader source structures remain. |
+| Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. HTML multi-selection, shared CSS and group duplicate/delete exist; group reparenting, cross-context clipboard and broader source structures remain. |
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | Full vector authoring and geometry model remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | Visual horizontal/vertical/reverse flex and grid controls, wrapping, gaps, alignment/distribution, per-side padding, fixed/hug/fill sizing, minimum/maximum dimensions, grid-child spans and breakpoint-scoped writes now exist. Full constraint, advanced grid, nested auto-layout and cross-framework equivalence work remains. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | Opacity, CSS border width/style/color, uniform and individual corners, basic color and shadow controls, and image fit/position controls exist. Browser tests cover border independence, corners, scope and exact undo. Multiple fills/strokes, gradient editing, crop handles/zoom/rotation, blending and complete visual/source representations remain. |
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 233 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 236 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -807,3 +807,28 @@ width/tablet opacity, untouched unselected image, restored group selection,
 and exact undo/redo. The shared inspector and outlines were visually inspected.
 Marquee/range selection, grouping, multi-layer structure, cross-file selection,
 and shared complex-effect controls remain unfinished.
+
+
+### Duplicate and delete HTML selections
+
+Multiple selected HTML layers can now be duplicated or deleted atomically.
+Overlapping ancestor/descendant selections reduce to the outermost selected
+subtrees, which are handled once. Duplicate creates a copy beside each original
+and allocates independent responsive style identities. All roots must pass source
+validation before the planner returns one file edit. Temporary copy/parent
+markers exist only during planning and are removed before any write. The planner
+checks parsed element counts, copied parents and combined style ownership.
+
+The duplicate/delete buttons and keyboard shortcuts now apply to the selection.
+Copies become selected; deleting selects their common ancestor. History stores
+the before and after selections, so undo/redo restores both exact source and
+selection membership. Other single-layer structural actions remain disabled for
+a group.
+
+All 236 unit tests pass. Writer tests cover independent styled copies across
+parents, nested selection reduction, untouched siblings, unknown/stale targets,
+invalid source regions, authored IDs and protected roots. Chromium and WebKit
+copy a styled selection, edit only its copies, undo that styling, delete both
+copies through a selected row's keyboard shortcut, restore the deletion, and
+exercise exact duplication undo/redo. Group reparenting, grouping/ungrouping,
+marquee selection and cross-document clipboard remain unfinished.
