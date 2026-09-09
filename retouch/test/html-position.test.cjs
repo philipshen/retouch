@@ -15,3 +15,11 @@ test('HTML positioning writes a single scoped rule and refuses important shortha
  for(const style of ['inset:0!important','inset-inline-start:2px!important','margin:10px!important','all:initial!important']){const r=resolved(style);assert.equal(css.plan(r,{fileHash:r.hash,width:0,changes}).refused,true,style);}
  for(const value of ['calc(50% + var(--x))','1px; color:red','url(x)'])assert.equal(V.valid('left',value),false);
 });
+test('zero-sized containing blocks retain valid edge and center anchors without dividing by zero',()=>{
+ const zero={...g,parentWidth:0,parentHeight:0};
+ assert.deepEqual(P.axis(zero,'x','end'),{left:'auto',right:'-100px',width:'80px'});
+ assert.deepEqual(P.axis(zero,'y','center'),{top:'calc(50% + 30px)',bottom:'auto',height:'40px'});
+ assert.deepEqual(P.axis(zero,'y','stretch'),{top:'30px',bottom:'-70px',height:'auto'});
+ for(const dimension of ['x','y'])for(const mode of ['start','end','center','stretch'])for(const [p,v]of Object.entries(P.axis(zero,dimension,mode)))assert.equal(V.valid(p,v),true,p+':'+v);
+ for(const dimension of ['x','y'])assert.throws(()=>P.axis(zero,dimension,'scale'),/nonzero/);
+});

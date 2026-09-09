@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 296 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 297 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1782,3 +1782,29 @@ Archive and receipt:
 and `verification.json` in that directory. SHA-256:
 `a9e4df7731d288e85b0962dfa2397fcb41f3805a75a84ece634d6a5406d4a993`.
 See desktop/README.md for the package verification scope and limitations.
+
+
+### Positioning inside zero-size containing blocks
+
+HTML edge, center and stretch anchors no longer reject a zero-width or
+zero-height containing block. This supports the common layout where an
+absolutely positioned child does not contribute to its parent's height. Scale
+remains unavailable on a zero-size axis because a proportional factor cannot
+be inferred; the corresponding option is disabled with a visible explanation.
+
+Canvas size limits now use the actual containing block, including zero
+dimensions, instead of treating zero as a missing value and substituting the
+viewport. Viewport-based absolute positioning uses viewport dimensions. Pointer
+gestures that stop at an unchanged size limit no longer write CSS or create an
+undo entry, matching keyboard no-op behavior.
+
+Validation: all 297 unit tests pass; zero-width and zero-height edge/center/
+stretch calculations and proportional refusal are covered. Chromium and WebKit
+pass the extended positioning workflow with a real zero-height parent, retained
+bounds under all four non-proportional vertical anchors, bounded resizing and
+exact undo. A child with max-height:100% and min-height:20px inside that parent
+stays at 20px in both preview and page, without a write when dragged beyond its
+limit. Existing responsive, pointer, keyboard, focus and cancellation checks
+also pass. Logs: `/private/tmp/retouch-zero-container-unit.log` and
+`/private/tmp/retouch-zero-container-{chromium,webkit}-final.log`.
+The be51333 desktop package predates this follow-up fix.

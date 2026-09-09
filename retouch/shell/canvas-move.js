@@ -10,7 +10,7 @@
   return {x:altKey||!hx?(width-w)/2:hx<0?width-w:0,y:altKey||!hy?(height-h)/2:hy<0?height-h:0,width:w,height:h};
  }
  function limits(target){
-  const css=target.ownerDocument.defaultView.getComputedStyle(target),parent=target.offsetParent,w=parent?.clientWidth||target.ownerDocument.documentElement.clientWidth,h=parent?.clientHeight||target.ownerDocument.defaultView.innerHeight;
+  const d=target.ownerDocument,window=d.defaultView,css=window.getComputedStyle(target),parent=target.offsetParent,viewport=!parent||parent===d.body&&window.getComputedStyle(parent).position==='static',w=viewport?d.documentElement.clientWidth:parent.clientWidth,h=viewport?window.innerHeight:parent.clientHeight;
   const number=p=>parseFloat(css.getPropertyValue(p))||0,borderX=number('padding-left')+number('padding-right')+number('border-left-width')+number('border-right-width'),borderY=number('padding-top')+number('padding-bottom')+number('border-top-width')+number('border-bottom-width');
   function value(raw,dimension,fallback){if(['auto','none'].includes(raw))return fallback;const match=/^(\d+(?:\.\d+)?|\.\d+)(px|%)$/.exec(raw);if(!match)throw Error('Use fixed or percentage size bounds before resizing on canvas.');return Number(match[1])*(match[2]==='%'?dimension/100:1);}
   // Placement writes border-box sizing; apply bounds in that resulting box model.
@@ -41,7 +41,7 @@
   listen(surface,'pointerdown',e=>{if(e.button!==0||state)return;e.preventDefault();e.stopImmediatePropagation();const handle=e.target.dataset.resizeHandle;if(mode==='resize'?!handle:e.target!==preview){cancel();return;}state={id:e.pointerId,handle,x:e.clientX,y:e.clientY,rawX:0,rawY:0,delta:{x:0,y:0}};surface.setPointerCapture(e.pointerId);});
   listen(surface,'focusin',e=>{if(state?.keyboard&&mode==='resize'&&e.target.dataset.resizeHandle&&e.target.dataset.resizeHandle!==state.handle){state={keyboard:true,handle:e.target.dataset.resizeHandle,id:null,rawX:0,rawY:0,base:state.delta,delta:state.delta};}});
   listen(surface,'pointermove',move);
-  listen(surface,'pointerup',e=>{if(!state||e.pointerId!==state.id)return;e.preventDefault();move(e);if(ended)return;const result=state.delta,distance=Math.hypot(state.rawX,state.rawY);cancel();if(distance>=4&&target.isConnected)onCommit(result);});
+  listen(surface,'pointerup',e=>{if(!state||e.pointerId!==state.id)return;e.preventDefault();move(e);if(ended)return;const result=state.delta,distance=Math.hypot(state.rawX,state.rawY);cancel();const changed=Math.abs(result.x)+Math.abs(result.y)+(mode==='resize'?Math.abs(result.width-r.width)+Math.abs(result.height-r.height):0)>1e-6;if(distance>=4&&changed&&target.isConnected)onCommit(result);});
   for(const event of ['pointercancel','lostpointercapture'])listen(surface,event,cancel);
   listen(root,'keydown',e=>{
    if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancel(true);return;}
