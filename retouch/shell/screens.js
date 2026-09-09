@@ -6,13 +6,13 @@
   const key = 'retouch.screen.v1';
   let screen = null;
   function valid(value) { return Number.isInteger(value) && value >= 240 && value <= 7680; }
-  function apply(next) {
+  function apply(next, options = {}) {
     screen = next;
     const name = next ? `${next.width}x${next.height}` : 'fluid';
     preset.value = [...preset.options].some(o => o.value === name) ? name : 'custom';
     if (next) { width.value = next.width; height.value = next.height; }
-    try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
-    window.dispatchEvent(new CustomEvent('retouch:screen', { detail: next }));
+    if(options.persist!==false)try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
+    window.dispatchEvent(Object.assign(new CustomEvent('retouch:screen', { detail: next }), {preservePan:!!options.preservePan}));
   }
   function custom() {
     const w = Number(width.value), h = Number(height.value);
@@ -42,7 +42,7 @@
   window.addEventListener('retouch:viewport', e => {
     if (!screen) { width.value = e.detail.width; height.value = e.detail.height; }
   });
-  window.RetouchScreens = { set(next) { if(next && valid(next.width) && valid(next.height))apply(next); }, restore() {
+  window.RetouchScreens = { get() { return screen ? {...screen} : null; }, set(next, options) { if(next===null || next && valid(next.width) && valid(next.height))apply(next, options); }, restore() {
     try {
       const saved = JSON.parse(localStorage.getItem(key));
       if (saved && valid(saved.width) && valid(saved.height)) apply(saved);

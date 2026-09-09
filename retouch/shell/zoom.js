@@ -111,7 +111,7 @@
   }
   window.addEventListener('retouch:screen',e=>{
     screen=e.detail;restoreUnits();measure();
-    canvas.scrollLeft=0;
+    if(!e.preservePan)canvas.scrollLeft=0;
   });
   new ResizeObserver(measure).observe(canvas);
   window.RetouchScreens?.restore();

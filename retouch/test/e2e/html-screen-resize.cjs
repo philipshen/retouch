@@ -1,0 +1,24 @@
+'use strict';
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict'),{once}=require('node:events');
+const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_INSPECTOR_FIXTURE for Playwright');const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
+(async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-screen-resize-')),file=path.join(root,'index.html'),original='<html><head><style>main{display:flex;flex-direction:column}article{background:skyblue;padding:20px}@media(min-width:600px){main{flex-direction:row}}</style></head><body><main><article>One</article><article>Two</article></main></body></html>';fs.writeFileSync(file,original);
+ const server=require('../../src/html-site.cjs').start({root,port:0,quiet:true});await once(server,'listening');const browser=await browserType.launch(),page=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[];page.on('pageerror',e=>errors.push(e.message));const app=page.frameLocator('#app');
+ const wait=async fn=>{for(let i=0;i<100;i++){try{if(await fn())return;}catch(e){if(!/Execution context was destroyed/.test(e.message))throw e;}await page.waitForTimeout(100);}throw Error('Timed out waiting for screen resize');};
+ const width=()=>app.locator('body').evaluate(()=>innerWidth),saved=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('retouch.screen.v1'))),handle=page.getByRole('slider',{name:'Resize screen width',exact:true});
+ const start=async()=>{const b=await handle.boundingBox();assert.ok(b);const x=b.x+b.width/2,y=b.y+b.height/2;await page.mouse.move(x,y);await page.mouse.down();return{x,y};};
+ try{
+  await page.goto(`http://localhost:${server.address().port}/rt`);await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await wait(async()=>await width()===390);
+  await page.getByRole('treeitem',{name:'main',exact:true}).click();await wait(async()=>await page.getByLabel('Style screen scope').count()===1);const scope=await page.getByLabel('Style screen scope').inputValue();
+  let p=await start();await page.mouse.move(p.x+110,p.y,{steps:10});await wait(async()=>await width()===610);assert.equal((await saved()).width,390,'drag preview is not persisted before release');await page.mouse.up();await wait(async()=>(await saved()).width===610);
+  assert.equal(await app.locator('main').evaluate(el=>getComputedStyle(el).flexDirection),'row');assert.equal(await page.getByLabel('Style screen scope').inputValue(),scope);assert.equal(fs.readFileSync(file,'utf8'),original);
+  p=await start();await page.mouse.move(p.x-60,p.y,{steps:5});await wait(async()=>await width()===490);await page.keyboard.press('Escape');await page.mouse.up();await wait(async()=>await width()===610);assert.equal((await saved()).width,610);
+  await handle.focus();await page.keyboard.press('Shift+ArrowLeft');await wait(async()=>await width()===600);await page.keyboard.press('ArrowLeft');await wait(async()=>await width()===599);assert.equal(await app.locator('main').evaluate(el=>getComputedStyle(el).flexDirection),'column');
+  await page.reload();await wait(async()=>await width()===599);
+  const canvas=page.locator('#frameWrap');await canvas.dispatchEvent('wheel',{deltaY:100,ctrlKey:true,bubbles:true,cancelable:true});const scale=await page.locator('#app').evaluate(el=>el.getBoundingClientRect().width/el.offsetWidth);assert.ok(scale<1);p=await start();await page.mouse.move(p.x+50,p.y,{steps:5});await page.mouse.up();const expected=Math.round(599+100/scale);await wait(async()=>Math.abs(await width()-expected)<=1);
+  if(process.env.RT_E2E_SCREEN_RESIZE_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_SCREEN_RESIZE_SCREENSHOT});
+  await handle.focus();await page.keyboard.press('Home');await wait(async()=>await width()===240);assert.equal(await handle.getAttribute('aria-valuenow'),'240');
+  await page.getByLabel('Screen size',{exact:true}).selectOption('fluid');await wait(async()=>await page.getByLabel('Screen size',{exact:true}).inputValue()==='fluid');const initial=await width();p=await start();await page.mouse.move(p.x-60,p.y,{steps:5});await page.keyboard.press('Escape');await page.mouse.up();await wait(async()=>await width()===initial);assert.equal(await page.getByLabel('Screen size',{exact:true}).inputValue(),'fluid');assert.equal(await saved(),null);
+  assert.equal(fs.readFileSync(file,'utf8'),original);assert.deepEqual(errors,[]);console.log(engine+': PASS direct screen-width drag, live responsive layout, cancel, keyboard, persistence, zoom and unchanged source/scope');
+ }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
+})().catch(e=>{console.error(e);process.exitCode=1;});

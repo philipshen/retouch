@@ -327,3 +327,11 @@ copy. Geometry and responsive paint start identical, with independent managed
 style identities so later edits affect only the copy. Undo/redo restore source
 and selection. SVG layers with authored IDs, template content or unsupported
 descendants cannot be duplicated yet; SVG clipboard operations remain unavailable.
+
+Drag the handle on the preview's right edge to explore screen widths between
+presets. Layout responds while dragging; release saves the preview size and
+Escape cancels. Focus the handle and use Left/Right for 1 px steps, Shift for
+10 px steps, or Home/End for the 240–7680 px limits. Zoom changes the drag scale
+without changing the screen's CSS pixels. Preview resizing does not write source
+or change the style scope. If the edge is outside the workspace, zoom out or
+use the width field.
