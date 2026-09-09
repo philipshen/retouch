@@ -135,7 +135,11 @@ Choose a trusted local web directory. Hidden files, package manifests and paths
 outside that directory are not served.
 
 The CSS properties panel edits dimensions, flex direction/wrapping, gap, padding,
-typography, colors and borders. Select a screen size and choose its minimum-width
+typography, colors and borders. Padding and margin support one to four values
+and individual edges; gap supports row/column values. Negative margins and letter
+spacing are supported. Setting padding or margin replaces its existing edge
+overrides at the selected size. Align/distribute controls operate on flex/grid
+containers. Select a screen size and choose its minimum-width
 scope to add a responsive override; each property has a reset button. Changes
 persist as element-specific style rules in the HTML and work without Retouch.
 Existing stylesheets stay intact. Generated declarations use `!important`; authored

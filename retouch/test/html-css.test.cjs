@@ -34,3 +34,29 @@ test('HTML CSS reset without an override is inert and refuses an identity owned 
  const id=resolve(original).element.id;
  assert.equal(edit(original.replace('<h1 class="title">Second',`<h1 data-rt-style="${id}" class="title">Second`),0,'200px').refused,true);
 });
+
+test('CSS spacing supports shorthand and signed margins but refuses malformed or invalid lengths',()=>{
+ for(const [property,value] of [['padding','8px 12px 16px 20px'],['gap','1rem 2rem'],['margin','-8px auto'],['letter-spacing','-0.02em'],['line-height','1.5'],['max-height','none']])assert.equal(css.valid(property,value),true,property+' '+value);
+ for(const [property,value] of [['padding','8'],['padding','-8px'],['gap','1px 2px 3px'],['width','normal'],['letter-spacing','5%'],['border-width','2%'],['color','#12345'],['margin','1px;display:none']])assert.equal(css.valid(property,value),false,property+' '+value);
+});
+test('CSS shorthand replaces prior edge overrides and later edges win in the rendered declaration order',()=>{
+ let source=edit(original,0,'8px 12px','padding').edits[0].after;
+ source=edit(source,0,'20px','padding-left').edits[0].after;
+ assert.deepEqual(css.describe(resolve(source)).cssRules[0],{padding:'8px 12px','padding-left':'20px'});
+ source=edit(source,0,'4px','padding').edits[0].after;
+ assert.deepEqual(css.describe(resolve(source)).cssRules[0],{padding:'4px'});
+ source=edit(source,0,'8px','gap').edits[0].after;
+ source=edit(source,0,'20px','column-gap').edits[0].after;
+ assert.ok(source.indexOf('gap:8px')<source.indexOf('column-gap:20px'));
+ const id=resolve(source).element.id,values=css.describe(resolve(source)).cssRules[0];
+ const legacy=source.replace(css.rule(id,0,values),css.rule(id,0,values,true));
+ assert.deepEqual(css.describe(resolve(legacy)).cssRules[0],values);
+ assert.equal(edit(legacy,0,'30px','column-gap').ok,true);
+
+});
+test('CSS important shorthand conflicts are refused while reset remains available',()=>{
+ for(const [inline,prop]of [['padding:1px !important','padding-left'],['padding-left:1px !important','padding'],['border-top:1px solid red !important','border-width'],['all:initial !important','width'],['font:12px serif !important','font-size']])assert.equal(edit(original.replace('class="title"',`style="${inline}"`),0,'2px',prop).refused,true,inline);
+ let source=edit(original,0,'240px').edits[0].after;
+ source=source.replace('class="title"','class="title" style="width:200px !important"');
+ const reset=edit(source,0,null);assert.equal(reset.ok,true);assert.ok(!reset.edits[0].after.includes('data-rt-css='));assert.ok(reset.edits[0].after.includes('width:200px !important'));
+});

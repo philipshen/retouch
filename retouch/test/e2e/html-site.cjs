@@ -30,12 +30,24 @@ const {chromium}=require(path.join(fixture,'node_modules/playwright'));
   await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).width)==='240px','reset inherits base');await settled();
   for(let i=0;i<3;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'CSS exact undo');
+  await page.getByLabel('Style screen scope').selectOption('');
+  const setCSS=async(label,value,property,expected)=>{
+   const field=page.getByLabel(label+' (CSS)',{exact:true});await field.fill(value);await field.press('Tab');
+   await wait(async()=>await app.locator('h1').evaluate((el,p)=>getComputedStyle(el).getPropertyValue(p),property)===expected,'spacing '+property);await settled();
+  };
+  await setCSS('Padding','8px 12px','padding-left','12px');
+  await setCSS('Padding left','20px','padding-left','20px');
+  await setCSS('Padding','4px','padding-left','4px');
+  await page.getByRole('button',{name:'Reset padding',exact:true}).click();
+  await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).paddingLeft)==='0px','padding reset');await settled();
+  for(let i=0;i<4;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
+  await wait(()=>read()===original,'spacing exact undo');
   await page.locator('#panelBody textarea').fill('Saved & clear');await page.getByRole('button',{name:'Apply text',exact:true}).click();
   await wait(async()=>await app.locator('h1').textContent()==='Saved & clear','text rendered');assert.ok(fs.readFileSync(file,'utf8').includes('Saved &amp; clear'));
   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>fs.readFileSync(file,'utf8')===original,'text undo');
   await page.getByRole('treeitem',{name:'img · Study',exact:true}).click();await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.getByRole('button',{name:'Apply image path',exact:true}).click();
   await wait(async()=>await app.locator('img').evaluate(el=>el.complete&&el.currentSrc.endsWith('/second.svg')),'image loaded');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>fs.readFileSync(file,'utf8')===original,'image undo');
-  assert.deepEqual(errors,[]);console.log('PASS HTML browser responsive CSS, isolated styling, standalone export, reset, text/image edits and exact undo');
+  assert.deepEqual(errors,[]);console.log('PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

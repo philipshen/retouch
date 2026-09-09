@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 204 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 207 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -384,3 +384,21 @@ mode detection, dynamic port discovery, health and termination. Native UI checks
 verify folder selection, the HTML default, a persisted width edit, exact undo,
 and Stop releasing the owned port. Release signing/notarization and public cask
 distribution remain unverified and unfinished.
+
+
+### HTML spacing and alignment controls
+
+A shared value schema now drives the HTML inspector and CSS writer. Padding and
+margin accept one to four values and expose individual sides; gap accepts two
+values. Minimum/maximum height and flex/grid alignment are exposed. Negative
+margins and letter spacing are accepted; invalid unitless dimensions and malformed
+hex colors are refused before saving. New shorthand edits replace stored edge
+overrides in the same scope; edge overrides sort after shorthand declarations.
+The reader also recognizes earlier generated declaration ordering.
+
+Inline important shorthand conflicts are checked for overlapping properties.
+Reset can remove an editor override even after an important inline rule was added
+externally. All 207 tests pass. Browser verification covers shorthand padding,
+per-edge editing, shorthand replacement, reset inheritance and exact undo, along
+with the existing responsive and standalone-output checks. Complex CSS functions,
+selector editing and full visual-design parity remain open.

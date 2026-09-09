@@ -1,19 +1,10 @@
 'use strict';
 const parse5=require('parse5'),MagicString=require('magic-string'),html=require('./adapters/html.cjs');
-const lengths=new Set(['width','height','min-width','max-width','min-height','max-height','gap','column-gap','row-gap','padding','padding-top','padding-right','padding-bottom','padding-left','font-size','line-height','letter-spacing','border-radius','border-width']);
-const choices={display:['block','inline-block','flex','grid','none'], 'flex-direction':['row','column','row-reverse','column-reverse'],'flex-wrap':['nowrap','wrap','wrap-reverse'],'align-items':['start','center','end','stretch','baseline'],'justify-content':['start','center','end','space-between','space-around','space-evenly'],'text-align':['start','left','center','right','justify'],'border-style':['none','solid','dashed','dotted','double']};
-const colors=new Set(['color','background-color','border-color']);
+const {valid,families,overlaps}=require('../shell/html-css-values.js');
 const escape=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 const attr=(node,name)=>node.attrs?.find(a=>a.name===name)?.value;
-function valid(property,value){
- if(value===null)return lengths.has(property)||colors.has(property)||Object.hasOwn(choices,property);
- if(typeof value!=='string'||value.length>150)return false;
- if(lengths.has(property))return /^(?:\d*\.?\d+(?:px|rem|em|%|vw|vh|ch)?|auto|none|normal|min-content|max-content|fit-content)$/.test(value);
- if(colors.has(property))return /^(?:#[a-f\d]{3,8}|[a-z]+|(?:rgb|rgba|hsl|hsla)\([\d.%,\s/]+\))$/i.test(value);
- return choices[property]?.includes(value)||false;
-}
-function rule(id,width,values){
- const body=`[data-rt-style="${id}"]{`+Object.entries(values).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${k}:${v} !important;`).join('')+'}';
+function rule(id,width,values,legacy=false){
+ const body=`[data-rt-style="${id}"]{`+Object.entries(values).sort(([a],[b])=>(legacy?0:Number(!families[a])-Number(!families[b]))||a.localeCompare(b)).map(([k,v])=>`${k}:${v} !important;`).join('')+'}';
  return width?`@media (min-width: ${width}px){${body}}`:body;
 }
 function inspect(resolved){
@@ -26,7 +17,7 @@ function inspect(resolved){
   if(node.tagName==='style'&&attr(node,'data-rt-css')===id){
    const width=Number(attr(node,'data-rt-width')),values=JSON.parse(attr(node,'data-rt-values')||'null');
    if(!Number.isInteger(width)||width<0||width>7680||!values||Array.isArray(values)||typeof values!=='object'||Object.entries(values).some(([p,v])=>!valid(p,v)||v===null))throw Error('The stored CSS rule is invalid.');
-   if(node.childNodes.map(n=>n.value||'').join('')!==rule(id,width,values))throw Error('The CSS rule changed outside the editor.');
+   if(![rule(id,width,values),rule(id,width,values,true)].includes(node.childNodes.map(n=>n.value||'').join('')))throw Error('The CSS rule changed outside the editor.');
    if(!node.sourceCodeLocation?.endTag||blocks.some(b=>b.width===width))throw Error('The CSS rule is ambiguous.');
    blocks.push({node,width,values});
   }
@@ -42,9 +33,15 @@ function plan(resolved,op){
   if(op.fileHash&&op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the element.');
   if(!Number.isInteger(op.width)||op.width<0||op.width>7680||!valid(op.property,op.value))return refuse('Unsupported CSS property, value or screen width.');
   const inline=attr(resolved.element.node,'style')||'';
-  if(new RegExp('(?:^|;)\\s*'+op.property+'\\s*:[^;]*!important','i').test(inline))return refuse('This property has an important inline style. Edit that source rule first.');
+  // Reset must remain possible even if an external inline rule now wins.
+  const important=[...inline.replace(/\/\*[\s\S]*?\*\//g,'').matchAll(/(?:^|;)\s*([a-z-]+)\s*:[^;]*!\s*important\s*(?=;|$)/gi)].map(m=>m[1].toLowerCase());
+  if(op.value!==null&&important.some(p=>overlaps(p,op.property)))return refuse('This property overlaps an important inline style. Edit that source rule first.');
   const state=inspect(resolved),block=state.blocks.find(b=>b.width===op.width),values={...block?.values};
-  if(op.value===null)delete values[op.property];else values[op.property]=op.value;
+  if(op.value===null)delete values[op.property];else {
+   values[op.property]=op.value;
+   // A new shorthand supersedes its old per-edge overrides in this scope.
+   for(const child of families[op.property]||[])delete values[child];
+  }
   if(JSON.stringify(values)===JSON.stringify(block?.values||{}))return {ok:true,hash:resolved.hash,edits:[]};
   const out=new MagicString(resolved.source);
   if(!attr(resolved.element.node,'data-rt-style'))out.appendLeft(resolved.element.location.startTag.startOffset+1+resolved.element.tag.length,` data-rt-style="${state.id}"`);
