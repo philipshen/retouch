@@ -63,7 +63,16 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
     const beforeFailure=read(),failureRoute='**/rt/__api/font-axes';await page.route(failureRoute,route=>route.fulfill({status:422,contentType:'application/json',body:JSON.stringify({ok:false,reason:'Font metadata could not be read.'})}));
     await page.getByRole('button',{name:'Inspect declared font axes',exact:true}).click();await wait(async()=>/Font metadata could not be read/.test(await page.getByLabel('Declared font axes',{exact:true}).textContent()));assert.equal(read(),beforeFailure);assert.equal(await page.getByLabel('Weight axis',{exact:true}).getAttribute('max'),'10000');assert.equal(await page.getByRole('button',{name:'Use Weight default',exact:true}).count(),0);
     await page.unroute(failureRoute);await page.getByRole('button',{name:'Inspect declared font axes',exact:true}).click();await wait(async()=>await page.getByLabel('Weight axis',{exact:true}).getAttribute('max')==='900');assert.equal(read(),beforeFailure);
-    console.log(engine+' '+kind+': PASS declared font discovery, metadata request, range validation, default application, cached metadata, failure recovery and exact undo');
+    const slider=page.getByRole('slider',{name:'Adjust Weight axis',exact:true});await slider.scrollIntoViewIfNeeded();
+    const beforeSlide=read();let rect=await slider.boundingBox();assert.ok(rect);
+    await page.mouse.move(rect.x+rect.width*.8,rect.y+rect.height/2);await page.mouse.down();await page.mouse.move(rect.x+rect.width*.3,rect.y+rect.height/2,{steps:8});assert.equal(read(),beforeSlide);await page.keyboard.press('Escape');await page.mouse.up();await settled();assert.equal(read(),beforeSlide);assert.equal(await slider.inputValue(),'850');
+    await slider.scrollIntoViewIfNeeded();rect=await slider.boundingBox();
+    await page.mouse.move(rect.x+rect.width*.8,rect.y+rect.height/2);await page.mouse.down();await page.mouse.move(rect.x+rect.width*.4,rect.y+rect.height/2,{steps:8});const slid=Number(await slider.inputValue());assert.ok(slid>100&&slid<800);assert.equal(read(),beforeSlide);
+    await write(()=>page.mouse.up(),/wght/);const rendered=Number((await axes()).match(/"wght"\s+([\d.]+)/)[1]);assert.ok(Math.abs(rendered-slid)<.01);
+    const beforeGesture=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===beforeGesture);await settled();await wait(async()=>/850/.test(await axes()));
+    await write(()=>slider.press('Home'),/100/);const beforeKey=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===beforeKey);await settled();await wait(async()=>/850/.test(await axes()));
+    if(process.env.RT_E2E_FONT_DISCOVERY_SCREENSHOT){await slider.scrollIntoViewIfNeeded();await page.screenshot({path:process.env.RT_E2E_FONT_DISCOVERY_SCREENSHOT});}
+    console.log(engine+' '+kind+': PASS declared font discovery, metadata request, range validation, default application, cached metadata, failure recovery, pointer commit/cancel, keyboard slider and exact undo');
    }
    await write(()=>page.getByLabel('Add font axis',{exact:true}).selectOption('wdth'),/wdth/);assert.match(await axes(),/850/);
    await write(()=>page.getByRole('button',{name:'Remove Width axis',exact:true}).click(),/850/);assert.doesNotMatch(await axes(),/wdth/);

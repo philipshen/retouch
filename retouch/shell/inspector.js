@@ -192,7 +192,28 @@
             note(results,axis.name+' ('+axis.tag+'): '+axis.min+' to '+axis.max+' · default '+axis.default+(axis.hidden?' · hidden axis':''));
             const compatible=/^[A-Za-z0-9]{4}$/.test(axis.tag)&&axis.min>=-10000&&axis.max<=10000;
             if(compatible&&axisInputs.has(axis.tag)){const input=axisInputs.get(axis.tag);input.min=axis.min;input.max=axis.max;input.title='Declared font range; default '+axis.default;}
-            if(compatible&&axes&&(axes.length<16||axes.some(entry=>entry[0]===axis.tag))){const use=button('Use '+axis.name+' default',()=>{const next=new Map(axes);next.set(axis.tag,axis.default);onChange(values.serializeVariations([...next]));});results.append(use);}
+            const active=axes?.find(entry=>entry[0]===axis.tag);
+            if(compatible&&active&&axis.min<axis.max){
+              const row=document.createElement('div');row.className='font-axis-range';
+              const slider=document.createElement('input');slider.type='range';slider.min=axis.min;slider.max=axis.max;slider.step='any';slider.value=active[1];
+              const output=document.createElement('output');output.textContent=String(active[1]);
+              field(row,'Adjust '+axis.name+' axis',slider);row.append(output);results.append(row);
+              const restore=()=>{slider.value=active[1];output.textContent=String(active[1]);};let cancelled=false;
+              const cancel=event=>{event.preventDefault();event.stopPropagation();cancelled=true;restore();slider.blur();};
+              slider.onpointerdown=()=>{
+                cancelled=false;slider.focus();const gesture=new AbortController(),options={capture:true,signal:gesture.signal};
+                document.addEventListener('keydown',event=>{if(event.key==='Escape')cancel(event);},options);
+                document.addEventListener('pointerup',()=>gesture.abort(),{...options,once:true});
+                document.addEventListener('pointercancel',()=>{cancelled=true;restore();gesture.abort();},{...options,once:true});
+                window.addEventListener('blur',()=>{cancelled=true;restore();gesture.abort();},{signal:gesture.signal,once:true});
+              };
+              slider.oninput=()=>{if(cancelled){restore();return;}output.textContent=String(round(Number(slider.value)));};
+              slider.onchange=()=>{if(cancelled){restore();return;}const value=Number(slider.value);if(Number.isFinite(value)&&value!==active[1])onChange(values.serializeVariations(axes.map(entry=>entry[0]===axis.tag?[axis.tag,value]:entry)));};
+              slider.onkeydown=event=>{if(event.key==='Escape')cancel(event);else cancelled=false;};
+              slider.onpointercancel=()=>{cancelled=true;restore();};
+              slider.title='Release to apply; Escape cancels before release.';
+            }
+            if(compatible&&axes&&(axes.length<16||active)){const use=button('Use '+axis.name+' default',()=>{const next=new Map(axes);next.set(axis.tag,axis.default);onChange(values.serializeVariations([...next]));});results.append(use);}
           }
         }
         details.append(inspect,results);render();

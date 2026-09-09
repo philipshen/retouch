@@ -18,7 +18,7 @@ changing those files. The original checkout may continue to evolve independently
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. HTML/React polygons and polylines now support direct vertex dragging and keyboard movement with source undo. Vertex insertion/deletion and Pen creation of straight segments and cubic curves in existing SVG canvases have browser/source verification. Compound SVG paths now support cubic handles, arcs, contour operations, multi-point and marquee selection, and canvas-axis alignment/distribution with source history. Vector networks, boolean operations, arbitrary masks and complete transforms remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. HTML absolute placement now supports edge, center, stretch and proportional anchors with screen-scoped writes. Transformed constraints, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML supports linear/radial gradient stacks with draggable stops, shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
-| Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A searchable page-font picker now discovers declared and used families, with React/HTML and local Liquid browser coverage. Full font browsing, live Shopify font verification, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
+| Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A searchable page-font picker now discovers declared and used families, with React/HTML and local Liquid browser coverage. Explicit variable-axis editing, declared-file range/default inspection and bounded axis sliders have HTML/React/local Liquid browser coverage. Full font browsing, actual glyph-font resolution, live Shopify font verification, full rich-text/paragraph/list controls and complete typography parity remain. |
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | Existing React and Liquid component inspection/detach; full creation/variants/library workflows remain. Live Shopify proof is incomplete. |
 | Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Not implemented or verified. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
@@ -5040,3 +5040,32 @@ and URLs, and full conditional stylesheet semantics remain incomplete. Metadata
 can be stale until reinspection/expiry. This is fixture verification, not live
 Shopify verification or full Figma parity. Native app launches remain paused;
 trusted macOS distribution and broad arbitrary-site parity remain unverified.
+
+### Sliders for inspected variable-font axes
+
+After inspecting a declared font file, each active compatible axis with a
+nonzero range has a labeled slider bounded by that font's metadata. Dragging
+updates the displayed value; release writes the current responsive override
+through existing history. Escape before release restores the control without
+writing source. Keyboard Home can set the minimum and undo restores the prior
+source exactly. Inactive axes can still be added with the font-default button.
+Existing numeric controls retain precise entry; drag display rounds to two
+places but commits the underlying range value.
+
+Real browser pointer drags, Escape cancellation, release commit, keyboard Home,
+rendered axis values and exact single-step undo passed for HTML, React and local
+Liquid in Chromium and WebKit. All six final processes exited 0. Logs:
+/private/tmp/retouch-font-sliders-{html,react,liquid}-final-{chromium,webkit}.log.
+Initial WebKit runs exposed a range-control focus difference: Escape reached the
+shell and cleared selection. Explicit focus alone did not resolve it; capturing
+Escape during the pointer gesture did. Gesture listeners end on pointer release,
+cancellation or window blur. The corrected WebKit screenshot was inspected:
+/private/tmp/retouch-font-sliders-final-webkit.png. The initial crowded label was
+also corrected with a stacked field layout. All 382 unit tests passed in
+/private/tmp/retouch-font-sliders-final-units.log; git diff --check passed.
+
+This does not yet preview the site's glyph appearance continuously while dragging.
+Sliders rely on inspected declared-file metadata, support only the existing
+compatible tag/value grammar, and do not prove actual glyph-font selection.
+Broader font support, full Figma parity and trusted native distribution remain
+unfinished. Native app launches remain paused.
