@@ -3981,3 +3981,35 @@ Exact active-face/glyph coverage, variable axes, font previews before applying,
 shadow-root discovery and live Shopify coverage remain incomplete. The complete
 Figma/any-site/trusted Mac distribution goal remains active. Native launches
 were not attempted and remain paused.
+
+
+### 2026-09-09 — Font discovery inside open web components
+
+The existing batched font traversal now queues open shadow roots, including
+nested roots, without recursive JavaScript calls. Text directly assigned to a
+slot uses the slot's computed font rather than the light-DOM host's font.
+Repeated families remain deduplicated by the catalog. The same entry and time
+budgets, cancellation and result paging remain in force. Closed shadow roots
+are not inspected.
+
+All 372 unit tests pass in `/private/tmp/retouch-shadow-font-unit.log`.
+The expanded real-browser discovery workflow passes in
+`/private/tmp/retouch-shadow-font-chromium.log` and
+`/private/tmp/retouch-shadow-font-webkit.log`. The fixture includes a font used
+only in an open root, a nested root styled by an adopted CSSStyleSheet, directly
+slotted text with a different font, duplicate uses and a closed root. It verifies
+all three accessible families appear, duplicates do not create extra choices,
+and the closed-root-only family is absent. Existing large-catalog, paging,
+rescan and cancellation checks also pass.
+
+The conditional local Liquid source-write regression passes in
+`/private/tmp/retouch-shadow-font-liquid-regression.log`, including keyboard
+selection, responsive changes, alternate-branch rendering and exact source undo.
+All browser runs exited and closed their contexts. No native app was launched.
+
+This extends font discovery only. It does not establish source mapping or
+editable internals for arbitrary web components, nor does it establish that a
+discovered family supplies the rendered glyphs. Closed roots, pseudo-element
+text, other iframe documents, complete variable-font/text controls and broader
+Figma Design/any-site/trusted native distribution requirements remain open.
+The active goal is incomplete and native launches remain paused.

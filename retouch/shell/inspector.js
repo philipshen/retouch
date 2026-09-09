@@ -259,11 +259,17 @@
   }
   function* pageTextFonts(d){
     if(!d.body)return;
-    const walker=d.createTreeWalker(d.body,5),seen=new WeakSet();let node=d.body;
-    do {
-      const el=node.nodeType===3&&/\S/.test(node.nodeValue||'')?node.parentElement:node.nodeType===1&&/^(INPUT|TEXTAREA)$/.test(node.tagName)?node:null;
-      if(el&&!seen.has(el)&&!/^(SCRIPT|STYLE|NOSCRIPT)$/.test(el.tagName)){seen.add(el);yield d.defaultView.getComputedStyle(el).fontFamily;}else yield null;
-    }while(node=walker.nextNode());
+    const roots=[d.body],seen=new WeakSet();
+    // Queue open roots so deeply nested components do not recurse on the JS
+    // stack. Each host/root/text node remains an entry in the batched scan.
+    for(let i=0;i<roots.length;i++){
+      const walker=d.createTreeWalker(roots[i],5);let node=roots[i];
+      do {
+        if(node.nodeType===1&&node.shadowRoot)roots.push(node.shadowRoot);
+        const el=node.nodeType===3&&/\S/.test(node.nodeValue||'')?(node.assignedSlot||node.parentElement):node.nodeType===1&&/^(INPUT|TEXTAREA)$/.test(node.tagName)?node:null;
+        if(el&&!seen.has(el)&&!/^(SCRIPT|STYLE|NOSCRIPT)$/.test(el.tagName)){seen.add(el);yield d.defaultView.getComputedStyle(el).fontFamily;}else yield null;
+      }while(node=walker.nextNode());
+    }
   }
   function* pageFontValues(d){for(const face of d.fonts||[])yield face.family;yield* pageTextFonts(d);}
   function scanPageFonts(d,onBatch,active=()=>true){

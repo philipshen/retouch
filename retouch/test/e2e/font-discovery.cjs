@@ -8,6 +8,9 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
  await page.addScriptTag({path:path.resolve(__dirname,'../../shell/inspector.js')});await page.addStyleTag({path:path.resolve(__dirname,'../../shell/shell.css')});
  await page.evaluate(()=>{
   const d=document.querySelector('iframe').contentDocument;d.body.innerHTML=Array.from({length:1500},(_,i)=>`<p style='font-family:${i===1499?'"Late Used",serif':'Georgia,serif'}'>Text ${i}</p>`).join('');
+  const host=d.createElement('div');d.body.append(host);host.append(d.createTextNode('Slotted text'));const shadow=host.attachShadow({mode:'open'});shadow.innerHTML='<style>p{font-family:"Shadow Only",serif}slot{font-family:"Slotted Face",serif}</style><p>Shadow text</p><p>Repeated family</p><slot></slot><section></section>';
+  const nested=shadow.querySelector('section').attachShadow({mode:'open'});nested.innerHTML='<p>Nested text</p>';const sheet=new d.defaultView.CSSStyleSheet();sheet.replaceSync('p{font-family:"Nested Face",serif}');nested.adoptedStyleSheets=[sheet];
+  const closed=d.createElement('div');d.body.append(closed);closed.attachShadow({mode:'closed'}).innerHTML=`<p style='font-family:"Closed Only",serif'>Closed text</p>`;
   for(let i=0;i<260;i++)d.fonts.add(new d.defaultView.FontFace('Declared '+i,'local("Arial")'));
   window.applied=[];RetouchInspector.fontPicker(document.querySelector('#picker'),d,'Georgia, serif',v=>applied.push(v));
   window.scanCallbacks=0;window.cancelledCallbacks=0;
@@ -20,6 +23,8 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
  await page.waitForFunction(()=>document.querySelector('.font-browser [role=status]').dataset.scanning==='false');
  assert.equal(await results.getByRole('button').count(),1);assert.match(await results.innerText(),/Late Used/);
  await results.getByRole('button').click();assert.match((await page.evaluate(()=>applied))[0],/Late Used/);
+ for(const name of ['Shadow Only','Nested Face','Slotted Face']){await search.fill(name);assert.equal(await results.getByRole('button').count(),1,name);}
+ await search.fill('Closed Only');assert.equal(await results.getByRole('button').count(),0);
  await search.fill('Declared 259');assert.equal(await results.getByRole('button').count(),1);await results.getByRole('button').click();assert.match((await page.evaluate(()=>applied))[1],/Declared 259/);
  await search.fill('');assert.equal(await results.getByRole('button').count(),50);const first=await results.getByRole('button').first().textContent();await page.getByRole('button',{name:'Next fonts',exact:true}).click();assert.notEqual(await results.getByRole('button').first().textContent(),first);assert.equal(await results.getByRole('button').count(),50);await page.getByRole('button',{name:'Previous fonts',exact:true}).click();assert.equal(await results.getByRole('button').first().textContent(),first);
  await search.press('Escape');assert.equal(await browse.getAttribute('open'),null);
@@ -29,5 +34,5 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
  assert.equal(await page.evaluate(()=>scanCallbacks),1);assert.equal(await page.evaluate(()=>cancelledCallbacks),0);
  assert.equal((await page.evaluate(()=>applied)).length,2,'discovery/search/paging must not apply fonts');assert.deepEqual(errors,[]);
  if(process.env.RT_E2E_FONT_DISCOVERY_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_FONT_DISCOVERY_SCREENSHOT});
- console.log(engine+': PASS fonts beyond 200 faces/300 elements/100 choices, search, bounded result paging, scan cancellation, rescan and no implicit apply');
+ console.log(engine+': PASS fonts beyond 200 faces/300 elements/100 choices, search, bounded result paging, nested open shadows and slots, closed-root boundary, scan cancellation, rescan and no implicit apply');
  }finally{await browser.close();}})().catch(error=>{console.error(error);process.exitCode=1;});
