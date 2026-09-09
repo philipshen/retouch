@@ -5609,3 +5609,26 @@ This prepares existing controls for linked styles; React/Liquid source links,
 propagation and override metadata are still unfinished. Dynamic class expressions,
 non-Tailwind styling and live Shopify are not verified by these fixtures. The
 full-parity goal remains active. Native launches remain paused.
+
+### Scoped typography class composition
+
+The class-style encoder now composes its values into existing classes using the
+inspector's property ownership predicates. It replaces only supplied typography
+properties in the chosen scope, preserves other breakpoints/state variants and
+unrelated color/layout classes, and emits canonical important property tokens.
+Repeated composition is idempotent. Combined size/line-height utilities are
+removed only when both properties are supplied; partial replacement refuses
+rather than silently losing the companion property. Font shorthand conflicts
+also refuse pending a structured shorthand-preservation implementation. Slashes
+inside arbitrary CSS expressions are not treated as coupled utility separators.
+
+All 417 unit tests passed, exit 0:
+/private/tmp/retouch-text-style-composition-units.log. React and Liquid writer
+round trips now use composed styles over existing typography and responsive
+classes. Chromium and WebKit compiled/rendered composed output correctly at
+900px and restored 390px styling below the 768px breakpoint, exit 0:
+/private/tmp/retouch-text-style-composition-{chromium,webkit}.log. Tests verify
+obsolete responsive typography tokens are removed and unrelated tokens retained.
+Syntax/diff checks passed. This remains an internal foundation: durable React/
+Liquid links, propagation and UI wiring are unfinished. Native launches remain
+paused; full parity is not achieved.

@@ -14,12 +14,26 @@ test('text style encodings refuse injection, missing values and unsupported prop
 });
 module.exports={full};
 test('React and Liquid source writers preserve all encoded typography tokens',()=>{
- const classes=Object.values(encode(full)).join(' ');
+ const classes=require('../src/text-style-classes.cjs').compose('p-4 font-serif font-bold text-lg/7 md:text-4xl hover:underline',full);
  for(const kind of ['react','liquid']){
   const adapter=require('../src/adapters/'+kind+'.cjs'),relPath=kind==='react'?'Page.jsx':'sections/main.liquid',source=kind==='react'?'export default function Page(){return <p className="p-4">Text</p>}':'<p class="p-4">Text</p>';
   const resolve=value=>({source:value,relPath,file:'/tmp/'+relPath,hash:adapter.contentHash(value),element:adapter.collect(value,relPath).elements[0]});
-  const result=adapter.planOp(resolve(source),{type:'setClasses',classes:'p-4 '+classes});assert.equal(result.ok,true,result.reason);
+  const result=adapter.planOp(resolve(source),{type:'setClasses',classes});assert.equal(result.ok,true,result.reason);
   const saved=adapter.describe(resolve(result.edits[0].after)).className;
   for(const token of classes.split(' '))assert.ok(saved.split(' ').includes(token),kind+' '+token);
  }
+});
+test('style composition replaces only owned typography in the chosen scope',()=>{
+ const {compose}=require('../src/text-style-classes.cjs');
+ const original='p-4 text-red-500 font-serif !font-bold md:font-light md:text-lg/7 hover:font-black [&:hover]:opacity-50';
+ const result=compose(original,{'font-weight':'500'},'');assert.ok(result.includes('font-serif'));assert.ok(!result.includes('!font-bold'));assert.ok(result.endsWith('![font-weight:500]'));assert.ok(result.includes('md:font-light'));assert.ok(result.includes('text-red-500'));
+ const scoped=compose(original,{'font-size':'40px','line-height':'1.2'},'md:');assert.ok(!scoped.includes('md:text-lg/7'));assert.ok(scoped.includes('md:font-light'));assert.ok(scoped.includes('!font-bold'));assert.ok(scoped.includes('md:![font-size:40px]'));assert.ok(scoped.includes('md:![line-height:1.2]'));assert.ok(scoped.includes('[&:hover]:opacity-50'));
+ assert.equal(compose(scoped,{'font-size':'40px','line-height':'1.2'},'md:'),scoped);
+});
+test('partial composition does not silently discard coupled utility properties or shorthands',()=>{
+ const {compose}=require('../src/text-style-classes.cjs');
+ assert.throws(()=>compose('text-lg/7',{'font-size':'40px'}),/both properties/);assert.throws(()=>compose('text-lg/7',{'line-height':'1.2'}),/both properties/);
+ assert.throws(()=>compose('![font:italic_20px_serif]',{'font-size':'40px'}),/shorthand/);
+ assert.doesNotThrow(()=>compose('text-[calc(1em/2)]',{'font-size':'40px'}));
+ assert.throws(()=>compose('p-4',{'font-size':'40px'},'md:hover:'),/scope/);
 });
