@@ -141,6 +141,11 @@ The **Appearance** section sets opacity in percent and rotation in degrees.
 Both follow the selected screen scope and support reset. Rotation combines with
 existing transform rules rather than replacing them.
 
+The **Typography** section supports font stacks, numeric weights, italic, text
+decoration and case, plus size, line height and letter spacing. Font families
+must be loaded by the page or available on the computer; entering a name does
+not install a font. Typography changes follow the selected screen scope.
+
 The CSS properties panel edits dimensions, flex direction/wrapping, gap, padding,
 typography, colors and borders. Padding and margin support one to four values
 and individual edges; gap supports row/column values. Negative margins and letter

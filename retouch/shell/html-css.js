@@ -5,7 +5,7 @@
   const sec=I.section('CSS properties');
   if(info.cssReason||!el||!Number.isInteger(width)){I.note(sec,info.cssReason||'Choose a pixel screen scope.','refused');return sec;}
   const css=el.ownerDocument.defaultView.getComputedStyle(el),own=info.cssRules?.[width]||{};
-  const appearance=I.section('Appearance');
+  const appearance=I.section('Appearance'),typography=I.section('Typography');
   for(const [property,label,min,max,unit]of [['opacity','Opacity (%)',0,100,''],['rotate','Rotation (°)',-360,360,'deg']]){
    const raw=own[property]??css.getPropertyValue(property),input=document.createElement('input');input.type='number';input.min=min;input.max=max;input.step='any';
    const value=property==='opacity'?Number(raw)*100:raw==='none'?0:/^-?[\d.]+deg$/.test(raw)?parseFloat(raw):NaN;
@@ -19,13 +19,16 @@
    const value=own[property]??css.getPropertyValue(property),input=document.createElement(options[property]?'select':'input');
    if(options[property])for(const item of new Set([value,...options[property]])){const option=document.createElement('option');option.value=item;option.textContent=item;input.append(option);}
    else input.type='text';
+   if(property==='font-family'){input.placeholder='Inter, sans-serif';input.title='Use a font loaded by this page or installed on your computer.';}
+   if(property==='font-weight'){input.placeholder='400';input.inputMode='decimal';}
    input.value=value;input.oninput=()=>input.setCustomValidity('');
    input.onchange=()=>{const value=input.value.trim();if(!CSS.supports(property,value)||!valid(property,value)){input.setCustomValidity('Use simple CSS lengths with units, keywords, or colors. Spacing accepts up to four values; gap accepts two.');input.reportValidity();return;}save(property,value,width);};
-   I.field(sec,label+' (CSS)',input);
-   const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);sec.append(reset);
+   const target=/^(font-|line-height|letter-spacing|text-)/.test(property)||property==='color'?typography:sec;
+   I.field(target,label+' (CSS)',input);
+   const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);target.append(reset);
   }
   I.note(sec,'Values use CSS units. Reset removes this size’s override and restores the page’s styling.');
-  const container=document.createElement('div');container.append(appearance,sec);return container;
+  const container=document.createElement('div');container.append(appearance,typography,sec);return container;
  }
  window.RetouchHTMLCSS={mount};
 })();

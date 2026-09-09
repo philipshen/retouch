@@ -52,6 +52,17 @@ const {chromium}=require(path.join(fixture,'node_modules/playwright'));
   await page.getByRole('button',{name:'Reset rotate',exact:true}).click();await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).rotate)==='none','rotation reset');await settled();
   for(let i=0;i<3;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'appearance exact undo');
+  const family=page.getByLabel('Font family (CSS)',{exact:true});await family.fill('monospace');await family.press('Tab');
+  await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).fontFamily)==='monospace','font family');await settled();
+  const weight=page.getByLabel('Font weight (CSS)',{exact:true});await weight.fill('600');await weight.press('Tab');
+  await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).fontWeight)==='600','font weight');await settled();
+  await page.getByLabel('Font style (CSS)',{exact:true}).selectOption('italic');await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).fontStyle)==='italic','font italic');await settled();
+  await page.getByLabel('Text decoration (CSS)',{exact:true}).selectOption('underline');await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).textDecorationLine)==='underline','text decoration');await settled();
+  await size('390x844');await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).fontStyle)==='normal','phone typography inheritance');
+  await size('768x1024');await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).fontStyle)==='italic','tablet typography');
+  for(let i=0;i<4;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
+  await wait(()=>read()===original,'typography exact undo');
+
 
   await page.locator('#panelBody textarea').fill('Saved & clear');await page.getByRole('button',{name:'Apply text',exact:true}).click();
   await wait(async()=>await app.locator('h1').textContent()==='Saved & clear','text rendered');assert.ok(fs.readFileSync(file,'utf8').includes('Saved &amp; clear'));

@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 212 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 213 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -480,3 +480,18 @@ transform preservation and reset. Browser checks verify computed tablet opacity
 and rotation, phone inheritance, reset and exact source restoration. This does
 not provide full transform matrices, arbitrary transform origins, 3D transforms
 or full Figma effects parity.
+
+
+### HTML typography controls
+
+HTML typography now has a dedicated section with font family stacks, numeric
+weights, font style, decoration, text case and the existing text metrics/color.
+The writer accepts bounded weights and simple quoted or Unicode font names,
+preserves source text, and detects conflicts with important inline font
+shorthands. It relies on existing page/system fonts; font upload and font discovery
+remain open.
+
+All 213 tests pass. Browser checks verify font family, weight, italic and
+underline at the tablet scope, phone inheritance, return to the tablet styling,
+and exact source undo. Text shaping controls, variable-font axes and full
+Figma typography parity remain open.

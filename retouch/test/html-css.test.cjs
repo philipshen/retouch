@@ -82,3 +82,14 @@ test('HTML opacity and rotation persist without replacing authored transforms',(
  assert.deepEqual(css.describe(resolve(source)).cssRules,{0:{opacity:'0.25'},768:{rotate:'45deg'}});
  source=edit(source,768,null,'rotate').edits[0].after;assert.deepEqual(css.describe(resolve(source)).cssRules,{0:{opacity:'0.25'}});
 });
+
+test('HTML typography accepts font stacks and weights, preserves source text, and checks shorthand conflicts',()=>{
+ for(const value of ['sans-serif','"Times New Roman", serif','"思源黑体", sans-serif'])assert.equal(css.valid('font-family',value),true);
+ for(const value of ['Arial; color:red','url(test)','"Unclosed','Arial,'])assert.equal(css.valid('font-family',value),false);
+ for(const value of ['400','625.5','bold'])assert.equal(css.valid('font-weight',value),true);
+ for(const value of ['0','1001','NaN'])assert.equal(css.valid('font-weight',value),false);
+ let source=edit(original,768,'"Times New Roman", serif','font-family').edits[0].after;
+ source=edit(source,768,'italic','font-style').edits[0].after;
+ assert.ok(source.includes('First</h1>'));assert.deepEqual(css.describe(resolve(source)).cssRules[768],{'font-family':'"Times New Roman", serif','font-style':'italic'});
+ assert.equal(edit(original.replace('class="title"','style="font:12px serif !important"'),0,'600','font-weight').refused,true);
+});
