@@ -85,7 +85,7 @@
    I.note(layout,'Arrange children at this screen size. Alignment uses the available space inside the container. Each action is one undo step.');
   }
   const corners=I.section('Corners'),appearance=I.section('Appearance'),typography=I.section('Typography');
-  I.select(typography,'Page font',I.fontFamilies(el.ownerDocument,css.fontFamily),css.fontFamily,value=>save('font-family',value,width));
+  I.fontPicker(typography,el.ownerDocument,css.fontFamily,value=>save('font-family',value,width));
   const visible=document.createElement('input');visible.type='checkbox';visible.checked=(own.visibility??css.visibility)==='visible';visible.onchange=()=>save('visibility',visible.checked?'visible':'hidden',width);I.field(appearance,'Visible layer',visible);
   const resetVisibility=I.button('Reset visibility',()=>save('visibility',null,width));resetVisibility.disabled=!Object.hasOwn(own,'visibility');appearance.append(resetVisibility);I.note(appearance,'Hidden layers keep their layout space. Select them in Layers to show them again.');
 

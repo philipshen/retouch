@@ -311,3 +311,10 @@ details.advanced > summary:hover { color: var(--ink); }
 
 .canvas-pan-surface { position:fixed; z-index:40; touch-action:none; user-select:none; }
 #canvasHand[aria-pressed="true"] { background:var(--accent); color:white; }
+
+.font-browser { margin: 8px 0; font-size: 12px; }
+.font-browser summary { cursor: pointer; color: var(--muted); padding: 5px 0; }
+.font-browser > input { box-sizing: border-box; width: 100%; margin-top: 6px; padding: 7px; background: #15171b; color: var(--ink); border: 1px solid var(--line); border-radius: 5px; font: inherit; }
+.font-results { max-height: 180px; overflow-y: auto; display: grid; gap: 4px; }
+.font-results .control-button { text-align: left; overflow-wrap: anywhere; }
+.font-results .control-button[aria-pressed="true"] { border-color: var(--accent); }

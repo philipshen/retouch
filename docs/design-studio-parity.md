@@ -18,7 +18,7 @@ changing those files. The original checkout may continue to evolve independently
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. HTML/React polygons and polylines now support direct vertex dragging and keyboard movement with source undo. Vertex insertion/deletion and Pen creation of straight segments and cubic curves in existing SVG canvases have browser/source verification. Compound SVG paths now support cubic handles, arcs, contour operations, multi-point and marquee selection, and canvas-axis alignment/distribution with source history. Vector networks, boolean operations, arbitrary masks and complete transforms remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. HTML absolute placement now supports edge, center, stretch and proportional anchors with screen-scoped writes. Transformed constraints, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML supports linear/radial gradient stacks with draggable stops, shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
-| Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A page-font picker now discovers declared and used families, with React/HTML and local Liquid browser coverage. Full font browsing, live Shopify font verification, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
+| Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A searchable page-font picker now discovers declared and used families, with React/HTML and local Liquid browser coverage. Full font browsing, live Shopify font verification, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | Existing React and Liquid component inspection/detach; full creation/variants/library workflows remain. Live Shopify proof is incomplete. |
 | Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Not implemented or verified. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
@@ -3850,3 +3850,43 @@ or full arbitrary-site evidence. Other Liquid runtime/build configurations,
 complex font names outside the bounded grammar, font loading status, variable
 axes, full Figma Design parity and trusted Mac distribution remain unverified
 or incomplete. No native Retouch launch was attempted; the launch pause remains.
+
+
+### 2026-09-09 — Searchable page fonts
+
+The shared font control retains its quick selector and adds an expandable
+Browse page fonts section. Search matches words across family names and fallback
+stacks, ignoring case, accents and CSS quote characters. Results are ordinary
+keyboard-accessible buttons, with the current choice indicated and a bounded
+scrolling results area. The search status reports match counts or a no-match
+message. Searching makes no source change. Escape closes the browser, returns
+focus to its summary and preserves the selected layer. A current family outside
+the supported writer grammar remains visible in the quick selector as a disabled
+current-value option instead of making the selector appear blank.
+
+All 371 unit tests pass in `/private/tmp/retouch-font-search-unit.log`.
+The page-font browser workflow now checks no-match behavior, preservation of the
+selected family and source, Escape without layer deselection, case-insensitive
+search, Tab/Enter application, and the existing responsive/reset/preview/undo
+flow. Passing browser evidence:
+- `/private/tmp/retouch-font-search-html-chromium.log`
+- `/private/tmp/retouch-font-search-html-webkit.log`
+- `/private/tmp/retouch-font-search-react-webkit-verified.log`
+- `/private/tmp/retouch-font-search-liquid-chromium.log`
+
+The Liquid variant also checks alternate template branches after each choice.
+All runs exited and cleaned their temporary fixtures. Screenshot
+`/private/tmp/retouch-font-search-html.png` was inspected: the expanded search,
+match count and result button fit in the inspector and leave the canvas visible.
+The initial React/WebKit log is retained at
+`/private/tmp/retouch-font-search-react-webkit.log`; it exposed a detached
+preview iframe during screen-size rerender. The preview-specific assertion now
+retries that transient detachment and still requires the replacement frame's
+computed font to match. Other errors continue to fail the check.
+
+Search currently covers the existing bounded discovered catalog (up to 200 font
+faces, 300 document elements and 100 choices), not all installed fonts or every
+font on arbitrarily large pages. It does not provide font-face load status,
+per-result glyph previews, variable axes or a full font management workflow.
+Those and broader Figma/any-site parity remain open. Live Shopify and trusted
+Mac distribution are still unverified; no native app launch was attempted.

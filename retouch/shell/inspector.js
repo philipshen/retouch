@@ -257,6 +257,25 @@
     for(const el of [...d.querySelectorAll('body *')].slice(0,300)){if(el.textContent?.trim())add(d.defaultView.getComputedStyle(el).fontFamily);}
     return [...found];
   }
+  function filterFonts(choices,query){
+    const normalize=s=>s.normalize('NFKD').replace(/\p{M}/gu,'').toLocaleLowerCase().replace(/["']/g,'');
+    const words=normalize(query).trim().split(/\s+/).filter(Boolean);
+    return choices.filter(([value,label])=>words.every(word=>normalize(value+' '+label).includes(word)));
+  }
+  function fontPicker(parent,d,current,onChange){
+    const choices=fontFamilies(d,current),supported=choices.some(([value])=>value===current);
+    const quick=select(parent,'Page font',supported?choices:[[current,current],...choices],current,onChange);
+    if(!supported)quick.options[0].disabled=true;
+    const browse=document.createElement('details');browse.className='font-browser';
+    const summary=document.createElement('summary');summary.textContent='Browse page fonts';browse.append(summary);
+    const search=document.createElement('input');search.type='search';search.placeholder='Search font names';search.setAttribute('aria-label','Search page fonts');browse.append(search);
+    const status=note(browse,'');status.setAttribute('role','status');
+    const results=document.createElement('div');results.className='font-results';results.setAttribute('role','group');results.setAttribute('aria-label','Matching fonts');browse.append(results);
+    const render=()=>{const matches=filterFonts(choices,search.value);status.textContent=matches.length?`${matches.length} font ${matches.length===1?'choice':'choices'}`:'No matching fonts. Try another name.';results.replaceChildren();for(const [value,label] of matches){const b=button(label,()=>onChange(value));b.setAttribute('aria-label','Use font '+label);b.setAttribute('aria-pressed',String(value===current));results.append(b);}};
+    search.oninput=render;browse.ontoggle=()=>{if(browse.open)search.focus();};
+    browse.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();browse.open=false;summary.focus();}});
+    render();parent.append(browse);return quick;
+  }
   function typography(info, el, save, changeTag) {
     const sec=section('Typography'); if(!el)return sec;
     const d=el.ownerDocument, css=d.defaultView.getComputedStyle(el);
@@ -286,7 +305,7 @@
       // other font properties. Scope wrapping is handled by the shell afterward.
       const styled=[...el.classList].some(t=>names.includes(t));
       const change=(match,value)=>save(replace(info.className,match,styled?'!'+value:value));
-      select(sec,'Page font',fontFamilies(d,css.fontFamily),css.fontFamily,value=>{const token=fontFamilyClass(value);if(token)change(fontFamilyToken,token);});
+      fontPicker(sec,d,css.fontFamily,value=>{const token=fontFamilyClass(value);if(token)change(fontFamilyToken,token);});
       const resetFamily=button('Reset font family',()=>save(replace(info.className,fontFamilyToken,'')));resetFamily.disabled=!tokens(info.className).map(base).some(t=>t&&fontFamilyToken(t));sec.append(resetFamily);
       for(const [label,re,choices] of controls)select(sec,label,[['','Inherited / custom'],...choices],tokens(info.className).map(base).find(t=>re.test(t))||'',value=>{if(value)change(t=>re.test(t),value);});
       number(sec,'Font size (px)',parseFloat(css.fontSize),1,1000,v=>change(t=>controls[0][1].test(t),`text-[${v}px]`));
@@ -338,6 +357,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,position,appearance,effects,typography,measurements,section,field,note,button,select};
+  const api={base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,filterFonts,fontPicker,position,appearance,effects,typography,measurements,section,field,note,button,select};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

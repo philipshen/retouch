@@ -42,3 +42,10 @@ test('page font encoding preserves underscores and font weights while rejecting 
  const d={fonts:[{family:'"Page Face"'}],querySelectorAll:()=>[{textContent:'Hello'}],defaultView:{getComputedStyle:()=>({fontFamily:'Georgia, serif'})}};
  assert.deepEqual(I.fontFamilies(d,'monospace').map(([value])=>value),['system-ui','sans-serif','serif','monospace','"Page Face"','Georgia, serif']);
 });
+
+test('font search matches family names and fallbacks without accents or quote sensitivity',()=>{
+ const {filterFonts}=require('../shell/inspector.js'),choices=[['"Café Sans", serif','Café Sans, serif'],['Studio_Test, monospace','Studio_Test, monospace']];
+ assert.deepEqual(filterFonts(choices,' CAFE "sans" '),[choices[0]]);
+ assert.deepEqual(filterFonts(choices,'studio mono'),[choices[1]]);
+ assert.deepEqual(filterFonts(choices,'missing'),[]);assert.deepEqual(filterFonts(choices,''),choices);
+});
