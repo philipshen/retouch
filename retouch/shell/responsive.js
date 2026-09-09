@@ -45,6 +45,21 @@
     for(const sheet of d.styleSheets){try{scan(sheet.cssRules);}catch{}}
     return [...found.values()].sort((a,b)=>a.label.localeCompare(b.label));
   }
+  // Anchor fallback for distinct, ascending minimum-width scopes. Complex media
+  // conditions and state variants are excluded rather than treated as breakpoints.
+  function inherited(classes,prefix,d,choices=d?discover(d):[]){
+    const base=project(classes);if(!prefix||!d)return base;
+    const probe=d.createElement('span');probe.style.cssText='font-size:initial;position:absolute;visibility:hidden';d.documentElement.append(probe);const initial=parseFloat(d.defaultView.getComputedStyle(probe).fontSize)||16;probe.remove();
+    const minimum=scope=>{
+      const arbitrary=/^min-\[(\d+(?:\.\d+)?)(px|rem|em)\]:$/.exec(scope);
+      const condition=choices.find(item=>item.prefix===scope)?.condition;
+      const named=condition&&/^\(\s*(?:min-width\s*:\s*|width\s*>=\s*)([\d.]+)(px|rem|em)\s*\)$/.exec(condition);
+      const match=arbitrary||named;return match?Number(match[1])*(match[2]==='px'?1:initial):null;
+    };
+    const limit=minimum(prefix);if(limit===null)return base;
+    const scopes=[...new Set(tokens(classes).map(token=>split(token).prefix))].filter(scope=>scope&&scope!==prefix).map(scope=>({scope,width:minimum(scope)})).filter(item=>item.width!==null&&item.width<limit).sort((a,b)=>a.width-b.width);
+    return [base,...scopes.map(item=>project(classes,item.scope))].filter(Boolean).join(' ');
+  }
   function atWidth(d,width,choices=discover(d)) {
     // Media-query em/rem units use the initial font size, not a styled root.
     const probe=d.createElement('span');probe.style.cssText='font-size:initial;position:absolute;visibility:hidden';
@@ -60,7 +75,7 @@
     const size=Math.round((unit==='px'?width:width/initial)*100000)/100000;
     return {prefix:`min-[${size}${unit}]:`,label:`${width} px and larger`};
   }
-  const api={split,project,replaceScope,discover,atWidth};
+  const api={split,project,replaceScope,discover,inherited,atWidth};
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.RetouchResponsive=api;
 })(typeof window==='object'?window:globalThis);

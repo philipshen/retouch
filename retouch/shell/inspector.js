@@ -124,16 +124,16 @@
     if (!info.classNameDynamic) return false;
     note(sec, info.classNameReason || 'Classes are computed by the component. Select its editable definition to change styles.', 'refused'); return true;
   }
-  function inferredAnchor(classes, axis, fallback='') {
-    const ts = tokens(classes).map(base).filter(Boolean);
-    const a = axis === 'x' ? 'left' : 'top', b = axis === 'x' ? 'right' : 'bottom';
-    if(!ts.some(t=>t.startsWith(a+'-')||t.startsWith(b+'-'))&&fallback)return inferredAnchor(fallback,axis);
-    const dim=axis==='x'?'w':'h',percent=prefix=>ts.some(t=>new RegExp('^'+prefix+'-\\[-?[0-9.]+%\\]$').test(t));
-    if(percent(a)&&percent(dim))return 'scale';
-    if (ts.some(t => t.startsWith(a + '-[calc(50%'))) return 'center';
-    const has = prefix => ts.some(t => t.startsWith(prefix + '-') && t !== prefix + '-auto');
-    if (has(a) && has(b)) return 'stretch';
-    return has(b) ? 'end' : 'start';
+  function inferredAnchor(classes,axis,fallback=''){
+    // Resolve individual edges and dimensions so an auto reset only clears its
+    // property; inherited important geometry still outranks normal overrides.
+    const properties=new Map();
+    for(const token of [...tokens(fallback),...tokens(classes)]){const t=base(token),match=t&&/^-?(inset-x|inset-y|inset|left|right|top|bottom|w|h|size)-(.+)$/.exec(t);if(!match)continue;const important=/^!|!$/.test(token),keys={inset:['left','right','top','bottom'],'inset-x':['left','right'],'inset-y':['top','bottom'],size:['w','h']}[match[1]]||[match[1]];for(const key of keys)if(!properties.get(key)?.important||important)properties.set(key,{value:match[2],important});}
+    const value=key=>properties.get(key)?.value,a=value(axis==='x'?'left':'top'),b=value(axis==='x'?'right':'bottom'),size=value(axis==='x'?'w':'h'),active=v=>v&&v!=='auto',percent=v=>/^\[-?[0-9.]+%\]$/.test(v||'')||/^\d+\/\d+$/.test(v||'');
+    if(percent(size)&&(percent(a)||!active(a)&&percent(b)))return 'scale';
+    if(a?.startsWith('[calc(50%'))return 'center';
+    if(active(a)&&active(b)&&(!size||size==='auto'))return 'stretch';
+    return !active(a)&&active(b)?'end':'start';
   }
   function position(info, el, save, notify, onTransform, onGeometry) {
     const sec = section('Position');
@@ -142,11 +142,11 @@
     const classes = info.className || '';
     const mode = tokens(classes).map(base).find(positionToken) || css.position;
     const applyAnchor = (x, y) => {
-      try { const g=geometry(el),next=anchorClasses(classes,g,x,y,info.anchorBaseClasses);if(onGeometry)onGeometry(next,g);else save(next); } catch (e) { notify(e.message); }
+      try { const g=geometry(el),next=anchorClasses(classes,g,x,y,info.anchorInheritedClasses);if(onGeometry)onGeometry(next,g);else save(next); } catch (e) { notify(e.message); }
     };
     select(sec, 'Positioning', [['static','Auto / flow'],['relative','Relative'],['absolute','Absolute'],['fixed','Fixed'],['sticky','Sticky']], mode, value => {
       if (value === 'absolute' && mode !== 'absolute') {
-        try { const g=geometry(el),next=anchorClasses(classes,g,nearestAnchor(g.x,g.width,g.parentWidth),nearestAnchor(g.y,g.height,g.parentHeight),info.anchorBaseClasses);if(onGeometry)onGeometry(next,g);else save(next); }
+        try { const g=geometry(el),next=anchorClasses(classes,g,nearestAnchor(g.x,g.width,g.parentWidth),nearestAnchor(g.y,g.height,g.parentHeight),info.anchorInheritedClasses);if(onGeometry)onGeometry(next,g);else save(next); }
         catch (e) { notify(e.message); }
       } else save(replace(classes, t => positionToken(t) || (value === 'static' && insetToken(t)), value));
     });
@@ -155,7 +155,7 @@
       try { g = geometry(el); } catch (e) { note(sec,e.message,'refused'); return sec; }
       note(sec, `Anchored to ${g.parentLabel}`);
       if(onTransform){const tools=document.createElement('div');tools.className='stack-presets';for(const action of ['move','resize']){const control=button((action==='move'?'Move':'Resize')+' on canvas',event=>onTransform(action,event.currentTarget));control.dataset.canvasTool=action;tools.append(control);}sec.append(tools);}
-      const x = inferredAnchor(classes,'x',info.anchorBaseClasses), y = inferredAnchor(classes,'y',info.anchorBaseClasses);
+      const x = inferredAnchor(classes,'x',info.anchorInheritedClasses), y = inferredAnchor(classes,'y',info.anchorInheritedClasses);
       const horizontal=select(sec,'Horizontal anchor',[['start','Left'],['center','Center'],['end','Right'],['stretch','Left + right'],['scale','Scale']],x,v=>applyAnchor(v,y));
       const vertical=select(sec,'Vertical anchor',[['start','Top'],['center','Center'],['end','Bottom'],['stretch','Top + bottom'],['scale','Scale']],y,v=>applyAnchor(x,v));
       for(const [input,size]of [[horizontal,g.parentWidth],[vertical,g.parentHeight]])if(size===0){const option=input.querySelector('option[value=scale]');option.disabled=true;option.textContent='Scale (needs container size)';}

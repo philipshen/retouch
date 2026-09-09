@@ -36,3 +36,16 @@ test('new widths reuse named breakpoints and retain the project unit and initial
  assert.equal(R.atWidth(d,1000,choices).prefix,'min-[50rem]:');
  assert.equal(R.atWidth(d,1000,[{prefix:'wide:',label:'wide',condition:'(min-width: 800px)'}]).prefix,'min-[1000px]:');
 });
+test('minimum-width anchor inheritance includes intermediate scopes in size order',()=>{
+ const d={createElement:()=>({style:{},remove(){}}),documentElement:{append(){}},defaultView:{getComputedStyle:()=>({fontSize:'16px'})}},choices=[{prefix:'md:',condition:'(width >= 48rem)'},{prefix:'lg:',condition:'(min-width: 1024px)'},{prefix:'range:',condition:'(width >= 48rem) and (width < 64rem)'}];
+ const classes='right-[20px] w-[80px] lg:opacity-90 md:left-[30px] md:right-auto min-[900px]:w-[100px] hover:left-0 md:hover:right-0 range:top-0 min-[1200px]:right-0';
+ const inherited=R.inherited(classes,'lg:',d,choices);assert.equal(inherited,'right-[20px] w-[80px] left-[30px] right-auto w-[100px]');assert.equal(inspector.inferredAnchor('opacity-90','x',inherited),'start');
+ assert.equal(R.inherited(classes,'md:',d,choices),'right-[20px] w-[80px]');assert.equal(R.inherited(classes,'',d,choices),'right-[20px] w-[80px]');assert.equal(R.inherited(classes,'max-[1000px]:',d,choices),'right-[20px] w-[80px]');
+});
+test('anchor inference resolves inherited auto resets, shorthands and important priorities',()=>{
+ assert.equal(inspector.inferredAnchor('left-[20px] right-auto','x','left-auto right-[30px]'),'start');
+ assert.equal(inspector.inferredAnchor('right-auto','x','left-auto right-[30px]!'),'end');
+ assert.equal(inspector.inferredAnchor('inset-x-0 w-auto','x'),'stretch');
+ assert.equal(inspector.inferredAnchor('w-[100px]','x','left-[5%] w-[20%] right-auto'),'start');
+ assert.equal(inspector.inferredAnchor('right-[5%] left-auto w-[20%]','x'),'scale');
+});

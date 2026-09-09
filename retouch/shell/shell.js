@@ -37,7 +37,7 @@ function busyPanel(start) {
 }
 let lastAppPath = null;
 let styleScope = '';
-function scopedInfo(info) { return {...info,styleScope,anchorBaseClasses:RetouchResponsive.project(info.className,''),className:RetouchResponsive.project(info.className,styleScope)}; }
+function scopedInfo(info) { return {...info,styleScope,anchorInheritedClasses:RetouchResponsive.inherited(info.className,styleScope,doc()),className:RetouchResponsive.project(info.className,styleScope)}; }
 
 const historyRoutes = new Map();
 function currentPageRoute(){try{const loc=iframe.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
@@ -1447,7 +1447,7 @@ async function writeReactBounds(info,classes,expected){
 function transformReactLayer(info,target,action,opener){
   stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!target?.isConnected||info.classNameDynamic)return;
   let g;try{const reason=reactGeometryReason(info,target);if(reason)throw Error(reason);if(target.ownerDocument.defaultView.getComputedStyle(target).position!=='absolute')throw Error('Choose a screen where this layer is absolute before transforming it.');g=RetouchInspector.geometry(target);}catch(error){toast(error.message,'err');return;}
-  const scope=styleScope,hash=info.hash,classes=RetouchResponsive.project(info.className,scope),base=RetouchResponsive.project(info.className,''),x=RetouchInspector.inferredAnchor(classes,'x',base),y=RetouchInspector.inferredAnchor(classes,'y',base);
+  const scope=styleScope,hash=info.hash,classes=RetouchResponsive.project(info.className,scope),base=RetouchResponsive.inherited(info.className,scope,doc()),x=RetouchInspector.inferredAnchor(classes,'x',base),y=RetouchInspector.inferredAnchor(classes,'y',base);
   stopDrawing=RetouchCanvasMove.mount({target,frame:iframe,canvas:canvasSurface,mode:action,opener,
     onCommit:async(delta,options)=>{if(sel?.info.id!==info.id||sel?.info.hash!==hash||styleScope!==scope)return;try{const geometry={...g,...(action==='resize'?{width:delta.width,height:delta.height}:{}),x:g.x+delta.x,y:g.y+delta.y};if(![geometry.x,geometry.y,geometry.width,geometry.height].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Keep layer bounds within 100,000 pixels.');if(await writeReactBounds(info,RetouchInspector.anchorClasses(classes,geometry,x,y,base),geometry)){if(options?.keyboard)document.querySelector('[data-canvas-tool='+action+']')?.focus({preventScroll:true});}}catch(error){toast(error.message,'err');}},
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});

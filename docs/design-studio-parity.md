@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 298 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 300 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1844,3 +1844,24 @@ inspector was visually checked in `/private/tmp/retouch-react-position.png`.
 Arbitrary CSS authoring, inline geometry, complex/multiple responsive variant
 cascades, transformed bounds, repeated runtime instances and broader renderer
 parity remain unfinished. The current Mac archive predates these React tools.
+
+
+### React anchors inherited through intermediate breakpoints
+
+Creating a desktop geometry override now inherits the tablet anchor through
+standard ascending minimum-width Tailwind scopes, instead of falling directly
+back to base classes. Anchor inference resolves individual edges, dimensions,
+shorthands, auto resets and important priorities. A tablet Scale anchor therefore
+stays proportional when first moving the layer at the desktop scope.
+
+Validation: 300 unit tests pass. The real Next.js/Tailwind positioning workflow
+passes in Chromium and WebKit, including base-to-tablet-to-desktop edits, desktop
+percentage classes, unchanged tablet bounds and exact source undo/redo. Logs:
+`/private/tmp/retouch-inherited-unit.log`,
+`/private/tmp/retouch-inherited-chromium.log` and
+`/private/tmp/retouch-inherited-webkit.log`.
+
+This inheritance model covers distinct ascending minimum-width scopes. Equal-width
+aliases, complex or overlapping media conditions, state variants and arbitrary
+compiler cascade ordering remain outside this validation. The current Mac package
+predates these changes; signing and notarization remain incomplete.
