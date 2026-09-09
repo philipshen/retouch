@@ -3,7 +3,7 @@ import WebKit
 
 // The editor remains the same shell as /rt. No Node or native command bridge is
 // exposed to a page. Native project startup delegates to the bundled CLI.
-final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate {
+final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTextFieldDelegate {
     private var window: NSWindow!
     private var web: WKWebView!
     private var address: NSTextField!
@@ -16,6 +16,61 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     private var logText: NSTextView?
     private var projectButton: NSButton!
     private var stopButton: NSButton!
+    private var discoveryTimer: Timer?
+    private var discoveryTask: URLSessionDataTask?
+    private var discoveryID = UUID()
+    private var outputLines = StartupLines()
+    private var candidateURLs: [URL] = []
+
+    struct StartupLines {
+        var pending = ""
+        mutating func append(_ text: String) -> [URL] {
+            pending += text
+            let lines = pending.components(separatedBy: "\n")
+            pending = String((lines.last ?? "").suffix(16384))
+            return lines.dropLast().flatMap { Studio.localEditorURLs($0) }
+        }
+    }
+    static func localEditorURLs(_ text: String) -> [URL] {
+        let clean = text.replacingOccurrences(of: "\u{001B}\\[[0-9;]*[A-Za-z]", with: "", options: .regularExpression)
+        let regex = try! NSRegularExpression(pattern: "https?://[^\\s<>\"']+")
+        return regex.matches(in: clean, range: NSRange(clean.startIndex..., in: clean)).compactMap { match in
+            guard let range = Range(match.range, in: clean) else { return nil }
+            return editorURL(String(clean[range]))
+        }
+    }
+    static func isRetouchHealth(_ data: Data?, _ response: URLResponse?, _ error: Error?) -> Bool {
+        let json = data.flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: Any]
+        return error == nil && (response as? HTTPURLResponse)?.statusCode == 200 && json?["ok"] as? Bool == true && json?["service"] as? String == "retouch"
+    }
+    private func stopDiscovery() {
+        discoveryID = UUID(); discoveryTimer?.invalidate(); discoveryTimer = nil
+        discoveryTask?.cancel(); discoveryTask = nil
+    }
+    private func startDiscovery() {
+        stopDiscovery(); outputLines = StartupLines(); candidateURLs = []
+        let id = discoveryID, deadline = Date().addingTimeInterval(90)
+        var index = 0
+        discoveryTimer = Timer.scheduledTimer(withTimeInterval: 0.75, repeats: true) { [weak self] _ in
+            guard let self = self, self.discoveryID == id else { return }
+            guard Date() < deadline else { self.stopDiscovery(); self.status.stringValue = "No ready editor found. Check Project logs or enter its local /rt URL."; return }
+            guard self.projectProcess?.isRunning == true else { self.stopDiscovery(); return }
+            guard self.discoveryTask == nil, !self.candidateURLs.isEmpty else { return }
+            let url = self.candidateURLs[index % self.candidateURLs.count]; index += 1
+            var health = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+            health.path = "/rt/__api/health"; health.query = nil; health.fragment = nil
+            var request = URLRequest(url: health.url!); request.timeoutInterval = 2
+            self.discoveryTask = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+                let ready = Self.isRetouchHealth(data, response, error)
+                DispatchQueue.main.async {
+                    guard let self = self, self.discoveryID == id else { return }
+                    self.discoveryTask = nil
+                    if ready { self.address.stringValue = url.absoluteString; self.connect() }
+                }
+            }
+            self.discoveryTask?.resume()
+        }
+    }
 
     static func shellQuote(_ value: String) -> String { "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'" }
     static var bundledCLI: String { Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/retouch/bin/retouch.cjs").path }
@@ -65,22 +120,28 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate {
             let data = handle.availableData
             if data.isEmpty { handle.readabilityHandler = nil; return }
             let text = String(decoding: data, as: UTF8.self)
-            DispatchQueue.main.async { self?.appendLog(text) }
+            DispatchQueue.main.async {
+                guard let self = self, self.projectProcess === process else { return }
+                self.appendLog(text)
+                for url in self.outputLines.append(text) where !self.candidateURLs.contains(url) {
+                    if self.candidateURLs.count < 16 { self.candidateURLs.append(url) }
+                }
+            }
         }
         process.terminationHandler = { [weak self] finished in
             DispatchQueue.main.async {
                 guard let self = self, self.projectProcess === finished else { return }
                 self.appendLog("\nProject exited (" + String(finished.terminationStatus) + ").\n")
                 self.status.stringValue = finished.terminationStatus == 127 ? "Startup executable not found. Check Project logs and ensure Node and your command are available." : "Project stopped. See Project logs for details."
-                self.projectProcess = nil; self.projectPipe = nil
+                self.stopDiscovery(); self.projectProcess = nil; self.projectPipe = nil
                 self.projectButton.isEnabled = true; self.stopButton.isEnabled = false
             }
         }
         do {
-            try process.run(); projectProcess = process; projectPipe = pipe
+            try process.run(); projectProcess = process; projectPipe = pipe; startDiscovery()
             UserDefaults.standard.set(command, forKey: key)
             projectButton.isEnabled = false; stopButton.isEnabled = true
-            status.stringValue = "Project starting · enter its local /rt URL when ready."
+            status.stringValue = "Project starting · looking for its local editor URL…"
         } catch {
             pipe.fileHandleForReading.readabilityHandler = nil
             appendLog("Could not start: " + error.localizedDescription + "\n")
@@ -89,7 +150,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     }
     @objc private func stopProject() {
         guard let process = projectProcess, process.isRunning else { return }
-        process.terminate(); stopButton.isEnabled = false; status.stringValue = "Stopping project…"
+        stopDiscovery(); process.terminate(); stopButton.isEnabled = false; status.stringValue = "Stopping project…"
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -109,6 +170,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         address = NSTextField(string: UserDefaults.standard.string(forKey: "editorURL") ?? "http://localhost:3000/rt")
         address.placeholderString = "Your running Retouch URL"
         address.setAccessibilityLabel("Retouch editor URL")
+        address.delegate = self
         address.target = self
         address.action = #selector(connect)
         let connectButton = NSButton(title: "Open editor", target: self, action: #selector(connect))
@@ -158,7 +220,11 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         return parts.url
     }
 
+    func controlTextDidBeginEditing(_ notification: Notification) {
+        if let field = notification.object as? NSTextField, field === address { stopDiscovery() }
+    }
     @objc private func connect() {
+        stopDiscovery()
         pending?.cancel()
         requestID = UUID()
         guard let url = Self.editorURL(address.stringValue) else {
@@ -192,7 +258,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         if (error as NSError).code != NSURLErrorCancelled { status.stringValue = "Could not load editor: \(error.localizedDescription)" }
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
-    func applicationWillTerminate(_ notification: Notification) { pending?.cancel(); if projectProcess?.isRunning == true { projectProcess?.terminate() } }
+    func applicationWillTerminate(_ notification: Notification) { stopDiscovery(); pending?.cancel(); if projectProcess?.isRunning == true { projectProcess?.terminate() } }
     @objc private func reloadEditor() { web.reload() }
     @objc private func focusAddress() { window.makeFirstResponder(address); address.selectText(nil) }
     private func buildMenu() {
@@ -221,6 +287,26 @@ if CommandLine.arguments.contains("--self-test") {
     for invalid in ["https://example.com/rt", "file:///tmp/x", "javascript:alert(1)", "http://localhost.evil/rt", "http://user@localhost/rt", "http://localhost:0/rt", "http://localhost/admin"] {
         precondition(Studio.editorURL(invalid) == nil, invalid)
     }
+    precondition(Studio.localEditorURLs("Local: http://localhost:3496").first?.absoluteString == "http://localhost:3496/rt")
+    precondition(Studio.localEditorURLs("Network: http://192.168.1.2:3000 http://localhost.evil/rt").isEmpty)
+    precondition(Studio.localEditorURLs("\u{001B}[32mhttps://127.0.0.1:9000/rt\u{001B}[0m").count == 1)
+    let response = HTTPURLResponse(url: URL(string: "http://localhost:3000")!, statusCode: 200, httpVersion: nil, headerFields: nil)
+    precondition(!Studio.isRetouchHealth(Data("{\"ok\":true}".utf8), response, nil))
+    precondition(Studio.isRetouchHealth(Data("{\"ok\":true,\"service\":\"retouch\"}".utf8), response, nil))
+    if let index = CommandLine.arguments.firstIndex(of: "--probe-editor"), CommandLine.arguments.count > index + 1 {
+        let editor = Studio.editorURL(CommandLine.arguments[index + 1])!
+        var health = URLComponents(url: editor, resolvingAgainstBaseURL: false)!
+        health.path = "/rt/__api/health"; health.query = nil; health.fragment = nil
+        let done = DispatchSemaphore(value: 0)
+        URLSession.shared.dataTask(with: health.url!) { data, response, error in
+            precondition(Studio.isRetouchHealth(data, response, error)); done.signal()
+        }.resume()
+        precondition(done.wait(timeout: .now() + 10) == .success)
+        print("PASS native discovery health probe against running editor")
+    }
+    var lines = Studio.StartupLines()
+    precondition(lines.append("Local: http://local").isEmpty)
+    precondition(lines.append("host:3496\n").first?.port == 3496)
     let command = "printf '%s' \"literal $HOME and `ticks`\""
     precondition(Studio.launchArguments(command).last == "exec " + Studio.shellQuote(Studio.bundledCLI) + " -- /bin/zsh -l -c " + Studio.shellQuote(command))
     let quotingTest = Process(), output = Pipe()
@@ -246,7 +332,7 @@ if CommandLine.arguments.contains("--self-test") {
         precondition(launch.terminationStatus == 7)
         print("PASS native launcher delegates to real CLI, preserves working directory and propagates exit status")
     }
-    print("PASS desktop URL boundaries and startup command literal round trip")
+    print("PASS desktop URL boundaries, startup URL discovery and command literal round trip")
 } else {
     let app = NSApplication.shared
     let delegate = Studio()

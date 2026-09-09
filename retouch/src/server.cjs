@@ -75,7 +75,7 @@ function handle(req, res, ctx) {
     requireToken(req, ctx.token);
     return json(res, 200, { ok: true, ...(ctx.sourceMonitor?.state() || { revision: 0, available: false }) });
   }
-  if (p === '/rt/__api/health') return json(res, 200, { ok: true });
+  if (p === '/rt/__api/health') return json(res, 200, { ok: true, service: 'retouch' });
   if (p === '/rt/__api/images' && req.method === 'GET') {
     requireToken(req, ctx.token);
     const assets = ctx.adapter.assets;

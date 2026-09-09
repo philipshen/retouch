@@ -22,7 +22,7 @@ The build includes the CLI and its locked production dependencies under
 `Contents/Resources/retouch`. Node 22 or later must be available to the login
 shell; the generated cask declares the Homebrew `node` formula dependency. A missing executable is reported in the status
 and logs. You can also start a project externally through
-`retouch -- <your usual command>`. Enter its local `/rt` URL in the app. The app checks the sidecar health endpoint before
+`retouch -- <your usual command>`. Enter its local `/rt` URL in the app for an externally started project. The app checks the sidecar health endpoint before
 opening the editor. Cmd+L focuses the address and Cmd+R reloads the editor.
 It remembers the last successful URL. This version does not edit arbitrary remote sites.
 
@@ -74,3 +74,19 @@ cask and actual ZIP/hash succeeded, and uninstall removed the app. The installed
 app retained quarantine and stalled at `_dyld_start` before its self-test; that
 process was stopped without removing quarantine. Signed/notarized launch remains
 unproven. The generated cask now uses the current `macos: :ventura` syntax.
+
+For app-started projects, the launcher now watches complete stdout/stderr lines
+for local editor URLs. It handles split chunks and ANSI colors, probes candidates
+for up to 90 seconds, and opens the first healthy Retouch endpoint. Network URLs
+and generic `{ "ok": true }` services are not accepted for automatic discovery.
+Starting to edit the address, stopping the project or quitting cancels discovery.
+Commands that do not print a local URL still use manual URL entry. Multiple apps
+currently choose the first ready candidate; a native app picker is not implemented.
+
+URL parsing/validation tests and a native health probe against the live fixture
+passed. The complete startup-log-to-WKWebView transition still needs native UI
+verification. The probe can be repeated against a running editor with:
+
+```sh
+desktop/dist/Retouch.app/Contents/MacOS/Retouch --self-test --probe-editor http://localhost:3000
+```

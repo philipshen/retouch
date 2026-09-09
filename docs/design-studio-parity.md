@@ -238,7 +238,8 @@ status propagation through the same launch-argument builder.
 
 The computer-use service returned `cgWindowNotFound`, so native dialog/log/Stop
 interaction and a complete project-startup-to-editing flow remain unverified.
-Automatic URL discovery and signed/notarized distribution are still missing.
+Automatic URL discovery is implemented with a live native health probe; the full
+UI transition and signed/notarized distribution remain unverified.
 The current app bundles the CLI; Node must be on the login shell's PATH.
 
 ### Packaged CLI and local cask installation
@@ -258,3 +259,19 @@ removing quarantine. This does not prove Gatekeeper launch. Uninstall, temporary
 tap removal and test trust-entry cleanup were completed. The generator's old
 macOS comparison syntax was replaced with `macos: :ventura` after Homebrew's
 warning. Public release hosting, signing/notarization and upgrade tests remain.
+
+### Native automatic editor discovery
+
+App-started projects feed complete output lines into loopback URL discovery.
+Split chunks and terminal colors are handled before validation. The launcher
+probes candidates for a Retouch-specific health marker, then opens the first
+ready editor. Address editing, project stop/exit and app quit cancel discovery;
+a 90-second timeout leaves a manual-connection message. It does not scan ports
+or accept remote/network URLs. Multiple ready apps currently use first-ready
+selection; an app picker remains open.
+
+The universal build, URL/chunk/ANSI parser assertions, rejection of generic OK
+health JSON, bundled CLI self-test, native health probe against the running
+fixture and all 194 unit tests passed. The browser shell also loaded. This proves
+parsing and health integration, not the whole native startup-to-editor UI
+transition, which remains unverified with native computer-use unavailable.

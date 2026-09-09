@@ -105,9 +105,10 @@ async function firstIdOfTag(tag) {
   return el.id;
 }
 
-test('health needs no token', async () => {
+test('health identifies Retouch without a token', async () => {
   const r = await req(port, 'GET', '/rt/__api/health');
   assert.strictEqual(r.status, 200);
+  assert.equal(JSON.parse(r.body).service, 'retouch');
 });
 
 test('resolve without the token is rejected', async () => {
