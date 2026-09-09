@@ -4180,3 +4180,33 @@ This improves inspector discoverability and keyboard continuity, not the full
 usability or parity requirement. Many design features, arbitrary-site source
 coverage and trusted Mac distribution remain unfinished. No native app launch
 was attempted; the launch pause remains active.
+
+
+### 2026-09-09 — Font-relative letter spacing
+
+Typography now has a Letter spacing (%) field, described as relative to the
+selected layer's font size. It stores an em value: 10% becomes 0.1em. React and
+Liquid replace tracking classes within the chosen scope; HTML writes the
+existing responsive letter-spacing property. The original pixel/CSS controls
+remain available. The percentage input currently accepts -100 to 1000, with
+six-decimal percentage precision when serializing.
+
+All 374 existing unit tests pass in
+`/private/tmp/retouch-relative-spacing-unit.log`. The new
+`test:e2e:relative-spacing` workflow passes in:
+- `/private/tmp/retouch-relative-spacing-react.log` (React/Chromium)
+- `/private/tmp/retouch-relative-spacing-html.log` (HTML/WebKit)
+- `/private/tmp/retouch-relative-spacing-liquid.log` (local Liquid/Chromium)
+
+The real inspector writes 10% spacing at 32px font size and verifies 3.2px
+computed spacing, increases the font to 40px and verifies spacing scales to 4px,
+then writes a -5% tablet override and verifies -2px spacing while the phone stays
+at 4px. Each run restores the exact original source and spacing through undo.
+Existing font-search/family/reset checks also pass. Runs exited successfully and
+cleaned their temporary fixtures. A descriptive tooltip was added after these
+runs; no behavior changed after verification.
+
+This covers the selected element's CSS-relative spacing. It does not establish
+mixed-run spacing parity, paragraph/list controls or the broader Figma/any-site/
+trusted native distribution objective. Native launches remain paused and none
+were attempted.

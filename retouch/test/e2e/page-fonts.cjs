@@ -48,6 +48,16 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===expected);await settled();}await wait(async()=>await height()===initialHeight);assert.equal(read(),original);
    console.log(engine+' '+kind+': PASS automatic/custom line height, responsive isolation, family/weight retention, reset and exact undo');
   }
+  if(process.env.RT_E2E_RELATIVE_SPACING){
+   const spacing=()=>app.locator('h1').evaluate(el=>getComputedStyle(el).letterSpacing),initial=await spacing();
+   const edit=async(label,value,expected)=>{snapshots.push(read());const input=page.getByLabel(label,{exact:true});await input.fill(value);await input.press('Tab');await wait(()=>read()!==snapshots.at(-1));await settled();await wait(async()=>Math.abs(parseFloat(await spacing())-expected)<.02);};
+   await page.getByLabel('Style screen scope').selectOption('');await settled();await edit('Letter spacing (%)','10',3.2);
+   assert.match(read(),/0\.1em/);await edit(kind==='html'?'Font size (CSS)':'Font size (px)',kind==='html'?'40px':'40',4);
+   await page.getByLabel('Style screen scope').selectOption(kind==='html'?'min-[768px]:':'md:');await settled();await edit('Letter spacing (%)','-5',-2);
+   await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await settled();await wait(async()=>Math.abs(parseFloat(await spacing())-4)<.02);await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();await wait(async()=>Math.abs(parseFloat(await spacing())+2)<.02);
+   while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===expected);await settled();}await wait(async()=>await spacing()===initial);assert.equal(read(),original);
+   console.log(engine+' '+kind+': PASS percentage letter spacing scales with font size, negative tablet override, phone isolation and exact undo');
+  }
   assert.deepEqual(errors,[]);console.log(engine+' '+kind+': PASS searchable page font catalog, keyboard apply/cancel, no-match preservation, declared and used families, underscore preservation, weight/named-style retention, responsive isolation, reset, preview and exact source undo');
  }finally{if(browser)await browser.close();if(child){child.kill('SIGTERM');await stopped;}if(server){server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));}fs.rmSync(root,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

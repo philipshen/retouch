@@ -370,6 +370,7 @@
       if(css.lineHeight==='normal'){lineHeight.value='';lineHeight.placeholder='Automatic';}
       sec.append(button('Automatic line height',()=>change(lineHeightToken,'[line-height:normal]')));
       const resetLineHeight=button('Reset line height',()=>save(replace(info.className,lineHeightToken,'')));resetLineHeight.disabled=!tokens(info.className).map(base).some(t=>t&&lineHeightToken(t));sec.append(resetLineHeight);
+      number(sec,'Letter spacing (%)',(parseFloat(css.letterSpacing)||0)/parseFloat(css.fontSize)*100,-100,1000,v=>change(t=>/^-?tracking-/.test(t),`tracking-[${Math.round(v*1e6)/1e8}em]`)).title='Relative to this layer’s font size.';
       number(sec,'Letter spacing (px)',parseFloat(css.letterSpacing)||0,-100,100,v=>change(t=>/^-?tracking-/.test(t),`tracking-[${v}px]`));
       select(sec,'Text alignment',['left','center','right','justify','start','end'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.textAlign,v=>change(t=>/^text-(left|center|right|justify|start|end)$/.test(t),'text-'+v));
       select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(t=>t==='italic'||t==='not-italic',v==='italic'?'italic':'not-italic'));
@@ -416,6 +417,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select};
+  const api={base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

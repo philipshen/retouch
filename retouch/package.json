@@ -14,6 +14,7 @@
     "test:e2e:react-selection-geometry": "node test/e2e/react-selection-geometry.cjs",
     "test:e2e:react-selection": "node test/e2e/react-selection.cjs",
     "test:e2e:react-position": "node test/e2e/react-position.cjs",
+    "test:e2e:relative-spacing": "RT_E2E_RELATIVE_SPACING=1 node test/e2e/page-fonts.cjs",
     "test:e2e:line-height": "RT_E2E_LINE_HEIGHT=1 node test/e2e/page-fonts.cjs",
     "test:e2e:variable-weight": "RT_E2E_CUSTOM_WEIGHT=1 RT_E2E_VARIABLE_FONT=1 node test/e2e/page-fonts.cjs",
     "test:e2e:custom-weight": "RT_E2E_CUSTOM_WEIGHT=1 node test/e2e/page-fonts.cjs",
