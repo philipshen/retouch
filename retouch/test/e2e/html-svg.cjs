@@ -6,7 +6,7 @@ if(!['chromium','webkit'].includes(engine))throw Error('RT_E2E_BROWSER must be c
 const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
 (async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-svg-'));
- const original='<html><head></head><body><svg width="300" height="150" viewBox="0 0 200 100"><rect aria-label="Box" x="5" y="5" width="40" height="20" fill="red"/><circle cx="100" cy="30" r="10" fill="blue"/><ellipse cx="30" cy="70" rx="10" ry="5" fill="green"/><line x1="60" y1="70" x2="100" y2="70" stroke="black"/></svg><p>Unchanged</p></body></html>';
+ const original='<html><head></head><body><svg width="300" height="150" viewBox="0 0 200 100"><rect aria-label="Box" x="5" y="5" width="40" height="20" fill="red"/><g><circle cx="100" cy="30" r="10" fill="blue"/><ellipse cx="30" cy="70" rx="10" ry="5" fill="green"/></g><line x1="60" y1="70" x2="100" y2="70" stroke="black"/></svg><p>Unchanged</p></body></html>';
  const file=path.join(root,'index.html');fs.writeFileSync(file,original);const read=()=>fs.readFileSync(file,'utf8');
  const server=require('../../src/html-site.cjs').start({root,port:0,quiet:true});await once(server,'listening');
  const browser=await browserType.launch(),page=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -56,7 +56,17 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
   await page.getByRole('treeitem',{name:'svg',exact:true}).click();await settled();await page.getByRole('button',{name:'Add circle',exact:true}).click();await settled();await wait(async()=>await app.locator('circle').count()===2);
   assert.equal(await app.locator('svg').count(),1);assert.equal(await app.locator('circle').last().getAttribute('r'),'30');assert.equal(await app.locator('circle').last().getAttribute('cy'),'50');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);
+  await page.getByRole('treeitem',{name:'rect · Box',exact:true}).click();await settled();await paint('fill','#ff00ff');const painted=read();
+  await page.getByRole('button',{name:'Delete layer',exact:true}).click();await settled();await wait(async()=>await app.locator('rect').count()===0);const deleted=read();assert.equal(await page.getByRole('treeitem',{name:'svg',exact:true}).getAttribute('aria-selected'),'true');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===painted);assert.equal(await page.getByRole('treeitem',{name:'rect · Box',exact:true}).getAttribute('aria-selected'),'true');await wait(async()=>await computed('fill')==='rgb(255, 0, 255)');
+  await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===deleted);await wait(async()=>await app.locator('rect').count()===0);
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===painted);
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);
+  await page.getByRole('treeitem',{name:'svg',exact:true}).click();await settled();await page.getByRole('button',{name:'Delete layer',exact:true}).click();await settled();await wait(async()=>await app.locator('svg').count()===0);assert.equal(await page.getByRole('treeitem',{name:'body',exact:true}).getAttribute('aria-selected'),'true');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);assert.equal(await page.getByRole('treeitem',{name:'svg',exact:true}).getAttribute('aria-selected'),'true');
+  await page.getByRole('treeitem',{name:'g',exact:true}).click();await settled();await page.getByRole('button',{name:'Delete layer',exact:true}).click();await settled();await wait(async()=>await app.locator('g').count()===0);assert.equal(await app.locator('circle,ellipse').count(),0);assert.equal(await app.locator('rect,line').count(),2);
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);assert.equal(await page.getByRole('treeitem',{name:'g',exact:true}).getAttribute('aria-selected'),'true');
   assert.equal(await app.locator('p').textContent(),'Unchanged');
-  assert.deepEqual(errors,[]);console.log(engine+': PASS inline SVG canvas/tree selection, primitive geometry, viewBox scaling, responsive paint, stroke styles, shape creation and exact source/selection undo/redo');
+  assert.deepEqual(errors,[]);console.log(engine+': PASS inline SVG canvas/tree selection, primitive geometry, viewBox scaling, responsive paint, stroke styles, shape creation/deletion and exact source/selection undo/redo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

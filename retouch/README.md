@@ -311,3 +311,7 @@ Select an HTML content container or an explicitly closed SVG canvas/group to use
 size the shape. The new shape is selected for geometry and paint editing. Undo
 and redo restore both source and selection. Group transforms and page styles
 still affect rendering; drawing a shape directly by dragging is not implemented.
+
+**Delete layer** also removes a selected SVG shape, group or canvas, including
+its contents. The parent becomes selected; undo restores the original layer,
+its paint and selection. Other SVG structural actions remain unfinished.

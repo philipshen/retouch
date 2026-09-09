@@ -1678,6 +1678,16 @@ async function structureAction(action) {
   if(sel.multiple?.length>1){if(action==='reparentElement')return chooseLayerParent(sel.info);if(['duplicateElement','deleteElement'].includes(action))return structureSelection(action);return toast('Choose one layer for this structural edit.','err');}
   await commitInlineEdit();
   const info=sel?.info;if(!info)return;
+  if(action==='deleteElement'&&info.svgDeletion){
+    busyPanel(true);
+    try{
+      const result=await api('POST','/rt/__api/op',{type:'deleteElement',id:info.id,fileHash:info.hash});
+      if(!result?.ok)return toast(result?.reason||result?.error||'Could not delete SVG layer','err');
+      editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:[info.id],selectionAfter:[result.parentId],undoId:result.undoId});
+      await reloadFrame();await restoreLayerSelection([result.parentId]);renderPanel();toast('Layer deleted','ok');
+    }finally{busyPanel(false);}
+    return;
+  }
   if(action==='reparentElement')return chooseLayerParent(info);
   if(action==='renameElement'){const input=document.getElementById('layerNameInput');input?.focus();input?.select();return;}
   if(action==='insertText'||action==='insertFrame')return insertLayer(action==='insertText'?'text':'frame',info);

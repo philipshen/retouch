@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 261 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 263 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1168,3 +1168,19 @@ stale hashes, templates and unsupported containers. The creation screenshot was
 inspected. The broader HTML workflow also passes in both engines after the
 shared insertion-history change. Drawing by drag, vector path authoring, SVG structural actions,
 transform-aware placement and full parity remain unfinished.
+
+
+### Delete SVG layers
+
+Delete layer now supports complete indexed SVG primitives, groups and viewports.
+It removes exactly the selected source region, validates all retained indexed
+elements and their parsed parents, and leaves surrounding comments/definitions
+unchanged. Templates and stale source hashes are refused. Deletion selects the
+parent, undo selects the restored layer and redo returns to the parent. Managed
+paint rules outside the deleted region remain in source, as with HTML deletion;
+exact undo restores the layer with its previous paint.
+
+All 263 unit tests pass. Chromium and WebKit verify deleting a painted primitive,
+a group with descendants and a whole viewport, including source/selection undo
+and redo and unchanged adjacent HTML. SVG duplication, reordering, reparenting
+and broader vector authoring remain unfinished; full parity is not achieved.
