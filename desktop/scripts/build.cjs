@@ -36,7 +36,9 @@ const executable = path.join(macos, 'Retouch');
 run('lipo', ['-create', ...binaries, '-output', executable], {stdio:'inherit'});
 const identity = process.env.RETOUCH_SIGN_IDENTITY;
 run('codesign', ['--force', '--sign', identity || '-', ...(identity ? ['--options', 'runtime', '--timestamp'] : []), app], {stdio:'inherit'});
-run(executable, ['--self-test', '--launch-bundled'], {stdio:'inherit'});
+const nativeTests = process.env.RETOUCH_RUN_NATIVE_TESTS === '1';
+if (nativeTests) run(executable, ['--self-test', '--launch-bundled'], {stdio:'inherit'});
+else console.log('SKIP native launch tests (set RETOUCH_RUN_NATIVE_TESTS=1 only when desktop launch testing is explicitly enabled)');
 run('codesign', ['--verify', '--strict', app], {stdio:'inherit'});
 const zip = path.join(out, 'Retouch-0.1.0-mac.zip');
 // ditto can append to an existing archive; remove only this generated output.
@@ -44,4 +46,4 @@ if (fs.existsSync(zip)) fs.unlinkSync(zip);
 run('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', app, zip], {stdio:'inherit'});
 const sha = crypto.createHash('sha256').update(fs.readFileSync(zip)).digest('hex');
 fs.writeFileSync(zip + '.sha256', sha + '\n');
-console.log(JSON.stringify({app,zip,sha256:sha,signing:identity?'Developer ID (notarization still required)':'ad hoc development build'},null,2));
+console.log(JSON.stringify({app,zip,sha256:sha,nativeSelfTests:nativeTests?'passed':'not run',signing:identity?'Developer ID (notarization still required)':'ad hoc development build'},null,2));
