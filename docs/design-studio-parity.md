@@ -4469,3 +4469,29 @@ byte-identical and the export contained no editor/script markup. Logs:
 `RT_INSPECTOR_FIXTURE=/private/tmp/retouch-responsive-fixture npm run test:e2e:svg-export`
 from retouch/. Sample downloaded artifact: `/private/tmp/retouch-export-example.svg`.
 Native app launches remain paused.
+
+### Shared SVG definitions in export (2026-09-09)
+
+Export now collects same-document paint/filter/clip/mask/marker/pattern references
+that live outside the selected SVG canvas. It follows local gradient/pattern href
+dependencies transitively, captures each definition's computed styling, and adds
+only the referenced definition roots to exported defs. Collection is separate from
+cloning so shared/nested definition roots are deduplicated. Missing local
+definitions and unsupported reference targets produce errors instead of silently
+writing broken fragment references. Symbol-instance and SMIL-animation restrictions
+also apply to imported definitions.
+
+Chromium and WebKit both downloaded and rasterized a canvas whose gradient and
+clipPath live in a separate zero-sized SVG. The gradient inherits stops through a
+second local gradient, proving transitive collection. Existing pixel checks for
+CSS geometry/colors, gradient blending, clipping and responsive output passed,
+as did missing-definition refusal and unchanged-source checks. Logs:
+`/private/tmp/retouch-svg-shared-chromium.log`,
+`/private/tmp/retouch-svg-shared-webkit.log`. Local-definition regression passed
+in `/private/tmp/retouch-svg-shared-local-regression.log`. All 375 unit tests
+passed in `/private/tmp/retouch-svg-shared-unit.log`. Run with
+`RT_E2E_SHARED_DEFS=1` to include this fixture in the SVG export browser harness.
+
+Definitions in other documents are still external links. Symbol expansion, embedded
+fonts/images, full animation snapshots and complete export parity remain unfinished.
+Native app launches remain paused.

@@ -5,18 +5,44 @@
   const svg=target?.closest('svg');if(!svg)throw Error('Select an SVG canvas or a shape inside it.');
   if(svg.querySelector('use'))throw Error('Export of linked SVG symbol instances is not supported yet.');
   if(svg.querySelector('animate,animateMotion,animateTransform,set'))throw Error('Export of SVG animations is not supported yet.');
-  const d=svg.ownerDocument,w=d.defaultView,copy=svg.cloneNode(true),originals=[svg,...svg.querySelectorAll('*')],copies=[copy,...copy.querySelectorAll('*')];
-  const localURL=value=>value.replace(/url\(["']?([^"')]+)["']?\)/g,(whole,href)=>{try{const u=new URL(href,d.baseURI);if(u.protocol==='javascript:')return 'none';return 'url("'+(u.hash&&u.href.split('#')[0]===d.URL.split('#')[0]?u.hash:u.href)+'")';}catch{return whole;}});
-  for(let i=0;i<originals.length;i++){
-   const original=originals[i],node=copies[i];
-   if(/^(script|style|animate|animateMotion|animateTransform|set)$/i.test(node.localName)){node.remove();continue;}
-   for(const attr of [...node.attributes])if(/^data-rt(?:-|$)|^on/i.test(attr.name))node.removeAttribute(attr.name);
-   const css=w.getComputedStyle(original);
-   for(const property of properties){const value=css.getPropertyValue(property);if(value)node.style.setProperty(property,localURL(value),'important');}
-   for(const attr of [...node.attributes]){
-    if(attr.localName!=='href')continue;
-    try{const url=new URL(attr.value,d.baseURI);if(['http:','https:','data:','blob:'].includes(url.protocol)||attr.value.startsWith('#'))node.setAttributeNS(attr.namespaceURI,attr.name,attr.value.startsWith('#')?attr.value:url.href);else node.removeAttributeNode(attr);}catch{node.removeAttributeNode(attr);}
+  const d=svg.ownerDocument,w=d.defaultView,roots=[svg],queue=[svg,...svg.querySelectorAll('*')],styles=new Map(),links=new Map();
+  function reference(href,collect=true){
+   let url;try{url=new URL(href,d.baseURI);}catch{return href;}
+   if(url.protocol==='javascript:')return '';
+   if(url.hash&&url.href.split('#')[0]===d.URL.split('#')[0]&&collect){
+    const id=decodeURIComponent(url.hash.slice(1)),definition=d.getElementById(id);
+    if(!definition)throw Error('Missing SVG definition: '+id);
+    if(!roots.some(root=>root.contains(definition))){
+     if(definition.namespaceURI!==svg.namespaceURI||!['linearGradient','radialGradient','clipPath','mask','filter','marker','pattern'].includes(definition.localName))throw Error('Unsupported shared SVG definition: '+id);
+     for(let i=roots.length-1;i>0;i--)if(definition.contains(roots[i]))roots.splice(i,1);
+     roots.push(definition);queue.push(definition,...definition.querySelectorAll('*'));
+    }
+    return url.hash;
    }
+   return url.href;
+  }
+  const localURL=value=>value.replace(/url\(["']?([^"')]+)["']?\)/g,(whole,href)=>{const url=reference(href);return url?'url("'+url+'")':'none';});
+  for(let i=0;i<queue.length;i++){
+   const original=queue[i];if(styles.has(original))continue;
+   if(original.localName==='use')throw Error('Export of linked SVG symbol instances is not supported yet.');
+   if(/^(animate|animateMotion|animateTransform|set)$/i.test(original.localName))throw Error('Export of SVG animations is not supported yet.');
+   const css=w.getComputedStyle(original),values=[];styles.set(original,values);
+   for(const property of properties){const value=css.getPropertyValue(property);if(value)values.push([property,localURL(value)]);}
+   const hrefs=[];links.set(original,hrefs);
+   for(const attr of original.attributes)if(attr.localName==='href'){
+    const value=reference(attr.value,['linearGradient','radialGradient','pattern'].includes(original.localName));
+    hrefs.push([attr.namespaceURI,attr.name,/^(?:https?:|data:|blob:|#)/.test(value)?value:null]);
+   }
+  }
+  const copy=svg.cloneNode(true),pairs=[];
+  function pair(original,clone){const a=[original,...original.querySelectorAll('*')],b=[clone,...clone.querySelectorAll('*')];for(let i=0;i<a.length;i++)pairs.push([a[i],b[i]]);}
+  pair(svg,copy);
+  if(roots.length>1){const defs=d.createElementNS(svg.namespaceURI,'defs');copy.prepend(defs);for(const definition of roots.slice(1)){const clone=definition.cloneNode(true);defs.append(clone);pair(definition,clone);}}
+  for(const [original,node]of pairs){
+   if(/^(script|style)$/i.test(node.localName)){node.remove();continue;}
+   for(const attr of [...node.attributes])if(/^data-rt(?:-|$)|^on/i.test(attr.name))node.removeAttribute(attr.name);
+   for(const [property,value]of styles.get(original)||[])node.style.setProperty(property,value,'important');
+   for(const [namespace,name,value]of links.get(original)||[]){if(value===null)node.removeAttribute(name);else node.setAttributeNS(namespace,name,value);}
   }
   const css=w.getComputedStyle(svg),rect=svg.getBoundingClientRect(),width=parseFloat(css.width)||rect.width,height=parseFloat(css.height)||rect.height;
   if(!(width>0&&height>0))throw Error('This SVG canvas has no visible dimensions.');
