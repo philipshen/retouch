@@ -54,6 +54,24 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
 
    assert.equal(fs.readFileSync(file,'utf8'),source);console.log(engine+': PASS downloaded PNG at 1x/2x/4x, crisp scaled edges, transparency, filename scales, invalid-scale/unsupported-content refusal and unchanged source');
   }
+  const references=await app.locator('svg[aria-label="Test artwork"]').evaluate(svg=>{
+   const d=svg.ownerDocument,holder=d.createElement('div');
+   holder.innerHTML='<svg width="0" height="0"><defs><path id="export-ref-shape" d="M0 0h10v10z"/><symbol id="export-ref-a"><use href="#export-ref-shape"/></symbol><symbol id="export-ref-b"><use href="#export-ref-a"/></symbol></defs></svg><svg id="export-ref-canvas"><use href="#export-ref-b"/><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#export-ref-b"/></svg>';
+   d.body.append(holder);
+   try{
+    const canvas=holder.querySelector('#export-ref-canvas'),before=holder.innerHTML,api=window.parent.RetouchSVGExport;
+    const result=api.useReferences(canvas),ids=result.definitions.map(node=>node.id).sort(),count=result.instances.size;
+    if(holder.innerHTML!==before)throw Error('Reference collection mutated the page');
+    const nested=holder.querySelector('#export-ref-a use');nested.setAttribute('href','#export-ref-b');
+    let cycle;try{api.useReferences(canvas);}catch(error){cycle=error.message;}
+    nested.setAttribute('href','#export-ref-missing');let missing;try{api.snapshot(canvas);}catch(error){missing=error.message;}
+    nested.setAttribute('href','https://example.invalid/icons.svg#icon');let external;try{api.useReferences(canvas);}catch(error){external=error.message;}
+    return {ids,count,cycle,missing,external};
+   }finally{holder.remove();}
+  });
+  assert.deepEqual(references.ids,['export-ref-a','export-ref-b','export-ref-shape']);assert.equal(references.count,4);
+  assert.match(references.cycle,/Cyclic SVG symbol reference/);assert.match(references.missing,/Missing SVG definition: export-ref-missing/);assert.match(references.external,/External SVG symbol references/);
+  console.log(engine+': PASS transitive shared symbol collection, href/xlink, reuse deduplication, cycle/missing/external diagnostics and no DOM mutation');
   const refusal=await app.locator('svg[aria-label="Test artwork"]').evaluate(svg=>{const use=svg.ownerDocument.createElementNS(svg.namespaceURI,'use');use.setAttribute('href','#solid');svg.append(use);try{return window.parent.RetouchSVGExport.snapshot(svg);}catch(error){return error.message;}finally{use.remove();}});assert.match(refusal,/symbol instances/);
   if(process.env.RT_E2E_TEXT_PATH){assert.match(text,/id="text-track"/);assert.match(text,/href="#text-track"/);}
   if(process.env.RT_E2E_SHARED_DEFS){assert.match(text,/id="paint-base"/);assert.match(text,/href="#paint-base"/);}

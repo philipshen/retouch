@@ -1,9 +1,35 @@
 (function(root){
  'use strict';
  const properties=['x','y','width','height','cx','cy','r','rx','ry','d','color','fill','fill-opacity','fill-rule','stroke','stroke-width','stroke-opacity','stroke-linecap','stroke-linejoin','stroke-miterlimit','stroke-dasharray','stroke-dashoffset','opacity','display','visibility','clip-path','clip-rule','mask','filter','marker-start','marker-mid','marker-end','stop-color','stop-opacity','flood-color','flood-opacity','lighting-color','paint-order','vector-effect','shape-rendering','text-rendering','image-rendering','font-family','font-size','font-weight','font-style','font-stretch','font-variant','font-variant-numeric','font-feature-settings','font-kerning','font-variation-settings','font-optical-sizing','direction','unicode-bidi','writing-mode','text-orientation','letter-spacing','word-spacing','text-anchor','dominant-baseline','alignment-baseline','text-decoration','white-space','transform','transform-origin','transform-box'];
+ function useReferences(svg){
+  const d=svg.ownerDocument,definitions=new Set(),instances=new Map(),active=new Set(),visited=new Set();
+  const pending=[[svg,false]];
+  while(pending.length){
+   const [node,leaving]=pending.pop();
+   if(leaving){active.delete(node);visited.add(node);continue;}
+   if(active.has(node))throw Error('Cyclic SVG symbol reference: '+(node.id||node.localName));
+   if(visited.has(node))continue;
+   if(visited.size+active.size>=10000)throw Error('SVG symbol references exceed the export limit.');
+   active.add(node);pending.push([node,true]);
+   for(const child of [...node.children].reverse())pending.push([child,false]);
+   if(node.localName==='use'){
+    const href=node.getAttribute('href')??node.getAttributeNS('http://www.w3.org/1999/xlink','href');
+    if(href){
+     let url;try{url=new URL(href,d.baseURI);}catch{throw Error('Invalid SVG symbol reference: '+href);}
+     if(!url.hash||url.href.split('#')[0]!==d.URL.split('#')[0])throw Error('External SVG symbol references are not supported yet.');
+     let id;try{id=decodeURIComponent(url.hash.slice(1));}catch{throw Error('Invalid SVG symbol reference: '+href);}
+     const definition=d.getElementById(id);
+     if(!definition)throw Error('Missing SVG definition: '+id);
+     if(definition.namespaceURI!==svg.namespaceURI)throw Error('SVG symbol reference targets a non-SVG element: '+id);
+     instances.set(node,definition);definitions.add(definition);pending.push([definition,false]);
+    }
+   }
+  }
+  return {definitions:[...definitions],instances};
+ }
  function snapshot(target){
   const svg=target?.closest('svg');if(!svg)throw Error('Select an SVG canvas or a shape inside it.');
-  if(svg.querySelector('use'))throw Error('Export of linked SVG symbol instances is not supported yet.');
+  if(svg.querySelector('use')){useReferences(svg);throw Error('Export of linked SVG symbol instances is not supported yet.');}
   if(svg.querySelector('animate,animateMotion,animateTransform,set'))throw Error('Export of SVG animations is not supported yet.');
   const d=svg.ownerDocument,w=d.defaultView,roots=[svg],queue=[svg,...svg.querySelectorAll('*')],styles=new Map(),links=new Map();
   function reference(href,collect=true){
@@ -111,5 +137,5 @@
  const jpeg=(target,scale=1,options={})=>raster(target,scale,'jpeg',options);
  async function downloadJPEG(target,scale=1,options={}){const result=await jpeg(target,scale,options);save(result.blob,result.name+(scale===1?'':'@'+scale+'x')+'.jpg');return result;}
  async function downloadPNG(target,scale=1){const result=await png(target,scale);save(result.blob,result.name+(scale===1?'':'@'+scale+'x')+'.png');return result;}
- root.RetouchSVGExport={snapshot,prepared,download,png,jpeg,downloadPNG,downloadJPEG};
+ root.RetouchSVGExport={useReferences,snapshot,prepared,download,png,jpeg,downloadPNG,downloadJPEG};
 })(window);

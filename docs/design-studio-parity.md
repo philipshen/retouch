@@ -4642,3 +4642,25 @@ This verifies the tested local-font curved layout, not every font, script or SVG
 text feature. Web-font embedding, text-to-outline conversion, symbols and arbitrary
 HTML-layer export remain incomplete. Native app launches remain paused at the
 user's request; full Figma parity and trusted cask distribution remain unproven.
+
+### Shared-symbol export reference groundwork (2026-09-09)
+
+Added a read-only SVG use-reference graph collector as preparation for symbol
+export. It resolves same-document href and legacy xlink:href, deduplicates shared
+definitions, follows nested instances, and reports missing, external, non-SVG or
+cyclic targets. Traversal uses an explicit stack and a 10,000-node bound. Snapshot
+now runs this validation before the existing symbol-export refusal, giving a
+specific error for broken references. No symbol rendering support is claimed:
+baking computed styles from definition nodes would incorrectly freeze inherited
+instance colors, so that rendering work remains pending.
+
+Real Chromium and WebKit fixtures passed nested symbols, two instances sharing
+one definition, href/xlink resolution, cyclic/missing/external diagnostics and
+unchanged DOM. Final iterative traversal evidence:
+`/private/tmp/retouch-symbol-refs-iterative-chromium.log` and
+`/private/tmp/retouch-symbol-refs-iterative-webkit.log`, both exit 0. The prior
+recursive implementation additionally passed the full curved-text PNG/JPEG flow
+in `retouch-symbol-refs-chromium.log` and `retouch-symbol-refs-webkit.log` under
+`/private/tmp`. Unit suite passed in `/private/tmp/retouch-symbol-refs-unit.log`;
+git diff --check passed. The node bound and every invalid URL form have not been
+exhaustively exercised. Native launches remain paused; full parity is incomplete.
