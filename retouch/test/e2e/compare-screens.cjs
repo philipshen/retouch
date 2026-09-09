@@ -37,7 +37,24 @@ const file=path.join(root,'app/page.jsx'),original=fs.readFileSync(file,'utf8'),
   await page.getByRole('button',{name:'Edit phone size',exact:true}).click();assert.equal(await page.getByLabel('Screen size',{exact:true}).inputValue(),'390x844');
   await page.getByRole('button',{name:'Compare screens',exact:true}).click();assert.equal(read(),original);
   for(let i=0;i<3;i++){await page.getByRole('button',{name:'Compare screens',exact:true}).click();await preview('Phone').locator('#anchor-target').waitFor();await page.getByRole('button',{name:'Compare screens',exact:true}).click();}
+  await page.getByLabel('Screen width',{exact:true}).fill('1120');await page.getByLabel('Screen width',{exact:true}).press('Tab');
+  await page.getByRole('button',{name:'Compare screens',exact:true}).click();
+  await page.getByRole('button',{name:'Pin current size',exact:true}).click();
+  const custom='Custom 1120 × 844';
+  await preview(custom).locator('#anchor-target').waitFor();
+  assert.deepEqual(await preview(custom).locator('body').evaluate(el=>[el.ownerDocument.defaultView.innerWidth,el.ownerDocument.defaultView.innerHeight]),[1120,844]);
+  assert.equal(await page.getByRole('button',{name:'Pin current size',exact:true}).isDisabled(),true);
+  await page.getByRole('button',{name:'Remove Tablet comparison',exact:true}).click();
+  await wait(async()=>await page.locator('iframe[title="Tablet comparison preview"]').count()===0,'removed tablet');
+  await page.reload();await page.getByRole('button',{name:'Compare screens',exact:true}).click();
+  await preview(custom).locator('#anchor-target').waitFor();assert.equal(await page.locator('iframe[title="Tablet comparison preview"]').count(),0);
+  await page.getByRole('button',{name:'Edit phone size',exact:true}).click();
+  await page.getByRole('button',{name:'Edit custom 1120 × 844 size',exact:true}).click();
+  assert.equal(await page.getByLabel('Screen width',{exact:true}).inputValue(),'1120');
+  await page.getByRole('button',{name:'Remove '+custom+' comparison',exact:true}).click();
+  await wait(async()=>await page.locator('iframe[title="'+custom+' comparison preview"]').count()===0,'custom removed');
+  await page.getByRole('button',{name:'Compare screens',exact:true}).click();
   await page.waitForTimeout(300);assert.deepEqual(errors,[]);
-  console.log('PASS independent phone/tablet/desktop viewport sizes, linked layer highlights, responsive CSS, active-size switching, live source edit/undo and preview disposal/reopen');
+  console.log('PASS independent phone/tablet/desktop viewport sizes, linked layer highlights, responsive CSS, active-size switching, live source edit/undo and preview disposal/reopen, custom pin/remove and persistence');
  }finally{if(read()!==original)fs.writeFileSync(file,original);await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -239,3 +239,6 @@ details.advanced > summary:hover { color: var(--ink); }
 .compare-overlay { position: absolute; inset: 0; pointer-events: none; }
 .compare-selection { position: absolute; border: 2px solid var(--accent); }
 .compare-card > .hint { color: var(--muted); font-size: 11px; margin-top: 6px; }
+
+#screenComparisons > .control-button { margin-bottom: 14px; }
+.compare-header > span { flex: 1; min-width: 0; }

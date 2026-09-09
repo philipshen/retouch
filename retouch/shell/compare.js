@@ -1,7 +1,17 @@
 (function(){
   'use strict';
   const toggle=document.getElementById('compareScreens'),rail=document.getElementById('screenComparisons'),main=document.getElementById('app');
-  const sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]];
+  const storageKey='retouch.comparisons.v1';
+  let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin;
+  const valid=v=>Number.isInteger(v)&&v>=240&&v<=7680;
+  try{const saved=JSON.parse(localStorage.getItem(storageKey));if(Array.isArray(saved)&&saved.length<=8&&saved.every(s=>Array.isArray(s)&&s.length===3&&typeof s[0]==='string'&&s[0].length<=80&&valid(s[1])&&valid(s[2])))sizes=saved;}catch{}
+  function remember(){try{localStorage.setItem(storageKey,JSON.stringify(sizes));}catch{}}
+  function current(){return {width:Number(document.getElementById('screenWidth').value),height:Number(document.getElementById('screenHeight').value)};}
+  function updateControls(){
+    const size=current();
+    if(pin){pin.disabled=sizes.length>=8||!valid(size.width)||!valid(size.height)||sizes.some(s=>s[1]===size.width&&s[2]===size.height);pin.title=sizes.length>=8?'Remove a comparison to add another':'Add the current canvas dimensions';}
+    for(const card of cards)card.edit.setAttribute('aria-pressed',String(size.width===card.width&&size.height===card.height));
+  }
   let cards=[],selected=null,route=null,open=false,timer=null;
   function path(){try{const loc=main.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
   function sync(force=false){
@@ -34,12 +44,20 @@
   function mount(){
     rail.replaceChildren();cards=[];
     const heading=document.createElement('h2');heading.textContent='Compare screens';rail.append(heading);
-    for(const [name,width,height] of sizes){
+    pin=document.createElement('button');pin.className='control-button';pin.textContent='Pin current size';
+    pin.onclick=()=>{const {width,height}=current();if(pin.disabled)return;const size=[`Custom ${width} × ${height}`,width,height];sizes.push(size);remember();addCard(size);cards.at(-1).frame.src=path()||'/';updateControls();};rail.append(pin);
+    for(const size of sizes)addCard(size);
+    updateControls();
+  }
+  function addCard(size){
+      const [name,width,height]=size;
       const card=document.createElement('section');card.className='compare-card';card.setAttribute('aria-label',name+' comparison');
       const header=document.createElement('div');header.className='compare-header';
-      const label=document.createElement('span');label.textContent=`${name} · ${width} × ${height}`;header.append(label);
+      const label=document.createElement('span');label.textContent=name.startsWith('Custom ')?name:`${name} · ${width} × ${height}`;header.append(label);
       const edit=document.createElement('button');edit.className='control-button';edit.textContent='Edit';edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');
       edit.onclick=()=>window.RetouchScreens.set({width,height});header.append(edit);
+      const remove=document.createElement('button');remove.className='control-button';remove.textContent='×';remove.setAttribute('aria-label','Remove '+name+' comparison');header.append(remove);
+      remove.onclick=async()=>{remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);cards=cards.filter(c=>c!==item);await unload(frame);card.remove();updateControls();};
       const viewport=document.createElement('div');viewport.className='compare-viewport';
       const frame=document.createElement('iframe');frame.title=name+' comparison preview';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');frame.style.width=width+'px';frame.style.height=height+'px';
       const overlay=document.createElement('div');overlay.className='compare-overlay';
@@ -47,17 +65,17 @@
       viewport.append(frame,overlay);card.append(header,viewport,message);rail.append(card);
       viewport.addEventListener('wheel',e=>{e.preventDefault();try{frame.contentWindow.scrollBy({top:e.deltaY/(viewport.clientWidth/width),left:e.deltaX,behavior:'instant'});}catch{}},{passive:false});
       cards.push({frame,overlay,message,viewport,width,height,edit});
-    }
   }
+  function unload(frame){return new Promise(resolve=>{
+    let timeout;
+    const done=()=>{clearTimeout(timeout);frame.removeEventListener('load',done);frame.remove();resolve();};
+    frame.addEventListener('load',done);timeout=setTimeout(done,1000);
+    try{frame.contentWindow.stop();frame.src='about:blank';}catch{done();}
+  });}
   async function dispose(){
     // Unload each browsing context before detaching it, including frames whose
     // framework bootstrap is still awaiting scripts or network responses.
-    await Promise.all(cards.map(({frame})=>new Promise(resolve=>{
-      let timeout;
-      const done=()=>{clearTimeout(timeout);frame.removeEventListener('load',done);frame.remove();resolve();};
-      frame.addEventListener('load',done);timeout=setTimeout(done,1000);
-      try{frame.contentWindow.stop();frame.src='about:blank';}catch{done();}
-    })));
+    await Promise.all(cards.map(({frame})=>unload(frame)));
     rail.replaceChildren();cards=[];route=null;
   }
   toggle.onclick=async()=>{
@@ -67,5 +85,6 @@
   window.addEventListener('retouch:selection',e=>{selected=e.detail;});
   window.addEventListener('retouch:route',()=>sync());
   main.addEventListener('load',()=>sync(true));
-  window.addEventListener('retouch:screen',e=>{for(const card of cards)card.edit.setAttribute('aria-pressed',String(e.detail?.width===card.width&&e.detail?.height===card.height));});
+  window.addEventListener('retouch:viewport',updateControls);
+  window.addEventListener('retouch:screen',updateControls);
 })();

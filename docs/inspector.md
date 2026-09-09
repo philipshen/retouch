@@ -186,5 +186,6 @@ previews, and navigation follows the main canvas. Closing the rail unloads the
 extra previews.
 
 Each preview runs independently, so temporary app state such as open menus is
-not synchronized. Comparison sizes are currently fixed; the main canvas retains
-its custom width/height controls.
+not synchronized. Set the main canvas width/height and click **Pin current size** to add a custom
+comparison. The × button removes a card. Up to eight sizes are remembered in
+this browser for the current site; duplicate dimensions cannot be pinned twice.

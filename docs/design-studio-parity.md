@@ -59,7 +59,7 @@ documentation. Nothing in it proves full parity.
    units; scoped content edits are not supported (content remains shared).
 2. Expand the linked screen comparison rail into customizable canvases with
    direct selection/editing, visible inheritance/overrides and synchronized
-   application state. Fixed phone/tablet/desktop previews now share source
+   application state. Pinned standard/custom previews now share source
    selection and edits; the main canvas remains the editing surface.
 3. Build the layer/document and generic-site authoring model that supports the
    remaining canvas/vector/layout/component operations without requiring JSX.
@@ -210,8 +210,18 @@ close/reopen. One initial run reported an unlocated framework error during frame
 teardown; after explicit context unloading, lifecycle and route checks passed
 without browser errors. The screenshot was visually inspected.
 
-These are linked source previews, not complete multi-canvas editing: custom
-comparison dimensions, direct edits within comparison frames, synchronized app
+These are linked source previews, not complete multi-canvas editing: direct edits within comparison frames, synchronized app
 state, per-screen override badges and general arbitrary-site support remain open.
 Each preview executes its own application instance. Cross-origin pages cannot be
 inspected through the current same-origin architecture.
+
+### Custom comparison sets
+
+Pin current size adds the main canvas dimensions as another live comparison.
+Duplicate dimensions are disabled; each card can be removed independently.
+Up to eight comparisons are retained in local storage for this origin, including
+across editor reloads. Stored dimensions are validated before loading frames.
+The extended comparison browser test verifies a real 1120×844 custom viewport,
+duplicate prevention, removing a default/custom card, persistence, activation and
+continued source edit/undo behavior. Comparison-card resizing and naming in place,
+shared project-level screen sets and direct editing remain open.
