@@ -289,6 +289,25 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await size('768x1024');await page.getByRole('button',{name:'Reset gradient fills',exact:true}).click();await wait(async()=>await effect('background-image')===baseGradient,'gradient reset inheritance');await settled();
   for(let i=0;i<9;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'gradient exact undo');
+  await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await settled();
+  await size('390x844');await page.getByLabel('Style screen scope').selectOption('');
+  await page.getByRole('treeitem',{name:'p · Unedited sibling',exact:true}).click({modifiers:['Shift']});await wait(async()=>await page.getByLabel('Shared Width',{exact:true}).count()===1,'multi-selection inspector');await settled();
+  await wait(async()=>await page.getByRole('treeitem',{selected:true}).count()===2,'both selected layers');
+  assert.equal(await page.getByLabel('Shared Font weight',{exact:true}).inputValue(),'','mixed font weights');assert.equal(await page.getByRole('button',{name:'Delete layer',exact:true}).isDisabled(),true,'single-layer actions disabled');
+  await app.locator('h1').click({modifiers:['Shift']});await wait(async()=>await page.getByRole('treeitem',{selected:true}).count()===1,'canvas toggle off');await settled();
+  await app.locator('h1').click({modifiers:['Shift']});await wait(async()=>await page.getByRole('treeitem',{selected:true}).count()===2,'canvas toggle on');await settled();
+  await page.getByLabel('Shared Width',{exact:true}).fill('240px');await page.getByLabel('Shared Width',{exact:true}).press('Tab');await wait(async()=>await app.locator('h1,p').evaluateAll(els=>els.every(el=>getComputedStyle(el).width==='240px')),'shared width');await settled();
+  if(process.env.RT_E2E_MULTI_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_MULTI_SCREENSHOT});
+  const sharedWidthSource=read();assert.equal(await app.locator('img').evaluate(el=>getComputedStyle(el).width),'100px','unselected image unchanged');
+  await size('768x1024');await page.getByLabel('Style screen scope').selectOption('min-[768px]:');
+  await page.getByLabel('Shared Opacity (%)',{exact:true}).fill('50');await page.getByLabel('Shared Opacity (%)',{exact:true}).press('Tab');await wait(async()=>await app.locator('h1,p').evaluateAll(els=>els.every(el=>getComputedStyle(el).opacity==='0.5')),'shared tablet opacity');await settled();
+  await size('390x844');await wait(async()=>await app.locator('h1,p').evaluateAll(els=>els.every(el=>getComputedStyle(el).opacity==='1')),'shared base opacity unchanged');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===sharedWidthSource,'one undo restores both opacities');
+  await wait(async()=>await page.getByRole('treeitem',{selected:true}).count()===2,'undo restores multiple selection');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'one undo restores both widths');
+  await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===sharedWidthSource,'shared redo exact source');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'shared final undo');
+  await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await wait(async()=>await page.getByRole('treeitem',{selected:true}).count()===1,'plain click returns to single selection');
   assert.deepEqual(errors,[]);console.log(engine+': PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

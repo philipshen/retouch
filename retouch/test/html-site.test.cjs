@@ -16,6 +16,10 @@ test('HTML site serves stamped documents and assets, edits through authenticated
   const styled=await op({id,type:'setCSS',width:768,property:'width',value:'320px'});assert.equal(styled.ok,true);
   assert.deepEqual(styled.element.cssRules,{768:{width:'320px'}});
   assert.equal((await op({type:'undo',undoId:styled.undoId})).ok,true);assert.equal(fs.readFileSync(path.join(root,'index.html'),'utf8'),original);
+  const bodyId=/<body data-rt="([a-f0-9]+)"/.exec(page)[1];
+  const shared=await op({id,type:'setCSSSelection',ids:[id,bodyId],fileHash:require('../src/adapters/html.cjs').contentHash(original),width:0,property:'width',value:'240px'});assert.equal(shared.ok,true);
+  assert.equal(shared.selection.length,2);for(const info of shared.selection){assert.equal(info.classNameDynamic,true);assert.equal(info.cssAuthoring,true);assert.deepEqual(info.cssRules,{0:{width:'240px'}});}
+  assert.equal((await op({type:'undo',undoId:shared.undoId})).ok,true);assert.equal(fs.readFileSync(path.join(root,'index.html'),'utf8'),original);
   const result=await op({id,type:'setText',text:'New & clear'});assert.equal(result.ok,true);
   assert.ok((await (await fetch(base)).text()).includes('New &amp; clear'));
   assert.equal((await op({type:'undo',undoId:result.undoId})).ok,true);assert.equal(fs.readFileSync(path.join(root,'index.html'),'utf8'),original);

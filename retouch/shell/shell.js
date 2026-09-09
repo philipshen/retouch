@@ -99,9 +99,10 @@ function hookFrame(d, w) {
     e.stopPropagation();
   };
   // Selection: capture-phase click; prevent the app from reacting (OQ-E4).
-  d.addEventListener('click', (e) => {
+  d.addEventListener('click', async (e) => {
     if (mode !== 'edit') return;
     if (panelTasks > 0 || undoBusy || sourceRequests) { e.preventDefault(); e.stopPropagation(); return; }
+    if ((e.shiftKey||e.metaKey||e.ctrlKey)&&sel?.info.cssAuthoring){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=e.target.closest?.('[data-rt]');if(target)await select(target,{toggle:true});return;}
     if (editing) {
       if (editing.el.contains(e.target)) return;
       commitInlineEdit(); // clicking away commits (R-5)
@@ -306,10 +307,15 @@ async function classifyNode(node) {
   return null;
 }
 
-async function select(node) {
+async function select(node,{toggle=false}={}) {
   const c = await classify(node);
   if (c?.superseded) return;
   if (!c) return clearSelection();
+  if(toggle&&c.info.cssAuthoring&&sel?.info.cssAuthoring&&c.info.file===sel.info.file&&c.info.hash===sel.info.hash){
+    let multiple=sel.multiple||[sel.info];multiple=multiple.some(info=>info.id===c.info.id)?multiple.filter(info=>info.id!==c.info.id):[...multiple,c.info];
+    if(!multiple.length)return clearSelection();if(multiple.length>100)return toast('Select up to 100 layers.','err');
+    const primary=multiple.find(info=>info.id===c.info.id)||multiple[0];sel={hostId:primary.id,instanceId:null,scope:'host',info:primary,multiple:multiple.length>1?multiple:undefined};renderPanel();return;
+  }
   sel = {
     hostId: c.hostId,
     instanceId: c.instanceId,
@@ -613,6 +619,7 @@ function paintLoop() {
       first=false;
     }
   }
+  if(d&&sel?.multiple&&mode==='edit')for(const info of sel.multiple)if(info.id!==activeId())for(const el of matchingEls(info.id))drawBox(el,'co',outlineKind(el,info));
   if(d && editing?.el.isConnected)drawBox(editing.el,'editing',outlineKind(editing.el,editing.info));
   if(d && hoverEl?.isConnected && mode==='edit' && !editing) {
     const kind=outlineKind(hoverEl,hoverDescription(hoverEl));
@@ -625,7 +632,7 @@ function paintLoop() {
   badgeTarget=badge;componentBadge.hidden=!badge;
   if(badge){const r=badge.el.getBoundingClientRect();componentBadge.style.left=Math.max(0,r.left)+'px';componentBadge.style.top=Math.max(0,r.top-22)+'px';}
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
-  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.info, !!panelTasks || undoBusy || !!sourceRequests);
+  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[]);
   requestAnimationFrame(paintLoop);
 }
 
@@ -705,7 +712,7 @@ function renderPanel() {
   head.className = 'sec';
   const badge = document.createElement('span');
   badge.className = 'kindbadge' + (info.kind === 'instance' ? ' instance' : '');
-  badge.textContent = info.kind === 'instance' ? 'component' : '<' + info.tag + '>';
+  badge.textContent = sel.multiple?.length>1?sel.multiple.length+' layers':info.kind === 'instance' ? 'component' : '<' + info.tag + '>';
   head.appendChild(badge);
   const file = document.createElement('div');
   file.className = 'filepath';
@@ -713,6 +720,8 @@ function renderPanel() {
   head.appendChild(file);
   head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
+
+  if(sel.multiple?.length>1){const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;panelBody.append(RetouchHTMLCSS.mountSelection(sel.multiple,sel.multiple.map(info=>matchingEls(info.id)[0]),width,setHTMLCSSSelection));return;}
 
   if(info.components?.length) {
     const label=document.createElement('label');label.textContent='Component scope';
@@ -1317,6 +1326,15 @@ async function renameLayer(name){
     sel.info=result.element;await reloadFrame();renderPanel();toast('Layer named','ok');
   }finally{busyPanel(false);}
 }
+async function setHTMLCSSSelection(property,value,width){
+  if(!sel?.multiple?.length)return;const selection=sel.multiple,info=sel.info;busyPanel(true);
+  try{
+    const result=await api('POST','/rt/__api/op',{type:'setCSSSelection',id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash,property,value,width});
+    if(!result?.ok)return toast(result?.reason||result?.error||'Could not style selected layers','err');
+    if(result.undoId)editorHistory.record({type:'setCSSSelection',id:info.id,selectionIds:selection.map(item=>item.id),undoId:result.undoId});
+    sel.info=result.element;sel.multiple=result.selection;await reloadFrame();renderPanel();toast('Selected layers updated','ok');
+  }finally{busyPanel(false);}
+}
 async function setHTMLCSS(property,value,width){
   if(!sel)return;const info=sel.info;busyPanel(true);
   try{
@@ -1452,6 +1470,7 @@ async function restoreHistory(direction,op) {
         return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
       });
     } else await reloadFrame();
+    if(sel&&op.selectionIds){const selected=await Promise.all(op.selectionIds.map(id=>api('GET',resolveUrl(id))));if(selected.every(result=>result?.ok))sel.multiple=selected.map(result=>result.element);}
     if (sel) renderPanel();
 
   } catch(error){toast('Source restored; preview refresh failed: '+error.message,'err');}
@@ -1517,7 +1536,7 @@ function toast(msg, cls) {
 RetouchMaxWidth.mount({
   container: overlayLayer.parentElement,
   getTarget() {
-    if (mode !== 'edit' || undoBusy || sourceRequests || !sel || sel.info.classNameDynamic || sel.info.kind === 'instance') return null;
+    if (mode !== 'edit' || undoBusy || sourceRequests || !sel || sel.multiple?.length>1 || sel.info.classNameDynamic || sel.info.kind === 'instance') return null;
     const el = editing?.el || matchingEls(activeId()).find(el => inTextScope(el, sel.info));
     return el ? { el, info: scopedInfo(sel.info) } : null;
   },
@@ -1538,7 +1557,7 @@ const layers = RetouchLayers.mount({
     await moveLayerInto(sel.info,destination.getAttribute('data-rt'),position);
   },
   host:document.getElementById('layersPanel'),
-  onSelect:async el=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await select(el);el.scrollIntoView({block:'nearest',inline:'nearest'});},
+  onSelect:async(el,options)=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await select(el,options);el.scrollIntoView({block:'nearest',inline:'nearest'});},
   onAction:action=>structureAction(action),
 });
 function chooseLayerParent(info){
@@ -1575,6 +1594,7 @@ async function insertLayer(preset,info){
   }finally{busyPanel(false);}
 }
 async function structureAction(action) {
+  if(sel?.multiple?.length>1)return toast('Choose one layer for structural edits.','err');
   if(!sel || panelTasks || undoBusy)return;
   await commitInlineEdit();
   const info=sel?.info;if(!info)return;

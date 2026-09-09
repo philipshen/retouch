@@ -35,7 +35,7 @@
     }
     const reason=document.createElement('p');reason.className='layer-reason';
     host.append(header,search,tree,empty,actions,reason);
-    let d=null,observer=null,timer=null,selected=null,rows=[],collapsed=new WeakSet(),lastCapabilities=null,isBusy=false,dragged=null;
+    let d=null,observer=null,timer=null,selected=null,rows=[],collapsed=new WeakSet(),lastCapabilities=null,isBusy=false,dragged=null,selectedSet=new Set();
     function clearTargets(){for(const row of rows)row.button.classList.remove('drop-target','drop-before','drop-after');}
     function endDrag(){dragged=null;clearTargets();for(const row of rows)row.button.classList.remove('dragging');}
     function render() {
@@ -54,12 +54,12 @@
           toggle.disabled=isBusy||!item.children.length;toggle.setAttribute('aria-label',(expanded?'Collapse ':'Expand ')+item.label);
           toggle.onclick=()=>{if(expanded)collapsed.add(item.el);else collapsed.delete(item.el);render();};
           const b=document.createElement('button');b.className='layer-item';b.textContent=item.label;b.title=item.label;
-          b.setAttribute('role','treeitem');b.setAttribute('aria-level',depth);b.setAttribute('aria-selected',String(item.el===selected));
+          b.setAttribute('role','treeitem');b.setAttribute('aria-level',depth);b.setAttribute('aria-selected',String(selectedSet.has(item.el)));
           b.tabIndex=item.el===selected?0:-1;b.disabled=isBusy;
           if(item.children.length)b.setAttribute('aria-expanded',String(expanded));
-          b.onclick=()=>onSelect(item.el);
+          b.onclick=e=>onSelect(item.el,{toggle:e.shiftKey||e.metaKey||e.ctrlKey});
           b.draggable=dragEnabled&&!['HTML','BODY'].includes(item.el.tagName);
-          b.ondragstart=e=>{if(isBusy||!b.draggable){e.preventDefault();return;}dragged=item.el;e.dataTransfer.setData('text/plain','retouch-layer:'+item.el.getAttribute('data-rt'));e.dataTransfer.effectAllowed='move';b.classList.add('dragging');};
+          b.ondragstart=e=>{if(isBusy||selectedSet.size>1||!b.draggable){e.preventDefault();return;}dragged=item.el;e.dataTransfer.setData('text/plain','retouch-layer:'+item.el.getAttribute('data-rt'));e.dataTransfer.effectAllowed='move';b.classList.add('dragging');};
           const dropPosition=e=>{const box=b.getBoundingClientRect();return isBusy?null:placement(dragged,item.el,(e.clientY-box.top)/box.height);};
           b.ondragover=e=>{clearTargets();const position=dropPosition(e);if(position){e.preventDefault();e.dataTransfer.dropEffect='move';b.classList.add(position==='inside'?'drop-target':'drop-'+position);}};
           b.ondragleave=clearTargets;
@@ -96,21 +96,22 @@
       observer?.disconnect();clearTimeout(timer);endDrag();d=next;collapsed=new WeakSet();render();
       if(d?.body){observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(render,100);});observer.observe(d.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['data-rt','data-rt-i','data-rt-name','id','aria-label','alt']});}
     }
-    function selection(el,info,busy=false) {
+    function selection(el,info,busy=false,multiple=[]) {
+      const nextSet=new Set(multiple.length?multiple:el?[el]:[]),changed=nextSet.size!==selectedSet.size||[...nextSet].some(item=>!selectedSet.has(item));selectedSet=nextSet;tree.setAttribute('aria-multiselectable',String(!!info?.cssAuthoring));
       if(isBusy!==busy){isBusy=busy;for(const r of rows){r.button.disabled=busy;r.toggle.disabled=busy||!r.item.children.length;}host.setAttribute('aria-busy',String(busy));}
-      if(selected!==el){
+      if(selected!==el||changed){
         selected=el;
         let reveal=false;
         for(let p=el?.parentElement;p;p=p.parentElement)if(collapsed.has(p)){collapsed.delete(p);reveal=true;}
         if(reveal)render();
-        for(const r of rows){r.button.setAttribute('aria-selected',String(r.item.el===el));r.button.tabIndex=r.item.el===el?0:-1;}
+        for(const r of rows){r.button.setAttribute('aria-selected',String(selectedSet.has(r.item.el)));r.button.tabIndex=r.item.el===el?0:-1;}
         if(!rows.some(r=>r.button.tabIndex===0)&&rows[0])rows[0].button.tabIndex=0;
         rows.find(r=>r.item.el===el)?.button.scrollIntoView({block:'nearest'});
       }
       const s=info?.structure;
       const copied=getClipboard();
       const compatible=!!copied&&copied.file===info?.file&&copied.parentId===s?.parentId&&copied.hash===(info?.fileHash||info?.hash);
-      const capabilities=JSON.stringify([!!info,s,busy,copied,compatible]);
+      const capabilities=JSON.stringify([!!info,s,busy,copied,compatible,selectedSet.size]);
       if(capabilities===lastCapabilities)return;
       lastCapabilities=capabilities;
       for(const action of ['insertText','insertFrame']){actionButtons[action].hidden=s?.canInsert===undefined;actionButtons[action].disabled=busy||!s?.canInsert;actionButtons[action].title=s?.insertReason||'Insert inside the selected container.';}
@@ -122,6 +123,7 @@
       actionButtons.deleteElement.disabled=busy||!s?.canDelete;
       actionButtons.before.disabled=busy||!s?.canMoveBefore;
       actionButtons.after.disabled=busy||!s?.canMoveAfter;
+      if(selectedSet.size>1){for(const button of Object.values(actionButtons))button.disabled=true;reason.textContent=selectedSet.size+' layers selected. Shared styles are available in the inspector.';return;}
       reason.textContent=info?(s?.canInsert&&!s?.canDuplicate?'Add text or a frame inside this container.':s?.reason || (!s?.canDuplicate?'Duplicate is unavailable for a layer with an authored ID, key, or ref.':'')):'Select a layer to organize it.';
     }
     return {attach,selection};

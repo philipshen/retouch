@@ -14,7 +14,7 @@ changing those files. The original checkout may continue to evolve independently
 | Area | Required outcome | Current evidence and remaining work |
 | --- | --- | --- |
 | Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Existing single-site zoom/selection/resize plus a linked phone/tablet/desktop comparison rail. Most document and multi-selection operations still absent or unaudited. |
-| Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. Multi-selection, cross-context clipboard and broader source structures remain. |
+| Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. HTML multi-selection and shared CSS editing now exist; group structural editing, cross-context clipboard and broader source structures remain. |
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | Full vector authoring and geometry model remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | Visual horizontal/vertical/reverse flex and grid controls, wrapping, gaps, alignment/distribution, per-side padding, fixed/hug/fill sizing, minimum/maximum dimensions, grid-child spans and breakpoint-scoped writes now exist. Full constraint, advanced grid, nested auto-layout and cross-framework equivalence work remains. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | Opacity, CSS border width/style/color, uniform and individual corners, basic color and shadow controls, and image fit/position controls exist. Browser tests cover border independence, corners, scope and exact undo. Multiple fills/strokes, gradient editing, crop handles/zoom/rotation, blending and complete visual/source representations remain. |
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 230 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 233 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -782,3 +782,28 @@ focus restoration, then undo both committed edits to the exact prior source.
 The rendered rail and preview were visually inspected. On-canvas gradient
 geometry handles and native interaction with these controls remain unverified
 or unfinished.
+
+
+### HTML multi-selection and atomic shared styling
+
+Shift/Cmd/Ctrl-click toggles layers in the tree or canvas. Every selected layer
+has a canvas outline and tree selection state. The inspector shows shared CSS
+values and leaves mixed fields empty until edited. Shared opacity, rotation,
+blending, dimensions, spacing, typography, colors and borders use the selected
+responsive scope. Single-layer structural/resize actions are disabled for groups.
+
+The batch planner validates 2–100 distinct body-layer identities in one document,
+checks the file hash, and plans each change against private in-memory snapshots.
+Only a fully validated result produces one file edit and one history entry.
+A refusal on a later layer cannot leave earlier layers changed. Undo/redo restores
+both source and the selected group. API descriptions retain HTML CSS authoring
+flags after batch writes.
+
+All 233 tests pass. Planner tests cover atomic edits, isolated identities,
+responsive reset/no-op, stale/invalid targets and partial-plan refusal. HTTP
+checks cover ancestor/child selection, adapter metadata and exact batch undo.
+Chromium and WebKit exercise tree/canvas toggling, mixed font weights, shared
+width/tablet opacity, untouched unselected image, restored group selection,
+and exact undo/redo. The shared inspector and outlines were visually inspected.
+Marquee/range selection, grouping, multi-layer structure, cross-file selection,
+and shared complex-effect controls remain unfinished.

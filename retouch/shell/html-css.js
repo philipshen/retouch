@@ -163,5 +163,23 @@
   I.note(sec,'Values use CSS units. Reset removes this size’s override and restores the page’s styling.');
   const container=document.createElement('div');container.append(appearance,fills,blur,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);container.append(typography,sec);return container;
  }
- window.RetouchHTMLCSS={mount};
+ function mountSelection(infos,elements,width,save){
+  const section=I.section('Shared styles');
+  if(!Number.isInteger(width)||elements.some(el=>!el)||infos.some(info=>info.cssReason)){I.note(section,'Re-select the layers and choose a pixel screen scope.','refused');return section;}
+  I.note(section,'Shift-click layers or the canvas to add or remove selections. Mixed values are left unchanged until you edit them. Each shared edit is one undo step.');
+  const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el));
+  const sharedFields=[['opacity','Opacity (%)'],['rotate','Rotation (°)'],['mix-blend-mode','Blend mode'],['isolation','Blend group'],...fields];
+  for(const [property,label]of sharedFields){
+   const values=infos.map((info,i)=>info.cssRules?.[width]?.[property]??computed[i].getPropertyValue(property)),mixed=values.some(value=>value!==values[0]),numeric=['opacity','rotate'].includes(property);
+   const input=document.createElement(options[property]?'select':'input');
+   if(options[property]){if(mixed){const option=document.createElement('option');option.value='';option.textContent='Mixed';option.disabled=true;input.append(option);}for(const value of new Set([...values,...options[property]])){const option=document.createElement('option');option.value=value;option.textContent=value;input.append(option);}}
+   else {input.type=numeric?'number':'text';input.placeholder=mixed?'Mixed':'';if(numeric){input.min=property==='opacity'?0:-360;input.max=property==='opacity'?100:360;input.step='any';}}
+   input.value=mixed?'':property==='opacity'?Number(values[0])*100:property==='rotate'?(values[0]==='none'?0:parseFloat(values[0])):values[0];
+   input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(!input.value.trim()||!input.checkValidity())return;const value=property==='opacity'?String(Number(input.value)/100):property==='rotate'?input.value+'deg':input.value.trim();if(!valid(property,value)||!CSS.supports(property,value)){input.setCustomValidity('Enter a supported CSS value.');input.reportValidity();return;}save(property,value,width);};
+   I.field(section,'Shared '+label,input);
+   const reset=I.button('Reset shared '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=infos.every(info=>!Object.hasOwn(info.cssRules?.[width]||{},property));section.append(reset);
+  }
+  return section;
+ }
+ window.RetouchHTMLCSS={mount,mountSelection};
 })();
