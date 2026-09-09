@@ -1598,3 +1598,28 @@ restored. desktop/README.md records the archive and receipt.
 A Developer ID Application identity is available locally. A separately signed
 build is awaiting local keychain authorization in SecurityAgent; no completed
 Developer ID archive or notarization is claimed.
+
+### SVG bring-to-front and send-to-back
+
+HTML and React SVG layers now expose Bring to front and Send to back alongside
+adjacent stacking. Each command moves the selected source subtree across all
+eligible siblings in one edit and one history entry. Source comments and gaps
+retain their positions, descendant identity is remapped, and selection follows
+the moved layer. Buttons disable at the corresponding edge or when crossing
+unsupported content; React expressions/components are boundaries. React checks
+the common parent once rather than parsing the full file for each sibling.
+
+The source tests cover both directions over four unequal sibling subtrees,
+comment preservation, ID/ancestry remapping, distant barriers, stale hashes and
+every source offset in the shared reorder helper. Browser coverage adds real
+paint-order checks across multiple siblings, edge-state controls, selected-layer
+retention and exact undo/redo to the existing HTML and Next/Tailwind SVG flows.
+This remains SVG stacking inside supported source parents; arbitrary CSS
+stacking contexts, cross-parent moves and full vector authoring remain separate
+unfinished work. The desktop artifacts described above predate these controls.
+
+Validation: all 292 unit tests pass. Both HTML SVG and real Next/Tailwind React
+SVG browser workflows pass in Chromium and WebKit, including the new stacking
+cases. Logs: `/private/tmp/retouch-first-last-unit-final.log`,
+`/private/tmp/retouch-first-last-html-{chromium,webkit}.log` and
+`/private/tmp/retouch-first-last-react-{chromium,webkit}-final.log`.

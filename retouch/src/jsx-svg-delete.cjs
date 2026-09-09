@@ -1,8 +1,9 @@
 'use strict';
 const ids=require('./id.cjs'),traverse=require('@babel/traverse').default;
 const tags=new Set(['svg','g','rect','circle','ellipse','line','path','polyline','polygon']);
+function supportsNode(node){return tags.has(ids.jsxElementName(node));}
 function describe(resolved){
- const node=resolved.element.node,tag=ids.jsxElementName(node);if(!tags.has(tag))return null;
+ const node=resolved.element.node,tag=ids.jsxElementName(node);if(!supportsNode(node))return null;
  let target;traverse(ids.parseSource(resolved.source),{JSXElement(p){if(p.node.start===node.start){target=p;p.stop();}}});
  if(!target||target.parent.type!=='JSXElement')return null;
  let boundary=tag==='svg'?'svg':null;
@@ -19,4 +20,4 @@ function plan(resolved,op){
  const oldParents=parents(before),newParents=parents(next);if(next.length!==retained.length||retained.some(e=>newParents.get(mapping.get(e.id))!==(mapping.get(oldParents.get(e.id))??null)))return refuse('The deletion would change surrounding JSX ancestry.');
  return {ok:true,hash:ids.contentHash(after),parentId:mapping.get(cap.parentId),structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
 }
-module.exports={describe,plan,parents};
+module.exports={describe,plan,parents,supportsNode};

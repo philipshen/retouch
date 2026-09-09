@@ -7,6 +7,11 @@ test('React SVG stacking swaps exact sibling subtrees and retains comments and d
 });
 test('React SVG stacking refuses expression/component boundaries, edge moves and stale hashes',()=>{
  for(const middle of ['{visible && <circle/>}','<Icon/>','<defs></defs>','text']){const r=resolve('export default()=> <svg><rect/>'+middle+'<line/></svg>');assert.equal(react.describe(r).structure.canMoveAfter,false);assert.equal(react.planOp(r,{type:'moveElement',direction:'after',fileHash:r.hash}).refused,true);}
- const r=resolve('export default()=> <svg><rect/><circle/></svg>');for(const op of [{direction:'before',fileHash:r.hash},{direction:'last',fileHash:r.hash},{direction:'after'},{direction:'after',fileHash:'stale'}]){const result=react.planOp(r,{type:'moveElement',...op});assert.equal(result.refused,true);assert.equal(result.edits,undefined);}
+ const r=resolve('export default()=> <svg><rect/><circle/></svg>');for(const op of [{direction:'before',fileHash:r.hash},{direction:'invalid',fileHash:r.hash},{direction:'after'},{direction:'after',fileHash:'stale'}]){const result=react.planOp(r,{type:'moveElement',...op});assert.equal(result.refused,true);assert.equal(result.edits,undefined);}
  assert.equal(react.describe(resolve('export default()=> <svg>{items.map(x=><g><rect/><circle/></g>)}</svg>')).svgMovement,null);
+});
+test('React SVG first/last moves preserve source subtrees and refuse distant expression barriers',()=>{
+ const a='<rect width={size}/>',b='<g><circle r={20}/></g>',c='<ellipse rx={10}/>',d='<line x2={30}/>',gap='\n{/*keep*/}\n',prefix='export default()=> <svg>',source=prefix+a+gap+b+'\n'+c+' '+d+'</svg>';
+ for(const [tag,direction,expected]of [['rect','last',b+gap+c+'\n'+d+' '+a],['line','first',d+gap+a+'\n'+b+' '+c]]){const r=resolve(source,tag),result=react.planOp(r,{type:'moveElement',direction,fileHash:r.hash});assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);assert.equal(result.edits[0].after,prefix+expected+'</svg>');assert.equal(ids.jsxElementName(ids.collectElements(result.edits[0].after,r.relPath).elements.find(e=>e.id===result.movedId).node),tag);}
+ for(const barrier of ['{show && <circle/>}','<Icon/>','<defs/>','text']){const r=resolve(prefix+'<rect/><circle/>'+barrier+'<line/></svg>');assert.equal(react.describe(r).structure.canMoveAfter,true);assert.equal(react.describe(r).structure.canMoveLast,false);assert.equal(react.planOp(r,{type:'moveElement',direction:'last',fileHash:r.hash}).refused,true);}
 });
