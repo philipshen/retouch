@@ -848,7 +848,7 @@ function renderPanelContents() {
     RetouchInspector.field(naming,'Layer name',input);input.onchange=()=>renameLayer(input.value);
     RetouchInspector.note(naming,'Names appear in the editor without changing page text or accessibility labels. Clear to use the original label.');panelBody.append(naming);
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
-    if(target?.namespaceURI!=='http://www.w3.org/2000/svg')panelBody.appendChild(RetouchHTMLPosition.mount(info,target,width,setHTMLCSS));
+    if(target?.namespaceURI!=='http://www.w3.org/2000/svg')panelBody.appendChild(RetouchHTMLPosition.mount(info,target,width,setHTMLCSS,g=>moveHTMLLayer(info,target,width,g)));
     panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS));
     if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{}));
     if(info.canSetTag){const section=RetouchInspector.section('Element');RetouchInspector.select(section,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','li'].map(tag=>[tag,tag]),info.tag,setTag);panelBody.appendChild(section);}
@@ -1428,6 +1428,16 @@ async function setSVGGeometry(property,value){
     sel.info=result.element;await refreshWrittenElement(sel.info,el=>svgGeometryMatches(el,sel.info));renderPanel();toast('Shape updated','ok');
   }finally{busyPanel(false);}
 }
+function moveHTMLLayer(info,target,width,g){
+  stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!target?.isConnected)return;
+  try{g=RetouchInspector.geometry(target);}catch(error){toast(error.message,'err');return;}
+  const inherited=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=target.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{});
+  stopDrawing=RetouchCanvasMove.mount({target,frame:iframe,canvas:canvasSurface,
+    onCommit:delta=>{if(sel?.info.id!==info.id||sel?.info.hash!==info.hash)return;try{const geometry={...g,x:g.x+delta.x,y:g.y+delta.y};if(![geometry.x,geometry.y].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Move within 100,000 pixels of the container.');setHTMLCSS(RetouchHTMLPosition.placement(geometry,inherited),null,width);}catch(error){toast(error.message,'err');}},
+    onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
+  if(stopDrawing)toast('Drag the selected outline. Shift locks an axis; Escape cancels.','ok');
+}
+
 async function setHTMLCSS(property,value,width){
   if(!sel)return;const info=sel.info;busyPanel(true);
   try{

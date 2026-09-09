@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 294 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 295 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1662,3 +1662,39 @@ Both complete 13-workflow HTML suites pass in Chromium and WebKit after the
 measurement fix (`retouch-html-position-integrated-{chromium,webkit}-final.log`).
 The final focused Chromium run additionally repeats the strongest proportional
 pixel assertions and the protected/transform refusal cases.
+
+
+### Canvas movement for positioned HTML layers
+
+Absolute HTML layers now offer Move on canvas in the Position section. The tool
+shows a draggable bounds preview above the page, converts physical pointer
+movement through canvas zoom, locks the dominant axis with Shift (including
+modifier changes while holding the pointer), and commits one responsive CSS
+transaction on release. The selected layer keeps its width/height and existing
+anchor modes. Preview movement leaves the page DOM and source unchanged;
+Escape, viewport/zoom/selection changes, navigation, blur, scrolling and
+observed layout changes cancel the tool. Pointer jitter under four physical
+pixels does not create a history entry. Invisible or zero-size layers cannot
+start a move.
+
+The existing single-click text editing behavior remains available outside the
+move tool. This is a bounds preview for one absolute HTML layer, not yet direct
+content dragging, flow reordering, multi-layer movement, snapping or equivalent
+movement in every renderer. Desktop archives still predate these changes.
+
+WebKit exposed an existing anchor timing issue after immediate viewport
+resizing: the callback could use measurements captured by the old inspector
+render. Anchor writes now measure the layer and resolve active responsive rules
+at invocation time. The move tool also measures at invocation, and cancels if
+the selected bounds or containing-block dimensions change during the gesture.
+
+Validation: 295 unit tests pass. The extended HTML positioning workflow passes
+in Chromium and WebKit with 50% zoom, exact 40 CSS-pixel movement from a
+20-physical-pixel drag, stationary Shift locking, preserved stretch/center
+modes and dimensions, Escape/screen cancellation, click-jitter suppression,
+and exact multi-step source undo/redo. Existing constraint, protected inline
+rule and transformed-layout refusal cases also pass. Logs:
+`/private/tmp/retouch-canvas-move-unit-final.log`,
+`/private/tmp/retouch-canvas-move-chromium-latest.log`, and
+`/private/tmp/retouch-canvas-move-webkit-verified.log`. The bounds preview was
+visually checked in `/private/tmp/retouch-canvas-move.png`.

@@ -22,7 +22,8 @@
   if(values[a]&&values[a]!=='auto'&&values[b]==='auto')return 'start';
   return '';
  }
- function mount(info,el,width,save){
+ function placement(g,values){const I=root.RetouchInspector;return {margin:'0','box-sizing':'border-box',...axis(g,'x',infer(values,'x')||I.nearestAnchor(g.x,g.width,g.parentWidth)),...axis(g,'y',infer(values,'y')||I.nearestAnchor(g.y,g.height,g.parentHeight))};}
+ function mount(info,el,width,save,onMove){
   const I=root.RetouchInspector,sec=I.section('Position');
   if(info.cssReason||!el||!Number.isInteger(width)){I.note(sec,info.cssReason||'Choose a pixel screen scope.','refused');return sec;}
   const css=el.ownerDocument.defaultView.getComputedStyle(el),own=info.cssRules?.[width]||{};
@@ -37,9 +38,10 @@
   if(mode==='absolute'){
    if(!g){I.note(sec,reason,'refused');return sec;}
    I.note(sec,'Anchored to '+g.parentLabel);
-   const inherited=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{});
+   if(onMove)sec.append(I.button('Move on canvas',()=>onMove(g)));
+   const effective=()=>Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{});let inherited=effective();
    for(const [dimension,label,choices]of [['x','Horizontal anchor',[['start','Left'],['center','Center'],['end','Right'],['stretch','Left + right'],['scale','Scale']]],['y','Vertical anchor',[['start','Top'],['center','Center'],['end','Bottom'],['stretch','Top + bottom'],['scale','Scale']]]]){
-    I.select(sec,label,[['','Custom / inherited'],...choices],infer(inherited,dimension),value=>{if(value)try{write({margin:'0','box-sizing':'border-box',...axis(g,'x',dimension==='x'?value:infer(inherited,'x')||I.nearestAnchor(g.x,g.width,g.parentWidth)),...axis(g,'y',dimension==='y'?value:infer(inherited,'y')||I.nearestAnchor(g.y,g.height,g.parentHeight))});}catch(error){report(error);}});
+    I.select(sec,label,[['','Custom / inherited'],...choices],infer(inherited,dimension),value=>{if(value)try{g=measure();inherited=effective();write({margin:'0','box-sizing':'border-box',...axis(g,'x',dimension==='x'?value:infer(inherited,'x')||I.nearestAnchor(g.x,g.width,g.parentWidth)),...axis(g,'y',dimension==='y'?value:infer(inherited,'y')||I.nearestAnchor(g.y,g.height,g.parentHeight))});}catch(error){report(error);}});
    }
    I.note(sec,'A custom position is captured at its current size when you choose an anchor.');
    I.note(sec,'Edges keep their distance. Center keeps its offset from the center. Both edges stretch; Scale changes position and size proportionally.');
@@ -51,5 +53,5 @@
   const reset=I.button('Reset positioning and size',()=>write(Object.fromEntries(properties.map(p=>[p,null]))));reset.disabled=!properties.some(p=>Object.hasOwn(own,p));sec.append(reset);
   I.note(sec,'Changes follow the selected screen scope. Reset restores the page’s positioning and size in this scope.');return sec;
  }
- const api={axis,infer,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchHTMLPosition=api;
+ const api={axis,infer,placement,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchHTMLPosition=api;
 })(typeof window==='object'?window:globalThis);
