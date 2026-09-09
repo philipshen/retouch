@@ -366,3 +366,11 @@ to bring a fixed preview fully into the available canvas. Fixed screens support
 1–200% zoom; Fit workspace retains its 25–200% range and Fit screen returns it
 to 100%. Fitting preserves fixed CSS dimensions, viewport units and the page's
 scroll position. Resize handles follow the new zoom immediately.
+
+
+Select an existing SVG canvas or group to use **Draw rectangle**, **Draw circle**,
+**Draw ellipse**, or **Draw line**. Drag inside the SVG to preview the shape and
+release to add it in one undo step. Drawing follows the viewBox, group transforms
+and canvas zoom. Escape, zooming or changing screen size cancels the preview.
+Geometry is shared across screen sizes. Drawing a new SVG directly on an HTML
+container and freehand/vector path tools remain unfinished.

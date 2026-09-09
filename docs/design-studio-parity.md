@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 272 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 273 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1376,3 +1376,25 @@ checks one-pixel movement, selection from both page background and gray canvas,
 zoom/screen cancellation, and unchanged source bytes. It joins test:e2e:html.
 All 272 unit tests pass; the activation check covers 1% through 200% zoom. Starting
 a marquee directly on content and cross-renderer parity remain unfinished.
+
+
+### Direct drawing inside SVG canvases
+
+Selected SVG canvases and groups now offer Draw rectangle, circle, ellipse and
+line. A pointer drag previews the shape without a source write; release inserts
+it atomically and selects it, with exact undo/redo through the existing history.
+Pointer coordinates pass through canvas zoom and the inverse SVG screen matrix,
+so viewBox origins/scaling and group transforms affect placement correctly.
+Escape, screen/zoom changes, scrolling, navigation and selection changes cancel
+the preview. Server validation bounds finite coordinates and rejects empty
+geometry or stale source hashes. Existing Add buttons keep their preset behavior.
+
+All 273 unit tests pass. The new html-svg-draw workflow passes in Chromium and
+WebKit with all four primitives, a translated/scaled group, a nonzero viewBox
+origin, 50% canvas zoom, live source preservation, exact undo/redo and Escape/
+zoom/screen cancellation. The existing SVG workflow also passes in both engines.
+The drawing screenshot was inspected. The new workflow joins test:e2e:html.
+Drawing directly into HTML layout, shape constraint modifiers, vector paths,
+pen/freehand tools and cross-renderer support remain unfinished; this does not
+establish full drawing parity. The native bundle has not yet been rebuilt with
+these changes.

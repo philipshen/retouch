@@ -1,0 +1,23 @@
+'use strict';
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict'),{once}=require('node:events');
+const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_INSPECTOR_FIXTURE for Playwright');const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
+(async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-svg-draw-')),file=path.join(root,'index.html');
+ const original='<html><head></head><body><svg width="600" height="400" viewBox="50 100 300 200" style="background:#f1f5f9"><g aria-label="Drawing" transform="translate(60 110) scale(2)"></g></svg><p>Unchanged</p></body></html>';fs.writeFileSync(file,original);
+ const server=require('../../src/html-site.cjs').start({root,port:0,quiet:true});await once(server,'listening');const browser=await browserType.launch(),page=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[];page.on('pageerror',e=>errors.push(e.message));const app=page.frameLocator('#app');
+ const wait=async fn=>{for(let i=0;i<100;i++){try{if(await fn())return;}catch(e){if(!/Execution context was destroyed/.test(e.message))throw e;}await page.waitForTimeout(100);}throw Error('Timed out waiting for drawing');};
+ const settled=()=>wait(async()=>await page.locator('#panelBody').getAttribute('aria-busy')!=='true');
+ const begin=async preset=>{await page.getByRole('treeitem',{name:'g · Drawing',exact:true}).click();await page.getByRole('button',{name:'Draw '+preset,exact:true}).click();await page.locator('.svg-draw-surface').waitFor();};
+ const point=async(x,y)=>{const f=await page.locator('#app').boundingBox(),p=await app.locator('g').evaluate((el,p)=>{const q=new DOMPoint(...p).matrixTransform(el.getScreenCTM());return {x:q.x,y:q.y,iw:innerWidth};},[x,y]);return {x:f.x+p.x*f.width/p.iw,y:f.y+p.y*f.width/p.iw};};
+ const drag=async()=>{const a=await point(10,10),b=await point(60,40);await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:5});};
+ try{
+  await page.goto(`http://localhost:${server.address().port}/rt`);await app.locator('svg').waitFor();await page.getByLabel('Screen size',{exact:true}).selectOption('1440x900');const zoom=page.getByLabel('Canvas zoom (%)',{exact:true});await zoom.fill('50');await zoom.press('Tab');
+  for(const [preset,tag,expected]of [['rectangle','rect',{x:10,y:10,width:50,height:30}],['circle','circle',{cx:35,cy:25,r:15}],['ellipse','ellipse',{cx:35,cy:25,rx:25,ry:15}],['line','line',{x1:10,y1:10,x2:60,y2:40}]]){
+   await begin(preset);await drag();assert.equal(fs.readFileSync(file,'utf8'),original,'preview does not write source');assert.equal(await app.locator('g '+tag).count(),1);if(preset==='rectangle'&&process.env.RT_E2E_SVG_DRAW_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_SVG_DRAW_SCREENSHOT});await page.mouse.up();await wait(()=>fs.readFileSync(file,'utf8')!==original);await settled();await wait(async()=>await app.locator('g '+tag+'[data-rt]').count()===1);
+   for(const [attr,value]of Object.entries(expected))assert.ok(Math.abs(Number(await app.locator('g '+tag).getAttribute(attr))-value)<.01,attr+' uses transformed SVG coordinates');
+   const drawn=fs.readFileSync(file,'utf8');await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>fs.readFileSync(file,'utf8')===original);await settled();await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>fs.readFileSync(file,'utf8')===drawn);await settled();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>fs.readFileSync(file,'utf8')===original);await settled();
+  }
+  for(const cancel of ['escape','zoom','screen']){await begin('rectangle');await drag();if(cancel==='escape')await page.keyboard.press('Escape');if(cancel==='zoom'){await zoom.fill('75');await zoom.press('Tab');}if(cancel==='screen')await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await wait(async()=>await page.locator('.svg-draw-surface').count()===0);await page.mouse.up();assert.equal(fs.readFileSync(file,'utf8'),original);assert.equal(await app.locator('g rect').count(),0);}
+  assert.deepEqual(errors,[]);console.log(engine+': PASS SVG drawing of four primitives at zoom with viewBox/group transforms, live preview, undo/redo and cancellation');
+ }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
+})().catch(e=>{console.error(e);process.exitCode=1;});

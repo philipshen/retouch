@@ -23,7 +23,7 @@ let sel = null; // { hostId, instanceId, scope: 'host'|'instance', info }
 let editing = null; // { el, id, info, original, originalHTML, snapshot, originalTree } during inline text editing
 let hoverEl = null;
 let measuring = false;
-let selectionMarquee=null,stopMarquee=null;
+let selectionMarquee=null,stopMarquee=null,stopDrawing=null;
 const marqueeSurface=document.createElement('div');marqueeSurface.className='selection-marquee-surface';document.body.append(marqueeSurface);
 const canvasSurface=document.getElementById('frameWrap');
 let sourceRequests = 0;
@@ -31,6 +31,7 @@ let undoBusy = false;
 let classificationSerial = 0;
 let panelTasks = 0;
 function busyPanel(start) {
+  if(start)stopDrawing?.();
   panelTasks += start ? 1 : -1;
   syncHistoryControls();
 }
@@ -83,6 +84,7 @@ setInterval(pollNavigation, 300);
 function doc() { return iframe.contentDocument; }
 
 function hookFrame(d, w) {
+  stopDrawing?.();
   stopMarquee?.();
   stopMarquee=RetouchMarquee.mount({document:d,frame:iframe,surface:canvasSurface,enabled:()=>window.__RT_RENDERING?.layerReparenting===true&&mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests,
     onChange:rect=>{selectionMarquee=rect?{document:d,rect}:null;},
@@ -243,6 +245,7 @@ async function refreshPages(){
   pagePicker.value=current;pagePicker.title=result.truncated?'Showing the first 1000 pages. Use Page URL for other pages.':'Choose a project page';
 }
 async function navigatePage(url){
+  stopDrawing?.();
   if(panelTasks||undoBusy||sourceRequests)return;
   await commitInlineEdit();clearSelection();iframe.src=url||'/';
 }
@@ -317,6 +320,7 @@ async function classifyNode(node) {
 }
 
 async function select(node,{toggle=false}={}) {
+  stopDrawing?.();
   const c = await classify(node);
   if (c?.superseded) return;
   if (!c) return clearSelection();
@@ -358,6 +362,7 @@ window.addEventListener('retouch:comparison-edit',async event=>{
 });
 
 async function selectMany(nodes,{active=nodes[0],append=false}={}){
+  stopDrawing?.();
   const serial=++classificationSerial;
   const ids=[...new Set([...(append?(sel?.multiple||[sel?.info]).filter(Boolean).map(info=>info.id):[]),...nodes.map(node=>node.getAttribute('data-rt'))])];
   if(!ids.length)return clearSelection();if(ids.length>100)return toast('Select up to 100 layers. Narrow the layer search first.','err');
@@ -387,6 +392,7 @@ async function loadScope() {
 }
 
 function clearSelection() {
+  stopDrawing?.();
   classificationSerial++;sel = null;renderedPanelSelection=null;
   window.dispatchEvent(new CustomEvent('retouch:selection',{detail:null}));
   panelBody.hidden = true;
@@ -501,6 +507,7 @@ async function commitInlineEdit() {
 
 // Reload the iframe to its current path, preserving scroll where possible.
 function reloadFrame() {
+  stopDrawing?.();
   return new Promise(resolve => {
     classificationSerial++;
     editing = null;
@@ -832,7 +839,8 @@ function renderPanelContents() {
     if(info.svgInsertion){
       const shapes=RetouchInspector.section('Add shape'),buttons=document.createElement('div');buttons.className='stack-presets';
       for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Add '+preset,()=>insertLayer(preset,info,'insertSVG')));
-      shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Adds a shape in a new 200 × 200 canvas.':'Adds a shape inside this SVG canvas or group.');panelBody.append(shapes);
+      if(!info.svgInsertion.createsViewport)for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Draw '+preset,()=>drawShape(preset,info)));
+      shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Adds a shape in a new 200 × 200 canvas.':'Add a preset shape, or choose Draw and drag inside this SVG canvas. Escape cancels.');panelBody.append(shapes);
     }
     if(info.svgGeometry){
       const geometry=RetouchInspector.section('SVG geometry');
@@ -1508,6 +1516,7 @@ function optimisticText(text) {
 async function undo() { return restoreDirection('undo'); }
 async function redo() { return restoreDirection('redo'); }
 async function restoreDirection(direction) {
+  stopDrawing?.();
   if(undoBusy || panelTasks || sourceRequests)return;
   await commitInlineEdit();
   if(undoBusy || panelTasks || sourceRequests)return;
@@ -1563,6 +1572,7 @@ async function restoreHistory(direction,op) {
 
 /* ---------- chrome ---------- */
 modeBtn.onclick = () => {
+  stopDrawing?.();
   mode = mode === 'edit' ? 'interact' : 'edit';
   modeBtn.textContent = mode === 'edit' ? 'Edit mode' : 'Interact mode';
   modeBtn.classList.toggle('mode-edit', mode === 'edit');
@@ -1666,11 +1676,21 @@ async function moveLayerInto(info,destinationId,position='inside'){
     toast('Layer moved','ok');
   }finally{busyPanel(false);}
 }
-async function insertLayer(preset,info,type='insertElement'){
+function drawShape(preset,info){
+  if(panelTasks||undoBusy||sourceRequests||editing)return;
+  stopDrawing?.();
+  const target=matchingEls(info.id)[0];if(!target)return;
+  if(mode!=='edit')modeBtn.click();
+  stopDrawing=RetouchSVGDraw.mount({target,frame:iframe,canvas:canvasSurface,preset,
+    onCommit:points=>insertLayer(preset,info,'insertSVG',{points}),
+    onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
+  if(stopDrawing)toast('Drag to draw '+preset+'. Escape cancels.','ok');
+}
+async function insertLayer(preset,info,type='insertElement',extra={}){
   if(panelTasks||undoBusy||sourceRequests)return;
   busyPanel(true);
   try{
-    const result=await api('POST','/rt/__api/op',{type,id:info.id,fileHash:info.fileHash||info.hash,preset});
+    const result=await api('POST','/rt/__api/op',{type,id:info.id,fileHash:info.fileHash||info.hash,preset,...extra});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not add layer','err');
     editorHistory.record({type:'structureSelection',id:info.id,selectionBefore:[info.id],selectionAfter:[result.createdId],undoId:result.undoId});
     await reloadFrame();

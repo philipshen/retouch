@@ -2,6 +2,13 @@
 const MagicString=require('magic-string'),insertion=require('./html-insert.cjs');
 const namespace='http://www.w3.org/2000/svg';
 const presets=['rectangle','circle','ellipse','line'];
+function drawnShape(preset,points){
+ if(!Array.isArray(points)||points.length!==4||points.some(n=>typeof n!=='number'||!Number.isFinite(n)||Math.abs(n)>100000))return null;
+ const [x1,y1,x2,y2]=points,x=Math.min(x1,x2),y=Math.min(y1,y2),w=Math.abs(x2-x1),h=Math.abs(y2-y1);
+ if(w>100000||h>100000||(!w&&!h)||preset!=='line'&&(!w||!h))return null;
+ const n=v=>String(Math.round(v*1000000)/1000000),fill=' fill="#a5b4fc"/>';
+ return {rectangle:`<rect x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}"${fill}`,circle:`<circle cx="${n(x+w/2)}" cy="${n(y+h/2)}" r="${n(Math.min(w,h)/2)}"${fill}`,ellipse:`<ellipse cx="${n(x+w/2)}" cy="${n(y+h/2)}" rx="${n(w/2)}" ry="${n(h/2)}"${fill}`,line:`<line x1="${n(x1)}" y1="${n(y1)}" x2="${n(x2)}" y2="${n(y2)}" stroke="#6366f1" stroke-width="2"/>`}[preset]||null;
+}
 function shape(resolved,preset){
  let viewport=resolved.element.node;while(viewport&&!(viewport.namespaceURI===namespace&&viewport.tagName==='svg'))viewport=viewport.parentNode;
  const attr=name=>viewport?.attrs?.find(a=>a.name===name)?.value;
@@ -23,13 +30,15 @@ function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason}),cap=describe(resolved);
  if(!cap||!presets.includes(op.preset))return refuse('Select a content container, SVG canvas or group to add a shape.');
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the container.');
+ const drawn=op.points===undefined?null:drawnShape(op.preset,op.points);
+ if(op.points!==undefined&&(cap.createsViewport||!drawn))return refuse('Draw a nonempty shape inside an existing SVG canvas or group.');
  const html=require('./adapters/html.cjs'),el=resolved.element,offset=el.location.endTag.startOffset;
  const opening=cap.createsViewport?'<svg width="200" height="200" viewBox="0 0 200 200" aria-label="Shapes">':'';
- const content=opening+shape(resolved,op.preset)+(cap.createsViewport?'</svg>':'');
+ const content=opening+(drawn||shape(resolved,op.preset))+(cap.createsViewport?'</svg>':'');
  const out=new MagicString(resolved.source);out.appendLeft(offset,content);const after=out.toString();
  const before=resolved.elements||html.collect(resolved.source,resolved.relPath).elements,next=html.collect(after,resolved.relPath).elements;
  const created=next.find(e=>e.location.startOffset===offset+opening.length),parent=next.find(e=>e.id===el.id),container=cap.createsViewport?next.find(e=>e.location.startOffset===offset):parent;
  if(next.length!==before.length+(cap.createsViewport?2:1)||!created||created.node.namespaceURI!==namespace||created.node.parentNode!==container?.node||cap.createsViewport&&container.node.parentNode!==parent?.node||before.some(e=>!next.some(n=>n.id===e.id&&n.tag===e.tag&&n.location.startOffset===e.location.startOffset+(e.location.startOffset>=offset?content.length:0))))return refuse('The shape would change the surrounding document structure.');
  return {ok:true,hash:html.contentHash(after),parentId:el.id,createdId:created.id,structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
 }
-module.exports={describe,plan};
+module.exports={describe,plan,drawnShape};

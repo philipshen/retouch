@@ -18,3 +18,11 @@ test('SVG insertion refuses stale hashes, template containers, implicit and non-
  for(const [source,tag]of [['<div v-for="a in b"></div>','div'],['<svg><g x-if="shown"></g></svg>','g'],['<svg/>','svg'],['<svg><rect/></svg>','rect'],['<p>Hello</p>','p']]){const r=resolve(source,tag);assert.equal(insert.describe(r),null);assert.equal(insert.plan(r,{preset:'circle',fileHash:r.hash}).refused,true);}
  const r=resolve('<div></div>','div');for(const op of [{preset:'circle',fileHash:'stale'},{preset:'script',fileHash:r.hash},{preset:'circle'}]){const result=insert.plan(r,op);assert.equal(result.refused,true);assert.equal(result.edits,undefined);}
 });
+
+test('Drawn SVG insertion preserves explicit coordinates and rejects invalid geometry atomically',()=>{
+ const r=resolve('<svg viewBox="50 100 200 100"><g transform="scale(2)"></g></svg>','g');
+ const cases={rectangle:'<rect x="10" y="20" width="60" height="40"',circle:'<circle cx="40" cy="40" r="20"',ellipse:'<ellipse cx="40" cy="40" rx="30" ry="20"',line:'<line x1="70" y1="60" x2="10" y2="20"'};
+ for(const [preset,expected]of Object.entries(cases)){const result=insert.plan(r,{preset,fileHash:r.hash,points:[70,60,10,20]});assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(expected));assert.ok(result.edits[0].after.includes('transform="scale(2)"'));}
+ for(const points of [null,[],[1,2,3],[0,0,0,0],[0,0,5,0],[0,0,Infinity,10],[0,0,100001,10],[0,0,'5',10],[0,0,'"/>',10]]){const result=insert.plan(r,{preset:'rectangle',fileHash:r.hash,points});assert.equal(result.refused,true);assert.equal(result.edits,undefined);}
+ const container=resolve('<div></div>','div');assert.equal(insert.plan(container,{preset:'rectangle',fileHash:container.hash,points:[0,0,10,10]}).refused,true);
+});
