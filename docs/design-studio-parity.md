@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 311 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 313 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -2030,3 +2030,32 @@ Screenshot `/private/tmp/retouch-alignment-target.png` was visually inspected.
 Flow layout, React/Liquid multi-selection geometry, vector alignment, editable
 spacing handles and group canvas transforms remain unfinished. The current Mac
 artifact predates these selection alignment changes; signing remains pending.
+
+
+### Exact selection spacing controls
+
+The alignment inspector now exposes horizontal and vertical gap fields in CSS
+pixels. Unequal gaps show Mixed. Entering a value arranges layers in spatial order,
+retains their sizes and the other axis, and keeps the first layer fixed. A chosen
+reference stays fixed instead; a containing-frame target starts spacing at the
+frame's left or top inner edge. Positive gaps, touching edges and overlapping
+negative gaps are supported while each step retains at least one thirty-second
+pixel of forward distance to avoid reversing layer order.
+
+Each committed spacing change uses the same atomic per-layer writer and one undo
+step. Escape restores an uncommitted value without clearing selection. Invalid
+values do not write source. A server refusal now refreshes the shared-style panel,
+so a refused spacing value returns to the actual current or Mixed value.
+
+Validation: all 313 unit tests pass. Chromium and WebKit verify positive, negative
+and zero gaps, mixed values, no-op repetition, fixed reference markup, containing
+frame origins, fractional/padded dimensions, scoped phone independence, Escape
+cancellation, order-reversal rejection, protected-layer refusal with field reset,
+and exact undo/redo. Existing alignment targets and shared-style regression checks
+also pass. Logs: `/private/tmp/retouch-exact-spacing-{unit,chromium,webkit,html-regression}.log`.
+Screenshot `/private/tmp/retouch-exact-spacing.png` was visually inspected.
+
+These are numeric spacing controls for supported absolute HTML selections.
+On-canvas spacing handles, group transforms, flow-layout rearrangement and
+React/Liquid/vector selection geometry remain unfinished. The current Mac package
+predates these selection controls; trusted native distribution remains unverified.

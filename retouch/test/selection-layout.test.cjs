@@ -17,3 +17,17 @@ test('explicit layer and frame targets align to their bounds and can distribute 
  const distributed=arrange(rects,'gap-x',parent),positions=rects.map((r,i)=>r.left+distributed[i].x);assert.deepEqual(positions,[100,300,540]);assert.equal(positions[2]+rects[2].width,parent.left+parent.width);
  assert.equal(arrange(rects,'top',{...parent,height:0})[0].y,160);assert.throws(()=>arrange(rects,'left',{...parent,width:-1}));assert.throws(()=>arrange(rects,'left',{...parent,left:NaN}));
 });
+test('exact gaps retain spatial order and keep the first or chosen layer fixed',()=>{
+ const {setSpacing,gaps}=require('../shell/selection-layout.js');
+ assert.deepEqual(setSpacing(rects,'x',25),[{x:0,y:0},{x:-75,y:0},{x:-160,y:0}]);
+ assert.deepEqual(setSpacing(rects,'x',25,{anchor:1}),[{x:75,y:0},{x:0,y:0},{x:-85,y:0}]);
+ assert.deepEqual(setSpacing(rects,'y',10,{anchor:2}),[{x:0,y:100},{x:0,y:60},{x:0,y:0}]);
+ assert.deepEqual(setSpacing(rects,'x',25,{start:0}),[{x:-20,y:0},{x:-95,y:0},{x:-180,y:0}]);
+ assert.deepEqual(setSpacing(rects,'x',-10),[{x:0,y:0},{x:-110,y:0},{x:-230,y:0}]);
+ assert.deepEqual(gaps([rects[2],rects[0],rects[1]].map(r=>Object.create(r)),'x').values,[100,110]);
+});
+test('exact spacing rejects nonfinite values, invalid references and order reversal',()=>{
+ const {setSpacing}=require('../shell/selection-layout.js');for(const gap of [NaN,Infinity,100001,-40])assert.throws(()=>setSpacing(rects,'x',gap));
+ for(const options of [{anchor:-1},{anchor:3},{anchor:1.5},{start:NaN}])assert.throws(()=>setSpacing(rects,'x',10,options));assert.throws(()=>setSpacing(rects,'z',10));
+ assert.deepEqual(setSpacing(rects.slice(0,2),'x',25),[{x:0,y:0},{x:-75,y:0}]);
+});

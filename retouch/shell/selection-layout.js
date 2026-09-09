@@ -17,6 +17,19 @@
   }
   return result;
  }
+ function gaps(rects,axis){
+  if(!['x','y'].includes(axis))throw Error('Choose horizontal or vertical spacing.');
+  const position=axis==='x'?'left':'top',size=axis==='x'?'width':'height',sorted=rects.map((r,i)=>({position:r[position],size:r[size],i})).sort((a,b)=>a.position-b.position);
+  return {sorted,values:sorted.slice(1).map((r,i)=>r.position-sorted[i].position-sorted[i].size)};
+ }
+ function setSpacing(rects,axis,gap,{anchor=null,start=null}={}){
+  arrange(rects,axis==='x'?'left':'top');const {sorted}=gaps(rects,axis);
+  if(!Number.isFinite(gap)||Math.abs(gap)>100000)throw Error('Use a spacing value between -100,000 and 100,000 pixels.');
+  if(gap<1/32-Math.min(...sorted.map(r=>r.size)))throw Error('Keep some forward distance between layers so their order stays intact.');
+  if(anchor!==null&&(!Number.isInteger(anchor)||anchor<0||anchor>=rects.length)||start!==null&&!Number.isFinite(start))throw Error('Choose a measurable spacing reference.');
+  let cursor=0;const packed=sorted.map(r=>{const item={...r,next:cursor};cursor+=r.size+gap;return item;}),reference=packed.find(r=>r.i===(anchor??sorted[0].i)),offset=start??reference.position-reference.next,result=rects.map(()=>({x:0,y:0}));
+  for(const r of packed)result[r.i][axis]=r.next+offset-r.position;return result;
+ }
  function preserveBox(changes,g,css){
   // Alignment keeps the authored box model, so content-box maximum sizes do
   // not suddenly constrain a border-box width after moving a padded layer.
@@ -57,13 +70,24 @@
    if(!parent||parent===d.body&&w.getComputedStyle(parent).position==='static')return {left:0,top:0,width:d.documentElement.clientWidth,height:w.innerHeight};
    const rect=parent.getBoundingClientRect();return {left:rect.left+parent.clientLeft,top:rect.top+parent.clientTop,width:parent.clientWidth,height:parent.clientHeight};
   }
+  function write(measured,deltas){if(deltas.every(d=>Math.abs(d.x)+Math.abs(d.y)<1/32))return;
+    const changes=Object.fromEntries(infos.map((info,i)=>{if(Math.abs(deltas[i].x)+Math.abs(deltas[i].y)<1/32)return [info.id,{}];const el=elements[i],effective=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{}),g=measured[i].geometry;return [info.id,preserveBox(P.placement({...g,x:g.x+deltas[i].x,y:g.y+deltas[i].y},effective),g,el.ownerDocument.defaultView.getComputedStyle(el))];}));save(changes,width);
+  }
   for(const [mode,label]of [['left','Align left'],['center','Align horizontal centers'],['right','Align right'],['top','Align top'],['middle','Align vertical centers'],['bottom','Align bottom'],['gap-x','Distribute horizontal spacing'],['gap-y','Distribute vertical spacing']]){
    const button=I.button(label,()=>{try{
     const measured=measure(),deltas=arrange(measured.map(item=>item.rect),mode,targetBounds(measured));if(deltas.every(d=>Math.abs(d.x)+Math.abs(d.y)<1/32))return;
-    const changes=Object.fromEntries(infos.map((info,i)=>{if(Math.abs(deltas[i].x)+Math.abs(deltas[i].y)<1/32)return [info.id,{}];const el=elements[i],effective=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{}),g=measured[i].geometry;return [info.id,preserveBox(P.placement({...g,x:g.x+deltas[i].x,y:g.y+deltas[i].y},effective),g,el.ownerDocument.defaultView.getComputedStyle(el))];}));save(changes,width);
+    write(measured,deltas);
    }catch(error){I.note(sec,error.message,'refused');}});if(mode.startsWith('gap-'))button.dataset.distribution=mode;controls.append(button);
   }
-  sec.append(controls);update();return sec;
+  sec.append(controls);
+  for(const [axis,label]of [['x','Horizontal gap (px)'],['y','Vertical gap (px)']]){
+   const values=gaps(measure().map(item=>item.rect),axis).values,mixed=values.some(value=>Math.abs(value-values[0])>=1/32),initial=mixed?'':String(Math.round(values.reduce((n,value)=>n+value,0)/values.length*100)/100),input=root.document.createElement('input');
+   input.type='number';input.step='any';input.min='-100000';input.max='100000';input.value=initial;input.placeholder=mixed?'Mixed':'';input.oninput=()=>input.setCustomValidity('');
+   input.onchange=()=>{if(!input.value.trim()){input.value=initial;return;}if(!input.checkValidity())return;try{const measured=measure(),target=targetBounds(measured),anchor=targetChoice.startsWith('layer:')?infos.findIndex(info=>'layer:'+info.id===targetChoice):null,start=targetChoice==='parent'?target[axis==='x'?'left':'top']:null;write(measured,setSpacing(measured.map(item=>item.rect),axis,Number(input.value),{anchor,start}));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+   input.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();input.value=initial;input.setCustomValidity('');input.blur();}else if(event.key==='Enter'){event.preventDefault();event.stopPropagation();input.blur();}};I.field(sec,label,input);
+  }
+  I.note(sec,'Exact gaps keep the first layer fixed, or the chosen reference layer. With a frame target, spacing starts at its left or top edge. Negative gaps overlap layers without reversing their order.');
+  update();return sec;
  }
- const api={arrange,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSelectionLayout=api;
+ const api={arrange,gaps,setSpacing,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSelectionLayout=api;
 })(typeof window==='object'?window:globalThis);

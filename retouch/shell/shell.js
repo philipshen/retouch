@@ -1413,7 +1413,7 @@ async function setHTMLCSSSelection(property,value,width,changesById){
   if(!sel?.multiple?.length)return;const selection=sel.multiple,info=sel.info;busyPanel(true);
   try{
     const result=await api('POST','/rt/__api/op',{type:'setCSSSelection',id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash,...(changesById?{changesById}:{property,value}),width});
-    if(!result?.ok)return toast(result?.reason||result?.error||'Could not style selected layers','err');
+    if(!result?.ok){renderPanel();return toast(result?.reason||result?.error||'Could not style selected layers','err');}
     if(result.undoId)editorHistory.record({type:'setCSSSelection',id:info.id,selectionIds:selection.map(item=>item.id),undoId:result.undoId});
     sel.info=result.element;sel.multiple=result.selection;await reloadFrame();renderPanel();toast('Selected layers updated','ok');
   }finally{busyPanel(false);}
