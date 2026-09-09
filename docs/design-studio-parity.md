@@ -5786,3 +5786,22 @@ visible base inheritance at md, no inherited detach action, no source write from
 inspection, scoped application and exact undo. Existing reset/propagation/catalog
 history flows also pass. Syntax and diff checks passed. Liquid linked styles and
 full parity remain unfinished. Native launches remain paused.
+
+### Liquid linked text style source writer (2026-09-09)
+
+Added the Liquid source planner for apply, detach, refresh and reset at explicit
+responsive scopes. Links serialize as an escaped data attribute alongside the
+class edit in one transaction plan. The tokenizer now retains attribute offsets
+and records generated attribute expressions so duplicate or ambiguous ownership
+can be refused before writing. Existing Liquid class patches preserve authored
+conditional expressions; dynamic application requires a rendered class snapshot.
+Refresh preserves local property overrides and reset follows the current style.
+
+All 433 unit tests passed, exit 0, in
+/private/tmp/retouch-liquid-linked-writer-units.log. New tests cover source identity,
+per-scope application, idempotence, template preservation, detach, refresh/reset,
+stale or ambiguous metadata, and actual Liquid rendering of both conditional
+branches with JSON metadata roundtrip. This planner is not yet wired to the API
+or inspector; project-wide Liquid propagation and live Shopify verification
+remain unfinished. Native app launches remain paused. Full Figma parity and a
+verified distributable desktop cask remain incomplete.

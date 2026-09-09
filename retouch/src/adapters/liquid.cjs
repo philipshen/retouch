@@ -135,6 +135,8 @@ function readOpenTag(source, start) {
   const tag = dynamicTag ? source.slice(start + 1, j) : source.slice(start + 1, j).toLowerCase();
   const nameEnd = j;
   let k = j;
+  const attributes = [];
+  let attributeExpressions = false;
   let classAttr = null;
   let srcAttr = null;
   let srcSet = false;
@@ -142,8 +144,8 @@ function readOpenTag(source, start) {
   let selfClosing = false;
   let openEnd = N;
   while (k < N) {
-    if (source.startsWith('{%', k)) { const e = source.indexOf('%}', k); k = e === -1 ? N : e + 2; continue; }
-    if (source.startsWith('{{', k)) { const e = source.indexOf('}}', k); k = e === -1 ? N : e + 2; continue; }
+    if (source.startsWith('{%', k)) { attributeExpressions = true; const e = source.indexOf('%}', k); k = e === -1 ? N : e + 2; continue; }
+    if (source.startsWith('{{', k)) { attributeExpressions = true; const e = source.indexOf('}}', k); k = e === -1 ? N : e + 2; continue; }
     const c = source[k];
     if (c === '>') { openEnd = k + 1; break; }
     if (c === '/' && source[k + 1] === '>') { selfClosing = true; openEnd = k + 2; break; }
@@ -180,6 +182,7 @@ function readOpenTag(source, start) {
         value = source.slice(valueStart, valueEnd);
       }
     }
+    attributes.push({name:attrName,attrStart,attrEnd:valueStart<0?attrNameEnd:k,valueStart,valueEnd,value});
     if (['x-text', 'x-html', 'v-text', 'v-html'].includes(attrName)) textBinding = true;
     if (attrName === 'class') {
       const cleaned=classes.clean(value||''),dynamic=/\{[%{]/.test(cleaned);
@@ -190,7 +193,7 @@ function readOpenTag(source, start) {
   }
   return {
     tag, dynamicTag, kind: 'host', tagStart: start, nameEnd, openEnd, selfClosing,
-    classAttr, srcAttr, srcSet, textBinding, childrenStart: openEnd, children: [],
+    attributes, attributeExpressions, classAttr, srcAttr, srcSet, textBinding, childrenStart: openEnd, children: [],
   };
 }
 
