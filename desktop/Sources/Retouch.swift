@@ -174,7 +174,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         address.target = self
         address.action = #selector(connect)
         let connectButton = NSButton(title: "Open editor", target: self, action: #selector(connect))
-        status = NSTextField(labelWithString: "Start your project with retouch -- <your usual command>, then open its /rt URL.")
+        status = NSTextField(labelWithString: "Open a project to start your usual command, or connect to a running editor.")
         status.textColor = .secondaryLabelColor
         status.font = .systemFont(ofSize: 12)
         projectButton = NSButton(title: "Open project…", target: self, action: #selector(openProject))
@@ -201,9 +201,9 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         body{background:#17181b;color:#e8e9eb;font:16px -apple-system;padding:12vh 10vw;line-height:1.6}
         h1{font-size:40px;letter-spacing:-1px}p{color:#aaa;max-width:600px}code{color:#87c8ff;background:#252830;padding:8px 12px;border-radius:6px}
         </style><h1>Your site. Your design canvas.</h1>
-        <p>Run your project with Retouch, then enter its editor URL above. Your site stays connected to its source files.</p>
-        <p><code>retouch -- npm run dev</code></p>
-        <p>Already using Make or a shell script? Keep that command after <code>retouch --</code>.</p>
+        <p>Choose Open project above, select your project folder, and enter your usual startup command. Retouch opens the editor when it is ready.</p>
+        <p><code>npm run dev</code></p>
+        <p>Already using Make or a shell script? Enter that same command. For a project already running with Retouch, enter its editor URL above.</p>
         """, baseURL: nil)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

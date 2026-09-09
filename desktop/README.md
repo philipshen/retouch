@@ -48,9 +48,10 @@ signing, then notarize and staple the app before creating the final published
 archive and its hash. The current build script does not automate notarization.
 Never reuse the pre-stapling archive hash for a rebuilt archive.
 
-Native UI verification on Apple Silicon confirmed welcome rendering and a
-successful connection to a running local editor. Full editor keyboard, file
-upload, WebKit rendering parity and Intel runtime tests remain outstanding.
+Native UI verification on Apple Silicon now covers project selection/startup,
+logs, automatic connection, a source width edit, button/keyboard undo and redo,
+comparison-size switching and Stop. File upload, complete WebKit editor parity,
+quit-during-startup and Intel runtime tests remain outstanding.
 
 The current universal build passes the URL/quoting self-test. To verify native
 launch arguments against a local CLI checkout (working directory and exit code):
@@ -59,10 +60,11 @@ launch arguments against a local CLI checkout (working directory and exit code):
 desktop/dist/Retouch.app/Contents/MacOS/Retouch --self-test --launch-cli "$PWD/retouch/bin/retouch.cjs"
 ```
 
-This launcher test passed on Apple Silicon. The new folder picker, startup dialog,
-log window and Stop control still need native UI verification; the computer-use
-service returned `cgWindowNotFound` in the latest verification attempt. This does
-not prove a complete desktop startup-to-editing flow or trusted distribution.
+This launcher test passed on Apple Silicon. A subsequent native UI pass verified
+the folder picker, remembered command, logs, automatic editor connection and
+Stop against the disposable Next.js fixture. Earlier `cgWindowNotFound` errors
+were no longer a blocker after opening a fresh app instance. Trusted distribution
+remains unverified.
 
 The build now runs `--self-test --launch-bundled` against the packaged CLI. A
 relocated bundle with spaces in its path passes that test and signature
@@ -84,9 +86,18 @@ Commands that do not print a local URL still use manual URL entry. Multiple apps
 currently choose the first ready candidate; a native app picker is not implemented.
 
 URL parsing/validation tests and a native health probe against the live fixture
-passed. The complete startup-log-to-WKWebView transition still needs native UI
-verification. The probe can be repeated against a running editor with:
+passed. The startup-log-to-WKWebView transition also passed in the native UI for
+the Next.js fixture. The probe can be repeated against a running editor with:
 
 ```sh
 desktop/dist/Retouch.app/Contents/MacOS/Retouch --self-test --probe-editor http://localhost:3000
 ```
+
+The native pass exposed stale inspector values after changing preview size in
+WebKit. The inspector now refreshes after the embedded window's own resize event.
+Phone-to-tablet switching updates computed opacity from 100% to 90% without
+reselecting the layer. A 180→240px width edit wrote the expected source class;
+undo restored the entire original file byte-for-byte. Cmd+Z and Cmd+Shift+Z also
+worked. Stop removed the app-owned port 3496 listener while the externally run
+port 3491 server stayed live. The welcome text now describes native project
+startup instead of requiring a separate global CLI command.

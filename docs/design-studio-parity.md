@@ -26,7 +26,7 @@ changing those files. The original checkout may continue to evolve independently
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React and Shopify/Liquid adapters only. Generic site capture/edit document and additional adapters remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | New presets/custom dimensions/rotation/persistence resize the actual iframe. Zoom preserves fixed viewport dimensions and vh. Real browser test passes. Breakpoint-scoped class edits, loaded-CSS discovery, inheritance reset and exact undo are browser-verified on React/Tailwind. Linked views, continuous resize handles and the full cross-framework responsive workflow remain. |
-| Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView app builds and connects to live local editor. Native project startup uses the bundled CLI and an installed Node runtime. Full desktop editor behavior, Intel runtime, onboarding and lifecycle verification remain. |
+| Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView app builds and connects to live local editor. Native project startup uses the bundled CLI and an installed Node runtime. Native startup, auto-connect, width editing/undo/redo and Stop passed on one fixture. Full editor behavior, file flows, Intel runtime and broader lifecycle verification remain. |
 | Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. Development build is ad hoc signed. Local cask install/uninstall passed. Developer ID signing/notarization, publishing, upgrades and quarantined launch remain unverified. |
 | Ease of use | New user can open a site, select/edit, compare screens, undo and retain work without learning implementation details | Controls have labels and basic defaults. Whole-workflow usability validation remains. |
 
@@ -236,10 +236,10 @@ The universal arm64/x86_64 build, ad hoc signature verification, URL/quoting tes
 and real-CLI launcher test passed. The latter checks working-directory and exit
 status propagation through the same launch-argument builder.
 
-The computer-use service returned `cgWindowNotFound`, so native dialog/log/Stop
-interaction and a complete project-startup-to-editing flow remain unverified.
-Automatic URL discovery is implemented with a live native health probe; the full
-UI transition and signed/notarized distribution remain unverified.
+Earlier computer-use attempts returned `cgWindowNotFound`. A fresh app instance
+subsequently passed native dialog/log/Stop and the fixture startup-to-editing
+flow, including automatic URL discovery. Signed/notarized distribution remains
+unverified.
 The current app bundles the CLI; Node must be on the login shell's PATH.
 
 ### Packaged CLI and local cask installation
@@ -272,6 +272,25 @@ selection; an app picker remains open.
 
 The universal build, URL/chunk/ANSI parser assertions, rejection of generic OK
 health JSON, bundled CLI self-test, native health probe against the running
-fixture and all 194 unit tests passed. The browser shell also loaded. This proves
-parsing and health integration, not the whole native startup-to-editor UI
-transition, which remains unverified with native computer-use unavailable.
+fixture and all 194 unit tests passed. The browser shell also loaded. A subsequent native UI pass also verified the startup-to-editor transition for
+this fixture; broader project/framework startup behavior remains unverified.
+
+### Native workflow verification and WebKit resize fix
+
+A fresh rebuilt app instance was tested through native accessibility controls.
+The folder picker selected the disposable Next fixture; its command dialog
+started `npm run dev -- --port 3496` through the bundled CLI. The log window showed
+startup, and the main window automatically connected to `/rt`. Reopening the
+project preserved the command. Editing width 180→240px wrote `w-[240px]`; button
+undo and Cmd+Z restored exact original source bytes, and Cmd+Shift+Z restored the
+edit. Source was restored at the end.
+
+The comparison rail rendered in WKWebView and activated phone/tablet dimensions.
+This found a stale-value bug: the parent's viewport notification could precede
+WebKit's child media-query recalculation. The shell now listens to the child
+window resize and refreshes computed controls after it settles. A fresh rebuilt
+native run verified opacity updating 100%→90% on phone→tablet without reselecting.
+Stop removed the owned CLI/dev-server processes and port 3496 listener; the
+external port 3491 server remained live. Welcome copy now matches native startup.
+These checks do not establish file upload, complete native editing parity,
+Intel runtime, arbitrary-site authoring or trusted release launch.

@@ -82,6 +82,9 @@ function hookFrame(d, w) {
       if (doc() === d && sel && !panelTasks && !panelBody.contains(document.activeElement)) renderPanel();
     }, 100);
   };
+  // WebKit can settle the child viewport after the parent's animation frame.
+  // Refresh on the embedded window's own resize, once its media queries apply.
+  w.addEventListener('resize',refreshStyles);
   if (d.head) new MutationObserver(refreshStyles).observe(d.head,{childList:true,subtree:true,characterData:true});
   d.addEventListener('load',e=>{if(e.target.tagName==='LINK')refreshStyles();},true);
   const suppress = (e) => {
