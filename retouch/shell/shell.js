@@ -709,6 +709,7 @@ function renderPanel() {
 
   const target = (editing?.el.ownerDocument === doc() ? editing.el : null) || matchingEls(activeId()).find(el => inTextScope(el, info));
   panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err')));
+  panelBody.appendChild(RetouchLayout.mount(style, target, setClasses));
   panelBody.appendChild(RetouchInspector.appearance(style, target, setClasses));
   if (info.src !== null || info.srcDynamic) panelBody.appendChild(imageSection(info));
   if (info.canSetTag || target?.textContent?.trim()) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag));
@@ -1400,6 +1401,7 @@ async function api(method, url, body) {
 }
 
 function toast(msg, cls) {
+  if (cls === 'ok') document.querySelectorAll('#toasts .toast.ok').forEach(el=>el.remove());
   const t = document.createElement('div');
   t.className = 'toast ' + (cls || '');
   t.textContent = msg;

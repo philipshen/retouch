@@ -1,0 +1,49 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const root=process.env.RT_INSPECTOR_FIXTURE;if(!root)throw Error('Set RT_INSPECTOR_FIXTURE to disposable inspector fixture');
+const {chromium}=require(path.join(root,'node_modules/playwright'));
+const file=path.join(root,'app/page.jsx'),original=fs.readFileSync(file,'utf8');
+const read=()=>fs.readFileSync(file,'utf8');
+(async()=>{
+ const browser=await chromium.launch(),page=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ const wait=async(fn,name)=>{for(let i=0;i<120;i++){if(await fn())return;await page.waitForTimeout(100);}throw Error('Timed out: '+name);};
+ const css=prop=>page.frameLocator('#app').locator('#anchor-parent').evaluate((el,p)=>getComputedStyle(el)[p],prop);
+ const choose=async name=>{await page.getByRole('treeitem',{name,exact:true}).click();await page.getByLabel('Arrange children',{exact:true}).waitFor();};
+ const number=async(name,value)=>{await page.getByLabel(name,{exact:true}).fill(value);await page.getByLabel(name,{exact:true}).press('Tab');};
+ const snapshots=[];
+ const action=async(fn,check,name)=>{snapshots.push(read());await fn();await wait(check,name);};
+ try {
+  await page.goto((process.env.RT_E2E_URL||'http://localhost:3496')+'/rt');
+  await choose('section · anchor-parent');
+  await action(()=>page.getByLabel('Arrange children').selectOption('row'),async()=>await css('display')==='flex'&&await css('flexDirection')==='row','row layout');
+  await action(()=>page.getByLabel('Wrap children').selectOption('wrap'),async()=>await css('flexWrap')==='wrap','wrapping');
+  await action(()=>number('Horizontal gap','24'),async()=>await css('columnGap')==='24px','gap');
+  await action(()=>number('Padding left','32'),async()=>await css('paddingLeft')==='32px','padding');
+  await action(()=>page.getByLabel('Align children').selectOption('center'),async()=>await css('alignItems')==='center','alignment');
+  await choose('div · anchor-target');
+  await action(()=>page.getByLabel('Width behavior',{exact:true}).selectOption('hug'),async()=>page.frameLocator('#app').locator('#anchor-target').evaluate(el=>el.getBoundingClientRect().width<180),'hug contents');
+  await action(()=>number('Width (px)','210'),async()=>page.frameLocator('#app').locator('#anchor-target').evaluate(el=>Math.abs(el.getBoundingClientRect().width-210)<1),'fixed dimension');
+  await action(()=>page.getByLabel('Width behavior',{exact:true}).selectOption('fill'),async()=>page.frameLocator('#app').locator('#anchor-target').evaluate(el=>getComputedStyle(el).flexGrow==='1'&&el.getBoundingClientRect().width>180),'fill parent');
+  await choose('section · anchor-parent');
+  await action(()=>page.getByLabel('Arrange children').selectOption('column'),async()=>await css('flexDirection')==='column','vertical layout');
+  await action(()=>page.getByLabel('Arrange children').selectOption('grid'),async()=>await css('display')==='grid','grid');
+  await action(()=>number('Columns','3'),async()=> (await css('gridTemplateColumns')).split(' ').length===3,'three tracks');
+  await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');
+  await page.getByLabel('Style screen scope').selectOption('md:');
+  await action(()=>page.getByLabel('Arrange children').selectOption('row'),async()=>await css('display')==='flex'&&await css('flexDirection')==='row','tablet row');
+  assert.match(read(),/md:flex/);assert.match(read(),/grid-cols-3/);
+  await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');
+  await wait(async()=>await css('display')==='grid','phone base grid');
+  await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');
+  await wait(async()=>await css('display')==='flex','tablet responsive row');
+  await page.screenshot({path:'/tmp/retouch-layout.png'});
+  for(const snapshot of snapshots.reverse()) {
+    await wait(async()=>await page.getByRole('button',{name:'Undo',exact:true}).isEnabled(),'undo ready');
+    await page.getByRole('button',{name:'Undo',exact:true}).click();
+    await wait(()=>read()===snapshot,'exact undo snapshot');
+  }
+  assert.equal(read(),original);assert.deepEqual(errors,[]);
+  console.log('PASS horizontal/vertical/grid layouts, gap, padding, alignment, flex fill sizing, breakpoint isolation, compiled rendering and exact undo');
+ } finally {if(read()!==original)fs.writeFileSync(file,original);await browser.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

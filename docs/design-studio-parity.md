@@ -16,7 +16,7 @@ changing those files. The original checkout may continue to evolve independently
 | Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Existing single-site zoom/selection/resize. Most document and multi-selection operations still absent or unaudited. |
 | Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI now exist. Reparenting, rename, multi-selection, cross-context clipboard and broader source structures remain. |
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | Full vector authoring and geometry model remain. |
-| Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | Some CSS controls exist; complete visual layout workflow and equivalence tests remain. |
+| Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | Visual horizontal/vertical/reverse flex and grid controls, wrapping, gaps, alignment/distribution, per-side padding, fixed/hug/fill sizing and breakpoint-scoped writes now exist. Full constraint, advanced grid, min/max, nested auto-layout and cross-framework equivalence work remains. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | Partial inspector controls exist; complete visual editors and source representations remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Basic inline formatting and inspector exist; full typography parity remains. |
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | Existing React and Liquid component inspection/detach; full creation/variants/library workflows remain. Live Shopify proof is incomplete. |
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 184 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 188 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -100,3 +100,17 @@ additional source planning. The layer tree does not yet expose unstamped sites.
 `retouch/test/e2e/layers.cjs` verifies hierarchy depth, search, collapse, keyboard
 navigation, selection without typing, duplicate/reorder/delete in source and in
 the rendered page, exact-byte undo and duplicate refusal for authored IDs.
+
+### Visual layout controls
+
+`retouch/test/e2e/layout.cjs` verifies visual edits against a real Next/Tailwind
+fixture: horizontal/vertical/grid layout, wrapping, horizontal gap, side padding,
+child alignment, hug/fixed/fill width, three grid tracks, tablet-vs-phone layout
+isolation and exact source restoration through the entire undo stack.
+
+The planner changes flex growth/basis/shrink only along the selected dimension's
+parent flex axis. Fill follows browser layout semantics; existing min/max
+constraints remain intact. Full Figma nested hug/fill behavior, layout suggestions,
+advanced grid tracks/spans, min/max controls and arbitrary CSS authoring remain
+unverified or unimplemented. Success notifications replace the previous save
+notification so repeated adjustments do not obscure the canvas.

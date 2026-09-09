@@ -110,3 +110,18 @@ literal siblings. Cmd/Ctrl+D duplicates the focused row; Delete/Backspace delete
 it. Undo restores exact source bytes. The panel explains unavailable actions
 when the current source structure cannot be edited safely. Grouping, reparenting,
 component-aware structural editing, multi-selection and clipboard remain open.
+
+## Visual layout
+
+**Arrange children** switches between normal flow, horizontal/vertical layouts
+(with reverse directions), and grid. Choose wrapping, independent horizontal and
+vertical gaps, alignment/distribution, grid columns and padding on each side.
+
+Width and height offer fixed pixels, hug content and fill available space. Fill
+uses flexible growth along a flex parent's main axis and full size otherwise;
+existing minimum and maximum constraints still apply. Layout controls follow the
+selected style breakpoint and participate in exact source undo.
+
+The source project must compile the generated Tailwind utilities. These controls
+do not yet expose advanced track definitions, grid spans, min/max fields or the
+complete nested auto-layout behavior of Figma.
