@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 327 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 328 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -2303,3 +2303,38 @@ Flow and transformed geometry, vector group transforms, cross-file selection,
 per-instance overrides, React group structure, Liquid equivalence and arbitrary
 site authoring remain unfinished. Full Figma parity and trusted Mac distribution
 remain open; the verified Mac artifact predates these tools.
+
+
+### React marquee and empty-frame selection
+
+React now supports marquee selection from gray canvas, page background and empty
+source-container backgrounds. This uses the same selection capability as the
+layer tree, instead of requiring HTML reparenting. Dragging within an empty frame
+can enclose its children; direct text, editable content, interactive elements and
+containers without source children do not start a marquee. Shift/Cmd/Ctrl adds to
+the existing selection. A short click still selects or toggles the frame.
+
+Pointer capture remains on the original inner element. An explicit short-click
+callback handles WebKit's suppressed compatibility click, with duplicate-click
+suppression for engines that also deliver it. The existing four-screen-pixel
+threshold, clipping and Escape/zoom/screen cancellation remain shared.
+
+Regression checking found missing static-HTML capability metadata: the site adapter
+implemented CSS selection operations without advertising them. Its operation list
+now reflects the CSS and selection planners, restoring the capability-based Select
+visible layers/range/marquee controls. The class-only operation refused by this
+site adapter is no longer advertised.
+
+Validation: all 328 unit/HTTP tests pass. Chromium and WebKit pass a real Next.js
+marquee workflow at 50/100/200% zoom, with inner-frame and gray starts, ordinary and
+modifier frame clicks, screen-pixel threshold, additive selection, Escape/zoom/
+screen cancellation, group movement and exact source/selection undo. Both engines
+also pass the static-HTML low-zoom marquee regression and its explicit selection
+capability/control checks. The package exposes `test:e2e:react-marquee`. Logs:
+`/private/tmp/retouch-react-marquee-{unit,chromium,webkit,html-regression,html-webkit}.log`.
+Screenshot `/private/tmp/retouch-react-marquee.png` was visually inspected.
+
+Marquee still selects source layers within the supported single-file selection
+model. Cross-file/instance selection, arbitrary site authoring, full Figma parity
+and trusted Mac distribution remain unfinished. The verified Mac artifact predates
+these selection tools.

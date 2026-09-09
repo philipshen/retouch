@@ -7,7 +7,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
  const wait=async fn=>{for(let i=0;i<100;i++){if(await fn())return;await page.waitForTimeout(100);}throw Error('Timed out waiting for marquee');};
  const marquee=page.locator('.selection-marquee'),zoom=page.getByLabel('Canvas zoom (%)',{exact:true});
  try{
-  await page.goto(`http://localhost:${server.address().port}/rt`);await page.frameLocator('#app').locator('div').waitFor();
+  await page.goto(`http://localhost:${server.address().port}/rt`);await page.frameLocator('#app').locator('div').waitFor();assert.equal(await page.evaluate(()=>window.__RT_RENDERING.selectionStyling),true);assert.equal(await page.getByRole('button',{name:'Select visible layers',exact:true}).isVisible(),true);
   for(const label of ['Screen width','Screen height']){const field=page.getByLabel(label,{exact:true});await field.fill('4000');await field.press('Tab');}await zoom.fill('10');await zoom.press('Tab');
   for(const gray of [false,true]){
    const f=await page.locator('#app').boundingBox(),start={x:gray?f.x-10:f.x+45,y:f.y+45};await page.mouse.move(start.x,start.y);await page.mouse.down();await page.mouse.move(start.x+1,start.y);await page.waitForTimeout(100);assert.equal(await marquee.count(),0,'one screen pixel does not start a marquee');

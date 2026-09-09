@@ -14,7 +14,7 @@ const redoBtn = document.getElementById('redoBtn');
 const statusEl = document.getElementById('status');
 const panelEmpty = document.getElementById('panelEmpty');
 const panelBody = document.getElementById('panelBody');
-if(window.__RT_RENDERING?.layerReparenting){const hint=document.createElement('p');hint.className='hint';hint.textContent='Drag empty canvas or page background to surround layers. Shift adds to the selection; Escape cancels.';panelEmpty.append(hint);}
+if(window.__RT_RENDERING?.selectionStyling){const hint=document.createElement('p');hint.className='hint';hint.textContent='Drag empty canvas or page background to surround layers. Shift adds to the selection; Escape cancels.';panelEmpty.append(hint);}
 
 const SPACING_STEPS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20, 24, 28, 32];
 
@@ -86,9 +86,10 @@ function doc() { return iframe.contentDocument; }
 function hookFrame(d, w) {
   stopDrawing?.();
   stopMarquee?.();
-  stopMarquee=RetouchMarquee.mount({document:d,frame:iframe,surface:canvasSurface,enabled:()=>window.__RT_RENDERING?.layerReparenting===true&&mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests,
+  stopMarquee=RetouchMarquee.mount({document:d,frame:iframe,surface:canvasSurface,enabled:()=>window.__RT_RENDERING?.selectionStyling===true&&mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests,
     onChange:rect=>{selectionMarquee=rect?{document:d,rect}:null;},
     onSelect:(nodes,options)=>selectMany(nodes,options),
+    onClick:(node,options)=>{if(!panelTasks&&!undoBusy&&!sourceRequests)select(node,options);},
   });
   // The compiler may deliver CSS after the source-write response. Refresh
   // computed inspector values when that CSS lands, without interrupting input.

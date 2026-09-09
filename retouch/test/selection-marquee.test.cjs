@@ -17,3 +17,10 @@ test('Marquee clips gray canvas coordinates to visible page before picking',()=>
 test('Marquee activation uses four screen pixels at low and high canvas zoom',()=>{
  for(const scale of [.01,.1,.25,1,2]){assert.equal(moved({x:0,y:0},{x:3/scale,y:0},scale),false);assert.equal(moved({x:0,y:0},{x:4/scale,y:0},scale),true);}
 });
+
+test('marquee starts on source container backgrounds but leaves text and interactive content alone',()=>{
+ const {background}=require('../shell/selection-marquee.js'),container=extra=>({tagName:'MAIN',hasAttribute:()=>true,closest:()=>null,querySelector:()=>({}),childNodes:[],...extra});
+ assert.equal(background({tagName:'BODY'}),true);assert.equal(background({tagName:'HTML'}),true);assert.equal(background(container()),true);
+ assert.equal(background(container({tagName:'DIV',childNodes:[{nodeType:3,textContent:' \n '}]})),true);
+ for(const el of [null,container({isContentEditable:true}),container({tagName:'BUTTON'}),container({hasAttribute:()=>false}),container({closest:()=>({})}),container({querySelector:()=>null}),container({childNodes:[{nodeType:3,textContent:'Text to select'}]})])assert.equal(background(el),false);
+});
