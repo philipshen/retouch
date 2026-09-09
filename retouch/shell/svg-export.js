@@ -13,7 +13,7 @@
     const id=decodeURIComponent(url.hash.slice(1)),definition=d.getElementById(id);
     if(!definition)throw Error('Missing SVG definition: '+id);
     if(!roots.some(root=>root.contains(definition))){
-     if(definition.namespaceURI!==svg.namespaceURI||!['linearGradient','radialGradient','clipPath','mask','filter','marker','pattern'].includes(definition.localName))throw Error('Unsupported shared SVG definition: '+id);
+     if(definition.namespaceURI!==svg.namespaceURI||!['linearGradient','radialGradient','clipPath','mask','filter','marker','pattern','path'].includes(definition.localName))throw Error('Unsupported shared SVG definition: '+id);
      for(let i=roots.length-1;i>0;i--)if(definition.contains(roots[i]))roots.splice(i,1);
      roots.push(definition);queue.push(definition,...definition.querySelectorAll('*'));
     }
@@ -30,7 +30,7 @@
    for(const property of properties){const value=css.getPropertyValue(property);if(value)values.push([property,localURL(value)]);}
    const hrefs=[];links.set(original,hrefs);
    for(const attr of original.attributes)if(attr.localName==='href'){
-    const value=reference(attr.value,['linearGradient','radialGradient','pattern'].includes(original.localName));
+    const value=reference(attr.value,['linearGradient','radialGradient','pattern','textPath'].includes(original.localName));
     hrefs.push([attr.namespaceURI,attr.name,/^(?:https?:|data:|blob:|#)/.test(value)?value:null]);
    }
   }
@@ -84,11 +84,10 @@
   if(![1,2,3,4].includes(scale))throw Error('Choose an image scale from 1× to 4×.');
   const result=snapshot(target),parsed=new DOMParser().parseFromString(result.text,'image/svg+xml');
   if(parsed.querySelector('foreignObject'))throw Error('Raster export with embedded HTML is not supported yet.');
-  if(parsed.querySelector('textPath'))throw Error('Raster export with text paths is not supported yet.');
   const normalize=family=>family.trim().replace(/^["']|["']$/g,'').toLowerCase();
   const families=value=>{const result=[];let part='',quote='',escape=false;for(const char of value){if(escape){part+=char;escape=false;continue;}if(char==='\\'){part+=char;escape=true;continue;}if(quote){part+=char;if(char===quote)quote='';continue;}if(char==='"'||char==="'"){quote=char;part+=char;}else if(char===','){result.push(normalize(part));part='';}else part+=char;}result.push(normalize(part));return result;};
   const pageFonts=new Set([...target.ownerDocument.fonts].map(face=>normalize(face.family)));
-  for(const text of parsed.querySelectorAll('text,tspan')){
+  for(const text of parsed.querySelectorAll('text,tspan,textPath,text a')){
    const names=families(text.style.fontFamily);
    if(names.some(family=>pageFonts.has(family)))throw Error('This text references a page font. Font embedding is not supported yet.');
   }

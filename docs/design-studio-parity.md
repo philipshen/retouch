@@ -4618,3 +4618,27 @@ in `/private/tmp/retouch-raster-text-unit.log`. RT_E2E_TEXT=1 enables the glyph 
 This proves the tested local font, not every system font, script or text layout.
 Web-font embedding, text outlines/paths, symbols and arbitrary-layer export remain
 unfinished. Native launches remain paused.
+
+### Curved SVG text export (2026-09-09)
+
+SVG snapshots now collect same-document paths referenced by textPath, including
+paths defined in a separate SVG. PNG/JPEG export permits these text layouts with
+local fonts; page-font refusal also checks textPath and linked text descendants.
+This supersedes the textPath refusal described in the preceding entry.
+
+Chromium and WebKit exported the shared quadratic-path TEST fixture successfully.
+The source screenshot and downloaded 1x PNG had identical thresholded black glyph
+masks within each engine (intersection-over-union 1.0; 317 and 322 ink pixels,
+respectively). The 90x50 crop contains the complete glyph region and excludes
+colored artwork through per-channel thresholds. The test requires >95% overlap,
+plus count and bounding-box checks. Both browser processes exited 0; logs:
+`/private/tmp/retouch-text-path-chromium-mask.log` and
+`/private/tmp/retouch-text-path-webkit-mask.log`. The same flows also passed SVG
+standalone decoding, raster scales, JPEG options, refusal cases and unchanged
+source checks. All 375 unit tests passed in
+`/private/tmp/retouch-text-path-unit.log`; git diff --check passed.
+
+This verifies the tested local-font curved layout, not every font, script or SVG
+text feature. Web-font embedding, text-to-outline conversion, symbols and arbitrary
+HTML-layer export remain incomplete. Native app launches remain paused at the
+user's request; full Figma parity and trusted cask distribution remain unproven.
