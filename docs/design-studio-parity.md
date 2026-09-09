@@ -1576,3 +1576,25 @@ fill remain unchanged while the copy moves and changes color. The existing
 geometry, drawing, responsive paint, stacking, deletion and revision-readiness
 checks also pass. Reference-aware duplication, dynamic subtree cloning, broader
 framework parity and a refreshed desktop bundle remain unfinished.
+
+
+### Integrated HTML suite and refreshed React/SVG Mac package
+
+All twelve HTML browser workflows pass in Chromium and WebKit at the integrated
+7708416 editor. The initial Chromium run stopped at the marquee test: after
+reselecting the same layer, the test could accept an already-selected row while
+the new selection request was still busy. It now also waits for the inspector
+to finish that request. The full Chromium suite then passed; the corrected
+marquee test also passed separately in WebKit.
+
+The refreshed universal Mac artifact packages all 79 current editor source
+files. Its built-bundle launcher tests, source/hash inventory, architectures,
+strict ad hoc signature and isolated cask install/uninstall were verified.
+The quarantined installed launcher produced no output within 45 seconds and
+was stopped; native interaction and trusted distribution remain unverified.
+Temporary installation/tap/trust state was removed and Homebrew developer mode
+restored. desktop/README.md records the archive and receipt.
+
+A Developer ID Application identity is available locally. A separately signed
+build is awaiting local keychain authorization in SecurityAgent; no completed
+Developer ID archive or notarization is claimed.

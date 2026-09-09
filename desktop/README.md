@@ -3,11 +3,11 @@
 A native AppKit window hosts the same Retouch editor used in the browser.
 macOS 13 or later; universal Apple Silicon and Intel binary.
 
-The latest local artifact packages editor commit `b78aed9`. Its bundled launcher,
+The latest local artifact packages editor commit `7708416`. Its bundled launcher,
 source inventory, universal architectures, strict ad hoc signature and isolated
-Homebrew install/uninstall were verified. Native interaction with this artifact
-is still unverified (`cgWindowNotFound`); earlier UI checks below apply to older
-bundles. No public, notarized release has been published.
+Homebrew install/uninstall were verified. The installed, quarantined app produced no launcher-test output within 45
+seconds and its process was stopped. Native interaction remains unverified;
+earlier UI checks below apply to older bundles. No public, notarized release has been published.
 
 Build with Apple's command line developer tools installed:
 
@@ -195,7 +195,7 @@ the precise cause or a usable native editor. A delayed activation experiment
 produced the same state and was not retained. Diagnostic processes exited cleanly.
 
 
-## Current local package (b78aed9)
+## Earlier local package (b78aed9)
 
 This bundle adds corner resizing, interrupted-gesture cancellation, visible zoom
 and Fit screen controls, low-zoom marquee fixes, and direct SVG shape drawing
@@ -217,3 +217,28 @@ Native UI inspection again returned `cgWindowNotFound`; these checks do not
 prove usable native interaction, trusted Gatekeeper launch, Intel execution or
 upgrade behavior. The archive is an ad hoc development build, not a published
 notarized release.
+
+
+## Current local package (7708416)
+
+This bundle includes React SVG geometry, drawing, responsive Tailwind paint,
+deletion, stacking and independent duplication, plus compiled source-revision
+checks and drawing previews outside the app DOM.
+
+Archive: `/private/tmp/retouch-desktop-react-svg-20260909/Retouch-0.1.0-mac.zip`
+
+SHA-256: `4abf44353957b8132ae932c82279ed2ff2574cf99e523f1e88637f74f820c44f`.
+The generated local cask and `verification.json` accompany the archive. All 79
+packaged source files matched the checkout after actual cask installation. Both
+architectures, strict ad hoc signature and retained quarantine were verified.
+The built bundle passed its launcher and HTML startup/health/shutdown tests.
+
+The cask-installed bundle produced no self-test output within a 45-second bound.
+Its process was stopped, the app uninstalled, and the temporary tap, cask trust
+entry and app directory removed. Homebrew developer mode was restored to
+disabled. This is an ad hoc development artifact, not a trusted release.
+
+A valid Developer ID Application identity was discovered, and a separate signed
+build was started. Signing is waiting in macOS SecurityAgent for local keychain
+authorization; computer-use safety restrictions prevent operating that dialog.
+No completed Developer ID archive or notarization is claimed.
