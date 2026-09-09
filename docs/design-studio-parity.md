@@ -3460,3 +3460,38 @@ per-anchor constraints remain open. Dense converted curves also warrant clearer
 handle visibility at small sizes. This does not establish full Figma parity or
 unrestricted site authoring. Native launches stayed paused; no desktop build or
 launch occurred, and trusted Mac distribution remains unverified.
+
+
+### 2026-09-09 — Selected-point controls for dense curves
+
+Curve handles and tangent lines now follow the selected anchor by default.
+All anchors remain available, the selected anchor is filled and exposed with
+aria-pressed, and Show all handles restores the contour-wide overview without
+changing source geometry. Path subdivision buttons appear on the selected
+anchor's adjacent edges. Polygon and polyline subdivision remains unchanged.
+Focus and pointer selection refresh the controls, including after arc conversion,
+contour changes, corner/smooth conversion and whole-contour mode transitions.
+
+Browser checks pass in `/private/tmp/retouch-handle-visibility-chromium-final.log`
+(HTML/Chromium) and `/private/tmp/retouch-handle-visibility-webkit-final.log`
+(React/WebKit). These check selected-handle visibility, overview toggling,
+adjacent subdivision controls, open/closing arcs, unchanged source on visibility
+changes, saved handle edits and exact undo/redo. The inspected
+`/private/tmp/retouch-handle-visibility-webkit-final.png` shows eight anchors with
+only the selected endpoint's handle, instead of the previous dense collection
+of every handle and insertion button.
+
+React/WebKit handle-mode regression passes in
+`/private/tmp/retouch-handle-visibility-modes-final.log`, covering independent,
+aligned and mirrored editing, pointer dragging, corner/smooth conversion and
+50/100/200 percent transforms. HTML/Chromium contour movement also passes in
+`/private/tmp/retouch-handle-visibility-contour.log`. Initial failures are retained
+in the corresponding logs without the final suffix: conversion tests incorrectly
+expected an outgoing handle at the closing arc endpoint, and the handle-mode
+test attempted to drag a handle before selecting its anchor. The corrected tests
+exercise the new point-selection interaction explicitly.
+
+This is a visibility improvement, not full vector-editing parity. Multi-point
+selection, persistent anchor constraints, vector networks, booleans/masks and
+arbitrary-site authoring remain open. Native launches remained paused; no Mac
+app build or launch was performed.

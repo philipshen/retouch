@@ -18,7 +18,7 @@
     preview.style.cssText='fill:none!important;stroke:#6366f1!important;stroke-width:1.5!important;';
     preview.setAttribute('vector-effect','non-scaling-stroke');drawing.append(preview);surface.append(drawing);
     const contourHit=root.document.createElementNS(ns,'path');contourHit.dataset.moveContour='true';contourHit.setAttribute('aria-label','Move selected contour');contourHit.setAttribute('role','button');contourHit.setAttribute('vector-effect','non-scaling-stroke');contourHit.style.cssText='fill:none!important;stroke:transparent!important;stroke-width:14!important;pointer-events:stroke;cursor:move;outline:none;';drawing.append(contourHit);
-    let ended=false,drag=null,active=0,activeHandle=null,raf,cancelPen=null,moveContourMode=false;
+    let ended=false,drag=null,active=0,activeHandle=null,raf,cancelPen=null,moveContourMode=false,showAllHandles=false;
     const initialMatrix=target.getScreenCTM(),matrixValues=m=>m&&[m.a,m.b,m.c,m.d,m.e,m.f];
     const initial=matrixValues(initialMatrix);
     function listen(el,type,fn,options){el.addEventListener(type,fn,options);cleanup.push(()=>el.removeEventListener(type,fn,options));}
@@ -70,6 +70,7 @@
       handleMode=root.document.createElement('select');handleMode.setAttribute('aria-label','Handle movement');handleMode.title='Applies to paired handles while editing. Independent moves one; aligned keeps the opposite length; mirrored keeps equal lengths.';
       for(const [value,text] of [['independent','Independent'],['aligned','Aligned'],['mirrored','Mirrored']]){const option=root.document.createElement('option');option.value=value;option.textContent=text;handleMode.append(option);}
       handleMode.value=handleMovement;handleMode.style.cssText='padding:6px;background:#2b2e33;color:#e5e7eb;border:1px solid #454951;border-radius:4px;';handleMode.onchange=()=>{handleMovement=handleMode.value;};label.append(handleMode);toolbar.append(label);
+      const visibilityLabel=root.document.createElement('label'),visibility=root.document.createElement('input');visibilityLabel.style.cssText='display:flex;align-items:center;gap:4px;font:12px system-ui;color:#e5e7eb;';visibility.type='checkbox';visibility.setAttribute('aria-label','Show all handles');visibility.onchange=()=>{showAllHandles=visibility.checked;paint();};visibilityLabel.append(visibility,root.document.createTextNode('Show all handles'));visibilityLabel.title='Normally only the selected point’s curve handles are shown. Select any point to reshape it.';toolbar.append(visibilityLabel);
     }
     if(subpaths){
       moveContourButton=action('Move contour',()=>{if(drag||!verify())return;moveContourMode=!moveContourMode;activeHandle=null;rebuild();(moveContourMode?contourHit:handles[active]).focus({preventScroll:true});});moveContourButton.title='Move every anchor and handle in the selected contour. Drag its outline or use arrow keys; Shift constrains movement.';
@@ -193,7 +194,7 @@
       if(pathData&&!root.RetouchSVGPath.serialize(vertices.filter((_,i)=>i!==active),closed)){announce('Keep a valid contour with distinct anchors.');return;}
       vertices.splice(active,1);activeHandle=null;active=Math.min(active,vertices.length-1);rebuild();(moveContourMode?contourHit:handles[active]).focus({preventScroll:true});
     }
-    listen(surface,'focusin',e=>{if(e.target.dataset.vertex!==undefined){active=Number(e.target.dataset.vertex);activeHandle=e.target.dataset.curveHandle||null;announce();}});
+    listen(surface,'focusin',e=>{if(e.target.dataset.vertex!==undefined){active=Number(e.target.dataset.vertex);activeHandle=e.target.dataset.curveHandle||null;announce();paint();}});
     listen(surface,'click',e=>{if(e.target.dataset.contour!==undefined){e.preventDefault();e.stopImmediatePropagation();selectContour(Number(e.target.dataset.contour));return;}if(e.target.dataset.insertVertex!==undefined){e.preventDefault();e.stopImmediatePropagation();insertPoint(Number(e.target.dataset.insertVertex));}});
     function paint(){
       updateArcHint();
@@ -205,9 +206,9 @@
       subpaths?.forEach((part,i)=>{if(i===contour)return;const outline=root.document.createElementNS(ns,'path');outline.setAttribute('d',root.RetouchSVGPath.serialize(part.nodes,part.closed));outline.setAttribute('transform',preview.getAttribute('transform'));outline.setAttribute('vector-effect','non-scaling-stroke');outline.style.cssText='fill:none!important;stroke:#a78bfa!important;stroke-width:1.5!important;';otherContours.append(outline);
         const hit=outline.cloneNode();hit.dataset.contour=String(i);hit.style.cssText='fill:none!important;stroke:transparent!important;stroke-width:12!important;pointer-events:stroke;cursor:pointer;';const title=root.document.createElementNS(ns,'title');title.textContent='Edit contour '+(i+1);hit.append(title);otherContours.append(hit);});
       function position(b,p,half){const q=new w.DOMPoint(p.x,p.y).matrixTransform(m);Object.assign(b.style,{left:f.left+q.x*scale-r.left-half+'px',top:f.top+q.y*scale-r.top-half+'px'});}
-      vertices.forEach((p,i)=>position(handles[i],p,6));
-      insertions.forEach((b,i)=>{const a=vertices[i],next=vertices[(i+1)%vertices.length];position(b,pathData?root.RetouchSVGPath.segmentMiddle(a,next):{x:(a.x+next.x)/2,y:(a.y+next.y)/2},9);});
-      tangentLines.replaceChildren();curveHandles.forEach(h=>{const a=vertices[h.index],b=a[h.key];position(h.button,b,5);const line=root.document.createElementNS(ns,'line'),p=new w.DOMPoint(a.x,a.y).matrixTransform(m),q=new w.DOMPoint(b.x,b.y).matrixTransform(m);line.setAttribute('x1',f.left+p.x*scale-r.left);line.setAttribute('y1',f.top+p.y*scale-r.top);line.setAttribute('x2',f.left+q.x*scale-r.left);line.setAttribute('y2',f.top+q.y*scale-r.top);line.style.cssText='stroke:#8b5cf6!important;stroke-width:1!important;';tangentLines.append(line);});
+      vertices.forEach((p,i)=>{position(handles[i],p,6);handles[i].style.background=i===active?'#6366f1':'white';handles[i].setAttribute('aria-pressed',String(i===active));});
+      insertions.forEach((b,i)=>{b.hidden=moveContourMode||!!pathData&&i!==active&&(i+1)%vertices.length!==active;const a=vertices[i],next=vertices[(i+1)%vertices.length];position(b,pathData?root.RetouchSVGPath.segmentMiddle(a,next):{x:(a.x+next.x)/2,y:(a.y+next.y)/2},9);});
+      tangentLines.replaceChildren();curveHandles.forEach(h=>{h.button.hidden=moveContourMode||!showAllHandles&&h.index!==active;if(h.button.hidden)return;const a=vertices[h.index],b=a[h.key];position(h.button,b,5);const line=root.document.createElementNS(ns,'line'),p=new w.DOMPoint(a.x,a.y).matrixTransform(m),q=new w.DOMPoint(b.x,b.y).matrixTransform(m);line.setAttribute('x1',f.left+p.x*scale-r.left);line.setAttribute('y1',f.top+p.y*scale-r.top);line.setAttribute('x2',f.left+q.x*scale-r.left);line.setAttribute('y2',f.top+q.y*scale-r.top);line.style.cssText='stroke:#8b5cf6!important;stroke-width:1!important;';tangentLines.append(line);});
 
     }
     function commit(){
