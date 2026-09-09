@@ -5536,3 +5536,26 @@ source restoration. Existing catalog history, propagation and responsive cases
 also pass. Syntax/diff checks passed. Overrides identical to the original style
 cannot be inferred as intentional from source values alone. React/Liquid linked
 styles and full parity remain unfinished; native launches remain paused.
+
+### Visible text-style inheritance across screen scopes
+
+When the active HTML screen scope has no explicit text-style link, the inspector
+now identifies the nearest narrower linked scope and its style name. It offers
+Apply inherited style at this scope, which applies the saved definition and
+creates a scoped link without changing narrower declarations. Inherited links
+cannot be detached or reset accidentally from the larger scope. The UI notes
+that local typography may override inherited styling; inheritance here describes
+the source link, not a claim that every computed property matches the library.
+Missing catalog styles are labeled unavailable and cannot be applied.
+
+HTML Chromium and WebKit browser tests passed, exit 0:
+/private/tmp/retouch-inherited-styles-focus-{chromium,webkit}.log. They verify
+base inheritance at 768px, explicit scoped application with the base link retained,
+nearest-scope inheritance from 768px at 1440px, no writes from inspection, and
+exact undo. Existing library/edit/propagation tests also pass. A test correction
+focuses the screen selector before switching presets: programmatic selectOption
+alone left focus in the inspector, where viewport-driven reconstruction is
+intentionally deferred. No product focus workaround was added. All 411 unit tests
+passed (/private/tmp/retouch-inherited-styles-units.log); syntax/diff checks passed.
+React/Liquid linked styles and full parity remain unfinished. Native launches
+remain paused.

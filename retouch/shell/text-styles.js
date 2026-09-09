@@ -39,6 +39,12 @@
     if(options.reset){const reset=I.button('Reset text style overrides',()=>run(()=>options.reset(options.link.id,library.revision),'Text style overrides reset.'));reset.disabled=!linkedStyle||!overrides.length;controls.append(reset);}
     controls.append(I.button('Detach text style',()=>run(()=>options.detach(),'Text style detached.')));
    }
+   if(!options.link&&options.inherited){
+    const inheritedStyle=library.styles.find(item=>item.id===options.inherited.link.id);
+    I.note(controls,'Inherited style: '+(inheritedStyle?.name||'Unavailable style')+' · '+options.inherited.label);
+    I.note(controls,'Local typography can override this inherited style. Applying it here creates a link for this screen scope and larger, leaving smaller screens unchanged.');
+    if(options.apply){const applyHere=I.button('Apply inherited style at this scope',()=>run(()=>options.apply(options.inherited.link.id,library.revision),'Text style applied.'));applyHere.disabled=!inheritedStyle;controls.append(applyHere);}
+   }
    const name=document.createElement('input');name.type='text';name.maxLength=80;name.value=style?.name||'';name.placeholder='Heading, Body, Caption…';I.field(controls,'Text style name',name);
    function label(){if(!name.value.trim()){name.setCustomValidity('Give the text style a name.');name.reportValidity();return null;}return name.value.trim();}
    name.oninput=()=>name.setCustomValidity('');
