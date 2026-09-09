@@ -374,6 +374,11 @@ Interact mode retain their normal keyboard behavior. Changing the preview size
 or zoom exits the hand tool. Choosing a move, resize, gap-adjustment or drawing
 tool also exits Hand. Switching to Hand discards an uncommitted tool preview.
 
+Use **Zoom to selection** (Shift+2) to reveal and fit selected layers. It keeps
+them centered while native scrolling settles, then enables editing controls.
+A new zoom or screen command cancels the pending fit. If the page keeps moving
+for a second, pause its scrolling or animations and try again.
+
 Use **Zoom** in the screen toolbar to set the canvas percentage, or **Fit screen**
 to bring a fixed preview fully into the available canvas. Fixed screens support
 1–6400% zoom. Fit workspace supports 25–6400% and follows the workspace size.

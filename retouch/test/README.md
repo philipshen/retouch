@@ -105,3 +105,8 @@ It accepts the same Playwright fixture and engine settings as zoom-anchor.
 a site with authored smooth scrolling, a Move tool that remains active after
 reveal, Fit scroll preservation, and source-edit reload/undo scroll preservation.
 It accepts the same Playwright fixture and browser engine settings.
+
+The zoom-selection workflow also exercises continuous page movement, bounded
+failure, recovery after motion stops, and cancellation by a newer Fit command.
+The canvas-pan workflow checks selection visibility after native keyboard
+scrolling in Interact mode, followed by editing and tool switching.

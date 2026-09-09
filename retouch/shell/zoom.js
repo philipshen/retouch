@@ -4,8 +4,9 @@
   const zoomInput=document.getElementById('canvasZoom'),fitButton=document.getElementById('fitScreen');
   const maxScale=64;
   const endPadding=96; // Screen pixels, independent of zoom.
-  let scale=1,width=0,height=0,gestureBase=null,positioned=false,screen=null;
+  let scale=1,width=0,height=0,gestureBase=null,positioned=false,screen=null,viewRevision=0;
   const hooked=new WeakSet();
+  for(const event of ['retouch:before-zoom','retouch:screen'])window.addEventListener(event,()=>viewRevision++);
   function layout(){
     if(!width||!height)return;
     const pad=scale===1?0:24,ew=Math.max(canvas.clientWidth,width*scale+pad*2);
@@ -59,16 +60,30 @@
       if(![viewport.width,viewport.height].every(value=>value>=240&&value<=7680))return {ok:false,reason:'Choose a screen size before zooming to this selection.'};
       window.RetouchScreens.set(viewport);
     }
+    let revision=viewRevision;
     await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    if(revision!==viewRevision)return {ok:false,reason:'The view changed while revealing the selection.'};
     if(visible.some(el=>!el.isConnected)||frame.contentDocument!==d)return {ok:false,reason:'The page changed before the selection could be revealed.'};
     visible[0].scrollIntoView({block:'center',inline:'center',behavior:'instant'});
     const bounds=()=>{const rects=visible.map(el=>el.getBoundingClientRect()),left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top));return {left,top,width:Math.max(...rects.map(r=>r.right))-left,height:Math.max(...rects.map(r=>r.bottom))-top};};
-    let rect=bounds();const p=center();change(Math.min((canvas.clientWidth-64)/rect.width,(canvas.clientHeight-64)/rect.height,maxScale),p.x,p.y);layout();
-    rect=bounds();w.scrollTo({left:w.scrollX+rect.left+rect.width/2-w.innerWidth/2,top:w.scrollY+rect.top+rect.height/2-w.innerHeight/2,behavior:'instant'});
-    rect=bounds();canvas.scrollLeft=stage.offsetLeft+(rect.left+rect.width/2)*scale-canvas.clientWidth/2;canvas.scrollTop=endPadding+(rect.top+rect.height/2)*scale-canvas.clientHeight/2;
-    // Let scroll events settle before enabling tools that cancel on viewport movement.
-    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-    if(visible.some(el=>!el.isConnected)||frame.contentDocument!==d)return {ok:false,reason:'The page changed while revealing the selection.'};
+    let rect=bounds();const p=center();change(Math.min((canvas.clientWidth-64)/rect.width,(canvas.clientHeight-64)/rect.height,maxScale),p.x,p.y);layout();revision=viewRevision;
+    const snapshot=()=>{const r=bounds();return [w.scrollX,w.scrollY,r.left,r.top,r.width,r.height,canvas.scrollLeft,canvas.scrollTop,canvas.clientWidth,canvas.clientHeight];};
+    const position=()=>{
+      rect=bounds();w.scrollTo({left:w.scrollX+rect.left+rect.width/2-w.innerWidth/2,top:w.scrollY+rect.top+rect.height/2-w.innerHeight/2,behavior:'instant'});
+      rect=bounds();canvas.scrollLeft=stage.offsetLeft+(rect.left+rect.width/2)*scale-canvas.clientWidth/2;canvas.scrollTop=endPadding+(rect.top+rect.height/2)*scale-canvas.clientHeight/2;
+      return snapshot();
+    };
+    // Native keyboard momentum can continue after an instant scroll request.
+    // Recenter while it settles; don't enable geometry tools during that motion.
+    let expected=position(),stable=0;const started=performance.now();
+    while(stable<3){
+      await new Promise(resolve=>requestAnimationFrame(resolve));
+      if(visible.some(el=>!el.isConnected)||frame.contentDocument!==d)return {ok:false,reason:'The page changed while revealing the selection.'};
+      if(revision!==viewRevision)return {ok:false,reason:'The view changed while revealing the selection.'};
+      const actual=snapshot();stable=actual.every((value,index)=>Math.abs(value-expected[index])<.25)?stable+1:0;
+      expected=position();
+      if(performance.now()-started>1000&&stable<3)return {ok:false,reason:'The page is still moving. Pause its scrolling or animations and try again.'};
+    }
     rect=bounds();
     return {ok:true,clipped:rect.left<0||rect.top<0||rect.left+rect.width>w.innerWidth||rect.top+rect.height>w.innerHeight};
   }
@@ -110,7 +125,7 @@
   }
   hooks(canvas,false);
   frame.addEventListener('load',()=>{
-    gestureBase=null;
+    viewRevision++;gestureBase=null;
     const d=frame.contentDocument;if(!d || hooked.has(d))return;
     hooked.add(d);hooks(d,true);
   });

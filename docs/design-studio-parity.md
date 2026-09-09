@@ -2833,3 +2833,34 @@ the archive. No current usable native UI, trusted launch, notarization, public
 release, upgrades or Intel execution is established. Desktop README now names
 this newest artifact and its failures; the earlier lock package evidence remains
 in its historical section. Full Figma parity remains unfinished.
+
+### 2026-09-09 — Settle native momentum before finishing selection fit
+
+The packaged zoom-visibility failure is now reproduced with a scroll-call trace:
+`/private/tmp/retouch-reveal-position-trace.log`. Native Space scrolling started
+in Interact mode keeps advancing after explicit instant scroll requests. During
+selection fitting, the page reached scrollY=0 as requested, then advanced to 54
+and 94 while the fitting operation was still busy. The old two-frame wait ended
+there, leaving the heading above the canvas (y=26.64 versus canvas top=89).
+This is distinct from inherited CSS smooth scrolling fixed in a288bc6.
+
+Selection fitting now recenters on each animation frame until the page bounds,
+scroll and canvas geometry remain stable for three frames. A one-second bound
+returns an actionable message for a continuously moving page. New zoom, screen
+or frame-load events supersede the pending operation, so it cannot override a
+newer view command. Temporary investigation tracing was removed.
+
+Both browser engines pass the native Space→edit→selection fit→Hand/Move/Draw
+flow, including the full heading visibility assertion:
+`/private/tmp/retouch-reveal-stability-pan-{chromium,webkit}.log`.
+Both also pass high zoom/precise source movement/exact undo, continuous-motion
+failure, recovery after motion stops and cancellation by a new Fit command:
+`/private/tmp/retouch-reveal-stability-{chromium,webkit}-final.log`.
+All 334 unit tests pass in `/private/tmp/retouch-reveal-stability-unit.log`.
+
+The React gap-control instability was investigated first. The real WebKit
+selection-geometry workflow passed with bounds/DOM-identity tracing enabled
+(`/private/tmp/retouch-gap-stability-trace.log`), so its earlier packaged failure
+is not established as resolved. The existing Mac navigation archive still
+contains the pre-fix code and retains its failing receipt. Full Figma parity and
+trusted Mac distribution remain incomplete.
