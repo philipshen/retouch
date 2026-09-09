@@ -151,7 +151,10 @@ filter expressions require clearing the stack before using the blur control.
 
 The **Gradient fills** section creates stacked linear or radial gradients with
 live previews. Edit angle or center, add/remove color stops, change their colors
-and percentage positions, and move fills forward. Up to eight fills with sixteen
+and percentage positions, and move fills forward. Drag color handles on the stop rail
+to preview their position on the canvas; release to save one undo step, or press
+Escape to cancel. Arrow keys move the focused stop by 1%, Shift by 10%, and
+Home/End move to the ends. Up to eight fills with sixteen
 stops each are supported. Clear removes background images at the current screen
 scope; Reset restores inherited styling. Existing image URLs and unsupported
 gradient expressions are identified before replacement. Canvas gradient handles,

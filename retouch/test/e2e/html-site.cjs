@@ -263,6 +263,20 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await page.getByLabel('Fill 1 Angle (°)',{exact:true}).fill('45');await page.getByLabel('Fill 1 Angle (°)',{exact:true}).press('Tab');await wait(async()=>(await effect('background-image')).startsWith('linear-gradient(45deg'),'gradient angle');await settled();
   await page.getByLabel('Add stop to fill 1',{exact:true}).click();await wait(async()=>await page.getByLabel('Fill 1 stop 3 color',{exact:true}).count()===1,'gradient stop');await settled();
   await page.getByLabel('Fill 1 stop 2 color',{exact:true}).fill('#00ff00');await page.getByLabel('Fill 1 stop 2 color',{exact:true}).press('Tab');await wait(async()=>(await effect('background-image')).includes('rgb(0, 255, 0) 50%'),'gradient stop color');await settled();
+  const beforeStopDrag=read();
+  let stopHandle=page.getByRole('slider',{name:'Fill 1 stop 2 handle',exact:true});await stopHandle.evaluate(el=>el.scrollIntoView({block:'center'}));
+  let railBox=await page.getByRole('group',{name:'Fill 1 stop positions',exact:true}).boundingBox(),handleBox=await stopHandle.boundingBox();
+  await page.mouse.move(handleBox.x+handleBox.width/2,handleBox.y+handleBox.height/2);await page.mouse.down();await page.mouse.move(railBox.x+railBox.width*.25,handleBox.y+handleBox.height/2,{steps:8});
+  await wait(async()=>(await effect('background-image')).includes('rgb(0, 255, 0) 25%'),'gradient drag live preview');assert.equal(read(),beforeStopDrag,'drag has not written source');
+  await page.mouse.up();await wait(()=>read()!==beforeStopDrag,'gradient drag commit');await settled();
+  const committedStopDrag=read(),committedGradient=await effect('background-image');
+  stopHandle=page.getByRole('slider',{name:'Fill 1 stop 2 handle',exact:true});await stopHandle.evaluate(el=>el.scrollIntoView({block:'center'}));railBox=await page.getByRole('group',{name:'Fill 1 stop positions',exact:true}).boundingBox();handleBox=await stopHandle.boundingBox();
+  await page.mouse.move(handleBox.x+handleBox.width/2,handleBox.y+handleBox.height/2);await page.mouse.down();await page.mouse.move(railBox.x+railBox.width*.75,handleBox.y+handleBox.height/2,{steps:8});await wait(async()=>(await effect('background-image')).includes('rgb(0, 255, 0) 75%'),'cancel preview');
+  await page.keyboard.press('Escape');await page.mouse.up();await wait(async()=>await effect('background-image')===committedGradient,'cancel restores gradient');assert.equal(read(),committedStopDrag,'cancel did not write');assert.equal(await app.locator('h1').getAttribute('style'),null,'preview style removed');
+  await stopHandle.press('ArrowRight');await wait(async()=>(await effect('background-image')).includes('rgb(0, 255, 0) 26%'),'keyboard stop');await settled();
+  assert.equal(await page.getByRole('slider',{name:'Fill 1 stop 2 handle',exact:true}).evaluate(el=>el===document.activeElement),true,'stop retains keyboard focus');
+  for(let i=0;i<2;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
+  await wait(()=>read()===beforeStopDrag,'drag and keyboard exact undo');
   const baseGradient=await effect('background-image');
   const fillGroup=page.locator('.gradient-controls').first();assert.equal(await fillGroup.evaluate(el=>{el.scrollIntoView({block:'nearest'});return el.scrollWidth<=el.clientWidth+1;}),true,'gradient controls fit panel');
   if(process.env.RT_E2E_GRADIENT_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_GRADIENT_SCREENSHOT});

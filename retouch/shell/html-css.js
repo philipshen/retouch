@@ -1,6 +1,48 @@
 (function(){
  const I=RetouchInspector;
  const {options,fields,valid,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients}=RetouchHTMLCSSValues;
+ function stopRail({gradient,index,info,el,preview,gradients,update}){
+  const rail=document.createElement('div');rail.className='gradient-stop-rail';rail.dataset.gradientSource=info.id;rail.dataset.gradientIndex=index;
+  rail.setAttribute('role','group');rail.setAttribute('aria-label','Fill '+(index+1)+' stop positions');
+  const strip=document.createElement('div');strip.className='gradient-stop-strip';strip.style.backgroundImage=serializeGradients([{...gradient,type:'linear',angle:90}]);rail.append(strip);
+  gradient.stops.forEach((stop,stopIndex)=>{
+   const handle=document.createElement('button');handle.type='button';handle.className='gradient-stop-handle';handle.dataset.stopIndex=stopIndex;handle.style.left=stop.position+'%';handle.style.backgroundColor=stop.color;
+   handle.setAttribute('role','slider');handle.setAttribute('aria-label','Fill '+(index+1)+' stop '+(stopIndex+1)+' handle');handle.setAttribute('aria-valuemin','0');handle.setAttribute('aria-valuemax','100');handle.setAttribute('aria-valuenow',stop.position);handle.title='Drag to position. Arrow keys move 1%; Shift moves 10%.';
+   function changed(position){const moved={...stop,position};const stops=gradient.stops.map((s,i)=>i===stopIndex?moved:s).sort((a,b)=>a.position-b.position);return {next:{...gradient,stops},newIndex:stops.indexOf(moved)};}
+   function commit(position){
+    if(position===stop.position)return;const {next,newIndex}=changed(position);
+    Promise.resolve(update(next)).then(()=>document.querySelector(`[data-gradient-source="${CSS.escape(info.id)}"][data-gradient-index="${index}"] [data-stop-index="${newIndex}"]`)?.focus({preventScroll:true}));
+   }
+   handle.onkeydown=e=>{
+    const delta=e.shiftKey?10:1;let position;
+    if(e.key==='ArrowLeft'||e.key==='ArrowDown')position=stop.position-delta;
+    else if(e.key==='ArrowRight'||e.key==='ArrowUp')position=stop.position+delta;
+    else if(e.key==='Home')position=0;else if(e.key==='End')position=100;else return;
+    e.preventDefault();e.stopPropagation();commit(Math.max(0,Math.min(100,position)));
+   };
+   handle.onpointerdown=e=>{
+    if(e.button!==0)return;e.preventDefault();e.stopPropagation();handle.focus({preventScroll:true});
+    const box=rail.getBoundingClientRect(),pointerId=e.pointerId,originalStyle=el.getAttribute('style'),originalValue=el.style.getPropertyValue('background-image'),originalPriority=el.style.getPropertyPriority('background-image');
+    let position=stop.position,lastStyle=originalStyle,active=true;
+    const render=()=>{const {next}=changed(position);preview.style.backgroundImage=serializeGradients([next]);strip.style.backgroundImage=serializeGradients([{...next,type:'linear',angle:90}]);handle.style.left=position+'%';handle.setAttribute('aria-valuenow',position);el.style.setProperty('background-image',serializeGradients(gradients.map((g,i)=>i===index?next:g)),'important');lastStyle=el.getAttribute('style');};
+    const move=event=>{if(event.pointerId!==pointerId||!active)return;position=Math.max(0,Math.min(100,Math.round(stop.position+(event.clientX-e.clientX)/box.width*100)));render();};
+    const finish=save=>{
+     if(!active)return;active=false;observer.disconnect();window.removeEventListener('pointermove',move,true);window.removeEventListener('pointerup',up,true);window.removeEventListener('pointercancel',cancel,true);window.removeEventListener('blur',cancel);document.removeEventListener('keydown',escape,true);handle.removeEventListener('lostpointercapture',cancel);
+     if(handle.hasPointerCapture(pointerId))handle.releasePointerCapture(pointerId);
+     if(el.getAttribute('style')===lastStyle){if(originalStyle===null)el.removeAttribute('style');else el.setAttribute('style',originalStyle);}
+     else if(originalValue)el.style.setProperty('background-image',originalValue,originalPriority);else el.style.removeProperty('background-image');
+     preview.style.backgroundImage=serializeGradients([gradient]);strip.style.backgroundImage=serializeGradients([{...gradient,type:'linear',angle:90}]);handle.style.left=stop.position+'%';handle.setAttribute('aria-valuenow',stop.position);
+     if(save&&rail.isConnected&&el.isConnected)commit(position);
+    };
+    const up=event=>{if(event.pointerId===pointerId){move(event);finish(true);}};
+    const cancel=()=>finish(false),escape=event=>{if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();cancel();}};
+    const observer=new MutationObserver(()=>{if(!rail.isConnected||!el.isConnected)cancel();});observer.observe(document.body,{childList:true,subtree:true});
+    window.addEventListener('pointermove',move,true);window.addEventListener('pointerup',up,true);window.addEventListener('pointercancel',cancel,true);window.addEventListener('blur',cancel);document.addEventListener('keydown',escape,true);handle.addEventListener('lostpointercapture',cancel);handle.setPointerCapture(pointerId);
+   };
+   rail.append(handle);
+  });
+  return rail;
+ }
  function mount(info,el,width,save){
   const sec=I.section('CSS properties');
   if(info.cssReason||!el||!Number.isInteger(width)){I.note(sec,info.cssReason||'Choose a pixel screen scope.','refused');return sec;}
@@ -55,13 +97,14 @@
   const resetShadows=I.button('Reset shadows',()=>save('box-shadow',null,width));resetShadows.disabled=!Object.hasOwn(own,'box-shadow');effects.append(resetShadows);
   I.note(effects,'Shadows are stacked from front to back. Reset restores this screen size’s inherited styling.');
   const fills=I.section('Gradient fills'),gradients=parseGradients(own['background-image']??css.backgroundImage);
-  const writeGradients=next=>{const value=serializeGradients(next);if(valid('background-image',value)&&CSS.supports('background-image',value))save('background-image',value,width);};
+  const writeGradients=next=>{const value=serializeGradients(next);if(valid('background-image',value)&&CSS.supports('background-image',value))return save('background-image',value,width);};
   if(gradients===null)I.note(fills,'The existing background image cannot be represented by these gradient controls. Clear background images to start a new fill.');
   else {
    gradients.forEach((gradient,index)=>{
     const group=document.createElement('fieldset');group.className='gradient-controls';const legend=document.createElement('legend');legend.textContent='Fill '+(index+1);group.append(legend);
     const preview=document.createElement('div');preview.className='gradient-preview';preview.style.backgroundImage=serializeGradients([gradient]);preview.setAttribute('aria-label','Fill '+(index+1)+' preview');group.append(preview);
     const update=next=>writeGradients(gradients.map((g,i)=>i===index?next:g));
+    group.append(stopRail({gradient,index,info,el,preview,gradients,update}));
     const type=document.createElement('select');for(const value of ['linear','radial']){const option=document.createElement('option');option.value=value;option.textContent=value==='linear'?'Linear':'Radial';type.append(option);}type.value=gradient.type;type.onchange=()=>update({...gradient,type:type.value});I.field(group,'Type',type).setAttribute('aria-label','Fill '+(index+1)+' type');
     for(const [key,label,max]of gradient.type==='linear'?[['angle','Angle (°)',360]]:[['x','Center X (%)',100],['y','Center Y (%)',100]]){
      const input=document.createElement('input');input.type='number';input.min=key==='angle'?-360:0;input.max=max;input.step='any';input.value=gradient[key];input.onchange=()=>{if(input.value!==''&&input.checkValidity())update({...gradient,[key]:Number(input.value)});};I.field(group,label,input).setAttribute('aria-label','Fill '+(index+1)+' '+label);
@@ -79,7 +122,7 @@
   }
   const clearFills=I.button('Clear background images',()=>save('background-image','none',width));clearFills.disabled=gradients?.length===0;fills.append(clearFills);
   const resetFills=I.button('Reset gradient fills',()=>save('background-image',null,width));resetFills.disabled=!Object.hasOwn(own,'background-image');fills.append(resetFills);
-  I.note(fills,'Fills stack from front to back over the background color. Stop positions are percentages.');
+  I.note(fills,'Fills stack from front to back over the background color. Drag stops on the rail, or enter percentages. Escape cancels a drag.');
   const parentCSS=el.parentElement&&el.ownerDocument.defaultView.getComputedStyle(el.parentElement),isFlexItem=parentCSS&&['flex','inline-flex'].includes(parentCSS.display);
   const flex=I.section('Flex sizing');
   if(isFlexItem){

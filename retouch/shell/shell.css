@@ -268,3 +268,8 @@ details.advanced > summary:hover { color: var(--ink); }
 .shadow-controls .control-button, .gradient-controls .control-button { margin:3px 4px 3px 0; }
 
 .gradient-preview { height:44px; border:1px solid var(--line); border-radius:4px; margin-bottom:8px; }
+
+.gradient-stop-rail { position:relative; height:30px; margin:0 9px 10px; touch-action:none; }
+.gradient-stop-strip { position:absolute; top:7px; height:12px; width:100%; border-radius:3px; }
+.gradient-stop-handle { position:absolute; top:2px; width:18px; height:24px; padding:0; transform:translateX(-50%); border:2px solid var(--ink); border-radius:4px; box-shadow:0 1px 3px #0008; cursor:ew-resize; touch-action:none; }
+.gradient-stop-handle:focus { z-index:1; outline:2px solid var(--accent); outline-offset:2px; }

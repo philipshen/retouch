@@ -763,3 +763,22 @@ optimized Swift SIL retains Studio until after NSApplication.run returns. CUA
 still reported cgWindowNotFound on a fresh launch, and the owned test process was
 stopped. No speculative native source change was made. The last Mac ZIP predates
 these gradient changes.
+
+
+### Direct gradient-stop positioning
+
+Gradient fills now include a stop rail with color handles. Pointer dragging
+updates the fill preview and selected canvas element without writing source.
+Release restores the transient inline style and saves one source transaction.
+Escape, pointer cancellation, focus loss or removal of the inspector cancels
+the preview. Existing inline styles are restored on completion. Keyboard arrows
+move stops by 1%, Shift by 10%, and Home/End to the bounds; focus returns to the
+corresponding stop after the editor reloads. Numeric fields remain available.
+
+All 230 unit tests pass. Chromium and WebKit exercise a real pointer drag,
+verify the canvas preview changes before source does, commit, cancel a second
+drag, verify transient style removal, move a stop with the keyboard, verify
+focus restoration, then undo both committed edits to the exact prior source.
+The rendered rail and preview were visually inspected. On-canvas gradient
+geometry handles and native interaction with these controls remain unverified
+or unfinished.
