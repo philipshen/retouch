@@ -331,3 +331,9 @@ details.advanced > summary:hover { color: var(--ink); }
 
 .numeric-typography { margin: 12px 0; font-size: 12px; }
 .numeric-typography > summary { cursor: pointer; color: var(--muted); }
+
+.compare-dimensions { display: flex; gap: 6px; align-items: center; margin: 8px 0; }
+.compare-dimensions label { display: flex; gap: 4px; align-items: center; color: var(--muted); font-size: 11px; min-width: 0; }
+.compare-dimensions input { width: 65px; min-width: 0; background: #15171b; color: var(--ink); border: 1px solid var(--line); border-radius: 5px; padding: 5px; font: 12px var(--font); }
+
+.compare-dimension-error { color: var(--muted); font-size: 11px; margin: 6px 0; }

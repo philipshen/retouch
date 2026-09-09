@@ -23,7 +23,28 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>fs.readFileSync(file,'utf8')===original);
   await page.getByLabel('Style screen scope').selectOption('');await wait(async()=>await card('Phone').locator('[data-scope-applies]').getAttribute('data-scope-applies')==='true');assert.match(await card('Phone').locator('[data-scope-applies]').textContent(),/Base styles apply/);
   const desktop=page.getByRole('button',{name:'Edit from Desktop comparison',exact:true});await desktop.focus();await page.keyboard.press('Enter');await wait(async()=>await app.locator('body').evaluate(()=>innerWidth)===1440);assert.equal(await page.getByRole('treeitem',{name:'article · Card',exact:true}).getAttribute('aria-selected'),'true');
-  if(process.env.RT_E2E_COMPARE_EDIT_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_COMPARE_EDIT_SCREENSHOT});
-  await page.getByRole('button',{name:'Compare screens',exact:true}).click();await wait(async()=>await page.locator('#screenComparisons iframe').count()===0);assert.deepEqual(errors,[]);console.log(engine+': PASS comparison layer picking, hidden/offscreen outlines, responsive visibility, edit-mode entry, link interception, explicit scoped edits, live previews, keyboard and undo');
+  const mainSize=await app.locator('body').evaluate(()=>[innerWidth,innerHeight]),scopeBefore=await page.getByLabel('Style screen scope').inputValue();
+  const resize=async(axis,value)=>{const input=page.getByLabel('Phone comparison '+axis,{exact:true});await input.fill(String(value));await input.press('Tab');};
+  await resize('width',650);await wait(()=>preview('Phone').locator('body').evaluate(()=>innerWidth===650));
+  assert.equal(await preview('Phone').locator('a').evaluate(el=>getComputedStyle(el).display),'none');assert.equal(await preview('Phone').locator('article').evaluate(el=>getComputedStyle(el).visibility),'visible');
+  await resize('height',320);await wait(()=>preview('Phone').locator('body').evaluate(()=>innerHeight===320));
+  assert.deepEqual(await app.locator('body').evaluate(()=>[innerWidth,innerHeight]),mainSize);assert.equal(await page.getByLabel('Style screen scope').inputValue(),scopeBefore);assert.equal(fs.readFileSync(file,'utf8'),original);
+  for(const invalid of [239,7681,500.5]){await resize('width',invalid);assert.equal(await page.getByLabel('Phone comparison width',{exact:true}).evaluate(el=>el.checkValidity()),false);assert.equal(await preview('Phone').locator('body').evaluate(()=>innerWidth),650);}
+  await page.getByLabel('Phone comparison width',{exact:true}).press('Escape');assert.equal(await page.getByLabel('Phone comparison width',{exact:true}).inputValue(),'650');
+  await page.getByRole('button',{name:'Rotate Phone comparison',exact:true}).click();await wait(()=>preview('Phone').locator('body').evaluate(()=>innerWidth===320&&innerHeight===650));
+  await page.getByRole('button',{name:'Edit styles from 320 px',exact:true}).click();await wait(async()=>await app.locator('body').evaluate(()=>innerWidth===320&&innerHeight===650)&&await page.getByLabel('Style screen scope').inputValue()==='min-[320px]:');assert.equal(fs.readFileSync(file,'utf8'),original);
+  await page.reload();await page.getByRole('button',{name:'Compare screens',exact:true}).click();await wait(()=>preview('Phone').locator('body').evaluate(()=>innerWidth===320&&innerHeight===650));
+  assert.equal(await page.getByLabel('Phone comparison width',{exact:true}).inputValue(),'320');assert.equal(await page.getByLabel('Phone comparison height',{exact:true}).inputValue(),'650');
+  await resize('width',768);await resize('height',1024);
+  assert.equal(await page.getByLabel('Phone comparison height',{exact:true}).inputValue(),'650');assert.equal(await card('Phone').getByRole('status').textContent(),'This size is already pinned.');
+  await page.getByLabel('Screen width',{exact:true}).fill('800');await page.getByLabel('Screen width',{exact:true}).press('Tab');
+  await page.getByLabel('Screen height',{exact:true}).fill('500');await page.getByLabel('Screen height',{exact:true}).press('Tab');
+  await page.getByRole('button',{name:'Pin current size',exact:true}).click();await preview('Custom 800 × 500').locator('body').waitFor();
+  const customWidth=page.getByLabel('Custom 800 × 500 comparison width',{exact:true});await customWidth.fill('810');await customWidth.press('Tab');
+  await wait(()=>preview('Custom 810 × 500').locator('body').evaluate(()=>innerWidth===810));assert.equal(await page.getByLabel('Custom 810 × 500 comparison width',{exact:true}).inputValue(),'810');
+  assert.equal(await page.getByRole('button',{name:'Edit styles from 810 px',exact:true}).count(),1);assert.equal(fs.readFileSync(file,'utf8'),original);
+  await wait(async()=>await page.getByLabel('Custom 810 × 500 scope coverage').getAttribute('data-scope-applies')==='true');
+  if(process.env.RT_E2E_COMPARE_EDIT_SCREENSHOT){await card('Custom 810 × 500').scrollIntoViewIfNeeded();await page.screenshot({path:process.env.RT_E2E_COMPARE_EDIT_SCREENSHOT});}
+  await page.getByRole('button',{name:'Compare screens',exact:true}).click();await wait(async()=>await page.locator('#screenComparisons iframe').count()===0);assert.deepEqual(errors,[]);console.log(engine+': PASS comparison layer picking, hidden/offscreen outlines, responsive visibility, edit-mode entry, link interception, explicit scoped edits, live previews, keyboard, editable comparison dimensions, rotation, validation, reload persistence and undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

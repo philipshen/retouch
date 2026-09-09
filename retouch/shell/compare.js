@@ -58,7 +58,7 @@
     updateControls();
   }
   function addCard(size){
-      const [name,width,height]=size;
+      let name=size[0],width=size[1],height=size[2];
       const card=document.createElement('section');card.className='compare-card';card.setAttribute('aria-label',name+' comparison');
       const header=document.createElement('div');header.className='compare-header';
       const label=document.createElement('span');label.textContent=name.startsWith('Custom ')?name:`${name} · ${width} × ${height}`;header.append(label);
@@ -73,7 +73,36 @@
       const scopeMessage=document.createElement('p');scopeMessage.className='compare-scope-message';scopeMessage.style.cssText='font:11px/1.4 system-ui;color:#aeb3bd;margin:8px 0;';scopeMessage.setAttribute('aria-label',name+' scope coverage');
       const scopeButton=document.createElement('button');scopeButton.className='control-button';scopeButton.textContent='Edit styles: '+width+' px and larger';scopeButton.setAttribute('aria-label','Edit styles from '+width+' px');scopeButton.title='Use this preview size and set the selected layer’s style scope to this width and larger. Does not change source until you edit a style.';scopeButton.disabled=!selected;
       scopeButton.onclick=()=>{if(!selected)return;window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,occurrence:0,scopeAtWidth:true,route:path()}}));};
-      viewport.append(frame,overlay);card.append(header,viewport,message,scopeMessage,scopeButton);rail.append(card);
+      const dimensions=document.createElement('div');dimensions.className='compare-dimensions';
+      const inputs={},dimensionError=document.createElement('p');dimensionError.className='compare-dimension-error';dimensionError.setAttribute('role','status');dimensionError.hidden=true;
+      const applyDimensions=(nextWidth,nextHeight)=>{
+        if(!valid(nextWidth)||!valid(nextHeight))return;
+        if(sizes.some(other=>other!==size&&other[1]===nextWidth&&other[2]===nextHeight)){
+          dimensionError.textContent='This size is already pinned.';dimensionError.hidden=false;inputs.width.value=width;inputs.height.value=height;return;
+        }
+        dimensionError.hidden=true;dimensionError.textContent='';
+        width=nextWidth;height=nextHeight;size[1]=width;size[2]=height;
+        if(name.startsWith('Custom ')){
+          name=`Custom ${width} × ${height}`;size[0]=name;
+          card.setAttribute('aria-label',name+' comparison');edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');remove.setAttribute('aria-label','Remove '+name+' comparison');viewport.setAttribute('aria-label','Edit from '+name+' comparison');frame.title=name+' comparison preview';scopeMessage.setAttribute('aria-label',name+' scope coverage');
+          for(const axis of ['width','height'])inputs[axis].setAttribute('aria-label',name+' comparison '+axis);rotate.setAttribute('aria-label','Rotate '+name+' comparison');
+        }
+        const item=cards.find(c=>c.frame===frame);if(item)Object.assign(item,{width,height});
+        frame.style.width=width+'px';frame.style.height=height+'px';
+        label.textContent=name.startsWith('Custom ')?name:`${name} · ${width} × ${height}`;
+        inputs.width.value=width;inputs.height.value=height;
+        scopeButton.textContent='Edit styles: '+width+' px and larger';scopeButton.setAttribute('aria-label','Edit styles from '+width+' px');
+        remember();updateControls();
+      };
+      for(const axis of ['width','height']){
+        const field=document.createElement('label');field.textContent=axis==='width'?'W':'H';
+        const input=document.createElement('input');input.type='number';input.min=240;input.max=7680;input.step=1;input.value=axis==='width'?width:height;input.setAttribute('aria-label',name+' comparison '+axis);inputs[axis]=input;
+        input.onchange=()=>{if(input.value!==''&&input.checkValidity())applyDimensions(axis==='width'?Number(input.value):width,axis==='height'?Number(input.value):height);};
+        input.onkeydown=event=>{if(event.key==='Escape'){input.value=axis==='width'?width:height;event.preventDefault();event.stopPropagation();}};
+        field.append(input);dimensions.append(field);
+      }
+      const rotate=document.createElement('button');rotate.type='button';rotate.className='control-button';rotate.textContent='Rotate';rotate.setAttribute('aria-label','Rotate '+name+' comparison');rotate.onclick=()=>applyDimensions(height,width);dimensions.append(rotate);
+      viewport.append(frame,overlay);card.append(header,dimensions,dimensionError,viewport,message,scopeMessage,scopeButton);rail.append(card);
       function activate(event){
         try{
           const d=frame.contentDocument,loc=frame.contentWindow.location;

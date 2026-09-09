@@ -4322,3 +4322,29 @@ confirmed the font's tabular one/eight advances are 636/638 units there and 600/
 at weight 400; failed logs remain. The corrected proof explicitly selects 400
 and undoes that source edit too. Inspected `/private/tmp/retouch-numeric.png`.
 Native launches remain paused; no desktop verification attempted.
+
+### Editable comparison dimensions (2026-09-09)
+
+Each pinned comparison now has width, height and Rotate controls. Changes resize
+the actual iframe while preserving main-canvas dimensions, selected style scope,
+and source. Labels, hit-test scale, active-size indicators and width-based scope
+actions use the updated dimensions. Custom-card titles and accessible labels
+follow their new size. The existing pinned-size persistence stores revisions.
+Only integer dimensions 240–7680 are accepted; Escape restores the current value,
+and duplicate pinned dimensions are refused with a visible status message.
+
+375 unit tests passed (`/private/tmp/retouch-compare-dimensions-unit.log`). Real
+Chromium and WebKit HTML flows passed media-query visibility changes, independent
+width/height, rotation, scope actions using the revised width, invalid values,
+duplicate refusal, custom-card renaming, reload persistence and unchanged source,
+alongside the previous selection/scoped-edit/undo checks. Logs:
+`/private/tmp/retouch-compare-dimensions-chromium-fixed.log`,
+`/private/tmp/retouch-compare-dimensions-webkit-fixed.log`, and final screenshot
+run `/private/tmp/retouch-compare-dimensions-final.log`. Inspected
+`/private/tmp/retouch-compare-dimensions-final.png`. Initial logs without the
+`-fixed` suffix retain the test's ambiguous p.hint locator failure; dimension
+errors now have a dedicated class separate from selection-status hints.
+
+This makes comparison viewport setup editable; property editing still occurs on
+the main canvas. Full simultaneous canvas authoring, synchronized application
+state and cross-renderer comparison verification remain. Native launches paused.
