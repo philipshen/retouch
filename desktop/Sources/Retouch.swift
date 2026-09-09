@@ -231,6 +231,27 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    func reportWindowState() {
+        let state: [String: Any] = [
+            "windowCreated": window != nil,
+            "windowVisible": window?.isVisible ?? false,
+            "windowMiniaturized": window?.isMiniaturized ?? false,
+            "windowOcclusionVisible": window?.occlusionState.contains(.visible) ?? false,
+            "windowNumber": window?.windowNumber ?? -1,
+            "windowFrame": NSStringFromRect(window?.frame ?? .zero),
+            "screenFrame": NSStringFromRect(window?.screen?.frame ?? .zero),
+            "webFrame": NSStringFromRect(web?.frame ?? .zero),
+            "webLoading": web?.isLoading ?? false,
+            "applicationActive": NSApp.isActive,
+            "applicationHidden": NSApp.isHidden,
+            "screenCount": NSScreen.screens.count
+        ]
+        if let data = try? JSONSerialization.data(withJSONObject: state, options: [.prettyPrinted, .sortedKeys]) {
+            FileHandle.standardOutput.write(data)
+            FileHandle.standardOutput.write(Data("\n".utf8))
+        }
+    }
+
     static func editorURL(_ raw: String) -> URL? {
         guard var parts = URLComponents(string: raw.trimmingCharacters(in: .whitespacesAndNewlines)),
               ["http", "https"].contains(parts.scheme?.lowercased() ?? ""),
@@ -392,5 +413,13 @@ if CommandLine.arguments.contains("--self-test") {
     let delegate = Studio()
     app.setActivationPolicy(.regular)
     app.delegate = delegate
+    // Opt-in diagnostic uses the actual GUI startup, without opening a project.
+    // Report local geometry only, then quit so command-line checks stay bounded.
+    if CommandLine.arguments.contains("--diagnose-window") {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            delegate.reportWindowState()
+            app.terminate(nil)
+        }
+    }
     app.run()
 }

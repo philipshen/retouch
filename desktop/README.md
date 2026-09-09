@@ -137,3 +137,26 @@ through CUA returned `cgWindowNotFound`. Its owned process was stopped. Browser
 WebKit results and earlier native UI passes do not establish a usable native
 editor for this bundle. Intel runtime and trusted Gatekeeper launch also remain
 unverified.
+
+
+## Bounded window diagnostic
+
+To inspect GUI startup without opening a project, run the app executable with
+`--diagnose-window`. It starts the real AppKit/WKWebView window, writes a JSON
+report after two seconds and quits. The report includes window creation,
+visibility/occlusion, activation, screen/window/WebView geometry and loading state;
+it does not print the remembered editor URL or project content.
+
+```sh
+/path/to/Retouch.app/Contents/MacOS/Retouch --diagnose-window
+```
+
+The universal diagnostic build in
+`/private/tmp/retouch-desktop-window-diagnostic/Retouch.app` passed the bundled
+launcher checks. Its `window-state.json` reported a created, non-miniaturized,
+visible 1440×992 window within the 1728×1117 screen and a non-loading WebView.
+However, applicationActive and windowOcclusionVisible were both false. CUA still
+could not find the window after a normal macOS launch. This narrows the observed
+boundary to window activation/visibility to the desktop tools; it does not prove
+the precise cause or a usable native editor. A delayed activation experiment
+produced the same state and was not retained. Diagnostic processes exited cleanly.

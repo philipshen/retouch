@@ -1052,3 +1052,19 @@ hidden layer through Layers, unchanged sibling geometry, atomic multi-hide,
 independent tablet visibility, preserved flex display, reset and exact source
 undo. The fixture is part of test:e2e:html and its screenshot was inspected.
 Layer-tree eye shortcuts, locking, other renderers and full parity remain open.
+
+
+### Native window diagnostic
+
+Native startup now has an opt-in `--diagnose-window` command that reports AppKit
+window/activation/screen/WebView state after two seconds and quits without opening
+a project. The universal build and bundled launcher tests pass. The diagnostic
+confirmed window creation and plausible on-screen geometry with WebView loading
+finished, but the application remained inactive and the window was reported as
+occluded. CUA still returned cgWindowNotFound after a normal macOS launch. A
+one-shot deferred activation experiment did not change those results and was
+removed. All owned investigation processes stopped.
+
+This is stronger startup evidence, not a native UI pass. The unresolved boundary
+is activation/desktop visibility rather than absence of an allocated window;
+the precise external or application cause remains unproven.
