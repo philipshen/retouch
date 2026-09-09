@@ -16,7 +16,7 @@ changing those files. The original checkout may continue to evolve independently
 | Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Bounded canvas zoom/scrolling and linked screen comparisons exist. HTML supports multi-selection, range selection, gray/page marquee gestures and framing a consecutive sibling selection. Full document/pages/sections, guides, snapping, pixel-preserving groups, locking/hiding and cross-renderer equivalence remain. |
 | Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. HTML multi-selection, shared CSS and group duplicate/delete/reparenting exist; cross-context clipboard and broader source structures remain. |
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. Full vector authoring, boolean operations, arbitrary masks and a shared geometry model remain. |
-| Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. Full constraints, absolute-child authoring, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
+| Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. HTML absolute placement now supports edge, center, stretch and proportional anchors with screen-scoped writes. Transformed constraints, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML supports linear/radial gradient stacks with draggable stops, shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. Font browsing, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | Existing React and Liquid component inspection/detach; full creation/variants/library workflows remain. Live Shopify proof is incomplete. |
@@ -26,7 +26,7 @@ changing those files. The original checkout may continue to evolve independently
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. HTML has responsive CSS, structural edits and batch selection operations. Arbitrary remote-site capture/authoring, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Corner resizing also supports Shift-locked proportions. Fully editable comparison canvases and cross-framework parity remain. |
-| Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop; The latest local bundle packages 1701d24 and matches all 72 source files. Native interaction remains unverified after cgWindowNotFound. File flows, Intel runtime and broader lifecycle verification remain. |
+| Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop; The latest verified local ad hoc bundle packages 7708416 and matches all 79 editor source files; later editor changes are not packaged. Native interaction remains unverified after cgWindowNotFound. File flows, Intel runtime and broader lifecycle verification remain. |
 | Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. Development build is ad hoc signed. Local cask install/uninstall passed. Developer ID signing/notarization, publishing, upgrades and quarantined launch remain unverified. |
 | Ease of use | New user can open a site, select/edit, compare screens, undo and retain work without learning implementation details | Controls have labels and basic defaults. Whole-workflow usability validation remains. |
 
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 289 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 294 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1623,3 +1623,42 @@ SVG browser workflows pass in Chromium and WebKit, including the new stacking
 cases. Logs: `/private/tmp/retouch-first-last-unit-final.log`,
 `/private/tmp/retouch-first-last-html-{chromium,webkit}.log` and
 `/private/tmp/retouch-first-last-react-{chromium,webkit}-final.log`.
+
+
+### HTML responsive positioning and constraints
+
+The Position section now supports HTML flow, relative, absolute, fixed and
+sticky modes. Converting to absolute captures the current border-box geometry,
+including margins, padding and the actual containing block. Absolute layers
+can keep a left/right/top/bottom distance, keep their center offset, stretch
+between opposing edges, or scale their position and size proportionally. Each
+anchor change is one responsive CSS transaction and one undo entry. Choosing
+an anchor normalizes the captured layer to zero margins and border-box sizing;
+a previously custom orthogonal axis receives its nearest anchor, while an
+existing Retouch anchor mode is retained. Reset positioning and size reveals
+the original page rules for those properties in the selected screen scope.
+
+The shared CSS validator accepts constrained center calculations and physical
+insets. Important inline inset shorthands and logical insets are protected from
+overlapping edits. Refused writes rebuild the panel so its controls continue
+to reflect the actual layer. Transforms/zoom and HTML within SVG viewports are
+not supported by the placement measurement and are refused without a write.
+Fixed/sticky inset fields provide CSS positioning controls; conversion to those
+modes does not yet preserve visual bounds.
+
+An integration regression exposed that eagerly measuring a flow element could
+interfere with gradient preview cleanup. Flow measurement now occurs only when
+converting to absolute; measuring an already-absolute layer does not mutate its
+inline style. The existing gradient preview cancellation test now passes again.
+
+Validation includes all 294 unit tests and a new browser workflow exercising
+flow-to-absolute bounds, borders/padding/margins, edge/center/stretch/scale
+behavior across phone/tablet/desktop dimensions, independent breakpoint
+rules/reset, protected inline rules, transformed-layout refusal and exact
+source undo/redo. The workflow is part of `test:e2e:html` (13 workflows).
+Screenshot: `/private/tmp/retouch-html-position.png`. Unit and browser logs use
+`/private/tmp/retouch-html-position-*`. Desktop packages still predate this work.
+Both complete 13-workflow HTML suites pass in Chromium and WebKit after the
+measurement fix (`retouch-html-position-integrated-{chromium,webkit}-final.log`).
+The final focused Chromium run additionally repeats the strongest proportional
+pixel assertions and the protected/transform refusal cases.

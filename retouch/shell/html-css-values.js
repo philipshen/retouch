@@ -1,12 +1,12 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchHTMLCSSValues=api;})(typeof window==='object'?window:globalThis,function(){
  const options={visibility:['visible','hidden'],overflow:['visible','hidden','clip','auto','scroll'],'overflow-x':['visible','hidden','clip','auto','scroll'],'overflow-y':['visible','hidden','clip','auto','scroll'],'mix-blend-mode':['normal','multiply','screen','overlay','darken','lighten','color-dodge','color-burn','hard-light','soft-light','difference','exclusion','hue','saturation','color','luminosity','plus-lighter'],isolation:['auto','isolate'],'font-style':['normal','italic','oblique'],'text-decoration-line':['none','underline','line-through','overline','underline line-through'],'text-transform':['none','uppercase','lowercase','capitalize'],'object-fit':['cover','contain','fill','none','scale-down'],display:['block','inline-block','flex','inline-flex','grid','inline-grid','none'],'flex-direction':['row','column','row-reverse','column-reverse'],'flex-wrap':['nowrap','wrap','wrap-reverse'],'align-content':['flex-start','flex-end','center','stretch','space-between','space-around','space-evenly'],'align-items':['flex-start','flex-end','start','center','end','stretch','baseline'],'justify-content':['flex-start','flex-end','start','center','end','space-between','space-around','space-evenly'],'text-align':['start','left','center','right','justify'],'border-style':['none','solid','dashed','dotted','double']};
  const svgFields=[['fill','SVG fill'],['stroke','SVG stroke'],['stroke-width','SVG stroke width'],['stroke-linecap','SVG line ends'],['stroke-linejoin','SVG line joins'],['stroke-dasharray','SVG dash pattern']];
- Object.assign(options,{'stroke-linecap':['butt','round','square'],'stroke-linejoin':['miter','round','bevel']});
+ Object.assign(options,{position:['static','relative','absolute','fixed','sticky'],'box-sizing':['border-box','content-box'],'stroke-linecap':['butt','round','square'],'stroke-linejoin':['miter','round','bevel']});
  const sides=['top','right','bottom','left'];
  const corners=['top-left','top-right','bottom-right','bottom-left'];
- const families={'border-radius':corners.map(c=>'border-'+c+'-radius'),overflow:['overflow-x','overflow-y'],'grid-column':['grid-column-start','grid-column-end'],'grid-row':['grid-row-start','grid-row-end'],padding:sides.map(s=>'padding-'+s),margin:sides.map(s=>'margin-'+s),gap:['row-gap','column-gap'],'border-width':sides.map(s=>'border-'+s+'-width')};
+ const families={inset:sides,'inset-inline':['inset-inline-start','inset-inline-end'],'inset-block':['inset-block-start','inset-block-end'],'border-radius':corners.map(c=>'border-'+c+'-radius'),overflow:['overflow-x','overflow-y'],'grid-column':['grid-column-start','grid-column-end'],'grid-row':['grid-row-start','grid-row-end'],padding:sides.map(s=>'padding-'+s),margin:sides.map(s=>'margin-'+s),gap:['row-gap','column-gap'],'border-width':sides.map(s=>'border-'+s+'-width')};
  const fields=[['width','Width'],['height','Height'],['min-width','Minimum width'],['max-width','Maximum width'],['min-height','Minimum height'],['max-height','Maximum height'],['display','Display'],['flex-direction','Direction'],['flex-wrap','Wrap'],['align-items','Align items'],['align-content','Align lines'],['justify-content','Distribute items'],['gap','Gap'],['padding','Padding'],...sides.map(s=>['padding-'+s,'Padding '+s]),['margin','Margin'],...sides.map(s=>['margin-'+s,'Margin '+s]),['font-family','Font family'],['font-weight','Font weight'],['font-style','Font style'],['text-decoration-line','Text decoration'],['text-transform','Text case'],['font-size','Font size'],['line-height','Line height'],['letter-spacing','Letter spacing'],['text-align','Text alignment'],['color','Text color'],['background-color','Background color'],['border-width','Border width'],['border-style','Border style'],['border-color','Border color'],['border-radius','Corner radius'],...corners.map(c=>['border-'+c+'-radius',c.split('-').map((word,i)=>i?word:word[0].toUpperCase()+word.slice(1)).join(' ')+' corner'])];
- const lengths=new Set([...fields.map(([p])=>p).filter(p=>!options[p]&&!p.endsWith('color')),'flex-basis','row-gap','column-gap',...families['border-width']]);
+ const lengths=new Set([...sides,...fields.map(([p])=>p).filter(p=>!options[p]&&!p.endsWith('color')),'flex-basis','row-gap','column-gap',...families['border-width']]);
  const colors=new Set(['color','background-color','border-color']);
  function adaptiveColumns(size){return Number.isInteger(size)&&size>=1&&size<=2000?`repeat(auto-fit, minmax(min(100%, ${size}px), 1fr))`:null;}
  function parseAdaptiveColumns(value){const match=/^repeat\(auto-fit, minmax\(min\(100%, ([1-9][0-9]{0,3})px\), 1fr\)\)$/.exec(value||'');return match&&Number(match[1])<=2000?Number(match[1]):null;}
@@ -48,6 +48,7 @@
   if(property==='opacity')return /^(?:\d*\.)?\d+$/.test(value)&&Number(value)>=0&&Number(value)<=1;
   if(property==='rotate')return /^-?(?:\d*\.)?\d+deg$/.test(value)&&Math.abs(parseFloat(value))<=360;
   if(property==='object-position'){const parts=value.split(/\s+/);return parts.length===2&&parts.every(p=>/^(?:\d*\.)?\d+%$/.test(p)&&parseFloat(p)>=0&&parseFloat(p)<=100);}
+  if(sides.includes(property)&&/^calc\(50% [+-] (?:\d*\.)?\d+px\)$/.test(value))return true;
   if(Object.hasOwn(options,property))return options[property].includes(value);
   if(colors.has(property))return /^(?:#(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})|[a-z]+|(?:rgb|rgba|hsl|hsla)\([\d.%,\s/]+\))$/i.test(value);
   if(!lengths.has(property))return false;
@@ -57,11 +58,12 @@
    if(token==='0')return true;
    const numeric=/^(-?)(?:\d*\.)?\d+(px|rem|em|%|vw|vh|ch)?$/.exec(token);
    if(numeric){
-    if(numeric[1]&&property!=='letter-spacing'&&!property.startsWith('margin'))return false;
+    if(numeric[1]&&property!=='letter-spacing'&&!property.startsWith('margin')&&!sides.includes(property))return false;
     if(!numeric[2]&&property!=='line-height')return false;
     if(numeric[2]==='%'&&(['letter-spacing','border-width',...families['border-width']].includes(property)))return false;
     return true;
    }
+   if(token==='auto'&&sides.includes(property))return true;
    if(token==='auto')return /^(?:width|height|min-width|min-height|margin(?:-(?:top|right|bottom|left))?)$/.test(property);
    if(token==='none')return property==='max-width'||property==='max-height';
    if(token==='normal')return ['gap','row-gap','column-gap','line-height','letter-spacing'].includes(property);
@@ -158,6 +160,6 @@
   if(property==='border-color'||property==='border-style')return sides.map(side=>'border-'+side+'-'+property.slice(7));
   return families[property]||[property];
  }
- function overlaps(a,b){if(a==='-webkit-backdrop-filter')a='backdrop-filter';if(b==='-webkit-backdrop-filter')b='backdrop-filter';return a==='all'||b==='all'||a==='background'&&b.startsWith('background-')||b==='background'&&a.startsWith('background-')||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')&&!b.endsWith('radius')||b==='border'&&a.startsWith('border-')&&!a.endsWith('radius')||a==='font'&&['font-family','font-weight','font-style','font-size','line-height'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
+ function overlaps(a,b){if(a==='-webkit-backdrop-filter')a='backdrop-filter';if(b==='-webkit-backdrop-filter')b='backdrop-filter';return a==='all'||b==='all'||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(a)&&sides.includes(b)||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(b)&&sides.includes(a)||a==='background'&&b.startsWith('background-')||b==='background'&&a.startsWith('background-')||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')&&!b.endsWith('radius')||b==='border'&&a.startsWith('border-')&&!a.endsWith('radius')||a==='font'&&['font-family','font-weight','font-style','font-size','line-height'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
  return {options,fields,svgFields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients};
 });

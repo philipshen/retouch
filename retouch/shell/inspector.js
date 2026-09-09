@@ -56,9 +56,10 @@
     const rect = el.getBoundingClientRect();
     const original = el.getAttribute('style');
     // Ask layout for the real containing block after switching to absolute.
-    el.style.setProperty('position', 'absolute', 'important');
+    const alreadyAbsolute=w.getComputedStyle(el).position==='absolute';
+    if(!alreadyAbsolute)el.style.setProperty('position', 'absolute', 'important');
     const parent = el.offsetParent;
-    if (original === null) el.removeAttribute('style'); else el.setAttribute('style', original);
+    if(!alreadyAbsolute){if (original === null) el.removeAttribute('style'); else el.setAttribute('style', original);}
     const viewport = !parent || (parent === d.body && w.getComputedStyle(parent).position === 'static');
     const pr = viewport ? { left: -w.scrollX, top: -w.scrollY } : parent.getBoundingClientRect();
     return {

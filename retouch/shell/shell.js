@@ -848,6 +848,7 @@ function renderPanelContents() {
     RetouchInspector.field(naming,'Layer name',input);input.onchange=()=>renameLayer(input.value);
     RetouchInspector.note(naming,'Names appear in the editor without changing page text or accessibility labels. Clear to use the original label.');panelBody.append(naming);
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
+    if(target?.namespaceURI!=='http://www.w3.org/2000/svg')panelBody.appendChild(RetouchHTMLPosition.mount(info,target,width,setHTMLCSS));
     panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS));
     if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{}));
     if(info.canSetTag){const section=RetouchInspector.section('Element');RetouchInspector.select(section,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','li'].map(tag=>[tag,tag]),info.tag,setTag);panelBody.appendChild(section);}
@@ -1431,7 +1432,7 @@ async function setHTMLCSS(property,value,width){
   if(!sel)return;const info=sel.info;busyPanel(true);
   try{
     const result=await api('POST','/rt/__api/op',{type:'setCSS',id:info.id,fileHash:info.hash,width,...(typeof property==='object'?{changes:property}:{property,value})});
-    if(!result?.ok){toast(result?.reason||result?.error||'Could not save CSS','err');return;}
+    if(!result?.ok){toast(result?.reason||result?.error||'Could not save CSS','err');renderPanel();return;}
     if(result.undoId)editorHistory.record({type:'setCSS',id:info.id,undoId:result.undoId});
     sel.info=result.element;await reloadFrame();renderPanel();toast('Saved','ok');
   }finally{busyPanel(false);}

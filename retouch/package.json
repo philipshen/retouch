@@ -9,7 +9,7 @@
   "scripts": {
     "test": "node --test 'test/**/*.test.cjs'",
     "test:e2e": "node test/e2e/run.cjs",
-    "test:e2e:html": "node test/e2e/html-site.cjs && node test/e2e/html-flex-writing.cjs && node test/e2e/html-wrap-layout.cjs && node test/e2e/html-adaptive-grid.cjs && node test/e2e/html-frame-bounds.cjs && node test/e2e/html-visibility.cjs && node test/e2e/html-corners.cjs && node test/e2e/html-svg.cjs && node test/e2e/html-screen-resize.cjs && node test/e2e/html-compare-edit.cjs && node test/e2e/html-marquee-zoom.cjs && node test/e2e/html-svg-draw.cjs",
+    "test:e2e:html": "node test/e2e/html-site.cjs && node test/e2e/html-flex-writing.cjs && node test/e2e/html-wrap-layout.cjs && node test/e2e/html-adaptive-grid.cjs && node test/e2e/html-frame-bounds.cjs && node test/e2e/html-position.cjs && node test/e2e/html-visibility.cjs && node test/e2e/html-corners.cjs && node test/e2e/html-svg.cjs && node test/e2e/html-screen-resize.cjs && node test/e2e/html-compare-edit.cjs && node test/e2e/html-marquee-zoom.cjs && node test/e2e/html-svg-draw.cjs",
     "test:e2e:react-svg": "node test/e2e/react-svg-geometry.cjs",
     "test:launch": "node test/launch/verify.cjs",
     "release:local": "node scripts/release.cjs"
