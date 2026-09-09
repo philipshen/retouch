@@ -14,7 +14,7 @@ const redoBtn = document.getElementById('redoBtn');
 const statusEl = document.getElementById('status');
 const panelEmpty = document.getElementById('panelEmpty');
 const panelBody = document.getElementById('panelBody');
-if(window.__RT_RENDERING?.layerReparenting){const hint=document.createElement('p');hint.className='hint';hint.textContent='Drag empty page background to surround layers. Shift adds to the selection; Escape cancels.';panelEmpty.append(hint);}
+if(window.__RT_RENDERING?.layerReparenting){const hint=document.createElement('p');hint.className='hint';hint.textContent='Drag empty canvas or page background to surround layers. Shift adds to the selection; Escape cancels.';panelEmpty.append(hint);}
 
 const SPACING_STEPS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20, 24, 28, 32];
 
@@ -24,6 +24,8 @@ let editing = null; // { el, id, info, original, originalHTML, snapshot, origina
 let hoverEl = null;
 let measuring = false;
 let selectionMarquee=null,stopMarquee=null;
+const marqueeSurface=document.createElement('div');marqueeSurface.className='selection-marquee-surface';document.body.append(marqueeSurface);
+const canvasSurface=document.getElementById('frameWrap');
 let sourceRequests = 0;
 let undoBusy = false;
 let classificationSerial = 0;
@@ -82,7 +84,7 @@ function doc() { return iframe.contentDocument; }
 
 function hookFrame(d, w) {
   stopMarquee?.();
-  stopMarquee=RetouchMarquee.mount({document:d,enabled:()=>window.__RT_RENDERING?.layerReparenting===true&&mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests,
+  stopMarquee=RetouchMarquee.mount({document:d,frame:iframe,surface:canvasSurface,enabled:()=>window.__RT_RENDERING?.layerReparenting===true&&mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests,
     onChange:rect=>{selectionMarquee=rect?{document:d,rect}:null;},
     onSelect:(nodes,options)=>selectMany(nodes,options),
   });
@@ -654,7 +656,12 @@ function paintLoop() {
   badgeTarget=badge;componentBadge.hidden=!badge;
   if(badge){const r=badge.el.getBoundingClientRect();componentBadge.style.left=Math.max(0,r.left)+'px';componentBadge.style.top=Math.max(0,r.top-22)+'px';}
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
-  if(selectionMarquee?.document===d){const rect=selectionMarquee.rect,box=document.createElement('div');box.className='selection-marquee';Object.assign(box.style,{left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px'});overlayLayer.append(box);}
+  marqueeSurface.textContent='';
+  if(selectionMarquee?.document===d){
+    const rect=selectionMarquee.rect,area=canvasSurface.getBoundingClientRect(),frame=iframe.getBoundingClientRect(),scale=frame.width/d.defaultView.innerWidth,box=document.createElement('div');
+    Object.assign(marqueeSurface.style,{left:area.left+canvasSurface.clientLeft+'px',top:area.top+canvasSurface.clientTop+'px',width:canvasSurface.clientWidth+'px',height:canvasSurface.clientHeight+'px'});
+    box.className='selection-marquee';Object.assign(box.style,{left:frame.left-area.left-canvasSurface.clientLeft+rect.left*scale+'px',top:frame.top-area.top-canvasSurface.clientTop+rect.top*scale+'px',width:rect.width*scale+'px',height:rect.height*scale+'px'});marqueeSurface.append(box);
+  }
   layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[]);
   requestAnimationFrame(paintLoop);
 }

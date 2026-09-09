@@ -278,3 +278,5 @@ details.advanced > summary:hover { color: var(--ink); }
 .layer-select-all:disabled { opacity:.5; cursor:default; }
 
 .selection-marquee { position:absolute; border:1px solid var(--accent); background:rgba(80,170,255,.13); pointer-events:none; box-sizing:border-box; }
+
+.selection-marquee-surface { position:fixed; overflow:hidden; pointer-events:none; z-index:30; }

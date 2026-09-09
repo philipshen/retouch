@@ -9,37 +9,43 @@
   });
   return candidates.filter(el=>!candidates.some(parent=>parent!==el&&parent.contains(el)));
  }
- function mount({document:d,enabled,onChange,onSelect}){
-  const w=d.defaultView;let state=null,ignoreClick=null;
-  const point=e=>({x:Math.max(0,Math.min(w.innerWidth,e.clientX)),y:Math.max(0,Math.min(w.innerHeight,e.clientY))});
+ function clip(rect,width,height){const left=Math.max(0,rect.left),top=Math.max(0,rect.top);return {left,top,width:Math.max(0,Math.min(width,rect.left+rect.width)-left),height:Math.max(0,Math.min(height,rect.top+rect.height)-top)};}
+ function mount({document:d,frame,surface,enabled,onChange,onSelect}){
+  const w=d.defaultView;let state=null,ignoreClick=null;const cleanup=[];
+  function listen(target,type,handler,capture=false){target.addEventListener(type,handler,capture);cleanup.push(()=>target.removeEventListener(type,handler,capture));}
+  function point(e,outer){if(!outer)return {x:e.clientX,y:e.clientY};const r=frame.getBoundingClientRect(),scale=r.width/w.innerWidth;return {x:(e.clientX-r.left)/scale,y:(e.clientY-r.top)/scale};}
   function finish(commit){
    if(!state)return;const current=state;state=null;
-   if(d.documentElement.hasPointerCapture(current.pointerId))d.documentElement.releasePointerCapture(current.pointerId);
+   if(current.capture.hasPointerCapture(current.pointerId))current.capture.releasePointerCapture(current.pointerId);
    onChange(null);
-   if(current.moved){ignoreClick={x:current.rawLast.x,y:current.rawLast.y,time:Date.now()};if(commit)onSelect(pick(d,rectangle(current.start,current.last)),{append:current.append});}
+   if(current.moved){ignoreClick={...current.rawLast,outer:current.outer,time:Date.now()};if(commit)onSelect(pick(d,clip(rectangle(current.start,current.last),w.innerWidth,w.innerHeight)),{append:current.append});}
   }
-  function down(e){
-   if(state||!enabled()||e.button!==0||!['HTML','BODY'].includes(e.target.tagName))return;
-   e.preventDefault();e.stopImmediatePropagation();const start=point(e);state={pointerId:e.pointerId,start,last:start,rawLast:{x:e.clientX,y:e.clientY},moved:false,append:e.shiftKey||e.metaKey||e.ctrlKey};
-   d.documentElement.setPointerCapture(e.pointerId);
+  function down(e,outer){
+   const allowed=outer?[surface,root.document.getElementById('canvasExtent'),root.document.getElementById('siteStage')].includes(e.target):['HTML','BODY'].includes(e.target.tagName);
+   if(state||!enabled()||e.button!==0||!allowed||(outer&&(!frame.getBoundingClientRect().width||!w.innerWidth)))return;
+   e.preventDefault();e.stopImmediatePropagation();const start=point(e,outer),capture=outer?surface:d.documentElement;
+   state={pointerId:e.pointerId,start,last:start,rawLast:{x:e.clientX,y:e.clientY},outer,capture,moved:false,append:e.shiftKey||e.metaKey||e.ctrlKey};capture.setPointerCapture(e.pointerId);
   }
-  function move(e){
-   if(!state||e.pointerId!==state.pointerId)return;e.preventDefault();e.stopImmediatePropagation();state.last=point(e);state.rawLast={x:e.clientX,y:e.clientY};
+  function move(e,outer){
+   if(!state||outer!==state.outer||e.pointerId!==state.pointerId)return;e.preventDefault();e.stopImmediatePropagation();state.last=point(e,outer);state.rawLast={x:e.clientX,y:e.clientY};
    if(Math.hypot(state.last.x-state.start.x,state.last.y-state.start.y)>=4)state.moved=true;
    if(state.moved)onChange(rectangle(state.start,state.last));
   }
-  function up(e){if(state&&e.pointerId===state.pointerId){move(e);finish(true);}}
+  function up(e,outer){if(state&&outer===state.outer&&e.pointerId===state.pointerId){move(e,outer);finish(true);}}
   function cancel(){finish(false);}
   function escape(e){if(state&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancel();}}
-  function click(e){
-   if(!ignoreClick)return;const previous=ignoreClick;ignoreClick=null;
+  function click(e,outer){
+   if(!ignoreClick||ignoreClick.outer!==outer)return;const previous=ignoreClick;ignoreClick=null;
    if(Date.now()-previous.time<500&&Math.abs(e.clientX-previous.x)<=2&&Math.abs(e.clientY-previous.y)<=2){e.preventDefault();e.stopImmediatePropagation();}
   }
   function blur(){if(!root.document.hasFocus())cancel();}
-  d.addEventListener('pointerdown',down,true);d.addEventListener('click',click,true);d.documentElement.addEventListener('lostpointercapture',cancel);
-  w.addEventListener('pointermove',move,true);w.addEventListener('pointerup',up,true);w.addEventListener('pointercancel',cancel,true);w.addEventListener('keydown',escape,true);w.addEventListener('resize',cancel);w.addEventListener('pagehide',cancel);w.addEventListener('blur',blur);
-  root.addEventListener('keydown',escape,true);root.addEventListener('blur',blur);
-  return ()=>{cancel();d.removeEventListener('pointerdown',down,true);d.removeEventListener('click',click,true);d.documentElement.removeEventListener('lostpointercapture',cancel);w.removeEventListener('pointermove',move,true);w.removeEventListener('pointerup',up,true);w.removeEventListener('pointercancel',cancel,true);w.removeEventListener('keydown',escape,true);w.removeEventListener('resize',cancel);w.removeEventListener('pagehide',cancel);w.removeEventListener('blur',blur);root.removeEventListener('keydown',escape,true);root.removeEventListener('blur',blur);};
+  function bind(eventWindow,eventDocument,capture,outer){
+   listen(outer?surface:eventDocument,'pointerdown',e=>down(e,outer),true);listen(eventDocument,'click',e=>click(e,outer),true);listen(capture,'lostpointercapture',cancel);
+   listen(eventWindow,'pointermove',e=>move(e,outer),true);listen(eventWindow,'pointerup',e=>up(e,outer),true);listen(eventWindow,'pointercancel',cancel,true);listen(eventWindow,'keydown',escape,true);listen(eventWindow,'resize',cancel);listen(eventWindow,'pagehide',cancel);listen(eventWindow,'blur',blur);
+  }
+  bind(w,d,d.documentElement,false);
+  if(surface&&frame)bind(root,root.document,surface,true);else{listen(root,'keydown',escape,true);listen(root,'blur',blur);}
+  return ()=>{cancel();cleanup.forEach(remove=>remove());};
  }
- const api={rectangle,enclosed,pick,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchMarquee=api;
+ const api={rectangle,enclosed,clip,pick,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchMarquee=api;
 })(typeof window==='object'?window:globalThis);

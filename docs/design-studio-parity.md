@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 240 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 241 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -891,3 +891,20 @@ drag enclosing the whole main container. They verify rectangle cleanup, preserve
 selection on cancellation, outermost-parent selection and unchanged source bytes.
 Starting on content or the outer gray canvas, clipped/irregular hit geometry and
 marquee support in other renderers remain unfinished.
+
+
+### Marquee selection from the gray canvas
+
+HTML marquee gestures can now start in the surrounding gray canvas and cross
+into the page. A fixed overlay clips the rectangle to the visible canvas; it
+cannot expand the canvas scroll extent. Pointer coordinates map through the
+current iframe scale, while layer containment is clipped to the page viewport
+so offscreen page content is excluded. Pointer capture, additive selection,
+Escape cancellation and source preservation apply to gray-start gestures too.
+
+All 241 unit tests pass, including page-viewport clipping. Chromium and WebKit
+browser checks cover page-start gestures, gray-start selection and cancellation,
+unchanged scroll dimensions/offsets during dragging, zoomed-out coordinate
+mapping, and exact source bytes. The gray/page boundary overlay was also inspected in a Chromium screenshot.
+Starting on content, irregular/clipped layer geometry and other renderers remain
+unfinished; this is not full Figma parity or native release verification.
