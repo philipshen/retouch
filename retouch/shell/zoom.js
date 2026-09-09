@@ -47,7 +47,7 @@
     window.dispatchEvent(new Event('retouch:before-zoom'));
     const p=center(),w=frame.contentWindow,scroll={x:w?.scrollX||0,y:w?.scrollY||0};
     const fit=screen?Math.min((canvas.clientWidth-48)/width,(canvas.clientHeight-48)/height,1):1;
-    change(fit,p.x,p.y);layout();canvas.scrollLeft=0;canvas.scrollTop=endPadding-(screen?24:0);w?.scrollTo(scroll.x,scroll.y);
+    change(fit,p.x,p.y);layout();canvas.scrollLeft=0;canvas.scrollTop=endPadding-(screen?24:0);w?.scrollTo({left:scroll.x,top:scroll.y,behavior:'instant'});
   });
   async function toSelection(elements){
     const w=frame.contentWindow,d=frame.contentDocument;

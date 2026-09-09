@@ -2775,3 +2775,31 @@ The real React selection-geometry suite additionally activates Hand before group
 movement at 50/100/200% and verifies dismissal before pointer edits and exact
 undo: `/private/tmp/retouch-hand-react-geometry.log` (Chromium PASS).
 No Mac archive refresh or full Figma parity is claimed by this checkpoint.
+
+### 2026-09-09 — Immediate editor reveal on smooth-scrolling sites
+
+Layer-tree selection and comparison selection now reveal their target with
+explicit instant scrolling. Fit screen and source reload restoration also use
+instant scrolling. Normal site interaction retains authored smooth scrolling.
+Previously those editor paths inherited `scroll-behavior:smooth`, enabling canvas
+tools while the target was still moving or entirely outside the visible canvas.
+The new isolated regression fails before the fix: the selected heading's top
+was y=1578 while the canvas ended at y=1100, even after the Move control appeared
+(`/private/tmp/retouch-layer-reveal-before.log`).
+
+The regression now passes in Chromium and WebKit, including immediate visibility,
+a Move surface that remains active after reveal, Fit preserving page scroll,
+a one-pixel source movement, reload scroll restoration and exact source undo.
+Logs: `/private/tmp/retouch-layer-reveal-{chromium,webkit}-final.log`.
+Hand/Move/Draw transitions also pass in both engines in
+`/private/tmp/retouch-reveal-tool-switch-{chromium,webkit}.log`.
+
+The preceding intermittent WebKit dismissal was not captured in six bounded
+traced attempts: `/private/tmp/retouch-move-cancel-trace.log` and
+`/private/tmp/retouch-move-cancel-repeat-{1,2,3,4,5}.log`. Those traces only showed
+expected Escape/Hand cancellation. This deterministic smooth-scroll defect is
+fixed, but its identity with that earlier intermittent failure remains unproven.
+Temporary cancellation tracing was removed. The Hand regression additionally
+checks that the revealed heading lies inside the canvas before starting Move.
+No Mac archive refresh or full Figma parity is claimed.
+All 334 unit tests pass in `/private/tmp/retouch-layer-reveal-unit.log`.

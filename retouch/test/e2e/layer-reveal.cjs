@@ -1,0 +1,19 @@
+'use strict';
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict'),{once}=require('node:events');
+const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_INSPECTOR_FIXTURE for Playwright');
+const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
+(async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-layer-reveal-')),file=path.join(root,'index.html');
+ const original='<html style="scroll-behavior:smooth"><body style="margin:0;height:3000px"><h1 style="position:absolute;left:100px;top:1500px;width:200px;height:40px;margin:0">Zoom anchor</h1></body></html>';fs.writeFileSync(file,original);
+ const server=require('../../src/html-site.cjs').start({root,port:0,quiet:true});await once(server,'listening');const browser=await browserType.launch(),page=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ try{
+  await page.goto(`http://localhost:${server.address().port}/rt`);await page.frameLocator('#app').getByRole('heading').waitFor();
+  const app=page.frameLocator('#app'),layer=page.getByRole('treeitem',{name:'h1 · Zoom anchor',exact:true}),move=page.getByRole('button',{name:'Move on canvas',exact:true});
+  await layer.click();await move.waitFor();await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+  const canvas=await page.locator('#frameWrap').boundingBox(),box=await app.getByRole('heading').boundingBox();assert.ok(box.y>=canvas.y-1&&box.y+box.height<=canvas.y+canvas.height+1,JSON.stringify({canvas,box}));
+  await move.click();await page.locator('.canvas-move-surface').waitFor();const before=await app.locator('body').evaluate(()=>scrollY);await page.waitForTimeout(300);assert.equal(await page.locator('.canvas-move-surface').isVisible(),true,'layer reveal does not keep scrolling and dismiss Move');assert.equal(await app.locator('body').evaluate(()=>scrollY),before);await page.keyboard.press('Escape');
+  await page.getByLabel('Canvas zoom (%)',{exact:true}).fill('200');await page.getByLabel('Canvas zoom (%)',{exact:true}).press('Enter');await page.locator('#frameWrap').evaluate(el=>{el.scrollTop=0;document.querySelector('#app').contentWindow.scrollTo({top:700,behavior:'instant'});});await page.getByRole('button',{name:'Fit screen',exact:true}).click();assert.equal(await app.locator('body').evaluate(()=>scrollY),700,'Fit immediately restores page scroll on a smooth-scrolling site');
+  await move.click();await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');await page.waitForFunction(()=>{const f=document.querySelector('#app');return f.contentDocument?.querySelector('h1')&&parseFloat(f.contentWindow.getComputedStyle(f.contentDocument.querySelector('h1')).left)===101;});assert.notEqual(fs.readFileSync(file,'utf8'),original);assert.equal(await app.locator('body').evaluate(()=>scrollY),700,'source reload restores scroll immediately');await page.getByRole('button',{name:'Undo',exact:true}).click();await page.waitForFunction(()=>{const f=document.querySelector('#app');return f.contentDocument?.querySelector('h1')&&parseFloat(f.contentWindow.getComputedStyle(f.contentDocument.querySelector('h1')).left)===100;});assert.equal(await app.locator('body').evaluate(()=>scrollY),700);
+  assert.equal(fs.readFileSync(file,'utf8'),original);assert.deepEqual(errors,[]);console.log(engine+': PASS immediate offscreen layer reveal and stable Move tool on a smooth-scrolling site, Fit and source-reload scroll preservation, exact movement undo');
+ }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
+})().catch(e=>{console.error(e);process.exitCode=1;});

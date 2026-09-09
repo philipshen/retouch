@@ -17,6 +17,7 @@
     "test:e2e:react-svg": "node test/e2e/react-svg-geometry.cjs",
     "test:launch": "node test/launch/verify.cjs",
     "release:local": "node scripts/release.cjs",
+    "test:e2e:layer-reveal": "node test/e2e/layer-reveal.cjs",
     "test:e2e:canvas-pan": "node test/e2e/canvas-pan.cjs",
     "test:e2e:zoom-anchor": "node test/e2e/zoom-anchor.cjs",
     "test:e2e:zoom-selection": "node test/e2e/zoom-selection.cjs",

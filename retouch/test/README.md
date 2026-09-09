@@ -100,3 +100,8 @@ selection, horizontal wheel scrolling, Escape during pointer capture, recovery
 of the next selection click, typing/Interact guards, screen-change cleanup, exclusive Hand/Move/Draw
 transitions and cancellation of an uncommitted movement preview.
 It accepts the same Playwright fixture and engine settings as zoom-anchor.
+
+`npm run test:e2e:layer-reveal` verifies immediate offscreen selection reveal on
+a site with authored smooth scrolling, a Move tool that remains active after
+reveal, Fit scroll preservation, and source-edit reload/undo scroll preservation.
+It accepts the same Playwright fixture and browser engine settings.

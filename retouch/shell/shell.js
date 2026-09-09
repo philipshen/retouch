@@ -366,7 +366,7 @@ window.addEventListener('retouch:comparison-edit',async event=>{
     if(serial!==comparisonSelectionSerial||classification!==classificationSerial||!sameRoute())return;
     const matches=[...doc().querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===detail.hostId&&el.getAttribute('data-rt-i')===detail.instanceId),target=matches[detail.occurrence];
     if(!target||iframe.contentWindow.innerWidth!==detail.width)continue;
-    await select(target);if(serial!==comparisonSelectionSerial||classificationSerial!==classification+1)return;target.scrollIntoView({block:'nearest',inline:'nearest'});return;
+    await select(target);if(serial!==comparisonSelectionSerial||classificationSerial!==classification+1)return;target.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});return;
   }
   toast('This layer is not present on the main canvas at this size.','err');
 });
@@ -545,7 +545,7 @@ function reloadFrame() {
           });
         }));
       } catch {}
-      try { iframe.contentWindow.scrollTo(0, y); } catch {}
+      try { iframe.contentWindow.scrollTo({left:0,top:y,behavior:'instant'}); } catch {}
       resolve();
     };
     iframe.addEventListener('load', done);
@@ -1784,7 +1784,7 @@ const layers = RetouchLayers.mount({
     await moveLayerInto(sel.info,destination.getAttribute('data-rt'),position);
   },
   host:document.getElementById('layersPanel'),
-  onSelect:async(el,options)=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await select(el,options);el.scrollIntoView({block:'nearest',inline:'nearest'});},
+  onSelect:async(el,options)=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await select(el,options);el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});},
   onSelectMany:async(nodes,options)=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await selectMany(nodes,options);},
   onAction:action=>structureAction(action),
 });

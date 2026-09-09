@@ -361,6 +361,10 @@ Changing a screen preset during a resize discards the older drag. Zooming or
 resizing the workspace cancels the drag and restores its starting dimensions,
 so releasing the pointer cannot overwrite a newer screen choice.
 
+Choosing a layer reveals it immediately, even on sites that use smooth scrolling.
+Fit screen and source-edit reloads also restore page scroll immediately, so a
+site animation does not continue moving the preview after an editor action.
+
 Use **Hand** to drag the canvas, or hold **Space** while dragging for a temporary
 hand tool. Drag distances stay in screen pixels at every zoom. The hand moves
 the preview within the finite workspace without changing page scroll or layer
