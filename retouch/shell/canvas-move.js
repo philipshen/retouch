@@ -35,6 +35,35 @@
   else{w=Math.max(minWidth,Math.min(maxWidth,w));h=Math.max(minHeight,Math.min(maxHeight,h));}
   return {x:altKey||!hx?(width-w)/2:hx<0?width-w:0,y:altKey||!hy?(height-h)/2:hy<0?height-h:0,width:w,height:h};
  }
+ function snapResize(rect,handle,dx,dy,targets,options={}){
+  const {tolerance=6,shiftKey=false,altKey=false}=options,m=altKey?2:1;
+  const directions={x:handle.includes('w')?-1:handle.includes('e')?1:0,y:handle.includes('n')?-1:handle.includes('s')?1:0};
+  const dimension={x:'width',y:'height'},position={x:'left',y:'top'},edge=(result,axis)=>rect[position[axis]]+result[axis]+(directions[axis]>0?result[dimension[axis]]:0);
+  const raw=resize(rect.width,rect.height,handle,dx,dy,options),best={};let closest=null;
+  // Solve a candidate size, then run it through the normal resize constraints.
+  // A clamped result must actually reach the line before it can count as a snap.
+  for(const axis of ['x','y']){
+   const sign=directions[axis],size=dimension[axis],initial=rect[position[axis]]+(sign>0?rect[size]:0);
+   if(!sign||Math.abs(edge(raw,axis)-initial)<1e-6)continue;
+   for(const target of targets)for(const fraction of [0,.5,1]){
+    const value=target[position[axis]]+target[size]*fraction,distance=Math.abs(value-edge(raw,axis));if(distance>tolerance)continue;
+    const desired=rect[size]+sign*(value-initial)*m;
+    let x=dx,y=dy;
+    if(shiftKey){const factor=desired/rect[size];x=directions.x*(rect.width*factor-rect.width)/m;y=directions.y*(rect.height*factor-rect.height)/m;}
+    else if(axis==='x')x=sign*(desired-rect[size])/m;else y=sign*(desired-rect[size])/m;
+    const result=resize(rect.width,rect.height,handle,x,y,options);if(Math.abs(edge(result,axis)-value)>1e-4)continue;
+    const candidate={x,y,result,distance};if(!best[axis]||distance<best[axis].distance)best[axis]=candidate;if(!closest||distance<closest.distance)closest=candidate;
+   }
+  }
+  const result=shiftKey?(closest?.result||raw):resize(rect.width,rect.height,handle,best.x?.x??dx,best.y?.y??dy,options),guides=[];
+  for(const axis of ['x','y']){
+   if(!best[axis])continue;const cross=axis==='x'?'y':'x';
+   for(const target of targets){const value=edge(result,axis);if(![0,.5,1].some(f=>Math.abs(value-target[position[axis]]-target[dimension[axis]]*f)<1e-4))continue;
+    guides.push({axis,value,start:Math.min(rect[position[cross]]+result[cross],target[position[cross]]),end:Math.max(rect[position[cross]]+result[cross]+result[dimension[cross]],target[position[cross]]+target[dimension[cross]])});break;
+   }
+  }
+  return {...result,guides};
+ }
  function limits(target){
   const d=target.ownerDocument,window=d.defaultView,css=window.getComputedStyle(target),parent=target.offsetParent,viewport=!parent||parent===d.body&&window.getComputedStyle(parent).position==='static',w=viewport?d.documentElement.clientWidth:parent.clientWidth,h=viewport?window.innerHeight:parent.clientHeight;
   const number=p=>parseFloat(css.getPropertyValue(p))||0,borderX=number('padding-left')+number('padding-right')+number('border-left-width')+number('border-right-width'),borderY=number('padding-top')+number('padding-bottom')+number('border-top-width')+number('border-bottom-width');
@@ -53,9 +82,9 @@
   Object.assign(surface.style,{position:'fixed',left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px',zIndex:40,overflow:'hidden',touchAction:'none'});
   const preview=root.document.createElement('div');preview.className='canvas-move-preview';preview.setAttribute('aria-label','Drag selected layer');
   const x=f.left+r.left*scale-left,y=f.top+r.top*scale-top;
-  Object.assign(preview.style,{position:'absolute',left:x+'px',top:y+'px',width:r.width*scale+'px',height:r.height*scale+'px',border:'2px solid #6366f1',boxSizing:'border-box',background:'rgba(99,102,241,.12)',cursor:'move'});surface.append(preview);
+  Object.assign(preview.style,{position:'absolute',left:x+'px',top:y+'px',width:r.width*scale+'px',height:r.height*scale+'px',border:'0',outline:'2px solid #6366f1',outlineOffset:'-2px',boxSizing:'border-box',background:'rgba(99,102,241,.12)',cursor:'move'});surface.append(preview);
   const guides=root.document.createElement('div');guides.className='canvas-snap-guides';guides.setAttribute('aria-hidden','true');guides.style.pointerEvents='none';surface.append(guides);
-  if(mode==='move'){const hint=root.document.createElement('div');hint.textContent='Drag to align · Shift locks an axis · Option / Alt disables snapping · Escape cancels';Object.assign(hint.style,{position:'absolute',bottom:'8px',left:'8px',right:'8px',padding:'6px 8px',background:'#1e293b',color:'white',fontSize:'12px',borderRadius:'4px',pointerEvents:'none'});surface.append(hint);}
+  {const hint=root.document.createElement('div');hint.textContent=mode==='move'?'Drag to align · Shift locks an axis · Option / Alt disables snapping · Escape cancels':'Drag handles to align · Shift keeps proportions · Option / Alt resizes from center · ⌘ / Ctrl disables snapping · Escape cancels';Object.assign(hint.style,{position:'absolute',bottom:'8px',left:'8px',right:'8px',padding:'6px 8px',background:'#1e293b',color:'white',fontSize:'12px',borderRadius:'4px',pointerEvents:'none'});surface.append(hint);}
   function paintGuides(items){guides.replaceChildren();for(const item of items){const line=root.document.createElement('div');line.dataset.snapAxis=item.axis;Object.assign(line.style,{position:'absolute',background:'#e11d48',left:(item.axis==='x'?f.left+item.value*scale-left:f.left+item.start*scale-left)+'px',top:(item.axis==='y'?f.top+item.value*scale-top:f.top+item.start*scale-top)+'px',width:item.axis==='x'?'1px':Math.max(1,(item.end-item.start)*scale)+'px',height:item.axis==='y'?'1px':Math.max(1,(item.end-item.start)*scale)+'px'});guides.append(line);}}
   if(mode==='resize')for(const handle of ['nw','n','ne','e','se','s','sw','w']){const button=root.document.createElement('button');button.type='button';button.dataset.resizeHandle=handle;const name={n:'top',s:'bottom',e:'right',w:'left',ne:'top right',nw:'top left',se:'bottom right',sw:'bottom left'}[handle];button.setAttribute('aria-label','Resize '+name);button.title='Resize '+name+'. Arrow keys adjust; Enter applies; Escape cancels.';Object.assign(button.style,{position:'absolute',padding:'0',width:'10px',height:'10px',minWidth:'0',border:'1px solid #6366f1',borderRadius:'1px',background:'white',left:handle.includes('w')?'0%':handle.includes('e')?'100%':'50%',top:handle.includes('n')?'0%':handle.includes('s')?'100%':'50%',transform:'translate(-50%,-50%)',cursor:handle+'-resize'});preview.append(button);}
   if(x+r.width*scale<=0||y+r.height*scale<=0||x>=right-left||y>=bottom-top){onError('Bring the layer into view before moving it.');return null;}
@@ -63,10 +92,10 @@
   function listen(el,name,fn,options){el.addEventListener(name,fn,options);cleanups.push(()=>el.removeEventListener(name,fn,options));}
   function cancel(restoreFocus=false){if(ended)return;ended=true;surface.remove();cleanups.forEach(fn=>fn());onEnd();if(restoreFocus===true)(opener?.isConnected?opener:root.document.querySelector('[data-canvas-tool='+mode+']'))?.focus({preventScroll:true});}
   function paint(modifiers){
-   if(mode==='resize'){const base=state.base||{x:0,y:0,width:r.width,height:r.height};state.delta=resize(base.width,base.height,state.handle,state.rawX/scale,state.rawY/scale,{...bounds,...modifiers});state.delta.x+=base.x;state.delta.y+=base.y;preview.style.width=state.delta.width*scale+'px';preview.style.height=state.delta.height*scale+'px';preview.style.transform=`translate(${state.delta.x*scale}px,${state.delta.y*scale}px)`;}
-   else{const locked=!state.keyboard&&modifiers.shiftKey,d=delta(state.rawX,state.rawY,locked),movement={x:d.x/scale,y:d.y/scale},snapped=!state.keyboard&&!modifiers.altKey?snap(r,movement,snapTargets(target),{tolerance:6/scale,lock:locked?(Math.abs(state.rawX)>=Math.abs(state.rawY)?'x':'y'):state.rawX===0?'y':state.rawY===0?'x':null}):{...movement,guides:[]};state.delta={x:snapped.x,y:snapped.y};paintGuides(snapped.guides);preview.style.transform=`translate(${state.delta.x*scale}px,${state.delta.y*scale}px)`;}
+   if(mode==='resize'){const base=state.base||{x:0,y:0,width:r.width,height:r.height};const resized=!state.keyboard&&!modifiers.metaKey&&!modifiers.ctrlKey?snapResize(r,state.handle,state.rawX/scale,state.rawY/scale,snapTargets(target),{...bounds,...modifiers,tolerance:6/scale}):{...resize(base.width,base.height,state.handle,state.rawX/scale,state.rawY/scale,{...bounds,...modifiers}),guides:[]};paintGuides(resized.guides);state.delta={x:resized.x,y:resized.y,width:resized.width,height:resized.height};state.delta.x+=base.x;state.delta.y+=base.y;preview.style.width=state.delta.width*scale+'px';preview.style.height=state.delta.height*scale+'px';preview.style.transform=`translate(${state.delta.x*scale}px,${state.delta.y*scale}px)`;}
+   else{const locked=!state.keyboard&&modifiers.shiftKey,d=delta(state.rawX,state.rawY,locked),movement={x:d.x/scale,y:d.y/scale},snapped=!state.keyboard&&!modifiers.altKey&&!modifiers.metaKey&&!modifiers.ctrlKey?snap(r,movement,snapTargets(target),{tolerance:6/scale,lock:locked?(Math.abs(state.rawX)>=Math.abs(state.rawY)?'x':'y'):state.rawX===0?'y':state.rawY===0?'x':null}):{...movement,guides:[]};state.delta={x:snapped.x,y:snapped.y};paintGuides(snapped.guides);preview.style.transform=`translate(${state.delta.x*scale}px,${state.delta.y*scale}px)`;}
   }
-  function move(e){if(!state||e.pointerId!==state.id)return;state.rawX=e.clientX-state.x;state.rawY=e.clientY-state.y;try{paint({shiftKey:e.shiftKey,altKey:e.altKey});}catch(error){cancel();onError(error.message);}}
+  function move(e){if(!state||e.pointerId!==state.id)return;state.rawX=e.clientX-state.x;state.rawY=e.clientY-state.y;try{paint({shiftKey:e.shiftKey,altKey:e.altKey,metaKey:e.metaKey,ctrlKey:e.ctrlKey});}catch(error){cancel();onError(error.message);}}
   listen(surface,'pointerdown',e=>{if(e.button!==0||state)return;e.preventDefault();e.stopImmediatePropagation();const handle=e.target.dataset.resizeHandle;if(mode==='resize'?!handle:e.target!==preview){cancel();return;}state={id:e.pointerId,handle,x:e.clientX,y:e.clientY,rawX:0,rawY:0,delta:{x:0,y:0}};surface.setPointerCapture(e.pointerId);});
   listen(surface,'focusin',e=>{if(state?.keyboard&&mode==='resize'&&e.target.dataset.resizeHandle&&e.target.dataset.resizeHandle!==state.handle){state={keyboard:true,handle:e.target.dataset.resizeHandle,id:null,rawX:0,rawY:0,base:state.delta,delta:state.delta};}});
   listen(surface,'pointermove',move);
@@ -80,14 +109,14 @@
    const handle=e.target.dataset.resizeHandle;if(mode==='resize'&&!handle)return;e.preventDefault();e.stopImmediatePropagation();
    if(!state||state.handle!==handle)state={keyboard:true,handle,id:null,rawX:0,rawY:0,delta:{x:0,y:0}};
    const step=mode==='move'&&e.shiftKey?10:1;state.rawX+=direction[0]*step*scale;state.rawY+=direction[1]*step*scale;
-   try{paint({shiftKey:e.shiftKey,altKey:e.altKey});}catch(error){cancel(true);onError(error.message);}
+   try{paint({shiftKey:e.shiftKey,altKey:e.altKey,metaKey:e.metaKey,ctrlKey:e.ctrlKey});}catch(error){cancel(true);onError(error.message);}
   },true);
-  for(const event of ['keydown','keyup'])listen(root,event,e=>{if(state&&(!state.keyboard||surface.contains(e.target))&&['Shift','Alt'].includes(e.key)){e.preventDefault();e.stopImmediatePropagation();try{paint({shiftKey:e.shiftKey,altKey:e.altKey});}catch(error){cancel();onError(error.message);}}},true);
+  for(const event of ['keydown','keyup'])listen(root,event,e=>{if(state&&(!state.keyboard||surface.contains(e.target))&&['Shift','Alt','Meta','Control'].includes(e.key)){e.preventDefault();e.stopImmediatePropagation();try{paint({shiftKey:e.shiftKey,altKey:e.altKey,metaKey:e.metaKey,ctrlKey:e.ctrlKey});}catch(error){cancel();onError(error.message);}}},true);
   for(const event of ['retouch:before-zoom','retouch:screen','retouch:viewport','resize','blur','pagehide'])listen(root,event,cancel);
   listen(root,'retouch:selection',e=>{if(e.detail!==target.getAttribute('data-rt'))cancel();});
   listen(frame,'load',cancel);listen(w,'scroll',cancel,true);listen(w,'resize',cancel);listen(canvas,'scroll',cancel);
   let tick;const observe=()=>{if(ended)return;const current=target.getBoundingClientRect();if(!target.isConnected||target.offsetParent!==parent||parent?.clientWidth!==parentWidth||parent?.clientHeight!==parentHeight||['left','top','width','height'].some(key=>Math.abs(current[key]-r[key])>.5)){cancel();return;}tick=root.requestAnimationFrame(observe);};tick=root.requestAnimationFrame(observe);cleanups.push(()=>root.cancelAnimationFrame(tick));
   root.document.body.append(surface);(mode==='resize'?preview.querySelector('[data-resize-handle=se]'):surface).focus({preventScroll:true});return cancel;
  }
- const api={delta,snap,resize,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchCanvasMove=api;
+ const api={delta,snap,resize,snapResize,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchCanvasMove=api;
 })(typeof window==='object'?window:globalThis);

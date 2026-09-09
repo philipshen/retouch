@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 301 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 304 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1886,7 +1886,33 @@ HTML and real Next.js/Tailwind positioning workflows also pass in Chromium.
 Evidence: `/private/tmp/retouch-snapping-{unit,chromium,webkit,html,react}.log`;
 visually inspected screenshot: `/private/tmp/retouch-snapping.png`.
 
-Resize snapping, equal-spacing suggestions, multi-layer transforms, custom guides,
+Equal-spacing suggestions, multi-layer transforms, custom guides,
 rulers and vector-edit snapping remain unfinished. This does not establish full
 Figma snapping parity or unrestricted renderer support. The Mac package has not
 yet been rebuilt with these changes.
+
+
+### Canvas resize alignment snapping
+
+Resize handles now snap their dragged edges to the container and visible siblings,
+using the same six-screen-pixel threshold as movement. Each candidate is solved
+through the existing minimum/maximum size and aspect-ratio constraints; a guide
+appears only when the constrained edge reaches its line. Corner resizing can align
+both edges independently, while proportional resizing chooses the closest reachable
+line and preserves the ratio. Option/Alt still resizes from the center. Command/Ctrl
+bypasses snapping during either movement or resizing, including modifier transitions
+without another pointer move. Keyboard resizing remains exact. Handle centers now
+sit on the actual preview edges rather than inside its decorative border.
+
+Validation: all 304 unit tests pass, including every handle direction, fixed opposite
+bounds, proportional and centered behavior, size-limit rejection and zoom tolerance.
+The expanded browser workflow passes in Chromium and WebKit at 50%, 100% and 200%
+zoom, checking committed corner bounds, guides, bypass, Shift/Alt combinations,
+maximum-size protection, preview/source separation, cancellation and exact undo.
+Existing HTML and real Next.js/Tailwind positioning workflows pass in Chromium.
+Logs: `/private/tmp/retouch-resize-snapping-{unit,chromium,webkit,html,react}.log`.
+The final screenshot `/private/tmp/retouch-resize-snapping.png` was visually checked.
+
+Equal-spacing suggestions, multi-layer transforms, custom guides/rulers and vector
+snapping still remain. The current Mac artifact predates these changes; the existing
+signed build is still waiting on its local signing/keychain interaction.

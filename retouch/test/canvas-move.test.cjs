@@ -26,3 +26,27 @@ test('movement snapping chooses nearest edges and centers without changing a loc
  assert.equal(snap(rect,{x:79,y:0},targets,{tolerance:12}).x,90);assert.equal(snap(rect,{x:79,y:0},targets,{tolerance:3}).x,79);
  const nearest=snap(rect,{x:88,y:0},[...targets,{left:149,top:300,width:50,height:50}]);assert.equal(nearest.x,89);
 });
+test('resize snapping preserves fixed opposite edges and solves independent corner alignment',()=>{
+ const {snapResize}=require('../shell/canvas-move.js'),r={left:30,top:40,width:80,height:60},targets=[{left:300,top:200,width:100,height:80}];
+ const corner=snapResize(r,'se',187,97,targets);assert.equal(corner.width,270);assert.equal(corner.height,160);assert.equal(corner.x,0);assert.equal(corner.y,0);assert.equal(corner.guides.length,2);
+ const west=snapResize(r,'w',-28,0,[{left:0,top:0,width:600,height:600}]);assert.equal(west.x,-30);assert.equal(west.width,110);assert.equal(west.x+west.width,80);assert.equal(west.height,60);
+ const locked=snapResize(r,'se',187,97,targets,{maxWidth:268,maxHeight:158});assert.equal(locked.width,267);assert.equal(locked.height,157);assert.equal(locked.guides.length,0);
+ const stationary=snapResize(r,'se',0,0,[{left:112,top:102,width:50,height:50}]);assert.equal(stationary.width,80);assert.equal(stationary.height,60);assert.equal(stationary.guides.length,0);
+});
+test('resize snapping keeps proportions and center constraints and honors screen-pixel tolerance',()=>{
+ const {snapResize}=require('../shell/canvas-move.js'),r={left:30,top:40,width:80,height:60},targets=[{left:150,top:200,width:100,height:80}];
+ const ratio=snapResize(r,'se',38,25,targets,{shiftKey:true});assert.equal(ratio.width,120);assert.equal(ratio.height,90);assert.equal(ratio.x,0);assert.equal(ratio.y,0);
+ const centered=snapResize(r,'e',38,0,targets,{altKey:true});assert.equal(centered.width,160);assert.equal(centered.x,-40);assert.equal(centered.x+centered.width/2,40);assert.equal(centered.y,0);
+ const both=snapResize(r,'ne',38,-25,targets,{shiftKey:true,altKey:true});assert.equal(both.width,160);assert.equal(both.height,120);assert.equal(both.x,-40);assert.equal(both.y,-30);
+ const limited=snapResize(r,'e',38,0,targets,{shiftKey:true,maxHeight:89});assert.equal(limited.guides.length,0);assert.equal(limited.width,118);assert.equal(limited.height,88.5);
+ assert.equal(snapResize(r,'e',29,0,targets,{tolerance:12}).width,120);assert.equal(snapResize(r,'e',29,0,targets,{tolerance:3}).width,109);
+});
+test('every resize handle snaps only its dragged edges and preserves the opposite bounds',()=>{
+ const {snapResize}=require('../shell/canvas-move.js'),r={left:100,top:100,width:100,height:80},targets=[{left:0,top:0,width:600,height:600}];
+ for(const handle of ['n','s','e','w','ne','nw','se','sw']){
+  const hx=handle.includes('w')?-1:handle.includes('e')?1:0,hy=handle.includes('n')?-1:handle.includes('s')?1:0,result=snapResize(r,handle,hx*98,hy<0?-98:hy>0?118:0,targets);
+  assert.equal(result.guides.length,Number(Boolean(hx))+Number(Boolean(hy)),handle);
+  if(hx<0){assert.equal(r.left+result.x,0);assert.equal(result.x+result.width,r.width);}else if(hx>0){assert.equal(result.x,0);assert.equal(r.left+result.width,300);}else{assert.equal(result.x,0);assert.equal(result.width,r.width);}
+  if(hy<0){assert.equal(r.top+result.y,0);assert.equal(result.y+result.height,r.height);}else if(hy>0){assert.equal(result.y,0);assert.equal(r.top+result.height,300);}else{assert.equal(result.y,0);assert.equal(result.height,r.height);}
+ }
+});
