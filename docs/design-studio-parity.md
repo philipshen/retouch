@@ -25,7 +25,7 @@ changing those files. The original checkout may continue to evolve independently
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload exists; complete export and import pipeline remains. |
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. HTML has responsive CSS, structural edits and batch selection operations. Arbitrary remote-site capture/authoring, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
-| Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Full editable multi-canvas views and corner resizing and cross-framework parity remain. |
+| Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Fully editable comparison canvases, corner resizing and cross-framework parity remain. |
 | Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop; interaction with the latest packaged source (4670764) remains unverified after cgWindowNotFound. Newer editor changes are not yet packaged. File flows, Intel runtime and broader lifecycle verification remain. |
 | Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. Development build is ad hoc signed. Local cask install/uninstall passed. Developer ID signing/notarization, publishing, upgrades and quarantined launch remain unverified. |
 | Ease of use | New user can open a site, select/edit, compare screens, undo and retain work without learning implementation details | Controls have labels and basic defaults. Whole-workflow usability validation remains. |
@@ -1269,3 +1269,21 @@ workflow joins test:e2e:html. All 270 unit tests pass; the screenshot was
 inspected. This provides direct selection into the editable
 main canvas; fully editable comparison canvases, synchronized application state
 and full parity remain unfinished.
+
+
+### Combined HTML verification and comparison visibility
+
+At 450e821, all ten test:e2e:html workflows completed successfully in both
+Chromium and WebKit: general HTML editing, flex writing modes, wrapping, adaptive
+grids, frame bounds, visibility, corners, SVG authoring, direct viewport resizing
+and comparison selection. This expands the combined browser baseline beyond
+the earlier seven-workflow run. It does not prove other adapters or native UI.
+
+Inspection also found that comparison outlines counted visibility:hidden layers
+as visible whenever their bounding boxes had area. The comparison painter now
+skips hidden/collapsed layers and bounds outside the viewport, and distinguishes
+hidden, absent and off-screen status. The focused comparison workflow passes
+in both engines after this fix, including a hidden phone layer, an off-screen
+desktop layer and the outline returning after scrolling into view. This checks
+computed visibility and viewport intersection; arbitrary clipping/masks are
+not modeled. Full parity and the native release remain unfinished.

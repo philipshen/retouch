@@ -30,13 +30,15 @@
       try{
         const d=frame.contentDocument;if(!d?.body||d.URL==='about:blank')continue;
         const nodes=selected?[...d.querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===selected||el.getAttribute('data-rt-i')===selected):[];
-        let visible=0;
+        let visible=0,offscreen=0;
         for(const el of nodes){
-          const rect=el.getBoundingClientRect();if(!rect.width||!rect.height)continue;visible++;
+          const rect=el.getBoundingClientRect(),css=d.defaultView.getComputedStyle(el);
+          if(!rect.width||!rect.height||['hidden','collapse'].includes(css.visibility))continue;
+          if(rect.bottom<=0||rect.right<=0||rect.top>=height||rect.left>=width){offscreen++;continue;}visible++;
           const box=document.createElement('div');box.className='compare-selection';
           Object.assign(box.style,{left:rect.left*scale+'px',top:rect.top*scale+'px',width:rect.width*scale+'px',height:rect.height*scale+'px'});overlay.append(box);
         }
-        message.textContent=selected?(visible?'Selected layer · '+visible+(visible===1?' instance':' instances'):'Selected layer is hidden or absent'):'Same page · independent viewport';
+        message.textContent=selected?(visible?'Selected layer · '+visible+(visible===1?' instance':' instances'):offscreen?'Selected layer is outside this viewport':nodes.length?'Selected layer is hidden':'Selected layer is absent on this screen'):'Same page · independent viewport';
       }catch{message.textContent='Preview unavailable for this page';}
     }
     timer=setTimeout(paint,100);
