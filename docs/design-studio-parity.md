@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 217 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 218 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -513,3 +513,19 @@ persistent selector. All 217 tests pass, including source range preservation,
 identity collision handling and independent post-move styles. Browser checks
 verify duplicate, move, delete and exact undo. General reparenting, grouping,
 styled cloning and structural editing of dynamic templates remain open.
+
+
+### Independent styled HTML copies
+
+HTML duplicate and same-parent paste now copy validated managed style rules for
+the selected subtree to fresh identities. Base and responsive rules stay with
+each copied layer, while later changes target only the chosen copy. The markup
+and cloned rules form one transaction, so undo restores exact source bytes.
+Malformed or ambiguous managed styles are refused, as are source ranges with
+untracked duplicate attributes. Authored identity attributes still block cloning.
+
+All 218 tests pass. Nested-subtree tests verify copied base/tablet rules and
+independent edits. Browser checks verify two styled layers, matching tablet
+widths, distinct persistent selectors, independent phone widths and exact undo.
+This removes the previous linked-style cloning restriction. Authored-ID remapping,
+general reparenting, grouping and dynamic-template structure remain open.

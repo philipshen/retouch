@@ -62,10 +62,11 @@ function htmlRange(resolved) {
     if(unsafeTags.has(ancestor.tagName)&&!['body','html'].includes(ancestor.tagName))throw Error('This parent is not a design layer.');
     if(ancestor.attrs?.some(a=>/^(?:v-for|v-if|x-for|x-if)$/.test(a.name)))throw Error('This parent is rendered by a template.');
   }
+  const known=new Set((resolved.elements||[]).map(e=>e.node));
   const voids=new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
   function complete(node){
     if(node.nodeName==='#text')return true;
-    return node.namespaceURI==='http://www.w3.org/1999/xhtml'&&!unsafeTags.has(node.tagName)&&node.sourceCodeLocation?.startTag&&(node.sourceCodeLocation.endTag||voids.has(node.tagName))&&(node.childNodes||[]).every(complete);
+    return known.has(node)&&node.namespaceURI==='http://www.w3.org/1999/xhtml'&&!unsafeTags.has(node.tagName)&&node.sourceCodeLocation?.startTag&&(node.sourceCodeLocation.endTag||voids.has(node.tagName))&&(node.childNodes||[]).every(complete);
   }
   const items=[];let cursor=parentLocation.startTag.endOffset;
   for(const node of parent.childNodes||[]){
@@ -80,12 +81,14 @@ function htmlRange(resolved) {
   return items;
 }
 function ranges(resolved,language) {return language==='react'?reactRange(resolved):language==='html'?htmlRange(resolved):liquidRange(resolved);}
-function duplicateAllowed(source,range,language) {return !/\s(?:id|key|ref)\s*=/i.test(source.slice(range.start,range.end)) && !(language==='html'&&/\sdata-rt-(?:style|css)\s*=/i.test(source.slice(range.start,range.end)));}
+function duplicateAllowed(source,range,language) {return !/\s(?:id|key|ref)\s*=/i.test(source.slice(range.start,range.end));}
 function describe(resolved,language) {
   try {
     const items=ranges(resolved,language),index=items.findIndex(r=>r.selected);
     if(index<0) throw Error('The source element could not be located.');
-    return {parentId:items.parentId,canPaste:true,canDuplicate:duplicateAllowed(resolved.source,items[index],language),canDelete:true,canMoveBefore:index>0,canMoveAfter:index<items.length-1,reason:null};
+    let canDuplicate=duplicateAllowed(resolved.source,items[index],language);
+    if(canDuplicate&&language==='html')try{require('./html-css.cjs').clone(resolved,items[index]);}catch{canDuplicate=false;}
+    return {parentId:items.parentId,canPaste:true,canDuplicate,canDelete:true,canMoveBefore:index>0,canMoveAfter:index<items.length-1,reason:null};
   } catch(error) {return {parentId:null,canPaste:false,canDuplicate:false,canDelete:false,canMoveBefore:false,canMoveAfter:false,reason:error.message};}
 }
 function planOp(resolved,op,language) {
@@ -104,10 +107,12 @@ function planOp(resolved,op,language) {
         copied=items.find(r=>r.start===start);
         if(!copied) throw Error('Paste requires a copied literal sibling in the same source parent.');
       }
-      if(!duplicateAllowed(source,copied,language)) throw Error('Duplicating this element would duplicate an authored identity or a linked element style.');
+      if(!duplicateAllowed(source,copied,language)) throw Error('Duplicating this element would duplicate an authored identity.');
       const previous=items[index-1];
       const gap=previous?source.slice(previous.end,node.start):'\n'+(source.slice(0,node.start).match(/(?:^|\n)([ \t]*)$/)?.[1]||'');
-      next=source.slice(0,node.end)+gap+source.slice(copied.start,copied.end)+source.slice(node.end);
+      const cloned=language==='html'?require('./html-css.cjs').clone(resolved,copied):null;
+      next=source.slice(0,node.end)+gap+(cloned?.chunk??source.slice(copied.start,copied.end))+source.slice(node.end);
+      if(cloned)next=cloned.append(next);
     } else if(op.type==='deleteElement') {
       next=source.slice(0,node.start)+source.slice(node.end);
     } else if(op.type==='moveElement') {

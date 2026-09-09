@@ -125,6 +125,18 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await page.getByRole('button',{name:'Delete layer',exact:true}).click();
   await wait(async()=>await app.locator('h1').count()===0,'delete HTML layer');await settled();
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'delete undo');
+
+  await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await page.getByLabel('Style screen scope').selectOption('');
+  await width('240px');await page.getByLabel('Style screen scope').selectOption('min-[768px]:');await width('320px');
+  await page.getByRole('button',{name:'Duplicate layer',exact:true}).click();await wait(async()=>await app.locator('h1').count()===2,'styled duplication');await settled();
+  assert.deepEqual(await app.locator('h1').evaluateAll(elements=>elements.map(el=>getComputedStyle(el).width)),['320px','320px']);
+  const ids=await app.locator('h1').evaluateAll(elements=>elements.map(el=>el.getAttribute('data-rt-style')));assert.notEqual(ids[0],ids[1]);
+  await size('390x844');await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).nth(1).click();await page.getByLabel('Style screen scope').selectOption('');
+  const copyWidth=page.getByLabel('Width (CSS)',{exact:true});await copyWidth.fill('160px');await copyWidth.press('Tab');
+  await wait(async()=>await app.locator('h1').nth(1).evaluate(el=>getComputedStyle(el).width)==='160px','copy independent edit');await settled();
+  assert.equal(await app.locator('h1').first().evaluate(el=>getComputedStyle(el).width),'240px');
+  for(let i=0;i<4;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
+  await wait(()=>read()===original,'styled clone exact undo');
   assert.deepEqual(errors,[]);console.log('PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

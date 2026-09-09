@@ -47,12 +47,13 @@ test('Liquid refuses control scopes and expression siblings',()=>{
   }
 });
 
-test('HTML structural ranges reject implicit markup and protect linked styles from cloning',()=>{
+test('HTML structural ranges reject implicit markup and remap linked style identities when cloning',()=>{
  for(const source of ['<div>text<b>B</b></div>','<div><b>B</b><!--comment--></div>','<ul><li>One<li>Two</ul>']){
   const resolved=target(html,source,source.includes('<li>')?'li':'b');assert.equal(html.planOp(resolved,{type:'deleteElement'}).refused,true);
  }
+ assert.equal(html.planOp(target(html,'<div><b class="a" class="b">B</b><i>I</i></div>','i'),{type:'duplicateElement'}).refused,true);
  const source='<div><b data-rt-style="1234567890">B</b><i>I</i></div>',resolved=target(html,source);
- assert.equal(html.describe(resolved).structure.canDuplicate,false);
+ assert.equal(html.describe(resolved).structure.canDuplicate,true);
  assert.equal(html.planOp(resolved,{type:'moveElement',direction:'after'}).ok,true);
  assert.equal(html.planOp(resolved,{type:'deleteElement'}).ok,true);
 });

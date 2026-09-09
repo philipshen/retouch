@@ -28,7 +28,7 @@ function inspect(resolved){
   for(const child of node.childNodes||[])walk(child);
  }
  walk(tree);if(owners.length>1||(owners.length===1&&!attr(resolved.element.node,'data-rt-style')))throw Error('This style identity is shared by multiple elements.');
- return {id,blocks,headEnd};
+ return {id,blocks,headEnd,used};
 }
 function describe(resolved){try{const state=inspect(resolved);return {cssAuthoring:true,cssRules:Object.fromEntries(state.blocks.map(b=>[b.width,b.values]))};}catch(e){return {cssAuthoring:true,cssReason:e.message,cssRules:{}};}}
 function plan(resolved,op){
@@ -57,4 +57,24 @@ function plan(resolved,op){
   const after=out.toString();return {ok:true,hash:html.contentHash(after),edits:[{file:resolved.file,before:resolved.source,after}]};
  }catch(e){return refuse(e.message);}
 }
-module.exports={describe,plan,valid,rule};
+function clone(resolved,range){
+ const chunk=new MagicString(resolved.source.slice(range.start,range.end)),styles=[];
+ const elements=resolved.elements||html.collect(resolved.source,resolved.relPath).elements;
+ const allocated=new Set();
+ for(const element of elements){
+  const marker=element.location.attrs?.['data-rt-style'];
+  if(!marker||marker.startOffset<range.start||marker.endOffset>range.end)continue;
+  const state=inspect({...resolved,element});let id,counter=0;
+  do{id=html.contentHash(resolved.source+'|copy|'+state.id+'|'+counter++).slice(0,10);}while(state.used.has(id)||allocated.has(id));
+  allocated.add(id);
+  chunk.overwrite(marker.startOffset-range.start,marker.endOffset-range.start,`data-rt-style="${id}"`);
+  for(const block of state.blocks.sort((a,b)=>a.width-b.width))styles.push(`<style data-rt-css="${id}" data-rt-width="${block.width}" data-rt-values="${escape(JSON.stringify(block.values))}">${rule(id,block.width,block.values)}</style>`);
+ }
+ return {chunk:chunk.toString(),append(source){
+  if(!styles.length)return source;
+  const tree=parse5.parse(source,{sourceCodeLocationInfo:true});let end=source.length;
+  function walk(node){if(node.tagName==='head'&&node.sourceCodeLocation?.endTag)end=node.sourceCodeLocation.endTag.startOffset;for(const child of node.childNodes||[])walk(child);}
+  walk(tree);return source.slice(0,end)+styles.join('')+source.slice(end);
+ }};
+}
+module.exports={describe,plan,valid,rule,clone};

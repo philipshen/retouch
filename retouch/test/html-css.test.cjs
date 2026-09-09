@@ -106,3 +106,18 @@ test('Moving a styled HTML layer keeps its styling and permits independent edits
  const updated=html.collect(next.edits[0].after,'index.html').elements.filter(e=>e.tag==='h1');
  assert.notEqual(updated[0].node.attrs.find(a=>a.name==='data-rt-style').value,updated[1].node.attrs.find(a=>a.name==='data-rt-style').value);
 });
+
+test('Duplicating styled HTML subtrees copies responsive rules to independent identities',()=>{
+ let source='<html><head></head><body><section><h1>Title</h1></section></body></html>';
+ source=edit(source,0,'240px').edits[0].after;source=edit(source,768,'320px').edits[0].after;
+ const elements=html.collect(source,'index.html').elements,element=elements.find(e=>e.tag==='section');
+ const duplicated=html.planOp({...resolve(source),elements,element},{type:'duplicateElement'});assert.equal(duplicated.ok,true);
+ source=duplicated.edits[0].after;
+ const titles=html.collect(source,'index.html').elements.filter(e=>e.tag==='h1');
+ const markers=titles.map(e=>e.node.attrs.find(a=>a.name==='data-rt-style').value);assert.notEqual(...markers);
+ for(const title of titles)assert.deepEqual(css.describe({...resolve(source),element:title}).cssRules,{0:{width:'240px'},768:{width:'320px'}});
+ const edited=css.plan({...resolve(source),element:titles[1]},{property:'width',value:'160px',width:0});assert.equal(edited.ok,true);
+ const fresh=html.collect(edited.edits[0].after,'index.html').elements.filter(e=>e.tag==='h1');
+ assert.equal(css.describe({...resolve(edited.edits[0].after),element:fresh[0]}).cssRules[0].width,'240px');
+ assert.equal(css.describe({...resolve(edited.edits[0].after),element:fresh[1]}).cssRules[0].width,'160px');
+});
