@@ -85,6 +85,7 @@
    I.note(layout,'Arrange children at this screen size. Alignment uses the available space inside the container. Each action is one undo step.');
   }
   const corners=I.section('Corners'),appearance=I.section('Appearance'),typography=I.section('Typography');
+  window.RetouchTextStyles?.mount(typography,el);
   I.fontPicker(typography,el.ownerDocument,css.fontFamily,value=>save('font-family',value,width));
   const relativeLineHeight=I.relativeNumber(typography,'Line height (%)',parseFloat(css.lineHeight)/parseFloat(css.fontSize)*100,0,1000,value=>save('line-height',String(Math.round(value*1e6)/1e8),width));relativeLineHeight.title='Relative to this layer’s font size.';if(css.lineHeight==='normal')relativeLineHeight.placeholder='Automatic';
   I.relativeNumber(typography,'Letter spacing (%)',(parseFloat(css.letterSpacing)||0)/parseFloat(css.fontSize)*100,-100,1000,value=>save('letter-spacing',`${Math.round(value*1e6)/1e8}em`,width)).title='Relative to this layer’s font size.';

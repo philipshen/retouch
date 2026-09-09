@@ -5353,3 +5353,32 @@ revision checks cover sequential stale clients, not full distributed concurrency
 The library currently supports 100 styles and 512 KiB. Full Figma parity and
 arbitrary-site coverage remain incomplete. Native launches stay paused; trusted
 macOS/Homebrew distribution remains unverified.
+
+### Text-style catalog inspector controls
+
+The Typography inspector now exposes an initially collapsed Saved text styles
+section in HTML and class-based React/Liquid renderers. It lazily loads the
+project catalog, captures supported computed typography at the current screen
+size, browses saved declarations, renames styles and deletes with an inline
+cancelable confirmation. IDs survive rename and reload. Unsupported computed
+values are refused explicitly rather than silently omitted. Requests have a
+15-second timeout; errors remain visible and Reload text styles recovers stale
+revision conflicts. Saved properties use readable labels in a collapsed detail
+section, keeping the ordinary typography controls within reach.
+
+The UI explicitly describes these as saved, unlinked typography snapshots.
+Relative CSS values resolve to computed values during capture. This is not yet
+linked application, variable binding, font installation, shared-library
+publication or catalog undo. Next work must implement durable layer references,
+responsive-scope application and update propagation through source transactions.
+
+All six HTML/React/local-Liquid x Chromium/WebKit browser runs exited 0:
+/private/tmp/retouch-text-styles-final-{html,react,liquid}-{chromium,webkit}.log.
+Coverage exercises capture, duplicate rejection, rename identity, full reload
+persistence, external-edit conflicts, reload recovery, cancel/delete and exact
+page-source preservation. No page errors were reported. The final HTML screenshot
+/private/tmp/retouch-text-styles-final.png was visually inspected. All 392 unit
+tests passed (/private/tmp/retouch-text-styles-ui-units.log); syntax and diff
+checks passed. Run browser coverage with test:e2e:text-styles plus the existing
+fixture/renderer/browser environment settings. This does not establish live
+Shopify coverage. Full parity remains unfinished; native launches stay paused.

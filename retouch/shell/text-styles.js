@@ -1,0 +1,51 @@
+(function(root){
+ 'use strict';
+ const properties=['font-family','font-size','font-weight','font-style','font-optical-sizing','font-variation-settings','font-variant-numeric','line-height','letter-spacing','text-align','text-decoration-line','text-transform'];
+ function mount(parent,element){
+  const I=root.RetouchInspector,details=document.createElement('details'),summary=document.createElement('summary');
+  summary.textContent='Saved text styles';details.append(summary);parent.append(details);
+  const body=document.createElement('div');details.append(body);let library=null,busy=false,loaded=false,selected='';
+  const status=I.note(body,'');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+  const controls=document.createElement('fieldset');controls.style.cssText='border:0;padding:0;margin:0;min-width:0';body.append(controls);
+  async function request(operation){
+   const response=await fetch('/rt/__api/text-styles',{method:operation?'POST':'GET',signal:AbortSignal.timeout(15000),headers:{'x-retouch-token':root.__RT_TOKEN,'content-type':'application/json'},...(operation?{body:JSON.stringify(operation)}:{})});
+   const result=await response.json();if(!response.ok||!result.ok)throw Error(result.reason||result.error||'Could not load text styles.');return result;
+  }
+  async function run(action,message){
+   if(busy)return;busy=true;controls.disabled=true;status.textContent='Working…';
+   try{await action();if(!details.isConnected)return;render();status.textContent=message;}
+   catch(error){if(details.isConnected)status.textContent=error.message;}
+   finally{busy=false;controls.disabled=false;}
+  }
+  function load(){return run(async()=>{library=await request();loaded=true;},'');}
+  function capture(){
+   if(!element.isConnected)throw Error('Select the layer again before saving its typography.');
+   const css=element.ownerDocument.defaultView.getComputedStyle(element),values={};
+   for(const property of properties){const value=css.getPropertyValue(property).trim();if(!root.RetouchHTMLCSSValues.valid(property,value))throw Error('This layer uses an unsupported '+property+' value: '+value);values[property]=value;}
+   return values;
+  }
+  function render(){
+   controls.replaceChildren();
+   const refresh=I.button('Reload text styles',load);controls.append(refresh);if(!library)return;
+   const picker=I.select(controls,'Saved text style',[['','Choose a saved style…'],...library.styles.map(style=>[style.id,style.name])],selected,value=>{selected=value;render();});
+   picker.disabled=!library.styles.length;
+   if(!library.styles.length)I.note(controls,'No saved styles yet. Save this layer’s typography to start your library.');
+   const style=library.styles.find(style=>style.id===selected);
+   const name=document.createElement('input');name.type='text';name.maxLength=80;name.value=style?.name||'';name.placeholder='Heading, Body, Caption…';I.field(controls,'Text style name',name);
+   function label(){if(!name.value.trim()){name.setCustomValidity('Give the text style a name.');name.reportValidity();return null;}return name.value.trim();}
+   name.oninput=()=>name.setCustomValidity('');
+   controls.append(I.button('Save current typography',()=>{const title=label();if(!title)return;run(async()=>{const values=capture();library=await request({type:'create',revision:library.revision,name:title,properties:values});selected=library.id;},'Text style saved.');}));
+   if(style){
+    const propertiesDetails=document.createElement('details'),propertiesTitle=document.createElement('summary');propertiesTitle.textContent='Style properties';propertiesDetails.append(propertiesTitle);const labels=['Font family','Font size','Font weight','Font style','Optical sizing','Variable font axes','Numeric styles','Line height','Letter spacing','Text alignment','Text decoration','Letter case'];const preview=document.createElement('dl');preview.className='text-style-properties';for(const [property,value]of Object.entries(style.properties)){const term=document.createElement('dt'),description=document.createElement('dd');term.textContent=labels[properties.indexOf(property)];description.textContent=value;preview.append(term,description);}propertiesDetails.append(preview);controls.append(propertiesDetails);
+    controls.append(I.button('Rename text style',()=>{const title=label();if(!title)return;run(async()=>{library=await request({type:'update',revision:library.revision,id:style.id,name:title,properties:style.properties});},'Text style renamed.');}));
+    const remove=I.button('Delete text style',()=>{
+     const confirm=I.button('Confirm delete '+style.name,()=>run(async()=>{library=await request({type:'delete',revision:library.revision,id:style.id});selected='';},'Text style deleted.'));
+     const cancel=I.button('Cancel deletion',()=>render());remove.replaceWith(confirm,cancel);confirm.focus();
+    });controls.append(remove);
+   }
+   I.note(controls,'Captures typography at the current screen size. Saved styles are not yet linked to layers.');
+  }
+  render();details.ontoggle=()=>{if(details.open&&!loaded)load();};
+ }
+ root.RetouchTextStyles={mount};
+})(window);

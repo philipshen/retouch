@@ -341,3 +341,6 @@ details.advanced > summary:hover { color: var(--ink); }
 .font-axis-range input[type="range"] { width: 100%; accent-color: var(--accent); padding: 0; }
 .font-axis-control { padding: 6px 0 12px; border-bottom: 1px solid var(--line); }
 .font-axis-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.text-style-properties { font: 11px/1.5 var(--mono); overflow-wrap: anywhere; }
+.text-style-properties dt { color: var(--muted); margin-top: 5px; }
+.text-style-properties dd { margin: 0; }

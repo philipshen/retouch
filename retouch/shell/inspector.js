@@ -475,6 +475,7 @@
   function typography(info, el, save, changeTag) {
     const sec=section('Typography'); if(!el)return sec;
     const d=el.ownerDocument, css=d.defaultView.getComputedStyle(el);
+    root.RetouchTextStyles?.mount(sec,el);
     note(sec,`${css.fontFamily} · ${css.fontSize} / ${css.lineHeight} · ${css.fontWeight}`,'computed-value');
     const preview=document.createElement('iframe');preview.className='type-preview';preview.title='Typography preview';preview.setAttribute('sandbox','allow-same-origin');sec.append(preview);
     preview.onload=()=>{
