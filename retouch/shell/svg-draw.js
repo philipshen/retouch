@@ -1,5 +1,13 @@
 (function(root){
  'use strict';
+ function constrained(preset,a,b,{shiftKey=false,altKey=false}={}){
+  let dx=b.x-a.x,dy=b.y-a.y;
+  if(shiftKey){
+   if(preset==='line'){const length=Math.hypot(dx,dy),angle=Math.round(Math.atan2(dy,dx)/(Math.PI/4))*Math.PI/4;dx=Math.cos(angle)*length;dy=Math.sin(angle)*length;}
+   else{const size=Math.max(Math.abs(dx),Math.abs(dy));dx=(dx<0?-1:1)*size;dy=(dy<0?-1:1)*size;}
+  }
+  return [altKey?{x:a.x-dx,y:a.y-dy}:a,{x:a.x+dx,y:a.y+dy}];
+ }
  const ns='http://www.w3.org/2000/svg';
  function geometry(preset,a,b){
   const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x),h=Math.abs(b.y-a.y);
@@ -15,12 +23,14 @@
   function listen(el,event,fn,options){el.addEventListener(event,fn,options);cleanup.push(()=>el.removeEventListener(event,fn,options));}
   function cancel(){if(ended)return;ended=true;preview.remove();surface.remove();cleanup.forEach(f=>f());onEnd();}
   function point(e){const f=frame.getBoundingClientRect(),scale=f.width/w.innerWidth,m=target.getScreenCTM()?.inverse();if(!m)throw Error('This SVG transform cannot be drawn into.');const p=new w.DOMPoint((e.clientX-f.left)/scale,(e.clientY-f.top)/scale).matrixTransform(m);if(!Number.isFinite(p.x)||!Number.isFinite(p.y))throw Error('This SVG transform cannot be drawn into.');return p;}
-  function move(e){if(!state||e.pointerId!==state.id)return;try{state.b=point(e);state.distance=Math.hypot(e.clientX-state.x,e.clientY-state.y);for(const [key,value]of Object.entries(geometry(preset,state.a,state.b)))preview.setAttribute(key,String(value));if(!preview.isConnected)target.append(preview);}catch(error){cancel();onError(error.message);}}
+  function paint(modifiers){state.points=constrained(preset,state.a,state.b,modifiers);for(const [key,value]of Object.entries(geometry(preset,...state.points)))preview.setAttribute(key,String(value));if(!preview.isConnected)target.append(preview);}
+  function move(e){if(!state||e.pointerId!==state.id)return;try{state.b=point(e);state.distance=Math.hypot(e.clientX-state.x,e.clientY-state.y);paint(e);}catch(error){cancel();onError(error.message);}}
   listen(surface,'pointerdown',e=>{if(state||e.button!==0)return;e.preventDefault();e.stopImmediatePropagation();try{const a=point(e);state={id:e.pointerId,a,b:a,x:e.clientX,y:e.clientY,distance:0};surface.setPointerCapture(e.pointerId);}catch(error){cancel();onError(error.message);}});
   listen(surface,'pointermove',move);
-  listen(surface,'pointerup',e=>{if(!state||e.pointerId!==state.id)return;e.preventDefault();move(e);if(!state||ended)return;const {a,b,distance}=state;cancel();if(distance>=4)onCommit([a.x,a.y,b.x,b.y]);});
+  listen(surface,'pointerup',e=>{if(!state||e.pointerId!==state.id)return;e.preventDefault();move(e);if(!state||ended)return;const {points:[a,b],distance}=state;cancel();if(distance>=4)onCommit([a.x,a.y,b.x,b.y]);});
   listen(surface,'pointercancel',cancel);listen(surface,'lostpointercapture',cancel);
   listen(root,'keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancel();}},true);
+  for(const type of ['keydown','keyup'])listen(root,type,e=>{if(state&&['Shift','Alt'].includes(e.key)){e.preventDefault();e.stopImmediatePropagation();paint(e);}},true);
   for(const event of ['retouch:before-zoom','retouch:screen','retouch:viewport','resize','blur','pagehide'])listen(root,event,cancel);
   listen(w,'resize',cancel);listen(w,'scroll',cancel,true);listen(canvas,'scroll',cancel);
   const f=frame.getBoundingClientRect(),r=viewport.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/w.innerWidth;
@@ -28,5 +38,5 @@
   if(right<=left||bottom<=top){cancel();onError('Bring the SVG canvas into view before drawing.');return null;}
   Object.assign(surface.style,{left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px'});root.document.body.append(surface);surface.focus({preventScroll:true});return cancel;
  }
- root.RetouchSVGDraw={mount,geometry};
-})(window);
+ const api={mount,geometry,constrained};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGDraw=api;
+})(typeof window==='object'?window:globalThis);

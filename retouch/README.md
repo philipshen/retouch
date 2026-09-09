@@ -370,7 +370,9 @@ scroll position. Resize handles follow the new zoom immediately.
 
 Select an existing SVG canvas or group to use **Draw rectangle**, **Draw circle**,
 **Draw ellipse**, or **Draw line**. Drag inside the SVG to preview the shape and
-release to add it in one undo step. Drawing follows the viewBox, group transforms
-and canvas zoom. Escape, zooming or changing screen size cancels the preview.
+release to add it in one undo step. Hold Shift for equal width/height or
+45-degree line angles; hold Option/Alt to draw from the starting point as the
+center. Combine both modifiers, or release them during the drag to return to
+free drawing. Drawing follows the viewBox, group transforms and canvas zoom. Escape, zooming or changing screen size cancels the preview.
 Geometry is shared across screen sizes. Drawing a new SVG directly on an HTML
 container and freehand/vector path tools remain unfinished.

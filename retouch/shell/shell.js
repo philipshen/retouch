@@ -840,7 +840,7 @@ function renderPanelContents() {
       const shapes=RetouchInspector.section('Add shape'),buttons=document.createElement('div');buttons.className='stack-presets';
       for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Add '+preset,()=>insertLayer(preset,info,'insertSVG')));
       if(!info.svgInsertion.createsViewport)for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Draw '+preset,()=>drawShape(preset,info)));
-      shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Adds a shape in a new 200 × 200 canvas.':'Add a preset shape, or choose Draw and drag inside this SVG canvas. Escape cancels.');panelBody.append(shapes);
+      shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Adds a shape in a new 200 × 200 canvas.':'Choose Draw and drag inside this SVG canvas. Shift constrains proportions or line angle; Option/Alt draws from the center. Escape cancels.');panelBody.append(shapes);
     }
     if(info.svgGeometry){
       const geometry=RetouchInspector.section('SVG geometry');
@@ -1684,7 +1684,7 @@ function drawShape(preset,info){
   stopDrawing=RetouchSVGDraw.mount({target,frame:iframe,canvas:canvasSurface,preset,
     onCommit:points=>insertLayer(preset,info,'insertSVG',{points}),
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
-  if(stopDrawing)toast('Drag to draw '+preset+'. Escape cancels.','ok');
+  if(stopDrawing)toast('Drag to draw '+preset+'. Shift constrains; Option/Alt draws from center. Escape cancels.','ok');
 }
 async function insertLayer(preset,info,type='insertElement',extra={}){
   if(panelTasks||undoBusy||sourceRequests)return;

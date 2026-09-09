@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 273 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 275 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1398,3 +1398,21 @@ Drawing directly into HTML layout, shape constraint modifiers, vector paths,
 pen/freehand tools and cross-renderer support remain unfinished; this does not
 establish full drawing parity. The native bundle has not yet been rebuilt with
 these changes.
+
+
+### SVG drawing constraints and center origins
+
+Drawing now accepts Shift for equal width/height or 45-degree line angles, and
+Option/Alt for a centered origin. Both modifiers compose. Pressing or releasing
+a modifier updates the live preview immediately with a stationary pointer;
+release commits the same constrained endpoints. Constraints use the selected
+SVG container's coordinate system, so a nonuniform transform can still stretch
+a source circle or square visually.
+
+All 275 unit tests pass. Unit checks cover all four drag quadrants, combining
+constraints, centered origins and line angle snapping with preserved radial
+distance. Chromium and WebKit verify stationary modifier changes, return to free
+drawing, exact source preservation during preview/cancel, and committed centered
+ellipses and diagonal lines with undo/redo at 50% canvas zoom in a transformed
+group. The previous four-shape creation and cancellation checks also pass.
+HTML drawing, vector path tools and cross-renderer parity remain unfinished.
