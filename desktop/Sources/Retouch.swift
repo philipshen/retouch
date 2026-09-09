@@ -77,6 +77,19 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
     static func launchArguments(_ command: String, cli: String? = nil) -> [String] {
         ["-l", "-c", "exec " + shellQuote(cli ?? bundledCLI) + " -- /bin/zsh -l -c " + shellQuote(command)]
     }
+    static func htmlLaunchArguments(_ folder: URL, cli: String? = nil) -> [String] {
+        ["-l", "-c", "exec " + shellQuote(cli ?? bundledCLI) + " html " + shellQuote(folder.path) + " --port=0"]
+    }
+    static func prefersHTML(_ folder: URL) -> Bool {
+        let fm = FileManager.default
+        return !fm.fileExists(atPath: folder.appendingPathComponent("package.json").path)
+            && ["index.html", "index.htm"].contains { fm.fileExists(atPath: folder.appendingPathComponent($0).path) }
+    }
+    @objc private func projectModeChanged(_ sender: NSPopUpButton) {
+        if let input = sender.superview?.subviews.first(where: { $0 is NSTextField }) as? NSTextField {
+            input.isEnabled = sender.indexOfSelectedItem == 0
+        }
+    }
     private func appendLog(_ text: String) {
         guard let log = logText else { return }
         log.textStorage?.append(NSAttributedString(string: text, attributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)]))
@@ -97,24 +110,33 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
     @objc private func openProject() {
         guard projectProcess == nil else { showLogs(); return }
         let picker = NSOpenPanel(); picker.canChooseFiles = false; picker.canChooseDirectories = true; picker.allowsMultipleSelection = false
-        picker.message = "Choose the project folder for your usual startup command."
+        picker.message = "Choose a web project or a folder containing HTML files."
         guard picker.runModal() == .OK, let folder = picker.url else { return }
         let alert = NSAlert(); alert.messageText = "Start " + folder.lastPathComponent
-        alert.informativeText = "Enter your usual startup command. The bundled Retouch CLI wraps it and output appears in Project logs."
+        alert.informativeText = "Choose HTML files to edit a static web folder, or enter your usual startup command for an app. The editor opens automatically."
         let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 480, height: 26))
         let key = "projectCommand:" + folder.path
         input.stringValue = UserDefaults.standard.string(forKey: key) ?? ""
         input.placeholderString = "npm run dev, make internal, or ./start.sh"
         input.setAccessibilityLabel("Project startup command")
-        alert.accessoryView = input; alert.addButton(withTitle: "Start project"); alert.addButton(withTitle: "Cancel")
-        alert.window.initialFirstResponder = input
+        let mode = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 480, height: 28))
+        mode.addItems(withTitles: ["Run startup command", "Edit HTML files"])
+        mode.setAccessibilityLabel("Project type")
+        mode.selectItem(at: Self.prefersHTML(folder) ? 1 : 0)
+        mode.target = self; mode.action = #selector(projectModeChanged(_:))
+        input.isEnabled = mode.indexOfSelectedItem == 0
+        let controls = NSStackView(views: [mode, input]); controls.orientation = .vertical
+        controls.alignment = .leading; controls.spacing = 8
+        alert.accessoryView = controls; alert.addButton(withTitle: "Start project"); alert.addButton(withTitle: "Cancel")
+        alert.window.initialFirstResponder = input.isEnabled ? input : mode
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         let command = input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !command.isEmpty else { status.stringValue = "Enter a startup command to start the project."; return }
+        let isHTML = mode.indexOfSelectedItem == 1
+        guard isHTML || !command.isEmpty else { status.stringValue = "Enter a startup command to start the project."; return }
         showLogs(); logText?.string = ""
-        appendLog("Project: " + folder.path + "\nCommand: retouch -- " + command + "\n\n")
+        appendLog("Project: " + folder.path + "\n" + (isHTML ? "Mode: HTML files" : "Command: retouch -- " + command) + "\n\n")
         let process = Process(), pipe = Pipe()
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh"); process.arguments = Self.launchArguments(command)
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh"); process.arguments = isHTML ? Self.htmlLaunchArguments(folder) : Self.launchArguments(command)
         process.currentDirectoryURL = folder; process.standardOutput = pipe; process.standardError = pipe
         pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
@@ -139,7 +161,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         }
         do {
             try process.run(); projectProcess = process; projectPipe = pipe; startDiscovery()
-            UserDefaults.standard.set(command, forKey: key)
+            if !isHTML { UserDefaults.standard.set(command, forKey: key) }
             projectButton.isEnabled = false; stopButton.isEnabled = true
             status.stringValue = "Project starting · looking for its local editor URL…"
         } catch {
@@ -201,7 +223,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         body{background:#17181b;color:#e8e9eb;font:16px -apple-system;padding:12vh 10vw;line-height:1.6}
         h1{font-size:40px;letter-spacing:-1px}p{color:#aaa;max-width:600px}code{color:#87c8ff;background:#252830;padding:8px 12px;border-radius:6px}
         </style><h1>Your site. Your design canvas.</h1>
-        <p>Choose Open project above, select your project folder, and enter your usual startup command. Retouch opens the editor when it is ready.</p>
+        <p>Choose Open project above, select your project folder, and choose HTML files or enter your usual startup command. Retouch opens the editor when it is ready.</p>
         <p><code>npm run dev</code></p>
         <p>Already using Make or a shell script? Enter that same command. For a project already running with Retouch, enter its editor URL above.</p>
         """, baseURL: nil)
@@ -238,8 +260,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         request.timeoutInterval = 8
         status.stringValue = "Connecting…"
         pending = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-            let json = data.flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: Any]
-            let ok = error == nil && (response as? HTTPURLResponse)?.statusCode == 200 && json?["ok"] as? Bool == true
+            let ok = Self.isRetouchHealth(data, response, error)
             DispatchQueue.main.async {
                 guard let self = self, self.requestID == id else { return }
                 if ok {
@@ -247,6 +268,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
                     UserDefaults.standard.set(url.absoluteString, forKey: "editorURL")
                     self.status.stringValue = "Connected · edits save to your project's source"
                     self.web.load(URLRequest(url: url))
+                    self.window.makeKeyAndOrderFront(nil)
                 } else {
                     self.status.stringValue = "Could not connect. Check that Retouch is running and the port is correct."
                 }
@@ -331,6 +353,38 @@ if CommandLine.arguments.contains("--self-test") {
         precondition(URL(fileURLWithPath: cwd).resolvingSymlinksInPath().path == folder.resolvingSymlinksInPath().path)
         precondition(launch.terminationStatus == 7)
         print("PASS native launcher delegates to real CLI, preserves working directory and propagates exit status")
+    }
+    let htmlFolder = FileManager.default.temporaryDirectory.appendingPathComponent("retouch HTML ' literal-$-" + UUID().uuidString)
+    try! FileManager.default.createDirectory(at: htmlFolder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: htmlFolder) }
+    try! "<html><body><h1>Native HTML</h1></body></html>".write(to: htmlFolder.appendingPathComponent("index.html"), atomically: true, encoding: .utf8)
+    precondition(Studio.prefersHTML(htmlFolder))
+    try! "{}".write(to: htmlFolder.appendingPathComponent("package.json"), atomically: true, encoding: .utf8)
+    precondition(!Studio.prefersHTML(htmlFolder))
+    try! FileManager.default.removeItem(at: htmlFolder.appendingPathComponent("package.json"))
+    if testCLI != nil || CommandLine.arguments.contains("--launch-bundled") {
+        let server = Process(), output = Pipe(), ready = DispatchSemaphore(value: 0)
+        server.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        server.arguments = Studio.htmlLaunchArguments(htmlFolder, cli: testCLI)
+        server.standardOutput = output; server.standardError = output
+        var startup = Studio.StartupLines(), editor: URL?
+        output.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            if data.isEmpty { handle.readabilityHandler = nil; ready.signal(); return }
+            if let url = startup.append(String(decoding: data, as: UTF8.self)).first { editor = url; ready.signal() }
+        }
+        try! server.run()
+        precondition(ready.wait(timeout: .now() + 15) == .success)
+        guard let editor = editor else { fatalError("HTML launcher produced no editor URL") }
+        var health = URLComponents(url: editor, resolvingAgainstBaseURL: false)!
+        health.path = "/rt/__api/health"
+        let checked = DispatchSemaphore(value: 0)
+        URLSession.shared.dataTask(with: health.url!) { data, response, error in
+            precondition(Studio.isRetouchHealth(data, response, error)); checked.signal()
+        }.resume()
+        precondition(checked.wait(timeout: .now() + 10) == .success)
+        server.terminate(); server.waitUntilExit(); output.fileHandleForReading.readabilityHandler = nil
+        print("PASS native HTML folder launch, literal path, dynamic port, editor health and stop")
     }
     print("PASS desktop URL boundaries, startup URL discovery and command literal round trip")
 } else {

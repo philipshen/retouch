@@ -10,7 +10,12 @@ node desktop/scripts/build.cjs
 open desktop/dist/Retouch.app
 ```
 
-Click **Open project…**, choose a folder, and enter your usual startup command.
+Click **Open project…** and choose a folder. Select **Edit HTML files** for a
+static web directory, or **Run startup command** for your usual app command.
+Folders with `index.html`/`index.htm` and no `package.json` default to HTML mode;
+the choice is always available. HTML mode starts the bundled server on an
+available port and opens its editor automatically, with no command required.
+The canvas comes forward when connected; logs remain available from the toolbar.
 The app runs it through its bundled Retouch CLI using a login zsh and the
 selected working directory. **Project logs** shows output; **Stop** signals the
 owned CLI, which handles its process group. The command is remembered per folder.
@@ -101,3 +106,8 @@ undo restored the entire original file byte-for-byte. Cmd+Z and Cmd+Shift+Z also
 worked. Stop removed the app-owned port 3496 listener while the externally run
 port 3491 server stayed live. The welcome text now describes native project
 startup instead of requiring a separate global CLI command.
+
+Native HTML verification covers the folder dialog, automatic mode selection,
+command-free startup, automatic connection, persistent CSS editing, exact undo
+and Stop releasing the listening port. Bundled launch self-tests also cover a
+folder path containing spaces and shell punctuation and dynamic port discovery.

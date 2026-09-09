@@ -371,3 +371,16 @@ forms; shorthand expansion, arbitrary selectors, state/container queries and
 existing stylesheet refactoring remain open. Generated declarations use
 `!important`; stronger authored important rules may win, and inline important
 conflicts are refused. It does not establish arbitrary-site or full Figma parity.
+
+
+### Native HTML project opening
+
+The native startup dialog offers HTML files and startup-command modes. A static
+index folder without a package manifest defaults to HTML mode; app projects keep
+their usual startup command. The bundled HTML CLI uses an available port and the
+existing health discovery opens the editor. The canvas is brought forward after
+connection. A universal build and bundled launch tests verify quoted paths,
+mode detection, dynamic port discovery, health and termination. Native UI checks
+verify folder selection, the HTML default, a persisted width edit, exact undo,
+and Stop releasing the owned port. Release signing/notarization and public cask
+distribution remain unverified and unfinished.
