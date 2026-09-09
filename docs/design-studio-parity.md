@@ -4948,3 +4948,35 @@ font implements GRAD or changes its glyphs. Automatic axis discovery, font-speci
 ranges and tags containing other legal OpenType characters remain unfinished.
 The prior +/-10000 numeric bound remains. Full parity is incomplete, and native
 launches remain paused.
+
+### Font-axis metadata parser groundwork (2026-09-09)
+
+Added src/font-axes.cjs to read axis tags, Unicode display names, minimum/default/
+maximum coordinates and hidden flags from fvar/name tables. It handles standalone
+TrueType/OpenType sfnt, WOFF and WOFF2, including skipping transformed WOFF2 outline
+and metrics table payloads while locating metadata. It reads metadata only; it
+neither reconstructs glyphs nor installs fonts. Input is limited to 16 MB and
+aggregate decompression to 32 MB, with bounded table/name/axis counts and range/
+truncation/duplicate checks. Collection fonts and unknown transforms are refused.
+
+Format references used:
+https://learn.microsoft.com/en-us/typography/opentype/spec/fvar
+https://www.w3.org/TR/WOFF2/
+
+The actual local Geist fixture (28356 bytes, SHA-256
+1b5ebfb3a01a97343ac96873e6d59a8cb285c66012b6a1ac509cb2765e995ba8)
+reported wght / Weight, minimum 100, default 400, maximum 900, hidden false.
+The complete read receipt is `/private/tmp/retouch-geist-axis-metadata.json`.
+Generated metadata fixtures agreed across sfnt, WOFF and transformed-outline
+WOFF2, including a negative custom-axis range and Unicode name. Tests cover input
+preservation, static-font absence, missing-name fallback, truncation, invalid
+ranges, duplicate axes, malformed base128 lengths and unknown transforms. The
+initial WOFF test incorrectly compressed an equal-length table; it was corrected
+to store raw bytes as required by WOFF. All 380 unit tests passed in
+`/private/tmp/retouch-font-metadata-unit.log`; git diff --check passed.
+
+This module is not yet wired to an API or inspector discovery. Font-file selection,
+CSS source/fallback resolution, access constraints, localized-name preferences and
+UI ranges remain unfinished. It is not a full font validator or exhaustive
+WOFF/WOFF2 decoder. Large-memory/CPU limits have not been stress-tested. Full Figma
+parity remains incomplete; native launches remain paused.
