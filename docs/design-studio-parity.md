@@ -3276,3 +3276,45 @@ Arcs, vector networks, booleans/masks, persistent per-anchor constraints and the
 remaining full-parity requirements remain open. Native launches remain paused;
 no desktop build or launch occurred. Full Figma Design parity, unrestricted site
 authoring and trusted Mac distribution remain incomplete.
+
+
+### 2026-09-09 — Whole-contour movement
+
+Move contour switches the vector editor to translating every anchor and handle
+in the selected contour together. Users drag its highlighted outline or use
+arrow keys; Shift-arrow moves ten SVG units. Pointer movement shares the existing
+axis constraint and inverse transform handling. A drag commits on release, while
+keyboard changes commit with Done/Enter. Escape cancels pending movement. Other
+contours retain their geometry and paint.
+
+Point controls are hidden/disabled during this mode, and Delete addresses the
+whole contour while preserving the existing final-contour guard. Returning from
+a cancelled nested Pen step restores keyboard focus to contour movement. Source
+bounds are checked before each translation. The active contour gets a blue
+highlight instead of the browser's oversized transformed SVG focus outline;
+tangent guides are hidden while moving.
+
+All 354 unit tests pass in `/private/tmp/retouch-move-contour-unit.log`. The initial
+browser tests matched both the visible preview and the new transparent hit path;
+those failures are retained in `/private/tmp/retouch-move-contour-html-chromium.log`
+and `/private/tmp/retouch-move-contour-react-webkit.log`. The visible preview now
+has an explicit data-vector-preview marker used by geometry assertions.
+
+All four browser workflows pass in
+`/private/tmp/retouch-move-contour-{html,react}-{chromium,webkit}-complete.log`.
+They check every translated anchor/handle against actual pointer events through
+nested transforms at 50/100/200 percent zoom, untouched neighboring contours,
+keyboard movement, preview isolation, mode switching, Escape, nested Pen focus
+restoration and exact undo/redo. The final highlight styling was verified in
+`/private/tmp/retouch-move-contour-html-chromium-focus.log` and
+`/private/tmp/retouch-move-contour-react-webkit-focus.log`; the inspected
+`/private/tmp/retouch-move-contour-html-chromium-focus.png` shows the contour itself
+highlighted without the oversized focus box or tangent lines.
+
+Before the final styling adjustment, curve-mode and Pen-append regressions passed
+in `/private/tmp/retouch-move-contour-html-chromium-svg-handle-modes.log` and
+`/private/tmp/retouch-move-contour-react-webkit-svg-draw-contour.log`.
+Arcs, vector networks, boolean/mask authoring, persistent per-anchor constraints
+and the broader Figma Design requirements remain open. Native launches remain
+paused; this work does not establish unrestricted site authoring or trusted Mac
+distribution.

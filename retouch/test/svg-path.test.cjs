@@ -101,3 +101,10 @@ test('Appending drawn contours preserves existing geometry and removes unused op
   const closed=path.appendContour(doc,nodes,true);assert.deepEqual(closed.subpaths[1],{nodes,closed:true});assert.ok(path.equivalentCompound(closed,path.parseCompound(path.serializeCompound(closed))));
   assert.equal(path.appendContour(doc,[{x:0,y:0}],false),null);assert.equal(path.appendContour({subpaths:Array(128).fill({nodes:[{x:0,y:0},{x:1,y:1}],closed:false})},nodes,false),null);
 });
+
+test('Contour translation moves every anchor and handle without changing shape or mutating input',()=>{
+  const part={nodes,closed:true},moved=path.translateContour(part,12,-7);assert.equal(moved.closed,true);
+  for(let i=0;i<nodes.length;i++)for(const key of ['', 'in', 'out']){const a=key?nodes[i][key]:nodes[i],b=key?moved.nodes[i][key]:moved.nodes[i];assert.equal(b.x-a.x,12);assert.equal(b.y-a.y,-7);}
+  assert.deepEqual(path.translateContour(moved,-12,7),part);assert.equal(nodes[0].x,0);
+  assert.equal(path.translateContour(part,100001,0),null);assert.equal(path.translateContour(part,NaN,0),null);
+});

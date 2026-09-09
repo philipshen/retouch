@@ -57,6 +57,10 @@
     for(const part of document.subpaths){if(!part||!Array.isArray(part.nodes)||(total+=part.nodes.length)>512)return null;const d=serialize(part.nodes,part.closed);if(!d)return null;parts.push(d);}
     return parts.join(' ');
   }
+  function translateContour(part,dx,dy){
+    if(!part||!serialize(part.nodes,part.closed)||!Number.isFinite(dx)||!Number.isFinite(dy))return null;
+    const nodes=part.nodes.map(p=>translate(p,dx,dy));return serialize(nodes,part.closed)?{nodes,closed:part.closed}:null;
+  }
   function appendContour(document,nodes,closed){
     if(!serializeCompound(document)||!serialize(nodes,closed))return null;
     const next=nodes.map(p=>translate(p,0,0));if(!closed){delete next[0].in;delete next.at(-1).out;}
@@ -114,5 +118,5 @@
     return (!next.in||coordinate(next.in))&&(!next.out||coordinate(next.out))?next:null;
   }
   function equivalent(a,b){return !!a&&!!b&&a.closed===b.closed&&a.nodes.length===b.nodes.length&&a.nodes.every((p,i)=>['','in','out'].every(key=>{const x=key?p[key]:p,y=key?b.nodes[i][key]:b.nodes[i];return !x&&!y||x&&y&&Math.abs(x.x-y.x)<1e-6&&Math.abs(x.y-y.y)<1e-6;}));}
-  const api={serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,split,segmentMiddle,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
+  const api={serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,split,segmentMiddle,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
 })(typeof window==='object'?window:globalThis);
