@@ -154,7 +154,12 @@ to toggle individual layers. On the canvas, Shift-click also toggles a layer.
 Shift plus Up/Down/Home/End extends the Layers range. **Select visible layers**,
 or Cmd/Ctrl+A while a row is focused, selects the displayed design layers. With
 a search active, it selects matching rows rather than their context ancestors;
-collapsed children and the HTML/body document roots are excluded. The **Shared styles** inspector shows
+collapsed children and the HTML/body document roots are excluded.
+Drag from empty HTML page background to surround layers with a marquee. Only
+fully enclosed layers are selected, and an enclosed parent represents its
+children. Shift adds to the current selection; Escape cancels. Marquee selection
+does not write source. Starting a marquee on content or the outer gray canvas
+is not implemented yet. The **Shared styles** inspector shows
 common values and marks differing values as Mixed. Changes and resets apply to
 all selected layers at the chosen screen scope in one undo step. If any layer
 refuses the change, the entire edit is refused. Up to 100 layers in one HTML

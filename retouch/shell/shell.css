@@ -276,3 +276,5 @@ details.advanced > summary:hover { color: var(--ink); }
 
 .layer-select-all { margin:7px 0; width:100%; padding:6px; border:1px solid var(--line); border-radius:5px; background:#24272d; color:var(--ink); font:12px var(--font); cursor:pointer; }
 .layer-select-all:disabled { opacity:.5; cursor:default; }
+
+.selection-marquee { position:absolute; border:1px solid var(--accent); background:rgba(80,170,255,.13); pointer-events:none; box-sizing:border-box; }

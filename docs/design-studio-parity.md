@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 239 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 240 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -872,3 +872,22 @@ ranges, keyboard expansion/contraction, individual toggling, select-all, filtere
 select-all, excluded context ancestors, search text selection and collapsed-tree
 selection, then compare source bytes with the original. Canvas marquee selection
 and broader renderer multi-selection remain unfinished.
+
+
+### HTML canvas marquee selection
+
+Dragging from an empty HTML/body page background now draws a marquee in the
+editor overlay. Release selects fully enclosed source-connected layers. If a
+parent is fully enclosed, its descendants are represented by that parent rather
+than selected again. Shift/Cmd/Ctrl adds the result to the current selection.
+Escape, pointer cancellation, lost capture, resize, navigation and focus loss
+clean up the gesture. The post-drag click is suppressed so it cannot replace the
+new selection. Normal editing and interaction modes retain their existing gates.
+
+All 240 unit tests pass. The geometry test covers reverse drags, containment and
+partial/zero-size exclusions. Chromium and WebKit perform real mouse gestures
+for a text-layer rectangle, additive image selection, cancellation, and a reverse
+drag enclosing the whole main container. They verify rectangle cleanup, preserved
+selection on cancellation, outermost-parent selection and unchanged source bytes.
+Starting on content or the outer gray canvas, clipped/irregular hit geometry and
+marquee support in other renderers remain unfinished.

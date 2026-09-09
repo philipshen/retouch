@@ -14,6 +14,7 @@ const redoBtn = document.getElementById('redoBtn');
 const statusEl = document.getElementById('status');
 const panelEmpty = document.getElementById('panelEmpty');
 const panelBody = document.getElementById('panelBody');
+if(window.__RT_RENDERING?.layerReparenting){const hint=document.createElement('p');hint.className='hint';hint.textContent='Drag empty page background to surround layers. Shift adds to the selection; Escape cancels.';panelEmpty.append(hint);}
 
 const SPACING_STEPS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20, 24, 28, 32];
 
@@ -22,6 +23,7 @@ let sel = null; // { hostId, instanceId, scope: 'host'|'instance', info }
 let editing = null; // { el, id, info, original, originalHTML, snapshot, originalTree } during inline text editing
 let hoverEl = null;
 let measuring = false;
+let selectionMarquee=null,stopMarquee=null;
 let sourceRequests = 0;
 let undoBusy = false;
 let classificationSerial = 0;
@@ -79,6 +81,11 @@ setInterval(pollNavigation, 300);
 function doc() { return iframe.contentDocument; }
 
 function hookFrame(d, w) {
+  stopMarquee?.();
+  stopMarquee=RetouchMarquee.mount({document:d,enabled:()=>window.__RT_RENDERING?.layerReparenting===true&&mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests,
+    onChange:rect=>{selectionMarquee=rect?{document:d,rect}:null;},
+    onSelect:(nodes,options)=>selectMany(nodes,options),
+  });
   // The compiler may deliver CSS after the source-write response. Refresh
   // computed inspector values when that CSS lands, without interrupting input.
   let styleRefresh;
@@ -647,6 +654,7 @@ function paintLoop() {
   badgeTarget=badge;componentBadge.hidden=!badge;
   if(badge){const r=badge.el.getBoundingClientRect();componentBadge.style.left=Math.max(0,r.left)+'px';componentBadge.style.top=Math.max(0,r.top-22)+'px';}
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
+  if(selectionMarquee?.document===d){const rect=selectionMarquee.rect,box=document.createElement('div');box.className='selection-marquee';Object.assign(box.style,{left:rect.left+'px',top:rect.top+'px',width:rect.width+'px',height:rect.height+'px'});overlayLayer.append(box);}
   layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[]);
   requestAnimationFrame(paintLoop);
 }
