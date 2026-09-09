@@ -1085,3 +1085,22 @@ untouched other corners and important border stroke, responsive inheritance,
 uniform replacement, individual reset and exact source undo. The new fixture is
 included in test:e2e:html; its screenshot was inspected. Figma corner smoothing,
 vector geometry, other renderer parity and trusted native release remain open.
+
+
+### Inspector scroll continuity
+
+Refreshing the same selection now restores the inspector scroll offset after all
+sections are rebuilt, including early-return inspector paths. A changed selection
+or cleared selection starts at the top. The key includes source file, selection
+scope, instance and selected IDs; ordinary style/hash changes keep the same key.
+This fixes the observed jump to the top after editing a corner below the fold.
+
+Chromium and WebKit corner tests explicitly scroll before editing and verify the
+saved scroll offset remains within one pixel, plus a new selection resets to zero.
+The inspected screenshot now retains the Corners section after saving. This
+improves editing continuity; focus restoration and full native/all-renderer
+interaction coverage remain separate unfinished work.
+
+The full seven-workflow HTML browser command also passed in Chromium and WebKit
+after this shared-renderer change, including general editing, flex/wrapping,
+adaptive grids, frame bounds, visibility and corners.

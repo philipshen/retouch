@@ -364,7 +364,7 @@ async function loadScope() {
 }
 
 function clearSelection() {
-  classificationSerial++;sel = null;
+  classificationSerial++;sel = null;renderedPanelSelection=null;
   window.dispatchEvent(new CustomEvent('retouch:selection',{detail:null}));
   panelBody.hidden = true;
   panelEmpty.hidden = false;
@@ -730,7 +730,17 @@ window.addEventListener('retouch:viewport',()=>{
     if(sel && !panelTasks && !panelBody.contains(document.activeElement))renderPanel();
   });
 });
+let renderedPanelSelection=null;
 function renderPanel() {
+  const panel=document.getElementById('panel');
+  const key=JSON.stringify([sel.info.file,sel.scope,sel.instanceId,(sel.multiple||[sel.info]).map(info=>info.id).sort()]);
+  const top=key===renderedPanelSelection?panel.scrollTop:0;
+  renderedPanelSelection=key;
+  // Rebuilding an empty fieldset can clamp its scroll container to zero.
+  // Restore synchronously after all sections (including early returns) exist.
+  try { renderPanelContents(); } finally { panel.scrollTop=top; }
+}
+function renderPanelContents() {
   window.dispatchEvent(new CustomEvent('retouch:selection',{detail:activeId()}));
   const info = sel.info;
   const style = scopedInfo(info);

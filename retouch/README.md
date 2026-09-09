@@ -185,6 +185,8 @@ reset removes the chosen scope’s visibility override.
 **Corners** includes uniform rounding and four independent corners. A corner can
 use two lengths for elliptical rounding. Setting uniform rounding replaces that
 scope’s individual overrides; resetting one corner restores inherited rounding.
+The inspector retains its scroll position when the same selection refreshes after
+an edit. Selecting a different layer opens its inspector at the top.
 A frame changes the document hierarchy, so parent selectors and flex/grid layout
 can change; this is not a guarantee of identical appearance. **Duplicate layers** and **Delete layers** apply to the
 selection in one undo step. Selecting a parent and its child handles the subtree

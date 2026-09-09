@@ -17,7 +17,7 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
   await page.goto(`http://localhost:${server.address().port}/rt`);await page.getByRole('treeitem',{name:'main · Frame',exact:true}).click();await settled();
   const size=async value=>{await page.getByLabel('Screen size',{exact:true}).selectOption(value);await wait(async()=>await app.locator('body').evaluate(()=>innerWidth)===Number(value.split('x')[0]));};
   const corner=property=>app.locator('main').evaluate((el,p)=>getComputedStyle(el).getPropertyValue(p),property);
-  const fill=async(label,value)=>{await page.getByLabel(label+' (CSS)',{exact:true}).fill(value);await page.getByLabel(label+' (CSS)',{exact:true}).press('Tab');await settled();};
+  const fill=async(label,value)=>{await page.getByLabel(label+' (CSS)',{exact:true}).evaluate(el=>el.scrollIntoView({block:'center'}));await page.getByLabel(label+' (CSS)',{exact:true}).fill(value);const scroll=await page.locator('#panel').evaluate(el=>el.scrollTop);assert.ok(scroll>0,'corner field is below the inspector fold');await page.getByLabel(label+' (CSS)',{exact:true}).press('Tab');await settled();await wait(async()=>Math.abs(await page.locator('#panel').evaluate(el=>el.scrollTop)-scroll)<=1);};
   await size('390x844');await fill('Corner radius','8px');await wait(async()=>await corner('border-top-left-radius')==='8px');const baseSource=read();
   await size('768x1024');await page.getByLabel('Style screen scope').selectOption('min-[768px]:');await fill('Top left corner','40px 10px');await wait(async()=>await corner('border-top-left-radius')==='40px 10px');const ellipseSource=read();assert.equal(await corner('border-top-right-radius'),'8px');assert.equal(await corner('border-top-width'),'2px');
   if(process.env.RT_E2E_CORNERS_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_CORNERS_SCREENSHOT});
@@ -28,6 +28,7 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===ellipseSource);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===baseSource);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);
+  await page.getByRole('treeitem',{name:'body',exact:true}).click();await settled();assert.equal(await page.locator('#panel').evaluate(el=>el.scrollTop),0,'new selection opens at top');
   assert.deepEqual(errors,[]);console.log(engine+': PASS independent/elliptical corners, preserved important stroke, responsive inheritance, uniform replacement and exact undo/reset');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
