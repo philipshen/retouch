@@ -315,3 +315,9 @@ still affect rendering; drawing a shape directly by dragging is not implemented.
 **Delete layer** also removes a selected SVG shape, group or canvas, including
 its contents. The parent becomes selected; undo restores the original layer,
 its paint and selection. Other SVG structural actions remain unfinished.
+
+Inside an SVG canvas or group, **Send backward** and **Bring forward** swap a
+layer with its neighboring SVG layer. Later layers normally paint on top.
+The moved layer stays selected, including through undo/redo; its geometry and
+paint rules travel with it. Reordering across definitions or other unindexed
+SVG nodes is not supported yet.

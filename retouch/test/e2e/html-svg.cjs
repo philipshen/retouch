@@ -15,7 +15,7 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
  const settled=()=>wait(async()=>await page.locator('#panelBody').getAttribute('aria-busy')!=='true');
  try{
   await page.goto(`http://localhost:${server.address().port}/rt`);await app.locator('rect').click();await settled();await wait(async()=>await page.getByLabel('Shape Width',{exact:true}).count()===1);
-  assert.equal(await page.getByRole('treeitem',{name:'rect · Box',exact:true}).getAttribute('aria-selected'),'true');
+  await wait(async()=>await page.getByRole('treeitem',{name:'rect · Box',exact:true}).getAttribute('aria-selected')==='true');
   const fill=async(label,value)=>{await page.getByLabel('Shape '+label,{exact:true}).fill(value);await page.getByLabel('Shape '+label,{exact:true}).press('Tab');await settled();};
   await fill('Width','80');await wait(async()=>await app.locator('rect').evaluate(el=>el.getBBox().width)===80);assert.equal(await app.locator('rect').evaluate(el=>el.getBoundingClientRect().width),120,'SVG viewBox scales source geometry');const wideSource=read();
   if(process.env.RT_E2E_SVG_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_SVG_SCREENSHOT});
@@ -66,7 +66,18 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);assert.equal(await page.getByRole('treeitem',{name:'svg',exact:true}).getAttribute('aria-selected'),'true');
   await page.getByRole('treeitem',{name:'g',exact:true}).click();await settled();await page.getByRole('button',{name:'Delete layer',exact:true}).click();await settled();await wait(async()=>await app.locator('g').count()===0);assert.equal(await app.locator('circle,ellipse').count(),0);assert.equal(await app.locator('rect,line').count(),2);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);assert.equal(await page.getByRole('treeitem',{name:'g',exact:true}).getAttribute('aria-selected'),'true');
+  await page.getByRole('treeitem',{name:'circle',exact:true}).click();await settled();await fill('Center X','20');const repositionX=read();await fill('Center Y','15');const overlapping=read();
+  await page.getByRole('treeitem',{name:'rect · Box',exact:true}).click();await settled();await paint('fill','#ff00ff');const overlapPainted=read();
+  const topShape=()=>app.locator('svg').evaluate(svg=>{const point=new DOMPoint(20,15).matrixTransform(svg.getScreenCTM());return document.elementFromPoint(point.x,point.y)?.tagName;});
+  await wait(async()=>await topShape()==='circle');assert.equal(await page.getByRole('button',{name:'Send backward',exact:true}).isDisabled(),true);
+  await page.getByRole('button',{name:'Bring forward',exact:true}).click();await settled();await wait(async()=>await topShape()==='rect');const reordered=read();if(process.env.RT_E2E_SVG_MOVE_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_SVG_MOVE_SCREENSHOT});assert.equal(await page.getByRole('treeitem',{name:'rect · Box',exact:true}).getAttribute('aria-selected'),'true');assert.equal(await computed('fill'),'rgb(255, 0, 255)');
+  await page.getByRole('button',{name:'Send backward',exact:true}).click();await settled();await wait(()=>read()===overlapPainted);await wait(async()=>await topShape()==='circle');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===reordered);await wait(async()=>await topShape()==='rect');assert.equal(await page.getByRole('treeitem',{name:'rect · Box',exact:true}).getAttribute('aria-selected'),'true');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===overlapPainted);
+  await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===reordered);await wait(async()=>await topShape()==='rect');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===overlapPainted);
+  for(const snapshot of [overlapping,repositionX,original]){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===snapshot);}
   assert.equal(await app.locator('p').textContent(),'Unchanged');
-  assert.deepEqual(errors,[]);console.log(engine+': PASS inline SVG canvas/tree selection, primitive geometry, viewBox scaling, responsive paint, stroke styles, shape creation/deletion and exact source/selection undo/redo');
+  assert.deepEqual(errors,[]);console.log(engine+': PASS inline SVG canvas/tree selection, primitive geometry, viewBox scaling, responsive paint, stroke styles, shape creation/deletion/reordering and exact source/selection undo/redo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

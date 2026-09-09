@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 263 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 265 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1184,3 +1184,19 @@ All 263 unit tests pass. Chromium and WebKit verify deleting a painted primitive
 a group with descendants and a whole viewport, including source/selection undo
 and redo and unchanged adjacent HTML. SVG duplication, reordering, reparenting
 and broader vector authoring remain unfinished; full parity is not achieved.
+
+
+### SVG stacking order
+
+Send backward and Bring forward now swap adjacent complete SVG layers inside
+a canvas or group. The writer preserves both source chunks and intervening
+comments/whitespace, validates all retained indexed elements and parsed parents,
+and remaps the selected source identity. Groups move with their descendants;
+managed paint identities stay attached. Unsupported SVG siblings and stale
+hashes are refused. The layer remains selected through source undo and redo.
+
+All 265 unit tests pass. Chromium and WebKit verify an overlapping rectangle
+and circle switching the topmost hit-tested shape, preserved managed fill,
+selection restoration and exact source undo/redo. The initial WebKit selection
+assertion was changed to wait for the asynchronous Layers highlight. SVG
+duplication, reparenting, drawing/path tools and full parity remain unfinished.

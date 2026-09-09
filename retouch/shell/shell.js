@@ -1678,13 +1678,15 @@ async function structureAction(action) {
   if(sel.multiple?.length>1){if(action==='reparentElement')return chooseLayerParent(sel.info);if(['duplicateElement','deleteElement'].includes(action))return structureSelection(action);return toast('Choose one layer for this structural edit.','err');}
   await commitInlineEdit();
   const info=sel?.info;if(!info)return;
-  if(action==='deleteElement'&&info.svgDeletion){
+  if(action==='deleteElement'&&info.svgDeletion||['before','after'].includes(action)&&info.svgMovement){
+    const deleting=action==='deleteElement';
     busyPanel(true);
     try{
-      const result=await api('POST','/rt/__api/op',{type:'deleteElement',id:info.id,fileHash:info.hash});
-      if(!result?.ok)return toast(result?.reason||result?.error||'Could not delete SVG layer','err');
-      editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:[info.id],selectionAfter:[result.parentId],undoId:result.undoId});
-      await reloadFrame();await restoreLayerSelection([result.parentId]);renderPanel();toast('Layer deleted','ok');
+      const result=await api('POST','/rt/__api/op',{type:deleting?'deleteElement':'moveElement',direction:action,id:info.id,fileHash:info.hash});
+      if(!result?.ok)return toast(result?.reason||result?.error||'Could not update SVG layer','err');
+      const selectionAfter=[deleting?result.parentId:result.movedId];
+      editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:[info.id],selectionAfter,undoId:result.undoId});
+      await reloadFrame();await restoreLayerSelection(selectionAfter);renderPanel();toast(deleting?'Layer deleted':'Layer moved','ok');
     }finally{busyPanel(false);}
     return;
   }
