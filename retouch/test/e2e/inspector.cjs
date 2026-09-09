@@ -125,7 +125,7 @@ const read = () => fs.readFileSync(file,'utf8');
    assert.equal(await frame.locator('#swap-image').evaluate(el=>el.complete&&el.naturalWidth>0),true);
    await page.getByRole('button',{name:'Undo',exact:true}).click();
    await until(()=>read()===original,'image undo');
-   await until(async()=>!await page.getByRole('button',{name:'Undo',exact:true}).isDisabled(),'image undo refreshed');
+   await until(async()=>(await page.getByRole('button',{name:'Undo',exact:true}).getAttribute('aria-busy'))==='false','image undo refreshed');
    await select('#swap-image');
    await page.locator('#panel input[type="file"]').setInputFiles({name:'upload.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="red"/></svg>')});
    await until(async()=>String(await frame.locator('#swap-image').getAttribute('src')).startsWith('/rt-assets/'),'uploaded image rendered');

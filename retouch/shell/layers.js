@@ -50,8 +50,8 @@
           if(item.children.length)b.setAttribute('aria-expanded',String(expanded));
           b.onclick=()=>onSelect(item.el);
           b.onkeydown=async e=>{
-            if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='d'){e.preventDefault();if(!isBusy){await onSelect(item.el);onAction('duplicateElement');}return;}
-            if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();if(!isBusy){await onSelect(item.el);onAction('deleteElement');}return;}
+            if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='d'){e.preventDefault();if(!isBusy){if(selected!==item.el)await onSelect(item.el);onAction('duplicateElement');}return;}
+            if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();if(!isBusy){if(selected!==item.el)await onSelect(item.el);onAction('deleteElement');}return;}
             const index=rows.findIndex(r=>r.button===b);
             if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)) {
               e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?rows.length-1:index+(e.key==='ArrowDown'?1:-1);

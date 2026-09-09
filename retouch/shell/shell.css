@@ -225,3 +225,4 @@ details.advanced > summary:hover { color: var(--ink); }
 .layer-actions button { padding:6px 3px; border:1px solid var(--line); border-radius:4px; background:#292c32; color:var(--ink); font:11px var(--font); cursor:pointer; }
 .layer-actions button:disabled { opacity:.4; cursor:default; }
 .layer-empty,.layer-reason { font-size:11px; color:var(--muted); padding:8px 4px; line-height:1.5; }
+#toolbar button:disabled { opacity:.4; cursor:default; }

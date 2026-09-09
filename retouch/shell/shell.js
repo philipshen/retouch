@@ -8,6 +8,7 @@ const overlayLayer = document.getElementById('overlayLayer');
 const modeBtn = document.getElementById('modeBtn');
 const routeInput = document.getElementById('routeInput');
 const undoBtn = document.getElementById('undoBtn');
+const redoBtn = document.getElementById('redoBtn');
 const statusEl = document.getElementById('status');
 const panelEmpty = document.getElementById('panelEmpty');
 const panelBody = document.getElementById('panelBody');
@@ -19,19 +20,30 @@ let sel = null; // { hostId, instanceId, scope: 'host'|'instance', info }
 let editing = null; // { el, id, info, original, originalHTML, snapshot, originalTree } during inline text editing
 let hoverEl = null;
 let measuring = false;
-let undoStack = [];
+let sourceRequests = 0;
 let undoBusy = false;
 let classificationSerial = 0;
 let panelTasks = 0;
 function busyPanel(start) {
   panelTasks += start ? 1 : -1;
-  panelBody.disabled = panelTasks > 0;
-  panelBody.inert = panelTasks > 0;
-  panelBody.setAttribute('aria-busy', String(panelTasks > 0));
+  syncHistoryControls();
 }
 let lastAppPath = null;
 let styleScope = '';
 function scopedInfo(info) { return {...info,styleScope,className:RetouchResponsive.project(info.className,styleScope)}; }
+
+const editorHistory = RetouchHistory.createHistory({apply:restoreHistory,onChange:syncHistoryControls});
+function syncHistoryControls() {
+  undoBusy = editorHistory.busy;
+  const busy = undoBusy || panelTasks > 0 || sourceRequests > 0;
+  undoBtn.disabled = busy || !editorHistory.canUndo;
+  redoBtn.disabled = busy || !editorHistory.canRedo;
+  undoBtn.setAttribute('aria-busy',String(busy));
+  redoBtn.setAttribute('aria-busy',String(busy));
+  panelBody.disabled = busy;panelBody.inert = busy;
+  panelBody.setAttribute('aria-busy',String(busy));
+}
+syncHistoryControls();
 
 /* ---------- boot ---------- */
 const appPath = (location.pathname.replace(/^\/rt\/?/, '/') || '/') + location.search + location.hash;
@@ -80,7 +92,7 @@ function hookFrame(d, w) {
   // Selection: capture-phase click; prevent the app from reacting (OQ-E4).
   d.addEventListener('click', (e) => {
     if (mode !== 'edit') return;
-    if (panelTasks > 0) { e.preventDefault(); e.stopPropagation(); return; }
+    if (panelTasks > 0 || undoBusy || sourceRequests) { e.preventDefault(); e.stopPropagation(); return; }
     if (editing) {
       if (editing.el.contains(e.target)) return;
       commitInlineEdit(); // clicking away commits (R-5)
@@ -165,7 +177,7 @@ function hookFrame(d, w) {
       }
       return;
     }
-    if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); e.stopPropagation(); undo(); }
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.stopPropagation(); e.shiftKey ? redo() : undo(); }
   }, true);
 
   // Follow SPA navigations (OQ-B6 rule 2).
@@ -384,7 +396,7 @@ async function commitInlineEdit() {
   Object.assign(op, sourcePayload(ed.info));
   const res = await api('POST', '/rt/__api/op', op);
   if (res && res.ok) {
-    undoStack.push(op.type === 'setText'
+    editorHistory.record(op.type === 'setText'
       ? { type: 'setText', id: ed.id, text: ed.info.textSource ? ed.info.text : ed.original, undoId: res.undoId, context: ed.info.context, sourceId: ed.info.textSource?.id }
       : { type: 'setChildren', id: ed.id, children: ed.originalTree, undoId: res.undoId, context: ed.info.context });
     updateSource(ed.info, res);
@@ -583,7 +595,7 @@ function paintLoop() {
   badgeTarget=badge;componentBadge.hidden=!badge;
   if(badge){const r=badge.el.getBoundingClientRect();componentBadge.style.left=Math.max(0,r.left)+'px';componentBadge.style.top=Math.max(0,r.top-22)+'px';}
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
-  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.info, !!panelTasks || undoBusy);
+  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.info, !!panelTasks || undoBusy || !!sourceRequests);
   requestAnimationFrame(paintLoop);
 }
 
@@ -875,7 +887,7 @@ async function detachInstance(id, component, button, context=sel?.info?.context)
     if (!usage?.ok) return toast('The usage no longer resolves.', 'err');
     const result = await api('POST', '/rt/__api/op', { type: 'detachComponent', id, fileHash: usage.element.hash, definitionHash: component.hash, context:usage.element.context });
     if (!result?.ok) return toast(result?.reason || result?.error || 'Detach failed', 'err');
-    undoStack.push({ type: 'detachComponent', id, undoId: result.undoId, context:usage.element.context });
+    editorHistory.record({ type: 'detachComponent', id, undoId: result.undoId, context:usage.element.context });
     const detached = await api('GET', componentUrl(id,usage.element.context));
     if (detached?.ok) {
       await refreshWrittenElement(usage.element, el => el.getAttribute('data-rt') === detached.definitionId);
@@ -946,7 +958,7 @@ async function writeTag(tag) {
   const prev = info.tag;
   const res = await api('POST', '/rt/__api/op', { type: 'setTag', id: info.id, tag, fileHash: info.hash, ...sourcePayload(info,info.tagSource) });
   if (res && res.ok) {
-    undoStack.push({ type: 'setTag', id: info.id, tag: prev, undoId: res.undoId, context:info.context });
+    editorHistory.record({ type: 'setTag', id: info.id, tag: prev, undoId: res.undoId, context:info.context });
     info.tag = tag;
     info.hash = res.hash;
     if (res.element?.tagSource) info.tagSource=res.element.tagSource;
@@ -1224,7 +1236,7 @@ async function writeSrc(src, isUndo, info) {
   const dimensions = target ? { width: Number(target.getAttribute('width')) || target.naturalWidth, height: Number(target.getAttribute('height')) || target.naturalHeight } : undefined;
   const res = await api('POST', '/rt/__api/op', { type: 'setSrc', id: info.id, src, fileHash: info.hash, dimensions, context:info.context });
   if (res && res.ok) {
-    if (!isUndo) undoStack.push({ type: 'setSrc', id: info.id, src: prev, undoId: res.undoId, context:info.context });
+    if (!isUndo) editorHistory.record({ type: 'setSrc', id: info.id, src: prev, undoId: res.undoId, context:info.context });
     info.src = src;
     info.srcImported = false;
     info.hash = res.hash;
@@ -1255,7 +1267,7 @@ async function writeClasses(classes, isUndo) {
     type: 'setClasses', id: info.id, classes, fileHash: info.fileHash || info.hash, context: info.context,
   });
   if (res && res.ok) {
-    if (!isUndo) undoStack.push({ type: 'setClasses', id: info.id, classes: prev, undoId: res.undoId, context: info.context });
+    if (!isUndo) editorHistory.record({ type: 'setClasses', id: info.id, classes: prev, undoId: res.undoId, context: info.context });
     info.className = res.element?.className ?? classes;
     info.hash = res.hash;
     if (window.__RT_RENDERING?.reloadAfterWrite) await refreshWrittenElement(info, el => info.className.split(/\s+/).filter(Boolean).every(token => el.classList.contains(token)));
@@ -1278,7 +1290,7 @@ async function setText(text, isUndo) {
     type: 'setText', id: info.id, text, fileHash: info.fileHash || info.hash, ...sourcePayload(info),
   });
   if (res && res.ok) {
-    if (!isUndo) undoStack.push({ type: 'setText', id: info.id, text: prev, undoId: res.undoId, context: info.context, sourceId: info.textSource?.id });
+    if (!isUndo) editorHistory.record({ type: 'setText', id: info.id, text: prev, undoId: res.undoId, context: info.context, sourceId: info.textSource?.id });
     info.text = text;
     updateSource(info, res);
     toast('Saved', 'ok');
@@ -1318,18 +1330,24 @@ function optimisticText(text) {
   for (const el of matchingEls(sel.info.id)) el.textContent = text;
 }
 
-async function undo() {
-  if (undoBusy) return;
-  undoBusy = true; undoBtn.disabled = true;
-  try { await undoNext(); } finally { undoBusy = false; undoBtn.disabled = false; }
+async function undo() { return restoreDirection('undo'); }
+async function redo() { return restoreDirection('redo'); }
+async function restoreDirection(direction) {
+  if(undoBusy || panelTasks || sourceRequests)return;
+  await commitInlineEdit();
+  if(undoBusy || panelTasks || sourceRequests)return;
+  try {
+    const result=await editorHistory[direction]();
+    if(result?.empty)toast('Nothing to '+direction);
+    else if(!result?.ok&&!result?.busy)toast(result?.reason||result?.error||'History restore failed','err');
+  } catch(error){toast(error.message,'err');}
 }
-async function undoNext() {
-  const op = undoStack[undoStack.length - 1];
-  if (!op) return toast('Nothing to undo');
-  if (op.undoId) {
-    const result = await api('POST', '/rt/__api/op', { type: 'undo', undoId: op.undoId });
-    if (!result?.ok) return toast(result?.reason || result?.error || 'Undo failed', 'err');
-    undoStack.pop();
+async function restoreHistory(direction,op) {
+  const result=await api('POST','/rt/__api/op',{type:direction,undoId:op.undoId});
+  if(!result?.ok)return result;
+  // Source history has already moved. A renderer failure must not leave the
+  // client stack on the old side of a successful transaction.
+  try {
     const fresh = await api('GET', resolveUrl(op.id, op.context));
     if (fresh?.ok) { sel = { hostId: op.id, instanceId: null, scope: 'host', info: fresh.element }; renderPanel(); }
     else clearSelection();
@@ -1348,22 +1366,10 @@ async function undoNext() {
       });
     } else await reloadFrame();
     if (sel) renderPanel();
-    toast('Undone', 'ok'); return;
-  }
-  undoStack.pop();
-  if (op.type === 'setText' || !sel || !sel.info || sel.info.id !== op.id) {
-    // Re-resolve the op's element so the write path stays identical.
-    const res = await api('GET', resolveUrl(op.id, op.context));
-    if (!res || !res.ok) return toast('Undo target no longer resolves', 'err');
-    if (op.sourceId && res.element.textSource?.id !== op.sourceId) return toast('The original string source changed; undo was not applied.', 'err');
-    sel = { hostId: op.id, instanceId: null, scope: 'host', info: res.element };
-  }
-  if (op.type === 'setClasses') await setClasses(op.classes, true);
-  else if (op.type === 'setText') await setText(op.text, true);
-  else if (op.type === 'setSrc') await setSrc(op.src, true);
-  else if (op.type === 'setChildren') await applyChildren(op.id, op.children);
-  else if (op.type === 'setTag') await applyTag(op.id, op.tag);
-  renderPanel();
+
+  } catch(error){toast('Source restored; preview refresh failed: '+error.message,'err');}
+  toast(direction==='undo'?'Undone':'Redone','ok');
+  return result;
 }
 
 /* ---------- chrome ---------- */
@@ -1374,13 +1380,14 @@ modeBtn.onclick = () => {
   if (mode === 'interact') { hoverEl = null; }
 };
 undoBtn.onclick = () => undo();
+redoBtn.onclick = () => redo();
 routeInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') iframe.src = routeInput.value || '/';
 });
 window.addEventListener('keydown', (e) => {
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
-  if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); undo(); }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.target.closest?.('input,textarea,[contenteditable="true"]')) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
   if (e.key === 'Escape') clearSelection();
 });
 window.addEventListener('keyup', (e) => { if (!e.altKey) measuring = false; });
@@ -1388,6 +1395,9 @@ window.addEventListener('blur', () => { measuring = false; });
 
 /* ---------- util ---------- */
 async function api(method, url, body) {
+  const writes = method === 'POST' && url === '/rt/__api/op';
+  if(writes && editorHistory.busy && !['undo','redo'].includes(body?.type)) return {ok:false,reason:'Wait for history restoration to finish.'};
+  if(writes){sourceRequests++;syncHistoryControls();}
   try {
     const res = await fetch(url, {
       method,
@@ -1397,7 +1407,7 @@ async function api(method, url, body) {
     return await res.json();
   } catch (err) {
     return { ok: false, error: err.message };
-  }
+  } finally {if(writes){sourceRequests--;syncHistoryControls();}}
 }
 
 function toast(msg, cls) {
@@ -1414,7 +1424,7 @@ function toast(msg, cls) {
 RetouchMaxWidth.mount({
   container: overlayLayer.parentElement,
   getTarget() {
-    if (mode !== 'edit' || !sel || sel.info.classNameDynamic || sel.info.kind === 'instance') return null;
+    if (mode !== 'edit' || undoBusy || sourceRequests || !sel || sel.info.classNameDynamic || sel.info.kind === 'instance') return null;
     const el = editing?.el || matchingEls(activeId()).find(el => inTextScope(el, sel.info));
     return el ? { el, info: scopedInfo(sel.info) } : null;
   },
@@ -1426,7 +1436,7 @@ RetouchMaxWidth.mount({
 
 const layers = RetouchLayers.mount({
   host:document.getElementById('layersPanel'),
-  onSelect:async el=>{if(panelTasks||undoBusy)return;await commitInlineEdit();await select(el);el.scrollIntoView({block:'nearest',inline:'nearest'});},
+  onSelect:async el=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await select(el);el.scrollIntoView({block:'nearest',inline:'nearest'});},
   onAction:action=>structureAction(action),
 });
 async function structureAction(action) {
@@ -1450,7 +1460,7 @@ async function structureAction(action) {
     const result=await api('POST','/rt/__api/op',{type:action==='before'||action==='after'?'moveElement':action,direction:action,id:info.id,fileHash:info.fileHash||info.hash,context:info.context});
     if(!result?.ok){toast(result?.reason||result?.error||'Could not change this layer','err');return;}
     const parentId=result.parentId||info.structure?.parentId;
-    undoStack.push({type:'structure',id:parentId||info.id,undoId:result.undoId,context:info.context});
+    editorHistory.record({type:'structure',id:parentId||info.id,undoId:result.undoId,context:info.context});
     const fresh=parentId?await api('GET',resolveUrl(parentId,info.context)):null;
     if(fresh?.ok) {
       await refreshWrittenElement(fresh.element,el=>JSON.stringify([...el.children].map(signature))===JSON.stringify(expected));

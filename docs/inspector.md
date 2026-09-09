@@ -125,3 +125,13 @@ selected style breakpoint and participate in exact source undo.
 The source project must compile the generated Tailwind utilities. These controls
 do not yet expose advanced track definitions, grid spans, min/max fields or the
 complete nested auto-layout behavior of Figma.
+
+## Undo and redo
+
+Use the toolbar or Cmd/Ctrl+Z to undo and Cmd/Ctrl+Shift+Z to redo. Text inputs
+retain native editing shortcuts. Buttons disable when no corresponding history
+entry exists or a write/restore is pending. A new edit after undo clears redo.
+
+Restores use exact source snapshots. If an external change conflicts, the restore
+is refused and its history entry stays available for retry. History currently
+belongs to the running editor/server session; it is not persisted across restarts.

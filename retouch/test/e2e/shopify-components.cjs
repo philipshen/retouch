@@ -46,7 +46,7 @@ let browser,page;
   await until(async()=>await card('Static first').evaluate(el=>getComputedStyle(el).backgroundColor)==='rgb(254, 220, 186)','detached static style rendered');
   assert.equal(await card('Static second').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
   assert.equal(await card('Dynamic first').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
-  for(let i=0;i<2;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await until(async()=>!await page.getByRole('button',{name:'Undo',exact:true}).isDisabled(),'static undo completed');}
+  for(let i=0;i<2;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await until(async()=>(await page.getByRole('button',{name:'Undo',exact:true}).getAttribute('aria-busy'))==='false','static undo completed');}
   assert.equal(fs.readFileSync(path.join(root,templateFile),'utf8'),original);
   assert.equal(fs.readFileSync(path.join(root,'blocks/rt-probe-card.liquid'),'utf8'),cardSource);
   console.log('PASS Shopify static component props, isolated preview, parent-chain detach, independent style and exact undo');
@@ -54,7 +54,7 @@ let browser,page;
   await until(()=>JSON.parse(fs.readFileSync(path.join(root,templateFile),'utf8')).sections.first.blocks.dynamic.type!==cardName,'dynamic usage detached');
   await page.getByRole('button',{name:'Choose fill',exact:true}).waitFor();
   assert.equal(JSON.parse(fs.readFileSync(path.join(root,templateFile),'utf8')).sections.first.type,frameName);
-  await page.getByRole('button',{name:'Undo',exact:true}).click();await until(async()=>!await page.getByRole('button',{name:'Undo',exact:true}).isDisabled(),'dynamic undo completed');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await until(async()=>(await page.getByRole('button',{name:'Undo',exact:true}).getAttribute('aria-busy'))==='false','dynamic undo completed');
   assert.equal(fs.readFileSync(path.join(root,templateFile),'utf8'),original);
   assert.ok(ops.every(op=>op.ok),JSON.stringify(ops));assert.deepEqual(errors,[]);
   await page.screenshot({path:'/tmp/retouch-shopify-components.png'});

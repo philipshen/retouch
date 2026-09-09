@@ -37,7 +37,7 @@ async function until(fn,label){for(let i=0;i<120;i++){if(await fn())return;await
    await until(async()=>{const colors=await frame.locator('article').evaluateAll(els=>els.map(el=>getComputedStyle(el).backgroundColor));return colors.every(c=>c==='rgb(221, 238, 255)');},'shared style on both instances');
    assert.match(fs.readFileSync(componentFile,'utf8'),/bg-\[#ddeeff\]/);assert.equal(fs.readFileSync(pageFile,'utf8'),original);
    await page.getByRole('button',{name:'Undo',exact:true}).click();await until(()=>fs.readFileSync(componentFile,'utf8')===shared,'shared undo');
-   await until(async()=>!await page.getByRole('button',{name:'Undo',exact:true}).isDisabled(),'undo refreshed');
+   await until(async()=>(await page.getByRole('button',{name:'Undo',exact:true}).getAttribute('aria-busy'))==='false','undo refreshed');
    console.log('PASS instance classification, props/defaults, live isolated preview, definition source, shared edit, exact undo');
 
    await frame.locator('article').first().click({position:{x:8,y:8}});
@@ -56,7 +56,7 @@ async function until(fn,label){for(let i=0;i<120;i++){if(await fn())return;await
    await page.getByRole('button',{name:'Undo',exact:true}).click();await until(()=>fs.readFileSync(createdFile,'utf8')===shared,'detached style undo');
    await page.getByRole('button',{name:'Undo',exact:true}).click();await until(()=>!fs.existsSync(createdFile),'detach undo removes copied module');
    assert.equal(fs.readFileSync(pageFile,'utf8'),original);assert.equal(fs.readFileSync(componentFile,'utf8'),shared);
-   await until(async()=>!await page.getByRole('button',{name:'Undo',exact:true}).isDisabled(),'detach undo refreshed');
+   await until(async()=>(await page.getByRole('button',{name:'Undo',exact:true}).getAttribute('aria-busy'))==='false','detach undo refreshed');
    await frame.getByRole('heading',{name:'First card',exact:true}).waitFor();
    assert.deepEqual(errors,[]);
    console.log('PASS detach changes one usage, preserves sibling, independent styling, two-file exact undo, no browser errors');

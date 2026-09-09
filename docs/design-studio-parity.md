@@ -23,7 +23,7 @@ changing those files. The original checkout may continue to evolve independently
 | Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Not implemented or verified. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload exists; complete export and import pipeline remains. |
-| History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Source transaction/history baseline covered by unit tests; UI and full collaborative editing remain. |
+| History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React and Shopify/Liquid adapters only. Generic site capture/edit document and additional adapters remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | New presets/custom dimensions/rotation/persistence resize the actual iframe. Zoom preserves fixed viewport dimensions and vh. Real browser test passes. Breakpoint-scoped class edits, loaded-CSS discovery, inheritance reset and exact undo are browser-verified on React/Tailwind. Linked views, continuous resize handles and the full cross-framework responsive workflow remain. |
 | Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView app builds and connects to live local editor. It currently requires CLI startup. Full desktop editor behavior, Intel runtime, onboarding and lifecycle verification remain. |
@@ -114,3 +114,20 @@ constraints remain intact. Full Figma nested hug/fill behavior, layout suggestio
 advanced grid tracks/spans, min/max controls and arbitrary CSS authoring remain
 unverified or unimplemented. Success notifications replace the previous save
 notification so repeated adjustments do not obscure the canvas.
+
+### Editor undo and redo
+
+The shell now uses the existing shared history controller instead of a separate
+undo-only array. All successful snapshot-bearing writes record through it.
+Toolbar availability tracks history state and pending writes; Cmd/Ctrl+Shift+Z
+performs redo, while text inputs retain their native undo shortcuts. Source writes
+are blocked during history restoration. A successful source restore moves client
+history even if subsequent preview refresh fails.
+
+`retouch/test/e2e/history.cjs` verifies button states, keyboard redo, rendered
+style and text restoration, external-change refusal without data loss, retry and invalidation of
+redo by a new edit. The layer browser suite now checks duplicate and delete redo
+in both source and rendered output. Intermittent initial duplicate-shortcut timeouts exposed a test readiness gap:
+the previous selection could still enable Duplicate before the next selection
+resolved. The test now waits for the intended row to be selected and enabled.
+The focused-layer shortcut also avoids redundant selection requests.
