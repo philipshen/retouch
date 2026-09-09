@@ -34,18 +34,23 @@
       if(!item.queries.some(group=>JSON.stringify(group)===JSON.stringify(queries)))item.queries.push(queries);
       item.condition=item.queries.map(group=>group.length===1?group[0]:group.map(query=>'['+query+']').join(' AND ')).join(' OR ');found.set(prefix,item);
     }
-    function scan(rules,media=[],parentSelector='') {
+    function scan(rules,media=[],parentSelector='',ancestors=new Set()) {
       for(const rule of rules) {
-        const own=rule.media?.mediaText,queries=own&&own!=='all'?[...media,own]:media;
+        const own=rule.media?.mediaText,queries=own&&own!=='all'&&!media.includes(own)?[...media,own]:media;
         const selector=rule.selectorText || parentSelector;
         const declarations=rule.style?(rule.style.length===undefined||rule.style.length>0):!rule.cssRules;
         if(declarations&&queries.some(query=>/width/.test(query))&&selector){
           for(const match of selector.matchAll(/\.([a-zA-Z][\w-]*)\\:/g))add(match[1]+':',queries);
         }
-        if(rule.cssRules)scan(rule.cssRules,queries,selector);
+        if(rule.styleSheet)scanSheet(rule.styleSheet,queries,ancestors);
+        if(rule.cssRules)scan(rule.cssRules,queries,selector,ancestors);
       }
     }
-    for(const sheet of d.styleSheets){try{if(!sheet.disabled){const media=sheet.media?.mediaText;scan(sheet.cssRules,media&&media!=='all'?[media]:[]);}}catch{}}
+    function scanSheet(sheet,media=[],ancestors=new Set()){
+      if(!sheet||ancestors.has(sheet))return;
+      try{if(sheet.disabled)return;const own=sheet.media?.mediaText,queries=own&&own!=='all'&&!media.includes(own)?[...media,own]:media;scan(sheet.cssRules,queries,'',new Set([...ancestors,sheet]));}catch{}
+    }
+    for(const sheet of [...(d.styleSheets||[]),...(d.adoptedStyleSheets||[])])scanSheet(sheet);
     return [...found.values()].sort((a,b)=>a.label.localeCompare(b.label));
   }
   function matches(choice,w){

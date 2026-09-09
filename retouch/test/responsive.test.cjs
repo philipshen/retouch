@@ -64,3 +64,12 @@ test('breakpoint discovery retains nested conditions and repeated alternatives w
  assert.equal(R.atWidth(metrics,768,[choice]).prefix,'min-[48rem]:');assert.equal(R.atWidth(metrics,768,[{prefix:'range:',condition:'(min-width: 48rem) and (max-width: 64rem)'}]).prefix,'min-[48rem]:');assert.equal(R.atWidth(metrics,768,[{prefix:'unknown:'}]).prefix,'min-[768px]:');
  assert.equal(R.inherited('left-0 tablet:left-10','min-[1000px]:',metrics,[choice]),'left-0');
 });
+
+
+test('imported and adopted stylesheets retain media context and tolerate inaccessible or cyclic imports',()=>{
+ const imported={media:{mediaText:'(min-width: 700px)'},cssRules:[{selectorText:'.imported\\:flex'}]},adopted={cssRules:[{media:{mediaText:'(min-width: 900px)'},cssRules:[{selectorText:'.adopted\\:flex'}]}]},blocked={get cssRules(){throw Error('SecurityError')}};
+ const parent={cssRules:[{media:{mediaText:'(min-width: 700px)'},styleSheet:imported},{styleSheet:blocked},{media:{mediaText:'(min-height: 800px)'},styleSheet:imported}]};
+ imported.cssRules.push({styleSheet:parent});
+ const choices=R.discover({styleSheets:[parent,{disabled:true,cssRules:[{selectorText:'.disabled\\:flex',media:{mediaText:'(min-width: 1px)'}}]}],adoptedStyleSheets:[adopted]});
+ assert.deepEqual(choices.map(c=>c.prefix),['adopted:','imported:']);assert.deepEqual(choices[1].queries,[['(min-width: 700px)'],['(min-height: 800px)','(min-width: 700px)']]);assert.deepEqual(choices[0].queries,[['(min-width: 900px)']]);
+});

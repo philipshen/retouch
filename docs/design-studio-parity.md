@@ -3714,3 +3714,34 @@ Unreadable/imported/adopted stylesheets, container/supports/state conditions,
 per-property cascade provenance and equivalent authoring across arbitrary sites
 still require broader work. Full Figma Design parity and trusted Mac distribution
 remain unproven. Native app launches stayed paused.
+
+
+### 2026-09-09 — Imported and document-adopted responsive stylesheets
+
+Breakpoint discovery now traverses readable CSS imports and document-level
+adoptedStyleSheets in addition to ordinary document stylesheets. Import and
+stylesheet media restrictions are carried through nested imports without
+repeating an identical restriction. Repeated imports under different conditions
+retain their separate alternatives. Branch-local cycle detection prevents
+recursive import graphs from looping, and an inaccessible import does not stop
+other sheets from being inspected. Disabled sheets are skipped.
+
+All 363 unit tests pass in `/private/tmp/retouch-stylesheet-discovery-unit.log`,
+including imported/adopted sheets, media propagation, cyclic graphs, disabled
+sheets and a CSSOM-access exception. Real browser checks pass in
+`/private/tmp/retouch-stylesheet-discovery-chromium.log` and
+`/private/tmp/retouch-stylesheet-discovery-webkit.log`. The new
+`test:e2e:responsive-stylesheets` workflow uses intercepted local test origins
+for actual browser stylesheet loading, nested and repeated imports, adopted
+sheets and a cross-origin stylesheet without CSSOM access. It compares discovery
+with rendered opacity at four viewport shapes, then verifies disable/removal
+updates. The opaque stylesheet renders but stays undiscovered, rather than being
+reported as an inactive breakpoint. No external site was contacted.
+
+The preceding compound-media regression also passes in
+`/private/tmp/retouch-stylesheet-discovery-media-regression.log`.
+This extends discovery, not authoring support for arbitrary stylesheet sources.
+Shadow-root styles, unreadable CSS, supports/container/state conditions and
+complete per-property provenance remain open, along with the broader Figma,
+arbitrary-site and trusted Mac distribution requirements. Browser contexts were
+closed after the checks; native app launches remained paused.
