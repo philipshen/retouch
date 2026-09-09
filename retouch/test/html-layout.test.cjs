@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),{stackLayout,flexAlignment,adaptiveColumns,parseAdaptiveColumns,valid}=require('../shell/html-css-values.js'),html=require('../src/adapters/html.cjs'),css=require('../src/html-css.cjs');
+const {test}=require('node:test'),assert=require('node:assert/strict'),{stackLayout,flexAlignment,adaptiveColumns,parseAdaptiveColumns,valid,overlaps}=require('../shell/html-css-values.js'),html=require('../src/adapters/html.cjs'),css=require('../src/html-css.cjs');
 test('Stack controls choose physical horizontal and vertical axes across writing modes',()=>{
  for(const mode of ['horizontal-tb','vertical-rl','vertical-lr','sideways-rl','sideways-lr'])for(const axis of ['horizontal','vertical']){
   const changes=stackLayout(axis,mode);assert.equal(changes.display,'flex');assert.equal(changes['flex-wrap'],'nowrap');assert.equal(changes['flex-direction'],(axis==='horizontal')===(mode==='horizontal-tb')?'row':'column');
@@ -35,4 +35,11 @@ test('Adaptive columns permit bounded exact syntax while keeping rows and inject
  for(const size of [1,240,2000]){const value=adaptiveColumns(size);assert.equal(parseAdaptiveColumns(value),size);assert.equal(valid('grid-template-columns',value),true);assert.equal(valid('grid-template-rows',value),false);}
  for(const size of [0,-1,2001,1.5,NaN])assert.equal(adaptiveColumns(size),null);
  for(const value of ['repeat(auto-fit, minmax(min(100%, 2001px), 1fr))','repeat(auto-fit, minmax(min(100%, 0px), 1fr))',adaptiveColumns(240)+';color:red','repeat(auto-fit, minmax(var(--x), 1fr))'])assert.equal(valid('grid-template-columns',value),false);
+});
+
+test('Frame aspect ratios reject zero and injection; clipping conflicts include both overflow axes',()=>{
+ for(const value of [null,'auto','1','1 / 1','16 / 9','auto 4 / 3','0.5','1/2'])assert.equal(valid('aspect-ratio',value),true);
+ for(const value of ['0','1 / 0','-1','calc(1)','1;display:none','10001 / 1'])assert.equal(valid('aspect-ratio',value),false);
+ for(const axis of ['overflow-x','overflow-y']){assert.equal(overlaps('overflow',axis),true);assert.equal(overlaps(axis,'overflow'),true);}
+ assert.equal(overlaps('overflow-x','overflow-y'),false);
 });

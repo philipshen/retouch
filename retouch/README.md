@@ -175,6 +175,10 @@ controls follow the selected screen scope and each use one undo step.
 **Adaptive grid** fits columns automatically using a configurable minimum column
 size. Below that minimum, a single column shrinks to the container. The minimum
 can also vary by screen scope; authored child dimensions and spans still apply.
+**Frame aspect ratio** accepts ratios such as `1:1` or `16/9` and makes height
+automatic in the same undo step. Content and minimum sizes can still increase
+height. **Clip content** contains overflow at the frame boundary; its reset
+restores inherited clipping. Both controls follow the selected screen scope.
 A frame changes the document hierarchy, so parent selectors and flex/grid layout
 can change; this is not a guarantee of identical appearance. **Duplicate layers** and **Delete layers** apply to the
 selection in one undo step. Selecting a parent and its child handles the subtree

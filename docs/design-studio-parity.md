@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 249 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 250 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1002,4 +1002,21 @@ columns at phone/tablet/desktop sizes, fitting a 240px viewport, a tablet-specif
 minimum, inherited control values, unchanged source during resizing and exact
 undo/redo. The fixture is included in test:e2e:html, and its inspector screenshot
 was inspected. Full grid/Figma parity, other renderers and native release remain
+unfinished.
+
+
+### Frame ratios and content clipping
+
+HTML containers expose Frame aspect ratio and Clip content in Layout. Ratio input
+normalizes colon or slash notation and atomically sets the ratio plus automatic
+height. Overflow clipping uses CSS clip; resetting removes the scoped shorthand
+and axis overrides. Source validation checks positive bounded ratios and overflow
+shorthand/axis conflicts. Content and minimum dimensions can override a preferred
+aspect ratio; this does not promise fixed geometric frames in every page layout.
+
+All 250 unit tests pass. Chromium and WebKit verify square and widescreen frame
+geometry, actual overflow hit-test exclusion, independent phone/tablet ratio and
+clipping overrides, clipping reset, and exact atomic source undo/redo. The fixture
+is included in test:e2e:html; its screenshot was inspected. Arbitrary masks,
+clipped selection outlines, other renderers and full Figma/native parity remain
 unfinished.
