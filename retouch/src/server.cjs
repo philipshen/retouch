@@ -21,13 +21,13 @@ const SHELL_DIR = path.join(__dirname, '..', 'shell');
 const HOST_RE = /^(localhost|127\.0\.0\.1)(:\d+)?$/;
 const TOKEN_HEADER = 'x-retouch-token';
 
-function startServer({ appRoot, port, adapter, proxyTo, rendering = {}, quiet = false }) {
+function startServer({ appRoot, port, adapter, proxyTo, serveSite, rendering = {}, quiet = false }) {
   adapter = adapter || require('./adapter.cjs').defaultAdapter();
   const token = crypto.randomBytes(16).toString('hex');
   const index = new Index(appRoot, adapter);
   const fileCount = index.scanAll();
   const history = new SourceHistory();
-  const sourceMonitor = proxyTo && rendering.reloadAfterWrite ? watchSource(appRoot) : null;
+  const sourceMonitor = (proxyTo || serveSite) && rendering.reloadAfterWrite ? watchSource(appRoot) : null;
   index.watch();
   if (!quiet) console.log(
     `[retouch] adapter=${adapter.name}; indexed ${fileCount} files under ${appRoot} (${index.idToFile.size} elements)`
@@ -35,7 +35,7 @@ function startServer({ appRoot, port, adapter, proxyTo, rendering = {}, quiet = 
 
   const server = http.createServer((req, res) => {
     try {
-      handle(req, res, { index, token, appRoot, adapter, proxyTo, rendering, history, sourceMonitor });
+      handle(req, res, { index, token, appRoot, adapter, proxyTo, serveSite, rendering, history, sourceMonitor });
     } catch (err) {
       res.writeHead(err.statusCode || 500, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: err.message }));
@@ -54,7 +54,7 @@ function startServer({ appRoot, port, adapter, proxyTo, rendering = {}, quiet = 
   });
 
   server.listen(port, '127.0.0.1', () => {
-    const appPort = proxyTo ? server.address().port : process.env.PORT || 3000;
+    const appPort = (proxyTo || serveSite) ? server.address().port : process.env.PORT || 3000;
     if (!quiet) console.log(`[retouch] mirror ready — open http://localhost:${appPort}/rt (sidecar :${server.address().port})`);
   });
   server.retouchIndex = index; // lets tests close the file watcher
@@ -216,6 +216,7 @@ function handle(req, res, ctx) {
   // share one origin. The stamped theme already carries data-rt in its render.
   if (ctx.proxyTo) return proxy(req, res, ctx.proxyTo, !!ctx.sourceMonitor);
 
+  if (ctx.serveSite) return ctx.serveSite(req,res);
   res.writeHead(404);
   res.end('not found');
 }

@@ -24,7 +24,7 @@ changing those files. The original checkout may continue to evolve independently
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload exists; complete export and import pipeline remains. |
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
-| Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React and Shopify/Liquid are the connected renderers. An HTML source adapter now handles source-preserving edits and history; generic capture, rendering and CSS authoring integration remain. A native WebView alone does not provide this. |
+| Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React and Shopify/Liquid are the connected renderers. An HTML source adapter now handles source-preserving edits and history; a local HTML renderer now supports text/tag/image edits; generic capture and CSS authoring integration remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | New presets/custom dimensions/rotation/persistence resize the actual iframe. Zoom preserves fixed viewport dimensions and vh. Real browser test passes. Breakpoint-scoped class edits, loaded-CSS discovery, inheritance reset and exact undo are browser-verified on React/Tailwind. Linked views, continuous resize handles and the full cross-framework responsive workflow remain. |
 | Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView app builds and connects to live local editor. Native project startup uses the bundled CLI and an installed Node runtime. Native startup, auto-connect, width editing/undo/redo and Stop passed on one fixture. Full editor behavior, file flows, Intel runtime and broader lifecycle verification remain. |
 | Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. Development build is ad hoc signed. Local cask install/uninstall passed. Developer ID signing/notarization, publishing, upgrades and quarantined launch remain unverified. |
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 200 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 201 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -324,7 +324,29 @@ still require additional document operations.
 Five focused adapter tests cover parser/stamp agreement, real index resolution,
 source-preserving edits, history round trips, escaping, stale-file protection and
 unsupported constructs. All 200 tests passed. This is a backend foundation;
-there is no HTML CLI mode or generic-site renderer yet. It does not establish
+a subsequent HTML CLI/renderer integration is described below. It does not establish
 that existing utility-based visual controls work on arbitrary HTML/CSS. The next
 integration needs a renderer, durable CSS authoring, asset/provenance handling and
 browser round-trip verification before HTML-site editing is user-facing.
+
+### Local HTML rendering mode
+
+`retouch html <web-directory> --port=9400` now serves local HTML documents and
+static assets with the shared editor at `/rt`. Documents receive source IDs in
+the response only; CSS and scripts remain authored. Text, supported tag and plain
+image-source edits use the HTML adapter and shared undo/redo. Source monitoring
+includes HTML files, and rendered pages reload after writes. Static serving
+rejects hidden paths, package manifests, unsupported asset types and symlink
+escapes, and retains loopback/Host validation from the shared server.
+
+An HTTP integration test verifies stamping, asset preservation, authenticated
+edits, class-edit refusal, exact undo and path boundaries. A real browser test
+verifies selection, original CSS color, text/image changes and loaded images
+after reload, followed by exact undo. All 201 tests passed, and the CLI smoke
+check opened the editor through agent-browser.
+
+This is local HTML content editing, not arbitrary-site design parity. Visual CSS
+controls are explicitly unavailable until a persistent CSS authoring path is
+connected. Rich markup editing, capture/import, structural actions, image uploads
+and full file/navigation/native integration remain open. Existing CSS is not
+replaced with a framework or reset stylesheet.

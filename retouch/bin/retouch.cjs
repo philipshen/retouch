@@ -9,6 +9,13 @@ if (cmd === '--') {
     code => { process.exitCode = code; },
     err => { console.error(`[retouch] ${err.message}`); process.exitCode = 1; }
   );
+} else if (cmd === 'html') {
+  try {
+    const options=process.argv.slice(4),raw=options.find(v=>v.startsWith('--port='))?.slice(7) || (options.includes('--port')?options[options.indexOf('--port')+1]:undefined);
+    const server=require('../src/html-site.cjs').start({root:path.resolve(arg||process.cwd()),port:raw===undefined?9400:Number(raw)});
+    const stop=()=>{server.retouchIndex.close();server.closeAllConnections();server.close();};
+    process.once('SIGTERM',stop);process.once('SIGINT',stop);
+  } catch(err) { console.error(err.message);process.exitCode=1; }
 } else if (cmd === 'doctor') {
   try { require('../src/doctor.cjs').doctor(arg); }
   catch (err) { console.error(err.message); process.exitCode = 1; }
@@ -32,6 +39,9 @@ Usage:
   retouch -- make everything
   retouch -- npm run dev
   retouch --version
+  retouch html <web-directory> [--port=9400]
+                              Edit literal HTML text, tags and image sources.
+                              CSS layout authoring is not available yet.
   retouch doctor [app-dir]     Inspect local toolchain and integration limits.
 
   retouch shopify <theme-dir>   Mirror a Shopify Liquid theme. Serves an

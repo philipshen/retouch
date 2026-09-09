@@ -24,7 +24,7 @@ function stripReloadClient(html) {
   return html;
 }
 const SKIP = new Set(['.git', '.shopify', 'node_modules', '.next']);
-function relevant(relative) { return !relative.split(path.sep).some(part => SKIP.has(part)) && /\.(liquid|json|css|scss|sass|js|mjs|cjs|ts|tsx|jsx|svg)$/i.test(relative); }
+function relevant(relative) { return !relative.split(path.sep).some(part => SKIP.has(part)) && /\.(html?|liquid|json|css|scss|sass|js|mjs|cjs|ts|tsx|jsx|svg)$/i.test(relative); }
 const hash = value => value === null ? null : crypto.createHash('sha256').update(value).digest('hex');
 function watchSource(root) {
   root = path.resolve(root);

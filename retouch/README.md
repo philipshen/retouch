@@ -121,3 +121,18 @@ sizes while editing. Reset overrides restores inheritance. Named breakpoints are
 discovered from loaded CSS; text and image content remain shared across sizes. See the
 [inspector guide](https://github.com/philipshen/retouch/blob/main/docs/inspector.md)
 for supported source patterns and browser verification.
+
+### Local HTML documents
+
+```sh
+retouch html ./my-web-directory --port=9400
+```
+
+Open `http://localhost:9400/rt` to select and edit literal HTML text, supported HTML
+tags and plain image paths. Existing CSS and scripts are served as authored;
+saved changes reload the preview, and undo/redo restores source snapshots.
+Choose a trusted local web directory. Hidden files, package manifests and paths
+outside that directory are not served.
+
+This mode currently edits content only. Layout/appearance controls, rich markup,
+structural edits, asset uploads and remote-site capture are not connected yet.
