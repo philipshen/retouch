@@ -41,4 +41,4 @@ function plan(resolved,op){
  if(next.length!==before.length+(cap.createsViewport?2:1)||!created||created.node.namespaceURI!==namespace||created.node.parentNode!==container?.node||cap.createsViewport&&container.node.parentNode!==parent?.node||before.some(e=>!next.some(n=>n.id===e.id&&n.tag===e.tag&&n.location.startOffset===e.location.startOffset+(e.location.startOffset>=offset?content.length:0))))return refuse('The shape would change the surrounding document structure.');
  return {ok:true,hash:html.contentHash(after),parentId:el.id,createdId:created.id,structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
 }
-module.exports={describe,plan,drawnShape};
+module.exports={describe,plan,drawnShape,shape};

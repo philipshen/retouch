@@ -392,3 +392,12 @@ RT_INSPECTOR_FIXTURE=/path/to/next-and-playwright-fixture npm run test:e2e:react
 ```
 
 Set `RT_E2E_BROWSER=webkit` (and the browser cache path when needed) for WebKit.
+
+
+React SVG canvases and groups with explicit closing tags now offer **Add** and
+**Draw** controls for rectangles, circles, ellipses and lines. Drawing supports
+canvas zoom, SVG transforms, Shift constraints and Option/Alt center origins.
+Release creates a JSX shape in one undo step; Escape discards the preview. The
+change applies to every rendered instance of that source container. Containers
+with spread props, explicit children props or injected HTML are not supported.
+SVG drawing directly into an HTML/JSX layout container remains unfinished.

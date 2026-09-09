@@ -84,6 +84,7 @@ function describeElement(resolved) {
 
   const textInfo = literalTextRange(node, source);
   return {
+    svgInsertion: require('./jsx-svg-insert.cjs').describe(resolved),
     svgGeometry: require('./jsx-svg-geometry.cjs').describe(resolved),
     id: element.id,
     kind: element.kind,
@@ -162,6 +163,7 @@ function refuseError(msg) {
 
 // op: { type, id, fileHash, ... }. `resolved` comes from Index.resolve(id).
 function planOp(resolved, op) {
+  if(op.type==='insertSVG')return require('./jsx-svg-insert.cjs').plan(resolved,op);
   if(op.type==='setSVGGeometry')return require('./jsx-svg-geometry.cjs').plan(resolved,op);
   if (op.fileHash && op.fileHash !== resolved.hash) {
     return refuse('The file changed since it was last read. Re-select the element and retry.');

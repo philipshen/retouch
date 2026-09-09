@@ -24,4 +24,4 @@ function plan(resolved,op){
  if(before.length!==next.length||before.some((e,i)=>e.id!==next[i].id||ids.jsxElementName(e.node)!==ids.jsxElementName(next[i].node)))return refuse('The edit would change the JSX document structure.');
  return {ok:true,hash:ids.contentHash(after),edits:after===resolved.source?[]:[{file:resolved.file,before:resolved.source,after}]};
 }
-module.exports={describe,plan};
+module.exports={describe,plan,literal};

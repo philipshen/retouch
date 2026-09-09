@@ -29,6 +29,6 @@ module.exports = {
   assets: { directory: 'public', urlPrefix: '/', uploadDirectory: 'rt-assets' },
   capabilities: {
     classAttr: 'className',
-    ops: ['setSVGGeometry', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types],
+    ops: ['insertSVG', 'setSVGGeometry', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types],
   },
 };

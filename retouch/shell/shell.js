@@ -836,17 +836,17 @@ function renderPanelContents() {
     for(const field of info.svgGeometry.fields){const input=document.createElement('input');input.type='text';input.value=field.value??'';input.placeholder=field.editable===false?'Dynamic value':'Default';input.disabled=field.editable===false;if(field.reason)input.title=field.reason;input.onchange=()=>setSVGGeometry(field.name,input.value.trim()||null);RetouchInspector.field(geometry,'Shape '+field.label,input);const reset=RetouchInspector.button('Reset shape '+field.label.toLowerCase(),()=>setSVGGeometry(field.name,null));reset.disabled=field.value===null||field.editable===false;geometry.append(reset);}
     RetouchInspector.note(geometry,'Geometry is shared across screen sizes. Values use SVG coordinates, px or %. The SVG viewport and page CSS can affect the rendered result.');panelBody.append(geometry);
   }
+  if(info.svgInsertion){
+    const shapes=RetouchInspector.section('Add shape'),buttons=document.createElement('div');buttons.className='stack-presets';
+    for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Add '+preset,()=>insertLayer(preset,info,'insertSVG')));
+    if(!info.svgInsertion.createsViewport)for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Draw '+preset,()=>drawShape(preset,info)));
+    shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Adds a shape in a new 200 × 200 canvas.':'Choose Draw and drag inside this SVG canvas. Shift constrains proportions or line angle; Option/Alt draws from the center. Escape cancels.');panelBody.append(shapes);
+  }
   if(info.cssAuthoring){
     const naming=RetouchInspector.section('Layer');
     const input=document.createElement('input');input.id='layerNameInput';input.type='text';input.maxLength=200;input.value=info.layerName||'';input.placeholder='Use the page’s element label';
     RetouchInspector.field(naming,'Layer name',input);input.onchange=()=>renameLayer(input.value);
     RetouchInspector.note(naming,'Names appear in the editor without changing page text or accessibility labels. Clear to use the original label.');panelBody.append(naming);
-    if(info.svgInsertion){
-      const shapes=RetouchInspector.section('Add shape'),buttons=document.createElement('div');buttons.className='stack-presets';
-      for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Add '+preset,()=>insertLayer(preset,info,'insertSVG')));
-      if(!info.svgInsertion.createsViewport)for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Draw '+preset,()=>drawShape(preset,info)));
-      shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Adds a shape in a new 200 × 200 canvas.':'Choose Draw and drag inside this SVG canvas. Shift constrains proportions or line angle; Option/Alt draws from the center. Escape cancels.');panelBody.append(shapes);
-    }
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
     panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS));
     if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{}));
@@ -1552,6 +1552,7 @@ async function restoreHistory(direction,op) {
       const info = fresh.element;
       const component = op.type === 'detachComponent' ? await api('GET', componentUrl(op.id,op.context)) : null;
       await refreshWrittenElement(info, el => {
+        if(op.svgCreatedId){const found=matchingInDocument(el.ownerDocument,op.svgCreatedId,null).length>0;return direction==='undo'?!found:found;}
         if (component?.ok) return el.getAttribute('data-rt') === component.definitionId;
         if (op.type === 'setSrc') return imageMatches(el,info.src,info.srcMatch);
         if (op.type === 'setSVGGeometry') return svgGeometryMatches(el,info);
@@ -1694,9 +1695,9 @@ async function insertLayer(preset,info,type='insertElement',extra={}){
   try{
     const result=await api('POST','/rt/__api/op',{type,id:info.id,fileHash:info.fileHash||info.hash,preset,...extra});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not add layer','err');
-    editorHistory.record({type:'structureSelection',id:info.id,selectionBefore:[info.id],selectionAfter:[result.createdId],undoId:result.undoId});
-    await reloadFrame();
+    editorHistory.record({type:'structureSelection',id:info.id,selectionBefore:[info.id],selectionAfter:[result.createdId],undoId:result.undoId,...(type==='insertSVG'?{svgCreatedId:result.createdId}:{})});
     const fresh=await api('GET',resolveUrl(result.createdId));
+    if(fresh?.ok)await refreshWrittenElement(fresh.element,el=>el.getAttribute('data-rt')===result.createdId);else await reloadFrame();
     if(fresh?.ok){sel={hostId:result.createdId,instanceId:null,scope:'host',info:fresh.element};renderPanel();}
     toast('Layer added','ok');
   }finally{busyPanel(false);}

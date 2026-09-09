@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 277 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 279 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1454,3 +1454,33 @@ This adds geometry parity, not full React SVG parity: drawing, paint controls an
 SVG structural operations remain incomplete there. Shape definitions without a
 lexically visible SVG ancestor, other frameworks and arbitrary remote sites are
 not covered. The current desktop archive predates this change.
+
+
+### React SVG creation and direct drawing
+
+Explicitly closed JSX SVG canvases/groups now share the four Add and Draw shape
+controls with HTML. The insertion planner preserves existing structural IDs,
+keeps existing expressions/siblings intact and emits React SVG prop names.
+Spread/children/injected-HTML containers, stale hashes and invalid geometry are
+refused. Draw coordinates use the live SVG transform and canvas zoom; modifiers
+and cancellation use the shared drawing tool. Creation and history wait for
+the created layer's presence or absence in the compiled renderer.
+
+Drawing previews now live in a separate SVG in the editor overlay, transformed
+into screen coordinates. The app DOM stays unchanged until the source write
+renders, avoiding temporary child injection into React-owned nodes. The extended
+Next workflow also exposed a detached-document typography-preview callback; it
+now checks that its source element and preview remain connected before reading
+the source document URL. An initial undo test failure was traced to a selector
+counting Next's development-toolbar SVG; it now targets the authored group.
+
+All 279 unit tests pass. Chromium and WebKit pass the real Next/React geometry
+workflow extended with all four preset shapes, rectangle/line drawing through a
+translated group at 50% zoom, combined Shift/Alt constraints, source and DOM
+preservation during preview, Escape cancellation and exact undo/redo. Existing
+HTML SVG editing and drawing workflows also pass in both engines. The drawing
+workflow compares overlay and rendered geometry bounds through a scaled group;
+the overlay screenshot was inspected.
+
+React SVG paint/structural tools, JSX-layout drawing, vector path tools and
+cross-framework parity remain incomplete. The native archive predates this work.

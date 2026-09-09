@@ -17,13 +17,14 @@
   const d=target.ownerDocument,w=d.defaultView,viewport=target.tagName.toLowerCase()==='svg'?target:target.ownerSVGElement;
   const surface=root.document.createElement('div');surface.className='svg-draw-surface';surface.setAttribute('aria-label','Draw '+preset);surface.tabIndex=0;
   Object.assign(surface.style,{position:'fixed',zIndex:40,cursor:'crosshair',touchAction:'none'});
-  const preview=d.createElementNS(ns,{rectangle:'rect',circle:'circle',ellipse:'ellipse',line:'line'}[preset]);
+  const drawing=root.document.createElementNS(ns,'svg');Object.assign(drawing.style,{position:'absolute',inset:'0',width:'100%',height:'100%',pointerEvents:'none',overflow:'hidden'});surface.append(drawing);
+  const preview=root.document.createElementNS(ns,{rectangle:'rect',circle:'circle',ellipse:'ellipse',line:'line'}[preset]);
   preview.style.cssText='pointer-events:none!important;fill:#a5b4fc!important;stroke:#6366f1!important;stroke-width:1!important;opacity:.7!important;';preview.setAttribute('vector-effect','non-scaling-stroke');if(preset==='line')preview.style.setProperty('fill','none','important');
   let state=null,ended=false;const cleanup=[];
   function listen(el,event,fn,options){el.addEventListener(event,fn,options);cleanup.push(()=>el.removeEventListener(event,fn,options));}
   function cancel(){if(ended)return;ended=true;preview.remove();surface.remove();cleanup.forEach(f=>f());onEnd();}
   function point(e){const f=frame.getBoundingClientRect(),scale=f.width/w.innerWidth,m=target.getScreenCTM()?.inverse();if(!m)throw Error('This SVG transform cannot be drawn into.');const p=new w.DOMPoint((e.clientX-f.left)/scale,(e.clientY-f.top)/scale).matrixTransform(m);if(!Number.isFinite(p.x)||!Number.isFinite(p.y))throw Error('This SVG transform cannot be drawn into.');return p;}
-  function paint(modifiers){state.points=constrained(preset,state.a,state.b,modifiers);for(const [key,value]of Object.entries(geometry(preset,...state.points)))preview.setAttribute(key,String(value));if(!preview.isConnected)target.append(preview);}
+  function paint(modifiers){state.points=constrained(preset,state.a,state.b,modifiers);for(const [key,value]of Object.entries(geometry(preset,...state.points)))preview.setAttribute(key,String(value));const m=target.getScreenCTM(),f=frame.getBoundingClientRect(),r=surface.getBoundingClientRect(),scale=f.width/w.innerWidth;preview.setAttribute('transform',`matrix(${m.a*scale} ${m.b*scale} ${m.c*scale} ${m.d*scale} ${m.e*scale+f.left-r.left} ${m.f*scale+f.top-r.top})`);if(!preview.isConnected)drawing.append(preview);}
   function move(e){if(!state||e.pointerId!==state.id)return;try{state.b=point(e);state.distance=Math.hypot(e.clientX-state.x,e.clientY-state.y);paint(e);}catch(error){cancel();onError(error.message);}}
   listen(surface,'pointerdown',e=>{if(state||e.button!==0)return;e.preventDefault();e.stopImmediatePropagation();try{const a=point(e);state={id:e.pointerId,a,b:a,x:e.clientX,y:e.clientY,distance:0};surface.setPointerCapture(e.pointerId);}catch(error){cancel();onError(error.message);}});
   listen(surface,'pointermove',move);
