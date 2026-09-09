@@ -4270,3 +4270,22 @@ the existing control-button styling for consistency.
 
 Full Figma parity and arbitrary-site authoring remain incomplete. Native app
 launches remain paused at the user's request; no native tests executed.
+
+### Inspector Tab continuity (2026-09-09)
+
+Text/number field Tab now records the adjacent visible, enabled inspector control
+before blur commits a save. Once the busy fieldset is enabled again, focus resolves
+the replacement control by semantic identity and occurrence within the same layer
+selection. Normal focus scrolling brings that control into view. Unchanged fields
+move immediately, Shift+Tab reverses direction, and a deliberate click or later
+keyboard action cancels queued focus. Controls with their own prevented Tab event
+retain that behavior. This covers input/textarea navigation within the inspector;
+it does not claim complete focus retention for all selection or route transitions.
+
+374 unit tests passed (`/private/tmp/retouch-panel-tab-unit.log`). Chromium HTML
+and React plus WebKit local Liquid passed actual edit/rebuild, next-button focus,
+Shift+Tab, unchanged Tab and exact source undo (`retouch-panel-tab-{html,react,liquid}.log`
+under `/private/tmp`). Added a held network write and explicit click into layer
+search to verify pending focus is cancelled; HTML and WebKit Liquid passed in
+`retouch-panel-tab-{html,liquid}-cancel.log`. React final validation is recorded in
+`/private/tmp/retouch-panel-tab-react-final.log`. Native launches remain paused.

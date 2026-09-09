@@ -58,6 +58,27 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===expected);await settled();}await wait(async()=>await spacing()===initial);assert.equal(read(),original);
    console.log(engine+' '+kind+': PASS percentage letter spacing scales with font size, negative tablet override, phone isolation and exact undo');
   }
+  if(process.env.RT_E2E_PANEL_TAB){
+   await page.getByLabel('Style screen scope').selectOption('');await settled();
+   const before=read(),input=page.getByLabel('Line height (%)',{exact:true}),next=page.getByRole('button',{name:'Use relative line height',exact:true});
+   await input.fill('181');await input.press('Tab');await wait(()=>read()!==before);await settled();
+   await wait(()=>next.evaluate(el=>el===el.ownerDocument.activeElement));
+   await page.keyboard.press('Shift+Tab');assert.equal(await input.evaluate(el=>el===el.ownerDocument.activeElement),true);
+   await input.press('Tab');assert.equal(await next.evaluate(el=>el===el.ownerDocument.activeElement),true);
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();
+   assert.equal(await page.getByRole('button',{name:'Undo',exact:true}).evaluate(el=>el.ownerDocument.activeElement?.getAttribute('aria-label'))==='Line height (%)',false);
+   let release,intercepted=false;const gate=new Promise(resolve=>{release=resolve;});
+   const hold=async route=>{intercepted=true;await gate;await route.continue();};
+   await page.route('**/rt/__api/op',hold);
+   try{
+    await input.fill('182');await input.press('Tab');await wait(()=>intercepted);
+    await page.getByRole('searchbox',{name:'Find a layer',exact:true}).click();release();
+    await wait(()=>read()!==before);await settled();
+    assert.equal(await page.getByRole('searchbox',{name:'Find a layer',exact:true}).evaluate(el=>el===el.ownerDocument.activeElement),true,'a deliberate click during save must retain focus');
+   }finally{release();await page.unroute('**/rt/__api/op',hold);}
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();
+   console.log(engine+' '+kind+': PASS Tab retains next control after save/rebuild, Shift+Tab returns, unchanged Tab does not write, explicit click cancels queued focus, exact undo');
+  }
   if(process.env.RT_E2E_CONVERT_SPACING){
    await page.getByLabel('Style screen scope').selectOption('');await settled();
    const write=async action=>{snapshots.push(read());await action();await wait(()=>read()!==snapshots.at(-1));await settled();};
