@@ -182,6 +182,9 @@ restores inherited clipping. Both controls follow the selected screen scope.
 **Visible layer** and **Shared Visibility** hide/show HTML layers while preserving
 their layout space and display mode. Hidden layers remain selectable in Layers;
 reset removes the chosen scope’s visibility override.
+**Corners** includes uniform rounding and four independent corners. A corner can
+use two lengths for elliptical rounding. Setting uniform rounding replaces that
+scope’s individual overrides; resetting one corner restores inherited rounding.
 A frame changes the document hierarchy, so parent selectors and flex/grid layout
 can change; this is not a guarantee of identical appearance. **Duplicate layers** and **Delete layers** apply to the
 selection in one undo step. Selecting a parent and its child handles the subtree

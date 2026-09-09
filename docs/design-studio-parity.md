@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 251 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 252 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1068,3 +1068,20 @@ removed. All owned investigation processes stopped.
 This is stronger startup evidence, not a native UI pass. The unresolved boundary
 is activation/desktop visibility rather than absence of an allocated window;
 the precise external or application cause remains unproven.
+
+
+### Independent HTML corners
+
+The HTML Corners section exposes uniform rounding and four physical corners,
+including two-length elliptical values and individual resets. Shared CSS also
+includes these fields. Uniform rounding clears per-corner overrides at its scope;
+individual corners serialize after the uniform shorthand. The writer retains
+historical ordering relative to other shorthand families so older saved rounding
+rules remain readable. Important border strokes no longer incorrectly block
+rounding, while overlapping important radius declarations are still refused.
+
+All 252 unit tests pass. Chromium and WebKit verify elliptical top-left rounding,
+untouched other corners and important border stroke, responsive inheritance,
+uniform replacement, individual reset and exact source undo. The new fixture is
+included in test:e2e:html; its screenshot was inspected. Figma corner smoothing,
+vector geometry, other renderer parity and trusted native release remain open.

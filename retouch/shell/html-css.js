@@ -70,7 +70,7 @@
    const resetClipping=I.button('Reset clipping',()=>save({overflow:null,'overflow-x':null,'overflow-y':null},null,width));resetClipping.disabled=!['overflow','overflow-x','overflow-y'].some(p=>Object.hasOwn(own,p));layout.append(resetClipping);
    I.note(layout,'Arrange children at this screen size. Alignment uses the available space inside the container. Each action is one undo step.');
   }
-  const appearance=I.section('Appearance'),typography=I.section('Typography');
+  const corners=I.section('Corners'),appearance=I.section('Appearance'),typography=I.section('Typography');
   const visible=document.createElement('input');visible.type='checkbox';visible.checked=(own.visibility??css.visibility)==='visible';visible.onchange=()=>save('visibility',visible.checked?'visible':'hidden',width);I.field(appearance,'Visible layer',visible);
   const resetVisibility=I.button('Reset visibility',()=>save('visibility',null,width));resetVisibility.disabled=!Object.hasOwn(own,'visibility');appearance.append(resetVisibility);I.note(appearance,'Hidden layers keep their layout space. Select them in Layers to show them again.');
 
@@ -182,12 +182,12 @@
    if(property==='font-weight'){input.placeholder='400';input.inputMode='decimal';}
    input.value=value;input.oninput=()=>input.setCustomValidity('');
    input.onchange=()=>{const value=input.value.trim();if(!CSS.supports(property,value)||!valid(property,value)){input.setCustomValidity('Use simple CSS lengths with units, keywords, or colors. Spacing accepts up to four values; gap accepts two.');input.reportValidity();return;}save(property,value,width);};
-   const target=/^(font-|line-height|letter-spacing|text-)/.test(property)||property==='color'?typography:sec;
+   const target=property.endsWith('radius')?corners:/^(font-|line-height|letter-spacing|text-)/.test(property)||property==='color'?typography:sec;
    I.field(target,label+' (CSS)',input);
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);target.append(reset);
   }
   I.note(sec,'Values use CSS units. Reset removes this size’s override and restores the page’s styling.');
-  const container=document.createElement('div');if(info.structure?.canInsert)container.append(layout);container.append(appearance,fills,blur,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);container.append(typography,sec);return container;
+  const container=document.createElement('div');if(info.structure?.canInsert)container.append(layout);container.append(appearance,corners,fills,blur,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);container.append(typography,sec);return container;
  }
  function mountSelection(infos,elements,width,save){
   const section=I.section('Shared styles');

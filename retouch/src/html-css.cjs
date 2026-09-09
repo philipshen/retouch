@@ -4,7 +4,8 @@ const {valid,families,overlaps}=require('../shell/html-css-values.js');
 const escape=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 const attr=(node,name)=>node.attrs?.find(a=>a.name===name)?.value;
 function rule(id,width,values,legacy=false){
- const body=`[data-rt-style="${id}"]{`+Object.entries(values).sort(([a],[b])=>(legacy?0:Number(!families[a])-Number(!families[b]))||a.localeCompare(b)).map(([k,v])=>`${k}:${v} !important;`).join('')+'}';
+ const group=p=>Number(!families[p]||p==='border-radius'),key=p=>families['border-radius'].includes(p)?'border-radius-'+p:p;
+ const body=`[data-rt-style="${id}"]{`+Object.entries(values).sort(([a],[b])=>legacy?a.localeCompare(b):group(a)-group(b)||key(a).localeCompare(key(b))).map(([k,v])=>`${k}:${v} !important;`).join('')+'}';
  return width?`@media (min-width: ${width}px){${body}}`:body;
 }
 function inspect(resolved){

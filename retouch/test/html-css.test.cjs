@@ -189,3 +189,16 @@ test('HTML gradient stacks preserve stops and responsive scopes and refuse malfo
  source=edit(source,768,null,'background-image').edits[0].after;assert.equal(css.describe(resolve(source)).cssRules[768],undefined);
  for(const property of ['background-image','background-color'])assert.equal(edit(original.replace('class="title"','style="background:red !important"'),0,property==='background-color'?'blue':value,property).refused,true);
 });
+
+test('Independent and elliptical corners preserve border styles and reset to uniform rounding',()=>{
+ let source=edit(original.replace('class="title"','class="title" style="border:2px solid black !important"'),0,'8px','border-radius').edits[0].after;
+ source=edit(source,0,'16px','gap').edits[0].after;
+ assert.ok(source.indexOf('gap:16px !important')<source.indexOf('border-radius:8px !important'),'preserve historical family order');
+ source=edit(source,0,'40px 10px','border-top-left-radius').edits[0].after;
+ assert.deepEqual(css.describe(resolve(source)).cssRules[0],{'border-radius':'8px',gap:'16px','border-top-left-radius':'40px 10px'});
+ assert.ok(source.indexOf('border-radius:8px !important')<source.indexOf('border-top-left-radius:40px 10px !important'));
+ source=edit(source,0,null,'border-top-left-radius').edits[0].after;assert.equal(css.describe(resolve(source)).cssRules[0]['border-top-left-radius'],undefined);
+ source=edit(source,0,'40px','border-bottom-right-radius').edits[0].after;source=edit(source,0,'20px','border-radius').edits[0].after;assert.deepEqual(css.describe(resolve(source)).cssRules[0],{'border-radius':'20px',gap:'16px'});
+ for(const property of ['border-radius','border-top-left-radius'])assert.equal(edit(original.replace('class="title"','style="border-top-left-radius:4px !important"'),0,'20px',property).refused,true);
+ assert.equal(css.valid('border-top-left-radius','-1px'),false);assert.equal(css.valid('border-top-left-radius','10px 20px 30px'),false);
+});
