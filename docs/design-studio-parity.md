@@ -4777,3 +4777,31 @@ unit suite was not rerun for this browser download-dispatch change. Permission
 rejections and concurrent public-API callers were not separately exercised.
 
 Full design parity remains incomplete. Native app launches remain paused.
+
+### One-click raster scale batches (2026-09-09)
+
+PNG and JPEG export now offer Export 1×–4× alongside the single-scale action.
+The batch takes one SVG snapshot, validates/renders the largest scale first,
+embeds linked bitmaps once, then renders the remaining scales from that prepared
+snapshot. All four files encode before any download dispatch. Filenames are
+ordered base, @2x, @3x, @4x; JPEG quality/background and custom names apply to the
+whole batch. Export controls are disabled until dispatch completes.
+
+Chromium and WebKit each downloaded all four PNGs and all four JPEGs, validating
+names, 200x100/400x200/600x300/800x400 dimensions and artwork colors. The fixture
+changed live artwork after the first download; subsequent files retained the
+captured color. Reused bitmap fetch count was exactly one per batch. Source files
+were unchanged and existing single-export flows passed. Both processes exited 0:
+`/private/tmp/retouch-export-batch-fixed-chromium.log` and
+`/private/tmp/retouch-export-batch-fixed-webkit.log`. All 375 unit tests passed in
+`/private/tmp/retouch-export-batch-unit.log`; git diff --check passed.
+
+The initial refactor accidentally referenced the internal captured argument in
+prepared(), causing the initial browser runs to time out. That error was fixed;
+failed logs remain in `retouch-export-batch-chromium.log` and
+`retouch-export-batch-webkit.log` under `/private/tmp`.
+
+Batch downloads still depend on browser download permission, and holding four
+encoded outputs increases memory use; large-batch memory pressure and interrupted
+download recovery were not measured. This does not add arbitrary HTML-layer
+export or complete Figma parity. Native app launches remain paused.

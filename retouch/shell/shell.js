@@ -937,7 +937,21 @@ function renderPanelContents() {
     RetouchInspector.field(exports,'Export file name',name);
     function updatePreview(){preview.textContent=RetouchSVGExport.fileStem(name.value,defaultName)+(svgExportFormat==='svg'||svgExportScale===1?'':'@'+svgExportScale+'x')+'.'+(svgExportFormat==='jpeg'?'jpg':svgExportFormat);}
     const format=RetouchInspector.select(exports,'Export format',[['svg','SVG · vector'],['png','PNG · transparent'],['jpeg','JPEG · opaque']],svgExportFormat,value=>{svgExportFormat=value;refreshOptions();});
-    const download=RetouchInspector.button('',async()=>{const invalid=options.querySelector(':invalid');if(invalid){invalid.reportValidity();return;}const selected=svgExportFormat;download.disabled=true;format.disabled=true;try{if(selected==='svg')await RetouchSVGExport.download(target,svgEmbedImages,{name:name.value});else if(selected==='png')await RetouchSVGExport.downloadPNG(target,svgExportScale,{name:name.value});else await RetouchSVGExport.downloadJPEG(target,svgExportScale,{quality:jpegQuality,background:jpegBackground,name:name.value});toast(selected.toUpperCase()+' exported','ok');}catch(error){toast(error.message,'err');}finally{download.disabled=false;format.disabled=false;}});
+    const download=RetouchInspector.button('',()=>runExport()),batch=RetouchInspector.button('Export 1×–4×',()=>runExport(true));
+    async function runExport(all=false){
+      const invalid=options.querySelector(':invalid');if(invalid){invalid.reportValidity();return;}
+      const selected=svgExportFormat,settings={quality:jpegQuality,background:jpegBackground,name:name.value};
+      const controls=[name,format,download,batch,...options.querySelectorAll('input,select,button')],states=controls.map(control=>control.disabled);
+      controls.forEach(control=>{control.disabled=true;});
+      try{
+        if(all)await RetouchSVGExport.downloadAllScales(target,selected,settings);
+        else if(selected==='svg')await RetouchSVGExport.download(target,svgEmbedImages,settings);
+        else if(selected==='png')await RetouchSVGExport.downloadPNG(target,svgExportScale,settings);
+        else await RetouchSVGExport.downloadJPEG(target,svgExportScale,settings);
+        toast(all?'4 '+selected.toUpperCase()+' files exported':selected.toUpperCase()+' exported','ok');
+      }catch(error){toast(error.message,'err');}
+      finally{controls.forEach((control,i)=>{control.disabled=states[i];});}
+    }
     function refreshOptions(){
       options.replaceChildren();
       if(svgExportFormat==='svg'){
@@ -951,9 +965,9 @@ function renderPanelContents() {
         }
         RetouchInspector.note(options,svgExportFormat==='jpeg'?'Lower quality makes smaller files. The background fills transparent areas.':'PNG preserves transparency. Bitmap images are embedded.');
       }
-      download.textContent=svgExportFormat==='svg'?'Export SVG canvas':'Export '+svgExportFormat.toUpperCase();updatePreview();
+      download.textContent=svgExportFormat==='svg'?'Export SVG canvas':'Export '+svgExportFormat.toUpperCase();batch.hidden=svgExportFormat==='svg';updatePreview();
     }
-    preview.className='hint';preview.setAttribute('aria-label','Export filename preview');exports.append(options,preview,download);refreshOptions();RetouchInspector.note(exports,'Exports the containing SVG canvas at this screen size.');panelBody.append(exports);
+    preview.className='hint';preview.setAttribute('aria-label','Export filename preview');exports.append(options,preview,download,batch);refreshOptions();RetouchInspector.note(exports,'Exports the containing SVG canvas at this screen size.');panelBody.append(exports);
   }
   if(info.svgGeometry){
     const geometry=RetouchInspector.section('SVG geometry');

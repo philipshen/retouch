@@ -131,6 +131,28 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    console.log(engine+': PASS custom Unicode filenames across SVG/PNG/JPEG, scale suffixes, preview, screen-size persistence and clear-to-default without source edits');
   }
   if(process.env.RT_E2E_EXPORT_BURST){for(let i=0;i<12;i++)await exportFile();console.log(engine+': PASS twelve consecutive downloads complete');}
+  if(process.env.RT_E2E_EXPORT_BATCH){
+   await page.getByLabel('Export file name',{exact:true}).fill('Batch icon');
+   for(const format of ['png','jpeg']){
+    await page.getByLabel('Export format',{exact:true}).selectOption(format);
+    const original=await app.locator('#solid').evaluate(node=>({style:node.getAttribute('style'),color:getComputedStyle(node).fill}));
+    const downloads=[],before=imageFetches;let mutation,timer,resolveDone;
+    const done=new Promise((resolve,reject)=>{resolveDone=resolve;timer=setTimeout(()=>reject(Error('Missing batch downloads')),30000);});
+    const listener=download=>{downloads.push(download);if(downloads.length===1)mutation=app.locator('#solid').evaluate(node=>{node.style.fill='blue';});if(downloads.length===4)resolveDone();};page.on('download',listener);
+    try{
+     await page.getByRole('button',{name:'Export 1×–4×',exact:true}).click();await done;await mutation;
+     if(process.env.RT_E2E_IMAGE)assert.equal(imageFetches-before,1,'batch embeds a reused bitmap once');
+     for(let i=0;i<4;i++){
+      const scale=i+1,expected='Batch-icon'+(i?'@'+scale+'x':'')+'.'+(format==='png'?'png':'jpg');assert.equal(downloads[i].suggestedFilename(),expected);
+      const dest=path.join(root,expected);await downloads[i].saveAs(dest);
+      const pixels=await page.evaluate(async({data,format,scale})=>{const image=new Image();image.src='data:image/'+format+';base64,'+data;await image.decode();const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;const context=canvas.getContext('2d');context.drawImage(image,0,0);return {size:[canvas.width,canvas.height],color:[...context.getImageData(30*scale,30*scale,1,1).data]};},{data:fs.readFileSync(dest).toString('base64'),format,scale});
+      assert.deepEqual(pixels.size,[200*scale,100*scale]);const expectedColor=original.color.match(/\d+/g).map(Number);expectedColor.forEach((value,index)=>assert.ok(Math.abs(value-pixels.color[index])<=(format==='jpeg'?8:0),JSON.stringify(pixels)));
+     }
+    }finally{clearTimeout(timer);page.off('download',listener);if(mutation)await mutation;await app.locator('#solid').evaluate((node,style)=>{if(style===null)node.removeAttribute('style');else node.setAttribute('style',style);},original.style);}
+   }
+   assert.equal(fs.readFileSync(file,'utf8'),source);assert.deepEqual(errors,[]);
+   console.log(engine+': PASS all-scale PNG/JPEG batches, ordered filenames, four dimensions, one bitmap fetch and frozen artwork despite live changes');
+  }
   if(process.env.RT_E2E_EXPORT_ARTIFACT)fs.writeFileSync(process.env.RT_E2E_EXPORT_ARTIFACT,text);
   console.log(engine+': PASS downloaded SVG decodes independently with viewport dimensions, CSS geometry/colors, gradient, clipping, responsive styling, no editor/script markup, unchanged source');
  }finally{if(browser)await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}

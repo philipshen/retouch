@@ -197,12 +197,12 @@
   saveQueue=task.catch(()=>{});return task;
  }
  async function download(target,embed=true,options={}){const result=embed?await prepared(target):snapshot(target);result.name=fileStem(options.name,result.name);await save(new Blob([result.text],{type:'image/svg+xml'}),result.name+'.svg');return result;}
- async function raster(target,scale=1,format='png',options={}){
+ async function raster(target,scale=1,format='png',options={},captured=null){
   const {quality=92,background='#ffffff'}=options;
   if(format==='jpeg'&&(!Number.isInteger(quality)||quality<1||quality>100||!/^#[a-f0-9]{6}$/i.test(background)))throw Error('Choose JPEG quality from 1–100 and a six-digit background color.');
   if(!['png','jpeg'].includes(format))throw Error('Choose PNG or JPEG.');
   if(![1,2,3,4].includes(scale))throw Error('Choose an image scale from 1× to 4×.');
-  const result=snapshot(target),parsed=new DOMParser().parseFromString(result.text,'image/svg+xml');
+  const result=captured?{...captured}:snapshot(target),parsed=new DOMParser().parseFromString(result.text,'image/svg+xml');
   if(parsed.querySelector('foreignObject'))throw Error('Raster export with embedded HTML is not supported yet.');
   const normalize=family=>family.trim().replace(/^["']|["']$/g,'').toLowerCase();
   const families=value=>{const result=[];let part='',quote='',escape=false;for(const char of value){if(escape){part+=char;escape=false;continue;}if(char==='\\'){part+=char;escape=true;continue;}if(quote){part+=char;if(char===quote)quote='';continue;}if(char==='"'||char==="'"){quote=char;part+=char;}else if(char===','){result.push(normalize(part));part='';}else part+=char;}result.push(normalize(part));return result;};
@@ -232,5 +232,20 @@
  const jpeg=(target,scale=1,options={})=>raster(target,scale,'jpeg',options);
  async function downloadJPEG(target,scale=1,options={}){const result=await jpeg(target,scale,options);result.name=fileStem(options.name,result.name);await save(result.blob,result.name+(scale===1?'':'@'+scale+'x')+'.jpg');return result;}
  async function downloadPNG(target,scale=1,options={}){const result=await png(target,scale);result.name=fileStem(options.name,result.name);await save(result.blob,result.name+(scale===1?'':'@'+scale+'x')+'.png');return result;}
- root.RetouchSVGExport={fileStem,useReferences,snapshot,prepared,download,png,jpeg,downloadPNG,downloadJPEG};
+ async function downloadAllScales(target,format='png',options={}){
+  options={...options};
+  const captured=snapshot(target);
+  // Validate the largest output first; embed linked images once for the batch.
+  const largest=await raster(target,4,format,options,captured),preparedCapture={...captured,text:largest.text},results=[];
+  for(const scale of [1,2,3])results.push(await raster(target,scale,format,options,preparedCapture));
+  results.push(largest);
+  // Encode every file before dispatch so an encoding failure cannot leave a
+  // half-generated batch. All files refer to the same captured artwork.
+  for(let i=0;i<results.length;i++){
+   const result=results[i];result.name=fileStem(options.name,captured.name);
+   await save(result.blob,result.name+(i?'@'+(i+1)+'x':'')+'.'+(format==='jpeg'?'jpg':'png'));
+  }
+  return results;
+ }
+ root.RetouchSVGExport={fileStem,useReferences,snapshot,prepared,download,downloadAllScales,png,jpeg,downloadPNG,downloadJPEG};
 })(window);
