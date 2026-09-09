@@ -1553,7 +1553,7 @@ const layers = RetouchLayers.mount({
   dragEnabled:window.__RT_RENDERING?.layerReparenting===true,
   onMove:async(source,destination,position)=>{
     if(panelTasks||undoBusy||sourceRequests||!source.isConnected||!destination.isConnected)return;
-    await commitInlineEdit();await select(source);
+    await commitInlineEdit();if(sel?.multiple?.some(info=>info.id===source.getAttribute('data-rt')))return structureSelection('reparentElement',{destinationId:destination.getAttribute('data-rt'),position});await select(source);
     if(!sel?.info.structure?.canReparent)return toast(sel?.info.structure?.reason||'This layer cannot be moved into another container.','err');
     await moveLayerInto(sel.info,destination.getAttribute('data-rt'),position);
   },
@@ -1563,13 +1563,14 @@ const layers = RetouchLayers.mount({
 });
 function chooseLayerParent(info){
   const selected=matchingEls(info.id)[0];if(!selected)return;
-  const candidates=[...doc().querySelectorAll('[data-rt]')].filter(el=>RetouchLayers.canNest(selected,el));
+  const sources=sel.multiple?sel.multiple.map(info=>matchingEls(info.id)[0]).filter(Boolean):[selected];
+  const candidates=[...doc().querySelectorAll('[data-rt]')].filter(el=>RetouchLayers.canNestMany(sources,el));
   if(!candidates.length)return toast('No other content container is available on this page.','err');
-  const modal=document.createElement('dialog'),heading=document.createElement('h3');heading.textContent='Move layer into';modal.className='layer-move-dialog';modal.append(heading);
+  const modal=document.createElement('dialog'),heading=document.createElement('h3');heading.textContent=sources.length>1?'Move layers into':'Move layer into';modal.className='layer-move-dialog';modal.append(heading);
   const picker=document.createElement('select');picker.setAttribute('aria-label','Destination container');
   for(const el of candidates){const option=document.createElement('option');option.value=el.getAttribute('data-rt');option.textContent=RetouchLayers.label(el);picker.append(option);}modal.append(picker);
   const close=()=>{modal.close();modal.remove();};
-  modal.append(RetouchInspector.button('Move layer',()=>{const destinationId=picker.value;close();moveLayerInto(info,destinationId);}),RetouchInspector.button('Cancel',close));
+  modal.append(RetouchInspector.button('Move layer',()=>{const destinationId=picker.value;close();if(sources.length>1)structureSelection('reparentElement',{destinationId,position:'inside'});else moveLayerInto(info,destinationId);}),RetouchInspector.button('Cancel',close));
   modal.addEventListener('cancel',()=>modal.remove());document.body.append(modal);modal.showModal();picker.focus();
 }
 async function moveLayerInto(info,destinationId,position='inside'){
@@ -1599,20 +1600,20 @@ async function restoreLayerSelection(ids){
   if(!selected.length||selected.some(result=>!result?.ok))return;
   const infos=selected.map(result=>result.element),first=infos[0];sel={hostId:first.id,instanceId:null,scope:'host',info:first,multiple:infos.length>1?infos:undefined};
 }
-async function structureSelection(action){
+async function structureSelection(action,extra={}){
   const selection=sel.multiple,info=sel.info;busyPanel(true);
   try{
-    const type=action==='duplicateElement'?'duplicateSelection':'deleteSelection';
-    const result=await api('POST','/rt/__api/op',{type,id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash});
+    const type=action==='duplicateElement'?'duplicateSelection':action==='deleteElement'?'deleteSelection':'reparentSelection';
+    const result=await api('POST','/rt/__api/op',{type,id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash,...extra});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not update selected layers','err');
     editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:selection.map(item=>item.id),selectionAfter:result.selectionIds,undoId:result.undoId});
     await reloadFrame();await restoreLayerSelection(result.selectionIds);if(sel)renderPanel();
-    toast(result.rootCount+' layer'+(result.rootCount===1?'':'s')+(action==='duplicateElement'?' duplicated':' deleted'),'ok');
+    toast(result.rootCount+' layer'+(result.rootCount===1?'':'s')+(action==='duplicateElement'?' duplicated':action==='deleteElement'?' deleted':' moved'),'ok');
   }finally{busyPanel(false);}
 }
 async function structureAction(action) {
   if(!sel || panelTasks || undoBusy || sourceRequests)return;
-  if(sel.multiple?.length>1){if(['duplicateElement','deleteElement'].includes(action))return structureSelection(action);return toast('Choose one layer for this structural edit.','err');}
+  if(sel.multiple?.length>1){if(action==='reparentElement')return chooseLayerParent(sel.info);if(['duplicateElement','deleteElement'].includes(action))return structureSelection(action);return toast('Choose one layer for this structural edit.','err');}
   await commitInlineEdit();
   const info=sel?.info;if(!info)return;
   if(action==='reparentElement')return chooseLayerParent(info);

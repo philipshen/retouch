@@ -321,6 +321,18 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===beforeGroupCopy,'one undo removes all copies');
   await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===afterGroupCopy,'redo group duplication');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'group structure setup exact undo');
+  await page.getByRole('treeitem',{name:'main',exact:true}).click();await page.getByRole('button',{name:'Add frame',exact:true}).click();await wait(async()=>await app.locator('main > div[aria-label="Frame"]').count()===1,'group move frame');await settled();
+  const beforeGroupMove=read();
+  await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await settled();await page.getByRole('treeitem',{name:'p · Unedited sibling',exact:true}).click({modifiers:['Shift']});await wait(async()=>await page.getByRole('treeitem',{selected:true}).count()===2,'group move selection');await settled();
+  await page.getByRole('button',{name:'Move into…',exact:true}).click();await page.getByLabel('Destination container',{exact:true}).selectOption({label:'div · Frame'});await page.getByRole('button',{name:'Move layer',exact:true}).click();await wait(async()=>await app.locator('main > div[aria-label="Frame"] > :is(h1,p)').count()===2,'group picker move');await settled();
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===beforeGroupMove,'group picker exact undo');await wait(async()=>await page.getByRole('treeitem',{selected:true}).count()===2,'group move selection restored');
+  await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).dragTo(page.getByRole('treeitem',{name:'div · Frame',exact:true}));await wait(async()=>await app.locator('main > div[aria-label="Frame"] > :is(h1,p)').count()===2,'drag selected group into frame');await settled();const nestedGroupSource=read();
+  const imageTarget=page.getByRole('treeitem',{name:'img · Study',exact:true}),imageTargetBox=await imageTarget.boundingBox();
+  await page.getByRole('treeitem',{name:'p · Unedited sibling',exact:true}).dragTo(imageTarget,{targetPosition:{x:imageTargetBox.width/2,y:2}});await wait(async()=>await app.locator('main > h1 + p + img').count()===1,'drag group before sibling');await settled();const positionedGroupSource=read();
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===nestedGroupSource,'group placement exact undo');
+  await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===positionedGroupSource,'group placement exact redo');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===beforeGroupMove,'group drag exact undo');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'group move setup exact undo');
   assert.deepEqual(errors,[]);console.log(engine+': PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

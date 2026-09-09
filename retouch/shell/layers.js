@@ -17,9 +17,10 @@
     return roots;
   }
   function canNest(source,target){return !!source&&!!target&&source!==target&&source.parentElement!==target&&!source.contains(target)&&['BODY','DIV','MAIN','SECTION','ARTICLE','ASIDE','HEADER','FOOTER','NAV','FORM','LI','TD','TH','BLOCKQUOTE'].includes(target.tagName);}
-  function placement(source,target,fraction){
-    if(!source||!target||source===target||source.contains(target))return null;
-    if(fraction>=.25&&fraction<=.75&&canNest(source,target))return 'inside';
+  function canNestMany(sources,target){return !!target&&sources.length>0&&sources.every(source=>source&&!source.contains(target))&&sources.some(source=>canNest(source,target));}
+  function placement(sources,target,fraction){
+    if(!target||sources.some(source=>!source||source.contains(target)))return null;
+    if(fraction>=.25&&fraction<=.75&&canNestMany(sources,target))return 'inside';
     if(!target.parentElement?.hasAttribute('data-rt')||['HTML','BODY'].includes(target.tagName))return null;
     return fraction<.5?'before':'after';
   }
@@ -59,8 +60,8 @@
           if(item.children.length)b.setAttribute('aria-expanded',String(expanded));
           b.onclick=e=>onSelect(item.el,{toggle:e.shiftKey||e.metaKey||e.ctrlKey});
           b.draggable=dragEnabled&&!['HTML','BODY'].includes(item.el.tagName);
-          b.ondragstart=e=>{if(isBusy||selectedSet.size>1||!b.draggable){e.preventDefault();return;}dragged=item.el;e.dataTransfer.setData('text/plain','retouch-layer:'+item.el.getAttribute('data-rt'));e.dataTransfer.effectAllowed='move';b.classList.add('dragging');};
-          const dropPosition=e=>{const box=b.getBoundingClientRect();return isBusy?null:placement(dragged,item.el,(e.clientY-box.top)/box.height);};
+          b.ondragstart=e=>{if(isBusy||!b.draggable){e.preventDefault();return;}dragged=item.el;e.dataTransfer.setData('text/plain','retouch-layer:'+item.el.getAttribute('data-rt'));e.dataTransfer.effectAllowed='move';for(const row of rows)if(row.item.el===dragged||selectedSet.has(dragged)&&selectedSet.has(row.item.el))row.button.classList.add('dragging');};
+          const dropPosition=e=>{const box=b.getBoundingClientRect();return isBusy?null:placement(selectedSet.has(dragged)?[...selectedSet]:[dragged],item.el,(e.clientY-box.top)/box.height);};
           b.ondragover=e=>{clearTargets();const position=dropPosition(e);if(position){e.preventDefault();e.dataTransfer.dropEffect='move';b.classList.add(position==='inside'?'drop-target':'drop-'+position);}};
           b.ondragleave=clearTargets;
           b.ondrop=e=>{const position=dropPosition(e);if(position){e.preventDefault();const source=dragged;endDrag();onMove?.(source,item.el,position);}};
@@ -124,11 +125,11 @@
       actionButtons.deleteElement.disabled=busy||!s?.canDelete;
       actionButtons.before.disabled=busy||!s?.canMoveBefore;
       actionButtons.after.disabled=busy||!s?.canMoveAfter;
-      if(selectedSet.size>1){for(const button of Object.values(actionButtons))button.disabled=true;actionButtons.duplicateElement.disabled=busy;actionButtons.deleteElement.disabled=busy;reason.textContent=selectedSet.size+' layers selected. Duplicate and delete apply to the selection.';return;}
+      if(selectedSet.size>1){for(const button of Object.values(actionButtons))button.disabled=true;actionButtons.duplicateElement.disabled=busy;actionButtons.deleteElement.disabled=busy;actionButtons.reparentElement.disabled=busy;reason.textContent=selectedSet.size+' layers selected. Move, duplicate and delete apply to the selection.';return;}
       reason.textContent=info?(s?.canInsert&&!s?.canDuplicate?'Add text or a frame inside this container.':s?.reason || (!s?.canDuplicate?'Duplicate is unavailable for a layer with an authored ID, key, or ref.':'')):'Select a layer to organize it.';
     }
     return {attach,selection};
   }
-  const api={label,collect,mount,canNest};
+  const api={label,collect,mount,canNest,canNestMany};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayers=api;
 })(typeof window==='object'?window:globalThis);

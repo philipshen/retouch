@@ -157,8 +157,10 @@ refuses the change, the entire edit is refused. Up to 100 layers in one HTML
 body are supported. **Duplicate layers** and **Delete layers** apply to the
 selection in one undo step. Selecting a parent and its child handles the subtree
 once. Copies get independent responsive styles, and undo restores the selection.
-Keyboard Duplicate/Delete also apply to the selected group. Reparenting groups,
-group clipboard and shared gradient/shadow controls remain unfinished. A plain
+Keyboard Duplicate/Delete also apply to the selected group. Drag any selected
+row onto a container or a row edge to move the set together, or use **Move into…**.
+Moves preserve source order and linked responsive styles, with one undo step.
+Group clipboard and shared gradient/shadow controls remain unfinished. A plain
 click returns to one layer.
 
 The **Gradient fills** section creates stacked linear or radial gradients with

@@ -14,7 +14,7 @@ changing those files. The original checkout may continue to evolve independently
 | Area | Required outcome | Current evidence and remaining work |
 | --- | --- | --- |
 | Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Existing single-site zoom/selection/resize plus a linked phone/tablet/desktop comparison rail. Most document and multi-selection operations still absent or unaudited. |
-| Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. HTML multi-selection, shared CSS and group duplicate/delete exist; group reparenting, cross-context clipboard and broader source structures remain. |
+| Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. HTML multi-selection, shared CSS and group duplicate/delete/reparenting exist; cross-context clipboard and broader source structures remain. |
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | Full vector authoring and geometry model remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | Visual horizontal/vertical/reverse flex and grid controls, wrapping, gaps, alignment/distribution, per-side padding, fixed/hug/fill sizing, minimum/maximum dimensions, grid-child spans and breakpoint-scoped writes now exist. Full constraint, advanced grid, nested auto-layout and cross-framework equivalence work remains. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | Opacity, CSS border width/style/color, uniform and individual corners, basic color and shadow controls, and image fit/position controls exist. Browser tests cover border independence, corners, scope and exact undo. Multiple fills/strokes, gradient editing, crop handles/zoom/rotation, blending and complete visual/source representations remain. |
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 236 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 239 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -832,3 +832,21 @@ copy a styled selection, edit only its copies, undo that styling, delete both
 copies through a selected row's keyboard shortcut, restore the deletion, and
 exercise exact duplication undo/redo. Group reparenting, grouping/ungrouping,
 marquee selection and cross-document clipboard remain unfinished.
+
+
+### Moving HTML selections together
+
+Move Into and Layers drag/drop now move the selected outer subtrees as one set.
+Container centers nest the set; row edges place it before/after the target.
+All selected rows show drag feedback, and targets within selected subtrees are
+excluded. The source planner preserves document order rather than click order,
+retains linked styles, checks every source range and destination, and returns
+one atomic edit. Temporary markers verify each moved root's parsed parent and
+contiguous order, then are removed before persistence.
+
+All 239 unit tests pass. Planner tests cover earlier/later destinations, every
+placement, responsive style retention, nested selections, cycles, invalid ranges
+and parser-changing nested forms. Chromium and WebKit move a set through the
+picker, undo it, drag it into a frame, drag it back before a sibling, and verify
+exact source/selection undo and redo. Grouping/ungrouping, marquee selection,
+cross-document moves and broader renderer support remain unfinished.
