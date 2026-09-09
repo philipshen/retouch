@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 316 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 318 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -2161,3 +2161,34 @@ Independent per-gap edits, flow-layout rearrangement, React/Liquid/vector select
 geometry, and full cross-renderer equivalence remain. The verified Mac package
 predates these selection tools; trusted distribution and full Figma parity remain
 unfinished.
+
+
+### Independent canvas gaps
+
+**Canvas gap adjustment** now offers **All gaps equally** and **Only the dragged
+gap**. The individual mode changes one horizontal or vertical gap while preserving
+the other gaps and every member's size. It keeps the first spatial layer or chosen
+reference layer fixed, or uses the containing frame's origin. Gap labels and
+member previews retain the actual uneven spacing throughout the gesture.
+
+Keyboard users can Tab between gap labels and accumulate separate adjustments in
+one preview, then apply them as one atomic source/history edit. Returning all gaps
+to their original values leaves source unchanged, including with a frame target.
+Changing the adjustment mode cancels pending work. Negative-gap limits now use the
+member preceding each gap; unrelated smaller layers do not restrict that gap.
+Existing coincident layer positions can remain unchanged while another gap moves.
+
+Validation: all 318 unit tests pass. Chromium and WebKit pass the extended spacing
+workflow, covering independent horizontal/vertical gaps at 50/100/200% zoom,
+unchanged neighboring gaps and dimensions, reference-source preservation, frame
+origins, cumulative keyboard edits and reversal, negative limits, cancellation,
+responsive independence, protected members and atomic undo/redo. Earlier equal-gap
+and different-container checks still pass. Chromium numeric spacing/alignment and
+WebKit group resizing regressions also pass. Logs:
+`/private/tmp/retouch-individual-spacing-{unit,chromium,webkit,layout-regression,resize-regression}.log`.
+Screenshot `/private/tmp/retouch-individual-spacing.png` was visually inspected.
+
+The numeric inspector fields still set a common gap; the new mode applies to the
+canvas controls. Flow layout, React/Liquid/vector selection geometry and broader
+cross-renderer equivalence remain unfinished. The verified Mac package predates
+these selection tools; trusted distribution and full Figma parity remain open.

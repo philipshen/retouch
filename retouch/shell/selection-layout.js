@@ -1,6 +1,6 @@
 (function(root){
  'use strict';
- let targetChoice='selection',selectionKey='';
+ let targetChoice='selection',selectionKey='',gapMode='equal';
  function arrange(rects,mode,target=null){
   if(rects.length<2||rects.length>100||rects.some(r=>!['left','top','width','height'].every(p=>Number.isFinite(r[p]))||r.width<=0||r.height<=0))throw Error('Choose between 2 and 100 visible layers.');
   if(target&&(!['left','top','width','height'].every(p=>Number.isFinite(target[p]))||target.width<0||target.height<0))throw Error('The alignment target needs measurable bounds.');
@@ -22,13 +22,17 @@
   const position=axis==='x'?'left':'top',size=axis==='x'?'width':'height',sorted=rects.map((r,i)=>({position:r[position],size:r[size],i})).sort((a,b)=>a.position-b.position);
   return {sorted,values:sorted.slice(1).map((r,i)=>r.position-sorted[i].position-sorted[i].size)};
  }
- function setSpacing(rects,axis,gap,{anchor=null,start=null}={}){
-  arrange(rects,axis==='x'?'left':'top');const {sorted}=gaps(rects,axis);
-  if(!Number.isFinite(gap)||Math.abs(gap)>100000)throw Error('Use a spacing value between -100,000 and 100,000 pixels.');
-  if(gap<1/32-Math.min(...sorted.map(r=>r.size)))throw Error('Keep some forward distance between layers so their order stays intact.');
+ function setGaps(rects,axis,values,{anchor=null,start=null}={}){
+  arrange(rects,axis==='x'?'left':'top');const {sorted,values:original}=gaps(rects,axis);
+  if(!Array.isArray(values)||values.length!==rects.length-1||Array.from(values).some(gap=>!Number.isFinite(gap)||Math.abs(gap)>100000))throw Error('Use a spacing value between -100,000 and 100,000 pixels for each gap.');
+  if(values.some((gap,i)=>gap!==original[i]&&gap<1/32-sorted[i].size))throw Error('Keep some forward distance between layers so their order stays intact.');
   if(anchor!==null&&(!Number.isInteger(anchor)||anchor<0||anchor>=rects.length)||start!==null&&!Number.isFinite(start))throw Error('Choose a measurable spacing reference.');
-  let cursor=0;const packed=sorted.map(r=>{const item={...r,next:cursor};cursor+=r.size+gap;return item;}),reference=packed.find(r=>r.i===(anchor??sorted[0].i)),offset=start??reference.position-reference.next,result=rects.map(()=>({x:0,y:0}));
+  let cursor=0;const packed=sorted.map((r,i)=>{const item={...r,next:cursor};cursor+=r.size+(values[i]??0);return item;}),reference=packed.find(r=>r.i===(anchor??sorted[0].i)),offset=start??reference.position-reference.next,result=rects.map(()=>({x:0,y:0}));
   for(const r of packed)result[r.i][axis]=r.next+offset-r.position;return result;
+ }
+ function setSpacing(rects,axis,gap,options={}){
+  if(!Number.isFinite(gap)||Math.abs(gap)>100000)throw Error('Use a spacing value between -100,000 and 100,000 pixels.');
+  return setGaps(rects,axis,Array(Math.max(0,rects.length-1)).fill(gap),options);
  }
  function preserveBox(changes,g,css){
   // Alignment keeps the authored box model, so content-box maximum sizes do
@@ -83,9 +87,10 @@
   }
   if(onTransform)for(const action of ['move','resize']){const control=I.button((action==='move'?'Move':'Resize')+' selection on canvas',event=>{try{const measured=measure();onTransform(elements,delta=>write(measured,action==='resize'?root.RetouchCanvasMove.memberBounds(measured.map(item=>item.rect),delta):measured.map(()=>delta)),event.currentTarget,action);}catch(error){I.note(sec,error.message,'refused');}});control.dataset.canvasTool=action;controls.append(control);}
   sec.append(controls);
+  if(onTransform)I.select(sec,'Canvas gap adjustment',[['equal','All gaps equally'],['individual','Only the dragged gap']],gapMode,value=>{gapMode=value;root.dispatchEvent(new root.Event('retouch:selection-layout'));});
   for(const [axis,label]of [['x','Horizontal gap (px)'],['y','Vertical gap (px)']]){
    const values=gaps(measure().map(item=>item.rect),axis).values,mixed=values.some(value=>Math.abs(value-values[0])>=1/32),initial=mixed?'':String(Math.round(values.reduce((n,value)=>n+value,0)/values.length*100)/100),input=root.document.createElement('input');
-   if(onTransform){const control=I.button('Adjust '+(axis==='x'?'horizontal':'vertical')+' gaps on canvas',event=>{try{const measured=measure(),target=targetBounds(measured),options={axis,anchor:targetChoice.startsWith('layer:')?infos.findIndex(info=>'layer:'+info.id===targetChoice):null,start:targetChoice==='parent'?target[axis==='x'?'left':'top']:null};onTransform(elements,delta=>write(measured,setSpacing(measured.map(item=>item.rect),axis,delta.gap,options)),event.currentTarget,'spacing-'+axis,options);}catch(error){I.note(sec,error.message,'refused');}});control.dataset.canvasTool='spacing-'+axis;sec.append(control);}
+   if(onTransform){const control=I.button('Adjust '+(axis==='x'?'horizontal':'vertical')+' gaps on canvas',event=>{try{const measured=measure(),target=targetBounds(measured),options={axis,independent:gapMode==='individual',anchor:targetChoice.startsWith('layer:')?infos.findIndex(info=>'layer:'+info.id===targetChoice):null,start:targetChoice==='parent'?target[axis==='x'?'left':'top']:null};onTransform(elements,delta=>write(measured,options.independent?setGaps(measured.map(item=>item.rect),axis,delta.values,options):setSpacing(measured.map(item=>item.rect),axis,delta.gap,options)),event.currentTarget,'spacing-'+axis,options);}catch(error){I.note(sec,error.message,'refused');}});control.dataset.canvasTool='spacing-'+axis;sec.append(control);}
    input.type='number';input.step='any';input.min='-100000';input.max='100000';input.value=initial;input.placeholder=mixed?'Mixed':'';input.oninput=()=>input.setCustomValidity('');
    input.onchange=()=>{if(!input.value.trim()){input.value=initial;return;}if(!input.checkValidity())return;try{const measured=measure(),target=targetBounds(measured),anchor=targetChoice.startsWith('layer:')?infos.findIndex(info=>'layer:'+info.id===targetChoice):null,start=targetChoice==='parent'?target[axis==='x'?'left':'top']:null;write(measured,setSpacing(measured.map(item=>item.rect),axis,Number(input.value),{anchor,start}));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
    input.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();input.value=initial;input.setCustomValidity('');input.blur();}else if(event.key==='Enter'){event.preventDefault();event.stopPropagation();input.blur();}};I.field(sec,label,input);
@@ -93,5 +98,5 @@
   I.note(sec,'Exact gaps keep the first layer fixed, or the chosen reference layer. With a frame target, spacing starts at its left or top edge. Negative gaps overlap layers without reversing their order.');
   update();return sec;
  }
- const api={arrange,gaps,setSpacing,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSelectionLayout=api;
+ const api={arrange,gaps,setGaps,setSpacing,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSelectionLayout=api;
 })(typeof window==='object'?window:globalThis);

@@ -31,3 +31,18 @@ test('exact spacing rejects nonfinite values, invalid references and order rever
  for(const options of [{anchor:-1},{anchor:3},{anchor:1.5},{start:NaN}])assert.throws(()=>setSpacing(rects,'x',10,options));assert.throws(()=>setSpacing(rects,'z',10));
  assert.deepEqual(setSpacing(rects.slice(0,2),'x',25),[{x:0,y:0},{x:-75,y:0}]);
 });
+test('individual gaps preserve untouched spacing and anchor either side of the changed gap',()=>{
+ const {setGaps}=require('../shell/selection-layout.js');
+ assert.deepEqual(setGaps(rects,'x',[125,110]),[{x:0,y:0},{x:25,y:0},{x:25,y:0}]);
+ assert.deepEqual(setGaps(rects,'x',[100,130]),[{x:0,y:0},{x:0,y:0},{x:20,y:0}]);
+ assert.deepEqual(setGaps(rects,'x',[125,110],{anchor:1}),[{x:-25,y:0},{x:0,y:0},{x:0,y:0}]);
+ assert.deepEqual(setGaps([rects[2],rects[0],rects[1]],'x',[100,130],{anchor:0}),[{x:0,y:0},{x:-20,y:0},{x:-20,y:0}]);
+ assert.deepEqual(setGaps(rects,'y',[60,70],{start:0}),[{x:0,y:-40},{x:0,y:-30},{x:0,y:-30}]);
+ assert.deepEqual(setGaps(rects,'x',[100,-79]),[{x:0,y:0},{x:0,y:0},{x:-189,y:0}]);
+});
+test('gap vectors reject invalid counts and changes that reverse order while retaining existing overlap',()=>{
+ const {setGaps}=require('../shell/selection-layout.js');
+ for(const values of [null,[],Array(2),[1],[1,2,3],[1,NaN],[Infinity,2],[-40,110],[100,-80]])assert.throws(()=>setGaps(rects,'x',values));
+ const overlapping=[{left:0,top:0,width:50,height:10},{left:0,top:20,width:20,height:10},{left:100,top:40,width:20,height:10}];
+ assert.deepEqual(setGaps(overlapping,'x',[-50,90]),[{x:0,y:0},{x:0,y:0},{x:10,y:0}]);
+});
