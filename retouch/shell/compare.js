@@ -20,20 +20,23 @@
     if(!force&&next===route)return;route=next;
     for(const card of cards){card.message.textContent='Loading…';card.frame.src=next;}
   }
+  function selectedNodes(d){return selected?[...d.querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===selected||el.getAttribute('data-rt-i')===selected):[];}
+  function rendered(el){const rect=el.getBoundingClientRect(),css=el.ownerDocument.defaultView.getComputedStyle(el);return rect.width>0&&rect.height>0&&!['hidden','collapse'].includes(css.visibility);}
   function paint(){
     if(!open)return;
     for(const card of cards){
-      const {frame,overlay,message,scopeMessage,width,height}=card;
+      const {frame,overlay,message,scopeMessage,width,height,reveal}=card;
       scopeMessage.textContent='Checking style scope…';scopeMessage.dataset.scopeApplies='unknown';
       const scale=card.viewport.clientWidth/width;
       frame.style.transform=`scale(${scale})`;card.viewport.style.height=height*scale+'px';
       overlay.replaceChildren();
       try{
-        const d=frame.contentDocument;if(!d?.body||d.URL==='about:blank')continue;
+        const d=frame.contentDocument;if(!d?.body||d.URL==='about:blank'){reveal.disabled=true;continue;}
         const applies=!scope.prefix?true:window.RetouchResponsive.matches(scope,d.defaultView);
         scopeMessage.dataset.scopeApplies=applies===null?'unknown':String(applies);
         scopeMessage.textContent=!scope.prefix?'Base styles apply here; breakpoint overrides may take precedence.':applies===null?'Scope coverage is unavailable for this breakpoint.':applies?'Current breakpoint applies here; other overrides may take precedence.':'Current breakpoint does not apply in this preview.';
-        const nodes=selected?[...d.querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===selected||el.getAttribute('data-rt-i')===selected):[];
+        const nodes=selectedNodes(d);
+        const count=nodes.filter(rendered).length;reveal.disabled=!count;reveal.textContent=count>1?'Show next instance':'Show selection';reveal.title=count>1?'Reveal the next rendered instance of this layer.':'Scroll this comparison to the selected layer.';
         let visible=0,offscreen=0;
         for(const el of nodes){
           const rect=el.getBoundingClientRect(),css=d.defaultView.getComputedStyle(el);
@@ -43,7 +46,7 @@
           Object.assign(box.style,{left:rect.left*scale+'px',top:rect.top*scale+'px',width:rect.width*scale+'px',height:rect.height*scale+'px'});overlay.append(box);
         }
         message.textContent=selected?(visible?'Selected layer · '+visible+(visible===1?' instance':' instances'):offscreen?'Selected layer is outside this viewport':nodes.length?'Selected layer is hidden':'Selected layer is absent on this screen'):'Same page · independent viewport';
-      }catch{message.textContent='Preview unavailable for this page';}
+      }catch{reveal.disabled=true;message.textContent='Preview unavailable for this page';}
     }
     timer=setTimeout(paint,100);
   }
@@ -71,6 +74,19 @@
       const overlay=document.createElement('div');overlay.className='compare-overlay';
       const message=document.createElement('p');message.className='hint';
       const scopeMessage=document.createElement('p');scopeMessage.className='compare-scope-message';scopeMessage.style.cssText='font:11px/1.4 system-ui;color:#aeb3bd;margin:8px 0;';scopeMessage.setAttribute('aria-label',name+' scope coverage');
+      const reveal=document.createElement('button');reveal.type='button';reveal.className='control-button';reveal.textContent='Show selection';reveal.setAttribute('aria-label','Show selection in '+name+' comparison');reveal.disabled=true;
+      let revealSelection=null,revealIndex=-1;
+      reveal.onclick=()=>{
+        try{
+          const d=frame.contentDocument,loc=frame.contentWindow.location;
+          if(!selected||!d?.body||loc.origin!==location.origin||loc.pathname+loc.search+loc.hash!==path())return;
+          const nodes=selectedNodes(d).filter(rendered);if(!nodes.length)return;
+          if(revealSelection!==selected){revealSelection=selected;revealIndex=-1;}
+          revealIndex=(revealIndex+1)%nodes.length;
+          // Native scrolling reveals the layer through nested scroll containers.
+          nodes[revealIndex].scrollIntoView({block:'center',inline:'center',behavior:'instant'});
+        }catch{message.textContent='Could not reveal the selected layer in this preview.';}
+      };
       const scopeButton=document.createElement('button');scopeButton.className='control-button';scopeButton.textContent='Edit styles: '+width+' px and larger';scopeButton.setAttribute('aria-label','Edit styles from '+width+' px');scopeButton.title='Use this preview size and set the selected layer’s style scope to this width and larger. Does not change source until you edit a style.';scopeButton.disabled=!selected;
       scopeButton.onclick=()=>{if(!selected)return;window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,occurrence:0,scopeAtWidth:true,route:path()}}));};
       const dimensions=document.createElement('div');dimensions.className='compare-dimensions';
@@ -85,7 +101,7 @@
         if(name.startsWith('Custom ')){
           name=`Custom ${width} × ${height}`;size[0]=name;
           card.setAttribute('aria-label',name+' comparison');edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');remove.setAttribute('aria-label','Remove '+name+' comparison');viewport.setAttribute('aria-label','Edit from '+name+' comparison');frame.title=name+' comparison preview';scopeMessage.setAttribute('aria-label',name+' scope coverage');
-          for(const axis of ['width','height'])inputs[axis].setAttribute('aria-label',name+' comparison '+axis);rotate.setAttribute('aria-label','Rotate '+name+' comparison');
+          for(const axis of ['width','height'])inputs[axis].setAttribute('aria-label',name+' comparison '+axis);rotate.setAttribute('aria-label','Rotate '+name+' comparison');reveal.setAttribute('aria-label','Show selection in '+name+' comparison');
         }
         const item=cards.find(c=>c.frame===frame);if(item)Object.assign(item,{width,height});
         frame.style.width=width+'px';frame.style.height=height+'px';
@@ -102,7 +118,7 @@
         field.append(input);dimensions.append(field);
       }
       const rotate=document.createElement('button');rotate.type='button';rotate.className='control-button';rotate.textContent='Rotate';rotate.setAttribute('aria-label','Rotate '+name+' comparison');rotate.onclick=()=>applyDimensions(height,width);dimensions.append(rotate);
-      viewport.append(frame,overlay);card.append(header,dimensions,dimensionError,viewport,message,scopeMessage,scopeButton);rail.append(card);
+      viewport.append(frame,overlay);card.append(header,dimensions,dimensionError,viewport,message,reveal,scopeMessage,scopeButton);rail.append(card);
       function activate(event){
         try{
           const d=frame.contentDocument,loc=frame.contentWindow.location;
@@ -139,7 +155,7 @@
           if(root){const style=w.getComputedStyle(root);w.scrollBy({left:/hidden|clip/.test(style.overflowX)?0:dx,top:/hidden|clip/.test(style.overflowY)?0:dy,behavior:'instant'});}
         }catch{}
       },{passive:false});
-      cards.push({frame,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit});
+      cards.push({frame,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal});
   }
   function unload(frame){return new Promise(resolve=>{
     let timeout;

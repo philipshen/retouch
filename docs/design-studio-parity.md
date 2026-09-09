@@ -4375,3 +4375,25 @@ This does not verify scrolling inside nested iframe documents or closed shadow
 roots, complete scroll-snap/RTL behavior, or synchronized application state across
 previews. Full simultaneous comparison authoring remains unfinished. Native app
 launches remain paused.
+
+### Reveal selected layers in comparisons (2026-09-09)
+
+Comparison cards now provide Show selection, or Show next instance when the
+selected source layer has multiple rendered instances. Activation scrolls the
+chosen instance into view through nested scroll containers without changing the
+main canvas, source or style scope. Hidden/absent layers disable the action;
+custom-card accessible labels follow dimension edits. The instance cursor resets
+when the selected source layer changes.
+
+375 unit tests passed in `/private/tmp/retouch-compare-reveal-unit.log`. Chromium
+and WebKit comparison browser flows passed offscreen reveal, hidden-layer refusal,
+cycling a runtime clone inside a nested scroller, unchanged main scroll/source,
+and existing selection/scoped-style/dimension/undo flows. Logs:
+`/private/tmp/retouch-compare-reveal-chromium-final.log` and
+`/private/tmp/retouch-compare-reveal-webkit-final.log`. WebKit additionally passed
+keyboard activation and retained focus across the comparison repaint interval in
+`/private/tmp/retouch-compare-reveal-keyboard.log`. The fixture's clone is a
+runtime-only repeated source identity; no source mutation is used to simulate it.
+
+Full simultaneous comparison editing, complete clipped-outline geometry and
+application-state synchronization remain unfinished. Native launches remain paused.

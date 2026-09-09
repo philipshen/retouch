@@ -15,8 +15,21 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   const card=name=>page.getByRole('region',{name:name+' comparison',exact:true});
   await wait(async()=>await card('Phone').locator('.compare-selection').count()===0&&await card('Phone').locator('p.hint').textContent()==='Selected layer is hidden');
   await wait(async()=>await card('Desktop').locator('.compare-selection').count()===0&&await card('Desktop').locator('p.hint').textContent()==='Selected layer is outside this viewport');
-  await page.getByRole('button',{name:'Edit from Desktop comparison',exact:true}).dispatchEvent('wheel',{deltaY:500,bubbles:true,cancelable:true});
+  const mainScrollBefore=await app.locator('body').evaluate(()=>[scrollX,scrollY]);
+  assert.equal(await page.getByRole('button',{name:'Show selection in Phone comparison',exact:true}).isDisabled(),true);
+  await page.getByRole('button',{name:'Show selection in Desktop comparison',exact:true}).click();
+  assert.deepEqual(await app.locator('body').evaluate(()=>[scrollX,scrollY]),mainScrollBefore);assert.equal(fs.readFileSync(file,'utf8'),original);
   await wait(async()=>await card('Desktop').locator('.compare-selection').count()===1&&await card('Desktop').locator('p.hint').textContent()==='Selected layer · 1 instance');
+  await preview('Desktop').locator('article').evaluate(el=>{
+   const container=el.ownerDocument.createElement('div');container.id='reveal-scroll-fixture';container.style.cssText='position:fixed;top:10px;left:10px;width:200px;height:180px;overflow:auto';
+   container.append(el.cloneNode(true));el.ownerDocument.body.append(container);
+  });
+  const showDesktop=page.getByRole('button',{name:'Show selection in Desktop comparison',exact:true});
+  await showDesktop.focus();await page.waitForTimeout(150);assert.equal(await showDesktop.evaluate(el=>el===el.ownerDocument.activeElement),true);
+  await showDesktop.press('Enter');await wait(()=>preview('Desktop').locator('#reveal-scroll-fixture').evaluate(el=>el.scrollTop>0));
+  assert.equal(await preview('Desktop').locator('#reveal-scroll-fixture article').evaluate(el=>{const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();return r.bottom>p.top&&r.top<p.bottom;}),true);
+  await preview('Desktop').locator('body').evaluate(()=>scrollTo(0,0));await showDesktop.click();await wait(()=>preview('Desktop').locator('body').evaluate(()=>scrollY>0));
+  await preview('Desktop').locator('#reveal-scroll-fixture').evaluate(el=>el.remove());assert.deepEqual(await app.locator('body').evaluate(()=>[scrollX,scrollY]),mainScrollBefore);assert.equal(fs.readFileSync(file,'utf8'),original);
   await wait(async()=>await card('Phone').locator('[data-scope-applies]').getAttribute('data-scope-applies')==='false'&&await card('Tablet').locator('[data-scope-applies]').getAttribute('data-scope-applies')==='false'&&await card('Desktop').locator('[data-scope-applies]').getAttribute('data-scope-applies')==='true');
   await page.getByRole('button',{name:'Edit styles from 768 px',exact:true}).click();await wait(async()=>await page.getByLabel('Style screen scope').inputValue()==='min-[768px]:'&&await card('Tablet').locator('[data-scope-applies]').getAttribute('data-scope-applies')==='true');assert.equal(fs.readFileSync(file,'utf8'),original);assert.equal(await card('Phone').locator('[data-scope-applies]').getAttribute('data-scope-applies'),'false');assert.match(await page.getByLabel('Comparison style scope').textContent(),/768 px and larger/);const field=page.getByLabel('Background color (CSS)',{exact:true});await field.fill('#ff0000');await field.press('Tab');await settled();
   await wait(async()=>await preview('Tablet').locator('article').evaluate(el=>getComputedStyle(el).backgroundColor)==='rgb(255, 0, 0)');assert.equal(await preview('Phone').locator('article').evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
@@ -45,6 +58,6 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   assert.equal(await page.getByRole('button',{name:'Edit styles from 810 px',exact:true}).count(),1);assert.equal(fs.readFileSync(file,'utf8'),original);
   await wait(async()=>await page.getByLabel('Custom 810 × 500 scope coverage').getAttribute('data-scope-applies')==='true');
   if(process.env.RT_E2E_COMPARE_EDIT_SCREENSHOT){await card('Custom 810 × 500').scrollIntoViewIfNeeded();await page.screenshot({path:process.env.RT_E2E_COMPARE_EDIT_SCREENSHOT});}
-  await page.getByRole('button',{name:'Compare screens',exact:true}).click();await wait(async()=>await page.locator('#screenComparisons iframe').count()===0);assert.deepEqual(errors,[]);console.log(engine+': PASS comparison layer picking, hidden/offscreen outlines, responsive visibility, edit-mode entry, link interception, explicit scoped edits, live previews, keyboard, editable comparison dimensions, rotation, validation, reload persistence and undo');
+  await page.getByRole('button',{name:'Compare screens',exact:true}).click();await wait(async()=>await page.locator('#screenComparisons iframe').count()===0);assert.deepEqual(errors,[]);console.log(engine+': PASS comparison selection reveal and instance cycling through nested scrollers, layer picking, hidden/offscreen outlines, responsive visibility, edit-mode entry, link interception, explicit scoped edits, live previews, keyboard, editable comparison dimensions, rotation, validation, reload persistence and undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
