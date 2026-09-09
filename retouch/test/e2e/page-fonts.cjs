@@ -36,6 +36,20 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===expected);await settled();}await wait(async()=>await weight()==='700');assert.equal(read(),original);
    console.log(engine+' '+kind+': PASS custom fractional weights, scope isolation, reset, family retention and exact undo'+(kind==='html'?'':', range validation and preset replacement'));
   }
+  if(process.env.RT_E2E_OPTICAL_SIZING){
+    await page.getByLabel('Style screen scope').selectOption('');await settled();
+    const optical=()=>app.locator('h1').evaluate(el=>getComputedStyle(el).fontOpticalSizing);
+    const change=async(action,expected)=>{snapshots.push(read());await action();await wait(()=>read()!==snapshots.at(-1));await settled();await wait(async()=>await optical()===expected);if(kind!=='html')await wait(async()=>{try{return await page.frameLocator('iframe[title="Typography preview"]').locator('body div').evaluate(el=>getComputedStyle(el).fontOpticalSizing)===expected;}catch(error){if(/Frame was detached|Execution context was destroyed/.test(error.message))return false;throw error;}});};
+    await change(()=>page.getByLabel('Optical sizing',{exact:true}).selectOption('none'),'none');
+    await page.getByLabel('Style screen scope').selectOption(kind==='html'?'min-[768px]:':'md:');await settled();await change(()=>page.getByLabel('Optical sizing',{exact:true}).selectOption('auto'),'auto');
+    await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await settled();await wait(async()=>await optical()==='none');await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();await wait(async()=>await optical()==='auto');
+    await change(()=>page.getByRole('button',{name:'Reset optical sizing',exact:true}).click(),'none');
+    const axisSection=page.locator('details').filter({has:page.locator('summary').getByText('Variable font axes',{exact:true})});if(await axisSection.getAttribute('open')===null)await page.getByText('Variable font axes',{exact:true}).click();
+    await change(()=>page.getByLabel('Add font axis',{exact:true}).selectOption('opsz'),'none');await wait(async()=>await page.getByText('The explicit Optical size axis overrides automatic sizing. Remove that axis to let the font adapt to text size.',{exact:true}).count()===1);
+    while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===expected);await settled();}assert.equal(read(),original);await wait(async()=>await optical()==='auto');
+    if(await axisSection.getAttribute('open')!==null)await page.getByText('Variable font axes',{exact:true}).click();
+    console.log(engine+' '+kind+': PASS optical sizing, responsive isolation, scoped reset, explicit-axis explanation, type preview and exact undo');
+  }
   if(process.env.RT_E2E_FONT_AXES){
    if(process.env.RT_E2E_VARIABLE_FONT){
     const beforeMetadata=read(),font=fs.readFileSync(path.join(fixture,'node_modules/next/dist/next-devtools/server/font/geist-latin.woff2')).toString('base64');

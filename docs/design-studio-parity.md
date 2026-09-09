@@ -5106,3 +5106,31 @@ This supersedes the previous no-live-preview limitation for the selected element
 It does not establish full font/typography parity or arbitrary-site support.
 Native app launch testing remains paused, and trusted Homebrew/macOS distribution
 remains unverified.
+
+### Responsive optical-sizing control
+
+HTML, React and local Liquid typography now expose Optical sizing: Automatic or
+Off, plus Reset optical sizing for the current screen scope. An explicit opsz
+axis produces an explanatory note instead of implying that Automatic takes
+precedence. React/Liquid Reset text overrides includes this property. HTML
+validation accepts only auto/none (or reset), and important font shorthand
+conflicts are recognized because optical sizing is a reset-only font subproperty.
+Reference: https://www.w3.org/TR/css-fonts-4/#font-optical-sizing-def and
+https://www.w3.org/TR/css-fonts-4/#font-prop.
+
+HTML, React and local Liquid fixtures passed on Chromium and WebKit: base Off,
+768px-and-larger Automatic, phone/tablet isolation, scoped reset revealing base
+Off, explicit-axis explanation, class-adapter type-preview state, and exact source
+undo. All six processes exited 0; logs are
+/private/tmp/retouch-optical-{html,react,liquid}-{chromium,webkit}.log.
+The 382 existing unit tests passed (/private/tmp/retouch-optical-final-units.log).
+An additional focused HTML CSS test then passed important-shorthand refusal,
+invalid-value rejection and independent scope reset with the full HTML CSS file
+(/private/tmp/retouch-optical-focused.log). The npm command
+`test:e2e:optical-sizing` runs the browser flow. git diff --check passed.
+
+These fixtures prove computed CSS and source behavior, not optical glyph changes
+in a font carrying an opsz axis. Fonts without optical sizing can legitimately
+look unchanged. Actual opsz-font visual verification and complete typography
+parity remain unfinished. Native launches remain paused; full arbitrary-site
+parity and trusted macOS/Homebrew distribution remain unverified.

@@ -207,3 +207,14 @@ test('Elliptical radius shorthand round-trips both axes and rejects malformed se
  for(const value of ['30px 10px / 15px 5px','50%/25%','1px 2px 3px 4px / 5px 6px 7px 8px']){const result=edit(original,768,value,'border-radius');assert.equal(result.ok,true,result.reason);assert.equal(css.describe(resolve(result.edits[0].after)).cssRules[768]['border-radius'],value);}
  for(const value of ['/10px','10px/','10px//20px','1px 2px 3px 4px 5px / 2px','2px / -1px','2px / calc(1px)','2px/1px;display:none'])assert.equal(css.valid('border-radius',value),false,value);
 });
+
+test('optical sizing respects important font shorthand and keeps scoped resets isolated',()=>{
+ const important=original.replace('class="title"','class="title" style="font: 12px serif !important"');
+ assert.equal(edit(important,768,'none','font-optical-sizing').refused,true);
+ for(const value of ['auto','none'])assert.equal(css.valid('font-optical-sizing',value),true);
+ for(const value of ['normal','12','auto;color:red'])assert.equal(css.valid('font-optical-sizing',value),false);
+ let source=edit(original,0,'none','font-optical-sizing').edits[0].after;
+ source=edit(source,768,'auto','font-optical-sizing').edits[0].after;
+ source=edit(source,768,null,'font-optical-sizing').edits[0].after;
+ assert.deepEqual(css.describe(resolve(source)).cssRules,{0:{'font-optical-sizing':'none'}});
+});

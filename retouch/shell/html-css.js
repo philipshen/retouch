@@ -88,6 +88,7 @@
   I.fontPicker(typography,el.ownerDocument,css.fontFamily,value=>save('font-family',value,width));
   const relativeLineHeight=I.relativeNumber(typography,'Line height (%)',parseFloat(css.lineHeight)/parseFloat(css.fontSize)*100,0,1000,value=>save('line-height',String(Math.round(value*1e6)/1e8),width));relativeLineHeight.title='Relative to this layer’s font size.';if(css.lineHeight==='normal')relativeLineHeight.placeholder='Automatic';
   I.relativeNumber(typography,'Letter spacing (%)',(parseFloat(css.letterSpacing)||0)/parseFloat(css.fontSize)*100,-100,1000,value=>save('letter-spacing',`${Math.round(value*1e6)/1e8}em`,width)).title='Relative to this layer’s font size.';
+  I.opticalTypography(typography,css,value=>save('font-optical-sizing',value,width),()=>save('font-optical-sizing',null,width),Object.hasOwn(own,'font-optical-sizing'));
   I.variationTypography(typography,css,value=>save('font-variation-settings',value,width),()=>save('font-variation-settings',null,width),Object.hasOwn(own,'font-variation-settings'),el);
   I.numericTypography(typography,css.fontVariantNumeric,value=>save('font-variant-numeric',value,width),()=>save('font-variant-numeric',null,width),Object.hasOwn(own,'font-variant-numeric'));
   const visible=document.createElement('input');visible.type='checkbox';visible.checked=(own.visibility??css.visibility)==='visible';visible.onchange=()=>save('visibility',visible.checked?'visible':'hidden',width);I.field(appearance,'Visible layer',visible);
