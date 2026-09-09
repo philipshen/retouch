@@ -47,6 +47,7 @@
   function change(next,x,y){
     next=Math.max(.25,Math.min(2,next));if(Math.abs(next-1)<.00001)next=1;
     if(next===scale)return;
+    window.dispatchEvent(new Event('retouch:before-zoom'));
     const bounds=canvas.getBoundingClientRect(),px=x-bounds.left,py=y-bounds.top;
     const siteTop=endPadding-canvas.scrollTop;
     const old=scale,siteX=(canvas.scrollLeft+px-stage.offsetLeft)/old;

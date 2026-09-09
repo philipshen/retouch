@@ -356,3 +356,7 @@ to preserve the starting aspect ratio; release Shift to return to free resizing.
 The ratio stays within the preview's size limits. Escape restores the original
 dimensions. When the corner has keyboard focus, arrows resize the corresponding
 axis by 1 px, or 10 px with Shift.
+
+Changing a screen preset during a resize discards the older drag. Zooming or
+resizing the workspace cancels the drag and restores its starting dimensions,
+so releasing the pointer cannot overwrite a newer screen choice.

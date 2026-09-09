@@ -1328,3 +1328,20 @@ the existing width/height workflow. The three-handle screenshot was inspected.
 The local native artifact still packages 1701d24; this newer editor change has
 not been repackaged. Editable comparison canvases, cross-framework coverage
 and full Figma/native parity remain unfinished.
+
+
+### Interrupted screen-resize transactions
+
+A browser regression reproduced an old drag overwriting a newer screen preset
+on pointer release. External screen changes now discard pending pointer work
+without restoring the obsolete size; resize-owned preview events keep their
+transaction. Zoom emits a pre-change event that cancels the drag before anchor
+calculations, and window/canvas width changes also cancel stale coordinates.
+A second regression reproduced pointer release preceding the resize callback;
+pointer processing now checks the actual workspace dimensions as well.
+
+All 271 unit tests pass. Chromium and WebKit verify preset replacement, zoom
+interruption and workspace resizing during an active corner drag, alongside
+width/height/corner gestures, Shift ratio locking, keyboard steps, persistence,
+Escape cancellation and unchanged source/scope. Full parity and native release
+verification remain unfinished.

@@ -9,9 +9,9 @@
  }
  function mount(){
   const frame=document.getElementById('app'),canvas=document.getElementById('frameWrap'),screens=window.RetouchScreens,handles={};
-  let drag=null,pending=null;
+  let drag=null,pending=null,applying=false;
   const dimensions=()=>({width:frame.offsetWidth,height:screens.get()?.height||canvas.clientHeight});
-  const apply=(next,persist)=>screens.set(next,{persist,preservePan:true});
+  const apply=(next,persist)=>{applying=true;try{screens.set(next,{persist,preservePan:true});}finally{applying=false;}};
   function position(){
    const f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),top=Math.max(f.top,c.top),bottom=Math.min(f.bottom,c.bottom),left=Math.max(f.left,c.left),right=Math.min(f.right,c.right),size=dimensions();
    for(const [axis,handle]of Object.entries(handles)){
@@ -29,8 +29,14 @@
    if(!save){canvas.scrollLeft=state.scrollLeft;canvas.scrollTop=state.scrollTop;}
    if(state.handle.hasPointerCapture(state.pointerId))state.handle.releasePointerCapture(state.pointerId);state.handle.classList.remove('dragging');position();
   }
+  function discard(){
+   if(!drag)return;if(pending!==null){cancelAnimationFrame(pending);pending=null;}const state=drag;drag=null;
+   if(state.handle.hasPointerCapture(state.pointerId))state.handle.releasePointerCapture(state.pointerId);state.handle.classList.remove('dragging');position();
+  }
   function move(e){
-   if(!drag||e.pointerId!==drag.pointerId)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.lastX=e.clientX;drag.lastY=e.clientY;
+   if(!drag||e.pointerId!==drag.pointerId)return;
+   if(canvas.clientWidth!==drag.canvasWidth||canvas.clientHeight!==drag.canvasHeight){finish(false);return;}
+   const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.lastX=e.clientX;drag.lastY=e.clientY;
    if((drag.axis==='width'?dx===0:drag.axis==='height'?dy===0:dx===0&&dy===0)&&!drag.changed)return;drag.changed=true;
    if(drag.axis!=='height')drag.width=widthAtRight(drag.right+dx,drag.canvasWidth,drag.scale);
    if(drag.axis!=='width')drag.height=heightAtDelta(drag.initialHeight,dy,drag.scale);
@@ -43,7 +49,7 @@
    handle.addEventListener('pointerdown',e=>{
     if(e.button!==0||drag)return;e.preventDefault();e.stopPropagation();handle.focus({preventScroll:true});const f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),size=dimensions();
     const initialHeight=axis!=='width'?frame.offsetHeight:clamp(size.height);
-    drag={axis,handle,pointerId:e.pointerId,original:screens.get(),width:size.width,initialWidth:size.width,height:initialHeight,initialHeight,x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,right:f.right-c.left+canvas.scrollLeft,canvasWidth:canvas.clientWidth,scale:f.width/frame.offsetWidth,scrollLeft:canvas.scrollLeft,scrollTop:canvas.scrollTop,changed:false};handle.setPointerCapture(e.pointerId);handle.classList.add('dragging');
+    drag={axis,handle,pointerId:e.pointerId,original:screens.get(),width:size.width,initialWidth:size.width,height:initialHeight,initialHeight,x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,right:f.right-c.left+canvas.scrollLeft,canvasWidth:canvas.clientWidth,canvasHeight:canvas.clientHeight,scale:f.width/frame.offsetWidth,scrollLeft:canvas.scrollLeft,scrollTop:canvas.scrollTop,changed:false};handle.setPointerCapture(e.pointerId);handle.classList.add('dragging');
    });
    handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',e=>{if(drag&&e.pointerId===drag.pointerId){move(e);finish(true);}});
    handle.addEventListener('pointercancel',()=>finish(false));handle.addEventListener('lostpointercapture',()=>finish(false));
@@ -56,6 +62,10 @@
   }
   window.addEventListener('blur',()=>finish(false));window.addEventListener('keydown',e=>{if(drag&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();finish(false);}},true);
   for(const type of ['keydown','keyup'])window.addEventListener(type,e=>{if(e.key==='Shift'&&drag?.axis==='both')move({pointerId:drag.pointerId,clientX:drag.lastX,clientY:drag.lastY,shiftKey:type==='keydown'});});
+  window.addEventListener('retouch:screen',()=>{if(!applying)discard();},true);
+  window.addEventListener('retouch:before-zoom',()=>finish(false));
+  window.addEventListener('resize',()=>finish(false),true);
+  new ResizeObserver(()=>{if(drag&&canvas.clientWidth!==drag.canvasWidth)finish(false);}).observe(canvas);
   window.addEventListener('retouch:viewport',position);window.addEventListener('retouch:screen',position);window.addEventListener('resize',position);canvas.addEventListener('scroll',position);frame.addEventListener('load',position);new ResizeObserver(position).observe(frame);position();
  }
  return {widthAtRight,heightAtDelta,preserveAspect,mount};
