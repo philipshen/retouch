@@ -25,7 +25,7 @@ const RAW_LIQUID = new Set(['comment', 'doc', 'raw', 'schema', 'javascript', 'st
 const RAW_HTML = new Set(['script', 'style']);
 const SKIP_TAGS = new Set(['script', 'style', 'svg', 'path', 'template']);
 const TEXT_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'div', 'blockquote', 'label', 'a', 'li']);
-const CLASS_TOKEN_RE = /^[^\s"'`\\<>{}]+$/u;
+const CLASS_TOKEN_RE = {test:require('../class-tokens.cjs').liquid};
 
 function contentHash(source) {
   return crypto.createHash('sha1').update(source).digest('hex');
@@ -150,6 +150,7 @@ function readOpenTag(source, start) {
     if (/\s/.test(c)) { k++; continue; }
     const attrStart = k;
     while (k < N && !/[\s=/>]/.test(source[k])) k++;
+    const attrNameEnd=k;
     const attrName = source.slice(attrStart, k).toLowerCase();
     while (k < N && /\s/.test(source[k])) k++;
     let value = null, valueStart = -1, valueEnd = -1;
@@ -162,6 +163,7 @@ function readOpenTag(source, start) {
         let e = k+1;
         while (e<N) {
           if (source.startsWith('{{',e)||source.startsWith('{%',e)) {
+            if(source.startsWith('{% comment %}',e)){const end=source.indexOf('{% endcomment %}',e+13);e=end<0?N:end+16;continue;}
             const close=source.startsWith('{{',e)?'}}':'%}';
             const end=source.indexOf(close,e+2); e=end<0?N:end+2; continue;
           }
@@ -180,7 +182,8 @@ function readOpenTag(source, start) {
     }
     if (['x-text', 'x-html', 'v-text', 'v-html'].includes(attrName)) textBinding = true;
     if (attrName === 'class') {
-      classAttr = { valueStart, valueEnd, value, dynamic: /\{[%{]/.test(value || '') };
+      const cleaned=classes.clean(value||''),dynamic=/\{[%{]/.test(cleaned);
+      classAttr = { attrStart, attrEnd:valueStart<0?attrNameEnd:k, valueStart, valueEnd, value:dynamic?value:classes.decode(cleaned), dynamic };
     }
     if (attrName === 'src') srcAttr = { valueStart, valueEnd, value };
     if (attrName === 'srcset') srcSet = true;
@@ -335,14 +338,16 @@ function planOp(resolved, op) {
     if(node.generatedImage) {
       try{images.setClasses(ms,resolved,merged);}catch(err){return refuse(err.message);}
     } else if (node.classAttr) {
-      let value=merged;
+      let value=classes.literal(merged);
       if (node.classAttr.dynamic) {
         try { value=classes.edit(node.classAttr.value,node.id,render.context(resolved.context).className,merged,resolved.source); }
         catch(err) { return refuse(err.message); }
       }
-      ms.overwrite(node.classAttr.valueStart, node.classAttr.valueEnd, value);
+      const attr=node.classAttr,quoted=attr.valueStart>0&&['"',"'"].includes(resolved.source[attr.valueStart-1]);
+      if(attr.valueStart<0)ms.overwrite(attr.attrStart,attr.attrEnd,`class="${value}"`);
+      else ms.overwrite(attr.valueStart,attr.valueEnd,quoted?value:`"${value}"`);
     } else if (merged !== '') {
-      ms.appendLeft(node.nameEnd, ` class="${merged}"`);
+      ms.appendLeft(node.nameEnd, ` class="${classes.literal(merged)}"`);
     }
   } else if (op.type === 'setSrc') {
     const info = describe(resolved);

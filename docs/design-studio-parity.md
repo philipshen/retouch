@@ -18,7 +18,7 @@ changing those files. The original checkout may continue to evolve independently
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. HTML/React polygons and polylines now support direct vertex dragging and keyboard movement with source undo. Vertex insertion/deletion and Pen creation of straight segments and cubic curves in existing SVG canvases have browser/source verification. Compound SVG paths now support cubic handles, arcs, contour operations, multi-point and marquee selection, and canvas-axis alignment/distribution with source history. Vector networks, boolean operations, arbitrary masks and complete transforms remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. HTML absolute placement now supports edge, center, stretch and proportional anchors with screen-scoped writes. Transformed constraints, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML supports linear/radial gradient stacks with draggable stops, shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
-| Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A page-font picker now discovers declared and used families, with React/HTML browser coverage. Full font browsing, Liquid complex-family serialization, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
+| Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A page-font picker now discovers declared and used families, with React/HTML and local Liquid browser coverage. Full font browsing, live Shopify font verification, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | Existing React and Liquid component inspection/detach; full creation/variants/library workflows remain. Live Shopify proof is incomplete. |
 | Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Not implemented or verified. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
@@ -3791,3 +3791,62 @@ font parity. Font search/previews across a full catalog, font loading states,
 variable axes, richer text editing and other Figma Design requirements remain.
 The broader goal is incomplete. Native app launches remain paused; no macOS
 app, native diagnostics or installed-cask launch checks were run.
+
+
+### 2026-09-09 — Liquid font serialization and conditional branches
+
+The Liquid writer now accepts the same bounded quoted-family and literal
+underscore grammar as the JSX writer through a shared class-token validator.
+Literal class attributes encode HTML-sensitive characters and retain raw
+Tailwind candidates in an owned Liquid comment. The adapter skips that comment
+when parsing the attribute and strips it when describing literal classes.
+Quoted, unquoted, boolean and absent class attributes are covered; neighboring
+attributes are retained. These comments disappear during Liquid rendering.
+
+Dynamic class patches preserve the original template expression, escape host
+HTML output, and retain raw candidates for CSS compilation. Conflicting font
+families in inactive branches and quoted Liquid assignments are removed at the
+same responsive scope without removing weight or other breakpoint families.
+Removal comparisons use captured values so quotes and backslashes do not depend
+on Liquid string-literal escape behavior. Generated image_tag class arguments
+use captures where a literal argument would consume a backslash or collide with
+a quote; image_tag still performs its own HTML escaping.
+
+All 370 unit tests pass in
+`/private/tmp/retouch-liquid-font-unit-release.log`. Added tests render literal
+and conditional templates through LiquidJS, parse actual HTML attributes with
+parse5, exercise repeated quoted-family replacements and reset, retain IDs and
+neighboring attributes, preserve alternate branches, and cover generated image
+classes. The existing source-history, other Liquid functionality and JSX writer
+suites also pass.
+
+The new `test:e2e:liquid-fonts` variant runs the actual Retouch inspector against
+a disposable Liquid renderer and the installed Tailwind scanner/compiler.
+Both browser engines pass:
+`/private/tmp/retouch-liquid-font-release-chromium.log` and
+`/private/tmp/retouch-liquid-font-release-webkit.log`.
+It verifies quoted and declared names, underscores, hover-selector compilation,
+weight and named-style retention, responsive family isolation, typography
+preview, reset and byte-exact source undo. After each font selection it renders
+an alternate template branch in a separate browser page and checks its computed
+family and weight. React regression passes in
+`/private/tmp/retouch-liquid-font-react-regression.log` after extracting the
+shared validator. All final runs exited successfully and cleaned their fixtures.
+The earlier dynamic Liquid screenshot
+`/private/tmp/retouch-liquid-page-fonts-dynamic.png` was visually inspected.
+
+Earlier failures remain in their logs: the initial generated-image test exposed
+underscore loss in a Liquid string argument; an inactive branch retained its
+old font utility; the first browser attempt used an unsupported absolute package
+entrypoint; one later assertion expected a different ordering of equivalent
+class tokens. These were resolved before the final checks. Tailwind emits a
+Node deprecation warning in the local test harness; there were no browser page
+errors. The agent-browser CLI was absent, so verification used the repository's
+Playwright harness instead.
+
+This supersedes the preceding entry's Liquid serializer gap for the tested
+font vocabulary. It is local LiquidJS/Tailwind evidence, not live Shopify theme
+or full arbitrary-site evidence. Other Liquid runtime/build configurations,
+complex font names outside the bounded grammar, font loading status, variable
+axes, full Figma Design parity and trusted Mac distribution remain unverified
+or incomplete. No native Retouch launch was attempted; the launch pause remains.

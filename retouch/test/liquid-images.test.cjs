@@ -94,3 +94,15 @@ test('image swaps retain generator attributes and responsive width choices, supp
   r=app.resolve();assert.ok(liquid.applyOp(r,{type:'setClasses',fileHash:r.hash,classes:'w-full shadow-lg md:w-1/2'}).ok);
   html=await engine.parseAndRender(fs.readFileSync(app.file,'utf8'),ctx);assert.match(html,/shadow-lg/);assert.doesNotMatch(html,/rounded-lg/);
 });
+
+test('generated image class arguments preserve quoted families and literal underscores',async t=>{
+ for(const classValue of ["'w-full'",'image_class']){
+  const app=fixture(t,`{{ image | image_url: width: 800 | image_tag: class: ${classValue} }}`);
+  let snapshot={className:'w-full'};
+  for(const desired of [String.raw`w-full [font-family:"Page_Face",Studio\_Test,serif]`,"w-full [font-family:'Single_Face',serif]",'w-full [font-family:"Next_Face",serif]','w-full']){
+   const r=app.resolve(snapshot),result=liquid.applyOp(r,{type:'setClasses',classes:desired,fileHash:r.hash});assert.ok(result.ok,result.reason);
+   const html=await engine.parseAndRender(fs.readFileSync(app.file,'utf8'),{image_class:'w-full'}),img=require('parse5').parseFragment(html).childNodes.find(n=>n.tagName==='img');
+   assert.equal(img.attrs.find(a=>a.name==='class').value.trim(),desired);snapshot={className:desired};
+  }
+ }
+});

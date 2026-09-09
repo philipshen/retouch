@@ -141,3 +141,37 @@ test('translation rich text edits its backing value and preserves interpolation 
   assert.equal(fs.readFileSync(r.file,'utf8'),r.source);
   assert.equal(liquid.applyOp(r,{...payload,children}).ok,false,'stale backing hash refused');
 });
+
+function renderedClasses(html){const tree=require('parse5').parseFragment(html),node=tree.childNodes.find(n=>n.tagName);return node.attrs.find(a=>a.name==='class')?.value.trim().split(/\s+/).join(' ');}
+test('page fonts round-trip literal Liquid attributes and keep raw Tailwind candidates',async t=>{
+ const desired=String.raw`font-bold [font-family:"Page_Face",Studio\_Test,serif] [&:hover]:opacity-50`;
+ for(const attr of ['class="font-bold"',"class='font-bold'",'class=font-bold','class','']){
+  const app=fixture(t,{'sections/hero.liquid':`<h1 ${attr} title="Kept">Headline</h1>`});
+  let r=app.resolve('sections/hero.liquid');const result=liquid.applyOp(r,{type:'setClasses',classes:desired,fileHash:r.hash});assert.ok(result.ok,result.reason);
+  const edited=fs.readFileSync(r.file,'utf8');assert.ok(edited.includes('[font-family:"Page_Face",Studio\\_Test,serif]'));assert.ok(edited.includes('[&:hover]:opacity-50'));assert.ok(edited.includes(' title="Kept"'));
+  assert.equal(renderedClasses(await engine.parseAndRender(edited)),desired);
+  r=app.resolve('sections/hero.liquid');assert.equal(liquid.describe(r).className,desired);assert.equal(liquid.describe(r).classNameDynamic,false);
+  assert.ok(liquid.applyOp(r,{type:'setClasses',classes:'font-bold',fileHash:r.hash}).ok);
+  assert.equal(renderedClasses(await engine.parseAndRender(fs.readFileSync(r.file,'utf8'))),'font-bold');
+ }
+});
+test('conditional Liquid font edits preserve branches and replace quoted families repeatedly',async t=>{
+ const original=`<h1 class="font-bold {% if wide %}font-mono{% else %}font-serif{% endif %} {{ tone }} md:opacity-90">Headline</h1>`;
+ const app=fixture(t,{'sections/hero.liquid':original});
+ const font=String.raw`[font-family:"Page_Face",Studio\_Test,serif]`;
+ let snapshot={className:'font-bold font-serif text-red-500 md:opacity-90'};
+ for(const family of [font,"[font-family:'Single_Face',serif]",'[font-family:"Other_Face",serif]',null]){
+  const desired='font-bold text-red-500 md:opacity-90'+(family?' '+family:'');
+  const r=app.resolve('sections/hero.liquid',snapshot),result=liquid.applyOp(r,{type:'setClasses',classes:desired,fileHash:r.hash});assert.ok(result.ok,result.reason);
+  const edited=fs.readFileSync(r.file,'utf8');assert.ok(edited.includes('{% if wide %}font-mono{% else %}font-serif{% endif %} {{ tone }}'));
+  for(const wide of [true,false])assert.equal(renderedClasses(await engine.parseAndRender(edited,{wide,tone:'text-red-500'})),desired);
+  assert.equal((edited.match(/capture __rt_classes_/g)||[]).length,1);snapshot={className:desired};
+ }
+});
+
+test('Liquid font edits remove conflicting quoted families in inactive assignments',async t=>{
+ const source=`{% if alternate %}{% assign family = '[font-family:"Other_Face",serif]' %}{% else %}{% assign family = '[font-family:"First_Face",serif]' %}{% endif %}<h1 class="font-bold {{ family }} md:font-mono">Headline</h1>`;
+ const app=fixture(t,{'sections/hero.liquid':source}),r=app.resolve('sections/hero.liquid',{className:'font-bold [font-family:"First_Face",serif] md:font-mono'}),desired='font-bold md:font-mono [font-family:"Chosen_Face",serif]';
+ const result=liquid.applyOp(r,{type:'setClasses',classes:desired,fileHash:r.hash});assert.ok(result.ok,result.reason);
+ for(const alternate of [true,false])assert.equal(renderedClasses(await engine.parseAndRender(fs.readFileSync(r.file,'utf8'),{alternate})),desired);
+});

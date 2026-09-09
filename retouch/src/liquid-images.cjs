@@ -68,9 +68,13 @@ function describe(source,node,context) {
 }
 function setClasses(ms,resolved,value) {
   const node=resolved.element,prior=classSource(resolved.source,node);
-  if(prior.literal) {appendArg(ms,node,'class',`'${value}'`);return;}
+  if(prior.literal) {
+    if(!value.includes('\\')&&!value.includes("'"))appendArg(ms,node,'class',`'${value}'`);
+    else {ms.appendLeft(node.tagStart,`{% capture ${prior.name} %}${value}{% endcapture %}`);appendArg(ms,node,'class',prior.name);}
+    return;
+  }
   const snapshot=require('./liquid-context.cjs').context(resolved.context).className;
-  const patch=classes.edit(prior.value,node.id,snapshot,value,resolved.source);
+  const patch=classes.edit(prior.value,node.id,snapshot,value,resolved.source,false);
   const next=`{% capture ${prior.name} %}${patch}{% endcapture %}`;
   if(prior.start!=null)ms.overwrite(prior.start,prior.end,next);
   else {ms.appendLeft(node.tagStart,next);appendArg(ms,node,'class',prior.name);}
