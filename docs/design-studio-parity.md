@@ -5233,3 +5233,34 @@ The parser bounds named instances at 256. Preset editing follows the existing
 static font families, localization selection, hidden-axis presentation and full
 font-style discovery remain unfinished. Native launches remain paused; full
 Figma/arbitrary-site parity and trusted native distribution remain unverified.
+
+### Everyday and advanced variable-font controls
+
+After inspection, font-designated hidden axes now appear in a collapsed Advanced
+font axes section, including their numeric controls, removal actions, metadata,
+sliders and default actions. They remain fully applied by presets. Common axes
+are ordered Weight, Width, Optical size, Slant and Italic before other visible
+axes, while unnamed/uninspected controls remain available. Advanced expansion
+state survives inspector rebuilds during the editor session. Expanding or
+collapsing the section never changes source.
+
+Roboto Flex preset flows passed for HTML, React and local Liquid in Chromium and
+WebKit: XOPQ starts hidden, Weight remains visible, expansion reveals XOPQ,
+editing it from 96 to 97 saves at the selected scope, the section stays open,
+and one undo restores exact source and Bold Italic matching. Collapse preserves
+source. All six final runs exited 0:
+/private/tmp/retouch-font-advanced-fixed-{html,react,liquid}-{chromium,webkit}.log.
+Initial HTML/React WebKit runs exposed an intermediate unclassified-control flash
+while cached metadata resolved. Controls now wait for the cache lookup before
+being revealed; the browser check waits for the classified layout. The corrected
+Chromium screenshot was inspected:
+/private/tmp/retouch-font-advanced-fixed-html-chromium.png.
+Both existing HTML axis/discovery/live-preview regressions exited 0:
+/private/tmp/retouch-font-advanced-regression-{chromium,webkit}.log. All 387 unit
+tests passed: /private/tmp/retouch-font-advanced-final-units.log. git diff --check
+passed.
+
+This classification depends on successfully inspected font metadata; it is not
+complete font discovery. Broader typography and Figma/arbitrary-site parity
+remain unfinished. Native app launches remain paused and trusted macOS/Homebrew
+distribution remains unverified.

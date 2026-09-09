@@ -154,19 +154,23 @@
     note(parent,manual?'The explicit Optical size axis overrides automatic sizing. Remove that axis to let the font adapt to text size.':'Automatic sizing adapts letterforms to text size when the font supports optical sizing.');
   }
   const variationToken=t=>/^\[font-variation-settings:.+\]$/.test(t);
+  let advancedVariationExpanded=false;
   function variationTypography(parent,css,onChange,onReset,canReset,el){
     const d=el?.ownerDocument;
     const values=root.RetouchHTMLCSSValues,axes=values.parseVariations(css.fontVariationSettings);
     const details=document.createElement('details');details.open=variationExpanded;details.ontoggle=()=>{if(details.isConnected)variationExpanded=details.open;};
     const summary=document.createElement('summary');summary.textContent='Variable font axes';details.append(summary);parent.append(details);
-    const axisInputs=new Map(),presetPanel=document.createElement('div');details.append(presetPanel);
+    const axisInputs=new Map(),axisGroups=new Map(),presetPanel=document.createElement('div'),visibleAxes=document.createElement('div'),advanced=document.createElement('details'),advancedAxes=document.createElement('div'),advancedMetadata=document.createElement('div');
+    const advancedSummary=document.createElement('summary');advancedSummary.textContent='Advanced font axes';advanced.open=advancedVariationExpanded;advanced.hidden=true;advanced.ontoggle=()=>{if(advanced.isConnected)advancedVariationExpanded=advanced.open;};advanced.append(advancedSummary,advancedAxes,advancedMetadata);details.append(presetPanel,visibleAxes,advanced);
+
     const labels={wght:'Weight',wdth:'Width',opsz:'Optical size',slnt:'Slant',ital:'Italic'};
     const defaults={wght:parseFloat(css.fontWeight)||400,wdth:100,opsz:parseFloat(css.fontSize)||16,slnt:0,ital:0};
     if(axes){
       const write=next=>onChange(values.serializeVariations(next));
       for(const [tag,value]of axes){
-        axisInputs.set(tag,number(details,(labels[tag]||tag)+' axis',value,-10000,10000,next=>write(axes.map(axis=>axis[0]===tag?[tag,next]:axis))));
-        details.append(button('Remove '+(labels[tag]||tag)+' axis',()=>write(axes.filter(axis=>axis[0]!==tag))));
+        const group=document.createElement('div');axisGroups.set(tag,group);visibleAxes.append(group);
+        axisInputs.set(tag,number(group,(labels[tag]||tag)+' axis',value,-10000,10000,next=>write(axes.map(axis=>axis[0]===tag?[tag,next]:axis))));
+        group.append(button('Remove '+(labels[tag]||tag)+' axis',()=>write(axes.filter(axis=>axis[0]!==tag))));
       }
       const custom=document.createElement('div');custom.hidden=true;
       const add=select(details,'Add font axis',[['','Choose an axis…'],...Object.entries(labels).filter(([tag])=>!axes.some(axis=>axis[0]===tag)),['custom','Custom axis…']],'',tag=>{custom.hidden=tag!=='custom';if(tag in defaults)write([...axes,[tag,defaults[tag]]]);else if(tag==='custom')tagInput.focus();});add.disabled=axes.length>=16;
@@ -193,13 +197,16 @@
           try{const found=await metadata.inspect(d,selected);if(details.isConnected)await render(found);}catch(error){if(details.isConnected){await render();if(details.isConnected)results.textContent=error.message;}}finally{inspect.disabled=false;choose.disabled=false;}
         });
         async function render(inspected){
-          const revision=++renderRevision;results.replaceChildren();presetPanel.replaceChildren();for(const input of axisInputs.values()){input.min=-10000;input.max=10000;input.title='';}
-          const inspectedFont=inspected||await metadata.peek(d,selected);if(!inspectedFont||revision!==renderRevision||!details.isConnected)return;const found=inspectedFont.axes;
+          const revision=++renderRevision;visibleAxes.hidden=true;results.replaceChildren();presetPanel.replaceChildren();advancedMetadata.replaceChildren();advanced.hidden=true;for(const group of axisGroups.values())visibleAxes.append(group);for(const input of axisInputs.values()){input.min=-10000;input.max=10000;input.title='';}
+          const inspectedFont=inspected||await metadata.peek(d,selected);if(revision!==renderRevision||!details.isConnected)return;visibleAxes.hidden=false;if(!inspectedFont)return;const found=inspectedFont.axes;
           const presets=inspectedFont.instances.filter(preset=>axes&&new Set([...axes,...preset.coordinates].map(([tag])=>tag)).size<=16&&preset.coordinates.every(([tag,value])=>/^[A-Za-z0-9]{4}$/.test(tag)&&Math.abs(value)<=10000));
           if(presets.length){const current=new Map(axes),matching=presets.findIndex(preset=>preset.coordinates.every(([tag,value])=>current.has(tag)&&Math.abs(current.get(tag)-value)<.0001));select(presetPanel,'Font style preset',[['','Choose a style…'],...presets.map((preset,index)=>[String(index),preset.name])],matching<0?'':String(matching),value=>{if(value==='')return;const preset=presets[Number(value)],next=new Map(axes);for(const [tag,coordinate]of preset.coordinates)next.set(tag,coordinate);onChange(values.serializeVariations([...next]));});note(presetPanel,'Applies all axes in this font preset at the current screen scope. Other axis overrides are preserved.');}
           if(!found.length)note(results,'This declared file has no variable axes.');
-          for(const axis of found){
-            note(results,axis.name+' ('+axis.tag+'): '+axis.min+' to '+axis.max+' · default '+axis.default+(axis.hidden?' · hidden axis':''));
+          const order=['wght','wdth','opsz','slnt','ital'],rank=tag=>order.includes(tag)?order.indexOf(tag):order.length;
+          for(const axis of [...found].sort((a,b)=>rank(a.tag)-rank(b.tag))){
+            const target=axis.hidden?advancedMetadata:results;if(axis.hidden)advanced.hidden=false;
+            const group=axisGroups.get(axis.tag);if(group)(axis.hidden?advancedAxes:visibleAxes).append(group);
+            note(target,axis.name+' ('+axis.tag+'): '+axis.min+' to '+axis.max+' · default '+axis.default+(axis.hidden?' · hidden axis':''));
             const compatible=/^[A-Za-z0-9]{4}$/.test(axis.tag)&&axis.min>=-10000&&axis.max<=10000;
             if(compatible&&axisInputs.has(axis.tag)){const input=axisInputs.get(axis.tag);input.min=axis.min;input.max=axis.max;input.title='Declared font range; default '+axis.default;}
             const active=axes?.find(entry=>entry[0]===axis.tag);
@@ -207,7 +214,7 @@
               const row=document.createElement('div');row.className='font-axis-range';
               const slider=document.createElement('input');slider.type='range';slider.min=axis.min;slider.max=axis.max;slider.step='any';slider.value=active[1];
               const output=document.createElement('output');output.textContent=String(active[1]);
-              field(row,'Adjust '+axis.name+' axis',slider);row.append(output);results.append(row);
+              field(row,'Adjust '+axis.name+' axis',slider);row.append(output);target.append(row);
               let stopPreview=()=>{},previewState=null;
               const previewValue=value=>{
                 if(!el?.isConnected||!slider.isConnected)return;
@@ -242,7 +249,7 @@
               slider.onpointercancel=()=>{cancelled=true;restore();};
               slider.title='Drag to preview; release to apply. Escape cancels before release.';
             }
-            if(compatible&&axes&&(axes.length<16||active)){const use=button('Use '+axis.name+' default',()=>{const next=new Map(axes);next.set(axis.tag,axis.default);onChange(values.serializeVariations([...next]));});results.append(use);}
+            if(compatible&&axes&&(axes.length<16||active)){const use=button('Use '+axis.name+' default',()=>{const next=new Map(axes);next.set(axis.tag,axis.default);onChange(values.serializeVariations([...next]));});target.append(use);}
           }
         }
         details.append(inspect,results);render();
