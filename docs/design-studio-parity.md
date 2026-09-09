@@ -1942,3 +1942,30 @@ This is a movement aid for supported positioned layers. It does not yet provide
 multi-layer distribution, editable spacing handles, custom rulers/guides, vector
 snapping or unrestricted renderer support. Mac signing remains pending, and the
 current Mac artifact has not been refreshed with these canvas changes.
+
+
+### Refreshed Mac package with responsive anchors and snapping
+
+The universal development artifact now packages source commit `4c49f9f`, including
+React geometry inheritance through intermediate breakpoints, movement/resize
+alignment snapping and equal-spacing suggestions. Archive:
+`/private/tmp/retouch-desktop-snapping-20260909/Retouch-0.1.0-mac.zip`.
+SHA-256: `301b54e288a7f2555333cc8ce4abebd1b53f123203b2481ae105ea0394938a23`.
+The generated cask and `verification.json` receipt accompany the archive.
+
+All 82 packaged source files matched the branch. Native launcher self-tests passed
+working-directory/exit behavior, literal paths, HTML startup, dynamic-port discovery,
+editor health and shutdown. The universal arm64/x86_64 binary passed strict ad hoc
+signature checks. All 15 HTML integration workflows passed in Chromium and WebKit
+against the code inside the app bundle, and bundled React positioning passed in
+Chromium. The package signature still verified after those tests.
+
+The isolated Homebrew cask install/uninstall passed with installed file hashes and
+quarantine intact. Its installed self-test timed out after 45 seconds without
+output; the owned process group was stopped. CUA returned `cgWindowNotFound` for
+the development app; its process was confirmed running and then stopped. These
+checks do not establish a usable native editor or trusted launch. Test app/tap,
+cask trust entry and test harness were removed; Homebrew developer mode was restored
+to disabled and owned native processes were confirmed absent. The separate Developer
+ID build remains waiting on its local signing interaction. Notarization, public
+cask distribution, upgrade behavior and Intel runtime remain unfinished.

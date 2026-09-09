@@ -3,14 +3,15 @@
 A native AppKit window hosts the same Retouch editor used in the browser.
 macOS 13 or later; universal Apple Silicon and Intel binary.
 
-The current local artifact packages editor commit `be51333`, including HTML
-responsive anchors and pointer/keyboard canvas movement and resizing. All 82
-packaged source files, universal architectures, strict ad hoc signature,
-built-bundle launcher tests and an isolated Homebrew install/uninstall were
-verified. Native UI inspection returned `cgWindowNotFound` despite running app
-processes. The quarantined installed launch was not repeated for this artifact;
-the previous bundle timed out without launcher-test output. No public,
-notarized release has been published.
+The current local artifact packages editor commit `4c49f9f`, including React
+responsive anchors, canvas movement/resizing, alignment snapping and equal-spacing
+suggestions. All 82 packaged source files, universal architectures, strict ad hoc
+signature, built-bundle launcher tests and an isolated Homebrew install/uninstall
+were verified. All 15 HTML workflows passed against bundled code in Chromium and
+WebKit; the bundled React positioning workflow passed in Chromium. Native UI
+inspection returned `cgWindowNotFound`. The quarantined installed self-test timed
+out after 45 seconds without output; its process was stopped and quarantine
+preserved. No public, notarized release has been published.
 
 Build with Apple's command line developer tools installed:
 
@@ -61,6 +62,26 @@ The default signature is ad hoc for local development. Set
 signing, then notarize and staple the app before creating the final published
 archive and its hash. The current build script does not automate notarization.
 Never reuse the pre-stapling archive hash for a rebuilt archive.
+
+## Latest local development artifact (4c49f9f)
+
+Archive: `/private/tmp/retouch-desktop-snapping-20260909/Retouch-0.1.0-mac.zip`
+
+SHA-256: `301b54e288a7f2555333cc8ce4abebd1b53f123203b2481ae105ea0394938a23`
+
+The generated `retouch-studio.rb`, checksum and `verification.json` accompany the
+archive. The receipt records per-file source hashes, native source hashes,
+architectures, bundled runtime tests, cask installation and cleanup. Source tests
+ran from a separate temporary harness whose runtime directories pointed into the
+app bundle; the harness was removed afterward. Strict signature verification
+still passed after the browser workflows.
+
+The local cask installed into an isolated app directory and retained quarantine.
+Its self-test timed out without output. The test app, temporary tap, cask trust
+entry and owned app processes were removed; Homebrew developer mode was restored
+to disabled. This artifact has not demonstrated usable native editing, trusted
+Gatekeeper launch, notarization, public distribution, upgrades or Intel runtime.
+The separate Developer ID build remains waiting on its local signing interaction.
 
 ## Historical native UI evidence (earlier bundles)
 
