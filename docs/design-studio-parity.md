@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 286 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 289 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1555,3 +1555,24 @@ after its structural ID changes. Existing geometry, paint, drawing, deletion
 and compiled-revision checks also pass. React SVG duplication, non-adjacent
 stacking commands and broader framework parity remain incomplete; the desktop
 archive predates this change.
+
+
+### Independent React SVG duplication
+
+The React adapter now duplicates literal SVG shape/group/canvas subtrees through
+a planner that copies exact source, maps retained and copied node identities,
+and validates ancestry after parsing. The copied layer is selected and can be
+edited independently. Literal strings and numeric geometry expressions are
+supported; authored IDs/keys/refs, spreads, dynamic expressions and unsupported
+subtrees are excluded from this specialized path. Existing generic literal
+duplication/clipboard support is preserved where it was already available.
+
+All 289 unit tests pass, including exact subtree copies, identity/ancestry
+checks, refusal boundaries and preservation of the generic fallback. Chromium
+and WebKit pass the real Next/Tailwind SVG workflow extended with shape/group
+duplication, distinct DOM/source IDs, selected-copy verification, independent
+copy X/fill edits and exact multi-step undo/redo. Original geometry and computed
+fill remain unchanged while the copy moves and changes color. The existing
+geometry, drawing, responsive paint, stacking, deletion and revision-readiness
+checks also pass. Reference-aware duplication, dynamic subtree cloning, broader
+framework parity and a refreshed desktop bundle remain unfinished.

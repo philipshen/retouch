@@ -427,3 +427,11 @@ paint on top. The move preserves the complete JSX subtrees and intervening
 comments, keeps the moved layer selected, and supports exact undo/redo. Expression
 blocks, component siblings and unsupported SVG nodes stop a move in that
 direction; changing their ordering is not implemented.
+
+
+**Duplicate layer** now copies literal React SVG shapes, groups and nested
+canvases, selects the copy, and gives its JSX nodes distinct source identities.
+Numeric geometry expressions and literal Tailwind classes are retained; editing
+the copy's geometry or paint leaves the original unchanged. Authored IDs, keys,
+refs, spreads and dynamic expressions remain protected. Existing generic literal
+duplication/clipboard support is retained outside the specialized SVG path.

@@ -6,7 +6,13 @@
 
 const path = require('node:path');
 const structure = require('../structure.cjs');
-const svgMove=require('../jsx-svg-move.cjs');
+const svgMove=require('../jsx-svg-move.cjs'),svgDelete=require('../jsx-svg-delete.cjs'),svgDuplicate=require('../jsx-svg-duplicate.cjs');
+function svgPlanner(resolved,op){
+ if(op.type==='moveElement'&&svgMove.describe(resolved))return svgMove;
+ if(op.type==='deleteElement'&&svgDelete.describe(resolved))return svgDelete;
+ if(op.type==='duplicateElement'&&svgDuplicate.describe(resolved))return svgDuplicate;
+ return null;
+}
 const { collectElements, contentHash } = require('../id.cjs');
 const { stamp } = require('../stamp.cjs');
 const { applyOp, planOp, describeElement } = require('../writer.cjs');
@@ -22,9 +28,20 @@ module.exports = {
   stamp,
   collect: collectElements,
   contentHash,
-  describe: resolved => {const svgDeletion=require('../jsx-svg-delete.cjs').describe(resolved),svgMovement=svgMove.describe(resolved),base={...structure.describe(resolved,'react'),...svgMovement};return {...describeElement(resolved),svgDeletion,svgMovement,context:resolved.context||null,structure:svgDeletion?{...base,canDelete:true,parentId:svgDeletion.parentId,reason:base.reason?'SVG deletion is available; other structural actions depend on the source structure.':null}:base};},
-  applyOp: (resolved,op) => op.type==='moveElement'&&svgMove.describe(resolved)?require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),svgMove.plan(resolved,op)):op.type==='deleteElement'&&require('../jsx-svg-delete.cjs').describe(resolved)?require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../jsx-svg-delete.cjs').plan(resolved,op)):structure.types.has(op.type) ? require('../transactions.cjs').applyPlan(resolved.appRoot || path.dirname(resolved.file),structure.planOp(resolved,op,'react')) : applyOp(resolved,op),
-  planOp: (resolved, op) => op.type==='moveElement'&&svgMove.describe(resolved)?svgMove.plan(resolved,op):op.type==='deleteElement'&&require('../jsx-svg-delete.cjs').describe(resolved)?require('../jsx-svg-delete.cjs').plan(resolved,op):structure.types.has(op.type) ? structure.planOp(resolved,op,'react') : op.type === 'detachComponent' ? require('../components.cjs').planDetach(resolved, op) : planOp(resolved, op),
+  describe: resolved => {
+    const svgDeletion=svgDelete.describe(resolved),svgMovement=svgMove.describe(resolved),svgDuplication=svgDuplicate.describe(resolved);
+    const base={...structure.describe(resolved,'react'),...svgMovement};
+    return {...describeElement(resolved),svgDeletion,svgMovement,svgDuplication,context:resolved.context||null,
+      structure:svgDeletion?{...base,canDelete:true,canDuplicate:!!svgDuplication||base.canDuplicate,canCopy:base.canDuplicate,canPaste:base.canPaste,parentId:svgDeletion.parentId,reason:base.reason?'SVG structural actions depend on the selected source subtree.':null}:base};
+  },
+  applyOp: (resolved,op) => {
+    const svg=svgPlanner(resolved,op);
+    return svg||structure.types.has(op.type)?require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),svg?svg.plan(resolved,op):structure.planOp(resolved,op,'react')):applyOp(resolved,op);
+  },
+  planOp: (resolved,op) => {
+    const svg=svgPlanner(resolved,op);
+    return svg?svg.plan(resolved,op):structure.types.has(op.type)?structure.planOp(resolved,op,'react'):op.type==='detachComponent'?require('../components.cjs').planDetach(resolved,op):planOp(resolved,op);
+  },
   describeComponent: resolved => require('../components.cjs').describe(resolved),
   hasReference: (root, file, excluded) => require('../components.cjs').hasReference(root, file, excluded),
   assets: { directory: 'public', urlPrefix: '/', uploadDirectory: 'rt-assets' },
