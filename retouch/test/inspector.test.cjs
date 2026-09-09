@@ -58,3 +58,11 @@ test('font file status preserves mixed face states without claiming glyph covera
  assert.equal(fontFaceLabel('"serif"',states),'No page font declaration');
  const namedGeneric=fontFaceStates({fonts:[{family:'"serif"',status:'loaded'}]});assert.equal(fontFaceLabel('serif',namedGeneric),'System / fallback family');assert.equal(fontFaceLabel('"serif"',namedGeneric),'1 loaded');assert.equal(fontFaceLabel('"Name,WithComma"',states),'Font status unavailable');
 });
+
+test('custom font weights preserve families and other scopes and validate the CSS range',()=>{
+ const {fontWeightToken,fontWeightClass,replace}=require('../shell/inspector.js');
+ for(const value of [1,537.5,1000])assert.equal(fontWeightClass(value),`font-[${value}]`);
+ for(const value of [0,1001,NaN,Infinity,'500'])assert.equal(fontWeightClass(value),null);
+ assert.equal(replace('font-bold font-serif md:font-[625.5]',fontWeightToken,fontWeightClass(537.5)),'font-serif md:font-[625.5] font-[537.5]');
+ assert.equal(replace('font-[537.5] font-serif',fontWeightToken,''),'font-serif');
+});

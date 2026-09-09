@@ -14,6 +14,7 @@
     "test:e2e:react-selection-geometry": "node test/e2e/react-selection-geometry.cjs",
     "test:e2e:react-selection": "node test/e2e/react-selection.cjs",
     "test:e2e:react-position": "node test/e2e/react-position.cjs",
+    "test:e2e:custom-weight": "RT_E2E_CUSTOM_WEIGHT=1 node test/e2e/page-fonts.cjs",
     "test:e2e:font-state": "node test/e2e/font-state.cjs",
     "test:e2e:font-discovery": "node test/e2e/font-discovery.cjs",
     "test:e2e:liquid-fonts": "RT_E2E_RENDERER=liquid RT_E2E_LIQUID_DYNAMIC=1 node test/e2e/page-fonts.cjs",

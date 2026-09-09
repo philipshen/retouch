@@ -4013,3 +4013,61 @@ discovered family supplies the rendered glyphs. Closed roots, pseudo-element
 text, other iframe documents, complete variable-font/text controls and broader
 Figma Design/any-site/trusted native distribution requirements remain open.
 The active goal is incomplete and native launches remain paused.
+
+
+### 2026-09-09 — Fractional font weights and reliable scope changes
+
+React/Liquid typography now has a numeric weight field covering 1–1000,
+including fractional values, and a weight-only reset. The writer classes replace
+weight tokens at the selected scope while retaining the font family, named
+styles and other scopes. Custom weight and size classes display Inherited /
+custom in their preset selectors instead of leaving those selectors blank.
+Static HTML already supports fractional weight through its CSS field.
+
+Verification exposed two shared editor issues. Unchanged class strings now
+return without a write or history entry. Compiler-stamped class writes use the
+existing rendered-revision readiness path before rebuilding the inspector,
+which prevents the inspector from retaining pre-compilation computed values.
+The style-scope selector also blurs a different focused panel field before
+changing scope, so delayed input change events are handled in the field's
+original scope. This matters for programmatic/accessibility selection and was
+reproduced by Chromium during the weight workflow.
+
+All 373 unit tests pass in
+`/private/tmp/retouch-custom-weight-unit-release.log`, including fractional
+weight token replacement and range validation. The new `test:e2e:custom-weight`
+variant passes final browser runs in:
+- `/private/tmp/retouch-custom-weight-release-react.log` (Chromium)
+- `/private/tmp/retouch-custom-weight-release-liquid.log` (WebKit, local Liquid)
+- `/private/tmp/retouch-custom-weight-release-html.log` (Chromium)
+
+All variants verify 537.5 base weight, 725.5 tablet weight, phone isolation,
+family retention, reset and exact source undo. React/Liquid additionally check
+numeric range rejection, custom preset display, replacement by the Medium
+preset, and inspector value agreement with the rendered revision. Switching
+scope after restoring an unchanged field is asserted not to write. The HTML
+variant exercises its existing CSS field and does not run the React/Liquid
+preset or numeric-input rejection assertions (the initial success-log wording
+was generalized afterward to reflect that distinction).
+
+React/WebKit also passed in
+`/private/tmp/retouch-custom-weight-react-webkit.log` before the final focused-field
+scope fix. A separate geometry/class-write regression passed in
+`/private/tmp/retouch-custom-weight-position-regression.log`, covering movement,
+resizing, scoped constraints, compiler revisions and undo/redo. Screenshot
+`/private/tmp/retouch-custom-weight-final.png` was inspected: both the rendered
+canvas and inspector reflect the 725.5 tablet weight. All runs exited and cleaned
+their disposable fixtures.
+
+Earlier failed logs are retained at
+`/private/tmp/retouch-custom-weight-react-chromium.log`,
+`/private/tmp/retouch-custom-weight-react-chromium-fixed.log`, and
+`/private/tmp/retouch-custom-weight-react-diagnostic.log`. The diagnostic showed
+an unintended md:type-editorial and md weight write after scope switching;
+`/private/tmp/retouch-custom-weight-react-scope-fixed.log` confirms that source
+corruption and extra undo step are removed by finishing the focused field first.
+
+Numeric CSS weight does not prove a selected font contains every requested
+weight or supports continuous variation. Actual glyph interpolation, variable
+axis discovery/editing, other typography controls and full Figma/any-site/native
+distribution parity remain incomplete. Native app launches remain paused.

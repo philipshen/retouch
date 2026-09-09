@@ -779,7 +779,13 @@ function screenScopeSection() {
     picker.append(option);
   }
   picker.value = styleScope;
-  picker.onchange = () => { stopDrawing?.(); styleScope = picker.value; renderPanel(); };
+  picker.onchange = () => {
+    // Programmatic/accessibility selection can change this control without
+    // blurring the prior input first. Finish that field in its original scope.
+    const focused=document.activeElement;
+    if(focused!==picker&&panelBody.contains(focused))focused.blur();
+    stopDrawing?.(); styleScope = picker.value; renderPanel();
+  };
   label.append(picker);section.append(label);
   RetouchInspector.note(section, styleScope
     ? 'Style changes apply to this breakpoint. Computed values reflect the preview; text and image content stay shared across sizes.'
@@ -1578,6 +1584,7 @@ async function writeClasses(classes, isUndo) {
   if (!sel || !sel.info) return;
   const info = sel.info;
   const prev = info.className || '';
+  if(classes===prev)return true;
   optimisticClasses(classes);
   const res = await api('POST', '/rt/__api/op', {
     type: 'setClasses', id: info.id, classes, fileHash: info.fileHash || info.hash, context: info.context,
@@ -1586,7 +1593,7 @@ async function writeClasses(classes, isUndo) {
     if (!isUndo) editorHistory.record({ type: 'setClasses', id: info.id, classes: prev, undoId: res.undoId, context: info.context });
     info.className = res.element?.className ?? classes;
     info.hash = res.hash;
-    if (window.__RT_RENDERING?.reloadAfterWrite) await refreshWrittenElement(info, el => info.className.split(/\s+/).filter(Boolean).every(token => el.classList.contains(token)));
+    if (window.__RT_RENDERING?.reloadAfterWrite||info.renderRevisionAttribute) await refreshWrittenElement(info, el => info.className.split(/\s+/).filter(Boolean).every(token => el.classList.contains(token)));
     toast('Saved', 'ok');
     renderPanel();
   } else {
