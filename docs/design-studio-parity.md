@@ -5069,3 +5069,40 @@ Sliders rely on inspected declared-file metadata, support only the existing
 compatible tag/value grammar, and do not prove actual glyph-font selection.
 Broader font support, full Figma parity and trusted native distribution remain
 unfinished. Native app launches remain paused.
+
+### Live glyph preview during variable-axis drags
+
+Axis sliders now preview the selected element's glyph appearance during input,
+without writing source. Temporary inline font-variation-settings are restored
+before committing the responsive edit, on Escape/cancel, on window blur/pagehide,
+or when the control/target leaves the DOM. Cleanup restores the exact original
+style attribute if untouched, or restores just the previewed property while
+preserving concurrent unrelated inline changes. Numeric field and slider readout
+follow the preview, displaying two decimal places while retaining the underlying
+slider value for commit. Preview currently affects the selected live element;
+comparison frames, sibling instances and the separate type sample update after
+source commit, not continuously during drag.
+
+The actual Geist fixture visibly changed glyph widths before pointer release;
+source remained byte-identical until commit. HTML, React and local Liquid passed
+Chromium and WebKit checks for live computed axes/glyph changes, Escape restoring
+inline style, release creating one undoable edit, keyboard edits, responsive
+isolation, concurrent page color preservation, and control-removal cleanup.
+Six final logs: /private/tmp/retouch-font-preview-final-{html,react,liquid}-
+{chromium,webkit}.log. All six exited 0. All 382 unit tests passed:
+/private/tmp/retouch-font-live-final-units.log. The axis npm browser command now
+includes the preview cleanup cases.
+
+The removal test exposed a Chromium event-order bug: removal could emit change
+before the element became disconnected. Deferring the save to a microtask and
+rechecking connection/cancellation prevents that unwanted write. Initial class
+fixture runs also hit transient detached controls during deferred panel refresh;
+the harness now reacquires the slider and its bounds before each gesture.
+The final two-decimal display polish has additional HTML browser runs at
+/private/tmp/retouch-font-preview-display-{chromium,webkit}.log and screenshot
+/private/tmp/retouch-font-live-display-chromium.png.
+
+This supersedes the previous no-live-preview limitation for the selected element.
+It does not establish full font/typography parity or arbitrary-site support.
+Native app launch testing remains paused, and trusted Homebrew/macOS distribution
+remains unverified.

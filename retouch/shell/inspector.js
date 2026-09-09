@@ -147,7 +147,8 @@
     const reset=button('Reset number formatting',onReset);reset.disabled=!canReset;details.append(reset);
   }
   const variationToken=t=>/^\[font-variation-settings:.+\]$/.test(t);
-  function variationTypography(parent,css,onChange,onReset,canReset,d){
+  function variationTypography(parent,css,onChange,onReset,canReset,el){
+    const d=el?.ownerDocument;
     const values=root.RetouchHTMLCSSValues,axes=values.parseVariations(css.fontVariationSettings);
     const details=document.createElement('details');details.open=variationExpanded;details.ontoggle=()=>{if(details.isConnected)variationExpanded=details.open;};
     const summary=document.createElement('summary');summary.textContent='Variable font axes';details.append(summary);parent.append(details);
@@ -198,20 +199,39 @@
               const slider=document.createElement('input');slider.type='range';slider.min=axis.min;slider.max=axis.max;slider.step='any';slider.value=active[1];
               const output=document.createElement('output');output.textContent=String(active[1]);
               field(row,'Adjust '+axis.name+' axis',slider);row.append(output);results.append(row);
-              const restore=()=>{slider.value=active[1];output.textContent=String(active[1]);};let cancelled=false;
+              let stopPreview=()=>{},previewState=null;
+              const previewValue=value=>{
+                if(!el?.isConnected||!slider.isConnected)return;
+                if(!previewState){
+                  const property='font-variation-settings',originalStyle=el.getAttribute('style'),originalValue=el.style.getPropertyValue(property),originalPriority=el.style.getPropertyPriority(property);
+                  const state=previewState={lastStyle:originalStyle,lastValue:null},lifetime=new AbortController();
+                  const observer=new MutationObserver(()=>{if(!el.isConnected||!slider.isConnected)stopPreview();});
+                  observer.observe(document.body,{childList:true,subtree:true});if(d.body)observer.observe(d.body,{childList:true,subtree:true});
+                  stopPreview=()=>{
+                    observer.disconnect();lifetime.abort();
+                    if(el.getAttribute('style')===state.lastStyle){if(originalStyle===null)el.removeAttribute('style');else el.setAttribute('style',originalStyle);}
+                    else if(el.style.getPropertyValue(property)===state.lastValue&&el.style.getPropertyPriority(property)==='important'){if(originalValue)el.style.setProperty(property,originalValue,originalPriority);else el.style.removeProperty(property);}
+                    axisInputs.get(axis.tag).value=active[1];previewState=null;stopPreview=()=>{};
+                  };
+                  window.addEventListener('blur',()=>stopPreview(),{signal:lifetime.signal,once:true});
+                  d.defaultView.addEventListener('pagehide',()=>stopPreview(),{signal:lifetime.signal,once:true});
+                }
+                el.style.setProperty('font-variation-settings',value,'important');previewState.lastValue=el.style.getPropertyValue('font-variation-settings');previewState.lastStyle=el.getAttribute('style');
+              };
+              const restore=()=>{stopPreview();slider.value=active[1];output.textContent=String(active[1]);};let cancelled=false;
               const cancel=event=>{event.preventDefault();event.stopPropagation();cancelled=true;restore();slider.blur();};
               slider.onpointerdown=()=>{
                 cancelled=false;slider.focus();const gesture=new AbortController(),options={capture:true,signal:gesture.signal};
                 document.addEventListener('keydown',event=>{if(event.key==='Escape')cancel(event);},options);
-                document.addEventListener('pointerup',()=>gesture.abort(),{...options,once:true});
+                document.addEventListener('pointerup',()=>{stopPreview();gesture.abort();},{...options,once:true});
                 document.addEventListener('pointercancel',()=>{cancelled=true;restore();gesture.abort();},{...options,once:true});
                 window.addEventListener('blur',()=>{cancelled=true;restore();gesture.abort();},{signal:gesture.signal,once:true});
               };
-              slider.oninput=()=>{if(cancelled){restore();return;}output.textContent=String(round(Number(slider.value)));};
-              slider.onchange=()=>{if(cancelled){restore();return;}const value=Number(slider.value);if(Number.isFinite(value)&&value!==active[1])onChange(values.serializeVariations(axes.map(entry=>entry[0]===axis.tag?[axis.tag,value]:entry)));};
+              slider.oninput=()=>{if(cancelled){restore();return;}output.textContent=String(round(Number(slider.value)));axisInputs.get(axis.tag).value=round(Number(slider.value));previewValue(values.serializeVariations(axes.map(entry=>entry[0]===axis.tag?[axis.tag,Number(slider.value)]:entry)));};
+              slider.onchange=()=>{stopPreview();if(!slider.isConnected||!el.isConnected)return;if(cancelled){restore();return;}const value=Number(slider.value);if(Number.isFinite(value)&&value!==active[1])queueMicrotask(()=>{if(slider.isConnected&&el.isConnected&&!cancelled)onChange(values.serializeVariations(axes.map(entry=>entry[0]===axis.tag?[axis.tag,value]:entry)));});};
               slider.onkeydown=event=>{if(event.key==='Escape')cancel(event);else cancelled=false;};
               slider.onpointercancel=()=>{cancelled=true;restore();};
-              slider.title='Release to apply; Escape cancels before release.';
+              slider.title='Drag to preview; release to apply. Escape cancels before release.';
             }
             if(compatible&&axes&&(axes.length<16||active)){const use=button('Use '+axis.name+' default',()=>{const next=new Map(axes);next.set(axis.tag,axis.default);onChange(values.serializeVariations([...next]));});results.append(use);}
           }
@@ -482,7 +502,7 @@
       select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(t=>t==='italic'||t==='not-italic',v==='italic'?'italic':'not-italic'));
       select(sec,'Text decoration',[['none','None'],['underline','Underline'],['line-through','Strikethrough'],['overline','Overline']],css.textDecorationLine,v=>change(t=>['underline','line-through','overline','no-underline'].includes(t),v==='none'?'no-underline':v));
       select(sec,'Text case',[['none','As written'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']],css.textTransform,v=>change(t=>['uppercase','lowercase','capitalize','normal-case'].includes(t),v==='none'?'normal-case':v));
-      variationTypography(sec,css,value=>change(variationToken,`[font-variation-settings:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,variationToken,'')),tokens(info.className).map(base).some(t=>t&&variationToken(t)),d);
+      variationTypography(sec,css,value=>change(variationToken,`[font-variation-settings:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,variationToken,'')),tokens(info.className).map(base).some(t=>t&&variationToken(t)),el);
       numericTypography(sec,css.fontVariantNumeric,value=>change(numericToken,`[font-variant-numeric:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,numericToken,'')),tokens(info.className).map(base).some(t=>t&&numericToken(t)));
       const textOverride=t=>variationToken(t)||numericToken(t)||lineHeightToken(t)||fontFamilyToken(t)||controls.some(([,re])=>re.test(t)) || /^(?:leading-|tracking-|-tracking-|text-(?:left|center|right|justify|start|end)$)/.test(t) || ['italic','not-italic','underline','line-through','overline','no-underline','uppercase','lowercase','capitalize','normal-case'].includes(t);
       const reset=button('Reset text overrides',()=>save(replace(info.className,textOverride,'')));

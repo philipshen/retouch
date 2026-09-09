@@ -20,7 +20,7 @@
     "test:e2e:relative-line-height": "RT_E2E_RELATIVE_LINE_HEIGHT=1 node test/e2e/page-fonts.cjs",
     "test:e2e:relative-spacing": "RT_E2E_RELATIVE_SPACING=1 node test/e2e/page-fonts.cjs",
     "test:e2e:line-height": "RT_E2E_LINE_HEIGHT=1 node test/e2e/page-fonts.cjs",
-    "test:e2e:font-axes": "RT_E2E_VARIABLE_FONT=1 RT_E2E_FONT_AXES=1 RT_E2E_FONT_DISCOVERY=1 node test/e2e/page-fonts.cjs",
+    "test:e2e:font-axes": "RT_E2E_VARIABLE_FONT=1 RT_E2E_FONT_AXES=1 RT_E2E_FONT_DISCOVERY=1 RT_E2E_FONT_PREVIEW_CLEANUP=1 node test/e2e/page-fonts.cjs",
     "test:e2e:variable-weight": "RT_E2E_CUSTOM_WEIGHT=1 RT_E2E_VARIABLE_FONT=1 node test/e2e/page-fonts.cjs",
     "test:e2e:custom-weight": "RT_E2E_CUSTOM_WEIGHT=1 node test/e2e/page-fonts.cjs",
     "test:e2e:font-state": "node test/e2e/font-state.cjs",
