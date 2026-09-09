@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 221 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 222 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -573,3 +573,17 @@ explicitly creates equal tracks. Inline grid shorthand conflicts are recognized.
 All 221 tests pass. Browser checks verify a two-column layout through actual
 child positions, a spanning child, phone inheritance and exact undo. Arbitrary
 track sizing, named grid areas, subgrid and draggable grid guides remain open.
+
+
+### Atomic HTML flex sizing
+
+Flex children expose Fill Available Space and Hug Contents, plus grow, shrink
+and basis fields. Presets update flex factors, basis, main-axis size and minimum
+size in a single validated CSS change set. Any invalid property or important
+inline conflict refuses the whole edit. Each preset is one source transaction
+and one undo entry; responsive scope applies to the complete change set.
+
+All 222 tests pass. Browser checks verify the resulting item widths, Hug reducing
+the content width, one-step exact undo for each preset, and phone inheritance.
+Existing max-size constraints remain effective. Vertical writing-mode sizing,
+full constraint combinations and direct on-canvas flex manipulation remain open.

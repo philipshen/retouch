@@ -15,6 +15,19 @@
    const reset=I.button('Reset '+property,()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);appearance.append(reset);
   }
   if(css.transform!=='none')I.note(appearance,'Rotation combines with the page’s existing transform.');
+  const parentCSS=el.parentElement&&el.ownerDocument.defaultView.getComputedStyle(el.parentElement),isFlexItem=parentCSS&&['flex','inline-flex'].includes(parentCSS.display);
+  const flex=I.section('Flex sizing');
+  if(isFlexItem){
+   const axis=parentCSS.flexDirection.startsWith('column')?'height':'width',minimum='min-'+axis;
+   flex.append(I.button('Fill available space',()=>save({'flex-grow':'1','flex-shrink':'1','flex-basis':'0%',[axis]:'auto',[minimum]:'0px'},null,width)));
+   flex.append(I.button('Hug contents',()=>save({'flex-grow':'0','flex-shrink':'0','flex-basis':'auto',[axis]:'max-content',[minimum]:'0px'},null,width)));
+   for(const [property,label]of [['flex-grow','Grow'],['flex-shrink','Shrink'],['flex-basis','Flex basis']]){
+    const input=document.createElement('input');input.type=property==='flex-basis'?'text':'number';if(input.type==='number'){input.min=0;input.max=1000;input.step='any';}input.value=own[property]??css.getPropertyValue(property);
+    input.onchange=()=>{const value=input.value.trim();if(input.checkValidity()&&valid(property,value))save(property,value,width);};I.field(flex,label,input);
+    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);flex.append(reset);
+   }
+   I.note(flex,'Fill and Hug change '+axis+' sizing along the parent’s flex direction. Each action is one undo step.');
+  }
   const grid=I.section('Grid');
   const isGrid=['grid','inline-grid'].includes(css.display),parentGrid=el.parentElement&&['grid','inline-grid'].includes(el.ownerDocument.defaultView.getComputedStyle(el.parentElement).display);
   const gridFields=[...(isGrid?[['grid-template-columns','Grid columns'],['grid-template-rows','Grid rows']]:[]),...(parentGrid?[['grid-column','Column span'],['grid-row','Row span']]:[])];
@@ -39,7 +52,7 @@
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);target.append(reset);
   }
   I.note(sec,'Values use CSS units. Reset removes this size’s override and restores the page’s styling.');
-  const container=document.createElement('div');container.append(appearance);if(gridFields.length)container.append(grid);container.append(typography,sec);return container;
+  const container=document.createElement('div');container.append(appearance);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);container.append(typography,sec);return container;
  }
  window.RetouchHTMLCSS={mount};
 })();

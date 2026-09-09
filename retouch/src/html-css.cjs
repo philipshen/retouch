@@ -35,17 +35,20 @@ function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason});
  try{
   if(op.fileHash&&op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the element.');
-  if(!Number.isInteger(op.width)||op.width<0||op.width>7680||!valid(op.property,op.value))return refuse('Unsupported CSS property, value or screen width.');
+  if(op.changes!==undefined&&(op.changes===null||typeof op.changes!=='object'||Array.isArray(op.changes)||Object.hasOwn(op,'property')))return refuse('Provide a property or a CSS change set.');
+  const changes=op.changes===undefined?[[op.property,op.value]]:Object.entries(op.changes);
+  if(!Number.isInteger(op.width)||op.width<0||op.width>7680||!changes.length||changes.length>32||changes.some(([property,value])=>!valid(property,value)))return refuse('Unsupported CSS property, value or screen width.');
   const inline=attr(resolved.element.node,'style')||'';
   // Reset must remain possible even if an external inline rule now wins.
   const important=[...inline.replace(/\/\*[\s\S]*?\*\//g,'').matchAll(/(?:^|;)\s*([a-z-]+)\s*:[^;]*!\s*important\s*(?=;|$)/gi)].map(m=>m[1].toLowerCase());
-  if(op.value!==null&&important.some(p=>overlaps(p,op.property)))return refuse('This property overlaps an important inline style. Edit that source rule first.');
+  if(changes.some(([property,value])=>value!==null&&important.some(p=>overlaps(p,property))))return refuse('This property overlaps an important inline style. Edit that source rule first.');
   const state=inspect(resolved),block=state.blocks.find(b=>b.width===op.width),values={...block?.values};
-  if(op.value===null)delete values[op.property];else {
-   values[op.property]=op.value;
+  for(const [property,value]of changes){
+  if(value===null)delete values[property];else {
+   values[property]=value;
    // A new shorthand supersedes its old per-edge overrides in this scope.
-   for(const child of families[op.property]||[])delete values[child];
-  }
+   for(const child of families[property]||[])delete values[child];
+  }}
   if(JSON.stringify(values)===JSON.stringify(block?.values||{}))return {ok:true,hash:resolved.hash,edits:[]};
   const out=new MagicString(resolved.source);
   if(!attr(resolved.element.node,'data-rt-style'))out.appendLeft(resolved.element.location.startTag.startOffset+1+resolved.element.tag.length,` data-rt-style="${state.id}"`);

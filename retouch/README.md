@@ -146,6 +146,11 @@ decoration and case, plus size, line height and letter spacing. Font families
 must be loaded by the page or available on the computer; entering a name does
 not install a font. Typography changes follow the selected screen scope.
 
+Children of flex containers expose **Fill available space**, **Hug contents**,
+and individual grow, shrink and basis controls. Fill/Hug adjust sizing along the
+parent’s flex direction; each preset saves as one undo step and follows the
+selected screen scope. Existing maximum-size constraints still apply.
+
 Set a container’s **Display** to grid to expose **Grid columns** and **Grid rows**.
 Counts create equal tracks; grid children expose column and row spans. Controls
 follow the screen scope and reset to the authored layout.

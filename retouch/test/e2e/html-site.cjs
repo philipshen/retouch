@@ -170,6 +170,20 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await size('390x844');await wait(async()=>await app.locator('main').evaluate(el=>getComputedStyle(el).display)==='block','grid phone inheritance');
   for(let i=0;i<3;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'grid exact undo');
+
+  await size('768x1024');await page.getByRole('treeitem',{name:'main',exact:true}).click();await page.getByLabel('Style screen scope').selectOption('');
+  const frameWidth=page.getByLabel('Width (CSS)',{exact:true});await frameWidth.fill('900px');await frameWidth.press('Tab');await wait(async()=>await app.locator('main').evaluate(el=>getComputedStyle(el).width)==='900px','flex frame width');await settled();
+  await page.getByLabel('Display (CSS)',{exact:true}).selectOption('flex');await wait(async()=>await app.locator('main').evaluate(el=>getComputedStyle(el).display)==='flex','flex parent');await settled();
+  const beforeFill=read();await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await page.getByLabel('Style screen scope').selectOption('min-[768px]:');
+  await page.getByRole('button',{name:'Fill available space',exact:true}).click();await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).flexGrow)==='1','fill flex item');await settled();
+  const fillSource=read(),fillWidth=await app.locator('h1').evaluate(el=>el.getBoundingClientRect().width);
+  await page.getByRole('button',{name:'Hug contents',exact:true}).click();await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).flexGrow)==='0','hug flex item');await settled();
+  assert.ok(await app.locator('h1').evaluate(el=>el.getBoundingClientRect().width)<fillWidth,'hug follows content width');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===fillSource,'hug is one undo step');
+  await size('390x844');await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).flexGrow)==='0','flex phone inheritance');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===beforeFill,'fill is one undo step');
+  for(let i=0;i<2;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
+  await wait(()=>read()===original,'flex setup exact undo');
   assert.deepEqual(errors,[]);console.log('PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

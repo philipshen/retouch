@@ -3,11 +3,13 @@
  const sides=['top','right','bottom','left'];
  const families={'grid-column':['grid-column-start','grid-column-end'],'grid-row':['grid-row-start','grid-row-end'],padding:sides.map(s=>'padding-'+s),margin:sides.map(s=>'margin-'+s),gap:['row-gap','column-gap'],'border-width':sides.map(s=>'border-'+s+'-width')};
  const fields=[['width','Width'],['height','Height'],['min-width','Minimum width'],['max-width','Maximum width'],['min-height','Minimum height'],['max-height','Maximum height'],['display','Display'],['flex-direction','Direction'],['flex-wrap','Wrap'],['align-items','Align items'],['justify-content','Distribute items'],['gap','Gap'],['padding','Padding'],...sides.map(s=>['padding-'+s,'Padding '+s]),['margin','Margin'],...sides.map(s=>['margin-'+s,'Margin '+s]),['font-family','Font family'],['font-weight','Font weight'],['font-style','Font style'],['text-decoration-line','Text decoration'],['text-transform','Text case'],['font-size','Font size'],['line-height','Line height'],['letter-spacing','Letter spacing'],['text-align','Text alignment'],['color','Text color'],['background-color','Background color'],['border-width','Border width'],['border-style','Border style'],['border-color','Border color'],['border-radius','Corner radius']];
- const lengths=new Set([...fields.map(([p])=>p).filter(p=>!options[p]&&!p.endsWith('color')),'row-gap','column-gap',...families['border-width']]);
+ const lengths=new Set([...fields.map(([p])=>p).filter(p=>!options[p]&&!p.endsWith('color')),'flex-basis','row-gap','column-gap',...families['border-width']]);
  const colors=new Set(['color','background-color','border-color']);
  function valid(property,value){
-  if(value===null)return ['grid-template-columns','grid-template-rows','grid-column','grid-row','opacity','rotate','object-position'].includes(property)||lengths.has(property)||colors.has(property)||Object.hasOwn(options,property);
+  if(value===null)return ['flex-grow','flex-shrink','grid-template-columns','grid-template-rows','grid-column','grid-row','opacity','rotate','object-position'].includes(property)||lengths.has(property)||colors.has(property)||Object.hasOwn(options,property);
   if(typeof value!=='string'||!value||value.length>150)return false;
+  if(['flex-grow','flex-shrink'].includes(property))return /^(?:\d*\.)?\d+$/.test(value)&&Number(value)>=0&&Number(value)<=1000;
+  if(property==='flex-basis'&&['auto','content'].includes(value))return true;
   if(['grid-template-columns','grid-template-rows'].includes(property)){const match=/^repeat\(([1-9]|1[0-9]|2[0-4]), minmax\(0, 1fr\)\)$/.exec(value);return !!match||value==='none';}
   if(['grid-column','grid-row'].includes(property)){const match=/^span ([1-9]|1[0-9]|2[0-4]) \/ span ([1-9]|1[0-9]|2[0-4])$/.exec(value);return !!match&&match[1]===match[2]||value==='auto';}
   if(property==='font-family')return value.split(',').every(part=>{const name=part.trim();return /^(?:[\p{L}\p{N}_-]+(?: +[\p{L}\p{N}_-]+)*|"[\p{L}\p{N} _-]+"|'[\p{L}\p{N} _-]+')$/u.test(name);});
@@ -42,6 +44,6 @@
   if(property==='border-color'||property==='border-style')return sides.map(side=>'border-'+side+'-'+property.slice(7));
   return families[property]||[property];
  }
- function overlaps(a,b){return a==='all'||b==='all'||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')||b==='border'&&a.startsWith('border-')||a==='font'&&['font-family','font-weight','font-style','font-size','line-height'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
+ function overlaps(a,b){return a==='all'||b==='all'||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')||b==='border'&&a.startsWith('border-')||a==='font'&&['font-family','font-weight','font-style','font-size','line-height'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
  return {options,fields,families,valid,overlaps};
 });

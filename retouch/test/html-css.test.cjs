@@ -130,3 +130,12 @@ test('HTML grid tracks and child spans are bounded and reset independently',()=>
  source=edit(source,768,null,'grid-row').edits[0].after;
  assert.deepEqual(css.describe(resolve(source)).cssRules[768],{'grid-template-columns':'repeat(3, minmax(0, 1fr))'});
 });
+
+test('HTML compound flex sizing validates every change before producing one source edit',()=>{
+ const changes={'flex-grow':'1','flex-shrink':'1','flex-basis':'0%',width:'auto','min-width':'0px'};
+ const result=css.plan(resolve(original),{width:768,changes});assert.equal(result.ok,true);assert.equal(result.edits.length,1);
+ assert.deepEqual(css.describe(resolve(result.edits[0].after)).cssRules[768],changes);
+ assert.equal(css.plan(resolve(original),{width:0,changes:{...changes,color:'red;display:none'}}).refused,true);
+ assert.equal(css.plan(resolve(original.replace('class="title"','style="flex:0 1 auto !important"')),{width:0,changes}).refused,true);
+ for(const changes of [[],null,{},'bad'])assert.equal(css.plan(resolve(original),{width:0,changes}).refused,true);
+});

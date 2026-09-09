@@ -1307,7 +1307,7 @@ async function writeSrc(src, isUndo, info) {
 async function setHTMLCSS(property,value,width){
   if(!sel)return;const info=sel.info;busyPanel(true);
   try{
-    const result=await api('POST','/rt/__api/op',{type:'setCSS',id:info.id,fileHash:info.hash,property,value,width});
+    const result=await api('POST','/rt/__api/op',{type:'setCSS',id:info.id,fileHash:info.hash,width,...(typeof property==='object'?{changes:property}:{property,value})});
     if(!result?.ok){toast(result?.reason||result?.error||'Could not save CSS','err');return;}
     if(result.undoId)editorHistory.record({type:'setCSS',id:info.id,undoId:result.undoId});
     sel.info=result.element;await reloadFrame();renderPanel();toast('Saved','ok');
