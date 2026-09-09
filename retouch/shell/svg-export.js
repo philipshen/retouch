@@ -29,17 +29,19 @@
  }
  function snapshot(target){
   const svg=target?.closest('svg');if(!svg)throw Error('Select an SVG canvas or a shape inside it.');
-  if(svg.querySelector('use')){useReferences(svg);throw Error('Export of linked SVG symbol instances is not supported yet.');}
+  const reuse=useReferences(svg),reused=new Map();
+  if(reuse.definitions.some(node=>!node.closest('defs,symbol')))throw Error('Export of SVG instances that reference visible artwork is not supported yet.');
+  for(const definition of reuse.definitions)for(const node of [definition,...definition.querySelectorAll('*')])if(!reused.has(node))reused.set(node,String(reused.size));
   if(svg.querySelector('animate,animateMotion,animateTransform,set'))throw Error('Export of SVG animations is not supported yet.');
   const d=svg.ownerDocument,w=d.defaultView,roots=[svg],queue=[svg,...svg.querySelectorAll('*')],styles=new Map(),links=new Map();
-  function reference(href,collect=true){
-   let url;try{url=new URL(href,d.baseURI);}catch{return href;}
+  function reference(href,collect=true,base=d.baseURI){
+   let url;try{url=new URL(href,base);}catch{return href;}
    if(url.protocol==='javascript:')return '';
    if(url.hash&&url.href.split('#')[0]===d.URL.split('#')[0]&&collect){
     const id=decodeURIComponent(url.hash.slice(1)),definition=d.getElementById(id);
     if(!definition)throw Error('Missing SVG definition: '+id);
     if(!roots.some(root=>root.contains(definition))){
-     if(definition.namespaceURI!==svg.namespaceURI||!['linearGradient','radialGradient','clipPath','mask','filter','marker','pattern','path'].includes(definition.localName))throw Error('Unsupported shared SVG definition: '+id);
+     if(definition.namespaceURI!==svg.namespaceURI||!['linearGradient','radialGradient','clipPath','mask','filter','marker','pattern','path','symbol','g','svg','use','rect','circle','ellipse','line','polyline','polygon','text','image'].includes(definition.localName))throw Error('Unsupported shared SVG definition: '+id);
      for(let i=roots.length-1;i>0;i--)if(definition.contains(roots[i]))roots.splice(i,1);
      roots.push(definition);queue.push(definition,...definition.querySelectorAll('*'));
     }
@@ -47,29 +49,105 @@
    }
    return url.href;
   }
-  const localURL=value=>value.replace(/url\(["']?([^"')]+)["']?\)/g,(whole,href)=>{const url=reference(href);return url?'url("'+url+'")':'none';});
+  const localURL=(value,base=d.baseURI)=>value.replace(/url\(["']?([^"')]+)["']?\)/g,(whole,href)=>{const url=reference(href,true,base);return url?'url("'+url+'")':'none';});
+  // Keep authored declarations on reused subtrees: computed values would freeze
+  // fill/currentColor/custom properties before each use instance inherits them.
+  function selectors(value){
+   const parts=[];let part='',depth=0,quote='',escape=false;
+   for(const char of value){
+    if(escape){part+=char;escape=false;continue;}
+    if(char==='\\'){part+=char;escape=true;continue;}
+    if(quote){part+=char;if(char===quote)quote='';continue;}
+    if(char==='"'||char==="'")quote=char;
+    if(char==='('||char==='[')depth++;if(char===')'||char===']')depth--;
+    if(char===','&&!depth){parts.push(part.trim());part='';}else part+=char;
+   }
+   if(part.trim())parts.push(part.trim());return parts;
+  }
+  const symbolCandidates=[...reused.keys()],isolated=new Map();
+  if(reuse.definitions.some(node=>svg.contains(node))){
+   const clone=svg.cloneNode(true),originals=[svg,...svg.querySelectorAll('*')],clones=[clone,...clone.querySelectorAll('*')];
+   originals.forEach((node,i)=>isolated.set(node,clones[i]));
+  }
+  for(const definition of reuse.definitions){const clone=definition.cloneNode(true);symbolCandidates.push(clone,...clone.querySelectorAll('*'));}
+  function symbolRules(rules){
+   let text='';
+   for(const rule of rules){
+    if(rule.type===1){
+     if(rule.cssRules?.length)throw Error('Symbol export with nested CSS is not supported yet.');
+     const selected=selectors(rule.selectorText).filter(selector=>{
+      for(const node of reused.keys())if(isolated.has(node)&&node.matches(selector)&&!isolated.get(node).matches(selector))throw Error('Symbol styles depending on ancestors outside this SVG canvas are not supported yet.');
+      return symbolCandidates.some(node=>node.matches(selector));
+     }).map(selector=>selector+':where([data-export-symbol])');
+     if(selected.length)text+=selected.join(',')+'{'+localURL(rule.style.cssText,rule.parentStyleSheet?.href||d.baseURI)+'}';
+    }else if(rule.type===4){if(w.matchMedia(rule.conditionText).matches)text+=symbolRules(rule.cssRules);}
+    else if(rule.type===12){if(w.CSS.supports(rule.conditionText))text+=symbolRules(rule.cssRules);}
+    else if(rule.constructor.name==='CSSLayerBlockRule')text+='@layer '+rule.name+'{'+symbolRules(rule.cssRules)+'}';
+    else if(rule.constructor.name==='CSSLayerStatementRule')text+=rule.cssText;
+    else if(rule.type===3){
+     if((!rule.media.mediaText||w.matchMedia(rule.media.mediaText).matches)&&(!rule.supportsText||w.CSS.supports(rule.supportsText))){
+      const imported=symbolRules(rule.styleSheet.cssRules);text+=rule.layerName===null||rule.layerName===undefined?imported:'@layer '+rule.layerName+'{'+imported+'}';
+     }
+    }
+    else if(rule.cssRules)throw Error('Symbol export with '+rule.cssText.split('{')[0].trim()+' is not supported yet.');
+   }
+   return text;
+  }
+  let symbolCSS='';
+  if(reused.size){
+   for(const sheet of [...d.styleSheets,...(d.adoptedStyleSheets||[])]){
+    if(sheet.disabled||(sheet.media.mediaText&&!w.matchMedia(sheet.media.mediaText).matches))continue;
+    let rules;try{rules=sheet.cssRules;}catch{throw Error('Cannot read a page stylesheet needed to preserve SVG symbol styles.');}
+    symbolCSS+=symbolRules(rules);
+   }
+  }
   for(let i=0;i<queue.length;i++){
    const original=queue[i];if(styles.has(original))continue;
-   if(original.localName==='use')throw Error('Export of linked SVG symbol instances is not supported yet.');
    if(/^(animate|animateMotion|animateTransform|set)$/i.test(original.localName))throw Error('Export of SVG animations is not supported yet.');
    const css=w.getComputedStyle(original),values=[];styles.set(original,values);
+   if(reused.has(original))for(const attr of original.attributes)if(attr.value.includes('url('))localURL(attr.value);
    for(const property of properties){const value=css.getPropertyValue(property);if(value)values.push([property,localURL(value)]);}
    const hrefs=[];links.set(original,hrefs);
    for(const attr of original.attributes)if(attr.localName==='href'){
-    const value=reference(attr.value,['linearGradient','radialGradient','pattern','textPath'].includes(original.localName));
+    const value=reference(attr.value,['linearGradient','radialGradient','pattern','textPath','use'].includes(original.localName));
     hrefs.push([attr.namespaceURI,attr.name,/^(?:https?:|data:|blob:|#)/.test(value)?value:null]);
    }
   }
   const copy=svg.cloneNode(true),pairs=[];
   function pair(original,clone){const a=[original,...original.querySelectorAll('*')],b=[clone,...clone.querySelectorAll('*')];for(let i=0;i<a.length;i++)pairs.push([a[i],b[i]]);}
   pair(svg,copy);
-  if(roots.length>1){const defs=d.createElementNS(svg.namespaceURI,'defs');copy.prepend(defs);for(const definition of roots.slice(1)){const clone=definition.cloneNode(true);defs.append(clone);pair(definition,clone);}}
+  if(roots.length>1){
+   const defs=d.createElementNS(svg.namespaceURI,'defs'),ancestors=new Map();copy.prepend(defs);
+   for(const definition of roots.slice(1)){
+    let container=defs;
+    if(reused.has(definition)){
+     const chain=[];for(let ancestor=definition.parentElement;ancestor;ancestor=ancestor.parentElement)chain.unshift(ancestor);
+     for(const ancestor of chain){
+      if(!ancestors.has(ancestor)){
+       const wrapper=ancestor.cloneNode(false);
+       for(const attr of [...wrapper.attributes])if(/^data-rt(?:-|$)|^on/i.test(attr.name))wrapper.removeAttribute(attr.name);
+       container.append(wrapper);ancestors.set(ancestor,wrapper);
+      }
+      container=ancestors.get(ancestor);
+     }
+    }
+    const clone=definition.cloneNode(true);container.append(clone);pair(definition,clone);
+   }
+  }
   for(const [original,node]of pairs){
    if(/^(script|style)$/i.test(node.localName)){node.remove();continue;}
    for(const attr of [...node.attributes])if(/^data-rt(?:-|$)|^on/i.test(attr.name))node.removeAttribute(attr.name);
-   for(const [property,value]of styles.get(original)||[])node.style.setProperty(property,value,'important');
+   if(reused.has(original)){
+    node.setAttribute('data-export-symbol',reused.get(original));
+    for(const property of [...node.style])node.style.setProperty(property,localURL(node.style.getPropertyValue(property)),node.style.getPropertyPriority(property));
+    for(const attr of [...node.attributes])if(attr.name!=='style'&&attr.value.includes('url('))attr.value=localURL(attr.value);
+   }else{
+    for(const [property,value]of styles.get(original)||[])node.style.setProperty(property,value,'important');
+    if(reuse.instances.has(original)){const computed=w.getComputedStyle(original);for(const property of computed)if(property.startsWith('--'))node.style.setProperty(property,computed.getPropertyValue(property));}
+   }
    for(const [namespace,name,value]of links.get(original)||[]){if(value===null)node.removeAttribute(name);else node.setAttributeNS(namespace,name,value);}
   }
+  if(symbolCSS){const style=d.createElementNS(svg.namespaceURI,'style');style.textContent=symbolCSS;copy.prepend(style);}
   const css=w.getComputedStyle(svg),rect=svg.getBoundingClientRect(),width=parseFloat(css.width)||rect.width,height=parseFloat(css.height)||rect.height;
   if(!(width>0&&height>0))throw Error('This SVG canvas has no visible dimensions.');
   copy.setAttribute('xmlns','http://www.w3.org/2000/svg');copy.setAttribute('width',String(width));copy.setAttribute('height',String(height));copy.style.width=width+'px';copy.style.height=height+'px';
@@ -113,6 +191,7 @@
   const normalize=family=>family.trim().replace(/^["']|["']$/g,'').toLowerCase();
   const families=value=>{const result=[];let part='',quote='',escape=false;for(const char of value){if(escape){part+=char;escape=false;continue;}if(char==='\\'){part+=char;escape=true;continue;}if(quote){part+=char;if(char===quote)quote='';continue;}if(char==='"'||char==="'"){quote=char;part+=char;}else if(char===','){result.push(normalize(part));part='';}else part+=char;}result.push(normalize(part));return result;};
   const pageFonts=new Set([...target.ownerDocument.fonts].map(face=>normalize(face.family)));
+  if(parsed.querySelector('use')&&parsed.querySelector('text,tspan,textPath')&&pageFonts.size)throw Error('Font embedding for SVG symbols with page fonts is not supported yet.');
   for(const text of parsed.querySelectorAll('text,tspan,textPath,text a')){
    const names=families(text.style.fontFamily);
    if(names.some(family=>pageFonts.has(family)))throw Error('This text references a page font. Font embedding is not supported yet.');

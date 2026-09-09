@@ -4664,3 +4664,43 @@ in `retouch-symbol-refs-chromium.log` and `retouch-symbol-refs-webkit.log` under
 `/private/tmp`. Unit suite passed in `/private/tmp/retouch-symbol-refs-unit.log`;
 git diff --check passed. The node bound and every invalid URL form have not been
 exhaustively exercised. Native launches remain paused; full parity is incomplete.
+
+### Shared SVG symbol export with instance inheritance (2026-09-09)
+
+Export now permits same-document symbols and artwork defined inside defs. It
+collects nested use references, retains authored declarations in reused subtrees,
+and copies matching stylesheet rules with a zero-specificity export scope.
+Current media/supports conditions are evaluated at the source viewport; layer
+structure is retained. Computed custom properties are carried on outer instances.
+Imported definitions retain cloned ancestor context so browser-native symbol
+selector behavior survives standalone export. No live page nodes are modified.
+This implements the inheritance direction described in the SVG specification:
+https://www.w3.org/TR/SVG2/struct.html#UseStyleInheritance
+
+Chromium and WebKit both matched source screenshot colors for two differently
+colored instances of a nested shared symbol, including currentColor and a CSS
+variable override. Downloaded PNGs retained those colors at 1x, 2x and 4x; SVG
+standalone decoding, JPEG options, reference diagnostics and unchanged source also
+passed. Final browser logs (both exit 0):
+`/private/tmp/retouch-symbol-export-guarded-chromium.log` and
+`/private/tmp/retouch-symbol-export-guarded-webkit.log`.
+
+The ancestor-selector fixture exposed an actual engine difference: Chromium's
+source icons are black while WebKit applies the outer ancestor rule and renders
+the instance colors. Export matches the source within each engine. Evidence:
+`retouch-symbol-export-ancestry-chromium.log` and
+`retouch-symbol-export-ancestry-webkit.log` under `/private/tmp`. The earlier
+selector-rewriting attempt changed Chromium's colors; its failed logs are retained
+as `retouch-symbol-export-*-fixed.log`. The first fixture run also hit an obsolete
+white-pixel assertion where an icon had been added; original logs are retained.
+
+Still unsupported: references to visible artwork, external symbol documents,
+unreadable stylesheets, CSS nesting/container/scope rules, and inline symbol rules
+that require ancestors outside the exported canvas. These return errors. Symbols
+with text and page fonts require font embedding. CSS animation/state fidelity,
+all imported/layered CSS combinations, exact geometry across arbitrary symbols,
+and cross-engine export equivalence are not proven. This is useful shared-icon
+coverage, not complete asset or Figma parity. Native app launches remain paused.
+
+Final unit validation: all 375 tests passed (exit 0) in
+`/private/tmp/retouch-symbol-export-final-unit.log`; git diff --check passed.
