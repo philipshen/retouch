@@ -1,6 +1,7 @@
 (function(root){
   'use strict';
   const ns='http://www.w3.org/2000/svg';
+  let handleMovement='independent';
   function mount({target,frame,canvas,points,pathData=null,onCommit,onEnd,onError}){
     const w=target.ownerDocument.defaultView,property=pathData?'d':'points',original=target.getAttribute(property);
     const initialCSS=pathData?w.getComputedStyle(target).getPropertyValue('d'):null;
@@ -47,6 +48,15 @@
     const status=root.document.createElement('span');status.setAttribute('role','status');
     status.style.cssText='font:12px system-ui;color:#e5e7eb;';toolbar.append(status);
     function action(label,fn){const b=root.document.createElement('button');b.type='button';b.textContent=label;b.onclick=fn;Object.assign(b.style,{padding:'6px 10px',minHeight:'28px',border:'1px solid #454951',borderRadius:'4px',background:'#2b2e33',color:'#e5e7eb',font:'12px system-ui',cursor:'pointer'});toolbar.append(b);return b;}
+    let handleMode;
+    if(pathData){
+      action('Make corner',()=>reshape('corner')).title='Remove the selected anchor’s handles';
+      action('Make smooth',()=>reshape('smooth')).title='Create aligned handles along the neighboring anchors';
+      const label=root.document.createElement('label');label.textContent='Move handles ';label.style.cssText='font:12px system-ui;color:#e5e7eb;';
+      handleMode=root.document.createElement('select');handleMode.setAttribute('aria-label','Handle movement');handleMode.title='Applies to paired handles while editing. Independent moves one; aligned keeps the opposite length; mirrored keeps equal lengths.';
+      for(const [value,text] of [['independent','Independent'],['aligned','Aligned'],['mirrored','Mirrored']]){const option=root.document.createElement('option');option.value=value;option.textContent=text;handleMode.append(option);}
+      handleMode.value=handleMovement;handleMode.style.cssText='padding:6px;background:#2b2e33;color:#e5e7eb;border:1px solid #454951;border-radius:4px;';handleMode.onchange=()=>{handleMovement=handleMode.value;};label.append(handleMode);toolbar.append(label);
+    }
     const removeButton=action('Delete point',removePoint);
     action('Done',commit);action('Cancel',cancel);surface.append(toolbar);
     function announce(message){status.textContent=message||`${activeHandle?activeHandle==='in'?'Incoming handle on point':'Outgoing handle on point':'Point'} ${active+1} of ${vertices.length}`;removeButton.disabled=vertices.length<=minimum;removeButton.style.opacity=removeButton.disabled?'.5':'1';}
@@ -56,7 +66,7 @@
         const b=root.document.createElement('button');b.type='button';b.dataset.vertex=String(i);b.setAttribute('aria-label','Vector point '+(i+1));
         Object.assign(b.style,{position:'absolute',width:'12px',height:'12px',padding:'0',border:'2px solid #6366f1',background:'white',borderRadius:'2px',cursor:'move',touchAction:'none',zIndex:1});
         surface.append(b);handles.push(b);
-        if(pathData)for(const key of ['in','out'])if(vertices[i][key]){const control=root.document.createElement('button');control.type='button';control.dataset.vertex=String(i);control.dataset.curveHandle=key;control.setAttribute('aria-label',(key==='in'?'Incoming':'Outgoing')+' handle '+(i+1));Object.assign(control.style,{position:'absolute',width:'10px',height:'10px',padding:'0',border:'2px solid #8b5cf6',background:'white',borderRadius:'50%',cursor:'move',touchAction:'none',zIndex:1});surface.append(control);curveHandles.push({button:control,index:i,key});}
+        if(pathData)for(const key of ['in','out'])if(vertices[i][key]&&Math.hypot(vertices[i][key].x-vertices[i].x,vertices[i][key].y-vertices[i].y)>1e-9){const control=root.document.createElement('button');control.type='button';control.dataset.vertex=String(i);control.dataset.curveHandle=key;control.setAttribute('aria-label',(key==='in'?'Incoming':'Outgoing')+' handle '+(i+1));Object.assign(control.style,{position:'absolute',width:'10px',height:'10px',padding:'0',border:'2px solid #8b5cf6',background:'white',borderRadius:'50%',cursor:'move',touchAction:'none',zIndex:1});surface.append(control);curveHandles.push({button:control,index:i,key});}
 
         if(closed||i<vertices.length-1){
           const add=root.document.createElement('button');add.type='button';add.dataset.insertVertex=String(i);add.setAttribute('aria-label','Add point after '+(i+1));add.title='Add a point on this edge';add.textContent='+';add.disabled=vertices.length>=512;
@@ -65,6 +75,17 @@
         }
       });
       announce();paint();
+    }
+    function reshape(kind){
+      if(drag||!verify())return;
+      const next=kind==='corner'?root.RetouchSVGPath.corner(vertices[active]):root.RetouchSVGPath.smooth(vertices,active,closed);
+      const candidate=vertices.map((p,i)=>i===active?next:p);
+      if(!next||!root.RetouchSVGPath.serialize(candidate,closed)){announce('This point cannot use that shape. Keep a valid path.');return;}
+      vertices[active]=next;activeHandle=null;rebuild();handles[active].focus({preventScroll:true});
+    }
+    function changeHandle(node,key,point){
+      const next=root.RetouchSVGPath.moveHandle(node,key,point,handleMovement);
+      if(next)vertices[active]=next;else announce('Keep handles within supported SVG coordinates.');
     }
     function insertPoint(index){
       if(drag||!verify())return;
@@ -99,24 +120,25 @@
       if(!drag||e.pointerId!==drag.id||!verify())return;
       try{const p=local(e);let dx=p.x-drag.pointer.x,dy=p.y-drag.pointer.y;
         if(e.shiftKey){if(Math.abs(dx)>Math.abs(dy))dy=0;else dx=0;}
-        if(activeHandle)vertices[active][activeHandle]={x:drag.point.x+dx,y:drag.point.y+dy};else vertices[active]=root.RetouchSVGPath.translate(drag.point,dx,dy);paint();
+        if(activeHandle)changeHandle(drag.node,activeHandle,{x:drag.point.x+dx,y:drag.point.y+dy});else vertices[active]=root.RetouchSVGPath.translate(drag.point,dx,dy);paint();
       }catch(error){cancel();onError(error.message);}
     }
     listen(surface,'pointerdown',e=>{
       const b=e.target;if(b.dataset.vertex===undefined||e.button!==0||drag)return;
       e.preventDefault();e.stopImmediatePropagation();if(!verify())return;
-      try{active=Number(b.dataset.vertex);activeHandle=b.dataset.curveHandle||null;b.focus({preventScroll:true});drag={id:e.pointerId,pointer:local(e),point:root.RetouchSVGPath.translate(activeHandle?vertices[active][activeHandle]:vertices[active],0,0)};b.setPointerCapture(e.pointerId);}catch(error){cancel();onError(error.message);}
+      try{active=Number(b.dataset.vertex);activeHandle=b.dataset.curveHandle||null;b.focus({preventScroll:true});drag={id:e.pointerId,pointer:local(e),node:root.RetouchSVGPath.translate(vertices[active],0,0),point:root.RetouchSVGPath.translate(activeHandle?vertices[active][activeHandle]:vertices[active],0,0)};b.setPointerCapture(e.pointerId);}catch(error){cancel();onError(error.message);}
     });
     listen(surface,'pointermove',move);
     listen(surface,'pointerup',e=>{if(!drag||drag.id!==e.pointerId)return;e.preventDefault();e.stopImmediatePropagation();move(e);if(!ended){const selected=activeHandle?vertices[active][activeHandle]:vertices[active],moved=Math.hypot(selected.x-drag.point.x,selected.y-drag.point.y)>1e-9;drag=null;if(moved)commit();}});
     listen(surface,'pointercancel',cancel);listen(surface,'lostpointercapture',()=>{if(drag)cancel();});
     listen(surface,'keydown',e=>{
       if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancel();return;}
+      if(e.target===handleMode)return;
       if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();e.stopImmediatePropagation();removePoint();return;}
       if(e.key==='Enter'&&e.target.dataset.vertex!==undefined){e.preventDefault();e.stopImmediatePropagation();commit();return;}
       const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
       if(!delta||e.metaKey||e.ctrlKey||e.altKey)return;e.preventDefault();e.stopImmediatePropagation();if(!verify())return;
-      const step=e.shiftKey?10:1;if(activeHandle)vertices[active][activeHandle]=root.RetouchSVGPath.translate(vertices[active][activeHandle],delta[0]*step,delta[1]*step);else vertices[active]=root.RetouchSVGPath.translate(vertices[active],delta[0]*step,delta[1]*step);paint();
+      const step=e.shiftKey?10:1;if(activeHandle)changeHandle(vertices[active],activeHandle,root.RetouchSVGPath.translate(vertices[active][activeHandle],delta[0]*step,delta[1]*step));else vertices[active]=root.RetouchSVGPath.translate(vertices[active],delta[0]*step,delta[1]*step);paint();
     },true);
     for(const event of ['retouch:before-zoom','retouch:screen','retouch:viewport','resize','blur','pagehide'])listen(root,event,cancel);
     listen(frame,'load',cancel);listen(w,'scroll',cancel,true);listen(canvas,'scroll',cancel);

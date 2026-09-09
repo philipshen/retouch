@@ -54,6 +54,30 @@
     next.splice(index+1,0,point);return next;
   }
   function translate(node,dx,dy){return {...node,x:node.x+dx,y:node.y+dy,...(node.in?{in:{x:node.in.x+dx,y:node.in.y+dy}}:{}),...(node.out?{out:{x:node.out.x+dx,y:node.out.y+dy}}:{})};}
+  function corner(node){const next=translate(node,0,0);delete next.in;delete next.out;return next;}
+  function smooth(nodes,index,closed=false){
+    if(!serialize(nodes,closed)||!Number.isInteger(index)||index<0||index>=nodes.length)return null;
+    const node=nodes[index],previous=index>0?nodes[index-1]:closed?nodes.at(-1):null,next=index<nodes.length-1?nodes[index+1]:closed?nodes[0]:null;
+    let dx=(next||node).x-(previous||node).x,dy=(next||node).y-(previous||node).y;
+    // A two-anchor loop has identical neighbors. Keep a usable existing tangent
+    // or choose a perpendicular to the edge so smoothing does not collapse it.
+    if(Math.hypot(dx,dy)<1e-9){if(node.out){dx=node.out.x-node.x;dy=node.out.y-node.y;}else if(node.in){dx=node.x-node.in.x;dy=node.y-node.in.y;}if(Math.hypot(dx,dy)<1e-9&&next){dx=-(next.y-node.y);dy=next.x-node.x;}}
+    const length=Math.hypot(dx,dy);if(length<1e-9)return null;dx/=length;dy/=length;
+    const result=corner(node),distance=p=>Math.hypot(p.x-node.x,p.y-node.y)/3;
+    if(previous){const size=node.in?Math.hypot(node.in.x-node.x,node.in.y-node.y)||distance(previous):distance(previous);result.in={x:node.x-dx*size,y:node.y-dy*size};}
+    if(next){const size=node.out?Math.hypot(node.out.x-node.x,node.out.y-node.y)||distance(next):distance(next);result.out={x:node.x+dx*size,y:node.y+dy*size};}
+    return coordinate(result)&&(!result.in||coordinate(result.in))&&(!result.out||coordinate(result.out))?result:null;
+  }
+  function moveHandle(node,key,point,mode='independent'){
+    if(!['in','out'].includes(key)||!['independent','aligned','mirrored'].includes(mode)||!coordinate(node)||!coordinate(point)||!node[key])return null;
+    const next=translate(node,0,0),other=key==='in'?'out':'in';next[key]={x:point.x,y:point.y};
+    if(mode!=='independent'&&node[other]){
+      const dx=point.x-node.x,dy=point.y-node.y,length=Math.hypot(dx,dy);
+      if(mode==='mirrored')next[other]={x:node.x-dx,y:node.y-dy};
+      else if(length>1e-9){const size=Math.hypot(node[other].x-node.x,node[other].y-node.y);next[other]={x:node.x-dx*size/length,y:node.y-dy*size/length};}
+    }
+    return (!next.in||coordinate(next.in))&&(!next.out||coordinate(next.out))?next:null;
+  }
   function equivalent(a,b){return !!a&&!!b&&a.closed===b.closed&&a.nodes.length===b.nodes.length&&a.nodes.every((p,i)=>['','in','out'].every(key=>{const x=key?p[key]:p,y=key?b.nodes[i][key]:b.nodes[i];return !x&&!y||x&&y&&Math.abs(x.x-y.x)<1e-6&&Math.abs(x.y-y.y)<1e-6;}));}
-  const api={serialize,curved,parse,split,segmentMiddle,translate,equivalent};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
+  const api={serialize,curved,parse,split,segmentMiddle,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
 })(typeof window==='object'?window:globalThis);

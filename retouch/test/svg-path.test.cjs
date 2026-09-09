@@ -33,3 +33,25 @@ test('Splitting a cubic preserves its geometry, including a curved closing edge'
   }
   const moved=path.translate(nodes[0],10,-5);assert.deepEqual(moved,{x:10,y:-5,in:{x:10,y:-55},out:{x:10,y:45}});assert.equal(nodes[0].x,0);
 });
+
+test('Handle movement preserves independent, aligned-length and mirrored constraints without mutating input',()=>{
+  const node={x:20,y:30,in:{x:10,y:30},out:{x:40,y:30}},point={x:20,y:50};
+  assert.deepEqual(path.moveHandle(node,'out',point),{...node,out:point});
+  assert.deepEqual(path.moveHandle(node,'out',point,'aligned'),{...node,in:{x:20,y:20},out:point});
+  assert.deepEqual(path.moveHandle(node,'out',point,'mirrored'),{...node,in:{x:20,y:10},out:point});
+  assert.deepEqual(path.moveHandle(node,'in',{x:20,y:10},'aligned').out,{x:20,y:50});
+  assert.deepEqual(path.moveHandle(node,'out',node,'aligned').in,node.in);
+  assert.deepEqual(path.moveHandle(node,'out',node,'mirrored').in,{x:20,y:30});
+  assert.deepEqual(node,{x:20,y:30,in:{x:10,y:30},out:{x:40,y:30}});
+  assert.equal(path.moveHandle(node,'out',{x:100001,y:0}),null);
+  assert.equal(path.moveHandle({x:99999,y:0,in:{x:99998,y:0},out:{x:100000,y:0}},'in',{x:0,y:0},'mirrored'),null);
+});
+test('Corner and smooth conversion handle interior points, endpoints and two-anchor loops',()=>{
+  const line=[{x:0,y:0},{x:30,y:30},{x:60,y:0}],middle=path.smooth(line,1);
+  assert.ok(Math.abs(middle.in.x-(30-Math.sqrt(200)))<1e-9);assert.equal(middle.in.y,30);assert.equal(middle.out.y,30);
+  assert.deepEqual(path.corner(middle),line[1]);assert.deepEqual(line[1],{x:30,y:30});
+  assert.deepEqual(path.smooth(line,0),{x:0,y:0,out:{x:10,y:10}});
+  assert.deepEqual(path.smooth(line,2),{x:60,y:0,in:{x:50,y:10}});
+  const loop=path.smooth(nodes,0,true);assert.deepEqual(loop,nodes[0]);
+  assert.equal(path.smooth(line,-1),null);
+});

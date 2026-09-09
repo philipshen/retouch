@@ -3121,3 +3121,38 @@ and `/private/tmp/retouch-saved-curves-vertices-react-regression.log`.
 This adds saved curve editing. Vector networks, arcs/compound paths, handle modes,
 booleans, masks and the other full-parity requirements remain open. Native app
 launches remain paused; no desktop build or launch occurred for this change.
+
+
+### 2026-09-09 — Corner/smooth conversion and linked handle movement
+
+Saved path editing now includes Make corner and Make smooth actions. Corner
+removes the selected anchor's control handles. Smooth creates opposing tangents
+along adjacent anchors, retaining usable handle lengths and deriving missing
+lengths from the neighboring edges. Open endpoints get only their used handle;
+two-anchor loops retain an existing tangent or use a perpendicular fallback.
+Invalid or out-of-bounds conversions leave the pending geometry unchanged.
+
+The Move handles selector offers Independent, Aligned and Mirrored movement.
+Aligned rotates the opposite handle while preserving its length. Mirrored also
+matches lengths. Pointer movement uses the drag-start geometry to avoid drift;
+keyboard movement uses the same helper. This is a tool-wide session setting,
+retained across reopening the editor until shell reload. Geometry is written to
+SVG source; persistent per-anchor constraint metadata remains unimplemented.
+
+Zero-length controls from serialized cubics are hidden so they do not obscure
+corner anchors after reopening. Make smooth restores usable handles. Both
+conversions stay in the isolated preview until commit and participate in exact
+source undo. Native launches remain paused.
+
+All 346 unit tests pass in `/private/tmp/retouch-handle-modes-unit.log`. All four
+HTML/React and Chromium/WebKit workflows pass in
+`/private/tmp/retouch-handle-modes-{html,react}-{chromium,webkit}-complete.log`.
+The new assertions check independent/aligned/mirrored keyboard geometry, mirrored
+pointer dragging, corner conversion and reopening, smooth conversion, cancellation
+and exact undo. They also run the saved-curve creation/editing regression at
+50/100/200 percent zoom through nested transforms. The inspected
+`/private/tmp/retouch-handle-modes-html-chromium.png` shows the visible conversion
+buttons, movement selector and curve controls without clipped toolbar actions.
+
+Full vector networks, compound paths/arcs, booleans/masks, the wider Figma Design
+scope, arbitrary-site authoring and trusted Mac distribution remain incomplete.
