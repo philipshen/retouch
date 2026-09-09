@@ -66,3 +66,10 @@ test('custom font weights preserve families and other scopes and validate the CS
  assert.equal(replace('font-bold font-serif md:font-[625.5]',fontWeightToken,fontWeightClass(537.5)),'font-serif md:font-[625.5] font-[537.5]');
  assert.equal(replace('font-[537.5] font-serif',fontWeightToken,''),'font-serif');
 });
+
+test('line-height overrides replace automatic and explicit spacing without changing font or other scopes',()=>{
+ const {replace,lineHeightToken}=require('../shell/inspector.js');
+ assert.equal(replace('font-serif font-[537.5] leading-[80px] md:leading-6',lineHeightToken,'[line-height:normal]'),'font-serif font-[537.5] md:leading-6 [line-height:normal]');
+ assert.equal(replace('text-lg [line-height:normal]',lineHeightToken,'leading-[45px]'),'text-lg leading-[45px]');
+ assert.equal(replace('text-lg leading-[45px]',lineHeightToken,''),'text-lg');
+});

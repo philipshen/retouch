@@ -36,6 +36,18 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===expected);await settled();}await wait(async()=>await weight()==='700');assert.equal(read(),original);
    console.log(engine+' '+kind+': PASS custom fractional weights, scope isolation, reset, family retention and exact undo'+(kind==='html'?'':', range validation and preset replacement'));
   }
+  if(process.env.RT_E2E_LINE_HEIGHT){
+   const height=()=>app.locator('h1').evaluate(el=>getComputedStyle(el).lineHeight),initialHeight=await height(),initialFamily=await family(),initialWeight=await app.locator('h1').evaluate(el=>getComputedStyle(el).fontWeight),input=page.getByLabel(kind==='html'?'Line height (CSS)':'Line height (px)',{exact:true});
+   const write=async(action,expected)=>{snapshots.push(read());await action();await wait(()=>read()!==snapshots.at(-1));await settled();await wait(async()=>await height()===expected);assert.equal(await family(),initialFamily);assert.equal(await app.locator('h1').evaluate(el=>getComputedStyle(el).fontWeight),initialWeight);};
+   const pixels=async value=>{await input.fill(value+(kind==='html'?'px':''));await input.press('Tab');};
+   await page.getByLabel('Style screen scope').selectOption('');await settled();await write(()=>pixels('80'),'80px');
+   await page.getByLabel('Style screen scope').selectOption(kind==='html'?'min-[768px]:':'md:');await settled();await write(()=>page.getByRole('button',{name:'Automatic line height',exact:true}).click(),'normal');
+   if(kind!=='html'){assert.equal(await input.inputValue(),'');assert.equal(await input.getAttribute('placeholder'),'Automatic');await write(()=>page.getByRole('button',{name:'Reset text overrides',exact:true}).click(),'80px');const automatic=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===automatic);await settled();await wait(async()=>await height()==='normal');}
+   await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await settled();await wait(async()=>await height()==='80px');await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();await wait(async()=>await height()==='normal');
+   await write(()=>pixels('45'),'45px');await write(()=>page.getByRole('button',{name:'Reset line height',exact:true}).click(),'80px');
+   while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===expected);await settled();}await wait(async()=>await height()===initialHeight);assert.equal(read(),original);
+   console.log(engine+' '+kind+': PASS automatic/custom line height, responsive isolation, family/weight retention, reset and exact undo');
+  }
   assert.deepEqual(errors,[]);console.log(engine+' '+kind+': PASS searchable page font catalog, keyboard apply/cancel, no-match preservation, declared and used families, underscore preservation, weight/named-style retention, responsive isolation, reset, preview and exact source undo');
  }finally{if(browser)await browser.close();if(child){child.kill('SIGTERM');await stopped;}if(server){server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));}fs.rmSync(root,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

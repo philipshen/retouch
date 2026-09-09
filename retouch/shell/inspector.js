@@ -249,6 +249,7 @@
     return '[font-family:'+value.trim().replace(/'/g,'"').replace(/_/g,'\\_').replace(/ /g,'_')+']';
   }
   const fontFamilyToken=t=>/^(?:font-(?:sans|serif|mono)|font-\[family-name:.*\]|\[font-family:.*\])$/.test(t);
+  const lineHeightToken=t=>/^(?:leading-.+|\[line-height:.+\])$/.test(t);
   const fontWeightToken=t=>/^font-(?:thin|extralight|light|normal|medium|semibold|bold|extrabold|black|\[\d+(?:\.\d+)?\])$/.test(t);
   function fontWeightClass(value){return typeof value==='number'&&Number.isFinite(value)&&value>=1&&value<=1000?`font-[${value}]`:null;}
   function fontFamilies(d,current){
@@ -364,14 +365,16 @@
       number(sec,'Font weight (1–1000)',parseFloat(css.fontWeight),1,1000,v=>{const token=fontWeightClass(v);if(token)change(fontWeightToken,token);});
       const resetWeight=button('Reset font weight',()=>save(replace(info.className,fontWeightToken,'')));resetWeight.disabled=!tokens(info.className).map(base).some(t=>t&&fontWeightToken(t));sec.append(resetWeight);
       number(sec,'Font size (px)',parseFloat(css.fontSize),1,1000,v=>change(t=>controls[0][1].test(t),`text-[${v}px]`));
-      const lineHeight=number(sec,'Line height (px)',parseFloat(css.lineHeight),0,2000,v=>change(t=>t.startsWith('leading-'),`leading-[${v}px]`));
-      if(css.lineHeight==='normal'){lineHeight.value='';lineHeight.placeholder='Normal';}
+      const lineHeight=number(sec,'Line height (px)',parseFloat(css.lineHeight),0,2000,v=>change(lineHeightToken,`leading-[${v}px]`));
+      if(css.lineHeight==='normal'){lineHeight.value='';lineHeight.placeholder='Automatic';}
+      sec.append(button('Automatic line height',()=>change(lineHeightToken,'[line-height:normal]')));
+      const resetLineHeight=button('Reset line height',()=>save(replace(info.className,lineHeightToken,'')));resetLineHeight.disabled=!tokens(info.className).map(base).some(t=>t&&lineHeightToken(t));sec.append(resetLineHeight);
       number(sec,'Letter spacing (px)',parseFloat(css.letterSpacing)||0,-100,100,v=>change(t=>/^-?tracking-/.test(t),`tracking-[${v}px]`));
       select(sec,'Text alignment',['left','center','right','justify','start','end'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.textAlign,v=>change(t=>/^text-(left|center|right|justify|start|end)$/.test(t),'text-'+v));
       select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(t=>t==='italic'||t==='not-italic',v==='italic'?'italic':'not-italic'));
       select(sec,'Text decoration',[['none','None'],['underline','Underline'],['line-through','Strikethrough'],['overline','Overline']],css.textDecorationLine,v=>change(t=>['underline','line-through','overline','no-underline'].includes(t),v==='none'?'no-underline':v));
       select(sec,'Text case',[['none','As written'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']],css.textTransform,v=>change(t=>['uppercase','lowercase','capitalize','normal-case'].includes(t),v==='none'?'normal-case':v));
-      const textOverride=t=>fontFamilyToken(t)||controls.some(([,re])=>re.test(t)) || /^(?:leading-|tracking-|-tracking-|text-(?:left|center|right|justify|start|end)$)/.test(t) || ['italic','not-italic','underline','line-through','overline','no-underline','uppercase','lowercase','capitalize','normal-case'].includes(t);
+      const textOverride=t=>lineHeightToken(t)||fontFamilyToken(t)||controls.some(([,re])=>re.test(t)) || /^(?:leading-|tracking-|-tracking-|text-(?:left|center|right|justify|start|end)$)/.test(t) || ['italic','not-italic','underline','line-through','overline','no-underline','uppercase','lowercase','capitalize','normal-case'].includes(t);
       const reset=button('Reset text overrides',()=>save(replace(info.className,textOverride,'')));
       reset.disabled=!tokens(info.className).map(base).some(t=>t!==null&&textOverride(t));sec.append(reset);
 
@@ -412,6 +415,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select};
+  const api={base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

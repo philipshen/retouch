@@ -4108,3 +4108,33 @@ This establishes variable weight behavior for one known font and tested values,
 not every font, every axis or every glyph. Axis discovery, axis-specific UI and
 broader typography/Figma/any-site/native distribution requirements remain open.
 No native app launch was attempted; the launch pause remains in force.
+
+
+### 2026-09-09 — Automatic line height and scoped spacing reset
+
+Typography now offers Automatic line height, writing CSS normal at the selected
+scope rather than a fixed line-height multiplier. React/Liquid also have a
+dedicated line-height reset; HTML uses its existing property reset. The pixel
+field remains available, shows Automatic when the computed value is normal,
+and replaces either automatic or explicit line-height classes. Reset text
+overrides now recognizes the arbitrary normal property as well as leading
+utilities. Family and weight overrides are retained by spacing-only changes.
+
+All 374 unit tests pass in `/private/tmp/retouch-line-height-unit.log`, including
+normal/explicit token replacement and preservation of fonts and other scopes.
+The new `test:e2e:line-height` workflow passes in:
+- `/private/tmp/retouch-line-height-react.log` (React/Chromium)
+- `/private/tmp/retouch-line-height-liquid.log` (local Liquid/WebKit)
+- `/private/tmp/retouch-line-height-html.log` (HTML/Chromium)
+
+The browser checks write 80px at base, normal at tablet, verify the phone remains
+80px, switch tablet to 45px, reset to inherited base spacing, and undo to the
+exact original source and initial computed spacing. They verify font family and
+weight remain unchanged. React/Liquid additionally verify the Automatic field
+placeholder and bulk text reset followed by undo of the automatic override.
+All runs exited successfully and cleaned their disposable fixtures.
+
+This improves line-height authoring, not complete text layout parity. Rich-text
+runs, paragraph spacing, lists, variable axes and broader Figma/any-site/native
+distribution requirements still need work. Native launches remain paused and
+none were attempted during this work.
