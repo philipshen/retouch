@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 241 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 244 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -908,3 +908,26 @@ unchanged scroll dimensions/offsets during dragging, zoomed-out coordinate
 mapping, and exact source bytes. The gray/page boundary overlay was also inspected in a Chromium screenshot.
 Starting on content, irregular/clipped layer geometry and other renderers remain
 unfinished; this is not full Figma parity or native release verification.
+
+
+### Frame a selection and release its children
+
+HTML layers now expose Frame selection for a single layer or consecutive sibling
+selection, and Remove frame for containers created by this operation. Framing
+keeps the original child markup, attributes, whitespace and linked responsive
+styles. Removing an otherwise untouched frame restores the exact original bytes.
+The new frame uses the existing responsive inspector. Each operation records one
+history entry with the selection before and after it.
+
+The source planner validates source hashes, normalizes selected descendants,
+and tracks every existing parsed element across source-offset changes. It refuses
+cross-parent/nonconsecutive selections, incompatible parent containers and
+incomplete/template markup without returning an edit. Unit coverage includes
+responsive styles, authored child IDs, exact removal, nested selections and
+atomic refusals. All 244 unit tests pass. Chromium and WebKit verify framing,
+independent tablet sizing, removal, exact undo/redo and selection restoration.
+The selected frame and layer actions were inspected in a Chromium screenshot.
+
+This creates a real block container. It can change CSS selector matching,
+margin collapse and flex/grid layout; pixel-preserving Figma groups, arbitrary
+cross-parent grouping and frame operations in other renderers remain unfinished.

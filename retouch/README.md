@@ -164,7 +164,11 @@ marquee on content is not implemented yet. The **Shared styles** inspector shows
 common values and marks differing values as Mixed. Changes and resets apply to
 all selected layers at the chosen screen scope in one undo step. If any layer
 refuses the change, the entire edit is refused. Up to 100 layers in one HTML
-body are supported. **Duplicate layers** and **Delete layers** apply to the
+body are supported. **Frame selection** wraps one layer or consecutive sibling
+layers in an editable HTML container. **Remove frame** removes that container
+and keeps its children. Both actions restore source and selection with undo.
+A frame changes the document hierarchy, so parent selectors and flex/grid layout
+can change; this is not a guarantee of identical appearance. **Duplicate layers** and **Delete layers** apply to the
 selection in one undo step. Selecting a parent and its child handles the subtree
 once. Copies get independent responsive styles, and undo restores the selection.
 Keyboard Duplicate/Delete also apply to the selected group. Drag any selected
