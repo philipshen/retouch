@@ -59,5 +59,6 @@ function getAdapter(name) {
 // The built-in adapters are registered on require.
 register(require('./adapters/react.cjs'));
 register(require('./adapters/liquid.cjs'));
+register(require('./adapters/html.cjs'));
 
 module.exports = { register, getAdapter, defaultAdapter: () => getAdapter('react') };
