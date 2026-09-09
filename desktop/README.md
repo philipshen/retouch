@@ -3,20 +3,21 @@
 A native AppKit window hosts the same Retouch editor used in the browser.
 macOS 13 or later; universal Apple Silicon and Intel binary.
 
-The newest local artifact packages editor commit `a288bc6`, including responsive
-zoom, pointer anchoring, Hand/Space-drag, exclusive tool switching and immediate
-selection reveal. All 88 packaged source files match that commit. Universal
-architectures, strict ad hoc signature, bundled launcher tests and isolated
-Homebrew install/uninstall pass. **This archive fails browser verification and
-has not demonstrated usable native launch.** It is a development artifact, not
-a release candidate. Details and the previous artifact's evidence follow below.
-No public, notarized release is published.
+Native launch testing is paused at the user's request after recurring macOS
+verification warnings. Builds now skip native launch tests by default. Do not
+run GUI diagnostics or native test commands below unless the user explicitly
+resumes that testing; see [AGENTS.md](AGENTS.md).
+
+The newest local artifact packages editor commit `d9cd994`, including stable
+selection fitting and preservation of pressed inspector controls. All 88 packaged
+source files match that commit. Eleven of twelve bundled browser workflows pass;
+WebKit's React workflow reports development-runtime page errors. The archive is
+not release-ready. No public, notarized release is published.
 
 Build with Apple's command line developer tools installed:
 
 ```sh
 node desktop/scripts/build.cjs
-open desktop/dist/Retouch.app
 ```
 
 Click **Open project…** and choose a folder. Select **Edit HTML files** for a
@@ -62,7 +63,26 @@ signing, then notarize and staple the app before creating the final published
 archive and its hash. The current build script does not automate notarization.
 Never reuse the pre-stapling archive hash for a rebuilt archive.
 
-## Latest local development artifact (a288bc6; verification failed)
+## Latest local development artifact (d9cd994; verification failed)
+
+Archive: `/private/tmp/retouch-desktop-navigation-fixed-20260909/Retouch-0.1.0-mac.zip`
+
+SHA-256: `2c73481f95da6f4ae24dc1a8b94180e590b4979b18d6e120376a3ff6f3da788f`
+
+The receipt verifies all 88 files against `d9cd994bf7b236a51d1e54a2c05a18b3ffaff7af`,
+universal architectures and the strict ad hoc signature after browser checks.
+All six Chromium workflows pass. WebKit passes five; React geometry and undo
+assertions complete, but Next development-runtime errors fail the final check.
+A traced browser-only rerun passes; the original failure remains in the receipt.
+
+Before the launch pause, isolated cask install/uninstall and installed source
+verification passed. Installed native launch failed with exit -9. Its process,
+app directory, cask, temporary tap and trust entry were removed. The bounded
+window diagnostic reported a created window, but an inactive app and no visible
+occlusion; this does not establish usable native UI. No native launch was repeated
+after the user requested the pause. The temporary browser harness is removed.
+
+## Previous local development artifact (a288bc6; verification failed)
 
 Archive: `/private/tmp/retouch-desktop-navigation-20260909/Retouch-0.1.0-mac.zip`
 
