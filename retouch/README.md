@@ -149,8 +149,12 @@ order. Reset removes the selected screen's override; Clear removes that filter
 stack at the selected scope. Multiple authored blur functions or unsupported
 filter expressions require clearing the stack before using the blur control.
 
-Select several HTML layers with **Shift-click** in Layers or on the canvas
-(Cmd/Ctrl-click also toggles a layer). The **Shared styles** inspector shows
+Select a range of HTML layers with **Shift-click** in Layers; use **Cmd/Ctrl-click**
+to toggle individual layers. On the canvas, Shift-click also toggles a layer.
+Shift plus Up/Down/Home/End extends the Layers range. **Select visible layers**,
+or Cmd/Ctrl+A while a row is focused, selects the displayed design layers. With
+a search active, it selects matching rows rather than their context ancestors;
+collapsed children and the HTML/body document roots are excluded. The **Shared styles** inspector shows
 common values and marks differing values as Mixed. Changes and resets apply to
 all selected layers at the chosen screen scope in one undo step. If any layer
 refuses the change, the entire edit is refused. Up to 100 layers in one HTML

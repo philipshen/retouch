@@ -325,6 +325,21 @@ async function select(node,{toggle=false}={}) {
   renderPanel();
 }
 
+async function selectMany(nodes,{active=nodes[0],append=false}={}){
+  const serial=++classificationSerial;
+  const ids=[...new Set([...(append?(sel?.multiple||[sel?.info]).filter(Boolean).map(info=>info.id):[]),...nodes.map(node=>node.getAttribute('data-rt'))])];
+  if(!ids.length)return clearSelection();if(ids.length>100)return toast('Select up to 100 layers. Narrow the layer search first.','err');
+  busyPanel(true);
+  try{
+    const results=await Promise.all(ids.map(id=>api('GET',resolveUrl(id))));if(serial!==classificationSerial)return;
+    if(nodes.some(node=>!node.isConnected)||results.some(result=>!result?.ok||!result.element.cssAuthoring))return toast('These layers cannot be selected together.','err');
+    const infos=results.map(result=>result.element),first=infos[0];
+    if(infos.some(info=>info.file!==first.file||info.hash!==first.hash))return toast('Select layers from one unchanged HTML document.','err');
+    const primary=infos.find(info=>info.id===active?.getAttribute('data-rt'))||first;
+    sel={hostId:primary.id,instanceId:null,scope:'host',info:primary,multiple:infos.length>1?infos:undefined};renderPanel();
+  }finally{busyPanel(false);}
+}
+
 function activeId() {
   if (!sel) return null;
   return sel.scope === 'instance' ? (sel.instanceId || sel.hostId) : (sel.hostId || sel.instanceId);
@@ -340,7 +355,7 @@ async function loadScope() {
 }
 
 function clearSelection() {
-  sel = null;
+  classificationSerial++;sel = null;
   window.dispatchEvent(new CustomEvent('retouch:selection',{detail:null}));
   panelBody.hidden = true;
   panelEmpty.hidden = false;
@@ -1559,6 +1574,7 @@ const layers = RetouchLayers.mount({
   },
   host:document.getElementById('layersPanel'),
   onSelect:async(el,options)=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await select(el,options);el.scrollIntoView({block:'nearest',inline:'nearest'});},
+  onSelectMany:async(nodes,options)=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await selectMany(nodes,options);},
   onAction:action=>structureAction(action),
 });
 function chooseLayerParent(info){

@@ -166,7 +166,7 @@
  function mountSelection(infos,elements,width,save){
   const section=I.section('Shared styles');
   if(!Number.isInteger(width)||elements.some(el=>!el)||infos.some(info=>info.cssReason)){I.note(section,'Re-select the layers and choose a pixel screen scope.','refused');return section;}
-  I.note(section,'Shift-click layers or the canvas to add or remove selections. Mixed values are left unchanged until you edit them. Each shared edit is one undo step.');
+  I.note(section,'Shift-click a range in Layers; Cmd/Ctrl-click toggles layers. On the canvas, Shift-click toggles. Mixed values stay unchanged until edited. Each shared edit is one undo step.');
   const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el));
   const sharedFields=[['opacity','Opacity (%)'],['rotate','Rotation (°)'],['mix-blend-mode','Blend mode'],['isolation','Blend group'],...fields];
   for(const [property,label]of sharedFields){

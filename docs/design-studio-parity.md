@@ -850,3 +850,25 @@ and parser-changing nested forms. Chromium and WebKit move a set through the
 picker, undo it, drag it into a frame, drag it back before a sibling, and verify
 exact source/selection undo and redo. Grouping/ungrouping, marquee selection,
 cross-document moves and broader renderer support remain unfinished.
+
+
+### Layer ranges and scoped select-all
+
+HTML Layers selection now supports anchored Shift-click ranges, Shift plus
+Up/Down/Home/End navigation, and Cmd/Ctrl-click toggling. Cmd/Ctrl+Shift extends
+a range into the existing selection. The anchor resets when the frame document
+changes. Select visible layers and Cmd/Ctrl+A on a row select displayed design
+layers; a filter restricts that set to matching labels and excludes context-only
+ancestors. Collapsed descendants and HTML/body roots are excluded. The search
+input retains normal text-selection behavior.
+
+Batch selection resolves every requested identity against one unchanged HTML
+document before replacing the selection. It preserves the existing 100-layer
+limit and ignores superseded requests; clearing selection invalidates pending
+classification. No selection operation writes source.
+
+All 239 unit tests pass. Chromium and WebKit verify forward and contracting
+ranges, keyboard expansion/contraction, individual toggling, select-all, filtered
+select-all, excluded context ancestors, search text selection and collapsed-tree
+selection, then compare source bytes with the original. Canvas marquee selection
+and broader renderer multi-selection remain unfinished.

@@ -24,7 +24,7 @@
     if(!target.parentElement?.hasAttribute('data-rt')||['HTML','BODY'].includes(target.tagName))return null;
     return fraction<.5?'before':'after';
   }
-  function mount({host,onSelect,onAction,getClipboard=()=>null,dragEnabled=false,onMove}) {
+  function mount({host,onSelect,onAction,getClipboard=()=>null,dragEnabled=false,onMove,onSelectMany}) {
     const header=document.createElement('h2');header.textContent='Layers';
     const search=document.createElement('input');search.type='search';search.placeholder='Find a layer…';search.setAttribute('aria-label','Find a layer');
     const tree=document.createElement('div');tree.className='layer-tree';tree.setAttribute('role','tree');tree.setAttribute('aria-label','Site layers');
@@ -35,10 +35,21 @@
       const b=document.createElement('button');b.textContent=name;b.disabled=true;b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
     }
     const reason=document.createElement('p');reason.className='layer-reason';
-    host.append(header,search,tree,empty,actions,reason);
-    let d=null,observer=null,timer=null,selected=null,rows=[],collapsed=new WeakSet(),lastCapabilities=null,isBusy=false,dragged=null,selectedSet=new Set();
+    const multiEnabled=dragEnabled&&typeof onSelectMany==='function',selectAll=document.createElement('button');selectAll.textContent='Select visible layers';selectAll.className='layer-select-all';selectAll.hidden=!multiEnabled;
+    host.append(header,search,selectAll,tree,empty,actions,reason);
+    let d=null,observer=null,timer=null,selected=null,rows=[],collapsed=new WeakSet(),lastCapabilities=null,isBusy=false,dragged=null,selectedSet=new Set(),rangeAnchor=null;
     function clearTargets(){for(const row of rows)row.button.classList.remove('drop-target','drop-before','drop-after');}
     function endDrag(){dragged=null;clearTargets();for(const row of rows)row.button.classList.remove('dragging');}
+    function selectionRows(){const query=search.value.trim().toLowerCase();return rows.filter(row=>!['HTML','BODY'].includes(row.item.el.tagName)&&(!query||row.item.label.toLowerCase().includes(query)));}
+    async function selectRange(target,append=false){
+      if(isBusy)return;const candidates=selectionRows(),end=candidates.findIndex(row=>row.item.el===target);
+      if(end<0)return onSelect(target);
+      const anchor=rangeAnchor?.isConnected?rangeAnchor:selected;let start=candidates.findIndex(row=>row.item.el===anchor);if(start<0)start=end;
+      if(!rangeAnchor?.isConnected)rangeAnchor=candidates[start].item.el;
+      await onSelectMany(candidates.slice(Math.min(start,end),Math.max(start,end)+1).map(row=>row.item.el),{active:target,append});
+    }
+    async function selectVisible(){if(!multiEnabled||isBusy)return;const candidates=selectionRows();if(candidates.length){rangeAnchor=candidates[0].item.el;await onSelectMany(candidates.map(row=>row.item.el),{active:candidates[0].item.el});}}
+    selectAll.onclick=selectVisible;
     function render() {
       const focused=rows.find(r=>r.button===document.activeElement)?.item.el;
       tree.replaceChildren();rows=[];
@@ -58,7 +69,7 @@
           b.setAttribute('role','treeitem');b.setAttribute('aria-level',depth);b.setAttribute('aria-selected',String(selectedSet.has(item.el)));
           b.tabIndex=item.el===selected?0:-1;b.disabled=isBusy;
           if(item.children.length)b.setAttribute('aria-expanded',String(expanded));
-          b.onclick=e=>onSelect(item.el,{toggle:e.shiftKey||e.metaKey||e.ctrlKey});
+          b.onclick=e=>{if(multiEnabled&&e.shiftKey)return selectRange(item.el,e.metaKey||e.ctrlKey);rangeAnchor=item.el;return onSelect(item.el,{toggle:e.metaKey||e.ctrlKey});};
           b.draggable=dragEnabled&&!['HTML','BODY'].includes(item.el.tagName);
           b.ondragstart=e=>{if(isBusy||!b.draggable){e.preventDefault();return;}dragged=item.el;e.dataTransfer.setData('text/plain','retouch-layer:'+item.el.getAttribute('data-rt'));e.dataTransfer.effectAllowed='move';for(const row of rows)if(row.item.el===dragged||selectedSet.has(dragged)&&selectedSet.has(row.item.el))row.button.classList.add('dragging');};
           const dropPosition=e=>{const box=b.getBoundingClientRect();return isBusy?null:placement(selectedSet.has(dragged)?[...selectedSet]:[dragged],item.el,(e.clientY-box.top)/box.height);};
@@ -67,6 +78,7 @@
           b.ondrop=e=>{const position=dropPosition(e);if(position){e.preventDefault();const source=dragged;endDrag();onMove?.(source,item.el,position);}};
           b.ondragend=endDrag;
           b.onkeydown=async e=>{
+            if(multiEnabled&&(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='a'){e.preventDefault();e.stopPropagation();await selectVisible();return;}
             if(e.key==='F2'){e.preventDefault();if(!isBusy){if(!selectedSet.has(item.el))await onSelect(item.el);onAction('renameElement');}return;}
             if((e.metaKey||e.ctrlKey)&&['c','v'].includes(e.key.toLowerCase())){e.preventDefault();if(!isBusy){if(!selectedSet.has(item.el))await onSelect(item.el);onAction(e.key.toLowerCase()==='c'?'copyElement':'pasteElement');}return;}
             if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='d'){e.preventDefault();if(!isBusy){if(!selectedSet.has(item.el))await onSelect(item.el);onAction('duplicateElement');}return;}
@@ -74,7 +86,7 @@
             const index=rows.findIndex(r=>r.button===b);
             if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)) {
               e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?rows.length-1:index+(e.key==='ArrowDown'?1:-1);
-              rows[Math.max(0,Math.min(rows.length-1,next))]?.button.focus();
+              const destination=rows[Math.max(0,Math.min(rows.length-1,next))];if(multiEnabled&&e.shiftKey&&destination)await selectRange(destination.item.el,e.metaKey||e.ctrlKey);destination?.button.focus();
             } else if(e.key==='ArrowRight') {
               e.preventDefault();if(item.children.length){if(!expanded){collapsed.delete(item.el);render();}else rows[index+1]?.button.focus();}
             } else if(e.key==='ArrowLeft') {
@@ -89,17 +101,19 @@
       if(rows.length&&!rows.some(r=>r.button.tabIndex===0))rows[0].button.tabIndex=0;
       empty.textContent=rows.length?'':query?'No matching layers.':'No source-connected layers on this page yet.';
       empty.hidden=!!rows.length;
+      selectAll.disabled=isBusy||!selectionRows().length;
       if(focused)rows.find(r=>r.item.el===focused)?.button.focus();
     }
     search.oninput=render;
     function attach(next) {
       if(d===next)return;
-      observer?.disconnect();clearTimeout(timer);endDrag();d=next;collapsed=new WeakSet();render();
+      observer?.disconnect();clearTimeout(timer);endDrag();rangeAnchor=null;d=next;collapsed=new WeakSet();render();
       if(d?.body){observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(render,100);});observer.observe(d.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['data-rt','data-rt-i','data-rt-name','id','aria-label','alt']});}
     }
     function selection(el,info,busy=false,multiple=[]) {
       const nextSet=new Set(multiple.length?multiple:el?[el]:[]),changed=nextSet.size!==selectedSet.size||[...nextSet].some(item=>!selectedSet.has(item));selectedSet=nextSet;tree.setAttribute('aria-multiselectable',String(!!info?.cssAuthoring));
-      if(isBusy!==busy){isBusy=busy;for(const r of rows){r.button.disabled=busy;r.toggle.disabled=busy||!r.item.children.length;}host.setAttribute('aria-busy',String(busy));}
+      if(!el)rangeAnchor=null;
+      if(isBusy!==busy){isBusy=busy;selectAll.disabled=busy||!selectionRows().length;for(const r of rows){r.button.disabled=busy;r.toggle.disabled=busy||!r.item.children.length;}host.setAttribute('aria-busy',String(busy));}
       if(selected!==el||changed){
         selected=el;
         let reveal=false;
