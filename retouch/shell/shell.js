@@ -787,9 +787,9 @@ function screenScopeSection() {
   const chosen = options.find(o=>o.prefix===styleScope);
   const arbitrary = /^(min|max)-\[([\d.]+(?:px|rem|em))\]:$/.exec(styleScope);
   const condition = chosen?.condition || (arbitrary ? `(${arbitrary[1]}-width: ${arbitrary[2]})` : null);
-  window.dispatchEvent(new CustomEvent('retouch:style-scope',{detail:{prefix:styleScope,label:chosen?.label||styleScope,condition}}));
-  if (condition && !iframe.contentWindow.matchMedia(condition).matches) {
-    RetouchInspector.note(section, 'This breakpoint is outside the current preview size. Resize the screen to see its styles.');
+  window.dispatchEvent(new CustomEvent('retouch:style-scope',{detail:{prefix:styleScope,label:chosen?.label||styleScope,condition,queries:chosen?.queries}}));
+  if (condition && RetouchResponsive.matches({condition,queries:chosen?.queries},iframe.contentWindow)===false) {
+    RetouchInspector.note(section, 'This breakpoint does not match the current preview. Its conditions may include width, height or orientation.');
   }
   if (!sel.info.cssAuthoring && styleScope && RetouchResponsive.project(sel.info.className,styleScope)) {
     section.append(RetouchInspector.button('Reset overrides at this size',()=>setClasses('')));

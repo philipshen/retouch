@@ -30,9 +30,9 @@
       overlay.replaceChildren();
       try{
         const d=frame.contentDocument;if(!d?.body||d.URL==='about:blank')continue;
-        const applies=!scope.prefix||scope.condition&&d.defaultView.matchMedia(scope.condition).matches;
-        scopeMessage.dataset.scopeApplies=scope.prefix&&!scope.condition?'unknown':String(!!applies);
-        scopeMessage.textContent=!scope.prefix?'Base styles apply here; breakpoint overrides may take precedence.':!scope.condition?'Scope coverage is unavailable for this breakpoint.':applies?'Current breakpoint applies here; other overrides may take precedence.':'Current breakpoint does not apply at this size.';
+        const applies=!scope.prefix?true:window.RetouchResponsive.matches(scope,d.defaultView);
+        scopeMessage.dataset.scopeApplies=applies===null?'unknown':String(applies);
+        scopeMessage.textContent=!scope.prefix?'Base styles apply here; breakpoint overrides may take precedence.':applies===null?'Scope coverage is unavailable for this breakpoint.':applies?'Current breakpoint applies here; other overrides may take precedence.':'Current breakpoint does not apply in this preview.';
         const nodes=selected?[...d.querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===selected||el.getAttribute('data-rt-i')===selected):[];
         let visible=0,offscreen=0;
         for(const el of nodes){

@@ -3668,3 +3668,49 @@ The broader requirement inventory remains open: arbitrary-site authoring,
 editable comparison canvases, complete per-property inheritance/provenance,
 Figma Design feature parity and trusted Mac distribution are not established.
 Native app launches stayed paused; this step used browser fixtures only.
+
+
+### 2026-09-09 — Preserve compound media conditions in responsive scopes
+
+Breakpoint discovery now retains enclosing media conditions together and merges
+repeated occurrences as alternatives. Nested conditions are evaluated with AND;
+alternative rule groups use OR; comma-separated queries stay intact for the
+browser's matchMedia evaluation. Empty outer style rules no longer advertise a
+broader breakpoint before their nested declarations are reached. Stylesheet
+media restrictions are retained, and disabled sheets are skipped.
+
+This follows the nested-rule behavior described in
+[CSS Conditional Rules](https://www.w3.org/TR/css-conditional-3/#processing).
+Inspector mismatch notes and comparison coverage use the same structured
+conditions. The readable condition summary is never parsed as an executable
+media query. Choosing a width reuses only a plain, single minimum-width scope;
+range, height-conditioned and alternative scopes cannot silently become a
+width-and-larger edit scope. Custom scopes still preserve discovered unit
+conventions. Anchor inheritance also excludes these compound scopes.
+
+All 362 unit tests pass in `/private/tmp/retouch-media-scope-unit-final.log`.
+The initial `/private/tmp/retouch-media-scope-unit.log` records a syntax error in
+the newly added nested fixture, corrected before the final run. Browser CSS
+agreement passes in `/private/tmp/retouch-media-scope-chromium.log` and
+`/private/tmp/retouch-media-scope-webkit.log`. The new
+`test:e2e:responsive-media` workflow checks nested width/height conditions,
+repeated alternatives, comma query lists, CSS nesting, five viewport shapes,
+initial rem metrics and refusal to reuse conditional breakpoint names.
+
+HTML comparison regression passes in
+`/private/tmp/retouch-media-scope-compare-chromium.log`. The actual React inspector
+and comparison workflow passes in
+`/private/tmp/retouch-media-scope-react-chromium.log` and
+`/private/tmp/retouch-media-scope-react-webkit.log`, with
+`RT_E2E_COMPLEX_SCOPES=1` and temporary CSS defining bounded/either scopes.
+It verifies nested tablet-only coverage, the separate desktop alternative,
+ordinary md reuse, custom rem scopes, source-isolated scope changes, live edits,
+undo, preview navigation/disposal and pin persistence. The temporary source was
+verified restored, the server exited and port64631 had no remaining listener
+before the fixture was removed.
+
+This covers discovered media conditions, not exhaustive CSS provenance.
+Unreadable/imported/adopted stylesheets, container/supports/state conditions,
+per-property cascade provenance and equivalent authoring across arbitrary sites
+still require broader work. Full Figma Design parity and trusted Mac distribution
+remain unproven. Native app launches stayed paused.

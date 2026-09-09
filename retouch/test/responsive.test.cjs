@@ -22,12 +22,12 @@ test('base editing preserves all variants and important declarations remain impo
 });
 test('loaded CSS discovers actual named breakpoint variants without evaluating config',()=>{
  const d={styleSheets:[{cssRules:[{media:{mediaText:'(width >= 48rem)'},cssRules:[{selectorText:'.tablet\\:flex'}, {selectorText:'.hover\\:text-red'}]}]}]};
- assert.deepEqual(R.discover(d),[{prefix:'tablet:',label:'tablet',condition:'(width >= 48rem)'}]);
+ assert.deepEqual(R.discover(d),[{prefix:'tablet:',label:'tablet',queries:[['(width >= 48rem)']],condition:'(width >= 48rem)'}]);
 });
 
 test('nested Tailwind v4 rules retain their outer selector during breakpoint discovery',()=>{
  const d={styleSheets:[{cssRules:[{selectorText:'.md\\:opacity-90',cssRules:[{media:{mediaText:'(width >= 48rem)'},cssRules:[{style:{opacity:'.9'}}]}]}]}]};
- assert.deepEqual(R.discover(d),[{prefix:'md:',label:'md',condition:'(width >= 48rem)'}]);
+ assert.deepEqual(R.discover(d),[{prefix:'md:',label:'md',queries:[['(width >= 48rem)']],condition:'(width >= 48rem)'}]);
 });
 test('new widths reuse named breakpoints and retain the project unit and initial font metrics',()=>{
  const d={createElement:()=>({style:{},remove(){}}),documentElement:{append(){}},defaultView:{getComputedStyle:()=>({fontSize:'20px'})}};
@@ -48,4 +48,19 @@ test('anchor inference resolves inherited auto resets, shorthands and important 
  assert.equal(inspector.inferredAnchor('inset-x-0 w-auto','x'),'stretch');
  assert.equal(inspector.inferredAnchor('w-[100px]','x','left-[5%] w-[20%] right-auto'),'start');
  assert.equal(inspector.inferredAnchor('right-[5%] left-auto w-[20%]','x'),'scale');
+});
+
+
+test('breakpoint discovery retains nested conditions and repeated alternatives without broadening parent rules',()=>{
+ const leaf={selectorText:'.tablet\\:flex'};
+ const nested={selectorText:leaf.selectorText,style:{length:0},cssRules:[{media:{mediaText:'(min-height: 60rem)'},cssRules:[{style:{length:1}}]}]};
+ const d={styleSheets:[{media:{mediaText:'screen'},cssRules:[
+   {media:{mediaText:'(min-width: 48rem)'},cssRules:[nested]},
+   {media:{mediaText:'(min-width: 90rem)'},cssRules:[leaf,leaf]}
+ ]}]};
+ const [choice]=R.discover(d);assert.deepEqual(choice.queries,[['screen','(min-width: 48rem)','(min-height: 60rem)'],['screen','(min-width: 90rem)']]);
+ const window=values=>({matchMedia:q=>({matches:values.includes(q)})});assert.equal(R.matches(choice,window(['screen','(min-width: 48rem)'])),false);assert.equal(R.matches(choice,window(['screen','(min-width: 48rem)','(min-height: 60rem)'])),true);assert.equal(R.matches(choice,window(['screen','(min-width: 90rem)'])),true);assert.equal(R.matches({prefix:'unknown:'},window([])),null);
+ const metrics={createElement:()=>({style:{},remove(){}}),documentElement:{append(){}},defaultView:{getComputedStyle:()=>({fontSize:'16px'})}};
+ assert.equal(R.atWidth(metrics,768,[choice]).prefix,'min-[48rem]:');assert.equal(R.atWidth(metrics,768,[{prefix:'range:',condition:'(min-width: 48rem) and (max-width: 64rem)'}]).prefix,'min-[48rem]:');assert.equal(R.atWidth(metrics,768,[{prefix:'unknown:'}]).prefix,'min-[768px]:');
+ assert.equal(R.inherited('left-0 tablet:left-10','min-[1000px]:',metrics,[choice]),'left-0');
 });

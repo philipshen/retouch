@@ -17,6 +17,10 @@ const file=path.join(root,'app/page.jsx'),original=fs.readFileSync(file,'utf8'),
    assert.deepEqual(await preview(name).locator('body').evaluate(el=>[el.ownerDocument.defaultView.innerWidth,el.ownerDocument.defaultView.innerHeight]),[w,h]);
    await wait(async()=>await page.getByRole('region',{name:name+' comparison',exact:true}).locator('.compare-selection').count()>0,'linked selection '+name);
   }
+  if(process.env.RT_E2E_COMPLEX_SCOPES==='1'){
+   await page.getByLabel('Style screen scope').selectOption('bounded:');await wait(async()=>await page.getByLabel('Phone scope coverage').getAttribute('data-scope-applies')==='false'&&await page.getByLabel('Tablet scope coverage').getAttribute('data-scope-applies')==='true'&&await page.getByLabel('Desktop scope coverage').getAttribute('data-scope-applies')==='false','nested width and height scope');
+   await page.getByLabel('Style screen scope').selectOption('either:');await wait(async()=>await page.getByLabel('Tablet scope coverage').getAttribute('data-scope-applies')==='true'&&await page.getByLabel('Desktop scope coverage').getAttribute('data-scope-applies')==='true','repeated breakpoint alternatives');assert.equal(read(),original);
+  }
   assert.equal(await preview('Phone').locator('#anchor-target').evaluate(el=>getComputedStyle(el).opacity),'1');
   assert.equal(await preview('Tablet').locator('#anchor-target').evaluate(el=>getComputedStyle(el).opacity),'0.9');
   await page.getByRole('button',{name:'Edit tablet size',exact:true}).click();
