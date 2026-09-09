@@ -88,7 +88,19 @@
       let name=size[0],width=size[1],height=size[2];
       const card=document.createElement('section');card.className='compare-card';card.setAttribute('aria-label',name+' comparison');
       const header=document.createElement('div');header.className='compare-header';
-      const label=document.createElement('span');label.textContent=name.startsWith('Custom ')?name:`${name} · ${width} × ${height}`;header.append(label);
+      const label=document.createElement('button');label.type='button';label.className='control-button';label.style.cssText='flex:1;text-align:left;min-width:0;overflow-wrap:anywhere';label.title='Rename this comparison';
+      const nameInput=document.createElement('input');nameInput.type='text';nameInput.maxLength=80;nameInput.hidden=true;nameInput.style.cssText='min-width:0;width:100%;box-sizing:border-box';
+      label.onclick=()=>{nameInput.value=name;nameInput.hidden=false;label.hidden=true;nameInput.focus();nameInput.select();};
+      function finishName(cancel=false){
+        if(nameInput.hidden)return;
+        const next=nameInput.value.trim().replace(/\s+/g,' ');
+        if(!cancel&&(!next||sizes.some(other=>other!==size&&other[0].toLowerCase()===next.toLowerCase()))){dimensionError.textContent=next?'Another comparison already has this name.':'Enter a comparison name.';dimensionError.hidden=false;return;}
+        if(!cancel){name=next;size[0]=name;remember();}
+        dimensionError.hidden=true;nameInput.hidden=true;label.hidden=false;updateLabels();
+      }
+      nameInput.onblur=()=>finishName();
+      nameInput.onkeydown=event=>{if(event.key==='Enter'||event.key==='Escape'){event.preventDefault();event.stopPropagation();finishName(event.key==='Escape');if(nameInput.hidden)label.focus();}};
+      header.append(label,nameInput);
       const edit=document.createElement('button');edit.className='control-button';edit.textContent='Edit';edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');
       edit.onclick=()=>window.RetouchScreens.set({width,height});header.append(edit);
       const remove=document.createElement('button');remove.className='control-button';remove.textContent='×';remove.setAttribute('aria-label','Remove '+name+' comparison');header.append(remove);
@@ -121,15 +133,12 @@
           dimensionError.textContent='This size is already pinned.';dimensionError.hidden=false;inputs.width.value=width;inputs.height.value=height;return;
         }
         dimensionError.hidden=true;dimensionError.textContent='';
+        const automatic=name===`Custom ${width} × ${height}`;
         width=nextWidth;height=nextHeight;size[1]=width;size[2]=height;
-        if(name.startsWith('Custom ')){
-          name=`Custom ${width} × ${height}`;size[0]=name;
-          card.setAttribute('aria-label',name+' comparison');edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');remove.setAttribute('aria-label','Remove '+name+' comparison');viewport.setAttribute('aria-label','Edit from '+name+' comparison');frame.title=name+' comparison preview';scopeMessage.setAttribute('aria-label',name+' scope coverage');
-          for(const axis of ['width','height'])inputs[axis].setAttribute('aria-label',name+' comparison '+axis);rotate.setAttribute('aria-label','Rotate '+name+' comparison');reveal.setAttribute('aria-label','Show selection in '+name+' comparison');
-        }
+        if(automatic){name=`Custom ${width} × ${height}`;size[0]=name;}
+        updateLabels();
         const item=cards.find(c=>c.frame===frame);if(item)Object.assign(item,{width,height});
         frame.style.width=width+'px';frame.style.height=height+'px';
-        label.textContent=name.startsWith('Custom ')?name:`${name} · ${width} × ${height}`;
         inputs.width.value=width;inputs.height.value=height;
         scopeButton.textContent='Edit styles: '+width+' px and larger';scopeButton.setAttribute('aria-label','Edit styles from '+width+' px');
         remember();updateControls();
@@ -142,6 +151,14 @@
         field.append(input);dimensions.append(field);
       }
       const rotate=document.createElement('button');rotate.type='button';rotate.className='control-button';rotate.textContent='Rotate';rotate.setAttribute('aria-label','Rotate '+name+' comparison');rotate.onclick=()=>applyDimensions(height,width);dimensions.append(rotate);
+      function updateLabels(){
+        label.textContent=name===`Custom ${width} × ${height}`?name:`${name} · ${width} × ${height}`;
+        label.setAttribute('aria-label','Rename '+name+' comparison');nameInput.setAttribute('aria-label','Comparison name');
+        card.setAttribute('aria-label',name+' comparison');edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');remove.setAttribute('aria-label','Remove '+name+' comparison');viewport.setAttribute('aria-label','Edit from '+name+' comparison');frame.title=name+' comparison preview';scopeMessage.setAttribute('aria-label',name+' scope coverage');
+        for(const axis of ['width','height'])inputs[axis].setAttribute('aria-label',name+' comparison '+axis);
+        rotate.setAttribute('aria-label','Rotate '+name+' comparison');reveal.setAttribute('aria-label','Show selection in '+name+' comparison');
+      }
+      updateLabels();
       viewport.append(frame,overlay);card.append(header,dimensions,dimensionError,viewport,message,reveal,scopeMessage,scopeButton);rail.append(card);
       function activate(event){
         try{

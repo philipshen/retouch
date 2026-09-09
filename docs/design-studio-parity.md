@@ -4805,3 +4805,26 @@ Batch downloads still depend on browser download permission, and holding four
 encoded outputs increases memory use; large-batch memory pressure and interrupted
 download recovery were not measured. This does not add arbitrary HTML-layer
 export or complete Figma parity. Native app launches remain paused.
+
+### Named comparison views (2026-09-09)
+
+Comparison titles are now buttons that open an inline name field. Enter/blur
+saves, Escape cancels, and whitespace is normalized. Empty and duplicate names
+are rejected with a status message. Names update the preview title and all card
+control labels, persist with pinned dimensions, and survive resizing. Only an
+exact generated Custom WIDTH × HEIGHT name automatically tracks changed sizes;
+other custom names retain their wording. Renaming does not reload the iframe or
+change the main canvas, source styles or history.
+
+Chromium and WebKit passed rename, resize retention, blank/duplicate rejection,
+Escape cancellation, reload persistence, unchanged source/main size, plus the
+existing comparison edit/selection/clip/scope/undo flow. Logs (exit 0):
+`/private/tmp/retouch-compare-rename-chromium.log` and
+`/private/tmp/retouch-compare-rename-webkit.log`. A further Chromium run passed in
+`/private/tmp/retouch-compare-rename-visual.log`; its screenshot
+`/private/tmp/retouch-compare-name.png` was inspected and showed readable title
+buttons beside Edit/remove controls within the narrow comparison rail.
+git diff --check passed. No unit suite rerun for this browser-only control change.
+
+Names remain local browser preferences; cross-device/team sharing is unfinished.
+Full Figma parity remains incomplete, and native launches remain paused.
