@@ -61,7 +61,7 @@ function busyPanel(start) {
 }
 let lastAppPath = null;
 let styleScope = '';
-let svgExportScale=1,svgEmbedImages=true;
+let svgExportScale=1,svgEmbedImages=true,svgExportFormat='svg';
 function scopedInfo(info) { return {...info,styleScope,anchorInheritedClasses:RetouchResponsive.inherited(info.className,styleScope,doc()),className:RetouchResponsive.project(info.className,styleScope)}; }
 
 let lockStorage;try{lockStorage=sessionStorage;}catch{}
@@ -928,12 +928,21 @@ function renderPanelContents() {
 
   const target = (editing?.el.ownerDocument === doc() ? editing.el : null) || matchingEls(activeId()).find(el => inTextScope(el, info));
   if(target?.namespaceURI==='http://www.w3.org/2000/svg'){
-    const exports=RetouchInspector.section('Export');
-    if(target.closest('svg')?.querySelector('image')){const embed=document.createElement('input');embed.type='checkbox';embed.checked=svgEmbedImages;embed.onchange=()=>{svgEmbedImages=embed.checked;};RetouchInspector.field(exports,'Embed images in SVG',embed);}
-    const svgDownload=RetouchInspector.button('Export SVG canvas',async()=>{svgDownload.disabled=true;try{await RetouchSVGExport.download(target,svgEmbedImages);toast('SVG exported','ok');}catch(error){toast(error.message,'err');}finally{svgDownload.disabled=false;}});exports.append(svgDownload);
-    RetouchInspector.select(exports,'PNG scale',[1,2,3,4].map(value=>[String(value),value+'×']),String(svgExportScale),value=>{svgExportScale=Number(value);});
-    const png=RetouchInspector.button('Export PNG',async()=>{png.disabled=true;try{await RetouchSVGExport.downloadPNG(target,svgExportScale);toast('PNG exported','ok');}catch(error){toast(error.message,'err');}finally{png.disabled=false;}});exports.append(png);
-    RetouchInspector.note(exports,'Exports the containing SVG canvas at this screen size. PNG embeds bitmap images. SVG can embed them or retain links. Fonts must be available where you open the SVG file.');panelBody.append(exports);
+    const exports=RetouchInspector.section('Export'),options=document.createElement('div');
+    const format=RetouchInspector.select(exports,'Export format',[['svg','SVG · vector'],['png','PNG · transparent'],['jpeg','JPEG · opaque']],svgExportFormat,value=>{svgExportFormat=value;refreshOptions();});
+    const download=RetouchInspector.button('',async()=>{const selected=svgExportFormat;download.disabled=true;format.disabled=true;try{if(selected==='svg')await RetouchSVGExport.download(target,svgEmbedImages);else if(selected==='png')await RetouchSVGExport.downloadPNG(target,svgExportScale);else await RetouchSVGExport.downloadJPEG(target,svgExportScale);toast(selected.toUpperCase()+' exported','ok');}catch(error){toast(error.message,'err');}finally{download.disabled=false;format.disabled=false;}});
+    function refreshOptions(){
+      options.replaceChildren();
+      if(svgExportFormat==='svg'){
+        if(target.closest('svg')?.querySelector('image')){const embed=document.createElement('input');embed.type='checkbox';embed.checked=svgEmbedImages;embed.onchange=()=>{svgEmbedImages=embed.checked;};RetouchInspector.field(options,'Embed images in SVG',embed);}
+        RetouchInspector.note(options,'Fonts must be available where you open the SVG file.');
+      }else{
+        RetouchInspector.select(options,'Export scale',[1,2,3,4].map(value=>[String(value),value+'×']),String(svgExportScale),value=>{svgExportScale=Number(value);});
+        RetouchInspector.note(options,svgExportFormat==='jpeg'?'JPEG uses a white background. Bitmap images are embedded.':'PNG preserves transparency. Bitmap images are embedded.');
+      }
+      download.textContent=svgExportFormat==='svg'?'Export SVG canvas':'Export '+svgExportFormat.toUpperCase();
+    }
+    exports.append(options,download);refreshOptions();RetouchInspector.note(exports,'Exports the containing SVG canvas at this screen size.');panelBody.append(exports);
   }
   if(info.svgGeometry){
     const geometry=RetouchInspector.section('SVG geometry');

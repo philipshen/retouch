@@ -22,7 +22,7 @@ changing those files. The original checkout may continue to evolve independently
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | Existing React and Liquid component inspection/detach; full creation/variants/library workflows remain. Live Shopify proof is incomplete. |
 | Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Not implemented or verified. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
-| Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload and SVG-canvas SVG/PNG downloads exist, including shared local definitions and bitmap embedding. Arbitrary-layer export, fonts, symbols and the full export/import pipeline remain. |
+| Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload and SVG-canvas SVG/PNG/JPEG downloads exist, including shared local definitions and bitmap embedding. Arbitrary-layer export, fonts, symbols and the full export/import pipeline remain. |
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. HTML has responsive CSS, structural edits and batch selection operations. Arbitrary remote-site capture/authoring, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Corner resizing also supports Shift-locked proportions. Comparison cards now show current scope coverage and offer an explicit width-and-larger style-scope action. Fully editable comparison canvases and cross-framework parity remain. |
@@ -4547,3 +4547,25 @@ Use RT_E2E_IMAGE=1 with the SVG export harness to enable bitmap coverage.
 Linked SVG-as-image recursion, font embedding/outlines, symbol expansion, animated
 frame fidelity and arbitrary HTML-layer export remain unfinished. Native app
 launches remain paused.
+
+### Export format picker and JPEG (2026-09-09)
+
+Consolidated SVG/PNG/JPEG into one format picker and download action. SVG shows its
+image-embedding option; raster formats show a shared 1×–4× scale picker. Format,
+scale and embedding choices survive inspector rebuilds in the current session.
+JPEG uses the same captured styles, shared definitions and embedded bitmap assets
+as PNG, composites transparency onto white, and encodes at quality 0.92. UI text
+explains the opaque background. Format switching is disabled during a download.
+
+Chromium and WebKit downloaded actual JPEG files, checked JPEG signatures and
+400×200 dimensions for 2× export, decoded white transparent-region pixels and
+artwork color within JPEG tolerance. Switching formats preserves scale; previous
+SVG embedding and PNG scale/alpha/edge tests also passed. Logs:
+`/private/tmp/retouch-export-jpeg-chromium.log` and
+`/private/tmp/retouch-export-jpeg-webkit.log`. All 375 unit tests passed in
+`/private/tmp/retouch-export-jpeg-unit.log`. Inspected the compact export panel in
+`/private/tmp/retouch-export-picker.png`; shortened the JPEG option label afterward
+to avoid truncation while retaining the white-background explanation below.
+
+Configurable JPEG quality/background, text/font export, symbols, arbitrary HTML
+layer export and full asset parity remain unfinished. Native launches remain paused.
