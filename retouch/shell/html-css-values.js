@@ -1,5 +1,7 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchHTMLCSSValues=api;})(typeof window==='object'?window:globalThis,function(){
  const options={visibility:['visible','hidden'],overflow:['visible','hidden','clip','auto','scroll'],'overflow-x':['visible','hidden','clip','auto','scroll'],'overflow-y':['visible','hidden','clip','auto','scroll'],'mix-blend-mode':['normal','multiply','screen','overlay','darken','lighten','color-dodge','color-burn','hard-light','soft-light','difference','exclusion','hue','saturation','color','luminosity','plus-lighter'],isolation:['auto','isolate'],'font-style':['normal','italic','oblique'],'text-decoration-line':['none','underline','line-through','overline','underline line-through'],'text-transform':['none','uppercase','lowercase','capitalize'],'object-fit':['cover','contain','fill','none','scale-down'],display:['block','inline-block','flex','inline-flex','grid','inline-grid','none'],'flex-direction':['row','column','row-reverse','column-reverse'],'flex-wrap':['nowrap','wrap','wrap-reverse'],'align-content':['flex-start','flex-end','center','stretch','space-between','space-around','space-evenly'],'align-items':['flex-start','flex-end','start','center','end','stretch','baseline'],'justify-content':['flex-start','flex-end','start','center','end','space-between','space-around','space-evenly'],'text-align':['start','left','center','right','justify'],'border-style':['none','solid','dashed','dotted','double']};
+ const svgFields=[['fill','SVG fill'],['stroke','SVG stroke'],['stroke-width','SVG stroke width'],['stroke-linecap','SVG line ends'],['stroke-linejoin','SVG line joins'],['stroke-dasharray','SVG dash pattern']];
+ Object.assign(options,{'stroke-linecap':['butt','round','square'],'stroke-linejoin':['miter','round','bevel']});
  const sides=['top','right','bottom','left'];
  const corners=['top-left','top-right','bottom-right','bottom-left'];
  const families={'border-radius':corners.map(c=>'border-'+c+'-radius'),overflow:['overflow-x','overflow-y'],'grid-column':['grid-column-start','grid-column-end'],'grid-row':['grid-row-start','grid-row-end'],padding:sides.map(s=>'padding-'+s),margin:sides.map(s=>'margin-'+s),gap:['row-gap','column-gap'],'border-width':sides.map(s=>'border-'+s+'-width')};
@@ -22,6 +24,14 @@
   return changes;
  }
  function valid(property,value){
+  if(['fill','stroke'].includes(property))return value===null||value==='none'||valid('color',value);
+  if(['stroke-width','stroke-dasharray'].includes(property)){
+   if(value===null||property==='stroke-dasharray'&&value==='none')return true;
+   if(typeof value!=='string'||value.length>150)return false;
+   if(/(?:^\s*,|,\s*,|,\s*$)/.test(value))return false;
+   const parts=value.trim().split(/[\s,]+/);
+   return parts.length>=1&&parts.length<=(property==='stroke-width'?1:16)&&parts.every(n=>/^(?:\d+\.?\d*|\.\d+)(?:px|%)?$/.test(n)&&parseFloat(n)<=100000);
+  }
   if(property==='aspect-ratio'){if(value===null||value==='auto')return true;if(typeof value!=='string'||value.length>60||! /^(?:auto )?(?:\d*\.)?\d+(?: *\/ *(?:\d*\.)?\d+)?$/.test(value))return false;return value.replace(/^auto /,'').split(/ *\/ */).every(n=>Number(n)>0&&Number(n)<=10000);}
   if(property==='background-image')return value===null||parseGradients(value)!==null;
   if(['filter','backdrop-filter'].includes(property))return value===null||parseFilters(value)!==null;
@@ -149,5 +159,5 @@
   return families[property]||[property];
  }
  function overlaps(a,b){if(a==='-webkit-backdrop-filter')a='backdrop-filter';if(b==='-webkit-backdrop-filter')b='backdrop-filter';return a==='all'||b==='all'||a==='background'&&b.startsWith('background-')||b==='background'&&a.startsWith('background-')||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')&&!b.endsWith('radius')||b==='border'&&a.startsWith('border-')&&!a.endsWith('radius')||a==='font'&&['font-family','font-weight','font-style','font-size','line-height'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
- return {options,fields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients};
+ return {options,fields,svgFields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients};
 });

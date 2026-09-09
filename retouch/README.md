@@ -299,3 +299,8 @@ and source-preserving undo. Attributes use SVG coordinates, px or percentages an
 are shared across screen sizes; the viewport and authored CSS can affect rendering.
 Definitions, SVG text and foreign content are not indexed yet. Shape creation,
 path/pen editing and SVG structural drag/drop remain unfinished.
+
+**SVG paint** edits fill, stroke, stroke width, line ends, line joins and dash
+patterns at the selected screen scope. Use `none` for no fill or stroke. Reset
+removes that scope's override; undo restores exact source. Solid CSS colors and
+`currentColor` are supported; SVG gradient/pattern references are not editable yet.

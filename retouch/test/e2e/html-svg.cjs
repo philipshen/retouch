@@ -26,7 +26,23 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
    await page.getByRole('treeitem',{name:tag,exact:true}).click();await settled();await fill(label,value);await wait(async()=>await app.locator(tag).getAttribute(attribute)===value);
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);
   }
+  await page.getByRole('treeitem',{name:'rect · Box',exact:true}).click();await settled();
+  const paint=async(label,value)=>{const field=page.getByLabel('SVG '+label,{exact:true});if(await field.evaluate(el=>el.tagName)==='SELECT')await field.selectOption(value);else{await field.fill(value);await field.press('Tab');}await settled();};
+  const computed=p=>app.locator('rect').evaluate((el,p)=>getComputedStyle(el).getPropertyValue(p),p);
+  const snapshots=[original];
+  for(const [label,value,property,expected]of [['fill','#00ff00','fill','rgb(0, 255, 0)'],['stroke','#0000ff','stroke','rgb(0, 0, 255)'],['stroke width','4','stroke-width','4px'],['line ends','round','stroke-linecap','round'],['line joins','bevel','stroke-linejoin','bevel'],['dash pattern','4 2','stroke-dasharray','4px, 2px']]){
+   await paint(label,value);await wait(async()=>await computed(property)===expected);snapshots.push(read());
+  }
+  assert.equal(await app.locator('rect').getAttribute('fill'),'red','original attribute is retained');
+  const size=async value=>{await page.getByLabel('Screen size',{exact:true}).selectOption(value);await wait(async()=>await app.locator('body').evaluate(()=>innerWidth)===Number(value.split('x')[0]));};
+  await size('768x1024');await page.getByLabel('Style screen scope').selectOption('min-[768px]:');await paint('fill','none');snapshots.push(read());await wait(async()=>await computed('fill')==='none');
+  if(process.env.RT_E2E_SVG_PAINT_SCREENSHOT){await page.getByLabel('SVG fill',{exact:true}).evaluate(el=>el.scrollIntoView({block:'start'}));await page.screenshot({path:process.env.RT_E2E_SVG_PAINT_SCREENSHOT});}
+  await size('390x844');await wait(async()=>await computed('fill')==='rgb(0, 255, 0)');await size('768x1024');await wait(async()=>await computed('fill')==='none');
+  await page.getByRole('button',{name:'Reset svg fill',exact:true}).click();await settled();await wait(async()=>await computed('fill')==='rgb(0, 255, 0)');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===snapshots.at(-1));
+  for(let i=snapshots.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===snapshots[i]);}
+  await wait(async()=>await computed('fill')==='rgb(255, 0, 0)');
   assert.equal(await app.locator('p').textContent(),'Unchanged');
-  assert.deepEqual(errors,[]);console.log(engine+': PASS inline SVG canvas/tree selection, primitive geometry, viewBox scaling and exact source undo/redo');
+  assert.deepEqual(errors,[]);console.log(engine+': PASS inline SVG canvas/tree selection, primitive geometry, viewBox scaling, responsive paint, stroke styles and exact source undo/redo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

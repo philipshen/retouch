@@ -1,6 +1,6 @@
 (function(){
  const I=RetouchInspector;
- const {options,fields,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients}=RetouchHTMLCSSValues;
+ const {options,fields,svgFields,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients}=RetouchHTMLCSSValues;
  function stopRail({gradient,index,info,el,preview,gradients,update}){
   const rail=document.createElement('div');rail.className='gradient-stop-rail';rail.dataset.gradientSource=info.id;rail.dataset.gradientIndex=index;
   rail.setAttribute('role','group');rail.setAttribute('aria-label','Fill '+(index+1)+' stop positions');
@@ -47,6 +47,20 @@
   const sec=I.section('CSS properties');
   if(info.cssReason||!el||!Number.isInteger(width)){I.note(sec,info.cssReason||'Choose a pixel screen scope.','refused');return sec;}
   const css=el.ownerDocument.defaultView.getComputedStyle(el),own=info.cssRules?.[width]||{};
+  let paint=null;
+  if(el.namespaceURI==='http://www.w3.org/2000/svg'){
+   paint=I.section('SVG paint');
+   for(const [property,label]of svgFields){
+    const input=document.createElement(options[property]?'select':'input');
+    if(options[property])for(const value of new Set([own[property]??css.getPropertyValue(property),...options[property]])){const option=document.createElement('option');option.value=value;option.textContent=value;input.append(option);}else input.type='text';
+    input.value=own[property]??css.getPropertyValue(property);
+    input.oninput=()=>input.setCustomValidity('');
+    input.onchange=()=>{const value=input.value.trim();if(!valid(property,value)||!CSS.supports(property,value)){input.setCustomValidity('Use a supported SVG paint value.');input.reportValidity();return;}save(property,value,width);};
+    I.field(paint,label,input);
+    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);paint.append(reset);
+   }
+   I.note(paint,'Paint follows the selected screen scope. Use none for no fill or stroke. Stroke width and dashes accept SVG units, px or %. Reset reveals the inherited CSS or original attribute.');
+  }
   const layout=I.section('Layout');
   if(info.structure?.canInsert){
    const stacks=document.createElement('div');stacks.className='stack-presets';
@@ -187,7 +201,7 @@
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);target.append(reset);
   }
   I.note(sec,'Values use CSS units. Reset removes this size’s override and restores the page’s styling.');
-  const container=document.createElement('div');if(info.structure?.canInsert)container.append(layout);container.append(appearance,corners,fills,blur,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);container.append(typography,sec);return container;
+  const container=document.createElement('div');if(paint)container.append(paint);if(info.structure?.canInsert)container.append(layout);container.append(appearance,corners,fills,blur,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);container.append(typography,sec);return container;
  }
  function mountSelection(infos,elements,width,save){
   const section=I.section('Shared styles');

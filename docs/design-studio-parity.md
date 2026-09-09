@@ -15,7 +15,7 @@ changing those files. The original checkout may continue to evolve independently
 | --- | --- | --- |
 | Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Bounded canvas zoom/scrolling and linked screen comparisons exist. HTML supports multi-selection, range selection, gray/page marquee gestures and framing a consecutive sibling selection. Full document/pages/sections, guides, snapping, pixel-preserving groups, locking/hiding and cross-renderer equivalence remain. |
 | Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. HTML multi-selection, shared CSS and group duplicate/delete/reparenting exist; cross-context clipboard and broader source structures remain. |
-| Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios and content clipping are verified. Full vector authoring, boolean operations, arbitrary masks and a shared geometry model remain. |
+| Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive geometry and responsive solid fill/stroke controls are verified. Full vector authoring, boolean operations, arbitrary masks and a shared geometry model remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. Full constraints, absolute-child authoring, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML supports linear/radial gradient stacks with draggable stops, shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. Font browsing, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 256 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 258 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1133,3 +1133,19 @@ HTML and exact source undo/redo. The SVG fixture joins test:e2e:html; its screen
 was inspected. Geometry remains shared across sizes and CSS can override geometry
 attributes. Shape creation, vector paint/path/pen tools, SVG structure and full
 Figma/native parity remain unfinished.
+
+
+### Responsive inline SVG paint
+
+SVG paint now exposes fill, stroke, width, line ends, line joins and dash patterns
+directly below geometry. These controls use the existing breakpoint CSS writer,
+retain original presentation attributes and support reset and exact source undo.
+Stroke lengths are bounded, line styles use an explicit vocabulary, and URL paint
+references and declaration injection are refused. Important inline conflicts are
+refused by the existing writer. Original attributes and inherited CSS return when
+the corresponding managed override is removed.
+
+All 258 unit tests pass. Chromium and WebKit verify computed fill/stroke styles,
+phone/tablet inheritance, reset and exact undo alongside SVG geometry checks.
+The paint screenshot was inspected. This covers solid paint and simple strokes;
+gradient/pattern references, vector creation and full parity remain unfinished.
