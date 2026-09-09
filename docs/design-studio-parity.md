@@ -4138,3 +4138,45 @@ This improves line-height authoring, not complete text layout parity. Rich-text
 runs, paragraph spacing, lists, variable axes and broader Figma/any-site/native
 distribution requirements still need work. Native launches remain paused and
 none were attempted during this work.
+
+
+### 2026-09-09 — Text-first HTML inspector and canvas-tool focus
+
+HTML text layers now place typography before positioning, layout and appearance
+controls. Other layer types retain position first. React and HTML share the
+existing text-layer classification, avoiding different ordering rules for the
+same tag. The HTML positioning section is passed into the CSS inspector's
+ordered container so it can follow typography without losing its controls.
+Screenshot `/private/tmp/retouch-text-inspector-priority.png` was inspected:
+the font controls appear near the top below layer naming and screen scope,
+instead of below the long appearance/effects sections.
+
+The positioning regression exposed an existing WebKit focus loss after a
+keyboard canvas move. It also failed on an archived, unchanged 3e2a0bb baseline
+at the same focus-restoration assertion. Inspector rebuilds now preserve focus
+on an existing canvas-tool button when the selected layer key is unchanged.
+The replacement button receives focus without scrolling; selection changes do
+not inherit that focus.
+
+All 374 existing unit tests pass in
+`/private/tmp/retouch-text-inspector-unit-final.log`. Existing browser workflows
+pass for typography/line-height/source undo in
+`/private/tmp/retouch-text-inspector-fonts.log`, HTML positioning in Chromium at
+`/private/tmp/retouch-text-inspector-position-chromium.log`, HTML positioning and
+focus in WebKit at `/private/tmp/retouch-text-inspector-focus-fixed.log`, and
+React positioning/focus at `/private/tmp/retouch-text-inspector-react-focus.log`.
+The positioning checks cover pointer and keyboard moves/resizes, scopes,
+constraints, cancellation/refusal and exact undo/redo. Every run exited and
+cleaned its fixture; the temporary baseline checkout was also removed.
+
+Failed diagnostic logs remain at
+`/private/tmp/retouch-text-inspector-position.log` and
+`/private/tmp/retouch-text-inspector-position-baseline-fixed.log`. The first
+baseline attempt lacked parse5 because it linked the fixture dependencies;
+`/private/tmp/retouch-text-inspector-position-baseline.log` retains that setup
+failure. The valid baseline run used the same Retouch dependencies as the worktree.
+
+This improves inspector discoverability and keyboard continuity, not the full
+usability or parity requirement. Many design features, arbitrary-site source
+coverage and trusted Mac distribution remain unfinished. No native app launch
+was attempted; the launch pause remains active.

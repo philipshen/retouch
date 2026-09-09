@@ -43,7 +43,7 @@
   });
   return rail;
  }
- function mount(info,el,width,save){
+ function mount(info,el,width,save,position=null){
   const sec=I.section('CSS properties');
   if(info.cssReason||!el||!Number.isInteger(width)){I.note(sec,info.cssReason||'Choose a pixel screen scope.','refused');return sec;}
   const css=el.ownerDocument.defaultView.getComputedStyle(el),own=info.cssRules?.[width]||{};
@@ -203,7 +203,12 @@
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);target.append(reset);
   }
   I.note(sec,'Values use CSS units. Reset removes this size’s override and restores the page’s styling.');
-  const container=document.createElement('div');if(paint)container.append(paint);if(info.structure?.canInsert)container.append(layout);container.append(appearance,corners,fills,blur,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);container.append(typography,sec);return container;
+  const container=document.createElement('div'),textLayer=I.isTextLayer(info.tag);
+  if(textLayer)container.append(typography);
+  if(position)container.append(position);
+  if(paint)container.append(paint);if(info.structure?.canInsert)container.append(layout);
+  container.append(appearance,corners,fills,blur,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);
+  if(!textLayer)container.append(typography);container.append(sec);return container;
  }
  function mountSelection(infos,elements,width,save){
   const section=I.section('Shared styles');

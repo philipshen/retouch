@@ -835,10 +835,11 @@ function renderPanel() {
   if(panelPointer&&key===renderedPanelSelection){panelRenderDeferred=true;return;}
   panelRenderDeferred=false;
   const top=key===renderedPanelSelection?panel.scrollTop:0;
+  const focusedTool=key===renderedPanelSelection&&panelBody.contains(document.activeElement)?document.activeElement.dataset.canvasTool:null;
   renderedPanelSelection=key;
   // Rebuilding an empty fieldset can clamp its scroll container to zero.
   // Restore synchronously after all sections (including early returns) exist.
-  try { renderPanelContents(); } finally { panel.scrollTop=top; }
+  try { renderPanelContents(); } finally { panel.scrollTop=top;if(focusedTool)[...panelBody.querySelectorAll('[data-canvas-tool]')].find(el=>el.dataset.canvasTool===focusedTool)?.focus({preventScroll:true}); }
 }
 function renderPanelContents() {
   window.dispatchEvent(new CustomEvent('retouch:selection',{detail:activeId()}));
@@ -921,14 +922,14 @@ function renderPanelContents() {
     RetouchInspector.field(naming,'Layer name',input);input.onchange=()=>renameLayer(input.value);
     RetouchInspector.note(naming,'Names appear in the editor without changing page text or accessibility labels. Clear to use the original label.');panelBody.append(naming);
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
-    if(target?.namespaceURI!=='http://www.w3.org/2000/svg')panelBody.appendChild(RetouchHTMLPosition.mount(info,target,width,setHTMLCSS,(g,action,opener)=>moveHTMLLayer(info,target,width,g,action,opener)));
-    panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS));
+    const position=target?.namespaceURI!=='http://www.w3.org/2000/svg'?RetouchHTMLPosition.mount(info,target,width,setHTMLCSS,(g,action,opener)=>moveHTMLLayer(info,target,width,g,action,opener)):null;
+    panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS,position));
     if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{}));
     if(info.canSetTag){const section=RetouchInspector.section('Element');RetouchInspector.select(section,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','li'].map(tag=>[tag,tag]),info.tag,setTag);panelBody.appendChild(section);}
     if(info.src!==null)panelBody.appendChild(imageSection(info));
   }else{
   if(target?.namespaceURI==='http://www.w3.org/2000/svg')panelBody.appendChild(RetouchSVGPaint.mount(style,target,setClasses));
-  const textLayer=/^(h[1-6]|p|span|a|label|blockquote|li|button)$/.test(info.tag);
+  const textLayer=RetouchInspector.isTextLayer(info.tag);
   if(textLayer) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag));
   panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err'),info.renderRevisionAttribute&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(action,opener)=>transformReactLayer(info,target,action,opener):null,info.renderRevisionAttribute&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(classes,g)=>writeReactBounds(info,classes,g):null));
   panelBody.appendChild(RetouchLayout.mount(style, target, setClasses));
