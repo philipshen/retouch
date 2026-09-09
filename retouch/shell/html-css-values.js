@@ -6,6 +6,7 @@
  const lengths=new Set([...fields.map(([p])=>p).filter(p=>!options[p]&&!p.endsWith('color')),'flex-basis','row-gap','column-gap',...families['border-width']]);
  const colors=new Set(['color','background-color','border-color']);
  function valid(property,value){
+  if(property==='box-shadow')return value===null||parseShadows(value)!==null;
   if(value===null)return ['flex-grow','flex-shrink','grid-template-columns','grid-template-rows','grid-column','grid-row','opacity','rotate','object-position'].includes(property)||lengths.has(property)||colors.has(property)||Object.hasOwn(options,property);
   if(typeof value!=='string'||!value||value.length>150)return false;
   if(['flex-grow','flex-shrink'].includes(property))return /^(?:\d*\.)?\d+$/.test(value)&&Number(value)>=0&&Number(value)<=1000;
@@ -38,6 +39,27 @@
    return false;
   });
  }
+ function parseShadows(value){
+  if(typeof value!=='string'||!value.trim()||value.length>4096)return null;
+  if(value.trim()==='none')return [];
+  const parts=value.split(/,(?![^()]*\))/);if(parts.length>16)return null;
+  const result=[];
+  for(const part of parts){
+   const tokens=part.trim().match(/(?:rgba?|hsla?)\([^()]*\)|[^\s]+/g)||[];
+   let color=null,inset=false;const lengths=[];
+   for(const token of tokens){
+    if(token==='inset'&&!inset){inset=true;continue;}
+    if(/^-?(?:\d*\.)?\d+(?:px)?$/.test(token)&&(token.endsWith('px')||Number(token)===0)){
+     const number=parseFloat(token);if(!Number.isFinite(number)||Math.abs(number)>10000)return null;lengths.push(number);
+    }else if(color===null&&token!=='inset'&&valid('color',token))color=token;
+    else return null;
+   }
+   if(lengths.length<2||lengths.length>4||(lengths[2]??0)<0)return null;
+   result.push({x:lengths[0],y:lengths[1],blur:lengths[2]??0,spread:lengths[3]??0,color:color??'currentColor',inset});
+  }
+  return result;
+ }
+ function serializeShadows(shadows){return shadows.length?shadows.map(s=>`${s.inset?'inset ':''}${s.x}px ${s.y}px ${s.blur}px ${s.spread}px ${s.color}`).join(', '):'none';}
  function affected(property){
   if(property==='border')return sides.flatMap(side=>['width','style','color'].map(part=>'border-'+side+'-'+part));
   if(/^border-(top|right|bottom|left)$/.test(property))return ['width','style','color'].map(part=>property+'-'+part);
@@ -45,5 +67,5 @@
   return families[property]||[property];
  }
  function overlaps(a,b){return a==='all'||b==='all'||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')||b==='border'&&a.startsWith('border-')||a==='font'&&['font-family','font-weight','font-style','font-size','line-height'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
- return {options,fields,families,valid,overlaps};
+ return {options,fields,families,valid,overlaps,parseShadows,serializeShadows};
 });

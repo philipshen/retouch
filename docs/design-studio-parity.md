@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 227 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 228 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -685,3 +685,21 @@ directions, moves between parents, list siblings and invalid placements. Chromiu
 and WebKit browser checks drag a heading after and then before a paragraph, undo
 both operations, and verify the original source bytes. Cross-document placement,
 multi-layer dragging and dynamic-template structural editing remain open.
+
+
+### Responsive HTML shadow stacks
+
+The HTML inspector now edits stacked box shadows: drop/inner type, X/Y offset,
+blur, spread, color, front-to-back ordering and removal. Add creates a subtle
+drop shadow. Clear writes `none` at the current scope, while Reset removes the
+local override. Each operation uses the existing CSS source transaction and
+undo history. Shared parsing handles computed color-first serialization and
+validates up to 16 shadows with pixel lengths. Unsupported authored expressions
+are identified instead of silently converted.
+
+All 228 unit tests pass. Writer checks cover stacked serialization, invalid blur,
+injection, responsive persistence/reset and inline-important conflicts. Chromium
+and WebKit verify adding and editing shadows, a separate tablet stack, inner
+shadows, reordering, inherited reset, clearing, and exact undo of all seven
+operations. Other effects such as filters, background blur, gradients and blend
+modes remain incomplete. This is not a native package verification.

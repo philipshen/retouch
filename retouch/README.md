@@ -141,6 +141,12 @@ The **Appearance** section sets opacity in percent and rotation in degrees.
 Both follow the selected screen scope and support reset. Rotation combines with
 existing transform rules rather than replacing them.
 
+The **Shadows** section edits up to 16 stacked drop or inner shadows, with X/Y
+offset, blur, spread and CSS color controls. Move a shadow up to bring it forward.
+Clear hides shadows at the selected screen scope; Reset removes that override
+and restores inherited styling. Controls author pixel lengths and preserve
+separate overrides at larger screen sizes.
+
 The **Typography** section supports font stacks, numeric weights, italic, text
 decoration and case, plus size, line height and letter spacing. Font families
 must be loaded by the page or available on the computer; entering a name does

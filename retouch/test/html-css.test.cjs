@@ -139,3 +139,18 @@ test('HTML compound flex sizing validates every change before producing one sour
  assert.equal(css.plan(resolve(original.replace('class="title"','style="flex:0 1 auto !important"')),{width:0,changes}).refused,true);
  for(const changes of [[],null,{},'bad'])assert.equal(css.plan(resolve(original),{width:0,changes}).refused,true);
 });
+
+test('HTML shadows parse computed color-first values and persist independent responsive stacks',()=>{
+ const {parseShadows,serializeShadows}=require('../shell/html-css-values.js');
+ const value='rgba(0, 0, 0, 0.25) 0px 4px 8px 0px, inset -2px 0px 3px -1px #1234';
+ const shadows=parseShadows(value);assert.equal(shadows.length,2);assert.equal(shadows[1].inset,true);assert.equal(shadows[1].spread,-1);
+ assert.deepEqual(parseShadows(serializeShadows(shadows)),shadows);
+ assert.deepEqual(parseShadows('none'),[]);assert.equal(parseShadows('0 0')[0].color,'currentColor');
+ for(const invalid of ['0px 0px -1px red','0 0;display:none','url(x) 0 0','1px','0px 1px 2px 3px 4px','inset inset 0 0 red','0px 10001px red','0 0 red,','var(--shadow)','0 0 red</style>',Array(17).fill('0 0 red').join(',')])assert.equal(css.valid('box-shadow',invalid),false,invalid);
+ let source=edit(original,0,value,'box-shadow').edits[0].after;
+ source=edit(source,768,'none','box-shadow').edits[0].after;
+ assert.deepEqual(css.describe(resolve(source)).cssRules,{0:{'box-shadow':value},768:{'box-shadow':'none'}});
+ source=edit(source,768,null,'box-shadow').edits[0].after;
+ assert.deepEqual(css.describe(resolve(source)).cssRules,{0:{'box-shadow':value}});
+ assert.equal(edit(original.replace('class="title"','style="box-shadow:0 0 red !important"'),0,value,'box-shadow').refused,true);
+});

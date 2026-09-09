@@ -1,6 +1,6 @@
 (function(){
  const I=RetouchInspector;
- const {options,fields,valid}=RetouchHTMLCSSValues;
+ const {options,fields,valid,parseShadows,serializeShadows}=RetouchHTMLCSSValues;
  function mount(info,el,width,save){
   const sec=I.section('CSS properties');
   if(info.cssReason||!el||!Number.isInteger(width)){I.note(sec,info.cssReason||'Choose a pixel screen scope.','refused');return sec;}
@@ -15,6 +15,27 @@
    const reset=I.button('Reset '+property,()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);appearance.append(reset);
   }
   if(css.transform!=='none')I.note(appearance,'Rotation combines with the page’s existing transform.');
+  const effects=I.section('Shadows'),shadows=parseShadows(own['box-shadow']??css.boxShadow);
+  const writeShadows=next=>{const value=serializeShadows(next);if(valid('box-shadow',value)&&CSS.supports('box-shadow',value))save('box-shadow',value,width);};
+  if(shadows===null)I.note(effects,'This shadow uses values these controls cannot represent. Clear it to create a new shadow, or Reset to restore the page’s styling.');
+  else {
+   shadows.forEach((shadow,index)=>{
+    const group=document.createElement('fieldset'),legend=document.createElement('legend');group.className='shadow-controls';legend.textContent='Shadow '+(index+1);group.append(legend);
+    const update=(key,value)=>writeShadows(shadows.map((item,i)=>i===index?{...item,[key]:value}:item));
+    const type=document.createElement('select');for(const [value,label]of [['drop','Drop shadow'],['inner','Inner shadow']]){const option=document.createElement('option');option.value=value;option.textContent=label;type.append(option);}type.value=shadow.inset?'inner':'drop';type.onchange=()=>update('inset',type.value==='inner');I.field(group,'Type',type).setAttribute('aria-label','Shadow '+(index+1)+' type');
+    for(const [key,label]of [['x','X'],['y','Y'],['blur','Blur'],['spread','Spread']]){
+     const input=document.createElement('input');input.type='number';input.step='any';input.min=key==='blur'?0:-10000;input.max=10000;input.value=shadow[key];
+     input.onchange=()=>{if(input.value!==''&&input.checkValidity())update(key,Number(input.value));};I.field(group,label+' (px)',input).setAttribute('aria-label','Shadow '+(index+1)+' '+label+' (px)');
+    }
+    const color=document.createElement('input');color.value=shadow.color;color.oninput=()=>color.setCustomValidity('');color.onchange=()=>{const value=color.value.trim();if(!valid('color',value)||!CSS.supports('color',value)){color.setCustomValidity('Use a CSS color, such as #00000040 or rgba(0, 0, 0, 0.25).');color.reportValidity();return;}update('color',value);};I.field(group,'Color',color).setAttribute('aria-label','Shadow '+(index+1)+' color');
+    group.append(I.button('Remove shadow '+(index+1),()=>writeShadows(shadows.filter((_,i)=>i!==index))));
+    if(index>0)group.append(I.button('Move shadow '+(index+1)+' up',()=>{const next=[...shadows];[next[index-1],next[index]]=[next[index],next[index-1]];writeShadows(next);}));effects.append(group);
+   });
+   const add=I.button('Add shadow',()=>writeShadows([...shadows,{x:0,y:4,blur:8,spread:0,color:'rgba(0, 0, 0, 0.25)',inset:false}]));add.disabled=shadows.length>=16;effects.append(add);
+  }
+  const clear=I.button('Clear shadows',()=>save('box-shadow','none',width));clear.disabled=shadows?.length===0;effects.append(clear);
+  const resetShadows=I.button('Reset shadows',()=>save('box-shadow',null,width));resetShadows.disabled=!Object.hasOwn(own,'box-shadow');effects.append(resetShadows);
+  I.note(effects,'Shadows are stacked from front to back. Reset restores this screen size’s inherited styling.');
   const parentCSS=el.parentElement&&el.ownerDocument.defaultView.getComputedStyle(el.parentElement),isFlexItem=parentCSS&&['flex','inline-flex'].includes(parentCSS.display);
   const flex=I.section('Flex sizing');
   if(isFlexItem){
@@ -53,7 +74,7 @@
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);target.append(reset);
   }
   I.note(sec,'Values use CSS units. Reset removes this size’s override and restores the page’s styling.');
-  const container=document.createElement('div');container.append(appearance);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);container.append(typography,sec);return container;
+  const container=document.createElement('div');container.append(appearance,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);container.append(typography,sec);return container;
  }
  window.RetouchHTMLCSS={mount};
 })();

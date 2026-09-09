@@ -221,6 +221,24 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   }
   for(let i=0;i<2;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'sibling drag exact undo');
+  await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await settled();
+  await size('390x844');await page.getByLabel('Style screen scope').selectOption('');
+  const shadowValue=()=>app.locator('h1').evaluate(el=>getComputedStyle(el).boxShadow);
+  await page.getByRole('button',{name:'Add shadow',exact:true}).click();await wait(async()=>(await shadowValue()).includes('4px 8px'),'base shadow');await settled();
+  await page.getByLabel('Shadow 1 Blur (px)',{exact:true}).fill('12');await page.getByLabel('Shadow 1 Blur (px)',{exact:true}).press('Tab');await wait(async()=>(await shadowValue()).includes('4px 12px'),'shadow blur');await settled();
+  const baseShadow=await shadowValue();
+  const shadowGroup=page.locator('.shadow-controls').first();await shadowGroup.scrollIntoViewIfNeeded();assert.equal(await shadowGroup.evaluate(el=>el.scrollWidth<=el.clientWidth+1),true,'shadow controls fit panel');
+  if(process.env.RT_E2E_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_SCREENSHOT});
+  await size('768x1024');await page.getByLabel('Style screen scope').selectOption('min-[768px]:');
+  await page.getByRole('button',{name:'Add shadow',exact:true}).click();await wait(async()=>await page.getByLabel('Shadow 2 type',{exact:true}).count()===1,'second shadow');await settled();
+  await page.getByLabel('Shadow 2 type',{exact:true}).selectOption('inner');await wait(async()=>(await shadowValue()).includes('inset'),'inner shadow');await settled();
+  await page.getByRole('button',{name:'Move shadow 2 up',exact:true}).click();await wait(async()=>await page.getByLabel('Shadow 1 type',{exact:true}).inputValue()==='inner','shadow reorder');await settled();
+  await size('390x844');await wait(async()=>await shadowValue()===baseShadow,'base shadow unchanged');
+  await size('768x1024');await wait(async()=>(await shadowValue()).includes('inset'),'tablet shadow retained');
+  await page.getByRole('button',{name:'Reset shadows',exact:true}).click();await wait(async()=>await shadowValue()===baseShadow,'shadow reset inheritance');await settled();
+  await size('390x844');await page.getByLabel('Style screen scope').selectOption('');await page.getByRole('button',{name:'Clear shadows',exact:true}).click();await wait(async()=>await shadowValue()==='none','clear shadows');await settled();
+  for(let i=0;i<7;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
+  await wait(()=>read()===original,'shadows exact undo');
   assert.deepEqual(errors,[]);console.log(engine+': PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
