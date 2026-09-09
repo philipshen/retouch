@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 250 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 251 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1036,3 +1036,19 @@ This is integration evidence for the tested static HTML fixtures. It does not
 establish arbitrary-site behavior, complete Figma parity, native WKWebView
 interaction or public distribution. The requirement matrix above was refreshed
 to distinguish the implemented HTML capabilities from those remaining gaps.
+
+
+### Screen-scoped visibility without losing layout
+
+HTML Appearance now exposes Visible layer and Reset visibility; multi-selection
+adds Shared Visibility with atomic batch writes. These use CSS visibility, keeping
+layout space and authored display settings intact. Hidden layers remain in the
+layer tree for selection and restoration. Display:none remains a separate CSS
+control for removing layout space; this is not full Figma hide/lock behavior.
+CSS visibility inheritance also permits descendants to explicitly become visible.
+
+All 251 unit tests pass. Chromium and WebKit verify single hide/show, selecting a
+hidden layer through Layers, unchanged sibling geometry, atomic multi-hide,
+independent tablet visibility, preserved flex display, reset and exact source
+undo. The fixture is part of test:e2e:html and its screenshot was inspected.
+Layer-tree eye shortcuts, locking, other renderers and full parity remain open.

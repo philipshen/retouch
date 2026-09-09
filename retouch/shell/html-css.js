@@ -71,6 +71,9 @@
    I.note(layout,'Arrange children at this screen size. Alignment uses the available space inside the container. Each action is one undo step.');
   }
   const appearance=I.section('Appearance'),typography=I.section('Typography');
+  const visible=document.createElement('input');visible.type='checkbox';visible.checked=(own.visibility??css.visibility)==='visible';visible.onchange=()=>save('visibility',visible.checked?'visible':'hidden',width);I.field(appearance,'Visible layer',visible);
+  const resetVisibility=I.button('Reset visibility',()=>save('visibility',null,width));resetVisibility.disabled=!Object.hasOwn(own,'visibility');appearance.append(resetVisibility);I.note(appearance,'Hidden layers keep their layout space. Select them in Layers to show them again.');
+
   for(const [property,label,min,max,unit]of [['opacity','Opacity (%)',0,100,''],['rotate','Rotation (°)',-360,360,'deg']]){
    const raw=own[property]??css.getPropertyValue(property),input=document.createElement('input');input.type='number';input.min=min;input.max=max;input.step='any';
    const value=property==='opacity'?Number(raw)*100:raw==='none'?0:/^-?[\d.]+deg$/.test(raw)?parseFloat(raw):NaN;
@@ -191,7 +194,7 @@
   if(!Number.isInteger(width)||elements.some(el=>!el)||infos.some(info=>info.cssReason)){I.note(section,'Re-select the layers and choose a pixel screen scope.','refused');return section;}
   I.note(section,'Shift-click a range in Layers; Cmd/Ctrl-click toggles layers. On the canvas, Shift-click toggles. Mixed values stay unchanged until edited. Each shared edit is one undo step.');
   const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el));
-  const sharedFields=[['opacity','Opacity (%)'],['rotate','Rotation (°)'],['mix-blend-mode','Blend mode'],['isolation','Blend group'],...fields];
+  const sharedFields=[['visibility','Visibility'],['opacity','Opacity (%)'],['rotate','Rotation (°)'],['mix-blend-mode','Blend mode'],['isolation','Blend group'],...fields];
   for(const [property,label]of sharedFields){
    const values=infos.map((info,i)=>info.cssRules?.[width]?.[property]??computed[i].getPropertyValue(property)),mixed=values.some(value=>value!==values[0]),numeric=['opacity','rotate'].includes(property);
    const input=document.createElement(options[property]?'select':'input');

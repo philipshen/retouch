@@ -43,3 +43,12 @@ test('Frame aspect ratios reject zero and injection; clipping conflicts include 
  for(const axis of ['overflow-x','overflow-y']){assert.equal(overlaps('overflow',axis),true);assert.equal(overlaps(axis,'overflow'),true);}
  assert.equal(overlaps('overflow-x','overflow-y'),false);
 });
+
+test('Visibility writes preserve authored display and can override or reset at another screen',()=>{
+ const source='<html><head></head><body><main style="display:flex"><p>Text</p></main></body></html>';
+ const resolve=text=>{const elements=html.collect(text,'index.html').elements;return {source:text,elements,element:elements.find(e=>e.tag==='main'),hash:html.contentHash(text),file:'/tmp/index.html',relPath:'index.html'};};
+ let r=resolve(source);const hidden=css.plan(r,{property:'visibility',value:'hidden',width:0});assert.equal(hidden.ok,true);r=resolve(hidden.edits[0].after);assert.ok(r.source.includes('style="display:flex"'));
+ const shown=css.plan(r,{property:'visibility',value:'visible',width:768});assert.equal(shown.ok,true);r=resolve(shown.edits[0].after);assert.deepEqual(css.describe(r).cssRules,{0:{visibility:'hidden'},768:{visibility:'visible'}});
+ const reset=css.plan(r,{property:'visibility',value:null,width:768});assert.equal(reset.ok,true);assert.deepEqual(css.describe(resolve(reset.edits[0].after)).cssRules,{0:{visibility:'hidden'}});
+ assert.equal(valid('visibility','hidden;display:none'),false);
+});

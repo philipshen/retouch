@@ -179,6 +179,9 @@ can also vary by screen scope; authored child dimensions and spans still apply.
 automatic in the same undo step. Content and minimum sizes can still increase
 height. **Clip content** contains overflow at the frame boundary; its reset
 restores inherited clipping. Both controls follow the selected screen scope.
+**Visible layer** and **Shared Visibility** hide/show HTML layers while preserving
+their layout space and display mode. Hidden layers remain selectable in Layers;
+reset removes the chosen scope’s visibility override.
 A frame changes the document hierarchy, so parent selectors and flex/grid layout
 can change; this is not a guarantee of identical appearance. **Duplicate layers** and **Delete layers** apply to the
 selection in one undo step. Selecting a parent and its child handles the subtree
