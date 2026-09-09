@@ -166,7 +166,10 @@ thumbnail previews, or **Choose image…** to upload into `rt-assets`. Undo rest
 the image reference; uploaded files remain in the folder for reuse. Hidden files,
 dependency directories and symlinks are excluded from the image list.
 
-The Layers panel can duplicate, move and delete complete literal HTML siblings.
+The Layers panel can copy, paste, duplicate, move and delete complete literal HTML
+siblings. Copy/Paste uses an editor-local clipboard; Ctrl/Cmd+C and Ctrl/Cmd+V
+work when a layer row is focused. Paste inserts after the selected sibling and
+requires the copied source to remain unchanged in the same parent.
 Mixed text/comment boundaries and implicitly closed parents are refused. Styled layers and their nested styled children copy their responsive rules to
 independent identities. Layers with authored IDs, keys or refs cannot yet be
 duplicated. Undo restores exact source snapshots.

@@ -16,14 +16,14 @@
     }
     return roots;
   }
-  function mount({host,onSelect,onAction}) {
+  function mount({host,onSelect,onAction,getClipboard=()=>null}) {
     const header=document.createElement('h2');header.textContent='Layers';
     const search=document.createElement('input');search.type='search';search.placeholder='Find a layer…';search.setAttribute('aria-label','Find a layer');
     const tree=document.createElement('div');tree.className='layer-tree';tree.setAttribute('role','tree');tree.setAttribute('aria-label','Site layers');
     const empty=document.createElement('p');empty.className='layer-empty';
     const actions=document.createElement('div');actions.className='layer-actions';
     const actionButtons={};
-    for(const [action,name] of [['duplicateElement','Duplicate layer'],['before','Move layer up'],['after','Move layer down'],['deleteElement','Delete layer']]) {
+    for(const [action,name] of [['copyElement','Copy layer'],['pasteElement','Paste layer'],['duplicateElement','Duplicate layer'],['before','Move layer up'],['after','Move layer down'],['deleteElement','Delete layer']]) {
       const b=document.createElement('button');b.textContent=name;b.disabled=true;b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
     }
     const reason=document.createElement('p');reason.className='layer-reason';
@@ -50,6 +50,7 @@
           if(item.children.length)b.setAttribute('aria-expanded',String(expanded));
           b.onclick=()=>onSelect(item.el);
           b.onkeydown=async e=>{
+            if((e.metaKey||e.ctrlKey)&&['c','v'].includes(e.key.toLowerCase())){e.preventDefault();if(!isBusy){if(selected!==item.el)await onSelect(item.el);onAction(e.key.toLowerCase()==='c'?'copyElement':'pasteElement');}return;}
             if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='d'){e.preventDefault();if(!isBusy){if(selected!==item.el)await onSelect(item.el);onAction('duplicateElement');}return;}
             if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();if(!isBusy){if(selected!==item.el)await onSelect(item.el);onAction('deleteElement');}return;}
             const index=rows.findIndex(r=>r.button===b);
@@ -90,9 +91,14 @@
         rows.find(r=>r.item.el===el)?.button.scrollIntoView({block:'nearest'});
       }
       const s=info?.structure;
-      const capabilities=JSON.stringify([!!info,s,busy]);
+      const copied=getClipboard();
+      const compatible=!!copied&&copied.file===info?.file&&copied.parentId===s?.parentId&&copied.hash===(info?.fileHash||info?.hash);
+      const capabilities=JSON.stringify([!!info,s,busy,copied,compatible]);
       if(capabilities===lastCapabilities)return;
       lastCapabilities=capabilities;
+      actionButtons.copyElement.disabled=busy||!s?.canDuplicate;
+      actionButtons.pasteElement.disabled=busy||!s?.canPaste||!compatible;
+      actionButtons.pasteElement.title=!copied?'Copy a layer first.':!compatible?'Paste requires an unchanged copied sibling in this source parent.':'Paste after the selected layer.';
       actionButtons.duplicateElement.disabled=busy||!s?.canDuplicate;
       actionButtons.deleteElement.disabled=busy||!s?.canDelete;
       actionButtons.before.disabled=busy||!s?.canMoveBefore;

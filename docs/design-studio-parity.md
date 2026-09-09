@@ -529,3 +529,18 @@ independent edits. Browser checks verify two styled layers, matching tablet
 widths, distinct persistent selectors, independent phone widths and exact undo.
 This removes the previous linked-style cloning restriction. Authored-ID remapping,
 general reparenting, grouping and dynamic-template structure remain open.
+
+
+### Layer copy/paste controls
+
+The shared Layers panel now exposes Copy and Paste plus Ctrl/Cmd+C and Ctrl/Cmd+V
+on focused layer rows. The editor-local clipboard records source identity, hash
+and parent; Paste inserts after the selected sibling through the existing source
+planner and history. Availability updates with the selection and copied source.
+Stale or different-parent targets are disabled and described in the button help.
+
+All 218 tests pass. The HTML browser test verifies both button and keyboard
+copy/paste, insertion position and exact undo. Keyboard tests wait for asynchronous
+layer selection before issuing shortcuts. This is a local source clipboard;
+system-clipboard interchange, cross-parent paste and durable copied fragments
+remain open.

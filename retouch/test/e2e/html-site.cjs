@@ -9,7 +9,7 @@ const {chromium}=require(path.join(fixture,'node_modules/playwright'));
  for(const [name,color]of [['first','red'],['second','blue'],['Écran #1','green']])fs.writeFileSync(path.join(root,name+'.svg'),'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="'+color+'"/></svg>');
  const server=require('../../src/html-site.cjs').start({root,port:0,quiet:true});await once(server,'listening');
  const browser=await chromium.launch(),page=await browser.newPage({viewport:{width:1500,height:1100}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
- const wait=async(fn,label)=>{for(let i=0;i<100;i++){try{if(await fn())return;}catch(error){if(!/Execution context was destroyed/.test(error.message))throw error;}await page.waitForTimeout(100);}throw Error('Timed out: '+label);};
+ const wait=async(fn,label)=>{for(let i=0;i<100;i++){try{if(await fn())return;}catch(error){if(!/Execution context was destroyed/.test(error.message))throw error;}await page.waitForTimeout(100);}throw Error('Timed out: '+label+'; '+await page.locator('#toasts').textContent());};
  const app=page.frameLocator('#app');
  try{
   await page.goto('http://localhost:'+server.address().port+'/rt');await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();
@@ -137,6 +137,16 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   assert.equal(await app.locator('h1').first().evaluate(el=>getComputedStyle(el).width),'240px');
   for(let i=0;i<4;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'styled clone exact undo');
+
+  await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await page.getByRole('button',{name:'Copy layer',exact:true}).click();
+  await page.getByRole('treeitem',{name:'p · Unedited sibling',exact:true}).click();await page.getByRole('button',{name:'Paste layer',exact:true}).click();
+  await wait(async()=>await app.locator('main > :nth-child(3)').evaluate(el=>el.tagName)==='H1','paste after selected sibling');await settled();
+  assert.equal(await app.locator('h1').count(),2);
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'paste exact undo');
+  const copiedRow=page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true});await copiedRow.click();await wait(async()=>await page.getByRole('button',{name:'Copy layer',exact:true}).isEnabled(),'copy ready');await wait(async()=>await copiedRow.getAttribute('aria-selected')==='true'&&await page.locator('#layersPanel').getAttribute('aria-busy')!=='true','copy selection settled');await copiedRow.press('Control+c');
+  const targetRow=page.getByRole('treeitem',{name:'p · Unedited sibling',exact:true});await targetRow.click();await wait(async()=>await page.getByRole('button',{name:'Paste layer',exact:true}).isEnabled(),'paste ready');await wait(async()=>await targetRow.getAttribute('aria-selected')==='true'&&await page.locator('#layersPanel').getAttribute('aria-busy')!=='true','paste selection settled');await targetRow.press('Control+v');
+  await wait(async()=>await app.locator('h1').count()===2,'keyboard layer paste');await settled();
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'keyboard paste undo');
   assert.deepEqual(errors,[]);console.log('PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1514,7 +1514,9 @@ RetouchMaxWidth.mount({
 });
 
 
+let layerClipboard=null;
 const layers = RetouchLayers.mount({
+  getClipboard:()=>layerClipboard,
   host:document.getElementById('layersPanel'),
   onSelect:async el=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await select(el);el.scrollIntoView({block:'nearest',inline:'nearest'});},
   onAction:action=>structureAction(action),
@@ -1528,7 +1530,14 @@ async function structureAction(action) {
   const siblings=[...target.parentElement.children];
   const signature=el=>el.tagName+'|'+el.textContent.trim();
   const expected=siblings.map(signature),at=siblings.indexOf(target);
-  if(action==='duplicateElement')expected.splice(at+1,0,expected[at]);
+  if(action==='copyElement'){
+    if(!info.structure?.canDuplicate)return toast('This layer cannot be copied safely.','err');
+    layerClipboard={id:info.id,hash:info.fileHash||info.hash,file:info.file,parentId:info.structure.parentId,signature:signature(target)};toast('Layer copied','ok');return;
+  }
+  if(action==='pasteElement'){
+    if(!layerClipboard||layerClipboard.file!==info.file||layerClipboard.parentId!==info.structure?.parentId||layerClipboard.hash!==(info.fileHash||info.hash))return toast('Copy an unchanged sibling in this source parent before pasting.','err');
+    expected.splice(at+1,0,layerClipboard.signature);
+  }else if(action==='duplicateElement')expected.splice(at+1,0,expected[at]);
   else if(action==='deleteElement')expected.splice(at,1);
   else if(action==='before'||action==='after') {
     const to=at+(action==='before'?-1:1);
@@ -1537,7 +1546,7 @@ async function structureAction(action) {
   } else return;
   busyPanel(true);
   try {
-    const result=await api('POST','/rt/__api/op',{type:action==='before'||action==='after'?'moveElement':action,direction:action,id:info.id,fileHash:info.fileHash||info.hash,context:info.context});
+    const result=await api('POST','/rt/__api/op',{type:action==='before'||action==='after'?'moveElement':action,direction:action,id:info.id,fileHash:info.fileHash||info.hash,context:info.context,...(action==='pasteElement'?{copiedId:layerClipboard.id,copiedHash:layerClipboard.hash}:{})});
     if(!result?.ok){toast(result?.reason||result?.error||'Could not change this layer','err');return;}
     const parentId=result.parentId||info.structure?.parentId;
     editorHistory.record({type:'structure',id:parentId||info.id,undoId:result.undoId,context:info.context});
