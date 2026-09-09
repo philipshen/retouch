@@ -2124,3 +2124,40 @@ Group rotation, scaling typography/effects, flow rearrangement, React/Liquid
 multi-selection geometry, vector group transforms and on-canvas spacing handles
 remain unfinished. The current Mac artifact predates these selection tools;
 trusted native distribution and full Figma parity remain open.
+
+
+### Direct canvas spacing handles
+
+Supported absolute HTML selections now have horizontal and vertical gap tools.
+Purple measurement lines and draggable numeric labels show the actual gaps;
+moving a label sets equal spacing across the selection with individual layer
+previews. Initial mixed gaps stay visible until adjustment. Clicking, moving only
+on the other axis, reversing a keyboard step or cancelling leaves mixed spacing
+and source unchanged. Arrow keys adjust by one CSS pixel, or ten with Shift.
+
+The first spatial layer stays fixed by default. A chosen reference layer remains
+unchanged, while a containing-frame target places the first layer at that frame's
+inner origin. Layers can belong to different containing frames. Negative gaps
+allow overlap and clamp before reversing spatial order. Layer dimensions and
+content-box decorations stay intact. A gesture writes one atomic source edit in
+the active responsive scope; undo/redo restores exact source and selection.
+Changing the alignment target, selection, scope or observed geometry cancels the
+preview. Protected members refuse the whole edit.
+
+Validation: all 316 unit tests pass. Chromium and WebKit exercise horizontal and
+vertical dragging, 50/100/200% zoom, mixed gaps, measurement lines/member previews,
+either gap as the drag origin, two-layer/different-container spacing, reference
+and frame anchors, negative/clamped gaps, keyboard steps and focus, no-op and
+cancellation paths, padded content-box sizes, responsive independence, protected
+members and atomic undo/redo. Chromium group movement, group resizing and
+single-layer snapping and equal-spacing guide regressions pass; WebKit
+alignment/numeric spacing passes.
+The HTML suite now includes this workflow (19 total). Logs:
+`/private/tmp/retouch-selection-spacing-{unit,chromium,webkit,move-regression,resize-regression,snap-regression,equal-regression,layout-regression}.log`.
+Screenshot `/private/tmp/retouch-selection-spacing.png` was visually inspected.
+
+These controls currently set a common gap across supported absolute HTML layers.
+Independent per-gap edits, flow-layout rearrangement, React/Liquid/vector selection
+geometry, and full cross-renderer equivalence remain. The verified Mac package
+predates these selection tools; trusted distribution and full Figma parity remain
+unfinished.
