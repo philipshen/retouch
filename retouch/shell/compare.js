@@ -30,7 +30,7 @@
       const style=w.getComputedStyle(node);
       if(node!==el){
         // Out-of-flow descendants can escape an intermediate overflow container.
-        const escapes=positioned.some(item=>item.fixed||!item.parent||!node.contains(item.parent));
+        const escapes=positioned.some(item=>!item.parent||!node.contains(item.parent));
         if(!escapes){
           const clipX=/hidden|clip|auto|scroll/.test(style.overflowX),clipY=/hidden|clip|auto|scroll/.test(style.overflowY);
           if(clipX||clipY){
@@ -41,7 +41,7 @@
           }
         }
       }
-      if(style.position==='absolute'||style.position==='fixed')positioned.push({parent:node.offsetParent,fixed:style.position==='fixed'});
+      if(style.position==='absolute'||style.position==='fixed')positioned.push({parent:node.offsetParent});
     }
     return right>left&&bottom>top?{left,top,width:right-left,height:bottom-top}:null;
   }

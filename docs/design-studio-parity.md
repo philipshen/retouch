@@ -4419,3 +4419,25 @@ verified absolute positioning escaping an intermediate overflow ancestor:
 Bounds remain rectangular. Rotated/nonrectangular clipping, masks, rounded clip
 edges, transformed containing blocks for fixed positioning and full shadow-tree
 clipping are not verified or complete. Native launches remain paused.
+
+### Fixed descendants of transformed containers (2026-09-09)
+
+Comparison clipping now uses the browser-reported offset parent for both absolute
+and fixed descendants. A viewport-fixed element has no such parent and escapes
+intermediate clips; a fixed element inside a transformed containing block is
+clipped by that block. This replaces the previous blanket exemption for all
+fixed positioning. [CSS Transforms rendering model](https://www.w3.org/TR/css-transforms-1/#transform-rendering)
+provides the relevant containing-block behavior. Direct Chromium and WebKit probes
+confirmed that these engines expose the transformed ancestor as offsetParent.
+
+Chromium and WebKit full comparison flows passed fixed-layer full clipping and
+partial clipping under scale(2): a 200px by 20px container-visible region produces
+a 400px by 40px rectangle before comparison scaling. Earlier viewport-fixed and
+absolute escape checks still pass, as do selection/reveal/scoped edits/undo. Logs:
+`/private/tmp/retouch-compare-fixed-chromium.log` and
+`/private/tmp/retouch-compare-fixed-webkit.log`. All 375 unit tests passed in
+`/private/tmp/retouch-compare-fixed-unit.log`.
+
+This verifies translation/positive axis scaling, not arbitrary rotations,
+nonrectangular clips or every browser's containing-block representation. Full
+Figma parity remains unfinished. Native launches remain paused.

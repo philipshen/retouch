@@ -39,6 +39,13 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   await preview('Desktop').locator('#reveal-scroll-fixture article').evaluate(el=>{el.parentElement.style.position='static';el.style.position='absolute';el.style.top=(el.ownerDocument.defaultView.scrollY+250)+'px';});
   await wait(async()=>await card('Desktop').locator('.compare-selection').count()===2); // Absolute positioning uses a containing block outside the overflow ancestor.
 
+  await preview('Desktop').locator('#reveal-scroll-fixture').evaluate(el=>{
+   el.style.position='fixed';el.style.transform='translateZ(0)';el.scrollTop=0;el.scrollLeft=0;
+   el.firstElementChild.style.cssText='position:fixed;top:250px;left:0;margin:0;width:300px;height:100px;box-sizing:border-box';
+  });
+  await wait(async()=>await card('Desktop').locator('.compare-selection').count()===1); // Transformed containers clip their fixed descendants.
+  await preview('Desktop').locator('#reveal-scroll-fixture').evaluate(el=>{el.style.transform='scale(2)';el.style.transformOrigin='0 0';el.firstElementChild.style.top='160px';el.scrollTop=0;});
+  await wait(async()=>{const box=await card('Desktop').locator('.compare-selection').last().boundingBox();return await card('Desktop').locator('.compare-selection').count()===2&&box&&Math.abs(box.height-40*desktopScale)<1&&Math.abs(box.width-400*desktopScale)<1;});
   await preview('Desktop').locator('body').evaluate(()=>scrollTo(0,0));await showDesktop.click();await wait(()=>preview('Desktop').locator('body').evaluate(()=>scrollY>0));
   await preview('Desktop').locator('#reveal-scroll-fixture').evaluate(el=>el.remove());assert.deepEqual(await app.locator('body').evaluate(()=>[scrollX,scrollY]),mainScrollBefore);assert.equal(fs.readFileSync(file,'utf8'),original);
   await wait(async()=>await card('Phone').locator('[data-scope-applies]').getAttribute('data-scope-applies')==='false'&&await card('Tablet').locator('[data-scope-applies]').getAttribute('data-scope-applies')==='false'&&await card('Desktop').locator('[data-scope-applies]').getAttribute('data-scope-applies')==='true');
@@ -69,6 +76,6 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   assert.equal(await page.getByRole('button',{name:'Edit styles from 810 px',exact:true}).count(),1);assert.equal(fs.readFileSync(file,'utf8'),original);
   await wait(async()=>await page.getByLabel('Custom 810 × 500 scope coverage').getAttribute('data-scope-applies')==='true');
   if(process.env.RT_E2E_COMPARE_EDIT_SCREENSHOT){await card('Custom 810 × 500').scrollIntoViewIfNeeded();await page.screenshot({path:process.env.RT_E2E_COMPARE_EDIT_SCREENSHOT});}
-  await page.getByRole('button',{name:'Compare screens',exact:true}).click();await wait(async()=>await page.locator('#screenComparisons iframe').count()===0);assert.deepEqual(errors,[]);console.log(engine+': PASS comparison selection reveal and instance cycling through nested scrollers, layer picking, hidden/offscreen and partially clipped outlines, out-of-flow escape, responsive visibility, edit-mode entry, link interception, explicit scoped edits, live previews, keyboard, editable comparison dimensions, rotation, validation, reload persistence and undo');
+  await page.getByRole('button',{name:'Compare screens',exact:true}).click();await wait(async()=>await page.locator('#screenComparisons iframe').count()===0);assert.deepEqual(errors,[]);console.log(engine+': PASS comparison selection reveal and instance cycling through nested scrollers, layer picking, hidden/offscreen and partially clipped outlines, out-of-flow escape, transformed fixed clipping, responsive visibility, edit-mode entry, link interception, explicit scoped edits, live previews, keyboard, editable comparison dimensions, rotation, validation, reload persistence and undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
