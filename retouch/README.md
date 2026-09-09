@@ -141,6 +141,14 @@ The **Appearance** section sets opacity in percent and rotation in degrees.
 Both follow the selected screen scope and support reset. Rotation combines with
 existing transform rules rather than replacing them.
 
+**Appearance** also offers blend modes and a blend-group isolation control.
+The **Blur** section adjusts layer and background blur in pixels. Layer blur
+affects the selected element and its children; background blur is visible through
+transparent areas. Supported existing color filters and drop shadows stay in
+order. Reset removes the selected screen's override; Clear removes that filter
+stack at the selected scope. Multiple authored blur functions or unsupported
+filter expressions require clearing the stack before using the blur control.
+
 The **Shadows** section edits up to 16 stacked drop or inner shadows, with X/Y
 offset, blur, spread and CSS color controls. Move a shadow up to bring it forward.
 Clear hides shadows at the selected screen scope; Reset removes that override

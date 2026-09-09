@@ -1,6 +1,6 @@
 (function(){
  const I=RetouchInspector;
- const {options,fields,valid,parseShadows,serializeShadows}=RetouchHTMLCSSValues;
+ const {options,fields,valid,parseShadows,serializeShadows,parseFilters,withBlur}=RetouchHTMLCSSValues;
  function mount(info,el,width,save){
   const sec=I.section('CSS properties');
   if(info.cssReason||!el||!Number.isInteger(width)){I.note(sec,info.cssReason||'Choose a pixel screen scope.','refused');return sec;}
@@ -15,6 +15,24 @@
    const reset=I.button('Reset '+property,()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);appearance.append(reset);
   }
   if(css.transform!=='none')I.note(appearance,'Rotation combines with the page’s existing transform.');
+  for(const [property,label]of [['mix-blend-mode','Blend mode'],['isolation','Blend group']]){
+   const current=own[property]??css.getPropertyValue(property),input=document.createElement('select');
+   for(const value of new Set([current,...options[property]])){if(!CSS.supports(property,value))continue;const option=document.createElement('option');option.value=value;option.textContent=property==='isolation'?(value==='isolate'?'Isolate children':'Blend with surroundings'):value;input.append(option);}
+   input.value=current;input.onchange=()=>save(property,input.value,width);I.field(appearance,label,input);
+   const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);appearance.append(reset);
+  }
+  const blur=I.section('Blur');
+  for(const [property,label]of [['filter','Layer blur'],['backdrop-filter','Background blur']]){
+   const raw=own[property]??(css.getPropertyValue(property)||'none'),filters=parseFilters(raw),blurFilters=filters?.filter(f=>f.name==='blur');
+   const input=document.createElement('input');input.type='number';input.min=0;input.max=1000;input.step='any';
+   input.disabled=!CSS.supports(property,'blur(1px)')||!filters||blurFilters.length>1;input.value=input.disabled?'':blurFilters.length?parseFloat(blurFilters[0].arg):0;
+   input.onchange=()=>{if(input.value!==''&&input.checkValidity()){const value=withBlur(raw,Number(input.value));if(value!==null&&CSS.supports(property,value))save(property,value,width);}};
+   I.field(blur,label+' (px)',input);
+   if(input.disabled)I.note(blur,label+' cannot be adjusted with this browser or filter stack.');
+   const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);blur.append(reset);
+   const clear=I.button('Clear '+(property==='filter'?'layer':'background')+' filters',()=>save(property,'none',width));clear.disabled=raw==='none';blur.append(clear);
+  }
+  I.note(blur,'Layer blur affects the layer and its children. Background blur affects content behind transparent areas. Existing color filters stay in order.');
   const effects=I.section('Shadows'),shadows=parseShadows(own['box-shadow']??css.boxShadow);
   const writeShadows=next=>{const value=serializeShadows(next);if(valid('box-shadow',value)&&CSS.supports('box-shadow',value))save('box-shadow',value,width);};
   if(shadows===null)I.note(effects,'This shadow uses values these controls cannot represent. Clear it to create a new shadow, or Reset to restore the page’s styling.');
@@ -74,7 +92,7 @@
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);target.append(reset);
   }
   I.note(sec,'Values use CSS units. Reset removes this size’s override and restores the page’s styling.');
-  const container=document.createElement('div');container.append(appearance,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);container.append(typography,sec);return container;
+  const container=document.createElement('div');container.append(appearance,blur,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);container.append(typography,sec);return container;
  }
  window.RetouchHTMLCSS={mount};
 })();

@@ -7,7 +7,7 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
 (async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-html-browser-')),file=path.join(root,'index.html');
  const original='<!doctype html><html><head><link rel="stylesheet" href="site.css"></head><body><main><h1 class="title">Hello HTML</h1><p class="title">Unedited sibling</p><img src="first.svg" alt="Study"></main></body></html>';
- fs.writeFileSync(file,original);fs.writeFileSync(path.join(root,'site.css'),'.title{color:rgb(120,30,60);font-size:36px}body{padding:32px}img{width:100px;height:100px}');
+ fs.writeFileSync(file,original);fs.writeFileSync(path.join(root,'site.css'),'.title{color:rgb(120,30,60);font-size:36px}h1{filter:contrast(0.8)}body{padding:32px}img{width:100px;height:100px}');
  for(const [name,color]of [['first','red'],['second','blue'],['Écran #1','green']])fs.writeFileSync(path.join(root,name+'.svg'),'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="'+color+'"/></svg>');
  const server=require('../../src/html-site.cjs').start({root,port:0,quiet:true});await once(server,'listening');
  const browser=await browserType.launch(),page=await browser.newPage({viewport:{width:1500,height:1100}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -239,6 +239,24 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await size('390x844');await page.getByLabel('Style screen scope').selectOption('');await page.getByRole('button',{name:'Clear shadows',exact:true}).click();await wait(async()=>await shadowValue()==='none','clear shadows');await settled();
   for(let i=0;i<7;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'shadows exact undo');
+  await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await settled();
+  await size('390x844');await page.getByLabel('Style screen scope').selectOption('');
+  const effect=property=>app.locator('h1').evaluate((el,p)=>getComputedStyle(el).getPropertyValue(p),property);
+  assert.equal(await effect('filter'),'contrast(0.8)');
+  for(const [label,value,property,expected]of [['Layer blur (px)','2','filter','contrast(0.8) blur(2px)'],['Background blur (px)','3','backdrop-filter','blur(3px)']]){
+   await page.getByLabel(label,{exact:true}).fill(value);await page.getByLabel(label,{exact:true}).press('Tab');await wait(async()=>await effect(property)===expected,label);await settled();
+  }
+  await page.getByLabel('Blend mode',{exact:true}).selectOption('multiply');await wait(async()=>await effect('mix-blend-mode')==='multiply','blend mode');await settled();
+  await page.getByLabel('Blend group',{exact:true}).selectOption('isolate');await wait(async()=>await effect('isolation')==='isolate','blend isolation');await settled();
+  await size('768x1024');await page.getByLabel('Style screen scope').selectOption('min-[768px]:');
+  await page.getByLabel('Layer blur (px)',{exact:true}).fill('5');await page.getByLabel('Layer blur (px)',{exact:true}).press('Tab');await wait(async()=>await effect('filter')==='contrast(0.8) blur(5px)','tablet blur');await settled();
+  await size('390x844');await wait(async()=>await effect('filter')==='contrast(0.8) blur(2px)','base blur unchanged');
+  await size('768x1024');await wait(async()=>await effect('filter')==='contrast(0.8) blur(5px)','tablet blur retained');
+  await page.getByRole('button',{name:'Reset layer blur',exact:true}).click();await wait(async()=>await effect('filter')==='contrast(0.8) blur(2px)','blur reset inheritance');await settled();
+  await size('390x844');await page.getByLabel('Style screen scope').selectOption('');
+  await page.getByRole('button',{name:'Clear layer filters',exact:true}).click();await wait(async()=>await effect('filter')==='none','clear layer filters');await settled();
+  for(let i=0;i<7;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
+  await wait(()=>read()===original,'blur and blending exact undo');await wait(async()=>await effect('filter')==='contrast(0.8)','authored filter restored');
   assert.deepEqual(errors,[]);console.log(engine+': PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

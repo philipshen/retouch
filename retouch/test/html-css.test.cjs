@@ -154,3 +154,23 @@ test('HTML shadows parse computed color-first values and persist independent res
  assert.deepEqual(css.describe(resolve(source)).cssRules,{0:{'box-shadow':value}});
  assert.equal(edit(original.replace('class="title"','style="box-shadow:0 0 red !important"'),0,value,'box-shadow').refused,true);
 });
+
+test('HTML blur preserves filter order and validates supported filter stacks',()=>{
+ const {parseFilters,withBlur}=require('../shell/html-css-values.js');
+ const stack='contrast(0.8) blur(2px) drop-shadow(rgba(0, 0, 0, 0.5) 1px 2px 3px) saturate(120%)';
+ assert.equal(parseFilters(stack).length,4);
+ assert.equal(withBlur(stack,8),stack.replace('blur(2px)','blur(8px)'));
+ assert.equal(withBlur(stack,0),stack.replace('blur(2px) ',''));
+ assert.equal(withBlur('none',3),'blur(3px)');assert.equal(withBlur('blur(3px)',0),'none');
+ assert.equal(withBlur('blur(2px) blur(3px)',4),null);
+ for(const invalid of ['blur(-1px)','blur(2%)','blur(1001px)','url(https://example.com)','blur(1px);display:none','contrast(NaN)','drop-shadow(inset 0 0 red)','drop-shadow(0 0 1px 2px red)','brightness(2','var(--filter)','blur(2px)</style>'])assert.equal(css.valid('filter',invalid),false,invalid);
+ let source=edit(original,0,stack,'filter').edits[0].after;
+ source=edit(source,768,'blur(4px)','backdrop-filter').edits[0].after;
+ source=edit(source,768,'multiply','mix-blend-mode').edits[0].after;
+ source=edit(source,0,'isolate','isolation').edits[0].after;
+ assert.deepEqual(css.describe(resolve(source)).cssRules,{0:{filter:stack,isolation:'isolate'},768:{'backdrop-filter':'blur(4px)','mix-blend-mode':'multiply'}});
+ source=edit(source,768,null,'backdrop-filter').edits[0].after;assert.equal(css.describe(resolve(source)).cssRules[768]['backdrop-filter'],undefined);
+ assert.equal(edit(original.replace('class="title"','style="filter:contrast(2) !important"'),0,'blur(4px)','filter').refused,true);
+ assert.equal(edit(original.replace('class="title"','style="-webkit-backdrop-filter:blur(2px) !important"'),0,'blur(4px)','backdrop-filter').refused,true);
+ assert.equal(css.valid('mix-blend-mode','multiply;display:none'),false);assert.equal(css.valid('isolation','normal'),false);
+});

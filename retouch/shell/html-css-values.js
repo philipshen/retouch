@@ -1,11 +1,12 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchHTMLCSSValues=api;})(typeof window==='object'?window:globalThis,function(){
- const options={'font-style':['normal','italic','oblique'],'text-decoration-line':['none','underline','line-through','overline','underline line-through'],'text-transform':['none','uppercase','lowercase','capitalize'],'object-fit':['cover','contain','fill','none','scale-down'],display:['block','inline-block','flex','inline-flex','grid','inline-grid','none'],'flex-direction':['row','column','row-reverse','column-reverse'],'flex-wrap':['nowrap','wrap','wrap-reverse'],'align-items':['start','center','end','stretch','baseline'],'justify-content':['start','center','end','space-between','space-around','space-evenly'],'text-align':['start','left','center','right','justify'],'border-style':['none','solid','dashed','dotted','double']};
+ const options={'mix-blend-mode':['normal','multiply','screen','overlay','darken','lighten','color-dodge','color-burn','hard-light','soft-light','difference','exclusion','hue','saturation','color','luminosity','plus-lighter'],isolation:['auto','isolate'],'font-style':['normal','italic','oblique'],'text-decoration-line':['none','underline','line-through','overline','underline line-through'],'text-transform':['none','uppercase','lowercase','capitalize'],'object-fit':['cover','contain','fill','none','scale-down'],display:['block','inline-block','flex','inline-flex','grid','inline-grid','none'],'flex-direction':['row','column','row-reverse','column-reverse'],'flex-wrap':['nowrap','wrap','wrap-reverse'],'align-items':['start','center','end','stretch','baseline'],'justify-content':['start','center','end','space-between','space-around','space-evenly'],'text-align':['start','left','center','right','justify'],'border-style':['none','solid','dashed','dotted','double']};
  const sides=['top','right','bottom','left'];
  const families={'grid-column':['grid-column-start','grid-column-end'],'grid-row':['grid-row-start','grid-row-end'],padding:sides.map(s=>'padding-'+s),margin:sides.map(s=>'margin-'+s),gap:['row-gap','column-gap'],'border-width':sides.map(s=>'border-'+s+'-width')};
  const fields=[['width','Width'],['height','Height'],['min-width','Minimum width'],['max-width','Maximum width'],['min-height','Minimum height'],['max-height','Maximum height'],['display','Display'],['flex-direction','Direction'],['flex-wrap','Wrap'],['align-items','Align items'],['justify-content','Distribute items'],['gap','Gap'],['padding','Padding'],...sides.map(s=>['padding-'+s,'Padding '+s]),['margin','Margin'],...sides.map(s=>['margin-'+s,'Margin '+s]),['font-family','Font family'],['font-weight','Font weight'],['font-style','Font style'],['text-decoration-line','Text decoration'],['text-transform','Text case'],['font-size','Font size'],['line-height','Line height'],['letter-spacing','Letter spacing'],['text-align','Text alignment'],['color','Text color'],['background-color','Background color'],['border-width','Border width'],['border-style','Border style'],['border-color','Border color'],['border-radius','Corner radius']];
  const lengths=new Set([...fields.map(([p])=>p).filter(p=>!options[p]&&!p.endsWith('color')),'flex-basis','row-gap','column-gap',...families['border-width']]);
  const colors=new Set(['color','background-color','border-color']);
  function valid(property,value){
+  if(['filter','backdrop-filter'].includes(property))return value===null||parseFilters(value)!==null;
   if(property==='box-shadow')return value===null||parseShadows(value)!==null;
   if(value===null)return ['flex-grow','flex-shrink','grid-template-columns','grid-template-rows','grid-column','grid-row','opacity','rotate','object-position'].includes(property)||lengths.has(property)||colors.has(property)||Object.hasOwn(options,property);
   if(typeof value!=='string'||!value||value.length>150)return false;
@@ -60,12 +61,39 @@
   return result;
  }
  function serializeShadows(shadows){return shadows.length?shadows.map(s=>`${s.inset?'inset ':''}${s.x}px ${s.y}px ${s.blur}px ${s.spread}px ${s.color}`).join(', '):'none';}
+ function parseFilters(value){
+  if(typeof value!=='string'||!value.trim()||value.length>4096)return null;
+  if(value.trim()==='none')return [];
+  const result=[];let rest=value.trim();
+  while(rest){
+   const match=/^([a-z-]+)\(/.exec(rest);if(!match||result.length>=16)return null;
+   let end=match[0].length,depth=1;for(;end<rest.length&&depth;end++){if(rest[end]==='(')depth++;if(rest[end]===')')depth--;}
+   if(depth)return null;
+   const name=match[1],arg=rest.slice(match[0].length,end-1).trim(),raw=rest.slice(0,end);
+   if(name==='blur'){if(!/^(?:\d*\.)?\d+(?:px)?$/.test(arg)||(!arg.endsWith('px')&&Number(arg)!==0)||parseFloat(arg)>1000)return null;}
+   else if(name==='hue-rotate'){if(!/^-?(?:\d*\.)?\d+(?:deg|rad|turn)$/.test(arg)||Math.abs(parseFloat(arg))>10000)return null;}
+   else if(['brightness','contrast','grayscale','invert','opacity','saturate','sepia'].includes(name)){if(!/^(?:\d*\.)?\d+%?$/.test(arg)||parseFloat(arg)>10000)return null;}
+   else if(name==='drop-shadow'){
+    const shadows=parseShadows(arg),lengths=arg.match(/(?:^|\s)-?(?:\d*\.)?\d+(?:px)?(?=\s|$)/g)||[];
+    if(!shadows||shadows.length!==1||shadows[0].inset||lengths.length<2||lengths.length>3)return null;
+   }else return null;
+   result.push({name,arg,raw});rest=rest.slice(end).trimStart();
+  }
+  return result;
+ }
+ function withBlur(value,amount){
+  const filters=parseFilters(value);if(!filters||filters.filter(f=>f.name==='blur').length>1||!Number.isFinite(amount)||amount<0||amount>1000)return null;
+  const result=[];let found=false;
+  for(const filter of filters){if(filter.name==='blur'){found=true;if(amount)result.push(`blur(${amount}px)`);}else result.push(filter.raw);}
+  if(!found&&amount)result.push(`blur(${amount}px)`);
+  return result.join(' ')||'none';
+ }
  function affected(property){
   if(property==='border')return sides.flatMap(side=>['width','style','color'].map(part=>'border-'+side+'-'+part));
   if(/^border-(top|right|bottom|left)$/.test(property))return ['width','style','color'].map(part=>property+'-'+part);
   if(property==='border-color'||property==='border-style')return sides.map(side=>'border-'+side+'-'+property.slice(7));
   return families[property]||[property];
  }
- function overlaps(a,b){return a==='all'||b==='all'||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')||b==='border'&&a.startsWith('border-')||a==='font'&&['font-family','font-weight','font-style','font-size','line-height'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
- return {options,fields,families,valid,overlaps,parseShadows,serializeShadows};
+ function overlaps(a,b){if(a==='-webkit-backdrop-filter')a='backdrop-filter';if(b==='-webkit-backdrop-filter')b='backdrop-filter';return a==='all'||b==='all'||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')||b==='border'&&a.startsWith('border-')||a==='font'&&['font-family','font-weight','font-style','font-size','line-height'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
+ return {options,fields,families,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur};
 });
