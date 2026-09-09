@@ -1,6 +1,6 @@
 (function (root) {
   'use strict';
-  let cornersExpanded=false,numericExpanded=false;
+  let cornersExpanded=false,numericExpanded=false,variationExpanded=false;
   const tokens = value => (value || '').split(/\s+/).filter(Boolean);
   // Colons inside arbitrary CSS values are not variant separators.
   function base(token) {
@@ -74,7 +74,7 @@
       parentLabel: viewport ? 'Page viewport' : `<${parent.tagName.toLowerCase()}>${parent.id ? ' #' + parent.id : ''}`,
     };
   }
-  const typeProperties = ['font-family', 'font-size', 'font-weight', 'font-style', 'font-stretch', 'font-variant-numeric', 'line-height', 'letter-spacing', 'text-transform', 'text-decoration-line'];
+  const typeProperties = ['font-family', 'font-size', 'font-weight', 'font-style', 'font-stretch', 'font-variation-settings', 'font-optical-sizing', 'font-variant-numeric', 'line-height', 'letter-spacing', 'text-transform', 'text-decoration-line'];
   function catalog(d) {
     const result = new Map();
     function scan(rules) {
@@ -145,6 +145,24 @@
     }
     note(details,'Appearance depends on the selected font’s supported features.');
     const reset=button('Reset number formatting',onReset);reset.disabled=!canReset;details.append(reset);
+  }
+  const variationToken=t=>/^\[font-variation-settings:.+\]$/.test(t);
+  function variationTypography(parent,css,onChange,onReset,canReset){
+    const values=root.RetouchHTMLCSSValues,axes=values.parseVariations(css.fontVariationSettings);
+    const details=document.createElement('details');details.open=variationExpanded;details.ontoggle=()=>{if(details.isConnected)variationExpanded=details.open;};
+    const summary=document.createElement('summary');summary.textContent='Variable font axes';details.append(summary);parent.append(details);
+    const labels={wght:'Weight',wdth:'Width',opsz:'Optical size',slnt:'Slant',ital:'Italic'};
+    const defaults={wght:parseFloat(css.fontWeight)||400,wdth:100,opsz:parseFloat(css.fontSize)||16,slnt:0,ital:0};
+    if(axes){
+      const write=next=>onChange(values.serializeVariations(next));
+      for(const [tag,value]of axes){
+        number(details,(labels[tag]||tag)+' axis',value,-10000,10000,next=>write(axes.map(axis=>axis[0]===tag?[tag,next]:axis)));
+        details.append(button('Remove '+(labels[tag]||tag)+' axis',()=>write(axes.filter(axis=>axis[0]!==tag))));
+      }
+      select(details,'Add font axis',[['','Choose an axis…'],...Object.entries(labels).filter(([tag])=>!axes.some(axis=>axis[0]===tag))],'',tag=>{if(tag in defaults)write([...axes,[tag,defaults[tag]]]);});
+    }else note(details,'This axis syntax cannot be edited here yet. Reset removes the current override.');
+    note(details,'Only axes supported by this font affect its appearance. Axis overrides take precedence over basic typography controls.');
+    const reset=button('Reset font axes',onReset);reset.disabled=!canReset;details.append(reset);
   }
   const numericToken=t=>/^\[font-variant-numeric:.+\]$/.test(t)||['normal-nums','ordinal','slashed-zero','lining-nums','oldstyle-nums','proportional-nums','tabular-nums','diagonal-fractions','stacked-fractions'].includes(t);
   function locked(sec, info) {
@@ -404,8 +422,9 @@
       select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(t=>t==='italic'||t==='not-italic',v==='italic'?'italic':'not-italic'));
       select(sec,'Text decoration',[['none','None'],['underline','Underline'],['line-through','Strikethrough'],['overline','Overline']],css.textDecorationLine,v=>change(t=>['underline','line-through','overline','no-underline'].includes(t),v==='none'?'no-underline':v));
       select(sec,'Text case',[['none','As written'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']],css.textTransform,v=>change(t=>['uppercase','lowercase','capitalize','normal-case'].includes(t),v==='none'?'normal-case':v));
+      variationTypography(sec,css,value=>change(variationToken,`[font-variation-settings:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,variationToken,'')),tokens(info.className).map(base).some(t=>t&&variationToken(t)));
       numericTypography(sec,css.fontVariantNumeric,value=>change(numericToken,`[font-variant-numeric:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,numericToken,'')),tokens(info.className).map(base).some(t=>t&&numericToken(t)));
-      const textOverride=t=>numericToken(t)||lineHeightToken(t)||fontFamilyToken(t)||controls.some(([,re])=>re.test(t)) || /^(?:leading-|tracking-|-tracking-|text-(?:left|center|right|justify|start|end)$)/.test(t) || ['italic','not-italic','underline','line-through','overline','no-underline','uppercase','lowercase','capitalize','normal-case'].includes(t);
+      const textOverride=t=>variationToken(t)||numericToken(t)||lineHeightToken(t)||fontFamilyToken(t)||controls.some(([,re])=>re.test(t)) || /^(?:leading-|tracking-|-tracking-|text-(?:left|center|right|justify|start|end)$)/.test(t) || ['italic','not-italic','underline','line-through','overline','no-underline','uppercase','lowercase','capitalize','normal-case'].includes(t);
       const reset=button('Reset text overrides',()=>save(replace(info.className,textOverride,'')));
       reset.disabled=!tokens(info.className).map(base).some(t=>t!==null&&textOverride(t));sec.append(reset);
 
@@ -446,6 +465,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number,relativeNumber,numericTypography,numericToken};
+  const api={base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number,relativeNumber,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

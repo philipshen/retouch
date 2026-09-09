@@ -1,4 +1,12 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchHTMLCSSValues=api;})(typeof window==='object'?window:globalThis,function(){
+ function parseVariations(value){
+  if(value==='normal')return [];
+  if(typeof value!=='string'||value.length>500)return null;
+  const result=new Map(),parts=value.split(',');if(!parts.length||parts.length>16)return null;
+  for(const part of parts){const match=/^\s*(["'])([A-Za-z0-9]{4})\1\s+(-?(?:\d+\.?\d*|\.\d+))\s*$/.exec(part);if(!match||!Number.isFinite(Number(match[3]))||Math.abs(Number(match[3]))>10000)return null;result.set(match[2],Number(match[3]));}
+  return [...result];
+ }
+ const serializeVariations=axes=>axes.map(([tag,value])=>'"'+tag+'" '+value).join(', ')||'normal';
  const numericGroups=[['Number width',[['','Font default'],['proportional-nums','Proportional'],['tabular-nums','Tabular']]],['Number style',[['','Font default'],['lining-nums','Lining'],['oldstyle-nums','Old style']]],['Fractions',[['','Font default'],['diagonal-fractions','Diagonal'],['stacked-fractions','Stacked']]],['Ordinals',[['','Font default'],['ordinal','Special forms']]],['Zero style',[['','Font default'],['slashed-zero','Slashed']]]];
  function numericValid(value){
   if(value==='normal')return true;
@@ -47,6 +55,7 @@
   if(property==='aspect-ratio'){if(value===null||value==='auto')return true;if(typeof value!=='string'||value.length>60||! /^(?:auto )?(?:\d*\.)?\d+(?: *\/ *(?:\d*\.)?\d+)?$/.test(value))return false;return value.replace(/^auto /,'').split(/ *\/ */).every(n=>Number(n)>0&&Number(n)<=10000);}
   if(property==='background-image')return value===null||parseGradients(value)!==null;
   if(['filter','backdrop-filter'].includes(property))return value===null||parseFilters(value)!==null;
+  if(property==='font-variation-settings')return value===null||parseVariations(value)!==null;
   if(property==='font-variant-numeric')return value===null||numericValid(value);
   if(property==='box-shadow')return value===null||parseShadows(value)!==null;
   if(value===null)return ['flex-grow','flex-shrink','grid-template-columns','grid-template-rows','grid-column','grid-row','opacity','rotate','object-position'].includes(property)||lengths.has(property)||colors.has(property)||Object.hasOwn(options,property);
@@ -173,6 +182,6 @@
   if(property==='border-color'||property==='border-style')return sides.map(side=>'border-'+side+'-'+property.slice(7));
   return families[property]||[property];
  }
- function overlaps(a,b){if(a==='-webkit-backdrop-filter')a='backdrop-filter';if(b==='-webkit-backdrop-filter')b='backdrop-filter';return a==='all'||b==='all'||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(a)&&sides.includes(b)||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(b)&&sides.includes(a)||a==='background'&&b.startsWith('background-')||b==='background'&&a.startsWith('background-')||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')&&!b.endsWith('radius')||b==='border'&&a.startsWith('border-')&&!a.endsWith('radius')||['font','font-variant'].includes(a)&&b==='font-variant-numeric'||['font','font-variant'].includes(b)&&a==='font-variant-numeric'||a==='font'&&['font-family','font-weight','font-style','font-size','line-height'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
- return {numericGroups,numericValid,numericChange,options,fields,svgFields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients};
+ function overlaps(a,b){if(a==='-webkit-backdrop-filter')a='backdrop-filter';if(b==='-webkit-backdrop-filter')b='backdrop-filter';return a==='all'||b==='all'||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(a)&&sides.includes(b)||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(b)&&sides.includes(a)||a==='background'&&b.startsWith('background-')||b==='background'&&a.startsWith('background-')||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')&&!b.endsWith('radius')||b==='border'&&a.startsWith('border-')&&!a.endsWith('radius')||['font','font-variant'].includes(a)&&b==='font-variant-numeric'||['font','font-variant'].includes(b)&&a==='font-variant-numeric'||a==='font'&&['font-family','font-weight','font-style','font-size','line-height','font-variation-settings'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
+ return {parseVariations,serializeVariations,numericGroups,numericValid,numericChange,options,fields,svgFields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients};
 });

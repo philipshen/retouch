@@ -85,3 +85,18 @@ test('numeric font features combine independent groups and reject conflicts',()=
  assert.equal(v.overlaps('font','font-variant-numeric'),true);assert.equal(v.overlaps('font-variant-numeric','font-variant'),true);
  assert.equal(replace('font-bold tabular-nums ordinal md:oldstyle-nums',numericToken,'[font-variant-numeric:normal]'),'font-bold md:oldstyle-nums [font-variant-numeric:normal]');
 });
+
+test('variable font axes preserve independent tags and scoped overrides',()=>{
+ const v=require('../shell/html-css-values.js'),{variationToken}=require('../shell/inspector.js');
+ assert.deepEqual(v.parseVariations('"wght" 200, "GRAD" -12.5, "wght" 850'),[['wght',850],['GRAD',-12.5]]);
+ assert.equal(v.serializeVariations([]),'normal');assert.equal(v.serializeVariations([['wght',537.5],['wdth',85]]),'"wght" 537.5, "wdth" 85');
+ for(const value of ['"wght" Infinity','"wght" 10001','"wght" 1; color:red','"weight" 200','"wght\' 200','normal, "wght" 200',''])assert.equal(v.valid('font-variation-settings',value),false,value);
+ assert.equal(v.valid('font-variation-settings',null),true);assert.equal(v.overlaps('font','font-variation-settings'),true);
+ assert.equal(replace('font-bold [font-variation-settings:"wght"_200] md:[font-variation-settings:"wdth"_80]',variationToken,'[font-variation-settings:"wght"_850]'),'font-bold md:[font-variation-settings:"wdth"_80] [font-variation-settings:"wght"_850]');
+});
+
+test('class writers allow quoted axis values without allowing injected declarations',()=>{
+ const {valid}=require('../src/class-tokens.cjs');
+ assert.equal(valid('md:![font-variation-settings:"wght"_537.5,_"GRAD"_-12]'),true);
+ for(const token of ['[font-variation-settings:"wght"_850;color:red]','[font-variation-settings:"weight"_850]','[font-variation-settings:"wght"_NaN]','[font-variation-settings:"wght"_850]"onclick="x'])assert.equal(valid(token),false,token);
+});

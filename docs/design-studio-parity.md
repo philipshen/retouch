@@ -4883,3 +4883,43 @@ File portability is verified through the browser round trip; a separate real
 project/browser-profile transfer was not exercised. This is file-based sharing,
 not a synchronized/team library. Undo load retains one previous set only in the
 current session. Full parity remains incomplete; native launches remain paused.
+
+### Explicit variable-font axes (2026-09-09)
+
+A shared Variable font axes disclosure now edits font-variation-settings across
+HTML, React and Liquid. Standard Weight, Width, Optical size, Slant and Italic
+axes can be added, edited independently and removed. Existing four-character
+alphanumeric custom tags are displayed/editable. Reset respects the current
+breakpoint, and class-based Reset text overrides includes axis overrides. The
+class writer now validates quoted axis declarations explicitly instead of
+rejecting every quoted property except font-family. Typography previews include
+variation and optical-sizing properties.
+
+All three adapters passed Chromium and WebKit browser flows: add/change axes,
+remove Width while preserving Weight, base/mobile versus tablet scope isolation,
+reset and exact source undo. A loaded variable font rendered Headline at about
+125.25px for wght=200 and 142.80px for wght=850, proving a glyph-layout change rather
+than only a computed CSS value. WebKit React/Liquid additionally checked the live
+typography preview's axis settings after edits. Evidence under /private/tmp:
+`retouch-font-axes-html-chromium.log`, `retouch-font-axes-html-webkit.log`,
+`retouch-font-axes-react-fixed.log`, `retouch-font-axes-liquid-fixed.log`,
+`retouch-font-axes-react-webkit.log`, `retouch-font-axes-liquid-webkit.log`.
+All processes exited 0. The initial React/Liquid tests exposed class-token
+validation refusing the quoted values; failed logs remain as
+`retouch-font-axes-react-chromium.log` and `retouch-font-axes-liquid-chromium.log`.
+
+All 377 unit tests passed in `/private/tmp/retouch-font-axes-unit-final.log`,
+including independent/scoped axis preservation and invalid declaration rejection.
+`/private/tmp/retouch-font-axes.png` was inspected; controls and the scope indicator
+were readable. Visual-run log: `/private/tmp/retouch-font-axes-visual.log`.
+git diff --check passed. `npm run test:e2e:font-axes` enables the variable-font
+fixture (RT_INSPECTOR_FIXTURE remains required; renderer/browser flags select the
+other adapters/engines).
+
+Automatic font-axis discovery, font-specific min/default/max ranges, arbitrary
+custom-tag addition and all legal OpenType tag syntax remain unfinished. The
+editor currently bounds values to +/-10000, and unsupported axes may have no
+visual effect. Only the tested font's weight axis has glyph-layout evidence;
+Width/Optical size/Slant/Italic support is not inferred from that test. Liquid
+coverage is a local fixture, not a fresh live Shopify verification. Full Figma
+parity is incomplete; native launches remain paused.

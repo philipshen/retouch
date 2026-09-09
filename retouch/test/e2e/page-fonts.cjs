@@ -36,6 +36,24 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===expected);await settled();}await wait(async()=>await weight()==='700');assert.equal(read(),original);
    console.log(engine+' '+kind+': PASS custom fractional weights, scope isolation, reset, family retention and exact undo'+(kind==='html'?'':', range validation and preset replacement'));
   }
+  if(process.env.RT_E2E_FONT_AXES){
+   await page.getByLabel('Style screen scope').selectOption('');await settled();await page.getByText('Variable font axes',{exact:true}).click();
+   const axes=()=>app.locator('h1').evaluate(el=>getComputedStyle(el).fontVariationSettings);
+   const write=async(action,expected)=>{snapshots.push(read());await action();await wait(()=>read()!==snapshots.at(-1));await settled();await wait(async()=>expected.test(await axes()));if(kind!=='html')await wait(async()=>{try{return expected.test(await page.frameLocator('iframe[title="Typography preview"]').locator('body div').evaluate(el=>getComputedStyle(el).fontVariationSettings));}catch(error){if(/Frame was detached|Execution context was destroyed/.test(error.message))return false;throw error;}});};
+   await write(()=>page.getByLabel('Add font axis',{exact:true}).selectOption('wght'),/wght/);
+   await write(async()=>{const input=page.getByLabel('Weight axis',{exact:true});await input.fill('200');await input.press('Tab');},/200/);
+   const extent=()=>app.locator('h1').evaluate(async el=>{await el.ownerDocument.fonts.ready;const range=el.ownerDocument.createRange();range.selectNodeContents(el);return range.getBoundingClientRect().width;});const lightWidth=await extent();
+   await page.getByLabel('Style screen scope').selectOption(kind==='html'?'min-[768px]:':'md:');await settled();
+   await write(async()=>{const input=page.getByLabel('Weight axis',{exact:true});await input.fill('850');await input.press('Tab');},/850/);const heavyWidth=await extent();
+   if(process.env.RT_E2E_VARIABLE_FONT)assert.ok(Math.abs(heavyWidth-lightWidth)>.01,JSON.stringify({lightWidth,heavyWidth}));
+   if(process.env.RT_E2E_FONT_AXES_SCREENSHOT){await page.getByLabel('Weight axis',{exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:process.env.RT_E2E_FONT_AXES_SCREENSHOT});}
+   await write(()=>page.getByLabel('Add font axis',{exact:true}).selectOption('wdth'),/wdth/);assert.match(await axes(),/850/);
+   await write(()=>page.getByRole('button',{name:'Remove Width axis',exact:true}).click(),/850/);assert.doesNotMatch(await axes(),/wdth/);
+   await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await settled();await wait(async()=>/200/.test(await axes()));await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();await wait(async()=>/850/.test(await axes()));
+   await write(()=>page.getByRole('button',{name:'Reset font axes',exact:true}).click(),/200/);
+   while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===expected);await settled();}assert.equal(read(),original);await wait(async()=>await axes()==='normal');
+   console.log(engine+' '+kind+': PASS variable axes, independent removal, breakpoint isolation, reset and exact undo; glyph extents '+JSON.stringify({lightWidth,heavyWidth}));
+  }
   if(process.env.RT_E2E_LINE_HEIGHT){
    const height=()=>app.locator('h1').evaluate(el=>getComputedStyle(el).lineHeight),initialHeight=await height(),initialFamily=await family(),initialWeight=await app.locator('h1').evaluate(el=>getComputedStyle(el).fontWeight),input=page.getByLabel(kind==='html'?'Line height (CSS)':'Line height (px)',{exact:true});
    const write=async(action,expected)=>{snapshots.push(read());await action();await wait(()=>read()!==snapshots.at(-1));await settled();await wait(async()=>await height()===expected);assert.equal(await family(),initialFamily);assert.equal(await app.locator('h1').evaluate(el=>getComputedStyle(el).fontWeight),initialWeight);};
