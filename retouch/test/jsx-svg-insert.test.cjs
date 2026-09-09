@@ -13,3 +13,11 @@ test('JSX SVG insertion refuses unsupported containers, controlled children and 
  for(const [source,tag]of [['<svg/>','svg'],['<div></div>','div'],['<svg {...props}></svg>','svg'],['<svg children={content}></svg>','svg'],['<svg dangerouslySetInnerHTML={html}></svg>','svg'],['<svg><foreignObject><g></g></foreignObject></svg>','g']]){const r=resolve('export default()=> '+source,tag);assert.equal(react.describe(r).svgInsertion,null);assert.equal(react.planOp(r,{type:'insertSVG',preset:'rectangle',fileHash:r.hash}).refused,true);}
  const r=resolve('export default()=> <svg></svg>');for(const op of [{preset:'script',fileHash:r.hash},{preset:'circle'},{preset:'circle',fileHash:'stale'},{preset:'rectangle',fileHash:r.hash,points:[0,0,0,0]},{preset:'line',fileHash:r.hash,points:[0,0,Infinity,1]}]){const result=react.planOp(r,{type:'insertSVG',...op});assert.equal(result.refused,true);assert.equal(result.edits,undefined);}
 });
+
+test('JSX pen insertion preserves surrounding IDs and emits JSX stroke attributes',()=>{
+ const r=resolve('export default()=> <svg><g></g><circle r="5"/></svg>','g');
+ for(const preset of ['polygon','polyline']){
+  const result=react.planOp(r,{type:'insertSVG',preset,fileHash:r.hash,points:[10,20,60,30,40,80]});assert.equal(result.ok,true,result.reason);assert.match(result.edits[0].after,/points="10,20 60,30 40,80"/);assert.match(result.edits[0].after,/strokeWidth="2"/);const next=resolve(result.edits[0].after,'g');assert.ok(r.elements.every(e=>next.elements.some(n=>n.id===e.id)));assert.equal(ids.jsxElementName(next.elements.find(e=>e.id===result.createdId).node),preset);
+  for(const points of [undefined,[1,2,3],[1,2,1,2,1,2],[1,2,3,4,NaN,5]])assert.equal(react.planOp(r,{type:'insertSVG',preset,fileHash:r.hash,points}).refused,true);
+ }
+});

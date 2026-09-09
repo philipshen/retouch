@@ -26,3 +26,12 @@ test('Drawn SVG insertion preserves explicit coordinates and rejects invalid geo
  for(const points of [null,[],[1,2,3],[0,0,0,0],[0,0,5,0],[0,0,Infinity,10],[0,0,100001,10],[0,0,'5',10],[0,0,'"/>',10]]){const result=insert.plan(r,{preset:'rectangle',fileHash:r.hash,points});assert.equal(result.refused,true);assert.equal(result.edits,undefined);}
  const container=resolve('<div></div>','div');assert.equal(insert.plan(container,{preset:'rectangle',fileHash:container.hash,points:[0,0,10,10]}).refused,true);
 });
+
+test('Pen insertion accepts bounded open and closed vectors and rejects incomplete or injected lists',()=>{
+ const r=resolve('<svg viewBox="0 0 200 100"><g></g></svg>','g');
+ for(const preset of ['polygon','polyline']){
+  const result=insert.plan(r,{preset,fileHash:r.hash,points:[10,20,60,30,40,80]});assert.equal(result.ok,true,result.reason);assert.match(result.edits[0].after,/points="10,20 60,30 40,80"/);const next=resolve(result.edits[0].after,'g');assert.ok(r.elements.every(e=>next.elements.some(n=>n.id===e.id)));assert.equal(next.elements.find(e=>e.id===result.createdId).tag,preset);
+  for(const points of [undefined,[],[1,2,3],[1,2,1,2,1,2],[1,2,3,4,Infinity,5],[1,2,3,4,'1" onload="x',5],Array(1026).fill(1)])assert.equal(insert.plan(r,{preset,fileHash:r.hash,points}).refused,true);
+ }
+ assert.equal(insert.plan(r,{preset:'polyline',fileHash:r.hash,points:[1,2,3,4]}).ok,true);assert.equal(insert.plan(r,{preset:'polygon',fileHash:r.hash,points:[1,2,3,4]}).refused,true);
+});

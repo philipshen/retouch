@@ -15,7 +15,7 @@ changing those files. The original checkout may continue to evolve independently
 | --- | --- | --- |
 | Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Bounded canvas zoom/scrolling and linked screen comparisons exist. HTML supports multi-selection, range selection, gray/page marquee gestures and framing a consecutive sibling selection. HTML/React canvas locks include batch undo and editor-reload persistence within a live project session. Full document/pages/sections, guides, complete snapping/grouping, durable lock identity and cross-renderer equivalence remain. |
 | Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. HTML multi-selection, shared CSS and group duplicate/delete/reparenting exist; cross-context clipboard and broader source structures remain. |
-| Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. HTML/React polygons and polylines now support direct vertex dragging and keyboard movement with source undo. Vertex insertion/deletion also have browser/source verification. Full path/pen authoring, boolean operations, arbitrary masks and a shared geometry model remain. |
+| Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. HTML/React polygons and polylines now support direct vertex dragging and keyboard movement with source undo. Vertex insertion/deletion and straight-segment Pen creation in existing SVG canvases have browser/source verification. Full curved-path authoring, boolean operations, arbitrary masks and a shared geometry model remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. HTML absolute placement now supports edge, center, stretch and proportional anchors with screen-scoped writes. Transformed constraints, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML supports linear/radial gradient stacks with draggable stops, shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. Font browsing, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
@@ -2997,3 +2997,49 @@ This extends existing straight-segment vectors; freeform creation, Bézier path
 authoring, vector networks, booleans and masks remain unfinished. Native app
 launches remain paused. Full Figma Design parity, arbitrary-site editing and
 trusted Mac distribution are not established by these checks.
+
+### 2026-09-09 — Draw new vectors with Pen
+
+Existing HTML and JSX SVG canvases/groups now offer Pen. Clicks place straight
+segments in local SVG coordinates; Shift constrains direction to 45-degree
+increments. Enter, Finish line or a double-click finishes an open polyline.
+Clicking the first point or Close shape creates a polygon. Backspace/Remove last
+point edits the pending path; Escape, Cancel and viewport changes discard it.
+The preview stays outside the site's DOM. Source insertion preserves surrounding
+identities, selects the new vector and participates in exact source undo/redo.
+Newly drawn vectors can immediately use the vertex editor.
+
+Both adapters reject missing, incomplete, nonnumeric, nonfinite, oversized and
+insufficiently distinct point lists. Pen accepts at most 512 points and uses the
+existing file-hash and structural checks. JSX output uses strokeWidth. Drawing
+into a repeatedly rendered source container is refused.
+
+A cancellation trace (`/private/tmp/retouch-svg-pen-cancel-trace.log`) exposed a
+shared toolbar issue: long help text changed canvas height and dispatched a
+viewport event that cancelled drawing. Status text now has a stable flex basis
+and ellipsis; its full text is available in the tooltip and transient message.
+The pen browser test asserts that help does not change toolbar height. Pen also
+shares the point editor's canvas-margin preparation so points on a clipped group
+edge remain accessible. Its actions occupy the larger frame overlay while point
+placement remains inside the SVG canvas.
+
+All four HTML/React × Chromium/WebKit workflows pass:
+`/private/tmp/retouch-svg-pen-{html,react}-{chromium,webkit}-complete.log`.
+These verify open vectors at 50/100/200 percent zoom through nested transforms,
+closed creation, Backspace, Shift, double-click, cancellation, subsequent point
+editing, source/DOM isolation during previews and exact undo/redo. Expected
+coordinates use actual delivered mouse events because WebKit rounds synthetic
+click positions. Initial failures and diagnostic logs remain in /private/tmp.
+The inspected `/private/tmp/retouch-svg-pen-html-chromium-complete.png` shows
+visible points, unobstructed actions and stable header layout.
+
+All 339 unit tests pass in `/private/tmp/retouch-svg-pen-unit-final.log`. Existing
+Chromium layer reveal/pressed Move/source undo passes in
+`/private/tmp/retouch-pen-toolbar-layer-reveal.log`; WebKit Hand/Space pan, tool
+exclusivity and source preservation pass in
+`/private/tmp/retouch-pen-toolbar-canvas-pan.log`.
+
+Pen currently creates straight segments inside existing SVG containers. Curves,
+Bézier handles, vector networks, booleans, masks and unrestricted canvas/document
+authoring remain. Native launches stayed paused; no desktop build or launch was
+performed. Full Figma parity and trusted Mac distribution remain incomplete.

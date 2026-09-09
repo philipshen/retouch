@@ -6,12 +6,13 @@ function describe(resolved){
  const node=resolved.element.node,tag=ids.jsxElementName(node);
  if(!['svg','g'].includes(tag)||!node.closingElement||ids.jsxElementName(viewport(resolved)?.node||node)!=='svg')return null;
  if(node.openingElement.attributes.some(a=>a.type==='JSXSpreadAttribute'||['children','dangerouslySetInnerHTML'].includes(a.name?.name)))return null;
- return {createsViewport:false,presets};
+ return {createsViewport:false,presets,pen:true};
 }
 function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason});
- if(!describe(resolved)||!presets.includes(op.preset))return refuse('Select an explicitly closed JSX SVG canvas or group without spread or children props.');
+ if(!describe(resolved)||!presets.includes(op.preset)&&!['polygon','polyline'].includes(op.preset))return refuse('Select an explicitly closed JSX SVG canvas or group without spread or children props.');
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the SVG container.');
+ if(['polygon','polyline'].includes(op.preset)&&op.points===undefined)return refuse('Place vector points before creating a line or polygon.');
  const drawn=op.points===undefined?null:svg.drawnShape(op.preset,op.points);if(op.points!==undefined&&!drawn)return refuse('Draw a nonempty shape with bounded SVG coordinates.');
  const view=viewport(resolved).node,attrs=view.openingElement.attributes.filter(a=>a.type==='JSXAttribute').map(a=>({name:a.name.name,value:literal(a)})).filter(a=>a.value!==undefined&&a.value!==null);
  const content=(drawn||svg.shape({element:{node:{tagName:'svg',namespaceURI:'http://www.w3.org/2000/svg',attrs}}},op.preset)).replace(/stroke-width=/g,'strokeWidth=');

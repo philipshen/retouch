@@ -3,6 +3,14 @@ const MagicString=require('magic-string'),insertion=require('./html-insert.cjs')
 const namespace='http://www.w3.org/2000/svg';
 const presets=['rectangle','circle','ellipse','line'];
 function drawnShape(preset,points){
+ if(['polygon','polyline'].includes(preset)){
+  const minimum=preset==='polygon'?3:2;
+  if(!Array.isArray(points)||points.length<minimum*2||points.length>1024||points.length%2||points.some(n=>typeof n!=='number'||!Number.isFinite(n)||Math.abs(n)>100000))return null;
+  const pairs=[];for(let i=0;i<points.length;i+=2)pairs.push(points[i]+','+points[i+1]);
+  if(new Set(pairs).size<minimum)return null;
+  return '<'+preset+' points="'+pairs.join(' ')+'" fill="'+(preset==='polygon'?'#a5b4fc':'none')+'" stroke="#6366f1" stroke-width="2"/>';
+ }
+
  if(!Array.isArray(points)||points.length!==4||points.some(n=>typeof n!=='number'||!Number.isFinite(n)||Math.abs(n)>100000))return null;
  const [x1,y1,x2,y2]=points,x=Math.min(x1,x2),y=Math.min(y1,y2),w=Math.abs(x2-x1),h=Math.abs(y2-y1);
  if(w>100000||h>100000||(!w&&!h)||preset!=='line'&&(!w||!h))return null;
@@ -24,12 +32,13 @@ function describe(resolved){
  if(!el.location.endTag)return null;
  if(svg?!['svg','g'].includes(el.tag):!insertion.describe(resolved).canInsert)return null;
  for(let node=el.node;node;node=node.parentNode)if(node.attrs?.some(a=>/^(?:v-for|v-if|x-for|x-if)$/.test(a.name)))return null;
- return {createsViewport:!svg,presets};
+ return {createsViewport:!svg,presets,pen:svg};
 }
 function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason}),cap=describe(resolved);
- if(!cap||!presets.includes(op.preset))return refuse('Select a content container, SVG canvas or group to add a shape.');
+ if(!cap||!presets.includes(op.preset)&&!['polygon','polyline'].includes(op.preset))return refuse('Select a content container, SVG canvas or group to add a shape.');
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the container.');
+ if(['polygon','polyline'].includes(op.preset)&&op.points===undefined)return refuse('Place vector points before creating a line or polygon.');
  const drawn=op.points===undefined?null:drawnShape(op.preset,op.points);
  if(op.points!==undefined&&(cap.createsViewport||!drawn))return refuse('Draw a nonempty shape inside an existing SVG canvas or group.');
  const html=require('./adapters/html.cjs'),el=resolved.element,offset=el.location.endTag.startOffset;

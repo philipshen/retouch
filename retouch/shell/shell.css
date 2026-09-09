@@ -17,7 +17,8 @@ body { background: var(--bg); color: var(--ink); font-family: var(--font); font-
 #modeBtn.mode-edit { background: var(--accent); color: #0c1015; border-color: var(--accent); font-weight: 600; }
 #routeInput { flex: 0 1 340px; background: #141518; color: var(--ink); border: 1px solid var(--line);
   border-radius: 6px; padding: 5px 10px; font-family: var(--mono); font-size: 12px; }
-#status { color: var(--muted); font-size: 12px; margin-left: auto; }
+#status { color: var(--muted); font-size: 12px; margin-left: auto; min-width: 0; flex: 1 1 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 #main { flex: 1; display: flex; min-height: 0; }
 #frameWrap { flex: 1; min-width: 0; position: relative; background: #808080; overflow:auto; }

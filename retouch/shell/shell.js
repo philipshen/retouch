@@ -901,7 +901,8 @@ function renderPanelContents() {
     const shapes=RetouchInspector.section('Add shape'),buttons=document.createElement('div');buttons.className='stack-presets';
     for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Add '+preset,()=>insertLayer(preset,info,'insertSVG')));
     if(!info.svgInsertion.createsViewport)for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Draw '+preset,()=>drawShape(preset,info)));
-    shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Adds a shape in a new 200 × 200 canvas.':'Choose Draw and drag inside this SVG canvas. Shift constrains proportions or line angle; Option/Alt draws from the center. Escape cancels.');panelBody.append(shapes);
+    if(info.svgInsertion.pen)buttons.append(RetouchInspector.button('Pen',()=>drawVector(info)));
+    shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Adds a shape in a new 200 × 200 canvas.':'Choose Draw and drag a shape, or Pen and click to place straight segments. In Pen, click the first point to close; Enter finishes an open line. Shift constrains direction. Escape cancels.');panelBody.append(shapes);
   }
   if(info.cssAuthoring){
     const naming=RetouchInspector.section('Layer');
@@ -1762,6 +1763,7 @@ function toast(msg, cls) {
   document.getElementById('toasts').appendChild(t);
   setTimeout(() => t.remove(), cls === 'err' ? 6000 : 1800);
   statusEl.textContent = msg;
+  statusEl.title = msg;
 }
 
 
@@ -1858,14 +1860,7 @@ async function moveLayerInto(info,destinationId,position='inside'){
     toast('Layer moved','ok');
   }finally{busyPanel(false);}
 }
-async function editSVGPoints(info){
-  if(panelTasks||undoBusy||sourceRequests||editing)return;
-  stopDrawing?.();
-  const targets=matchingEls(info.id),field=info.svgGeometry?.fields.find(field=>field.name==='points'),points=RetouchSVGPoints.parse(field?.value);
-  if(targets.length!==1)return toast('Select a vector rendered once to edit its points.','err');
-  if(!points||points.length<2||field.editable===false)return;
-  const target=targets[0];
-  if(target.getAttribute('points')!==field.value)return toast('The vector changed. Re-select it before editing.','err');
+async function prepareVectorCanvas(info,target){
   if(mode!=='edit')modeBtn.click();canvasPan.cancel();
   // Keep handles away from the clipped canvas edge without changing site size or zoom.
   const f=iframe.getBoundingClientRect(),c=canvasSurface.getBoundingClientRect(),r=target.getBoundingClientRect(),scale=f.width/iframe.contentWindow.innerWidth;
@@ -1876,13 +1871,33 @@ async function editSVGPoints(info){
   const cancelPending=()=>{cancelled=true;if(stopDrawing===cancelPending)stopDrawing=null;};
   stopDrawing=cancelPending;
   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-  if(cancelled)return;
+  if(cancelled)return false;
   stopDrawing=null;
-  if(sel?.info!==info||mode!=='edit'||panelTasks||undoBusy||sourceRequests||editing||!target.isConnected)return;
+  return sel?.info===info&&mode==='edit'&&!panelTasks&&!undoBusy&&!sourceRequests&&!editing&&target.isConnected;
+}
+async function editSVGPoints(info){
+  if(panelTasks||undoBusy||sourceRequests||editing)return;
+  stopDrawing?.();
+  const targets=matchingEls(info.id),field=info.svgGeometry?.fields.find(field=>field.name==='points'),points=RetouchSVGPoints.parse(field?.value);
+  if(targets.length!==1)return toast('Select a vector rendered once to edit its points.','err');
+  if(!points||points.length<2||field.editable===false)return;
+  const target=targets[0];
+  if(target.getAttribute('points')!==field.value)return toast('The vector changed. Re-select it before editing.','err');
+  if(!await prepareVectorCanvas(info,target))return;
   stopDrawing=RetouchSVGVertices.mount({target,points,frame:iframe,canvas:canvasSurface,
     onCommit:value=>{if(sel?.info===info)setSVGGeometry('points',value);},
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
   if(stopDrawing)toast('Drag a point or use arrow keys. Click + to add; Delete removes a point. Done or Enter saves; Escape cancels.','ok');
+}
+async function drawVector(info){
+  if(panelTasks||undoBusy||sourceRequests||editing)return;
+  stopDrawing?.();const targets=matchingEls(info.id);
+  if(targets.length!==1)return toast('Select an SVG container rendered once to draw into.','err');
+  if(!await prepareVectorCanvas(info,targets[0]))return;
+  stopDrawing=RetouchSVGPen.mount({target:targets[0],frame:iframe,canvas:canvasSurface,
+    onCommit:(points,closed)=>insertLayer(closed?'polygon':'polyline',info,'insertSVG',{points}),
+    onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
+  if(stopDrawing)toast('Click to place points. Shift constrains direction. Click the first point to close, or Enter to finish a line. Backspace removes the last point; Escape cancels.','ok');
 }
 function drawShape(preset,info){
   if(panelTasks||undoBusy||sourceRequests||editing)return;
