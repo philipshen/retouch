@@ -2751,3 +2751,27 @@ responsive zoom and precise 6400% source-edit/undo flow also passes:
 The latest Mac archive does not include this tool. Full Figma parity, arbitrary
 remote-site authoring and trusted distribution remain unfinished.
 All 334 unit tests pass in `/private/tmp/retouch-canvas-pan-unit-final.log`.
+
+### 2026-09-09 — Exclusive Hand and editing tools
+
+Starting single-layer movement/resizing (HTML or React), group transformation or
+gap adjustment, or SVG drawing now dismisses Hand before mounting the editing
+tool. Switching to Hand already cancels an uncommitted editing preview. This
+prevents two tools from remaining logically active and competing for Escape.
+
+The expanded HTML browser regression includes Hand→Move, Move keyboard preview→
+Hand with unchanged source, and Hand→SVG rectangle drawing. Testing the corrected
+fixture against the previous implementation reproduces Hand remaining pressed
+while Move is mounted: `/private/tmp/retouch-tool-switch-baseline.log`.
+The initial fixture attempted to move an offscreen layer; it now explicitly uses
+Zoom to selection before testing tool transitions.
+Chromium passes in `/private/tmp/retouch-tool-switch-chromium-final.log`.
+WebKit passes in `/private/tmp/retouch-tool-switch-webkit-probe.log` and, after
+removing temporary diagnostic calls, `/private/tmp/retouch-tool-switch-webkit-confirmed.log`.
+An earlier WebKit run lost the move surface after the zoom/Hand transition
+(`/private/tmp/retouch-tool-switch-webkit-final.log`); its timing-related cause is
+not established, so those successful reruns do not prove it fully resolved.
+The real React selection-geometry suite additionally activates Hand before group
+movement at 50/100/200% and verifies dismissal before pointer edits and exact
+undo: `/private/tmp/retouch-hand-react-geometry.log` (Chromium PASS).
+No Mac archive refresh or full Figma parity is claimed by this checkpoint.

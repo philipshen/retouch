@@ -367,7 +367,8 @@ the preview within the finite workspace without changing page scroll or layer
 selection; use the wheel inside the preview to scroll the page. Release Space
 to return to editing, or press Escape to leave the hand tool. Text fields and
 Interact mode retain their normal keyboard behavior. Changing the preview size
-or zoom exits the hand tool.
+or zoom exits the hand tool. Choosing a move, resize, gap-adjustment or drawing
+tool also exits Hand. Switching to Hand discards an uncommitted tool preview.
 
 Use **Zoom** in the screen toolbar to set the canvas percentage, or **Fit screen**
 to bring a fixed preview fully into the available canvas. Fixed screens support

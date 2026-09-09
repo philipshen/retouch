@@ -97,5 +97,6 @@ site. Set `RT_INSPECTOR_FIXTURE` to a fixture with Playwright installed and
 `npm run test:e2e:canvas-pan` uses an isolated HTML fixture to verify Hand and
 Space-drag from editor/iframe focus at 50/200/400%, unchanged page scroll and
 selection, horizontal wheel scrolling, Escape during pointer capture, recovery
-of the next selection click, typing/Interact guards and screen-change cleanup.
+of the next selection click, typing/Interact guards, screen-change cleanup, exclusive Hand/Move/Draw
+transitions and cancellation of an uncommitted movement preview.
 It accepts the same Playwright fixture and engine settings as zoom-anchor.

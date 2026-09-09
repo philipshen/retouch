@@ -1476,6 +1476,7 @@ function transformReactLayer(info,target,action,opener){
   stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!target?.isConnected||info.classNameDynamic)return;
   let g;try{const reason=reactGeometryReason(info,target);if(reason)throw Error(reason);if(target.ownerDocument.defaultView.getComputedStyle(target).position!=='absolute')throw Error('Choose a screen where this layer is absolute before transforming it.');g=RetouchInspector.geometry(target);}catch(error){toast(error.message,'err');return;}
   const scope=styleScope,hash=info.hash,classes=RetouchResponsive.project(info.className,scope),base=RetouchResponsive.inherited(info.className,scope,doc()),x=RetouchInspector.inferredAnchor(classes,'x',base),y=RetouchInspector.inferredAnchor(classes,'y',base);
+  canvasPan.cancel();
   stopDrawing=RetouchCanvasMove.mount({target,frame:iframe,canvas:canvasSurface,mode:action,opener,
     onCommit:async(delta,options)=>{if(sel?.info.id!==info.id||sel?.info.hash!==hash||styleScope!==scope)return;try{const geometry={...g,...(action==='resize'?{width:delta.width,height:delta.height}:{}),x:g.x+delta.x,y:g.y+delta.y};if(![geometry.x,geometry.y,geometry.width,geometry.height].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Keep layer bounds within 100,000 pixels.');if(await writeReactBounds(info,RetouchInspector.anchorClasses(classes,geometry,x,y,base),geometry)){if(options?.keyboard)document.querySelector('[data-canvas-tool='+action+']')?.focus({preventScroll:true});}}catch(error){toast(error.message,'err');}},
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
@@ -1485,6 +1486,7 @@ function transformReactLayer(info,target,action,opener){
 function transformLayerSelection(elements,commit,opener,action='move',spacing=null){
   stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!sel?.multiple?.length)return;
   const hash=sel.info.hash,scope=styleScope,key=sel.multiple.map(info=>info.id).sort().join(',');
+  canvasPan.cancel();
   stopDrawing=RetouchCanvasMove.mount({target:elements[0],targets:elements,selectionId:activeId(),frame:iframe,canvas:canvasSurface,mode:action,spacing,opener,
     onCommit:async(delta,options)=>{if(sel?.info.hash!==hash||styleScope!==scope||sel.multiple?.map(info=>info.id).sort().join(',')!==key)return;try{if(![delta.x,delta.y,...(action==='resize'?[delta.width,delta.height]:spacing?[delta.gap,...(spacing.independent?delta.values:[])]:[])].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Keep selection bounds within 100,000 pixels.');await commit(delta);if(options?.keyboard)document.querySelector('[data-canvas-tool='+action+']')?.focus({preventScroll:true});}catch(error){toast(error.message,'err');}},
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
@@ -1495,6 +1497,7 @@ function moveHTMLLayer(info,target,width,g,action='move',opener){
   stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!target?.isConnected)return;
   try{g=RetouchInspector.geometry(target);}catch(error){toast(error.message,'err');return;}
   const inherited=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=target.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{});
+  canvasPan.cancel();
   stopDrawing=RetouchCanvasMove.mount({target,frame:iframe,canvas:canvasSurface,mode:action,opener,
     onCommit:(delta,options)=>{if(sel?.info.id!==info.id||sel?.info.hash!==info.hash)return;try{const geometry={...g,...(action==='resize'?{width:delta.width,height:delta.height}:{}),x:g.x+delta.x,y:g.y+delta.y};if(![geometry.x,geometry.y,geometry.width,geometry.height].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Move within 100,000 pixels of the container.');setHTMLCSS(RetouchHTMLPosition.placement(geometry,inherited),null,width).then(()=>{if(options?.keyboard&&sel?.info.id===info.id)document.querySelector('[data-canvas-tool='+action+']')?.focus({preventScroll:true});});}catch(error){toast(error.message,'err');}},
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
@@ -1812,6 +1815,7 @@ function drawShape(preset,info){
   stopDrawing?.();
   const target=matchingEls(info.id)[0];if(!target)return;
   if(mode!=='edit')modeBtn.click();
+  canvasPan.cancel();
   stopDrawing=RetouchSVGDraw.mount({target,frame:iframe,canvas:canvasSurface,preset,
     onCommit:points=>insertLayer(preset,info,'insertSVG',{points}),
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
