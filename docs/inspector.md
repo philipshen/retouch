@@ -145,3 +145,12 @@ When a named project text style overrides utility classes, explicit property
 changes use important utilities while retaining the style's other font properties.
 **Reset text overrides** clears the supported property overrides in that scope
 and restores the inherited/project styling.
+
+## Borders and corners
+
+Appearance includes border width, solid/dashed/dotted/double/none styles and a
+color picker. Increasing width from a hidden border enables a solid border.
+Set one radius for all corners or expand Individual corners. Mixed corner values
+are shown explicitly; percentage and elliptical values remain visible as hints
+until replaced with a pixel value. These controls follow breakpoint scope and
+use the shared undo/redo history.

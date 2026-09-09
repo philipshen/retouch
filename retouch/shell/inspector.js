@@ -1,5 +1,6 @@
 (function (root) {
   'use strict';
+  let cornersExpanded=false;
   const tokens = value => (value || '').split(/\s+/).filter(Boolean);
   // Colons inside arbitrary CSS values are not variant separators.
   function base(token) {
@@ -172,6 +173,11 @@
     }
     return sec;
   }
+  function colorHex(value,d) {
+    const canvas=d.createElement('canvas');canvas.width=canvas.height=1;
+    const ctx=canvas.getContext('2d');ctx.fillStyle=value;ctx.fillRect(0,0,1,1);
+    return '#'+[...ctx.getImageData(0,0,1,1).data].slice(0,3).map(v=>v.toString(16).padStart(2,'0')).join('');
+  }
   function appearance(info, el, save) {
     const sec = section('Appearance');
     if (!el) return sec;
@@ -180,7 +186,32 @@
     const row = document.createElement('div'); row.className='opacity-row';
     const input = number(row,'Opacity (%)',Number(css.opacity)*100,0,100,value=>save(replace(info.className,t=>t.startsWith('opacity-'),`opacity-[${round(value/100)}]`)));
     const slider = document.createElement('input'); slider.type='range'; slider.min=0; slider.max=100; slider.value=input.value; slider.setAttribute('aria-label','Opacity');
-    slider.oninput=()=>{input.value=slider.value;}; slider.onchange=()=>input.onchange(); row.append(slider); sec.append(row); return sec;
+    slider.oninput=()=>{input.value=slider.value;}; slider.onchange=()=>input.onchange(); row.append(slider); sec.append(row);
+    const widthToken=t=>/^border(?:-(?:[trblxyse]))?(?:-(?:\d+(?:\.\d+)?|\[(?:length:[^\]]+|[-.\d][^\]]*)\]))?$/.test(t);
+    const borderWidths=['Top','Right','Bottom','Left'].map(side=>css['border'+side+'Width']);
+    const borderWidth=number(sec,'Border width (px)',borderWidths.every(v=>v===borderWidths[0])?parseFloat(borderWidths[0]):NaN,0,100,v=>{
+      let next=replace(info.className,widthToken,`border-[${v}px]`);
+      if(v>0&&css.borderTopStyle==='none')next=replace(next,t=>/^border(?:-[trblxyse])?-(solid|dashed|dotted|double|hidden|none)$/.test(t),'border-solid');
+      save(next);
+    });
+    borderWidth.placeholder='Mixed';
+    select(sec,'Border style',['solid','dashed','dotted','double','none'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.borderTopStyle,v=>save(replace(info.className,t=>/^border(?:-[trblxyse])?-(solid|dashed|dotted|double|hidden|none)$/.test(t),'border-'+v)));
+    const borderColor=document.createElement('input');borderColor.type='color';borderColor.value='#000000';
+    try {const c=colorHex(css.borderTopColor,el.ownerDocument);if(c)borderColor.value=c;} catch {}
+    // Color inputs accept sRGB hex, while computed CSS may use lab/oklch.
+    // Show the browser's computed value separately instead of mislabelling it.
+    field(sec,'Border color',borderColor);note(sec,css.borderTopColor,'computed-value');
+    borderColor.onchange=()=>save(replace(info.className,t=>t.startsWith('border-')&&!widthToken(t)&&!/^border(?:-[trblxyse])?-(solid|dashed|dotted|double|hidden|none|collapse|separate|spacing-|opacity-)/.test(t),`border-[${borderColor.value}]`));
+    const radius=value=>/^[\d.]+px$/.test(value)?parseFloat(value):NaN;
+    const radii=[css.borderTopLeftRadius,css.borderTopRightRadius,css.borderBottomRightRadius,css.borderBottomLeftRadius];
+    const allRadius=number(sec,'Corner radius (px)',radii.every(v=>v===radii[0])?radius(radii[0]):NaN,0,10000,v=>save(replace(info.className,t=>/^rounded(?:-|$)/.test(t),`rounded-[${v}px]`)));
+    allRadius.placeholder=radii.every(v=>v===radii[0])?radii[0]:'Mixed';
+    const corners=document.createElement('details');const summary=document.createElement('summary');summary.textContent='Individual corners';corners.append(summary);
+    for(const [name,token,property] of [['Top left','tl','borderTopLeftRadius'],['Top right','tr','borderTopRightRadius'],['Bottom right','br','borderBottomRightRadius'],['Bottom left','bl','borderBottomLeftRadius']]) {
+      const field=number(corners,name+' radius (px)',radius(css[property]),0,10000,v=>save(replace(info.className,t=>t.startsWith('rounded-'+token+'-'),`rounded-${token}-[${v}px]`)));field.placeholder=css[property];
+    }
+    corners.open=cornersExpanded;corners.ontoggle=()=>{if(corners.isConnected)cornersExpanded=corners.open;};
+    sec.append(corners);return sec;
   }
   function effects(info, el, save, notify) {
     const sec = section('Effects');
