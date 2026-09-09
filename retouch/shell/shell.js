@@ -735,7 +735,7 @@ function screenScopeSection() {
     picker.append(option);
   }
   picker.value = styleScope;
-  picker.onchange = () => { styleScope = picker.value; renderPanel(); };
+  picker.onchange = () => { stopDrawing?.(); styleScope = picker.value; renderPanel(); };
   label.append(picker);section.append(label);
   RetouchInspector.note(section, styleScope
     ? 'Style changes apply to this breakpoint. Computed values reflect the preview; text and image content stay shared across sizes.'
@@ -848,7 +848,7 @@ function renderPanelContents() {
     RetouchInspector.field(naming,'Layer name',input);input.onchange=()=>renameLayer(input.value);
     RetouchInspector.note(naming,'Names appear in the editor without changing page text or accessibility labels. Clear to use the original label.');panelBody.append(naming);
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
-    if(target?.namespaceURI!=='http://www.w3.org/2000/svg')panelBody.appendChild(RetouchHTMLPosition.mount(info,target,width,setHTMLCSS,g=>moveHTMLLayer(info,target,width,g)));
+    if(target?.namespaceURI!=='http://www.w3.org/2000/svg')panelBody.appendChild(RetouchHTMLPosition.mount(info,target,width,setHTMLCSS,(g,action)=>moveHTMLLayer(info,target,width,g,action)));
     panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS));
     if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{}));
     if(info.canSetTag){const section=RetouchInspector.section('Element');RetouchInspector.select(section,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','li'].map(tag=>[tag,tag]),info.tag,setTag);panelBody.appendChild(section);}
@@ -1428,14 +1428,14 @@ async function setSVGGeometry(property,value){
     sel.info=result.element;await refreshWrittenElement(sel.info,el=>svgGeometryMatches(el,sel.info));renderPanel();toast('Shape updated','ok');
   }finally{busyPanel(false);}
 }
-function moveHTMLLayer(info,target,width,g){
+function moveHTMLLayer(info,target,width,g,action='move'){
   stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!target?.isConnected)return;
   try{g=RetouchInspector.geometry(target);}catch(error){toast(error.message,'err');return;}
   const inherited=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=target.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{});
-  stopDrawing=RetouchCanvasMove.mount({target,frame:iframe,canvas:canvasSurface,
-    onCommit:delta=>{if(sel?.info.id!==info.id||sel?.info.hash!==info.hash)return;try{const geometry={...g,x:g.x+delta.x,y:g.y+delta.y};if(![geometry.x,geometry.y].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Move within 100,000 pixels of the container.');setHTMLCSS(RetouchHTMLPosition.placement(geometry,inherited),null,width);}catch(error){toast(error.message,'err');}},
+  stopDrawing=RetouchCanvasMove.mount({target,frame:iframe,canvas:canvasSurface,mode:action,
+    onCommit:delta=>{if(sel?.info.id!==info.id||sel?.info.hash!==info.hash)return;try{const geometry={...g,...(action==='resize'?{width:delta.width,height:delta.height}:{}),x:g.x+delta.x,y:g.y+delta.y};if(![geometry.x,geometry.y,geometry.width,geometry.height].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Move within 100,000 pixels of the container.');setHTMLCSS(RetouchHTMLPosition.placement(geometry,inherited),null,width);}catch(error){toast(error.message,'err');}},
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
-  if(stopDrawing)toast('Drag the selected outline. Shift locks an axis; Escape cancels.','ok');
+  if(stopDrawing)toast(action==='resize'?'Drag an edge or corner. Shift keeps proportions; Option/Alt resizes from center. Escape cancels.':'Drag the selected outline. Shift locks an axis; Escape cancels.','ok');
 }
 
 async function setHTMLCSS(property,value,width){

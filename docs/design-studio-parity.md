@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 295 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 296 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1698,3 +1698,34 @@ rule and transformed-layout refusal cases also pass. Logs:
 `/private/tmp/retouch-canvas-move-chromium-latest.log`, and
 `/private/tmp/retouch-canvas-move-webkit-verified.log`. The bounds preview was
 visually checked in `/private/tmp/retouch-canvas-move.png`.
+
+
+### Canvas resizing for positioned HTML layers
+
+Resize on canvas now exposes all eight edge/corner handles for an absolute
+HTML layer. Resizing keeps the opposite edge in place; Shift preserves the
+original aspect ratio, and Option/Alt resizes around the center. Modifiers can
+change while the pointer remains held. The bounds preview follows canvas zoom
+and commits one scoped CSS transaction with the layer's existing anchor modes.
+The tool enforces the border/padding minimum and fixed/percentage CSS size
+bounds in the resulting border-box layout. Intrinsic/complex size bounds are
+not yet represented by this tool and produce a refusal before drawing.
+
+An unchanged-selection inspector refresh now leaves active canvas tools intact.
+Actual selection changes still cancel, and changing the style screen scope
+explicitly cancels the tool before changing the target scope. Escape and the
+existing viewport, layout, navigation and blur cancellation paths remain.
+
+Validation: 296 unit tests pass. Chromium and WebKit pass the extended HTML
+positioning workflow with edge resizing, proportional centered corner resizing
+at 50% zoom, live modifier preview bounds, unchanged source/DOM during preview,
+retained stretch/center anchors, scope/Escape cancellation and exact undo/redo.
+An authored 80–140px width-bound fixture verifies both preview and committed
+minimum/maximum clamping while preserving the original min/max rules. Logs:
+`/private/tmp/retouch-canvas-resize-unit-final.log` and
+`/private/tmp/retouch-canvas-resize-{chromium,webkit}-bounds.log`.
+The eight-handle preview was inspected in `/private/tmp/retouch-canvas-resize.png`.
+
+Full content previews, flow resizing/reordering, transformed geometry,
+multi-selection resizing, snapping, keyboard handle resizing and other-renderer
+parity remain unfinished. Desktop archives still predate the canvas tools.
