@@ -92,7 +92,28 @@
     const size=Math.round((unit==='px'?width:width/initial)*100000)/100000;
     return {prefix:`min-[${size}${unit}]:`,label:`${width} px and larger`};
   }
-  const api={split,project,replaceScope,discover,matches,inherited,atWidth};
+  function inheritedLink(links,prefix,d,choices=null){
+    if(!links||!prefix||!d||Object.hasOwn(links,prefix))return null;
+    choices=choices||discover(d);
+    const probe=d.createElement('span');probe.style.cssText='font-size:initial;position:absolute;visibility:hidden';d.documentElement.append(probe);
+    const initial=parseFloat(d.defaultView.getComputedStyle(probe).fontSize)||16;probe.remove();
+    function minimum(scope){
+      if(scope==='')return -1;
+      const arbitrary=/^min-\[(\d+(?:\.\d+)?)(px|rem|em)\]:$/.exec(scope),condition=minimumCondition(choices.find(item=>item.prefix===scope));
+      const named=condition&&/^\(\s*(?:min-width\s*:\s*|width\s*>=\s*)([\d.]+)(px|rem|em)\s*\)$/.exec(condition),match=arbitrary||named;
+      return match?Number(match[1])*(match[2]==='px'?1:initial):null;
+    }
+    const limit=minimum(prefix);if(limit===null)return null;
+    const candidates=[];
+    for(const [scope,link]of Object.entries(links)){
+      const width=minimum(scope);if(width===null)return null;
+      if(width<limit)candidates.push({scope,link,width,label:scope?(choices.find(item=>item.prefix===scope)?.label||width+'px and larger'):'All sizes'});
+    }
+    candidates.sort((a,b)=>b.width-a.width);
+    if(!candidates.length||candidates.length>1&&candidates[0].width===candidates[1].width)return null;
+    const {scope,link,label}=candidates[0];return {scope,link,label};
+  }
+  const api={split,project,replaceScope,discover,matches,inherited,atWidth,inheritedLink};
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.RetouchResponsive=api;
 })(typeof window==='object'?window:globalThis);

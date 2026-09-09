@@ -73,3 +73,13 @@ test('imported and adopted stylesheets retain media context and tolerate inacces
  const choices=R.discover({styleSheets:[parent,{disabled:true,cssRules:[{selectorText:'.disabled\\:flex',media:{mediaText:'(min-width: 1px)'}}]}],adoptedStyleSheets:[adopted]});
  assert.deepEqual(choices.map(c=>c.prefix),['adopted:','imported:']);assert.deepEqual(choices[1].queries,[['(min-width: 700px)'],['(min-height: 800px)','(min-width: 700px)']]);assert.deepEqual(choices[0].queries,[['(min-width: 900px)']]);
 });
+test('text style inheritance uses actual breakpoint units and the nearest unambiguous source scope',()=>{
+ const d={createElement:()=>({style:{},remove(){}}),documentElement:{append(){}},defaultView:{getComputedStyle:()=>({fontSize:'20px'})}},base={id:'base'},tablet={id:'tablet'},choices=[{prefix:'tablet:',label:'Tablet',condition:'(width >= 40rem)'},{prefix:'desktop:',label:'Desktop',condition:'(min-width: 1200px)'}];
+ assert.deepEqual(R.inheritedLink({'':base},'tablet:',d,choices),{scope:'',link:base,label:'All sizes'});
+ assert.deepEqual(R.inheritedLink({'':base,'tablet:':tablet},'desktop:',d,choices),{scope:'tablet:',link:tablet,label:'Tablet'});
+ assert.deepEqual(R.inheritedLink({'':base,'tablet:':tablet},'min-[700px]:',d,choices),{scope:'',link:base,label:'All sizes'});
+ assert.equal(R.inheritedLink({'':base,'tablet:':tablet},'tablet:',d,choices),null);
+ assert.equal(R.inheritedLink({'':base,'tablet:':tablet,'min-[800px]:':{id:'tie'}},'desktop:',d,choices),null);
+ assert.equal(R.inheritedLink({'':base,'unknown:':tablet},'desktop:',d,choices),null);
+ assert.equal(R.inheritedLink({'':base},'max-[1200px]:',d,choices),null);
+});

@@ -5762,3 +5762,27 @@ Coverage is JSX/TSX under this adapter's source conventions, not arbitrary JS,
 external packages or all CSS systems. Dynamic expressions and unsupported linked
 markup still refuse. React inherited-link UI, Liquid links, collaboration and the
 broader full-parity goal remain unfinished. Native launches stay paused.
+
+### React text-style inheritance from actual breakpoint rules
+
+React's typography library now identifies an inherited link when the active
+scope has no direct link. It resolves named scopes from loaded breakpoint CSS,
+converts px/rem/em using initial font metrics, and chooses the nearest narrower
+unambiguous linked scope. The existing Apply inherited style at this scope action
+creates a local scoped link while preserving the narrower link. Inherited links
+do not expose detach/reset controls that would mutate their source scope.
+
+Equal-width ties, unknown linked breakpoints, compound media queries and maximum-
+width scopes do not produce an inheritance claim. These need richer cascade
+analysis for full arbitrary-site support. Discovery is skipped when a direct link
+already exists or no responsive scope is selected.
+
+All 429 unit tests passed, exit 0:
+/private/tmp/retouch-react-inherited-styles-units.log. Unit coverage includes custom
+names, initial 20px rem metrics, nearest scope, exact links, unknown conditions
+and ties. React Chromium and WebKit browser processes exited 0:
+/private/tmp/retouch-react-inherited-styles-{chromium,webkit}.log. They verify
+visible base inheritance at md, no inherited detach action, no source write from
+inspection, scoped application and exact undo. Existing reset/propagation/catalog
+history flows also pass. Syntax and diff checks passed. Liquid linked styles and
+full parity remain unfinished. Native launches remain paused.
