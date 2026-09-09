@@ -14,7 +14,17 @@
    if(locks.has(change.id)!==expected)return {ok:false,reason:'The layer lock changed since this history entry.'};
    if(next)locks.add(change.id);else locks.delete(change.id);return {ok:true};
   }
-  return {direct,locked,set,change,restore};
+  function pick(node,x,y){
+   const selector='[data-rt], [data-rt-i]',first=node?.closest?.(selector);
+   if(!first||!locked(first))return first||null;
+   if(!Number.isFinite(x)||!Number.isFinite(y))return null;
+   for(const hit of node.ownerDocument.elementsFromPoint(x,y)){
+    const candidate=hit.closest?.(selector);
+    if(candidate&&!locked(candidate)&&!candidate.contains(node)&&!['HTML','BODY'].includes(candidate.tagName))return candidate;
+   }
+   return null;
+  }
+  return {direct,locked,set,change,restore,pick};
  }
  const api={create};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayerLocks=api;
 })(typeof window==='object'?window:globalThis);

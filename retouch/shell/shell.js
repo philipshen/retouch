@@ -91,7 +91,7 @@ function hookFrame(d, w) {
     onChange:rect=>{selectionMarquee=rect?{document:d,rect}:null;},
     selectable:node=>!layerLocks.locked(node),
     onSelect:(nodes,options)=>selectMany(nodes,options),
-    onClick:(node,options)=>{if(!panelTasks&&!undoBusy&&!sourceRequests)select(node,options);},
+    onClick:(node,options)=>{if(panelTasks||undoBusy||sourceRequests)return;const target=layerLocks.pick(node,options.point?.x,options.point?.y);if(target)select(target,options);else if(!options.toggle)clearSelection();},
   });
   // The compiler may deliver CSS after the source-write response. Refresh
   // computed inspector values when that CSS lands, without interrupting input.
@@ -118,14 +118,14 @@ function hookFrame(d, w) {
   d.addEventListener('click', async (e) => {
     if (mode !== 'edit') return;
     if (panelTasks > 0 || undoBusy || sourceRequests) { e.preventDefault(); e.stopPropagation(); return; }
-    if ((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection)){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=e.target.closest?.('[data-rt]');if(target&&!layerLocks.locked(target))await select(target,{toggle:true});return;}
+    if ((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection)){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=layerLocks.pick(e.target,e.clientX,e.clientY);if(target)await select(target,{toggle:true});return;}
     if (editing) {
       if (editing.el.contains(e.target)) return;
       commitInlineEdit(); // clicking away commits (R-5)
     }
     e.preventDefault();
     e.stopPropagation();
-    const t = e.target.closest && e.target.closest('[data-rt], [data-rt-i]');
+    const t = layerLocks.pick(e.target,e.clientX,e.clientY);
     // Single click selects AND, when the element has editable literal text,
     // enters in-place editing directly (user decision, 2026-09-02).
     if (t&&!layerLocks.locked(t)) startInlineEdit(t, e, true);
@@ -140,14 +140,13 @@ function hookFrame(d, w) {
     }
     e.preventDefault();
     e.stopPropagation();
-    const t = e.target.closest && e.target.closest('[data-rt], [data-rt-i]');
+    const t = layerLocks.pick(e.target,e.clientX,e.clientY);
     if (t&&!layerLocks.locked(t)) startInlineEdit(t, e);
   }, true);
   d.addEventListener('mousemove', (e) => {
     if (mode !== 'edit') { hoverEl = null; return; }
     measuring = e.altKey;
-    hoverEl = (e.target.closest && e.target.closest('[data-rt], [data-rt-i]')) || null;
-    if(layerLocks.locked(hoverEl))hoverEl=null;
+    hoverEl = layerLocks.pick(e.target,e.clientX,e.clientY);
   }, true);
   d.addEventListener('mouseleave', () => { hoverEl = null; }, true);
   d.addEventListener('keydown', (e) => { if (e.key === 'Alt') measuring = true; }, true);

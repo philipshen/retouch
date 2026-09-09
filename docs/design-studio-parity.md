@@ -2447,3 +2447,26 @@ The real React lock/marquee/group-edit workflow also passes in WebKit; log
 
 Session persistence, durable source identity, full Figma parity and trusted Mac
 distribution remain unfinished. The packaged Mac app predates lock support.
+
+## Selection through locked overlays
+
+Canvas picking now searches the rendered hit stack beneath a locked source layer.
+It skips locked descendants and the covered layer's own ancestors, so a locked
+object cannot intercept access to an unrelated editable layer beneath it. This
+applies to normal/modifier picking, double-click text access and hover outlines.
+A drag starting over a locked object can start a marquee; short clicks preserve
+normal picking through the overlay, with the existing duplicate-click suppression.
+No pointer-events styles or source attributes are changed.
+
+The new `test:e2e:locked-overlay` passes in Chromium and WebKit at 50/100/200%
+zoom. It covers underlying selection, modifier selection, empty clicks, text
+editing entry/exit, marquee starts over a locked overlay, Escape, unlock behavior,
+unchanged source and suppression of the overlay's application click handler.
+The HTML lock/history workflow passes in Chromium, and the real React lock/marquee/
+group-edit workflow passes in WebKit. All 330 unit/HTTP tests pass. Logs:
+`/private/tmp/retouch-locked-overlay-{chromium,webkit,lock-regression,react-regression,unit}.log`.
+
+This uses the browser's same-document hit stack; it does not add source mapping
+inside cross-origin frames or closed shadow roots. Full arbitrary-site authoring,
+lock persistence, remaining Figma features and trusted desktop distribution remain
+unfinished. The latest packaged app predates the lock work.

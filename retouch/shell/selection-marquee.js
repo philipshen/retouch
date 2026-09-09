@@ -26,11 +26,11 @@
    if(!state)return;const current=state;state=null;
    if(current.capture.hasPointerCapture(current.pointerId))current.capture.releasePointerCapture(current.pointerId);
    onChange(null);
-   if(!current.moved&&commit&&!current.outer&&!['HTML','BODY'].includes(current.target.tagName)&&current.target.isConnected&&selectable(current.target)&&onClick){const marker=ignoreClick={...current.rawLast,outer:false,time:Date.now()};root.setTimeout(()=>{if(ignoreClick===marker)ignoreClick=null;},0);onClick(current.target,{toggle:current.append});}
+   if(!current.moved&&commit&&!current.outer&&!['HTML','BODY'].includes(current.target.tagName)&&current.target.isConnected&&onClick){const marker=ignoreClick={...current.rawLast,outer:false,time:Date.now()};root.setTimeout(()=>{if(ignoreClick===marker)ignoreClick=null;},0);onClick(current.target,{toggle:current.append,point:current.last});}
    if(current.moved){ignoreClick={...current.rawLast,outer:current.outer,time:Date.now()};if(commit)onSelect(pick(d,clip(rectangle(current.start,current.last),w.innerWidth,w.innerHeight),selectable),{append:current.append});}
   }
   function down(e,outer){
-   const allowed=outer?[surface,root.document.getElementById('canvasExtent'),root.document.getElementById('siteStage')].includes(e.target):background(e.target);
+   const allowed=outer?[surface,root.document.getElementById('canvasExtent'),root.document.getElementById('siteStage')].includes(e.target):background(e.target)||!selectable(e.target);
    if(state||!enabled()||e.button!==0||!allowed||(outer&&(!frame.getBoundingClientRect().width||!w.innerWidth)))return;
    e.preventDefault();e.stopImmediatePropagation();const start=point(e,outer),capture=outer?surface:e.target;
    state={pointerId:e.pointerId,target:e.target,start,last:start,rawLast:{x:e.clientX,y:e.clientY},outer,capture,scale:frame?frame.getBoundingClientRect().width/w.innerWidth:1,moved:false,append:e.shiftKey||e.metaKey||e.ctrlKey};capture.setPointerCapture(e.pointerId);
