@@ -1727,7 +1727,10 @@ window.addEventListener('keydown', (e) => {
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.target.closest?.('input,textarea,[contenteditable="true"]')) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
-  if (e.key === 'Escape') clearSelection();
+  if (e.key === 'Escape') {
+    if(stopDrawing){e.preventDefault();stopDrawing();return;}
+    clearSelection();
+  }
 });
 window.addEventListener('keyup', (e) => { if (!e.altKey) measuring = false; });
 window.addEventListener('blur', () => { measuring = false; });

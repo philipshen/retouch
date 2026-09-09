@@ -3411,3 +3411,52 @@ vector networks, booleans/masks, persistent per-anchor constraints and the broad
 Figma Design requirements remain open. Native launches stayed paused; no desktop
 build or launch occurred. Unrestricted site authoring and trusted Mac distribution
 remain unverified.
+
+
+### 2026-09-09 — Convert SVG arcs into editable Bézier curves
+
+The arc inspector now offers Convert arc to Bézier. It creates cubic handles
+while preserving the original segment endpoints and neighboring contours. The
+conversion is pending until Done, can be cancelled with Escape, and participates
+in exact source undo/redo. Saved handles can be reopened and edited normally.
+The cubic Hermite subdivision uses a conservative interpolation bound of 0.01
+SVG coordinate units; unsupported numeric or document point limits refuse the
+conversion without changing the pending arc. This is an SVG-local bound, not a
+screen-pixel guarantee under arbitrary transforms.
+
+All 359 unit tests pass in `/private/tmp/retouch-arc-convert-unit-escape.log`.
+Numerical tests sample rotated, eccentric, radii-corrected, long and short arcs
+in both directions against the parametric ellipse, and cover closing segments,
+endpoint preservation and atomic refusal at point limits. The original unit
+failure in `/private/tmp/retouch-arc-convert-unit.log` was an incorrect assertion
+that the shared start anchor would gain no outgoing handle; that assertion was
+corrected to preserve the neighboring arc while allowing its new cubic handle.
+
+All four browser workflows pass in
+`/private/tmp/retouch-arc-convert-html-chromium-fixed.log`,
+`/private/tmp/retouch-arc-convert-html-webkit.log`,
+`/private/tmp/retouch-arc-convert-react-chromium.log`, and
+`/private/tmp/retouch-arc-convert-react-webkit-fixed.log`.
+They verify open and closing arc conversion, unchanged neighboring contours,
+rendered shape samples, editable saved handles, source isolation, exact undo/redo,
+invalid-property refusal and cancellation, alongside the existing transformed
+arc operations at 50/100/200 percent zoom. The inspected Chromium and WebKit
+screenshots show the converted handles and accessible Done/Cancel controls:
+`/private/tmp/retouch-arc-convert-html-chromium.png` and
+`/private/tmp/retouch-arc-convert-react-webkit-fixed.png`.
+
+The original React/WebKit failure is retained in
+`/private/tmp/retouch-arc-convert-react-webkit.log`. Escape could reach the shell
+when focus fell outside the editor and clear the selected layer. The shell now
+cancels an active drawing before clearing selection. The browser regression
+explicitly removes focus before Escape and verifies the editor closes while the
+selected vector remains available to edit.
+The React/WebKit nested Pen regression also passes in
+`/private/tmp/retouch-arc-convert-nested-pen.log`, including child cancellation,
+retained parent edits and exact source history.
+
+Direct arc-radius handles, vector networks, booleans/masks and persistent
+per-anchor constraints remain open. Dense converted curves also warrant clearer
+handle visibility at small sizes. This does not establish full Figma parity or
+unrestricted site authoring. Native launches stayed paused; no desktop build or
+launch occurred, and trusted Mac distribution remains unverified.

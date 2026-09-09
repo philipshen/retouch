@@ -110,6 +110,13 @@
     }
     const longLabel=root.document.createElement('label'),longArc=root.document.createElement('input');longArc.type='checkbox';longArc.setAttribute('aria-label','Long arc');longArc.onchange=()=>changeArc({large:longArc.checked?1:0});longLabel.append(longArc,root.document.createTextNode('Long arc'));arcPanel.append(longLabel);
     const reverseArc=action('Reverse arc',()=>{if(arcIndex!==null)changeArc({sweep:1-vertices[arcIndex].arc.sweep});});arcPanel.append(reverseArc);const arcNote=root.document.createElement('span');arcNote.dataset.arcHint='true';arcNote.style.cssText='flex-basis:100%;font-size:11px;line-height:1.4;color:#aeb3bd;';arcPanel.append(arcNote);if(propertiesPane){arcPanel.style.padding='12px';arcPanel.style.marginBottom='12px';arcPanel.style.border='1px solid #454951';arcPanel.style.borderRadius='6px';propertiesPane.prepend(arcPanel);}else toolbar.append(arcPanel);
+    const convertArc=action('Convert arc to Bézier',()=>{
+      if(drag||cancelPen||arcIndex===null||!verify())return;
+      if(Object.values(arcInputs).some(input=>input.getAttribute('aria-invalid')==='true')){status.textContent='Correct the arc properties before converting.';return;}
+      const converted=root.RetouchSVGPath.arcToCubics({nodes:vertices,closed},arcIndex);
+      if(!converted||totalPoints()-vertices.length+converted.nodes.length>512){status.textContent='This conversion cannot meet the precision and point limits. The arc is unchanged.';return;}
+      vertices.splice(0,vertices.length,...converted.nodes);active=converted.selected;activeHandle=null;arcAnchor=-1;rebuild();handles[active].focus({preventScroll:true});announce('Arc converted to editable Bézier curves. Done saves; Escape cancels.');
+    });convertArc.title='Approximate this arc with editable curves, within 0.01 SVG units. The original arc can be restored with Undo.';arcPanel.insertBefore(convertArc,arcNote);
     arcPicker.style.cssText='padding:5px;background:#2b2e33;color:#e5e7eb;border:1px solid #454951;border-radius:4px;';arcPicker.onchange=()=>{arcIndex=Number(arcPicker.value);refreshArc();};
     listen(arcPanel,'keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancel();}else if(e.key==='Enter'&&e.target.tagName==='INPUT'&&e.target.type==='number'){e.preventDefault();e.stopImmediatePropagation();commit();}},true);
     function refreshArc(){

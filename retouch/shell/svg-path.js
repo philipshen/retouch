@@ -111,6 +111,24 @@
     return [rx,ry,cx,cy,start,delta].every(Number.isFinite)?{rx,ry,cx,cy,start,delta,c,s}:null;
   }
   function arcPoint(center,t){const angle=center.start+center.delta*t,x=center.rx*Math.cos(angle),y=center.ry*Math.sin(angle);return{x:center.c*x-center.s*y+center.cx,y:center.s*x+center.c*y+center.cy};}
+  function arcToCubics(part,index,tolerance=.01){
+    if(!part||!serialize(part.nodes,part.closed)||!Number.isInteger(index)||index<0||index>=part.nodes.length||!part.nodes[index].arc||!part.closed&&index===0||!Number.isFinite(tolerance)||tolerance<1e-6||tolerance>1)return null;
+    const nodes=part.nodes.map(p=>translate(p,0,0)),a=nodes[(index+nodes.length-1)%nodes.length],b=nodes[index],center=arcCenter(a,b),arc=b.arc;
+    if(!center){if(arc.rx&&arc.ry&&(a.x!==b.x||a.y!==b.y))return null;delete b.arc;return serialize(nodes,part.closed)?{nodes,closed:part.closed,selected:index}:null;}
+    // Cubic Hermite interpolation: per-coordinate error <= R*h^4/384.
+    // The Euclidean bound uses sqrt(2)*R. Reserve half the tolerance for
+    // floating-point evaluation and preserve the original endpoints exactly.
+    // https://dlmf.nist.gov/3.3 (remainder and confluent divided differences)
+    const radius=Math.max(center.rx,center.ry),roundoff=128*Number.EPSILON*Math.max(1,radius,Math.abs(center.cx),Math.abs(center.cy));if(roundoff>=tolerance/4)return null;
+    const maxStep=Math.min(Math.PI/2,Math.pow(384*tolerance/2/(Math.SQRT2*radius),.25)),count=Math.max(1,Math.ceil(Math.abs(center.delta)/maxStep));if(!Number.isFinite(count)||nodes.length+count-1>512)return null;
+    const step=center.delta/count,inserted=[];let previous=a;
+    function tangent(t){const angle=center.start+center.delta*t,x=-center.rx*Math.sin(angle),y=center.ry*Math.cos(angle);return{x:center.c*x-center.s*y,y:center.s*x+center.c*y};}
+    for(let i=0;i<count;i++){
+      const next=i===count-1?b:arcPoint(center,(i+1)/count),u=tangent(i/count),v=tangent((i+1)/count);previous.out={x:previous.x+step*u.x/3,y:previous.y+step*u.y/3};next.in={x:next.x-step*v.x/3,y:next.y-step*v.y/3};if(next!==b)inserted.push(next);previous=next;
+    }
+    delete b.arc;const at=index===0?nodes.length:index;nodes.splice(at,0,...inserted);
+    return serialize(nodes,part.closed)?{nodes,closed:part.closed,selected:inserted.length?at:index}:null;
+  }
   function segmentMiddle(a,b){if(b.arc){const center=arcCenter(a,b);return center?arcPoint(center,.5):midpoint(a,b);}const ab=midpoint(a,a.out||a),bc=midpoint(a.out||a,b.in||b),cd=midpoint(b.in||b,b);return midpoint(midpoint(ab,bc),midpoint(bc,cd));}
   function split(nodes,index,closed){
     if(!serialize(nodes,closed)||nodes.length>=512||!Number.isInteger(index)||index<0||index>=nodes.length-(closed?0:1))return null;
@@ -145,5 +163,5 @@
     return (!next.in||coordinate(next.in))&&(!next.out||coordinate(next.out))?next:null;
   }
   function equivalent(a,b){return !!a&&!!b&&a.closed===b.closed&&a.nodes.length===b.nodes.length&&a.nodes.every((p,i)=>(!p.arc&&!b.nodes[i].arc||p.arc&&b.nodes[i].arc&&['rx','ry','rotation','large','sweep'].every(key=>Math.abs(p.arc[key]-b.nodes[i].arc[key])<1e-6))&&['','in','out'].every(key=>{const x=key?p[key]:p,y=key?b.nodes[i][key]:b.nodes[i];return !x&&!y||x&&y&&Math.abs(x.x-y.x)<1e-6&&Math.abs(x.y-y.y)<1e-6;}));}
-  const api={serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,setArc,split,segmentMiddle,arcCenter,arcPoint,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
+  const api={serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,setArc,split,segmentMiddle,arcCenter,arcPoint,arcToCubics,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
 })(typeof window==='object'?window:globalThis);

@@ -136,3 +136,14 @@ test('Arc parameter edits change only the selected segment and reject invalid va
   for(const changes of [{rx:-1},{rx:Infinity},{rx:100001},{rotation:NaN},{large:2},{sweep:true},{unexpected:1},{ry:'20'}])assert.equal(path.setArc(part,0,changes),null);
   assert.equal(path.setArc(part,-1,{rx:20}),null);assert.equal(path.setArc(path.parse('M0 0L1 1'),1,{rx:20}),null);
 });
+
+test('Arc-to-cubic conversion bounds parametric error and preserves endpoints and neighboring segments',()=>{
+  const evaluate=(a,b,t)=>{const u=1-t;return{x:u*u*u*a.x+3*u*u*t*a.out.x+3*u*t*t*b.in.x+t*t*t*b.x,y:u*u*u*a.y+3*u*u*t*a.out.y+3*u*t*t*b.in.y+t*t*t*b.y};};
+  for(const large of [0,1])for(const sweep of [0,1])for(const [rx,ry,rotation] of [[40,40,0],[60,25,35],[5,3,-40],[5000,2000,70]]){
+    const part=path.parse(`M10 20A${rx} ${ry} ${rotation} ${large} ${sweep} 70 50`),before=JSON.stringify(part),center=path.arcCenter(...part.nodes),converted=path.arcToCubics(part,1),count=converted.nodes.length-1;assert.equal(JSON.stringify(part),before);assert.ok(converted.nodes.every(p=>!p.arc));assert.equal(converted.nodes[0].x,10);assert.equal(converted.nodes.at(-1).x,70);
+    for(let i=0;i<count;i++)for(let j=0;j<=20;j++){const expected=path.arcPoint(center,(i+j/20)/count),actual=evaluate(converted.nodes[i],converted.nodes[i+1],j/20);assert.ok(Math.hypot(expected.x-actual.x,expected.y-actual.y)<=.01,JSON.stringify({rx,ry,rotation,large,sweep,i,j,expected,actual}));}
+  }
+  const loop=path.parse('M0 0A30 20 0 0 1 60 0A30 20 0 0 1 0 0Z'),converted=path.arcToCubics(loop,0);assert.equal(converted.closed,true);assert.deepEqual({...converted.nodes[1],out:undefined},{...loop.nodes[1],out:undefined});assert.ok(converted.nodes[1].out);assert.equal(converted.nodes[0].arc,undefined);assert.ok(converted.nodes[0].in);assert.ok(converted.nodes.at(-1).out);
+  assert.equal(path.arcToCubics(loop,0,0),null);assert.equal(path.arcToCubics(path.parse('M0 0L10 10'),1),null);
+  const crowded={closed:false,nodes:Array.from({length:512},(_,i)=>({x:i,y:0}))};crowded.nodes[1].arc={rx:100,ry:100,rotation:0,large:1,sweep:1};assert.equal(path.arcToCubics(crowded,1),null);
+});
