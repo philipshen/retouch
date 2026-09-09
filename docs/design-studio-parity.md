@@ -18,7 +18,7 @@ changing those files. The original checkout may continue to evolve independently
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | Full vector authoring and geometry model remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | Visual horizontal/vertical/reverse flex and grid controls, wrapping, gaps, alignment/distribution, per-side padding, fixed/hug/fill sizing and breakpoint-scoped writes now exist. Full constraint, advanced grid, min/max, nested auto-layout and cross-framework equivalence work remains. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | Partial inspector controls exist; complete visual editors and source representations remain. |
-| Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Basic inline formatting and inspector exist; full typography parity remains. |
+| Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. Font browsing, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | Existing React and Liquid component inspection/detach; full creation/variants/library workflows remain. Live Shopify proof is incomplete. |
 | Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Not implemented or verified. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 188 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 189 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -131,3 +131,17 @@ in both source and rendered output. Intermittent initial duplicate-shortcut time
 the previous selection could still enable Duplicate before the next selection
 resolved. The test now waits for the intended row to be selected and enabled.
 The focused-layer shortcut also avoids redundant selection requests.
+
+### Typography property controls
+
+The inspector now exposes custom pixel font size and line height, letter spacing,
+alignment, italic/normal, decoration and case. Text elements show typography before
+container layout controls. Explicit property edits retain named project text styles
+and override their unlayered CSS when needed; reset removes the supported property
+overrides in the current scope while preserving the named style. Normal line height
+is displayed as Normal rather than an estimated number.
+
+`retouch/test/e2e/typography.cjs` checks computed CSS on a named project style,
+repeated important overrides, base/tablet isolation, reset and exact-byte undo for
+the whole edit sequence. Each step waits for both the rendered result and the
+committed source before taking its next history snapshot.

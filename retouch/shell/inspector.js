@@ -15,7 +15,7 @@
     const old = tokens(classes);
     const important = old.some(t => base(t) !== null && match(base(t)) && (t.startsWith('!') || t.endsWith('!')));
     return old.filter(t => base(t) === null || !match(base(t)))
-      .concat(tokens(additions).map(t => important ? '!' + t : t)).join(' ');
+      .concat(tokens(additions).map(t => important && !/^!|!$/.test(t) ? '!' + t : t)).join(' ');
   }
   const round = n => Math.round(n * 100) / 100;
   const px = n => `${round(n)}px`;
@@ -111,7 +111,7 @@
     input.value = value; input.onchange = () => onChange(input.value); return field(parent, label, input);
   }
   function number(parent, label, value, min, max, onChange) {
-    const input = document.createElement('input'); input.type = 'number'; input.min = min; input.max = max; input.step = 'any'; input.value = round(value);
+    const input = document.createElement('input'); input.type = 'number'; input.min = min; input.max = max; input.step = 'any'; input.value = Number.isFinite(value) ? round(value) : '';
     input.onchange = () => { if (input.value !== '' && input.checkValidity()) onChange(Number(input.value)); };
     return field(parent, label, input);
   }
@@ -228,7 +228,25 @@
       } else note(sec,info.styleScope ? 'Use size and weight below for breakpoint typography. Named project styles currently apply through base styles.' : 'No named typography styles found in the loaded CSS.');
       const controls=[['Font size',/^text-(?:xs|sm|base|lg|[2-9]?xl|\[(?:length:)?[-.\d][^\]]*\])(?:\/.*)?$/,[['text-sm','Small'],['text-base','Body'],['text-lg','Large'],['text-2xl','Heading'],['text-4xl','Display']]],
         ['Font weight',/^font-(?:thin|extralight|light|normal|medium|semibold|bold|extrabold|black|\[\d+\])$/,[['font-normal','Regular'],['font-medium','Medium'],['font-semibold','Semibold'],['font-bold','Bold']]]];
-      for(const [label,re,choices] of controls)select(sec,label,[['','Inherited / custom'],...choices],tokens(info.className).map(base).find(t=>re.test(t))||'',value=>{if(value)save(replace(info.className,t=>re.test(t),value));});
+      // Project text styles can live outside CSS layers and outrank utilities.
+      // An explicit property override must still win without dropping the style's
+      // other font properties. Scope wrapping is handled by the shell afterward.
+      const styled=[...el.classList].some(t=>names.includes(t));
+      const change=(match,value)=>save(replace(info.className,match,styled?'!'+value:value));
+      for(const [label,re,choices] of controls)select(sec,label,[['','Inherited / custom'],...choices],tokens(info.className).map(base).find(t=>re.test(t))||'',value=>{if(value)change(t=>re.test(t),value);});
+      number(sec,'Font size (px)',parseFloat(css.fontSize),1,1000,v=>change(t=>controls[0][1].test(t),`text-[${v}px]`));
+      const lineHeight=number(sec,'Line height (px)',parseFloat(css.lineHeight),0,2000,v=>change(t=>t.startsWith('leading-'),`leading-[${v}px]`));
+      if(css.lineHeight==='normal'){lineHeight.value='';lineHeight.placeholder='Normal';}
+      number(sec,'Letter spacing (px)',parseFloat(css.letterSpacing)||0,-100,100,v=>change(t=>/^-?tracking-/.test(t),`tracking-[${v}px]`));
+      select(sec,'Text alignment',['left','center','right','justify','start','end'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.textAlign,v=>change(t=>/^text-(left|center|right|justify|start|end)$/.test(t),'text-'+v));
+      select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(t=>t==='italic'||t==='not-italic',v==='italic'?'italic':'not-italic'));
+      select(sec,'Text decoration',[['none','None'],['underline','Underline'],['line-through','Strikethrough'],['overline','Overline']],css.textDecorationLine,v=>change(t=>['underline','line-through','overline','no-underline'].includes(t),v==='none'?'no-underline':v));
+      select(sec,'Text case',[['none','As written'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']],css.textTransform,v=>change(t=>['uppercase','lowercase','capitalize','normal-case'].includes(t),v==='none'?'normal-case':v));
+      const textOverride=t=>controls.some(([,re])=>re.test(t)) || /^(?:leading-|tracking-|-tracking-|text-(?:left|center|right|justify|start|end)$)/.test(t) || ['italic','not-italic','underline','line-through','overline','no-underline','uppercase','lowercase','capitalize','normal-case'].includes(t);
+      const reset=button('Reset text overrides',()=>save(replace(info.className,textOverride,'')));
+      reset.disabled=!tokens(info.className).map(base).some(t=>t!==null&&textOverride(t));sec.append(reset);
+
+
     }
     if(info.canSetTag)select(sec,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label'].map(n=>[n,n]),info.tag,changeTag);
     return sec;

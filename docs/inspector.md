@@ -135,3 +135,13 @@ entry exists or a write/restore is pending. A new edit after undo clears redo.
 Restores use exact source snapshots. If an external change conflicts, the restore
 is refused and its history entry stays available for retry. History currently
 belongs to the running editor/server session; it is not persisted across restarts.
+
+## Typography properties
+
+Text layers put typography near the top of the inspector. Set exact font size,
+line height and letter spacing, then choose alignment, slant, decoration and case.
+These property changes follow the chosen breakpoint scope and support undo/redo.
+When a named project text style overrides utility classes, explicit property
+changes use important utilities while retaining the style's other font properties.
+**Reset text overrides** clears the supported property overrides in that scope
+and restores the inherited/project styling.

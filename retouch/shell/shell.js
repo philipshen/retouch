@@ -720,11 +720,13 @@ function renderPanel() {
   }
 
   const target = (editing?.el.ownerDocument === doc() ? editing.el : null) || matchingEls(activeId()).find(el => inTextScope(el, info));
+  const textLayer=/^(h[1-6]|p|span|a|label|blockquote|li|button)$/.test(info.tag);
+  if(textLayer) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag));
   panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err')));
   panelBody.appendChild(RetouchLayout.mount(style, target, setClasses));
   panelBody.appendChild(RetouchInspector.appearance(style, target, setClasses));
   if (info.src !== null || info.srcDynamic) panelBody.appendChild(imageSection(info));
-  if (info.canSetTag || target?.textContent?.trim()) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag));
+  if (!textLayer && (info.canSetTag || target?.textContent?.trim())) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag));
   panelBody.appendChild(colorSection('Fill', 'bg', style));
   panelBody.appendChild(colorSection('Text color', 'text', style));
   panelBody.appendChild(RetouchInspector.effects(style, target, setClasses, message => toast(message, 'err')));

@@ -10,6 +10,9 @@ test('base edits preserve breakpoint and state variants, including arbitrary val
   assert.equal(replace('opacity-50 md:opacity-20 hover:opacity-100', t=>t.startsWith('opacity-'),'opacity-[0.4]'), 'md:opacity-20 hover:opacity-100 opacity-[0.4]');
   assert.equal(replace('opacity-50! md:opacity-20', t=>t.startsWith('opacity-'),'opacity-[0.4]'), 'md:opacity-20 !opacity-[0.4]');
 });
+test('important property edits do not duplicate important markers', () => {
+  assert.equal(replace('!text-[42px] md:text-lg', t=>t.startsWith('text-'),'!text-[44px]'),'md:text-lg !text-[44px]');
+});
 test('anchor conversion preserves unrelated and responsive styles and pins existing bounds', () => {
   const g = { x: 420, y: 20, width: 160, height: 80, parentWidth: 600, parentHeight: 300 };
   assert.equal(nearestAnchor(g.x,g.width,g.parentWidth), 'end');
