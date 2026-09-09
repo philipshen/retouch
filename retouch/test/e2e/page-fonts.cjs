@@ -37,6 +37,12 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    console.log(engine+' '+kind+': PASS custom fractional weights, scope isolation, reset, family retention and exact undo'+(kind==='html'?'':', range validation and preset replacement'));
   }
   if(process.env.RT_E2E_FONT_AXES){
+   if(process.env.RT_E2E_VARIABLE_FONT){
+    const beforeMetadata=read(),font=fs.readFileSync(path.join(fixture,'node_modules/next/dist/next-devtools/server/font/geist-latin.woff2')).toString('base64');
+    const metadata=await page.evaluate(async encoded=>{const response=await fetch('/rt/__api/font-axes',{method:'POST',headers:{'x-retouch-token':window.__RT_TOKEN,'content-type':'application/octet-stream'},body:Uint8Array.from(atob(encoded),char=>char.charCodeAt(0))});return {status:response.status,...await response.json()};},font);
+    assert.equal(metadata.status,200);assert.equal(metadata.ok,true);assert.deepEqual(metadata.axes,[{tag:'wght',name:'Weight',min:100,default:400,max:900,hidden:false}]);assert.equal(read(),beforeMetadata);
+    console.log(engine+' '+kind+': PASS authenticated real WOFF2 metadata API without source changes');
+   }
    await page.getByLabel('Style screen scope').selectOption('');await settled();await page.getByText('Variable font axes',{exact:true}).click();
    const axes=()=>app.locator('h1').evaluate(el=>getComputedStyle(el).fontVariationSettings);
    const write=async(action,expected)=>{snapshots.push(read());await action();await wait(()=>read()!==snapshots.at(-1));await settled();await wait(async()=>expected.test(await axes()));if(kind!=='html')await wait(async()=>{try{return expected.test(await page.frameLocator('iframe[title="Typography preview"]').locator('body div').evaluate(el=>getComputedStyle(el).fontVariationSettings));}catch(error){if(/Frame was detached|Execution context was destroyed/.test(error.message))return false;throw error;}});};

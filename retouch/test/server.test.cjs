@@ -195,3 +195,19 @@ test('shell state scope isolates projects and changes session identity on a fres
  }
  cleanup(otherRoot);
 });
+
+test('font metadata API authenticates and parses bytes without writing assets or source',async()=>{
+ const bytes=Buffer.alloc(64);bytes.writeUInt32BE(0x10000,0);bytes.writeUInt16BE(1,4);bytes.write('fvar',12);bytes.writeUInt32BE(28,20);bytes.writeUInt32BE(36,24);bytes.writeUInt16BE(1,28);bytes.writeUInt16BE(16,32);bytes.writeUInt16BE(1,36);bytes.writeUInt16BE(20,38);bytes.write('wght',44);[100,400,900].forEach((value,i)=>bytes.writeInt32BE(value*65536,48+i*4));
+ const endpoint='/rt/__api/font-axes',headers={'x-retouch-token':token,'content-type':'application/octet-stream'},source=fs.readFileSync(path.join(root,'app/Page.tsx'),'utf8'),files=fs.readdirSync(root,{recursive:true}).sort();
+ const denied=await req(port,'POST',endpoint,{body:bytes});assert.notEqual(denied.status,200);
+ const method=await req(port,'GET',endpoint,{headers});assert.equal(method.status,405);
+ const result=await req(port,'POST',endpoint,{headers,body:bytes});assert.equal(result.status,200);assert.deepEqual(JSON.parse(result.body),{ok:true,axes:[{tag:'wght',name:'wght',min:100,default:400,max:900,hidden:false}]});
+ const malformed=await req(port,'POST',endpoint,{headers,body:Buffer.from('not a font')});assert.equal(malformed.status,422);assert.equal(JSON.parse(malformed.body).ok,false);
+ assert.equal(fs.readFileSync(path.join(root,'app/Page.tsx'),'utf8'),source);assert.deepEqual(fs.readdirSync(root,{recursive:true}).sort(),files);
+});
+test('oversized binary metadata and image uploads return usable 413 responses',async()=>{
+ for(const [endpoint,limit]of [['/rt/__api/font-axes',16*1024*1024],['/rt/__api/upload?name=too-large.png',10000000]]){
+  const result=await req(port,'POST',endpoint,{headers:{'x-retouch-token':token},body:Buffer.alloc(limit+1)});assert.equal(result.status,413);assert.equal(JSON.parse(result.body).ok,false);
+ }
+ const health=await req(port,'GET','/rt/__api/health');assert.equal(health.status,200);
+});

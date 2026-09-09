@@ -4980,3 +4980,30 @@ CSS source/fallback resolution, access constraints, localized-name preferences a
 UI ranges remain unfinished. It is not a full font validator or exhaustive
 WOFF/WOFF2 decoder. Large-memory/CPU limits have not been stress-tested. Full Figma
 parity remains incomplete; native launches remain paused.
+
+### Authenticated font metadata API (2026-09-09)
+
+The shared sidecar now accepts POST /rt/__api/font-axes with font bytes and the
+existing editor token. It returns parsed axis metadata, refuses other methods,
+returns 422 for malformed/unsupported font data, and limits input to 16 MB.
+It neither fetches remote URLs nor stores font bytes or changes source files.
+The binary request reader now drains/discards excess data and returns a readable
+413 response instead of destroying the connection before the response arrives;
+this also fixes oversized image-upload error reporting.
+
+Real sidecar integration tests passed token rejection, method handling, parsed
+axis values, malformed input, unchanged source/file inventory, and oversized
+font/image requests followed by a healthy server response. Focused log:
+`/private/tmp/retouch-font-api-focused.log`. Chromium and WebKit posted the actual
+Geist WOFF2 fixture through the shell token and obtained Weight 100/400/900 without
+source changes. Existing typography flows passed in the same runs:
+`/private/tmp/retouch-font-api-chromium.log` and
+`/private/tmp/retouch-font-api-webkit.log`. All 382 unit tests passed in
+`/private/tmp/retouch-font-api-unit.log`; all processes exited 0 and git diff --check
+passed.
+
+Inspector font-source discovery and automatic range controls remain unfinished;
+this endpoint is their transport boundary, not an automatic discovery feature.
+Parser CPU behavior under adversarial inputs and disconnected/slow body streams
+were not stress-tested. Full parity remains incomplete; native launches remain
+paused.

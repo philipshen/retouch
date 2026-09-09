@@ -77,6 +77,15 @@ function handle(req, res, ctx) {
     return json(res, 200, { ok: true, ...(ctx.sourceMonitor?.state() || { revision: 0, available: false }) });
   }
   if (p === '/rt/__api/health') return json(res, 200, { ok: true, service: 'retouch' });
+  if (p === '/rt/__api/font-axes') {
+    requireToken(req, ctx.token);
+    if(req.method!=='POST')return json(res,405,{ok:false,reason:'Send font bytes with POST.'});
+    return readBinary(req,16*1024*1024,bytes=>{
+      if(!bytes)return json(res,413,{ok:false,reason:'Font files must be 16 MB or smaller.'});
+      try{return json(res,200,{ok:true,axes:require('./font-axes.cjs').readFontAxes(bytes)});}
+      catch(error){return json(res,422,{ok:false,reason:error.message});}
+    });
+  }
   if (p === '/rt/__api/pages' && req.method === 'GET') {
     requireToken(req, ctx.token);
     return json(res, 200, {ok:true,available:!!ctx.adapter.pages,...(ctx.adapter.pages?.()||{pages:[]})});
@@ -329,12 +338,13 @@ function readBinary(req, maxBytes, cb) {
   let size = 0;
   let over = false;
   req.on('data', (c) => {
+    if(over)return;
     size += c.length;
-    if (size > maxBytes) { over = true; req.destroy(); return; }
+    // Drain excess input without retaining it so the client can receive 413.
+    if (size > maxBytes) { over = true; chunks.length=0; cb(null); return; }
     chunks.push(c);
   });
-  req.on('end', () => cb(over ? null : Buffer.concat(chunks)));
-  req.on('close', () => { if (over) cb(null); });
+  req.on('end', () => { if(!over)cb(Buffer.concat(chunks)); });
 }
 
 function readBody(req, cb) {
