@@ -68,3 +68,11 @@ test('group bounds retain every member including overlap, negative coordinates a
  const {union}=require('../shell/canvas-move.js'),rects=[{left:-20,top:30,width:80,height:40},{left:100,top:-10,width:60,height:90},{left:0,top:0,width:40,height:40}].map(r=>Object.create(r));
  assert.deepEqual(union(rects),{left:-20,top:-10,right:160,bottom:80,width:180,height:90});assert.deepEqual(union([...rects].reverse()),union(rects));assert.throws(()=>union([]));assert.throws(()=>union([{left:0,top:0,width:0,height:40}]));assert.throws(()=>union([{left:NaN,top:0,width:40,height:40}]));
 });
+test('group resizing scales member bounds and gaps relative to the resized selection',()=>{
+ const {memberBounds,union}=require('../shell/canvas-move.js'),rects=[{left:10,top:20,width:100,height:50},{left:150,top:100,width:50,height:100}],next={x:20,y:-10,width:380,height:90},members=memberBounds(rects,next);
+ assert.deepEqual(members,[{x:20,y:-10,width:200,height:25},{x:160,y:-50,width:100,height:50}]);assert.deepEqual(union(rects.map((r,i)=>({left:r.left+members[i].x,top:r.top+members[i].y,width:members[i].width,height:members[i].height}))),{left:30,top:10,right:410,bottom:100,width:380,height:90});assert.throws(()=>memberBounds(rects,{...next,width:0}));
+});
+test('group limits combine the tightest per-member ratios and respect CSS minimum priority',()=>{
+ const {groupLimits}=require('../shell/canvas-move.js'),rects=[{left:10,top:20,width:100,height:50},{left:150,top:100,width:50,height:100}],limits=[{minWidth:50,maxWidth:200,minHeight:25,maxHeight:100},{minWidth:20,maxWidth:60,minHeight:40,maxHeight:150}];
+ assert.deepEqual(groupLimits(rects,limits),{minWidth:95,maxWidth:228,minHeight:90,maxHeight:270});assert.equal(groupLimits(rects,[{...limits[0],maxWidth:20},limits[1]]).maxWidth,95);assert.throws(()=>groupLimits(rects,[{...limits[0],minWidth:200},limits[1]]));assert.throws(()=>groupLimits(rects,[]));
+});

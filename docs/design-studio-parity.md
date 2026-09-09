@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 314 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 316 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -2090,3 +2090,37 @@ Screenshot `/private/tmp/retouch-selection-move.png` was visually inspected.
 Group resizing/rotation, flow rearrangement, React/Liquid multi-selection geometry,
 vector group transforms and on-canvas spacing handles remain unfinished. The current
 Mac artifact predates these selection controls; trusted distribution remains open.
+
+
+### Atomic multi-layer canvas resizing
+
+Supported absolute HTML selections now expose **Resize selection on canvas** with
+an outer eight-handle outline and individual member previews. Resizing scales
+member bounds and their positions within the union, including layers in different
+containing frames. Shift preserves proportions; Option/Alt resizes from the
+center. Snapping, bypass, keyboard steps, cancellation and responsive scope writes
+share the single-layer canvas implementation. Each gesture commits one atomic edit
+and restores the selection through exact source undo/redo.
+
+The tightest member min/max constraints limit the whole selection. Content-box
+members retain their authored box model, padding and borders; aggregate limits
+account for those decorations and browser fractional-pixel serialization. Changes
+to any member's size constraints cancel a preview even when its current rendered
+bounds have not changed. Protected members refuse the entire source write.
+Typography, effects, padding and border thickness do not scale with these bounds.
+
+Validation: all 316 unit tests pass. Chromium and WebKit verify member previews,
+50/100/200% zoom, edge/corner gestures, proportional and centered resizing,
+content-box limits, external snapping, keyboard/focus/no-op behavior, constraint
+change cancellation, scope independence, protected-member refusal, different
+containing frames, and exact atomic undo/redo. Chromium group movement,
+single-layer snapping/resize and real React/Tailwind positioning regressions pass;
+WebKit selection alignment and exact-gap regressions pass. The new workflow is
+included in the HTML suite, which now contains 18 workflows. Logs:
+`/private/tmp/retouch-selection-resize-{unit,chromium,webkit,move-regression,snap-regression,layout-regression,react-regression}.log`.
+Screenshot `/private/tmp/retouch-selection-resize.png` was visually inspected.
+
+Group rotation, scaling typography/effects, flow rearrangement, React/Liquid
+multi-selection geometry, vector group transforms and on-canvas spacing handles
+remain unfinished. The current Mac artifact predates these selection tools;
+trusted native distribution and full Figma parity remain open.

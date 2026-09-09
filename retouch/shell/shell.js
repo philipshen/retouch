@@ -791,7 +791,7 @@ function renderPanelContents() {
   head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
 
-  if(sel.multiple?.length>1){const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),moveHTMLSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
+  if(sel.multiple?.length>1){const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformHTMLSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
   if(info.components?.length) {
     const label=document.createElement('label');label.textContent='Component scope';
@@ -1454,13 +1454,13 @@ function transformReactLayer(info,target,action,opener){
   if(stopDrawing)toast(action==='resize'?'Drag a handle or use arrow keys. Shift keeps proportions; Option/Alt centers. Enter applies keyboard changes; Escape cancels.':'Drag the outline or use arrow keys (Shift: 10px). Enter applies keyboard changes; Escape cancels.','ok');
 }
 
-function moveHTMLSelection(elements,commit,opener){
+function transformHTMLSelection(elements,commit,opener,action='move'){
   stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!sel?.multiple?.length)return;
   const hash=sel.info.hash,scope=styleScope,key=sel.multiple.map(info=>info.id).sort().join(',');
-  stopDrawing=RetouchCanvasMove.mount({target:elements[0],targets:elements,selectionId:activeId(),frame:iframe,canvas:canvasSurface,opener,
-    onCommit:async(delta,options)=>{if(sel?.info.hash!==hash||styleScope!==scope||sel.multiple?.map(info=>info.id).sort().join(',')!==key)return;try{if(![delta.x,delta.y].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Move within 100,000 pixels of the starting position.');await commit(delta);if(options?.keyboard)document.querySelector('[data-canvas-tool=move]')?.focus({preventScroll:true});}catch(error){toast(error.message,'err');}},
+  stopDrawing=RetouchCanvasMove.mount({target:elements[0],targets:elements,selectionId:activeId(),frame:iframe,canvas:canvasSurface,mode:action,opener,
+    onCommit:async(delta,options)=>{if(sel?.info.hash!==hash||styleScope!==scope||sel.multiple?.map(info=>info.id).sort().join(',')!==key)return;try{if(![delta.x,delta.y,...(action==='resize'?[delta.width,delta.height]:[])].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Keep selection bounds within 100,000 pixels.');await commit(delta);if(options?.keyboard)document.querySelector('[data-canvas-tool='+action+']')?.focus({preventScroll:true});}catch(error){toast(error.message,'err');}},
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
-  if(stopDrawing)toast('Drag the selection outline or use arrow keys (Shift: 10px). Enter applies keyboard changes; Escape cancels.','ok');
+  if(stopDrawing)toast(action==='resize'?'Drag a selection handle. Shift keeps proportions; Option/Alt centers. Enter applies keyboard changes; Escape cancels.':'Drag the selection outline or use arrow keys (Shift: 10px). Enter applies keyboard changes; Escape cancels.','ok');
 }
 
 function moveHTMLLayer(info,target,width,g,action='move',opener){

@@ -48,6 +48,19 @@
   if(!rects.length||rects.some(r=>!['left','top','width','height'].every(p=>Number.isFinite(r[p]))||r.width<=0||r.height<=0))throw Error('Select visible layers with nonzero sizes.');
   const left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top)),right=Math.max(...rects.map(r=>r.left+r.width)),bottom=Math.max(...rects.map(r=>r.top+r.height));return {left,top,right,bottom,width:right-left,height:bottom-top};
  }
+ function memberBounds(rects,next){
+  const group=union(rects);if(!['x','y','width','height'].every(p=>Number.isFinite(next[p]))||next.width<=0||next.height<=0)throw Error('Use positive selection dimensions.');
+  const sx=next.width/group.width,sy=next.height/group.height;
+  return rects.map(r=>({x:next.x+(r.left-group.left)*(sx-1),y:next.y+(r.top-group.top)*(sy-1),width:r.width*sx,height:r.height*sy}));
+ }
+ function groupLimits(rects,limits){
+  const group=union(rects);if(limits.length!==rects.length)throw Error('Measure every layer’s size bounds.');const result={};
+  for(const [size,min,max]of [['width','minWidth','maxWidth'],['height','minHeight','maxHeight']]){
+   const low=Math.max(...rects.map((r,i)=>limits[i][min]/r[size])),high=Math.min(...rects.map((r,i)=>Math.max(limits[i][min],limits[i][max])/r[size]));
+   if(!Number.isFinite(low)||low<=0||Number.isNaN(high)||low>high)throw Error('The layer size bounds do not allow resizing together.');result[min]=group[size]*low;result[max]=group[size]*high;
+  }
+  return result;
+ }
  function snapTargets(target,selected=[target]){
   const d=target.ownerDocument,w=d.defaultView,targets=[],parents=new Set(),siblings=new Set();
   for(const el of selected){const parent=el.offsetParent,viewport=!parent||parent===d.body&&w.getComputedStyle(parent).position==='static';parents.add(viewport?d:parent);for(const sibling of el.parentElement?.children||[])siblings.add(sibling);}
@@ -96,24 +109,24 @@
   }
   return {...result,guides};
  }
- function limits(target){
+ function limits(target,preserveBox=false){
   const d=target.ownerDocument,window=d.defaultView,css=window.getComputedStyle(target),parent=target.offsetParent,viewport=!parent||parent===d.body&&window.getComputedStyle(parent).position==='static',w=viewport?d.documentElement.clientWidth:parent.clientWidth,h=viewport?window.innerHeight:parent.clientHeight;
   const number=p=>parseFloat(css.getPropertyValue(p))||0,borderX=number('padding-left')+number('padding-right')+number('border-left-width')+number('border-right-width'),borderY=number('padding-top')+number('padding-bottom')+number('border-top-width')+number('border-bottom-width');
   function value(raw,dimension,fallback){if(['auto','none'].includes(raw))return fallback;const match=/^(\d+(?:\.\d+)?|\.\d+)(px|%)$/.exec(raw);if(!match)throw Error('Use fixed or percentage size bounds before resizing on canvas.');return Number(match[1])*(match[2]==='%'?dimension/100:1);}
-  // Placement writes border-box sizing; apply bounds in that resulting box model.
-  return {minWidth:Math.max(1,borderX,value(css.minWidth,w,0)),minHeight:Math.max(1,borderY,value(css.minHeight,h,0)),maxWidth:value(css.maxWidth,w,Infinity),maxHeight:value(css.maxHeight,h,Infinity)};
+  // Single-layer placement uses border-box; groups retain each authored box model.
+  const extra=preserveBox&&css.boxSizing==='content-box',result={minWidth:Math.max(1,borderX,value(css.minWidth,w,0)+(extra?borderX:0)),minHeight:Math.max(1,borderY,value(css.minHeight,h,0)+(extra?borderY:0)),maxWidth:value(css.maxWidth,w,Infinity)+(extra?borderX:0),maxHeight:value(css.maxHeight,h,Infinity)+(extra?borderY:0)};
+  if(preserveBox){const r=target.getBoundingClientRect();for(const [key,size]of [['minWidth','width'],['maxWidth','width'],['minHeight','height'],['maxHeight','height']])if(Math.abs(result[key]-r[size])<1/32)result[key]=r[size];}return result;
  }
  function mount({target,targets=[target],selectionId=target.getAttribute('data-rt'),frame,canvas,mode='move',opener=root.document.activeElement,onCommit,onEnd,onError}){
   if(!targets.length||targets.length>100||new Set(targets).size!==targets.length||!targets.includes(target)||targets.some(el=>!el.isConnected||el.ownerDocument!==target.ownerDocument)){onError('Re-select the layers in one document.');return null;}
-  if(targets.length>1&&mode!=='move'){onError('Resize layers individually for now.');return null;}
   const snapshots=targets.map(el=>({el,rect:el.getBoundingClientRect(),parent:el.offsetParent,parentWidth:el.offsetParent?.clientWidth,parentHeight:el.offsetParent?.clientHeight}));let r;try{r=union(snapshots.map(item=>item.rect));}catch(error){onError(error.message);return null;}
   const w=target.ownerDocument.defaultView,f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/w.innerWidth;
-  let bounds={};if(mode==='resize')try{bounds=limits(target);}catch(error){onError(error.message);return null;}
+  let bounds={};if(mode==='resize')try{for(const item of snapshots)item.sizeLimits=limits(item.el,targets.length>1);bounds=targets.length>1?groupLimits(snapshots.map(item=>item.rect),snapshots.map(item=>item.sizeLimits)):snapshots[0].sizeLimits;}catch(error){onError(error.message);return null;}
   const left=Math.max(f.left,c.left),top=Math.max(f.top,c.top),right=Math.min(f.right,c.right),bottom=Math.min(f.bottom,c.bottom);
   if(!Number.isFinite(scale)||scale<=0||right<=left||bottom<=top){onError('Bring the layer into view before moving it.');return null;}
-  const surface=root.document.createElement('div');surface.className='canvas-move-surface';surface.tabIndex=0;surface.setAttribute('aria-label',(mode==='resize'?'Resize':'Move')+' layer on canvas');
+  const surface=root.document.createElement('div');surface.className='canvas-move-surface';surface.tabIndex=0;surface.setAttribute('aria-label',(mode==='resize'?'Resize':'Move')+(targets.length>1?' selection':' layer')+' on canvas');
   Object.assign(surface.style,{position:'fixed',left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px',zIndex:40,overflow:'hidden',touchAction:'none'});
-  const preview=root.document.createElement('div');preview.className='canvas-move-preview';preview.setAttribute('aria-label','Drag selected layer');
+  const preview=root.document.createElement('div');preview.className='canvas-move-preview';preview.setAttribute('aria-label',targets.length>1?'Drag selected layers':'Drag selected layer');
   const x=f.left+r.left*scale-left,y=f.top+r.top*scale-top;
   Object.assign(preview.style,{position:'absolute',left:x+'px',top:y+'px',width:r.width*scale+'px',height:r.height*scale+'px',border:'0',outline:'2px solid #6366f1',outlineOffset:'-2px',boxSizing:'border-box',background:'rgba(99,102,241,.12)',cursor:'move'});surface.append(preview);
   if(targets.length>1)for(const {rect}of snapshots){const ghost=root.document.createElement('div');ghost.className='canvas-group-layer';ghost.setAttribute('aria-hidden','true');Object.assign(ghost.style,{position:'absolute',pointerEvents:'none',left:(rect.left-r.left)*scale+'px',top:(rect.top-r.top)*scale+'px',width:rect.width*scale+'px',height:rect.height*scale+'px',outline:'1px solid #6366f1',outlineOffset:'-1px',background:'rgba(99,102,241,.12)'});preview.append(ghost);}
@@ -130,7 +143,7 @@
   function listen(el,name,fn,options){el.addEventListener(name,fn,options);cleanups.push(()=>el.removeEventListener(name,fn,options));}
   function cancel(restoreFocus=false){if(ended)return;ended=true;surface.remove();cleanups.forEach(fn=>fn());onEnd();if(restoreFocus===true)(opener?.isConnected?opener:root.document.querySelector('[data-canvas-tool='+mode+']'))?.focus({preventScroll:true});}
   function paint(modifiers){
-   if(mode==='resize'){const base=state.base||{x:0,y:0,width:r.width,height:r.height};const resized=!state.keyboard&&!modifiers.metaKey&&!modifiers.ctrlKey?snapResize(r,state.handle,state.rawX/scale,state.rawY/scale,snapTargets(target,targets),{...bounds,...modifiers,tolerance:6/scale}):{...resize(base.width,base.height,state.handle,state.rawX/scale,state.rawY/scale,{...bounds,...modifiers}),guides:[]};paintGuides(resized.guides);state.delta={x:resized.x,y:resized.y,width:resized.width,height:resized.height};state.delta.x+=base.x;state.delta.y+=base.y;preview.style.width=state.delta.width*scale+'px';preview.style.height=state.delta.height*scale+'px';preview.style.transform=`translate(${state.delta.x*scale}px,${state.delta.y*scale}px)`;}
+   if(mode==='resize'){const base=state.base||{x:0,y:0,width:r.width,height:r.height};const resized=!state.keyboard&&!modifiers.metaKey&&!modifiers.ctrlKey?snapResize(r,state.handle,state.rawX/scale,state.rawY/scale,snapTargets(target,targets),{...bounds,...modifiers,tolerance:6/scale}):{...resize(base.width,base.height,state.handle,state.rawX/scale,state.rawY/scale,{...bounds,...modifiers}),guides:[]};paintGuides(resized.guides);state.delta={x:resized.x,y:resized.y,width:resized.width,height:resized.height};state.delta.x+=base.x;state.delta.y+=base.y;preview.style.width=state.delta.width*scale+'px';preview.style.height=state.delta.height*scale+'px';preview.style.transform=`translate(${state.delta.x*scale}px,${state.delta.y*scale}px)`;if(targets.length>1){const sx=state.delta.width/r.width,sy=state.delta.height/r.height;preview.querySelectorAll('.canvas-group-layer').forEach((ghost,i)=>{const rect=snapshots[i].rect;Object.assign(ghost.style,{left:(rect.left-r.left)*sx*scale+'px',top:(rect.top-r.top)*sy*scale+'px',width:rect.width*sx*scale+'px',height:rect.height*sy*scale+'px'});});}}
    else{const locked=!state.keyboard&&modifiers.shiftKey,d=delta(state.rawX,state.rawY,locked),movement={x:d.x/scale,y:d.y/scale},snapped=!state.keyboard&&!modifiers.altKey&&!modifiers.metaKey&&!modifiers.ctrlKey?snap(r,movement,snapTargets(target,targets),{tolerance:6/scale,lock:locked?(Math.abs(state.rawX)>=Math.abs(state.rawY)?'x':'y'):state.rawX===0?'y':state.rawY===0?'x':null}):{...movement,guides:[]};state.delta={x:snapped.x,y:snapped.y};paintGuides(snapped.guides);paintSpacing(snapped.spacing);preview.style.transform=`translate(${state.delta.x*scale}px,${state.delta.y*scale}px)`;}
   }
   function move(e){if(!state||e.pointerId!==state.id)return;state.rawX=e.clientX-state.x;state.rawY=e.clientY-state.y;try{paint({shiftKey:e.shiftKey,altKey:e.altKey,metaKey:e.metaKey,ctrlKey:e.ctrlKey});}catch(error){cancel();onError(error.message);}}
@@ -153,8 +166,8 @@
   for(const event of ['retouch:before-zoom','retouch:screen','retouch:viewport','resize','blur','pagehide'])listen(root,event,cancel);
   listen(root,'retouch:selection',e=>{if(e.detail!==selectionId)cancel();});
   listen(frame,'load',cancel);listen(w,'scroll',cancel,true);listen(w,'resize',cancel);listen(canvas,'scroll',cancel);
-  let tick;const observe=()=>{if(ended)return;if(snapshots.some(({el,rect,parent,parentWidth,parentHeight})=>{const current=el.getBoundingClientRect();return !el.isConnected||el.offsetParent!==parent||parent?.clientWidth!==parentWidth||parent?.clientHeight!==parentHeight||['left','top','width','height'].some(key=>Math.abs(current[key]-rect[key])>.5);})){cancel();return;}tick=root.requestAnimationFrame(observe);};tick=root.requestAnimationFrame(observe);cleanups.push(()=>root.cancelAnimationFrame(tick));
+  let tick;const observe=()=>{if(ended)return;if(snapshots.some(({el,rect,parent,parentWidth,parentHeight,sizeLimits})=>{const current=el.getBoundingClientRect();if(sizeLimits)try{const next=limits(el,targets.length>1);if(Object.keys(sizeLimits).some(key=>next[key]!==sizeLimits[key]))return true;}catch{return true;}return !el.isConnected||el.offsetParent!==parent||parent?.clientWidth!==parentWidth||parent?.clientHeight!==parentHeight||['left','top','width','height'].some(key=>Math.abs(current[key]-rect[key])>.5);})){cancel();return;}tick=root.requestAnimationFrame(observe);};tick=root.requestAnimationFrame(observe);cleanups.push(()=>root.cancelAnimationFrame(tick));
   root.document.body.append(surface);(mode==='resize'?preview.querySelector('[data-resize-handle=se]'):surface).focus({preventScroll:true});return cancel;
  }
- const api={delta,union,snap,resize,snapResize,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchCanvasMove=api;
+ const api={delta,union,memberBounds,groupLimits,snap,resize,snapResize,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchCanvasMove=api;
 })(typeof window==='object'?window:globalThis);

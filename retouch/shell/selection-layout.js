@@ -41,7 +41,7 @@
   }
   return changes;
  }
- function mount(infos,elements,width,save,onMove){
+ function mount(infos,elements,width,save,onTransform){
   const I=root.RetouchInspector,P=root.RetouchHTMLPosition,sec=I.section('Align selected layers');
   function measure(){
    if(!Number.isInteger(width)||elements.some(el=>!el?.isConnected)||infos.some(info=>info.cssReason))throw Error('Re-select the layers and choose a pixel screen scope.');
@@ -70,8 +70,10 @@
    if(!parent||parent===d.body&&w.getComputedStyle(parent).position==='static')return {left:0,top:0,width:d.documentElement.clientWidth,height:w.innerHeight};
    const rect=parent.getBoundingClientRect();return {left:rect.left+parent.clientLeft,top:rect.top+parent.clientTop,width:parent.clientWidth,height:parent.clientHeight};
   }
-  function write(measured,deltas){if(deltas.every(d=>Math.abs(d.x)+Math.abs(d.y)<1/32))return;
-    const changes=Object.fromEntries(infos.map((info,i)=>{if(Math.abs(deltas[i].x)+Math.abs(deltas[i].y)<1/32)return [info.id,{}];const el=elements[i],effective=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{}),g=measured[i].geometry;return [info.id,preserveBox(P.placement({...g,x:g.x+deltas[i].x,y:g.y+deltas[i].y},effective),g,el.ownerDocument.defaultView.getComputedStyle(el))];}));return save(changes,width);
+  function write(measured,deltas){
+   const changed=(g,d)=>Math.abs(d.x)+Math.abs(d.y)+Math.abs((d.width??g.width)-g.width)+Math.abs((d.height??g.height)-g.height)>=1/32;
+   if(!deltas.some((d,i)=>changed(measured[i].geometry,d)))return;
+   const changes=Object.fromEntries(infos.map((info,i)=>{const g=measured[i].geometry,d=deltas[i];if(!changed(g,d))return [info.id,{}];const el=elements[i],effective=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{}),next={...g,x:g.x+d.x,y:g.y+d.y,width:d.width??g.width,height:d.height??g.height};if(!['x','y','width','height'].every(p=>Number.isFinite(next[p])&&Math.abs(next[p])<=100000))throw Error('Keep layer bounds within 100,000 pixels.');return [info.id,preserveBox(P.placement(next,effective),next,el.ownerDocument.defaultView.getComputedStyle(el))];}));return save(changes,width);
   }
   for(const [mode,label]of [['left','Align left'],['center','Align horizontal centers'],['right','Align right'],['top','Align top'],['middle','Align vertical centers'],['bottom','Align bottom'],['gap-x','Distribute horizontal spacing'],['gap-y','Distribute vertical spacing']]){
    const button=I.button(label,()=>{try{
@@ -79,7 +81,7 @@
     write(measured,deltas);
    }catch(error){I.note(sec,error.message,'refused');}});if(mode.startsWith('gap-'))button.dataset.distribution=mode;controls.append(button);
   }
-  if(onMove){const move=I.button('Move selection on canvas',event=>{try{const measured=measure();onMove(elements,delta=>write(measured,measured.map(()=>delta)),event.currentTarget);}catch(error){I.note(sec,error.message,'refused');}});move.dataset.canvasTool='move';controls.append(move);}
+  if(onTransform)for(const action of ['move','resize']){const control=I.button((action==='move'?'Move':'Resize')+' selection on canvas',event=>{try{const measured=measure();onTransform(elements,delta=>write(measured,action==='resize'?root.RetouchCanvasMove.memberBounds(measured.map(item=>item.rect),delta):measured.map(()=>delta)),event.currentTarget,action);}catch(error){I.note(sec,error.message,'refused');}});control.dataset.canvasTool=action;controls.append(control);}
   sec.append(controls);
   for(const [axis,label]of [['x','Horizontal gap (px)'],['y','Vertical gap (px)']]){
    const values=gaps(measure().map(item=>item.rect),axis).values,mixed=values.some(value=>Math.abs(value-values[0])>=1/32),initial=mixed?'':String(Math.round(values.reduce((n,value)=>n+value,0)/values.length*100)/100),input=root.document.createElement('input');
