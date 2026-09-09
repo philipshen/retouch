@@ -2723,3 +2723,31 @@ Existing viewport/selection/high-zoom/source-undo browser flows pass in both
 engines: `/private/tmp/retouch-anchor-selection-{chromium,webkit}.log`.
 This checkpoint does not validate every sticky/nested-scroll layout or refresh
 the Mac archive. Full feature parity and trusted distribution remain unfinished.
+
+### 2026-09-09 — Hand tool and temporary Space-drag
+
+Added a visible Hand toggle and temporary Space-drag for canvas navigation.
+The hand surface uses pointer capture in the parent editor, so dragging across
+iframe/canvas boundaries moves the finite canvas by physical screen pixels
+without changing page scroll, layer selection or source. Space works with a
+layer row or iframe focused; normal buttons and editable fields retain native
+keyboard behavior. Escape cancels an in-flight gesture without allowing its
+remaining pointer movement to pan, and capture survives until the real release
+so WebKit does not swallow the next selection click. Screen/zoom changes,
+Interact mode, busy source/history work and parent-window blur exit the hand.
+Horizontal wheel input pans the canvas; vertical/pinch input uses existing zoom
+and page-scroll handling. This is viewport panning, not whole-document capture.
+
+Both engines pass the isolated HTML flow at 50/200/400%, with editor and iframe
+focus, selection/page-scroll preservation, horizontal wheel input, Escape during
+a drag, the next layer click, parent-field typing, Interact mode, screen-change
+cleanup and unchanged source. Logs:
+`/private/tmp/retouch-canvas-pan-chromium-complete.log` and
+`/private/tmp/retouch-canvas-pan-webkit-complete.log`.
+An initial Space check exposed that layer rows use buttons; the shortcut now
+exempts treeitems from the ordinary-button guard. Chromium's existing selection,
+responsive zoom and precise 6400% source-edit/undo flow also passes:
+`/private/tmp/retouch-pan-zoom-regression.log`.
+The latest Mac archive does not include this tool. Full Figma parity, arbitrary
+remote-site authoring and trusted distribution remain unfinished.
+All 334 unit tests pass in `/private/tmp/retouch-canvas-pan-unit-final.log`.

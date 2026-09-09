@@ -361,6 +361,14 @@ Changing a screen preset during a resize discards the older drag. Zooming or
 resizing the workspace cancels the drag and restores its starting dimensions,
 so releasing the pointer cannot overwrite a newer screen choice.
 
+Use **Hand** to drag the canvas, or hold **Space** while dragging for a temporary
+hand tool. Drag distances stay in screen pixels at every zoom. The hand moves
+the preview within the finite workspace without changing page scroll or layer
+selection; use the wheel inside the preview to scroll the page. Release Space
+to return to editing, or press Escape to leave the hand tool. Text fields and
+Interact mode retain their normal keyboard behavior. Changing the preview size
+or zoom exits the hand tool.
+
 Use **Zoom** in the screen toolbar to set the canvas percentage, or **Fit screen**
 to bring a fixed preview fully into the available canvas. Fixed screens support
 1–6400% zoom. Fit workspace supports 25–6400% and follows the workspace size.

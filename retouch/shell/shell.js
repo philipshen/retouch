@@ -30,6 +30,7 @@ let sourceRequests = 0;
 let undoBusy = false;
 let classificationSerial = 0;
 let panelTasks = 0;
+const canvasPan=RetouchCanvasPan.mount({enabled:()=>mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy,onActivate:()=>{window.dispatchEvent(new Event('retouch:before-zoom'));stopDrawing?.();hoverEl=null;}});
 function busyPanel(start) {
   if(start)stopDrawing?.();
   panelTasks += start ? 1 : -1;
@@ -47,6 +48,7 @@ const editorHistory = RetouchHistory.createHistory({apply:restoreHistory,onChang
 function syncHistoryControls() {
   undoBusy = editorHistory.busy;
   const busy = undoBusy || panelTasks > 0 || sourceRequests > 0;
+  if(busy)canvasPan.cancel();
   undoBtn.disabled = busy || !editorHistory.canUndo;
   redoBtn.disabled = busy || !editorHistory.canRedo;
   undoBtn.setAttribute('aria-busy',String(busy));
@@ -700,6 +702,7 @@ function paintLoop() {
     Object.assign(marqueeSurface.style,{left:area.left+canvasSurface.clientLeft+'px',top:area.top+canvasSurface.clientTop+'px',width:canvasSurface.clientWidth+'px',height:canvasSurface.clientHeight+'px'});
     box.className='selection-marquee';Object.assign(box.style,{left:frame.left-area.left-canvasSurface.clientLeft+rect.left*scale+'px',top:frame.top-area.top-canvasSurface.clientTop+rect.top*scale+'px',width:rect.width*scale+'px',height:rect.height*scale+'px'});marqueeSurface.append(box);
   }
+  document.getElementById('canvasHand').disabled=mode!=='edit'||!!editing||!!panelTasks||undoBusy||!!sourceRequests;
   document.getElementById('zoomSelection').disabled=!sel||!!panelTasks||undoBusy||!!sourceRequests;
   layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[]);
   requestAnimationFrame(paintLoop);
@@ -1655,6 +1658,7 @@ async function restoreHistory(direction,op) {
 
 /* ---------- chrome ---------- */
 modeBtn.onclick = () => {
+  canvasPan.cancel();
   stopDrawing?.();
   mode = mode === 'edit' ? 'interact' : 'edit';
   modeBtn.textContent = mode === 'edit' ? 'Edit mode' : 'Interact mode';

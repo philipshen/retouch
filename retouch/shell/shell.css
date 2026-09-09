@@ -307,3 +307,6 @@ details.advanced > summary:hover { color: var(--ink); }
 .layer-lock-filter { display:flex; align-items:center; gap:5px; font-size:12px; margin:6px 0; }
 .layer-lock-filter[hidden] { display:none; }
 #layersPanel .layer-lock-filter input { flex:0 0 14px; width:14px; height:14px; padding:0; margin:0; }
+
+.canvas-pan-surface { position:fixed; z-index:40; touch-action:none; user-select:none; }
+#canvasHand[aria-pressed="true"] { background:var(--accent); color:white; }

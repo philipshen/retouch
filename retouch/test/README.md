@@ -93,3 +93,9 @@ bottom, in workspace and fixed-screen modes. It also checks immediate residual
 page scrolling when zooming out reaches the canvas limit on a smooth-scrolling
 site. Set `RT_INSPECTOR_FIXTURE` to a fixture with Playwright installed and
 `RT_E2E_BROWSER=webkit` to use WebKit.
+
+`npm run test:e2e:canvas-pan` uses an isolated HTML fixture to verify Hand and
+Space-drag from editor/iframe focus at 50/200/400%, unchanged page scroll and
+selection, horizontal wheel scrolling, Escape during pointer capture, recovery
+of the next selection click, typing/Interact guards and screen-change cleanup.
+It accepts the same Playwright fixture and engine settings as zoom-anchor.
