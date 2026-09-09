@@ -186,15 +186,15 @@
     if(d&&root.RetouchFontMetadata){
       const metadata=root.RetouchFontMetadata,declared=metadata.sources(d,css.fontFamily),results=document.createElement('div');results.setAttribute('aria-label','Declared font axes');
       if(declared.files.length){
-        let selected=metadata.selection(d,declared.family);if(!declared.files.some(file=>file.url===selected))selected=declared.files[0].url;
+        let renderRevision=0,selected=metadata.selection(d,declared.family);if(!declared.files.some(file=>file.url===selected))selected=declared.files[0].url;
         const choose=select(details,'Declared font file',declared.files.map(file=>[file.url,file.label]),selected,value=>{selected=value;metadata.selection(d,declared.family,value);render();});
         const inspect=button('Inspect declared font axes',async()=>{
-          inspect.disabled=true;choose.disabled=true;results.textContent='Reading font axes…';
-          try{const found=await metadata.inspect(d,selected);if(details.isConnected)render(found);}catch(error){if(details.isConnected){render();results.textContent=error.message;}}finally{inspect.disabled=false;choose.disabled=false;}
+          renderRevision++;inspect.disabled=true;choose.disabled=true;results.textContent='Reading font axes…';
+          try{const found=await metadata.inspect(d,selected);if(details.isConnected)await render(found);}catch(error){if(details.isConnected){await render();if(details.isConnected)results.textContent=error.message;}}finally{inspect.disabled=false;choose.disabled=false;}
         });
-        function render(inspected){
-          results.replaceChildren();for(const input of axisInputs.values()){input.min=-10000;input.max=10000;input.title='';}
-          const found=inspected||metadata.peek(d,selected);if(!found)return;
+        async function render(inspected){
+          const revision=++renderRevision;results.replaceChildren();for(const input of axisInputs.values()){input.min=-10000;input.max=10000;input.title='';}
+          const found=inspected||await metadata.peek(d,selected);if(!found||revision!==renderRevision||!details.isConnected)return;
           if(!found.length)note(results,'This declared file has no variable axes.');
           for(const axis of found){
             note(results,axis.name+' ('+axis.tag+'): '+axis.min+' to '+axis.max+' · default '+axis.default+(axis.hidden?' · hidden axis':''));

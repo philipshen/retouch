@@ -26,10 +26,11 @@
  }
  const key=(d,value)=>d.location.origin+'\n'+value;
  function selection(d,family,url){const id=key(d,family);if(url!==undefined){if(choices.size>=32&&!choices.has(id))choices.delete(choices.keys().next().value);choices.set(id,url);}return choices.get(id);}
- function peek(d,url){const id=key(d,url),entry=cache.get(id);if(entry&&Date.now()-entry.time<300000)return entry.axes;cache.delete(id);}
+ async function cacheKey(d,url){const value=key(d,url);if(value.length<=2048)return value;if(root.crypto?.subtle){try{const digest=await root.crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));return 'sha256:'+Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,'0')).join('');}catch{}}return value;}
+ async function peek(d,url){const id=await cacheKey(d,url),entry=cache.get(id);if(entry&&Date.now()-entry.time<300000)return entry.axes;cache.delete(id);}
 
  async function inspect(d,url){
-  const id=key(d,url);cache.delete(id);
+  const id=await cacheKey(d,url);cache.delete(id);
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
   try{
    const response=await d.defaultView.fetch(url,{signal:controller.signal,credentials:'same-origin'});if(!response.ok)throw Error('Could not read font file (HTTP '+response.status+').');

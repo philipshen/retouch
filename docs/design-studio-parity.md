@@ -5164,3 +5164,32 @@ fixture. It does not prove all fonts, optical-sizing implementations, live
 Shopify integration or full typography parity. Native app launches remain
 paused, and full arbitrary-site/Figma parity and trusted macOS distribution
 remain unfinished.
+
+### Retain inspected ranges for large embedded fonts
+
+The real Roboto Flex fixture exposed an inspector lifecycle gap: its base64 URL
+exceeded the metadata cache's 2 MiB key budget, so inspection succeeded but the
+next source reload lost ranges and sliders. Long URL keys now use Web Crypto
+SHA-256 of the page origin plus URL. The cache retains metadata and a compact
+identity instead of retaining a large font URL as its key. Entry count, key
+budget and five-minute expiry remain bounded. Small keys keep their prior path.
+If Web Crypto is unavailable or digesting fails, the previous bounded direct-key
+fallback remains; oversized embedded fonts still cannot be cached on that path.
+Selected-file choices retain their existing separately bounded URL mapping.
+
+Inspector cache reads are now asynchronous and revision-guarded so an older
+lookup cannot overwrite a newer render/inspection. Inspection errors await the
+cache render before displaying their message. HTML, React and local Liquid
+passed in Chromium and WebKit with Roboto Flex: ranges and the optical-axis
+slider survived source reloads, with no extra metadata request. Real glyph,
+optical precedence, responsive/reset and exact undo checks passed as well.
+All six runs exited 0: /private/tmp/retouch-font-digest-{html,react,liquid}-
+{chromium,webkit}.log. Both existing HTML live-preview/discovery regression runs
+also exited 0, including failed reinspection, cancel, removal cleanup and undo:
+/private/tmp/retouch-font-digest-regression-{chromium,webkit}.log.
+
+Focused cache tests exercise a 3 MiB key across document replacement, URL and
+origin isolation, expiry, and failed reinspection invalidation. The full unit
+suite result is /private/tmp/retouch-font-digest-final-units.log. No native app
+was launched. Full arbitrary-site/Figma parity, broader font discovery and
+trusted native distribution remain unfinished.
