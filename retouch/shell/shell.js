@@ -725,7 +725,10 @@ function renderPanel() {
   panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err')));
   panelBody.appendChild(RetouchLayout.mount(style, target, setClasses));
   panelBody.appendChild(RetouchInspector.appearance(style, target, setClasses));
-  if (info.src !== null || info.srcDynamic) panelBody.appendChild(imageSection(info));
+  if (info.src !== null || info.srcDynamic) {
+    if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(style,target,setClasses));
+    panelBody.appendChild(imageSection(info));
+  }
   if (!textLayer && (info.canSetTag || target?.textContent?.trim())) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag));
   panelBody.appendChild(colorSection('Fill', 'bg', style));
   panelBody.appendChild(colorSection('Text color', 'text', style));

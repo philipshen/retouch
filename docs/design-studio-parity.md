@@ -17,7 +17,7 @@ changing those files. The original checkout may continue to evolve independently
 | Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI now exist. Reparenting, rename, multi-selection, cross-context clipboard and broader source structures remain. |
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | Full vector authoring and geometry model remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | Visual horizontal/vertical/reverse flex and grid controls, wrapping, gaps, alignment/distribution, per-side padding, fixed/hug/fill sizing and breakpoint-scoped writes now exist. Full constraint, advanced grid, min/max, nested auto-layout and cross-framework equivalence work remains. |
-| Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | Opacity, CSS border width/style/color, uniform and individual corners, basic color and shadow controls exist. Browser tests cover border independence, corners, scope and exact undo. Multiple fills/strokes, gradient editing, cropping, blending and complete visual/source representations remain. |
+| Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | Opacity, CSS border width/style/color, uniform and individual corners, basic color and shadow controls, and image fit/position controls exist. Browser tests cover border independence, corners, scope and exact undo. Multiple fills/strokes, gradient editing, crop handles/zoom/rotation, blending and complete visual/source representations remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. Font browsing, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | Existing React and Liquid component inspection/detach; full creation/variants/library workflows remain. Live Shopify proof is incomplete. |
 | Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Not implemented or verified. |
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 189 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 192 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -158,3 +158,18 @@ The individual-corner disclosure remains open while making successive edits.
 independence, individual-corner preservation, mixed-value refresh, responsive
 isolation and exact-byte undo of the full sequence. These are CSS borders;
 vector strokes, stroke alignment and multiple strokes remain unimplemented.
+
+### Image framing
+
+Image layers expose five CSS object-fit modes, a nine-point position control and
+precise horizontal/vertical percentages. Changes follow breakpoint scope, retain
+the image source and frame dimensions, and participate in shared undo/redo.
+Numeric controls prefer committed class values while CSS recompiles, preventing
+successive axis edits from restoring a stale value on the other axis.
+
+`retouch/test/e2e/image-framing.cjs` verifies computed fit/position, visibly
+different left/right crop screenshots, fixed frame dimensions, unchanged source
+asset bytes, tablet/base isolation and exact-byte undo. The general inspector
+browser regression also passed. These controls apply to editable IMG classes;
+interactive crop handles, custom crop zoom/rotation, background-image framing and
+multiple image fills remain unimplemented.

@@ -9,17 +9,16 @@ Liquid parity work and its remaining verification gates are tracked in
 | Position | Switch between flow, relative, absolute, fixed, and sticky. Absolute placement preserves the current box and suggests the nearest anchors. |
 | Anchors | Pin horizontally to the left, center, right, or both edges; vertically to the top, center, bottom, or both edges. Both edges stretch with the existing positioning container. Insets also accept CSS units. |
 | Measurements | Hold Alt / Option and hover. Green bands show padding; labeled lines measure padding, parent distances, or gaps to the selected element. Releasing the key dismisses the overlay without a write. |
-| Image | Preview the current image, browse project assets, enter a project path, or upload a replacement. |
+| Image | Adjust image fit and position; preview, browse project assets, enter a project path, or upload a replacement. |
 | Typography | See a sample in the page's fonts, family, size, line height, and weight. Swap a named typography class discovered from loaded CSS, or choose size and weight utilities. HTML semantics have a separate control. |
 | Component | Inspect props, usage values, defaults, and definition source. View a live component in a separate modal canvas. Edit its shared definition, or detach the selected usage into its own module. |
 | Fill / text color | Choose a palette color or enter a 3, 4, 6, or 8 digit hex value. The inspector also shows the computed color. |
 | Effects | Apply a shadow preset or set X/Y, blur, spread, color, opacity, and inner shadow. |
 | Opacity | Set a percentage or use the slider. |
 
-The new style controls edit **base classes**. Existing breakpoint and state
-classes stay intact and may override a base edit at the current viewport.
-There is no new media-query or breakpoint editor. Authored responsive image
-source choices remain outside image replacement.
+Style controls follow the selected breakpoint scope. Other breakpoint and state
+classes stay intact and may override an edit at the current viewport. Authored
+responsive image source choices remain outside image replacement.
 
 Styles use the existing Tailwind write path. Keep the app's CSS compiler running
 so newly introduced utilities become available. Anchor placement uses the real
@@ -154,3 +153,13 @@ Set one radius for all corners or expand Individual corners. Mixed corner values
 are shown explicitly; percentage and elliptical values remain visible as hints
 until replaced with a pixel value. These controls follow breakpoint scope and
 use the shared undo/redo history.
+
+## Image framing
+
+Select an image and choose Fill frame, Fit inside, Stretch, Original size or
+Scale down. Use the nine-point position control or enter horizontal and vertical
+percentages to position the image inside its frame. Set the frame's width and
+height through Layout when needed. Framing edits follow breakpoint scope and
+support undo/redo without changing the image source or rewriting the asset.
+These controls edit CSS object-fit/object-position on IMG elements; background
+images and custom crop zoom/rotation are not supported.
