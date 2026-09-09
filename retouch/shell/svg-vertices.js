@@ -103,7 +103,8 @@
     }
     const removeButton=action('Delete point',removePoint);
     action('Done',commit);action('Cancel',cancel);surface.append(toolbar);
-    function announce(message){status.textContent=message||`${activeHandle?activeHandle==='in'?'Incoming handle on point':'Outgoing handle on point':'Point'} ${active+1} of ${vertices.length}`;removeButton.disabled=moveContourMode||vertices.length<=minimum;removeButton.style.opacity=removeButton.disabled?'.5':'1';}
+    function adjacentArc(){return !!(vertices[active]?.arc||(vertices[active+1]||(closed?vertices[0]:null))?.arc);}
+    function announce(message){if(cornerButton){const arcEndpoint=adjacentArc(),disabled=moveContourMode||arcEndpoint;cornerButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or edit the path data.':'Remove the selected anchor’s handles';smoothButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or edit the path data.':'Create aligned handles along the neighboring anchors';cornerButton.disabled=disabled;smoothButton.disabled=disabled;for(const button of [cornerButton,smoothButton])button.style.opacity=disabled?'.5':'1';}status.textContent=message||`${activeHandle?activeHandle==='in'?'Incoming handle on point':'Outgoing handle on point':'Point'} ${active+1} of ${vertices.length}`;removeButton.disabled=moveContourMode||vertices.length<=minimum;removeButton.style.opacity=removeButton.disabled?'.5':'1';}
     const totalPoints=()=>subpaths?subpaths.reduce((sum,part)=>sum+part.nodes.length,0):vertices.length;
     function refreshContours(){
       if(!contourPicker)return;contourPicker.replaceChildren();
@@ -135,6 +136,7 @@
     }
     function reshape(kind){
       if(drag||!verify())return;
+      if(adjacentArc()){announce('Arc endpoints support moving and subdivision. Edit path data to change arc parameters.');return;}
       const next=kind==='corner'?root.RetouchSVGPath.corner(vertices[active]):root.RetouchSVGPath.smooth(vertices,active,closed);
       const candidate=vertices.map((p,i)=>i===active?next:p);
       if(!next||!root.RetouchSVGPath.serialize(candidate,closed)){announce('This point cannot use that shape. Keep a valid path.');return;}

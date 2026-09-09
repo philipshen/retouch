@@ -3318,3 +3318,51 @@ Arcs, vector networks, boolean/mask authoring, persistent per-anchor constraints
 and the broader Figma Design requirements remain open. Native launches remain
 paused; this work does not establish unrestricted site authoring or trusted Mac
 distribution.
+
+
+### 2026-09-09 — Preserve and edit SVG elliptical arcs
+
+The path model now retains A/a segments as arc descriptors on their endpoint
+anchors. Parsing supports relative endpoints, packed single-character flags,
+negative-radius normalization and curved closing edges. Serialization preserves
+SVG A commands instead of approximating ellipses with cubics. Arc descriptors are
+validated and deep-copied during translation/duplication. Opening clears the
+closing arc; reversal transfers descriptors to reversed endpoints and flips the
+sweep flag. Conflicting incoming Bézier/arc representations are refused.
+
+Subdivision uses endpoint-to-center conversion and radius correction from the
+SVG implementation notes:
+https://www.w3.org/TR/SVG/implnote.html#ArcImplementationNotes.
+It divides the sweep angle and emits two arcs using corrected radii, preserving
+the ellipse. Zero-radius arcs follow the browser's straight-line behavior.
+Unrepresentable subdivision results remain unchanged. Existing path controls
+move arc endpoints and complete contours, split open and closing arcs, reverse,
+duplicate and delete them through source history. Corner/smooth conversion is
+disabled at adjacent arc segments to preserve their geometry; tooltips explain
+that arc parameters can currently be edited through path data.
+
+All 357 unit tests pass in `/private/tmp/retouch-arcs-unit-final.log`. They cover
+flag grammar, closure, malformed parameters, both sweep/large-arc choices,
+rotated ellipses and corrected radii, subdivision/reversal samples, translation
+and zero-radius geometry. The model checks use a 1e-5-unit tolerance.
+
+All four arc browser workflows pass in
+`/private/tmp/retouch-arcs-html-chromium.log`,
+`/private/tmp/retouch-arcs-react-webkit.log`,
+`/private/tmp/retouch-arcs-html-webkit-svg-arcs.log`, and
+`/private/tmp/retouch-arcs-react-chromium-svg-arcs.log`.
+They verify rendered arc subdivision within 0.12 SVG units, preserved A commands,
+endpoint/whole-contour edits, open reversal, nested transforms at 50/100/200 percent
+zoom, isolated previews and exact undo/redo. The latter two also verify closed
+arc reversal. The inspected `/private/tmp/retouch-arcs-html-chromium.png` shows
+elliptical compound contours with a subdivided arc and accessible anchor controls.
+Bézier handle-mode and Pen-append regressions pass in
+`/private/tmp/retouch-arcs-html-chromium-svg-handle-modes.log` and
+`/private/tmp/retouch-arcs-react-webkit-svg-draw-contour.log`.
+
+Dedicated radius/rotation/arc-flag controls and arc-to-cubic conversion remain.
+Move-only/degenerate contours, drawing commands after Z without a new moveto,
+vector networks, booleans/masks, persistent per-anchor constraints and the broader
+Figma Design requirements remain open. Native launches remained paused; no desktop
+build or launch occurred. Unrestricted site authoring and trusted Mac distribution
+are not established by this change.

@@ -24,7 +24,7 @@ test('Path parser normalizes relative, implicit, smooth and quadratic segments a
   const smooth=path.parse('M0 0C0 10 10 10 10 0s10-10 10 0');assert.deepEqual(smooth.nodes[1].out,{x:10,y:-10});
   const q=path.parse('M0 0Q15 30 30 0T60 0');assert.deepEqual(q.nodes[0].out,{x:10,y:20});assert.deepEqual(q.nodes[1].out,{x:40,y:-20});
   assert.deepEqual(path.parse('M.5.5L1e1-2').nodes,[{x:.5,y:.5},{x:10,y:-2}]);
-  for(const d of ['M0 0L1','M0 0C1 2 3','M,0 0L1 2','M0,,0L1 2','M0 0,L1 2','M0 0L1 2,','M0 0L1 2ZL2 2','M0 0L1 2M3 4L5 6','M0 0A1 1 0 0 0 2 3','M0 0LInfinity 0','M0 0L100001 0','M0 0L1 2" onload="x'])assert.equal(path.parse(d),null,d);
+  for(const d of ['M0 0L1','M0 0C1 2 3','M,0 0L1 2','M0,,0L1 2','M0 0,L1 2','M0 0L1 2,','M0 0L1 2ZL2 2','M0 0L1 2M3 4L5 6','M0 0A1 1 0 2 0 2 3','M0 0LInfinity 0','M0 0L100001 0','M0 0L1 2" onload="x'])assert.equal(path.parse(d),null,d);
 });
 test('Splitting a cubic preserves its geometry, including a curved closing edge',()=>{
   const evaluate=(a,b,t)=>{const u=1-t,c=a.out||a,d=b.in||b;return{x:u*u*u*a.x+3*u*u*t*c.x+3*u*t*t*d.x+t*t*t*b.x,y:u*u*u*a.y+3*u*u*t*c.y+3*u*t*t*d.y+t*t*t*b.y};};
@@ -62,7 +62,7 @@ test('Compound paths preserve contour order, closure and relative moveto origins
   assert.equal(path.parse(d),null);assert.ok(path.equivalentCompound(doc,path.parseCompound(path.serializeCompound(doc))));
   assert.deepEqual(path.parseCompound('m10 20l30 10m20 30l10 0').subpaths[1].nodes[0],{x:60,y:60});
   const unchanged=JSON.parse(JSON.stringify(doc.subpaths[0]));doc.subpaths[1].nodes[0]=path.translate(doc.subpaths[1].nodes[0],3,4);assert.deepEqual(doc.subpaths[0],unchanged);
-  for(const bad of ['M0 0M10 10L20 20','M0 0L10 10 M2 2A1 1 0 0 0 3 3','M0 0L10 10Z L20 20'])assert.equal(path.parseCompound(bad),null,bad);
+  for(const bad of ['M0 0M10 10L20 20','M0 0L10 10 M2 2A1 1 0 2 0 3 3','M0 0L10 10Z L20 20'])assert.equal(path.parseCompound(bad),null,bad);
   assert.equal(path.serializeCompound({subpaths:Array(129).fill(doc.subpaths[0])}),null);
   assert.equal(path.serializeCompound({subpaths:Array(128).fill({nodes:Array.from({length:5},(_,i)=>({x:i,y:i})),closed:false})}),null);
 });
@@ -107,4 +107,25 @@ test('Contour translation moves every anchor and handle without changing shape o
   for(let i=0;i<nodes.length;i++)for(const key of ['', 'in', 'out']){const a=key?nodes[i][key]:nodes[i],b=key?moved.nodes[i][key]:moved.nodes[i];assert.equal(b.x-a.x,12);assert.equal(b.y-a.y,-7);}
   assert.deepEqual(path.translateContour(moved,-12,7),part);assert.equal(nodes[0].x,0);
   assert.equal(path.translateContour(part,100001,0),null);assert.equal(path.translateContour(part,NaN,0),null);
+});
+
+test('Arc parsing preserves A commands, relative endpoints, packed flags and curved closures',()=>{
+  const parsed=path.parse('M10 20a30 15 25 01100 40');assert.deepEqual(parsed.nodes[1],{x:110,y:60,arc:{rx:30,ry:15,rotation:25,large:0,sweep:1}});assert.equal(path.serialize(parsed.nodes),'M 10 20 A 30 15 25 0 1 110 60');
+  const loop=path.parse('M0 0A30 20 0 0 1 60 0A30 20 0 0 1 0 0Z');assert.equal(loop.nodes.length,2);assert.ok(loop.nodes[0].arc);assert.ok(path.equivalent(loop,path.parse(path.serialize(loop.nodes,true))));
+  for(const d of ['M0 0A10 10 0 2 0 30 0','M0 0A10 10 0 -1 0 30 0','M0 0A10 10 0 0 1e2 30 0','M0 0A100001 10 0 0 1 30 0'])assert.equal(path.parse(d),null,d);
+  assert.equal(path.parse('M0 0A-10 -20 0 0 1 30 0').nodes[1].arc.rx,10);
+});
+test('Arc subdivision and reversal preserve circular and rotated elliptical geometry',()=>{
+  for(const large of [0,1])for(const sweep of [0,1])for(const [rx,ry,rotation] of [[40,40,0],[60,25,35],[5,3,-40]]){
+    const original=path.parse(`M10 20A${rx} ${ry} ${rotation} ${large} ${sweep} 70 50`),a=original.nodes[0],b=original.nodes[1],center=path.arcCenter(a,b),split=path.split(original.nodes,0,false);assert.equal(split.length,3);
+    for(let i=0;i<=20;i++){const t=i/20,p=path.arcPoint(center,t),part=t<=.5?[split[0],split[1],t*2]:[split[1],split[2],(t-.5)*2],q=path.arcPoint(path.arcCenter(part[0],part[1]),part[2]);assert.ok(Math.hypot(p.x-q.x,p.y-q.y)<1e-5,JSON.stringify({rx,ry,rotation,large,sweep,t,p,q}));}
+    const reversed=path.editContour({subpaths:[original]},0,'reverse').subpaths[0],rc=path.arcCenter(...reversed.nodes);for(let i=0;i<=20;i++){const p=path.arcPoint(center,i/20),q=path.arcPoint(rc,1-i/20);assert.ok(Math.hypot(p.x-q.x,p.y-q.y)<1e-5);}
+    assert.deepEqual(path.editContour({subpaths:[reversed]},0,'reverse').subpaths[0],original);
+  }
+});
+test('Arc translation and opening retain the intended segments without sharing descriptors',()=>{
+  const part=path.parse('M0 0A30 20 0 0 1 60 0A30 20 0 0 1 0 0Z'),moved=path.translateContour(part,10,15);assert.deepEqual(moved.nodes[0].arc,part.nodes[0].arc);assert.notEqual(moved.nodes[0].arc,part.nodes[0].arc);
+  const opened=path.editContour({subpaths:[part]},0,'open').subpaths[0];assert.equal(opened.nodes[0].arc,undefined);assert.deepEqual(opened.nodes[1].arc,part.nodes[1].arc);
+  const split=path.split(part.nodes,1,true);assert.equal(split.length,3);assert.ok(split[0].arc);assert.ok(split[2].arc);assert.equal(path.smooth(part.nodes,0,true),null);
+  const zero=path.parse('M0 0A0 10 0 0 1 40 20');assert.deepEqual(path.segmentMiddle(...zero.nodes),{x:20,y:10});assert.ok(path.split(zero.nodes,0,false));
 });
