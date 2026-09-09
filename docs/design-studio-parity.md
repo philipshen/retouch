@@ -4704,3 +4704,24 @@ coverage, not complete asset or Figma parity. Native app launches remain paused.
 
 Final unit validation: all 375 tests passed (exit 0) in
 `/private/tmp/retouch-symbol-export-final-unit.log`; git diff --check passed.
+
+### Effective SVG reference precedence (2026-09-09)
+
+Snapshot collection now uses the effective modern href when both href and
+xlink:href exist, removes the unused legacy attribute from the export, and treats
+an explicitly empty href as suppressing the legacy fallback. Source attributes
+remain unchanged. This prevents valid icons from failing export merely because
+an obsolete legacy fallback names a missing definition.
+
+A direct browser comparison against parent commit 670085b reproduced the failure:
+parent snapshot reported `Missing SVG definition: obsolete-missing-icon`; the
+working implementation exported the valid effective reference. Chromium and
+WebKit end-to-end tests passed mixed references, empty modern href, unchanged
+source attributes, nested-symbol colors/CSS variables, standalone SVG decoding,
+PNG colors at 1x/2x/4x and JPEG export. Both processes exited 0; logs:
+`/private/tmp/retouch-symbol-href-chromium.log` and
+`/private/tmp/retouch-symbol-href-webkit.log`. git diff --check passed. These are
+focused browser checks; the unit suite was not rerun for this change.
+
+The previously documented symbol/CSS/font limitations remain. Full Figma parity
+is incomplete, and native launches remain paused.

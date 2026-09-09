@@ -14,6 +14,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   source=source.replace('<script>void 0</script>','<use href="#export-icon-wrapper" x="160" y="30" width="20" height="20" color="rgb(25,160,70)"/><use href="#export-icon-wrapper" x="180" y="30" width="20" height="20" color="rgb(160,25,180)"/><script>void 0</script>');
  }
  if(process.env.RT_E2E_SYMBOL_VARIABLE)source=source.replace('fill:currentColor','fill:var(--icon-fill,currentColor)').replace('color="rgb(160,25,180)"','color="rgb(10,10,200)" style="--icon-fill:rgb(160,25,180)"');
+ if(process.env.RT_E2E_SYMBOL_LEGACY)source=source.replaceAll('href="#export-icon-wrapper"','href="#export-icon-wrapper" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#obsolete-missing-icon"');
  fs.writeFileSync(file,source);
  const server=require('../../src/html-site.cjs').start({root,port:0,quiet:true});if(!server.listening)await once(server,'listening');let browser;
  try{
@@ -91,6 +92,16 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   assert.deepEqual(references.ids,['export-ref-a','export-ref-b','export-ref-shape']);assert.equal(references.count,4);
   assert.match(references.cycle,/Cyclic SVG symbol reference/);assert.match(references.missing,/Missing SVG definition: export-ref-missing/);assert.match(references.external,/External SVG symbol references/);
   console.log(engine+': PASS transitive shared symbol collection, href/xlink, reuse deduplication, cycle/missing/external diagnostics and no DOM mutation');
+  const emptyReference=await app.locator('svg[aria-label="Test artwork"]').evaluate(svg=>{
+   const node=svg.ownerDocument.createElementNS(svg.namespaceURI,'use');node.id='export-empty-reference';node.setAttribute('href','');node.setAttributeNS('http://www.w3.org/1999/xlink','xlink:href','#obsolete-missing-icon');svg.append(node);
+   try{
+    const result=window.parent.RetouchSVGExport.snapshot(svg),parsed=new DOMParser().parseFromString(result.text,'image/svg+xml'),exported=parsed.getElementById(node.id);
+    return {modern:exported.hasAttribute('href'),legacy:exported.hasAttributeNS('http://www.w3.org/1999/xlink','href'),source:node.getAttribute('href'),fallback:node.getAttributeNS('http://www.w3.org/1999/xlink','href')};
+   }finally{node.remove();}
+  });
+  assert.deepEqual(emptyReference,{modern:false,legacy:false,source:'',fallback:'#obsolete-missing-icon'});
+  if(process.env.RT_E2E_SYMBOL_LEGACY)assert.doesNotMatch(text,/obsolete-missing-icon/);
+  console.log(engine+': PASS effective href precedence, empty href suppresses legacy fallback, unchanged source attributes');
   const refusal=await app.locator('svg[aria-label="Test artwork"]').evaluate(svg=>{const use=svg.ownerDocument.createElementNS(svg.namespaceURI,'use');use.setAttribute('href','#solid');svg.append(use);try{return window.parent.RetouchSVGExport.snapshot(svg);}catch(error){return error.message;}finally{use.remove();}});assert.match(refusal,/reference visible artwork/);
   if(process.env.RT_E2E_TEXT_PATH){assert.match(text,/id="text-track"/);assert.match(text,/href="#text-track"/);}
   if(process.env.RT_E2E_SHARED_DEFS){assert.match(text,/id="paint-base"/);assert.match(text,/href="#paint-base"/);}

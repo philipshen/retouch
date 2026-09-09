@@ -108,7 +108,11 @@
    if(reused.has(original))for(const attr of original.attributes)if(attr.value.includes('url('))localURL(attr.value);
    for(const property of properties){const value=css.getPropertyValue(property);if(value)values.push([property,localURL(value)]);}
    const hrefs=[];links.set(original,hrefs);
+   const effectiveHref=original.getAttributeNode('href')||original.getAttributeNodeNS('http://www.w3.org/1999/xlink','href');
    for(const attr of original.attributes)if(attr.localName==='href'){
+    // Modern href wins even when empty; an obsolete xlink fallback must not
+    // collect missing assets or become active again in the exported document.
+    if(attr!==effectiveHref||!attr.value){hrefs.push([attr.namespaceURI,attr.name,null]);continue;}
     const value=reference(attr.value,['linearGradient','radialGradient','pattern','textPath','use'].includes(original.localName));
     hrefs.push([attr.namespaceURI,attr.name,/^(?:https?:|data:|blob:|#)/.test(value)?value:null]);
    }
