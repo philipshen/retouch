@@ -86,3 +86,10 @@ It accepts `RT_AGENT_BROWSER_BIN` and restores the JSON fixture on failure.
 `node test/e2e/zoom.cjs` verifies pinch gestures, gray side margins, responsive
 viewport preservation, stable viewport-height sections, unchanged CSS units, scaled
 selection geometry, text focus, and correct drag snapping/cancellation at 50%. It accepts `RT_AGENT_BROWSER_BIN`.
+
+`npm run test:e2e:zoom-anchor` starts an isolated HTML fixture and verifies
+pointer anchoring through canvas/iframe wheel gestures at page top, middle and
+bottom, in workspace and fixed-screen modes. It also checks immediate residual
+page scrolling when zooming out reaches the canvas limit on a smooth-scrolling
+site. Set `RT_INSPECTOR_FIXTURE` to a fixture with Playwright installed and
+`RT_E2E_BROWSER=webkit` to use WebKit.

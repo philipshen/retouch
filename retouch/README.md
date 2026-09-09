@@ -368,7 +368,10 @@ Zoom preserves the iframe viewport, including viewport units and height media
 queries, without rewriting preview CSS. Zooming out shows a smaller viewport;
 scroll inside it to reach more of the page. Fit screen returns a workspace to
 100%. Fitting preserves fixed CSS dimensions, viewport units and the page's
-scroll position. Resize handles follow the new zoom immediately.
+scroll position. Resize handles follow the new zoom immediately. Pinch zoom
+keeps the point under the pointer anchored where canvas and page bounds allow.
+It pans the canvas first, preserving page scroll; any necessary page adjustment
+is immediate even when the site uses smooth scrolling.
 
 
 Select an existing SVG canvas or group to use **Draw rectangle**, **Draw circle**,

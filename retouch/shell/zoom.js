@@ -29,7 +29,11 @@
     scale=next;
     layout();
     canvas.scrollLeft=stage.offsetLeft+siteX*scale-px;
-    w?.scrollTo(w.scrollX,Math.max(0,siteY-(py-siteTop)/scale));
+    // Pan the magnified viewport first so fixed/sticky content and the page's
+    // scroll position stay stable. Only use page scrolling for residual travel
+    // when the finite canvas cannot keep the pointer's document point anchored.
+    canvas.scrollTop=endPadding+(siteY-(w?.scrollY||0))*scale-py;
+    w?.scrollTo({left:w.scrollX,top:Math.max(0,siteY-(py+canvas.scrollTop-endPadding)/scale),behavior:'instant'});
   }
   const center=()=>{const r=canvas.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};};
   zoomInput.addEventListener('input',()=>zoomInput.setCustomValidity(''));

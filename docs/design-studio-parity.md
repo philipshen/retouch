@@ -2703,3 +2703,23 @@ All 334 unit tests pass in `/private/tmp/retouch-viewport-unit.log`.
 The legacy external Moses zoom script expectations were updated but that script
 was not run in this checkpoint. The latest Mac archive still predates zoom work;
 full Figma parity, arbitrary-site authoring and trusted distribution remain open.
+
+### 2026-09-09 — Keep zoom anchored under the pointer
+
+Zoom now pans the canvas before changing page scroll, preserving the pointer's
+page coordinate and the iframe's scroll position when canvas bounds allow it.
+If the canvas reaches its limit, residual page scrolling is immediate, including
+sites that author `scroll-behavior:smooth`. Finite canvas/page bounds can still
+prevent exact anchoring when zooming out; this does not introduce infinite space.
+
+A new isolated HTML browser test reproduced the previous failure before the fix:
+at 100% to 200%, the point at document y=200 moved to y=103 under the pointer and
+page scroll began animating (`/private/tmp/retouch-zoom-anchor-before.log`).
+The test now passes in Chromium and WebKit for both canvas and iframe gestures,
+workspace and fixed screens, page top/middle/bottom, 100→200→400→200%, and a
+100→50% residual-scroll case that checks immediate and settled coordinates.
+Logs: `/private/tmp/retouch-zoom-anchor-{chromium,webkit}-final.log`.
+Existing viewport/selection/high-zoom/source-undo browser flows pass in both
+engines: `/private/tmp/retouch-anchor-selection-{chromium,webkit}.log`.
+This checkpoint does not validate every sticky/nested-scroll layout or refresh
+the Mac archive. Full feature parity and trusted distribution remain unfinished.
