@@ -52,23 +52,23 @@
     selectAll.onclick=selectVisible;
     function render() {
       const focused=rows.find(r=>r.button===document.activeElement)?.item.el;
-      tree.replaceChildren();rows=[];
+      const previous=new Map(rows.map(row=>[row.item.el,row]));rows=[];
       const query=search.value.trim().toLowerCase();
       const matches=new Map();
       function matched(item){if(!matches.has(item))matches.set(item,item.label.toLowerCase().includes(query)||item.children.some(matched));return matches.get(item);}
       function walk(items,depth) {
         for(const item of items) {
           if(query&&!matched(item))continue;
-          const row=document.createElement('div');row.className='layer-row';row.style.paddingLeft=(depth-1)*12+'px';
+          const prior=previous.get(item.el),row=prior?.row||document.createElement('div');row.className='layer-row';row.style.paddingLeft=(depth-1)*12+'px';
           const expanded=!!query||!collapsed.has(item.el);
-          const toggle=document.createElement('button');toggle.className='layer-toggle';toggle.tabIndex=-1;
+          const toggle=prior?.toggle||document.createElement('button');toggle.className='layer-toggle';toggle.tabIndex=-1;
           toggle.textContent=item.children.length?(expanded?'▾':'▸'):'';
           toggle.disabled=isBusy||!item.children.length;toggle.setAttribute('aria-label',(expanded?'Collapse ':'Expand ')+item.label);
           toggle.onclick=()=>{if(expanded)collapsed.add(item.el);else collapsed.delete(item.el);render();};
-          const b=document.createElement('button');b.className='layer-item';b.textContent=item.label;b.title=item.label;
+          const b=prior?.button||document.createElement('button');b.className='layer-item';if(b.textContent!==item.label)b.textContent=item.label;b.title=item.label;
           b.setAttribute('role','treeitem');b.setAttribute('aria-level',depth);b.setAttribute('aria-selected',String(selectedSet.has(item.el)));
           b.tabIndex=item.el===selected?0:-1;b.disabled=isBusy;
-          if(item.children.length)b.setAttribute('aria-expanded',String(expanded));
+          if(item.children.length)b.setAttribute('aria-expanded',String(expanded));else b.removeAttribute('aria-expanded');
           b.onclick=e=>{if(multiEnabled&&e.shiftKey)return selectRange(item.el,e.metaKey||e.ctrlKey);rangeAnchor=item.el;return onSelect(item.el,{toggle:e.metaKey||e.ctrlKey});};
           b.draggable=dragEnabled&&item.el.namespaceURI==='http://www.w3.org/1999/xhtml'&&!['HTML','BODY'].includes(item.el.tagName);
           b.ondragstart=e=>{if(isBusy||!b.draggable){e.preventDefault();return;}dragged=item.el;e.dataTransfer.setData('text/plain','retouch-layer:'+item.el.getAttribute('data-rt'));e.dataTransfer.effectAllowed='move';for(const row of rows)if(row.item.el===dragged||selectedSet.has(dragged)&&selectedSet.has(row.item.el))row.button.classList.add('dragging');};
@@ -93,11 +93,16 @@
               e.preventDefault();if(item.children.length&&expanded){collapsed.add(item.el);render();}else rows.find(r=>r.item===item.parent)?.button.focus();
             }
           };
-          row.append(toggle,b);tree.append(row);rows.push({item,button:b,toggle});
+          if(!prior)row.append(toggle,b);rows.push({item,row,button:b,toggle});
           if(expanded)walk(item.children,depth+1);
         }
       }
       if(d)walk(collect(d),1);
+      // Keep existing layer buttons attached while source updates arrive. Replacing
+      // them between pointerdown and pointerup loses the browser's click target.
+      const retained=new Set(rows.map(entry=>entry.row));
+      for(const child of [...tree.children])if(!retained.has(child))child.remove();
+      for(let i=0;i<rows.length;i++)if(tree.children[i]!==rows[i].row)tree.insertBefore(rows[i].row,tree.children[i]||null);
       if(rows.length&&!rows.some(r=>r.button.tabIndex===0))rows[0].button.tabIndex=0;
       empty.textContent=rows.length?'':query?'No matching layers.':'No source-connected layers on this page yet.';
       empty.hidden=!!rows.length;

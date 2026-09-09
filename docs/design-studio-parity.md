@@ -2377,3 +2377,24 @@ restored to disabled. Native interaction, trusted launch, notarization, public
 release, upgrades and Intel runtime remain unverified. The separate older-source
 Developer ID build still waits for local keychain authorization. Full Figma parity
 and arbitrary-site authoring remain active unfinished requirements.
+
+## Preserve layer interactions across live source updates
+
+A deterministic browser regression reproduced a missed layer click: a source
+mutation between mouse press and release triggered the layer observer, whose full
+tree replacement detached the pressed button. The tree now reuses rows keyed by
+their source DOM element, removes obsolete rows and moves only rows whose order
+changed. Handlers and accessibility metadata refresh against the new hierarchy;
+existing buttons remain attached during unrelated updates. Rename retains focus,
+and keyboard parent navigation follows reparenting.
+
+The new `test:e2e:layer-interactions` fails on the prior implementation and passes
+in Chromium and WebKit. It covers held-click source refresh, modifier selection,
+button identity, rename focus, reparented keyboard navigation, search and disclosure.
+The real React selection/style workflow passes in both engines; the HTML selection
+layout workflow passes in Chromium. All 328 unit/HTTP tests pass. Logs are
+`/private/tmp/retouch-layer-refresh-{before,chromium,webkit,react-chromium,react-webkit,html,unit}.log`.
+
+This proves and fixes a real source-refresh click loss. It does not establish the
+cause of the earlier packaged WebKit timeout, whose evidence remains intact.
+The latest Mac archive still packages `3b3d8a1` and predates this source fix.

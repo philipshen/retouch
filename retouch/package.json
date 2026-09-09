@@ -16,7 +16,8 @@
     "test:e2e:react-position": "node test/e2e/react-position.cjs",
     "test:e2e:react-svg": "node test/e2e/react-svg-geometry.cjs",
     "test:launch": "node test/launch/verify.cjs",
-    "release:local": "node scripts/release.cjs"
+    "release:local": "node scripts/release.cjs",
+    "test:e2e:layer-interactions": "node test/e2e/layer-interactions.cjs"
   },
   "main": "./src/index.cjs",
   "exports": {
