@@ -4246,3 +4246,27 @@ This verifies selected-element CSS multiplier behavior, not complete mixed-run
 or paragraph layout parity. More advanced typography, arbitrary-site source
 coverage and trusted native distribution remain incomplete. Native launches
 remain paused and none were attempted.
+
+### Explicit spacing conversion (2026-09-09)
+
+Added compact Use % actions for line height and letter spacing in React, Liquid,
+and HTML typography. An unchanged computed percentage now explicitly converts
+fixed spacing into unitless line height / em tracking. Conversion uses the
+unrounded computed ratio; edited values retain input validation. Separate labels
+and buttons preserve accessible input association. Blur followed by activation
+deduplicates the same pending value.
+
+Verified 374 unit tests (`/private/tmp/retouch-convert-unit.log`) and real browser
+flows: Chromium HTML (`retouch-convert-html.log`), Chromium React
+(`retouch-convert-react-fixed.log`), WebKit local Liquid
+(`retouch-convert-liquid-fixed.log`), all under `/private/tmp`. Checks establish
+fixed 48px line height and 3.2px tracking, convert without changing the displayed
+150% / 10%, preserve appearance, resize the font 32px to 40px, verify 60px / 4px,
+and undo to exact original source. Initial React/Liquid test setup entered the
+already displayed 48px and generated no change; failed logs are retained. Corrected
+setup first establishes a different explicit value. Screenshot
+`/private/tmp/retouch-convert.png` inspected; conversion buttons subsequently use
+the existing control-button styling for consistency.
+
+Full Figma parity and arbitrary-site authoring remain incomplete. Native app
+launches remain paused at the user's request; no native tests executed.

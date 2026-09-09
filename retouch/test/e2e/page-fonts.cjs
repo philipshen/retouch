@@ -58,6 +58,25 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===expected);await settled();}await wait(async()=>await spacing()===initial);assert.equal(read(),original);
    console.log(engine+' '+kind+': PASS percentage letter spacing scales with font size, negative tablet override, phone isolation and exact undo');
   }
+  if(process.env.RT_E2E_CONVERT_SPACING){
+   await page.getByLabel('Style screen scope').selectOption('');await settled();
+   const write=async action=>{snapshots.push(read());await action();await wait(()=>read()!==snapshots.at(-1));await settled();};
+   const edit=async(label,value)=>write(async()=>{const input=page.getByLabel(label,{exact:true});await input.fill(value);await input.press('Tab');});
+   const metrics=()=>app.locator('h1').evaluate(el=>{const s=getComputedStyle(el);return [parseFloat(s.lineHeight),parseFloat(s.letterSpacing)];});
+   await edit(kind==='html'?'Line height (CSS)':'Line height (px)',kind==='html'?'64px':'64');
+   await edit(kind==='html'?'Line height (CSS)':'Line height (px)',kind==='html'?'48px':'48');
+   await edit(kind==='html'?'Letter spacing (CSS)':'Letter spacing (px)',kind==='html'?'3.2px':'3.2');
+   assert.equal(await page.getByLabel('Line height (%)',{exact:true}).inputValue(),'150');
+   assert.equal(await page.getByLabel('Letter spacing (%)',{exact:true}).inputValue(),'10');
+   await write(()=>page.getByRole('button',{name:'Use relative line height',exact:true}).click());
+   await write(()=>page.getByRole('button',{name:'Use relative letter spacing',exact:true}).click());
+   assert.deepEqual(await metrics(),[48,3.2]);
+   if(process.env.RT_E2E_CONVERT_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_CONVERT_SCREENSHOT});
+   await edit(kind==='html'?'Font size (CSS)':'Font size (px)',kind==='html'?'40px':'40');
+   await wait(async()=>JSON.stringify(await metrics())==='[60,4]');
+   while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===expected);await settled();}assert.equal(read(),original);
+   console.log(engine+' '+kind+': PASS unchanged-value conversion preserves appearance, scales both spacing properties with font size, and exact undo');
+  }
   if(process.env.RT_E2E_RELATIVE_LINE_HEIGHT){
    const height=()=>app.locator('h1').evaluate(el=>getComputedStyle(el).lineHeight),initial=await height();
    const edit=async(label,value,expected)=>{snapshots.push(read());const input=page.getByLabel(label,{exact:true});await input.fill(value);await input.press('Tab');await wait(()=>read()!==snapshots.at(-1));await settled();await wait(async()=>Math.abs(parseFloat(await height())-expected)<.02);};

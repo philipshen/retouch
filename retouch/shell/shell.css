@@ -323,3 +323,8 @@ details.advanced > summary:hover { color: var(--ink); }
 .font-pages .control-button { flex: 1; }
 
 .font-face-state { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; font-weight: normal; }
+
+.relative-field { display: flex; align-items: center; gap: 6px; }
+.relative-field .inspector-field { flex: 1; min-width: 0; }
+.relative-field input { width: 92px; }
+.relative-field > button { flex-shrink: 0; font-size: 11px; padding: 6px; }
