@@ -66,6 +66,11 @@
     for(const part of document.subpaths){if(!part||!Array.isArray(part.nodes)||(total+=part.nodes.length)>512)return null;const d=serialize(part.nodes,part.closed);if(!d)return null;parts.push(d);}
     return parts.join(' ');
   }
+  function setArc(part,index,changes){
+    if(!part||!serialize(part.nodes,part.closed)||!Number.isInteger(index)||!part.nodes[index]?.arc||!changes||typeof changes!=='object'||Array.isArray(changes)||Object.keys(changes).some(key=>!['rx','ry','rotation','large','sweep'].includes(key)))return null;
+    const arc={...part.nodes[index].arc,...changes};if(!validArc(arc))return null;
+    const nodes=part.nodes.map(p=>translate(p,0,0));nodes[index].arc=arc;return {nodes,closed:part.closed};
+  }
   function translateContour(part,dx,dy){
     if(!part||!serialize(part.nodes,part.closed)||!Number.isFinite(dx)||!Number.isFinite(dy))return null;
     const nodes=part.nodes.map(p=>translate(p,dx,dy));return serialize(nodes,part.closed)?{nodes,closed:part.closed}:null;
@@ -140,5 +145,5 @@
     return (!next.in||coordinate(next.in))&&(!next.out||coordinate(next.out))?next:null;
   }
   function equivalent(a,b){return !!a&&!!b&&a.closed===b.closed&&a.nodes.length===b.nodes.length&&a.nodes.every((p,i)=>(!p.arc&&!b.nodes[i].arc||p.arc&&b.nodes[i].arc&&['rx','ry','rotation','large','sweep'].every(key=>Math.abs(p.arc[key]-b.nodes[i].arc[key])<1e-6))&&['','in','out'].every(key=>{const x=key?p[key]:p,y=key?b.nodes[i][key]:b.nodes[i];return !x&&!y||x&&y&&Math.abs(x.x-y.x)<1e-6&&Math.abs(x.y-y.y)<1e-6;}));}
-  const api={serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,split,segmentMiddle,arcCenter,arcPoint,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
+  const api={serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,setArc,split,segmentMiddle,arcCenter,arcPoint,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
 })(typeof window==='object'?window:globalThis);

@@ -129,3 +129,10 @@ test('Arc translation and opening retain the intended segments without sharing d
   const split=path.split(part.nodes,1,true);assert.equal(split.length,3);assert.ok(split[0].arc);assert.ok(split[2].arc);assert.equal(path.smooth(part.nodes,0,true),null);
   const zero=path.parse('M0 0A0 10 0 0 1 40 20');assert.deepEqual(path.segmentMiddle(...zero.nodes),{x:20,y:10});assert.ok(path.split(zero.nodes,0,false));
 });
+
+test('Arc parameter edits change only the selected segment and reject invalid values atomically',()=>{
+  const part=path.parse('M0 0A30 20 0 0 1 60 0A30 20 0 0 1 0 0Z'),before=JSON.stringify(part),edited=path.setArc(part,0,{rx:45,rotation:30,large:1,sweep:0});assert.deepEqual(edited.nodes[1],part.nodes[1]);assert.deepEqual(edited.nodes[0].arc,{rx:45,ry:20,rotation:30,large:1,sweep:0});assert.equal(JSON.stringify(part),before);
+  assert.equal(path.setArc(part,0,{ry:0}).nodes[0].arc.ry,0);
+  for(const changes of [{rx:-1},{rx:Infinity},{rx:100001},{rotation:NaN},{large:2},{sweep:true},{unexpected:1},{ry:'20'}])assert.equal(path.setArc(part,0,changes),null);
+  assert.equal(path.setArc(part,-1,{rx:20}),null);assert.equal(path.setArc(path.parse('M0 0L1 1'),1,{rx:20}),null);
+});

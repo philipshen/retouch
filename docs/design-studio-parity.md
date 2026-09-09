@@ -3366,3 +3366,48 @@ vector networks, booleans/masks, persistent per-anchor constraints and the broad
 Figma Design requirements remain open. Native launches remained paused; no desktop
 build or launch occurred. Unrestricted site authoring and trusted Mac distribution
 are not established by this change.
+
+
+### 2026-09-09 — Arc property controls in the inspector
+
+Arc editing now exposes Radius X, Radius Y, rotation, Long arc and Reverse arc
+controls. A segment picker distinguishes incoming and outgoing arcs at shared
+anchors. Controls change the pending preview without moving endpoints or altering
+neighboring contours. Done/Enter commits through source history; Escape discards
+pending edits. Invalid numeric values are marked and keep the editor open until
+corrected. Number-field navigation no longer reaches canvas point shortcuts.
+
+The controls live in the inspector sidebar and are removed when editing ends.
+They hide while a nested Pen step is active and return afterward. A contextual
+hint explains zero-radius straight segments and reports SVG's effective radii
+when the authored radii must expand to connect the endpoints. Switching arcs
+refreshes both values and the hint.
+
+All 358 unit tests pass in `/private/tmp/retouch-arc-controls-unit.log`. Initial
+browser failures are retained in `/private/tmp/retouch-arc-controls-html-chromium.log`
+and `/private/tmp/retouch-arc-controls-react-webkit.log`: the floating toolbar grew
+over subdivision controls at 50 percent zoom. Moving properties to the sidebar
+resolved that layout failure.
+
+All four browser workflows pass in
+`/private/tmp/retouch-arc-controls-html-chromium-sidebar.log`,
+`/private/tmp/retouch-arc-controls-react-webkit-sidebar.log`,
+`/private/tmp/retouch-arc-controls-html-webkit-svg-arc-controls.log`, and
+`/private/tmp/retouch-arc-controls-react-chromium-svg-arc-controls.log`.
+They verify all arc parameters, incoming/outgoing selection, rendered geometry
+changes, unchanged endpoints/neighboring contours, invalid-value recovery,
+keyboard handling, preview isolation and exact undo/redo, alongside the arc
+50/100/200 percent zoom regression. The latter two also verify radius-correction
+and zero-radius hints. A final Chromium pass in
+`/private/tmp/retouch-arc-controls-hint-final.log` verifies hint refresh on segment
+switching. The inspected `/private/tmp/retouch-arc-controls-final.png` shows the
+properties in the sidebar and unobstructed canvas actions.
+
+Bézier handle and Pen-append regressions pass in
+`/private/tmp/retouch-arc-controls-html-chromium-svg-handle-modes.log` and
+`/private/tmp/retouch-arc-controls-react-webkit-svg-draw-contour.log` before the final
+hint-refresh adjustment. Direct arc-radius handles, arc-to-cubic conversion,
+vector networks, booleans/masks, persistent per-anchor constraints and the broader
+Figma Design requirements remain open. Native launches stayed paused; no desktop
+build or launch occurred. Unrestricted site authoring and trusted Mac distribution
+remain unverified.

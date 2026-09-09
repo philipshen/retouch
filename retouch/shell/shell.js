@@ -1884,7 +1884,7 @@ async function editSVGPoints(info){
   const target=targets[0];
   if(field.name==='d'?!RetouchSVGPath.equivalentCompound(pathData,RetouchSVGPath.parseCompound(target.getAttribute('d'))):target.getAttribute(field.name)!==field.value)return toast('The vector changed. Re-select it before editing.','err');
   if(!await prepareVectorCanvas(info,target))return;
-  stopDrawing=RetouchSVGVertices.mount({target,points,pathData,frame:iframe,canvas:canvasSurface,
+  stopDrawing=RetouchSVGVertices.mount({target,points,pathData,propertiesPane:panelBody,frame:iframe,canvas:canvasSurface,
     onCommit:value=>{if(sel?.info===info)setSVGGeometry(field.name,value);},
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
   if(stopDrawing)toast('Drag a point or use arrow keys. Click + to add; Delete removes a point. Done or Enter saves; Escape cancels.','ok');
