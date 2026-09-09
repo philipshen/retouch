@@ -77,7 +77,22 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
   await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===reordered);await wait(async()=>await topShape()==='rect');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===overlapPainted);
   for(const snapshot of [overlapping,repositionX,original]){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===snapshot);}
+  await page.getByRole('treeitem',{name:'rect · Box',exact:true}).click();await settled();await paint('fill','#ff00ff');const originalPaint=read();
+  await page.getByRole('button',{name:'Duplicate layer',exact:true}).click();await settled();await wait(async()=>await app.locator('rect').count()===2);const copiedSource=read();
+  assert.equal(await page.getByRole('treeitem',{name:'rect · Box',exact:true}).last().getAttribute('aria-selected'),'true');
+  assert.notEqual(await app.locator('rect').first().getAttribute('data-rt-style'),await app.locator('rect').last().getAttribute('data-rt-style'));
+  await paint('fill','#00ff00');await wait(async()=>await app.locator('rect').last().evaluate(el=>getComputedStyle(el).fill)==='rgb(0, 255, 0)');assert.equal(await app.locator('rect').first().evaluate(el=>getComputedStyle(el).fill),'rgb(255, 0, 255)');
+  const copyPaint=read();await fill('X','60');await wait(async()=>await app.locator('rect').last().getAttribute('x')==='60');assert.equal(await app.locator('rect').first().getAttribute('x'),'5');
+  if(process.env.RT_E2E_SVG_DUPLICATE_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_SVG_DUPLICATE_SCREENSHOT});
+  for(const snapshot of [copyPaint,copiedSource,originalPaint]){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===snapshot);}
+  assert.equal(await app.locator('rect').count(),1);assert.equal(await page.getByRole('treeitem',{name:'rect · Box',exact:true}).getAttribute('aria-selected'),'true');
+  await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===copiedSource);assert.equal(await page.getByRole('treeitem',{name:'rect · Box',exact:true}).last().getAttribute('aria-selected'),'true');
+  for(const snapshot of [originalPaint,original]){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===snapshot);}
+  for(const tag of ['g','svg']){
+   await page.getByRole('treeitem',{name:tag,exact:true}).click();await settled();await page.getByRole('button',{name:'Duplicate layer',exact:true}).click();await settled();await wait(async()=>await app.locator(tag).count()===2);assert.equal(await app.locator('circle').count(),2);assert.equal(await app.locator('ellipse').count(),2);
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);assert.equal(await page.getByRole('treeitem',{name:tag,exact:true}).getAttribute('aria-selected'),'true');
+  }
   assert.equal(await app.locator('p').textContent(),'Unchanged');
-  assert.deepEqual(errors,[]);console.log(engine+': PASS inline SVG canvas/tree selection, primitive geometry, viewBox scaling, responsive paint, stroke styles, shape creation/deletion/reordering and exact source/selection undo/redo');
+  assert.deepEqual(errors,[]);console.log(engine+': PASS inline SVG canvas/tree selection, primitive geometry, viewBox scaling, responsive paint, stroke styles, shape creation/deletion/reordering/duplication and exact source/selection undo/redo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

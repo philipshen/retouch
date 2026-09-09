@@ -134,7 +134,7 @@
       actionButtons.reparentElement.hidden=s?.canReparent===undefined;actionButtons.reparentElement.disabled=busy||!s?.canReparent;
       actionButtons.frameSelection.hidden=s?.canFrame===undefined;actionButtons.frameSelection.disabled=busy||!s?.canFrame;actionButtons.frameSelection.title='Wrap consecutive sibling layers in a new layout container.';
       actionButtons.removeFrame.hidden=s?.canRemoveFrame===undefined;actionButtons.removeFrame.disabled=busy||!s?.canRemoveFrame;actionButtons.removeFrame.title='Remove the frame container and its styling; keep its children.';
-      actionButtons.copyElement.disabled=busy||!s?.canDuplicate;
+      actionButtons.copyElement.disabled=busy||!(s?.canCopy??s?.canDuplicate);
       actionButtons.pasteElement.disabled=busy||!s?.canPaste||!compatible;
       actionButtons.pasteElement.title=!copied?'Copy a layer first.':!compatible?'Paste requires an unchanged copied sibling in this source parent.':'Paste after the selected layer.';
       actionButtons.duplicateElement.disabled=busy||!s?.canDuplicate;

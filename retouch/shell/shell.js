@@ -1678,15 +1678,15 @@ async function structureAction(action) {
   if(sel.multiple?.length>1){if(action==='reparentElement')return chooseLayerParent(sel.info);if(['duplicateElement','deleteElement'].includes(action))return structureSelection(action);return toast('Choose one layer for this structural edit.','err');}
   await commitInlineEdit();
   const info=sel?.info;if(!info)return;
-  if(action==='deleteElement'&&info.svgDeletion||['before','after'].includes(action)&&info.svgMovement){
-    const deleting=action==='deleteElement';
+  if(action==='deleteElement'&&info.svgDeletion||action==='duplicateElement'&&info.svgDuplication||['before','after'].includes(action)&&info.svgMovement){
+    const deleting=action==='deleteElement',duplicating=action==='duplicateElement';
     busyPanel(true);
     try{
-      const result=await api('POST','/rt/__api/op',{type:deleting?'deleteElement':'moveElement',direction:action,id:info.id,fileHash:info.hash});
+      const result=await api('POST','/rt/__api/op',{type:deleting?'deleteElement':duplicating?'duplicateElement':'moveElement',direction:action,id:info.id,fileHash:info.hash});
       if(!result?.ok)return toast(result?.reason||result?.error||'Could not update SVG layer','err');
-      const selectionAfter=[deleting?result.parentId:result.movedId];
+      const selectionAfter=[deleting?result.parentId:duplicating?result.createdId:result.movedId];
       editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:[info.id],selectionAfter,undoId:result.undoId});
-      await reloadFrame();await restoreLayerSelection(selectionAfter);renderPanel();toast(deleting?'Layer deleted':'Layer moved','ok');
+      await reloadFrame();await restoreLayerSelection(selectionAfter);renderPanel();toast(deleting?'Layer deleted':duplicating?'Layer duplicated':'Layer moved','ok');
     }finally{busyPanel(false);}
     return;
   }
@@ -1699,7 +1699,7 @@ async function structureAction(action) {
   const signature=el=>el.tagName+'|'+el.textContent.trim();
   const expected=siblings.map(signature),at=siblings.indexOf(target);
   if(action==='copyElement'){
-    if(!info.structure?.canDuplicate)return toast('This layer cannot be copied safely.','err');
+    if(!(info.structure?.canCopy??info.structure?.canDuplicate))return toast('Copy is unavailable for this layer.','err');
     layerClipboard={id:info.id,hash:info.fileHash||info.hash,file:info.file,parentId:info.structure.parentId,signature:signature(target)};toast('Layer copied','ok');return;
   }
   if(action==='pasteElement'){

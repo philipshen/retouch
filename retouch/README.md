@@ -321,3 +321,9 @@ layer with its neighboring SVG layer. Later layers normally paint on top.
 The moved layer stays selected, including through undo/redo; its geometry and
 paint rules travel with it. Reordering across definitions or other unindexed
 SVG nodes is not supported yet.
+
+**Duplicate layer** copies a complete SVG shape, group or canvas and selects the
+copy. Geometry and responsive paint start identical, with independent managed
+style identities so later edits affect only the copy. Undo/redo restore source
+and selection. SVG layers with authored IDs, template content or unsupported
+descendants cannot be duplicated yet; SVG clipboard operations remain unavailable.

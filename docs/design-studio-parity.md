@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 265 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 268 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1200,3 +1200,19 @@ and circle switching the topmost hit-tested shape, preserved managed fill,
 selection restoration and exact source undo/redo. The initial WebKit selection
 assertion was changed to wait for the asynchronous Layers highlight. SVG
 duplication, reparenting, drawing/path tools and full parity remain unfinished.
+
+
+### Independent SVG duplication
+
+Duplicate layer now copies complete SVG primitives, groups and viewports next
+to the original. Managed CSS identities and all breakpoint rules are cloned
+independently. Parsed original/copy nesting and final source identities are
+validated; the copy is selected immediately and after redo, while undo selects
+the original. Authored IDs/keys/refs, template content and unsupported descendants
+remain refused pending reference remapping. SVG copy/paste remains unavailable.
+
+All 268 unit tests pass. Chromium and WebKit verify independent copied fill and
+geometry, group/viewport descendants, selection and exact source undo/redo.
+Source tests cover cloned base/tablet paint rules and refusals. The screenshot
+shows the magenta original and separately positioned green copy. Reference-aware
+copying, SVG reparenting, drawing/path tools and full parity remain unfinished.
