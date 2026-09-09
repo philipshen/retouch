@@ -110,3 +110,9 @@ The zoom-selection workflow also exercises continuous page movement, bounded
 failure, recovery after motion stops, and cancellation by a newer Fit command.
 The canvas-pan workflow checks selection visibility after native keyboard
 scrolling in Interact mode, followed by editing and tool switching.
+
+The React selection-geometry and HTML layer-reveal workflows now hold an
+inspector button pressed during a real browser-window resize. They verify the
+button survives through release and activates its tool; the HTML workflow also
+checks that the deferred inspector rebuild runs afterward. Set
+`RT_TRACE_PAGE_ERRORS=1` for React page-error stacks when diagnosing failures.

@@ -88,6 +88,8 @@ setInterval(pollNavigation, 300);
 function doc() { return iframe.contentDocument; }
 
 function hookFrame(d, w) {
+  w.addEventListener('pointerup',releasePanelPointer,true);
+  w.addEventListener('pointercancel',releasePanelPointer,true);
   stopDrawing?.();
   stopMarquee?.();
   stopMarquee=RetouchMarquee.mount({document:d,frame:iframe,surface:canvasSurface,enabled:()=>window.__RT_RENDERING?.selectionStyling===true&&mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests,
@@ -773,10 +775,26 @@ window.addEventListener('retouch:viewport',()=>{
     if(sel && !panelTasks && !panelInteractionFocused())renderPanel();
   });
 });
-let renderedPanelSelection=null;
+let renderedPanelSelection=null,panelPointer=null,panelRenderDeferred=false;
+window.addEventListener('pointerdown',event=>{
+  if(event.button===0&&panelBody.contains(event.target))panelPointer={id:event.pointerId};
+},true);
+function releasePanelPointer(event){
+  const pointer=panelPointer;if(!pointer||event&&event.pointerId!==pointer.id)return;
+  // Keep the existing control through the browser's compatibility click.
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    if(panelPointer!==pointer)return;panelPointer=null;
+    if(panelRenderDeferred&&sel){panelRenderDeferred=false;renderPanel();}
+  }));
+}
+window.addEventListener('pointerup',releasePanelPointer,true);
+window.addEventListener('pointercancel',releasePanelPointer,true);
+window.addEventListener('blur',()=>releasePanelPointer());
 function renderPanel() {
   const panel=document.getElementById('panel');
   const key=JSON.stringify([sel.info.file,sel.scope,sel.instanceId,(sel.multiple||[sel.info]).map(info=>info.id).sort()]);
+  if(panelPointer&&key===renderedPanelSelection){panelRenderDeferred=true;return;}
+  panelRenderDeferred=false;
   const top=key===renderedPanelSelection?panel.scrollTop:0;
   renderedPanelSelection=key;
   // Rebuilding an empty fieldset can clamp its scroll container to zero.

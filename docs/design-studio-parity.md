@@ -2864,3 +2864,37 @@ selection-geometry workflow passed with bounds/DOM-identity tracing enabled
 is not established as resolved. The existing Mac navigation archive still
 contains the pre-fix code and retains its failing receipt. Full Figma parity and
 trusted Mac distribution remain incomplete.
+
+### 2026-09-09 — Preserve inspector controls during pointer activation
+
+A same-selection inspector rebuild now waits until an active panel pointer
+finishes. Pointer release/cancel in either the editor or iframe schedules the
+pending rebuild after the compatibility click; a new selection can still render
+immediately. This preserves the control and its click handler across viewport
+refreshes instead of replacing the pressed DOM element before mouse-up.
+
+A real browser-window resize while Move is pressed fails against the previous
+inspector in an isolated runtime copy:
+`/private/tmp/retouch-inspector-real-resize-before.log` (pressed node detached).
+The copy was removed after the terminal result. The initial regression used a
+synthetic viewport event without required detail, which produced an HTML
+exception. That test version also encountered Next development-overlay errors;
+their precise cause was not established. The synthetic event was replaced with
+a real window resize, without suppressing page errors. Optional React error-stack
+logging remains available through `RT_TRACE_PAGE_ERRORS=1`.
+
+The HTML regression verifies the held control remains attached, release starts
+Move, the deferred rebuild subsequently runs, and source editing/scroll restore/
+exact undo still work. React verifies the ordinary gap-button click as well as
+holding it during resize, followed by keyboard gap edits and exact source undo.
+The fresh archive still predates this fix and retains its failing receipt; the
+new source checks do not retroactively validate that artifact or establish every
+cause of the prior intermittent WebKit instability. Full Figma parity and
+trusted Mac distribution remain unfinished.
+
+Final HTML browser logs (both PASS):
+`/private/tmp/retouch-panel-press-html-{chromium,webkit}-complete.log`.
+Final real React browser logs (both PASS):
+`/private/tmp/retouch-gap-press-{chromium,webkit}-real.log`.
+WebKit screen-resize regression passes in `/private/tmp/retouch-panel-press-screen.log`;
+all 334 unit tests pass in `/private/tmp/retouch-panel-press-unit.log`.
