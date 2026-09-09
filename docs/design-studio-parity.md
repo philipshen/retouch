@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 252 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 253 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1104,3 +1104,13 @@ interaction coverage remain separate unfinished work.
 The full seven-workflow HTML browser command also passed in Chromium and WebKit
 after this shared-renderer change, including general editing, flex/wrapping,
 adaptive grids, frame bounds, visibility and corners.
+
+
+### Elliptical shorthand round-trip
+
+The uniform HTML radius field now accepts one to four horizontal radii followed
+by a slash and one to four vertical radii, including percentages. This closes the
+gap where the browser displayed elliptical shorthand that the editor rejected.
+Malformed axes, extra slashes, negative lengths and declaration injection remain
+refused. All 253 unit tests pass; Chromium and WebKit verify editing both axes,
+computed independent corners and exact undo in the existing corner workflow.

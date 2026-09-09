@@ -202,3 +202,8 @@ test('Independent and elliptical corners preserve border styles and reset to uni
  for(const property of ['border-radius','border-top-left-radius'])assert.equal(edit(original.replace('class="title"','style="border-top-left-radius:4px !important"'),0,'20px',property).refused,true);
  assert.equal(css.valid('border-top-left-radius','-1px'),false);assert.equal(css.valid('border-top-left-radius','10px 20px 30px'),false);
 });
+
+test('Elliptical radius shorthand round-trips both axes and rejects malformed separators',()=>{
+ for(const value of ['30px 10px / 15px 5px','50%/25%','1px 2px 3px 4px / 5px 6px 7px 8px']){const result=edit(original,768,value,'border-radius');assert.equal(result.ok,true,result.reason);assert.equal(css.describe(resolve(result.edits[0].after)).cssRules[768]['border-radius'],value);}
+ for(const value of ['/10px','10px/','10px//20px','1px 2px 3px 4px 5px / 2px','2px / -1px','2px / calc(1px)','2px/1px;display:none'])assert.equal(css.valid('border-radius',value),false,value);
+});

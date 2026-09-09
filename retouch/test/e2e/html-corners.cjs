@@ -23,6 +23,8 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
   if(process.env.RT_E2E_CORNERS_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_CORNERS_SCREENSHOT});
   await size('390x844');await wait(async()=>await corner('border-top-left-radius')==='8px');await size('768x1024');await wait(async()=>await corner('border-top-left-radius')==='40px 10px');
   await fill('Corner radius','20px');await wait(async()=>await corner('border-top-left-radius')==='20px'&&await corner('border-bottom-right-radius')==='20px');
+  const uniformSource=read();await fill('Corner radius','30px 10px / 15px 5px');await wait(async()=>await corner('border-top-left-radius')==='30px 15px'&&await corner('border-top-right-radius')==='10px 5px');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===uniformSource);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===ellipseSource);await wait(async()=>await corner('border-top-left-radius')==='40px 10px');
   await page.getByRole('button',{name:'Reset top left corner',exact:true}).click();await settled();await wait(async()=>await corner('border-top-left-radius')==='8px');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===ellipseSource);

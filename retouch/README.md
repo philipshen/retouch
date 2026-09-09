@@ -183,7 +183,8 @@ restores inherited clipping. Both controls follow the selected screen scope.
 their layout space and display mode. Hidden layers remain selectable in Layers;
 reset removes the chosen scope’s visibility override.
 **Corners** includes uniform rounding and four independent corners. A corner can
-use two lengths for elliptical rounding. Setting uniform rounding replaces that
+use two lengths for elliptical rounding. The uniform field also accepts CSS
+slash notation, such as `30px 10px / 15px 5px`, for both radius axes. Setting uniform rounding replaces that
 scope’s individual overrides; resetting one corner restores inherited rounding.
 The inspector retains its scroll position when the same selection refreshes after
 an edit. Selecting a different layer opens its inspector at the top.

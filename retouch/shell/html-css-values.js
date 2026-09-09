@@ -28,6 +28,7 @@
   if(property==='box-shadow')return value===null||parseShadows(value)!==null;
   if(value===null)return ['flex-grow','flex-shrink','grid-template-columns','grid-template-rows','grid-column','grid-row','opacity','rotate','object-position'].includes(property)||lengths.has(property)||colors.has(property)||Object.hasOwn(options,property);
   if(typeof value!=='string'||!value||value.length>150)return false;
+  if(property==='border-radius'&&value.includes('/')){const axes=value.split('/');return axes.length===2&&axes.every(axis=>{const tokens=axis.trim().split(/\s+/);return tokens.length>=1&&tokens.length<=4&&tokens.every(token=>valid('border-top-left-radius',token));});}
   if(['flex-grow','flex-shrink'].includes(property))return /^(?:\d*\.)?\d+$/.test(value)&&Number(value)>=0&&Number(value)<=1000;
   if(property==='flex-basis'&&['auto','content'].includes(value))return true;
   if(['grid-template-columns','grid-template-rows'].includes(property)){const match=/^repeat\(([1-9]|1[0-9]|2[0-4]), minmax\(0, 1fr\)\)$/.exec(value);return !!match||value==='none'||property==='grid-template-columns'&&parseAdaptiveColumns(value)!==null;}
