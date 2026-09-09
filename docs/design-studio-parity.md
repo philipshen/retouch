@@ -5134,3 +5134,33 @@ in a font carrying an opsz axis. Fonts without optical sizing can legitimately
 look unchanged. Actual opsz-font visual verification and complete typography
 parity remain unfinished. Native launches remain paused; full arbitrary-site
 parity and trusted macOS/Homebrew distribution remain unverified.
+
+### Real optical-size font verification
+
+The optical-sizing browser command now uses an unmodified, vendored Roboto Flex
+font with its SIL Open Font License and a provenance README. The 1,787,292-byte
+fixture has SHA-256
+9b523f7d82593df0107173849ebb8c817471a1df4b4fb2c3cbf40cfd810c8281;
+upstream Google Fonts Git blob 2a11e4cd5588a89e0047140b09c912059d1a150f.
+It remains under test/fixtures/fonts, excluded by the npm package files list,
+and is loaded in the test page only, never installed into macOS.
+
+HTML, React and local Liquid passed Chromium and WebKit runs using the real font.
+For the same 32px headline, Automatic rendered at 129.03125px in Chromium and
+129.019485px in WebKit, compared with 134px for Off. Explicit opsz 8 versus 144
+rendered at 142.5/121.625px in Chromium and 142.492188/121.625px in WebKit.
+Enabling Automatic with explicit opsz 144 retained the explicit-axis width.
+Inspection found Optical Size min 8, default 14, max 144, and set numeric bounds.
+Responsive scope/reset, the class-adapter type sample, existing font-picker
+behavior, and exact source undo passed in the same runs. All six exited 0:
+/private/tmp/retouch-real-optical-{html,react,liquid}-{chromium,webkit}.log.
+All 383 unit tests passed (/private/tmp/retouch-real-optical-units.log).
+The HTML runs initially used the prior WOFF2 data MIME with the TTF fixture;
+both browsers decoded it. The harness now correctly uses font/ttf for this
+fixture, as exercised by the React/Liquid runs. git diff --check passed.
+
+This supplies the previously missing real-opsz-font visual evidence for this
+fixture. It does not prove all fonts, optical-sizing implementations, live
+Shopify integration or full typography parity. Native app launches remain
+paused, and full arbitrary-site/Figma parity and trusted macOS distribution
+remain unfinished.
