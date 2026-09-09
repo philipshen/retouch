@@ -48,6 +48,7 @@ function describe(resolved){
   canSetTag:!!el.location.endTag&&textTags.has(el.tag),context:resolved.context||null};
 }
 function planOp(resolved,op){
+ if(op.type==='reparentElement')return require('../html-reparent.cjs').plan(resolved,op);
  if(op.type==='insertElement')return insertion.plan(resolved,op);
  if(structure.types.has(op.type))return structure.planOp(resolved,op,'html');
  if(op.fileHash&&op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the element.');
@@ -86,4 +87,4 @@ function planOp(resolved,op){
 }
 module.exports={name:'html',matches:file=>/\.html?$/i.test(file),collect,stamp,contentHash:hash,describe,planOp,
  applyOp:(resolved,op)=>require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),planOp(resolved,op)),
- capabilities:{classAttr:'class',ops:['renameElement','insertElement','setClasses','setText','setTag','setSrc',...structure.types]}};
+ capabilities:{classAttr:'class',ops:['reparentElement','renameElement','insertElement','setClasses','setText','setTag','setSrc',...structure.types]}};

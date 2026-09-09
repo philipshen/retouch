@@ -196,6 +196,16 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await name.fill('');await name.press('Tab');await wait(async()=>await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).count()===1,'clear layer name');await settled();
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===namedSource,'clear name undo');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'rename exact undo');
+
+  await page.getByRole('treeitem',{name:'main',exact:true}).click();await page.getByRole('button',{name:'Add frame',exact:true}).click();await wait(async()=>await app.locator('main > div[aria-label="Frame"]').count()===1,'reparent destination frame');await settled();
+  await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await page.getByLabel('Style screen scope').selectOption('');await width('240px');const beforeMove=read();
+  await page.getByRole('button',{name:'Move into…',exact:true}).click();await page.getByLabel('Destination container',{exact:true}).selectOption({label:'div · Frame'});await page.getByRole('button',{name:'Move layer',exact:true}).click();
+  await wait(async()=>await app.locator('main > div[aria-label="Frame"] > h1').count()===1,'move into frame');await settled();
+  assert.equal(await app.locator('h1').evaluate(el=>getComputedStyle(el).width),'240px');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===beforeMove,'reparent exact undo');
+  await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(async()=>await app.locator('main > div[aria-label="Frame"] > h1').count()===1,'reparent redo');
+  for(let i=0;i<3;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
+  await wait(()=>read()===original,'reparent setup exact undo');
   assert.deepEqual(errors,[]);console.log(engine+': PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

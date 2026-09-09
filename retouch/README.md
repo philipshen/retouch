@@ -193,7 +193,11 @@ Mixed text/comment boundaries and implicitly closed parents are refused. Styled 
 independent identities. Layers with authored IDs, keys or refs cannot yet be
 duplicated. Undo restores exact source snapshots.
 
-Rich markup editing, general reparenting and remote-site capture remain open.
+Use **Move into…** to move a complete HTML layer into another content container
+in the same document. Linked styles remain attached, and Undo/Redo restores the
+source. Moving into the layer itself or its descendants is refused.
+
+Rich markup editing, cross-document moves and remote-site capture remain open.
 
 
 ### HTML browser verification

@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 223 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 225 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -639,3 +639,18 @@ All 223 tests pass. Chromium and WebKit HTML suites verify rename, search, F2,
 clear, preserved page text/accessibility and exact undo. The direct HTTP check
 verifies immediate selection of a just-created file. Naming in other source
 adapters and bulk layer naming remain open.
+
+
+### Moving HTML layers into frames
+
+Move Into exposes a destination picker for HTML content containers. The source
+planner moves a complete literal subtree within the same document, retains its
+persistent style selectors and records the common ancestor for stable undo/redo.
+It rejects descendant/self destinations, stale source, unknown containers and
+moves that alter the parsed structure. The moved layer is selected after reload.
+
+All 225 tests pass. Writer checks cover destinations before and after the source,
+linked responsive styles, cycles and invalid nested-form moves. Chromium and
+WebKit browser checks move a styled heading into a newly created frame, verify
+its width and exercise exact undo/redo. Drag/drop reparenting, cross-document
+moves and dynamic-template structure remain open.
