@@ -184,8 +184,19 @@
  }
  async function prepared(target){const result=snapshot(target),parsed=new DOMParser().parseFromString(result.text,'image/svg+xml');await embedImages(parsed,target);return {...result,text:new XMLSerializer().serializeToString(parsed.documentElement)};}
  function fileStem(value,fallback='retouch-canvas'){return String(value||'').trim().replace(/\.(?:svg|png|jpe?g)$/i,'').replace(/[^\p{L}\p{N}_-]+/gu,'-').replace(/^-+|-+$/g,'').slice(0,80)||fallback;}
- function save(blob,name){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
- async function download(target,embed=true,options={}){const result=embed?await prepared(target):snapshot(target);result.name=fileStem(options.name,result.name);save(new Blob([result.text],{type:'image/svg+xml'}),result.name+'.svg');return result;}
+ let saveQueue=Promise.resolve(),lastSave=-Infinity;
+ function save(blob,name){
+  // Chromium can silently drop rapid download bursts. Pace the real dispatch,
+  // including concurrent callers, and let the inspector await that dispatch.
+  const task=saveQueue.then(async()=>{
+   const delay=150-(performance.now()-lastSave);if(delay>0)await new Promise(resolve=>setTimeout(resolve,delay));
+   const url=URL.createObjectURL(blob),link=document.createElement('a');
+   try{link.href=url;link.download=name;document.body.append(link);link.click();lastSave=performance.now();}
+   finally{link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+  });
+  saveQueue=task.catch(()=>{});return task;
+ }
+ async function download(target,embed=true,options={}){const result=embed?await prepared(target):snapshot(target);result.name=fileStem(options.name,result.name);await save(new Blob([result.text],{type:'image/svg+xml'}),result.name+'.svg');return result;}
  async function raster(target,scale=1,format='png',options={}){
   const {quality=92,background='#ffffff'}=options;
   if(format==='jpeg'&&(!Number.isInteger(quality)||quality<1||quality>100||!/^#[a-f0-9]{6}$/i.test(background)))throw Error('Choose JPEG quality from 1–100 and a six-digit background color.');
@@ -219,7 +230,7 @@
  }
  const png=(target,scale=1)=>raster(target,scale,'png');
  const jpeg=(target,scale=1,options={})=>raster(target,scale,'jpeg',options);
- async function downloadJPEG(target,scale=1,options={}){const result=await jpeg(target,scale,options);result.name=fileStem(options.name,result.name);save(result.blob,result.name+(scale===1?'':'@'+scale+'x')+'.jpg');return result;}
- async function downloadPNG(target,scale=1,options={}){const result=await png(target,scale);result.name=fileStem(options.name,result.name);save(result.blob,result.name+(scale===1?'':'@'+scale+'x')+'.png');return result;}
+ async function downloadJPEG(target,scale=1,options={}){const result=await jpeg(target,scale,options);result.name=fileStem(options.name,result.name);await save(result.blob,result.name+(scale===1?'':'@'+scale+'x')+'.jpg');return result;}
+ async function downloadPNG(target,scale=1,options={}){const result=await png(target,scale);result.name=fileStem(options.name,result.name);await save(result.blob,result.name+(scale===1?'':'@'+scale+'x')+'.png');return result;}
  root.RetouchSVGExport={fileStem,useReferences,snapshot,prepared,download,png,jpeg,downloadPNG,downloadJPEG};
 })(window);

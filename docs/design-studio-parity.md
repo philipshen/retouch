@@ -4750,3 +4750,30 @@ under `/private/tmp`; both processes exited 1. The focused run succeeds, but the
 cause of this accumulated-download behavior has not been proven. Do not report
 that combined Chromium run as passing. Names do not persist across page reloads.
 Full parity remains incomplete; native launches remain paused.
+
+### Repeated-download stall resolved in tested browsers (2026-09-09)
+
+A minimal Chromium page with no Retouch code reproduced the rate-sensitive loss:
+12 button clicks delivered 10 blob downloads in 473 ms; a fresh page with 150 ms
+between clicks delivered all 12 in 2343 ms. This isolates the observed problem
+from filename normalization and Retouch's raster encoder. Historical Chromium
+reports discuss the same burst symptom, but the local reproduction is the
+current evidence; no exact universal browser threshold is claimed.
+
+Retouch now serializes download dispatch and spaces requests by at least 150 ms.
+SVG, PNG and JPEG helpers await dispatch, keeping the inspector busy until its
+request is sent. The first download is immediate; a failed queued task does not
+poison later tasks, and object URLs/anchors are cleaned up. Browser security and
+download permission settings are unchanged. Dispatch completion is not an OS
+file-save acknowledgement.
+
+The previously failing combined raster/name flow passed in Chromium and WebKit,
+followed by 12 additional consecutive successful downloads in each engine. Both
+processes exited 0. Logs: `/private/tmp/retouch-export-paced-chromium.log` and
+`/private/tmp/retouch-export-paced-webkit.log`. Existing pixel, filename, format,
+scale and unchanged-source checks also passed; git diff --check passed. This
+supersedes the unresolved eleventh-download issue in the preceding entry. The
+unit suite was not rerun for this browser download-dispatch change. Permission
+rejections and concurrent public-API callers were not separately exercised.
+
+Full design parity remains incomplete. Native app launches remain paused.

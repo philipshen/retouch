@@ -130,6 +130,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    assert.equal(fs.readFileSync(file,'utf8'),source);assert.deepEqual(errors,[]);
    console.log(engine+': PASS custom Unicode filenames across SVG/PNG/JPEG, scale suffixes, preview, screen-size persistence and clear-to-default without source edits');
   }
+  if(process.env.RT_E2E_EXPORT_BURST){for(let i=0;i<12;i++)await exportFile();console.log(engine+': PASS twelve consecutive downloads complete');}
   if(process.env.RT_E2E_EXPORT_ARTIFACT)fs.writeFileSync(process.env.RT_E2E_EXPORT_ARTIFACT,text);
   console.log(engine+': PASS downloaded SVG decodes independently with viewport dimensions, CSS geometry/colors, gradient, clipping, responsive styling, no editor/script markup, unchanged source');
  }finally{if(browser)await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
