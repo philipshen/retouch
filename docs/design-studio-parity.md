@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 248 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 249 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -985,3 +985,21 @@ see desktop/README.md for the exact SHA-256. Native CUA opening still returned
 cgWindowNotFound, so interactive use of this bundle is unverified. This proves
 local build and cask installation, not public distribution, notarization, Intel
 runtime or full native UI parity.
+
+
+### Adaptive grid columns
+
+The HTML Layout section now offers Adaptive grid and Minimum column size (px).
+The preset atomically sets grid display, auto-fit columns with a bounded minimum,
+and automatic rows. A nested CSS minimum lets a single track shrink below the
+chosen size on narrow screens. Managed adaptive rules are recognized across
+inherited screen scopes, and the minimum can be overridden per breakpoint.
+Child dimensions, spans and authored flow rules remain in effect; this is not a
+guarantee that arbitrary fixed-size content cannot overflow.
+
+All 249 unit tests pass. Chromium and WebKit verify the fixture's one/three/five
+columns at phone/tablet/desktop sizes, fitting a 240px viewport, a tablet-specific
+minimum, inherited control values, unchanged source during resizing and exact
+undo/redo. The fixture is included in test:e2e:html, and its inspector screenshot
+was inspected. Full grid/Figma parity, other renderers and native release remain
+unfinished.

@@ -5,6 +5,8 @@
  const fields=[['width','Width'],['height','Height'],['min-width','Minimum width'],['max-width','Maximum width'],['min-height','Minimum height'],['max-height','Maximum height'],['display','Display'],['flex-direction','Direction'],['flex-wrap','Wrap'],['align-items','Align items'],['align-content','Align lines'],['justify-content','Distribute items'],['gap','Gap'],['padding','Padding'],...sides.map(s=>['padding-'+s,'Padding '+s]),['margin','Margin'],...sides.map(s=>['margin-'+s,'Margin '+s]),['font-family','Font family'],['font-weight','Font weight'],['font-style','Font style'],['text-decoration-line','Text decoration'],['text-transform','Text case'],['font-size','Font size'],['line-height','Line height'],['letter-spacing','Letter spacing'],['text-align','Text alignment'],['color','Text color'],['background-color','Background color'],['border-width','Border width'],['border-style','Border style'],['border-color','Border color'],['border-radius','Corner radius']];
  const lengths=new Set([...fields.map(([p])=>p).filter(p=>!options[p]&&!p.endsWith('color')),'flex-basis','row-gap','column-gap',...families['border-width']]);
  const colors=new Set(['color','background-color','border-color']);
+ function adaptiveColumns(size){return Number.isInteger(size)&&size>=1&&size<=2000?`repeat(auto-fit, minmax(min(100%, ${size}px), 1fr))`:null;}
+ function parseAdaptiveColumns(value){const match=/^repeat\(auto-fit, minmax\(min\(100%, ([1-9][0-9]{0,3})px\), 1fr\)\)$/.exec(value||'');return match&&Number(match[1])<=2000?Number(match[1]):null;}
  function stackLayout(axis,writingMode='horizontal-tb'){
   const vertical=/^(vertical|sideways)/.test(writingMode);
   return {display:'flex','flex-direction':(axis==='vertical')===vertical?'row':'column','flex-wrap':'nowrap'};
@@ -26,7 +28,7 @@
   if(typeof value!=='string'||!value||value.length>150)return false;
   if(['flex-grow','flex-shrink'].includes(property))return /^(?:\d*\.)?\d+$/.test(value)&&Number(value)>=0&&Number(value)<=1000;
   if(property==='flex-basis'&&['auto','content'].includes(value))return true;
-  if(['grid-template-columns','grid-template-rows'].includes(property)){const match=/^repeat\(([1-9]|1[0-9]|2[0-4]), minmax\(0, 1fr\)\)$/.exec(value);return !!match||value==='none';}
+  if(['grid-template-columns','grid-template-rows'].includes(property)){const match=/^repeat\(([1-9]|1[0-9]|2[0-4]), minmax\(0, 1fr\)\)$/.exec(value);return !!match||value==='none'||property==='grid-template-columns'&&parseAdaptiveColumns(value)!==null;}
   if(['grid-column','grid-row'].includes(property)){const match=/^span ([1-9]|1[0-9]|2[0-4]) \/ span ([1-9]|1[0-9]|2[0-4])$/.exec(value);return !!match&&match[1]===match[2]||value==='auto';}
   if(property==='font-family')return value.split(',').every(part=>{const name=part.trim();return /^(?:[\p{L}\p{N}_-]+(?: +[\p{L}\p{N}_-]+)*|"[\p{L}\p{N} _-]+"|'[\p{L}\p{N} _-]+')$/u.test(name);});
   if(property==='font-weight')return ['normal','bold'].includes(value)||/^(?:\d*\.)?\d+$/.test(value)&&Number(value)>=1&&Number(value)<=1000;
@@ -144,5 +146,5 @@
   return families[property]||[property];
  }
  function overlaps(a,b){if(a==='-webkit-backdrop-filter')a='backdrop-filter';if(b==='-webkit-backdrop-filter')b='backdrop-filter';return a==='all'||b==='all'||a==='background'&&b.startsWith('background-')||b==='background'&&a.startsWith('background-')||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')||b==='border'&&a.startsWith('border-')||a==='font'&&['font-family','font-weight','font-style','font-size','line-height'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
- return {options,fields,families,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients};
+ return {options,fields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients};
 });

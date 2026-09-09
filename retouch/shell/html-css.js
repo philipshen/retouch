@@ -1,6 +1,6 @@
 (function(){
  const I=RetouchInspector;
- const {options,fields,stackLayout,flexAlignment,valid,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients}=RetouchHTMLCSSValues;
+ const {options,fields,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients}=RetouchHTMLCSSValues;
  function stopRail({gradient,index,info,el,preview,gradients,update}){
   const rail=document.createElement('div');rail.className='gradient-stop-rail';rail.dataset.gradientSource=info.id;rail.dataset.gradientIndex=index;
   rail.setAttribute('role','group');rail.setAttribute('aria-label','Fill '+(index+1)+' stop positions');
@@ -51,6 +51,10 @@
   if(info.structure?.canInsert){
    const stacks=document.createElement('div');stacks.className='stack-presets';
    for(const [axis,label]of [['horizontal','Horizontal stack'],['vertical','Vertical stack']]){const changes=stackLayout(axis,css.writingMode),button=I.button(label,()=>save(changes,null,width));button.setAttribute('aria-pressed',String(['flex','inline-flex'].includes(css.display)&&css.flexDirection===changes['flex-direction']&&css.flexWrap==='nowrap'));stacks.append(button);}layout.append(stacks);
+   const inheritedColumns=Object.entries(info.cssRules||{}).filter(([size])=>Number(size)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((value,[,rules])=>rules['grid-template-columns']??value,'');
+   const adaptiveSize=parseAdaptiveColumns(own['grid-template-columns']??inheritedColumns),isAdaptive=['grid','inline-grid'].includes(css.display)&&adaptiveSize!==null;
+   const adaptive=I.button('Adaptive grid',()=>save({display:'grid','grid-template-columns':adaptiveColumns(adaptiveSize||240),'grid-template-rows':'none'},null,width));adaptive.setAttribute('aria-pressed',String(isAdaptive));stacks.append(adaptive);
+   if(isAdaptive){const minimum=document.createElement('input');minimum.type='number';minimum.min=1;minimum.max=2000;minimum.step=1;minimum.value=adaptiveSize;minimum.onchange=()=>{const value=adaptiveColumns(Number(minimum.value));if(value&&minimum.checkValidity())save('grid-template-columns',value,width);};I.field(layout,'Minimum column size (px)',minimum);I.note(layout,'Columns fit the available space automatically. Below this minimum, a single column shrinks to fit. Child sizes and spans can still affect the result.');}
    if(['flex','inline-flex'].includes(css.display)){
     const wrapping=document.createElement('select');for(const [value,label]of [['nowrap','Single line'],['wrap','Wrap to new lines'],['wrap-reverse','Wrap in reverse']]){const option=document.createElement('option');option.value=value;option.textContent=label;wrapping.append(option);}wrapping.value=css.flexWrap;wrapping.onchange=()=>save('flex-wrap',wrapping.value,width);I.field(layout,'Child wrapping',wrapping);
     const align=document.createElement('div');align.className='layout-alignment';align.setAttribute('role','group');align.setAttribute('aria-label','Align children');

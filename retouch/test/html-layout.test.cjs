@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),{stackLayout,flexAlignment,valid}=require('../shell/html-css-values.js'),html=require('../src/adapters/html.cjs'),css=require('../src/html-css.cjs');
+const {test}=require('node:test'),assert=require('node:assert/strict'),{stackLayout,flexAlignment,adaptiveColumns,parseAdaptiveColumns,valid}=require('../shell/html-css-values.js'),html=require('../src/adapters/html.cjs'),css=require('../src/html-css.cjs');
 test('Stack controls choose physical horizontal and vertical axes across writing modes',()=>{
  for(const mode of ['horizontal-tb','vertical-rl','vertical-lr','sideways-rl','sideways-lr'])for(const axis of ['horizontal','vertical']){
   const changes=stackLayout(axis,mode);assert.equal(changes.display,'flex');assert.equal(changes['flex-wrap'],'nowrap');assert.equal(changes['flex-direction'],(axis==='horizontal')===(mode==='horizontal-tb')?'row':'column');
@@ -29,4 +29,10 @@ test('Wrapping alignment moves the line group and reverses the cross axis for re
   assert.equal(normal['align-content'],single['align-items']);assert.equal(reverse['align-content'],single['align-items']==='flex-start'?'flex-end':'flex-start');assert.equal(reverse['align-items'],reverse['align-content']);assert.equal(reverse['justify-content'],single['justify-content']);
   for(const [p,v]of Object.entries(reverse))assert.equal(valid(p,v),true);
  }
+});
+
+test('Adaptive columns permit bounded exact syntax while keeping rows and injected values out',()=>{
+ for(const size of [1,240,2000]){const value=adaptiveColumns(size);assert.equal(parseAdaptiveColumns(value),size);assert.equal(valid('grid-template-columns',value),true);assert.equal(valid('grid-template-rows',value),false);}
+ for(const size of [0,-1,2001,1.5,NaN])assert.equal(adaptiveColumns(size),null);
+ for(const value of ['repeat(auto-fit, minmax(min(100%, 2001px), 1fr))','repeat(auto-fit, minmax(min(100%, 0px), 1fr))',adaptiveColumns(240)+';color:red','repeat(auto-fit, minmax(var(--x), 1fr))'])assert.equal(valid('grid-template-columns',value),false);
 });
