@@ -5632,3 +5632,26 @@ obsolete responsive typography tokens are removed and unrelated tokens retained.
 Syntax/diff checks passed. This remains an internal foundation: durable React/
 Liquid links, propagation and UI wiring are unfinished. Native launches remain
 paused; full parity is not achieved.
+
+### Durable React text-style link writer foundation
+
+Added a React source planner that composes typography classes and serializes a
+style UUID plus applied-property snapshot per responsive scope in the same source
+edit. Link metadata is a literal JSX string expression, preserving quoted font
+names safely. Applying again is idempotent; structural layer identity remains
+stable. Detach removes only the selected scope's link and preserves classes and
+other scope links. Metadata is bounded to 32 scopes and 128 KiB.
+
+All 420 unit tests passed, exit 0:
+/private/tmp/retouch-react-style-links-units.log. New cases cover base and md
+application, source reparse/identity, metadata round trips, retained layout/state
+classes, coupled typography replacement, idempotence and scoped detach. Stale
+source, dynamic classes/metadata, duplicate class attributes, spreads and nested
+variant scopes refuse explicitly. Syntax/diff checks passed.
+
+This planner is not yet wired into the server operation dispatcher or inspector.
+React update propagation, override metadata/reset, inheritance UI and browser
+verification of the linked flow remain pending, as does the corresponding Liquid
+writer. The conservative refusal cases need broader authoring support for the
+full arbitrary-site objective. No native launches occurred; full parity remains
+unfinished.
