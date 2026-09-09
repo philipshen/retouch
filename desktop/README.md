@@ -3,13 +3,14 @@
 A native AppKit window hosts the same Retouch editor used in the browser.
 macOS 13 or later; universal Apple Silicon and Intel binary.
 
-The current local artifact packages editor commit `a88e45e`, including the
-React/HTML selection tools and canvas layer locks: batch lock/unlock, ordered
-undo/redo, keyboard shortcuts, filtered recovery and editor-reload persistence
-within a live project session. All 87 packaged source files match that commit.
-Universal architectures, strict ad hoc signature, built-bundle launcher tests and
-an isolated Homebrew install/uninstall were verified. Bundled browser evidence
-and native limits are recorded below. No public, notarized release is published.
+The newest local artifact packages editor commit `a288bc6`, including responsive
+zoom, pointer anchoring, Hand/Space-drag, exclusive tool switching and immediate
+selection reveal. All 88 packaged source files match that commit. Universal
+architectures, strict ad hoc signature, bundled launcher tests and isolated
+Homebrew install/uninstall pass. **This archive fails browser verification and
+has not demonstrated usable native launch.** It is a development artifact, not
+a release candidate. Details and the previous artifact's evidence follow below.
+No public, notarized release is published.
 
 Build with Apple's command line developer tools installed:
 
@@ -61,7 +62,29 @@ signing, then notarize and staple the app before creating the final published
 archive and its hash. The current build script does not automate notarization.
 Never reuse the pre-stapling archive hash for a rebuilt archive.
 
-## Latest local development artifact (a88e45e)
+## Latest local development artifact (a288bc6; verification failed)
+
+Archive: `/private/tmp/retouch-desktop-navigation-20260909/Retouch-0.1.0-mac.zip`
+
+SHA-256: `2d0aa17904c6e1ca24574eb17d6036294eadec2dc87c54499f335732ea7a972c`
+
+The generated cask, checksum and `verification.json` accompany the archive.
+The receipt binds 88 packaged source files to
+`a288bc614a89e7924545b365fa507ef7893b3b02`. Bundled browser verification found
+Chromium's selected heading partly outside the canvas after Zoom to selection,
+and WebKit timed out waiting for a React horizontal-gap control to become stable.
+The receipt records per-workflow results; these failures are not waived.
+
+The isolated cask installed and verified all 88 files, both architectures and
+the strict signature. Quarantine was preserved. The installed self-test timed
+out after 45 seconds; its owned process group was stopped. The cask, app directory,
+temporary tap and trust entry were removed, and Homebrew developer mode was
+restored. Native inspection of the built app returned `cgWindowNotFound`; its
+owned process was sampled and stopped. No trusted launch, notarization, public
+release, upgrade or Intel execution is established by this artifact.
+
+## Previous local development artifact (a88e45e)
+
 
 Archive: `/private/tmp/retouch-desktop-locks-20260909/Retouch-0.1.0-mac.zip`
 

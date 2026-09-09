@@ -2803,3 +2803,33 @@ Temporary cancellation tracing was removed. The Hand regression additionally
 checks that the revealed heading lies inside the canvas before starting Move.
 No Mac archive refresh or full Figma parity is claimed.
 All 334 unit tests pass in `/private/tmp/retouch-layer-reveal-unit.log`.
+
+### 2026-09-09 — Fresh navigation Mac archive; verification failed
+
+Built `/private/tmp/retouch-desktop-navigation-20260909/Retouch-0.1.0-mac.zip`
+from `a288bc614a89e7924545b365fa507ef7893b3b02`, SHA-256
+`2d0aa17904c6e1ca24574eb17d6036294eadec2dc87c54499f335732ea7a972c`.
+All 88 packaged source files match the commit, before and after bundled browser
+runs. Universal arm64/x86_64, strict ad hoc signature, native bundled launcher,
+HTML startup/health/stop and URL-boundary self-tests pass. The generated cask
+installed in an isolated directory and verified the same 88 files and signature.
+Quarantine remained intact; installed native self-test timed out after 45 seconds.
+Its owned process group, installed cask, app directory, temporary tap and cask
+trust entry were removed; Homebrew developer mode was restored to disabled.
+
+Both bundled engines pass zoom anchoring, high-zoom selection/source undo,
+immediate layer reveal/Fit/source-reload restoration and screen resizing.
+Chromium additionally passes real React group geometry but fails the Hand flow's
+post-zoom heading visibility assertion (part of the heading lies above canvas).
+WebKit passes Hand/tool switching but times out waiting for the real React
+horizontal-gap button to stabilize. Ten of twelve workflows passed; the archive
+is explicitly not a release candidate. `verification.json` contains all results
+and logs, including the initial failures rather than replacing them with retries.
+The temporary browser harness was removed after terminal tests/hash verification.
+
+Native CUA inspection returned `cgWindowNotFound`. The owned built-app process
+was sampled and stopped, with `native-ui-check.json` and the process sample beside
+the archive. No current usable native UI, trusted launch, notarization, public
+release, upgrades or Intel execution is established. Desktop README now names
+this newest artifact and its failures; the earlier lock package evidence remains
+in its historical section. Full Figma parity remains unfinished.
