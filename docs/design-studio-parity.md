@@ -26,7 +26,7 @@ changing those files. The original checkout may continue to evolve independently
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. HTML has responsive CSS, structural edits and batch selection operations. Arbitrary remote-site capture/authoring, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Corner resizing also supports Shift-locked proportions. Fully editable comparison canvases and cross-framework parity remain. |
-| Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop; The latest verified local ad hoc bundle packages 7708416 and matches all 79 editor source files; later editor changes are not packaged. Native interaction remains unverified after cgWindowNotFound. File flows, Intel runtime and broader lifecycle verification remain. |
+| Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop; The latest verified local ad hoc bundle packages be51333 and matches all 82 editor source files, including HTML canvas tools. Native interaction remains unverified after cgWindowNotFound. File flows, Intel runtime and broader lifecycle verification remain. |
 | Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. Development build is ad hoc signed. Local cask install/uninstall passed. Developer ID signing/notarization, publishing, upgrades and quarantined launch remain unverified. |
 | Ease of use | New user can open a site, select/edit, compare screens, undo and retain work without learning implementation details | Controls have labels and basic defaults. Whole-workflow usability validation remains. |
 
@@ -1756,3 +1756,29 @@ responsive scope and pointer modifier/cancellation cases remain covered.
 Logs: `/private/tmp/retouch-canvas-keyboard-unit.log` and
 `/private/tmp/retouch-canvas-keyboard-{chromium,webkit}-verified.log`.
 Desktop archives still predate these canvas tools.
+
+### Refreshed canvas-tools Mac artifact
+
+A new universal development bundle packages editor `be51333`, including the
+responsive HTML anchors and pointer/keyboard movement/resizing. All 82 packaged
+source files match the worktree. Built-bundle launcher and HTML startup/health/
+shutdown tests pass, the strict ad hoc signature and both architectures verify,
+and the generated cask passes Ruby syntax checking. Both full 13-workflow HTML
+suites pass in Chromium and WebKit for this source revision.
+
+The new archive was installed through an isolated Homebrew cask. Installed
+source hashes, architectures, signature and retained quarantine all verified.
+The cask/app, temporary tap/trust entry and owned native test processes were
+removed, and Homebrew developer mode restored to disabled. Native processes ran
+but computer-use inspection returned cgWindowNotFound; the captured main-thread
+sample was in AppKit's event loop. Visible native interaction is still unproven.
+Quarantined installed launch was not repeated after the previous artifact's
+bounded no-output timeout. This remains a development archive, not a trusted
+published release. The separately running Developer ID build still awaits
+local keychain authorization and contains older source.
+
+Archive and receipt:
+`/private/tmp/retouch-desktop-canvas-tools-20260909/Retouch-0.1.0-mac.zip`
+and `verification.json` in that directory. SHA-256:
+`a9e4df7731d288e85b0962dfa2397fcb41f3805a75a84ece634d6a5406d4a993`.
+See desktop/README.md for the package verification scope and limitations.

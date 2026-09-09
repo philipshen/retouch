@@ -3,11 +3,14 @@
 A native AppKit window hosts the same Retouch editor used in the browser.
 macOS 13 or later; universal Apple Silicon and Intel binary.
 
-The latest local artifact packages editor commit `7708416`. Its bundled launcher,
-source inventory, universal architectures, strict ad hoc signature and isolated
-Homebrew install/uninstall were verified. The installed, quarantined app produced no launcher-test output within 45
-seconds and its process was stopped. Native interaction remains unverified;
-earlier UI checks below apply to older bundles. No public, notarized release has been published.
+The current local artifact packages editor commit `be51333`, including HTML
+responsive anchors and pointer/keyboard canvas movement and resizing. All 82
+packaged source files, universal architectures, strict ad hoc signature,
+built-bundle launcher tests and an isolated Homebrew install/uninstall were
+verified. Native UI inspection returned `cgWindowNotFound` despite running app
+processes. The quarantined installed launch was not repeated for this artifact;
+the previous bundle timed out without launcher-test output. No public,
+notarized release has been published.
 
 Build with Apple's command line developer tools installed:
 
@@ -219,7 +222,7 @@ upgrade behavior. The archive is an ad hoc development build, not a published
 notarized release.
 
 
-## Current local package (7708416)
+## Previous local package (7708416)
 
 This bundle includes React SVG geometry, drawing, responsive Tailwind paint,
 deletion, stacking and independent duplication, plus compiled source-revision
@@ -242,3 +245,30 @@ A valid Developer ID Application identity was discovered, and a separate signed
 build was started. Signing is waiting in macOS SecurityAgent for local keychain
 authorization; computer-use safety restrictions prevent operating that dialog.
 No completed Developer ID archive or notarization is claimed.
+
+## Current local package (be51333)
+
+This bundle adds SVG front/back stacking, responsive HTML position/anchor
+controls, and pointer/keyboard canvas movement and resizing, including
+proportional/centered handles, cancellation and exact undo/redo.
+
+Archive: `/private/tmp/retouch-desktop-canvas-tools-20260909/Retouch-0.1.0-mac.zip`
+
+SHA-256: `a9e4df7731d288e85b0962dfa2397fcb41f3805a75a84ece634d6a5406d4a993`.
+
+The generated `retouch-studio.rb`, `verification.json` and cask verification log
+are alongside the archive. The receipt binds all 82 packaged source-file hashes
+to `be5133378c9b6bce6ef0d76a46c57fe4057797b0`. Both architectures and the strict
+ad hoc signature were checked before and after isolated cask installation.
+Quarantine was retained. The built bundle passed launcher/cwd/exit, HTML
+startup/health/stop and URL-discovery tests. Both full 13-workflow HTML suites
+passed in Chromium and WebKit against the identical editor source.
+
+Native app processes ran, but computer-use inspection returned
+`cgWindowNotFound` twice. A process sample showed the main AppKit event loop;
+this does not prove a visible or usable native editor. Both owned test instances
+were stopped. Installed quarantined launch was not repeated because the prior
+artifact's bounded launch produced no output. The cask, temporary tap and trust
+entry, isolated app directory and test processes were removed; Homebrew developer
+mode was restored to disabled. The separate Developer ID build still awaits
+local keychain authorization and packages older editor source `7708416`.
