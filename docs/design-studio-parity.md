@@ -1729,3 +1729,30 @@ The eight-handle preview was inspected in `/private/tmp/retouch-canvas-resize.pn
 Full content previews, flow resizing/reordering, transformed geometry,
 multi-selection resizing, snapping, keyboard handle resizing and other-renderer
 parity remain unfinished. Desktop archives still predate the canvas tools.
+
+### Keyboard canvas movement and resizing
+
+The active canvas tools now accept arrow keys. Movement uses one CSS pixel per
+press, or ten with Shift, independently of visual zoom. Resize handles receive
+keyboard focus and have readable edge/corner labels. Arrows adjust the focused
+handle; Shift preserves proportions and Option/Alt centers the resize. Tab can
+change handles while retaining the pending bounds, so edits from multiple
+handles still form one gesture. Enter writes one scoped edit; Escape cancels.
+Returning to the starting bounds does not create a source write/history entry.
+
+Cancel and keyboard commit restore focus to the initiating tool button, even
+when inspector rendering replaced that button. WebKit does not consistently
+focus a clicked button, so the initiating control is passed explicitly instead
+of inferred from document.activeElement. Pointer behavior and source-free
+bounds previews remain unchanged. Keyboard operations still cover one absolute
+HTML layer; general keyboard transformation parity remains unfinished.
+
+Validation: all 296 unit tests pass. Chromium and WebKit pass the extended HTML
+positioning workflow including one-pixel changes at 50% zoom, Shift ten-pixel
+movement, Tab between resize handles with retained preview, Enter commit,
+Escape cancellation/focus restoration, post-commit focus, no-op suppression,
+and exact combined pointer/keyboard undo/redo. Existing geometry, bounds,
+responsive scope and pointer modifier/cancellation cases remain covered.
+Logs: `/private/tmp/retouch-canvas-keyboard-unit.log` and
+`/private/tmp/retouch-canvas-keyboard-{chromium,webkit}-verified.log`.
+Desktop archives still predate these canvas tools.
