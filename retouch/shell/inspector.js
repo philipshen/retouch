@@ -159,7 +159,20 @@
         number(details,(labels[tag]||tag)+' axis',value,-10000,10000,next=>write(axes.map(axis=>axis[0]===tag?[tag,next]:axis)));
         details.append(button('Remove '+(labels[tag]||tag)+' axis',()=>write(axes.filter(axis=>axis[0]!==tag))));
       }
-      select(details,'Add font axis',[['','Choose an axis…'],...Object.entries(labels).filter(([tag])=>!axes.some(axis=>axis[0]===tag))],'',tag=>{if(tag in defaults)write([...axes,[tag,defaults[tag]]]);});
+      const custom=document.createElement('div');custom.hidden=true;
+      const add=select(details,'Add font axis',[['','Choose an axis…'],...Object.entries(labels).filter(([tag])=>!axes.some(axis=>axis[0]===tag)),['custom','Custom axis…']],'',tag=>{custom.hidden=tag!=='custom';if(tag in defaults)write([...axes,[tag,defaults[tag]]]);else if(tag==='custom')tagInput.focus();});add.disabled=axes.length>=16;
+      const tagInput=document.createElement('input');tagInput.type='text';tagInput.maxLength=4;tagInput.pattern='[A-Za-z0-9]{4}';tagInput.required=true;tagInput.placeholder='GRAD';tagInput.oninput=()=>tagInput.setCustomValidity('');field(custom,'Custom axis tag',tagInput);
+      const initial=number(custom,'Initial axis value',0,-10000,10000,()=>{});
+      const create=()=>{
+        const tag=tagInput.value;
+        tagInput.setCustomValidity(!/^[A-Za-z0-9]{4}$/.test(tag)?'Use the font’s four-character letter/number tag.':axes.some(axis=>axis[0]===tag)?'This axis is already listed.':'');
+        if(!tagInput.reportValidity()||!initial.reportValidity()||initial.value==='')return;
+        write([...axes,[tag,Number(initial.value)]]);
+      };
+      custom.append(button('Add custom axis',create));
+      custom.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();event.stopPropagation();create();}else if(event.key==='Escape'){event.preventDefault();event.stopPropagation();custom.hidden=true;add.value='';add.focus();}};
+      note(custom,'Tags are case-sensitive. Use the tag and range documented by the font designer.');details.append(custom);
+
     }else note(details,'This axis syntax cannot be edited here yet. Reset removes the current override.');
     note(details,'Only axes supported by this font affect its appearance. Axis overrides take precedence over basic typography controls.');
     const reset=button('Reset font axes',onReset);reset.disabled=!canReset;details.append(reset);

@@ -4923,3 +4923,28 @@ visual effect. Only the tested font's weight axis has glyph-layout evidence;
 Width/Optical size/Slant/Italic support is not inferred from that test. Liquid
 coverage is a local fixture, not a fresh live Shopify verification. Full Figma
 parity is incomplete; native launches remain paused.
+
+### Custom variable-font axis entry (2026-09-09)
+
+The Add font axis picker now includes Custom axis. Users enter a case-sensitive
+four-character alphanumeric tag and an initial value, then add it with the button
+or Enter. Malformed and already-listed tags are rejected without source changes;
+Escape cancels. New-axis entry is disabled at the existing 16-axis limit. Custom
+axes use the same scoped editing, independent removal and reset path as standard
+axes, with an inline reminder to use the font designer's documented tag/range.
+
+HTML, React and Liquid passed in Chromium and WebKit. Tests added GRAD=-12.5 beside
+wght=850, verified both values in rendered CSS (and the class-based typography
+preview), removed GRAD without losing wght, rejected a three-character tag and
+a duplicate wght, cancelled entry with Escape, and undid source changes exactly.
+Logs (all exit 0), under `/private/tmp`:
+`retouch-custom-axes-html-chromium.log`, `retouch-custom-axes-html-webkit.log`,
+`retouch-custom-axes-react-chromium.log`, `retouch-custom-axes-react-webkit.log`,
+`retouch-custom-axes-liquid-chromium.log`, `retouch-custom-axes-liquid-webkit.log`.
+git diff --check passed; the unit suite was not rerun for this shared UI extension.
+
+The GRAD test proves declaration persistence and editing, not that the fixture
+font implements GRAD or changes its glyphs. Automatic axis discovery, font-specific
+ranges and tags containing other legal OpenType characters remain unfinished.
+The prior +/-10000 numeric bound remains. Full parity is incomplete, and native
+launches remain paused.

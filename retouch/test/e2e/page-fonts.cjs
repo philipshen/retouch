@@ -49,6 +49,12 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    if(process.env.RT_E2E_FONT_AXES_SCREENSHOT){await page.getByLabel('Weight axis',{exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:process.env.RT_E2E_FONT_AXES_SCREENSHOT});}
    await write(()=>page.getByLabel('Add font axis',{exact:true}).selectOption('wdth'),/wdth/);assert.match(await axes(),/850/);
    await write(()=>page.getByRole('button',{name:'Remove Width axis',exact:true}).click(),/850/);assert.doesNotMatch(await axes(),/wdth/);
+   const beforeCustom=read();await page.getByLabel('Add font axis',{exact:true}).selectOption('custom');assert.equal(read(),beforeCustom);
+   const tag=page.getByRole('textbox',{name:'Custom axis tag',exact:true});await tag.fill('BAD');await page.getByRole('button',{name:'Add custom axis',exact:true}).click();assert.equal(await tag.evaluate(node=>node.checkValidity()),false);assert.equal(read(),beforeCustom);
+   await tag.fill('wght');await page.getByRole('button',{name:'Add custom axis',exact:true}).click();assert.equal(await tag.evaluate(node=>node.validationMessage),'This axis is already listed.');assert.equal(read(),beforeCustom);
+   await tag.fill('GRAD');await page.getByLabel('Initial axis value',{exact:true}).fill('-12.5');await write(()=>page.getByLabel('Initial axis value',{exact:true}).press('Enter'),/GRAD/);assert.match(await axes(),/-12.5/);assert.match(await axes(),/850/);
+   await write(()=>page.getByRole('button',{name:'Remove GRAD axis',exact:true}).click(),/850/);assert.doesNotMatch(await axes(),/GRAD/);
+   const beforeCancel=read();await page.getByLabel('Add font axis',{exact:true}).selectOption('custom');await tag.fill('GRAD');await tag.press('Escape');assert.equal(read(),beforeCancel);assert.equal(await page.getByLabel('Add font axis',{exact:true}).inputValue(),'');
    await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await settled();await wait(async()=>/200/.test(await axes()));await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();await wait(async()=>/850/.test(await axes()));
    await write(()=>page.getByRole('button',{name:'Reset font axes',exact:true}).click(),/200/);
    while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===expected);await settled();}assert.equal(read(),original);await wait(async()=>await axes()==='normal');
