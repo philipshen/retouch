@@ -334,6 +334,29 @@ async function select(node,{toggle=false}={}) {
   renderPanel();
 }
 
+let comparisonSelectionSerial=0;
+window.addEventListener('retouch:comparison-edit',async event=>{
+  const detail=event.detail||{},serial=++comparisonSelectionSerial;
+  if(panelTasks||undoBusy||sourceRequests||!['width','height'].every(key=>Number.isInteger(detail[key])&&detail[key]>=240&&detail[key]<=7680))return;
+  const validId=id=>id===null||id===undefined||/^[a-f0-9]{10}$/.test(id);
+  if(!validId(detail.hostId)||!validId(detail.instanceId)||!Number.isInteger(detail.occurrence)||detail.occurrence<0||detail.occurrence>10000)return;
+  await commitInlineEdit();if(serial!==comparisonSelectionSerial)return;
+  const sameRoute=()=>{try{const loc=iframe.contentWindow.location;return loc.pathname+loc.search+loc.hash===detail.route;}catch{return false;}};
+  if(!sameRoute())return toast('The page changed. Select the layer in the refreshed comparison.','err');
+  if(mode!=='edit')modeBtn.click();
+  window.RetouchScreens.set({width:detail.width,height:detail.height});
+  if(!detail.hostId&&!detail.instanceId)return;
+  const classification=classificationSerial;
+  for(let attempt=0;attempt<60;attempt++){
+    await new Promise(resolve=>setTimeout(resolve,50));
+    if(serial!==comparisonSelectionSerial||classification!==classificationSerial||!sameRoute())return;
+    const matches=[...doc().querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===detail.hostId&&el.getAttribute('data-rt-i')===detail.instanceId),target=matches[detail.occurrence];
+    if(!target||iframe.contentWindow.innerWidth!==detail.width)continue;
+    await select(target);if(serial!==comparisonSelectionSerial||classificationSerial!==classification+1)return;target.scrollIntoView({block:'nearest',inline:'nearest'});return;
+  }
+  toast('This layer is not present on the main canvas at this size.','err');
+});
+
 async function selectMany(nodes,{active=nodes[0],append=false}={}){
   const serial=++classificationSerial;
   const ids=[...new Set([...(append?(sel?.multiple||[sel?.info]).filter(Boolean).map(info=>info.id):[]),...nodes.map(node=>node.getAttribute('data-rt'))])];

@@ -340,3 +340,10 @@ The bottom-edge handle resizes preview height with the same release-to-save
 and Escape-to-cancel behavior. Up/Down keys step 1 px; Shift steps 10 px.
 Height resizing updates viewport units and height media queries while keeping
 width fixed. Both edge handles operate in CSS pixels at any canvas zoom.
+
+Click a layer in a comparison preview to open that screen size on the main
+canvas and select the matching layer. Links in comparison previews select
+instead of navigating. This enters Edit mode and keeps your style scope; choose
+the intended scope in the inspector before changing styles. Keyboard users can
+focus a preview and press Enter or Space to open its size with the current
+selection. Comparisons remain previews; editing happens on the main canvas.

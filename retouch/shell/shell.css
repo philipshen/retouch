@@ -293,3 +293,6 @@ details.advanced > summary:hover { color: var(--ink); }
 
 .screen-resize-handle[data-axis="height"] { width:48px; height:12px; cursor:ns-resize; transform:translate(-50%,-100%); }
 .screen-resize-handle[data-axis="height"]::after { width:20px; height:2px; }
+
+.compare-viewport[role="button"] { cursor:crosshair; }
+.compare-viewport[role="button"]:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }

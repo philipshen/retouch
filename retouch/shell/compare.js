@@ -44,6 +44,7 @@
   function mount(){
     rail.replaceChildren();cards=[];
     const heading=document.createElement('h2');heading.textContent='Compare screens';rail.append(heading);
+    const hint=document.createElement('p');hint.className='hint';hint.textContent='Click a layer to edit on the main canvas. Style scope stays unchanged.';rail.append(hint);
     pin=document.createElement('button');pin.className='control-button';pin.textContent='Pin current size';
     pin.onclick=()=>{const {width,height}=current();if(pin.disabled)return;const size=[`Custom ${width} × ${height}`,width,height];sizes.push(size);remember();addCard(size);cards.at(-1).frame.src=path()||'/';updateControls();};rail.append(pin);
     for(const size of sizes)addCard(size);
@@ -58,11 +59,25 @@
       edit.onclick=()=>window.RetouchScreens.set({width,height});header.append(edit);
       const remove=document.createElement('button');remove.className='control-button';remove.textContent='×';remove.setAttribute('aria-label','Remove '+name+' comparison');header.append(remove);
       remove.onclick=async()=>{remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);cards=cards.filter(c=>c!==item);await unload(frame);card.remove();updateControls();};
-      const viewport=document.createElement('div');viewport.className='compare-viewport';
+      const viewport=document.createElement('div');viewport.className='compare-viewport';viewport.tabIndex=0;viewport.setAttribute('role','button');viewport.setAttribute('aria-label','Edit from '+name+' comparison');viewport.title='Click a layer to select it on the main canvas at this size. Style scope stays unchanged.';
       const frame=document.createElement('iframe');frame.title=name+' comparison preview';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');frame.style.width=width+'px';frame.style.height=height+'px';
       const overlay=document.createElement('div');overlay.className='compare-overlay';
       const message=document.createElement('p');message.className='hint';
       viewport.append(frame,overlay);card.append(header,viewport,message);rail.append(card);
+      function activate(event){
+        try{
+          const d=frame.contentDocument,loc=frame.contentWindow.location;
+          if(!d?.body||loc.origin!==location.origin||loc.pathname+loc.search+loc.hash!==path()){message.textContent='Wait for this comparison to finish loading.';return;}
+          const bounds=viewport.getBoundingClientRect(),scale=viewport.clientWidth/width;
+          const node=event?d.elementFromPoint((event.clientX-bounds.left)/scale,(event.clientY-bounds.top)/scale)?.closest('[data-rt],[data-rt-i]'):null;
+          if(event&&!node){message.textContent='This layer is not editable yet.';return;}
+          const hostId=node?.getAttribute('data-rt'),instanceId=node?.getAttribute('data-rt-i');
+          const peers=node?[...d.querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===hostId&&el.getAttribute('data-rt-i')===instanceId):[];
+          window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,hostId,instanceId,occurrence:node?peers.indexOf(node):0,route:path()}}));
+        }catch{message.textContent='Preview unavailable for this page';}
+      }
+      viewport.addEventListener('click',event=>{if(event.button===0)activate(event);});
+      viewport.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();activate();}});
       viewport.addEventListener('wheel',e=>{e.preventDefault();try{frame.contentWindow.scrollBy({top:e.deltaY/(viewport.clientWidth/width),left:e.deltaX,behavior:'instant'});}catch{}},{passive:false});
       cards.push({frame,overlay,message,viewport,width,height,edit});
   }

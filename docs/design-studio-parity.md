@@ -1250,3 +1250,22 @@ queries and 100vh geometry, independent width, Escape cancellation, keyboard
 steps, reload persistence and restoring Fit workspace. Source and style scope
 remain unchanged. Corner resizing, editable comparison canvases, cross-framework
 coverage and full Figma/native parity remain unfinished.
+
+
+### Select layers from comparison previews
+
+Clicking a comparison now hit-tests its scaled viewport and opens the same
+size on the main canvas, enters Edit mode and selects the matching source layer
+(or matching repeated occurrence). Source links are intercepted for selection.
+The current style scope stays unchanged and the rail explains this. Keyboard
+Enter/Space opens the preview's size while preserving the current selection.
+Route checks reject stale previews; a bounded wait handles responsive rendering,
+and newer selection activity supersedes a pending comparison selection.
+
+Chromium and WebKit verify a phone-only link selected from a desktop starting
+size, prevented navigation, edit-mode entry, a tablet-scoped write reflected in
+comparison previews, exact undo, keyboard activation and frame disposal. The
+workflow joins test:e2e:html. All 270 unit tests pass; the screenshot was
+inspected. This provides direct selection into the editable
+main canvas; fully editable comparison canvases, synchronized application state
+and full parity remain unfinished.
