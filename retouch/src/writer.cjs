@@ -165,6 +165,7 @@ function refuseError(msg) {
 
 // op: { type, id, fileHash, ... }. `resolved` comes from Index.resolve(id).
 function planOp(resolved, op) {
+  if(op.type==='setClassesSelection')return require('./jsx-class-selection.cjs').plan(resolved,op);
   if(op.type==='insertSVG')return require('./jsx-svg-insert.cjs').plan(resolved,op);
   if(op.type==='setSVGGeometry')return require('./jsx-svg-geometry.cjs').plan(resolved,op);
   if (op.fileHash && op.fileHash !== resolved.hash) {

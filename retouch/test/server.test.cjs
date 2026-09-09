@@ -165,3 +165,19 @@ test('upload stores under public/rt-assets and returns a root-relative src', asy
   assert.match(out.src, /^\/rt-assets\//);
   assert.ok(fs.existsSync(path.join(root, 'public', out.src.replace(/^\//, ''))));
 });
+
+test('React batch class API saves and restores all selected layers as one source transaction', async () => {
+  const file=path.join(root,'app/Page.tsx'),original=fs.readFileSync(file,'utf8'),id=await firstIdOfTag('h2'),other=await firstIdOfTag('img');
+  const run=async body=>JSON.parse((await req(port,'POST','/rt/__api/op',{body:JSON.stringify(body),headers:AUTH()})).body);
+  const resolve=async target=>JSON.parse((await req(port,'GET','/rt/__api/resolve?id='+target,{headers:AUTH()})).body).element;
+  const selected=await resolve(id),operation={type:'setClassesSelection',id,ids:[id,other],fileHash:selected.hash,classesById:{[id]:'text-lg md:opacity-[0.4]',[other]:'md:opacity-[0.7]'}};
+  const invalid=await run({...operation,classesById:{...operation.classesById,[other]:'bad" token'}});assert.strictEqual(invalid.refused,true);assert.strictEqual(fs.readFileSync(file,'utf8'),original);
+  const saved=await run(operation);assert.ok(saved.ok);assert.ok(saved.undoId);assert.deepStrictEqual(saved.selection.map(e=>e.id),[id,other]);assert.ok(saved.selection.every(e=>e.hash===saved.hash));
+  const after=fs.readFileSync(file,'utf8');assert.notStrictEqual(after,original);assert.strictEqual((await resolve(other)).className,'md:opacity-[0.7]');assert.strictEqual((await resolve(id)).hash,saved.hash);
+  const stale=await run(operation);assert.strictEqual(stale.refused,true);assert.strictEqual(fs.readFileSync(file,'utf8'),after);
+  const noop=await run({...operation,fileHash:saved.hash});assert.ok(noop.ok);assert.strictEqual(noop.undoId,undefined);assert.strictEqual(fs.readFileSync(file,'utf8'),after);
+  assert.ok((await run({type:'undo',undoId:saved.undoId})).ok);assert.strictEqual(fs.readFileSync(file,'utf8'),original);
+  assert.ok((await run({type:'redo',undoId:saved.undoId})).ok);assert.strictEqual(fs.readFileSync(file,'utf8'),after);
+  fs.appendFileSync(file,'\n// external edit\n');const external=fs.readFileSync(file,'utf8');assert.strictEqual((await run({type:'undo',undoId:saved.undoId})).ok,false);assert.strictEqual(fs.readFileSync(file,'utf8'),external);
+  fs.writeFileSync(file,after);assert.ok((await run({type:'undo',undoId:saved.undoId})).ok);assert.strictEqual(fs.readFileSync(file,'utf8'),original);
+});

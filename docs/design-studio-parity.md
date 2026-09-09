@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 318 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 323 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -2192,3 +2192,36 @@ The numeric inspector fields still set a common gap; the new mode applies to the
 canvas controls. Flow layout, React/Liquid/vector selection geometry and broader
 cross-renderer equivalence remain unfinished. The verified Mac package predates
 these selection tools; trusted distribution and full Figma parity remain open.
+
+
+### Atomic React selection class API
+
+The React source adapter now supports `setClassesSelection` for 2–100 distinct
+host layers in one source file. Each selected ID receives a class string or `null`
+to preserve its source markup verbatim. Every member is validated against private
+in-memory snapshots before one final source edit reaches the shared transaction
+layer. A stale version, unknown/component member, invalid token/map, dynamic class
+expression or spread-prop conflict refuses the whole edit. An unchanged reference
+may retain dynamic/spread markup because that member is not rewritten.
+
+The result includes fresh complete descriptors for the selection. Semantically
+unchanged class values preserve existing source quoting and produce no history
+entry. One batch creates one undo step, with exact source restoration and the
+existing external-change protections. The single-layer writer remains in use for
+each member's class validation and Tailwind conflict merging.
+
+Validation: all 323 unit and HTTP integration tests pass. Coverage includes exact
+reference/no-op preservation, class removal, stable IDs and metadata, complete-map
+validation, dynamic/spread/token refusals without partial edits, stale source,
+exact batch undo/redo and external-edit refusal. Chromium and WebKit also pass a
+new real Next.js/Tailwind workflow: the API changes two layers at the tablet
+breakpoint, compiled geometry updates for both, phone positions stay unchanged,
+and API undo/redo restores both layers together. The existing Chromium React
+positioning workflow still passes. Commands include `test:e2e:react-selection`.
+Logs: `/private/tmp/retouch-react-selection-api-{unit,chromium,webkit,position-regression}.log`.
+
+This is the source transaction needed for React multi-layer authoring. The shell
+still restricts multi-selection to HTML; React selection controls and shared
+canvas geometry must be connected next. Cross-file/instance-specific selection,
+Liquid parity, arbitrary-site authoring and full Figma parity remain unfinished.
+The verified Mac package predates this source operation.
