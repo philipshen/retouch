@@ -211,3 +211,18 @@ test('oversized binary metadata and image uploads return usable 413 responses',a
  }
  const health=await req(port,'GET','/rt/__api/health');assert.equal(health.status,200);
 });
+
+test('text style API authenticates, persists and rejects stale or malformed writes', async () => {
+ const endpoint='/rt/__api/text-styles';
+ assert.strictEqual((await req(port,'GET',endpoint)).status,401);
+ const initial=await req(port,'GET',endpoint,{headers:AUTH()});assert.strictEqual(initial.status,200);
+ const post=body=>req(port,'POST',endpoint,{headers:AUTH(),body:JSON.stringify(body)});
+ const created=await post({type:'create',revision:JSON.parse(initial.body).revision,name:'Title',properties:{'font-size':'32px','font-weight':'700'}});
+ assert.strictEqual(created.status,200);const style=JSON.parse(created.body);
+ assert.strictEqual(JSON.parse((await req(port,'GET',endpoint,{headers:AUTH()})).body).styles[0].id,style.id);
+ assert.strictEqual((await post({type:'delete',revision:null,id:style.id})).status,409);
+ assert.strictEqual((await req(port,'POST',endpoint,{headers:AUTH(),body:'{'})).status,400);
+ assert.strictEqual((await req(port,'POST',endpoint,{headers:AUTH(),body:' '.repeat(512*1024+1)})).status,413);
+ assert.strictEqual((await req(port,'DELETE',endpoint,{headers:AUTH()})).status,405);
+ assert.strictEqual((await post({type:'delete',revision:style.revision,id:style.id})).status,200);
+});

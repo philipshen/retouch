@@ -77,6 +77,17 @@ function handle(req, res, ctx) {
     return json(res, 200, { ok: true, ...(ctx.sourceMonitor?.state() || { revision: 0, available: false }) });
   }
   if (p === '/rt/__api/health') return json(res, 200, { ok: true, service: 'retouch' });
+  if (p === '/rt/__api/text-styles') {
+    requireToken(req,ctx.token);
+    const library=require('./text-styles.cjs');
+    if(req.method==='GET')return json(res,200,{ok:true,...library.read(ctx.appRoot)});
+    if(req.method!=='POST')return json(res,405,{ok:false,reason:'Use GET or POST for text styles.'});
+    return readBinary(req,library.LIMIT,bytes=>{
+      if(!bytes)return json(res,413,{ok:false,reason:'Text style requests must be 512 KB or smaller.'});
+      let operation;try{operation=JSON.parse(bytes.toString('utf8'));}catch{return json(res,400,{ok:false,reason:'Invalid text style JSON.'});}
+      try{return json(res,200,{ok:true,...library.change(ctx.appRoot,operation)});}catch(error){return json(res,error.statusCode||500,{ok:false,reason:error.message});}
+    });
+  }
   if (p === '/rt/__api/font-axes') {
     requireToken(req, ctx.token);
     if(req.method!=='POST')return json(res,405,{ok:false,reason:'Send font bytes with POST.'});

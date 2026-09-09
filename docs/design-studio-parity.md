@@ -5327,3 +5327,29 @@ while a write is pending, caret/selection preservation for all text inputs,
 all inspector control types and arbitrary-page focus scripts remain unverified.
 Full Figma/arbitrary-site parity remains unfinished. Native launches remain
 paused and trusted macOS/Homebrew distribution remains unverified.
+
+### Project text-style catalog foundation
+
+Added a project-local `.retouch/text-styles.json` catalog and authenticated
+GET/POST `/rt/__api/text-styles` endpoint. Styles have stable UUID identities,
+unique names and validated typography declarations, including variable-font
+coordinates. Create, update and delete require the revision read by the caller;
+stale requests and intervening external edits are refused. Writes use the
+existing source transaction primitive. Reads do not create project files.
+Malformed libraries, unsupported declarations, oversized input and symlinked
+catalog paths are rejected without replacing stored data.
+
+All 392 unit/integration tests passed (process exit 0), including real HTTP
+persistence/authentication/method/body-limit checks and exact-byte preservation
+on invalid or stale writes. Log: /private/tmp/retouch-text-styles-units.log.
+Syntax checks and git diff --check passed. No browser UI changed in this step.
+
+This is storage infrastructure, not a completed shared text-style experience.
+Next work must connect inspector capture/application and persistent layer links,
+then propagate style edits to linked uses while preserving responsive scopes,
+local overrides and source undo. Catalog CRUD is not yet in source undo history.
+Simultaneous writes from separate server processes have no cross-process lock;
+revision checks cover sequential stale clients, not full distributed concurrency.
+The library currently supports 100 styles and 512 KiB. Full Figma parity and
+arbitrary-site coverage remain incomplete. Native launches stay paused; trusted
+macOS/Homebrew distribution remains unverified.
