@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 328 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 329 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -2398,3 +2398,30 @@ layout workflow passes in Chromium. All 328 unit/HTTP tests pass. Logs are
 This proves and fixes a real source-refresh click loss. It does not establish the
 cause of the earlier packaged WebKit timeout, whose evidence remains intact.
 The latest Mac archive still packages `3b3d8a1` and predates this source fix.
+
+## Canvas layer locks
+
+The Layers tree now exposes lock/unlock controls with labels and inherited lock
+state. Locked layers and their descendants are excluded from canvas click/text
+editing, modifier picking, hover outlines and marquee selection. Select-visible
+and range candidates omit locked layers. Explicit tree selection remains available
+for deliberate inspector edits. Locking clears the current selection and cancels
+active canvas tools. Source files and runtime DOM attributes/styles are unchanged.
+
+Locks belong to the current editor session and page route, keyed by source host
+or instance IDs. They survive iframe reloads and route round trips; a child's
+independent lock survives unlocking its parent. They are not persisted across an
+editor reload, do not yet participate in undo/redo, and are not a source-write
+permission boundary. Source structural changes may shift IDs; durable document
+identity and lock persistence remain unfinished.
+
+The real React marquee workflow passes in Chromium and WebKit with locked-layer
+filtering, modifier picking, group movement and exact source undo. The HTML lock
+workflow passes in
+Chromium and WebKit, including plain/modifier/double-click, marquee filtering,
+inherited states, iframe reload, SPA route changes, deliberate tree selection and
+unchanged source. The focused state test covers route and instance separation.
+All 329 unit/HTTP tests pass; existing layer-interaction regression passes.
+Logs: `/private/tmp/retouch-layer-locks-{chromium,webkit,react-chromium,react-webkit,unit,interactions}.log`.
+Screenshot `/private/tmp/retouch-layer-locks.png` was inspected. The latest Mac
+archive predates this feature.

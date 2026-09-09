@@ -3,9 +3,9 @@
  function rectangle(a,b){return {left:Math.min(a.x,b.x),top:Math.min(a.y,b.y),width:Math.abs(b.x-a.x),height:Math.abs(b.y-a.y)};}
  function moved(a,b,scale=1){return Math.hypot(b.x-a.x,b.y-a.y)*scale>=4;}
  function enclosed(rect,box){return box.width>0&&box.height>0&&box.left>=rect.left&&box.top>=rect.top&&box.right<=rect.left+rect.width&&box.bottom<=rect.top+rect.height;}
- function pick(d,rect){
+ function pick(d,rect,selectable=()=>true){
   const candidates=[...d.querySelectorAll('body [data-rt]')].filter(el=>{
-   if(['SCRIPT','STYLE','TEMPLATE','HEAD','META','LINK'].includes(el.tagName))return false;
+   if(!selectable(el)||['SCRIPT','STYLE','TEMPLATE','HEAD','META','LINK'].includes(el.tagName))return false;
    const css=d.defaultView.getComputedStyle(el);return !['hidden','collapse'].includes(css.visibility)&&enclosed(rect,el.getBoundingClientRect());
   });
   return candidates.filter(el=>!candidates.some(parent=>parent!==el&&parent.contains(el)));
@@ -18,7 +18,7 @@
   if(el.closest('[contenteditable="true"], [role="button"], [role="link"]'))return false;
   return !!el.querySelector('[data-rt], [data-rt-i]')&&![...el.childNodes].some(node=>node.nodeType===3&&node.textContent.trim());
  }
- function mount({document:d,frame,surface,enabled,onChange,onSelect,onClick}){
+ function mount({document:d,frame,surface,enabled,onChange,onSelect,onClick,selectable=()=>true}){
   const w=d.defaultView;let state=null,ignoreClick=null;const cleanup=[];
   function listen(target,type,handler,capture=false){target.addEventListener(type,handler,capture);cleanup.push(()=>target.removeEventListener(type,handler,capture));}
   function point(e,outer){if(!outer)return {x:e.clientX,y:e.clientY};const r=frame.getBoundingClientRect(),scale=r.width/w.innerWidth;return {x:(e.clientX-r.left)/scale,y:(e.clientY-r.top)/scale};}
@@ -26,8 +26,8 @@
    if(!state)return;const current=state;state=null;
    if(current.capture.hasPointerCapture(current.pointerId))current.capture.releasePointerCapture(current.pointerId);
    onChange(null);
-   if(!current.moved&&commit&&!current.outer&&!['HTML','BODY'].includes(current.target.tagName)&&current.target.isConnected&&onClick){const marker=ignoreClick={...current.rawLast,outer:false,time:Date.now()};root.setTimeout(()=>{if(ignoreClick===marker)ignoreClick=null;},0);onClick(current.target,{toggle:current.append});}
-   if(current.moved){ignoreClick={...current.rawLast,outer:current.outer,time:Date.now()};if(commit)onSelect(pick(d,clip(rectangle(current.start,current.last),w.innerWidth,w.innerHeight)),{append:current.append});}
+   if(!current.moved&&commit&&!current.outer&&!['HTML','BODY'].includes(current.target.tagName)&&current.target.isConnected&&selectable(current.target)&&onClick){const marker=ignoreClick={...current.rawLast,outer:false,time:Date.now()};root.setTimeout(()=>{if(ignoreClick===marker)ignoreClick=null;},0);onClick(current.target,{toggle:current.append});}
+   if(current.moved){ignoreClick={...current.rawLast,outer:current.outer,time:Date.now()};if(commit)onSelect(pick(d,clip(rectangle(current.start,current.last),w.innerWidth,w.innerHeight),selectable),{append:current.append});}
   }
   function down(e,outer){
    const allowed=outer?[surface,root.document.getElementById('canvasExtent'),root.document.getElementById('siteStage')].includes(e.target):background(e.target);

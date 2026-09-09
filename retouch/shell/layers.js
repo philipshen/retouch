@@ -24,7 +24,7 @@
     if(!target.parentElement?.hasAttribute('data-rt')||['HTML','BODY'].includes(target.tagName))return null;
     return fraction<.5?'before':'after';
   }
-  function mount({host,onSelect,onAction,getClipboard=()=>null,dragEnabled=false,multiSelectEnabled=dragEnabled,onMove,onSelectMany}) {
+  function mount({host,onSelect,onAction,getClipboard=()=>null,dragEnabled=false,multiSelectEnabled=dragEnabled,onMove,onSelectMany,locks,onLock}) {
     const header=document.createElement('h2');header.textContent='Layers';
     const search=document.createElement('input');search.type='search';search.placeholder='Find a layer…';search.setAttribute('aria-label','Find a layer');
     const tree=document.createElement('div');tree.className='layer-tree';tree.setAttribute('role','tree');tree.setAttribute('aria-label','Site layers');
@@ -40,7 +40,7 @@
     let d=null,observer=null,timer=null,selected=null,rows=[],collapsed=new WeakSet(),lastCapabilities=null,isBusy=false,dragged=null,selectedSet=new Set(),rangeAnchor=null;
     function clearTargets(){for(const row of rows)row.button.classList.remove('drop-target','drop-before','drop-after');}
     function endDrag(){dragged=null;clearTargets();for(const row of rows)row.button.classList.remove('dragging');}
-    function selectionRows(){const query=search.value.trim().toLowerCase();return rows.filter(row=>!['HTML','BODY'].includes(row.item.el.tagName)&&(!query||row.item.label.toLowerCase().includes(query)));}
+    function selectionRows(){const query=search.value.trim().toLowerCase();return rows.filter(row=>!['HTML','BODY'].includes(row.item.el.tagName)&&!locks?.locked(row.item.el)&&(!query||row.item.label.toLowerCase().includes(query)));}
     async function selectRange(target,append=false){
       if(isBusy)return;const candidates=selectionRows(),end=candidates.findIndex(row=>row.item.el===target);
       if(end<0)return onSelect(target);
@@ -93,7 +93,16 @@
               e.preventDefault();if(item.children.length&&expanded){collapsed.add(item.el);render();}else rows.find(r=>r.item===item.parent)?.button.focus();
             }
           };
-          if(!prior)row.append(toggle,b);rows.push({item,row,button:b,toggle});
+          let lock=prior?.lock;
+          if(locks&&onLock){
+            lock ||= document.createElement('button');lock.className='layer-lock';
+            const direct=locks.direct(item.el),inherited=!direct&&locks.locked(item.el);
+            lock.textContent=direct||inherited?'🔒':'🔓';lock.setAttribute('aria-label',(direct?'Unlock ':inherited?'Locked by parent: ':'Lock ')+item.label);
+            lock.title=inherited?'Unlock the parent layer first.':direct?'Unlock canvas selection':'Lock canvas selection for this editor session; select from Layers to edit';
+            lock.setAttribute('aria-pressed',String(direct||inherited));lock.disabled=isBusy||inherited;
+            lock.onclick=async()=>{await onLock(item.el,!locks.direct(item.el));render();};
+          }
+          if(!prior)row.append(toggle,b);if(lock&&!lock.parentElement)row.append(lock);rows.push({item,row,button:b,toggle,lock});
           if(expanded)walk(item.children,depth+1);
         }
       }
@@ -118,7 +127,7 @@
     function selection(el,info,busy=false,multiple=[]) {
       const nextSet=new Set(multiple.length?multiple:el?[el]:[]),changed=nextSet.size!==selectedSet.size||[...nextSet].some(item=>!selectedSet.has(item));selectedSet=nextSet;tree.setAttribute('aria-multiselectable',String(!!(info?.cssAuthoring||info?.classSelection)));
       if(!el)rangeAnchor=null;
-      if(isBusy!==busy){isBusy=busy;selectAll.disabled=busy||!selectionRows().length;for(const r of rows){r.button.disabled=busy;r.toggle.disabled=busy||!r.item.children.length;}host.setAttribute('aria-busy',String(busy));}
+      if(isBusy!==busy){isBusy=busy;selectAll.disabled=busy||!selectionRows().length;for(const r of rows){r.button.disabled=busy;r.toggle.disabled=busy||!r.item.children.length;if(r.lock)r.lock.disabled=busy||!locks.direct(r.item.el)&&locks.locked(r.item.el);}host.setAttribute('aria-busy',String(busy));}
       if(selected!==el||changed){
         selected=el;
         let reveal=false;
@@ -151,7 +160,7 @@
       if(selectedSet.size>1){for(const button of Object.values(actionButtons))button.disabled=true;if(!info?.cssAuthoring){reason.textContent=selectedSet.size+' source layers selected. Shared styles apply together.';return;}actionButtons.duplicateElement.disabled=busy;actionButtons.deleteElement.disabled=busy;actionButtons.reparentElement.disabled=busy;actionButtons.frameSelection.disabled=busy||!s?.canFrame;reason.textContent=selectedSet.size+' layers selected. Frame, move, duplicate and delete apply to the selection.';return;}
       reason.textContent=info?.svgMovement?'Send backward or bring forward changes which SVG shape appears on top.':info?.svgDeletion?'Delete removes this SVG layer and its contents. Undo restores it.':info?(s?.canInsert&&!s?.canDuplicate?'Add text or a frame inside this container.':s?.reason || (!s?.canDuplicate?'Duplicate is unavailable for a layer with an authored ID, key, or ref.':'')):'Select a layer to organize it.';
     }
-    return {attach,selection};
+    return {attach,selection,refresh:render};
   }
   const api={label,collect,mount,canNest,canNestMany};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayers=api;

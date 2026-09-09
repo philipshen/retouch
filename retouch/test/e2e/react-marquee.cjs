@@ -14,6 +14,10 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   const clickBackground=async value=>{await app.locator('main').evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));const box=await app.locator('main').boundingBox();await page.mouse.click(box.x+5*value/100,box.y+5*value/100);};
   await wait(async()=>await app.locator('main').evaluate(el=>{const r=el.getBoundingClientRect();return r.left===50&&r.top===50&&r.width===300&&r.height===260;}));
   diagnose=async()=>console.log('DIAGNOSTIC',JSON.stringify({errors,source:read(),selected:await selected()}));
+  await zoom(100);await page.getByRole('button',{name:'Lock div · A',exact:true}).click();await page.getByRole('button',{name:'Unlock div · A',exact:true}).waitFor();
+  await drag(100);await selection(['B']);await settled();
+  await app.locator('[aria-label="A"]').click({modifiers:['Shift']});await selection(['B']);
+  await page.getByRole('button',{name:'Unlock div · A',exact:true}).click();await page.getByRole('button',{name:'Lock div · A',exact:true}).waitFor();
   for(const value of [50,100,200]){
    await zoom(value);await clickBackground(value);await wait(async()=>await page.getByRole('treeitem',{name:'main · Frame',exact:true}).getAttribute('aria-selected')==='true');
    await drag(value,{tiny:true});await selection(['A','B']);await settled();assert.equal(await page.getByRole('button',{name:'Move selection on canvas',exact:true}).count(),1);
@@ -24,6 +28,6 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   await page.getByRole('button',{name:'Move selection on canvas',exact:true}).click();await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');await wait(()=>read()!==original);await settled();assert.deepEqual(await app.locator('[aria-label="A"],[aria-label="B"],[aria-label="C"]').evaluateAll(els=>els.map(el=>parseFloat(getComputedStyle(el).left))),[21,141,30]);await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();await selection(['A','B']);
   // An active drag is cancelled by zoom and screen changes without selecting new layers.
   for(const change of ['zoom','screen']){const f=await page.locator('#app').boundingBox();await page.mouse.move(f.x-12,f.y+60);await page.mouse.down();await page.mouse.move(f.x+280,f.y+270,{steps:4});await wait(async()=>await marquee.count()===1);if(change==='zoom'){await page.getByLabel('Canvas zoom (%)',{exact:true}).fill('50');await page.getByLabel('Canvas zoom (%)',{exact:true}).press('Enter');}else await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await wait(async()=>await marquee.count()===0);await page.mouse.up();await selection(['A','B']);if(change==='zoom')await zoom(100);}
-  assert.equal(read(),original);assert.deepEqual(errors,[]);console.log(engine+': PASS React inner-frame and gray-canvas marquee at 50/100/200% zoom, click preservation, screen-pixel threshold, additive selection, Escape/zoom/screen cancellation, group edit integration and exact source/selection undo');
+  assert.equal(read(),original);assert.deepEqual(errors,[]);console.log(engine+': PASS React canvas locks and inner-frame and gray-canvas marquee at 50/100/200% zoom, click preservation, screen-pixel threshold, additive selection, Escape/zoom/screen cancellation, group edit integration and exact source/selection undo');
  }catch(error){if(diagnose)await diagnose();throw error;}finally{if(browser)await browser.close();if(!exited)child.kill('SIGTERM');await stopped;fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

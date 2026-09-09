@@ -39,6 +39,7 @@ let lastAppPath = null;
 let styleScope = '';
 function scopedInfo(info) { return {...info,styleScope,anchorInheritedClasses:RetouchResponsive.inherited(info.className,styleScope,doc()),className:RetouchResponsive.project(info.className,styleScope)}; }
 
+const layerLocks=RetouchLayerLocks.create({route:()=>currentPageRoute()||''});
 const historyRoutes = new Map();
 function currentPageRoute(){try{const loc=iframe.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
 const editorHistory = RetouchHistory.createHistory({apply:restoreHistory,onChange:syncHistoryControls,capture:entry=>({route:historyRoutes.get(entry.undoId)||currentPageRoute()})});
@@ -88,6 +89,7 @@ function hookFrame(d, w) {
   stopMarquee?.();
   stopMarquee=RetouchMarquee.mount({document:d,frame:iframe,surface:canvasSurface,enabled:()=>window.__RT_RENDERING?.selectionStyling===true&&mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests,
     onChange:rect=>{selectionMarquee=rect?{document:d,rect}:null;},
+    selectable:node=>!layerLocks.locked(node),
     onSelect:(nodes,options)=>selectMany(nodes,options),
     onClick:(node,options)=>{if(!panelTasks&&!undoBusy&&!sourceRequests)select(node,options);},
   });
@@ -116,7 +118,7 @@ function hookFrame(d, w) {
   d.addEventListener('click', async (e) => {
     if (mode !== 'edit') return;
     if (panelTasks > 0 || undoBusy || sourceRequests) { e.preventDefault(); e.stopPropagation(); return; }
-    if ((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection)){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=e.target.closest?.('[data-rt]');if(target)await select(target,{toggle:true});return;}
+    if ((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection)){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=e.target.closest?.('[data-rt]');if(target&&!layerLocks.locked(target))await select(target,{toggle:true});return;}
     if (editing) {
       if (editing.el.contains(e.target)) return;
       commitInlineEdit(); // clicking away commits (R-5)
@@ -126,7 +128,7 @@ function hookFrame(d, w) {
     const t = e.target.closest && e.target.closest('[data-rt], [data-rt-i]');
     // Single click selects AND, when the element has editable literal text,
     // enters in-place editing directly (user decision, 2026-09-02).
-    if (t) startInlineEdit(t, e, true);
+    if (t&&!layerLocks.locked(t)) startInlineEdit(t, e, true);
     else clearSelection();
   }, true);
   // Double-click also starts inline text editing (kept as a fallback).
@@ -139,12 +141,13 @@ function hookFrame(d, w) {
     e.preventDefault();
     e.stopPropagation();
     const t = e.target.closest && e.target.closest('[data-rt], [data-rt-i]');
-    if (t) startInlineEdit(t, e);
+    if (t&&!layerLocks.locked(t)) startInlineEdit(t, e);
   }, true);
   d.addEventListener('mousemove', (e) => {
     if (mode !== 'edit') { hoverEl = null; return; }
     measuring = e.altKey;
     hoverEl = (e.target.closest && e.target.closest('[data-rt], [data-rt-i]')) || null;
+    if(layerLocks.locked(hoverEl))hoverEl=null;
   }, true);
   d.addEventListener('mouseleave', () => { hoverEl = null; }, true);
   d.addEventListener('keydown', (e) => { if (e.key === 'Alt') measuring = true; }, true);
@@ -230,6 +233,7 @@ function onNavigated() {
     const p = loc.pathname + loc.search + loc.hash;
     if(lastAppPath && lastAppPath!==p)clearSelection();
     lastAppPath = p;
+    layers.refresh();
     pagePicker.value=loc.pathname;
     window.dispatchEvent(new CustomEvent('retouch:route'));
     routeInput.value = p;
@@ -1712,6 +1716,14 @@ RetouchMaxWidth.mount({
 
 let layerClipboard=null;
 const layers = RetouchLayers.mount({
+  locks:layerLocks,
+  onLock:async(el,value)=>{
+    if(panelTasks||undoBusy||sourceRequests)return;
+    await commitInlineEdit();stopDrawing?.();
+    layerLocks.set(el,value);hoverEl=null;
+    if(value)clearSelection();
+    toast(value?'Layer locked on the canvas. Select it in Layers to edit.':'Layer unlocked.','ok');
+  },
   getClipboard:()=>layerClipboard,
   dragEnabled:window.__RT_RENDERING?.layerReparenting===true,
   multiSelectEnabled:window.__RT_RENDERING?.selectionStyling===true,

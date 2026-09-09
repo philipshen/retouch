@@ -299,3 +299,7 @@ details.advanced > summary:hover { color: var(--ink); }
 
 .screen-resize-handle[data-axis="both"] { width:16px; height:16px; cursor:nwse-resize; transform:translate(-100%,-100%); border-radius:3px; }
 .screen-resize-handle[data-axis="both"]::after { width:7px; height:7px; background:none; border-right:2px solid #cbd5e1; border-bottom:2px solid #cbd5e1; }
+
+.layer-lock { flex:0 0 26px; font-size:11px; opacity:0; }
+.layer-row:hover .layer-lock, .layer-row:focus-within .layer-lock, .layer-lock[aria-pressed="true"], .layer-lock:hover, .layer-lock:focus-visible { opacity:1; }
+.layer-lock:disabled { cursor:default; }
