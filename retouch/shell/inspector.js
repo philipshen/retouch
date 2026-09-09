@@ -254,8 +254,22 @@
     function add(value,label){value=value?.trim();if(value&&fontFamilyClass(value)&&!found.has(value)&&found.size<100)found.set(value,label||value.replace(/["']/g,''));}
     add(current);let count=0;
     for(const face of d.fonts||[]){add(face.family);if(++count>=200)break;}
-    for(const el of [...d.querySelectorAll('body *')].slice(0,300)){if(el.textContent?.trim())add(d.defaultView.getComputedStyle(el).fontFamily);}
+    count=0;for(const value of pageTextFonts(d)){add(value);if(++count>=300)break;}
     return [...found];
+  }
+  function* pageTextFonts(d){
+    if(!d.body)return;
+    const walker=d.createTreeWalker(d.body,5),seen=new WeakSet();let node=d.body;
+    do {
+      const el=node.nodeType===3&&/\S/.test(node.nodeValue||'')?node.parentElement:node.nodeType===1&&/^(INPUT|TEXTAREA)$/.test(node.tagName)?node:null;
+      if(el&&!seen.has(el)&&!/^(SCRIPT|STYLE|NOSCRIPT)$/.test(el.tagName)){seen.add(el);yield d.defaultView.getComputedStyle(el).fontFamily;}else yield null;
+    }while(node=walker.nextNode());
+  }
+  function* pageFontValues(d){for(const face of d.fonts||[])yield face.family;yield* pageTextFonts(d);}
+  function scanPageFonts(d,onBatch,active=()=>true){
+    const values=pageFontValues(d);let timer,stopped=false;
+    const step=()=>{if(stopped||!active())return;const batch=[],deadline=performance.now()+8;let done=false;for(let i=0;i<100&&(i===0||performance.now()<deadline);i++){const next=values.next();if(next.done){done=true;break;}if(next.value&&fontFamilyClass(next.value))batch.push(next.value.trim());}onBatch(batch,done);if(!done&&!stopped)timer=setTimeout(step,0);};
+    timer=setTimeout(step,0);return ()=>{stopped=true;clearTimeout(timer);values.return();};
   }
   function filterFonts(choices,query){
     const normalize=s=>s.normalize('NFKD').replace(/\p{M}/gu,'').toLocaleLowerCase().replace(/["']/g,'');
@@ -271,8 +285,21 @@
     const search=document.createElement('input');search.type='search';search.placeholder='Search font names';search.setAttribute('aria-label','Search page fonts');browse.append(search);
     const status=note(browse,'');status.setAttribute('role','status');
     const results=document.createElement('div');results.className='font-results';results.setAttribute('role','group');results.setAttribute('aria-label','Matching fonts');browse.append(results);
-    const render=()=>{const matches=filterFonts(choices,search.value);status.textContent=matches.length?`${matches.length} font ${matches.length===1?'choice':'choices'}`:'No matching fonts. Try another name.';results.replaceChildren();for(const [value,label] of matches){const b=button(label,()=>onChange(value));b.setAttribute('aria-label','Use font '+label);b.setAttribute('aria-pressed',String(value===current));results.append(b);}};
-    search.oninput=render;browse.ontoggle=()=>{if(browse.open)search.focus();};
+    const pages=document.createElement('div');pages.className='font-pages';let offset=0,scanning=false,cancelScan;
+    const previous=button('Previous fonts',()=>{offset=Math.max(0,offset-50);render();}),next=button('Next fonts',()=>{offset+=50;render();});pages.append(previous,next);browse.append(pages);
+    const render=()=>{
+      const matches=filterFonts(choices,search.value),focused=results.contains(document.activeElement)?document.activeElement.dataset.font:null;
+      if(offset>=matches.length)offset=0;
+      status.textContent=(matches.length?`${matches.length} font ${matches.length===1?'choice':'choices'}`:scanning?'No matches yet.':'No matching fonts. Try another name.')+(scanning?' · Scanning page…':'');status.dataset.scanning=String(scanning);
+      pages.hidden=matches.length<=50;previous.disabled=offset===0;next.disabled=offset+50>=matches.length;
+      if(matches.length>50)status.textContent+=` · Showing ${offset+1}–${Math.min(offset+50,matches.length)}`;
+      results.replaceChildren();for(const [value,label] of matches.slice(offset,offset+50)){const b=button(label,()=>onChange(value));b.dataset.font=value;b.setAttribute('aria-label','Use font '+label);b.setAttribute('aria-pressed',String(value===current));results.append(b);if(value===focused)b.focus({preventScroll:true});}
+    };
+    search.oninput=()=>{offset=0;render();};browse.ontoggle=()=>{
+      cancelScan?.();scanning=browse.open;
+      if(browse.open){search.focus();choices.splice(0,choices.length,...fontFamilies(d,current));offset=0;const known=new Set(choices.map(([value])=>value));cancelScan=scanPageFonts(d,(batch,done)=>{let changed=false;for(const value of batch)if(!known.has(value)){known.add(value);choices.push([value,value.replace(/["']/g,'')]);changed=true;}scanning=!done;if(changed||done)render();},()=>browse.isConnected&&browse.open);}
+      render();
+    };
     browse.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();browse.open=false;summary.focus();}});
     render();parent.append(browse);return quick;
   }
@@ -357,6 +384,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,filterFonts,fontPicker,position,appearance,effects,typography,measurements,section,field,note,button,select};
+  const api={base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,filterFonts,fontPicker,scanPageFonts,position,appearance,effects,typography,measurements,section,field,note,button,select};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

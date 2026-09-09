@@ -3890,3 +3890,51 @@ font on arbitrarily large pages. It does not provide font-face load status,
 per-result glyph previews, variable axes or a full font management workflow.
 Those and broader Figma/any-site parity remain open. Live Shopify and trusted
 Mac distribution are still unverified; no native app launch was attempted.
+
+
+### 2026-09-09 — Progressive page-wide font discovery
+
+Opening Browse page fonts now starts a fresh asynchronous scan of the document's
+FontFaceSet and text/control elements throughout its body. The scan yields after
+100 entries or an eight-millisecond between-entry budget, reports Scanning page,
+and stops when the browser closes or its inspector is removed. Reopening
+rebuilds the catalog, discovering new declarations and dropping removed ones.
+Search covers the full discovered catalog, while Previous/Next fonts controls
+render at most 50 matching buttons per page. Focus on an existing result is
+preserved during catalog updates. Searching and paging never apply a font.
+
+The quick dropdown remains a bounded initial sample for immediate interaction.
+Its initial body scan now uses a tree walker instead of allocating and copying
+a querySelectorAll result for the entire page or reading ancestor textContent.
+The expanded browser no longer stops at 200 faces, 300 body entries or 100
+choices. The elapsed-time budget is checked between entries; an individual
+browser style computation can still take longer than the budget.
+
+All 371 unit tests pass in
+`/private/tmp/retouch-font-discovery-unit-release.log`. The new
+`test:e2e:font-discovery` workflow uses a real iframe document with 260 declared
+faces and 1,500 text elements, including a late-used family. Chromium and WebKit
+pass in `/private/tmp/retouch-font-discovery-release-chromium.log` and
+`/private/tmp/retouch-font-discovery-release-webkit.log`. Checks cover discovery
+past every former limit, late-family selection, 50-result paging, cancellation
+before and after the first batch, rescanning newly declared and removed faces,
+and no implicit application during search or paging. The isolated picker
+screenshot `/private/tmp/retouch-font-discovery-release.png` was inspected.
+
+Full inspector/source-write regressions pass for HTML in
+`/private/tmp/retouch-font-scan-html-regression.log`, React/WebKit in
+`/private/tmp/retouch-font-scan-react-regression.log`, and conditional local Liquid
+in `/private/tmp/retouch-font-discovery-liquid-regression.log`. The first two
+precede the final fresh-catalog-on-reopen adjustment; final discovery tests and
+the Liquid workflow include it. All browser processes exited and closed their
+contexts. An initial Chromium discovery assertion read the previous completed
+status before the reopen toggle began its new scan; its failing log remains
+`/private/tmp/retouch-font-discovery-chromium.log`. The corrected test waits for
+the newly declared result itself before asserting completion.
+
+This supersedes the preceding search-catalog cutoff limitation for normal body
+content and document font declarations. Shadow roots, generated pseudo-element
+text, cross-origin iframe documents, installed-font enumeration, font loading
+status and variable axes still require work. The scan is a fresh traversal, not
+a subscription to every subsequent DOM change. The full Figma/any-site/native
+distribution goal remains incomplete, and native app launches remain paused.

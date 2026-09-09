@@ -1,0 +1,33 @@
+'use strict';
+const assert=require('node:assert/strict'),path=require('node:path');
+const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_INSPECTOR_FIXTURE');
+const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
+(async()=>{const browser=await browserType.launch();try{
+ const page=await browser.newPage({viewport:{width:900,height:800}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setContent('<main id="picker" style="width:300px"></main><iframe title="Site"></iframe>');
+ await page.addScriptTag({path:path.resolve(__dirname,'../../shell/inspector.js')});await page.addStyleTag({path:path.resolve(__dirname,'../../shell/shell.css')});
+ await page.evaluate(()=>{
+  const d=document.querySelector('iframe').contentDocument;d.body.innerHTML=Array.from({length:1500},(_,i)=>`<p style='font-family:${i===1499?'"Late Used",serif':'Georgia,serif'}'>Text ${i}</p>`).join('');
+  for(let i=0;i<260;i++)d.fonts.add(new d.defaultView.FontFace('Declared '+i,'local("Arial")'));
+  window.applied=[];RetouchInspector.fontPicker(document.querySelector('#picker'),d,'Georgia, serif',v=>applied.push(v));
+  window.scanCallbacks=0;window.cancelledCallbacks=0;
+  const cancel=RetouchInspector.scanPageFonts(d,()=>cancelledCallbacks++);cancel();
+  let stop;stop=RetouchInspector.scanPageFonts(d,()=>{scanCallbacks++;stop();});
+ });
+ const browse=page.locator('.font-browser'),search=page.getByRole('searchbox',{name:'Search page fonts'}),results=page.getByRole('group',{name:'Matching fonts'});
+ assert.equal(await page.getByLabel('Page font',{exact:true}).locator('option').count(),100);
+ await page.getByText('Browse page fonts',{exact:true}).click();await search.fill('Late Used');await page.waitForFunction(()=>document.querySelector('.font-results').innerText.includes('Late Used'));
+ await page.waitForFunction(()=>document.querySelector('.font-browser [role=status]').dataset.scanning==='false');
+ assert.equal(await results.getByRole('button').count(),1);assert.match(await results.innerText(),/Late Used/);
+ await results.getByRole('button').click();assert.match((await page.evaluate(()=>applied))[0],/Late Used/);
+ await search.fill('Declared 259');assert.equal(await results.getByRole('button').count(),1);await results.getByRole('button').click();assert.match((await page.evaluate(()=>applied))[1],/Declared 259/);
+ await search.fill('');assert.equal(await results.getByRole('button').count(),50);const first=await results.getByRole('button').first().textContent();await page.getByRole('button',{name:'Next fonts',exact:true}).click();assert.notEqual(await results.getByRole('button').first().textContent(),first);assert.equal(await results.getByRole('button').count(),50);await page.getByRole('button',{name:'Previous fonts',exact:true}).click();assert.equal(await results.getByRole('button').first().textContent(),first);
+ await search.press('Escape');assert.equal(await browse.getAttribute('open'),null);
+ await page.evaluate(()=>{const d=document.querySelector('iframe').contentDocument;d.fonts.add(new d.defaultView.FontFace('Newly Declared','local("Arial")'));for(const face of d.fonts)if(face.family.includes('Declared 259'))d.fonts.delete(face);});
+ await page.getByText('Browse page fonts',{exact:true}).click();await search.fill('Newly Declared');await page.waitForFunction(()=>document.querySelector('.font-results').innerText.includes('Newly Declared'));await page.waitForFunction(()=>document.querySelector('.font-browser [role=status]').dataset.scanning==='false');assert.equal(await results.getByRole('button').count(),1);
+ await search.fill('Declared 259');assert.equal(await results.getByRole('button').count(),0);await search.fill('Newly Declared');
+ assert.equal(await page.evaluate(()=>scanCallbacks),1);assert.equal(await page.evaluate(()=>cancelledCallbacks),0);
+ assert.equal((await page.evaluate(()=>applied)).length,2,'discovery/search/paging must not apply fonts');assert.deepEqual(errors,[]);
+ if(process.env.RT_E2E_FONT_DISCOVERY_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_FONT_DISCOVERY_SCREENSHOT});
+ console.log(engine+': PASS fonts beyond 200 faces/300 elements/100 choices, search, bounded result paging, scan cancellation, rescan and no implicit apply');
+ }finally{await browser.close();}})().catch(error=>{console.error(error);process.exitCode=1;});

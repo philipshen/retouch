@@ -318,3 +318,6 @@ details.advanced > summary:hover { color: var(--ink); }
 .font-results { max-height: 180px; overflow-y: auto; display: grid; gap: 4px; }
 .font-results .control-button { text-align: left; overflow-wrap: anywhere; }
 .font-results .control-button[aria-pressed="true"] { border-color: var(--accent); }
+
+.font-pages:not([hidden]) { display: flex; gap: 6px; margin-top: 6px; }
+.font-pages .control-button { flex: 1; }

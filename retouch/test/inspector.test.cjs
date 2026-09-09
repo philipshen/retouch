@@ -39,7 +39,7 @@ test('page font encoding preserves underscores and font weights while rejecting 
  assert.equal(I.fontFamilyClass('Studio_Test, serif'),String.raw`[font-family:Studio\_Test,_serif]`);
  for(const value of ['Arial; color:red','url(test)','var(--font)','"Unclosed','Arial,'])assert.equal(I.fontFamilyClass(value),null);
  assert.equal(I.replace('font-serif font-bold md:font-mono',I.fontFamilyToken,I.fontFamilyClass('serif')),'font-bold md:font-mono [font-family:serif]');
- const d={fonts:[{family:'"Page Face"'}],querySelectorAll:()=>[{textContent:'Hello'}],defaultView:{getComputedStyle:()=>({fontFamily:'Georgia, serif'})}};
+ const d={fonts:[{family:'"Page Face"'}],body:{nodeType:1,tagName:'BODY'},createTreeWalker:()=>{let used=false;return {nextNode:()=>used?null:(used=true,{nodeType:3,nodeValue:'Hello',parentElement:{tagName:'P'}})};},defaultView:{getComputedStyle:()=>({fontFamily:'Georgia, serif'})}};
  assert.deepEqual(I.fontFamilies(d,'monospace').map(([value])=>value),['system-ui','sans-serif','serif','monospace','"Page Face"','Georgia, serif']);
 });
 
