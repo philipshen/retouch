@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 323 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 325 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -2225,3 +2225,40 @@ still restricts multi-selection to HTML; React selection controls and shared
 canvas geometry must be connected next. Cross-file/instance-specific selection,
 Liquid parity, arbitrary-site authoring and full Figma parity remain unfinished.
 The verified Mac package predates this source operation.
+
+
+### React multi-selection and shared style controls
+
+React host layers in one source file can now be selected together with Cmd/Ctrl
+click in Layers, Shift-click ranges, or Shift/Cmd/Ctrl click on the canvas. The
+Layers tree exposes multi-selection, and shared opacity, visibility, blend mode
+and isolation controls use the atomic class-selection operation. Mixed preview
+values remain unchanged until edited. Changes and resets preserve other utility
+groups, important markers, state variants and unrelated responsive scopes.
+New breakpoint edits inherit important priority from lower scopes when needed;
+reset buttons stay disabled when that scope has no matching override.
+
+Each shared edit records one history entry and restores the full selection through
+undo/redo. Preview refresh checks every selected layer's compiled source revision
+and exact class list. Dynamic class expressions and spread props explain why shared
+styling is unavailable; an inline property disables its corresponding editor.
+Escape discards an uncommitted field value without clearing the selection.
+
+Selection capabilities are now separate from layer reparenting. React structural
+multi-layer actions remain disabled while shared styling is available. Source
+class edits affect every rendered occurrence of the selected source layer; these
+controls do not create per-instance overrides.
+
+Validation: 325 unit/HTTP tests pass, including shared-style scope preservation,
+important/state classes, resets and invalid-value refusal. Chromium and WebKit
+pass the real Next.js selection workflow, which exercises mixed values,
+opacity/visibility/blend changes, tablet-only edits with phone independence,
+resets, range and canvas selection, exact undo/redo with selection restoration,
+and dynamic/inline/spread guards. The Chromium HTML spacing regression passes.
+Evidence logs are `/private/tmp/retouch-react-selection-ui-{unit,chromium,webkit,html-regression}.log`.
+Screenshot `/private/tmp/retouch-react-selection-ui.png` was visually inspected.
+
+React multi-layer alignment, movement, resizing and spacing remain to be connected;
+React multi-layer structure, cross-file/instance overrides, Liquid equivalence and
+arbitrary-site authoring remain incomplete. The verified Mac package predates these
+controls. Full Figma parity and trusted Mac distribution remain open.

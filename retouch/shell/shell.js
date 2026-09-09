@@ -113,7 +113,7 @@ function hookFrame(d, w) {
   d.addEventListener('click', async (e) => {
     if (mode !== 'edit') return;
     if (panelTasks > 0 || undoBusy || sourceRequests) { e.preventDefault(); e.stopPropagation(); return; }
-    if ((e.shiftKey||e.metaKey||e.ctrlKey)&&sel?.info.cssAuthoring){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=e.target.closest?.('[data-rt]');if(target)await select(target,{toggle:true});return;}
+    if ((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection)){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=e.target.closest?.('[data-rt]');if(target)await select(target,{toggle:true});return;}
     if (editing) {
       if (editing.el.contains(e.target)) return;
       commitInlineEdit(); // clicking away commits (R-5)
@@ -324,7 +324,7 @@ async function select(node,{toggle=false}={}) {
   const c = await classify(node);
   if (c?.superseded) return;
   if (!c) return clearSelection();
-  if(toggle&&c.info.cssAuthoring&&sel?.info.cssAuthoring&&c.info.file===sel.info.file&&c.info.hash===sel.info.hash){
+  if(toggle&&(c.info.cssAuthoring&&sel?.info.cssAuthoring||c.info.classSelection&&sel?.info.classSelection)&&c.info.file===sel.info.file&&c.info.hash===sel.info.hash){
     let multiple=sel.multiple||[sel.info];multiple=multiple.some(info=>info.id===c.info.id)?multiple.filter(info=>info.id!==c.info.id):[...multiple,c.info];
     if(!multiple.length)return clearSelection();if(multiple.length>100)return toast('Select up to 100 layers.','err');
     const primary=multiple.find(info=>info.id===c.info.id)||multiple[0];sel={hostId:primary.id,instanceId:null,scope:'host',info:primary,multiple:multiple.length>1?multiple:undefined};renderPanel();return;
@@ -369,9 +369,9 @@ async function selectMany(nodes,{active=nodes[0],append=false}={}){
   busyPanel(true);
   try{
     const results=await Promise.all(ids.map(id=>api('GET',resolveUrl(id))));if(serial!==classificationSerial)return;
-    if(nodes.some(node=>!node.isConnected)||results.some(result=>!result?.ok||!result.element.cssAuthoring))return toast('These layers cannot be selected together.','err');
+    if(nodes.some(node=>!node.isConnected)||results.some(result=>!result?.ok||!(result.element.cssAuthoring||result.element.classSelection)))return toast('These layers cannot be selected together.','err');
     const infos=results.map(result=>result.element),first=infos[0];
-    if(infos.some(info=>info.file!==first.file||info.hash!==first.hash))return toast('Select layers from one unchanged HTML document.','err');
+    if(infos.some(info=>info.file!==first.file||info.hash!==first.hash))return toast('Select layers from one unchanged source file.','err');
     const primary=infos.find(info=>info.id===active?.getAttribute('data-rt'))||first;
     sel={hostId:primary.id,instanceId:null,scope:'host',info:primary,multiple:infos.length>1?infos:undefined};renderPanel();
   }finally{busyPanel(false);}
@@ -791,7 +791,7 @@ function renderPanelContents() {
   head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
 
-  if(sel.multiple?.length>1){const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformHTMLSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
+  if(sel.multiple?.length>1){if(info.classSelection){panelBody.append(RetouchReactSelection.mount(sel.multiple,sel.multiple.map(item=>matchingEls(item.id)[0]),styleScope,setReactClassesSelection));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformHTMLSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
   if(info.components?.length) {
     const label=document.createElement('label');label.textContent='Component scope';
@@ -1418,6 +1418,19 @@ async function setHTMLCSSSelection(property,value,width,changesById){
     sel.info=result.element;sel.multiple=result.selection;await reloadFrame();renderPanel();toast('Selected layers updated','ok');
   }finally{busyPanel(false);}
 }
+function classSelectionMatches(infos,document){
+  const tokens=value=>(value||'').split(/\s+/).filter(Boolean).sort().join(' ');
+  return infos.every(info=>{const elements=matchingInDocument(document,info.id,info);return elements.length&&elements.every(el=>el.getAttribute(info.renderRevisionAttribute)===info.hash&&tokens(el.getAttribute('class'))===tokens(info.className));});
+}
+async function setReactClassesSelection(classesById){
+  if(!sel?.multiple?.length||panelTasks||undoBusy||sourceRequests)return;stopDrawing?.();const selection=sel.multiple,info=sel.info;busyPanel(true);
+  try{
+    const result=await api('POST','/rt/__api/op',{type:'setClassesSelection',id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash,classesById});
+    if(!result?.ok){renderPanel();return toast(result?.reason||result?.error||'Could not style selected layers','err');}
+    if(result.undoId)editorHistory.record({type:'setClassesSelection',id:info.id,selectionIds:selection.map(item=>item.id),undoId:result.undoId});
+    sel.info=result.element;sel.multiple=result.selection;await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));renderPanel();toast('Selected layers updated','ok');
+  }finally{busyPanel(false);}
+}
 function svgGeometryMatches(el,info){return info.svgGeometry?.fields.every(field=>field.editable===false||el.getAttribute(field.name)===field.value);}
 async function setSVGGeometry(property,value){
   if(!sel||panelTasks||undoBusy||sourceRequests)return;const info=sel.info;busyPanel(true);
@@ -1597,8 +1610,10 @@ async function restoreHistory(direction,op) {
     else clearSelection();
     if (fresh?.ok) {
       const info = fresh.element;
+      const selectionResult=op.type==='setClassesSelection'?await Promise.all(op.selectionIds.map(id=>api('GET',resolveUrl(id)))):null;
       const component = op.type === 'detachComponent' ? await api('GET', componentUrl(op.id,op.context)) : null;
       await refreshWrittenElement(info, el => {
+        if(selectionResult)return selectionResult.every(result=>result?.ok)&&classSelectionMatches(selectionResult.map(result=>result.element),el.ownerDocument);
         if(op.svgCreatedId){const found=matchingInDocument(el.ownerDocument,op.svgCreatedId,null).length>0;return direction==='undo'?!found:found;}
         if (component?.ok) return el.getAttribute('data-rt') === component.definitionId;
         if (op.type === 'setSrc') return imageMatches(el,info.src,info.srcMatch);
@@ -1693,6 +1708,7 @@ let layerClipboard=null;
 const layers = RetouchLayers.mount({
   getClipboard:()=>layerClipboard,
   dragEnabled:window.__RT_RENDERING?.layerReparenting===true,
+  multiSelectEnabled:window.__RT_RENDERING?.selectionStyling===true,
   onMove:async(source,destination,position)=>{
     if(panelTasks||undoBusy||sourceRequests||!source.isConnected||!destination.isConnected)return;
     await commitInlineEdit();if(sel?.multiple?.some(info=>info.id===source.getAttribute('data-rt')))return structureSelection('reparentElement',{destinationId:destination.getAttribute('data-rt'),position});await select(source);
@@ -1755,6 +1771,7 @@ async function restoreLayerSelection(ids){
   const infos=selected.map(result=>result.element),first=infos[0];sel={hostId:first.id,instanceId:null,scope:'host',info:first,multiple:infos.length>1?infos:undefined};
 }
 async function structureSelection(action,extra={}){
+  if(sel.multiple?.length>1&&!sel.info.cssAuthoring)return toast('React selection structure editing is not available yet.','err');
   const selection=sel.multiple||[sel.info],info=sel.info;busyPanel(true);
   try{
     const type=['frameSelection','removeFrame'].includes(action)?action:action==='duplicateElement'?'duplicateSelection':action==='deleteElement'?'deleteSelection':'reparentSelection';
