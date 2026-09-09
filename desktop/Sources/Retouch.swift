@@ -2,7 +2,7 @@ import AppKit
 import WebKit
 
 // The editor remains the same shell as /rt. No Node or native command bridge is
-// exposed to a page; project startup continues to belong to the existing CLI.
+// exposed to a page. Native project startup delegates to the installed CLI.
 final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     private var window: NSWindow!
     private var web: WKWebView!
@@ -10,6 +10,86 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     private var status: NSTextField!
     private var pending: URLSessionDataTask?
     private var requestID = UUID()
+    private var projectProcess: Process?
+    private var projectPipe: Pipe?
+    private var logWindow: NSWindow?
+    private var logText: NSTextView?
+    private var projectButton: NSButton!
+    private var stopButton: NSButton!
+
+    static func shellQuote(_ value: String) -> String { "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'" }
+    static func launchArguments(_ command: String, cli: String = "retouch") -> [String] {
+        ["-l", "-c", "exec " + shellQuote(cli) + " -- /bin/zsh -l -c " + shellQuote(command)]
+    }
+    private func appendLog(_ text: String) {
+        guard let log = logText else { return }
+        log.textStorage?.append(NSAttributedString(string: text, attributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)]))
+        if let storage = log.textStorage, storage.length > 100000 { storage.deleteCharacters(in: NSRange(location: 0, length: storage.length - 100000)) }
+        log.scrollToEndOfDocument(nil)
+    }
+    @objc private func showLogs() {
+        if logWindow == nil {
+            let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 850, height: 500), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+            panel.title = "Retouch project output"; panel.isReleasedWhenClosed = false
+            let scroll = NSScrollView(frame: panel.contentView!.bounds); scroll.autoresizingMask = [.width, .height]; scroll.hasVerticalScroller = true
+            let text = NSTextView(frame: scroll.bounds); text.isEditable = false; text.isVerticallyResizable = true; text.autoresizingMask = [.width]
+            scroll.documentView = text; panel.contentView?.addSubview(scroll)
+            logWindow = panel; logText = text; panel.center()
+        }
+        logWindow?.makeKeyAndOrderFront(nil)
+    }
+    @objc private func openProject() {
+        guard projectProcess == nil else { showLogs(); return }
+        let picker = NSOpenPanel(); picker.canChooseFiles = false; picker.canChooseDirectories = true; picker.allowsMultipleSelection = false
+        picker.message = "Choose the project folder for your usual startup command."
+        guard picker.runModal() == .OK, let folder = picker.url else { return }
+        let alert = NSAlert(); alert.messageText = "Start " + folder.lastPathComponent
+        alert.informativeText = "Enter your usual startup command. The installed retouch CLI wraps it and output appears in Project logs."
+        let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 480, height: 26))
+        let key = "projectCommand:" + folder.path
+        input.stringValue = UserDefaults.standard.string(forKey: key) ?? ""
+        input.placeholderString = "npm run dev, make internal, or ./start.sh"
+        input.setAccessibilityLabel("Project startup command")
+        alert.accessoryView = input; alert.addButton(withTitle: "Start project"); alert.addButton(withTitle: "Cancel")
+        alert.window.initialFirstResponder = input
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        let command = input.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !command.isEmpty else { status.stringValue = "Enter a startup command to start the project."; return }
+        showLogs(); logText?.string = ""
+        appendLog("Project: " + folder.path + "\nCommand: retouch -- " + command + "\n\n")
+        let process = Process(), pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh"); process.arguments = Self.launchArguments(command)
+        process.currentDirectoryURL = folder; process.standardOutput = pipe; process.standardError = pipe
+        pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            if data.isEmpty { handle.readabilityHandler = nil; return }
+            let text = String(decoding: data, as: UTF8.self)
+            DispatchQueue.main.async { self?.appendLog(text) }
+        }
+        process.terminationHandler = { [weak self] finished in
+            DispatchQueue.main.async {
+                guard let self = self, self.projectProcess === finished else { return }
+                self.appendLog("\nProject exited (" + String(finished.terminationStatus) + ").\n")
+                self.status.stringValue = finished.terminationStatus == 127 ? "Startup executable not found. Check Project logs and install the Retouch CLI if missing." : "Project stopped. See Project logs for details."
+                self.projectProcess = nil; self.projectPipe = nil
+                self.projectButton.isEnabled = true; self.stopButton.isEnabled = false
+            }
+        }
+        do {
+            try process.run(); projectProcess = process; projectPipe = pipe
+            UserDefaults.standard.set(command, forKey: key)
+            projectButton.isEnabled = false; stopButton.isEnabled = true
+            status.stringValue = "Project starting · enter its local /rt URL when ready."
+        } catch {
+            pipe.fileHandleForReading.readabilityHandler = nil
+            appendLog("Could not start: " + error.localizedDescription + "\n")
+            status.stringValue = "Could not start the project. See Project logs."
+        }
+    }
+    @objc private func stopProject() {
+        guard let process = projectProcess, process.isRunning else { return }
+        process.terminate(); stopButton.isEnabled = false; status.stringValue = "Stopping project…"
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         buildMenu()
@@ -34,7 +114,10 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         status = NSTextField(labelWithString: "Start your project with retouch -- <your usual command>, then open its /rt URL.")
         status.textColor = .secondaryLabelColor
         status.font = .systemFont(ofSize: 12)
-        let bar = NSStackView(views: [address, connectButton])
+        projectButton = NSButton(title: "Open project…", target: self, action: #selector(openProject))
+        stopButton = NSButton(title: "Stop", target: self, action: #selector(stopProject)); stopButton.isEnabled = false
+        let logsButton = NSButton(title: "Project logs", target: self, action: #selector(showLogs))
+        let bar = NSStackView(views: [projectButton!, stopButton!, logsButton, address, connectButton])
         bar.spacing = 8
         for view in [bar, status!, web!] { view.translatesAutoresizingMaskIntoConstraints = false; root.addSubview(view) }
         NSLayoutConstraint.activate([
@@ -108,7 +191,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         if (error as NSError).code != NSURLErrorCancelled { status.stringValue = "Could not load editor: \(error.localizedDescription)" }
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
-    func applicationWillTerminate(_ notification: Notification) { pending?.cancel() }
+    func applicationWillTerminate(_ notification: Notification) { pending?.cancel(); if projectProcess?.isRunning == true { projectProcess?.terminate() } }
     @objc private func reloadEditor() { web.reload() }
     @objc private func focusAddress() { window.makeFirstResponder(address); address.selectText(nil) }
     private func buildMenu() {
@@ -137,7 +220,30 @@ if CommandLine.arguments.contains("--self-test") {
     for invalid in ["https://example.com/rt", "file:///tmp/x", "javascript:alert(1)", "http://localhost.evil/rt", "http://user@localhost/rt", "http://localhost:0/rt", "http://localhost/admin"] {
         precondition(Studio.editorURL(invalid) == nil, invalid)
     }
-    print("PASS desktop URL normalization and connection boundaries")
+    let command = "printf '%s' \"literal $HOME and `ticks`\""
+    precondition(Studio.launchArguments(command).last == "exec 'retouch' -- /bin/zsh -l -c " + Studio.shellQuote(command))
+    let quotingTest = Process(), output = Pipe()
+    quotingTest.executableURL = URL(fileURLWithPath: "/bin/zsh")
+    quotingTest.arguments = ["-c", "printf '%s' " + Studio.shellQuote(command)]
+    quotingTest.standardOutput = output
+    try! quotingTest.run(); quotingTest.waitUntilExit()
+    precondition(String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self) == command)
+    precondition(quotingTest.terminationStatus == 0)
+    if let index = CommandLine.arguments.firstIndex(of: "--launch-cli"), CommandLine.arguments.count > index + 1 {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("retouch-native-launch-" + UUID().uuidString)
+        try! FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let launch = Process(), capture = Pipe()
+        launch.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        launch.arguments = Studio.launchArguments("printf '%s' \"$PWD\"; exit 7", cli: CommandLine.arguments[index + 1])
+        launch.currentDirectoryURL = folder; launch.standardOutput = capture
+        try! launch.run(); launch.waitUntilExit()
+        let cwd = String(decoding: capture.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        precondition(URL(fileURLWithPath: cwd).resolvingSymlinksInPath().path == folder.resolvingSymlinksInPath().path)
+        precondition(launch.terminationStatus == 7)
+        print("PASS native launcher delegates to real CLI, preserves working directory and propagates exit status")
+    }
+    print("PASS desktop URL boundaries and startup command literal round trip")
 } else {
     let app = NSApplication.shared
     let delegate = Studio()

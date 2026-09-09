@@ -225,3 +225,19 @@ The extended comparison browser test verifies a real 1120×844 custom viewport,
 duplicate prevention, removing a default/custom card, persistence, activation and
 continued source edit/undo behavior. Comparison-card resizing and naming in place,
 shared project-level screen sets and direct editing remain open.
+
+### Native project startup
+
+The desktop app now has Open project, a native folder/command dialog, a project
+log window and Stop. Startup delegates to the installed CLI with the selected
+working directory and usual command; the app owns one project process at a time.
+Quit signals the owned CLI. No native command bridge is exposed to web content.
+The universal arm64/x86_64 build, ad hoc signature verification, URL/quoting test
+and real-CLI launcher test passed. The latter checks working-directory and exit
+status propagation through the same launch-argument builder.
+
+The computer-use service returned `cgWindowNotFound`, so native dialog/log/Stop
+interaction and a complete project-startup-to-editing flow remain unverified.
+CLI/Node bundling, automatic URL discovery, signed/notarized distribution and
+actual brew-cask installation are still missing. The current app requires an
+installed Retouch CLI and Node on the login shell's PATH.
