@@ -3,15 +3,15 @@
 A native AppKit window hosts the same Retouch editor used in the browser.
 macOS 13 or later; universal Apple Silicon and Intel binary.
 
-The current local artifact packages editor commit `4c49f9f`, including React
-responsive anchors, canvas movement/resizing, alignment snapping and equal-spacing
-suggestions. All 82 packaged source files, universal architectures, strict ad hoc
+The current local artifact packages editor commit `3b3d8a1`, including React and
+HTML multi-selection, marquee selection, shared styles, alignment, group movement/
+resizing and gap controls. It also fixes inspector focus loss during stylesheet
+refresh. All 86 packaged source files, universal architectures, strict ad hoc
 signature, built-bundle launcher tests and an isolated Homebrew install/uninstall
-were verified. All 15 HTML workflows passed against bundled code in Chromium and
-WebKit; the bundled React positioning workflow passed in Chromium. Native UI
-inspection returned `cgWindowNotFound`. The quarantined installed self-test timed
-out after 45 seconds without output; its process was stopped and quarantine
-preserved. No public, notarized release has been published.
+were verified. Bundled browser results and their limits are recorded below.
+The quarantined installed self-test timed out after 45 seconds without output;
+its process was stopped and quarantine preserved. Native interaction with this
+artifact is unverified. No public, notarized release has been published.
 
 Build with Apple's command line developer tools installed:
 
@@ -63,25 +63,38 @@ signing, then notarize and staple the app before creating the final published
 archive and its hash. The current build script does not automate notarization.
 Never reuse the pre-stapling archive hash for a rebuilt archive.
 
-## Latest local development artifact (4c49f9f)
+## Latest local development artifact (3b3d8a1)
 
-Archive: `/private/tmp/retouch-desktop-snapping-20260909/Retouch-0.1.0-mac.zip`
+Archive: `/private/tmp/retouch-desktop-selection-fixed-20260909/Retouch-0.1.0-mac.zip`
 
-SHA-256: `301b54e288a7f2555333cc8ce4abebd1b53f123203b2481ae105ea0394938a23`
+SHA-256: `012656964aeb9142812079d29fbe2a7e95739b4ac2ee32a13b45e5ba8d519887`
 
 The generated `retouch-studio.rb`, checksum and `verification.json` accompany the
-archive. The receipt records per-file source hashes, native source hashes,
-architectures, bundled runtime tests, cask installation and cleanup. Source tests
-ran from a separate temporary harness whose runtime directories pointed into the
-app bundle; the harness was removed afterward. Strict signature verification
-still passed after the browser workflows.
+archive. The receipt binds 86 per-file source hashes to
+`3b3d8a194966072a722b018e2873ae19a84e691c` and records native source hashes,
+architectures, bundled runtime tests, cask installation and cleanup.
+
+All 19 HTML workflows passed in Chromium and WebKit against bundled code.
+React geometry passed in Chromium, and React marquee and shared-style workflows
+passed in WebKit. The first shared-style run timed out during selection with no
+page errors; a diagnostic rerun and the unchanged test both passed. Its cause is
+unresolved, and the receipt preserves all three results. All 328 unit/HTTP tests
+passed against the source checkout.
+
+Browser verification used a temporary test harness whose runtime directories
+pointed into the app bundle. The harness was removed after all tests finished;
+all packaged source hashes and the strict signature still verified afterward.
+See the receipt for individual terminal results and logs. The earlier archive at `/private/tmp/retouch-desktop-selection-20260909`
+packages `924bc30` and failed both engines' first HTML workflow; its receipt
+retains those failures. This archive includes the resulting inspector focus fix.
 
 The local cask installed into an isolated app directory and retained quarantine.
 Its self-test timed out without output. The test app, temporary tap, cask trust
-entry and owned app processes were removed; Homebrew developer mode was restored
-to disabled. This artifact has not demonstrated usable native editing, trusted
-Gatekeeper launch, notarization, public distribution, upgrades or Intel runtime.
-The separate Developer ID build remains waiting on its local signing interaction.
+entry and owned app process group were removed; Homebrew developer mode was
+restored to disabled. This artifact has not demonstrated usable native editing,
+trusted Gatekeeper launch, notarization, public distribution, upgrades or Intel
+runtime. The separate Developer ID build still awaits local signing interaction
+and packages older source `7708416`.
 
 ## Historical native UI evidence (earlier bundles)
 
@@ -267,7 +280,7 @@ build was started. Signing is waiting in macOS SecurityAgent for local keychain
 authorization; computer-use safety restrictions prevent operating that dialog.
 No completed Developer ID archive or notarization is claimed.
 
-## Current local package (be51333)
+## Earlier local package (be51333)
 
 This bundle adds SVG front/back stacking, responsive HTML position/anchor
 controls, and pointer/keyboard canvas movement and resizing, including
