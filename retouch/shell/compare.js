@@ -79,11 +79,52 @@
     }
     timer=setTimeout(paint,100);
   }
+  let previousSet=null,setStatus,setMessage='',loadingSet=false,loadRevision=0;
+  function parseSet(text){
+    let value;try{value=JSON.parse(text);}catch{throw Error('Choose a valid screen-set JSON file.');}
+    if(value?.version!==1||!Array.isArray(value.screens)||value.screens.length>8)throw Error('A screen set must have version 1 and up to eight screens.');
+    const names=new Set(),dimensions=new Set();
+    return value.screens.map(screen=>{
+      const name=typeof screen?.name==='string'?screen.name.trim().replace(/\s+/g,' '):'';
+      if(!name||name.length>80||!valid(screen.width)||!valid(screen.height))throw Error('Each screen needs a name and whole-number dimensions from 240 to 7680.');
+      const key=screen.width+'x'+screen.height;
+      if(names.has(name.toLowerCase())||dimensions.has(key))throw Error('Screen names and dimensions must be unique.');
+      names.add(name.toLowerCase());dimensions.add(key);return [name,screen.width,screen.height];
+    });
+  }
+  async function replaceSet(next,history,undo,message){
+    if(loadingSet)return;loadingSet=true;toggle.disabled=true;rail.inert=true;clearTimeout(timer);
+    try{
+      await dispose();sizes=next;removed.splice(0,removed.length,...history);previousSet=undo;setMessage=message;
+      remember();mount();sync(true);paint();
+    }finally{loadingSet=false;toggle.disabled=false;rail.inert=false;}
+  }
   function mount(){
     rail.replaceChildren();cards=[];
     const heading=document.createElement('h2');heading.textContent='Compare screens';rail.append(heading);
     const hint=document.createElement('p');hint.className='hint';hint.textContent='Click a layer to edit on the main canvas. Style scope stays unchanged.';rail.append(hint);
     scopeSummary=document.createElement('p');scopeSummary.className='hint';scopeSummary.setAttribute('aria-label','Comparison style scope');scopeSummary.textContent='Style scope: '+scope.label;rail.append(scopeSummary);
+    const files=document.createElement('div');files.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px';
+    const saveSet=document.createElement('button');saveSet.type='button';saveSet.className='control-button';saveSet.textContent='Save screen set';
+    saveSet.onclick=()=>{
+      const text=JSON.stringify({version:1,screens:sizes.map(([name,width,height])=>({name,width,height}))},null,2)+'\n';
+      const url=URL.createObjectURL(new Blob([text],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='retouch-screens.json';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+    };
+    const loadSet=document.createElement('button');loadSet.type='button';loadSet.className='control-button';loadSet.textContent='Load screen set';loadSet.title='Replace these comparison views with a saved screen set. You can undo the load.';
+    const file=document.createElement('input');file.type='file';file.accept='.json,application/json';file.hidden=true;file.setAttribute('aria-label','Screen set file');loadSet.onclick=()=>file.click();
+    file.onchange=async()=>{
+      const selectedFile=file.files[0],revision=++loadRevision;file.value='';if(!selectedFile||loadingSet)return;
+      try{
+        if(selectedFile.size>65536)throw Error('Screen-set files must be 64 KB or smaller.');
+        const next=parseSet(await selectedFile.text());if(revision!==loadRevision||!open)return;
+        const undo={sizes:sizes.map(size=>[...size]),removed:removed.map(entry=>({size:[...entry.size],index:entry.index}))};
+        await replaceSet(next,[],undo,'Loaded '+next.length+' comparison views.');
+      }catch(error){if(revision===loadRevision){setMessage=error.message;setStatus.textContent=setMessage;}}
+    };
+    const undoLoad=document.createElement('button');undoLoad.type='button';undoLoad.className='control-button';undoLoad.textContent='Undo load screen set';undoLoad.hidden=!previousSet;
+    undoLoad.onclick=()=>{if(previousSet&&!loadingSet)replaceSet(previousSet.sizes,previousSet.removed,null,'Restored previous screen set.');};
+    setStatus=document.createElement('p');setStatus.className='hint';setStatus.setAttribute('role','status');setStatus.setAttribute('aria-label','Screen set status');setStatus.textContent=setMessage;
+    files.append(saveSet,loadSet,undoLoad,file);rail.append(files,setStatus);
     pin=document.createElement('button');pin.className='control-button';pin.textContent='Pin current size';
     pin.onclick=()=>{const {width,height}=current();if(pin.disabled)return;const size=[`Custom ${width} × ${height}`,width,height];sizes.push(size);remember();addCard(size);cards.at(-1).frame.src=path()||'/';updateControls();};rail.append(pin);
     restore=document.createElement('button');restore.className='control-button';restore.type='button';
@@ -223,6 +264,7 @@
     rail.replaceChildren();cards=[];route=null;
   }
   toggle.onclick=async()=>{
+    loadRevision++;
     clearTimeout(timer);open=!open;toggle.setAttribute('aria-pressed',String(open));rail.hidden=!open;
     if(open){mount();sync(true);paint();}else{toggle.disabled=true;try{await dispose();}finally{toggle.disabled=false;}}
   };

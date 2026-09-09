@@ -4852,3 +4852,34 @@ Conflict/capacity disabling and more than eight removal cycles were not separate
 exercised. Undo history does not survive a page reload and restored previews load
 afresh; their prior application/scroll state is not restored. Full parity remains
 incomplete, and native app launches remain paused.
+
+### Portable named screen sets (2026-09-09)
+
+Compare screens now provides Save screen set and Load screen set. The downloaded
+retouch-screens.json contains version 1 and ordered name/width/height records,
+without page content, URLs or source styles. Loading validates the complete file
+before replacing any view: up to eight screens, unique names and dimension pairs,
+nonempty names up to 80 characters, whole-number dimensions 240–7680, and a 64 KB
+file limit. Undo load screen set restores the previous pinned list and removal
+history. Loaded preferences persist locally; the main canvas and source remain
+unchanged. Closing comparisons invalidates an outstanding file read.
+
+Chromium and WebKit passed actual JSON download/reload, named dimensions and order,
+loading a different two-view set, undoing it, and rejecting duplicate dimensions,
+unsupported versions, invalid sizes, blank names, malformed JSON and oversized
+files. A marker confirmed invalid files did not reload existing previews. A gated
+File.text test confirmed that closing/reopening comparisons prevents an old read
+from applying afterward. Full existing comparison flows also passed. Final logs
+(both exit 0): `/private/tmp/retouch-screen-sets-cancel-chromium.log` and
+`/private/tmp/retouch-screen-sets-cancel-webkit.log`. The prior full validation runs
+are `retouch-screen-sets-final-chromium.log` and
+`retouch-screen-sets-final-webkit.log` under `/private/tmp`.
+
+`/private/tmp/retouch-screen-sets.png` was inspected: save/load controls fit on one
+row and Undo load wraps beneath them in the narrow comparison rail. git diff
+--check passed. Unit tests were not rerun for this browser file/control flow.
+
+File portability is verified through the browser round trip; a separate real
+project/browser-profile transfer was not exercised. This is file-based sharing,
+not a synchronized/team library. Undo load retains one previous set only in the
+current session. Full parity remains incomplete; native launches remain paused.
