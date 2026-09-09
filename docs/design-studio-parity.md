@@ -26,7 +26,7 @@ changing those files. The original checkout may continue to evolve independently
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. HTML has responsive CSS, structural edits and batch selection operations. Arbitrary remote-site capture/authoring, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Fully editable comparison canvases, corner resizing and cross-framework parity remain. |
-| Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop; interaction with the latest packaged source (4670764) remains unverified after cgWindowNotFound. Newer editor changes are not yet packaged. File flows, Intel runtime and broader lifecycle verification remain. |
+| Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop; The latest local bundle packages 1701d24 and matches all 72 source files. Native interaction remains unverified after cgWindowNotFound. File flows, Intel runtime and broader lifecycle verification remain. |
 | Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. Development build is ad hoc signed. Local cask install/uninstall passed. Developer ID signing/notarization, publishing, upgrades and quarantined launch remain unverified. |
 | Ease of use | New user can open a site, select/edit, compare screens, undo and retain work without learning implementation details | Controls have labels and basic defaults. Whole-workflow usability validation remains. |
 
@@ -1287,3 +1287,26 @@ in both engines after this fix, including a hidden phone layer, an off-screen
 desktop layer and the outline returning after scrolling into view. This checks
 computed visibility and viewport intersection; arbitrary clipping/masks are
 not modeled. Full parity and the native release remain unfinished.
+
+
+### Refreshed native package and cask verification
+
+A universal Mac bundle now packages editor source 1701d24, including the recent
+SVG, viewport-resizing and comparison work. Bundled launch tests passed CLI
+argument/exit handling, HTML startup, literal paths, dynamic-port discovery,
+health and shutdown. The generated local cask installed and uninstalled in an
+isolated app directory. All 72 installed source files matched the checkout;
+arm64/x86_64 and strict ad hoc signature checks passed. Quarantine was retained.
+
+Artifact: /private/tmp/retouch-desktop-responsive-20260909/Retouch-0.1.0-mac.zip
+SHA-256: 6be76fa775b61902538b016c68085e0de22bd803311a7b9d9cbc073ab1465e07
+The adjacent verification.json records hashes and cleanup. The temporary cask
+trust entry, tap and installed app were removed; owned processes stopped and
+Homebrew developer mode returned to disabled.
+
+Fresh CUA access still returned cgWindowNotFound. The bounded diagnostic showed
+a created visible window, with applicationActive=false and
+windowOcclusionVisible=false. Native interaction, trusted distribution, public
+release, upgrades and Intel runtime remain unproven. Documentation now separates
+this current package evidence from historical native UI checks. Full parity
+is not achieved.

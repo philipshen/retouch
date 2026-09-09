@@ -3,6 +3,12 @@
 A native AppKit window hosts the same Retouch editor used in the browser.
 macOS 13 or later; universal Apple Silicon and Intel binary.
 
+The latest local artifact packages editor commit `1701d24`. Its bundled launcher,
+source inventory, universal architectures, strict ad hoc signature and isolated
+Homebrew install/uninstall were verified. Native interaction with this artifact
+is still unverified (`cgWindowNotFound`); earlier UI checks below apply to older
+bundles. No public, notarized release has been published.
+
 Build with Apple's command line developer tools installed:
 
 ```sh
@@ -53,7 +59,9 @@ signing, then notarize and staple the app before creating the final published
 archive and its hash. The current build script does not automate notarization.
 Never reuse the pre-stapling archive hash for a rebuilt archive.
 
-Native UI verification on Apple Silicon now covers project selection/startup,
+## Historical native UI evidence (earlier bundles)
+
+Earlier native UI verification on Apple Silicon covered project selection/startup,
 logs, automatic connection, a source width edit, button/keyboard undo and redo,
 comparison-size switching and Stop. File upload, complete WebKit editor parity,
 quit-during-startup and Intel runtime tests remain outstanding.
@@ -112,7 +120,32 @@ command-free startup, automatic connection, persistent CSS editing, exact undo
 and Stop releasing the listening port. Bundled launch self-tests also cover a
 folder path containing spaces and shell punctuation and dynamic port discovery.
 
-## Current editor packaging verification
+## Current local package (1701d24)
+
+The current editor bundle includes inline SVG geometry, paint, creation,
+duplication, deletion and stacking; width/height preview handles; and selection
+from comparison previews. Its archive is:
+
+`/private/tmp/retouch-desktop-responsive-20260909/Retouch-0.1.0-mac.zip`
+
+SHA-256: `6be76fa775b61902538b016c68085e0de22bd803311a7b9d9cbc073ab1465e07`.
+The generated `retouch-studio.rb` and `verification.json` accompany the ZIP.
+All 72 packaged source files matched the checkout. The installed app contains
+arm64 and x86_64, passed strict signature verification and retained quarantine.
+Bundled tests passed CLI exit/working-directory behavior, literal folder paths,
+HTML startup, dynamic-port discovery, editor health and shutdown.
+
+The temporary cask installed and uninstalled in an isolated app directory. Its
+app, tap and cask trust entry were removed; owned app processes were stopped and
+Homebrew developer mode was restored to disabled. The build output is retained.
+
+CUA returned `cgWindowNotFound` for the fresh app. The bounded native diagnostic
+reported a created/visible/non-miniaturized 1440×992 window and non-loading
+WebView, but applicationActive and windowOcclusionVisible were false. This does
+not verify native editing or identify the underlying GUI failure. Developer ID
+signing, notarization, public publishing, upgrade and Intel runtime remain open.
+
+## Earlier package verification (4670764)
 
 A fresh universal build from source commit `4670764` includes HTML multi-selection,
 marquee selection from the bounded gray canvas, frame selection/removal, gradient
