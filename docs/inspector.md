@@ -84,7 +84,16 @@ The Screen toolbar switches the actual iframe viewport between phone (390 ×
 to 7680 CSS pixels. Rotate swaps dimensions; Fit workspace follows the editor
 window. The chosen size persists in this site's browser storage. Pinch zoom
 changes the visual scale without changing a fixed screen's media queries or
-viewport-height units. Controls currently write base styles; previewing a phone
-does not yet scope a style edit to a phone breakpoint.
+viewport-height units. Choose **Style changes** in the inspector to edit base styles, a named loaded
+breakpoint, or the current width and larger. Size previews and write scopes are
+independent; the inspector notes when the chosen breakpoint is outside the preview.
+Style controls and the advanced class editor operate on that scope, preserving
+other breakpoints and state variants. **Reset overrides at this size** returns to
+inherited styles. Text, image content and HTML tag changes remain shared.
+
+Named custom typography presets currently apply at base scope; size and weight
+controls work at breakpoints. The project must compile newly authored Tailwind
+utilities. Arbitrary CSS files and unused config-only breakpoint names still need
+a fuller source integration.
 
 Run `node test/e2e/screens.cjs` from `retouch/` for the isolated browser check.

@@ -220,12 +220,12 @@
     preview.srcdoc='<!doctype html><html><head></head><body></body></html>';
     if(!locked(sec,info)) {
       const names=catalog(d), current=tokens(info.className).filter(t=>names.includes(t));
-      if(names.length) {
+      if(names.length && !info.styleScope) {
         select(sec,'Typography class',[['','Choose a project style…'],...names.map(n=>[n,n])],current.length===1?current[0]:'',value=>{
           if(value)save(replace(info.className,t=>names.includes(t),value));
         });
         note(sec,current.length?'Applied: '+current.join(' '):'Styles from this page’s loaded CSS.');
-      } else note(sec,'No named typography styles found in the loaded CSS.');
+      } else note(sec,info.styleScope ? 'Use size and weight below for breakpoint typography. Named project styles currently apply through base styles.' : 'No named typography styles found in the loaded CSS.');
       const controls=[['Font size',/^text-(?:xs|sm|base|lg|[2-9]?xl|\[(?:length:)?[-.\d][^\]]*\])(?:\/.*)?$/,[['text-sm','Small'],['text-base','Body'],['text-lg','Large'],['text-2xl','Heading'],['text-4xl','Display']]],
         ['Font weight',/^font-(?:thin|extralight|light|normal|medium|semibold|bold|extrabold|black|\[\d+\])$/,[['font-normal','Regular'],['font-medium','Medium'],['font-semibold','Semibold'],['font-bold','Bold']]]];
       for(const [label,re,choices] of controls)select(sec,label,[['','Inherited / custom'],...choices],tokens(info.className).map(base).find(t=>re.test(t))||'',value=>{if(value)save(replace(info.className,t=>re.test(t),value));});

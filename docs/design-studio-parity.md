@@ -25,7 +25,7 @@ changing those files. The original checkout may continue to evolve independently
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload exists; complete export and import pipeline remains. |
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Source transaction/history baseline covered by unit tests; UI and full collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React and Shopify/Liquid adapters only. Generic site capture/edit document and additional adapters remain. A native WebView alone does not provide this. |
-| Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | New presets/custom dimensions/rotation/persistence resize the actual iframe. Zoom preserves fixed viewport dimensions and vh. Real browser test passes. Breakpoint-aware writes and linked views remain. |
+| Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | New presets/custom dimensions/rotation/persistence resize the actual iframe. Zoom preserves fixed viewport dimensions and vh. Real browser test passes. Breakpoint-scoped class edits, loaded-CSS discovery, inheritance reset and exact undo are browser-verified on React/Tailwind. Linked views, continuous resize handles and the full cross-framework responsive workflow remain. |
 | Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView app builds and connects to live local editor. It currently requires CLI startup. Full desktop editor behavior, Intel runtime, onboarding and lifecycle verification remain. |
 | Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. Development build is ad hoc signed. Developer ID signing/notarization, publishing and actual Homebrew installation remain unverified. |
 | Ease of use | New user can open a site, select/edit, compare screens, undo and retain work without learning implementation details | Controls have labels and basic defaults. Whole-workflow usability validation remains. |
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 179 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 183 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -53,8 +53,10 @@ documentation. Nothing in it proves full parity.
 
 ## Next implementation sequence
 
-1. Add explicit base/breakpoint edit scope shared by all inspector operations;
-   preserve existing variants and source undo. Discover project breakpoints.
+1. Expand breakpoint scopes to full CSS/style representations, named typography
+   styles, important-cascade handling and per-property inheritance controls.
+   Current class scopes preserve unrelated variants and use project breakpoint
+   units; scoped content edits are not supported (content remains shared).
 2. Add linked screen canvases with one selected source element and visible
    inheritance/overrides, then verify actual writes across widths.
 3. Build the layer/document and generic-site authoring model that supports the
@@ -62,3 +64,19 @@ documentation. Nothing in it proves full parity.
 4. Expand feature families above with browser/source round-trip verification.
 5. Integrate desktop project startup, site capture, persistence and file flows;
    publish and verify the cask distribution when a release is ready.
+
+### Responsive editing verification
+
+`RT_INSPECTOR_FIXTURE=/private/tmp/retouch-responsive-fixture node
+retouch/test/e2e/responsive.cjs` passed against a disposable Next.js 16.2.5 /
+Tailwind 4 fixture on port 3496. It checks md opacity writes in source and rendered
+CSS, phone/base independence, reset inheritance, custom rem breakpoint compilation,
+exact-byte undo across scope changes, computed inspector refresh and runtime errors.
+The full inspector E2E also passed for positioning/anchors, typography, colors,
+effects, measurements and images.
+
+A real-browser failure exposed mixed px/rem breakpoint ordering; new size scopes
+now reuse a matching named breakpoint and follow loaded breakpoint units. Loaded
+CSS discovery does not inventory unused breakpoint names in project config files.
+Named custom typography classes do not automatically gain responsive variants;
+those presets remain base-only while size/weight controls support scopes.

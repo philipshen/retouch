@@ -205,3 +205,8 @@ details.advanced > summary:hover { color: var(--ink); }
 #screenToolbar input { width:72px; }
 #screenToolbar button { cursor:pointer; }
 #screenHint { color:var(--muted); font-size:11px; }
+
+.screen-scope { margin-top:12px; padding:10px; background:#17191e; border:1px solid var(--line); border-radius:6px; }
+.screen-scope label { display:flex; flex-direction:column; gap:6px; }
+.screen-scope select { max-width:100%; background:var(--panel); color:var(--ink); padding:6px; border:1px solid var(--line); border-radius:4px; }
+.screen-scope .hint { color:var(--muted); margin-top:8px; line-height:1.4; }

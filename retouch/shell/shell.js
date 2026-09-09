@@ -30,6 +30,8 @@ function busyPanel(start) {
   panelBody.setAttribute('aria-busy', String(panelTasks > 0));
 }
 let lastAppPath = null;
+let styleScope = '';
+function scopedInfo(info) { return {...info,styleScope,className:RetouchResponsive.project(info.className,styleScope)}; }
 
 /* ---------- boot ---------- */
 const appPath = (location.pathname.replace(/^\/rt\/?/, '/') || '/') + location.search + location.hash;
@@ -44,6 +46,7 @@ iframe.addEventListener('load', () => {
     hoverEl = null;
     hookFrame(iframe.contentDocument, iframe.contentWindow);
     onNavigated();
+    if (sel) renderPanel();
   } catch (err) {
     toast('Could not attach to the app frame: ' + err.message, 'err');
   }
@@ -57,6 +60,17 @@ setInterval(pollNavigation, 300);
 function doc() { return iframe.contentDocument; }
 
 function hookFrame(d, w) {
+  // The compiler may deliver CSS after the source-write response. Refresh
+  // computed inspector values when that CSS lands, without interrupting input.
+  let styleRefresh;
+  const refreshStyles = () => {
+    clearTimeout(styleRefresh);
+    styleRefresh = setTimeout(() => {
+      if (doc() === d && sel && !panelTasks && !panelBody.contains(document.activeElement)) renderPanel();
+    }, 100);
+  };
+  if (d.head) new MutationObserver(refreshStyles).observe(d.head,{childList:true,subtree:true,characterData:true});
+  d.addEventListener('load',e=>{if(e.target.tagName==='LINK')refreshStyles();},true);
   const suppress = (e) => {
     if (mode !== 'edit') return;
     if (editing && editing.el.contains(e.target)) return; // let the text being edited behave
@@ -587,8 +601,56 @@ function drawBox(el, cls, kind) {
 }
 
 /* ---------- panel ---------- */
+function screenScopeSection() {
+  const section = document.createElement('div');
+  section.className = 'screen-scope';
+  const label = document.createElement('label');
+  label.textContent = 'Style changes';
+  const picker = document.createElement('select');
+  picker.setAttribute('aria-label', 'Style screen scope');
+  const options = [{prefix:'',label:'All sizes · base'}];
+  if (doc()) options.push(...RetouchResponsive.discover(doc()));
+  const width = iframe.contentWindow?.innerWidth;
+  if (Number.isInteger(width) && width >= 240) {
+    const atWidth = RetouchResponsive.atWidth(doc(),width,options.slice(1));
+    if (!options.some(o=>o.prefix===atWidth.prefix)) options.push(atWidth);
+  }
+  if (styleScope && !options.some(o=>o.prefix===styleScope)) options.push({prefix:styleScope,label:styleScope.slice(0,-1)});
+  for (const item of options) {
+    const option = document.createElement('option');
+    option.value = item.prefix;
+    option.textContent = item.label + (item.condition ? ` · ${item.condition}` : '');
+    picker.append(option);
+  }
+  picker.value = styleScope;
+  picker.onchange = () => { styleScope = picker.value; renderPanel(); };
+  label.append(picker);section.append(label);
+  RetouchInspector.note(section, styleScope
+    ? 'Style changes apply to this breakpoint. Computed values reflect the preview; text and image content stay shared across sizes.'
+    : 'Base styles apply at every size unless a breakpoint or state overrides them.');
+  const chosen = options.find(o=>o.prefix===styleScope);
+  const arbitrary = /^(min|max)-\[([\d.]+(?:px|rem|em))\]:$/.exec(styleScope);
+  const condition = chosen?.condition || (arbitrary ? `(${arbitrary[1]}-width: ${arbitrary[2]})` : null);
+  if (condition && !iframe.contentWindow.matchMedia(condition).matches) {
+    RetouchInspector.note(section, 'This breakpoint is outside the current preview size. Resize the screen to see its styles.');
+  }
+  if (styleScope && RetouchResponsive.project(sel.info.className,styleScope)) {
+    section.append(RetouchInspector.button('Reset overrides at this size',()=>setClasses('')));
+  }
+  return section;
+}
+let viewportRenderPending = false;
+window.addEventListener('retouch:viewport',()=>{
+  if(viewportRenderPending)return;
+  viewportRenderPending=true;
+  requestAnimationFrame(()=>{
+    viewportRenderPending=false;
+    if(sel && !panelTasks && !panelBody.contains(document.activeElement))renderPanel();
+  });
+});
 function renderPanel() {
   const info = sel.info;
+  const style = scopedInfo(info);
   panelEmpty.hidden = true;
   panelBody.hidden = false;
   panelBody.innerHTML = '';
@@ -603,9 +665,7 @@ function renderPanel() {
   file.className = 'filepath';
   file.textContent = info.file;
   head.appendChild(file);
-  if ((info.className || '').split(/\s+/).some(t => RetouchInspector.base(t) === null)) {
-    RetouchInspector.note(head, 'Editing base styles. Existing breakpoint and state styles may override them.');
-  }
+  head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
 
   if(info.components?.length) {
@@ -646,13 +706,13 @@ function renderPanel() {
   }
 
   const target = (editing?.el.ownerDocument === doc() ? editing.el : null) || matchingEls(activeId()).find(el => inTextScope(el, info));
-  panelBody.appendChild(RetouchInspector.position(info, target, setClasses, message => toast(message, 'err')));
-  panelBody.appendChild(RetouchInspector.appearance(info, target, setClasses));
+  panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err')));
+  panelBody.appendChild(RetouchInspector.appearance(style, target, setClasses));
   if (info.src !== null || info.srcDynamic) panelBody.appendChild(imageSection(info));
-  if (info.canSetTag || target?.textContent?.trim()) panelBody.appendChild(RetouchInspector.typography(info, target, setClasses, setTag));
-  panelBody.appendChild(colorSection('Fill', 'bg', info));
-  panelBody.appendChild(colorSection('Text color', 'text', info));
-  panelBody.appendChild(RetouchInspector.effects(info, target, setClasses, message => toast(message, 'err')));
+  if (info.canSetTag || target?.textContent?.trim()) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag));
+  panelBody.appendChild(colorSection('Fill', 'bg', style));
+  panelBody.appendChild(colorSection('Text color', 'text', style));
+  panelBody.appendChild(RetouchInspector.effects(style, target, setClasses, message => toast(message, 'err')));
 
   // Text
   const tsec = document.createElement('div');
@@ -720,7 +780,7 @@ function renderPanel() {
   } else {
     const chips = document.createElement('div');
     chips.id = 'chips';
-    const tokens = (info.className || '').split(/\s+/).filter(Boolean);
+    const tokens = (style.className || '').split(/\s+/).filter(Boolean);
     for (const t of tokens) {
       const chip = document.createElement('span');
       chip.className = 'chip';
@@ -737,7 +797,7 @@ function renderPanel() {
     add.placeholder = 'add class… (Enter)';
     add.onkeydown = (e) => {
       if (e.key === 'Enter' && add.value.trim()) {
-        setClasses(((info.className || '') + ' ' + add.value.trim()).trim());
+        setClasses(((style.className || '') + ' ' + add.value.trim()).trim());
       }
     };
     csec.appendChild(add);
@@ -1178,7 +1238,10 @@ async function writeSrc(src, isUndo, info) {
 /* ---------- ops ---------- */
 async function setClasses(classes, isUndo) {
   busyPanel(true);
-  try { return await writeClasses(classes, isUndo); } finally { busyPanel(false); }
+  try {
+    if (!isUndo && sel) classes = RetouchResponsive.replaceScope(sel.info.className, classes, styleScope);
+    return await writeClasses(classes, isUndo);
+  } catch (e) { toast(e.message, 'err'); return false; } finally { busyPanel(false); }
 }
 async function writeClasses(classes, isUndo) {
   if (!sel || !sel.info) return;
@@ -1281,6 +1344,7 @@ async function undoNext() {
         return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
       });
     } else await reloadFrame();
+    if (sel) renderPanel();
     toast('Undone', 'ok'); return;
   }
   undoStack.pop();
@@ -1348,7 +1412,7 @@ RetouchMaxWidth.mount({
   getTarget() {
     if (mode !== 'edit' || !sel || sel.info.classNameDynamic || sel.info.kind === 'instance') return null;
     const el = editing?.el || matchingEls(activeId()).find(el => inTextScope(el, sel.info));
-    return el ? { el, info: sel.info } : null;
+    return el ? { el, info: scopedInfo(sel.info) } : null;
   },
   beforeDrag: commitInlineEdit,
   save: classes => setClasses(classes),

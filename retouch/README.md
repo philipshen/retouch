@@ -116,7 +116,8 @@ font previews, fill/text colors, shadows, and opacity. Local React components
 have a live preview and props panel, shared-definition editing, and module
 detachment with exact undo. The screen toolbar previews phone, tablet, desktop or custom dimensions, with
 rotation and remembered sizing. Pinch zoom preserves the selected screen
-viewport. Style controls currently edit base styles and preserve existing
-breakpoint classes; breakpoint-aware editing is still being implemented. See the
+viewport. Choose base or breakpoint style scope in the inspector to preserve other screen
+sizes while editing. Reset overrides restores inheritance. Named breakpoints are
+discovered from loaded CSS; text and image content remain shared across sizes. See the
 [inspector guide](https://github.com/philipshen/retouch/blob/main/docs/inspector.md)
 for supported source patterns and browser verification.
