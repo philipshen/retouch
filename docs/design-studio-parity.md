@@ -1345,3 +1345,20 @@ interruption and workspace resizing during an active corner drag, alongside
 width/height/corner gestures, Shift ratio locking, keyboard steps, persistence,
 Escape cancellation and unchanged source/scope. Full parity and native release
 verification remain unfinished.
+
+
+### Visible zoom and fit-screen controls
+
+The screen toolbar now exposes a validated zoom percentage and Fit screen.
+Fixed viewports support 1–200% zoom, allowing the maximum 7680 × 7680 screen to
+fit a normal workspace. Fluid Fit workspace mode keeps its 25–200% range and
+Fit screen returns it to 100%. Fixed-screen fitting uses the available canvas
+minus a 24px margin per edge, without changing CSS viewport dimensions, vh
+geometry or page scroll. Zoom events also reposition resize handles immediately,
+fixing stale handle placement after a gesture.
+
+All 271 unit tests pass. Chromium and WebKit verify fitted bounds, a 50% setting,
+maximum viewport fitting below 25%, invalid input/recovery, fixed dimensions,
+page scroll, vh geometry, handle placement and Fit workspace reset alongside
+the complete resize workflow. Full parity, cross-framework coverage and native
+release verification remain unfinished.

@@ -1,6 +1,7 @@
 (function(){
   'use strict';
   const canvas=document.getElementById('frameWrap'),extent=document.getElementById('canvasExtent'),stage=document.getElementById('siteStage'),frame=document.getElementById('app');
+  const zoomInput=document.getElementById('canvasZoom'),fitButton=document.getElementById('fitScreen');
   const endPadding=96; // Screen pixels, independent of zoom.
   let scale=1,width=0,height=0,pinnedHeight=0,gestureBase=null,positioned=false,screen=null;
   const pinned=new Map(),hooked=new WeakSet();
@@ -43,9 +44,11 @@
     stage.style.transform=`scale(${scale})`;
     stage.style.setProperty('--canvas-zoom',String(scale));
     if(!positioned){canvas.scrollTop=endPadding;positioned=true;}
+    zoomInput.setCustomValidity('');zoomInput.min=screen?'1':'25';zoomInput.value=String(Math.round(scale*10000)/100);
+    window.dispatchEvent(new CustomEvent('retouch:zoom',{detail:{scale}}));
   }
   function change(next,x,y){
-    next=Math.max(.25,Math.min(2,next));if(Math.abs(next-1)<.00001)next=1;
+    next=Math.max(screen ? .01 : .25,Math.min(2,next));if(Math.abs(next-1)<.00001)next=1;
     if(next===scale)return;
     window.dispatchEvent(new Event('retouch:before-zoom'));
     const bounds=canvas.getBoundingClientRect(),px=x-bounds.left,py=y-bounds.top;
@@ -58,6 +61,20 @@
     canvas.scrollLeft=stage.offsetLeft+siteX*scale-px;
     w?.scrollTo(w.scrollX,Math.max(0,siteY-(py-siteTop)/scale));
   }
+  const center=()=>{const r=canvas.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};};
+  zoomInput.addEventListener('input',()=>zoomInput.setCustomValidity(''));
+  zoomInput.addEventListener('change',()=>{
+    const value=Number(zoomInput.value),min=screen?1:25;
+    if(!zoomInput.value||!Number.isFinite(value)||value<min||value>200){zoomInput.setCustomValidity('Choose a zoom from '+min+'% to 200%.');zoomInput.reportValidity();return;}
+    const p=center();change(value/100,p.x,p.y);
+  });
+  zoomInput.addEventListener('keydown',e=>{if(e.key==='Enter')zoomInput.blur();});
+  fitButton.addEventListener('click',()=>{
+    window.dispatchEvent(new Event('retouch:before-zoom'));
+    const p=center(),w=frame.contentWindow,scroll={x:w?.scrollX||0,y:w?.scrollY||0};
+    const fit=screen?Math.min((canvas.clientWidth-48)/width,(canvas.clientHeight-48)/height,1):1;
+    change(fit,p.x,p.y);layout();canvas.scrollLeft=0;canvas.scrollTop=endPadding-(screen?24:0);w?.scrollTo(scroll.x,scroll.y);
+  });
   function scrollPage(e,inFrame){
     if(!e.deltaY || e.shiftKey || Math.abs(e.deltaX)>Math.abs(e.deltaY))return;
     const w=frame.contentWindow,d=frame.contentDocument,root=d?.scrollingElement;
@@ -107,6 +124,7 @@
   function measure(){
     width=screen?screen.width:canvas.clientWidth;
     height=screen?screen.height:canvas.clientHeight;
+    if(!screen&&scale<.25)scale=.25;
     pinUnits();layout();
     window.dispatchEvent(new CustomEvent('retouch:viewport',{detail:{width,height,fixed:!!screen}}));
   }

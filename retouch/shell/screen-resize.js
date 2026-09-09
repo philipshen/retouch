@@ -66,6 +66,7 @@
   window.addEventListener('retouch:before-zoom',()=>finish(false));
   window.addEventListener('resize',()=>finish(false),true);
   new ResizeObserver(()=>{if(drag&&canvas.clientWidth!==drag.canvasWidth)finish(false);}).observe(canvas);
+  window.addEventListener('retouch:zoom',position);
   window.addEventListener('retouch:viewport',position);window.addEventListener('retouch:screen',position);window.addEventListener('resize',position);canvas.addEventListener('scroll',position);frame.addEventListener('load',position);new ResizeObserver(position).observe(frame);position();
  }
  return {widthAtRight,heightAtDelta,preserveAspect,mount};
