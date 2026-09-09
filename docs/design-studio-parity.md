@@ -5297,3 +5297,33 @@ combined controls. git diff --check passed.
 This improves one inspector workflow; it does not establish full ease-of-use,
 typography, arbitrary-site or Figma parity. Native launches remain paused and
 trusted macOS/Homebrew distribution remains unverified.
+
+### Keyboard focus across inspector saves
+
+The existing queued Tab-focus mechanism now also captures an active input,
+select or textarea before a panel save disables/rebuilds the inspector. It
+restores the corresponding control for the same selection. A panel observer
+handles controls added or revealed later by cached font metadata. Missing targets
+expire three seconds after the panel becomes available; time spent saving does
+not consume that grace period. Explicit pointer/keyboard actions in the shell,
+window blur, or a different selection cancel restoration. Normal browser focus
+scrolling is retained, so an off-screen target becomes visible. Existing Tab
+next-target behavior takes precedence over retaining the previous input.
+
+HTML, React and local Liquid passed in Chromium and WebKit: slider Home saves,
+focus survives reconstruction, and a subsequent keyboard End saves without
+refocusing through the locator. The End write is deliberately held while the
+panel is scrolled away; after release, the slider is focused and within the
+panel bounds. Tab, Shift+Tab, unchanged Tab, clicking layer search during a held
+save, and exact source undo pass in the same flow. All six final processes
+exited 0: /private/tmp/retouch-panel-focus-final-{html,react,liquid}-
+{chromium,webkit}.log. The npm command test:e2e:axis-keyboard runs this coverage.
+All 387 unit tests passed (/private/tmp/retouch-panel-focus-units.log); syntax and
+git diff --check passed. Internal focus-state/helper names were updated from Tab
+to Focus to reflect the broader role.
+
+This verifies sequential saved keyboard adjustments. Continuous key repeat
+while a write is pending, caret/selection preservation for all text inputs,
+all inspector control types and arbitrary-page focus scripts remain unverified.
+Full Figma/arbitrary-site parity remains unfinished. Native launches remain
+paused and trusted macOS/Homebrew distribution remains unverified.

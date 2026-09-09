@@ -114,7 +114,15 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
     await page.mouse.move(rect.x+rect.width*.8,rect.y+rect.height/2);await page.mouse.down();await page.mouse.move(rect.x+rect.width*.4,rect.y+rect.height/2,{steps:8});const slid=Number(await slider.inputValue());assert.ok(slid>100&&slid<800);assert.equal(read(),beforeSlide);assert.ok(Math.abs(Number((await axes()).match(/"wght"\s+([\d.]+)/)[1])-slid)<.01);
     await write(()=>page.mouse.up(),/wght/);const rendered=Number((await axes()).match(/"wght"\s+([\d.]+)/)[1]);assert.ok(Math.abs(rendered-slid)<.01);assert.equal(await app.locator('h1').getAttribute('style'),inlineBefore);
     const beforeGesture=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===beforeGesture);await settled();await wait(async()=>/850/.test(await axes()));
-    await write(()=>slider.press('Home'),/100/);const beforeKey=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===beforeKey);await settled();await wait(async()=>/850/.test(await axes()));
+    await write(()=>slider.press('Home'),/100/);
+    if(process.env.RT_E2E_AXIS_KEYBOARD){
+      await wait(()=>slider.evaluate(el=>el===el.ownerDocument.activeElement));
+      let releaseFocus,focusHeld=false;const focusGate=new Promise(resolve=>{releaseFocus=resolve;}),holdFocus=async route=>{focusHeld=true;await focusGate;await route.continue();};await page.route('**/rt/__api/op',holdFocus);
+      try{await write(async()=>{await page.keyboard.press('End');await wait(()=>focusHeld);await page.locator('#panel').evaluate(el=>{el.scrollTop=el.scrollHeight;});releaseFocus();},/900/);await wait(()=>slider.evaluate(el=>el===el.ownerDocument.activeElement));assert.equal(await slider.evaluate(el=>{const r=el.getBoundingClientRect(),p=el.ownerDocument.getElementById('panel').getBoundingClientRect();return r.top>=p.top&&r.bottom<=p.bottom;}),true);}finally{releaseFocus();await page.unroute('**/rt/__api/op',holdFocus);}
+      const beforeEnd=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===beforeEnd);await settled();await wait(async()=>/100/.test(await axes()));
+      console.log(engine+' '+kind+': PASS slider keyboard focus survives source save and inspector reconstruction');
+    }
+    const beforeKey=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===beforeKey);await settled();await wait(async()=>/850/.test(await axes()));
     if(process.env.RT_E2E_FONT_DISCOVERY_SCREENSHOT){await slider.scrollIntoViewIfNeeded();await page.screenshot({path:process.env.RT_E2E_FONT_DISCOVERY_SCREENSHOT});}
     console.log(engine+' '+kind+': PASS declared font discovery, metadata request, range validation, default application, cached metadata, failure recovery, live glyph preview, pointer commit/cancel, keyboard slider and exact undo');
    }

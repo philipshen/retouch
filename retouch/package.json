@@ -22,6 +22,7 @@
     "test:e2e:line-height": "RT_E2E_LINE_HEIGHT=1 node test/e2e/page-fonts.cjs",
     "test:e2e:font-presets": "RT_E2E_OPTICAL_SIZING=1 RT_E2E_OPTICAL_FONT=1 RT_E2E_FONT_PRESETS=1 node test/e2e/page-fonts.cjs",
     "test:e2e:optical-sizing": "RT_E2E_OPTICAL_SIZING=1 RT_E2E_OPTICAL_FONT=1 node test/e2e/page-fonts.cjs",
+    "test:e2e:axis-keyboard": "RT_E2E_VARIABLE_FONT=1 RT_E2E_FONT_AXES=1 RT_E2E_FONT_DISCOVERY=1 RT_E2E_AXIS_KEYBOARD=1 RT_E2E_PANEL_TAB=1 node test/e2e/page-fonts.cjs",
     "test:e2e:font-axes": "RT_E2E_VARIABLE_FONT=1 RT_E2E_FONT_AXES=1 RT_E2E_FONT_DISCOVERY=1 RT_E2E_FONT_PREVIEW_CLEANUP=1 node test/e2e/page-fonts.cjs",
     "test:e2e:variable-weight": "RT_E2E_CUSTOM_WEIGHT=1 RT_E2E_VARIABLE_FONT=1 node test/e2e/page-fonts.cjs",
     "test:e2e:custom-weight": "RT_E2E_CUSTOM_WEIGHT=1 node test/e2e/page-fonts.cjs",

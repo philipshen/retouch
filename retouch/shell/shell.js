@@ -30,31 +30,41 @@ let sourceRequests = 0;
 let undoBusy = false;
 let classificationSerial = 0;
 let panelTasks = 0;
-let pendingPanelTab=null;
+let pendingPanelFocus=null;
 const panelSelectionKey=()=>sel?JSON.stringify([sel.info.file,sel.scope,sel.instanceId,(sel.multiple||[sel.info]).map(info=>info.id).sort()]):null;
 const controlIdentity=el=>JSON.stringify([el.tagName,el.getAttribute('aria-label'),el.getAttribute('name'),el.dataset.canvasTool,el.matches('button,summary')?el.textContent:null]);
-function restorePanelTab(){
-  const pending=pendingPanelTab;if(!pending||panelBody.disabled)return;
-  pendingPanelTab=null;
-  if(pending.selection!==panelSelectionKey())return;
+function restorePanelFocus(){
+  const pending=pendingPanelFocus;if(!pending||panelBody.disabled)return;
+  if(!pending.expires)pending.expires=Date.now()+3000;
+  if(pending.selection!==panelSelectionKey()||Date.now()>pending.expires){pendingPanelFocus=null;return;}
   const candidates=[...panelBody.querySelectorAll('input,select,textarea,button,summary,[tabindex]')].filter(el=>controlIdentity(el)===pending.identity);
   const target=candidates[pending.index];
-  if(target&&!target.matches(':disabled')&&target.getClientRects().length)target.focus();
+  if(target&&!target.matches(':disabled')&&target.getClientRects().length){pendingPanelFocus=null;target.focus();}
 }
 panelBody.addEventListener('keydown',event=>{
   if(event.defaultPrevented||event.key!=='Tab'||event.altKey||event.ctrlKey||event.metaKey||!event.target.matches('input:not([type=checkbox]):not([type=radio]),textarea'))return;
   const controls=[...panelBody.querySelectorAll('input,select,textarea,button,summary,[tabindex]')].filter(el=>el.tabIndex>=0&&!el.matches(':disabled')&&el.getClientRects().length);
   const target=controls[controls.indexOf(event.target)+(event.shiftKey?-1:1)];if(!target)return;
   const identity=controlIdentity(target),matches=[...panelBody.querySelectorAll('input,select,textarea,button,summary,[tabindex]')].filter(el=>controlIdentity(el)===identity);
-  pendingPanelTab={selection:panelSelectionKey(),identity,index:matches.indexOf(target)};
-  event.preventDefault();event.target.blur();restorePanelTab();
+  pendingPanelFocus={selection:panelSelectionKey(),identity,index:matches.indexOf(target),expires:0};
+  event.preventDefault();event.target.blur();restorePanelFocus();
 });
 // A deliberate click or keyboard action during a save supersedes queued focus.
-window.addEventListener('pointerdown',()=>{pendingPanelTab=null;},true);
-window.addEventListener('keydown',()=>{pendingPanelTab=null;},true);
+window.addEventListener('pointerdown',()=>{pendingPanelFocus=null;},true);
+window.addEventListener('keydown',()=>{pendingPanelFocus=null;},true);
+window.addEventListener('blur',()=>{pendingPanelFocus=null;});
+// Metadata can rebuild an input after the source save has completed.
+new MutationObserver(restorePanelFocus).observe(panelBody,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','disabled']});
 
 const canvasPan=RetouchCanvasPan.mount({enabled:()=>mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy,onActivate:()=>{window.dispatchEvent(new Event('retouch:before-zoom'));stopDrawing?.();hoverEl=null;}});
 function busyPanel(start) {
+  if(start&&!panelTasks&&!pendingPanelFocus){
+    const target=document.activeElement;
+    if(panelBody.contains(target)&&target.matches('input,select,textarea')){
+      const identity=controlIdentity(target),matches=[...panelBody.querySelectorAll('input,select,textarea,button,summary,[tabindex]')].filter(el=>controlIdentity(el)===identity);
+      pendingPanelFocus={selection:panelSelectionKey(),identity,index:matches.indexOf(target),expires:0};
+    }
+  }
   if(start)stopDrawing?.();
   panelTasks += start ? 1 : -1;
   syncHistoryControls();
@@ -81,7 +91,7 @@ function syncHistoryControls() {
   pagePicker.disabled = busy;routeInput.disabled = busy;
   panelBody.disabled = busy;panelBody.inert = busy;
   panelBody.setAttribute('aria-busy',String(busy));
-  if(!busy)queueMicrotask(restorePanelTab);
+  if(!busy)queueMicrotask(restorePanelFocus);
 }
 syncHistoryControls();
 
