@@ -2530,3 +2530,20 @@ React run and pointer diagnostic remain in `/private/tmp/retouch-lock-reload-rea
 and `/private/tmp/retouch-lock-reload-react-pointer-diagnostic.log`.
 The final server-scope regression passed all 11 server tests in
 `/private/tmp/retouch-lock-reload-server-final.log`.
+
+## Keyboard selection locking
+
+Command/Control+Shift+L toggles locks for the current selection. An entirely
+directly locked selection unlocks; an unlocked or mixed selection locks together.
+The shortcut uses the same batch state/history path as row and selection buttons,
+works from both the editor chrome and the app iframe, and is exposed in button
+tooltips and accessibility shortcut metadata. Text inputs, editable content,
+Interact mode and open dialogs keep their native handling; busy state and repeat
+keydown events do not create extra lock actions.
+
+The HTML lock workflow passes in Chromium and WebKit with parent Meta and iframe
+Control shortcuts, batch undo, unlock toggling, editor-search/native-iframe input
+exclusion and Interact-mode exclusion, alongside the existing history and reload
+checks. Logs: `/private/tmp/retouch-lock-shortcut-{chromium,webkit,unit}.log`.
+The work remains on the isolated design-studio branch. Full parity and trusted Mac
+distribution remain unfinished; the packaged app still predates lock support.

@@ -191,6 +191,7 @@ function hookFrame(d, w) {
     }
   }, true);
   d.addEventListener('keydown', (e) => {
+    if(lockShortcut(e))return;
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'i')) {
@@ -1665,6 +1666,7 @@ routeInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') navigatePage(routeInput.value || '/');
 });
 window.addEventListener('keydown', (e) => {
+  if(lockShortcut(e))return;
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.target.closest?.('input,textarea,[contenteditable="true"]')) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
@@ -1720,18 +1722,29 @@ RetouchMaxWidth.mount({
 });
 
 
+async function setLayerLocks(el,value){
+  if(panelTasks||undoBusy||sourceRequests)return;
+  await commitInlineEdit();stopDrawing?.();
+  const lockChanges=layerLocks.changeMany(Array.isArray(el)?el:[el],value);if(!lockChanges.length)return;
+  editorHistory.record({type:'layerLock',undoId:'lock:'+crypto.randomUUID(),route:lockChanges[0].route,lockChanges});hoverEl=null;
+  if(value)clearSelection();
+  layers.refresh();
+  toast(value?'Selection locked on the canvas. Select it in Layers to edit.':'Selection unlocked.','ok');
+}
+function lockShortcut(e){
+  if(!(e.metaKey||e.ctrlKey)||!e.shiftKey||e.altKey||e.key.toLowerCase()!=='l')return false;
+  if(mode!=='edit'||editing||e.target.isContentEditable||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable="true"],[contenteditable=""]'))return false;
+  e.preventDefault();e.stopImmediatePropagation();
+  if(e.repeat||panelTasks||undoBusy||sourceRequests||!sel)return true;
+  const elements=sel.multiple?sel.multiple.flatMap(info=>matchingEls(info.id)):matchingEls(activeId());
+  if(elements.length)void setLayerLocks(elements,!elements.every(el=>layerLocks.direct(el)));
+  return true;
+}
+
 let layerClipboard=null;
 const layers = RetouchLayers.mount({
   locks:layerLocks,
-  onLock:async(el,value)=>{
-    if(panelTasks||undoBusy||sourceRequests)return;
-    await commitInlineEdit();stopDrawing?.();
-    const lockChanges=layerLocks.changeMany(Array.isArray(el)?el:[el],value);if(!lockChanges.length)return;
-    editorHistory.record({type:'layerLock',undoId:'lock:'+crypto.randomUUID(),route:lockChanges[0].route,lockChanges});hoverEl=null;
-    if(value)clearSelection();
-    layers.refresh();
-    toast(value?'Selection locked on the canvas. Select it in Layers to edit.':'Selection unlocked.','ok');
-  },
+  onLock:setLayerLocks,
   getClipboard:()=>layerClipboard,
   dragEnabled:window.__RT_RENDERING?.layerReparenting===true,
   multiSelectEnabled:window.__RT_RENDERING?.selectionStyling===true,

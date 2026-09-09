@@ -36,10 +36,12 @@
     }
     const lockSelection=document.createElement('button'),unlockSelection=document.createElement('button');
     lockSelection.textContent='Lock selection';unlockSelection.textContent='Unlock selection';
+    lockSelection.title='Lock selected layers (⌘/Ctrl+Shift+L toggles selection locks)';
+    lockSelection.setAttribute('aria-keyshortcuts','Meta+Shift+L Control+Shift+L');unlockSelection.setAttribute('aria-keyshortcuts','Meta+Shift+L Control+Shift+L');
     lockSelection.hidden=unlockSelection.hidden=!locks||!onLock;
     lockSelection.disabled=unlockSelection.disabled=true;
     lockSelection.onclick=()=>onLock([...selectedSet],true);unlockSelection.onclick=()=>onLock([...selectedSet],false);
-    unlockSelection.title='Remove direct locks from selected layers. Inherited locks must be removed from their parent.';
+    unlockSelection.title='Remove direct locks from selected layers. Inherited locks must be removed from their parent. ⌘/Ctrl+Shift+L toggles selection locks.';
     actions.append(lockSelection,unlockSelection);
     const reason=document.createElement('p');reason.className='layer-reason';
     const multiEnabled=multiSelectEnabled&&typeof onSelectMany==='function',selectAll=document.createElement('button');selectAll.textContent='Select visible layers';selectAll.className='layer-select-all';selectAll.hidden=!multiEnabled;
