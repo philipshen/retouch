@@ -13,6 +13,9 @@ test('HTML site serves stamped documents and assets, edits through authenticated
   const shell=await (await fetch(base+'/rt')).text(),token=/__RT_TOKEN = "([a-f0-9]+)"/.exec(shell)[1];
   const op=async value=>{const r=await fetch(base+'/rt/__api/op',{method:'POST',headers:{'x-retouch-token':token},body:JSON.stringify(value)});return r.json();};
   assert.equal((await op({id,type:'setClasses',classes:'w-40'})).refused,true);
+  const styled=await op({id,type:'setCSS',width:768,property:'width',value:'320px'});assert.equal(styled.ok,true);
+  assert.deepEqual(styled.element.cssRules,{768:{width:'320px'}});
+  assert.equal((await op({type:'undo',undoId:styled.undoId})).ok,true);assert.equal(fs.readFileSync(path.join(root,'index.html'),'utf8'),original);
   const result=await op({id,type:'setText',text:'New & clear'});assert.equal(result.ok,true);
   assert.ok((await (await fetch(base)).text()).includes('New &amp; clear'));
   assert.equal((await op({type:'undo',undoId:result.undoId})).ok,true);assert.equal(fs.readFileSync(path.join(root,'index.html'),'utf8'),original);

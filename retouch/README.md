@@ -134,5 +134,12 @@ saved changes reload the preview, and undo/redo restores source snapshots.
 Choose a trusted local web directory. Hidden files, package manifests and paths
 outside that directory are not served.
 
-This mode currently edits content only. Layout/appearance controls, rich markup,
-structural edits, asset uploads and remote-site capture are not connected yet.
+The CSS properties panel edits dimensions, flex direction/wrapping, gap, padding,
+typography, colors and borders. Select a screen size and choose its minimum-width
+scope to add a responsive override; each property has a reset button. Changes
+persist as element-specific style rules in the HTML and work without Retouch.
+Existing stylesheets stay intact. Generated declarations use `!important`; authored
+important rules with stronger specificity can still win. Important inline values
+are refused. The panel accepts a limited set of simple CSS values.
+
+Rich markup, structural edits, asset uploads and remote-site capture remain open.

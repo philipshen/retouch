@@ -1,13 +1,13 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path');
-const html=require('./adapters/html.cjs');
+const html=require('./adapters/html.cjs'),css=require('./html-css.cjs');
 const types={'.html':'text/html; charset=utf-8','.htm':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript','.mjs':'text/javascript','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.gif':'image/gif','.webp':'image/webp','.avif':'image/avif','.ico':'image/x-icon','.woff':'font/woff','.woff2':'font/woff2','.ttf':'font/ttf','.otf':'font/otf'};
-const reason='CSS authoring for HTML sites is not connected yet. Text, tag and plain image edits are available.';
+const reason='Use the CSS properties panel for this HTML document. Utility class editing is unavailable.';
 function start({root,port=9400,quiet=false}){
  root=fs.realpathSync(root);
  if(!fs.statSync(root).isDirectory())throw Error('Choose an HTML web directory.');
  if(!Number.isInteger(port)||port<0||port>65535)throw Error('Invalid port.');
- const adapter={...html,describe:r=>({...html.describe(r),classNameDynamic:true,classNameReason:reason}),planOp:(r,op)=>op.type==='setClasses'?{ok:false,refused:true,reason}:html.planOp(r,op)};
+ const adapter={...html,describe:r=>({...html.describe(r),...css.describe(r),classNameDynamic:true,classNameReason:reason}),planOp:(r,op)=>op.type==='setCSS'?css.plan(r,op):op.type==='setClasses'?{ok:false,refused:true,reason}:html.planOp(r,op)};
  function serveSite(req,res){
   const fail=(status,message)=>{res.writeHead(status,{'content-type':'text/plain'});res.end(message);};
   if(!['GET','HEAD'].includes(req.method))return fail(405,'method not allowed');

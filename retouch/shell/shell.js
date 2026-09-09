@@ -628,10 +628,11 @@ function screenScopeSection() {
   const picker = document.createElement('select');
   picker.setAttribute('aria-label', 'Style screen scope');
   const options = [{prefix:'',label:'All sizes · base'}];
-  if (doc()) options.push(...RetouchResponsive.discover(doc()));
+  if(sel?.info.cssAuthoring) options.push(...Object.keys(sel.info.cssRules||{}).map(Number).filter(w=>w>0).sort((a,b)=>a-b).map(w=>({prefix:`min-[${w}px]:`,label:`${w} px and larger`})));
+  else if (doc()) options.push(...RetouchResponsive.discover(doc()));
   const width = iframe.contentWindow?.innerWidth;
   if (Number.isInteger(width) && width >= 240) {
-    const atWidth = RetouchResponsive.atWidth(doc(),width,options.slice(1));
+    const atWidth = sel?.info.cssAuthoring?{prefix:`min-[${width}px]:`,label:`${width} px and larger`}:RetouchResponsive.atWidth(doc(),width,options.slice(1));
     if (!options.some(o=>o.prefix===atWidth.prefix)) options.push(atWidth);
   }
   if (styleScope && !options.some(o=>o.prefix===styleScope)) options.push({prefix:styleScope,label:styleScope.slice(0,-1)});
@@ -653,7 +654,7 @@ function screenScopeSection() {
   if (condition && !iframe.contentWindow.matchMedia(condition).matches) {
     RetouchInspector.note(section, 'This breakpoint is outside the current preview size. Resize the screen to see its styles.');
   }
-  if (styleScope && RetouchResponsive.project(sel.info.className,styleScope)) {
+  if (!sel.info.cssAuthoring && styleScope && RetouchResponsive.project(sel.info.className,styleScope)) {
     section.append(RetouchInspector.button('Reset overrides at this size',()=>setClasses('')));
   }
   return section;
@@ -726,6 +727,12 @@ function renderPanel() {
   }
 
   const target = (editing?.el.ownerDocument === doc() ? editing.el : null) || matchingEls(activeId()).find(el => inTextScope(el, info));
+  if(info.cssAuthoring){
+    const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
+    panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS));
+    if(info.canSetTag){const section=RetouchInspector.section('Element');RetouchInspector.select(section,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','li'].map(tag=>[tag,tag]),info.tag,setTag);panelBody.appendChild(section);}
+    if(info.src!==null)panelBody.appendChild(imageSection(info));
+  }else{
   const textLayer=/^(h[1-6]|p|span|a|label|blockquote|li|button)$/.test(info.tag);
   if(textLayer) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag));
   panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err')));
@@ -740,6 +747,7 @@ function renderPanel() {
   panelBody.appendChild(colorSection('Text color', 'text', style));
   panelBody.appendChild(RetouchInspector.effects(style, target, setClasses, message => toast(message, 'err')));
 
+  }
   // Text
   const tsec = document.createElement('div');
   tsec.className = 'sec';
@@ -790,6 +798,7 @@ function renderPanel() {
   }
   panelBody.appendChild(tsec);
 
+  if(info.cssAuthoring)return;
   // Advanced: raw CSS class manipulation, collapsed by default (not tier 1).
   const adv = document.createElement('details');
   adv.className = 'sec advanced';
@@ -1262,6 +1271,15 @@ async function writeSrc(src, isUndo, info) {
 }
 
 /* ---------- ops ---------- */
+async function setHTMLCSS(property,value,width){
+  if(!sel)return;const info=sel.info;busyPanel(true);
+  try{
+    const result=await api('POST','/rt/__api/op',{type:'setCSS',id:info.id,fileHash:info.hash,property,value,width});
+    if(!result?.ok){toast(result?.reason||result?.error||'Could not save CSS','err');return;}
+    if(result.undoId)editorHistory.record({type:'setCSS',id:info.id,undoId:result.undoId});
+    sel.info=result.element;await reloadFrame();renderPanel();toast('Saved','ok');
+  }finally{busyPanel(false);}
+}
 async function setClasses(classes, isUndo) {
   busyPanel(true);
   try {

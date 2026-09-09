@@ -24,7 +24,7 @@ changing those files. The original checkout may continue to evolve independently
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload exists; complete export and import pipeline remains. |
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
-| Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React and Shopify/Liquid are the connected renderers. An HTML source adapter now handles source-preserving edits and history; a local HTML renderer now supports text/tag/image edits; generic capture and CSS authoring integration remain. A native WebView alone does not provide this. |
+| Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React and Shopify/Liquid are the connected renderers. An HTML source adapter now handles source-preserving edits and history; a local HTML renderer now supports text/tag/image edits; basic responsive CSS editing is connected; generic capture and complete CSS authoring remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | New presets/custom dimensions/rotation/persistence resize the actual iframe. Zoom preserves fixed viewport dimensions and vh. Real browser test passes. Breakpoint-scoped class edits, loaded-CSS discovery, inheritance reset and exact undo are browser-verified on React/Tailwind. Linked views, continuous resize handles and the full cross-framework responsive workflow remain. |
 | Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView app builds and connects to live local editor. Native project startup uses the bundled CLI and an installed Node runtime. Native startup, auto-connect, width editing/undo/redo and Stop passed on one fixture. Full editor behavior, file flows, Intel runtime and broader lifecycle verification remain. |
 | Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. Development build is ad hoc signed. Local cask install/uninstall passed. Developer ID signing/notarization, publishing, upgrades and quarantined launch remain unverified. |
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 201 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 204 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -345,8 +345,29 @@ verifies selection, original CSS color, text/image changes and loaded images
 after reload, followed by exact undo. All 201 tests passed, and the CLI smoke
 check opened the editor through agent-browser.
 
-This is local HTML content editing, not arbitrary-site design parity. Visual CSS
-controls are explicitly unavailable until a persistent CSS authoring path is
-connected. Rich markup editing, capture/import, structural actions, image uploads
-and full file/navigation/native integration remain open. Existing CSS is not
-replaced with a framework or reset stylesheet.
+This initially shipped with content editing; the subsequent CSS authoring path
+is described below. Rich markup editing, capture/import, structural actions, image
+uploads and full file/navigation/native integration remain open. Existing CSS is
+not replaced with a framework or reset stylesheet.
+
+
+### Persistent HTML CSS editing
+
+The local HTML mode now has a CSS properties panel for dimensions, display,
+flex direction/wrapping, gap, padding, typography, colors and borders. It writes
+scoped rules into the source document, using a persistent element attribute.
+Base and minimum-width rules are sorted so creating a base rule later does not
+mask an earlier larger-screen rule. Reset removes a single property in the chosen
+scope. Text and image editing continue to use the same source history.
+
+Backend tests cover breakpoint order, isolation, reset, stale writes, malformed
+values, externally modified rules and identity collisions. HTTP tests verify
+CSS writes and exact undo. Browser tests verify phone/tablet computed widths,
+unaffected siblings, standalone HTML rendering, reset inheritance and exact
+source restoration. The suite now passes 204 tests.
+
+This is a bounded CSS authoring path. Values are limited to supported simple
+forms; shorthand expansion, arbitrary selectors, state/container queries and
+existing stylesheet refactoring remain open. Generated declarations use
+`!important`; stronger authored important rules may win, and inline important
+conflicts are refused. It does not establish arbitrary-site or full Figma parity.
