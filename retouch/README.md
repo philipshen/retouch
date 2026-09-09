@@ -148,7 +148,7 @@ not install a font. Typography changes follow the selected screen scope.
 
 Children of flex containers expose **Fill available space**, **Hug contents**,
 and individual grow, shrink and basis controls. Fill/Hug adjust sizing along the
-parent’s flex direction; each preset saves as one undo step and follows the
+parent’s flex direction and writing mode; each preset saves as one undo step and follows the
 selected screen scope. Existing maximum-size constraints still apply.
 
 Set a container’s **Display** to grid to expose **Grid columns** and **Grid rows**.

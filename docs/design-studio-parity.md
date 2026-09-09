@@ -587,3 +587,16 @@ All 222 tests pass. Browser checks verify the resulting item widths, Hug reducin
 the content width, one-step exact undo for each preset, and phone inheritance.
 Existing max-size constraints remain effective. Vertical writing-mode sizing,
 full constraint combinations and direct on-canvas flex manipulation remain open.
+
+
+### Flex sizing in vertical writing modes
+
+Fill/Hug now derives the physical main axis from both flex direction and the
+parent writing mode. Vertical rows size height, and vertical columns size width;
+reversed directions retain that axis. The cross-axis dimension is preserved.
+
+A dedicated browser test (`retouch/test/e2e/html-flex-writing.cjs`) covers six
+horizontal, vertical-rl, vertical-lr and reversed-direction cases. It checks actual
+filled/hugged dimensions, retained cross sizes and exact one-step undo for both
+presets. All six cases passed in Chromium. WebKit runtime validation of these
+specific cases remains outstanding; its Playwright runtime is not installed.

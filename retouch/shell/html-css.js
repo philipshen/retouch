@@ -18,7 +18,8 @@
   const parentCSS=el.parentElement&&el.ownerDocument.defaultView.getComputedStyle(el.parentElement),isFlexItem=parentCSS&&['flex','inline-flex'].includes(parentCSS.display);
   const flex=I.section('Flex sizing');
   if(isFlexItem){
-   const axis=parentCSS.flexDirection.startsWith('column')?'height':'width',minimum='min-'+axis;
+   const inlineAxis=/^(vertical|sideways)/.test(parentCSS.writingMode)?'height':'width';
+   const axis=parentCSS.flexDirection.startsWith('column')?(inlineAxis==='width'?'height':'width'):inlineAxis,minimum='min-'+axis;
    flex.append(I.button('Fill available space',()=>save({'flex-grow':'1','flex-shrink':'1','flex-basis':'0%',[axis]:'auto',[minimum]:'0px'},null,width)));
    flex.append(I.button('Hug contents',()=>save({'flex-grow':'0','flex-shrink':'0','flex-basis':'auto',[axis]:'max-content',[minimum]:'0px'},null,width)));
    for(const [property,label]of [['flex-grow','Grow'],['flex-shrink','Shrink'],['flex-basis','Flex basis']]){
