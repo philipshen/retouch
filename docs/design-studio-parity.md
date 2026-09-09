@@ -4210,3 +4210,39 @@ This covers the selected element's CSS-relative spacing. It does not establish
 mixed-run spacing parity, paragraph/list controls or the broader Figma/any-site/
 trusted native distribution objective. Native launches remain paused and none
 were attempted.
+
+
+### 2026-09-09 — Font-relative line height
+
+Typography now offers Line height (%) alongside automatic and pixel/CSS
+controls. It writes a unitless multiplier (175% becomes 1.75), allowing spacing
+to scale when the selected element's font size changes. The field derives its
+current display from computed line height and font size, shows Automatic when
+normal has no numeric computed height, and supports 0–1000% with six-decimal
+percentage precision when serialized. React/Liquid use the existing scoped
+line-height token replacement and reset; HTML uses the responsive CSS writer.
+
+All 374 existing unit tests pass in
+`/private/tmp/retouch-relative-line-unit.log`. The new
+`test:e2e:relative-line-height` workflow passes in:
+- `/private/tmp/retouch-relative-line-react-fixed.log` (React/Chromium)
+- `/private/tmp/retouch-relative-line-html-fixed.log` (HTML/WebKit)
+- `/private/tmp/retouch-relative-line-liquid-fixed.log` (local Liquid/Chromium)
+
+Each browser run writes 175% at 32px and verifies 56px line height, increases the
+font size to 40px and verifies 70px while the percentage display stays 175,
+sets tablet spacing to 200%/80px, checks phone spacing remains 70px, resets tablet
+to the base multiplier, and restores the exact original source and spacing with
+undo. All runs exited successfully and cleaned their temporary fixtures.
+
+The initial React/Liquid tests tried to enter their already displayed 150%
+value, which correctly produced no change event; the tests timed out waiting
+for a write. Their logs remain at `/private/tmp/retouch-relative-line-react.log`
+and `/private/tmp/retouch-relative-line-liquid.log`. The corrected test begins
+with a different value. The earlier HTML 150% check passed at
+`/private/tmp/retouch-relative-line-html.log` because its initial value was normal.
+
+This verifies selected-element CSS multiplier behavior, not complete mixed-run
+or paragraph layout parity. More advanced typography, arbitrary-site source
+coverage and trusted native distribution remain incomplete. Native launches
+remain paused and none were attempted.

@@ -86,6 +86,7 @@
   }
   const corners=I.section('Corners'),appearance=I.section('Appearance'),typography=I.section('Typography');
   I.fontPicker(typography,el.ownerDocument,css.fontFamily,value=>save('font-family',value,width));
+  const relativeLineHeight=I.number(typography,'Line height (%)',parseFloat(css.lineHeight)/parseFloat(css.fontSize)*100,0,1000,value=>save('line-height',String(Math.round(value*1e6)/1e8),width));relativeLineHeight.title='Relative to this layer’s font size.';if(css.lineHeight==='normal')relativeLineHeight.placeholder='Automatic';
   I.number(typography,'Letter spacing (%)',(parseFloat(css.letterSpacing)||0)/parseFloat(css.fontSize)*100,-100,1000,value=>save('letter-spacing',`${Math.round(value*1e6)/1e8}em`,width)).title='Relative to this layer’s font size.';
   const visible=document.createElement('input');visible.type='checkbox';visible.checked=(own.visibility??css.visibility)==='visible';visible.onchange=()=>save('visibility',visible.checked?'visible':'hidden',width);I.field(appearance,'Visible layer',visible);
   const resetVisibility=I.button('Reset visibility',()=>save('visibility',null,width));resetVisibility.disabled=!Object.hasOwn(own,'visibility');appearance.append(resetVisibility);I.note(appearance,'Hidden layers keep their layout space. Select them in Layers to show them again.');
