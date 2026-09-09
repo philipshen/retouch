@@ -19,12 +19,15 @@
   return !!el.querySelector('[data-rt], [data-rt-i]')&&![...el.childNodes].some(node=>node.nodeType===3&&node.textContent.trim());
  }
  function mount({document:d,frame,surface,enabled,onChange,onSelect,onClick,selectable=()=>true}){
-  const w=d.defaultView;let state=null,ignoreClick=null;const cleanup=[];
+  const w=d.defaultView;let state=null,ignoreClick=null,canceledCapture=null;const cleanup=[];
   function listen(target,type,handler,capture=false){target.addEventListener(type,handler,capture);cleanup.push(()=>target.removeEventListener(type,handler,capture));}
   function point(e,outer){if(!outer)return {x:e.clientX,y:e.clientY};const r=frame.getBoundingClientRect(),scale=r.width/w.innerWidth;return {x:(e.clientX-r.left)/scale,y:(e.clientY-r.top)/scale};}
   function finish(commit){
    if(!state)return;const current=state;state=null;
-   if(current.capture.hasPointerCapture(current.pointerId))current.capture.releasePointerCapture(current.pointerId);
+   if(current.capture.hasPointerCapture(current.pointerId)){
+    if(commit)current.capture.releasePointerCapture(current.pointerId);
+    else canceledCapture={capture:current.capture,pointerId:current.pointerId,outer:current.outer};
+   }
    onChange(null);
    if(!current.moved&&commit&&!current.outer&&!['HTML','BODY'].includes(current.target.tagName)&&current.target.isConnected&&onClick){const marker=ignoreClick={...current.rawLast,outer:false,time:Date.now()};root.setTimeout(()=>{if(ignoreClick===marker)ignoreClick=null;},0);onClick(current.target,{toggle:current.append,point:current.last});}
    if(current.moved){ignoreClick={...current.rawLast,outer:current.outer,time:Date.now()};if(commit)onSelect(pick(d,clip(rectangle(current.start,current.last),w.innerWidth,w.innerHeight),selectable),{append:current.append});}
@@ -40,7 +43,16 @@
    if(moved(state.start,state.last,state.scale))state.moved=true;
    if(state.moved)onChange(rectangle(state.start,state.last));
   }
-  function up(e,outer){if(state&&outer===state.outer&&e.pointerId===state.pointerId){move(e,outer);finish(true);}}
+  function up(e,outer){
+   if(canceledCapture&&outer===canceledCapture.outer&&e.pointerId===canceledCapture.pointerId){
+    // End a canceled gesture on its real pointerup. Releasing capture earlier
+    // can make WebKit retarget the next control click to the old canvas surface.
+    const previous=canceledCapture;canceledCapture=null;
+    if(previous.capture.hasPointerCapture(e.pointerId))previous.capture.releasePointerCapture(e.pointerId);
+    ignoreClick={x:e.clientX,y:e.clientY,outer,time:Date.now()};e.preventDefault();e.stopImmediatePropagation();return;
+   }
+   if(state&&outer===state.outer&&e.pointerId===state.pointerId){move(e,outer);finish(true);}
+  }
   function cancel(){finish(false);}
   function escape(e){if(state&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancel();}}
   function click(e,outer){
@@ -49,13 +61,14 @@
   }
   function blur(){if(!root.document.hasFocus())cancel();}
   function bind(eventWindow,eventDocument,outer){
-   listen(outer?surface:eventDocument,'pointerdown',e=>down(e,outer),true);listen(eventDocument,'click',e=>click(e,outer),true);listen(eventWindow,'lostpointercapture',cancel,true);
+   listen(eventDocument,'pointerdown',()=>{ignoreClick=null;},true);
+   listen(outer?surface:eventDocument,'pointerdown',e=>down(e,outer),true);listen(eventDocument,'click',e=>click(e,outer),true);listen(eventWindow,'lostpointercapture',e=>{if(canceledCapture?.pointerId===e.pointerId)canceledCapture=null;cancel();},true);
    listen(eventWindow,'pointermove',e=>move(e,outer),true);listen(eventWindow,'pointerup',e=>up(e,outer),true);listen(eventWindow,'pointercancel',cancel,true);listen(eventWindow,'keydown',escape,true);listen(eventWindow,'resize',cancel);listen(eventWindow,'pagehide',cancel);listen(eventWindow,'blur',blur);
   }
   listen(root,'retouch:before-zoom',cancel);listen(root,'retouch:screen',cancel);
   bind(w,d,false);
   if(surface&&frame)bind(root,root.document,true);else{listen(root,'keydown',escape,true);listen(root,'blur',blur);}
-  return ()=>{cancel();cleanup.forEach(remove=>remove());};
+  return ()=>{cancel();const previous=canceledCapture;canceledCapture=null;if(previous?.capture.hasPointerCapture(previous.pointerId))previous.capture.releasePointerCapture(previous.pointerId);cleanup.forEach(remove=>remove());};
  }
  const api={rectangle,moved,enclosed,clip,pick,background,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchMarquee=api;
 })(typeof window==='object'?window:globalThis);

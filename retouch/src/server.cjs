@@ -24,6 +24,7 @@ const TOKEN_HEADER = 'x-retouch-token';
 function startServer({ appRoot, port, adapter, proxyTo, serveSite, rendering = {}, quiet = false }) {
   adapter = adapter || require('./adapter.cjs').defaultAdapter();
   const token = crypto.randomBytes(16).toString('hex');
+  const stateScope={project:crypto.createHash('sha256').update(fs.realpathSync(appRoot)).digest('hex'),session:crypto.createHash('sha256').update(token).digest('hex')};
   const index = new Index(appRoot, adapter);
   const fileCount = index.scanAll();
   const history = new SourceHistory();
@@ -35,7 +36,7 @@ function startServer({ appRoot, port, adapter, proxyTo, serveSite, rendering = {
 
   const server = http.createServer((req, res) => {
     try {
-      handle(req, res, { index, token, appRoot, adapter, proxyTo, serveSite, rendering, history, sourceMonitor });
+      handle(req, res, { index, token, stateScope, appRoot, adapter, proxyTo, serveSite, rendering, history, sourceMonitor });
     } catch (err) {
       res.writeHead(err.statusCode || 500, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: err.message }));
@@ -215,7 +216,7 @@ function handle(req, res, ctx) {
     const html = fs
       .readFileSync(path.join(SHELL_DIR, 'index.html'), 'utf8')
       .replace('__RETOUCH_TOKEN__', ctx.token)
-      .replace('__RETOUCH_RENDERING__', JSON.stringify({selectionStyling:ctx.adapter.capabilities?.ops?.some(op=>['setClassesSelection','setCSSSelection'].includes(op))===true,layerReparenting:ctx.adapter.capabilities?.ops?.includes('reparentElement')===true,reloadAfterWrite:ctx.rendering.reloadAfterWrite===true,revalidateStyles:ctx.rendering.revalidateStyles===true}));
+      .replace('__RETOUCH_RENDERING__', JSON.stringify({stateScope:ctx.stateScope,selectionStyling:ctx.adapter.capabilities?.ops?.some(op=>['setClassesSelection','setCSSSelection'].includes(op))===true,layerReparenting:ctx.adapter.capabilities?.ops?.includes('reparentElement')===true,reloadAfterWrite:ctx.rendering.reloadAfterWrite===true,revalidateStyles:ctx.rendering.revalidateStyles===true}));
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
     return res.end(html);
   }

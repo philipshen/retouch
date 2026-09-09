@@ -39,7 +39,8 @@ let lastAppPath = null;
 let styleScope = '';
 function scopedInfo(info) { return {...info,styleScope,anchorInheritedClasses:RetouchResponsive.inherited(info.className,styleScope,doc()),className:RetouchResponsive.project(info.className,styleScope)}; }
 
-const layerLocks=RetouchLayerLocks.create({route:()=>currentPageRoute()||''});
+let lockStorage;try{lockStorage=sessionStorage;}catch{}
+const layerLocks=RetouchLayerLocks.create({route:()=>currentPageRoute()||'',storage:lockStorage,scope:window.__RT_RENDERING?.stateScope});
 const historyRoutes = new Map();
 function currentPageRoute(){try{const loc=iframe.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
 const editorHistory = RetouchHistory.createHistory({apply:restoreHistory,onChange:syncHistoryControls,capture:entry=>({route:historyRoutes.get(entry.undoId)||currentPageRoute()})});

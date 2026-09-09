@@ -181,3 +181,17 @@ test('React batch class API saves and restores all selected layers as one source
   fs.appendFileSync(file,'\n// external edit\n');const external=fs.readFileSync(file,'utf8');assert.strictEqual((await run({type:'undo',undoId:saved.undoId})).ok,false);assert.strictEqual(fs.readFileSync(file,'utf8'),external);
   fs.writeFileSync(file,after);assert.ok((await run({type:'undo',undoId:saved.undoId})).ok);assert.strictEqual(fs.readFileSync(file,'utf8'),original);
 });
+
+test('shell state scope isolates projects and changes session identity on a fresh sidecar',async()=>{
+ const scope=body=>JSON.parse(/window\.__RT_RENDERING = (.*);<\/script>/.exec(body)[1]).stateScope,first=scope((await req(port,'GET','/rt')).body);
+ assert.match(first.project,/^[a-f0-9]{64}$/);assert.match(first.session,/^[a-f0-9]{64}$/);
+ assert.equal(first.project,require('node:crypto').createHash('sha256').update(fs.realpathSync(root)).digest('hex'));
+ assert.deepEqual(scope((await req(port,'GET','/rt/another')).body),first);
+ const otherRoot=makeApp({'app/Page.tsx':APP});
+ for(const appRoot of [root,otherRoot]){
+  const next=startServer({appRoot,port:0,quiet:true});
+  try{await new Promise(resolve=>next.once('listening',resolve));const fresh=scope((await req(next.address().port,'GET','/rt')).body);assert.notEqual(fresh.session,first.session);assert.equal(fresh.project===first.project,appRoot===root);}
+  finally{next.retouchIndex.close();await new Promise(resolve=>next.close(resolve));}
+ }
+ cleanup(otherRoot);
+});

@@ -23,3 +23,16 @@ test('batch lock history preserves mixed state and refuses the entire conflictin
  locks.set(b,true);assert.equal(locks.restoreMany(both,'undo').ok,true);assert.equal(locks.direct(a),false);assert.equal(locks.direct(b),false);
  assert.deepEqual(locks.changeMany([a,node(null)],true),[]);assert.equal(locks.direct(a),false,'invalid member prevents every change');
 });
+test('session storage restores batch and history changes only for the same project session',()=>{
+ const values=new Map(),storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},scope={project:'a'.repeat(64),session:'b'.repeat(64)},a=node('a'.repeat(10)),b=node('b'.repeat(10)),options={storage,scope};
+ const locks=create(options),change=locks.changeMany([a,b],true);assert.equal(create(options).direct(a),true);assert.equal(create(options).direct(b),true);
+ locks.restoreMany(change,'undo');assert.equal(create(options).direct(a),false);locks.restoreMany(change,'redo');assert.equal(create(options).direct(a),true);
+ assert.equal(create({...options,scope:{...scope,project:'c'.repeat(64)}}).direct(a),false);assert.equal(create({...options,scope:{...scope,session:'d'.repeat(64)}}).direct(a),false);
+ locks.change(a,false);assert.equal(create(options).direct(a),false);assert.equal(create(options).direct(b),true);
+});
+test('malformed lock storage is discarded atomically and unavailable storage preserves live editing',()=>{
+ const scope={project:'a'.repeat(64),session:'b'.repeat(64)},a=node('a'.repeat(10));
+ const corrupt={getItem:()=>JSON.stringify({version:1,session:scope.session,pages:[['/', ['a'.repeat(10)]],['bad',['invalid']]]}),setItem(){throw Error('quota');}};
+ const locks=create({scope,storage:corrupt,route:()=>'/'});assert.equal(locks.direct(a),false);locks.set(a,true);assert.equal(locks.direct(a),true);
+ const unavailable=create({scope,storage:{getItem(){throw Error('disabled');},setItem(){throw Error('disabled');}}});unavailable.changeMany([a],true);assert.equal(unavailable.direct(a),true);
+});

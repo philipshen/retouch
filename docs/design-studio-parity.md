@@ -13,7 +13,7 @@ changing those files. The original checkout may continue to evolve independently
 
 | Area | Required outcome | Current evidence and remaining work |
 | --- | --- | --- |
-| Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Bounded canvas zoom/scrolling and linked screen comparisons exist. HTML supports multi-selection, range selection, gray/page marquee gestures and framing a consecutive sibling selection. Full document/pages/sections, guides, snapping, pixel-preserving groups, locking/hiding and cross-renderer equivalence remain. |
+| Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Bounded canvas zoom/scrolling and linked screen comparisons exist. HTML supports multi-selection, range selection, gray/page marquee gestures and framing a consecutive sibling selection. HTML/React canvas locks include batch undo and editor-reload persistence within a live project session. Full document/pages/sections, guides, complete snapping/grouping, durable lock identity and cross-renderer equivalence remain. |
 | Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. HTML multi-selection, shared CSS and group duplicate/delete/reparenting exist; cross-context clipboard and broader source structures remain. |
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. Full vector authoring, boolean operations, arbitrary masks and a shared geometry model remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. HTML absolute placement now supports edge, center, stretch and proportional anchors with screen-scoped writes. Transformed constraints, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 331 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 334 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -2491,3 +2491,42 @@ editing in WebKit: `/private/tmp/retouch-batch-locks-react-webkit.log`.
 
 Lock persistence and durable source identity remain unfinished; the latest Mac
 archive still predates the lock features. Full parity remains the active goal.
+
+## Locks survive editor reloads within the live project session
+
+The shell now receives opaque project and sidecar-session identifiers. Project
+identity hashes the canonical project path; session identity hashes the fresh
+sidecar token. Neither stored identifier contains the raw path or token. Locks
+are saved in tab session storage under the project identity, and loaded only when
+the stored sidecar session also matches. Lock/unlock and undo/redo all update the
+stored state. Corrupt, oversized or incompatible lock data is discarded; unavailable
+storage leaves live editing usable.
+
+Both Chromium and WebKit pass full editor reload with restored lock behavior,
+unlock/undo followed by another reload, and an independent editor tab starting
+without those locks. History itself remains session-memory-only and starts empty
+on editor reload; restored locks do not create fictitious history entries. The
+HTTP test verifies stable project identity, route-independent scope, different
+projects and fresh sidecar session identities. All 334 unit/HTTP tests pass.
+Logs: `/private/tmp/retouch-lock-reload-{chromium,webkit,unit}.log`.
+
+Locks still intentionally reset for a new sidecar session. Persistence across
+server restarts or tab closure requires durable source identity beyond the current
+structural IDs. Source edits during the live session can still shift those IDs;
+this existing limitation is not solved here. Full parity, arbitrary-site authoring
+and trusted Mac distribution remain unfinished; the local archive predates locks.
+
+React editor-reload verification also exposed a canceled-marquee pointer-capture
+bug. A WebKit trace showed press and release targeting a lock button, followed by
+the click being delivered to the old canvas capture surface, with no busy operation.
+Cancellation now retains capture until the canceled pointer's actual release;
+cleanup still releases it, and a fresh pointerdown clears stale click suppression.
+The real React workflow, including clicking Lock immediately after screen/zoom
+cancellation and then reloading the editor, passes in Chromium and WebKit.
+Locked-overlay and low-zoom marquee/cancellation workflows also pass in both engines.
+Logs: `/private/tmp/retouch-lock-reload-react-{chromium,webkit}-fixed.log` and
+`/private/tmp/retouch-lock-reload-cancel-{chromium,webkit}.log`. The failing initial
+React run and pointer diagnostic remain in `/private/tmp/retouch-lock-reload-react-webkit.log`
+and `/private/tmp/retouch-lock-reload-react-pointer-diagnostic.log`.
+The final server-scope regression passed all 11 server tests in
+`/private/tmp/retouch-lock-reload-server-final.log`.
