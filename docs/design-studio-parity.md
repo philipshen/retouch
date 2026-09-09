@@ -3495,3 +3495,48 @@ This is a visibility improvement, not full vector-editing parity. Multi-point
 selection, persistent anchor constraints, vector networks, booleans/masks and
 arbitrary-site authoring remain open. Native launches remained paused; no Mac
 app build or launch was performed.
+
+
+### 2026-09-09 — Multi-point vector selection and editing
+
+Shift-click now adds or removes anchors from the current contour selection.
+Dragging a selected anchor moves the selected group with every attached handle;
+arrows move by one SVG unit, Shift-arrows by ten. A stationary plain click
+collapses the group to that anchor. Select all points and Cmd/Ctrl+A provide
+whole-contour point selection. Selected anchors and their handles remain visible,
+with a selected-count status. Batch Delete, Make corner and Make smooth operate
+on the group and retain the contour's validity/minimum point requirements.
+Arc-adjacent selections retain their arc descriptors and disable incompatible
+corner/smooth conversion. Arc properties remain a single-anchor interaction.
+
+Movement validates the full candidate before applying any point, so coordinate
+or handle bounds refuse the whole move. Source remains unchanged during keyboard
+or pointer preview; Done/Enter and drag release use existing source history.
+Escape discards pending edits. Structural contour changes reset point selection,
+and whole-contour movement remains a separate mode.
+
+All 360 unit tests pass in `/private/tmp/retouch-multi-points-unit.log`, including
+atomic refusal, duplicate/invalid indices, attached handles, arc descriptors and
+unchanged input models. The new browser workflow passes in all four combinations:
+`/private/tmp/retouch-multi-points-chromium.log` (HTML/Chromium),
+`/private/tmp/retouch-multi-points-webkit.log` (React/WebKit),
+`/private/tmp/retouch-multi-points-react-chromium.log`, and
+`/private/tmp/retouch-multi-points-html-webkit.log`.
+They verify group movement at 50/100/200 percent zoom under nested transforms,
+untouched points/contours, handles, select-all, toggle/collapse, batch deletion,
+corner conversion, minimum counts, cancellation and exact undo/redo. The latter
+two also verify batch smoothing after corner conversion. The inspected
+`/private/tmp/retouch-multi-points-webkit.png` shows two selected anchors, their
+handles, the pending outline and the selected-count toolbar.
+
+Regressions pass in `/private/tmp/retouch-multi-points-vertices.log`,
+`/private/tmp/retouch-multi-points-handles.log`,
+`/private/tmp/retouch-multi-points-arcs.log`, and
+`/private/tmp/retouch-multi-points-contour.log`: existing polygon/polyline editing,
+independent/aligned/mirrored handles, arc controls and whole-contour movement.
+
+Selection is currently scoped to one contour. Cross-contour selection, marquee
+selection, vector networks, booleans/masks, persistent point constraints and
+arbitrary-site authoring remain open. Full Figma Design parity and trusted Mac
+distribution remain unproven. Native app launches stayed paused; no desktop build
+or launch occurred.

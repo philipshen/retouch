@@ -147,3 +147,12 @@ test('Arc-to-cubic conversion bounds parametric error and preserves endpoints an
   assert.equal(path.arcToCubics(loop,0,0),null);assert.equal(path.arcToCubics(path.parse('M0 0L10 10'),1),null);
   const crowded={closed:false,nodes:Array.from({length:512},(_,i)=>({x:i,y:0}))};crowded.nodes[1].arc={rx:100,ry:100,rotation:0,large:1,sweep:1};assert.equal(path.arcToCubics(crowded,1),null);
 });
+
+
+test('Selected point translation is atomic and retains attached handles and arc metadata',()=>{
+  const part=path.parse('M0 0C5 0 15 20 20 20A30 20 45 0 1 60 40L80 50'),before=JSON.stringify(part),result=path.translatePoints(part,[0,2],10,-5);
+  assert.deepEqual(result.nodes,part.nodes.map((p,i)=>path.translate(p,[0,2].includes(i)?10:0,[0,2].includes(i)?-5:0)));assert.equal(JSON.stringify(part),before);
+  assert.deepEqual(path.translatePoints(part,[0,0],10,0).nodes[0],path.translate(part.nodes[0],10,0));
+  for(const [indices,dx,dy] of [[[],1,0],[[4],1,0],[[.5],1,0],[[0],Infinity,0],[[3],100000,0]])assert.equal(path.translatePoints(part,indices,dx,dy),null);
+  assert.equal(JSON.stringify(part),before);
+});

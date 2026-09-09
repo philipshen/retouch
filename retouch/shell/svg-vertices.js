@@ -18,7 +18,7 @@
     preview.style.cssText='fill:none!important;stroke:#6366f1!important;stroke-width:1.5!important;';
     preview.setAttribute('vector-effect','non-scaling-stroke');drawing.append(preview);surface.append(drawing);
     const contourHit=root.document.createElementNS(ns,'path');contourHit.dataset.moveContour='true';contourHit.setAttribute('aria-label','Move selected contour');contourHit.setAttribute('role','button');contourHit.setAttribute('vector-effect','non-scaling-stroke');contourHit.style.cssText='fill:none!important;stroke:transparent!important;stroke-width:14!important;pointer-events:stroke;cursor:move;outline:none;';drawing.append(contourHit);
-    let ended=false,drag=null,active=0,activeHandle=null,raf,cancelPen=null,moveContourMode=false,showAllHandles=false;
+    let ended=false,drag=null,active=0,activeHandle=null,raf,cancelPen=null,moveContourMode=false,showAllHandles=false,selectedPoints=new Set([0]);
     const initialMatrix=target.getScreenCTM(),matrixValues=m=>m&&[m.a,m.b,m.c,m.d,m.e,m.f];
     const initial=matrixValues(initialMatrix);
     function listen(el,type,fn,options){el.addEventListener(type,fn,options);cleanup.push(()=>el.removeEventListener(type,fn,options));}
@@ -122,7 +122,7 @@
     listen(arcPanel,'keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancel();}else if(e.key==='Enter'&&e.target.tagName==='INPUT'&&e.target.type==='number'){e.preventDefault();e.stopImmediatePropagation();commit();}},true);
     function refreshArc(){
       const next=(active+1)%vertices.length,indices=[];if(vertices[active]?.arc)indices.push(active);if((closed||active<vertices.length-1)&&vertices[next]?.arc)indices.push(next);
-      arcPanel.style.display=pathData&&!moveContourMode&&indices.length?'flex':'none';
+      arcPanel.style.display=pathData&&!moveContourMode&&selectedPoints.size===1&&indices.length?'flex':'none';
       if(!indices.length)return;if(arcAnchor!==active||!indices.includes(arcIndex))arcIndex=indices[0];arcAnchor=active;arcPicker.replaceChildren();
       for(const index of indices){const option=root.document.createElement('option');option.value=String(index);option.textContent=index===active?'Arc into point '+(active+1):'Arc out of point '+(active+1);arcPicker.append(option);}arcPicker.value=String(arcIndex);
       const arc=vertices[arcIndex].arc;for(const [key,input] of Object.entries(arcInputs)){input.value=String(arc[key]);input.removeAttribute('aria-invalid');}longArc.checked=!!arc.large;updateArcHint();
@@ -137,10 +137,12 @@
       if(!result){status.textContent='Enter finite radii from 0 to 100000 and a rotation from −100000 to 100000.';return;}
       vertices[arcIndex].arc=result.nodes[arcIndex].arc;paint();status.textContent='Arc updated in preview. Done saves; Escape cancels.';
     }
+    function selectAllPoints(){if(drag||moveContourMode||!verify())return;selectedPoints=new Set(vertices.map((_,i)=>i));activeHandle=null;announce();paint();handles[active].focus({preventScroll:true});}
+    action('Select all points',selectAllPoints).title='Select every point in this contour. Shift-click a point to add or remove it; drag or use arrows to move the selection.';
     const removeButton=action('Delete point',removePoint);
     action('Done',commit);action('Cancel',cancel);surface.append(toolbar);
-    function adjacentArc(){return !!(vertices[active]?.arc||(vertices[active+1]||(closed?vertices[0]:null))?.arc);}
-    function announce(message){refreshArc();if(cornerButton){const arcEndpoint=adjacentArc(),disabled=moveContourMode||arcEndpoint;cornerButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or use Arc properties.':'Remove the selected anchor’s handles';smoothButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or use Arc properties.':'Create aligned handles along the neighboring anchors';cornerButton.disabled=disabled;smoothButton.disabled=disabled;for(const button of [cornerButton,smoothButton])button.style.opacity=disabled?'.5':'1';}status.textContent=message||`${activeHandle?activeHandle==='in'?'Incoming handle on point':'Outgoing handle on point':'Point'} ${active+1} of ${vertices.length}`;removeButton.disabled=moveContourMode||vertices.length<=minimum;removeButton.style.opacity=removeButton.disabled?'.5':'1';}
+    function adjacentArc(){return [...selectedPoints].some(i=>vertices[i]?.arc||(vertices[i+1]||(closed?vertices[0]:null))?.arc);}
+    function announce(message){refreshArc();if(cornerButton){const arcEndpoint=adjacentArc(),disabled=moveContourMode||arcEndpoint;cornerButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or use Arc properties.':'Remove the selected anchor’s handles';smoothButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or use Arc properties.':'Create aligned handles along the neighboring anchors';cornerButton.disabled=disabled;smoothButton.disabled=disabled;for(const button of [cornerButton,smoothButton])button.style.opacity=disabled?'.5':'1';}status.textContent=message||(selectedPoints.size>1&&!activeHandle?`${selectedPoints.size} points selected. Shift-click adds or removes points.`:null)||`${activeHandle?activeHandle==='in'?'Incoming handle on point':'Outgoing handle on point':'Point'} ${active+1} of ${vertices.length}`;removeButton.disabled=moveContourMode||vertices.length-selectedPoints.size<minimum;removeButton.textContent=selectedPoints.size>1?'Delete points':'Delete point';removeButton.style.opacity=removeButton.disabled?'.5':'1';}
     const totalPoints=()=>subpaths?subpaths.reduce((sum,part)=>sum+part.nodes.length,0):vertices.length;
     function refreshContours(){
       if(!contourPicker)return;contourPicker.replaceChildren();
@@ -150,7 +152,8 @@
       moveContourButton.setAttribute('aria-pressed',String(moveContourMode));moveContourButton.style.background=moveContourMode?'#4338ca':'#2b2e33';cornerButton.disabled=moveContourMode;smoothButton.disabled=moveContourMode;handleMode.disabled=moveContourMode;
       for(const button of [deleteContourButton,duplicateContourButton,drawContourButton,cornerButton,smoothButton])button.style.opacity=button.disabled?'.5':'1';
     }
-    function rebuild(){
+    function rebuild(resetSelection=true){
+      if(resetSelection)selectedPoints=new Set([active]);
       refreshContours();
       for(const b of [...handles,...insertions,...curveHandles.map(h=>h.button)])b.remove();handles=[];insertions=[];curveHandles=[];
       vertices.forEach((_,i)=>{
@@ -173,10 +176,9 @@
     function reshape(kind){
       if(drag||!verify())return;
       if(adjacentArc()){announce('Arc endpoints support moving and subdivision. Edit path data to change arc parameters.');return;}
-      const next=kind==='corner'?root.RetouchSVGPath.corner(vertices[active]):root.RetouchSVGPath.smooth(vertices,active,closed);
-      const candidate=vertices.map((p,i)=>i===active?next:p);
-      if(!next||!root.RetouchSVGPath.serialize(candidate,closed)){announce('This point cannot use that shape. Keep a valid path.');return;}
-      vertices[active]=next;activeHandle=null;rebuild();(moveContourMode?contourHit:handles[active]).focus({preventScroll:true});
+      const candidate=vertices.map((p,i)=>selectedPoints.has(i)?kind==='corner'?root.RetouchSVGPath.corner(p):root.RetouchSVGPath.smooth(vertices,i,closed):p);
+      if(candidate.some(p=>!p)||!root.RetouchSVGPath.serialize(candidate,closed)){announce('These points cannot use that shape. Keep a valid path.');return;}
+      vertices.splice(0,vertices.length,...candidate);activeHandle=null;rebuild(false);handles[active].focus({preventScroll:true});
     }
     function changeHandle(node,key,point){
       const next=root.RetouchSVGPath.moveHandle(node,key,point,handleMovement);
@@ -190,11 +192,12 @@
     }
     function removePoint(){
       if(drag||!verify())return;
-      if(vertices.length<=minimum){announce(`Keep at least ${minimum} points in this ${closed?'polygon':'line'}.`);return;}
-      if(pathData&&!root.RetouchSVGPath.serialize(vertices.filter((_,i)=>i!==active),closed)){announce('Keep a valid contour with distinct anchors.');return;}
-      vertices.splice(active,1);activeHandle=null;active=Math.min(active,vertices.length-1);rebuild();(moveContourMode?contourHit:handles[active]).focus({preventScroll:true});
+      const remaining=vertices.filter((_,i)=>!selectedPoints.has(i));
+      if(remaining.length<minimum){announce(`Keep at least ${minimum} points in this ${closed?'polygon':'line'}.`);return;}
+      if(pathData&&!root.RetouchSVGPath.serialize(remaining,closed)){announce('Keep a valid contour with distinct anchors.');return;}
+      vertices.splice(0,vertices.length,...remaining);activeHandle=null;active=Math.min(active,vertices.length-1);rebuild();handles[active].focus({preventScroll:true});
     }
-    listen(surface,'focusin',e=>{if(e.target.dataset.vertex!==undefined){active=Number(e.target.dataset.vertex);activeHandle=e.target.dataset.curveHandle||null;announce();paint();}});
+    listen(surface,'focusin',e=>{if(e.target.dataset.vertex!==undefined){active=Number(e.target.dataset.vertex);activeHandle=e.target.dataset.curveHandle||null;if(!selectedPoints.has(active))selectedPoints=new Set([active]);announce();paint();}});
     listen(surface,'click',e=>{if(e.target.dataset.contour!==undefined){e.preventDefault();e.stopImmediatePropagation();selectContour(Number(e.target.dataset.contour));return;}if(e.target.dataset.insertVertex!==undefined){e.preventDefault();e.stopImmediatePropagation();insertPoint(Number(e.target.dataset.insertVertex));}});
     function paint(){
       updateArcHint();
@@ -206,9 +209,9 @@
       subpaths?.forEach((part,i)=>{if(i===contour)return;const outline=root.document.createElementNS(ns,'path');outline.setAttribute('d',root.RetouchSVGPath.serialize(part.nodes,part.closed));outline.setAttribute('transform',preview.getAttribute('transform'));outline.setAttribute('vector-effect','non-scaling-stroke');outline.style.cssText='fill:none!important;stroke:#a78bfa!important;stroke-width:1.5!important;';otherContours.append(outline);
         const hit=outline.cloneNode();hit.dataset.contour=String(i);hit.style.cssText='fill:none!important;stroke:transparent!important;stroke-width:12!important;pointer-events:stroke;cursor:pointer;';const title=root.document.createElementNS(ns,'title');title.textContent='Edit contour '+(i+1);hit.append(title);otherContours.append(hit);});
       function position(b,p,half){const q=new w.DOMPoint(p.x,p.y).matrixTransform(m);Object.assign(b.style,{left:f.left+q.x*scale-r.left-half+'px',top:f.top+q.y*scale-r.top-half+'px'});}
-      vertices.forEach((p,i)=>{position(handles[i],p,6);handles[i].style.background=i===active?'#6366f1':'white';handles[i].setAttribute('aria-pressed',String(i===active));});
-      insertions.forEach((b,i)=>{b.hidden=moveContourMode||!!pathData&&i!==active&&(i+1)%vertices.length!==active;const a=vertices[i],next=vertices[(i+1)%vertices.length];position(b,pathData?root.RetouchSVGPath.segmentMiddle(a,next):{x:(a.x+next.x)/2,y:(a.y+next.y)/2},9);});
-      tangentLines.replaceChildren();curveHandles.forEach(h=>{h.button.hidden=moveContourMode||!showAllHandles&&h.index!==active;if(h.button.hidden)return;const a=vertices[h.index],b=a[h.key];position(h.button,b,5);const line=root.document.createElementNS(ns,'line'),p=new w.DOMPoint(a.x,a.y).matrixTransform(m),q=new w.DOMPoint(b.x,b.y).matrixTransform(m);line.setAttribute('x1',f.left+p.x*scale-r.left);line.setAttribute('y1',f.top+p.y*scale-r.top);line.setAttribute('x2',f.left+q.x*scale-r.left);line.setAttribute('y2',f.top+q.y*scale-r.top);line.style.cssText='stroke:#8b5cf6!important;stroke-width:1!important;';tangentLines.append(line);});
+      vertices.forEach((p,i)=>{position(handles[i],p,6);handles[i].style.background=selectedPoints.has(i)?'#6366f1':'white';handles[i].setAttribute('aria-pressed',String(selectedPoints.has(i)));});
+      insertions.forEach((b,i)=>{b.hidden=moveContourMode||!!pathData&&!selectedPoints.has(i)&&!selectedPoints.has((i+1)%vertices.length);const a=vertices[i],next=vertices[(i+1)%vertices.length];position(b,pathData?root.RetouchSVGPath.segmentMiddle(a,next):{x:(a.x+next.x)/2,y:(a.y+next.y)/2},9);});
+      tangentLines.replaceChildren();curveHandles.forEach(h=>{h.button.hidden=moveContourMode||!showAllHandles&&!selectedPoints.has(h.index);if(h.button.hidden)return;const a=vertices[h.index],b=a[h.key];position(h.button,b,5);const line=root.document.createElementNS(ns,'line'),p=new w.DOMPoint(a.x,a.y).matrixTransform(m),q=new w.DOMPoint(b.x,b.y).matrixTransform(m);line.setAttribute('x1',f.left+p.x*scale-r.left);line.setAttribute('y1',f.top+p.y*scale-r.top);line.setAttribute('x2',f.left+q.x*scale-r.left);line.setAttribute('y2',f.top+q.y*scale-r.top);line.style.cssText='stroke:#8b5cf6!important;stroke-width:1!important;';tangentLines.append(line);});
 
     }
     function commit(){
@@ -218,11 +221,15 @@
       if(pathData?!value:!root.RetouchSVGPoints.parse(value)){cancel();onError('Vector points must stay within supported SVG coordinates.');return;}
       cancel();if(changed)onCommit(value);
     }
+    function moveSelected(nodes,dx,dy){
+      const result=root.RetouchSVGPath.translatePoints({nodes,closed},[...selectedPoints],dx,dy);
+      if(result)vertices.splice(0,vertices.length,...result.nodes);else announce('Keep the selected points within supported SVG coordinates.');
+    }
     function move(e){
       if(!drag||e.pointerId!==drag.id||!verify())return;
       try{const p=local(e);let dx=p.x-drag.pointer.x,dy=p.y-drag.pointer.y;
         if(e.shiftKey){if(Math.abs(dx)>Math.abs(dy))dy=0;else dx=0;}
-        if(drag.contour){const translated=root.RetouchSVGPath.translateContour(drag.contour,dx,dy);if(translated)vertices.splice(0,vertices.length,...translated.nodes);else announce('Keep the contour within supported SVG coordinates.');}else if(activeHandle)changeHandle(drag.node,activeHandle,{x:drag.point.x+dx,y:drag.point.y+dy});else vertices[active]=root.RetouchSVGPath.translate(drag.point,dx,dy);paint();
+        if(drag.contour){const translated=root.RetouchSVGPath.translateContour(drag.contour,dx,dy);if(translated)vertices.splice(0,vertices.length,...translated.nodes);else announce('Keep the contour within supported SVG coordinates.');}else if(activeHandle)changeHandle(drag.node,activeHandle,{x:drag.point.x+dx,y:drag.point.y+dy});else moveSelected(drag.nodes,dx,dy);paint();
       }catch(error){cancel();onError(error.message);}
     }
     listen(surface,'pointerdown',e=>{
@@ -230,20 +237,24 @@
       if(moveContourMode&&b===contourHit){e.preventDefault();e.stopImmediatePropagation();if(!verify())return;try{contourHit.focus({preventScroll:true});drag={id:e.pointerId,pointer:local(e),point:{...vertices[0]},contour:{closed,nodes:vertices.map(p=>root.RetouchSVGPath.translate(p,0,0))}};contourHit.setPointerCapture(e.pointerId);}catch(error){cancel();onError(error.message);}return;}
       if(b.dataset.vertex===undefined)return;
       e.preventDefault();e.stopImmediatePropagation();if(!verify())return;
-      try{active=Number(b.dataset.vertex);activeHandle=b.dataset.curveHandle||null;b.focus({preventScroll:true});drag={id:e.pointerId,pointer:local(e),node:root.RetouchSVGPath.translate(vertices[active],0,0),point:root.RetouchSVGPath.translate(activeHandle?vertices[active][activeHandle]:vertices[active],0,0)};b.setPointerCapture(e.pointerId);}catch(error){cancel();onError(error.message);}
+      try{const index=Number(b.dataset.vertex);activeHandle=b.dataset.curveHandle||null;
+        if(e.shiftKey&&!activeHandle){if(selectedPoints.has(index)&&selectedPoints.size>1){selectedPoints.delete(index);active=[...selectedPoints][0];handles[active].focus({preventScroll:true});announce();paint();return;}selectedPoints.add(index);}else if(!selectedPoints.has(index))selectedPoints=new Set([index]);
+        active=index;b.focus({preventScroll:true});announce();paint();drag={id:e.pointerId,pointer:local(e),nodes:vertices.map(p=>root.RetouchSVGPath.translate(p,0,0)),node:root.RetouchSVGPath.translate(vertices[active],0,0),point:root.RetouchSVGPath.translate(activeHandle?vertices[active][activeHandle]:vertices[active],0,0),collapse:!e.shiftKey&&!activeHandle};b.setPointerCapture(e.pointerId);
+      }catch(error){cancel();onError(error.message);}
     });
     listen(surface,'pointermove',move);
-    listen(surface,'pointerup',e=>{if(!drag||drag.id!==e.pointerId)return;e.preventDefault();e.stopImmediatePropagation();move(e);if(!ended){const selected=drag.contour?vertices[0]:activeHandle?vertices[active][activeHandle]:vertices[active],moved=Math.hypot(selected.x-drag.point.x,selected.y-drag.point.y)>1e-9;drag=null;if(moved)commit();}});
+    listen(surface,'pointerup',e=>{if(!drag||drag.id!==e.pointerId)return;e.preventDefault();e.stopImmediatePropagation();move(e);if(!ended){const selected=drag.contour?vertices[0]:activeHandle?vertices[active][activeHandle]:vertices[active],moved=Math.hypot(selected.x-drag.point.x,selected.y-drag.point.y)>1e-9;const collapse=drag.collapse;drag=null;if(moved)commit();else if(collapse){selectedPoints=new Set([active]);announce();paint();}}});
     listen(surface,'pointercancel',cancel);listen(surface,'lostpointercapture',()=>{if(drag)cancel();});
     listen(surface,'keydown',e=>{
       if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancel();return;}
       if(arcPanel.contains(e.target)){if(e.key==='Enter'&&e.target.tagName==='INPUT'&&e.target.type==='number'){e.preventDefault();e.stopImmediatePropagation();commit();}return;}
       if(e.target===handleMode||e.target===contourPicker)return;
+      if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='a'){e.preventDefault();e.stopImmediatePropagation();selectAllPoints();return;}
       if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();e.stopImmediatePropagation();if(moveContourMode)restructure('delete');else removePoint();return;}
       if(e.key==='Enter'&&(e.target.dataset.vertex!==undefined||e.target===contourHit)){e.preventDefault();e.stopImmediatePropagation();commit();return;}
       const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
       if(!delta||e.metaKey||e.ctrlKey||e.altKey)return;e.preventDefault();e.stopImmediatePropagation();if(!verify())return;
-      const step=e.shiftKey?10:1;if(moveContourMode){const translated=root.RetouchSVGPath.translateContour({nodes:vertices,closed},delta[0]*step,delta[1]*step);if(translated)vertices.splice(0,vertices.length,...translated.nodes);else announce('Keep the contour within supported SVG coordinates.');}else if(activeHandle)changeHandle(vertices[active],activeHandle,root.RetouchSVGPath.translate(vertices[active][activeHandle],delta[0]*step,delta[1]*step));else vertices[active]=root.RetouchSVGPath.translate(vertices[active],delta[0]*step,delta[1]*step);paint();
+      const step=e.shiftKey?10:1;if(moveContourMode){const translated=root.RetouchSVGPath.translateContour({nodes:vertices,closed},delta[0]*step,delta[1]*step);if(translated)vertices.splice(0,vertices.length,...translated.nodes);else announce('Keep the contour within supported SVG coordinates.');}else if(activeHandle)changeHandle(vertices[active],activeHandle,root.RetouchSVGPath.translate(vertices[active][activeHandle],delta[0]*step,delta[1]*step));else moveSelected(vertices,delta[0]*step,delta[1]*step);paint();
     },true);
     for(const event of ['retouch:before-zoom','retouch:screen','retouch:viewport','resize','blur','pagehide'])listen(root,event,cancel);
     listen(frame,'load',cancel);listen(w,'scroll',cancel,true);listen(canvas,'scroll',cancel);
