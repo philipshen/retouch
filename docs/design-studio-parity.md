@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 284 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 286 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1533,3 +1533,25 @@ transitions. The existing geometry, paint, drawing and cancellation checks also
 pass. HTML SVG editing/history passes in both engines after the shared handler
 change. React SVG duplication, stacking and broader framework parity remain
 incomplete; the desktop bundle predates these changes.
+
+
+### React SVG stacking order
+
+React SVG canvases/groups now expose Send backward and Bring forward for adjacent
+supported SVG child layers. The planner swaps complete JSX subtrees while
+retaining the intervening whitespace/comments and dynamic attribute expressions.
+It remaps source IDs and verifies all retained node positions/tags/ancestry after
+parsing. Expression blocks, component siblings, unsupported SVG nodes, edge
+moves and stale source hashes are refused. The existing revision-aware structural
+handler keeps the moved layer selected and restores source/selection through
+history.
+
+All 286 unit tests pass. Chromium and WebKit pass the full real Next/Tailwind SVG
+workflow, including a new overlapping red rectangle/blue circle test. Browser
+hit-testing confirms that Bring forward changes the frontmost shape, undo/redo
+restores the matching paint order, and Send backward produces the same source
+ordering from the opposite selection. The moved rectangle remains selected
+after its structural ID changes. Existing geometry, paint, drawing, deletion
+and compiled-revision checks also pass. React SVG duplication, non-adjacent
+stacking commands and broader framework parity remain incomplete; the desktop
+archive predates this change.

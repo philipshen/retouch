@@ -19,4 +19,4 @@ function plan(resolved,op){
  const oldParents=parents(before),newParents=parents(next);if(next.length!==retained.length||retained.some(e=>newParents.get(mapping.get(e.id))!==(mapping.get(oldParents.get(e.id))??null)))return refuse('The deletion would change surrounding JSX ancestry.');
  return {ok:true,hash:ids.contentHash(after),parentId:mapping.get(cap.parentId),structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
 }
-module.exports={describe,plan};
+module.exports={describe,plan,parents};

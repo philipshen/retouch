@@ -419,3 +419,11 @@ roots and selections enclosed by JSX rendering expressions remain unsupported.
 Compiled React host elements carry a source revision marker so preview refreshes
 can distinguish a saved revision from an older render with the same layer IDs;
 this marker is not written to project source.
+
+
+Within a React SVG canvas or group, **Send backward** and **Bring forward** move
+a selected shape or group past its neighboring SVG layer. Later siblings normally
+paint on top. The move preserves the complete JSX subtrees and intervening
+comments, keeps the moved layer selected, and supports exact undo/redo. Expression
+blocks, component siblings and unsupported SVG nodes stop a move in that
+direction; changing their ordering is not implemented.
