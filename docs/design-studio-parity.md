@@ -2338,3 +2338,16 @@ Marquee still selects source layers within the supported single-file selection
 model. Cross-file/instance selection, arbitrary site authoring, full Figma parity
 and trusted Mac distribution remain unfinished. The verified Mac artifact predates
 these selection tools.
+
+## Inspector focus preservation during stylesheet refresh
+
+Packaged HTML verification exposed a regression from the React geometry viewport
+refresh: replacing the inspector after CSS changes could dismiss the project image
+browser or remove a gradient stop's keyboard focus. Stylesheet refreshes now preserve
+any focused inspector interaction. Viewport refreshes may replace only the canvas
+tool button that initiated a viewport change; other controls retain focus.
+
+The full 19-workflow HTML suites pass in Chromium and WebKit after the stylesheet
+refresh fix. The superseding packaged build will also verify the final viewport
+focus guard and React geometry controls against bundled code. The earlier selection
+archive's verification receipt records its HTML failures and superseded status.

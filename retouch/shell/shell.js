@@ -93,11 +93,13 @@ function hookFrame(d, w) {
   });
   // The compiler may deliver CSS after the source-write response. Refresh
   // computed inspector values when that CSS lands, without interrupting input.
-  let styleRefresh;
-  const refreshStyles = () => {
+  let styleRefresh, viewportStyleRefresh=false;
+  const refreshStyles = event => {
+    viewportStyleRefresh ||= event?.type==='resize';
     clearTimeout(styleRefresh);
     styleRefresh = setTimeout(() => {
-      if (doc() === d && sel && !panelTasks && !panelInputFocused()) renderPanel();
+      const viewport=viewportStyleRefresh;viewportStyleRefresh=false;
+      if (doc() === d && sel && !panelTasks && (viewport?!panelInteractionFocused():!panelBody.contains(document.activeElement))) renderPanel();
     }, 100);
   };
   // WebKit can settle the child viewport after the parent's animation frame.
@@ -752,14 +754,14 @@ function screenScopeSection() {
   }
   return section;
 }
-function panelInputFocused(){return panelBody.contains(document.activeElement)&&document.activeElement.matches('input,textarea,select,[contenteditable="true"]');}
+function panelInteractionFocused(){return panelBody.contains(document.activeElement)&&!document.activeElement.matches('[data-canvas-tool]');}
 let viewportRenderPending = false;
 window.addEventListener('retouch:viewport',()=>{
   if(viewportRenderPending)return;
   viewportRenderPending=true;
   requestAnimationFrame(()=>{
     viewportRenderPending=false;
-    if(sel && !panelTasks && !panelInputFocused())renderPanel();
+    if(sel && !panelTasks && !panelInteractionFocused())renderPanel();
   });
 });
 let renderedPanelSelection=null;
