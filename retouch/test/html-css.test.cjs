@@ -60,3 +60,14 @@ test('CSS important shorthand conflicts are refused while reset remains availabl
  source=source.replace('class="title"','class="title" style="width:200px !important"');
  const reset=edit(source,0,null);assert.equal(reset.ok,true);assert.ok(!reset.edits[0].after.includes('data-rt-css='));assert.ok(reset.edits[0].after.includes('width:200px !important'));
 });
+
+test('HTML image framing accepts fit modes and bounded focal points',()=>{
+ for(const mode of ['cover','contain','fill','none','scale-down'])assert.equal(css.valid('object-fit',mode),true);
+ for(const value of ['0% 100%','25.5% 50%'])assert.equal(css.valid('object-position',value),true);
+ for(const value of ['101% 0%','-1% 0%','0%','0% 0%;color:red','left top'])assert.equal(css.valid('object-position',value),false);
+ let source=edit(original,768,'cover','object-fit').edits[0].after;
+ source=edit(source,768,'25% 75%','object-position').edits[0].after;
+ assert.deepEqual(css.describe(resolve(source)).cssRules[768],{'object-fit':'cover','object-position':'25% 75%'});
+ source=edit(source,768,null,'object-position').edits[0].after;
+ assert.deepEqual(css.describe(resolve(source)).cssRules[768],{'object-fit':'cover'});
+});

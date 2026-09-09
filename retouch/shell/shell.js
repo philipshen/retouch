@@ -755,6 +755,7 @@ function renderPanel() {
   if(info.cssAuthoring){
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
     panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS));
+    if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{}));
     if(info.canSetTag){const section=RetouchInspector.section('Element');RetouchInspector.select(section,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','li'].map(tag=>[tag,tag]),info.tag,setTag);panelBody.appendChild(section);}
     if(info.src!==null)panelBody.appendChild(imageSection(info));
   }else{

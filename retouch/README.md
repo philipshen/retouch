@@ -149,7 +149,10 @@ Existing stylesheets stay intact. Generated declarations use `!important`; autho
 important rules with stronger specificity can still win. Important inline values
 are refused. The panel accepts a limited set of simple CSS values.
 
-Select an image and use **Browse project images** to search the web folder with
+Select an image to choose **Image fit**, pick one of nine positions, or enter
+horizontal and vertical percentages. These framing changes follow the selected
+screen scope; each has its own reset. Set a frame width and height to make
+cropping visible. Use **Browse project images** to search the web folder with
 thumbnail previews, or **Choose image…** to upload into `rt-assets`. Undo restores
 the image reference; uploaded files remain in the folder for reuse. Hidden files,
 dependency directories and symlinks are excluded from the image list.

@@ -12,17 +12,18 @@
     if(own)return [Number(own[1]),Number(own[2])];
     return computed.split(/\s+/).map(p=>/^[-\d.]+%$/.test(p)?parseFloat(p):NaN);
   }
-  function mount(info,el,save){
+  function mount(info,el,save,saveCSS,overrides={}){
     const sec=I.section('Image framing');if(!el||el.tagName!=='IMG')return sec;
-    if(info.classNameDynamic){I.note(sec,info.classNameReason||'Image styles are computed.','refused');return sec;}
+    if(info.classNameDynamic&&!saveCSS){I.note(sec,info.classNameReason||'Image styles are computed.','refused');return sec;}
     const css=el.ownerDocument.defaultView.getComputedStyle(el);
-    I.select(sec,'Image fit',[['cover','Fill frame'],['contain','Fit inside'],['fill','Stretch'],['none','Original size'],['scale-down','Scale down']],css.objectFit,v=>save(fit(info.className,v)));
+    const writePosition=(x,y)=>saveCSS?saveCSS('object-position',`${x}% ${y}%`):save(position(info.className,x,y));
+    I.select(sec,'Image fit',[['cover','Fill frame'],['contain','Fit inside'],['fill','Stretch'],['none','Original size'],['scale-down','Scale down']],css.objectFit,v=>saveCSS?saveCSS('object-fit',v):save(fit(info.className,v)));
     const parts=css.objectPosition.split(/\s+/);
-    const numbers=coordinates(info.className,css.objectPosition);
+    const numbers=coordinates(saveCSS?'':info.className,css.objectPosition);
     const grid=document.createElement('div');grid.className='anchor-grid';grid.setAttribute('role','group');grid.setAttribute('aria-label','Image position');
     const symbols=['↖','↑','↗','←','·','→','↙','↓','↘'];
     for(let y=0;y<3;y++)for(let x=0;x<3;x++){
-      const b=I.button(symbols[y*3+x],()=>save(position(info.className,x*50,y*50)));
+      const b=I.button(symbols[y*3+x],()=>writePosition(x*50,y*50));
       const name=['top','middle','bottom'][y]+' '+['left','center','right'][x];b.setAttribute('aria-label','Image position '+name);b.title=name;
       b.setAttribute('aria-pressed',String(numbers[0]===x*50&&numbers[1]===y*50));grid.append(b);
     }
@@ -32,8 +33,9 @@
       const input=document.createElement('input');input.type='number';input.min=0;input.max=100;input.step='any';
       input.value=Number.isFinite(numbers[i])?numbers[i]:'';input.placeholder=parts[i]||'50%';
       I.field(sec,i===0?'Image horizontal position (%)':'Image vertical position (%)',input);fields.push(input);
-      input.onchange=()=>{if(fields.every(f=>f.value!==''&&f.checkValidity()))save(position(info.className,...fields.map(f=>Number(f.value))));};
+      input.onchange=()=>{if(fields.every(f=>f.value!==''&&f.checkValidity()))writePosition(...fields.map(f=>Number(f.value)));};
     }
+    if(saveCSS)for(const [property,label]of [['object-fit','Reset image fit'],['object-position','Reset image position']]){const reset=I.button(label,()=>saveCSS(property,null));reset.disabled=!Object.hasOwn(overrides,property);sec.append(reset);}
     I.note(sec,'Position the image inside its frame.');
     return sec;
   }

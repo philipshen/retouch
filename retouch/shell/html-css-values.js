@@ -1,13 +1,14 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchHTMLCSSValues=api;})(typeof window==='object'?window:globalThis,function(){
- const options={display:['block','inline-block','flex','grid','none'],'flex-direction':['row','column','row-reverse','column-reverse'],'flex-wrap':['nowrap','wrap','wrap-reverse'],'align-items':['start','center','end','stretch','baseline'],'justify-content':['start','center','end','space-between','space-around','space-evenly'],'text-align':['start','left','center','right','justify'],'border-style':['none','solid','dashed','dotted','double']};
+ const options={'object-fit':['cover','contain','fill','none','scale-down'],display:['block','inline-block','flex','grid','none'],'flex-direction':['row','column','row-reverse','column-reverse'],'flex-wrap':['nowrap','wrap','wrap-reverse'],'align-items':['start','center','end','stretch','baseline'],'justify-content':['start','center','end','space-between','space-around','space-evenly'],'text-align':['start','left','center','right','justify'],'border-style':['none','solid','dashed','dotted','double']};
  const sides=['top','right','bottom','left'];
  const families={padding:sides.map(s=>'padding-'+s),margin:sides.map(s=>'margin-'+s),gap:['row-gap','column-gap'],'border-width':sides.map(s=>'border-'+s+'-width')};
  const fields=[['width','Width'],['height','Height'],['min-width','Minimum width'],['max-width','Maximum width'],['min-height','Minimum height'],['max-height','Maximum height'],['display','Display'],['flex-direction','Direction'],['flex-wrap','Wrap'],['align-items','Align items'],['justify-content','Distribute items'],['gap','Gap'],['padding','Padding'],...sides.map(s=>['padding-'+s,'Padding '+s]),['margin','Margin'],...sides.map(s=>['margin-'+s,'Margin '+s]),['font-size','Font size'],['line-height','Line height'],['letter-spacing','Letter spacing'],['text-align','Text alignment'],['color','Text color'],['background-color','Background color'],['border-width','Border width'],['border-style','Border style'],['border-color','Border color'],['border-radius','Corner radius']];
  const lengths=new Set([...fields.map(([p])=>p).filter(p=>!options[p]&&!p.endsWith('color')),'row-gap','column-gap',...families['border-width']]);
  const colors=new Set(['color','background-color','border-color']);
  function valid(property,value){
-  if(value===null)return lengths.has(property)||colors.has(property)||Object.hasOwn(options,property);
+  if(value===null)return property==='object-position'||lengths.has(property)||colors.has(property)||Object.hasOwn(options,property);
   if(typeof value!=='string'||!value||value.length>150)return false;
+  if(property==='object-position'){const parts=value.split(/\s+/);return parts.length===2&&parts.every(p=>/^(?:\d*\.)?\d+%$/.test(p)&&parseFloat(p)>=0&&parseFloat(p)<=100);}
   if(Object.hasOwn(options,property))return options[property].includes(value);
   if(colors.has(property))return /^(?:#(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})|[a-z]+|(?:rgb|rgba|hsl|hsla)\([\d.%,\s/]+\))$/i.test(value);
   if(!lengths.has(property))return false;

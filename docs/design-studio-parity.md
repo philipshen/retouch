@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 210 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 211 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -452,3 +452,16 @@ edits and redo. The HTML browser test edits a second page, navigates home, undoe
 back on the second page, navigates home again and redoes back on the second page,
 then verifies exact source restoration. History remains local to the running
 editor session; persistent history and shared multi-user editing remain open.
+
+
+### HTML image framing
+
+HTML images now use the shared image framing UI, with fit modes, nine position
+anchors, percentage coordinates and per-property reset. The HTML writer persists
+`object-fit` and bounded percentage `object-position` rules at the selected
+minimum-width scope. Utility-based renderers keep their existing class writer.
+
+All 211 tests pass. Browser checks verify tablet fit and position overrides,
+phone inheritance, reset and exact undo through the HTML source writer. These
+are CSS frame controls; destructive bitmap cropping, masks and image effects
+remain open.
