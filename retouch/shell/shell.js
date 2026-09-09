@@ -1696,6 +1696,7 @@ async function writeClasses(classes, isUndo) {
     if (!isUndo) editorHistory.record({ type: 'setClasses', id: info.id, classes: prev, undoId: res.undoId, context: info.context });
     info.className = res.element?.className ?? classes;
     info.hash = res.hash;
+    if(info.classTextStyles&&res.element)for(const key of ['textStyleLinks','textStyleOverrides','classTextStyles','textStyleLinkReason'])info[key]=res.element[key];
     if (window.__RT_RENDERING?.reloadAfterWrite||info.renderRevisionAttribute) await refreshWrittenElement(info, el => info.className.split(/\s+/).filter(Boolean).every(token => el.classList.contains(token)));
     toast('Saved', 'ok');
     renderPanel();

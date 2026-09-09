@@ -19,17 +19,22 @@ function metadata(element){
  }
  return {links,attribute:attr};
 }
-function describe(resolved){if(resolved.element.kind!=='host')return {};try{return {classTextStyles:true,textStyleLinks:metadata(resolved.element).links};}catch(error){return {classTextStyles:false,textStyleLinkReason:error.message};}}
+function describe(resolved){if(resolved.element.kind!=='host')return {};try{
+ const links=metadata(resolved.element).links,info=require('./writer.cjs').describeElement(resolved);
+ const overrides=info.classNameDynamic?{}:Object.fromEntries(Object.entries(links).map(([scope,link])=>[scope,classes.overrides(info.className||'',link.properties,scope)]));
+ return {classTextStyles:true,textStyleLinks:links,textStyleOverrides:overrides};
+}catch(error){return {classTextStyles:false,textStyleLinkReason:error.message};}}
 function plan(resolved,op,style){
  try{
   if(resolved.element.kind!=='host')return refuse('Select a host layer to apply a text style.');
   if(op.fileHash&&op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the layer.');
   const scope=op.scope??'';responsive.replaceScope('','',scope);
   const current=metadata(resolved.element).links;let source=resolved.source;
-  if(op.type==='applyTextStyle'){
+  if(op.type==='applyTextStyle'||op.type==='resetTextStyle'){
    const validated=catalog.validate({version:1,styles:[style]}).styles[0],info=react.describe(resolved);
    if(info.classNameDynamic)return refuse('Text style application needs literal classes.');
-   const composed=classes.compose(info.className||'',validated.properties,scope),result=react.planOp(resolved,{type:'setClasses',classes:composed,fileHash:resolved.hash});if(!result.ok)return result;
+   if(op.type==='resetTextStyle'&&current[scope]?.id!==validated.id)return refuse('The layer is no longer linked to this text style.');
+   const composed=classes.compose(info.className||'',validated.properties,scope,op.type==='resetTextStyle'?Object.keys(current[scope].properties):[]),result=react.planOp(resolved,{type:'setClasses',classes:composed,fileHash:resolved.hash});if(!result.ok)return result;
    source=result.edits[0]?.after||source;current[scope]={id:validated.id,properties:validated.properties};
   }else if(op.type==='detachTextStyle')delete current[scope];else return refuse('Unsupported React text style operation.');
   if(Object.keys(current).length>32)return refuse('A layer supports up to 32 text style scopes.');

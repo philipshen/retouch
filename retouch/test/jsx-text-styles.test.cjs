@@ -20,3 +20,13 @@ test('React text style writer refuses stale source, dynamic metadata and ambiguo
  for(const text of [source.replace('<p ','<p className="other" '),source.replace('<p ','<p {...props} '),source.replace('<p ','<p data-rt-text-styles={getLinks()} '),source.replace('className="p-4 font-bold md:text-lg/7 hover:text-red-500"','className={classes}')])assert.equal(apply(text).ok,false);
  assert.equal(apply(source,'md:hover:').ok,false);
 });
+test('React override reset removes changed and obsolete properties only in its scope',()=>{
+ const before=apply(apply(source).edits[0].after,'md:').edits[0].after;
+ const modified=before.replace('md:![font-size:32px]','md:!text-[40px]');
+ assert.deepEqual(linked.describe(resolve(modified)).textStyleOverrides,{'':[], 'md:':['font-size']});
+ const next={...style,properties:{'font-size':'48px','line-height':'1.2'}};
+ const result=linked.plan(resolve(modified),{type:'resetTextStyle',scope:'md:'},next);assert.equal(result.ok,true,result.reason);
+ const after=resolve(result.edits[0].after),info=react.describe(after);
+ assert.ok(info.className.includes('![font-size:32px]'));assert.ok(info.className.includes('md:![font-size:48px]'));assert.ok(!info.className.includes('md:!text-[40px]'));assert.ok(!info.className.includes('md:![font-family:'));
+ assert.deepEqual(linked.describe(after).textStyleOverrides,{'':[], 'md:':[]});assert.equal(linked.plan(resolve(source),{type:'resetTextStyle',scope:'md:'},style).ok,false);
+});

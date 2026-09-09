@@ -28,20 +28,25 @@ function hasSizeLeading(token){
  if(!inspector.fontSizeToken(token)||!token.startsWith('text-'))return false;let depth=0;
  for(const character of token){if(character==='['||character==='(')depth++;else if(character===']'||character===')')depth--;else if(character==='/'&&depth===0)return true;}return false;
 }
-function compose(classes,values,prefix=''){
+function compose(classes,values,prefix='',remove=[]){
+ if(!Array.isArray(remove)||remove.some(property=>!properties.includes(property)))throw Error('Unsupported typography reset properties.');
  if(typeof classes!=='string')throw Error('Text styles require a class string.');
- responsive.replaceScope('','',prefix);const encoded=encode(values),keys=Object.keys(encoded),retained=[];
+ responsive.replaceScope('','',prefix);const encoded=encode(values),keys=[...new Set([...Object.keys(encoded),...remove])],retained=[];
  for(const token of classes.split(/\s+/).filter(Boolean)){
   if(!classTokens.valid(token))throw Error('The source contains unsupported class syntax.');
   const part=responsive.split(token);if(part.prefix!==prefix){retained.push(token);continue;}
   const plain=inspector.base(part.value);
   if(/^\[font:/.test(plain)||Object.hasOwn(values,'font-variant-numeric')&&/^\[font-variant:/.test(plain))throw Error('Expand the font shorthand before applying a text style.');
   if(hasSizeLeading(plain)&&keys.some(key=>key==='font-size'||key==='line-height')){
-   if(!Object.hasOwn(values,'font-size')||!Object.hasOwn(values,'line-height'))throw Error('This utility combines font size and line height. Apply both properties together.');
+   if(!keys.includes('font-size')||!keys.includes('line-height'))throw Error('This utility combines font size and line height. Apply both properties together.');
    continue;
   }
   if(!keys.some(property=>matchers[property](plain)))retained.push(token);
  }
  return retained.concat(Object.values(encoded).map(token=>prefix+token)).join(' ');
 }
-module.exports={encode,compose};
+function overrides(className,baseline,prefix=''){
+ const encoded=encode(baseline),tokens=responsive.project(className,prefix).split(/\s+/).filter(Boolean);
+ return Object.keys(encoded).filter(property=>!tokens.includes(encoded[property])||tokens.some(token=>token!==encoded[property]&&(/^!|!$/.test(token))&&(matchers[property](inspector.base(token))||property==='line-height'&&hasSizeLeading(inspector.base(token))||/^\[font:/.test(inspector.base(token))))).sort();
+}
+module.exports={encode,compose,overrides};

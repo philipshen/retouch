@@ -37,3 +37,10 @@ test('partial composition does not silently discard coupled utility properties o
  assert.doesNotThrow(()=>compose('text-[calc(1em/2)]',{'font-size':'40px'}));
  assert.throws(()=>compose('p-4',{'font-size':'40px'},'md:hover:'),/scope/);
 });
+test('override detection distinguishes canonical ownership, local resets and important competitors',()=>{
+ const {overrides}=require('../src/text-style-classes.cjs'),baseline={'font-size':'32px','font-weight':'500'};
+ assert.deepEqual(overrides('![font-size:32px] ![font-weight:500] font-bold md:!text-lg',baseline),[]);
+ assert.deepEqual(overrides('![font-size:32px] !font-bold',baseline),['font-weight']);
+ assert.deepEqual(overrides('![font-size:32px] ![font-weight:500] !text-lg',baseline),['font-size']);
+ assert.deepEqual(overrides('md:![font-size:32px] md:![font-weight:500] !text-lg',baseline,'md:'),[]);
+});

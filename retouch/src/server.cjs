@@ -193,7 +193,7 @@ function handle(req, res, ctx) {
           if (!ctx.adapter.capabilities?.ops?.includes('setCSS')) return json(res,409,{ok:false,reason:'Linked text style updates are not available for this renderer yet.'});
           result=applyPlan(ctx.appRoot,require('./text-style-update.cjs').plan(ctx.appRoot,{type:'update',revision:op.libraryRevision,id:op.styleId,name:op.name,properties:op.properties}));
         } else if (op.type === 'applyTextStyle' || op.type === 'detachTextStyle' || op.type === 'resetTextStyle') {
-          const reactStyles=ctx.adapter.name==='react'&&op.type!=='resetTextStyle';
+          const reactStyles=ctx.adapter.name==='react';
           if (!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!reactStyles) return json(res,409,{ok:false,reason:'Linked text style application is not available for this renderer yet.'});
           let style;
           if (op.type === 'applyTextStyle' || op.type === 'resetTextStyle') {

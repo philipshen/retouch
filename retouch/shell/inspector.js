@@ -482,7 +482,7 @@
   function typography(info, el, save, changeTag, textStyleAction) {
     const sec=section('Typography'); if(!el)return sec;
     const d=el.ownerDocument, css=d.defaultView.getComputedStyle(el);
-    root.RetouchTextStyles?.mount(sec,el,info.classTextStyles&&!info.classNameDynamic&&textStyleAction?{link:info.textStyleLinks?.[info.styleScope||''],apply:(styleId,libraryRevision)=>textStyleAction('applyTextStyle',info.styleScope||'',{styleId,libraryRevision}),detach:()=>textStyleAction('detachTextStyle',info.styleScope||'',{})}:{});
+    root.RetouchTextStyles?.mount(sec,el,info.classTextStyles&&!info.classNameDynamic&&textStyleAction?{link:info.textStyleLinks?.[info.styleScope||''],overrides:info.textStyleOverrides?.[info.styleScope||'']||[],reset:(styleId,libraryRevision)=>textStyleAction('resetTextStyle',info.styleScope||'',{styleId,libraryRevision}),apply:(styleId,libraryRevision)=>textStyleAction('applyTextStyle',info.styleScope||'',{styleId,libraryRevision}),detach:()=>textStyleAction('detachTextStyle',info.styleScope||'',{})}:{});
     note(sec,`${css.fontFamily} · ${css.fontSize} / ${css.lineHeight} · ${css.fontWeight}`,'computed-value');
     const preview=document.createElement('iframe');preview.className='type-preview';preview.title='Typography preview';preview.setAttribute('sandbox','allow-same-origin');sec.append(preview);
     preview.onload=()=>{

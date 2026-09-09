@@ -5684,3 +5684,28 @@ HTML WebKit and local Liquid WebKit regressions also exited 0:
 /private/tmp/retouch-react-links-regression-{html-chromium,html-webkit,liquid-webkit}.log.
 Syntax/diff checks passed. React propagation/reset/inheritance and Liquid link
 application remain unfinished, along with full parity. Native launches stay paused.
+
+### React linked typography override count and reset
+
+React links now expose per-scope override counts based on canonical property
+ownership. Missing/replaced canonical tokens and competing important typography
+utilities count as local overrides; normal-priority utilities and other scopes
+do not. Reset text style overrides restores the current catalog definition in
+the selected scope, removes properties owned by the old definition but absent
+from the new one, and preserves other scopes. The operation remains revision-
+checked and undoable. Initial browser testing found that ordinary class saves
+kept old link metadata in the client; class-save responses now refresh that
+metadata before inspector reconstruction.
+
+All 423 unit tests passed, exit 0:
+/private/tmp/retouch-react-style-reset-final-units.log. Unit coverage verifies
+scoped reset, obsolete-property removal, canonical ownership and competing
+important declarations. React Chromium and WebKit browser flows exited 0:
+/private/tmp/retouch-react-style-reset-fixed-{chromium,webkit}.log. They change a
+linked paragraph from 32px to 40px through the inspector, observe one override,
+reset to 32px with no overrides, and undo reset/edit back to exact source. Existing
+apply/detach, responsive isolation and catalog-history flows also pass. Syntax and
+diff checks passed. Counts describe supported source-class ownership, not a
+complete analysis of arbitrary CSS cascade rules. React propagation/inheritance,
+Liquid linked styles and full parity remain unfinished. Native launches stay
+paused.
