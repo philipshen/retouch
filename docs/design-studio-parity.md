@@ -4071,3 +4071,40 @@ Numeric CSS weight does not prove a selected font contains every requested
 weight or supports continuous variation. Actual glyph interpolation, variable
 axis discovery/editing, other typography controls and full Figma/any-site/native
 distribution parity remain incomplete. Native app launches remain paused.
+
+
+### 2026-09-09 — Rendered variable-weight verification
+
+The new `test:e2e:variable-weight` variant uses the installed fixture's Geist
+Latin WOFF2 as an embedded test font, with a declared weight range of 100–900.
+Its OpenType fvar metadata was inspected with fontTools and confirms a wght
+axis with minimum 100, default 400 and maximum 900. The exact fixture binary is
+`/private/tmp/retouch-responsive-fixture/node_modules/next/dist/next-devtools/server/font/geist-latin.woff2`,
+SHA-256 `1b5ebfb3a01a97343ac96873e6d59a8cb285c66012b6a1ac509cb2765e995ba8`.
+The binary remains in the external fixture; no font binary was added to the repo.
+
+The actual editor/source workflow sets base weight 537.5 and tablet weight
+725.5. After confirming the face loaded, the test rasterizes the selected text
+in a temporary page canvas using that element's computed weight and family,
+then compares summed glyph alpha coverage at a fixed size. Chromium's coverage
+increases from 336292 to 421076; WebKit's increases from 340152 to 424558.
+This supplies evidence of a changed glyph rendering, beyond merely reading a
+changed CSS property. Both values are inside the inspected variable axis range.
+
+Passing evidence is in `/private/tmp/retouch-variable-weight-react.log`
+(React/Chromium) and `/private/tmp/retouch-variable-weight-html-webkit.log`
+(HTML/WebKit). The full font/weight workflow also verifies family retention,
+responsive isolation, reset and exact source undo; React additionally checks
+preset replacement, range rejection and inspector agreement with the renderer.
+Both runs exited successfully and removed their temporary fixtures. This turn
+changes only the browser harness, package test entry and this evidence ledger;
+it does not change editor implementation or claim a new unit-suite run.
+
+The default Python fontTools environment lacked WOFF2's Brotli dependency;
+metadata inspection succeeded in an isolated uv environment with Brotli and
+fontTools, without changing the workspace's linked node_modules.
+
+This establishes variable weight behavior for one known font and tested values,
+not every font, every axis or every glyph. Axis discovery, axis-specific UI and
+broader typography/Figma/any-site/native distribution requirements remain open.
+No native app launch was attempted; the launch pause remains in force.
