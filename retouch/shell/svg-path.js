@@ -12,5 +12,48 @@
     if(closed){if(nodes.at(-1).out||nodes[0].in)d+=' '+segment(nodes.at(-1),nodes[0]);d+=' Z';}
     return d;
   }
-  const api={serialize,curved};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
+  function parse(text){
+    if(typeof text!=='string'||text.length>100000)return null;
+    const tokens=[],number=/[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?/iy;
+    let i=0;
+    while(i<text.length){
+      let separated=false;while(/[\t\n\r ]/.test(text[i]||'!')){i++;separated=true;}
+      if(i===text.length)break;
+      if(text[i]===','){if(typeof tokens.at(-1)!=='number')return null;i++;while(/[\t\n\r ]/.test(text[i]||'!'))i++;if(i===text.length||/[a-z,]/i.test(text[i]))return null;separated=true;}
+      if(/[a-z]/i.test(text[i])){tokens.push(text[i++]);}
+      else{if(typeof tokens.at(-1)==='number'&&!separated&&!/[+\-.]/.test(text[i]))return null;number.lastIndex=i;const match=number.exec(text);if(!match)return null;tokens.push(Number(match[0]));i=number.lastIndex;}
+      if(tokens.length>4096)return null;
+    }
+    const nodes=[];let at=0,command=null,previous=null,quadratic=null,closed=false;
+    function numbers(count){const v=tokens.slice(at,at+count);if(v.length!==count||v.some(n=>typeof n!=='number'||!Number.isFinite(n)))return null;at+=count;return v;}
+    while(at<tokens.length){
+      if(typeof tokens[at]==='string')command=tokens[at++];
+      if(!command||closed)return null;const op=command.toUpperCase(),relative=command!==op,a=nodes.at(-1)||{x:0,y:0};
+      if(!nodes.length&&op!=='M')return null;
+      if(op==='Z'){closed=true;command=null;continue;}
+      const count={M:2,L:2,H:1,V:1,C:6,S:4,Q:4,T:2}[op];if(!count)return null;const v=numbers(count);if(!v)return null;
+      const pair=n=>({x:v[n]+(relative?a.x:0),y:v[n+1]+(relative?a.y:0)});
+      if(op==='M'){if(nodes.length)return null;nodes.push(pair(0));command=relative?'l':'L';}
+      else if(op==='L')nodes.push(pair(0));
+      else if(op==='H')nodes.push({x:v[0]+(relative?a.x:0),y:a.y});
+      else if(op==='V')nodes.push({x:a.x,y:v[0]+(relative?a.y:0)});
+      else if(op==='C'||op==='S'){const control=op==='C'?pair(0):['C','S'].includes(previous)&&a.in?{x:2*a.x-a.in.x,y:2*a.y-a.in.y}:{x:a.x,y:a.y};a.out=control;nodes.push({...pair(op==='C'?4:2),in:pair(op==='C'?2:0)});}
+      else{const q=op==='Q'?pair(0):['Q','T'].includes(previous)&&quadratic?{x:2*a.x-quadratic.x,y:2*a.y-quadratic.y}:{x:a.x,y:a.y},b=pair(op==='Q'?2:0);a.out={x:a.x+2*(q.x-a.x)/3,y:a.y+2*(q.y-a.y)/3};b.in={x:b.x+2*(q.x-b.x)/3,y:b.y+2*(q.y-b.y)/3};nodes.push(b);quadratic=q;}
+      if(!['Q','T'].includes(op))quadratic=null;previous=op;
+      if(nodes.length>513)return null;
+    }
+    if(closed&&nodes.length>2){const first=nodes[0],last=nodes.at(-1);if(first.x===last.x&&first.y===last.y){if(last.in)first.in=last.in;nodes.pop();}}
+    return serialize(nodes,closed)?{nodes,closed}:null;
+  }
+  const midpoint=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+  function segmentMiddle(a,b){const ab=midpoint(a,a.out||a),bc=midpoint(a.out||a,b.in||b),cd=midpoint(b.in||b,b);return midpoint(midpoint(ab,bc),midpoint(bc,cd));}
+  function split(nodes,index,closed){
+    if(!serialize(nodes,closed)||nodes.length>=512||!Number.isInteger(index)||index<0||index>=nodes.length-(closed?0:1))return null;
+    const next=nodes.map(p=>({...p,...(p.in?{in:{...p.in}}:{}),...(p.out?{out:{...p.out}}:{})})),a=next[index],b=next[(index+1)%next.length];let point;
+    if(a.out||b.in){const ab=midpoint(a,a.out||a),bc=midpoint(a.out||a,b.in||b),cd=midpoint(b.in||b,b),abc=midpoint(ab,bc),bcd=midpoint(bc,cd);a.out=ab;b.in=cd;point={...midpoint(abc,bcd),in:abc,out:bcd};}else point=midpoint(a,b);
+    next.splice(index+1,0,point);return next;
+  }
+  function translate(node,dx,dy){return {...node,x:node.x+dx,y:node.y+dy,...(node.in?{in:{x:node.in.x+dx,y:node.in.y+dy}}:{}),...(node.out?{out:{x:node.out.x+dx,y:node.out.y+dy}}:{})};}
+  function equivalent(a,b){return !!a&&!!b&&a.closed===b.closed&&a.nodes.length===b.nodes.length&&a.nodes.every((p,i)=>['','in','out'].every(key=>{const x=key?p[key]:p,y=key?b.nodes[i][key]:b.nodes[i];return !x&&!y||x&&y&&Math.abs(x.x-y.x)<1e-6&&Math.abs(x.y-y.y)<1e-6;}));}
+  const api={serialize,curved,parse,split,segmentMiddle,translate,equivalent};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
 })(typeof window==='object'?window:globalThis);

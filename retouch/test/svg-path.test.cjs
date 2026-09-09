@@ -17,3 +17,19 @@ for(const kind of ['html','react'])test(kind+' path insertion preserves source i
   }
   for(const op of [{nodes:[{x:0,y:0}]},{nodes:[nodes[0],{x:10,y:0,out:{x:NaN,y:0}}]},{fileHash:'stale'},{closed:'true'}])assert.equal(adapter.planOp(r,{type:'insertSVG',preset:'path',nodes,closed:false,fileHash:r.hash,...op}).refused,true);
 });
+
+test('Path parser normalizes relative, implicit, smooth and quadratic segments and round-trips closure',()=>{
+  assert.deepEqual(path.parse(path.serialize(nodes,true)),{nodes,closed:true});
+  assert.equal(path.serialize(path.parse('m10 10 20 0h10v20l-10 0z').nodes,true),'M 10 10 L 30 10 L 40 10 L 40 30 L 30 30 Z');
+  const smooth=path.parse('M0 0C0 10 10 10 10 0s10-10 10 0');assert.deepEqual(smooth.nodes[1].out,{x:10,y:-10});
+  const q=path.parse('M0 0Q15 30 30 0T60 0');assert.deepEqual(q.nodes[0].out,{x:10,y:20});assert.deepEqual(q.nodes[1].out,{x:40,y:-20});
+  assert.deepEqual(path.parse('M.5.5L1e1-2').nodes,[{x:.5,y:.5},{x:10,y:-2}]);
+  for(const d of ['M0 0L1','M0 0C1 2 3','M,0 0L1 2','M0,,0L1 2','M0 0,L1 2','M0 0L1 2,','M0 0L1 2ZL2 2','M0 0L1 2M3 4L5 6','M0 0A1 1 0 0 0 2 3','M0 0LInfinity 0','M0 0L100001 0','M0 0L1 2" onload="x'])assert.equal(path.parse(d),null,d);
+});
+test('Splitting a cubic preserves its geometry, including a curved closing edge',()=>{
+  const evaluate=(a,b,t)=>{const u=1-t,c=a.out||a,d=b.in||b;return{x:u*u*u*a.x+3*u*u*t*c.x+3*u*t*t*d.x+t*t*t*b.x,y:u*u*u*a.y+3*u*u*t*c.y+3*u*t*t*d.y+t*t*t*b.y};};
+  for(const closed of [false,true])for(const index of closed?[0,1]:[0]){
+    const split=path.split(nodes,index,closed);assert.equal(split.length,3);for(let i=0;i<=20;i++){const t=i/20,a=nodes[index],b=nodes[(index+1)%2],expected=evaluate(a,b,t),actual=t<=.5?evaluate(split[index],split[index+1],t*2):evaluate(split[index+1],split[(index+2)%3],(t-.5)*2);assert.ok(Math.hypot(actual.x-expected.x,actual.y-expected.y)<1e-9);}
+  }
+  const moved=path.translate(nodes[0],10,-5);assert.deepEqual(moved,{x:10,y:-5,in:{x:10,y:-55},out:{x:10,y:45}});assert.equal(nodes[0].x,0);
+});

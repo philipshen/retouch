@@ -3083,3 +3083,41 @@ This establishes curve creation, not complete vector authoring. Editing saved
 path anchors/handles, independent handle controls, path conversion/import, vector
 networks, booleans and masks remain. Native launches stayed paused. Full Figma
 Design parity, arbitrary-site support and trusted Mac distribution remain open.
+
+
+### 2026-09-09 — Saved path anchors and independent Bézier handles
+
+The vector point editor now opens supported SVG paths in HTML and JSX. Moving an
+anchor translates its attached handles; incoming and outgoing handles can also
+move independently with pointer dragging or arrow keys. Shift-arrow moves ten
+SVG units. Adding a point splits the cubic at its midpoint without changing its
+geometry. Anchor deletion, Done/Enter, Escape and source undo/redo use the existing
+geometry history flow. Pending geometry remains outside the site DOM.
+
+The shared parser accepts one subpath using M/L/H/V/C/S/Q/T/Z, including relative,
+implicit and smooth commands. Quadratics normalize to cubic handles. It rejects
+arcs, compound paths, malformed data and unsupported coordinate/node bounds.
+These remain explicit vector-authoring gaps. The command semantics follow
+https://www.w3.org/TR/SVG2/paths.html.
+
+All four saved-curve browser workflows pass:
+`/private/tmp/retouch-saved-curves-{html,react}-{chromium,webkit}-complete.log`.
+They cover anchor/independent-handle changes at 50/100/200 percent zoom through
+nested transforms, geometry-preserving insertion, deletion, preview isolation,
+cancellation, actual CSS geometry override refusal and exact source undo/redo.
+The inspected `/private/tmp/retouch-saved-curves-react-chromium.png` shows anchor
+squares, round handles, tangent lines and the editing action bar.
+
+The original Chromium failure is retained in
+`/private/tmp/retouch-saved-curves-html-diagnostic.log`: computed CSS rounded the
+attribute's coordinates, causing a false override refusal. The check now compares
+browser-normalized CSS values. Source/transform/animation changes still cancel
+pending edits. All 344 unit tests pass in
+`/private/tmp/retouch-saved-curves-unit.log`, including exact cubic subdivision
+checks and parser normalization/rejection cases. Existing polygon/polyline
+regressions pass in `/private/tmp/retouch-saved-curves-vertices-html-regression.log`
+and `/private/tmp/retouch-saved-curves-vertices-react-regression.log`.
+
+This adds saved curve editing. Vector networks, arcs/compound paths, handle modes,
+booleans, masks and the other full-parity requirements remain open. Native app
+launches remain paused; no desktop build or launch occurred for this change.
