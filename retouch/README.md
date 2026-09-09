@@ -168,7 +168,9 @@ body are supported. **Frame selection** wraps one layer or consecutive sibling
 layers in an editable HTML container. **Remove frame** removes that container
 and keeps its children. Both actions restore source and selection with undo.
 The **Layout** section offers **Horizontal stack**, **Vertical stack**, and a
-nine-position child alignment control for single-line flex containers. These
+nine-position child alignment control for flex containers. **Child wrapping**
+chooses a single line, wrapped lines, or reverse wrapping. Alignment moves both
+children and their wrapped lines toward the chosen position. These
 controls follow the selected screen scope and each use one undo step.
 A frame changes the document hierarchy, so parent selectors and flex/grid layout
 can change; this is not a guarantee of identical appearance. **Duplicate layers** and **Delete layers** apply to the

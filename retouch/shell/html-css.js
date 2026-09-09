@@ -51,10 +51,11 @@
   if(info.structure?.canInsert){
    const stacks=document.createElement('div');stacks.className='stack-presets';
    for(const [axis,label]of [['horizontal','Horizontal stack'],['vertical','Vertical stack']]){const changes=stackLayout(axis,css.writingMode),button=I.button(label,()=>save(changes,null,width));button.setAttribute('aria-pressed',String(['flex','inline-flex'].includes(css.display)&&css.flexDirection===changes['flex-direction']&&css.flexWrap==='nowrap'));stacks.append(button);}layout.append(stacks);
-   if(['flex','inline-flex'].includes(css.display)&&css.flexWrap==='nowrap'){
+   if(['flex','inline-flex'].includes(css.display)){
+    const wrapping=document.createElement('select');for(const [value,label]of [['nowrap','Single line'],['wrap','Wrap to new lines'],['wrap-reverse','Wrap in reverse']]){const option=document.createElement('option');option.value=value;option.textContent=label;wrapping.append(option);}wrapping.value=css.flexWrap;wrapping.onchange=()=>save('flex-wrap',wrapping.value,width);I.field(layout,'Child wrapping',wrapping);
     const align=document.createElement('div');align.className='layout-alignment';align.setAttribute('role','group');align.setAttribute('aria-label','Align children');
     for(let y=0;y<3;y++)for(let x=0;x<3;x++){
-     const label='Align children '+['top','middle','bottom'][y]+' '+['left','center','right'][x],changes=flexAlignment(x,y,css),button=I.button('•',()=>save(changes,null,width));button.setAttribute('aria-label',label);button.title=label;button.setAttribute('aria-pressed',String(css.justifyContent===changes['justify-content']&&css.alignItems===changes['align-items']));align.append(button);
+     const label='Align children '+['top','middle','bottom'][y]+' '+['left','center','right'][x],changes=flexAlignment(x,y,css),button=I.button('•',()=>save(changes,null,width));button.setAttribute('aria-label',label);button.title=label;button.setAttribute('aria-pressed',String(css.justifyContent===changes['justify-content']&&css.alignItems===changes['align-items']&&(!changes['align-content']||css.alignContent===changes['align-content'])));align.append(button);
     }
     layout.append(align);
    }

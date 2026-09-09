@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 247 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 248 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -950,3 +950,20 @@ fixtures, with child bounding boxes checked at opposite corners and along both
 stack axes. A Chromium screenshot confirms the visible controls and selected state.
 Full auto-layout parity, pixel-preserving groups and other renderer support remain
 unfinished.
+
+
+### Wrapping and physical alignment across lines
+
+The HTML Layout section now exposes Child wrapping for single-line, normal and
+reverse wrapping. The alignment grid also works with wrapped flex layouts: one
+atomic edit sets justification, item alignment and line alignment at the chosen
+screen scope. Reverse wrapping flips the physical cross-axis mapping. Align lines
+is additionally available in the CSS fields with its own reset.
+
+All 248 unit tests pass. Chromium and WebKit each verify twelve normal/reverse
+wrapping fixtures across horizontal, vertical, reversed and RTL axes. Actual child
+bounding boxes must form two rows and two columns at the chosen opposite corners.
+Screen-scoped wrapping changes apply at tablet size while the phone retains its
+original wrapping, and each edit undoes to exact source. The new fixture is part
+of test:e2e:html; its screenshot was inspected. This extends flex auto-layout,
+while full Figma parity, other renderers and native release remain incomplete.

@@ -22,3 +22,11 @@ test('Stack and alignment changes form one responsive source edit and refuse con
  const result=css.plan(r,{changes,width:768,fileHash:r.hash});assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);const after=result.edits[0].after,next=html.collect(after,'index.html').elements;assert.deepEqual(css.describe({...r,source:after,elements:next,element:next.find(e=>e.tag==='main')}).cssRules,{768:changes});
  const conflict=source.replace('<main>','<main style="display:block !important">'),items=html.collect(conflict,'index.html').elements,refusal=css.plan({...r,source:conflict,hash:html.contentHash(conflict),elements:items,element:items.find(e=>e.tag==='main')},{changes,width:768});assert.equal(refusal.refused,true);assert.equal(refusal.edits,undefined);
 });
+
+test('Wrapping alignment moves the line group and reverses the cross axis for reverse wrapping',()=>{
+ for(const mode of ['horizontal-tb','vertical-rl','vertical-lr'])for(const direction of ['row','column','row-reverse','column-reverse']){
+  const state={writingMode:mode,flexDirection:direction},single=flexAlignment(0,0,state),normal=flexAlignment(0,0,{...state,flexWrap:'wrap'}),reverse=flexAlignment(0,0,{...state,flexWrap:'wrap-reverse'});
+  assert.equal(normal['align-content'],single['align-items']);assert.equal(reverse['align-content'],single['align-items']==='flex-start'?'flex-end':'flex-start');assert.equal(reverse['align-items'],reverse['align-content']);assert.equal(reverse['justify-content'],single['justify-content']);
+  for(const [p,v]of Object.entries(reverse))assert.equal(valid(p,v),true);
+ }
+});
