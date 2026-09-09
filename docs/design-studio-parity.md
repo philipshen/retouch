@@ -5264,3 +5264,36 @@ This classification depends on successfully inspected font metadata; it is not
 complete font discovery. Broader typography and Figma/arbitrary-site parity
 remain unfinished. Native app launches remain paused and trusted macOS/Homebrew
 distribution remains unverified.
+
+### Keep each font axis's controls together
+
+Each active axis now forms a labeled group containing its numeric input, range
+metadata, slider and default/removal actions. This eliminates the previous split
+between numeric controls near the top and sliders/defaults in a separate list.
+The slider keeps its accessible label and native value semantics; the numeric
+input remains the single visible live value. Font default and Remove override
+use compact visible labels with descriptive accessible names. Inactive axes keep
+explicitly named default actions so separate candidate axes remain identifiable.
+Advanced-axis classification and session expansion behavior are preserved.
+
+HTML, React and local Liquid preset/advanced/optical flows passed in Chromium
+and WebKit, including responsive isolation and exact undo. Logs:
+/private/tmp/retouch-font-groups-{html,react,liquid}-{chromium,webkit}.log, except
+the successful React/WebKit recheck is
+/private/tmp/retouch-font-groups-react-webkit-recheck.log. Its initial parallel
+run timed out waiting to click Undo after completing the preset/optical checks;
+the isolated unchanged test completed with exit 0. This is recorded as a timing
+failure, not proof that the underlying cause is fixed. The other five initial
+preset runs exited 0. Both HTML discovery/slider regression runs exited 0:
+/private/tmp/retouch-font-groups-regression-{chromium,webkit}.log. They operate
+the slider/default action within the new labeled axis group and verify live
+preview, failure recovery, cancellation, cleanup and exact undo. All 387 unit
+tests passed: /private/tmp/retouch-font-groups-units.log. The first unit command
+was issued from the repository root without a package.json; the corrected
+retouch-directory run is the successful evidence. The screenshot
+/private/tmp/retouch-font-groups-html-chromium.png was inspected and shows the
+combined controls. git diff --check passed.
+
+This improves one inspector workflow; it does not establish full ease-of-use,
+typography, arbitrary-site or Figma parity. Native launches remain paused and
+trusted macOS/Homebrew distribution remains unverified.
