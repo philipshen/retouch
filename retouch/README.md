@@ -350,3 +350,9 @@ selection. Comparisons remain previews; editing happens on the main canvas.
 
 Comparison selection hints distinguish hidden, absent and off-screen layers.
 Scroll a comparison to bring an off-screen layer and its outline into view.
+
+Drag the bottom-right corner to resize width and height together. Hold Shift
+to preserve the starting aspect ratio; release Shift to return to free resizing.
+The ratio stays within the preview's size limits. Escape restores the original
+dimensions. When the corner has keyboard focus, arrows resize the corresponding
+axis by 1 px, or 10 px with Shift.

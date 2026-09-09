@@ -25,7 +25,7 @@ changing those files. The original checkout may continue to evolve independently
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload exists; complete export and import pipeline remains. |
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. HTML has responsive CSS, structural edits and batch selection operations. Arbitrary remote-site capture/authoring, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
-| Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Fully editable comparison canvases, corner resizing and cross-framework parity remain. |
+| Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Corner resizing also supports Shift-locked proportions. Fully editable comparison canvases and cross-framework parity remain. |
 | Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop; The latest local bundle packages 1701d24 and matches all 72 source files. Native interaction remains unverified after cgWindowNotFound. File flows, Intel runtime and broader lifecycle verification remain. |
 | Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. Development build is ad hoc signed. Local cask install/uninstall passed. Developer ID signing/notarization, publishing, upgrades and quarantined launch remain unverified. |
 | Ease of use | New user can open a site, select/edit, compare screens, undo and retain work without learning implementation details | Controls have labels and basic defaults. Whole-workflow usability validation remains. |
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 270 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 271 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1310,3 +1310,21 @@ windowOcclusionVisible=false. Native interaction, trusted distribution, public
 release, upgrades and Intel runtime remain unproven. Documentation now separates
 this current package evidence from historical native UI checks. Full parity
 is not achieved.
+
+
+### Corner resizing and temporary aspect lock
+
+The preview now has a bottom-right corner handle for both dimensions. Shift
+preserves the starting aspect ratio using the larger proportional change, with
+both dimensions bounded together. Pressing or releasing Shift during a drag
+updates the preview without requiring another pointer move. Escape restores
+the original size; release persists both dimensions. Keyboard arrows act on
+one axis, with Shift changing the step to 10 px.
+
+All 271 unit tests pass. Chromium and WebKit verify free corner resizing,
+stationary modifier changes, ratio-locked release, zoomed movement, independent
+keyboard axes, cancellation, persistence and unchanged source/scope alongside
+the existing width/height workflow. The three-handle screenshot was inspected.
+The local native artifact still packages 1701d24; this newer editor change has
+not been repackaged. Editable comparison canvases, cross-framework coverage
+and full Figma/native parity remain unfinished.
