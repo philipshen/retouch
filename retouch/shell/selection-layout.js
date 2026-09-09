@@ -1,16 +1,18 @@
 (function(root){
  'use strict';
- function arrange(rects,mode){
+ let targetChoice='selection',selectionKey='';
+ function arrange(rects,mode,target=null){
   if(rects.length<2||rects.length>100||rects.some(r=>!['left','top','width','height'].every(p=>Number.isFinite(r[p]))||r.width<=0||r.height<=0))throw Error('Choose between 2 and 100 visible layers.');
+  if(target&&(!['left','top','width','height'].every(p=>Number.isFinite(target[p]))||target.width<0||target.height<0))throw Error('The alignment target needs measurable bounds.');
   const modes={left:['x',0],center:['x',.5],right:['x',1],top:['y',0],middle:['y',.5],bottom:['y',1],'gap-x':['x','gap'],'gap-y':['y','gap']};
   if(!modes[mode])throw Error('Choose an alignment.');
   const [axis,fraction]=modes[mode],position=axis==='x'?'left':'top',size=axis==='x'?'width':'height',result=rects.map(()=>({x:0,y:0}));
   if(fraction==='gap'){
    if(rects.length<3)throw Error('Select at least three layers to distribute spacing.');
-   const sorted=rects.map((r,i)=>({[position]:r[position],[size]:r[size],i})).sort((a,b)=>a[position]-b[position]),first=sorted[0],last=sorted.at(-1),gap=(last[position]+last[size]-first[position]-sorted.reduce((n,r)=>n+r[size],0))/(sorted.length-1);let start=first[position];
+   const sorted=rects.map((r,i)=>({[position]:r[position],[size]:r[size],i})).sort((a,b)=>a[position]-b[position]),first=sorted[0],last=sorted.at(-1),gap=((target?target[size]:last[position]+last[size]-first[position])-sorted.reduce((n,r)=>n+r[size],0))/(sorted.length-1);let start=target?target[position]:first[position];
    for(const r of sorted){result[r.i][axis]=start-r[position];start+=r[size]+gap;}
   }else{
-   const start=Math.min(...rects.map(r=>r[position])),end=Math.max(...rects.map(r=>r[position]+r[size])),line=start+(end-start)*fraction;
+   const start=target?target[position]:Math.min(...rects.map(r=>r[position])),end=target?target[position]+target[size]:Math.max(...rects.map(r=>r[position]+r[size])),line=start+(end-start)*fraction;
    for(let i=0;i<rects.length;i++)result[i][axis]=line-rects[i][size]*fraction-rects[i][position];
   }
   return result;
@@ -40,15 +42,28 @@
    return elements.map(el=>({geometry:I.geometry(el),rect:el.getBoundingClientRect()}));
   }
   try{measure();}catch(error){I.note(sec,error.message,'refused');return sec;}
-  I.note(sec,'Align within the selection bounds. Distribution keeps the first and last layers in place. Changes follow this screen scope and undo together.');
-  const controls=root.document.createElement('div');controls.className='stack-presets';
+  const key=infos.map(info=>info.id).sort().join(',');if(key!==selectionKey){selectionKey=key;targetChoice='selection';}
+  const commonParent=()=>elements.every(el=>el.offsetParent===elements[0].offsetParent);
+  if(targetChoice==='parent'&&!commonParent())targetChoice='selection';
+  const choices=[['selection','Selection bounds'],['parent','Containing frame'],...infos.map((info,i)=>['layer:'+info.id,'Layer: '+(i+1)+'. '+(info.layerName||elements[i].getAttribute('aria-label')||elements[i].id||info.text?.trim().slice(0,32)||info.tag)])];
+  const controls=root.document.createElement('div');controls.className='stack-presets';const description=root.document.createElement('p');description.className='hint';
+  const update=()=>{description.textContent=(targetChoice==='selection'?'Align within the selection bounds. Distribution keeps the outer layers in place.':targetChoice==='parent'?'Align to the containing frame. Distribution spreads layers across its bounds.':'The chosen layer stays unchanged. Alignment moves the other selected layers.')+' Changes follow this screen scope and undo together.';for(const button of controls.querySelectorAll('[data-distribution]'))button.disabled=infos.length<3||targetChoice.startsWith('layer:');};
+  const choice=I.select(sec,'Align to',choices,targetChoice,value=>{targetChoice=value;update();});if(!commonParent()){const option=choice.querySelector('[value=parent]');option.disabled=true;option.textContent='Containing frame (different containers)';}sec.append(description);
+  function targetBounds(measured){
+   if(targetChoice==='selection')return null;
+   if(targetChoice.startsWith('layer:')){const index=infos.findIndex(info=>'layer:'+info.id===targetChoice);if(index<0)throw Error('Choose a selected layer as the alignment target.');return measured[index].rect;}
+   if(!commonParent())throw Error('Choose layers with the same containing frame.');
+   const parent=elements[0].offsetParent,d=elements[0].ownerDocument,w=d.defaultView;
+   if(!parent||parent===d.body&&w.getComputedStyle(parent).position==='static')return {left:0,top:0,width:d.documentElement.clientWidth,height:w.innerHeight};
+   const rect=parent.getBoundingClientRect();return {left:rect.left+parent.clientLeft,top:rect.top+parent.clientTop,width:parent.clientWidth,height:parent.clientHeight};
+  }
   for(const [mode,label]of [['left','Align left'],['center','Align horizontal centers'],['right','Align right'],['top','Align top'],['middle','Align vertical centers'],['bottom','Align bottom'],['gap-x','Distribute horizontal spacing'],['gap-y','Distribute vertical spacing']]){
    const button=I.button(label,()=>{try{
-    const measured=measure(),deltas=arrange(measured.map(item=>item.rect),mode);if(deltas.every(d=>Math.abs(d.x)+Math.abs(d.y)<1/32))return;
-    const changes=Object.fromEntries(infos.map((info,i)=>{const el=elements[i],effective=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{}),g=measured[i].geometry;return [info.id,preserveBox(P.placement({...g,x:g.x+deltas[i].x,y:g.y+deltas[i].y},effective),g,el.ownerDocument.defaultView.getComputedStyle(el))];}));save(changes,width);
-   }catch(error){I.note(sec,error.message,'refused');}});if(mode.startsWith('gap-')&&infos.length<3)button.disabled=true;controls.append(button);
+    const measured=measure(),deltas=arrange(measured.map(item=>item.rect),mode,targetBounds(measured));if(deltas.every(d=>Math.abs(d.x)+Math.abs(d.y)<1/32))return;
+    const changes=Object.fromEntries(infos.map((info,i)=>{if(Math.abs(deltas[i].x)+Math.abs(deltas[i].y)<1/32)return [info.id,{}];const el=elements[i],effective=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{}),g=measured[i].geometry;return [info.id,preserveBox(P.placement({...g,x:g.x+deltas[i].x,y:g.y+deltas[i].y},effective),g,el.ownerDocument.defaultView.getComputedStyle(el))];}));save(changes,width);
+   }catch(error){I.note(sec,error.message,'refused');}});if(mode.startsWith('gap-'))button.dataset.distribution=mode;controls.append(button);
   }
-  sec.append(controls);return sec;
+  sec.append(controls);update();return sec;
  }
  const api={arrange,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSelectionLayout=api;
 })(typeof window==='object'?window:globalThis);

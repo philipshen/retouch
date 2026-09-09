@@ -27,3 +27,9 @@ test('individual layer change sets form one atomic edit and reject partial or mi
  for(const extra of [{property:'width'},{value:null},{changes:{}},{changesById:null},{changesById:[]},{changesById:{[ids[0]]:{left:'20px'}}},{changesById:{...op.changesById,'0000000000':{left:'0px'}}},{changesById:{[ids[0]]:{left:'20px'},[ids[1]]:{left:'red'}}}])assert.equal(selection.plan(r,{...op,...extra}).refused,true);
  const protectedSource=source.replace('<p>','<p style="left:100px!important">'),protectedResult=selection.plan(resolve(protectedSource),{...op,fileHash:html.contentHash(protectedSource)});assert.equal(protectedResult.refused,true);assert.equal(protectedResult.edits,undefined);
 });
+test('unchanged reference layers remain byte-for-byte untouched while other layers change atomically',()=>{
+ const original=source.replace('<p>','<p style="left:100px!important">'),r=resolve(original),ids=operation(r).ids,op={ids,fileHash:r.hash,width:0,changesById:{[ids[0]]:{left:'100px'},[ids[1]]:{}}},result=selection.plan(r,op);
+ assert.equal(result.ok,true);assert.match(result.edits[0].after,/<p style="left:100px!important">Paragraph<\/p>/);assert.deepEqual(result.selection[1].cssRules,{});assert.deepEqual(result.selection[0].cssRules,{0:{left:'100px'}});
+ const unchanged={...op,changesById:Object.fromEntries(ids.map(id=>[id,{}]))};assert.deepEqual(selection.plan(r,unchanged).edits,[]);
+ for(const width of [undefined,-1,7681,1.5])assert.equal(selection.plan(r,{...unchanged,width}).refused,true);
+});

@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 309 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 311 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1998,5 +1998,35 @@ Screenshot `/private/tmp/retouch-selection-layout.png` was visually checked.
 
 These controls currently require separate absolute-positioned HTML layers. Flow
 layout rearrangement, React/Liquid multi-selection geometry, vector alignment,
-key-object/parent alignment targets, editable spacing handles and group canvas
+editable spacing handles and group canvas
 transforms remain unfinished. The current Mac artifact predates this change.
+
+
+### Chosen-layer and containing-frame alignment targets
+
+The selection inspector now has an **Align to** control: selection bounds, the
+common containing frame, or any named selected layer. A chosen reference layer
+stays unchanged in both geometry and source, including when its position is
+protected by an inline important rule. Frame alignment uses the inner frame bounds
+excluding borders; distribution can spread the selection across those bounds.
+Frame targeting is disabled for selections with different containing frames.
+Distribution is disabled for a chosen-layer target. Target choice persists through
+source edits, screen changes and undo while the same selection remains active.
+
+The atomic CSS writer accepts empty per-layer change sets for untouched references,
+while still validating the entire selection and screen width. Unmoved layers no
+longer acquire unnecessary style rules. A conflicting layer that must move still
+refuses the complete source edit.
+
+Validation: all 311 unit tests pass. Chromium and WebKit exercise all six alignments
+against a chosen layer and a bordered frame, both frame distribution axes, unchanged
+reference markup, preserved fractional/padded dimensions, target persistence through
+undo, different-container refusal and a protected reference. Existing responsive,
+atomic undo/redo and unsupported-selection checks still pass, as does the shared
+HTML styling regression. Logs:
+`/private/tmp/retouch-alignment-target-{unit,chromium,webkit,html-regression}.log`.
+Screenshot `/private/tmp/retouch-alignment-target.png` was visually inspected.
+
+Flow layout, React/Liquid multi-selection geometry, vector alignment, editable
+spacing handles and group canvas transforms remain unfinished. The current Mac
+artifact predates these selection alignment changes; signing remains pending.
