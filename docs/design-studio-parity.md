@@ -5559,3 +5559,28 @@ intentionally deferred. No product focus workaround was added. All 411 unit test
 passed (/private/tmp/retouch-inherited-styles-units.log); syntax/diff checks passed.
 React/Liquid linked styles and full parity remain unfinished. Native launches
 remain paused.
+
+### Class-based text-style encoding foundation
+
+Added a canonical encoder for all 12 catalog typography properties into important
+arbitrary-property class tokens. Property ownership remains explicit instead of
+depending on theme utility names. Encoding validates the same catalog CSS grammar,
+preserves quoted Unicode family names and literal underscores, and handles
+variable-font coordinates, numeric features and combined text decorations.
+React and Liquid source writers preserve the generated tokens through their own
+source serialization. Unsupported/injected values refuse before encoding.
+
+All 414 unit tests passed, exit 0:
+/private/tmp/retouch-text-class-encoding-units.log. Chromium and WebKit rendering
+checks exited 0 (/private/tmp/retouch-text-class-encoding-{chromium,webkit}.log):
+Tailwind compiles the generated tokens; all 12 computed properties match equivalent
+inline CSS at 900px, and the original 390px typography returns below the 768px
+breakpoint. Browser coverage is available as test:e2e:text-style-classes with the
+existing fixture/browser environment variables. No page errors. Diff checks passed.
+
+This encoder is not yet connected to linked-style application in React/Liquid.
+Next work must add durable source links and override-aware propagation, and teach
+existing inspector edits/reset predicates to recognize canonical property tokens
+so manual edits do not leave competing declarations. Dynamic class expressions,
+non-Tailwind projects and live Shopify rendering are not covered here. Full parity
+remains unfinished. Native launches remain paused.
