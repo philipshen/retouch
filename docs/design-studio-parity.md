@@ -13,7 +13,7 @@ changing those files. The original checkout may continue to evolve independently
 
 | Area | Required outcome | Current evidence and remaining work |
 | --- | --- | --- |
-| Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Existing single-site zoom/selection/resize. Most document and multi-selection operations still absent or unaudited. |
+| Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Existing single-site zoom/selection/resize plus a linked phone/tablet/desktop comparison rail. Most document and multi-selection operations still absent or unaudited. |
 | Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI now exist. Reparenting, rename, multi-selection, cross-context clipboard and broader source structures remain. |
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | Full vector authoring and geometry model remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | Visual horizontal/vertical/reverse flex and grid controls, wrapping, gaps, alignment/distribution, per-side padding, fixed/hug/fill sizing, minimum/maximum dimensions and breakpoint-scoped writes now exist. Full constraint, advanced grid, nested auto-layout and cross-framework equivalence work remains. |
@@ -57,8 +57,10 @@ documentation. Nothing in it proves full parity.
    styles, important-cascade handling and per-property inheritance controls.
    Current class scopes preserve unrelated variants and use project breakpoint
    units; scoped content edits are not supported (content remains shared).
-2. Add linked screen canvases with one selected source element and visible
-   inheritance/overrides, then verify actual writes across widths.
+2. Expand the linked screen comparison rail into customizable canvases with
+   direct selection/editing, visible inheritance/overrides and synchronized
+   application state. Fixed phone/tablet/desktop previews now share source
+   selection and edits; the main canvas remains the editing surface.
 3. Build the layer/document and generic-site authoring model that supports the
    remaining canvas/vector/layout/component operations without requiring JSX.
 4. Expand feature families above with browser/source round-trip verification.
@@ -188,3 +190,28 @@ percentage constraints, minimum precedence over a smaller maximum, reset,
 invalid-input rejection, tablet/base isolation and exact-byte undo. The existing
 layout browser regression also verifies the surrounding controls. General nested
 auto-layout equivalence and arbitrary-site CSS authoring remain open.
+
+### Linked screen comparisons
+
+Compare screens opens live phone (390×844), tablet (768×1024) and desktop
+(1440×900) previews alongside the editing canvas. Each iframe has its own actual
+CSS viewport dimensions; the rail scales the rendered page rather than changing
+its responsive breakpoints. The selected source layer is outlined in each
+preview, including multiple rendered instances. Hidden/absent selections are
+identified. Edit activates that screen size on the main canvas while retaining
+selection. Wheel scrolling inspects each preview independently. Routes follow the
+main canvas; source edits and undo update the previews through the renderer.
+Closing the rail unloads its browsing contexts before detaching frames.
+
+`retouch/test/e2e/compare-screens.cjs` verifies exact viewport dimensions, different
+responsive CSS, source-linked outlines, size switching, a tablet-scoped write
+visible on tablet/desktop but not phone, undo, route changes and repeated preview
+close/reopen. One initial run reported an unlocated framework error during frame
+teardown; after explicit context unloading, lifecycle and route checks passed
+without browser errors. The screenshot was visually inspected.
+
+These are linked source previews, not complete multi-canvas editing: custom
+comparison dimensions, direct edits within comparison frames, synchronized app
+state, per-screen override badges and general arbitrary-site support remain open.
+Each preview executes its own application instance. Cross-origin pages cannot be
+inspected through the current same-origin architecture.

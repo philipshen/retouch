@@ -174,3 +174,17 @@ limit. **Reset** removes that property's override in the selected breakpoint
 scope so inherited styling applies again. Minimums take precedence when they
 exceed a maximum. Limits work alongside fixed, hug and fill sizing and use shared
 undo/redo. CSS functions such as `calc()` are not accepted as new input here.
+
+## Compare screens
+
+Click **Compare screens** to see live phone, tablet and desktop previews beside
+the canvas. Blue outlines identify the selected source layer at each size. Scroll
+over a preview to inspect more of its page; click its **Edit** button to use that
+size in the main editing canvas. Choose the style scope in the inspector to make
+shared or breakpoint-specific changes. Source edits and undo appear across the
+previews, and navigation follows the main canvas. Closing the rail unloads the
+extra previews.
+
+Each preview runs independently, so temporary app state such as open menus is
+not synchronized. Comparison sizes are currently fixed; the main canvas retains
+its custom width/height controls.

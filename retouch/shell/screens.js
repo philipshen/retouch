@@ -42,7 +42,7 @@
   window.addEventListener('retouch:viewport', e => {
     if (!screen) { width.value = e.detail.width; height.value = e.detail.height; }
   });
-  window.RetouchScreens = { restore() {
+  window.RetouchScreens = { set(next) { if(next && valid(next.width) && valid(next.height))apply(next); }, restore() {
     try {
       const saved = JSON.parse(localStorage.getItem(key));
       if (saved && valid(saved.width) && valid(saved.height)) apply(saved);

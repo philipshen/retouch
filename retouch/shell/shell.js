@@ -205,6 +205,7 @@ function onNavigated() {
     if (loc.origin !== location.origin) return;
     const p = loc.pathname + loc.search + loc.hash;
     lastAppPath = p;
+    window.dispatchEvent(new CustomEvent('retouch:route'));
     routeInput.value = p;
     history.replaceState(null, '', '/rt' + (p === '/' ? '' : p));
   } catch {}
@@ -306,6 +307,7 @@ async function loadScope() {
 
 function clearSelection() {
   sel = null;
+  window.dispatchEvent(new CustomEvent('retouch:selection',{detail:null}));
   panelBody.hidden = true;
   panelEmpty.hidden = false;
 }
@@ -663,6 +665,7 @@ window.addEventListener('retouch:viewport',()=>{
   });
 });
 function renderPanel() {
+  window.dispatchEvent(new CustomEvent('retouch:selection',{detail:activeId()}));
   const info = sel.info;
   const style = scopedInfo(info);
   panelEmpty.hidden = true;
