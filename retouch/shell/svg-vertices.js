@@ -8,10 +8,11 @@
     const subpaths=pathData?.subpaths.map(part=>({closed:part.closed,nodes:part.nodes.map(p=>root.RetouchSVGPath.translate(p,0,0))}));
     let contour=0,vertices=subpaths?subpaths[0].nodes:points.map(p=>root.RetouchSVGPath.translate(p,0,0));const cleanup=[];
     const surface=root.document.createElement('div');surface.className='svg-vertex-surface';
-    surface.setAttribute('role','group');surface.setAttribute('aria-label','Edit vector points');
+    surface.tabIndex=-1;surface.setAttribute('role','group');surface.setAttribute('aria-label','Edit vector points');
     Object.assign(surface.style,{position:'fixed',zIndex:40,overflow:'hidden',touchAction:'none'});
     const drawing=root.document.createElementNS(ns,'svg');
     Object.assign(drawing.style,{position:'absolute',inset:'0',width:'100%',height:'100%',pointerEvents:'none'});
+    const selectionBox=root.document.createElement('div');selectionBox.dataset.vectorMarquee='true';selectionBox.hidden=true;selectionBox.style.cssText='position:absolute;pointer-events:none;border:1px solid #60a5fa;background:#3b82f622;z-index:1;';surface.append(selectionBox);
     const otherContours=root.document.createElementNS(ns,'g');drawing.append(otherContours);
     const preview=root.document.createElementNS(ns,target.tagName.toLowerCase());
     preview.dataset.vectorPreview='true';
@@ -138,11 +139,11 @@
       vertices[arcIndex].arc=result.nodes[arcIndex].arc;paint();status.textContent='Arc updated in preview. Done saves; Escape cancels.';
     }
     function selectAllPoints(){if(drag||moveContourMode||!verify())return;selectedPoints=new Set(vertices.map((_,i)=>i));activeHandle=null;announce();paint();handles[active].focus({preventScroll:true});}
-    action('Select all points',selectAllPoints).title='Select every point in this contour. Shift-click a point to add or remove it; drag or use arrows to move the selection.';
+    action('Select all points',selectAllPoints).title='Select every point in this contour. Drag a box for a smaller selection. Shift-click or Shift-drag adds points; drag selected points or use arrows to move them.';
     const removeButton=action('Delete point',removePoint);
     action('Done',commit);action('Cancel',cancel);surface.append(toolbar);
     function adjacentArc(){return [...selectedPoints].some(i=>vertices[i]?.arc||(vertices[i+1]||(closed?vertices[0]:null))?.arc);}
-    function announce(message){refreshArc();if(cornerButton){const arcEndpoint=adjacentArc(),disabled=moveContourMode||arcEndpoint;cornerButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or use Arc properties.':'Remove the selected anchor’s handles';smoothButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or use Arc properties.':'Create aligned handles along the neighboring anchors';cornerButton.disabled=disabled;smoothButton.disabled=disabled;for(const button of [cornerButton,smoothButton])button.style.opacity=disabled?'.5':'1';}status.textContent=message||(selectedPoints.size>1&&!activeHandle?`${selectedPoints.size} points selected. Shift-click adds or removes points.`:null)||`${activeHandle?activeHandle==='in'?'Incoming handle on point':'Outgoing handle on point':'Point'} ${active+1} of ${vertices.length}`;removeButton.disabled=moveContourMode||vertices.length-selectedPoints.size<minimum;removeButton.textContent=selectedPoints.size>1?'Delete points':'Delete point';removeButton.style.opacity=removeButton.disabled?'.5':'1';}
+    function announce(message){refreshArc();if(cornerButton){const arcEndpoint=adjacentArc(),disabled=moveContourMode||!selectedPoints.size||arcEndpoint;cornerButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or use Arc properties.':'Remove the selected anchor’s handles';smoothButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or use Arc properties.':'Create aligned handles along the neighboring anchors';cornerButton.disabled=disabled;smoothButton.disabled=disabled;for(const button of [cornerButton,smoothButton])button.style.opacity=disabled?'.5':'1';}status.textContent=message||(!selectedPoints.size?'No points selected. Drag a box to select points.':null)||(selectedPoints.size>1&&!activeHandle?`${selectedPoints.size} points selected. Shift-click adds or removes points.`:null)||`${activeHandle?activeHandle==='in'?'Incoming handle on point':'Outgoing handle on point':'Point'} ${active+1} of ${vertices.length}`;removeButton.disabled=moveContourMode||!selectedPoints.size||vertices.length-selectedPoints.size<minimum;removeButton.textContent=selectedPoints.size>1?'Delete points':'Delete point';removeButton.style.opacity=removeButton.disabled?'.5':'1';}
     const totalPoints=()=>subpaths?subpaths.reduce((sum,part)=>sum+part.nodes.length,0):vertices.length;
     function refreshContours(){
       if(!contourPicker)return;contourPicker.replaceChildren();
@@ -191,7 +192,7 @@
       if(pathData){const next=root.RetouchSVGPath.split(vertices,index,closed);if(!next)return;vertices.splice(0,vertices.length,...next);}else vertices.splice(index+1,0,{x:(a.x+b.x)/2,y:(a.y+b.y)/2});activeHandle=null;active=index+1;rebuild();(moveContourMode?contourHit:handles[active]).focus({preventScroll:true});
     }
     function removePoint(){
-      if(drag||!verify())return;
+      if(drag||!selectedPoints.size||!verify())return;
       const remaining=vertices.filter((_,i)=>!selectedPoints.has(i));
       if(remaining.length<minimum){announce(`Keep at least ${minimum} points in this ${closed?'polygon':'line'}.`);return;}
       if(pathData&&!root.RetouchSVGPath.serialize(remaining,closed)){announce('Keep a valid contour with distinct anchors.');return;}
@@ -221,12 +222,21 @@
       if(pathData?!value:!root.RetouchSVGPoints.parse(value)){cancel();onError('Vector points must stay within supported SVG coordinates.');return;}
       cancel();if(changed)onCommit(value);
     }
+    function updateMarquee(e){
+      const left=Math.min(drag.box.x,e.clientX),top=Math.min(drag.box.y,e.clientY),right=Math.max(drag.box.x,e.clientX),bottom=Math.max(drag.box.y,e.clientY),r=surface.getBoundingClientRect();
+      selectedPoints=new Set(drag.box.previous);
+      handles.forEach((button,i)=>{const b=button.getBoundingClientRect(),x=b.left+b.width/2,y=b.top+b.height/2;if(x>=left&&x<=right&&y>=top&&y<=bottom)selectedPoints.add(i);});
+      if(selectedPoints.size&&!selectedPoints.has(active))active=[...selectedPoints][0];activeHandle=null;
+      Object.assign(selectionBox.style,{left:left-r.left+'px',top:top-r.top+'px',width:right-left+'px',height:bottom-top+'px'});selectionBox.hidden=false;announce();paint();
+    }
     function moveSelected(nodes,dx,dy){
+      if(!selectedPoints.size)return;
       const result=root.RetouchSVGPath.translatePoints({nodes,closed},[...selectedPoints],dx,dy);
       if(result)vertices.splice(0,vertices.length,...result.nodes);else announce('Keep the selected points within supported SVG coordinates.');
     }
     function move(e){
       if(!drag||e.pointerId!==drag.id||!verify())return;
+      if(drag.box){updateMarquee(e);return;}
       try{const p=local(e);let dx=p.x-drag.pointer.x,dy=p.y-drag.pointer.y;
         if(e.shiftKey){if(Math.abs(dx)>Math.abs(dy))dy=0;else dx=0;}
         if(drag.contour){const translated=root.RetouchSVGPath.translateContour(drag.contour,dx,dy);if(translated)vertices.splice(0,vertices.length,...translated.nodes);else announce('Keep the contour within supported SVG coordinates.');}else if(activeHandle)changeHandle(drag.node,activeHandle,{x:drag.point.x+dx,y:drag.point.y+dy});else moveSelected(drag.nodes,dx,dy);paint();
@@ -235,6 +245,7 @@
     listen(surface,'pointerdown',e=>{
       const b=e.target;if(e.button!==0||drag)return;
       if(moveContourMode&&b===contourHit){e.preventDefault();e.stopImmediatePropagation();if(!verify())return;try{contourHit.focus({preventScroll:true});drag={id:e.pointerId,pointer:local(e),point:{...vertices[0]},contour:{closed,nodes:vertices.map(p=>root.RetouchSVGPath.translate(p,0,0))}};contourHit.setPointerCapture(e.pointerId);}catch(error){cancel();onError(error.message);}return;}
+      if(!moveContourMode&&(b===surface||b===drawing)){e.preventDefault();e.stopImmediatePropagation();if(!verify())return;surface.focus({preventScroll:true});drag={id:e.pointerId,box:{x:e.clientX,y:e.clientY,previous:e.shiftKey?[...selectedPoints]:[]}};surface.setPointerCapture(e.pointerId);updateMarquee(e);return;}
       if(b.dataset.vertex===undefined)return;
       e.preventDefault();e.stopImmediatePropagation();if(!verify())return;
       try{const index=Number(b.dataset.vertex);activeHandle=b.dataset.curveHandle||null;
@@ -243,7 +254,7 @@
       }catch(error){cancel();onError(error.message);}
     });
     listen(surface,'pointermove',move);
-    listen(surface,'pointerup',e=>{if(!drag||drag.id!==e.pointerId)return;e.preventDefault();e.stopImmediatePropagation();move(e);if(!ended){const selected=drag.contour?vertices[0]:activeHandle?vertices[active][activeHandle]:vertices[active],moved=Math.hypot(selected.x-drag.point.x,selected.y-drag.point.y)>1e-9;const collapse=drag.collapse;drag=null;if(moved)commit();else if(collapse){selectedPoints=new Set([active]);announce();paint();}}});
+    listen(surface,'pointerup',e=>{if(!drag||drag.id!==e.pointerId)return;e.preventDefault();e.stopImmediatePropagation();move(e);if(!ended&&drag.box){drag=null;selectionBox.hidden=true;announce();return;}if(!ended){const selected=drag.contour?vertices[0]:activeHandle?vertices[active][activeHandle]:vertices[active],moved=Math.hypot(selected.x-drag.point.x,selected.y-drag.point.y)>1e-9;const collapse=drag.collapse;drag=null;if(moved)commit();else if(collapse){selectedPoints=new Set([active]);announce();paint();}}});
     listen(surface,'pointercancel',cancel);listen(surface,'lostpointercapture',()=>{if(drag)cancel();});
     listen(surface,'keydown',e=>{
       if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancel();return;}
@@ -251,7 +262,7 @@
       if(e.target===handleMode||e.target===contourPicker)return;
       if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='a'){e.preventDefault();e.stopImmediatePropagation();selectAllPoints();return;}
       if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();e.stopImmediatePropagation();if(moveContourMode)restructure('delete');else removePoint();return;}
-      if(e.key==='Enter'&&(e.target.dataset.vertex!==undefined||e.target===contourHit)){e.preventDefault();e.stopImmediatePropagation();commit();return;}
+      if(e.key==='Enter'&&(e.target.dataset.vertex!==undefined||e.target===contourHit||e.target===surface)){e.preventDefault();e.stopImmediatePropagation();commit();return;}
       const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
       if(!delta||e.metaKey||e.ctrlKey||e.altKey)return;e.preventDefault();e.stopImmediatePropagation();if(!verify())return;
       const step=e.shiftKey?10:1;if(moveContourMode){const translated=root.RetouchSVGPath.translateContour({nodes:vertices,closed},delta[0]*step,delta[1]*step);if(translated)vertices.splice(0,vertices.length,...translated.nodes);else announce('Keep the contour within supported SVG coordinates.');}else if(activeHandle)changeHandle(vertices[active],activeHandle,root.RetouchSVGPath.translate(vertices[active][activeHandle],delta[0]*step,delta[1]*step));else moveSelected(vertices,delta[0]*step,delta[1]*step);paint();

@@ -3540,3 +3540,38 @@ selection, vector networks, booleans/masks, persistent point constraints and
 arbitrary-site authoring remain open. Full Figma Design parity and trusted Mac
 distribution remain unproven. Native app launches stayed paused; no desktop build
 or launch occurred.
+
+
+### 2026-09-09 — Drag-box selection for vector points
+
+Dragging empty space in the vector editor now draws a selection box and selects
+anchor centers inside it. Shift-drag adds those anchors to the starting selection;
+ordinary drag replaces it. Reverse-direction boxes behave the same way. The hit
+test uses displayed anchor centers, so it follows rotation, nonuniform transforms
+and canvas zoom. Releasing the box changes selection without writing source.
+The focused editor accepts arrows and Enter afterward for group editing.
+
+Empty boxes clear the point selection and disable point deletion and shape
+conversion. Escape during a box drag removes the editor and leaves source
+unchanged. Pointer capture keeps a box drag distinct from point/handle movement;
+whole-contour and nested Pen modes keep their existing controls. Inspector help
+and the startup status explain box selection, Shift-add and group movement.
+
+All four browser workflows pass:
+`/private/tmp/retouch-marquee-chromium.log` (HTML/Chromium),
+`/private/tmp/retouch-marquee-webkit.log` (React/WebKit),
+`/private/tmp/retouch-marquee-react-chromium.log`, and
+`/private/tmp/retouch-marquee-html-webkit.log`.
+They exercise 50/100/200 percent zoom, forward/reverse boxes, Shift-add, empty
+selection, Escape mid-drag, keyboard movement after selection, attached handles,
+unchanged neighboring contours, source isolation and exact undo/redo. They also
+run the full multi-point workflow, including batch corner/smooth/delete and
+selection toggling. The latter two runs include the final help text. The inspected
+`/private/tmp/retouch-marquee-final.png` shows the box and selected anchors with
+readable updated help. React/WebKit nested Pen regression passes in
+`/private/tmp/retouch-marquee-nested-pen.log`.
+
+Box selection is currently confined to the active contour. Cross-contour point
+selection, vector networks, booleans/masks, persistent point constraints,
+arbitrary-site authoring and full Figma parity remain open. Native launches
+stayed paused; trusted Mac distribution remains unverified.
