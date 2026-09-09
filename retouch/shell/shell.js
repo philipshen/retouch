@@ -557,9 +557,27 @@ function reloadFrame() {
 }
 
 // A source write can finish before the framework invalidates its rendered
-// module. Reloading immediately can miss HMR and strand an old render.
+// module. Wait for that revision, retaining the live session when HMR applies it.
+// Reload only when the renderer cannot confirm a matching live update.
 async function refreshWrittenElement(info, matches) {
   const location = iframe.contentWindow.location.href;
+  async function liveUpdateReady(){
+    // Only compiler-stamped revisions can prove the live page reflects this write.
+    if(!info.renderRevisionAttribute)return false;
+    let stable=0;
+    for(let attempt=0;attempt<20;attempt++){
+      if(iframe.contentWindow.location.href!==location)return false;
+      try{
+        const d=doc(),el=matchingInDocument(d,info.id,info)[0];
+        const stylesReady=[...d.querySelectorAll('link[rel="stylesheet"]')].every(link=>link.disabled||!!link.sheet);
+        const ready=el&&el.getAttribute(info.renderRevisionAttribute)===info.hash&&matches(el)&&stylesReady;
+        stable=ready?stable+1:0;
+        if(stable>=3)return true;
+      }catch{stable=0;}
+      await new Promise(resolve=>setTimeout(resolve,50));
+    }
+    return false;
+  }
   for (let attempt = 0; attempt < 20; attempt++) {
     if (iframe.contentWindow.location.href !== location) return;
     try {
@@ -567,7 +585,11 @@ async function refreshWrittenElement(info, matches) {
       if (response.ok) {
         const html = new DOMParser().parseFromString(await response.text(), 'text/html');
         const el = matchingInDocument(html,info.id,info)[0];
-        if (el && (!info.renderRevisionAttribute||el.getAttribute(info.renderRevisionAttribute)===info.hash) && matches(el)) { await reloadFrame(); return; }
+        if (el && (!info.renderRevisionAttribute||el.getAttribute(info.renderRevisionAttribute)===info.hash) && matches(el)) {
+          if(await liveUpdateReady())return;
+          if(iframe.contentWindow.location.href===location)await reloadFrame();
+          return;
+        }
       }
     } catch {}
     await new Promise(resolve => setTimeout(resolve, 150));
@@ -706,8 +728,12 @@ function paintLoop() {
   }
   document.getElementById('canvasHand').disabled=mode!=='edit'||!!editing||!!panelTasks||undoBusy||!!sourceRequests;
   document.getElementById('zoomSelection').disabled=!sel||!!panelTasks||undoBusy||!!sourceRequests;
-  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[]);
+  syncLayerSelection();
   requestAnimationFrame(paintLoop);
+}
+
+function syncLayerSelection() {
+  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[]);
 }
 
 function inTextScope(el, info) {
@@ -791,6 +817,8 @@ window.addEventListener('pointerup',releasePanelPointer,true);
 window.addEventListener('pointercancel',releasePanelPointer,true);
 window.addEventListener('blur',()=>releasePanelPointer());
 function renderPanel() {
+  // Selection is part of the completed edit, even before the next paint.
+  syncLayerSelection();
   const panel=document.getElementById('panel');
   const key=JSON.stringify([sel.info.file,sel.scope,sel.instanceId,(sel.multiple||[sel.info]).map(info=>info.id).sort()]);
   if(panelPointer&&key===renderedPanelSelection){panelRenderDeferred=true;return;}

@@ -2898,3 +2898,37 @@ Final real React browser logs (both PASS):
 `/private/tmp/retouch-gap-press-{chromium,webkit}-real.log`.
 WebKit screen-resize regression passes in `/private/tmp/retouch-panel-press-screen.log`;
 all 334 unit tests pass in `/private/tmp/retouch-panel-press-unit.log`.
+
+### 2026-09-09 — Preserve confirmed live previews and selection on undo
+
+React source writes now retain the iframe session when the live DOM confirms the
+compiler revision and expected edit, with linked stylesheets loaded across three
+observations. The existing reload path remains for renderers without revision
+stamps or live updates that do not settle within the bounded check. This avoids
+forcing a navigation after an already-applied HMR update; it does not guarantee
+preservation of every application's component state.
+
+The first WebKit run exposed Layers showing one selected item after a three-layer
+undo. Selection was restored in editor state but the tree depended on the next
+animation frame. Inspector updates now synchronize layer selection immediately,
+including before deferred panel-content rendering. The existing exact-selection
+assertions remain unchanged.
+
+Both full React selection-geometry workflows pass, including source movement at
+50/100/200 percent zoom, responsive geometry, gaps, undo/redo and a new assertion
+that the iframe window survives a compiler-confirmed edit:
+`/private/tmp/retouch-live-refresh-{chromium,webkit}-sync.log`.
+The initial failed WebKit log remains at
+`/private/tmp/retouch-live-refresh-webkit.log`.
+All 334 unit tests pass in `/private/tmp/retouch-live-refresh-unit.log`.
+Chromium's HTML layer-reveal workflow passes with source-reload scroll preservation
+and exact movement undo in `/private/tmp/retouch-live-refresh-html-reveal.log`.
+
+WebKit SVG geometry, creation/drawing, duplication, stacking/deletion, responsive
+paint and exact undo/redo also pass in
+`/private/tmp/retouch-live-refresh-webkit-svg.log`.
+
+Native launch testing remains paused at the user's request. No native app was
+launched for this work. The d9cd994 archive retains its original failed receipt;
+these source changes do not validate that archive. Full Figma Design parity,
+arbitrary-site support and trusted Mac distribution remain incomplete.
