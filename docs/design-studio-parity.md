@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 275 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 277 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1431,3 +1431,26 @@ The artifact and receipt are recorded in desktop/README.md.
 Native UI inspection still returns cgWindowNotFound, so current native
 interaction remains unverified. No public tap, notarized release, trusted
 Gatekeeper launch, Intel runtime or upgrade verification is claimed.
+
+
+### React SVG geometry and renderer readiness
+
+The React adapter now describes and edits rectangle, circle, ellipse and line
+coordinates beneath an explicit JSX SVG ancestor. The shared inspector presents
+literal string/numeric values, reset controls and disabled dynamic/spread values.
+Source writes require the exact file hash, retain surrounding JSX and validate
+structural IDs after parsing. Geometry is shared across source instances/sizes.
+
+A real Next.js 16.2.5 browser test exposed an immediate-reload race: the JSX write
+succeeded but the preview remained on the previous compiled geometry. Geometry
+writes and history restoration now use the existing rendered-element readiness
+check before reloading. The test passed in Chromium and WebKit after this fix,
+covering four primitives, viewBox scaling, disabled dynamic coordinates and exact
+source undo/redo. It launches and cleans up its own Next project and server via
+the Retouch command wrapper. All 277 unit tests pass, including JSX refusal and
+source-preservation checks. The existing HTML SVG workflow passes in both engines.
+
+This adds geometry parity, not full React SVG parity: drawing, paint controls and
+SVG structural operations remain incomplete there. Shape definitions without a
+lexically visible SVG ancestor, other frameworks and arbitrary remote sites are
+not covered. The current desktop archive predates this change.

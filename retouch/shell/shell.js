@@ -831,6 +831,11 @@ function renderPanelContents() {
   }
 
   const target = (editing?.el.ownerDocument === doc() ? editing.el : null) || matchingEls(activeId()).find(el => inTextScope(el, info));
+  if(info.svgGeometry){
+    const geometry=RetouchInspector.section('SVG geometry');
+    for(const field of info.svgGeometry.fields){const input=document.createElement('input');input.type='text';input.value=field.value??'';input.placeholder=field.editable===false?'Dynamic value':'Default';input.disabled=field.editable===false;if(field.reason)input.title=field.reason;input.onchange=()=>setSVGGeometry(field.name,input.value.trim()||null);RetouchInspector.field(geometry,'Shape '+field.label,input);const reset=RetouchInspector.button('Reset shape '+field.label.toLowerCase(),()=>setSVGGeometry(field.name,null));reset.disabled=field.value===null||field.editable===false;geometry.append(reset);}
+    RetouchInspector.note(geometry,'Geometry is shared across screen sizes. Values use SVG coordinates, px or %. The SVG viewport and page CSS can affect the rendered result.');panelBody.append(geometry);
+  }
   if(info.cssAuthoring){
     const naming=RetouchInspector.section('Layer');
     const input=document.createElement('input');input.id='layerNameInput';input.type='text';input.maxLength=200;input.value=info.layerName||'';input.placeholder='Use the page’s element label';
@@ -841,11 +846,6 @@ function renderPanelContents() {
       for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Add '+preset,()=>insertLayer(preset,info,'insertSVG')));
       if(!info.svgInsertion.createsViewport)for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Draw '+preset,()=>drawShape(preset,info)));
       shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Adds a shape in a new 200 × 200 canvas.':'Choose Draw and drag inside this SVG canvas. Shift constrains proportions or line angle; Option/Alt draws from the center. Escape cancels.');panelBody.append(shapes);
-    }
-    if(info.svgGeometry){
-      const geometry=RetouchInspector.section('SVG geometry');
-      for(const field of info.svgGeometry.fields){const input=document.createElement('input');input.type='text';input.value=field.value??'';input.placeholder='Default';input.onchange=()=>setSVGGeometry(field.name,input.value.trim()||null);RetouchInspector.field(geometry,'Shape '+field.label,input);const reset=RetouchInspector.button('Reset shape '+field.label.toLowerCase(),()=>setSVGGeometry(field.name,null));reset.disabled=field.value===null;geometry.append(reset);}
-      RetouchInspector.note(geometry,'Geometry is shared across screen sizes. Values use SVG coordinates, px or %. The SVG viewport and page CSS can affect the rendered result.');panelBody.append(geometry);
     }
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
     panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS));
@@ -1416,13 +1416,14 @@ async function setHTMLCSSSelection(property,value,width){
     sel.info=result.element;sel.multiple=result.selection;await reloadFrame();renderPanel();toast('Selected layers updated','ok');
   }finally{busyPanel(false);}
 }
+function svgGeometryMatches(el,info){return info.svgGeometry?.fields.every(field=>field.editable===false||el.getAttribute(field.name)===field.value);}
 async function setSVGGeometry(property,value){
   if(!sel||panelTasks||undoBusy||sourceRequests)return;const info=sel.info;busyPanel(true);
   try{
     const result=await api('POST','/rt/__api/op',{type:'setSVGGeometry',id:info.id,fileHash:info.hash,property,value});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not update shape','err');
     if(result.undoId)editorHistory.record({type:'setSVGGeometry',id:info.id,undoId:result.undoId});
-    sel.info=result.element;await reloadFrame();renderPanel();toast('Shape updated','ok');
+    sel.info=result.element;await refreshWrittenElement(sel.info,el=>svgGeometryMatches(el,sel.info));renderPanel();toast('Shape updated','ok');
   }finally{busyPanel(false);}
 }
 async function setHTMLCSS(property,value,width){
@@ -1553,6 +1554,7 @@ async function restoreHistory(direction,op) {
       await refreshWrittenElement(info, el => {
         if (component?.ok) return el.getAttribute('data-rt') === component.definitionId;
         if (op.type === 'setSrc') return imageMatches(el,info.src,info.srcMatch);
+        if (op.type === 'setSVGGeometry') return svgGeometryMatches(el,info);
         if (op.type === 'setTag') return el.tagName.toLowerCase() === info.tag;
         if (op.type === 'setClasses' && !info.classNameDynamic) {
           const tokens = value => (value || '').split(/\s+/).filter(Boolean).sort().join(' ');

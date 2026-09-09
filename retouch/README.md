@@ -376,3 +376,19 @@ center. Combine both modifiers, or release them during the drag to return to
 free drawing. Drawing follows the viewBox, group transforms and canvas zoom. Escape, zooming or changing screen size cancels the preview.
 Geometry is shared across screen sizes. Drawing a new SVG directly on an HTML
 container and freehand/vector path tools remain unfinished.
+
+
+React/JSX shapes inside an explicit SVG now expose the same **SVG geometry**
+coordinates as HTML rectangles, circles, ellipses and lines. Literal strings and
+numeric expressions can be changed or reset with exact source undo/redo. Dynamic
+expressions and spread-controlled values are disabled. Geometry applies across
+screen sizes and component instances sharing that source. Shape components whose
+SVG ancestor is outside their JSX definition are not handled yet.
+
+The real Next.js regression test creates and cleans up its own project/server:
+
+```sh
+RT_INSPECTOR_FIXTURE=/path/to/next-and-playwright-fixture npm run test:e2e:react-svg
+```
+
+Set `RT_E2E_BROWSER=webkit` (and the browser cache path when needed) for WebKit.
