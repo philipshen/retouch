@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 253 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 256 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1114,3 +1114,22 @@ gap where the browser displayed elliptical shorthand that the editor rejected.
 Malformed axes, extra slashes, negative lengths and declaration injection remain
 refused. All 253 unit tests pass; Chromium and WebKit verify editing both axes,
 computed independent corners and exact undo in the existing corner workflow.
+
+
+### Inline SVG primitive source editing
+
+The HTML adapter now assigns stable identities to supported inline SVG roots,
+groups and shapes while keeping following HTML source IDs stable. Rectangles,
+circles, ellipses and lines expose coordinate/size attributes in SVG geometry.
+Edits validate the attribute vocabulary, bounded numeric/px/percentage values,
+source hash and unchanged parsed identities. Reset removes the attribute; every
+write is an ordinary source transaction with exact undo. SVG shapes do not expose
+HTML text editing or HTML structural dragging. Definitions, text and foreign
+content remain excluded from indexing.
+
+All 256 unit tests pass. Chromium and WebKit verify SVG canvas/tree selection,
+rectangle width and viewBox scaling, circle/ellipse/line edits, unchanged adjacent
+HTML and exact source undo/redo. The SVG fixture joins test:e2e:html; its screenshot
+was inspected. Geometry remains shared across sizes and CSS can override geometry
+attributes. Shape creation, vector paint/path/pen tools, SVG structure and full
+Figma/native parity remain unfinished.

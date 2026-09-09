@@ -806,6 +806,11 @@ function renderPanelContents() {
     const input=document.createElement('input');input.id='layerNameInput';input.type='text';input.maxLength=200;input.value=info.layerName||'';input.placeholder='Use the page’s element label';
     RetouchInspector.field(naming,'Layer name',input);input.onchange=()=>renameLayer(input.value);
     RetouchInspector.note(naming,'Names appear in the editor without changing page text or accessibility labels. Clear to use the original label.');panelBody.append(naming);
+    if(info.svgGeometry){
+      const geometry=RetouchInspector.section('SVG geometry');
+      for(const field of info.svgGeometry.fields){const input=document.createElement('input');input.type='text';input.value=field.value??'';input.placeholder='Default';input.onchange=()=>setSVGGeometry(field.name,input.value.trim()||null);RetouchInspector.field(geometry,'Shape '+field.label,input);const reset=RetouchInspector.button('Reset shape '+field.label.toLowerCase(),()=>setSVGGeometry(field.name,null));reset.disabled=field.value===null;geometry.append(reset);}
+      RetouchInspector.note(geometry,'Geometry is shared across screen sizes. Values use SVG coordinates, px or %. The SVG viewport and page CSS can affect the rendered result.');panelBody.append(geometry);
+    }
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
     panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS));
     if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{}));
@@ -1373,6 +1378,15 @@ async function setHTMLCSSSelection(property,value,width){
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not style selected layers','err');
     if(result.undoId)editorHistory.record({type:'setCSSSelection',id:info.id,selectionIds:selection.map(item=>item.id),undoId:result.undoId});
     sel.info=result.element;sel.multiple=result.selection;await reloadFrame();renderPanel();toast('Selected layers updated','ok');
+  }finally{busyPanel(false);}
+}
+async function setSVGGeometry(property,value){
+  if(!sel||panelTasks||undoBusy||sourceRequests)return;const info=sel.info;busyPanel(true);
+  try{
+    const result=await api('POST','/rt/__api/op',{type:'setSVGGeometry',id:info.id,fileHash:info.hash,property,value});
+    if(!result?.ok)return toast(result?.reason||result?.error||'Could not update shape','err');
+    if(result.undoId)editorHistory.record({type:'setSVGGeometry',id:info.id,undoId:result.undoId});
+    sel.info=result.element;await reloadFrame();renderPanel();toast('Shape updated','ok');
   }finally{busyPanel(false);}
 }
 async function setHTMLCSS(property,value,width){

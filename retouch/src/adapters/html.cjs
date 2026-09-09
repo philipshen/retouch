@@ -17,7 +17,7 @@ function collect(source,relPath){
   for(const node of parent.childNodes||[]){
    if(!node.tagName)continue;
    const here=route+'/'+index++;
-   if(skip.has(node.tagName)||node.namespaceURI!=='http://www.w3.org/1999/xhtml')continue;
+   if(skip.has(node.tagName)||node.namespaceURI!=='http://www.w3.org/1999/xhtml'&&!(node.namespaceURI==='http://www.w3.org/2000/svg'&&['svg','g','rect','circle','ellipse','line','path','polyline','polygon'].includes(node.tagName)))continue;
    const start=node.sourceCodeLocation?.startTag;
    if(start&&!duplicateAttributes.some(offset=>offset>=start.startOffset&&offset<start.endOffset))elements.push({id:hash(relPath+'|'+here).slice(0,10),kind:'host',tag:node.tagName,node,location:node.sourceCodeLocation});
    walk(node,here);
@@ -40,14 +40,15 @@ function attr(el,name){return el.node.attrs.find(a=>a.name===name)?.value??null;
 function plain(el){return el.location.endTag&&(el.node.childNodes||[]).every(n=>n.nodeName==='#text');}
 function picture(el){for(let p=el.node.parentNode;p;p=p.parentNode)if(p.tagName==='picture')return true;return false;}
 function describe(resolved){
- const el=resolved.element,canText=!!plain(el),canSrc=el.tag==='img'&&attr(el,'srcset')===null&&!picture(el);
- return {structure:{...structure.describe(resolved,'html'),...insertion.describe(resolved)},id:el.id,kind:'host',tag:el.tag,file:resolved.relPath,hash:resolved.hash,className:attr(el,'class')||'',classNameDynamic:false,
+ const el=resolved.element,canText=el.node.namespaceURI==='http://www.w3.org/1999/xhtml'&&!!plain(el),canSrc=el.tag==='img'&&attr(el,'srcset')===null&&!picture(el);
+ return {svgGeometry:require('../svg-geometry.cjs').describe(el),structure:{...structure.describe(resolved,'html'),...insertion.describe(resolved)},id:el.id,kind:'host',tag:el.tag,file:resolved.relPath,hash:resolved.hash,className:attr(el,'class')||'',classNameDynamic:false,
   canRename:true,layerName:attr(el,'data-rt-name')||'',text:canText?el.node.childNodes.map(n=>n.value).join(''):null,textDynamic:!canText,mixedText:false,canSetChildren:false,
   textReason:canText?null:'This HTML region contains nested markup, comments, or an implicit closing tag.',
   src:attr(el,'src'),srcDynamic:false,canSetSrc:canSrc,srcReason:canSrc?null:'Select a plain image without responsive sources.',
   canSetTag:!!el.location.endTag&&textTags.has(el.tag),context:resolved.context||null};
 }
 function planOp(resolved,op){
+ if(op.type==='setSVGGeometry')return require('../svg-geometry.cjs').plan(resolved,op);
  if(op.type==='reparentElement')return require('../html-reparent.cjs').plan(resolved,op);
  if(op.type==='insertElement')return insertion.plan(resolved,op);
  if(structure.types.has(op.type))return structure.planOp(resolved,op,'html');
@@ -87,4 +88,4 @@ function planOp(resolved,op){
 }
 module.exports={name:'html',matches:file=>/\.html?$/i.test(file),collect,stamp,contentHash:hash,describe,planOp,
  applyOp:(resolved,op)=>require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),planOp(resolved,op)),
- capabilities:{classAttr:'class',ops:['reparentElement','renameElement','insertElement','setClasses','setText','setTag','setSrc',...structure.types]}};
+ capabilities:{classAttr:'class',ops:['setSVGGeometry','reparentElement','renameElement','insertElement','setClasses','setText','setTag','setSrc',...structure.types]}};

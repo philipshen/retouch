@@ -41,13 +41,13 @@ test('HTML refuses nested text replacement, stale snapshots and parser-altering 
  fs.writeFileSync(file,'<div><div>nested</div></div>');
  assert.equal(html.applyOp(resolve('div'),{type:'setTag',tag:'p'}).refused,true);
 }));
-test('HTML responsive images, foreign SVG, implicit tags and reserved stamps are handled explicitly',()=>{
+test('HTML responsive images, SVG roots, unsupported SVG text, implicit tags and reserved stamps are handled explicitly',()=>{
  assert.equal(html.collect('<p class=first class=second>ambiguous</p>','page.html').elements.length,0);
  const text='<p>implicit<p>next</p><picture><img src="a.png"></picture><svg><text>x</text></svg><div data-rt="old">yes</div>';
  const els=html.collect(text,'page.html').elements;
  assert.equal(html.describe({element:els.find(e=>e.tag==='p'),source:text}).text,null);
  assert.equal(html.describe({element:els.find(e=>e.tag==='img'),source:text}).canSetSrc,false);
- assert.ok(!els.some(e=>e.tag==='svg'||e.tag==='text'));
+ assert.ok(els.some(e=>e.tag==='svg'));assert.ok(!els.some(e=>e.tag==='text'));
  const stamped=html.stamp(text,'page.html').code;assert.ok(!stamped.includes('data-rt="old"'));
 });
 

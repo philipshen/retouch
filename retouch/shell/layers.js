@@ -70,7 +70,7 @@
           b.tabIndex=item.el===selected?0:-1;b.disabled=isBusy;
           if(item.children.length)b.setAttribute('aria-expanded',String(expanded));
           b.onclick=e=>{if(multiEnabled&&e.shiftKey)return selectRange(item.el,e.metaKey||e.ctrlKey);rangeAnchor=item.el;return onSelect(item.el,{toggle:e.metaKey||e.ctrlKey});};
-          b.draggable=dragEnabled&&!['HTML','BODY'].includes(item.el.tagName);
+          b.draggable=dragEnabled&&item.el.namespaceURI==='http://www.w3.org/1999/xhtml'&&!['HTML','BODY'].includes(item.el.tagName);
           b.ondragstart=e=>{if(isBusy||!b.draggable){e.preventDefault();return;}dragged=item.el;e.dataTransfer.setData('text/plain','retouch-layer:'+item.el.getAttribute('data-rt'));e.dataTransfer.effectAllowed='move';for(const row of rows)if(row.item.el===dragged||selectedSet.has(dragged)&&selectedSet.has(row.item.el))row.button.classList.add('dragging');};
           const dropPosition=e=>{const box=b.getBoundingClientRect();return isBusy?null:placement(selectedSet.has(dragged)?[...selectedSet]:[dragged],item.el,(e.clientY-box.top)/box.height);};
           b.ondragover=e=>{clearTargets();const position=dropPosition(e);if(position){e.preventDefault();e.dataTransfer.dropEffect='move';b.classList.add(position==='inside'?'drop-target':'drop-'+position);}};

@@ -291,3 +291,11 @@ HTML editor round trip and horizontal/vertical flex sizing. Both suites create
 and remove their own temporary sites. Set `PLAYWRIGHT_BROWSERS_PATH` when using a
 separate browser cache. WebKit tests exercise the browser engine; the native Mac
 app still needs its own AppKit/WebView integration checks.
+
+
+Inline SVG roots, groups and common paths/shapes now appear in Layers. Rectangles,
+circles, ellipses and lines expose **SVG geometry** coordinates/sizes with reset
+and source-preserving undo. Attributes use SVG coordinates, px or percentages and
+are shared across screen sizes; the viewport and authored CSS can affect rendering.
+Definitions, SVG text and foreign content are not indexed yet. Shape creation,
+path/pen editing and SVG structural drag/drop remain unfinished.
