@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 304 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 306 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1886,7 +1886,7 @@ HTML and real Next.js/Tailwind positioning workflows also pass in Chromium.
 Evidence: `/private/tmp/retouch-snapping-{unit,chromium,webkit,html,react}.log`;
 visually inspected screenshot: `/private/tmp/retouch-snapping.png`.
 
-Equal-spacing suggestions, multi-layer transforms, custom guides,
+Multi-layer transforms, custom guides,
 rulers and vector-edit snapping remain unfinished. This does not establish full
 Figma snapping parity or unrestricted renderer support. The Mac package has not
 yet been rebuilt with these changes.
@@ -1913,6 +1913,32 @@ Existing HTML and real Next.js/Tailwind positioning workflows pass in Chromium.
 Logs: `/private/tmp/retouch-resize-snapping-{unit,chromium,webkit,html,react}.log`.
 The final screenshot `/private/tmp/retouch-resize-snapping.png` was visually checked.
 
-Equal-spacing suggestions, multi-layer transforms, custom guides/rulers and vector
+Multi-layer transforms, custom guides/rulers and vector
 snapping still remain. The current Mac artifact predates these changes; the existing
 signed build is still waiting on its local signing/keychain interaction.
+
+
+### Equal-spacing movement suggestions
+
+Dragging a layer now offers equal gaps between adjacent visible siblings, or repeats
+an existing neighboring gap before or after the pair. Purple gap markers display
+both distances in CSS pixels. The suggestion considers siblings sharing the dragged
+layer's row or column, excludes the containing block, and rejects overlapping
+placements. Closer edge/center alignments win when they compete with a spacing
+suggestion. The same screen-pixel attraction threshold, axis lock, bypass modifiers,
+source-free preview, cancellation and single-gesture undo apply.
+
+Validation: all 306 unit tests pass, including insertion, repetition in both
+directions, vertical spacing, collision rejection, other-row/container exclusion,
+nearest-target priority and zoom tolerance. A dedicated HTML browser workflow
+passes in Chromium and WebKit: equal and repeated horizontal gaps at 50%, 100% and
+200% zoom; vertical spacing; measured labels; hidden-sibling exclusion; live bypass;
+unchanged source during preview; cancellation; and exact source undo. The existing
+movement/resize snapping workflow and real Next.js/Tailwind positioning regression
+also pass in Chromium. Logs: `/private/tmp/retouch-spacing-{unit,chromium,webkit,snap-regression,react}.log`.
+The screenshot `/private/tmp/retouch-spacing.png` was visually inspected.
+
+This is a movement aid for supported positioned layers. It does not yet provide
+multi-layer distribution, editable spacing handles, custom rulers/guides, vector
+snapping or unrestricted renderer support. Mac signing remains pending, and the
+current Mac artifact has not been refreshed with these canvas changes.

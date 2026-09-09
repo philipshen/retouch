@@ -3,6 +3,27 @@
  function delta(x,y,shift){return shift?(Math.abs(x)>=Math.abs(y)?{x,y:0}:{x:0,y}):{x,y};}
  // All geometry is in iframe viewport CSS pixels; tolerance is supplied in the
  // same units so the attraction distance stays constant at every canvas zoom.
+ function equalSpacing(rect,movement,targets,axis,tolerance){
+  const position=axis==='x'?'left':'top',size=axis==='x'?'width':'height',cross=axis==='x'?'top':'left',extent=axis==='x'?'height':'width',other=axis==='x'?'y':'x';
+  const start=rect[position]+movement[axis],crossStart=rect[cross]+movement[other],crossEnd=crossStart+rect[extent];
+  // Only compare adjacent, non-overlapping siblings in the same row or column.
+  // The container is an alignment target, never an equal-spacing neighbor.
+  const siblings=targets.filter(t=>!t.container&&Math.min(crossEnd,t[cross]+t[extent])-Math.max(crossStart,t[cross])>0).sort((a,b)=>a[position]-b[position]);let best=null;
+  for(let i=0;i<siblings.length-1;i++){
+   const a=siblings[i],b=siblings[i+1],aEnd=a[position]+a[size],bEnd=b[position]+b[size],gap=b[position]-aEnd;if(gap<0)continue;
+   const middle=(aEnd+b[position]-rect[size])/2;
+   for(const [destination,segments]of [
+    [middle,[[aEnd,middle],[middle+rect[size],b[position]]]],
+    [bEnd+gap,[[aEnd,b[position]],[bEnd,bEnd+gap]]],
+    [a[position]-gap-rect[size],[[a[position]-gap,a[position]],[aEnd,b[position]]]]
+   ]){
+    const distance=Math.abs(destination-start);if(distance>tolerance||segments.some(([from,to])=>to<from))continue;
+    if(siblings.some(t=>Math.min(destination+rect[size],t[position]+t[size])-Math.max(destination,t[position])>1e-6))continue;
+    if(!best||distance<best.distance)best={destination,distance,segments:segments.map(([from,to])=>({axis,start:from,end:to,cross:crossStart+rect[extent]/2,gap:to-from}))};
+   }
+  }
+  return best;
+ }
  function snap(rect,movement,targets,{tolerance=6,lock=null}={}){
   const result={...movement,guides:[]};
   for(const axis of ['x','y']){
@@ -14,12 +35,19 @@
    }
    if(best){result[axis]+=best.adjustment;result.guides.push({axis,value:best.value,start:Math.min(rect[cross]+movement[axis==='x'?'y':'x'],best.target[cross]),end:Math.max(rect[cross]+movement[axis==='x'?'y':'x']+rect[extent],best.target[cross]+best.target[extent])});}
   }
+  result.spacing=[];
+  for(const axis of ['x','y']){
+   if(lock&&axis!==lock)continue;
+   const other=axis==='x'?'y':'x',candidate=equalSpacing(rect,{...movement,[other]:result[other]},targets,axis,tolerance),aligned=result.guides.some(g=>g.axis===axis);
+   if(candidate&&(!aligned||candidate.distance<Math.abs(result[axis]-movement[axis]))){result[axis]=candidate.destination-rect[axis==='x'?'left':'top'];result.guides=result.guides.filter(g=>g.axis!==axis);result.spacing.push(...candidate.segments);}
+  }
+  if(!result.spacing.length)delete result.spacing;
   return result;
  }
  function snapTargets(target){
   const d=target.ownerDocument,w=d.defaultView,parent=target.offsetParent,viewport=!parent||parent===d.body&&w.getComputedStyle(parent).position==='static',targets=[];
-  if(viewport)targets.push({left:0,top:0,width:d.documentElement.clientWidth,height:w.innerHeight});
-  else{const r=parent.getBoundingClientRect();targets.push({left:r.left+parent.clientLeft,top:r.top+parent.clientTop,width:parent.clientWidth,height:parent.clientHeight});}
+  if(viewport)targets.push({container:true,left:0,top:0,width:d.documentElement.clientWidth,height:w.innerHeight});
+  else{const r=parent.getBoundingClientRect();targets.push({container:true,left:r.left+parent.clientLeft,top:r.top+parent.clientTop,width:parent.clientWidth,height:parent.clientHeight});}
   for(const sibling of target.parentElement?.children||[]){
    if(sibling===target)continue;const css=w.getComputedStyle(sibling),r=sibling.getBoundingClientRect();
    if(css.visibility!=='visible'||css.display==='none'||r.width<=0||r.height<=0||r.right<=0||r.bottom<=0||r.left>=w.innerWidth||r.top>=w.innerHeight)continue;
@@ -84,8 +112,12 @@
   const x=f.left+r.left*scale-left,y=f.top+r.top*scale-top;
   Object.assign(preview.style,{position:'absolute',left:x+'px',top:y+'px',width:r.width*scale+'px',height:r.height*scale+'px',border:'0',outline:'2px solid #6366f1',outlineOffset:'-2px',boxSizing:'border-box',background:'rgba(99,102,241,.12)',cursor:'move'});surface.append(preview);
   const guides=root.document.createElement('div');guides.className='canvas-snap-guides';guides.setAttribute('aria-hidden','true');guides.style.pointerEvents='none';surface.append(guides);
-  {const hint=root.document.createElement('div');hint.textContent=mode==='move'?'Drag to align · Shift locks an axis · Option / Alt disables snapping · Escape cancels':'Drag handles to align · Shift keeps proportions · Option / Alt resizes from center · ⌘ / Ctrl disables snapping · Escape cancels';Object.assign(hint.style,{position:'absolute',bottom:'8px',left:'8px',right:'8px',padding:'6px 8px',background:'#1e293b',color:'white',fontSize:'12px',borderRadius:'4px',pointerEvents:'none'});surface.append(hint);}
+  {const hint=root.document.createElement('div');hint.textContent=mode==='move'?'Drag to align or match spacing · Shift locks an axis · Option / Alt disables snapping · Escape cancels':'Drag handles to align · Shift keeps proportions · Option / Alt resizes from center · ⌘ / Ctrl disables snapping · Escape cancels';Object.assign(hint.style,{position:'absolute',bottom:'8px',left:'8px',right:'8px',padding:'6px 8px',background:'#1e293b',color:'white',fontSize:'12px',borderRadius:'4px',pointerEvents:'none'});surface.append(hint);}
   function paintGuides(items){guides.replaceChildren();for(const item of items){const line=root.document.createElement('div');line.dataset.snapAxis=item.axis;Object.assign(line.style,{position:'absolute',background:'#e11d48',left:(item.axis==='x'?f.left+item.value*scale-left:f.left+item.start*scale-left)+'px',top:(item.axis==='y'?f.top+item.value*scale-top:f.top+item.start*scale-top)+'px',width:item.axis==='x'?'1px':Math.max(1,(item.end-item.start)*scale)+'px',height:item.axis==='y'?'1px':Math.max(1,(item.end-item.start)*scale)+'px'});guides.append(line);}}
+  function paintSpacing(items=[]){for(const item of items){const line=root.document.createElement('div');line.dataset.spacingAxis=item.axis;line.dataset.spacingGap=String(Math.round(item.gap*100)/100);Object.assign(line.style,{position:'absolute',background:'#a21caf',left:(f.left+(item.axis==='x'?item.start:item.cross)*scale-left)+'px',top:(f.top+(item.axis==='y'?item.start:item.cross)*scale-top)+'px',width:item.axis==='x'?Math.max(1,(item.end-item.start)*scale)+'px':'1px',height:item.axis==='y'?Math.max(1,(item.end-item.start)*scale)+'px':'1px'});
+   for(const end of [0,100]){const tick=root.document.createElement('span');Object.assign(tick.style,{position:'absolute',background:'#a21caf',left:item.axis==='x'?end+'%':'-3px',top:item.axis==='y'?end+'%':'-3px',width:item.axis==='x'?'1px':'7px',height:item.axis==='y'?'1px':'7px'});line.append(tick);}
+   const label=root.document.createElement('span');label.textContent=(Math.round(item.gap*100)/100)+' px';Object.assign(label.style,{position:'absolute',whiteSpace:'nowrap',background:'#a21caf',color:'white',padding:'1px 3px',borderRadius:'2px',fontSize:'11px',lineHeight:'14px',left:item.axis==='x'?'50%':'6px',top:item.axis==='y'?'50%':'-20px',transform:item.axis==='x'?'translateX(-50%)':'translateY(-50%)'});line.append(label);guides.append(line);
+  }}
   if(mode==='resize')for(const handle of ['nw','n','ne','e','se','s','sw','w']){const button=root.document.createElement('button');button.type='button';button.dataset.resizeHandle=handle;const name={n:'top',s:'bottom',e:'right',w:'left',ne:'top right',nw:'top left',se:'bottom right',sw:'bottom left'}[handle];button.setAttribute('aria-label','Resize '+name);button.title='Resize '+name+'. Arrow keys adjust; Enter applies; Escape cancels.';Object.assign(button.style,{position:'absolute',padding:'0',width:'10px',height:'10px',minWidth:'0',border:'1px solid #6366f1',borderRadius:'1px',background:'white',left:handle.includes('w')?'0%':handle.includes('e')?'100%':'50%',top:handle.includes('n')?'0%':handle.includes('s')?'100%':'50%',transform:'translate(-50%,-50%)',cursor:handle+'-resize'});preview.append(button);}
   if(x+r.width*scale<=0||y+r.height*scale<=0||x>=right-left||y>=bottom-top){onError('Bring the layer into view before moving it.');return null;}
   let state=null,ended=false;const cleanups=[];
@@ -93,7 +125,7 @@
   function cancel(restoreFocus=false){if(ended)return;ended=true;surface.remove();cleanups.forEach(fn=>fn());onEnd();if(restoreFocus===true)(opener?.isConnected?opener:root.document.querySelector('[data-canvas-tool='+mode+']'))?.focus({preventScroll:true});}
   function paint(modifiers){
    if(mode==='resize'){const base=state.base||{x:0,y:0,width:r.width,height:r.height};const resized=!state.keyboard&&!modifiers.metaKey&&!modifiers.ctrlKey?snapResize(r,state.handle,state.rawX/scale,state.rawY/scale,snapTargets(target),{...bounds,...modifiers,tolerance:6/scale}):{...resize(base.width,base.height,state.handle,state.rawX/scale,state.rawY/scale,{...bounds,...modifiers}),guides:[]};paintGuides(resized.guides);state.delta={x:resized.x,y:resized.y,width:resized.width,height:resized.height};state.delta.x+=base.x;state.delta.y+=base.y;preview.style.width=state.delta.width*scale+'px';preview.style.height=state.delta.height*scale+'px';preview.style.transform=`translate(${state.delta.x*scale}px,${state.delta.y*scale}px)`;}
-   else{const locked=!state.keyboard&&modifiers.shiftKey,d=delta(state.rawX,state.rawY,locked),movement={x:d.x/scale,y:d.y/scale},snapped=!state.keyboard&&!modifiers.altKey&&!modifiers.metaKey&&!modifiers.ctrlKey?snap(r,movement,snapTargets(target),{tolerance:6/scale,lock:locked?(Math.abs(state.rawX)>=Math.abs(state.rawY)?'x':'y'):state.rawX===0?'y':state.rawY===0?'x':null}):{...movement,guides:[]};state.delta={x:snapped.x,y:snapped.y};paintGuides(snapped.guides);preview.style.transform=`translate(${state.delta.x*scale}px,${state.delta.y*scale}px)`;}
+   else{const locked=!state.keyboard&&modifiers.shiftKey,d=delta(state.rawX,state.rawY,locked),movement={x:d.x/scale,y:d.y/scale},snapped=!state.keyboard&&!modifiers.altKey&&!modifiers.metaKey&&!modifiers.ctrlKey?snap(r,movement,snapTargets(target),{tolerance:6/scale,lock:locked?(Math.abs(state.rawX)>=Math.abs(state.rawY)?'x':'y'):state.rawX===0?'y':state.rawY===0?'x':null}):{...movement,guides:[]};state.delta={x:snapped.x,y:snapped.y};paintGuides(snapped.guides);paintSpacing(snapped.spacing);preview.style.transform=`translate(${state.delta.x*scale}px,${state.delta.y*scale}px)`;}
   }
   function move(e){if(!state||e.pointerId!==state.id)return;state.rawX=e.clientX-state.x;state.rawY=e.clientY-state.y;try{paint({shiftKey:e.shiftKey,altKey:e.altKey,metaKey:e.metaKey,ctrlKey:e.ctrlKey});}catch(error){cancel();onError(error.message);}}
   listen(surface,'pointerdown',e=>{if(e.button!==0||state)return;e.preventDefault();e.stopImmediatePropagation();const handle=e.target.dataset.resizeHandle;if(mode==='resize'?!handle:e.target!==preview){cancel();return;}state={id:e.pointerId,handle,x:e.clientX,y:e.clientY,rawX:0,rawY:0,delta:{x:0,y:0}};surface.setPointerCapture(e.pointerId);});

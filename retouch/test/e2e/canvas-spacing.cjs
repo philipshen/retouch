@@ -1,0 +1,29 @@
+'use strict';
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict'),{once}=require('node:events');
+const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_INSPECTOR_FIXTURE for Playwright');
+const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
+(async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-spacing-')),file=path.join(root,'index.html');
+ const original='<html><head><style>body{margin:0}main{position:relative;margin:20px;border:10px solid #475569;width:600px;height:600px;background:#dbeafe}.box{position:absolute;left:20px;top:220px;width:40px;height:60px;background:#f87171}.sibling{position:absolute;top:100px;height:60px;background:#34d399}.a{left:50px;width:60px}.b{left:230px;width:80px}.v1{left:500px;top:100px;width:60px;height:50px}.v2{left:500px;top:330px;width:60px;height:70px}.hidden{visibility:hidden;left:148px;width:40px}</style></head><body><main><div class="box" aria-label="Box">Box</div><div class="sibling a">A</div><div class="sibling b">B</div><div class="sibling v1">C</div><div class="sibling v2">D</div><div class="sibling hidden">Hidden</div></main></body></html>';
+ fs.writeFileSync(file,original);const read=()=>fs.readFileSync(file,'utf8'),server=require('../../src/html-site.cjs').start({root,port:0,quiet:true});await once(server,'listening');
+ const browser=await browserType.launch(),page=await browser.newPage({viewport:{width:1600,height:1100}}),app=page.frameLocator('#app'),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const wait=async fn=>{for(let i=0;i<100;i++){try{if(await fn())return;}catch(e){if(!/Execution context was destroyed/.test(e.message))throw e;}await page.waitForTimeout(100);}throw Error('Spacing did not settle');},settled=()=>wait(async()=>await page.locator('#panelBody').getAttribute('aria-busy')!=='true');
+ const close=(a,b)=>assert.ok(Math.abs(a-b)<.3,`${a} differs from ${b}`),box=()=>app.locator('.box').evaluate(el=>{const r=el.getBoundingClientRect(),p=el.parentElement,pr=p.getBoundingClientRect();return{x:r.left-pr.left-p.clientLeft,y:r.top-pr.top-p.clientTop,width:r.width,height:r.height};});
+ const start=async()=>{await page.getByRole('button',{name:'Move on canvas',exact:true}).click();const r=await page.locator('.canvas-move-preview').boundingBox(),point={x:r.x+r.width/2,y:r.y+r.height/2};await page.mouse.move(point.x,point.y);await page.mouse.down();return point;};
+ const undo=async()=>{await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();close((await box()).x,20);close((await box()).y,220);};
+ const zoom=async value=>{await page.getByLabel('Canvas zoom (%)',{exact:true}).fill(String(value));await page.getByLabel('Canvas zoom (%)',{exact:true}).press('Enter');await app.locator('body').evaluate(()=>scrollTo(0,0));await page.locator('#frameWrap').evaluate(async el=>{el.scrollLeft=0;el.scrollTop=96;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));});};
+ try{
+  await page.goto(`http://localhost:${server.address().port}/rt`);await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await wait(async()=>await app.locator('body').evaluate(()=>innerWidth)===768);await page.getByRole('treeitem',{name:'div · Box',exact:true}).click();await settled();
+  for(const value of [50,100,200]){await zoom(value);const scale=value/100;
+   for(const [destination,gap]of [[150,40],[430,120]]){
+    const point=await start(),dx=(destination-20)*scale-4;await page.mouse.move(point.x+dx,point.y-120*scale,{steps:5});assert.equal(read(),original);close((await box()).x,20);assert.equal(await page.locator('[data-spacing-axis=x]').count(),2);assert.deepEqual(await page.locator('[data-spacing-axis=x]').evaluateAll(els=>els.map(el=>el.dataset.spacingGap)),[String(gap),String(gap)]);const preview=await page.locator('.canvas-move-preview').boundingBox();close(preview.x+preview.width/2,point.x+(destination-20)*scale);
+    await page.keyboard.down('Alt');assert.equal(await page.locator('[data-spacing-axis]').count(),0);close((await page.locator('.canvas-move-preview').boundingBox()).x+preview.width/2,point.x+dx);await page.keyboard.up('Alt');assert.equal(await page.locator('[data-spacing-axis=x]').count(),2);
+    if(value===100&&destination===150&&process.env.RT_E2E_SPACING_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_SPACING_SCREENSHOT});
+    await page.mouse.up();await wait(()=>read()!==original);await settled();close((await box()).x,destination);close((await box()).y,100);await undo();
+   }
+  }
+  await zoom(100);let point=await start();await page.mouse.move(point.x+480,point.y-12,{steps:5});assert.equal(await page.locator('[data-spacing-axis=y]').count(),2);assert.deepEqual(await page.locator('[data-spacing-axis=y]').evaluateAll(els=>els.map(el=>el.dataset.spacingGap)),['60','60']);await page.mouse.up();await wait(()=>read()!==original);await settled();close((await box()).x,500);close((await box()).y,210);await undo();
+  point=await start();await page.mouse.move(point.x+128,point.y-120);assert.equal(await page.locator('[data-spacing-axis=x]').count(),2);await page.keyboard.press('Escape');await page.mouse.up();assert.equal(read(),original);assert.equal(await page.locator('[data-spacing-axis]').count(),0);assert.deepEqual(errors,[]);
+  console.log(engine+': PASS equal and repeated horizontal gaps at 50/100/200% zoom, vertical spacing, measured labels, hidden sibling exclusion, bypass, source isolation, cancellation and exact undo');
+ }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
+})().catch(e=>{console.error(e);process.exitCode=1;});

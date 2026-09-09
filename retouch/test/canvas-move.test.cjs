@@ -50,3 +50,17 @@ test('every resize handle snaps only its dragged edges and preserves the opposit
   if(hy<0){assert.equal(r.top+result.y,0);assert.equal(result.y+result.height,r.height);}else if(hy>0){assert.equal(result.y,0);assert.equal(r.top+result.height,300);}else{assert.equal(result.y,0);assert.equal(result.height,r.height);}
  }
 });
+test('movement offers equal gaps between siblings and repeats a neighboring gap in either direction',()=>{
+ const {snap}=require('../shell/canvas-move.js'),r={left:20,top:20,width:40,height:30},targets=[{left:100,top:100,width:50,height:30},{left:270,top:100,width:50,height:30}];
+ for(const [raw,expected,gap] of [[168,170,40],[418,420,120],[-78,-80,120]]){const result=snap(r,{x:raw,y:80},targets);assert.equal(result.x,expected);assert.equal(result.y,80);assert.equal(result.spacing.length,2);assert.ok(result.spacing.every(s=>s.axis==='x'&&s.gap===gap));}
+ const transpose=t=>({left:t.top,top:t.left,width:t.height,height:t.width}),vertical=snap(transpose(r),{x:80,y:168},targets.map(transpose));assert.equal(vertical.y,170);assert.ok(vertical.spacing.every(s=>s.axis==='y'&&s.gap===40));
+ const locked=snap(r,{x:168,y:80},targets,{lock:'y'});assert.equal(locked.spacing,undefined);assert.equal(locked.x,168);
+});
+test('spacing ignores containers, other rows, collisions and more distant candidates than edge alignment',()=>{
+ const {snap}=require('../shell/canvas-move.js'),r={left:20,top:20,width:40,height:30},a={left:100,top:100,width:50,height:30},b={left:270,top:100,width:50,height:30},movement={x:168,y:80};
+ assert.equal(snap(r,movement,[{...a,container:true},b]).spacing,undefined);
+ assert.equal(snap(r,{x:168,y:200},[a,b]).spacing,undefined);
+ assert.equal(snap(r,movement,[a,{left:190,top:100,width:40,height:30},b]).spacing,undefined);
+ const closer=snap(r,movement,[a,b,{left:189,top:500,width:20,height:20}]);assert.equal(closer.x,169);assert.equal(closer.spacing,undefined);
+ assert.equal(snap(r,{x:159,y:80},[a,b],{tolerance:12}).x,170);assert.equal(snap(r,{x:159,y:80},[a,b],{tolerance:3}).x,159);
+});
