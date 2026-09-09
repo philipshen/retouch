@@ -1202,10 +1202,17 @@ function imageSection(info) {
   const browse = RetouchInspector.button('Browse project images', async () => {
     assets.hidden = !assets.hidden; if (assets.hidden || assets.childElementCount) return;
     const result = await api('GET', '/rt/__api/images');
-    if (!result?.ok) return toast(result?.error || 'Could not list images', 'err');
+    if (!result?.ok) return toast(result?.reason || result?.error || 'Could not list images', 'err');
+    const search = document.createElement('input');search.type='search';search.placeholder='Find an image…';search.setAttribute('aria-label','Find a project image');
+    assets.append(search);
+    const buttons=[];
     for (const asset of result.images) {
-      const b = RetouchInspector.button(asset.name, () => setSrc(asset.src, false, info)); b.title = asset.src; assets.append(b);
+      const b = RetouchInspector.button('', () => setSrc(asset.src, false, info)); b.title = asset.src;
+      const preview=document.createElement('img');preview.src=asset.src;preview.alt='';preview.loading='lazy';
+      const label=document.createElement('span');label.textContent=asset.name;b.append(preview,label);assets.append(b);buttons.push({button:b,path:decodeURIComponent(asset.src).toLowerCase()});
     }
+    const empty=document.createElement('p');empty.className='note';empty.textContent='No matching images';empty.hidden=true;assets.append(empty);
+    search.oninput=()=>{const query=search.value.trim().toLowerCase();let count=0;for(const item of buttons){item.button.hidden=!item.path.includes(query);if(!item.button.hidden)count++;}empty.hidden=count>0;};
     if (!result.images.length) RetouchInspector.note(assets, 'No project images found. Choose a file to upload.');
   });
   sec.append(browse, assets);

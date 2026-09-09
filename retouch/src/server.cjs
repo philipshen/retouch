@@ -85,14 +85,17 @@ function handle(req, res, ctx) {
     function scan(folder, prefix) {
       if (images.length >= 500 || !fs.existsSync(folder)) return;
       for (const entry of fs.readdirSync(folder, { withFileTypes: true })) {
-        if (entry.name.startsWith('.') || entry.isSymbolicLink()) continue;
-        const name = prefix + entry.name;
+        if (entry.name.startsWith('.') || entry.isSymbolicLink() || assets.excludeDirectories?.includes(entry.name)) continue;
+        const name = prefix + encodeURIComponent(entry.name);
         if (entry.isDirectory()) scan(path.join(folder, entry.name), name + '/');
-        else if (/\.(png|jpe?g|gif|webp|avif|svg)$/i.test(name)) images.push({ src: name, name: entry.name });
+        else if (/\.(png|jpe?g|gif|webp|avif|svg|ico)$/i.test(name)) images.push({ src: name, name: entry.name });
         if (images.length >= 500) break;
       }
     }
-    if (fs.existsSync(dir) && fs.realpathSync(dir).startsWith(fs.realpathSync(ctx.appRoot) + path.sep)) scan(dir, assets.urlPrefix);
+    if (fs.existsSync(dir)) {
+      const root = fs.realpathSync(ctx.appRoot), actual = fs.realpathSync(dir);
+      if (actual === root || actual.startsWith(root + path.sep)) scan(dir, assets.urlPrefix);
+    }
     return json(res, 200, { ok: true, images });
   }
 
@@ -190,10 +193,12 @@ function handle(req, res, ctx) {
         });
       }
       const rawName = url.searchParams.get('name') || 'image';
+      if (assets.imageOnly && !/\.(png|jpe?g|gif|webp|avif|svg|ico)$/i.test(rawName)) return json(res, 409, {ok:false,reason:'Choose a PNG, JPEG, GIF, WebP, AVIF, SVG or ICO image.'});
       const safe =
         rawName.toLowerCase().replace(/[^a-z0-9._-]/g, '-').replace(/^[.-]+/, '').slice(-80) || 'image';
       const dir = path.join(assetRoot, assets.uploadDirectory);
-      if (!fs.realpathSync(assetRoot).startsWith(fs.realpathSync(ctx.appRoot) + path.sep)) return json(res, 409, { ok: false, reason: 'Asset directory is outside the project.' });
+      const projectRoot = fs.realpathSync(ctx.appRoot), actualAssetRoot = fs.realpathSync(assetRoot);
+      if (actualAssetRoot !== projectRoot && !actualAssetRoot.startsWith(projectRoot + path.sep)) return json(res, 409, { ok: false, reason: 'Asset directory is outside the project.' });
       fs.mkdirSync(dir, { recursive: true });
       if (!fs.realpathSync(dir).startsWith(fs.realpathSync(ctx.appRoot) + path.sep)) return json(res, 409, { ok: false, reason: 'Asset directory is outside the project.' });
       const name = 'rt-' + crypto.randomBytes(6).toString('hex') + '-' + safe;

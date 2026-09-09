@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 207 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 208 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -402,3 +402,20 @@ externally. All 207 tests pass. Browser verification covers shorthand padding,
 per-edge editing, shorthand replacement, reset inheritance and exact undo, along
 with the existing responsive and standalone-output checks. Complex CSS functions,
 selector editing and full visual-design parity remain open.
+
+
+### HTML image assets
+
+The HTML renderer exposes the web folder as its asset root and stores uploads
+under `rt-assets`. The shared image browser now includes lazy thumbnail previews
+and filename/path search. URL segments are encoded so spaces, Unicode, percent
+signs and fragment characters remain part of filenames. HTML asset listing skips
+hidden paths, dependency directories and symlinks. Uploads accept supported image
+extensions and retain the existing project-containment checks.
+
+HTTP tests verify root assets, encoded URLs, excluded paths, upload rendering and
+refusal of an upload directory symlink outside the project. The full suite passes
+208 tests. Browser checks verify case-insensitive Unicode search, previews,
+selection, upload, rendered replacement and exact source undo. Uploaded files
+remain reusable after undoing their reference; asset deletion and responsive
+picture/source-set authoring remain open.

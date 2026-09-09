@@ -146,4 +146,9 @@ Existing stylesheets stay intact. Generated declarations use `!important`; autho
 important rules with stronger specificity can still win. Important inline values
 are refused. The panel accepts a limited set of simple CSS values.
 
-Rich markup, structural edits, asset uploads and remote-site capture remain open.
+Select an image and use **Browse project images** to search the web folder with
+thumbnail previews, or **Choose image…** to upload into `rt-assets`. Undo restores
+the image reference; uploaded files remain in the folder for reuse. Hidden files,
+dependency directories and symlinks are excluded from the image list.
+
+Rich markup, structural edits and remote-site capture remain open.

@@ -7,7 +7,7 @@ function start({root,port=9400,quiet=false}){
  root=fs.realpathSync(root);
  if(!fs.statSync(root).isDirectory())throw Error('Choose an HTML web directory.');
  if(!Number.isInteger(port)||port<0||port>65535)throw Error('Invalid port.');
- const adapter={...html,describe:r=>({...html.describe(r),...css.describe(r),classNameDynamic:true,classNameReason:reason}),planOp:(r,op)=>op.type==='setCSS'?css.plan(r,op):op.type==='setClasses'?{ok:false,refused:true,reason}:html.planOp(r,op)};
+ const adapter={...html,assets:{directory:'.',urlPrefix:'/',uploadDirectory:'rt-assets',excludeDirectories:['node_modules'],imageOnly:true},describe:r=>({...html.describe(r),...css.describe(r),classNameDynamic:true,classNameReason:reason}),planOp:(r,op)=>op.type==='setCSS'?css.plan(r,op):op.type==='setClasses'?{ok:false,refused:true,reason}:html.planOp(r,op)};
  function serveSite(req,res){
   const fail=(status,message)=>{res.writeHead(status,{'content-type':'text/plain'});res.end(message);};
   if(!['GET','HEAD'].includes(req.method))return fail(405,'method not allowed');

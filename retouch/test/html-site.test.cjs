@@ -21,3 +21,24 @@ test('HTML site serves stamped documents and assets, edits through authenticated
   assert.equal((await op({type:'undo',undoId:result.undoId})).ok,true);assert.equal(fs.readFileSync(path.join(root,'index.html'),'utf8'),original);
  }finally{server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 });
+
+test('HTML image assets list root files with encoded URLs and upload into a contained image directory',async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-html-assets-')),outside=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-html-outside-'));
+ const svg='<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>';
+ fs.writeFileSync(path.join(root,'index.html'),'<img src="first.svg">');
+ fs.writeFileSync(path.join(root,'photo #1.svg'),svg);
+ for(const folder of ['.hidden','node_modules']){fs.mkdirSync(path.join(root,folder));fs.writeFileSync(path.join(root,folder,'secret.svg'),svg);}
+ fs.symlinkSync(outside,path.join(root,'linked'));fs.writeFileSync(path.join(outside,'outside.svg'),svg);
+ const server=start({root,port:0,quiet:true});await once(server,'listening');const base='http://127.0.0.1:'+server.address().port;
+ try{
+  const shell=await (await fetch(base+'/rt')).text(),token=/__RT_TOKEN = "([a-f0-9]+)"/.exec(shell)[1],headers={'x-retouch-token':token};
+  const images=await (await fetch(base+'/rt/__api/images',{headers})).json();assert.deepEqual(images.images,[{src:'/photo%20%231.svg',name:'photo #1.svg'}]);
+  assert.equal(await (await fetch(base+images.images[0].src)).text(),svg);
+  const upload=name=>fetch(base+'/rt/__api/upload?name='+encodeURIComponent(name),{method:'POST',headers,body:svg});
+  assert.equal((await upload('page.html')).status,409);
+  const saved=await (await upload('new image.svg')).json();assert.equal(saved.ok,true);assert.match(saved.src,/^\/rt-assets\/rt-[a-f0-9]+-new-image.svg$/);
+  assert.equal(await (await fetch(base+saved.src)).text(),svg);
+  fs.rmSync(path.join(root,'rt-assets'),{recursive:true});fs.symlinkSync(outside,path.join(root,'rt-assets'));
+  assert.equal((await upload('escape.svg')).status,409);assert.deepEqual(fs.readdirSync(outside),['outside.svg']);
+ }finally{server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});fs.rmSync(outside,{recursive:true,force:true});}
+});
