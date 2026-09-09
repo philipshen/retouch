@@ -61,6 +61,7 @@ function busyPanel(start) {
 }
 let lastAppPath = null;
 let styleScope = '';
+const svgExportNames=new WeakMap();
 let svgExportScale=1,svgEmbedImages=true,svgExportFormat='svg',jpegQuality=92,jpegBackground='#ffffff';
 function scopedInfo(info) { return {...info,styleScope,anchorInheritedClasses:RetouchResponsive.inherited(info.className,styleScope,doc()),className:RetouchResponsive.project(info.className,styleScope)}; }
 
@@ -929,24 +930,30 @@ function renderPanelContents() {
   const target = (editing?.el.ownerDocument === doc() ? editing.el : null) || matchingEls(activeId()).find(el => inTextScope(el, info));
   if(target?.namespaceURI==='http://www.w3.org/2000/svg'){
     const exports=RetouchInspector.section('Export'),options=document.createElement('div');
+    const canvas=target.closest('svg'),name=document.createElement('input'),preview=document.createElement('div');
+    const defaultName=RetouchSVGExport.fileStem(canvas.getAttribute('aria-label')||canvas.id);
+    name.type='text';name.maxLength=160;name.placeholder=defaultName;name.value=svgExportNames.get(canvas)||'';
+    name.oninput=()=>{if(name.value)svgExportNames.set(canvas,name.value);else svgExportNames.delete(canvas);updatePreview();};
+    RetouchInspector.field(exports,'Export file name',name);
+    function updatePreview(){preview.textContent=RetouchSVGExport.fileStem(name.value,defaultName)+(svgExportFormat==='svg'||svgExportScale===1?'':'@'+svgExportScale+'x')+'.'+(svgExportFormat==='jpeg'?'jpg':svgExportFormat);}
     const format=RetouchInspector.select(exports,'Export format',[['svg','SVG · vector'],['png','PNG · transparent'],['jpeg','JPEG · opaque']],svgExportFormat,value=>{svgExportFormat=value;refreshOptions();});
-    const download=RetouchInspector.button('',async()=>{const invalid=options.querySelector(':invalid');if(invalid){invalid.reportValidity();return;}const selected=svgExportFormat;download.disabled=true;format.disabled=true;try{if(selected==='svg')await RetouchSVGExport.download(target,svgEmbedImages);else if(selected==='png')await RetouchSVGExport.downloadPNG(target,svgExportScale);else await RetouchSVGExport.downloadJPEG(target,svgExportScale,{quality:jpegQuality,background:jpegBackground});toast(selected.toUpperCase()+' exported','ok');}catch(error){toast(error.message,'err');}finally{download.disabled=false;format.disabled=false;}});
+    const download=RetouchInspector.button('',async()=>{const invalid=options.querySelector(':invalid');if(invalid){invalid.reportValidity();return;}const selected=svgExportFormat;download.disabled=true;format.disabled=true;try{if(selected==='svg')await RetouchSVGExport.download(target,svgEmbedImages,{name:name.value});else if(selected==='png')await RetouchSVGExport.downloadPNG(target,svgExportScale,{name:name.value});else await RetouchSVGExport.downloadJPEG(target,svgExportScale,{quality:jpegQuality,background:jpegBackground,name:name.value});toast(selected.toUpperCase()+' exported','ok');}catch(error){toast(error.message,'err');}finally{download.disabled=false;format.disabled=false;}});
     function refreshOptions(){
       options.replaceChildren();
       if(svgExportFormat==='svg'){
         if(target.closest('svg')?.querySelector('image')){const embed=document.createElement('input');embed.type='checkbox';embed.checked=svgEmbedImages;embed.onchange=()=>{svgEmbedImages=embed.checked;};RetouchInspector.field(options,'Embed images in SVG',embed);}
         RetouchInspector.note(options,'Fonts must be available where you open the SVG file.');
       }else{
-        RetouchInspector.select(options,'Export scale',[1,2,3,4].map(value=>[String(value),value+'×']),String(svgExportScale),value=>{svgExportScale=Number(value);});
+        RetouchInspector.select(options,'Export scale',[1,2,3,4].map(value=>[String(value),value+'×']),String(svgExportScale),value=>{svgExportScale=Number(value);updatePreview();});
         if(svgExportFormat==='jpeg'){
           RetouchInspector.number(options,'JPEG quality (%)',jpegQuality,1,100,value=>{if(Number.isInteger(value))jpegQuality=value;}).step='1';
           const color=document.createElement('input');color.type='color';color.value=jpegBackground;color.onchange=()=>{jpegBackground=color.value;};RetouchInspector.field(options,'JPEG background',color);
         }
         RetouchInspector.note(options,svgExportFormat==='jpeg'?'Lower quality makes smaller files. The background fills transparent areas.':'PNG preserves transparency. Bitmap images are embedded.');
       }
-      download.textContent=svgExportFormat==='svg'?'Export SVG canvas':'Export '+svgExportFormat.toUpperCase();
+      download.textContent=svgExportFormat==='svg'?'Export SVG canvas':'Export '+svgExportFormat.toUpperCase();updatePreview();
     }
-    exports.append(options,download);refreshOptions();RetouchInspector.note(exports,'Exports the containing SVG canvas at this screen size.');panelBody.append(exports);
+    preview.className='hint';preview.setAttribute('aria-label','Export filename preview');exports.append(options,preview,download);refreshOptions();RetouchInspector.note(exports,'Exports the containing SVG canvas at this screen size.');panelBody.append(exports);
   }
   if(info.svgGeometry){
     const geometry=RetouchInspector.section('SVG geometry');

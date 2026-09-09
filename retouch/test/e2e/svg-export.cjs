@@ -112,6 +112,24 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    const error=await app.locator('svg[aria-label="Test artwork"]').evaluate(async svg=>{const image=svg.ownerDocument.createElementNS(svg.namespaceURI,'image');image.setAttribute('href','/bad-image.png');svg.append(image);try{await parent.RetouchSVGExport.prepared(svg);}catch(error){return error.message;}finally{image.remove();}});assert.match(error,/decode a linked bitmap/);
   }
   const webFont=await app.locator('svg[aria-label="Test artwork"]').evaluate(async svg=>{const d=svg.ownerDocument,face=new FontFace('Export, Test Face','url(/missing-export-font.woff2)'),text=d.createElementNS(svg.namespaceURI,'text');text.textContent='Font';text.style.fontFamily='"Export, Test Face"';d.fonts.add(face);svg.append(text);try{await parent.RetouchSVGExport.png(svg);}catch(error){return error.message;}finally{text.remove();d.fonts.delete(face);}});assert.match(webFont,/Font embedding/);
+  if(process.env.RT_E2E_EXPORT_NAME){
+   await page.getByLabel('Export file name',{exact:true}).fill('Banner / 中文.png');
+   for(const format of ['svg','png','jpeg']){
+    await page.getByLabel('Export format',{exact:true}).selectOption(format);
+    if(format!=='svg')await page.getByLabel('Export scale',{exact:true}).selectOption('2');
+    const expected='Banner-中文'+(format==='svg'?'':'@2x')+'.'+(format==='jpeg'?'jpg':format);
+    assert.equal(await page.getByLabel('Export filename preview',{exact:true}).textContent(),expected);
+    console.log(engine+': exporting custom '+format+' as '+expected);
+    const event=page.waitForEvent('download');await page.getByRole('button',{name:format==='svg'?'Export SVG canvas':'Export '+format.toUpperCase(),exact:true}).click();
+    const download=await event;assert.equal(download.suggestedFilename(),expected);await download.saveAs(path.join(root,expected));
+   }
+   await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');
+   assert.equal(await page.getByLabel('Export file name',{exact:true}).inputValue(),'Banner / 中文.png');
+   await page.getByLabel('Export file name',{exact:true}).fill('');await exportFile();
+   assert.equal(await page.getByLabel('Export filename preview',{exact:true}).textContent(),'Test-artwork.svg');
+   assert.equal(fs.readFileSync(file,'utf8'),source);assert.deepEqual(errors,[]);
+   console.log(engine+': PASS custom Unicode filenames across SVG/PNG/JPEG, scale suffixes, preview, screen-size persistence and clear-to-default without source edits');
+  }
   if(process.env.RT_E2E_EXPORT_ARTIFACT)fs.writeFileSync(process.env.RT_E2E_EXPORT_ARTIFACT,text);
   console.log(engine+': PASS downloaded SVG decodes independently with viewport dimensions, CSS geometry/colors, gradient, clipping, responsive styling, no editor/script markup, unchanged source');
  }finally{if(browser)await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}

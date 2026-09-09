@@ -4725,3 +4725,28 @@ focused browser checks; the unit suite was not rerun for this change.
 
 The previously documented symbol/CSS/font limitations remain. Full Figma parity
 is incomplete, and native launches remain paused.
+
+### Editable export filenames (2026-09-09)
+
+The Export inspector now has an Export file name field and an exact filename
+preview. Custom names persist per SVG canvas in a WeakMap during the page session;
+clearing the field restores the canvas-derived default. SVG/PNG/JPEG download
+helpers share filename normalization, remove a supplied image extension, replace
+path punctuation with hyphens, retain Unicode letters/numbers, and apply raster
+scale suffixes. These preferences do not edit the site's source or history.
+
+WebKit passed the combined existing raster flow and naming checks in
+`/private/tmp/retouch-export-names-webkit.log`. Focused Chromium naming checks
+passed in `/private/tmp/retouch-export-names-chromium-focused.log`. Actual downloads
+were Banner-中文.svg, Banner-中文@2x.png and Banner-中文@2x.jpg. Both verified preview,
+screen-size persistence, clearing to default and unchanged source. git diff --check
+passed. The unit suite was not rerun for this UI/download-name change.
+
+Unresolved verification issue: Chromium's larger combined raster-plus-naming run
+completed the custom SVG and PNG downloads, then timed out waiting for the custom
+JPEG (the eleventh download in that page run). It reproduced in
+`retouch-export-names-chromium.log` and `retouch-export-names-chromium-debug.log`
+under `/private/tmp`; both processes exited 1. The focused run succeeds, but the
+cause of this accumulated-download behavior has not been proven. Do not report
+that combined Chromium run as passing. Names do not persist across page reloads.
+Full parity remains incomplete; native launches remain paused.
