@@ -5,7 +5,7 @@
 
 const path = require('node:path');
 const MagicString = require('magic-string');
-const { collectElements } = require('./id.cjs');
+const { collectElements, contentHash } = require('./id.cjs');
 
 const HOST_ATTR = 'data-rt';
 const INSTANCE_ATTR = 'data-rt-i';
@@ -26,8 +26,9 @@ function stamp(source, filePath, appRoot) {
   const { elements } = collectElements(source, relPath);
   if (elements.length === 0) return null;
 
-  const ms = new MagicString(source);
+  const ms = new MagicString(source),revision=contentHash(source);
   for (const el of elements) {
+    if(el.kind==='host')ms.appendLeft(el.node.openingElement.end-(el.node.openingElement.selfClosing?2:1),` data-rt-revision="${revision}"`);
     const attr = el.kind === 'host' ? HOST_ATTR : INSTANCE_ATTR;
     const insertAt = el.node.openingElement.name.end;
     ms.appendLeft(insertAt, ` ${attr}="${el.id}"`);

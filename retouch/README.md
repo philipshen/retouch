@@ -410,3 +410,12 @@ paint utility and reveals the inherited CSS or original SVG attribute. Dynamic
 class expressions, spread-controlled classes and inline property overrides are
 protected. These controls require Tailwind; general React CSS authoring and SVG
 paint servers/gradients remain unfinished.
+
+
+**Delete layer** now removes complete React SVG child shapes, groups or nested
+canvases even when neighboring shapes have dynamic attributes. It selects the
+parent and preserves exact source and selection through undo/redo. Component
+roots and selections enclosed by JSX rendering expressions remain unsupported.
+Compiled React host elements carry a source revision marker so preview refreshes
+can distinguish a saved revision from an older render with the same layer IDs;
+this marker is not written to project source.

@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 281 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 284 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1507,3 +1507,29 @@ the selected layer and inspector to settle. The paint screenshot was inspected.
 These controls require Tailwind. General React CSS authoring, SVG paint servers
 and gradients, structural SVG tools and cross-framework parity remain
 incomplete. The desktop archive predates these controls.
+
+
+### React SVG deletion and compiled source revisions
+
+React SVG deletion now operates on complete literal child-node ranges without
+requiring all siblings to have literal attributes. Shapes, groups and nested
+SVG canvases can be deleted; component roots and selections enclosed by JSX
+rendering expressions remain protected. The planner validates retained node
+offsets, tags and ancestry after reparsing and returns the mapped parent ID.
+Source history retains exact before/after bytes.
+
+React stamping now adds data-rt-revision to compiled host elements only, after
+spread props. It records the source hash without changing project source or
+passing revision props to custom components. The rendered-element readiness
+check uses this marker when the React descriptor advertises it, preventing
+old markup with reused structural IDs from satisfying that check. Other
+renderers retain their existing readiness behavior and bounded reload fallback.
+
+All 284 unit tests pass, including dynamic sibling deletion, group/canvas
+removal, refusal boundaries and source-revision/ID behavior. Chromium and WebKit
+pass the real Next/Tailwind workflow with shape/group/canvas deletion, source
+revision equality, exact undo/redo and create-delete-undo-delete-undo-creation
+transitions. The existing geometry, paint, drawing and cancellation checks also
+pass. HTML SVG editing/history passes in both engines after the shared handler
+change. React SVG duplication, stacking and broader framework parity remain
+incomplete; the desktop bundle predates these changes.

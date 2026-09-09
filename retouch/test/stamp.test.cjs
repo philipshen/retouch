@@ -46,3 +46,9 @@ test('produces a source map', () => {
   const out = stamp(`export const C = () => <div/>;`, file, ROOT);
   assert.ok(out.map && out.map.mappings);
 });
+
+test('compiled host revisions change with source while structural IDs remain stable',()=>{
+ const {contentHash,collectElements}=require('../src/id.cjs'),src='export const C=()=> <svg {...props}><rect width={10}/><Icon/></svg>;',next=src.replace('10','20'),a=stamp(src,file,ROOT),b=stamp(next,file,ROOT);
+ assert.equal((a.code.match(/data-rt-revision=/g)||[]).length,2);assert.ok(a.code.includes('data-rt-revision="'+contentHash(src)+'"'));assert.ok(b.code.includes('data-rt-revision="'+contentHash(next)+'"'));assert.deepEqual(a.code.match(/data-rt="[^"]+"/g),b.code.match(/data-rt="[^"]+"/g));
+ const hosts=collectElements(a.code,'C.tsx').elements.filter(e=>e.kind==='host');for(const host of hosts)assert.equal(host.node.openingElement.attributes.at(-1).name.name,'data-rt-revision');assert.ok(!src.includes('data-rt-revision'));
+});

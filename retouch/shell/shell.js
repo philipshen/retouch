@@ -555,7 +555,7 @@ async function refreshWrittenElement(info, matches) {
       if (response.ok) {
         const html = new DOMParser().parseFromString(await response.text(), 'text/html');
         const el = matchingInDocument(html,info.id,info)[0];
-        if (el && matches(el)) { await reloadFrame(); return; }
+        if (el && (!info.renderRevisionAttribute||el.getAttribute(info.renderRevisionAttribute)===info.hash) && matches(el)) { await reloadFrame(); return; }
       }
     } catch {}
     await new Promise(resolve => setTimeout(resolve, 150));
@@ -1733,7 +1733,9 @@ async function structureAction(action) {
       if(!result?.ok)return toast(result?.reason||result?.error||'Could not update SVG layer','err');
       const selectionAfter=[deleting?result.parentId:duplicating?result.createdId:result.movedId];
       editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:[info.id],selectionAfter,undoId:result.undoId});
-      await reloadFrame();await restoreLayerSelection(selectionAfter);renderPanel();toast(deleting?'Layer deleted':duplicating?'Layer duplicated':'Layer moved','ok');
+      await restoreLayerSelection(selectionAfter);
+      if(sel?.info.renderRevisionAttribute)await refreshWrittenElement(sel.info,()=>true);else await reloadFrame();
+      renderPanel();toast(deleting?'Layer deleted':duplicating?'Layer duplicated':'Layer moved','ok');
     }finally{busyPanel(false);}
     return;
   }
