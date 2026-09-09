@@ -721,3 +721,20 @@ authored contrast, independent tablet blur, inherited reset, clear, and exact
 undo of seven edits. These checks establish CSS behavior, not pixel equivalence
 with Figma rendering. Gradient fills, arbitrary filter-stack editing and broader
 framework parity remain unfinished.
+
+
+### Current native bundle and cask refresh
+
+Rebuilt the universal Mac app from `54ccdbe` to include the recent HTML editing
+features. Bundled launcher/HTML discovery self-tests passed. A local cask install
+and uninstall passed for the exact generated archive; the installed app had
+both architectures, passed strict ad hoc signature verification, and matched
+all 61 packaged source files. The test app and temporary tap were removed.
+The archive, cask and hash receipt remain under
+`/private/tmp/retouch-desktop-effects-build`.
+
+Current native interaction remains unverified because CUA could not find the
+window after a fresh launch and session. A process sample established AppKit
+execution, not visual usability. The test process was stopped. Public release,
+notarization, trusted Gatekeeper launch and Intel runtime verification remain
+outstanding. See `desktop/README.md` for the exact archive hash and evidence.

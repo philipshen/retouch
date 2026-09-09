@@ -111,3 +111,24 @@ Native HTML verification covers the folder dialog, automatic mode selection,
 command-free startup, automatic connection, persistent CSS editing, exact undo
 and Stop releasing the listening port. Bundled launch self-tests also cover a
 folder path containing spaces and shell punctuation and dynamic port discovery.
+
+## Current editor packaging verification
+
+A fresh universal build from source commit `54ccdbe` includes HTML layer placement,
+responsive shadows, blur and blending. The bundled launcher self-tests passed
+(command exit propagation, literal folder paths, dynamic-port discovery, health
+and shutdown). Its ZIP was installed and uninstalled through a temporary local
+cask in an isolated app directory. The installed app passed strict ad hoc
+signature verification and all 61 packaged source files matched that checkout.
+The temporary tap and installed test app were removed; quarantine was preserved.
+
+The artifact is `/private/tmp/retouch-desktop-effects-build/Retouch-0.1.0-mac.zip`,
+with SHA-256 `b29b8ec1758ec26c06ee9a7b4f9976eebc375bb287a95eb1e3271f73e29cc3c6`.
+A generated local cask and per-file `verification.json` receipt accompany it.
+These are local development artifacts, not a published or notarized release.
+
+Native interaction with this build remains unverified: the CUA tool repeatedly
+reported `cgWindowNotFound`, including after a fresh process and tool session.
+Process sampling showed the AppKit event loop, but did not establish a visible
+usable editor. The test process was stopped. Earlier native UI results do not
+prove interaction with the current bundle.
