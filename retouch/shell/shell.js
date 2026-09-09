@@ -34,7 +34,9 @@ let lastAppPath = null;
 let styleScope = '';
 function scopedInfo(info) { return {...info,styleScope,className:RetouchResponsive.project(info.className,styleScope)}; }
 
-const editorHistory = RetouchHistory.createHistory({apply:restoreHistory,onChange:syncHistoryControls});
+const historyRoutes = new Map();
+function currentPageRoute(){try{const loc=iframe.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
+const editorHistory = RetouchHistory.createHistory({apply:restoreHistory,onChange:syncHistoryControls,capture:entry=>({route:historyRoutes.get(entry.undoId)||currentPageRoute()})});
 function syncHistoryControls() {
   undoBusy = editorHistory.busy;
   const busy = undoBusy || panelTasks > 0 || sourceRequests > 0;
@@ -1401,12 +1403,24 @@ async function restoreDirection(direction) {
     else if(!result?.ok&&!result?.busy)toast(result?.reason||result?.error||'History restore failed','err');
   } catch(error){toast(error.message,'err');}
 }
+async function showHistoryPage(route){
+  if(!route||route===currentPageRoute())return;
+  const target=new URL(route,location.origin);
+  if(target.origin!==location.origin)throw Error('The edited page is outside this editor.');
+  clearSelection();
+  await new Promise((resolve,reject)=>{
+    const done=()=>{clearTimeout(timer);iframe.removeEventListener('load',done);resolve();};
+    const timer=setTimeout(()=>{iframe.removeEventListener('load',done);reject(Error('The edited page did not finish loading.'));},10000);
+    iframe.addEventListener('load',done);iframe.src=target.href;
+  });
+}
 async function restoreHistory(direction,op) {
   const result=await api('POST','/rt/__api/op',{type:direction,undoId:op.undoId});
   if(!result?.ok)return result;
   // Source history has already moved. A renderer failure must not leave the
   // client stack on the old side of a successful transaction.
   try {
+    await showHistoryPage(op.route);
     const fresh = await api('GET', resolveUrl(op.id, op.context));
     if (fresh?.ok) { sel = { hostId: op.id, instanceId: null, scope: 'host', info: fresh.element }; renderPanel(); }
     else clearSelection();
@@ -1455,6 +1469,7 @@ window.addEventListener('blur', () => { measuring = false; });
 /* ---------- util ---------- */
 async function api(method, url, body) {
   const writes = method === 'POST' && url === '/rt/__api/op';
+  const route = writes ? currentPageRoute() : null;
   if(writes && editorHistory.busy && !['undo','redo'].includes(body?.type)) return {ok:false,reason:'Wait for history restoration to finish.'};
   if(writes){sourceRequests++;syncHistoryControls();}
   try {
@@ -1463,7 +1478,12 @@ async function api(method, url, body) {
       headers: { 'x-retouch-token': TOKEN, ...(body ? { 'content-type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
     });
-    return await res.json();
+    const result=await res.json();
+    if(writes&&result.ok&&result.undoId&&!['undo','redo'].includes(body?.type)){
+      if(!historyRoutes.has(result.undoId))historyRoutes.set(result.undoId,route);
+      while(historyRoutes.size>200)historyRoutes.delete(historyRoutes.keys().next().value);
+    }
+    return result;
   } catch (err) {
     return { ok: false, error: err.message };
   } finally {if(writes){sourceRequests--;syncHistoryControls();}}

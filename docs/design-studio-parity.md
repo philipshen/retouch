@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 209 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 210 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -436,3 +436,19 @@ catalog boundaries. Browser checks create and discover a second page, navigate
 to it, edit its source without changing the first page, undo exactly and return
 home. Page creation/deletion in the UI, remote capture and framework route
 catalogs remain open.
+
+
+### History across page navigation
+
+Source-write requests capture their originating page before awaiting the server.
+The shared history controller retains that route with each gesture, so subsequent
+navigation cannot change its destination. After a successful source undo/redo,
+the shell opens the original page before resolving and refreshing the element.
+A refused source operation keeps both the history entry and current page. Preview
+load failure does not reverse a successful source-history transition.
+
+All 210 tests pass. A controller test verifies the original route survives grouped
+edits and redo. The HTML browser test edits a second page, navigates home, undoes
+back on the second page, navigates home again and redoes back on the second page,
+then verifies exact source restoration. History remains local to the running
+editor session; persistent history and shared multi-user editing remain open.

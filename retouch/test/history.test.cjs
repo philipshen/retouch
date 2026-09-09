@@ -105,3 +105,11 @@ test('a grouped client entry undoes to its initial preview and redoes its final 
   assert.equal(applied[1].after,'final');assert.deepEqual(applied[1].syncInfo,{hash:'two'});
   assert.equal(history.canRedo,false);assert.equal(history.canUndo,true);
 });
+
+test('client history captures the original page once per gesture and retains it for redo',async()=>{
+ let route='/first.html';const calls=[];
+ const history=createHistory({capture:()=>({route}),apply:async(type,entry)=>{calls.push([type,entry.route]);return {ok:true};}});
+ history.record({undoId:'a'});route='/second.html';history.record({undoId:'a'});history.record({undoId:'b'});
+ await history.undo();await history.undo();await history.redo();
+ assert.deepEqual(calls,[['undo','/second.html'],['undo','/first.html'],['redo','/first.html']]);
+});

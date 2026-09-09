@@ -1,6 +1,6 @@
 (function(root) {
   'use strict';
-  function createHistory({apply,onChange=()=>{}}) {
+  function createHistory({apply,onChange=()=>{},capture=()=>({})}) {
     const undo=[],redo=[];let busy=false;
     const controller={
       get canUndo(){return undo.length>0;}, get canRedo(){return redo.length>0;}, get busy(){return busy;},
@@ -13,7 +13,7 @@
         if(previous?.undoId===entry.undoId) {
           if(Object.hasOwn(entry,'after'))previous.after=entry.after;
           if(Object.hasOwn(entry,'syncInfo'))previous.syncInfo=entry.syncInfo;
-        } else undo.push({...entry});
+        } else undo.push({...capture(entry),...entry});
         if(undo.length>100)undo.shift();
         redo.length=0;onChange(controller);
       },
