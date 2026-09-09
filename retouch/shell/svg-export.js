@@ -77,7 +77,9 @@
  async function prepared(target){const result=snapshot(target),parsed=new DOMParser().parseFromString(result.text,'image/svg+xml');await embedImages(parsed,target);return {...result,text:new XMLSerializer().serializeToString(parsed.documentElement)};}
  function save(blob,name){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
  async function download(target,embed=true){const result=embed?await prepared(target):snapshot(target);save(new Blob([result.text],{type:'image/svg+xml'}),result.name+'.svg');return result;}
- async function raster(target,scale=1,format='png'){
+ async function raster(target,scale=1,format='png',options={}){
+  const {quality=92,background='#ffffff'}=options;
+  if(format==='jpeg'&&(!Number.isInteger(quality)||quality<1||quality>100||!/^#[a-f0-9]{6}$/i.test(background)))throw Error('Choose JPEG quality from 1–100 and a six-digit background color.');
   if(!['png','jpeg'].includes(format))throw Error('Choose PNG or JPEG.');
   if(![1,2,3,4].includes(scale))throw Error('Choose an image scale from 1× to 4×.');
   const result=snapshot(target),parsed=new DOMParser().parseFromString(result.text,'image/svg+xml');
@@ -93,14 +95,14 @@
   const url=URL.createObjectURL(new Blob([result.text],{type:'image/svg+xml'}));
   try{
    const image=new Image();image.src=url;await image.decode();
-   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d');if(!context)throw Error('Could not create the export canvas.');if(format==='jpeg'){context.fillStyle='#fff';context.fillRect(0,0,width,height);}context.drawImage(image,0,0,width,height);
-   const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(Error('Could not encode the image.')),'image/'+format,0.92));
+   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const context=canvas.getContext('2d');if(!context)throw Error('Could not create the export canvas.');if(format==='jpeg'){context.fillStyle=background;context.fillRect(0,0,width,height);}context.drawImage(image,0,0,width,height);
+   const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(Error('Could not encode the image.')),'image/'+format,quality/100));
    return {...result,width,height,blob};
   }finally{URL.revokeObjectURL(url);}
  }
  const png=(target,scale=1)=>raster(target,scale,'png');
- const jpeg=(target,scale=1)=>raster(target,scale,'jpeg');
- async function downloadJPEG(target,scale=1){const result=await jpeg(target,scale);save(result.blob,result.name+(scale===1?'':'@'+scale+'x')+'.jpg');return result;}
+ const jpeg=(target,scale=1,options={})=>raster(target,scale,'jpeg',options);
+ async function downloadJPEG(target,scale=1,options={}){const result=await jpeg(target,scale,options);save(result.blob,result.name+(scale===1?'':'@'+scale+'x')+'.jpg');return result;}
  async function downloadPNG(target,scale=1){const result=await png(target,scale);save(result.blob,result.name+(scale===1?'':'@'+scale+'x')+'.png');return result;}
  root.RetouchSVGExport={snapshot,prepared,download,png,jpeg,downloadPNG,downloadJPEG};
 })(window);

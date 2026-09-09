@@ -4569,3 +4569,25 @@ to avoid truncation while retaining the white-background explanation below.
 
 Configurable JPEG quality/background, text/font export, symbols, arbitrary HTML
 layer export and full asset parity remain unfinished. Native launches remain paused.
+
+### JPEG quality and background (2026-09-09)
+
+JPEG export now offers integer quality 1–100% and a background color picker.
+Settings persist across format changes and inspector rebuilds within the editor
+session. JPEG encoding uses the requested quality, and the chosen background
+fills transparent pixels before compositing the SVG snapshot. Export validates
+both the UI fields and raster API options. Defaults remain quality 92%, white.
+
+Chromium and WebKit downloaded JPEGs at quality 35% and 95% with background
+#123456. Independent decode confirmed the background within JPEG tolerance, and
+file sizes changed from 2057 to 3921 bytes (Chromium) and 3154 to 5821 bytes
+(WebKit). This demonstrates the quality tradeoff for the fixture, not a universal
+file-size guarantee. Format switches retained 95% / #123456. Invalid 0%, 101% and
+fractional quality inputs failed validity checks. Existing SVG/PNG/JPEG download,
+asset embedding, alpha, dimensions and source-preservation checks still passed.
+Logs: `/private/tmp/retouch-jpeg-options-chromium.log` and
+`/private/tmp/retouch-jpeg-options-webkit.log`. All 375 unit tests passed in
+`/private/tmp/retouch-jpeg-options-unit.log`.
+
+Text/font rasterization, symbols, arbitrary HTML-layer exports and full asset
+parity remain unfinished. Native launches remain paused.

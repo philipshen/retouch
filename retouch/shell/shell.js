@@ -61,7 +61,7 @@ function busyPanel(start) {
 }
 let lastAppPath = null;
 let styleScope = '';
-let svgExportScale=1,svgEmbedImages=true,svgExportFormat='svg';
+let svgExportScale=1,svgEmbedImages=true,svgExportFormat='svg',jpegQuality=92,jpegBackground='#ffffff';
 function scopedInfo(info) { return {...info,styleScope,anchorInheritedClasses:RetouchResponsive.inherited(info.className,styleScope,doc()),className:RetouchResponsive.project(info.className,styleScope)}; }
 
 let lockStorage;try{lockStorage=sessionStorage;}catch{}
@@ -930,7 +930,7 @@ function renderPanelContents() {
   if(target?.namespaceURI==='http://www.w3.org/2000/svg'){
     const exports=RetouchInspector.section('Export'),options=document.createElement('div');
     const format=RetouchInspector.select(exports,'Export format',[['svg','SVG · vector'],['png','PNG · transparent'],['jpeg','JPEG · opaque']],svgExportFormat,value=>{svgExportFormat=value;refreshOptions();});
-    const download=RetouchInspector.button('',async()=>{const selected=svgExportFormat;download.disabled=true;format.disabled=true;try{if(selected==='svg')await RetouchSVGExport.download(target,svgEmbedImages);else if(selected==='png')await RetouchSVGExport.downloadPNG(target,svgExportScale);else await RetouchSVGExport.downloadJPEG(target,svgExportScale);toast(selected.toUpperCase()+' exported','ok');}catch(error){toast(error.message,'err');}finally{download.disabled=false;format.disabled=false;}});
+    const download=RetouchInspector.button('',async()=>{const invalid=options.querySelector(':invalid');if(invalid){invalid.reportValidity();return;}const selected=svgExportFormat;download.disabled=true;format.disabled=true;try{if(selected==='svg')await RetouchSVGExport.download(target,svgEmbedImages);else if(selected==='png')await RetouchSVGExport.downloadPNG(target,svgExportScale);else await RetouchSVGExport.downloadJPEG(target,svgExportScale,{quality:jpegQuality,background:jpegBackground});toast(selected.toUpperCase()+' exported','ok');}catch(error){toast(error.message,'err');}finally{download.disabled=false;format.disabled=false;}});
     function refreshOptions(){
       options.replaceChildren();
       if(svgExportFormat==='svg'){
@@ -938,7 +938,11 @@ function renderPanelContents() {
         RetouchInspector.note(options,'Fonts must be available where you open the SVG file.');
       }else{
         RetouchInspector.select(options,'Export scale',[1,2,3,4].map(value=>[String(value),value+'×']),String(svgExportScale),value=>{svgExportScale=Number(value);});
-        RetouchInspector.note(options,svgExportFormat==='jpeg'?'JPEG uses a white background. Bitmap images are embedded.':'PNG preserves transparency. Bitmap images are embedded.');
+        if(svgExportFormat==='jpeg'){
+          RetouchInspector.number(options,'JPEG quality (%)',jpegQuality,1,100,value=>{if(Number.isInteger(value))jpegQuality=value;}).step='1';
+          const color=document.createElement('input');color.type='color';color.value=jpegBackground;color.onchange=()=>{jpegBackground=color.value;};RetouchInspector.field(options,'JPEG background',color);
+        }
+        RetouchInspector.note(options,svgExportFormat==='jpeg'?'Lower quality makes smaller files. The background fills transparent areas.':'PNG preserves transparency. Bitmap images are embedded.');
       }
       download.textContent=svgExportFormat==='svg'?'Export SVG canvas':'Export '+svgExportFormat.toUpperCase();
     }
