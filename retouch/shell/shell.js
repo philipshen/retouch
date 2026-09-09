@@ -926,6 +926,11 @@ function renderPanelContents() {
   }
 
   const target = (editing?.el.ownerDocument === doc() ? editing.el : null) || matchingEls(activeId()).find(el => inTextScope(el, info));
+  if(target?.namespaceURI==='http://www.w3.org/2000/svg'){
+    const exports=RetouchInspector.section('Export');
+    exports.append(RetouchInspector.button('Export SVG canvas',()=>{try{RetouchSVGExport.download(target);toast('SVG exported','ok');}catch(error){toast(error.message,'err');}}));
+    RetouchInspector.note(exports,'Exports the containing SVG canvas at this screen size. Linked images remain external; fonts must be available where you open the file.');panelBody.append(exports);
+  }
   if(info.svgGeometry){
     const geometry=RetouchInspector.section('SVG geometry');
     const pointField=info.svgGeometry.fields.find(field=>['points','d'].includes(field.name));

@@ -4441,3 +4441,31 @@ absolute escape checks still pass, as do selection/reveal/scoped edits/undo. Log
 This verifies translation/positive axis scaling, not arbitrary rotations,
 nonrectangular clips or every browser's containing-block representation. Full
 Figma parity remains unfinished. Native launches remain paused.
+
+### SVG canvas export (2026-09-09)
+
+Added Export SVG canvas when selecting SVG layers. The browser downloads a
+standalone SVG document with the containing canvas's viewBox and dimensions,
+definitions, and computed geometry/paint/typography styles at the current preview
+size. Local paint-server URLs are normalized to fragment references; linked asset
+URLs are made absolute. Editor stamps, executable handlers, scripts and source
+style elements are removed after styling is captured. Source files are unchanged.
+
+The initial export path explicitly refuses linked symbol instances (`use`) and
+SMIL animations rather than silently exporting incorrect inherited paint or base
+geometry. Linked images are not embedded and fonts must be available to the
+consumer. External definitions, font outlines/embedding, arbitrary animation
+snapshots, raster/PDF export, selected-shape cropping and complete SVG fidelity
+remain unfinished; this is the first canvas export path, not full asset parity.
+
+375 unit tests passed in `/private/tmp/retouch-svg-export-unit.log`. Chromium and
+WebKit downloaded real files, decoded each as an SVG image independently of the
+editor document and checked dimensions and raster pixels: CSS-defined width/color,
+gradient paint, clipPath and phone/tablet styling all passed. The source remained
+byte-identical and the export contained no editor/script markup. Logs:
+`/private/tmp/retouch-svg-export-chromium.log`,
+`/private/tmp/retouch-svg-export-webkit.log`, and WebKit's symbol-refusal check
+`/private/tmp/retouch-svg-export-webkit-final.log`. Reusable command:
+`RT_INSPECTOR_FIXTURE=/private/tmp/retouch-responsive-fixture npm run test:e2e:svg-export`
+from retouch/. Sample downloaded artifact: `/private/tmp/retouch-export-example.svg`.
+Native app launches remain paused.
