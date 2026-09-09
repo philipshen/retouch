@@ -114,7 +114,9 @@ The right inspector includes explicit positioning and anchors, Alt/Option-hover
 padding and spacing measurements, image browsing/uploads, typography classes and
 font previews, fill/text colors, shadows, and opacity. Local React components
 have a live preview and props panel, shared-definition editing, and module
-detachment with exact undo. New style controls preserve existing breakpoint
-classes; media-query editing remains deferred. See the
+detachment with exact undo. The screen toolbar previews phone, tablet, desktop or custom dimensions, with
+rotation and remembered sizing. Pinch zoom preserves the selected screen
+viewport. Style controls currently edit base styles and preserve existing
+breakpoint classes; breakpoint-aware editing is still being implemented. See the
 [inspector guide](https://github.com/philipshen/retouch/blob/main/docs/inspector.md)
 for supported source patterns and browser verification.

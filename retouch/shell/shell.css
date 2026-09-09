@@ -197,3 +197,11 @@ details.advanced > summary:hover { color: var(--ink); }
 .rt-context-menu button:hover:not(:disabled), .rt-context-menu button:focus-visible { background: #1769df; outline: none; }
 .rt-context-menu button:disabled { opacity: .4; cursor: default; }
 .rt-context-menu kbd { font: inherit; opacity: .65; white-space: nowrap; }
+
+/* Screen dimensions are CSS pixels; pinch changes canvas magnification only. */
+#screenToolbar { display:flex; align-items:center; flex-wrap:wrap; gap:10px; padding:7px 12px; background:var(--panel); border-bottom:1px solid var(--line); }
+#screenToolbar label { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:12px; }
+#screenToolbar input, #screenToolbar select, #screenToolbar button { border:1px solid var(--line); border-radius:5px; background:#141518; color:var(--ink); padding:5px 7px; font:12px var(--font); }
+#screenToolbar input { width:72px; }
+#screenToolbar button { cursor:pointer; }
+#screenHint { color:var(--muted); font-size:11px; }

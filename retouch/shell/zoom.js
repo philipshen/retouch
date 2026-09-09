@@ -2,7 +2,7 @@
   'use strict';
   const canvas=document.getElementById('frameWrap'),extent=document.getElementById('canvasExtent'),stage=document.getElementById('siteStage'),frame=document.getElementById('app');
   const endPadding=96; // Screen pixels, independent of zoom.
-  let scale=1,width=0,height=0,pinnedHeight=0,gestureBase=null,positioned=false;
+  let scale=1,width=0,height=0,pinnedHeight=0,gestureBase=null,positioned=false,screen=null;
   const pinned=new Map(),hooked=new WeakSet();
   // Expanding the visible page must not expand 100vh heroes with it. Rebase
   // viewport-height lengths in the preview's CSS only; never write source.
@@ -13,7 +13,7 @@
     pinned.clear();pinnedHeight=0;
   }
   function pinUnits(){
-    if(scale===1){restoreUnits();return;}
+    if(scale===1 || screen){restoreUnits();return;}
     if(pinnedHeight && pinnedHeight!==height)restoreUnits();
     pinnedHeight=height;
     const d=frame.contentDocument;if(!d)return;
@@ -36,9 +36,9 @@
   }
   function layout(){
     if(!width||!height)return;
-    const pad=scale===1?0:24,ew=Math.max(width,width*scale+pad*2);
-    extent.style.width=ew+'px';extent.style.height=(height+endPadding*2)+'px';
-    stage.style.width=width+'px';stage.style.height=height/scale+'px';
+    const pad=scale===1?0:24,ew=Math.max(canvas.clientWidth,width*scale+pad*2);
+    extent.style.width=ew+'px';extent.style.height=(Math.max(canvas.clientHeight,screen?height*scale:height)+endPadding*2)+'px';
+    stage.style.width=width+'px';stage.style.height=(screen?height:height/scale)+'px';
     stage.style.left=(ew-width*scale)/2+'px';stage.style.top=endPadding+'px';
     stage.style.transform=`scale(${scale})`;
     stage.style.setProperty('--canvas-zoom',String(scale));
@@ -71,7 +71,8 @@
     const max=Math.max(0,root.scrollHeight-root.clientHeight);
     const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?height:1);
     const current=w.scrollY*scale+canvas.scrollTop-endPadding;
-    const next=Math.max(-endPadding,Math.min(max*scale+endPadding,current+delta));
+    const clipped=screen?Math.max(0,height*scale-canvas.clientHeight):0;
+    const next=Math.max(-endPadding,Math.min(max*scale+clipped+endPadding,current+delta));
     // Native scrolling within the page; take over only at the canvas boundary.
     if(inFrame && canvas.scrollTop===endPadding && next>=0 && next<=max*scale)return;
     e.preventDefault();e.stopPropagation();
@@ -102,5 +103,16 @@
     new MutationObserver(refresh).observe(d.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['style']});
     d.addEventListener('load',refresh,true);
   });
-  new ResizeObserver(()=>{width=canvas.offsetWidth;height=canvas.offsetHeight;pinUnits();layout();}).observe(canvas);
+  function measure(){
+    width=screen?screen.width:canvas.clientWidth;
+    height=screen?screen.height:canvas.clientHeight;
+    pinUnits();layout();
+    window.dispatchEvent(new CustomEvent('retouch:viewport',{detail:{width,height,fixed:!!screen}}));
+  }
+  window.addEventListener('retouch:screen',e=>{
+    screen=e.detail;restoreUnits();measure();
+    canvas.scrollLeft=0;
+  });
+  new ResizeObserver(measure).observe(canvas);
+  window.RetouchScreens?.restore();
 })();

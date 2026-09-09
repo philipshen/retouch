@@ -76,3 +76,15 @@ resizing, source persistence after reload, image replacement/upload, and undo.
 The second checks props and live preview isolation, shared definition edits,
 detachment, independent edits, and exact two-file undo. Both collect browser
 errors and restore their disposable sources.
+
+## Screen previews
+
+The Screen toolbar switches the actual iframe viewport between phone (390 ×
+844), tablet (768 × 1024), desktop (1440 × 900), and custom dimensions from 240
+to 7680 CSS pixels. Rotate swaps dimensions; Fit workspace follows the editor
+window. The chosen size persists in this site's browser storage. Pinch zoom
+changes the visual scale without changing a fixed screen's media queries or
+viewport-height units. Controls currently write base styles; previewing a phone
+does not yet scope a style edit to a phone breakpoint.
+
+Run `node test/e2e/screens.cjs` from `retouch/` for the isolated browser check.

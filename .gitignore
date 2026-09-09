@@ -1,7 +1,9 @@
 unplastic-backbone/
 moses/
-node_modules/
+node_modules
 *.log
 .DS_Store
 
 /retouch/artifacts/
+
+/desktop/dist/
