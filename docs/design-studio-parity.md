@@ -14,7 +14,7 @@ changing those files. The original checkout may continue to evolve independently
 | Area | Required outcome | Current evidence and remaining work |
 | --- | --- | --- |
 | Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Existing single-site zoom/selection/resize plus a linked phone/tablet/desktop comparison rail. Most document and multi-selection operations still absent or unaudited. |
-| Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI now exist. Reparenting, rename, multi-selection, cross-context clipboard and broader source structures remain. |
+| Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. Multi-selection, cross-context clipboard and broader source structures remain. |
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | Full vector authoring and geometry model remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | Visual horizontal/vertical/reverse flex and grid controls, wrapping, gaps, alignment/distribution, per-side padding, fixed/hug/fill sizing, minimum/maximum dimensions, grid-child spans and breakpoint-scoped writes now exist. Full constraint, advanced grid, nested auto-layout and cross-framework equivalence work remains. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | Opacity, CSS border width/style/color, uniform and individual corners, basic color and shadow controls, and image fit/position controls exist. Browser tests cover border independence, corners, scope and exact undo. Multiple fills/strokes, gradient editing, crop handles/zoom/rotation, blending and complete visual/source representations remain. |
@@ -654,3 +654,18 @@ linked responsive styles, cycles and invalid nested-form moves. Chromium and
 WebKit browser checks move a styled heading into a newly created frame, verify
 its width and exercise exact undo/redo. Drag/drop reparenting, cross-document
 moves and dynamic-template structure remain open.
+
+
+### Dragging HTML layers into containers
+
+The Layers tree now supports dragging a layer onto a valid content container to
+append the source subtree inside it. Eligible targets highlight during the drag;
+self, descendant and current-parent targets are excluded. The operation uses the
+same validated source planner and exact history as Move Into. Dragging is enabled
+only for adapters advertising reparent support. The destination picker remains
+available for keyboard use.
+
+All 225 unit tests pass. Chromium and WebKit browser checks perform a real layer
+drag into a new frame, undo the move, then undo frame creation and compare the
+source with its original bytes. This does not add drag-based sibling placement,
+cross-document moves or native package verification.

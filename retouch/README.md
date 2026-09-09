@@ -193,8 +193,9 @@ Mixed text/comment boundaries and implicitly closed parents are refused. Styled 
 independent identities. Layers with authored IDs, keys or refs cannot yet be
 duplicated. Undo restores exact source snapshots.
 
-Use **Move into…** to move a complete HTML layer into another content container
-in the same document. Linked styles remain attached, and Undo/Redo restores the
+Drag an HTML layer onto a container row in **Layers**, or use **Move into…**,
+to append it inside that container in the same document. Valid drop targets are
+highlighted while dragging. Linked styles remain attached, and Undo/Redo restores the
 source. Moving into the layer itself or its descendants is refused.
 
 Rich markup editing, cross-document moves and remote-site capture remain open.

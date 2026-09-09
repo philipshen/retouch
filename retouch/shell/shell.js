@@ -1530,27 +1530,37 @@ RetouchMaxWidth.mount({
 let layerClipboard=null;
 const layers = RetouchLayers.mount({
   getClipboard:()=>layerClipboard,
+  dragEnabled:window.__RT_RENDERING?.layerReparenting===true,
+  onMove:async(source,destination)=>{
+    if(panelTasks||undoBusy||sourceRequests||!source.isConnected||!destination.isConnected)return;
+    await commitInlineEdit();await select(source);
+    if(!sel?.info.structure?.canReparent)return toast(sel?.info.structure?.reason||'This layer cannot be moved into another container.','err');
+    await moveLayerInto(sel.info,destination.getAttribute('data-rt'));
+  },
   host:document.getElementById('layersPanel'),
   onSelect:async el=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await select(el);el.scrollIntoView({block:'nearest',inline:'nearest'});},
   onAction:action=>structureAction(action),
 });
 function chooseLayerParent(info){
   const selected=matchingEls(info.id)[0];if(!selected)return;
-  const allowed=new Set(['BODY','DIV','MAIN','SECTION','ARTICLE','ASIDE','HEADER','FOOTER','NAV','FORM','LI','TD','TH','BLOCKQUOTE']);
-  const candidates=[...doc().querySelectorAll('[data-rt]')].filter(el=>allowed.has(el.tagName)&&el!==selected.parentElement&&!selected.contains(el));
+  const candidates=[...doc().querySelectorAll('[data-rt]')].filter(el=>RetouchLayers.canNest(selected,el));
   if(!candidates.length)return toast('No other content container is available on this page.','err');
   const modal=document.createElement('dialog'),heading=document.createElement('h3');heading.textContent='Move layer into';modal.className='layer-move-dialog';modal.append(heading);
   const picker=document.createElement('select');picker.setAttribute('aria-label','Destination container');
   for(const el of candidates){const option=document.createElement('option');option.value=el.getAttribute('data-rt');option.textContent=RetouchLayers.label(el);picker.append(option);}modal.append(picker);
   const close=()=>{modal.close();modal.remove();};
-  modal.append(RetouchInspector.button('Move layer',async()=>{const destinationId=picker.value;close();busyPanel(true);try{
+  modal.append(RetouchInspector.button('Move layer',()=>{const destinationId=picker.value;close();moveLayerInto(info,destinationId);}),RetouchInspector.button('Cancel',close));
+  modal.addEventListener('cancel',()=>modal.remove());document.body.append(modal);modal.showModal();picker.focus();
+}
+async function moveLayerInto(info,destinationId){
+  busyPanel(true);
+  try{
     const result=await api('POST','/rt/__api/op',{type:'reparentElement',id:info.id,fileHash:info.hash,destinationId});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not move layer','err');
     editorHistory.record({type:'structure',id:result.parentId,undoId:result.undoId});await reloadFrame();
     const fresh=await api('GET',resolveUrl(result.movedId));if(fresh?.ok){sel={hostId:result.movedId,instanceId:null,scope:'host',info:fresh.element};renderPanel();}
     toast('Layer moved','ok');
-  }finally{busyPanel(false);}}),RetouchInspector.button('Cancel',close));
-  modal.addEventListener('cancel',()=>modal.remove());document.body.append(modal);modal.showModal();picker.focus();
+  }finally{busyPanel(false);}
 }
 async function insertLayer(preset,info){
   busyPanel(true);

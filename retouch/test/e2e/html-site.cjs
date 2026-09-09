@@ -206,6 +206,13 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(async()=>await app.locator('main > div[aria-label="Frame"] > h1').count()===1,'reparent redo');
   for(let i=0;i<3;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'reparent setup exact undo');
+
+  await page.getByRole('treeitem',{name:'main',exact:true}).click();await page.getByRole('button',{name:'Add frame',exact:true}).click();await wait(async()=>await app.locator('main > div[aria-label="Frame"]').count()===1,'drag destination frame');await settled();
+  const dragSource=page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}),dropTarget=page.getByRole('treeitem',{name:'div · Frame',exact:true});
+  await wait(async()=>await page.locator('#layersPanel').getAttribute('aria-busy')!=='true','drag ready');await dragSource.dragTo(dropTarget);
+  await wait(async()=>await app.locator('main > div[aria-label="Frame"] > h1').count()===1,'drag into frame');await settled();
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(async()=>await app.locator('main > h1').count()===1,'drag undo');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'drag setup undo');
   assert.deepEqual(errors,[]);console.log(engine+': PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

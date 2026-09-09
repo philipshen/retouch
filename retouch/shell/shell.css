@@ -255,3 +255,7 @@ details.advanced > summary:hover { color: var(--ink); }
 .layer-move-dialog h3 { margin-bottom:12px; }
 .layer-move-dialog select { width:100%; margin-bottom:16px; padding:8px; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:5px; }
 .layer-move-dialog button { margin-right:8px; }
+
+.layer-item[draggable="true"] { cursor:grab; }
+.layer-item.dragging { opacity:.5; }
+.layer-item.drop-target { outline:2px solid var(--accent); background:#19344d; }
