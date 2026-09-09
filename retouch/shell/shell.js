@@ -1000,7 +1000,7 @@ function renderPanelContents() {
     RetouchInspector.note(naming,'Names appear in the editor without changing page text or accessibility labels. Clear to use the original label.');panelBody.append(naming);
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
     const position=target?.namespaceURI!=='http://www.w3.org/2000/svg'?RetouchHTMLPosition.mount(info,target,width,setHTMLCSS,(g,action,opener)=>moveHTMLLayer(info,target,width,g,action,opener)):null;
-    panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS,position));
+    panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS,position,writeTextStyle));
     if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{}));
     if(info.canSetTag){const section=RetouchInspector.section('Element');RetouchInspector.select(section,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','li'].map(tag=>[tag,tag]),info.tag,setTag);panelBody.appendChild(section);}
     if(info.src!==null)panelBody.appendChild(imageSection(info));
@@ -1642,6 +1642,15 @@ function moveHTMLLayer(info,target,width,g,action='move',opener){
   if(stopDrawing)toast(action==='resize'?'Drag a handle or use arrow keys. Shift keeps proportions; Option/Alt centers. Enter applies keyboard changes; Escape cancels.':'Drag the outline or use arrow keys (Shift: 10px). Enter applies keyboard changes; Escape cancels.','ok');
 }
 
+async function writeTextStyle(type,width,extra={}){
+  if(!sel)return;const info=sel.info;busyPanel(true);
+  try{
+    const result=await api('POST','/rt/__api/op',{type,id:info.id,fileHash:info.hash,width,...extra});
+    if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save text style');
+    if(result.undoId)editorHistory.record({type:'setCSS',id:info.id,undoId:result.undoId});
+    if(sel?.info.id===info.id){sel.info=result.element;await reloadFrame();renderPanel();}toast('Saved','ok');
+  }finally{busyPanel(false);}
+}
 async function setHTMLCSS(property,value,width){
   if(!sel)return;const info=sel.info;busyPanel(true);
   try{

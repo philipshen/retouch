@@ -5382,3 +5382,30 @@ tests passed (/private/tmp/retouch-text-styles-ui-units.log); syntax and diff
 checks passed. Run browser coverage with test:e2e:text-styles plus the existing
 fixture/renderer/browser environment settings. This does not establish live
 Shopify coverage. Full parity remains unfinished; native launches stay paused.
+
+### HTML linked text-style application and detach
+
+HTML typography now offers Apply text style and Detach text style at the active
+screen scope. The authenticated source operation resolves the catalog style on
+the server and requires its current revision. Application writes normal managed
+CSS plus a durable per-width style UUID and applied-property snapshot on the
+source element in one transaction. Detach removes only that scope's reference,
+retaining appearance. Both operations use source history and exact-byte undo.
+Manual property edits retain the applied snapshot for later override-aware
+propagation. Invalid metadata, unsupported widths, stale source and important
+inline conflicts are refused. Metadata is bounded to 32 scopes and 128 KiB.
+
+This does not yet propagate catalog updates. The inspector says so explicitly.
+React/Liquid application remains unavailable; their catalog management remains
+functional. Catalog deletion can leave a reference displayed as Unavailable
+style; source declarations remain intact. Shared libraries, variable bindings,
+and catalog history remain unfinished. The broader full-parity goal is active.
+
+All 396 unit tests passed (/private/tmp/retouch-text-style-links-units.log).
+HTML Chromium and WebKit browser tests apply saved heading typography to a
+paragraph, detach while retaining appearance, undo both back to exact source,
+then apply at 768px and verify tablet changes plus phone isolation and undo.
+React Chromium and local Liquid WebKit catalog regressions also passed. All four
+processes exited 0; logs: /private/tmp/retouch-text-style-links-final-
+{html-chromium,html-webkit,react-chromium,liquid-webkit}.log. No browser page errors.
+Syntax and diff checks passed. No native app launches were performed.

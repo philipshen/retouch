@@ -1,7 +1,7 @@
 (function(root){
  'use strict';
  const properties=['font-family','font-size','font-weight','font-style','font-optical-sizing','font-variation-settings','font-variant-numeric','line-height','letter-spacing','text-align','text-decoration-line','text-transform'];
- function mount(parent,element){
+ function mount(parent,element,options={}){
   const I=root.RetouchInspector,details=document.createElement('details'),summary=document.createElement('summary');
   summary.textContent='Saved text styles';details.append(summary);parent.append(details);
   const body=document.createElement('div');details.append(body);let library=null,busy=false,loaded=false,selected='';
@@ -31,11 +31,13 @@
    picker.disabled=!library.styles.length;
    if(!library.styles.length)I.note(controls,'No saved styles yet. Save this layer’s typography to start your library.');
    const style=library.styles.find(style=>style.id===selected);
+   if(options.link){I.note(controls,'Linked style: '+(library.styles.find(item=>item.id===options.link.id)?.name||'Unavailable style'));controls.append(I.button('Detach text style',()=>run(()=>options.detach(),'Text style detached.')));}
    const name=document.createElement('input');name.type='text';name.maxLength=80;name.value=style?.name||'';name.placeholder='Heading, Body, Caption…';I.field(controls,'Text style name',name);
    function label(){if(!name.value.trim()){name.setCustomValidity('Give the text style a name.');name.reportValidity();return null;}return name.value.trim();}
    name.oninput=()=>name.setCustomValidity('');
    controls.append(I.button('Save current typography',()=>{const title=label();if(!title)return;run(async()=>{const values=capture();library=await request({type:'create',revision:library.revision,name:title,properties:values});selected=library.id;},'Text style saved.');}));
    if(style){
+    if(options.apply)controls.append(I.button('Apply text style',()=>run(()=>options.apply(style.id,library.revision),'Text style applied.')));
     const propertiesDetails=document.createElement('details'),propertiesTitle=document.createElement('summary');propertiesTitle.textContent='Style properties';propertiesDetails.append(propertiesTitle);const labels=['Font family','Font size','Font weight','Font style','Optical sizing','Variable font axes','Numeric styles','Line height','Letter spacing','Text alignment','Text decoration','Letter case'];const preview=document.createElement('dl');preview.className='text-style-properties';for(const [property,value]of Object.entries(style.properties)){const term=document.createElement('dt'),description=document.createElement('dd');term.textContent=labels[properties.indexOf(property)];description.textContent=value;preview.append(term,description);}propertiesDetails.append(preview);controls.append(propertiesDetails);
     controls.append(I.button('Rename text style',()=>{const title=label();if(!title)return;run(async()=>{library=await request({type:'update',revision:library.revision,id:style.id,name:title,properties:style.properties});},'Text style renamed.');}));
     const remove=I.button('Delete text style',()=>{
@@ -43,7 +45,7 @@
      const cancel=I.button('Cancel deletion',()=>render());remove.replaceWith(confirm,cancel);confirm.focus();
     });controls.append(remove);
    }
-   I.note(controls,'Captures typography at the current screen size. Saved styles are not yet linked to layers.');
+   I.note(controls,options.apply?'Apply at the selected screen scope. Style links are saved; library update propagation is not available yet.':'Captures typography at the current screen size. Style application is not available for this renderer yet.');
   }
   render();details.ontoggle=()=>{if(details.open&&!loaded)load();};
  }

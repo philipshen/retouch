@@ -181,7 +181,17 @@ function handle(req, res, ctx) {
       let result;
       try {
         resolved.context = renderContext(op.context);
-        result = applyPlan(ctx.appRoot, ctx.adapter.planOp(resolved, op));
+        if (op.type === 'applyTextStyle' || op.type === 'detachTextStyle') {
+          if (!ctx.adapter.capabilities?.ops?.includes('setCSS')) return json(res,409,{ok:false,reason:'Linked text style application is not available for this renderer yet.'});
+          let style;
+          if (op.type === 'applyTextStyle') {
+            const library=require('./text-styles.cjs').read(ctx.appRoot);
+            if(op.libraryRevision!==library.revision)return json(res,409,{ok:false,reason:'Text styles changed. Reload the library before applying.'});
+            style=library.styles.find(item=>item.id===op.styleId);
+            if(!style)return json(res,409,{ok:false,reason:'That text style no longer exists.'});
+          }
+          result=applyPlan(ctx.appRoot,require('./html-text-styles.cjs').plan(resolved,op,style));
+        } else result = applyPlan(ctx.appRoot, ctx.adapter.planOp(resolved, op));
       } catch (err) {
         return json(res, err.statusCode || 500, { ok: false, error: err.message });
       }
