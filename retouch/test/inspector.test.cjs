@@ -25,3 +25,10 @@ test('anchor conversion preserves unrelated and responsive styles and pins exist
   assert.match(stretch,/left-\[420px\] right-\[20px\] w-auto/);
   assert.match(stretch,/top-\[calc\(50%-130px\)\] bottom-auto h-\[80px\]/);
 });
+test('positioned class edits retain important geometry, proportional anchors and inherited scope modes',()=>{
+ const I=require('../shell/inspector.js'),g={x:20,y:30,width:80,height:40,parentWidth:400,parentHeight:200};
+ const changed=I.anchorClasses('absolute right-[20px]! top-[30px] w-[80px] h-[40px] bg-red-500 md:opacity-50',g,'end','start');
+ for(const token of ['!absolute','!right-[300px]','!w-[80px]','bg-red-500','md:opacity-50'])assert.ok(changed.split(' ').includes(token),token);
+ const scaled=I.anchorClasses('absolute left-[20px] top-[30px] w-[80px] h-[40px]',g,'scale','scale');assert.equal(I.inferredAnchor(scaled,'x'),'scale');assert.equal(I.inferredAnchor(scaled,'y'),'scale');assert.match(scaled,/left-\[5%\]/);assert.match(scaled,/h-\[20%\]/);
+ assert.match(I.anchorClasses('opacity-90',g,'end','start','right-[20px]!'),/!right-\[300px\]/);assert.equal(I.inferredAnchor('opacity-50','x','right-[20px]'),'end');assert.equal(I.inferredAnchor('left-[20px] right-auto','x','right-[20px]'),'start');assert.throws(()=>I.axisClasses({...g,parentWidth:0},'x','scale'));
+});

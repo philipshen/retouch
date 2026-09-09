@@ -33,6 +33,7 @@
     const start = horizontal ? g.x : g.y, size = horizontal ? g.width : g.height;
     const parent = horizontal ? g.parentWidth : g.parentHeight;
     const a = horizontal ? 'left' : 'top', b = horizontal ? 'right' : 'bottom', dim = horizontal ? 'w' : 'h';
+    if(anchor==='scale'){if(parent<=0)throw Error('Scale needs a container with a nonzero size.');const percent=n=>`${Math.round(n/parent*1000000)/10000}%`;return `${a}-[${percent(start)}] ${b}-auto ${dim}-[${percent(size)}]`;}
     if (anchor === 'stretch') return `${a}-[${px(start)}] ${b}-[${px(parent - start - size)}] ${dim}-auto`;
     if (anchor === 'end') return `${a}-auto ${b}-[${px(parent - start - size)}] ${dim}-[${px(size)}]`;
     if (anchor === 'center') {
@@ -41,9 +42,11 @@
     }
     return `${a}-[${px(start)}] ${b}-auto ${dim}-[${px(size)}]`;
   }
-  function anchorClasses(classes, g, horizontal, vertical) {
-    let next = replace(classes, t => positionToken(t) || insetToken(t) || /^(w|h|size)-/.test(t) || /^-?m(?:[trblxyse])?-/.test(t) || /^box-(border|content)$/.test(t), 'absolute m-0 box-border');
-    return [next, axisClasses(g, 'x', horizontal), axisClasses(g, 'y', vertical)].join(' ');
+  function anchorClasses(classes,g,horizontal,vertical,fallback=''){
+    const match=t=>positionToken(t)||insetToken(t)||/^(w|h|size)-/.test(t)||/^-?m(?:[trblxyse])?-/.test(t)||/^box-(border|content)$/.test(t);
+    let additions=['absolute m-0 box-border',axisClasses(g,'x',horizontal),axisClasses(g,'y',vertical)].join(' ');
+    if(tokens(fallback).some(t=>base(t)!==null&&match(base(t))&&(/^!|!$/.test(t))))additions=tokens(additions).map(t=>'!'+t).join(' ');
+    return replace(classes,match,additions);
   }
   function geometry(el) {
     const d = el.ownerDocument, w = d.defaultView;
@@ -121,26 +124,29 @@
     if (!info.classNameDynamic) return false;
     note(sec, info.classNameReason || 'Classes are computed by the component. Select its editable definition to change styles.', 'refused'); return true;
   }
-  function inferredAnchor(classes, axis) {
+  function inferredAnchor(classes, axis, fallback='') {
     const ts = tokens(classes).map(base).filter(Boolean);
     const a = axis === 'x' ? 'left' : 'top', b = axis === 'x' ? 'right' : 'bottom';
+    if(!ts.some(t=>t.startsWith(a+'-')||t.startsWith(b+'-'))&&fallback)return inferredAnchor(fallback,axis);
+    const dim=axis==='x'?'w':'h',percent=prefix=>ts.some(t=>new RegExp('^'+prefix+'-\\[-?[0-9.]+%\\]$').test(t));
+    if(percent(a)&&percent(dim))return 'scale';
     if (ts.some(t => t.startsWith(a + '-[calc(50%'))) return 'center';
     const has = prefix => ts.some(t => t.startsWith(prefix + '-') && t !== prefix + '-auto');
     if (has(a) && has(b)) return 'stretch';
     return has(b) ? 'end' : 'start';
   }
-  function position(info, el, save, notify) {
+  function position(info, el, save, notify, onTransform, onGeometry) {
     const sec = section('Position');
     if (!el || locked(sec, info)) return sec;
     const css = el.ownerDocument.defaultView.getComputedStyle(el);
     const classes = info.className || '';
     const mode = tokens(classes).map(base).find(positionToken) || css.position;
     const applyAnchor = (x, y) => {
-      try { save(anchorClasses(classes, geometry(el), x, y)); } catch (e) { notify(e.message); }
+      try { const g=geometry(el),next=anchorClasses(classes,g,x,y,info.anchorBaseClasses);if(onGeometry)onGeometry(next,g);else save(next); } catch (e) { notify(e.message); }
     };
     select(sec, 'Positioning', [['static','Auto / flow'],['relative','Relative'],['absolute','Absolute'],['fixed','Fixed'],['sticky','Sticky']], mode, value => {
       if (value === 'absolute' && mode !== 'absolute') {
-        try { const g = geometry(el); save(anchorClasses(classes, g, nearestAnchor(g.x,g.width,g.parentWidth), nearestAnchor(g.y,g.height,g.parentHeight))); }
+        try { const g=geometry(el),next=anchorClasses(classes,g,nearestAnchor(g.x,g.width,g.parentWidth),nearestAnchor(g.y,g.height,g.parentHeight),info.anchorBaseClasses);if(onGeometry)onGeometry(next,g);else save(next); }
         catch (e) { notify(e.message); }
       } else save(replace(classes, t => positionToken(t) || (value === 'static' && insetToken(t)), value));
     });
@@ -148,16 +154,18 @@
       let g;
       try { g = geometry(el); } catch (e) { note(sec,e.message,'refused'); return sec; }
       note(sec, `Anchored to ${g.parentLabel}`);
-      const x = inferredAnchor(classes,'x'), y = inferredAnchor(classes,'y');
-      select(sec,'Horizontal anchor',[['start','Left'],['center','Center'],['end','Right'],['stretch','Left + right']],x,v=>applyAnchor(v,y));
-      select(sec,'Vertical anchor',[['start','Top'],['center','Center'],['end','Bottom'],['stretch','Top + bottom']],y,v=>applyAnchor(x,v));
+      if(onTransform){const tools=document.createElement('div');tools.className='stack-presets';for(const action of ['move','resize']){const control=button((action==='move'?'Move':'Resize')+' on canvas',event=>onTransform(action,event.currentTarget));control.dataset.canvasTool=action;tools.append(control);}sec.append(tools);}
+      const x = inferredAnchor(classes,'x',info.anchorBaseClasses), y = inferredAnchor(classes,'y',info.anchorBaseClasses);
+      const horizontal=select(sec,'Horizontal anchor',[['start','Left'],['center','Center'],['end','Right'],['stretch','Left + right'],['scale','Scale']],x,v=>applyAnchor(v,y));
+      const vertical=select(sec,'Vertical anchor',[['start','Top'],['center','Center'],['end','Bottom'],['stretch','Top + bottom'],['scale','Scale']],y,v=>applyAnchor(x,v));
+      for(const [input,size]of [[horizontal,g.parentWidth],[vertical,g.parentHeight]])if(size===0){const option=input.querySelector('option[value=scale]');option.disabled=true;option.textContent='Scale (needs container size)';}
       const grid = document.createElement('div'); grid.className = 'anchor-grid'; grid.setAttribute('aria-label','Anchor points');
       for (const [yi, yn] of ['start','center','end'].entries()) for (const [xi,xn] of ['start','center','end'].entries()) {
         const b = button('•',()=>applyAnchor(xn,yn)); b.setAttribute('aria-label',`${['Top','Center','Bottom'][yi]} ${['left','center','right'][xi]} anchor`);
         b.setAttribute('aria-pressed',String(x===xn&&y===yn)); grid.append(b);
       }
       sec.append(grid);
-      note(sec,'Edge distances stay constant as the container resizes. Both edges stretch the element.');
+      note(sec,'Edge distances stay constant as the container resizes. Both edges stretch the element. Scale changes position and size proportionally.');
     }
     if (mode !== 'static') {
       const row = document.createElement('div'); row.className = 'control-grid';
@@ -315,6 +323,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={base,replace,nearestAnchor,axisClasses,anchorClasses,geometry,catalog,position,appearance,effects,typography,measurements,section,field,note,button,select};
+  const api={base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,position,appearance,effects,typography,measurements,section,field,note,button,select};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

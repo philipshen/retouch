@@ -37,7 +37,7 @@ function busyPanel(start) {
 }
 let lastAppPath = null;
 let styleScope = '';
-function scopedInfo(info) { return {...info,styleScope,className:RetouchResponsive.project(info.className,styleScope)}; }
+function scopedInfo(info) { return {...info,styleScope,anchorBaseClasses:RetouchResponsive.project(info.className,''),className:RetouchResponsive.project(info.className,styleScope)}; }
 
 const historyRoutes = new Map();
 function currentPageRoute(){try{const loc=iframe.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
@@ -857,7 +857,7 @@ function renderPanelContents() {
   if(target?.namespaceURI==='http://www.w3.org/2000/svg')panelBody.appendChild(RetouchSVGPaint.mount(style,target,setClasses));
   const textLayer=/^(h[1-6]|p|span|a|label|blockquote|li|button)$/.test(info.tag);
   if(textLayer) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag));
-  panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err')));
+  panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err'),info.renderRevisionAttribute&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(action,opener)=>transformReactLayer(info,target,action,opener):null,info.renderRevisionAttribute&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(classes,g)=>writeReactBounds(info,classes,g):null));
   panelBody.appendChild(RetouchLayout.mount(style, target, setClasses));
   panelBody.appendChild(RetouchInspector.appearance(style, target, setClasses));
   if (info.src !== null || info.srcDynamic) {
@@ -1428,6 +1428,32 @@ async function setSVGGeometry(property,value){
     sel.info=result.element;await refreshWrittenElement(sel.info,el=>svgGeometryMatches(el,sel.info));renderPanel();toast('Shape updated','ok');
   }finally{busyPanel(false);}
 }
+function reactGeometryReason(info,target){
+  if(info.svgPaint?.reason)return info.svgPaint.reason;
+  if(['position','inset','inset-inline','inset-block','inset-inline-start','inset-inline-end','inset-block-start','inset-block-end','left','right','top','bottom','width','height','margin','margin-left','margin-right','margin-top','margin-bottom','box-sizing'].some(p=>target?.style.getPropertyValue(p)))return 'This layer has inline geometry styles. Edit those source styles before moving or resizing with classes.';
+  return null;
+}
+
+async function writeReactBounds(info,classes,expected){
+  const reason=reactGeometryReason(info,matchingEls(info.id)[0]);if(reason){toast(reason,'err');renderPanel();return false;}
+  busyPanel(true);try{
+    if(!await setClasses(classes))return false;
+    const current=sel.info;await refreshWrittenElement(current,el=>current.className.split(/\s+/).filter(Boolean).every(token=>el.classList.contains(token)));
+    for(let i=0;i<50;i++){const target=matchingEls(current.id)[0];if(target?.isConnected&&target.ownerDocument.defaultView.getComputedStyle(target).position==='absolute'){const actual=RetouchInspector.geometry(target);if(['x','y','width','height'].every(key=>Math.abs(actual[key]-expected[key])<.6)){renderPanel();return true;}}await new Promise(resolve=>setTimeout(resolve,100));}
+    renderPanel();toast('Saved classes, but the bounds did not settle. Check responsive or inline overrides.','err');return false;
+  }catch(error){toast(error.message,'err');return false;}finally{busyPanel(false);}
+}
+
+function transformReactLayer(info,target,action,opener){
+  stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!target?.isConnected||info.classNameDynamic)return;
+  let g;try{const reason=reactGeometryReason(info,target);if(reason)throw Error(reason);if(target.ownerDocument.defaultView.getComputedStyle(target).position!=='absolute')throw Error('Choose a screen where this layer is absolute before transforming it.');g=RetouchInspector.geometry(target);}catch(error){toast(error.message,'err');return;}
+  const scope=styleScope,hash=info.hash,classes=RetouchResponsive.project(info.className,scope),base=RetouchResponsive.project(info.className,''),x=RetouchInspector.inferredAnchor(classes,'x',base),y=RetouchInspector.inferredAnchor(classes,'y',base);
+  stopDrawing=RetouchCanvasMove.mount({target,frame:iframe,canvas:canvasSurface,mode:action,opener,
+    onCommit:async(delta,options)=>{if(sel?.info.id!==info.id||sel?.info.hash!==hash||styleScope!==scope)return;try{const geometry={...g,...(action==='resize'?{width:delta.width,height:delta.height}:{}),x:g.x+delta.x,y:g.y+delta.y};if(![geometry.x,geometry.y,geometry.width,geometry.height].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Keep layer bounds within 100,000 pixels.');if(await writeReactBounds(info,RetouchInspector.anchorClasses(classes,geometry,x,y,base),geometry)){if(options?.keyboard)document.querySelector('[data-canvas-tool='+action+']')?.focus({preventScroll:true});}}catch(error){toast(error.message,'err');}},
+    onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
+  if(stopDrawing)toast(action==='resize'?'Drag a handle or use arrow keys. Shift keeps proportions; Option/Alt centers. Enter applies keyboard changes; Escape cancels.':'Drag the outline or use arrow keys (Shift: 10px). Enter applies keyboard changes; Escape cancels.','ok');
+}
+
 function moveHTMLLayer(info,target,width,g,action='move',opener){
   stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!target?.isConnected)return;
   try{g=RetouchInspector.geometry(target);}catch(error){toast(error.message,'err');return;}

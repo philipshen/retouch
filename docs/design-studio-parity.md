@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 297 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 298 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1808,3 +1808,39 @@ limit. Existing responsive, pointer, keyboard, focus and cancellation checks
 also pass. Logs: `/private/tmp/retouch-zero-container-unit.log` and
 `/private/tmp/retouch-zero-container-{chromium,webkit}-final.log`.
 The be51333 desktop package predates this follow-up fix.
+
+
+### React/Tailwind canvas transforms and proportional anchors
+
+Literal React host layers now expose the shared Move on canvas and Resize on
+canvas tools when positioned absolutely. Pointer and keyboard gestures retain
+the selected source scope, existing geometry anchor modes, unrelated classes
+and history. The React Position section also offers proportional Scale anchors.
+An axis without an anchor in the selected scope falls back to the base source
+anchor. Important geometry utilities remain important, including inherited
+priority when writing a responsive override.
+
+Geometry writes wait for both the matching compiled source revision and the
+expected rendered bounds. A real Next run showed that its revision marker could
+advance before the new Tailwind styles took effect. If the bounds do not settle
+within the bounded wait, the editor reports that condition; the source change
+remains undoable. Dynamic classes, spread-controlled props and inline geometry
+styles are not rewritten through this class-editing path. Refused anchor writes
+restore the inspector's displayed source state.
+
+Validation: all 298 unit tests pass. A new disposable Next.js/Tailwind browser
+workflow passes in Chromium and WebKit: pointer move/resize at 50% zoom, keyboard
+movement/resizing, important base classes, a tablet override that leaves phone
+geometry unchanged, proportional scaling across tablet/desktop dimensions,
+class preservation, compiled/CSS readiness, cancellation, dynamic/inline/spread
+refusals and exact source undo/redo. The existing extended HTML positioning
+workflow also passes in Chromium after the shared-control changes.
+`npm run test:e2e:react-position` runs the new workflow with
+RT_INSPECTOR_FIXTURE set. Logs: `/private/tmp/retouch-react-position-unit-final.log`,
+`/private/tmp/retouch-react-position-{chromium,webkit}-final.log`, and
+`/private/tmp/retouch-react-position-html-regression.log`. The rendered React
+inspector was visually checked in `/private/tmp/retouch-react-position.png`.
+
+Arbitrary CSS authoring, inline geometry, complex/multiple responsive variant
+cascades, transformed bounds, repeated runtime instances and broader renderer
+parity remain unfinished. The current Mac archive predates these React tools.
