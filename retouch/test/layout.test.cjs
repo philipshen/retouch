@@ -21,3 +21,19 @@ test('responsive layout proposals preserve source base and other variants',()=>{
 test('fill removes conflicting explicit flex basis, growth and shrink settings',()=>{
  assert.equal(L.sizeClasses('w-20 basis-40 grow-0 shrink-0 md:grow-0 flex-wrap','width','fill',0,{display:'flex',direction:'row'}),'md:grow-0 flex-wrap w-auto flex-1');
 });
+
+test('size limits preserve dimensions, other limits and responsive variants',()=>{
+ const source='w-full min-w-20 max-w-xl md:max-w-2xl min-h-10';
+ assert.equal(L.limitClasses(source,'max-width','480'),'w-full min-w-20 md:max-w-2xl min-h-10 max-w-[480px]');
+ assert.equal(L.limitClasses('!max-w-xl w-full','max-width','75%'),'w-full !max-w-[75%]');
+ assert.equal(L.limitClasses(source,'min-width',null),'w-full max-w-xl md:max-w-2xl min-h-10');
+ assert.equal(R.replaceScope(source,L.limitClasses(R.project(source,'md:'),'max-width','30rem'),'md:'),'w-full min-w-20 max-w-xl min-h-10 md:max-w-[30rem]');
+ assert.equal(L.ownLimit('min-w-[25%]','min-width'),'25%');
+ assert.equal(L.ownLimit('md:min-w-[25%]','min-width'),null);
+});
+test('size limits validate units and retain explicit unlimited/intrinsic values',()=>{
+ for(const v of ['auto','min-content','max-content','fit-content','0','1.5rem','75%'])assert.ok(L.limitValue(v,'min-width'));
+ assert.equal(L.limitValue('none','max-height'),'none');
+ for(const v of ['-1','NaN','1px] hidden','auto','calc(100% - 1px)'])assert.throws(()=>L.limitValue(v,'max-width'));
+ assert.throws(()=>L.limitClasses('','bad','1'));
+});

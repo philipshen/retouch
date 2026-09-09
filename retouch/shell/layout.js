@@ -17,6 +17,28 @@
     if(alongFlex)addition=mode==='fill'?`${dim}-auto flex-1`:addition+' flex-none';
     return I.replace(classes,match,addition);
   }
+  const limitKeys=['min-width','max-width','min-height','max-height'];
+  function limitValue(value,key) {
+    if(!limitKeys.includes(key))throw Error('Unknown size limit');
+    value=String(value).trim();
+    if(/^\d*\.?\d+$/.test(value))value+='px';
+    if(!/^(?:\d*\.?\d+(?:px|%|rem|em|vw|vh|svw|svh|dvw|dvh|ch)|min-content|max-content|fit-content)$/.test(value)&&value!==(key.startsWith('min-')?'auto':'none'))throw Error('Use a nonnegative CSS size, or a sizing keyword');
+    return value;
+  }
+  function limitClasses(classes,key,value) {
+    if(!limitKeys.includes(key))throw Error('Unknown size limit');
+    const prefix=key.replace('width','w').replace('height','h')+'-';
+    const addition=value===null?'':prefix+'['+limitValue(value,key)+']';
+    return I.replace(classes,t=>t.startsWith(prefix),addition);
+  }
+  function ownLimit(classes,key) {
+    const prefix=key.replace('width','w').replace('height','h')+'-';
+    const token=classes.split(/\s+/).map(t=>t.replace(/^!|!$/g,'')).find(t=>t.startsWith(prefix));
+    if(!token)return null;
+    const value=token.slice(prefix.length);
+    return value.startsWith('[')&&value.endsWith(']')?value.slice(1,-1).replace(/_/g,' '):null;
+  }
+  let limitsOpen=false;
   function mount(info,el,save) {
     const sec=I.section('Layout');if(!el)return sec;
     if(info.classNameDynamic){I.note(sec,info.classNameReason||'This layout has computed classes.','refused');return sec;}
@@ -58,8 +80,23 @@
       I.select(sec,title+' behavior',[['','Inherited / auto'],['fixed','Fixed'],['hug','Hug content'],['fill','Fill available']],sizing,v=>{if(v)save(sizeClasses(classes,axis,v,Math.round(dims[axis]*100)/100,context));});
       numeric(title+' (px)',dims[axis],0,100000,v=>save(sizeClasses(classes,axis,'fixed',v,context)));
     }
+    const limits=document.createElement('details');limits.className='advanced';limits.open=limitsOpen;
+    limits.ontoggle=()=>{limitsOpen=limits.open;};
+    const title=document.createElement('summary');title.textContent='Size limits';limits.append(title);
+    for(const key of limitKeys) {
+      const label=key.replace('min-','Minimum ').replace('max-','Maximum ');
+      const input=document.createElement('input');input.type='text';input.value=ownLimit(classes,key)??css.getPropertyValue(key);input.placeholder=key.startsWith('min-')?'auto':'none';
+      input.oninput=()=>input.setCustomValidity('');
+      input.onchange=()=>{try{const value=limitValue(input.value,key);input.setCustomValidity('');save(limitClasses(classes,key,value));}catch(e){input.setCustomValidity(e.message);input.reportValidity();}};
+      I.field(limits,label,input);
+      const reset=I.button('Reset '+label.toLowerCase(),()=>save(limitClasses(classes,key,null)));
+      const prefix=key.replace('width','w').replace('height','h')+'-';
+      reset.disabled=!classes.split(/\s+/).some(t=>t.replace(/^!|!$/g,'').startsWith(prefix));limits.append(reset);
+    }
+    I.note(limits,'Use px, %, rem or other CSS units. Reset removes this scope’s override. Minimums take precedence over smaller maximums.');
+    sec.append(limits);
     return sec;
   }
-  const api={modeClasses,sizeClasses,mount};
+  const api={modeClasses,sizeClasses,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

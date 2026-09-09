@@ -16,7 +16,7 @@ changing those files. The original checkout may continue to evolve independently
 | Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Existing single-site zoom/selection/resize. Most document and multi-selection operations still absent or unaudited. |
 | Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI now exist. Reparenting, rename, multi-selection, cross-context clipboard and broader source structures remain. |
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | Full vector authoring and geometry model remain. |
-| Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | Visual horizontal/vertical/reverse flex and grid controls, wrapping, gaps, alignment/distribution, per-side padding, fixed/hug/fill sizing and breakpoint-scoped writes now exist. Full constraint, advanced grid, min/max, nested auto-layout and cross-framework equivalence work remains. |
+| Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | Visual horizontal/vertical/reverse flex and grid controls, wrapping, gaps, alignment/distribution, per-side padding, fixed/hug/fill sizing, minimum/maximum dimensions and breakpoint-scoped writes now exist. Full constraint, advanced grid, nested auto-layout and cross-framework equivalence work remains. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | Opacity, CSS border width/style/color, uniform and individual corners, basic color and shadow controls, and image fit/position controls exist. Browser tests cover border independence, corners, scope and exact undo. Multiple fills/strokes, gradient editing, crop handles/zoom/rotation, blending and complete visual/source representations remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. Font browsing, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | Existing React and Liquid component inspection/detach; full creation/variants/library workflows remain. Live Shopify proof is incomplete. |
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 192 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 194 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -111,7 +111,7 @@ isolation and exact source restoration through the entire undo stack.
 The planner changes flex growth/basis/shrink only along the selected dimension's
 parent flex axis. Fill follows browser layout semantics; existing min/max
 constraints remain intact. Full Figma nested hug/fill behavior, layout suggestions,
-advanced grid tracks/spans, min/max controls and arbitrary CSS authoring remain
+advanced grid tracks/spans and arbitrary CSS authoring remain
 unverified or unimplemented. Success notifications replace the previous save
 notification so repeated adjustments do not obscure the canvas.
 
@@ -173,3 +173,18 @@ asset bytes, tablet/base isolation and exact-byte undo. The general inspector
 browser regression also passed. These controls apply to editable IMG classes;
 interactive crop handles, custom crop zoom/rotation, background-image framing and
 multiple image fills remain unimplemented.
+
+### Minimum and maximum sizing
+
+Layout includes a Size limits disclosure with minimum/maximum width and height.
+Inputs accept nonnegative lengths, percentages and intrinsic sizing keywords;
+unitless numbers mean pixels. Per-property reset removes only the selected
+scope's utility override. Authored arbitrary values are shown without converting
+percentages into pixels. CSS functions and variables remain visible but are not
+accepted as new inputs by these controls.
+
+`retouch/test/e2e/size-limits.cjs` verifies actual geometry with fixed/fill sizing,
+percentage constraints, minimum precedence over a smaller maximum, reset,
+invalid-input rejection, tablet/base isolation and exact-byte undo. The existing
+layout browser regression also verifies the surrounding controls. General nested
+auto-layout equivalence and arbitrary-site CSS authoring remain open.

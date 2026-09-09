@@ -163,3 +163,14 @@ height through Layout when needed. Framing edits follow breakpoint scope and
 support undo/redo without changing the image source or rewriting the asset.
 These controls edit CSS object-fit/object-position on IMG elements; background
 images and custom crop zoom/rotation are not supported.
+
+## Size limits
+
+Expand **Size limits** under Layout to set minimum and maximum width and height.
+Enter a number for pixels or include a unit such as `50%`, `24rem` or `80vw`.
+Intrinsic values `min-content`, `max-content` and `fit-content` are also accepted.
+Use `auto` for a minimum or `none` for a maximum when explicitly overriding a
+limit. **Reset** removes that property's override in the selected breakpoint
+scope so inherited styling applies again. Minimums take precedence when they
+exceed a maximum. Limits work alongside fixed, hug and fill sizing and use shared
+undo/redo. CSS functions such as `calc()` are not accepted as new input here.
