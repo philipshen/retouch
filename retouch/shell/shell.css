@@ -241,7 +241,8 @@ details.advanced > summary:hover { color: var(--ink); }
 .compare-header button[aria-pressed="true"] { border-color: var(--accent); }
 .compare-viewport { width: 100%; position: relative; overflow: hidden; background: white; }
 .compare-viewport iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; pointer-events: none; }
-.compare-overlay { position: absolute; inset: 0; pointer-events: none; }
+/* Capture wheel input here: WebKit can otherwise scroll the iframe natively. */
+.compare-overlay { position: absolute; inset: 0; pointer-events: auto; }
 .compare-selection { position: absolute; border: 2px solid var(--accent); }
 .compare-card > .hint { color: var(--muted); font-size: 11px; margin-top: 6px; }
 

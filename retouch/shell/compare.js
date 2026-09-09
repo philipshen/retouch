@@ -117,7 +117,28 @@
       }
       viewport.addEventListener('click',event=>{if(event.button===0)activate(event);});
       viewport.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();activate();}});
-      viewport.addEventListener('wheel',e=>{e.preventDefault();try{frame.contentWindow.scrollBy({top:e.deltaY/(viewport.clientWidth/width),left:e.deltaX,behavior:'instant'});}catch{}},{passive:false});
+      viewport.addEventListener('wheel',e=>{
+        if(e.ctrlKey)return;
+        e.preventDefault();
+        try{
+          const d=frame.contentDocument,w=frame.contentWindow,bounds=viewport.getBoundingClientRect(),scale=viewport.clientWidth/width;
+          if(!d?.body||!Number.isFinite(scale)||scale<=0)return;
+          let node=d.elementFromPoint((e.clientX-bounds.left)/scale,(e.clientY-bounds.top)/scale)||d.body;
+          const css=w.getComputedStyle(node),line=parseFloat(css.lineHeight)||16;
+          let dx=e.deltaX*(e.deltaMode===1?line:e.deltaMode===2?width:1/scale),dy=e.deltaY*(e.deltaMode===1?line:e.deltaMode===2?height:1/scale);
+          const root=d.scrollingElement;
+          while(node&&node!==root&&(dx||dy)){
+            const style=w.getComputedStyle(node),x=/auto|scroll/.test(style.overflowX),y=/auto|scroll/.test(style.overflowY),beforeX=node.scrollLeft,beforeY=node.scrollTop;
+            node.scrollBy({left:x?dx:0,top:y?dy:0,behavior:'instant'});
+            dx-=node.scrollLeft-beforeX;dy-=node.scrollTop-beforeY;
+            if(Math.abs(dx)<1)dx=0;if(Math.abs(dy)<1)dy=0;
+            if(x&&/contain|none/.test(style.overscrollBehaviorX))dx=0;
+            if(y&&/contain|none/.test(style.overscrollBehaviorY))dy=0;
+            node=node.assignedSlot||node.parentElement||node.getRootNode()?.host;
+          }
+          if(root){const style=w.getComputedStyle(root);w.scrollBy({left:/hidden|clip/.test(style.overflowX)?0:dx,top:/hidden|clip/.test(style.overflowY)?0:dy,behavior:'instant'});}
+        }catch{}
+      },{passive:false});
       cards.push({frame,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit});
   }
   function unload(frame){return new Promise(resolve=>{

@@ -4348,3 +4348,30 @@ errors now have a dedicated class separate from selection-status hints.
 This makes comparison viewport setup editable; property editing still occurs on
 the main canvas. Full simultaneous canvas authoring, synchronized application
 state and cross-renderer comparison verification remain. Native launches paused.
+
+### Nested scrolling in comparison previews (2026-09-09)
+
+Comparison wheel input now targets the scrollable element under the pointer,
+consumes movement there, and passes residual movement through ancestors to the
+page. Both pixel axes account for preview scale, including edited comparison
+widths. Line and page delta modes are handled, overscroll containment stops
+ancestor handoff, and subpixel rounding residuals do not nudge ancestor scrollers.
+The overlay explicitly receives pointer input: real WebKit wheel events previously
+reached the iframe and scrolled natively despite iframe pointer-events:none.
+
+Added `npm run test:e2e:compare-scroll`, a disposable HTML fixture with nested
+horizontal and vertical scrollers. Chromium and WebKit real mouse wheel checks
+plus dispatched line/page events passed: scaled axes before/after card resizing,
+inner-to-outer-to-page handoff, containment, unchanged main scroll and unchanged
+source. Logs `/private/tmp/retouch-compare-scroll-{chromium,webkit}-release.log`.
+Both engines also passed existing comparison selection/scoped-edit/resize/undo
+checks (`retouch-compare-scroll-edit.log` and `retouch-compare-scroll-edit-webkit.log`
+under `/private/tmp`). All 375 unit tests passed in
+`/private/tmp/retouch-compare-scroll-unit.log`. The failed real WebKit input log
+`/private/tmp/retouch-compare-scroll-webkit-final.log` is retained as evidence for
+the overlay fix; initial synthetic-only passing tests did not expose that bug.
+
+This does not verify scrolling inside nested iframe documents or closed shadow
+roots, complete scroll-snap/RTL behavior, or synchronized application state across
+previews. Full simultaneous comparison authoring remains unfinished. Native app
+launches remain paused.
