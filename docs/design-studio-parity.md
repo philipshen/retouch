@@ -5655,3 +5655,32 @@ verification of the linked flow remain pending, as does the corresponding Liquid
 writer. The conservative refusal cases need broader authoring support for the
 full arbitrary-site objective. No native launches occurred; full parity remains
 unfinished.
+
+### React linked text-style apply/detach integration
+
+React now exposes saved-style apply and detach through the typography inspector
+and authenticated source operations, using catalog revision checks and shared
+undo. Base and named responsive scopes serialize durable style IDs/property
+snapshots alongside composed classes. Detach preserves typography. Unsupported
+layers retain catalog browsing but do not expose application. The UI explicitly
+states that library updates do not yet propagate in React, and does not claim an
+override count before React override inspection is implemented.
+
+Browser verification found that immediate reload after a React write could render
+the old module/classes. Linked-style writes now use the existing renderer-revision
+confirmation path, matching both classes and metadata before rebuilding the
+inspector. Longer testing also exposed library closure during panel reconstruction;
+the library now retains its open state and selected style across that rebuild.
+These states remain local to the current editor page, not persisted across reload.
+
+All 421 unit/integration tests passed, exit 0:
+/private/tmp/retouch-react-linked-styles-final-units.log. A real React HTTP source
+operation applies an md link and exact undo restores the file. React Chromium and
+WebKit browser runs exited 0 (/private/tmp/retouch-react-linked-styles-final-
+{chromium,webkit}.log): apply to another text layer, inspect serialized identity,
+detach retaining rendered typography, undo both exactly, apply only at md, verify
+phone isolation, undo, and complete catalog history/conflict flows. HTML Chromium,
+HTML WebKit and local Liquid WebKit regressions also exited 0:
+/private/tmp/retouch-react-links-regression-{html-chromium,html-webkit,liquid-webkit}.log.
+Syntax/diff checks passed. React propagation/reset/inheritance and Liquid link
+application remain unfinished, along with full parity. Native launches stay paused.

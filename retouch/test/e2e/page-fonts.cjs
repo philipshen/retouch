@@ -28,12 +28,23 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   }
   if(process.env.RT_E2E_TEXT_STYLES){
    const catalogFile=path.join(root,'.retouch/text-styles.json'),catalog=()=>JSON.parse(fs.readFileSync(catalogFile,'utf8'));
-   const openLibrary=async()=>{await page.getByText('Saved text styles',{exact:true}).click();await page.getByLabel('Text style name',{exact:true}).waitFor();};
+   const openLibrary=async()=>{const summary=page.getByText('Saved text styles',{exact:true});if(!await summary.evaluate(el=>el.parentElement.open))await summary.click();await page.getByLabel('Text style name',{exact:true}).waitFor();};
    await openLibrary();await page.getByLabel('Text style name',{exact:true}).fill('Heading');await page.getByRole('button',{name:'Save current typography',exact:true}).click();
    await wait(()=>fs.existsSync(catalogFile)&&catalog().styles.length===1);await page.getByRole('button',{name:'Rename text style',exact:true}).waitFor();
    const saved=catalog().styles[0];assert.equal(saved.properties['font-size'],'32px');assert.equal(saved.properties['font-weight'],'700');assert.equal(saved.properties['font-family'],await family());assert.equal(read(),original);
    await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>!fs.existsSync(catalogFile));await settled();
    await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>fs.existsSync(catalogFile)&&catalog().styles[0].id===saved.id);await settled();await openLibrary();await page.getByLabel('Saved text style',{exact:true}).selectOption(saved.id);
+   if(kind==='react'){
+    await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click();await settled();const smallSize=await app.locator('p').first().evaluate(el=>getComputedStyle(el).fontSize);
+    await openLibrary();await page.getByLabel('Saved text style',{exact:true}).selectOption(saved.id);await page.getByRole('button',{name:'Apply text style',exact:true}).click();await wait(()=>read().includes('data-rt-text-styles'));await settled();await wait(async()=>await app.locator('p').first().evaluate(el=>getComputedStyle(el).fontSize)==='32px');
+    const linkedSource=read();assert.equal(await app.locator('p').first().evaluate(el=>JSON.parse(el.getAttribute('data-rt-text-styles'))[''].id),saved.id);
+    await openLibrary();await page.getByText('Linked style: Heading',{exact:true}).waitFor();await page.getByRole('button',{name:'Detach text style',exact:true}).click();await wait(()=>!read().includes('data-rt-text-styles'));await settled();assert.equal(await app.locator('p').first().evaluate(el=>getComputedStyle(el).fontSize),'32px');
+    await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===linkedSource);await settled();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();
+    await page.getByLabel('Screen size',{exact:true}).focus();await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();await page.getByLabel('Style screen scope').selectOption('md:');await settled();await openLibrary();await page.getByLabel('Saved text style',{exact:true}).selectOption(saved.id);
+    await page.getByRole('button',{name:'Apply text style',exact:true}).click();await wait(()=>read().includes('data-rt-text-styles'));await settled();await wait(async()=>await app.locator('p').first().evaluate(el=>getComputedStyle(el).fontSize)==='32px');assert.equal(await app.locator('p').first().evaluate(el=>JSON.parse(el.getAttribute('data-rt-text-styles'))['md:'].id),saved.id);
+    await page.getByLabel('Screen size',{exact:true}).focus();await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await settled();await wait(async()=>await app.locator('p').first().evaluate(el=>getComputedStyle(el).fontSize)===smallSize);
+    await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();await page.getByLabel('Style screen scope').selectOption('');await settled();await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await settled();await openLibrary();await page.getByLabel('Saved text style',{exact:true}).selectOption(saved.id);
+   }
    if(kind==='html'){
     await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click();await settled();await openLibrary();await page.getByLabel('Saved text style',{exact:true}).selectOption(saved.id);
     await page.getByRole('button',{name:'Apply text style',exact:true}).click();await wait(()=>read().includes('data-rt-text-styles'));await settled();await wait(async()=>await app.locator('p').first().evaluate(el=>getComputedStyle(el).fontSize)==='32px');

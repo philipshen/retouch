@@ -19,7 +19,7 @@ function metadata(element){
  }
  return {links,attribute:attr};
 }
-function describe(resolved){try{return {textStyleLinks:metadata(resolved.element).links};}catch(error){return {textStyleLinkReason:error.message};}}
+function describe(resolved){if(resolved.element.kind!=='host')return {};try{return {classTextStyles:true,textStyleLinks:metadata(resolved.element).links};}catch(error){return {classTextStyles:false,textStyleLinkReason:error.message};}}
 function plan(resolved,op,style){
  try{
   if(resolved.element.kind!=='host')return refuse('Select a host layer to apply a text style.');

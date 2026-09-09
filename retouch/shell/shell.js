@@ -1007,7 +1007,7 @@ function renderPanelContents() {
   }else{
   if(target?.namespaceURI==='http://www.w3.org/2000/svg')panelBody.appendChild(RetouchSVGPaint.mount(style,target,setClasses));
   const textLayer=RetouchInspector.isTextLayer(info.tag);
-  if(textLayer) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag));
+  if(textLayer) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag,(type,scope,extra)=>writeTextStyle(type,undefined,{scope,...extra})));
   panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err'),info.renderRevisionAttribute&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(action,opener)=>transformReactLayer(info,target,action,opener):null,info.renderRevisionAttribute&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(classes,g)=>writeReactBounds(info,classes,g):null));
   panelBody.appendChild(RetouchLayout.mount(style, target, setClasses));
   panelBody.appendChild(RetouchInspector.appearance(style, target, setClasses));
@@ -1015,7 +1015,7 @@ function renderPanelContents() {
     if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(style,target,setClasses));
     panelBody.appendChild(imageSection(info));
   }
-  if (!textLayer && (info.canSetTag || target?.textContent?.trim())) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag));
+  if (!textLayer && (info.canSetTag || target?.textContent?.trim())) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag,(type,scope,extra)=>writeTextStyle(type,undefined,{scope,...extra})));
   panelBody.appendChild(colorSection('Fill', 'bg', style));
   panelBody.appendChild(colorSection('Text color', 'text', style));
   panelBody.appendChild(RetouchInspector.effects(style, target, setClasses, message => toast(message, 'err')));
@@ -1658,7 +1658,13 @@ async function writeTextStyle(type,width,extra={}){
     const result=await api('POST','/rt/__api/op',{type,id:info.id,fileHash:info.hash,width,...extra});
     if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save text style');
     if(result.undoId)editorHistory.record({type:'setCSS',id:info.id,undoId:result.undoId});
-    if(sel?.info.id===info.id){sel.info=result.element;await reloadFrame();renderPanel();}toast('Saved','ok');
+    if(sel?.info.id===info.id){
+      sel.info=result.element;
+      if(result.element.classTextStyles)await refreshWrittenElement(result.element,el=>{
+        try{return JSON.stringify(JSON.parse(el.getAttribute('data-rt-text-styles')||'{}'))===JSON.stringify(result.element.textStyleLinks||{})&&(result.element.className||'').split(/\s+/).filter(Boolean).every(token=>el.classList.contains(token));}catch{return false;}
+      });else await reloadFrame();
+      renderPanel();
+    }toast('Saved','ok');
   }finally{busyPanel(false);}
 }
 async function setHTMLCSS(property,value,width){

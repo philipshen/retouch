@@ -236,3 +236,12 @@ test('catalog mutations participate in shared exact-byte undo and redo',async()=
   const result=await req(port,'POST','/rt/__api/op',{headers:AUTH(),body:JSON.stringify({type,undoId:created.undoId})});assert.strictEqual(result.status,200);assert.strictEqual(fs.readFileSync(file,'utf8'),expected);
  }
 });
+
+test('React text style API applies a scoped link and restores exact source through undo',async()=>{
+ const id=await firstIdOfTag('h2'),resolved=JSON.parse((await req(port,'GET','/rt/__api/resolve?id='+id,{headers:AUTH()})).body).element;
+ const library=JSON.parse((await req(port,'GET','/rt/__api/text-styles',{headers:AUTH()})).body);
+ const created=JSON.parse((await req(port,'POST','/rt/__api/text-styles',{headers:AUTH(),body:JSON.stringify({type:'create',revision:library.revision,name:'API linked style',properties:{'font-size':'36px','line-height':'1.2'}})})).body);
+ const file=path.join(root,'app/Page.tsx'),before=fs.readFileSync(file,'utf8');
+ const response=await req(port,'POST','/rt/__api/op',{headers:AUTH(),body:JSON.stringify({type:'applyTextStyle',id,fileHash:resolved.hash,scope:'md:',styleId:created.id,libraryRevision:created.revision})});assert.strictEqual(response.status,200);const applied=JSON.parse(response.body);assert.ok(applied.undoId);assert.strictEqual(applied.element.textStyleLinks['md:'].id,created.id);assert.ok(applied.element.className.includes('md:![font-size:36px]'));
+ const undone=await req(port,'POST','/rt/__api/op',{headers:AUTH(),body:JSON.stringify({type:'undo',undoId:applied.undoId})});assert.strictEqual(undone.status,200);assert.strictEqual(fs.readFileSync(file,'utf8'),before);
+});
