@@ -2,7 +2,8 @@
   'use strict';
   const toggle=document.getElementById('compareScreens'),rail=document.getElementById('screenComparisons'),main=document.getElementById('app');
   const storageKey='retouch.comparisons.v1';
-  let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin;
+  let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore;
+  const removed=[];let removals=0;
   const valid=v=>Number.isInteger(v)&&v>=240&&v<=7680;
   try{const saved=JSON.parse(localStorage.getItem(storageKey));if(Array.isArray(saved)&&saved.length<=8&&saved.every(s=>Array.isArray(s)&&s.length===3&&typeof s[0]==='string'&&s[0].length<=80&&valid(s[1])&&valid(s[2])))sizes=saved;}catch{}
   function remember(){try{localStorage.setItem(storageKey,JSON.stringify(sizes));}catch{}}
@@ -10,6 +11,10 @@
   function updateControls(){
     const size=current();
     if(pin){pin.disabled=sizes.length>=8||!valid(size.width)||!valid(size.height)||sizes.some(s=>s[1]===size.width&&s[2]===size.height);pin.title=sizes.length>=8?'Remove a comparison to add another':'Add the current canvas dimensions';}
+    if(restore){
+      const last=removed.at(-1);restore.hidden=!last;restore.disabled=!last||removals>0||sizes.length>=8||sizes.some(size=>size[1]===last.size[1]&&size[2]===last.size[2]||size[0].toLowerCase()===last.size[0].toLowerCase());
+      restore.textContent=last?'Undo remove: '+last.size[0]:'Undo remove';restore.title=restore.disabled?'Finish removing views, or free the name and dimensions before restoring.':'Restore the last removed comparison in its original position.';
+    }
     for(const card of cards){card.edit.setAttribute('aria-pressed',String(size.width===card.width&&size.height===card.height));card.scopeButton.disabled=!selected;}
   }
   let cards=[],selected=null,route=null,open=false,timer=null,scope={prefix:'',label:'All sizes · base',condition:null},scopeSummary;
@@ -81,10 +86,17 @@
     scopeSummary=document.createElement('p');scopeSummary.className='hint';scopeSummary.setAttribute('aria-label','Comparison style scope');scopeSummary.textContent='Style scope: '+scope.label;rail.append(scopeSummary);
     pin=document.createElement('button');pin.className='control-button';pin.textContent='Pin current size';
     pin.onclick=()=>{const {width,height}=current();if(pin.disabled)return;const size=[`Custom ${width} × ${height}`,width,height];sizes.push(size);remember();addCard(size);cards.at(-1).frame.src=path()||'/';updateControls();};rail.append(pin);
+    restore=document.createElement('button');restore.className='control-button';restore.type='button';
+    restore.onclick=()=>{
+      if(restore.disabled)return;
+      const last=removed.pop(),index=Math.min(last.index,sizes.length),next=cards[index]?.card;
+      sizes.splice(index,0,last.size);addCard(last.size,next);const item=cards.pop();cards.splice(index,0,item);
+      item.frame.src=path()||'/';remember();updateControls();item.card.scrollIntoView({block:'nearest'});
+    };rail.append(restore);
     for(const size of sizes)addCard(size);
     updateControls();
   }
-  function addCard(size){
+  function addCard(size,before=null){
       let name=size[0],width=size[1],height=size[2];
       const card=document.createElement('section');card.className='compare-card';card.setAttribute('aria-label',name+' comparison');
       const header=document.createElement('div');header.className='compare-header';
@@ -104,7 +116,7 @@
       const edit=document.createElement('button');edit.className='control-button';edit.textContent='Edit';edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');
       edit.onclick=()=>window.RetouchScreens.set({width,height});header.append(edit);
       const remove=document.createElement('button');remove.className='control-button';remove.textContent='×';remove.setAttribute('aria-label','Remove '+name+' comparison');header.append(remove);
-      remove.onclick=async()=>{remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);cards=cards.filter(c=>c!==item);await unload(frame);card.remove();updateControls();};
+      remove.onclick=async()=>{remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;card.inert=true;removals++;removed.push({size:[...size],index});if(removed.length>8)removed.shift();sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);cards=cards.filter(c=>c!==item);updateControls();await unload(frame);card.remove();removals--;updateControls();};
       const viewport=document.createElement('div');viewport.className='compare-viewport';viewport.tabIndex=0;viewport.setAttribute('role','button');viewport.setAttribute('aria-label','Edit from '+name+' comparison');viewport.title='Click a layer to select it on the main canvas at this size. Style scope stays unchanged.';
       const frame=document.createElement('iframe');frame.title=name+' comparison preview';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');frame.style.width=width+'px';frame.style.height=height+'px';
       const overlay=document.createElement('div');overlay.className='compare-overlay';
@@ -159,7 +171,7 @@
         rotate.setAttribute('aria-label','Rotate '+name+' comparison');reveal.setAttribute('aria-label','Show selection in '+name+' comparison');
       }
       updateLabels();
-      viewport.append(frame,overlay);card.append(header,dimensions,dimensionError,viewport,message,reveal,scopeMessage,scopeButton);rail.append(card);
+      viewport.append(frame,overlay);card.append(header,dimensions,dimensionError,viewport,message,reveal,scopeMessage,scopeButton);rail.insertBefore(card,before);
       function activate(event){
         try{
           const d=frame.contentDocument,loc=frame.contentWindow.location;
@@ -196,7 +208,7 @@
           if(root){const style=w.getComputedStyle(root);w.scrollBy({left:/hidden|clip/.test(style.overflowX)?0:dx,top:/hidden|clip/.test(style.overflowY)?0:dy,behavior:'instant'});}
         }catch{}
       },{passive:false});
-      cards.push({frame,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal});
+      cards.push({card,frame,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal});
   }
   function unload(frame){return new Promise(resolve=>{
     let timeout;

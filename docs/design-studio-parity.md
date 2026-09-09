@@ -4828,3 +4828,27 @@ git diff --check passed. No unit suite rerun for this browser-only control chang
 
 Names remain local browser preferences; cross-device/team sharing is unfinished.
 Full Figma parity remains incomplete, and native launches remain paused.
+
+### Undo removal of comparison views (2026-09-09)
+
+Compare screens now offers Undo remove: NAME after a view is removed. Up to eight
+removals are retained in the current page session. Restore recreates the last
+removed view at its saved position with its original name and dimensions, and
+persists the resulting pinned list. The new iframe is inserted directly in place;
+surviving preview frames are not moved or reloaded. Restore waits for outstanding
+frame removal and is disabled when the eight-view limit or an existing name/size
+conflicts with the saved view. This preference undo is separate from source edit
+history and does not change the main canvas.
+
+Chromium and WebKit passed removing Tablet and Checkout narrow, restoring them in
+reverse removal order, checking the complete original card order and the custom
+820px width. A live state marker on the untouched Desktop iframe survived. Source
+files remained unchanged, and the full existing comparison flow passed. Logs
+(both exit 0): `/private/tmp/retouch-compare-restore-chromium.log` and
+`/private/tmp/retouch-compare-restore-webkit.log`. git diff --check passed. Unit
+tests were not rerun for this browser control change.
+
+Conflict/capacity disabling and more than eight removal cycles were not separately
+exercised. Undo history does not survive a page reload and restored previews load
+afresh; their prior application/scroll state is not restored. Full parity remains
+incomplete, and native app launches remain paused.
