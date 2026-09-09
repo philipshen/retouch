@@ -159,7 +159,7 @@
     const values=root.RetouchHTMLCSSValues,axes=values.parseVariations(css.fontVariationSettings);
     const details=document.createElement('details');details.open=variationExpanded;details.ontoggle=()=>{if(details.isConnected)variationExpanded=details.open;};
     const summary=document.createElement('summary');summary.textContent='Variable font axes';details.append(summary);parent.append(details);
-    const axisInputs=new Map();
+    const axisInputs=new Map(),presetPanel=document.createElement('div');details.append(presetPanel);
     const labels={wght:'Weight',wdth:'Width',opsz:'Optical size',slnt:'Slant',ital:'Italic'};
     const defaults={wght:parseFloat(css.fontWeight)||400,wdth:100,opsz:parseFloat(css.fontSize)||16,slnt:0,ital:0};
     if(axes){
@@ -193,8 +193,10 @@
           try{const found=await metadata.inspect(d,selected);if(details.isConnected)await render(found);}catch(error){if(details.isConnected){await render();if(details.isConnected)results.textContent=error.message;}}finally{inspect.disabled=false;choose.disabled=false;}
         });
         async function render(inspected){
-          const revision=++renderRevision;results.replaceChildren();for(const input of axisInputs.values()){input.min=-10000;input.max=10000;input.title='';}
-          const found=inspected||await metadata.peek(d,selected);if(!found||revision!==renderRevision||!details.isConnected)return;
+          const revision=++renderRevision;results.replaceChildren();presetPanel.replaceChildren();for(const input of axisInputs.values()){input.min=-10000;input.max=10000;input.title='';}
+          const inspectedFont=inspected||await metadata.peek(d,selected);if(!inspectedFont||revision!==renderRevision||!details.isConnected)return;const found=inspectedFont.axes;
+          const presets=inspectedFont.instances.filter(preset=>axes&&new Set([...axes,...preset.coordinates].map(([tag])=>tag)).size<=16&&preset.coordinates.every(([tag,value])=>/^[A-Za-z0-9]{4}$/.test(tag)&&Math.abs(value)<=10000));
+          if(presets.length){const current=new Map(axes),matching=presets.findIndex(preset=>preset.coordinates.every(([tag,value])=>current.has(tag)&&Math.abs(current.get(tag)-value)<.0001));select(presetPanel,'Font style preset',[['','Choose a style…'],...presets.map((preset,index)=>[String(index),preset.name])],matching<0?'':String(matching),value=>{if(value==='')return;const preset=presets[Number(value)],next=new Map(axes);for(const [tag,coordinate]of preset.coordinates)next.set(tag,coordinate);onChange(values.serializeVariations([...next]));});note(presetPanel,'Applies all axes in this font preset at the current screen scope. Other axis overrides are preserved.');}
           if(!found.length)note(results,'This declared file has no variable axes.');
           for(const axis of found){
             note(results,axis.name+' ('+axis.tag+'): '+axis.min+' to '+axis.max+' · default '+axis.default+(axis.hidden?' · hidden axis':''));

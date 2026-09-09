@@ -201,7 +201,7 @@ test('font metadata API authenticates and parses bytes without writing assets or
  const endpoint='/rt/__api/font-axes',headers={'x-retouch-token':token,'content-type':'application/octet-stream'},source=fs.readFileSync(path.join(root,'app/Page.tsx'),'utf8'),files=fs.readdirSync(root,{recursive:true}).sort();
  const denied=await req(port,'POST',endpoint,{body:bytes});assert.notEqual(denied.status,200);
  const method=await req(port,'GET',endpoint,{headers});assert.equal(method.status,405);
- const result=await req(port,'POST',endpoint,{headers,body:bytes});assert.equal(result.status,200);assert.deepEqual(JSON.parse(result.body),{ok:true,axes:[{tag:'wght',name:'wght',min:100,default:400,max:900,hidden:false}]});
+ const result=await req(port,'POST',endpoint,{headers,body:bytes});assert.equal(result.status,200);assert.deepEqual(JSON.parse(result.body),{ok:true,axes:[{tag:'wght',name:'wght',min:100,default:400,max:900,hidden:false}],instances:[]});
  const malformed=await req(port,'POST',endpoint,{headers,body:Buffer.from('not a font')});assert.equal(malformed.status,422);assert.equal(JSON.parse(malformed.body).ok,false);
  assert.equal(fs.readFileSync(path.join(root,'app/Page.tsx'),'utf8'),source);assert.deepEqual(fs.readdirSync(root,{recursive:true}).sort(),files);
 });

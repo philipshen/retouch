@@ -5193,3 +5193,43 @@ origin isolation, expiry, and failed reinspection invalidation. The full unit
 suite result is /private/tmp/retouch-font-digest-final-units.log. No native app
 was launched. Full arbitrary-site/Figma parity, broader font discovery and
 trusted native distribution remain unfinished.
+
+### Font-provided named variable styles
+
+The metadata parser now reads named fvar instances with Unicode names and a
+complete coordinate tuple in font axis order. The endpoint and browser cache
+carry axes plus instances. The inspector offers Font style preset above the
+axis controls after inspection; selecting a preset applies its coordinates in
+one existing responsive source/history operation. Matching explicit coordinates
+select the corresponding preset. Axis overrides outside the preset are retained.
+This is the font designer's named instance data, not inferred weight names.
+Reference: https://learn.microsoft.com/en-us/typography/opentype/spec/fvar.
+
+Parser tests cover both legal instance record sizes (with and without optional
+PostScript name ID) in sfnt, WOFF and WOFF2, Unicode labels, fractional/negative
+coordinates, and refusal of truncated records, invalid sizes/counts, reserved
+flags and coordinates outside axis bounds. readFontAxes remains available; the
+new readFontMetadata returns axes and instances. Inspection remains authenticated
+and does not write source. The focused parser/cache/server tests passed (20),
+and all 387 unit tests passed: /private/tmp/retouch-font-presets-focused.log and
+/private/tmp/retouch-font-presets-units.log.
+
+Roboto Flex supplies 20 named presets. HTML, React and local Liquid passed in
+Chromium and WebKit: choosing Bold Italic wrote all 13 coordinates, including
+wght 700, slnt -10 and opsz 14; the phone retained inherited settings; the tablet
+retained the preset; subsequent optical edits and exact source undo passed.
+Logs: /private/tmp/retouch-font-presets-html-chromium.log and
+/private/tmp/retouch-font-presets-{html,react,liquid}-final-{chromium,webkit}.log
+(except html-final-chromium, whose earlier successful log is named above).
+The initial HTML WebKit screenshot attempt encountered a transient detached
+control during panel refresh; the screenshot step now reacquires it, and the
+corrected run exited 0. The Chromium screenshot was inspected at
+/private/tmp/retouch-font-presets-chromium.png and visibly renders Bold Italic.
+Both HTML axis/discovery/live-preview regression runs exited 0:
+/private/tmp/retouch-font-presets-regression-{chromium,webkit}.log.
+
+The parser bounds named instances at 256. Preset editing follows the existing
+16-axis, alphanumeric-tag and numeric-range limits. STAT-derived style names,
+static font families, localization selection, hidden-axis presentation and full
+font-style discovery remain unfinished. Native launches remain paused; full
+Figma/arbitrary-site parity and trusted native distribution remain unverified.

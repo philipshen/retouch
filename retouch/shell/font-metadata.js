@@ -27,7 +27,7 @@
  const key=(d,value)=>d.location.origin+'\n'+value;
  function selection(d,family,url){const id=key(d,family);if(url!==undefined){if(choices.size>=32&&!choices.has(id))choices.delete(choices.keys().next().value);choices.set(id,url);}return choices.get(id);}
  async function cacheKey(d,url){const value=key(d,url);if(value.length<=2048)return value;if(root.crypto?.subtle){try{const digest=await root.crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));return 'sha256:'+Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,'0')).join('');}catch{}}return value;}
- async function peek(d,url){const id=await cacheKey(d,url),entry=cache.get(id);if(entry&&Date.now()-entry.time<300000)return entry.axes;cache.delete(id);}
+ async function peek(d,url){const id=await cacheKey(d,url),entry=cache.get(id);if(entry&&Date.now()-entry.time<300000)return entry.details;cache.delete(id);}
 
  async function inspect(d,url){
   const id=await cacheKey(d,url);cache.delete(id);
@@ -38,7 +38,8 @@
    while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>limit){await reader.cancel();throw Error('Font files must be 16 MB or smaller.');}chunks.push(value);}
    const result=await root.fetch('/rt/__api/font-axes',{method:'POST',headers:{'x-retouch-token':root.__RT_TOKEN,'content-type':'application/octet-stream'},body:new Blob(chunks),signal:controller.signal});
    const metadata=await result.json();if(!result.ok||!metadata.ok)throw Error(metadata.reason||'Could not inspect font axes.');
-   if(id.length<=2*1024*1024){while(cache.size>=32||[...cache.keys()].reduce((sum,value)=>sum+value.length,0)+id.length>2*1024*1024)cache.delete(cache.keys().next().value);cache.set(id,{axes:metadata.axes,time:Date.now()});}return metadata.axes;
+   const details={axes:metadata.axes,instances:metadata.instances||[]};
+   if(id.length<=2*1024*1024){while(cache.size>=32||[...cache.keys()].reduce((sum,value)=>sum+value.length,0)+id.length>2*1024*1024)cache.delete(cache.keys().next().value);cache.set(id,{details,time:Date.now()});}return details;
   }catch(error){if(error.name==='AbortError')throw Error('Font inspection timed out.');throw error;}finally{clearTimeout(timer);controller.abort();}
  }
  root.RetouchFontMetadata={sources,peek,inspect,selection};

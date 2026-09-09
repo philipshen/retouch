@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),zlib=require('node:zlib');
-const {readFontAxes}=require('../src/font-axes.cjs');
+const {readFontAxes,readFontMetadata}=require('../src/font-axes.cjs');
 function metadata(){
  const fvar=Buffer.alloc(56);fvar.writeUInt16BE(1,0);fvar.writeUInt16BE(16,4);fvar.writeUInt16BE(2,8);fvar.writeUInt16BE(20,10);
  for(const [i,tag,min,normal,max,hidden] of [[0,'wght',100,400,900,0],[1,'GRAD',-50,0,100,1]]){const o=16+i*20;fvar.write(tag,o);[min,normal,max].forEach((value,j)=>fvar.writeInt32BE(value*65536,o+4+j*4));fvar.writeUInt16BE(hidden,o+16);fvar.writeUInt16BE(256+i,o+18);}
@@ -11,12 +11,12 @@ function sfnt(entries=metadata()){
  const out=Buffer.alloc(12+entries.length*16+entries.reduce((sum,[,b])=>sum+b.length,0));out.writeUInt32BE(0x10000,0);out.writeUInt16BE(entries.length,4);let offset=12+entries.length*16;
  entries.forEach(([tag,b],i)=>{const o=12+i*16;out.write(tag,o);out.writeUInt32BE(offset,o+8);out.writeUInt32BE(b.length,o+12);b.copy(out,offset);offset+=b.length;});return out;
 }
-function woff(){
- const entries=metadata().map(([tag,data])=>{const packed=zlib.deflateSync(data);return {tag,data,compressed:packed.length<data.length?packed:data};}),out=Buffer.alloc(44+entries.length*20+entries.reduce((sum,e)=>sum+e.compressed.length,0));out.write('wOFF');out.writeUInt32BE(0x10000,4);out.writeUInt32BE(out.length,8);out.writeUInt16BE(entries.length,12);let offset=44+entries.length*20;
+function woff(source=metadata()){
+ const entries=source.map(([tag,data])=>{const packed=zlib.deflateSync(data);return {tag,data,compressed:packed.length<data.length?packed:data};}),out=Buffer.alloc(44+entries.length*20+entries.reduce((sum,e)=>sum+e.compressed.length,0));out.write('wOFF');out.writeUInt32BE(0x10000,4);out.writeUInt32BE(out.length,8);out.writeUInt16BE(entries.length,12);let offset=44+entries.length*20;
  entries.forEach((e,i)=>{const o=44+i*20;out.write(e.tag,o);out.writeUInt32BE(offset,o+4);out.writeUInt32BE(e.compressed.length,o+8);out.writeUInt32BE(e.data.length,o+12);e.compressed.copy(out,offset);offset+=e.compressed.length;});return out;
 }
-function woff2(){
- const entries=metadata(),directory=Buffer.from([10,10,1,11,6,0,47,entries[0][1].length,5,entries[1][1].length]),compressed=zlib.brotliCompressSync(Buffer.concat([Buffer.from([0]),...entries.map(([,b])=>b)])),out=Buffer.alloc(48+directory.length+compressed.length);
+function woff2(source=metadata()){
+ const entries=source,directory=Buffer.from([10,10,1,11,6,0,47,entries[0][1].length,5,entries[1][1].length]),compressed=zlib.brotliCompressSync(Buffer.concat([Buffer.from([0]),...entries.map(([,b])=>b)])),out=Buffer.alloc(48+directory.length+compressed.length);
  out.write('wOF2');out.writeUInt32BE(0x10000,4);out.writeUInt32BE(out.length,8);out.writeUInt16BE(4,12);out.writeUInt32BE(compressed.length,20);directory.copy(out,48);compressed.copy(out,48+directory.length);return out;
 }
 const expected=[{tag:'wght',name:'Weight',min:100,default:400,max:900,hidden:false},{tag:'GRAD',name:'Grade é',min:-50,default:0,max:100,hidden:true}];
@@ -33,4 +33,20 @@ test('font metadata rejects truncated data, invalid ranges, duplicate axes and u
  const duplicate=metadata();duplicate[0][1].write('wght',36);assert.throws(()=>readFontAxes(sfnt(duplicate)),/variation axis/);
  const transform=woff2();transform[48]=74;assert.throws(()=>readFontAxes(transform),/transform/);
  const malformed=woff2();malformed[49]=128;assert.throws(()=>readFontAxes(malformed),/table length/);
+});
+function namedMetadata(optional=true){
+ const entries=metadata(),size=optional?14:12,fvar=Buffer.concat([entries[0][1],Buffer.alloc(size*2)]);fvar.writeUInt16BE(2,12);fvar.writeUInt16BE(size,14);
+ for(const [i,name,wght,grade]of [[0,256,650,-12.5],[1,257,400,0]]){const o=56+i*size;fvar.writeUInt16BE(name,o);fvar.writeInt32BE(wght*65536,o+4);fvar.writeInt32BE(grade*65536,o+8);if(optional)fvar.writeUInt16BE(0xffff,o+12);}
+ entries[0][1]=fvar;return entries;
+}
+test('named font styles retain all coordinates and Unicode names across font containers',()=>{
+ for(const optional of [false,true])for(const encode of [sfnt,woff,woff2]){
+  const result=readFontMetadata(encode(namedMetadata(optional)));
+  assert.deepEqual(result.axes,expected);
+  assert.deepEqual(result.instances,[{name:'Weight',coordinates:[['wght',650],['GRAD',-12.5]]},{name:'Grade é',coordinates:[['wght',400],['GRAD',0]]}]);
+ }
+});
+test('named font styles reject malformed sizes, unsupported flags and out-of-range coordinates',()=>{
+ for(const mutate of [b=>b.writeUInt16BE(11,14),b=>b.writeUInt16BE(257,12),b=>b.writeUInt16BE(1,58),b=>b.writeInt32BE(950*65536,60)]){const entries=namedMetadata();mutate(entries[0][1]);assert.throws(()=>readFontMetadata(sfnt(entries)),/font style/);}
+ const entries=namedMetadata();entries[0][1]=entries[0][1].subarray(0,-1);assert.throws(()=>readFontMetadata(sfnt(entries)),/Truncated/);
 });

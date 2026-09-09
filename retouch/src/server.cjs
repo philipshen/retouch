@@ -82,7 +82,7 @@ function handle(req, res, ctx) {
     if(req.method!=='POST')return json(res,405,{ok:false,reason:'Send font bytes with POST.'});
     return readBinary(req,16*1024*1024,bytes=>{
       if(!bytes)return json(res,413,{ok:false,reason:'Font files must be 16 MB or smaller.'});
-      try{return json(res,200,{ok:true,axes:require('./font-axes.cjs').readFontAxes(bytes)});}
+      try{return json(res,200,{ok:true,...require('./font-axes.cjs').readFontMetadata(bytes)});}
       catch(error){return json(res,422,{ok:false,reason:error.message});}
     });
   }

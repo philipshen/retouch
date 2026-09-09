@@ -12,7 +12,7 @@ function fixture(){
 test('large font URL metadata survives document replacement, isolates URLs/origins and expires',async()=>{
  const f=fixture(),url='data:font/ttf;base64,'+'A'.repeat(3*1024*1024),d=f.document('http://localhost:4000');
  await f.api.inspect(d,url);
- assert.deepEqual(await f.api.peek(f.document('http://localhost:4000'),url),f.axes);
+ assert.deepEqual((await f.api.peek(f.document('http://localhost:4000'),url)).axes,f.axes);
  assert.equal(f.calls(),1);
  assert.equal(await f.api.peek(d,url+'B'),undefined);
  assert.equal(await f.api.peek(f.document('http://localhost:5000'),url),undefined);
@@ -20,7 +20,7 @@ test('large font URL metadata survives document replacement, isolates URLs/origi
 });
 test('failed reinspection invalidates cached metadata for a hashed font URL',async()=>{
  const f=fixture(),d=f.document('http://localhost:4000'),url='https://fonts.test/font.ttf?'+ 'x'.repeat(4096);
- await f.api.inspect(d,url);assert.deepEqual(await f.api.peek(d,url),f.axes);
+ await f.api.inspect(d,url);assert.deepEqual((await f.api.peek(d,url)).axes,f.axes);
  f.fail();await assert.rejects(f.api.inspect(d,url),/Changed file is invalid/);
  assert.equal(await f.api.peek(d,url),undefined);
 });

@@ -48,11 +48,11 @@ function names(table){
  }
  return result;
 }
-function readFontAxes(input){
+function readFontMetadata(input){
  if(!(input instanceof Uint8Array))throw Error('Expected font bytes.');
  if(input.byteLength>16*1024*1024)throw Error('Font files must be 16 MB or smaller.');
  const b=Buffer.from(input.buffer,input.byteOffset,input.byteLength);
- const all=tables(b),fvar=all.get('fvar');if(!fvar)return [];
+ const all=tables(b),fvar=all.get('fvar');if(!fvar)return {axes:[],instances:[]};
  if(u16(fvar,0)!==1||u16(fvar,2)!==0)throw Error('Unsupported font variation version.');
  const offset=u16(fvar,4),count=u16(fvar,8),size=u16(fvar,10);if(offset<16||count>64||size<20)throw Error('Invalid font variation directory.');bytes(fvar,offset,count*size);
  const labels=names(all.get('name')),seen=new Set(),axes=[];
@@ -61,6 +61,17 @@ function readFontAxes(input){
   if(!/^[\x20-\x7e]{4}$/.test(axis)||seen.has(axis)||min>defaultValue||defaultValue>max)throw Error('Invalid font variation axis.');seen.add(axis);
   axes.push({tag:axis,name:labels.get(u16(fvar,o+18))?.value||axis,min,default:defaultValue,max,hidden:!!(u16(fvar,o+16)&1)});
  }
- return axes;
+ const instanceCount=u16(fvar,12),instanceSize=u16(fvar,14),instanceStart=offset+count*size,instances=[];
+ if(instanceCount>256||instanceCount&&![4+count*4,6+count*4].includes(instanceSize))throw Error('Invalid named font style directory.');
+ bytes(fvar,instanceStart,instanceCount*instanceSize);
+ for(let i=0;i<instanceCount;i++){
+  const o=instanceStart+i*instanceSize,nameID=u16(fvar,o),coordinates=axes.map((axis,j)=>{
+   const value=bytes(fvar,o+4+j*4,4).readInt32BE(0)/65536;if(value<axis.min||value>axis.max)throw Error('Named font style is outside its axis range.');return [axis.tag,value];
+  });
+  if(u16(fvar,o+2)!==0)throw Error('Unsupported named font style flags.');
+  instances.push({name:labels.get(nameID)?.value||'Style '+(i+1),coordinates});
+ }
+ return {axes,instances};
 }
-module.exports={readFontAxes};
+const readFontAxes=input=>readFontMetadata(input).axes;
+module.exports={readFontAxes,readFontMetadata};
