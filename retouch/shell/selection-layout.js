@@ -41,7 +41,7 @@
   }
   return changes;
  }
- function mount(infos,elements,width,save){
+ function mount(infos,elements,width,save,onMove){
   const I=root.RetouchInspector,P=root.RetouchHTMLPosition,sec=I.section('Align selected layers');
   function measure(){
    if(!Number.isInteger(width)||elements.some(el=>!el?.isConnected)||infos.some(info=>info.cssReason))throw Error('Re-select the layers and choose a pixel screen scope.');
@@ -71,7 +71,7 @@
    const rect=parent.getBoundingClientRect();return {left:rect.left+parent.clientLeft,top:rect.top+parent.clientTop,width:parent.clientWidth,height:parent.clientHeight};
   }
   function write(measured,deltas){if(deltas.every(d=>Math.abs(d.x)+Math.abs(d.y)<1/32))return;
-    const changes=Object.fromEntries(infos.map((info,i)=>{if(Math.abs(deltas[i].x)+Math.abs(deltas[i].y)<1/32)return [info.id,{}];const el=elements[i],effective=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{}),g=measured[i].geometry;return [info.id,preserveBox(P.placement({...g,x:g.x+deltas[i].x,y:g.y+deltas[i].y},effective),g,el.ownerDocument.defaultView.getComputedStyle(el))];}));save(changes,width);
+    const changes=Object.fromEntries(infos.map((info,i)=>{if(Math.abs(deltas[i].x)+Math.abs(deltas[i].y)<1/32)return [info.id,{}];const el=elements[i],effective=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{}),g=measured[i].geometry;return [info.id,preserveBox(P.placement({...g,x:g.x+deltas[i].x,y:g.y+deltas[i].y},effective),g,el.ownerDocument.defaultView.getComputedStyle(el))];}));return save(changes,width);
   }
   for(const [mode,label]of [['left','Align left'],['center','Align horizontal centers'],['right','Align right'],['top','Align top'],['middle','Align vertical centers'],['bottom','Align bottom'],['gap-x','Distribute horizontal spacing'],['gap-y','Distribute vertical spacing']]){
    const button=I.button(label,()=>{try{
@@ -79,6 +79,7 @@
     write(measured,deltas);
    }catch(error){I.note(sec,error.message,'refused');}});if(mode.startsWith('gap-'))button.dataset.distribution=mode;controls.append(button);
   }
+  if(onMove){const move=I.button('Move selection on canvas',event=>{try{const measured=measure();onMove(elements,delta=>write(measured,measured.map(()=>delta)),event.currentTarget);}catch(error){I.note(sec,error.message,'refused');}});move.dataset.canvasTool='move';controls.append(move);}
   sec.append(controls);
   for(const [axis,label]of [['x','Horizontal gap (px)'],['y','Vertical gap (px)']]){
    const values=gaps(measure().map(item=>item.rect),axis).values,mixed=values.some(value=>Math.abs(value-values[0])>=1/32),initial=mixed?'':String(Math.round(values.reduce((n,value)=>n+value,0)/values.length*100)/100),input=root.document.createElement('input');

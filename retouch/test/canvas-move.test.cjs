@@ -64,3 +64,7 @@ test('spacing ignores containers, other rows, collisions and more distant candid
  const closer=snap(r,movement,[a,b,{left:189,top:500,width:20,height:20}]);assert.equal(closer.x,169);assert.equal(closer.spacing,undefined);
  assert.equal(snap(r,{x:159,y:80},[a,b],{tolerance:12}).x,170);assert.equal(snap(r,{x:159,y:80},[a,b],{tolerance:3}).x,159);
 });
+test('group bounds retain every member including overlap, negative coordinates and DOM rectangle accessors',()=>{
+ const {union}=require('../shell/canvas-move.js'),rects=[{left:-20,top:30,width:80,height:40},{left:100,top:-10,width:60,height:90},{left:0,top:0,width:40,height:40}].map(r=>Object.create(r));
+ assert.deepEqual(union(rects),{left:-20,top:-10,right:160,bottom:80,width:180,height:90});assert.deepEqual(union([...rects].reverse()),union(rects));assert.throws(()=>union([]));assert.throws(()=>union([{left:0,top:0,width:0,height:40}]));assert.throws(()=>union([{left:NaN,top:0,width:40,height:40}]));
+});

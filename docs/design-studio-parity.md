@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 313 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 314 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -2059,3 +2059,34 @@ These are numeric spacing controls for supported absolute HTML selections.
 On-canvas spacing handles, group transforms, flow-layout rearrangement and
 React/Liquid/vector selection geometry remain unfinished. The current Mac package
 predates these selection controls; trusted native distribution remains unverified.
+
+
+### Atomic multi-layer canvas movement
+
+Supported HTML selections now expose **Move selection on canvas**. A shared outer
+outline and individual member previews move together; the site DOM and source stay
+unchanged during the gesture. Pointer movement, Shift axis lock, snapping/bypass,
+keyboard one-pixel/Shift-ten-pixel steps, cancellation and focus restoration use the
+same canvas tool as single layers. The union bounds snap to external candidates;
+selected members and their containing sibling ancestors are excluded as neighbors.
+Candidate elements and containers are deduplicated across the selection.
+
+A commit translates every member by the same CSS-pixel delta and writes one atomic
+source edit. Sizes, padding, borders and internal gaps are preserved, including
+members in different containing frames. Any member or containing-frame geometry
+change cancels an active gesture. A scope/selection change cancels it as well, and
+a conflicting protected member refuses the whole source change.
+
+Validation: all 314 unit tests pass. Chromium and WebKit exercise group pointer
+movement at 50%, 100% and 200% zoom; member previews; external snapping and selected
+member exclusion; Shift lock; precise keyboard movement and no-op handling; focus;
+phone/base independence; exact undo/redo with selection restoration; member-layout
+and secondary-container cancellation; different-container movement; and atomic
+protection. Chromium single-layer snapping/resize and real React positioning
+regressions pass; WebKit equal-spacing snapping also passes. Logs:
+`/private/tmp/retouch-selection-move-{unit,chromium,webkit,snap-regression,react-regression,spacing-regression}.log`.
+Screenshot `/private/tmp/retouch-selection-move.png` was visually inspected.
+
+Group resizing/rotation, flow rearrangement, React/Liquid multi-selection geometry,
+vector group transforms and on-canvas spacing handles remain unfinished. The current
+Mac artifact predates these selection controls; trusted distribution remains open.
