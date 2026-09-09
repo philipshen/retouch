@@ -5805,3 +5805,24 @@ branches with JSON metadata roundtrip. This planner is not yet wired to the API
 or inspector; project-wide Liquid propagation and live Shopify verification
 remain unfinished. Native app launches remain paused. Full Figma parity and a
 verified distributable desktop cask remain incomplete.
+
+### Liquid linked typography inspector and shared history (2026-09-09)
+
+Connected Liquid apply, detach and reset to the authenticated source operation
+API and typography inspector. The panel displays direct and inherited links,
+scoped override counts and reset controls. Writes and their history entries carry
+rendered layer context, allowing conditional class patches to preserve authored
+branches. Liquid exposes a separate update capability so the panel does not offer
+project-wide library propagation before that planner exists.
+
+All 433 unit tests passed, exit 0:
+/private/tmp/retouch-liquid-linked-ui-units.log. Browser processes exited 0:
+/private/tmp/retouch-liquid-linked-ui-chromium.log (Liquid static classes),
+/private/tmp/retouch-liquid-linked-ui-webkit.log (Liquid conditional classes), and
+/private/tmp/retouch-liquid-links-react-regression.log (React regression).
+The shared flow verifies rendered typography, metadata, inherited scoped apply,
+manual override/reset, detach, responsive width changes, exact source undo,
+catalog history and stale revision recovery, with no page errors. Liquid uses
+the local Liquid renderer and Tailwind fixture; live Shopify remains unverified.
+Project-wide Liquid propagation remains unfinished. Native launches stay paused;
+full design parity and verified desktop distribution remain incomplete.

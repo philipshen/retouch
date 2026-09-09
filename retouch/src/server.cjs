@@ -193,8 +193,8 @@ function handle(req, res, ctx) {
           if (!ctx.adapter.capabilities?.ops?.includes('setCSS')&&ctx.adapter.name!=='react') return json(res,409,{ok:false,reason:'Linked text style updates are not available for this renderer yet.'});
           result=applyPlan(ctx.appRoot,require('./text-style-update.cjs').plan(ctx.appRoot,{type:'update',revision:op.libraryRevision,id:op.styleId,name:op.name,properties:op.properties},ctx.adapter.name==='react'?'react':'html'));
         } else if (op.type === 'applyTextStyle' || op.type === 'detachTextStyle' || op.type === 'resetTextStyle') {
-          const reactStyles=ctx.adapter.name==='react';
-          if (!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!reactStyles) return json(res,409,{ok:false,reason:'Linked text style application is not available for this renderer yet.'});
+          const reactStyles=ctx.adapter.name==='react',liquidStyles=ctx.adapter.name==='liquid';
+          if (!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!reactStyles&&!liquidStyles) return json(res,409,{ok:false,reason:'Linked text style application is not available for this renderer yet.'});
           let style;
           if (op.type === 'applyTextStyle' || op.type === 'resetTextStyle') {
             const library=require('./text-styles.cjs').read(ctx.appRoot);
@@ -202,7 +202,7 @@ function handle(req, res, ctx) {
             style=library.styles.find(item=>item.id===op.styleId);
             if(!style)return json(res,409,{ok:false,reason:'That text style no longer exists.'});
           }
-          result=applyPlan(ctx.appRoot,require(reactStyles?'./jsx-text-styles.cjs':'./html-text-styles.cjs').plan(resolved,op,style));
+          result=applyPlan(ctx.appRoot,require(reactStyles?'./jsx-text-styles.cjs':liquidStyles?'./liquid-text-styles.cjs':'./html-text-styles.cjs').plan(resolved,op,style));
         } else result = applyPlan(ctx.appRoot, ctx.adapter.planOp(resolved, op));
       } catch (err) {
         return json(res, err.statusCode || 500, { ok: false, error: err.message });

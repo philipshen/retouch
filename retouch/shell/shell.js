@@ -1664,9 +1664,9 @@ async function refreshTextStyleElement(info){
 async function writeTextStyle(type,width,extra={}){
   if(!sel)return;const info=sel.info;busyPanel(true);
   try{
-    const result=await api('POST','/rt/__api/op',{type,id:info.id,fileHash:info.hash,width,...extra});
+    const result=await api('POST','/rt/__api/op',{type,id:info.id,fileHash:info.hash,context:info.context,width,...extra});
     if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save text style');
-    if(result.undoId)editorHistory.record({type:'setCSS',id:info.id,undoId:result.undoId});
+    if(result.undoId)editorHistory.record({type:'setCSS',id:info.id,context:info.context,undoId:result.undoId});
     if(sel?.info.id===info.id){
       sel.info=result.element;
       await refreshTextStyleElement(result.element);

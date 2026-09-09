@@ -22,9 +22,9 @@ function metadata(element){
  return {links,attribute:attr};
 }
 function describe(resolved){if(resolved.element.kind!=='host')return {};try{
- const links=metadata(resolved.element).links,info=liquid.describe(resolved);
+ const links=metadata(resolved.element).links,info=liquid.describeElement(resolved);
  const overrides=info.classNameDynamic?{}:Object.fromEntries(Object.entries(links).map(([scope,link])=>[scope,[...new Set([...(link.overrides||[]),...classes.overrides(info.className||'',link.properties,scope)])].sort()]));
- return {classTextStyles:true,textStyleLinks:links,textStyleOverrides:overrides};
+ return {classTextStyles:true,textStyleUpdates:false,textStyleLinks:links,textStyleOverrides:overrides};
 }catch(error){return {classTextStyles:false,textStyleLinkReason:error.message};}}
 function plan(resolved,op,style){
  try{
@@ -33,7 +33,7 @@ function plan(resolved,op,style){
   const scope=op.scope??'';responsive.replaceScope('','',scope);
   const current=metadata(resolved.element).links;let source=resolved.source;
   if(['applyTextStyle','resetTextStyle','refreshTextStyle'].includes(op.type)){
-   const validated=catalog.validate({version:1,styles:[style]}).styles[0],info=liquid.describe(resolved);
+   const validated=catalog.validate({version:1,styles:[style]}).styles[0],info=liquid.describeElement(resolved);
    if(info.classNameDynamic)return refuse('Reload the preview to read this layer’s rendered classes.');
    if(op.type!=='applyTextStyle'&&current[scope]?.id!==validated.id)return refuse('The layer is no longer linked to this text style.');
    const refreshed=op.type==='refreshTextStyle'?classes.refresh(info.className||'',current[scope].properties,validated.properties,scope,current[scope].overrides):null;

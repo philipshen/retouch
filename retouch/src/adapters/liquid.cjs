@@ -314,7 +314,7 @@ function describeElement(resolved) {
 }
 
 function describe(resolved) {
-  return {...describeElement(resolved),components:theme.ancestry(resolved),structure:structure.describe(resolved,'liquid')};
+  return {...describeElement(resolved),...require('../liquid-text-styles.cjs').describe(resolved),components:theme.ancestry(resolved),structure:structure.describe(resolved,'liquid')};
 }
 
 function refuse(reason) { return { ok: false, refused: true, reason }; }
@@ -415,6 +415,7 @@ module.exports = {
   collect,
   contentHash,
   describe,
+  describeElement,
   applyOp,
   planOp,
   describeComponent: resolved=>resolved.element.theme?theme.describe(resolved):components.describe(resolved),
