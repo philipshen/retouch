@@ -2,7 +2,7 @@ import AppKit
 import WebKit
 
 // The editor remains the same shell as /rt. No Node or native command bridge is
-// exposed to a page. Native project startup delegates to the installed CLI.
+// exposed to a page. Native project startup delegates to the bundled CLI.
 final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     private var window: NSWindow!
     private var web: WKWebView!
@@ -18,8 +18,9 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     private var stopButton: NSButton!
 
     static func shellQuote(_ value: String) -> String { "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'" }
-    static func launchArguments(_ command: String, cli: String = "retouch") -> [String] {
-        ["-l", "-c", "exec " + shellQuote(cli) + " -- /bin/zsh -l -c " + shellQuote(command)]
+    static var bundledCLI: String { Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/retouch/bin/retouch.cjs").path }
+    static func launchArguments(_ command: String, cli: String? = nil) -> [String] {
+        ["-l", "-c", "exec " + shellQuote(cli ?? bundledCLI) + " -- /bin/zsh -l -c " + shellQuote(command)]
     }
     private func appendLog(_ text: String) {
         guard let log = logText else { return }
@@ -44,7 +45,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         picker.message = "Choose the project folder for your usual startup command."
         guard picker.runModal() == .OK, let folder = picker.url else { return }
         let alert = NSAlert(); alert.messageText = "Start " + folder.lastPathComponent
-        alert.informativeText = "Enter your usual startup command. The installed retouch CLI wraps it and output appears in Project logs."
+        alert.informativeText = "Enter your usual startup command. The bundled Retouch CLI wraps it and output appears in Project logs."
         let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 480, height: 26))
         let key = "projectCommand:" + folder.path
         input.stringValue = UserDefaults.standard.string(forKey: key) ?? ""
@@ -70,7 +71,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate {
             DispatchQueue.main.async {
                 guard let self = self, self.projectProcess === finished else { return }
                 self.appendLog("\nProject exited (" + String(finished.terminationStatus) + ").\n")
-                self.status.stringValue = finished.terminationStatus == 127 ? "Startup executable not found. Check Project logs and install the Retouch CLI if missing." : "Project stopped. See Project logs for details."
+                self.status.stringValue = finished.terminationStatus == 127 ? "Startup executable not found. Check Project logs and ensure Node and your command are available." : "Project stopped. See Project logs for details."
                 self.projectProcess = nil; self.projectPipe = nil
                 self.projectButton.isEnabled = true; self.stopButton.isEnabled = false
             }
@@ -221,7 +222,7 @@ if CommandLine.arguments.contains("--self-test") {
         precondition(Studio.editorURL(invalid) == nil, invalid)
     }
     let command = "printf '%s' \"literal $HOME and `ticks`\""
-    precondition(Studio.launchArguments(command).last == "exec 'retouch' -- /bin/zsh -l -c " + Studio.shellQuote(command))
+    precondition(Studio.launchArguments(command).last == "exec " + Studio.shellQuote(Studio.bundledCLI) + " -- /bin/zsh -l -c " + Studio.shellQuote(command))
     let quotingTest = Process(), output = Pipe()
     quotingTest.executableURL = URL(fileURLWithPath: "/bin/zsh")
     quotingTest.arguments = ["-c", "printf '%s' " + Studio.shellQuote(command)]
@@ -229,13 +230,15 @@ if CommandLine.arguments.contains("--self-test") {
     try! quotingTest.run(); quotingTest.waitUntilExit()
     precondition(String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self) == command)
     precondition(quotingTest.terminationStatus == 0)
-    if let index = CommandLine.arguments.firstIndex(of: "--launch-cli"), CommandLine.arguments.count > index + 1 {
+    let cliIndex = CommandLine.arguments.firstIndex(of: "--launch-cli")
+    let testCLI = cliIndex.flatMap { CommandLine.arguments.count > $0 + 1 ? CommandLine.arguments[$0 + 1] : nil }
+    if testCLI != nil || CommandLine.arguments.contains("--launch-bundled") {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("retouch-native-launch-" + UUID().uuidString)
         try! FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
         let launch = Process(), capture = Pipe()
         launch.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        launch.arguments = Studio.launchArguments("printf '%s' \"$PWD\"; exit 7", cli: CommandLine.arguments[index + 1])
+        launch.arguments = Studio.launchArguments("printf '%s' \"$PWD\"; exit 7", cli: testCLI)
         launch.currentDirectoryURL = folder; launch.standardOutput = capture
         try! launch.run(); launch.waitUntilExit()
         let cwd = String(decoding: capture.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)

@@ -11,7 +11,8 @@ process.stdout.write(`cask "retouch-studio" do
   name "Retouch"
   desc "Visual design editor for websites connected to local source"
   homepage "https://github.com/philipshen/retouch"
-  depends_on macos: ">= :ventura"
+  depends_on formula: "node"
+  depends_on macos: :ventura
   app "Retouch.app"
   zap trash: "~/Library/Preferences/design.retouch.studio.plist"
 end

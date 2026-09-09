@@ -11,15 +11,16 @@ open desktop/dist/Retouch.app
 ```
 
 Click **Open project…**, choose a folder, and enter your usual startup command.
-The app runs it through the installed `retouch` CLI using a login zsh and the
+The app runs it through its bundled Retouch CLI using a login zsh and the
 selected working directory. **Project logs** shows output; **Stop** signals the
 owned CLI, which handles its process group. The command is remembered per folder.
 Only one app-owned project runs at a time, and quitting signals that project to
 stop. Commands execute only from the native startup dialog; page content has no
 native command bridge.
 
-The CLI and Node must currently be installed and available to the login shell;
-they are not bundled in this app. A missing executable is reported in the status
+The build includes the CLI and its locked production dependencies under
+`Contents/Resources/retouch`. Node 22 or later must be available to the login
+shell; the generated cask declares the Homebrew `node` formula dependency. A missing executable is reported in the status
 and logs. You can also start a project externally through
 `retouch -- <your usual command>`. Enter its local `/rt` URL in the app. The app checks the sidecar health endpoint before
 opening the editor. Cmd+L focuses the address and Cmd+R reloads the editor.
@@ -37,8 +38,9 @@ node desktop/scripts/cask.cjs <release-zip-url> <sha256> > retouch-studio.rb
 The generator accepts a `file:///...` URL for local packaging verification.
 Follow the [Homebrew Cask Cookbook](https://docs.brew.sh/Cask-Cookbook) to place
 the generated cask in the release tap. No public tap or downloadable desktop
-release is published yet. A successful build is not evidence that Homebrew
-installation, upgrades or Gatekeeper distribution work.
+release is published yet. Local cask installation and uninstall were verified
+using an isolated app directory and temporary local tap. Upgrade and trusted
+Gatekeeper launch remain unverified.
 
 The default signature is ad hoc for local development. Set
 `RETOUCH_SIGN_IDENTITY` to a Developer ID Application identity for release
@@ -60,4 +62,15 @@ desktop/dist/Retouch.app/Contents/MacOS/Retouch --self-test --launch-cli "$PWD/r
 This launcher test passed on Apple Silicon. The new folder picker, startup dialog,
 log window and Stop control still need native UI verification; the computer-use
 service returned `cgWindowNotFound` in the latest verification attempt. This does
-not prove a complete desktop startup-to-editing flow or a self-contained cask.
+not prove a complete desktop startup-to-editing flow or trusted distribution.
+
+The build now runs `--self-test --launch-bundled` against the packaged CLI. A
+relocated bundle with spaces in its path passes that test and signature
+verification. Its CLI also started the real Next.js fixture and served `/rt`
+successfully. No globally installed Retouch command is required.
+
+A local `brew install --cask --appdir=<isolated-directory>` using the generated
+cask and actual ZIP/hash succeeded, and uninstall removed the app. The installed
+app retained quarantine and stalled at `_dyld_start` before its self-test; that
+process was stopped without removing quarantine. Signed/notarized launch remains
+unproven. The generated cask now uses the current `macos: :ventura` syntax.

@@ -26,8 +26,8 @@ changing those files. The original checkout may continue to evolve independently
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React and Shopify/Liquid adapters only. Generic site capture/edit document and additional adapters remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | New presets/custom dimensions/rotation/persistence resize the actual iframe. Zoom preserves fixed viewport dimensions and vh. Real browser test passes. Breakpoint-scoped class edits, loaded-CSS discovery, inheritance reset and exact undo are browser-verified on React/Tailwind. Linked views, continuous resize handles and the full cross-framework responsive workflow remain. |
-| Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView app builds and connects to live local editor. It currently requires CLI startup. Full desktop editor behavior, Intel runtime, onboarding and lifecycle verification remain. |
-| Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. Development build is ad hoc signed. Developer ID signing/notarization, publishing and actual Homebrew installation remain unverified. |
+| Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView app builds and connects to live local editor. Native project startup uses the bundled CLI and an installed Node runtime. Full desktop editor behavior, Intel runtime, onboarding and lifecycle verification remain. |
+| Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. Development build is ad hoc signed. Local cask install/uninstall passed. Developer ID signing/notarization, publishing, upgrades and quarantined launch remain unverified. |
 | Ease of use | New user can open a site, select/edit, compare screens, undo and retain work without learning implementation details | Controls have labels and basic defaults. Whole-workflow usability validation remains. |
 
 Figma reference material used to anchor the inventory:
@@ -229,7 +229,7 @@ shared project-level screen sets and direct editing remain open.
 ### Native project startup
 
 The desktop app now has Open project, a native folder/command dialog, a project
-log window and Stop. Startup delegates to the installed CLI with the selected
+log window and Stop. Startup delegates to the bundled CLI with the selected
 working directory and usual command; the app owns one project process at a time.
 Quit signals the owned CLI. No native command bridge is exposed to web content.
 The universal arm64/x86_64 build, ad hoc signature verification, URL/quoting test
@@ -238,6 +238,23 @@ status propagation through the same launch-argument builder.
 
 The computer-use service returned `cgWindowNotFound`, so native dialog/log/Stop
 interaction and a complete project-startup-to-editing flow remain unverified.
-CLI/Node bundling, automatic URL discovery, signed/notarized distribution and
-actual brew-cask installation are still missing. The current app requires an
-installed Retouch CLI and Node on the login shell's PATH.
+Automatic URL discovery and signed/notarized distribution are still missing.
+The current app bundles the CLI; Node must be on the login shell's PATH.
+
+### Packaged CLI and local cask installation
+
+The desktop build stages the CLI from source and installs only production
+packages from the lockfile, with lifecycle scripts disabled. It copies that
+closure into app resources before signing. The native launcher resolves the CLI
+relative to its bundle, including after relocation to a path with spaces. Both
+the native bundled-launch self-test and a real Next.js dev-server launch from the
+relocated packaged CLI passed. The editor health endpoint and browser shell loaded.
+
+The generated cask declares Node as a formula dependency. Local installation of
+the actual archive/hash into an isolated app directory succeeded; signature
+verification passed. The quarantined installed binary stalled before main
+(`_dyld_start` in a process sample), so its runtime self-test was stopped without
+removing quarantine. This does not prove Gatekeeper launch. Uninstall, temporary
+tap removal and test trust-entry cleanup were completed. The generator's old
+macOS comparison syntax was replaced with `macos: :ventura` after Homebrew's
+warning. Public release hosting, signing/notarization and upgrade tests remain.
