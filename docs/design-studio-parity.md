@@ -2547,3 +2547,27 @@ exclusion and Interact-mode exclusion, alongside the existing history and reload
 checks. Logs: `/private/tmp/retouch-lock-shortcut-{chromium,webkit,unit}.log`.
 The work remains on the isolated design-studio branch. Full parity and trusted Mac
 distribution remain unfinished; the packaged app still predates lock support.
+
+## Find and recover locked layers
+
+The Layers tree now offers Locked layers only and Unlock shown locks. The lock
+filter composes with text search, retains ancestor context and temporarily opens
+collapsed branches without discarding their stored collapse state. Empty results
+explain whether no locks exist or no locked layers match. Unlock shown locks
+removes direct locks represented in the filtered tree as one undoable action;
+locks outside those results remain unchanged. Recovery controls stay available
+without a current canvas selection.
+
+Chromium and WebKit pass filtering, ancestor context, temporary branch expansion,
+collapse-state restoration, empty results, filtered unlock/undo and preservation
+of locks hidden by search, within the complete lock/history/reload workflow.
+The existing layer-interaction regression and all 334 unit/HTTP tests pass.
+Logs: `/private/tmp/retouch-lock-recovery-{chromium-final,webkit-final,interactions,unit}.log`.
+Visual inspection found and corrected the checkbox's inherited full-width styling
+and matched the recovery button to the tree controls. The final Chromium workflow
+passed in `/private/tmp/retouch-lock-recovery-visual-final.log`; screenshot
+`/private/tmp/retouch-lock-recovery-final.png` was inspected.
+
+Full feature parity, arbitrary-site source authoring, durable lock identity and
+trusted Mac distribution remain unfinished. The existing Mac archive predates
+these lock controls.

@@ -45,7 +45,12 @@
     actions.append(lockSelection,unlockSelection);
     const reason=document.createElement('p');reason.className='layer-reason';
     const multiEnabled=multiSelectEnabled&&typeof onSelectMany==='function',selectAll=document.createElement('button');selectAll.textContent='Select visible layers';selectAll.className='layer-select-all';selectAll.hidden=!multiEnabled;
-    host.append(header,search,selectAll,tree,empty,actions,reason);
+    const lockFilter=document.createElement('label'),lockedOnly=document.createElement('input'),unlockShown=document.createElement('button');
+    lockedOnly.type='checkbox';lockFilter.append(lockedOnly,' Locked layers only');lockFilter.className='layer-lock-filter';lockFilter.hidden=!locks;
+    unlockShown.textContent='Unlock shown locks';unlockShown.className='layer-select-all';unlockShown.hidden=!locks||!onLock;unlockShown.disabled=true;
+    unlockShown.title='Unlock direct locks shown in this filtered tree as one undoable action.';
+    unlockShown.onclick=()=>onLock(rows.filter(row=>locks.direct(row.item.el)).map(row=>row.item.el),false);
+    host.append(header,search,lockFilter,unlockShown,selectAll,tree,empty,actions,reason);
     let d=null,observer=null,timer=null,selected=null,rows=[],collapsed=new WeakSet(),lastCapabilities=null,isBusy=false,dragged=null,selectedSet=new Set(),rangeAnchor=null;
     function clearTargets(){for(const row of rows)row.button.classList.remove('drop-target','drop-before','drop-after');}
     function endDrag(){dragged=null;clearTargets();for(const row of rows)row.button.classList.remove('dragging');}
@@ -64,12 +69,12 @@
       const previous=new Map(rows.map(row=>[row.item.el,row]));rows=[];
       const query=search.value.trim().toLowerCase();
       const matches=new Map();
-      function matched(item){if(!matches.has(item))matches.set(item,item.label.toLowerCase().includes(query)||item.children.some(matched));return matches.get(item);}
+      function matched(item){if(!matches.has(item))matches.set(item,((!lockedOnly.checked||locks?.locked(item.el))&&item.label.toLowerCase().includes(query))||item.children.some(matched));return matches.get(item);}
       function walk(items,depth) {
         for(const item of items) {
-          if(query&&!matched(item))continue;
+          if((query||lockedOnly.checked)&&!matched(item))continue;
           const prior=previous.get(item.el),row=prior?.row||document.createElement('div');row.className='layer-row';row.style.paddingLeft=(depth-1)*12+'px';
-          const expanded=!!query||!collapsed.has(item.el);
+          const expanded=!!query||lockedOnly.checked||!collapsed.has(item.el);
           const toggle=prior?.toggle||document.createElement('button');toggle.className='layer-toggle';toggle.tabIndex=-1;
           toggle.textContent=item.children.length?(expanded?'▾':'▸'):'';
           toggle.disabled=isBusy||!item.children.length;toggle.setAttribute('aria-label',(expanded?'Collapse ':'Expand ')+item.label);
@@ -122,12 +127,13 @@
       for(const child of [...tree.children])if(!retained.has(child))child.remove();
       for(let i=0;i<rows.length;i++)if(tree.children[i]!==rows[i].row)tree.insertBefore(rows[i].row,tree.children[i]||null);
       if(rows.length&&!rows.some(r=>r.button.tabIndex===0))rows[0].button.tabIndex=0;
-      empty.textContent=rows.length?'':query?'No matching layers.':'No source-connected layers on this page yet.';
+      empty.textContent=rows.length?'':lockedOnly.checked?(query?'No locked layers match.':'No locked layers.'):query?'No matching layers.':'No source-connected layers on this page yet.';
       empty.hidden=!!rows.length;
       selectAll.disabled=isBusy||!selectionRows().length;
+      unlockShown.disabled=isBusy||!rows.some(row=>locks?.direct(row.item.el));
       if(focused)rows.find(r=>r.item.el===focused)?.button.focus();
     }
-    search.oninput=render;
+    search.oninput=render;lockedOnly.onchange=render;
     function attach(next) {
       if(d===next)return;
       observer?.disconnect();clearTimeout(timer);endDrag();rangeAnchor=null;d=next;collapsed=new WeakSet();render();
@@ -146,6 +152,7 @@
         if(!rows.some(r=>r.button.tabIndex===0)&&rows[0])rows[0].button.tabIndex=0;
         rows.find(r=>r.item.el===el)?.button.scrollIntoView({block:'nearest'});
       }
+      unlockShown.disabled=busy||!rows.some(row=>locks?.direct(row.item.el));
       lockSelection.disabled=busy||![...selectedSet].some(el=>!locks?.direct(el));
       unlockSelection.disabled=busy||![...selectedSet].some(el=>locks?.direct(el));
       const s=info?.structure;

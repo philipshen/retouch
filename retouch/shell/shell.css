@@ -303,3 +303,7 @@ details.advanced > summary:hover { color: var(--ink); }
 .layer-lock { flex:0 0 26px; font-size:11px; opacity:0; }
 .layer-row:hover .layer-lock, .layer-row:focus-within .layer-lock, .layer-lock[aria-pressed="true"], .layer-lock:hover, .layer-lock:focus-visible { opacity:1; }
 .layer-lock:disabled { cursor:default; }
+
+.layer-lock-filter { display:flex; align-items:center; gap:5px; font-size:12px; margin:6px 0; }
+.layer-lock-filter[hidden] { display:none; }
+#layersPanel .layer-lock-filter input { flex:0 0 14px; width:14px; height:14px; padding:0; margin:0; }
