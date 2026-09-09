@@ -753,6 +753,10 @@ function renderPanel() {
 
   const target = (editing?.el.ownerDocument === doc() ? editing.el : null) || matchingEls(activeId()).find(el => inTextScope(el, info));
   if(info.cssAuthoring){
+    const naming=RetouchInspector.section('Layer');
+    const input=document.createElement('input');input.id='layerNameInput';input.type='text';input.maxLength=200;input.value=info.layerName||'';input.placeholder='Use the page’s element label';
+    RetouchInspector.field(naming,'Layer name',input);input.onchange=()=>renameLayer(input.value);
+    RetouchInspector.note(naming,'Names appear in the editor without changing page text or accessibility labels. Clear to use the original label.');panelBody.append(naming);
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
     panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS));
     if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{}));
@@ -1304,6 +1308,15 @@ async function writeSrc(src, isUndo, info) {
 }
 
 /* ---------- ops ---------- */
+async function renameLayer(name){
+  if(!sel?.info.canRename)return;const info=sel.info;busyPanel(true);
+  try{
+    const result=await api('POST','/rt/__api/op',{type:'renameElement',id:info.id,fileHash:info.hash,name});
+    if(!result?.ok)return toast(result?.reason||result?.error||'Could not name layer','err');
+    if(result.undoId)editorHistory.record({type:'renameElement',id:info.id,undoId:result.undoId});
+    sel.info=result.element;await reloadFrame();renderPanel();toast('Layer named','ok');
+  }finally{busyPanel(false);}
+}
 async function setHTMLCSS(property,value,width){
   if(!sel)return;const info=sel.info;busyPanel(true);
   try{
@@ -1537,6 +1550,7 @@ async function structureAction(action) {
   if(!sel || panelTasks || undoBusy)return;
   await commitInlineEdit();
   const info=sel?.info;if(!info)return;
+  if(action==='renameElement'){const input=document.getElementById('layerNameInput');input?.focus();input?.select();return;}
   if(action==='insertText'||action==='insertFrame')return insertLayer(action==='insertText'?'text':'frame',info);
   const target=matchingEls(info.id).find(el=>inTextScope(el,info));
   if(!target?.parentElement)return;

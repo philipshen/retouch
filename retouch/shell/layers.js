@@ -2,7 +2,7 @@
   'use strict';
   function label(el) {
     const tag=el.tagName.toLowerCase();
-    const name=el.getAttribute('aria-label') || el.getAttribute('alt') || el.id ||
+    const name=el.getAttribute('data-rt-name') || el.getAttribute('aria-label') || el.getAttribute('alt') || el.id ||
       [...el.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join(' ').trim().replace(/\s+/g,' ');
     return tag+(name?' · '+name.slice(0,70):'');
   }
@@ -50,6 +50,7 @@
           if(item.children.length)b.setAttribute('aria-expanded',String(expanded));
           b.onclick=()=>onSelect(item.el);
           b.onkeydown=async e=>{
+            if(e.key==='F2'){e.preventDefault();if(!isBusy){if(selected!==item.el)await onSelect(item.el);onAction('renameElement');}return;}
             if((e.metaKey||e.ctrlKey)&&['c','v'].includes(e.key.toLowerCase())){e.preventDefault();if(!isBusy){if(selected!==item.el)await onSelect(item.el);onAction(e.key.toLowerCase()==='c'?'copyElement':'pasteElement');}return;}
             if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='d'){e.preventDefault();if(!isBusy){if(selected!==item.el)await onSelect(item.el);onAction('duplicateElement');}return;}
             if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();if(!isBusy){if(selected!==item.el)await onSelect(item.el);onAction('deleteElement');}return;}
@@ -77,7 +78,7 @@
     function attach(next) {
       if(d===next)return;
       observer?.disconnect();clearTimeout(timer);d=next;collapsed=new WeakSet();render();
-      if(d?.body){observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(render,100);});observer.observe(d.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['data-rt','data-rt-i','id','aria-label','alt']});}
+      if(d?.body){observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(render,100);});observer.observe(d.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['data-rt','data-rt-i','data-rt-name','id','aria-label','alt']});}
     }
     function selection(el,info,busy=false) {
       if(isBusy!==busy){isBusy=busy;for(const r of rows){r.button.disabled=busy;r.toggle.disabled=busy||!r.item.children.length;}host.setAttribute('aria-busy',String(busy));}

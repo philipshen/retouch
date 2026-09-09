@@ -54,5 +54,9 @@ test('HTML page catalog uses navigable encoded routes and excludes private or re
   const result=await (await fetch(base+'/rt/__api/pages',{headers:{'x-retouch-token':token}})).json();
   assert.equal(result.available,true);assert.deepEqual(result.pages.map(p=>p.url).sort(),['/','/about%20us.html','/guide/','/index.htm']);
   for(const page of result.pages)assert.equal((await fetch(base+page.url)).status,200,page.path);
+  fs.writeFileSync(path.join(root,'new.html'),'<html><body><h1>Just created</h1></body></html>');
+  const created=await (await fetch(base+'/new.html')).text(),id=/<h1 data-rt="([a-f0-9]+)"/.exec(created)[1];
+  const resolved=await (await fetch(base+'/rt/__api/resolve?id='+id,{headers:{'x-retouch-token':token}})).json();assert.equal(resolved.ok,true,'served new pages resolve immediately');
+
  }finally{server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 });

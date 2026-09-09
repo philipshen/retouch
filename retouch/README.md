@@ -175,6 +175,11 @@ thumbnail previews, or **Choose image…** to upload into `rt-assets`. Undo rest
 the image reference; uploaded files remain in the folder for reuse. Hidden files,
 dependency directories and symlinks are excluded from the image list.
 
+Use **Layer name** to name an HTML layer for the editor, or press F2 on its
+focused layer row. Names participate in layer search and Undo/Redo. Clear the
+name to return to the page’s original label. Visible text and accessibility
+labels are preserved.
+
 Select an HTML content container and choose **Add text** or **Add frame**. The
 new layer is selected immediately; a frame can contain further text and frames.
 New frames start with a visible dashed border and minimum height, which can be

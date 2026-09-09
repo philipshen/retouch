@@ -8,6 +8,7 @@ function start({root,port=9400,quiet=false}){
  if(!fs.statSync(root).isDirectory())throw Error('Choose an HTML web directory.');
  if(!Number.isInteger(port)||port<0||port>65535)throw Error('Invalid port.');
  const adapter={...html,pages:()=>require('./html-pages.cjs').list(root),assets:{directory:'.',urlPrefix:'/',uploadDirectory:'rt-assets',excludeDirectories:['node_modules'],imageOnly:true},describe:r=>({...html.describe(r),...css.describe(r),classNameDynamic:true,classNameReason:reason}),planOp:(r,op)=>op.type==='setCSS'?css.plan(r,op):op.type==='setClasses'?{ok:false,refused:true,reason}:html.planOp(r,op)};
+ let server;
  function serveSite(req,res){
   const fail=(status,message)=>{res.writeHead(status,{'content-type':'text/plain'});res.end(message);};
   if(!['GET','HEAD'].includes(req.method))return fail(405,'method not allowed');
@@ -22,11 +23,15 @@ function start({root,port=9400,quiet=false}){
    if(!file.startsWith(root+path.sep))return fail(403,'outside web directory');
    const type=types[path.extname(file).toLowerCase()];if(!type||!fs.statSync(file).isFile())return fail(404,'not found');
    let body=fs.readFileSync(file);
-   if(html.matches(file))body=Buffer.from(html.stamp(body.toString('utf8'),file,root)?.code||body);
+   if(html.matches(file)){
+    server.retouchIndex.indexFile(file);
+    body=Buffer.from(html.stamp(body.toString('utf8'),file,root)?.code||body);
+   }
    res.writeHead(200,{'content-type':type,'cache-control':'no-store','x-content-type-options':'nosniff','x-frame-options':'SAMEORIGIN'});
    res.end(req.method==='HEAD'?undefined:body);
   }catch(err){return fail(err.code==='ENOENT'?404:500,err.code==='ENOENT'?'not found':'could not serve file');}
  }
- return require('./server.cjs').startServer({appRoot:root,port,adapter,serveSite,rendering:{reloadAfterWrite:true,revalidateStyles:true},quiet});
+ server=require('./server.cjs').startServer({appRoot:root,port,adapter,serveSite,rendering:{reloadAfterWrite:true,revalidateStyles:true},quiet});
+ return server;
 }
 module.exports={start};

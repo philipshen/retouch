@@ -186,6 +186,16 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===beforeFill,'fill is one undo step');
   for(let i=0;i<2;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'flex setup exact undo');
+
+  await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();const name=page.getByLabel('Layer name',{exact:true});await name.fill('Hero & title');await name.press('Tab');
+  await wait(async()=>await page.getByRole('treeitem',{name:'h1 · Hero & title',exact:true}).count()===1,'layer renamed');await settled();
+  assert.equal(await app.locator('h1').textContent(),'Hello HTML');assert.equal(await app.locator('h1').getAttribute('aria-label'),null);
+  const namedSource=read();await page.getByLabel('Find a layer',{exact:true}).fill('Hero');assert.equal(await page.getByRole('treeitem',{name:'h1 · Hero & title',exact:true}).count(),1);await page.getByLabel('Find a layer',{exact:true}).fill('');
+  const namedRow=page.getByRole('treeitem',{name:'h1 · Hero & title',exact:true});await namedRow.click();await settled();await wait(async()=>await namedRow.getAttribute('aria-selected')==='true'&&await page.locator('#layersPanel').getAttribute('aria-busy')!=='true','rename selection ready');await namedRow.press('F2');
+  await wait(()=>page.evaluate(()=>document.activeElement?.id==='layerNameInput'),'F2 naming focus');
+  await name.fill('');await name.press('Tab');await wait(async()=>await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).count()===1,'clear layer name');await settled();
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===namedSource,'clear name undo');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'rename exact undo');
   assert.deepEqual(errors,[]);console.log(engine+': PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

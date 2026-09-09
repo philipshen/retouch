@@ -42,7 +42,7 @@ function picture(el){for(let p=el.node.parentNode;p;p=p.parentNode)if(p.tagName=
 function describe(resolved){
  const el=resolved.element,canText=!!plain(el),canSrc=el.tag==='img'&&attr(el,'srcset')===null&&!picture(el);
  return {structure:{...structure.describe(resolved,'html'),...insertion.describe(resolved)},id:el.id,kind:'host',tag:el.tag,file:resolved.relPath,hash:resolved.hash,className:attr(el,'class')||'',classNameDynamic:false,
-  text:canText?el.node.childNodes.map(n=>n.value).join(''):null,textDynamic:!canText,mixedText:false,canSetChildren:false,
+  canRename:true,layerName:attr(el,'data-rt-name')||'',text:canText?el.node.childNodes.map(n=>n.value).join(''):null,textDynamic:!canText,mixedText:false,canSetChildren:false,
   textReason:canText?null:'This HTML region contains nested markup, comments, or an implicit closing tag.',
   src:attr(el,'src'),srcDynamic:false,canSetSrc:canSrc,srcReason:canSrc?null:'Select a plain image without responsive sources.',
   canSetTag:!!el.location.endTag&&textTags.has(el.tag),context:resolved.context||null};
@@ -57,7 +57,11 @@ function planOp(resolved,op){
   if(old)out.overwrite(old.startOffset,old.endOffset,token);
   else out.appendLeft(el.location.startTag.startOffset+1+el.tag.length,' '+token);
  }
- if(op.type==='setClasses'){
+ if(op.type==='renameElement'){
+  if(typeof op.name!=='string'||op.name.length>200||/[\x00-\x1f\x7f]/.test(op.name))return refuse('Use a single-line layer name of up to 200 characters.');
+  const name=op.name.trim(),old=el.location.attrs?.['data-rt-name'];
+  if(name)setAttr('data-rt-name',name);else if(old)out.remove(old.startOffset,old.endOffset);
+ }else if(op.type==='setClasses'){
   if(typeof op.classes!=='string'||op.classes.length>100000||/[\0-\x08\x0b\x0c\x0e-\x1f]/.test(op.classes))return refuse('Invalid class string.');
   setAttr('class',op.classes);
  }else if(op.type==='setText'){
@@ -74,6 +78,7 @@ function planOp(resolved,op){
   setAttr('src',op.src);
  }else return refuse('This HTML operation is not implemented.');
  const after=out.toString();
+ if(after===resolved.source)return {ok:true,hash:resolved.hash,edits:[]};
  const beforeElements=resolved.elements||collect(resolved.source,resolved.relPath).elements;
  const nextElements=collect(after,resolved.relPath).elements;
  if(beforeElements.length!==nextElements.length||beforeElements.some((before,i)=>before.id!==nextElements[i].id||nextElements[i].tag!==(before.id===el.id&&op.type==='setTag'?op.tag:before.tag)))return refuse('This edit changes the parsed HTML structure. Use a structured document operation.');
@@ -81,4 +86,4 @@ function planOp(resolved,op){
 }
 module.exports={name:'html',matches:file=>/\.html?$/i.test(file),collect,stamp,contentHash:hash,describe,planOp,
  applyOp:(resolved,op)=>require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),planOp(resolved,op)),
- capabilities:{classAttr:'class',ops:['insertElement','setClasses','setText','setTag','setSrc',...structure.types]}};
+ capabilities:{classAttr:'class',ops:['renameElement','insertElement','setClasses','setText','setTag','setSrc',...structure.types]}};

@@ -50,3 +50,13 @@ test('HTML responsive images, foreign SVG, implicit tags and reserved stamps are
  assert.ok(!els.some(e=>e.tag==='svg'||e.tag==='text'));
  const stamped=html.stamp(text,'page.html').code;assert.ok(!stamped.includes('data-rt="old"'));
 });
+
+// Layer names are design metadata; page text and accessibility remain authored.
+test('HTML layer names preserve semantics and escape source markup',()=>{
+ const source='<html><body><h1 aria-label="Heading">Visible title</h1></body></html>',elements=html.collect(source,'index.html').elements;
+ const resolved={source,file:'/tmp/index.html',relPath:'index.html',hash:html.contentHash(source),elements,element:elements.find(e=>e.tag==='h1')};
+ const result=html.planOp(resolved,{type:'renameElement',name:'Hero & "title"'});assert.equal(result.ok,true);
+ assert.ok(result.edits[0].after.includes('data-rt-name="Hero &amp; &quot;title&quot;"'));
+ assert.ok(result.edits[0].after.includes('aria-label="Heading">Visible title</h1>'));
+ assert.equal(html.planOp(resolved,{type:'renameElement',name:'Bad\nname'}).refused,true);
+});

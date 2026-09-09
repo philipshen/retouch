@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 222 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 223 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -621,3 +621,21 @@ extracted with system unzip into `/private/tmp/retouch-playwright-browsers`.
 WebKit verification used that `PLAYWRIGHT_BROWSERS_PATH`; the partial default-cache
 file was removed. This verifies the Playwright WebKit engine, not the packaged
 AppKit application, Gatekeeper launch or a signed public cask release.
+
+
+### HTML layer names and immediate page selection
+
+HTML layer names persist in `data-rt-name`, leaving text and accessibility
+attributes intact. The inspector exposes naming, layer search uses the name,
+and F2 on a focused row opens the field. Clearing restores the original label;
+undo restores exact source snapshots. Names are escaped and bounded to one line.
+
+A browser pass also exposed an indexing race for newly created pages. An HTTP
+regression test reproduced it: serving a new page could precede the index watcher.
+The HTML server now indexes a document before returning its stamped markup, so
+its elements resolve immediately.
+
+All 223 tests pass. Chromium and WebKit HTML suites verify rename, search, F2,
+clear, preserved page text/accessibility and exact undo. The direct HTTP check
+verifies immediate selection of a just-created file. Naming in other source
+adapters and bulk layer naming remain open.
