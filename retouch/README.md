@@ -189,3 +189,19 @@ independent identities. Layers with authored IDs, keys or refs cannot yet be
 duplicated. Undo restores exact source snapshots.
 
 Rich markup editing, general reparenting and remote-site capture remain open.
+
+
+### HTML browser verification
+
+From `retouch/`, with Playwright available in a disposable fixture directory:
+
+```sh
+RT_INSPECTOR_FIXTURE=/path/to/fixture npm run test:e2e:html
+RT_E2E_BROWSER=webkit RT_INSPECTOR_FIXTURE=/path/to/fixture npm run test:e2e:html
+```
+
+Install the matching Playwright browsers before running. The command covers the
+HTML editor round trip and horizontal/vertical flex sizing. Both suites create
+and remove their own temporary sites. Set `PLAYWRIGHT_BROWSERS_PATH` when using a
+separate browser cache. WebKit tests exercise the browser engine; the native Mac
+app still needs its own AppKit/WebView integration checks.

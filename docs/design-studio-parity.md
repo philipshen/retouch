@@ -600,3 +600,24 @@ horizontal, vertical-rl, vertical-lr and reversed-direction cases. It checks act
 filled/hugged dimensions, retained cross sizes and exact one-step undo for both
 presets. All six cases passed in Chromium. WebKit runtime validation of these
 specific cases remains outstanding; its Playwright runtime is not installed.
+
+
+### HTML checks across Chromium and WebKit
+
+The HTML editor and flex-writing suites now accept `RT_E2E_BROWSER=chromium` or
+`webkit`. `npm run test:e2e:html` runs both suites. The combined command passed in
+Chromium and WebKit using the fixture's Playwright 1.58.2. WebKit coverage includes
+responsive CSS, typography, assets/uploads, page navigation, structural commands,
+independent styled copies, clipboard actions, creation and flex sizing, with
+source undo checks. The six writing-mode cases also passed in WebKit.
+
+WebKit reports different intrinsic SVG dimensions under the page's image CSS.
+The upload check now requires a decoded image at the uploaded URL and independently
+checks exact saved bytes, avoiding an engine-specific natural-width assertion.
+
+The Node-based browser installer stalled during extraction after download. The
+archive passed `unzip -tq`; the owned installer was stopped and the archive was
+extracted with system unzip into `/private/tmp/retouch-playwright-browsers`.
+WebKit verification used that `PLAYWRIGHT_BROWSERS_PATH`; the partial default-cache
+file was removed. This verifies the Playwright WebKit engine, not the packaged
+AppKit application, Gatekeeper launch or a signed public cask release.

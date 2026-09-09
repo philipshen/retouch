@@ -1,14 +1,16 @@
 'use strict';
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict'),{once}=require('node:events');
 const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_INSPECTOR_FIXTURE for Playwright');
-const {chromium}=require(path.join(fixture,'node_modules/playwright'));
+const engine=process.env.RT_E2E_BROWSER||'chromium';
+if(!['chromium','webkit'].includes(engine))throw Error('RT_E2E_BROWSER must be chromium or webkit');
+const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
 (async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-html-browser-')),file=path.join(root,'index.html');
  const original='<!doctype html><html><head><link rel="stylesheet" href="site.css"></head><body><main><h1 class="title">Hello HTML</h1><p class="title">Unedited sibling</p><img src="first.svg" alt="Study"></main></body></html>';
  fs.writeFileSync(file,original);fs.writeFileSync(path.join(root,'site.css'),'.title{color:rgb(120,30,60);font-size:36px}body{padding:32px}img{width:100px;height:100px}');
  for(const [name,color]of [['first','red'],['second','blue'],['Écran #1','green']])fs.writeFileSync(path.join(root,name+'.svg'),'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="'+color+'"/></svg>');
  const server=require('../../src/html-site.cjs').start({root,port:0,quiet:true});await once(server,'listening');
- const browser=await chromium.launch(),page=await browser.newPage({viewport:{width:1500,height:1100}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const browser=await browserType.launch(),page=await browser.newPage({viewport:{width:1500,height:1100}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  const wait=async(fn,label)=>{for(let i=0;i<100;i++){try{if(await fn())return;}catch(error){if(!/Execution context was destroyed/.test(error.message))throw error;}await page.waitForTimeout(100);}throw Error('Timed out: '+label+'; '+await page.locator('#toasts').textContent());};
  const app=page.frameLocator('#app');
  try{
@@ -93,7 +95,7 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'asset browser undo');
   const upload='<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><rect width="50" height="50" fill="green"/></svg>';
   await page.locator('#panelBody input[type=file]').setInputFiles({name:'uploaded.svg',mimeType:'image/svg+xml',buffer:Buffer.from(upload)});
-  await wait(async()=>await app.locator('img').evaluate(el=>el.complete&&el.naturalWidth===50&&el.currentSrc.includes('/rt-assets/')),'uploaded image loaded');await settled();
+  await wait(async()=>await app.locator('img').evaluate(el=>el.complete&&el.naturalWidth>0&&el.currentSrc.includes('/rt-assets/')),'uploaded image loaded').catch(async error=>{console.error('Upload state',await app.locator('img').evaluate(el=>({src:el.getAttribute('src'),currentSrc:el.currentSrc,complete:el.complete,naturalWidth:el.naturalWidth,naturalHeight:el.naturalHeight})));throw error;});await settled();
   const saved=fs.readdirSync(path.join(root,'rt-assets'));assert.equal(saved.length,1);assert.equal(fs.readFileSync(path.join(root,'rt-assets',saved[0]),'utf8'),upload);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'uploaded source undo');
   assert.equal(fs.readdirSync(path.join(root,'rt-assets')).length,1,'uploaded asset retained for reuse');
@@ -184,6 +186,6 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===beforeFill,'fill is one undo step');
   for(let i=0;i<2;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'flex setup exact undo');
-  assert.deepEqual(errors,[]);console.log('PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
+  assert.deepEqual(errors,[]);console.log(engine+': PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

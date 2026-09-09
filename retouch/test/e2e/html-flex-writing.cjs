@@ -1,7 +1,9 @@
 'use strict';
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict'),{once}=require('node:events');
 const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_INSPECTOR_FIXTURE for Playwright');
-const {chromium}=require(path.join(fixture,'node_modules/playwright'));
+const engine=process.env.RT_E2E_BROWSER||'chromium';
+if(!['chromium','webkit'].includes(engine))throw Error('RT_E2E_BROWSER must be chromium or webkit');
+const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
 (async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-flex-writing-'));
  const cases=[['horizontal-tb','row','width','height'],['horizontal-tb','column','height','width'],['vertical-rl','row','height','width'],['vertical-lr','column','width','height'],['vertical-rl','row-reverse','height','width'],['vertical-rl','column-reverse','width','height']];
@@ -10,7 +12,7 @@ const {chromium}=require(path.join(fixture,'node_modules/playwright'));
   fs.writeFileSync(path.join(root,`case-${i}.html`),source);return source;
  });
  const server=require('../../src/html-site.cjs').start({root,port:0,quiet:true});await once(server,'listening');
- const browser=await chromium.launch(),page=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const browser=await browserType.launch(),page=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  const app=page.frameLocator('#app');
  const wait=async fn=>{for(let i=0;i<100;i++){try{if(await fn())return;}catch(error){if(!/Execution context was destroyed/.test(error.message))throw error;}await page.waitForTimeout(100);}throw Error('Timed out waiting for layout');};
  const settled=()=>wait(async()=>await page.locator('#panelBody').getAttribute('aria-busy')!=='true');
@@ -32,6 +34,6 @@ const {chromium}=require(path.join(fixture,'node_modules/playwright'));
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===filled);
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===originals[index]);
   }
-  assert.deepEqual(errors,[]);console.log('PASS horizontal, vertical and reversed flex fill/hug dimensions, cross-size preservation and exact one-step undo');
+  assert.deepEqual(errors,[]);console.log(engine+': PASS horizontal, vertical and reversed flex fill/hug dimensions, cross-size preservation and exact one-step undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
