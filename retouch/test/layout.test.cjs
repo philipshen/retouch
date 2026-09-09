@@ -37,3 +37,15 @@ test('size limits validate units and retain explicit unlimited/intrinsic values'
  for(const v of ['-1','NaN','1px] hidden','auto','calc(100% - 1px)'])assert.throws(()=>L.limitValue(v,'max-width'));
  assert.throws(()=>L.limitClasses('','bad','1'));
 });
+
+test('grid spans replace axis placement without altering other axes, sizes or scopes',()=>{
+ assert.equal(L.spanClasses('col-start-2 col-end-4 col-span-2 row-span-2 w-full md:col-span-3','column',3),'row-span-2 w-full md:col-span-3 col-span-3');
+ assert.equal(L.spanClasses('!row-[2_/_5] col-start-2','row','full'),'col-start-2 !row-span-full');
+ assert.equal(L.spanClasses('col-span-full','column','auto'),'col-auto');
+ assert.equal(L.spanClasses('col-card -col-start-2 col-end-[footer] row-card','column',2),'col-card row-card col-span-2');
+ assert.equal(R.replaceScope('col-span-2 md:col-start-3',L.spanClasses('col-start-3','column',1),'md:'),'col-span-2 md:col-span-1');
+ for(const value of [0,25,NaN,1.5,'2'])assert.throws(()=>L.spanClasses('','row',value));
+ assert.equal(L.spanValue('2','4'),'');
+ assert.equal(L.spanValue('span 3','span 3'),'3');
+ assert.equal(L.spanValue('1','-1'),'full');
+});

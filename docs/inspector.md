@@ -189,3 +189,13 @@ Each preview runs independently, so temporary app state such as open menus is
 not synchronized. Set the main canvas width/height and click **Pin current size** to add a custom
 comparison. The × button removes a card. Up to eight sizes are remembered in
 this browser for the current site; duplicate dimensions cannot be pinned twice.
+
+## Grid spans
+
+Select an in-flow child of a grid to set **Span columns** and **Span rows** in
+Layout. Choose a track count, all tracks, or Auto. Picking a span replaces
+explicit start/end line placement on that axis; other-axis placement and element
+dimensions stay unchanged. A fixed-width item may therefore stay narrower than
+its spanned area; use Fill available to fill it. Spans follow the selected
+breakpoint scope and support undo/redo. Unrepresented explicit placements show
+Custom placement.

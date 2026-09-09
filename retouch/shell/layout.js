@@ -17,6 +17,20 @@
     if(alongFlex)addition=mode==='fill'?`${dim}-auto flex-1`:addition+' flex-none';
     return I.replace(classes,match,addition);
   }
+  function spanClasses(classes,axis,value) {
+    if(!['column','row'].includes(axis))throw Error('Unknown grid axis');
+    if(!['auto','full'].includes(value)&&!(Number.isInteger(value)&&value>=1&&value<=24))throw Error('Choose a span from 1 to 24');
+    const prefix=axis==='column'?'col':'row';
+    const placement=new RegExp('^-?'+prefix+'-(?:auto|span-(?:full|\\d+|\\[.+\\])|(?:start|end)-(?:auto|\\d+|\\[.+\\])|\\d+|\\[.+\\])$');
+    return I.replace(classes,t=>placement.test(t),prefix+'-'+(typeof value==='number'?'span-'+value:value==='full'?'span-full':'auto'));
+  }
+  function spanValue(start,end) {
+    if(start==='auto'&&end==='auto')return 'auto';
+    if(start==='1'&&end==='-1')return 'full';
+    const span=/^span (\d+)$/.exec(start);
+    if(span&&end===start)return span[1];
+    return '';
+  }
   const limitKeys=['min-width','max-width','min-height','max-height'];
   function limitValue(value,key) {
     if(!limitKeys.includes(key))throw Error('Unknown size limit');
@@ -68,6 +82,14 @@
       const justify=css.justifyContent==='normal'?'start':css.justifyContent.replace('flex-','').replace('space-','');
       I.select(sec,'Distribute children',[['start','Start'],['center','Center'],['end','End'],['between','Space between'],['around','Space around'],['evenly','Space evenly']],justify,v=>save(I.replace(classes,t=>/^justify-(?!items-|self-)/.test(t),'justify-'+v)));
     }
+    if(parent&&/grid/.test(parent.display)&&!['absolute','fixed'].includes(css.position)) {
+      const counts=Array.from({length:24},(_,i)=>[String(i+1),String(i+1)]);
+      for(const axis of ['column','row']) {
+        const prop=axis==='column'?'gridColumn':'gridRow';
+        I.select(sec,axis==='column'?'Span columns':'Span rows',[['','Custom placement'],['auto','Auto'],['full',axis==='column'?'All columns':'All rows'],...counts],spanValue(css[prop+'Start'],css[prop+'End']),v=>{if(v)save(spanClasses(classes,axis,/^\d+$/.test(v)?Number(v):v));});
+      }
+      I.note(sec,'Choosing a span replaces explicit line placement on that axis. Other dimensions stay unchanged.');
+    }
     for(const [side,short] of [['Top','t'],['Right','r'],['Bottom','b'],['Left','l']]) {
       numeric('Padding '+side.toLowerCase(),parseFloat(css['padding'+side])||0,0,10000,v=>save(I.replace(classes,t=>t.startsWith('p'+short+'-'),`p${short}-[${v}px]`)));
     }
@@ -97,6 +119,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={modeClasses,sizeClasses,limitValue,limitClasses,ownLimit,mount};
+  const api={modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);
