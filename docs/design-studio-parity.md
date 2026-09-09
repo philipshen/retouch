@@ -5436,3 +5436,37 @@ updates, manual edits and resets, removed/added declarations, unrelated style
 identities, corrupt managed CSS, idempotence, successive updates and coincidental
 override matches. Syntax and diff checks passed. No browser UI changed and no
 native launches occurred. Full parity remains unfinished.
+
+### Transactional HTML library updates from the inspector
+
+Update style from this layer now captures current typography and submits an
+undoable source operation. It checks the selected source hash and library
+revision, plans the catalog change and every matching link in the HTML page
+inventory, then commits them through the shared transaction primitive. Pages
+need not have been opened in the editor. Existing per-scope override handling is
+retained. Invalid linked CSS or intervening file edits refuse the transaction.
+One undo/redo covers both the catalog and affected source pages. Rename-only
+planning avoids rewriting pages. The inspector describes the project-wide effect.
+
+Inventory follows the HTML site's existing page discovery, excluding hidden
+paths, node_modules, symlinks and the reserved root rt directory. Updates refuse
+truncated inventories above 1,000 pages or more than 32 MiB of aggregate HTML.
+These are explicit operational bounds, not universal-site coverage. Separate
+process concurrency and files added between inventory and commit remain outside
+this guarantee. Unsupported/unindexed markup requires further coverage. React
+and Liquid linked-style application/updates remain unfinished. The older catalog
+CRUD API is still separate from this source-history operation; direct property
+updates through that endpoint do not propagate. Catalog create/delete/rename UI
+history is also still unfinished.
+
+All 404 unit tests passed, exit 0:
+/private/tmp/retouch-style-update-final-units.log. Transaction tests verify two
+pages and catalog together, exact undo/redo, invalid-page refusal, stale-page
+refusal and rename-only behavior. HTML Chromium and WebKit browser processes
+exited 0 (/private/tmp/retouch-style-update-final-{chromium,webkit}.log): update
+from a layer changes the rendered paragraph plus an unvisited page, then one undo
+restores both source files and catalog exactly. Existing apply/detach and screen
+isolation cases also pass. Initial browser timeout was a fixture error: its
+simulated page font change needed inline important priority to outrank managed
+CSS. No browser product workaround was introduced for it. Syntax and diff checks
+passed. Native launches remain paused; full parity is not achieved.

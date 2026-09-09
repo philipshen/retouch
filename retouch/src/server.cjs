@@ -181,7 +181,11 @@ function handle(req, res, ctx) {
       let result;
       try {
         resolved.context = renderContext(op.context);
-        if (op.type === 'applyTextStyle' || op.type === 'detachTextStyle') {
+        if (op.type === 'updateTextStyle') {
+          if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source layer changed. Re-select it before updating the style.'});
+          if (!ctx.adapter.capabilities?.ops?.includes('setCSS')) return json(res,409,{ok:false,reason:'Linked text style updates are not available for this renderer yet.'});
+          result=applyPlan(ctx.appRoot,require('./text-style-update.cjs').plan(ctx.appRoot,{type:'update',revision:op.libraryRevision,id:op.styleId,name:op.name,properties:op.properties}));
+        } else if (op.type === 'applyTextStyle' || op.type === 'detachTextStyle') {
           if (!ctx.adapter.capabilities?.ops?.includes('setCSS')) return json(res,409,{ok:false,reason:'Linked text style application is not available for this renderer yet.'});
           let style;
           if (op.type === 'applyTextStyle') {

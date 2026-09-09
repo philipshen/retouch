@@ -28,7 +28,7 @@ function read(root){
  const {file}=paths(root);let source;try{source=fs.readFileSync(file,'utf8');}catch(error){if(error.code==='ENOENT')return {version:1,styles:[],revision:null};throw error;}
  let parsed;try{parsed=JSON.parse(source);}catch{fail('The text style library is not valid JSON.',409);}return {...validate(parsed),revision:revision(source)};
 }
-function change(root,operation){
+function planChange(root,operation){
  if(!object(operation)||!['create','update','delete'].includes(operation.type)||Object.keys(operation).some(key=>!['type','revision','id','name','properties'].includes(key)))fail('Invalid text style operation.');
  const {directory,file}=paths(root),source=fs.existsSync(file)?fs.readFileSync(file,'utf8'):null,current=read(root);
  if(operation.revision!==current.revision||revision(source)!==current.revision)fail('Text styles changed. Reload the library before saving.',409);
@@ -36,8 +36,12 @@ function change(root,operation){
  if(operation.type==='create'){if(id!==undefined)fail('New style IDs are assigned by the library.');if(styles.length>=MAX_STYLES)fail('The library supports up to 100 text styles.');id=crypto.randomUUID();styles.push({id,name:name(operation.name),properties:values(operation.properties)});}
  else{const index=styles.findIndex(style=>style.id===id);if(index<0)fail('That text style no longer exists.',409);if(operation.type==='delete')styles.splice(index,1);else styles[index]={id,name:name(operation.name),properties:values(operation.properties)};}
  const library=validate({version:1,styles}),after=JSON.stringify(library,null,2)+'\n';if(Buffer.byteLength(after)>LIMIT)fail('The text style library is too large.',413);
- fs.mkdirSync(directory,{recursive:true});paths(root);
- const applied=applyPlan(root,{ok:true,edits:[{file,before:source,after}]});if(!applied.ok)fail(applied.reason,409);
- return {...library,revision:revision(after),id};
+ return {ok:true,edits:source===after?[]:[{file,before:source,after}],result:{...library,revision:revision(after),id}};
 }
-module.exports={read,change,validate,properties,LIMIT};
+function change(root,operation){
+ const plan=planChange(root,operation),{directory}=paths(root);
+ fs.mkdirSync(directory,{recursive:true});paths(root);
+ const applied=applyPlan(root,plan);if(!applied.ok)fail(applied.reason,409);
+ return plan.result;
+}
+module.exports={read,change,planChange,validate,properties,LIMIT};

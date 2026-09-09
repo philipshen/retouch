@@ -1,0 +1,26 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path');
+const catalog=require('./text-styles.cjs'),linked=require('./html-text-styles.cjs');
+// Compose the complete project change before any source or catalog write.
+// Use the HTML site's page inventory, including pages not visited in the editor.
+function plan(root,operation){
+ try{
+  if(operation?.type!=='update')throw Error('Use a text style update operation.');
+  const before=catalog.read(root),change=catalog.planChange(root,operation);
+  const previous=before.styles.find(style=>style.id===operation.id),next=change.result.styles.find(style=>style.id===operation.id);
+  if(JSON.stringify(previous.properties)===JSON.stringify(next.properties))return {...change,updated:0,pages:0};
+  const inventory=require('./html-pages.cjs').list(root);
+  if(inventory.truncated)throw Error('This project exceeds the 1,000-page text style update limit. No changes were saved.');
+  let bytes=0,updated=0,pages=0;const edits=[...change.edits];
+  for(const page of inventory.pages){
+   const file=path.join(root,page.path),stat=fs.lstatSync(file);
+   if(!stat.isFile()||stat.isSymbolicLink())throw Error('A project page is no longer a regular file. Reload before updating.');
+   bytes+=stat.size;if(bytes>32*1024*1024)throw Error('Project HTML exceeds the 32 MB text style update limit. No changes were saved.');
+   const source=fs.readFileSync(file,'utf8'),planned=linked.planFile(file,page.path,source,next);
+   if(!planned.ok)throw Error(page.path+': '+planned.reason);
+   edits.push(...planned.edits);updated+=planned.updated;if(planned.updated)pages++;
+  }
+  return {...change,edits,updated,pages};
+ }catch(error){return {ok:false,refused:true,reason:error.message};}
+}
+module.exports={plan};
