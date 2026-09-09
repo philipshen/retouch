@@ -93,3 +93,11 @@ test('Opening removes only closing handles and closing makes a straight connecti
   const doc={subpaths:[{nodes,closed:true}]},opened=path.editContour(doc,0,'open').subpaths[0];assert.equal(opened.closed,false);assert.equal(opened.nodes[0].in,undefined);assert.equal(opened.nodes[1].out,undefined);assert.deepEqual(opened.nodes[0].out,nodes[0].out);assert.deepEqual(opened.nodes[1].in,nodes[1].in);
   const closed=path.editContour({subpaths:[opened]},0,'close').subpaths[0];assert.equal(closed.closed,true);assert.equal(closed.nodes[0].in,undefined);assert.equal(closed.nodes[1].out,undefined);
 });
+
+test('Appending drawn contours preserves existing geometry and removes unused open endpoint handles',()=>{
+  const doc=path.parseCompound('M0 0H100V100H0Z'),before=JSON.stringify(doc),added=path.appendContour(doc,nodes,false);
+  assert.equal(added.selected,1);assert.deepEqual(added.subpaths[0],doc.subpaths[0]);assert.equal(added.subpaths[1].nodes[0].in,undefined);assert.equal(added.subpaths[1].nodes[1].out,undefined);assert.deepEqual(added.subpaths[1].nodes[0].out,nodes[0].out);assert.equal(JSON.stringify(doc),before);
+  assert.ok(path.equivalentCompound(added,path.parseCompound(path.serializeCompound(added))));
+  const closed=path.appendContour(doc,nodes,true);assert.deepEqual(closed.subpaths[1],{nodes,closed:true});assert.ok(path.equivalentCompound(closed,path.parseCompound(path.serializeCompound(closed))));
+  assert.equal(path.appendContour(doc,[{x:0,y:0}],false),null);assert.equal(path.appendContour({subpaths:Array(128).fill({nodes:[{x:0,y:0},{x:1,y:1}],closed:false})},nodes,false),null);
+});

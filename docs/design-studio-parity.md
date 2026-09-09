@@ -3235,3 +3235,44 @@ operations and the remaining Figma Design requirements are still open. The
 preview uses outlines; fill-rule changes are rendered by the site after commit.
 Native launches remain paused. This source change does not establish trusted Mac
 distribution or arbitrary-site authoring.
+
+
+### 2026-09-09 — Pen drawing into existing compound paths
+
+Draw contour opens Pen from the path editor. It draws in the selected path's own
+coordinate system, including path-level and ancestor transforms. Finishing an
+open or closed drawing appends a contour to the pending document and selects it;
+Done writes the entire edit as one source/history operation. The path remains a
+single SVG element and retains existing paint, contours and source identity.
+Unused endpoint handles are removed from open appended contours.
+
+Pen cancellation returns to earlier pending point edits. Cancelling the parent
+editor discards all pending changes; source, screen or transform changes tear down
+both tools. Pen shares the parent's stale-geometry guard and remaining anchor
+budget. Its background outlines show the pending document while drawing, so prior
+point edits remain visible. Source and rendered site DOM are untouched until the
+parent edit commits.
+
+All 353 unit tests pass in `/private/tmp/retouch-draw-contour-unit.log`. The first
+React/WebKit test counted SVG paths in Next.js development chrome; that failure is
+retained in `/private/tmp/retouch-draw-contour-react-webkit.log`. The assertion now
+counts only the edited site's SVG content. Coordinate checks use actual delivered
+pointer events and inverse SVG matrices with a 0.01-unit tolerance.
+
+All four final browser workflows pass in
+`/private/tmp/retouch-draw-contour-{html,react}-{chromium,webkit}-context.log`.
+They cover curved append at 50/100/200 percent zoom through nested nonuniform
+transforms, closed straight contours, preserved pending edits and contextual
+outlines, child/parent Escape, source-change/screen-change teardown, unchanged site
+path count, source isolation and exact undo/redo. The inspected
+`/private/tmp/retouch-draw-contour-react-webkit-context.png` shows the pending
+outlines, new curve, tangent handles and Pen actions. Standalone curve creation
+and contour-action regressions passed in
+`/private/tmp/retouch-draw-contour-html-chromium-svg-curves.log` and
+`/private/tmp/retouch-draw-contour-react-webkit-svg-contour-actions.log` before the
+optional background-outline rendering was added.
+
+Arcs, vector networks, booleans/masks, persistent per-anchor constraints and the
+remaining full-parity requirements remain open. Native launches remain paused;
+no desktop build or launch occurred. Full Figma Design parity, unrestricted site
+authoring and trusted Mac distribution remain incomplete.

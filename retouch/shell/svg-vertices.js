@@ -16,11 +16,11 @@
     const preview=root.document.createElementNS(ns,target.tagName.toLowerCase());
     preview.style.cssText='fill:none!important;stroke:#6366f1!important;stroke-width:1.5!important;';
     preview.setAttribute('vector-effect','non-scaling-stroke');drawing.append(preview);surface.append(drawing);
-    let ended=false,drag=null,active=0,activeHandle=null,raf;
+    let ended=false,drag=null,active=0,activeHandle=null,raf,cancelPen=null;
     const initialMatrix=target.getScreenCTM(),matrixValues=m=>m&&[m.a,m.b,m.c,m.d,m.e,m.f];
     const initial=matrixValues(initialMatrix);
     function listen(el,type,fn,options){el.addEventListener(type,fn,options);cleanup.push(()=>el.removeEventListener(type,fn,options));}
-    function cancel(){if(ended)return;ended=true;root.cancelAnimationFrame(raf);cleanup.forEach(f=>f());surface.remove();onEnd();}
+    function cancel(){if(ended)return;ended=true;cancelPen?.();root.cancelAnimationFrame(raf);cleanup.forEach(f=>f());surface.remove();onEnd();}
     function animated(){
       // WebKit can cache animatedPoints across React attribute updates. Inspect
       // SMIL targets instead of treating that stale list as the rendered geometry.
@@ -50,7 +50,7 @@
     const status=root.document.createElement('span');status.setAttribute('role','status');
     status.style.cssText='font:12px system-ui;color:#e5e7eb;';toolbar.append(status);
     function action(label,fn){const b=root.document.createElement('button');b.type='button';b.textContent=label;b.onclick=fn;Object.assign(b.style,{padding:'6px 10px',minHeight:'28px',border:'1px solid #454951',borderRadius:'4px',background:'#2b2e33',color:'#e5e7eb',font:'12px system-ui',cursor:'pointer'});toolbar.append(b);return b;}
-    let handleMode,contourPicker,deleteContourButton,duplicateContourButton,closureButton;
+    let handleMode,contourPicker,deleteContourButton,duplicateContourButton,closureButton,drawContourButton;
     if(subpaths){
       const label=root.document.createElement('label');label.textContent='Contour ';label.style.cssText='font:12px system-ui;color:#e5e7eb;';
       contourPicker=root.document.createElement('select');contourPicker.setAttribute('aria-label','Path contour');contourPicker.style.cssText='padding:6px;background:#2b2e33;color:#e5e7eb;border:1px solid #454951;border-radius:4px;';
@@ -70,10 +70,26 @@
       handleMode.value=handleMovement;handleMode.style.cssText='padding:6px;background:#2b2e33;color:#e5e7eb;border:1px solid #454951;border-radius:4px;';handleMode.onchange=()=>{handleMovement=handleMode.value;};label.append(handleMode);toolbar.append(label);
     }
     if(subpaths){
+      drawContourButton=action('Draw contour',drawContour);drawContourButton.title='Draw a new outline in this path. Finish drawing, then Done saves the path.';
       duplicateContourButton=action('Duplicate contour',()=>restructure('duplicate'));duplicateContourButton.title='Copy this contour with a 10-unit SVG offset';
       deleteContourButton=action('Delete contour',()=>restructure('delete'));deleteContourButton.title='Remove this contour, keeping the rest of the path';
       action('Reverse contour',()=>restructure('reverse')).title='Reverse drawing direction. This can change holes with the nonzero fill rule.';
       closureButton=action('Close contour',()=>restructure(closed?'open':'close'));
+    }
+    function drawContour(){
+      if(drag||!verify()||cancelPen)return;
+      if(totalPoints()>510||subpaths.length>=128){announce('This path has no room for another contour.');return;}
+      surface.style.display='none';
+      cancelPen=root.RetouchSVGPen.mount({target,frame,canvas,maxPoints:512-totalPoints(),isCurrent:current,contextPath:root.RetouchSVGPath.serializeCompound({subpaths}),
+        onEnd:()=>{cancelPen=null;if(!ended){surface.style.display='';rebuild();handles[active].focus({preventScroll:true});}},
+        onError,
+        onCommit:(flat,closed,nodes)=>{
+          if(ended||!verify())return;
+          const drawn=nodes||Array.from({length:flat.length/2},(_,i)=>({x:flat[i*2],y:flat[i*2+1]}));
+          const result=root.RetouchSVGPath.appendContour({subpaths},drawn,closed);
+          if(!result){announce('The new contour exceeds this path’s supported limits.');return;}
+          subpaths.splice(0,subpaths.length,...result.subpaths);selectContour(result.selected);announce('Contour added to preview. Done saves; Escape cancels.');
+        }});
     }
     function restructure(action){
       if(drag||!verify())return;
@@ -89,9 +105,9 @@
     function refreshContours(){
       if(!contourPicker)return;contourPicker.replaceChildren();
       subpaths.forEach((part,i)=>{const option=root.document.createElement('option');option.value=String(i);option.textContent=`${i+1} of ${subpaths.length} · ${part.closed?'Closed':'Open'}`;contourPicker.append(option);});contourPicker.value=String(contour);
-      deleteContourButton.disabled=subpaths.length===1;duplicateContourButton.disabled=subpaths.length>=128||totalPoints()+vertices.length>512;
+      drawContourButton.disabled=subpaths.length>=128||totalPoints()>510;deleteContourButton.disabled=subpaths.length===1;duplicateContourButton.disabled=subpaths.length>=128||totalPoints()+vertices.length>512;
       closureButton.textContent=closed?'Open contour':'Close contour';closureButton.title=closed?'Remove the edge from the last anchor to the first':'Join the last anchor to the first with a straight edge';
-      for(const button of [deleteContourButton,duplicateContourButton])button.style.opacity=button.disabled?'.5':'1';
+      for(const button of [deleteContourButton,duplicateContourButton,drawContourButton])button.style.opacity=button.disabled?'.5':'1';
     }
     function rebuild(){
       refreshContours();

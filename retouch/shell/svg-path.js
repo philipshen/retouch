@@ -57,6 +57,12 @@
     for(const part of document.subpaths){if(!part||!Array.isArray(part.nodes)||(total+=part.nodes.length)>512)return null;const d=serialize(part.nodes,part.closed);if(!d)return null;parts.push(d);}
     return parts.join(' ');
   }
+  function appendContour(document,nodes,closed){
+    if(!serializeCompound(document)||!serialize(nodes,closed))return null;
+    const next=nodes.map(p=>translate(p,0,0));if(!closed){delete next[0].in;delete next.at(-1).out;}
+    const subpaths=[...document.subpaths.map(part=>({closed:part.closed,nodes:part.nodes.map(p=>translate(p,0,0))})),{nodes:next,closed}];
+    return serializeCompound({subpaths})?{subpaths,selected:subpaths.length-1}:null;
+  }
   function editContour(document,index,action){
     if(!serializeCompound(document)||!Number.isInteger(index)||index<0||index>=document.subpaths.length)return null;
     const subpaths=document.subpaths.map(part=>({closed:part.closed,nodes:part.nodes.map(p=>translate(p,0,0))})),part=subpaths[index];let selected=index;
@@ -108,5 +114,5 @@
     return (!next.in||coordinate(next.in))&&(!next.out||coordinate(next.out))?next:null;
   }
   function equivalent(a,b){return !!a&&!!b&&a.closed===b.closed&&a.nodes.length===b.nodes.length&&a.nodes.every((p,i)=>['','in','out'].every(key=>{const x=key?p[key]:p,y=key?b.nodes[i][key]:b.nodes[i];return !x&&!y||x&&y&&Math.abs(x.x-y.x)<1e-6&&Math.abs(x.y-y.y)<1e-6;}));}
-  const api={serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,split,segmentMiddle,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
+  const api={serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,split,segmentMiddle,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
 })(typeof window==='object'?window:globalThis);
