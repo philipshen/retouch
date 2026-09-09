@@ -15,7 +15,7 @@ changing those files. The original checkout may continue to evolve independently
 | --- | --- | --- |
 | Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Bounded canvas zoom/scrolling and linked screen comparisons exist. HTML supports multi-selection, range selection, gray/page marquee gestures and framing a consecutive sibling selection. HTML/React canvas locks include batch undo and editor-reload persistence within a live project session. Full document/pages/sections, guides, complete snapping/grouping, durable lock identity and cross-renderer equivalence remain. |
 | Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. HTML multi-selection, shared CSS and group duplicate/delete/reparenting exist; cross-context clipboard and broader source structures remain. |
-| Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. HTML/React polygons and polylines now support direct vertex dragging and keyboard movement with source undo. Vertex insertion/deletion and Pen creation of straight segments and cubic curves in existing SVG canvases have browser/source verification. Full curved-path authoring, boolean operations, arbitrary masks and a shared geometry model remain. |
+| Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. HTML/React polygons and polylines now support direct vertex dragging and keyboard movement with source undo. Vertex insertion/deletion and Pen creation of straight segments and cubic curves in existing SVG canvases have browser/source verification. Compound SVG paths now support cubic handles, arcs, contour operations, multi-point and marquee selection, and canvas-axis alignment/distribution with source history. Vector networks, boolean operations, arbitrary masks and complete transforms remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. HTML absolute placement now supports edge, center, stretch and proportional anchors with screen-scoped writes. Transformed constraints, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML supports linear/radial gradient stacks with draggable stops, shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. Font browsing, variable axes, full rich-text/paragraph/list controls and complete typography parity remain. |
@@ -25,7 +25,7 @@ changing those files. The original checkout may continue to evolve independently
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload exists; complete export and import pipeline remains. |
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. HTML has responsive CSS, structural edits and batch selection operations. Arbitrary remote-site capture/authoring, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
-| Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Corner resizing also supports Shift-locked proportions. Fully editable comparison canvases and cross-framework parity remain. |
+| Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Corner resizing also supports Shift-locked proportions. Comparison cards now show current scope coverage and offer an explicit width-and-larger style-scope action. Fully editable comparison canvases and cross-framework parity remain. |
 | Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop; The latest recorded ad hoc bundle packages d9cd994 and retains a failed browser/native-launch receipt; see desktop/README.md. Native launches are paused at the user's request. Current native interaction remains unverified. File flows, Intel runtime and broader lifecycle verification remain. |
 | Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. Development build is ad hoc signed. Local cask install/uninstall passed. Developer ID signing/notarization, publishing, upgrades and quarantined launch remain unverified. |
 | Ease of use | New user can open a site, select/edit, compare screens, undo and retain work without learning implementation details | Controls have labels and basic defaults. Whole-workflow usability validation remains. |
@@ -3618,3 +3618,53 @@ selection, vector networks, booleans/masks, persistent point constraints and
 arbitrary-site authoring remain open; full Figma parity is not established.
 Native launches remained paused, with no desktop build or launch in this step.
 Trusted Mac distribution remains unverified.
+
+
+### 2026-09-09 — Responsive scope coverage in comparison previews
+
+The comparison rail now displays the current style scope and reports whether its
+breakpoint applies in each preview. Base scope is identified separately; wording
+keeps breakpoint coverage distinct from the final CSS cascade, where other
+overrides may take precedence. Unavailable/loading coverage is marked unknown.
+An explicit Edit styles: [width] px and larger action switches the main viewport
+and selects that minimum-width style scope. Ordinary layer picking and the
+existing Edit size action continue to preserve the user's chosen style scope.
+No scope action writes source until a subsequent style edit.
+
+The action requires a selected layer. Static HTML uses its pixel media scopes;
+React reuses a matching loaded Tailwind breakpoint and preserves the project's
+breakpoint units for custom widths. Scope choices and coverage update when the
+inspector scope changes. These are breakpoint-coverage indicators, not a
+per-property provenance inspector or direct authoring inside comparison frames.
+
+HTML/Chromium and HTML/WebKit pass in
+`/private/tmp/retouch-compare-scope-chromium.log` and
+`/private/tmp/retouch-compare-scope-webkit.log`; final labels/loading-state handling
+also pass in `/private/tmp/retouch-compare-scope-html-final.log`.
+These check unchanged source on scope selection, tablet/desktop versus phone
+coverage, base scope, live scoped color writes, exact undo, layer picking and
+hidden/offscreen states. The inspected
+`/private/tmp/retouch-compare-scope-chromium.png` shows coverage beneath the
+comparison viewports; the final action label explicitly says Edit styles.
+
+An isolated copy of the Next/Tailwind fixture passes Chromium in
+`/private/tmp/retouch-compare-scope-react-chromium-final.log` and WebKit in
+`/private/tmp/retouch-compare-scope-react-webkit-final.log`. These verify md reuse,
+1120px mapped to a 70rem custom scope, coverage at standard/custom sizes,
+source isolation, live width updates, exact undo, navigation, repeated preview
+open/close, pin/remove and persisted custom sizes. The fixture source was verified
+restored before removal, and its CLI/server exited with no listener on port63241.
+
+Initial failures remain recorded: the first server launch used the parent temp
+directory instead of the fixture (`/private/tmp/retouch-compare-scope-react-server.log`);
+the first Chromium test tried the custom-scope action after navigation cleared
+selection (`/private/tmp/retouch-compare-scope-react-chromium.log`); and WebKit's
+navigation poll encountered a replaced execution context
+(`/private/tmp/retouch-compare-scope-react-webkit.log`). The corrected test verifies
+the disabled state, selects a layer, and tolerates only that specific transient
+navigation error while polling.
+
+The broader requirement inventory remains open: arbitrary-site authoring,
+editable comparison canvases, complete per-property inheritance/provenance,
+Figma Design feature parity and trusted Mac distribution are not established.
+Native app launches stayed paused; this step used browser fixtures only.

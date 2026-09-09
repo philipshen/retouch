@@ -361,6 +361,10 @@ window.addEventListener('retouch:comparison-edit',async event=>{
   if(!sameRoute())return toast('The page changed. Select the layer in the refreshed comparison.','err');
   if(mode!=='edit')modeBtn.click();
   window.RetouchScreens.set({width:detail.width,height:detail.height});
+  if(detail.scopeAtWidth){
+    if(!sel)return toast('Select a layer before choosing its style scope.','err');
+    styleScope=sel.info.cssAuthoring?`min-[${detail.width}px]:`:RetouchResponsive.atWidth(doc(),detail.width).prefix;renderPanel();
+  }
   if(!detail.hostId&&!detail.instanceId)return;
   const classification=classificationSerial;
   for(let attempt=0;attempt<60;attempt++){
@@ -783,6 +787,7 @@ function screenScopeSection() {
   const chosen = options.find(o=>o.prefix===styleScope);
   const arbitrary = /^(min|max)-\[([\d.]+(?:px|rem|em))\]:$/.exec(styleScope);
   const condition = chosen?.condition || (arbitrary ? `(${arbitrary[1]}-width: ${arbitrary[2]})` : null);
+  window.dispatchEvent(new CustomEvent('retouch:style-scope',{detail:{prefix:styleScope,label:chosen?.label||styleScope,condition}}));
   if (condition && !iframe.contentWindow.matchMedia(condition).matches) {
     RetouchInspector.note(section, 'This breakpoint is outside the current preview size. Resize the screen to see its styles.');
   }

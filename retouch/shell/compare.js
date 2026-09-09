@@ -10,9 +10,9 @@
   function updateControls(){
     const size=current();
     if(pin){pin.disabled=sizes.length>=8||!valid(size.width)||!valid(size.height)||sizes.some(s=>s[1]===size.width&&s[2]===size.height);pin.title=sizes.length>=8?'Remove a comparison to add another':'Add the current canvas dimensions';}
-    for(const card of cards)card.edit.setAttribute('aria-pressed',String(size.width===card.width&&size.height===card.height));
+    for(const card of cards){card.edit.setAttribute('aria-pressed',String(size.width===card.width&&size.height===card.height));card.scopeButton.disabled=!selected;}
   }
-  let cards=[],selected=null,route=null,open=false,timer=null;
+  let cards=[],selected=null,route=null,open=false,timer=null,scope={prefix:'',label:'All sizes · base',condition:null},scopeSummary;
   function path(){try{const loc=main.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
   function sync(force=false){
     if(!open)return;
@@ -23,12 +23,16 @@
   function paint(){
     if(!open)return;
     for(const card of cards){
-      const {frame,overlay,message,width,height}=card;
+      const {frame,overlay,message,scopeMessage,width,height}=card;
+      scopeMessage.textContent='Checking style scope…';scopeMessage.dataset.scopeApplies='unknown';
       const scale=card.viewport.clientWidth/width;
       frame.style.transform=`scale(${scale})`;card.viewport.style.height=height*scale+'px';
       overlay.replaceChildren();
       try{
         const d=frame.contentDocument;if(!d?.body||d.URL==='about:blank')continue;
+        const applies=!scope.prefix||scope.condition&&d.defaultView.matchMedia(scope.condition).matches;
+        scopeMessage.dataset.scopeApplies=scope.prefix&&!scope.condition?'unknown':String(!!applies);
+        scopeMessage.textContent=!scope.prefix?'Base styles apply here; breakpoint overrides may take precedence.':!scope.condition?'Scope coverage is unavailable for this breakpoint.':applies?'Current breakpoint applies here; other overrides may take precedence.':'Current breakpoint does not apply at this size.';
         const nodes=selected?[...d.querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===selected||el.getAttribute('data-rt-i')===selected):[];
         let visible=0,offscreen=0;
         for(const el of nodes){
@@ -47,6 +51,7 @@
     rail.replaceChildren();cards=[];
     const heading=document.createElement('h2');heading.textContent='Compare screens';rail.append(heading);
     const hint=document.createElement('p');hint.className='hint';hint.textContent='Click a layer to edit on the main canvas. Style scope stays unchanged.';rail.append(hint);
+    scopeSummary=document.createElement('p');scopeSummary.className='hint';scopeSummary.setAttribute('aria-label','Comparison style scope');scopeSummary.textContent='Style scope: '+scope.label;rail.append(scopeSummary);
     pin=document.createElement('button');pin.className='control-button';pin.textContent='Pin current size';
     pin.onclick=()=>{const {width,height}=current();if(pin.disabled)return;const size=[`Custom ${width} × ${height}`,width,height];sizes.push(size);remember();addCard(size);cards.at(-1).frame.src=path()||'/';updateControls();};rail.append(pin);
     for(const size of sizes)addCard(size);
@@ -65,7 +70,10 @@
       const frame=document.createElement('iframe');frame.title=name+' comparison preview';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');frame.style.width=width+'px';frame.style.height=height+'px';
       const overlay=document.createElement('div');overlay.className='compare-overlay';
       const message=document.createElement('p');message.className='hint';
-      viewport.append(frame,overlay);card.append(header,viewport,message);rail.append(card);
+      const scopeMessage=document.createElement('p');scopeMessage.className='compare-scope-message';scopeMessage.style.cssText='font:11px/1.4 system-ui;color:#aeb3bd;margin:8px 0;';scopeMessage.setAttribute('aria-label',name+' scope coverage');
+      const scopeButton=document.createElement('button');scopeButton.className='control-button';scopeButton.textContent='Edit styles: '+width+' px and larger';scopeButton.setAttribute('aria-label','Edit styles from '+width+' px');scopeButton.title='Use this preview size and set the selected layer’s style scope to this width and larger. Does not change source until you edit a style.';scopeButton.disabled=!selected;
+      scopeButton.onclick=()=>{if(!selected)return;window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,occurrence:0,scopeAtWidth:true,route:path()}}));};
+      viewport.append(frame,overlay);card.append(header,viewport,message,scopeMessage,scopeButton);rail.append(card);
       function activate(event){
         try{
           const d=frame.contentDocument,loc=frame.contentWindow.location;
@@ -81,7 +89,7 @@
       viewport.addEventListener('click',event=>{if(event.button===0)activate(event);});
       viewport.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();activate();}});
       viewport.addEventListener('wheel',e=>{e.preventDefault();try{frame.contentWindow.scrollBy({top:e.deltaY/(viewport.clientWidth/width),left:e.deltaX,behavior:'instant'});}catch{}},{passive:false});
-      cards.push({frame,overlay,message,viewport,width,height,edit});
+      cards.push({frame,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit});
   }
   function unload(frame){return new Promise(resolve=>{
     let timeout;
@@ -99,7 +107,8 @@
     clearTimeout(timer);open=!open;toggle.setAttribute('aria-pressed',String(open));rail.hidden=!open;
     if(open){mount();sync(true);paint();}else{toggle.disabled=true;try{await dispose();}finally{toggle.disabled=false;}}
   };
-  window.addEventListener('retouch:selection',e=>{selected=e.detail;});
+  window.addEventListener('retouch:selection',e=>{selected=e.detail;updateControls();});
+  window.addEventListener('retouch:style-scope',e=>{scope=e.detail;if(scopeSummary)scopeSummary.textContent='Style scope: '+scope.label;});
   window.addEventListener('retouch:route',()=>sync());
   main.addEventListener('load',()=>sync(true));
   window.addEventListener('retouch:viewport',updateControls);
