@@ -115,6 +115,16 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>fs.readFileSync(secondFile,'utf8')===secondOriginal,'redo undone exactly');
 
   await page.getByLabel('Project page',{exact:true}).selectOption('/');await wait(async()=>await app.locator('h1').textContent()==='Hello HTML','return to home');
+
+  await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await page.getByRole('button',{name:'Duplicate layer',exact:true}).click();
+  await wait(async()=>await app.locator('h1').count()===2,'duplicate HTML layer');await settled();
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'duplicate undo');
+  await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await page.getByRole('button',{name:'Move layer down',exact:true}).click();
+  await wait(async()=>await app.locator('main > :first-child').evaluate(el=>el.tagName)==='P','move HTML layer');await settled();
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'move undo');
+  await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await page.getByRole('button',{name:'Delete layer',exact:true}).click();
+  await wait(async()=>await app.locator('h1').count()===0,'delete HTML layer');await settled();
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'delete undo');
   assert.deepEqual(errors,[]);console.log('PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

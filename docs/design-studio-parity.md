@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 213 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 217 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -495,3 +495,21 @@ All 213 tests pass. Browser checks verify font family, weight, italic and
 underline at the tablet scope, phone inheritance, return to the tablet styling,
 and exact source undo. Text shaping controls, variable-font axes and full
 Figma typography parity remain open.
+
+
+### HTML layer organization
+
+The HTML adapter now connects to the shared structural planner and Layers panel.
+Complete literal siblings support duplication, movement and deletion with exact
+source snapshots. Explicit source ranges exclude mixed text/comments, parser
+inserted parents and incomplete markup. Cloning authored identity attributes or
+linked editor styles remains refused; copying linked styles is a subsequent
+required step. Styled layers can be moved or deleted.
+
+Style identity allocation now avoids identifiers already owned by another layer
+or retained style block, so moving a styled element cannot cause the layer at its
+old structural position to acquire those rules. The original element retains its
+persistent selector. All 217 tests pass, including source range preservation,
+identity collision handling and independent post-move styles. Browser checks
+verify duplicate, move, delete and exact undo. General reparenting, grouping,
+styled cloning and structural editing of dynamic templates remain open.

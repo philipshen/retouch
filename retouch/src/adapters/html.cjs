@@ -2,7 +2,7 @@
 // HTML source documents form the editing foundation for renderer-independent
 // site imports. Locations come from the HTML parser, never from client mappings.
 const path=require('node:path'),crypto=require('node:crypto');
-const parse5=require('parse5'),MagicString=require('magic-string');
+const parse5=require('parse5'),MagicString=require('magic-string'),structure=require('../structure.cjs');
 const hash=source=>crypto.createHash('sha1').update(source).digest('hex');
 const skip=new Set(['script','style','template']);
 const textTags=new Set(['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','li']);
@@ -41,13 +41,14 @@ function plain(el){return el.location.endTag&&(el.node.childNodes||[]).every(n=>
 function picture(el){for(let p=el.node.parentNode;p;p=p.parentNode)if(p.tagName==='picture')return true;return false;}
 function describe(resolved){
  const el=resolved.element,canText=!!plain(el),canSrc=el.tag==='img'&&attr(el,'srcset')===null&&!picture(el);
- return {id:el.id,kind:'host',tag:el.tag,file:resolved.relPath,hash:resolved.hash,className:attr(el,'class')||'',classNameDynamic:false,
+ return {structure:structure.describe(resolved,'html'),id:el.id,kind:'host',tag:el.tag,file:resolved.relPath,hash:resolved.hash,className:attr(el,'class')||'',classNameDynamic:false,
   text:canText?el.node.childNodes.map(n=>n.value).join(''):null,textDynamic:!canText,mixedText:false,canSetChildren:false,
   textReason:canText?null:'This HTML region contains nested markup, comments, or an implicit closing tag.',
   src:attr(el,'src'),srcDynamic:false,canSetSrc:canSrc,srcReason:canSrc?null:'Select a plain image without responsive sources.',
   canSetTag:!!el.location.endTag&&textTags.has(el.tag),context:resolved.context||null};
 }
 function planOp(resolved,op){
+ if(structure.types.has(op.type))return structure.planOp(resolved,op,'html');
  if(op.fileHash&&op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the element.');
  const el=resolved.element,out=new MagicString(resolved.source);
  function setAttr(name,value){
@@ -79,4 +80,4 @@ function planOp(resolved,op){
 }
 module.exports={name:'html',matches:file=>/\.html?$/i.test(file),collect,stamp,contentHash:hash,describe,planOp,
  applyOp:(resolved,op)=>require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),planOp(resolved,op)),
- capabilities:{classAttr:'class',ops:['setClasses','setText','setTag','setSrc']}};
+ capabilities:{classAttr:'class',ops:['setClasses','setText','setTag','setSrc',...structure.types]}};

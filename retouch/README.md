@@ -166,4 +166,9 @@ thumbnail previews, or **Choose image…** to upload into `rt-assets`. Undo rest
 the image reference; uploaded files remain in the folder for reuse. Hidden files,
 dependency directories and symlinks are excluded from the image list.
 
-Rich markup, structural edits and remote-site capture remain open.
+The Layers panel can duplicate, move and delete complete literal HTML siblings.
+Mixed text/comment boundaries and implicitly closed parents are refused. Layers
+with authored IDs or linked editor styles cannot yet be duplicated; styled layers
+can be moved or deleted. Undo restores exact source snapshots.
+
+Rich markup editing, general reparenting and remote-site capture remain open.

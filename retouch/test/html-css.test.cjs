@@ -29,10 +29,11 @@ test('HTML CSS refuses injection, stale writes, conflicting identities and modif
  assert.equal(edit(source.replace('<h1 class=',`<h1 ${marker} class=`),0,'260px').refused,true);
 });
 
-test('HTML CSS reset without an override is inert and refuses an identity owned elsewhere',()=>{
+test('HTML CSS reset without an override is inert and allocates a fresh identity when the old path is occupied',()=>{
  assert.deepEqual(edit(original,0,null).edits,[]);
  const id=resolve(original).element.id;
- assert.equal(edit(original.replace('<h1 class="title">Second',`<h1 data-rt-style="${id}" class="title">Second`),0,'200px').refused,true);
+ const changed=edit(original.replace('<h1 class="title">Second',`<h1 data-rt-style="${id}" class="title">Second`),0,'200px');
+ assert.equal(changed.ok,true);assert.notEqual(/<h1 data-rt-style="([^"]+)"/.exec(changed.edits[0].after)[1],id);
 });
 
 test('CSS spacing supports shorthand and signed margins but refuses malformed or invalid lengths',()=>{
@@ -92,4 +93,16 @@ test('HTML typography accepts font stacks and weights, preserves source text, an
  source=edit(source,768,'italic','font-style').edits[0].after;
  assert.ok(source.includes('First</h1>'));assert.deepEqual(css.describe(resolve(source)).cssRules[768],{'font-family':'"Times New Roman", serif','font-style':'italic'});
  assert.equal(edit(original.replace('class="title"','style="font:12px serif !important"'),0,'600','font-weight').refused,true);
+});
+
+test('Moving a styled HTML layer keeps its styling and permits independent edits at its old source position',()=>{
+ let source=edit(original,0,'240px').edits[0].after;
+ const resolved=resolve(source);resolved.elements=html.collect(source,'index.html').elements;resolved.element=resolved.elements.find(e=>e.tag==='h1');
+ source=html.planOp(resolved,{type:'moveElement',direction:'after'}).edits[0].after;
+ const elements=html.collect(source,'index.html').elements.filter(e=>e.tag==='h1');
+ assert.deepEqual(css.describe({...resolve(source),element:elements[0]}).cssRules,{});
+ assert.deepEqual(css.describe({...resolve(source),element:elements[1]}).cssRules,{0:{width:'240px'}});
+ const next=css.plan({...resolve(source),element:elements[0]},{property:'width',value:'120px',width:0});assert.equal(next.ok,true);
+ const updated=html.collect(next.edits[0].after,'index.html').elements.filter(e=>e.tag==='h1');
+ assert.notEqual(updated[0].node.attrs.find(a=>a.name==='data-rt-style').value,updated[1].node.attrs.find(a=>a.name==='data-rt-style').value);
 });

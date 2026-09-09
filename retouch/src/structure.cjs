@@ -54,13 +54,38 @@ function liquidRange(resolved) {
   ranges.parentId=parent.id || null;
   return ranges;
 }
-function ranges(resolved,language) {return language==='react'?reactRange(resolved):liquidRange(resolved);}
-function duplicateAllowed(source,range) {return !/\s(?:id|key|ref)\s*=/i.test(source.slice(range.start,range.end));}
+function htmlRange(resolved) {
+  const selected=resolved.element.node,parent=selected.parentNode;
+  const parentLocation=parent?.sourceCodeLocation;
+  if(!parentLocation?.startTag||!parentLocation.endTag)throw Error('Select a child inside an explicitly closed HTML parent.');
+  for(let ancestor=parent;ancestor;ancestor=ancestor.parentNode){
+    if(unsafeTags.has(ancestor.tagName)&&!['body','html'].includes(ancestor.tagName))throw Error('This parent is not a design layer.');
+    if(ancestor.attrs?.some(a=>/^(?:v-for|v-if|x-for|x-if)$/.test(a.name)))throw Error('This parent is rendered by a template.');
+  }
+  const voids=new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
+  function complete(node){
+    if(node.nodeName==='#text')return true;
+    return node.namespaceURI==='http://www.w3.org/1999/xhtml'&&!unsafeTags.has(node.tagName)&&node.sourceCodeLocation?.startTag&&(node.sourceCodeLocation.endTag||voids.has(node.tagName))&&(node.childNodes||[]).every(complete);
+  }
+  const items=[];let cursor=parentLocation.startTag.endOffset;
+  for(const node of parent.childNodes||[]){
+    if(node.nodeName==='#text'&&!node.value.trim())continue;
+    if(!complete(node)||!node.tagName)throw Error('Structural editing requires complete literal siblings without mixed text or comments.');
+    const loc=node.sourceCodeLocation;
+    if(loc.startOffset<cursor||resolved.source.slice(cursor,loc.startOffset).trim())throw Error('The parsed HTML does not match a contiguous sibling region.');
+    items.push({start:loc.startOffset,end:loc.endOffset,selected:node===selected});cursor=loc.endOffset;
+  }
+  if(resolved.source.slice(cursor,parentLocation.endTag.startOffset).trim())throw Error('The parent has untracked markup.');
+  items.parentId=resolved.elements?.find(e=>e.node===parent)?.id||null;
+  return items;
+}
+function ranges(resolved,language) {return language==='react'?reactRange(resolved):language==='html'?htmlRange(resolved):liquidRange(resolved);}
+function duplicateAllowed(source,range,language) {return !/\s(?:id|key|ref)\s*=/i.test(source.slice(range.start,range.end)) && !(language==='html'&&/\sdata-rt-(?:style|css)\s*=/i.test(source.slice(range.start,range.end)));}
 function describe(resolved,language) {
   try {
     const items=ranges(resolved,language),index=items.findIndex(r=>r.selected);
     if(index<0) throw Error('The source element could not be located.');
-    return {parentId:items.parentId,canPaste:true,canDuplicate:duplicateAllowed(resolved.source,items[index]),canDelete:true,canMoveBefore:index>0,canMoveAfter:index<items.length-1,reason:null};
+    return {parentId:items.parentId,canPaste:true,canDuplicate:duplicateAllowed(resolved.source,items[index],language),canDelete:true,canMoveBefore:index>0,canMoveAfter:index<items.length-1,reason:null};
   } catch(error) {return {parentId:null,canPaste:false,canDuplicate:false,canDelete:false,canMoveBefore:false,canMoveAfter:false,reason:error.message};}
 }
 function planOp(resolved,op,language) {
@@ -75,11 +100,11 @@ function planOp(resolved,op,language) {
       if(op.type==='pasteElement') {
         if(typeof op.copiedHash!=='string'||op.copiedHash!==resolved.hash) throw Error('The copied source changed. Copy the element again.');
         const element=resolved.elements.find(e=>e.id===op.copiedId);
-        const start=language==='react'?element?.node?.start:element?.tagStart;
+        const start=language==='react'?element?.node?.start:language==='html'?element?.node?.sourceCodeLocation?.startOffset:element?.tagStart;
         copied=items.find(r=>r.start===start);
         if(!copied) throw Error('Paste requires a copied literal sibling in the same source parent.');
       }
-      if(!duplicateAllowed(source,copied)) throw Error('Duplicating this element would duplicate an authored id, key, or ref.');
+      if(!duplicateAllowed(source,copied,language)) throw Error('Duplicating this element would duplicate an authored identity or a linked element style.');
       const previous=items[index-1];
       const gap=previous?source.slice(previous.end,node.start):'\n'+(source.slice(0,node.start).match(/(?:^|\n)([ \t]*)$/)?.[1]||'');
       next=source.slice(0,node.end)+gap+source.slice(copied.start,copied.end)+source.slice(node.end);

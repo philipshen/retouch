@@ -8,9 +8,13 @@ function rule(id,width,values,legacy=false){
  return width?`@media (min-width: ${width}px){${body}}`:body;
 }
 function inspect(resolved){
- const id=attr(resolved.element.node,'data-rt-style')||resolved.element.id;
+ const tree=parse5.parse(resolved.source,{sourceCodeLocationInfo:true}),used=new Set();
+ function identities(node){for(const name of ['data-rt-style','data-rt-css']){const value=attr(node,name);if(value)used.add(value);}for(const child of node.childNodes||[])identities(child);}
+ identities(tree);
+ let id=attr(resolved.element.node,'data-rt-style')||resolved.element.id;
+ if(!attr(resolved.element.node,'data-rt-style'))for(let attempt=0;used.has(id);attempt++)id=html.contentHash(resolved.source+'|'+resolved.element.id+'|'+attempt).slice(0,10);
  if(!/^[a-f0-9]{10}$/.test(id))throw Error('The element has an unsupported style identity.');
- const tree=parse5.parse(resolved.source,{sourceCodeLocationInfo:true}),blocks=[],owners=[];let headEnd=null;
+ const blocks=[],owners=[];let headEnd=null;
  function walk(node){
   if(attr(node,'data-rt-style')===id)owners.push(node);
   if(node.tagName==='head'&&node.sourceCodeLocation?.endTag)headEnd=node.sourceCodeLocation.endTag.startOffset;
