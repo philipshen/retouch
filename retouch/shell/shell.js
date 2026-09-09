@@ -96,7 +96,7 @@ function hookFrame(d, w) {
   const refreshStyles = () => {
     clearTimeout(styleRefresh);
     styleRefresh = setTimeout(() => {
-      if (doc() === d && sel && !panelTasks && !panelBody.contains(document.activeElement)) renderPanel();
+      if (doc() === d && sel && !panelTasks && !panelInputFocused()) renderPanel();
     }, 100);
   };
   // WebKit can settle the child viewport after the parent's animation frame.
@@ -751,13 +751,14 @@ function screenScopeSection() {
   }
   return section;
 }
+function panelInputFocused(){return panelBody.contains(document.activeElement)&&document.activeElement.matches('input,textarea,select,[contenteditable="true"]');}
 let viewportRenderPending = false;
 window.addEventListener('retouch:viewport',()=>{
   if(viewportRenderPending)return;
   viewportRenderPending=true;
   requestAnimationFrame(()=>{
     viewportRenderPending=false;
-    if(sel && !panelTasks && !panelBody.contains(document.activeElement))renderPanel();
+    if(sel && !panelTasks && !panelInputFocused())renderPanel();
   });
 });
 let renderedPanelSelection=null;
@@ -791,7 +792,7 @@ function renderPanelContents() {
   head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
 
-  if(sel.multiple?.length>1){if(info.classSelection){panelBody.append(RetouchReactSelection.mount(sel.multiple,sel.multiple.map(item=>matchingEls(item.id)[0]),styleScope,setReactClassesSelection));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformHTMLSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
+  if(sel.multiple?.length>1){if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
   if(info.components?.length) {
     const label=document.createElement('label');label.textContent='Component scope';
@@ -1422,14 +1423,16 @@ function classSelectionMatches(infos,document){
   const tokens=value=>(value||'').split(/\s+/).filter(Boolean).sort().join(' ');
   return infos.every(info=>{const elements=matchingInDocument(document,info.id,info);return elements.length&&elements.every(el=>el.getAttribute(info.renderRevisionAttribute)===info.hash&&tokens(el.getAttribute('class'))===tokens(info.className));});
 }
-async function setReactClassesSelection(classesById){
+async function setReactClassesSelection(classesById,expected=null){
   if(!sel?.multiple?.length||panelTasks||undoBusy||sourceRequests)return;stopDrawing?.();const selection=sel.multiple,info=sel.info;busyPanel(true);
   try{
     const result=await api('POST','/rt/__api/op',{type:'setClassesSelection',id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash,classesById});
     if(!result?.ok){renderPanel();return toast(result?.reason||result?.error||'Could not style selected layers','err');}
     if(result.undoId)editorHistory.record({type:'setClassesSelection',id:info.id,selectionIds:selection.map(item=>item.id),undoId:result.undoId});
-    sel.info=result.element;sel.multiple=result.selection;await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));renderPanel();toast('Selected layers updated','ok');
-  }finally{busyPanel(false);}
+    sel.info=result.element;sel.multiple=result.selection;await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));
+    if(expected){let ready=false;for(let attempt=0;attempt<50;attempt++){ready=Object.entries(expected).every(([id,g])=>{const el=matchingEls(id)[0];if(!el?.isConnected)return false;try{const actual=RetouchInspector.geometry(el);return ['x','y','width','height'].every(key=>Math.abs(actual[key]-g[key])<.6);}catch{return false;}});if(ready)break;await new Promise(resolve=>setTimeout(resolve,100));}if(!ready){renderPanel();toast('Saved selection classes, but the bounds did not settle. Check responsive or inline overrides.','err');return false;}}
+    renderPanel();toast('Selected layers updated','ok');return true;
+  }catch(error){renderPanel();toast(error.message,'err');return false;}finally{busyPanel(false);}
 }
 function svgGeometryMatches(el,info){return info.svgGeometry?.fields.every(field=>field.editable===false||el.getAttribute(field.name)===field.value);}
 async function setSVGGeometry(property,value){
@@ -1467,7 +1470,7 @@ function transformReactLayer(info,target,action,opener){
   if(stopDrawing)toast(action==='resize'?'Drag a handle or use arrow keys. Shift keeps proportions; Option/Alt centers. Enter applies keyboard changes; Escape cancels.':'Drag the outline or use arrow keys (Shift: 10px). Enter applies keyboard changes; Escape cancels.','ok');
 }
 
-function transformHTMLSelection(elements,commit,opener,action='move',spacing=null){
+function transformLayerSelection(elements,commit,opener,action='move',spacing=null){
   stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!sel?.multiple?.length)return;
   const hash=sel.info.hash,scope=styleScope,key=sel.multiple.map(info=>info.id).sort().join(',');
   stopDrawing=RetouchCanvasMove.mount({target:elements[0],targets:elements,selectionId:activeId(),frame:iframe,canvas:canvasSurface,mode:action,spacing,opener,

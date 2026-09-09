@@ -45,13 +45,14 @@
   }
   return changes;
  }
- function mount(infos,elements,width,save,onTransform){
+ function mount(infos,elements,width,save,onTransform,strategy=null){
   const I=root.RetouchInspector,P=root.RetouchHTMLPosition,sec=I.section('Align selected layers');
   function measure(){
+   strategy?.validate();
    if(!Number.isInteger(width)||elements.some(el=>!el?.isConnected)||infos.some(info=>info.cssReason))throw Error('Re-select the layers and choose a pixel screen scope.');
    if(width>elements[0].ownerDocument.defaultView.innerWidth)throw Error('Choose a screen at least '+width+' pixels wide for this scope.');
    for(const el of elements){
-    if(el.namespaceURI!=='http://www.w3.org/1999/xhtml'||elements.some(other=>other!==el&&el.contains(other)))throw Error('Choose separate HTML layers without selecting their ancestors.');
+    if(el.namespaceURI!=='http://www.w3.org/1999/xhtml'||elements.some(other=>other!==el&&el.contains(other)))throw Error('Choose separate page layers without selecting their ancestors.');
     for(let ancestor=el.parentElement;ancestor;ancestor=ancestor.parentElement)if(ancestor.namespaceURI==='http://www.w3.org/2000/svg')throw Error('Alignment inside an SVG viewport is not available yet.');
     const css=el.ownerDocument.defaultView.getComputedStyle(el);if(css.visibility!=='visible'||!el.getClientRects().length)throw Error('Choose visible layers to align their canvas bounds.');
     if(css.position!=='absolute')throw Error('Choose Absolute positioning for each layer to align its canvas bounds.');
@@ -77,6 +78,7 @@
   function write(measured,deltas){
    const changed=(g,d)=>Math.abs(d.x)+Math.abs(d.y)+Math.abs((d.width??g.width)-g.width)+Math.abs((d.height??g.height)-g.height)>=1/32;
    if(!deltas.some((d,i)=>changed(measured[i].geometry,d)))return;
+   if(strategy)return strategy.write(measured,deltas);
    const changes=Object.fromEntries(infos.map((info,i)=>{const g=measured[i].geometry,d=deltas[i];if(!changed(g,d))return [info.id,{}];const el=elements[i],effective=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{}),next={...g,x:g.x+d.x,y:g.y+d.y,width:d.width??g.width,height:d.height??g.height};if(!['x','y','width','height'].every(p=>Number.isFinite(next[p])&&Math.abs(next[p])<=100000))throw Error('Keep layer bounds within 100,000 pixels.');return [info.id,preserveBox(P.placement(next,effective),next,el.ownerDocument.defaultView.getComputedStyle(el))];}));return save(changes,width);
   }
   for(const [mode,label]of [['left','Align left'],['center','Align horizontal centers'],['right','Align right'],['top','Align top'],['middle','Align vertical centers'],['bottom','Align bottom'],['gap-x','Distribute horizontal spacing'],['gap-y','Distribute vertical spacing']]){

@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 325 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 327 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -2262,3 +2262,44 @@ React multi-layer alignment, movement, resizing and spacing remain to be connect
 React multi-layer structure, cross-file/instance overrides, Liquid equivalence and
 arbitrary-site authoring remain incomplete. The verified Mac package predates these
 controls. Full Figma parity and trusted Mac distribution remain open.
+
+
+### React selection geometry on the shared canvas
+
+Unique absolute React host layers now use the shared selection layout and canvas
+tools: alignment to selection/layer/frame bounds, distribution, numeric gaps,
+equal/individual canvas gaps, movement and eight-handle resizing. A geometry
+strategy translates the common measured result to each member's Tailwind classes
+and submits one atomic selection edit. Unchanged reference layers use `null` and
+retain their markup exactly. All changed members are checked for rendered geometry
+after the compiled revision/class refresh.
+
+Content-box layers retain their padding, borders and size bounds. Percentage,
+stretch and end anchors use each member's containing frame, including selections
+across different frames. Important priority is preserved by geometry group: an
+important right anchor does not turn an unchanged width into important and suppress
+its larger-breakpoint override. Geometry requires an active style scope and refuses
+inline positioning, dynamic/spread classes, repeated source instances and the
+shared unsupported transformed/nested/SVG cases. Commit revalidates the selection
+so a new inline geometry override cannot slip through a preview.
+
+Viewport and stylesheet refresh now distinguish a focused form field from a
+focused action button. An action button no longer keeps obsolete geometry controls
+visible after changing screen size; in-progress form inputs remain protected.
+
+Validation: all 327 unit/HTTP tests pass. Chromium and WebKit pass the new real
+Next.js/Tailwind selection-geometry workflow: alignment/reference markup,
+50/100/200% pointer movement, keyboard movement, content-box resizing and maximum
+size clamping, numeric and independent gaps, exact undo/redo with selection,
+important responsive anchors, larger-breakpoint width preservation, phone/base
+independence, inactive-scope refusal, inline changes during a preview, repeated
+instances and different containing frames. Existing Chromium React shared-style
+and HTML spacing workflows pass. The package exposes
+`test:e2e:react-selection-geometry`. Logs:
+`/private/tmp/retouch-react-selection-geometry-{unit,chromium,webkit,styles-regression,html-regression}.log`.
+Screenshot `/private/tmp/retouch-react-selection-geometry.png` was visually inspected.
+
+Flow and transformed geometry, vector group transforms, cross-file selection,
+per-instance overrides, React group structure, Liquid equivalence and arbitrary
+site authoring remain unfinished. Full Figma parity and trusted Mac distribution
+remain open; the verified Mac artifact predates these tools.
