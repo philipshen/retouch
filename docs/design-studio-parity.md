@@ -2646,3 +2646,32 @@ character and still verifies that zoom remains unchanged while typing.
 
 Full parity, arbitrary-site authoring and trusted desktop distribution remain
 unfinished; the latest Mac archive predates Zoom to selection and these shortcuts.
+
+## Precision zoom through 6400%
+
+The zoom input, wheel/gesture clamp and Zoom to selection now support up to 6400%.
+High zoom from Fit workspace fixes the current actual viewport dimensions before
+magnifying and preserves horizontal pan through that transition. Fixed screens
+retain their 1% minimum. Input validation rejects values above 6400% without
+changing the canvas. Zoom-to-selection waits for the final pan frames before
+re-enabling tools that cancel on viewport movement.
+
+Chromium and WebKit pass direct workspace-to-high-zoom conversion, fixed viewport
+preservation, unchanged CSS bounds, scaled rendered bounds at 400/1600/6400%,
+bounded 96px canvas end padding, invalid-limit refusal, and selection fitting.
+A 10px layer fits at 6400%; a 64-screen-pixel Control-drag moves it exactly one CSS
+pixel, followed by exact source undo in both engines. WebKit's native context menu
+initially intercepted Control-drag; the active canvas tool surface now suppresses
+that menu. The trace in `/private/tmp/retouch-high-zoom-pointer-webkit-events.log`
+records the interruption. A separate test setup issue retained text in the layer
+search; that field is now explicitly reset before choosing the tiny layer.
+
+Final browser logs: `/private/tmp/retouch-high-zoom-pointer-{chromium,webkit}-fixed.log`.
+All 334 unit/HTTP tests pass in `/private/tmp/retouch-high-zoom-unit-final.log`.
+The HTML screen-resize regression passes in Chromium in
+`/private/tmp/retouch-high-zoom-screen-regression.log`.
+
+This does not establish every editing gesture at every high zoom, complete legacy
+Fit-workspace viewport-unit equivalence through the fixed-screen transition, or
+full Figma parity. Arbitrary-site authoring and trusted Mac distribution remain
+unfinished; the latest archive predates these zoom changes.

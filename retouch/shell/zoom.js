@@ -2,6 +2,7 @@
   'use strict';
   const canvas=document.getElementById('frameWrap'),extent=document.getElementById('canvasExtent'),stage=document.getElementById('siteStage'),frame=document.getElementById('app');
   const zoomInput=document.getElementById('canvasZoom'),fitButton=document.getElementById('fitScreen');
+  const maxScale=64;
   const endPadding=96; // Screen pixels, independent of zoom.
   let scale=1,width=0,height=0,pinnedHeight=0,gestureBase=null,positioned=false,screen=null;
   const pinned=new Map(),hooked=new WeakSet();
@@ -48,8 +49,13 @@
     window.dispatchEvent(new CustomEvent('retouch:zoom',{detail:{scale}}));
   }
   function change(next,x,y){
-    next=Math.max(screen ? .01 : .25,Math.min(2,next));if(Math.abs(next-1)<.00001)next=1;
+    next=Math.max(screen ? .01 : .25,Math.min(maxScale,next));if(Math.abs(next-1)<.00001)next=1;
     if(next===scale)return;
+    if(!screen&&next>2){
+      const viewport={width:frame.contentWindow.innerWidth,height:frame.contentWindow.innerHeight};
+      if([viewport.width,viewport.height].every(value=>value>=240&&value<=7680))window.RetouchScreens.set(viewport,{preservePan:true});
+      else{zoomInput.setCustomValidity('Choose a fixed screen size before zooming beyond 200%.');zoomInput.reportValidity();return;}
+    }
     window.dispatchEvent(new Event('retouch:before-zoom'));
     const bounds=canvas.getBoundingClientRect(),px=x-bounds.left,py=y-bounds.top;
     const siteTop=endPadding-canvas.scrollTop;
@@ -65,7 +71,7 @@
   zoomInput.addEventListener('input',()=>zoomInput.setCustomValidity(''));
   zoomInput.addEventListener('change',()=>{
     const value=Number(zoomInput.value),min=screen?1:25;
-    if(!zoomInput.value||!Number.isFinite(value)||value<min||value>200){zoomInput.setCustomValidity('Choose a zoom from '+min+'% to 200%.');zoomInput.reportValidity();return;}
+    if(!zoomInput.value||!Number.isFinite(value)||value<min||value>maxScale*100){zoomInput.setCustomValidity('Choose a zoom from '+min+'% to '+maxScale*100+'%.');zoomInput.reportValidity();return;}
     const p=center();change(value/100,p.x,p.y);
   });
   zoomInput.addEventListener('keydown',e=>{if(e.key==='Enter')zoomInput.blur();});
@@ -89,9 +95,13 @@
     if(visible.some(el=>!el.isConnected)||frame.contentDocument!==d)return {ok:false,reason:'The page changed before the selection could be revealed.'};
     visible[0].scrollIntoView({block:'center',inline:'center',behavior:'instant'});
     const bounds=()=>{const rects=visible.map(el=>el.getBoundingClientRect()),left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top));return {left,top,width:Math.max(...rects.map(r=>r.right))-left,height:Math.max(...rects.map(r=>r.bottom))-top};};
-    let rect=bounds();const p=center();change(Math.min((canvas.clientWidth-64)/rect.width,(canvas.clientHeight-64)/rect.height,2),p.x,p.y);layout();
+    let rect=bounds();const p=center();change(Math.min((canvas.clientWidth-64)/rect.width,(canvas.clientHeight-64)/rect.height,maxScale),p.x,p.y);layout();
     rect=bounds();w.scrollTo({left:w.scrollX+rect.left+rect.width/2-w.innerWidth/2,top:w.scrollY+rect.top+rect.height/2-w.innerHeight/2,behavior:'instant'});
     rect=bounds();canvas.scrollLeft=stage.offsetLeft+(rect.left+rect.width/2)*scale-canvas.clientWidth/2;canvas.scrollTop=endPadding+(rect.top+rect.height/2)*scale-canvas.clientHeight/2;
+    // Let scroll events settle before enabling tools that cancel on viewport movement.
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    if(visible.some(el=>!el.isConnected)||frame.contentDocument!==d)return {ok:false,reason:'The page changed while revealing the selection.'};
+    rect=bounds();
     return {ok:true,clipped:rect.left<0||rect.top<0||rect.left+rect.width>w.innerWidth||rect.top+rect.height>w.innerHeight};
   }
   window.RetouchZoom={toSelection};
