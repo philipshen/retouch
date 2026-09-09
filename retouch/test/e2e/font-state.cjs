@@ -1,0 +1,30 @@
+'use strict';
+const assert=require('node:assert/strict'),path=require('node:path'),fs=require('node:fs');
+const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_INSPECTOR_FIXTURE');
+const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
+(async()=>{const browser=await browserType.launch();try{
+ const page=await browser.newPage({viewport:{width:900,height:700}}),errors=[],requests=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('https://retouch-font.test/**',route=>{requests.push(route);});
+ await page.setContent('<section id="picker" class="sec" style="width:300px;padding:20px"></section><iframe title="Site"></iframe>');
+ await page.addScriptTag({path:path.resolve(__dirname,'../../shell/inspector.js')});await page.addStyleTag({path:path.resolve(__dirname,'../../shell/shell.css')});
+ await page.evaluate(()=>{
+  const d=document.querySelector('iframe').contentDocument;d.body.textContent='Page text';
+  window.good=new d.defaultView.FontFace('Test Face','url("https://retouch-font.test/good.woff2")',{weight:'400'});window.bad=new d.defaultView.FontFace('Test Face','url("https://retouch-font.test/bad.woff2")',{weight:'700'});d.fonts.add(good);d.fonts.add(bad);
+  window.added=0;window.removed=0;window.applied=[];
+  const add=d.fonts.addEventListener.bind(d.fonts),remove=d.fonts.removeEventListener.bind(d.fonts);d.fonts.addEventListener=(...args)=>{added++;return add(...args);};d.fonts.removeEventListener=(...args)=>{removed++;return remove(...args);};
+  RetouchInspector.fontPicker(document.querySelector('#picker'),d,'"Test Face", serif',v=>applied.push(v));
+ });
+ const current=page.getByLabel('Current font files');assert.equal(await current.textContent(),'2 not loaded');
+ await page.getByText('Browse page fonts',{exact:true}).click();await page.getByRole('searchbox',{name:'Search page fonts'}).fill('Test Face');
+ const choice=page.getByRole('button',{name:'Use font Test Face',exact:true});assert.match(await choice.textContent(),/2 not loaded/);assert.equal(requests.length,0,'observing and browsing must not load font URLs');
+ await page.evaluate(()=>{void bad.load().catch(()=>{});});await page.waitForFunction(()=>document.querySelector('[aria-label="Current font files"]').textContent.includes('1 loading'));
+ assert.equal(requests.length,1);await requests[0].fulfill({status:404,headers:{'access-control-allow-origin':'*'},body:''});
+ await page.waitForFunction(()=>document.querySelector('[aria-label="Current font files"]').textContent.includes('1 failed'));assert.match(await choice.textContent(),/1 failed/);
+ await page.evaluate(()=>{void good.load().catch(()=>{});});await page.waitForFunction(()=>document.querySelector('[aria-label="Current font files"]').textContent.includes('1 loading'));
+ assert.equal(requests.length,2);await requests[1].fulfill({status:200,headers:{'access-control-allow-origin':'*','content-type':'font/woff2'},body:fs.readFileSync(path.join(fixture,'node_modules/next/dist/next-devtools/server/font/geist-latin.woff2'))});
+ await page.waitForFunction(()=>document.querySelector('[aria-label="Current font files"]').textContent==='1 failed · 1 loaded');assert.match(await choice.textContent(),/1 failed · 1 loaded/);assert.equal(await choice.isEnabled(),true);
+ assert.equal(await page.evaluate(()=>applied.length),0);assert.deepEqual(errors,[]);
+ if(process.env.RT_E2E_FONT_STATE_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_FONT_STATE_SCREENSHOT});
+ await page.locator('#picker').evaluate(el=>el.remove());await page.waitForFunction(()=>removed===added);assert.equal(await page.evaluate(()=>added),3);
+ console.log(engine+': PASS unloaded/loading/failed/loaded face states, mixed family status, no observation-triggered fetch/apply, and listener disposal');
+ }finally{await browser.close();}})().catch(error=>{console.error(error);process.exitCode=1;});

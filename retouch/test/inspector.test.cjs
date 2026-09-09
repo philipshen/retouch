@@ -49,3 +49,12 @@ test('font search matches family names and fallbacks without accents or quote se
  assert.deepEqual(filterFonts(choices,'studio mono'),[choices[1]]);
  assert.deepEqual(filterFonts(choices,'missing'),[]);assert.deepEqual(filterFonts(choices,''),choices);
 });
+
+test('font file status preserves mixed face states without claiming glyph coverage',()=>{
+ const {fontFaceStates,fontFaceLabel}=require('../shell/inspector.js');
+ const states=fontFaceStates({fonts:[{family:'"Page Face"',status:'loaded'},{family:'Page Face',status:'loading'},{family:'Page Face',status:'error'},{family:'Page Face',status:'unloaded'}]});
+ assert.equal(fontFaceLabel('"PAGE FACE", serif',states),'1 loading · 1 failed · 1 not loaded · 1 loaded');
+ assert.equal(fontFaceLabel('serif',states),'System / fallback family');assert.equal(fontFaceLabel('Unknown, serif',states),'No page font declaration');
+ assert.equal(fontFaceLabel('"serif"',states),'No page font declaration');
+ const namedGeneric=fontFaceStates({fonts:[{family:'"serif"',status:'loaded'}]});assert.equal(fontFaceLabel('serif',namedGeneric),'System / fallback family');assert.equal(fontFaceLabel('"serif"',namedGeneric),'1 loaded');assert.equal(fontFaceLabel('"Name,WithComma"',states),'Font status unavailable');
+});

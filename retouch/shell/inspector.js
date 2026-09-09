@@ -276,10 +276,22 @@
     const words=normalize(query).trim().split(/\s+/).filter(Boolean);
     return choices.filter(([value,label])=>words.every(word=>normalize(value+' '+label).includes(word)));
   }
+  function fontFaceStates(d){
+    const states=new Map();for(const face of d.fonts||[]){const key=face.family.trim().replace(/^(["'])(.*)\1$/,'$2').toLocaleLowerCase();let counts=states.get(key);if(!counts)states.set(key,counts={loaded:0,loading:0,unloaded:0,error:0});if(Object.hasOwn(counts,face.status))counts[face.status]++;}return states;
+  }
+  function fontFaceLabel(value,states){
+    if(!fontFamilyClass(value))return 'Font status unavailable';
+    const family=value.split(',')[0].trim();
+    if(/^(system-ui|sans-serif|serif|monospace|cursive|fantasy|ui-serif|ui-sans-serif|ui-monospace|ui-rounded)$/i.test(family))return 'System / fallback family';
+    const counts=states.get(family.replace(/^(["'])(.*)\1$/,'$2').toLocaleLowerCase());
+    if(!counts)return 'No page font declaration';
+    return [['loading','loading'],['error','failed'],['unloaded','not loaded'],['loaded','loaded']].filter(([key])=>counts[key]).map(([key,label])=>`${counts[key]} ${label}`).join(' · ')||'Font status unavailable';
+  }
   function fontPicker(parent,d,current,onChange){
     const choices=fontFamilies(d,current),supported=choices.some(([value])=>value===current);
     const quick=select(parent,'Page font',supported?choices:[[current,current],...choices],current,onChange);
     if(!supported)quick.options[0].disabled=true;
+    const currentStatus=note(parent,'');currentStatus.setAttribute('aria-label','Current font files');currentStatus.setAttribute('role','status');
     const browse=document.createElement('details');browse.className='font-browser';
     const summary=document.createElement('summary');summary.textContent='Browse page fonts';browse.append(summary);
     const search=document.createElement('input');search.type='search';search.placeholder='Search font names';search.setAttribute('aria-label','Search page fonts');browse.append(search);
@@ -288,12 +300,13 @@
     const pages=document.createElement('div');pages.className='font-pages';let offset=0,scanning=false,cancelScan;
     const previous=button('Previous fonts',()=>{offset=Math.max(0,offset-50);render();}),next=button('Next fonts',()=>{offset+=50;render();});pages.append(previous,next);browse.append(pages);
     const render=()=>{
+      const states=fontFaceStates(d);currentStatus.textContent=fontFaceLabel(current,states);
       const matches=filterFonts(choices,search.value),focused=results.contains(document.activeElement)?document.activeElement.dataset.font:null;
       if(offset>=matches.length)offset=0;
       status.textContent=(matches.length?`${matches.length} font ${matches.length===1?'choice':'choices'}`:scanning?'No matches yet.':'No matching fonts. Try another name.')+(scanning?' · Scanning page…':'');status.dataset.scanning=String(scanning);
       pages.hidden=matches.length<=50;previous.disabled=offset===0;next.disabled=offset+50>=matches.length;
       if(matches.length>50)status.textContent+=` · Showing ${offset+1}–${Math.min(offset+50,matches.length)}`;
-      results.replaceChildren();for(const [value,label] of matches.slice(offset,offset+50)){const b=button(label,()=>onChange(value));b.dataset.font=value;b.setAttribute('aria-label','Use font '+label);b.setAttribute('aria-pressed',String(value===current));results.append(b);if(value===focused)b.focus({preventScroll:true});}
+      results.replaceChildren();for(const [value,label] of matches.slice(offset,offset+50)){const b=button(label,()=>onChange(value));const detail=document.createElement('small');detail.className='font-face-state';detail.textContent=fontFaceLabel(value,states);b.append(detail);b.dataset.font=value;b.setAttribute('aria-label','Use font '+label);b.setAttribute('aria-pressed',String(value===current));results.append(b);if(value===focused)b.focus({preventScroll:true});}
     };
     search.oninput=()=>{offset=0;render();};browse.ontoggle=()=>{
       cancelScan?.();scanning=browse.open;
@@ -301,6 +314,11 @@
       render();
     };
     browse.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();browse.open=false;summary.focus();}});
+    note(browse,'Status is for declared font faces. Some characters or weights may still use a fallback.');
+    if(d.fonts?.addEventListener){
+      const events=['loading','loadingdone','loadingerror'];const update=()=>{if(parent.isConnected)render();};for(const event of events)d.fonts.addEventListener(event,update);
+      const observer=new MutationObserver(()=>{if(!parent.isConnected){observer.disconnect();cancelScan?.();for(const event of events)d.fonts.removeEventListener(event,update);}});observer.observe(document.body,{childList:true,subtree:true});
+    }
     render();parent.append(browse);return quick;
   }
   function typography(info, el, save, changeTag) {
@@ -384,6 +402,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,filterFonts,fontPicker,scanPageFonts,position,appearance,effects,typography,measurements,section,field,note,button,select};
+  const api={base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

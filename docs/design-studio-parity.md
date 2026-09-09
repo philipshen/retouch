@@ -3938,3 +3938,46 @@ text, cross-origin iframe documents, installed-font enumeration, font loading
 status and variable axes still require work. The scan is a fresh traversal, not
 a subscription to every subsequent DOM change. The full Figma/any-site/native
 distribution goal remains incomplete, and native app launches remain paused.
+
+
+### 2026-09-09 — Declared font-face loading feedback
+
+The font selector and browser results now report the first family's declared
+font-face states: loaded, loading, failed and not loaded. Mixed states remain
+visible rather than collapsing an entire family into a success flag. Unquoted
+generic families are identified as system/fallback families, even when a quoted
+custom family with the same spelling exists. Families without page declarations
+are identified as such; unsupported family syntax reports status unavailable.
+The UI explains that some characters or weights may still use fallback fonts.
+These counts are not proof of which face rendered a glyph or of installed-font
+availability.
+
+Feedback reads FontFaceSet metadata and listens for loading/loadingdone/
+loadingerror. It does not call load() or check(), request font URLs, write source
+or apply a choice. An inspector lifecycle observer removes those listeners and
+cancels its scan when the containing inspector is removed.
+
+All 372 unit tests pass in `/private/tmp/retouch-font-state-unit-final.log`,
+including mixed state aggregation, quoted generic names and unsupported syntax.
+The new `test:e2e:font-state` workflow passes Chromium and WebKit in
+`/private/tmp/retouch-font-state-chromium.log` and
+`/private/tmp/retouch-font-state-webkit.log`. It intercepts test font requests,
+explicitly initiates them from the fixture, holds the loading state, returns a
+404 for one face and a valid fixture WOFF2 for another, and verifies live mixed
+failed/loaded feedback. There are no font requests before fixture initiation,
+no implicit font application, no page errors, and all three listeners are
+removed after inspector disposal. No external font server was contacted.
+The isolated screenshot `/private/tmp/retouch-font-state.png` was inspected.
+
+Discovery/paging/cancellation regression passes in
+`/private/tmp/retouch-font-state-discovery-regression.log`. Actual source-edit
+flows, responsive isolation and exact undo pass for React/WebKit in
+`/private/tmp/retouch-font-state-react-regression.log` and HTML/Chromium in
+`/private/tmp/retouch-font-state-html-regression.log`. Every run exited
+successfully and closed its browser contexts.
+
+This adds declared-face feedback, not full font management or shaping parity.
+Exact active-face/glyph coverage, variable axes, font previews before applying,
+shadow-root discovery and live Shopify coverage remain incomplete. The complete
+Figma/any-site/trusted Mac distribution goal remains active. Native launches
+were not attempted and remain paused.
