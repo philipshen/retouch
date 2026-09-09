@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 306 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 309 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1969,3 +1969,34 @@ cask trust entry and test harness were removed; Homebrew developer mode was rest
 to disabled and owned native processes were confirmed absent. The separate Developer
 ID build remains waiting on its local signing interaction. Notarization, public
 cask distribution, upgrade behavior and Intel runtime remain unfinished.
+
+
+### Atomic selection alignment and spacing distribution
+
+HTML multi-selection now exposes left/center/right and top/middle/bottom alignment
+within the selection bounds, plus horizontal and vertical equal-gap distribution.
+Distribution preserves the first and last layers in spatial order. The operation
+measures current geometry at click time, retains each layer's dimensions and the
+other axis, follows the selected screen scope and uses one undo step. Authored
+content-box sizing, padding, borders and size limits are retained. Repeated
+alignment ignores subpixel differences below one thirty-second CSS pixel to avoid
+adding history solely from browser layout quantization.
+
+The shared CSS writer now accepts individual per-layer change sets and validates
+all selected layers before returning one source edit. Missing/extra change sets,
+mixed uniform/individual instructions, stale hashes and a protected layer refuse
+the complete operation. Existing uniform shared-style editing still passes its
+browser regression.
+
+Validation: 309 unit tests pass. The new selection-layout workflow passes in
+Chromium and WebKit: all six alignments and both distribution axes; fractional,
+padded and maximum-constrained dimensions; no-op repetition; responsive phone
+independence; exact atomic undo/redo; disabled two-layer distribution; and
+protected, flow, nested-selection and transformed-ancestor refusals. Logs:
+`/private/tmp/retouch-selection-layout-{unit,chromium,webkit,html-regression}.log`.
+Screenshot `/private/tmp/retouch-selection-layout.png` was visually checked.
+
+These controls currently require separate absolute-positioned HTML layers. Flow
+layout rearrangement, React/Liquid multi-selection geometry, vector alignment,
+key-object/parent alignment targets, editable spacing handles and group canvas
+transforms remain unfinished. The current Mac artifact predates this change.

@@ -791,7 +791,7 @@ function renderPanelContents() {
   head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
 
-  if(sel.multiple?.length>1){const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;panelBody.append(RetouchHTMLCSS.mountSelection(sel.multiple,sel.multiple.map(info=>matchingEls(info.id)[0]),width,setHTMLCSSSelection));return;}
+  if(sel.multiple?.length>1){const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes)),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
   if(info.components?.length) {
     const label=document.createElement('label');label.textContent='Component scope';
@@ -1409,10 +1409,10 @@ async function renameLayer(name){
     sel.info=result.element;await reloadFrame();renderPanel();toast('Layer named','ok');
   }finally{busyPanel(false);}
 }
-async function setHTMLCSSSelection(property,value,width){
+async function setHTMLCSSSelection(property,value,width,changesById){
   if(!sel?.multiple?.length)return;const selection=sel.multiple,info=sel.info;busyPanel(true);
   try{
-    const result=await api('POST','/rt/__api/op',{type:'setCSSSelection',id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash,property,value,width});
+    const result=await api('POST','/rt/__api/op',{type:'setCSSSelection',id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash,...(changesById?{changesById}:{property,value}),width});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not style selected layers','err');
     if(result.undoId)editorHistory.record({type:'setCSSSelection',id:info.id,selectionIds:selection.map(item=>item.id),undoId:result.undoId});
     sel.info=result.element;sel.multiple=result.selection;await reloadFrame();renderPanel();toast('Selected layers updated','ok');

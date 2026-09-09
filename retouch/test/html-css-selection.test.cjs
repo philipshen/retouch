@@ -20,3 +20,10 @@ test('HTML shared styling refuses stale, unknown, duplicate and non-body selecti
  const r=resolve(source),ids=operation(r).ids;
  for(const extra of [{fileHash:'stale'},{fileHash:undefined},{ids:[ids[0],ids[0]]},{ids:[ids[0],'0000000000']},{ids:[ids[0],r.elements.find(e=>e.tag==='head').id]},{ids:[ids[0]]},{ids:['not-an-id',ids[0]]}])assert.equal(selection.plan(r,operation(r,extra)).refused,true);
 });
+test('individual layer change sets form one atomic edit and reject partial or mixed maps',()=>{
+ const r=resolve(source),ids=operation(r).ids,op={ids,fileHash:r.hash,width:768,changesById:{[ids[0]]:{left:'20px',width:'80px'},[ids[1]]:{left:'100px',width:'120px'}}},result=selection.plan(r,op);
+ assert.equal(result.ok,true);assert.equal(result.edits.length,1);assert.equal(result.edits[0].before,source);assert.deepEqual(result.selection.map(info=>info.cssRules[768]),Object.values(op.changesById));
+ const fresh=resolve(result.edits[0].after);assert.deepEqual(selection.plan(fresh,{...op,fileHash:fresh.hash}).edits,[]);
+ for(const extra of [{property:'width'},{value:null},{changes:{}},{changesById:null},{changesById:[]},{changesById:{[ids[0]]:{left:'20px'}}},{changesById:{...op.changesById,'0000000000':{left:'0px'}}},{changesById:{[ids[0]]:{left:'20px'},[ids[1]]:{left:'red'}}}])assert.equal(selection.plan(r,{...op,...extra}).refused,true);
+ const protectedSource=source.replace('<p>','<p style="left:100px!important">'),protectedResult=selection.plan(resolve(protectedSource),{...op,fileHash:html.contentHash(protectedSource)});assert.equal(protectedResult.refused,true);assert.equal(protectedResult.edits,undefined);
+});
