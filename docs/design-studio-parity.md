@@ -26,7 +26,7 @@ changing those files. The original checkout may continue to evolve independently
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. HTML has responsive CSS, structural edits and batch selection operations. Arbitrary remote-site capture/authoring, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Corner resizing also supports Shift-locked proportions. Fully editable comparison canvases and cross-framework parity remain. |
-| Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop; The latest local ad hoc bundle packages 3b3d8a1 and matches all 86 packaged source files, including React/HTML selection tools. Current native interaction remains unverified; its quarantined self-test timed out without output. File flows, Intel runtime and broader lifecycle verification remain. |
+| Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop; The latest local ad hoc bundle packages a88e45e and matches all 87 packaged source files, including React/HTML selection and lock tools. Current native interaction remains unverified; its quarantined self-test timed out without output. File flows, Intel runtime and broader lifecycle verification remain. |
 | Homebrew | Published immutable archive, integrity hash, cask/tap, install/launch/upgrade/uninstall, trusted macOS distribution | Universal ZIP, SHA-256 and cask generator exist. Development build is ad hoc signed. Local cask install/uninstall passed. Developer ID signing/notarization, publishing, upgrades and quarantined launch remain unverified. |
 | Ease of use | New user can open a site, select/edit, compare screens, undo and retain work without learning implementation details | Controls have labels and basic defaults. Whole-workflow usability validation remains. |
 
@@ -2571,3 +2571,32 @@ passed in `/private/tmp/retouch-lock-recovery-visual-final.log`; screenshot
 Full feature parity, arbitrary-site source authoring, durable lock identity and
 trusted Mac distribution remain unfinished. The existing Mac archive predates
 these lock controls.
+
+## Refreshed Mac lock package (a88e45e)
+
+The universal ad hoc archive packages source
+`a88e45e4f1e508da21298c0b05892a0c3d5975b6` and is available at
+`/private/tmp/retouch-desktop-locks-20260909/Retouch-0.1.0-mac.zip`.
+SHA-256: `24e274a13a940e65b8217792737c90b5cff8b87dd15fbb24c124d1b7a3714bb9`.
+Its generated cask, verification receipt, native UI check and process sample are
+alongside the archive. All 87 packaged source files matched the source commit and
+the cask-installed copy. Both architectures, strict ad hoc signature and bundled
+launcher/cwd/exit, HTML startup/health/stop and URL self-tests passed.
+
+Both Chromium and WebKit passed all 19 HTML workflows against bundled code, plus
+the lock/history/reload/shortcut/recovery, locked-overlay and layer-interaction
+workflows. The real React lock/marquee/group-edit workflow passed in WebKit.
+The source hashes and strict signature verified again after browser testing;
+the temporary harness was removed. Logs are `/private/tmp/retouch-locks-package-*.log`,
+with individual paths and counts recorded in `verification.json`.
+
+The isolated cask install/uninstall and cleanup passed. The installed quarantined
+self-test timed out after 45 seconds without output; its owned process group was
+stopped and verified absent. Quarantine was retained. The test app, temporary tap,
+cask trust and registration, and app directory were removed; Homebrew developer
+mode was restored to disabled. Native inspection of the built app returned
+`cgWindowNotFound`. Its owned PID 3105 was sampled and stopped. This does not prove
+usable native editing, trusted launch, notarization, public distribution, upgrades
+or Intel runtime. The older-source Developer ID build was polled and remained live
+waiting for local signing interaction. Full Figma parity and arbitrary-site
+source authoring remain unfinished.

@@ -3,15 +3,13 @@
 A native AppKit window hosts the same Retouch editor used in the browser.
 macOS 13 or later; universal Apple Silicon and Intel binary.
 
-The current local artifact packages editor commit `3b3d8a1`, including React and
-HTML multi-selection, marquee selection, shared styles, alignment, group movement/
-resizing and gap controls. It also fixes inspector focus loss during stylesheet
-refresh. All 86 packaged source files, universal architectures, strict ad hoc
-signature, built-bundle launcher tests and an isolated Homebrew install/uninstall
-were verified. Bundled browser results and their limits are recorded below.
-The quarantined installed self-test timed out after 45 seconds without output;
-its process was stopped and quarantine preserved. Native interaction with this
-artifact is unverified. No public, notarized release has been published.
+The current local artifact packages editor commit `a88e45e`, including the
+React/HTML selection tools and canvas layer locks: batch lock/unlock, ordered
+undo/redo, keyboard shortcuts, filtered recovery and editor-reload persistence
+within a live project session. All 87 packaged source files match that commit.
+Universal architectures, strict ad hoc signature, built-bundle launcher tests and
+an isolated Homebrew install/uninstall were verified. Bundled browser evidence
+and native limits are recorded below. No public, notarized release is published.
 
 Build with Apple's command line developer tools installed:
 
@@ -63,38 +61,35 @@ signing, then notarize and staple the app before creating the final published
 archive and its hash. The current build script does not automate notarization.
 Never reuse the pre-stapling archive hash for a rebuilt archive.
 
-## Latest local development artifact (3b3d8a1)
+## Latest local development artifact (a88e45e)
 
-Archive: `/private/tmp/retouch-desktop-selection-fixed-20260909/Retouch-0.1.0-mac.zip`
+Archive: `/private/tmp/retouch-desktop-locks-20260909/Retouch-0.1.0-mac.zip`
 
-SHA-256: `012656964aeb9142812079d29fbe2a7e95739b4ac2ee32a13b45e5ba8d519887`
+SHA-256: `24e274a13a940e65b8217792737c90b5cff8b87dd15fbb24c124d1b7a3714bb9`
 
 The generated `retouch-studio.rb`, checksum and `verification.json` accompany the
-archive. The receipt binds 86 per-file source hashes to
-`3b3d8a194966072a722b018e2873ae19a84e691c` and records native source hashes,
-architectures, bundled runtime tests, cask installation and cleanup.
-
-All 19 HTML workflows passed in Chromium and WebKit against bundled code.
-React geometry passed in Chromium, and React marquee and shared-style workflows
-passed in WebKit. The first shared-style run timed out during selection with no
-page errors; a diagnostic rerun and the unchanged test both passed. Its cause is
-unresolved, and the receipt preserves all three results. All 328 unit/HTTP tests
-passed against the source checkout.
-
-Browser verification used a temporary test harness whose runtime directories
-pointed into the app bundle. The harness was removed after all tests finished;
-all packaged source hashes and the strict signature still verified afterward.
-See the receipt for individual terminal results and logs. The earlier archive at `/private/tmp/retouch-desktop-selection-20260909`
-packages `924bc30` and failed both engines' first HTML workflow; its receipt
-retains those failures. This archive includes the resulting inspector focus fix.
+archive. The receipt binds 87 packaged source hashes to
+`a88e45e4f1e508da21298c0b05892a0c3d5975b6`, along with native source hashes,
+architectures, browser results, cask installation and cleanup. Browser workflows
+used a separate test harness with runtime directories pointing into this bundle.
+Both engines passed all 19 HTML workflows plus lock/history/reload/shortcut/recovery,
+locked-overlay and layer-interaction checks. The real React lock/marquee/group-edit
+workflow passed in WebKit. All 87 source hashes and the strict signature still
+verified afterward; the temporary harness was removed. See the receipt for
+terminal results and logs.
 
 The local cask installed into an isolated app directory and retained quarantine.
-Its self-test timed out without output. The test app, temporary tap, cask trust
-entry and owned app process group were removed; Homebrew developer mode was
-restored to disabled. This artifact has not demonstrated usable native editing,
-trusted Gatekeeper launch, notarization, public distribution, upgrades or Intel
-runtime. The separate Developer ID build still awaits local signing interaction
-and packages older source `7708416`.
+Its self-test timed out after 45 seconds without output; its owned process group
+was stopped and verified absent. The installed app, temporary tap, cask trust
+entry and app directory were removed, and Homebrew developer mode restored to
+disabled. Native inspection of the built app returned `cgWindowNotFound`; its
+owned process was sampled and stopped. The native check and sample accompany
+the archive. This has not demonstrated usable native editing, trusted Gatekeeper
+launch, notarization, public distribution, upgrades or Intel runtime.
+
+The separate Developer ID build still awaits local signing interaction and
+packages older source `7708416`. Earlier archive receipts remain in their original
+artifact directories, including the initial selection archive's HTML failures.
 
 ## Historical native UI evidence (earlier bundles)
 
