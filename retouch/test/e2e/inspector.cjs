@@ -60,6 +60,7 @@ const read = () => fs.readFileSync(file,'utf8');
    child=await rect('#anchor-target');parent=await rect('#anchor-parent');
    const center=child.x+child.width/2-(parent.x+parent.width/2);
    await page.setViewportSize({width:1320,height:900});
+   await until(async()=>{const c=await rect('#anchor-target'),p=await rect('#anchor-parent');return Math.abs(c.x+c.width/2-(p.x+p.width/2)-center)<1;},'center anchor after canvas resize');
    child=await rect('#anchor-target');parent=await rect('#anchor-parent');
    assert.ok(Math.abs(child.x+child.width/2-(parent.x+parent.width/2)-center)<1,'center anchor follows resize');
    await select('#anchor-target');
@@ -67,6 +68,7 @@ const read = () => fs.readFileSync(file,'utf8');
    await until(()=>read().includes('w-auto'),'stretch source');await sleep(500);
    const width=(await rect('#anchor-target')).width;
    await page.setViewportSize({width:1420,height:900});
+   await until(async()=>Math.abs((await rect('#anchor-target')).width-width-100)<1,'stretch after canvas resize');
    assert.ok(Math.abs((await rect('#anchor-target')).width-width-100)<1,'both edges stretch with parent');
    await page.screenshot({path:'/tmp/retouch-inspector-anchors.png'});
    for(let n=0;n<4;n++) {const prior=read();await page.getByRole('button',{name:'Undo',exact:true}).click();await until(()=>read()!==prior,'undo source');await frame.locator('#anchor-target').waitFor();}

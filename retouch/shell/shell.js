@@ -45,6 +45,7 @@ iframe.addEventListener('load', () => {
     if (editing?.el.ownerDocument !== iframe.contentDocument) editing = null;
     hoverEl = null;
     hookFrame(iframe.contentDocument, iframe.contentWindow);
+    layers.attach(iframe.contentDocument);
     onNavigated();
     if (sel) renderPanel();
   } catch (err) {
@@ -582,6 +583,7 @@ function paintLoop() {
   badgeTarget=badge;componentBadge.hidden=!badge;
   if(badge){const r=badge.el.getBoundingClientRect();componentBadge.style.left=Math.max(0,r.left)+'px';componentBadge.style.top=Math.max(0,r.top-22)+'px';}
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
+  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.info, !!panelTasks || undoBusy);
   requestAnimationFrame(paintLoop);
 }
 
@@ -1418,3 +1420,40 @@ RetouchMaxWidth.mount({
   save: classes => setClasses(classes),
   notify: message => toast(message, 'err'),
 });
+
+
+const layers = RetouchLayers.mount({
+  host:document.getElementById('layersPanel'),
+  onSelect:async el=>{if(panelTasks||undoBusy)return;await commitInlineEdit();await select(el);el.scrollIntoView({block:'nearest',inline:'nearest'});},
+  onAction:action=>structureAction(action),
+});
+async function structureAction(action) {
+  if(!sel || panelTasks || undoBusy)return;
+  await commitInlineEdit();
+  const info=sel?.info;if(!info)return;
+  const target=matchingEls(info.id).find(el=>inTextScope(el,info));
+  if(!target?.parentElement)return;
+  const siblings=[...target.parentElement.children];
+  const signature=el=>el.tagName+'|'+el.textContent.trim();
+  const expected=siblings.map(signature),at=siblings.indexOf(target);
+  if(action==='duplicateElement')expected.splice(at+1,0,expected[at]);
+  else if(action==='deleteElement')expected.splice(at,1);
+  else if(action==='before'||action==='after') {
+    const to=at+(action==='before'?-1:1);
+    if(to<0||to>=expected.length)return;
+    const item=expected.splice(at,1)[0];expected.splice(to,0,item);
+  } else return;
+  busyPanel(true);
+  try {
+    const result=await api('POST','/rt/__api/op',{type:action==='before'||action==='after'?'moveElement':action,direction:action,id:info.id,fileHash:info.fileHash||info.hash,context:info.context});
+    if(!result?.ok){toast(result?.reason||result?.error||'Could not change this layer','err');return;}
+    const parentId=result.parentId||info.structure?.parentId;
+    undoStack.push({type:'structure',id:parentId||info.id,undoId:result.undoId,context:info.context});
+    const fresh=parentId?await api('GET',resolveUrl(parentId,info.context)):null;
+    if(fresh?.ok) {
+      await refreshWrittenElement(fresh.element,el=>JSON.stringify([...el.children].map(signature))===JSON.stringify(expected));
+      sel={hostId:parentId,instanceId:null,scope:'host',info:fresh.element};renderPanel();
+    } else {await reloadFrame();clearSelection();}
+    toast('Layer updated','ok');
+  } finally {busyPanel(false);}
+}

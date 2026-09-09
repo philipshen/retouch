@@ -97,3 +97,16 @@ utilities. Arbitrary CSS files and unused config-only breakpoint names still nee
 a fuller source integration.
 
 Run `node test/e2e/screens.cjs` from `retouch/` for the isolated browser check.
+
+## Layers
+
+The left panel shows the rendered hierarchy of source-connected elements. Search
+by tag, ID, label or direct text. Use disclosures to collapse groups; selecting an
+element on the canvas reveals its ancestors. Click a row or press Enter to select
+it without entering text editing. Arrow keys navigate and expand/collapse rows.
+
+Use Duplicate layer, Move layer up/down or Delete layer to change source-backed
+literal siblings. Cmd/Ctrl+D duplicates the focused row; Delete/Backspace deletes
+it. Undo restores exact source bytes. The panel explains unavailable actions
+when the current source structure cannot be edited safely. Grouping, reparenting,
+component-aware structural editing, multi-selection and clipboard remain open.

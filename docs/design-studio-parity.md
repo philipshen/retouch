@@ -14,7 +14,7 @@ changing those files. The original checkout may continue to evolve independently
 | Area | Required outcome | Current evidence and remaining work |
 | --- | --- | --- |
 | Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Existing single-site zoom/selection/resize. Most document and multi-selection operations still absent or unaudited. |
-| Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Source structure backend exists; full tree and complete canvas interactions remain. |
+| Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI now exist. Reparenting, rename, multi-selection, cross-context clipboard and broader source structures remain. |
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | Full vector authoring and geometry model remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | Some CSS controls exist; complete visual layout workflow and equivalence tests remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | Partial inspector controls exist; complete visual editors and source representations remain. |
@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification, 2026-09-08
 
-- `cd retouch && npm test`: 183 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 184 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -80,3 +80,23 @@ now reuse a matching named breakpoint and follow loaded breakpoint units. Loaded
 CSS discovery does not inventory unused breakpoint names in project config files.
 Named custom typography classes do not automatically gain responsive variants;
 those presets remain base-only while size/weight controls support scopes.
+
+### Layer workflow
+
+The new left panel follows source-connected elements in the rendered DOM and
+keeps the hierarchy updated after navigation and source changes. Search retains
+matching ancestors, canvas selection reveals collapsed ancestors, and arrow keys
+navigate rows. Enter selects a layer without entering text editing. Cmd/Ctrl+D
+and Delete/Backspace act on the focused layer.
+
+Duplicate, delete and sibling move actions use the existing adapter plans and
+source transaction history. The UI waits for the rendered child ordering/count
+to match a successful structural write. Selection/actions are disabled while a
+write or undo is pending to avoid acting on a replaced document. The current
+backend still restricts structural changes to literal native siblings and refuses
+identity duplication; components, expressions, loops and reparenting require
+additional source planning. The layer tree does not yet expose unstamped sites.
+
+`retouch/test/e2e/layers.cjs` verifies hierarchy depth, search, collapse, keyboard
+navigation, selection without typing, duplicate/reorder/delete in source and in
+the rendered page, exact-byte undo and duplicate refusal for authored IDs.
