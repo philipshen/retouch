@@ -17,3 +17,12 @@ test('canvas resizing anchors opposite edges and supports centered proportional 
  for(const handle of ['n','s','e','w','ne','nw','se','sw']){const g=resize(100,50,handle,12,7,{altKey:true});assert.equal(g.x+g.width/2,50);assert.equal(g.y+g.height/2,25);}
  assert.throws(()=>resize(100,50,'invalid',0,0));
 });
+test('movement snapping chooses nearest edges and centers without changing a locked axis',()=>{
+ const {snap}=require('../shell/canvas-move.js'),rect={left:20,top:30,width:40,height:20},targets=[{left:150,top:120,width:60,height:40}];
+ const aligned=snap(rect,{x:88,y:72},targets);assert.equal(aligned.x,90);assert.equal(aligned.y,70);assert.equal(aligned.guides.length,2);
+ const center=snap(rect,{x:139,y:99},targets);assert.equal(center.x,140);assert.equal(center.y,100);
+ const locked=snap(rect,{x:88,y:0},targets,{lock:'x'});assert.equal(locked.x,90);assert.equal(locked.y,0);assert.equal(locked.guides.length,1);
+ assert.deepEqual(snap(rect,{x:70,y:50},targets),{x:70,y:50,guides:[]});
+ assert.equal(snap(rect,{x:79,y:0},targets,{tolerance:12}).x,90);assert.equal(snap(rect,{x:79,y:0},targets,{tolerance:3}).x,79);
+ const nearest=snap(rect,{x:88,y:0},[...targets,{left:149,top:300,width:50,height:50}]);assert.equal(nearest.x,89);
+});

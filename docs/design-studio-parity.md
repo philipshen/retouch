@@ -39,7 +39,7 @@ documentation. Nothing in it proves full parity.
 
 ## Verification baseline and historical checks
 
-- `cd retouch && npm test`: 300 passed. Run with local network/watch permissions;
+- `cd retouch && npm test`: 301 passed. Run with local network/watch permissions;
   sandbox-denied socket/watcher failures are not product failures.
 - `cd retouch && node test/e2e/screens.cjs`: real browser fixture exercises shipped
   shell, actual media query changes, width/height, rotation, custom sizing, invalid
@@ -1865,3 +1865,28 @@ This inheritance model covers distinct ascending minimum-width scopes. Equal-wid
 aliases, complex or overlapping media conditions, state variants and arbitrary
 compiler cascade ordering remain outside this validation. The current Mac package
 predates these changes; signing and notarization remain incomplete.
+
+
+### Canvas movement alignment snapping
+
+The shared HTML and React movement overlay now attracts dragged layer edges and
+centers to the containing block and visible direct siblings. Red alignment guides
+show the matched line. The threshold is six screen pixels at every canvas zoom;
+Option/Alt bypasses snapping immediately, including modifier changes mid-drag.
+Shift preserves the dominant axis, a strictly horizontal or vertical drag retains
+its other coordinate, and keyboard nudges remain exact. Candidate sibling bounds
+are read during the gesture so animation does not leave stale alignment targets.
+The preview and guides live outside the site; only a committed drag writes source.
+
+Validation: 301 unit tests pass. The dedicated canvas-snapping browser workflow
+passes in Chromium and WebKit at 50%, 100% and 200% zoom, covering sibling and
+bordered-container alignment, hidden-sibling exclusion, live guides, modifier
+transitions, keyboard precision, cancellation and exact source undo. Existing
+HTML and real Next.js/Tailwind positioning workflows also pass in Chromium.
+Evidence: `/private/tmp/retouch-snapping-{unit,chromium,webkit,html,react}.log`;
+visually inspected screenshot: `/private/tmp/retouch-snapping.png`.
+
+Resize snapping, equal-spacing suggestions, multi-layer transforms, custom guides,
+rulers and vector-edit snapping remain unfinished. This does not establish full
+Figma snapping parity or unrestricted renderer support. The Mac package has not
+yet been rebuilt with these changes.
