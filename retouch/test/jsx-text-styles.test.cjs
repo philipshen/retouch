@@ -30,3 +30,22 @@ test('React override reset removes changed and obsolete properties only in its s
  assert.ok(info.className.includes('![font-size:32px]'));assert.ok(info.className.includes('md:![font-size:48px]'));assert.ok(!info.className.includes('md:!text-[40px]'));assert.ok(!info.className.includes('md:![font-family:'));
  assert.deepEqual(linked.describe(after).textStyleOverrides,{'':[], 'md:':[]});assert.equal(linked.plan(resolve(source),{type:'resetTextStyle',scope:'md:'},style).ok,false);
 });
+test('React refresh preserves local edits across successive matching library values and scopes',()=>{
+ let before=apply(apply(source).edits[0].after,'md:').edits[0].after;before=before.replace('md:![font-size:32px]','md:!text-[40px]');
+ const next={...style,properties:{...style.properties,'font-size':'40px','font-weight':'600'}};
+ const first=linked.planFile('/tmp/Page.jsx','Page.jsx',before,next);assert.equal(first.ok,true,first.reason);assert.equal(first.updated,2);assert.equal(first.edits.length,1);
+ let r=resolve(first.edits[0].after),info=react.describe(r);assert.ok(info.className.includes('![font-size:40px]'));assert.ok(info.className.includes('md:!text-[40px]'));assert.ok(info.className.includes('md:![font-weight:600]'));assert.deepEqual(info.textStyleLinks['md:'].overrides,['font-size']);
+ const later={...next,properties:{...next.properties,'font-size':'60px'}};const second=linked.planFile('/tmp/Page.jsx','Page.jsx',r.source,later);assert.equal(second.ok,true);r=resolve(second.edits[0].after);assert.ok(react.describe(r).className.includes('md:!text-[40px]'));assert.ok(react.describe(r).className.includes('![font-size:60px]'));assert.deepEqual(linked.planFile('/tmp/Page.jsx','Page.jsx',r.source,later).edits,[]);
+ const reset=linked.plan(r,{type:'resetTextStyle',scope:'md:'},later);assert.equal(reset.ok,true);assert.deepEqual(linked.describe(resolve(reset.edits[0].after)).textStyleOverrides['md:'],[]);
+});
+test('React refresh preserves explicit resets and new local properties while removing obsolete inherited ones',()=>{
+ let before=apply(source).edits[0].after.replace('![font-size:32px]','').replace('hover:text-red-500','tracking-[3px] hover:text-red-500');
+ const next={...style,properties:{'font-size':'48px','letter-spacing':'1px'}};
+ const result=linked.planFile('/tmp/Page.jsx','Page.jsx',before,next);assert.equal(result.ok,true,result.reason);const info=react.describe(resolve(result.edits[0].after));
+ assert.ok(!info.className.includes('![font-size:'));assert.ok(info.className.includes('tracking-[3px]'));assert.ok(!info.className.includes('![font-weight:'));assert.deepEqual(info.textStyleLinks[''].overrides,['font-size','letter-spacing']);
+});
+test('React refresh ignores unlinked spreads but refuses malformed linked metadata without returning partial edits',()=>{
+ const before=apply(source).edits[0].after.replace('return <p','return <><p').replace('</p>}','</p><span {...props}/></>}');
+ const next={...style,properties:{...style.properties,'font-size':'48px'}};assert.equal(linked.planFile('/tmp/Page.jsx','Page.jsx',before,next).ok,true);
+ const broken=before.replace('<span {...props}/>','<span data-rt-text-styles={getLinks()}/>');const result=linked.planFile('/tmp/Page.jsx','Page.jsx',broken,next);assert.equal(result.ok,false);assert.equal(result.edits,undefined);
+});

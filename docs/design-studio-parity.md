@@ -5709,3 +5709,26 @@ diff checks passed. Counts describe supported source-class ownership, not a
 complete analysis of arbitrary CSS cascade rules. React propagation/inheritance,
 Liquid linked styles and full parity remain unfinished. Native launches stay
 paused.
+
+### Override-aware React text-style refresh planner
+
+React file planning now refreshes every matching linked layer/scope into one
+before/after source edit. Canonical properties follow the updated definition;
+local replacements, removed canonical properties and pre-existing values for
+newly introduced properties are preserved. Detected overrides are recorded
+explicitly so later matching library values do not reclaim local ownership.
+Obsolete inherited properties are removed. Reset clears retained override state
+and its obsolete declarations. Unlinked spread attributes do not block a file;
+malformed linked metadata and unsupported linked layers refuse the plan.
+An AST coverage check prevents silently missing explicit link attributes outside
+the indexed JSX elements.
+
+All 426 unit tests passed, exit 0:
+/private/tmp/retouch-react-style-refresh-units.log. New cases cover successive
+updates, coincidental matches, scoped preservation, resets, added/removed
+properties, idempotence and malformed-link refusal without partial edits. Syntax
+and diff checks passed. This planner is not yet connected to project-wide React
+catalog mutations or the update UI; browser propagation remains unverified.
+Font shorthands/coupled utility conflicts still refuse where ownership cannot be
+preserved safely. Liquid links and full parity remain unfinished. Native launches
+remain paused.

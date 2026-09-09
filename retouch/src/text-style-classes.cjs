@@ -31,7 +31,7 @@ function hasSizeLeading(token){
 function compose(classes,values,prefix='',remove=[]){
  if(!Array.isArray(remove)||remove.some(property=>!properties.includes(property)))throw Error('Unsupported typography reset properties.');
  if(typeof classes!=='string')throw Error('Text styles require a class string.');
- responsive.replaceScope('','',prefix);const encoded=encode(values),keys=[...new Set([...Object.keys(encoded),...remove])],retained=[];
+ responsive.replaceScope('','',prefix);const encoded=values&&typeof values==='object'&&!Array.isArray(values)&&!Object.keys(values).length&&remove.length?{}:encode(values),keys=[...new Set([...Object.keys(encoded),...remove])],retained=[];
  for(const token of classes.split(/\s+/).filter(Boolean)){
   if(!classTokens.valid(token))throw Error('The source contains unsupported class syntax.');
   const part=responsive.split(token);if(part.prefix!==prefix){retained.push(token);continue;}
@@ -49,4 +49,12 @@ function overrides(className,baseline,prefix=''){
  const encoded=encode(baseline),tokens=responsive.project(className,prefix).split(/\s+/).filter(Boolean);
  return Object.keys(encoded).filter(property=>!tokens.includes(encoded[property])||tokens.some(token=>token!==encoded[property]&&(/^!|!$/.test(token))&&(matchers[property](inspector.base(token))||property==='line-height'&&hasSizeLeading(inspector.base(token))||/^\[font:/.test(inspector.base(token))))).sort();
 }
-module.exports={encode,compose,overrides};
+function refresh(className,baseline,next,prefix='',retained=[]){
+ encode(baseline);encode(next);
+ if(!Array.isArray(retained)||retained.some(property=>!properties.includes(property)))throw Error('Invalid text style overrides.');
+ const local=new Set([...retained,...overrides(className,baseline,prefix)]),tokens=responsive.project(className,prefix).split(/\s+/).filter(Boolean).map(inspector.base);
+ for(const property of Object.keys(next))if(!Object.hasOwn(baseline,property)&&tokens.some(token=>matchers[property](token)||property==='line-height'&&hasSizeLeading(token)||/^\[font:/.test(token)))local.add(property);
+ const values=Object.fromEntries(Object.entries(next).filter(([property])=>!local.has(property))),removed=Object.keys(baseline).filter(property=>!Object.hasOwn(next,property)&&!local.has(property));
+ return {classes:Object.keys(values).length||removed.length?compose(className,values,prefix,removed):className,overrides:[...local].sort()};
+}
+module.exports={encode,compose,overrides,refresh};
