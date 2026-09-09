@@ -14,6 +14,7 @@
     "test:e2e:react-selection-geometry": "node test/e2e/react-selection-geometry.cjs",
     "test:e2e:react-selection": "node test/e2e/react-selection.cjs",
     "test:e2e:react-position": "node test/e2e/react-position.cjs",
+    "test:e2e:svg-arrange-points": "RT_E2E_COMPOUND=1 RT_E2E_MULTI_POINTS=1 RT_E2E_ARRANGE_POINTS=1 node test/e2e/svg-vertices.cjs",
     "test:e2e:svg-marquee": "RT_E2E_COMPOUND=1 RT_E2E_MULTI_POINTS=1 RT_E2E_MARQUEE=1 node test/e2e/svg-vertices.cjs",
     "test:e2e:svg-multi-points": "RT_E2E_COMPOUND=1 RT_E2E_MULTI_POINTS=1 node test/e2e/svg-vertices.cjs",
     "test:e2e:svg-arc-convert": "RT_E2E_COMPOUND=1 RT_E2E_ARCS=1 RT_E2E_ARC_CONVERT=1 node test/e2e/svg-vertices.cjs",

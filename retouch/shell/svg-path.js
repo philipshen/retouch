@@ -76,6 +76,15 @@
     const selected=new Set(indices),nodes=part.nodes.map((p,i)=>translate(p,selected.has(i)?dx:0,selected.has(i)?dy:0));
     return serialize(nodes,part.closed)?{nodes,closed:part.closed}:null;
   }
+  function arrangePoints(part,indices,axis,mode,matrix={a:1,b:0,c:0,d:1}){
+    if(!part||!serialize(part.nodes,part.closed)||!Array.isArray(indices)||indices.some(i=>!Number.isInteger(i)||i<0||i>=part.nodes.length)||!['x','y'].includes(axis)||!['min','center','max','distribute'].includes(mode)||!matrix||!['a','b','c','d'].every(k=>Number.isFinite(matrix[k])))return null;
+    const {a,b,c,d}=matrix,det=a*d-b*c,selected=[...new Set(indices)];if(!Number.isFinite(det)||Math.abs(det)<1e-12||selected.length<(mode==='distribute'?3:2))return null;
+    const projected=selected.map(i=>({i,value:axis==='x'?a*part.nodes[i].x+c*part.nodes[i].y:b*part.nodes[i].x+d*part.nodes[i].y})).sort((p,q)=>p.value-q.value||p.i-q.i);
+    if(projected.some(p=>!Number.isFinite(p.value)))return null;
+    const low=projected[0].value,high=projected.at(-1).value,nodes=part.nodes.map(p=>translate(p,0,0));
+    projected.forEach((p,rank)=>{const target=mode==='min'?low:mode==='max'?high:low+(high-low)*(mode==='center'?.5:rank/(projected.length-1)),delta=target-p.value;nodes[p.i]=translate(nodes[p.i],axis==='x'?d*delta/det:-c*delta/det,axis==='x'?-b*delta/det:a*delta/det);});
+    return serialize(nodes,part.closed)?{nodes,closed:part.closed}:null;
+  }
   function translateContour(part,dx,dy){
     if(!part||!serialize(part.nodes,part.closed)||!Number.isFinite(dx)||!Number.isFinite(dy))return null;
     const nodes=part.nodes.map(p=>translate(p,dx,dy));return serialize(nodes,part.closed)?{nodes,closed:part.closed}:null;
@@ -168,5 +177,5 @@
     return (!next.in||coordinate(next.in))&&(!next.out||coordinate(next.out))?next:null;
   }
   function equivalent(a,b){return !!a&&!!b&&a.closed===b.closed&&a.nodes.length===b.nodes.length&&a.nodes.every((p,i)=>(!p.arc&&!b.nodes[i].arc||p.arc&&b.nodes[i].arc&&['rx','ry','rotation','large','sweep'].every(key=>Math.abs(p.arc[key]-b.nodes[i].arc[key])<1e-6))&&['','in','out'].every(key=>{const x=key?p[key]:p,y=key?b.nodes[i][key]:b.nodes[i];return !x&&!y||x&&y&&Math.abs(x.x-y.x)<1e-6&&Math.abs(x.y-y.y)<1e-6;}));}
-  const api={serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,translatePoints,setArc,split,segmentMiddle,arcCenter,arcPoint,arcToCubics,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
+  const api={serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,translatePoints,arrangePoints,setArc,split,segmentMiddle,arcCenter,arcPoint,arcToCubics,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
 })(typeof window==='object'?window:globalThis);

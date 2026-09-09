@@ -3575,3 +3575,46 @@ Box selection is currently confined to the active contour. Cross-contour point
 selection, vector networks, booleans/masks, persistent point constraints,
 arbitrary-site authoring and full Figma parity remain open. Native launches
 stayed paused; trusted Mac distribution remains unverified.
+
+
+### 2026-09-09 — Align and distribute selected vector points
+
+Selecting at least two anchors reveals Arrange points in the inspector. Left,
+Center, Right, Top, Middle and Bottom align point centers on the visible canvas
+axes, including rotated and nonuniformly scaled SVGs. Space horizontally and
+Space vertically require three points and distribute their centers between the
+selected extremes. Each point's handles move with it; unselected points and
+other contours remain unchanged. Actions update the pending preview, preserve
+selection, and use Done/Escape and existing source undo/redo.
+
+The geometry helper projects anchors through the SVG screen matrix, computes
+alignment/spacing in those axes and maps displacement back into local coordinates.
+It rejects invalid/singular transforms, insufficient selections, unsupported
+indices, degenerate results and coordinate overflow before changing the model.
+The inspector group hides for a single/empty selection, whole-contour movement
+and nested Pen drawing. Cancelling nested Pen now restores the original point
+selection and the arrangement controls.
+
+All 361 unit tests pass in `/private/tmp/retouch-arrange-points-unit-final.log`.
+Tests cover both axes and every operation under a nonuniform rotated matrix,
+unchanged orthogonal coordinates, attached handles/arc descriptors, unselected
+anchors, input immutability and invalid/overflow/degenerate refusals.
+All four browser workflows pass in
+`/private/tmp/retouch-arrange-points-chromium.log` (HTML/Chromium),
+`/private/tmp/retouch-arrange-points-webkit.log` (React/WebKit),
+`/private/tmp/retouch-arrange-points-react-chromium.log`, and
+`/private/tmp/retouch-arrange-points-html-webkit.log`.
+They verify all eight controls, projected positions and preserved orthogonal
+coordinates, attached handles, selection counts, unchanged neighboring contours,
+source isolation, cancellation and exact undo/redo. All actions run at 100 percent
+zoom; left alignment and horizontal distribution also run at 50 and 200 percent.
+The latter two workflows additionally verify nested Pen selection restoration.
+The inspected `/private/tmp/retouch-arrange-points-chromium.png` shows the controls
+in the inspector and aligned anchor centers. The full marquee/multi-point
+regression passes in `/private/tmp/retouch-arrange-points-marquee.log`.
+
+Arrangement remains scoped to selected anchors in one contour. Cross-contour
+selection, vector networks, booleans/masks, persistent point constraints and
+arbitrary-site authoring remain open; full Figma parity is not established.
+Native launches remained paused, with no desktop build or launch in this step.
+Trusted Mac distribution remains unverified.

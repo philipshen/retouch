@@ -156,3 +156,16 @@ test('Selected point translation is atomic and retains attached handles and arc 
   for(const [indices,dx,dy] of [[[],1,0],[[4],1,0],[[.5],1,0],[[0],Infinity,0],[[3],100000,0]])assert.equal(path.translatePoints(part,indices,dx,dy),null);
   assert.equal(JSON.stringify(part),before);
 });
+
+
+test('Point arrangement uses projected axes and carries handles without changing other anchors',()=>{
+  const part=path.parse('M0 0C5 0 15 20 20 20A30 20 45 0 1 60 40L80 50'),before=JSON.stringify(part),matrix={a:.8,b:.6,c:-1.2,d:1.6},project=p=>({x:matrix.a*p.x+matrix.c*p.y,y:matrix.b*p.x+matrix.d*p.y});
+  for(const axis of ['x','y'])for(const mode of ['min','center','max','distribute']){
+    const indices=[0,1,2],result=path.arrangePoints(part,indices,axis,mode,matrix),original=indices.map(i=>({i,...project(part.nodes[i])})).sort((a,b)=>a[axis]-b[axis]),low=original[0][axis],high=original.at(-1)[axis];assert.ok(result);assert.deepEqual(result.nodes[3],part.nodes[3]);
+    original.forEach((p,rank)=>{const expected=mode==='min'?low:mode==='max'?high:low+(high-low)*(mode==='center'?.5:rank/2),q=project(result.nodes[p.i]);assert.ok(Math.abs(q[axis]-expected)<1e-8);assert.ok(Math.abs(q[axis==='x'?'y':'x']-p[axis==='x'?'y':'x'])<1e-8);const dx=result.nodes[p.i].x-part.nodes[p.i].x,dy=result.nodes[p.i].y-part.nodes[p.i].y;assert.deepEqual(result.nodes[p.i],path.translate(part.nodes[p.i],dx,dy));});
+  }
+  for(const [indices,axis,mode,m] of [[[0],'x','min',matrix],[[0,0],'x','min',matrix],[[0,1],'x','distribute',matrix],[[0,4],'x','max',matrix],[[0,1],'z','min',matrix],[[0,1],'x','other',matrix],[[0,1],'x','min',{a:1,b:1,c:1,d:1}]])assert.equal(path.arrangePoints(part,indices,axis,mode,m),null);
+  assert.equal(path.arrangePoints(path.parse('M0 0L1 0'),[0,1],'x','min'),null);
+  assert.equal(path.arrangePoints(path.parse('M99990 99990L-99990 -99990L-99980 99990'),[0,1,2],'x','min',{a:1,b:1,c:-1,d:1}),null);
+  assert.equal(JSON.stringify(part),before);
+});
