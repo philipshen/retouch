@@ -191,7 +191,7 @@ function hookFrame(d, w) {
     }
   }, true);
   d.addEventListener('keydown', (e) => {
-    if(lockShortcut(e))return;
+    if(canvasZoomShortcut(e)||lockShortcut(e))return;
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'i')) {
@@ -1667,7 +1667,7 @@ routeInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') navigatePage(routeInput.value || '/');
 });
 window.addEventListener('keydown', (e) => {
-  if(lockShortcut(e))return;
+  if(canvasZoomShortcut(e)||lockShortcut(e))return;
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.target.closest?.('input,textarea,[contenteditable="true"]')) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
@@ -1731,6 +1731,15 @@ async function setLayerLocks(el,value){
   if(value)clearSelection();
   layers.refresh();
   toast(value?'Selection locked on the canvas. Select it in Layers to edit.':'Selection unlocked.','ok');
+}
+function canvasZoomShortcut(e){
+  if(!e.shiftKey||e.metaKey||e.ctrlKey||e.altKey||!['Digit1','Digit2'].includes(e.code))return false;
+  if(mode!=='edit'||editing||e.target.isContentEditable||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable="true"],[contenteditable=""]'))return false;
+  e.preventDefault();e.stopImmediatePropagation();
+  if(e.repeat||panelTasks||undoBusy||sourceRequests)return true;
+  const button=document.getElementById(e.code==='Digit1'?'fitScreen':'zoomSelection');
+  if(!button.disabled)button.click();
+  return true;
 }
 function lockShortcut(e){
   if(!(e.metaKey||e.ctrlKey)||!e.shiftKey||e.altKey||e.key.toLowerCase()!=='l')return false;

@@ -2625,3 +2625,24 @@ Selections spanning more than the current screen viewport are reported as partia
 outside it. Complete reveal through arbitrary nested clipping/scroll containers,
 zoom beyond 200%, full Figma parity and trusted Mac distribution remain unfinished.
 The latest Mac archive predates this control.
+
+## Canvas zoom shortcuts
+
+Shift+1 fits the current screen and Shift+2 reveals/zooms the selection. Both use
+the existing toolbar actions and work from editor chrome or the app iframe.
+Button tooltips and accessibility metadata advertise the shortcuts. Typing,
+editable content, Interact mode and open editor dialogs retain their own handling;
+modified/repeated keys and busy actions do not trigger extra zoom operations.
+The shortcuts use physical Digit1/Digit2 codes so shifted punctuation does not
+prevent recognition.
+
+The zoom-selection workflow passes in Chromium and WebKit for both focus contexts,
+fit/reveal transitions, unchanged responsive dimensions, native editor-search and
+iframe-input typing, Interact-mode exclusion and unchanged source. All 334 unit/
+HTTP tests pass. Logs: `/private/tmp/retouch-zoom-shortcuts-{chromium-final,webkit-final,unit}.log`.
+The first runs had an incorrect native-character assertion: Playwright's Shift+2
+synthesis inserts `2` in these inputs. The final check uses the observed native
+character and still verifies that zoom remains unchanged while typing.
+
+Full parity, arbitrary-site authoring and trusted desktop distribution remain
+unfinished; the latest Mac archive predates Zoom to selection and these shortcuts.
