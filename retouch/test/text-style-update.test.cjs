@@ -20,3 +20,6 @@ test('external edits after planning refuse the transaction before catalog mutati
 test('rename-only changes do not rewrite linked source and stale catalog updates refuse',t=>{
  const {root,operation}=fixture(t),current=catalog.read(root);const rename=update.plan(root,{...operation,name:'Renamed',properties:current.styles[0].properties});assert.equal(rename.ok,true);assert.equal(rename.edits.length,1);assert.equal(rename.updated,0);assert.equal(update.plan(root,{...operation,revision:'stale'}).ok,false);
 });
+test('an unindexed linked layer blocks project mutation instead of silently leaving an old style behind',t=>{
+ const {root,operation}=fixture(t),file=path.join(root,'second.html');fs.writeFileSync(file,fs.readFileSync(file,'utf8').replace('<p ','<template><p ').replace('</p>','</p></template>'));const before=snapshot(root),plan=update.plan(root,operation);assert.equal(plan.ok,false);assert.match(plan.reason,/second.html.*unsupported or ambiguous markup/);assert.deepEqual(snapshot(root),before);
+});

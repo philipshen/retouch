@@ -49,8 +49,16 @@ function plan(resolved,op,style){
 function planFile(file,relPath,before,style){
  try{
   catalog.validate({version:1,styles:[style]});let source=before,updated=0;
-  const targets=[];
-  for(const element of html.collect(source,relPath).elements){
+  const targets=[],elements=html.collect(source,relPath).elements;
+  const indexedStarts=new Set(elements.map(element=>element.location.startTag.startOffset));
+  const tree=require('parse5').parse(source,{sourceCodeLocationInfo:true});
+  function checkCoverage(node){
+   if(node.attrs?.some(item=>item.name===attribute)&&!indexedStarts.has(node.sourceCodeLocation?.startTag?.startOffset))throw Error('A text style link belongs to unsupported or ambiguous markup. Resolve that layer before updating.');
+   for(const child of node.childNodes||[])checkCoverage(child);
+   if(node.content)checkCoverage(node.content);
+  }
+  checkCoverage(tree);
+  for(const element of elements){
    const state=links({element});for(const [width,link]of Object.entries(state))if(link.id===style.id)targets.push({id:element.id,width:Number(width)});
   }
   for(const target of targets){

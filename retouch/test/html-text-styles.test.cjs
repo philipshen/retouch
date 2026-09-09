@@ -64,3 +64,16 @@ test('detected overrides remain local even when a later library value happens to
  const reapplied=linked.plan(resolve(source),{type:'applyTextStyle',width:0},next).edits[0].after;
  assert.equal(linked.links(resolve(reapplied))[0].overrides,undefined);assert.equal(css.describe(resolve(reapplied)).cssRules[0]['font-size'],'60px');
 });
+test('refresh refuses linked nodes omitted by the source index, including templates and duplicate attributes',()=>{
+ const linkedSource=apply(original).edits[0].after;
+ const variants=[
+  linkedSource.replace('<h1 ','<h1 class="a" class="b" '),
+  linkedSource.replace('<h1 ','<template><h1 ').replace('</h1>','</h1></template>'),
+  linkedSource.replace('<h1 ','<svg><text ').replace('</h1>','</text></svg>')
+ ];
+ for(const source of variants){const plan=linked.planFile('/tmp/index.html','index.html',source,{...style,properties:{'font-size':'48px'}});assert.equal(plan.ok,false);assert.match(plan.reason,/unsupported or ambiguous markup/);assert.equal(plan.edits,undefined);}
+});
+test('coverage checks distinguish actual links from examples in comments and script text',()=>{
+ const source=apply(original).edits[0].after.replace('</body>','<!-- <template data-rt-text-styles="bad"></template> --><script>const example=\'<span data-rt-text-styles="bad">\';</script></body>');
+ const result=linked.planFile('/tmp/index.html','index.html',source,{...style,properties:{'font-size':'48px'}});assert.equal(result.ok,true);assert.equal(result.updated,1);
+});

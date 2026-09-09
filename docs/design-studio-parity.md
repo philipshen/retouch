@@ -5470,3 +5470,20 @@ isolation cases also pass. Initial browser timeout was a fixture error: its
 simulated page font change needed inline important priority to outrank managed
 CSS. No browser product workaround was introduced for it. Syntax and diff checks
 passed. Native launches remain paused; full parity is not achieved.
+
+### Text-style update coverage for unindexed markup
+
+File planning now compares every actual parsed text-style link owner against
+source-indexed element locations, traversing template content as well as ordinary
+children. If a link belongs to an unsupported or ambiguous layer, project update
+refuses before writing any catalog or page changes. This closes silent omission
+for linked nodes with duplicate attributes, template descendants and unsupported
+SVG text. The check uses parsed attributes; comments and script-string examples
+do not create false link owners.
+
+All 407 unit tests passed, exit 0, including file-level refusal cases, false
+positive checks and a project transaction case preserving all catalog/page bytes:
+/private/tmp/retouch-style-link-coverage-units.log. Syntax and diff checks passed.
+No browser UI changed. This guard does not add editing support for those markup
+forms; that support remains required for the broader arbitrary-site goal.
+Native launches remain paused. Full Figma parity remains incomplete.
