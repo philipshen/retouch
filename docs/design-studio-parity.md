@@ -4397,3 +4397,25 @@ runtime-only repeated source identity; no source mutation is used to simulate it
 
 Full simultaneous comparison editing, complete clipped-outline geometry and
 application-state synchronization remain unfinished. Native launches remain paused.
+
+### Overflow-clipped comparison outlines (2026-09-09)
+
+Comparison selection bounds now intersect the viewport and ancestor overflow
+scroll/auto/hidden/clip boxes on each axis. Fully clipped instances no longer
+produce visible outlines but remain revealable. Partial outlines use the visible
+rectangle. Intermediate overflow containers are skipped when an absolute
+descendant's containing block lies outside them; viewport-fixed descendants also
+escape those clips. This avoids incorrectly hiding floating layers.
+
+375 unit tests passed (`/private/tmp/retouch-compare-clip-unit.log`). Chromium and
+WebKit comparison flows passed full clipping, reveal through nested scrolling,
+partial clipping to a 200px by 30px visible area at comparison scale, fixed-layer
+escape, and existing scoped editing/dimensions/undo checks. Logs:
+`/private/tmp/retouch-compare-clip-chromium-final.log`,
+`/private/tmp/retouch-compare-clip-webkit.log`. The extended WebKit run additionally
+verified absolute positioning escaping an intermediate overflow ancestor:
+`/private/tmp/retouch-compare-clip-webkit-final.log`.
+
+Bounds remain rectangular. Rotated/nonrectangular clipping, masks, rounded clip
+edges, transformed containing blocks for fixed positioning and full shadow-tree
+clipping are not verified or complete. Native launches remain paused.

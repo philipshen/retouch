@@ -22,6 +22,29 @@
   }
   function selectedNodes(d){return selected?[...d.querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===selected||el.getAttribute('data-rt-i')===selected):[];}
   function rendered(el){const rect=el.getBoundingClientRect(),css=el.ownerDocument.defaultView.getComputedStyle(el);return rect.width>0&&rect.height>0&&!['hidden','collapse'].includes(css.visibility);}
+  function visibleBounds(el,width,height){
+    const w=el.ownerDocument.defaultView,raw=el.getBoundingClientRect();
+    let left=Math.max(0,raw.left),top=Math.max(0,raw.top),right=Math.min(width,raw.right),bottom=Math.min(height,raw.bottom);
+    const positioned=[];
+    for(let node=el;node;node=node.parentElement){
+      const style=w.getComputedStyle(node);
+      if(node!==el){
+        // Out-of-flow descendants can escape an intermediate overflow container.
+        const escapes=positioned.some(item=>item.fixed||!item.parent||!node.contains(item.parent));
+        if(!escapes){
+          const clipX=/hidden|clip|auto|scroll/.test(style.overflowX),clipY=/hidden|clip|auto|scroll/.test(style.overflowY);
+          if(clipX||clipY){
+            const rect=node.getBoundingClientRect(),sx=node.offsetWidth?rect.width/node.offsetWidth:1,sy=node.offsetHeight?rect.height/node.offsetHeight:1;
+            const x=rect.left+node.clientLeft*sx,y=rect.top+node.clientTop*sy;
+            if(clipX){left=Math.max(left,x);right=Math.min(right,x+node.clientWidth*sx);}
+            if(clipY){top=Math.max(top,y);bottom=Math.min(bottom,y+node.clientHeight*sy);}
+          }
+        }
+      }
+      if(style.position==='absolute'||style.position==='fixed')positioned.push({parent:node.offsetParent,fixed:style.position==='fixed'});
+    }
+    return right>left&&bottom>top?{left,top,width:right-left,height:bottom-top}:null;
+  }
   function paint(){
     if(!open)return;
     for(const card of cards){
@@ -41,9 +64,10 @@
         for(const el of nodes){
           const rect=el.getBoundingClientRect(),css=d.defaultView.getComputedStyle(el);
           if(!rect.width||!rect.height||['hidden','collapse'].includes(css.visibility))continue;
-          if(rect.bottom<=0||rect.right<=0||rect.top>=height||rect.left>=width){offscreen++;continue;}visible++;
+          const bounds=visibleBounds(el,width,height);
+          if(!bounds){offscreen++;continue;}visible++;
           const box=document.createElement('div');box.className='compare-selection';
-          Object.assign(box.style,{left:rect.left*scale+'px',top:rect.top*scale+'px',width:rect.width*scale+'px',height:rect.height*scale+'px'});overlay.append(box);
+          Object.assign(box.style,{left:bounds.left*scale+'px',top:bounds.top*scale+'px',width:bounds.width*scale+'px',height:bounds.height*scale+'px'});overlay.append(box);
         }
         message.textContent=selected?(visible?'Selected layer · '+visible+(visible===1?' instance':' instances'):offscreen?'Selected layer is outside this viewport':nodes.length?'Selected layer is hidden':'Selected layer is absent on this screen'):'Same page · independent viewport';
       }catch{reveal.disabled=true;message.textContent='Preview unavailable for this page';}
