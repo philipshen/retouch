@@ -61,7 +61,7 @@ function busyPanel(start) {
 }
 let lastAppPath = null;
 let styleScope = '';
-let svgExportScale=1;
+let svgExportScale=1,svgEmbedImages=true;
 function scopedInfo(info) { return {...info,styleScope,anchorInheritedClasses:RetouchResponsive.inherited(info.className,styleScope,doc()),className:RetouchResponsive.project(info.className,styleScope)}; }
 
 let lockStorage;try{lockStorage=sessionStorage;}catch{}
@@ -929,10 +929,11 @@ function renderPanelContents() {
   const target = (editing?.el.ownerDocument === doc() ? editing.el : null) || matchingEls(activeId()).find(el => inTextScope(el, info));
   if(target?.namespaceURI==='http://www.w3.org/2000/svg'){
     const exports=RetouchInspector.section('Export');
-    exports.append(RetouchInspector.button('Export SVG canvas',()=>{try{RetouchSVGExport.download(target);toast('SVG exported','ok');}catch(error){toast(error.message,'err');}}));
+    if(target.closest('svg')?.querySelector('image')){const embed=document.createElement('input');embed.type='checkbox';embed.checked=svgEmbedImages;embed.onchange=()=>{svgEmbedImages=embed.checked;};RetouchInspector.field(exports,'Embed images in SVG',embed);}
+    const svgDownload=RetouchInspector.button('Export SVG canvas',async()=>{svgDownload.disabled=true;try{await RetouchSVGExport.download(target,svgEmbedImages);toast('SVG exported','ok');}catch(error){toast(error.message,'err');}finally{svgDownload.disabled=false;}});exports.append(svgDownload);
     RetouchInspector.select(exports,'PNG scale',[1,2,3,4].map(value=>[String(value),value+'×']),String(svgExportScale),value=>{svgExportScale=Number(value);});
     const png=RetouchInspector.button('Export PNG',async()=>{png.disabled=true;try{await RetouchSVGExport.downloadPNG(target,svgExportScale);toast('PNG exported','ok');}catch(error){toast(error.message,'err');}finally{png.disabled=false;}});exports.append(png);
-    RetouchInspector.note(exports,'Exports the containing SVG canvas at this screen size. Linked images remain external; fonts must be available where you open the file.');panelBody.append(exports);
+    RetouchInspector.note(exports,'Exports the containing SVG canvas at this screen size. PNG embeds bitmap images. SVG can embed them or retain links. Fonts must be available where you open the SVG file.');panelBody.append(exports);
   }
   if(info.svgGeometry){
     const geometry=RetouchInspector.section('SVG geometry');

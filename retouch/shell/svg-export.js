@@ -49,19 +49,46 @@
   copy.setAttribute('xmlns','http://www.w3.org/2000/svg');copy.setAttribute('width',String(width));copy.setAttribute('height',String(height));copy.style.width=width+'px';copy.style.height=height+'px';
   return {text:new XMLSerializer().serializeToString(copy),width,height,name:(svg.getAttribute('aria-label')||svg.id||'retouch-canvas').replace(/[^\p{L}\p{N}_-]+/gu,'-').slice(0,80)||'retouch-canvas'};
  }
+ async function embedImages(parsed,target){
+  const cache=new Map();let total=0;
+  for(const image of parsed.querySelectorAll('image')){
+   const href=image.getAttributeNode('href')||image.getAttributeNodeNS('http://www.w3.org/1999/xlink','href');
+   const attributes=href?[href]:[];for(const attr of [...image.attributes])if(attr.localName==='href'&&attr!==href)image.removeAttributeNode(attr);
+   for(const attr of attributes){
+    const href=attr.value;if(href.startsWith('data:')||href.startsWith('#'))continue;
+    if(!cache.has(href)){
+     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+     try{
+      const response=await target.ownerDocument.defaultView.fetch(href,{signal:controller.signal,credentials:'same-origin'});
+      if(!response.ok)throw Error('Could not embed image (HTTP '+response.status+').');
+      const type=(response.headers.get('content-type')||'').split(';')[0].trim().toLowerCase();
+      if(!/^image\/(png|jpeg|webp|gif|avif)$/.test(type))throw Error('Image embedding currently supports PNG, JPEG, WebP, GIF and AVIF.');
+      const reader=response.body.getReader(),chunks=[];let size=0;
+      while(true){const {value,done}=await reader.read();if(done)break;size+=value.byteLength;total+=value.byteLength;if(size>16*1024*1024||total>64*1024*1024){await reader.cancel();throw Error('Embedded images exceed the export limit (16 MB per image, 64 MB total).');}chunks.push(value);}
+      const blob=new Blob(chunks,{type}),testURL=URL.createObjectURL(blob);
+      try{const bitmap=new Image();bitmap.src=testURL;await bitmap.decode();}catch{throw Error('Could not decode a linked bitmap image.');}finally{URL.revokeObjectURL(testURL);}
+      const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error('Could not encode the embedded image.'));reader.readAsDataURL(blob);});cache.set(href,data);
+     }catch(error){if(error.name==='AbortError')throw Error('Image embedding timed out. Try exporting again.');throw error;}finally{clearTimeout(timer);controller.abort();}
+    }
+    image.setAttributeNS(attr.namespaceURI,attr.name,cache.get(href));
+   }
+  }
+ }
+ async function prepared(target){const result=snapshot(target),parsed=new DOMParser().parseFromString(result.text,'image/svg+xml');await embedImages(parsed,target);return {...result,text:new XMLSerializer().serializeToString(parsed.documentElement)};}
  function save(blob,name){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
- function download(target){const result=snapshot(target);save(new Blob([result.text],{type:'image/svg+xml'}),result.name+'.svg');return result;}
+ async function download(target,embed=true){const result=embed?await prepared(target):snapshot(target);save(new Blob([result.text],{type:'image/svg+xml'}),result.name+'.svg');return result;}
  async function png(target,scale=1){
   if(![1,2,3,4].includes(scale))throw Error('Choose a PNG scale from 1× to 4×.');
   const result=snapshot(target),parsed=new DOMParser().parseFromString(result.text,'image/svg+xml');
   if(parsed.querySelector('text,foreignObject'))throw Error('PNG export with text or embedded HTML is not supported yet.');
+  const width=Math.ceil(result.width*scale),height=Math.ceil(result.height*scale);
+  if(width>16384||height>16384||width*height>32000000)throw Error('Choose a smaller scale: PNG exports support up to 32 million pixels and 16,384 pixels per side.');
+  await embedImages(parsed,target);result.text=new XMLSerializer().serializeToString(parsed.documentElement);
   for(const node of parsed.querySelectorAll('*')){
    const urls=[...(node.getAttribute('style')||'').matchAll(/url\(["']?([^"')]+)["']?\)/g)].map(match=>match[1]);
    if(node.localName!=='a')for(const attr of node.attributes)if(attr.localName==='href')urls.push(attr.value);
    if(urls.some(url=>!url.startsWith('#')&&!url.startsWith('data:')))throw Error('Embed linked images and external SVG resources before exporting PNG.');
   }
-  const width=Math.ceil(result.width*scale),height=Math.ceil(result.height*scale);
-  if(width>16384||height>16384||width*height>32000000)throw Error('Choose a smaller scale: PNG exports support up to 32 million pixels and 16,384 pixels per side.');
   const url=URL.createObjectURL(new Blob([result.text],{type:'image/svg+xml'}));
   try{
    const image=new Image();image.src=url;await image.decode();
@@ -71,5 +98,5 @@
   }finally{URL.revokeObjectURL(url);}
  }
  async function downloadPNG(target,scale=1){const result=await png(target,scale);save(result.blob,result.name+(scale===1?'':'@'+scale+'x')+'.png');return result;}
- root.RetouchSVGExport={snapshot,download,png,downloadPNG};
+ root.RetouchSVGExport={snapshot,prepared,download,png,downloadPNG};
 })(window);

@@ -22,7 +22,7 @@ changing those files. The original checkout may continue to evolve independently
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | Existing React and Liquid component inspection/detach; full creation/variants/library workflows remain. Live Shopify proof is incomplete. |
 | Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Not implemented or verified. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
-| Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload exists; complete export and import pipeline remains. |
+| Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload and SVG-canvas SVG/PNG downloads exist, including shared local definitions and bitmap embedding. Arbitrary-layer export, fonts, symbols and the full export/import pipeline remain. |
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. HTML has responsive CSS, structural edits and batch selection operations. Arbitrary remote-site capture/authoring, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Corner resizing also supports Shift-locked proportions. Comparison cards now show current scope coverage and offer an explicit width-and-larger style-scope action. Fully editable comparison canvases and cross-framework parity remain. |
@@ -4517,3 +4517,33 @@ with RT_INSPECTOR_FIXTURE set.
 PNG currently refuses SVG text/foreignObject and nonembedded external resources;
 font/image embedding, symbol expansion and full asset fidelity remain unfinished.
 This exports SVG canvases, not arbitrary HTML layers. Native launches remain paused.
+
+### Bitmap embedding for SVG/PNG export (2026-09-09)
+
+Exports can now fetch linked SVG image elements and embed their bitmap bytes as
+data URLs. PNG always embeds; SVG defaults to embedding and exposes Embed images
+in SVG when images are present, preserving linked-only export as an option. Reused
+URLs fetch once per operation. Browser fetch/CORS rules and same-origin credential
+handling apply. Downloads wait for embedding and report failures rather than
+announcing success early. Fetched bitmaps are decoded before inclusion; missing or
+corrupt assets fail explicitly. href takes precedence over legacy xlink:href.
+
+The reader accepts PNG/JPEG/WebP/GIF/AVIF MIME types with a 15-second network bound,
+16 MB per image and 64 MB per export byte limits. PNG output dimensions are checked
+before image fetching. These resource bounds are configured; the browser fixture
+verifies PNG data, not every accepted decoder or timeout/byte-limit boundary.
+
+Chromium and WebKit downloaded SVG and 1×/2×/4× PNG containing two uses of the same
+linked bitmap. Independent raster samples matched the source image; exported SVG
+contained data URLs, and request counts proved one fetch per embedding operation.
+Shared gradients/clipping and previous export checks passed. Final logs:
+`/private/tmp/retouch-export-image-final.log` and
+`/private/tmp/retouch-export-image-webkit-final.log`. Chromium also verified the
+unchecked option retains links and performs no image fetch:
+`/private/tmp/retouch-export-image-option.log`. Missing and corrupt-image refusals
+passed. All 375 unit tests passed in `/private/tmp/retouch-export-image-unit.log`.
+Use RT_E2E_IMAGE=1 with the SVG export harness to enable bitmap coverage.
+
+Linked SVG-as-image recursion, font embedding/outlines, symbol expansion, animated
+frame fidelity and arbitrary HTML-layer export remain unfinished. Native app
+launches remain paused.
