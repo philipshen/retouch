@@ -3,10 +3,31 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
 const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_INSPECTOR_FIXTURE for Playwright');const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
 (async()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-zoom-selection-')),file=path.join(root,'index.html'),original='<html><body style="margin:0;height:3000px"><div aria-label="A" style="position:absolute;left:40px;top:1500px;width:100px;height:100px;background:skyblue">A</div><div aria-label="B" style="position:absolute;left:200px;top:1600px;width:80px;height:80px;background:pink">B</div><div aria-label="Tiny" style="position:absolute;left:400px;top:1500px;width:10px;height:10px;background:green"></div></body></html>';fs.writeFileSync(file,original);const server=require('../../src/html-site.cjs').start({root,port:0,quiet:true});await once(server,'listening');const browser=await browserType.launch(),page=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
- const wait=async fn=>{for(let i=0;i<100;i++){if(await fn())return;await page.waitForTimeout(100);}throw Error('Timed out waiting for selection zoom');};
+ const wait=async fn=>{for(let i=0;i<100;i++){try{if(await fn())return;}catch(error){if(!/Execution context was destroyed/.test(error.message))throw error;}await page.waitForTimeout(100);}throw Error('Timed out waiting for selection zoom');};
  try{
   await page.goto(`http://localhost:${server.address().port}/rt`);const app=page.frameLocator('#app'),button=page.getByRole('button',{name:'Zoom to selection',exact:true});await app.getByLabel('A',{exact:true}).waitFor();assert.equal(await button.isDisabled(),true);
-  const workspace=await app.locator('body').evaluate(()=>[innerWidth,innerHeight]),manualZoom=page.getByLabel('Canvas zoom (%)',{exact:true});await manualZoom.fill('400');await manualZoom.press('Enter');await wait(async()=>Number(await manualZoom.inputValue())===400);assert.deepEqual(await app.locator('body').evaluate(()=>[innerWidth,innerHeight]),workspace,'direct high zoom freezes the actual workspace viewport');await manualZoom.fill('100');await manualZoom.press('Enter');await page.getByLabel('Screen size',{exact:true}).selectOption('fluid');
+  const baseline=await app.locator('body').evaluate(el=>{
+   const style=el.ownerDocument.createElement('style');style.id='viewport-probe-style';style.textContent='#viewport-probe{position:absolute;left:0;top:0;width:1px;height:100vh;--copy:"100vh"}@media(min-height:'+innerHeight+'px){#viewport-probe{width:2px}}';el.ownerDocument.head.append(style);
+   const probe=el.ownerDocument.createElement('div');probe.id='viewport-probe';el.append(probe);return [innerWidth,innerHeight];
+  });
+  const probe=()=>app.locator('#viewport-probe').evaluate(el=>({viewport:[innerWidth,innerHeight],height:el.getBoundingClientRect().height,width:el.getBoundingClientRect().width,css:el.ownerDocument.querySelector('#viewport-probe-style').sheet.cssRules[0].style.height}));
+  for(const value of ['50','200','400','25','100']){
+   const control=page.getByLabel('Canvas zoom (%)',{exact:true});await control.fill(value);await control.press('Enter');
+   assert.deepEqual(await probe(),{viewport:baseline,height:baseline[1],width:2,css:'100vh'},'workspace zoom '+value+' preserves viewport units, media queries and authored CSS');
+   assert.equal(await page.getByLabel('Screen size',{exact:true}).inputValue(),'fluid','zoom does not silently select a fixed screen');
+   const pan=await page.locator('#frameWrap').evaluate(canvas=>{
+    const frame=document.querySelector('#app'),w=frame.contentWindow,scale=Number(document.querySelector('#canvasZoom').value)/100;
+    const wheel=deltaY=>canvas.dispatchEvent(new WheelEvent('wheel',{deltaY,bubbles:true,cancelable:true}));wheel(1e8);
+    const bottom={page:w.scrollY,max:w.document.scrollingElement.scrollHeight-w.innerHeight,pan:canvas.scrollTop,expected:192+Math.max(0,w.innerHeight*scale-canvas.clientHeight)};wheel(1e8);const repeated=canvas.scrollTop;wheel(-1e8);const top=canvas.scrollTop;wheel(-1e8);
+    return {bottom,repeated,top,topAgain:canvas.scrollTop};
+   });
+   assert.ok(Math.abs(pan.bottom.page-pan.bottom.max)<2);assert.ok(Math.abs(pan.bottom.pan-pan.bottom.expected)<2,'bounded bottom pan at '+value);assert.equal(pan.repeated,pan.bottom.pan);assert.equal(pan.top,0);assert.equal(pan.topAgain,0);
+
+  }
+  await page.setViewportSize({width:1600,height:1200});await wait(async()=>(await probe()).viewport[1]===baseline[1]+100);assert.equal((await probe()).height,baseline[1]+100,'workspace resize changes viewport units');
+  await page.setViewportSize({width:1600,height:1100});await wait(async()=>(await probe()).viewport[1]===baseline[1]);
+  await app.locator('#viewport-probe').evaluate(el=>{el.remove();document.querySelector('#viewport-probe-style').remove();});
+  const workspace=await app.locator('body').evaluate(()=>[innerWidth,innerHeight]),manualZoom=page.getByLabel('Canvas zoom (%)',{exact:true});await manualZoom.fill('400');await manualZoom.press('Enter');await wait(async()=>Number(await manualZoom.inputValue())===400);assert.deepEqual(await app.locator('body').evaluate(()=>[innerWidth,innerHeight]),workspace,'direct high zoom preserves the workspace viewport');await manualZoom.fill('100');await manualZoom.press('Enter');await page.getByLabel('Screen size',{exact:true}).selectOption('fluid');
   const dimensions=()=>app.locator('body').evaluate(()=>[innerWidth,innerHeight]),before=await dimensions();await page.getByRole('treeitem',{name:'div · A',exact:true}).click();await button.click();await wait(async()=>Number(await page.getByLabel('Canvas zoom (%)',{exact:true}).inputValue())>200);assert.deepEqual(await dimensions(),before,'workspace viewport dimensions are preserved');
   const visible=async names=>{await wait(async()=>await button.getAttribute('aria-busy')==='false');const canvas=await page.locator('#frameWrap').boundingBox();for(const name of names){const b=await app.getByLabel(name,{exact:true}).boundingBox();assert.ok(b.x>=canvas.x-1&&b.y>=canvas.y-1&&b.x+b.width<=canvas.x+canvas.width+1&&b.y+b.height<=canvas.y+canvas.height+1,JSON.stringify({name,b,canvas}));}};await visible(['A']);
   await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await page.getByRole('treeitem',{name:'div · B',exact:true}).click({modifiers:['Meta']});await wait(async()=>await page.getByRole('treeitem',{selected:true}).count()===2);await button.click();await visible(['A','B']);assert.deepEqual(await dimensions(),[768,1024]);

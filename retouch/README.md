@@ -363,9 +363,11 @@ so releasing the pointer cannot overwrite a newer screen choice.
 
 Use **Zoom** in the screen toolbar to set the canvas percentage, or **Fit screen**
 to bring a fixed preview fully into the available canvas. Fixed screens support
-1–6400% zoom. Fit workspace starts with a 25% minimum; zooming above 200%
-freezes its current actual viewport dimensions as a fixed screen. Fit screen
-returns an unfrozen workspace to 100%. Fitting preserves fixed CSS dimensions, viewport units and the page's
+1–6400% zoom. Fit workspace supports 25–6400% and follows the workspace size.
+Zoom preserves the iframe viewport, including viewport units and height media
+queries, without rewriting preview CSS. Zooming out shows a smaller viewport;
+scroll inside it to reach more of the page. Fit screen returns a workspace to
+100%. Fitting preserves fixed CSS dimensions, viewport units and the page's
 scroll position. Resize handles follow the new zoom immediately.
 
 

@@ -83,6 +83,6 @@ Set `RT_AGENT_BROWSER_BIN` to a local agent-browser executable to skip npx.
 on the Moses heading, exact backing JSON changes, rendered updates, and undo.
 It accepts `RT_AGENT_BROWSER_BIN` and restores the JSON fixture on failure.
 
-`node test/e2e/zoom.cjs` verifies pinch gestures, gray side margins, increased
-vertical coverage, stable viewport-height sections, restored CSS units, scaled
+`node test/e2e/zoom.cjs` verifies pinch gestures, gray side margins, responsive
+viewport preservation, stable viewport-height sections, unchanged CSS units, scaled
 selection geometry, text focus, and correct drag snapping/cancellation at 50%. It accepts `RT_AGENT_BROWSER_BIN`.

@@ -4,43 +4,13 @@
   const zoomInput=document.getElementById('canvasZoom'),fitButton=document.getElementById('fitScreen');
   const maxScale=64;
   const endPadding=96; // Screen pixels, independent of zoom.
-  let scale=1,width=0,height=0,pinnedHeight=0,gestureBase=null,positioned=false,screen=null;
-  const pinned=new Map(),hooked=new WeakSet();
-  // Expanding the visible page must not expand 100vh heroes with it. Rebase
-  // viewport-height lengths in the preview's CSS only; never write source.
-  function restoreUnits(){
-    for(const [style,props] of pinned)for(const [name,p] of props) {
-      if(style.getPropertyValue(name)===p.after)style.setProperty(name,p.before,p.priority);
-    }
-    pinned.clear();pinnedHeight=0;
-  }
-  function pinUnits(){
-    if(scale===1 || screen){restoreUnits();return;}
-    if(pinnedHeight && pinnedHeight!==height)restoreUnits();
-    pinnedHeight=height;
-    const d=frame.contentDocument;if(!d)return;
-    function patch(style){
-      if(!style)return;
-      for(const name of Array.from(style)) {
-        const before=style.getPropertyValue(name);
-        // Leave quoted text and URLs alone.
-        const after=before.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|url\([^)]*\)|(-?\d*\.?\d+)(?:s|l|d)?vh\b/gi,(match,n)=>n===undefined?match:(Number(n)*height/100)+'px');
-        if(after===before)continue;
-        const props=pinned.get(style)||new Map();
-        const priority=style.getPropertyPriority(name);
-        style.setProperty(name,after,priority);
-        props.set(name,{before,after:style.getPropertyValue(name),priority});pinned.set(style,props);
-      }
-    }
-    function scan(rules){for(const rule of rules){patch(rule.style);if(rule.cssRules)scan(rule.cssRules);}}
-    for(const sheet of d.styleSheets){try{scan(sheet.cssRules);}catch{}}
-    for(const el of d.querySelectorAll('[style]'))patch(el.style);
-  }
+  let scale=1,width=0,height=0,gestureBase=null,positioned=false,screen=null;
+  const hooked=new WeakSet();
   function layout(){
     if(!width||!height)return;
     const pad=scale===1?0:24,ew=Math.max(canvas.clientWidth,width*scale+pad*2);
-    extent.style.width=ew+'px';extent.style.height=(Math.max(canvas.clientHeight,screen?height*scale:height)+endPadding*2)+'px';
-    stage.style.width=width+'px';stage.style.height=(screen?height:height/scale)+'px';
+    extent.style.width=ew+'px';extent.style.height=(Math.max(canvas.clientHeight,height*scale)+endPadding*2)+'px';
+    stage.style.width=width+'px';stage.style.height=height+'px';
     stage.style.left=(ew-width*scale)/2+'px';stage.style.top=endPadding+'px';
     stage.style.transform=`scale(${scale})`;
     stage.style.setProperty('--canvas-zoom',String(scale));
@@ -51,18 +21,12 @@
   function change(next,x,y){
     next=Math.max(screen ? .01 : .25,Math.min(maxScale,next));if(Math.abs(next-1)<.00001)next=1;
     if(next===scale)return;
-    if(!screen&&next>2){
-      const viewport={width:frame.contentWindow.innerWidth,height:frame.contentWindow.innerHeight};
-      if([viewport.width,viewport.height].every(value=>value>=240&&value<=7680))window.RetouchScreens.set(viewport,{preservePan:true});
-      else{zoomInput.setCustomValidity('Choose a fixed screen size before zooming beyond 200%.');zoomInput.reportValidity();return;}
-    }
     window.dispatchEvent(new Event('retouch:before-zoom'));
     const bounds=canvas.getBoundingClientRect(),px=x-bounds.left,py=y-bounds.top;
     const siteTop=endPadding-canvas.scrollTop;
     const old=scale,siteX=(canvas.scrollLeft+px-stage.offsetLeft)/old;
     const w=frame.contentWindow,siteY=(w?.scrollY||0)+(py-siteTop)/old;
     scale=next;
-    if(scale===1 || pinnedHeight!==height)pinUnits();
     layout();
     canvas.scrollLeft=stage.offsetLeft+siteX*scale-px;
     w?.scrollTo(w.scrollX,Math.max(0,siteY-(py-siteTop)/scale));
@@ -119,7 +83,7 @@
     const max=Math.max(0,root.scrollHeight-root.clientHeight);
     const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?height:1);
     const current=w.scrollY*scale+canvas.scrollTop-endPadding;
-    const clipped=screen?Math.max(0,height*scale-canvas.clientHeight):0;
+    const clipped=Math.max(0,height*scale-canvas.clientHeight);
     const next=Math.max(-endPadding,Math.min(max*scale+clipped+endPadding,current+delta));
     // Native scrolling within the page; take over only at the canvas boundary.
     if(inFrame && canvas.scrollTop===endPadding && next>=0 && next<=max*scale)return;
@@ -142,24 +106,19 @@
   }
   hooks(canvas,false);
   frame.addEventListener('load',()=>{
-    restoreUnits();gestureBase=null;
+    gestureBase=null;
     const d=frame.contentDocument;if(!d || hooked.has(d))return;
-    hooked.add(d);hooks(d,true);pinUnits();
-    // Stylesheet swaps and inline-style changes from the app still participate.
-    let pending=false;
-    const refresh=()=>{if(pending||scale===1)return;pending=true;requestAnimationFrame(()=>{pending=false;if(frame.contentDocument===d)pinUnits();});};
-    new MutationObserver(refresh).observe(d.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['style']});
-    d.addEventListener('load',refresh,true);
+    hooked.add(d);hooks(d,true);
   });
   function measure(){
     width=screen?screen.width:canvas.clientWidth;
     height=screen?screen.height:canvas.clientHeight;
     if(!screen&&scale<.25)scale=.25;
-    pinUnits();layout();
+    layout();
     window.dispatchEvent(new CustomEvent('retouch:viewport',{detail:{width,height,fixed:!!screen}}));
   }
   window.addEventListener('retouch:screen',e=>{
-    screen=e.detail;restoreUnits();measure();
+    screen=e.detail;measure();
     if(!e.preservePan)canvas.scrollLeft=0;
   });
   new ResizeObserver(measure).observe(canvas);

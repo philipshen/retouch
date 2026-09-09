@@ -2675,3 +2675,31 @@ This does not establish every editing gesture at every high zoom, complete legac
 Fit-workspace viewport-unit equivalence through the fixed-screen transition, or
 full Figma parity. Arbitrary-site authoring and trusted Mac distribution remain
 unfinished; the latest archive predates these zoom changes.
+
+### 2026-09-09 — Preserve responsive viewport during workspace zoom
+
+Workspace zoom now scales a stable iframe viewport, just as fixed screens do.
+Removed preview-only vh rewriting, its style mutation observer, and the automatic
+switch to a fixed screen above 200%. Previously workspace 200% halved innerHeight
+while pinned 100vh retained the original height; switching to 400% restored vh
+against the smaller frozen viewport. Height media queries also saw different
+geometry from pinned viewport units. Workspace dimensions now follow workspace
+resizing at every zoom, and magnification leaves CSS and responsive layout intact.
+Zooming out displays a smaller viewport instead of additional vertical page area.
+A viewport smaller than the workspace leaves unused canvas space; additional
+endpoint panning remains bounded by 96 screen pixels. Zoom to selection still
+chooses a fixed screen before fitting the selected bounds.
+
+Chromium and WebKit pass viewport-unit, height-media-query, untouched CSS,
+workspace-resize, stable screen-choice, and repeated top/bottom pan limit checks
+at 25/50/100/200/400%, together with the existing selection, high zoom through
+6400%, one-CSS-pixel Control-drag and exact source undo flow:
+`/private/tmp/retouch-viewport-zoom-chromium-final.log` and
+`/private/tmp/retouch-viewport-zoom-webkit-bounds.log`.
+The initial WebKit run encountered an execution-context destruction during the
+expected source-edit reload; polling now retries that specific transient error.
+Chromium screen-resize regression passes in `/private/tmp/retouch-viewport-resize.log`.
+All 334 unit tests pass in `/private/tmp/retouch-viewport-unit.log`.
+The legacy external Moses zoom script expectations were updated but that script
+was not run in this checkpoint. The latest Mac archive still predates zoom work;
+full Figma parity, arbitrary-site authoring and trusted distribution remain open.
