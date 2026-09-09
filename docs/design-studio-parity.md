@@ -5487,3 +5487,30 @@ positive checks and a project transaction case preserving all catalog/page bytes
 No browser UI changed. This guard does not add editing support for those markup
 forms; that support remains required for the broader arbitrary-site goal.
 Native launches remain paused. Full Figma parity remains incomplete.
+
+### Shared undo/redo for text-style library management
+
+Catalog create, rename and delete now commit through the shared transaction
+history and return undo IDs. The inspector uses the shell's request locking and
+history recording path, so library actions interleave with source edits in order.
+Undoing the first save removes the newly created catalog file; redo restores the
+same style identity. Undo/redo of rename and delete restores exact catalog bytes.
+The empty .retouch directory may remain after undoing first creation.
+
+Direct HTML catalog property updates now use the project propagation planner
+and shared history as well. This closes the earlier documented CRUD API bypass:
+the catalog endpoint no longer changes HTML style definitions independently of
+linked pages. The existing selected-layer update action retains its source-hash
+check. Non-HTML catalog management is undoable, while React/Liquid linked-style
+application and propagation remain unfinished. Histories remain session-local;
+external edits can still invalidate an old undo, which then refuses safely.
+
+All 409 unit/integration tests passed, exit 0:
+/private/tmp/retouch-catalog-history-final-units.log. A real HTTP HTML catalog
+update changes two linked pages and catalog, returns one undo ID and restores all
+three files exactly through the source undo endpoint. Browser tests passed in
+HTML/React/local-Liquid x Chromium/WebKit, all six processes exit 0:
+/private/tmp/retouch-catalog-history-{html,react,liquid}-{chromium,webkit}.log.
+They exercise create/undo/redo, rename/undo/redo and delete/undo/redo, plus the
+existing HTML apply/detach, cross-page update and screen isolation flows. Syntax
+and diff checks passed. No native launches occurred. Full parity remains open.

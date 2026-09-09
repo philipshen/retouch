@@ -85,7 +85,14 @@ function handle(req, res, ctx) {
     return readBinary(req,library.LIMIT,bytes=>{
       if(!bytes)return json(res,413,{ok:false,reason:'Text style requests must be 512 KB or smaller.'});
       let operation;try{operation=JSON.parse(bytes.toString('utf8'));}catch{return json(res,400,{ok:false,reason:'Invalid text style JSON.'});}
-      try{return json(res,200,{ok:true,...library.change(ctx.appRoot,operation)});}catch(error){return json(res,error.statusCode||500,{ok:false,reason:error.message});}
+      try{
+        const plan=operation?.type==='update'&&ctx.adapter.capabilities?.ops?.includes('setCSS')?require('./text-style-update.cjs').plan(ctx.appRoot,operation):library.planChange(ctx.appRoot,operation);
+        if(!plan.ok)return json(res,409,plan);
+        const applied=library.commitPlan(ctx.appRoot,plan);
+        for(const edit of applied.edits)if(ctx.adapter.matches(edit.file))ctx.index.indexFile(edit.file);
+        const undoId=ctx.history.record(applied.edits);ctx.sourceMonitor?.acknowledge(applied.edits);
+        return json(res,200,{ok:true,...applied.result,undoId,updated:applied.updated||0});
+      }catch(error){return json(res,error.statusCode||500,{ok:false,reason:error.message});}
     });
   }
   if (p === '/rt/__api/font-axes') {

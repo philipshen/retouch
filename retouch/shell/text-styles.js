@@ -8,6 +8,7 @@
   const status=I.note(body,'');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
   const controls=document.createElement('fieldset');controls.style.cssText='border:0;padding:0;margin:0;min-width:0';body.append(controls);
   async function request(operation){
+   if(operation)return root.RetouchTextStyleRequest(operation);
    const response=await fetch('/rt/__api/text-styles',{method:operation?'POST':'GET',signal:AbortSignal.timeout(15000),headers:{'x-retouch-token':root.__RT_TOKEN,'content-type':'application/json'},...(operation?{body:JSON.stringify(operation)}:{})});
    const result=await response.json();if(!response.ok||!result.ok)throw Error(result.reason||result.error||'Could not load text styles.');return result;
   }

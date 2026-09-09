@@ -38,10 +38,11 @@ function planChange(root,operation){
  const library=validate({version:1,styles}),after=JSON.stringify(library,null,2)+'\n';if(Buffer.byteLength(after)>LIMIT)fail('The text style library is too large.',413);
  return {ok:true,edits:source===after?[]:[{file,before:source,after}],result:{...library,revision:revision(after),id}};
 }
-function change(root,operation){
- const plan=planChange(root,operation),{directory}=paths(root);
+function commitPlan(root,plan){
+ if(!plan?.ok)return plan;const {directory}=paths(root);
  fs.mkdirSync(directory,{recursive:true});paths(root);
  const applied=applyPlan(root,plan);if(!applied.ok)fail(applied.reason,409);
- return plan.result;
+ return applied;
 }
-module.exports={read,change,planChange,validate,properties,LIMIT};
+function change(root,operation){return commitPlan(root,planChange(root,operation)).result;}
+module.exports={read,change,planChange,commitPlan,validate,properties,LIMIT};

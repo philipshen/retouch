@@ -1642,6 +1642,16 @@ function moveHTMLLayer(info,target,width,g,action='move',opener){
   if(stopDrawing)toast(action==='resize'?'Drag a handle or use arrow keys. Shift keeps proportions; Option/Alt centers. Enter applies keyboard changes; Escape cancels.':'Drag the outline or use arrow keys (Shift: 10px). Enter applies keyboard changes; Escape cancels.','ok');
 }
 
+window.RetouchTextStyleRequest=async operation=>{
+  const info=sel?.info;busyPanel(true);
+  try{
+    const result=await api('POST','/rt/__api/text-styles',operation);
+    if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save text styles');
+    if(result.undoId)editorHistory.record({type:'textStyleCatalog',id:info?.id,context:info?.context,undoId:result.undoId});
+    if(result.updated){await reloadFrame();if(sel)renderPanel();}
+    return result;
+  }finally{busyPanel(false);}
+};
 async function writeTextStyle(type,width,extra={}){
   if(!sel)return;const info=sel.info;busyPanel(true);
   try{
@@ -1836,7 +1846,7 @@ window.addEventListener('blur', () => { measuring = false; });
 
 /* ---------- util ---------- */
 async function api(method, url, body) {
-  const writes = method === 'POST' && url === '/rt/__api/op';
+  const writes = method === 'POST' && ['/rt/__api/op','/rt/__api/text-styles'].includes(url);
   const route = writes ? currentPageRoute() : null;
   if(writes && editorHistory.busy && !['undo','redo'].includes(body?.type)) return {ok:false,reason:'Wait for history restoration to finish.'};
   if(writes){sourceRequests++;syncHistoryControls();}

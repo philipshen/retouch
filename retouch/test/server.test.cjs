@@ -226,3 +226,13 @@ test('text style API authenticates, persists and rejects stale or malformed writ
  assert.strictEqual((await req(port,'DELETE',endpoint,{headers:AUTH()})).status,405);
  assert.strictEqual((await post({type:'delete',revision:style.revision,id:style.id})).status,200);
 });
+
+test('catalog mutations participate in shared exact-byte undo and redo',async()=>{
+ const endpoint='/rt/__api/text-styles',file=path.join(root,'.retouch/text-styles.json'),before=fs.readFileSync(file,'utf8');
+ const initial=JSON.parse((await req(port,'GET',endpoint,{headers:AUTH()})).body);
+ const created=JSON.parse((await req(port,'POST',endpoint,{headers:AUTH(),body:JSON.stringify({type:'create',revision:initial.revision,name:'History style',properties:{'font-size':'24px'}})})).body);
+ assert.ok(created.undoId);const after=fs.readFileSync(file,'utf8');
+ for(const [type,expected]of [['undo',before],['redo',after]]){
+  const result=await req(port,'POST','/rt/__api/op',{headers:AUTH(),body:JSON.stringify({type,undoId:created.undoId})});assert.strictEqual(result.status,200);assert.strictEqual(fs.readFileSync(file,'utf8'),expected);
+ }
+});

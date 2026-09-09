@@ -23,3 +23,11 @@ test('rename-only changes do not rewrite linked source and stale catalog updates
 test('an unindexed linked layer blocks project mutation instead of silently leaving an old style behind',t=>{
  const {root,operation}=fixture(t),file=path.join(root,'second.html');fs.writeFileSync(file,fs.readFileSync(file,'utf8').replace('<p ','<template><p ').replace('</p>','</p></template>'));const before=snapshot(root),plan=update.plan(root,operation);assert.equal(plan.ok,false);assert.match(plan.reason,/second.html.*unsupported or ambiguous markup/);assert.deepEqual(snapshot(root),before);
 });
+test('HTML catalog API propagates direct property updates and records one shared undo',async t=>{
+ const {root,operation}=fixture(t),before=snapshot(root),server=require('../src/html-site.cjs').start({root,port:0,quiet:true});
+ t.after(async()=>{server.retouchIndex.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));});
+ if(!server.listening)await require('node:events').once(server,'listening');const url='http://localhost:'+server.address().port;
+ const shell=await(await fetch(url+'/rt')).text(),token=/__RT_TOKEN = "([0-9a-f]+)"/.exec(shell)[1],headers={'x-retouch-token':token,'content-type':'application/json'};
+ const response=await fetch(url+'/rt/__api/text-styles',{method:'POST',headers,body:JSON.stringify(operation)});assert.equal(response.status,200);const result=await response.json();assert.equal(result.updated,2);assert.ok(result.undoId);assert.notDeepEqual(snapshot(root),before);
+ const undo=await fetch(url+'/rt/__api/op',{method:'POST',headers,body:JSON.stringify({type:'undo',undoId:result.undoId})});assert.equal(undo.status,200);assert.deepEqual(snapshot(root),before);
+});
