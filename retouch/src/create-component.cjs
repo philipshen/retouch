@@ -57,7 +57,15 @@ function plan(resolved,op) {
       },
     });
     if(reason)return refuse(reason);
-    if(captures.size&&/\.tsx?$/.test(resolved.relPath))return refuse('TypeScript local dependencies need an explicit typed prop contract before extracting.');
+    if(captures.size&&/\.tsx?$/.test(resolved.relPath))for(let parent=selected.parentPath;parent&&!parent.isFunction();parent=parent.parentPath){
+      if(['IfStatement','ConditionalExpression','LogicalExpression','SwitchCase'].includes(parent.node.type))return refuse('TypeScript control-flow narrowing needs to stay with the extracted component.');
+    }
+    const captureTypes=new Map();
+    if(captures.size&&/\.tsx?$/.test(resolved.relPath))for(const [name,binding]of captures){
+      const type=require('./component-capture-type.cjs')(binding,resolved.source);
+      if(!type)return refuse('TypeScript local dependency "'+name+'" needs a self-contained explicit type before extracting.');
+      captureTypes.set(name,type);
+    }
     // React consumes key/ref and development metadata instead of forwarding them.
     // Alias those names, avoiding collisions with every other captured binding.
     const used=new Set(captures.keys()),props=[...captures.keys()].map((name,index)=>{
@@ -67,7 +75,7 @@ function plan(resolved,op) {
       }
       return {name,prop};
     });
-    const parameters=props.length?'{ '+props.map(({name,prop})=>prop===name?name:prop+': '+name).join(', ')+' }':'';
+    const parameters=props.length?'{ '+props.map(({name,prop})=>prop===name?name:prop+': '+name).join(', ')+' }'+(captureTypes.size?': { '+props.map(({name,prop})=>JSON.stringify(prop)+': '+captureTypes.get(name)).join('; ')+' }':''):'';
     const attributes=props.map(({name,prop})=>' '+prop+'={'+name+'}').join('');
     const fragment=new MagicString(resolved.source.slice(node.start,node.end));
     if(key)fragment.remove(key.start-node.start,key.end-node.start);

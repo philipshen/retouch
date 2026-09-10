@@ -105,7 +105,7 @@ test('captured React reserved names are passed through ordinary aliased props',(
 });
 test('extraction refuses untyped TS props and deferred reads before local initialization',()=>{
  for(const [source,file,reason] of [
-  ['function Page({label}:{label:string}){return <article>{label}</article>}','page.tsx',/typed prop contract/],
+  ['function Page({label}){return <article>{label}</article>}','page.tsx',/explicit type/],
   ['function Page(){const layer=<article onClick={()=>label}/>;const label="later";return layer}','page.jsx',/initialized after/],
  ]){const f=fixture(source,file);try{const plan=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(plan.ok,false);assert.match(plan.reason,reason);assert.equal(fs.readFileSync(f.selected.file,'utf8'),source);}finally{f.close();}}
 });
@@ -156,4 +156,23 @@ test('creation maps extracted descendants and retained key JSX to their correspo
    }
   }finally{f.close();}
  }
+});
+
+
+test('TypeScript extraction carries explicit structural capture types into component props',()=>{
+ const source='function Page({heading:label,count,onClick}:{heading:string;count:number;onClick:()=>void}){const tags:string[]=[];return <article onClick={onClick} title={label}>{count}{tags.join(",")}</article>}';
+ const f=fixture(source,'page.tsx');try{
+  const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);
+  const after=result.edits[0].after;assert.match(after,/"label": \(string\)/);assert.match(after,/"count": \(number\)/);assert.match(after,/"onClick": \(\(\)=>void\)/);assert.match(after,/"tags": \(string\[\]\)/);
+  assert.doesNotThrow(()=>require('../src/id.cjs').parseSource(after));
+ }finally{f.close();}
+});
+test('TypeScript extraction refuses capture types requiring scope or narrowing analysis',()=>{
+ for(const source of ['function Page<T>({value}:{value:T}){return <article>{value}</article>}', 'function Page({value}:{value?:string}){return <article>{value}</article>}', 'function Page({value}:{value:string|number}){return <article>{value}</article>}', 'function Page({value="x"}:{value?:string}){return <article>{value}</article>}']){
+  const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/explicit type/);assert.equal(fs.readFileSync(f.selected.file,'utf8'),source);}finally{f.close();}
+ }
+});
+
+test('typed extraction retains guards that narrow captured values outside the subtree',()=>{
+ const f=fixture('function Page(value:unknown){if(typeof value==="string")return <article>{value.toUpperCase()}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/narrowing/);}finally{f.close();}
 });
