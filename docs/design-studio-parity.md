@@ -9412,3 +9412,54 @@ destinations supported by the source planner. Cross-parent/cross-file moves,
 multi-component drags, independent per-render structure, full variants/slots and
 arbitrary-site durable authoring remain open. Full Figma Design parity is incomplete.
 Native launches remain paused and trusted brew installation remains unverified.
+
+
+### Move component usages into other source containers (2026-09-10)
+
+React components can now move into another container through a center-of-row drop
+or the Move into dialog. Eligible containers are visible indexed hosts in the same
+render function and file. The planner preserves the exact component chunk and
+checks external identifier bindings at the destination, including component names.
+It rejects scope capture changes, locally declared values unavailable when the
+container is created, self-containment and containers whose children come from
+explicit props or spreads. Typed expressions must remain in their lexical scope;
+module and named-function bindings remain available. Root/prop expressions retain
+syntactically necessary null values, while moved child usages are removed cleanly
+from the former parent without accumulating null placeholders.
+
+The planner maps every source layer one-to-one after removal and insertion,
+including expansion of self-closing destinations. The existing movement history
+path restores selection, source and lock IDs; a destination may contain locked
+children without losing their locks, while dropping into a locked container is
+unavailable. The Layers hierarchy follows the component's new container.
+
+Validation: 753 unit tests passed. Cases cover destinations before/after the
+source, self-closing/populated frames, exact names/keys/props/children, all source
+IDs, shadowed component/value bindings, typed scopes, declaration timing, same
+function/module bindings, stale sources and unsupported child ownership. Chromium
+and WebKit passed real drag into a frame and dialog movement back to the outer
+frame, exact Undo/Redo in both directions, retained instance overrides and an
+existing locked destination child. They also passed subsequent duplicate/delete
+and full framed component-property flows, with exit zero and no page errors. The
+last typed-scope guard is covered by the final unit suite; browser fixtures use
+same-scope literal props. Screenshot inspection confirms the nested component row,
+retained destination-child lock and selected instance controls.
+
+An initial Chromium run timed out clicking Undo in the earlier required-component
+insertion scenario, before reparenting. A traced rerun and the final lock-aware run
+passed; that timeout did not reproduce. Fixture failure tracing was corrected to
+read pages from Browser.contexts(), and now includes Undo geometry/open dialogs
+and an optional failure screenshot. git diff --check and syntax checks passed.
+Evidence: /private/tmp/retouch-component-reparent-units-scopes.log,
+/private/tmp/retouch-component-reparent-chromium.log (initial timeout),
+/private/tmp/retouch-component-reparent-chromium-trace.log,
+/private/tmp/retouch-component-reparent-chromium-locked.log,
+/private/tmp/retouch-component-reparent-webkit-locked.log,
+/private/tmp/retouch-component-reparent-locked.png.
+
+Moves across render functions/files, general captured-data relocation, slot/spread
+child preservation, full TypeScript type resolution, multi-component moves and
+independent per-render structure remain unfinished. Runtime component state and
+appearance preservation across new parent layouts are not established. Full Figma
+Design parity and arbitrary-site authoring remain incomplete. Native launches
+remain paused and trusted brew installation remains unverified.

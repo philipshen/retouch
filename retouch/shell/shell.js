@@ -2369,7 +2369,7 @@ const layers = RetouchLayers.mount({
   dragEnabled:window.__RT_RENDERING?.layerReparenting===true&&!historyRecoveryRequired,
   multiSelectEnabled:window.__RT_RENDERING?.selectionStyling===true,
   onMoveComponent:window.__RT_RENDERING?.componentInsertion&&!historyRecoveryRequired?async(source,destination,position,move)=>{
-    if(historyRecoveryRequired||panelTasks||undoBusy||sourceRequests||!source.isConnected||!destination.isConnected||layerLocks.locked(source))return;
+    if(historyRecoveryRequired||panelTasks||undoBusy||sourceRequests||!source.isConnected||!destination.isConnected||layerLocks.locked(source)||position==='inside'&&layerLocks.locked(destination))return;
     await commitInlineEdit();await moveInstance({id:move.id,hash:move.fileHash},position,move.destinationId);
   }:undefined,
   onMove:async(source,destination,position)=>{
@@ -2383,6 +2383,13 @@ const layers = RetouchLayers.mount({
   onSelectMany:async(nodes,options)=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await selectMany(nodes,options);},
   onAction:action=>structureAction(action),
 });
+function chooseComponentParent(info){
+ const ids=new Set(info.componentMovement?.containers||[]),candidates=[...doc().querySelectorAll('[data-rt]')].filter(el=>ids.has(el.getAttribute('data-rt'))&&!layerLocks.locked(el));
+ if(!candidates.length)return toast('No compatible container is visible on this page.','err');
+ const modal=document.createElement('dialog'),heading=document.createElement('h3');heading.textContent='Move component into';modal.setAttribute('aria-label','Move component into');modal.className='layer-move-dialog';modal.append(heading);
+ const picker=document.createElement('select');picker.setAttribute('aria-label','Destination container');const seen=new Set();for(const el of candidates){const id=el.getAttribute('data-rt');if(seen.has(id))continue;seen.add(id);const option=document.createElement('option');option.value=id;option.textContent=RetouchLayers.label(el);picker.append(option);}modal.append(picker);
+ const close=()=>{modal.close();modal.remove();};modal.append(RetouchInspector.button('Move component',()=>{const destinationId=picker.value;close();moveInstance(info,'inside',destinationId);}),RetouchInspector.button('Cancel',close));modal.addEventListener('cancel',()=>modal.remove());document.body.append(modal);modal.showModal();picker.focus();
+}
 function chooseLayerParent(info){
   const selected=matchingEls(info.id)[0];if(!selected)return;
   const sources=sel.multiple?sel.multiple.map(info=>matchingEls(info.id)[0]).filter(Boolean):[selected];
@@ -2508,7 +2515,7 @@ async function structureAction(action) {
     }finally{busyPanel(false);}
     return;
   }
-  if(action==='reparentElement')return chooseLayerParent(info);
+  if(action==='reparentElement')return info.kind==='instance'?chooseComponentParent(info):chooseLayerParent(info);
   if(action==='renameElement'){const input=document.getElementById('layerNameInput');input?.focus();input?.select();return;}
   if(action==='insertText'||action==='insertFrame')return insertLayer(action==='insertText'?'text':'frame',info);
   const target=matchingEls(info.id).find(el=>inTextScope(el,info));

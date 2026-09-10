@@ -10,8 +10,9 @@ function context(resolved){
  if(index<0)throw Error('The component usage no longer resolves.');
  return {siblings,index};
 }
-function describe(resolved){try{const {siblings,index}=context(resolved);return {ok:true,fileHash:resolved.hash,targets:siblings.filter((_,i)=>i!==index).map(node=>resolved.elements.find(el=>el.node.start===node.start)?.id).filter(Boolean),canMoveBefore:index>0,canMoveAfter:index<siblings.length-1,canMoveFirst:index>0,canMoveLast:index<siblings.length-1};}catch(error){return refuse(error.message);}}
+function describe(resolved){const parents=require('./reparent-component.cjs').describe(resolved);try{const {siblings,index}=context(resolved);return {...parents,ok:true,fileHash:resolved.hash,targets:siblings.filter((_,i)=>i!==index).map(node=>resolved.elements.find(el=>el.node.start===node.start)?.id).filter(Boolean),canMoveBefore:index>0,canMoveAfter:index<siblings.length-1,canMoveFirst:index>0,canMoveLast:index<siblings.length-1};}catch(error){return {...refuse(error.message),...parents,fileHash:resolved.hash,targets:[]};}}
 function plan(resolved,op){
+ if(op.direction==='inside')return require('./reparent-component.cjs').plan(resolved,op);
  if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the component before moving it.');
  try{
   const {siblings,index}=context(resolved);let destination=({before:index-1,after:index+1,first:0,last:siblings.length-1})[op.direction];
