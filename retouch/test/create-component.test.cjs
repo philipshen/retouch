@@ -204,3 +204,14 @@ test('typed extraction does not lose optional or defaulted ancestor contracts',(
   const f=fixture('function Page('+pattern+'){return <article>{label}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/explicit type/);}finally{f.close();}
  }
 });
+
+test('typed extraction resolves module interfaces and alias chains for capture contracts',()=>{
+ for(const contract of ['interface Props {title:string;count:number}', 'type Label=string;type Base={title:Label;count:number};type Props=Base;', 'export interface Props {title:string;count:number}']){
+  const f=fixture(contract+' function Page({title,count}:Props){return <article title={title}>{count+1}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);assert.ok(result.edits[0].after.includes('"title": (string)'));assert.ok(result.edits[0].after.includes('"count": (number)'));}finally{f.close();}
+ }
+});
+test('typed extraction refuses ambiguous, generic and cyclic module contracts',()=>{
+ for(const source of ['type Props=Props;function Page({title}:Props){return <article>{title}</article>}', 'interface Props<T>{title:T} function Page({title}:Props<string>){return <article>{title}</article>}', 'interface Props{title:string} function Page(){type Props={title:number};const {title}:Props={title:2};return <article>{title}</article>}']){
+  const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/explicit type/);}finally{f.close();}
+ }
+});
