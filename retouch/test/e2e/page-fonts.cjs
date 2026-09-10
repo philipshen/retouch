@@ -33,6 +33,11 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
     await page.getByRole('button',{name:'Detach site variable',exact:true}).click();await wait(()=>read()!==batch);await settled();assert.deepEqual(await colors(),['rgb(204, 51, 0)','rgb(0, 136, 68)']);assert.equal(read().includes('color:var(--accent)'),false);
     await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===batch);await settled();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();
    }
+   await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await page.getByLabel('Screen size',{exact:true}).focus();await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();
+   await page.getByText('Define a variable',{exact:true}).click();await page.getByLabel('Variable name',{exact:true}).fill('--local');await page.getByLabel('Variable definition',{exact:true}).fill('#ff8800');await page.getByRole('button',{name:'Save variable on layer',exact:true}).click();await wait(()=>read().includes('md:![--local:#ff8800]'));await settled();const defined=read();
+   await page.getByLabel('Site variable',{exact:true}).selectOption('--local');await page.getByRole('button',{name:'Apply site variable',exact:true}).click();await wait(async()=>await color()==='rgb(255, 136, 0)');await settled();const localBound=read();
+   await page.getByText('Define a variable',{exact:true}).click();await page.getByLabel('Defined in this scope',{exact:true}).selectOption('--local');await page.getByLabel('Variable definition',{exact:true}).fill('#0088ff');await page.getByRole('button',{name:'Save variable on layer',exact:true}).click();await wait(async()=>await color()==='rgb(0, 136, 255)');await settled();
+   for(const expected of [localBound,defined,before]){await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===expected);await settled();}
    assert.deepEqual(errors,[]);console.log('CLASS SITE VARIABLES PASS',kind);return;
   }
   if(process.env.RT_E2E_GRADIENTS){

@@ -2,19 +2,19 @@
  'use strict';
  const inspector=()=>root.RetouchInspector||require('./inspector.js'),values=()=>root.RetouchHTMLCSSValues||require('./html-css-values.js');
  function compose(current,property,value){
-  if(![...values().fields,...values().svgFields].some(([name])=>name===property)||!values().valid(property,value))throw Error('Unsupported variable target or value.');
+  if((!values().variableName(property)&&![...values().fields,...values().svgFields].some(([name])=>name===property))||!values().valid(property,value))throw Error('Unsupported variable target or value.');
   const kept=[];
   for(const token of (current||'').split(/\s+/).filter(Boolean)){
    const plain=inspector().base(token);
    if(plain?.startsWith('['+property+':'))continue;
-   if(value!==null&&plain!==null&&/^!|!$/.test(token))throw Error('Resolve important utilities in this screen scope before binding a site variable.');
+   if(value!==null&&plain!==null&&!(values().variableName(property)&&/^\[[a-z-]+:/.test(plain))&&!/^\[--[a-zA-Z_][a-zA-Z0-9_-]*:/.test(plain)&&/^!|!$/.test(token))throw Error('Resolve important utilities in this screen scope before binding a site variable.');
    kept.push(token);
   }
   if(value!==null)kept.push('!['+property+':'+value.replace(/\s+/g,'_')+']');
   return kept.join(' ');
  }
  function bindings(classes){
-  const rules={};for(const token of (classes||'').split(/\s+/)){const match=/^\[([a-z-]+):(var\(--[a-zA-Z_][a-zA-Z0-9_-]{0,127}\))\]$/.exec(inspector().base(token)||'');if(match)rules[match[1]]=match[2];}return rules;
+  const rules={};for(const token of (classes||'').split(/\s+/)){const match=/^\[([a-z-]+):(var\(--[a-zA-Z_][a-zA-Z0-9_-]{0,127}\))\]$/.exec(inspector().base(token)||'');if(match)rules[match[1]]=match[2];const definition=/^\[(--[a-zA-Z_][a-zA-Z0-9_-]{0,127}):([^\]]+)\]$/.exec(inspector().base(token)||'');if(definition)rules[definition[1]]=definition[2].startsWith('var(')?definition[2]:definition[2].replace(/_/g,' ');}return rules;
  }
  function mount(info,element,save,notify){
   const panel=root.RetouchSiteVariables.mount(element,0,(property,value)=>{

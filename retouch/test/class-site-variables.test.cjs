@@ -20,3 +20,9 @@ test('selection variable edits preserve other scopes and retain per-layer detach
  const partial=selectionClasses(saved,'md:',[{color:null},{}]);assert.equal(partial.b,bound.b);assert.equal(partial.a.includes('var('),false);
  assert.throws(()=>selectionClasses([{...infos[0],className:'md:!text-red-500'},infos[1]],'md:',[{color:'var(--accent)'},{color:'var(--accent)'}]),/important/);
 });
+
+test('local variable definitions coexist with bindings and preserve alias identifiers',()=>{
+ const defined=compose('font-bold','--accent_color','#ff8800'),bound=compose(defined,'color','var(--accent_color)'),updated=compose(bound,'--accent_color','#0088ff');assert.match(updated,/!\[--accent_color:#0088ff\]/);assert.match(updated,/!\[color:var\(--accent_color\)\]/);
+ assert.deepEqual(bindings(compose(updated,'--alias','var(--accent_color)')),{'--accent_color':'#0088ff',color:'var(--accent_color)','--alias':'var(--accent_color)'});
+ assert.throws(()=>compose('','--loop','var(--loop)'),/Unsupported/);
+});

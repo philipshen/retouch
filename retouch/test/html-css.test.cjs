@@ -228,3 +228,10 @@ test('HTML variable bindings round-trip in scoped source and refuse unsupported 
  for(const [property,value]of [['unknown','var(--brand)'],['color','var(--brand);color:red'],['color','var(--brand, red)'],['color','var(--bad name)'],['color','var(--x)</style><script>bad</script>']])assert.equal(edit(source,768,value,property).ok,false);
  assert.equal(edit(source,768,null,'color').ok,true);
 });
+
+test('scoped custom properties preserve names and support bounded definitions and aliases',()=>{
+ let source=original;
+ for(const [name,value]of [['--accent_color','#0088ff'],['--space','24px'],['--weight','0.5'],['--alias','var(--accent_color)']]){const plan=edit(source,768,value,name);assert.equal(plan.ok,true,plan.reason);source=plan.edits[0].after;assert.equal(css.describe(resolve(source)).cssRules[768][name],value);}
+ for(const [name,value]of [['--bad name','red'],['--loop','var(--loop)'],['--x','red;display:none'],['--x','url(https://example.com)'],['--x','100001px']])assert.equal(edit(source,768,value,name).ok,false);
+ assert.equal(edit(source,768,null,'--alias').ok,true);
+});

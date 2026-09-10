@@ -7205,3 +7205,28 @@ exactly. Unit tests also check other-scope retention and mixed reset maps.
 Liquid multi-selection remains unavailable through its current adapter; this
 change does not claim it. Variable definitions, modes and inherited binding UI
 remain unfinished. Native app launches remain paused.
+
+### Local variable definitions (2026-09-10)
+
+Site variables now includes Define a variable: create/update a named custom
+property on the selected layer(s), select an existing definition in the current
+scope, and remove that definition. Values support bounded scalar sizes/numbers,
+colors and simple variable aliases. Definitions use existing scoped HTML CSS or
+React/Liquid arbitrary-property class writes and source Undo. A bound property
+updates when its local definition changes. Removing a definition reveals the
+CSS cascade rather than rewriting its consumers.
+
+Validation rejects malformed names, source injection and direct self aliases.
+Class definitions preserve underscores in alias names; explicit custom-property
+classes coexist with bound important properties. Existing conservative important
+utility refusals remain. Collections, global library management, named modes,
+full value grammar and indirect alias-cycle detection remain unfinished.
+
+All 543 unit tests pass in `/private/tmp/retouch-define-variable-units.log`.
+HTML flows pass in Chromium and WebKit, and Next.js/local Liquid flows pass in
+`/private/tmp/retouch-define-var-{react,liquid}.log`: create, bind, update the
+computed appearance and exact Undo of every source edit. Chromium additionally
+verifies definition removal and Undo. The HTML helper now waits for completed
+panel writes and tolerates navigation-context replacement while polling.
+The definition panel screenshot `/private/tmp/retouch-variable-definition.png`
+was visually inspected. Native app launches remain paused.
