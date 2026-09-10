@@ -52,7 +52,8 @@
   const component=(token,hue=false)=>{if(token.toLowerCase()==='none')return true;const parsed=/^([+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?)(%|deg|grad|rad|turn)?$/i.exec(token);return !!parsed&&Number.isFinite(Number(parsed[1]))&&Math.abs(Number(parsed[1]))<=1e6&&(hue?parsed[2]!=='%':!parsed[2]||parsed[2]==='%');};
   return channels.every((token,index)=>component(token,match[1].toLowerCase()==='oklch'&&index===2))&&(parts.length===1||component(parts[1].trim()));
  }
- function valid(property,value){
+ function valid(property,value,allowVariable=true){
+  if(allowVariable&&[...fields,...svgFields].some(([name])=>name===property)&&typeof value==='string'&&/^var\(--[a-zA-Z_][a-zA-Z0-9_-]{0,127}\)$/.test(value))return valid(property,null);
   if(['fill','stroke'].includes(property))return value===null||value==='none'||valid('color',value);
   if(['stroke-width','stroke-dasharray'].includes(property)){
    if(value===null||property==='stroke-dasharray'&&value==='none')return true;
@@ -125,7 +126,7 @@
     if(token==='inset'&&!inset){inset=true;continue;}
     if(/^-?(?:\d*\.)?\d+(?:px)?$/.test(token)&&(token.endsWith('px')||Number(token)===0)){
      const number=parseFloat(token);if(!Number.isFinite(number)||Math.abs(number)>10000)return null;lengths.push(number);
-    }else if(color===null&&token!=='inset'&&valid('color',token))color=token;
+    }else if(color===null&&token!=='inset'&&valid('color',token,false))color=token;
     else return null;
    }
    if(lengths.length<2||lengths.length>4||(lengths[2]??0)<0)return null;
@@ -221,7 +222,7 @@
      const stop=positionPattern.exec(color);if(!stop)break;
      positions.unshift(Number(stop[2])*({'%':1,deg:100/360,turn:100,rad:100/(2*Math.PI),grad:.25}[stop[3]]));color=stop[1];
     }
-    if(!valid('color',color)||positions.some(position=>!Number.isFinite(position)||position>100))return null;
+    if(!valid('color',color,false)||positions.some(position=>!Number.isFinite(position)||position>100))return null;
     for(const position of positions.length?positions:[null])gradient.stops.push({color,position});
     if(gradient.stops.length>16)return null;
    }

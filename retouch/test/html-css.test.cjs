@@ -20,7 +20,7 @@ test('HTML CSS stores isolated rules in ascending breakpoint order and resets in
  assert.deepEqual(html.collect(source,'index.html').elements.map(e=>e.id),html.collect(original,'index.html').elements.map(e=>e.id));
 });
 test('HTML CSS refuses injection, stale writes, conflicting identities and modified managed CSS',()=>{
- for(const value of ['2px;color:red','</style>','url(https://example.com)','var(--x)'])assert.equal(edit(original,0,value).refused,true);
+ for(const value of ['2px;color:red','</style>','url(https://example.com)','var(--x;)'])assert.equal(edit(original,0,value).refused,true);
  assert.equal(css.plan(resolve(original),{width:0,value:'2px',property:'width',fileHash:'stale'}).refused,true);
  assert.equal(edit(original.replace('class="title"','style="width: 3px !important"'),0,'4px').refused,true);
  const source=edit(original,0,'240px').edits[0].after;
@@ -217,4 +217,14 @@ test('optical sizing respects important font shorthand and keeps scoped resets i
  source=edit(source,768,'auto','font-optical-sizing').edits[0].after;
  source=edit(source,768,null,'font-optical-sizing').edits[0].after;
  assert.deepEqual(css.describe(resolve(source)).cssRules,{0:{'font-optical-sizing':'none'}});
+});
+
+test('HTML variable bindings round-trip in scoped source and refuse unsupported properties or injected syntax',()=>{
+ let source=original;
+ for(const [property,value]of [['color','var(--brand)'],['padding','var(--spacing_2)'],['font-family','var(--font-body)']]){
+  const plan=edit(source,768,value,property);assert.equal(plan.ok,true,plan.reason);source=plan.edits[0].after;assert.equal(css.describe(resolve(source)).cssRules[768][property],value);
+ }
+ assert.equal(css.describe(resolve(source)).cssRules[0],undefined);
+ for(const [property,value]of [['unknown','var(--brand)'],['color','var(--brand);color:red'],['color','var(--brand, red)'],['color','var(--bad name)'],['color','var(--x)</style><script>bad</script>']])assert.equal(edit(source,768,value,property).ok,false);
+ assert.equal(edit(source,768,null,'color').ok,true);
 });

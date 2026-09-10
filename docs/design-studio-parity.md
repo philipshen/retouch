@@ -7120,3 +7120,28 @@ Chromium and WebKit. It verifies pin/rename/picker selection, exact iframe width
 remove/undo-remove, reload and switching two real HTML project servers at the
 same origin with independent dimensions and pinned sets. All 536 unit tests pass
 in `/private/tmp/retouch-project-screens-units.log`. Native launches remain paused.
+
+### Existing site variable bindings (2026-09-09)
+
+HTML inspectors now include Site variables. The picker discovers custom
+properties computed on the selected layer, including inherited and aliased
+values, and filters them for the chosen supported CSS property. Applying stores
+an explicit var(--name) reference through the existing screen-scoped source
+transaction. Detach captures the current computed literal when representable;
+reset removes the local binding. All actions use existing source Undo.
+
+The initial variable grammar accepts bounded ASCII custom-property names without
+fallback expressions. Structured shadow/gradient colors retain their separate
+literal-value validation, preventing the new binding support from silently
+accepting values those structured editors cannot fully represent. Discovery is
+bounded to 500 compatible variables and does not modify variable definitions.
+Collections, modes, definition/alias authoring, multi-selection variable UX and
+React/Liquid controls remain unfinished; this is not full Figma variables parity.
+
+Validation: 537 unit tests pass in
+`/private/tmp/retouch-site-variables-units-final.log`. Chromium and WebKit pass
+`retouch/test/e2e/site-variables.cjs`: a CSS alias follows a media-query value
+change, incompatible spacing variables are excluded from a color target, detach
+retains the visible color and two Undo operations restore the binding and exact
+original source. The panel screenshot `/private/tmp/retouch-site-variables.png`
+was visually inspected. Native app launches remain paused.

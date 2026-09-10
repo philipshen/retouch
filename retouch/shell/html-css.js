@@ -177,6 +177,7 @@
   }
   I.note(sec,'Values use CSS units. Reset removes this size’s override and restores the page’s styling.');
   const container=document.createElement('div'),textLayer=I.isTextLayer(info.tag);
+  container.append(RetouchSiteVariables.mount(el,width,save,own));
   if(textLayer)container.append(typography);
   if(position)container.append(position);
   if(paint)container.append(paint);if(info.structure?.canInsert)container.append(layout);
