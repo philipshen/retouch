@@ -30,8 +30,9 @@ function createHistoryStore(root,directory){
  }
  return {
   file,
-  load(){
-   const raw=source();if(raw===null){revision=null;return {undo:[],redo:[]};}const state=validate(JSON.parse(raw),true);revision=digest(raw);
+  load({requirePending=false}={}){
+   const raw=source();if(raw===null){if(requirePending)throw Error('The pending history journal is missing. Recovery remains paused.');revision=null;return {undo:[],redo:[]};}const state=validate(JSON.parse(raw),true);revision=digest(raw);
+   if(requirePending&&!state.pending)throw Error('The pending history operation is missing. Recovery remains paused.');
    if(state.pending){try{
     if(state.pending.owner&&state.pending.owner!==process.pid){let alive=true;try{process.kill(state.pending.owner,0);}catch(error){if(error.code==='ESRCH')alive=false;}if(alive)throw Error('A source operation is still owned by another running editor.');}
     const {type}=state.pending,entry=type==='record'?state.pending.entry:state[type].at(-1),before=type==='undo'?'after':'before',after=type==='undo'?'before':'after';
@@ -40,7 +41,7 @@ function createHistoryStore(root,directory){
      let stat;try{stat=fs.lstatSync(edit.file);}catch(error){if(error.code!=='ENOENT')throw error;}if(!stat)return null;if(!stat.isFile()||stat.isSymbolicLink()||stat.size>LIMIT)throw Error('Pending history source is not a bounded regular file.');return fs.readFileSync(edit.file,'utf8');
     });
     const matches=side=>entry.edits.every((edit,index)=>contents[index]===edit[side]);
-    if(matches(before)){}else if(matches(after)){if(type==='record'){state.undo.push(entry);state.undo=state.undo.slice(-100);state.redo=[];}else{state[type].pop();state[type==='undo'?'redo':'undo'].push(entry);}}else throw Error('An interrupted source operation left changed or mixed files. Source was not modified during recovery.');
+    if(matches(before)){}else if(matches(after)){if(type==='record'){state.undo.push(entry);state.undo=state.undo.slice(-100);state.redo=[];}else{state[type].pop();state[type==='undo'?'redo':'undo'].push(entry);}}else {const files=entry.edits.slice(0,10).map((edit,index)=>path.relative(actual,edit.file)+': '+(contents[index]===edit[before]?'before operation':contents[index]===edit[after]?'after operation':'changed externally'));throw Error('An interrupted source operation left changed or mixed files. Source was not modified during recovery. '+files.join('; ')+(entry.edits.length>10?'; and more files.':'.'));}
     delete state.pending;this.save(state);
    }catch(error){error.recoveryRequired=true;throw error;}}
    return state;

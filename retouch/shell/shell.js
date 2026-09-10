@@ -104,7 +104,14 @@ function syncHistoryControls() {
 syncHistoryControls();
 
 const historyWarning=document.createElement('span');historyWarning.setAttribute('role','status');historyWarning.className='hint';document.getElementById('toolbar').append(historyWarning);
-function showHistoryPersistence(error,recoveryRequired=false){historyRecoveryRequired=recoveryRequired;historyWarning.hidden=!error&&!recoveryRequired;historyWarning.textContent=recoveryRequired?'Source recovery required. Editing is paused.':error?'History is available for this session only.':'';historyWarning.title=error||'';if(recoveryRequired){mode='interact';modeBtn.disabled=true;modeBtn.textContent='Interact mode';modeBtn.classList.remove('mode-edit');stopDrawing?.();hoverEl=null;}syncHistoryControls();}
+const recoveryDetails=document.createElement('details');recoveryDetails.hidden=true;recoveryDetails.className='recovery-details';
+const recoverySummary=document.createElement('summary');recoverySummary.textContent='Review recovery';
+const recoveryReason=document.createElement('p'),recoveryHelp=document.createElement('p'),recoveryRetry=document.createElement('button');
+recoveryHelp.textContent='Review the affected files in your code editor. Once all files match the state before or after the interrupted operation, recheck to resume editing. Rechecking does not change source files.';
+recoveryRetry.textContent='Recheck recovery';recoveryRetry.type='button';
+const recoveryPanel=document.createElement('div');recoveryPanel.className='recovery-panel';recoveryPanel.append(recoveryReason,recoveryHelp,recoveryRetry);recoveryReason.setAttribute('role','status');recoveryDetails.append(recoverySummary,recoveryPanel);document.getElementById('toolbar').append(recoveryDetails);
+recoveryRetry.addEventListener('click',async()=>{recoveryRetry.disabled=true;try{const result=await api('POST','/rt/__api/history-recovery',{});if(result.ok)location.reload();else recoveryReason.textContent=result.reason||result.error||'Recovery is still required.';}catch(error){recoveryReason.textContent='Could not recheck recovery: '+error.message;}finally{recoveryRetry.disabled=false;}});
+function showHistoryPersistence(error,recoveryRequired=false){historyRecoveryRequired=recoveryRequired;recoveryDetails.hidden=!recoveryRequired;recoveryReason.textContent=error||'';historyWarning.hidden=!error&&!recoveryRequired;historyWarning.textContent=recoveryRequired?'Source recovery required. Editing is paused.':error?'History is available for this session only.':'';historyWarning.title=error||'';if(recoveryRequired){mode='interact';modeBtn.disabled=true;modeBtn.textContent='Interact mode';modeBtn.classList.remove('mode-edit');stopDrawing?.();hoverEl=null;}syncHistoryControls();}
 showHistoryPersistence(window.__RT_RENDERING?.historyPersistenceError,historyRecoveryRequired);
 
 /* ---------- boot ---------- */

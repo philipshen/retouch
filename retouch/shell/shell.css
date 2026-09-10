@@ -352,3 +352,8 @@ details.advanced > summary:hover { color: var(--ink); }
 .gradient-angle-handle { position:absolute; z-index:2; width:14px; height:14px; padding:0; transform:translate(-50%,-50%); border:2px solid white; background:#17191d; box-shadow:0 0 0 1px #17191d; cursor:crosshair; touch-action:none; }
 .gradient-angle-handle:focus { outline:2px solid var(--accent); outline-offset:3px; }
 .gradient-angle-line { position:absolute; pointer-events:none; width:1px; height:26px; margin-top:-26px; transform-origin:bottom; background:white; box-shadow:1px 0 #17191d; }
+
+.recovery-details { position:relative; font-size:12px; flex-shrink:0; }
+.recovery-details summary { cursor:pointer; }
+.recovery-panel { position:absolute; right:0; top:calc(100% + 12px); width:min(420px, calc(100vw - 32px)); max-height:60vh; overflow:auto; padding:16px; border:1px solid var(--line); border-radius:8px; background:#202329; color:var(--ink); box-shadow:0 8px 24px #0006; z-index:1000; line-height:1.5; overflow-wrap:anywhere; }
+.recovery-panel p:first-child { margin-top:0; }

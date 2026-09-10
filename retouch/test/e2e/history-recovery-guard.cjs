@@ -12,7 +12,19 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
    const headers={'x-retouch-token':window.__RT_TOKEN,'content-type':'application/json'},resolve=await fetch('/rt/__api/resolve?id='+id,{headers}).then(r=>r.json()),results=[];
    for(const [url,body]of [['/rt/__api/op',{type:'setText',id,fileHash:resolve.element.hash,text:'Changed'}],['/rt/__api/text-styles',{}],['/rt/__api/color-styles',{}],['/rt/__api/effect-styles',{}],['/rt/__api/upload',{}]]){const response=await fetch(url,{method:'POST',headers,body:JSON.stringify(body)});results.push({status:response.status,body:await response.json()});}return results;
   },id);for(const response of responses){assert.equal(response.status,409);assert.equal(response.body.historyRecoveryRequired,true);}assert.equal(fs.readFileSync(file,'utf8'),after);assert.equal(fs.readFileSync(other,'utf8'),before);assert.equal(fs.readFileSync(store.file,'utf8'),journal);
+  await page.getByText('Review recovery',{exact:true}).click();
+  await page.getByRole('button',{name:'Recheck recovery',exact:true}).click();await page.getByRole('button',{name:'Recheck recovery',exact:true}).waitFor();
+  await page.waitForFunction(()=>document.querySelector('.recovery-panel p').textContent.includes('index.html: after operation'));
+  assert.match(await page.locator('.recovery-panel p').first().textContent(),/other.html: before operation/);
+  assert.equal(fs.readFileSync(store.file,'utf8'),journal);
+  const cleared=JSON.parse(journal);delete cleared.pending;
+  for(const damaged of [null,'broken',JSON.stringify(cleared)]){
+   if(damaged===null)fs.unlinkSync(store.file);else fs.writeFileSync(store.file,damaged);
+   const result=await page.evaluate(async()=>{const response=await fetch('/rt/__api/history-recovery',{method:'POST',headers:{'x-retouch-token':window.__RT_TOKEN}});return {status:response.status,body:await response.json()};});
+   assert.equal(result.status,409);assert.equal(result.body.historyRecoveryRequired,true);
+  }
+  fs.writeFileSync(store.file,journal);
   if(process.env.RT_E2E_RECOVERY_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_RECOVERY_SCREENSHOT});
-  await stop();fs.writeFileSync(other,after);await start(port);await page.reload();await page.getByRole('treeitem',{name:'h1 · History',exact:true}).waitFor();assert.equal(await page.getByText('Source recovery required. Editing is paused.',{exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'Edit mode',exact:true}).isEnabled(),true);await page.getByRole('button',{name:'Undo',exact:true}).click();for(let i=0;i<150;i++){if(fs.readFileSync(file,'utf8')===before&&fs.readFileSync(other,'utf8')===before)break;await page.waitForTimeout(100);}assert.equal(fs.readFileSync(file,'utf8'),before);assert.equal(fs.readFileSync(other,'utf8'),before);assert.deepEqual(errors,[]);console.log('HISTORY RECOVERY GUARD PASS',engine);
+  fs.writeFileSync(other,after);await page.getByRole('button',{name:'Recheck recovery',exact:true}).click();await page.getByText('Source recovery required. Editing is paused.',{exact:true}).waitFor({state:'hidden'});await page.getByRole('treeitem',{name:'h1 · History',exact:true}).waitFor();assert.equal(await page.getByText('Source recovery required. Editing is paused.',{exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'Edit mode',exact:true}).isEnabled(),true);await page.getByRole('button',{name:'Undo',exact:true}).click();for(let i=0;i<150;i++){if(fs.readFileSync(file,'utf8')===before&&fs.readFileSync(other,'utf8')===before)break;await page.waitForTimeout(100);}assert.equal(fs.readFileSync(file,'utf8'),before);assert.equal(fs.readFileSync(other,'utf8'),before);assert.deepEqual(errors,[]);console.log('HISTORY RECOVERY GUARD PASS',engine);
  }finally{await browser?.close();if(server)await stop();fs.rmSync(root,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

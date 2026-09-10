@@ -7049,3 +7049,26 @@ live-owner and mixed-state errors require recovery, ordinary corrupt journals
 retain the fallback, and general operation exceptions include recovery status.
 An interactive recovery-resolution workflow, save-lock recovery and complete
 crash durability remain unfinished. Native launches remain paused.
+
+### Recovery review and retry (2026-09-09)
+
+The paused editor now offers Review recovery, showing relative filenames and
+whether their contents match the state before/after the interrupted operation or
+an external edit. The bounded panel explains how to resolve files in a code
+editor and offers Recheck recovery. Rechecking never modifies source files; it
+reconciles the pending journal, reloads the shell and restores source Undo when
+all affected files match one consistent side. No server restart is required.
+
+The authenticated retry endpoint retains the pause if the journal is missing,
+corrupt, has lost its pending entry, has a live owner or cannot be saved. Runtime
+pending state must be persisted successfully before retrying recovery. Automatic
+source repair, per-file resolution controls and stale save-lock recovery remain
+unfinished.
+
+Validation: 534 unit tests pass (`/private/tmp/retouch-recovery-recheck-units.log`).
+Chromium and WebKit recovery tests verify mixed-state explanations, unchanged
+source/journal on refusal, missing/corrupt/cleared journal refusal, and resumption
+with exact multi-file Undo after resolution. WebKit exposed a test navigation
+race; the test now waits for the recovery banner to disappear after reload.
+The review panel screenshot `/private/tmp/retouch-recovery-review.png` was
+visually inspected. Native app launches remain paused.

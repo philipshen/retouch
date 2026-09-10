@@ -29,8 +29,18 @@ function startServer({ appRoot, port, adapter, proxyTo, serveSite, rendering = {
   const index = new Index(appRoot, adapter);
   const fileCount = index.scanAll();
   let history;
-  try{const directory=process.env.RETOUCH_STATE_DIR||path.join(fs.realpathSync(require('node:os').homedir()),'.retouch','history');history=new SourceHistory(100,{store:require('./history-store.cjs').createHistoryStore(appRoot,directory)});}
+  const historyDirectory=()=>process.env.RETOUCH_STATE_DIR||path.join(fs.realpathSync(require('node:os').homedir()),'.retouch','history');
+  try{const directory=historyDirectory();history=new SourceHistory(100,{store:require('./history-store.cjs').createHistoryStore(appRoot,directory)});}
   catch(error){history=new SourceHistory(100,{store:{save(){throw error;}}});history.persistenceError=error.message;if(error.recoveryRequired)history.recoveryError=error.message;}
+  function retryHistoryRecovery(){
+    if(!history.recoveryRequired)return {ok:true};
+    try{
+      if(history.pending){history.persist();if(history.persistenceError)throw Error(history.persistenceError);}
+      const store=require('./history-store.cjs').createHistoryStore(appRoot,historyDirectory());
+      const recovered=new SourceHistory(100,{store:{load:()=>store.load({requirePending:true}),save:state=>store.save(state)}});
+      history=recovered;return {ok:true};
+    }catch(error){history.recoveryError=error.message;history.persistenceError=error.message;return {ok:false,reason:error.message,historyRecoveryRequired:true,historyPersistenceError:error.message};}
+  }
   const sourceMonitor = (proxyTo || serveSite) && rendering.reloadAfterWrite ? watchSource(appRoot) : null;
   index.watch();
   if (!quiet) console.log(
@@ -39,7 +49,7 @@ function startServer({ appRoot, port, adapter, proxyTo, serveSite, rendering = {
 
   const server = http.createServer((req, res) => {
     try {
-      handle(req, res, { index, token, stateScope, appRoot, adapter, proxyTo, serveSite, rendering, history, sourceMonitor });
+      handle(req, res, { index, token, stateScope, appRoot, adapter, proxyTo, serveSite, rendering, history, sourceMonitor, retryHistoryRecovery });
     } catch (err) {
       res.writeHead(err.statusCode || 500, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: err.message }));
@@ -75,6 +85,8 @@ function handle(req, res, ctx) {
   const p = url.pathname;
 
   if(req.method==='POST'&&['/rt/__api/op','/rt/__api/text-styles','/rt/__api/color-styles','/rt/__api/effect-styles','/rt/__api/upload'].includes(p)&&ctx.history.recoveryRequired){requireToken(req,ctx.token);return json(res,409,{ok:false,refused:true,reason:'An incomplete source operation requires recovery before editing can resume.',historyRecoveryRequired:true,historyPersistenceError:ctx.history.recoveryError||ctx.history.persistenceError});}
+
+  if(p==='/rt/__api/history-recovery'&&req.method==='POST'){requireToken(req,ctx.token);const result=ctx.retryHistoryRecovery();return json(res,result.ok?200:409,result);}
 
   if (p.startsWith('/rt/__assets/')) return serveAsset(p.slice('/rt/__assets/'.length), res);
   if (p === '/rt/__api/source-revision' && req.method === 'GET') {
