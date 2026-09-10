@@ -7253,3 +7253,25 @@ and valid definition edits. Framework logs are
 `/private/tmp/retouch-cycle-{react,liquid}.log`. Initial browser assertions were
 ambiguous between toast/status copies; scoped status assertions now pass.
 Native app launches remain paused.
+
+### Responsive variable inheritance controls (2026-09-10)
+
+The Site variables panel distinguishes direct scope bindings from known inherited
+bindings. “Override inherited binding here” creates a reference at the selected
+scope without changing smaller scopes. Definition editing also offers inherited
+variable definitions, copying their authored value into the form so a new scoped
+override can be saved. Mixed selection actions retain per-layer references and
+leave layers without inherited bindings unchanged.
+
+HTML combines managed rules from smaller minimum-width scopes. React/Liquid use
+the existing known minimum-width class inheritance model. Arbitrary external
+CSS, ancestor provenance and complex state/media combinations are not fully
+represented as editable inherited definitions.
+
+All 545 unit tests pass in
+`/private/tmp/retouch-inherited-variable-units.log`. HTML Chromium/WebKit flows
+verify base-to-tablet binding/definition overrides, phone isolation and exact
+Undo. Next.js and local Liquid flows verify tablet-to-desktop overrides, tablet
+isolation and exact Undo in
+`/private/tmp/retouch-inherited-var-{react,liquid}.log`. Native launches remain
+paused; full Figma parity remains incomplete.

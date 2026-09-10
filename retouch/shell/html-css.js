@@ -2,6 +2,7 @@
  const I=RetouchInspector;
  const {options,fields,svgFields,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients}=RetouchHTMLCSSValues;
  const stopRail=RetouchGradientStopRail;
+ function inheritedVariables(info,width){return Object.entries(info.cssRules||{}).filter(([scope])=>Number(scope)<width).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,rules])=>Object.assign(all,rules),{});}
  function mount(info,el,width,save,position=null,textStyleAction=null){
   const sec=I.section('CSS properties');
   if(info.cssReason||!el||!Number.isInteger(width)){I.note(sec,info.cssReason||'Choose a pixel screen scope.','refused');return sec;}
@@ -177,7 +178,7 @@
   }
   I.note(sec,'Values use CSS units. Reset removes this size’s override and restores the page’s styling.');
   const container=document.createElement('div'),textLayer=I.isTextLayer(info.tag);
-  container.append(RetouchSiteVariables.mount(el,width,save,own));
+  container.append(RetouchSiteVariables.mount(el,width,save,own,null,[inheritedVariables(info,width)]));
   if(textLayer)container.append(typography);
   if(position)container.append(position);
   if(paint)container.append(paint);if(info.structure?.canInsert)container.append(layout);
@@ -188,7 +189,7 @@
   const section=I.section('Shared styles');
   if(!Number.isInteger(width)||elements.some(el=>!el)||infos.some(info=>info.cssReason)){I.note(section,'Re-select the layers and choose a pixel screen scope.','refused');return section;}
   I.note(section,'Shift-click a range in Layers; Cmd/Ctrl-click toggles layers. On the canvas, Shift-click toggles. Mixed values stay unchanged until edited. Each shared edit is one undo step.');
-  section.append(RetouchSiteVariables.mount(elements,width,save,infos.map(info=>info.cssRules?.[width]||{}),changes=>save(null,null,width,Object.fromEntries(infos.map((info,index)=>[info.id,changes[index]])))));
+  section.append(RetouchSiteVariables.mount(elements,width,save,infos.map(info=>info.cssRules?.[width]||{}),changes=>save(null,null,width,Object.fromEntries(infos.map((info,index)=>[info.id,changes[index]]))),infos.map(info=>inheritedVariables(info,width))));
   const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el));
   const typography=I.section('Shared typography'),families=computed.map(css=>css.fontFamily),mixedFamilies=families.some(value=>value!==families[0]);section.append(typography);
   I.fontPicker(typography,elements[0].ownerDocument,mixedFamilies?'':families[0],value=>save('font-family',value,width),{mixed:mixedFamilies,label:'Shared Page font'});

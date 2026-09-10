@@ -20,7 +20,7 @@
  function mount(info,element,save,notify){
   const panel=root.RetouchSiteVariables.mount(element,0,(property,value)=>{
    try{if(value!==null&&[...element.style].some(name=>element.style.getPropertyPriority(name)==='important'))throw Error('Resolve inline important styles before binding a site variable.');const next=compose(info.className,property,value);if(values().variableName(property)&&typeof value==='string'&&value.startsWith('var('))checkCycle({...bindings(info.anchorInheritedClasses),...bindings(next)});return save(next);}catch(error){notify(error.message);}
-  },bindings(info.className));return panel;
+  },bindings(info.className),null,[bindings(info.anchorInheritedClasses)]);return panel;
  }
  function selectionClasses(infos,scope,changes,inherited=[]){
   const responsive=root.RetouchResponsive||require('./responsive.js');
@@ -38,7 +38,7 @@
    for(let index=0;index<elements.length;index++)if(Object.values(changes[index]).some(value=>value!==null)&&[...elements[index].style].some(name=>elements[index].style.getPropertyPriority(name)==='important'))throw Error('Resolve inline important styles before binding a site variable.');
    return save(selectionClasses(infos,scope,changes,infos.map((info,index)=>root.RetouchResponsive.inherited(info.className,scope,elements[index].ownerDocument))));
   }catch(error){notify(error.message);}};
-  return root.RetouchSiteVariables.mount(elements,0,(property,value)=>write(infos.map(()=>({[property]:value}))),infos.map(info=>bindings(root.RetouchResponsive.project(info.className,scope))),write);
+  return root.RetouchSiteVariables.mount(elements,0,(property,value)=>write(infos.map(()=>({[property]:value}))),infos.map(info=>bindings(root.RetouchResponsive.project(info.className,scope))),write,infos.map((info,index)=>bindings(root.RetouchResponsive.inherited(info.className,scope,elements[index].ownerDocument))));
  }
  const api={compose,bindings,mount,selectionClasses,mountSelection};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchClassSiteVariables=api;
 })(typeof window==='object'?window:globalThis);
