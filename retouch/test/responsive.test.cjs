@@ -84,3 +84,11 @@ test('text style inheritance uses actual breakpoint units and the nearest unambi
  assert.equal(R.inheritedLink({'':base,'unknown:':tablet},'desktop:',d,choices),null);
  assert.equal(R.inheritedLink({'':base},'max-[1200px]:',d,choices),null);
 });
+
+test('absolute-unit named breakpoints reuse widths and inherit earlier scopes without creating unsupported units',()=>{
+ const d={createElement:()=>({style:{},remove(){}}),documentElement:{append(){}},defaultView:{getComputedStyle:()=>({fontSize:'20px'})}},choices=[{prefix:'small:',label:'Small',condition:'(min-width:4in)'},{prefix:'tablet:',label:'Tablet',condition:'(width >= 576PT)'},{prefix:'large:',label:'Large',condition:'(min-width:60pc)'}];
+ assert.equal(R.atWidth(d,768,choices).prefix,'tablet:');assert.equal(R.atWidth(d,800,choices).prefix,'min-[800px]:');
+ assert.equal(R.inherited('left-0 small:left-4 tablet:w-20 large:opacity-50','large:',d,choices),'left-0 left-4 w-20');
+ assert.deepEqual(R.inheritedLink({'':{id:'base'},'small:':{id:'small'},'tablet:':{id:'tablet'}},'large:',d,choices),{scope:'tablet:',label:'Tablet',link:{id:'tablet'}});
+ assert.equal(R.inheritedLink({'small:':{id:'a'},'min-[384px]:':{id:'b'}},'tablet:',d,choices),null,'equivalent widths do not choose an arbitrary binding');
+});

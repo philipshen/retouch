@@ -61,6 +61,9 @@
     if(item?.queries&&(item.queries.length!==1||item.queries[0].length!==1))return null;
     return item?.queries?.[0][0]||item?.condition||null;
   }
+  const absolutePixels={px:1,in:96,cm:96/2.54,mm:96/25.4,q:96/101.6,pt:96/72,pc:16};
+  const lengthPixels=(value,unit,initial)=>Number(value)*(absolutePixels[unit.toLowerCase()]??initial);
+  const minimumLength=item=>minimumCondition(item)?.match(/^\(\s*(?:min-width\s*:\s*|width\s*>=\s*)([\d.]+)(px|rem|em|in|cm|mm|q|pt|pc)\s*\)$/i);
   // Anchor fallback for distinct, ascending minimum-width scopes. Complex media
   // conditions and state variants are excluded rather than treated as breakpoints.
   function inherited(classes,prefix,d,choices=d?discover(d):[]){
@@ -69,8 +72,8 @@
     const minimum=scope=>{
       const arbitrary=/^min-\[(\d+(?:\.\d+)?)(px|rem|em)\]:$/.exec(scope);
       const condition=minimumCondition(choices.find(item=>item.prefix===scope));
-      const named=condition&&/^\(\s*(?:min-width\s*:\s*|width\s*>=\s*)([\d.]+)(px|rem|em)\s*\)$/.exec(condition);
-      const match=arbitrary||named;return match?Number(match[1])*(match[2]==='px'?1:initial):null;
+      const named=minimumLength({condition});
+      const match=arbitrary||named;return match?lengthPixels(match[1],match[2],initial):null;
     };
     const limit=minimum(prefix);if(limit===null)return base;
     const scopes=[...new Set(tokens(classes).map(token=>split(token).prefix))].filter(scope=>scope&&scope!==prefix).map(scope=>({scope,width:minimum(scope)})).filter(item=>item.width!==null&&item.width<limit).sort((a,b)=>a.width-b.width);
@@ -82,13 +85,13 @@
     d.documentElement.append(probe);
     const initial=parseFloat(d.defaultView.getComputedStyle(probe).fontSize)||16;probe.remove();
     const minima=choices.map(item=>{
-      const match=minimumCondition(item)?.match(/^\(\s*(?:min-width\s*:\s*|width\s*>=\s*)([\d.]+)(px|rem|em)\s*\)$/);
-      return match?{...item,unit:match[2],px:Number(match[1])*(match[2]==='px'?1:initial)}:null;
+      const match=minimumLength(item);
+      return match?{...item,unit:match[2].toLowerCase(),px:lengthPixels(match[1],match[2],initial)}:null;
     }).filter(Boolean);
     const existing=minima.find(item=>Math.abs(item.px-width)<.01);
     if(existing)return existing;
     const units=choices.flatMap(item=>item.queries?item.queries.flat():[item.condition||'']).map(query=>query.match(/(?:min-width\s*:\s*|width\s*>=\s*)[\d.]+(px|rem|em)/)?.[1]).filter(Boolean);
-    const unit=units.includes('rem')?'rem':minima[0]?.unit||units[0]||'px';
+    const unit=units.includes('rem')?'rem':minima.find(item=>['px','rem','em'].includes(item.unit))?.unit||units[0]||'px';
     const size=Math.round((unit==='px'?width:width/initial)*100000)/100000;
     return {prefix:`min-[${size}${unit}]:`,label:`${width} px and larger`};
   }
@@ -103,7 +106,7 @@
     try{
       const w=probe.contentWindow;if(!w)return null;
       const initial=parseFloat(w.getComputedStyle(w.document.documentElement).fontSize)||16;
-      const unitPixels={px:1,em:initial,rem:initial,in:96,cm:96/2.54,mm:96/25.4,q:96/101.6,pt:96/72,pc:16};
+      const unitPixels={...absolutePixels,em:initial,rem:initial};
       const widths=new Set([current.width,240,7680]),heights=new Set([current.height,240,7680]),ratios=[];
       const add=(set,value)=>{for(const n of [Math.floor(value)-1,Math.floor(value),Math.ceil(value),Math.ceil(value)+1])if(n>=240&&n<=7680)set.add(n);};
       for(const query of groups.flat())for(const part of query.matchAll(/\(([^()]*)\)/g)){
@@ -148,8 +151,8 @@
     function minimum(scope){
       if(scope==='')return -1;
       const arbitrary=/^min-\[(\d+(?:\.\d+)?)(px|rem|em)\]:$/.exec(scope),condition=minimumCondition(choices.find(item=>item.prefix===scope));
-      const named=condition&&/^\(\s*(?:min-width\s*:\s*|width\s*>=\s*)([\d.]+)(px|rem|em)\s*\)$/.exec(condition),match=arbitrary||named;
-      return match?Number(match[1])*(match[2]==='px'?1:initial):null;
+      const named=minimumLength({condition}),match=arbitrary||named;
+      return match?lengthPixels(match[1],match[2],initial):null;
     }
     const limit=minimum(prefix);if(limit===null)return null;
     const candidates=[];
