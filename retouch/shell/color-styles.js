@@ -2,6 +2,13 @@
  'use strict';
  let expanded=false,preferred='',target='color';
  function normalize(value){if(typeof value!=='string'||!/^#(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})$/i.test(value))throw Error('Enter a hex color with 3, 4, 6 or 8 digits.');let hex=value.slice(1).toLowerCase();if(hex.length<5)hex=[...hex].map(c=>c+c).join('');return '#'+hex+(hex.length===6?'ff':'');}
+ // Resolve each paint property independently: an unrelated link at a nearer
+ // breakpoint must not hide this property's narrower-scope connection.
+ function inheritedLink(links,width,property){
+  if(!Number.isInteger(width)||width<=0||links?.[width]?.[property])return null;
+  const scope=Object.keys(links||{}).map(Number).filter(value=>Number.isInteger(value)&&value>=0&&value<width&&links[value]?.[property]).sort((a,b)=>b-a)[0];
+  return scope===undefined?null:{link:links[scope][property],width:scope,label:scope?scope+'px and larger':'All sizes'};
+ }
  function mount(parent,options={}){
   const I=root.RetouchInspector,details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Saved color styles';details.append(summary);parent.append(details);
   const status=I.note(details,'');status.setAttribute('role','status');status.setAttribute('aria-live','polite');const controls=document.createElement('fieldset');controls.style.cssText='border:0;padding:0;margin:0;min-width:0';details.append(controls);
@@ -18,6 +25,13 @@
     const link=options.links?.[target];
     if(link){const definition=library.styles.find(item=>item.id===link.id),overridden=options.overrides?.includes(target);I.note(controls,'Linked color: '+(definition?.name||'Unavailable style')+(overridden?' · Local override.':'.'));
      const reset=I.button('Reset linked color',()=>run(()=>options.reset(link.id,library.revision,target),'Linked color reset.'));reset.disabled=!definition||!overridden;controls.append(reset,I.button('Detach linked color',()=>run(()=>options.detach(target),'Color detached.')));
+    }
+    const inherited=!link&&inheritedLink(options.allLinks,options.width,target);
+    if(inherited){
+     const definition=library.styles.find(item=>item.id===inherited.link.id);
+     I.note(controls,'Inherited color: '+(definition?.name||'Unavailable style')+' · '+inherited.label);
+     I.note(controls,'Local paint can override this inherited color. Apply it here to create a link for this screen scope and larger, leaving smaller screens unchanged.');
+     const applyHere=I.button('Apply inherited color at this scope',()=>run(()=>options.apply(inherited.link.id,library.revision,target),'Color applied.'));applyHere.disabled=!definition;controls.append(applyHere);
     }
     if(style)controls.append(I.button('Apply color style',()=>run(()=>options.apply(style.id,library.revision,target),'Color applied.')));
     I.note(controls,'Applies at the selected screen scope. Palette updates follow links across project pages; local overrides are preserved.');
@@ -39,5 +53,5 @@
   }
   render();details.ontoggle=()=>{if(!details.isConnected)return;expanded=details.open;if(details.open&&!library)load();};details.open=expanded;
  }
- root.RetouchColorStyles={mount,normalize};
+ root.RetouchColorStyles={mount,normalize,inheritedLink};
 })(window);

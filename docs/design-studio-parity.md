@@ -6173,3 +6173,24 @@ the override label, resets it and restores both edits with undo. Existing palett
 CRUD, transfer and stale-revision flows pass. React/Liquid paint links, batch
 color operations, inherited-color UI, SVG paint targets and wide-gamut palettes
 remain unfinished. Native launches stay paused; full parity is not achieved.
+
+### Inherited HTML palette links across screen sizes (2026-09-09)
+
+The palette now identifies the nearest narrower linked scope for each paint
+property independently. A background link is not hidden by a nearer text-color
+link. Larger scopes offer “Apply inherited color at this scope”, creating a
+separate connection through the existing source transaction and shared undo.
+Direct links retain reset/detach controls; inherited links do not expose controls
+that would unexpectedly edit the smaller scope. Unavailable definitions disable
+promotion. The UI explains that local paint can override inherited links; this
+is link provenance, not a claim to resolve every external CSS cascade.
+
+All 462 unit tests passed (exit 0), recorded in
+/private/tmp/retouch-color-inheritance-units.log. Chromium and WebKit browser
+flows passed (exit 0), recorded in /private/tmp/retouch-color-inheritance-chromium.log
+and /private/tmp/retouch-color-inheritance-webkit.log. Both verify 768px-to-1440px
+inheritance, per-property isolation, independent promotion, direct-link controls,
+exact source undo, plus the existing project propagation, local override/reset,
+phone isolation, detach, catalog transfer and stale-revision flows. React/Liquid
+color links, batch paint links, SVG paint targets and wide-gamut palettes remain
+unfinished. Native app launches remain paused; full parity is not achieved.

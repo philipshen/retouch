@@ -5,3 +5,14 @@ test('palette color entry expands shorthand and retains explicit alpha exactly',
  for(const [input,expected]of [['#abc','#aabbccff'],['#AbC8','#aabbcc88'],['#ABCDEF','#abcdefff'],['#12345600','#12345600'],['#0000','#00000000']])assert.equal(normalize(input),expected);
  for(const input of ['',null,42,'red','#12','#12345','#123456789','var(--color)','#123;bad'])assert.throws(()=>normalize(input),/hex color/);
 });
+
+test('inherited palette links follow the nearest narrower scope per paint property',()=>{
+ const {inheritedLink}=window.RetouchColorStyles,base={id:'base'},tablet={id:'tablet'},text={id:'text'};
+ const links={0:{'background-color':base},768:{'background-color':tablet},1024:{color:text}};
+ assert.equal(inheritedLink(links,1440,'background-color').link,tablet);
+ assert.equal(inheritedLink(links,1440,'background-color').label,'768px and larger');
+ assert.equal(inheritedLink(links,390,'background-color').label,'All sizes');
+ assert.equal(inheritedLink(links,1440,'color').link,text);
+ for(const [width,property]of [[0,'background-color'],[768,'background-color'],[390,'color'],[1440,'border-color'],[NaN,'color'],[-1,'color']])assert.equal(inheritedLink(links,width,property),null);
+ assert.equal(inheritedLink({},1440,'color'),null);
+});
