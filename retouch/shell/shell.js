@@ -1214,7 +1214,7 @@ function componentSection(id) {
   const description = RetouchInspector.note(sec, 'Loading definition…');
   api('GET', componentUrl(id,sel?.info?.context)).then(component => {
     if (!sec.isConnected) return;
-    if(component?.inlineComponent){sec.remove();return;}
+    if(component?.inlineComponent&&!componentLibrarySelections.has(id)){sec.remove();return;}
     if (!component?.ok) { description.textContent = component?.reason || 'Definition unavailable.'; return; }
     description.textContent = component.name + ' · ' + component.file;
     if (component.detached) sec.querySelector('h3').textContent = 'Detached component';
@@ -1223,7 +1223,7 @@ function componentSection(id) {
     const edit = RetouchInspector.button('Edit definition', () => editDefinition(id, component));
     edit.disabled = !component.definitionId; actions.append(edit);
     const duplicate=RetouchInspector.button('Duplicate instance',()=>duplicateInstance(id,sel?.info?.context));duplicate.disabled=!component.canDuplicate;duplicate.title=component.duplicateReason||'Duplicate this source usage, keeping the shared definition.';actions.append(duplicate);
-    const detach = RetouchInspector.button('Detach instance', () => detachInstance(id, component, detach));
+    const detach = RetouchInspector.button('Detach instance', () => detachInstance(id, component, detach));detach.disabled=!component.canDetach;
     detach.disabled = !component.canDetach; if (!component.detached) actions.append(detach); sec.append(actions);
     const count=matchingInDocument(doc(),id,component).length;
     RetouchInspector.note(sec, `${count} rendered instance${count === 1 ? '' : 's'} at this usage. ${component.detached ? 'This module is independent of the original component.' : 'Definition edits are shared.'}`);
@@ -1245,10 +1245,10 @@ new ResizeObserver(entries=>{
   panelBody.querySelectorAll('.component-prop-text').forEach(sizeComponentText);
 }).observe(panelBody);
 const componentPropertyFilters=new Map();
-function propTable(props,instanceId,fileHash) {
+function propTable(props,instanceId,fileHash,options={}) {
   const table = document.createElement('table'); table.className = 'component-props';
   const thead = document.createElement('thead'); const header = document.createElement('tr');
-  for (const text of ['Prop', 'This instance', 'Default']) { const th=document.createElement('th');th.textContent=text;header.append(th); }
+  for (const text of ['Prop', options.definitionOnly?'Type / options':'This instance', 'Default']) { const th=document.createElement('th');th.textContent=text;header.append(th); }
   thead.append(header); table.append(thead);
   const body=document.createElement('tbody');
   for(const prop of props){
@@ -1312,7 +1312,7 @@ async function editDefinition(instanceId, component) {
   const target=roots.map(root=>root.getAttribute('data-rt')===component.definitionId?root:root.querySelector(`[data-rt="${component.definitionId}"]`)).find(Boolean);
   const response = await api('GET', resolveUrl(component.definitionId, target?renderContext(target):sel?.info?.context));
   if (!response?.ok) return toast('The definition changed. Re-select the component.', 'err');
-  sel = { hostId: component.definitionId, instanceId, scope: 'host', info: response.element };
+  sel = { hostId: component.definitionId, instanceId:component.definitionOnly?null:instanceId, scope: 'host', info: response.element };
   renderPanel(); toast(component.detached ? 'Editing detached definition' : 'Editing shared definition', 'ok');
 }
 async function duplicateInstance(id,context) {
@@ -1348,21 +1348,23 @@ async function detachInstance(id, component, button, context=sel?.info?.context)
     toast('Detached to ' + result.detachedFile, 'ok');
   } finally { button.disabled = false; }
 }
+const componentLibrarySelections=new Set();
 const componentLibraryButton=document.getElementById('componentLibrary');
 componentLibraryButton.hidden=!window.__RT_RENDERING?.componentLibrary;
 componentLibraryButton.addEventListener('click',()=>RetouchComponentLibrary.open({
  read:()=>api('GET','/rt/__api/components'),
- instances:item=>item.usages.flatMap(usage=>matchingInDocument(doc(),usage.id).map(element=>({id:usage.id,element,label:usage.file+(usage.line?':'+usage.line:'')}))),
+ instances:item=>item.usages.length?item.usages.flatMap(usage=>matchingInDocument(doc(),usage.id).map(element=>({id:usage.id,element,label:usage.file+(usage.line?':'+usage.line:'')}))):matchingInDocument(doc(),item.definitionId).map(element=>({id:item.definitionId,definition:true,element,label:item.file})),
  select:async(instance,isActive)=>{
   if(!instance?.element?.isConnected)throw Error('This instance is no longer on the page. Refresh the component list.');
   if(panelTasks||sourceRequests||undoBusy)throw Error('Wait for the current edit to finish.');
-  const serial=classificationSerial,context=renderContext(instance.element),usage=await api('GET',resolveUrl(instance.id,context)),component=await api('GET',componentUrl(instance.id,context));
+  const serial=classificationSerial,context=renderContext(instance.element),usage=await api('GET',resolveUrl(instance.id,context)),component=await api('GET',instance.definition?'/rt/__api/component-definition?id='+instance.id:componentUrl(instance.id,context));
   if(!isActive()||serial!==classificationSerial)return;
   if(!instance.element.isConnected)throw Error('This instance is no longer on the page. Refresh the list.');
   if(!usage?.ok||!component?.ok)throw Error('This component no longer resolves. Refresh the list.');
-  stopDrawing?.();classificationSerial++;sel={hostId:component.definitionId,instanceId:instance.id,scope:'instance',info:usage.element};renderPanel();instance.element.scrollIntoView({block:'nearest',inline:'nearest'});
+  if(!instance.definition){componentLibrarySelections.add(instance.id);if(componentLibrarySelections.size>1000)componentLibrarySelections.delete(componentLibrarySelections.values().next().value);}
+  stopDrawing?.();classificationSerial++;sel={hostId:component.definitionId,instanceId:instance.definition?null:instance.id,scope:instance.definition?'host':'instance',info:usage.element};renderPanel();instance.element.scrollIntoView({block:'nearest',inline:'nearest'});
  },
- view:async(id,onPage,isActive)=>{const component=await api('GET',componentUrl(id));if(!isActive())return;if(!component?.ok)throw Error(component?.reason||'This component no longer resolves.');openComponent(id,component,{preview:onPage});}
+ view:async(id,onPage,isActive,definitionOnly)=>{const component=await api('GET',definitionOnly?'/rt/__api/component-definition?id='+id:componentUrl(id));if(!isActive())return;if(!component?.ok)throw Error(component?.reason||'This component no longer resolves.');openComponent(id,component,{preview:onPage});}
 }));
 function openComponent(id, component,options={}) {
   const modal = document.createElement('dialog');modal.className = 'component-modal';modal.setAttribute('aria-label',component.name+' component');
@@ -1372,11 +1374,11 @@ function openComponent(id, component,options={}) {
   RetouchInspector.note(modal, component.file, 'filepath');
   const content=document.createElement('div');content.className='component-workspace';if(options.preview===false)content.classList.add('component-source-only');
   const canvas=document.createElement('div');canvas.className='component-canvas';
-  RetouchInspector.note(canvas,options.preview===false?'This component is not mounted on the current page. Its source and property definitions are shown here.':'Live preview · current instance props');
+  RetouchInspector.note(canvas,options.preview===false?'No matching instance was found on this page. Its source and property definitions are shown here.':component.definitionOnly?'Live preview · current page rendering':'Live preview · current instance props');
   const preview=document.createElement('iframe');preview.title='Component preview';canvas.append(preview);
   const sidebar=document.createElement('div');sidebar.className='component-details';
-  const h=document.createElement('h3');h.textContent='Props';sidebar.append(h,propTable(component.props));
-  RetouchInspector.note(sidebar,'Values show the usage source. Expressions keep their application context.');
+  const h=document.createElement('h3');h.textContent='Props';sidebar.append(h,propTable(component.props,null,null,{definitionOnly:component.definitionOnly}));
+  RetouchInspector.note(sidebar,component.definitionOnly?'Declared properties and defaults. No instance values are applied.':'Values show the usage source. Expressions keep their application context.');
   const details=document.createElement('details');details.open=options.preview===false;const summary=document.createElement('summary');summary.textContent='Component definition';
   const code=document.createElement('pre');code.textContent=component.source;details.append(summary,code);sidebar.append(details);
   const edit=RetouchInspector.button('Edit definition',()=>{modal.close();editDefinition(id,component);});edit.disabled=!component.definitionId||options.preview===false;sidebar.append(edit);

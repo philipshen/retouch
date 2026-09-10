@@ -4,7 +4,7 @@ window.RetouchComponentLibrary={open({read,instances,select,view}){
  const header=document.createElement('header'),title=document.createElement('h2');title.textContent='Project components';
  const button=(label,action)=>{const result=document.createElement('button');result.type='button';result.className='control-button';result.textContent=label;result.addEventListener('click',action);return result;};
  header.append(title,button('Close',()=>dialog.close()));
- const description=document.createElement('p');description.textContent='Find components created in Retouch or reused at multiple source locations.';
+ const description=document.createElement('p');description.textContent='Browse exported, created and reused components in your project.';
  const tools=document.createElement('div');tools.className='component-library-tools';
  const search=document.createElement('input');search.type='search';search.placeholder='Find by name or file…';search.setAttribute('aria-label','Search project components');
  const refresh=button('Refresh',load);tools.append(search,refresh);
@@ -20,11 +20,11 @@ window.RetouchComponentLibrary={open({read,instances,select,view}){
   for(const item of rows){
    const row=document.createElement('li');row.setAttribute('aria-label',item.name+' · '+item.file);
    const name=document.createElement('h3');name.textContent=item.name;const file=document.createElement('p');file.className='filepath';file.textContent=item.file;
-   const present=instances(item),count=document.createElement('p');count.textContent=item.usageCount+' source usage'+(item.usageCount===1?'':'s')+' · '+present.length+' on this page';
+   const present=instances(item),count=document.createElement('p');count.textContent=(item.usageCount?item.usageCount+' source usage'+(item.usageCount===1?'':'s'):'No authored usages')+' · '+(present.length?present.length+' on this page':'Not found on this page');
    const actions=document.createElement('div');actions.className='component-library-actions';
    let picker;if(present.length>1){picker=document.createElement('select');picker.setAttribute('aria-label','Instance of '+item.name);present.forEach((instance,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent='Instance '+(index+1)+' · '+instance.label;picker.append(option);});actions.append(picker);}
    const choose=button('Select on canvas',async()=>{choose.disabled=true;try{await select(present[Number(picker?.value||0)],()=>dialog.isConnected);if(dialog.isConnected)dialog.close();}catch(error){status.textContent=error.message;choose.disabled=false;}});choose.disabled=!present.length;actions.append(choose);
-   const source=button('View component',async()=>{source.disabled=true;try{const instance=present[Number(picker?.value||0)];await view(instance?.id||item.usages[0].id,!!instance,()=>dialog.isConnected);if(dialog.isConnected)dialog.close();}catch(error){status.textContent=error.message;}finally{source.disabled=false;}});actions.append(source);
+   const source=button('View component',async()=>{source.disabled=true;try{const instance=present[Number(picker?.value||0)];await view(instance?.id||item.usages[0]?.id||item.definitionId,!!instance,()=>dialog.isConnected,instance?.definition===true||!item.usages.length);if(dialog.isConnected)dialog.close();}catch(error){status.textContent=error.message;}finally{source.disabled=false;}});actions.append(source);
    row.append(name,file,count,actions);list.append(row);
   }
  }

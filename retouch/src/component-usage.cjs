@@ -41,6 +41,17 @@ function library(index){
   if(!group.names.includes(entry.name))group.names.push(entry.name);
   group.usages.push({id,name:entry.name,file:entry.usageFile,line:entry.line});
  }
+ if(index.adapter.name==='react')for(const file of index.fileIds.keys()){
+  try{
+   const source=fs.readFileSync(file,'utf8'),rel=path.relative(index.appRoot,file).split(path.sep).join('/');
+   for(const definition of require('./component-definitions.cjs').definitions(source,rel)){
+    const key=rel+'#'+definition.definitionId,group=groups.get(key);
+    if(group){for(const name of definition.names)if(!group.names.includes(name))group.names.push(name);continue;}
+    const usages=[...entries].filter(([,entry])=>entry.key===key).map(([id,entry])=>({id,name:entry.name,file:entry.usageFile,line:entry.line}));
+    groups.set(key,{key,definitionId:definition.definitionId,file:rel,names:[...new Set([...definition.names,...usages.map(usage=>usage.name)])],usages,...(!usages.length?{definitionOnly:true}:{})});
+   }
+  }catch{}
+ }
  const components=[...groups.values()].map(group=>({...group,name:group.names.sort()[0],usageCount:group.usages.length,usages:group.usages.sort((a,b)=>a.file.localeCompare(b.file)||(a.line||0)-(b.line||0))})).sort((a,b)=>a.name.localeCompare(b.name)||a.file.localeCompare(b.file));
  return {components:components.slice(0,2000),total:components.length,truncated:components.length>2000,unreadableFiles:index.errors.size};
 }

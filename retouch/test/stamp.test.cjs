@@ -59,3 +59,9 @@ test('explicitly created component roots forward instance identity only in compi
  const output=stamp(src,file,ROOT).code;assert.ok(output.includes('data-rt-i={arguments[0]?.["data-rt-i"]}'));assert.strictEqual((output.match(/arguments\[0\]/g)||[]).length,1);assert.ok(!src.includes('arguments[0]'));assert.doesNotThrow(()=>require('../src/id.cjs').parseSource(output));
  const unmarked=stamp(src.replace('/** @retouch-component */',''),file,ROOT).code;assert.ok(!unmarked.includes('arguments[0]'));
 });
+test('exported function component roots forward their incoming instance marker without changing nested hosts',()=>{
+ for(const src of ['export function Card({label}){return <article><span>{label}</span></article>}','function Card(){return <article/>} export {Card as PublicCard};','export default function Card(){return <article/>}']){
+  const output=stamp(src,file,ROOT).code,{elements}=require('../src/id.cjs').collectElements(output,'C.tsx'),root=elements.find(element=>element.node.openingElement.name.name==='article');assert.ok(root.node.openingElement.attributes.some(attr=>attr.name?.name==='data-rt-i'));assert.equal((output.match(/arguments\[0\]/g)||[]).length,1);assert.ok(!src.includes('data-rt-i'));const nested=elements.find(element=>element.node.openingElement.name.name==='span');if(nested)assert.equal(nested.node.openingElement.attributes.some(attr=>attr.name?.name==='data-rt-i'),false);
+ }
+ const existing='export function Card(){return <article data-rt-i="authored"/>}';assert.equal((stamp(existing,file,ROOT).code.match(/arguments\[0\]/g)||[]).length,0);
+});

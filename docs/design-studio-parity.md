@@ -19,7 +19,7 @@ changing those files. The original checkout may continue to evolve independently
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. HTML absolute placement now supports edge, center, stretch and proportional anchors with screen-scoped writes. Transformed constraints, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML, React and local Liquid support linear/radial/angular gradient stacks, repetition, color interpolation, explicit radial sizing, draggable stops/centers/rotation, keyboard editing and exact undo. HTML also supports shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A searchable page-font picker now discovers declared and used families, with React/HTML and local Liquid browser coverage. Explicit variable-axis editing, declared-file range/default inspection and bounded axis sliders have HTML/React/local Liquid browser coverage. Full font browsing, actual glyph-font resolution, live Shopify font verification, full rich-text/paragraph/list controls and complete typography parity remain. |
-| Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | React can extract a source subtree into an explicitly reusable same-file component, preserve call-site keys/module references, select and duplicate linked instances, and Undo/Redo through the UI. Chromium/WebKit checks verify unchanged rendering and exact source restoration. Stable JavaScript parent-local values become explicit props, with browser-verified callback/state behavior. Typed captures, scoped JSX styles and other context-dependent expressions still need extraction support. React instance text/number/boolean props have source-backed controls and Undo/Redo, including omitted values, literal defaults, finite typed choices and searchable property lists. Local imported TypeScript contracts resolve through aliases, wildcard barrels, nested namespace re-exports and project path mappings with dependency revision guards. A searchable project component browser groups source aliases, shows authored/on-page counts, selects mounted instances and views off-page definitions. Existing React/Liquid inspection and detach remain; unused-export discovery, insertion, cross-file creation, variants, computed-default/expression/enum prop authoring, shared libraries and live Shopify proof remain incomplete. |
+| Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | React can extract a source subtree into an explicitly reusable same-file component, preserve call-site keys/module references, select and duplicate linked instances, and Undo/Redo through the UI. Chromium/WebKit checks verify unchanged rendering and exact source restoration. Stable JavaScript parent-local values become explicit props, with browser-verified callback/state behavior. Typed captures, scoped JSX styles and other context-dependent expressions still need extraction support. React instance text/number/boolean props have source-backed controls and Undo/Redo, including omitted values, literal defaults, finite typed choices and searchable property lists. Local imported TypeScript contracts resolve through aliases, wildcard barrels, nested namespace re-exports and project path mappings with dependency revision guards. A searchable project component browser groups source aliases, shows authored/on-page counts, selects mounted instances and views off-page definitions. It also discovers direct module-level function/arrow exports and marked definitions without authored usages, exposing declared property types/defaults. Existing React/Liquid inspection and detach remain; complete export/class/wrapper discovery, insertion, cross-file creation, variants, computed-default/expression/enum prop authoring, shared libraries and live Shopify proof remain incomplete. |
 | Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Reusable text styles support responsive links, inherited-scope display, local override/reset, project-wide updates and shared undo in HTML, React and local Liquid. Validated JSON library import/export preserves style identity. HTML, React and local Liquid color styles link text/background/border/SVG paint with scoped overrides and project updates; palettes support sRGB and Display P3. HTML effect styles link shadows and layer/backdrop filters with project updates, overrides and undo. React/Liquid effect links, variables, aliases, collections/modes and shared remote library workflows remain. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload and SVG-canvas SVG/PNG/JPEG downloads exist, including shared local definitions and bitmap embedding. Arbitrary-layer export, fonts, symbols and the full export/import pipeline remain. |
@@ -8412,3 +8412,48 @@ classification. It does not yet discover unused exports, insert new instances,
 manage shared external libraries or supply generic isolated previews. React browser
 coverage does not establish Liquid/live Shopify library parity. Full Figma/any-site
 parity and trusted brew distribution remain incomplete. Native launches stay paused.
+
+## Exported definitions without authored instances (2026-09-10)
+
+The React component browser now discovers direct module-level function and arrow
+exports, local export aliases, default functions and explicitly marked private
+components with supported returned JSX host roots. Discovery parses source without
+executing or mounting modules. Exported definitions remain listed at zero, one or
+multiple authored usages; they do not disappear when first used. Definition-only
+inspection is authenticated and addressed by a verified source id, with declared
+property types, finite choices, optionality and defaults shown separately from
+instance values. No-match rows say an instance was not found, rather than claiming
+that the component cannot be mounted elsewhere.
+
+Framework-mounted definitions with no authored call site can be selected through
+their stamped host root. Explicit library selection can expose a single-use
+exported component's property controls while retaining the default inline-wrapper
+classification for ordinary canvas selection. This intent is bounded to 1,000
+session selections. Unavailable detach actions are disabled.
+
+Browser testing exposed missing rendered instance markers for ordinary exported
+function declarations. The compile-time stamper now forwards incoming instance
+identity to their direct returned host roots, preserving production source and
+nested host identity. This enables an unmarked, single-use exported function to be
+selected from the library, edited through its props and restored with Undo.
+
+Validation: 667 unit tests passed. New checks cover source-only discovery, aliases,
+private/helper exclusion, imported type/default metadata, zero-to-one-to-two usage
+continuity, authenticated definition access, arbitrary nested-id refusal and
+compiled exported-function identity. Chromium and WebKit pass unused source viewing
+(including a module that would throw if executed), framework Page selection,
+single-use exported property edit/Undo, multiple-instance selection, library
+refresh and the full property/default/unset/Undo/Redo workflow. Tests now wait for
+library selection to finish before checking the resulting inspector. Initial count
+expectations were corrected to include the fixture's exported framework layout.
+
+Logs: /private/tmp/retouch-unused-components-units.log and
+/private/tmp/retouch-unused-components-{chromium,webkit}-finished.log.
+Reviewed narrow-workspace screenshot: /private/tmp/retouch-unused-components-final.png.
+
+Insertion, class components, higher-order wrappers, CommonJS exports, definitions
+without a supported host root and complete conditional/arrow instance-marker
+propagation remain incomplete. Discovery remains bounded by the React source index
+and does not prove generic isolated previews or Liquid/live Shopify parity. Full
+Figma/any-site parity and trusted brew distribution remain incomplete. Native
+launches stay paused.

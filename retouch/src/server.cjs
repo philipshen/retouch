@@ -202,6 +202,14 @@ function handle(req, res, ctx) {
     return json(res,200,{ok:true,...require('./component-usage.cjs').library(ctx.index)});
   }
 
+  if(p==='/rt/__api/component-definition'&&req.method==='GET'){
+    requireToken(req,ctx.token);const id=url.searchParams.get('id')||'';
+    if(!/^[0-9a-f]{10}$/.test(id))return json(res,400,{ok:false,reason:'Invalid component definition id.'});
+    if(ctx.adapter.name!=='react')return json(res,409,{ok:false,reason:'Unused component definitions are not supported by this renderer yet.'});
+    const resolved=ctx.index.resolve(id);if(!resolved)return json(res,409,{ok:false,reason:'This definition no longer resolves. Refresh the library.'});
+    const result=require('./component-definitions.cjs').describe(resolved);return json(res,result.ok?200:409,result);
+  }
+
   if (p === '/rt/__api/component' && req.method === 'GET') {
     requireToken(req, ctx.token);
     const id = url.searchParams.get('id') || '';

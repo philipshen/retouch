@@ -252,3 +252,12 @@ test('project component library requires a token and refreshes source-index disc
   fs.unlinkSync(file);const refresh=await req(port,'GET','/rt/__api/components',{headers:{'X-Retouch-Token':token}});assert.equal(JSON.parse(refresh.body).components.some(item=>item.name==='LibraryBadge'),false);
  }finally{if(fs.existsSync(file))fs.unlinkSync(file);}
 });
+test('unused component definition API authenticates and exposes declared defaults by source id',async()=>{
+ const file=path.join(root,'UnusedButton.tsx');fs.writeFileSync(file,'export function UnusedButton({label="Ready"}:{label?:string}){return <button>{label}</button>}');
+ try{
+  const listing=await req(port,'GET','/rt/__api/components',{headers:{'X-Retouch-Token':token}}),component=JSON.parse(listing.body).components.find(item=>item.name==='UnusedButton');assert.ok(component);assert.equal(component.usageCount,0);
+  assert.notEqual((await req(port,'GET','/rt/__api/component-definition?id='+component.definitionId)).status,200);
+  const response=await req(port,'GET','/rt/__api/component-definition?id='+component.definitionId,{headers:{'X-Retouch-Token':token}});assert.equal(response.status,200,response.body);const data=JSON.parse(response.body);assert.equal(data.definitionOnly,true);assert.equal(data.props[0].default,'"Ready"');assert.equal(data.props[0].value,'string (optional)');
+  assert.equal((await req(port,'GET','/rt/__api/component-definition?id=../../etc/passwd',{headers:{'X-Retouch-Token':token}})).status,400);
+ }finally{fs.unlinkSync(file);}
+});

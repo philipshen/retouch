@@ -33,11 +33,12 @@ function stamp(source, filePath, appRoot) {
     const insertAt = el.node.openingElement.name.end;
     ms.appendLeft(insertAt, ` ${attr}="${el.id}"`);
   }
-  // Explicitly created components keep their instance marker on the root host
-  // without adding editor props or attributes to production source.
+  // Discoverable exported functions and explicitly created components forward
+  // their instance marker without adding editor attributes to production source.
+  const componentFunctions=new Set(require('./component-definitions.cjs').definitions(source,relPath,{ast,elements}).map(definition=>definition.fn.start));
   require('@babel/traverse').default(ast,{FunctionDeclaration(p){
     const exported=p.parentPath.isExportNamedDeclaration()||p.parentPath.isExportDefaultDeclaration();
-    if(![...(p.node.leadingComments||[]),...(exported?p.parentPath.node.leadingComments||[]:[])].some(comment=>comment.value.trim()==='* @retouch-component'))return;
+    if(!componentFunctions.has(p.node.start)&&![...(p.node.leadingComments||[]),...(exported?p.parentPath.node.leadingComments||[]:[])].some(comment=>comment.value.trim()==='* @retouch-component'))return;
     for(const statement of p.node.body.body){
       const node=statement.type==='ReturnStatement'?statement.argument:null;
       if(node?.type!=='JSXElement'||!elements.some(el=>el.node===node&&el.kind==='host'))continue;
