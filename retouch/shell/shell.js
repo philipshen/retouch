@@ -287,7 +287,7 @@ function hookFrame(d, w) {
   d.addEventListener('pointerdown',cancelOpacityEntry,true);
   d.addEventListener('keydown', (e) => {
     if(mode==='edit'&&!editing&&window.RetouchActions?.shortcut(e)){cancelOpacityEntry();return;}
-    if(opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||layerNavigationShortcut(e))return;
+    if(opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||layerNavigationShortcut(e)||canvasLayerShortcut(e))return;
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'i')) {
@@ -2369,6 +2369,13 @@ async function setLayerLocks(el,value){
   if(value)clearSelection();
   layers.refresh();
   toast(value?'Selection locked on the canvas. Select it in Layers to edit.':'Selection unlocked.','ok');
+}
+function canvasLayerShortcut(e){
+ if(e.defaultPrevented||e.isComposing||e.altKey||e.shiftKey||mode!=='edit'||editing||!sel||e.target.isContentEditable||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||document.querySelector('dialog[open]'))return false;
+ const mod=e.metaKey||e.ctrlKey,key=e.key.toLowerCase(),id=mod?{c:'layer-copyElement',v:'layer-pasteElement',d:'layer-duplicateElement'}[key]:key==='f2'?'rename-layer':['delete','backspace'].includes(key)?'layer-deleteElement':null;
+ if(!id)return false;e.preventDefault();e.stopPropagation();
+ if(!e.repeat&&!panelTasks&&!undoBusy&&!sourceRequests)window.RetouchActions?.run(id);
+ return true;
 }
 function layerNavigationShortcut(e){
   if(e.defaultPrevented||e.isComposing||e.metaKey||e.ctrlKey||e.altKey||!['Enter','Tab'].includes(e.key)||mode!=='edit'||editing||!sel||sel.multiple?.length>1||e.target.isContentEditable||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||document.querySelector('dialog[open]'))return false;
