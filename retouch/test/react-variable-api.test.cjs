@@ -1,0 +1,29 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{once}=require('node:events'),react=require('../src/adapters/react.cjs'),linked=require('../src/jsx-variable-bindings.cjs'),library=require('../src/variable-library.cjs'),updates=require('../src/variable-update.cjs');
+const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0'),original='export default function Page(){return <h1 className="text-xl p-2">Variables</h1>}';
+const data=()=>({version:1,collections:[{id:id(1),name:'Theme',defaultMode:id(2),modes:[{id:id(2),name:'Light'},{id:id(3),name:'Dark'}]}],variables:[{id:id(4),collectionId:id(1),name:'Brand',type:'color',values:{[id(2)]:'#123456',[id(3)]:'#cc3300'}}]});
+function setup(t){const root=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'retouch-react-variables-')));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));return root;}
+function resolve(root,name,source){const file=path.join(root,name),elements=react.collect(source,name).elements;return {file,relPath:name,source,elements,element:elements.find(e=>e.kind==='host'),hash:react.contentHash(source)};}
+const snapshot=root=>Object.fromEntries(['Page.jsx','Other.tsx','.retouch/variables.json'].map(name=>[name,fs.readFileSync(path.join(root,name),'utf8')]));
+test('React variable API propagates to unvisited JSX source and restores catalog and layers with one undo',async t=>{
+ const root=setup(t),input=data();library.commitPlan(root,library.planChange(root,{type:'replace',revision:null,library:input}));fs.writeFileSync(path.join(root,'Page.jsx'),original);
+ const other=linked.plan(resolve(root,'Other.tsx',original),{type:'applyVariable',scope:'md:',property:'color',binding:{id:id(4),modes:{[id(1)]:id(3)}}},input);assert.equal(other.ok,true,other.reason);fs.writeFileSync(path.join(root,'Other.tsx'),other.edits[0].after);
+ const previous=process.env.RETOUCH_STATE_DIR;process.env.RETOUCH_STATE_DIR=path.join(root,'.history-cache');let server;
+ try{
+  server=require('../src/server.cjs').startServer({appRoot:root,adapter:react,port:0,quiet:true});await once(server,'listening');const base='http://127.0.0.1:'+server.address().port,markup=await fetch(base+'/rt').then(r=>r.text()),headers={'x-retouch-token':/window\.__RT_TOKEN = "([a-f0-9]+)"/.exec(markup)[1],'content-type':'application/json'};
+  const post=async(url,body)=>{const r=await fetch(base+url,{method:'POST',headers,body:JSON.stringify(body)});return {status:r.status,body:await r.json()};};
+  const r=resolve(root,'Page.jsx',original),op={type:'applyVariable',id:r.element.id,fileHash:r.hash,scope:'md:',property:'color',binding:{id:id(4)},libraryRevision:library.read(root).revision};
+  assert.equal((await fetch(base+'/rt/__api/op',{method:'POST',body:JSON.stringify(op)})).status,401);assert.equal((await post('/rt/__api/op',{...op,libraryRevision:null})).status,409);assert.equal(fs.readFileSync(r.file,'utf8'),original);
+  const applied=await post('/rt/__api/op',op);assert.equal(applied.status,200,JSON.stringify(applied.body));assert.equal(applied.body.element.classVariables,true);assert.equal(applied.body.element.variableLinks['md:'].color.id,id(4));const before=snapshot(root),revision=library.read(root).revision;
+  input.variables[0].values[id(2)]='#00ff00';input.variables[0].values[id(3)]='#9933ff';const updated=await post('/rt/__api/variables',{type:'replace',revision,library:input});assert.equal(updated.status,200,JSON.stringify(updated.body));assert.equal(updated.body.updated,2);
+  assert.ok(react.describe(resolve(root,'Page.jsx',fs.readFileSync(r.file,'utf8'))).className.includes('md:![color:#00ff00ff]'));assert.ok(react.describe(resolve(root,'Other.tsx',fs.readFileSync(path.join(root,'Other.tsx'),'utf8'))).className.includes('md:![color:#9933ffff]'));
+  const after=snapshot(root),removed=structuredClone(input);removed.variables=[];assert.equal((await post('/rt/__api/variables',{type:'replace',revision:updated.body.revision,library:removed})).status,409);assert.deepEqual(snapshot(root),after);
+  assert.equal((await post('/rt/__api/op',{type:'undo',undoId:updated.body.undoId})).status,200);assert.deepEqual(snapshot(root),before);assert.equal((await post('/rt/__api/op',{type:'undo',undoId:applied.body.undoId})).status,200);assert.equal(fs.readFileSync(r.file,'utf8'),original);
+ }finally{if(server){server.retouchIndex.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}if(previous===undefined)delete process.env.RETOUCH_STATE_DIR;else process.env.RETOUCH_STATE_DIR=previous;}
+});
+test('React project planning refuses malformed later files and stale before-images before saving the catalog',t=>{
+ const root=setup(t),input=data();library.commitPlan(root,library.planChange(root,{type:'replace',revision:null,library:input}));for(const name of ['Page.jsx','Other.tsx']){const result=linked.plan(resolve(root,name,original),{type:'applyVariable',property:'color',binding:{id:id(4)}},input);fs.writeFileSync(path.join(root,name),result.edits[0].after);}
+ const saved=library.read(root);input.variables[0].values[id(2)]='#ff0000';const op={type:'replace',revision:saved.revision,library:input},planned=updates.plan(root,op,'react');assert.equal(planned.ok,true,planned.reason);assert.equal(planned.edits.length,3);
+ fs.appendFileSync(path.join(root,'Page.jsx'),'\n// external edit');const before=snapshot(root);assert.throws(()=>library.commitPlan(root,planned),/source changed/);assert.deepEqual(snapshot(root),before);
+ fs.writeFileSync(path.join(root,'Other.tsx'),original.replace('<h1','<h1 data-rt-variables="bad"'));const badBefore=snapshot(root),bad=updates.plan(root,op,'react');assert.equal(bad.ok,false);assert.equal(bad.edits,undefined);assert.deepEqual(snapshot(root),badBefore);
+});

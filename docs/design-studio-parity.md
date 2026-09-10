@@ -7518,3 +7518,28 @@ This browser check validates generated CSS, not a complete React editor flow.
 React API/inspector routing and atomic project-wide collection propagation remain
 to be connected before exposing these operations to users. Native launches remain
 paused. Full Figma parity remains incomplete.
+
+### React variable API and project propagation (2026-09-10)
+
+React host-layer descriptions now expose collection-binding metadata and override
+state. The authenticated operation API routes single-layer apply/reset/detach/
+remove to the JSX planner with source-hash and library-revision checks. React
+selection operations remain explicitly refused until their planner is connected.
+
+Collection replacement in React now scans JSX/TSX source with the existing bounded
+framework-source inventory, plans every linked file, and commits catalog plus
+source changes together through source history. The source index is refreshed for
+all affected files. This includes files not visited in the editor and retains
+per-binding collection mode choices. The inventory retains its 1,000-file/32 MB
+bounds and excludes symlinks, hidden directories and generated/dependency folders.
+
+All 572 unit tests pass (`/private/tmp/retouch-react-variable-api-units.log`).
+The new real-HTTP API tests verify authentication, stale library refusal, React
+binding metadata, distinct mode values in selected and unvisited files, deletion
+refusal for referenced variables, and exact Undo of both JSX/TSX files and the
+catalog. Planner tests verify malformed linked files and external source edits
+leave all files unchanged on refusal.
+
+The React inspector and complete browser editing flow are still unconnected;
+these results prove source/API behavior, not complete React variable parity.
+Native application launches remain paused; full Figma parity remains incomplete.

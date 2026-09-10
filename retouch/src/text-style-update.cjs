@@ -30,4 +30,4 @@ function plan(root,operation,renderer='html',family='text'){
   return {...change,edits,updated,pages};
  }catch(error){return {ok:false,refused:true,reason:error.message};}
 }
-module.exports={plan};
+module.exports={plan,sourceInventory};
