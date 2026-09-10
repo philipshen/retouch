@@ -1367,16 +1367,19 @@ async function insertLibraryComponent(item,target,isActive){
  const definition=await api('GET','/rt/__api/component-definition?id='+item.definitionId);
  if(!isActive())return false;if(!definition?.ok)throw Error(definition?.reason||'Refresh the component library.');
  if(!definition.insertion?.ok)throw Error(definition.insertion?.reason||'Could not read component properties.');
+ const previous=target.swap?await api('GET',componentUrl(target.id)):null;
+ if(target.swap&&!previous?.swap?.ok)throw Error(previous?.swap?.reason||'This instance cannot be swapped.');
+ const kept={},removed=[];if(previous)for(const [name,value] of Object.entries(previous.swap.props)){const prop=definition.insertion.properties.find(prop=>prop.name===name);if(prop&&(!prop.type||typeof value===prop.type)&&(!prop.choices||prop.choices.includes(value)))Object.defineProperty(kept,name,{value,enumerable:true});else removed.push(name);}
  const submit=async props=>{
  if(!isActive())return false;busyPanel(true);try{
-  const result=await api('POST','/rt/__api/op',{type:'insertComponent',id:target.id,fileHash:target.hash,definitionFile:definition.file,definitionId:definition.definitionId,definitionHash:definition.hash,contractHash:definition.insertion.revision,props});
+  const result=await api('POST','/rt/__api/op',{type:target.swap?'swapComponent':'insertComponent',dropProps:removed,id:target.id,fileHash:target.hash,definitionFile:definition.file,definitionId:definition.definitionId,definitionHash:definition.hash,contractHash:definition.insertion.revision,props});
   if(!result?.ok)throw Error(result?.reason||result?.error||'Could not insert the component.');
-  const inserted=result.insertedComponent;editorHistory.record({type:'insertComponent',id:inserted.parentId,instanceId:inserted.instanceId,previousParentId:inserted.previousParentId,undoId:result.undoId});
+  const inserted=result.insertedComponent;editorHistory.record({type:target.swap?'swapComponent':'insertComponent',previousInstanceId:inserted.previousInstanceId,id:inserted.parentId,instanceId:inserted.instanceId,previousParentId:inserted.previousParentId,undoId:result.undoId});
   const parent=await api('GET',resolveUrl(inserted.parentId));if(parent?.ok)await refreshWrittenElement(parent.element,el=>!!el.ownerDocument.querySelector('[data-rt-i="'+inserted.instanceId+'"]'));else await reloadFrame();
-  await selectInsertedComponent(inserted.instanceId,inserted.parentId);toast('Component inserted','ok');
+  await selectInsertedComponent(inserted.instanceId,inserted.parentId);toast(target.swap?'Component swapped':'Component inserted','ok');
  }finally{busyPanel(false);}
  };
- return definition.insertion.properties.some(prop=>prop.required)?RetouchComponentLibrary.configure({component:definition,target,submit}):submit({});
+ return target.swap||definition.insertion.properties.some(prop=>prop.required)?RetouchComponentLibrary.configure({component:definition,target,submit,mode:target.swap?'swap':'insert',initial:kept,removed}):submit({});
 }
 const componentLibrarySelections=new Set();
 const componentLibraryButton=document.getElementById('componentLibrary');
@@ -1385,6 +1388,7 @@ componentLibraryButton.addEventListener('click',()=>RetouchComponentLibrary.open
  read:()=>api('GET','/rt/__api/components'),
  insertTarget:sel?.info.canInsertComponent?{id:sel.info.id,hash:sel.info.hash,context:sel.info.context,label:'<'+sel.info.tag+'> · '+sel.info.file}:null,
  insert:window.__RT_RENDERING?.componentInsertion?insertLibraryComponent:undefined,
+ swapTarget:sel?.info.kind==='instance'?{swap:true,id:sel.info.id,hash:sel.info.hash,definitionId:sel.info.definitionId,context:sel.info.context}:null,
 
  instances:item=>item.usages.length?item.usages.flatMap(usage=>matchingInDocument(doc(),usage.id).map(element=>({id:usage.id,element,label:usage.file+(usage.line?':'+usage.line:'')}))):matchingInDocument(doc(),item.definitionId).map(element=>({id:item.definitionId,definition:true,element,label:item.file})),
  select:async(instance,isActive)=>{
@@ -2141,7 +2145,7 @@ async function restoreHistory(direction,op) {
   // client stack on the old side of a successful transaction.
   try {
     await showHistoryPage(op.route);
-    if(op.type==='insertComponent'){const parentId=direction==='redo'?op.id:op.previousParentId,parent=await api('GET',resolveUrl(parentId));if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else await reloadFrame();if(direction==='redo')await selectInsertedComponent(op.instanceId,op.id);else if(parent?.ok){sel={hostId:parentId,instanceId:null,scope:'host',info:parent.element};renderPanel();}else clearSelection();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(['insertComponent','swapComponent'].includes(op.type)){const parentId=direction==='redo'?op.id:op.previousParentId,parent=await api('GET',resolveUrl(parentId));if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else await reloadFrame();if(direction==='redo')await selectInsertedComponent(op.instanceId,op.id);else if(op.type==='swapComponent')await selectInsertedComponent(op.previousInstanceId,op.previousParentId);else if(parent?.ok){sel={hostId:parentId,instanceId:null,scope:'host',info:parent.element};renderPanel();}else clearSelection();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='collectionSelection'){await reloadFrame();await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}

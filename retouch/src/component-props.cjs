@@ -63,4 +63,4 @@ function plan(resolved,op){
   return {ok:true,hash:contentHash(ms.toString()),componentProp:{instanceId:resolved.element.id,parentId},edits,pathChecks:choice?.pathChecks||[]};
  }catch(error){return refuse('Could not edit the component property: '+error.message);}
 }
-module.exports={describe,plan};
+module.exports={describe,plan,literal};

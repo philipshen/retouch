@@ -1,0 +1,15 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {makeApp,cleanup,Index,pick,id}=require('./helpers.cjs'),planner=require('../src/insert-component.cjs'),definitions=require('../src/component-definitions.cjs'),tx=require('../src/transactions.cjs');
+function fixture(attrs='label="Keep" tone="old" key={itemKey}',children=''){
+ const source='import {Old} from "./Old";const itemKey="stable";export default function Page(){return <main><Old '+attrs+'>'+children+'</Old><aside>Sibling</aside></main>}',target='export function Next({label,width,tone="bold"}:{label:string;width:number;tone?:"calm"|"bold"}){return <section>{label}</section>}',root=fs.realpathSync(makeApp({'Page.tsx':source,'Old.tsx':'export function Old(){return <article/>}','Next.tsx':target})),index=new Index(root);index.scanAll();const resolved=pick(index,root,'Page.tsx','Old').resolved,def=definitions.definitions(target,'Next.tsx')[0],op={type:'swapComponent',fileHash:resolved.hash,definitionFile:'Next.tsx',definitionId:def.definitionId,definitionHash:id.contentHash(target),props:{width:200},dropProps:['tone']};return {root,index,resolved,op,source,target,close(){index.close();cleanup(root);}};
+}
+test('swap preserves compatible overrides and key, requires review of removed overrides and keeps definitions unchanged',()=>{
+ const f=fixture();try{assert.match(planner.plan(f.resolved,{...f.op,dropProps:[]}).reason,/Review/);const plan=planner.plan(f.resolved,f.op);assert.ok(plan.ok,plan.reason);assert.match(plan.edits[0].after,/<Next key=\{itemKey\} label=\{"Keep"\} width=\{200\}\/>/);assert.ok(plan.edits[0].after.includes('<aside>Sibling</aside>'));assert.equal(plan.insertedComponent.previousInstanceId,f.resolved.element.id);assert.ok(tx.applyPlan(f.root,plan).ok);f.index.scanAll();assert.equal(require('../src/components.cjs').describe(f.index.resolve(plan.insertedComponent.instanceId)).props.find(prop=>prop.name==='label').editor.value,'Keep');assert.equal(fs.readFileSync(path.join(f.root,'Next.tsx'),'utf8'),f.target);assert.ok(tx.applyPlan(f.root,{ok:true,edits:[{file:f.resolved.file,before:plan.edits[0].after,after:f.source}]}).ok);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.source);}finally{f.close();}
+});
+test('swap refuses expressions, spreads, refs, nested children and duplicate overrides without writing',()=>{
+ for(const [attrs,children] of [['label={itemKey}',''],['{...props}',''],['ref={ref}',''],['label="x" label="y"',''],['label="x"','<b>Keep content</b>']]){const f=fixture(attrs,children);try{assert.equal(planner.plan(f.resolved,f.op).ok,false);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.source);}finally{f.close();}}
+});
+test('swap validates newly supplied required props and rejects a stale usage',()=>{
+ const f=fixture();try{assert.match(planner.plan(f.resolved,{...f.op,props:{}}).reason,/required.*width/);assert.equal(planner.plan(f.resolved,{...f.op,props:{width:'wide'}}).ok,false);assert.equal(planner.plan(f.resolved,{...f.op,fileHash:'stale'}).ok,false);}finally{f.close();}
+});

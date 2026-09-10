@@ -8669,3 +8669,41 @@ Reuse through configured path aliases, directory indexes and re-export barrels
 remains incomplete. Other component, arbitrary-site, responsive-design and full
 Figma Design parity gaps remain open, as does trusted brew distribution. Native
 app launches and native launch tests stay paused.
+
+
+### Swap a selected component from the library
+
+The library now offers Swap selected instance. Its review form lists retained
+literal overrides and overrides that will be removed, and asks for missing
+required values from the target definition. Compatible named literals carry
+across; omitted properties use the new component defaults. The source planner
+preserves the original key attribute, reuses/adds the target import, replaces the
+selected JSX usage, and records before/after instance and parent IDs. Source,
+rendered parent revision and inspector selection follow exact Undo/Redo.
+
+The writer independently computes compatible/removed overrides and requires the
+reviewed removal list to match, in addition to existing source/definition/contract
+and module-path checks. Current refusals cover expression overrides, spreads,
+refs/special props, duplicate attributes, nested children and instances without a
+source host frame. Selecting the same definition is refused. The existing import
+of the old component is retained; unused-import cleanup is not implemented.
+
+Validation: 686 unit tests passed. Swap tests cover literal/key preservation,
+explicit removal review, new required prop validation, sibling/source-definition
+preservation, exact source reversal and refusals without writes. Chromium and
+WebKit passed the complete component library/property workflow including swap
+Cancel, retained label, reviewed legacy override removal, required width, default
+tone, original key, source/render/inspector state and exact Undo/Redo. Chromium
+used named imports and WebKit used a namespace import for the original component.
+Both browser processes ended with exit zero and strict empty page-error checks.
+The review form fit a 720px workspace; reviewed screenshot:
+/private/tmp/retouch-component-swap-ui.png.
+Logs: /private/tmp/retouch-component-swap-units.log,
+/private/tmp/retouch-component-swap-chromium.log and
+/private/tmp/retouch-component-swap-webkit.log.
+
+Expression/slot preservation, root-instance swapping, full nested override and
+variant equivalence, class/HOC/multiple-root identity, generic framework/site
+support and other full Figma Design requirements remain incomplete. Trusted brew
+distribution is also unverified. Native app launches and native launch tests remain
+paused.
