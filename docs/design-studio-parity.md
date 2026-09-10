@@ -7230,3 +7230,26 @@ verifies definition removal and Undo. The HTML helper now waits for completed
 panel writes and tolerates navigation-context replacement while polling.
 The definition panel screenshot `/private/tmp/retouch-variable-definition.png`
 was visually inspected. Native app launches remain paused.
+
+### Managed variable alias cycle checks (2026-09-10)
+
+Alias writes now detect indirect cycles in known managed definitions and report
+the cycle path before saving. HTML validates the merged definitions at each
+managed minimum-width scope, catching cycles introduced only on larger screens.
+React/Liquid local composition checks its projected scope; inspector writes also
+include known inherited minimum-width definitions. React batch preparation
+performs the same check before submitting the batch. Missing references remain
+allowed so aliases and their targets can be authored in either order.
+
+This is not a full CSS cascade dependency analyzer: external stylesheets,
+ancestor definitions, complex media/state combinations and non-simple var()
+expressions are not all modeled. Class checks protect inspector composition,
+not arbitrary hand-written class updates. Reset remains available for repair.
+
+Validation: 545 unit tests pass in `/private/tmp/retouch-alias-cycle-units.log`.
+HTML Chromium/WebKit and real Next.js/local Liquid browser flows reject a new
+cycle, retain exact source and computed appearance, and permit subsequent Undo
+and valid definition edits. Framework logs are
+`/private/tmp/retouch-cycle-{react,liquid}.log`. Initial browser assertions were
+ambiguous between toast/status copies; scoped status assertions now pass.
+Native app launches remain paused.

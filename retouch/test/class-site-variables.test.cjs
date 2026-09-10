@@ -26,3 +26,9 @@ test('local variable definitions coexist with bindings and preserve alias identi
  assert.deepEqual(bindings(compose(updated,'--alias','var(--accent_color)')),{'--accent_color':'#0088ff',color:'var(--accent_color)','--alias':'var(--accent_color)'});
  assert.throws(()=>compose('','--loop','var(--loop)'),/Unsupported/);
 });
+
+test('class aliases refuse local and inherited cycles before producing a selection map',()=>{
+ assert.throws(()=>compose('![--a:var(--b)]','--b','var(--a)'),/cycle.*--a.*--b/);
+ assert.equal(compose('![--a:var(--b)]','--b','24px').includes('![--b:24px]'),true);
+ const {selectionClasses}=require('../shell/class-site-variables.js');assert.throws(()=>selectionClasses([{id:'a',className:'![--a:var(--b)]'}],'md:',[{'--b':'var(--a)'}],['![--a:var(--b)]']),/cycle/);
+});

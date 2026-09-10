@@ -235,3 +235,11 @@ test('scoped custom properties preserve names and support bounded definitions an
  for(const [name,value]of [['--bad name','red'],['--loop','var(--loop)'],['--x','red;display:none'],['--x','url(https://example.com)'],['--x','100001px']])assert.equal(edit(source,768,value,name).ok,false);
  assert.equal(edit(source,768,null,'--alias').ok,true);
 });
+
+test('alias cycles are refused across managed HTML screen scopes while acyclic chains remain editable',()=>{
+ let source=edit(original,0,'var(--b)','--a').edits[0].after;
+ const cycle=edit(source,768,'var(--a)','--b');assert.equal(cycle.ok,false);assert.match(cycle.reason,/cycle.*768px.*--a.*--b.*--a/);
+ source=edit(source,768,'24px','--b').edits[0].after;assert.equal(edit(source,768,'var(--a)','--c').ok,true);
+ assert.equal(edit(source,768,'var(--c)','--a').ok,true,'undefined references are not cycles');
+ const V=require('../shell/html-css-values.js');assert.deepEqual(V.variableCycle({'--a':'var(--b)','--b':'var(--c)','--c':'var(--a)'}),['--a','--b','--c','--a']);assert.equal(V.variableCycle({'--a':'var(--b)','--b':'24px'}),null);
+});

@@ -53,6 +53,19 @@
   return channels.every((token,index)=>component(token,match[1].toLowerCase()==='oklch'&&index===2))&&(parts.length===1||component(parts[1].trim()));
  }
  const variableName=value=>typeof value==='string'&&/^--[a-zA-Z_][a-zA-Z0-9_-]{0,127}$/.test(value);
+ function variableCycle(definitions){
+  const finished=new Set();
+  for(const start of Object.keys(definitions).filter(variableName)){
+   const route=[],positions=new Map();let name=start;
+   while(variableName(name)&&Object.hasOwn(definitions,name)&&!finished.has(name)){
+    if(positions.has(name))return [...route.slice(positions.get(name)),name];
+    positions.set(name,route.length);route.push(name);
+    name=/^var\((--[a-zA-Z_][a-zA-Z0-9_-]{0,127})\)$/.exec(definitions[name])?.[1];
+   }
+   for(const name of route)finished.add(name);
+  }
+  return null;
+ }
  function variableValue(value){return value===null||typeof value==='string'&&value.length<=150&&(/^(?:[+-]?(?:\d+(?:\.\d+)?|\.\d+))(?:px|rem|em|%|vw|vh)?$/.test(value)&&Math.abs(parseFloat(value))<=100000||/^var\(--[a-zA-Z_][a-zA-Z0-9_-]{0,127}\)$/.test(value)||valid('color',value,false));}
  function valid(property,value,allowVariable=true){
   if(variableName(property))return variableValue(value)&&value!=='var('+property+')';
@@ -252,5 +265,5 @@
   return families[property]||[property];
  }
  function overlaps(a,b){if(a==='-webkit-backdrop-filter')a='backdrop-filter';if(b==='-webkit-backdrop-filter')b='backdrop-filter';return a==='all'||b==='all'||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(a)&&sides.includes(b)||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(b)&&sides.includes(a)||a==='background'&&b.startsWith('background-')||b==='background'&&a.startsWith('background-')||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')&&!b.endsWith('radius')||b==='border'&&a.startsWith('border-')&&!a.endsWith('radius')||['font','font-variant'].includes(a)&&b==='font-variant-numeric'||['font','font-variant'].includes(b)&&a==='font-variant-numeric'||a==='font'&&['font-family','font-weight','font-style','font-size','line-height','font-variation-settings','font-optical-sizing'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
- return {variableName,variableValue,parseVariations,serializeVariations,numericGroups,numericValid,numericChange,options,fields,svgFields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients,gradientColorSpaces};
+ return {variableCycle,variableName,variableValue,parseVariations,serializeVariations,numericGroups,numericValid,numericChange,options,fields,svgFields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients,gradientColorSpaces};
 });

@@ -1,6 +1,6 @@
 'use strict';
 const parse5=require('parse5'),MagicString=require('magic-string'),html=require('./adapters/html.cjs');
-const {valid,families,overlaps}=require('../shell/html-css-values.js');
+const {valid,families,overlaps,variableName,variableCycle}=require('../shell/html-css-values.js');
 const escape=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 const attr=(node,name)=>node.attrs?.find(a=>a.name===name)?.value;
 function rule(id,width,values,legacy=false){
@@ -55,6 +55,9 @@ function plan(resolved,op){
   if(!attr(resolved.element.node,'data-rt-style'))out.appendLeft(resolved.element.location.startTag.startOffset+1+resolved.element.tag.length,` data-rt-style="${state.id}"`);
   const rules=new Map(state.blocks.map(b=>[b.width,b.values]));
   if(Object.keys(values).length)rules.set(op.width,values);else rules.delete(op.width);
+  if(changes.some(([property,value])=>variableName(property)&&typeof value==='string'&&value.startsWith('var('))){
+   const effective={};for(const [width,props]of [...rules].sort(([a],[b])=>a-b)){Object.assign(effective,props);const cycle=variableCycle(effective);if(cycle)return refuse('Variable alias cycle at '+(width?width+'px and larger':'all sizes')+': '+cycle.join(' → '));}
+  }
   for(const old of state.blocks)out.remove(old.node.sourceCodeLocation.startOffset,old.node.sourceCodeLocation.endOffset);
   const content=[...rules].sort(([a],[b])=>a-b).map(([width,props])=>`<style data-rt-css="${state.id}" data-rt-width="${width}" data-rt-values="${escape(JSON.stringify(props))}">${rule(state.id,width,props)}</style>`).join('');
   if(content)out.appendLeft(state.headEnd??resolved.source.length,content);
