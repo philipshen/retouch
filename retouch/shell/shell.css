@@ -250,6 +250,8 @@ details.advanced > summary:hover { color: var(--ink); }
 .compare-header button[aria-pressed="true"] { border-color: var(--accent); }
 .compare-viewport { width: 100%; position: relative; z-index: 2; overflow: hidden; }
 .compare-surface { position: absolute; z-index: 1; overflow: hidden; background: white; pointer-events: none; }
+/* Keep collapsed documents laid out at their explicit iframe dimensions. */
+.compare-surface[hidden] { display: block; visibility: hidden; width: 0 !important; height: 0 !important; left: 0 !important; top: 0 !important; }
 .compare-surface iframe { position: absolute; top: 0; left: 0; border: 0; transform-origin: 0 0; pointer-events: none; }
 /* Capture wheel input here: WebKit can otherwise scroll the iframe natively. */
 .compare-overlay { position: absolute; inset: 0; pointer-events: auto; }
