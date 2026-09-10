@@ -8933,3 +8933,32 @@ Logical expressions, arrays, portals, dynamic text, grouped layer-tree rows,
 per-render overrides and fragment layout editing remain open. Full Figma Design
 parity and arbitrary-site authoring remain incomplete. Native launches remain
 paused; trusted brew distribution is unverified.
+
+### Anchored optional fragment edges and repeated instances (2026-09-10)
+
+The browser now groups overlapping prefix/suffix variants when their connected
+pattern family contains a host occurring exactly once in every variant. It uses
+the longest adjacent matching sequence within that anchored family. The shared
+host prevents a group from crossing into another complete rendered invocation.
+Transitive overlaps without a common anchor still fall back to individual roots;
+DOM sibling adjacency remains required.
+
+Validation: 704 unit tests passed. New cases cover adjacent repeated optional
+prefix/suffix shapes, transitive ambiguity and separated DOM siblings. Chromium
+with an optional suffix and WebKit with an optional prefix passed the full root
+fragment property/hover/swap/detach flow. Additional real browser checks render
+RootWrapper twice while SingleCard retains one authored source usage: the library
+shows two entries, and the DOM resolves into two separate three-host groups. The
+fixture then restores its source and verifies property Undo plus detach/Undo/Redo.
+Both repeated browser runs terminated with exit zero and strict empty page-error
+assertions. Evidence:
+/private/tmp/retouch-fragment-edges-units.log,
+/private/tmp/retouch-fragment-edges-chromium-repeated.log,
+/private/tmp/retouch-fragment-edges-webkit-repeated.log.
+
+The guarantee uses complete source-defined host sequences in the current DOM;
+arbitrary runtime DOM surgery can invalidate that correspondence. Unanchored
+variants, logical expressions, arrays/portals, dynamic text, grouped layer-tree
+presentation, per-render overrides and fragment layout editing remain open.
+Full Figma Design parity and arbitrary-site authoring are incomplete. Native
+launches remain paused; trusted brew distribution remains unverified.
