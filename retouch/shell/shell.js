@@ -165,7 +165,8 @@ async function canvasContextMenu(event,keyboard=false){
  event.preventDefault();event.stopPropagation();const serial=++canvasContextSerial;
  const target=keyboard?matchingEls(activeId())[0]:layerLocks.pick(event.target,event.clientX,event.clientY);
  if(!target)return;
- if(!keyboard&&!(sel?.multiple&&sel.multiple.some(info=>matchingEls(info.id).includes(target))))await select(target);
+ const selectedTargets=!sel?[]:sel.multiple?sel.multiple.flatMap(info=>matchingEls(info.id)):sel.info.kind==='instance'?selectedComponentGroups(doc(),activeId(),sel.info)[0]?.elements||[]:matchingEls(activeId()).filter(el=>inTextScope(el,sel.info)).slice(0,1);
+ if(!keyboard&&!selectedTargets.includes(target))await select(target);
  if(serial!==canvasContextSerial||mode!=='edit'||!sel)return;
  const frame=iframe.getBoundingClientRect(),box=target.getBoundingClientRect(),x=keyboard?box.left:event.clientX,y=keyboard?box.bottom:event.clientY;
  const body=doc().body;body.tabIndex=-1;
