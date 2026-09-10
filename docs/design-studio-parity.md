@@ -10095,3 +10095,9 @@ Validation: Chromium (`/private/tmp/retouch-optional-browser-chromium.log`) and 
 Whole-object extraction now preserves explicit index signatures, including readonly signatures inherited from same-module interfaces and named aliases in their value types. Destructured lookup inference remains separate; this path copies the dictionary contract rather than inventing a required property type.
 
 Validation: all 807 unit tests passed (`/private/tmp/retouch-index-contracts-units.log`). The strict compiler suite passed 19 extraction scenarios and three guarded refusals (`/private/tmp/retouch-index-contracts-compiler.log`), including missing-key fallbacks with noUncheckedIndexedAccess enabled. No browser run in this planner expansion. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Live readonly dictionary and tuple extraction
+
+Added a browser fixture with an inherited readonly index signature, an absent dictionary key and a readonly named React state tuple. The flow verifies the readonly generated contract, missing-key fallback, stateful method callback, definition editing, appearance and exact source Undo/Redo.
+
+Validation: Chromium (`/private/tmp/retouch-index-browser-chromium.log`) and WebKit (`/private/tmp/retouch-index-browser-webkit.log`) both exited 0. No production code changed in this verification stage. Full Figma parity remains incomplete; native launches remain paused.
