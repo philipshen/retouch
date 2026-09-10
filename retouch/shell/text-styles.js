@@ -47,6 +47,16 @@
    picker.disabled=!library.styles.length;
    if(!library.styles.length)I.note(controls,options.selection?'No saved styles yet. Import a library or select one layer to save its typography.':'No saved styles yet. Save this layer’s typography to start your library.');
    const style=library.styles.find(style=>style.id===selected);
+   if(options.selectionLinks){
+    const {linked,styles,overrides}=options.selectionLinks;
+    I.note(controls,linked+' of '+options.selection+' layers linked in this screen scope'+(styles>1?' · Mixed styles.':'.'));
+    if(linked){
+     I.note(controls,overrides+' local '+(overrides===1?'override':'overrides')+' across the selection.');
+     const reset=I.button('Reset selected text style overrides',()=>run(()=>options.resetSelection(library.revision),'Selected style overrides reset.'));reset.disabled=!overrides;controls.append(reset);
+     controls.append(I.button('Detach selected text styles',()=>run(()=>options.detachSelection(),'Selected text styles detached.')));
+     I.note(controls,'Reset follows each layer’s own linked style. Detach keeps its appearance. Unlinked layers and other screen scopes stay unchanged.');
+    }
+   }
    if(options.link){
     const linkedStyle=library.styles.find(item=>item.id===options.link.id),overrides=options.overrides||[];
     I.note(controls,'Linked style: '+(linkedStyle?.name||'Unavailable style'));

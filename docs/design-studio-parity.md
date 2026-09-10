@@ -5903,3 +5903,26 @@ propagation and single-layer flows continue to pass without page errors.
 Selections currently remain limited to 2–100 layers in one HTML/React source
 file; cross-file selection, Liquid multi-selection and batch detach/reset remain
 unfinished. Native launches remain paused, and full Figma parity is not achieved.
+
+### Reset and detach typography across a selection (2026-09-09)
+
+The HTML/React selection library now displays direct-link coverage, mixed style
+identity and aggregate local override counts at the selected screen scope. Reset
+restores each layer's own library definition; detach removes links while retaining
+appearance. Both use one transaction and shared undo. Unlinked layers and other
+scopes are preserved. A missing required library style or malformed member refuses
+the entire reset before any writes. Detach remains available for unavailable
+styles because it does not need a current catalog definition.
+
+All 445 unit tests passed, exit 0:
+/private/tmp/retouch-style-selection-reset-final-units.log. Tests cover mixed
+linked styles, reset definitions, missing-style refusal without edits, detach
+appearance preservation, idempotence and unchanged unlinked layers. Browser
+processes exited 0: /private/tmp/retouch-style-selection-reset-html.log and
+/private/tmp/retouch-style-selection-reset-react.log (Chromium), plus
+/private/tmp/retouch-style-selection-reset-webkit.log (HTML WebKit). The flows
+apply to two layers, edit one layer locally, reset the selection, undo both changes,
+detach together and undo to exact source snapshots, while checking rendered sizes
+and visible link/override counts. Existing single-layer and library flows pass.
+Cross-file and Liquid selection support remain unfinished. Native launches remain
+paused; full Figma parity and verified desktop distribution remain incomplete.

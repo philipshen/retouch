@@ -1563,18 +1563,21 @@ async function renameLayer(name){
 function mountSelectionTextStyles(){
   const selection=sel.multiple,element=matchingEls(sel.info.id)[0];
   if(!element||!selection.every(info=>info.classTextStyles||info.cssAuthoring))return;
-  RetouchTextStyles.mount(panelBody,element,{selection:selection.length,apply:async(styleId,libraryRevision)=>{
+  const scope=sel.info.classSelection?styleScope:String(styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0);
+  const links=selection.map(info=>info.textStyleLinks?.[scope]).filter(Boolean),overrides=selection.reduce((sum,info)=>sum+(info.textStyleOverrides?.[scope]?.length||0),0);
+  async function write(type,styleId,libraryRevision){
     const info=sel.info,ids=selection.map(item=>item.id),react=!!info.classSelection;busyPanel(true);
     try{
       const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
-      const result=await api('POST','/rt/__api/op',{type:'applyTextStyleSelection',id:info.id,ids,fileHash:info.hash,scope:styleScope,width,styleId,libraryRevision});
-      if(!result?.ok)throw Error(result?.reason||result?.error||'Could not apply the text style to this selection.');
+      const result=await api('POST','/rt/__api/op',{type,id:info.id,ids,fileHash:info.hash,scope:styleScope,width,styleId,libraryRevision});
+      if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update text styles in this selection.');
       if(result.undoId)editorHistory.record({type:react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
       sel.info=result.element;sel.multiple=result.selection;
       if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();
-      renderPanel();toast('Text style applied to selected layers','ok');
+      renderPanel();toast('Selected text styles updated','ok');
     }finally{busyPanel(false);}
-  }});
+  }
+  RetouchTextStyles.mount(panelBody,element,{selection:selection.length,selectionLinks:{linked:links.length,styles:new Set(links.map(link=>link.id)).size,overrides},apply:(id,revision)=>write('applyTextStyleSelection',id,revision),resetSelection:revision=>write('resetTextStyleSelection',undefined,revision),detachSelection:()=>write('detachTextStyleSelection')});
 }
 async function setHTMLCSSSelection(property,value,width,changesById){
   if(!sel?.multiple?.length)return;const selection=sel.multiple,info=sel.info;busyPanel(true);
