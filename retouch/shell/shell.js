@@ -1372,7 +1372,8 @@ async function duplicateInstance(id,context) {
     const usage=await api('GET',resolveUrl(id,context));if(!usage?.ok)throw Error('Re-select the component before duplicating.');
     const result=await api('POST','/rt/__api/op',{type:'duplicateComponent',id,fileHash:usage.element.hash});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not duplicate the instance.');
     const copied=result.duplicatedComponent;
-    editorHistory.record({type:'duplicateComponent',id:copied.parentId||id,instanceCopyId:copied.instanceId,instanceOriginalId:id,undoId:result.undoId});
+    editorHistory.record({type:'duplicateComponent',id:copied.parentId||id,instanceCopyId:copied.instanceId,instanceOriginalId:id,sourceIdMap:copied.sourceIdMap,undoId:result.undoId});
+    if(copied.sourceIdMap)layerLocks.remap(copied.sourceIdMap);
     const copy=await api('GET',resolveUrl(copied.instanceId)),parent=copied.parentId?await api('GET',resolveUrl(copied.parentId)):null;
     if(parent?.ok)await refreshWrittenElement(parent.element,el=>!!el.ownerDocument.querySelector('[data-rt-i="'+copied.instanceId+'"]'));
     else if(copy?.ok)await refreshWrittenElement(copy.element,el=>el.getAttribute('data-rt-i')===copied.instanceId);

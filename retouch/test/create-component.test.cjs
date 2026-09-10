@@ -129,3 +129,12 @@ test('duplicated keyed callback results retain the list key without reevaluating
   const usage=[...f.index.idToFile.keys()].map(id=>f.index.resolve(id)).find(r=>r.element.kind==='instance'),plan=require('../src/duplicate-component.cjs').plan(usage,{fileHash:usage.hash});assert.equal(plan.ok,true,plan.reason);const after=plan.edits[0].after;assert.match(after,/<RetouchFragment1 key=\{item.key\(\)\}>/);assert.equal((after.match(/item.key\(\)/g)||[]).length,1);assert.match(after,/import \{ Fragment as RetouchFragment1 \} from "react"/);assert.equal(require('../src/id.cjs').collectElements(after,'page.jsx').elements.filter(el=>el.kind==='instance').length,2);assert.equal(fs.readFileSync(usage.file,'utf8'),source);
  }finally{f.close();}
 });
+test('component duplication maps original usages and descendants across wrapping and sibling shifts',()=>{
+ for(const jsx of ['<main><Card><span>Child</span></Card><Card/><aside/></main>','<Card><span>Child</span></Card>','<Card key="original"><span>Child</span></Card>']){
+  const source='function Page(){return '+jsx+'} function Card({children}){return <article>{children}</article>}',f=fixture(source);
+  try{const usage=[...f.index.idToFile.keys()].map(id=>f.index.resolve(id)).find(r=>r.element.kind==='instance'),plan=require('../src/duplicate-component.cjs').plan(usage,{fileHash:usage.hash});assert.equal(plan.ok,true,plan.reason);
+   const next=require('../src/id.cjs').collectElements(plan.edits[0].after,usage.relPath).elements,mapping=new Map(plan.duplicatedComponent.sourceIdMap),mapped=usage.elements.map(e=>mapping.get(e.id)||e.id);assert.equal(new Set(mapped).size,mapped.length);assert.ok(!mapped.includes(plan.duplicatedComponent.instanceId));
+   for(const element of usage.elements){const fresh=next.find(e=>e.id===(mapping.get(element.id)||element.id));assert.ok(fresh);assert.equal(fresh.kind,element.kind);assert.equal(fresh.node.openingElement.name.name,element.node.openingElement.name.name);}
+  }finally{f.close();}
+ }
+});

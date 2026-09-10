@@ -35,7 +35,9 @@ function plan(resolved,op){
   const elements=collectElements(after,resolved.relPath).elements,duplicate=elements.find(e=>e.kind==='instance'&&e.node.start===insert);
   const retained=elements.find(e=>e.kind==='instance'&&e.node.start===target.start+(wrapped?open.length:0));
   if(!duplicate||!retained)throw Error('The copied usage could not be mapped back to source.');
-  return {ok:true,hash:contentHash(after),duplicatedComponent:{instanceId:duplicate.id,originalId:resolved.element.id,retainedInstanceId:retained.id,parentId,wrapped},edits:[{file:resolved.file,before:resolved.source,after}]};
+  const originalElements=resolved.elements||collectElements(resolved.source,resolved.relPath).elements,delta=after.length-resolved.source.length-importText.length,sourceIdMap=[],mapped=new Set();
+  for(const element of originalElements){const before=element.node.start,inside=before>=target.start&&before<target.end,offset=inside?before+(wrapped?open.length:0)-(wrapped&&key&&before>=key.end?key.end-key.start:0):before+(before>=target.end?delta:0),next=elements.find(item=>item.kind===element.kind&&item.node.start===offset);if(!next||mapped.has(next.id))throw Error('An original layer lost its source identity during duplication.');mapped.add(next.id);if(next.id!==element.id)sourceIdMap.push([element.id,next.id]);}
+  return {ok:true,hash:contentHash(after),duplicatedComponent:{instanceId:duplicate.id,originalId:resolved.element.id,retainedInstanceId:retained.id,sourceIdMap,parentId,wrapped},edits:[{file:resolved.file,before:resolved.source,after}]};
  }catch(error){return refuse(error.message);}
 }
 module.exports={describe,plan};
