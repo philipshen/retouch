@@ -26,6 +26,7 @@ const cases=[
  ['readonly destructuring','function Page(){const [title,count]:readonly [string,number]=["Hi",2];return <article title={title}>{count+1}</article>}'],
 ];
 const refusedCases=[
+ ['earlier optional guard','interface Props{title?:string}function Page(data:Props){if(!data.title)return null;return <article title={data.title.toUpperCase()}>Hi</article>}',true],
  ['class shadows alias','type Value=string;function Page(){class Value{label="Hi"}const value:Value=new Value();return <article>{value.label}</article>}',true],
  ['enum shadows alias','type Value=string;function Page(){enum Value{First}const value:Value=Value.First;return <article>{value.toFixed()}</article>}',true],
 ];
@@ -47,5 +48,5 @@ for(const [name,body,refused]of [...cases,...refusedCases]){
   console.log('PASS',name);
  }finally{index?.close();cleanup(root);}
 }
-console.log('PASS',refusedCases.length,'compiler-valid shadowing refusals');
+console.log('PASS',refusedCases.length,'compiler-valid guarded refusals');
 console.log('PASS',cases.length,'strict TypeScript extraction scenarios with typed JSX attributes; compiler',ts.version);

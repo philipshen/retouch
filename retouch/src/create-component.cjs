@@ -60,6 +60,23 @@ function plan(resolved,op) {
     if(captures.size&&/\.tsx?$/.test(resolved.relPath))for(let parent=selected.parentPath;parent&&!parent.isFunction();parent=parent.parentPath){
       if(['IfStatement','ConditionalExpression','LogicalExpression','SwitchCase'].includes(parent.node.type))return refuse('TypeScript control-flow narrowing needs to stay with the extracted component.');
     }
+    if(captures.size&&/\.tsx?$/.test(resolved.relPath)){
+      let earlierGuard=false;
+      const referencesCapture=path=>{
+        if(!path?.node)return false;let found=false;
+        const check=ref=>{if(ref.isReferencedIdentifier()&&captures.has(ref.node.name)&&captures.get(ref.node.name)===ref.scope.getBinding(ref.node.name))found=true;};
+        check(path);path.traverse({ReferencedIdentifier:check});return found;
+      };
+      selected.getFunctionParent()?.traverse({
+        Function(path){path.skip();},
+        enter(path){
+          if(path.node.start>=node.start){path.skip();return;}
+          const key=['IfStatement','WhileStatement','DoWhileStatement','ForStatement','ConditionalExpression'].includes(path.node.type)?'test':path.node.type==='SwitchStatement'?'discriminant':path.node.type==='LogicalExpression'?'left':null;
+          if(key&&referencesCapture(path.get(key)))earlierGuard=true;
+        },
+      });
+      if(earlierGuard)return refuse('An earlier TypeScript guard may narrow these captured values. Keep that guard with the extracted component.');
+    }
     const captureTypes=new Map();
     if(captures.size&&/\.tsx?$/.test(resolved.relPath))for(const [name,binding]of captures){
       const type=require('./component-capture-type.cjs')(binding,resolved.source);

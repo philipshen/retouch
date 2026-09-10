@@ -10077,3 +10077,9 @@ Validation: the new unit regression failed before the fix (`/private/tmp/retouch
 Whole-object, whole-tuple and callback contracts now retain optional fields/parameters instead of refusing every optional node inside a type. Direct optional captures and optional destructuring paths retain their separate refusal checks. Method-style callbacks with optional arguments are emitted with the optional argument intact.
 
 Validation: all 805 unit tests passed (`/private/tmp/retouch-optional-contracts-units.log`). The reusable compiler suite passed 17 extraction scenarios and two valid-source shadowing refusals (`/private/tmp/retouch-optional-contracts-compiler.log`). The suite now enables exactOptionalPropertyTypes and noUncheckedIndexedAccess alongside strict mode. No browser run in this planner expansion. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Respect preceding TypeScript guards during extraction
+
+Typed extraction now checks preceding conditional/loop/switch tests for references to the exact captured bindings. An earlier guard can narrow an optional property before a later return; moving only that JSX would lose the guard. Such cases now refuse with a specific explanation. Guards referencing unrelated locals or globals do not trigger this check. This remains conservative analysis, not a complete TypeScript control-flow model.
+
+Validation: the compiler-valid earlier-guard regression failed its refusal expectation before the fix (`/private/tmp/retouch-early-guard-before.log`). All 806 unit tests passed after the fix (`/private/tmp/retouch-early-guard-units-final.log`), including unrelated-guard checks. The strict compiler suite passed 17 extraction scenarios and three valid-source guarded refusals (`/private/tmp/retouch-early-guard-compiler-final.log`). No browser run for this planner guard. Full Figma parity remains incomplete; native launches remain paused.

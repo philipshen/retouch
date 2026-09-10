@@ -266,3 +266,8 @@ test('typed whole-value extraction preserves optional members and callback param
   ['function Page(data:[title?:string]){return <article title={data[0]??"Hi"}>Hi</article>}','"data": ([title?:string])'],
  ]){const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);assert.ok(result.edits[0].after.includes(expected));}finally{f.close();}}
 });
+
+test('typed extraction preserves prior optional-property guards and ignores unrelated guards',()=>{
+ const f=fixture('interface Props{title?:string}function Page(data:Props){if(!data.title)return null;return <article>{data.title.toUpperCase()}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/earlier TypeScript guard/);}finally{f.close();}
+ for(const condition of ['!enabled','Math.random()>0.5']){const safe=fixture('function Page(title:string,enabled:boolean){if('+condition+')return null;return <article>{title.toUpperCase()}</article>}','page.tsx');try{const result=create.plan(safe.selected,{name:'Card',fileHash:safe.selected.hash});assert.ok(result.ok,result.reason);}finally{safe.close();}}
+});
