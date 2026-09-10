@@ -17,12 +17,17 @@ function inspect(resolved,name,definition){
    const next=new Set(seen);next.add(node.typeName.name);return resolve(declaration.type==='TSTypeAliasDeclaration'?declaration.typeAnnotation:declaration.body,next);
   }
   let keyVisits=0;
-  function literalKeys(node,seen=new Set()){
+  function literalKeys(node,seen=new Set(),contractSeen=new Set()){
    node=resolve(node);if(!node||++keyVisits>1000||seen.has(node)||seen.size>=20)return null;
    const next=new Set(seen);next.add(node);
    if(node.type==='TSLiteralType'&&node.literal.type==='StringLiteral')return [node.literal.value];
+   if(node.type==='TSTypeOperator'&&node.operator==='keyof'){
+    const members=contractMembers(node.typeAnnotation,contractSeen);if(!members)return null;
+    if(members.some(field=>!['TSPropertySignature','TSMethodSignature'].includes(field.type)||field.computed||!['Identifier','StringLiteral'].includes(field.key?.type)))return null;
+    const keys=[...new Set(members.map(field=>field.key.name??field.key.value))];return keys.length<=100?keys:null;
+   }
    if(node.type!=='TSUnionType')return null;
-   const parts=node.types.map(type=>literalKeys(type,next));if(parts.some(part=>!part))return null;
+   const parts=node.types.map(type=>literalKeys(type,next,contractSeen));if(parts.some(part=>!part))return null;
    const keys=parts.flat();return keys.length<=100?keys:null;
   }
   let visits=0;
@@ -40,7 +45,7 @@ function inspect(resolved,name,definition){
      const base=contractMembers(args[0],seen);if(!base)return null;
      if(utility==='Readonly')return base;
      if(utility==='Partial'||utility==='Required')return base.map(field=>({...field,optional:utility==='Partial'}));
-     const keys=literalKeys(args[1]);if(!keys)return null;
+     const keys=literalKeys(args[1],new Set(),seen);if(!keys)return null;
      const memberName=field=>!field.computed&&(field.key?.name??field.key?.value);
      if(utility==='Pick'&&keys.some(key=>!base.some(field=>memberName(field)===key)))return null;
      return base.filter(field=>utility==='Pick'?keys.includes(memberName(field)):!keys.includes(memberName(field)));

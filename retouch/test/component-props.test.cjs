@@ -144,7 +144,7 @@ test('utility discovery refuses shadowed names, invalid arity, and unsupported k
   ['class Partial<T> { custom!:T }','Partial<Base>'],
   ['', 'Partial<Base,Base>'],
   ['', 'Pick<Base,"missing">'],
-  ['', 'Pick<Base,keyof Base>'],
+  ['', 'Pick<Base,string>'],
  ]){const source=prefix+'interface Base {size:"small"|"large"}function Card(props:'+type+'){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),definition={source,fn:ast.program.body.find(n=>n.type==='FunctionDeclaration')};assert.equal(inspect.choices({},'size',definition),null);}
 });
 
@@ -154,4 +154,20 @@ test('boolean keyword contracts expose both boolean values and preserve optional
   const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.kind==='instance'),info=props.describe(usage,'emphasized');assert.deepEqual(info.choices,[true,false]);assert.equal(info.unset,true);assert.equal(info.allowUnset,optional);
   const op={name:'emphasized',fileHash:usage.hash,definitionHash:info.definitionHash};assert.equal(props.plan(usage,{...op,value:'true'}).ok,false);for(const value of [true,false]){const plan=props.plan(usage,{...op,value});assert.ok(plan.ok,plan.reason);assert.ok(plan.edits[0].after.includes('emphasized={'+value+'}'));}
  }finally{index.close();cleanup(root);}}
+});
+
+
+test('finite keyof contracts expose supported Pick and Omit variants',()=>{
+ const inspect=require('../src/component-prop-choices.cjs');
+ for(const type of ['Pick<Base,keyof Selected>','Omit<Base,keyof Excluded>','Pick<Base,Keys>']){
+  const source='interface Base {size:"small"|"large";tone:"calm"|"bold"}interface Selected {size:string}interface Excluded {tone:string}type Keys=keyof Selected;function Card(props:'+type+'){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),definition={source,fn:ast.program.body.find(n=>n.type==='FunctionDeclaration')};assert.deepEqual(inspect.names({},definition),['size']);assert.deepEqual(inspect.choices({},'size',definition).choices,['small','large']);
+ }
+});
+test('keyof expansion refuses unbounded keys, computed keys and recursive selections',()=>{
+ const inspect=require('../src/component-prop-choices.cjs');
+ for(const prefix of [
+  'interface Keys {[key:string]:string}type Props=Pick<Base,keyof Keys>;',
+  'interface Keys {[Symbol.iterator]():void}type Props=Pick<Base,keyof Keys>;',
+  'type Props=Pick<Base,keyof Props>;',
+ ]){const source='interface Base {size:"small"|"large"}'+prefix+'function Card(props:Props){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),definition={source,fn:ast.program.body.find(n=>n.type==='FunctionDeclaration')};assert.equal(inspect.choices({},'size',definition),null);}
 });

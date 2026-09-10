@@ -8145,3 +8145,18 @@ checkboxes. The declared type and definition revision still constrain writes.
 boolean option discovered through nested utility types, including the rendered
 font-weight change and exact Undo/Redo. Full component parity remains incomplete;
 native app launches remain paused.
+
+
+## Finite keyof variant selections (2026-09-10)
+
+Pick/Omit key selection now understands keyof over supported module-local object
+contracts, including aliases. Only finite named string properties/methods qualify;
+index signatures, computed or numeric keys, unknown types, recursion and traversal
+limits still refuse. Contract traversal retains its ancestry through key queries
+to prevent recursive selections from restarting resolution indefinitely.
+
+632 unit tests pass, covering Pick/Omit aliases, excluded keys and refused recursive
+or unbounded queries. Chromium and WebKit verify a fixture that selects its string and boolean badge
+options through keyof inside nested utility types; its workflow includes rendered
+changes, optional unset, defaults and exact Undo/Redo. Full Figma parity remains
+incomplete. Native launches remain paused.
