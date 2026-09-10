@@ -42,20 +42,23 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===snapshots.at(-1));
   for(let i=snapshots.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===snapshots[i]);}
   await wait(async()=>await computed('fill')==='rgb(255, 0, 0)');
+  await page.getByRole('button',{name:'Lock rect · Box',exact:true}).click();await page.getByRole('button',{name:'Lock circle',exact:true}).click();
+  const insertionLocks=()=>page.evaluate(()=>['rect','circle'].every(tag=>[...doc().querySelectorAll(tag)].every((el,i)=>layerLocks.direct(el)===(i===0)))&&[...doc().querySelectorAll('ellipse,line,svg')].every(el=>!layerLocks.direct(el)));
   for(const [preset,tag]of [['rectangle','rect'],['circle','circle'],['ellipse','ellipse'],['line','line']]){
    await page.getByRole('treeitem',{name:'body',exact:true}).click();await settled();
    await page.getByRole('button',{name:'Add '+preset,exact:true}).click();await settled();await wait(async()=>await app.locator('svg').count()===2);
-   const created=app.locator('svg').last().locator(tag);await wait(async()=>await created.count()===1);const id=await created.getAttribute('data-rt');
+   const created=app.locator('svg').last().locator(tag);await wait(async()=>await created.count()===1);const id=await created.getAttribute('data-rt');await wait(insertionLocks);
    await wait(async()=>await page.locator('[role=treeitem][aria-selected=true]').count()===1&&await page.locator('[role=treeitem][aria-selected=true]').textContent()===tag);
    assert.ok(await created.evaluate(el=>{const r=el.getBoundingClientRect();return r.width>0;}));const added=read();
-   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);assert.equal(await page.getByRole('treeitem',{name:'body',exact:true}).getAttribute('aria-selected'),'true');
-   await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===added);await wait(async()=>await app.locator('[data-rt="'+id+'"]').count()===1);assert.equal(await page.getByRole('treeitem',{name:tag,exact:true}).last().getAttribute('aria-selected'),'true');
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(insertionLocks);assert.equal(await page.getByRole('treeitem',{name:'body',exact:true}).getAttribute('aria-selected'),'true');
+   await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===added);await wait(insertionLocks);await wait(async()=>await app.locator('[data-rt="'+id+'"]').count()===1);assert.equal(await page.getByRole('treeitem',{name:tag,exact:true}).last().getAttribute('aria-selected'),'true');
    if(preset==='rectangle'&&process.env.RT_E2E_SVG_INSERT_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_SVG_INSERT_SCREENSHOT});
-   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(insertionLocks);
   }
   await page.getByRole('treeitem',{name:'svg',exact:true}).click();await settled();await page.getByRole('button',{name:'Add circle',exact:true}).click();await settled();await wait(async()=>await app.locator('circle').count()===2);
-  assert.equal(await app.locator('svg').count(),1);assert.equal(await app.locator('circle').last().getAttribute('r'),'30');assert.equal(await app.locator('circle').last().getAttribute('cy'),'50');
-  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);
+  await wait(insertionLocks);assert.equal(await app.locator('svg').count(),1);assert.equal(await app.locator('circle').last().getAttribute('r'),'30');assert.equal(await app.locator('circle').last().getAttribute('cy'),'50');
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(insertionLocks);
+  for(const tag of ['circle','rect']){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(async()=>!await page.evaluate(tag=>layerLocks.direct(doc().querySelector(tag)),tag));}console.log('SVG INSERT/EXISTING LOCKS/UNLOCKED SHAPES/SELECTION/UNDO/REDO PASS',engine);
   await page.getByRole('treeitem',{name:'rect · Box',exact:true}).click();await settled();await paint('fill','#ff00ff');const painted=read();
   await page.getByRole('button',{name:'Delete layer',exact:true}).click();await settled();await wait(async()=>await app.locator('rect').count()===0);const deleted=read();assert.equal(await page.getByRole('treeitem',{name:'svg',exact:true}).getAttribute('aria-selected'),'true');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===painted);assert.equal(await page.getByRole('treeitem',{name:'rect · Box',exact:true}).getAttribute('aria-selected'),'true');await wait(async()=>await computed('fill')==='rgb(255, 0, 255)');
