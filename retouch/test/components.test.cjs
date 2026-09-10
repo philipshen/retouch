@@ -113,3 +113,18 @@ test('component API undo checks the copied module and new references before rest
     assert.equal(fs.readFileSync(usage.file,'utf8'),page);assert.equal(fs.existsSync(copy),false);
   }finally{server.retouchIndex.close();server.close();cleanup(root);}
 });
+
+test('detaching a usage preserves every authored usage-file identity including JSX props and children',()=>{
+  const source=`import { Card } from './components';
+export default function Page() { return <main><Card title={<strong>Title</strong>}><span>Child</span><Card title="Nested"/></Card><Card title="Sibling"/><footer>After</footer></main>; }
+`;
+  const {root,index,usage}=setup({'page.jsx':source});try{
+    const before=require('../src/id.cjs').collectElements(source,'page.jsx').elements;
+    const c=components.describe(usage),result=components.detach(usage,{fileHash:usage.hash,definitionHash:c.hash});
+    assert.ok(result.ok,result.reason);index.scanAll();
+    const after=require('../src/id.cjs').collectElements(fs.readFileSync(usage.file,'utf8'),'page.jsx').elements;
+    assert.deepEqual(after.map(e=>e.id),before.map(e=>e.id));
+    for(const element of before){const retained=index.resolve(element.id);assert.ok(retained,element.id);assert.equal(retained.element.kind,element.kind);}
+    assert.equal(components.describe(index.resolve(usage.element.id)).detached,true);
+  }finally{cleanup(root);}
+});

@@ -170,7 +170,12 @@ function planDetach(resolved,op) {
   // Appending preserves structural IDs of every existing usage site.
   ms.append(`\nimport ${importText} from ${JSON.stringify(spec)};\n`);
   const next=ms.toString();
-  try{parseSource(next);parseSource(moduleSource);}catch(err){return refuse('Detached code did not parse: '+err.message);}
+  try{
+    parseSource(moduleSource);
+    const original=collectElements(resolved.source,resolved.relPath).elements;
+    const retained=collectElements(next,resolved.relPath).elements;
+    if(original.length!==retained.length||original.some((element,index)=>element.id!==retained[index].id||element.kind!==retained[index].kind))return refuse('Detaching would change existing layer identities.');
+  }catch(err){return refuse('Detached code did not parse: '+err.message);}
   return {ok:true,hash:contentHash(next),createdFile:copy,createdHash:contentHash(moduleSource),detachedFile:path.relative(resolved.appRoot,copy).split(path.sep).join('/'),name:alias,
     edits:[{file:copy,before:null,after:moduleSource},{file:resolved.file,before:resolved.source,after:next}]};
 }
