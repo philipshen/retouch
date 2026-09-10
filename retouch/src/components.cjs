@@ -119,7 +119,9 @@ function describe(resolved) {
   try {
     resolved = { ...resolved, appRoot: fs.realpathSync(resolved.appRoot), file: fs.realpathSync(resolved.file) };
     const def=definition(resolved),rel=path.relative(resolved.appRoot,def.file).split(path.sep).join('/');
-    const {elements}=collectElements(def.source,rel);
+    const {elements,ast}=collectElements(def.source,rel);
+    const declaration=ast.program.body.find(item=>['ExportNamedDeclaration','ExportDefaultDeclaration'].includes(item.type)&&item.declaration?.start===def.fn.start);
+    const explicitComponent=[...(def.fn.leadingComments||[]),...(declaration?.leadingComments||[])].some(comment=>comment.value.trim()==='* @retouch-component');
     const host=elements.find(e=>e.kind==='host'&&e.node.start>=def.fn.start&&e.node.end<=def.fn.end);
     const props=new Map();
     let param=def.fn.params[0];if(param?.type==='AssignmentPattern')param=param.left;
@@ -137,7 +139,7 @@ function describe(resolved) {
     const children=resolved.element.node.children?.filter(n=>n.type!=='JSXText'||n.value.trim());
     if(children?.length)props.set('children',{name:'children',default:'—',value:resolved.source.slice(children[0].start,children.at(-1).end)});
     const detached=def.file.includes('.retouch-'+resolved.element.id+'.');
-    return {ok:true,explicitComponent:def.fn.leadingComments?.some(comment=>comment.value.trim()==='* @retouch-component')===true,name:def.name,file:rel,hash:contentHash(def.source),source:def.source.slice(def.fn.start,def.fn.end),props:[...props.values()],definitionId:host?.id||null,detached,canDetach:!detached};
+    return {ok:true,explicitComponent,name:def.name,file:rel,hash:contentHash(def.source),source:def.source.slice(def.fn.start,def.fn.end),props:[...props.values()],definitionId:host?.id||null,detached,canDetach:!detached};
   }catch(err){return refuse(err.message);}
 }
 function planDetach(resolved,op) {

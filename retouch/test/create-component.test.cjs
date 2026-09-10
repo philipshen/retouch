@@ -52,3 +52,15 @@ test('component creation API integrates inspection and exact Undo/Redo with sour
   assert.ok((await post({type:'redo',undoId:result.undoId})).ok);assert.equal(fs.readFileSync(f.selected.file,'utf8'),after);
  }finally{server.retouchIndex.close();await new Promise(resolve=>server.close(resolve));f.close();}
 });
+
+
+test('created components retain explicit identity when their declaration becomes a named or default export',()=>{
+ for(const prefix of ['export','export default']){
+  const f=fixture('function Page(){return <article>Hello</article>}','Cards.jsx');try{
+   const plan=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(plan.ok,plan.reason);
+   const after=plan.edits[0].after.replace('function Card()',prefix+' function Card()');fs.writeFileSync(f.selected.file,after);f.index.scanAll();
+   const info=adapter.describeComponent(f.index.resolve(plan.createdComponent.instanceId));assert.ok(info.ok,info.reason);assert.equal(info.explicitComponent,true);assert.equal(require('../src/component-usage.cjs').usage(f.index,plan.createdComponent.instanceId).inlineComponent,false);
+   const stamped=adapter.stamp(after,f.selected.file,f.root).code;assert.ok(stamped.includes('data-rt-i={arguments[0]?.["data-rt-i"]}'));
+  }finally{f.close();}
+ }
+});

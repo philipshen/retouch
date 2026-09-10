@@ -36,7 +36,8 @@ function stamp(source, filePath, appRoot) {
   // Explicitly created components keep their instance marker on the root host
   // without adding editor props or attributes to production source.
   require('@babel/traverse').default(ast,{FunctionDeclaration(p){
-    if(!p.node.leadingComments?.some(comment=>comment.value.trim()==='* @retouch-component'))return;
+    const exported=p.parentPath.isExportNamedDeclaration()||p.parentPath.isExportDefaultDeclaration();
+    if(![...(p.node.leadingComments||[]),...(exported?p.parentPath.node.leadingComments||[]:[])].some(comment=>comment.value.trim()==='* @retouch-component'))return;
     for(const statement of p.node.body.body){
       const node=statement.type==='ReturnStatement'?statement.argument:null;
       if(node?.type!=='JSXElement'||!elements.some(el=>el.node===node&&el.kind==='host'))continue;
