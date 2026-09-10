@@ -222,7 +222,18 @@
         const field=document.createElement('label');field.textContent=axis==='width'?'W':'H';
         const input=document.createElement('input');input.type='number';input.min=240;input.max=7680;input.step=1;input.value=axis==='width'?width:height;input.setAttribute('aria-label',name+' comparison '+axis);inputs[axis]=input;
         input.onchange=()=>{if(input.value!==''&&input.checkValidity())applyDimensions(axis==='width'?Number(input.value):width,axis==='height'?Number(input.value):height);};
-        input.onkeydown=event=>{if(event.key==='Escape'){input.value=axis==='width'?width:height;event.preventDefault();event.stopPropagation();}};
+        input.title='Pixels. Shift+Up/Down steps 10 pixels; Enter applies; Escape discards typed changes.';
+        input.onkeydown=event=>{
+          if(event.key==='Escape'){input.value=axis==='width'?width:height;event.preventDefault();event.stopPropagation();input.select();}
+          else if(event.key==='Enter'){event.preventDefault();input.blur();}
+          else if(event.shiftKey&&['ArrowUp','ArrowDown'].includes(event.key)){
+            event.preventDefault();const value=Number(input.value);
+            if(input.value!==''&&Number.isFinite(value)){
+              const next=Math.max(240,Math.min(7680,Math.round(value)+(event.key==='ArrowUp'?10:-10)));
+              applyDimensions(axis==='width'?next:width,axis==='height'?next:height);
+            }
+          }
+        };
         field.append(input);dimensions.append(field);
       }
       const order=document.createElement('div');order.className='compare-header';

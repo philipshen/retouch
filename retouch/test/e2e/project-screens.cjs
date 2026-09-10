@@ -15,6 +15,16 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   await page.getByRole('button',{name:'Compare screens',exact:true}).click();await page.getByRole('button',{name:'Pin current size',exact:true}).click();
   await page.getByRole('button',{name:'Rename Custom 1120 × 844 comparison',exact:true}).click();await page.getByLabel('Comparison name',{exact:true}).filter({visible:true}).fill('Reading view');await page.getByLabel('Comparison name',{exact:true}).filter({visible:true}).press('Enter');
   assert.equal(await picker.locator('option[value="saved:1120x844"]').textContent(),'Reading view · 1120 × 844');
+  for(const [axis,initial]of [['width',1120],['height',844]]){
+   const field=page.getByLabel('Reading view comparison '+axis,{exact:true}),preview=page.frameLocator('iframe[title="Reading view comparison preview"]');
+   const dimension=()=>preview.locator('body').evaluate((el,axis)=>axis==='width'?innerWidth:innerHeight,axis);
+   await field.fill('1234');await field.press('Escape');await field.press('Tab');assert.equal(await field.inputValue(),String(initial));assert.equal(await dimension(),initial);
+   await field.press('Shift+ArrowUp');await page.waitForFunction(({axis,value})=>document.querySelector('iframe[title="Reading view comparison preview"]').contentWindow[axis==='width'?'innerWidth':'innerHeight']===value,{axis,value:initial+10});
+   await field.press('Shift+ArrowDown');await page.waitForFunction(({axis,value})=>document.querySelector('iframe[title="Reading view comparison preview"]').contentWindow[axis==='width'?'innerWidth':'innerHeight']===value,{axis,value:initial});
+   await field.fill(String(initial+20));await field.press('Enter');assert.equal(await field.evaluate(el=>el===document.activeElement),false);await page.waitForFunction(({axis,value})=>document.querySelector('iframe[title="Reading view comparison preview"]').contentWindow[axis==='width'?'innerWidth':'innerHeight']===value,{axis,value:initial+20});
+   await field.fill(String(initial));await field.press('Enter');
+  }
+
   await picker.selectOption('390x844');await picker.selectOption('saved:1120x844');await page.waitForFunction(()=>document.querySelector('#app').contentWindow.innerWidth===1120);assert.equal(await page.getByLabel('Screen height',{exact:true}).inputValue(),'844');
   await page.getByRole('button',{name:'Remove Reading view comparison',exact:true}).click();assert.equal(await picker.inputValue(),'custom');assert.equal(await page.getByLabel('Screen width',{exact:true}).inputValue(),'1120');
   await page.getByRole('button',{name:'Undo remove: Reading view',exact:true}).click();assert.equal(await picker.inputValue(),'saved:1120x844');
