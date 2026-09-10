@@ -10011,3 +10011,9 @@ Validation: 794 unit tests passed (`/private/tmp/retouch-nested-capture-types-un
 Typed extraction now resolves unambiguous same-module interfaces and type-alias chains before following a captured property path. Resolved leaf annotations are copied into the component's explicit prop contract. Exported interfaces are recognized; generic arguments, inheritance, duplicate/shadowed declarations and cyclic aliases remain refused instead of guessing their meaning.
 
 Validation: all 796 unit tests passed (`/private/tmp/retouch-module-contracts-units.log`). Strict TypeScript compiler probes passed for generated components from an interface and a chained alias whose string field uses another alias. Tests include exported interfaces and refusal cases for generics, shadowing and cycles. No browser run in this planner expansion. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Live named-contract extraction
+
+Added a TSX browser fixture using a same-module state-tuple alias, object interface and callback alias. The creation flow verifies resolved prop annotations, live state updates from the extracted callback, shared-definition editing, preserved appearance and exact Undo/Redo source restoration.
+
+Validation: Chromium (`/private/tmp/retouch-named-contract-browser-chromium.log`) and WebKit (`/private/tmp/retouch-named-contract-browser-webkit.log`) both exited 0. This confirms the same-module named-contract path; imported types, generic substitution and interface inheritance remain separate work. No production code changed in this verification stage. Full Figma parity remains incomplete; native launches remain paused.
