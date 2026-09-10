@@ -66,3 +66,25 @@ test('choice-only writes guard an imported definition without adding it to histo
   fs.writeFileSync(guard.file,guard.before);const applied=require('../src/transactions.cjs').applyPlan(root,plan);assert.ok(applied.ok,applied.reason);assert.equal(applied.edits.length,1);assert.equal(applied.edits[0].file,usage.file);
  }finally{index.close();cleanup(root);}
 });
+
+
+test('variant choices follow inherited and intersected module-local prop contracts',()=>{
+ const discover=require('../src/component-prop-choices.cjs').choices;
+ for(const declarations of [
+  'interface Base {size?: "small"|"large"} interface Props extends Base {title:string}',
+  'type Base={size:"small"|"large"};type Props=Base & {title:string}',
+  'interface Base {size:"small"|"large"} interface Left extends Base {} interface Right extends Base {} interface Props extends Left,Right {}',
+  'type Size="small"|"large";type Variant={size:Size};interface Base {title:string} type Props=Base & Variant',
+ ]){const source=declarations+';function Card({size}:Props){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),fn=ast.program.body.find(n=>n.type==='FunctionDeclaration');assert.deepEqual(discover({},'size',{source,fn}).choices,['small','large']);}
+});
+test('contract composition refuses cycles, missing bases and ambiguous property declarations',()=>{
+ const discover=require('../src/component-prop-choices.cjs').choices;
+ for(const declarations of [
+  'interface Props extends Missing {size:"small"|"large"}',
+  'interface Base extends Props {} interface Props extends Base {size:"small"|"large"}',
+  'type Base=Props;type Props=Base & {size:"small"|"large"}',
+  'interface Base {size:"small"|"large"} interface Props extends Base {size:"small"}',
+  'type Props={size:"small"|"large"} & {size:"small"}',
+  'interface Base<T> {size:T} interface Props extends Base<"small"|"large"> {}',
+ ]){const source=declarations+';function Card({size}:Props){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),fn=ast.program.body.find(n=>n.type==='FunctionDeclaration');assert.equal(discover({},'size',{source,fn}),null,declarations);}
+});

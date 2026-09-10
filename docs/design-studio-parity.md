@@ -8037,3 +8037,19 @@ The Chromium and WebKit TypeScript browser flows choose a size variant, verify t
 instance renders at 48px while its sibling stays 32px, and check exact Undo/Redo.
 The temporary fixture needed Node TypeScript declarations before this TSX flow
 could render; test failures now include server logs. Native launches remain paused.
+
+
+## Composed TypeScript prop contracts (2026-09-10)
+
+Variant discovery now follows module-local interface inheritance and object-type
+intersections. Diamond inheritance deduplicates the same property declaration.
+Distinct declarations of the same property, cyclic or missing bases, generic
+arguments and unsupported contracts still require deeper type resolution. The
+traversal has depth and node budgets. Existing definition revision guards apply
+to the resolved choices.
+
+623 unit tests pass, including inherited aliases, intersections, diamonds, cycles,
+missing bases and ambiguous redeclarations. Chromium and WebKit browser flows use multiple
+base interfaces plus an intersection and verify choice editing, a visible size
+change, sibling isolation, defaults, and exact Undo/Redo. Full variant authoring
+and broader type resolution remain incomplete. Native launches remain paused.
