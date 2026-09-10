@@ -7300,3 +7300,24 @@ invalid/missing references, typed literals and combination-specific cycles.
 This module is not yet connected to persistence, binding adapters or UI; it does
 not claim user-visible collection/mode support. Those integrations remain next
 work toward the full feature. Native launches remain paused.
+
+### Persistent variable collection API (2026-09-10)
+
+Variable collections now persist in `.retouch/variables.json` via an authenticated
+GET/POST `/rt/__api/variables` endpoint. Replacement operations validate the full
+identity/type/mode graph, resolve the default mode combination, and require the
+exact previous revision. Source transactions own the write, so a stale prepared
+plan cannot overwrite changed bytes. The existing journal records collection
+changes and restores them after server restart. Unsafe/symlinked library paths
+and oversized files are refused. Recovery-required state pauses this endpoint.
+
+All 552 tests pass in `/private/tmp/retouch-variable-library-units.log`. New
+integration tests exercise real authenticated HTTP, unauthorized refusal,
+revision conflicts, restart persistence and exact Undo/Redo. Storage tests cover
+stale prepared writes, symlinks and invalid default alias cycles. The Chromium
+recovery-guard flow also verifies refusal of the new write endpoint.
+
+Collection UI, layer bindings, source propagation and mode activation are not yet
+connected. Future linked updates must account for references before replacement
+or deletion; this initial persistence API does not claim propagation. Native app
+launches remain paused and full Figma parity remains incomplete.

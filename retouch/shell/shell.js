@@ -1986,7 +1986,7 @@ window.addEventListener('blur', () => { measuring = false; });
 
 /* ---------- util ---------- */
 async function api(method, url, body) {
-  const writes = method === 'POST' && ['/rt/__api/op','/rt/__api/text-styles','/rt/__api/color-styles','/rt/__api/effect-styles'].includes(url);
+  const writes = method === 'POST' && ['/rt/__api/op','/rt/__api/text-styles','/rt/__api/color-styles','/rt/__api/effect-styles','/rt/__api/variables'].includes(url);
   const route = writes ? currentPageRoute() : null;
   if(writes&&historyRecoveryRequired)return {ok:false,reason:'Source recovery is required before editing can resume.'};
   if(writes && editorHistory.busy && !['undo','redo'].includes(body?.type)) return {ok:false,reason:'Wait for history restoration to finish.'};

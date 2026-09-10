@@ -94,7 +94,7 @@ function handle(req, res, ctx) {
   const url = new URL(req.url, 'http://localhost');
   const p = url.pathname;
 
-  if(req.method==='POST'&&['/rt/__api/op','/rt/__api/text-styles','/rt/__api/color-styles','/rt/__api/effect-styles','/rt/__api/upload'].includes(p)&&ctx.history.recoveryRequired){requireToken(req,ctx.token);return json(res,409,{ok:false,refused:true,reason:'An incomplete source operation requires recovery before editing can resume.',historyRecoveryRequired:true,historyPersistenceError:ctx.history.recoveryError||ctx.history.persistenceError});}
+  if(req.method==='POST'&&['/rt/__api/op','/rt/__api/text-styles','/rt/__api/color-styles','/rt/__api/effect-styles','/rt/__api/variables','/rt/__api/upload'].includes(p)&&ctx.history.recoveryRequired){requireToken(req,ctx.token);return json(res,409,{ok:false,refused:true,reason:'An incomplete source operation requires recovery before editing can resume.',historyRecoveryRequired:true,historyPersistenceError:ctx.history.recoveryError||ctx.history.persistenceError});}
 
   if(p==='/rt/__api/history-recovery-review'&&req.method==='GET'){requireToken(req,ctx.token);const result=ctx.reviewHistoryRecovery();return json(res,result.ok?200:409,result);}
   if(p==='/rt/__api/history-recovery-restore'&&req.method==='POST'){requireToken(req,ctx.token);return readBody(req,raw=>{let body;try{body=JSON.parse(raw);}catch{return json(res,400,{ok:false,reason:'Invalid recovery request.'});}if(typeof body?.token!=='string')return json(res,400,{ok:false,reason:'Review recovery before restoring.'});const result=ctx.reviewHistoryRecovery(body.token);return json(res,result.ok?200:409,result);});}
@@ -107,6 +107,17 @@ function handle(req, res, ctx) {
     return json(res, 200, { ok: true, ...(ctx.sourceMonitor?.state() || { revision: 0, available: false }) });
   }
   if (p === '/rt/__api/health') return json(res, 200, { ok: true, service: 'retouch' });
+  if(p==='/rt/__api/variables'){
+    requireToken(req,ctx.token);const library=require('./variable-library.cjs');
+    if(req.method==='GET')return json(res,200,{ok:true,...library.read(ctx.appRoot)});
+    if(req.method!=='POST')return json(res,405,{ok:false,reason:'Use GET or POST for variable collections.'});
+    return readBinary(req,library.LIMIT,bytes=>{
+      if(!bytes)return json(res,413,{ok:false,reason:'Variable collection requests must be 2 MiB or smaller.'});
+      let operation;try{operation=JSON.parse(bytes.toString('utf8'));}catch{return json(res,400,{ok:false,reason:'Invalid variable collection JSON.'});}
+      try{const applied=library.commitPlan(ctx.appRoot,library.planChange(ctx.appRoot,operation),(root,plan)=>ctx.history.commit(root,plan,{route:historyRoute(req)}));ctx.sourceMonitor?.acknowledge(applied.edits);return json(res,200,{ok:true,...applied.result,undoId:applied.undoId,historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired});}
+      catch(error){return json(res,error.statusCode||500,{ok:false,reason:error.message,historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired});}
+    });
+  }
   if (p === '/rt/__api/text-styles' || p === '/rt/__api/color-styles' || p === '/rt/__api/effect-styles') {
     requireToken(req,ctx.token);
     const kind=p==='/rt/__api/color-styles'?'color':p==='/rt/__api/effect-styles'?'effect':'text',library=require('./'+kind+'-styles.cjs');
