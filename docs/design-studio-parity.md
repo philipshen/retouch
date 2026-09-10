@@ -7646,3 +7646,22 @@ history has not fallen back to session-only storage. The screenshot
 This is local Liquid verification, not live Shopify verification. Liquid batch
 selection, class-based inheritance controls, ancestor modes and full Figma parity
 remain unfinished. Native application launches remain paused.
+
+### Persistent history for aliased project roots (2026-09-10)
+
+The sidecar now resolves its project root once before creating the source index,
+source monitor, transactions and history store. Previously, opening a project
+through a root symlink mixed aliased source paths with a canonical history identity:
+the edit succeeded but history reported `Invalid source history snapshot` and
+fell back to the current session. Root aliases now share one canonical journal.
+
+A real HTTP regression test reproduced that failure before the change. It now
+edits through a symlink, restarts through the canonical root to Undo, restarts
+through the symlink to Redo, and verifies exact source bytes and one journal with
+relative paths. Existing history tests continue to refuse redirected source files,
+unsafe journals, traversal and competing writers; no history safety guard was
+removed. All 578 unit tests pass in
+`/private/tmp/retouch-history-root-alias-units.log`.
+
+This fixes root path identity for server operations; broader Figma parity remains
+incomplete. Native application launches remain paused.

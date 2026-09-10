@@ -23,6 +23,8 @@ const TOKEN_HEADER = 'x-retouch-token';
 function historyRoute(req){try{const value=req.headers['x-retouch-route'];return typeof value==='string'?decodeURIComponent(value):undefined;}catch{return undefined;}}
 
 function startServer({ appRoot, port, adapter, proxyTo, serveSite, rendering = {}, quiet = false }) {
+  // Use one project identity for the source index, transactions and history.
+  appRoot = fs.realpathSync(appRoot);
   adapter = adapter || require('./adapter.cjs').defaultAdapter();
   const token = crypto.randomBytes(16).toString('hex');
   const stateScope={project:crypto.createHash('sha256').update(fs.realpathSync(appRoot)).digest('hex'),session:crypto.createHash('sha256').update(token).digest('hex')};
