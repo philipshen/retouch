@@ -36,3 +36,9 @@ test('retained side-effect import still evaluates the old module after removing 
  const key='retouchSwap'+Date.now()+Math.random(),root=makeApp({'Old.mjs':'globalThis['+JSON.stringify(key)+']=(globalThis['+JSON.stringify(key)+']||0)+1;export const Old=()=>null;'});
  try{const source='import {Old} from "./Old.mjs";const C=()=> <Old/>;',ast=parse(source);let selected;traverse(ast,{JSXElement(p){selected=p;p.stop();}});const edit=cleanupImport(ast,selected,source,'New'),after=(source.slice(0,edit.start)+edit.after+source.slice(edit.end)).replace('const C=()=> <Old/>;','export const C=()=>null;');const file=path.join(root,'After.mjs');fs.writeFileSync(file,after);await import(pathToFileURL(file).href);assert.equal(globalThis[key],1);}finally{delete globalThis[key];cleanup(root);}
 });
+test('swap supports direct function roots and conditional roots without inventing a containing frame',()=>{
+ for(const conditional of [false,true]){const f=fixture();try{
+  const source=f.source.replace('<main>','').replace('<aside>Sibling</aside></main>','').replace('return <Old',conditional?'return true ? <Old':'return <Old').replace('</Old>}','</Old>'+(conditional?' : null':'')+'}');
+  fs.writeFileSync(f.resolved.file,source);f.index.scanAll();const resolved=pick(f.index,f.root,'Page.tsx','Old').resolved,plan=planner.plan(resolved,{...f.op,fileHash:resolved.hash});assert.ok(plan.ok,plan.reason);assert.equal(plan.insertedComponent.parentId,null);assert.equal(plan.insertedComponent.previousParentId,null);assert.ok(tx.applyPlan(f.root,plan).ok);f.index.scanAll();assert.equal(require('../src/components.cjs').describe(f.index.resolve(plan.insertedComponent.instanceId)).props.find(prop=>prop.name==='label').editor.value,'Keep');assert.ok(tx.applyPlan(f.root,{ok:true,edits:[{file:f.resolved.file,before:plan.edits[0].after,after:source}]}).ok);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),source);
+ }finally{f.close();}}
+});

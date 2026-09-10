@@ -8739,3 +8739,40 @@ Logs: /private/tmp/retouch-swap-import-cleanup-units.log,
 The existing component expression/content/root-swap limitations and full Figma
 Design/arbitrary-site gaps remain open. Trusted brew distribution is unverified.
 Native app launches and native launch tests remain paused.
+
+### Root-instance swap and revision-aware detach (2026-09-10)
+
+Instances returned directly by a function can now be swapped without a containing
+source host frame. The transaction records nullable parent IDs and maps the old
+and new usage identities for exact Undo/Redo. Root property edits and swaps wait
+for the caller source revision on the mounted component, separately from the
+component definition revision. Instrumentation forwards both markers through
+supported regular and arrow function roots, preserving lexical arrow semantics.
+
+Detach refresh uses the saved usage revision and accepts the mounted conditional
+root. Its history refresh uses the same branch-aware matching. The component API
+no longer disables detach solely because a definition has one source usage; the
+adapter's actual detach capability remains authoritative. The existing canvas
+inline-component presentation heuristic remains separate.
+
+Validation: 693 unit tests pass. New source tests cover direct/conditional root
+swap mapping and source reversal; stamp tests execute forwarding for regular and
+arrow forms and distinguish caller and definition revisions. Chromium and WebKit
+passed root property edit/Undo, swap/Undo/Redo, and detach/Undo/Redo/Undo against a
+real Next fixture. Detach checks the mounted footer branch, independent copied
+module creation/removal, exact usage-source restoration, and unchanged shared
+source. The broader framed insertion/required-props/swap/branch/duplicate/property
+flow also passed in Chromium. All three browser processes terminated with exit
+zero and strict empty page-error assertions. Initial detach browser runs exposed
+the single-usage capability restriction; both corrected runs passed.
+
+Evidence: /private/tmp/retouch-root-detach-units-final.log,
+/private/tmp/retouch-root-detach-chromium-fixed.log,
+/private/tmp/retouch-root-detach-webkit-fixed.log,
+/private/tmp/retouch-root-revision-framed.log.
+
+Full Figma parity remains incomplete. Fragment/wrapper identity forwarding,
+expression/content swaps, full variants and nested overrides, arbitrary-site
+authoring and the other outstanding design-feature gaps remain open. Trusted brew
+distribution is unverified. Native app launches and native launch tests remain
+paused at the user's request.

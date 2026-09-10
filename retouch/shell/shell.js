@@ -1305,8 +1305,9 @@ function mountedComponentHost(instanceId,component,context){
 }
 async function refreshComponentProperty(instanceId,parentId){
   const parent=parentId?await api('GET',resolveUrl(parentId)):null;
-  if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else await reloadFrame();
-  const usage=await api('GET',resolveUrl(instanceId)),component=await api('GET',componentUrl(instanceId));
+  const usage=await api('GET',resolveUrl(instanceId));
+  if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else if(usage?.ok)await refreshWrittenElement(usage.element,()=>true);else await reloadFrame();
+  const component=await api('GET',componentUrl(instanceId));
   if(usage?.ok&&component?.ok){sel={hostId:mountedComponentHost(instanceId,component,usage.element.context)?.getAttribute('data-rt')||component.definitionId,instanceId,scope:'instance',info:usage.element};renderPanel();}else clearSelection();
 }
 async function setComponentProperty(instanceId,name,value,fileHash,options={}){
@@ -1350,11 +1351,20 @@ async function detachInstance(id, component, button, context=sel?.info?.context)
     editorHistory.record({ type: 'detachComponent', id, undoId: result.undoId, context:usage.element.context });
     const detached = await api('GET', componentUrl(id,usage.element.context));
     if (detached?.ok) {
-      await refreshWrittenElement(usage.element, el => el.getAttribute('data-rt') === detached.definitionId);
+      await refreshWrittenElement(result.element || {...usage.element,hash:result.hash}, el => (detached.definitionIds || [detached.definitionId]).includes(el.getAttribute('data-rt')));
       await editDefinition(id, detached);
     }
     toast('Detached to ' + result.detachedFile, 'ok');
   } finally { button.disabled = false; }
+}
+async function refreshSwappedComponent(instanceId,parentId){
+ if(parentId){const parent=await api('GET',resolveUrl(parentId));if(parent?.ok){await refreshWrittenElement(parent.element,()=>true);return;}}
+ const usage=await api('GET',resolveUrl(instanceId)),component=await api('GET',componentUrl(instanceId));
+ if(!usage?.ok||!component?.ok)throw Error('The swap was saved, but its component no longer resolves.');
+ const roots=component.definitionIds?.length?component.definitionIds:[component.definitionId].filter(Boolean),matches=node=>roots.includes(node.getAttribute('data-rt'))&&node.getAttribute('data-rt-revision')===component.hash;
+ const info=usage.element;
+ await refreshWrittenElement(info,matches);
+ if(!matchingInDocument(doc(),instanceId,info).some(node=>matches(node)&&node.getAttribute(info.renderRevisionAttribute)===info.hash))throw Error('The swap was saved, but its component has not appeared in the preview yet.');
 }
 async function selectInsertedComponent(id,parentId){
  const usage=await api('GET',resolveUrl(id)),component=await api('GET',componentUrl(id));
@@ -1375,7 +1385,8 @@ async function insertLibraryComponent(item,target,isActive){
   const result=await api('POST','/rt/__api/op',{type:target.swap?'swapComponent':'insertComponent',dropProps:removed,id:target.id,fileHash:target.hash,definitionFile:definition.file,definitionId:definition.definitionId,definitionHash:definition.hash,contractHash:definition.insertion.revision,props});
   if(!result?.ok)throw Error(result?.reason||result?.error||'Could not insert the component.');
   const inserted=result.insertedComponent;editorHistory.record({type:target.swap?'swapComponent':'insertComponent',previousInstanceId:inserted.previousInstanceId,id:inserted.parentId,instanceId:inserted.instanceId,previousParentId:inserted.previousParentId,undoId:result.undoId});
-  const parent=await api('GET',resolveUrl(inserted.parentId));if(parent?.ok)await refreshWrittenElement(parent.element,el=>!!el.ownerDocument.querySelector('[data-rt-i="'+inserted.instanceId+'"]'));else await reloadFrame();
+  if(target.swap)await refreshSwappedComponent(inserted.instanceId,inserted.parentId);
+  else{const parent=await api('GET',resolveUrl(inserted.parentId));if(parent?.ok)await refreshWrittenElement(parent.element,el=>!!el.ownerDocument.querySelector('[data-rt-i="'+inserted.instanceId+'"]'));else await reloadFrame();}
   await selectInsertedComponent(inserted.instanceId,inserted.parentId);toast(target.swap?'Component swapped':'Component inserted','ok');
  }finally{busyPanel(false);}
  };
@@ -2145,7 +2156,7 @@ async function restoreHistory(direction,op) {
   // client stack on the old side of a successful transaction.
   try {
     await showHistoryPage(op.route);
-    if(['insertComponent','swapComponent'].includes(op.type)){const parentId=direction==='redo'?op.id:op.previousParentId,parent=await api('GET',resolveUrl(parentId));if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else await reloadFrame();if(direction==='redo')await selectInsertedComponent(op.instanceId,op.id);else if(op.type==='swapComponent')await selectInsertedComponent(op.previousInstanceId,op.previousParentId);else if(parent?.ok){sel={hostId:parentId,instanceId:null,scope:'host',info:parent.element};renderPanel();}else clearSelection();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(['insertComponent','swapComponent'].includes(op.type)){const parentId=direction==='redo'?op.id:op.previousParentId,parent=parentId?await api('GET',resolveUrl(parentId)):null;if(op.type==='swapComponent')await refreshSwappedComponent(direction==='redo'?op.instanceId:op.previousInstanceId,parentId);else if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else await reloadFrame();if(direction==='redo')await selectInsertedComponent(op.instanceId,op.id);else if(op.type==='swapComponent')await selectInsertedComponent(op.previousInstanceId,op.previousParentId);else if(parent?.ok){sel={hostId:parentId,instanceId:null,scope:'host',info:parent.element};renderPanel();}else clearSelection();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='collectionSelection'){await reloadFrame();await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
@@ -2161,7 +2172,7 @@ async function restoreHistory(direction,op) {
         if(op.type==='duplicateComponent'){const found=!!el.ownerDocument.querySelector('[data-rt-i="'+op.instanceCopyId+'"]');return direction==='undo'?!found:found;}
         if(op.svgCreatedId){const found=matchingInDocument(el.ownerDocument,op.svgCreatedId,null).length>0;return direction==='undo'?!found:found;}
         if(op.type==='createComponent'&&direction==='undo')return el.getAttribute('data-rt')===op.id;
-        if (component?.ok) return el.getAttribute('data-rt') === component.definitionId;
+        if (component?.ok) return (component.definitionIds || [component.definitionId]).includes(el.getAttribute('data-rt'));
         if (op.type === 'setSrc') return imageMatches(el,info.src,info.srcMatch);
         if (op.type === 'setSVGGeometry') return svgGeometryMatches(el,info);
         if (op.type === 'setTag') return el.tagName.toLowerCase() === info.tag;

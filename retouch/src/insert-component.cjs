@@ -37,7 +37,6 @@ function plan(resolved,op){
   if(!selected)throw Error('The selected frame no longer resolves.');
   let parentBefore=swapping?null:resolved.element;
   if(swapping)for(let p=selected.parentPath;p;p=p.parentPath){parentBefore=resolved.elements.find(element=>element.kind==='host'&&element.node.start===p.node.start);if(parentBefore)break;}
-  if(swapping&&!parentBefore)throw Error('Swap an instance inside a source frame. Root instance swapping is not supported yet.');
   let local=def.name,importText='',importAt=ast.program.directives.at(-1)?.end||ast.program.interpreter?.end||0;
   if(file===resolved.file){
    const binding=selected.scope.getBinding(local),bindingStart=binding?.path.node.init?.start??binding?.path.node.start;
@@ -61,10 +60,10 @@ function plan(resolved,op){
   if(cleanup)ms.overwrite(cleanup.start,cleanup.end,cleanup.after);
   if(importText)ms.appendLeft(importAt,importText);
   const after=ms.toString(),elements=collectElements(after,resolved.relPath).elements,offset=pos=>importText.length+(cleanup&&cleanup.end<=pos?cleanup.after.length-(cleanup.end-cleanup.start):0);
-  const inserted=elements.find(element=>element.kind==='instance'&&element.node.start===position+offset(position)),parent=elements.find(element=>element.kind==='host'&&element.node.start===parentBefore.node.start+offset(parentBefore.node.start));
-  if(!inserted||!parent)throw Error('The inserted component could not be mapped to source.');
+  const inserted=elements.find(element=>element.kind==='instance'&&element.node.start===position+offset(position)),parent=parentBefore?elements.find(element=>element.kind==='host'&&element.node.start===parentBefore.node.start+offset(parentBefore.node.start)):null;
+  if(!inserted||parentBefore&&!parent)throw Error('The inserted component could not be mapped to source.');
   const edits=[{file:resolved.file,before:resolved.source,after}];for(const [dependency,before] of dependencies)if(dependency!==resolved.file)edits.push({file:dependency,before,after:before});
-  return {ok:true,hash:contentHash(after),insertedComponent:{instanceId:inserted.id,parentId:parent.id,previousParentId:parentBefore.id,...(swapping?{previousInstanceId:resolved.element.id}: {})},edits,pathChecks:[...checks.values()]};
+  return {ok:true,hash:contentHash(after),insertedComponent:{instanceId:inserted.id,parentId:parent?.id||null,previousParentId:parentBefore?.id||null,...(swapping?{previousInstanceId:resolved.element.id}: {})},edits,pathChecks:[...checks.values()]};
  }catch(error){return refuse(error.message);}
 }
 module.exports={plan,canContain};

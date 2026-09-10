@@ -90,7 +90,7 @@ function describeElement(resolved) {
     svgPaint: {reason:node.openingElement.attributes.some(a=>a.type==='JSXSpreadAttribute')?'Spread props may control this layer’s classes.':null},
     svgInsertion: require('./jsx-svg-insert.cjs').describe(resolved),
     svgGeometry: require('./jsx-svg-geometry.cjs').describe(resolved),
-    ...(element.kind==='host'?{renderRevisionAttribute:'data-rt-revision'}:{}),
+    renderRevisionAttribute:element.kind==='host'?'data-rt-revision':'data-rt-i-revision',
     id: element.id,
     kind: element.kind,
     tag: tagOf(node),

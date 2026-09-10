@@ -28,7 +28,7 @@ function stamp(source, filePath, appRoot) {
 
   const ms = new MagicString(source),revision=contentHash(source);
   for (const el of elements) {
-    if(el.kind==='host')ms.appendLeft(el.node.openingElement.end-(el.node.openingElement.selfClosing?2:1),` data-rt-revision="${revision}"`);
+    ms.appendLeft(el.node.openingElement.end-(el.node.openingElement.selfClosing?2:1),` ${el.kind==='host'?'data-rt-revision':'data-rt-i-revision'}="${revision}"`);
     const attr = el.kind === 'host' ? HOST_ATTR : INSTANCE_ATTR;
     const insertAt = el.node.openingElement.name.end;
     ms.appendLeft(insertAt, ` ${attr}="${el.id}"`);
@@ -41,10 +41,10 @@ function stamp(source, filePath, appRoot) {
     if(!componentFunctions.has(p.node.start)&&![...(p.node.leadingComments||[]),...(exported?p.parentPath.node.leadingComments||[]:[])].some(comment=>comment.value.trim()==='* @retouch-component'))return;
     const roots=require('./component-return-roots.cjs')(p.node).filter(node=>node.type==='JSXElement'&&elements.some(el=>el.node===node&&el.kind==='host')&&!node.openingElement.attributes.some(attr=>attr.name?.name===INSTANCE_ATTR));
     if(!roots.length)return;
-    const marker=p.isArrowFunctionExpression()?require('./arrow-instance-marker.cjs')(p,source,ms):'arguments[0]?.["data-rt-i"]';
+    const marker=p.isArrowFunctionExpression()?require('./arrow-instance-marker.cjs')(p,source,ms):{identity:'arguments[0]?.["data-rt-i"]',revision:'arguments[0]?.["data-rt-i-revision"]'};
     if(!marker)return;
     for(const node of roots){
-      ms.appendLeft(node.openingElement.end-(node.openingElement.selfClosing?2:1),` data-rt-i={${marker}}`);
+      ms.appendLeft(node.openingElement.end-(node.openingElement.selfClosing?2:1),` data-rt-i={${marker.identity}}`+(node.openingElement.attributes.some(attr=>attr.name?.name==='data-rt-i-revision')?'':` data-rt-i-revision={${marker.revision}}`));
     }
   }
   require('@babel/traverse').default(ast,{FunctionDeclaration:forward,FunctionExpression:forward,ArrowFunctionExpression:forward});

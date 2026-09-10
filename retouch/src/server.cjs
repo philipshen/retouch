@@ -219,7 +219,7 @@ function handle(req, res, ctx) {
     resolved.context = renderContext(url.searchParams.get('context'));
     const result = ctx.adapter.describeComponent(resolved);
     const usage=require('./component-usage.cjs').usage(ctx.index,id);
-    if(result.ok && usage){Object.assign(result,usage);if(usage.inlineComponent)result.canDetach=false;}
+    if(result.ok && usage)Object.assign(result,usage);
     return json(res, result.ok ? 200 : 409, {...result,historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired});
   }
 
