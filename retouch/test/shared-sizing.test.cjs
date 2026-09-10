@@ -34,3 +34,22 @@ test('resetting a bound dimension replaces its important axis override and prese
   assert.equal(classes.compose('md:'+axis+'-40 md:'+axis+'-auto!',property,null,'md:'),'md:'+axis+'-40');
  }
 });
+
+
+test('shared size constraints preserve independent bounds and do not inherit fixed-size priority',()=>{
+ const source='size-[80px] md:!size-[120px] md:!min-w-[40px] md:max-w-[300px] lg:min-w-[90px]';
+ const min=shared.change(source,'md:','min-width',180);assert.ok(min.includes('md:![min-width:180px]'));assert.ok(min.includes('md:max-w-[300px]'));assert.ok(min.includes('lg:min-w-[90px]'));
+ const max=shared.change(source,'md:','max-height',100);assert.ok(max.includes('md:[max-height:100px]'));assert.ok(!max.includes('md:![max-height:'));
+ assert.ok(shared.change(min,'md:','min-width','auto').includes('md:![min-width:auto]'));
+ assert.ok(shared.change(source,'md:','max-width','none').includes('md:[max-width:none]'));
+ for(const [property,invalid]of [['width','none'],['min-width','none'],['max-height','auto'],['max-width','30%']])assert.throws(()=>shared.change(source,'md:',property,invalid),/supported shared style/);
+ assert.throws(()=>shared.change('md:[min-inline-size:10px]','md:','min-width',180),/logical sizing/);
+});
+
+test('shared constraints preserve unmeasured relative values and convert each box axis',()=>{
+ const values={'min-width':'50%','max-width':'none','min-height':'auto','max-height':'200px','padding-left':'10px','padding-right':'10px','padding-top':'4px','padding-bottom':'4px'};
+ const css={boxSizing:'content-box',getPropertyValue:property=>values[property]||'0px'};
+ for(const property of ['min-width','max-width','min-height'])assert.ok(Number.isNaN(shared.dimensionSize(css,property)));
+ assert.equal(shared.dimensionSize(css,'max-height'),208);assert.equal(shared.dimensionValue(css,'min-width',180),160);assert.equal(shared.dimensionValue(css,'max-height',100),92);
+ assert.equal(shared.dimensionValue(css,'min-width','auto'),'auto');assert.equal(shared.dimensionValue(css,'max-height','none'),'none');
+});
