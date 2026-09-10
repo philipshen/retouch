@@ -159,6 +159,7 @@ setInterval(pollNavigation, 300);
 function doc() { return iframe.contentDocument; }
 
 let canvasContextSerial=0;
+document.addEventListener('pointerdown',()=>canvasContextSerial++,true);
 async function canvasContextMenu(event,keyboard=false){
  if(event.defaultPrevented||event.isComposing||mode!=='edit'||editing||panelTasks||undoBusy||sourceRequests||document.querySelector('dialog[open]')||event.target.isContentEditable||event.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]'))return;
  if(keyboard&&!sel)return;
@@ -2476,6 +2477,11 @@ const layers = RetouchLayers.mount({
   onSelect:async(el,options)=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();if(options?.component&&options.sourceId)componentLibrarySelections.add(options.sourceId);await select(el,options);el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});},
   onSelectMany:async(nodes,options)=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await selectMany(nodes,options);},
   onAction:action=>structureAction(action),
+  onContextMenu:async({event,select:choose,selected,opener,keyboard})=>{
+    if(event.defaultPrevented||event.isComposing||mode!=='edit'||editing||panelTasks||undoBusy||sourceRequests||document.querySelector('dialog[open]'))return;
+    event.preventDefault();event.stopPropagation();const serial=++canvasContextSerial;
+    try{if(!selected)await choose();if(serial!==canvasContextSerial||mode!=='edit'||!sel||!opener.isConnected)return;const box=opener.getBoundingClientRect();window.RetouchActions?.contextMenu({x:keyboard?box.left:event.clientX,y:keyboard?box.bottom:event.clientY,opener});}catch(error){toast(error.message,'err');}
+  },
 });
 window.RetouchLayerNavigation={
   available:direction=>mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&(direction==='siblings'?layers.canSelectSiblings():layers.canNavigate(direction)),

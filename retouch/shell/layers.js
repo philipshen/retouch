@@ -24,7 +24,7 @@
     if(!target.parentElement?.hasAttribute('data-rt')||['HTML','BODY'].includes(target.tagName))return null;
     return fraction<.5?'before':'after';
   }
-  function mount({host,onSelect,onAction,getClipboard=()=>null,dragEnabled=false,multiSelectEnabled=dragEnabled,onMove,onMoveComponent,onSelectMany,locks,onLock,readComponents}) {
+  function mount({host,onSelect,onAction,onContextMenu,getClipboard=()=>null,dragEnabled=false,multiSelectEnabled=dragEnabled,onMove,onMoveComponent,onSelectMany,locks,onLock,readComponents}) {
     const header=document.createElement('h2');header.textContent='Layers';header.title='On the canvas: Enter selects a child, Shift+Enter selects its parent, and Tab/Shift+Tab selects siblings.';
     const search=document.createElement('input');search.type='search';search.placeholder='Find a layer…';search.setAttribute('aria-label','Find a layer');
     const tree=document.createElement('div');tree.className='layer-tree';tree.setAttribute('role','tree');tree.setAttribute('aria-label','Site layers');
@@ -91,6 +91,7 @@
           b.tabIndex=isSelected(item)?0:-1;b.disabled=isBusy;
           if(item.children.length)b.setAttribute('aria-expanded',String(expanded));else b.removeAttribute('aria-expanded');
           b.onclick=e=>{if(item.componentId||item.parent?.componentId)return choose(item);if(multiEnabled&&e.shiftKey)return selectRange(item.el,e.metaKey||e.ctrlKey);rangeAnchor=item.el;return onSelect(item.el,{toggle:e.metaKey||e.ctrlKey});};
+          b.oncontextmenu=event=>onContextMenu?.({event,select:()=>choose(item),selected:isSelected(item),opener:b});
           b.draggable=item.componentId?!!onMoveComponent&&!!(item.movement?.targets?.length||item.movement?.containers?.length)&&item.movement.fileHash===item.el.getAttribute('data-rt-i-revision'):dragEnabled&&item.el.namespaceURI==='http://www.w3.org/1999/xhtml'&&!['HTML','BODY'].includes(item.el.tagName);
           b.ondragstart=e=>{if(isBusy||!b.draggable||locks?.locked(item.el)){e.preventDefault();return;}dragged=item.el;draggedItem=item;e.dataTransfer.setData('text/plain','retouch-layer:'+(item.componentId||item.el.getAttribute('data-rt')));e.dataTransfer.effectAllowed='move';for(const row of rows)if(row.item.el===dragged||selectedSet.has(dragged)&&selectedSet.has(row.item.el))row.button.classList.add('dragging');};
           const dropPosition=e=>{const box=b.getBoundingClientRect(),fraction=(e.clientY-box.top)/box.height;if(isBusy)return null;if(draggedItem?.componentId){const id=item.componentId||item.el.getAttribute('data-rt');if(!item.componentId&&fraction>=.25&&fraction<=.75&&draggedItem.movement.containers?.includes(id)&&!locks?.locked(item.el))return 'inside';return draggedItem.movement.targets.includes(id)?(fraction<.5?'before':'after'):null;}return item.componentId?null:placement(selectedSet.has(dragged)?[...selectedSet]:[dragged],item.el,fraction);};
@@ -99,6 +100,7 @@
           b.ondrop=e=>{const position=dropPosition(e);if(position){e.preventDefault();const source=dragged,component=draggedItem?.componentId?{id:draggedItem.componentId,fileHash:draggedItem.movement.fileHash,destinationId:item.componentId||item.el.getAttribute('data-rt')}:null;endDrag();if(component)onMoveComponent?.(source,item.el,position,component);else onMove?.(source,item.el,position);}};
           b.ondragend=endDrag;
           b.onkeydown=async e=>{
+            if(onContextMenu&&(e.key==='ContextMenu'||e.key==='F10'&&e.shiftKey)){await onContextMenu({event:e,select:()=>choose(item),selected:isSelected(item),opener:b,keyboard:true});return;}
             if(item.parent?.componentId&&(e.key==='F2'||e.key==='Delete'||e.key==='Backspace'||(e.metaKey||e.ctrlKey)&&['c','v','d'].includes(e.key.toLowerCase())))await choose(item);
             if(item.componentId&&['Delete','Backspace'].includes(e.key)){e.preventDefault();e.stopPropagation();if(!isBusy&&!e.repeat){await choose(item);await onAction('deleteElement');}return;}
             if(item.componentId&&(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='d'){e.preventDefault();e.stopPropagation();if(!isBusy&&!e.repeat){await choose(item);await onAction('duplicateElement');}return;}
