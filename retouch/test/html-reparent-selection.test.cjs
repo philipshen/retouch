@@ -10,6 +10,9 @@ test('HTML selection moves preserve source order and linked responsive styles fo
   let source='<html><head></head><body><main>'+content+'</main></body></html>';
   source=css.plan(resolve(source),{property:'width',value:'240px',width:768}).edits[0].after;
   const r=resolve(source),result=selection.plan(r,op(r,position));assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);
+  const mapping=new Map(result.sourceIdMap),afterElements=html.collect(result.edits[0].after,r.relPath).elements;
+  assert.deepEqual(r.elements.map(e=>mapping.get(e.id)||e.id).sort(),afterElements.map(e=>e.id).sort());
+  for(const element of r.elements)assert.equal(afterElements.find(e=>e.id===(mapping.get(element.id)||element.id)).tag,element.tag);
   const fresh=resolve(result.edits[0].after),moved=result.selectionIds.map(id=>fresh.elements.find(e=>e.id===id));assert.deepEqual(moved.map(e=>e.tag),['h1','p']);assert.ok(moved.every(e=>e.node.parentNode.tagName==='aside'));
   const children=moved[0].node.parentNode.childNodes.filter(n=>n.tagName).map(n=>n.tagName);assert.deepEqual(children,position==='before'?['h1','p','h2']:['h2','h1','p']);
   assert.deepEqual(css.describe({...fresh,element:moved[0]}).cssRules,{768:{width:'240px'}});assert.equal(fresh.elements.find(e=>e.id===result.parentId).tag,'main');assert.ok(!result.edits[0].after.includes('data-rt-move-'));
