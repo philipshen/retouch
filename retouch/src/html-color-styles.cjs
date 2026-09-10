@@ -1,6 +1,6 @@
 'use strict';
 const MagicString=require('magic-string'),html=require('./adapters/html.cjs'),css=require('./html-css.cjs'),catalog=require('./color-styles.cjs');
-const attribute='data-rt-color-styles',properties=['color','background-color','border-color'],refuse=reason=>({ok:false,refused:true,reason});
+const attribute='data-rt-color-styles',properties=['color','background-color','border-color','fill','stroke'],refuse=reason=>({ok:false,refused:true,reason});
 function links({element}){
  const raw=element.node.attrs.find(a=>a.name===attribute)?.value;if(raw===undefined)return {};
  if(raw.length>128*1024)throw Error('Color style links are too large.');const state=JSON.parse(raw);

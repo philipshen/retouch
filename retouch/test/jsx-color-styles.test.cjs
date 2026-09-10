@@ -48,3 +48,11 @@ test('linked paint replaces only recognized color utilities at its own scope',()
  }
  assert.throws(()=>classes.compose('!bg-(--custom)','background-color','#fff'),/important/);
 });
+
+test('SVG palette paint owns fill and stroke without taking stroke width or background images',()=>{
+ const fill=classes.compose('!fill-red-500 !stroke-2 !stroke-blue-500 !bg-none','fill','#1234');assert.ok(fill.includes('![fill:#1234]'));assert.ok(!fill.includes('!fill-red-500'));assert.ok(fill.includes('!stroke-2'));
+ const stroke=classes.compose(fill,'stroke','#abcdef');assert.ok(stroke.includes('![stroke:#abcdef]'));assert.ok(stroke.includes('!stroke-2'));assert.ok(!stroke.includes('!stroke-blue-500'));assert.equal(classes.overridden(stroke,'stroke','#abcdef'),false);
+ assert.equal(classes.overridden(stroke+' !stroke-[length:3px]','stroke','#abcdef'),false);assert.equal(classes.overridden(stroke+' !stroke-red-500','stroke','#abcdef'),true);
+ assert.ok(classes.compose('!bg-none','background-color','#fff').includes('!bg-none'));
+ assert.ok(!classes.compose('!fill-none','fill','#fff').includes('!fill-none'));assert.ok(!classes.compose('!stroke-none','stroke','#fff').includes('!stroke-none'));
+});

@@ -21,7 +21,7 @@
    const style=library.styles.find(item=>item.id===selected);if(!style)selected='';
    I.select(controls,'Saved color style',[['','New color…'],...library.styles.map(item=>[item.id,item.name])],selected,value=>{selected=value;preferred=value;render();});
    if(options.apply){
-    I.select(controls,'Color target',[['color','Text'],['background-color','Background'],['border-color','Border']],target,value=>{target=value;render();});
+    I.select(controls,'Color target',[['color','Text'],['background-color','Background'],['border-color','Border'],['fill','SVG fill'],['stroke','SVG stroke']],target,value=>{target=value;render();});
     if(options.selection){
      const links=options.selection.map(info=>info.colorStyleLinks?.[options.width]?.[target]).filter(Boolean),overrides=options.selection.filter(info=>info.colorStyleOverrides?.[options.width]?.includes(target)).length;
      I.note(controls,links.length+' of '+options.selection.length+' layers linked in this screen scope'+(new Set(links.map(link=>link.id)).size>1?' · Mixed colors.':'.'));

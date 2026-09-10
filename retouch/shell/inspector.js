@@ -334,7 +334,7 @@
     const css = el.ownerDocument.defaultView.getComputedStyle(el);
     if (locked(sec,info)) return sec;
     if(colorAction){
-      for(const [property,label]of [['color','Text color'],['background-color','Background color'],['border-color','Border color']]){
+      for(const [property,label]of [['color','Text color'],['background-color','Background color'],['border-color','Border color'],...(el.namespaceURI==='http://www.w3.org/2000/svg'?[['fill','SVG fill'],['stroke','SVG stroke']]:[])]){
         const input=document.createElement('input');input.type='text';input.spellcheck=false;input.placeholder='#RRGGBB or #RRGGBBAA';
         const computed=property==='border-color'?css.borderTopColor:css.getPropertyValue(property);
         // Keep the actual computed color visible; an empty field accepts a new

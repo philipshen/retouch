@@ -6355,3 +6355,28 @@ source update/undo, unchanged phone paint, detach and exact source restoration.
 These are local renderer receipts, not live Shopify verification. Liquid batch
 color operations, arbitrary remote-site authoring, wide-gamut palettes and full
 Figma feature parity remain unfinished. Native app launches remain paused.
+
+### Shared palette colors for SVG fill and stroke (2026-09-09)
+
+The palette now offers SVG fill/stroke alongside text/background/border targets.
+HTML managed CSS and React/Liquid class links accept these properties through
+existing apply/reset/detach and project propagation paths. React/Liquid SVG
+Appearance also exposes alpha-capable local fill/stroke inputs. Class paint
+composition recognizes SVG color utilities while preserving stroke-width
+utilities; SVG none paint is replaced without mistaking background-none for
+background color. Geometry attributes are not rewritten by palette operations.
+
+All 477 unit tests passed, exit 0: /private/tmp/retouch-svg-palette-units.log.
+Source tests cover fill/stroke ownership, important stroke width preservation,
+override detection and background-image none preservation. Palette browser flows
+passed in HTML Chromium, React Chromium and local Liquid WebKit, exit 0:
+/private/tmp/retouch-svg-palette-html.log,
+/private/tmp/retouch-svg-palette-react.log and
+/private/tmp/retouch-svg-palette-liquid.log. Each applies an alpha color to both
+fill and stroke on a rectangle, verifies computed paint and unchanged dimensions,
+and undoes to exact source before running existing renderer palette flows.
+React's initial verifier matched Next's own SVG icons; scoping the locator to the
+fixture artwork resolved that test ambiguity. SVG-specific project propagation,
+local reset and responsive-link browser flows still need dedicated coverage;
+gradient paint-server styles, wide-gamut colors and full parity remain incomplete.
+Native app launches remain paused; no live Shopify claim is made.

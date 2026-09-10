@@ -1,6 +1,6 @@
 'use strict';
 const catalog=require('./color-styles.cjs'),responsive=require('../shell/responsive.js'),inspector=require('../shell/inspector.js'),tokens=require('./class-tokens.cjs');
-const properties=['color','background-color','border-color'];
+const properties=['color','background-color','border-color','fill','stroke'];
 function encode(property,value){
  if(!properties.includes(property))throw Error('Choose a supported color property.');
  catalog.validate({version:1,styles:[{id:'11111111-1111-4111-8111-111111111111',name:'Color',properties:{color:value}}]});
@@ -8,6 +8,12 @@ function encode(property,value){
 }
 function related(plain,property){
  if(/^\[all:/.test(plain))return true;
+ if(property==='fill')return /^\[fill:/.test(plain)||/^fill-/.test(plain);
+ if(property==='stroke'){
+  if(/^\[stroke:/.test(plain))return true;
+  if(!/^stroke-/.test(plain))return false;
+  return !/^stroke-(?:\d+(?:\.\d+)?|\[(?:length:[^\]]+|[-.\d][^\]]*)\]|\(length:[^)]+\))$/.test(plain);
+ }
  if(property==='color')return /^\[color:/.test(plain)||/^text-/.test(plain)&&!inspector.fontSizeToken(plain)&&!inspector.textAlignToken(plain)&&!/^text-(?:wrap|nowrap|balance|pretty|ellipsis|clip)$/.test(plain);
  if(property==='background-color'){
   if(/^\[background(?:-color)?:/.test(plain))return true;
@@ -28,11 +34,11 @@ function related(plain,property){
 function own(plain,property){
  if(plain.startsWith('['+property+':'))return true;
  if(property==='border-color'&&/^\[border-(?:top|right|bottom|left|inline|block|inline-start|inline-end|block-start|block-end)-color:/.test(plain))return true;
- const match=(property==='color'?/^text-(.+)$/:property==='background-color'?/^bg-(.+)$/:/^border-(?:[trblxyse]-)?(.+)$/).exec(plain);if(!match)return false;
+ const match=(property==='color'?/^text-(.+)$/:property==='background-color'?/^bg-(.+)$/:property==='fill'?/^fill-(.+)$/:property==='stroke'?/^stroke-(.+)$/:/^border-(?:[trblxyse]-)?(.+)$/).exec(plain);if(!match)return false;
  const value=match[1],alpha='(?:/(?:[0-9]+(?:\\.[0-9]+)?|\\[[^\\]]+\\]|\\([^)]+\\)))?';
  // Restrict implicit names to the standard palette; custom utility names can
  // carry arbitrary declarations and must not be discarded on a guess.
- const named='(?:inherit|current|transparent|black|white|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(?:50|[1-9]00|950))';
+ const named=(['fill','stroke'].includes(property)?'(?:none|':'(?:')+'inherit|current|transparent|black|white|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(?:50|[1-9]00|950))';
  return new RegExp('^'+named+alpha+'$').test(value)||new RegExp('^\\[(?:#[a-fA-F0-9]{3,8}|color:[^\\]]+|(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color|color-mix)\\([^\\]]+\\))\\]'+alpha+'$').test(value)||new RegExp('^\\(color:[^)]+\\)'+alpha+'$').test(value);
 }
 function compose(className,property,value,scope=''){
