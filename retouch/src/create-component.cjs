@@ -5,7 +5,7 @@ const {parseSource,collectElements,contentHash} = require('./id.cjs');
 const refuse = reason => ({ok:false,refused:true,reason});
 
 // Same-module extraction keeps imports and module bindings in their original
-// scope. Parent-local captures need an explicit prop contract before extraction.
+// scope. Stable parent-local bindings become explicit props at the call site.
 function plan(resolved,op) {
   if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the layer before creating a component.');
   if(resolved.element.kind!=='host')return refuse('Select a source layer to create a component.');
@@ -29,6 +29,7 @@ function plan(resolved,op) {
     if(keys.length>1)return refuse('Resolve duplicate key attributes before creating a component.');
     const key=keys[0],inside=n=>n.start>=node.start&&n.end<=node.end;
     let reason=null;
+    const captures=new Map();
     selected.traverse({
       enter(p){
         if(reason){p.skip();return;}
@@ -39,6 +40,7 @@ function plan(resolved,op) {
         if(p.isJSXSpreadAttribute()){reason='Expand spread attributes before creating a component so key and ref behavior stays explicit.';return;}
         if(p.isJSXAttribute()&&p.node.name?.name==='ref'&&p.node.value?.type==='StringLiteral'){reason='String refs depend on the original component owner.';return;}
         if(p.isCallExpression()){
+          if(p.node.callee.type==='Identifier'&&p.node.callee.name==='eval'){reason='Direct eval depends on its original lexical scope.';return;}
           const callee=p.node.callee,name=callee.type==='Identifier'?callee.name:callee.type==='MemberExpression'&&!callee.computed?callee.property.name:'';
           const binding=callee.type==='Identifier'?p.scope.getBinding(name):null,imported=binding?.path.node.imported?.name;
           if(/^use[A-Z0-9]/.test(name||'')||/^use[A-Z0-9]/.test(imported||'')){reason='Move hook calls out of the selected subtree before creating a component.';return;}
@@ -46,23 +48,39 @@ function plan(resolved,op) {
         if(p.isReferencedIdentifier()){
           const name=p.node.name,binding=p.scope.getBinding(name);
           if(name==='arguments'){reason='This subtree depends on its surrounding arguments.';return;}
-          if(binding&&!binding.scope.path.isProgram()&&!inside(binding.path.node))reason='This subtree captures the local value "'+name+'". Expose it as a component prop before extracting.';
+          if(binding&&!binding.scope.path.isProgram()&&!inside(binding.path.node)){
+            if(binding.kind!=='param'&&!binding.path.isFunctionDeclaration()&&binding.path.node.end>node.start){reason='The local value "'+name+'" is initialized after this layer. Move its initialization before the layer before extracting.';return;}
+            if(!binding.constant){reason='The local value "'+name+'" is reassigned. Make its update behavior explicit before extracting.';return;}
+            captures.set(name,binding);
+          }
         }
       },
     });
     if(reason)return refuse(reason);
+    if(captures.size&&/\.tsx?$/.test(resolved.relPath))return refuse('TypeScript local dependencies need an explicit typed prop contract before extracting.');
+    // React consumes key/ref and development metadata instead of forwarding them.
+    // Alias those names, avoiding collisions with every other captured binding.
+    const used=new Set(captures.keys()),props=[...captures.keys()].map((name,index)=>{
+      let prop=name;
+      if(['key','ref','__self','__source','__proto__'].includes(name)){
+        prop='retouchValue'+index;while(used.has(prop))prop+='x';used.add(prop);
+      }
+      return {name,prop};
+    });
+    const parameters=props.length?'{ '+props.map(({name,prop})=>prop===name?name:prop+': '+name).join(', ')+' }':'';
+    const attributes=props.map(({name,prop})=>' '+prop+'={'+name+'}').join('');
     const fragment=new MagicString(resolved.source.slice(node.start,node.end));
     if(key)fragment.remove(key.start-node.start,key.end-node.start);
-    const replacement='<'+op.name+(key?' '+resolved.source.slice(key.start,key.end):'')+' />';
+    const replacement='<'+op.name+(key?' '+resolved.source.slice(key.start,key.end):'')+attributes+' />';
     const ms=new MagicString(resolved.source);ms.overwrite(node.start,node.end,replacement);
     // A non-exported declaration also works in Next page/layout modules, which
     // restrict named exports. Existing JSX paths and sibling IDs stay stable.
-    ms.append('\n\n/** @retouch-component */\nfunction '+op.name+'() {\n  return ('+fragment.toString()+');\n}\n');
+    ms.append('\n\n/** @retouch-component */\nfunction '+op.name+'('+parameters+') {\n  return ('+fragment.toString()+');\n}\n');
     const after=ms.toString(),next=collectElements(after,resolved.relPath);
     const instance=next.elements.find(e=>e.id===resolved.element.id&&e.kind==='instance');
     const definition=next.elements.find(e=>e.kind==='host'&&e.node.start>resolved.source.length-node.end+node.start+replacement.length);
     if(!instance||!definition)return refuse('The extracted component could not be mapped back to source.');
-    return {ok:true,hash:contentHash(after),createdComponent:{name:op.name,instanceId:instance.id,definitionId:definition.id},edits:[{file:resolved.file,before:resolved.source,after}]};
+    return {ok:true,hash:contentHash(after),createdComponent:{name:op.name,props:props.map(({name,prop})=>({name:prop,local:name})),instanceId:instance.id,definitionId:definition.id},edits:[{file:resolved.file,before:resolved.source,after}]};
   }catch(error){return refuse('Could not create the component: '+error.message);}
 }
 module.exports={plan};

@@ -1183,7 +1183,7 @@ function createComponentSection(info) {
   const body=document.createElement('div');body.style.padding='0 12px 12px';details.append(body);
   const input=document.createElement('input');input.type='text';input.value='NewComponent';input.required=true;input.maxLength=80;input.pattern='[A-Z][A-Za-z0-9_$]{0,79}';
   RetouchInspector.field(body,'Component name',input);
-  RetouchInspector.note(body,'Creates a reusable component in this source file and replaces the selected subtree with an instance. This changes all screen sizes. Local state dependencies need an explicit prop contract first.');
+  RetouchInspector.note(body,'Creates a reusable component in this source file and replaces the selected subtree with an instance. This changes all screen sizes. JavaScript local values become props automatically.');
   const button=RetouchInspector.button('Create component from layer',async()=>{
     if(!input.reportValidity())return;
     busyPanel(true);

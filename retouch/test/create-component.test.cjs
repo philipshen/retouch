@@ -17,10 +17,10 @@ test('component creation preserves module imports, JSX descendants, sibling IDs,
   const component=adapter.describeComponent(f.index.resolve(plan.createdComponent.instanceId));assert.ok(component.ok,component.reason);assert.equal(component.name,'ProductCard');assert.equal(component.explicitComponent,true);assert.equal(require('../src/component-usage.cjs').usage(f.index,plan.createdComponent.instanceId).inlineComponent,false);assert.equal(component.definitionId,plan.createdComponent.definitionId);
  }finally{f.close();}
 });
-test('component creation refuses captures and context changes without partial edits',()=>{
+test('component creation refuses unsafe captures and context changes without partial edits',()=>{
  const cases=[
-  [`export default function Page({label}){return <article>{label}</article>}`,/local value "label"/],
-  [`export default function Page(){const Local=()=>null;return <article><Local/></article>}`,/local value "Local"/],
+  [`function Page(){let label="a";label="b";return <article>{label}</article>}`,/reassigned/],
+  [`function Page(){return <article>{eval("label")}</article>}`,/eval/],
   [`export default function Page({props}){return <article {...props}/>}`,/spread attributes/],
   [`export default function Page(){return <article ref="card"/>}`,/String refs/],
   [`import {useId as id} from 'react'; export default function Page(){return <article>{id()}</article>}`,/hook calls/],
@@ -83,4 +83,33 @@ test('component duplication refuses roots and ambiguous identities without writi
 
 test('component duplication refuses a fixed DOM identity in its shared definition',()=>{
  const f=fixture('function Page(){return <main><Card/></main>} function Card(){return <article id="fixed"/>}');try{const usage=[...f.index.idToFile.keys()].map(id=>f.index.resolve(id)).find(r=>r.element.kind==='instance');const result=require('../src/duplicate-component.cjs').plan(usage,{fileHash:usage.hash});assert.equal(result.ok,false);assert.match(result.reason,/fixed DOM id/);assert.equal(adapter.describeComponent(usage).canDuplicate,false);}finally{f.close();}
+});
+
+
+test('component creation turns local values, callbacks, and JSX component bindings into explicit props',()=>{
+ const source='function Page({label, onClick}){const Local=()=>null;return <article onClick={onClick}>{label}<Local/>{[1].map(label=><span>{label}</span>)}</article>}';
+ const f=fixture(source);try{
+  const plan=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(plan.ok,plan.reason);
+  assert.ok(plan.edits[0].after.includes('<Card onClick={onClick} label={label} Local={Local} />'));
+  assert.ok(plan.edits[0].after.includes('function Card({ onClick, label, Local })'));
+  assert.deepEqual(plan.createdComponent.props,[{name:'onClick',local:'onClick'},{name:'label',local:'label'},{name:'Local',local:'Local'}]);
+  assert.equal(fs.readFileSync(f.selected.file,'utf8'),source);
+ }finally{f.close();}
+});
+test('captured React reserved names are passed through ordinary aliased props',()=>{
+ const f=fixture('function Page({key,ref,retouchValue0}){return <article key={key} ref={ref}>{key}{retouchValue0}</article>}');try{
+  const plan=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(plan.ok,plan.reason);
+  assert.ok(plan.edits[0].after.includes('<Card key={key} retouchValue0x={ref} retouchValue1={key} retouchValue0={retouchValue0} />'));
+  assert.ok(plan.edits[0].after.includes('function Card({ retouchValue0x: ref, retouchValue1: key, retouchValue0 })'));
+ }finally{f.close();}
+});
+test('extraction refuses untyped TS props and deferred reads before local initialization',()=>{
+ for(const [source,file,reason] of [
+  ['function Page({label}:{label:string}){return <article>{label}</article>}','page.tsx',/typed prop contract/],
+  ['function Page(){const layer=<article onClick={()=>label}/>;const label="later";return layer}','page.jsx',/initialized after/],
+ ]){const f=fixture(source,file);try{const plan=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(plan.ok,false);assert.match(plan.reason,reason);assert.equal(fs.readFileSync(f.selected.file,'utf8'),source);}finally{f.close();}}
+});
+
+test('prototype-named captures use safe JSX prop names',()=>{
+ const f=fixture('function Page({__proto__}){return <article>{__proto__}</article>}');try{const plan=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(plan.ok,plan.reason);assert.ok(plan.edits[0].after.includes('<Card retouchValue0={__proto__} />'));assert.ok(plan.edits[0].after.includes('function Card({ retouchValue0: __proto__ })'));}finally{f.close();}
 });
