@@ -11,7 +11,7 @@
   const frame=document.getElementById('app'),canvas=document.getElementById('frameWrap'),screens=window.RetouchScreens,handles={};
   let drag=null,pending=null,applying=false;
   const dimensions=()=>({width:frame.offsetWidth,height:screens.get()?.height||canvas.clientHeight});
-  const apply=(next,persist)=>{applying=true;try{screens.set(next,{persist,preservePan:true});}finally{applying=false;}};
+  const apply=(next,persist,axis)=>{applying=true;try{screens.set(screens.constrain(next,axis),{persist,preservePan:true});}finally{applying=false;}};
   function position(){
    const f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),top=Math.max(f.top,c.top),bottom=Math.min(f.bottom,c.bottom),left=Math.max(f.left,c.left),right=Math.min(f.right,c.right),size=dimensions();
    for(const [axis,handle]of Object.entries(handles)){
@@ -40,6 +40,7 @@
    if((drag.axis==='width'?dx===0:drag.axis==='height'?dy===0:dx===0&&dy===0)&&!drag.changed)return;drag.changed=true;
    if(drag.axis!=='height')drag.width=widthAtRight(drag.right+dx,drag.canvasWidth,drag.scale);
    if(drag.axis!=='width')drag.height=heightAtDelta(drag.initialHeight,dy,drag.scale);
+   Object.assign(drag,screens.constrain({width:drag.width,height:drag.height},drag.axis,{width:drag.initialWidth,height:drag.initialHeight}));
    if(drag.axis==='both'&&e.shiftKey)Object.assign(drag,preserveAspect(drag.width,drag.height,drag.initialWidth,drag.initialHeight));
    if(pending===null)pending=requestAnimationFrame(flush);
   }
@@ -55,9 +56,9 @@
    handle.addEventListener('pointercancel',()=>finish(false));handle.addEventListener('lostpointercapture',()=>finish(false));
    handle.addEventListener('keydown',e=>{
     const size=dimensions(),step=e.shiftKey?10:1;let value;
-    if(axis==='both'){const key={ArrowLeft:['width',-step],ArrowRight:['width',step],ArrowUp:['height',-step],ArrowDown:['height',step]}[e.key];if(!key)return;e.preventDefault();e.stopPropagation();apply({...size,height:clamp(size.height),[key[0]]:clamp(size[key[0]]+key[1])},true);return;}
+    if(axis==='both'){const key={ArrowLeft:['width',-step],ArrowRight:['width',step],ArrowUp:['height',-step],ArrowDown:['height',step]}[e.key];if(!key)return;e.preventDefault();e.stopPropagation();apply({...size,height:clamp(size.height),[key[0]]:clamp(size[key[0]]+key[1])},true,key[0]);return;}
     if(e.key===(axis==='width'?'ArrowLeft':'ArrowUp'))value=size[axis]-step;else if(e.key===(axis==='width'?'ArrowRight':'ArrowDown'))value=size[axis]+step;else if(e.key==='Home')value=240;else if(e.key==='End')value=7680;else return;
-    e.preventDefault();e.stopPropagation();apply({...size,height:clamp(size.height),[axis]:clamp(value)},true);
+    e.preventDefault();e.stopPropagation();apply({...size,height:clamp(size.height),[axis]:clamp(value)},true,axis);
    });
   }
   window.addEventListener('blur',()=>finish(false));window.addEventListener('keydown',e=>{if(drag&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();finish(false);}},true);

@@ -3,6 +3,7 @@
   const preset = document.getElementById('screenPreset');
   const width = document.getElementById('screenWidth');
   const height = document.getElementById('screenHeight');
+  const aspect=document.getElementById('screenAspect');
   const project=window.__RT_RENDERING?.stateScope?.project;
   const key = 'retouch.screen.v1'+(typeof project==='string'&&/^[a-f0-9]{64}$/.test(project)?':'+project:'');
   const savedGroup=document.createElement('optgroup');savedGroup.label='Project screens';preset.append(savedGroup);
@@ -11,6 +12,15 @@
   const copy=value=>value?{...value}:null;
   const same=(a,b)=>a?.width===b?.width&&a?.height===b?.height;
   const updateHistory=()=>{undoButton.disabled=!undoStack.length;redoButton.disabled=!redoStack.length;};
+  let linked=false;try{linked=localStorage.getItem(key+'.aspect')==='true';}catch{}
+  const updateAspect=()=>{aspect.setAttribute('aria-pressed',String(linked));aspect.textContent=linked?'Ratio locked':'Lock ratio';};updateAspect();
+  aspect.onclick=()=>{linked=!linked;updateAspect();try{localStorage.setItem(key+'.aspect',String(linked));}catch{}};
+  function constrain(next,axis,base=screen||viewport){
+    if(!linked||!axis||!base||!base.width||!base.height)return next;
+    const x=next.width/base.width,y=next.height/base.height,requested=axis==='width'?x:axis==='height'?y:Math.abs(x-1)>Math.abs(y-1)?x:y;
+    const scale=Math.max(240/base.width,240/base.height,Math.min(7680/base.width,7680/base.height,requested));
+    return {width:Math.round(base.width*scale),height:Math.round(base.height*scale)};
+  }
   function valid(value) { return Number.isInteger(value) && value >= 240 && value <= 7680; }
   function apply(next, options = {}) {
     if(options.persist!==false){
@@ -32,12 +42,12 @@
   undoButton.onclick=()=>replay(false,true);redoButton.onclick=()=>replay(true,true);
   document.addEventListener('keydown',event=>{
     if(event.defaultPrevented||event.isComposing||event.altKey||!(event.metaKey||event.ctrlKey))return;
-    const target=event.target;if(![preset,width,height,undoButton,redoButton,document.getElementById('screenRotate')].includes(target)&&!target.matches?.('.screen-resize-handle'))return;
+    const target=event.target;if(![preset,width,height,aspect,undoButton,redoButton,document.getElementById('screenRotate')].includes(target)&&!target.matches?.('.screen-resize-handle'))return;
     const key=event.key.toLowerCase();if(key!=='z'&&key!=='y')return;
     if((target===width||target===height)&&target.value!==String((screen||viewport)?.[target===width?'width':'height']))return;
     event.preventDefault();event.stopPropagation();replay(key==='y'||event.shiftKey,target===undoButton||target===redoButton);
   });
-  function custom() {
+  function custom(axis) {
     const w = Number(width.value), h = Number(height.value);
     if (!valid(w) || !valid(h)) {
       const input = !valid(w) ? width : height;
@@ -45,11 +55,11 @@
       input.reportValidity();
       return;
     }
-    apply({ width: w, height: h });
+    apply(constrain({ width: w, height: h },axis));
   }
   for (const input of [width, height]) {
     input.addEventListener('input', () => input.setCustomValidity(''));
-    input.addEventListener('change', custom);
+    input.addEventListener('change',()=>custom(input===width?'width':'height'));
     input.addEventListener('keydown', e => {
       if(e.key==='Escape'){
         e.preventDefault();e.stopPropagation();
@@ -61,7 +71,7 @@
         const current=Number(input.value);
         if(Number.isFinite(current)&&input.value!==''){
           input.value=Math.max(240,Math.min(7680,Math.round(current)+(e.key==='ArrowUp'?10:-10)));
-          input.setCustomValidity('');custom();
+          input.setCustomValidity('');custom(input===width?'width':'height');
         }
       }else if(e.key==='Enter')input.blur();
     });
@@ -80,7 +90,7 @@
     viewport={width:e.detail.width,height:e.detail.height};
     if (!screen) { width.value = e.detail.width; height.value = e.detail.height; }
   });
-  window.RetouchScreens = { setSaved(sizes) {
+  window.RetouchScreens = { constrain, setSaved(sizes) {
     savedGroup.replaceChildren();
     for(const [label,w,h] of sizes){if(typeof label!=='string'||!valid(w)||!valid(h))continue;const option=document.createElement('option');option.value='saved:'+w+'x'+h;option.textContent=label+' · '+w+' × '+h;savedGroup.append(option);}
     const name=screen?screen.width+'x'+screen.height:'fluid';preset.value=[...preset.options].some(option=>option.value===name)?name:[...savedGroup.children].some(option=>option.value==='saved:'+name)?'saved:'+name:'custom';
