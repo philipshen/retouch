@@ -371,7 +371,7 @@
           if(root){const style=w.getComputedStyle(root);w.scrollBy({left:/hidden|clip/.test(style.overflowX)?0:dx,top:/hidden|clip/.test(style.overflowY)?0:dy,behavior:'instant'});}
         }catch{}
       },{passive:false});
-      cards.push({card,frame,surface,previewBody,setCollapsed,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal,up,down});
+      cards.push({card,frame,surface,previewBody,setCollapsed,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal,up,down,move});
   }
   function unload(frame){return new Promise(resolve=>{
     let timeout;
@@ -400,7 +400,13 @@
   new ResizeObserver(()=>{if(open)layoutPreviews();}).observe(rail);
   window.RetouchComparisons={
     canShowSizes(requested){return Array.isArray(requested)&&requested.length>0&&requested.every(size=>this.canShowSize(size))&&sizes.length+new Set(requested.filter(size=>!sizes.some(existing=>existing[1]===size.width&&existing[2]===size.height)).map(size=>size.width+'x'+size.height)).size<=8;},
-    showSizes(requested){if(!this.canShowSizes(requested))return false;for(const size of requested)this.showSize(size);return true;},
+    showSizes(requested){
+      if(!this.canShowSizes(requested))return false;for(const size of requested)this.showSize(size);
+      const group=[...new Set(requested.map(size=>cards.find(card=>card.width===size.width&&card.height===size.height)))],start=Math.min(...group.map(card=>cards.indexOf(card))),moves=[];
+      for(const [offset,item]of group.entries()){const delta=start+offset-cards.indexOf(item);if(delta&&item.move(delta,false))moves.push({move:item.move,delta});}
+      if(moves.length){orderUndo.push({delta:1,move:direction=>{for(const item of direction<0?[...moves].reverse():moves)if(!item.move(direction*item.delta,false))return false;return true;}});if(orderUndo.length>50)orderUndo.shift();orderRedo.length=0;updateControls();}
+      group[0].card.scrollIntoView({block:'nearest',inline:'nearest'});group[0].viewport.focus({preventScroll:true});return true;
+    },
     canShowSize:({width,height})=>valid(width)&&valid(height)&&!toggle.disabled&&!loadingSet&&!removals&&(sizes.length<8||sizes.some(size=>size[1]===width&&size[2]===height)),
     showSize(size){
       if(!this.canShowSize(size))return false;

@@ -932,7 +932,7 @@ window.addEventListener('retouch:viewport',()=>{
   viewportRenderPending=true;
   requestAnimationFrame(()=>{
     viewportRenderPending=false;
-    if(sel && !panelTasks && !panelInteractionFocused())renderPanel();
+    if(sel && !panelTasks){if(panelInteractionFocused())panelRenderDeferred=true;else renderPanel();}
   });
 });
 let renderedPanelSelection=null,panelPointer=null,panelRenderDeferred=false;
