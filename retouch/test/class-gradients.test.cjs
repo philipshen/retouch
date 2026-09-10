@@ -16,5 +16,17 @@ test('angular gradients normalize angle units without changing stop order or col
  assert.equal(V.parseGradients('conic-gradient(red, blue)')[0].angle,0);
  assert.equal(V.parseGradients('conic-gradient(at 20% 30%, red, blue)')[0].x,20);
  assert.equal(V.parseGradients('conic-gradient(from 3.141592653589793rad, red 0rad, blue 6.283185307179586rad)')[0].angle,180);
- for(const bad of ['conic-gradient(from 90degat 25% 50%, red, blue)','conic-gradient(from 361deg, red, blue)','conic-gradient(at 101% 20%, red, blue)','conic-gradient(red 270deg, blue 90deg)','conic-gradient(red 0px, blue 100px)','linear-gradient(red 0deg, blue 360deg)','conic-gradient(red 0%, blue 101%)'])assert.equal(V.parseGradients(bad),null,bad);
+ for(const bad of ['conic-gradient(from 90degat 25% 50%, red, blue)','conic-gradient(from 361deg, red, blue)','conic-gradient(at 101% 20%, red, blue)','conic-gradient(red 0px, blue 100px)','linear-gradient(red 0deg, blue 360deg)','conic-gradient(red 0%, blue 101%)'])assert.equal(V.parseGradients(bad),null,bad);
+});
+
+test('gradient stop fixup preserves implicit spacing, hard bands, and descending anchors',()=>{
+ for(const [value,positions]of [
+  ['linear-gradient(red, green, blue)',[0,50,100]],
+  ['linear-gradient(red 10%, orange, yellow, green 70%, blue)',[10,30,50,70,100]],
+  ['radial-gradient(red 0% 25%, blue 25% 100%)',[0,25,25,100]],
+  ['conic-gradient(red 0deg 90deg, blue, green .5turn, black)',[0,25,37.5,50,100]],
+  ['linear-gradient(red 80%, green, blue 20%, black)',[80,80,80,100]],
+  ['linear-gradient(red, green 70% 30%, blue)',[0,70,70,100]]
+ ]){const parsed=V.parseGradients(value);assert.deepEqual(parsed[0].stops.map(s=>s.position),positions,value);assert.deepEqual(V.parseGradients(V.serializeGradients(parsed)),parsed);}
+ for(const invalid of ['linear-gradient(red 0% 20% 30%, blue)', 'linear-gradient(red 20px 40%, blue)', 'linear-gradient(red, 50%, blue)', 'linear-gradient('+Array(9).fill('red 0% 100%').join(',')+')'])assert.equal(V.parseGradients(invalid),null);
 });

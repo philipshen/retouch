@@ -193,11 +193,27 @@
     if(radial){gradient.shape=radial[1];gradient.x=Number(radial[2]??50);gradient.y=Number(radial[3]??50);args.shift();if(gradient.x>100||gradient.y>100)return null;}
    }
    if(args.length<2||args.length>16)return null;
-   for(let i=0;i<args.length;i++){
-    const stop=(gradient.type==='conic'?/^(.*?)\s+((?:\d*\.)?\d+)(%|deg|turn|rad|grad)$/:/^(.*?)\s+((?:\d*\.)?\d+)(%)$/).exec(args[i]);
-    const color=stop?stop[1]:args[i],position=stop?Number(stop[2])*({'%':1,deg:100/360,turn:100,rad:100/(2*Math.PI),grad:.25}[stop[3]]):i===0?0:i===args.length-1?100:null;
-    if(position===null||position>100||!valid('color',color)||gradient.stops.length&&position<gradient.stops.at(-1).position)return null;
-    gradient.stops.push({color,position});
+   const positionPattern=gradient.type==='conic'?/^(.*)\s+((?:\d*\.)?\d+)(%|deg|turn|rad|grad)$/:/^(.*)\s+((?:\d*\.)?\d+)(%)$/;
+   for(const arg of args){
+    let color=arg;const positions=[];
+    for(let count=0;count<2;count++){
+     const stop=positionPattern.exec(color);if(!stop)break;
+     positions.unshift(Number(stop[2])*({'%':1,deg:100/360,turn:100,rad:100/(2*Math.PI),grad:.25}[stop[3]]));color=stop[1];
+    }
+    if(!valid('color',color)||positions.some(position=>!Number.isFinite(position)||position>100))return null;
+    for(const position of positions.length?positions:[null])gradient.stops.push({color,position});
+    if(gradient.stops.length>16)return null;
+   }
+   // Preserve CSS stop fixup: endpoint defaults, ascending anchors, then equal spacing.
+   // https://www.w3.org/TR/css-images-3/#color-stop-fixup
+   const stops=gradient.stops;stops[0].position??=0;stops.at(-1).position??=100;
+   let anchor=0;
+   for(let i=1;i<stops.length;i++){
+    if(stops[i].position===null)continue;
+    stops[i].position=Math.max(stops[anchor].position,stops[i].position);
+    const step=(stops[i].position-stops[anchor].position)/(i-anchor);
+    for(let j=anchor+1;j<i;j++)stops[j].position=stops[anchor].position+step*(j-anchor);
+    anchor=i;
    }
    result.push(gradient);
   }

@@ -182,7 +182,7 @@ test('HTML gradient stacks preserve stops and responsive scopes and refuse malfo
  assert.deepEqual(parseGradients(serializeGradients(fills)),fills);
  assert.equal(parseGradients('linear-gradient(to right, red, blue)')[0].angle,90);
  assert.equal(parseGradients('radial-gradient(at 25% 75%, red 0%, blue 100%)')[0].x,25);
- for(const invalid of ['url(https://example.com)','linear-gradient(90deg,red 0%)','linear-gradient(90deg,red 100%,blue 0%)','linear-gradient(90deg,red 0%,blue 101%)','linear-gradient(90deg,red 0%,blue 100%);display:none','linear-gradient(to top right, red, blue)','radial-gradient(ellipse at 101% 50%,red,blue)','linear-gradient(90deg,var(--x),blue)','linear-gradient(90deg,red</style>,blue)',Array(9).fill('linear-gradient(red, blue)').join(',')])assert.equal(css.valid('background-image',invalid),false,invalid);
+ for(const invalid of ['url(https://example.com)','linear-gradient(90deg,red 0%)','linear-gradient(90deg,red 0%,blue 101%)','linear-gradient(90deg,red 0%,blue 100%);display:none','linear-gradient(to top right, red, blue)','radial-gradient(ellipse at 101% 50%,red,blue)','linear-gradient(90deg,var(--x),blue)','linear-gradient(90deg,red</style>,blue)',Array(9).fill('linear-gradient(red, blue)').join(',')])assert.equal(css.valid('background-image',invalid),false,invalid);
  let source=edit(original,0,value,'background-image').edits[0].after;
  source=edit(source,768,'none','background-image').edits[0].after;
  assert.deepEqual(css.describe(resolve(source)).cssRules,{0:{'background-image':value},768:{'background-image':'none'}});
