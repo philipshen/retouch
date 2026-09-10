@@ -72,3 +72,10 @@ test('shared flex factors preserve shorthand basis and independent factors with 
  assert.deepEqual(shared.change(grown,'md:','flex-grow',null).split(' ').sort(),source.split(' ').sort());
  for(const value of [-1,Infinity,1001,'auto'])assert.throws(()=>shared.change(source,'md:','flex-grow',value),/supported shared style/);
 });
+
+
+test('shared flex basis retains units, shorthand factors, and independent screen overrides',()=>{
+ const source='basis-auto md:!flex-[1_0_100px] md:grow-2 md:basis-20 lg:basis-full';
+ for(const value of ['0','120px','2rem','50%','auto','content','min-content','max-content','fit-content']){const result=shared.change(source,'md:','flex-basis',value);assert.ok(result.includes('md:![flex-basis:'+value+']'));assert.ok(result.includes('md:!flex-[1_0_100px]'));assert.ok(result.includes('md:grow-2'));assert.ok(result.includes('lg:basis-full'));assert.ok(!result.includes('md:basis-20'));}
+ for(const value of ['-1px','100','NaNpx','100001px','50%;color:red','',null]){if(value===null){assert.ok(!shared.change(source,'md:','flex-basis',null).includes('md:basis-20'));continue;}assert.throws(()=>shared.change(source,'md:','flex-basis',value),/supported shared style/);}
+});
