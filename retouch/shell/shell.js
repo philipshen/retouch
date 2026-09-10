@@ -2439,6 +2439,10 @@ const layers = RetouchLayers.mount({
   onSelectMany:async(nodes,options)=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await selectMany(nodes,options);},
   onAction:action=>structureAction(action),
 });
+window.RetouchLayerNavigation={
+  available:direction=>mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&layers.canNavigate(direction),
+  run:direction=>{if(window.RetouchLayerNavigation.available(direction))return layers.navigate(direction).catch(error=>toast(error.message,'err'));}
+};
 function chooseComponentParent(info){
  const ids=new Set(info.componentMovement?.containers||[]),candidates=[...doc().querySelectorAll('[data-rt]')].filter(el=>ids.has(el.getAttribute('data-rt'))&&!layerLocks.locked(el));
  if(!candidates.length)return toast('No compatible container is visible on this page.','err');

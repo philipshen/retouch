@@ -194,7 +194,7 @@
       if(selectedSet.size>1){for(const button of Object.values(actionButtons))button.disabled=true;if(!info?.cssAuthoring){reason.textContent=selectedSet.size+' source layers selected. Shared styles apply together.';return;}actionButtons.duplicateElement.disabled=busy;actionButtons.deleteElement.disabled=busy;actionButtons.reparentElement.disabled=busy;actionButtons.frameSelection.disabled=busy||!s?.canFrame;reason.textContent=selectedSet.size+' layers selected. Frame, move, duplicate and delete apply to the selection.';return;}
       reason.textContent=info?.kind==='instance'?(info.componentMovement?.canReparent?'Drag into another frame or reorder sibling layers. Changes apply at every screen size.':info.componentMovement?.ok?'Ordering changes sibling source order at every screen size. CSS layout can affect visual order.':info.componentDuplicateReason||'Duplicate creates another instance with the shared definition.'):info?.svgMovement?'Send backward or bring forward changes which SVG shape appears on top.':info?.svgDeletion?'Delete removes this SVG layer and its contents. Undo restores it.':info?(s?.canInsert&&!s?.canDuplicate?'Add text or a frame inside this container.':s?.reason || (!s?.canDuplicate?'Duplicate is unavailable for a layer with an authored ID, key, or ref.':'')):'Select a layer to organize it.';
     }
-    async function navigate(direction){
+    function navigationTarget(direction){
       if(isBusy||selectedSet.size!==1)return false;
       const all=[];function flatten(items){for(const item of items){all.push(item);flatten(item.children);}}flatten(treeRoots);
       const current=all.find(isSelected);if(!current)return false;
@@ -206,10 +206,13 @@
         const siblings=current.parent?.children||treeRoots,index=siblings.indexOf(current),step=direction==='next'?1:-1;
         for(let n=1;n<siblings.length;n++){const item=siblings[(index+step*n+siblings.length)%siblings.length];if(allowed(item)){destination=item;break;}}
       }
-      if(!destination)return false;
+      return destination;
+    }
+    async function navigate(direction){
+      const destination=navigationTarget(direction);if(!destination)return false;
       search.value='';lockedOnly.checked=false;for(let parent=destination.parent;parent;parent=parent.parent)collapsed.delete(key(parent));render();await choose(destination);return true;
     }
-    return {attach,selection,navigate,refresh:()=>{render();void loadComponents();}};
+    return {attach,selection,navigate,canNavigate:direction=>!!navigationTarget(direction),refresh:()=>{render();void loadComponents();}};
   }
   const api={label,collect,mount,canNest,canNestMany};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayers=api;
