@@ -4,13 +4,16 @@
   const project=window.__RT_RENDERING?.stateScope?.project;
   const storageKey='retouch.comparisons.v1'+(typeof project==='string'&&/^[a-f0-9]{64}$/.test(project)?':'+project:'');
   let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore;
-  const removed=[];let removals=0;
+  const removed=[],orderUndo=[],orderRedo=[];let removals=0,undoOrder,redoOrder;
+  function clearOrderHistory(){orderUndo.length=0;orderRedo.length=0;}
   const valid=v=>Number.isInteger(v)&&v>=240&&v<=7680;
   try{const saved=JSON.parse(localStorage.getItem(storageKey));if(Array.isArray(saved)&&saved.length<=8&&saved.every(s=>Array.isArray(s)&&s.length===3&&typeof s[0]==='string'&&s[0].length<=80&&valid(s[1])&&valid(s[2])))sizes=saved;}catch{}
   function remember(){try{localStorage.setItem(storageKey,JSON.stringify(sizes));}catch{}window.RetouchScreens?.setSaved(sizes);}
   function current(){return {width:Number(document.getElementById('screenWidth').value),height:Number(document.getElementById('screenHeight').value)};}
   function updateControls(){
     const size=current();
+    if(undoOrder)undoOrder.disabled=!orderUndo.length||removals>0||loadingSet;
+    if(redoOrder)redoOrder.disabled=!orderRedo.length||removals>0||loadingSet;
     if(pin){pin.disabled=sizes.length>=8||!valid(size.width)||!valid(size.height)||sizes.some(s=>s[1]===size.width&&s[2]===size.height);pin.title=sizes.length>=8?'Remove a comparison to add another':'Add the current canvas dimensions';}
     if(restore){
       const last=removed.at(-1);restore.hidden=!last;restore.disabled=!last||removals>0||sizes.length>=8||sizes.some(size=>size[1]===last.size[1]&&size[2]===last.size[2]||size[0].toLowerCase()===last.size[0].toLowerCase());
@@ -135,10 +138,18 @@
       sizes.splice(index,0,last.size);addCard(last.size,next);const item=cards.pop();cards.splice(index,0,item);
       item.frame.src=path()||'/';remember();updateControls();item.card.scrollIntoView({block:'nearest'});
     };rail.append(restore);
+    const orderHistory=document.createElement('div');orderHistory.className='compare-header';
+    undoOrder=document.createElement('button');redoOrder=document.createElement('button');
+    for(const button of [undoOrder,redoOrder]){button.type='button';button.className='control-button';}
+    undoOrder.textContent='Undo screen order';redoOrder.textContent='Redo screen order';
+    function replay(from,to,reverse){if(removals||loadingSet||!from.length)return;const entry=from.at(-1);if(entry.move(reverse?-entry.delta:entry.delta,false)){from.pop();to.push(entry);updateControls();const button=reverse?undoOrder:redoOrder;(button.disabled?(reverse?redoOrder:undoOrder):button).focus();}}
+    undoOrder.onclick=()=>replay(orderUndo,orderRedo,true);redoOrder.onclick=()=>replay(orderRedo,orderUndo,false);
+    orderHistory.append(undoOrder,redoOrder);rail.append(orderHistory);
     for(const size of sizes)addCard(size);
     updateControls();
   }
   function addCard(size,before=null){
+      clearOrderHistory();
       let name=size[0],width=size[1],height=size[2];
       const card=document.createElement('section');card.className='compare-card';card.setAttribute('aria-label',name+' comparison');
       const header=document.createElement('div');header.className='compare-header';
@@ -158,7 +169,7 @@
       const edit=document.createElement('button');edit.className='control-button';edit.textContent='Edit';edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');
       edit.onclick=()=>window.RetouchScreens.set({width,height});header.append(edit);
       const remove=document.createElement('button');remove.className='control-button';remove.textContent='×';remove.setAttribute('aria-label','Remove '+name+' comparison');header.append(remove);
-      remove.onclick=async()=>{remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;card.inert=true;removals++;removed.push({size:[...size],index});if(removed.length>8)removed.shift();sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);cards=cards.filter(c=>c!==item);updateControls();await unload(frame);card.remove();removals--;updateControls();};
+      remove.onclick=async()=>{remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;card.inert=true;clearOrderHistory();removals++;removed.push({size:[...size],index});if(removed.length>8)removed.shift();sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);cards=cards.filter(c=>c!==item);updateControls();await unload(frame);card.remove();removals--;updateControls();};
       const viewport=document.createElement('div');viewport.className='compare-viewport';viewport.tabIndex=0;viewport.setAttribute('role','button');viewport.setAttribute('aria-label','Edit from '+name+' comparison');viewport.title='Click a layer to select it on the main canvas at this size. Style scope stays unchanged.';
       const frame=document.createElement('iframe');frame.title=name+' comparison preview';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');frame.style.width=width+'px';frame.style.height=height+'px';
       const overlay=document.createElement('div');overlay.className='compare-overlay';
@@ -207,15 +218,15 @@
       const order=document.createElement('div');order.className='compare-header';
       const up=document.createElement('button'),down=document.createElement('button');
       up.type=down.type='button';up.className=down.className='control-button';up.textContent='Move up';down.textContent='Move down';order.append(up,down);
-      function move(delta){
+      function move(delta,record=true){
         const index=sizes.indexOf(size),next=index+delta;if(index<0||next<0||next>=sizes.length||loadingSet||removals)return;
         const item=cards[index],anchor=delta<0?cards[next].card:cards[next].card.nextSibling;
         // moveBefore retains the iframe's browsing context. Older engines reload
         // moved frames, so restore the document scroll after that load.
         if(typeof rail.moveBefore==='function')rail.moveBefore(card,anchor);
         else{let scroll;try{scroll={x:frame.contentWindow.scrollX,y:frame.contentWindow.scrollY};}catch{}if(scroll)frame.addEventListener('load',()=>{try{frame.contentWindow.scrollTo({left:scroll.x,top:scroll.y,behavior:'instant'});}catch{}},{once:true});rail.insertBefore(card,anchor);}
-        sizes.splice(index,1);sizes.splice(next,0,size);cards.splice(index,1);cards.splice(next,0,item);remember();updateControls();
-        const control=delta<0?up:down;if(control.disabled)(delta<0?down:up).focus();else control.focus();
+        sizes.splice(index,1);sizes.splice(next,0,size);cards.splice(index,1);cards.splice(next,0,item);if(record){orderUndo.push({move,delta});if(orderUndo.length>50)orderUndo.shift();orderRedo.length=0;}remember();updateControls();
+        const control=delta<0?up:down;if(control.disabled)(delta<0?down:up).focus();else control.focus();return true;
       }
       up.onclick=()=>move(-1);down.onclick=()=>move(1);
       const rotate=document.createElement('button');rotate.type='button';rotate.className='control-button';rotate.textContent='Rotate';rotate.setAttribute('aria-label','Rotate '+name+' comparison');rotate.onclick=()=>applyDimensions(height,width);dimensions.append(rotate);
@@ -274,6 +285,7 @@
     try{frame.contentWindow.stop();frame.src='about:blank';}catch{done();}
   });}
   async function dispose(){
+    clearOrderHistory();
     // Unload each browsing context before detaching it, including frames whose
     // framework bootstrap is still awaiting scripts or network responses.
     await Promise.all(cards.map(({frame})=>unload(frame)));

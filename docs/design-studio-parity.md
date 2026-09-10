@@ -9575,3 +9575,24 @@ All runs exited zero with no page errors. Evidence:
 The controls were visually inspected in /private/tmp/retouch-compare-order.png.
 Syntax and git diff --check passed. Native launches remain paused; full Figma
 parity and trusted brew installation remain unfinished.
+
+### Undo and redo comparison screen ordering (2026-09-10)
+
+The comparison rail now includes Undo screen order and Redo screen order. Up to
+50 moves are retained while the current comparison set is open, including moves
+of different screens. Undo/Redo update the saved project order and screen picker;
+a new move clears the redo branch. Adding, removing, restoring or loading screens
+and closing the comparison rail clear this session history so stale callbacks
+cannot act on replaced preview frames. These controls affect screen organization,
+not the independent source-edit history.
+
+Chromium and WebKit passed multistep Undo/Redo, branch replacement, remove/restore
+invalidation, close/reopen history reset, persistent screen order and unchanged
+source. The full existing nested scrolling suite also passed in both engines.
+All processes exited zero with no page errors. Evidence:
+/private/tmp/retouch-screen-order-history-chromium-final.log,
+/private/tmp/retouch-screen-order-history-webkit-final.log.
+Syntax and git diff --check passed. The existing WebKit move fallback still
+reloads preview application state while restoring document scroll. Persistent
+screen history across sessions and unified document history remain unfinished,
+as do full Figma parity and trusted brew installation. Native launches stay paused.
