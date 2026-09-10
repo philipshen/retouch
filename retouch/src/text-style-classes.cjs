@@ -38,7 +38,9 @@ function compose(classes,values,prefix='',remove=[]){
   const plain=inspector.base(part.value);
   if(/^\[font:/.test(plain)||Object.hasOwn(values,'font-variant-numeric')&&/^\[font-variant:/.test(plain))throw Error('Expand the font shorthand before applying a text style.');
   if(hasSizeLeading(plain)&&keys.some(key=>key==='font-size'||key==='line-height')){
-   if(!keys.includes('font-size')||!keys.includes('line-height'))throw Error('This utility combines font size and line height. Apply both properties together.');
+   if(!keys.includes('font-size')||!keys.includes('line-height')){
+    for(const value of require('../shell/react-selection.js').expandSizeLeading(part.value).split(/\s+/))if(!keys.some(property=>matchers[property](inspector.base(value))))retained.push(prefix+value);
+   }
    continue;
   }
   if(!keys.some(property=>matchers[property](plain)))retained.push(token);

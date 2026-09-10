@@ -5976,3 +5976,31 @@ named classes and undo to the exact source and original computed families. Prior
 shared typography, linked-style, history and transfer flows also pass. Native
 launches remain paused; full design parity and verified desktop distribution
 remain unfinished.
+
+### Independent size and leading from combined utilities (2026-09-09)
+
+Shared React typography now decomposes explicit combined size/leading utilities
+such as `text-lg/7` into separate tokens in the selected scope. Font-size edits
+retain authored leading; line-height edits retain authored size. Important markers,
+arbitrary bracket values and unrelated responsive/state variants are preserved.
+Property reset also removes only its side of the combined utility. Incomplete
+utilities still refuse. General CSS font shorthands and all arbitrary size
+expressions remain unfinished.
+
+Saved text-style composition uses the same decomposition for partial styles,
+removing the prior requirement that a style supply size and line height together.
+This improves the class-based React/Liquid application planners without altering
+other property ownership or local override rules.
+
+All 450 unit tests passed, exit 0:
+/private/tmp/retouch-coupled-type-final-units.log. React browser flows exited 0 in
+/private/tmp/retouch-coupled-type-chromium.log and
+/private/tmp/retouch-coupled-type-webkit.log. Two layers begin with distinct combined
+utilities; changing their size preserves each computed line height, changing their
+line height preserves each size, and undo restores exact source. Existing linked
+styles and library flows also pass. Standalone compiled Tailwind render tests for
+partial saved styles passed in Chromium and WebKit, exit 0:
+/private/tmp/retouch-coupled-style-render.log and
+/private/tmp/retouch-coupled-style-render-webkit.log. These assert the unchanged
+computed counterpart property. Native launches remain paused; full design parity
+and verified desktop distribution remain incomplete.

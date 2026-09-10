@@ -21,9 +21,9 @@ test('shared typography edits canonical linked classes and retain other scopes a
  for(const [property,value,token]of cases){const next=change(source,'md:',property,value);assert.ok(next.includes('md:!'+token),next);assert.ok(next.includes('p-4'));assert.ok(next.includes('hover:text-red-500'));assert.ok(next.includes('text-sm'));assert.equal(change(next,'md:',property,value),next);assert.ok(!change(next,'md:',property,null).includes('md:!'+token));}
  assert.equal(change('!text-lg','md:','font-size',40),'!text-lg md:![font-size:40px]');
 });
-test('shared typography rejects invalid values and coupled source ownership without changing classes',()=>{
+test('shared typography rejects invalid values and font shorthands without changing classes',()=>{
  for(const [property,value]of [['font-size',-1],['font-size',2001],['font-weight',0],['font-weight',500.5],['line-height',Infinity],['letter-spacing',-1001],['text-align','left;bad'],['font-style','oblique 90deg'],['text-transform','bad']])assert.throws(()=>change('p-4','',property,value));
- assert.throws(()=>change('md:text-lg/7','md:','font-size',40),/combines/);assert.throws(()=>change('md:text-lg/7','md:','line-height',null),/combines/);
+ assert.equal(change('md:text-lg/7','md:','font-size',40),'md:leading-7 md:[font-size:40px]');assert.equal(change('md:text-lg/7','md:','line-height',null),'md:text-lg');
  assert.throws(()=>change('[font:italic_16px_serif]','','font-weight',500),/shorthand/);
  assert.equal(change('md:text-lg/7','','font-size',40),'md:text-lg/7 [font-size:40px]');
 });
@@ -38,4 +38,12 @@ test('shared explicit typography overrides named page styles without removing th
  assert.equal(change('editorial p-4','','font-family','monospace',document),'editorial p-4 ![font-family:monospace]');
  assert.equal(change('editorial p-4','','font-size',40,document),'editorial p-4 ![font-size:40px]');
  assert.equal(change('editorial p-4 ![font-family:monospace]','','font-family',null,document),'editorial p-4');
+});
+
+test('shared edits split combined size and leading while retaining scope and importance',()=>{
+ assert.equal(change('p-4 text-lg/7 md:text-xl/9 hover:text-sm/6','','font-size',40),'md:text-xl/9 hover:text-sm/6 p-4 leading-7 [font-size:40px]');
+ assert.equal(change('md:!text-lg/7','md:','line-height',50),'md:!text-lg md:![line-height:50px]');
+ assert.equal(change('text-[20px]/[calc(1/2)]!','','font-size',24),'!leading-[calc(1/2)] ![font-size:24px]');
+ assert.equal(change('text-lg/7','','font-size',null),'leading-7');
+ assert.throws(()=>change('text-lg/','','font-size',24),/incomplete/);
 });

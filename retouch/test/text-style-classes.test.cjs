@@ -32,7 +32,7 @@ test('style composition replaces only owned typography in the chosen scope',()=>
 });
 test('partial composition does not silently discard coupled utility properties or shorthands',()=>{
  const {compose}=require('../src/text-style-classes.cjs');
- assert.throws(()=>compose('text-lg/7',{'font-size':'40px'}),/both properties/);assert.throws(()=>compose('text-lg/7',{'line-height':'1.2'}),/both properties/);
+ assert.equal(compose('text-lg/7',{'font-size':'40px'}),'leading-7 ![font-size:40px]');assert.equal(compose('text-lg/7',{'line-height':'1.2'}),'text-lg ![line-height:1.2]');assert.equal(compose('md:!text-lg/7',{'font-size':'40px'},'md:'),'md:!leading-7 md:![font-size:40px]');
  assert.throws(()=>compose('![font:italic_20px_serif]',{'font-size':'40px'}),/shorthand/);
  assert.doesNotThrow(()=>compose('text-[calc(1em/2)]',{'font-size':'40px'}));
  assert.throws(()=>compose('p-4',{'font-size':'40px'},'md:hover:'),/scope/);
