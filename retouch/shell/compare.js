@@ -4,7 +4,7 @@
   const project=window.__RT_RENDERING?.stateScope?.project;
   const storageKey='retouch.comparisons.v1'+(typeof project==='string'&&/^[a-f0-9]{64}$/.test(project)?':'+project:'');
   let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore,allPreviews,revealAll;
-  const collapsedScreens=new WeakSet(),sizeHistories=new WeakMap(),lockedRatios=new WeakSet();let previewSerial=0;
+  const collapsedScreens=new WeakSet(),sizeHistories=new WeakMap(),nameHistories=new WeakMap(),lockedRatios=new WeakSet();let previewSerial=0;
   const removed=[],orderUndo=[],orderRedo=[];let removals=0,undoOrder,redoOrder;
   function clearOrderHistory(){orderUndo.length=0;orderRedo.length=0;}
   const valid=v=>Number.isInteger(v)&&v>=240&&v<=7680;
@@ -17,6 +17,7 @@
   function snapshotSize(size){
     const copy=[...size],history=sizeHistories.get(size);if(lockedRatios.has(size))lockedRatios.add(copy);if(collapsedScreens.has(size))collapsedScreens.add(copy);
     if(history){const clone=entry=>({...entry,before:[...entry.before],after:[...entry.after],ratioBefore:[...entry.ratioBefore],ratioAfter:[...entry.ratioAfter]});sizeHistories.set(copy,{ratio:[...history.ratio],undo:history.undo.map(clone),redo:history.redo.map(clone)});}
+    const names=nameHistories.get(size);if(names)nameHistories.set(copy,{undo:names.undo.map(entry=>({...entry})),redo:names.redo.map(entry=>({...entry}))});
     return copy;
   }
   function current(){return {width:Number(document.getElementById('screenWidth').value),height:Number(document.getElementById('screenHeight').value)};}
@@ -184,12 +185,31 @@
       const header=document.createElement('div');header.className='compare-header';
       const label=document.createElement('button');label.type='button';label.className='control-button';label.style.cssText='flex:1;text-align:left;min-width:0;overflow-wrap:anywhere';label.title='Rename this comparison';
       const nameInput=document.createElement('input');nameInput.type='text';nameInput.maxLength=80;nameInput.hidden=true;nameInput.style.cssText='min-width:0;width:100%;box-sizing:border-box';
+      const names=nameHistories.get(size)||{undo:[],redo:[]};nameHistories.set(size,names);
+      const nameHistory=document.createElement('div');nameHistory.className='compare-header';
+      const undoName=document.createElement('button'),redoName=document.createElement('button');
+      for(const button of [undoName,redoName]){button.type='button';button.className='control-button';}
+      undoName.textContent='Undo name';redoName.textContent='Redo name';nameHistory.append(undoName,redoName);
+      function updateNameHistory(){undoName.disabled=!names.undo.length;redoName.disabled=!names.redo.length;nameHistory.hidden=!names.undo.length&&!names.redo.length;undoName.setAttribute('aria-label','Undo '+name+' comparison name');redoName.setAttribute('aria-label','Redo '+name+' comparison name');}
+      function replayName(redo){
+        const from=redo?names.redo:names.undo,to=redo?names.undo:names.redo,entry=from.at(-1);if(!entry)return;
+        const next=redo?entry.after:entry.before;
+        if(sizes.some(other=>other!==size&&other[0].toLowerCase()===next.toLowerCase())){dimensionError.textContent='Another comparison already has this name.';dimensionError.hidden=false;return;}
+        name=next;size[0]=name;nameInput.value=name;from.pop();to.push(entry);dimensionError.hidden=true;remember();updateLabels();updateControls();label.focus();
+      }
+      undoName.onclick=()=>replayName(false);redoName.onclick=()=>replayName(true);
+      for(const target of [label,nameInput,nameHistory])target.addEventListener('keydown',event=>{
+        if(event.defaultPrevented||event.isComposing||event.altKey||!(event.metaKey||event.ctrlKey))return;
+        const key=event.key.toLowerCase();if(key!=='z'&&key!=='y'||event.target===nameInput&&nameInput.value!==name)return;
+        event.preventDefault();event.stopPropagation();replayName(key==='y'||event.shiftKey);
+      });
+      label.title='Rename this comparison. Command/Ctrl+Z undoes its name; Command/Ctrl+Shift+Z redoes it.';
       label.onclick=()=>{nameInput.value=name;nameInput.hidden=false;label.hidden=true;nameInput.focus();nameInput.select();};
       function finishName(cancel=false){
         if(nameInput.hidden)return;
         const next=nameInput.value.trim().replace(/\s+/g,' ');
         if(!cancel&&(!next||sizes.some(other=>other!==size&&other[0].toLowerCase()===next.toLowerCase()))){dimensionError.textContent=next?'Another comparison already has this name.':'Enter a comparison name.';dimensionError.hidden=false;return;}
-        if(!cancel){name=next;size[0]=name;remember();}
+        if(!cancel&&next!==name){names.undo.push({before:name,after:next});if(names.undo.length>50)names.undo.shift();names.redo.length=0;name=next;size[0]=name;remember();}
         dimensionError.hidden=true;nameInput.hidden=true;label.hidden=false;updateLabels();updateControls();
       }
       nameInput.onblur=()=>finishName();
@@ -300,6 +320,7 @@
       function setCollapsed(hidden){previewBody.hidden=hidden;if(hidden)collapsedScreens.add(size);else collapsedScreens.delete(size);updateDisclosure();}
       disclosure.onclick=()=>{setCollapsed(!previewBody.hidden);remember();updateControls();};
       function updateLabels(){
+        updateNameHistory();
         updateAspect();
         updateDisclosure();
         label.textContent=name===`Custom ${width} × ${height}`?name:`${name} · ${width} × ${height}`;
@@ -312,7 +333,7 @@
       }
       for(const [control,action]of [[label,'rename'],[edit,'edit'],[reveal,'reveal'],[disclosure,'visibility']]){control.dataset.comparisonAction=action;control.dataset.comparisonCommand=previewBody.id+'-'+action;}
       updateLabels();updateSizeHistory();
-      viewport.append(overlay);previewBody.append(viewport,message,reveal,scopeMessage,scopeButton);card.append(header,dimensions,dimensionError,sizeHistory,order,disclosure,previewBody);rail.insertBefore(card,before);
+      viewport.append(overlay);previewBody.append(viewport,message,reveal,scopeMessage,scopeButton);card.append(header,nameHistory,dimensions,dimensionError,sizeHistory,order,disclosure,previewBody);rail.insertBefore(card,before);
       function activate(event){
         try{
           const d=frame.contentDocument,loc=frame.contentWindow.location;

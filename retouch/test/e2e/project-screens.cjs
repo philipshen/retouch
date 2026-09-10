@@ -15,6 +15,13 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   await page.getByRole('button',{name:'Compare screens',exact:true}).click();await page.getByRole('button',{name:'Pin current size',exact:true}).click();
   await page.getByRole('button',{name:'Rename Custom 1120 × 844 comparison',exact:true}).click();await page.getByLabel('Comparison name',{exact:true}).filter({visible:true}).fill('Reading view');await page.getByLabel('Comparison name',{exact:true}).filter({visible:true}).press('Enter');
   assert.equal(await picker.locator('option[value="saved:1120x844"]').textContent(),'Reading view · 1120 × 844');
+  await page.frameLocator('iframe[title="Reading view comparison preview"]').locator('body').evaluate(()=>window.nameHistoryMarker='retained');
+  await page.getByRole('button',{name:'Undo Reading view comparison name',exact:true}).click();assert.equal(await picker.locator('option[value="saved:1120x844"]').textContent(),'Custom 1120 × 844 · 1120 × 844');
+  await page.getByRole('button',{name:'Rename Custom 1120 × 844 comparison',exact:true}).press('Meta+Shift+z');assert.equal(await page.frameLocator('iframe[title="Reading view comparison preview"]').locator('body').evaluate(()=>window.nameHistoryMarker),'retained','name history preserves the preview document');
+  await page.getByRole('button',{name:'Rename Tablet comparison',exact:true}).click();const conflictName=page.getByLabel('Comparison name',{exact:true}).filter({visible:true});await conflictName.fill('Custom 1120 × 844');await conflictName.press('Enter');
+  await page.getByRole('button',{name:'Undo Reading view comparison name',exact:true}).click();await page.getByText('Another comparison already has this name.',{exact:true}).waitFor();await page.getByRole('button',{name:'Rename Reading view comparison',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Undo Custom 1120 × 844 comparison name',exact:true}).click();await page.getByRole('button',{name:'Rename Reading view comparison',exact:true}).press('Control+z');await page.getByRole('button',{name:'Redo Custom 1120 × 844 comparison name',exact:true}).click();
+
   for(const [axis,initial]of [['width',1120],['height',844]]){
    const field=page.getByLabel('Reading view comparison '+axis,{exact:true}),preview=page.frameLocator('iframe[title="Reading view comparison preview"]');
    const dimension=()=>preview.locator('body').evaluate((el,axis)=>axis==='width'?innerWidth:innerHeight,axis);
@@ -44,6 +51,7 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   await page.getByRole('button',{name:'Undo remove: Reading view',exact:true}).click();assert.equal(await picker.inputValue(),'saved:1120x844');
   for(const restored of ['removed view','reopened rail']){
    if(restored==='reopened rail'){await page.getByRole('button',{name:'Compare screens',exact:true}).click();await page.getByRole('button',{name:'Compare screens',exact:true}).click();}
+   await page.getByRole('button',{name:'Undo Reading view comparison name',exact:true}).click();await page.getByRole('button',{name:'Redo Custom 1120 × 844 comparison name',exact:true}).click();
    assert.equal(await ratio().getAttribute('aria-pressed'),'true',restored+' retains ratio lock');
    const redoSize=page.getByRole('button',{name:'Redo Reading view comparison size',exact:true});assert.equal(await redoSize.isDisabled(),false,restored+' retains size history');await redoSize.click();assert.deepEqual(await comparisonSize(),[1130,844]);
    await page.getByRole('button',{name:'Undo Reading view comparison size',exact:true}).click();assert.deepEqual(await comparisonSize(),[1120,844]);
