@@ -349,6 +349,19 @@
     const input = number(row,'Opacity (%)',Number(css.opacity)*100,0,100,value=>save(replace(info.className,t=>t.startsWith('opacity-'),`opacity-[${round(value/100)}]`)));
     const slider = document.createElement('input'); slider.type='range'; slider.min=0; slider.max=100; slider.value=input.value; slider.setAttribute('aria-label','Opacity');
     slider.oninput=()=>{input.value=slider.value;}; slider.onchange=()=>input.onchange(); row.append(slider); sec.append(row);
+    for(const [property,label]of [['mix-blend-mode','Blend mode'],['isolation','Blend group']]){
+      const values=root.RetouchHTMLCSSValues.options[property],current=css.getPropertyValue(property);
+      const write=value=>{
+        let next=root.RetouchReactSelection.change(info.className,'',property,value,el.ownerDocument);
+        const matches=token=>property==='mix-blend-mode'?/^mix-blend-|^\[mix-blend-mode:/.test(token):/^(isolate|isolation-auto)$|^\[isolation:/.test(token);
+        if(value!==null&&tokens(info.anchorInheritedClasses).some(token=>/^!|!$/.test(token)&&matches(base(token)||'')))next=replace(next,matches,'!'+(property==='mix-blend-mode'?'mix-blend-'+value:value==='auto'?'isolation-auto':'isolate'));
+        save(next);
+      };
+      const choices=[...new Set([current,...values])].filter(value=>el.ownerDocument.defaultView.CSS.supports(property,value));
+      const control=select(sec,label,choices.map(value=>[value,property==='isolation'?(value==='isolate'?'Isolate children':'Blend with surroundings'):value]),current,write);
+      const reset=button('Reset '+label.toLowerCase(),()=>write(null));reset.disabled=root.RetouchReactSelection.change(info.className,'',property,null)===info.className;sec.append(reset);
+      if(el.style.getPropertyValue(property)){control.disabled=true;reset.disabled=true;note(sec,'An inline '+label.toLowerCase()+' controls this layer.');}
+    }
     const widthToken=t=>/^border(?:-(?:[trblxyse]))?(?:-(?:\d+(?:\.\d+)?|\[(?:length:[^\]]+|[-.\d][^\]]*)\]))?$/.test(t);
     const borderWidths=['Top','Right','Bottom','Left'].map(side=>css['border'+side+'Width']);
     const borderWidth=number(sec,'Border width (px)',borderWidths.every(v=>v===borderWidths[0])?parseFloat(borderWidths[0]):NaN,0,100,v=>{
