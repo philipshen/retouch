@@ -2544,12 +2544,13 @@ async function structureAction(action) {
     const result=await api('POST','/rt/__api/op',{type:action==='before'||action==='after'?'moveElement':action,direction:action,id:info.id,fileHash:info.fileHash||info.hash,context:info.context,...(action==='pasteElement'?{copiedId:layerClipboard.id,copiedHash:layerClipboard.hash}:{})});
     if(!result?.ok){toast(result?.reason||result?.error||'Could not change this layer','err');return;}
     const parentId=result.parentId||info.structure?.parentId;
-    editorHistory.record({type:'structure',id:parentId||info.id,undoId:result.undoId,context:info.context});
+    const selectionAfter=result.createdId||(action==='deleteElement'?parentId:null);
+    editorHistory.record({type:selectionAfter?'structureSelection':'structure',id:parentId||info.id,undoId:result.undoId,context:info.context,...(selectionAfter?{selectionBefore:[info.id],selectionAfter:[selectionAfter]}:{})});
     const fresh=parentId?await api('GET',resolveUrl(parentId,info.context)):null;
     if(fresh?.ok) {
       await refreshWrittenElement(fresh.element,el=>JSON.stringify([...el.children].map(signature))===JSON.stringify(expected));
-      sel={hostId:parentId,instanceId:null,scope:'host',info:fresh.element};renderPanel();
-    } else {await reloadFrame();clearSelection();}
+      sel={hostId:parentId,instanceId:null,scope:'host',info:fresh.element};if(result.createdId)await restoreLayerSelection([result.createdId]);renderPanel();
+    } else {await reloadFrame();clearSelection();if(result.createdId){await restoreLayerSelection([result.createdId]);if(sel)renderPanel();}}
     toast('Layer updated','ok');
   } finally {busyPanel(false);}
 }

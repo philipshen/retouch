@@ -57,3 +57,11 @@ test('HTML structural ranges reject implicit markup and remap linked style ident
  assert.equal(html.planOp(resolved,{type:'moveElement',direction:'after'}).ok,true);
  assert.equal(html.planOp(resolved,{type:'deleteElement'}).ok,true);
 });
+for(const adapter of [react,liquid,html])test(adapter.name+' identifies duplicated and pasted roots for selection',()=>{
+ const markup='<div><a>A</a><b>B</b><i>I</i></div>',source=adapter===react?'function View(){return '+markup+'}':markup,resolved=target(adapter,source);
+ for(const type of ['duplicateElement','pasteElement']){
+  const copied=resolved.elements.find(element=>(element.node?.openingElement?.name.name||element.tag)==='a'),plan=adapter.planOp(resolved,{type,fileHash:resolved.hash,...(type==='pasteElement'?{copiedId:copied.id,copiedHash:resolved.hash}:{})});assert.equal(plan.ok,true,plan.reason);
+  const elements=adapter.collect(plan.edits[0].after,resolved.relPath).elements,created=elements.find(element=>element.id===plan.createdId);assert.ok(created);assert.notEqual(created.id,resolved.element.id);assert.notEqual(created.id,copied.id);assert.equal(created.node?.openingElement?.name.name||created.tag,type==='pasteElement'?'a':'b');
+  const siblings=elements.filter(element=>['a','b','i'].includes(element.node?.openingElement?.name.name||element.tag));assert.equal(siblings[2].id,created.id);
+ }
+});

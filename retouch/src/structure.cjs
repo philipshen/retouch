@@ -97,7 +97,7 @@ function planOp(resolved,op,language) {
     const items=ranges(resolved,language),index=items.findIndex(r=>r.selected),source=resolved.source;
     if(index<0) throw Error('The source element could not be located.');
     const node=items[index],chunk=source.slice(node.start,node.end);
-    let next;
+    let next,createdId;
     if(op.type==='duplicateElement'||op.type==='pasteElement') {
       let copied=node;
       if(op.type==='pasteElement') {
@@ -112,7 +112,11 @@ function planOp(resolved,op,language) {
       const gap=previous?source.slice(previous.end,node.start):'\n'+(source.slice(0,node.start).match(/(?:^|\n)([ \t]*)$/)?.[1]||'');
       const cloned=language==='html'?require('./html-css.cjs').clone(resolved,copied):null;
       next=source.slice(0,node.end)+gap+(cloned?.chunk??source.slice(copied.start,copied.end))+source.slice(node.end);
+      const adapter=require('./adapters/'+language+'.cjs'),start=element=>language==='react'?element.node.start:language==='html'?element.location.startOffset:element.tagStart;
+      const createdAt=node.end+gap.length,created=adapter.collect(next,resolved.relPath).elements.filter(element=>start(element)===createdAt);
+      if(created.length!==1)throw Error('The new copy could not be identified in source.');createdId=created[0].id;
       if(cloned)next=cloned.append(next);
+      if(!adapter.collect(next,resolved.relPath).elements.some(element=>element.id===createdId))throw Error('The new copy lost its source identity.');
     } else if(op.type==='deleteElement') {
       next=source.slice(0,node.start)+source.slice(node.end);
     } else if(op.type==='moveElement') {
@@ -124,7 +128,7 @@ function planOp(resolved,op,language) {
       items.forEach((r,i)=>{next+=chunks[i]+source.slice(r.end,items[i+1]?.start??source.length);});
     } else throw Error('Unknown structural operation.');
     if(language==='react') parseSource(next);
-    return {ok:true,hash:contentHash(next),structural:true,parentId:items.parentId,edits:[{file:resolved.file,before:source,after:next}]};
+    return {ok:true,hash:contentHash(next),structural:true,parentId:items.parentId,...(createdId?{createdId}:{}),edits:[{file:resolved.file,before:source,after:next}]};
   } catch(error) {return refuse(error.message);}
 }
 module.exports={types,describe,planOp,htmlRange};

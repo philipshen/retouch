@@ -9771,3 +9771,29 @@ Syntax and diff checks passed.
 Complete inspector command coverage, source selection continuity across every
 structural operation and full Figma parity remain unfinished. Native launches
 remain paused, and trusted brew installation remains unverified.
+
+### Keep newly duplicated and pasted host layers selected (2026-09-10)
+
+Literal host duplicate/paste plans now return the new root's verified source ID
+for React, Liquid and HTML. The planner locates it at the insertion offset and
+rechecks identity after HTML's linked-style cloning step. The shell selects that
+copy after rendering instead of the parent, with a reload fallback for parents
+without an indexed host. Source history records selection before/after; deletion
+also records selection so Undo reselects the restored layer.
+
+All 761 unit tests passed, including new duplicate/paste identity checks across
+the three adapters. Chromium and WebKit passed actual HTML duplicate and paste
+selection, duplicate Undo/Redo selection, deletion Undo reselection, exact source
+restoration and the full Actions flow. Both browser processes exited zero with
+no page errors. Evidence:
+/private/tmp/retouch-copy-selection-units.log,
+/private/tmp/retouch-copy-selection-chromium-final.log,
+/private/tmp/retouch-copy-selection-webkit-final.log.
+The first browser checks exposed missing deletion-history selection metadata,
+which was then implemented and verified. Syntax and diff checks passed.
+
+React/Liquid copy identities are unit-verified here; the new selection flow has
+not been exercised against live Liquid/Shopify or every React rendering pattern.
+Selection identity through arbitrary runtime occurrences and every structural
+operation remains incomplete. Full Figma parity and trusted brew installation
+remain unfinished; native app launches remain paused.
