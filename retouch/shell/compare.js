@@ -231,13 +231,22 @@
         scopeButton.textContent='Edit styles: '+width+' px and larger';scopeButton.setAttribute('aria-label','Edit styles from '+width+' px');
         remember();updateControls();updateSizeHistory();return true;
       };
-      const replaySize=(from,to,undo)=>{const entry=from.at(-1);if(!entry)return;const target=undo?entry.before:entry.after;if(applyDimensions(...target,false)){from.pop();to.push(entry);updateSizeHistory();const button=undo?undoSize:redoSize;(button.disabled?(undo?redoSize:undoSize):button).focus();}};
+      const replaySize=(from,to,undo,moveFocus=true)=>{const entry=from.at(-1);if(!entry)return;const target=undo?entry.before:entry.after;if(applyDimensions(...target,false)){from.pop();to.push(entry);updateSizeHistory();const button=undo?undoSize:redoSize;if(moveFocus)(button.disabled?(undo?redoSize:undoSize):button).focus();}};
       undoSize.onclick=()=>replaySize(sizeUndo,sizeRedo,true);redoSize.onclick=()=>replaySize(sizeRedo,sizeUndo,false);
+      for(const target of [dimensions,sizeHistory])target.addEventListener('keydown',event=>{
+        if(event.defaultPrevented||event.isComposing||event.altKey||!(event.metaKey||event.ctrlKey))return;
+        const key=event.key.toLowerCase(),redo=key==='y'||key==='z'&&event.shiftKey;if(key!=='z'&&key!=='y')return;
+        const input=event.target===inputs.width?inputs.width:event.target===inputs.height?inputs.height:null;
+        // An uncommitted number draft keeps the browser's native text history.
+        if(input&&input.value!==String(input===inputs.width?width:height))return;
+        event.preventDefault();event.stopPropagation();replaySize(redo?sizeRedo:sizeUndo,redo?sizeUndo:sizeRedo,!redo,!input);
+      });
+      undoSize.title='Undo this screen size: Command/Ctrl+Z in the size controls.';redoSize.title='Redo this screen size: Command/Ctrl+Shift+Z or Ctrl+Y in the size controls.';
       for(const axis of ['width','height']){
         const field=document.createElement('label');field.textContent=axis==='width'?'W':'H';
         const input=document.createElement('input');input.type='number';input.min=240;input.max=7680;input.step=1;input.value=axis==='width'?width:height;input.setAttribute('aria-label',name+' comparison '+axis);inputs[axis]=input;
         input.onchange=()=>{if(input.value!==''&&input.checkValidity())applyDimensions(axis==='width'?Number(input.value):width,axis==='height'?Number(input.value):height);};
-        input.title='Pixels. Shift+Up/Down steps 10 pixels; Enter applies; Escape discards typed changes.';
+        input.title='Pixels. Shift+Up/Down steps 10 pixels; Enter applies; Escape discards typed changes; Command/Ctrl+Z undoes a committed size.';
         input.onkeydown=event=>{
           if(event.key==='Escape'){input.value=axis==='width'?width:height;event.preventDefault();event.stopPropagation();input.select();}
           else if(event.key==='Enter'){event.preventDefault();input.blur();}
