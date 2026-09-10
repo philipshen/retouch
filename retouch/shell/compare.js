@@ -42,7 +42,7 @@
     for(const [index,card] of cards.entries()){card.up.disabled=index===0||removals>0;card.down.disabled=index===cards.length-1||removals>0;card.edit.setAttribute('aria-pressed',String(size.width===card.width&&size.height===card.height));card.scopeButton.disabled=!selected;}
     layoutPreviews();
   }
-  let cards=[],selected=null,route=null,open=false,timer=null,scope={prefix:'',label:'All sizes · base',condition:null},scopeSummary;
+  let cards=[],selected=null,selectedIds=[],route=null,open=false,timer=null,scope={prefix:'',label:'All sizes · base',condition:null},scopeSummary;
   function path(){try{const loc=main.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
   function scrollViewport(w,dx,dy){
     const d=w.document,html=w.getComputedStyle(d.documentElement),body=d.body&&w.getComputedStyle(d.body);
@@ -71,7 +71,7 @@
     if(!force&&next===route)return;route=next;
     for(const card of cards){card.message.textContent='Loading…';card.frame.src=next;}
   }
-  function selectedNodes(d){return selected?[...d.querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===selected||el.getAttribute('data-rt-i')===selected):[];}
+  function selectedNodes(d){const ids=new Set(selectedIds);return ids.size?[...d.querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>ids.has(el.getAttribute('data-rt'))||ids.has(el.getAttribute('data-rt-i'))):[];}
   function rendered(el){const rect=el.getBoundingClientRect(),css=el.ownerDocument.defaultView.getComputedStyle(el);return rect.width>0&&rect.height>0&&!['hidden','collapse'].includes(css.visibility);}
   function visibleBounds(el,width,height){
     const w=el.ownerDocument.defaultView,raw=el.getBoundingClientRect();
@@ -124,7 +124,7 @@
           if(!bounds){offscreen++;continue;}visible++;
           boxes.push({left:bounds.left*scale,top:bounds.top*scale,width:bounds.width*scale,height:bounds.height*scale});
         }
-        updateProperty(message,'textContent',selected?(visible?'Selected layer · '+visible+(visible===1?' instance':' instances'):offscreen?'Selected layer is outside this viewport':nodes.length?'Selected layer is hidden':'Selected layer is absent on this screen'):'Same page · independent viewport');
+        updateProperty(message,'textContent',selected?(visible?(selectedIds.length>1?'Selection · ':'Selected layer · ')+visible+(visible===1?' instance':' instances'):offscreen?'Selected layer is outside this viewport':nodes.length?'Selected layer is hidden':'Selected layer is absent on this screen'):'Same page · independent viewport');
       }catch{boxes.length=0;updateProperty(reveal,'disabled',true);updateScope(scopeMessage,'unknown','Scope coverage is unavailable for this page.');updateProperty(message,'textContent','Preview unavailable for this page');}finally{updateOutlines(card,boxes);}
     }
     timer=setTimeout(paint,100);
@@ -158,7 +158,7 @@
     const focus=document.createElement('button');focus.id='comparisonFocus';focus.type='button';focus.className='control-button';focus.textContent='Focus previews';focus.setAttribute('aria-pressed',String(focusPreviews));focus.title='Hide screen-management controls to give more space to previews. Toggle again to restore the controls.';
     focus.onclick=()=>{focusPreviews=!focusPreviews;rail.classList.toggle('focus-previews',focusPreviews);focus.setAttribute('aria-pressed',String(focusPreviews));try{localStorage.setItem(storageKey+'.focus',String(focusPreviews));}catch{}layoutPreviews();};rail.append(focus);
     const heading=document.createElement('h2');heading.textContent='Compare screens';rail.append(heading);
-    const hint=document.createElement('p');hint.className='hint';hint.id='comparisonNavigationHint';hint.textContent='Click a layer to edit on the main canvas. Style scope stays unchanged. Focus a preview and use arrow keys, Page Up/Down, or Home/End to scroll the panel at its center. Enter opens its size.';rail.append(hint);
+    const hint=document.createElement('p');hint.className='hint';hint.id='comparisonNavigationHint';hint.textContent='Click a layer to edit on the main canvas; Shift-click to add or remove it from the selection. Style scope stays unchanged. Focus a preview and use arrow keys, Page Up/Down, or Home/End to scroll the panel at its center. Enter opens its size.';rail.append(hint);
     scopeSummary=document.createElement('p');scopeSummary.className='hint';scopeSummary.setAttribute('aria-label','Comparison style scope');scopeSummary.textContent='Style scope: '+scope.label;rail.append(scopeSummary);
     const files=document.createElement('div');files.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px';
     allPreviews=document.createElement('button');allPreviews.id='comparisonVisibility';allPreviews.type='button';allPreviews.className='control-button';allPreviews.title='Collapse previews to manage screen sizes, or expand them again. Keeps each page loaded.';
@@ -370,7 +370,7 @@
           if(event&&!node){message.textContent='No unlocked editable layer here. Select locked layers in Layers.';return;}
           const hostId=node?.getAttribute('data-rt'),instanceId=node?.getAttribute('data-rt-i');
           const peers=node?[...d.querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===hostId&&el.getAttribute('data-rt-i')===instanceId):[];
-          window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,hostId,instanceId,occurrence:node?peers.indexOf(node):0,route:path()}}));
+          window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,hostId,instanceId,occurrence:node?peers.indexOf(node):0,toggle:!!event?.shiftKey,route:path()}}));
         }catch{message.textContent='Preview unavailable for this page';}
       }
       viewport.addEventListener('click',event=>{if(event.button===0)activate(event);});
@@ -427,7 +427,8 @@
     clearTimeout(timer);open=!open;toggle.setAttribute('aria-pressed',String(open));rail.hidden=!open;
     if(open){mount();sync(true);paint();}else{toggle.disabled=true;updateControls();try{await dispose();}finally{toggle.disabled=false;updateControls();}}
   };
-  window.addEventListener('retouch:selection',e=>{selected=e.detail;updateControls();});
+  window.addEventListener('retouch:selection',e=>{selected=e.detail;selectedIds=selected?[selected]:[];updateControls();});
+  window.addEventListener('retouch:selection-set',e=>{selectedIds=e.detail;});
   window.addEventListener('retouch:style-scope',e=>{scope=e.detail;if(scopeSummary)scopeSummary.textContent='Style scope: '+scope.label;});
   window.addEventListener('retouch:route',()=>sync());
   main.addEventListener('load',()=>sync(true));

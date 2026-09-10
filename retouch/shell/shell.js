@@ -471,7 +471,7 @@ window.addEventListener('retouch:comparison-edit',async event=>{
     const matches=[...doc().querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===detail.hostId&&el.getAttribute('data-rt-i')===detail.instanceId),target=matches[detail.occurrence];
     if(!target||iframe.contentWindow.innerWidth!==detail.width)continue;
     if(layerLocks.locked(target))return toast('This layer is locked. Select it in Layers to edit.','err');
-    await select(target);if(serial!==comparisonSelectionSerial||classificationSerial!==classification+1)return;target.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});return;
+    await select(target,{toggle:detail.toggle===true});if(serial!==comparisonSelectionSerial||classificationSerial!==classification+1)return;target.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});return;
   }
   toast('This layer is not present on the main canvas at this size.','err');
 });
@@ -975,6 +975,7 @@ function renderPanel() {
 }
 function renderPanelContents() {
   window.dispatchEvent(new CustomEvent('retouch:selection',{detail:activeId()}));
+  window.dispatchEvent(new CustomEvent('retouch:selection-set',{detail:(sel.multiple||[sel.info]).map(info=>info.id)}));
   const info = sel.info;
   const style = scopedInfo(info);
   panelEmpty.hidden = true;
