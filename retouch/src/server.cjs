@@ -315,7 +315,7 @@ function handle(req, res, ctx) {
         ctx.sourceMonitor?.acknowledge(result.edits);
         delete result.edits; delete result.createdFile; delete result.createdHash;
         const fresh = ctx.index.resolve(op.id);
-        if (fresh) { fresh.context = resolved.context; result.element = ctx.adapter.describe(fresh); }
+        if (fresh) { fresh.context = resolved.context; result.element = require('./component-usage.cjs').describe(ctx.index,fresh); }
       }
       return json(res, result.ok ? 200 : 409, {...result,historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired});
       } catch (err) {
