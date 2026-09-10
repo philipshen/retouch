@@ -30,3 +30,14 @@ test('Multiple HTML deletion keeps unselected siblings and refuses stale or inva
  const identified=resolve(original.replace('<p>','<p id="unique">'));assert.equal(selection.plan(identified,op(identified,'duplicateSelection')).refused,true);
  const root=resolve(original,'body');assert.equal(selection.plan(root,op(root,'deleteSelection',['body','h1'])).refused,true);
 });
+test('Multi-layer edits map original survivors, remove complete subtrees, and leave no temporary attributes',()=>{
+ const r=resolve(original,'section');
+ for(const type of ['duplicateSelection','deleteSelection']){
+  const result=selection.plan(r,op(r,type,['section','aside']));assert.equal(result.ok,true,result.reason);
+  const fresh=resolve(result.edits[0].after),mapping=new Map(result.sourceIdMap),survivors=r.elements.filter(e=>!result.removedSourceIds.includes(e.id)),ids=survivors.map(e=>mapping.get(e.id)||e.id);assert.equal(new Set(ids).size,ids.length);
+  for(const element of survivors){const next=fresh.elements.find(e=>e.id===(mapping.get(element.id)||element.id));assert.ok(next);assert.equal(next.tag,element.tag);}
+  assert.ok(mapping.has(r.elements.find(e=>e.tag==='img').id));assert.ok(!result.edits[0].after.includes('data-rt-copy-'));
+  if(type==='deleteSelection'){assert.deepEqual(result.removedSourceIds.map(id=>r.elements.find(e=>e.id===id).tag),['section','h1','aside','p']);assert.deepEqual(ids.sort(),fresh.elements.map(e=>e.id).sort());}
+  else assert.ok(result.selectionIds.every(id=>!ids.includes(id)));
+ }
+});

@@ -2492,7 +2492,9 @@ async function structureSelection(action,extra={}){
     const type=['frameSelection','removeFrame'].includes(action)?action:action==='duplicateElement'?'duplicateSelection':action==='deleteElement'?'deleteSelection':'reparentSelection';
     const result=await api('POST','/rt/__api/op',{type,id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash,...extra});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not update selected layers','err');
-    editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:selection.map(item=>item.id),selectionAfter:result.selectionIds,undoId:result.undoId});
+    const deletedLocks=result.removedSourceIds?layerLocks.removeSourceIds(result.removedSourceIds):null;
+    editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:selection.map(item=>item.id),selectionAfter:result.selectionIds,undoId:result.undoId,...(result.sourceIdMap?{sourceIdMap:result.sourceIdMap}:{}),...(deletedLocks?{deletedLocks,removedSourceIds:result.removedSourceIds}:{})});
+    if(result.sourceIdMap)layerLocks.remap(result.sourceIdMap);
     await reloadFrame();await restoreLayerSelection(result.selectionIds);if(sel)renderPanel();
     toast(result.rootCount+' layer'+(result.rootCount===1?'':'s')+(action==='duplicateElement'?' duplicated':action==='deleteElement'?' deleted':action==='frameSelection'?' framed':action==='removeFrame'?' released from frame':' moved'),'ok');
   }finally{busyPanel(false);}

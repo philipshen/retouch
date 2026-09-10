@@ -19,9 +19,11 @@ function plan(resolved,op){
   }).sort((a,b)=>a.start-b.start);
   let common=roots[0].node.parentNode;while(common&&!roots.every(e=>contains(common,e.node)))common=common.parentNode;
   const parentId=elements.find(e=>e.node===common)?.id;if(!parentId)return refuse('The shared parent has no source identity.');
-  const out=new MagicString(resolved.source),clones=[],parents=[...new Set(roots.map(e=>e.node.parentNode))];
+  const out=new MagicString(resolved.source),clones=[];
   let marker;do{marker='data-rt-copy-'+crypto.randomBytes(6).toString('hex');}while(resolved.source.includes(marker));
-  if(op.type==='duplicateSelection')for(const [index,parent]of parents.entries())out.appendLeft(parent.sourceCodeLocation.startTag.startOffset+1+parent.tagName.length,` ${marker}="p${index}"`);
+  const removedSourceIds=op.type==='deleteSelection'?elements.filter(e=>roots.some(root=>contains(root.node,e.node))).map(e=>e.id):[];
+  const originals=elements.filter(e=>!removedSourceIds.includes(e.id));
+  for(const [index,element]of originals.entries())out.appendLeft(element.location.startTag.startOffset+1+element.tag.length,` ${marker}="o${index}"`);
   for(const [index,range]of ranges.entries()){
    if(op.type==='deleteSelection'){out.remove(range.start,range.end);continue;}
    const clone=css.clone({...resolved,elements},range);clones.push(clone);
@@ -32,19 +34,21 @@ function plan(resolved,op){
   let after=out.toString();for(const clone of clones)after=clone.append(after);
   const parsed=html.collect(after,resolved.relPath).elements,subtreeCount=elements.filter(e=>roots.some(root=>contains(root.node,e.node))).length;
   if(parsed.length!==elements.length+(op.type==='duplicateSelection'?subtreeCount:-subtreeCount))return refuse('The operation changes the parsed HTML structure.');
+  const marked=value=>parsed.find(e=>e.node.attrs.some(a=>a.name===marker&&a.value===value));
+  const sourceIdMap=originals.flatMap((element,index)=>{const target=marked('o'+index);if(!target||target.tag!==element.tag)throw Error('An original layer lost its source identity.');return target.id===element.id?[]:[[element.id,target.id]];});
   let selectionIds=[parentId];
   if(op.type==='duplicateSelection'){
-   const marked=value=>parsed.find(e=>e.node.attrs.some(a=>a.name===marker&&a.value===value));
-   selectionIds=ranges.map((range,index)=>{const copy=marked('c'+index),parent=marked('p'+parents.indexOf(range.element.node.parentNode));if(!copy||!parent||copy.node.parentNode!==parent.node||copy.tag!==range.element.tag)throw Error('A copy changed its parsed parent.');return copy.id;});
-   const clean=new MagicString(after);for(const element of parsed){const attr=element.location.attrs?.[marker];if(attr)clean.remove(attr.startOffset-1,attr.endOffset);}after=clean.toString();
-   if(after.includes(marker))return refuse('The copy identity could not be removed.');
-   const final=html.collect(after,resolved.relPath).elements;
-   if(final.length!==parsed.length||selectionIds.some(id=>!final.some(e=>e.id===id)))return refuse('The copied selection could not be preserved.');
-   // Validate copied style ownership and managed rule metadata after combining
-   // all clones, including identities allocated by separate subtree copies.
-   for(const element of final)if(element.node.attrs.some(a=>a.name==='data-rt-style')){const state=css.describe({...resolved,source:after,elements:final,element});if(state.cssReason)throw Error(state.cssReason);}
+   selectionIds=ranges.map((range,index)=>{const copy=marked('c'+index),parent=marked('o'+originals.findIndex(element=>element.node===range.element.node.parentNode));if(!copy||!parent||copy.node.parentNode!==parent.node||copy.tag!==range.element.tag)throw Error('A copy changed its parsed parent.');return copy.id;});
   }
-  return {ok:true,hash:html.contentHash(after),parentId,selectionIds,rootCount:roots.length,structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
+  const clean=new MagicString(after);for(const element of parsed){const attr=element.location.attrs?.[marker];if(attr)clean.remove(attr.startOffset-1,attr.endOffset);}after=clean.toString();
+  if(after.includes(marker))return refuse('The temporary layer identity could not be removed.');
+  const final=html.collect(after,resolved.relPath).elements,mapping=new Map(sourceIdMap),finalIds=new Set(final.map(element=>element.id));
+  if(final.length!==parsed.length||selectionIds.some(id=>!finalIds.has(id)))return refuse('The resulting selection could not be preserved.');
+  if(originals.some(element=>!finalIds.has(mapping.get(element.id)||element.id)))return refuse('An original layer could not be preserved.');
+  // Validate copied style ownership and managed rule metadata after combining
+  // all clones, including identities allocated by separate subtree copies.
+  if(op.type==='duplicateSelection')for(const element of final)if(element.node.attrs.some(a=>a.name==='data-rt-style')){const state=css.describe({...resolved,source:after,elements:final,element});if(state.cssReason)throw Error(state.cssReason);}
+  return {ok:true,hash:html.contentHash(after),sourceIdMap,removedSourceIds,parentId,selectionIds,rootCount:roots.length,structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
  }catch(error){return refuse(error.message);}
 }
 module.exports={plan};
