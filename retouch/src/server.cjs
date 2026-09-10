@@ -244,9 +244,9 @@ function handle(req, res, ctx) {
       const applyPlan=(root,plan)=>ctx.history.commit(root,plan,{group:op.historyGroup,route:historyRoute(req)});
       try {
         resolved.context = renderContext(op.context);
+        if(ctx.adapter.name==='liquid'&&op.type?.endsWith('Selection')&&op.contexts&&typeof op.contexts==='object'&&!Array.isArray(op.contexts)){op.contexts=Object.fromEntries(Object.entries(op.contexts).map(([id,value])=>[id,renderContext(value)]));}
         if(['applyVariable','resetVariable','detachVariable','removeVariable','applyVariableSelection','resetVariableSelection','detachVariableSelection','removeVariableSelection'].includes(op.type)){
           const reactVariables=ctx.adapter.name==='react',liquidVariables=ctx.adapter.name==='liquid';
-          if(liquidVariables&&op.type.endsWith('Selection')&&op.contexts&&typeof op.contexts==='object'&&!Array.isArray(op.contexts)){op.contexts=Object.fromEntries(Object.entries(op.contexts).map(([id,value])=>[id,renderContext(value)]));}
           if(!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!reactVariables&&!liquidVariables)return json(res,409,{ok:false,reason:'Collection bindings currently need an HTML, React or Liquid project.'});
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source changed. Re-select the layer.'});
           let model;

@@ -4,25 +4,25 @@ const refuse=reason=>({ok:false,refused:true,reason});
 function plan(resolved,op,style,adapter,family='text'){
  try{
   const color=family==='color',effect=family==='effect';
-  if(effect&&!['html','react'].includes(adapter.name))return refuse('Effect style selection needs HTML or React layers.');
-  if(color&&!['html','react'].includes(adapter.name))return refuse('Color style selection is not available for this renderer yet.');
-  if(!['html','react'].includes(adapter.name))return refuse('Text style selection is not available for this renderer yet.');
+  const liquid=adapter.name==='liquid',classBased=liquid||adapter.name==='react';
+  if(!['html','react','liquid'].includes(adapter.name))return refuse('Style selections need HTML, React or Liquid layers.');
   if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the layers.');
   const type={applyEffectStyleSelection:'applyEffectStyle',resetEffectStyleSelection:'resetEffectStyle',detachEffectStyleSelection:'detachEffectStyle',applyColorStyleSelection:'applyColorStyle',resetColorStyleSelection:'resetColorStyle',detachColorStyleSelection:'detachColorStyle',applyTextStyleSelection:'applyTextStyle',resetTextStyleSelection:'resetTextStyle',detachTextStyleSelection:'detachTextStyle'}[op.type||'applyTextStyleSelection'];
   if(!type||type.includes('Color')!==color||type.includes('Effect')!==effect)return refuse('Unsupported selection style operation.');
   if(color&&!require('./html-color-styles.cjs').properties.includes(op.property))return refuse('Choose a supported color property.');
-  const scope=adapter.name==='react'?(op.scope??''):String(op.width);
-  if(adapter.name==='react')require('../shell/responsive.js').replaceScope('','',scope);
+  const scope=classBased?(op.scope??''):String(op.width);
+  if(classBased)require('../shell/responsive.js').replaceScope('','',scope);
   else if(!Number.isInteger(op.width)||op.width<0||op.width>7680)return refuse('Choose a supported screen width.');
   const ids=op.ids;
   if(!Array.isArray(ids)||ids.length<2||ids.length>100||new Set(ids).size!==ids.length||!ids.includes(resolved.element.id)||ids.some(id=>typeof id!=='string'||!/^[a-f0-9]{10}$/.test(id)))return refuse('Choose between 2 and 100 distinct layers in one source file.');
+  if(liquid&&(!op.contexts||typeof op.contexts!=='object'||Array.isArray(op.contexts)||Object.keys(op.contexts).length!==ids.length||ids.some(id=>!Object.hasOwn(op.contexts,id))))return refuse('Re-select every Liquid layer to capture its rendered context.');
   const initial=adapter.collect(resolved.source,resolved.relPath).elements;
   if(ids.some(id=>initial.find(element=>element.id===id)?.kind!=='host'))return refuse('Every selected layer must belong to the same source file.');
-  const linked=require(effect?(adapter.name==='react'?'./jsx-effect-styles.cjs':'./html-effect-styles.cjs'):color?(adapter.name==='react'?'./jsx-color-styles.cjs':'./html-color-styles.cjs'):adapter.name==='react'?'./jsx-text-styles.cjs':'./html-text-styles.cjs');let source=resolved.source;
+  const renderer=liquid?'liquid':adapter.name==='react'?'jsx':'html',linked=require('./'+renderer+'-'+(effect?'effect':color?'color':'text')+'-styles.cjs');let source=resolved.source;
   for(const id of ids){
    const elements=adapter.collect(source,resolved.relPath).elements,element=elements.find(item=>item.id===id),hash=adapter.contentHash(source);
    if(!element)return refuse('A selected layer no longer resolves.');
-   const current={...resolved,source,elements,element,hash},description=linked.describe(current);
+   const current={...resolved,source,elements,element,hash,...(liquid?{context:op.contexts[id]}:{})},description=linked.describe(current);
    const reason=effect?description.effectStyleLinkReason:color?(description.colorStyleReason||description.colorStyleLinkReason):description.textStyleLinkReason;if(reason)return refuse(reason);
    const link=effect?description.effectStyleLinks?.[scope]:color?description.colorStyleLinks?.[scope]?.[op.property]:description.textStyleLinks?.[scope];let selectedStyle=style;
    if(!type.startsWith('apply')){
@@ -34,7 +34,7 @@ function plan(resolved,op,style,adapter,family='text'){
   }
   const elements=adapter.collect(source,resolved.relPath).elements,hash=adapter.contentHash(source),selection=ids.map(id=>{
    const element=elements.find(item=>item.id===id);if(!element)throw Error('The selected layer lost its source identity.');
-   return adapter.describe({...resolved,source,elements,element,hash});
+   return adapter.describe({...resolved,source,elements,element,hash,...(liquid?{context:op.contexts[id]}:{})});
   });
   return {ok:true,hash,selection,edits:source===resolved.source?[]:[{file:resolved.file,before:resolved.source,after:source}]};
  }catch(error){return refuse(error.message);}

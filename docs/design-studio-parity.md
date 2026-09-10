@@ -7773,3 +7773,37 @@ layout, literal classes and saved-style editing remain unfinished. Cross-file
 selection and live Shopify verification are also incomplete. These browser checks
 use local LiquidJS/Tailwind. Full Figma parity remains in progress, and native
 application launches remain paused.
+
+### Multi-layer Liquid saved text, color and effect styles (2026-09-10)
+
+Liquid multi-selection now exposes saved typography, color and effect libraries
+alongside collection bindings. Apply writes the chosen style to the selected
+screen scope on all selected layers. Reset follows each layer's own linked style;
+detach preserves its appearance. Each batch carries separate rendered contexts,
+plans every selected host before writing, and commits one source edit. Missing
+contexts, missing linked definitions or malformed later layers refuse the batch.
+Undo/Redo reloads the Liquid preview and restores the complete selection.
+
+The shared saved-style planner now supports Liquid conditional classes and class
+screen scopes. Color, text and effect selection writers reuse the collection
+context transport. The Liquid selection inspector exposes these supported saved
+style controls without implying general shared layout/class editing is available.
+
+All 586 unit tests pass (`/private/tmp/retouch-liquid-style-selection-units.log`).
+New tests cover all three style families, independent mixed definitions, reset
+values, detach appearance, missing definitions/contexts and atomic refusal. Both
+conditional branches are rendered with LiquidJS, verifying one layer's font and
+tracking utilities are not transferred to another layer.
+
+Real local LiquidJS/Tailwind flows pass Chromium and WebKit:
+`/private/tmp/retouch-liquid-style-reset-chromium.log` and
+`/private/tmp/retouch-liquid-style-reset-webkit.log`. For each style family they
+verify shared application, phone/tablet isolation, a single-layer literal override,
+batch reset, exact Undo of reset/override, detach, Redo and complete source restore.
+The screenshot `/private/tmp/retouch-liquid-saved-style-selection.png` was inspected.
+The React saved text-style Chromium regression also passes
+(`/private/tmp/retouch-liquid-style-react-text-regression.log`).
+
+This is local Liquid verification, not live Shopify. General Liquid shared
+layout/class controls, cross-file selection, ancestor collection modes and full
+Figma parity remain unfinished. Native launches remain paused.
