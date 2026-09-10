@@ -149,6 +149,8 @@ details.advanced > summary:hover { color: var(--ink); }
 .component-props [aria-invalid="true"] { border-color: var(--danger); }
 .component-props textarea { resize: vertical; line-height: 1.5; }
 .component-props input[type="checkbox"] { width: auto; }
+.component-props-search { width: 100%; min-width: 0; padding: 6px; background: #15171b; color: var(--ink); border: 1px solid var(--line); border-radius: 5px; font: 12px var(--font); }
+.component-props-count { display: block; margin-top: 5px; color: var(--muted); }
 .component-props th { color: var(--muted); font-weight: 500; }
 .component-modal { margin: auto; width: min(1100px, 92vw); height: min(760px, 90vh); max-width: none; max-height: none; padding: 20px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 14px; }
 .component-modal::backdrop { background: #0009; }

@@ -8218,3 +8218,18 @@ Chromium and WebKit verify focus after reset, unset, and keyboard activation of 
 text/Unset, then continue through validation and exact Undo/Redo. This was a
 focused UI change; the unit suite was not rerun. Full parity remains incomplete,
 and native launches remain paused.
+
+
+## Searchable component property lists (2026-09-10)
+
+Inspector lists with eight or more properties now include name search, a visible
+match count and no-match feedback. Queries are case-insensitive and trimmed for
+matching, retained across edits to the same instance in a bounded 50-instance
+session cache, and cleared with Escape. Hidden rows leave keyboard navigation;
+revealed text fields remeasure their wrapped content. Search does not write source.
+
+Chromium and WebKit verify no-match handling, Tab to a visible property, query
+retention across an actual write and clearing without changing source, then run the
+property/history workflow. Screenshot review confirms the search fits the panel.
+This was a targeted UI change; the unit suite was not rerun. Full parity remains
+incomplete and native app launches remain paused.

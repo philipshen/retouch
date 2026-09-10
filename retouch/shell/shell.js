@@ -1238,6 +1238,7 @@ new ResizeObserver(entries=>{
   const width=entries[0]?.contentRect.width;if(width===componentPropertyPanelWidth)return;componentPropertyPanelWidth=width;
   panelBody.querySelectorAll('.component-prop-text').forEach(sizeComponentText);
 }).observe(panelBody);
+const componentPropertyFilters=new Map();
 function propTable(props,instanceId,fileHash) {
   const table = document.createElement('table'); table.className = 'component-props';
   const thead = document.createElement('thead'); const header = document.createElement('tr');
@@ -1245,7 +1246,7 @@ function propTable(props,instanceId,fileHash) {
   thead.append(header); table.append(thead);
   const body=document.createElement('tbody');
   for(const prop of props){
-    const row=document.createElement('tr'),name=document.createElement('td'),value=document.createElement('td'),fallback=document.createElement('td');name.textContent=prop.name;fallback.textContent=prop.default;
+    const row=document.createElement('tr'),name=document.createElement('td'),value=document.createElement('td'),fallback=document.createElement('td');row.dataset.propertyName=String(prop.name);name.textContent=prop.name;fallback.textContent=prop.default;
     if(instanceId&&prop.editor?.editable&&prop.editor.choices&&!(prop.editor.type==='boolean'&&typeof prop.editor.value==='boolean'&&prop.editor.choices.length===2&&!prop.editor.allowUnset&&!prop.editor.unset)){
       const meta=prop.editor,input=document.createElement('select');input.setAttribute('aria-label','Component property '+prop.name);
       meta.choices.forEach((choice,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=String(choice);input.append(option);});
@@ -1275,7 +1276,17 @@ function propTable(props,instanceId,fileHash) {
     if(prop.editor?.inherited){const note=document.createElement('small');note.textContent='Default';value.append(note);}
     row.append(name,value,fallback);body.append(row);
   }
-  table.append(body);return table;
+  table.append(body);
+  if(!instanceId||props.length<8)return table;
+  const group=document.createElement('div'),search=document.createElement('input'),status=document.createElement('small');search.type='search';search.className='component-props-search';search.setAttribute('aria-label','Search component properties');search.placeholder='Find a property…';search.value=componentPropertyFilters.get(instanceId)||'';status.className='component-props-count';status.setAttribute('role','status');
+  const filter=()=>{
+    const query=search.value.trim().toLowerCase();let count=0;
+    for(const row of body.children){row.hidden=!row.dataset.propertyName.toLowerCase().includes(query);if(!row.hidden)count++;}
+    status.textContent=count?(query?count+' of '+props.length+' properties':props.length+' properties'):'No properties match.';
+    componentPropertyFilters.delete(instanceId);if(search.value)componentPropertyFilters.set(instanceId,search.value);if(componentPropertyFilters.size>50)componentPropertyFilters.delete(componentPropertyFilters.keys().next().value);
+    requestAnimationFrame(()=>{if(group.isConnected)group.querySelectorAll('.component-prop-text').forEach(sizeComponentText);});
+  };
+  search.addEventListener('input',filter);search.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();search.value='';filter();}});group.append(search,status,table);filter();return group;
 }
 async function refreshComponentProperty(instanceId,parentId){
   const parent=parentId?await api('GET',resolveUrl(parentId)):null;
