@@ -38,6 +38,6 @@
   for(const id of ['layersPanel','panelBody','toolbar','screenPreset','screenUndo','screenRedo','screenAspect','screenComparisons']){const target=document.getElementById(id);if(target)observer.observe(target,{subtree:true,childList:true,attributes:true,attributeFilter:['disabled','hidden','title','aria-pressed','aria-label','inert']});}
   current.addEventListener('close',()=>{observer.disconnect();current.remove();if(dialog===current)dialog=null;});current.showModal();render();input.focus();
  }
- function shortcut(event){if(event.defaultPrevented||event.isComposing||!(event.metaKey||event.ctrlKey)||event.altKey||event.shiftKey||event.key.toLowerCase()!=='k'||event.target.closest?.('input,textarea,select,[contenteditable="true"]')||document.querySelector('dialog[open]'))return false;event.preventDefault();event.stopPropagation();open();return true;}
+ function shortcut(event){if(event.defaultPrevented||event.isComposing||!(event.metaKey||event.ctrlKey)||event.altKey||event.shiftKey||event.key.toLowerCase()!=='k'||event.target.isContentEditable||event.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||document.querySelector('dialog[open]'))return false;event.preventDefault();event.stopPropagation();open();return true;}
  trigger.onclick=open;window.addEventListener('keydown',shortcut);window.RetouchActions={open,shortcut};
 })();

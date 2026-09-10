@@ -2273,10 +2273,10 @@ window.addEventListener('keydown', (e) => {
   if(opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e))return;
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
-  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.target.closest?.('input,textarea,[contenteditable="true"]')) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
   if (e.key === 'Escape') {
     if(stopDrawing){e.preventDefault();stopDrawing();return;}
-    if(!e.target.closest?.('input,textarea,select,[contenteditable="true"]')&&window.RetouchWorkspacePanels?.closeIfOpen()){e.preventDefault();return;}
+    if(!e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')&&window.RetouchWorkspacePanels?.closeIfOpen()){e.preventDefault();return;}
     clearSelection();
   }
 });
@@ -2349,7 +2349,7 @@ window.addEventListener('blur',cancelOpacityEntry);
 function opacityShortcut(e){
   if(opacityEntry&&(e.key==='Escape'||(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z')){cancelOpacityEntry();e.preventDefault();e.stopImmediatePropagation();return true;}
   if(e.defaultPrevented||e.isComposing||e.metaKey||e.ctrlKey||e.altKey||e.shiftKey||!/^\d$/.test(e.key)){cancelOpacityEntry();return false;}
-  if(mode!=='edit'||editing||!sel||e.target.isContentEditable||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable="true"],[contenteditable=""]')){cancelOpacityEntry();return false;}
+  if(mode!=='edit'||editing||!sel||e.target.isContentEditable||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')){cancelOpacityEntry();return false;}
   const input=panelBody.querySelector('input[aria-label="Shared Opacity (%)"],input[aria-label="Opacity (%)"]');
   if(!input||input.matches(':disabled')||input.closest('[inert]')){cancelOpacityEntry();return false;}
   e.preventDefault();e.stopImmediatePropagation();
@@ -2368,7 +2368,7 @@ function opacityShortcut(e){
 }
 function visibilityShortcut(e){
   if(e.defaultPrevented||e.isComposing||!(e.metaKey||e.ctrlKey)||!e.shiftKey||e.altKey||e.key.toLowerCase()!=='h')return false;
-  if(mode!=='edit'||editing||!sel||e.target.isContentEditable||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable="true"],[contenteditable=""]'))return false;
+  if(mode!=='edit'||editing||!sel||e.target.isContentEditable||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]'))return false;
   const input=panelBody.querySelector('select[aria-label="Shared Visibility"],select[aria-label="Visibility"],input[aria-label="Visible layer"]');
   if(!input||input.matches(':disabled')||input.closest('[inert]'))return false;
   e.preventDefault();e.stopImmediatePropagation();
@@ -2378,7 +2378,7 @@ function visibilityShortcut(e){
 }
 function canvasZoomShortcut(e){
   if(!e.shiftKey||e.metaKey||e.ctrlKey||e.altKey||!['Digit1','Digit2'].includes(e.code))return false;
-  if(mode!=='edit'||editing||e.target.isContentEditable||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable="true"],[contenteditable=""]'))return false;
+  if(mode!=='edit'||editing||e.target.isContentEditable||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]'))return false;
   e.preventDefault();e.stopImmediatePropagation();
   if(e.repeat||panelTasks||undoBusy||sourceRequests)return true;
   const button=document.getElementById(e.code==='Digit1'?'fitScreen':'zoomSelection');
@@ -2387,7 +2387,7 @@ function canvasZoomShortcut(e){
 }
 function lockShortcut(e){
   if(!(e.metaKey||e.ctrlKey)||!e.shiftKey||e.altKey||e.key.toLowerCase()!=='l')return false;
-  if(mode!=='edit'||editing||e.target.isContentEditable||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable="true"],[contenteditable=""]'))return false;
+  if(mode!=='edit'||editing||e.target.isContentEditable||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]'))return false;
   e.preventDefault();e.stopImmediatePropagation();
   if(e.repeat||panelTasks||undoBusy||sourceRequests||!sel)return true;
   const elements=sel.multiple?sel.multiple.flatMap(info=>matchingEls(info.id)):matchingEls(activeId());
