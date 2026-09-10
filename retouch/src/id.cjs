@@ -44,15 +44,11 @@ function jsxElementName(node) {
   return null;
 }
 
-function isFragmentName(name) {
-  return name === 'Fragment' || (name && name.endsWith('.Fragment'));
-}
-
 // A "host" element (<div>) carries data-rt; a component usage (<Button>)
 // carries data-rt-i (the instance ID). Fragments are never stamped.
 function classifyElement(node) {
   const name = jsxElementName(node);
-  if (!name || isFragmentName(name)) return null;
+  if (!name) return null;
   const first = name[0];
   if (first === first.toLowerCase() && !name.includes('.')) return 'host';
   return 'instance';
@@ -62,9 +58,10 @@ function classifyElement(node) {
 // in source order. `relPath` must be POSIX-style relative to the app root.
 function collectElements(source, relPath) {
   const ast = parseSource(source);
-  const out = [];
+  const out = [], fragments = new Set();
   traverse(ast, {
     JSXElement(path) {
+      if(require('./react-fragment.cjs')(path)){fragments.add(path.node.start);return;}
       const kind = classifyElement(path.node);
       if (!kind) return;
       const loc = path.getPathLocation();
@@ -76,7 +73,7 @@ function collectElements(source, relPath) {
       });
     },
   });
-  return { ast, elements: out };
+  return { ast, elements: out, fragments };
 }
 
 function contentHash(source) {

@@ -119,10 +119,10 @@ function describe(resolved) {
   try {
     resolved = { ...resolved, appRoot: fs.realpathSync(resolved.appRoot), file: fs.realpathSync(resolved.file) };
     const def=definition(resolved),rel=path.relative(resolved.appRoot,def.file).split(path.sep).join('/');
-    const {elements,ast}=collectElements(def.source,rel);
+    const {elements,ast,fragments}=collectElements(def.source,rel);
     const declaration=ast.program.body.find(item=>['ExportNamedDeclaration','ExportDefaultDeclaration'].includes(item.type)&&item.declaration?.start===def.fn.start);
     const explicitComponent=[...(def.fn.leadingComments||[]),...(declaration?.leadingComments||[])].some(comment=>comment.value.trim()==='* @retouch-component');
-    const roots=require('./component-return-roots.cjs')(def.fn),returned=new Set(require('./component-render-roots.cjs')(def.fn).map(node=>node.start));
+    const roots=require('./component-return-roots.cjs')(def.fn),returned=new Set(require('./component-render-roots.cjs')(def.fn,fragments).map(node=>node.start));
     const host=elements.find(element=>element.kind==='host'&&(roots.length?roots.some(root=>element.node.start>=root.start&&element.node.end<=root.end):element.node.start>=def.fn.start&&element.node.end<=def.fn.end));
     const definitionIds=elements.filter(element=>element.kind==='host'&&returned.has(element.node.start)).map(element=>element.id);
     const props=new Map();

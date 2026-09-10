@@ -8804,3 +8804,33 @@ selection outlines, root grouping/counts, named React.Fragment forms, nested
 component wrappers and callback-generated fragment roots still need work. Full
 Figma Design parity and arbitrary-site support remain incomplete. Native launches
 remain paused and trusted brew distribution remains unverified.
+
+### Bound React.Fragment and imported fragment aliases (2026-09-10)
+
+Named fragments now share transparent-root behavior with shorthand fragments.
+React default imports, namespace imports, named Fragment aliases, and named
+imports of React's default export are resolved through lexical bindings. Custom
+components called Fragment, components from other packages, and locally shadowed
+React/Fragment bindings retain instance identity. The earlier name-only exclusion
+incorrectly hid those custom instances and did not recognize aliases.
+
+Fragment classification records source positions so separately parsed definition
+and instrumentation ASTs agree. An initial browser run exposed object-identity
+matching that omitted named-fragment roots from descriptors after swap Undo; the
+position-based fix and an explicit independent-AST regression cover that failure.
+
+Validation: 697 unit tests pass. Tests cover import forms, shadowing, custom names,
+key preservation, and multi-root descriptors across separate parses. Chromium
+with an aliased Fragment import and WebKit with a namespace React.Fragment both
+passed real root-property edit/Undo, component swap/Undo/Redo, and detach with
+copied-module cleanup and shared-source preservation. Corrected browser processes
+both ended with exit zero and strict empty page-error assertions. Evidence:
+/private/tmp/retouch-named-fragment-units-fixed.log,
+/private/tmp/retouch-named-fragment-chromium-fixed.log,
+/private/tmp/retouch-named-fragment-webkit-fixed.log.
+
+Multi-root selection/grouping and counts remain incomplete. Fragment reexports,
+CommonJS/global React bindings, nested component wrappers and callback-generated
+roots are not covered by this binding resolver. Full Figma Design parity and
+arbitrary-site authoring remain open. Native launches remain paused; trusted brew
+distribution is still unverified.

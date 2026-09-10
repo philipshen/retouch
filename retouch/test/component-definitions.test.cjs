@@ -26,3 +26,12 @@ test('fragment descriptors include top-level conditional hosts and exclude their
   index.scanAll();const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(resolved=>resolved.element.kind==='instance'),info=require('../src/components.cjs').describe(usage);assert.equal(info.ok,true);assert.deepEqual(info.definitionIds.map(id=>index.resolve(id).element.node.openingElement.name.name),['header','aside','section','footer']);assert.equal(index.resolve(info.definitionId).element.node.openingElement.name.name,'header');
  }finally{index.close();cleanup(root);}
 });
+
+
+test('named fragment roots resolve across independently parsed definition and usage ASTs',()=>{
+ for(const [prefix,tag] of [['import {Fragment as Group} from "react";','Group'],['import * as R from "react";','R.Fragment']]){
+  const root=fs.realpathSync(makeApp({'Card.tsx':prefix+'export function Card({show=false}){if(show)return <section/>;return <'+tag+'><footer/><small/></'+tag+'>}','Page.tsx':'import {Card} from "./Card";export default function Page(){return <Card/>}'})),index=new Index(root);try{
+   index.scanAll();const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(resolved=>resolved.element.kind==='instance'),info=require('../src/components.cjs').describe(usage);assert.equal(info.ok,true);assert.deepEqual(info.definitionIds.map(id=>index.resolve(id).element.node.openingElement.name.name),['section','footer','small']);
+  }finally{index.close();cleanup(root);}
+ }
+});

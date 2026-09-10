@@ -135,3 +135,12 @@ test('fragment roots forward caller identity and revision without stamping neste
  }
  assert.doesNotThrow(()=>require('../src/id.cjs').parseSource(output));assert.ok(!source.includes('data-rt-i'));
 });
+
+test('React fragment bindings and aliases are transparent while shadowed and custom names remain instances',()=>{
+ for(const [imports,tag] of [['import React from "react";','React.Fragment'],['import * as R from "react";','R.Fragment'],['import {Fragment as Group} from "react";','Group'],['import {default as R} from "react";','R.Fragment']]){
+  const source=imports+'export const Card=()=> <'+tag+' key="group"><header/><footer/></'+tag+'>',out=stamp(source,file,ROOT).code,{elements}=require('../src/id.cjs').collectElements(out,'C.tsx');assert.equal(elements.length,2);for(const el of elements){assert.equal(el.kind,'host');assert.ok(el.node.openingElement.attributes.some(attr=>attr.name?.name==='data-rt-i'));}assert.match(out,/key="group"/);assert.doesNotThrow(()=>require('../src/id.cjs').parseSource(out));
+ }
+ for(const source of ['import {Fragment} from "other";export const Card=()=> <Fragment><header/></Fragment>','import React from "other";export const Card=()=> <React.Fragment><header/></React.Fragment>','import {Fragment} from "react";export const Card=({Fragment})=> <Fragment><header/></Fragment>','import React from "react";export const Card=({React})=> <React.Fragment><header/></React.Fragment>']){
+  const out=stamp(source,file,ROOT).code,{elements}=require('../src/id.cjs').collectElements(out,'C.tsx');assert.equal(elements[0].kind,'instance');assert.ok(elements[0].node.openingElement.attributes.some(attr=>attr.name?.name==='data-rt-i'));assert.equal(elements[1].node.openingElement.attributes.some(attr=>attr.name?.name==='data-rt-i'),false);
+ }
+});
