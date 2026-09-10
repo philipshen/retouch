@@ -10107,3 +10107,9 @@ Validation: Chromium (`/private/tmp/retouch-index-browser-chromium.log`) and Web
 Extraction now combines disjoint structural object intersections, including same-module aliases, for whole-object captures and destructured fields. The same combination path serves inherited interfaces. Overlapping names, multiple index signatures and non-object intersection branches refuse rather than produce an incorrectly flattened contract; resolver nesting is explicitly bounded.
 
 Validation: all 809 unit tests passed (`/private/tmp/retouch-intersection-contracts-units.log`). The strict compiler suite passed 21 extraction scenarios and three guarded refusals (`/private/tmp/retouch-intersection-contracts-compiler.log`). New checks cover whole/destructured intersections and refusal of overlapping/non-object/indexed intersections. No browser run in this planner expansion. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Live whole-object intersection extraction
+
+Added a browser fixture capturing an intersection of an inherited interface and a separate optional-field object. The flow verifies both branches in the generated contract, callback-driven React state updates, definition editing, appearance and exact source Undo/Redo.
+
+Validation: Chromium (`/private/tmp/retouch-intersection-browser-chromium.log`) and WebKit (`/private/tmp/retouch-intersection-browser-webkit.log`) both exited 0. No production code changed in this verification stage. Full Figma parity remains incomplete; native launches remain paused.
