@@ -9171,3 +9171,42 @@ Null-placeholder cleanup, component move/rename/copy, persistent runtime identit
 per-render overrides and fragment layout editing remain open. Full Figma Design
 parity and arbitrary-site support are incomplete. Native launches remain paused;
 trusted brew distribution is unverified.
+
+
+### Clean imports used only within a deleted component subtree (2026-09-10)
+
+Deleting a component now also removes import bindings referenced only by its
+props, children or TypeScript assertions. Imports still referenced elsewhere and
+previously unused imports remain unchanged. Import rendering is shared with swap
+cleanup. Runtime imports retain explicit module evaluation; removed type-only
+imports become empty statements so unrelated structural source IDs remain stable.
+Scoped identifier collection supplements Babel binding references, which omitted
+some TypeScript references in the initial implementation.
+
+Validation: all 724 unit tests passed. Added coverage checks multiple imports,
+child components, imported prop values, type-only assertions, external type
+annotations, previously unused bindings and preservation of unrelated IDs. The
+TypeScript 5.9.3 compiler/runtime probe first reproduces noUnusedLocals errors
+without cleanup, then verifies corrected deletion compiles, the runtime module
+evaluates exactly once and the type-only module never evaluates. Initial runs
+caught an extraction syntax error and missed type-only references; both were
+corrected before the passing runs. Chromium and WebKit logs report passing Layers
+duplicate/delete, keyboard deletion, Undo/Redo, root detach and root swap flows;
+the harness asserts no page errors before its final success marker. These browser
+runs cover regression behavior; the new imported props/children cases are covered
+by unit and compiler probes. On resumption all four runs were terminal by process
+inspection, with complete passing logs; their original process handles were not
+retained across context compaction. git diff --check also passed.
+
+Evidence: /private/tmp/retouch-delete-subtree-imports-units-fixed.log,
+/private/tmp/retouch-delete-subtree-typecheck.cjs,
+/private/tmp/retouch-delete-subtree-typecheck-fixed.log,
+/private/tmp/retouch-delete-subtree-imports-chromium.log,
+/private/tmp/retouch-delete-subtree-imports-webkit.log.
+
+This is scoped source cleanup, not full TypeScript namespace or generic resolution.
+Unused local declarations and null placeholders remain. Component move/rename/copy,
+full variants and slots, persistent runtime identity, arbitrary-site authoring and
+other Figma Design requirements remain incomplete. Native app launches remain
+paused following the recurring macOS warning; trusted brew distribution is still
+unverified.
