@@ -28,7 +28,7 @@
  }
  function render(){
   previewSerial++;body.replaceChildren();body.append(I.button('Reload collections',load));if(!library)return;
-  I.note(body,'Collections share typed variables across named modes. Definitions are saved to the project. In HTML projects, select a layer and open Collection bindings to apply variables and choose modes.');
+  I.note(body,'Collections share typed variables across named modes. Definitions are saved to the project. In HTML or React projects, select a layer and open Collection bindings to apply variables and choose modes.');
   if(library.collections.length)body.append(modePreview());
   if(!library.collections.some(item=>item.id===collectionId))collectionId=library.collections[0]?.id||'';
   I.select(body,'Variable collection',[['','Choose a collection…'],...library.collections.map(item=>[item.id,item.name])],collectionId,value=>{collectionId=value;variableId='';render();});

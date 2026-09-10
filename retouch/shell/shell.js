@@ -933,6 +933,7 @@ function renderPanelContents() {
   }
 
   if((sel.multiple?.length>1?sel.multiple.every(item=>item.variables):info.variables)){const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;RetouchCollectionBindings.mount(panelBody,sel.multiple?.length>1?sel.multiple:info,width,sel.multiple?.length>1?writeVariableSelection:writeTextStyle);}
+  else if(!sel.multiple?.length&&info.classVariables){const scope=styleScope;RetouchCollectionBindings.mount(panelBody,info,scope,(type,_width,extra)=>writeTextStyle(type,0,{scope,...extra}),{scopeLabel:document.querySelector('[aria-label="Style screen scope"]')?.selectedOptions[0]?.textContent||scope||'all screen sizes'});}
 
   if(!sel.multiple?.length&&(info.cssAuthoring||info.classEffectStyles)&&!info.effectStyleLinkReason){
    const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,scope=info.classEffectStyles?styleScope:width,links=info.effectStyleLinks||{},inheritedWidth=Object.keys(links).map(Number).filter(value=>value<width).sort((a,b)=>b-a)[0];
@@ -1757,7 +1758,7 @@ function moveHTMLLayer(info,target,width,g,action='move',opener){
 window.RetouchVariableModePreview=async request=>{const result=await api('POST','/rt/__api/variables/resolve',request);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not preview variable modes.');return result;};
 window.RetouchVariableLibraryRequest=async operation=>{
  if(!operation){const result=await api('GET','/rt/__api/variables');if(!result?.ok)throw Error(result?.reason||result?.error||'Could not load variable collections.');return result;}
- busyPanel(true);try{const result=await api('POST','/rt/__api/variables',operation);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save variable collections.');if(result.undoId)editorHistory.record({type:'sourceHistory',undoId:result.undoId});if(result.updated){const info=sel?.info,ids=sel?.multiple?.map(item=>item.id),fresh=info?await api('GET',resolveUrl(info.id,info.context)):null;if(fresh?.ok&&sel?.info.id===info.id)sel.info=fresh.element;await reloadFrame();if(ids?.length>1)await restoreLayerSelection(ids);else if(sel)renderPanel();}return result;}finally{busyPanel(false);}
+ busyPanel(true);try{const result=await api('POST','/rt/__api/variables',operation);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save variable collections.');if(result.undoId)editorHistory.record({type:'sourceHistory',undoId:result.undoId});if(result.updated){const info=sel?.info,ids=sel?.multiple?.map(item=>item.id),fresh=info?await api('GET',resolveUrl(info.id,info.context)):null;if(fresh?.ok&&sel?.info.id===info.id)sel.info=fresh.element;if(fresh?.ok&&fresh.element.classVariables)await refreshTextStyleElement(fresh.element);else await reloadFrame();if(ids?.length>1)await restoreLayerSelection(ids);else if(sel)renderPanel();}return result;}finally{busyPanel(false);}
 };
 window.RetouchColorStyleRequest=async operation=>{
  const info=sel?.info;busyPanel(true);
@@ -1797,8 +1798,8 @@ window.RetouchTextStyleRequest=async operation=>{
   }finally{busyPanel(false);}
 };
 async function refreshTextStyleElement(info){
-  if(info.classTextStyles)await refreshWrittenElement(info,el=>{
-    try{return JSON.stringify(JSON.parse(el.getAttribute('data-rt-text-styles')||'{}'))===JSON.stringify(info.textStyleLinks||{})&&JSON.stringify(JSON.parse(el.getAttribute('data-rt-color-styles')||'{}'))===JSON.stringify(info.colorStyleLinks||{})&&JSON.stringify(JSON.parse(el.getAttribute('data-rt-effect-styles')||'{}'))===JSON.stringify(info.effectStyleLinks||{})&&(info.className||'').split(/\s+/).filter(Boolean).every(token=>el.classList.contains(token));}catch{return false;}
+  if(info.classTextStyles||info.classVariables)await refreshWrittenElement(info,el=>{
+    try{return JSON.stringify(JSON.parse(el.getAttribute('data-rt-text-styles')||'{}'))===JSON.stringify(info.textStyleLinks||{})&&JSON.stringify(JSON.parse(el.getAttribute('data-rt-color-styles')||'{}'))===JSON.stringify(info.colorStyleLinks||{})&&JSON.stringify(JSON.parse(el.getAttribute('data-rt-effect-styles')||'{}'))===JSON.stringify(info.effectStyleLinks||{})&&(!info.classVariables||JSON.stringify(JSON.parse(el.getAttribute('data-rt-variables')||'{}'))===JSON.stringify(info.variableLinks||{}))&&(info.className||'').split(/\s+/).filter(Boolean).every(token=>el.classList.contains(token));}catch{return false;}
   });else await reloadFrame();
 }
 async function writeTextStyle(type,width,extra={}){
@@ -1844,7 +1845,7 @@ async function writeClasses(classes, isUndo) {
     info.className = res.element?.className ?? classes;
     info.hash = res.hash;
     if(info.classTextStyles&&res.element)for(const key of ['textStyleLinks','textStyleOverrides','classTextStyles','textStyleLinkReason'])info[key]=res.element[key];
-    if(res.element)for(const key of ['colorStyleLinks','colorStyleOverrides','classColorStyles','colorStyleLinkReason','effectStyleLinks','effectStyleOverrides','classEffectStyles','effectStyleLinkReason'])info[key]=res.element[key];
+    if(res.element)for(const key of ['colorStyleLinks','colorStyleOverrides','classColorStyles','colorStyleLinkReason','effectStyleLinks','effectStyleOverrides','classEffectStyles','effectStyleLinkReason','classVariables','variableLinks','variableOverrides','variableReason'])info[key]=res.element[key];
     if (window.__RT_RENDERING?.reloadAfterWrite||info.renderRevisionAttribute) await refreshWrittenElement(info, el => info.className.split(/\s+/).filter(Boolean).every(token => el.classList.contains(token)));
     toast('Saved', 'ok');
     renderPanel();

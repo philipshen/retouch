@@ -7543,3 +7543,28 @@ leave all files unchanged on refusal.
 The React inspector and complete browser editing flow are still unconnected;
 these results prove source/API behavior, not complete React variable parity.
 Native application launches remain paused; full Figma parity remains incomplete.
+
+### React inspector collection bindings (2026-09-10)
+
+React host layers now use the collection inspector for typed variable selection,
+mode choices, units, apply/reset and detach. The panel uses the actual responsive
+scope key and its existing human-readable label. Source updates wait for the
+compiler-stamped render revision and matching variable metadata/classes before
+reporting completion. Collection edits use the same render synchronization, and
+ordinary class edits refresh variable override descriptions.
+
+All 572 unit tests pass (`/private/tmp/retouch-react-collection-ui-units.log`).
+The real Next.js/Tailwind editor flow in `page-fonts.cjs` with
+`RT_E2E_COLLECTION_BINDINGS=1` passes Chromium and WebKit, checking tablet-only
+paint, independent modes, phone isolation, collection edits reaching the rendered
+page, detach preserving appearance, numeric padding and byte-exact source/catalog
+Undo. Logs: `/private/tmp/retouch-react-collection-chromium.log` and
+`/private/tmp/retouch-react-collection-webkit.log`. The fixture uses canonical
+private history paths and explicitly checks that persistence has not fallen back
+to session-only storage. Restart persistence is not asserted by this browser test.
+The existing HTML collection-binding browser flow also passes.
+
+The React screenshot `/private/tmp/retouch-react-collection.png` was visually
+inspected. React multi-layer binding and inherited-binding controls remain
+unfinished, as do Liquid collection support and ancestor mode semantics. Full
+Figma parity is still incomplete; native launches remain paused.

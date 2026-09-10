@@ -14,7 +14,7 @@
   }
   return null;
  }
- function mount(parent,input,width,write){
+ function mount(parent,input,width,write,options={}){
   const selection=Array.isArray(input)?input:[input],info=selection[0],multiple=selection.length>1;
   const I=RetouchInspector,details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Collection bindings';details.append(summary);parent.append(details);details.open=expanded;
   const status=I.note(details,''),controls=document.createElement('fieldset');status.setAttribute('role','status');controls.style.cssText='border:0;padding:0;margin:0;min-width:0';details.append(controls);
@@ -27,7 +27,7 @@
   const load=()=>run(async()=>{library=await RetouchVariableLibraryRequest();await preview();});
   function render(){
    controls.replaceChildren();controls.append(I.button('Reload collection bindings',load));if(!library)return;
-   I.note(controls,'Bind '+(multiple?selection.length+' layers':'this layer')+' at '+(width?width+'px and larger':'all screen sizes')+'. Collection edits update linked pages.');
+   I.note(controls,'Bind '+(multiple?selection.length+' layers':'this layer')+' at '+(options.scopeLabel||(width?width+'px and larger':'all screen sizes'))+'. Collection edits update linked pages.');
    const labels=new Map(RetouchHTMLCSSValues.fields),properties=[...paints,...numbers,'visibility','font-family'];
    I.select(controls,'Collection binding target',properties.map(p=>[p,labels.get(p)||p]),target,value=>{target=value;init();run(preview);});
    const type=paints.includes(target)?'color':numbers.includes(target)?'number':target==='visibility'?'boolean':'string';
