@@ -191,3 +191,16 @@ test('typed tuple extraction refuses optional, rest, and defaulted positions',()
   'function Page(){const [label="Hello"]:[string?]=[];return <article>{label}</article>}'
  ]){const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/explicit type/);}finally{f.close();}}
 });
+
+test('typed extraction follows nested object and tuple destructuring contracts',()=>{
+ for(const declaration of [
+  'const {data:{text:label,count}}:{data:{text:string;count:number}}={data:{text:"Hi",count:2}};',
+  'const {data:[label,count]}:{data:[string,number]}={data:["Hi",2]};',
+  'const [{text:label},[count]]:[{text:string},[number]]=[{text:"Hi"},[2]];'
+ ]){const f=fixture('function Page(){'+declaration+'return <article title={label}>{count+1}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);assert.ok(result.edits[0].after.includes('"label": (string)'));assert.ok(result.edits[0].after.includes('"count": (number)'));}finally{f.close();}}
+});
+test('typed extraction does not lose optional or defaulted ancestor contracts',()=>{
+ for(const pattern of ['{data:{label}={label:"Hi"}}:{data?:{label:string}}','{data:[label="Hi"]}:{data:[string?]}']){
+  const f=fixture('function Page('+pattern+'){return <article>{label}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/explicit type/);}finally{f.close();}
+ }
+});

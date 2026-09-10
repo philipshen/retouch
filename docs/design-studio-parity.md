@@ -9999,3 +9999,9 @@ Validation: all 792 unit tests passed (`/private/tmp/retouch-capture-patterns-un
 Added a browser fixture that extracts directly from an explicitly annotated named useState tuple and an aliased typed object local. It verifies the generated string/callback annotations, callback-driven React state updates, appearance, definition editing and exact Undo/Redo source restoration.
 
 Validation: Chromium (`/private/tmp/retouch-typed-tuple-browser-chromium.log`) and WebKit (`/private/tmp/retouch-typed-tuple-browser-webkit.log`) both exited 0. This verifies explicit tuple annotations; inferred hook types remain outside the current capture-type path. No production code changed in this stage. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Nested typed capture paths
+
+Typed component extraction now follows nested object and tuple destructuring contracts, preserving aliases and positional members down to the captured identifier. Contract traversal is bounded; optional/rest/defaulted paths remain refused rather than losing their narrowing requirements. Duplicate object contract members are not selected ambiguously.
+
+Validation: 794 unit tests passed (`/private/tmp/retouch-nested-capture-types-units.log`). Strict TypeScript compiler probes passed for generated components using nested objects, tuples inside objects, and nested object/tuple combinations. Tests also retain refusals for optional/defaulted ancestor paths. No browser run in this planner stage. Full Figma parity remains incomplete; native launches remain paused.
