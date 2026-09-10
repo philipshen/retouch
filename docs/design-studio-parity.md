@@ -6400,3 +6400,25 @@ retains the base color, reset md to inherited paint, and undo both source states
 exactly before completing existing palette tests. Wider cascade/paint-server
 coverage and full Figma parity remain incomplete. Native launches remain paused;
 these receipts do not verify a live Shopify theme.
+
+### Shared local paint for React selections (2026-09-09)
+
+React shared styles now provide text/background/border hex-with-alpha inputs,
+plus SVG fill/stroke when every selected layer is SVG. Mixed computed colors are
+identified. A source planner composes paint for each layer's own classes and
+passes the complete selection to the existing atomic class transaction; one
+undo restores the entire edit. Saved links remain attached and report overrides,
+so the palette can reset each layer to its linked definition. Invalid/stale or
+dynamic selections and unresolved important shorthands refuse without partial
+source edits. Inline-controlled inputs are disabled in the shared inspector.
+
+All 480 tests passed, exit 0: /private/tmp/retouch-shared-paint-units.log.
+Dedicated source tests cover differing initial colors, scope isolation,
+idempotence and all-or-nothing refusal. React Chromium and WebKit browser flows
+passed, exit 0: /private/tmp/retouch-shared-paint-chromium.log and
+/private/tmp/retouch-shared-paint-webkit.log. Both apply a shared alpha-green
+background, verify two local overrides and computed paint, reset through the
+palette, and undo both source states exactly before continuing existing color
+library flows. Shared SVG/text/border inputs use this route but lack dedicated
+live selection receipts. Liquid batch editing, cross-file selections and full
+Figma parity remain incomplete. Native launches remain paused.

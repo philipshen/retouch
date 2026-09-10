@@ -901,7 +901,7 @@ function renderPanelContents() {
    RetouchColorStyles.mount(panelBody,sel.multiple?.length>1?selectionColorOptions(scope):info.colorStyles||info.classColorStyles?{width:scope,allLinks:info.colorStyleLinks,links:info.colorStyleLinks?.[scope],overrides:info.colorStyleOverrides?.[scope]||[],inherited:info.classColorStyles?property=>RetouchResponsive.inheritedLink(Object.fromEntries(Object.entries(info.colorStyleLinks||{}).filter(([,group])=>group[property]).map(([key,group])=>[key,group[property]])),styleScope,matchingEls(info.id)[0]?.ownerDocument):undefined,apply:(styleId,libraryRevision,property)=>writeTextStyle('applyColorStyle',width,{scope:styleScope,styleId,libraryRevision,property}),reset:(styleId,libraryRevision,property)=>writeTextStyle('resetColorStyle',width,{scope:styleScope,styleId,libraryRevision,property}),detach:property=>writeTextStyle('detachColorStyle',width,{scope:styleScope,property})}:{});
   }
 
-  if(sel.multiple?.length>1){mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
+  if(sel.multiple?.length>1){mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection,setSelectionColorOverride));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
   if(info.components?.length) {
     const label=document.createElement('label');label.textContent='Component scope';
@@ -1562,6 +1562,15 @@ async function renameLayer(name){
     if(result.undoId)editorHistory.record({type:'renameElement',id:info.id,undoId:result.undoId});
     sel.info=result.element;await reloadFrame();renderPanel();toast('Layer named','ok');
   }finally{busyPanel(false);}
+}
+async function setSelectionColorOverride(property,value){
+ const selection=sel?.multiple,info=sel?.info;if(!selection?.length)return;const ids=selection.map(item=>item.id);busyPanel(true);
+ try{
+  const result=await api('POST','/rt/__api/op',{type:'setColorOverrideSelection',id:info.id,ids,fileHash:info.hash,scope:styleScope,property,value});
+  if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update selected paint.');
+  if(result.undoId)editorHistory.record({type:'setClassesSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
+  sel.info=result.element;sel.multiple=result.selection;await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));renderPanel();
+ }finally{busyPanel(false);}
 }
 function selectionColorOptions(width){
   const selection=sel.multiple;

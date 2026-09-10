@@ -188,7 +188,10 @@ function handle(req, res, ctx) {
       let result;
       try {
         resolved.context = renderContext(op.context);
-        if(op.type==='setColorOverride'){
+        if(op.type==='setColorOverrideSelection'){
+          if(ctx.adapter.name!=='react')return json(res,409,{ok:false,reason:'Shared class color editing needs a React selection.'});
+          result=applyPlan(ctx.appRoot,require('./color-override-selection.cjs').plan(resolved,op));
+        }else if(op.type==='setColorOverride'){
           if(!['react','liquid'].includes(ctx.adapter.name))return json(res,409,{ok:false,reason:'Class color editing is not available for this renderer.'});
           const info=ctx.adapter.describe(resolved);if(info.classNameDynamic)return json(res,409,{ok:false,reason:'Color editing needs literal classes.'});
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source changed. Re-select the layer.'});
