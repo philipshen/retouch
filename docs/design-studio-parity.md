@@ -9993,3 +9993,9 @@ Validation: Chromium (`/private/tmp/retouch-typed-extraction-chromium.log`) and 
 Component extraction now reads explicit structural contracts on local object destructuring and tuple patterns. Renamed object properties and skipped tuple positions keep the correct capture types; named tuple members contribute their element type rather than their label. Optional, rest and defaulted positions remain refused where positional/type narrowing is not established.
 
 Validation: all 792 unit tests passed (`/private/tmp/retouch-capture-patterns-units.log`). Strict TypeScript compiler probes passed for generated components from object locals, plain tuples and named tuples with a skipped slot, including numeric arithmetic and string attributes. No live browser run in this planner-only expansion. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Live extraction from typed React state tuples
+
+Added a browser fixture that extracts directly from an explicitly annotated named useState tuple and an aliased typed object local. It verifies the generated string/callback annotations, callback-driven React state updates, appearance, definition editing and exact Undo/Redo source restoration.
+
+Validation: Chromium (`/private/tmp/retouch-typed-tuple-browser-chromium.log`) and WebKit (`/private/tmp/retouch-typed-tuple-browser-webkit.log`) both exited 0. This verifies explicit tuple annotations; inferred hook types remain outside the current capture-type path. No production code changed in this stage. Full Figma parity remains incomplete; native launches remain paused.
