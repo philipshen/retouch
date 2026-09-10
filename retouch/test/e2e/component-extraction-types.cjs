@@ -7,6 +7,10 @@ const ts=require(path.join(fixture,'node_modules/typescript'));
 const {makeApp,cleanup,Index}=require('../helpers.cjs'),create=require('../../src/create-component.cjs');
 const jsx='declare namespace JSX {interface ElementChildrenAttribute {children:{}} interface IntrinsicElements {article:{title?:string;onClick?:()=>void;children?:unknown}}}\n';
 const cases=[
+ ['literal variant union','type Tone="quiet"|"loud";function Page(tone:Tone){return <article title={tone}>{tone==="quiet"?"Quiet":"Loud"}</article>}'],
+ ['nullable union prop','type Label=string|null;function Page({title}:{title:Label}){return <article title={title??"Hi"}>Hi</article>}'],
+ ['discriminated union','type Data={kind:"text";text:string}|{kind:"count";count:number};function Page(data:Data){return <article>{data.kind==="text"?data.text.toUpperCase():data.count.toFixed()}</article>}'],
+ ['nested union callback','type Value=string|number;interface Props{value:Value;onSelect(value:Value):void}function Page(data:Props){return <article onClick={()=>data.onSelect(data.value)}>{data.value}</article>}'],
  ['diamond interface','interface Base{title:string}interface Left extends Base{}interface Right extends Base{}interface Props extends Left,Right{count:number}function Page(data:Props){return <article title={data.title}>{data.count+1}</article>}'],
  ['identical intersection fields','type Props={title:string}&{title:string}&{count:number};function Page(data:Props){return <article title={data.title}>{data.count+1}</article>}'],
  ['diamond index signature','interface Base{readonly [key:string]:string}interface Left extends Base{}interface Right extends Base{}interface Props extends Left,Right{}function Page(data:Props){return <article title={data["title"]??"Hi"}>Hi</article>}'],
@@ -33,6 +37,8 @@ const cases=[
  ['readonly destructuring','function Page(){const [title,count]:readonly [string,number]=["Hi",2];return <article title={title}>{count+1}</article>}'],
 ];
 const refusedCases=[
+ ['initialized union local','type Value=string|number;function Page(){const value:Value="Hi";return <article title={value.toUpperCase()}>Hi</article>}',true],
+ ['earlier union guard','function Page(value:string|number){if(typeof value!=="string")return null;return <article title={value.toUpperCase()}>Hi</article>}',true],
  ['earlier optional guard','interface Props{title?:string}function Page(data:Props){if(!data.title)return null;return <article title={data.title.toUpperCase()}>Hi</article>}',true],
  ['class shadows alias','type Value=string;function Page(){class Value{label="Hi"}const value:Value=new Value();return <article>{value.label}</article>}',true],
  ['enum shadows alias','type Value=string;function Page(){enum Value{First}const value:Value=Value.First;return <article>{value.toFixed()}</article>}',true],

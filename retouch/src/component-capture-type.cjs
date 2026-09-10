@@ -1,6 +1,6 @@
 'use strict';
 // A copied structural type must not refer to bindings from the old function.
-const allowed=new Set(['TSTypeAnnotation','TSTypeLiteral','TSPropertySignature','TSMethodSignature','TSIndexSignature','TSFunctionType','TSArrayType','TSTupleType','TSNamedTupleMember','TSOptionalType','TSRestType','TSLiteralType','TSParenthesizedType','TSTypeOperator',...'TSStringKeyword TSNumberKeyword TSBooleanKeyword TSBigIntKeyword TSSymbolKeyword TSAnyKeyword TSNeverKeyword TSVoidKeyword TSUndefinedKeyword TSNullKeyword'.split(' ')]);
+const allowed=new Set(['TSTypeAnnotation','TSTypeLiteral','TSPropertySignature','TSMethodSignature','TSIndexSignature','TSFunctionType','TSArrayType','TSTupleType','TSNamedTupleMember','TSOptionalType','TSRestType','TSLiteralType','TSUnionType','TSParenthesizedType','TSTypeOperator',...'TSStringKeyword TSNumberKeyword TSBooleanKeyword TSBigIntKeyword TSSymbolKeyword TSAnyKeyword TSNeverKeyword TSVoidKeyword TSUndefinedKeyword TSNullKeyword'.split(' ')]);
 function renderType(node,source,resolve,budget={left:2000},depth=0){
  if(!node||depth>20||--budget.left<0)return null;
  if(node.captureText){
@@ -106,6 +106,7 @@ function typeResolver(binding,source){
 module.exports=function captureType(binding,source){
  const pattern=binding.path.node.type==='VariableDeclarator'?binding.path.node.id:binding.path.node;
  const resolve=typeResolver(binding,source),type=resolve(binding.identifier.typeAnnotation?.typeAnnotation||patternType(pattern,pattern.typeAnnotation?.typeAnnotation,binding.identifier.name,resolve));
- if(binding.identifier.optional||!type)return null;
+ // Initializers can narrow a local union even without an explicit guard.
+ if(binding.identifier.optional||!type||type.type==='TSUnionType'&&binding.kind!=='param')return null;
  const text=renderType(type,source,resolve);return text===null?null:'('+text+')';
 };
