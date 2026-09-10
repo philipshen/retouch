@@ -63,3 +63,12 @@ test('shared aspect ratios atomically release height while preserving width and 
  for(const value of ['0 / 1','1 / 0','-1 / 1','Infinity','2; color:red',''])assert.throws(()=>shared.changeRatio(source,'md:',value),/supported shared style/);
  assert.throws(()=>shared.changeRatio('md:[block-size:10px]','md:','16 / 9'),/logical sizing/);
 });
+
+
+test('shared flex factors preserve shorthand basis and independent factors with important priority',()=>{
+ const source='flex-none md:!flex-[0_1_100px] md:shrink-0 lg:grow-2';
+ const grown=shared.change(source,'md:','flex-grow',1);assert.ok(grown.includes('md:![flex-grow:1]'));assert.ok(grown.includes('md:!flex-[0_1_100px]'));assert.ok(grown.includes('md:shrink-0'));assert.ok(grown.includes('lg:grow-2'));
+ const shrunk=shared.change(grown,'md:','flex-shrink',.5);assert.ok(shrunk.includes('md:![flex-shrink:0.5]'));assert.ok(!shrunk.includes('md:shrink-0'));assert.ok(shrunk.includes('md:![flex-grow:1]'));
+ assert.deepEqual(shared.change(grown,'md:','flex-grow',null).split(' ').sort(),source.split(' ').sort());
+ for(const value of [-1,Infinity,1001,'auto'])assert.throws(()=>shared.change(source,'md:','flex-grow',value),/supported shared style/);
+});
