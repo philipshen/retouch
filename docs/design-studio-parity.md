@@ -10023,3 +10023,9 @@ Validation: Chromium (`/private/tmp/retouch-named-contract-browser-chromium.log`
 Extraction now follows non-generic same-module interface inheritance, including multiple levels, to resolve captured leaf properties. Whole-object captures render the combined structural contract so inherited fields are retained. Cycles, duplicate/overridden member names and unsupported base forms remain refused. The standalone-interface path remains unchanged.
 
 Validation: all 798 unit tests passed (`/private/tmp/retouch-inherited-contracts-units-final.log`). Strict TypeScript compiler probes passed for generated components capturing inherited fields individually and capturing the entire derived object. Tests include cyclic inheritance, overlapping members and generic bases. No browser run in this planner expansion. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Live extraction through interface inheritance
+
+Added browser coverage for a captured property inherited through two same-module interface levels. The fixture retains the named state tuple and callback alias, then verifies generated prop annotations, callback-driven state changes, definition editing, appearance and exact source Undo/Redo.
+
+Validation: Chromium (`/private/tmp/retouch-inherited-browser-chromium.log`) and WebKit (`/private/tmp/retouch-inherited-browser-webkit.log`) both exited 0. Whole-object inherited contracts retain the preceding unit/compiler coverage; this browser fixture exercises inherited leaf extraction. No production code changed in this verification stage. Full Figma parity remains incomplete; native launches remain paused.
