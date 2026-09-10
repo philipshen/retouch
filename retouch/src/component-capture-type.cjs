@@ -12,7 +12,7 @@ function renderType(node,source,resolve,budget={left:2000},depth=0){
   if(!valid||!value||typeof value!=='object')return;
   if(--budget.left<0){valid=false;return;}
   if(Array.isArray(value)){value.forEach(inspect);return;}
-  if(value.type==='TSTypeReference'){
+  if(['TSTypeReference','TSIntersectionType'].includes(value.type)){
    const resolved=resolve(value),text=resolved&&renderType(resolved,source,resolve,budget,depth+1);
    if(text===null||text===undefined){valid=false;return;}
    edits.push({start:value.start-node.start,end:value.end-node.start,text:'('+text+')'});return;
@@ -67,30 +67,38 @@ function typeResolver(binding,source){
   });
   for(const statement of program.node.body){const node=statement.type==='ExportNamedDeclaration'?statement.declaration:statement;if(node&&['TSTypeAliasDeclaration','TSInterfaceDeclaration'].includes(node.type))declarations.set(node.id.name,node);}
  }
- return function resolve(type,seen=new Set()){
-  if(!type)return null;
-  if(type.type==='TSParenthesizedType')return resolve(type.typeAnnotation,seen);
+ function combine(members,start,end){
+  const keys=new Set();let indexSignature=false;
+  for(const member of members){
+   if(member.type==='TSIndexSignature'){if(indexSignature)return null;indexSignature=true;continue;}
+   if(!['TSPropertySignature','TSMethodSignature'].includes(member.type)||member.computed)return null;
+   const key=String(member.key.name??member.key.value);if(keys.has(key))return null;keys.add(key);
+  }
+  return {type:'TSTypeLiteral',members,start,end,captureText:'{ '+members.map(member=>source.slice(member.start,member.end)).join('; ')+' }'};
+ }
+ return function resolve(type,seen=new Set(),depth=0){
+  if(!type||depth>30)return null;
+  if(type.type==='TSParenthesizedType')return resolve(type.typeAnnotation,seen,depth+1);
+  if(type.type==='TSIntersectionType'){
+   const parts=type.types.map(part=>resolve(part,seen,depth+1));
+   if(parts.some(part=>part?.type!=='TSTypeLiteral'))return null;
+   return combine(parts.flatMap(part=>part.members),type.start,type.end);
+  }
   if(type.type!=='TSTypeReference')return type;
   if(type.typeName.type!=='Identifier'||type.typeParameters||type.typeArguments)return null;
   const name=type.typeName.name,node=declarations.get(name);
   if(!node||counts.get(name)!==1||node.typeParameters||seen.has(name)||seen.size>=20)return null;
   const next=new Set(seen);next.add(name);
-  if(node.type==='TSTypeAliasDeclaration')return resolve(node.typeAnnotation,next);
+  if(node.type==='TSTypeAliasDeclaration')return resolve(node.typeAnnotation,next,depth+1);
   if(!node.extends?.length)return {type:'TSTypeLiteral',members:node.body.body,start:node.body.start,end:node.body.end};
   const members=[];
   for(const base of node.extends||[]){
-    const resolved=resolve({type:'TSTypeReference',typeName:base.expression,typeParameters:base.typeParameters,typeArguments:base.typeArguments},next);
+    const resolved=resolve({type:'TSTypeReference',typeName:base.expression,typeParameters:base.typeParameters,typeArguments:base.typeArguments},next,depth+1);
     if(resolved?.type!=='TSTypeLiteral')return null;
     members.push(...resolved.members);
   }
   members.push(...node.body.body);
-  const keys=new Set();
-  for(const member of members){
-    if(member.type==='TSIndexSignature')continue;
-    if(!['TSPropertySignature','TSMethodSignature'].includes(member.type)||member.computed)return null;
-    const key=String(member.key.name??member.key.value);if(keys.has(key))return null;keys.add(key);
-  }
-  return {type:'TSTypeLiteral',members,start:node.body.start,end:node.body.end,captureText:'{ '+members.map(member=>source.slice(member.start,member.end)).join('; ')+' }'};
+  return combine(members,node.body.start,node.body.end);
  };
 }
 module.exports=function captureType(binding,source){

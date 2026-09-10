@@ -10101,3 +10101,9 @@ Validation: all 807 unit tests passed (`/private/tmp/retouch-index-contracts-uni
 Added a browser fixture with an inherited readonly index signature, an absent dictionary key and a readonly named React state tuple. The flow verifies the readonly generated contract, missing-key fallback, stateful method callback, definition editing, appearance and exact source Undo/Redo.
 
 Validation: Chromium (`/private/tmp/retouch-index-browser-chromium.log`) and WebKit (`/private/tmp/retouch-index-browser-webkit.log`) both exited 0. No production code changed in this verification stage. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Disjoint object-intersection contracts
+
+Extraction now combines disjoint structural object intersections, including same-module aliases, for whole-object captures and destructured fields. The same combination path serves inherited interfaces. Overlapping names, multiple index signatures and non-object intersection branches refuse rather than produce an incorrectly flattened contract; resolver nesting is explicitly bounded.
+
+Validation: all 809 unit tests passed (`/private/tmp/retouch-intersection-contracts-units.log`). The strict compiler suite passed 21 extraction scenarios and three guarded refusals (`/private/tmp/retouch-intersection-contracts-compiler.log`). New checks cover whole/destructured intersections and refusal of overlapping/non-object/indexed intersections. No browser run in this planner expansion. Full Figma parity remains incomplete; native launches remain paused.

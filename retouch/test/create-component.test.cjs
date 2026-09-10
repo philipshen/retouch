@@ -277,3 +277,11 @@ test('typed extraction preserves indexed object contracts including inherited re
   const f=fixture(contract+' function Page(data:Props){return <article title={data["title"]??"Hi"}>Hi</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);const signature=result.edits[0].after.split('function Card(')[1];assert.ok(signature.includes('[key:string]:(string)'));if(contract.includes('readonly'))assert.ok(signature.includes('readonly [key:string]'));}finally{f.close();}
  }
 });
+
+test('typed extraction combines disjoint object intersections for leaf and whole captures',()=>{
+ const declarations='interface Base{title:string}type Props=Base & {count:number};';
+ for(const [params,body]of [['{title,count}:Props','<article title={title}>{count+1}</article>'],['data:Props','<article title={data.title}>{data.count+1}</article>']]){const f=fixture(declarations+'function Page('+params+'){return '+body+'}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);if(params.startsWith('data'))assert.ok(result.edits[0].after.includes('"data": ({ title:string; count:number })'));}finally{f.close();}}
+});
+test('overlapping and non-object intersections are not flattened incorrectly',()=>{
+ for(const type of ['{title:string}&{title:"Hi"}','string&{brand:true}','{[key:string]:string}&{[name:string]:string}']){const f=fixture('type Props='+type+';function Page(data:Props){return <article>{String(data)}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);}finally{f.close();}}
+});
