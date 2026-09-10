@@ -25,6 +25,19 @@
   }
   return result;
  }
+ function tree(roots,components){
+  const nodes=new Map();function scan(items){for(const item of items){nodes.set(item.el,item);scan(item.children);}}scan(roots);
+  for(const component of components)for(const usage of component.usages||[]){
+   const matches=[...nodes.keys()].filter(el=>el.getAttribute('data-rt-i')===usage.id);
+   for(const instance of group(matches,component.rootGroups)){
+    if(!instance.complete)continue;const children=instance.elements.map(el=>nodes.get(el)),parent=children[0].parent,siblings=parent?parent.children:roots,index=siblings.indexOf(children[0]);
+    if(index<0||children.some((item,n)=>item.parent!==parent||siblings[index+n]!==item))continue;
+    const item={el:instance.element,componentId:usage.id,label:component.name+' · component',children,parent,componentRoots:instance.elements};
+    siblings.splice(index,children.length,item);for(const child of children)child.parent=item;
+   }
+  }
+  return roots;
+ }
  function prioritize(groups,target){
   if(!target?.isConnected)return groups;
   const selected=groups.find(group=>group.elements.includes(target));
@@ -34,5 +47,5 @@
   const rects=elements.map(el=>el.getBoundingClientRect()).filter(r=>r.width||r.height);if(!rects.length)return null;
   const left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top));return {left,top,width:Math.max(...rects.map(r=>r.right))-left,height:Math.max(...rects.map(r=>r.bottom))-top};
  }
- const api={group,prioritize,bounds};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.RetouchComponentInstances=api;
+ const api={group,tree,prioritize,bounds};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.RetouchComponentInstances=api;
 })(typeof window!=='undefined'?window:globalThis);

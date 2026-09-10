@@ -24,7 +24,7 @@
     if(!target.parentElement?.hasAttribute('data-rt')||['HTML','BODY'].includes(target.tagName))return null;
     return fraction<.5?'before':'after';
   }
-  function mount({host,onSelect,onAction,getClipboard=()=>null,dragEnabled=false,multiSelectEnabled=dragEnabled,onMove,onSelectMany,locks,onLock}) {
+  function mount({host,onSelect,onAction,getClipboard=()=>null,dragEnabled=false,multiSelectEnabled=dragEnabled,onMove,onSelectMany,locks,onLock,readComponents}) {
     const header=document.createElement('h2');header.textContent='Layers';
     const search=document.createElement('input');search.type='search';search.placeholder='Find a layer…';search.setAttribute('aria-label','Find a layer');
     const tree=document.createElement('div');tree.className='layer-tree';tree.setAttribute('role','tree');tree.setAttribute('aria-label','Site layers');
@@ -40,7 +40,7 @@
     lockSelection.setAttribute('aria-keyshortcuts','Meta+Shift+L Control+Shift+L');unlockSelection.setAttribute('aria-keyshortcuts','Meta+Shift+L Control+Shift+L');
     lockSelection.hidden=unlockSelection.hidden=!locks||!onLock;
     lockSelection.disabled=unlockSelection.disabled=true;
-    lockSelection.onclick=()=>onLock([...selectedSet],true);unlockSelection.onclick=()=>onLock([...selectedSet],false);
+    lockSelection.onclick=()=>onLock(selectedRoots(),true);unlockSelection.onclick=()=>onLock(selectedRoots(),false);
     unlockSelection.title='Remove direct locks from selected layers. Inherited locks must be removed from their parent. ⌘/Ctrl+Shift+L toggles selection locks.';
     actions.append(lockSelection,unlockSelection);
     const reason=document.createElement('p');reason.className='layer-reason';
@@ -49,12 +49,18 @@
     lockedOnly.type='checkbox';lockFilter.append(lockedOnly,' Locked layers only');lockFilter.className='layer-lock-filter';lockFilter.hidden=!locks;
     unlockShown.textContent='Unlock shown locks';unlockShown.className='layer-select-all';unlockShown.hidden=!locks||!onLock;unlockShown.disabled=true;
     unlockShown.title='Unlock direct locks shown in this filtered tree as one undoable action.';
-    unlockShown.onclick=()=>onLock(rows.filter(row=>locks.direct(row.item.el)).map(row=>row.item.el),false);
+    unlockShown.onclick=()=>onLock(rows.filter(row=>!row.item.componentId&&locks.direct(row.item.el)).map(row=>row.item.el),false);
     host.append(header,search,lockFilter,unlockShown,selectAll,tree,empty,actions,reason);
+    let components=[],componentRequest=0,selectedInfo=null,treeRoots=[],virtualItems=[];const componentKeys=new WeakMap();
+    const key=item=>{if(!item.componentId)return item.el;let keys=componentKeys.get(item.el);if(!keys)componentKeys.set(item.el,keys=new Map());if(!keys.has(item.componentId))keys.set(item.componentId,{});return keys.get(item.componentId);};
+    const isSelected=item=>item.componentId?selectedInfo?.kind==='instance'&&selectedInfo.id===item.componentId&&item.componentRoots.includes(selected):!(selectedInfo?.kind==='instance'&&virtualItems.some(row=>row.componentId===selectedInfo.id&&row.componentRoots.includes(selected)))&&selectedSet.has(item.el);
+    const selectedRoots=()=>selectedInfo?.kind==='instance'?virtualItems.find(item=>item.componentId===selectedInfo.id&&item.componentRoots.includes(selected))?.componentRoots||[...selectedSet]:[...selectedSet];
+    const choose=item=>onSelect(item.el,{sourceId:item.componentId|| (item.parent?.componentId?item.el.getAttribute('data-rt'):undefined),component:!!item.componentId});
+    async function loadComponents(){if(!readComponents||!d)return;const request=++componentRequest,current=d;try{const result=await readComponents();if(request===componentRequest&&d===current&&result?.ok){components=result.components||[];render();}}catch{}}
     let d=null,observer=null,timer=null,selected=null,rows=[],collapsed=new WeakSet(),lastCapabilities=null,isBusy=false,dragged=null,selectedSet=new Set(),rangeAnchor=null;
     function clearTargets(){for(const row of rows)row.button.classList.remove('drop-target','drop-before','drop-after');}
     function endDrag(){dragged=null;clearTargets();for(const row of rows)row.button.classList.remove('dragging');}
-    function selectionRows(){const query=search.value.trim().toLowerCase();return rows.filter(row=>!['HTML','BODY'].includes(row.item.el.tagName)&&!locks?.locked(row.item.el)&&(!query||row.item.label.toLowerCase().includes(query)));}
+    function selectionRows(){const query=search.value.trim().toLowerCase();return rows.filter(row=>!row.item.componentId&&!['HTML','BODY'].includes(row.item.el.tagName)&&!locks?.locked(row.item.el)&&(!query||row.item.label.toLowerCase().includes(query)));}
     async function selectRange(target,append=false){
       if(isBusy)return;const candidates=selectionRows(),end=candidates.findIndex(row=>row.item.el===target);
       if(end<0)return onSelect(target);
@@ -65,33 +71,35 @@
     async function selectVisible(){if(!multiEnabled||isBusy)return;const candidates=selectionRows();if(candidates.length){rangeAnchor=candidates[0].item.el;await onSelectMany(candidates.map(row=>row.item.el),{active:candidates[0].item.el});}}
     selectAll.onclick=selectVisible;
     function render() {
-      const focused=rows.find(r=>r.button===document.activeElement)?.item.el;
-      const previous=new Map(rows.map(row=>[row.item.el,row]));rows=[];
+      const focused=rows.find(r=>r.button===document.activeElement)?.item;
+      const previous=new Map(rows.map(row=>[key(row.item),row]));rows=[];
       const query=search.value.trim().toLowerCase();
       const matches=new Map();
       function matched(item){if(!matches.has(item))matches.set(item,((!lockedOnly.checked||locks?.locked(item.el))&&item.label.toLowerCase().includes(query))||item.children.some(matched));return matches.get(item);}
       function walk(items,depth) {
         for(const item of items) {
           if((query||lockedOnly.checked)&&!matched(item))continue;
-          const prior=previous.get(item.el),row=prior?.row||document.createElement('div');row.className='layer-row';row.style.paddingLeft=(depth-1)*12+'px';
-          const expanded=!!query||lockedOnly.checked||!collapsed.has(item.el);
+          const prior=previous.get(key(item)),row=prior?.row||document.createElement('div');row.className='layer-row'+(item.componentId?' component-tree-row':'');row.style.paddingLeft=(depth-1)*12+'px';
+          const expanded=!!query||lockedOnly.checked||!collapsed.has(key(item));
           const toggle=prior?.toggle||document.createElement('button');toggle.className='layer-toggle';toggle.tabIndex=-1;
           toggle.textContent=item.children.length?(expanded?'▾':'▸'):'';
           toggle.disabled=isBusy||!item.children.length;toggle.setAttribute('aria-label',(expanded?'Collapse ':'Expand ')+item.label);
-          toggle.onclick=()=>{if(expanded)collapsed.add(item.el);else collapsed.delete(item.el);render();};
+          toggle.onclick=()=>{if(expanded)collapsed.add(key(item));else collapsed.delete(key(item));render();};
           const b=prior?.button||document.createElement('button');b.className='layer-item';if(b.textContent!==item.label)b.textContent=item.label;b.title=item.label;
-          b.setAttribute('role','treeitem');b.setAttribute('aria-level',depth);b.setAttribute('aria-selected',String(selectedSet.has(item.el)));
-          b.tabIndex=item.el===selected?0:-1;b.disabled=isBusy;
+          b.setAttribute('role','treeitem');b.setAttribute('aria-level',depth);b.setAttribute('aria-selected',String(isSelected(item)));
+          b.tabIndex=isSelected(item)?0:-1;b.disabled=isBusy;
           if(item.children.length)b.setAttribute('aria-expanded',String(expanded));else b.removeAttribute('aria-expanded');
-          b.onclick=e=>{if(multiEnabled&&e.shiftKey)return selectRange(item.el,e.metaKey||e.ctrlKey);rangeAnchor=item.el;return onSelect(item.el,{toggle:e.metaKey||e.ctrlKey});};
-          b.draggable=dragEnabled&&item.el.namespaceURI==='http://www.w3.org/1999/xhtml'&&!['HTML','BODY'].includes(item.el.tagName);
+          b.onclick=e=>{if(item.componentId||item.parent?.componentId)return choose(item);if(multiEnabled&&e.shiftKey)return selectRange(item.el,e.metaKey||e.ctrlKey);rangeAnchor=item.el;return onSelect(item.el,{toggle:e.metaKey||e.ctrlKey});};
+          b.draggable=!item.componentId&&dragEnabled&&item.el.namespaceURI==='http://www.w3.org/1999/xhtml'&&!['HTML','BODY'].includes(item.el.tagName);
           b.ondragstart=e=>{if(isBusy||!b.draggable){e.preventDefault();return;}dragged=item.el;e.dataTransfer.setData('text/plain','retouch-layer:'+item.el.getAttribute('data-rt'));e.dataTransfer.effectAllowed='move';for(const row of rows)if(row.item.el===dragged||selectedSet.has(dragged)&&selectedSet.has(row.item.el))row.button.classList.add('dragging');};
-          const dropPosition=e=>{const box=b.getBoundingClientRect();return isBusy?null:placement(selectedSet.has(dragged)?[...selectedSet]:[dragged],item.el,(e.clientY-box.top)/box.height);};
+          const dropPosition=e=>{const box=b.getBoundingClientRect();return isBusy||item.componentId?null:placement(selectedSet.has(dragged)?[...selectedSet]:[dragged],item.el,(e.clientY-box.top)/box.height);};
           b.ondragover=e=>{clearTargets();const position=dropPosition(e);if(position){e.preventDefault();e.dataTransfer.dropEffect='move';b.classList.add(position==='inside'?'drop-target':'drop-'+position);}};
           b.ondragleave=clearTargets;
           b.ondrop=e=>{const position=dropPosition(e);if(position){e.preventDefault();const source=dragged;endDrag();onMove?.(source,item.el,position);}};
           b.ondragend=endDrag;
           b.onkeydown=async e=>{
+            if(item.parent?.componentId&&(e.key==='F2'||e.key==='Delete'||e.key==='Backspace'||(e.metaKey||e.ctrlKey)&&['c','v','d'].includes(e.key.toLowerCase())))await choose(item);
+            if(item.componentId&&(e.key==='F2'||e.key==='Delete'||e.key==='Backspace'||(e.metaKey||e.ctrlKey)&&['c','v','d'].includes(e.key.toLowerCase()))){e.preventDefault();await choose(item);return;}
             if(multiEnabled&&(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='a'){e.preventDefault();e.stopPropagation();await selectVisible();return;}
             if(e.key==='F2'){e.preventDefault();if(!isBusy){if(!selectedSet.has(item.el))await onSelect(item.el);onAction('renameElement');}return;}
             if((e.metaKey||e.ctrlKey)&&['c','v'].includes(e.key.toLowerCase())){e.preventDefault();if(!isBusy){if(!selectedSet.has(item.el))await onSelect(item.el);onAction(e.key.toLowerCase()==='c'?'copyElement':'pasteElement');}return;}
@@ -102,13 +110,13 @@
               e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?rows.length-1:index+(e.key==='ArrowDown'?1:-1);
               const destination=rows[Math.max(0,Math.min(rows.length-1,next))];if(multiEnabled&&e.shiftKey&&destination)await selectRange(destination.item.el,e.metaKey||e.ctrlKey);destination?.button.focus();
             } else if(e.key==='ArrowRight') {
-              e.preventDefault();if(item.children.length){if(!expanded){collapsed.delete(item.el);render();}else rows[index+1]?.button.focus();}
+              e.preventDefault();if(item.children.length){if(!expanded){collapsed.delete(key(item));render();}else rows[index+1]?.button.focus();}
             } else if(e.key==='ArrowLeft') {
-              e.preventDefault();if(item.children.length&&expanded){collapsed.add(item.el);render();}else rows.find(r=>r.item===item.parent)?.button.focus();
+              e.preventDefault();if(item.children.length&&expanded){collapsed.add(key(item));render();}else rows.find(r=>r.item===item.parent)?.button.focus();
             }
           };
           let lock=prior?.lock;
-          if(locks&&onLock){
+          if(locks&&onLock&&!item.componentId){
             lock ||= document.createElement('button');lock.className='layer-lock';
             const direct=locks.direct(item.el),inherited=!direct&&locks.locked(item.el);
             lock.textContent=direct||inherited?'🔒':'🔓';lock.setAttribute('aria-label',(direct?'Unlock ':inherited?'Locked by parent: ':'Lock ')+item.label);
@@ -120,7 +128,7 @@
           if(expanded)walk(item.children,depth+1);
         }
       }
-      if(d)walk(collect(d),1);
+      treeRoots=d?(readComponents?RetouchComponentInstances.tree(collect(d),components):collect(d)):[];virtualItems=[];function indexVirtual(items){for(const item of items){if(item.componentId)virtualItems.push(item);indexVirtual(item.children);}}indexVirtual(treeRoots);walk(treeRoots,1);
       // Keep existing layer buttons attached while source updates arrive. Replacing
       // them between pointerdown and pointerup loses the browser's click target.
       const retained=new Set(rows.map(entry=>entry.row));
@@ -131,31 +139,33 @@
       empty.hidden=!!rows.length;
       selectAll.disabled=isBusy||!selectionRows().length;
       unlockShown.disabled=isBusy||!rows.some(row=>locks?.direct(row.item.el));
-      if(focused)rows.find(r=>r.item.el===focused)?.button.focus();
+      if(focused)rows.find(r=>key(r.item)===key(focused))?.button.focus();
     }
     search.oninput=render;lockedOnly.onchange=render;
     function attach(next) {
       if(d===next)return;
-      observer?.disconnect();clearTimeout(timer);endDrag();rangeAnchor=null;d=next;collapsed=new WeakSet();render();
-      if(d?.body){observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(render,100);});observer.observe(d.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['data-rt','data-rt-i','data-rt-name','id','aria-label','alt']});}
+      observer?.disconnect();clearTimeout(timer);endDrag();rangeAnchor=null;d=next;components=[];componentRequest++;collapsed=new WeakSet();render();void loadComponents();
+      if(d?.body){observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(()=>{render();void loadComponents();},100);});observer.observe(d.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['data-rt','data-rt-i','data-rt-revision','data-rt-name','id','aria-label','alt']});}
     }
     function selection(el,info,busy=false,multiple=[],readOnly=false) {
+      const scopeChanged=selectedInfo?.kind!==info?.kind||selectedInfo?.id!==info?.id;selectedInfo=info;
       const nextSet=new Set(multiple.length?multiple:el?[el]:[]),changed=nextSet.size!==selectedSet.size||[...nextSet].some(item=>!selectedSet.has(item));selectedSet=nextSet;tree.setAttribute('aria-multiselectable',String(!!(info?.cssAuthoring||info?.classSelection)));
       if(!el)rangeAnchor=null;
       if(isBusy!==busy){isBusy=busy;selectAll.disabled=busy||!selectionRows().length;for(const r of rows){r.button.disabled=busy;r.toggle.disabled=busy||!r.item.children.length;if(r.lock)r.lock.disabled=busy||!locks.direct(r.item.el)&&locks.locked(r.item.el);}host.setAttribute('aria-busy',String(busy));}
-      if(selected!==el||changed){
+      if(selected!==el||changed||scopeChanged){
         selected=el;
         let reveal=false;
-        for(let p=el?.parentElement;p;p=p.parentElement)if(collapsed.has(p)){collapsed.delete(p);reveal=true;}
+        function selectedItem(items){for(const item of items){if(isSelected(item))return item;const child=selectedItem(item.children);if(child)return child;}return null;}
+        for(let p=selectedItem(treeRoots)?.parent;p;p=p.parent)if(collapsed.has(key(p))){collapsed.delete(key(p));reveal=true;}
         if(reveal)render();
-        for(const r of rows){r.button.setAttribute('aria-selected',String(selectedSet.has(r.item.el)));r.button.tabIndex=r.item.el===el?0:-1;}
+        for(const r of rows){r.button.setAttribute('aria-selected',String(isSelected(r.item)));r.button.tabIndex=isSelected(r.item)?0:-1;}
         if(!rows.some(r=>r.button.tabIndex===0)&&rows[0])rows[0].button.tabIndex=0;
-        rows.find(r=>r.item.el===el)?.button.scrollIntoView({block:'nearest'});
+        rows.find(r=>isSelected(r.item))?.button.scrollIntoView({block:'nearest'});
       }
       if(readOnly){busy=true;for(const row of rows)if(row.lock)row.lock.disabled=true;}
       unlockShown.disabled=busy||!rows.some(row=>locks?.direct(row.item.el));
-      lockSelection.disabled=busy||![...selectedSet].some(el=>!locks?.direct(el));
-      unlockSelection.disabled=busy||![...selectedSet].some(el=>locks?.direct(el));
+      lockSelection.disabled=busy||!selectedRoots().some(el=>!locks?.direct(el));
+      unlockSelection.disabled=busy||!selectedRoots().some(el=>locks?.direct(el));
       const s=info?.structure;
       const copied=getClipboard();
       const compatible=!!copied&&copied.file===info?.file&&copied.parentId===s?.parentId&&copied.hash===(info?.fileHash||info?.hash);
@@ -179,7 +189,7 @@
       if(selectedSet.size>1){for(const button of Object.values(actionButtons))button.disabled=true;if(!info?.cssAuthoring){reason.textContent=selectedSet.size+' source layers selected. Shared styles apply together.';return;}actionButtons.duplicateElement.disabled=busy;actionButtons.deleteElement.disabled=busy;actionButtons.reparentElement.disabled=busy;actionButtons.frameSelection.disabled=busy||!s?.canFrame;reason.textContent=selectedSet.size+' layers selected. Frame, move, duplicate and delete apply to the selection.';return;}
       reason.textContent=info?.svgMovement?'Send backward or bring forward changes which SVG shape appears on top.':info?.svgDeletion?'Delete removes this SVG layer and its contents. Undo restores it.':info?(s?.canInsert&&!s?.canDuplicate?'Add text or a frame inside this container.':s?.reason || (!s?.canDuplicate?'Duplicate is unavailable for a layer with an authored ID, key, or ref.':'')):'Select a layer to organize it.';
     }
-    return {attach,selection,refresh:render};
+    return {attach,selection,refresh:()=>{render();void loadComponents();}};
   }
   const api={label,collect,mount,canNest,canNestMany};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayers=api;

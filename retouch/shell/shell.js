@@ -363,11 +363,14 @@ function updateSource(info, result) {
 // resolve — its file changed and its structural id shifted, or the DOM is a
 // frame that has not reloaded yet — so we climb rather than error. Returns
 // { el, info } or null. This is the single gate for what is selectable.
-async function classify(node) {
+async function classify(node,sourceId) {
   const serial = ++classificationSerial;
   busyPanel(true);
   try {
-    const result = await classifyNode(node);
+    let result;
+    if(sourceId&&[node?.getAttribute?.('data-rt'),node?.getAttribute?.('data-rt-i')].includes(sourceId)){
+      const resolved=await api('GET',resolveUrl(sourceId,renderContext(node)));result=resolved?.ok?{el:node,info:resolved.element,...idsOf(node)}:null;
+    }else result = await classifyNode(node);
     return serial === classificationSerial ? result : { superseded: true };
   } finally {
     busyPanel(false);
@@ -402,9 +405,9 @@ async function classifyNode(node) {
   return null;
 }
 
-async function select(node,{toggle=false}={}) {
+async function select(node,{toggle=false,sourceId}={}) {
   stopDrawing?.();
-  const c = await classify(node);
+  const c = await classify(node,sourceId);
   if (c?.superseded) return;
   if (!c) return clearSelection();
   if(toggle&&(c.info.cssAuthoring&&sel?.info.cssAuthoring||c.info.classSelection&&sel?.info.classSelection||c.info.contextSelection&&sel?.info.contextSelection)&&c.info.file===sel.info.file&&c.info.hash===sel.info.hash){
@@ -2325,6 +2328,7 @@ document.getElementById('zoomSelection').onclick=async e=>{
 
 let layerClipboard=null;
 const layers = RetouchLayers.mount({
+  readComponents:window.__RT_RENDERING?.componentInsertion?()=>api('GET','/rt/__api/components'):undefined,
   locks:layerLocks,
   onLock:setLayerLocks,
   getClipboard:()=>layerClipboard,
@@ -2337,7 +2341,7 @@ const layers = RetouchLayers.mount({
     await moveLayerInto(sel.info,destination.getAttribute('data-rt'),position);
   },
   host:document.getElementById('layersPanel'),
-  onSelect:async(el,options)=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await select(el,options);el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});},
+  onSelect:async(el,options)=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();if(options?.component&&options.sourceId)componentLibrarySelections.add(options.sourceId);await select(el,options);el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});},
   onSelectMany:async(nodes,options)=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await selectMany(nodes,options);},
   onAction:action=>structureAction(action),
 });

@@ -8995,3 +8995,41 @@ Persistent runtime identity, virtual component rows in the layer tree, dynamic
 root families, independent per-render overrides and fragment layout editing remain
 open. Full Figma Design parity and arbitrary-site support remain incomplete.
 Native launches remain paused; trusted brew distribution is unverified.
+
+### Expandable source-connected component rows in Layers (2026-09-10)
+
+The React Layers tree now uses verified component root groups to insert virtual,
+expandable component rows above their actual source layers. Each repeated
+occurrence gets its own row. Selecting the component row targets its authored
+usage and keeps the selected occurrence primary; selecting an immediate child
+explicitly targets that host source layer. Incomplete/unavailable groups keep the
+ordinary source tree. These are editor rows, not wrappers inserted into app DOM.
+
+Stable per-root/component row keys preserve buttons, focus and disclosure state
+while metadata refreshes. Selected virtual rows and child source rows are distinct;
+keyboard expansion and child navigation retain the correct scope. Component rows
+are excluded from raw DOM drag/drop and source-layer range selection. Group lock
+controls cover every root, while keyboard source-edit actions on children resolve
+the child before dispatch. Component metadata loads asynchronously on attachment
+and refreshes after observed app mutations/source updates; failed reads retain the
+existing tree rather than claiming new groups.
+
+Validation: 707 unit tests passed, including virtual tree parent/child structure,
+repeated groups and incomplete fallback. Chromium and WebKit passed component-row
+collapse/expand, keyboard navigation, explicit host-child selection, group locking
+and exact lock Undo, plus repeated-row primary selection. Existing conditional
+fragment hover, zoom, swap, property Undo and detach/Undo/Redo pass. The broader
+framed insertion/required-properties/branch/duplicate/property flow passed in
+Chromium. All final browser processes terminated with exit zero and strict empty
+page-error assertions. The screenshot was inspected and shows purple component
+rows with indented source layers and a matching grouped canvas outline. Evidence:
+/private/tmp/retouch-component-tree-units-fixed.log,
+/private/tmp/retouch-component-tree-chromium-controls.log,
+/private/tmp/retouch-component-tree-webkit-controls.log,
+/private/tmp/retouch-component-tree-framed.log,
+/private/tmp/retouch-component-tree.png.
+
+Virtual-row structural move/rename/copy operations, persistent runtime identity,
+unverified dynamic root shapes, per-render source overrides and fragment layout
+editing remain open. Full Figma Design parity and arbitrary-site support are
+incomplete. Native launches remain paused; trusted brew distribution is unverified.

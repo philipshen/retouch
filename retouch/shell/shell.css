@@ -403,3 +403,6 @@ details.advanced > summary:hover { color: var(--ink); }
 .component-insert textarea { resize:vertical;min-height:60px; }
 .component-insert .component-library-actions { justify-content:flex-end;margin-top:18px; }
 .component-insert [role=alert] { font-size:12px;overflow-wrap:anywhere; }
+
+.component-tree-row > .layer-item { color:#c49aff; font-weight:600; }
+.component-tree-row > .layer-item[aria-selected="true"] { background:#493367; }

@@ -43,3 +43,10 @@ test('anchored optional prefix and suffix variants keep adjacent repeated instan
 test('primary occurrence follows a live chosen root without losing or mutating related groups',()=>{
  const elements=nodes(['a','b','a','b']);elements.forEach(el=>el.isConnected=true);const groups=group(elements,[['a','b']]),chosen=prioritize(groups,elements[3]);assert.equal(chosen[0],groups[1]);assert.equal(chosen[1],groups[0]);assert.equal(groups[0].element,elements[0]);elements[3].isConnected=false;assert.equal(prioritize(groups,elements[3]),groups);assert.equal(prioritize(groups,{isConnected:true}),groups);
 });
+
+test('component tree wraps each verified occurrence and preserves nested source layers',()=>{
+ const dom=nodes(['a','b','a','b']);dom.forEach((el,i)=>el.getAttribute=name=>name==='data-rt-i'?'usage':['a','b','a','b'][i]);const nested={el:{getAttribute:()=>null},label:'nested',children:[],parent:null},items=dom.map(el=>({el,label:'host',children:[],parent:null}));items[0].children.push(nested);nested.parent=items[0];const roots=require('../shell/component-instances.js').tree(items,[{name:'Card',rootGroups:[['a','b']],usages:[{id:'usage'}]}]);assert.equal(roots.length,2);assert.deepEqual(roots.map(item=>item.componentId),['usage','usage']);assert.equal(roots[0].children.length,2);assert.equal(roots[0].children[0].parent,roots[0]);assert.equal(nested.parent,roots[0].children[0]);assert.equal(roots[1].el,dom[2]);
+});
+test('component tree leaves incomplete occurrences as normal source rows',()=>{
+ const el={getAttribute:name=>name==='data-rt-i'?'usage':'a',nextElementSibling:null},item={el,label:'host',children:[],parent:null};const roots=require('../shell/component-instances.js').tree([item],[{name:'Card',rootGroups:[['a','b']],usages:[{id:'usage'}]}]);assert.equal(roots[0],item);assert.equal(roots[0].componentId,undefined);
+});
