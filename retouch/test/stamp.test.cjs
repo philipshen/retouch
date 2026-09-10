@@ -52,3 +52,10 @@ test('compiled host revisions change with source while structural IDs remain sta
  assert.equal((a.code.match(/data-rt-revision=/g)||[]).length,2);assert.ok(a.code.includes('data-rt-revision="'+contentHash(src)+'"'));assert.ok(b.code.includes('data-rt-revision="'+contentHash(next)+'"'));assert.deepEqual(a.code.match(/data-rt="[^"]+"/g),b.code.match(/data-rt="[^"]+"/g));
  const hosts=collectElements(a.code,'C.tsx').elements.filter(e=>e.kind==='host');for(const host of hosts)assert.equal(host.node.openingElement.attributes.at(-1).name.name,'data-rt-revision');assert.ok(!src.includes('data-rt-revision'));
 });
+
+
+test('explicitly created component roots forward instance identity only in compiled output',()=>{
+ const src='export default function Page(){return <Card/>}\n/** @retouch-component */\nfunction Card(){return <article><span>Hi</span></article>}';
+ const output=stamp(src,file,ROOT).code;assert.ok(output.includes('data-rt-i={arguments[0]?.["data-rt-i"]}'));assert.strictEqual((output.match(/arguments\[0\]/g)||[]).length,1);assert.ok(!src.includes('arguments[0]'));assert.doesNotThrow(()=>require('../src/id.cjs').parseSource(output));
+ const unmarked=stamp(src.replace('/** @retouch-component */',''),file,ROOT).code;assert.ok(!unmarked.includes('arguments[0]'));
+});

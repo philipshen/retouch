@@ -21,3 +21,12 @@ show a stable, compact component badge with a diamond icon and a detach button
 whose tooltip is detach. The badge invokes the existing detach operation with
 the hovered or selected usage's context. Text focus does not introduce green.
 Top/bottom edges use ns-resize cursors; left/right use ew-resize cursors.
+
+## Explicit creation
+
+Components created through the editor carry an `@retouch-component` declaration
+comment. They remain components even at one authored call site, because creation
+expresses the intent to reuse the definition. Ordinary pre-existing single-use
+components retain the inline behavior above. The React compiler forwards the
+instance marker on a marked declaration's direct root host only in instrumented
+output; production source needs no editor prop or DOM attribute.

@@ -16,7 +16,7 @@ function catalogue(index) {
         const info=index.adapter.describeComponent({appRoot:index.appRoot,file,relPath,source,element,elements,hash:index.adapter.contentHash(source)});
         if(!info.ok || !info.definitionId)continue;
         const key=info.file+'#'+info.definitionId;
-        entries.set(element.id,{key,definitionId:info.definitionId});
+        entries.set(element.id,{key,definitionId:info.definitionId,explicitComponent:info.explicitComponent===true});
         counts.set(key,(counts.get(key)||0)+1);
       }
     } catch {}
@@ -25,7 +25,7 @@ function catalogue(index) {
 }
 function usage(index,id) {
   const {entries,counts}=catalogue(index),entry=entries.get(id);
-  return entry?{usageCount:counts.get(entry.key),definitionId:entry.definitionId,inlineComponent:counts.get(entry.key)===1}:null;
+  return entry?{usageCount:counts.get(entry.key),definitionId:entry.definitionId,inlineComponent:counts.get(entry.key)===1&&!entry.explicitComponent}:null;
 }
 function describe(index,resolved) {
   const info=index.adapter.describe(resolved);

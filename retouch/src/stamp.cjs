@@ -23,7 +23,7 @@ function stamp(source, filePath, appRoot) {
   if (!source.includes('<')) return null;
 
   const relPath = toPosixRel(appRoot, filePath);
-  const { elements } = collectElements(source, relPath);
+  const { ast, elements } = collectElements(source, relPath);
   if (elements.length === 0) return null;
 
   const ms = new MagicString(source),revision=contentHash(source);
@@ -33,6 +33,17 @@ function stamp(source, filePath, appRoot) {
     const insertAt = el.node.openingElement.name.end;
     ms.appendLeft(insertAt, ` ${attr}="${el.id}"`);
   }
+  // Explicitly created components keep their instance marker on the root host
+  // without adding editor props or attributes to production source.
+  require('@babel/traverse').default(ast,{FunctionDeclaration(p){
+    if(!p.node.leadingComments?.some(comment=>comment.value.trim()==='* @retouch-component'))return;
+    for(const statement of p.node.body.body){
+      const node=statement.type==='ReturnStatement'?statement.argument:null;
+      if(node?.type!=='JSXElement'||!elements.some(el=>el.node===node&&el.kind==='host'))continue;
+      if(node.openingElement.attributes.some(attr=>attr.name?.name===INSTANCE_ATTR))continue;
+      ms.appendLeft(node.openingElement.end-(node.openingElement.selfClosing?2:1),` data-rt-i={arguments[0]?.["data-rt-i"]}`);
+    }
+  }});
   return {
     code: ms.toString(),
     map: ms.generateMap({ hires: true, source: filePath }),

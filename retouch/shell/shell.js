@@ -942,6 +942,8 @@ function renderPanelContents() {
   }
   if(sel.multiple?.length>1){mountSelectionEffectStyles();mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchClassSiteVariables.mountSelection(sel.multiple,elements,styleScope,setReactClassesSelection,message=>toast(message,'err')),RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection,setSelectionColorOverride));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
+  if(info.canCreateComponent)panelBody.append(createComponentSection(info));
+
   if(info.components?.length) {
     const label=document.createElement('label');label.textContent='Component scope';
     const select=document.createElement('select');select.setAttribute('aria-label','Component scope');
@@ -1173,6 +1175,28 @@ function renderPanelContents() {
     : 'Drag horizontally from any selection edge to snap the maximum width to a Tailwind size. The popup shows the exact class being changed.';
   sizing.append(title, hint);panelBody.appendChild(sizing);
 
+}
+
+function createComponentSection(info) {
+  const details=document.createElement('details');details.className='advanced';
+  const summary=document.createElement('summary');summary.textContent='Create component';details.append(summary);
+  const body=document.createElement('div');body.style.padding='0 12px 12px';details.append(body);
+  const input=document.createElement('input');input.type='text';input.value='NewComponent';input.required=true;input.maxLength=80;input.pattern='[A-Z][A-Za-z0-9_$]{0,79}';
+  RetouchInspector.field(body,'Component name',input);
+  RetouchInspector.note(body,'Creates a reusable component in this source file and replaces the selected subtree with an instance. This changes all screen sizes. Local state dependencies need an explicit prop contract first.');
+  const button=RetouchInspector.button('Create component from layer',async()=>{
+    if(!input.reportValidity())return;
+    busyPanel(true);
+    try{
+      const result=await api('POST','/rt/__api/op',{type:'createComponent',id:info.id,fileHash:info.hash,name:input.value});
+      if(!result?.ok){RetouchInspector.note(body,result?.reason||result?.error||'Could not create the component.','refused');return;}
+      editorHistory.record({type:'createComponent',id:info.id,undoId:result.undoId});
+      const created=result.createdComponent;
+      await refreshWrittenElement(result.element,el=>el.getAttribute('data-rt')===created.definitionId);
+      sel={hostId:created.definitionId,instanceId:created.instanceId,scope:'instance',info:result.element};
+      renderPanel();toast('Created '+created.name,'ok');
+    }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
+  });body.append(button);return details;
 }
 
 function componentSection(id) {
@@ -1982,10 +2006,11 @@ async function restoreHistory(direction,op) {
     if (fresh?.ok) {
       const info = fresh.element;
       const selectionResult=op.type==='setClassesSelection'?await Promise.all(op.selectionIds.map(id=>api('GET',resolveUrl(id)))):null;
-      const component = op.type === 'detachComponent' ? await api('GET', componentUrl(op.id,op.context)) : null;
+      const component = op.type === 'detachComponent'||op.type==='createComponent'&&direction==='redo' ? await api('GET', componentUrl(op.id,op.context)) : null;
       await refreshWrittenElement(info, el => {
         if(selectionResult)return selectionResult.every(result=>result?.ok)&&classSelectionMatches(selectionResult.map(result=>result.element),el.ownerDocument);
         if(op.svgCreatedId){const found=matchingInDocument(el.ownerDocument,op.svgCreatedId,null).length>0;return direction==='undo'?!found:found;}
+        if(op.type==='createComponent'&&direction==='undo')return el.getAttribute('data-rt')===op.id;
         if (component?.ok) return el.getAttribute('data-rt') === component.definitionId;
         if (op.type === 'setSrc') return imageMatches(el,info.src,info.srcMatch);
         if (op.type === 'setSVGGeometry') return svgGeometryMatches(el,info);
@@ -1996,6 +2021,7 @@ async function restoreHistory(direction,op) {
         }
         return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
       });
+      if(op.type==='createComponent'&&component?.ok)sel={hostId:component.definitionId,instanceId:op.id,scope:'instance',info};
     } else await reloadFrame();
     const selectionIds=direction==='undo'?op.selectionBefore||op.selectionIds:op.selectionAfter||op.selectionIds;
     if(sel&&selectionIds)await restoreLayerSelection(selectionIds);
