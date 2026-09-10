@@ -49,3 +49,14 @@ test('React catalog HTTP update commits linked components and catalog with exact
  const response=await fetch(url+'/rt/__api/text-styles',{method:'POST',headers,body:JSON.stringify(operation)});assert.equal(response.status,200);const result=await response.json();assert.equal(result.updated,2);assert.ok(result.undoId);assert.ok(snapshot()['components/Unvisited.tsx'].includes('![font-size:30px]'));
  const undo=await fetch(url+'/rt/__api/op',{method:'POST',headers,body:JSON.stringify({type:'undo',undoId:result.undoId})});assert.equal(undo.status,200);assert.deepEqual(snapshot(),before);
 });
+test('Liquid project updates include unopened templates and one exact catalog/source undo',t=>{
+ const liquid=require('../src/adapters/liquid.cjs'),links=require('../src/liquid-text-styles.cjs'),root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-liquid-update-'));
+ t.after(()=>fs.rmSync(root,{recursive:true,force:true}));fs.mkdirSync(path.join(root,'sections'));
+ const saved=catalog.change(root,{type:'create',revision:null,name:'Heading',properties:{'font-size':'32px'}}),style=saved.styles[0],files=['sections/main.liquid','sections/unvisited.liquid'];
+ for(const relPath of files){const source='<p class="{{ classes }} p-4">Text</p>',elements=liquid.collect(source,relPath).elements,file=path.join(root,relPath),result=links.plan({file,relPath,source,elements,element:elements[0],hash:liquid.contentHash(source),context:{className:'p-4'}},{type:'applyTextStyle'},style);assert.equal(result.ok,true,result.reason);fs.writeFileSync(file,result.edits[0].after);}
+ const snapshot=()=>Object.fromEntries(['.retouch/text-styles.json',...files].map(file=>[file,fs.readFileSync(path.join(root,file),'utf8')])),before=snapshot(),operation={type:'update',revision:saved.revision,id:style.id,name:style.name,properties:{'font-size':'48px'}},plan=update.plan(root,operation,'liquid');
+ assert.equal(plan.ok,true,plan.reason);assert.equal(plan.updated,2);assert.equal(plan.edits.length,3);assert.deepEqual(snapshot(),before);
+ const applied=applyPlan(root,plan);assert.equal(applied.ok,true);const after=snapshot();for(const file of files)assert.ok(after[file].includes('![font-size:48px]'));
+ const history=new SourceHistory(),id=history.record(applied.edits);assert.equal(history.apply(root,'undo',id,liquid).ok,true);assert.deepEqual(snapshot(),before);assert.equal(history.apply(root,'redo',id,liquid).ok,true);assert.deepEqual(snapshot(),after);
+ fs.appendFileSync(path.join(root,files[1]),'<p data-rt-text-styles="bad">Other</p>');const broken=snapshot(),current=catalog.read(root),refused=update.plan(root,{...operation,revision:current.revision,properties:{'font-size':'60px'}},'liquid');assert.equal(refused.ok,false);assert.equal(refused.edits,undefined);assert.deepEqual(snapshot(),broken);
+});

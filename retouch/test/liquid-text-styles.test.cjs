@@ -42,3 +42,31 @@ test('Liquid links refuse stale, duplicate, generated and dynamic metadata witho
  for(const text of ['<p class="a" class="b">Text</p>','<p {{ attributes }}>Text</p>','<p {% if x %}class="a"{% endif %}>Text</p>','<p data-rt-text-styles="{{ links }}">Text</p>','<p data-rt-text-styles="{}" data-rt-text-styles="{}">Text</p>']){const result=apply(text);assert.equal(result.ok,false,text);assert.equal(result.edits,undefined);}
  assert.equal(apply(source,'md:hover:').ok,false);
 });
+test('Liquid file refresh updates unopened conditional layers while retaining source overrides',async()=>{
+ const dynamic='<p class="{% if product.available %}font-bold{% else %}font-normal{% endif %} p-4">{{ product.title }}</p>';
+ const before=apply(dynamic,'',{className:'font-bold p-4'}).edits[0].after,next={...style,properties:{...style.properties,'font-size':'48px','letter-spacing':'2px'}};
+ const refreshed=linked.planFile('/tmp/main.liquid','sections/main.liquid',before,next);assert.equal(refreshed.ok,true,refreshed.reason);assert.equal(refreshed.updated,1);
+ const after=refreshed.edits[0].after,engine=new(require('liquidjs').Liquid)();
+ for(const available of [true,false]){
+  const rendered=await engine.parseAndRender(after,{product:{available,title:'Product'}}),attrs=Object.fromEntries(require('parse5').parseFragment(rendered).childNodes[0].attrs.map(a=>[a.name,a.value]));
+  assert.ok(attrs.class.includes('![font-size:48px]'));assert.ok(!attrs.class.includes('![font-size:32px]'));assert.ok(attrs.class.includes('p-4'));assert.ok(!attrs.class.includes('![letter-spacing:2px]'));assert.deepEqual(JSON.parse(attrs['data-rt-text-styles'])[''].overrides,['letter-spacing']);
+ }
+ assert.deepEqual(linked.planFile('/tmp/main.liquid','sections/main.liquid',after,next).edits,[]);
+ const r=resolve(before,{className:'font-bold p-4'}),edited=liquid.planOp(r,{type:'setClasses',classes:liquid.describe(r).className.replace('![font-size:32px]','!text-[40px]')});
+ const changed=linked.planFile('/tmp/main.liquid','sections/main.liquid',edited.edits[0].after,next);assert.equal(changed.ok,true,changed.reason);
+ const rendered=await engine.parseAndRender(changed.edits[0].after,{product:{available:false}});assert.ok(rendered.includes('!text-[40px]'));assert.ok(!rendered.includes('![font-size:48px]'));
+});
+test('Liquid file refresh refuses unindexed and malformed links before returning edits',()=>{
+ const before=apply(source).edits[0].after,next={...style,properties:{'font-size':'48px'}};
+ for(const bad of [before.replace('<p ','<template ').replace('</p>','</template>'),before+'<p data-rt-text-styles="broken">Other</p>']){
+  const result=linked.planFile('/tmp/main.liquid','sections/main.liquid',bad,next);assert.equal(result.ok,false);assert.equal(result.edits,undefined);
+ }
+});
+
+test('copied dynamic Liquid layers rebase class patch identity when their style changes',async()=>{
+ const before=apply('<p class="{{ classes }} p-4">Text</p>','',{className:'font-bold p-4'}).edits[0].after;
+ const next={...style,properties:{...style.properties,'font-size':'48px'}},result=linked.planFile('/tmp/copied.liquid','sections/copied.liquid',before,next);
+ assert.equal(result.ok,true,result.reason);const after=result.edits[0].after,newId=liquid.collect(after,'sections/copied.liquid').elements[0].id;
+ assert.ok(after.includes('{% capture __rt_classes_'+newId+' %}'));assert.equal((after.match(/retouch-classes-v1:/g)||[]).length,1);
+ const rendered=await new(require('liquidjs').Liquid)().parseAndRender(after,{classes:'font-normal'});assert.ok(rendered.includes('![font-size:48px]'));assert.ok(!rendered.includes('![font-size:32px]'));assert.ok(rendered.includes('p-4'));
+});

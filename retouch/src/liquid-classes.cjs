@@ -15,7 +15,9 @@ function literal(value){const special=tokens(value).filter(t=>require('./class-t
 function familyScope(token){const m=/^(.*?:)?!?(?:font-(?:sans|serif|mono)|font-\[family-name:.*\]|\[font-family:.*\])!?$/.exec(token);return m?m[1]||'':null;}
 const tokens=value=>String(value||'').split(/\s+/).filter(Boolean);
 function unpack(value,id) {
-  const prefix=`{% capture __rt_classes_${id} %}`;
+  // A copied template has a new structural ID but still owns its saved patch.
+  // Unwrap that patch before regenerating variable names for the new layer.
+  const prefix=value.match(/^\{% capture __rt_classes_[a-f0-9]{10} %\}/)?.[0]||`{% capture __rt_classes_${id} %}`;
   const boundary='{% endcapture %}';
   const metadata=/\{% comment %\}retouch-classes-v1:([A-Za-z0-9+/=]+)\{% endcomment %\}$/;
   const match=metadata.exec(value);

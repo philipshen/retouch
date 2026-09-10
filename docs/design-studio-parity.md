@@ -5826,3 +5826,33 @@ catalog history and stale revision recovery, with no page errors. Liquid uses
 the local Liquid renderer and Tailwind fixture; live Shopify remains unverified.
 Project-wide Liquid propagation remains unfinished. Native launches stay paused;
 full design parity and verified desktop distribution remain incomplete.
+
+### Project-wide Liquid text style propagation (2026-09-09)
+
+Library property updates now plan the catalog and all linked Liquid source files
+before writing, including templates not visited in the editor. Both the selected
+layer operation and catalog update endpoint use the project planner and shared
+undo history. The inspector now offers Update style from this layer for Liquid.
+Malformed metadata, unindexed link owners, source conflicts and existing inventory
+limits refuse the whole change. Hidden/vendor/build directories and symlinks
+remain outside the inventory.
+
+Dynamic layers refresh from their source-owned class patch, preserving authored
+Liquid expressions and local overrides without evaluating an invented page state.
+Newly introduced properties retain local ownership on dynamic layers until an
+explicit reset: inactive branches may already supply those properties. Arbitrary
+dynamic expressions without an owned patch refuse with a reapply instruction.
+Copied templates now unwrap the previous layer's owned patch and regenerate its
+variables with the new structural ID instead of nesting patches.
+
+All 437 unit tests passed, exit 0:
+/private/tmp/retouch-liquid-project-styles-final-units.log. Tests render both
+conditional branches, verify copied patch identity, override retention, atomic
+catalog/source planning, unopened files, malformed-link refusal and exact undo/
+redo. Liquid browser flows exited 0 in Chromium and WebKit:
+/private/tmp/retouch-liquid-project-styles-chromium-fixed.log and
+/private/tmp/retouch-liquid-project-styles-webkit.log. They verify source edits,
+unopened copied templates, catalog update and exact shared undo alongside prior
+responsive/reset/detach flows. The first Chromium run failed on copied patch
+identity; the fixed rerun passed. Live Shopify remains unverified. Native app
+launches remain paused; full parity and verified desktop distribution are pending.
