@@ -208,11 +208,23 @@
       }
       return destination;
     }
+    function siblingTargets(){
+      if(!multiEnabled||isBusy||!selectedSet.size||selectedInfo?.kind==='instance')return [];
+      const all=[];function walk(items){for(const item of items){all.push(item);walk(item.children);}}walk(treeRoots);
+      const current=all.find(item=>!item.componentId&&item.el===selected);if(!current)return [];
+      const siblings=(current.parent?.children||treeRoots).filter(item=>!['HTML','BODY'].includes(item.el.tagName)&&!(item.componentRoots||[item.el]).some(el=>locks?.locked(el)));
+      return siblings.some(item=>item.componentId)?[]:siblings;
+    }
+    async function selectSiblings(){
+      const targets=siblingTargets();if(!targets.length)return false;
+      search.value='';lockedOnly.checked=false;for(let parent=targets[0].parent;parent;parent=parent.parent)collapsed.delete(key(parent));render();
+      await onSelectMany(targets.map(item=>item.el),{active:selected});return true;
+    }
     async function navigate(direction){
       const destination=navigationTarget(direction);if(!destination)return false;
       search.value='';lockedOnly.checked=false;for(let parent=destination.parent;parent;parent=parent.parent)collapsed.delete(key(parent));render();await choose(destination);return true;
     }
-    return {attach,selection,navigate,canNavigate:direction=>!!navigationTarget(direction),refresh:async()=>{render();await loadComponents();}};
+    return {attach,selection,navigate,selectSiblings,canSelectSiblings:()=>siblingTargets().length>1,canNavigate:direction=>!!navigationTarget(direction),refresh:async()=>{render();await loadComponents();}};
   }
   const api={label,collect,mount,canNest,canNestMany};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayers=api;

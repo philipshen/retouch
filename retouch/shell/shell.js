@@ -2478,8 +2478,8 @@ const layers = RetouchLayers.mount({
   onAction:action=>structureAction(action),
 });
 window.RetouchLayerNavigation={
-  available:direction=>mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&layers.canNavigate(direction),
-  run:direction=>{if(window.RetouchLayerNavigation.available(direction))return layers.navigate(direction).catch(error=>toast(error.message,'err'));}
+  available:direction=>mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&(direction==='siblings'?layers.canSelectSiblings():layers.canNavigate(direction)),
+  run:direction=>{if(window.RetouchLayerNavigation.available(direction))return (direction==='siblings'?layers.selectSiblings():layers.navigate(direction)).catch(error=>toast(error.message,'err'));}
 };
 function chooseComponentParent(info){
  const ids=new Set(info.componentMovement?.containers||[]),candidates=[...doc().querySelectorAll('[data-rt]')].filter(el=>ids.has(el.getAttribute('data-rt'))&&!layerLocks.locked(el));
