@@ -8069,3 +8069,18 @@ transaction guards apply to both setting and clearing these choices.
 clearing, sibling isolation, exact source Undo/Redo and the existing variant/default
 workflow. This does not complete full component or arbitrary-site parity. Native
 app launches remain paused.
+
+
+## Nested variant union aliases (2026-09-10)
+
+Variant discovery now recursively expands unions that contain module-local aliases
+to other literal unions. Source order is preserved and duplicate choices appear
+once. Recursive aliases, mixed primitive types, unbounded branches, excessive
+traversal and more than 100 expanded literal entries are rejected. The existing
+writer validates choices and definition revisions before changing source.
+
+626 unit tests pass. The browser fixture now composes its size choices from named
+aliases with a duplicate literal; Chromium and WebKit verification covers dropdown contents, rendered
+size changes, sibling isolation, optional unset, defaults and exact Undo/Redo.
+Full variant authoring and cross-framework parity remain incomplete. Native app
+launches remain paused.

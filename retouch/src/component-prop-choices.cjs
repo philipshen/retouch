@@ -39,8 +39,18 @@ function choices(resolved,name,definition){
   // Diamond inheritance can reach the same declaration more than once. Distinct
   // declarations of one property still need type-level conflict/narrowing checks.
   const fields=[...new Set(members)].filter(p=>p.type==='TSPropertySignature'&&!p.computed&&(p.key.name??p.key.value)===name);if(fields.length!==1)return null;
-  const type=resolve(fields[0].typeAnnotation?.typeAnnotation),types=type?.type==='TSUnionType'?type.types:[type],values=[];
-  for(let item of types){item=resolve(item);if(item?.type!=='TSLiteralType')return null;let value=item.literal;if(value.type==='UnaryExpression'&&value.operator==='-'&&value.argument.type==='NumericLiteral')values.push(-value.argument.value);else if(['StringLiteral','NumericLiteral','BooleanLiteral'].includes(value.type))values.push(value.value);else return null;}
+  const values=[];let choiceVisits=0;
+  function expand(node,seen=new Set()){
+   node=resolve(node);if(!node||++choiceVisits>1000||seen.size>=20||seen.has(node))return false;
+   const next=new Set(seen);next.add(node);
+   if(node.type==='TSUnionType')return node.types.every(type=>expand(type,next));
+   if(node.type!=='TSLiteralType')return false;
+   const value=node.literal;
+   if(value.type==='UnaryExpression'&&value.operator==='-'&&value.argument.type==='NumericLiteral')values.push(-value.argument.value);
+   else if(['StringLiteral','NumericLiteral','BooleanLiteral'].includes(value.type))values.push(value.value);else return false;
+   return values.length<=100;
+  }
+  if(!expand(fields[0].typeAnnotation?.typeAnnotation))return null;
   if(!values.length||values.length>100||!values.every(v=>typeof v===typeof values[0]&&(typeof v!=='number'||Number.isFinite(v))))return null;
   return {choices:[...new Set(values)],type:typeof values[0],optional:!!fields[0].optional,definition:def};
  }catch{return null;}

@@ -100,3 +100,19 @@ test('omitted choices can be set and only optional choices can be unset',()=>{
   }finally{index.close();cleanup(root);}
  }
 });
+
+
+test('variant choices expand nested literal union aliases in source order',()=>{
+ const declarations='type Compact="small"|"medium";type Expanded="large"|"huge";type Size=Compact|Expanded|"small";';
+ const source=declarations+'function Card({size}:{size:Size}){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),fn=ast.program.body.find(n=>n.type==='FunctionDeclaration'),result=require('../src/component-prop-choices.cjs').choices({},'size',{source,fn});assert.deepEqual(result.choices,['small','medium','large','huge']);
+});
+test('nested choice expansion rejects recursive, mixed, unbounded and oversized unions',()=>{
+ const declarations=[
+  'type Size="small"|Size;',
+  'type First="small"|Second;type Second="large"|First;type Size=First;',
+  'type Extra=string;type Size="small"|Extra;',
+  'type Extra=1|2;type Size="small"|Extra;',
+  'type Size='+Array.from({length:101},(_,i)=>JSON.stringify('choice'+i)).join('|')+';',
+ ];
+ for(const prefix of declarations){const source=prefix+'function Card({size}:{size:Size}){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),fn=ast.program.body.find(n=>n.type==='FunctionDeclaration');assert.equal(require('../src/component-prop-choices.cjs').choices({},'size',{source,fn}),null);}
+});
