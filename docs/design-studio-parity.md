@@ -10229,3 +10229,7 @@ The React browser fixture now exercises an absent optional title with a literal 
 ### Optional tuple capture contracts (2026-09-10)
 
 Component extraction now preserves undefined for optional tuple parameters, including named tuple aliases and skipped positions. Literal tuple defaults remain in the original scope and produce resolved captured types, including nested tuple destructuring. Optional local captures without defaults, rest bindings, and dynamic defaults remain guarded. Validation: 815 unit tests, 41 strict before/after TypeScript compiler scenarios, and 6 compiler-valid guarded refusals. Evidence: `/private/tmp/retouch-optional-tuples-units.log`, `/private/tmp/retouch-optional-tuples-compiler.log`. Live browser coverage of optional tuple extraction remains outstanding. Native launches remain paused; full parity is incomplete.
+
+### Live optional tuple-default extraction (2026-09-10)
+
+The React creation fixture now covers a missing named optional tuple value with a literal local default. Chromium and WebKit verify the default stays at its original declaration, the generated prop resolves to string, appearance and live callbacks survive extraction, Layers duplication works immediately, shared definition styling applies, and source Undo/Redo remains exact. Evidence: `/private/tmp/retouch-tuple-default-browser-chromium.log`, `/private/tmp/retouch-tuple-default-browser-webkit.log`. This validates the local tuple-default flow; other tuple contracts have compiler coverage only. Native launches remain paused; full parity is incomplete.
