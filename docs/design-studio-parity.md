@@ -9550,3 +9550,28 @@ The full WebKit component suite also exited zero with no page errors, covering
 real named-usage selection, naming history, duplication, deletion and property
 editing: /private/tmp/retouch-library-name-webkit.log. The final off-page label
 addition is covered by both focused browser runs.
+
+### Arrange project comparison screens (2026-09-10)
+
+Comparison cards now have Move up and Move down controls with accessible names,
+correct boundary states and focus retained on an available move control. Order
+is persisted in the project screen set and reflected in the project screen
+picker. Reordering is disabled during asynchronous view removal. Source files,
+the main editing viewport and style scope are not changed by this operation.
+
+Chromium uses state-preserving DOM movement when available. The tested WebKit
+engine lacks that operation and reloads a moved iframe; document scroll is
+restored after load, but temporary application/form state is not preserved on
+that fallback. This remains an explicit parity gap, alongside general responsive
+workflow completeness and arbitrary-site editing.
+
+Chromium and WebKit passed order persistence across reload, boundaries, saved
+picker order, unchanged source and the existing nested comparison scrolling
+suite. Chromium additionally preserved a live preview marker; WebKit exercised
+the scroll-restoring fallback and verified remove/Undo remove after reordering.
+All runs exited zero with no page errors. Evidence:
+/private/tmp/retouch-compare-order-chromium-final.log,
+/private/tmp/retouch-compare-order-webkit-final.log.
+The controls were visually inspected in /private/tmp/retouch-compare-order.png.
+Syntax and git diff --check passed. Native launches remain paused; full Figma
+parity and trusted brew installation remain unfinished.

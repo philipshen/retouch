@@ -11,6 +11,18 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   const wait=async fn=>{for(let n=0;n<100;n++){if(await fn())return;await new Promise(r=>setTimeout(r,50));}throw Error('Comparison scroll did not settle');};
   await page.goto('http://localhost:'+server.address().port+'/rt');await page.getByRole('button',{name:'Compare screens',exact:true}).click();
   const frame=page.frameLocator('iframe[title="Phone comparison preview"]'),viewport=page.getByRole('button',{name:'Edit from Phone comparison',exact:true});await frame.locator('#inner').waitFor();
+  if(process.env.RT_E2E_COMPARE_ORDER){
+   const order=()=>page.locator('.compare-card').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('aria-label'))),up=()=>page.getByRole('button',{name:'Move Phone comparison up',exact:true}),down=()=>page.getByRole('button',{name:'Move Phone comparison down',exact:true});
+   assert.equal(await up().isDisabled(),true);assert.equal(await page.getByRole('button',{name:'Move Desktop comparison down',exact:true}).isDisabled(),true);
+   const preserving=await page.evaluate(()=>typeof document.getElementById('screenComparisons').moveBefore==='function');await frame.locator('body').evaluate(()=>{window.reorderProbe='kept';scrollTo(0,300);});
+   await down().click();assert.deepEqual(await order(),['Tablet comparison','Phone comparison','Desktop comparison']);await wait(async()=>await frame.locator('body').evaluate(()=>scrollY)===300);if(preserving)assert.equal(await frame.locator('body').evaluate(()=>window.reorderProbe),'kept');
+   assert.deepEqual(await page.locator('#screenPreset optgroup[label="Project screens"] option').allTextContents(),['Tablet · 768 × 1024','Phone · 390 × 844','Desktop · 1440 × 900']);
+   await page.reload();await page.getByRole('button',{name:'Compare screens',exact:true}).click();await frame.locator('#inner').waitFor();assert.deepEqual(await order(),['Tablet comparison','Phone comparison','Desktop comparison']);
+   await page.getByRole('button',{name:'Remove Tablet comparison',exact:true}).click();await wait(async()=>await page.locator('.compare-card').count()===2);const restore=page.getByRole('button',{name:'Undo remove: Tablet',exact:true});await wait(async()=>!await restore.isDisabled());await restore.click();assert.deepEqual(await order(),['Tablet comparison','Phone comparison','Desktop comparison']);
+   await down().click();assert.deepEqual(await order(),['Tablet comparison','Desktop comparison','Phone comparison']);assert.equal(await down().isDisabled(),true);await up().click();await up().click();assert.deepEqual(await order(),['Phone comparison','Tablet comparison','Desktop comparison']);assert.equal(await up().isDisabled(),true);assert.equal(fs.readFileSync(file,'utf8'),source);
+   if(process.env.RT_E2E_COMPARE_ORDER_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_COMPARE_ORDER_SCREENSHOT});await frame.locator('body').evaluate(()=>scrollTo(0,0));console.log('COMPARISON ORDER/PERSISTENCE/BOUNDARIES/SOURCE PASS',engine,{preserving});
+  }
+
   await viewport.scrollIntoViewIfNeeded();const box=await viewport.boundingBox(),scale=box.width/390;
   const wheel=async(dx,dy,deltaMode=0)=>{await viewport.dispatchEvent('wheel',{clientX:box.x+30*scale,clientY:box.y+30*scale,deltaX:dx,deltaY:dy,deltaMode,bubbles:true,cancelable:true});};
   const positions=()=>frame.locator('body').evaluate(()=>({inner:[document.querySelector('#inner').scrollLeft,document.querySelector('#inner').scrollTop],outer:[document.querySelector('#outer').scrollLeft,document.querySelector('#outer').scrollTop],page:[scrollX,scrollY]}));

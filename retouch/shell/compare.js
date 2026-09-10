@@ -16,7 +16,7 @@
       const last=removed.at(-1);restore.hidden=!last;restore.disabled=!last||removals>0||sizes.length>=8||sizes.some(size=>size[1]===last.size[1]&&size[2]===last.size[2]||size[0].toLowerCase()===last.size[0].toLowerCase());
       restore.textContent=last?'Undo remove: '+last.size[0]:'Undo remove';restore.title=restore.disabled?'Finish removing views, or free the name and dimensions before restoring.':'Restore the last removed comparison in its original position.';
     }
-    for(const card of cards){card.edit.setAttribute('aria-pressed',String(size.width===card.width&&size.height===card.height));card.scopeButton.disabled=!selected;}
+    for(const [index,card] of cards.entries()){card.up.disabled=index===0||removals>0;card.down.disabled=index===cards.length-1||removals>0;card.edit.setAttribute('aria-pressed',String(size.width===card.width&&size.height===card.height));card.scopeButton.disabled=!selected;}
   }
   let cards=[],selected=null,route=null,open=false,timer=null,scope={prefix:'',label:'All sizes · base',condition:null},scopeSummary;
   function path(){try{const loc=main.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
@@ -204,16 +204,31 @@
         input.onkeydown=event=>{if(event.key==='Escape'){input.value=axis==='width'?width:height;event.preventDefault();event.stopPropagation();}};
         field.append(input);dimensions.append(field);
       }
+      const order=document.createElement('div');order.className='compare-header';
+      const up=document.createElement('button'),down=document.createElement('button');
+      up.type=down.type='button';up.className=down.className='control-button';up.textContent='Move up';down.textContent='Move down';order.append(up,down);
+      function move(delta){
+        const index=sizes.indexOf(size),next=index+delta;if(index<0||next<0||next>=sizes.length||loadingSet||removals)return;
+        const item=cards[index],anchor=delta<0?cards[next].card:cards[next].card.nextSibling;
+        // moveBefore retains the iframe's browsing context. Older engines reload
+        // moved frames, so restore the document scroll after that load.
+        if(typeof rail.moveBefore==='function')rail.moveBefore(card,anchor);
+        else{let scroll;try{scroll={x:frame.contentWindow.scrollX,y:frame.contentWindow.scrollY};}catch{}if(scroll)frame.addEventListener('load',()=>{try{frame.contentWindow.scrollTo({left:scroll.x,top:scroll.y,behavior:'instant'});}catch{}},{once:true});rail.insertBefore(card,anchor);}
+        sizes.splice(index,1);sizes.splice(next,0,size);cards.splice(index,1);cards.splice(next,0,item);remember();updateControls();
+        const control=delta<0?up:down;if(control.disabled)(delta<0?down:up).focus();else control.focus();
+      }
+      up.onclick=()=>move(-1);down.onclick=()=>move(1);
       const rotate=document.createElement('button');rotate.type='button';rotate.className='control-button';rotate.textContent='Rotate';rotate.setAttribute('aria-label','Rotate '+name+' comparison');rotate.onclick=()=>applyDimensions(height,width);dimensions.append(rotate);
       function updateLabels(){
         label.textContent=name===`Custom ${width} × ${height}`?name:`${name} · ${width} × ${height}`;
         label.setAttribute('aria-label','Rename '+name+' comparison');nameInput.setAttribute('aria-label','Comparison name');
         card.setAttribute('aria-label',name+' comparison');edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');remove.setAttribute('aria-label','Remove '+name+' comparison');viewport.setAttribute('aria-label','Edit from '+name+' comparison');frame.title=name+' comparison preview';scopeMessage.setAttribute('aria-label',name+' scope coverage');
         for(const axis of ['width','height'])inputs[axis].setAttribute('aria-label',name+' comparison '+axis);
+        up.setAttribute('aria-label','Move '+name+' comparison up');down.setAttribute('aria-label','Move '+name+' comparison down');
         rotate.setAttribute('aria-label','Rotate '+name+' comparison');reveal.setAttribute('aria-label','Show selection in '+name+' comparison');
       }
       updateLabels();
-      viewport.append(frame,overlay);card.append(header,dimensions,dimensionError,viewport,message,reveal,scopeMessage,scopeButton);rail.insertBefore(card,before);
+      viewport.append(frame,overlay);card.append(header,dimensions,dimensionError,order,viewport,message,reveal,scopeMessage,scopeButton);rail.insertBefore(card,before);
       function activate(event){
         try{
           const d=frame.contentDocument,loc=frame.contentWindow.location;
@@ -250,7 +265,7 @@
           if(root){const style=w.getComputedStyle(root);w.scrollBy({left:/hidden|clip/.test(style.overflowX)?0:dx,top:/hidden|clip/.test(style.overflowY)?0:dy,behavior:'instant'});}
         }catch{}
       },{passive:false});
-      cards.push({card,frame,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal});
+      cards.push({card,frame,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal,up,down});
   }
   function unload(frame){return new Promise(resolve=>{
     let timeout;
