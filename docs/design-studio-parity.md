@@ -6739,3 +6739,27 @@ single-layer effects, library updates, responsive isolation and detach checks
 remain in the same flow. Liquid multi-selection, complete filter-stack editing,
 arbitrary-site support and full Figma parity remain incomplete. Native app
 launches remain paused.
+
+### React and Liquid shadow-stack authoring (2026-09-09)
+
+Class-based Effects now includes a persistent Shadow stack disclosure. It edits
+up to 16 ordered inner/outer shadows with per-shadow offsets, blur, spread and
+color; users can add, remove, move upward, clear all, or reset the current scope.
+Canonical important box-shadow classes preserve other effects and responsive
+variants. Inline important ownership disables the stack controls; important ring
+or all-property conflicts refuse edits. Existing preset/custom-shadow controls
+remain available.
+
+All 509 tests passed, exit 0: /private/tmp/retouch-shadow-stack-units.log. Source
+checks cover ordered stacks, scope retention, clear/reset, conflicting ownership
+and unrepresentable values. React/Chromium and conditional Liquid/WebKit flows
+passed, exit 0: /private/tmp/retouch-shadow-stack-react.log and
+/private/tmp/retouch-shadow-stack-liquid.log. Both add a second shadow, convert it
+to inner, change its blur to 11px, verify computed paint, move it forward, remove
+the other shadow, and undo through every intermediate source snapshot exactly.
+The broader effect library and responsive checks continue to pass in these flows.
+
+Arbitrary shadow expressions/colors beyond the existing parser, full filter-stack
+authoring, arbitrary-site support and full Figma parity remain incomplete. Local
+Liquid fixtures do not establish live Shopify behavior. Native app launches
+remain paused.

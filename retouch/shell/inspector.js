@@ -1,6 +1,6 @@
 (function (root) {
   'use strict';
-  let cornersExpanded=false,numericExpanded=false,variationExpanded=false;
+  let cornersExpanded=false,numericExpanded=false,variationExpanded=false,shadowStackExpanded=false;
   const tokens = value => (value || '').split(/\s+/).filter(Boolean);
   // Colons inside arbitrary CSS values are not variant separators.
   function base(token) {
@@ -382,6 +382,33 @@
     if(tokens(classes).some(t=>/^!|!$/.test(t)&&base(t)?.startsWith('[all:')))throw Error('Resolve the important all-property reset before editing filters.');
     return replace(classes,match,'!['+property+':'+value.replace(/\s/g,'_')+']');
   }
+  function shadowClasses(classes,value){
+    const V=typeof module==='object'&&module.exports?require('./html-css-values.js'):root.RetouchHTMLCSSValues;
+    if(value!==null&&!V.valid('box-shadow',value))throw Error('Unsupported shadow stack.');
+    if(tokens(classes).some(token=>/^!|!$/.test(token)&&/^(?:\[all:|(?:inset-)?ring(?:-|$))/.test(base(token)||'')))throw Error('Resolve the important ring or all-property reset before editing shadows.');
+    return replace(classes,t=>/^shadow(?:-|$)/.test(t)||/^\[box-shadow:/.test(t),value===null?'':'![box-shadow:'+value.replace(/\s/g,'_')+']');
+  }
+  function shadowStack(parent,info,el,save,notify){
+    const V=root.RetouchHTMLCSSValues,shadows=V.parseShadows(el.ownerDocument.defaultView.getComputedStyle(el).boxShadow),details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Shadow stack';details.append(summary);details.open=shadowStackExpanded;details.ontoggle=()=>{if(details.isConnected)shadowStackExpanded=details.open;};parent.append(details);
+    const write=next=>{try{save(shadowClasses(info.className,next===null?null:V.serializeShadows(next)));}catch(error){notify(error.message);}};
+    if(shadows===null)note(details,'This shadow stack contains values these controls cannot edit.');
+    else{
+      shadows.forEach((shadow,index)=>{
+        const group=document.createElement('fieldset'),legend=document.createElement('legend');group.className='shadow-controls';legend.textContent='Shadow '+(index+1);group.append(legend);
+        const update=(key,value)=>write(shadows.map((item,i)=>i===index?{...item,[key]:value}:item));
+        select(group,'Shadow '+(index+1)+' type',[['drop','Drop shadow'],['inner','Inner shadow']],shadow.inset?'inner':'drop',value=>update('inset',value==='inner'));
+        for(const [key,label]of [['x','X'],['y','Y'],['blur','Blur'],['spread','Spread']])number(group,'Shadow '+(index+1)+' '+label+' (px)',shadow[key],key==='blur'?0:-10000,10000,value=>update(key,value));
+        const color=document.createElement('input');color.value=shadow.color;field(group,'Shadow '+(index+1)+' color',color);color.oninput=()=>color.setCustomValidity('');color.onchange=()=>{const value=color.value.trim();if(!V.valid('color',value)||!el.ownerDocument.defaultView.CSS.supports('color',value)){color.setCustomValidity('Enter a supported CSS color.');color.reportValidity();return;}update('color',value);};
+        group.append(button('Remove shadow '+(index+1),()=>write(shadows.filter((_,i)=>i!==index))));
+        if(index>0)group.append(button('Move shadow '+(index+1)+' up',()=>{const next=[...shadows];[next[index-1],next[index]]=[next[index],next[index-1]];write(next);}));details.append(group);
+      });
+      const add=button('Add shadow',()=>write([...shadows,{x:0,y:4,blur:8,spread:0,color:'rgba(0, 0, 0, 0.25)',inset:false}]));add.disabled=shadows.length>=16;details.append(add);
+    }
+    const clear=button('Clear shadows',()=>write([]));clear.disabled=shadows?.length===0;details.append(clear);
+    const reset=button('Reset shadows',()=>write(null));try{reset.disabled=shadowClasses(info.className,null)===info.className;}catch(error){reset.disabled=true;reset.title=error.message;}details.append(reset);
+    if(el.style.getPropertyPriority('box-shadow')==='important'){for(const input of details.querySelectorAll('input,select,button'))input.disabled=true;note(details,'An inline important shadow controls this layer.');}
+    note(details,'Shadows are stacked from front to back. Reset reveals this screen scope’s inherited styling.');
+  }
   function effects(info, el, save, notify) {
     const sec = section('Effects');
     if (!el || locked(sec,info)) return sec;
@@ -396,6 +423,7 @@
       note(sec,value,'computed-value');
     }
     note(sec,css.boxShadow,'computed-value');
+    shadowStack(sec,info,el,save,notify);
     const shadowMatch=t=>/^shadow(?:-|$)/.test(t)||/^\[box-shadow:/.test(t);
     const saveShadow=value=>{const inherited=tokens(info.anchorInheritedClasses).some(token=>/^!|!$/.test(token)&&base(token)!==null&&shadowMatch(base(token)));return save(replace(info.className,shadowMatch,inherited?'!'+value:value));};
     const presets=[['','Choose shadow…'],['shadow-none','None'],['shadow-sm','Small'],['shadow-md','Medium'],['shadow-lg','Large'],['shadow-xl','Extra large'],['shadow-inner','Inner']];
@@ -609,6 +637,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);
