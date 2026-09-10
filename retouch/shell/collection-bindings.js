@@ -1,14 +1,25 @@
-(function(){
+(function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory(require('./html-css-values.js'));else root.RetouchCollectionBindings=factory(root.RetouchHTMLCSSValues);})(typeof globalThis!=='undefined'?globalThis:this,function(V){
  'use strict';
  let expanded=false,target='color';
  const paints=['color','background-color','border-color','fill','stroke'],numbers=['width','height','min-width','max-width','min-height','max-height','gap','padding','margin','font-size','letter-spacing','border-width','border-radius','opacity','font-weight','line-height','flex-grow','flex-shrink',...['top','right','bottom','left'].flatMap(side=>['padding-'+side,'margin-'+side]),...['top-left','top-right','bottom-left','bottom-right'].map(corner=>'border-'+corner+'-radius')];
  const unitless=['opacity','font-weight','line-height','flex-grow','flex-shrink'];
+ // Track the nearest contributing managed screen scope, not just the nearest link.
+ function inherited(info,width,property,ignoreOwn=false){
+  if(!Number.isInteger(width)||width<=0)return null;
+  const links=info.variableLinks||{},rules=info.cssRules||{},scopes=[...new Set([...Object.keys(links),...Object.keys(rules)])].map(Number).filter(w=>Number.isInteger(w)&&w>=0&&w<=width).sort((a,b)=>b-a);
+  for(const scope of scopes){
+   const keys=Object.keys(rules[scope]||{}).filter(key=>!(ignoreOwn&&scope===width&&key===property)),current=scope===width&&ignoreOwn?null:links[scope]?.[property];
+   if(scope<width&&current)return {link:current,width:scope,label:scope?scope+'px and larger':'All sizes',override:!!(info.variableOverrides?.[scope]?.includes(property)||keys.some(key=>key!==property&&V.overlaps(key,property)))};
+   if(current||keys.some(key=>V.overlaps(key,property)))return null;
+  }
+  return null;
+ }
  function mount(parent,info,width,write){
   const I=RetouchInspector,details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Collection bindings';details.append(summary);parent.append(details);details.open=expanded;
   const status=I.note(details,''),controls=document.createElement('fieldset');status.setAttribute('role','status');controls.style.cssText='border:0;padding:0;margin:0;min-width:0';details.append(controls);
   let library=null,values=[],selected='',modes={},unit='',busy=false;
   const link=()=>info.variableLinks?.[width]?.[target];
-  const init=()=>{const current=link();selected=current?.id||'';modes={...current?.modes};unit=current?.unit??(unitless.includes(target)?'':'px');};init();
+  const init=()=>{const current=link()||inherited(info,width,target)?.link;selected=current?.id||'';modes={...current?.modes};unit=current?.unit??(unitless.includes(target)?'':'px');};init();
   async function run(action){if(busy)return;busy=true;controls.disabled=true;status.textContent='Working…';try{await action();if(details.isConnected){render();status.textContent='';}}catch(error){values=[];if(details.isConnected){render();status.textContent=error.message;}}finally{busy=false;controls.disabled=false;}}
   const preview=async()=>{values=(await RetouchVariableModePreview({revision:library.revision,modes})).values;};
   const load=()=>run(async()=>{library=await RetouchVariableLibraryRequest();await preview();});
@@ -26,13 +37,20 @@
    if(resolved)I.note(controls,'Resolved value: '+value);
    const valid=value!==null&&RetouchHTMLCSSValues.valid(target,value),apply=I.button('Apply collection binding',()=>run(()=>write('applyVariable',width,{property:target,libraryRevision:library.revision,binding:{id:selected,modes,...(type==='number'?{unit}:{})}})));apply.disabled=!valid;controls.append(apply);
    if(resolved&&!valid)I.note(controls,'This value cannot control the selected property. Choose another variable or unit.');
+   const from=inherited(info,width,target);
+   if(from){
+    const variable=library.variables.find(v=>v.id===from.link.id);I.note(controls,'Inherited: '+(variable?.name||'Missing variable')+' · '+from.label+(from.override?' · Local override in that scope':''));
+    const copy=I.button('Override collection binding here',()=>run(()=>write('applyVariable',width,{property:target,libraryRevision:library.revision,binding:{id:from.link.id,modes:from.link.modes,...(from.link.unit!==undefined?{unit:from.link.unit}:{})}})));controls.append(copy);
+    I.note(controls,'Creates a binding here using the inherited variable and modes. It uses the library value; smaller screen scopes stay unchanged.');
+   }
    if(link()){
     const variable=library.variables.find(v=>v.id===link().id);I.note(controls,'Linked: '+(variable?.name||'Missing variable')+(info.variableOverrides?.[width]?.includes(target)?' · Local override':''));
+    const fallback=inherited(info,width,target,true);if(fallback){controls.append(I.button('Use smaller-screen binding',()=>run(()=>write('removeVariable',width,{property:target}))));I.note(controls,'Removes this scope’s binding and property override to reveal '+fallback.label+'.');}
     controls.append(I.button('Reset collection binding',()=>run(()=>write('resetVariable',width,{property:target,libraryRevision:library.revision}))),I.button('Detach collection binding',()=>run(()=>write('detachVariable',width,{property:target}))));
    }
   }
   render();
   details.addEventListener('toggle',()=>{expanded=details.open;if(expanded&&!library&&!busy)load();});if(expanded)load();
  }
- window.RetouchCollectionBindings={mount};
-})();
+ return {mount,inherited};
+});

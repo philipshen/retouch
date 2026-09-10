@@ -7419,3 +7419,32 @@ The existing Chromium collection-editor flow also passes. The inspector screensh
 Multi-layer binding, inherited collection mode controls, React/Liquid collection
 bindings, and broader Figma variable semantics remain unfinished. Native app
 launches remain paused. Full Figma parity is not achieved.
+
+### Screen-scope collection inheritance (2026-09-10)
+
+The HTML collection inspector now shows the nearest contributing smaller-screen
+binding and initializes its variable, modes and numeric unit from that binding.
+Override collection binding here creates an independent binding in the selected
+screen scope while retaining the inherited identity and mode choices. The action
+explicitly uses the library value rather than copying a local literal override.
+
+Use smaller-screen binding removes the current scope's metadata and CSS property
+in one source-history operation, revealing the narrower-scope binding. Detach
+continues to retain the current appearance. Inheritance is resolved per property;
+intervening literal values or overlapping shorthand/longhand declarations prevent
+a false inherited-state claim. Unrelated properties at nearer scopes do not hide
+a valid connection. This concerns managed screen scopes on the same layer, not
+ancestor collection-mode inheritance or the complete external CSS cascade.
+
+All 563 unit tests pass (`/private/tmp/retouch-inherited-collection-units.log`).
+Chromium and WebKit collection-binding flows pass: tablet-to-desktop inheritance
+retains the variable ID and selected mode, desktop mode edits leave tablet
+unchanged, removing the desktop binding reveals tablet appearance, and each Undo
+restores exact prior source bytes. Existing override, detach, cycle refusal,
+numeric binding and collection update checks remain part of the same flow.
+
+Multi-selection, ancestor modes, React/Liquid collection bindings and full Figma
+parity remain unfinished. Native application launches remain paused.
+The inherited-state screenshot `/private/tmp/retouch-inherited-collection.png`
+was visually inspected; the scope label, mode selection and override action fit
+the inspector without horizontal clipping.

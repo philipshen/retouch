@@ -241,11 +241,11 @@ function handle(req, res, ctx) {
       const applyPlan=(root,plan)=>ctx.history.commit(root,plan,{group:op.historyGroup,route:historyRoute(req)});
       try {
         resolved.context = renderContext(op.context);
-        if(['applyVariable','resetVariable','detachVariable'].includes(op.type)){
+        if(['applyVariable','resetVariable','detachVariable','removeVariable'].includes(op.type)){
           if(!ctx.adapter.capabilities?.ops?.includes('setCSS'))return json(res,409,{ok:false,reason:'Collection bindings currently need an HTML project.'});
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source changed. Re-select the layer.'});
           let model;
-          if(op.type!=='detachVariable'){
+          if(!['detachVariable','removeVariable'].includes(op.type)){
             const library=require('./variable-library.cjs').read(ctx.appRoot);
             if(library.revision!==op.libraryRevision)return json(res,409,{ok:false,reason:'Variable collections changed. Reload before binding.'});
             model={version:library.version,collections:library.collections,variables:library.variables};

@@ -31,3 +31,10 @@ test('invalid and unindexed links and stale operations refuse without partial so
  library.variables=library.variables.filter(v=>v.id!==id(5));const result=linked.planFile('/tmp/index.html','index.html',source,library);assert.equal(result.ok,false);assert.equal(result.edits,undefined);
  assert.equal(linked.plan(resolve(original),{type:'applyVariable',property:'width',width:0,binding:{id:id(5)},fileHash:'old'},fixture()).ok,false);
 });
+
+test('removing a scope binding removes its CSS override and preserves narrower bindings',()=>{
+ const library=fixture();let source=apply(original,'color',{id:id(4)},0,library).edits[0].after;const base=source;
+ source=apply(source,'color',{id:id(4),modes:{[id(1)]:id(3)}},768,library).edits[0].after;
+ const result=linked.plan(resolve(source),{type:'removeVariable',property:'color',width:768});assert.equal(result.ok,true,result.reason);const after=resolve(result.edits[0].after);assert.deepEqual(linked.links(after),linked.links(resolve(base)));assert.deepEqual(css.describe(after).cssRules,css.describe(resolve(base)).cssRules);
+ assert.equal(linked.plan(after,{type:'removeVariable',property:'color',width:768}).ok,false);
+});

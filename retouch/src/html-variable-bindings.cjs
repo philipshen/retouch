@@ -21,7 +21,7 @@ function plan(resolved,op,library){try{
  if(op.fileHash&&op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the layer.');
  if(!Number.isInteger(op.width)||op.width<0||op.width>7680||!properties.includes(op.property))return refuse('Choose a supported variable property and screen scope.');
  const state=links(resolved),oldLink=state[op.width]?.[op.property];let source=resolved.source;
- if(op.type==='detachVariable'){if(oldLink){delete state[op.width][op.property];if(!Object.keys(state[op.width]).length)delete state[op.width];}}
+ if(['detachVariable','removeVariable'].includes(op.type)){if(op.type==='removeVariable'){if(!oldLink)return refuse('The layer is no longer linked to a variable.');const result=css.plan(resolved,{width:op.width,property:op.property,value:null});if(!result.ok)return result;source=result.edits[0]?.after||source;}if(oldLink){delete state[op.width][op.property];if(!Object.keys(state[op.width]).length)delete state[op.width];}}
  else if(['applyVariable','resetVariable','refreshVariable'].includes(op.type)){
   const spec=op.type==='applyVariable'?op.binding:oldLink&&{id:oldLink.id,modes:oldLink.modes,...(oldLink.unit!==undefined?{unit:oldLink.unit}:{})};if(!spec)return refuse('The layer is no longer linked to a variable.');const resolvedValue=bindings.resolve(library,op.property,spec),value=resolvedValue.value;
   const info=css.describe(resolved);if(info.cssReason)return refuse(info.cssReason);
