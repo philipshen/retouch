@@ -6694,3 +6694,27 @@ The reset assertion checks rendered classes rather than searching source text:
 Liquid patch metadata intentionally retains removed tokens. These are local
 Liquid/Tailwind fixtures, not live Shopify verification. Native launches remain
 paused; full Figma parity and arbitrary-site authoring remain incomplete.
+
+### React and Liquid blur controls (2026-09-09)
+
+The class-based Effects inspector now includes layer and backdrop blur numeric
+controls. Each edits the existing computed stack at the selected screen scope,
+preserving other functions and their order, and writes a canonical important
+property class. Setting zero removes blur from that stack (or writes none for an
+otherwise empty stack). Layer/backdrop effects remain independent. Unsupported
+stacks and stacks with multiple blur functions disable the single-value control;
+important all-property resets refuse the edit. Local edits refresh saved-effect
+override status and can be reset through the style library.
+
+All 506 unit tests passed, exit 0:
+/private/tmp/retouch-blur-controls-units.log. Focused tests cover function order,
+drop-shadow retention, scope separation, independent backdrop ownership, explicit
+none and unsupported-value refusal. Browser flows now use the visible Layer blur
+control instead of calling the shell class writer directly. React/Chromium and
+conditional Liquid/WebKit passed, exit 0:
+/private/tmp/retouch-blur-controls-react-final.log and
+/private/tmp/retouch-blur-controls-liquid-final.log. They also edit backdrop blur
+to 5px and zero, check the computed value and unchanged layer filter, and restore
+exact source bytes through undo. Saved effects, resets, project updates and mobile
+scope checks remain in those flows. No native app was launched. Full filter-stack
+authoring, full Figma parity and arbitrary-site support remain incomplete.

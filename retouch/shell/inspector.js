@@ -375,10 +375,26 @@
     corners.open=cornersExpanded;corners.ontoggle=()=>{if(corners.isConnected)cornersExpanded=corners.open;};
     sec.append(corners);return sec;
   }
+  function filterClasses(classes,property,value){
+    const values=typeof module==='object'&&module.exports?require('./html-css-values.js'):root.RetouchHTMLCSSValues;
+    if(!['filter','backdrop-filter'].includes(property)||!values.valid(property,value)||typeof value!=='string')throw Error('Unsupported filter stack.');
+    const match=t=>t.startsWith('['+property+':')||(property==='backdrop-filter'?/^backdrop-(?:blur|brightness|contrast|grayscale|hue-rotate|invert|opacity|saturate|sepia|filter)(?:-|$)/.test(t):/^(?:-?hue-rotate|filter|blur|brightness|contrast|drop-shadow|grayscale|invert|saturate|sepia)(?:-|$)/.test(t));
+    if(tokens(classes).some(t=>/^!|!$/.test(t)&&base(t)?.startsWith('[all:')))throw Error('Resolve the important all-property reset before editing filters.');
+    return replace(classes,match,'!['+property+':'+value.replace(/\s/g,'_')+']');
+  }
   function effects(info, el, save, notify) {
     const sec = section('Effects');
     if (!el || locked(sec,info)) return sec;
     const css=el.ownerDocument.defaultView.getComputedStyle(el);
+    for(const [property,label]of [['filter','Layer blur (px)'],['backdrop-filter','Backdrop blur (px)']]){
+      const value=css.getPropertyValue(property).trim(),parsed=root.RetouchHTMLCSSValues.parseFilters(value),blurs=parsed?.filter(item=>item.name==='blur');
+      const input=number(sec,label,blurs?.length===1?parseFloat(blurs[0].arg):blurs?.length===0?0:NaN,0,1000,amount=>{
+        const next=root.RetouchHTMLCSSValues.withBlur(value,amount);if(next===null)return notify('This filter stack cannot be edited with a single blur control.');
+        try{save(filterClasses(info.className,property,next));}catch(error){notify(error.message);}
+      });
+      if(!parsed||blurs.length>1){input.disabled=true;note(sec,'This '+(property==='filter'?'layer':'backdrop')+' filter cannot be adjusted with a single blur value.');}
+      note(sec,value,'computed-value');
+    }
     note(sec,css.boxShadow,'computed-value');
     const shadowMatch=t=>/^shadow(?:-|$)/.test(t)||/^\[box-shadow:/.test(t);
     const saveShadow=value=>{const inherited=tokens(info.anchorInheritedClasses).some(token=>/^!|!$/.test(token)&&base(token)!==null&&shadowMatch(base(token)));return save(replace(info.className,shadowMatch,inherited?'!'+value:value));};
@@ -593,6 +609,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);
