@@ -8485,3 +8485,45 @@ selection, full component variants/insertion and arbitrary-site authoring remain
 incomplete. This verifies conditional-root property editing, not complete Figma
 variant parity. Full Figma Design parity and trusted brew distribution remain
 unachieved. Native app launches and native launch tests remain paused.
+
+
+### Arrow component instance identity and focused draft refresh
+
+Discoverable exported and explicitly marked arrow components now forward compiled
+instance identity to their returned host roots. The transform preserves lexical
+this/arguments, captures identity before identifier/rest prop reassignment, keeps
+rest props available, and supports destructured/default props, concise or block
+bodies, async arrows and TypeScript headers. Synthetic names avoid source binding
+collisions. Parameter-free arrows retain length zero using a default parameter.
+Semicolon-free directive prologues retain valid syntax. Production source is not
+rewritten by stamping.
+
+Parameter-free arrows with an explicit use-strict directive remain host-stamped
+without instance forwarding: introducing a default parameter would invalidate
+that directive. Unsupported destructuring patterns, fragment/multiple roots,
+classes and higher-order wrappers still need further identity work. This is not
+complete component/variant parity.
+
+Browser verification exposed intermittent Chromium text-focus loss before the
+commit keystroke (two failed runs). The captured trace shows a field blur/save
+before Ctrl+Enter reaches the page body; a later diagnostic run passed. Inspection
+also identified that same-selection metadata could rebuild a focused text field
+when no pointer was active. The panel now defers that rebuild while a draft input
+is focused and no edit is running. A deterministic browser check calls loadScope
+during an unsaved multiline draft and verifies the same field remains connected
+and focused with unchanged source before explicitly committing it.
+
+Validation: 673 unit tests passed, including executed arrow fixtures for lexical
+semantics, reassignment, defaults, rest props, name collisions, async rendering
+and zero-argument calls, plus typed/directive parse checks. Chromium and WebKit
+both passed the final full component property/library workflow with an exported
+arrow component, conditional root changes, source preservation, Undo/Redo and the
+metadata-refresh draft regression. All test process handles reached terminal exit
+zero. Final logs: /private/tmp/retouch-arrow-identity-units-verified.log,
+/private/tmp/retouch-arrow-identity-chromium-verified.log and
+/private/tmp/retouch-arrow-identity-webkit-verified.log. Earlier diagnostic evidence:
+/private/tmp/retouch-arrow-identity-chromium-final.log and
+/private/tmp/retouch-arrow-focus-render-trace.log.
+
+Full Figma Design parity, arbitrary-site authoring and trusted brew distribution
+remain incomplete. Native app launches and native launch tests stay paused.

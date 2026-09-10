@@ -908,7 +908,8 @@ function renderPanel() {
   syncLayerSelection();
   const panel=document.getElementById('panel');
   const key=JSON.stringify([sel.info.file,sel.scope,sel.instanceId,(sel.multiple||[sel.info]).map(info=>info.id).sort()]);
-  if(panelPointer&&key===renderedPanelSelection){panelRenderDeferred=true;return;}
+  const focusedDraft=!panelTasks&&!sourceRequests&&!undoBusy&&panelInteractionFocused()&&document.activeElement.matches('input,textarea');
+  if((panelPointer||focusedDraft)&&key===renderedPanelSelection){panelRenderDeferred=true;return;}
   panelRenderDeferred=false;
   const top=key===renderedPanelSelection?panel.scrollTop:0;
   const focusedTool=key===renderedPanelSelection&&panelBody.contains(document.activeElement)?document.activeElement.dataset.canvasTool:null;
