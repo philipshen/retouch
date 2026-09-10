@@ -345,18 +345,21 @@
       }
     }
     if(colorAction)note(sec,'Clear removes paint from this screen scope to reveal inherited styles. Saved color links stay attached; reset them from the palette.');
+    function writeAppearance(property,value){
+      let next=root.RetouchReactSelection.change(info.className,'',property,value,el.ownerDocument);
+      const matches=token=>property==='opacity'?/^opacity-|^\[opacity:/.test(token):property==='mix-blend-mode'?/^mix-blend-|^\[mix-blend-mode:/.test(token):/^(isolate|isolation-auto)$|^\[isolation:/.test(token);
+      if(value!==null&&tokens(info.anchorInheritedClasses).some(token=>/^!|!$/.test(token)&&matches(base(token)||'')))next=replace(next,matches,'!'+(property==='opacity'?'opacity-['+value/100+']':property==='mix-blend-mode'?'mix-blend-'+value:value==='auto'?'isolation-auto':'isolate'));
+      save(next);
+    }
     const row = document.createElement('div'); row.className='opacity-row';
-    const input = number(row,'Opacity (%)',Number(css.opacity)*100,0,100,value=>save(replace(info.className,t=>t.startsWith('opacity-'),`opacity-[${round(value/100)}]`)));
+    const input = number(row,'Opacity (%)',Number(css.opacity)*100,0,100,value=>writeAppearance('opacity',value));
     const slider = document.createElement('input'); slider.type='range'; slider.min=0; slider.max=100; slider.value=input.value; slider.setAttribute('aria-label','Opacity');
     slider.oninput=()=>{input.value=slider.value;}; slider.onchange=()=>input.onchange(); row.append(slider); sec.append(row);
+    const resetOpacity=button('Reset opacity',()=>writeAppearance('opacity',null));resetOpacity.disabled=root.RetouchReactSelection.change(info.className,'','opacity',null)===info.className;sec.append(resetOpacity);
+    if(el.style.getPropertyValue('opacity')){input.disabled=true;slider.disabled=true;resetOpacity.disabled=true;note(sec,'An inline opacity controls this layer.');}
     for(const [property,label]of [['mix-blend-mode','Blend mode'],['isolation','Blend group']]){
       const values=root.RetouchHTMLCSSValues.options[property],current=css.getPropertyValue(property);
-      const write=value=>{
-        let next=root.RetouchReactSelection.change(info.className,'',property,value,el.ownerDocument);
-        const matches=token=>property==='mix-blend-mode'?/^mix-blend-|^\[mix-blend-mode:/.test(token):/^(isolate|isolation-auto)$|^\[isolation:/.test(token);
-        if(value!==null&&tokens(info.anchorInheritedClasses).some(token=>/^!|!$/.test(token)&&matches(base(token)||'')))next=replace(next,matches,'!'+(property==='mix-blend-mode'?'mix-blend-'+value:value==='auto'?'isolation-auto':'isolate'));
-        save(next);
-      };
+      const write=value=>writeAppearance(property,value);
       const choices=[...new Set([current,...values])].filter(value=>el.ownerDocument.defaultView.CSS.supports(property,value));
       const control=select(sec,label,choices.map(value=>[value,property==='isolation'?(value==='isolate'?'Isolate children':'Blend with surroundings'):value]),current,write);
       const reset=button('Reset '+label.toLowerCase(),()=>write(null));reset.disabled=root.RetouchReactSelection.change(info.className,'',property,null)===info.className;sec.append(reset);

@@ -10257,3 +10257,7 @@ React Appearance now exposes Blend mode and Blend group, with per-property reset
 ### Responsive blend priority and inline guards verified (2026-09-10)
 
 The React browser fixture now includes inline blend/isolation declarations and important base blend classes. Chromium and WebKit verify disabled single-layer controls and resets for inline declarations; tablet-only blend and isolation overrides with important priority; unchanged inherited phone values; scoped reset revealing base values; and exact-source Undo of reset/application. Both full React selection suites pass. Evidence: `/private/tmp/retouch-blend-scope-chromium.log`, `/private/tmp/retouch-blend-scope-webkit.log`. Native launches remain paused; full parity is incomplete.
+
+### Single-layer opacity reset and inline guards (2026-09-10)
+
+React Appearance opacity now uses the shared class transform, including arbitrary opacity declarations, and offers Reset opacity. Appearance writes share inherited important handling with blend controls. Inline opacity disables both numeric and slider controls plus reset. Chromium and WebKit full React selection suites pass single-layer opacity application, reset to the inherited value, unchanged peer opacity, exact-source Undo of reset/application, inline control availability, and existing responsive blend checks. All 815 unit tests pass. Evidence: `/private/tmp/retouch-opacity-parity-units.log`, `/private/tmp/retouch-opacity-parity-chromium.log`, `/private/tmp/retouch-opacity-parity-webkit.log`. Native launches remain paused; full parity is incomplete.
