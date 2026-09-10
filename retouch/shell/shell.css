@@ -254,7 +254,7 @@ details.advanced > summary:hover { color: var(--ink); }
 /* Capture wheel input here: WebKit can otherwise scroll the iframe natively. */
 .compare-overlay { position: absolute; inset: 0; pointer-events: auto; }
 .compare-selection { position: absolute; border: 2px solid var(--accent); }
-.compare-card > .hint { color: var(--muted); font-size: 11px; margin-top: 6px; }
+.compare-card .hint { color: var(--muted); font-size: 11px; margin-top: 6px; }
 
 #screenComparisons > .control-button { margin-bottom: 14px; }
 .compare-header > span { flex: 1; min-width: 0; }

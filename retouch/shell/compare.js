@@ -4,16 +4,18 @@
   const project=window.__RT_RENDERING?.stateScope?.project;
   const storageKey='retouch.comparisons.v1'+(typeof project==='string'&&/^[a-f0-9]{64}$/.test(project)?':'+project:'');
   let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore;
+  const collapsedNames=new Set();let previewSerial=0;
+  try{const saved=JSON.parse(localStorage.getItem(storageKey+'.collapsed'));if(Array.isArray(saved)&&saved.length<=8)for(const name of saved)if(typeof name==='string'&&name.length<=80)collapsedNames.add(name);}catch{}
   const removed=[],orderUndo=[],orderRedo=[];let removals=0,undoOrder,redoOrder;
   function clearOrderHistory(){orderUndo.length=0;orderRedo.length=0;}
   const valid=v=>Number.isInteger(v)&&v>=240&&v<=7680;
   try{const saved=JSON.parse(localStorage.getItem(storageKey));if(Array.isArray(saved)&&saved.length<=8&&saved.every(s=>Array.isArray(s)&&s.length===3&&typeof s[0]==='string'&&s[0].length<=80&&valid(s[1])&&valid(s[2])))sizes=saved;}catch{}
-  function remember(){try{localStorage.setItem(storageKey,JSON.stringify(sizes));}catch{}window.RetouchScreens?.setSaved(sizes);}
+  function remember(){try{localStorage.setItem(storageKey,JSON.stringify(sizes));localStorage.setItem(storageKey+'.collapsed',JSON.stringify(sizes.map(size=>size[0]).filter(name=>collapsedNames.has(name))));}catch{}window.RetouchScreens?.setSaved(sizes);}
   function current(){return {width:Number(document.getElementById('screenWidth').value),height:Number(document.getElementById('screenHeight').value)};}
   function layoutPreviews(){
     const railBounds=rail.getBoundingClientRect();
-    for(const item of cards){const scale=item.viewport.clientWidth/item.width;item.frame.style.transform=`scale(${scale})`;item.viewport.style.height=item.height*scale+'px';}
-    for(const item of cards){const bounds=item.viewport.getBoundingClientRect();Object.assign(item.surface.style,{left:bounds.left-railBounds.left+rail.scrollLeft-rail.clientLeft+'px',top:bounds.top-railBounds.top+rail.scrollTop-rail.clientTop+'px',width:bounds.width+'px',height:bounds.height+'px'});}
+    for(const item of cards){item.surface.hidden=item.previewBody.hidden;if(item.previewBody.hidden)continue;const scale=item.viewport.clientWidth/item.width;item.frame.style.transform=`scale(${scale})`;item.viewport.style.height=item.height*scale+'px';}
+    for(const item of cards){if(item.previewBody.hidden)continue;const bounds=item.viewport.getBoundingClientRect();Object.assign(item.surface.style,{left:bounds.left-railBounds.left+rail.scrollLeft-rail.clientLeft+'px',top:bounds.top-railBounds.top+rail.scrollTop-rail.clientTop+'px',width:bounds.width+'px',height:bounds.height+'px'});}
   }
   function updateControls(){
     const size=current();
@@ -64,6 +66,7 @@
     if(!open)return;
     layoutPreviews();
     for(const card of cards){
+      if(card.previewBody.hidden)continue;
       const {frame,overlay,message,scopeMessage,width,height,reveal}=card;
       scopeMessage.textContent='Checking style scope…';scopeMessage.dataset.scopeApplies='unknown';
       const scale=card.viewport.clientWidth/width;
@@ -166,7 +169,7 @@
         if(nameInput.hidden)return;
         const next=nameInput.value.trim().replace(/\s+/g,' ');
         if(!cancel&&(!next||sizes.some(other=>other!==size&&other[0].toLowerCase()===next.toLowerCase()))){dimensionError.textContent=next?'Another comparison already has this name.':'Enter a comparison name.';dimensionError.hidden=false;return;}
-        if(!cancel){name=next;size[0]=name;remember();}
+        if(!cancel){if(collapsedNames.delete(name))collapsedNames.add(next);name=next;size[0]=name;remember();}
         dimensionError.hidden=true;nameInput.hidden=true;label.hidden=false;updateLabels();
       }
       nameInput.onblur=()=>finishName();
@@ -236,7 +239,12 @@
       }
       up.onclick=()=>move(-1);down.onclick=()=>move(1);
       const rotate=document.createElement('button');rotate.type='button';rotate.className='control-button';rotate.textContent='Rotate';rotate.setAttribute('aria-label','Rotate '+name+' comparison');rotate.onclick=()=>applyDimensions(height,width);dimensions.append(rotate);
+      const previewBody=document.createElement('div');previewBody.id='comparison-preview-'+(++previewSerial);previewBody.hidden=collapsedNames.has(name);surface.hidden=previewBody.hidden;
+      const disclosure=document.createElement('button');disclosure.type='button';disclosure.className='control-button';disclosure.setAttribute('aria-controls',previewBody.id);
+      function updateDisclosure(){disclosure.textContent=previewBody.hidden?'Show preview':'Hide preview';disclosure.setAttribute('aria-label',(previewBody.hidden?'Show ':'Hide ')+name+' preview');disclosure.setAttribute('aria-expanded',String(!previewBody.hidden));}
+      disclosure.onclick=()=>{previewBody.hidden=!previewBody.hidden;if(previewBody.hidden)collapsedNames.add(name);else collapsedNames.delete(name);remember();updateDisclosure();layoutPreviews();};
       function updateLabels(){
+        updateDisclosure();
         label.textContent=name===`Custom ${width} × ${height}`?name:`${name} · ${width} × ${height}`;
         label.setAttribute('aria-label','Rename '+name+' comparison');nameInput.setAttribute('aria-label','Comparison name');
         card.setAttribute('aria-label',name+' comparison');edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');remove.setAttribute('aria-label','Remove '+name+' comparison');viewport.setAttribute('aria-label','Edit from '+name+' comparison');frame.title=name+' comparison preview';scopeMessage.setAttribute('aria-label',name+' scope coverage');
@@ -245,7 +253,7 @@
         rotate.setAttribute('aria-label','Rotate '+name+' comparison');reveal.setAttribute('aria-label','Show selection in '+name+' comparison');
       }
       updateLabels();
-      viewport.append(overlay);card.append(header,dimensions,dimensionError,order,viewport,message,reveal,scopeMessage,scopeButton);rail.insertBefore(card,before);
+      viewport.append(overlay);previewBody.append(viewport,message,reveal,scopeMessage,scopeButton);card.append(header,dimensions,dimensionError,order,disclosure,previewBody);rail.insertBefore(card,before);
       function activate(event){
         try{
           const d=frame.contentDocument,loc=frame.contentWindow.location;
@@ -282,7 +290,7 @@
           if(root){const style=w.getComputedStyle(root);w.scrollBy({left:/hidden|clip/.test(style.overflowX)?0:dx,top:/hidden|clip/.test(style.overflowY)?0:dy,behavior:'instant'});}
         }catch{}
       },{passive:false});
-      cards.push({card,frame,surface,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal,up,down});
+      cards.push({card,frame,surface,previewBody,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal,up,down});
   }
   function unload(frame){return new Promise(resolve=>{
     let timeout;

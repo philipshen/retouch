@@ -9624,3 +9624,31 @@ This establishes state preservation for reordering the tested live previews;
 route/source reloads and closing/reopening comparisons still recreate previews.
 Full Figma parity, arbitrary-site authoring and trusted brew installation remain
 unfinished. Native Retouch launches remain paused.
+
+### Collapse comparison previews without losing their state (2026-09-10)
+
+Each comparison now has an accessible Show preview / Hide preview disclosure.
+Dimensions, Edit and ordering controls remain available while the preview and its
+selection/scope details are hidden. The iframe stays mounted with its viewport
+dimensions intact. Hidden previews skip overlay painting, and the remaining
+surfaces are repositioned immediately to match their cards.
+
+Collapsed screen names persist in project-scoped local browser state separately
+from portable screen-set JSON. Renaming migrates the preference to the new name.
+This is a viewing preference, not an authored style or source-history operation.
+Closing/reloading the editor still recreates preview browsing contexts; preserving
+live state across that lifecycle remains unfinished.
+
+Chromium and WebKit passed collapse/reopen with retained JavaScript state, an
+unsaved input and viewport width, collapsed preference across reload, ordering,
+history, nested scrolling and unchanged source. Both also passed the full HTML
+comparison-editing suite, including selection, responsive edits, screen-set
+load/Undo, removal restoration, renaming and resizing. All runs exited zero with
+no page errors. Evidence:
+/private/tmp/retouch-collapse-previews-chromium-final.log,
+/private/tmp/retouch-collapse-previews-webkit.log,
+/private/tmp/retouch-collapse-edit-chromium.log,
+/private/tmp/retouch-collapse-edit-webkit.log.
+The compact layout was inspected in /private/tmp/retouch-collapsed-preview.png.
+Syntax and git diff --check passed. Full Figma parity and trusted brew installation
+remain unfinished; native app launches remain paused.
