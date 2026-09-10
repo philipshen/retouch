@@ -901,9 +901,10 @@ function renderPanelContents() {
    RetouchColorStyles.mount(panelBody,sel.multiple?.length>1?selectionColorOptions(scope):info.colorStyles||info.classColorStyles?{width:scope,readColor:property=>{const element=matchingEls(info.id)[0];if(!element)throw Error('Re-select the layer to read its color.');return element.ownerDocument.defaultView.getComputedStyle(element).getPropertyValue(property);},allLinks:info.colorStyleLinks,links:info.colorStyleLinks?.[scope],overrides:info.colorStyleOverrides?.[scope]||[],inherited:info.classColorStyles?property=>RetouchResponsive.inheritedLink(Object.fromEntries(Object.entries(info.colorStyleLinks||{}).filter(([,group])=>group[property]).map(([key,group])=>[key,group[property]])),styleScope,matchingEls(info.id)[0]?.ownerDocument):undefined,apply:(styleId,libraryRevision,property)=>writeTextStyle('applyColorStyle',width,{scope:styleScope,styleId,libraryRevision,property}),reset:(styleId,libraryRevision,property)=>writeTextStyle('resetColorStyle',width,{scope:styleScope,styleId,libraryRevision,property}),detach:property=>writeTextStyle('detachColorStyle',width,{scope:styleScope,property})}:{});
   }
 
-  if(!sel.multiple?.length&&info.cssAuthoring&&!info.effectStyleLinkReason){
-   const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,links=info.effectStyleLinks||{},inheritedWidth=Object.keys(links).map(Number).filter(value=>value<width).sort((a,b)=>b-a)[0];
-   RetouchEffectStyles.mount(panelBody,matchingEls(info.id)[0],{link:links[width],overrides:info.effectStyleOverrides?.[width]||[],inherited:!links[width]&&inheritedWidth!==undefined?{link:links[inheritedWidth],label:inheritedWidth?inheritedWidth+'px and larger':'All sizes'}:null,apply:(styleId,libraryRevision)=>writeTextStyle('applyEffectStyle',width,{styleId,libraryRevision}),reset:(styleId,libraryRevision)=>writeTextStyle('resetEffectStyle',width,{styleId,libraryRevision}),detach:()=>writeTextStyle('detachEffectStyle',width),update:(styleId,libraryRevision,name,properties)=>writeTextStyle('updateEffectStyle',width,{styleId,libraryRevision,name,properties})});
+  if(!sel.multiple?.length&&(info.cssAuthoring||info.classEffectStyles)&&!info.effectStyleLinkReason){
+   const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,scope=info.classEffectStyles?styleScope:width,links=info.effectStyleLinks||{},inheritedWidth=Object.keys(links).map(Number).filter(value=>value<width).sort((a,b)=>b-a)[0];
+   const inherited=info.classEffectStyles?RetouchResponsive.inheritedLink(links,styleScope,matchingEls(info.id)[0]?.ownerDocument):!links[width]&&inheritedWidth!==undefined?{link:links[inheritedWidth],label:inheritedWidth?inheritedWidth+'px and larger':'All sizes'}:null;
+   RetouchEffectStyles.mount(panelBody,matchingEls(info.id)[0],{link:links[scope],overrides:info.effectStyleOverrides?.[scope]||[],inherited,apply:(styleId,libraryRevision)=>writeTextStyle('applyEffectStyle',width,{scope:styleScope,styleId,libraryRevision}),reset:(styleId,libraryRevision)=>writeTextStyle('resetEffectStyle',width,{scope:styleScope,styleId,libraryRevision}),detach:()=>writeTextStyle('detachEffectStyle',width,{scope:styleScope}),update:(styleId,libraryRevision,name,properties)=>writeTextStyle('updateEffectStyle',width,{scope:styleScope,styleId,libraryRevision,name,properties})});
   }
   if(sel.multiple?.length>1){mountSelectionEffectStyles();mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection,setSelectionColorOverride));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
@@ -1592,18 +1593,18 @@ function selectionColorOptions(width){
 }
 function mountSelectionEffectStyles(){
   const selection=sel.multiple,element=matchingEls(sel.info.id)[0];
-  if(!element||!selection.every(info=>info.cssAuthoring))return;
-  const scope=String(styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0);
+  if(!element||!selection.every(info=>info.cssAuthoring||info.classEffectStyles))return;
+  const scope=sel.info.classEffectStyles?styleScope:String(styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0);
   const links=selection.map(info=>info.effectStyleLinks?.[scope]).filter(Boolean),overrides=selection.reduce((sum,info)=>sum+(info.effectStyleOverrides?.[scope]?.length||0),0);
   async function write(type,styleId,libraryRevision){
-    const info=sel.info,ids=selection.map(item=>item.id);busyPanel(true);
+    const info=sel.info,ids=selection.map(item=>item.id),react=!!info.classEffectStyles;busyPanel(true);
     try{
       const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
       const result=await api('POST','/rt/__api/op',{type,id:info.id,ids,fileHash:info.hash,scope:styleScope,width,styleId,libraryRevision});
       if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update effect styles in this selection.');
-      if(result.undoId)editorHistory.record({type:'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
+      if(result.undoId)editorHistory.record({type:react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
       sel.info=result.element;sel.multiple=result.selection;
-      await reloadFrame();
+      if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();
       renderPanel();toast('Selected effect styles updated','ok');
     }finally{busyPanel(false);}
   }
@@ -1749,7 +1750,7 @@ window.RetouchTextStyleRequest=async operation=>{
 };
 async function refreshTextStyleElement(info){
   if(info.classTextStyles)await refreshWrittenElement(info,el=>{
-    try{return JSON.stringify(JSON.parse(el.getAttribute('data-rt-text-styles')||'{}'))===JSON.stringify(info.textStyleLinks||{})&&JSON.stringify(JSON.parse(el.getAttribute('data-rt-color-styles')||'{}'))===JSON.stringify(info.colorStyleLinks||{})&&(info.className||'').split(/\s+/).filter(Boolean).every(token=>el.classList.contains(token));}catch{return false;}
+    try{return JSON.stringify(JSON.parse(el.getAttribute('data-rt-text-styles')||'{}'))===JSON.stringify(info.textStyleLinks||{})&&JSON.stringify(JSON.parse(el.getAttribute('data-rt-color-styles')||'{}'))===JSON.stringify(info.colorStyleLinks||{})&&JSON.stringify(JSON.parse(el.getAttribute('data-rt-effect-styles')||'{}'))===JSON.stringify(info.effectStyleLinks||{})&&(info.className||'').split(/\s+/).filter(Boolean).every(token=>el.classList.contains(token));}catch{return false;}
   });else await reloadFrame();
 }
 async function writeTextStyle(type,width,extra={}){
@@ -1795,7 +1796,7 @@ async function writeClasses(classes, isUndo) {
     info.className = res.element?.className ?? classes;
     info.hash = res.hash;
     if(info.classTextStyles&&res.element)for(const key of ['textStyleLinks','textStyleOverrides','classTextStyles','textStyleLinkReason'])info[key]=res.element[key];
-    if(res.element)for(const key of ['colorStyleLinks','colorStyleOverrides','classColorStyles','colorStyleLinkReason'])info[key]=res.element[key];
+    if(res.element)for(const key of ['colorStyleLinks','colorStyleOverrides','classColorStyles','colorStyleLinkReason','effectStyleLinks','effectStyleOverrides','classEffectStyles','effectStyleLinkReason'])info[key]=res.element[key];
     if (window.__RT_RENDERING?.reloadAfterWrite||info.renderRevisionAttribute) await refreshWrittenElement(info, el => info.className.split(/\s+/).filter(Boolean).every(token => el.classList.contains(token)));
     toast('Saved', 'ok');
     renderPanel();

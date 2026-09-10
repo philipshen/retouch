@@ -380,9 +380,10 @@
     if (!el || locked(sec,info)) return sec;
     const css=el.ownerDocument.defaultView.getComputedStyle(el);
     note(sec,css.boxShadow,'computed-value');
-    const shadowMatch=t=>/^shadow(?:-|$)/.test(t);
+    const shadowMatch=t=>/^shadow(?:-|$)/.test(t)||/^\[box-shadow:/.test(t);
+    const saveShadow=value=>{const inherited=tokens(info.anchorInheritedClasses).some(token=>/^!|!$/.test(token)&&base(token)!==null&&shadowMatch(base(token)));return save(replace(info.className,shadowMatch,inherited?'!'+value:value));};
     const presets=[['','Choose shadow…'],['shadow-none','None'],['shadow-sm','Small'],['shadow-md','Medium'],['shadow-lg','Large'],['shadow-xl','Extra large'],['shadow-inner','Inner']];
-    select(sec,'Shadow preset',presets,tokens(info.className).map(base).find(t=>presets.some(([p])=>p===t))||'',value=>{if(value)save(replace(info.className,shadowMatch,value));});
+    select(sec,'Shadow preset',presets,tokens(info.className).map(base).find(t=>presets.some(([p])=>p===t))||'',value=>{if(value)saveShadow(value);});
     const form=document.createElement('div');form.className='control-grid';
     const values={x:0,y:4,blur:12,spread:0};
     for(const [key,label] of [['x','X'],['y','Y'],['blur','Blur'],['spread','Spread']]) number(form,'Shadow '+label,values[key],key==='blur'?0:-1000,1000,v=>{values[key]=v;});
@@ -393,7 +394,7 @@
     sec.append(button('Apply custom shadow',()=>{
       if(![...sec.querySelectorAll('input')].every(i=>i.checkValidity()&&i.value!=='')) return notify('Check the shadow values.');
       const hex=color.value+Math.round(alpha/100*255).toString(16).padStart(2,'0');
-      save(replace(info.className,shadowMatch,`shadow-[${inset.checked?'inset_':''}${px(values.x)}_${px(values.y)}_${px(values.blur)}_${px(values.spread)}_${hex}]`));
+      saveShadow(`shadow-[${inset.checked?'inset_':''}${px(values.x)}_${px(values.y)}_${px(values.blur)}_${px(values.spread)}_${hex}]`);
     }));
     return sec;
   }

@@ -6636,3 +6636,32 @@ and forcing layout did. These are diagnostic observations in the bundled WebKit,
 not a general claim about all Safari releases. No such workaround has been added
 to product code. Reliable live preview remains required before enabling the React
 effect library UI. Native app launches remain paused; full parity is incomplete.
+
+### React saved-effect inspector integration (2026-09-09)
+
+The React inspector now exposes saved effect stacks for single layers and
+multi-selection. Apply/reset/detach use the selected responsive class scope;
+project updates share source/catalog undo. Single-layer links show inherited
+scope information through the existing breakpoint discovery. Fresh source
+metadata is checked after writes and local class edits refresh override status.
+The shadow preset/custom-shadow controls recognize canonical linked shadows,
+retain important precedence (including inherited shadows), and the effect reset
+planner replaces standard shadow overrides while refusing important ring
+conflicts.
+
+All 500 unit tests passed, exit 0:
+/private/tmp/retouch-react-effects-ui-units.log. Real Next.js browser flows passed
+in Chromium and WebKit, exit 0:
+/private/tmp/retouch-react-effects-ui-final-chromium.log and
+/private/tmp/retouch-react-effects-ui-final-webkit.log. Both exercised capture,
+responsive apply, a visible shadow preset override and reset, a filter override
+through the shell's class-write function, project update of an unopened JSX file,
+exact catalog/source undo, mobile scope isolation, detach retaining computed
+paint, and two-layer apply/detach/undo. This verifies the real framework refresh
+path; it does not turn the earlier isolated WebKit nested-CSS live-mutation
+failure into a pass. No browser-specific DOM workaround was introduced.
+
+The existing HTML effect flow also passed, exit 0:
+/private/tmp/retouch-react-effects-html-regression.log. Liquid effect links,
+complete class-renderer filter-stack controls, broader arbitrary-site authoring,
+and full Figma parity remain unfinished. Native Retouch launches remain paused.

@@ -25,3 +25,9 @@ test('React effect file planner refreshes a linked owner and refuses malformed m
  const initial=apply(source).edits[0].after,next={...style,properties:{filter:'blur(5px)'}},result=linked.planFile('/tmp/page.tsx','app/page.tsx',initial,next);assert.equal(result.ok,true,result.reason);assert.equal(result.updated,1);assert.ok(result.edits[0].after.includes('md:![filter:blur(5px)]'));
  const malformed=linked.planFile('/tmp/page.tsx','app/page.tsx',initial.replace('<p>','<p data-rt-effect-styles="bad">'),next);assert.equal(malformed.ok,false);assert.equal(malformed.edits,undefined);
 });
+
+test('effect reset replaces standard important shadow overrides without removing ring ownership',()=>{
+ const next=classes.compose('md:!shadow-lg md:opacity-50 hover:shadow-xl',{'box-shadow':'none'},'md:');assert.equal(next,'md:opacity-50 hover:shadow-xl md:![box-shadow:none]');
+ assert.equal(classes.compose('md:!shadow-[inset_0px_2px_4px_0px_#00000033]',{'box-shadow':'none'},'md:'),'md:![box-shadow:none]');
+ assert.throws(()=>classes.compose('md:!ring-2',{'box-shadow':'none'},'md:'),/important effect/);
+});

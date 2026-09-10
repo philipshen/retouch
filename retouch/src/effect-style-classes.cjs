@@ -24,7 +24,7 @@ function compose(className,values,scope='',remove=[]){
   if(!tokens.valid(token))throw Error('The source contains unsupported class syntax.');
   const part=responsive.split(token),plain=inspector.base(part.value);
   if(part.prefix!==scope){kept.push(token);continue;}
-  if(keys.some(property=>plain.startsWith('['+property+':')))continue;
+  if(keys.some(property=>plain.startsWith('['+property+':')||property==='box-shadow'&&/^shadow-(?:none|2?xs|sm|md|lg|xl|2xl|inner|\[(?:inset_|[-.\d])[^\]]*\])$/.test(plain)))continue;
   // Utility families can share Tailwind custom properties. Keep their source,
   // and refuse important conflicts rather than discard unrelated declarations.
   if(/^!|!$/.test(part.value)&&keys.some(property=>related(plain,property)))throw Error('Resolve the important effect utility before linking this style.');
