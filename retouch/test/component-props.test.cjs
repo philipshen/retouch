@@ -171,3 +171,29 @@ test('keyof expansion refuses unbounded keys, computed keys and recursive select
   'type Props=Pick<Base,keyof Props>;',
  ]){const source='interface Base {size:"small"|"large"}'+prefix+'function Card(props:Props){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),definition={source,fn:ast.program.body.find(n=>n.type==='FunctionDeclaration')};assert.equal(inspect.choices({},'size',definition),null);}
 });
+
+
+test('finite variant utilities filter literals by declared type membership',()=>{
+ const discover=require('../src/component-prop-choices.cjs').choices;
+ for(const [type,expected] of [
+  ['Exclude<All,"medium">',['small','large']],
+  ['Extract<All,"small"|"large">',['small','large']],
+  ['Exclude<Extract<All,string>,"medium">',['small','large']],
+  ['Extract<"small"|1|string[],string> ',null],
+  ['Extract<"small"|1,string>',['small']],
+  ['Exclude<boolean,false>',[true]],
+  ['Extract<-1|2,number>',[-1,2]],
+  ['Exclude<All,never>',['small','medium','large']],
+ ]){const source='type All="small"|"medium"|"large";function Card(props:{size:'+type+'}){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),definition={source,fn:ast.program.body.find(n=>n.type==='FunctionDeclaration')};assert.deepEqual(discover({},'size',definition)?.choices||null,expected);}
+});
+test('variant filtering rejects recursive, shadowed, empty and unknown filter contracts',()=>{
+ const discover=require('../src/component-prop-choices.cjs').choices;
+ for(const [prefix,type] of [
+  ['type Size=Exclude<Size,"small">;', 'Size'],
+  ['import type {Exclude} from "./custom";', 'Exclude<"small"|"large","large">'],
+  ['', 'Extract<"small",never>'],
+  ['', 'Exclude<"small",unknown>'],
+  ['', 'Exclude<"small",Missing>'],
+  ['', 'Extract<"small">'],
+ ]){const source=prefix+'function Card(props:{size:'+type+'}){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),definition={source,fn:ast.program.body.find(n=>n.type==='FunctionDeclaration')};assert.equal(discover({},'size',definition),null);}
+});

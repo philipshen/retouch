@@ -8160,3 +8160,18 @@ or unbounded queries. Chromium and WebKit verify a fixture that selects its stri
 options through keyof inside nested utility types; its workflow includes rendered
 changes, optional unset, defaults and exact Undo/Redo. Full Figma parity remains
 incomplete. Native launches remain paused.
+
+
+## Filtered finite component choices (2026-09-10)
+
+Variant discovery supports Exclude and Extract over finite primitive literal unions,
+including nested filters, aliases and primitive keyword filters. Source order is
+retained and the existing final choice checks still apply. Shadowed utilities,
+unknown filters, recursive types, unsupported candidates and excessive traversal
+return no inferred choice set. Empty results do not produce an editable dropdown.
+This remains a bounded type reader, not a complete TypeScript checker.
+
+634 unit tests pass. Chromium and WebKit verify a fixture that derives visible size choices using
+nested Extract/Exclude, checks that the excluded value is absent, and exercises
+rendered size changes, optional props, defaults, focus and exact Undo/Redo. Full
+Figma parity remains incomplete. Native app launches remain paused.

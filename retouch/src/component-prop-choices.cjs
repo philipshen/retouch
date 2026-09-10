@@ -12,6 +12,7 @@ function inspect(resolved,name,definition){
   function resolve(node,seen=new Set()){
    if(node?.type==='TSParenthesizedType')return resolve(node.typeAnnotation,seen);
    if(node?.type!=='TSTypeReference')return node;
+   if(node.typeName.type==='Identifier'&&['Exclude','Extract'].includes(node.typeName.name)&&!declarations.has(node.typeName.name)&&!importedNames.has(node.typeName.name))return node;
    if(node.typeName.type!=='Identifier'||node.typeParameters||seen.has(node.typeName.name)||seen.size>=20)return null;
    const declaration=declarations.get(node.typeName.name);if(!declaration||declaration.typeParameters||declaration.extends?.length)return null;
    const next=new Set(seen);next.add(node.typeName.name);return resolve(declaration.type==='TSTypeAliasDeclaration'?declaration.typeAnnotation:declaration.body,next);
@@ -67,11 +68,33 @@ function inspect(resolved,name,definition){
   // Diamond inheritance can reach the same declaration more than once. Distinct
   // declarations of one property still need type-level conflict/narrowing checks.
   const fields=[...new Set(members)].filter(p=>p.type==='TSPropertySignature'&&!p.computed&&(p.key.name??p.key.value)===name);if(fields.length!==1)return null;
+  let filterVisits=0;
+  function matchesFilter(value,node,seen=new Set()){
+   node=resolve(node);if(!node||++filterVisits>1000||seen.has(node)||seen.size>=20)return null;
+   const next=new Set(seen);next.add(node);
+   if(node.type==='TSUnionType'){const matches=node.types.map(type=>matchesFilter(value,type,next));return matches.includes(null)?null:matches.some(Boolean);}
+   if(node.type==='TSStringKeyword')return typeof value==='string';
+   if(node.type==='TSNumberKeyword')return typeof value==='number';
+   if(node.type==='TSBooleanKeyword')return typeof value==='boolean';
+   if(node.type==='TSNeverKeyword')return false;
+   if(['TSAnyKeyword','TSUnknownKeyword'].includes(node.type))return true;
+   if(node.type!=='TSLiteralType')return null;
+   const literal=node.literal;
+   if(literal.type==='UnaryExpression'&&literal.operator==='-'&&literal.argument.type==='NumericLiteral')return value===-literal.argument.value;
+   if(['StringLiteral','NumericLiteral','BooleanLiteral'].includes(literal.type))return value===literal.value;
+   return null;
+  }
   const values=[];let choiceVisits=0;
   function expand(node,seen=new Set()){
    node=resolve(node);if(!node||++choiceVisits>1000||seen.size>=20||seen.has(node))return false;
    const next=new Set(seen);next.add(node);
    if(node.type==='TSUnionType')return node.types.every(type=>expand(type,next));
+   if(node.type==='TSTypeReference'&&['Exclude','Extract'].includes(node.typeName.name)){
+    const args=node.typeParameters?.params;if(args?.length!==2)return false;
+    const start=values.length;if(!expand(args[0],next))return false;
+    const candidates=values.splice(start),matches=candidates.map(value=>matchesFilter(value,args[1]));if(matches.includes(null))return false;
+    values.push(...candidates.filter((_,index)=>node.typeName.name==='Extract'?matches[index]:!matches[index]));return values.length<=100;
+   }
    if(node.type==='TSBooleanKeyword'){values.push(true,false);return values.length<=100;}
    if(node.type!=='TSLiteralType')return false;
    const value=node.literal;
