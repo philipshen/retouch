@@ -1235,9 +1235,11 @@ function propTable(props,instanceId,fileHash) {
       const meta=prop.editor,input=document.createElement(meta.type==='string'?'textarea':'input');input.setAttribute('aria-label','Component property '+prop.name);if(meta.type!=='string')input.type=meta.type==='boolean'?'checkbox':'number';
       if(meta.type==='string'){const resize=()=>{input.rows=Math.min(5,Math.max(1,input.value.split('\n').length));};input.title='Enter adds a line. Command/Ctrl+Enter saves. Escape cancels.';input.addEventListener('input',resize);input.rows=Math.min(5,Math.max(1,String(meta.value).split('\n').length));}
       if(meta.type==='boolean')input.checked=meta.value;else input.value=String(meta.value);if(meta.type==='number')input.step='any';
-      input.addEventListener('change',()=>{if(!input.reportValidity()||meta.type==='number'&&input.value==='')return;const next=meta.type==='boolean'?input.checked:meta.type==='number'?Number(input.value):input.value;if(next!==meta.value)setComponentProperty(instanceId,prop.name,next,fileHash);});
+      input.addEventListener('change',()=>{if(!input.reportValidity()||meta.type==='number'&&input.value==='')return;const next=meta.type==='boolean'?input.checked:meta.type==='number'?Number(input.value):input.value;if(next!==meta.value)setComponentProperty(instanceId,prop.name,next,fileHash,{definitionHash:meta.definitionHash});});
       input.addEventListener('keydown',event=>{if(event.isComposing)return;if(event.key==='Enter'&&(meta.type!=='string'||event.metaKey||event.ctrlKey)){event.preventDefault();event.stopPropagation();input.blur();}if(event.key==='Escape'){event.preventDefault();event.stopPropagation();if(meta.type==='boolean')input.checked=meta.value;else input.value=String(meta.value);if(meta.type==='string')input.rows=Math.min(5,Math.max(1,input.value.split('\n').length));input.blur();}});value.append(input);
     }else{value.textContent=prop.value;value.title=prop.editor?.reason||'';}
+    if(instanceId&&prop.editor?.canReset){const reset=RetouchInspector.button('Reset',()=>setComponentProperty(instanceId,prop.name,undefined,fileHash,{reset:true,definitionHash:prop.editor.definitionHash}));reset.setAttribute('aria-label','Reset '+prop.name+' to default');reset.title='Remove this instance override and use the component default.';value.append(reset);}
+    if(prop.editor?.inherited){const note=document.createElement('small');note.textContent='Default';value.append(note);}
     row.append(name,value,fallback);body.append(row);
   }
   table.append(body);return table;
@@ -1248,9 +1250,9 @@ async function refreshComponentProperty(instanceId,parentId){
   const usage=await api('GET',resolveUrl(instanceId)),component=await api('GET',componentUrl(instanceId));
   if(usage?.ok&&component?.ok){sel={hostId:component.definitionId,instanceId,scope:'instance',info:usage.element};renderPanel();}else clearSelection();
 }
-async function setComponentProperty(instanceId,name,value,fileHash){
+async function setComponentProperty(instanceId,name,value,fileHash,options={}){
   busyPanel(true);try{
-    const result=await api('POST','/rt/__api/op',{type:'setComponentProp',id:instanceId,fileHash,name,value});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not edit the property.');
+    const result=await api('POST','/rt/__api/op',{type:'setComponentProp',id:instanceId,fileHash,name,value,...options});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not edit the property.');
     const parentId=result.componentProp.parentId;editorHistory.record({type:'setComponentProp',id:instanceId,parentId,undoId:result.undoId});await refreshComponentProperty(instanceId,parentId);toast('Instance property updated','ok');
   }catch(error){toast(error.message,'err');if(sel)renderPanel();}finally{busyPanel(false);}
 }

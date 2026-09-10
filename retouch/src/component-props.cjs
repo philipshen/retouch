@@ -11,26 +11,43 @@ function literal(attr){
  if(node.type==='UnaryExpression'&&node.operator==='-'&&node.argument.type==='NumericLiteral')return {type:'number',value:-node.argument.value};
  return null;
 }
-function describe(resolved,name){
+function defaultProp(resolved,name,definition){
+ try{
+  const def=definition||require('./components.cjs').definition(resolved);
+  let param=def.fn.params[0];if(param?.type==='AssignmentPattern')param=param.left;
+  if(param?.type!=='ObjectPattern')return null;
+  const fields=param.properties.filter(p=>p.type==='ObjectProperty'&&!p.computed&&(p.key.name||p.key.value)===name);
+  if(fields.length!==1||fields[0].value.type!=='AssignmentPattern')return null;
+  const value=literal({value:fields[0].value.right});return value?{...value,definition:def}:null;
+ }catch{return null;}
+}
+function describe(resolved,name,definition){
  const attrs=resolved.element.node.openingElement.attributes;
  if(resolved.element.kind!=='instance')return {reason:'Select a component instance.'};
  if(!/^[A-Za-z_$][\w$]*$/.test(name)||['key','ref','children','__proto__','__self','__source'].includes(name)||name.startsWith('data-rt'))return {reason:'This property has special component behavior.'};
  if(attrs.some(a=>a.type==='JSXSpreadAttribute'))return {reason:'A spread controls this usage. Edit its source binding.'};
  const matches=attrs.filter(a=>a.type==='JSXAttribute'&&a.name.name===name);
- if(matches.length!==1)return {reason:matches.length?'Resolve duplicate attributes first.':'This property uses its definition default.'};
- const value=literal(matches[0]);return value?{editable:true,...value}:{reason:'This property is driven by an expression. Edit its source binding.'};
+ if(matches.length>1)return {reason:'Resolve duplicate attributes first.'};
+ const fallback=defaultProp(resolved,name,definition),defaults=fallback?{definitionHash:contentHash(fallback.definition.source),defaultValue:fallback.value,canReset:matches.length===1}:{};
+ if(!matches.length)return fallback?{editable:true,type:fallback.type,value:fallback.value,inherited:true,...defaults}:{reason:'This property uses its definition default.'};
+ const value=literal(matches[0]);return value?{editable:true,...value,...defaults}:{reason:'This property is driven by an expression. Edit its source binding.',...defaults};
 }
 function plan(resolved,op){
  if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the instance before editing its properties.');
  try{
-  const info=describe(resolved,op.name);if(!info.editable)return refuse(info.reason);
-  if(typeof op.value!==info.type||info.type==='number'&&!Number.isFinite(op.value)||info.type==='string'&&op.value.length>100000)return refuse('Use a valid '+info.type+' value for this property.');
+  const info=describe(resolved,op.name);if(op.reset===true?!info.canReset:!info.editable)return refuse(info.reason||'This property has no literal default to restore.');
+  const fallback=op.reset===true||info.inherited?defaultProp(resolved,op.name):null;
+  if((op.reset===true||info.inherited)&&!fallback)return refuse('The component default no longer resolves. Re-select the instance.');
+  if(fallback&&op.definitionHash!==contentHash(fallback.definition.source))return refuse('The component definition changed. Re-select the instance before using its default.');
+  if(op.reset!==true&&(typeof op.value!==info.type||info.type==='number'&&!Number.isFinite(op.value)||info.type==='string'&&op.value.length>100000))return refuse('Use a valid '+info.type+' value for this property.');
   const attr=resolved.element.node.openingElement.attributes.find(a=>a.type==='JSXAttribute'&&a.name.name===op.name);
   // Expression strings avoid JSX entity and multiline whitespace normalization.
-  const code=op.name+'={'+JSON.stringify(op.value).replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029')+'}';
-  const ms=new MagicString(resolved.source);ms.overwrite(attr.start,attr.end,code);
+  const code=op.reset===true?'':op.name+'={'+JSON.stringify(op.value).replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029')+'}';
+  const ms=new MagicString(resolved.source);if(attr)ms.overwrite(attr.start,attr.end,code);else ms.appendLeft(resolved.element.node.openingElement.name.end,' '+code);
   let parentId=null;traverse(parseSource(resolved.source),{JSXElement(p){if(p.node.start!==resolved.element.node.start)return;for(let q=p.parentPath;q;q=q.parentPath){const host=resolved.elements.find(e=>e.kind==='host'&&e.node.start===q.node.start);if(host){parentId=host.id;break;}}p.stop();}});
-  return {ok:true,hash:contentHash(ms.toString()),componentProp:{instanceId:resolved.element.id,parentId},edits:[{file:resolved.file,before:resolved.source,after:ms.toString()}]};
+  const edits=[{file:resolved.file,before:resolved.source,after:ms.toString()}];
+  if(fallback&&fallback.definition.file!==resolved.file)edits.push({file:fallback.definition.file,before:fallback.definition.source,after:fallback.definition.source});
+  return {ok:true,hash:contentHash(ms.toString()),componentProp:{instanceId:resolved.element.id,parentId},edits};
  }catch(error){return refuse('Could not edit the component property: '+error.message);}
 }
 module.exports={describe,plan};
