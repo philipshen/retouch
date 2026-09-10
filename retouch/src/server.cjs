@@ -263,8 +263,8 @@ function handle(req, res, ctx) {
           if(op.type==='updateEffectStyle')result=applyPlan(ctx.appRoot,require('./text-style-update.cjs').plan(ctx.appRoot,{type:'update',revision:op.libraryRevision,id:op.styleId,name:op.name,properties:op.properties},reactEffects?'react':liquidEffects?'liquid':'html','effect'));
           else {let style;if(!op.type.startsWith('detachEffectStyle')){const library=require('./effect-styles.cjs').read(ctx.appRoot);if(library.revision!==op.libraryRevision)return json(res,409,{ok:false,reason:'Effect styles changed. Reload the library.'});style=op.type==='resetEffectStyleSelection'?library:library.styles.find(item=>item.id===op.styleId);if(!style)return json(res,409,{ok:false,reason:'That effect style no longer exists.'});}result=applyPlan(ctx.appRoot,op.type.endsWith('Selection')?require('./text-style-selection.cjs').plan(resolved,op,style,ctx.adapter,'effect'):require(reactEffects?'./jsx-effect-styles.cjs':liquidEffects?'./liquid-effect-styles.cjs':'./html-effect-styles.cjs').plan(resolved,op,style));}
         }else if(op.type==='setColorOverrideSelection'){
-          if(ctx.adapter.name!=='react')return json(res,409,{ok:false,reason:'Shared class color editing needs a React selection.'});
-          result=applyPlan(ctx.appRoot,require('./color-override-selection.cjs').plan(resolved,op));
+          if(!['react','liquid'].includes(ctx.adapter.name))return json(res,409,{ok:false,reason:'Shared class color editing needs React or Liquid layers.'});
+          result=applyPlan(ctx.appRoot,require('./color-override-selection.cjs').plan(resolved,op,ctx.adapter));
         }else if(op.type==='setColorOverride'){
           if(!['react','liquid'].includes(ctx.adapter.name))return json(res,409,{ok:false,reason:'Class color editing is not available for this renderer.'});
           const info=ctx.adapter.describe(resolved);if(info.classNameDynamic)return json(res,409,{ok:false,reason:'Color editing needs literal classes.'});

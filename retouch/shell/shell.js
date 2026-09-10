@@ -190,7 +190,7 @@ function hookFrame(d, w) {
   d.addEventListener('click', async (e) => {
     if (mode !== 'edit') return;
     if (panelTasks > 0 || undoBusy || sourceRequests) { e.preventDefault(); e.stopPropagation(); return; }
-    if ((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection||sel?.info.collectionSelection)){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=layerLocks.pick(e.target,e.clientX,e.clientY);if(target)await select(target,{toggle:true});return;}
+    if ((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection||sel?.info.contextSelection)){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=layerLocks.pick(e.target,e.clientX,e.clientY);if(target)await select(target,{toggle:true});return;}
     if (editing) {
       if (editing.el.contains(e.target)) return;
       commitInlineEdit(); // clicking away commits (R-5)
@@ -403,7 +403,7 @@ async function select(node,{toggle=false}={}) {
   const c = await classify(node);
   if (c?.superseded) return;
   if (!c) return clearSelection();
-  if(toggle&&(c.info.cssAuthoring&&sel?.info.cssAuthoring||c.info.classSelection&&sel?.info.classSelection||c.info.collectionSelection&&sel?.info.collectionSelection)&&c.info.file===sel.info.file&&c.info.hash===sel.info.hash){
+  if(toggle&&(c.info.cssAuthoring&&sel?.info.cssAuthoring||c.info.classSelection&&sel?.info.classSelection||c.info.contextSelection&&sel?.info.contextSelection)&&c.info.file===sel.info.file&&c.info.hash===sel.info.hash){
     let multiple=sel.multiple||[sel.info];multiple=multiple.some(info=>info.id===c.info.id)?multiple.filter(info=>info.id!==c.info.id):[...multiple,c.info];
     if(!multiple.length)return clearSelection();if(multiple.length>100)return toast('Select up to 100 layers.','err');
     const primary=multiple.find(info=>info.id===c.info.id)||multiple[0];sel={hostId:primary.id,instanceId:null,scope:'host',info:primary,multiple:multiple.length>1?multiple:undefined};renderPanel();return;
@@ -940,7 +940,6 @@ function renderPanelContents() {
    const inherited=info.classEffectStyles?RetouchResponsive.inheritedLink(links,styleScope,matchingEls(info.id)[0]?.ownerDocument):!links[width]&&inheritedWidth!==undefined?{link:links[inheritedWidth],label:inheritedWidth?inheritedWidth+'px and larger':'All sizes'}:null;
    RetouchEffectStyles.mount(panelBody,matchingEls(info.id)[0],{link:links[scope],overrides:info.effectStyleOverrides?.[scope]||[],inherited,apply:(styleId,libraryRevision)=>writeTextStyle('applyEffectStyle',width,{scope:styleScope,styleId,libraryRevision}),reset:(styleId,libraryRevision)=>writeTextStyle('resetEffectStyle',width,{scope:styleScope,styleId,libraryRevision}),detach:()=>writeTextStyle('detachEffectStyle',width,{scope:styleScope}),update:(styleId,libraryRevision,name,properties)=>writeTextStyle('updateEffectStyle',width,{scope:styleScope,styleId,libraryRevision,name,properties})});
   }
-  if(sel.multiple?.length>1&&info.collectionSelection){mountSelectionEffectStyles();mountSelectionTextStyles();return;}
   if(sel.multiple?.length>1){mountSelectionEffectStyles();mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchClassSiteVariables.mountSelection(sel.multiple,elements,styleScope,setReactClassesSelection,message=>toast(message,'err')),RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection,setSelectionColorOverride));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
   if(info.components?.length) {
@@ -1607,14 +1606,14 @@ async function renameLayer(name){
 async function setSelectionColorOverride(property,value){
  const selection=sel?.multiple,info=sel?.info;if(!selection?.length)return;const ids=selection.map(item=>item.id);busyPanel(true);
  try{
-  const result=await api('POST','/rt/__api/op',{type:'setColorOverrideSelection',id:info.id,ids,fileHash:info.hash,scope:styleScope,property,value});
+  const result=await api('POST','/rt/__api/op',{type:'setColorOverrideSelection',id:info.id,ids,fileHash:info.hash,...selectionSourceContexts(selection),scope:styleScope,property,value});
   if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update selected paint.');
-  if(result.undoId)editorHistory.record({type:'setClassesSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
-  sel.info=result.element;sel.multiple=result.selection;await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));renderPanel();
+  if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':'setClassesSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
+  sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));renderPanel();
  }finally{busyPanel(false);}
 }
 function selectionSourceContexts(selection){
- if(!selection[0]?.collectionSelection)return {};
+ if(!selection[0]?.contextSelection)return {};
  const contexts=Object.fromEntries(selection.map(item=>{const element=matchingEls(item.id)[0];if(!element)throw Error('Re-select the missing layer.');return [item.id,renderContext(element)];}));
  return {contexts,context:contexts[sel.info.id]};
 }
@@ -1623,8 +1622,8 @@ async function writeVariableSelection(type,width,extra){
  try{
   const result=await api('POST','/rt/__api/op',{type:type+'Selection',id:info.id,ids,fileHash:info.hash,width,...selectionSourceContexts(selection),...extra});
   if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update selected variable bindings.');
-  if(result.undoId)editorHistory.record({type:info.collectionSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
-  sel.info=result.element;sel.multiple=result.selection;if(info.collectionSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();renderPanel();toast('Selected bindings updated','ok');
+  if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
+  sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();renderPanel();toast('Selected bindings updated','ok');
  }finally{busyPanel(false);}
 }
 function selectionColorOptions(width){
@@ -1635,8 +1634,8 @@ function selectionColorOptions(width){
     try{
       const result=await api('POST','/rt/__api/op',{type,id:info.id,ids,fileHash:info.hash,...selectionSourceContexts(selection),width:react?0:width,scope:react?width:undefined,property,styleId,libraryRevision});
       if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update selected colors.');
-      if(result.undoId)editorHistory.record({type:info.collectionSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
-      sel.info=result.element;sel.multiple=result.selection;if(info.collectionSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();renderPanel();toast('Selected colors updated','ok');
+      if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
+      sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();renderPanel();toast('Selected colors updated','ok');
     }finally{busyPanel(false);}
   }
   return {width,selection,apply:(id,revision,property)=>write('applyColorStyleSelection',property,id,revision),resetSelection:(revision,property)=>write('resetColorStyleSelection',property,undefined,revision),detachSelection:property=>write('detachColorStyleSelection',property)};
@@ -1652,9 +1651,9 @@ function mountSelectionEffectStyles(){
       const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
       const result=await api('POST','/rt/__api/op',{type,id:info.id,ids,fileHash:info.hash,...selectionSourceContexts(selection),scope:styleScope,width,styleId,libraryRevision});
       if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update effect styles in this selection.');
-      if(result.undoId)editorHistory.record({type:info.collectionSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
+      if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
       sel.info=result.element;sel.multiple=result.selection;
-      if(info.collectionSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();
+      if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();
       renderPanel();toast('Selected effect styles updated','ok');
     }finally{busyPanel(false);}
   }
@@ -1671,9 +1670,9 @@ function mountSelectionTextStyles(){
       const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
       const result=await api('POST','/rt/__api/op',{type,id:info.id,ids,fileHash:info.hash,...selectionSourceContexts(selection),scope:styleScope,width,styleId,libraryRevision});
       if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update text styles in this selection.');
-      if(result.undoId)editorHistory.record({type:info.collectionSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
+      if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
       sel.info=result.element;sel.multiple=result.selection;
-      if(info.collectionSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();
+      if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();
       renderPanel();toast('Selected text styles updated','ok');
     }finally{busyPanel(false);}
   }
@@ -1695,10 +1694,10 @@ function classSelectionMatches(infos,document){
 async function setReactClassesSelection(classesById,expected=null){
   if(!sel?.multiple?.length||panelTasks||undoBusy||sourceRequests)return;stopDrawing?.();const selection=sel.multiple,info=sel.info;busyPanel(true);
   try{
-    const result=await api('POST','/rt/__api/op',{type:'setClassesSelection',id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash,classesById});
+    const result=await api('POST','/rt/__api/op',{type:'setClassesSelection',id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash,...selectionSourceContexts(selection),classesById});
     if(!result?.ok){renderPanel();return toast(result?.reason||result?.error||'Could not style selected layers','err');}
-    if(result.undoId)editorHistory.record({type:'setClassesSelection',id:info.id,selectionIds:selection.map(item=>item.id),undoId:result.undoId});
-    sel.info=result.element;sel.multiple=result.selection;await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));
+    if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':'setClassesSelection',id:info.id,selectionIds:selection.map(item=>item.id),undoId:result.undoId});
+    sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(selection.map(item=>item.id));}else await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));
     if(expected){let ready=false;for(let attempt=0;attempt<50;attempt++){ready=Object.entries(expected).every(([id,g])=>{const el=matchingEls(id)[0];if(!el?.isConnected)return false;try{const actual=RetouchInspector.geometry(el);return ['x','y','width','height'].every(key=>Math.abs(actual[key]-g[key])<.6);}catch{return false;}});if(ready)break;await new Promise(resolve=>setTimeout(resolve,100));}if(!ready){renderPanel();toast('Saved selection classes, but the bounds did not settle. Check responsive or inline overrides.','err');return false;}}
     renderPanel();toast('Selected layers updated','ok');return true;
   }catch(error){renderPanel();toast(error.message,'err');return false;}finally{busyPanel(false);}

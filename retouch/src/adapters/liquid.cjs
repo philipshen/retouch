@@ -293,6 +293,8 @@ function describeElement(resolved) {
     hash: resolved.hash,
     className: classEditable ? className : null,
     classNameDynamic: !classEditable,
+    classSelection:classEditable&&!node.attributeExpressions&&(node.attributes||[]).filter(attr=>attr.name==='class').length<=1,
+    contextSelection:classEditable&&!node.attributeExpressions&&(node.attributes||[]).filter(attr=>attr.name==='class').length<=1,
     classNameReason: !classEditable ? 'Reload the preview to read this element’s rendered classes.' : null,
     src: asset ? '/assets/' + asset[1] : imageUrl ? render.context(resolved.context).src||null : srcDynamic ? null : node.srcAttr?.value ?? null,
     srcMatch:asset?{pathnameSuffix:'/'+asset[1]}:null,
@@ -324,6 +326,7 @@ function escapeText(t) {
 }
 
 function planOp(resolved, op) {
+  if(op.type==='setClassesSelection')return require('../liquid-class-selection.cjs').plan(resolved,op);
   if(structure.types.has(op.type)) return structure.planOp(resolved,op,'liquid');
   if (op.fileHash && op.fileHash !== resolved.hash) {
     return refuse('The file changed since it was last read. Re-select the element and retry.');
@@ -421,6 +424,6 @@ module.exports = {
   describeComponent: resolved=>resolved.element.theme?theme.describe(resolved):components.describe(resolved),
   hasReference: components.hasReference,
   assets: { directory: 'assets', urlPrefix: '/assets/', uploadDirectory: '' },
-  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types] },
+  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types] },
   _parse: parse, // exported for tests
 };

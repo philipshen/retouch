@@ -7807,3 +7807,42 @@ The React saved text-style Chromium regression also passes
 This is local Liquid verification, not live Shopify. General Liquid shared
 layout/class controls, cross-file selection, ancestor collection modes and full
 Figma parity remain unfinished. Native launches remain paused.
+
+### Liquid shared classes and selection geometry (2026-09-10)
+
+Liquid host selections now use the shared class inspector, site-variable controls
+and supported absolute-layer geometry tools. A new Liquid batch class planner
+writes one source snapshot while preserving each layer's conditional class
+expression and rendered context. Null entries preserve reference layers verbatim.
+Duplicate/generated attributes, missing contexts, stale sources and invalid later
+class values refuse the entire batch. Shared color overrides now route through
+the same Liquid planner. Source descriptions distinguish class-selection support
+from the context transport needed to edit Liquid templates.
+
+All context-based selection writes reload the Liquid preview and restore all
+selected layers. The saved-style and collection controls retain this path while
+React continues to wait for compiler-stamped revisions. Geometry retains existing
+restrictions: unique visible absolute-positioned hosts, active screen scope, and
+no conflicting inline geometry or SVG containers. Normal-flow alignment was not
+silently enabled; the first browser fixture confirmed those controls were absent,
+then was corrected to exercise supported absolute layers.
+
+All 588 unit tests pass (`/private/tmp/retouch-liquid-shared-classes-units.log`).
+New planner tests verify both conditional branches, distinct per-layer classes,
+idempotence, untouched null references, shared paint, and complete refusal for
+malformed/stale selections. Liquid Chromium and WebKit flows verify shared opacity,
+font size, paint and blur, phone/tablet isolation, right-edge alignment, canvas
+movement preview without source writes, Escape cancellation, keyboard commit and
+exact multi-step Undo:
+`/private/tmp/retouch-liquid-shared-canvas-chromium.log` and
+`/private/tmp/retouch-liquid-shared-canvas-webkit.log`.
+The screenshot `/private/tmp/retouch-liquid-shared-classes.png` was inspected.
+Liquid saved-style Chromium and React collection Chromium regressions also pass:
+`/private/tmp/retouch-liquid-shared-saved-style-regression.log` and
+`/private/tmp/retouch-liquid-shared-react-regression.log`.
+
+The newly reachable resize/gap/site-variable paths share existing class writers,
+but this turn's Liquid browser checks do not establish comprehensive coverage of
+those controls. Cross-file selection, general flow-layout editing, live Shopify,
+ancestor collection modes and full Figma parity remain incomplete. Native launches
+remain paused.

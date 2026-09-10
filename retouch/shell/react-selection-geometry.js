@@ -25,7 +25,7 @@
     const d=elements[0]?.ownerDocument;if(!d)throw Error('Re-select the layers.');
     if(scope){const arbitrary=/^min-\[(\d+(?:\.\d+)?)(px|rem|em)\]:$/.exec(scope),condition=R.discover(d).find(choice=>choice.prefix===scope)?.condition||(arbitrary?'(min-width: '+arbitrary[1]+arbitrary[2]+')':null);if(!condition||!d.defaultView.matchMedia(condition).matches)throw Error('Choose a screen where this style scope is active before changing selection geometry.');}
     for(let i=0;i<infos.length;i++){
-     if(!infos[i].classSelection||infos[i].classNameDynamic)throw Error('Selection geometry needs literal React host classes.');
+     if(!infos[i].classSelection||infos[i].classNameDynamic)throw Error('Selection geometry needs editable host classes.');
      if(matches(infos[i].id).length!==1)throw Error('This source layer renders more than once. Choose unique source layers for selection geometry.');
      const refusal=reason(infos[i],elements[i]);if(refusal)throw Error(refusal);
     }
