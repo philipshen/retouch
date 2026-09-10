@@ -79,3 +79,13 @@ test('shared flex basis retains units, shorthand factors, and independent screen
  for(const value of ['0','120px','2rem','50%','auto','content','min-content','max-content','fit-content']){const result=shared.change(source,'md:','flex-basis',value);assert.ok(result.includes('md:![flex-basis:'+value+']'));assert.ok(result.includes('md:!flex-[1_0_100px]'));assert.ok(result.includes('md:grow-2'));assert.ok(result.includes('lg:basis-full'));assert.ok(!result.includes('md:basis-20'));}
  for(const value of ['-1px','100','NaNpx','100001px','50%;color:red','',null]){if(value===null){assert.ok(!shared.change(source,'md:','flex-basis',null).includes('md:basis-20'));continue;}assert.throws(()=>shared.change(source,'md:','flex-basis',value),/supported shared style/);}
 });
+
+
+test('shared item alignment preserves the companion axis of place-self shorthands',()=>{
+ const source='place-self-start md:!place-self-end md:self-start md:justify-self-center lg:self-end';
+ const aligned=shared.change(source,'md:','align-self','center');assert.ok(aligned.includes('md:![align-self:center]'));assert.ok(aligned.includes('md:!place-self-end'));assert.ok(aligned.includes('md:justify-self-center'));assert.ok(!aligned.includes('md:self-start'));assert.ok(aligned.includes('lg:self-end'));
+ const justified=shared.change(aligned,'md:','justify-self','start');assert.ok(justified.includes('md:![justify-self:start]'));assert.ok(justified.includes('md:![align-self:center]'));assert.ok(!justified.includes('md:justify-self-center'));
+ const reset=shared.change(justified,'md:','justify-self',null);assert.ok(!reset.includes('[justify-self:'));assert.ok(reset.includes('md:!place-self-end'));
+ assert.ok(shared.change('md:![place-self:start_end]','md:','align-self','last baseline').includes('md:![align-self:last_baseline]'));
+ assert.throws(()=>shared.change(source,'md:','align-self','space-between'),/supported shared style/);
+});
