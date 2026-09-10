@@ -53,3 +53,13 @@ test('shared constraints preserve unmeasured relative values and convert each bo
  assert.equal(shared.dimensionSize(css,'max-height'),208);assert.equal(shared.dimensionValue(css,'min-width',180),160);assert.equal(shared.dimensionValue(css,'max-height',100),92);
  assert.equal(shared.dimensionValue(css,'min-width','auto'),'auto');assert.equal(shared.dimensionValue(css,'max-height','none'),'none');
 });
+
+
+test('shared aspect ratios atomically release height while preserving width and scoped bounds',()=>{
+ const source='size-[80px] aspect-square md:!size-[120px] md:!aspect-video md:min-h-[24px] lg:aspect-auto';
+ const ratio=shared.changeRatio(source,'md:','2:1');assert.ok(ratio.includes('md:![aspect-ratio:2_/_1]'));assert.ok(ratio.includes('md:!h-auto'));assert.ok(ratio.includes('md:!size-[120px]'));assert.ok(ratio.includes('md:min-h-[24px]'));assert.ok(ratio.includes('aspect-square'));assert.ok(ratio.includes('lg:aspect-auto'));
+ const reset=shared.changeRatio(ratio,'md:',null);assert.ok(!reset.includes('md:![aspect-ratio:'));assert.ok(reset.includes('md:!h-auto'));
+ const auto=shared.changeRatio(source,'md:','auto');assert.ok(auto.includes('md:![aspect-ratio:auto]'));assert.ok(!auto.includes('md:!h-auto'));
+ for(const value of ['0 / 1','1 / 0','-1 / 1','Infinity','2; color:red',''])assert.throws(()=>shared.changeRatio(source,'md:',value),/supported shared style/);
+ assert.throws(()=>shared.changeRatio('md:[block-size:10px]','md:','16 / 9'),/logical sizing/);
+});

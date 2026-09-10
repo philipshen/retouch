@@ -7,6 +7,7 @@
  Object.assign(fields,{
   width:{label:'Width (px)',min:0,max:100000,valid:validDimension,matches:t=>/^w-|^\[width:/.test(t),token:v=>dimensionToken('w',v)},
   height:{label:'Height (px)',min:0,max:100000,valid:validDimension,matches:t=>/^h-|^\[height:/.test(t),token:v=>dimensionToken('h',v)},
+  'aspect-ratio':{label:'Aspect ratio',ratio:true,valid:value=>(root.RetouchHTMLCSSValues||require('./html-css-values.js')).valid('aspect-ratio',value),matches:token=>/^aspect-|^\[aspect-ratio:/.test(token),token:value=>'[aspect-ratio:'+value.replace(/ /g,'_')+']'},
   'font-family':{label:'Font family',picker:true,valid:v=>!!inspector().fontFamilyClass(v),matches:t=>inspector().fontFamilyToken(t),token:v=>inspector().fontFamilyClass(v)},
   'font-size':{label:'Font size (px)',min:0,max:2000,matches:t=>inspector().fontSizeToken(t),token:v=>'[font-size:'+v+'px]'},
   'font-weight':{label:'Font weight (1–1000)',min:1,max:1000,step:1,matches:t=>inspector().fontWeightToken(t),token:v=>'[font-weight:'+v+']'},
@@ -33,6 +34,7 @@
   if(addition&&document&&!['opacity','visibility','mix-blend-mode','isolation'].includes(property)&&I.catalog(document).some(name=>(classes||'').split(/\s+/).includes(name))&&!addition.startsWith('!'))addition='!'+addition;
   const projected=R.project(classes,scope),expanded=['font-size','line-height'].includes(property)?I.expandSizeLeading(projected):projected,next=I.replace(expanded,field.matches,addition);return next===projected?(classes||''):R.replaceScope(classes,next,scope);
  }
+ function changeRatio(classes,scope,value,document=null){const normalized=value===null?null:String(value).trim().replace(/\s*[:/]\s*/g,' / '),next=change(classes,scope,'aspect-ratio',normalized,document);return normalized===null||normalized==='auto'?next:change(next,scope,'height','auto',document);}
  function changeBlur(classes,scope,property,current,amount){
   const V=root.RetouchHTMLCSSValues||require('./html-css-values.js'),R=root.RetouchResponsive||require('./responsive.js'),next=V.withBlur(current,amount);
   if(next===null)throw Error('A selected filter cannot be adjusted with a single blur value.');
@@ -67,6 +69,15 @@
   const automatic=I.button('Automatic shared line height',()=>relativeWrite('line-height','normal',false));automatic.disabled=elements.some(el=>el.style.getPropertyValue('line-height'));relativeGroup.append(automatic);
   I.note(relativeGroup,'Relative spacing follows each layer’s own font size. Pixel controls and resets are available below.');
   for(const [property,field]of Object.entries(fields).filter(([,field])=>!field.constraint).flatMap(entry=>['width','height'].includes(entry[0])?[entry,...['min-','max-'].map(prefix=>[prefix+entry[0],fields[prefix+entry[0]]])]:[entry])){
+   if(field.ratio){
+    const values=computed.map(css=>css.getPropertyValue(property)),mixed=values.some(value=>value!==values[0]),input=root.document.createElement('input');input.type='text';input.value=mixed?'':values[0];input.placeholder=mixed?'Mixed':'auto, 1 / 1, 16 / 9';
+    const blocked=elements.some((el,i)=>el.style.getPropertyValue(property)||el.style.getPropertyValue('height')||el.style.getPropertyValue('inline-size')||el.style.getPropertyValue('block-size')||['inline','contents'].includes(computed[i].display));input.disabled=blocked;
+    const write=value=>{try{save(Object.fromEntries(infos.map((info,i)=>[info.id,changeRatio(info.className,scope,value,elements[i].ownerDocument)])));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+    input.oninput=()=>input.setCustomValidity('');input.onchange=()=>write(input.value);input.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();input.value=mixed?'':values[0];input.setCustomValidity('');input.blur();}else if(event.key==='Enter'){event.preventDefault();event.stopPropagation();input.blur();}};I.field(sec,'Shared Aspect ratio',input);
+    const presets=root.document.createElement('div');presets.className='stack-presets';for(const [value,label]of [['1 / 1','Square'],['4 / 3','4:3'],['16 / 9','16:9'],['auto','Automatic']]){const button=I.button(label,()=>write(value));button.setAttribute('aria-label',label+' shared aspect ratio');button.disabled=blocked;presets.append(button);}sec.append(presets);
+    const reset=I.button('Reset shared aspect ratio',()=>write(null));try{reset.disabled=infos.every(info=>changeRatio(info.className,scope,null)===(info.className||''));}catch{reset.disabled=true;}sec.append(reset);
+    I.note(sec,'A ratio makes height automatic. It follows each layer’s box sizing: content-box ratios exclude padding and borders. Content, flex layout, and minimum/maximum sizes may change the result. Reset removes the ratio; Undo also restores the previous height.');continue;
+   }
    if(field.picker){
     const values=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el).fontFamily),mixed=values.some(value=>value!==values[0]),group=root.document.createElement('fieldset');group.style.cssText='border:0;padding:0;margin:0;min-width:0';sec.append(group);
     const write=value=>{try{save(Object.fromEntries(infos.map((info,i)=>[info.id,change(info.className,scope,property,value,elements[i].ownerDocument)])));}catch(error){I.note(sec,error.message,'refused');}};
@@ -89,5 +100,5 @@
   I.note(sec,'Pixel sizes include padding and borders. Automatic sizing follows the page layout; fit content follows each layer’s content within the available space. Minimum and maximum sizes bound the result; when they conflict, the minimum takes precedence.');
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={change,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);
