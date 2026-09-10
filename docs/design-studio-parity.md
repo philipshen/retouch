@@ -17,13 +17,13 @@ changing those files. The original checkout may continue to evolve independently
 | Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. HTML multi-selection, shared CSS and group duplicate/delete/reparenting exist; cross-context clipboard and broader source structures remain. |
 | Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. HTML/React polygons and polylines now support direct vertex dragging and keyboard movement with source undo. Vertex insertion/deletion and Pen creation of straight segments and cubic curves in existing SVG canvases have browser/source verification. Compound SVG paths now support cubic handles, arcs, contour operations, multi-point and marquee selection, and canvas-axis alignment/distribution with source history. Vector networks, boolean operations, arbitrary masks and complete transforms remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. HTML absolute placement now supports edge, center, stretch and proportional anchors with screen-scoped writes. Transformed constraints, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
-| Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML supports linear/radial gradient stacks with draggable stops, shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
+| Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML, React and local Liquid support linear/radial/angular gradient stacks, repetition, color interpolation, explicit radial sizing, draggable stops/centers/rotation, keyboard editing and exact undo. HTML also supports shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A searchable page-font picker now discovers declared and used families, with React/HTML and local Liquid browser coverage. Explicit variable-axis editing, declared-file range/default inspection and bounded axis sliders have HTML/React/local Liquid browser coverage. Full font browsing, actual glyph-font resolution, live Shopify font verification, full rich-text/paragraph/list controls and complete typography parity remain. |
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | Existing React and Liquid component inspection/detach; full creation/variants/library workflows remain. Live Shopify proof is incomplete. |
 | Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Reusable text styles support responsive links, inherited-scope display, local override/reset, project-wide updates and shared undo in HTML, React and local Liquid. Validated JSON library import/export preserves style identity. HTML, React and local Liquid color styles link text/background/border/SVG paint with scoped overrides and project updates; palettes support sRGB and Display P3. HTML effect styles link shadows and layer/backdrop filters with project updates, overrides and undo. React/Liquid effect links, variables, aliases, collections/modes and shared remote library workflows remain. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload and SVG-canvas SVG/PNG/JPEG downloads exist, including shared local definitions and bitmap embedding. Arbitrary-layer export, fonts, symbols and the full export/import pipeline remain. |
-| History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
+| History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Completed source and lock history now survives editor-tab reload within a running server session. Persistence across server restarts, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. HTML has responsive CSS, structural edits and batch selection operations. Arbitrary remote-site capture/authoring, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Corner resizing also supports Shift-locked proportions. Comparison cards now show current scope coverage and offer an explicit width-and-larger style-scope action. Fully editable comparison canvases and cross-framework parity remain. |
 | Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop; The latest recorded ad hoc bundle packages d9cd994 and retains a failed browser/native-launch receipt; see desktop/README.md. Native launches are paused at the user's request. Current native interaction remains unverified. File flows, Intel runtime and broader lifecycle verification remain. |
@@ -6879,3 +6879,40 @@ Class-renderer stops currently use fields rather than the HTML draggable stop
 rail. Conic/repeating gradients, arbitrary image-layer mixing, full Figma parity
 and arbitrary-site authoring remain incomplete. Live Shopify is unverified.
 Native Retouch launches remain paused.
+
+
+### Gradient editing and editor-refresh history (2026-09-09)
+
+The gradient work after the initial class-renderer implementation adds shared
+stop dragging, angular/repeating fills, CSS stop fixup, color-space and hue
+interpolation, radial extent/radius controls, and preview center/rotation handles.
+Drag previews do not write source until release; Escape cancels. Keyboard edits
+retain focus across the Liquid inspector's successive metadata refreshes. The
+rotation flow has Chromium/React and WebKit/local-Liquid source/undo verification;
+the HTML suite verifies the shared controls. Gradient normalization has exact
+pixel comparisons in Chromium and WebKit. Relevant receipts include
+`/private/tmp/retouch-gradient-angle-react-final.log`,
+`/private/tmp/retouch-gradient-angle-liquid-final.log`,
+`/private/tmp/retouch-gradient-angle-html.log`, and
+`/private/tmp/retouch-radial-size-pixels-{chromium,webkit}.log`.
+The rotation screenshot `/private/tmp/retouch-gradient-angle.png` was inspected.
+These checks do not prove arbitrary image-layer mixing or full paint parity.
+
+Client undo and redo stacks now persist in sessionStorage with the project and
+server-session identity. Reloading an editor tab restores completed edits and
+editor-only lock history in their original order, including the route used for
+preview restoration. Invalid/oversized state is discarded; storage failures do
+not prevent edits or in-memory undo. Persistence is bounded to 100 entries per
+stack and 2 MiB of serialized state. A new server session does not reuse obsolete
+history identifiers. The server still holds source snapshots only in memory.
+In-flight requests interrupted before their history response, server restarts,
+closed-tab recovery, and synchronized multi-client history remain unfinished.
+
+All 523 unit tests passed (`/private/tmp/retouch-history-reload-units.log`). New
+browser tests pass in Chromium and WebKit:
+`/private/tmp/retouch-history-reload-{chromium,webkit}.log`. They interleave a
+source edit and a layer lock, reload on both sides of history, undo/redo across
+reloads, verify exact source and rendered opacity, and restart the server at the
+same address to verify that obsolete history is not offered.
+Native Retouch launches remain paused. Full parity and arbitrary-site support
+remain incomplete.

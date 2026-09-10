@@ -113,3 +113,20 @@ test('client history captures the original page once per gesture and retains it 
  await history.undo();await history.undo();await history.redo();
  assert.deepEqual(calls,[['undo','/second.html'],['undo','/first.html'],['redo','/first.html']]);
 });
+
+test('client history survives reload, preserves both stacks and isolates project and server session',async()=>{
+ const values=new Map(),storage={getItem:key=>values.get(key),setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)},scope={project:'a'.repeat(64),session:'b'.repeat(64)},applied=[];
+ const options={scope,storage,apply:async(type,entry)=>{applied.push([type,entry]);return {ok:true};},capture:()=>({route:'/products'})};
+ let history=createHistory(options);history.record({type:'setText',undoId:'one',id:'layer',text:'before'});history.record({type:'setText',undoId:'two',id:'layer',text:'middle'});await history.undo();
+ history=createHistory(options);assert.equal(history.canUndo,true);assert.equal(history.canRedo,true);await history.redo();assert.equal(applied.at(-1)[1].route,'/products');assert.equal(applied.at(-1)[1].undoId,'two');
+ history=createHistory(options);await history.undo();await history.undo();assert.equal(applied.at(-1)[1].undoId,'one');assert.equal(history.canUndo,false);
+ history=createHistory(options);assert.equal(history.canRedo,true);history.record({type:'setText',undoId:'branch'});assert.equal(createHistory(options).canRedo,false);
+ assert.equal(createHistory({...options,scope:{...scope,project:'c'.repeat(64)}}).canUndo,false);
+ assert.equal(createHistory({...options,scope:{...scope,session:'d'.repeat(64)}}).canUndo,false);
+});
+test('saved client history tolerates corrupt storage, failed restores and storage quota failures',async()=>{
+ const scope={project:'a'.repeat(64),session:'b'.repeat(64)};let raw='broken';const storage={getItem:()=>raw,setItem:(_,value)=>{raw=value;},removeItem:()=>{raw=null;}};
+ let history=createHistory({scope,storage,apply:async()=>({ok:false})});assert.equal(history.canUndo,false);assert.equal(raw,null);history.record({type:'setText',undoId:'one'});await history.undo();assert.equal(createHistory({scope,storage,apply:async()=>({ok:true})}).canUndo,true);
+ raw=JSON.stringify({version:1,session:scope.session,undo:[{undoId:'bad'}],redo:[]});assert.equal(createHistory({scope,storage}).canUndo,false);
+ storage.setItem=()=>{throw Error('Quota exceeded');};history.record({type:'setText',undoId:'two'});assert.equal(history.canUndo,true);assert.equal(raw,null);
+});
