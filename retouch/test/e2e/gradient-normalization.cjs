@@ -7,6 +7,9 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   const page=await browser.newPage({viewport:{width:400,height:400},deviceScaleFactor:1});await page.setContent('<div id="paint" style="width:300px;height:240px"></div>');const paint=page.locator('#paint');
   for(const value of [
    'linear-gradient(90deg, red, green, blue)',
+   'repeating-linear-gradient(45deg, red 0% 10%, blue 10% 20%)',
+   'repeating-radial-gradient(circle at 25% 60%, red, green, blue 20%)',
+   'repeating-conic-gradient(from 45deg, red 0deg 45deg, blue 45deg 90deg)',
    'linear-gradient(45deg, red 10%, orange, yellow, green 70%, blue)',
    'radial-gradient(ellipse at 25% 60%, red 0% 25%, blue 25% 100%)',
    'conic-gradient(from 90deg at 25% 60%, red 0deg 90deg, blue, green .5turn, black)',

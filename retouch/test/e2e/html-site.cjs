@@ -285,11 +285,12 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await page.getByLabel('Fill 1 Center X (%)',{exact:true}).fill('25');await page.getByLabel('Fill 1 Center X (%)',{exact:true}).press('Tab');await wait(async()=>(await effect('background-image')).includes('25% 50%'),'radial center');await settled();
   await page.getByLabel('Fill 1 type',{exact:true}).selectOption('conic');await wait(async()=>(await effect('background-image')).startsWith('conic-gradient('),'angular gradient');await settled();
   await page.getByLabel('Fill 1 Angle (°)',{exact:true}).fill('90');await page.getByLabel('Fill 1 Angle (°)',{exact:true}).press('Tab');await wait(async()=>(await effect('background-image')).startsWith('conic-gradient(from 90deg at 25% 50%'),'angular rotation and center');await settled();
+  await page.getByLabel('Fill 1 Repeat',{exact:true}).check();await wait(async()=>(await effect('background-image')).startsWith('repeating-conic-gradient('),'repeating fill');await settled();
   await page.getByRole('button',{name:'Add gradient',exact:true}).click();await wait(async()=>await page.getByLabel('Fill 2 type',{exact:true}).count()===1,'second gradient');await settled();
   await page.getByRole('button',{name:'Move fill 2 up',exact:true}).click();await wait(async()=>(await effect('background-image')).startsWith('linear-gradient(90deg'),'gradient stack ordering');await settled();
   await size('390x844');await wait(async()=>await effect('background-image')===baseGradient,'base gradient unchanged');
   await size('768x1024');await page.getByRole('button',{name:'Reset gradient fills',exact:true}).click();await wait(async()=>await effect('background-image')===baseGradient,'gradient reset inheritance');await settled();
-  for(let i=0;i<11;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
+  for(let i=0;i<12;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'gradient exact undo');
   await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await settled();
   await size('390x844');await page.getByLabel('Style screen scope').selectOption('');

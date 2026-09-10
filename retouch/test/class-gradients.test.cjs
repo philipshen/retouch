@@ -30,3 +30,10 @@ test('gradient stop fixup preserves implicit spacing, hard bands, and descending
  ]){const parsed=V.parseGradients(value);assert.deepEqual(parsed[0].stops.map(s=>s.position),positions,value);assert.deepEqual(V.parseGradients(V.serializeGradients(parsed)),parsed);}
  for(const invalid of ['linear-gradient(red 0% 20% 30%, blue)', 'linear-gradient(red 20px 40%, blue)', 'linear-gradient(red, 50%, blue)', 'linear-gradient('+Array(9).fill('red 0% 100%').join(',')+')'])assert.equal(V.parseGradients(invalid),null);
 });
+
+test('repeating gradient stacks retain their period and independent repeat settings',()=>{
+ const value='repeating-linear-gradient(45deg, red 0% 10%, blue 10% 20%), repeating-radial-gradient(circle, white 0%, black 25%), repeating-conic-gradient(red 0deg 45deg, blue 45deg 90deg), linear-gradient(red, blue)';
+ const parsed=V.parseGradients(value);assert.equal(parsed.length,4);assert.deepEqual(parsed.map(g=>!!g.repeat),[true,true,true,false]);assert.deepEqual(parsed[0].stops.map(s=>s.position),[0,10,10,20]);assert.equal(parsed[2].stops.at(-1).position,25);assert.deepEqual(V.parseGradients(V.serializeGradients(parsed)),parsed);
+ const single=V.serializeGradients([{...parsed[0],repeat:false}]);assert.ok(single.startsWith('linear-gradient('));assert.deepEqual(V.parseGradients(single)[0].stops,parsed[0].stops);
+ assert.ok(G.classes('!bg-[repeating-linear-gradient(red,blue)] bg-cover',value).startsWith('bg-cover ![background-image:'));
+});
