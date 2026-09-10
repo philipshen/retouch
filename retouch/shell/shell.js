@@ -20,6 +20,7 @@ const SPACING_STEPS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11,
 
 let historyRecoveryRequired=!!window.__RT_RENDERING?.historyRecoveryRequired;
 let mode = historyRecoveryRequired?'interact':'edit'; // 'edit' | 'interact'
+let renderedSelection=null; // Live DOM anchor for the explicitly chosen occurrence.
 let sel = null; // { hostId, instanceId, scope: 'host'|'instance', info }
 let editing = null; // { el, id, info, original, originalHTML, snapshot, originalTree } during inline text editing
 let hoverEl = null;
@@ -411,6 +412,7 @@ async function select(node,{toggle=false}={}) {
     if(!multiple.length)return clearSelection();if(multiple.length>100)return toast('Select up to 100 layers.','err');
     const primary=multiple.find(info=>info.id===c.info.id)||multiple[0];sel={hostId:primary.id,instanceId:null,scope:'host',info:primary,multiple:multiple.length>1?multiple:undefined};renderPanel();return;
   }
+  renderedSelection={id:c.info.id,element:c.el};
   sel = {
     hostId: c.hostId,
     instanceId: c.instanceId,
@@ -479,7 +481,7 @@ async function loadScope() {
 
 function clearSelection() {
   stopDrawing?.();
-  classificationSerial++;sel = null;renderedPanelSelection=null;
+  classificationSerial++;sel = null;renderedSelection=null;renderedPanelSelection=null;
   window.dispatchEvent(new CustomEvent('retouch:selection',{detail:null}));
   panelBody.hidden = true;
   panelEmpty.hidden = false;
@@ -491,6 +493,7 @@ async function startInlineEdit(node, evt, quiet) {
   if (c?.superseded) return;
   if (!c) return clearSelection(); // nothing editable here — no error
   const { el, info } = c;
+  renderedSelection={id:c.info.id,element:c.el};
   sel = {
     hostId: c.hostId,
     instanceId: c.instanceId,
@@ -774,7 +777,7 @@ function paintLoop() {
     const id=activeId();
     let first=true;
     const targets=matchingInDocument(d,id,sel.info).filter(el=>inTextScope(el,sel.info));
-    const groups=sel.info.kind==='instance'?RetouchComponentInstances.group(targets,sel.info.rootGroups):targets.map(el=>({element:el,elements:[el]}));
+    const groups=sel.info.kind==='instance'?RetouchComponentInstances.prioritize(RetouchComponentInstances.group(targets,sel.info.rootGroups),renderedSelection?.id===id?renderedSelection.element:null):targets.map(el=>({element:el,elements:[el]}));
     for(const group of groups) {
       const el=group.element,kind=outlineKind(el,sel.info);
       const bounds=RetouchComponentInstances.bounds(group.elements);if(bounds)drawBounds(bounds,first?'sel':'co',kind);
@@ -1302,7 +1305,7 @@ function propTable(props,instanceId,fileHash,options={}) {
 }
 function mountedComponentHost(instanceId,component,context){
  const ids=component.definitionIds?.length?component.definitionIds:[component.definitionId].filter(Boolean);
- for(const root of matchingInDocument(doc(),instanceId,{...component,context})){
+ for(const root of selectedComponentGroups(doc(),instanceId,{...component,context}).flatMap(group=>group.elements)){
   if(ids.includes(root.getAttribute('data-rt')))return root;
   for(const id of ids){const host=root.querySelector('[data-rt="'+id+'"]');if(host)return host;}
  }
@@ -1415,7 +1418,7 @@ componentLibraryButton.addEventListener('click',()=>RetouchComponentLibrary.open
   if(!instance.element.isConnected)throw Error('This instance is no longer on the page. Refresh the list.');
   if(!usage?.ok||!component?.ok)throw Error('This component no longer resolves. Refresh the list.');
   if(!instance.definition){componentLibrarySelections.add(instance.id);if(componentLibrarySelections.size>1000)componentLibrarySelections.delete(componentLibrarySelections.values().next().value);}
-  stopDrawing?.();classificationSerial++;sel={hostId:mountedComponentHost(instance.id,component,context)?.getAttribute('data-rt')||component.definitionId,instanceId:instance.definition?null:instance.id,scope:instance.definition?'host':'instance',info:usage.element};renderPanel();instance.element.scrollIntoView({block:'nearest',inline:'nearest'});
+  stopDrawing?.();classificationSerial++;renderedSelection={id:instance.id,element:instance.element};sel={hostId:mountedComponentHost(instance.id,component,context)?.getAttribute('data-rt')||component.definitionId,instanceId:instance.definition?null:instance.id,scope:instance.definition?'host':'instance',info:usage.element};renderPanel();instance.element.scrollIntoView({block:'nearest',inline:'nearest'});
  },
  view:async(id,onPage,isActive,definitionOnly)=>{const component=await api('GET',definitionOnly?'/rt/__api/component-definition?id='+id:componentUrl(id));if(!isActive())return;if(!component?.ok)throw Error(component?.reason||'This component no longer resolves.');openComponent(id,component,{preview:onPage});}
 }));
@@ -2072,7 +2075,11 @@ async function setText(text, isUndo) {
 function matchingEls(id) {
   const d = doc();
   if (!d) return [];
-  return matchingInDocument(d,id,sel?.info?.id===id?sel.info:sel?.multiple?.find(info=>info.id===id)||null);
+  const info=sel?.info?.id===id?sel.info:sel?.multiple?.find(info=>info.id===id)||null;
+  return info?.kind==='instance'?selectedComponentGroups(d,id,info).flatMap(group=>group.elements):matchingInDocument(d,id,info);
+}
+function selectedComponentGroups(d,id,info){
+ return RetouchComponentInstances.prioritize(RetouchComponentInstances.group(matchingInDocument(d,id,info),info?.rootGroups),renderedSelection?.id===id?renderedSelection.element:null);
 }
 function matchingInDocument(d,id,info) {
   if(!d)return [];
@@ -2308,7 +2315,7 @@ document.getElementById('zoomSelection').onclick=async e=>{
   if(!sel||panelTasks||undoBusy||sourceRequests)return;
   const button=e.currentTarget;
   await commitInlineEdit();if(!sel||panelTasks||undoBusy||sourceRequests)return;stopDrawing?.();
-  const elements=sel.multiple?sel.multiple.flatMap(info=>matchingEls(info.id)):matchingEls(activeId());
+  const elements=sel.multiple?sel.multiple.flatMap(info=>matchingEls(info.id)):sel.info.kind==='instance'?selectedComponentGroups(doc(),activeId(),sel.info)[0]?.elements||[]:matchingEls(activeId());
   busyPanel(true);button.setAttribute('aria-busy','true');
   try{
     const result=await window.RetouchZoom.toSelection(elements);

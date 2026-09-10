@@ -1,6 +1,6 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const {group,bounds}=require('../shell/component-instances.js'),{collectElements}=require('../src/id.cjs'),rootGroups=require('../src/component-root-groups.cjs');
+const {group,prioritize,bounds}=require('../shell/component-instances.js'),{collectElements}=require('../src/id.cjs'),rootGroups=require('../src/component-root-groups.cjs');
 function nodes(ids){const result=ids.map(id=>({getAttribute:()=>id,nextElementSibling:null}));result.forEach((el,i)=>el.nextElementSibling=result[i+1]||null);return result;}
 test('fragment roots form one instance per complete adjacent source sequence',()=>{
  const elements=nodes(['footer','small','footer','small','section']);const result=group(elements,[['footer','small'],['section']]);assert.deepEqual(result.map(item=>[item.elements.length,item.complete]),[[2,true],[2,true],[1,true]]);assert.equal(result[1].element,elements[2]);
@@ -37,4 +37,9 @@ test('anchored optional prefix and suffix variants keep adjacent repeated instan
  // A transitive overlap without one shared anchor does not justify longest-match grouping.
  assert.equal(group(nodes(['a','b','c']),[['a'],['a','b'],['b','c']])[0].complete,false);
  const separated=nodes(['a','b']);separated[0].nextElementSibling={};assert.deepEqual(group(separated,[['a'],['a','b']]).map(item=>[item.elements.length,item.complete]),[[1,true],[1,false]]);
+});
+
+
+test('primary occurrence follows a live chosen root without losing or mutating related groups',()=>{
+ const elements=nodes(['a','b','a','b']);elements.forEach(el=>el.isConnected=true);const groups=group(elements,[['a','b']]),chosen=prioritize(groups,elements[3]);assert.equal(chosen[0],groups[1]);assert.equal(chosen[1],groups[0]);assert.equal(groups[0].element,elements[0]);elements[3].isConnected=false;assert.equal(prioritize(groups,elements[3]),groups);assert.equal(prioritize(groups,{isConnected:true}),groups);
 });

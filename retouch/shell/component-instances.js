@@ -25,9 +25,14 @@
   }
   return result;
  }
+ function prioritize(groups,target){
+  if(!target?.isConnected)return groups;
+  const selected=groups.find(group=>group.elements.includes(target));
+  return selected?[selected,...groups.filter(group=>group!==selected)]:groups;
+ }
  function bounds(elements){
   const rects=elements.map(el=>el.getBoundingClientRect()).filter(r=>r.width||r.height);if(!rects.length)return null;
   const left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top));return {left,top,width:Math.max(...rects.map(r=>r.right))-left,height:Math.max(...rects.map(r=>r.bottom))-top};
  }
- const api={group,bounds};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.RetouchComponentInstances=api;
+ const api={group,prioritize,bounds};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.RetouchComponentInstances=api;
 })(typeof window!=='undefined'?window:globalThis);

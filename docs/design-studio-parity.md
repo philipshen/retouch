@@ -8962,3 +8962,36 @@ variants, logical expressions, arrays/portals, dynamic text, grouped layer-tree
 presentation, per-render overrides and fragment layout editing remain open.
 Full Figma Design parity and arbitrary-site authoring are incomplete. Native
 launches remain paused; trusted brew distribution remains unverified.
+
+### Primary selection for a chosen rendered occurrence (2026-09-10)
+
+Choosing a rendered instance from the library or clicking one of its roots now
+records a live DOM anchor. The corresponding group becomes the primary outline,
+layer focus and selected component badge; other renderings of the same source
+usage retain related outlines. Component-root lookup and instance matching prefer
+the chosen group. Zoom to selection receives only its roots, while source writes
+continue to affect the authored usage wherever it renders.
+
+The anchor is checked against current connected DOM groups and cleared with
+selection. If a reload or branch replacement removes it, selection falls back to
+the first current group; this does not claim persistent identity across remounts,
+reordering or reloads and does not invent a per-render source override.
+
+Validation: 705 unit tests passed, including selection prioritization without
+mutating related groups and detached/unknown anchor fallback. Chromium and WebKit
+both passed the repeated conditional-fragment fixture: picker entry two becomes
+the second primary outline, clicking the first and second occurrences moves the
+primary outline accordingly, and the real Zoom to selection call receives exactly
+the second group's three roots. The test wraps the zoom call only to observe its
+targets and invokes the original implementation. Subsequent source restoration,
+property Undo and detach/Undo/Redo pass. Both final browser processes ended with
+exit zero and strict empty page-error assertions. An intermediate zoom test used
+the wrong accessible button label; the corrected test passed. Evidence:
+/private/tmp/retouch-rendered-selection-units.log,
+/private/tmp/retouch-rendered-selection-chromium-final.log,
+/private/tmp/retouch-rendered-selection-webkit-final.log.
+
+Persistent runtime identity, virtual component rows in the layer tree, dynamic
+root families, independent per-render overrides and fragment layout editing remain
+open. Full Figma Design parity and arbitrary-site support remain incomplete.
+Native launches remain paused; trusted brew distribution is unverified.
