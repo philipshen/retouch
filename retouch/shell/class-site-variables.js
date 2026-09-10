@@ -21,5 +21,22 @@
    try{if(value!==null&&[...element.style].some(name=>element.style.getPropertyPriority(name)==='important'))throw Error('Resolve inline important styles before binding a site variable.');return save(compose(info.className,property,value));}catch(error){notify(error.message);}
   },bindings(info.className));return panel;
  }
- const api={compose,bindings,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchClassSiteVariables=api;
+ function selectionClasses(infos,scope,changes){
+  const responsive=root.RetouchResponsive||require('./responsive.js');
+  if(changes.length!==infos.length)throw Error('Re-select the layers before binding variables.');
+  return Object.fromEntries(infos.map((info,index)=>{
+   let projected=responsive.project(info.className,scope);
+   for(const [property,value]of Object.entries(changes[index]))projected=compose(projected,property,value);
+   return [info.id,responsive.replaceScope(info.className,projected,scope)];
+  }));
+ }
+ function mountSelection(infos,elements,scope,save,notify){
+  if(elements.some(element=>!element)){const panel=document.createElement('div');inspector().note(panel,'Re-select the layers to bind site variables.');return panel;}
+  const write=changes=>{try{
+   for(let index=0;index<elements.length;index++)if(Object.values(changes[index]).some(value=>value!==null)&&[...elements[index].style].some(name=>elements[index].style.getPropertyPriority(name)==='important'))throw Error('Resolve inline important styles before binding a site variable.');
+   return save(selectionClasses(infos,scope,changes));
+  }catch(error){notify(error.message);}};
+  return root.RetouchSiteVariables.mount(elements,0,(property,value)=>write(infos.map(()=>({[property]:value}))),infos.map(info=>bindings(root.RetouchResponsive.project(info.className,scope))),write);
+ }
+ const api={compose,bindings,mount,selectionClasses,mountSelection};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchClassSiteVariables=api;
 })(typeof window==='object'?window:globalThis);

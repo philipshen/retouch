@@ -12,3 +12,11 @@ test('class variables reject important ownership conflicts and unsupported sourc
 test('binding inspection includes only direct variable references in the projected scope',()=>{
  assert.deepEqual(bindings('md:![color:var(--tablet)] ![width:var(--size)] [fill:var(--paint)]! text-red-500'),{width:'var(--size)',fill:'var(--paint)'});
 });
+
+test('selection variable edits preserve other scopes and retain per-layer detach values',()=>{
+ const {selectionClasses}=require('../shell/class-site-variables.js'),infos=[{id:'a',className:'text-blue-500 md:font-bold hover:text-red-500'},{id:'b',className:'bg-white md:opacity-50'}];
+ const bound=selectionClasses(infos,'md:',[{color:'var(--accent)'},{color:'var(--accent)'}]);assert.equal(bound.a,'text-blue-500 hover:text-red-500 md:font-bold md:![color:var(--accent)]');assert.equal(bound.b,'bg-white md:opacity-50 md:![color:var(--accent)]');
+ const saved=infos.map(info=>({...info,className:bound[info.id]})),detached=selectionClasses(saved,'md:',[{color:'#123456'},{color:'#008844'}]);assert.match(detached.a,/md:!\[color:#123456\]/);assert.match(detached.b,/md:!\[color:#008844\]/);
+ const partial=selectionClasses(saved,'md:',[{color:null},{}]);assert.equal(partial.b,bound.b);assert.equal(partial.a.includes('var('),false);
+ assert.throws(()=>selectionClasses([{...infos[0],className:'md:!text-red-500'},infos[1]],'md:',[{color:'var(--accent)'},{color:'var(--accent)'}]),/important/);
+});

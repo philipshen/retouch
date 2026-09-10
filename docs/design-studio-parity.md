@@ -7186,3 +7186,22 @@ Liquid flow with conditional class branches in
 `/private/tmp/retouch-class-var-webkit.log`. Local Liquid is not live Shopify
 verification. Compositor unit tests cover property replacement, ordinary/variant
 class retention, unsafe inputs, ownership refusal and scope-local recognition.
+
+### React selection variable bindings (2026-09-09)
+
+React multi-selection now exposes Site variables through the existing atomic
+class-selection writer. Each layer's current scope is composed independently,
+then merged with its untouched base, other breakpoint and interaction classes.
+Batch detach stores each bound layer's own computed literal; reset leaves
+unbound layers unchanged. All target classes are prepared before one API write,
+so a compositor refusal cannot submit a partial batch.
+
+All 541 unit tests pass in
+`/private/tmp/retouch-multi-class-variable-units.log`. Next.js browser flows pass
+in Chromium and WebKit (`/private/tmp/retouch-multi-class-var-{react,webkit}.log`):
+two selected layers resolve the same variable name to different colors, receive
+tablet-scoped bindings, detach to distinct literals, then undo both source edits
+exactly. Unit tests also check other-scope retention and mixed reset maps.
+Liquid multi-selection remains unavailable through its current adapter; this
+change does not claim it. Variable definitions, modes and inherited binding UI
+remain unfinished. Native app launches remain paused.
