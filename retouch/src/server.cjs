@@ -21,13 +21,17 @@ const SHELL_DIR = path.join(__dirname, '..', 'shell');
 const HOST_RE = /^(localhost|127\.0\.0\.1)(:\d+)?$/;
 const TOKEN_HEADER = 'x-retouch-token';
 
+function historyRoute(req){try{const value=req.headers['x-retouch-route'];return typeof value==='string'?decodeURIComponent(value):undefined;}catch{return undefined;}}
+
 function startServer({ appRoot, port, adapter, proxyTo, serveSite, rendering = {}, quiet = false }) {
   adapter = adapter || require('./adapter.cjs').defaultAdapter();
   const token = crypto.randomBytes(16).toString('hex');
   const stateScope={project:crypto.createHash('sha256').update(fs.realpathSync(appRoot)).digest('hex'),session:crypto.createHash('sha256').update(token).digest('hex')};
   const index = new Index(appRoot, adapter);
   const fileCount = index.scanAll();
-  const history = new SourceHistory();
+  let history;
+  try{const directory=process.env.RETOUCH_STATE_DIR||path.join(fs.realpathSync(require('node:os').homedir()),'.retouch','history');history=new SourceHistory(100,{store:require('./history-store.cjs').createHistoryStore(appRoot,directory)});}
+  catch(error){history=new SourceHistory(100,{store:{save(){throw error;}}});history.persistenceError=error.message;}
   const sourceMonitor = (proxyTo || serveSite) && rendering.reloadAfterWrite ? watchSource(appRoot) : null;
   index.watch();
   if (!quiet) console.log(
@@ -91,8 +95,8 @@ function handle(req, res, ctx) {
         if(!plan.ok)return json(res,409,plan);
         const applied=library.commitPlan(ctx.appRoot,plan);
         for(const edit of applied.edits)if(ctx.adapter.matches(edit.file))ctx.index.indexFile(edit.file);
-        const undoId=ctx.history.record(applied.edits);ctx.sourceMonitor?.acknowledge(applied.edits);
-        return json(res,200,{ok:true,...applied.result,undoId,updated:applied.updated||0});
+        const undoId=ctx.history.record(applied.edits,undefined,historyRoute(req));ctx.sourceMonitor?.acknowledge(applied.edits);
+        return json(res,200,{ok:true,...applied.result,undoId,historyPersistenceError:ctx.history.persistenceError,updated:applied.updated||0});
       }catch(error){return json(res,error.statusCode||500,{ok:false,reason:error.message});}
     });
   }
@@ -152,7 +156,7 @@ function handle(req, res, ctx) {
     const result = ctx.adapter.describeComponent(resolved);
     const usage=require('./component-usage.cjs').usage(ctx.index,id);
     if(result.ok && usage){Object.assign(result,usage);if(usage.inlineComponent)result.canDetach=false;}
-    return json(res, result.ok ? 200 : 409, result);
+    return json(res, result.ok ? 200 : 409, {...result,historyPersistenceError:ctx.history.persistenceError});
   }
 
   if (p === '/rt/__api/op' && req.method === 'POST') {
@@ -173,7 +177,7 @@ function handle(req, res, ctx) {
         for (const edit of result.edits) if (ctx.adapter.matches(edit.file)) ctx.index.indexFile(edit.file);
         ctx.sourceMonitor?.acknowledge(result.edits);
         delete result.edits;
-        return json(res,200,result);
+        return json(res,200,{...result,historyPersistenceError:ctx.history.persistenceError});
       }
       if (!/^[0-9a-f]{10}$/.test(op.id || '')) return json(res, 400, { ok: false, error: 'bad id' });
       const resolved = ctx.index.resolve(op.id);
@@ -231,14 +235,14 @@ function handle(req, res, ctx) {
       if (result.ok) {
         for (const edit of result.edits) if (ctx.adapter.matches(edit.file)) ctx.index.indexFile(edit.file);
         if (result.edits.length) {
-          result.undoId = ctx.history.record(result.edits, op.historyGroup);
+          result.undoId = ctx.history.record(result.edits, op.historyGroup,historyRoute(req));
         }
         ctx.sourceMonitor?.acknowledge(result.edits);
         delete result.edits; delete result.createdFile; delete result.createdHash;
         const fresh = ctx.index.resolve(op.id);
         if (fresh) { fresh.context = resolved.context; result.element = ctx.adapter.describe(fresh); }
       }
-      return json(res, result.ok ? 200 : 409, result);
+      return json(res, result.ok ? 200 : 409, {...result,historyPersistenceError:ctx.history.persistenceError});
       } catch (err) {
         return json(res, 409, { ok: false, refused: true, reason: 'The source operation could not complete: ' + err.message });
       }
@@ -278,7 +282,7 @@ function handle(req, res, ctx) {
     const html = fs
       .readFileSync(path.join(SHELL_DIR, 'index.html'), 'utf8')
       .replace('__RETOUCH_TOKEN__', ctx.token)
-      .replace('__RETOUCH_RENDERING__', JSON.stringify({stateScope:ctx.stateScope,selectionStyling:ctx.adapter.capabilities?.ops?.some(op=>['setClassesSelection','setCSSSelection'].includes(op))===true,layerReparenting:ctx.adapter.capabilities?.ops?.includes('reparentElement')===true,reloadAfterWrite:ctx.rendering.reloadAfterWrite===true,revalidateStyles:ctx.rendering.revalidateStyles===true}));
+      .replace('__RETOUCH_RENDERING__', JSON.stringify({history:ctx.history.snapshot(),historyPersistenceError:ctx.history.persistenceError,stateScope:ctx.stateScope,selectionStyling:ctx.adapter.capabilities?.ops?.some(op=>['setClassesSelection','setCSSSelection'].includes(op))===true,layerReparenting:ctx.adapter.capabilities?.ops?.includes('reparentElement')===true,reloadAfterWrite:ctx.rendering.reloadAfterWrite===true,revalidateStyles:ctx.rendering.revalidateStyles===true}).replace(/</g,'\\u003c'));
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
     return res.end(html);
   }

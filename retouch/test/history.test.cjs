@@ -130,3 +130,10 @@ test('saved client history tolerates corrupt storage, failed restores and storag
  raw=JSON.stringify({version:1,session:scope.session,undo:[{undoId:'bad'}],redo:[]});assert.equal(createHistory({scope,storage}).canUndo,false);
  storage.setItem=()=>{throw Error('Quota exceeded');};history.record({type:'setText',undoId:'two'});assert.equal(history.canUndo,true);assert.equal(raw,null);
 });
+
+test('server history reconciles stale local stacks while retaining matching local lock history',async()=>{
+ let raw=null;const scope={project:'a'.repeat(64),session:'b'.repeat(64)},storage={getItem:()=>raw,setItem:(_,value)=>{raw=value;},removeItem:()=>{raw=null;}},applied=[];
+ const options={scope,storage,apply:async(type,entry)=>{applied.push(entry);return {ok:true};}};let history=createHistory(options);history.record({type:'setText',undoId:'source'});history.record({type:'layerLock',undoId:'lock'});
+ history=createHistory({...options,initialState:{undo:[{type:'sourceHistory',undoId:'source'}],redo:[]}});await history.undo();assert.equal(applied.at(-1).type,'layerLock');
+ history=createHistory({...options,initialState:{undo:[{type:'sourceHistory',undoId:'source'},{type:'sourceHistory',undoId:'recovered',route:'/other'}],redo:[]}});await history.undo();assert.equal(applied.at(-1).undoId,'recovered');assert.equal(applied.at(-1).route,'/other');assert.equal(history.canRedo,true);
+});

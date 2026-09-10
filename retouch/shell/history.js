@@ -1,6 +1,6 @@
 (function(root) {
   'use strict';
-  function createHistory({apply,onChange=()=>{},capture=()=>({}),storage,scope}) {
+  function createHistory({apply,onChange=()=>{},capture=()=>({}),storage,scope,initialState}) {
     const undo=[],redo=[];let busy=false;
     const validScope=scope&&/^[a-f0-9]{64}$/.test(scope.project)&&/^[a-f0-9]{64}$/.test(scope.session),key=validScope?'retouch.history.v1:'+scope.project:null,maxBytes=2*1024*1024;
     const validStack=stack=>Array.isArray(stack)&&stack.length<=100&&stack.every(entry=>entry&&typeof entry==='object'&&!Array.isArray(entry)&&typeof entry.undoId==='string'&&entry.undoId.length>0&&entry.undoId.length<=200&&typeof entry.type==='string'&&entry.type.length<=80&&(entry.route===undefined||entry.route===null||typeof entry.route==='string'&&entry.route.length<=4096));
@@ -15,6 +15,11 @@
       catch{try{storage.removeItem(key);}catch{}}
     }
 
+    if(initialState&&validStack(initialState.undo)&&validStack(initialState.redo)){
+      const sourceIds=stack=>stack.filter(entry=>entry.type!=='layerLock').map(entry=>entry.undoId);
+      if(JSON.stringify([sourceIds(undo),sourceIds(redo)])!==JSON.stringify([sourceIds(initialState.undo),sourceIds(initialState.redo)])){undo.splice(0,undo.length,...initialState.undo);redo.splice(0,redo.length,...initialState.redo);}
+      remember();
+    }
     const controller={
       get canUndo(){return undo.length>0;}, get canRedo(){return redo.length>0;}, get busy(){return busy;},
       record(entry) {

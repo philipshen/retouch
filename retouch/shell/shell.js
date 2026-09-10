@@ -86,7 +86,7 @@ let lockStorage;try{lockStorage=sessionStorage;}catch{}
 const layerLocks=RetouchLayerLocks.create({route:()=>currentPageRoute()||'',storage:lockStorage,scope:window.__RT_RENDERING?.stateScope});
 const historyRoutes = new Map();
 function currentPageRoute(){try{const loc=iframe.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
-const editorHistory = RetouchHistory.createHistory({apply:restoreHistory,onChange:syncHistoryControls,storage:lockStorage,scope:window.__RT_RENDERING?.stateScope,capture:entry=>({route:historyRoutes.get(entry.undoId)||currentPageRoute()})});
+const editorHistory = RetouchHistory.createHistory({apply:restoreHistory,onChange:syncHistoryControls,storage:lockStorage,scope:window.__RT_RENDERING?.stateScope,initialState:window.__RT_RENDERING?.history,capture:entry=>({route:historyRoutes.get(entry.undoId)||currentPageRoute()})});
 function syncHistoryControls() {
   undoBusy = editorHistory.busy;
   const busy = undoBusy || panelTasks > 0 || sourceRequests > 0;
@@ -101,6 +101,10 @@ function syncHistoryControls() {
   if(!busy)queueMicrotask(restorePanelFocus);
 }
 syncHistoryControls();
+
+const historyWarning=document.createElement('span');historyWarning.setAttribute('role','status');historyWarning.className='hint';document.getElementById('toolbar').append(historyWarning);
+function showHistoryPersistence(error){historyWarning.hidden=!error;historyWarning.textContent=error?'History is available for this session only.':'';historyWarning.title=error||'';}
+showHistoryPersistence(window.__RT_RENDERING?.historyPersistenceError);
 
 /* ---------- boot ---------- */
 const appPath = (location.pathname.replace(/^\/rt\/?/, '/') || '/') + location.search + location.hash;
@@ -1901,6 +1905,7 @@ async function restoreHistory(direction,op) {
   // client stack on the old side of a successful transaction.
   try {
     await showHistoryPage(op.route);
+    if(op.type==='sourceHistory'){clearSelection();await reloadFrame();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     const fresh = await api('GET', resolveUrl(op.id, op.context));
     if (fresh?.ok) { sel = { hostId: op.id, instanceId: null, scope: 'host', info: fresh.element }; renderPanel(); }
     else clearSelection();
@@ -1967,10 +1972,11 @@ async function api(method, url, body) {
   try {
     const res = await fetch(url, {
       method,
-      headers: { 'x-retouch-token': TOKEN, ...(body ? { 'content-type': 'application/json' } : {}) },
+      headers: { 'x-retouch-token': TOKEN, ...(route?{'x-retouch-route':encodeURIComponent(route)}:{}), ...(body ? { 'content-type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
     });
     const result=await res.json();
+    if(Object.hasOwn(result,'historyPersistenceError'))showHistoryPersistence(result.historyPersistenceError);
     if(writes&&result.ok&&result.undoId&&!['undo','redo'].includes(body?.type)){
       if(!historyRoutes.has(result.undoId))historyRoutes.set(result.undoId,route);
       while(historyRoutes.size>200)historyRoutes.delete(historyRoutes.keys().next().value);

@@ -23,7 +23,7 @@ changing those files. The original checkout may continue to evolve independently
 | Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Reusable text styles support responsive links, inherited-scope display, local override/reset, project-wide updates and shared undo in HTML, React and local Liquid. Validated JSON library import/export preserves style identity. HTML, React and local Liquid color styles link text/background/border/SVG paint with scoped overrides and project updates; palettes support sRGB and Display P3. HTML effect styles link shadows and layer/backdrop filters with project updates, overrides and undo. React/Liquid effect links, variables, aliases, collections/modes and shared remote library workflows remain. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload and SVG-canvas SVG/PNG/JPEG downloads exist, including shared local definitions and bitmap embedding. Arbitrary-layer export, fonts, symbols and the full export/import pipeline remain. |
-| History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Completed source and lock history now survives editor-tab reload within a running server session. Persistence across server restarts, complete gesture grouping, version browsing and collaborative editing remain. |
+| History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Completed source and lock history now survives editor-tab reload within a running server session. Source Undo/Redo now recovers across normal server restarts; crash recovery, complete gesture grouping, version browsing and collaborative editing remain. |
 | Any site | Useful authoring on arbitrary public/local sites and source-connected editing across frameworks; honest source mapping and durable edits | Next/React, Shopify/Liquid and local static HTML have source adapters with different capabilities. HTML has responsive CSS, structural edits and batch selection operations. Arbitrary remote-site capture/authoring, other frameworks, dynamic structure and equivalent capabilities across adapters remain. A native WebView alone does not provide this. |
 | Screen sizes | Easy size selection, continuous resizing, side-by-side linked views, explicit inheritance and breakpoint overrides, discoverability | Presets/custom dimensions/rotation/persistence resize the actual iframe; zoom preserves viewport dimensions. Linked comparison previews exist, with edits on the main canvas. React/Tailwind scopes and HTML responsive layouts/styles have browser/source verification. Direct width and height handles support live resizing, cancel and keyboard steps. Corner resizing also supports Shift-locked proportions. Comparison cards now show current scope coverage and offer an explicit width-and-larger style-scope action. Fully editable comparison canvases and cross-framework parity remain. |
 | Desktop | Native installable app, project/site onboarding, editor operation, keyboard/file integration, recovery | Universal AppKit/WKWebView build and bundled CLI launcher tests pass. Earlier native UI fixtures passed startup/edit/undo/Stop; The latest recorded ad hoc bundle packages d9cd994 and retains a failed browser/native-launch receipt; see desktop/README.md. Native launches are paused at the user's request. Current native interaction remains unverified. File flows, Intel runtime and broader lifecycle verification remain. |
@@ -6938,3 +6938,33 @@ editor still does not restore source history across server restarts. Integration
 must expose persistence failures, recover client operation descriptors, handle
 old editor-only locks separately, and address interrupted writes and stale save
 locks before claiming crash recovery. Native launches remain paused.
+
+
+### Source-history restart integration (2026-09-09)
+
+The server now opens the project journal on startup. By default journals live in
+`~/.retouch/history`, outside the edited project; `RETOUCH_STATE_DIR` overrides
+the storage directory. Startup snapshots expose only undo identities and edited
+routes to the shell, not source file contents. The client reconciles its cached
+source stack with the server's authoritative stack while retaining matching
+session-only lock history. Recovered source actions reload the edited page;
+selection-specific operation descriptors are not restored after server restart.
+
+Normal server restarts preserve source Undo and Redo. Source checks still refuse
+external changes atomically. Corrupt/inaccessible journals fall back to memory,
+and the toolbar visibly reports that history is available only for the current
+session. Persistence failures after writes and history restores are returned to
+the client and update this status. Journal routes are validated and escaped in
+bootstrap data. Editor-only lock state remains scoped to the running server.
+
+All 527 unit tests passed (`/private/tmp/retouch-history-restart-units.log`). The
+Chromium/WebKit browser receipts are
+`/private/tmp/retouch-history-restart-{chromium,webkit}-final.log`. Tests restart
+the server at the same address, recover source history, preserve external edits,
+navigate from another page to the original edited route, and verify continued
+editing/undo plus visible status after a corrupt journal.
+
+This is normal-restart persistence, not crash-atomic source/history storage:
+interrupted writes, stale save-lock recovery, synchronized active clients and
+version browsing remain unfinished. Native launches remain paused, and full
+Figma parity and arbitrary-site editing remain incomplete.

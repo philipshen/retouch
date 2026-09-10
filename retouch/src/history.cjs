@@ -5,9 +5,10 @@ const {applyPlan} = require('./transactions.cjs');
 // Groups are explicit interaction identities, never a timing heuristic. Entries
 // retain the first before-image and the last after-image for every touched file.
 class SourceHistory {
-  constructor(limit = 100, {store} = {}) { this.limit=limit; this.store=store;const saved=store?.load();this.undo=saved?.undo||[];this.redo=saved?.redo||[];this.group=null;this.persistenceError=null; }
+  constructor(limit = 100, {store} = {}) { this.limit=limit; this.store=store;const saved=store?.load?.();this.undo=saved?.undo||[];this.redo=saved?.redo||[];this.group=null;this.persistenceError=null; }
   persist(){try{this.store?.save({undo:this.undo,redo:this.redo});this.persistenceError=null;}catch(error){this.persistenceError=error.message;}}
-  record(edits, group) {
+  snapshot(){const entries=stack=>stack.map(entry=>({type:'sourceHistory',undoId:entry.id,route:entry.route}));return {undo:entries(this.undo),redo:entries(this.redo)};}
+  record(edits, group, route) {
     if (!edits.length) return null;
     const last=this.undo.at(-1);
     const canMerge=group && group===this.group && last && edits.every(edit=> {
@@ -23,7 +24,7 @@ class SourceHistory {
       }
       this.persist();return last.id;
     }
-    const entry={id:crypto.randomBytes(16).toString('hex'),edits:edits.map(e=>({...e}))};
+    const entry={id:crypto.randomBytes(16).toString('hex'),edits:edits.map(e=>({...e})),...(typeof route==='string'&&route.startsWith('/')&&!route.startsWith('//')&&route.length<=4096?{route}:{})};
     this.undo.push(entry); this.group=group || null;
     if(this.undo.length>this.limit)this.undo.shift();
     this.persist();return entry.id;

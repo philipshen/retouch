@@ -19,7 +19,8 @@ function createHistoryStore(root,directory){
   const ids=new Set();
   const stack=entries=>entries.map(entry=>{
    if(!object(entry)||typeof entry.id!=='string'||!/^[a-f0-9]{32}$/.test(entry.id)||ids.has(entry.id)||!Array.isArray(entry.edits)||!entry.edits.length||entry.edits.length>1000)throw Error('Invalid source history entry.');ids.add(entry.id);const files=new Set();
-   return {id:entry.id,edits:entry.edits.map(edit=>{
+   if(entry.route!==undefined&&(typeof entry.route!=='string'||!entry.route.startsWith('/')||entry.route.startsWith('//')||entry.route.length>4096))throw Error('Invalid history route.');
+   return {id:entry.id,...(entry.route?{route:entry.route}:{}),edits:entry.edits.map(edit=>{
     if(!object(edit)||typeof edit.file!=='string'||!edit.file||edit.file.length>4096||edit.file.includes('\\')||edit.file.includes('\0')||path.isAbsolute(edit.file)||edit.file.split('/').some(part=>!part||part==='.'||part==='..')||files.has(edit.file)||![edit.before,edit.after].every(value=>value===null||typeof value==='string'))throw Error('Invalid source history snapshot.');files.add(edit.file);
     return {file:decode?path.join(actual,edit.file):edit.file,before:edit.before,after:edit.after};
    })};
@@ -29,7 +30,7 @@ function createHistoryStore(root,directory){
   file,
   load(){const raw=source();if(raw===null){revision=null;return {undo:[],redo:[]};}const state=validate(JSON.parse(raw),true);revision=digest(raw);return state;},
   save(state){
-   const encode=entries=>entries.map(entry=>({id:entry.id,edits:entry.edits.map(edit=>({...edit,file:path.relative(actual,edit.file).split(path.sep).join('/')}))}));
+   const encode=entries=>entries.map(entry=>({id:entry.id,...(entry.route?{route:entry.route}:{}),edits:entry.edits.map(edit=>({...edit,file:path.relative(actual,edit.file).split(path.sep).join('/')}))}));
    const data={version:1,project,undo:encode(state.undo),redo:encode(state.redo)};validate(data,false);const raw=JSON.stringify(data);if(Buffer.byteLength(raw)>LIMIT)throw Error('Source history exceeds the local storage limit.');
    safe();const fd=fs.openSync(lock,'wx',0o600);let temporary;
    try{
