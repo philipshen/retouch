@@ -44,6 +44,13 @@
   }
   let cards=[],selected=null,route=null,open=false,timer=null,scope={prefix:'',label:'All sizes · base',condition:null},scopeSummary;
   function path(){try{const loc=main.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
+  function scrollViewport(w,dx,dy){
+    const d=w.document,html=w.getComputedStyle(d.documentElement),body=d.body&&w.getComputedStyle(d.body);
+    // The root's visible overflow can be supplied by the body, including in
+    // quirks-mode pages where scrollingElement itself is the body.
+    const overflow=axis=>html['overflow'+axis]==='visible'?(body?.['overflow'+axis]||'visible'):html['overflow'+axis];
+    w.scrollBy({left:/hidden|clip/.test(overflow('X'))?0:dx,top:/hidden|clip/.test(overflow('Y'))?0:dy,behavior:'instant'});
+  }
   function sync(force=false){
     if(!open)return;
     const next=path();if(!next)return;
@@ -137,7 +144,7 @@
     const focus=document.createElement('button');focus.id='comparisonFocus';focus.type='button';focus.className='control-button';focus.textContent='Focus previews';focus.setAttribute('aria-pressed',String(focusPreviews));focus.title='Hide screen-management controls to give more space to previews. Toggle again to restore the controls.';
     focus.onclick=()=>{focusPreviews=!focusPreviews;rail.classList.toggle('focus-previews',focusPreviews);focus.setAttribute('aria-pressed',String(focusPreviews));try{localStorage.setItem(storageKey+'.focus',String(focusPreviews));}catch{}layoutPreviews();};rail.append(focus);
     const heading=document.createElement('h2');heading.textContent='Compare screens';rail.append(heading);
-    const hint=document.createElement('p');hint.className='hint';hint.textContent='Click a layer to edit on the main canvas. Style scope stays unchanged.';rail.append(hint);
+    const hint=document.createElement('p');hint.className='hint';hint.id='comparisonNavigationHint';hint.textContent='Click a layer to edit on the main canvas. Style scope stays unchanged. Focus a preview and use arrow keys, Page Up/Down, or Home/End to scroll; Enter opens its size.';rail.append(hint);
     scopeSummary=document.createElement('p');scopeSummary.className='hint';scopeSummary.setAttribute('aria-label','Comparison style scope');scopeSummary.textContent='Style scope: '+scope.label;rail.append(scopeSummary);
     const files=document.createElement('div');files.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px';
     allPreviews=document.createElement('button');allPreviews.id='comparisonVisibility';allPreviews.type='button';allPreviews.className='control-button';allPreviews.title='Collapse previews to manage screen sizes, or expand them again. Keeps each page loaded.';
@@ -224,7 +231,7 @@
       edit.onclick=()=>window.RetouchScreens.set({width,height});header.append(edit);
       const remove=document.createElement('button');remove.className='control-button';remove.textContent='×';remove.setAttribute('aria-label','Remove '+name+' comparison');header.append(remove);
       remove.onclick=async()=>{remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;card.inert=true;clearOrderHistory();removals++;removed.push({size,index});if(removed.length>8)removed.shift();sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);cards=cards.filter(c=>c!==item);updateControls();await unload(frame);surface.remove();card.remove();removals--;updateControls();};
-      const viewport=document.createElement('div');viewport.className='compare-viewport';viewport.tabIndex=0;viewport.setAttribute('role','button');viewport.setAttribute('aria-label','Edit from '+name+' comparison');viewport.title='Click a layer to select it on the main canvas at this size. Style scope stays unchanged.';
+      const viewport=document.createElement('div');viewport.className='compare-viewport';viewport.tabIndex=0;viewport.setAttribute('role','button');viewport.setAttribute('aria-label','Edit from '+name+' comparison');viewport.title='Click a layer to select it on the main canvas at this size. Style scope stays unchanged.';viewport.setAttribute('aria-describedby','comparisonNavigationHint');viewport.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight PageUp PageDown Home End Enter Space');
       const frame=document.createElement('iframe');frame.title=name+' comparison preview';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');frame.style.width=width+'px';frame.style.height=height+'px';
       const surface=document.createElement('div');surface.className='compare-surface';surface.setAttribute('aria-hidden','true');surface.append(frame);rail.append(surface);
       const overlay=document.createElement('div');overlay.className='compare-overlay';
@@ -352,7 +359,20 @@
         }catch{message.textContent='Preview unavailable for this page';}
       }
       viewport.addEventListener('click',event=>{if(event.button===0)activate(event);});
-      viewport.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();activate();}});
+      viewport.addEventListener('keydown',event=>{
+        if(event.defaultPrevented||event.isComposing||event.altKey||event.ctrlKey||event.metaKey||event.shiftKey)return;
+        if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();activate();return;}
+        if(!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','Home','End'].includes(event.key))return;
+        event.preventDefault();event.stopPropagation();
+        try{
+          const d=frame.contentDocument,w=frame.contentWindow,loc=w.location,root=d?.scrollingElement;
+          if(!root||loc.origin!==location.origin||loc.pathname+loc.search+loc.hash!==path())return;
+          const page=Math.floor(height*.9);
+          const dx=event.key==='ArrowLeft'?-40:event.key==='ArrowRight'?40:0;
+          const dy=({ArrowUp:-40,ArrowDown:40,PageUp:-page,PageDown:page,Home:-w.scrollY,End:root.scrollHeight-w.scrollY})[event.key]||0;
+          scrollViewport(w,dx,dy);
+        }catch{}
+      });
       viewport.addEventListener('wheel',e=>{
         if(e.ctrlKey)return;
         e.preventDefault();
@@ -372,7 +392,7 @@
             if(y&&/contain|none/.test(style.overscrollBehaviorY))dy=0;
             node=node.assignedSlot||node.parentElement||node.getRootNode()?.host;
           }
-          if(root){const style=w.getComputedStyle(root);w.scrollBy({left:/hidden|clip/.test(style.overflowX)?0:dx,top:/hidden|clip/.test(style.overflowY)?0:dy,behavior:'instant'});}
+          if(root)scrollViewport(w,dx,dy);
         }catch{}
       },{passive:false});
       cards.push({card,frame,surface,previewBody,setCollapsed,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal,up,down,move});
