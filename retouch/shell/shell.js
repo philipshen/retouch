@@ -977,7 +977,7 @@ function renderPanelContents() {
   const componentId = sel.instanceId || componentTarget?.getAttribute('data-rt-i');
   if (componentId && !info.textLeaf) panelBody.appendChild(componentSection(componentId));
   if (info.kind === 'instance' && !info.canSetSrc) {
-    RetouchInspector.note(panelBody, 'Instance props are listed above. Edit the definition for shared styles, or detach this usage for independent styles.');
+    RetouchInspector.note(panelBody, 'Edit literal instance props above. Changes apply to this source usage at every screen size. Edit the definition for shared styles.');
     return;
   }
 
@@ -1219,18 +1219,39 @@ function componentSection(id) {
     const count=matchingInDocument(doc(),id,component).length;
     RetouchInspector.note(sec, `${count} rendered instance${count === 1 ? '' : 's'} at this usage. ${component.detached ? 'This module is independent of the original component.' : 'Definition edits are shared.'}`);
     if(!component.canDetach&&!component.detached&&component.reason)RetouchInspector.note(sec,component.reason);
-    if (component.props.length) sec.append(propTable(component.props));
+    if (component.props.length) sec.append(propTable(component.props,id,component.usageHash));
   });
   return sec;
 }
-function propTable(props) {
+function propTable(props,instanceId,fileHash) {
   const table = document.createElement('table'); table.className = 'component-props';
   const thead = document.createElement('thead'); const header = document.createElement('tr');
   for (const text of ['Prop', 'This instance', 'Default']) { const th=document.createElement('th');th.textContent=text;header.append(th); }
   thead.append(header); table.append(thead);
   const body=document.createElement('tbody');
-  for(const prop of props){const row=document.createElement('tr');for(const value of [prop.name,prop.value,prop.default]){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}body.append(row);}
+  for(const prop of props){
+    const row=document.createElement('tr'),name=document.createElement('td'),value=document.createElement('td'),fallback=document.createElement('td');name.textContent=prop.name;fallback.textContent=prop.default;
+    if(instanceId&&prop.editor?.editable){
+      const input=document.createElement('input'),meta=prop.editor;input.setAttribute('aria-label','Component property '+prop.name);input.type=meta.type==='boolean'?'checkbox':meta.type==='number'?'number':'text';
+      if(meta.type==='boolean')input.checked=meta.value;else input.value=String(meta.value);if(meta.type==='number')input.step='any';
+      input.addEventListener('change',()=>{if(!input.reportValidity()||meta.type==='number'&&input.value==='')return;const next=meta.type==='boolean'?input.checked:meta.type==='number'?Number(input.value):input.value;if(next!==meta.value)setComponentProperty(instanceId,prop.name,next,fileHash);});
+      input.addEventListener('keydown',event=>{if(event.key==='Enter'){input.blur();}if(event.key==='Escape'){if(meta.type==='boolean')input.checked=meta.value;else input.value=String(meta.value);input.blur();}});value.append(input);
+    }else{value.textContent=prop.value;value.title=prop.editor?.reason||'';}
+    row.append(name,value,fallback);body.append(row);
+  }
   table.append(body);return table;
+}
+async function refreshComponentProperty(instanceId,parentId){
+  const parent=parentId?await api('GET',resolveUrl(parentId)):null;
+  if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else await reloadFrame();
+  const usage=await api('GET',resolveUrl(instanceId)),component=await api('GET',componentUrl(instanceId));
+  if(usage?.ok&&component?.ok){sel={hostId:component.definitionId,instanceId,scope:'instance',info:usage.element};renderPanel();}else clearSelection();
+}
+async function setComponentProperty(instanceId,name,value,fileHash){
+  busyPanel(true);try{
+    const result=await api('POST','/rt/__api/op',{type:'setComponentProp',id:instanceId,fileHash,name,value});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not edit the property.');
+    const parentId=result.componentProp.parentId;editorHistory.record({type:'setComponentProp',id:instanceId,parentId,undoId:result.undoId});await refreshComponentProperty(instanceId,parentId);toast('Instance property updated','ok');
+  }catch(error){toast(error.message,'err');if(sel)renderPanel();}finally{busyPanel(false);}
 }
 async function editDefinition(instanceId, component) {
   if (!component.definitionId) return;
@@ -2016,6 +2037,7 @@ async function restoreHistory(direction,op) {
   // client stack on the old side of a successful transaction.
   try {
     await showHistoryPage(op.route);
+    if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='collectionSelection'){await reloadFrame();await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     const fresh = await api('GET', resolveUrl(op.id, op.context));
