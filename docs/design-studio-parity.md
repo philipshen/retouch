@@ -8834,3 +8834,43 @@ CommonJS/global React bindings, nested component wrappers and callback-generated
 roots are not covered by this binding resolver. Full Figma Design parity and
 arbitrary-site authoring remain open. Native launches remain paused; trusted brew
 distribution is still unverified.
+
+### Fragment instance grouping in selection and library (2026-09-10)
+
+Fixed top-level host sequences now define fragment instance groups. Source
+metadata records complete sequences for direct host returns and transparent
+shorthand/named fragments. The browser groups only matching adjacent DOM sibling
+sequences; repeated sequences remain separate entries. Missing, ambiguous or
+separated matches remain individually selectable. Dynamic fragment children,
+text outside host roots, child components and callbacks do not invent complete
+instance boundaries.
+
+The component picker counts a verified fragment group once, and the selected
+instance has one enclosing outline covering all its visible roots. The inspector
+reports grouped instance counts. Fallback picker entries identify rendered layers
+rather than claiming an unknown component boundary. Source usage selection still
+edits that callsite wherever it renders; this does not introduce per-render source
+overrides or runtime React identity.
+
+Validation: 701 unit tests passed, including repeated sequences, missing and
+separated roots, ambiguity, negative-coordinate union bounds, named/shorthand
+source groups and unknown-child refusal. Chromium (named Fragment alias) and
+WebKit (namespace React.Fragment) both passed library count/no-duplicate-picker
+checks and exact overlay geometry across the two-host fragment, followed by root
+swap/detach/Undo/Redo. The full framed insertion, required-props, swap, branch,
+duplicate and property-edit flow also passed in Chromium. All browser processes
+terminated with exit zero and strict empty page-error assertions. The captured
+screenshot was visually inspected: one outline encloses both fragment hosts and
+the inspector reports one instance. Evidence:
+/private/tmp/retouch-instance-groups-units.log,
+/private/tmp/retouch-instance-groups-chromium.log,
+/private/tmp/retouch-instance-groups-webkit.log,
+/private/tmp/retouch-instance-groups-framed.log,
+/private/tmp/retouch-instance-groups.png.
+
+Remaining work includes grouped layer-tree presentation, group hover outlines,
+per-render selection identity, dynamic/portal/mixed-text roots and layout editing
+across fragment roots. DOM mutation can make source-based boundaries unavailable;
+the fallback is selectable individual roots. Full Figma Design parity and
+arbitrary-site authoring are incomplete. Native launches remain paused; trusted
+brew distribution is unverified.

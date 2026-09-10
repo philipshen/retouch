@@ -16,7 +16,7 @@ function catalogue(index) {
         const info=index.adapter.describeComponent({appRoot:index.appRoot,file,relPath,source,element,elements,hash:index.adapter.contentHash(source)});
         if(!info.ok || !info.definitionId)continue;
         const key=info.file+'#'+info.definitionId;
-        entries.set(element.id,{key,definitionId:info.definitionId,explicitComponent:info.explicitComponent===true,name:info.name,file:info.file,usageFile:relPath,line:element.node?.loc?.start?.line||null});
+        entries.set(element.id,{key,definitionId:info.definitionId,rootGroups:info.rootGroups,explicitComponent:info.explicitComponent===true,name:info.name,file:info.file,usageFile:relPath,line:element.node?.loc?.start?.line||null});
         counts.set(key,(counts.get(key)||0)+1);
       }
     } catch {}
@@ -25,7 +25,7 @@ function catalogue(index) {
 }
 function usage(index,id) {
   const {entries,counts}=catalogue(index),entry=entries.get(id);
-  return entry?{usageCount:counts.get(entry.key),definitionId:entry.definitionId,inlineComponent:counts.get(entry.key)===1&&!entry.explicitComponent}:null;
+  return entry?{usageCount:counts.get(entry.key),definitionId:entry.definitionId,rootGroups:entry.rootGroups,inlineComponent:counts.get(entry.key)===1&&!entry.explicitComponent}:null;
 }
 function describe(index,resolved) {
   const info=index.adapter.describe(resolved);
@@ -37,7 +37,7 @@ function library(index){
  const {entries,counts}=catalogue(index),groups=new Map();
  for(const [id,entry] of entries){
   if(counts.get(entry.key)<2&&!entry.explicitComponent)continue;
-  let group=groups.get(entry.key);if(!group){group={key:entry.key,definitionId:entry.definitionId,file:entry.file,names:[],usages:[]};groups.set(entry.key,group);}
+  let group=groups.get(entry.key);if(!group){group={key:entry.key,definitionId:entry.definitionId,rootGroups:entry.rootGroups,file:entry.file,names:[],usages:[]};groups.set(entry.key,group);}
   if(!group.names.includes(entry.name))group.names.push(entry.name);
   group.usages.push({id,name:entry.name,file:entry.usageFile,line:entry.line});
  }
@@ -48,7 +48,7 @@ function library(index){
     const key=rel+'#'+definition.definitionId,group=groups.get(key);
     if(group){for(const name of definition.names)if(!group.names.includes(name))group.names.push(name);continue;}
     const usages=[...entries].filter(([,entry])=>entry.key===key).map(([id,entry])=>({id,name:entry.name,file:entry.usageFile,line:entry.line}));
-    groups.set(key,{key,definitionId:definition.definitionId,file:rel,names:[...new Set([...definition.names,...usages.map(usage=>usage.name)])],usages,...(!usages.length?{definitionOnly:true}:{})});
+    groups.set(key,{key,definitionId:definition.definitionId,rootGroups:[...entries.values()].find(entry=>entry.key===key)?.rootGroups,file:rel,names:[...new Set([...definition.names,...usages.map(usage=>usage.name)])],usages,...(!usages.length?{definitionOnly:true}:{})});
    }
   }catch{}
  }

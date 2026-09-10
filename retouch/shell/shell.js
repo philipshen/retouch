@@ -773,10 +773,11 @@ function paintLoop() {
   if (d && sel && mode==='edit') {
     const id=activeId();
     let first=true;
-    for(const el of matchingInDocument(d,id,sel.info)) {
-      if(!inTextScope(el,sel.info))continue;
-      const kind=outlineKind(el,sel.info);
-      drawBox(el,first?'sel':'co',kind);
+    const targets=matchingInDocument(d,id,sel.info).filter(el=>inTextScope(el,sel.info));
+    const groups=sel.info.kind==='instance'?RetouchComponentInstances.group(targets,sel.info.rootGroups):targets.map(el=>({element:el,elements:[el]}));
+    for(const group of groups) {
+      const el=group.element,kind=outlineKind(el,sel.info);
+      const bounds=RetouchComponentInstances.bounds(group.elements);if(bounds)drawBounds(bounds,first?'sel':'co',kind);
       if(first && kind==='instance')badge={el,id:el.getAttribute('data-rt-i') || id};
       first=false;
     }
@@ -814,7 +815,9 @@ function inTextScope(el, info) {
   return Object.entries(info.renderScope || {}).every(([name,value])=>el.getAttribute(name)===value);
 }
 function drawBox(el, cls, kind) {
-  const r = el.getBoundingClientRect();
+  drawBounds(el.getBoundingClientRect(),cls,kind);
+}
+function drawBounds(r,cls,kind){
   if (r.width === 0 && r.height === 0) return;
   const b = document.createElement('div');
   b.className = 'box ' + cls + ' ' + kind;
@@ -1226,8 +1229,8 @@ function componentSection(id) {
     const duplicate=RetouchInspector.button('Duplicate instance',()=>duplicateInstance(id,sel?.info?.context));duplicate.disabled=!component.canDuplicate;duplicate.title=component.duplicateReason||'Duplicate this source usage, keeping the shared definition.';actions.append(duplicate);
     const detach = RetouchInspector.button('Detach instance', () => detachInstance(id, component, detach));detach.disabled=!component.canDetach;
     detach.disabled = !component.canDetach; if (!component.detached) actions.append(detach); sec.append(actions);
-    const count=matchingInDocument(doc(),id,component).length;
-    RetouchInspector.note(sec, `${count} rendered instance${count === 1 ? '' : 's'} at this usage. ${component.detached ? 'This module is independent of the original component.' : 'Definition edits are shared.'}`);
+    const groups=RetouchComponentInstances.group(matchingInDocument(doc(),id,component),component.rootGroups),count=groups.length,unit=groups.every(group=>group.complete)?'instance':groups.every(group=>!group.complete)?'rendered layer':'selection target';
+    RetouchInspector.note(sec, `${count} ${unit}${count === 1 ? '' : 's'} at this usage. ${component.detached ? 'This module is independent of the original component.' : 'Definition edits are shared.'}`);
     if(!component.canDetach&&!component.detached&&component.reason)RetouchInspector.note(sec,component.reason);
     if (component.props.length) sec.append(propTable(component.props,id,component.usageHash));
   });
@@ -1401,7 +1404,7 @@ componentLibraryButton.addEventListener('click',()=>RetouchComponentLibrary.open
  insert:window.__RT_RENDERING?.componentInsertion?insertLibraryComponent:undefined,
  swapTarget:sel?.info.kind==='instance'?{swap:true,id:sel.info.id,hash:sel.info.hash,definitionId:sel.info.definitionId,context:sel.info.context}:null,
 
- instances:item=>item.usages.length?item.usages.flatMap(usage=>matchingInDocument(doc(),usage.id).map(element=>({id:usage.id,element,label:usage.file+(usage.line?':'+usage.line:'')}))):matchingInDocument(doc(),item.definitionId).map(element=>({id:item.definitionId,definition:true,element,label:item.file})),
+ instances:item=>item.usages.length?item.usages.flatMap(usage=>RetouchComponentInstances.group(matchingInDocument(doc(),usage.id),item.rootGroups).map(group=>({...group,id:usage.id,label:usage.file+(usage.line?':'+usage.line:'')+(group.elements.length>1?' · '+group.elements.length+' layers':'')}))):matchingInDocument(doc(),item.definitionId).map(element=>({id:item.definitionId,definition:true,element,label:item.file})),
  select:async(instance,isActive)=>{
   if(!instance?.element?.isConnected)throw Error('This instance is no longer on the page. Refresh the component list.');
   if(panelTasks||sourceRequests||undoBusy)throw Error('Wait for the current edit to finish.');
