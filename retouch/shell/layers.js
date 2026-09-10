@@ -139,7 +139,7 @@
       observer?.disconnect();clearTimeout(timer);endDrag();rangeAnchor=null;d=next;collapsed=new WeakSet();render();
       if(d?.body){observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(render,100);});observer.observe(d.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['data-rt','data-rt-i','data-rt-name','id','aria-label','alt']});}
     }
-    function selection(el,info,busy=false,multiple=[]) {
+    function selection(el,info,busy=false,multiple=[],readOnly=false) {
       const nextSet=new Set(multiple.length?multiple:el?[el]:[]),changed=nextSet.size!==selectedSet.size||[...nextSet].some(item=>!selectedSet.has(item));selectedSet=nextSet;tree.setAttribute('aria-multiselectable',String(!!(info?.cssAuthoring||info?.classSelection)));
       if(!el)rangeAnchor=null;
       if(isBusy!==busy){isBusy=busy;selectAll.disabled=busy||!selectionRows().length;for(const r of rows){r.button.disabled=busy;r.toggle.disabled=busy||!r.item.children.length;if(r.lock)r.lock.disabled=busy||!locks.direct(r.item.el)&&locks.locked(r.item.el);}host.setAttribute('aria-busy',String(busy));}
@@ -152,6 +152,7 @@
         if(!rows.some(r=>r.button.tabIndex===0)&&rows[0])rows[0].button.tabIndex=0;
         rows.find(r=>r.item.el===el)?.button.scrollIntoView({block:'nearest'});
       }
+      if(readOnly){busy=true;for(const row of rows)if(row.lock)row.lock.disabled=true;}
       unlockShown.disabled=busy||!rows.some(row=>locks?.direct(row.item.el));
       lockSelection.disabled=busy||![...selectedSet].some(el=>!locks?.direct(el));
       unlockSelection.disabled=busy||![...selectedSet].some(el=>locks?.direct(el));

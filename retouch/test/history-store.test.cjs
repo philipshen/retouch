@@ -55,6 +55,16 @@ test('normal grouped commits retain one undo and rejected source plans leave red
 
 test('a different live process cannot recover an in-progress source operation',t=>{
  const {spawnSync}=require('node:child_process'),{root,directory,open}=setup(t),file=path.join(root,'a');fs.writeFileSync(file,'after');const history=open(),id=history.record([{file,before:'before',after:'after'}]),store=createHistoryStore(root,directory),state=store.load();store.save({...state,pending:{type:'undo',id,owner:process.pid}});const bytes=fs.readFileSync(store.file,'utf8');
- const code=`const {createHistoryStore}=require(${JSON.stringify(require.resolve('../src/history-store.cjs'))});try{createHistoryStore(process.argv[1],process.argv[2]).load();process.exit(2);}catch(error){if(!error.message.includes('another running editor'))throw error;}`;
+ const code=`const {createHistoryStore}=require(${JSON.stringify(require.resolve('../src/history-store.cjs'))});try{createHistoryStore(process.argv[1],process.argv[2]).load();process.exit(2);}catch(error){if(!error.message.includes('another running editor')||error.recoveryRequired!==true)throw error;}`;
  const child=spawnSync(process.execPath,['-e',code,root,directory],{encoding:'utf8',timeout:10000});assert.equal(child.status,0,child.stderr);assert.equal(fs.readFileSync(store.file,'utf8'),bytes);assert.equal(fs.readFileSync(file,'utf8'),'after');
+});
+
+test('unresolved recovery blocks source commits and history without overwriting its journal',t=>{
+ const {root,directory,open}=setup(t),a=path.join(root,'a'),b=path.join(root,'b');fs.writeFileSync(a,'after');fs.writeFileSync(b,'before');
+ const store=createHistoryStore(root,directory);store.load();store.save({undo:[],redo:[],pending:{type:'record',entry:{id:'a'.repeat(32),edits:[{file:a,before:'before',after:'after'},{file:b,before:'before',after:'after'}]}}});const bytes=fs.readFileSync(store.file,'utf8');
+ let failure;try{open();}catch(error){failure=error;}assert.equal(failure?.recoveryRequired,true);
+ const fallback=new SourceHistory();fallback.recoveryError=failure.message;assert.equal(fallback.recoveryRequired,true);
+ assert.equal(fallback.commit(root,{ok:true,edits:[{file:a,before:'after',after:'new'}]}).ok,false);assert.equal(fallback.apply(root,'undo','a'.repeat(32),{}).ok,false);
+ assert.equal(fs.readFileSync(a,'utf8'),'after');assert.equal(fs.readFileSync(b,'utf8'),'before');assert.equal(fs.readFileSync(store.file,'utf8'),bytes);
+ fs.writeFileSync(store.file,'broken');assert.throws(()=>open(),error=>error.recoveryRequired!==true);
 });

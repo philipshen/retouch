@@ -18,7 +18,8 @@ if(window.__RT_RENDERING?.selectionStyling){const hint=document.createElement('p
 
 const SPACING_STEPS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20, 24, 28, 32];
 
-let mode = 'edit'; // 'edit' | 'interact'
+let historyRecoveryRequired=!!window.__RT_RENDERING?.historyRecoveryRequired;
+let mode = historyRecoveryRequired?'interact':'edit'; // 'edit' | 'interact'
 let sel = null; // { hostId, instanceId, scope: 'host'|'instance', info }
 let editing = null; // { el, id, info, original, originalHTML, snapshot, originalTree } during inline text editing
 let hoverEl = null;
@@ -91,20 +92,20 @@ function syncHistoryControls() {
   undoBusy = editorHistory.busy;
   const busy = undoBusy || panelTasks > 0 || sourceRequests > 0;
   if(busy)canvasPan.cancel();
-  undoBtn.disabled = busy || !editorHistory.canUndo;
-  redoBtn.disabled = busy || !editorHistory.canRedo;
+  undoBtn.disabled = busy || historyRecoveryRequired || !editorHistory.canUndo;
+  redoBtn.disabled = busy || historyRecoveryRequired || !editorHistory.canRedo;
   undoBtn.setAttribute('aria-busy',String(busy));
   redoBtn.setAttribute('aria-busy',String(busy));
   pagePicker.disabled = busy;routeInput.disabled = busy;
-  panelBody.disabled = busy;panelBody.inert = busy;
+  panelBody.disabled = busy||historyRecoveryRequired;panelBody.inert = busy||historyRecoveryRequired;
   panelBody.setAttribute('aria-busy',String(busy));
   if(!busy)queueMicrotask(restorePanelFocus);
 }
 syncHistoryControls();
 
 const historyWarning=document.createElement('span');historyWarning.setAttribute('role','status');historyWarning.className='hint';document.getElementById('toolbar').append(historyWarning);
-function showHistoryPersistence(error){historyWarning.hidden=!error;historyWarning.textContent=error?'History is available for this session only.':'';historyWarning.title=error||'';}
-showHistoryPersistence(window.__RT_RENDERING?.historyPersistenceError);
+function showHistoryPersistence(error,recoveryRequired=false){historyRecoveryRequired=recoveryRequired;historyWarning.hidden=!error&&!recoveryRequired;historyWarning.textContent=recoveryRequired?'Source recovery required. Editing is paused.':error?'History is available for this session only.':'';historyWarning.title=error||'';if(recoveryRequired){mode='interact';modeBtn.disabled=true;modeBtn.textContent='Interact mode';modeBtn.classList.remove('mode-edit');stopDrawing?.();hoverEl=null;}syncHistoryControls();}
+showHistoryPersistence(window.__RT_RENDERING?.historyPersistenceError,historyRecoveryRequired);
 
 /* ---------- boot ---------- */
 const appPath = (location.pathname.replace(/^\/rt\/?/, '/') || '/') + location.search + location.hash;
@@ -784,7 +785,7 @@ function paintLoop() {
 }
 
 function syncLayerSelection() {
-  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[]);
+  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
 }
 
 function inTextScope(el, info) {
@@ -1967,6 +1968,7 @@ window.addEventListener('blur', () => { measuring = false; });
 async function api(method, url, body) {
   const writes = method === 'POST' && ['/rt/__api/op','/rt/__api/text-styles','/rt/__api/color-styles','/rt/__api/effect-styles'].includes(url);
   const route = writes ? currentPageRoute() : null;
+  if(writes&&historyRecoveryRequired)return {ok:false,reason:'Source recovery is required before editing can resume.'};
   if(writes && editorHistory.busy && !['undo','redo'].includes(body?.type)) return {ok:false,reason:'Wait for history restoration to finish.'};
   if(writes){sourceRequests++;syncHistoryControls();}
   try {
@@ -1976,7 +1978,7 @@ async function api(method, url, body) {
       body: body ? JSON.stringify(body) : undefined,
     });
     const result=await res.json();
-    if(Object.hasOwn(result,'historyPersistenceError'))showHistoryPersistence(result.historyPersistenceError);
+    if(Object.hasOwn(result,'historyPersistenceError'))showHistoryPersistence(result.historyPersistenceError,!!result.historyRecoveryRequired);
     if(writes&&result.ok&&result.undoId&&!['undo','redo'].includes(body?.type)){
       if(!historyRoutes.has(result.undoId))historyRoutes.set(result.undoId,route);
       while(historyRoutes.size>200)historyRoutes.delete(historyRoutes.keys().next().value);
@@ -2057,10 +2059,10 @@ const layers = RetouchLayers.mount({
   locks:layerLocks,
   onLock:setLayerLocks,
   getClipboard:()=>layerClipboard,
-  dragEnabled:window.__RT_RENDERING?.layerReparenting===true,
+  dragEnabled:window.__RT_RENDERING?.layerReparenting===true&&!historyRecoveryRequired,
   multiSelectEnabled:window.__RT_RENDERING?.selectionStyling===true,
   onMove:async(source,destination,position)=>{
-    if(panelTasks||undoBusy||sourceRequests||!source.isConnected||!destination.isConnected)return;
+    if(historyRecoveryRequired||panelTasks||undoBusy||sourceRequests||!source.isConnected||!destination.isConnected)return;
     await commitInlineEdit();if(sel?.multiple?.some(info=>info.id===source.getAttribute('data-rt')))return structureSelection('reparentElement',{destinationId:destination.getAttribute('data-rt'),position});await select(source);
     if(!sel?.info.structure?.canReparent)return toast(sel?.info.structure?.reason||'This layer cannot be moved into another container.','err');
     await moveLayerInto(sel.info,destination.getAttribute('data-rt'),position);

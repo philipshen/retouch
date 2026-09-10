@@ -32,7 +32,7 @@ function createHistoryStore(root,directory){
   file,
   load(){
    const raw=source();if(raw===null){revision=null;return {undo:[],redo:[]};}const state=validate(JSON.parse(raw),true);revision=digest(raw);
-   if(state.pending){
+   if(state.pending){try{
     if(state.pending.owner&&state.pending.owner!==process.pid){let alive=true;try{process.kill(state.pending.owner,0);}catch(error){if(error.code==='ESRCH')alive=false;}if(alive)throw Error('A source operation is still owned by another running editor.');}
     const {type}=state.pending,entry=type==='record'?state.pending.entry:state[type].at(-1),before=type==='undo'?'after':'before',after=type==='undo'?'before':'after';
     const contents=entry.edits.map(edit=>{
@@ -42,7 +42,7 @@ function createHistoryStore(root,directory){
     const matches=side=>entry.edits.every((edit,index)=>contents[index]===edit[side]);
     if(matches(before)){}else if(matches(after)){if(type==='record'){state.undo.push(entry);state.undo=state.undo.slice(-100);state.redo=[];}else{state[type].pop();state[type==='undo'?'redo':'undo'].push(entry);}}else throw Error('An interrupted source operation left changed or mixed files. Source was not modified during recovery.');
     delete state.pending;this.save(state);
-   }
+   }catch(error){error.recoveryRequired=true;throw error;}}
    return state;
   },
   save(state){

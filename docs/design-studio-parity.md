@@ -7018,3 +7018,34 @@ Complete crash recovery remains unfinished: save-lock interruption, power-loss
 durability, mixed-file resolution and synchronized active clients remain. Asset
 uploads outside the source-plan history path are not covered by this wrapper.
 Native Retouch launches remain paused; full parity remains incomplete.
+
+
+### Unresolved recovery pauses source editing (2026-09-09)
+
+Startup failures involving a validated pending operation now carry an explicit
+recovery-required state. They no longer fall through to writable memory-only
+history. Source commits and restores refuse this state, and authenticated server
+write guards also cover style libraries and asset uploads. Runtime rollback
+failures return the state immediately, including through library/undo errors.
+
+The shell shows “Source recovery required. Editing is paused.”, starts in
+interaction mode, disables source fields, history buttons and structural layer
+actions, and retains page navigation and inspection. Ordinary corrupt history
+with no validated pending operation keeps the existing session-only fallback.
+This distinguishes unavailable historical data from unresolved source mutation.
+
+Browser tests pass in Chromium and WebKit:
+`/private/tmp/retouch-recovery-guard-{chromium,webkit}-final.log`. They seed mixed
+source state, verify the visible pause and disabled controls, issue authenticated
+requests to five write endpoints, and check unchanged source/journal bytes. Once
+the fixture source matches a completed operation, a server restart recovers the
+entry and enables exact Undo. Normal/corrupt-journal restart checks still pass in
+`/private/tmp/retouch-recovery-guard-reload-{chromium,webkit}.log`.
+The paused-state screenshot was visually inspected.
+
+All 534 unit tests pass in `/private/tmp/retouch-recovery-guard-verified-units.log`.
+The final Chromium and WebKit recovery guard runs also pass after checking that
+live-owner and mixed-state errors require recovery, ordinary corrupt journals
+retain the fallback, and general operation exceptions include recovery status.
+An interactive recovery-resolution workflow, save-lock recovery and complete
+crash durability remain unfinished. Native launches remain paused.

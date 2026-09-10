@@ -30,7 +30,7 @@ function startServer({ appRoot, port, adapter, proxyTo, serveSite, rendering = {
   const fileCount = index.scanAll();
   let history;
   try{const directory=process.env.RETOUCH_STATE_DIR||path.join(fs.realpathSync(require('node:os').homedir()),'.retouch','history');history=new SourceHistory(100,{store:require('./history-store.cjs').createHistoryStore(appRoot,directory)});}
-  catch(error){history=new SourceHistory(100,{store:{save(){throw error;}}});history.persistenceError=error.message;}
+  catch(error){history=new SourceHistory(100,{store:{save(){throw error;}}});history.persistenceError=error.message;if(error.recoveryRequired)history.recoveryError=error.message;}
   const sourceMonitor = (proxyTo || serveSite) && rendering.reloadAfterWrite ? watchSource(appRoot) : null;
   index.watch();
   if (!quiet) console.log(
@@ -74,6 +74,8 @@ function handle(req, res, ctx) {
   const url = new URL(req.url, 'http://localhost');
   const p = url.pathname;
 
+  if(req.method==='POST'&&['/rt/__api/op','/rt/__api/text-styles','/rt/__api/color-styles','/rt/__api/effect-styles','/rt/__api/upload'].includes(p)&&ctx.history.recoveryRequired){requireToken(req,ctx.token);return json(res,409,{ok:false,refused:true,reason:'An incomplete source operation requires recovery before editing can resume.',historyRecoveryRequired:true,historyPersistenceError:ctx.history.recoveryError||ctx.history.persistenceError});}
+
   if (p.startsWith('/rt/__assets/')) return serveAsset(p.slice('/rt/__assets/'.length), res);
   if (p === '/rt/__api/source-revision' && req.method === 'GET') {
     requireToken(req, ctx.token);
@@ -95,8 +97,8 @@ function handle(req, res, ctx) {
         const applied=library.commitPlan(ctx.appRoot,plan,(root,planned)=>ctx.history.commit(root,planned,{route:historyRoute(req)}));
         for(const edit of applied.edits)if(ctx.adapter.matches(edit.file))ctx.index.indexFile(edit.file);
         const undoId=applied.undoId;ctx.sourceMonitor?.acknowledge(applied.edits);
-        return json(res,200,{ok:true,...applied.result,undoId,historyPersistenceError:ctx.history.persistenceError,updated:applied.updated||0});
-      }catch(error){return json(res,error.statusCode||500,{ok:false,reason:error.message});}
+        return json(res,200,{ok:true,...applied.result,undoId,historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired,updated:applied.updated||0});
+      }catch(error){return json(res,error.statusCode||500,{ok:false,reason:error.message,historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired});}
     });
   }
   if (p === '/rt/__api/font-axes') {
@@ -155,7 +157,7 @@ function handle(req, res, ctx) {
     const result = ctx.adapter.describeComponent(resolved);
     const usage=require('./component-usage.cjs').usage(ctx.index,id);
     if(result.ok && usage){Object.assign(result,usage);if(usage.inlineComponent)result.canDetach=false;}
-    return json(res, result.ok ? 200 : 409, {...result,historyPersistenceError:ctx.history.persistenceError});
+    return json(res, result.ok ? 200 : 409, {...result,historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired});
   }
 
   if (p === '/rt/__api/op' && req.method === 'POST') {
@@ -172,11 +174,11 @@ function handle(req, res, ctx) {
       if (op.historyGroup !== undefined && (typeof op.historyGroup !== 'string' || op.historyGroup.length > 200)) return json(res, 400, {ok:false,error:'bad history group'});
       if (op.type === 'undo' || op.type === 'redo') {
         const result = ctx.history.apply(ctx.appRoot, op.type, op.undoId, ctx.adapter);
-        if (!result.ok) return json(res,409,result);
+        if (!result.ok) return json(res,409,{...result,historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired});
         for (const edit of result.edits) if (ctx.adapter.matches(edit.file)) ctx.index.indexFile(edit.file);
         ctx.sourceMonitor?.acknowledge(result.edits);
         delete result.edits;
-        return json(res,200,{...result,historyPersistenceError:ctx.history.persistenceError});
+        return json(res,200,{...result,historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired});
       }
       if (!/^[0-9a-f]{10}$/.test(op.id || '')) return json(res, 400, { ok: false, error: 'bad id' });
       const resolved = ctx.index.resolve(op.id);
@@ -239,9 +241,9 @@ function handle(req, res, ctx) {
         const fresh = ctx.index.resolve(op.id);
         if (fresh) { fresh.context = resolved.context; result.element = ctx.adapter.describe(fresh); }
       }
-      return json(res, result.ok ? 200 : 409, {...result,historyPersistenceError:ctx.history.persistenceError});
+      return json(res, result.ok ? 200 : 409, {...result,historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired});
       } catch (err) {
-        return json(res, 409, { ok: false, refused: true, reason: 'The source operation could not complete: ' + err.message });
+        return json(res, 409, { ok: false, refused: true, reason: 'The source operation could not complete: ' + err.message, historyPersistenceError:ctx.history.persistenceError, historyRecoveryRequired:ctx.history.recoveryRequired });
       }
     });
   }
@@ -279,7 +281,7 @@ function handle(req, res, ctx) {
     const html = fs
       .readFileSync(path.join(SHELL_DIR, 'index.html'), 'utf8')
       .replace('__RETOUCH_TOKEN__', ctx.token)
-      .replace('__RETOUCH_RENDERING__', JSON.stringify({history:ctx.history.snapshot(),historyPersistenceError:ctx.history.persistenceError,stateScope:ctx.stateScope,selectionStyling:ctx.adapter.capabilities?.ops?.some(op=>['setClassesSelection','setCSSSelection'].includes(op))===true,layerReparenting:ctx.adapter.capabilities?.ops?.includes('reparentElement')===true,reloadAfterWrite:ctx.rendering.reloadAfterWrite===true,revalidateStyles:ctx.rendering.revalidateStyles===true}).replace(/</g,'\\u003c'));
+      .replace('__RETOUCH_RENDERING__', JSON.stringify({history:ctx.history.snapshot(),historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired,stateScope:ctx.stateScope,selectionStyling:ctx.adapter.capabilities?.ops?.some(op=>['setClassesSelection','setCSSSelection'].includes(op))===true,layerReparenting:ctx.adapter.capabilities?.ops?.includes('reparentElement')===true,reloadAfterWrite:ctx.rendering.reloadAfterWrite===true,revalidateStyles:ctx.rendering.revalidateStyles===true}).replace(/</g,'\\u003c'));
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
     return res.end(html);
   }

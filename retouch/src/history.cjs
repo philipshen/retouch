@@ -6,6 +6,7 @@ const {applyPlan} = require('./transactions.cjs');
 // retain the first before-image and the last after-image for every touched file.
 class SourceHistory {
   constructor(limit = 100, {store} = {}) { this.limit=limit; this.store=store;const saved=store?.load?.();this.undo=saved?.undo||[];this.redo=saved?.redo||[];this.group=null;this.persistenceError=null; }
+  get recoveryRequired(){return !!this.pending||!!this.recoveryError;}
   persist(){try{this.store?.save({undo:this.undo,redo:this.redo,...(this.pending?{pending:this.pending}:{})});this.persistenceError=null;}catch(error){this.persistenceError=error.message;}}
   snapshot(){const entries=stack=>stack.map(entry=>({type:'sourceHistory',undoId:entry.id,route:entry.route}));return {undo:entries(this.undo),redo:entries(this.redo)};}
   record(edits, group, route) {
@@ -31,7 +32,7 @@ class SourceHistory {
   }
   commit(root,plan,{group,route}={}){
     if(!plan?.ok)return plan;
-    if(this.pending)return {ok:false,refused:true,reason:'An incomplete source operation requires recovery before more edits can be applied.'};
+    if(this.recoveryRequired)return {ok:false,refused:true,reason:'An incomplete source operation requires recovery before more edits can be applied.'};
     const edits=plan.edits.filter(edit=>edit.before!==edit.after);
     if(!edits.length)return applyPlan(root,plan);
     const entry={id:crypto.randomBytes(16).toString('hex'),edits:edits.map(edit=>({...edit})),...(typeof route==='string'&&route.startsWith('/')&&!route.startsWith('//')&&route.length<=4096?{route}:{})};
@@ -41,7 +42,7 @@ class SourceHistory {
     const undoId=this.record(result.edits,group,route);return {...result,undoId};
   }
   apply(root, type, id, adapter) {
-    if(this.pending)return {ok:false,reason:'An incomplete source restore requires recovery before more history can be applied.'};
+    if(this.recoveryRequired)return {ok:false,reason:'An incomplete source restore requires recovery before more history can be applied.'};
     const from=type==='undo'?this.undo:this.redo;
     const to=type==='undo'?this.redo:this.undo;
     const entry=from.at(-1);
