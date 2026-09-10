@@ -910,13 +910,16 @@ function screenScopeSection() {
   if (condition && RetouchResponsive.matches({condition,queries:chosen?.queries},iframe.contentWindow)===false) {
     RetouchInspector.note(section, 'This breakpoint does not match the current preview. Its conditions may include width, height or orientation.');
     const previewSize=RetouchResponsive.previewSize({condition,queries:chosen?.queries},document,{width:iframe.contentWindow.innerWidth,height:iframe.contentWindow.innerHeight});
-    if(previewSize){const preview=RetouchInspector.button('Preview this breakpoint',()=>{stopDrawing?.();preview.blur();window.RetouchScreens?.set(previewSize);});preview.id='previewBreakpoint';preview.title=`Preview at ${previewSize.width} × ${previewSize.height}. Undo preview size restores the previous screen.`;section.append(preview);}
+    if(previewSize){const preview=RetouchInspector.button('Preview this breakpoint',()=>{stopDrawing?.();preview.blur();window.RetouchScreens?.set(previewSize);});preview.id='previewBreakpoint';preview.title=`Preview at ${previewSize.width} × ${previewSize.height}. Undo preview size restores the previous screen.`;section.append(preview);
+      const compare=RetouchInspector.button('Compare this breakpoint',()=>{if(!window.RetouchComparisons?.showSize({...previewSize,label:chosen?.label||styleScope}))toast('Remove a comparison or finish the current operation first.','err');});compare.id='compareBreakpoint';compare.dataset.width=previewSize.width;compare.dataset.height=previewSize.height;compare.disabled=!window.RetouchComparisons?.canShowSize(previewSize);compare.title='Keep the main canvas size and open a matching comparison. Reuses an existing screen with the same dimensions.';section.append(compare);
+    }
   }
   if (!sel.multiple?.length && !sel.info.cssAuthoring && styleScope && RetouchResponsive.project(sel.info.className,styleScope)) {
     section.append(RetouchInspector.button('Reset overrides at this size',()=>setClasses('')));
   }
   return section;
 }
+window.addEventListener('retouch:comparisons',()=>{const button=document.getElementById('compareBreakpoint');if(button)button.disabled=!window.RetouchComparisons?.canShowSize({width:Number(button.dataset.width),height:Number(button.dataset.height)});});
 function panelInteractionFocused(){return panelBody.contains(document.activeElement)&&!document.activeElement.matches('[data-canvas-tool]');}
 let viewportRenderPending = false;
 window.addEventListener('retouch:viewport',()=>{
