@@ -42,3 +42,10 @@ test('gradient color interpolation preserves geometry, color space, and polar hu
  for(const value of ['linear-gradient(45deg in oklab, red, blue)','linear-gradient(in srgb-linear, red, blue)','radial-gradient(in oklch longer hue circle at 25% 60%, red, blue)','conic-gradient(from 45deg at 25% 60% in hsl decreasing hue, red, blue)','repeating-linear-gradient(in display-p3 90deg, red 0%, blue 20%)']){const parsed=V.parseGradients(value);assert.ok(parsed,value);assert.deepEqual(V.parseGradients(V.serializeGradients(parsed)),parsed);}
  for(const value of ['linear-gradient(red in oklab, blue)','linear-gradient(in srgb longer hue, red, blue)','linear-gradient(in unknown, red, blue)','linear-gradient(in oklab in srgb, red, blue)','linear-gradient(in oklch sideways hue, red, blue)'])assert.equal(V.parseGradients(value),null,value);
 });
+
+test('radial sizing preserves extent keywords and explicit circular or elliptical radii',()=>{
+ for(const [header,shape,size]of [['closest-side','ellipse','closest-side'],['circle farthest-corner','circle','farthest-corner'],['closest-corner circle','circle','closest-corner'],['80px','circle','80px'],['ellipse 40% 60%','ellipse','40% 60%'],['20px 50%','ellipse','20px 50%'],['circle 0','circle','0px']]){
+  const value='radial-gradient('+header+' at 25% 60%, red, blue)',parsed=V.parseGradients(value);assert.ok(parsed,value);assert.equal(parsed[0].shape,shape);assert.equal(parsed[0].size,size);assert.deepEqual(V.parseGradients(V.serializeGradients(parsed)),parsed);
+ }
+ for(const header of ['circle 20%','circle 20px 30px','ellipse 20px','ellipse circle','circle -2px','ellipse 10% 20% 30%','circle 10001px','closest-side farthest-side'])assert.equal(V.parseGradients('radial-gradient('+header+', red, blue)'),null,header);
+});

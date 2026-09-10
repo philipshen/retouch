@@ -201,8 +201,16 @@
      if(Math.abs(gradient.angle)>360||gradient.x>100||gradient.y>100)return null;
     }
    }else {
-    const radial=/^(ellipse|circle)(?: at ((?:\d*\.)?\d+)% ((?:\d*\.)?\d+)%)?$/.exec(args[0].startsWith('at ')?'ellipse '+args[0]:args[0]);
-    if(radial){gradient.shape=radial[1];gradient.x=Number(radial[2]??50);gradient.y=Number(radial[3]??50);args.shift();if(gradient.x>100||gradient.y>100)return null;}
+    const radial=/^(.+?)(?: at ((?:\d*\.)?\d+)% ((?:\d*\.)?\d+)%)?$/.exec(args[0].startsWith('at ')?'ellipse '+args[0]:args[0]);
+    if(radial){
+     const tokens=radial[1].split(/\s+/),shapes=tokens.filter(token=>['circle','ellipse'].includes(token)),sizes=tokens.filter(token=>!['circle','ellipse'].includes(token));
+     const keyword=sizes.length===1&&['closest-side','closest-corner','farthest-side','farthest-corner'].includes(sizes[0]);
+     const radii=sizes.length>0&&sizes.length<=2&&sizes.every(token=>/^(?:0|(?:\d*\.)?\d+(?:px|%))$/.test(token)&&parseFloat(token)<=10000);
+     const shape=shapes[0]||(radii&&sizes.length===1?'circle':'ellipse');
+     if(shapes.length<=1&&(keyword||!sizes.length&&shapes.length||radii&&(shape==='ellipse'?sizes.length===2:sizes.length===1&&!sizes[0].endsWith('%')))){
+      gradient.shape=shape;if(sizes.length)gradient.size=sizes.map(token=>token==='0'?'0px':token).join(' ');gradient.x=Number(radial[2]??50);gradient.y=Number(radial[3]??50);args.shift();if(gradient.x>100||gradient.y>100)return null;
+     }else if(shapes.length||tokens.some(token=>['closest-side','closest-corner','farthest-side','farthest-corner'].includes(token))||/^[\d.-]/.test(radial[1]))return null;
+    }
    }
    if(needsGeometry&&args.length===headerCount)return null;
    if(args.length<2||args.length>16)return null;
@@ -232,7 +240,7 @@
   }
   return result;
  }
- function serializeGradients(gradients){return gradients.length?gradients.map(g=>`${g.repeat?'repeating-':''}${g.type}-gradient(${g.type==='linear'?g.angle+'deg':g.type==='conic'?'from '+g.angle+'deg at '+g.x+'% '+g.y+'%':g.shape+' at '+g.x+'% '+g.y+'%'}${g.colorSpace?' in '+g.colorSpace+(g.hue?' '+g.hue+' hue':''):''}, ${g.stops.map(s=>s.color+' '+s.position+'%').join(', ')})`).join(', '):'none';}
+ function serializeGradients(gradients){return gradients.length?gradients.map(g=>`${g.repeat?'repeating-':''}${g.type}-gradient(${g.type==='linear'?g.angle+'deg':g.type==='conic'?'from '+g.angle+'deg at '+g.x+'% '+g.y+'%':g.shape+(g.size?' '+g.size:'')+' at '+g.x+'% '+g.y+'%'}${g.colorSpace?' in '+g.colorSpace+(g.hue?' '+g.hue+' hue':''):''}, ${g.stops.map(s=>s.color+' '+s.position+'%').join(', ')})`).join(', '):'none';}
  function affected(property){
   if(property==='border')return sides.flatMap(side=>['width','style','color'].map(part=>'border-'+side+'-'+part));
   if(/^border-(top|right|bottom|left)$/.test(property))return ['width','style','color'].map(part=>property+'-'+part);
