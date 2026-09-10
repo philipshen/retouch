@@ -10071,3 +10071,9 @@ Validation: Chromium (`/private/tmp/retouch-method-contract-browser-chromium.log
 A new regression reproduced incorrect acceptance of a local class capture whose name matched a module type alias: the generated contract used the unrelated alias. Type-resolution ambiguity checks now also count classes, enums, namespaces, import-equals declarations and import bindings. Such captures refuse rather than receive the wrong type.
 
 Validation: the new unit regression failed before the fix (`/private/tmp/retouch-type-shadow-before.log`); all 804 unit tests passed afterward (`/private/tmp/retouch-type-shadow-units.log`). The strict compiler suite passed 14 supported extraction scenarios and two compiler-valid class/enum shadowing examples that now refuse without changing source (`/private/tmp/retouch-type-shadow-compiler-final.log`). No browser run for this planner guard. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Preserve optional members within captured contracts
+
+Whole-object, whole-tuple and callback contracts now retain optional fields/parameters instead of refusing every optional node inside a type. Direct optional captures and optional destructuring paths retain their separate refusal checks. Method-style callbacks with optional arguments are emitted with the optional argument intact.
+
+Validation: all 805 unit tests passed (`/private/tmp/retouch-optional-contracts-units.log`). The reusable compiler suite passed 17 extraction scenarios and two valid-source shadowing refusals (`/private/tmp/retouch-optional-contracts-compiler.log`). The suite now enables exactOptionalPropertyTypes and noUncheckedIndexedAccess alongside strict mode. No browser run in this planner expansion. Full Figma parity remains incomplete; native launches remain paused.

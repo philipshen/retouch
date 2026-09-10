@@ -18,7 +18,7 @@ function renderType(node,source,resolve,budget={left:2000},depth=0){
    edits.push({start:value.start-node.start,end:value.end-node.start,text:'('+text+')'});return;
   }
   if(value.type==='TSTypeOperator'&&(value.operator!=='readonly'||!['TSArrayType','TSTupleType'].includes(value.typeAnnotation.type))){valid=false;return;}
-  if(value.type?.startsWith('TS')&&!allowed.has(value.type)||value.computed||value.optional){valid=false;return;}
+  if(value.type?.startsWith('TS')&&!allowed.has(value.type)||value.computed||value.optional&&!['TSPropertySignature','TSMethodSignature','Identifier','TSNamedTupleMember'].includes(value.type)){valid=false;return;}
   for(const [key,child]of Object.entries(value))if(!['loc','leadingComments','trailingComments','innerComments','extra'].includes(key))inspect(child);
  }
  inspect(node);if(!valid)return null;

@@ -258,3 +258,11 @@ test('typed extraction does not substitute module aliases for shadowing local cl
   'type Value=string;function Page(){enum Value{First}const value:Value=Value.First;return <article>{value.toFixed()}</article>}',
  ]){const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false,'A local type must not resolve to the module alias');assert.match(result.reason,/explicit type/);assert.equal(fs.readFileSync(f.selected.file,'utf8'),source);}finally{f.close();}}
 });
+
+test('typed whole-value extraction preserves optional members and callback parameters',()=>{
+ for(const [source,expected]of [
+  ['interface Props{title?:string}function Page(data:Props){return <article title={data.title??"Hi"}>Hi</article>}','"data": ({title?:string})'],
+  ['type Label=string;interface Props{onSelect(value?:Label):void}function Page({onSelect}:Props){return <article onClick={()=>onSelect()}>Hi</article>}','"onSelect": ((value?:(string))=>void)'],
+  ['function Page(data:[title?:string]){return <article title={data[0]??"Hi"}>Hi</article>}','"data": ([title?:string])'],
+ ]){const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);assert.ok(result.edits[0].after.includes(expected));}finally{f.close();}}
+});

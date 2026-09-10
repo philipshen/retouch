@@ -7,6 +7,9 @@ const ts=require(path.join(fixture,'node_modules/typescript'));
 const {makeApp,cleanup,Index}=require('../helpers.cjs'),create=require('../../src/create-component.cjs');
 const jsx='declare namespace JSX {interface ElementChildrenAttribute {children:{}} interface IntrinsicElements {article:{title?:string;onClick?:()=>void;children?:unknown}}}\n';
 const cases=[
+ ['optional object member','interface Props{title?:string}function Page(data:Props){return <article title={data.title??"Hi"}>Hi</article>}'],
+ ['optional method argument','type Label=string;interface Props{onSelect(value?:Label):void}function Page({onSelect}:Props){return <article onClick={()=>onSelect()}>Hi</article>}'],
+ ['optional whole tuple','function Page(data:[title?:string]){return <article title={data[0]??"Hi"}>Hi</article>}'],
  ['method prop','type Label=string;interface Base{onSelect(value:Label):void}interface Props extends Base{}function Page({onSelect}:Props){return <article onClick={()=>onSelect("Hi")}>Hi</article>}'],
  ['inline props','function Page({title,count}:{title:string;count:number}){return <article title={title}>{count+1}</article>}'],
  ['local callback','function Page(){const title:string="Hi",onClick:()=>void=()=>{};return <article title={title} onClick={onClick}>Hi</article>}'],
@@ -27,7 +30,7 @@ const refusedCases=[
  ['enum shadows alias','type Value=string;function Page(){enum Value{First}const value:Value=Value.First;return <article>{value.toFixed()}</article>}',true],
 ];
 function check(file,label){
- const program=ts.createProgram([file],{strict:true,noEmit:true,jsx:ts.JsxEmit.Preserve,types:[],skipLibCheck:true});
+ const program=ts.createProgram([file],{strict:true,exactOptionalPropertyTypes:true,noUncheckedIndexedAccess:true,noEmit:true,jsx:ts.JsxEmit.Preserve,types:[],skipLibCheck:true});
  const diagnostics=ts.getPreEmitDiagnostics(program);
  assert.equal(diagnostics.length,0,label+'\n'+ts.formatDiagnosticsWithColorAndContext(diagnostics,{getCanonicalFileName:file=>file,getCurrentDirectory:()=>path.dirname(file),getNewLine:()=> '\n'}));
 }
