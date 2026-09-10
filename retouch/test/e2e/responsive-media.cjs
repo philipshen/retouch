@@ -27,6 +27,8 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    {choice:{condition:'(aspect-ratio: 0.75)'},current:{width:390,height:844},expected:{width:633,height:844}},
    {choice:{condition:'(4/3 < aspect-ratio < 16/9) and (min-width: 700px) and (min-height: 500px)'},current:{width:390,height:844}},
    {choice:{condition:'(aspect-ratio: 3/4) and (600px <= width <= 620px)'},current:{width:390,height:844},expected:{width:618,height:824}},
+   ...['8in','576pt','48pc','20.32cm','203.2mm','812.8q','8IN'].map(length=>({choice:{condition:`(min-width:${length})`},current:{width:390,height:844},expected:{width:768,height:844}})),
+   {choice:{condition:'(max-height:450pt)'},current:{width:390,height:844},expected:{width:390,height:600}},
    {choice:{condition:'print and (min-width: 600px)'},current:{width:390,height:844},expected:null},
    {choice:{condition:'(min-width: 9000px)'},current:{width:390,height:844},expected:null}
   ];

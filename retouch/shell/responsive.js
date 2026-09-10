@@ -103,6 +103,7 @@
     try{
       const w=probe.contentWindow;if(!w)return null;
       const initial=parseFloat(w.getComputedStyle(w.document.documentElement).fontSize)||16;
+      const unitPixels={px:1,em:initial,rem:initial,in:96,cm:96/2.54,mm:96/25.4,q:96/101.6,pt:96/72,pc:16};
       const widths=new Set([current.width,240,7680]),heights=new Set([current.height,240,7680]),ratios=[];
       const add=(set,value)=>{for(const n of [Math.floor(value)-1,Math.floor(value),Math.ceil(value),Math.ceil(value)+1])if(n>=240&&n<=7680)set.add(n);};
       for(const query of groups.flat())for(const part of query.matchAll(/\(([^()]*)\)/g)){
@@ -114,7 +115,7 @@
           ratios.push({numerator:numerator/x,denominator:denominator/x});
         }
         const axes=part[1].match(/(?:min-|max-)?(width|height)\b/g)||[];
-        for(const value of part[1].matchAll(/(\d+(?:\.\d+)?)(px|rem|em)\b/g))for(const axis of axes)add(axis.endsWith('width')?widths:heights,Number(value[1])*(value[2]==='px'?1:initial));
+        for(const value of part[1].matchAll(/(\d+(?:\.\d+)?)(px|rem|em|in|cm|mm|q|pt|pc)\b/gi))for(const axis of axes)add(axis.endsWith('width')?widths:heights,Number(value[1])*unitPixels[value[2].toLowerCase()]);
       }
       // Orientation can require crossing the other dimension without an
       // explicit numerical boundary in the query.
