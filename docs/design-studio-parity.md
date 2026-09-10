@@ -9927,3 +9927,9 @@ Validation: 785 unit tests passed (`/private/tmp/retouch-property-filter-units.l
 Audited the remaining detach path: it appends an import and renames one usage, preserving existing usage-file IDs in the tested case. The planner now explicitly checks the complete ordered ID/kind sequence before creating files, so a future detach transformation cannot silently invalidate existing selection and lock references. Added coverage for JSX-valued props, authored children, nested component usages and following siblings, plus detached-definition resolution.
 
 Validation: all 786 unit tests passed (`/private/tmp/retouch-detach-identity-units.log`). This is planner/index coverage; live detach lock behavior and definition-scope lock transfer are not established by this test. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Live React detachment verification after identity guard
+
+Both Chromium and WebKit completed the configured page-fonts component flow with ROOT_DETACH enabled. The browser checks exercise independent-module creation, unchanged shared source, changed rendered definition root, exact source/module removal on Undo, module/root restoration on Redo, and final Undo. Property editing checks completed afterward in both engines.
+
+Evidence: `/private/tmp/retouch-detach-browser-chromium.log` and `/private/tmp/retouch-detach-browser-webkit.log`, both terminal exit 0. Flags: React renderer, component property edit/choices/library, unused components, root detach. These runs establish the live detach/history path after the identity invariant change; they do not assert lock transfer from shared definition layers or every component shape. No production changes in this verification stage. Full Figma parity remains incomplete, and native launches remain paused.
