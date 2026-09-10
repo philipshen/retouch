@@ -27,7 +27,17 @@ test('React project planner refreshes each paint link and refuses malformed unin
 });
 test('explicit linked paint classes keep ordinary utilities and refuse important shorthand ownership',()=>{
  assert.equal(classes.compose('text-lg/7 border-2 bg-cover','color','#abc'),'text-lg/7 border-2 bg-cover ![color:#abc]');
- for(const [property,token]of [['color','!text-red-500'],['background-color','!bg-red-500'],['border-color','!border-2'],['color','![all:unset]']])assert.throws(()=>classes.compose(token,property,'#fff'),/important/);
+ for(const [property,token]of [['color','!text-red-500'],['background-color','!bg-red-500'],['border-color','![border:2px_solid_red]'],['color','![all:unset]']])assert.throws(()=>classes.compose(token,property,'#fff'),/important/);
  assert.equal(classes.overridden('![color:#abc] text-red-500','color','#abc'),false);assert.equal(classes.overridden('![color:#abc] !text-red-500','color','#abc'),true);
  assert.equal(classes.compose('md:!bg-red-500','background-color','#fff'),'md:!bg-red-500 ![background-color:#fff]');
+});
+
+test('important geometry and background image utilities neither block paint nor create false overrides',()=>{
+ const cases={
+  'border-color':['!border-2','border-x-4!','!border-solid','![border-width:2px]','![border-radius:4px]','![border-image:url(x)]','!border-[length:var(--stroke)]','!border-(length:--stroke)'],
+  'background-color':['!bg-cover','!bg-none','!bg-center','!bg-no-repeat','!bg-clip-text','!bg-blend-multiply','!bg-linear-to-r','!bg-[url(image.png)]','!bg-[position:10%_20%]','!bg-(image:--picture)','![background-image:url(x)]'],
+  'color':['!text-lg/7','!text-center','!text-balance']
+ };
+ for(const [property,values]of Object.entries(cases))for(const token of values){const composed=classes.compose(token,property,'#1234');assert.ok(composed.split(' ').includes(token),token);assert.equal(classes.overridden(composed,property,'#1234'),false,token);}
+ for(const [property,token]of [['border-color','![border-inline:2px_solid_red]'],['border-color','!border-t-red-500'],['background-color','![background:red]'],['background-color','!bg-(--unknown)']])assert.throws(()=>classes.compose(token,property,'#fff'),/important/);
 });

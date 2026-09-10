@@ -6290,3 +6290,24 @@ saved alpha color, and undo both edits to exact source; existing palette flows
 also pass. Text and border use the same endpoint but do not yet have separate
 live editor override/reset coverage. Wide-gamut editing, Liquid links and full
 renderer parity remain incomplete. Native app launches remain paused.
+
+### Linked paint alongside important geometry/image utilities (2026-09-09)
+
+Refined paint ownership classification so recognized important font-size/alignment,
+border width/style/spacing/radius/image, and background image/size/position/repeat/
+compositing utilities can coexist with explicit linked color properties. These
+utilities are retained and no longer create false local-color override flags.
+Logical/physical border paint shorthands, background shorthands, all-property
+resets and ambiguous important color utilities still refuse composition. This
+avoids deleting unrelated geometry or silently choosing an uncertain cascade.
+
+All 472 tests passed, exit 0: /private/tmp/retouch-paint-important-units.log.
+Source tests exercise retained important utilities, override classification and
+continued refusal for overlapping/ambiguous properties. Tailwind-rendered paint
+checks passed in Chromium and WebKit, exit 0:
+/private/tmp/retouch-paint-important-chromium.log and
+/private/tmp/retouch-paint-important-webkit.log. They verify explicit alpha paint,
+18px typography, 2px border width, cover sizing and a retained background image,
+plus exact phone paint restoration across viewport changes. Named important
+color-utility replacement, broader CSS cascade ownership, Liquid links and full
+Figma parity remain unfinished. Native app launches remain paused.

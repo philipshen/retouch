@@ -7,10 +7,23 @@ function encode(property,value){
  return '!['+property+':'+value+']';
 }
 function related(plain,property){
- if(/^\[(?:all):/.test(plain))return true;
+ if(/^\[all:/.test(plain))return true;
  if(property==='color')return /^\[color:/.test(plain)||/^text-/.test(plain)&&!inspector.fontSizeToken(plain)&&!inspector.textAlignToken(plain)&&!/^text-(?:wrap|nowrap|balance|pretty|ellipsis|clip)$/.test(plain);
- if(property==='background-color')return /^\[background(?:-color)?:/.test(plain)||/^bg-/.test(plain);
- return /^\[border(?:-[a-z]+)*:/.test(plain)||/^border(?:-|$)/.test(plain);
+ if(property==='background-color'){
+  if(/^\[background(?:-color)?:/.test(plain))return true;
+  if(!/^bg-/.test(plain))return false;
+  // These utilities own image placement/compositing, never background-color.
+  if(/^bg-(?:none|auto|cover|contain|fixed|local|scroll|repeat|repeat-x|repeat-y|repeat-space|repeat-round|no-repeat|center|top|bottom|left|right|left-top|left-bottom|right-top|right-bottom)$/.test(plain))return false;
+  if(/^bg-(?:clip|origin)-(?:border|padding|content|text)$/.test(plain)||/^bg-blend-/.test(plain)||/^bg-(?:gradient-to-|linear-|radial|conic)/.test(plain))return false;
+  if(/^bg-\[(?:url\(|image:|length:|size:|position:|(?:repeating-)?(?:linear|radial|conic)-gradient\()/.test(plain)||/^bg-\((?:image|length|size|position):/.test(plain))return false;
+  return true;
+ }
+ const declaration=/^\[([a-z-]+):/.exec(plain)?.[1];
+ if(declaration)return /^border(?:-(?:top|right|bottom|left|inline|block|inline-start|inline-end|block-start|block-end))?(?:-color)?$/.test(declaration);
+ if(!/^border(?:-|$)/.test(plain))return false;
+ if(/^border(?:-[trblxyse])?(?:-(?:\d+(?:\.\d+)?|\[(?:length:[^\]]+|[-.\d][^\]]*)\]|\(length:[^)]+\)))?$/.test(plain))return false;
+ if(/^border(?:-[trblxyse])?-(?:solid|dashed|dotted|double|hidden|none)$/.test(plain)||/^border-(?:collapse|separate)$/.test(plain)||/^border-spacing-/.test(plain))return false;
+ return true;
 }
 function own(plain,property){return plain.startsWith('['+property+':');}
 function compose(className,property,value,scope=''){
