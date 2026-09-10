@@ -88,7 +88,7 @@ function describe(resolved,language) {
     if(index<0) throw Error('The source element could not be located.');
     let canDuplicate=duplicateAllowed(resolved.source,items[index],language);
     if(canDuplicate&&language==='html')try{require('./html-css.cjs').clone(resolved,items[index]);}catch{canDuplicate=false;}
-    return {...(language==='html'?{canReparent:true}:{}),parentId:items.parentId,canPaste:true,canDuplicate,canDelete:true,canMoveBefore:index>0,canMoveAfter:index<items.length-1,reason:null};
+    return {...(language==='html'?{canReparent:true}:{}),parentId:items.parentId,canPaste:true,canDuplicate,canDelete:true,canMoveBefore:index>0,canMoveAfter:index<items.length-1,canMoveFirst:index>0,canMoveLast:index<items.length-1,reason:null};
   } catch(error) {return {...(language==='html'?{canReparent:false}:{}),parentId:null,canPaste:false,canDuplicate:false,canDelete:false,canMoveBefore:false,canMoveAfter:false,reason:error.message};}
 }
 function planOp(resolved,op,language) {
@@ -96,8 +96,8 @@ function planOp(resolved,op,language) {
   try {
     const items=ranges(resolved,language),index=items.findIndex(r=>r.selected),source=resolved.source;
     if(index<0) throw Error('The source element could not be located.');
-    const node=items[index],chunk=source.slice(node.start,node.end);
-    let next,createdId;
+    const node=items[index];
+    let next,createdId,movedId,sourceIdMap;
     if(op.type==='duplicateElement'||op.type==='pasteElement') {
       let copied=node;
       if(op.type==='pasteElement') {
@@ -122,13 +122,16 @@ function planOp(resolved,op,language) {
     } else if(op.type==='moveElement') {
       const to=op.direction==='before'?index-1:op.direction==='after'?index+1:op.direction==='first'?0:op.direction==='last'?items.length-1:-1;
       if(to<0||to>=items.length||to===index) throw Error('There is no sibling in that direction.');
-      const chunks=items.map(r=>source.slice(r.start,r.end));
-      chunks.splice(index,1);chunks.splice(to,0,chunk);
+      const order=items.map((_,i)=>i);order.splice(index,1);order.splice(to,0,index);
+      const chunks=order.map(i=>source.slice(items[i].start,items[i].end)),positions=[];
       next=source.slice(0,items[0].start);
-      items.forEach((r,i)=>{next+=chunks[i]+source.slice(r.end,items[i+1]?.start??source.length);});
+      items.forEach((r,i)=>{positions.push({range:items[order[i]],start:next.length});next+=chunks[i]+source.slice(r.end,items[i+1]?.start??source.length);});
+      const adapter=require('./adapters/'+language+'.cjs'),elements=adapter.collect(next,resolved.relPath).elements,start=element=>language==='react'?element.node.start:language==='html'?element.location.startOffset:element.tagStart,mapped=new Set();sourceIdMap=[];
+      for(const element of resolved.elements){const before=start(element),position=positions.find(item=>before>=item.range.start&&before<item.range.end),after=position?position.start+before-position.range.start:before,target=elements.find(item=>item.kind===element.kind&&start(item)===after);if(!target||mapped.has(target.id))throw Error('The reordered layers could not be mapped back to source.');mapped.add(target.id);if(target.id!==element.id)sourceIdMap.push([element.id,target.id]);if(element.id===resolved.element.id)movedId=target.id;}
+      if(!movedId||mapped.size!==elements.length)throw Error('Reordering changed the source layer identities.');
     } else throw Error('Unknown structural operation.');
     if(language==='react') parseSource(next);
-    return {ok:true,hash:contentHash(next),structural:true,parentId:items.parentId,...(createdId?{createdId}:{}),edits:[{file:resolved.file,before:source,after:next}]};
+    return {ok:true,hash:contentHash(next),structural:true,parentId:items.parentId,...(createdId?{createdId}:{}),...(movedId?{movedId,sourceIdMap}:{}),edits:[{file:resolved.file,before:source,after:next}]};
   } catch(error) {return refuse(error.message);}
 }
 module.exports={types,describe,planOp,htmlRange};

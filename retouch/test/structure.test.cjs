@@ -65,3 +65,7 @@ for(const adapter of [react,liquid,html])test(adapter.name+' identifies duplicat
   const siblings=elements.filter(element=>['a','b','i'].includes(element.node?.openingElement?.name.name||element.tag));assert.equal(siblings[2].id,created.id);
  }
 });
+for(const adapter of [react,liquid,html])test(adapter.name+' maps every reordered layer including descendants',()=>{
+ const markup='<div><a>A</a><b><span>Longer content</span></b><i>I</i></div>',source=adapter===react?'function View(){return '+markup+'}':markup,resolved=target(adapter,source);
+ for(const direction of ['before','after','first','last']){const plan=adapter.planOp(resolved,{type:'moveElement',direction,fileHash:resolved.hash});assert.equal(plan.ok,true,plan.reason);const elements=adapter.collect(plan.edits[0].after,resolved.relPath).elements,mapping=new Map(plan.sourceIdMap);assert.equal(mapping.get(resolved.element.id),plan.movedId);assert.deepEqual(resolved.elements.map(element=>mapping.get(element.id)||element.id).sort(),elements.map(element=>element.id).sort());for(const element of resolved.elements){const next=elements.find(item=>item.id===(mapping.get(element.id)||element.id));assert.equal(next.node?.openingElement?.name.name||next.tag,element.node?.openingElement?.name.name||element.tag);}}
+});

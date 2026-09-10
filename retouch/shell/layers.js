@@ -188,7 +188,7 @@
       actionButtons.deleteElement.disabled=busy||!(info?.kind==='instance'?info.canDeleteComponent:s?.canDelete);
       actionButtons.before.textContent=info?.svgMovement?'Send backward':info?.kind==='instance'?'Move component up':'Move layer up';actionButtons.after.textContent=info?.svgMovement?'Bring forward':info?.kind==='instance'?'Move component down':'Move layer down';
       const movement=info?.kind==='instance'?info.componentMovement:s;
-      for(const [action,cap] of [['first','canMoveFirst'],['last','canMoveLast']]){actionButtons[action].hidden=!info?.svgMovement&&info?.kind!=='instance';actionButtons[action].disabled=busy||!movement?.[cap];}
+      for(const [action,cap] of [['first','canMoveFirst'],['last','canMoveLast']]){actionButtons[action].hidden=!info?.svgMovement&&info?.kind!=='instance'&&typeof s?.canMoveFirst!=='boolean';actionButtons[action].disabled=busy||!movement?.[cap];}
       actionButtons.before.disabled=busy||!movement?.canMoveBefore;
       actionButtons.after.disabled=busy||!movement?.canMoveAfter;
       if(selectedSet.size>1){for(const button of Object.values(actionButtons))button.disabled=true;if(!info?.cssAuthoring){reason.textContent=selectedSet.size+' source layers selected. Shared styles apply together.';return;}actionButtons.duplicateElement.disabled=busy;actionButtons.deleteElement.disabled=busy;actionButtons.reparentElement.disabled=busy;actionButtons.frameSelection.disabled=busy||!s?.canFrame;reason.textContent=selectedSet.size+' layers selected. Frame, move, duplicate and delete apply to the selection.';return;}

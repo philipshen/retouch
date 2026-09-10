@@ -2205,6 +2205,7 @@ async function restoreHistory(direction,op) {
     await showHistoryPage(op.route);
     if(['insertComponent','swapComponent'].includes(op.type)){const parentId=direction==='redo'?op.id:op.previousParentId,parent=parentId?await api('GET',resolveUrl(parentId)):null;if(op.type==='swapComponent')await refreshSwappedComponent(direction==='redo'?op.instanceId:op.previousInstanceId,parentId);else if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else await reloadFrame();if(direction==='redo')await selectInsertedComponent(op.instanceId,op.id);else if(op.type==='swapComponent')await selectInsertedComponent(op.previousInstanceId,op.previousParentId);else if(parent?.ok){sel={hostId:parentId,instanceId:null,scope:'host',info:parent.element};renderPanel();}else clearSelection();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='moveComponent'){layerLocks.remap(op.sourceIdMap,direction);const id=direction==='undo'?op.previousInstanceId:op.id;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);layers.refresh();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.sourceIdMap)layerLocks.remap(op.sourceIdMap,direction);
     if(op.type==='renameComponent'){await refreshSwappedComponent(op.id,null);await selectInsertedComponent(op.id,null);layers.refresh();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='deleteComponent'){if(direction==='undo'){await refreshSwappedComponent(op.id,null);await selectInsertedComponent(op.id,op.parentId);}else{await refreshDeletedComponent(op.id,op.parentId);clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
@@ -2534,23 +2535,24 @@ async function structureAction(action) {
     expected.splice(at+1,0,layerClipboard.signature);
   }else if(action==='duplicateElement')expected.splice(at+1,0,expected[at]);
   else if(action==='deleteElement')expected.splice(at,1);
-  else if(action==='before'||action==='after') {
-    const to=at+(action==='before'?-1:1);
+  else if(['before','after','first','last'].includes(action)) {
+    const to=action==='first'?0:action==='last'?expected.length-1:at+(action==='before'?-1:1);
     if(to<0||to>=expected.length)return;
     const item=expected.splice(at,1)[0];expected.splice(to,0,item);
   } else return;
   busyPanel(true);
   try {
-    const result=await api('POST','/rt/__api/op',{type:action==='before'||action==='after'?'moveElement':action,direction:action,id:info.id,fileHash:info.fileHash||info.hash,context:info.context,...(action==='pasteElement'?{copiedId:layerClipboard.id,copiedHash:layerClipboard.hash}:{})});
+    const result=await api('POST','/rt/__api/op',{type:['before','after','first','last'].includes(action)?'moveElement':action,direction:action,id:info.id,fileHash:info.fileHash||info.hash,context:info.context,...(action==='pasteElement'?{copiedId:layerClipboard.id,copiedHash:layerClipboard.hash}:{})});
     if(!result?.ok){toast(result?.reason||result?.error||'Could not change this layer','err');return;}
     const parentId=result.parentId||info.structure?.parentId;
-    const selectionAfter=result.createdId||(action==='deleteElement'?parentId:null);
-    editorHistory.record({type:selectionAfter?'structureSelection':'structure',id:parentId||info.id,undoId:result.undoId,context:info.context,...(selectionAfter?{selectionBefore:[info.id],selectionAfter:[selectionAfter]}:{})});
+    const selectionAfter=result.createdId||result.movedId||(action==='deleteElement'?parentId:null);
+    editorHistory.record({type:selectionAfter?'structureSelection':'structure',id:parentId||info.id,undoId:result.undoId,context:info.context,...(result.sourceIdMap?{sourceIdMap:result.sourceIdMap}:{}),...(selectionAfter?{selectionBefore:[info.id],selectionAfter:[selectionAfter]}:{})});
+    if(result.sourceIdMap)layerLocks.remap(result.sourceIdMap);
     const fresh=parentId?await api('GET',resolveUrl(parentId,info.context)):null;
     if(fresh?.ok) {
       await refreshWrittenElement(fresh.element,el=>JSON.stringify([...el.children].map(signature))===JSON.stringify(expected));
-      sel={hostId:parentId,instanceId:null,scope:'host',info:fresh.element};if(result.createdId)await restoreLayerSelection([result.createdId]);renderPanel();
-    } else {await reloadFrame();clearSelection();if(result.createdId){await restoreLayerSelection([result.createdId]);if(sel)renderPanel();}}
+      sel={hostId:parentId,instanceId:null,scope:'host',info:fresh.element};if(result.createdId||result.movedId)await restoreLayerSelection([result.createdId||result.movedId]);renderPanel();
+    } else {await reloadFrame();clearSelection();if(result.createdId||result.movedId){await restoreLayerSelection([result.createdId||result.movedId]);if(sel)renderPanel();}}
     toast('Layer updated','ok');
   } finally {busyPanel(false);}
 }

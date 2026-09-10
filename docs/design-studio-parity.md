@@ -9797,3 +9797,31 @@ not been exercised against live Liquid/Shopify or every React rendering pattern.
 Selection identity through arbitrary runtime occurrences and every structural
 operation remains incomplete. Full Figma parity and trusted brew installation
 remain unfinished; native app launches remain paused.
+
+### Preserve host selection and locks through sibling ordering (2026-09-10)
+
+Literal host reordering now returns the moved layer's ID and a complete source-ID
+mapping, including nested descendants, across React, Liquid and HTML. The planner
+verifies a one-to-one mapping with unchanged element count. The shell keeps the
+moved layer selected and remaps stored locks before rendering and in both history
+directions. The first/last sibling operations already supported by the planner
+are now exposed as Send to back / Bring to front for supported host layers.
+These operations change source sibling order; CSS still determines visual layout
+and stacking behavior.
+
+All 764 unit tests passed, including all four directions and descendant mappings
+in each adapter. Chromium and WebKit passed all four host ordering controls with
+a locked sibling, retained moved-layer selection, inverse/forward lock mappings,
+exact source restoration and subsequent full Actions editing flows. Both final
+browser processes exited zero without page errors. Evidence:
+/private/tmp/retouch-host-order-units-final.log,
+/private/tmp/retouch-host-order-chromium-final.log,
+/private/tmp/retouch-host-order-webkit-final.log.
+Initial browser runs identified missing host first/last controls, which were
+implemented; lock-history cleanup was adjusted to reselect after its established
+selection-clearing behavior. Syntax and diff checks passed.
+
+Browser proof here is for HTML. React/Liquid mappings are covered by unit tests;
+live Shopify and arbitrary runtime occurrences remain unverified. Full Figma
+parity, comprehensive structural identity and trusted brew installation remain
+unfinished. Native launches remain paused.
