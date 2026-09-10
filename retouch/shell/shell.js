@@ -1232,10 +1232,11 @@ function propTable(props,instanceId,fileHash) {
   for(const prop of props){
     const row=document.createElement('tr'),name=document.createElement('td'),value=document.createElement('td'),fallback=document.createElement('td');name.textContent=prop.name;fallback.textContent=prop.default;
     if(instanceId&&prop.editor?.editable){
-      const input=document.createElement('input'),meta=prop.editor;input.setAttribute('aria-label','Component property '+prop.name);input.type=meta.type==='boolean'?'checkbox':meta.type==='number'?'number':'text';
+      const meta=prop.editor,input=document.createElement(meta.type==='string'?'textarea':'input');input.setAttribute('aria-label','Component property '+prop.name);if(meta.type!=='string')input.type=meta.type==='boolean'?'checkbox':'number';
+      if(meta.type==='string'){const resize=()=>{input.rows=Math.min(5,Math.max(1,input.value.split('\n').length));};input.title='Enter adds a line. Command/Ctrl+Enter saves. Escape cancels.';input.addEventListener('input',resize);input.rows=Math.min(5,Math.max(1,String(meta.value).split('\n').length));}
       if(meta.type==='boolean')input.checked=meta.value;else input.value=String(meta.value);if(meta.type==='number')input.step='any';
       input.addEventListener('change',()=>{if(!input.reportValidity()||meta.type==='number'&&input.value==='')return;const next=meta.type==='boolean'?input.checked:meta.type==='number'?Number(input.value):input.value;if(next!==meta.value)setComponentProperty(instanceId,prop.name,next,fileHash);});
-      input.addEventListener('keydown',event=>{if(event.key==='Enter'){input.blur();}if(event.key==='Escape'){if(meta.type==='boolean')input.checked=meta.value;else input.value=String(meta.value);input.blur();}});value.append(input);
+      input.addEventListener('keydown',event=>{if(event.isComposing)return;if(event.key==='Enter'&&(meta.type!=='string'||event.metaKey||event.ctrlKey)){event.preventDefault();event.stopPropagation();input.blur();}if(event.key==='Escape'){event.preventDefault();event.stopPropagation();if(meta.type==='boolean')input.checked=meta.value;else input.value=String(meta.value);if(meta.type==='string')input.rows=Math.min(5,Math.max(1,input.value.split('\n').length));input.blur();}});value.append(input);
     }else{value.textContent=prop.value;value.title=prop.editor?.reason||'';}
     row.append(name,value,fallback);body.append(row);
   }

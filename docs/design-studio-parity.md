@@ -7975,3 +7975,17 @@ from overwriting a changed source file. Typed source history restores selection.
 exact Undo/Redo; both engines verify a duplicated instance can change its
 own property without changing its sibling or shared definition. Screenshot review
 confirmed controls fit the inspector. Native app launches remain paused.
+
+
+## Multiline instance text properties (2026-09-10)
+
+Literal string props now use compact text areas that expand up to five text rows,
+with manual vertical resizing. Enter inserts a newline; Command/Ctrl+Enter or blur
+commits the source edit. Escape restores the value and original row count without
+writing. Composition key events do not trigger premature commits. This preserves
+multiline string content through the existing JSON-expression source writer.
+
+615 unit tests passed. The browser property flow now exercises newline entry,
+Escape cancellation, both commit shortcuts, exact source Undo/Redo, and sibling
+instance isolation. Full component property/variant parity remains incomplete.
+Native launches remain paused.
