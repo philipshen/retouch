@@ -22,20 +22,27 @@ const cases=[
  ['readonly tuple','function Page(){const values:readonly [string,number]=["Hi",2];return <article title={values[0]}>{values[1]+1}</article>}'],
  ['readonly destructuring','function Page(){const [title,count]:readonly [string,number]=["Hi",2];return <article title={title}>{count+1}</article>}'],
 ];
+const refusedCases=[
+ ['class shadows alias','type Value=string;function Page(){class Value{label="Hi"}const value:Value=new Value();return <article>{value.label}</article>}',true],
+ ['enum shadows alias','type Value=string;function Page(){enum Value{First}const value:Value=Value.First;return <article>{value.toFixed()}</article>}',true],
+];
 function check(file,label){
  const program=ts.createProgram([file],{strict:true,noEmit:true,jsx:ts.JsxEmit.Preserve,types:[],skipLibCheck:true});
  const diagnostics=ts.getPreEmitDiagnostics(program);
  assert.equal(diagnostics.length,0,label+'\n'+ts.formatDiagnosticsWithColorAndContext(diagnostics,{getCanonicalFileName:file=>file,getCurrentDirectory:()=>path.dirname(file),getNewLine:()=> '\n'}));
 }
-for(const [name,body]of cases){
+for(const [name,body,refused]of [...cases,...refusedCases]){
  const root=makeApp({'page.tsx':jsx+body});let index;
  try{
   index=new Index(root);index.scanAll();
   const resolved=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(result=>result.element.node.openingElement.name.name==='article');
   check(resolved.file,name+' before extraction');
-  const plan=create.plan(resolved,{name:'ExtractedCard',fileHash:resolved.hash});assert.ok(plan.ok,name+': '+plan.reason);
+  const plan=create.plan(resolved,{name:'ExtractedCard',fileHash:resolved.hash});
+  if(refused){assert.equal(plan.ok,false,name);assert.equal(fs.readFileSync(resolved.file,'utf8'),jsx+body);console.log('PASS refusal',name);continue;}
+  assert.ok(plan.ok,name+': '+plan.reason);
   fs.writeFileSync(resolved.file,plan.edits[0].after);check(resolved.file,name+' after extraction');
   console.log('PASS',name);
  }finally{index?.close();cleanup(root);}
 }
+console.log('PASS',refusedCases.length,'compiler-valid shadowing refusals');
 console.log('PASS',cases.length,'strict TypeScript extraction scenarios with typed JSX attributes; compiler',ts.version);

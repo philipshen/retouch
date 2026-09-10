@@ -10065,3 +10065,9 @@ Validation: all 803 unit tests passed (`/private/tmp/retouch-method-captures-uni
 Added a browser fixture whose captured callback is destructured from a method-style interface. The flow verifies its callable output annotation and actual React state update after extraction, alongside whole-object inherited aliases, definition edits, appearance and exact source Undo/Redo.
 
 Validation: Chromium (`/private/tmp/retouch-method-contract-browser-chromium.log`) and WebKit (`/private/tmp/retouch-method-contract-browser-webkit.log`) both exited 0. No production code changed in this verification stage. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Prevent incorrect module-alias resolution across local type shadows
+
+A new regression reproduced incorrect acceptance of a local class capture whose name matched a module type alias: the generated contract used the unrelated alias. Type-resolution ambiguity checks now also count classes, enums, namespaces, import-equals declarations and import bindings. Such captures refuse rather than receive the wrong type.
+
+Validation: the new unit regression failed before the fix (`/private/tmp/retouch-type-shadow-before.log`); all 804 unit tests passed afterward (`/private/tmp/retouch-type-shadow-units.log`). The strict compiler suite passed 14 supported extraction scenarios and two compiler-valid class/enum shadowing examples that now refuse without changing source (`/private/tmp/retouch-type-shadow-compiler-final.log`). No browser run for this planner guard. Full Figma parity remains incomplete; native launches remain paused.

@@ -62,6 +62,8 @@ function typeResolver(binding,source){
   program.traverse({
    'TSTypeAliasDeclaration|TSInterfaceDeclaration'(path){const name=path.node.id.name;counts.set(name,(counts.get(name)||0)+1);},
    TSTypeParameter(path){const name=path.node.name;counts.set(name,(counts.get(name)||0)+1);},
+   'ClassDeclaration|ClassExpression|TSEnumDeclaration|TSModuleDeclaration|TSImportEqualsDeclaration'(path){const name=path.node.id?.name;if(name)counts.set(name,(counts.get(name)||0)+1);},
+   'ImportSpecifier|ImportDefaultSpecifier|ImportNamespaceSpecifier'(path){const name=path.node.local.name;counts.set(name,(counts.get(name)||0)+1);},
   });
   for(const statement of program.node.body){const node=statement.type==='ExportNamedDeclaration'?statement.declaration:statement;if(node&&['TSTypeAliasDeclaration','TSInterfaceDeclaration'].includes(node.type))declarations.set(node.id.name,node);}
  }

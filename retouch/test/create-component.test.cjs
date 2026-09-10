@@ -251,3 +251,10 @@ test('typed extraction converts destructured method signatures to callable props
 test('typed extraction does not treat optional methods or accessors as required callables',()=>{
  for(const member of ['onSelect?(value:string):void','get onSelect():string']){const f=fixture('interface Props{'+member+'}function Page({onSelect}:Props){return <article>{String(onSelect)}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);}finally{f.close();}}
 });
+
+test('typed extraction does not substitute module aliases for shadowing local classes or enums',()=>{
+ for(const source of [
+  'type Value=string;function Page(){class Value{label="Hi"}const value:Value=new Value();return <article>{value.label}</article>}',
+  'type Value=string;function Page(){enum Value{First}const value:Value=Value.First;return <article>{value.toFixed()}</article>}',
+ ]){const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false,'A local type must not resolve to the module alias');assert.match(result.reason,/explicit type/);assert.equal(fs.readFileSync(f.selected.file,'utf8'),source);}finally{f.close();}}
+});
