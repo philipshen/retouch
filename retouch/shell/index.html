@@ -17,6 +17,8 @@
   <button id="undoBtn" title="Undo (Cmd/Ctrl+Z)" disabled>Undo</button>
   <button id="redoBtn" title="Redo (Cmd/Ctrl+Shift+Z)" disabled>Redo</button>
   <button id="componentLibrary" hidden>Components</button>
+  <button id="toggleLayers" aria-label="Toggle Layers panel" aria-controls="layersPanel" aria-expanded="true">Layers</button>
+  <button id="toggleInspector" aria-label="Toggle Inspector panel" aria-controls="panel" aria-expanded="true">Inspector</button>
   <span id="status"></span>
 </div>
 <div id="screenToolbar" aria-label="Screen preview">
@@ -45,7 +47,7 @@
     </div></div>
   </div>
   <aside id="screenComparisons" aria-label="Screen comparisons" hidden></aside>
-  <div id="panel">
+  <div id="panel" role="complementary" aria-label="Inspector panel">
     <div id="panelEmpty">Click an element to select it.<br>
       Clicking text edits it in place (Enter or Escape saves).<br><br>
       <span class="hint">Hold Alt / Option and hover to measure padding and spacing.<br><br>Blue outline = element. Purple outline = component instance.
@@ -99,6 +101,7 @@
 <script src="/rt/__assets/history.js"></script>
 <script src="/rt/__assets/compare.js"></script>
 <script src="/rt/__assets/comparison-resize.js"></script>
+<script src="/rt/__assets/workspace-panels.js"></script>
 <script src="/rt/__assets/canvas-pan.js"></script>
 <script src="/rt/__assets/collection-bindings.js"></script>
 <script src="/rt/__assets/shell.js"></script>

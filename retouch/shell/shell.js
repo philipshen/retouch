@@ -2264,6 +2264,7 @@ window.addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.target.closest?.('input,textarea,[contenteditable="true"]')) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
   if (e.key === 'Escape') {
     if(stopDrawing){e.preventDefault();stopDrawing();return;}
+    if(!e.target.closest?.('input,textarea,select,[contenteditable="true"]')&&window.RetouchWorkspacePanels?.closeIfOpen()){e.preventDefault();return;}
     clearSelection();
   }
 });

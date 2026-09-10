@@ -5,7 +5,8 @@
  let preferred=270,drag=null;
  try{const saved=Number(localStorage.getItem(key));if(Number.isInteger(saved)&&saved>=240&&saved<=640)preferred=saved;}catch{}
  handle.id='comparisonResizeHandle';handle.tabIndex=0;handle.setAttribute('role','separator');handle.setAttribute('aria-label','Resize comparison panel');handle.setAttribute('aria-orientation','vertical');handle.setAttribute('aria-controls',rail.id);handle.title='Drag to resize comparisons. Arrow keys move the edge; Shift steps 50 px. Double-click resets. Escape cancels.';rail.before(handle);
- const maximum=()=>Math.max(240,Math.min(640,main.clientWidth-document.getElementById('layersPanel').offsetWidth-document.getElementById('panel').offsetWidth-168));
+ const occupied=id=>{const panel=document.getElementById(id);return getComputedStyle(panel).position==='absolute'?0:panel.offsetWidth;};
+ const maximum=()=>Math.max(240,Math.min(640,main.clientWidth-occupied('layersPanel')-occupied('panel')-168));
  function save(){try{localStorage.setItem(key,String(preferred));}catch{}}
  function layout(){
   const max=maximum(),width=Math.max(240,Math.min(max,preferred));handle.hidden=rail.hidden;rail.style.width=width+'px';
@@ -25,6 +26,7 @@
   const step=event.shiftKey?50:10,width=rail.offsetWidth,next=event.key==='ArrowLeft'?width+step:event.key==='ArrowRight'?width-step:event.key==='Home'?240:event.key==='End'?maximum():null;
   if(next===null||drag)return;event.preventDefault();event.stopPropagation();preferred=Math.max(240,Math.min(maximum(),next));save();layout();
  });
+ window.addEventListener('retouch:workspace-layout',layout);
  window.addEventListener('blur',()=>finish(false));window.addEventListener('resize',()=>{finish(false);layout();});
  new MutationObserver(()=>{if(rail.hidden)finish(false);layout();}).observe(rail,{attributes:true,attributeFilter:['hidden']});
  new ResizeObserver(layout).observe(main);layout();

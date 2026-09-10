@@ -8,19 +8,19 @@
 body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 13px;
   height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-#toolbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+#toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 12px;
   border-bottom: 1px solid var(--line); background: var(--panel); }
 #logo { font-weight: 700; letter-spacing: .02em; color: var(--accent); margin-right: 4px; }
 #toolbar button { background: #2a2d33; color: var(--ink); border: 1px solid var(--line);
   border-radius: 6px; padding: 5px 12px; font-size: 12.5px; cursor: pointer; }
 #toolbar button:hover { border-color: var(--accent); }
 #modeBtn.mode-edit { background: var(--accent); color: #0c1015; border-color: var(--accent); font-weight: 600; }
-#routeInput { flex: 0 1 340px; background: #141518; color: var(--ink); border: 1px solid var(--line);
+#routeInput { min-width: 80px; flex: 0 1 340px; background: #141518; color: var(--ink); border: 1px solid var(--line);
   border-radius: 6px; padding: 5px 10px; font-family: var(--mono); font-size: 12px; }
 #status { color: var(--muted); font-size: 12px; margin-left: auto; min-width: 0; flex: 1 1 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-#main { flex: 1; display: flex; min-height: 0; }
+#main { position: relative; flex: 1; display: flex; min-height: 0; }
 #frameWrap { flex: 1; min-width: 0; position: relative; background: #808080; overflow:auto; }
 #app { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 #overlayLayer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
@@ -411,3 +411,8 @@ details.advanced > summary:hover { color: var(--ink); }
 #comparisonResizeHandle { flex:0 0 6px; cursor:col-resize; touch-action:none; background:var(--bg); border-left:1px solid var(--line); }
 #comparisonResizeHandle:hover,#comparisonResizeHandle:focus-visible,#comparisonResizeHandle.dragging { background:var(--accent); outline:none; }
 #comparisonResizeHandle[hidden] { display:none; }
+
+#layersPanel[hidden],#panel[hidden] { display:none; }
+.compact-workspace #layersPanel,.compact-workspace #panel { position:absolute; top:0; bottom:0; z-index:45; box-shadow:0 0 24px #0008; max-width:calc(100% - 32px); }
+.compact-workspace #layersPanel { left:0; }
+.compact-workspace #panel { right:0; }

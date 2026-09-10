@@ -9682,3 +9682,30 @@ ordering click (/private/tmp/retouch-compare-width-webkit.log). The recheck pass
 the cause was not established and no permanent fix for that intermittent event
 is claimed. Syntax and diff checks passed. Full Figma parity and trusted brew
 installation remain incomplete; native app launches remain paused.
+
+### Keep the canvas usable in compact editor windows (2026-09-10)
+
+Layers and Inspector now have explicit toolbar toggles. At widths of 1100 px and
+above they remain docked with independently saved project preferences. Below that
+width, both start closed and open one at a time as non-modal drawers, preserving
+canvas/comparison width. Selecting a different layer opens the inspector; repeated
+selection refreshes do not replace a drawer the user chose. Escape closes an open
+drawer after active drawing cancellation has had priority, retaining selection
+and returning focus to the toggle. Input/dialog Escape behavior stays with those
+controls. The toolbar wraps, and rail-width bounds ignore overlay drawers.
+
+Chromium and WebKit passed desktop visibility persistence, 720px compact layout
+without horizontal page overflow, retained canvas width with comparisons and
+open drawers, layer selection, Escape/focus, repeated-selection stability, real
+background-color source/render edits and exact Undo. Returning to desktop restores
+docked preferences. All processes exited zero without page errors. Evidence:
+/private/tmp/retouch-compact-edit-chromium-final.log,
+/private/tmp/retouch-compact-edit-webkit-final.log.
+WebKit also passed the full widened comparison editing regression suite:
+/private/tmp/retouch-panel-layout-compare-webkit.log.
+The compact inspector was inspected in /private/tmp/retouch-compact-workspace.png.
+Syntax and git diff --check passed.
+
+This verifies the tested compact desktop workspace, not every tiny viewport,
+mobile touch workflow or arbitrary-site interface. Full Figma parity and trusted
+brew installation remain unfinished. Native launches remain paused.
