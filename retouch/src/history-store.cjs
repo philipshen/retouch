@@ -25,7 +25,7 @@ function createHistoryStore(root,directory){
     return {file:decode?path.join(actual,edit.file):edit.file,before:edit.before,after:edit.after};
    })};
   });const result={undo:stack(state.undo),redo:stack(state.redo)};
-  if(state.pending!==undefined){const pending=state.pending;if(!object(pending)||!['undo','redo'].includes(pending.type)||result[pending.type].at(-1)?.id!==pending.id)throw Error('Invalid pending history restore.');result.pending={type:pending.type,id:pending.id};}
+  if(state.pending!==undefined){const pending=state.pending;if(!object(pending))throw Error('Invalid pending history operation.');if(pending.type==='record'){result.pending={type:'record',entry:stack([pending.entry])[0]};}else{if(!['undo','redo'].includes(pending.type)||result[pending.type].at(-1)?.id!==pending.id)throw Error('Invalid pending history restore.');result.pending={type:pending.type,id:pending.id};}if(pending.owner!==undefined){if(!Number.isSafeInteger(pending.owner)||pending.owner<=0)throw Error('Invalid pending history owner.');result.pending.owner=pending.owner;}}
   return result;
  }
  return {
@@ -33,20 +33,21 @@ function createHistoryStore(root,directory){
   load(){
    const raw=source();if(raw===null){revision=null;return {undo:[],redo:[]};}const state=validate(JSON.parse(raw),true);revision=digest(raw);
    if(state.pending){
-    const {type}=state.pending,entry=state[type].at(-1),before=type==='undo'?'after':'before',after=type==='undo'?'before':'after';
+    if(state.pending.owner&&state.pending.owner!==process.pid){let alive=true;try{process.kill(state.pending.owner,0);}catch(error){if(error.code==='ESRCH')alive=false;}if(alive)throw Error('A source operation is still owned by another running editor.');}
+    const {type}=state.pending,entry=type==='record'?state.pending.entry:state[type].at(-1),before=type==='undo'?'after':'before',after=type==='undo'?'before':'after';
     const contents=entry.edits.map(edit=>{
      const parent=fs.realpathSync(path.dirname(edit.file));if(parent!==path.dirname(edit.file)||!edit.file.startsWith(actual+path.sep))throw Error('Pending history follows a symbolic link.');
      let stat;try{stat=fs.lstatSync(edit.file);}catch(error){if(error.code!=='ENOENT')throw error;}if(!stat)return null;if(!stat.isFile()||stat.isSymbolicLink()||stat.size>LIMIT)throw Error('Pending history source is not a bounded regular file.');return fs.readFileSync(edit.file,'utf8');
     });
     const matches=side=>entry.edits.every((edit,index)=>contents[index]===edit[side]);
-    if(matches(before)){}else if(matches(after)){state[type].pop();state[type==='undo'?'redo':'undo'].push(entry);}else throw Error('An interrupted history restore left changed or mixed files. Source was not modified during recovery.');
+    if(matches(before)){}else if(matches(after)){if(type==='record'){state.undo.push(entry);state.undo=state.undo.slice(-100);state.redo=[];}else{state[type].pop();state[type==='undo'?'redo':'undo'].push(entry);}}else throw Error('An interrupted source operation left changed or mixed files. Source was not modified during recovery.');
     delete state.pending;this.save(state);
    }
    return state;
   },
   save(state){
    const encode=entries=>entries.map(entry=>({id:entry.id,...(entry.route?{route:entry.route}:{}),edits:entry.edits.map(edit=>({...edit,file:path.relative(actual,edit.file).split(path.sep).join('/')}))}));
-   const data={version:1,project,undo:encode(state.undo),redo:encode(state.redo),...(state.pending?{pending:state.pending}:{})};validate(data,false);const raw=JSON.stringify(data);if(Buffer.byteLength(raw)>LIMIT)throw Error('Source history exceeds the local storage limit.');
+   const data={version:1,project,undo:encode(state.undo),redo:encode(state.redo),...(state.pending?{pending:state.pending.type==='record'?{type:'record',entry:encode([state.pending.entry])[0],...(state.pending.owner?{owner:state.pending.owner}:{})}:state.pending}:{})};validate(data,false);const raw=JSON.stringify(data);if(Buffer.byteLength(raw)>LIMIT)throw Error('Source history exceeds the local storage limit.');
    safe();const fd=fs.openSync(lock,'wx',0o600);let temporary;
    try{
     if(digest(source())!==revision)throw Error('Source history changed in another editor.');

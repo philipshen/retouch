@@ -29,6 +29,17 @@ class SourceHistory {
     if(this.undo.length>this.limit)this.undo.shift();
     this.persist();return entry.id;
   }
+  commit(root,plan,{group,route}={}){
+    if(!plan?.ok)return plan;
+    if(this.pending)return {ok:false,refused:true,reason:'An incomplete source operation requires recovery before more edits can be applied.'};
+    const edits=plan.edits.filter(edit=>edit.before!==edit.after);
+    if(!edits.length)return applyPlan(root,plan);
+    const entry={id:crypto.randomBytes(16).toString('hex'),edits:edits.map(edit=>({...edit})),...(typeof route==='string'&&route.startsWith('/')&&!route.startsWith('//')&&route.length<=4096?{route}:{})};
+    this.pending={type:'record',entry,owner:process.pid};this.persist();
+    const result=applyPlan(root,plan);if(!result.rollbackFailed)this.pending=null;
+    if(!result.ok){this.persist();if(result.rollbackFailed)this.persistenceError='An incomplete source operation requires recovery.';return result;}
+    const undoId=this.record(result.edits,group,route);return {...result,undoId};
+  }
   apply(root, type, id, adapter) {
     if(this.pending)return {ok:false,reason:'An incomplete source restore requires recovery before more history can be applied.'};
     const from=type==='undo'?this.undo:this.redo;
@@ -40,7 +51,7 @@ class SourceHistory {
     for(const edit of edits) {
       if(edit.after===null && edit.before!==null && adapter.hasReference?.(root,edit.file,excluded))return {ok:false,reason:'Another file now refers to the detached module. Undo was not applied.'};
     }
-    this.pending={type,id};this.persist();
+    this.pending={type,id,owner:process.pid};this.persist();
     const result=applyPlan(root,{ok:true,edits});
     if(!result.rollbackFailed)this.pending=null;
     if(!result.ok){this.persist();if(result.rollbackFailed)this.persistenceError='An incomplete source restore requires recovery.';return result;}

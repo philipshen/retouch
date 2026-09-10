@@ -9,7 +9,6 @@ const http = require('node:http');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { Index } = require('./indexer.cjs');
-const { applyPlan } = require('./transactions.cjs');
 const { SourceHistory } = require('./history.cjs');
 const { MARKER, isMirrorRequest, stripReloadClient, watchSource } = require('./mirror-sync.cjs');
 
@@ -93,9 +92,9 @@ function handle(req, res, ctx) {
         const renderer=['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html',linked=ctx.adapter.capabilities?.ops?.includes('setCSS')||['react','liquid'].includes(ctx.adapter.name);
         const plan=operation?.type==='update'&&linked?require('./text-style-update.cjs').plan(ctx.appRoot,operation,renderer,kind):library.planChange(ctx.appRoot,operation);
         if(!plan.ok)return json(res,409,plan);
-        const applied=library.commitPlan(ctx.appRoot,plan);
+        const applied=library.commitPlan(ctx.appRoot,plan,(root,planned)=>ctx.history.commit(root,planned,{route:historyRoute(req)}));
         for(const edit of applied.edits)if(ctx.adapter.matches(edit.file))ctx.index.indexFile(edit.file);
-        const undoId=ctx.history.record(applied.edits,undefined,historyRoute(req));ctx.sourceMonitor?.acknowledge(applied.edits);
+        const undoId=applied.undoId;ctx.sourceMonitor?.acknowledge(applied.edits);
         return json(res,200,{ok:true,...applied.result,undoId,historyPersistenceError:ctx.history.persistenceError,updated:applied.updated||0});
       }catch(error){return json(res,error.statusCode||500,{ok:false,reason:error.message});}
     });
@@ -191,6 +190,7 @@ function handle(req, res, ctx) {
         return json(res, 400, { ok: false, error: 'path outside project root' });
       }
       let result;
+      const applyPlan=(root,plan)=>ctx.history.commit(root,plan,{group:op.historyGroup,route:historyRoute(req)});
       try {
         resolved.context = renderContext(op.context);
         if(['applyEffectStyle','resetEffectStyle','detachEffectStyle','updateEffectStyle','applyEffectStyleSelection','resetEffectStyleSelection','detachEffectStyleSelection'].includes(op.type)){
@@ -234,9 +234,6 @@ function handle(req, res, ctx) {
       // Keep the index fresh immediately (the watcher would also catch it).
       if (result.ok) {
         for (const edit of result.edits) if (ctx.adapter.matches(edit.file)) ctx.index.indexFile(edit.file);
-        if (result.edits.length) {
-          result.undoId = ctx.history.record(result.edits, op.historyGroup,historyRoute(req));
-        }
         ctx.sourceMonitor?.acknowledge(result.edits);
         delete result.edits; delete result.createdFile; delete result.createdHash;
         const fresh = ctx.index.resolve(op.id);

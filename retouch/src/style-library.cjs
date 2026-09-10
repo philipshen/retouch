@@ -47,10 +47,10 @@ function planChange(root,operation){
  const library=validate({version:1,styles}),after=JSON.stringify(library,null,2)+'\n';if(Buffer.byteLength(after)>LIMIT)fail(`The ${label} library is too large.`,413);
  return {ok:true,edits:source===after?[]:[{file,before:source,after}],result:{...library,revision:revision(after),id,...(operation.type==='import'?{added}:{})}};
 }
-function commitPlan(root,plan){
+function commitPlan(root,plan,apply=applyPlan){
  if(!plan?.ok)return plan;const {directory}=paths(root);
  fs.mkdirSync(directory,{recursive:true});paths(root);
- const applied=applyPlan(root,plan);if(!applied.ok)fail(applied.reason,409);
+ const applied=apply(root,plan);if(!applied.ok)fail(applied.reason,409);
  return applied;
 }
 function change(root,operation){return commitPlan(root,planChange(root,operation)).result;}

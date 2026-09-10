@@ -35,5 +35,26 @@ test('a failed multi-file rollback retains its pending marker and prevents furth
  const {root,directory,open}=setup(t),a=path.join(root,'a'),b=path.join(root,'b');fs.writeFileSync(a,'after-a');fs.writeFileSync(b,'after-b');const history=open(),id=history.record([{file:a,before:'before-a',after:'after-a'},{file:b,before:'before-b',after:'after-b'}]);
  const rename=fs.renameSync;t.mock.method(fs,'renameSync',(from,to)=>{if(to===a||to===b&&fs.readFileSync(b,'utf8')==='before-b')throw Error('Simulated replacement failure');return rename(from,to);});
  const result=history.apply(root,'undo',id,{});assert.equal(result.ok,false);assert.equal(result.rollbackFailed,true);assert.equal(fs.readFileSync(a,'utf8'),'after-a');assert.equal(fs.readFileSync(b,'utf8'),'before-b');assert.match(history.persistenceError,/requires recovery/);assert.match(history.apply(root,'undo',id,{}).reason,/requires recovery/);
- const journal=JSON.parse(fs.readFileSync(createHistoryStore(root,directory).file,'utf8'));assert.deepEqual(journal.pending,{type:'undo',id});assert.throws(()=>open(),/mixed files/);
+ const journal=JSON.parse(fs.readFileSync(createHistoryStore(root,directory).file,'utf8'));assert.deepEqual(journal.pending,{type:'undo',id,owner:process.pid});assert.throws(()=>open(),/mixed files/);
+});
+test('new source commits survive process exit around source writes and invalidate redo only after application',t=>{
+ const {spawnSync}=require('node:child_process');
+ for(const phase of ['prepared','applied']){
+  const {root,directory,open}=setup(t),a=path.join(root,'a'),created=path.join(root,'new'),removed=path.join(root,'old');fs.writeFileSync(a,'original');fs.writeFileSync(removed,'remove me');let history=open();const initial=history.commit(root,{ok:true,edits:[{file:a,before:'original',after:'previous'}]});assert.equal(initial.ok,true);assert.equal(history.apply(root,'undo',initial.undoId,{}).ok,true);
+  const plan={ok:true,edits:[{file:a,before:'original',after:'next'},{file:created,before:null,after:'created'},{file:removed,before:'remove me',after:null}]};
+  const code=`const {createHistoryStore}=require(${JSON.stringify(require.resolve('../src/history-store.cjs'))});const {SourceHistory}=require(${JSON.stringify(require.resolve('../src/history.cjs'))});const disk=createHistoryStore(process.argv[1],process.argv[2]);const history=new SourceHistory(100,{store:{load:()=>disk.load(),save(state){if(!state.pending&&process.argv[3]==='applied')process.exit(70);disk.save(state);if(state.pending&&process.argv[3]==='prepared')process.exit(70);}}});history.commit(process.argv[1],JSON.parse(process.argv[4]),{route:'/edited'});`;
+  const child=spawnSync(process.execPath,['-e',code,root,directory,phase,JSON.stringify(plan)],{encoding:'utf8',timeout:10000});assert.equal(child.status,70,child.stderr);history=open();
+  if(phase==='prepared'){assert.equal(history.undo.length,0);assert.equal(history.redo.length,1);assert.equal(fs.existsSync(created),false);assert.equal(fs.readFileSync(a,'utf8'),'original');}
+  else{assert.equal(history.undo.length,1);assert.equal(history.redo.length,0);assert.equal(history.undo[0].route,'/edited');assert.equal(fs.readFileSync(a,'utf8'),'next');assert.equal(fs.readFileSync(created,'utf8'),'created');assert.equal(fs.existsSync(removed),false);assert.equal(history.apply(root,'undo',history.undo[0].id,{}).ok,true);assert.equal(fs.readFileSync(a,'utf8'),'original');assert.equal(fs.existsSync(created),false);assert.equal(fs.readFileSync(removed,'utf8'),'remove me');}
+ }
+});
+test('normal grouped commits retain one undo and rejected source plans leave redo intact',t=>{
+ const {root,open}=setup(t),file=path.join(root,'a');fs.writeFileSync(file,'zero');let history=open();
+ const first=history.commit(root,{ok:true,edits:[{file,before:'zero',after:'one'}]},{group:'gesture'}),second=history.commit(root,{ok:true,edits:[{file,before:'one',after:'two'}]},{group:'gesture'});assert.equal(first.undoId,second.undoId);assert.equal(history.undo.length,1);history=open();assert.equal(history.apply(root,'undo',first.undoId,{}).ok,true);assert.equal(fs.readFileSync(file,'utf8'),'zero');assert.equal(history.commit(root,{ok:true,edits:[{file,before:'wrong',after:'bad'}]}).ok,false);history=open();assert.equal(history.redo.length,1);assert.equal(fs.readFileSync(file,'utf8'),'zero');
+});
+
+test('a different live process cannot recover an in-progress source operation',t=>{
+ const {spawnSync}=require('node:child_process'),{root,directory,open}=setup(t),file=path.join(root,'a');fs.writeFileSync(file,'after');const history=open(),id=history.record([{file,before:'before',after:'after'}]),store=createHistoryStore(root,directory),state=store.load();store.save({...state,pending:{type:'undo',id,owner:process.pid}});const bytes=fs.readFileSync(store.file,'utf8');
+ const code=`const {createHistoryStore}=require(${JSON.stringify(require.resolve('../src/history-store.cjs'))});try{createHistoryStore(process.argv[1],process.argv[2]).load();process.exit(2);}catch(error){if(!error.message.includes('another running editor'))throw error;}`;
+ const child=spawnSync(process.execPath,['-e',code,root,directory],{encoding:'utf8',timeout:10000});assert.equal(child.status,0,child.stderr);assert.equal(fs.readFileSync(store.file,'utf8'),bytes);assert.equal(fs.readFileSync(file,'utf8'),'after');
 });

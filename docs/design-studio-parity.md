@@ -6991,3 +6991,30 @@ This covers those Undo/Redo interruption boundaries. New source edits still need
 a write-ahead integration; crashes during journal replacement can leave save
 locks requiring recovery. Power-loss durability, automatic resolution of mixed
 files and complete crash recovery remain unproven. Native launches remain paused.
+
+
+### Write-ahead history for new source edits (2026-09-09)
+
+The server's planned source operations now use SourceHistory.commit, including
+component/source plans and linked text/color/effect style operations. Style
+library commits also use the wrapper after validating/creating their directory.
+A pending record stores the transaction snapshots before source changes. Recovery
+leaves an unstarted edit and its redo stack alone; a fully applied edit becomes
+an undo entry and invalidates redo. File creation/deletion and routes survive
+this path. Mixed states remain unresolved without automatic source mutation.
+Normal gesture grouping is unchanged; a recovered interrupted group segment can
+be a separate undo step. New markers include the owning process, and another
+live process cannot recover them as abandoned operations.
+
+All 533 tests passed (`/private/tmp/retouch-history-new-edits-units-final.log`).
+Process-exit tests cover new multi-file transactions that modify, create and
+delete source, both before and after application. Tests also cover grouping,
+stale-plan refusal, redo retention and live-owner exclusion. Chromium/WebKit
+restart tests pass in `/private/tmp/retouch-history-new-edits-{chromium,webkit}.log`;
+the broader HTML browser workflow passes in
+`/private/tmp/retouch-history-new-edits-html.log`.
+
+Complete crash recovery remains unfinished: save-lock interruption, power-loss
+durability, mixed-file resolution and synchronized active clients remain. Asset
+uploads outside the source-plan history path are not covered by this wrapper.
+Native Retouch launches remain paused; full parity remains incomplete.
