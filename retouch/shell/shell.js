@@ -167,6 +167,7 @@ async function canvasContextMenu(event,keyboard=false){
  if(!target)return;
  const selectedTargets=!sel?[]:sel.multiple?sel.multiple.flatMap(info=>matchingEls(info.id)):sel.info.kind==='instance'?selectedComponentGroups(doc(),activeId(),sel.info)[0]?.elements||[]:matchingEls(activeId()).filter(el=>inTextScope(el,sel.info)).slice(0,1);
  if(!keyboard&&!selectedTargets.includes(target))await select(target);
+ if(keyboard)await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
  if(serial!==canvasContextSerial||mode!=='edit'||!sel)return;
  const frame=iframe.getBoundingClientRect(),box=target.getBoundingClientRect(),x=keyboard?box.left:event.clientX,y=keyboard?box.bottom:event.clientY;
  const body=doc().body;body.tabIndex=-1;
