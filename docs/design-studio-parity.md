@@ -9963,3 +9963,9 @@ Validation: project-screens completed in Chromium and WebKit (`/private/tmp/reto
 Each mounted comparison now retains up to 50 dimension changes, including rotation, typed sizes and keyboard steps. Undo size/Redo size use the existing dimension validation, preset persistence and live iframe resizing path. New edits clear redo; duplicate-size refusals leave history available. History is local to the mounted comparison and is not persisted across reload/removal.
 
 Validation: project-screens passed in Chromium (`/private/tmp/retouch-comparison-history-chromium-final.log`) and WebKit (`/private/tmp/retouch-comparison-history-webkit.log`), both exit 0. Tests cover rotation Undo/Redo, saved preset restoration, redo invalidation after a new edit, retained preview browsing context, keyboard dimensions and existing reload/project isolation. No production native launch occurred. Full Figma parity remains incomplete.
+
+### 2026-09-10 — Restore comparison-size history with removed views
+
+Comparison size history now belongs to the in-memory screen record through a WeakMap, rather than to its disposable controls. Removing a view retains that record in removal history, so Undo remove restores its size Undo/Redo stacks. Rebuilding the comparison rail also retains the stacks. Histories remain bounded and do not keep discarded screen records alive.
+
+Validation: project-screens passed in Chromium (`/private/tmp/retouch-comparison-history-restore-chromium.log`) and WebKit (`/private/tmp/retouch-comparison-history-restore-webkit.log`), terminal exit 0. New assertions replay size Redo/Undo after restoring a removed view and reopening the rail; existing size editing/history, reload persistence and project isolation checks also passed. Size history still does not persist across page reload or screen-set replacement. Full Figma parity remains incomplete; native launches remain paused.

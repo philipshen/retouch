@@ -4,7 +4,7 @@
   const project=window.__RT_RENDERING?.stateScope?.project;
   const storageKey='retouch.comparisons.v1'+(typeof project==='string'&&/^[a-f0-9]{64}$/.test(project)?':'+project:'');
   let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore;
-  const collapsedNames=new Set();let previewSerial=0;
+  const collapsedNames=new Set(),sizeHistories=new WeakMap();let previewSerial=0;
   try{const saved=JSON.parse(localStorage.getItem(storageKey+'.collapsed'));if(Array.isArray(saved)&&saved.length<=8)for(const name of saved)if(typeof name==='string'&&name.length<=80)collapsedNames.add(name);}catch{}
   const removed=[],orderUndo=[],orderRedo=[];let removals=0,undoOrder,redoOrder;
   function clearOrderHistory(){orderUndo.length=0;orderRedo.length=0;}
@@ -178,7 +178,7 @@
       const edit=document.createElement('button');edit.className='control-button';edit.textContent='Edit';edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');
       edit.onclick=()=>window.RetouchScreens.set({width,height});header.append(edit);
       const remove=document.createElement('button');remove.className='control-button';remove.textContent='×';remove.setAttribute('aria-label','Remove '+name+' comparison');header.append(remove);
-      remove.onclick=async()=>{remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;card.inert=true;clearOrderHistory();removals++;removed.push({size:[...size],index});if(removed.length>8)removed.shift();sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);cards=cards.filter(c=>c!==item);updateControls();await unload(frame);surface.remove();card.remove();removals--;updateControls();};
+      remove.onclick=async()=>{remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;card.inert=true;clearOrderHistory();removals++;removed.push({size,index});if(removed.length>8)removed.shift();sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);cards=cards.filter(c=>c!==item);updateControls();await unload(frame);surface.remove();card.remove();removals--;updateControls();};
       const viewport=document.createElement('div');viewport.className='compare-viewport';viewport.tabIndex=0;viewport.setAttribute('role','button');viewport.setAttribute('aria-label','Edit from '+name+' comparison');viewport.title='Click a layer to select it on the main canvas at this size. Style scope stays unchanged.';
       const frame=document.createElement('iframe');frame.title=name+' comparison preview';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');frame.style.width=width+'px';frame.style.height=height+'px';
       const surface=document.createElement('div');surface.className='compare-surface';surface.setAttribute('aria-hidden','true');surface.append(frame);rail.append(surface);
@@ -202,7 +202,8 @@
       scopeButton.onclick=()=>{if(!selected)return;window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,occurrence:0,scopeAtWidth:true,route:path()}}));};
       const dimensions=document.createElement('div');dimensions.className='compare-dimensions';
       const inputs={},dimensionError=document.createElement('p');dimensionError.className='compare-dimension-error';dimensionError.setAttribute('role','status');dimensionError.hidden=true;
-      const sizeUndo=[],sizeRedo=[],sizeHistory=document.createElement('div');sizeHistory.className='compare-header';
+      let history=sizeHistories.get(size);if(!history){history={undo:[],redo:[]};sizeHistories.set(size,history);}
+      const sizeUndo=history.undo,sizeRedo=history.redo,sizeHistory=document.createElement('div');sizeHistory.className='compare-header';
       const undoSize=document.createElement('button'),redoSize=document.createElement('button');
       for(const button of [undoSize,redoSize]){button.type='button';button.className='control-button';button.disabled=true;}
       undoSize.textContent='Undo size';redoSize.textContent='Redo size';sizeHistory.append(undoSize,redoSize);
@@ -273,7 +274,7 @@
         undoSize.setAttribute('aria-label','Undo '+name+' comparison size');redoSize.setAttribute('aria-label','Redo '+name+' comparison size');
         rotate.setAttribute('aria-label','Rotate '+name+' comparison');reveal.setAttribute('aria-label','Show selection in '+name+' comparison');
       }
-      updateLabels();
+      updateLabels();updateSizeHistory();
       viewport.append(overlay);previewBody.append(viewport,message,reveal,scopeMessage,scopeButton);card.append(header,dimensions,dimensionError,sizeHistory,order,disclosure,previewBody);rail.insertBefore(card,before);
       function activate(event){
         try{

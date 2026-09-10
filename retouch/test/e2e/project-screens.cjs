@@ -36,6 +36,11 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   await picker.selectOption('390x844');await picker.selectOption('saved:1120x844');await page.waitForFunction(()=>document.querySelector('#app').contentWindow.innerWidth===1120);assert.equal(await page.getByLabel('Screen height',{exact:true}).inputValue(),'844');
   await page.getByRole('button',{name:'Remove Reading view comparison',exact:true}).click();assert.equal(await picker.inputValue(),'custom');assert.equal(await page.getByLabel('Screen width',{exact:true}).inputValue(),'1120');
   await page.getByRole('button',{name:'Undo remove: Reading view',exact:true}).click();assert.equal(await picker.inputValue(),'saved:1120x844');
+  for(const restored of ['removed view','reopened rail']){
+   if(restored==='reopened rail'){await page.getByRole('button',{name:'Compare screens',exact:true}).click();await page.getByRole('button',{name:'Compare screens',exact:true}).click();}
+   const redoSize=page.getByRole('button',{name:'Redo Reading view comparison size',exact:true});assert.equal(await redoSize.isDisabled(),false,restored+' retains size history');await redoSize.click();assert.deepEqual(await comparisonSize(),[1130,844]);
+   await page.getByRole('button',{name:'Undo Reading view comparison size',exact:true}).click();assert.deepEqual(await comparisonSize(),[1120,844]);
+  }
   await page.reload();await page.frameLocator('#app').locator('h1').waitFor();assert.equal(await picker.inputValue(),'saved:1120x844');
   await stop();await start(roots[1],port);await open();assert.equal(await picker.inputValue(),'fluid');assert.equal(await picker.locator('option[value="saved:1120x844"]').count(),0);await picker.selectOption('768x1024');
   await stop();await start(roots[0],port);await open();assert.equal(await picker.inputValue(),'saved:1120x844');await page.waitForFunction(()=>document.querySelector('#app').contentWindow.innerWidth===1120);
