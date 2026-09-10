@@ -6,6 +6,7 @@ test('React shared styles preserve unrelated classes, scopes and important marke
  assert.equal(change('opacity-80!','md:','opacity',25),'opacity-80! md:!opacity-[0.25]');
  assert.equal(change('visible md:invisible hover:visible','md:','visibility','collapse'),'visible hover:visible md:collapse');
  assert.equal(change('mix-blend-screen isolate','','mix-blend-mode','multiply'),'isolate mix-blend-multiply');
+ assert.equal(change('mix-blend-screen md:mix-blend-multiply hover:mix-blend-overlay','md:','mix-blend-mode','plus-lighter'),'mix-blend-screen hover:mix-blend-overlay md:mix-blend-plus-lighter');
  assert.equal(change('mix-blend-screen isolate','','isolation','auto'),'mix-blend-screen isolation-auto');
  assert.equal(change('opacity-80 md:opacity-60 hover:opacity-20','md:','opacity',null),'opacity-80 hover:opacity-20');
  assert.equal(change('[opacity:.2] shadow-lg','','opacity',75),'shadow-lg opacity-[0.75]');
