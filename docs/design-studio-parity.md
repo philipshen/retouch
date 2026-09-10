@@ -7597,3 +7597,25 @@ is unconfirmed, so this does not prove those dev-server errors are eliminated.
 React inheritance controls, Liquid bindings, ancestor modes and cross-file
 selections remain unfinished. Native launches remain paused; full parity is not
 achieved.
+
+### Liquid collection source-planning foundation (2026-09-10)
+
+Liquid host-layer planning now supports typed variable apply/reset/refresh/detach
+and override removal using scoped explicit classes and bounded, escaped metadata.
+IDs, collection modes, units and sticky local overrides survive source round trips.
+Conditional class expressions use the existing source-owned class patch mechanism;
+refresh can update those owned classes in unopened files without evaluating or
+replacing the original Liquid expression. Reset needs the layer's rendered class
+context when the expression is dynamic.
+
+All 576 unit tests pass (`/private/tmp/retouch-liquid-variable-planner-units.log`).
+The focused Liquid tests also pass after adding unindexed-link and unowned dynamic
+class refusal checks. LiquidJS rendering verifies both conditional branches retain
+their original classes and template text while receiving color, numeric, boolean
+and string variable bindings, including literal font-name underscores. File refresh
+is idempotent, preserves local overrides until reset, and refuses cyclic/missing
+references or malformed later links without returning partial edits.
+
+The Liquid planner is not yet connected to the authenticated API, project-wide
+collection replacement or inspector. These tests use local LiquidJS, not a live
+Shopify storefront. Native launches remain paused; full Figma parity is incomplete.
