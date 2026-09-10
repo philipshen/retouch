@@ -6583,3 +6583,29 @@ restoration through undo. Subsequent cleanup removed unreachable React branches
 from the HTML-only selection handler; syntax checks and the full unit suite
 passed afterward. Native app launches remain paused. React/Liquid effect links,
 variables/modes, arbitrary-site authoring and full Figma parity remain incomplete.
+
+### React effect source groundwork and WebKit limitation (2026-09-09)
+
+Added a React source planner for scoped effect-style metadata and canonical
+Tailwind arbitrary-property classes. Apply/reset/refresh/detach preserve other
+screen scopes and utility source; refresh retains local effect overrides and
+reset adopts the latest definition. Whole-file planning checks metadata coverage
+before returning an edit. Spread attributes, dynamic classes, malformed links,
+stale hashes and competing important effect utilities are refused. These modules
+are not yet wired into the adapter, server or inspector.
+
+All 496 unit tests passed (exit 0):
+/private/tmp/retouch-react-effect-source-units.log. Real Tailwind compilation and
+Chromium live class mutation matched reference computed shadow stacks, layer
+filters and backdrop filters, with mobile scope isolation and preserved padding:
+/private/tmp/retouch-react-effect-classes-chromium.log.
+
+WebKit live mutation failed: after changing the DOM classes, computed effects
+retained the previous values even after two animation frames. Evidence:
+/private/tmp/retouch-react-effect-classes-webkit.log. Rendering each state in a
+fresh document passed: /private/tmp/retouch-react-effect-classes-webkit-reload.log.
+The browser harness retains the failing live-mutation path by default; the
+RT_E2E_EFFECT_RELOAD=1 variant explicitly verifies fresh-document rendering only.
+This is not a live-update pass. Resolve or accommodate the WebKit invalidation
+behavior before enabling React linked effects in the inspector. Native launches
+remain paused; broad Figma parity and arbitrary-site support are incomplete.
