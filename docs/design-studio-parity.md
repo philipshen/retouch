@@ -6123,3 +6123,28 @@ found during review was fixed before the final run. Existing text-library browse
 flows passed, exit 0, in /private/tmp/retouch-color-palette-text-regression.log,
 including linked source propagation, shared history and file transfer. Native
 launches remain paused; full parity and verified desktop distribution are pending.
+
+### Color palette editor and file transfer (2026-09-09)
+
+The inspector now exposes Saved color styles with named palette selection,
+validated hex entry, RGB picker, opacity, checkerboard alpha preview and explicit
+create/update/delete actions. The library supports JSON download/upload and stale
+revision recovery through Reload. All mutations use the shell's source-request
+lock and shared undo routing. Opacity editing retains the typed value while typing;
+serialized alpha remains the exact 8-bit hex value shown in the hex field.
+
+All 458 unit tests passed, exit 0:
+/private/tmp/retouch-color-palette-ui-final-units.log. The new UI normalization test
+covers shorthand, case, transparent alpha and invalid values. Browser processes
+exited 0 in /private/tmp/retouch-color-palette-ui-chromium.log (HTML) and
+/private/tmp/retouch-color-palette-ui-webkit.log (Liquid), covering creation, exact
+alpha, update/rename, create/update undo/redo, actual JSON download/upload, external
+revision conflict/reload, deletion cancellation and unchanged source. The visual
+rerun passed in /private/tmp/retouch-color-palette-ui-visual.log; inspected screenshot
+/private/tmp/retouch-color-palette-ui.png shows readable controls, the alpha preview
+and existing inspector sections without clipping of palette controls.
+
+The palette is currently accessed through a selected layer and stores sRGB hex
+colors. Applying colors to layers, durable color links, propagation, wide-gamut
+formats and document-level library navigation remain unfinished. Native launches
+remain paused; full design parity and verified desktop distribution are pending.

@@ -897,6 +897,7 @@ function renderPanelContents() {
   head.appendChild(file);
   head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
+  RetouchColorStyles.mount(panelBody);
 
   if(sel.multiple?.length>1){mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
@@ -1661,6 +1662,10 @@ function moveHTMLLayer(info,target,width,g,action='move',opener){
   if(stopDrawing)toast(action==='resize'?'Drag a handle or use arrow keys. Shift keeps proportions; Option/Alt centers. Enter applies keyboard changes; Escape cancels.':'Drag the outline or use arrow keys (Shift: 10px). Enter applies keyboard changes; Escape cancels.','ok');
 }
 
+window.RetouchColorStyleRequest=async operation=>{
+ const info=sel?.info;busyPanel(true);
+ try{const result=await api('POST','/rt/__api/color-styles',operation);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save color styles');if(result.undoId)editorHistory.record({type:'colorStyleCatalog',id:info?.id,context:info?.context,undoId:result.undoId});return result;}finally{busyPanel(false);}
+};
 window.RetouchTextStyleRequest=async operation=>{
   const info=sel?.info;busyPanel(true);
   try{
@@ -1879,7 +1884,7 @@ window.addEventListener('blur', () => { measuring = false; });
 
 /* ---------- util ---------- */
 async function api(method, url, body) {
-  const writes = method === 'POST' && ['/rt/__api/op','/rt/__api/text-styles'].includes(url);
+  const writes = method === 'POST' && ['/rt/__api/op','/rt/__api/text-styles','/rt/__api/color-styles'].includes(url);
   const route = writes ? currentPageRoute() : null;
   if(writes && editorHistory.busy && !['undo','redo'].includes(body?.type)) return {ok:false,reason:'Wait for history restoration to finish.'};
   if(writes){sourceRequests++;syncHistoryControls();}
