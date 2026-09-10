@@ -282,6 +282,7 @@ function hookFrame(d, w) {
       }
       return;
     }
+    if(mode!=='edit'||e.defaultPrevented||e.isComposing||e.target.isContentEditable||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]'))return;
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.stopPropagation(); e.shiftKey ? redo() : undo(); }
   }, true);
 
