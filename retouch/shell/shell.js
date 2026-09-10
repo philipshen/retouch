@@ -901,6 +901,10 @@ function renderPanelContents() {
    RetouchColorStyles.mount(panelBody,sel.multiple?.length>1?selectionColorOptions(scope):info.colorStyles||info.classColorStyles?{width:scope,readColor:property=>{const element=matchingEls(info.id)[0];if(!element)throw Error('Re-select the layer to read its color.');return element.ownerDocument.defaultView.getComputedStyle(element).getPropertyValue(property);},allLinks:info.colorStyleLinks,links:info.colorStyleLinks?.[scope],overrides:info.colorStyleOverrides?.[scope]||[],inherited:info.classColorStyles?property=>RetouchResponsive.inheritedLink(Object.fromEntries(Object.entries(info.colorStyleLinks||{}).filter(([,group])=>group[property]).map(([key,group])=>[key,group[property]])),styleScope,matchingEls(info.id)[0]?.ownerDocument):undefined,apply:(styleId,libraryRevision,property)=>writeTextStyle('applyColorStyle',width,{scope:styleScope,styleId,libraryRevision,property}),reset:(styleId,libraryRevision,property)=>writeTextStyle('resetColorStyle',width,{scope:styleScope,styleId,libraryRevision,property}),detach:property=>writeTextStyle('detachColorStyle',width,{scope:styleScope,property})}:{});
   }
 
+  if(!sel.multiple?.length&&info.cssAuthoring&&!info.effectStyleLinkReason){
+   const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,links=info.effectStyleLinks||{},inheritedWidth=Object.keys(links).map(Number).filter(value=>value<width).sort((a,b)=>b-a)[0];
+   RetouchEffectStyles.mount(panelBody,matchingEls(info.id)[0],{link:links[width],overrides:info.effectStyleOverrides?.[width]||[],inherited:!links[width]&&inheritedWidth!==undefined?{link:links[inheritedWidth],label:inheritedWidth?inheritedWidth+'px and larger':'All sizes'}:null,apply:(styleId,libraryRevision)=>writeTextStyle('applyEffectStyle',width,{styleId,libraryRevision}),reset:(styleId,libraryRevision)=>writeTextStyle('resetEffectStyle',width,{styleId,libraryRevision}),detach:()=>writeTextStyle('detachEffectStyle',width),update:(styleId,libraryRevision,name,properties)=>writeTextStyle('updateEffectStyle',width,{styleId,libraryRevision,name,properties})});
+  }
   if(sel.multiple?.length>1){mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection,setSelectionColorOverride));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
   if(info.components?.length) {
@@ -1696,6 +1700,20 @@ window.RetouchColorStyleRequest=async operation=>{
   return result;
  }finally{busyPanel(false);}
 };
+window.RetouchEffectStyleRequest=async operation=>{
+  const info=sel?.info;busyPanel(true);
+  try{
+    const result=await api('POST','/rt/__api/effect-styles',operation);
+    if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save effect styles');
+    if(result.undoId)editorHistory.record({type:'effectStyleCatalog',id:info?.id,context:info?.context,undoId:result.undoId});
+    if(result.updated){
+      const fresh=info?await api('GET',resolveUrl(info.id,info.context)):null;
+      if(fresh?.ok&&sel?.info.id===info.id){sel.info=fresh.element;await refreshTextStyleElement(fresh.element);}else await reloadFrame();
+      if(sel)renderPanel();
+    }
+    return result;
+  }finally{busyPanel(false);}
+};
 window.RetouchTextStyleRequest=async operation=>{
   const info=sel?.info;busyPanel(true);
   try{
@@ -1915,7 +1933,7 @@ window.addEventListener('blur', () => { measuring = false; });
 
 /* ---------- util ---------- */
 async function api(method, url, body) {
-  const writes = method === 'POST' && ['/rt/__api/op','/rt/__api/text-styles','/rt/__api/color-styles'].includes(url);
+  const writes = method === 'POST' && ['/rt/__api/op','/rt/__api/text-styles','/rt/__api/color-styles','/rt/__api/effect-styles'].includes(url);
   const route = writes ? currentPageRoute() : null;
   if(writes && editorHistory.busy && !['undo','redo'].includes(body?.type)) return {ok:false,reason:'Wait for history restoration to finish.'};
   if(writes){sourceRequests++;syncHistoryControls();}

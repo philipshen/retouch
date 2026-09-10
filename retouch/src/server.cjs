@@ -77,16 +77,17 @@ function handle(req, res, ctx) {
     return json(res, 200, { ok: true, ...(ctx.sourceMonitor?.state() || { revision: 0, available: false }) });
   }
   if (p === '/rt/__api/health') return json(res, 200, { ok: true, service: 'retouch' });
-  if (p === '/rt/__api/text-styles' || p === '/rt/__api/color-styles') {
+  if (p === '/rt/__api/text-styles' || p === '/rt/__api/color-styles' || p === '/rt/__api/effect-styles') {
     requireToken(req,ctx.token);
-    const colorLibrary=p==='/rt/__api/color-styles',kind=colorLibrary?'color':'text',library=require(colorLibrary?'./color-styles.cjs':'./text-styles.cjs');
+    const kind=p==='/rt/__api/color-styles'?'color':p==='/rt/__api/effect-styles'?'effect':'text',library=require('./'+kind+'-styles.cjs');
     if(req.method==='GET')return json(res,200,{ok:true,...library.read(ctx.appRoot)});
     if(req.method!=='POST')return json(res,405,{ok:false,reason:'Use GET or POST for '+kind+' styles.'});
     return readBinary(req,library.LIMIT,bytes=>{
       if(!bytes)return json(res,413,{ok:false,reason:kind+' style requests must be 512 KB or smaller.'});
       let operation;try{operation=JSON.parse(bytes.toString('utf8'));}catch{return json(res,400,{ok:false,reason:'Invalid '+kind+' style JSON.'});}
       try{
-        const plan=colorLibrary&&operation?.type==='update'&&(ctx.adapter.capabilities?.ops?.includes('setCSS')||['react','liquid'].includes(ctx.adapter.name))?require('./text-style-update.cjs').plan(ctx.appRoot,operation,['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html','color'):!colorLibrary&&operation?.type==='update'&&(ctx.adapter.capabilities?.ops?.includes('setCSS')||['react','liquid'].includes(ctx.adapter.name))?require('./text-style-update.cjs').plan(ctx.appRoot,operation,['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html'):library.planChange(ctx.appRoot,operation);
+        const renderer=['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html',linked=ctx.adapter.capabilities?.ops?.includes('setCSS')||kind!=='effect'&&['react','liquid'].includes(ctx.adapter.name);
+        const plan=operation?.type==='update'&&linked?require('./text-style-update.cjs').plan(ctx.appRoot,operation,renderer,kind):library.planChange(ctx.appRoot,operation);
         if(!plan.ok)return json(res,409,plan);
         const applied=library.commitPlan(ctx.appRoot,plan);
         for(const edit of applied.edits)if(ctx.adapter.matches(edit.file))ctx.index.indexFile(edit.file);
@@ -188,7 +189,12 @@ function handle(req, res, ctx) {
       let result;
       try {
         resolved.context = renderContext(op.context);
-        if(op.type==='setColorOverrideSelection'){
+        if(['applyEffectStyle','resetEffectStyle','detachEffectStyle','updateEffectStyle'].includes(op.type)){
+          if(!ctx.adapter.capabilities?.ops?.includes('setCSS'))return json(res,409,{ok:false,reason:'Linked effect styles need an HTML project.'});
+          if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source changed. Re-select the layer.'});
+          if(op.type==='updateEffectStyle')result=applyPlan(ctx.appRoot,require('./text-style-update.cjs').plan(ctx.appRoot,{type:'update',revision:op.libraryRevision,id:op.styleId,name:op.name,properties:op.properties},'html','effect'));
+          else {let style;if(op.type!=='detachEffectStyle'){const library=require('./effect-styles.cjs').read(ctx.appRoot);if(library.revision!==op.libraryRevision)return json(res,409,{ok:false,reason:'Effect styles changed. Reload the library.'});style=library.styles.find(item=>item.id===op.styleId);if(!style)return json(res,409,{ok:false,reason:'That effect style no longer exists.'});}result=applyPlan(ctx.appRoot,require('./html-effect-styles.cjs').plan(resolved,op,style));}
+        }else if(op.type==='setColorOverrideSelection'){
           if(ctx.adapter.name!=='react')return json(res,409,{ok:false,reason:'Shared class color editing needs a React selection.'});
           result=applyPlan(ctx.appRoot,require('./color-override-selection.cjs').plan(resolved,op));
         }else if(op.type==='setColorOverride'){

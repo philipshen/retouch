@@ -20,7 +20,7 @@ changing those files. The original checkout may continue to evolve independently
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML supports linear/radial gradient stacks with draggable stops, shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A searchable page-font picker now discovers declared and used families, with React/HTML and local Liquid browser coverage. Explicit variable-axis editing, declared-file range/default inspection and bounded axis sliders have HTML/React/local Liquid browser coverage. Full font browsing, actual glyph-font resolution, live Shopify font verification, full rich-text/paragraph/list controls and complete typography parity remain. |
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | Existing React and Liquid component inspection/detach; full creation/variants/library workflows remain. Live Shopify proof is incomplete. |
-| Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Reusable text styles support responsive links, inherited-scope display, local override/reset, project-wide updates and shared undo in HTML, React and local Liquid. Validated JSON library import/export preserves style identity. HTML color styles link text/background/border paint with scoped overrides and project updates. React/Liquid color links, effect styles, variables, aliases, collections/modes and shared remote library workflows remain. |
+| Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Reusable text styles support responsive links, inherited-scope display, local override/reset, project-wide updates and shared undo in HTML, React and local Liquid. Validated JSON library import/export preserves style identity. HTML, React and local Liquid color styles link text/background/border/SVG paint with scoped overrides and project updates; palettes support sRGB and Display P3. HTML effect styles link shadows and layer/backdrop filters with project updates, overrides and undo. React/Liquid effect links, variables, aliases, collections/modes and shared remote library workflows remain. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload and SVG-canvas SVG/PNG/JPEG downloads exist, including shared local definitions and bitmap embedding. Arbitrary-layer export, fonts, symbols and the full export/import pipeline remain. |
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
@@ -6533,3 +6533,29 @@ conversion, apply/capture and palette flows. No production implementation change
 was needed for these cases. Physical display color accuracy, dedicated P3
 selection/SVG propagation coverage and full parity remain incomplete. Native
 launches remain paused; local Liquid tests do not prove live Shopify behavior.
+
+### Reusable HTML effect styles (2026-09-09)
+
+Added an independent effect-style library for box shadows, layer filters and
+backdrop filters, with stable IDs, revision checks, import/export, rename/delete
+and shared history. HTML layers link captured effect stacks per screen scope.
+Apply/reset/detach use source transactions; project updates include unopened HTML
+pages and preserve local overrides until reset. Inherited links are displayed
+using the existing scope convention. The source planner checks supported values,
+metadata coverage and stale files before any write. The palette shows effect
+properties and supports updating a definition from the selected layer.
+
+All 488 tests passed, exit 0: /private/tmp/retouch-effect-styles-units.log.
+Source tests cover scoped effects, idempotence, retained local blur, changed
+shadow/backdrop effects, reset/detach and malformed/unsupported refusal. Chromium
+and WebKit browser flows passed, exit 0:
+/private/tmp/retouch-effect-styles-final-chromium.log and
+/private/tmp/retouch-effect-styles-webkit-transfer.log. Both save/apply an effect
+stack at 768px, preserve a local blur edit, update an unopened page, restore the
+catalog and sources together, reset/detach, verify phone isolation and undo to
+exact source. Export/import preserves library bytes. Final Chromium additionally
+verifies the catalog-update refresh path after correcting its helper reference.
+HTML text-style regression passed, exit 0:
+/private/tmp/retouch-effect-styles-text-regression.log. React/Liquid effect links,
+batch effects, variables/modes, arbitrary-site authoring and full Figma parity
+remain unfinished. Native launches remain paused.
