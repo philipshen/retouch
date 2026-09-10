@@ -10047,3 +10047,9 @@ Validation: Chromium (`/private/tmp/retouch-object-contract-browser-chromium.log
 Component extraction now preserves readonly array/tuple annotations for whole-value captures and follows readonly tuples when extracting individual destructured members. Nested same-module aliases in readonly arrays resolve through the existing bounded renderer. Other type operators remain refused.
 
 Validation: all 801 unit tests passed (`/private/tmp/retouch-readonly-captures-units.log`). Strict TypeScript compiler probes passed for a readonly array containing a named alias, a whole readonly tuple and destructured readonly tuple values. No browser run in this planner expansion. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Reproducible strict extraction compiler suite
+
+Added `npm run test:types:extraction`, using TypeScript from RT_INSPECTOR_FIXTURE without adding a runtime dependency. The suite compiles original and extracted source for 13 scenarios: inline props, callbacks, object aliases, named/nested tuples, nested objects, interfaces, alias chains, inherited objects, nested named types and readonly captures. JSX attributes have explicit string/callback contracts rather than an unrestricted intrinsic type.
+
+Validation: `RT_INSPECTOR_FIXTURE=/private/tmp/retouch-responsive-fixture npm --prefix retouch run test:types:extraction` passed with TypeScript 5.9.3 (`/private/tmp/retouch-extraction-types-suite.log`, exit 0). This makes the previously manual compiler probes repeatable. No production code or native launch changed in this stage. Full Figma parity remains incomplete; native launches remain paused.
