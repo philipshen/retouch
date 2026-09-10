@@ -106,9 +106,10 @@
     return value.screens.map(screen=>{
       const name=typeof screen?.name==='string'?screen.name.trim().replace(/\s+/g,' '):'';
       if(!name||name.length>80||!valid(screen.width)||!valid(screen.height))throw Error('Each screen needs a name and whole-number dimensions from 240 to 7680.');
+      if(screen.lockAspectRatio!==undefined&&typeof screen.lockAspectRatio!=='boolean')throw Error('Screen aspect-ratio locks must be true or false.');
       const key=screen.width+'x'+screen.height;
       if(names.has(name.toLowerCase())||dimensions.has(key))throw Error('Screen names and dimensions must be unique.');
-      names.add(name.toLowerCase());dimensions.add(key);return [name,screen.width,screen.height];
+      names.add(name.toLowerCase());dimensions.add(key);const size=[name,screen.width,screen.height];if(screen.lockAspectRatio)lockedRatios.add(size);return size;
     });
   }
   async function replaceSet(next,history,undo,message){
@@ -126,7 +127,7 @@
     const files=document.createElement('div');files.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px';
     const saveSet=document.createElement('button');saveSet.type='button';saveSet.className='control-button';saveSet.textContent='Save screen set';
     saveSet.onclick=()=>{
-      const text=JSON.stringify({version:1,screens:sizes.map(([name,width,height])=>({name,width,height}))},null,2)+'\n';
+      const text=JSON.stringify({version:1,screens:sizes.map(size=>({name:size[0],width:size[1],height:size[2],lockAspectRatio:lockedRatios.has(size)}))},null,2)+'\n';
       const url=URL.createObjectURL(new Blob([text],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='retouch-screens.json';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
     };
     const loadSet=document.createElement('button');loadSet.type='button';loadSet.className='control-button';loadSet.textContent='Load screen set';loadSet.title='Replace these comparison views with a saved screen set. You can undo the load.';
