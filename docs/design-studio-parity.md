@@ -8527,3 +8527,27 @@ zero. Final logs: /private/tmp/retouch-arrow-identity-units-verified.log,
 
 Full Figma Design parity, arbitrary-site authoring and trusted brew distribution
 remain incomplete. Native app launches and native launch tests stay paused.
+
+
+### Mounted branch selection after component duplication
+
+Duplicate instance and its Undo/Redo restoration now resolve the mounted host
+from the component's returned root IDs. They no longer always select the first
+source branch, which could be absent from the page. The existing linked-instance
+source operation and history format are unchanged.
+
+Validation: 673 unit tests passed. Chromium and WebKit both passed the expanded
+full component property/library workflow. The new browser sequence duplicates an
+exported arrow component whose visible footer is not its first source root,
+checks the Component tab, changes only the copy to a section, verifies the
+original footer and title remain, then checks exact source restoration, instance
+counts and visible root selection across Undo/Redo of both property and duplicate
+operations. The shared definition stays byte-for-byte unchanged. All test process
+handles finished with exit zero.
+Logs: /private/tmp/retouch-branch-duplicate-units.log,
+/private/tmp/retouch-branch-duplicate-chromium.log and
+/private/tmp/retouch-branch-duplicate-webkit.log.
+
+Component insertion/swap, full variants/shared libraries, arbitrary-site authoring,
+full Figma Design parity and trusted brew distribution remain incomplete. Native
+app launches and native launch tests remain paused.

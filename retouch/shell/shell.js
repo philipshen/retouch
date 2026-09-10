@@ -1335,7 +1335,7 @@ async function duplicateInstance(id,context) {
     else if(copy?.ok)await refreshWrittenElement({...copy.element,renderRevisionAttribute:null},el=>el.getAttribute('data-rt-i')===copied.instanceId);
     else await reloadFrame();
     const component=await api('GET',componentUrl(copied.instanceId));
-    if(copy?.ok&&component?.ok){sel={hostId:component.definitionId,instanceId:copied.instanceId,scope:'instance',info:copy.element};renderPanel();}
+    if(copy?.ok&&component?.ok){sel={hostId:mountedComponentHost(copied.instanceId,component,copy.element.context)?.getAttribute('data-rt')||component.definitionId,instanceId:copied.instanceId,scope:'instance',info:copy.element};renderPanel();}
     toast('Instance duplicated; definition remains shared','ok');
   }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
 }
@@ -2143,7 +2143,7 @@ async function restoreHistory(direction,op) {
       });
       if(op.type==='createComponent'&&component?.ok)sel={hostId:component.definitionId,instanceId:op.id,scope:'instance',info};
     } else await reloadFrame();
-    if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId,usage=await api('GET',resolveUrl(id)),component=await api('GET',componentUrl(id));if(usage?.ok&&component?.ok)sel={hostId:component.definitionId,instanceId:id,scope:'instance',info:usage.element};}
+    if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId,usage=await api('GET',resolveUrl(id)),component=await api('GET',componentUrl(id));if(usage?.ok&&component?.ok)sel={hostId:mountedComponentHost(id,component,usage.element.context)?.getAttribute('data-rt')||component.definitionId,instanceId:id,scope:'instance',info:usage.element};}
     const selectionIds=direction==='undo'?op.selectionBefore||op.selectionIds:op.selectionAfter||op.selectionIds;
     if(sel&&selectionIds)await restoreLayerSelection(selectionIds);
     if (sel) renderPanel();
