@@ -1,6 +1,6 @@
 'use strict';
 // A copied structural type must not refer to bindings from the old function.
-const allowed=new Set(['TSTypeAnnotation','TSTypeLiteral','TSPropertySignature','TSMethodSignature','TSFunctionType','TSArrayType','TSTupleType','TSNamedTupleMember','TSOptionalType','TSRestType','TSLiteralType','TSParenthesizedType',...'TSStringKeyword TSNumberKeyword TSBooleanKeyword TSBigIntKeyword TSSymbolKeyword TSAnyKeyword TSNeverKeyword TSVoidKeyword TSUndefinedKeyword TSNullKeyword'.split(' ')]);
+const allowed=new Set(['TSTypeAnnotation','TSTypeLiteral','TSPropertySignature','TSMethodSignature','TSFunctionType','TSArrayType','TSTupleType','TSNamedTupleMember','TSOptionalType','TSRestType','TSLiteralType','TSParenthesizedType','TSTypeOperator',...'TSStringKeyword TSNumberKeyword TSBooleanKeyword TSBigIntKeyword TSSymbolKeyword TSAnyKeyword TSNeverKeyword TSVoidKeyword TSUndefinedKeyword TSNullKeyword'.split(' ')]);
 function renderType(node,source,resolve,budget={left:2000},depth=0){
  if(!node||depth>20||--budget.left<0)return null;
  if(node.captureText){
@@ -17,6 +17,7 @@ function renderType(node,source,resolve,budget={left:2000},depth=0){
    if(text===null||text===undefined){valid=false;return;}
    edits.push({start:value.start-node.start,end:value.end-node.start,text:'('+text+')'});return;
   }
+  if(value.type==='TSTypeOperator'&&(value.operator!=='readonly'||!['TSArrayType','TSTupleType'].includes(value.typeAnnotation.type))){valid=false;return;}
   if(value.type?.startsWith('TS')&&!allowed.has(value.type)||value.computed||value.optional){valid=false;return;}
   for(const [key,child]of Object.entries(value))if(!['loc','leadingComments','trailingComments','innerComments','extra'].includes(key))inspect(child);
  }
@@ -29,6 +30,7 @@ function patternType(pattern,contract,name,resolve,depth=0){
  if(!pattern||!contract||depth>20||pattern.optional)return null;
  contract=resolve(contract);if(!contract)return null;
  if(pattern.type==='Identifier')return pattern.name===name?contract:null;
+ if(pattern.type==='ArrayPattern'&&contract.type==='TSTypeOperator'&&contract.operator==='readonly')contract=resolve(contract.typeAnnotation);
  if(pattern.type==='ObjectPattern'&&contract.type==='TSTypeLiteral'){
   for(const property of pattern.properties){
    if(property.type!=='ObjectProperty'||property.computed)continue;

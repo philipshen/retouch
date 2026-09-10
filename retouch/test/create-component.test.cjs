@@ -235,3 +235,12 @@ test('typed extraction expands nested named types in whole-object and callback c
 test('recursive structural capture aliases refuse within bounded expansion',()=>{
  const f=fixture('interface Props {next:Props} function Page(data:Props){return <article>{String(data.next)}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/explicit type/);}finally{f.close();}
 });
+
+test('typed extraction preserves readonly arrays and whole tuples while resolving destructured tuple leaves',()=>{
+ for(const [declaration,body,expected]of [
+  ['const values:readonly string[]=["Hi"];','<article>{values.join(",")}</article>','"values": (readonly string[])'],
+  ['const values:readonly [string,number]=["Hi",2];','<article>{values[0]}{values[1]+1}</article>','"values": (readonly [string,number])'],
+  ['const [label,count]:readonly [string,number]=["Hi",2];','<article title={label}>{count+1}</article>','"count": (number)'],
+  ['const values:readonly Label[]=["Hi"];','<article>{values.join(",")}</article>','"values": (readonly (string)[])']
+ ]){const f=fixture('type Label=string;function Page(){'+declaration+'return '+body+'}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);assert.ok(result.edits[0].after.includes(expected));}finally{f.close();}}
+});

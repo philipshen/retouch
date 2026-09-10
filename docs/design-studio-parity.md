@@ -10041,3 +10041,9 @@ Validation: all 800 unit tests passed (`/private/tmp/retouch-nested-aliases-unit
 Added a browser fixture capturing an entire object whose inherited property uses a named alias. The flow checks the generated combined structural type, rendered title, callback-driven state updates, definition edits, appearance preservation and exact source Undo/Redo.
 
 Validation: Chromium (`/private/tmp/retouch-object-contract-browser-chromium.log`) and WebKit (`/private/tmp/retouch-object-contract-browser-webkit.log`) both exited 0. This verifies whole-object capture through the live Next/React pipeline, alongside named tuple and callback captures. No production code changed in this verification stage. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Readonly capture contracts
+
+Component extraction now preserves readonly array/tuple annotations for whole-value captures and follows readonly tuples when extracting individual destructured members. Nested same-module aliases in readonly arrays resolve through the existing bounded renderer. Other type operators remain refused.
+
+Validation: all 801 unit tests passed (`/private/tmp/retouch-readonly-captures-units.log`). Strict TypeScript compiler probes passed for a readonly array containing a named alias, a whole readonly tuple and destructured readonly tuple values. No browser run in this planner expansion. Full Figma parity remains incomplete; native launches remain paused.
