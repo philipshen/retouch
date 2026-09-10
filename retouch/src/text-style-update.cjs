@@ -1,6 +1,5 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path');
-const catalog=require('./text-styles.cjs');
 function sourceInventory(root,renderer){
  const pages=[],skip=new Set(['node_modules','dist','build','out','public','coverage']);let truncated=false;
  function walk(directory){for(const entry of fs.readdirSync(directory,{withFileTypes:true})){if(entry.name.startsWith('.')||entry.isSymbolicLink()||skip.has(entry.name))continue;const file=path.join(directory,entry.name);if(entry.isDirectory())walk(file);else if(entry.isFile()&&(renderer==='liquid'?/\.liquid$/:/\.(jsx|tsx)$/).test(entry.name)){pages.push({path:path.relative(root,file).split(path.sep).join('/')});if(pages.length>1000){truncated=true;return;}}if(truncated)return;}}
@@ -8,10 +7,12 @@ function sourceInventory(root,renderer){
 }
 // Compose the complete project change before any source or catalog write.
 // Use the HTML site's page inventory, including pages not visited in the editor.
-function plan(root,operation,renderer='html'){
+function plan(root,operation,renderer='html',family='text'){
+ const catalog=family==='color'?require('./color-styles.cjs'):require('./text-styles.cjs');
  try{
   if(!['html','react','liquid'].includes(renderer))throw Error('Unsupported text style renderer.');
-  const linked=require(renderer==='react'?'./jsx-text-styles.cjs':renderer==='liquid'?'./liquid-text-styles.cjs':'./html-text-styles.cjs');
+  if(family==='color'&&renderer!=='html')throw Error('Color style propagation requires an HTML project.');
+  const linked=require(family==='color'?'./html-color-styles.cjs':renderer==='react'?'./jsx-text-styles.cjs':renderer==='liquid'?'./liquid-text-styles.cjs':'./html-text-styles.cjs');
   if(operation?.type!=='update')throw Error('Use a text style update operation.');
   const before=catalog.read(root),change=catalog.planChange(root,operation);
   const previous=before.styles.find(style=>style.id===operation.id),next=change.result.styles.find(style=>style.id===operation.id);

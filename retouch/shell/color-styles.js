@@ -1,8 +1,8 @@
 (function(root){
  'use strict';
- let expanded=false,preferred='';
+ let expanded=false,preferred='',target='color';
  function normalize(value){if(typeof value!=='string'||!/^#(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})$/i.test(value))throw Error('Enter a hex color with 3, 4, 6 or 8 digits.');let hex=value.slice(1).toLowerCase();if(hex.length<5)hex=[...hex].map(c=>c+c).join('');return '#'+hex+(hex.length===6?'ff':'');}
- function mount(parent){
+ function mount(parent,options={}){
   const I=root.RetouchInspector,details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Saved color styles';details.append(summary);parent.append(details);
   const status=I.note(details,'');status.setAttribute('role','status');status.setAttribute('aria-live','polite');const controls=document.createElement('fieldset');controls.style.cssText='border:0;padding:0;margin:0;min-width:0';details.append(controls);
   let library=null,selected=preferred,busy=false;
@@ -13,6 +13,15 @@
    controls.replaceChildren();controls.append(I.button('Reload color styles',load));if(!library)return;
    const style=library.styles.find(item=>item.id===selected);if(!style)selected='';
    I.select(controls,'Saved color style',[['','New color…'],...library.styles.map(item=>[item.id,item.name])],selected,value=>{selected=value;preferred=value;render();});
+   if(options.apply){
+    I.select(controls,'Color target',[['color','Text'],['background-color','Background'],['border-color','Border']],target,value=>{target=value;render();});
+    const link=options.links?.[target];
+    if(link){const definition=library.styles.find(item=>item.id===link.id),overridden=options.overrides?.includes(target);I.note(controls,'Linked color: '+(definition?.name||'Unavailable style')+(overridden?' · Local override.':'.'));
+     const reset=I.button('Reset linked color',()=>run(()=>options.reset(link.id,library.revision,target),'Linked color reset.'));reset.disabled=!definition||!overridden;controls.append(reset,I.button('Detach linked color',()=>run(()=>options.detach(target),'Color detached.')));
+    }
+    if(style)controls.append(I.button('Apply color style',()=>run(()=>options.apply(style.id,library.revision,target),'Color applied.')));
+    I.note(controls,'Applies at the selected screen scope. Palette updates follow links across project pages; local overrides are preserved.');
+   }
    const name=document.createElement('input');name.type='text';name.maxLength=80;name.value=style?.name||'';name.placeholder='Brand, Surface, Accent…';I.field(controls,'Color style name',name);
    const hex=document.createElement('input');hex.type='text';hex.value=normalize(style?.properties.color||'#2563eb');hex.spellcheck=false;I.field(controls,'Color hex with alpha',hex);
    const picker=document.createElement('input');picker.type='color';I.field(controls,'Color RGB',picker);

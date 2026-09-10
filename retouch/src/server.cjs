@@ -86,7 +86,7 @@ function handle(req, res, ctx) {
       if(!bytes)return json(res,413,{ok:false,reason:kind+' style requests must be 512 KB or smaller.'});
       let operation;try{operation=JSON.parse(bytes.toString('utf8'));}catch{return json(res,400,{ok:false,reason:'Invalid '+kind+' style JSON.'});}
       try{
-        const plan=!colorLibrary&&operation?.type==='update'&&(ctx.adapter.capabilities?.ops?.includes('setCSS')||['react','liquid'].includes(ctx.adapter.name))?require('./text-style-update.cjs').plan(ctx.appRoot,operation,['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html'):library.planChange(ctx.appRoot,operation);
+        const plan=colorLibrary&&operation?.type==='update'&&ctx.adapter.capabilities?.ops?.includes('setCSS')?require('./text-style-update.cjs').plan(ctx.appRoot,operation,'html','color'):!colorLibrary&&operation?.type==='update'&&(ctx.adapter.capabilities?.ops?.includes('setCSS')||['react','liquid'].includes(ctx.adapter.name))?require('./text-style-update.cjs').plan(ctx.appRoot,operation,['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html'):library.planChange(ctx.appRoot,operation);
         if(!plan.ok)return json(res,409,plan);
         const applied=library.commitPlan(ctx.appRoot,plan);
         for(const edit of applied.edits)if(ctx.adapter.matches(edit.file))ctx.index.indexFile(edit.file);
@@ -188,7 +188,11 @@ function handle(req, res, ctx) {
       let result;
       try {
         resolved.context = renderContext(op.context);
-        if (op.type === 'updateTextStyle') {
+        if (['applyColorStyle','resetColorStyle','detachColorStyle'].includes(op.type)) {
+          if(!ctx.adapter.capabilities?.ops?.includes('setCSS'))return json(res,409,{ok:false,reason:'Linked color styles are not available for this renderer yet.'});
+          let style;if(op.type!=='detachColorStyle'){const library=require('./color-styles.cjs').read(ctx.appRoot);if(library.revision!==op.libraryRevision)return json(res,409,{ok:false,reason:'Color styles changed. Reload the palette.'});style=library.styles.find(item=>item.id===op.styleId);if(!style)return json(res,409,{ok:false,reason:'That color style no longer exists.'});}
+          result=applyPlan(ctx.appRoot,require('./html-color-styles.cjs').plan(resolved,op,style));
+        } else if (op.type === 'updateTextStyle') {
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source layer changed. Re-select it before updating the style.'});
           if (!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!['react','liquid'].includes(ctx.adapter.name)) return json(res,409,{ok:false,reason:'Linked text style updates are not available for this renderer yet.'});
           result=applyPlan(ctx.appRoot,require('./text-style-update.cjs').plan(ctx.appRoot,{type:'update',revision:op.libraryRevision,id:op.styleId,name:op.name,properties:op.properties},['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html'));

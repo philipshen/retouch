@@ -897,7 +897,7 @@ function renderPanelContents() {
   head.appendChild(file);
   head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
-  RetouchColorStyles.mount(panelBody);
+  {const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;RetouchColorStyles.mount(panelBody,!sel.multiple?.length&&info.colorStyles?{links:info.colorStyleLinks?.[width],overrides:info.colorStyleOverrides?.[width]||[],apply:(styleId,libraryRevision,property)=>writeTextStyle('applyColorStyle',width,{styleId,libraryRevision,property}),reset:(styleId,libraryRevision,property)=>writeTextStyle('resetColorStyle',width,{styleId,libraryRevision,property}),detach:property=>writeTextStyle('detachColorStyle',width,{property})}:{});}
 
   if(sel.multiple?.length>1){mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
@@ -1664,7 +1664,12 @@ function moveHTMLLayer(info,target,width,g,action='move',opener){
 
 window.RetouchColorStyleRequest=async operation=>{
  const info=sel?.info;busyPanel(true);
- try{const result=await api('POST','/rt/__api/color-styles',operation);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save color styles');if(result.undoId)editorHistory.record({type:'colorStyleCatalog',id:info?.id,context:info?.context,undoId:result.undoId});return result;}finally{busyPanel(false);}
+ try{
+  const result=await api('POST','/rt/__api/color-styles',operation);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save color styles');
+  if(result.undoId)editorHistory.record({type:'colorStyleCatalog',id:info?.id,context:info?.context,undoId:result.undoId});
+  if(result.updated){const fresh=info?await api('GET',resolveUrl(info.id,info.context)):null;if(fresh?.ok&&sel?.info.id===info.id)sel.info=fresh.element;await reloadFrame();if(sel)renderPanel();}
+  return result;
+ }finally{busyPanel(false);}
 };
 window.RetouchTextStyleRequest=async operation=>{
   const info=sel?.info;busyPanel(true);

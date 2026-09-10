@@ -20,7 +20,7 @@ changing those files. The original checkout may continue to evolve independently
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML supports linear/radial gradient stacks with draggable stops, shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A searchable page-font picker now discovers declared and used families, with React/HTML and local Liquid browser coverage. Explicit variable-axis editing, declared-file range/default inspection and bounded axis sliders have HTML/React/local Liquid browser coverage. Full font browsing, actual glyph-font resolution, live Shopify font verification, full rich-text/paragraph/list controls and complete typography parity remain. |
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | Existing React and Liquid component inspection/detach; full creation/variants/library workflows remain. Live Shopify proof is incomplete. |
-| Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Reusable text styles support responsive links, inherited-scope display, local override/reset, project-wide updates and shared undo in HTML, React and local Liquid. Validated JSON library import/export preserves style identity. Color/effect styles, variables, aliases, collections/modes and shared remote library workflows remain. |
+| Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Reusable text styles support responsive links, inherited-scope display, local override/reset, project-wide updates and shared undo in HTML, React and local Liquid. Validated JSON library import/export preserves style identity. HTML color styles link text/background/border paint with scoped overrides and project updates. React/Liquid color links, effect styles, variables, aliases, collections/modes and shared remote library workflows remain. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload and SVG-canvas SVG/PNG/JPEG downloads exist, including shared local definitions and bitmap embedding. Arbitrary-layer export, fonts, symbols and the full export/import pipeline remain. |
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
@@ -6148,3 +6148,28 @@ The palette is currently accessed through a selected layer and stores sRGB hex
 colors. Applying colors to layers, durable color links, propagation, wide-gamut
 formats and document-level library navigation remain unfinished. Native launches
 remain paused; full design parity and verified desktop distribution are pending.
+
+### Linked HTML palette colors and project propagation (2026-09-09)
+
+HTML layers now apply saved colors to text, background or border at the selected
+screen scope. Durable metadata records each property's link and applied baseline
+independently across widths. The palette displays the selected property's linked
+style and local override state, with reset and appearance-preserving detach.
+Palette definition updates compose the catalog plus all linked HTML pages before
+writing, including unopened pages, and undo together. Local paint overrides and
+explicit resets retain ownership across subsequent library changes; reset opts
+back into the current definition. Invalid/unindexed metadata refuses propagation.
+
+All 461 unit tests passed, exit 0:
+/private/tmp/retouch-html-color-links-units.log. Source tests cover property/scope
+isolation, idempotence, unchanged paint on detach, persistent override ownership,
+reset, stale input and malformed/unindexed refusal without partial edits. Browser
+processes exited 0: /private/tmp/retouch-html-color-links-chromium.log and
+/private/tmp/retouch-html-color-links-webkit.log. Both apply an alpha background at
+768px, update the palette and an unopened page together, restore catalog/source
+with one undo, verify phone/base paint stays unchanged, detach without visual
+change and undo to exact source. WebKit additionally edits a local paint, verifies
+the override label, resets it and restores both edits with undo. Existing palette
+CRUD, transfer and stale-revision flows pass. React/Liquid paint links, batch
+color operations, inherited-color UI, SVG paint targets and wide-gamut palettes
+remain unfinished. Native launches stay paused; full parity is not achieved.
