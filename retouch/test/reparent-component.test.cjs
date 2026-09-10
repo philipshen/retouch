@@ -41,3 +41,19 @@ test('cross-function moves reject lost loop values, shadowing, execution context
   'function Page(){const dest=()=> <section/>;const label="late";return <main><Card label={label}/>{dest()}</main>}',
  ]){const r=resolved(source),destination=r.elements.find(el=>el.node.openingElement.name.name==='section');assert.equal(move.plan(r,{fileHash:r.hash,direction:'inside',destinationId:destination.id}).ok,false,source);assert.equal(move.describe(r).containers.includes(destination.id),false,source);}
 });
+test('reparenting rejects local render cycles introduced through other components or helpers',()=>{
+ for(const source of [
+  'function Page(){return <main><Card/><Other/></main>}function Card(){return <Other/>}function Other(){return <section/>}',
+  'function Page(){return <main><Card/><Other/></main>}function Card(){return [1].map(()=> <Other/>)}function Other(){return <section/>}',
+  'function Page(){return <main><Card/><Other/></main>}function Card(){return renderOther()}function renderOther(){return <Other/>}function Other(){return <section/>}',
+  'function Page(){return <main><Card/><Other/></main>}const Card=()=> <Alias/>;const Alias=Other;function Other(){return <section/>}',
+  'function Page(){return <main><Card><Other/></Card><Other/></main>}function Card({children}){return children}function Other(){return <section/>}',
+ ]){const r=resolved(source),destination=r.elements.find(el=>el.node.openingElement.name.name==='section');const plan=move.plan(r,{fileHash:r.hash,direction:'inside',destinationId:destination.id});assert.equal(plan.ok,false,source);assert.match(plan.reason,/recurs|cycle/i);assert.equal(move.describe(r).containers.includes(destination.id),false);}
+});
+
+test('member component usages cannot move into their object definition',()=>{
+ const r=resolved('function Page(){return <Parts.Card/>}const Parts={Card:()=> <section/>}');r.element=r.elements.find(el=>el.kind==='instance');const destination=r.elements.find(el=>el.node.openingElement.name.name==='section');assert.equal(move.plan(r,{fileHash:r.hash,direction:'inside',destinationId:destination.id}).ok,false);assert.equal(move.describe(r).containers.includes(destination.id),false);
+});
+test('unrelated existing function cycles do not prevent a valid component move',()=>{
+ const r=resolved('function A(){return B()}function B(){return A()}import {Card} from "./Card";function Page(){return <Card/>}function Other(){return <section/>}');const destination=r.elements.find(el=>el.node.openingElement.name.name==='section');assert.equal(move.plan(r,{fileHash:r.hash,direction:'inside',destinationId:destination.id}).ok,true);
+});

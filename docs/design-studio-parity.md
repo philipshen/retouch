@@ -9493,3 +9493,31 @@ processes exited zero with no page errors. Evidence:
 
 Full Figma Design parity and arbitrary-site authoring remain incomplete. Native
 Retouch launches remain paused; trusted brew installation remains unverified.
+
+### Reject component moves that introduce local render cycles (2026-09-10)
+
+A regression test reproduced an accepted move of Card into Other when Card
+already rendered Other. The resulting source would recurse indefinitely. Moves
+now trace local function dependencies before offering or applying a destination.
+The analysis follows constant aliases, component references, render helpers,
+inline nested callbacks and referenced components inside the moved subtree.
+Passing local functions as props is treated conservatively as a dependency.
+Moves within the same owning function do not introduce new graph edges and stay
+available. The direct own-definition guard also remains for member components.
+
+This is local source analysis. Imported implementations, dynamic member dispatch,
+reassigned functions and runtime data-dependent behavior are not fully resolved;
+project-wide cycle analysis remains unfinished. Conservatively counting nested
+functions or function props can exclude destinations that runtime behavior would
+permit. Full Figma parity remains incomplete and native app launches stay paused.
+
+Validation: 758 unit tests passed, including the reproduced indirect recursion,
+helper/alias/callback paths, moved child components, member self-recursion and
+unrelated existing cycles. Unit evidence:
+/private/tmp/retouch-reparent-cycles-units-final.log.
+Chromium also passed the full framed component editing suite with callback
+reparenting, lock preservation, exact Undo/Redo, duplication, deletion and
+property editing, exiting zero with no page errors. Evidence:
+/private/tmp/retouch-reparent-cycles-chromium.log. The final restored member
+own-definition guard is covered by the final unit suite; the browser fixture
+uses an imported component. git diff --check passed.
