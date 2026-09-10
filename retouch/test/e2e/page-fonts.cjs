@@ -80,6 +80,13 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
     await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();await page.getByLabel('Style screen scope').selectOption('');await settled();
     await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await settled();await openLibrary();await page.getByLabel('Saved text style',{exact:true}).selectOption(saved.id);
    }
+   if(kind==='html'||kind==='react'){
+    await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click();await page.getByRole('treeitem',{name:'p · Named text',exact:true}).click({modifiers:['Shift']});await settled();await openLibrary();await page.getByLabel('Saved text style',{exact:true}).selectOption(saved.id);
+    assert.equal(await page.getByRole('button',{name:'Save current typography',exact:true}).count(),0);
+    await page.getByRole('button',{name:'Apply text style',exact:true}).click();await wait(()=>read()!==original);await settled();await wait(async()=>await app.locator('p').evaluateAll(nodes=>nodes.every(el=>getComputedStyle(el).fontSize==='32px')));
+    assert.deepEqual(await app.locator('p').evaluateAll(nodes=>nodes.map(el=>JSON.parse(el.getAttribute('data-rt-text-styles')))),[{[kind==='html'?'0':'']:{id:saved.id,properties:saved.properties}},{[kind==='html'?'0':'']:{id:saved.id,properties:saved.properties}}]);
+    await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await settled();await openLibrary();await page.getByLabel('Saved text style',{exact:true}).selectOption(saved.id);
+   }
    await page.getByRole('button',{name:'Save current typography',exact:true}).click();await wait(async()=>await page.getByRole('status').filter({hasText:'Text style names must be unique.'}).count()===1);assert.equal(catalog().styles.length,1);
    await page.getByLabel('Text style name',{exact:true}).fill('Display');await page.getByRole('button',{name:'Rename text style',exact:true}).click();await wait(()=>catalog().styles[0].name==='Display');assert.equal(catalog().styles[0].id,saved.id);
    await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>catalog().styles[0].name==='Heading');await settled();await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>catalog().styles[0].name==='Display');await settled();

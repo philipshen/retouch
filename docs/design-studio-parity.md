@@ -5879,3 +5879,27 @@ entry, and no source/page errors. Existing linked style workflows still pass.
 The requirement matrix now records implemented reusable text styles accurately;
 variables, aliases, other style types and full design parity remain unfinished.
 Native launches remain paused.
+
+### Apply saved typography to a selection (2026-09-09)
+
+HTML and React multi-selection panels now include saved text styles. Applying a
+style creates a link on every selected layer at the current responsive scope in
+one source transaction and one shared undo entry. The planner reparses intermediate
+snapshots in memory and refuses the entire operation if any layer is unsupported,
+malformed, stale or outside the selected file. Repeated identical application is
+a no-op. Selection UI does not offer to capture one primary layer's typography as
+though it represented mixed values across the selection.
+
+All 443 unit tests passed, exit 0:
+/private/tmp/retouch-style-selection-units.log. Planner tests cover responsive
+metadata, stable identity, idempotence and refusal without partial edits. Browser
+processes exited 0 in /private/tmp/retouch-style-selection-html.log,
+/private/tmp/retouch-style-selection-react.log (Chromium), and
+/private/tmp/retouch-style-selection-webkit.log (HTML WebKit). They select two
+layers through the tree, apply the saved style, verify both computed sizes and
+link metadata, and undo to the exact source snapshot. Existing library transfer,
+propagation and single-layer flows continue to pass without page errors.
+
+Selections currently remain limited to 2–100 layers in one HTML/React source
+file; cross-file selection, Liquid multi-selection and batch detach/reset remain
+unfinished. Native launches remain paused, and full Figma parity is not achieved.

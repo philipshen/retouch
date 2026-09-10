@@ -898,7 +898,7 @@ function renderPanelContents() {
   head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
 
-  if(sel.multiple?.length>1){if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
+  if(sel.multiple?.length>1){mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
   if(info.components?.length) {
     const label=document.createElement('label');label.textContent='Component scope';
@@ -1559,6 +1559,22 @@ async function renameLayer(name){
     if(result.undoId)editorHistory.record({type:'renameElement',id:info.id,undoId:result.undoId});
     sel.info=result.element;await reloadFrame();renderPanel();toast('Layer named','ok');
   }finally{busyPanel(false);}
+}
+function mountSelectionTextStyles(){
+  const selection=sel.multiple,element=matchingEls(sel.info.id)[0];
+  if(!element||!selection.every(info=>info.classTextStyles||info.cssAuthoring))return;
+  RetouchTextStyles.mount(panelBody,element,{selection:selection.length,apply:async(styleId,libraryRevision)=>{
+    const info=sel.info,ids=selection.map(item=>item.id),react=!!info.classSelection;busyPanel(true);
+    try{
+      const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
+      const result=await api('POST','/rt/__api/op',{type:'applyTextStyleSelection',id:info.id,ids,fileHash:info.hash,scope:styleScope,width,styleId,libraryRevision});
+      if(!result?.ok)throw Error(result?.reason||result?.error||'Could not apply the text style to this selection.');
+      if(result.undoId)editorHistory.record({type:react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
+      sel.info=result.element;sel.multiple=result.selection;
+      if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();
+      renderPanel();toast('Text style applied to selected layers','ok');
+    }finally{busyPanel(false);}
+  }});
 }
 async function setHTMLCSSSelection(property,value,width,changesById){
   if(!sel?.multiple?.length)return;const selection=sel.multiple,info=sel.info;busyPanel(true);

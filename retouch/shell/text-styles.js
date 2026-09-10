@@ -45,7 +45,7 @@
    },'Import complete. Existing styles were preserved.');};
    const picker=I.select(controls,'Saved text style',[['','Choose a saved style…'],...library.styles.map(style=>[style.id,style.name])],selected,value=>{selected=value;preferredStyle=value;render();});
    picker.disabled=!library.styles.length;
-   if(!library.styles.length)I.note(controls,'No saved styles yet. Save this layer’s typography to start your library.');
+   if(!library.styles.length)I.note(controls,options.selection?'No saved styles yet. Import a library or select one layer to save its typography.':'No saved styles yet. Save this layer’s typography to start your library.');
    const style=library.styles.find(style=>style.id===selected);
    if(options.link){
     const linkedStyle=library.styles.find(item=>item.id===options.link.id),overrides=options.overrides||[];
@@ -63,7 +63,7 @@
    const name=document.createElement('input');name.type='text';name.maxLength=80;name.value=style?.name||'';name.placeholder='Heading, Body, Caption…';I.field(controls,'Text style name',name);
    function label(){if(!name.value.trim()){name.setCustomValidity('Give the text style a name.');name.reportValidity();return null;}return name.value.trim();}
    name.oninput=()=>name.setCustomValidity('');
-   controls.append(I.button('Save current typography',()=>{const title=label();if(!title)return;run(async()=>{const values=capture();library=await request({type:'create',revision:library.revision,name:title,properties:values});selected=library.id;preferredStyle=selected;},'Text style saved.');}));
+   if(!options.selection)controls.append(I.button('Save current typography',()=>{const title=label();if(!title)return;run(async()=>{const values=capture();library=await request({type:'create',revision:library.revision,name:title,properties:values});selected=library.id;preferredStyle=selected;},'Text style saved.');}));
    if(style){
     if(options.apply)controls.append(I.button('Apply text style',()=>run(()=>options.apply(style.id,library.revision),'Text style applied.')));
     if(options.update){controls.append(I.button('Update style from this layer',()=>run(()=>options.update(style.id,library.revision,style.name,capture()),'Text style updated.')));I.note(controls,'Updates linked layers across project source files. Local overrides are preserved.');}
@@ -74,7 +74,7 @@
      const cancel=I.button('Cancel deletion',()=>render());remove.replaceWith(confirm,cancel);confirm.focus();
     });controls.append(remove);
    }
-   I.note(controls,options.apply?(options.update?'Apply at the selected screen scope. Detach keeps the current appearance.':'Apply at the selected screen scope. Library updates do not propagate in this renderer yet.'):'Captures typography at the current screen size. Style application is not available for this renderer yet.');
+   I.note(controls,options.selection?'Applies to all '+options.selection+' selected layers at the selected screen scope. Undo restores the whole selection.':options.apply?(options.update?'Apply at the selected screen scope. Detach keeps the current appearance.':'Apply at the selected screen scope. Library updates do not propagate in this renderer yet.'):'Captures typography at the current screen size. Style application is not available for this renderer yet.');
   }
   render();details.ontoggle=()=>{if(!details.isConnected)return;expanded=details.open;if(details.open&&!loaded)load();};details.open=expanded;
  }
