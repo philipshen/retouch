@@ -6380,3 +6380,23 @@ fixture artwork resolved that test ambiguity. SVG-specific project propagation,
 local reset and responsive-link browser flows still need dedicated coverage;
 gradient paint-server styles, wide-gamut colors and full parity remain incomplete.
 Native app launches remain paused; no live Shopify claim is made.
+
+### Responsive SVG local paint over inherited palette colors (2026-09-09)
+
+The existing SVG paint inspector now preserves relevant inherited importance
+when authoring a larger-screen property override. A local fill/stroke edit can
+therefore override an important saved color from the base scope. Reset removes
+that local property and reveals inherited paint; palette metadata remains linked
+at its original scope. Typed stroke-width variables are classified as geometry,
+so changing stroke color no longer removes stroke-(length:--variable) utilities.
+
+All 478 tests passed, exit 0: /private/tmp/retouch-svg-responsive-units.log.
+Unit coverage checks typed stroke-width ownership, inherited importance,
+independent paint properties and reset. React Chromium and local Liquid WebKit
+editor flows passed, exit 0: /private/tmp/retouch-svg-responsive-react.log and
+/private/tmp/retouch-svg-responsive-liquid.log. They link base SVG paint, author
+an alpha-green md fill through the existing SVG paint control, verify phone
+retains the base color, reset md to inherited paint, and undo both source states
+exactly before completing existing palette tests. Wider cascade/paint-server
+coverage and full Figma parity remain incomplete. Native launches remain paused;
+these receipts do not verify a live Shopify theme.

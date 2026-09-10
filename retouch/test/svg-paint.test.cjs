@@ -13,3 +13,9 @@ test('SVG paint refuses unsupported properties and unsafe or malformed class val
  for(const [key,value]of [['fill','url(https://example.com/a.svg)'],['stroke-width','-2'],['fill','red;display:none'],['stroke-dasharray','2 nope'],['unknown','red']])assert.throws(()=>paint.update('',key,value));
  assert.equal(paint.update('','stroke-linecap','round'),'[stroke-linecap:round]');assert.equal(paint.update('','stroke-dasharray','4 2'),'[stroke-dasharray:4_2]');
 });
+
+test('SVG local responsive paint retains inherited importance and typed stroke width ownership',()=>{
+ assert.equal(paint.property('!stroke-(length:--outline-width)'),'stroke-width');assert.equal(paint.property('stroke-[length:var(--outline-width)]!'),'stroke-width');
+ const source='!stroke-(length:--outline-width) !stroke-red-500';assert.equal(paint.update(source,'stroke','#1234'),'!stroke-(length:--outline-width) ![stroke:#1234]');assert.equal(paint.update(source,'stroke-width','4'),'!stroke-red-500 ![stroke-width:4]');
+ assert.equal(paint.update('','fill','#1234','![fill:#abcdef]'),'![fill:#1234]');assert.equal(paint.update('','stroke','none','!stroke-blue-500'),'![stroke:none]');assert.equal(paint.update('','fill','#1234','!stroke-blue-500'),'[fill:#1234]');assert.equal(paint.update('![fill:#1234]','fill',null,'![fill:#abcdef]'),'');
+});
