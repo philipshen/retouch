@@ -8100,3 +8100,19 @@ leaves the typed props-object definition unchanged. Chromium and WebKit exercise
 an optional tone choice on Badge(props: BadgeProps), a rendered background change,
 and exact source Undo/Redo. Full component parity remains incomplete and native
 launches remain paused.
+
+
+## Standard TypeScript utility prop contracts (2026-09-10)
+
+Variant discovery now follows supported Partial, Required, Readonly, Pick and Omit
+wrappers over module-local prop contracts. Optionality is preserved or changed as
+declared; Pick/Omit support finite string-literal key unions and their aliases.
+Local/imported names shadowing a utility are not treated as the built-in. Invalid
+arity, unknown Pick keys, unsupported key expressions and excessive traversal are
+refused. General generic instantiation, keyof evaluation and mapped types remain
+unfinished. Behavior was checked against the installed TypeScript utility types.
+
+629 unit tests pass. Chromium and WebKit verify a fixture that wraps BadgeProps in nested
+Readonly/Partial/Pick and exercises omitted choice editing, a rendered background
+change and exact Undo/Redo alongside the existing variant workflow. Full Figma
+parity remains incomplete. Native app launches remain paused.

@@ -124,3 +124,26 @@ test('component descriptors expose omitted declared choices from a typed props o
   const plan=props.plan(usage,{name:'tone',value:'bold',fileHash:usage.hash,definitionHash:tone.editor.definitionHash});assert.ok(plan.ok,plan.reason);assert.ok(plan.edits[0].after.includes('<Card tone={"bold"}/>'));assert.equal(plan.edits[0].after.split('function Card')[1],source.split('function Card')[1]);
  }finally{index.close();cleanup(root);}
 });
+
+
+test('built-in utility contracts preserve choices and optionality',()=>{
+ const inspect=require('../src/component-prop-choices.cjs');
+ for(const [type,optional,names] of [
+  ['Partial<Base>',true,['size','tone']],
+  ['Required<Partial<Base>>',false,['size','tone']],
+  ['Readonly<Partial<Base>>',true,['size','tone']],
+  ['Pick<Partial<Base>,Keys>',true,['size']],
+  ['Omit<Partial<Base>,"tone">',true,['size']],
+ ]){const source='type Keys="size";interface Base {size:"small"|"large";tone:"calm"|"bold"}function Card(props:'+type+'){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),definition={source,fn:ast.program.body.find(n=>n.type==='FunctionDeclaration')};assert.deepEqual(inspect.names({},definition),names);const choice=inspect.choices({},'size',definition);assert.deepEqual(choice.choices,['small','large']);assert.equal(choice.optional,optional);}
+});
+test('utility discovery refuses shadowed names, invalid arity, and unsupported keys',()=>{
+ const inspect=require('../src/component-prop-choices.cjs');
+ for(const [prefix,type] of [
+  ['import type {Partial} from "./custom";','Partial<Base>'],
+  ['type Partial<T>={size:"custom"};','Partial<Base>'],
+  ['class Partial<T> { custom!:T }','Partial<Base>'],
+  ['', 'Partial<Base,Base>'],
+  ['', 'Pick<Base,"missing">'],
+  ['', 'Pick<Base,keyof Base>'],
+ ]){const source=prefix+'interface Base {size:"small"|"large"}function Card(props:'+type+'){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),definition={source,fn:ast.program.body.find(n=>n.type==='FunctionDeclaration')};assert.equal(inspect.choices({},'size',definition),null);}
+});
