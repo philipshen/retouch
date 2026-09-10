@@ -6075,3 +6075,25 @@ work correctly. The integrated linked-style/library regression passed, exit 0,
 in /private/tmp/retouch-html-shared-type-links.log, including visible direct-link
 coverage and aggregate overrides after a shared relative edit. Native launches
 remain paused; full design parity and verified desktop distribution are unfinished.
+
+### Shared relative typography for React selections (2026-09-09)
+
+React multi-selection now includes percentage-based line height and tracking,
+plus automatic line height. Values write unitless line height or em tracking at
+the selected responsive scope, so differently sized layers retain proportional
+spacing. Mixed/automatic values display explicitly. Inline-controlled properties
+disable the corresponding controls. Edits preserve important priority, named
+style overrides and combined utility size ownership, using one shared transaction
+and undo entry per action. Pixel controls and property resets remain available.
+
+All 454 unit tests passed, exit 0:
+/private/tmp/retouch-react-relative-type-units.log. New tests cover relative token
+encoding, negative tracking, important scoped combined utilities, automatic line
+height and invalid values. React browser processes exited 0:
+/private/tmp/retouch-react-relative-type-chromium.log and
+/private/tmp/retouch-react-relative-type-webkit.log. Both verify shared font edits,
+20px/32px sizes, 200% leading yielding 40px/64px, 10% tracking yielding 2px/3.2px,
+unchanged phone/base styling, automatic leading and exact source/computed undo.
+General font shorthand support, arbitrary-site adapters and the broader parity
+matrix remain unfinished. Native launches remain paused; full design parity and
+verified desktop distribution are not achieved.

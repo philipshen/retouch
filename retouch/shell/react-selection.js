@@ -12,12 +12,13 @@
   'font-style':{label:'Font slant',matches:t=>inspector().fontStyleToken(t),options:['normal','italic','oblique'],token:v=>'[font-style:'+v+']'},
   'text-transform':{label:'Text case',matches:t=>inspector().caseToken(t),options:['none','uppercase','lowercase','capitalize'],token:v=>'[text-transform:'+v+']'}
  });
- function change(classes,scope,property,value,document=null){
-  const field=fields[property];if(!field||value!==null&&(field.valid?!field.valid(value):field.options?!field.options.includes(value):!Number.isFinite(value)||value<(field.min??0)||value>(field.max??100)||field.step===1&&!Number.isInteger(value)))throw Error('Choose a supported shared style value.');
+ function change(classes,scope,property,value,document=null,relative=false){
+  if(relative&&(!['line-height','letter-spacing'].includes(property)||!Number.isFinite(value)||value<(property==='line-height'?0:-100)||value>1000))throw Error('Choose a supported relative typography value.');
+  const field=fields[property];if(!field||value!==null&&!(property==='line-height'&&value==='normal')&&(field.valid?!field.valid(value):field.options?!field.options.includes(value):!Number.isFinite(value)||value<(field.min??0)||value>(field.max??100)||field.step===1&&!Number.isInteger(value)))throw Error('Choose a supported shared style value.');
   const I=root.RetouchInspector||require('./inspector.js'),R=root.RetouchResponsive||require('./responsive.js');
   const active=R.project(classes,scope).split(/\s+/).map(I.base).filter(Boolean);
   if(['font-family','font-size','font-weight','line-height','font-style'].includes(property)&&active.some(token=>/^\[font:/.test(token)))throw Error('A selected layer uses a font shorthand. Edit that shorthand before changing its typography.');
-  let addition=value===null?'':field.token(value);if(scope&&value!==null&&R.inherited(classes,scope,document).split(/\s+/).some(token=>I.base(token)!==null&&field.matches(I.base(token))&&/^!|!$/.test(token)))addition='!'+addition;
+  let addition=value===null?'':relative?'['+property+':'+Math.round(value*1e6)/1e8+(property==='letter-spacing'?'em':'')+']':property==='line-height'&&value==='normal'?'[line-height:normal]':field.token(value);if(scope&&value!==null&&R.inherited(classes,scope,document).split(/\s+/).some(token=>I.base(token)!==null&&field.matches(I.base(token))&&/^!|!$/.test(token)))addition='!'+addition;
   if(addition&&document&&!['opacity','visibility','mix-blend-mode','isolation'].includes(property)&&I.catalog(document).some(name=>(classes||'').split(/\s+/).includes(name))&&!addition.startsWith('!'))addition='!'+addition;
   const projected=R.project(classes,scope),expanded=['font-size','line-height'].includes(property)?I.expandSizeLeading(projected):projected,next=I.replace(expanded,field.matches,addition);return next===projected?(classes||''):R.replaceScope(classes,next,scope);
  }
@@ -25,6 +26,15 @@
   const I=root.RetouchInspector,sec=I.section('Shared styles');
   if(elements.some(el=>!el?.isConnected)||infos.some(info=>info.classNameDynamic||info.svgPaint?.reason)){I.note(sec,'Shared styles need literal class names without spread props on every selected layer.','refused');return sec;}
   I.note(sec,'Shift-click a range in Layers; Cmd/Ctrl-click toggles layers. On the canvas, Shift-click toggles. Each edit updates these source layers and undoes together, including every rendered instance.');
+  const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el));
+  const relativeGroup=root.document.createElement('fieldset');relativeGroup.style.cssText='border:0;padding:0;margin:0;min-width:0';sec.append(relativeGroup);
+  const relativeWrite=(property,value,relative=true)=>{try{save(Object.fromEntries(infos.map((info,i)=>[info.id,change(info.className,scope,property,value,elements[i].ownerDocument,relative)])));}catch(error){I.note(sec,error.message,'refused');}};
+  for(const [property,label,min]of [['line-height','Shared Line height (%)',0],['letter-spacing','Shared Letter spacing (%)',-100]]){
+   const values=computed.map(css=>{const raw=css.getPropertyValue(property);return raw==='normal'&&property==='line-height'?NaN:(parseFloat(raw)||0)/parseFloat(css.fontSize)*100;}),mixed=values.some(value=>!Number.isFinite(value)||Math.abs(value-values[0])>.0001),group=root.document.createElement('fieldset');group.style.cssText='border:0;padding:0;margin:0;min-width:0';relativeGroup.append(group);
+   const input=I.relativeNumber(group,label,mixed?NaN:values[0],min,1000,value=>relativeWrite(property,value));if(mixed)input.placeholder='Mixed / automatic';input.title='Relative to each selected layer’s own font size.';group.disabled=elements.some(el=>el.style.getPropertyValue(property));
+  }
+  const automatic=I.button('Automatic shared line height',()=>relativeWrite('line-height','normal',false));automatic.disabled=elements.some(el=>el.style.getPropertyValue('line-height'));relativeGroup.append(automatic);
+  I.note(relativeGroup,'Relative spacing follows each layer’s own font size. Pixel controls and resets are available below.');
   for(const [property,field]of Object.entries(fields)){
    if(field.picker){
     const values=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el).fontFamily),mixed=values.some(value=>value!==values[0]),group=root.document.createElement('fieldset');group.style.cssText='border:0;padding:0;margin:0;min-width:0';sec.append(group);
@@ -45,5 +55,5 @@
   }
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={change,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={change,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);

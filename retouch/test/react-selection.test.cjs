@@ -62,3 +62,11 @@ test('fluid and explicitly typed font sizes remain editable without consuming te
  assert.equal(I.replaceTypography('text-[length:calc(20px/2)]/[1.4] text-[color:var(--brand)]',I.fontSizeToken,'text-[40px]'),'leading-[1.4] text-[color:var(--brand)] text-[40px]');
  assert.equal(change('md:!text-[clamp(16px,2vw,24px)]/9 hover:text-red-500','md:','font-size',40),'hover:text-red-500 md:!leading-9 md:![font-size:40px]');
 });
+test('shared relative spacing writes font-relative tokens and preserves combined sizes',()=>{
+ const {changeRelative}=require('../shell/react-selection.js');
+ assert.equal(changeRelative('p-4 md:!text-lg/9 hover:leading-8','md:','line-height',200),'p-4 hover:leading-8 md:!text-lg md:![line-height:2]');
+ assert.equal(changeRelative('!tracking-[2px] md:tracking-wide','','letter-spacing',10),'md:tracking-wide ![letter-spacing:0.1em]');
+ assert.equal(changeRelative('','','letter-spacing',-2),'[letter-spacing:-0.02em]');
+ assert.equal(change('!text-lg/9','','line-height','normal'),'!text-lg ![line-height:normal]');
+ for(const [property,value]of [['font-size',100],['line-height',-1],['line-height',NaN],['letter-spacing',-101],['letter-spacing',1001]])assert.throws(()=>changeRelative('p-4','',property,value));
+});
