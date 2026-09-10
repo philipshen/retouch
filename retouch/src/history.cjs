@@ -5,7 +5,8 @@ const {applyPlan} = require('./transactions.cjs');
 // Groups are explicit interaction identities, never a timing heuristic. Entries
 // retain the first before-image and the last after-image for every touched file.
 class SourceHistory {
-  constructor(limit = 100) { this.limit=limit; this.undo=[]; this.redo=[]; this.group=null; }
+  constructor(limit = 100, {store} = {}) { this.limit=limit; this.store=store;const saved=store?.load();this.undo=saved?.undo||[];this.redo=saved?.redo||[];this.group=null;this.persistenceError=null; }
+  persist(){try{this.store?.save({undo:this.undo,redo:this.redo});this.persistenceError=null;}catch(error){this.persistenceError=error.message;}}
   record(edits, group) {
     if (!edits.length) return null;
     const last=this.undo.at(-1);
@@ -20,12 +21,12 @@ class SourceHistory {
         if(previous) previous.after=edit.after;
         else last.edits.push({...edit});
       }
-      return last.id;
+      this.persist();return last.id;
     }
     const entry={id:crypto.randomBytes(16).toString('hex'),edits:edits.map(e=>({...e}))};
     this.undo.push(entry); this.group=group || null;
     if(this.undo.length>this.limit)this.undo.shift();
-    return entry.id;
+    this.persist();return entry.id;
   }
   apply(root, type, id, adapter) {
     const from=type==='undo'?this.undo:this.redo;
@@ -39,7 +40,7 @@ class SourceHistory {
     }
     const result=applyPlan(root,{ok:true,edits});
     if(!result.ok)return result;
-    from.pop();to.push(entry);this.group=null;
+    from.pop();to.push(entry);this.group=null;this.persist();
     return {...result,undoId:entry.id};
   }
 }

@@ -6916,3 +6916,25 @@ reloads, verify exact source and rendered opacity, and restart the server at the
 same address to verify that obsolete history is not offered.
 Native Retouch launches remain paused. Full parity and arbitrary-site support
 remain incomplete.
+
+
+### Persistent source-history store foundation (2026-09-09)
+
+`history-store.cjs` adds a project-scoped disk journal with relative source paths,
+100-entry/64-MiB bounds, validated snapshots, private file modes, atomic journal
+replacement, an exclusive save lock and revision checks between editor processes.
+The caller chooses its local state directory. Symbolic-link storage, traversal,
+corrupt journals and stale concurrent saves are refused. Loading does not mutate
+source files. SourceHistory can now use this store and retains its in-memory
+history plus a persistence error when a disk save fails after a source edit.
+
+The backend tests reconstruct SourceHistory from disk between operations, verify
+both undo and redo, preserve externally changed files, reject competing journal
+writes and exercise write failure. All 526 unit tests passed in
+`/private/tmp/retouch-history-store-units.log`.
+
+This store is not connected to server startup or history discovery yet, so the
+editor still does not restore source history across server restarts. Integration
+must expose persistence failures, recover client operation descriptors, handle
+old editor-only locks separately, and address interrupted writes and stale save
+locks before claiming crash recovery. Native launches remain paused.
