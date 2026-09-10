@@ -10029,3 +10029,9 @@ Validation: all 798 unit tests passed (`/private/tmp/retouch-inherited-contracts
 Added browser coverage for a captured property inherited through two same-module interface levels. The fixture retains the named state tuple and callback alias, then verifies generated prop annotations, callback-driven state changes, definition editing, appearance and exact source Undo/Redo.
 
 Validation: Chromium (`/private/tmp/retouch-inherited-browser-chromium.log`) and WebKit (`/private/tmp/retouch-inherited-browser-webkit.log`) both exited 0. Whole-object inherited contracts retain the preceding unit/compiler coverage; this browser fixture exercises inherited leaf extraction. No production code changed in this verification stage. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Expand nested named types in capture signatures
+
+Whole-object and callback captures now expand same-module aliases nested inside their structural contracts, including inherited object properties. Generated annotations contain the resolved types instead of failing on remaining named references. Rendering is bounded by depth and node budget, so recursive structural references refuse cleanly.
+
+Validation: all 800 unit tests passed (`/private/tmp/retouch-nested-aliases-units.log`). A strict TypeScript compiler probe passed on an extracted inherited object with named string/number properties and a callback whose argument uses the string alias. Tests also cover bounded refusal of recursive object contracts. No browser run in this planner expansion. Full Figma parity remains incomplete; native launches remain paused.

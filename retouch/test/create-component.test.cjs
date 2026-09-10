@@ -227,3 +227,11 @@ test('typed extraction refuses cyclic and ambiguous inherited contracts',()=>{
   const f=fixture(contracts+' function Page({title}:Props){return <article>{title}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/explicit type/);}finally{f.close();}
  }
 });
+
+test('typed extraction expands nested named types in whole-object and callback captures',()=>{
+ const contracts='type Label=string;type Count=number;interface Base {title:Label}interface Props extends Base {count:Count}type Handler=(value:Label)=>void;';
+ const f=fixture(contracts+' function Page(data:Props,onValue:Handler){return <article onClick={()=>onValue(data.title)}>{data.count+1}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);const signature=result.edits[0].after.split('function Card(')[1];assert.match(signature,/title:\(string\)/);assert.match(signature,/count:\(number\)/);assert.match(signature,/value:\(string\)/);assert.ok(!signature.includes('Label'));assert.ok(!signature.includes('Count'));}finally{f.close();}
+});
+test('recursive structural capture aliases refuse within bounded expansion',()=>{
+ const f=fixture('interface Props {next:Props} function Page(data:Props){return <article>{String(data.next)}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/explicit type/);}finally{f.close();}
+});
