@@ -147,3 +147,11 @@ test('utility discovery refuses shadowed names, invalid arity, and unsupported k
   ['', 'Pick<Base,keyof Base>'],
  ]){const source=prefix+'interface Base {size:"small"|"large"}function Card(props:'+type+'){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),definition={source,fn:ast.program.body.find(n=>n.type==='FunctionDeclaration')};assert.equal(inspect.choices({},'size',definition),null);}
 });
+
+
+test('boolean keyword contracts expose both boolean values and preserve optional state',()=>{
+ for(const optional of [true,false]){const source='interface Props {emphasized'+(optional?'?':'')+':boolean}function Page(){return <main><Card/></main>}function Card(props:Props){return <h1/>}',root=fs.realpathSync(makeApp({'page.tsx':source})),index=new Index(root);index.scanAll();try{
+  const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.kind==='instance'),info=props.describe(usage,'emphasized');assert.deepEqual(info.choices,[true,false]);assert.equal(info.unset,true);assert.equal(info.allowUnset,optional);
+  const op={name:'emphasized',fileHash:usage.hash,definitionHash:info.definitionHash};assert.equal(props.plan(usage,{...op,value:'true'}).ok,false);for(const value of [true,false]){const plan=props.plan(usage,{...op,value});assert.ok(plan.ok,plan.reason);assert.ok(plan.edits[0].after.includes('emphasized={'+value+'}'));}
+ }finally{index.close();cleanup(root);}}
+});

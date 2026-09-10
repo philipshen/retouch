@@ -1243,7 +1243,7 @@ function propTable(props,instanceId,fileHash) {
   const body=document.createElement('tbody');
   for(const prop of props){
     const row=document.createElement('tr'),name=document.createElement('td'),value=document.createElement('td'),fallback=document.createElement('td');name.textContent=prop.name;fallback.textContent=prop.default;
-    if(instanceId&&prop.editor?.editable&&prop.editor.choices){
+    if(instanceId&&prop.editor?.editable&&prop.editor.choices&&!(prop.editor.type==='boolean'&&typeof prop.editor.value==='boolean'&&prop.editor.choices.length===2&&!prop.editor.allowUnset&&!prop.editor.unset)){
       const meta=prop.editor,input=document.createElement('select');input.setAttribute('aria-label','Component property '+prop.name);
       meta.choices.forEach((choice,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=String(choice);input.append(option);});
       const selected=meta.choices.indexOf(meta.value);

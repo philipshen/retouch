@@ -8130,3 +8130,18 @@ and WebKit now pass focus retention for saved text, unchanged commits without so
 writes, and variant dropdowns, alongside rendered edits and exact Undo/Redo. This
 was a targeted UI fix; the unit suite was not rerun. Full parity remains unfinished.
 Native app launches remain paused.
+
+
+## Declared boolean component options (2026-09-10)
+
+TypeScript boolean contracts now expose true and false choices even when a source
+usage omits the prop. Optional boolean props without a literal default retain a
+separate Not set state, which removes the attribute. Explicit false remains a
+literal false value. Existing boolean values with literal defaults keep their
+checkbox controls. Invalid non-boolean source literals are not displayed as checked
+checkboxes. The declared type and definition revision still constrain writes.
+
+630 unit tests pass. Chromium and WebKit verify true, false and unset through a
+boolean option discovered through nested utility types, including the rendered
+font-weight change and exact Undo/Redo. Full component parity remains incomplete;
+native app launches remain paused.

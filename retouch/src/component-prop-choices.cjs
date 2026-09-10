@@ -67,6 +67,7 @@ function inspect(resolved,name,definition){
    node=resolve(node);if(!node||++choiceVisits>1000||seen.size>=20||seen.has(node))return false;
    const next=new Set(seen);next.add(node);
    if(node.type==='TSUnionType')return node.types.every(type=>expand(type,next));
+   if(node.type==='TSBooleanKeyword'){values.push(true,false);return values.length<=100;}
    if(node.type!=='TSLiteralType')return false;
    const value=node.literal;
    if(value.type==='UnaryExpression'&&value.operator==='-'&&value.argument.type==='NumericLiteral')values.push(-value.argument.value);
