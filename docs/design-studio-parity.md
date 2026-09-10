@@ -10059,3 +10059,9 @@ Validation: `RT_INSPECTOR_FIXTURE=/private/tmp/retouch-responsive-fixture npm --
 Extraction now converts destructured method signatures into callable prop annotations, including inherited methods and named argument aliases. It retains the return type and parameters while changing method syntax into function-type syntax. Optional methods and accessors are refused rather than treated as required functions.
 
 Validation: all 803 unit tests passed (`/private/tmp/retouch-method-captures-units.log`). The reusable strict compiler suite now contains 14 scenarios and passed (`/private/tmp/retouch-method-captures-compiler.log`), including an inherited method invoked by the extracted click handler. No browser run in this planner expansion. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Live method-prop extraction
+
+Added a browser fixture whose captured callback is destructured from a method-style interface. The flow verifies its callable output annotation and actual React state update after extraction, alongside whole-object inherited aliases, definition edits, appearance and exact source Undo/Redo.
+
+Validation: Chromium (`/private/tmp/retouch-method-contract-browser-chromium.log`) and WebKit (`/private/tmp/retouch-method-contract-browser-webkit.log`) both exited 0. No production code changed in this verification stage. Full Figma parity remains incomplete; native launches remain paused.
