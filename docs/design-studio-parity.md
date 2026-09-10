@@ -10017,3 +10017,9 @@ Validation: all 796 unit tests passed (`/private/tmp/retouch-module-contracts-un
 Added a TSX browser fixture using a same-module state-tuple alias, object interface and callback alias. The creation flow verifies resolved prop annotations, live state updates from the extracted callback, shared-definition editing, preserved appearance and exact Undo/Redo source restoration.
 
 Validation: Chromium (`/private/tmp/retouch-named-contract-browser-chromium.log`) and WebKit (`/private/tmp/retouch-named-contract-browser-webkit.log`) both exited 0. This confirms the same-module named-contract path; imported types, generic substitution and interface inheritance remain separate work. No production code changed in this verification stage. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Inherited same-module capture contracts
+
+Extraction now follows non-generic same-module interface inheritance, including multiple levels, to resolve captured leaf properties. Whole-object captures render the combined structural contract so inherited fields are retained. Cycles, duplicate/overridden member names and unsupported base forms remain refused. The standalone-interface path remains unchanged.
+
+Validation: all 798 unit tests passed (`/private/tmp/retouch-inherited-contracts-units-final.log`). Strict TypeScript compiler probes passed for generated components capturing inherited fields individually and capturing the entire derived object. Tests include cyclic inheritance, overlapping members and generic bases. No browser run in this planner expansion. Full Figma parity remains incomplete; native launches remain paused.

@@ -31,7 +31,7 @@ function patternType(pattern,contract,name,resolve,depth=0){
  // Defaults and rest bindings need separate narrowing/shape analysis.
  return null;
 }
-function typeResolver(binding){
+function typeResolver(binding,source){
  const program=binding.path.findParent(path=>path.isProgram()),declarations=new Map(),counts=new Map();
  if(program){
   program.traverse({
@@ -49,13 +49,25 @@ function typeResolver(binding){
   if(!node||counts.get(name)!==1||node.typeParameters||seen.has(name)||seen.size>=20)return null;
   const next=new Set(seen);next.add(name);
   if(node.type==='TSTypeAliasDeclaration')return resolve(node.typeAnnotation,next);
-  if(node.extends?.length)return null;
-  return {type:'TSTypeLiteral',members:node.body.body,start:node.body.start,end:node.body.end};
+  if(!node.extends?.length)return {type:'TSTypeLiteral',members:node.body.body,start:node.body.start,end:node.body.end};
+  const members=[];
+  for(const base of node.extends||[]){
+    const resolved=resolve({type:'TSTypeReference',typeName:base.expression,typeParameters:base.typeParameters,typeArguments:base.typeArguments},next);
+    if(resolved?.type!=='TSTypeLiteral')return null;
+    members.push(...resolved.members);
+  }
+  members.push(...node.body.body);
+  const keys=new Set();
+  for(const member of members){
+    if(!['TSPropertySignature','TSMethodSignature'].includes(member.type)||member.computed)return null;
+    const key=String(member.key.name??member.key.value);if(keys.has(key))return null;keys.add(key);
+  }
+  return {type:'TSTypeLiteral',members,start:node.body.start,end:node.body.end,captureText:'{ '+members.map(member=>source.slice(member.start,member.end)).join('; ')+' }'};
  };
 }
 module.exports=function captureType(binding,source){
  const pattern=binding.path.node.type==='VariableDeclarator'?binding.path.node.id:binding.path.node;
- const resolve=typeResolver(binding),type=resolve(binding.identifier.typeAnnotation?.typeAnnotation||patternType(pattern,pattern.typeAnnotation?.typeAnnotation,binding.identifier.name,resolve));
+ const resolve=typeResolver(binding,source),type=resolve(binding.identifier.typeAnnotation?.typeAnnotation||patternType(pattern,pattern.typeAnnotation?.typeAnnotation,binding.identifier.name,resolve));
  if(binding.identifier.optional||!type||!closed(type))return null;
- return '('+source.slice(type.start,type.end)+')';
+ return '('+(type.captureText||source.slice(type.start,type.end))+')';
 };

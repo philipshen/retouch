@@ -215,3 +215,15 @@ test('typed extraction refuses ambiguous, generic and cyclic module contracts',(
   const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/explicit type/);}finally{f.close();}
  }
 });
+
+test('typed extraction includes inherited interface properties in leaf and whole-object contracts',()=>{
+ const contracts='interface Base {title:string} interface Details extends Base {count:number} interface Props extends Details {enabled:boolean}';
+ for(const [params,body]of [['{title,count}:Props','<article title={title}>{count+1}</article>'],['data:Props','<article title={data.title}>{data.count+1}</article>']]){
+  const f=fixture(contracts+' function Page('+params+'){return '+body+'}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);const after=result.edits[0].after;if(params.startsWith('data')){assert.match(after,/"data": \(\{ title:string; count:number; enabled:boolean \}\)/);}else{assert.ok(after.includes('"title": (string)'));assert.ok(after.includes('"count": (number)'));}}finally{f.close();}
+ }
+});
+test('typed extraction refuses cyclic and ambiguous inherited contracts',()=>{
+ for(const contracts of ['interface Base extends Props {title:string} interface Props extends Base {}','interface Base {title:string} interface Props extends Base {title:"Hi"}','interface Base<T>{title:T} interface Props extends Base<string>{}']){
+  const f=fixture(contracts+' function Page({title}:Props){return <article>{title}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/explicit type/);}finally{f.close();}
+ }
+});
