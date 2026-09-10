@@ -358,3 +358,29 @@ test('path aliases reject executable config, cycles, package inheritance and pro
  }
  const outside=makeApp({'contracts.ts':'export interface Props {title?:"small"|"large"}'}),f=importedTypes({...aliasFiles(),'tsconfig.json':JSON.stringify({compilerOptions:{paths:{'@/*':[outside+'/*']}}})});try{assert.equal(props.describe(f.resolved,'title').choices,undefined);}finally{f.close();cleanup(outside);}
 });
+
+test('adding an earlier alias fallback target invalidates both the editor and pending transaction',()=>{
+ const f=importedTypes({...aliasFiles(),'tsconfig.json':'{"compilerOptions":{"paths":{"@/*":["./preferred/*","./types/*"]}}}'});try{
+  const info=props.describe(f.resolved,'title'),op={name:'title',value:'large',fileHash:f.resolved.hash,definitionHash:info.definitionHash},plan=props.plan(f.resolved,op);assert.ok(plan.ok,plan.reason);assert.ok(plan.pathChecks.some(check=>check.kind==='missing'&&check.file.endsWith('/preferred/contracts.ts')));
+  fs.mkdirSync(require('node:path').join(f.root,'preferred'));fs.writeFileSync(require('node:path').join(f.root,'preferred/contracts.ts'),'export interface Props {title?:"small"|"large"}');
+  assert.equal(props.plan(f.resolved,op).ok,false);assert.equal(require('../src/transactions.cjs').applyPlan(f.root,plan).ok,false);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.resolved.source);
+ }finally{f.close();}
+});
+test('missing resolution candidates remain absent after a successful property transaction',()=>{
+ const f=importedTypes({...aliasFiles(),'tsconfig.json':'{"compilerOptions":{"paths":{"@/*":["./preferred/*","./types/*"]}}}'});try{
+  const info=props.describe(f.resolved,'title'),plan=props.plan(f.resolved,{name:'title',value:'large',fileHash:f.resolved.hash,definitionHash:info.definitionHash}),applied=require('../src/transactions.cjs').applyPlan(f.root,plan);assert.ok(applied.ok,applied.reason);assert.equal(applied.edits.length,1);assert.equal(fs.existsSync(require('node:path').join(f.root,'preferred')),false);
+ }finally{f.close();}
+});
+test('a file added ahead of a directory index cannot silently replace the selected contract',()=>{
+ const f=importedTypes({'contracts/index.ts':'export interface Props {title?:"small"|"large"}'});try{
+  const info=props.describe(f.resolved,'title'),op={name:'title',value:'large',fileHash:f.resolved.hash,definitionHash:info.definitionHash},plan=props.plan(f.resolved,op);assert.ok(plan.ok,plan.reason);
+  fs.writeFileSync(require('node:path').join(f.root,'contracts.ts'),'export interface Props {title?:"small"|"large"}');assert.equal(props.plan(f.resolved,op).ok,false);assert.equal(require('../src/transactions.cjs').applyPlan(f.root,plan).ok,false);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.resolved.source);
+ }finally{f.close();}
+});
+test('retargeting an imported type symlink invalidates pending writes even with identical contents',()=>{
+ const text='export interface Props {title?:"small"|"large"}',f=importedTypes({'a.ts':text,'b.ts':text});try{
+  const path=require('node:path'),link=path.join(f.root,'contracts.ts');fs.symlinkSync(path.join(f.root,'a.ts'),link);
+  const info=props.describe(f.resolved,'title'),op={name:'title',value:'large',fileHash:f.resolved.hash,definitionHash:info.definitionHash},plan=props.plan(f.resolved,op);assert.ok(plan.ok,plan.reason);
+  fs.unlinkSync(link);fs.symlinkSync(path.join(f.root,'b.ts'),link);assert.equal(props.plan(f.resolved,op).ok,false);assert.equal(require('../src/transactions.cjs').applyPlan(f.root,plan).ok,false);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.resolved.source);
+ }finally{f.close();}
+});

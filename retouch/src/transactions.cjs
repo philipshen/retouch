@@ -21,6 +21,7 @@ function applyPlan(root, plan) {
   const done = [];
   try {
     const realRoot = fs.realpathSync(root);
+    if(plan.pathChecks!==undefined)require('./source-path-checks.cjs').verify(realRoot,plan.pathChecks);
     const seen = new Set();
     for (const edit of plan.edits) {
       const parent = fs.realpathSync(path.dirname(edit.file));

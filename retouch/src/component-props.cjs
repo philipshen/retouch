@@ -60,7 +60,7 @@ function plan(resolved,op){
   let parentId=null;traverse(parseSource(resolved.source),{JSXElement(p){if(p.node.start!==resolved.element.node.start)return;for(let q=p.parentPath;q;q=q.parentPath){const host=resolved.elements.find(e=>e.kind==='host'&&e.node.start===q.node.start);if(host){parentId=host.id;break;}}p.stop();}});
   const edits=[{file:resolved.file,before:resolved.source,after:ms.toString()}];
   for(const dependency of dependencies)if(dependency.file!==resolved.file)edits.push({file:dependency.file,before:dependency.source,after:dependency.source});
-  return {ok:true,hash:contentHash(ms.toString()),componentProp:{instanceId:resolved.element.id,parentId},edits};
+  return {ok:true,hash:contentHash(ms.toString()),componentProp:{instanceId:resolved.element.id,parentId},edits,pathChecks:choice?.pathChecks||[]};
  }catch(error){return refuse('Could not edit the component property: '+error.message);}
 }
 module.exports={describe,plan};

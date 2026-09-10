@@ -4,7 +4,7 @@ const {parseSource,contentHash}=require('./id.cjs');
 // A bounded, source-only module graph. Each AST node keeps its lexical module;
 // identical private type names in different files must never share a binding.
 module.exports=function typeModules(resolved,def,ast){
- const modules=new Map(),owners=new WeakMap();
+ const modules=new Map(),owners=new WeakMap(),pathChecks=new Map();
  function mark(node,mod){if(!node||typeof node!=='object')return;owners.set(node,mod);for(const value of Object.values(node)){if(Array.isArray(value))value.forEach(child=>mark(child,mod));else if(value&&typeof value==='object')mark(value,mod);}}
  function register(file,source,tree){
   if(modules.size>=40)throw Error('Too many type modules');
@@ -23,8 +23,11 @@ module.exports=function typeModules(resolved,def,ast){
   const root=fs.realpathSync(resolved.appRoot);
   const bases=specifier.startsWith('.')?[path.resolve(path.dirname(mod.file),specifier)]:(paths||(paths=require('./component-type-paths.cjs')(resolved.appRoot))).candidates(specifier);
   for(const base of bases)for(const suffix of ['', '.ts','.tsx','/index.ts','/index.tsx']){
-   const candidate=base+suffix;if(!fs.existsSync(candidate)||!fs.statSync(candidate).isFile()||! /\.[jt]sx?$/.test(candidate))continue;
-   const file=fs.realpathSync(candidate);if(!file.startsWith(root+path.sep)||file.split(path.sep).includes('node_modules'))throw Error('Type module is outside this project');
+   const candidate=base+suffix;if(!/\.[jt]sx?$/.test(candidate))continue;
+   if(pathChecks.size>=1000&&!pathChecks.has(candidate))throw Error('Too many type resolution candidates');
+   const check=require('./source-path-checks.cjs').snapshot(root,candidate),previous=pathChecks.get(candidate);
+   if(previous&&JSON.stringify(previous)!==JSON.stringify(check))throw Error('Type resolution changed during inspection');pathChecks.set(candidate,check);
+   if(check.kind!=='file')continue;const file=check.realPath;
    if(modules.has(file))return modules.get(file);
    const source=fs.readFileSync(file,'utf8');if(source.length>1000000)throw Error('Type module is too large');return register(file,source,parseSource(source));
   }
@@ -63,6 +66,10 @@ module.exports=function typeModules(resolved,def,ast){
   },
   builtin(node,name){return !(owners.get(node)||main).shadowed.has(name);},
   inherit(node,from){owners.set(node,owners.get(from)||main);return node;},
-  metadata(){const dependencies=[...modules.values()].map(({file,source})=>({file,source})).concat(paths?.dependencies()||[]);return {dependencies,revision:dependencies.length===1?contentHash(def.source):contentHash(JSON.stringify(dependencies.map(d=>[d.file,d.source===null?null:contentHash(d.source)]).sort((a,b)=>a[0].localeCompare(b[0]))))};}
+  metadata(){
+   const dependencies=[...modules.values()].map(({file,source})=>({file,source})).concat(paths?.dependencies()||[]),checks=[...pathChecks.values()].sort((a,b)=>a.file.localeCompare(b.file));
+   const revisions=dependencies.map(d=>[d.file,d.source===null?null:contentHash(d.source)]).sort((a,b)=>a[0].localeCompare(b[0]));
+   return {dependencies,pathChecks:checks,revision:dependencies.length===1&&!checks.length?contentHash(def.source):contentHash(JSON.stringify([revisions,checks]))};
+  }
  };
 };

@@ -891,9 +891,15 @@ function releasePanelPointer(event){
   // Keep the existing control through the browser's compatibility click.
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     if(panelPointer!==pointer)return;panelPointer=null;
-    if(panelRenderDeferred&&sel){panelRenderDeferred=false;renderPanel();}
+    if(panelRenderDeferred&&sel&&!panelInteractionFocused()){panelRenderDeferred=false;renderPanel();}
   }));
 }
+// A late scope response can be deferred behind the selection click. If the user
+// has already started editing another control, keep that draft and refresh only
+// after focus leaves the inspector; Tab between fields must not release it.
+panelBody.addEventListener('focusout',()=>requestAnimationFrame(()=>{
+  if(panelRenderDeferred&&sel&&!panelPointer&&!panelInteractionFocused())renderPanel();
+}));
 window.addEventListener('pointerup',releasePanelPointer,true);
 window.addEventListener('pointercancel',releasePanelPointer,true);
 window.addEventListener('blur',()=>releasePanelPointer());

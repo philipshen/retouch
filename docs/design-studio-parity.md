@@ -8341,3 +8341,42 @@ project-reference/nested-project config selection, alternate module suffixes and
 bare baseUrl lookups remain incomplete. Filesystem candidate additions during a
 pending transaction are not comprehensively guarded. Full Figma/any-site parity
 and trusted brew distribution remain unproven. Native launches stay paused.
+
+## Import-resolution preconditions for property writes (2026-09-10)
+
+Property contract inspection now snapshots every supported file candidate probed
+before selecting an import target. Missing paths, directory candidates, unresolved
+symlinks and resolved file destinations contribute to the editor revision. These
+read-only preconditions are verified by the shared transaction layer before source
+writes, alongside the existing exact-content guards. Adding a higher-priority
+alias target or a file ahead of an index module, or retargeting a symlink, therefore
+invalidates both an open editor and a pending property plan even if the new type
+source happens to have identical contents. Missing directories/files are never
+created by these checks and do not enter source history.
+
+Validation: 660 unit tests passed, including alias fallback additions, index
+shadowing, identical-content symlink retargeting, missing-parent preservation,
+malformed/outside-project preconditions and directory/dangling-link changes.
+The history integration test also verifies that a refused resolution check creates
+no undo entry, leaves source unchanged and clears its pending journal.
+
+Browser validation initially exposed intermittent Tab/Shift+Tab focus loss. Event
+and render-stack tracing identified a deferred loadScope refresh released after a
+selection click: it destroyed a newly focused property-search field. Deferred
+pointer refreshes now wait while an inspector control is focused, and a focusout
+handler releases them when focus leaves the inspector. Existing Tab behavior is
+retained. The browser regression explicitly schedules that deferred metadata
+refresh while search contains a draft and verifies the field survives with focus
+and text intact before navigating with Tab/Shift+Tab.
+
+Final Chromium and WebKit runs pass the complete property/search/default/unset/
+duplicate/Undo/Redo workflow with a missing first alias target. They verify exact
+source/config preservation and that the missing target directory is never created.
+Logs: /private/tmp/retouch-resolution-guards-units.log and
+/private/tmp/retouch-resolution-guards-{chromium,webkit}-verified.log.
+Diagnostic evidence: /private/tmp/retouch-resolution-focus-render-trace.log.
+
+The preconditions cover the supported component type resolver, not every source
+resolver or framework. They are checked before writes; cross-process locking and
+power-loss atomicity remain incomplete. Full Figma/any-site parity and trusted brew
+distribution remain unproven. Native launches stay paused.
