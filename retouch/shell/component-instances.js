@@ -32,7 +32,7 @@
    for(const instance of group(matches,component.rootGroups)){
     if(!instance.complete)continue;const children=instance.elements.map(el=>nodes.get(el)),parent=children[0].parent,siblings=parent?parent.children:roots,index=siblings.indexOf(children[0]);
     if(index<0||children.some((item,n)=>item.parent!==parent||siblings[index+n]!==item))continue;
-    const item={el:instance.element,componentId:usage.id,label:component.name+' · component',children,parent,componentRoots:instance.elements};
+    const item={el:instance.element,componentId:usage.id,label:(usage.layerName||component.name)+' · component',children,parent,componentRoots:instance.elements};
     siblings.splice(index,children.length,item);for(const child of children)child.parent=item;
    }
   }

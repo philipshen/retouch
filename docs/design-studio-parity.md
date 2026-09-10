@@ -9210,3 +9210,38 @@ full variants and slots, persistent runtime identity, arbitrary-site authoring a
 other Figma Design requirements remain incomplete. Native app launches remain
 paused following the recurring macOS warning; trusted brew distribution is still
 unverified.
+
+
+### Name component instances in Layers (2026-09-10)
+
+React component usages now have a Layer name inspector field. F2 on the component
+row focuses it; saving names the virtual Layers row, and clearing restores the
+component definition label. Names belong to the authored usage and therefore apply
+to every rendering of that usage at every screen size. Shared definition names,
+page text and accessibility labels remain unchanged. Names are stored in escaped
+opening-tag comments, not component props. Source hashes guard writes and the
+planner verifies all structural source IDs remain identical. Comment escaping
+covers terminators, quotes and Unicode. Component swaps retain the usage name.
+Undo/Redo uses caller-revision refresh and restores component selection and rows.
+
+Validation: 729 unit tests passed, including generic JSX, member tags, original
+comments and attributes, name replacement/clearing, stale/invalid input, distinct
+usage metadata and swap retention. The initial unit run exposed an accidental
+React metadata read in the Liquid catalogue; adapter gating fixed the regression.
+A TypeScript transpile probe with comment removal produced byte-identical emitted
+JSX before and after naming, including a generic component and escaped label.
+Chromium and WebKit both passed F2 focus, save, clear, exact source Undo/Redo,
+unchanged rendered title/shared definition, and subsequent duplicate/delete/detach
+history flows. Both browser processes returned exit zero with strict no-page-error
+assertions. The later swap-retention addition passed the final unit suite; the
+browser naming/history runs preceded that addition. git diff --check passed.
+Evidence: /private/tmp/retouch-component-names-units-final.log,
+/private/tmp/retouch-component-names-chromium.log,
+/private/tmp/retouch-component-names-webkit.log.
+
+Names currently appear on component Layers rows and the inspector; component
+library occurrence choices still show source locations. React host naming, bulk
+naming, independent per-render names, component movement/copy, full variants and
+slots, arbitrary-site durable authoring and other Figma Design requirements remain
+open. Full parity is incomplete. Native app launches remain paused and trusted
+brew distribution remains unverified.

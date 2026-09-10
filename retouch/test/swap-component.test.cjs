@@ -42,3 +42,8 @@ test('swap supports direct function roots and conditional roots without inventin
   fs.writeFileSync(f.resolved.file,source);f.index.scanAll();const resolved=pick(f.index,f.root,'Page.tsx','Old').resolved,plan=planner.plan(resolved,{...f.op,fileHash:resolved.hash});assert.ok(plan.ok,plan.reason);assert.equal(plan.insertedComponent.parentId,null);assert.equal(plan.insertedComponent.previousParentId,null);assert.ok(tx.applyPlan(f.root,plan).ok);f.index.scanAll();assert.equal(require('../src/components.cjs').describe(f.index.resolve(plan.insertedComponent.instanceId)).props.find(prop=>prop.name==='label').editor.value,'Keep');assert.ok(tx.applyPlan(f.root,{ok:true,edits:[{file:f.resolved.file,before:plan.edits[0].after,after:source}]}).ok);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),source);
  }finally{f.close();}}
 });
+test('swap retains the instance layer name without turning it into a component prop',()=>{
+ const f=fixture();try{
+  const names=require('../src/component-layer-name.cjs'),named=names.plan(f.resolved,{fileHash:f.resolved.hash,name:'Hero */ summary'});assert.ok(tx.applyPlan(f.root,named).ok);f.index.scanAll();const resolved=f.index.resolve(f.resolved.element.id),plan=planner.plan(resolved,{...f.op,fileHash:resolved.hash});assert.ok(plan.ok,plan.reason);assert.ok(tx.applyPlan(f.root,plan).ok);f.index.scanAll();const swapped=f.index.resolve(plan.insertedComponent.instanceId);assert.equal(names.describe(swapped).layerName,'Hero */ summary');assert.deepEqual(swapped.element.node.openingElement.attributes.map(attr=>attr.name.name),['key','label','width']);
+ }finally{f.close();}
+});

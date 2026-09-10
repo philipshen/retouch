@@ -994,6 +994,12 @@ function renderPanelContents() {
     panelBody.appendChild(scopes);
   }
 
+  if(info.canRename){
+    const naming=RetouchInspector.section('Layer');
+    const input=document.createElement('input');input.id='layerNameInput';input.type='text';input.maxLength=200;input.value=info.layerName||'';input.placeholder='Use the page’s element label';
+    RetouchInspector.field(naming,'Layer name',input);input.onchange=()=>renameLayer(input.value);
+    RetouchInspector.note(naming,'Names appear in the editor without changing page text or accessibility labels. Clear to use the original label.');panelBody.append(naming);
+  }
   const componentTarget = matchingEls(activeId())[0]?.closest('[data-rt-i]');
   const componentId = sel.instanceId || componentTarget?.getAttribute('data-rt-i');
   if (componentId && !info.textLeaf) panelBody.appendChild(componentSection(componentId));
@@ -1059,10 +1065,6 @@ function renderPanelContents() {
     shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Adds a shape in a new 200 × 200 canvas.':'Choose Draw and drag a shape, or Pen: click for straight segments, drag for curves. In Pen, click the first point to close; Enter finishes an open line. Shift constrains direction. Escape cancels.');panelBody.append(shapes);
   }
   if(info.cssAuthoring){
-    const naming=RetouchInspector.section('Layer');
-    const input=document.createElement('input');input.id='layerNameInput';input.type='text';input.maxLength=200;input.value=info.layerName||'';input.placeholder='Use the page’s element label';
-    RetouchInspector.field(naming,'Layer name',input);input.onchange=()=>renameLayer(input.value);
-    RetouchInspector.note(naming,'Names appear in the editor without changing page text or accessibility labels. Clear to use the original label.');panelBody.append(naming);
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
     const position=target?.namespaceURI!=='http://www.w3.org/2000/svg'?RetouchHTMLPosition.mount(info,target,width,setHTMLCSS,(g,action,opener)=>moveHTMLLayer(info,target,width,g,action,opener)):null;
     panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS,position,writeTextStyle));
@@ -1812,8 +1814,9 @@ async function renameLayer(name){
   try{
     const result=await api('POST','/rt/__api/op',{type:'renameElement',id:info.id,fileHash:info.hash,name});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not name layer','err');
-    if(result.undoId)editorHistory.record({type:'renameElement',id:info.id,undoId:result.undoId});
-    sel.info=result.element;await reloadFrame();renderPanel();toast('Layer named','ok');
+    if(result.undoId)editorHistory.record({type:info.kind==='instance'?'renameComponent':'renameElement',id:info.id,undoId:result.undoId});
+    if(info.kind==='instance'){await refreshSwappedComponent(info.id,null);await selectInsertedComponent(info.id,null);layers.refresh();}
+    else{sel.info=result.element;await reloadFrame();renderPanel();}toast('Layer named','ok');
   }finally{busyPanel(false);}
 }
 async function setSelectionColorOverride(property,value){
@@ -2192,6 +2195,7 @@ async function restoreHistory(direction,op) {
   try {
     await showHistoryPage(op.route);
     if(['insertComponent','swapComponent'].includes(op.type)){const parentId=direction==='redo'?op.id:op.previousParentId,parent=parentId?await api('GET',resolveUrl(parentId)):null;if(op.type==='swapComponent')await refreshSwappedComponent(direction==='redo'?op.instanceId:op.previousInstanceId,parentId);else if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else await reloadFrame();if(direction==='redo')await selectInsertedComponent(op.instanceId,op.id);else if(op.type==='swapComponent')await selectInsertedComponent(op.previousInstanceId,op.previousParentId);else if(parent?.ok){sel={hostId:parentId,instanceId:null,scope:'host',info:parent.element};renderPanel();}else clearSelection();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='renameComponent'){await refreshSwappedComponent(op.id,null);await selectInsertedComponent(op.id,null);layers.refresh();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='deleteComponent'){if(direction==='undo'){await refreshSwappedComponent(op.id,null);await selectInsertedComponent(op.id,op.parentId);}else{await refreshDeletedComponent(op.id,op.parentId);clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}

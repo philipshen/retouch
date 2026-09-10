@@ -1,0 +1,14 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
+const {makeApp,cleanup,Index}=require('./helpers.cjs'),names=require('../src/component-layer-name.cjs'),{applyPlan}=require('../src/transactions.cjs');
+for(const jsx of ['<Card/>','<Card<string> value="x"/>','<Cards.Card /* keep */ value={1}/>'])test('component layer names preserve props, comments and source IDs: '+jsx,()=>{
+ const source='export default ()=> <main>'+jsx+'<aside/></main>',root=fs.realpathSync(makeApp({'Page.tsx':source})),index=new Index(root);try{
+  index.scanAll();const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.kind==='instance'),ids=[...index.idToFile.keys()],attrs=usage.element.node.openingElement.attributes.map(a=>source.slice(a.start,a.end));
+  const label='Hero "card" */ <tag> 🌞',result=index.adapter.planOp(usage,{type:'renameElement',fileHash:usage.hash,name:label});assert.equal(result.ok,true,result.reason);assert.equal(applyPlan(root,result).ok,true);index.scanAll();const named=index.resolve(usage.element.id);assert.equal(names.describe(named).layerName,label);assert.equal(index.adapter.describe(named).canRename,true);assert.deepEqual([...index.idToFile.keys()],ids);assert.deepEqual(named.element.node.openingElement.attributes.map(a=>named.source.slice(a.start,a.end)),attrs);if(jsx.includes('keep'))assert.match(named.source,/\/\* keep \*\//);
+  const renamed=names.plan(named,{fileHash:named.hash,name:'Other'});assert.equal(renamed.ok,true);assert.equal(applyPlan(root,renamed).ok,true);index.scanAll();const other=index.resolve(usage.element.id);assert.equal(names.describe(other).layerName,'Other');assert.equal((other.source.match(/@retouch-layer/g)||[]).length,1);
+  const cleared=names.plan(other,{fileHash:other.hash,name:''});assert.equal(cleared.ok,true);assert.doesNotMatch(cleared.edits[0].after,/@retouch-layer/);assert.equal(names.plan(other,{fileHash:'stale',name:'x'}).ok,false);for(const name of ['bad\nname','x'.repeat(201),null])assert.equal(names.plan(other,{fileHash:other.hash,name}).ok,false);
+ }finally{index.close();cleanup(root);}
+});
+test('component library carries distinct usage names without renaming the definition',()=>{
+ const root=fs.realpathSync(makeApp({'Page.tsx':'import {Card} from "./Card";export default ()=> <><Card/><Card/></>','Card.tsx':'export function Card(){return <article/>}'})),index=new Index(root);try{index.scanAll();const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.kind==='instance'),result=names.plan(usage,{fileHash:usage.hash,name:'Hero'});assert.equal(applyPlan(root,result).ok,true);index.scanAll();const library=require('../src/component-usage.cjs').library(index),card=library.components.find(c=>c.name==='Card');assert.equal(card.usages.length,2);assert.deepEqual(card.usages.map(u=>u.layerName),['Hero','']);}finally{index.close();cleanup(root);}
+});
