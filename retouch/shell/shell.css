@@ -269,7 +269,7 @@ details.advanced > summary:hover { color: var(--ink); }
 .shadow-controls legend, .gradient-controls legend { padding:0 4px; font-size:12px; color:var(--muted); }
 .shadow-controls .control-button, .gradient-controls .control-button { margin:3px 4px 3px 0; }
 
-.gradient-preview { height:44px; border:1px solid var(--line); border-radius:4px; margin-bottom:8px; }
+.gradient-preview { position:relative; height:44px; border:1px solid var(--line); border-radius:4px; margin-bottom:8px; }
 
 .gradient-stop-rail { position:relative; height:30px; margin:0 9px 10px; touch-action:none; }
 .gradient-stop-strip { position:absolute; top:7px; height:12px; width:100%; border-radius:3px; }
@@ -344,3 +344,7 @@ details.advanced > summary:hover { color: var(--ink); }
 .text-style-properties { font: 11px/1.5 var(--mono); overflow-wrap: anywhere; }
 .text-style-properties dt { color: var(--muted); margin-top: 5px; }
 .text-style-properties dd { margin: 0; }
+
+.gradient-preview:has(.gradient-center-handle) { height:88px; }
+.gradient-center-handle { position:absolute; width:16px; height:16px; padding:0; transform:translate(-50%,-50%); border:2px solid white; border-radius:50%; background:#17191d; box-shadow:0 0 0 1px #17191d; cursor:move; touch-action:none; }
+.gradient-center-handle:focus { outline:2px solid var(--accent); outline-offset:3px; }
