@@ -118,7 +118,7 @@
       const widths=new Set([current.width,240,7680]),heights=new Set([current.height,240,7680]),ratios=[];
       const add=(set,value)=>{for(const n of [Math.floor(value)-1,Math.floor(value),Math.ceil(value),Math.ceil(value)+1])if(n>=240&&n<=7680)set.add(n);};
       for(const query of groups.flat())for(const part of query.matchAll(/\(([^()]*)\)/g)){
-        if(/\baspect-ratio\b/.test(part[1]))for(const match of part[1].matchAll(/(\d+(?:\.\d+)?)\s*(?:\/\s*(\d+(?:\.\d+)?))?/g)){
+        if(/\baspect-ratio\b/.test(part[1]))for(const match of part[1].matchAll(/(\d*\.\d+|\d+)\s*(?:\/\s*(\d*\.\d+|\d+))?/g)){
           const a=match[1],b=match[2]||'1',scale=10**Math.max(a.split('.')[1]?.length||0,b.split('.')[1]?.length||0);
           let numerator=Math.round(Number(a)*scale),denominator=Math.round(Number(b)*scale);
           if(!Number.isSafeInteger(numerator)||!Number.isSafeInteger(denominator)||numerator<=0||denominator<=0)continue;

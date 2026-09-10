@@ -10513,3 +10513,9 @@ Unit coverage verifies mixed named/generated widths, absolute/rem units, screen/
 ### React named and generated scope ordering (2026-09-10)
 
 The component breakpoint fixture now accepts RT_E2E_COMPONENT_SCOPE_ORDER=1, adding authored stylesheet breakpoints whose alphabetical names deliberately oppose their width order. At a 900px preview, Chromium and WebKit verify the complete picker order is base, zeta at 400px, md at 768px, generated min-[56.25rem] at 900px, then alpha at 1200px. Source remains unchanged by the ordering/preview check. Both runs subsequently pass shared-definition breakpoint comparisons, live Undo/Redo, and the existing component creation/source/render history flow. No production change was required. Evidence: `/private/tmp/retouch-react-scope-order-chromium.log`, `/private/tmp/retouch-react-scope-order-webkit.log`. Native launches remain paused; full parity remains incomplete.
+
+### Leading decimal aspect-ratio previews (2026-09-10)
+
+Breakpoint preview candidate generation now reads leading decimal ratios correctly, including decimals in either side of a fraction. Previously (aspect-ratio: .75) yielded no suggestion because its numerator was read as 75. Chromium and WebKit now verify .75 and .375 / .5 both suggest 633 by 844 from 390 by 844, while .5 / 1 suggests 422 by 844. Each suggested size is also checked against the browser media matcher. Existing compound boundary, CSS agreement, and probe cleanup coverage passes in both engines; all 821 unit tests pass.
+
+Evidence: `/private/tmp/retouch-decimal-media-before.log`, `/private/tmp/retouch-decimal-media-chromium.log`, `/private/tmp/retouch-decimal-media-webkit.log`, `/private/tmp/retouch-decimal-media-units.log`. This fixes leading decimal ratios, not all CSS numeric syntax or arbitrary media-query solving. Native launches remain paused; full parity remains incomplete.
