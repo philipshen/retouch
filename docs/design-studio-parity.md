@@ -8233,3 +8233,30 @@ retention across an actual write and clearing without changing source, then run 
 property/history workflow. Screenshot review confirms the search fits the panel.
 This was a targeted UI change; the unit suite was not rerun. Full parity remains
 incomplete and native app launches remain paused.
+
+## Imported component property contracts (2026-09-10)
+
+React component property discovery now follows relative local TypeScript imports,
+including named/default imports, aliases and explicit named re-exports. Each AST
+node retains its lexical module, so private aliases with the same name in separate
+files resolve independently. Imported contracts compose with the existing bounded
+interface, utility, primitive and finite-choice reader. Source is never executed.
+
+Property editor revisions include every loaded type module. Plans retain those
+files as non-writing transaction guards; changing a contract invalidates an open
+editor and a pending commit, including reset of expression overrides. Only actual
+usage writes enter history. Cycles, missing/private exports, package imports and
+paths escaping the project are refused by type discovery.
+
+Validation: 641 unit tests, including module scope, stale-editor/commit races,
+expression resets, cycles, private exports and symlink containment. Chromium and
+WebKit completed the property/search/default/unset/duplicate/Undo/Redo flow using
+contracts split through a barrel into separate files; imported source stayed exact.
+Browser evidence preceded a final strengthening of the repeated-definition read
+check; the final unit suite covers reset and default behavior.
+Logs: /private/tmp/retouch-imported-types-{units,chromium,webkit}.log.
+
+This remains a bounded TypeScript reader: config aliases, package and namespace
+imports, wildcard re-exports, generic contracts and full compiler semantics remain
+incomplete. Full Figma/any-site parity and trusted brew distribution are still
+unproven. Native app launches remain paused.

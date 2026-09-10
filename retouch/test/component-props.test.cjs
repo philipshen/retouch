@@ -210,3 +210,44 @@ test('declared primitive props reject incompatible literals and guard imported t
   fs.writeFileSync(usage.file,usage.source.replace(' value="wrong"',''));index.scanAll();const fresh=index.resolve(usage.element.id),info=props.describe(fresh,'value'),plan=props.plan(fresh,{name:'value',value:2,fileHash:fresh.hash,definitionHash:info.definitionHash});assert.ok(plan.ok,plan.reason);assert.equal(plan.edits.length,2);const guard=plan.edits.find(e=>e.file.endsWith('Card.tsx'));fs.appendFileSync(guard.file,'\n// type changed');assert.equal(require('../src/transactions.cjs').applyPlan(root,plan).ok,false);assert.equal(fs.readFileSync(fresh.file,'utf8'),fresh.source);
  }finally{index.close();cleanup(root);}
 });
+
+function importedTypes(files){
+ const root=fs.realpathSync(makeApp({'page.tsx':'import Card from "./Card";export default function Page(){return <main><Card/></main>}','Card.tsx':'import type {Props} from "./contracts";export default function Card({title="small"}:Props){return <h1>{title}</h1>}',...files})),index=new Index(root);index.scanAll();
+ const resolved=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.kind==='instance');return {root,index,resolved,close(){index.close();cleanup(root);}};
+}
+test('relative imported contracts preserve module scope through aliases, barrels and inheritance',()=>{
+ const f=importedTypes({'contracts.ts':'export type {PublicProps as Props} from "./types";','types.ts':'import type {Base} from "./base";type Size="small"|"large";export interface PublicProps extends Base {title?:Size}','base.ts':'type Size=1|2;export interface Base {count?:Size}'});try{
+  const title=props.describe(f.resolved,'title'),count=props.describe(f.resolved,'count');assert.deepEqual(title.choices,['small','large']);assert.deepEqual(count.choices,[1,2]);
+  assert.ok(adapter.describeComponent(f.resolved).props.some(p=>p.name==='count'));
+  const op={name:'title',value:'large',fileHash:f.resolved.hash,definitionHash:title.definitionHash},plan=props.plan(f.resolved,op);assert.ok(plan.ok,plan.reason);assert.equal(plan.edits.length,5);
+  const applied=require('../src/transactions.cjs').applyPlan(f.root,plan);assert.ok(applied.ok);assert.equal(applied.edits.length,1);assert.match(fs.readFileSync(f.resolved.file,'utf8'),/title=\{"large"\}/);
+ }finally{f.close();}
+});
+test('imported contract revisions reject stale editors and commit races without writing source',()=>{
+ for(const changed of ['export interface Props {title?:"small"|"medium"}','export interface Props {title?:Missing}','// contract removed']){
+  const f=importedTypes({'contracts.ts':'export interface Props {title?:"small"|"large"}'});try{
+   const info=props.describe(f.resolved,'title'),op={name:'title',value:'large',fileHash:f.resolved.hash,definitionHash:info.definitionHash},plan=props.plan(f.resolved,op);assert.ok(plan.ok,plan.reason);
+   fs.writeFileSync(require('node:path').join(f.root,'contracts.ts'),changed);
+   assert.equal(props.plan(f.resolved,op).ok,false);assert.equal(require('../src/transactions.cjs').applyPlan(f.root,plan).ok,false);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.resolved.source);
+  }finally{f.close();}
+ }
+});
+test('imported contracts refuse export cycles, private exports, external packages and escaping symlinks',()=>{
+ for(const files of [
+  {'contracts.ts':'export type {Props} from "./again";','again.ts':'export type {Props} from "./contracts";'},
+  {'contracts.ts':'interface Props {title?:"small"|"large"}'},
+  {'contracts.ts':'export type {Props} from "some-package";'},
+  {'contracts.ts':'import type {Props as Other} from "./again";export type Props=Other;','again.ts':'import type {Props} from "./contracts";export type Other=Props;export {Other as Props};'}
+ ]){const f=importedTypes(files);try{assert.equal(props.describe(f.resolved,'title').choices,undefined);}finally{f.close();}}
+ const outside=makeApp({'secret.ts':'export interface Props {title?:"small"|"large"}'}),f=importedTypes({});try{fs.symlinkSync(require('node:path').join(outside,'secret.ts'),require('node:path').join(f.root,'contracts.ts'));assert.equal(props.describe(f.resolved,'title').choices,undefined);}finally{f.close();cleanup(outside);}
+});
+test('imported default types, utility types and private utility shadows resolve in their owning module',()=>{
+ const f=importedTypes({'contracts.ts':'import type Base from "./base";export type Props=Partial<Base>;','base.ts':'type Extract="small"|"large";export default interface Base {title:Extract;count:number}'});try{assert.deepEqual(props.describe(f.resolved,'title').choices,['small','large']);assert.equal(props.describe(f.resolved,'count').type,'number');}finally{f.close();}
+});
+test('resetting an expression override guards the imported default contract',()=>{
+ const f=importedTypes({'page.tsx':'import Card from "./Card";const title="small";function Page(){return <main><Card title={title}/></main>}','contracts.ts':'export interface Props {title?:"small"|"large"}'});try{
+  const info=props.describe(f.resolved,'title');assert.equal(info.editable,undefined);assert.equal(info.canReset,true);
+  const op={name:'title',reset:true,fileHash:f.resolved.hash,definitionHash:info.definitionHash},plan=props.plan(f.resolved,op);assert.ok(plan.ok,plan.reason);assert.equal(plan.edits.length,3);
+  fs.appendFileSync(require('node:path').join(f.root,'contracts.ts'),'\n// external revision');assert.equal(props.plan(f.resolved,op).ok,false);assert.equal(require('../src/transactions.cjs').applyPlan(f.root,plan).ok,false);
+ }finally{f.close();}
+});
