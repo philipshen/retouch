@@ -2408,7 +2408,7 @@ document.getElementById('zoomSelection').onclick=async e=>{
   if(!sel||panelTasks||undoBusy||sourceRequests)return;
   const button=e.currentTarget;
   await commitInlineEdit();if(!sel||panelTasks||undoBusy||sourceRequests)return;stopDrawing?.();
-  const elements=sel.multiple?sel.multiple.flatMap(info=>matchingEls(info.id)):sel.info.kind==='instance'?selectedComponentGroups(doc(),activeId(),sel.info)[0]?.elements||[]:matchingEls(activeId());
+  const elements=sel.multiple?sel.multiple.flatMap(info=>matchingEls(info.id)):sel.info.kind==='instance'?selectedComponentGroups(doc(),activeId(),sel.info)[0]?.elements||[]:matchingEls(activeId()).filter(el=>inTextScope(el,sel.info)).slice(0,1);
   busyPanel(true);button.setAttribute('aria-busy','true');
   try{
     const result=await window.RetouchZoom.toSelection(elements);
