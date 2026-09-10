@@ -1,0 +1,11 @@
+'use strict';
+const bindings=require('./variable-bindings.cjs'),V=require('../shell/html-css-values.js'),responsive=require('../shell/responsive.js'),inspector=require('../shell/inspector.js'),tokens=require('./class-tokens.cjs');
+function encode(property,value){if(!bindings.properties.includes(property)||!V.valid(property,value)||value===null)throw Error('Unsupported variable target or resolved value.');const encoded='!['+property+':'+value.replace(/_/g,'\\_').replace(/\s+/g,'_')+']';if(!tokens.valid(encoded))throw Error('This variable value cannot be represented as a class.');return encoded;}
+function conflict(token,property){if(!/^!|!$/.test(token))return false;const plain=inspector.base(token),declaration=/^\[([a-z-]+|--[a-zA-Z0-9_-]+):/.exec(plain||'')?.[1];return !declaration||!declaration.startsWith('--')&&V.overlaps(declaration,property);}
+function compose(className,property,value,scope=''){
+ if(typeof className!=='string'||!bindings.properties.includes(property))throw Error('Variable bindings need literal classes and a supported property.');responsive.replaceScope('','',scope);const encoded=value===null?null:encode(property,value),kept=[];let present=false;
+ for(const token of className.split(/\s+/).filter(Boolean)){if(!tokens.valid(token))throw Error('The source contains unsupported class syntax.');const part=responsive.split(token);if(part.prefix===scope){const plain=inspector.base(part.value);if(plain?.startsWith('['+property+':')){if(encoded&&part.value===encoded&&!present){kept.push(token);present=true;}continue;}if(encoded&&conflict(part.value,property))throw Error('Resolve conflicting important utilities before binding '+property+'.');}kept.push(token);}
+ return (encoded&&!present?kept.concat(scope+encoded):kept).join(' ');
+}
+function overridden(className,property,value,scope=''){const encoded=encode(property,value),projected=responsive.project(className,scope).split(/\s+/).filter(Boolean);return !projected.includes(encoded)||projected.some(token=>token!==encoded&&conflict(token,property));}
+module.exports={properties:bindings.properties,encode,compose,overridden};

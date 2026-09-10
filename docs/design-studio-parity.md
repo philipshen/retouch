@@ -7492,3 +7492,29 @@ The screenshot `/private/tmp/retouch-multi-collection.png` was visually inspecte
 Selection inheritance controls, cross-document selection, ancestor collection
 modes and React/Liquid collection bindings remain unfinished. Full Figma parity
 remains incomplete and native app launches remain paused.
+
+### React collection source-planning foundation (2026-09-10)
+
+The JSX variable planner now supports typed apply, reset, refresh, detach and
+remove operations on host layers with literal classes. It preserves stable IDs,
+mode maps, units and sticky local overrides in bounded JSX metadata. Class edits
+stay within the requested responsive scope and preserve authored utilities.
+Repeated identical application does not reorder classes. Explicit unrelated
+important declarations can coexist; conflicting or unknown important utilities
+are refused. Literal underscores in font family names are escaped correctly.
+
+Whole-file planning refreshes every linked host layer, follows aliases, and
+refuses malformed links, missing variables and component-instance metadata.
+Spread/dynamic attributes and unsafe inline styles are refused before writes.
+Removing a binding override reveals the original authored utility; detaching
+retains the applied class appearance.
+
+All 570 unit tests pass (`/private/tmp/retouch-jsx-variable-planner-units.log`).
+The new `test/e2e/variable-classes.cjs` compiles generated classes using the
+fixture's Tailwind implementation and checks computed styles in Chromium and
+WebKit, including responsive isolation and literal font-name underscores.
+This browser check validates generated CSS, not a complete React editor flow.
+
+React API/inspector routing and atomic project-wide collection propagation remain
+to be connected before exposing these operations to users. Native launches remain
+paused. Full Figma parity remains incomplete.
