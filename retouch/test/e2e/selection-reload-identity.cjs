@@ -1,0 +1,13 @@
+'use strict';
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict'),{once}=require('node:events');
+const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_INSPECTOR_FIXTURE');const engine=process.env.RT_E2E_BROWSER||'chromium';
+(async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-reload-identity-')),file=path.join(root,'index.html'),source='<html><body><main><section id="card-a"><p>A</p></section><section id="card-b"><p>B</p></section></main><script>if(sessionStorage.order){document.querySelector("main").prepend(document.getElementById("card-b"));}if(sessionStorage.duplicate){document.getElementById("card-a").id="card-b";}</script></body></html>';fs.writeFileSync(file,source);
+ const server=require('../../src/html-site.cjs').start({root,port:0,quiet:true});if(!server.listening)await once(server,'listening');let browser;
+ try{
+  browser=await require(path.join(fixture,'node_modules/playwright'))[engine].launch();const page=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('http://localhost:'+server.address().port+'/rt');const app=page.frameLocator('#app');await app.locator('#card-b p').waitFor();
+  await page.getByRole('treeitem',{name:'p · B',exact:true}).click();await page.waitForFunction(()=>sel&&!panelTasks&&!undoBusy&&!sourceRequests);const id=await page.evaluate(()=>sel.info.id);
+  await app.locator('body').evaluate(()=>sessionStorage.order='reverse');await page.evaluate(()=>reloadFrame());await app.locator('main > section:first-child#card-b').waitFor();assert.equal(await page.evaluate(()=>sel?.info.id),id);assert.equal(await page.getByRole('treeitem',{name:'p · B',exact:true}).getAttribute('aria-selected'),'true');assert.equal(await page.evaluate(()=>renderedSelection.element.parentElement.id),'card-b');
+  await app.locator('body').evaluate(()=>sessionStorage.duplicate='yes');await page.evaluate(()=>reloadFrame());assert.equal(await app.locator('#card-b').count(),2);assert.equal(await page.evaluate(()=>sel),null);assert.match(await page.locator('#toasts').textContent(),/page structure changed/i);assert.equal(fs.readFileSync(file,'utf8'),source);assert.deepEqual(errors,[]);console.log('STABLE ANCESTOR ID REORDER AND DUPLICATE ID REFUSAL PASS',engine);
+ }finally{if(browser)await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));fs.rmSync(root,{recursive:true,force:true});}
+})().catch(error=>{console.error(error);process.exitCode=1;});

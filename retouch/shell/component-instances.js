@@ -46,11 +46,26 @@
  function occurrenceShape(elements){
   return JSON.stringify(elements.map(el=>{const path=[];for(let node=el;node;node=node.parentElement){const parent=node.parentElement;path.push([node.tagName,node.getAttribute('id'),node.getAttribute('data-rt'),node.getAttribute('data-rt-i'),parent?[...parent.children].indexOf(node):0]);}return path;}));
  }
+ function occurrenceIdentity(el){
+  const path=[];
+  for(let node=el;node;node=node.parentElement){
+   const id=node.getAttribute('id'),source=[node.tagName,node.getAttribute('data-rt'),node.getAttribute('data-rt-i')];
+   if(id){
+    const matches=[...(node.ownerDocument?.querySelectorAll('[id]')||[])].filter(other=>other.getAttribute('id')===id);
+    if(matches.length!==1)return null;
+    return JSON.stringify([id,source,path]);
+   }
+   const parent=node.parentElement;path.push([...source,parent?[...parent.children].indexOf(node):0]);
+  }
+  return null;
+ }
  function captureOccurrence(elements,target){
-  const index=elements.indexOf(target);return target?.isConnected&&index>=0?{index,shape:occurrenceShape(elements)}:null;
+  const index=elements.indexOf(target);return target?.isConnected&&index>=0?{index,shape:occurrenceShape(elements),identity:occurrenceIdentity(target)}:null;
  }
  function restoreOccurrence(elements,bookmark){
-  return bookmark&&elements.every(el=>el.isConnected)&&occurrenceShape(elements)===bookmark.shape?elements[bookmark.index]||null:null;
+  if(!bookmark||!elements.every(el=>el.isConnected))return null;
+  if(bookmark.identity){const matches=elements.filter(el=>occurrenceIdentity(el)===bookmark.identity);return matches.length===1?matches[0]:null;}
+  return occurrenceShape(elements)===bookmark.shape?elements[bookmark.index]||null:null;
  }
  function bounds(elements){
   const rects=elements.map(el=>el.getBoundingClientRect()).filter(r=>r.width||r.height);if(!rects.length)return null;
