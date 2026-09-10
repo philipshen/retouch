@@ -8053,3 +8053,19 @@ missing bases and ambiguous redeclarations. Chromium and WebKit browser flows us
 base interfaces plus an intersection and verify choice editing, a visible size
 change, sibling isolation, defaults, and exact Undo/Redo. Full variant authoring
 and broader type resolution remain incomplete. Native launches remain paused.
+
+
+## Omitted and optional variant choices (2026-09-10)
+
+A declared finite choice no longer needs an existing literal attribute or literal
+default to be editable. Omitted required choices show a disabled prompt until a
+value is selected. Optional choices without a literal default offer Not set, which
+removes the source attribute instead of writing an undefined expression. This is a
+source omission; runtime fallback expressions may still provide a rendered value.
+Required props cannot be unset by this operation. Definition revision checks and
+transaction guards apply to both setting and clearing these choices.
+
+624 unit tests pass. Chromium and WebKit verification covers optional choice selection and
+clearing, sibling isolation, exact source Undo/Redo and the existing variant/default
+workflow. This does not complete full component or arbitrary-site parity. Native
+app launches remain paused.

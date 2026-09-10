@@ -42,7 +42,7 @@ function choices(resolved,name,definition){
   const type=resolve(fields[0].typeAnnotation?.typeAnnotation),types=type?.type==='TSUnionType'?type.types:[type],values=[];
   for(let item of types){item=resolve(item);if(item?.type!=='TSLiteralType')return null;let value=item.literal;if(value.type==='UnaryExpression'&&value.operator==='-'&&value.argument.type==='NumericLiteral')values.push(-value.argument.value);else if(['StringLiteral','NumericLiteral','BooleanLiteral'].includes(value.type))values.push(value.value);else return null;}
   if(!values.length||values.length>100||!values.every(v=>typeof v===typeof values[0]&&(typeof v!=='number'||Number.isFinite(v))))return null;
-  return {choices:[...new Set(values)],type:typeof values[0],definition:def};
+  return {choices:[...new Set(values)],type:typeof values[0],optional:!!fields[0].optional,definition:def};
  }catch{return null;}
 }
 module.exports={choices};

@@ -88,3 +88,15 @@ test('contract composition refuses cycles, missing bases and ambiguous property 
   'interface Base<T> {size:T} interface Props extends Base<"small"|"large"> {}',
  ]){const source=declarations+';function Card({size}:Props){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),fn=ast.program.body.find(n=>n.type==='FunctionDeclaration');assert.equal(discover({},'size',{source,fn}),null,declarations);}
 });
+
+test('omitted choices can be set and only optional choices can be unset',()=>{
+ for(const optional of [true,false]){
+  const source='function Page(){return <main><Card/></main>}function Card({size}:{size'+(optional?'?':'')+':"small"|"large"}){return <h1/>}',root=fs.realpathSync(makeApp({'page.tsx':source})),index=new Index(root);index.scanAll();try{
+   const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.kind==='instance'),info=props.describe(usage,'size');assert.equal(info.unset,true);assert.equal(info.editable,true);assert.equal(info.allowUnset,optional);
+   assert.equal(props.plan(usage,{name:'size',value:'large',fileHash:usage.hash,definitionHash:'stale'}).ok,false);
+   const set=props.plan(usage,{name:'size',value:'large',fileHash:usage.hash,definitionHash:info.definitionHash});assert.ok(set.ok,set.reason);assert.ok(require('../src/transactions.cjs').applyPlan(root,set).ok);index.scanAll();const fresh=index.resolve(usage.element.id),current=props.describe(fresh,'size');assert.equal(current.value,'large');assert.equal(current.canClear,optional);
+   assert.equal(props.plan(fresh,{name:'size',clear:true,fileHash:fresh.hash,definitionHash:'stale'}).ok,false);
+   const clear=props.plan(fresh,{name:'size',clear:true,fileHash:fresh.hash,definitionHash:current.definitionHash});assert.equal(clear.ok,optional);if(optional){assert.ok(require('../src/transactions.cjs').applyPlan(root,clear).ok);index.scanAll();assert.equal(props.describe(index.resolve(usage.element.id),'size').unset,true);assert.equal(clear.edits[0].after.split('function Card')[1],source.split('function Card')[1]);}
+  }finally{index.close();cleanup(root);}
+ }
+});

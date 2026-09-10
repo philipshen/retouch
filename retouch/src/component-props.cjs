@@ -28,25 +28,33 @@ function describe(resolved,name,definition){
  if(attrs.some(a=>a.type==='JSXSpreadAttribute'))return {reason:'A spread controls this usage. Edit its source binding.'};
  const matches=attrs.filter(a=>a.type==='JSXAttribute'&&a.name.name===name);
  if(matches.length>1)return {reason:'Resolve duplicate attributes first.'};
- const fallback=defaultProp(resolved,name,definition),defaults=fallback?{definitionHash:contentHash(fallback.definition.source),defaultValue:fallback.value,canReset:matches.length===1}:{};
- if(!matches.length){const choice=require('./component-prop-choices.cjs').choices(resolved,name,definition);return fallback?{editable:true,type:fallback.type,value:fallback.value,inherited:true,...defaults,...(choice?{choices:choice.choices,type:choice.type}: {})}:{reason:'This property uses its definition default.'};}
- const value=literal(matches[0]),choice=require('./component-prop-choices.cjs').choices(resolved,name,definition),contract=choice?{choices:choice.choices,type:choice.type,definitionHash:contentHash(choice.definition.source)}:{};return value?{editable:true,...value,...defaults,...contract}:{reason:'This property is driven by an expression. Edit its source binding.',...defaults};
+ const fallback=defaultProp(resolved,name,definition),choice=require('./component-prop-choices.cjs').choices(resolved,name,definition);
+ const defaults=fallback?{definitionHash:contentHash(fallback.definition.source),defaultValue:fallback.value,canReset:matches.length===1}:{};
+ const contract=choice?{choices:choice.choices,type:choice.type,definitionHash:contentHash(choice.definition.source),allowUnset:choice.optional&&!fallback,canClear:choice.optional&&!fallback&&matches.length===1}:{};
+ if(!matches.length){
+  if(fallback)return {editable:true,type:fallback.type,value:fallback.value,inherited:true,...defaults,...contract};
+  if(choice)return {editable:true,unset:true,...contract};
+  return {reason:'This property uses its definition default.'};
+ }
+ const value=literal(matches[0]);return value?{editable:true,...value,...defaults,...contract}:{reason:'This property is driven by an expression. Edit its source binding.',...defaults};
 }
 function plan(resolved,op){
  if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the instance before editing its properties.');
  try{
-  const info=describe(resolved,op.name);if(op.reset===true?!info.canReset:!info.editable)return refuse(info.reason||'This property has no literal default to restore.');
+  if(op.reset===true&&op.clear===true)return refuse('Choose reset or unset, not both.');
+  const remove=op.reset===true||op.clear===true;
+  const info=describe(resolved,op.name);if(op.clear===true?!info.canClear:op.reset===true?!info.canReset:!info.editable)return refuse(info.reason||(op.clear===true?'This property cannot be unset.':'This property has no literal default to restore.'));
   const fallback=op.reset===true||info.inherited?defaultProp(resolved,op.name):null;
   if((op.reset===true||info.inherited)&&!fallback)return refuse('The component default no longer resolves. Re-select the instance.');
   if(fallback&&op.definitionHash!==contentHash(fallback.definition.source))return refuse('The component definition changed. Re-select the instance before using its default.');
-  if(op.reset!==true&&(typeof op.value!==info.type||info.type==='number'&&!Number.isFinite(op.value)||info.type==='string'&&op.value.length>100000))return refuse('Use a valid '+info.type+' value for this property.');
+  if(!remove&&(typeof op.value!==info.type||info.type==='number'&&!Number.isFinite(op.value)||info.type==='string'&&op.value.length>100000))return refuse('Use a valid '+info.type+' value for this property.');
   const choice=info.choices?require('./component-prop-choices.cjs').choices(resolved,op.name):null;
   if(info.choices&&(!choice||op.definitionHash!==contentHash(choice.definition.source)))return refuse('The component type changed. Re-select the instance.');
-  if(op.reset!==true&&choice&&!choice.choices.includes(op.value))return refuse('Choose one of the values declared by this component.');
+  if(!remove&&choice&&!choice.choices.includes(op.value))return refuse('Choose one of the values declared by this component.');
   const dependency=fallback?.definition||choice?.definition;
   const attr=resolved.element.node.openingElement.attributes.find(a=>a.type==='JSXAttribute'&&a.name.name===op.name);
   // Expression strings avoid JSX entity and multiline whitespace normalization.
-  const code=op.reset===true?'':op.name+'={'+JSON.stringify(op.value).replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029')+'}';
+  const code=remove?'':op.name+'={'+JSON.stringify(op.value).replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029')+'}';
   const ms=new MagicString(resolved.source);if(attr)ms.overwrite(attr.start,attr.end,code);else ms.appendLeft(resolved.element.node.openingElement.name.end,' '+code);
   let parentId=null;traverse(parseSource(resolved.source),{JSXElement(p){if(p.node.start!==resolved.element.node.start)return;for(let q=p.parentPath;q;q=q.parentPath){const host=resolved.elements.find(e=>e.kind==='host'&&e.node.start===q.node.start);if(host){parentId=host.id;break;}}p.stop();}});
   const edits=[{file:resolved.file,before:resolved.source,after:ms.toString()}];

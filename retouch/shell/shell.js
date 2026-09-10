@@ -1246,8 +1246,10 @@ function propTable(props,instanceId,fileHash) {
     if(instanceId&&prop.editor?.editable&&prop.editor.choices){
       const meta=prop.editor,input=document.createElement('select');input.setAttribute('aria-label','Component property '+prop.name);
       meta.choices.forEach((choice,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=String(choice);input.append(option);});
-      const selected=meta.choices.indexOf(meta.value);if(selected<0){const option=document.createElement('option');option.value='-1';option.disabled=true;option.textContent=String(meta.value)+' (outside declared choices)';input.append(option);}input.value=String(selected);
-      input.addEventListener('change',()=>setComponentProperty(instanceId,prop.name,meta.choices[Number(input.value)],fileHash,{definitionHash:meta.definitionHash}));value.append(input);
+      const selected=meta.choices.indexOf(meta.value);
+      if(meta.allowUnset){const option=document.createElement('option');option.value='unset';option.textContent='Not set';input.prepend(option);}
+      if(selected<0&&!meta.unset||meta.unset&&!meta.allowUnset){const option=document.createElement('option');option.value='-1';option.disabled=true;option.textContent=meta.unset?'Choose a value':String(meta.value)+' (outside declared choices)';input.prepend(option);}input.value=meta.unset&&meta.allowUnset?'unset':String(selected);
+      input.addEventListener('change',()=>setComponentProperty(instanceId,prop.name,input.value==='unset'?undefined:meta.choices[Number(input.value)],fileHash,{definitionHash:meta.definitionHash,...(input.value==='unset'?{clear:true}:{})}));value.append(input);
     }else if(instanceId&&prop.editor?.editable){
       const meta=prop.editor,input=document.createElement(meta.type==='string'?'textarea':'input');input.setAttribute('aria-label','Component property '+prop.name);if(meta.type!=='string')input.type=meta.type==='boolean'?'checkbox':'number';
       if(meta.type==='string'){const resize=()=>sizeComponentText(input);input.className='component-prop-text';input.rows=1;input.title='Enter adds a line. Command/Ctrl+Enter saves. Escape cancels.';input.addEventListener('input',resize);requestAnimationFrame(resize);}
