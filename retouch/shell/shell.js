@@ -158,7 +158,24 @@ setInterval(pollNavigation, 300);
 /* ---------- frame hooks ---------- */
 function doc() { return iframe.contentDocument; }
 
+let canvasContextSerial=0;
+async function canvasContextMenu(event,keyboard=false){
+ if(event.defaultPrevented||event.isComposing||mode!=='edit'||editing||panelTasks||undoBusy||sourceRequests||document.querySelector('dialog[open]')||event.target.isContentEditable||event.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]'))return;
+ if(keyboard&&!sel)return;
+ event.preventDefault();event.stopPropagation();const serial=++canvasContextSerial;
+ const target=keyboard?matchingEls(activeId())[0]:layerLocks.pick(event.target,event.clientX,event.clientY);
+ if(!target)return;
+ if(!keyboard&&!(sel?.multiple&&sel.multiple.some(info=>matchingEls(info.id).includes(target))))await select(target);
+ if(serial!==canvasContextSerial||mode!=='edit'||!sel)return;
+ const frame=iframe.getBoundingClientRect(),box=target.getBoundingClientRect(),x=keyboard?box.left:event.clientX,y=keyboard?box.bottom:event.clientY;
+ const body=doc().body;body.tabIndex=-1;
+ window.RetouchActions?.contextMenu({x:frame.left+x*frame.width/iframe.offsetWidth,y:frame.top+y*frame.height/iframe.offsetHeight,opener:body});
+}
 function hookFrame(d, w) {
+  d.addEventListener('contextmenu',event=>void canvasContextMenu(event).catch(error=>toast(error.message,'err')),true);
+  d.addEventListener('keydown',event=>{if(event.key==='ContextMenu'||event.key==='F10'&&event.shiftKey)void canvasContextMenu(event,true).catch(error=>toast(error.message,'err'));},true);
+  d.addEventListener('pointerdown',()=>{canvasContextSerial++;window.RetouchActions?.closeContext();},true);
+  d.addEventListener('scroll',()=>window.RetouchActions?.closeContext(),true);
   w.addEventListener('pointerup',releasePanelPointer,true);
   w.addEventListener('pointercancel',releasePanelPointer,true);
   stopDrawing?.();
