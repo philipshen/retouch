@@ -77,16 +77,16 @@ function handle(req, res, ctx) {
     return json(res, 200, { ok: true, ...(ctx.sourceMonitor?.state() || { revision: 0, available: false }) });
   }
   if (p === '/rt/__api/health') return json(res, 200, { ok: true, service: 'retouch' });
-  if (p === '/rt/__api/text-styles') {
+  if (p === '/rt/__api/text-styles' || p === '/rt/__api/color-styles') {
     requireToken(req,ctx.token);
-    const library=require('./text-styles.cjs');
+    const colorLibrary=p==='/rt/__api/color-styles',kind=colorLibrary?'color':'text',library=require(colorLibrary?'./color-styles.cjs':'./text-styles.cjs');
     if(req.method==='GET')return json(res,200,{ok:true,...library.read(ctx.appRoot)});
-    if(req.method!=='POST')return json(res,405,{ok:false,reason:'Use GET or POST for text styles.'});
+    if(req.method!=='POST')return json(res,405,{ok:false,reason:'Use GET or POST for '+kind+' styles.'});
     return readBinary(req,library.LIMIT,bytes=>{
-      if(!bytes)return json(res,413,{ok:false,reason:'Text style requests must be 512 KB or smaller.'});
-      let operation;try{operation=JSON.parse(bytes.toString('utf8'));}catch{return json(res,400,{ok:false,reason:'Invalid text style JSON.'});}
+      if(!bytes)return json(res,413,{ok:false,reason:kind+' style requests must be 512 KB or smaller.'});
+      let operation;try{operation=JSON.parse(bytes.toString('utf8'));}catch{return json(res,400,{ok:false,reason:'Invalid '+kind+' style JSON.'});}
       try{
-        const plan=operation?.type==='update'&&(ctx.adapter.capabilities?.ops?.includes('setCSS')||['react','liquid'].includes(ctx.adapter.name))?require('./text-style-update.cjs').plan(ctx.appRoot,operation,['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html'):library.planChange(ctx.appRoot,operation);
+        const plan=!colorLibrary&&operation?.type==='update'&&(ctx.adapter.capabilities?.ops?.includes('setCSS')||['react','liquid'].includes(ctx.adapter.name))?require('./text-style-update.cjs').plan(ctx.appRoot,operation,['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html'):library.planChange(ctx.appRoot,operation);
         if(!plan.ok)return json(res,409,plan);
         const applied=library.commitPlan(ctx.appRoot,plan);
         for(const edit of applied.edits)if(ctx.adapter.matches(edit.file))ctx.index.indexFile(edit.file);

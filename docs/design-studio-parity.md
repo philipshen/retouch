@@ -6097,3 +6097,29 @@ unchanged phone/base styling, automatic leading and exact source/computed undo.
 General font shorthand support, arbitrary-site adapters and the broader parity
 matrix remain unfinished. Native launches remain paused; full design parity and
 verified desktop distribution are not achieved.
+
+### Project color library foundation (2026-09-09)
+
+Extracted the catalog transaction/storage implementation into a shared style
+library factory, preserving the text library format and operations. Added the
+separate `.retouch/color-styles.json` catalog and authenticated
+`/rt/__api/color-styles` GET/POST endpoint. Colors have stable IDs, normalized
+unique names and a color property; create/update/delete/import use revision checks
+and shared undo/redo. Imported identical definitions are idempotent; conflicting
+IDs/names refuse without partial writes. Text and color libraries remain separate.
+
+This initial color validator accepts sRGB hex with optional alpha. Wide-gamut color
+spaces, semantic aliases, palette UI, layer application and linked propagation are
+not implemented yet. GET exposes the versioned library data for export, but there
+is no palette download/upload UI yet. This foundation does not establish full
+reusable color-style parity.
+
+All 457 unit tests passed, exit 0:
+/private/tmp/retouch-color-palette-final-units.log. New tests cover stable alpha,
+independent text/color catalogs, roundtrip import, idempotence, invalid/conflicting/
+stale inputs, symlink refusal, authentication, malformed-ID HTTP validation, and
+exact shared undo/redo of palette creation. A validation-variable shadowing bug
+found during review was fixed before the final run. Existing text-library browser
+flows passed, exit 0, in /private/tmp/retouch-color-palette-text-regression.log,
+including linked source propagation, shared history and file transfer. Native
+launches remain paused; full parity and verified desktop distribution are pending.
