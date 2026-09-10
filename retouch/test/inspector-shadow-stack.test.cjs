@@ -18,3 +18,8 @@ test('Display P3 shadow colors preserve channels and alpha through stack and fil
  for(const bad of ['0px 2px color(display-p3 2 0 0)','0px 2px color(display-p3 1 0 0','0px 2px rgb(0,0,0))','0px 2px red,','0px 2px var(--unknown)'])assert.equal(V.parseShadows(bad),null,bad);
  assert.equal(V.parseFilters('drop-shadow(1px 2px 3px 4px '+color+')'),null);
 });
+
+test('Oklab and OKLCH shadows preserve explicit channels, hue units, percentages and missing components',()=>{
+ for(const color of ['oklch(63.7% 0.237 25.331 / .6)','oklab(.65 -0.1 2e-2 / 40%)','oklch(.8 0.2 .5turn)','oklab(none 10% -5%)','oklch(1 0 none / none)']){assert.equal(V.valid('color',color),true,color);const value='0px 2px 4px '+color;assert.equal(V.parseShadows(value)[0].color,color);assert.ok(I.shadowClasses('',value).includes(color.replace(/\s/g,'_')));assert.equal(V.parseFilters('drop-shadow(1px 2px 3px '+color+')').length,1);}
+ for(const bad of ['oklch(.7 .2 50%)','oklab(.7 20deg .1)','oklab(.7,.1,.2)','oklab(.7 .1)','oklch(.7 .1 2 / 0.5 / 1)','oklab(.7 .1 .2 /)','oklab(.7 .1 .2);color:red','oklch(from red l c h)','oklab(calc(.7) .1 .2)','oklab(1e999 .1 .2)'])assert.equal(V.valid('color',bad),false,bad);
+});

@@ -43,6 +43,15 @@
   if(flexWrap!=='nowrap')changes['align-content']=changes['align-items'];
   return changes;
  }
+ // Explicit Oklab/OkLCh syntax, preserving channels instead of converting gamut.
+ // https://www.w3.org/TR/css-color-4/#specifying-oklab-oklch
+ function okColor(value){
+  const match=/^(oklab|oklch)\((.*)\)$/i.exec(value);if(!match)return false;
+  const parts=match[2].split('/');if(parts.length>2)return false;
+  const channels=parts[0].trim().split(/\s+/);if(channels.length!==3)return false;
+  const component=(token,hue=false)=>{if(token.toLowerCase()==='none')return true;const parsed=/^([+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?)(%|deg|grad|rad|turn)?$/i.exec(token);return !!parsed&&Number.isFinite(Number(parsed[1]))&&Math.abs(Number(parsed[1]))<=1e6&&(hue?parsed[2]!=='%':!parsed[2]||parsed[2]==='%');};
+  return channels.every((token,index)=>component(token,match[1].toLowerCase()==='oklch'&&index===2))&&(parts.length===1||component(parts[1].trim()));
+ }
  function valid(property,value){
   if(['fill','stroke'].includes(property))return value===null||value==='none'||valid('color',value);
   if(['stroke-width','stroke-dasharray'].includes(property)){
@@ -72,6 +81,7 @@
   if(property==='object-position'){const parts=value.split(/\s+/);return parts.length===2&&parts.every(p=>/^(?:\d*\.)?\d+%$/.test(p)&&parseFloat(p)>=0&&parseFloat(p)<=100);}
   if(sides.includes(property)&&/^calc\(50% [+-] (?:\d*\.)?\d+px\)$/.test(value))return true;
   if(Object.hasOwn(options,property))return options[property].includes(value);
+  if(colors.has(property)&&/^okl(?:ab|ch)\(/i.test(value))return okColor(value);
   if(colors.has(property)&&/^color\(display-p3\s/i.test(value))return (typeof module==='object'&&module.exports?require('./palette-values.js'):globalThis.RetouchPaletteValues).valid(value);
   if(colors.has(property))return /^(?:#(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})|[a-z]+|(?:rgb|rgba|hsl|hsla)\([\d.%,\s/]+\))$/i.test(value);
   if(!lengths.has(property))return false;

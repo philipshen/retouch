@@ -6783,3 +6783,26 @@ shadow, confirm the computed color space, then edit blur, reorder and remove
 shadows, and undo each source snapshot exactly. This proves preserved CSS values
 and browser rendering behavior, not monitor gamut or color calibration. Full
 Figma parity remains incomplete; native app launches remain paused.
+
+### Oklab and OKLCH shadow preservation (2026-09-09)
+
+The shared CSS color validator now accepts explicit Oklab and OKLCH functions,
+including numeric/percentage channels, numeric or angle hue, alpha and missing
+components. The source keeps the function and channels; no conversion to sRGB is
+performed. Validation follows the explicit grammar in
+https://www.w3.org/TR/css-color-4/#specifying-oklab-oklch, with the existing string
+bound and a finite numeric magnitude limit. Relative colors and calc expressions
+are still refused. Saved palette definitions remain hex/Display P3 only; this
+change applies to CSS values and shadow/effect stacks.
+
+All 511 tests passed, exit 0: /private/tmp/retouch-oklch-shadows-units.log. Source
+tests cover round-trips through shadows and drop-shadow, percentages, exponents,
+hue units and missing components, plus malformed/injected/unsupported syntax.
+React/Chromium and conditional Liquid/WebKit browser flows passed, exit 0:
+/private/tmp/retouch-oklch-shadows-react.log and
+/private/tmp/retouch-oklch-shadows-liquid.log. Both edit a shadow to the OKLCH value
+used by the test, confirm the computed function, and retain edit/reorder/remove
+and exact undo behavior. Oklab has source coverage here; only OKLCH was exercised
+in these full browser flows. Live Shopify, complete color-expression support,
+arbitrary-site authoring and full Figma parity remain unverified or incomplete.
+Native app launches remain paused.
