@@ -10083,3 +10083,9 @@ Validation: all 805 unit tests passed (`/private/tmp/retouch-optional-contracts-
 Typed extraction now checks preceding conditional/loop/switch tests for references to the exact captured bindings. An earlier guard can narrow an optional property before a later return; moving only that JSX would lose the guard. Such cases now refuse with a specific explanation. Guards referencing unrelated locals or globals do not trigger this check. This remains conservative analysis, not a complete TypeScript control-flow model.
 
 Validation: the compiler-valid earlier-guard regression failed its refusal expectation before the fix (`/private/tmp/retouch-early-guard-before.log`). All 806 unit tests passed after the fix (`/private/tmp/retouch-early-guard-units-final.log`), including unrelated-guard checks. The strict compiler suite passed 17 extraction scenarios and three valid-source guarded refusals (`/private/tmp/retouch-early-guard-compiler-final.log`). No browser run for this planner guard. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Live optional inherited object extraction
+
+Added a browser fixture with an absent optional property on the captured inherited object. It verifies the generated optional contract, the rendered fallback value, callback-driven state changes, definition editing, appearance and exact Undo/Redo source restoration.
+
+Validation: Chromium (`/private/tmp/retouch-optional-browser-chromium.log`) and WebKit (`/private/tmp/retouch-optional-browser-webkit.log`) both exited 0. This also exercises the typed extraction flow after the preceding-guard fix. No production code changed in this verification stage. Full Figma parity remains incomplete; native launches remain paused.
