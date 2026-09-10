@@ -393,7 +393,7 @@ async function classifyNode(node) {
     for (const id of [instanceId, hostId]) {
       if (!id || !/^[0-9a-f]{10}$/.test(id)) continue;
       const res = await api('GET', resolveUrl(id, renderContext(el)));
-      if(res?.ok && res.element.inlineComponent){inlineComponent=true;continue;}
+      if(res?.ok && res.element.inlineComponent&&!componentLibrarySelections.has(id)){inlineComponent=true;continue;}
       if (res && res.ok) return { el, info: res.element, hostId, instanceId:inlineComponent?null:instanceId };
     }
     el = el.parentElement ? el.parentElement.closest('[data-rt], [data-rt-i]') : null;
@@ -737,16 +737,16 @@ const hoverDescriptions = new WeakMap();
 function hoverDescription(el) {
   let entry=hoverDescriptions.get(el);
   if(!entry || (!entry.pending && Date.now()-entry.updated>2000)) {
-    entry={info:entry?.info || null,pending:true,updated:Date.now()};
+    entry={info:entry?.info || null,element:entry?.element||el,pending:true,updated:Date.now()};
     hoverDescriptions.set(el,entry);
     classifyNode(el).then(result=>{
-      entry.info=result?.info || {unresolved:true};entry.pending=false;entry.updated=Date.now();
+      entry.info=result?.info || {unresolved:true};entry.element=result?.el||el;entry.pending=false;entry.updated=Date.now();
     });
   }
-  return entry.info;
+  return {info:entry.info,element:entry.element||el};
 }
 function outlineKind(el, info) {
-  if(info?.kind==='instance' && !info.inlineComponent)return 'instance';
+  if(info?.kind==='instance' && (!info.inlineComponent||componentLibrarySelections.has(info.id)))return 'instance';
   if(!info)return null;
   return !info.unresolved && (info.classNameDynamic===false || info.text!=null || info.canSetChildren || info.canSetSrc || info.canSetTag) ? 'editable' : 'readonly';
 }
@@ -778,22 +778,24 @@ function paintLoop() {
     for(const group of groups) {
       const el=group.element,kind=outlineKind(el,sel.info);
       const bounds=RetouchComponentInstances.bounds(group.elements);if(bounds)drawBounds(bounds,first?'sel':'co',kind);
-      if(first && kind==='instance')badge={el,id:el.getAttribute('data-rt-i') || id};
+      if(first && kind==='instance')badge={el,elements:group.elements,id:el.getAttribute('data-rt-i') || id};
       first=false;
     }
   }
   if(d&&sel?.multiple&&mode==='edit')for(const info of sel.multiple)if(info.id!==activeId())for(const el of matchingEls(info.id))drawBox(el,'co',outlineKind(el,info));
   if(d && editing?.el.isConnected)drawBox(editing.el,'editing',outlineKind(editing.el,editing.info));
   if(d && hoverEl?.isConnected && mode==='edit' && !editing) {
-    const kind=outlineKind(hoverEl,hoverDescription(hoverEl));
-    if(kind)drawBox(hoverEl,'hover',kind);
-    if(kind==='instance')badge={el:hoverEl,id:hoverEl.getAttribute('data-rt-i')};
+    const hovered=hoverDescription(hoverEl),target=hovered.element,info=hovered.info,kind=outlineKind(target,info);
+    const group=kind==='instance'?RetouchComponentInstances.group(matchingInDocument(d,info.id,info),info.rootGroups).find(group=>group.elements.includes(target)):null;
+    const elements=group?.elements||[target],bounds=RetouchComponentInstances.bounds(elements);
+    if(kind&&bounds)drawBounds(bounds,'hover',kind);
+    if(kind==='instance')badge={el:target,elements,id:info.id};
   }
   // Keep the badge mounted so pointer/focus events survive animation frames.
   if(componentBadge.matches(':hover') || componentBadge.contains(document.activeElement))badge=badgeTarget;
   if(mode!=='edit' || !badge?.el.isConnected)badge=null;
   badgeTarget=badge;componentBadge.hidden=!badge;
-  if(badge){const r=badge.el.getBoundingClientRect();componentBadge.style.left=Math.max(0,r.left)+'px';componentBadge.style.top=Math.max(0,r.top-22)+'px';}
+  if(badge){const r=RetouchComponentInstances.bounds((badge.elements||[badge.el]).filter(el=>el.isConnected))||badge.el.getBoundingClientRect();componentBadge.style.left=Math.max(0,r.left)+'px';componentBadge.style.top=Math.max(0,r.top-22)+'px';}
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
   marqueeSurface.textContent='';
   if(selectionMarquee?.document===d){

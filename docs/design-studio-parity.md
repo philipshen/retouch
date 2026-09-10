@@ -8874,3 +8874,34 @@ across fragment roots. DOM mutation can make source-based boundaries unavailable
 the fallback is selectable individual roots. Full Figma Design parity and
 arbitrary-site authoring are incomplete. Native launches remain paused; trusted
 brew distribution is unverified.
+
+### Grouped component hover and canvas reselection (2026-09-10)
+
+Hovering either host of a verified fragment group now outlines the whole group,
+matching selection bounds. The component badge follows the union bounds and keeps
+its mounted button stable during hover/focus. Hover classification retains the
+resolved source ancestor instead of applying that ancestor's metadata to an
+unresolved descendant, and preserves that target during cache refresh.
+
+A single-use instance explicitly selected from the project component library
+keeps component classification when clicked again on the canvas. Its outline and
+badge use component styling instead of falling back to an ordinary host layer.
+The existing direct text-leaf editing path remains separate.
+
+Validation: 701 unit tests passed. Chromium and WebKit verify both fragment roots
+produce the exact same hover rectangle as grouped selection, the component badge
+is visible, and clicking the second root preserves the instance property editor.
+The existing root swap/detach/Undo/Redo checks pass in both browsers. The broader
+framed insertion, required properties, swap, branch, duplicate and property flow
+also passed in Chromium. All browser processes ended with exit zero and strict
+empty page-error assertions. The screenshot was inspected and shows one purple
+component outline enclosing both roots with one badge. Evidence:
+/private/tmp/retouch-fragment-hover-units.log,
+/private/tmp/retouch-fragment-hover-chromium.log,
+/private/tmp/retouch-fragment-hover-webkit.log,
+/private/tmp/retouch-fragment-hover-framed.log,
+/private/tmp/retouch-fragment-hover.png.
+
+Grouped layer-tree presentation, per-render source overrides, dynamic grouping,
+fragment layout editing and the broader full-Figma/arbitrary-site gaps remain
+open. Native launches remain paused and trusted brew distribution is unverified.
