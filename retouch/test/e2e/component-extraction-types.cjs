@@ -7,6 +7,8 @@ const ts=require(path.join(fixture,'node_modules/typescript'));
 const {makeApp,cleanup,Index}=require('../helpers.cjs'),create=require('../../src/create-component.cjs');
 const jsx='declare namespace JSX {interface ElementChildrenAttribute {children:{}} interface IntrinsicElements {article:{title?:string;onClick?:()=>void;children?:unknown}}}\n';
 const cases=[
+ ['indexed object','type Label=string;interface Props{[key:string]:Label}function Page(data:Props){return <article title={data["title"]??"Hi"}>Hi</article>}'],
+ ['inherited readonly index','type Label=string;interface Base{readonly [key:string]:Label}interface Props extends Base{title:Label}function Page(data:Props){return <article title={data["other"]??data.title}>Hi</article>}'],
  ['optional object member','interface Props{title?:string}function Page(data:Props){return <article title={data.title??"Hi"}>Hi</article>}'],
  ['optional method argument','type Label=string;interface Props{onSelect(value?:Label):void}function Page({onSelect}:Props){return <article onClick={()=>onSelect()}>Hi</article>}'],
  ['optional whole tuple','function Page(data:[title?:string]){return <article title={data[0]??"Hi"}>Hi</article>}'],

@@ -271,3 +271,9 @@ test('typed extraction preserves prior optional-property guards and ignores unre
  const f=fixture('interface Props{title?:string}function Page(data:Props){if(!data.title)return null;return <article>{data.title.toUpperCase()}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/earlier TypeScript guard/);}finally{f.close();}
  for(const condition of ['!enabled','Math.random()>0.5']){const safe=fixture('function Page(title:string,enabled:boolean){if('+condition+')return null;return <article>{title.toUpperCase()}</article>}','page.tsx');try{const result=create.plan(safe.selected,{name:'Card',fileHash:safe.selected.hash});assert.ok(result.ok,result.reason);}finally{safe.close();}}
 });
+
+test('typed extraction preserves indexed object contracts including inherited readonly signatures',()=>{
+ for(const contract of ['type Label=string;interface Props{[key:string]:Label}', 'type Label=string;interface Base{readonly [key:string]:Label}interface Props extends Base{title:Label}']){
+  const f=fixture(contract+' function Page(data:Props){return <article title={data["title"]??"Hi"}>Hi</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);const signature=result.edits[0].after.split('function Card(')[1];assert.ok(signature.includes('[key:string]:(string)'));if(contract.includes('readonly'))assert.ok(signature.includes('readonly [key:string]'));}finally{f.close();}
+ }
+});

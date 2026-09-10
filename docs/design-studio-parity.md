@@ -10089,3 +10089,9 @@ Validation: the compiler-valid earlier-guard regression failed its refusal expec
 Added a browser fixture with an absent optional property on the captured inherited object. It verifies the generated optional contract, the rendered fallback value, callback-driven state changes, definition editing, appearance and exact Undo/Redo source restoration.
 
 Validation: Chromium (`/private/tmp/retouch-optional-browser-chromium.log`) and WebKit (`/private/tmp/retouch-optional-browser-webkit.log`) both exited 0. This also exercises the typed extraction flow after the preceding-guard fix. No production code changed in this verification stage. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Explicit index-signature capture contracts
+
+Whole-object extraction now preserves explicit index signatures, including readonly signatures inherited from same-module interfaces and named aliases in their value types. Destructured lookup inference remains separate; this path copies the dictionary contract rather than inventing a required property type.
+
+Validation: all 807 unit tests passed (`/private/tmp/retouch-index-contracts-units.log`). The strict compiler suite passed 19 extraction scenarios and three guarded refusals (`/private/tmp/retouch-index-contracts-compiler.log`), including missing-key fallbacks with noUncheckedIndexedAccess enabled. No browser run in this planner expansion. Full Figma parity remains incomplete; native launches remain paused.

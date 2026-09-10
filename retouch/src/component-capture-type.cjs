@@ -1,6 +1,6 @@
 'use strict';
 // A copied structural type must not refer to bindings from the old function.
-const allowed=new Set(['TSTypeAnnotation','TSTypeLiteral','TSPropertySignature','TSMethodSignature','TSFunctionType','TSArrayType','TSTupleType','TSNamedTupleMember','TSOptionalType','TSRestType','TSLiteralType','TSParenthesizedType','TSTypeOperator',...'TSStringKeyword TSNumberKeyword TSBooleanKeyword TSBigIntKeyword TSSymbolKeyword TSAnyKeyword TSNeverKeyword TSVoidKeyword TSUndefinedKeyword TSNullKeyword'.split(' ')]);
+const allowed=new Set(['TSTypeAnnotation','TSTypeLiteral','TSPropertySignature','TSMethodSignature','TSIndexSignature','TSFunctionType','TSArrayType','TSTupleType','TSNamedTupleMember','TSOptionalType','TSRestType','TSLiteralType','TSParenthesizedType','TSTypeOperator',...'TSStringKeyword TSNumberKeyword TSBooleanKeyword TSBigIntKeyword TSSymbolKeyword TSAnyKeyword TSNeverKeyword TSVoidKeyword TSUndefinedKeyword TSNullKeyword'.split(' ')]);
 function renderType(node,source,resolve,budget={left:2000},depth=0){
  if(!node||depth>20||--budget.left<0)return null;
  if(node.captureText){
@@ -86,6 +86,7 @@ function typeResolver(binding,source){
   members.push(...node.body.body);
   const keys=new Set();
   for(const member of members){
+    if(member.type==='TSIndexSignature')continue;
     if(!['TSPropertySignature','TSMethodSignature'].includes(member.type)||member.computed)return null;
     const key=String(member.key.name??member.key.value);if(keys.has(key))return null;keys.add(key);
   }
