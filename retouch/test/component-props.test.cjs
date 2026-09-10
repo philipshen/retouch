@@ -251,3 +251,34 @@ test('resetting an expression override guards the imported default contract',()=
   fs.appendFileSync(require('node:path').join(f.root,'contracts.ts'),'\n// external revision');assert.equal(props.plan(f.resolved,op).ok,false);assert.equal(require('../src/transactions.cjs').applyPlan(f.root,plan).ok,false);
  }finally{f.close();}
 });
+
+test('namespace imports resolve contracts, inherited fields and scalar choices through wildcard barrels',()=>{
+ const f=importedTypes({
+  'Card.tsx':'import type * as Types from "./contracts";export default function Card({title="small"}:Types.Props){return <h1>{title}</h1>}',
+  'contracts.ts':'export * from "./types";export * from "./unrelated";',
+  'types.ts':'import type * as Base from "./base";export interface Props extends Base.Fields {title?:Base.Size}',
+  'base.ts':'export interface Fields {count?:number} export type Size="small"|"large";',
+  'unrelated.ts':'export interface Other {title:boolean}'
+ });try{
+  const info=props.describe(f.resolved,'title');assert.deepEqual(info.choices,['small','large']);assert.equal(props.describe(f.resolved,'count').type,'number');
+  const op={name:'title',value:'large',fileHash:f.resolved.hash,definitionHash:info.definitionHash},plan=props.plan(f.resolved,op);assert.ok(plan.ok,plan.reason);assert.equal(plan.edits.length,6);
+  fs.appendFileSync(require('node:path').join(f.root,'unrelated.ts'),'\nexport interface Props {title?:"small"|"other"}');
+  assert.equal(props.plan(f.resolved,op).ok,false);assert.equal(require('../src/transactions.cjs').applyPlan(f.root,plan).ok,false);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.resolved.source);
+ }finally{f.close();}
+});
+test('wildcard export diamonds preserve declaration identity and explicit exports win over ambiguity',()=>{
+ for(const contracts of ['export * from "./left";export * from "./right";', 'export * from "./left";export * from "./other";export type {Props} from "./base";']){
+  const f=importedTypes({'contracts.ts':contracts,'left.ts':'export * from "./base";','right.ts':'export type {Props} from "./base";','base.ts':'export interface Props {title?:"small"|"large"}','other.ts':'export interface Props {title?:boolean}'});try{assert.deepEqual(props.describe(f.resolved,'title').choices,['small','large']);}finally{f.close();}
+ }
+});
+test('wildcard graphs handle cycles but refuse ambiguous, default and unresolved explicit exports',()=>{
+ const f=importedTypes({'contracts.ts':'export * from "./cycle";export * from "./base";','cycle.ts':'export * from "./contracts";','base.ts':'export interface Props {title?:"small"|"large"}'});try{assert.deepEqual(props.describe(f.resolved,'title').choices,['small','large']);}finally{f.close();}
+ for(const files of [
+  {'contracts.ts':'export * from "./base";export * from "./other";','base.ts':'export interface Props {title?:"small"|"large"}','other.ts':'export interface Props {title?:"small"|"other"}'},
+  {'Card.tsx':'import type Props from "./contracts";export default function Card({title="small"}:Props){return <h1/>}','contracts.ts':'export * from "./base";','base.ts':'export default interface Props {title?:"small"|"large"}'},
+  {'contracts.ts':'export * from "./base";export * from "./other";','base.ts':'export interface Props {title?:"small"|"large"}','other.ts':'export type {Missing as Props} from "./base";'}
+ ]){const g=importedTypes(files);try{assert.equal(props.describe(g.resolved,'title').choices,undefined);}finally{g.close();}}
+});
+test('an explicit namespace export is not mistaken for a wildcard type with the same name',()=>{
+ const f=importedTypes({'contracts.ts':'export * from "./base";export * as Props from "./other";','base.ts':'export interface Props {title?:"small"|"large"}','other.ts':'export type Title="other";'});try{assert.equal(props.describe(f.resolved,'title').choices,undefined);}finally{f.close();}
+});

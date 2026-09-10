@@ -25,6 +25,10 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   const badgeStart=source.indexOf('interface BadgeBase'),badgeEnd=source.indexOf('/** @retouch-component */',badgeStart),badge=source.slice(badgeStart,badgeEnd).replace('type BadgeProps=','export type BadgeProps=');source=source.slice(0,badgeStart)+source.slice(badgeEnd);
   for(const [name,text] of [['headline-types.ts',head],['badge-types.ts',badge],['contracts.ts','export type {Props as HeadlineProps} from "./headline-types"; export type {BadgeProps} from "./badge-types";']]){const target=path.join(root,'app',name);fs.writeFileSync(target,text);importedTypeSources.set(target,text);}
   fs.writeFileSync(file,'import type {HeadlineProps as Props, BadgeProps} from "./contracts";\n'+source);
+  if(process.env.RT_E2E_COMPONENT_NAMESPACE_TYPES){
+   const barrel=path.join(root,'app/contracts.ts'),text='export * from "./headline-types"; export * from "./badge-types";';fs.writeFileSync(barrel,text);importedTypeSources.set(barrel,text);
+   fs.writeFileSync(file,'import type * as Contracts from "./contracts";\n'+source.replace(':Props)',':Contracts.Props)').replace(':BadgeProps)',':Contracts.BadgeProps)'));
+  }
  }
  if(process.env.RT_E2E_COMPONENT_PROPS){assert.equal(kind,'react');fs.writeFileSync(file,fs.readFileSync(file,'utf8').replace('export default function Page(){return','\"use client\"; import {useState} from \"react\"; export default function Page(){const [label,setLabel]=useState(\"Headline\"), title=\"Local title\", onClick=()=>setLabel(\"Clicked\");return').replace('>Headline</h1>',' title={title} onClick={onClick}>{label}</h1>'));}
  if(process.env.RT_E2E_CREATE_COMPONENT){assert.equal(kind,'react');process.env.RETOUCH_STATE_DIR=path.join(root,'.history-cache');}

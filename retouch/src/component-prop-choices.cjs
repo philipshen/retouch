@@ -12,8 +12,8 @@ function inspect(resolved,name,definition){
    if(node?.type==='TSParenthesizedType')return resolve(node.typeAnnotation,seen);
    if(node?.type!=='TSTypeReference')return node;
    if(node.typeName.type==='Identifier'&&['Exclude','Extract'].includes(node.typeName.name)&&modules.builtin(node,node.typeName.name))return node;
-   if(node.typeName.type!=='Identifier'||node.typeParameters||seen.size>=20)return null;
-   const declaration=modules.lookup(node,node.typeName.name);if(!declaration||seen.has(declaration)||declaration.typeParameters||declaration.extends?.length)return null;
+   if(node.typeParameters||seen.size>=20)return null;
+   const declaration=modules.lookup(node);if(!declaration||seen.has(declaration)||declaration.typeParameters||declaration.extends?.length)return null;
    const next=new Set(seen);next.add(declaration);return resolve(declaration.type==='TSTypeAliasDeclaration'?declaration.typeAnnotation:declaration.body,next);
   }
   let keyVisits=0;
@@ -51,13 +51,13 @@ function inspect(resolved,name,definition){
      return base.filter(field=>utility==='Pick'?keys.includes(memberName(field)):!keys.includes(memberName(field)));
     }
    }
-   if(node.type!=='TSTypeReference'||node.typeName.type!=='Identifier'||node.typeParameters)return null;
-   const declaration=modules.lookup(node,node.typeName.name);if(!declaration||seen.has(declaration)||declaration.typeParameters)return null;
+   if(node.type!=='TSTypeReference'||node.typeParameters)return null;
+   const declaration=modules.lookup(node);if(!declaration||seen.has(declaration)||declaration.typeParameters)return null;
    const next=new Set(seen);next.add(declaration);
    if(declaration.type==='TSTypeAliasDeclaration')return contractMembers(declaration.typeAnnotation,next);
    const inherited=[];
    for(const base of declaration.extends||[]){
-    if(base.expression.type!=='Identifier'||base.typeParameters)return null;
+    if(!['Identifier','TSQualifiedName'].includes(base.expression.type)||base.typeParameters)return null;
     const group=contractMembers(modules.inherit({type:'TSTypeReference',typeName:base.expression},base),next);if(!group)return null;inherited.push(...group);
    }
    return [...inherited,...declaration.body.body];

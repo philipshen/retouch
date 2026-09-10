@@ -8260,3 +8260,26 @@ This remains a bounded TypeScript reader: config aliases, package and namespace
 imports, wildcard re-exports, generic contracts and full compiler semantics remain
 incomplete. Full Figma/any-site parity and trusted brew distribution are still
 unproven. Native app launches remain paused.
+
+## Namespace and wildcard component type imports (2026-09-10)
+
+Property discovery now resolves namespace-qualified contracts, inherited interfaces
+and scalar choices from relative local imports. Wildcard barrels resolve named
+exports across cycles and diamonds, retain declaration identity, exclude default,
+and reject ambiguous declarations. Explicit named exports take precedence over
+wildcards. Every visited branch is included in the existing revision and commit
+guards, even if it currently has no matching export; adding a conflicting export
+there invalidates the editor and pending write. Resolution work has a shared bound.
+
+Validation: 645 unit tests passed. New cases cover namespace contracts/inheritance,
+scalar aliases, ambiguous additions, diamond identity, explicit precedence, cycles,
+default exclusion and unresolved explicit exports. Chromium and WebKit passed the
+property/search/default/unset/duplicate/Undo/Redo workflow using namespace-qualified
+contracts imported through wildcard barrels, preserving all imported source files.
+Browser runs preceded a final refusal guard for unsupported explicit namespace
+re-exports; the final unit suite covers that guard.
+Logs: /private/tmp/retouch-namespace-types-{units,chromium,webkit}.log.
+
+Nested namespace re-exports, config aliases, packages and general compiler semantics
+remain incomplete. Full Figma/any-site parity and trusted brew distribution remain
+unproven. Native launches stay paused.
