@@ -968,6 +968,10 @@ window.addEventListener('pointerup',releasePanelPointer,true);
 window.addEventListener('pointercancel',releasePanelPointer,true);
 window.addEventListener('blur',()=>releasePanelPointer());
 function renderPanel() {
+  // A reload or document.open() can leave the preview without a root. Keep
+  // the current inspector until the frame load restores measurable content.
+  const previewDocument=doc();
+  if(!previewDocument?.documentElement||!previewDocument.body||!previewDocument.defaultView){panelRenderDeferred=true;return;}
   // Selection is part of the completed edit, even before the next paint.
   syncLayerSelection();
   const panel=document.getElementById('panel');

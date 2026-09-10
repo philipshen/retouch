@@ -17,6 +17,7 @@
     "test:e2e:react-marquee": "node test/e2e/react-marquee.cjs",
     "test:e2e:react-selection-geometry": "node test/e2e/react-selection-geometry.cjs",
     "test:e2e:react-selection": "node test/e2e/react-selection.cjs",
+    "test:e2e:react-reload": "RT_E2E_REACT_RELOAD_VIEWPORT=1 node test/e2e/react-selection.cjs",
     "test:e2e:react-position": "node test/e2e/react-position.cjs",
     "test:e2e:relative-line-height": "RT_E2E_RELATIVE_LINE_HEIGHT=1 node test/e2e/page-fonts.cjs",
     "test:e2e:relative-spacing": "RT_E2E_RELATIVE_SPACING=1 node test/e2e/page-fonts.cjs",

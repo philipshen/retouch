@@ -67,6 +67,25 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    await click('B');await wait(async()=>await page.getByRole('treeitem',{selected:true}).count()===1);assert.equal(await page.getByRole('treeitem',{name:'div · A',exact:true}).getAttribute('aria-selected'),'true');await click('B');await wait(async()=>await page.getByRole('treeitem',{selected:true}).count()===2);await uiSettled();await page.getByRole('button',{name:'Compare screens',exact:true}).click();await page.waitForFunction(()=>!document.getElementById('compareScreens').disabled);await page.getByLabel('Style screen scope').selectOption('');assert.equal(read(),original);
    console.log('REACT COMPARISON MULTISELECT/OUTLINES/SHARED BREAKPOINT EDIT/COMPILED CSS/UNDO/REDO PASS',engine);
   }
+  if(process.env.RT_E2E_REACT_RELOAD_VIEWPORT){
+   await page.locator('#logo').click();
+   // Run in the site's realm: document.open() called from the shell can also
+   // replace the document URL with /rt, testing a different navigation.
+   await app.locator('body').evaluate(()=>{document.open();});
+   await page.evaluate(async()=>{
+    // Hold a real document replacement open across paints to make the otherwise
+    // intermittent empty-root interval deterministic.
+    window.dispatchEvent(new CustomEvent('retouch:viewport',{detail:{width:768,height:1024,fixed:true}}));
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    await reloadFrame();
+    const timer=setInterval(()=>window.dispatchEvent(new CustomEvent('retouch:viewport',{detail:{width:768,height:1024,fixed:true}})),20);
+    try{for(let i=0;i<5;i++)await reloadFrame();}finally{clearInterval(timer);}
+   });
+   await uiSettled();await wait(async()=>await page.getByRole('treeitem',{selected:true}).count()===2);assert.equal(read(),original);
+   await page.getByLabel('Style screen scope').selectOption('md:');
+   const field=page.getByLabel('Shared Opacity (%)',{exact:true});await field.fill('35');await field.press('Enter');await wait(()=>read()!==original);await uiSettled();await size('768x1024');await opacityIs([.35,.35]);await undo();
+   console.log('REACT EMPTY DOCUMENT/RELOAD/VIEWPORT/SELECTION/EDIT/UNDO PASS',engine);
+  }
   if(process.env.RT_E2E_REACT_SELECTION_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_REACT_SELECTION_SCREENSHOT});assert.deepEqual(errors,[]);
   console.log(engine+': PASS React multi-selection UI, mixed/shared styling, scopes, canvas/range selection, inline/spread guards, selection undo/redo, dynamic refusal and real React/Tailwind batch source API, compiled multi-layer responsive positions, fresh metadata, no-op/stale/dynamic refusal and one-step exact undo/redo');
  }catch(error){if(diagnose)await diagnose();throw error;}finally{if(browser)await browser.close();if(!exited)child.kill('SIGTERM');await stopped;fs.rmSync(root,{recursive:true,force:true});}
