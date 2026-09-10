@@ -8707,3 +8707,35 @@ variant equivalence, class/HOC/multiple-root identity, generic framework/site
 support and other full Figma Design requirements remain incomplete. Trusted brew
 distribution is also unverified. Native app launches and native launch tests remain
 paused.
+
+
+### Clean up the old component binding after a swap
+
+Swapping now removes the old imported binding when the replaced JSX was its last
+reference. Imports still referenced elsewhere, used by the retained key, or reused
+by the replacement namespace member are preserved. Other named/default/type
+specifiers remain. Comments inside the edited import are retained. When no runtime
+bindings remain, an explicit side-effect import preserves evaluation of the old
+module; this also applies when the remaining specifiers are type-only.
+
+The source planner accounts for import-rewrite length changes when mapping the
+new instance and parent IDs. The original import/source bytes remain part of the
+same history transaction, so Undo restores them exactly. Cleanup is limited to
+the binding made unused by this swap; it does not sweep unrelated unused imports.
+
+Validation: 690 unit tests passed. Added checks cover last-use cleanup and ID
+mapping, external value/type references, key references, sibling specifiers,
+comments, imports declared after JSX, and type-only remnants. A runtime ESM test
+verifies the old module still evaluates once after its unused binding is removed.
+Chromium (named import) and WebKit (namespace import) both passed the complete
+insertion/required-properties/swap/branch/duplicate/property/library flow. The
+browser swap checks now require removal of the old binding plus a retained
+side-effect import and exact Undo/Redo. Both processes ended with exit zero and
+strict empty page-error assertions.
+Logs: /private/tmp/retouch-swap-import-cleanup-units.log,
+/private/tmp/retouch-swap-import-cleanup-chromium.log and
+/private/tmp/retouch-swap-import-cleanup-webkit.log.
+
+The existing component expression/content/root-swap limitations and full Figma
+Design/arbitrary-site gaps remain open. Trusted brew distribution is unverified.
+Native app launches and native launch tests remain paused.

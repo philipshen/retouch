@@ -13,3 +13,26 @@ test('swap refuses expressions, spreads, refs, nested children and duplicate ove
 test('swap validates newly supplied required props and rejects a stale usage',()=>{
  const f=fixture();try{assert.match(planner.plan(f.resolved,{...f.op,props:{}}).reason,/required.*width/);assert.equal(planner.plan(f.resolved,{...f.op,props:{width:'wide'}}).ok,false);assert.equal(planner.plan(f.resolved,{...f.op,fileHash:'stale'}).ok,false);}finally{f.close();}
 });
+test('swapping the last imported usage retains a side-effect import and maps shifted source positions',()=>{
+ const f=fixture();try{const plan=planner.plan(f.resolved,f.op);assert.ok(plan.ok,plan.reason);assert.match(plan.edits[0].after,/import "\.\/Old";/);assert.doesNotMatch(plan.edits[0].after,/import \{Old\}/);assert.ok(tx.applyPlan(f.root,plan).ok);f.index.scanAll();assert.equal(f.index.resolve(plan.insertedComponent.parentId).element.node.openingElement.name.name,'main');assert.equal(f.index.resolve(plan.insertedComponent.instanceId).element.node.openingElement.name.name,'Next');}finally{f.close();}
+});
+test('swap cleanup preserves bindings used outside the replaced JSX or by the retained key',()=>{
+ for(const [attrs,suffix] of [['label="Keep" tone="old" key={Old.name}',''],['label="Keep" tone="old"',';export const StillUsed=Old;'],['label="Keep" tone="old"',';type OldType=typeof Old;']]){
+  const f=fixture(attrs);try{if(suffix){fs.appendFileSync(f.resolved.file,suffix);f.index.scanAll();f.resolved=f.index.resolve(f.resolved.element.id);f.op.fileHash=f.resolved.hash;}const plan=planner.plan(f.resolved,f.op);assert.ok(plan.ok,plan.reason);assert.ok(plan.edits[0].after.includes('import {Old} from "./Old";'));}finally{f.close();}
+ }
+});
+test('cleanup preserves sibling imports and comments, and retains evaluation when only types remain',()=>{
+ const parse=require('../src/id.cjs').parseSource,traverse=require('@babel/traverse').default,cleanupImport=require('../src/component-import-cleanup.cjs');
+ for(const [source,expected] of [
+  ['import Default, {Old, Other} from "./Old";const C=()=> <Old/>;','import Default, { Other } from "./Old";'],
+  ['import Old, {Other} from "./Old";const C=()=> <Old/>;','import { Other } from "./Old";'],
+  ['import Default, * as Old from "./Old";const C=()=> <Old.Card/>;','import Default from "./Old";'],
+  ['import { /* note */ Old, type Props} from "./Old";const C=()=> <Old/>;','/* note */\nimport { type Props } from "./Old";\nimport "./Old";'],
+  ['const C=()=> <Old/>;import {Old} from "./Old";','import "./Old";'],
+ ]){const ast=parse(source);let selected;traverse(ast,{JSXElement(p){selected=p;p.stop();}});const edit=cleanupImport(ast,selected,source,'New');assert.ok(edit);assert.equal(edit.after,expected);assert.doesNotThrow(()=>parse(source.slice(0,edit.start)+edit.after+source.slice(edit.end)));}
+});
+test('retained side-effect import still evaluates the old module after removing its unused binding',async()=>{
+ const {pathToFileURL}=require('node:url'),parse=require('../src/id.cjs').parseSource,traverse=require('@babel/traverse').default,cleanupImport=require('../src/component-import-cleanup.cjs');
+ const key='retouchSwap'+Date.now()+Math.random(),root=makeApp({'Old.mjs':'globalThis['+JSON.stringify(key)+']=(globalThis['+JSON.stringify(key)+']||0)+1;export const Old=()=>null;'});
+ try{const source='import {Old} from "./Old.mjs";const C=()=> <Old/>;',ast=parse(source);let selected;traverse(ast,{JSXElement(p){selected=p;p.stop();}});const edit=cleanupImport(ast,selected,source,'New'),after=(source.slice(0,edit.start)+edit.after+source.slice(edit.end)).replace('const C=()=> <Old/>;','export const C=()=>null;');const file=path.join(root,'After.mjs');fs.writeFileSync(file,after);await import(pathToFileURL(file).href);assert.equal(globalThis[key],1);}finally{delete globalThis[key];cleanup(root);}
+});

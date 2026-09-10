@@ -52,14 +52,16 @@ function plan(resolved,op){
    const spec=exported==='default'?local:'{ '+exported+(exported!==local?' as '+local:'')+' }';
    importText='\nimport '+spec+' from '+JSON.stringify(specifier)+';\n';
   }
+  const cleanup=swapping?require('./component-import-cleanup.cjs')(ast,selected,resolved.source,local):null;
   const jsx='<'+local+(attributes.length?' '+attributes.join(' '):'')+'/>',ms=new MagicString(resolved.source);
   let position;
   if(swapping){position=node.start;ms.overwrite(node.start,node.end,jsx);}
   else if(node.openingElement.selfClosing){position=node.openingElement.end-2;ms.overwrite(position,node.openingElement.end,'>\n'+jsx+'\n</'+tag+'>');position+=2;}
   else{position=node.closingElement.start;ms.appendLeft(position,'\n'+jsx+'\n');position++;}
+  if(cleanup)ms.overwrite(cleanup.start,cleanup.end,cleanup.after);
   if(importText)ms.appendLeft(importAt,importText);
-  const after=ms.toString(),elements=collectElements(after,resolved.relPath).elements,offset=importText.length;
-  const inserted=elements.find(element=>element.kind==='instance'&&element.node.start===position+offset),parent=elements.find(element=>element.kind==='host'&&element.node.start===parentBefore.node.start+offset);
+  const after=ms.toString(),elements=collectElements(after,resolved.relPath).elements,offset=pos=>importText.length+(cleanup&&cleanup.end<=pos?cleanup.after.length-(cleanup.end-cleanup.start):0);
+  const inserted=elements.find(element=>element.kind==='instance'&&element.node.start===position+offset(position)),parent=elements.find(element=>element.kind==='host'&&element.node.start===parentBefore.node.start+offset(parentBefore.node.start));
   if(!inserted||!parent)throw Error('The inserted component could not be mapped to source.');
   const edits=[{file:resolved.file,before:resolved.source,after}];for(const [dependency,before] of dependencies)if(dependency!==resolved.file)edits.push({file:dependency,before,after:before});
   return {ok:true,hash:contentHash(after),insertedComponent:{instanceId:inserted.id,parentId:parent.id,previousParentId:parentBefore.id,...(swapping?{previousInstanceId:resolved.element.id}: {})},edits,pathChecks:[...checks.values()]};
