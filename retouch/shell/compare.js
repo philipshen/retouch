@@ -14,7 +14,7 @@
   function remember(){try{localStorage.setItem(storageKey+'.aspect',JSON.stringify(sizes.filter(size=>lockedRatios.has(size)).map(size=>size[0])));localStorage.setItem(storageKey,JSON.stringify(sizes));localStorage.setItem(storageKey+'.collapsed',JSON.stringify(sizes.map(size=>size[0]).filter(name=>collapsedNames.has(name))));}catch{}window.RetouchScreens?.setSaved(sizes);}
   function snapshotSize(size){
     const copy=[...size],history=sizeHistories.get(size);if(lockedRatios.has(size))lockedRatios.add(copy);
-    if(history)sizeHistories.set(copy,{undo:history.undo.map(entry=>({before:[...entry.before],after:[...entry.after]})),redo:history.redo.map(entry=>({before:[...entry.before],after:[...entry.after]}))});
+    if(history){const clone=entry=>({...entry,before:[...entry.before],after:[...entry.after],ratioBefore:[...entry.ratioBefore],ratioAfter:[...entry.ratioAfter]});sizeHistories.set(copy,{ratio:[...history.ratio],undo:history.undo.map(clone),redo:history.redo.map(clone)});}
     return copy;
   }
   function current(){return {width:Number(document.getElementById('screenWidth').value),height:Number(document.getElementById('screenHeight').value)};}
@@ -218,21 +218,22 @@
       scopeButton.onclick=()=>{if(!selected)return;window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,occurrence:0,scopeAtWidth:true,route:path()}}));};
       const dimensions=document.createElement('div');dimensions.className='compare-dimensions';
       const inputs={},dimensionError=document.createElement('p');dimensionError.className='compare-dimension-error';dimensionError.setAttribute('role','status');dimensionError.hidden=true;
-      let history=sizeHistories.get(size);if(!history){history={undo:[],redo:[]};sizeHistories.set(size,history);}
+      let history=sizeHistories.get(size);if(!history){history={undo:[],redo:[],ratio:[width,height]};sizeHistories.set(size,history);}
       const sizeUndo=history.undo,sizeRedo=history.redo,sizeHistory=document.createElement('div');sizeHistory.className='compare-header';
       const undoSize=document.createElement('button'),redoSize=document.createElement('button');
       for(const button of [undoSize,redoSize]){button.type='button';button.className='control-button';button.disabled=true;}
       undoSize.textContent='Undo size';redoSize.textContent='Redo size';sizeHistory.append(undoSize,redoSize);
       const updateSizeHistory=()=>{undoSize.disabled=!sizeUndo.length;redoSize.disabled=!sizeRedo.length;};
       const applyDimensions=(nextWidth,nextHeight,record=true,axis)=>{
-        if(axis&&lockedRatios.has(size)){const next=window.RetouchScreens.constrain({width:nextWidth,height:nextHeight},axis,{width,height},true);nextWidth=next.width;nextHeight=next.height;}
+        if(axis&&lockedRatios.has(size)){const next=window.RetouchScreens.constrain({width:nextWidth,height:nextHeight},axis,{width:history.ratio[0],height:history.ratio[1]},true);nextWidth=next.width;nextHeight=next.height;}
         if(!valid(nextWidth)||!valid(nextHeight))return;
         if(sizes.some(other=>other!==size&&other[1]===nextWidth&&other[2]===nextHeight)){
           dimensionError.textContent='This size is already pinned.';dimensionError.hidden=false;inputs.width.value=width;inputs.height.value=height;return;
         }
         dimensionError.hidden=true;dimensionError.textContent='';
         if(nextWidth===width&&nextHeight===height)return true;
-        if(record){sizeUndo.push({before:[width,height],after:[nextWidth,nextHeight]});if(sizeUndo.length>50)sizeUndo.shift();sizeRedo.length=0;}
+        const ratioBefore=[...history.ratio],ratioAfter=axis&&lockedRatios.has(size)?ratioBefore:[nextWidth,nextHeight];
+        if(record){sizeUndo.push({before:[width,height],after:[nextWidth,nextHeight],ratioBefore,ratioAfter});if(sizeUndo.length>50)sizeUndo.shift();sizeRedo.length=0;}history.ratio=[...ratioAfter];
         const automatic=name===`Custom ${width} × ${height}`;
         width=nextWidth;height=nextHeight;size[1]=width;size[2]=height;
         if(automatic){name=`Custom ${width} × ${height}`;size[0]=name;}
@@ -243,7 +244,7 @@
         scopeButton.textContent='Edit styles: '+width+' px and larger';scopeButton.setAttribute('aria-label','Edit styles from '+width+' px');
         remember();updateControls();updateSizeHistory();return true;
       };
-      const replaySize=(from,to,undo,moveFocus=true)=>{const entry=from.at(-1);if(!entry)return;const target=undo?entry.before:entry.after;if(applyDimensions(...target,false)){from.pop();to.push(entry);updateSizeHistory();const button=undo?undoSize:redoSize;if(moveFocus)(button.disabled?(undo?redoSize:undoSize):button).focus();}};
+      const replaySize=(from,to,undo,moveFocus=true)=>{const entry=from.at(-1);if(!entry)return;const target=undo?entry.before:entry.after;if(applyDimensions(...target,false)){history.ratio=[...(undo?entry.ratioBefore:entry.ratioAfter)];from.pop();to.push(entry);updateSizeHistory();const button=undo?undoSize:redoSize;if(moveFocus)(button.disabled?(undo?redoSize:undoSize):button).focus();}};
       undoSize.onclick=()=>replaySize(sizeUndo,sizeRedo,true);redoSize.onclick=()=>replaySize(sizeRedo,sizeUndo,false);
       for(const target of [dimensions,sizeHistory])target.addEventListener('keydown',event=>{
         if(event.defaultPrevented||event.isComposing||event.altKey||!(event.metaKey||event.ctrlKey))return;
@@ -287,7 +288,7 @@
       up.onclick=()=>move(-1);down.onclick=()=>move(1);
       const aspect=document.createElement('button');aspect.type='button';aspect.className='control-button';aspect.title='Keep width and height proportional. Rotate establishes a new ratio.';
       const updateAspect=()=>{aspect.setAttribute('aria-label','Lock '+name+' comparison aspect ratio');aspect.setAttribute('aria-pressed',String(lockedRatios.has(size)));aspect.textContent=lockedRatios.has(size)?'Ratio locked':'Lock ratio';};
-      aspect.onclick=()=>{if(lockedRatios.has(size))lockedRatios.delete(size);else lockedRatios.add(size);updateAspect();remember();};updateAspect();dimensions.append(aspect);
+      aspect.onclick=()=>{if(lockedRatios.has(size))lockedRatios.delete(size);else lockedRatios.add(size);history.ratio=[width,height];updateAspect();remember();};updateAspect();dimensions.append(aspect);
       const rotate=document.createElement('button');rotate.type='button';rotate.className='control-button';rotate.textContent='Rotate';rotate.setAttribute('aria-label','Rotate '+name+' comparison');rotate.onclick=()=>applyDimensions(height,width);dimensions.append(rotate);
       const previewBody=document.createElement('div');previewBody.id='comparison-preview-'+(++previewSerial);previewBody.hidden=collapsedNames.has(name);surface.hidden=previewBody.hidden;
       const disclosure=document.createElement('button');disclosure.type='button';disclosure.className='control-button';disclosure.setAttribute('aria-controls',previewBody.id);
