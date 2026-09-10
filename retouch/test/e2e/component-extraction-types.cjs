@@ -7,6 +7,9 @@ const ts=require(path.join(fixture,'node_modules/typescript'));
 const {makeApp,cleanup,Index}=require('../helpers.cjs'),create=require('../../src/create-component.cjs');
 const jsx='declare namespace JSX {interface ElementChildrenAttribute {children:{}} interface IntrinsicElements {article:{title?:string;onClick?:()=>void;children?:unknown}}}\n';
 const cases=[
+ ['diamond interface','interface Base{title:string}interface Left extends Base{}interface Right extends Base{}interface Props extends Left,Right{count:number}function Page(data:Props){return <article title={data.title}>{data.count+1}</article>}'],
+ ['identical intersection fields','type Props={title:string}&{title:string}&{count:number};function Page(data:Props){return <article title={data.title}>{data.count+1}</article>}'],
+ ['diamond index signature','interface Base{readonly [key:string]:string}interface Left extends Base{}interface Right extends Base{}interface Props extends Left,Right{}function Page(data:Props){return <article title={data["title"]??"Hi"}>Hi</article>}'],
  ['object intersection','interface Base{title:string}type Props=Base & {count:number};function Page(data:Props){return <article title={data.title}>{data.count+1}</article>}'],
  ['destructured intersection','interface Base{title:string}type Props=Base & {count:number};function Page({title,count}:Props){return <article title={title}>{count+1}</article>}'],
  ['indexed object','type Label=string;interface Props{[key:string]:Label}function Page(data:Props){return <article title={data["title"]??"Hi"}>Hi</article>}'],

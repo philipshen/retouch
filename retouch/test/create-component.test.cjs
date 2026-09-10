@@ -285,3 +285,14 @@ test('typed extraction combines disjoint object intersections for leaf and whole
 test('overlapping and non-object intersections are not flattened incorrectly',()=>{
  for(const type of ['{title:string}&{title:"Hi"}','string&{brand:true}','{[key:string]:string}&{[name:string]:string}']){const f=fixture('type Props='+type+';function Page(data:Props){return <article>{String(data)}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);}finally{f.close();}}
 });
+
+test('typed extraction coalesces identical members across diamonds and intersections',()=>{
+ for(const contract of [
+  'interface Base{title:string}interface Left extends Base{}interface Right extends Base{}interface Props extends Left,Right{count:number}',
+  'type Props={title:string} & {title:string} & {count:number};',
+  'interface Base{readonly [key:string]:string}interface Left extends Base{}interface Right extends Base{}interface Props extends Left,Right{}'
+ ]){const f=fixture(contract+'function Page(data:Props){return <article>{String(data)}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);const signature=result.edits[0].after.split('function Card(')[1];assert.equal((signature.match(contract.includes('[key')?/\[key:string\]/g:/title:string/g)||[]).length,1);}finally{f.close();}}
+});
+test('overlapping contracts retain readonly and optional differences as unresolved',()=>{
+ for(const contract of ['type Props={title:string}&{readonly title:string};','type Props={title?:string}&{title:string};']){const f=fixture(contract+'function Page(data:Props){return <article>{String(data)}</article>}','page.tsx');try{assert.equal(create.plan(f.selected,{name:'Card',fileHash:f.selected.hash}).ok,false);}finally{f.close();}}
+});

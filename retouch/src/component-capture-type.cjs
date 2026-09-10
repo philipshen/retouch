@@ -68,13 +68,15 @@ function typeResolver(binding,source){
   for(const statement of program.node.body){const node=statement.type==='ExportNamedDeclaration'?statement.declaration:statement;if(node&&['TSTypeAliasDeclaration','TSInterfaceDeclaration'].includes(node.type))declarations.set(node.id.name,node);}
  }
  function combine(members,start,end){
-  const keys=new Set();let indexSignature=false;
+  const keys=new Map(),unique=[];
+  const shape=node=>JSON.stringify(node,(key,value)=>['start','end','loc','extra','leadingComments','trailingComments','innerComments'].includes(key)?undefined:value);
   for(const member of members){
-   if(member.type==='TSIndexSignature'){if(indexSignature)return null;indexSignature=true;continue;}
-   if(!['TSPropertySignature','TSMethodSignature'].includes(member.type)||member.computed)return null;
-   const key=String(member.key.name??member.key.value);if(keys.has(key))return null;keys.add(key);
+   if(!['TSPropertySignature','TSMethodSignature','TSIndexSignature'].includes(member.type)||member.computed)return null;
+   const key=member.type==='TSIndexSignature'?'index':'property:'+String(member.key.name??member.key.value),previous=keys.get(key);
+   if(previous){if(previous!==member&&shape(previous)!==shape(member))return null;continue;}
+   keys.set(key,member);unique.push(member);
   }
-  return {type:'TSTypeLiteral',members,start,end,captureText:'{ '+members.map(member=>source.slice(member.start,member.end)).join('; ')+' }'};
+  return {type:'TSTypeLiteral',members:unique,start,end,captureText:'{ '+unique.map(member=>source.slice(member.start,member.end)).join('; ')+' }'};
  }
  return function resolve(type,seen=new Set(),depth=0){
   if(!type||depth>30)return null;

@@ -10113,3 +10113,9 @@ Validation: all 809 unit tests passed (`/private/tmp/retouch-intersection-contra
 Added a browser fixture capturing an intersection of an inherited interface and a separate optional-field object. The flow verifies both branches in the generated contract, callback-driven React state updates, definition editing, appearance and exact source Undo/Redo.
 
 Validation: Chromium (`/private/tmp/retouch-intersection-browser-chromium.log`) and WebKit (`/private/tmp/retouch-intersection-browser-webkit.log`) both exited 0. No production code changed in this verification stage. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Identical overlapping capture members
+
+Contract combination now coalesces structurally identical declarations across inheritance diamonds and intersections. Source locations, comments and literal spelling metadata do not make otherwise identical declarations conflict. Optional/readonly/type differences remain unresolved; repeated identical inherited index signatures are emitted once.
+
+Validation: all 811 unit tests passed (`/private/tmp/retouch-identical-contracts-units.log`). The strict compiler suite passed 24 extraction scenarios and three guarded refusals (`/private/tmp/retouch-identical-contracts-compiler.log`), including diamond fields, identical intersection fields and a diamond readonly index signature. No browser run in this planner expansion. Full Figma parity remains incomplete; native launches remain paused.
