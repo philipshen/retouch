@@ -4,18 +4,18 @@
   const project=window.__RT_RENDERING?.stateScope?.project;
   const storageKey='retouch.comparisons.v1'+(typeof project==='string'&&/^[a-f0-9]{64}$/.test(project)?':'+project:'');
   let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore,allPreviews,revealAll;
-  const collapsedNames=new Set(),sizeHistories=new WeakMap(),lockedRatios=new WeakSet();let previewSerial=0;
-  try{const saved=JSON.parse(localStorage.getItem(storageKey+'.collapsed'));if(Array.isArray(saved)&&saved.length<=8)for(const name of saved)if(typeof name==='string'&&name.length<=80)collapsedNames.add(name);}catch{}
+  const collapsedScreens=new WeakSet(),sizeHistories=new WeakMap(),lockedRatios=new WeakSet();let previewSerial=0;
   const removed=[],orderUndo=[],orderRedo=[];let removals=0,undoOrder,redoOrder;
   function clearOrderHistory(){orderUndo.length=0;orderRedo.length=0;}
   const valid=v=>Number.isInteger(v)&&v>=240&&v<=7680;
   try{const saved=JSON.parse(localStorage.getItem(storageKey));if(Array.isArray(saved)&&saved.length<=8&&saved.every(s=>Array.isArray(s)&&s.length===3&&typeof s[0]==='string'&&s[0].length<=80&&valid(s[1])&&valid(s[2])))sizes=saved;}catch{}
+  try{const saved=JSON.parse(localStorage.getItem(storageKey+'.collapsed'));if(Array.isArray(saved)&&saved.length<=8)for(const size of sizes)if(saved.includes(size[0]))collapsedScreens.add(size);}catch{}
   try{const names=JSON.parse(localStorage.getItem(storageKey+'.aspect'));if(Array.isArray(names)&&names.length<=8)for(const size of sizes)if(names.includes(size[0]))lockedRatios.add(size);}catch{}
   const ratioOf=size=>sizeHistories.get(size)?.ratio||[size[1],size[2]];
   try{const anchors=JSON.parse(localStorage.getItem(storageKey+'.aspectBases'));if(Array.isArray(anchors)&&anchors.length<=8)for(const size of sizes){const entry=anchors.find(entry=>Array.isArray(entry)&&entry.length===3&&entry[0]===size[0]&&valid(entry[1])&&valid(entry[2]));if(entry)sizeHistories.set(size,{undo:[],redo:[],ratio:entry.slice(1)});}}catch{}
-  function remember(){try{localStorage.setItem(storageKey+'.aspectBases',JSON.stringify(sizes.filter(size=>lockedRatios.has(size)).map(size=>[size[0],...ratioOf(size)])));localStorage.setItem(storageKey+'.aspect',JSON.stringify(sizes.filter(size=>lockedRatios.has(size)).map(size=>size[0])));localStorage.setItem(storageKey,JSON.stringify(sizes));localStorage.setItem(storageKey+'.collapsed',JSON.stringify(sizes.map(size=>size[0]).filter(name=>collapsedNames.has(name))));}catch{}window.RetouchScreens?.setSaved(sizes);}
+  function remember(){try{localStorage.setItem(storageKey+'.aspectBases',JSON.stringify(sizes.filter(size=>lockedRatios.has(size)).map(size=>[size[0],...ratioOf(size)])));localStorage.setItem(storageKey+'.aspect',JSON.stringify(sizes.filter(size=>lockedRatios.has(size)).map(size=>size[0])));localStorage.setItem(storageKey,JSON.stringify(sizes));localStorage.setItem(storageKey+'.collapsed',JSON.stringify(sizes.filter(size=>collapsedScreens.has(size)).map(size=>size[0])));}catch{}window.RetouchScreens?.setSaved(sizes);}
   function snapshotSize(size){
-    const copy=[...size],history=sizeHistories.get(size);if(lockedRatios.has(size))lockedRatios.add(copy);
+    const copy=[...size],history=sizeHistories.get(size);if(lockedRatios.has(size))lockedRatios.add(copy);if(collapsedScreens.has(size))collapsedScreens.add(copy);
     if(history){const clone=entry=>({...entry,before:[...entry.before],after:[...entry.after],ratioBefore:[...entry.ratioBefore],ratioAfter:[...entry.ratioAfter]});sizeHistories.set(copy,{ratio:[...history.ratio],undo:history.undo.map(clone),redo:history.redo.map(clone)});}
     return copy;
   }
@@ -114,10 +114,11 @@
       const name=typeof screen?.name==='string'?screen.name.trim().replace(/\s+/g,' '):'';
       if(!name||name.length>80||!valid(screen.width)||!valid(screen.height))throw Error('Each screen needs a name and whole-number dimensions from 240 to 7680.');
       if(screen.lockAspectRatio!==undefined&&typeof screen.lockAspectRatio!=='boolean')throw Error('Screen aspect-ratio locks must be true or false.');
+      if(screen.previewCollapsed!==undefined&&typeof screen.previewCollapsed!=='boolean')throw Error('Preview collapsed states must be true or false.');
       if(screen.aspectRatio!==undefined&&(!screen.aspectRatio||!valid(screen.aspectRatio.width)||!valid(screen.aspectRatio.height)))throw Error('Screen aspect ratios need whole-number reference dimensions from 240 to 7680.');
       const key=screen.width+'x'+screen.height;
       if(names.has(name.toLowerCase())||dimensions.has(key))throw Error('Screen names and dimensions must be unique.');
-      names.add(name.toLowerCase());dimensions.add(key);const size=[name,screen.width,screen.height];if(screen.lockAspectRatio)lockedRatios.add(size);if(screen.aspectRatio)sizeHistories.set(size,{undo:[],redo:[],ratio:[screen.aspectRatio.width,screen.aspectRatio.height]});return size;
+      names.add(name.toLowerCase());dimensions.add(key);const size=[name,screen.width,screen.height];if(screen.previewCollapsed)collapsedScreens.add(size);if(screen.lockAspectRatio)lockedRatios.add(size);if(screen.aspectRatio)sizeHistories.set(size,{undo:[],redo:[],ratio:[screen.aspectRatio.width,screen.aspectRatio.height]});return size;
     });
   }
   async function replaceSet(next,history,undo,message){
@@ -139,7 +140,7 @@
     revealAll.onclick=()=>{if(!selected)return;for(const card of cards)card.setCollapsed(false);remember();updateControls();clearTimeout(timer);paint();for(const card of cards)card.reveal.click();};files.append(revealAll);
     const saveSet=document.createElement('button');saveSet.type='button';saveSet.className='control-button';saveSet.textContent='Save screen set';
     saveSet.onclick=()=>{
-      const text=JSON.stringify({version:1,screens:sizes.map(size=>({name:size[0],width:size[1],height:size[2],lockAspectRatio:lockedRatios.has(size),...(lockedRatios.has(size)?{aspectRatio:{width:ratioOf(size)[0],height:ratioOf(size)[1]}}:{})}))},null,2)+'\n';
+      const text=JSON.stringify({version:1,screens:sizes.map(size=>({name:size[0],width:size[1],height:size[2],lockAspectRatio:lockedRatios.has(size),...(collapsedScreens.has(size)?{previewCollapsed:true}:{}),...(lockedRatios.has(size)?{aspectRatio:{width:ratioOf(size)[0],height:ratioOf(size)[1]}}:{})}))},null,2)+'\n';
       const url=URL.createObjectURL(new Blob([text],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='retouch-screens.json';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
     };
     const loadSet=document.createElement('button');loadSet.type='button';loadSet.className='control-button';loadSet.textContent='Load screen set';loadSet.title='Replace these comparison views with a saved screen set. You can undo the load.';
@@ -188,7 +189,7 @@
         if(nameInput.hidden)return;
         const next=nameInput.value.trim().replace(/\s+/g,' ');
         if(!cancel&&(!next||sizes.some(other=>other!==size&&other[0].toLowerCase()===next.toLowerCase()))){dimensionError.textContent=next?'Another comparison already has this name.':'Enter a comparison name.';dimensionError.hidden=false;return;}
-        if(!cancel){if(collapsedNames.delete(name))collapsedNames.add(next);name=next;size[0]=name;remember();}
+        if(!cancel){name=next;size[0]=name;remember();}
         dimensionError.hidden=true;nameInput.hidden=true;label.hidden=false;updateLabels();
       }
       nameInput.onblur=()=>finishName();
@@ -293,10 +294,10 @@
       const updateAspect=()=>{aspect.setAttribute('aria-label','Lock '+name+' comparison aspect ratio');aspect.setAttribute('aria-pressed',String(lockedRatios.has(size)));aspect.textContent=lockedRatios.has(size)?'Ratio locked':'Lock ratio';};
       aspect.onclick=()=>{if(lockedRatios.has(size))lockedRatios.delete(size);else lockedRatios.add(size);history.ratio=[width,height];updateAspect();remember();};updateAspect();dimensions.append(aspect);
       const rotate=document.createElement('button');rotate.type='button';rotate.className='control-button';rotate.textContent='Rotate';rotate.setAttribute('aria-label','Rotate '+name+' comparison');rotate.onclick=()=>applyDimensions(height,width);dimensions.append(rotate);
-      const previewBody=document.createElement('div');previewBody.id='comparison-preview-'+(++previewSerial);previewBody.hidden=collapsedNames.has(name);surface.hidden=previewBody.hidden;
+      const previewBody=document.createElement('div');previewBody.id='comparison-preview-'+(++previewSerial);previewBody.hidden=collapsedScreens.has(size);surface.hidden=previewBody.hidden;
       const disclosure=document.createElement('button');disclosure.type='button';disclosure.className='control-button';disclosure.setAttribute('aria-controls',previewBody.id);
       function updateDisclosure(){disclosure.textContent=previewBody.hidden?'Show preview':'Hide preview';disclosure.setAttribute('aria-label',(previewBody.hidden?'Show ':'Hide ')+name+' preview');disclosure.setAttribute('aria-expanded',String(!previewBody.hidden));}
-      function setCollapsed(hidden){previewBody.hidden=hidden;if(hidden)collapsedNames.add(name);else collapsedNames.delete(name);updateDisclosure();}
+      function setCollapsed(hidden){previewBody.hidden=hidden;if(hidden)collapsedScreens.add(size);else collapsedScreens.delete(size);updateDisclosure();}
       disclosure.onclick=()=>{setCollapsed(!previewBody.hidden);remember();updateControls();};
       function updateLabels(){
         updateAspect();
