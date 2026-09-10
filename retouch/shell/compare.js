@@ -134,9 +134,9 @@
     const hint=document.createElement('p');hint.className='hint';hint.textContent='Click a layer to edit on the main canvas. Style scope stays unchanged.';rail.append(hint);
     scopeSummary=document.createElement('p');scopeSummary.className='hint';scopeSummary.setAttribute('aria-label','Comparison style scope');scopeSummary.textContent='Style scope: '+scope.label;rail.append(scopeSummary);
     const files=document.createElement('div');files.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px';
-    allPreviews=document.createElement('button');allPreviews.type='button';allPreviews.className='control-button';allPreviews.title='Collapse previews to manage screen sizes, or expand them again. Keeps each page loaded.';
+    allPreviews=document.createElement('button');allPreviews.id='comparisonVisibility';allPreviews.type='button';allPreviews.className='control-button';allPreviews.title='Collapse previews to manage screen sizes, or expand them again. Keeps each page loaded.';
     allPreviews.onclick=()=>{const hide=cards.some(card=>!card.previewBody.hidden);for(const card of cards)card.setCollapsed(hide);remember();updateControls();};files.append(allPreviews);
-    revealAll=document.createElement('button');revealAll.type='button';revealAll.className='control-button';revealAll.textContent='Show selection in all previews';revealAll.title='Expand comparisons and scroll each page to the selected layer. Repeat to cycle repeated instances.';
+    revealAll=document.createElement('button');revealAll.id='comparisonRevealAll';revealAll.type='button';revealAll.className='control-button';revealAll.textContent='Show selection in all previews';revealAll.title='Expand comparisons and scroll each page to the selected layer. Repeat to cycle repeated instances.';
     revealAll.onclick=()=>{if(!selected)return;for(const card of cards)card.setCollapsed(false);remember();updateControls();clearTimeout(timer);paint();for(const card of cards)card.reveal.click();};files.append(revealAll);
     const saveSet=document.createElement('button');saveSet.type='button';saveSet.className='control-button';saveSet.textContent='Save screen set';
     saveSet.onclick=()=>{
