@@ -6718,3 +6718,24 @@ to 5px and zero, check the computed value and unchanged layer filter, and restor
 exact source bytes through undo. Saved effects, resets, project updates and mobile
 scope checks remain in those flows. No native app was launched. Full filter-stack
 authoring, full Figma parity and arbitrary-site support remain incomplete.
+
+### Shared React blur editing (2026-09-09)
+
+React multi-selection now exposes shared layer and backdrop blur fields. Mixed
+amounts display an empty Mixed field. Each layer retains its own other filter
+functions and their order; changes are calculated for the entire selection
+before one atomic class write and shared undo. Unsupported stacks, multiple blur
+functions and inline important filters disable the control. Single-layer blur
+controls now also respect inline important filters.
+
+All 507 unit tests passed, exit 0:
+/private/tmp/retouch-shared-blur-units.log. Chromium and WebKit Next.js flows passed,
+exit 0: /private/tmp/retouch-shared-blur-chromium.log and
+/private/tmp/retouch-shared-blur-webkit.log. The browser fixture prepares two
+layers with distinct brightness/contrast stacks and blur amounts, edits both to
+4px through the shared control, verifies each computed stack, sets backdrop blur
+to zero on both, and verifies exact source restoration through undo. Existing
+single-layer effects, library updates, responsive isolation and detach checks
+remain in the same flow. Liquid multi-selection, complete filter-stack editing,
+arbitrary-site support and full Figma parity remain incomplete. Native app
+launches remain paused.

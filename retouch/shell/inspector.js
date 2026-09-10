@@ -392,7 +392,7 @@
         const next=root.RetouchHTMLCSSValues.withBlur(value,amount);if(next===null)return notify('This filter stack cannot be edited with a single blur control.');
         try{save(filterClasses(info.className,property,next));}catch(error){notify(error.message);}
       });
-      if(!parsed||blurs.length>1){input.disabled=true;note(sec,'This '+(property==='filter'?'layer':'backdrop')+' filter cannot be adjusted with a single blur value.');}
+      if(!parsed||blurs.length>1||el.style.getPropertyPriority(property)==='important'){input.disabled=true;note(sec,'This '+(property==='filter'?'layer':'backdrop')+' filter cannot be adjusted with a single blur value.');}
       note(sec,value,'computed-value');
     }
     note(sec,css.boxShadow,'computed-value');

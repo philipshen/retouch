@@ -70,3 +70,12 @@ test('shared relative spacing writes font-relative tokens and preserves combined
  assert.equal(change('!text-lg/9','','line-height','normal'),'!text-lg ![line-height:normal]');
  for(const [property,value]of [['font-size',100],['line-height',-1],['line-height',NaN],['letter-spacing',-101],['letter-spacing',1001]])assert.throws(()=>changeRelative('p-4','',property,value));
 });
+
+test('shared blur keeps each layer stack and unrelated responsive classes',()=>{
+ const {changeBlur}=require('../shell/react-selection.js');
+ const a=changeBlur('blur-sm p-4 md:![filter:brightness(0.8)_blur(2px)] hover:blur-lg','md:','filter','brightness(0.8) blur(2px)',4),b=changeBlur('shadow-lg md:contrast-125','md:','filter','contrast(1.25) blur(6px)',4);
+ assert.ok(a.includes('md:![filter:brightness(0.8)_blur(4px)]'));assert.ok(a.includes('blur-sm'));assert.ok(a.includes('hover:blur-lg'));assert.equal(b,'shadow-lg md:![filter:contrast(1.25)_blur(4px)]');
+ assert.equal(changeBlur('','md:','backdrop-filter','blur(2px)',0),'md:![backdrop-filter:none]');
+ for(const value of ['url(#external)','blur(1px) blur(2px)'])assert.throws(()=>changeBlur('','md:','filter',value,4),/single blur/);
+ for(const amount of [-1,1001,Infinity])assert.throws(()=>changeBlur('','md:','filter','none',amount));
+});
