@@ -32,9 +32,10 @@
     const actions=document.createElement('div');actions.className='layer-actions';
     const actionButtons={};
     for(const [action,name] of [['insertText','Add text'],['insertFrame','Add frame'],['copyElement','Copy layer'],['pasteElement','Paste layer'],['reparentElement','Move into…'],['frameSelection','Frame selection'],['removeFrame','Remove frame'],['duplicateElement','Duplicate layer'],['before','Move layer up'],['after','Move layer down'],['first','Send to back'],['last','Bring to front'],['deleteElement','Delete layer']]) {
-      const b=document.createElement('button');b.textContent=name;b.disabled=true;b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
+      const b=document.createElement('button');b.textContent=name;b.dataset.designAction=action;b.disabled=true;b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
     }
     const lockSelection=document.createElement('button'),unlockSelection=document.createElement('button');
+    lockSelection.dataset.designAction='lockSelection';unlockSelection.dataset.designAction='unlockSelection';
     lockSelection.textContent='Lock selection';unlockSelection.textContent='Unlock selection';
     lockSelection.title='Lock selected layers (⌘/Ctrl+Shift+L toggles selection locks)';
     lockSelection.setAttribute('aria-keyshortcuts','Meta+Shift+L Control+Shift+L');unlockSelection.setAttribute('aria-keyshortcuts','Meta+Shift+L Control+Shift+L');

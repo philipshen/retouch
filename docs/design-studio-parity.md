@@ -9739,3 +9739,35 @@ fixed. Test selectors were scoped to the dialog, iframe focus was made explicit,
 and expected navigation replacement is tolerated during rendered-source waits.
 Syntax and diff checks passed. Full Figma parity and trusted brew installation
 remain unfinished. Native app launches remain paused.
+
+### Run selected-layer operations from Actions (2026-09-10)
+
+Actions now exposes the existing Layers controls for inserting, copying/pasting,
+framing, reparenting, ordering, duplicating, deleting and locking selections. The
+labels and disabled states come from the actual controls, including component
+and multi-selection labels. Rename opens the inspector if needed and focuses the
+source-backed layer-name field. Execution checks inherited fieldset disability
+as well as the target's connection and visibility.
+
+The dialog watches capability changes while open and preserves its highlighted
+command. It rebuilds results only when matching command state or target identity
+changes; a first observer implementation repeatedly detached click targets and
+was corrected. This keeps pending-edit availability current without rebuilding
+unchanged rows on routine inspector refreshes.
+
+Chromium and WebKit passed lock/reselection/unlock, duplicate/select-copy/delete,
+exact source Undo, compact-inspector Rename/Undo and the previous Actions flow.
+Evidence: /private/tmp/retouch-layer-actions-chromium-verified.log and
+/private/tmp/retouch-layer-actions-webkit-selection.log. Test assumptions about
+locking clearing selection and host duplication selecting the parent were
+corrected; Chromium additionally waits for selection resolution before entering
+compact layout. Both final processes exited zero with no page errors.
+React's full framed component suite passed component duplication through Actions,
+subsequent property editing and history:
+/private/tmp/retouch-component-actions-chromium.log. That run preceded the final
+menu observer changes, which are covered by the HTML browser flows above.
+Syntax and diff checks passed.
+
+Complete inspector command coverage, source selection continuity across every
+structural operation and full Figma parity remain unfinished. Native launches
+remain paused, and trusted brew installation remains unverified.

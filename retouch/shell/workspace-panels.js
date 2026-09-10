@@ -12,6 +12,6 @@
  function close(){const previous=opened;opened=null;layout();if(previous)buttons[previous].focus();}
  for(const [name,button]of Object.entries(buttons))button.onclick=()=>{if(compact)opened=opened===name?null:name;else{hidden[name]=!hidden[name];try{localStorage.setItem(key,JSON.stringify(hidden));}catch{}}layout();};
  window.addEventListener('retouch:selection',event=>{if(compact&&event.detail&&event.detail!==lastSelection){opened='inspector';layout();}lastSelection=event.detail;});
- window.RetouchWorkspacePanels={closeIfOpen(){if(!compact||!opened)return false;close();return true;}};
+ window.RetouchWorkspacePanels={showInspector(){if(compact)opened='inspector';else{hidden.inspector=false;try{localStorage.setItem(key,JSON.stringify(hidden));}catch{}}layout();},closeIfOpen(){if(!compact||!opened)return false;close();return true;}};
  new ResizeObserver(layout).observe(main);layout();
 })();
