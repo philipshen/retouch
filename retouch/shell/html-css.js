@@ -114,8 +114,8 @@
     const preview=document.createElement('div');preview.className='gradient-preview';preview.style.backgroundImage=serializeGradients([gradient]);preview.setAttribute('aria-label','Fill '+(index+1)+' preview');group.append(preview);
     const update=next=>writeGradients(gradients.map((g,i)=>i===index?next:g));
     group.append(stopRail({gradient,index,info,el,preview,gradients,update}));
-    const type=document.createElement('select');for(const value of ['linear','radial']){const option=document.createElement('option');option.value=value;option.textContent=value==='linear'?'Linear':'Radial';type.append(option);}type.value=gradient.type;type.onchange=()=>update({...gradient,type:type.value});I.field(group,'Type',type).setAttribute('aria-label','Fill '+(index+1)+' type');
-    for(const [key,label,max]of gradient.type==='linear'?[['angle','Angle (°)',360]]:[['x','Center X (%)',100],['y','Center Y (%)',100]]){
+    const type=document.createElement('select');for(const value of ['linear','radial','conic']){const option=document.createElement('option');option.value=value;option.textContent=value==='linear'?'Linear':value==='radial'?'Radial':'Angular';type.append(option);}type.value=gradient.type;type.onchange=()=>update({...gradient,type:type.value});I.field(group,'Type',type).setAttribute('aria-label','Fill '+(index+1)+' type');
+    for(const [key,label,max]of [...(gradient.type!=='radial'?[['angle','Angle (°)',360]]:[]),...(gradient.type!=='linear'?[['x','Center X (%)',100],['y','Center Y (%)',100]]:[])]){
      const input=document.createElement('input');input.type='number';input.min=key==='angle'?-360:0;input.max=max;input.step='any';input.value=gradient[key];input.onchange=()=>{if(input.value!==''&&input.checkValidity())update({...gradient,[key]:Number(input.value)});};I.field(group,label,input).setAttribute('aria-label','Fill '+(index+1)+' '+label);
     }
     gradient.stops.forEach((stop,stopIndex)=>{

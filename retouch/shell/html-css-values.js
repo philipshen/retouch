@@ -172,22 +172,30 @@
   const layers=splitLayers(value);if(!layers||layers.length>8)return null;
   const result=[];
   for(const layer of layers){
-   const match=/^(linear|radial)-gradient\((.*)\)$/.exec(layer);if(!match)return null;
+   const match=/^(linear|radial|conic)-gradient\((.*)\)$/.exec(layer);if(!match)return null;
    const args=splitLayers(match[2]);if(!args)return null;
-   const gradient={type:match[1],angle:180,x:50,y:50,shape:'ellipse',stops:[]};
+   const gradient={type:match[1],angle:match[1]==='conic'?0:180,x:50,y:50,shape:'ellipse',stops:[]};
    if(gradient.type==='linear'){
     const angle=/^(-?(?:\d*\.)?\d+)deg$/.exec(args[0]);
     const directions={'to top':0,'to right':90,'to bottom':180,'to left':270};
     if(angle){gradient.angle=Number(angle[1]);args.shift();if(Math.abs(gradient.angle)>360)return null;}
     else if(Object.hasOwn(directions,args[0]))gradient.angle=directions[args.shift()];
+   }else if(gradient.type==='conic'){
+    // CSS Images 4: angular stops use angles or percentages of a full turn.
+    // https://www.w3.org/TR/css-images-4/#conic-gradients
+    const header=/^(?:from (-?(?:\d*\.)?\d+)(deg|turn|rad|grad))?(?: at ((?:\d*\.)?\d+)% ((?:\d*\.)?\d+)%)?$/.exec(args[0].startsWith('at ')?'from 0deg '+args[0]:args[0]);
+    if(header&&(header[1]!==undefined||header[3]!==undefined)){
+     gradient.angle=Number(header[1]??0)*({deg:1,turn:360,rad:180/Math.PI,grad:.9}[header[2]]??1);gradient.x=Number(header[3]??50);gradient.y=Number(header[4]??50);args.shift();
+     if(Math.abs(gradient.angle)>360||gradient.x>100||gradient.y>100)return null;
+    }
    }else {
     const radial=/^(ellipse|circle)(?: at ((?:\d*\.)?\d+)% ((?:\d*\.)?\d+)%)?$/.exec(args[0].startsWith('at ')?'ellipse '+args[0]:args[0]);
     if(radial){gradient.shape=radial[1];gradient.x=Number(radial[2]??50);gradient.y=Number(radial[3]??50);args.shift();if(gradient.x>100||gradient.y>100)return null;}
    }
    if(args.length<2||args.length>16)return null;
    for(let i=0;i<args.length;i++){
-    const stop=/^(.*?)\s+((?:\d*\.)?\d+)%$/.exec(args[i]);
-    const color=stop?stop[1]:args[i],position=stop?Number(stop[2]):i===0?0:i===args.length-1?100:null;
+    const stop=(gradient.type==='conic'?/^(.*?)\s+((?:\d*\.)?\d+)(%|deg|turn|rad|grad)$/:/^(.*?)\s+((?:\d*\.)?\d+)(%)$/).exec(args[i]);
+    const color=stop?stop[1]:args[i],position=stop?Number(stop[2])*({'%':1,deg:100/360,turn:100,rad:100/(2*Math.PI),grad:.25}[stop[3]]):i===0?0:i===args.length-1?100:null;
     if(position===null||position>100||!valid('color',color)||gradient.stops.length&&position<gradient.stops.at(-1).position)return null;
     gradient.stops.push({color,position});
    }
@@ -195,7 +203,7 @@
   }
   return result;
  }
- function serializeGradients(gradients){return gradients.length?gradients.map(g=>`${g.type}-gradient(${g.type==='linear'?g.angle+'deg':g.shape+' at '+g.x+'% '+g.y+'%'}, ${g.stops.map(s=>s.color+' '+s.position+'%').join(', ')})`).join(', '):'none';}
+ function serializeGradients(gradients){return gradients.length?gradients.map(g=>`${g.type}-gradient(${g.type==='linear'?g.angle+'deg':g.type==='conic'?'from '+g.angle+'deg at '+g.x+'% '+g.y+'%':g.shape+' at '+g.x+'% '+g.y+'%'}, ${g.stops.map(s=>s.color+' '+s.position+'%').join(', ')})`).join(', '):'none';}
  function affected(property){
   if(property==='border')return sides.flatMap(side=>['width','style','color'].map(part=>'border-'+side+'-'+part));
   if(/^border-(top|right|bottom|left)$/.test(property))return ['width','style','color'].map(part=>property+'-'+part);
