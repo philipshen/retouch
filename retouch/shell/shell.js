@@ -190,7 +190,7 @@ function hookFrame(d, w) {
   d.addEventListener('click', async (e) => {
     if (mode !== 'edit') return;
     if (panelTasks > 0 || undoBusy || sourceRequests) { e.preventDefault(); e.stopPropagation(); return; }
-    if ((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection)){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=layerLocks.pick(e.target,e.clientX,e.clientY);if(target)await select(target,{toggle:true});return;}
+    if ((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection||sel?.info.collectionSelection)){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=layerLocks.pick(e.target,e.clientX,e.clientY);if(target)await select(target,{toggle:true});return;}
     if (editing) {
       if (editing.el.contains(e.target)) return;
       commitInlineEdit(); // clicking away commits (R-5)
@@ -403,7 +403,7 @@ async function select(node,{toggle=false}={}) {
   const c = await classify(node);
   if (c?.superseded) return;
   if (!c) return clearSelection();
-  if(toggle&&(c.info.cssAuthoring&&sel?.info.cssAuthoring||c.info.classSelection&&sel?.info.classSelection)&&c.info.file===sel.info.file&&c.info.hash===sel.info.hash){
+  if(toggle&&(c.info.cssAuthoring&&sel?.info.cssAuthoring||c.info.classSelection&&sel?.info.classSelection||c.info.collectionSelection&&sel?.info.collectionSelection)&&c.info.file===sel.info.file&&c.info.hash===sel.info.hash){
     let multiple=sel.multiple||[sel.info];multiple=multiple.some(info=>info.id===c.info.id)?multiple.filter(info=>info.id!==c.info.id):[...multiple,c.info];
     if(!multiple.length)return clearSelection();if(multiple.length>100)return toast('Select up to 100 layers.','err');
     const primary=multiple.find(info=>info.id===c.info.id)||multiple[0];sel={hostId:primary.id,instanceId:null,scope:'host',info:primary,multiple:multiple.length>1?multiple:undefined};renderPanel();return;
@@ -451,8 +451,8 @@ async function selectMany(nodes,{active=nodes[0],append=false}={}){
   if(!ids.length)return clearSelection();if(ids.length>100)return toast('Select up to 100 layers. Narrow the layer search first.','err');
   busyPanel(true);
   try{
-    const results=await Promise.all(ids.map(id=>api('GET',resolveUrl(id))));if(serial!==classificationSerial)return;
-    if(nodes.some(node=>!node.isConnected)||results.some(result=>!result?.ok||!(result.element.cssAuthoring||result.element.classSelection)))return toast('These layers cannot be selected together.','err');
+    const results=await Promise.all(ids.map(id=>{const element=matchingEls(id)[0];return api('GET',resolveUrl(id,element?renderContext(element):undefined));}));if(serial!==classificationSerial)return;
+    if(nodes.some(node=>!node.isConnected)||results.some(result=>!result?.ok||!(result.element.cssAuthoring||result.element.classSelection||result.element.collectionSelection)))return toast('These layers cannot be selected together.','err');
     const infos=results.map(result=>result.element),first=infos[0];
     if(infos.some(info=>info.file!==first.file||info.hash!==first.hash))return toast('Select layers from one unchanged source file.','err');
     const primary=infos.find(info=>info.id===active?.getAttribute('data-rt'))||first;
@@ -864,7 +864,7 @@ function screenScopeSection() {
   if (condition && RetouchResponsive.matches({condition,queries:chosen?.queries},iframe.contentWindow)===false) {
     RetouchInspector.note(section, 'This breakpoint does not match the current preview. Its conditions may include width, height or orientation.');
   }
-  if (!sel.info.cssAuthoring && styleScope && RetouchResponsive.project(sel.info.className,styleScope)) {
+  if (!sel.multiple?.length && !sel.info.cssAuthoring && styleScope && RetouchResponsive.project(sel.info.className,styleScope)) {
     section.append(RetouchInspector.button('Reset overrides at this size',()=>setClasses('')));
   }
   return section;
@@ -928,7 +928,7 @@ function renderPanelContents() {
   head.appendChild(file);
   head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
-  {const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,scope=info.classColorStyles?styleScope:width;
+  if(!(sel.multiple?.length>1&&info.collectionSelection)){const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,scope=info.classColorStyles?styleScope:width;
    RetouchColorStyles.mount(panelBody,sel.multiple?.length>1?selectionColorOptions(scope):info.colorStyles||info.classColorStyles?{width:scope,readColor:property=>{const element=matchingEls(info.id)[0];if(!element)throw Error('Re-select the layer to read its color.');return element.ownerDocument.defaultView.getComputedStyle(element).getPropertyValue(property);},allLinks:info.colorStyleLinks,links:info.colorStyleLinks?.[scope],overrides:info.colorStyleOverrides?.[scope]||[],inherited:info.classColorStyles?property=>RetouchResponsive.inheritedLink(Object.fromEntries(Object.entries(info.colorStyleLinks||{}).filter(([,group])=>group[property]).map(([key,group])=>[key,group[property]])),styleScope,matchingEls(info.id)[0]?.ownerDocument):undefined,apply:(styleId,libraryRevision,property)=>writeTextStyle('applyColorStyle',width,{scope:styleScope,styleId,libraryRevision,property}),reset:(styleId,libraryRevision,property)=>writeTextStyle('resetColorStyle',width,{scope:styleScope,styleId,libraryRevision,property}),detach:property=>writeTextStyle('detachColorStyle',width,{scope:styleScope,property})}:{});
   }
 
@@ -940,6 +940,7 @@ function renderPanelContents() {
    const inherited=info.classEffectStyles?RetouchResponsive.inheritedLink(links,styleScope,matchingEls(info.id)[0]?.ownerDocument):!links[width]&&inheritedWidth!==undefined?{link:links[inheritedWidth],label:inheritedWidth?inheritedWidth+'px and larger':'All sizes'}:null;
    RetouchEffectStyles.mount(panelBody,matchingEls(info.id)[0],{link:links[scope],overrides:info.effectStyleOverrides?.[scope]||[],inherited,apply:(styleId,libraryRevision)=>writeTextStyle('applyEffectStyle',width,{scope:styleScope,styleId,libraryRevision}),reset:(styleId,libraryRevision)=>writeTextStyle('resetEffectStyle',width,{scope:styleScope,styleId,libraryRevision}),detach:()=>writeTextStyle('detachEffectStyle',width,{scope:styleScope}),update:(styleId,libraryRevision,name,properties)=>writeTextStyle('updateEffectStyle',width,{scope:styleScope,styleId,libraryRevision,name,properties})});
   }
+  if(sel.multiple?.length>1&&info.collectionSelection)return;
   if(sel.multiple?.length>1){mountSelectionEffectStyles();mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchClassSiteVariables.mountSelection(sel.multiple,elements,styleScope,setReactClassesSelection,message=>toast(message,'err')),RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection,setSelectionColorOverride));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
   if(info.components?.length) {
@@ -1615,10 +1616,11 @@ async function setSelectionColorOverride(property,value){
 async function writeVariableSelection(type,width,extra){
  const selection=sel?.multiple,info=sel?.info;if(!selection?.length)return;const ids=selection.map(item=>item.id),react=!!info.classVariables;busyPanel(true);
  try{
-  const result=await api('POST','/rt/__api/op',{type:type+'Selection',id:info.id,ids,fileHash:info.hash,width,...extra});
+  const contexts=info.collectionSelection?Object.fromEntries(selection.map(item=>{const element=matchingEls(item.id)[0];if(!element)throw Error('Re-select the missing layer.');return [item.id,renderContext(element)];})):undefined;
+  const result=await api('POST','/rt/__api/op',{type:type+'Selection',id:info.id,ids,fileHash:info.hash,width,context:contexts?.[info.id],contexts,...extra});
   if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update selected variable bindings.');
-  if(result.undoId)editorHistory.record({type:react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
-  sel.info=result.element;sel.multiple=result.selection;if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();renderPanel();toast('Selected bindings updated','ok');
+  if(result.undoId)editorHistory.record({type:info.collectionSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
+  sel.info=result.element;sel.multiple=result.selection;if(info.collectionSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();renderPanel();toast('Selected bindings updated','ok');
  }finally{busyPanel(false);}
 }
 function selectionColorOptions(width){
@@ -1880,7 +1882,7 @@ async function setText(text, isUndo) {
 function matchingEls(id) {
   const d = doc();
   if (!d) return [];
-  return matchingInDocument(d,id,sel?.info?.id===id?sel.info:null);
+  return matchingInDocument(d,id,sel?.info?.id===id?sel.info:sel?.multiple?.find(info=>info.id===id)||null);
 }
 function matchingInDocument(d,id,info) {
   if(!d)return [];
@@ -1970,6 +1972,7 @@ async function restoreHistory(direction,op) {
   try {
     await showHistoryPage(op.route);
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='collectionSelection'){await reloadFrame();await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     const fresh = await api('GET', resolveUrl(op.id, op.context));
     if (fresh?.ok) { sel = { hostId: op.id, instanceId: null, scope: 'host', info: fresh.element }; renderPanel(); }
     else clearSelection();
@@ -2221,7 +2224,7 @@ async function insertLayer(preset,info,type='insertElement',extra={}){
   }finally{busyPanel(false);}
 }
 async function restoreLayerSelection(ids){
-  const selected=await Promise.all(ids.map(id=>api('GET',resolveUrl(id))));
+  const selected=await Promise.all(ids.map(id=>{const element=matchingEls(id)[0];return api('GET',resolveUrl(id,element?renderContext(element):undefined));}));
   if(!selected.length||selected.some(result=>!result?.ok))return;
   const infos=selected.map(result=>result.element),first=infos[0];sel={hostId:first.id,instanceId:null,scope:'host',info:first,multiple:infos.length>1?infos:undefined};
 }

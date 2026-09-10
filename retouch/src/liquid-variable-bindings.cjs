@@ -27,7 +27,7 @@ function describe(resolved){if(resolved.element.kind!=='host')return {};try{
  const links=metadata(resolved.element).links,info=liquid.describeElement(resolved);
  if(info.classNameDynamic)throw Error('Reload the preview to read this layer’s rendered classes.');
  const overrides=Object.fromEntries(Object.entries(links).map(([scope,group])=>[scope,Object.entries(group).filter(([property,link])=>link.override||classes.overridden(info.className||'',property,link.value,scope)).map(([property])=>property)]));
- return {classVariables:true,variableLinks:links,variableOverrides:overrides};
+ return {classVariables:true,collectionSelection:true,variableLinks:links,variableOverrides:overrides};
 }catch(error){return {classVariables:false,variableReason:error.message};}}
 function plan(resolved,op,library){
  try{

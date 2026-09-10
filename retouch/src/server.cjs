@@ -246,7 +246,7 @@ function handle(req, res, ctx) {
         resolved.context = renderContext(op.context);
         if(['applyVariable','resetVariable','detachVariable','removeVariable','applyVariableSelection','resetVariableSelection','detachVariableSelection','removeVariableSelection'].includes(op.type)){
           const reactVariables=ctx.adapter.name==='react',liquidVariables=ctx.adapter.name==='liquid';
-          if(liquidVariables&&op.type.endsWith('Selection'))return json(res,409,{ok:false,reason:'Liquid collection bindings currently need a single layer.'});
+          if(liquidVariables&&op.type.endsWith('Selection')&&op.contexts&&typeof op.contexts==='object'&&!Array.isArray(op.contexts)){op.contexts=Object.fromEntries(Object.entries(op.contexts).map(([id,value])=>[id,renderContext(value)]));}
           if(!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!reactVariables&&!liquidVariables)return json(res,409,{ok:false,reason:'Collection bindings currently need an HTML, React or Liquid project.'});
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source changed. Re-select the layer.'});
           let model;
@@ -342,7 +342,7 @@ function handle(req, res, ctx) {
     const html = fs
       .readFileSync(path.join(SHELL_DIR, 'index.html'), 'utf8')
       .replace('__RETOUCH_TOKEN__', ctx.token)
-      .replace('__RETOUCH_RENDERING__', JSON.stringify({history:ctx.history.snapshot(),historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired,stateScope:ctx.stateScope,selectionStyling:ctx.adapter.capabilities?.ops?.some(op=>['setClassesSelection','setCSSSelection'].includes(op))===true,layerReparenting:ctx.adapter.capabilities?.ops?.includes('reparentElement')===true,reloadAfterWrite:ctx.rendering.reloadAfterWrite===true,revalidateStyles:ctx.rendering.revalidateStyles===true}).replace(/</g,'\\u003c'));
+      .replace('__RETOUCH_RENDERING__', JSON.stringify({history:ctx.history.snapshot(),historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired,stateScope:ctx.stateScope,selectionStyling:ctx.adapter.capabilities?.collectionSelection===true||ctx.adapter.capabilities?.ops?.some(op=>['setClassesSelection','setCSSSelection'].includes(op))===true,layerReparenting:ctx.adapter.capabilities?.ops?.includes('reparentElement')===true,reloadAfterWrite:ctx.rendering.reloadAfterWrite===true,revalidateStyles:ctx.rendering.revalidateStyles===true}).replace(/</g,'\\u003c'));
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
     return res.end(html);
   }

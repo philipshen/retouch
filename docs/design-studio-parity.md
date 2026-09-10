@@ -7737,3 +7737,39 @@ WebKit passes (`/private/tmp/retouch-collection-undo-liquid-webkit.log`).
 This verifies the reproduced collection-history failure, not all possible Next
 reload races or all source-history operations. Full Figma parity and native trust/
 installation verification remain incomplete. Native launches remain paused.
+
+### Multi-layer Liquid collection bindings (2026-09-10)
+
+Liquid host layers can now be selected together in the layer tree or with canvas
+Shift-click and edited through the collection-binding inspector. Apply creates a
+shared binding; reset preserves each layer's variable/modes; detach retains each
+layer's current classes. Batch Undo/Redo reloads the Liquid preview and restores
+selection with fresh rendered contexts. Multi-selection carries each source
+layer's own context, including conditional class snapshots, instead of reusing
+one layer's context across the batch.
+
+The authenticated API normalizes each context and the planner requires 2–100
+unique host IDs in one unchanged source file. All edits are planned in memory and
+committed once. Missing contexts, stale source, malformed links or an unsupported
+later layer refuse the complete operation. Conditional expressions remain in
+source, and LiquidJS tests render both branches to verify classes do not migrate
+between selected layers. API coverage verifies exact Undo/Redo and stale-write
+refusal. Reset tests preserve different per-layer modes after literal overrides.
+
+All 583 unit tests pass (`/private/tmp/retouch-liquid-multi-collection-units.log`).
+The expanded dynamic Liquid browser flow passes Chromium and WebKit, including
+tree and canvas Shift-selection, mixed modes, shared apply, selection restoration,
+reset, detach and exact source Undo/Redo:
+`/private/tmp/retouch-liquid-multi-final-chromium.log` and
+`/private/tmp/retouch-liquid-multi-final-webkit.log`.
+The React WebKit regression flow also passes
+(`/private/tmp/retouch-liquid-multi-react-regression-webkit.log`). The screenshot
+`/private/tmp/retouch-liquid-multi-collection.png` was visually inspected. The
+single-layer “Reset overrides at this size” control is now omitted during any
+multi-selection, where it would otherwise modify only the primary layer.
+
+Liquid multi-selection currently exposes collection bindings; general shared
+layout, literal classes and saved-style editing remain unfinished. Cross-file
+selection and live Shopify verification are also incomplete. These browser checks
+use local LiquidJS/Tailwind. Full Figma parity remains in progress, and native
+application launches remain paused.
