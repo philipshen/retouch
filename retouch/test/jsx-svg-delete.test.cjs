@@ -9,3 +9,13 @@ test('React SVG deletion rejects component roots and expression-controlled selec
  for(const [source,tag]of [['export default()=> <svg></svg>','svg'],['export default()=> <svg>{visible && <rect/>}</svg>','rect'],['export default()=> <svg>{items.map(x=><g><rect/></g>)}</svg>','rect'],['export default()=> <svg><foreignObject><rect/></foreignObject></svg>','rect']])assert.equal(react.describe(resolve(source,tag)).svgDeletion,null);
  const r=resolve('export default()=> <svg><rect/></svg>');for(const fileHash of [undefined,'stale']){const result=react.planOp(r,{type:'deleteElement',fileHash});assert.equal(result.refused,true);assert.equal(result.edits,undefined);}
 });
+
+test('SVG deletion identifies removed descendants and maps every survivor',()=>{
+ const markup='<main><svg><rect/><g><circle/><ellipse/></g><line/></svg><p>After</p></main>',source='export default()=>'+markup;
+ for(const tag of ['rect','g','svg']){
+  const r=resolve(source,tag),result=react.planOp(r,{type:'deleteElement',fileHash:r.hash});assert.equal(result.ok,true,result.reason);
+  const fresh=ids.collectElements(result.edits[0].after,r.relPath).elements,mapping=new Map(result.sourceIdMap),survivors=r.elements.filter(e=>!result.removedSourceIds.includes(e.id));assert.deepEqual(survivors.map(e=>mapping.get(e.id)||e.id).sort(),fresh.map(e=>e.id).sort());
+  assert.ok(result.removedSourceIds.includes(r.element.id));if(tag==='g')assert.equal(result.removedSourceIds.length,3);
+  for(const element of survivors){const next=fresh.find(e=>e.id===(mapping.get(element.id)||element.id));assert.equal(ids.jsxElementName(next.node),ids.jsxElementName(element.node));}
+ }
+});

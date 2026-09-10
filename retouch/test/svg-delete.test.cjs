@@ -13,3 +13,13 @@ test('SVG deletion refuses stale hashes, unclosed source, templates and HTML tar
  for(const [source,tag]of [['<svg><g v-if="shown"><rect/></g></svg>','rect'],['<svg><rect>','rect'],['<p>Hello</p>','p']]){const r=resolve(source,tag);assert.equal(del.describe(r),null);assert.equal(del.plan(r,{fileHash:r.hash}).refused,true);}
  const r=resolve();for(const fileHash of [undefined,'stale'])assert.equal(del.plan(r,{fileHash}).refused,true);
 });
+
+test('SVG deletion identifies removed descendants and maps every survivor',()=>{
+ const markup='<main><svg><rect/><g><circle/><ellipse/></g><line/></svg><p>After</p></main>',source=markup;
+ for(const tag of ['rect','g','svg']){
+  const r=resolve(source,tag),result=del.plan(r,{fileHash:r.hash});assert.equal(result.ok,true,result.reason);
+  const fresh=html.collect(result.edits[0].after,r.relPath).elements,mapping=new Map(result.sourceIdMap),survivors=r.elements.filter(e=>!result.removedSourceIds.includes(e.id));assert.deepEqual(survivors.map(e=>mapping.get(e.id)||e.id).sort(),fresh.map(e=>e.id).sort());
+  assert.ok(result.removedSourceIds.includes(r.element.id));if(tag==='g')assert.equal(result.removedSourceIds.length,3);
+  for(const element of survivors){const next=fresh.find(e=>e.id===(mapping.get(element.id)||element.id));assert.equal(next.tag,element.tag);}
+ }
+});

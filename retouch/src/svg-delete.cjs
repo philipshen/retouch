@@ -20,6 +20,7 @@ function plan(resolved,op){
  for(const e of retained){const offset=e.location.startOffset-(e.location.startOffset>=end?end-start:0),fresh=next.find(n=>n.location.startOffset===offset&&n.tag===e.tag&&n.node.namespaceURI===e.node.namespaceURI);if(!fresh)return refuse('The deletion would change the surrounding document structure.');mapped.set(e.node,fresh);}
  if(next.length!==retained.length||retained.some(e=>mapped.has(e.node.parentNode)&&mapped.get(e.node).node.parentNode!==mapped.get(e.node.parentNode).node))return refuse('The deletion would change the surrounding document structure.');
  const parent=mapped.get(resolved.element.node.parentNode);
- return {ok:true,hash:html.contentHash(after),parentId:parent.id,structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
+ const sourceIdMap=retained.flatMap(element=>{const id=mapped.get(element.node).id;return id===element.id?[]:[[element.id,id]];}),removedSourceIds=resolved.elements.filter(e=>e.location.startOffset>=start&&e.location.startOffset<end).map(e=>e.id);
+ return {ok:true,sourceIdMap,removedSourceIds,hash:html.contentHash(after),parentId:parent.id,structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
 }
 module.exports={describe,plan};

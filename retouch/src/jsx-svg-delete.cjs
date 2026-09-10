@@ -18,6 +18,6 @@ function plan(resolved,op){
  const {start,end}=resolved.element.node,after=resolved.source.slice(0,start)+resolved.source.slice(end),before=resolved.elements||ids.collectElements(resolved.source,resolved.relPath).elements,next=ids.collectElements(after,resolved.relPath).elements,retained=before.filter(e=>e.node.start<start||e.node.start>=end),mapping=new Map();
  for(const old of retained){const offset=old.node.start-(old.node.start>=end?end-start:0),fresh=next.find(e=>e.node.start===offset&&ids.jsxElementName(e.node)===ids.jsxElementName(old.node));if(!fresh)return refuse('The deletion would change surrounding JSX structure.');mapping.set(old.id,fresh.id);}
  const oldParents=parents(before),newParents=parents(next);if(next.length!==retained.length||retained.some(e=>newParents.get(mapping.get(e.id))!==(mapping.get(oldParents.get(e.id))??null)))return refuse('The deletion would change surrounding JSX ancestry.');
- return {ok:true,hash:ids.contentHash(after),parentId:mapping.get(cap.parentId),structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
+ return {ok:true,sourceIdMap:[...mapping].filter(([a,b])=>a!==b),removedSourceIds:before.filter(e=>e.node.start>=start&&e.node.start<end).map(e=>e.id),hash:ids.contentHash(after),parentId:mapping.get(cap.parentId),structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
 }
 module.exports={describe,plan,parents,supportsNode};
