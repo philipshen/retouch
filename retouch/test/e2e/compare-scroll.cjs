@@ -11,6 +11,15 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   const wait=async fn=>{for(let n=0;n<100;n++){if(await fn())return;await new Promise(r=>setTimeout(r,50));}throw Error('Comparison scroll did not settle');};
   await page.goto('http://localhost:'+server.address().port+'/rt');await page.getByRole('button',{name:'Compare screens',exact:true}).click();
   const frame=page.frameLocator('iframe[title="Phone comparison preview"]'),viewport=page.getByRole('button',{name:'Edit from Phone comparison',exact:true});await frame.locator('#inner').waitFor();
+  if(process.env.RT_E2E_COMPARE_RESIZE){
+   const edge=page.getByRole('separator',{name:'Resize comparison panel',exact:true}),rail=page.locator('#screenComparisons'),width=()=>rail.evaluate(el=>el.offsetWidth);
+   await frame.locator('body').evaluate(()=>window.widthProbe='kept');const originalWidth=await width();const drag=async delta=>{const box=await edge.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+80);await page.mouse.down();await page.mouse.move(box.x+box.width/2-delta,box.y+80);};
+   await drag(130);await wait(async()=>await width()===originalWidth+130);await page.keyboard.press('Escape');await page.mouse.up();assert.equal(await width(),originalWidth);
+   await drag(130);await page.mouse.up();assert.equal(await width(),400);await edge.press('Shift+ArrowLeft');assert.equal(await width(),450);await edge.press('ArrowRight');assert.equal(await width(),440);assert.equal(await frame.locator('body').evaluate(()=>window.widthProbe),'kept');assert.equal(await frame.locator('body').evaluate(()=>innerWidth),390);
+   await page.reload();await page.getByRole('button',{name:'Compare screens',exact:true}).click();await frame.locator('#inner').waitFor();assert.equal(await width(),440);await edge.press('Home');assert.equal(await width(),240);await edge.press('End');assert.equal(await width(),640);
+   await page.setViewportSize({width:1200,height:1200});await wait(async()=>await width()<640);assert.ok(await page.locator('#frameWrap').evaluate(el=>el.clientWidth)>=160);await page.setViewportSize({width:1800,height:1200});await wait(async()=>await width()===640);
+   if(process.env.RT_E2E_COMPARE_WIDTH_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_COMPARE_WIDTH_SCREENSHOT});await edge.dblclick();assert.equal(await width(),270);assert.equal(fs.readFileSync(file,'utf8'),source);console.log('COMPARISON WIDTH/DRAG/CANCEL/KEYBOARD/PERSISTENCE/LIVE STATE PASS',engine);
+  }
   if(process.env.RT_E2E_COMPARE_ORDER){
    const order=()=>page.locator('.compare-card').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('aria-label'))),up=()=>page.getByRole('button',{name:'Move Phone comparison up',exact:true}),down=()=>page.getByRole('button',{name:'Move Phone comparison down',exact:true});
    assert.equal(await up().isDisabled(),true);assert.equal(await page.getByRole('button',{name:'Move Desktop comparison down',exact:true}).isDisabled(),true);

@@ -407,3 +407,7 @@ details.advanced > summary:hover { color: var(--ink); }
 
 .component-tree-row > .layer-item { color:#c49aff; font-weight:600; }
 .component-tree-row > .layer-item[aria-selected="true"] { background:#493367; }
+
+#comparisonResizeHandle { flex:0 0 6px; cursor:col-resize; touch-action:none; background:var(--bg); border-left:1px solid var(--line); }
+#comparisonResizeHandle:hover,#comparisonResizeHandle:focus-visible,#comparisonResizeHandle.dragging { background:var(--accent); outline:none; }
+#comparisonResizeHandle[hidden] { display:none; }

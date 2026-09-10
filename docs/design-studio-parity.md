@@ -9652,3 +9652,33 @@ no page errors. Evidence:
 The compact layout was inspected in /private/tmp/retouch-collapsed-preview.png.
 Syntax and git diff --check passed. Full Figma parity and trusted brew installation
 remain unfinished; native app launches remain paused.
+
+### Resize the comparison workspace (2026-09-10)
+
+The comparison rail now has a draggable left edge and an accessible keyboard
+separator. Left/Right moves the edge by 10 px, Shift by 50 px, Home/End selects the
+available limits and double-click resets to 270 px. Escape, pointer cancellation,
+window blur or window resize cancel an active drag. The preferred width persists
+per project; the rendered width is bounded from 240 to 640 px and narrows when
+needed to reserve canvas space in sufficiently wide windows. Very narrow overall
+workspace layout remains a broader unfinished UX area.
+
+Rail resizing scales the mounted comparison surfaces without changing their
+actual page viewport dimensions or source. Chromium and WebKit passed drag,
+cancellation, keyboard controls, persistence, responsive clamping/recovery,
+retained live preview state and the combined ordering/collapse/scrolling suite.
+Both engines also passed the full comparison-editing suite with a widened rail,
+including selection alignment, scoped edits, clipping, naming, resizing,
+screen-set loading and history. All final/recheck processes exited zero with no
+page errors. Evidence:
+/private/tmp/retouch-compare-width-chromium.log,
+/private/tmp/retouch-compare-width-webkit-recheck.log,
+/private/tmp/retouch-wide-edit-chromium.log,
+/private/tmp/retouch-wide-edit-webkit.log.
+The wide layout was inspected in /private/tmp/retouch-wide-comparisons.png.
+
+The initial WebKit combined run passed width checks but missed a later Desktop
+ordering click (/private/tmp/retouch-compare-width-webkit.log). The recheck passed;
+the cause was not established and no permanent fix for that intermittent event
+is claimed. Syntax and diff checks passed. Full Figma parity and trusted brew
+installation remain incomplete; native app launches remain paused.
