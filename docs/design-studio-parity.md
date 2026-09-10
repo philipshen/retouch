@@ -6489,3 +6489,27 @@ receipts verify browser CSS values, not physical monitor gamut or calibration.
 More intuitive color-space creation/conversion, other spaces, complete P3
 project-update/selection receipts and full Figma parity remain unfinished.
 Native launches remain paused; live Shopify remains unverified.
+
+### Explicit sRGB / Display P3 conversion controls (2026-09-09)
+
+The palette now has a Color space selector, making Display P3 channel editing
+available without entering CSS syntax. Conversion decodes the shared transfer
+curve, transforms through D65 XYZ and re-encodes destination channels. Matrices
+and transfer constants follow W3C CSS Color 4's sample conversion definitions:
+https://www.w3.org/TR/css-color-4/#color-conversion-code. Existing sRGB colors
+retain alpha when converted to P3. Destination sRGB uses the palette's 8-bit hex
+representation. Out-of-gamut conversion preserves the P3 draft and presents a
+separate, explicitly labeled clipping action with an appearance/quantization
+explanation; Keep Display P3 cancels it. This is channel clipping, not perceptual
+CSS gamut mapping. Conversion itself does not write the catalog or source.
+
+All 486 tests passed, exit 0: /private/tmp/retouch-color-space-units.log.
+Unit tests cover sampled exact sRGB round trips, red-primary coordinates,
+alpha preservation, unsupported destinations and explicit clipping. HTML
+Chromium and local Liquid WebKit flows passed, exit 0:
+/private/tmp/retouch-color-space-html.log and
+/private/tmp/retouch-color-space-liquid.log. Both switch spaces, keep an
+out-of-gamut draft unchanged, cancel/explicitly apply clipping, verify no source
+or catalog mutation, then complete P3 and existing palette flows. Perceptual gamut
+mapping, other color spaces, physical display calibration and full Figma parity
+remain unfinished. Native launches remain paused; live Shopify is unverified.

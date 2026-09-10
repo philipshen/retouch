@@ -11,5 +11,18 @@
  }
  function p3(channels,alpha){return 'color(display-p3 '+channels.join(' ')+' / '+alpha+')';}
  function valid(value){try{parse(value);return true;}catch{return false;}}
- const api={parse,p3,valid};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPaletteValues=api;
+ // D65 primaries and transfer curves: W3C CSS Color 4, color-conversion-code.
+ // https://www.w3.org/TR/css-color-4/#color-conversion-code
+ const toXYZ={srgb:[[506752/1228815,87881/245763,12673/70218],[87098/409605,175762/245763,12673/175545],[7918/409605,87881/737289,1001167/1053270]],'display-p3':[[608311/1250200,189793/714400,198249/1000160],[35783/156275,247089/357200,198249/2500400],[0,32229/714400,5220557/5000800]]};
+ const fromXYZ={srgb:[[12831/3959,-329/214,-1974/3959],[-851781/878810,1648619/878810,36519/878810],[705/12673,-2585/12673,705/667]],'display-p3':[[446124/178915,-333277/357830,-72051/178915],[-14852/17905,63121/35810,423/17905],[11844/330415,-50337/660830,316169/330415]]};
+ const multiply=(matrix,vector)=>matrix.map(row=>row.reduce((sum,n,i)=>sum+n*vector[i],0));
+ function convert(value,space,clip=false){
+  if(!Object.hasOwn(toXYZ,space))throw Error('Choose sRGB or Display P3.');const original=parse(value);
+  if(original.space===space)return {value:original.value,clipped:false};
+  const linear=original.channels.map(n=>n<=0.04045?n/12.92:((n+0.055)/1.055)**2.4),xyz=multiply(toXYZ[original.space],linear),channels=multiply(fromXYZ[space],xyz).map(n=>Math.abs(n)<=0.0031308?12.92*n:Math.sign(n)*(1.055*Math.abs(n)**(1/2.4)-0.055)),clipped=channels.some(n=>n< -1e-7||n>1+1e-7);
+  if(clipped&&!clip)return {value:null,clipped:true};
+  const bounded=channels.map(n=>Math.max(0,Math.min(1,n)));
+  return {value:space==='display-p3'?p3(bounded.map(n=>Number(n.toFixed(12))),original.alpha):'#'+[...bounded,original.alpha].map(n=>Math.round(n*255).toString(16).padStart(2,'0')).join(''),clipped};
+ }
+ const api={parse,p3,valid,convert};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPaletteValues=api;
 })(typeof window==='object'?window:globalThis);
