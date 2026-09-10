@@ -1,4 +1,4 @@
-(function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory(require('./html-css-values.js'));else root.RetouchCollectionBindings=factory(root.RetouchHTMLCSSValues);})(typeof globalThis!=='undefined'?globalThis:this,function(V){
+(function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory(require('./html-css-values.js'),require('./responsive.js'),require('./inspector.js'));else root.RetouchCollectionBindings=factory(root.RetouchHTMLCSSValues,root.RetouchResponsive,root.RetouchInspector);})(typeof globalThis!=='undefined'?globalThis:this,function(V,R,I){
  'use strict';
  let expanded=false,target='color';
  const paints=['color','background-color','border-color','fill','stroke'],numbers=['width','height','min-width','max-width','min-height','max-height','gap','padding','margin','font-size','letter-spacing','border-width','border-radius','opacity','font-weight','line-height','flex-grow','flex-shrink',...['top','right','bottom','left'].flatMap(side=>['padding-'+side,'margin-'+side]),...['top-left','top-right','bottom-left','bottom-right'].map(corner=>'border-'+corner+'-radius')];
@@ -14,14 +14,28 @@
   }
   return null;
  }
+ function classInherited(info,scope,property,document,ignoreOwn=false,choices=null){
+  const candidates={};
+  for(const [key,group]of Object.entries(info.variableLinks||{})){if(group[property]&&!(ignoreOwn&&key===scope))candidates[key]={binding:group[property],override:!!info.variableOverrides?.[key]?.includes(property)};}
+  for(const token of (info.className||'').split(/\s+/).filter(Boolean)){
+   const part=R.split(token);if(!/^!|!$/.test(part.value))continue;
+   const declaration=/^\[([a-z-]+|--[a-zA-Z0-9_-]+):/.exec(I.base(part.value)||'')?.[1];
+   if(ignoreOwn&&part.prefix===scope&&declaration===property)continue;
+   if(declaration&&(declaration.startsWith('--')||!V.overlaps(declaration,property)))continue;
+   if(candidates[part.prefix]?.binding){if(declaration!==property)candidates[part.prefix].override=true;}
+   else candidates[part.prefix]={blocked:true};
+  }
+  const result=R.inheritedLink(candidates,scope,document,choices);return result&&!result.link.blocked?{scope:result.scope,label:result.label,link:result.link.binding,override:result.link.override}:null;
+ }
  function mount(parent,input,width,write,options={}){
   const selection=Array.isArray(input)?input:[input],info=selection[0],multiple=selection.length>1;
   const I=RetouchInspector,details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Collection bindings';details.append(summary);parent.append(details);details.open=expanded;
   const status=I.note(details,''),controls=document.createElement('fieldset');status.setAttribute('role','status');controls.style.cssText='border:0;padding:0;margin:0;min-width:0';details.append(controls);
   let library=null,values=[],selected='',modes={},unit='',busy=false;
+  const inherit=(property,ignoreOwn=false)=>options.inherited?options.inherited(property,ignoreOwn):inherited(info,width,property,ignoreOwn);
   const ownLinks=()=>selection.map(item=>item.variableLinks?.[width]?.[target]);
   const link=()=>{const links=ownLinks();return links[0]&&links.every(item=>JSON.stringify(item)===JSON.stringify(links[0]))?links[0]:null;};
-  const init=()=>{const current=link()||(!multiple&&inherited(info,width,target)?.link);selected=current?.id||'';modes={...current?.modes};unit=current?.unit??(unitless.includes(target)?'':'px');};init();
+  const init=()=>{const current=link()||(!multiple&&inherit(target)?.link);selected=current?.id||'';modes={...current?.modes};unit=current?.unit??(unitless.includes(target)?'':'px');};init();
   async function run(action){if(busy)return;busy=true;controls.disabled=true;status.textContent='Working…';try{await action();if(details.isConnected){render();status.textContent='';}}catch(error){values=[];if(details.isConnected){render();status.textContent=error.message;}}finally{busy=false;controls.disabled=false;}}
   const preview=async()=>{values=[];if(selected)values=(await RetouchVariableModePreview({revision:library.revision,modes,variableId:selected})).values;};
   const load=()=>run(async()=>{library=await RetouchVariableLibraryRequest();await preview();});
@@ -39,7 +53,7 @@
    if(resolved)I.note(controls,'Resolved value: '+value);
    const valid=value!==null&&RetouchHTMLCSSValues.valid(target,value),apply=I.button('Apply collection binding',()=>run(()=>write('applyVariable',width,{property:target,libraryRevision:library.revision,binding:{id:selected,modes,...(type==='number'?{unit}:{})}})));apply.disabled=!valid;controls.append(apply);
    if(resolved&&!valid)I.note(controls,'This value cannot control the selected property. Choose another variable or unit.');
-   const from=multiple?null:inherited(info,width,target);
+   const from=multiple?null:inherit(target);
    if(from){
     const variable=library.variables.find(v=>v.id===from.link.id);I.note(controls,'Inherited: '+(variable?.name||'Missing variable')+' · '+from.label+(from.override?' · Local override in that scope':''));
     const copy=I.button('Override collection binding here',()=>run(()=>write('applyVariable',width,{property:target,libraryRevision:library.revision,binding:{id:from.link.id,modes:from.link.modes,...(from.link.unit!==undefined?{unit:from.link.unit}:{})}})));controls.append(copy);
@@ -50,12 +64,12 @@
    if(bound){
     if(!multiple){const variable=library.variables.find(v=>v.id===link().id);I.note(controls,'Linked: '+(variable?.name||'Missing variable')+(info.variableOverrides?.[width]?.includes(target)?' · Local override':''));}
     else I.note(controls,'Reset preserves each layer’s variable and modes. Unbound layers stay unchanged when resetting or detaching.');
-    const fallback=multiple?null:inherited(info,width,target,true);if(fallback){controls.append(I.button('Use smaller-screen binding',()=>run(()=>write('removeVariable',width,{property:target}))));I.note(controls,'Removes this scope’s binding and property override to reveal '+fallback.label+'.');}
+    const fallback=multiple?null:inherit(target,true);if(fallback){controls.append(I.button('Use smaller-screen binding',()=>run(()=>write('removeVariable',width,{property:target}))));I.note(controls,'Removes this scope’s binding and property override to reveal '+fallback.label+'.');}
     controls.append(I.button('Reset collection binding',()=>run(()=>write('resetVariable',width,{property:target,libraryRevision:library.revision}))),I.button('Detach collection binding',()=>run(()=>write('detachVariable',width,{property:target}))));
    }
   }
   render();
   details.addEventListener('toggle',()=>{expanded=details.open;if(expanded&&!library&&!busy)load();});if(expanded)load();
  }
- return {mount,inherited};
+ return {mount,inherited,classInherited};
 });

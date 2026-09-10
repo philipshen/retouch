@@ -80,6 +80,7 @@ test('text style inheritance uses actual breakpoint units and the nearest unambi
  assert.deepEqual(R.inheritedLink({'':base,'tablet:':tablet},'min-[700px]:',d,choices),{scope:'',link:base,label:'All sizes'});
  assert.equal(R.inheritedLink({'':base,'tablet:':tablet},'tablet:',d,choices),null);
  assert.equal(R.inheritedLink({'':base,'tablet:':tablet,'min-[800px]:':{id:'tie'}},'desktop:',d,choices),null);
+ assert.equal(R.inheritedLink({'':base,'min-[1200px]:':tablet},'desktop:',d,choices),null);
  assert.equal(R.inheritedLink({'':base,'unknown:':tablet},'desktop:',d,choices),null);
  assert.equal(R.inheritedLink({'':base},'max-[1200px]:',d,choices),null);
 });

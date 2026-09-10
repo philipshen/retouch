@@ -106,7 +106,7 @@
     const limit=minimum(prefix);if(limit===null)return null;
     const candidates=[];
     for(const [scope,link]of Object.entries(links)){
-      const width=minimum(scope);if(width===null)return null;
+      const width=minimum(scope);if(width===null||width===limit)return null;
       if(width<limit)candidates.push({scope,link,width,label:scope?(choices.find(item=>item.prefix===scope)?.label||width+'px and larger'):'All sizes'});
     }
     candidates.sort((a,b)=>b.width-a.width);

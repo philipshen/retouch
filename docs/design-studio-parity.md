@@ -7665,3 +7665,39 @@ removed. All 578 unit tests pass in
 
 This fixes root path identity for server operations; broader Figma parity remains
 incomplete. Native application launches remain paused.
+
+### React and Liquid collection screen inheritance (2026-09-10)
+
+Single React and Liquid layers now show the nearest smaller-screen collection
+binding, including its variable, mode and numeric unit. “Override collection
+binding here” copies that binding into the chosen scope; “Use smaller-screen
+binding” removes the current scoped binding/property override to reveal it again.
+The lookup uses discovered breakpoint conditions and initial-font-relative units.
+Important overlapping declarations, unknown scopes and ambiguous equal-width
+breakpoints prevent an inheritance claim. The shared responsive lookup also now
+rejects an alternate scope at exactly the target breakpoint.
+
+All 579 unit tests pass in
+`/private/tmp/retouch-class-inherited-collection-final-units.log`. Focused tests
+cover named/rem breakpoints, disjoint declarations, overlapping/unknown utilities,
+local overrides, own-scope removal and equal-width ambiguity. React and Liquid
+Chromium flows passed, as did local Liquid WebKit, with desktop override creation,
+independent tablet/desktop modes, fallback removal and exact source Undo.
+Logs: `/private/tmp/retouch-react-inherited-collection-chromium.log`,
+`/private/tmp/retouch-liquid-inherited-collection-chromium.log`, and
+`/private/tmp/retouch-liquid-inherited-collection-webkit.log`. The screenshot
+`/private/tmp/retouch-react-inherited-collection.png` was visually inspected.
+
+React WebKit is NOT passing: editing/source assertions complete, but the final
+page-error check repeatedly catches Next hot-update/RSC/stack-frame fetch access
+control errors. Optional `RT_E2E_NETWORK_TRACE=1` now records failed requests,
+error stacks, frame navigation, HTTP failures and API mutation responses without
+filtering errors. `/private/tmp/retouch-react-inherited-collection-webkit-operations.log`
+places the first error immediately after the catalog-update Undo response and
+alongside canceled document loads. This points to the generic source-history
+reload path for further investigation; it does not establish the root cause or
+prove a fix. A diagnostic run also observed a transient HTTP 500.
+
+Liquid verification uses local LiquidJS/Tailwind, not Shopify. Ancestor collection
+modes, Liquid multi-selection, broader site support and full Figma parity remain
+unfinished. Native application launches remain paused.
