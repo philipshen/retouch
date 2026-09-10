@@ -7,6 +7,11 @@ const ts=require(path.join(fixture,'node_modules/typescript'));
 const {makeApp,cleanup,Index}=require('../helpers.cjs'),create=require('../../src/create-component.cjs');
 const jsx='declare namespace JSX {interface ElementChildrenAttribute {children:{}} interface IntrinsicElements {article:{title?:string;onClick?:()=>void;children?:unknown}}}\n';
 const cases=[
+ ['negative literal default','interface Props{count?:-2}function Page({count=-2}:Props){return <article>{count.toFixed()}</article>}'],
+ ['optional string default','type Label=string;interface Props{title?:Label}function Page({title="Hi"}:Props){return <article title={title.toUpperCase()}>Hi</article>}'],
+ ['numeric and boolean defaults','interface Props{count?:number;enabled?:boolean}function Page({count=-2,enabled=true}:Props){return <article>{enabled?count.toFixed():"None"}</article>}'],
+ ['local destructured default','function Page(){const {title="Hi"}:{title?:string}={};return <article title={title.toUpperCase()}>Hi</article>}'],
+ ['literal typed default','interface Props{title?:"Hi"}function Page({title="Hi"}:Props){return <article title={title}>Hi</article>}'],
  ['optional parameter','function Page(title?:string){return <article title={title??"Hi"}>Hi</article>}'],
  ['optional destructured property','type Label=string;interface Props{title?:Label}function Page({title}:Props){return <article title={title??"Hi"}>Hi</article>}'],
  ['optional destructured method','interface Props{onSelect?():void}function Page({onSelect}:Props){return <article onClick={()=>onSelect?.()}>Hi</article>}'],
@@ -41,6 +46,7 @@ const cases=[
  ['readonly destructuring','function Page(){const [title,count]:readonly [string,number]=["Hi",2];return <article title={title}>{count+1}</article>}'],
 ];
 const refusedCases=[
+ ['dynamic optional default','function fallback():string|undefined{return undefined}function Page({title=fallback()}:{title?:string}){return <article title={title??"Hi"}>Hi</article>}',true],
  ['initialized union local','type Value=string|number;function Page(){const value:Value="Hi";return <article title={value.toUpperCase()}>Hi</article>}',true],
  ['earlier union guard','function Page(value:string|number){if(typeof value!=="string")return null;return <article title={value.toUpperCase()}>Hi</article>}',true],
  ['earlier optional guard','interface Props{title?:string}function Page(data:Props){if(!data.title)return null;return <article title={data.title.toUpperCase()}>Hi</article>}',true],

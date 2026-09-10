@@ -168,7 +168,7 @@ test('TypeScript extraction carries explicit structural capture types into compo
  }finally{f.close();}
 });
 test('TypeScript extraction refuses capture types requiring scope or narrowing analysis',()=>{
- for(const source of ['function Page<T>({value}:{value:T}){return <article>{value}</article>}', 'function Page({value="x"}:{value?:string}){return <article>{value}</article>}']){
+ for(const source of ['function Page<T>({value}:{value:T}){return <article>{value}</article>}', 'function Page({value=String("x")}:{value?:string}){return <article>{value}</article>}']){
   const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/explicit type/);assert.equal(fs.readFileSync(f.selected.file,'utf8'),source);}finally{f.close();}
  }
 });
@@ -306,4 +306,9 @@ test('typed extraction keeps undefined in optional parameter contracts',()=>{
  for(const source of ['function Page(value?:string){return <article>{value??"Default"}</article>}','interface Props{value?:string}function Page({value}:Props){return <article>{value??"Default"}</article>}']){
  const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);assert.ok(result.edits[0].after.includes('"value": ((string) | undefined)'));}finally{f.close();}
  }
+});
+
+test('typed extraction preserves primitive literal defaults at the call site',()=>{
+ const source='type Label=string;interface Props{title?:Label;count?:number;enabled?:boolean}function Page({title="Hi",count=-2,enabled=true}:Props){return <article title={title.toUpperCase()}>{enabled?count+1:0}</article>}';
+ const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);const after=result.edits[0].after;assert.ok(after.includes('title="Hi",count=-2,enabled=true'));for(const [name,type]of [['title','string'],['count','number'],['enabled','boolean']])assert.ok(after.includes('"'+name+'": ('+type+')'));}finally{f.close();}
 });

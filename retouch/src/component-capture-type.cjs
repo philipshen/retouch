@@ -32,6 +32,13 @@ function patternType(pattern,contract,name,resolve,source,depth=0){
  if(!pattern||!contract||depth>20||pattern.optional)return null;
  contract=resolve(contract);if(!contract)return null;
  if(pattern.type==='Identifier')return pattern.name===name?contract:null;
+ if(pattern.type==='AssignmentPattern'){
+  const literal=node=>['StringLiteral','BooleanLiteral','NumericLiteral'].includes(node?.type)?node.value:node?.type==='UnaryExpression'&&['+','-'].includes(node.operator)&&node.argument.type==='NumericLiteral'?(node.operator==='-'?-1:1)*node.argument.value:undefined;
+  const value=literal(pattern.right),primitive={string:'TSStringKeyword',boolean:'TSBooleanKeyword',number:'TSNumberKeyword'}[typeof value];
+  const compatible=primitive&&(contract.type===primitive||contract.type==='TSLiteralType'&&literal(contract.literal)===value);
+  return compatible?patternType(pattern.left,contract,name,resolve,source,depth+1):null;
+ }
+
  if(pattern.type==='ArrayPattern'&&contract.type==='TSTypeOperator'&&contract.operator==='readonly')contract=resolve(contract.typeAnnotation);
  if(pattern.type==='ObjectPattern'&&contract.type==='TSTypeLiteral'){
   for(const property of pattern.properties){
@@ -45,6 +52,7 @@ function patternType(pattern,contract,name,resolve,source,depth=0){
     if(member.optional){const marker=source.slice(start).match(/^(?:\s|\/\*[\s\S]*?\*\/|\/\/[^\n]*(?:\n|$))*\?/);if(!marker)continue;start+=marker[0].length;}
     type={type:'TSFunctionType',methodFunction:true,parameters:member.parameters,typeParameters:member.typeParameters,typeAnnotation:member.typeAnnotation,start,end:type.end};
    }
+   if(member.optional&&property.value.type==='AssignmentPattern'){const result=patternType(property.value,type,name,resolve,source,depth+1);if(result)return result;continue;}
    if(member.optional){if(property.value.type==='Identifier'&&property.value.name===name&&type)return withUndefined(type);continue;}
    const result=patternType(property.value,type,name,resolve,source,depth+1);if(result)return result;
   }
@@ -58,7 +66,7 @@ function patternType(pattern,contract,name,resolve,source,depth=0){
    const result=patternType(pattern.elements[index],member,name,resolve,source,depth+1);if(result)return result;
   }
  }
- // Defaults and rest bindings need separate narrowing/shape analysis.
+ // Non-literal defaults, optional tuple positions, and rest bindings need further analysis.
  return null;
 }
 function typeResolver(binding,source){
