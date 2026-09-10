@@ -57,7 +57,7 @@ panelBody.addEventListener('keydown',event=>{
   const controls=[...panelBody.querySelectorAll('input,select,textarea,button,summary,[tabindex]')].filter(el=>el.tabIndex>=0&&!el.matches(':disabled')&&el.getClientRects().length);
   const target=controls[controls.indexOf(event.target)+(event.shiftKey?-1:1)];if(!target)return;
   const identity=controlIdentity(target),matches=[...panelBody.querySelectorAll('input,select,textarea,button,summary,[tabindex]')].filter(el=>controlIdentity(el)===identity);
-  pendingPanelFocus={selection:panelSelectionKey(),identity,index:matches.indexOf(target),expires:0};
+  pendingPanelFocus={selection:panelSelectionKey(),identity,index:matches.indexOf(target),expires:0,retain:true};
   event.preventDefault();event.target.blur();restorePanelFocus();
 });
 // A deliberate click or keyboard action during a save supersedes queued focus.

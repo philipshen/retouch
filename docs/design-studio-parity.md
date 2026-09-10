@@ -19,7 +19,7 @@ changing those files. The original checkout may continue to evolve independently
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. HTML absolute placement now supports edge, center, stretch and proportional anchors with screen-scoped writes. Transformed constraints, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML, React and local Liquid support linear/radial/angular gradient stacks, repetition, color interpolation, explicit radial sizing, draggable stops/centers/rotation, keyboard editing and exact undo. HTML also supports shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A searchable page-font picker now discovers declared and used families, with React/HTML and local Liquid browser coverage. Explicit variable-axis editing, declared-file range/default inspection and bounded axis sliders have HTML/React/local Liquid browser coverage. Full font browsing, actual glyph-font resolution, live Shopify font verification, full rich-text/paragraph/list controls and complete typography parity remain. |
-| Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | React can extract a source subtree into an explicitly reusable same-file component, preserve call-site keys/module references, select and duplicate linked instances, and Undo/Redo through the UI. Chromium/WebKit checks verify unchanged rendering and exact source restoration. Stable JavaScript parent-local values become explicit props, with browser-verified callback/state behavior. Typed captures, scoped JSX styles and other context-dependent expressions still need extraction support. React instance text/number/boolean props have source-backed controls and Undo/Redo, including omitted values, literal defaults, finite typed choices and searchable property lists. Relative imported TypeScript contracts resolve through aliases, wildcard barrels and nested namespace re-exports with dependency revision guards. Existing React/Liquid inspection and detach remain; cross-file creation, variants, computed-default/expression/enum prop authoring, libraries and live Shopify proof remain incomplete. |
+| Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | React can extract a source subtree into an explicitly reusable same-file component, preserve call-site keys/module references, select and duplicate linked instances, and Undo/Redo through the UI. Chromium/WebKit checks verify unchanged rendering and exact source restoration. Stable JavaScript parent-local values become explicit props, with browser-verified callback/state behavior. Typed captures, scoped JSX styles and other context-dependent expressions still need extraction support. React instance text/number/boolean props have source-backed controls and Undo/Redo, including omitted values, literal defaults, finite typed choices and searchable property lists. Local imported TypeScript contracts resolve through aliases, wildcard barrels, nested namespace re-exports and project path mappings with dependency revision guards. Existing React/Liquid inspection and detach remain; cross-file creation, variants, computed-default/expression/enum prop authoring, libraries and live Shopify proof remain incomplete. |
 | Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Reusable text styles support responsive links, inherited-scope display, local override/reset, project-wide updates and shared undo in HTML, React and local Liquid. Validated JSON library import/export preserves style identity. HTML, React and local Liquid color styles link text/background/border/SVG paint with scoped overrides and project updates; palettes support sRGB and Display P3. HTML effect styles link shadows and layer/backdrop filters with project updates, overrides and undo. React/Liquid effect links, variables, aliases, collections/modes and shared remote library workflows remain. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload and SVG-canvas SVG/PNG/JPEG downloads exist, including shared local definitions and bitmap embedding. Arbitrary-layer export, fonts, symbols and the full export/import pipeline remain. |
@@ -8306,3 +8306,38 @@ and complete TypeScript compiler semantics remain incomplete. The requirement
 matrix now reflects the recent property-control and imported-contract work without
 claiming component parity. Full Figma/any-site parity and trusted brew distribution
 remain unproven. Native launches stay paused.
+
+## Project path aliases for component contracts (2026-09-10)
+
+Component type imports now read root tsconfig.json, falling back to jsconfig.json,
+and follow relative local configuration inheritance, including ordered extends
+arrays. Literal JSON-shaped configuration is parsed without executing source.
+Paths preserve their declaring config's directory when baseUrl is absent; inherited
+baseUrl and paths overrides are respected. Exact aliases precede wildcard aliases,
+then the longest matching prefix wins, with ordered target fallback. This follows
+the matching rules documented at
+https://www.typescriptlang.org/docs/handbook/modules/reference#paths.
+
+Every read configuration joins the existing revision and non-writing commit guards.
+When jsconfig is used, the absence of tsconfig is also guarded, without creating it
+or adding configuration files to undo history. Cycles, malformed/nonliteral data,
+package-based inheritance, escaping paths and symlinked configs are not inferred.
+
+Validation: 653 unit tests passed. Added tests cover matching precedence, wildcard
+suffixes, fallback targets, JSONC, inherited path origins/baseUrl, config revisions,
+jsconfig priority changes, no-write history and invalid/escaping configurations.
+Initial Chromium browser runs twice exposed lost Tab focus from filtered property
+search. The queued Tab destination now survives late inspector refreshes until the
+existing expiry or deliberate-input cancellation; the final Chromium and WebKit
+runs pass Tab/Shift+Tab and the complete property/default/unset/search/duplicate/
+Undo/Redo flow with an alias inherited from another config. Type files and configs
+remain unchanged after framework startup.
+Logs: /private/tmp/retouch-type-paths-units.log,
+/private/tmp/retouch-type-paths-{chromium,webkit}-final.log. Earlier Chromium failure
+logs are retained as retouch-type-paths-chromium.log and -chromium-recheck.log.
+
+This is not complete compiler resolution: external packages, package configs,
+project-reference/nested-project config selection, alternate module suffixes and
+bare baseUrl lookups remain incomplete. Filesystem candidate additions during a
+pending transaction are not comprehensively guarded. Full Figma/any-site parity
+and trusted brew distribution remain unproven. Native launches stay paused.

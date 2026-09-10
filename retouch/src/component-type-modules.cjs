@@ -18,13 +18,11 @@ module.exports=function typeModules(resolved,def,ast){
   }
   return mod;
  }
- const main=register(def.file,def.source,ast);mark(def.fn,main);
+ const main=register(def.file,def.source,ast);mark(def.fn,main);let paths;
  function imported(mod,specifier){
-  // Config aliases and package resolution require additional config dependency
-  // tracking. Relative local imports have an explicit source boundary.
-  if(!specifier.startsWith('.'))throw Error('Only relative type imports are supported');
-  const base=path.resolve(path.dirname(mod.file),specifier),root=fs.realpathSync(resolved.appRoot);
-  for(const suffix of ['', '.ts','.tsx','/index.ts','/index.tsx']){
+  const root=fs.realpathSync(resolved.appRoot);
+  const bases=specifier.startsWith('.')?[path.resolve(path.dirname(mod.file),specifier)]:(paths||(paths=require('./component-type-paths.cjs')(resolved.appRoot))).candidates(specifier);
+  for(const base of bases)for(const suffix of ['', '.ts','.tsx','/index.ts','/index.tsx']){
    const candidate=base+suffix;if(!fs.existsSync(candidate)||!fs.statSync(candidate).isFile()||! /\.[jt]sx?$/.test(candidate))continue;
    const file=fs.realpathSync(candidate);if(!file.startsWith(root+path.sep)||file.split(path.sep).includes('node_modules'))throw Error('Type module is outside this project');
    if(modules.has(file))return modules.get(file);
@@ -65,6 +63,6 @@ module.exports=function typeModules(resolved,def,ast){
   },
   builtin(node,name){return !(owners.get(node)||main).shadowed.has(name);},
   inherit(node,from){owners.set(node,owners.get(from)||main);return node;},
-  metadata(){const dependencies=[...modules.values()].map(({file,source})=>({file,source}));return {dependencies,revision:dependencies.length===1?contentHash(def.source):contentHash(JSON.stringify(dependencies.map(d=>[d.file,contentHash(d.source)]).sort((a,b)=>a[0].localeCompare(b[0]))))};}
+  metadata(){const dependencies=[...modules.values()].map(({file,source})=>({file,source})).concat(paths?.dependencies()||[]);return {dependencies,revision:dependencies.length===1?contentHash(def.source):contentHash(JSON.stringify(dependencies.map(d=>[d.file,d.source===null?null:contentHash(d.source)]).sort((a,b)=>a[0].localeCompare(b[0]))))};}
  };
 };

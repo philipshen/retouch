@@ -315,3 +315,46 @@ test('qualified property types refuse private names, type-member guesses and unb
   });try{assert.equal(props.describe(f.resolved,'title').choices,undefined);}finally{f.close();}
  }
 });
+
+function aliasFiles(configName='tsconfig.json'){
+ return {'Card.tsx':'import type {Props} from "@/contracts";export default function Card({title="small"}:Props){return <h1>{title}</h1>}',[configName]:'{"compilerOptions":{"paths":{"@/*":["./types/*"]}}}','types/contracts.ts':'export interface Props {title?:"small"|"large"}'};
+}
+test('project path aliases expose imported choices and guard root config changes',()=>{
+ const f=importedTypes(aliasFiles());try{
+  const info=props.describe(f.resolved,'title');assert.deepEqual(info.choices,['small','large']);const op={name:'title',value:'large',fileHash:f.resolved.hash,definitionHash:info.definitionHash},plan=props.plan(f.resolved,op);assert.ok(plan.ok,plan.reason);assert.equal(plan.edits.length,4);
+  fs.appendFileSync(require('node:path').join(f.root,'tsconfig.json'),'\n// changed');assert.equal(props.plan(f.resolved,op).ok,false);assert.equal(require('../src/transactions.cjs').applyPlan(f.root,plan).ok,false);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.resolved.source);
+ }finally{f.close();}
+});
+test('jsconfig aliases guard the absence of a higher-priority tsconfig without creating it',()=>{
+ const f=importedTypes(aliasFiles('jsconfig.json'));try{
+  const info=props.describe(f.resolved,'title'),op={name:'title',value:'large',fileHash:f.resolved.hash,definitionHash:info.definitionHash},plan=props.plan(f.resolved,op);assert.ok(plan.ok,plan.reason);
+  const absent=plan.edits.find(e=>e.file.endsWith('/tsconfig.json'));assert.equal(absent.before,null);assert.equal(absent.after,null);
+  const applied=require('../src/transactions.cjs').applyPlan(f.root,plan);assert.ok(applied.ok);assert.equal(applied.edits.length,1);assert.equal(fs.existsSync(absent.file),false);
+  fs.writeFileSync(f.resolved.file,f.resolved.source);fs.writeFileSync(absent.file,'{}');assert.equal(require('../src/transactions.cjs').applyPlan(f.root,plan).ok,false);assert.equal(props.plan(f.resolved,op).ok,false);
+ }finally{f.close();}
+});
+test('path mapping uses exact matches, longest prefixes, suffixes and ordered target fallbacks',()=>{
+ for(const paths of [
+  {'@/*':['./wrong/*'],'@/contracts':['./types/contracts']},
+  {'*':['./wrong/*'],'@/*':['./types/*']},
+  {'@/*tracts':['./types/*tracts']},
+  {'@/*':['./missing/*','./types/*']}
+ ]){const f=importedTypes({...aliasFiles(),'tsconfig.json':JSON.stringify({compilerOptions:{paths}}),'wrong/contracts.ts':'export interface Props {title?:boolean}'});try{assert.deepEqual(props.describe(f.resolved,'title').choices,['small','large']);}finally{f.close();}}
+});
+test('relative JSONC config inheritance preserves path origins and guards every inherited source',()=>{
+ const f=importedTypes({...aliasFiles(),'tsconfig.json':'{ /* local config */ "extends": ["./config/first", "./config/second"], "compilerOptions": {"strict":true,}, }',
+  'config/first.json':'{"compilerOptions":{"paths":{"@/*":["../wrong/*"]}}}',
+  'config/second.json':'{"compilerOptions":{"paths":{"@/*":["../types/*"]}}}',
+  'wrong/contracts.ts':'export interface Props {title?:boolean}'
+ });try{
+  const info=props.describe(f.resolved,'title');assert.deepEqual(info.choices,['small','large']);const op={name:'title',value:'large',fileHash:f.resolved.hash,definitionHash:info.definitionHash},plan=props.plan(f.resolved,op);assert.ok(plan.ok,plan.reason);assert.equal(plan.edits.length,6);
+  fs.appendFileSync(require('node:path').join(f.root,'config/second.json'),'\n// revision');assert.equal(props.plan(f.resolved,op).ok,false);assert.equal(require('../src/transactions.cjs').applyPlan(f.root,plan).ok,false);
+ }finally{f.close();}
+ const g=importedTypes({...aliasFiles(),'tsconfig.json':'{"extends":"./config/base","compilerOptions":{"paths":{"@/*":["*"]}}}','config/base.json':'{"compilerOptions":{"baseUrl":"../types"}}'});try{assert.deepEqual(props.describe(g.resolved,'title').choices,['small','large']);}finally{g.close();}
+});
+test('path aliases reject executable config, cycles, package inheritance and project escapes',()=>{
+ for(const config of ['{"compilerOptions": (()=>({paths:{"@/*":["./types/*"]}}))()}','{"extends":"./tsconfig"}','{"extends":"external/config"}','{"compilerOptions":{"paths":{"@/*/*":["./types/*"]}}}','{"compilerOptions":{"paths":{"@/*":"./types/*"}}}','{"compilerOptions":{}}; globalThis.bad=true']){
+  const f=importedTypes({...aliasFiles(),'tsconfig.json':config});try{assert.equal(props.describe(f.resolved,'title').choices,undefined);}finally{f.close();}
+ }
+ const outside=makeApp({'contracts.ts':'export interface Props {title?:"small"|"large"}'}),f=importedTypes({...aliasFiles(),'tsconfig.json':JSON.stringify({compilerOptions:{paths:{'@/*':[outside+'/*']}}})});try{assert.equal(props.describe(f.resolved,'title').choices,undefined);}finally{f.close();cleanup(outside);}
+});
