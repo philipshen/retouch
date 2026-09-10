@@ -6,6 +6,7 @@
   let focusPreviews=false;try{focusPreviews=localStorage.getItem(storageKey+'.focus')==='true';}catch{}
   let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore,allPreviews,revealAll;
   const collapsedScreens=new WeakSet(),sizeHistories=new WeakMap(),nameHistories=new WeakMap(),lockedRatios=new WeakSet();let previewSerial=0;
+  const marqueeCleanup=new WeakMap();
   const removed=[],orderUndo=[],orderRedo=[];let removals=0,undoOrder,redoOrder;
   function clearOrderHistory(){orderUndo.length=0;orderRedo.length=0;}
   const valid=v=>Number.isInteger(v)&&v>=240&&v<=7680;
@@ -158,7 +159,7 @@
     const focus=document.createElement('button');focus.id='comparisonFocus';focus.type='button';focus.className='control-button';focus.textContent='Focus previews';focus.setAttribute('aria-pressed',String(focusPreviews));focus.title='Hide screen-management controls to give more space to previews. Toggle again to restore the controls.';
     focus.onclick=()=>{focusPreviews=!focusPreviews;rail.classList.toggle('focus-previews',focusPreviews);focus.setAttribute('aria-pressed',String(focusPreviews));try{localStorage.setItem(storageKey+'.focus',String(focusPreviews));}catch{}layoutPreviews();};rail.append(focus);
     const heading=document.createElement('h2');heading.textContent='Compare screens';rail.append(heading);
-    const hint=document.createElement('p');hint.className='hint';hint.id='comparisonNavigationHint';hint.textContent='Click a layer to edit on the main canvas; Shift-click to add or remove it from the selection. Style scope stays unchanged. Focus a preview and use arrow keys, Page Up/Down, or Home/End to scroll the panel at its center. Enter opens its size.';rail.append(hint);
+    const hint=document.createElement('p');hint.className='hint';hint.id='comparisonNavigationHint';hint.textContent='Click a layer to edit on the main canvas; Shift-click to add or remove it. Drag from empty space to select a group. Style scope stays unchanged. Focus a preview and use arrow keys, Page Up/Down, or Home/End to scroll the panel at its center. Enter opens its size.';rail.append(hint);
     scopeSummary=document.createElement('p');scopeSummary.className='hint';scopeSummary.setAttribute('aria-label','Comparison style scope');scopeSummary.textContent='Style scope: '+scope.label;rail.append(scopeSummary);
     const files=document.createElement('div');files.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px';
     allPreviews=document.createElement('button');allPreviews.id='comparisonVisibility';allPreviews.type='button';allPreviews.className='control-button';allPreviews.title='Collapse previews to manage screen sizes, or expand them again. Keeps each page loaded.';
@@ -250,6 +251,28 @@
       const surface=document.createElement('div');surface.className='compare-surface';surface.setAttribute('aria-hidden','true');surface.append(frame);rail.append(surface);
       const overlay=document.createElement('div');overlay.className='compare-overlay';
       const message=document.createElement('p');message.className='hint';
+      const marquee=document.createElement('div');marquee.className='selection-marquee';marquee.hidden=true;viewport.append(marquee);let stopMarquee=null;
+      function attachMarquee(){
+        stopMarquee?.();stopMarquee=null;
+        try{
+          const d=frame.contentDocument;if(!d?.body||d.URL==='about:blank')return;
+          const ready=()=>{try{const loc=frame.contentWindow.location;return open&&!card.inert&&!previewBody.hidden&&frame.contentDocument===d&&loc.origin===location.origin&&loc.pathname+loc.search+loc.hash===path()&&window.RetouchCanvasSelection?.canMarquee();}catch{return false;}};
+          stopMarquee=window.RetouchMarquee.mount({document:d,frame,surface:viewport,
+            enabled:ready,
+            selectable:node=>window.RetouchCanvasSelection.selectable(node),
+            outerBackground:(event,point)=>{const node=d.elementFromPoint(point.x,point.y);return window.RetouchMarquee.background(node)||node&&!window.RetouchCanvasSelection.selectable(node);},
+            onChange:rect=>{marquee.hidden=!rect;if(rect){const scale=viewport.clientWidth/width;for(const key of ['left','top','width','height'])marquee.style[key]=rect[key]*scale+'px';}},
+            onSelect:(nodes,options)=>{
+              if(!ready())return;
+              if(nodes.length>100){message.textContent='Select up to 100 layers. Draw a smaller selection.';return;}
+              const all=[...d.querySelectorAll('[data-rt],[data-rt-i]')],selection=nodes.map(node=>{const hostId=node.getAttribute('data-rt'),instanceId=node.getAttribute('data-rt-i');return {hostId,instanceId,occurrence:all.filter(el=>el.getAttribute('data-rt')===hostId&&el.getAttribute('data-rt-i')===instanceId).indexOf(node)};});
+              window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,selection,append:options.append,occurrence:0,route:path()}}));
+            }
+          });
+        }catch{}
+      }
+      frame.addEventListener('load',attachMarquee);marqueeCleanup.set(frame,()=>{stopMarquee?.();frame.removeEventListener('load',attachMarquee);});
+
       const scopeMessage=document.createElement('p');scopeMessage.className='compare-scope-message';scopeMessage.style.cssText='font:11px/1.4 system-ui;color:#aeb3bd;margin:8px 0;';scopeMessage.setAttribute('aria-label',name+' scope coverage');
       const reveal=document.createElement('button');reveal.type='button';reveal.className='control-button';reveal.textContent='Show selection';reveal.setAttribute('aria-label','Show selection in '+name+' comparison');reveal.disabled=true;
       let revealSelection=null,revealIndex=-1;
@@ -409,7 +432,7 @@
       },{passive:false});
       cards.push({card,frame,surface,previewBody,setCollapsed,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal,up,down,move});
   }
-  function unload(frame){return new Promise(resolve=>{
+  function unload(frame){marqueeCleanup.get(frame)?.();marqueeCleanup.delete(frame);return new Promise(resolve=>{
     let timeout;
     const done=()=>{clearTimeout(timeout);frame.removeEventListener('load',done);frame.remove();resolve();};
     frame.addEventListener('load',done);timeout=setTimeout(done,1000);

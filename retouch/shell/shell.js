@@ -89,7 +89,7 @@ function scopedInfo(info) { return {...info,styleScope,anchorInheritedClasses:Re
 
 let lockStorage;try{lockStorage=sessionStorage;}catch{}
 const layerLocks=RetouchLayerLocks.create({route:()=>currentPageRoute()||'',storage:lockStorage,scope:window.__RT_RENDERING?.stateScope});
-window.RetouchCanvasSelection={pick:(node,x,y)=>layerLocks.pick(node,x,y)};
+window.RetouchCanvasSelection={pick:(node,x,y)=>layerLocks.pick(node,x,y),selectable:node=>!layerLocks.locked(node),canMarquee:()=>window.__RT_RENDERING?.selectionStyling===true&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests};
 const historyRoutes = new Map();
 function currentPageRoute(){try{const loc=iframe.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
 const editorHistory = RetouchHistory.createHistory({apply:restoreHistory,onChange:syncHistoryControls,storage:lockStorage,scope:window.__RT_RENDERING?.stateScope,initialState:window.__RT_RENDERING?.history,capture:entry=>({route:historyRoutes.get(entry.undoId)||currentPageRoute()})});
@@ -454,6 +454,7 @@ window.addEventListener('retouch:comparison-edit',async event=>{
   if(panelTasks||undoBusy||sourceRequests||!['width','height'].every(key=>Number.isInteger(detail[key])&&detail[key]>=240&&detail[key]<=7680))return;
   const validId=id=>id===null||id===undefined||/^[a-f0-9]{10}$/.test(id);
   if(!validId(detail.hostId)||!validId(detail.instanceId)||!Number.isInteger(detail.occurrence)||detail.occurrence<0||detail.occurrence>10000)return;
+  const group=detail.selection;if(group!==undefined&&(!Array.isArray(group)||group.length>100||group.some(item=>!item||!item.hostId||!validId(item.hostId)||!validId(item.instanceId)||!Number.isInteger(item.occurrence)||item.occurrence<0||item.occurrence>10000)))return;
   await commitInlineEdit();if(serial!==comparisonSelectionSerial)return;
   const sameRoute=()=>{try{const loc=iframe.contentWindow.location;return loc.pathname+loc.search+loc.hash===detail.route;}catch{return false;}};
   if(!sameRoute())return toast('The page changed. Select the layer in the refreshed comparison.','err');
@@ -463,11 +464,19 @@ window.addEventListener('retouch:comparison-edit',async event=>{
     if(!sel)return toast('Select a layer before choosing its style scope.','err');
     styleScope=sel.info.cssAuthoring?`min-[${detail.width}px]:`:RetouchResponsive.atWidth(doc(),detail.width).prefix;renderPanel();
   }
-  if(!detail.hostId&&!detail.instanceId)return;
+  if(group?.length===0){if(!detail.append)clearSelection();return;}
+  if(!group&&!detail.hostId&&!detail.instanceId)return;
   const classification=classificationSerial;
   for(let attempt=0;attempt<60;attempt++){
     await new Promise(resolve=>setTimeout(resolve,50));
     if(serial!==comparisonSelectionSerial||classification!==classificationSerial||!sameRoute())return;
+    if(group){
+      if(iframe.contentWindow.innerWidth!==detail.width||iframe.contentWindow.innerHeight!==detail.height)continue;
+      const nodes=[...doc().querySelectorAll('[data-rt],[data-rt-i]')],targets=group.map(item=>nodes.filter(el=>el.getAttribute('data-rt')===item.hostId&&el.getAttribute('data-rt-i')===item.instanceId)[item.occurrence]);
+      if(targets.some(target=>!target))continue;
+      if(targets.some(target=>layerLocks.locked(target)))return toast('A selected layer is now locked. Select the group again.','err');
+      await selectMany(targets,{append:detail.append===true});return;
+    }
     const matches=[...doc().querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===detail.hostId&&el.getAttribute('data-rt-i')===detail.instanceId),target=matches[detail.occurrence];
     if(!target||iframe.contentWindow.innerWidth!==detail.width)continue;
     if(layerLocks.locked(target))return toast('This layer is locked. Select it in Layers to edit.','err');

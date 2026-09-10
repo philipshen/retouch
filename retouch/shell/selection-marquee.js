@@ -18,7 +18,7 @@
   if(el.closest('[contenteditable="true"], [role="button"], [role="link"]'))return false;
   return !!el.querySelector('[data-rt], [data-rt-i]')&&![...el.childNodes].some(node=>node.nodeType===3&&node.textContent.trim());
  }
- function mount({document:d,frame,surface,enabled,onChange,onSelect,onClick,selectable=()=>true}){
+ function mount({document:d,frame,surface,enabled,onChange,onSelect,onClick,selectable=()=>true,outerBackground}){
   const w=d.defaultView;let state=null,ignoreClick=null,canceledCapture=null;const cleanup=[];
   function listen(target,type,handler,capture=false){target.addEventListener(type,handler,capture);cleanup.push(()=>target.removeEventListener(type,handler,capture));}
   function point(e,outer){if(!outer)return {x:e.clientX,y:e.clientY};const r=frame.getBoundingClientRect(),scale=r.width/w.innerWidth;return {x:(e.clientX-r.left)/scale,y:(e.clientY-r.top)/scale};}
@@ -33,7 +33,7 @@
    if(current.moved){ignoreClick={...current.rawLast,outer:current.outer,time:Date.now()};if(commit)onSelect(pick(d,clip(rectangle(current.start,current.last),w.innerWidth,w.innerHeight),selectable),{append:current.append});}
   }
   function down(e,outer){
-   const allowed=outer?[surface,root.document.getElementById('canvasExtent'),root.document.getElementById('siteStage')].includes(e.target):background(e.target)||!selectable(e.target);
+   const allowed=outer?(outerBackground?outerBackground(e,point(e,true)):[surface,root.document.getElementById('canvasExtent'),root.document.getElementById('siteStage')].includes(e.target)):background(e.target)||!selectable(e.target);
    if(state||!enabled()||e.button!==0||!allowed||(outer&&(!frame.getBoundingClientRect().width||!w.innerWidth)))return;
    e.preventDefault();e.stopImmediatePropagation();const start=point(e,outer),capture=outer?surface:e.target;
    state={pointerId:e.pointerId,target:e.target,start,last:start,rawLast:{x:e.clientX,y:e.clientY},outer,capture,scale:frame?frame.getBoundingClientRect().width/w.innerWidth:1,moved:false,append:e.shiftKey||e.metaKey||e.ctrlKey};capture.setPointerCapture(e.pointerId);
