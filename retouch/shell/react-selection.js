@@ -2,9 +2,11 @@
  'use strict';
  const fields={opacity:{label:'Opacity (%)',matches:t=>/^opacity-|^\[opacity:/.test(t),token:v=>'opacity-['+v/100+']'},visibility:{label:'Visibility',matches:t=>/^(visible|invisible|collapse)$|^\[visibility:/.test(t),options:['visible','hidden','collapse'],token:v=>({visible:'visible',hidden:'invisible',collapse:'collapse'})[v]},'mix-blend-mode':{label:'Blend mode',matches:t=>/^mix-blend-|^\[mix-blend-mode:/.test(t),options:['normal','multiply','screen','overlay','darken','lighten','color-dodge','color-burn','hard-light','soft-light','difference','exclusion','hue','saturation','color','luminosity'],token:v=>'mix-blend-'+v},isolation:{label:'Blend group',matches:t=>/^(isolate|isolation-auto)$|^\[isolation:/.test(t),options:['auto','isolate'],token:v=>v==='auto'?'isolation-auto':'isolate'}};
  const inspector=()=>root.RetouchInspector||require('./inspector.js');
+ const dimensionKeywords=['auto','fit-content'],validDimension=value=>dimensionKeywords.includes(value)||Number.isFinite(value)&&value>=0&&value<=100000;
+ const dimensionToken=(axis,value)=>axis+'-'+(value==='auto'?'auto':value==='fit-content'?'fit':'['+value+'px]');
  Object.assign(fields,{
-  width:{label:'Width (px)',min:0,max:100000,matches:t=>/^w-|^\[width:/.test(t),token:v=>'w-['+v+'px]'},
-  height:{label:'Height (px)',min:0,max:100000,matches:t=>/^h-|^\[height:/.test(t),token:v=>'h-['+v+'px]'},
+  width:{label:'Width (px)',min:0,max:100000,valid:validDimension,matches:t=>/^w-|^\[width:/.test(t),token:v=>dimensionToken('w',v)},
+  height:{label:'Height (px)',min:0,max:100000,valid:validDimension,matches:t=>/^h-|^\[height:/.test(t),token:v=>dimensionToken('h',v)},
   'font-family':{label:'Font family',picker:true,valid:v=>!!inspector().fontFamilyClass(v),matches:t=>inspector().fontFamilyToken(t),token:v=>inspector().fontFamilyClass(v)},
   'font-size':{label:'Font size (px)',min:0,max:2000,matches:t=>inspector().fontSizeToken(t),token:v=>'[font-size:'+v+'px]'},
   'font-weight':{label:'Font weight (1–1000)',min:1,max:1000,step:1,matches:t=>inspector().fontWeightToken(t),token:v=>'[font-weight:'+v+']'},
@@ -16,7 +18,7 @@
  });
  function decoration(css,property){return (property==='width'?['left','right']:['top','bottom']).reduce((sum,side)=>sum+(parseFloat(css.getPropertyValue('padding-'+side))||0)+(parseFloat(css.getPropertyValue('border-'+side+'-width'))||0),0);}
  function dimensionSize(css,property){const value=parseFloat(css.getPropertyValue(property));return Number.isFinite(value)?value+(css.boxSizing==='content-box'?decoration(css,property):0):NaN;}
- function dimensionValue(css,property,value){if(value===null)return null;const extra=decoration(css,property);if(value<extra)throw Error('The requested size is smaller than a selected layer’s padding and borders.');return Math.round((value-(css.boxSizing==='content-box'?extra:0))*1e6)/1e6;}
+ function dimensionValue(css,property,value){if(value===null||dimensionKeywords.includes(value))return value;const extra=decoration(css,property);if(value<extra)throw Error('The requested size is smaller than a selected layer’s padding and borders.');return Math.round((value-(css.boxSizing==='content-box'?extra:0))*1e6)/1e6;}
  function change(classes,scope,property,value,document=null,relative=false){
   if(relative&&(!['line-height','letter-spacing'].includes(property)||!Number.isFinite(value)||value<(property==='line-height'?0:-100)||value>1000))throw Error('Choose a supported relative typography value.');
   const field=fields[property];if(!field||value!==null&&!(property==='line-height'&&value==='normal')&&(field.valid?!field.valid(value):field.options?!field.options.includes(value):!Number.isFinite(value)||value<(field.min??0)||value>(field.max??100)||field.step===1&&!Number.isInteger(value)))throw Error('Choose a supported shared style value.');
@@ -79,9 +81,10 @@
    input.value=display;input.disabled=blocked;input.title=blocked?'An inline style controls this property on a selected layer. Edit that source style first.':'';
    const write=value=>{try{save(Object.fromEntries(infos.map((info,i)=>[info.id,change(info.className,scope,property,dimension?dimensionValue(elements[i].ownerDocument.defaultView.getComputedStyle(elements[i]),property,value):value,elements[i].ownerDocument)])));}catch(error){I.note(sec,error.message,'refused');}};
    input.onchange=()=>{if(input.value!==''&&input.checkValidity())write(field.options?input.value:Number(input.value));};input.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();input.value=display;input.blur();}else if(event.key==='Enter'){event.preventDefault();event.stopPropagation();input.blur();}};I.field(sec,'Shared '+field.label,input);
+   if(dimension){const presets=root.document.createElement('div');presets.className='stack-presets';for(const [value,label]of [['auto','Automatic shared '+property],['fit-content','Fit shared '+property+' to content']]){const button=I.button(label,()=>write(value));button.disabled=blocked;presets.append(button);}sec.append(presets);}
    const reset=I.button('Reset shared '+field.label.toLowerCase(),()=>write(null));try{reset.disabled=infos.every(info=>change(info.className,scope,property,null)===(info.className||''));}catch(error){reset.disabled=true;reset.title=error.message;}sec.append(reset);
   }
-  I.note(sec,'Width and height include padding and borders. Each layer’s min/max constraints still apply.');
+  I.note(sec,'Pixel sizes include padding and borders. Automatic sizing follows the page layout; fit content follows each layer’s content within the available space. Existing min/max constraints still apply.');
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
  const api={change,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;

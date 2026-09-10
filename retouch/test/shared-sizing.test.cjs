@@ -7,10 +7,30 @@ test('shared dimensions preserve coupled size utilities and independent companio
  const height=shared.change(width,'md:','height',60);assert.ok(height.includes('md:!h-[60px]'));assert.ok(height.includes('md:!w-[200px]'));assert.ok(height.includes('md:!size-[120px]'));
  const inherited=shared.change('!size-[80px]','min-[900px]:','width',200,{createElement:()=>({style:{},remove(){}}),documentElement:{append(){}},defaultView:{getComputedStyle:()=>({fontSize:'16px'})},styleSheets:[]});assert.ok(inherited.includes('min-[900px]:!w-[200px]'));
  assert.throws(()=>shared.change('md:[inline-size:2rem]','md:','width',200),/logical sizing/);
- for(const value of [-1,Infinity,100001,'auto'])assert.throws(()=>shared.change(source,'md:','width',value),/supported shared style value/);
+ for(const value of [-1,Infinity,100001,'100%'])assert.throws(()=>shared.change(source,'md:','width',value),/supported shared style value/);
 });
 
 test('shared dimensions measure outer boxes and preserve content-box padding',()=>{
  const css={boxSizing:'content-box',getPropertyValue:property=>({width:'140px',height:'100px','padding-left':'10px','padding-right':'10px','padding-top':'10px','padding-bottom':'10px','border-left-width':'2px','border-right-width':'2px','border-top-width':'2px','border-bottom-width':'2px'})[property]||''};
  assert.equal(shared.dimensionSize(css,'width'),164);assert.equal(shared.dimensionSize(css,'height'),124);assert.equal(shared.dimensionValue(css,'width',200),176);assert.equal(shared.dimensionValue(css,'height',60),36);assert.equal(shared.dimensionValue(css,'height',null),null);assert.throws(()=>shared.dimensionValue(css,'width',20),/padding and borders/);assert.equal(shared.dimensionValue({...css,boxSizing:'border-box'},'width',200),200);
+});
+
+test('automatic and fit-content shared sizes override only one axis with retained priority',()=>{
+ const source='size-[80px] md:!size-[120px]';
+ assert.ok(shared.change(source,'md:','width','auto').includes('md:!w-auto'));
+ const fit=shared.change(source,'md:','width','fit-content');assert.ok(fit.includes('md:!w-fit'));assert.ok(fit.includes('md:!size-[120px]'));
+ const height=shared.change(fit,'md:','height','auto');assert.ok(height.includes('md:!h-auto'));assert.ok(height.includes('md:!w-fit'));
+ for(const keyword of ['auto','fit-content'])assert.equal(shared.dimensionValue({boxSizing:'content-box',getPropertyValue:()=> '12px'},'width',keyword),keyword);
+});
+
+test('resetting a bound dimension replaces its important axis override and preserves fallback utilities',()=>{
+ const classes=require('../src/variable-classes.cjs');
+ for(const [property,axis]of [['width','w'],['height','h']]){
+  const source='md:'+axis+'-40 md:!'+axis+'-fit md:!opacity-50';
+  // Disjoint known explicit properties are allowed; unknown important utilities
+  // retain the existing refusal, including opacity shorthand here.
+  assert.throws(()=>classes.compose(source,property,'24px','md:'),/conflicting important/);
+  const input=source.replace('md:!opacity-50','md:![color:red]'),result=classes.compose(input,property,'24px','md:');assert.ok(result.includes('md:!['+property+':24px]'));assert.ok(result.includes('md:'+axis+'-40'));assert.ok(!result.includes(axis+'-fit'));assert.ok(result.includes('md:![color:red]'));
+  assert.equal(classes.compose('md:'+axis+'-40 md:'+axis+'-auto!',property,null,'md:'),'md:'+axis+'-40');
+ }
 });

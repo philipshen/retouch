@@ -7905,3 +7905,40 @@ The original Liquid fixture accidentally edited a stylesheet selector instead of
 the layer class; its setup was corrected to target the class attribute. These are
 local React/Next and LiquidJS/Tailwind checks, not universal-site or live Shopify
 verification. Full Figma parity remains incomplete and native launches stay paused.
+
+### Shared automatic and fit-content sizing (2026-09-10)
+
+React and Liquid shared dimensions now offer Automatic and Fit content actions
+for each axis, alongside fixed outer pixel sizing and Reset. Automatic follows
+the browser's layout behavior; fit-content follows the content within available
+space. These keyword values are not converted as pixel/content-box dimensions.
+They retain the same scoped important priority and preserve coupled size classes
+and the companion axis. Existing inline/logical sizing restrictions and min/max
+constraints still apply. This is CSS automatic/fit-content behavior, not a claim
+that every Figma hug/fill mode is implemented.
+
+The expanded browser flow verifies automatic content height, text-measured fitted
+width including padding/borders, fitted height, automatic full-width block layout,
+phone isolation and exact source Undo. It passes React and Liquid in Chromium
+and WebKit: `/private/tmp/retouch-react-intrinsic-sizing-final-chromium.log`,
+`/private/tmp/retouch-liquid-intrinsic-sizing-final-chromium.log`,
+`/private/tmp/retouch-react-intrinsic-sizing-webkit.log`, and
+`/private/tmp/retouch-liquid-intrinsic-sizing-webkit.log`.
+The screenshot `/private/tmp/retouch-intrinsic-sizing.png` was inspected. Its
+capture now waits for the returning screen layout and focuses the sizing field,
+avoiding a detached-element race during inspector rebuilding.
+
+Inspection also reproduced a binding integration failure: resetting a width
+variable after an important w-auto/w-fit override was rejected as an unknown
+important utility. Variable composition now replaces important utilities for the
+specific width/height axis while retaining ordinary fallback sizing utilities,
+other dimensions and existing refusal of unrelated ambiguous important utilities.
+Real multi-selection flows bind width, apply automatic width, reset the binding,
+and Undo every step exactly in React Chromium and Liquid WebKit:
+`/private/tmp/retouch-react-intrinsic-binding-reset.log` and
+`/private/tmp/retouch-liquid-intrinsic-binding-reset.log`.
+All 592 unit tests pass (`/private/tmp/retouch-intrinsic-sizing-final-units.log`).
+
+Universal site support, complete hug/fill semantics, broader variable/runtime mode
+behavior, live Shopify and full Figma parity remain unfinished. Native launches
+remain paused.
