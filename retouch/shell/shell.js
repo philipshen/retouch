@@ -2340,14 +2340,27 @@ async function setLayerLocks(el,value){
   layers.refresh();
   toast(value?'Selection locked on the canvas. Select it in Layers to edit.':'Selection unlocked.','ok');
 }
+let opacityEntry=null;
+function cancelOpacityEntry(){if(opacityEntry){clearTimeout(opacityEntry.timer);opacityEntry=null;}}
 function opacityShortcut(e){
-  if(e.defaultPrevented||e.isComposing||e.metaKey||e.ctrlKey||e.altKey||e.shiftKey||!/^\d$/.test(e.key))return false;
-  if(mode!=='edit'||editing||!sel||e.target.isContentEditable||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable="true"],[contenteditable=""]'))return false;
+  if(opacityEntry&&(e.key==='Escape'||(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z')){cancelOpacityEntry();e.preventDefault();e.stopImmediatePropagation();return true;}
+  if(e.defaultPrevented||e.isComposing||e.metaKey||e.ctrlKey||e.altKey||e.shiftKey||!/^\d$/.test(e.key)){cancelOpacityEntry();return false;}
+  if(mode!=='edit'||editing||!sel||e.target.isContentEditable||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable="true"],[contenteditable=""]')){cancelOpacityEntry();return false;}
   const input=panelBody.querySelector('input[aria-label="Shared Opacity (%)"],input[aria-label="Opacity (%)"]');
-  if(!input||input.matches(':disabled')||input.closest('[inert]'))return false;
+  if(!input||input.matches(':disabled')||input.closest('[inert]')){cancelOpacityEntry();return false;}
   e.preventDefault();e.stopImmediatePropagation();
   if(e.repeat||panelTasks||undoBusy||sourceRequests)return true;
-  input.value=String(e.key==='0'?100:Number(e.key)*10);input.dispatchEvent(new Event('change',{bubbles:true}));return true;
+  const key=JSON.stringify([(sel.multiple||[sel.info]).map(info=>info.id).sort(),styleScope]);
+  let digits=opacityEntry?.input===input&&opacityEntry.key===key?opacityEntry.digits+e.key:e.key;
+  if(digits.length>3||Number(digits)>100)digits=e.key;
+  cancelOpacityEntry();
+  const entry={input,key,digits};opacityEntry=entry;
+  entry.timer=setTimeout(()=>{
+    if(opacityEntry!==entry)return;opacityEntry=null;
+    if(!input.isConnected||input.matches(':disabled')||input.closest('[inert]')||mode!=='edit'||editing||!sel||panelTasks||undoBusy||sourceRequests||document.querySelector('dialog[open]')||key!==JSON.stringify([(sel.multiple||[sel.info]).map(info=>info.id).sort(),styleScope]))return;
+    input.value=String(digits.length===1?(digits==='0'?100:Number(digits)*10):Number(digits));input.dispatchEvent(new Event('change',{bubbles:true}));
+  },450);
+  return true;
 }
 function canvasZoomShortcut(e){
   if(!e.shiftKey||e.metaKey||e.ctrlKey||e.altKey||!['Digit1','Digit2'].includes(e.code))return false;

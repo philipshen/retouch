@@ -108,7 +108,7 @@
   function field(parent, label, control) {
     const row = document.createElement('label'); row.className = 'inspector-field';
     const text = document.createElement('span'); text.textContent = label;
-    if(['Opacity (%)','Shared Opacity (%)'].includes(label))control.title='On the canvas: keys 1–9 set 10%–90% opacity; 0 sets 100%. Typing here edits the value normally.';
+    if(['Opacity (%)','Shared Opacity (%)'].includes(label))control.title='On the canvas: keys 1–9 set 10%–90% opacity; 0 sets 100%. Type digits quickly for an exact percentage (25, 05, 00). Escape cancels. Typing here edits normally.';
     control.setAttribute('aria-label', label); row.append(text, control); parent.append(row); return control;
   }
   function select(parent, label, choices, value, onChange) {
