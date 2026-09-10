@@ -8601,3 +8601,41 @@ identity, drag insertion, swap and complete variant/shared-library behavior rema
 incomplete. This does not prove arbitrary-framework or remote-site insertion.
 Full Figma Design parity and trusted brew distribution remain unachieved. Native
 app launches and native launch tests remain paused.
+
+
+### Required-property form for component insertion
+
+Component insertion now asks for required supported primitive properties before
+writing source. Text uses a multiline field, numbers accept finite fractional
+values, booleans retain true/false as values, and finite unions use declared
+choices. Optional/defaulted properties remain omitted from the new usage.
+Components needing no required values retain one-click insertion. Unsupported
+required values are identified in the form and cannot be submitted; cancellation
+returns to the library without a write.
+
+A shared insertion schema now supplies both definition metadata and writer
+validation, including requiredness, supported types/choices and a revision over
+the definition/type dependencies and resolution checks. The shell submits this
+revision. If the contract changes while the form is open, the writer refuses the
+operation and the form keeps its draft and displays the error. The library stays
+open after Cancel/Escape. The form closes only after successful insertion.
+
+Validation: 680 unit tests passed. New source tests check required control
+metadata, optional defaults, empty string/zero/false values and stale imported
+contracts. Chromium and WebKit passed the complete insertion/property/library
+workflow, including Escape cancellation, missing-number/choice validation,
+multiline text, fractional width, false boolean, finite choice, unchanged optional
+default, an imported type edit while the form is open, retained draft after
+refusal, insertion source/render/inspector checks, exact Undo/Redo and existing
+branch/duplication behavior. Both browser runs retained strict empty page-error
+assertions and ended with exit zero. The form fit within a 720px workspace in the
+reviewed screenshot /private/tmp/retouch-required-insert-ui.png.
+Logs: /private/tmp/retouch-required-insert-units.log,
+/private/tmp/retouch-required-insert-chromium.log and
+/private/tmp/retouch-required-insert-webkit.log.
+
+Untyped/unsupported required values, function/node props, complete TypeScript
+contracts, optional property configuration before insertion, import reuse,
+client/server boundaries, full variants and arbitrary-site authoring remain
+incomplete. Full Figma Design parity and trusted brew distribution are unachieved.
+Native app launches and native launch tests remain paused.

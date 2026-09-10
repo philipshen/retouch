@@ -396,3 +396,10 @@ details.advanced > summary:hover { color: var(--ink); }
 .component-library-actions select { padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:12px var(--font); }
 .component-workspace.component-source-only { display:block;overflow:auto; }
 .component-source-only .component-canvas { margin-bottom:18px; }
+.component-insert { width:min(540px,92vw); }
+.component-insert fieldset { border:0;padding:0;margin:0;min-width:0; }
+.component-insert label { display:flex;flex-direction:column;gap:6px;margin:14px 0;font-size:13px; }
+.component-insert input,.component-insert textarea,.component-insert select { width:100%;box-sizing:border-box;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit; }
+.component-insert textarea { resize:vertical;min-height:60px; }
+.component-insert .component-library-actions { justify-content:flex-end;margin-top:18px; }
+.component-insert [role=alert] { font-size:12px;overflow-wrap:anywhere; }

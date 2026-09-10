@@ -1365,14 +1365,18 @@ async function insertLibraryComponent(item,target,isActive){
  if(!target)throw Error('Select a frame before inserting a component.');
  if(panelTasks||sourceRequests||undoBusy)throw Error('Wait for the current edit to finish.');
  const definition=await api('GET','/rt/__api/component-definition?id='+item.definitionId);
- if(!isActive())return;if(!definition?.ok)throw Error(definition?.reason||'Refresh the component library.');
- busyPanel(true);try{
-  const result=await api('POST','/rt/__api/op',{type:'insertComponent',id:target.id,fileHash:target.hash,definitionFile:definition.file,definitionId:definition.definitionId,definitionHash:definition.hash});
+ if(!isActive())return false;if(!definition?.ok)throw Error(definition?.reason||'Refresh the component library.');
+ if(!definition.insertion?.ok)throw Error(definition.insertion?.reason||'Could not read component properties.');
+ const submit=async props=>{
+ if(!isActive())return false;busyPanel(true);try{
+  const result=await api('POST','/rt/__api/op',{type:'insertComponent',id:target.id,fileHash:target.hash,definitionFile:definition.file,definitionId:definition.definitionId,definitionHash:definition.hash,contractHash:definition.insertion.revision,props});
   if(!result?.ok)throw Error(result?.reason||result?.error||'Could not insert the component.');
   const inserted=result.insertedComponent;editorHistory.record({type:'insertComponent',id:inserted.parentId,instanceId:inserted.instanceId,previousParentId:inserted.previousParentId,undoId:result.undoId});
   const parent=await api('GET',resolveUrl(inserted.parentId));if(parent?.ok)await refreshWrittenElement(parent.element,el=>!!el.ownerDocument.querySelector('[data-rt-i="'+inserted.instanceId+'"]'));else await reloadFrame();
   await selectInsertedComponent(inserted.instanceId,inserted.parentId);toast('Component inserted','ok');
  }finally{busyPanel(false);}
+ };
+ return definition.insertion.properties.some(prop=>prop.required)?RetouchComponentLibrary.configure({component:definition,target,submit}):submit({});
 }
 const componentLibrarySelections=new Set();
 const componentLibraryButton=document.getElementById('componentLibrary');

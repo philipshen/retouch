@@ -16,18 +16,10 @@ function plan(resolved,op){
   const rel=path.relative(root,file).split(path.sep).join('/'),def=require('./component-definitions.cjs').definitions(source,rel).find(item=>item.definitionId===op.definitionId);
   if(!def)throw Error('The component definition no longer resolves.');
   if(file===resolved.file&&node.start>=def.fn.start&&node.end<=def.fn.end)throw Error('A component cannot be inserted into its own definition.');
-  const definition={...def,file},types=require('./component-prop-choices.cjs'),fields=new Map();let param=def.fn.params[0];if(param?.type==='AssignmentPattern')param=param.left;
-  if(param?.type==='ObjectPattern')for(const field of param.properties)if(field.type==='ObjectProperty'&&!field.computed)fields.set(field.key.name??field.key.value,{defaulted:field.value.type==='AssignmentPattern'});
-  const declaredNames=types.names(resolved,definition);for(const name of declaredNames)if(!fields.has(name))fields.set(name,{});
+  const definition={...def,file},{fields,dependencies,checks,revision}=require('./component-insertion-props.cjs')(resolved,definition);
+  if(op.contractHash!==undefined&&op.contractHash!==revision)throw Error('The component properties changed. Cancel and reopen insertion to load the current controls.');
   const props=op.props??{};if(!props||typeof props!=='object'||Array.isArray(props)||Object.keys(props).length>100)throw Error('Component properties must be a literal property object.');
-  const dependencies=new Map([[file,source]]),checks=new Map();
-  for(const [name,field] of fields){
-   const contract=types.property(resolved,name,definition);field.contract=contract;
-   for(const dependency of contract?.dependencies||[]){if(dependencies.has(dependency.file)&&dependencies.get(dependency.file)!==dependency.source)throw Error('The component contract changed while preparing insertion. Refresh the library.');dependencies.set(dependency.file,dependency.source);}
-   for(const check of contract?.pathChecks||[]){if(checks.has(check.file)&&JSON.stringify(checks.get(check.file))!==JSON.stringify(check))throw Error('The component type resolution changed while preparing insertion. Refresh the library.');checks.set(check.file,check);}
-   if(!Object.hasOwn(props,name)&&!field.defaulted&&(contract?!contract.optional:true))throw Error('Set the required component property "'+name+'" before inserting.');
-  }
-  if(JSON.stringify(declaredNames)!==JSON.stringify(types.names(resolved,definition)))throw Error('The component properties changed while preparing insertion. Refresh the library.');
+  for(const [name,field] of fields)if(field.required&&!Object.hasOwn(props,name))throw Error('Set the required component property "'+name+'" before inserting.');
   const attributes=[];
   for(const [name,value] of Object.entries(props)){
    const field=fields.get(name),contract=field?.contract;

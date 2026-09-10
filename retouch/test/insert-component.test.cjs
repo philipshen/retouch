@@ -27,3 +27,8 @@ test('insertion rejects a contract changing between property reads rather than c
   const result=planner.plan(f.resolved,{...f.op,props:{label:'Hello',tone:'calm'}});assert.equal(result.ok,false);assert.match(result.reason,/contract changed/);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.page);
  }finally{types.property=original;f.close();}
 });
+test('insertion descriptors expose required controls and reject stale form contracts',()=>{
+ const f=fixture(undefined,'import type {Props} from "./types";export function Card({label,count,enabled,tone,note="Default"}:Props){return <article>{label}</article>}');try{
+  const file=path.join(f.root,'parts/types.ts');fs.writeFileSync(file,'export interface Props {label:string;count:number;enabled:boolean;tone:"calm"|"bold";note?:string}');f.index.scanAll();const descriptor=definitions.describe(f.index.resolve(f.op.definitionId));assert.ok(descriptor.insertion.ok);assert.deepEqual(descriptor.insertion.properties.filter(prop=>prop.required).map(prop=>[prop.name,prop.type,prop.supported]),[['label','string',true],['count','number',true],['enabled','boolean',true],['tone','string',true]]);assert.equal(descriptor.insertion.properties.find(prop=>prop.name==='note').required,false);const op={...f.op,contractHash:descriptor.insertion.revision,props:{label:'',count:0,enabled:false,tone:'bold'}};assert.ok(planner.plan(f.resolved,op).ok);fs.appendFileSync(file,'\n// changed');assert.match(planner.plan(f.resolved,op).reason,/properties changed/);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.page);
+ }finally{f.close();}
+});

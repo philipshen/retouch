@@ -36,6 +36,7 @@ function describe(resolved){
  if(param?.type==='ObjectPattern')for(const field of param.properties){if(field.type!=='ObjectProperty'||field.computed)continue;const name=field.key.name??field.key.value;if(typeof name!=='string')continue;props.set(name,{name,value:'Unknown type',default:field.value.type==='AssignmentPattern'?def.source.slice(field.value.right.start,field.value.right.end):'—'});}
  const types=require('./component-prop-choices.cjs');for(const name of types.names(resolved,def))if(!props.has(name))props.set(name,{name,value:'Unknown type',default:'—'});
  for(const prop of props.values()){const type=types.property(resolved,prop.name,def);if(type)prop.value=(type.choices?type.choices.map(value=>JSON.stringify(value)).join(' | '):type.type)+(type.optional?' (optional)':' (required)');}
- return {ok:true,definitionOnly:true,name:def.name,file:resolved.relPath,hash:contentHash(resolved.source),source:resolved.source.slice(def.fn.start,def.fn.end),props:[...props.values()],definitionId:def.definitionId};
+ let insertion;try{const schema=require('./component-insertion-props.cjs')(resolved,def);insertion={ok:true,properties:schema.properties,revision:schema.revision};}catch(error){insertion={ok:false,reason:error.message};}
+ return {ok:true,definitionOnly:true,insertion,name:def.name,file:resolved.relPath,hash:contentHash(resolved.source),source:resolved.source.slice(def.fn.start,def.fn.end),props:[...props.values()],definitionId:def.definitionId};
 }
 module.exports={definitions,describe};
