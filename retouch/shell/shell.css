@@ -357,3 +357,10 @@ details.advanced > summary:hover { color: var(--ink); }
 .recovery-details summary { cursor:pointer; }
 .recovery-panel { position:absolute; right:0; top:calc(100% + 12px); width:min(420px, calc(100vw - 32px)); max-height:60vh; overflow:auto; padding:16px; border:1px solid var(--line); border-radius:8px; background:#202329; color:var(--ink); box-shadow:0 8px 24px #0006; z-index:1000; line-height:1.5; overflow-wrap:anywhere; }
 .recovery-panel p:first-child { margin-top:0; }
+.variable-library { margin:auto; width:min(720px,calc(100vw - 48px)); max-height:85vh; overflow:auto; box-sizing:border-box; background:#202329; color:var(--ink); border:1px solid var(--line); border-radius:10px; padding:24px; }
+.variable-library::backdrop { background:#0008; }
+.variable-library h2 { margin-top:0; }
+.variable-library button { background:#2a2d33; color:var(--ink); border:1px solid var(--line); border-radius:4px; padding:6px 10px; margin:3px; cursor:pointer; }
+.variable-library fieldset { border:1px solid var(--line); margin:12px 0; min-width:0; }
+.variable-library details { margin:16px 0; }
+.variable-library input,.variable-library select { max-width:100%; }

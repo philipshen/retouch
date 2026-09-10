@@ -7321,3 +7321,25 @@ Collection UI, layer bindings, source propagation and mode activation are not ye
 connected. Future linked updates must account for references before replacement
 or deletion; this initial persistence API does not claim propagation. Native app
 launches remain paused and full Figma parity remains incomplete.
+
+### Variable collection editor (2026-09-10)
+
+A Variables toolbar button opens a project collection editor. It creates,
+renames and deletes collections; adds/renames/removes modes; changes the default
+mode; and edits color/number/boolean/string values or same-type aliases for every
+mode. New modes copy the collection's default values, preserving alias identity.
+Variable type is fixed after creation to avoid invalidating incoming references.
+Validation errors retain the form; referenced-variable deletion and stale
+revision writes leave project bytes unchanged. Saved operations enter source
+history and can be undone through the main toolbar after closing the dialog.
+
+All 552 unit tests pass in `/private/tmp/retouch-collection-ui-units.log`.
+`test/e2e/variable-library.cjs` passes in Chromium and WebKit for collections,
+modes, colors, aliases, deletion refusal, stable-ID rename, Undo, reload and stale
+write refusal. Chromium additionally verifies numeric, boolean and string form
+values retain their JSON types. The dialog was centered after visual inspection;
+its final screenshot `/private/tmp/retouch-variable-collections.png` was checked.
+
+Layer binding, source propagation and mode activation remain unconnected and the
+editor says so. This collection editor is not full variable-mode parity. Native
+app launches remain paused.
