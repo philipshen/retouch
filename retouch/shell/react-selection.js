@@ -49,12 +49,19 @@
   if(next===null)throw Error('A selected filter cannot be adjusted with a single blur value.');
   return R.replaceScope(classes,inspector().filterClasses(R.project(classes,scope),property,next),scope);
  }
+ const groupNames={size:'Size',layout:'Layout',typography:'Typography',appearance:'Appearance',effects:'Effects'};
+ let groupState=null;
+ function sharedGroups(parent){
+  if(groupState===null){groupState={};try{const saved=JSON.parse(root.localStorage.getItem('retouch.shared-inspector-sections.v1')||'{}');for(const key of Object.keys(groupNames))if(typeof saved?.[key]==='boolean')groupState[key]=saved[key];}catch{}}
+  return Object.fromEntries(Object.entries(groupNames).map(([key,title])=>{const details=root.document.createElement('details'),summary=root.document.createElement('summary'),body=root.document.createElement('div');details.className='advanced shared-inspector-group';details.dataset.sharedSection=key;details.setAttribute('aria-label','Shared '+title.toLowerCase()+' section');details.open=groupState[key]!==false;summary.textContent=title;body.className='shared-inspector-group-body';details.append(summary,body);parent.append(details);details.ontoggle=()=>{if(!details.isConnected)return;groupState[key]=details.open;try{root.localStorage.setItem('retouch.shared-inspector-sections.v1',JSON.stringify(groupState));}catch{}};return [key,body];}));
+ }
  function mount(infos,elements,scope,save,saveColor){
   const I=root.RetouchInspector,sec=I.section('Shared styles');
   if(elements.some(el=>!el?.isConnected)||infos.some(info=>info.classNameDynamic||info.svgPaint?.reason)){I.note(sec,'Shared styles need literal class names without spread props on every selected layer.','refused');return sec;}
   I.note(sec,'Shift-click a range in Layers; Cmd/Ctrl-click toggles layers. On the canvas, Shift-click toggles. Each edit updates these source layers and undoes together, including every rendered instance.');
-  const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el));
+  const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el)),groups=sharedGroups(sec);
   for(const [property,label]of [['filter','Shared Layer blur (px)'],['backdrop-filter','Shared Backdrop blur (px)']]){
+   const sec=groups.effects;
    const values=computed.map(css=>css.getPropertyValue(property).trim()),parsed=values.map(value=>root.RetouchHTMLCSSValues.parseFilters(value)),blurs=parsed.map(stack=>stack?.filter(item=>item.name==='blur')),amounts=blurs.map(stack=>stack?.length===1?parseFloat(stack[0].arg):stack?.length===0?0:NaN),mixed=amounts.some(amount=>amount!==amounts[0]);
    const input=I.number(sec,label,mixed?NaN:amounts[0],0,1000,amount=>{try{const changes=Object.fromEntries(infos.map((info,i)=>[info.id,changeBlur(info.className,scope,property,values[i],amount)]));save(changes);}catch(error){I.note(sec,error.message,'refused');}});
    input.placeholder=mixed?'Mixed':'';input.disabled=parsed.some((stack,i)=>!stack||blurs[i].length>1||elements[i].style.getPropertyPriority(property)==='important');
@@ -62,15 +69,16 @@
   }
 
   if(saveColor)for(const [property,label]of [['color','Text color'],['background-color','Background color'],['border-color','Border color'],...(elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg')?[['fill','SVG fill'],['stroke','SVG stroke']]:[])]){
+   const sec=groups.appearance;
    const values=computed.map(css=>css.getPropertyValue(property)),mixed=values.some(value=>value!==values[0]),input=root.document.createElement('input');input.type='text';input.spellcheck=false;input.placeholder=mixed?'Mixed · enter hex with alpha':'#RRGGBB or #RRGGBBAA';input.disabled=elements.some(el=>el.style.getPropertyValue(property));
    I.field(sec,'Shared '+label+' with alpha',input);I.note(sec,mixed?'Mixed colors':values[0]);
    const clear=I.button('Clear selected '+label.toLowerCase(),()=>saveColor(property,null).catch(error=>I.note(sec,error.message,'refused')));clear.disabled=input.disabled;sec.append(clear);
    input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{const value=input.value.trim();if(!root.RetouchPaletteValues.valid(value)){input.setCustomValidity('Enter a hex color or color(display-p3 r g b / alpha).');input.reportValidity();return;}saveColor(property,value).catch(error=>{input.setCustomValidity(error.message);input.reportValidity();});};
   }
 
-  if(saveColor)I.note(sec,'Clear removes selected-scope paint to reveal inherited styles. Saved links stay attached; palette reset restores their definitions.');
-  const relativeGroup=root.document.createElement('fieldset');relativeGroup.style.cssText='border:0;padding:0;margin:0;min-width:0';sec.append(relativeGroup);
-  const relativeWrite=(property,value,relative=true)=>{try{save(Object.fromEntries(infos.map((info,i)=>[info.id,change(info.className,scope,property,value,elements[i].ownerDocument,relative)])));}catch(error){I.note(sec,error.message,'refused');}};
+  if(saveColor)I.note(groups.appearance,'Clear removes selected-scope paint to reveal inherited styles. Saved links stay attached; palette reset restores their definitions.');
+  const relativeGroup=root.document.createElement('fieldset');relativeGroup.style.cssText='border:0;padding:0;margin:0;min-width:0';groups.typography.append(relativeGroup);
+  const relativeWrite=(property,value,relative=true)=>{try{save(Object.fromEntries(infos.map((info,i)=>[info.id,change(info.className,scope,property,value,elements[i].ownerDocument,relative)])));}catch(error){I.note(groups.typography,error.message,'refused');}};
   for(const [property,label,min]of [['line-height','Shared Line height (%)',0],['letter-spacing','Shared Letter spacing (%)',-100]]){
    const values=computed.map(css=>{const raw=css.getPropertyValue(property);return raw==='normal'&&property==='line-height'?NaN:(parseFloat(raw)||0)/parseFloat(css.fontSize)*100;}),mixed=values.some(value=>!Number.isFinite(value)||Math.abs(value-values[0])>.0001),group=root.document.createElement('fieldset');group.style.cssText='border:0;padding:0;margin:0;min-width:0';relativeGroup.append(group);
    const input=I.relativeNumber(group,label,mixed?NaN:values[0],min,1000,value=>relativeWrite(property,value));if(mixed)input.placeholder='Mixed / automatic';input.title='Relative to each selected layer’s own font size.';group.disabled=elements.some(el=>el.style.getPropertyValue(property));
@@ -78,6 +86,7 @@
   const automatic=I.button('Automatic shared line height',()=>relativeWrite('line-height','normal',false));automatic.disabled=elements.some(el=>el.style.getPropertyValue('line-height'));relativeGroup.append(automatic);
   I.note(relativeGroup,'Relative spacing follows each layer’s own font size. Pixel controls and resets are available below.');
   for(const [property,field]of Object.entries(fields).filter(([,field])=>!field.constraint).flatMap(entry=>['width','height'].includes(entry[0])?[entry,...['min-','max-'].map(prefix=>[prefix+entry[0],fields[prefix+entry[0]]])]:[entry])){
+   const sec=field.constraint||field.ratio||['width','height'].includes(property)?groups.size:field.flexItem||field.layoutItem?groups.layout:['opacity','visibility','mix-blend-mode','isolation'].includes(property)?groups.appearance:groups.typography;
    if(field.ratio){
     const values=computed.map(css=>css.getPropertyValue(property)),mixed=values.some(value=>value!==values[0]),input=root.document.createElement('input');input.type='text';input.value=mixed?'':values[0];input.placeholder=mixed?'Mixed':'auto, 1 / 1, 16 / 9';
     const blocked=elements.some((el,i)=>el.style.getPropertyValue(property)||el.style.getPropertyValue('height')||el.style.getPropertyValue('inline-size')||el.style.getPropertyValue('block-size')||['inline','contents'].includes(computed[i].display));input.disabled=blocked;
@@ -111,7 +120,7 @@
    if(field.constraint){const button=I.button((field.keyword==='auto'?'Automatic shared minimum ':'No shared maximum ')+(property.endsWith('width')?'width':'height'),()=>write(field.keyword));button.disabled=blocked;sec.append(button);}
    const reset=I.button('Reset shared '+field.label.toLowerCase(),()=>write(null));try{reset.disabled=infos.every(info=>change(info.className,scope,property,null)===(info.className||''));}catch(error){reset.disabled=true;reset.title=error.message;}sec.append(reset);
   }
-  I.note(sec,'Pixel sizes include padding and borders. Automatic sizing follows the page layout; fit content follows each layer’s content within the available space. Minimum and maximum sizes bound the result; when they conflict, the minimum takes precedence.');
+  I.note(groups.size,'Pixel sizes include padding and borders. Automatic sizing follows the page layout; fit content follows each layer’s content within the available space. Minimum and maximum sizes bound the result; when they conflict, the minimum takes precedence.');
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
  const api={change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;

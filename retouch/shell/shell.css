@@ -367,3 +367,7 @@ details.advanced > summary:hover { color: var(--ink); }
 
 .variable-preview-table { border-collapse:collapse; width:100%; font-size:12px; }
 .variable-preview-table th,.variable-preview-table td { padding:8px; border-bottom:1px solid var(--line); text-align:left; overflow-wrap:anywhere; white-space:pre-wrap; }
+
+.shared-inspector-group { margin-top: 10px; }
+.shared-inspector-group-body { padding: 0 12px 12px; min-width: 0; }
+.shared-inspector-group-body > .inspector-field:first-child { margin-top: 0; }
