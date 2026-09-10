@@ -6,7 +6,7 @@
   const project=window.__RT_RENDERING?.stateScope?.project;
   const key = 'retouch.screen.v1'+(typeof project==='string'&&/^[a-f0-9]{64}$/.test(project)?':'+project:'');
   const savedGroup=document.createElement('optgroup');savedGroup.label='Project screens';preset.append(savedGroup);
-  let screen = null;
+  let screen = null, viewport = null;
   function valid(value) { return Number.isInteger(value) && value >= 240 && value <= 7680; }
   function apply(next, options = {}) {
     screen = next;
@@ -29,7 +29,21 @@
   for (const input of [width, height]) {
     input.addEventListener('input', () => input.setCustomValidity(''));
     input.addEventListener('change', custom);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') { input.blur(); } });
+    input.addEventListener('keydown', e => {
+      if(e.key==='Escape'){
+        e.preventDefault();e.stopPropagation();
+        const committed=screen||viewport;
+        if(committed)input.value=input===width?committed.width:committed.height;
+        input.setCustomValidity('');input.select();
+      }else if(e.shiftKey&&['ArrowUp','ArrowDown'].includes(e.key)){
+        e.preventDefault();
+        const current=Number(input.value);
+        if(Number.isFinite(current)&&input.value!==''){
+          input.value=Math.max(240,Math.min(7680,Math.round(current)+(e.key==='ArrowUp'?10:-10)));
+          input.setCustomValidity('');custom();
+        }
+      }else if(e.key==='Enter')input.blur();
+    });
   }
   preset.addEventListener('change', () => {
     width.setCustomValidity(''); height.setCustomValidity('');
@@ -42,6 +56,7 @@
     if (valid(w) && valid(h)) apply({ width: h, height: w });
   });
   window.addEventListener('retouch:viewport', e => {
+    viewport={width:e.detail.width,height:e.detail.height};
     if (!screen) { width.value = e.detail.width; height.value = e.detail.height; }
   });
   window.RetouchScreens = { setSaved(sizes) {

@@ -28,9 +28,9 @@
     <option value="768x1024">Tablet</option><option value="1440x900">Desktop</option>
     <option value="custom">Custom</option>
   </select></label>
-  <label>W <input id="screenWidth" aria-label="Screen width" type="number" min="240" max="7680" step="1"></label>
+  <label>W <input id="screenWidth" title="Width in pixels. Shift+Up/Down steps 10 pixels; Escape discards typed changes." aria-label="Screen width" type="number" min="240" max="7680" step="1"></label>
   <span aria-hidden="true">×</span>
-  <label>H <input id="screenHeight" aria-label="Screen height" type="number" min="240" max="7680" step="1"></label>
+  <label>H <input id="screenHeight" title="Height in pixels. Shift+Up/Down steps 10 pixels; Escape discards typed changes." aria-label="Screen height" type="number" min="240" max="7680" step="1"></label>
   <button id="screenRotate" title="Swap screen width and height">Rotate</button>
   <label>Zoom <input id="canvasZoom" aria-label="Canvas zoom (%)" type="number" min="25" max="6400" step="any" value="100">%</label>
   <button id="canvasHand" aria-pressed="false" title="Pan the canvas, or hold Space and drag">Hand</button>
