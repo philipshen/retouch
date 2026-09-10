@@ -88,8 +88,9 @@
       const match=minimumLength(item);
       return match?{...item,unit:match[2].toLowerCase(),px:lengthPixels(match[1],match[2],initial)}:null;
     }).filter(Boolean);
-    const existing=minima.find(item=>Math.abs(item.px-width)<.01);
-    if(existing)return existing;
+    const existing=[...new Map(minima.filter(item=>Math.abs(item.px-width)<.01).map(item=>[item.prefix,item])).values()];
+    if(existing.length===1)return existing[0];
+    if(existing.length>1)return {prefix:`min-[${width}px]:`,label:`${width} px and larger`};
     const units=choices.flatMap(item=>item.queries?item.queries.flat():[item.condition||'']).map(query=>query.match(/(?:min-width\s*:\s*|width\s*>=\s*)[\d.]+(px|rem|em)/)?.[1]).filter(Boolean);
     const unit=units.includes('rem')?'rem':minima.find(item=>['px','rem','em'].includes(item.unit))?.unit||units[0]||'px';
     const size=Math.round((unit==='px'?width:width/initial)*100000)/100000;

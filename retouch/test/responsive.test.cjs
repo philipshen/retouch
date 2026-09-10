@@ -92,3 +92,9 @@ test('absolute-unit named breakpoints reuse widths and inherit earlier scopes wi
  assert.deepEqual(R.inheritedLink({'':{id:'base'},'small:':{id:'small'},'tablet:':{id:'tablet'}},'large:',d,choices),{scope:'tablet:',label:'Tablet',link:{id:'tablet'}});
  assert.equal(R.inheritedLink({'small:':{id:'a'},'min-[384px]:':{id:'b'}},'tablet:',d,choices),null,'equivalent widths do not choose an arbitrary binding');
 });
+
+test('automatic width scopes do not arbitrarily select among equivalent named breakpoints',()=>{
+ const d={createElement:()=>({style:{},remove(){}}),documentElement:{append(){}},defaultView:{getComputedStyle:()=>({fontSize:'16px'})}},choices=[{prefix:'tablet:',condition:'(min-width:8in)'},{prefix:'wide:',condition:'(min-width:768px)'}];
+ assert.equal(R.atWidth(d,768,choices).prefix,'min-[768px]:');assert.equal(R.atWidth(d,768,[...choices].reverse()).prefix,'min-[768px]:');
+ assert.equal(R.atWidth(d,768,[choices[0],choices[0]]).prefix,'tablet:','repeated entries for one scope are not distinct choices');
+});

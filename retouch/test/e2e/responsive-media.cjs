@@ -49,5 +49,6 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
  assert.equal(await page.evaluate(()=>RetouchResponsive.previewSize({condition:'(min-width:240px)'},document,{width:390,height:844},false)),null);
  assert.equal(await page.locator('iframe').count(),0);console.log('COMPOUND BREAKPOINT BOUNDARY/CSS/UNIVERSAL SCOPE/PROBE CLEANUP PASS',engine);
  await page.addStyleTag({content:'@media(min-width:8in){.physical\\:opacity{opacity:.4}}'});await page.evaluate(()=>{const el=document.createElement('div');el.className='physical:opacity';el.textContent='Physical';document.body.append(el);});await page.setViewportSize({width:768,height:844});assert.deepEqual(await page.evaluate(()=>({scope:RetouchResponsive.atWidth(document,innerWidth).prefix,opacity:getComputedStyle(document.querySelector('.physical\\:opacity')).opacity})),{scope:'physical:',opacity:'0.4'});
+ await page.addStyleTag({content:'@media(min-width:768px){.alternate\\:opacity{opacity:.3}}'});assert.equal(await page.evaluate(()=>RetouchResponsive.atWidth(document,innerWidth).prefix),'min-[768px]:');
  console.log(engine+': PASS nested and repeated media alternatives, query lists, CSS nesting, runtime CSS agreement, initial rem units and conditional-breakpoint non-reuse');
 }finally{await browser.close();}})().catch(error=>{console.error(error);process.exitCode=1});
