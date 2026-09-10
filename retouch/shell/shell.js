@@ -1743,6 +1743,7 @@ function moveHTMLLayer(info,target,width,g,action='move',opener){
   if(stopDrawing)toast(action==='resize'?'Drag a handle or use arrow keys. Shift keeps proportions; Option/Alt centers. Enter applies keyboard changes; Escape cancels.':'Drag the outline or use arrow keys (Shift: 10px). Enter applies keyboard changes; Escape cancels.','ok');
 }
 
+window.RetouchVariableModePreview=async request=>{const result=await api('POST','/rt/__api/variables/resolve',request);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not preview variable modes.');return result;};
 window.RetouchVariableLibraryRequest=async operation=>{
  if(!operation){const result=await api('GET','/rt/__api/variables');if(!result?.ok)throw Error(result?.reason||result?.error||'Could not load variable collections.');return result;}
  busyPanel(true);try{const result=await api('POST','/rt/__api/variables',operation);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save variable collections.');if(result.undoId)editorHistory.record({type:'sourceHistory',undoId:result.undoId});return result;}finally{busyPanel(false);}

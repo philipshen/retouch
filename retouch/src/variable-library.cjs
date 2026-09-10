@@ -24,4 +24,9 @@ function commitPlan(root,plan,apply=applyPlan){
  if(!plan?.ok)return plan;const {directory}=paths(root);fs.mkdirSync(directory,{recursive:true});paths(root);
  const result=apply(root,plan);if(!result.ok)fail(result.reason);return result;
 }
-module.exports={LIMIT,read,planChange,commitPlan};
+function resolve(root,request){
+ if(!request||typeof request!=='object'||Array.isArray(request)||Object.keys(request).some(key=>!['revision','modes'].includes(key)))fail('Invalid variable mode preview.',422);
+ const current=read(root);if(request.revision!==current.revision)fail('Variable collections changed. Reload before previewing modes.');
+ const values=model.resolver({version:current.version,collections:current.collections,variables:current.variables},request.modes).resolveAll();return {revision:current.revision,values};
+}
+module.exports={LIMIT,read,planChange,commitPlan,resolve};

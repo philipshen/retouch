@@ -21,7 +21,13 @@ test('authenticated variable API persists across restart and restores history',a
   assert.equal((await fetch(base+'/rt/__api/variables')).status,401);assert.equal((await fetch(base+'/rt/__api/variables',{method:'POST',body:'{}'})).status,401);
   const post=async(url,body)=>{const response=await fetch(base+url,{method:'POST',headers,body:JSON.stringify(body)});return {status:response.status,body:await response.json()};};
   const saved=await post('/rt/__api/variables',{type:'replace',revision:null,library:data()});assert.equal(saved.status,200);assert.ok(saved.body.undoId);assert.equal((await post('/rt/__api/variables',{type:'replace',revision:null,library:data()})).status,409);
+  assert.equal((await fetch(base+'/rt/__api/variables/resolve',{method:'POST',body:'{}'})).status,401);const preview=await post('/rt/__api/variables/resolve',{revision:saved.body.revision,modes:{}});assert.equal(preview.status,200);assert.equal(preview.body.values[0].value,'#ffffffff');assert.equal((await post('/rt/__api/variables/resolve',{revision:null,modes:{}})).status,409);
   await stop();base=await start();headers={'x-retouch-token':await token(),'content-type':'application/json'};const current=await fetch(base+'/rt/__api/variables',{headers}).then(r=>r.json());assert.equal(current.revision,saved.body.revision);
   assert.equal((await post('/rt/__api/op',{type:'undo',undoId:saved.body.undoId})).status,200);const undone=await fetch(base+'/rt/__api/variables',{headers}).then(r=>r.json());assert.equal(undone.revision,null);assert.deepEqual(undone.collections,[]);
  }finally{if(server)await stop();if(previous===undefined)delete process.env.RETOUCH_STATE_DIR;else process.env.RETOUCH_STATE_DIR=previous;}
+});
+
+test('mode preview resolves exact revisions without writes and rejects cyclic mode combinations',t=>{
+ const root=setup(t),input=data(),dark=id(4);input.collections[0].modes.push({id:dark,name:'Dark'});input.variables[0].values[dark]={alias:id(3)};library.commitPlan(root,library.planChange(root,{type:'replace',revision:null,library:input}));const saved=library.read(root),file=path.join(root,'.retouch/variables.json'),bytes=fs.readFileSync(file,'utf8');
+ assert.equal(library.resolve(root,{revision:saved.revision,modes:{}}).values[0].value,'#ffffffff');assert.throws(()=>library.resolve(root,{revision:saved.revision,modes:{[id(1)]:dark}}),/cycle/);assert.throws(()=>library.resolve(root,{revision:null,modes:{}}),/changed/);assert.throws(()=>library.resolve(root,{revision:saved.revision,modes:{[id(1)]:id(99)}}),/selected mode/);assert.equal(fs.readFileSync(file,'utf8'),bytes);
 });

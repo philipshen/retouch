@@ -364,3 +364,6 @@ details.advanced > summary:hover { color: var(--ink); }
 .variable-library fieldset { border:1px solid var(--line); margin:12px 0; min-width:0; }
 .variable-library details { margin:16px 0; }
 .variable-library input,.variable-library select { max-width:100%; }
+
+.variable-preview-table { border-collapse:collapse; width:100%; font-size:12px; }
+.variable-preview-table th,.variable-preview-table td { padding:8px; border-bottom:1px solid var(--line); text-align:left; overflow-wrap:anywhere; white-space:pre-wrap; }

@@ -107,6 +107,10 @@ function handle(req, res, ctx) {
     return json(res, 200, { ok: true, ...(ctx.sourceMonitor?.state() || { revision: 0, available: false }) });
   }
   if (p === '/rt/__api/health') return json(res, 200, { ok: true, service: 'retouch' });
+  if(p==='/rt/__api/variables/resolve'){
+    requireToken(req,ctx.token);if(req.method!=='POST')return json(res,405,{ok:false,reason:'Use POST to preview variable modes.'});
+    return readBinary(req,16384,bytes=>{if(!bytes)return json(res,413,{ok:false,reason:'Mode selection exceeds 16 KiB.'});let request;try{request=JSON.parse(bytes.toString('utf8'));}catch{return json(res,400,{ok:false,reason:'Invalid mode selection JSON.'});}try{return json(res,200,{ok:true,...require('./variable-library.cjs').resolve(ctx.appRoot,request)});}catch(error){return json(res,error.statusCode||500,{ok:false,reason:error.message});}});
+  }
   if(p==='/rt/__api/variables'){
     requireToken(req,ctx.token);const library=require('./variable-library.cjs');
     if(req.method==='GET')return json(res,200,{ok:true,...library.read(ctx.appRoot)});

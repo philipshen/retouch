@@ -7343,3 +7343,22 @@ its final screenshot `/private/tmp/retouch-variable-collections.png` was checked
 Layer binding, source propagation and mode activation remain unconnected and the
 editor says so. This collection editor is not full variable-mode parity. Native
 app launches remain paused.
+
+### Independent collection mode preview (2026-09-10)
+
+The collection editor now previews resolved variable values under independently
+selected collection modes. Its table includes type and the variable/mode alias
+path, so users can inspect cross-collection resolution. Preview requests are
+authenticated, bounded and tied to the library revision. They write no files or
+history entries; invalid modes and cyclic combinations return no partial value
+list. Stale async responses are discarded after a newer selection or rerender.
+
+All 553 unit tests pass in `/private/tmp/retouch-mode-preview-units.log`.
+API tests verify authentication, revision conflicts, cycle refusal and unchanged
+file bytes. Chromium and WebKit collection UI flows verify Dark-mode literals,
+alias results, typed values, resolution paths and unchanged source. The preview
+screenshot `/private/tmp/retouch-variable-mode-preview.png` was visually checked.
+
+This previews values in the collection editor; it does not activate modes on
+canvas layers. Source bindings, propagation and canvas activation remain next
+work. Native app launches remain paused; full parity remains incomplete.
