@@ -86,3 +86,9 @@ test('HTML copy identity mapping survives cloned responsive styles inserted in t
  for(const element of resolved.elements){const next=elements.find(item=>item.id===(mapping.get(element.id)||element.id));assert.ok(next);assert.equal(next.tag,element.tag);}
  const created=elements.find(element=>element.id===plan.createdId);assert.deepEqual(css.describe({...resolved,source:plan.edits[0].after,element:created}).cssRules,{768:{color:'red'}});
 });
+for(const adapter of [react,liquid,html])test(adapter.name+' maps survivors and identifies every deleted descendant',()=>{
+ const markup='<div><a>A</a><b><span>Removed</span></b><i><em>Survives</em></i></div>',source=adapter===react?'function View(){return '+markup+'}':markup,resolved=target(adapter,source),plan=adapter.planOp(resolved,{type:'deleteElement'});assert.equal(plan.ok,true,plan.reason);
+ assert.deepEqual(new Set(plan.removedSourceIds),new Set(['b','span'].map(tag=>target(adapter,source,tag).element.id)));
+ const elements=adapter.collect(plan.edits[0].after,resolved.relPath).elements,mapping=new Map(plan.sourceIdMap),survivors=resolved.elements.filter(element=>!plan.removedSourceIds.includes(element.id));assert.deepEqual(survivors.map(element=>mapping.get(element.id)||element.id).sort(),elements.map(element=>element.id).sort());
+ for(const element of survivors){const next=elements.find(item=>item.id===(mapping.get(element.id)||element.id));assert.equal(next.node?.openingElement?.name.name||next.tag,element.node?.openingElement?.name.name||element.tag);}
+});

@@ -31,6 +31,11 @@
    for(const change of changes){const next=direction==='undo'?change.before:change.after,locks=entries(change.route);if(next)locks.add(change.id);else locks.delete(change.id);}remember();return {ok:true};
   }
   function restore(change,direction){return restoreMany([change],direction);}
+  function removeSourceIds(ids){
+   const removed=new Set(ids),changes=[];
+   for(const [route,locks]of pages)for(const id of removed)if(locks.has(id)){changes.push({id,route,before:true,after:false});locks.delete(id);}
+   if(changes.length)remember();return changes;
+  }
   function remap(pairs,direction='redo'){
    if(!Array.isArray(pairs)||pairs.some(pair=>!Array.isArray(pair)||pair.length!==2||pair.some(id=>typeof id!=='string'||!/^[a-f0-9]{10}$/.test(id)))||new Set(pairs.map(pair=>pair[0])).size!==pairs.length||new Set(pairs.map(pair=>pair[1])).size!==pairs.length)throw Error('Invalid source layer mapping');
    const mapping=new Map(pairs.map(pair=>direction==='undo'?[pair[1],pair[0]]:pair));
@@ -46,7 +51,7 @@
    }
    return null;
   }
-  return {direct,locked,set,change,changeMany,restore,restoreMany,remap,pick};
+  return {direct,locked,set,change,changeMany,restore,restoreMany,removeSourceIds,remap,pick};
  }
  const api={create};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayerLocks=api;
 })(typeof window==='object'?window:globalThis);

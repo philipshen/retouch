@@ -2205,7 +2205,9 @@ async function restoreHistory(direction,op) {
     await showHistoryPage(op.route);
     if(['insertComponent','swapComponent'].includes(op.type)){const parentId=direction==='redo'?op.id:op.previousParentId,parent=parentId?await api('GET',resolveUrl(parentId)):null;if(op.type==='swapComponent')await refreshSwappedComponent(direction==='redo'?op.instanceId:op.previousInstanceId,parentId);else if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else await reloadFrame();if(direction==='redo')await selectInsertedComponent(op.instanceId,op.id);else if(op.type==='swapComponent')await selectInsertedComponent(op.previousInstanceId,op.previousParentId);else if(parent?.ok){sel={hostId:parentId,instanceId:null,scope:'host',info:parent.element};renderPanel();}else clearSelection();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='moveComponent'){layerLocks.remap(op.sourceIdMap,direction);const id=direction==='undo'?op.previousInstanceId:op.id;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);layers.refresh();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.removedSourceIds&&direction==='redo')layerLocks.removeSourceIds(op.removedSourceIds);
     if(op.sourceIdMap)layerLocks.remap(op.sourceIdMap,direction);
+    if(op.deletedLocks&&direction==='undo'){const restored=layerLocks.restoreMany(op.deletedLocks,'undo');if(!restored.ok)toast(restored.reason,'err');}
     if(op.type==='renameComponent'){await refreshSwappedComponent(op.id,null);await selectInsertedComponent(op.id,null);layers.refresh();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='deleteComponent'){if(direction==='undo'){await refreshSwappedComponent(op.id,null);await selectInsertedComponent(op.id,op.parentId);}else{await refreshDeletedComponent(op.id,op.parentId);clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
@@ -2546,7 +2548,8 @@ async function structureAction(action) {
     if(!result?.ok){toast(result?.reason||result?.error||'Could not change this layer','err');return;}
     const parentId=result.parentId||info.structure?.parentId;
     const selectionAfter=result.createdId||result.movedId||(action==='deleteElement'?parentId:null);
-    editorHistory.record({type:selectionAfter?'structureSelection':'structure',id:parentId||info.id,undoId:result.undoId,context:info.context,...(result.sourceIdMap?{sourceIdMap:result.sourceIdMap}:{}),...(selectionAfter?{selectionBefore:[info.id],selectionAfter:[selectionAfter]}:{})});
+    const deletedLocks=result.removedSourceIds?layerLocks.removeSourceIds(result.removedSourceIds):null;
+    editorHistory.record({...(deletedLocks?{deletedLocks,removedSourceIds:result.removedSourceIds}:{}),type:selectionAfter?'structureSelection':'structure',id:parentId||info.id,undoId:result.undoId,context:info.context,...(result.sourceIdMap?{sourceIdMap:result.sourceIdMap}:{}),...(selectionAfter?{selectionBefore:[info.id],selectionAfter:[selectionAfter]}:{})});
     if(result.sourceIdMap)layerLocks.remap(result.sourceIdMap);
     const fresh=parentId?await api('GET',resolveUrl(parentId,info.context)):null;
     if(fresh?.ok) {
