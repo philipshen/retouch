@@ -212,7 +212,7 @@
       const destination=navigationTarget(direction);if(!destination)return false;
       search.value='';lockedOnly.checked=false;for(let parent=destination.parent;parent;parent=parent.parent)collapsed.delete(key(parent));render();await choose(destination);return true;
     }
-    return {attach,selection,navigate,canNavigate:direction=>!!navigationTarget(direction),refresh:()=>{render();void loadComponents();}};
+    return {attach,selection,navigate,canNavigate:direction=>!!navigationTarget(direction),refresh:async()=>{render();await loadComponents();}};
   }
   const api={label,collect,mount,canNest,canNestMany};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayers=api;

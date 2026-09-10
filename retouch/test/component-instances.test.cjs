@@ -50,3 +50,12 @@ test('component tree wraps each verified occurrence and preserves nested source 
 test('component tree leaves incomplete occurrences as normal source rows',()=>{
  const el={getAttribute:name=>name==='data-rt-i'?'usage':'a',nextElementSibling:null},item={el,label:'host',children:[],parent:null};const roots=require('../shell/component-instances.js').tree([item],[{name:'Card',rootGroups:[['a','b']],usages:[{id:'usage'}]}]);assert.equal(roots[0],item);assert.equal(roots[0].componentId,undefined);
 });
+
+test('reload occurrence bookmarks retain position only for matching source structure',()=>{
+ const {captureOccurrence,restoreOccurrence}=require('../shell/component-instances.js');
+ const make=()=>{const parent={tagName:'MAIN',getAttribute:()=>null,children:[]};parent.children=[0,1].map(()=>({tagName:'FOOTER',isConnected:true,parentElement:parent,getAttribute:name=>name==='data-rt'?'footer':null}));return parent.children;};
+ const before=make(),bookmark=captureOccurrence(before,before[1]),after=make();assert.equal(restoreOccurrence(after,bookmark),after[1]);assert.equal(captureOccurrence(before,{}),null);
+ assert.equal(restoreOccurrence(after.slice(0,1),bookmark),null);after[1].tagName='ASIDE';assert.equal(restoreOccurrence(after,bookmark),null);after[1].tagName='FOOTER';after[1].getAttribute=name=>name==='data-rt'?'different':null;assert.equal(restoreOccurrence(after,bookmark),null);
+ const shifted=make();shifted[0].parentElement.children.unshift({});assert.equal(restoreOccurrence(shifted.slice(1),bookmark),null);
+ const detached=make();detached[1].isConnected=false;assert.equal(restoreOccurrence(detached,bookmark),null);assert.equal(captureOccurrence(detached,detached[1]),null);
+});

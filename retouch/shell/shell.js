@@ -602,6 +602,8 @@ async function commitInlineEdit() {
 // Reload the iframe to its current path, preserving scroll where possible.
 function reloadFrame() {
   stopDrawing?.();
+  const selectionBefore=sel,anchorBefore=renderedSelection,routeBefore=iframe.contentWindow?.location.href;
+  const bookmark=sel&&!sel.multiple&&renderedSelection?.id===activeId()?RetouchComponentInstances.captureOccurrence(matchingInDocument(doc(),activeId(),sel.info),renderedSelection.element):null;
   return new Promise(resolve => {
     classificationSerial++;
     editing = null;
@@ -629,7 +631,15 @@ function reloadFrame() {
           });
         }));
       } catch {}
-      try { iframe.contentWindow.scrollTo({left:0,top:y,behavior:'instant'}); } catch {}
+      try {
+        if(bookmark)await layers.refresh();
+        if(bookmark&&sel===selectionBefore&&renderedSelection===anchorBefore&&iframe.contentWindow.location.href===routeBefore){
+          const target=RetouchComponentInstances.restoreOccurrence(matchingInDocument(doc(),activeId(),sel.info),bookmark);
+          if(target){renderedSelection={id:activeId(),element:target};renderPanel();}
+          else {clearSelection();toast('The page structure changed. Select the layer again.');}
+        }
+        iframe.contentWindow.scrollTo({left:0,top:y,behavior:'instant'});
+      } catch {}
       resolve();
     };
     iframe.addEventListener('load', done);

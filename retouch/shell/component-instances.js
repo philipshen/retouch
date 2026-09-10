@@ -43,9 +43,18 @@
   const selected=groups.find(group=>group.elements.includes(target));
   return selected?[selected,...groups.filter(group=>group!==selected)]:groups;
  }
+ function occurrenceShape(elements){
+  return JSON.stringify(elements.map(el=>{const path=[];for(let node=el;node;node=node.parentElement){const parent=node.parentElement;path.push([node.tagName,node.getAttribute('id'),node.getAttribute('data-rt'),node.getAttribute('data-rt-i'),parent?[...parent.children].indexOf(node):0]);}return path;}));
+ }
+ function captureOccurrence(elements,target){
+  const index=elements.indexOf(target);return target?.isConnected&&index>=0?{index,shape:occurrenceShape(elements)}:null;
+ }
+ function restoreOccurrence(elements,bookmark){
+  return bookmark&&elements.every(el=>el.isConnected)&&occurrenceShape(elements)===bookmark.shape?elements[bookmark.index]||null:null;
+ }
  function bounds(elements){
   const rects=elements.map(el=>el.getBoundingClientRect()).filter(r=>r.width||r.height);if(!rects.length)return null;
   const left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top));return {left,top,width:Math.max(...rects.map(r=>r.right))-left,height:Math.max(...rects.map(r=>r.bottom))-top};
  }
- const api={group,tree,prioritize,bounds};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.RetouchComponentInstances=api;
+ const api={group,tree,prioritize,bounds,captureOccurrence,restoreOccurrence};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.RetouchComponentInstances=api;
 })(typeof window!=='undefined'?window:globalThis);
