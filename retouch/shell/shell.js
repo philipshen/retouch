@@ -1930,6 +1930,32 @@ async function showHistoryPage(route){
     iframe.addEventListener('load',done);iframe.src=target.href;
   });
 }
+async function refreshSourceHistory(manifest) {
+  const target=RetouchHistoryRender.targets(manifest,doc());
+  if(!target){await reloadFrame();return;}
+  const route=iframe.contentWindow.location.href;
+  let stable=0;
+  for(let attempt=0;attempt<40;attempt++){
+    if(iframe.contentWindow.location.href!==route)return;
+    try{
+      const d=doc(),stylesReady=[...d.querySelectorAll('link[rel="stylesheet"]')].every(link=>link.disabled||!!link.sheet);
+      stable=stylesReady&&RetouchHistoryRender.matches(target,d)?stable+1:0;
+      if(stable>=3)return;
+    }catch{stable=0;}
+    await new Promise(resolve=>setTimeout(resolve,50));
+  }
+  // Frameworks may require a reload even with stable source identities. Wait
+  // for the server-rendered revision before asking the canvas to load it.
+  for(let attempt=0;attempt<20;attempt++){
+    if(iframe.contentWindow.location.href!==route)return;
+    try{
+      const response=await fetch(route,{cache:'no-store'});
+      if(response.ok&&RetouchHistoryRender.matches(target,new DOMParser().parseFromString(await response.text(),'text/html'))){await reloadFrame();return;}
+    }catch{}
+    await new Promise(resolve=>setTimeout(resolve,150));
+  }
+  throw Error('The restored source has not reached the preview yet.');
+}
 async function restoreHistory(direction,op) {
   if(op.type==='layerLock'){
     await showHistoryPage(op.route);
@@ -1943,7 +1969,7 @@ async function restoreHistory(direction,op) {
   // client stack on the old side of a successful transaction.
   try {
     await showHistoryPage(op.route);
-    if(op.type==='sourceHistory'){clearSelection();await reloadFrame();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     const fresh = await api('GET', resolveUrl(op.id, op.context));
     if (fresh?.ok) { sel = { hostId: op.id, instanceId: null, scope: 'host', info: fresh.element }; renderPanel(); }
     else clearSelection();

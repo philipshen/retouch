@@ -7701,3 +7701,39 @@ prove a fix. A diagnostic run also observed a transient HTTP 500.
 Liquid verification uses local LiquidJS/Tailwind, not Shopify. Ancestor collection
 modes, Liquid multi-selection, broader site support and full Figma parity remain
 unfinished. Native application launches remain paused.
+
+### React collection Undo/Redo waits for rendered revisions (2026-09-10)
+
+Collection source-history Undo previously reloaded the canvas immediately after
+restoring files. WebKit repeatedly reported canceled document loads and Next
+hot-update/RSC access-control errors at that point. React collection restores now
+return a render manifest containing host IDs and restored source hashes. The
+manifest is available only when all non-catalog edits are JSX/TSX files with
+unchanged host identities; other history restores retain their reload fallback.
+No source text or filesystem paths are added to the response.
+
+The canvas checks every affected visible host and repeated instance, waits for
+matching revisions and loaded styles, and preserves the live document when HMR
+completes. If HMR does not confirm the restore, it checks server-rendered revisions
+before reloading. A preview failure does not undo a successful source-history
+transaction or leave a stale selection active.
+
+All 581 unit tests pass (`/private/tmp/retouch-collection-undo-render-units.log`).
+The authenticated API test checks both restored source hashes. Focused render
+checks reject stale instances, missing hosts, partially updated source files,
+unsupported edits and structural host-identity changes.
+
+The expanded React browser flow renders linked layers from two source files.
+Catalog edits, Undo, Redo and another Undo verify both computed colors, exact
+restored source/catalog bytes and a document-local marker proving the live page
+was retained. Both Chromium and WebKit pass with the existing strict page-error
+check, without filtering the previously failing errors:
+`/private/tmp/retouch-collection-undo-two-files-chromium.log` and
+`/private/tmp/retouch-collection-undo-two-files-webkit.log`.
+The earlier single-file WebKit diagnostic also passed after this change
+(`/private/tmp/retouch-collection-undo-render-webkit.log`). Local dynamic Liquid
+WebKit passes (`/private/tmp/retouch-collection-undo-liquid-webkit.log`).
+
+This verifies the reproduced collection-history failure, not all possible Next
+reload races or all source-history operations. Full Figma parity and native trust/
+installation verification remain incomplete. Native launches remain paused.

@@ -225,6 +225,7 @@ function handle(req, res, ctx) {
         if (!result.ok) return json(res,409,{...result,historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired});
         for (const edit of result.edits) if (ctx.adapter.matches(edit.file)) ctx.index.indexFile(edit.file);
         ctx.sourceMonitor?.acknowledge(result.edits);
+        try{result.renderRevisions=require('./history-render-revisions.cjs')(ctx.appRoot,result.edits,ctx.adapter);}catch{result.renderRevisions=null;}
         delete result.edits;
         return json(res,200,{...result,historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired});
       }
