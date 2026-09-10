@@ -74,22 +74,22 @@
     const key=JSON.stringify(boxes);if(card.outlineKey===key)return;card.outlineKey=key;
     card.overlay.replaceChildren(...boxes.map(bounds=>{const box=document.createElement('div');box.className='compare-selection';for(const [axis,value]of Object.entries(bounds))box.style[axis]=value+'px';return box;}));
   }
+  function updateProperty(node,key,value){if(node[key]!==value)node[key]=value;}
+  function updateScope(node,state,text){if(node.dataset.scopeApplies!==state)node.dataset.scopeApplies=state;updateProperty(node,'textContent',text);}
   function paint(){
     if(!open)return;
     layoutPreviews();
     for(const card of cards){
       if(card.previewBody.hidden)continue;
-      const {frame,overlay,message,scopeMessage,width,height,reveal}=card;
-      scopeMessage.textContent='Checking style scope…';scopeMessage.dataset.scopeApplies='unknown';
+      const {frame,message,scopeMessage,width,height,reveal}=card;
       const scale=card.viewport.clientWidth/width;
       const boxes=[];
       try{
-        const d=frame.contentDocument;if(!d?.body||d.URL==='about:blank'){reveal.disabled=true;continue;}
+        const d=frame.contentDocument;if(!d?.body||d.URL==='about:blank'){updateProperty(reveal,'disabled',true);updateScope(scopeMessage,'unknown','Checking style scope…');continue;}
         const applies=!scope.prefix?true:window.RetouchResponsive.matches(scope,d.defaultView);
-        scopeMessage.dataset.scopeApplies=applies===null?'unknown':String(applies);
-        scopeMessage.textContent=!scope.prefix?'Base styles apply here; breakpoint overrides may take precedence.':applies===null?'Scope coverage is unavailable for this breakpoint.':applies?'Current breakpoint applies here; other overrides may take precedence.':'Current breakpoint does not apply in this preview.';
+        updateScope(scopeMessage,applies===null?'unknown':String(applies),!scope.prefix?'Base styles apply here; breakpoint overrides may take precedence.':applies===null?'Scope coverage is unavailable for this breakpoint.':applies?'Current breakpoint applies here; other overrides may take precedence.':'Current breakpoint does not apply in this preview.');
         const nodes=selectedNodes(d);
-        const count=nodes.filter(rendered).length;reveal.disabled=!count;reveal.textContent=count>1?'Show next instance':'Show selection';reveal.title=count>1?'Reveal the next rendered instance of this layer.':'Scroll this comparison to the selected layer.';
+        const count=nodes.filter(rendered).length;updateProperty(reveal,'disabled',!count);updateProperty(reveal,'textContent',count>1?'Show next instance':'Show selection');updateProperty(reveal,'title',count>1?'Reveal the next rendered instance of this layer.':'Scroll this comparison to the selected layer.');
         let visible=0,offscreen=0;
         for(const el of nodes){
           const rect=el.getBoundingClientRect(),css=d.defaultView.getComputedStyle(el);
@@ -98,8 +98,8 @@
           if(!bounds){offscreen++;continue;}visible++;
           boxes.push({left:bounds.left*scale,top:bounds.top*scale,width:bounds.width*scale,height:bounds.height*scale});
         }
-        message.textContent=selected?(visible?'Selected layer · '+visible+(visible===1?' instance':' instances'):offscreen?'Selected layer is outside this viewport':nodes.length?'Selected layer is hidden':'Selected layer is absent on this screen'):'Same page · independent viewport';
-      }catch{boxes.length=0;reveal.disabled=true;message.textContent='Preview unavailable for this page';}finally{updateOutlines(card,boxes);}
+        updateProperty(message,'textContent',selected?(visible?'Selected layer · '+visible+(visible===1?' instance':' instances'):offscreen?'Selected layer is outside this viewport':nodes.length?'Selected layer is hidden':'Selected layer is absent on this screen'):'Same page · independent viewport');
+      }catch{boxes.length=0;updateProperty(reveal,'disabled',true);updateScope(scopeMessage,'unknown','Scope coverage is unavailable for this page.');updateProperty(message,'textContent','Preview unavailable for this page');}finally{updateOutlines(card,boxes);}
     }
     timer=setTimeout(paint,100);
   }
