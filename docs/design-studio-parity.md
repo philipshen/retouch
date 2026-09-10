@@ -7162,3 +7162,27 @@ mixed reset preserves an unbound layer's authored color. Undo restores exact
 source for each batch. All 537 unit tests pass in
 `/private/tmp/retouch-multi-variable-units.log`. Variable definitions/modes and
 React/Liquid binding controls remain unfinished. Native app launches stay paused.
+
+### React and Liquid site variable bindings (2026-09-09)
+
+The single-layer React/Liquid inspector now uses the Site variables picker.
+Bindings are explicit important arbitrary-property utilities, merged through the
+existing responsive scope writer. Ordinary authored utilities remain underneath;
+reset removes the explicit property, detach stores the current computed literal,
+and exact source Undo remains available. Existing class bindings in the selected
+scope are recognized. Native app launch testing remains paused.
+
+The initial compositor refuses other important utilities within the projected
+scope and inline important declarations when writing a value; it does not yet
+prove that an unrelated important declaration is safe to retain. Variant scopes
+remain intact. Class multi-selection, inherited binding UI, definition/alias
+editing, modes and complete variable grammar remain unfinished.
+
+All 540 unit tests pass in `/private/tmp/retouch-class-variable-units.log`.
+Real Next.js and local Liquid Chromium flows pass in
+`/private/tmp/retouch-class-var-{react,liquid}.log`: tablet-only binding, computed
+color, detach, mobile isolation, and exact source Undo. WebKit also passes the
+Liquid flow with conditional class branches in
+`/private/tmp/retouch-class-var-webkit.log`. Local Liquid is not live Shopify
+verification. Compositor unit tests cover property replacement, ordinary/variant
+class retention, unsafe inputs, ownership refusal and scope-local recognition.
