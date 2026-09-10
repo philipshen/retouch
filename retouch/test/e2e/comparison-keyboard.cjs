@@ -21,6 +21,18 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   await preview.locator('html').evaluate(el=>el.style.overflow='hidden');await key('PageDown');await key('ArrowRight');await wheel();assert.deepEqual(await position(),[0,0]);await preview.locator('html').evaluate(el=>el.style.removeProperty('overflow'));
   await preview.locator('body').evaluate(el=>el.style.overflow='hidden');await key('End');await key('ArrowRight');await wheel();assert.deepEqual(await position(),[0,0]);await preview.locator('body').evaluate(el=>el.style.removeProperty('overflow'));
   await wheel();const wheeled=await position();assert.ok(wheeled[0]>0&&wheeled[1]>0);
+  await preview.locator('body').evaluate(()=>{
+   scrollTo(0,0);const outer=document.createElement('section');outer.id='keyboardOuter';outer.style.cssText='position:fixed;left:20px;top:100px;width:340px;height:650px;overflow:auto;background:white';
+   outer.innerHTML='<div style="height:1600px"><div id="keyboardPanel" style="margin-top:40px;width:300px;height:440px;overflow:auto"><div style="width:1000px;height:1800px">Nested panel</div></div></div>';document.body.append(outer);
+  });
+  const nested=()=>preview.locator('body').evaluate(()=>({panel:[document.getElementById('keyboardPanel').scrollLeft,document.getElementById('keyboardPanel').scrollTop],outer:document.getElementById('keyboardOuter').scrollTop,page:[scrollX,scrollY]}));
+  await key('ArrowDown');assert.deepEqual(await nested(),{panel:[0,40],outer:0,page:[0,0]},'Keyboard scroll targets the nested panel at the preview center');
+  await key('ArrowRight');assert.equal((await nested()).panel[0],40);await key('ArrowLeft');await key('Home');assert.equal((await nested()).panel[1],0);
+  await key('PageDown');assert.equal((await nested()).panel[1],396);await key('PageUp');assert.equal((await nested()).panel[1],0);
+  await key('End');assert.equal((await nested()).panel[1],1360);await key('ArrowDown');assert.equal((await nested()).outer,40);assert.deepEqual((await nested()).page,[0,0]);
+  await preview.locator('#keyboardPanel').evaluate(el=>el.style.overscrollBehavior='contain');await key('ArrowDown');assert.equal((await nested()).outer,40,'Contained panel does not scroll its parent');
+  await key('Home');assert.equal((await nested()).panel[1],0);await preview.locator('html').evaluate(el=>el.style.overflow='hidden');await key('ArrowDown');assert.equal((await nested()).panel[1],40,'Viewport overflow does not disable nested scrolling');
+  await preview.locator('body').evaluate(()=>{document.documentElement.style.removeProperty('overflow');document.getElementById('keyboardOuter').remove();});
   await key('Enter');await page.waitForFunction(()=>doc().defaultView.innerWidth===390&&doc().defaultView.innerHeight===844);assert.equal(await page.getByLabel('Style screen scope').inputValue(),'min-[768px]:');assert.equal(fs.readFileSync(file,'utf8'),source);assert.deepEqual(errors,[]);
   console.log('COMPARISON KEYBOARD SCROLL/FOCUS/MODIFIER/OVERFLOW/SCOPE/SOURCE PASS',engine);
  }finally{if(browser)await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));fs.rmSync(root,{recursive:true,force:true});}

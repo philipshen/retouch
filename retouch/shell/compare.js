@@ -51,6 +51,20 @@
     const overflow=axis=>html['overflow'+axis]==='visible'?(body?.['overflow'+axis]||'visible'):html['overflow'+axis];
     w.scrollBy({left:/hidden|clip/.test(overflow('X'))?0:dx,top:/hidden|clip/.test(overflow('Y'))?0:dy,behavior:'instant'});
   }
+  const scrollParent=node=>node.assignedSlot||node.parentElement||node.getRootNode()?.host;
+  function scrollFrom(w,node,dx,dy){
+    const root=w.document.scrollingElement;
+    while(node&&node!==root&&(dx||dy)){
+      const style=w.getComputedStyle(node),x=/auto|scroll/.test(style.overflowX),y=/auto|scroll/.test(style.overflowY),beforeX=node.scrollLeft,beforeY=node.scrollTop;
+      node.scrollBy({left:x?dx:0,top:y?dy:0,behavior:'instant'});
+      dx-=node.scrollLeft-beforeX;dy-=node.scrollTop-beforeY;
+      if(Math.abs(dx)<1)dx=0;if(Math.abs(dy)<1)dy=0;
+      if(x&&/contain|none/.test(style.overscrollBehaviorX))dx=0;
+      if(y&&/contain|none/.test(style.overscrollBehaviorY))dy=0;
+      node=scrollParent(node);
+    }
+    if(root)scrollViewport(w,dx,dy);
+  }
   function sync(force=false){
     if(!open)return;
     const next=path();if(!next)return;
@@ -144,7 +158,7 @@
     const focus=document.createElement('button');focus.id='comparisonFocus';focus.type='button';focus.className='control-button';focus.textContent='Focus previews';focus.setAttribute('aria-pressed',String(focusPreviews));focus.title='Hide screen-management controls to give more space to previews. Toggle again to restore the controls.';
     focus.onclick=()=>{focusPreviews=!focusPreviews;rail.classList.toggle('focus-previews',focusPreviews);focus.setAttribute('aria-pressed',String(focusPreviews));try{localStorage.setItem(storageKey+'.focus',String(focusPreviews));}catch{}layoutPreviews();};rail.append(focus);
     const heading=document.createElement('h2');heading.textContent='Compare screens';rail.append(heading);
-    const hint=document.createElement('p');hint.className='hint';hint.id='comparisonNavigationHint';hint.textContent='Click a layer to edit on the main canvas. Style scope stays unchanged. Focus a preview and use arrow keys, Page Up/Down, or Home/End to scroll; Enter opens its size.';rail.append(hint);
+    const hint=document.createElement('p');hint.className='hint';hint.id='comparisonNavigationHint';hint.textContent='Click a layer to edit on the main canvas. Style scope stays unchanged. Focus a preview and use arrow keys, Page Up/Down, or Home/End to scroll the panel at its center. Enter opens its size.';rail.append(hint);
     scopeSummary=document.createElement('p');scopeSummary.className='hint';scopeSummary.setAttribute('aria-label','Comparison style scope');scopeSummary.textContent='Style scope: '+scope.label;rail.append(scopeSummary);
     const files=document.createElement('div');files.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px';
     allPreviews=document.createElement('button');allPreviews.id='comparisonVisibility';allPreviews.type='button';allPreviews.className='control-button';allPreviews.title='Collapse previews to manage screen sizes, or expand them again. Keeps each page loaded.';
@@ -367,10 +381,17 @@
         try{
           const d=frame.contentDocument,w=frame.contentWindow,loc=w.location,root=d?.scrollingElement;
           if(!root||loc.origin!==location.origin||loc.pathname+loc.search+loc.hash!==path())return;
-          const page=Math.floor(height*.9);
+          const node=d.elementFromPoint(width/2,height/2)||d.body;
+          let target=node;
+          while(target&&target!==root){
+            const style=w.getComputedStyle(target);
+            if(/auto|scroll/.test(style.overflowY)&&(target.scrollHeight>target.clientHeight||/contain|none/.test(style.overscrollBehaviorY)))break;
+            target=scrollParent(target);
+          }
+          const nested=target&&target!==root,page=Math.floor((nested?target.clientHeight:height)*.9),top=nested?target.scrollTop:w.scrollY;
           const dx=event.key==='ArrowLeft'?-40:event.key==='ArrowRight'?40:0;
-          const dy=({ArrowUp:-40,ArrowDown:40,PageUp:-page,PageDown:page,Home:-w.scrollY,End:root.scrollHeight-w.scrollY})[event.key]||0;
-          scrollViewport(w,dx,dy);
+          const dy=({ArrowUp:-40,ArrowDown:40,PageUp:-page,PageDown:page,Home:-top,End:nested?target.scrollHeight-target.clientHeight-top:root.scrollHeight-height-top})[event.key]||0;
+          scrollFrom(w,node,dx,dy);
         }catch{}
       });
       viewport.addEventListener('wheel',e=>{
@@ -382,17 +403,7 @@
           let node=d.elementFromPoint((e.clientX-bounds.left)/scale,(e.clientY-bounds.top)/scale)||d.body;
           const css=w.getComputedStyle(node),line=parseFloat(css.lineHeight)||16;
           let dx=e.deltaX*(e.deltaMode===1?line:e.deltaMode===2?width:1/scale),dy=e.deltaY*(e.deltaMode===1?line:e.deltaMode===2?height:1/scale);
-          const root=d.scrollingElement;
-          while(node&&node!==root&&(dx||dy)){
-            const style=w.getComputedStyle(node),x=/auto|scroll/.test(style.overflowX),y=/auto|scroll/.test(style.overflowY),beforeX=node.scrollLeft,beforeY=node.scrollTop;
-            node.scrollBy({left:x?dx:0,top:y?dy:0,behavior:'instant'});
-            dx-=node.scrollLeft-beforeX;dy-=node.scrollTop-beforeY;
-            if(Math.abs(dx)<1)dx=0;if(Math.abs(dy)<1)dy=0;
-            if(x&&/contain|none/.test(style.overscrollBehaviorX))dx=0;
-            if(y&&/contain|none/.test(style.overscrollBehaviorY))dy=0;
-            node=node.assignedSlot||node.parentElement||node.getRootNode()?.host;
-          }
-          if(root)scrollViewport(w,dx,dy);
+          scrollFrom(w,node,dx,dy);
         }catch{}
       },{passive:false});
       cards.push({card,frame,surface,previewBody,setCollapsed,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal,up,down,move});
