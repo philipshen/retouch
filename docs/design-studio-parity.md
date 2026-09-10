@@ -6665,3 +6665,32 @@ The existing HTML effect flow also passed, exit 0:
 /private/tmp/retouch-react-effects-html-regression.log. Liquid effect links,
 complete class-renderer filter-stack controls, broader arbitrary-site authoring,
 and full Figma parity remain unfinished. Native Retouch launches remain paused.
+
+### Liquid saved-effect styles (2026-09-09)
+
+Saved effects now work on Liquid template hosts, including rendered conditional
+class expressions. Links carry scoped property baselines; source writes reuse
+owned Liquid class patches and preserve original branches. Project updates scan
+unopened templates, retain local overrides, and leave newly introduced properties
+locally owned on dynamic hosts until explicit reset because inactive branches
+cannot be evaluated from the source patch. Missing rendered context, malformed
+metadata, generated attributes and missing owned patches refuse edits.
+
+Adapter/API wiring enables the existing single-layer effect inspector and both
+catalog and selected-layer project updates with shared history. Multi-selection
+Liquid effects remain unsupported. Detach preserves rendered classes.
+
+All 504 tests passed, exit 0:
+/private/tmp/retouch-liquid-effects-final-units.log. Source tests render both
+conditional branches, verify override/reset/detach behavior and refusal cases.
+A real HTTP catalog test updates two conditional templates, undoes all source and
+catalog bytes, and refuses a later malformed template without partial writes.
+Chromium and WebKit browser flows passed, exit 0:
+/private/tmp/retouch-liquid-effects-chromium.log and
+/private/tmp/retouch-liquid-effects-webkit.log. Both test capture/apply, visible
+shadow preset override/reset, filter edits through the shell class writer,
+unopened-template propagation, mobile scope isolation, detach and exact undo.
+The reset assertion checks rendered classes rather than searching source text:
+Liquid patch metadata intentionally retains removed tokens. These are local
+Liquid/Tailwind fixtures, not live Shopify verification. Native launches remain
+paused; full Figma parity and arbitrary-site authoring remain incomplete.
