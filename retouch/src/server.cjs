@@ -86,7 +86,7 @@ function handle(req, res, ctx) {
       if(!bytes)return json(res,413,{ok:false,reason:kind+' style requests must be 512 KB or smaller.'});
       let operation;try{operation=JSON.parse(bytes.toString('utf8'));}catch{return json(res,400,{ok:false,reason:'Invalid '+kind+' style JSON.'});}
       try{
-        const plan=colorLibrary&&operation?.type==='update'&&(ctx.adapter.capabilities?.ops?.includes('setCSS')||ctx.adapter.name==='react')?require('./text-style-update.cjs').plan(ctx.appRoot,operation,ctx.adapter.name==='react'?'react':'html','color'):!colorLibrary&&operation?.type==='update'&&(ctx.adapter.capabilities?.ops?.includes('setCSS')||['react','liquid'].includes(ctx.adapter.name))?require('./text-style-update.cjs').plan(ctx.appRoot,operation,['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html'):library.planChange(ctx.appRoot,operation);
+        const plan=colorLibrary&&operation?.type==='update'&&(ctx.adapter.capabilities?.ops?.includes('setCSS')||['react','liquid'].includes(ctx.adapter.name))?require('./text-style-update.cjs').plan(ctx.appRoot,operation,['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html','color'):!colorLibrary&&operation?.type==='update'&&(ctx.adapter.capabilities?.ops?.includes('setCSS')||['react','liquid'].includes(ctx.adapter.name))?require('./text-style-update.cjs').plan(ctx.appRoot,operation,['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html'):library.planChange(ctx.appRoot,operation);
         if(!plan.ok)return json(res,409,plan);
         const applied=library.commitPlan(ctx.appRoot,plan);
         for(const edit of applied.edits)if(ctx.adapter.matches(edit.file))ctx.index.indexFile(edit.file);
@@ -189,15 +189,15 @@ function handle(req, res, ctx) {
       try {
         resolved.context = renderContext(op.context);
         if(op.type==='setColorOverride'){
-          if(ctx.adapter.name!=='react')return json(res,409,{ok:false,reason:'Class color editing is not available for this renderer.'});
+          if(!['react','liquid'].includes(ctx.adapter.name))return json(res,409,{ok:false,reason:'Class color editing is not available for this renderer.'});
           const info=ctx.adapter.describe(resolved);if(info.classNameDynamic)return json(res,409,{ok:false,reason:'Color editing needs literal classes.'});
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source changed. Re-select the layer.'});
           let classes;try{classes=require('./color-style-classes.cjs').compose(info.className||'',op.property,op.value,op.scope||'');}catch(error){return json(res,409,{ok:false,reason:error.message});}
           result=applyPlan(ctx.appRoot,ctx.adapter.planOp(resolved,{type:'setClasses',classes,fileHash:op.fileHash}));
         } else if (['applyColorStyle','resetColorStyle','detachColorStyle','applyColorStyleSelection','resetColorStyleSelection','detachColorStyleSelection'].includes(op.type)) {
-          if(!ctx.adapter.capabilities?.ops?.includes('setCSS')&&ctx.adapter.name!=='react')return json(res,409,{ok:false,reason:'Linked color styles are not available for this renderer yet.'});
+          if(!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!['react','liquid'].includes(ctx.adapter.name))return json(res,409,{ok:false,reason:'Linked color styles are not available for this renderer yet.'});
           let style;if(!op.type.startsWith('detachColorStyle')){const library=require('./color-styles.cjs').read(ctx.appRoot);if(library.revision!==op.libraryRevision)return json(res,409,{ok:false,reason:'Color styles changed. Reload the palette.'});style=op.type==='resetColorStyleSelection'?library:library.styles.find(item=>item.id===op.styleId);if(!style)return json(res,409,{ok:false,reason:'That color style no longer exists.'});}
-          result=applyPlan(ctx.appRoot,op.type.endsWith('Selection')?require('./text-style-selection.cjs').plan(resolved,op,style,ctx.adapter,'color'):require(ctx.adapter.name==='react'?'./jsx-color-styles.cjs':'./html-color-styles.cjs').plan(resolved,op,style));
+          result=applyPlan(ctx.appRoot,op.type.endsWith('Selection')?require('./text-style-selection.cjs').plan(resolved,op,style,ctx.adapter,'color'):require(ctx.adapter.name==='react'?'./jsx-color-styles.cjs':ctx.adapter.name==='liquid'?'./liquid-color-styles.cjs':'./html-color-styles.cjs').plan(resolved,op,style));
         } else if (op.type === 'updateTextStyle') {
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source layer changed. Re-select it before updating the style.'});
           if (!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!['react','liquid'].includes(ctx.adapter.name)) return json(res,409,{ok:false,reason:'Linked text style updates are not available for this renderer yet.'});

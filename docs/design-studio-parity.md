@@ -6333,3 +6333,25 @@ background and top-border colors, compare resulting alpha paint with inline CSS,
 and preserve important font size, border width, background sizing/image and phone
 appearance. Arbitrary custom utility ownership, Liquid color links and complete
 Figma parity remain unfinished. Native app launches remain paused.
+
+### Liquid palette links and project propagation (2026-09-09)
+
+Liquid templates now expose per-property/per-scope color links to the palette.
+Single-layer apply/reset/detach and local alpha paint edits use the existing
+rendered class context and owned class patch writer. Conditional Liquid source
+is preserved. Project updates enumerate all .liquid sources and compose catalog
+and source edits before committing, using owned class patches for unopened
+dynamic layers. Local overrides remain owned until explicitly reset. Missing
+patches, generated/ambiguous metadata and stale sources refuse safely.
+
+All 476 unit tests passed, exit 0: /private/tmp/retouch-liquid-palette-units.log.
+Source tests render both conditional branches after link application and project
+refresh, and cover override/reset/detach plus invalid metadata refusal. Local
+Liquid/Tailwind browser flows passed in Chromium and WebKit, exit 0:
+/private/tmp/retouch-liquid-palette-chromium.log and
+/private/tmp/retouch-liquid-palette-webkit.log. Both run with conditional class
+source and verify md paint, alpha local override/reset, catalog plus unopened
+source update/undo, unchanged phone paint, detach and exact source restoration.
+These are local renderer receipts, not live Shopify verification. Liquid batch
+color operations, arbitrary remote-site authoring, wide-gamut palettes and full
+Figma feature parity remain unfinished. Native app launches remain paused.

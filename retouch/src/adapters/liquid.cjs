@@ -314,7 +314,7 @@ function describeElement(resolved) {
 }
 
 function describe(resolved) {
-  return {...describeElement(resolved),...require('../liquid-text-styles.cjs').describe(resolved),components:theme.ancestry(resolved),structure:structure.describe(resolved,'liquid')};
+  return {...describeElement(resolved),...require('../liquid-text-styles.cjs').describe(resolved),...require('../liquid-color-styles.cjs').describe(resolved),components:theme.ancestry(resolved),structure:structure.describe(resolved,'liquid')};
 }
 
 function refuse(reason) { return { ok: false, refused: true, reason }; }
