@@ -6267,3 +6267,26 @@ React local paint inspector controls still need canonical linked-property editin
 parity; reset ownership has source tests but not a React live override/reset flow.
 Important utility conflict handling remains conservative. Liquid colors and full
 renderer parity remain incomplete. Native launches remain paused.
+
+### React local paint overrides (2026-09-09)
+
+React Appearance now accepts explicit sRGB hex colors with alpha for text,
+background and border paint. The existing border picker also uses the canonical
+paint writer. Edits target the selected responsive scope and keep saved-color
+links, allowing the palette to report a local override and reset it. Computed
+paint remains visible beside the inputs rather than silently converting alpha
+or wide-gamut computed colors. The API requires an exact source hash, literal
+classes, supported paint properties and valid palette color syntax; conflicts
+return a source refusal without writes.
+
+All 471 tests passed, exit 0: /private/tmp/retouch-react-local-paint-units.log.
+After tightening refusal HTTP status and mandatory source hash, the focused API
+test was rerun and passed. It checks stale/invalid source preservation and exact
+shared undo/redo. React Chromium and WebKit editor flows passed, exit 0:
+/private/tmp/retouch-react-local-paint-chromium.log and
+/private/tmp/retouch-react-local-paint-webkit.log. Both change a linked background
+to alpha green, verify rendered paint and the local override label, reset to the
+saved alpha color, and undo both edits to exact source; existing palette flows
+also pass. Text and border use the same endpoint but do not yet have separate
+live editor override/reset coverage. Wide-gamut editing, Liquid links and full
+renderer parity remain incomplete. Native app launches remain paused.

@@ -328,11 +328,21 @@
     const ctx=canvas.getContext('2d');ctx.fillStyle=value;ctx.fillRect(0,0,1,1);
     return '#'+[...ctx.getImageData(0,0,1,1).data].slice(0,3).map(v=>v.toString(16).padStart(2,'0')).join('');
   }
-  function appearance(info, el, save) {
+  function appearance(info, el, save, colorAction) {
     const sec = section('Appearance');
     if (!el) return sec;
     const css = el.ownerDocument.defaultView.getComputedStyle(el);
     if (locked(sec,info)) return sec;
+    if(colorAction){
+      for(const [property,label]of [['color','Text color'],['background-color','Background color'],['border-color','Border color']]){
+        const input=document.createElement('input');input.type='text';input.spellcheck=false;input.placeholder='#RRGGBB or #RRGGBBAA';
+        const computed=property==='border-color'?css.borderTopColor:css.getPropertyValue(property);
+        // Keep the actual computed color visible; an empty field accepts a new
+        // explicit sRGB value without silently flattening alpha or wide gamut.
+        field(sec,label+' with alpha',input);note(sec,computed,'computed-value');
+        input.onchange=()=>{const value=input.value.trim();if(!/^#(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})$/i.test(value)){input.setCustomValidity('Enter a hex color with 3, 4, 6 or 8 digits.');input.reportValidity();return;}input.setCustomValidity('');colorAction(property,value).catch(error=>{input.setCustomValidity(error.message);input.reportValidity();});};input.oninput=()=>input.setCustomValidity('');
+      }
+    }
     const row = document.createElement('div'); row.className='opacity-row';
     const input = number(row,'Opacity (%)',Number(css.opacity)*100,0,100,value=>save(replace(info.className,t=>t.startsWith('opacity-'),`opacity-[${round(value/100)}]`)));
     const slider = document.createElement('input'); slider.type='range'; slider.min=0; slider.max=100; slider.value=input.value; slider.setAttribute('aria-label','Opacity');
@@ -351,7 +361,7 @@
     // Color inputs accept sRGB hex, while computed CSS may use lab/oklch.
     // Show the browser's computed value separately instead of mislabelling it.
     field(sec,'Border color',borderColor);note(sec,css.borderTopColor,'computed-value');
-    borderColor.onchange=()=>save(replace(info.className,t=>t.startsWith('border-')&&!widthToken(t)&&!/^border(?:-[trblxyse])?-(solid|dashed|dotted|double|hidden|none|collapse|separate|spacing-|opacity-)/.test(t),`border-[${borderColor.value}]`));
+    borderColor.onchange=()=>colorAction?colorAction('border-color',borderColor.value).catch(error=>{borderColor.setCustomValidity(error.message);borderColor.reportValidity();}):save(replace(info.className,t=>t.startsWith('border-')&&!widthToken(t)&&!/^border(?:-[trblxyse])?-(solid|dashed|dotted|double|hidden|none|collapse|separate|spacing-|opacity-)/.test(t),`border-[${borderColor.value}]`));
     const radius=value=>/^[\d.]+px$/.test(value)?parseFloat(value):NaN;
     const radii=[css.borderTopLeftRadius,css.borderTopRightRadius,css.borderBottomRightRadius,css.borderBottomLeftRadius];
     const allRadius=number(sec,'Corner radius (px)',radii.every(v=>v===radii[0])?radius(radii[0]):NaN,0,10000,v=>save(replace(info.className,t=>/^rounded(?:-|$)/.test(t),`rounded-[${v}px]`)));

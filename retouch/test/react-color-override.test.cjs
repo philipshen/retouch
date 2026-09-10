@@ -1,0 +1,11 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),react=require('../src/adapters/react.cjs');
+test('React local paint API preserves source on invalid/stale writes and supports exact undo',async t=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-react-paint-')),file=path.join(root,'Page.jsx'),source='export default function Page(){return <p className="text-lg border-2 bg-blue-500">Paint</p>}';fs.writeFileSync(file,source);
+ const server=require('../src/server.cjs').startServer({appRoot:root,adapter:react,port:0,quiet:true});t.after(async()=>{server.retouchIndex.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));fs.rmSync(root,{recursive:true,force:true});});if(!server.listening)await require('node:events').once(server,'listening');
+ const url='http://localhost:'+server.address().port,shell=await(await fetch(url+'/rt')).text(),token=/__RT_TOKEN = "([0-9a-f]+)"/.exec(shell)[1],id=react.collect(source,'Page.jsx').elements[0].id,hash=react.contentHash(source),op={type:'setColorOverride',id,fileHash:hash,property:'background-color',value:'#00ff0080',scope:'md:'};
+ const post=async body=>{const response=await fetch(url+'/rt/__api/op',{method:'POST',headers:{'x-retouch-token':token,'content-type':'application/json'},body:JSON.stringify(body)});return {status:response.status,value:await response.json()};};
+ for(const patch of [{fileHash:'stale'},{property:'opacity'},{value:'url(evil)'}]){const result=await post({...op,...patch});assert.equal(result.status,409);assert.equal(fs.readFileSync(file,'utf8'),source);}
+ const result=await post(op);assert.equal(result.status,200,JSON.stringify(result.value));assert.ok(result.value.undoId);const after=fs.readFileSync(file,'utf8');assert.ok(after.includes('md:![background-color:#00ff0080]'));assert.ok(after.includes('text-lg border-2 bg-blue-500'));
+ assert.equal((await post({type:'undo',undoId:result.value.undoId})).status,200);assert.equal(fs.readFileSync(file,'utf8'),source);assert.equal((await post({type:'redo',undoId:result.value.undoId})).status,200);assert.equal(fs.readFileSync(file,'utf8'),after);
+});

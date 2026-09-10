@@ -188,7 +188,13 @@ function handle(req, res, ctx) {
       let result;
       try {
         resolved.context = renderContext(op.context);
-        if (['applyColorStyle','resetColorStyle','detachColorStyle','applyColorStyleSelection','resetColorStyleSelection','detachColorStyleSelection'].includes(op.type)) {
+        if(op.type==='setColorOverride'){
+          if(ctx.adapter.name!=='react')return json(res,409,{ok:false,reason:'Class color editing is not available for this renderer.'});
+          const info=ctx.adapter.describe(resolved);if(info.classNameDynamic)return json(res,409,{ok:false,reason:'Color editing needs literal classes.'});
+          if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source changed. Re-select the layer.'});
+          let classes;try{classes=require('./color-style-classes.cjs').compose(info.className||'',op.property,op.value,op.scope||'');}catch(error){return json(res,409,{ok:false,reason:error.message});}
+          result=applyPlan(ctx.appRoot,ctx.adapter.planOp(resolved,{type:'setClasses',classes,fileHash:op.fileHash}));
+        } else if (['applyColorStyle','resetColorStyle','detachColorStyle','applyColorStyleSelection','resetColorStyleSelection','detachColorStyleSelection'].includes(op.type)) {
           if(!ctx.adapter.capabilities?.ops?.includes('setCSS')&&ctx.adapter.name!=='react')return json(res,409,{ok:false,reason:'Linked color styles are not available for this renderer yet.'});
           let style;if(!op.type.startsWith('detachColorStyle')){const library=require('./color-styles.cjs').read(ctx.appRoot);if(library.revision!==op.libraryRevision)return json(res,409,{ok:false,reason:'Color styles changed. Reload the palette.'});style=op.type==='resetColorStyleSelection'?library:library.styles.find(item=>item.id===op.styleId);if(!style)return json(res,409,{ok:false,reason:'That color style no longer exists.'});}
           result=applyPlan(ctx.appRoot,op.type.endsWith('Selection')?require('./text-style-selection.cjs').plan(resolved,op,style,ctx.adapter,'color'):require(ctx.adapter.name==='react'?'./jsx-color-styles.cjs':'./html-color-styles.cjs').plan(resolved,op,style));
