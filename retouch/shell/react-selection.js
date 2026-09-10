@@ -3,6 +3,8 @@
  const fields={opacity:{label:'Opacity (%)',matches:t=>/^opacity-|^\[opacity:/.test(t),token:v=>'opacity-['+v/100+']'},visibility:{label:'Visibility',matches:t=>/^(visible|invisible|collapse)$|^\[visibility:/.test(t),options:['visible','hidden','collapse'],token:v=>({visible:'visible',hidden:'invisible',collapse:'collapse'})[v]},'mix-blend-mode':{label:'Blend mode',matches:t=>/^mix-blend-|^\[mix-blend-mode:/.test(t),options:['normal','multiply','screen','overlay','darken','lighten','color-dodge','color-burn','hard-light','soft-light','difference','exclusion','hue','saturation','color','luminosity'],token:v=>'mix-blend-'+v},isolation:{label:'Blend group',matches:t=>/^(isolate|isolation-auto)$|^\[isolation:/.test(t),options:['auto','isolate'],token:v=>v==='auto'?'isolation-auto':'isolate'}};
  const inspector=()=>root.RetouchInspector||require('./inspector.js');
  Object.assign(fields,{
+  width:{label:'Width (px)',min:0,max:100000,matches:t=>/^w-|^\[width:/.test(t),token:v=>'w-['+v+'px]'},
+  height:{label:'Height (px)',min:0,max:100000,matches:t=>/^h-|^\[height:/.test(t),token:v=>'h-['+v+'px]'},
   'font-family':{label:'Font family',picker:true,valid:v=>!!inspector().fontFamilyClass(v),matches:t=>inspector().fontFamilyToken(t),token:v=>inspector().fontFamilyClass(v)},
   'font-size':{label:'Font size (px)',min:0,max:2000,matches:t=>inspector().fontSizeToken(t),token:v=>'[font-size:'+v+'px]'},
   'font-weight':{label:'Font weight (1–1000)',min:1,max:1000,step:1,matches:t=>inspector().fontWeightToken(t),token:v=>'[font-weight:'+v+']'},
@@ -12,13 +14,19 @@
   'font-style':{label:'Font slant',matches:t=>inspector().fontStyleToken(t),options:['normal','italic','oblique'],token:v=>'[font-style:'+v+']'},
   'text-transform':{label:'Text case',matches:t=>inspector().caseToken(t),options:['none','uppercase','lowercase','capitalize'],token:v=>'[text-transform:'+v+']'}
  });
+ function decoration(css,property){return (property==='width'?['left','right']:['top','bottom']).reduce((sum,side)=>sum+(parseFloat(css.getPropertyValue('padding-'+side))||0)+(parseFloat(css.getPropertyValue('border-'+side+'-width'))||0),0);}
+ function dimensionSize(css,property){const value=parseFloat(css.getPropertyValue(property));return Number.isFinite(value)?value+(css.boxSizing==='content-box'?decoration(css,property):0):NaN;}
+ function dimensionValue(css,property,value){if(value===null)return null;const extra=decoration(css,property);if(value<extra)throw Error('The requested size is smaller than a selected layer’s padding and borders.');return Math.round((value-(css.boxSizing==='content-box'?extra:0))*1e6)/1e6;}
  function change(classes,scope,property,value,document=null,relative=false){
   if(relative&&(!['line-height','letter-spacing'].includes(property)||!Number.isFinite(value)||value<(property==='line-height'?0:-100)||value>1000))throw Error('Choose a supported relative typography value.');
   const field=fields[property];if(!field||value!==null&&!(property==='line-height'&&value==='normal')&&(field.valid?!field.valid(value):field.options?!field.options.includes(value):!Number.isFinite(value)||value<(field.min??0)||value>(field.max??100)||field.step===1&&!Number.isInteger(value)))throw Error('Choose a supported shared style value.');
   const I=root.RetouchInspector||require('./inspector.js'),R=root.RetouchResponsive||require('./responsive.js');
   const active=R.project(classes,scope).split(/\s+/).map(I.base).filter(Boolean);
   if(['font-family','font-size','font-weight','line-height','font-style'].includes(property)&&active.some(token=>/^\[font:/.test(token)))throw Error('A selected layer uses a font shorthand. Edit that shorthand before changing its typography.');
-  let addition=value===null?'':relative?'['+property+':'+Math.round(value*1e6)/1e8+(property==='letter-spacing'?'em':'')+']':property==='line-height'&&value==='normal'?'[line-height:normal]':field.token(value);if(scope&&value!==null&&R.inherited(classes,scope,document).split(/\s+/).some(token=>I.base(token)!==null&&field.matches(I.base(token))&&/^!|!$/.test(token)))addition='!'+addition;
+  const dimension=['width','height'].includes(property),priorityMatch=token=>field.matches(token)||dimension&&/^size-/.test(token);
+  if(dimension&&value!==null&&[...active,...R.inherited(classes,scope,document).split(/\s+/).map(I.base)].some(token=>/^\[(inline|block)-size:/.test(token||'')))throw Error('A selected layer uses logical sizing. Edit its inline or block size before setting a physical width or height.');
+  let addition=value===null?'':relative?'['+property+':'+Math.round(value*1e6)/1e8+(property==='letter-spacing'?'em':'')+']':property==='line-height'&&value==='normal'?'[line-height:normal]':field.token(value);if(scope&&value!==null&&R.inherited(classes,scope,document).split(/\s+/).some(token=>I.base(token)!==null&&priorityMatch(I.base(token))&&/^!|!$/.test(token)))addition='!'+addition;
+  if(dimension&&addition&&R.project(classes,scope).split(/\s+/).some(token=>I.base(token)!==null&&/^size-/.test(I.base(token))&&/^!|!$/.test(token)))addition='!'+addition.replace(/^!/,'');
   if(addition&&document&&!['opacity','visibility','mix-blend-mode','isolation'].includes(property)&&I.catalog(document).some(name=>(classes||'').split(/\s+/).includes(name))&&!addition.startsWith('!'))addition='!'+addition;
   const projected=R.project(classes,scope),expanded=['font-size','line-height'].includes(property)?I.expandSizeLeading(projected):projected,next=I.replace(expanded,field.matches,addition);return next===projected?(classes||''):R.replaceScope(classes,next,scope);
  }
@@ -64,16 +72,17 @@
     const reset=I.button('Reset shared font family',()=>write(null));try{reset.disabled=infos.every(info=>change(info.className,scope,property,null)===(info.className||''));}catch(error){reset.disabled=true;reset.title=error.message;}group.append(reset);continue;
    }
 
-   const values=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el).getPropertyValue(property)),mixed=values.some(v=>v!==values[0]),input=root.document.createElement(field.options?'select':'input'),blocked=elements.some(el=>el.style.getPropertyValue(property));
+   const dimension=['width','height'].includes(property),values=elements.map(el=>{const css=el.ownerDocument.defaultView.getComputedStyle(el);return dimension?dimensionSize(css,property)+'px':css.getPropertyValue(property);}),mixed=values.some(v=>v!==values[0]),input=root.document.createElement(field.options?'select':'input'),blocked=elements.some(el=>{const css=el.ownerDocument.defaultView.getComputedStyle(el);return el.style.getPropertyValue(property)||dimension&&(el.style.getPropertyValue('inline-size')||el.style.getPropertyValue('block-size')||['inline','contents'].includes(css.display)||!Number.isFinite(dimensionSize(css,property)));});
    if(field.options){if(mixed){const o=root.document.createElement('option');o.value='';o.textContent='Mixed';o.disabled=true;input.append(o);}for(const value of field.options){const o=root.document.createElement('option');o.value=value;o.textContent=value;input.append(o);}}
    else{input.type='number';input.min=String(field.min??0);input.max=String(field.max??100);input.step=String(field.step??'any');input.placeholder=mixed?'Mixed':'';}
    const display=mixed?'':field.options?values[0]:property==='opacity'?String(Math.round(Number(values[0])*10000)/100):Number.isFinite(parseFloat(values[0]))?String(parseFloat(values[0])):'';
    input.value=display;input.disabled=blocked;input.title=blocked?'An inline style controls this property on a selected layer. Edit that source style first.':'';
-   const write=value=>{try{save(Object.fromEntries(infos.map((info,i)=>[info.id,change(info.className,scope,property,value,elements[i].ownerDocument)])));}catch(error){I.note(sec,error.message,'refused');}};
+   const write=value=>{try{save(Object.fromEntries(infos.map((info,i)=>[info.id,change(info.className,scope,property,dimension?dimensionValue(elements[i].ownerDocument.defaultView.getComputedStyle(elements[i]),property,value):value,elements[i].ownerDocument)])));}catch(error){I.note(sec,error.message,'refused');}};
    input.onchange=()=>{if(input.value!==''&&input.checkValidity())write(field.options?input.value:Number(input.value));};input.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();input.value=display;input.blur();}else if(event.key==='Enter'){event.preventDefault();event.stopPropagation();input.blur();}};I.field(sec,'Shared '+field.label,input);
    const reset=I.button('Reset shared '+field.label.toLowerCase(),()=>write(null));try{reset.disabled=infos.every(info=>change(info.className,scope,property,null)===(info.className||''));}catch(error){reset.disabled=true;reset.title=error.message;}sec.append(reset);
   }
+  I.note(sec,'Width and height include padding and borders. Each layer’s min/max constraints still apply.');
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={change,changeBlur,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={change,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);

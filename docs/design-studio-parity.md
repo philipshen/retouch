@@ -7870,3 +7870,38 @@ This adds rendered verification for two-layer local Liquid selections. It does
 not establish independent-gap isolation across three or more Liquid layers,
 complete pointer/zoom coverage, live Shopify behavior, or full Figma parity.
 Native launches remain paused.
+
+### Shared outer width and height for React and Liquid (2026-09-10)
+
+The shared class inspector now exposes width and height controls with mixed-value
+states and per-dimension resets. Values describe the outer layout box, including
+padding and borders. Each member's requested dimension is converted through its
+own box sizing before the existing atomic selection writer saves the classes.
+A requested box smaller than a member's padding/borders refuses before saving.
+Inline sizing overrides and unmeasurable/inline layout boxes disable editing;
+logical sizing declarations are refused rather than guessing a physical axis.
+Existing min/max and layout constraints continue to apply.
+
+A width or height override preserves coupled `size-*` utilities instead of
+splitting/removing them. Important size declarations carry their priority into
+the single-axis override. Reset removes that override so the original responsive
+size can contribute again, while the companion dimension remains untouched.
+This adds fixed pixel sizing; it does not implement all Figma hug/fill modes.
+
+All 590 unit tests pass (`/private/tmp/retouch-shared-outer-sizing-units.log`).
+Focused tests cover coupled utilities, independent companion dimensions, scope
+preservation, inherited important sizing, logical-axis refusal, invalid values,
+content-box measurement/conversion and below-padding refusal. Browser flows use
+mixed border-box/content-box layers, padding, borders and important coupled size
+classes. They verify shared width, unchanged explicit heights, phone isolation,
+shared height, width reset and exact multi-step source Undo. React Chromium and
+Liquid WebKit pass in `/private/tmp/retouch-react-outer-sizing-chromium.log` and
+`/private/tmp/retouch-liquid-outer-sizing-webkit.log`. React WebKit and Liquid
+Chromium also pass (`/private/tmp/retouch-react-outer-sizing-webkit.log` and
+`/private/tmp/retouch-liquid-outer-sizing-chromium.log`).
+The screenshot `/private/tmp/retouch-react-shared-sizing.png` was inspected.
+
+The original Liquid fixture accidentally edited a stylesheet selector instead of
+the layer class; its setup was corrected to target the class attribute. These are
+local React/Next and LiquidJS/Tailwind checks, not universal-site or live Shopify
+verification. Full Figma parity remains incomplete and native launches stay paused.
