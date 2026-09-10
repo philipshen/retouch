@@ -27,7 +27,7 @@ function plan(resolved,op){
   }
   const after=ms.toString(),remaining=collectElements(after,resolved.relPath).elements,ids=new Set(remaining.map(el=>el.id));
   if(resolved.elements.some(el=>!(el.node.start>=target.node.start&&el.node.end<=target.node.end)&&!ids.has(el.id)))throw Error('The deletion could not preserve unrelated source identities.');
-  return {ok:true,hash:contentHash(after),deletedComponent:{instanceId:resolved.element.id,parentId},edits:[{file:resolved.file,before:resolved.source,after}]};
+  return {ok:true,hash:contentHash(after),deletedComponent:{instanceId:resolved.element.id,parentId,removedSourceIds:resolved.elements.filter(el=>el.node.start>=target.node.start&&el.node.end<=target.node.end).map(el=>el.id)},edits:[{file:resolved.file,before:resolved.source,after}]};
  }catch(error){return refuse(error.message);}
 }
 module.exports={plan};

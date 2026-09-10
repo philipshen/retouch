@@ -1362,7 +1362,8 @@ async function deleteInstance(id,context){
  busyPanel(true);try{
   const usage=await api('GET',resolveUrl(id,context));if(!usage?.ok)throw Error('Re-select the component before deleting.');
   const result=await api('POST','/rt/__api/op',{type:'deleteComponent',id,fileHash:sel?.info.id===id?sel.info.hash:usage.element.hash});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not delete the component usage.');
-  editorHistory.record({type:'deleteComponent',id,parentId:result.deletedComponent.parentId,undoId:result.undoId});
+  const removedSourceIds=result.deletedComponent.removedSourceIds||[id],deletedLocks=layerLocks.removeSourceIds(removedSourceIds);
+  editorHistory.record({type:'deleteComponent',id,parentId:result.deletedComponent.parentId,removedSourceIds,deletedLocks,undoId:result.undoId});
   await refreshDeletedComponent(id,result.deletedComponent.parentId);clearSelection();toast('Component usage deleted; definition remains available','ok');
  }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
 }
