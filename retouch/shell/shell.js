@@ -33,13 +33,20 @@ let panelTasks = 0;
 let pendingPanelFocus=null;
 const panelSelectionKey=()=>sel?JSON.stringify([sel.info.file,sel.scope,sel.instanceId,(sel.multiple||[sel.info]).map(info=>info.id).sort()]):null;
 const controlIdentity=el=>JSON.stringify([el.tagName,el.getAttribute('aria-label'),el.getAttribute('name'),el.dataset.canvasTool,el.matches('button,summary')?el.textContent:null]);
+// Source refresh can rebuild a slider again after the save releases the panel.
+// Retain its destination briefly; deliberate input still cancels the request below.
+window.RetouchPanelFocus={queue(target,label){
+  if(!panelBody.contains(target))return;
+  const identityTarget=target.cloneNode(true);if(label)identityTarget.setAttribute('aria-label',label);
+  pendingPanelFocus={selection:panelSelectionKey(),identity:controlIdentity(identityTarget),index:0,expires:0,retain:true};
+}};
 function restorePanelFocus(){
   const pending=pendingPanelFocus;if(!pending||panelBody.disabled)return;
   if(!pending.expires)pending.expires=Date.now()+3000;
   if(pending.selection!==panelSelectionKey()||Date.now()>pending.expires){pendingPanelFocus=null;return;}
   const candidates=[...panelBody.querySelectorAll('input,select,textarea,button,summary,[tabindex]')].filter(el=>controlIdentity(el)===pending.identity);
   const target=candidates[pending.index];
-  if(target&&!target.matches(':disabled')&&target.getClientRects().length){pendingPanelFocus=null;target.focus();}
+  if(target&&!target.matches(':disabled')&&target.getClientRects().length){if(!pending.retain)pendingPanelFocus=null;if(document.activeElement!==target)target.focus();}
 }
 panelBody.addEventListener('keydown',event=>{
   if(event.defaultPrevented||event.key!=='Tab'||event.altKey||event.ctrlKey||event.metaKey||!event.target.matches('input:not([type=checkbox]):not([type=radio]),textarea'))return;

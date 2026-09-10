@@ -14,7 +14,7 @@
   if(!gradients)inspector.note(details,'This background image cannot be edited as a gradient. Clear background images to start a gradient fill.');
   else{
    gradients.forEach((gradient,index)=>{const group=d.createElement('fieldset'),legend=d.createElement('legend'),label='Gradient '+(index+1);legend.textContent=label;group.className='gradient-controls';group.append(legend);const update=next=>write(gradients.map((item,i)=>i===index?next:item));
-    const preview=d.createElement('div');preview.className='gradient-preview';preview.style.backgroundImage=V().serializeGradients([gradient]);preview.setAttribute('aria-label',label+' preview');group.append(preview);
+    const preview=d.createElement('div');preview.className='gradient-preview';preview.style.backgroundImage=V().serializeGradients([gradient]);preview.setAttribute('aria-label',label+' preview');group.append(preview,root.RetouchGradientStopRail({gradient,index,info,el:element,preview,gradients,update,label:'Gradient'}));
     inspector.select(group,label+' type',[['linear','Linear'],['radial','Radial']],gradient.type,type=>update({...gradient,type}));
     if(gradient.type==='radial')inspector.select(group,label+' shape',[['ellipse','Ellipse'],['circle','Circle']],gradient.shape,shape=>update({...gradient,shape}));
     for(const [key,title,min,max]of gradient.type==='linear'?[['angle','Angle (deg)',-360,360]]:[['x','Center X (%)',0,100],['y','Center Y (%)',0,100]])inspector.number(group,label+' '+title,gradient[key],min,max,value=>update({...gradient,[key]:value}));
