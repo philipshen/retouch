@@ -6832,3 +6832,24 @@ and undo the changes. Not every filter type received a browser interaction test.
 Full Figma parity, arbitrary-site authoring and native release delivery remain
 incomplete. Local Liquid verification does not establish live Shopify behavior.
 Native Retouch launches remain paused.
+
+### Structured drop-shadow controls (2026-09-09)
+
+The shared filter-stack editor now exposes separate X/Y offsets, blur and color
+for drop-shadow functions, replacing the raw argument field. Editing preserves
+neighboring filters, stack order and supported color spaces. Spread and inset
+are not offered because drop-shadow does not support them. The single-effect
+value writer now verifies that an argument still produces exactly one function,
+so a malformed value cannot silently insert another effect.
+
+All 514 tests passed, exit 0: /private/tmp/retouch-drop-shadow-units.log. Source
+checks cover preserved P3/OKLCH colors, neighboring functions, bad ownership,
+invalid values and attempts to introduce extra functions through an argument.
+Browser flows passed, exit 0: /private/tmp/retouch-drop-shadow-html.log
+(HTML/Chromium), /private/tmp/retouch-drop-shadow-react.log (Next.js/Chromium), and
+/private/tmp/retouch-drop-shadow-liquid.log (conditional Liquid/WebKit). All three
+add a drop shadow, change X to -3px, blur to 7px and color to Display P3, check the
+computed filter alongside its existing blur, and undo each source snapshot
+exactly. Existing filter ordering, duplicate blur and backdrop checks also pass.
+Full Figma parity and arbitrary-site authoring remain incomplete. Native app
+launches remain paused.
