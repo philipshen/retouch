@@ -910,7 +910,7 @@ function screenScopeSection() {
   if (condition && RetouchResponsive.matches({condition,queries:chosen?.queries},iframe.contentWindow)===false) {
     RetouchInspector.note(section, 'This breakpoint does not match the current preview. Its conditions may include width, height or orientation.');
     const previewSize=RetouchResponsive.previewSize({condition,queries:chosen?.queries},document,{width:iframe.contentWindow.innerWidth,height:iframe.contentWindow.innerHeight});
-    if(previewSize){const preview=RetouchInspector.button('Preview this breakpoint',()=>{stopDrawing?.();preview.blur();window.RetouchScreens?.set(previewSize);});preview.title=`Preview at ${previewSize.width} × ${previewSize.height}. Undo preview size restores the previous screen.`;section.append(preview);}
+    if(previewSize){const preview=RetouchInspector.button('Preview this breakpoint',()=>{stopDrawing?.();preview.blur();window.RetouchScreens?.set(previewSize);});preview.id='previewBreakpoint';preview.title=`Preview at ${previewSize.width} × ${previewSize.height}. Undo preview size restores the previous screen.`;section.append(preview);}
   }
   if (!sel.multiple?.length && !sel.info.cssAuthoring && styleScope && RetouchResponsive.project(sel.info.className,styleScope)) {
     section.append(RetouchInspector.button('Reset overrides at this size',()=>setClasses('')));
