@@ -6513,3 +6513,23 @@ out-of-gamut draft unchanged, cancel/explicitly apply clipping, verify no source
 or catalog mutation, then complete P3 and existing palette flows. Perceptual gamut
 mapping, other color spaces, physical display calibration and full Figma parity
 remain unfinished. Native launches remain paused; live Shopify is unverified.
+
+### Display P3 project-update and override verification (2026-09-09)
+
+Extended the live palette verifier to exercise P3 beyond single-layer apply.
+The fixture links a P3 background, creates an unopened source copy, authors a
+local P3 override, then updates the palette to a third P3 color. The unopened
+source receives the new definition while the active layer retains its local
+paint. Palette reset adopts the new definition. Undo restores the reset, then
+the project update (catalog and both sources), then the local edit byte-for-byte.
+
+All three browser processes passed, exit 0:
+/private/tmp/retouch-p3-project-html.log (HTML Chromium),
+/private/tmp/retouch-p3-project-react.log (React Chromium), and
+/private/tmp/retouch-p3-project-liquid.log (conditional Liquid WebKit).
+The new assertions verify rendered P3 paint, retained override labels, unopened
+file propagation and exact transaction history alongside the existing color
+conversion, apply/capture and palette flows. No production implementation change
+was needed for these cases. Physical display color accuracy, dedicated P3
+selection/SVG propagation coverage and full parity remain incomplete. Native
+launches remain paused; local Liquid tests do not prove live Shopify behavior.
