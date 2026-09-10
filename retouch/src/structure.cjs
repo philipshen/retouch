@@ -113,10 +113,14 @@ function planOp(resolved,op,language) {
       const cloned=language==='html'?require('./html-css.cjs').clone(resolved,copied):null;
       next=source.slice(0,node.end)+gap+(cloned?.chunk??source.slice(copied.start,copied.end))+source.slice(node.end);
       const adapter=require('./adapters/'+language+'.cjs'),start=element=>language==='react'?element.node.start:language==='html'?element.location.startOffset:element.tagStart;
-      const createdAt=node.end+gap.length,created=adapter.collect(next,resolved.relPath).elements.filter(element=>start(element)===createdAt);
+      const elements=adapter.collect(next,resolved.relPath).elements,insertedLength=next.length-source.length;
+      const createdAt=node.end+gap.length,created=elements.filter(element=>start(element)===createdAt);
       if(created.length!==1)throw Error('The new copy could not be identified in source.');createdId=created[0].id;
+      const mapped=new Set();sourceIdMap=[];
+      for(const element of resolved.elements){const before=start(element),after=before>=node.end?before+insertedLength:before,target=elements.find(item=>item.kind===element.kind&&start(item)===after);if(!target||mapped.has(target.id))throw Error('The original layers could not be mapped after copying.');mapped.add(target.id);if(target.id!==element.id)sourceIdMap.push([element.id,target.id]);}
       if(cloned)next=cloned.append(next);
-      if(!adapter.collect(next,resolved.relPath).elements.some(element=>element.id===createdId))throw Error('The new copy lost its source identity.');
+      const finalIds=new Set(adapter.collect(next,resolved.relPath).elements.map(element=>element.id));
+      if(!finalIds.has(createdId)||[...mapped].some(id=>!finalIds.has(id)))throw Error('Copying changed the source layer identities.');
     } else if(op.type==='deleteElement') {
       next=source.slice(0,node.start)+source.slice(node.end);
     } else if(op.type==='moveElement') {
@@ -131,7 +135,7 @@ function planOp(resolved,op,language) {
       if(!movedId||mapped.size!==elements.length)throw Error('Reordering changed the source layer identities.');
     } else throw Error('Unknown structural operation.');
     if(language==='react') parseSource(next);
-    return {ok:true,hash:contentHash(next),structural:true,parentId:items.parentId,...(createdId?{createdId}:{}),...(movedId?{movedId,sourceIdMap}:{}),edits:[{file:resolved.file,before:source,after:next}]};
+    return {ok:true,hash:contentHash(next),structural:true,parentId:items.parentId,...(createdId?{createdId}:{}),...(movedId?{movedId}:{}),...(sourceIdMap?{sourceIdMap}:{}),edits:[{file:resolved.file,before:source,after:next}]};
   } catch(error) {return refuse(error.message);}
 }
 module.exports={types,describe,planOp,htmlRange};

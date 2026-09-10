@@ -69,3 +69,20 @@ for(const adapter of [react,liquid,html])test(adapter.name+' maps every reordere
  const markup='<div><a>A</a><b><span>Longer content</span></b><i>I</i></div>',source=adapter===react?'function View(){return '+markup+'}':markup,resolved=target(adapter,source);
  for(const direction of ['before','after','first','last']){const plan=adapter.planOp(resolved,{type:'moveElement',direction,fileHash:resolved.hash});assert.equal(plan.ok,true,plan.reason);const elements=adapter.collect(plan.edits[0].after,resolved.relPath).elements,mapping=new Map(plan.sourceIdMap);assert.equal(mapping.get(resolved.element.id),plan.movedId);assert.deepEqual(resolved.elements.map(element=>mapping.get(element.id)||element.id).sort(),elements.map(element=>element.id).sort());for(const element of resolved.elements){const next=elements.find(item=>item.id===(mapping.get(element.id)||element.id));assert.equal(next.node?.openingElement?.name.name||next.tag,element.node?.openingElement?.name.name||element.tag);}}
 });
+
+for(const adapter of [react,liquid,html])test(adapter.name+' preserves original layer identities when copies shift later siblings',()=>{
+ const markup='<div><a>A</a><b><span>Copy</span></b><i><em>Locked</em></i></div>',source=adapter===react?'function View(){return '+markup+'}':markup,resolved=target(adapter,source);
+ for(const type of ['duplicateElement','pasteElement']){
+  const copied=target(adapter,source,'a').element,plan=adapter.planOp(resolved,{type,copiedId:copied.id,copiedHash:resolved.hash});assert.equal(plan.ok,true,plan.reason);
+  const elements=adapter.collect(plan.edits[0].after,resolved.relPath).elements,mapping=new Map(plan.sourceIdMap),ids=resolved.elements.map(element=>mapping.get(element.id)||element.id);assert.equal(new Set(ids).size,ids.length);assert.ok(!ids.includes(plan.createdId));
+  for(const element of resolved.elements){const next=elements.find(item=>item.id===(mapping.get(element.id)||element.id));assert.ok(next);assert.equal(next.node?.openingElement?.name.name||next.tag,element.node?.openingElement?.name.name||element.tag);}
+  assert.ok(mapping.has(target(adapter,source,'i').element.id));assert.ok(mapping.has(target(adapter,source,'em').element.id));
+ }
+});
+test('HTML copy identity mapping survives cloned responsive styles inserted in the head',()=>{
+ const css=require('../src/html-css.cjs'),original='<html><head></head><body><b>Copy</b><i><em>Locked</em></i></body></html>',styled=css.plan(target(html,original),{width:768,property:'color',value:'red'});assert.equal(styled.ok,true);
+ const resolved=target(html,styled.edits[0].after),plan=html.planOp(resolved,{type:'duplicateElement'});assert.equal(plan.ok,true,plan.reason);
+ const elements=html.collect(plan.edits[0].after,resolved.relPath).elements,mapping=new Map(plan.sourceIdMap);
+ for(const element of resolved.elements){const next=elements.find(item=>item.id===(mapping.get(element.id)||element.id));assert.ok(next);assert.equal(next.tag,element.tag);}
+ const created=elements.find(element=>element.id===plan.createdId);assert.deepEqual(css.describe({...resolved,source:plan.edits[0].after,element:created}).cssRules,{768:{color:'red'}});
+});

@@ -9825,3 +9825,9 @@ Browser proof here is for HTML. React/Liquid mappings are covered by unit tests;
 live Shopify and arbitrary runtime occurrences remain unverified. Full Figma
 parity, comprehensive structural identity and trusted brew installation remain
 unfinished. Native launches remain paused.
+
+### 2026-09-10 — Original sibling locks survive host copies
+
+Duplicate and paste now return an original-to-result source ID map for literal React, Liquid, and HTML layers, including descendants of later siblings. The shell's existing simultaneous lock remapping and inverse history mapping preserve original locks while leaving the new copy unlocked. HTML mapping is checked again after cloned responsive styles are inserted in the head.
+
+Validation: 768 unit tests passed (`/private/tmp/retouch-copy-lock-units-final.log`). Real Chromium and WebKit Actions flows passed duplicate/paste with a locked later sibling, unlocked copies, exact source restoration, and Undo/Redo (`/private/tmp/retouch-copy-lock-chromium.log`, `/private/tmp/retouch-copy-lock-webkit.log`). Existing ordering, selection, compact rename, and Actions flows also passed. Native launches remain paused after the macOS warning; no native app was executed. Full Figma parity remains incomplete, including broader runtime identity and structural editing across arbitrary sites.
