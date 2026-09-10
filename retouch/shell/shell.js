@@ -2371,8 +2371,10 @@ async function setLayerLocks(el,value){
   toast(value?'Selection locked on the canvas. Select it in Layers to edit.':'Selection unlocked.','ok');
 }
 function canvasLayerShortcut(e){
- if(e.defaultPrevented||e.isComposing||e.altKey||e.shiftKey||mode!=='edit'||editing||!sel||e.target.isContentEditable||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||document.querySelector('dialog[open]'))return false;
- const mod=e.metaKey||e.ctrlKey,key=e.key.toLowerCase(),id=mod?{c:'layer-copyElement',v:'layer-pasteElement',d:'layer-duplicateElement'}[key]:key==='f2'?'rename-layer':['delete','backspace'].includes(key)?'layer-deleteElement':null;
+ if(e.defaultPrevented||e.isComposing||e.altKey||mode!=='edit'||editing||!sel||e.target.isContentEditable||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||document.querySelector('dialog[open]'))return false;
+ const mod=e.metaKey||e.ctrlKey,key=e.key.toLowerCase(),bracket=mod&&['[',']','{','}'].includes(key);
+ if(e.shiftKey&&!bracket)return false;
+ const id=bracket?(['[','{'].includes(key)?(e.shiftKey?'layer-first':'layer-before'):(e.shiftKey?'layer-last':'layer-after')):mod?{c:'layer-copyElement',v:'layer-pasteElement',d:'layer-duplicateElement'}[key]:key==='f2'?'rename-layer':['delete','backspace'].includes(key)?'layer-deleteElement':null;
  if(!id)return false;e.preventDefault();e.stopPropagation();
  if(!e.repeat&&!panelTasks&&!undoBusy&&!sourceRequests)window.RetouchActions?.run(id);
  return true;
