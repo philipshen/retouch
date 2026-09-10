@@ -19,6 +19,11 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   await selectParents();await run('Delete layers');await wait(async()=>await app.locator('section,aside').count()===0);await wait(locked);
   await run('Undo last edit');await wait(async()=>fs.readFileSync(file,'utf8')===source&&await app.locator('section').count()===1);await wait(locked);
   await run('Redo last edit');await wait(async()=>await app.locator('section,aside').count()===0);await wait(locked);
-  await run('Undo last edit');await wait(async()=>fs.readFileSync(file,'utf8')===source&&await app.locator('section').count()===1);await wait(locked);assert.deepEqual(errors,[]);console.log('MULTI-LAYER COPY/DELETE/DESCENDANT AND SIBLING LOCKS/UNDO/REDO PASS',engine);
+  await run('Undo last edit');await wait(async()=>fs.readFileSync(file,'utf8')===source&&await app.locator('section').count()===1);await wait(locked);await selectParents();await run('Frame selection');await wait(async()=>await app.locator('[data-rt-frame]').count()===1);await wait(locked);const framed=fs.readFileSync(file,'utf8');
+  await run('Undo last edit');await wait(async()=>fs.readFileSync(file,'utf8')===source&&await app.locator('[data-rt-frame]').count()===0);await wait(locked);
+  await run('Redo last edit');await wait(async()=>fs.readFileSync(file,'utf8')===framed&&await app.locator('[data-rt-frame]').count()===1);await wait(locked);
+  await row('div · Frame').click();await run('Lock selection');await row('div · Frame').click();await run('Remove frame');await wait(async()=>fs.readFileSync(file,'utf8')===source&&await app.locator('[data-rt-frame]').count()===0);await wait(locked);
+  await run('Undo last edit');await wait(async()=>fs.readFileSync(file,'utf8')===framed&&await app.locator('[data-rt-frame]').count()===1);await wait(locked);await wait(async()=>await page.evaluate(()=>layerLocks.direct(doc().querySelector('[data-rt-frame]'))));
+  await run('Redo last edit');await wait(async()=>fs.readFileSync(file,'utf8')===source&&await app.locator('[data-rt-frame]').count()===0);await wait(locked);assert.deepEqual(errors,[]);console.log('FRAME/UNFRAME/DESCENDANT AND SIBLING LOCKS/UNDO/REDO PASS',engine);console.log('MULTI-LAYER COPY/DELETE/DESCENDANT AND SIBLING LOCKS/UNDO/REDO PASS',engine);
  }finally{if(browser)await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

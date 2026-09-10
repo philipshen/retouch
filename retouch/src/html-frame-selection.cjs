@@ -45,7 +45,8 @@ function plan(resolved,op){
   if(!removed&&(!frame||frame.node.parentNode!==mapped.get(parent.node)?.node))return refuse('The frame changed its parsed parent.');
   for(const element of elements){if(element===removed)continue;const next=mapped.get(element.node),expected=roots.includes(element)?(removed?mapped.get(parent.node):frame):mapped.get(element.node.parentNode);if(expected&&next.node.parentNode!==expected.node)return refuse('Framing would move an unrelated layer.');}
   const selectionIds=removed?(roots.length?roots.map(e=>mapped.get(e.node).id):[mapped.get(parent.node).id]):[frame.id];
-  return {ok:true,hash:html.contentHash(after),parentId:parent.id,selectionIds,rootCount:roots.length,structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
+  const sourceIdMap=elements.filter(element=>element!==removed).flatMap(element=>{const id=mapped.get(element.node).id;return id===element.id?[]:[[element.id,id]];}),removedSourceIds=removed?[removed.id]:[];
+  return {ok:true,hash:html.contentHash(after),sourceIdMap,removedSourceIds,parentId:parent.id,selectionIds,rootCount:roots.length,structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
  }catch(error){return refuse(error.message);}
 }
 module.exports={describe,plan};

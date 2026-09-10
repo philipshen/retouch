@@ -25,3 +25,13 @@ test('Frame selection refuses stale, nonconsecutive, cross-parent and invalid HT
  for(const op of [{type:'frameSelection',fileHash:'stale',ids:[r.element.id]},{type:'removeFrame',fileHash:r.hash},{type:'frameSelection',fileHash:r.hash,ids:[r.element.id,'missing']}])assert.equal(frames.plan(r,op).refused,true);
  const list=resolve('<html><body><ul><li>One</li><li>Two</li></ul></body></html>','li');assert.equal(wrap(list,['li']).refused,true,'a div cannot replace list items');
 });
+test('Frame and unframe map every surviving layer and report only the removed wrapper',()=>{
+ const r=resolve('<html><body><main><h1>T<em>Nested</em></h1><p>P</p><aside><span>Sibling</span></aside></main></body></html>'),framed=wrap(r);assert.equal(framed.ok,true,framed.reason);
+ const fresh=resolve(framed.edits[0].after,'div'),unframed=frames.plan(fresh,{type:'removeFrame',fileHash:fresh.hash});assert.equal(unframed.ok,true,unframed.reason);
+ for(const [before,result]of [[r,framed],[fresh,unframed]]){
+  const after=resolve(result.edits[0].after),mapping=new Map(result.sourceIdMap),survivors=before.elements.filter(e=>!result.removedSourceIds.includes(e.id)),ids=survivors.map(e=>mapping.get(e.id)||e.id);assert.equal(new Set(ids).size,ids.length);
+  for(const element of survivors){const next=after.elements.find(e=>e.id===(mapping.get(element.id)||element.id));assert.ok(next);assert.equal(next.tag,element.tag);}
+  assert.ok(mapping.has(before.elements.find(e=>e.tag==='em').id));assert.ok(mapping.has(before.elements.find(e=>e.tag==='span').id));
+ }
+ assert.deepEqual(framed.removedSourceIds,[]);assert.deepEqual(unframed.removedSourceIds,[fresh.element.id]);assert.equal(unframed.edits[0].after,r.source);
+});
