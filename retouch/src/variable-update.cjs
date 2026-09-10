@@ -3,11 +3,11 @@ const fs=require('node:fs'),path=require('node:path'),library=require('./variabl
 // Plan every linked page before committing either the catalog or source changes.
 function plan(root,operation,renderer='html'){
  try{
-  if(!['html','react'].includes(renderer))throw Error('Unsupported variable binding renderer.');
-  const linked=require(renderer==='react'?'./jsx-variable-bindings.cjs':'./html-variable-bindings.cjs');
+  if(!['html','react','liquid'].includes(renderer))throw Error('Unsupported variable binding renderer.');
+  const linked=require(renderer==='react'?'./jsx-variable-bindings.cjs':renderer==='liquid'?'./liquid-variable-bindings.cjs':'./html-variable-bindings.cjs');
   const change=library.planChange(root,operation),next=change.result;
   const model={version:next.version,collections:next.collections,variables:next.variables};
-  const inventory=renderer==='react'?require('./text-style-update.cjs').sourceInventory(root,renderer):require('./html-pages.cjs').list(root);
+  const inventory=renderer!=='html'?require('./text-style-update.cjs').sourceInventory(root,renderer):require('./html-pages.cjs').list(root);
   if(inventory.truncated)throw Error('This project exceeds the 1,000-page variable update limit. No changes were saved.');
   let bytes=0,updated=0,pages=0;const edits=[...change.edits];
   for(const page of inventory.pages){

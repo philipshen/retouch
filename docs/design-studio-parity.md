@@ -7619,3 +7619,30 @@ references or malformed later links without returning partial edits.
 The Liquid planner is not yet connected to the authenticated API, project-wide
 collection replacement or inspector. These tests use local LiquidJS, not a live
 Shopify storefront. Native launches remain paused; full Figma parity is incomplete.
+
+### Liquid collection API, propagation and inspector (2026-09-10)
+
+Liquid host descriptions now expose collection links to the shared inspector.
+Single-layer operations route to the Liquid planner with rendered class context,
+source-hash and library-revision checks. Project collection replacement plans all
+linked Liquid files, including unopened dynamic source-owned class patches, before
+committing catalog and source edits together. Liquid multi-selection is explicitly
+refused pending adapter/selection support.
+
+All 577 unit tests pass (`/private/tmp/retouch-liquid-variable-integration-units.log`).
+The new HTTP API test verifies conditional class branches survive propagation to
+two files with independent modes, referenced-variable deletion refuses unchanged,
+and one Undo restores both sources plus the catalog exactly.
+
+The local LiquidJS/Tailwind inspector flow passes Chromium and WebKit with dynamic
+classes: tablet mode changes, phone isolation, live collection updates, detach,
+numeric padding and exact Undo. Logs are
+`/private/tmp/retouch-liquid-collection-chromium.log` and
+`/private/tmp/retouch-liquid-collection-webkit.log`. The fixture now canonicalizes
+its project root as well as its private history path; both runs explicitly verify
+history has not fallen back to session-only storage. The screenshot
+`/private/tmp/retouch-liquid-collection.png` was visually inspected.
+
+This is local Liquid verification, not live Shopify verification. Liquid batch
+selection, class-based inheritance controls, ancestor modes and full Figma parity
+remain unfinished. Native application launches remain paused.

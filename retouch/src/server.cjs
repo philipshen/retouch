@@ -119,7 +119,7 @@ function handle(req, res, ctx) {
       if(!bytes)return json(res,413,{ok:false,reason:'Variable collection requests must be 2 MiB or smaller.'});
       let operation;try{operation=JSON.parse(bytes.toString('utf8'));}catch{return json(res,400,{ok:false,reason:'Invalid variable collection JSON.'});}
       try{
-        const plan=ctx.adapter.capabilities?.ops?.includes('setCSS')||ctx.adapter.name==='react'?require('./variable-update.cjs').plan(ctx.appRoot,operation,ctx.adapter.name==='react'?'react':'html'):library.planChange(ctx.appRoot,operation);
+        const plan=ctx.adapter.capabilities?.ops?.includes('setCSS')||['react','liquid'].includes(ctx.adapter.name)?require('./variable-update.cjs').plan(ctx.appRoot,operation,['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html'):library.planChange(ctx.appRoot,operation);
         if(!plan.ok)return json(res,plan.statusCode||409,plan);
         const applied=library.commitPlan(ctx.appRoot,plan,(root,planned)=>ctx.history.commit(root,planned,{route:historyRoute(req)}));
         for(const edit of applied.edits)if(ctx.adapter.matches(edit.file))ctx.index.indexFile(edit.file);
@@ -242,8 +242,9 @@ function handle(req, res, ctx) {
       try {
         resolved.context = renderContext(op.context);
         if(['applyVariable','resetVariable','detachVariable','removeVariable','applyVariableSelection','resetVariableSelection','detachVariableSelection','removeVariableSelection'].includes(op.type)){
-          const reactVariables=ctx.adapter.name==='react';
-          if(!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!reactVariables)return json(res,409,{ok:false,reason:'Collection bindings currently need an HTML or React project.'});
+          const reactVariables=ctx.adapter.name==='react',liquidVariables=ctx.adapter.name==='liquid';
+          if(liquidVariables&&op.type.endsWith('Selection'))return json(res,409,{ok:false,reason:'Liquid collection bindings currently need a single layer.'});
+          if(!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!reactVariables&&!liquidVariables)return json(res,409,{ok:false,reason:'Collection bindings currently need an HTML, React or Liquid project.'});
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source changed. Re-select the layer.'});
           let model;
           if(!op.type.startsWith('detachVariable')&&!op.type.startsWith('removeVariable')){
@@ -251,7 +252,7 @@ function handle(req, res, ctx) {
             if(library.revision!==op.libraryRevision)return json(res,409,{ok:false,reason:'Variable collections changed. Reload before binding.'});
             model={version:library.version,collections:library.collections,variables:library.variables};
           }
-          result=applyPlan(ctx.appRoot,op.type.endsWith('Selection')?require('./variable-selection.cjs').plan(resolved,op,model,ctx.adapter):require(reactVariables?'./jsx-variable-bindings.cjs':'./html-variable-bindings.cjs').plan(resolved,op,model));
+          result=applyPlan(ctx.appRoot,op.type.endsWith('Selection')?require('./variable-selection.cjs').plan(resolved,op,model,ctx.adapter):require(reactVariables?'./jsx-variable-bindings.cjs':liquidVariables?'./liquid-variable-bindings.cjs':'./html-variable-bindings.cjs').plan(resolved,op,model));
         }else if(['applyEffectStyle','resetEffectStyle','detachEffectStyle','updateEffectStyle','applyEffectStyleSelection','resetEffectStyleSelection','detachEffectStyleSelection'].includes(op.type)){
           const reactEffects=ctx.adapter.name==='react',liquidEffects=ctx.adapter.name==='liquid';
           if(!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!reactEffects&&!liquidEffects)return json(res,409,{ok:false,reason:'Linked effect styles need an HTML, React or Liquid project.'});
