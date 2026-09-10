@@ -6806,3 +6806,29 @@ and exact undo behavior. Oklab has source coverage here; only OKLCH was exercise
 in these full browser flows. Live Shopify, complete color-expression support,
 arbitrary-site authoring and full Figma parity remain unverified or incomplete.
 Native app launches remain paused.
+
+### Shared filter-stack editor across renderers (2026-09-09)
+
+HTML, React and Liquid now use one layer/backdrop filter-stack editor. It exposes
+ordered effects, adding, changing type/value, moving up/down, removing, clearing
+and scope reset. Multiple blur functions remain independent. Numeric controls
+use pixels, percentages or degrees as appropriate; drop-shadow accepts its
+supported offsets/color argument. Untouched functions keep their original text.
+Existing quick blur controls remain available for single-blur stacks. The editor
+limits stacks to 16 supported functions and refuses invalid arguments before a
+source write; unsupported URL and arbitrary expression filters remain uneditable.
+
+All 513 tests passed, exit 0: /private/tmp/retouch-filter-stack-units.log. Pure
+checks cover duplicate functions, stable ordering, changes/removal, limits and
+refusal paths. Real browser flows passed, exit 0:
+/private/tmp/retouch-filter-stack-html-final.log (HTML/Chromium),
+/private/tmp/retouch-filter-stack-react-final.log (Next.js/Chromium), and
+/private/tmp/retouch-filter-stack-liquid-final.log (conditional Liquid/WebKit).
+All three add brightness, edit it, add/edit a second blur, verify computed order,
+reorder/remove effects and undo each source state exactly. They separately add
+and edit backdrop contrast, clear the backdrop stack, inspect computed values,
+and undo the changes. Not every filter type received a browser interaction test.
+
+Full Figma parity, arbitrary-site authoring and native release delivery remain
+incomplete. Local Liquid verification does not establish live Shopify behavior.
+Native Retouch launches remain paused.

@@ -377,10 +377,10 @@
   }
   function filterClasses(classes,property,value){
     const values=typeof module==='object'&&module.exports?require('./html-css-values.js'):root.RetouchHTMLCSSValues;
-    if(!['filter','backdrop-filter'].includes(property)||!values.valid(property,value)||typeof value!=='string')throw Error('Unsupported filter stack.');
+    if(!['filter','backdrop-filter'].includes(property)||value!==null&&(!values.valid(property,value)||typeof value!=='string'))throw Error('Unsupported filter stack.');
     const match=t=>t.startsWith('['+property+':')||(property==='backdrop-filter'?/^backdrop-(?:blur|brightness|contrast|grayscale|hue-rotate|invert|opacity|saturate|sepia|filter)(?:-|$)/.test(t):/^(?:-?hue-rotate|filter|blur|brightness|contrast|drop-shadow|grayscale|invert|saturate|sepia)(?:-|$)/.test(t));
     if(tokens(classes).some(t=>/^!|!$/.test(t)&&base(t)?.startsWith('[all:')))throw Error('Resolve the important all-property reset before editing filters.');
-    return replace(classes,match,'!['+property+':'+value.replace(/\s/g,'_')+']');
+    return replace(classes,match,value===null?'':'!['+property+':'+value.replace(/\s/g,'_')+']');
   }
   function shadowClasses(classes,value){
     const V=typeof module==='object'&&module.exports?require('./html-css-values.js'):root.RetouchHTMLCSSValues;
@@ -421,6 +421,7 @@
       });
       if(!parsed||blurs.length>1||el.style.getPropertyPriority(property)==='important'){input.disabled=true;note(sec,'This '+(property==='filter'?'layer':'backdrop')+' filter cannot be adjusted with a single blur value.');}
       note(sec,value,'computed-value');
+      root.RetouchFilterStack.mount(sec,property,value,next=>save(filterClasses(info.className,property,next)),{disabled:el.style.getPropertyPriority(property)==='important',reset:true});
     }
     note(sec,css.boxShadow,'computed-value');
     shadowStack(sec,info,el,save,notify);

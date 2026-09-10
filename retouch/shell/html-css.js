@@ -123,6 +123,7 @@
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);blur.append(reset);
    const clear=I.button('Clear '+(property==='filter'?'layer':'background')+' filters',()=>save(property,'none',width));clear.disabled=raw==='none';blur.append(clear);
   }
+  for(const property of ['filter','backdrop-filter'])RetouchFilterStack.mount(blur,property,own[property]??css.getPropertyValue(property),value=>save(property,value,width),{reset:Object.hasOwn(own,property)});
   I.note(blur,'Layer blur affects the layer and its children. Background blur affects content behind transparent areas. Existing color filters stay in order.');
   const effects=I.section('Shadows'),shadows=parseShadows(own['box-shadow']??css.boxShadow);
   const writeShadows=next=>{const value=serializeShadows(next);if(valid('box-shadow',value)&&CSS.supports('box-shadow',value))save('box-shadow',value,width);};
