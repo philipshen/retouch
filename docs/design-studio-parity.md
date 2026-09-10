@@ -8192,3 +8192,16 @@ literals are reported instead of silently changing their displayed type.
 review confirms the fields fit the inspector. General nullable/union primitives,
 complete type resolution and full component parity remain unfinished. Native app
 launches remain paused.
+
+
+## Numeric property draft validation (2026-09-10)
+
+An emptied numeric field previously remained blank without explaining that its
+saved source value still applied. Invalid numeric drafts now show an associated
+inline alert and invalid field state. Optional values point to Unset for removal.
+No source write occurs for the invalid draft; typing clears the old error and
+Escape restores the saved value and removes the error. Chromium and WebKit verify
+that a saved 160px width stays rendered while its empty draft is rejected, then
+verifies Escape, explicit unset and exact Undo/Redo. This is a targeted UI change;
+the unit suite was not rerun. Full parity remains incomplete and native launches
+remain paused.

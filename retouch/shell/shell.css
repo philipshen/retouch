@@ -145,6 +145,8 @@ details.advanced > summary:hover { color: var(--ink); }
 .component-props select, .component-props textarea, .component-props input:not([type="checkbox"]) { width: 100%; min-width: 0; box-sizing: border-box; font: inherit; background: #15171b; color: var(--ink); border: 1px solid var(--line); border-radius: 5px; padding: 5px; }
 .component-props td > button { margin-top: 4px; padding: 2px 6px; font-size: 10px; }
 .component-props td > small { display: block; margin-top: 3px; color: var(--muted); }
+.component-props .property-error { color: var(--danger); }
+.component-props [aria-invalid="true"] { border-color: var(--danger); }
 .component-props textarea { resize: vertical; line-height: 1.5; }
 .component-props input[type="checkbox"] { width: auto; }
 .component-props th { color: var(--muted); font-weight: 500; }
