@@ -10285,3 +10285,7 @@ Command/Ctrl+Shift+H toggles selection visibility through the current single/sha
 ### Mixed responsive visibility shortcuts verified (2026-09-10)
 
 The React selection browser fixture now starts with one hidden and one visible layer, confirms the Mixed visibility state, and uses the visibility shortcut to hide then show both in the tablet scope. Phone widths retain their original mixed states throughout; successive Undo operations restore each exact source state and the initial visibility difference. Chromium and WebKit full React selection suites pass. Evidence: `/private/tmp/retouch-mixed-visibility-chromium.log`, `/private/tmp/retouch-mixed-visibility-webkit.log`. Native launches remain paused; full parity is incomplete.
+
+### Discoverable selection visibility actions (2026-09-10)
+
+Actions search now offers Hide selection or Show selection based on the current single/shared visibility control. Mixed selections offer Hide selection; unavailable controls retain the palette disabled-state checks. Chromium and WebKit Actions suites verify HTML hide/show label changes and exact-source Undo; both full React selection suites verify hiding a mixed selection through Actions in tablet scope while phone visibility remains unchanged. Evidence: `/private/tmp/retouch-visibility-actions-chromium.log`, `/private/tmp/retouch-visibility-actions-webkit.log`, `/private/tmp/retouch-visibility-actions-react-chromium.log`, `/private/tmp/retouch-visibility-actions-react-webkit.log`. Native launches remain paused; full parity is incomplete.
