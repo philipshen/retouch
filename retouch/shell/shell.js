@@ -282,8 +282,7 @@ function hookFrame(d, w) {
       }
       return;
     }
-    if(mode!=='edit'||e.defaultPrevented||e.isComposing||e.target.isContentEditable||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]'))return;
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.stopPropagation(); e.shiftKey ? redo() : undo(); }
+    sourceHistoryShortcut(e,true);
   }, true);
 
   // Follow SPA navigations (OQ-B6 rule 2).
@@ -2273,7 +2272,7 @@ window.addEventListener('keydown', (e) => {
   if(opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e))return;
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
-  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+  if(sourceHistoryShortcut(e))return;
   if (e.key === 'Escape') {
     if(stopDrawing){e.preventDefault();stopDrawing();return;}
     if(!e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')&&window.RetouchWorkspacePanels?.closeIfOpen()){e.preventDefault();return;}
@@ -2341,6 +2340,11 @@ async function setLayerLocks(el,value){
   if(value)clearSelection();
   layers.refresh();
   toast(value?'Selection locked on the canvas. Select it in Layers to edit.':'Selection unlocked.','ok');
+}
+function sourceHistoryShortcut(e,canvas=false){
+  if(e.defaultPrevented||e.isComposing||e.altKey||!(e.metaKey||e.ctrlKey)||canvas&&mode!=='edit'||e.target.isContentEditable||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||document.querySelector('dialog[open]'))return false;
+  const key=e.key.toLowerCase();if(key!=='z'&&(key!=='y'||e.shiftKey))return false;
+  e.preventDefault();e.stopPropagation();if(key==='y'||e.shiftKey)redo();else undo();return true;
 }
 let opacityEntry=null;
 function cancelOpacityEntry(){if(opacityEntry){clearTimeout(opacityEntry.timer);opacityEntry=null;}}

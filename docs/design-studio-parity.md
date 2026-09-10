@@ -10297,3 +10297,7 @@ The site-frame fallback Undo handler now requires Edit mode and ignores native t
 ### Preserve custom and plain-text editor shortcuts (2026-09-10)
 
 Actions and canvas keyboard guards now recognize textbox roles and all enabled contenteditable forms, including plaintext-only, consistently with the site Undo guard. Previously Ctrl+K in a custom textbox opened Retouch Actions. The regression failed before the fix. Chromium and WebKit full Actions suites now verify that custom textbox and plaintext-only editor key input does not open Actions or schedule a canvas opacity write, alongside native form Undo and existing canvas shortcut flows. Evidence: `/private/tmp/retouch-native-editor-before.log`, `/private/tmp/retouch-native-editor-chromium.log`, `/private/tmp/retouch-native-editor-webkit.log`. Native launches remain paused; full parity is incomplete.
+
+### Consistent source-history Redo keys (2026-09-10)
+
+A shared source-history keyboard handler now supports Ctrl+Y alongside Command/Ctrl+Shift+Z in both the shell and Edit-mode site frame. It preserves native input/contenteditable/textbox ownership, Interact-mode site behavior, composition, already-handled events, and dialogs. The Redo button documents the added shortcut. Chromium and WebKit full Actions suites verify exact-source Redo/Undo from both focus surfaces and retain the native editor regression checks. Evidence: `/private/tmp/retouch-redo-keys-chromium.log`, `/private/tmp/retouch-redo-keys-webkit.log`. Native launches remain paused; full parity is incomplete.

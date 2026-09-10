@@ -19,6 +19,10 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    const editor=app.locator('[data-native-editor="'+kind+'"]');await editor.press('Control+k');assert.equal(await dialog().count(),0,kind+' editors retain their command shortcut');await editor.press('2');await page.waitForTimeout(650);assert.equal(fs.readFileSync(file,'utf8'),styledSource,kind+' editors do not trigger canvas opacity');await editor.evaluate(el=>el.remove());
   }
   await open();await input().fill('undo');assert.equal(await page.getByRole('option',{name:'Undo last edit',exact:true}).getAttribute('aria-disabled'),'false');await input().press('Enter');await dialog().waitFor({state:'hidden'});await wait(async()=>fs.readFileSync(file,'utf8')===source);
+  for(const surface of ['shell','site']){
+   const historyKey=async key=>{await page.waitForFunction(()=>!undoBusy&&!sourceRequests&&!panelTasks);if(surface==='shell'){await page.locator('#logo').click();await page.keyboard.press(key);}else{await app.locator('body').evaluate(el=>el.tabIndex=-1);await app.locator('body').press(key);}};
+   await historyKey('Control+y');await wait(()=>fs.readFileSync(file,'utf8')===styledSource);await historyKey('Control+z');await wait(()=>fs.readFileSync(file,'utf8')===source);
+  }
   for(const [surface,key,value]of [['shell','4','0.4'],['site','0','1']]){
    await page.waitForFunction(()=>!undoBusy&&!sourceRequests&&!panelTasks&&panelBody.getAttribute('aria-busy')!=='true');
    if(surface==='shell'){await page.locator('#logo').click();await page.keyboard.press(key);}else await app.locator('body').press(key);
