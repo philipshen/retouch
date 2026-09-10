@@ -112,7 +112,7 @@
       const scale=card.viewport.clientWidth/width;
       const boxes=[];
       try{
-        const d=frame.contentDocument;if(!d?.body||d.URL==='about:blank'){updateProperty(reveal,'disabled',true);updateScope(scopeMessage,'unknown','Checking style scope…');continue;}
+        const d=frame.contentDocument;card.attachMarquee?.();if(!d?.body||d.URL==='about:blank'){updateProperty(reveal,'disabled',true);updateScope(scopeMessage,'unknown','Checking style scope…');continue;}
         const applies=!scope.prefix?true:window.RetouchResponsive.matches(scope,d.defaultView);
         updateScope(scopeMessage,applies===null?'unknown':String(applies),!scope.prefix?'Base styles apply here; breakpoint overrides may take precedence.':applies===null?'Scope coverage is unavailable for this breakpoint.':applies?'Current breakpoint applies here; other overrides may take precedence.':'Current breakpoint does not apply in this preview.');
         const nodes=selectedNodes(d);
@@ -251,11 +251,12 @@
       const surface=document.createElement('div');surface.className='compare-surface';surface.setAttribute('aria-hidden','true');surface.append(frame);rail.append(surface);
       const overlay=document.createElement('div');overlay.className='compare-overlay';
       const message=document.createElement('p');message.className='hint';
-      const marquee=document.createElement('div');marquee.className='selection-marquee';marquee.hidden=true;viewport.append(marquee);let stopMarquee=null;
+      const marquee=document.createElement('div');marquee.className='selection-marquee';marquee.hidden=true;viewport.append(marquee);let stopMarquee=null,marqueeDocument=null;
       function attachMarquee(){
-        stopMarquee?.();stopMarquee=null;
         try{
-          const d=frame.contentDocument;if(!d?.body||d.URL==='about:blank')return;
+          const d=frame.contentDocument;if(d===marqueeDocument&&stopMarquee)return;
+          stopMarquee?.();stopMarquee=null;marqueeDocument=null;
+          if(!d?.body||d.URL==='about:blank')return;
           const ready=()=>{try{const loc=frame.contentWindow.location;return open&&!card.inert&&!previewBody.hidden&&frame.contentDocument===d&&loc.origin===location.origin&&loc.pathname+loc.search+loc.hash===path()&&window.RetouchCanvasSelection?.canMarquee();}catch{return false;}};
           stopMarquee=window.RetouchMarquee.mount({document:d,frame,surface:viewport,
             enabled:ready,
@@ -268,7 +269,7 @@
               const all=[...d.querySelectorAll('[data-rt],[data-rt-i]')],selection=nodes.map(node=>{const hostId=node.getAttribute('data-rt'),instanceId=node.getAttribute('data-rt-i');return {hostId,instanceId,occurrence:all.filter(el=>el.getAttribute('data-rt')===hostId&&el.getAttribute('data-rt-i')===instanceId).indexOf(node)};});
               window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,selection,append:options.append,occurrence:0,route:path()}}));
             }
-          });
+          });marqueeDocument=d;
         }catch{}
       }
       frame.addEventListener('load',attachMarquee);marqueeCleanup.set(frame,()=>{stopMarquee?.();frame.removeEventListener('load',attachMarquee);});
@@ -430,7 +431,7 @@
           scrollFrom(w,node,dx,dy);
         }catch{}
       },{passive:false});
-      cards.push({card,frame,surface,previewBody,setCollapsed,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal,up,down,move});
+      cards.push({card,frame,surface,previewBody,setCollapsed,attachMarquee,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal,up,down,move});
   }
   function unload(frame){marqueeCleanup.get(frame)?.();marqueeCleanup.delete(frame);return new Promise(resolve=>{
     let timeout;
