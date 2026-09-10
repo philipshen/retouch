@@ -38,6 +38,9 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   await ratio().click();
   await picker.selectOption('390x844');await picker.selectOption('saved:1120x844');await page.waitForFunction(()=>document.querySelector('#app').contentWindow.innerWidth===1120);assert.equal(await page.getByLabel('Screen height',{exact:true}).inputValue(),'844');
   await page.getByRole('button',{name:'Remove Reading view comparison',exact:true}).click();assert.equal(await picker.inputValue(),'custom');assert.equal(await page.getByLabel('Screen width',{exact:true}).inputValue(),'1120');
+  const restoreReading=page.getByRole('button',{name:'Undo remove: Reading view',exact:true});await page.waitForFunction(()=>[...document.querySelectorAll('button')].some(button=>button.textContent==='Undo remove: Reading view'&&!button.disabled));
+  await page.getByRole('button',{name:'Rename Tablet comparison',exact:true}).click();const renamedScreen=page.getByLabel('Comparison name',{exact:true}).filter({visible:true});await renamedScreen.fill('Reading view');await renamedScreen.press('Enter');assert.equal(await restoreReading.isDisabled(),true,'renaming to a removed screen name disables restoration immediately');
+  await page.getByRole('button',{name:'Rename Reading view comparison',exact:true}).click();await renamedScreen.fill('Tablet');await renamedScreen.press('Enter');assert.equal(await restoreReading.isEnabled(),true,'freeing a removed screen name enables restoration immediately');
   await page.getByRole('button',{name:'Undo remove: Reading view',exact:true}).click();assert.equal(await picker.inputValue(),'saved:1120x844');
   for(const restored of ['removed view','reopened rail']){
    if(restored==='reopened rail'){await page.getByRole('button',{name:'Compare screens',exact:true}).click();await page.getByRole('button',{name:'Compare screens',exact:true}).click();}

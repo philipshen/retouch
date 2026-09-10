@@ -10237,3 +10237,7 @@ The React creation fixture now covers a missing named optional tuple value with 
 ### Rename comparison screens from Actions (2026-09-10)
 
 Actions search now exposes each comparison header rename command using the same stable card identity and current accessible name as other screen commands. Chromium and WebKit full Actions suites pass focused name entry, command-label updates after renaming, editing the renamed size, Escape cancellation, and preservation of a marker in the mounted preview document. Existing responsive and source-edit history flows remain covered. Evidence: `/private/tmp/retouch-rename-actions-chromium.log`, `/private/tmp/retouch-rename-actions-webkit.log`. Native launches remain paused; full parity is incomplete.
+
+### Renaming respects removed-screen name conflicts (2026-09-10)
+
+Finishing a comparison rename now refreshes shared controls, and restoration rechecks its availability before mutating the screen list. Previously, renaming an active screen to a removed screen name left Undo remove enabled and could admit duplicate names. The browser regression failed before the fix. Chromium and WebKit project-screen suites now pass immediate conflict disabling, re-enabling after the name is freed, and subsequent restoration alongside saved sizes, ratio/history, screen-set import/export, and project isolation. Evidence: `/private/tmp/retouch-rename-restore-before.log`, `/private/tmp/retouch-rename-restore-chromium.log`, `/private/tmp/retouch-rename-restore-webkit.log`. Native launches remain paused; full parity is incomplete.

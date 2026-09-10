@@ -162,7 +162,7 @@
     pin.onclick=()=>{const {width,height}=current();if(pin.disabled)return;const size=[`Custom ${width} × ${height}`,width,height];sizes.push(size);remember();addCard(size);cards.at(-1).frame.src=path()||'/';updateControls();};rail.append(pin);
     restore=document.createElement('button');restore.className='control-button';restore.type='button';
     restore.onclick=()=>{
-      if(restore.disabled)return;
+      updateControls();if(restore.disabled)return;
       const last=removed.pop(),index=Math.min(last.index,sizes.length),next=cards[index]?.card;
       sizes.splice(index,0,last.size);addCard(last.size,next);const item=cards.pop();cards.splice(index,0,item);
       item.frame.src=path()||'/';remember();updateControls();item.card.scrollIntoView({block:'nearest'});
@@ -190,7 +190,7 @@
         const next=nameInput.value.trim().replace(/\s+/g,' ');
         if(!cancel&&(!next||sizes.some(other=>other!==size&&other[0].toLowerCase()===next.toLowerCase()))){dimensionError.textContent=next?'Another comparison already has this name.':'Enter a comparison name.';dimensionError.hidden=false;return;}
         if(!cancel){name=next;size[0]=name;remember();}
-        dimensionError.hidden=true;nameInput.hidden=true;label.hidden=false;updateLabels();
+        dimensionError.hidden=true;nameInput.hidden=true;label.hidden=false;updateLabels();updateControls();
       }
       nameInput.onblur=()=>finishName();
       nameInput.onkeydown=event=>{if(event.key==='Enter'||event.key==='Escape'){event.preventDefault();event.stopPropagation();finishName(event.key==='Escape');if(nameInput.hidden)label.focus();}};
