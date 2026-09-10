@@ -1,10 +1,11 @@
 'use strict';
-window.RetouchComponentLibrary={open({read,instances,select,view}){
+window.RetouchComponentLibrary={open({read,instances,select,view,insert,insertTarget}){
  const dialog=document.createElement('dialog');dialog.className='component-library';dialog.setAttribute('aria-label','Project components');
  const header=document.createElement('header'),title=document.createElement('h2');title.textContent='Project components';
  const button=(label,action)=>{const result=document.createElement('button');result.type='button';result.className='control-button';result.textContent=label;result.addEventListener('click',action);return result;};
  header.append(title,button('Close',()=>dialog.close()));
  const description=document.createElement('p');description.textContent='Browse exported, created and reused components in your project.';
+ if(insert)description.textContent+=' '+(insertTarget?'Insert into '+insertTarget.label+'.':'Select a frame on the canvas to insert a component.');
  const tools=document.createElement('div');tools.className='component-library-tools';
  const search=document.createElement('input');search.type='search';search.placeholder='Find by name or file…';search.setAttribute('aria-label','Search project components');
  const refresh=button('Refresh',load);tools.append(search,refresh);
@@ -25,6 +26,7 @@ window.RetouchComponentLibrary={open({read,instances,select,view}){
    let picker;if(present.length>1){picker=document.createElement('select');picker.setAttribute('aria-label','Instance of '+item.name);present.forEach((instance,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent='Instance '+(index+1)+' · '+instance.label;picker.append(option);});actions.append(picker);}
    const choose=button('Select on canvas',async()=>{choose.disabled=true;try{await select(present[Number(picker?.value||0)],()=>dialog.isConnected);if(dialog.isConnected)dialog.close();}catch(error){status.textContent=error.message;choose.disabled=false;}});choose.disabled=!present.length;actions.append(choose);
    const source=button('View component',async()=>{source.disabled=true;try{const instance=present[Number(picker?.value||0)];await view(instance?.id||item.usages[0]?.id||item.definitionId,!!instance,()=>dialog.isConnected,instance?.definition===true||!item.usages.length);if(dialog.isConnected)dialog.close();}catch(error){status.textContent=error.message;}finally{source.disabled=false;}});actions.append(source);
+   if(insert){const add=button('Insert into frame',async()=>{add.disabled=true;try{await insert(item,insertTarget,()=>dialog.isConnected);if(dialog.isConnected)dialog.close();}catch(error){status.textContent=error.message;}finally{add.disabled=!insertTarget;}});add.disabled=!insertTarget;actions.append(add);}
    row.append(name,file,count,actions);list.append(row);
   }
  }

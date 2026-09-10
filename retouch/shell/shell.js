@@ -1356,11 +1356,32 @@ async function detachInstance(id, component, button, context=sel?.info?.context)
     toast('Detached to ' + result.detachedFile, 'ok');
   } finally { button.disabled = false; }
 }
+async function selectInsertedComponent(id,parentId){
+ const usage=await api('GET',resolveUrl(id)),component=await api('GET',componentUrl(id));
+ if(!usage?.ok||!component?.ok){clearSelection();return;}
+ componentLibrarySelections.add(id);sel={hostId:mountedComponentHost(id,component,usage.element.context)?.getAttribute('data-rt')||component.definitionId,instanceId:id,scope:'instance',info:usage.element};renderPanel();matchingInDocument(doc(),id)[0]?.scrollIntoView({block:'nearest',inline:'nearest'});
+}
+async function insertLibraryComponent(item,target,isActive){
+ if(!target)throw Error('Select a frame before inserting a component.');
+ if(panelTasks||sourceRequests||undoBusy)throw Error('Wait for the current edit to finish.');
+ const definition=await api('GET','/rt/__api/component-definition?id='+item.definitionId);
+ if(!isActive())return;if(!definition?.ok)throw Error(definition?.reason||'Refresh the component library.');
+ busyPanel(true);try{
+  const result=await api('POST','/rt/__api/op',{type:'insertComponent',id:target.id,fileHash:target.hash,definitionFile:definition.file,definitionId:definition.definitionId,definitionHash:definition.hash});
+  if(!result?.ok)throw Error(result?.reason||result?.error||'Could not insert the component.');
+  const inserted=result.insertedComponent;editorHistory.record({type:'insertComponent',id:inserted.parentId,instanceId:inserted.instanceId,previousParentId:inserted.previousParentId,undoId:result.undoId});
+  const parent=await api('GET',resolveUrl(inserted.parentId));if(parent?.ok)await refreshWrittenElement(parent.element,el=>!!el.ownerDocument.querySelector('[data-rt-i="'+inserted.instanceId+'"]'));else await reloadFrame();
+  await selectInsertedComponent(inserted.instanceId,inserted.parentId);toast('Component inserted','ok');
+ }finally{busyPanel(false);}
+}
 const componentLibrarySelections=new Set();
 const componentLibraryButton=document.getElementById('componentLibrary');
 componentLibraryButton.hidden=!window.__RT_RENDERING?.componentLibrary;
 componentLibraryButton.addEventListener('click',()=>RetouchComponentLibrary.open({
  read:()=>api('GET','/rt/__api/components'),
+ insertTarget:sel?.info.canInsertComponent?{id:sel.info.id,hash:sel.info.hash,context:sel.info.context,label:'<'+sel.info.tag+'> · '+sel.info.file}:null,
+ insert:window.__RT_RENDERING?.componentInsertion?insertLibraryComponent:undefined,
+
  instances:item=>item.usages.length?item.usages.flatMap(usage=>matchingInDocument(doc(),usage.id).map(element=>({id:usage.id,element,label:usage.file+(usage.line?':'+usage.line:'')}))):matchingInDocument(doc(),item.definitionId).map(element=>({id:item.definitionId,definition:true,element,label:item.file})),
  select:async(instance,isActive)=>{
   if(!instance?.element?.isConnected)throw Error('This instance is no longer on the page. Refresh the component list.');
@@ -2116,6 +2137,7 @@ async function restoreHistory(direction,op) {
   // client stack on the old side of a successful transaction.
   try {
     await showHistoryPage(op.route);
+    if(op.type==='insertComponent'){const parentId=direction==='redo'?op.id:op.previousParentId,parent=await api('GET',resolveUrl(parentId));if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else await reloadFrame();if(direction==='redo')await selectInsertedComponent(op.instanceId,op.id);else if(parent?.ok){sel={hostId:parentId,instanceId:null,scope:'host',info:parent.element};renderPanel();}else clearSelection();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='collectionSelection'){await reloadFrame();await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}

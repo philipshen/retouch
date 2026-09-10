@@ -8551,3 +8551,53 @@ Logs: /private/tmp/retouch-branch-duplicate-units.log,
 Component insertion/swap, full variants/shared libraries, arbitrary-site authoring,
 full Figma Design parity and trusted brew distribution remain incomplete. Native
 app launches and native launch tests remain paused.
+
+
+### Component library insertion into a selected source frame
+
+The React component library now offers Insert into frame when a supported source
+container is selected. Insertion adds a linked JSX instance, expands a self-closing
+container if needed, and creates a named/default import with a collision-free
+local name for cross-file definitions. Same-file insertion uses the visible local
+binding and refuses direct self-insertion. Directive prologues are preserved.
+The operation maps the inserted instance and new parent source IDs, records one
+history action, selects the inserted component and exposes its property controls.
+Undo removes the usage and introduced import; Redo restores them.
+
+The transaction guards the destination, definition, imported type dependencies
+and extensionless import candidates. Ambiguous module stems, stale source, changed
+resolution paths and inconsistent contract snapshots are refused before writes.
+The source operation accepts supported literal string/number/boolean props and
+validates required properties and finite choices. The current library UI inserts
+using defaults and reports missing required props; a required-property form is
+still needed. Cross-file insertion currently generates a fresh import alias
+rather than reusing an existing compatible import.
+
+Initial browser verification found source Undo could succeed while the canvas
+still showed the inserted instance: adding/removing the import changed source
+IDs, leaving generic history revision targets empty. Insertion history now waits
+for the explicitly resolved before/after parent frame's compiler revision. Initial
+WebKit also reported access-control errors around reloads. Final Chromium and
+WebKit runs both passed with strict empty page-error assertions after the refresh
+change; no errors were filtered.
+
+Validation: final full unit suite passed 679 tests. Six insertion tests cover
+imports/name collisions, directives, self-closing/default exports, same-file
+bindings, recursion refusal, typed literal props, exact write reversal, stale
+paths and contract changes between property reads. Browser workflows cover
+library insertion into main, independent property edits, existing-instance
+preservation, import/usage source bytes, Undo/Redo selection and rendered counts,
+then the existing branch/duplicate/property/library flow. Both browser processes
+finished exit zero. The final contract-snapshot guard was added afterward and
+covered by the final unit suite.
+Logs: /private/tmp/retouch-component-insert-units-verified.log,
+/private/tmp/retouch-component-insert-{chromium,webkit}-fixed.log and
+/private/tmp/retouch-component-insert-ui.log. Reviewed screenshot:
+/private/tmp/retouch-component-insert-ui.png.
+
+Required-property input UI, complete TypeScript contracts, import reuse, indirect
+module-cycle analysis, client/server component boundary handling, multi-root
+identity, drag insertion, swap and complete variant/shared-library behavior remain
+incomplete. This does not prove arbitrary-framework or remote-site insertion.
+Full Figma Design parity and trusted brew distribution remain unachieved. Native
+app launches and native launch tests remain paused.

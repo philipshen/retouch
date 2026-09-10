@@ -1,0 +1,29 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {makeApp,cleanup,Index,pick}=require('./helpers.cjs'),planner=require('../src/insert-component.cjs'),definitions=require('../src/component-definitions.cjs'),tx=require('../src/transactions.cjs');
+function fixture(page='"use client";export default function Page(){const Card=1;return <main><h1>Existing</h1></main>}',component='export const Card=({label="Ready"})=><article>{label}</article>'){
+ const root=fs.realpathSync(makeApp({'page.tsx':page,'parts/Card.tsx':component})),index=new Index(root);index.scanAll();const resolved=pick(index,root,'page.tsx','main').resolved,def=definitions.definitions(component,'parts/Card.tsx')[0],op={fileHash:resolved.hash,definitionFile:'parts/Card.tsx',definitionId:def.definitionId,definitionHash:require('../src/id.cjs').contentHash(component)};
+ return {root,index,resolved,op,page,component,close(){index.close();cleanup(root);}};
+}
+test('insertion adds a collision-free import and child, preserves directives and maps new source IDs',()=>{
+ const f=fixture();try{const plan=planner.plan(f.resolved,f.op);assert.ok(plan.ok,plan.reason);assert.match(plan.edits[0].after,/^"use client";\nimport \{ Card as Card2 \} from "\.\/parts\/Card";/);assert.match(plan.edits[0].after,/<h1>Existing<\/h1>\n<Card2\/>/);const applied=tx.applyPlan(f.root,plan);assert.ok(applied.ok,applied.reason);assert.equal(applied.edits.length,1);f.index.scanAll();assert.equal(f.index.resolve(plan.insertedComponent.instanceId).element.node.openingElement.name.name,'Card2');assert.equal(f.index.resolve(plan.insertedComponent.parentId).element.node.openingElement.name.name,'main');assert.equal(fs.readFileSync(path.join(f.root,'parts/Card.tsx'),'utf8'),f.component);assert.ok(tx.applyPlan(f.root,{ok:true,edits:applied.edits.map(edit=>({...edit,before:edit.after,after:edit.before}))}).ok);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.page);}finally{f.close();}
+});
+test('insertion expands self-closing frames and supports default exports',()=>{
+ const f=fixture('export default function Page(){return <main/>}','export default ()=> <article/>');try{const plan=planner.plan(f.resolved,f.op);assert.ok(plan.ok,plan.reason);assert.match(plan.edits[0].after,/import InsertedComponent from/);assert.match(plan.edits[0].after,/<main>\n<InsertedComponent\/>\n<\/main>/);assert.ok(tx.applyPlan(f.root,plan).ok);f.index.scanAll();assert.ok(f.index.resolve(plan.insertedComponent.instanceId));}finally{f.close();}
+});
+test('same-file insertion uses a visible component binding without an import and refuses recursive placement',()=>{
+ const f=fixture();try{const source='/** @retouch-component */\nfunction Card(){return <article/>} export default function Page(){return <main/>}';fs.writeFileSync(f.resolved.file,source);f.index.scanAll();const def=definitions.definitions(source,'page.tsx').find(d=>d.name==='Card'),resolved=pick(f.index,f.root,'page.tsx','main').resolved,op={...f.op,fileHash:resolved.hash,definitionFile:'page.tsx',definitionId:def.definitionId,definitionHash:resolved.hash};const plan=planner.plan(resolved,op);assert.ok(plan.ok,plan.reason);assert.ok(!plan.edits[0].after.includes('import '));const recursive=pick(f.index,f.root,'page.tsx','article').resolved;assert.match(planner.plan(recursive,{...op,fileHash:recursive.hash}).reason,/own definition/);}finally{f.close();}
+});
+test('required primitive props and finite choices are validated, escaped and guarded with imported types',()=>{
+ const f=fixture(undefined,'import type {Props} from "./types";export function Card({label,tone}:Props){return <article>{label}</article>}');try{fs.writeFileSync(path.join(f.root,'parts/types.ts'),'export interface Props {label:string;tone?:"calm"|"bold"}');assert.match(planner.plan(f.resolved,f.op).reason,/required.*label/);assert.equal(planner.plan(f.resolved,{...f.op,props:{label:'x',tone:'invalid'}}).ok,false);const plan=planner.plan(f.resolved,{...f.op,props:{label:'" & <tag>\nline',tone:'calm'}});assert.ok(plan.ok,plan.reason);assert.match(plan.edits[0].after,/label=\{/);fs.appendFileSync(path.join(f.root,'parts/types.ts'),'\n// changed');assert.equal(tx.applyPlan(f.root,plan).ok,false);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.page);}finally{f.close();}
+});
+test('insertion refuses stale definitions, changed import resolution and escaped paths without writes',()=>{
+ const f=fixture();try{assert.equal(planner.plan(f.resolved,{...f.op,definitionHash:'stale'}).ok,false);assert.equal(planner.plan(f.resolved,{...f.op,definitionFile:'../elsewhere.tsx'}).ok,false);const plan=planner.plan(f.resolved,f.op);assert.ok(plan.ok,plan.reason);fs.writeFileSync(path.join(f.root,'parts/Card.ts'),'export const Card=1;');assert.equal(tx.applyPlan(f.root,plan).ok,false);assert.equal(planner.plan(f.resolved,f.op).ok,false);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.page);}finally{f.close();}
+});
+test('insertion rejects a contract changing between property reads rather than combining snapshots',()=>{
+ const f=fixture(undefined,'import type {Props} from "./types";export function Card({label,tone}:Props){return <article>{label}</article>}'),types=require('../src/component-prop-choices.cjs'),original=types.property;try{
+  const file=path.join(f.root,'parts/types.ts');fs.writeFileSync(file,'export interface Props {label:string;tone?:"calm"|"bold"}');
+  types.property=(resolved,name,definition)=>{const result=original(resolved,name,definition);if(name==='label')fs.appendFileSync(file,'\n// external edit');return result;};
+  const result=planner.plan(f.resolved,{...f.op,props:{label:'Hello',tone:'calm'}});assert.equal(result.ok,false);assert.match(result.reason,/contract changed/);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.page);
+ }finally{types.property=original;f.close();}
+});

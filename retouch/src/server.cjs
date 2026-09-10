@@ -357,7 +357,7 @@ function handle(req, res, ctx) {
     const html = fs
       .readFileSync(path.join(SHELL_DIR, 'index.html'), 'utf8')
       .replace('__RETOUCH_TOKEN__', ctx.token)
-      .replace('__RETOUCH_RENDERING__', JSON.stringify({componentLibrary:!!ctx.adapter.describeComponent,history:ctx.history.snapshot(),historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired,stateScope:ctx.stateScope,selectionStyling:ctx.adapter.capabilities?.collectionSelection===true||ctx.adapter.capabilities?.ops?.some(op=>['setClassesSelection','setCSSSelection'].includes(op))===true,layerReparenting:ctx.adapter.capabilities?.ops?.includes('reparentElement')===true,reloadAfterWrite:ctx.rendering.reloadAfterWrite===true,revalidateStyles:ctx.rendering.revalidateStyles===true}).replace(/</g,'\\u003c'));
+      .replace('__RETOUCH_RENDERING__', JSON.stringify({componentInsertion:ctx.adapter.name==='react',componentLibrary:!!ctx.adapter.describeComponent,history:ctx.history.snapshot(),historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired,stateScope:ctx.stateScope,selectionStyling:ctx.adapter.capabilities?.collectionSelection===true||ctx.adapter.capabilities?.ops?.some(op=>['setClassesSelection','setCSSSelection'].includes(op))===true,layerReparenting:ctx.adapter.capabilities?.ops?.includes('reparentElement')===true,reloadAfterWrite:ctx.rendering.reloadAfterWrite===true,revalidateStyles:ctx.rendering.revalidateStyles===true}).replace(/</g,'\\u003c'));
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
     return res.end(html);
   }
