@@ -92,6 +92,36 @@
     const size=Math.round((unit==='px'?width:width/initial)*100000)/100000;
     return {prefix:`min-[${size}${unit}]:`,label:`${width} px and larger`};
   }
+  // Candidate boundaries suggest sizes; the browser remains authoritative for
+  // nested alternatives, orientation, range syntax and environment conditions.
+  function previewSize(choice,d,current){
+    const groups=choice?.queries||(choice?.condition?[[choice.condition]]:null);
+    if(!groups?.length||!d||!current)return null;
+    const probe=d.createElement('iframe');probe.title='Breakpoint preview measurement';probe.setAttribute('aria-hidden','true');probe.tabIndex=-1;
+    probe.style.cssText='position:fixed!important;left:-10000px!important;top:0!important;border:0!important;visibility:hidden!important;pointer-events:none!important;min-width:0!important;min-height:0!important;max-width:none!important;max-height:none!important;';
+    d.documentElement.append(probe);
+    try{
+      const w=probe.contentWindow;if(!w)return null;
+      const initial=parseFloat(w.getComputedStyle(w.document.documentElement).fontSize)||16;
+      const widths=new Set([current.width,240,7680]),heights=new Set([current.height,240,7680]);
+      const add=(set,value)=>{for(const n of [Math.floor(value)-1,Math.floor(value),Math.ceil(value),Math.ceil(value)+1])if(n>=240&&n<=7680)set.add(n);};
+      for(const query of groups.flat())for(const part of query.matchAll(/\(([^()]*)\)/g)){
+        const axes=part[1].match(/(?:min-|max-)?(width|height)\b/g)||[];
+        for(const value of part[1].matchAll(/(\d+(?:\.\d+)?)(px|rem|em)\b/g))for(const axis of axes)add(axis.endsWith('width')?widths:heights,Number(value[1])*(value[2]==='px'?1:initial));
+      }
+      // Orientation can require crossing the other dimension without an
+      // explicit numerical boundary in the query.
+      for(const value of [...widths,...heights]){add(widths,value);add(heights,value);}
+      const candidates=[];for(const width of widths)for(const height of heights)candidates.push({width,height});
+      candidates.sort((a,b)=>(Math.abs(a.width-current.width)+Math.abs(a.height-current.height))-(Math.abs(b.width-current.width)+Math.abs(b.height-current.height)));
+      for(const size of candidates.slice(0,2000)){
+        probe.style.setProperty('width',size.width+'px','important');probe.style.setProperty('height',size.height+'px','important');
+        void probe.offsetWidth;
+        if(matches(choice,w)===true)return size;
+      }
+      return null;
+    }finally{probe.remove();}
+  }
   function inheritedLink(links,prefix,d,choices=null){
     if(!links||!prefix||!d||Object.hasOwn(links,prefix))return null;
     choices=choices||discover(d);
@@ -113,7 +143,7 @@
     if(!candidates.length||candidates.length>1&&candidates[0].width===candidates[1].width)return null;
     const {scope,link,label}=candidates[0];return {scope,link,label};
   }
-  const api={split,project,replaceScope,discover,matches,inherited,atWidth,inheritedLink};
+  const api={split,project,replaceScope,discover,matches,inherited,atWidth,inheritedLink,previewSize};
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.RetouchResponsive=api;
 })(typeof window==='object'?window:globalThis);
