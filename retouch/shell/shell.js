@@ -107,9 +107,21 @@ const historyWarning=document.createElement('span');historyWarning.setAttribute(
 const recoveryDetails=document.createElement('details');recoveryDetails.hidden=true;recoveryDetails.className='recovery-details';
 const recoverySummary=document.createElement('summary');recoverySummary.textContent='Review recovery';
 const recoveryReason=document.createElement('p'),recoveryHelp=document.createElement('p'),recoveryRetry=document.createElement('button');
-recoveryHelp.textContent='Review the affected files in your code editor. Once all files match the state before or after the interrupted operation, recheck to resume editing. Rechecking does not change source files.';
+recoveryHelp.textContent='Restore the files listed below to their state before the interrupted edit, or resolve them in your code editor and recheck. External changes require manual resolution. Rechecking does not change source files.';
 recoveryRetry.textContent='Recheck recovery';recoveryRetry.type='button';
 const recoveryPanel=document.createElement('div');recoveryPanel.className='recovery-panel';recoveryPanel.append(recoveryReason,recoveryHelp,recoveryRetry);recoveryReason.setAttribute('role','status');recoveryDetails.append(recoverySummary,recoveryPanel);document.getElementById('toolbar').append(recoveryDetails);
+const recoveryFiles=document.createElement('ul'),recoveryRestore=document.createElement('button');let recoveryToken=null;
+recoveryRestore.type='button';recoveryRestore.textContent='Restore before interrupted edit';recoveryRestore.hidden=true;
+recoveryPanel.append(recoveryFiles,recoveryRestore);
+async function reviewRecovery(){
+ recoveryToken=null;recoveryRestore.hidden=true;recoveryFiles.replaceChildren();
+ try{const result=await api('GET','/rt/__api/history-recovery-review');if(!result.ok)return;
+  for(const file of result.files){const row=document.createElement('li');row.textContent=file.file+' — '+(file.state==='before'?'already restored':file.state==='external'?'external changes; resolve manually':file.action==='remove'?'will be removed':file.action==='create'?'will be recreated':'will be restored');recoveryFiles.append(row);}
+  recoveryToken=result.token;recoveryRestore.hidden=!result.canRestore;
+ }catch(error){recoveryReason.textContent='Could not review recovery: '+error.message;}
+}
+recoveryDetails.addEventListener('toggle',()=>{if(recoveryDetails.open)reviewRecovery();});
+recoveryRestore.addEventListener('click',async()=>{if(!recoveryToken)return;recoveryRestore.disabled=true;try{const result=await api('POST','/rt/__api/history-recovery-restore',{token:recoveryToken});if(result.ok)location.reload();else{recoveryReason.textContent=result.reason||'Recovery could not complete.';await reviewRecovery();}}catch(error){recoveryReason.textContent=error.message;}finally{recoveryRestore.disabled=false;}});
 recoveryRetry.addEventListener('click',async()=>{recoveryRetry.disabled=true;try{const result=await api('POST','/rt/__api/history-recovery',{});if(result.ok)location.reload();else recoveryReason.textContent=result.reason||result.error||'Recovery is still required.';}catch(error){recoveryReason.textContent='Could not recheck recovery: '+error.message;}finally{recoveryRetry.disabled=false;}});
 function showHistoryPersistence(error,recoveryRequired=false){historyRecoveryRequired=recoveryRequired;recoveryDetails.hidden=!recoveryRequired;recoveryReason.textContent=error||'';historyWarning.hidden=!error&&!recoveryRequired;historyWarning.textContent=recoveryRequired?'Source recovery required. Editing is paused.':error?'History is available for this session only.':'';historyWarning.title=error||'';if(recoveryRequired){mode='interact';modeBtn.disabled=true;modeBtn.textContent='Interact mode';modeBtn.classList.remove('mode-edit');stopDrawing?.();hoverEl=null;}syncHistoryControls();}
 showHistoryPersistence(window.__RT_RENDERING?.historyPersistenceError,historyRecoveryRequired);

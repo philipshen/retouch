@@ -28,8 +28,36 @@ function createHistoryStore(root,directory){
   if(state.pending!==undefined){const pending=state.pending;if(!object(pending))throw Error('Invalid pending history operation.');if(pending.type==='record'){result.pending={type:'record',entry:stack([pending.entry])[0]};}else{if(!['undo','redo'].includes(pending.type)||result[pending.type].at(-1)?.id!==pending.id)throw Error('Invalid pending history restore.');result.pending={type:pending.type,id:pending.id};}if(pending.owner!==undefined){if(!Number.isSafeInteger(pending.owner)||pending.owner<=0)throw Error('Invalid pending history owner.');result.pending.owner=pending.owner;}}
   return result;
  }
+ function pendingRecovery(){
+  const raw=source();if(raw===null)throw Error('The pending history journal is missing.');
+  const state=validate(JSON.parse(raw),true);if(!state.pending)throw Error('The pending history operation is missing.');
+  const pending=state.pending;if(pending.owner&&pending.owner!==process.pid){let alive=true;try{process.kill(pending.owner,0);}catch(error){if(error.code==='ESRCH')alive=false;}if(alive)throw Error('A source operation is still owned by another running editor.');}
+  const entry=pending.type==='record'?pending.entry:state[pending.type].at(-1),before=pending.type==='undo'?'after':'before',after=pending.type==='undo'?'before':'after';
+  const contents=entry.edits.map(edit=>{
+   if(fs.realpathSync(path.dirname(edit.file))!==path.dirname(edit.file)||!edit.file.startsWith(actual+path.sep))throw Error('Pending history follows a symbolic link.');
+   let stat;try{stat=fs.lstatSync(edit.file);}catch(error){if(error.code!=='ENOENT')throw error;}if(!stat)return null;
+   if(!stat.isFile()||stat.isSymbolicLink()||stat.size>LIMIT)throw Error('Pending history source is not a bounded regular file.');return fs.readFileSync(edit.file,'utf8');
+  });
+  const token=digest(JSON.stringify([digest(raw),contents]));
+  return {raw,state,entry,before,after,contents,token};
+ }
  return {
   file,
+  inspectRecovery(){
+   const {entry,before,after,contents,token}=pendingRecovery();
+   const files=entry.edits.map((edit,index)=>({file:path.relative(actual,edit.file),state:contents[index]===edit[before]?'before':contents[index]===edit[after]?'after':'external',action:edit[before]===null?'remove':contents[index]===null?'create':'restore'}));
+   return {token,files,canRestore:files.every(file=>file.state!=='external')};
+  },
+  restoreRecovery(token,adapter={}){
+   const current=pendingRecovery(),{raw,state,entry,before,contents}=current;
+   if(typeof token!=='string'||token!==current.token)throw Error('The recovery files changed. Review recovery again before restoring.');
+   if(entry.edits.some((edit,index)=>contents[index]!==edit.before&&contents[index]!==edit.after))throw Error('A file has external changes. Resolve it in your code editor before restoring.');
+   const edits=entry.edits.map((edit,index)=>({file:edit.file,before:contents[index],after:edit[before]}));
+   for(const edit of edits)if(edit.after===null&&edit.before!==null&&adapter.hasReference?.(actual,edit.file,edits.map(item=>item.file)))throw Error('Another file now refers to a file this recovery would remove.');
+   revision=digest(raw);state.pending.owner=process.pid;this.save(state);
+   const applied=require('./transactions.cjs').applyPlan(actual,{ok:true,edits});if(!applied.ok)throw Error(applied.reason);
+   this.load({requirePending:true});return {ok:true};
+  },
   load({requirePending=false}={}){
    const raw=source();if(raw===null){if(requirePending)throw Error('The pending history journal is missing. Recovery remains paused.');revision=null;return {undo:[],redo:[]};}const state=validate(JSON.parse(raw),true);revision=digest(raw);
    if(requirePending&&!state.pending)throw Error('The pending history operation is missing. Recovery remains paused.');

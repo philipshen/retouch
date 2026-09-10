@@ -7072,3 +7072,29 @@ with exact multi-file Undo after resolution. WebKit exposed a test navigation
 race; the test now waits for the recovery banner to disappear after reload.
 The review panel screenshot `/private/tmp/retouch-recovery-review.png` was
 visually inspected. Native app launches remain paused.
+
+### Restore reviewed interrupted edits (2026-09-09)
+
+Review recovery now lists every affected file and its planned action: unchanged,
+restore, recreate or remove. “Restore before interrupted edit” returns all files
+to the starting side of the interrupted operation, then resumes the editor. For
+interrupted Undo/Redo it retains the original history stack position. It does
+not manufacture a successful edit from a partially completed operation.
+
+The review token binds journal bytes and current file contents. Restore refuses
+stale reviews, external edits, unsafe paths, live owners and created files that
+have acquired external references. It persists the pending marker with the
+current process owner before applying the existing checked source transaction;
+the marker remains until source restoration and journal reconciliation finish.
+Multi-process source serialization and power-loss durability are still not fully
+implemented. External edits still require manual resolution; no forced overwrite
+control is offered.
+
+Validation: all 536 tests pass in
+`/private/tmp/retouch-recovery-restore-units.log`; 12 focused history-store tests
+also pass after adding the recovery process owner. Chromium and WebKit exercise
+the visible file list, restore button, resumed editing, exact file contents and
+empty history after cancelling an interrupted new edit. Unit tests cover stale
+reviews, external changes, deletion references and interrupted Undo/Redo sides.
+The screenshot `/private/tmp/retouch-recovery-restore.png` was visually inspected.
+Native launches remain paused; full Figma parity remains incomplete.

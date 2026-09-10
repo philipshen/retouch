@@ -68,3 +68,19 @@ test('unresolved recovery blocks source commits and history without overwriting 
  assert.equal(fs.readFileSync(a,'utf8'),'after');assert.equal(fs.readFileSync(b,'utf8'),'before');assert.equal(fs.readFileSync(store.file,'utf8'),bytes);
  fs.writeFileSync(store.file,'broken');assert.throws(()=>open(),error=>error.recoveryRequired!==true);
 });
+
+test('reviewed recovery restores only unchanged before/after snapshots and preserves history',t=>{
+ const {root,directory}=setup(t),a=path.join(root,'a'),b=path.join(root,'b'),created=path.join(root,'created');fs.writeFileSync(a,'after');fs.writeFileSync(b,'before');fs.writeFileSync(created,'created');
+ const store=createHistoryStore(root,directory);store.load();store.save({undo:[],redo:[],pending:{type:'record',entry:{id:'a'.repeat(32),edits:[{file:a,before:'before',after:'after'},{file:b,before:'before',after:'after'},{file:created,before:null,after:'created'}]}}});
+ const review=store.inspectRecovery();assert.equal(review.canRestore,true);assert.deepEqual(review.files.map(file=>file.state),['after','before','after']);assert.equal(review.files[2].action,'remove');
+ fs.writeFileSync(a,'external');assert.throws(()=>store.restoreRecovery(review.token),/changed/);assert.equal(store.inspectRecovery().canRestore,false);assert.throws(()=>store.restoreRecovery(store.inspectRecovery().token),/external/);assert.equal(fs.readFileSync(a,'utf8'),'external');
+ fs.writeFileSync(a,'after');assert.throws(()=>store.restoreRecovery(store.inspectRecovery().token,{hasReference:()=>true}),/refers/);assert.equal(fs.existsSync(created),true);
+ assert.equal(store.restoreRecovery(store.inspectRecovery().token).ok,true);assert.equal(fs.readFileSync(a,'utf8'),'before');assert.equal(fs.readFileSync(b,'utf8'),'before');assert.equal(fs.existsSync(created),false);assert.deepEqual(store.load(),{undo:[],redo:[]});
+});
+
+test('restoring interrupted undo or redo returns to its starting side without moving history',t=>{
+ for(const type of ['undo','redo']){
+  const {root,directory}=setup(t),a=path.join(root,'a'),b=path.join(root,'b');fs.writeFileSync(a,'before');fs.writeFileSync(b,'after');const entry={id:'a'.repeat(32),edits:[{file:a,before:'before',after:'after'},{file:b,before:'before',after:'after'}]},store=createHistoryStore(root,directory);store.load();store.save({undo:type==='undo'?[entry]:[],redo:type==='redo'?[entry]:[],pending:{type,id:entry.id}});
+  store.restoreRecovery(store.inspectRecovery().token);const recovered=store.load();assert.equal(recovered[type][0].id,entry.id);assert.equal(recovered.pending,undefined);for(const file of [a,b])assert.equal(fs.readFileSync(file,'utf8'),type==='undo'?'after':'before');
+ }
+});

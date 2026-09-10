@@ -32,6 +32,16 @@ function startServer({ appRoot, port, adapter, proxyTo, serveSite, rendering = {
   const historyDirectory=()=>process.env.RETOUCH_STATE_DIR||path.join(fs.realpathSync(require('node:os').homedir()),'.retouch','history');
   try{const directory=historyDirectory();history=new SourceHistory(100,{store:require('./history-store.cjs').createHistoryStore(appRoot,directory)});}
   catch(error){history=new SourceHistory(100,{store:{save(){throw error;}}});history.persistenceError=error.message;if(error.recoveryRequired)history.recoveryError=error.message;}
+  function reviewHistoryRecovery(token){
+    if(!history.recoveryRequired)return {ok:false,reason:'No source recovery is pending.'};
+    try{
+      if(history.pending){history.persist();if(history.persistenceError)throw Error(history.persistenceError);}
+      const store=require('./history-store.cjs').createHistoryStore(appRoot,historyDirectory());
+      if(token===undefined)return {ok:true,...store.inspectRecovery()};
+      store.restoreRecovery(token,adapter);
+      history=new SourceHistory(100,{store});index.scanAll();return {ok:true};
+    }catch(error){return {ok:false,reason:error.message};}
+  }
   function retryHistoryRecovery(){
     if(!history.recoveryRequired)return {ok:true};
     try{
@@ -49,7 +59,7 @@ function startServer({ appRoot, port, adapter, proxyTo, serveSite, rendering = {
 
   const server = http.createServer((req, res) => {
     try {
-      handle(req, res, { index, token, stateScope, appRoot, adapter, proxyTo, serveSite, rendering, history, sourceMonitor, retryHistoryRecovery });
+      handle(req, res, { index, token, stateScope, appRoot, adapter, proxyTo, serveSite, rendering, history, sourceMonitor, retryHistoryRecovery, reviewHistoryRecovery });
     } catch (err) {
       res.writeHead(err.statusCode || 500, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: err.message }));
@@ -85,6 +95,9 @@ function handle(req, res, ctx) {
   const p = url.pathname;
 
   if(req.method==='POST'&&['/rt/__api/op','/rt/__api/text-styles','/rt/__api/color-styles','/rt/__api/effect-styles','/rt/__api/upload'].includes(p)&&ctx.history.recoveryRequired){requireToken(req,ctx.token);return json(res,409,{ok:false,refused:true,reason:'An incomplete source operation requires recovery before editing can resume.',historyRecoveryRequired:true,historyPersistenceError:ctx.history.recoveryError||ctx.history.persistenceError});}
+
+  if(p==='/rt/__api/history-recovery-review'&&req.method==='GET'){requireToken(req,ctx.token);const result=ctx.reviewHistoryRecovery();return json(res,result.ok?200:409,result);}
+  if(p==='/rt/__api/history-recovery-restore'&&req.method==='POST'){requireToken(req,ctx.token);return readBody(req,raw=>{let body;try{body=JSON.parse(raw);}catch{return json(res,400,{ok:false,reason:'Invalid recovery request.'});}if(typeof body?.token!=='string')return json(res,400,{ok:false,reason:'Review recovery before restoring.'});const result=ctx.reviewHistoryRecovery(body.token);return json(res,result.ok?200:409,result);});}
 
   if(p==='/rt/__api/history-recovery'&&req.method==='POST'){requireToken(req,ctx.token);const result=ctx.retryHistoryRecovery();return json(res,result.ok?200:409,result);}
 
