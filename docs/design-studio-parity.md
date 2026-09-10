@@ -8007,3 +8007,14 @@ instance selection. The shared definition stays unchanged.
 618 unit tests passed; the focused planner suite also passed after the final guard.
 Chromium and WebKit verify reset, re-override, exact Undo/Redo and sibling isolation through
 the actual inspector. Native app launches remain paused.
+
+
+## Wrapped property text sizing (2026-09-10)
+
+Screenshot review found soft-wrapped text clipped by the newline-count sizing.
+Property text areas now measure their rendered content, cap automatic growth at
+five visual lines, and resize again when the inspector width changes. Long text
+scrolls and remains manually resizable. Escape restores the original field height
+as well as the value. Chromium and WebKit verify unclipped wrapped text, bounded long-text
+height, cancellation without writes, and the existing property/history workflow.
+Native launches remain paused; full parity remains unfinished.
