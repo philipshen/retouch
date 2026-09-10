@@ -6051,3 +6051,27 @@ WebKit, exit 0: /private/tmp/retouch-fluid-size-variable-render.log and
 /private/tmp/retouch-fluid-size-variable-webkit.log. They prove a 22px variable
 size becomes 40px while keeping 36px leading. Native launches remain paused;
 full design parity and verified desktop distribution remain unfinished.
+
+### Shared HTML font and relative spacing controls (2026-09-09)
+
+HTML multi-selection now includes the searchable page-font picker with mixed
+families, relative line-height/tracking controls, and automatic line height.
+Percentage values resolve against each selected layer's own font size, preserving
+size differences. Edits use the selected width-and-larger scope and existing
+atomic selection history. Raw CSS fields and resets remain available.
+
+Fixed shared HTML CSS responses omitting text-style links and override counts.
+The updated response now describes both CSS and linked typography for every
+selected layer, so selection edits do not make the library UI lose that state.
+
+All 453 unit tests passed, exit 0:
+/private/tmp/retouch-html-shared-type-units.log. A new source test verifies shared
+CSS edits retain both linked IDs and fresh override counts. Browser processes
+exited 0 in /private/tmp/retouch-html-shared-type-chromium.log and
+/private/tmp/retouch-html-shared-type-webkit.log: 20px/32px layers retain their sizes,
+a shared font edit undoes exactly, 200% leading yields 40px/64px, 10% tracking yields
+2px/3.2px, phone sizes retain their base values, and automatic leading plus undo
+work correctly. The integrated linked-style/library regression passed, exit 0,
+in /private/tmp/retouch-html-shared-type-links.log, including visible direct-link
+coverage and aggregate overrides after a shared relative edit. Native launches
+remain paused; full design parity and verified desktop distribution are unfinished.

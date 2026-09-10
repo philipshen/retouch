@@ -33,3 +33,10 @@ test('unchanged reference layers remain byte-for-byte untouched while other laye
  const unchanged={...op,changesById:Object.fromEntries(ids.map(id=>[id,{}]))};assert.deepEqual(selection.plan(r,unchanged).edits,[]);
  for(const width of [undefined,-1,7681,1.5])assert.equal(selection.plan(r,{...unchanged,width}).refused,true);
 });
+
+test('HTML shared CSS edits retain linked typography metadata and updated override counts',()=>{
+ const links=require('../src/html-text-styles.cjs'),style={id:'11111111-1111-4111-8111-111111111111',name:'Heading',properties:{'font-size':'32px','line-height':'1.4'}};let current=source;
+ for(const id of operation(resolve(source)).ids){const r=resolve(current),result=links.plan({...r,element:r.elements.find(e=>e.id===id)},{type:'applyTextStyle',width:768},style);assert.equal(result.ok,true,result.reason);current=result.edits[0].after;}
+ const r=resolve(current),result=selection.plan(r,operation(r,{property:'line-height',value:'2'}));assert.equal(result.ok,true,result.reason);
+ for(const info of result.selection){assert.equal(info.textStyleLinks[768].id,style.id);assert.deepEqual(info.textStyleOverrides[768],['line-height']);}
+});

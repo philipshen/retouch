@@ -223,6 +223,15 @@
   if(!Number.isInteger(width)||elements.some(el=>!el)||infos.some(info=>info.cssReason)){I.note(section,'Re-select the layers and choose a pixel screen scope.','refused');return section;}
   I.note(section,'Shift-click a range in Layers; Cmd/Ctrl-click toggles layers. On the canvas, Shift-click toggles. Mixed values stay unchanged until edited. Each shared edit is one undo step.');
   const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el));
+  const typography=I.section('Shared typography'),families=computed.map(css=>css.fontFamily),mixedFamilies=families.some(value=>value!==families[0]);section.append(typography);
+  I.fontPicker(typography,elements[0].ownerDocument,mixedFamilies?'':families[0],value=>save('font-family',value,width),{mixed:mixedFamilies,label:'Shared Page font'});
+  for(const [property,label,min,max]of [['line-height','Shared Line height (%)',0,1000],['letter-spacing','Shared Letter spacing (%)',-100,1000]]){
+   const values=computed.map(css=>{const size=parseFloat(css.fontSize),raw=css.getPropertyValue(property);return raw==='normal'&&property==='line-height'?NaN:(parseFloat(raw)||0)/size*100;}),mixed=values.some(value=>!Number.isFinite(value)||Math.abs(value-values[0])>.0001);
+   const input=I.relativeNumber(typography,label,mixed?NaN:values[0],min,max,value=>save(property,String(Math.round(value*1e6)/1e8)+(property==='letter-spacing'?'em':''),width));
+   if(mixed)input.placeholder='Mixed / automatic';input.title='Relative to each selected layer’s own font size.';
+  }
+  typography.append(I.button('Automatic shared line height',()=>save('line-height','normal',width)));
+  I.note(typography,'Relative spacing follows each layer’s own font size. Raw CSS values and property resets are available below.');
   const sharedFields=[['visibility','Visibility'],['opacity','Opacity (%)'],['rotate','Rotation (°)'],['mix-blend-mode','Blend mode'],['isolation','Blend group'],...fields];
   for(const [property,label]of sharedFields){
    const values=infos.map((info,i)=>info.cssRules?.[width]?.[property]??computed[i].getPropertyValue(property)),mixed=values.some(value=>value!==values[0]),numeric=['opacity','rotate'].includes(property);
