@@ -6559,3 +6559,27 @@ HTML text-style regression passed, exit 0:
 /private/tmp/retouch-effect-styles-text-regression.log. React/Liquid effect links,
 batch effects, variables/modes, arbitrary-site authoring and full Figma parity
 remain unfinished. Native launches remain paused.
+
+### Shared HTML effect styles (2026-09-09)
+
+Multi-selection now applies, resets and detaches saved effect stacks at the
+selected screen scope. The panel reports linked-layer coverage, mixed definitions
+and local overrides. Reset follows each layer's own saved definition; an
+unavailable definition, malformed metadata or stale source refuses the entire
+selection before writing. Each operation produces one source transaction and one
+undo entry. Detaching preserves the rendered effects. Shared CSS edits retain
+effect-link descriptions so override status remains visible.
+
+The shared planner also now rejects malformed React color-link metadata during
+selection reset instead of silently treating the layer as unlinked.
+
+All 491 unit tests passed (exit 0), including mixed-definition reset, missing
+library entries, invalid selections and malformed metadata:
+/private/tmp/retouch-effect-selection-final-units.log. Chromium and WebKit browser
+flows passed: /private/tmp/retouch-effect-selection-chromium.log and
+/private/tmp/retouch-effect-selection-webkit.log. Both exercised two-layer apply,
+local blur override, selection reset, detach with retained paint, and exact source
+restoration through undo. Subsequent cleanup removed unreachable React branches
+from the HTML-only selection handler; syntax checks and the full unit suite
+passed afterward. Native app launches remain paused. React/Liquid effect links,
+variables/modes, arbitrary-site authoring and full Figma parity remain incomplete.

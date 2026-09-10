@@ -62,3 +62,7 @@ test('clearing linked paint keeps the connection as an override that palette res
  const next=resolve(cleared.edits[0].after);assert.equal(links.describe(next).colorStyleLinks['md:'].color.id,style.id);assert.deepEqual(links.describe(next).colorStyleOverrides['md:'],['color']);
  const reset=links.plan(next,{type:'resetColorStyle',property:'color',scope:'md:'},style);assert.equal(reset.ok,true,reset.reason);assert.deepEqual(links.describe(resolve(reset.edits[0].after)).colorStyleOverrides['md:'],[]);
 });
+
+test('selection reset refuses malformed React color metadata instead of treating it as unlinked',()=>{
+ const r=resolve(source.replace('<h1','<h1 data-rt-color-styles="bad"')),result=require('../src/text-style-selection.cjs').plan(r,{type:'resetColorStyleSelection',ids:r.elements.map(e=>e.id),fileHash:r.hash,scope:'md:',property:'color'},{styles:[]},react,'color');assert.equal(result.ok,false);assert.equal(result.edits,undefined);
+});

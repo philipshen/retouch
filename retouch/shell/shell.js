@@ -905,7 +905,7 @@ function renderPanelContents() {
    const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,links=info.effectStyleLinks||{},inheritedWidth=Object.keys(links).map(Number).filter(value=>value<width).sort((a,b)=>b-a)[0];
    RetouchEffectStyles.mount(panelBody,matchingEls(info.id)[0],{link:links[width],overrides:info.effectStyleOverrides?.[width]||[],inherited:!links[width]&&inheritedWidth!==undefined?{link:links[inheritedWidth],label:inheritedWidth?inheritedWidth+'px and larger':'All sizes'}:null,apply:(styleId,libraryRevision)=>writeTextStyle('applyEffectStyle',width,{styleId,libraryRevision}),reset:(styleId,libraryRevision)=>writeTextStyle('resetEffectStyle',width,{styleId,libraryRevision}),detach:()=>writeTextStyle('detachEffectStyle',width),update:(styleId,libraryRevision,name,properties)=>writeTextStyle('updateEffectStyle',width,{styleId,libraryRevision,name,properties})});
   }
-  if(sel.multiple?.length>1){mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection,setSelectionColorOverride));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
+  if(sel.multiple?.length>1){mountSelectionEffectStyles();mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection,setSelectionColorOverride));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
   if(info.components?.length) {
     const label=document.createElement('label');label.textContent='Component scope';
@@ -1589,6 +1589,25 @@ function selectionColorOptions(width){
     }finally{busyPanel(false);}
   }
   return {width,selection,apply:(id,revision,property)=>write('applyColorStyleSelection',property,id,revision),resetSelection:(revision,property)=>write('resetColorStyleSelection',property,undefined,revision),detachSelection:property=>write('detachColorStyleSelection',property)};
+}
+function mountSelectionEffectStyles(){
+  const selection=sel.multiple,element=matchingEls(sel.info.id)[0];
+  if(!element||!selection.every(info=>info.cssAuthoring))return;
+  const scope=String(styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0);
+  const links=selection.map(info=>info.effectStyleLinks?.[scope]).filter(Boolean),overrides=selection.reduce((sum,info)=>sum+(info.effectStyleOverrides?.[scope]?.length||0),0);
+  async function write(type,styleId,libraryRevision){
+    const info=sel.info,ids=selection.map(item=>item.id);busyPanel(true);
+    try{
+      const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
+      const result=await api('POST','/rt/__api/op',{type,id:info.id,ids,fileHash:info.hash,scope:styleScope,width,styleId,libraryRevision});
+      if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update effect styles in this selection.');
+      if(result.undoId)editorHistory.record({type:'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
+      sel.info=result.element;sel.multiple=result.selection;
+      await reloadFrame();
+      renderPanel();toast('Selected effect styles updated','ok');
+    }finally{busyPanel(false);}
+  }
+  RetouchEffectStyles.mount(panelBody,element,{selection:selection.length,selectionLinks:{linked:links.length,styles:new Set(links.map(link=>link.id)).size,overrides},apply:(id,revision)=>write('applyEffectStyleSelection',id,revision),resetSelection:revision=>write('resetEffectStyleSelection',undefined,revision),detachSelection:()=>write('detachEffectStyleSelection')});
 }
 function mountSelectionTextStyles(){
   const selection=sel.multiple,element=matchingEls(sel.info.id)[0];

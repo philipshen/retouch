@@ -189,11 +189,11 @@ function handle(req, res, ctx) {
       let result;
       try {
         resolved.context = renderContext(op.context);
-        if(['applyEffectStyle','resetEffectStyle','detachEffectStyle','updateEffectStyle'].includes(op.type)){
+        if(['applyEffectStyle','resetEffectStyle','detachEffectStyle','updateEffectStyle','applyEffectStyleSelection','resetEffectStyleSelection','detachEffectStyleSelection'].includes(op.type)){
           if(!ctx.adapter.capabilities?.ops?.includes('setCSS'))return json(res,409,{ok:false,reason:'Linked effect styles need an HTML project.'});
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source changed. Re-select the layer.'});
           if(op.type==='updateEffectStyle')result=applyPlan(ctx.appRoot,require('./text-style-update.cjs').plan(ctx.appRoot,{type:'update',revision:op.libraryRevision,id:op.styleId,name:op.name,properties:op.properties},'html','effect'));
-          else {let style;if(op.type!=='detachEffectStyle'){const library=require('./effect-styles.cjs').read(ctx.appRoot);if(library.revision!==op.libraryRevision)return json(res,409,{ok:false,reason:'Effect styles changed. Reload the library.'});style=library.styles.find(item=>item.id===op.styleId);if(!style)return json(res,409,{ok:false,reason:'That effect style no longer exists.'});}result=applyPlan(ctx.appRoot,require('./html-effect-styles.cjs').plan(resolved,op,style));}
+          else {let style;if(!op.type.startsWith('detachEffectStyle')){const library=require('./effect-styles.cjs').read(ctx.appRoot);if(library.revision!==op.libraryRevision)return json(res,409,{ok:false,reason:'Effect styles changed. Reload the library.'});style=op.type==='resetEffectStyleSelection'?library:library.styles.find(item=>item.id===op.styleId);if(!style)return json(res,409,{ok:false,reason:'That effect style no longer exists.'});}result=applyPlan(ctx.appRoot,op.type.endsWith('Selection')?require('./text-style-selection.cjs').plan(resolved,op,style,ctx.adapter,'effect'):require('./html-effect-styles.cjs').plan(resolved,op,style));}
         }else if(op.type==='setColorOverrideSelection'){
           if(ctx.adapter.name!=='react')return json(res,409,{ok:false,reason:'Shared class color editing needs a React selection.'});
           result=applyPlan(ctx.appRoot,require('./color-override-selection.cjs').plan(resolved,op));

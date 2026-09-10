@@ -25,7 +25,7 @@ function plan(resolved,op){
   if(result.edits.length)source=result.edits[0].after;
  }
  const hash=html.contentHash(source),elements=html.collect(source,resolved.relPath).elements;
- const selection=op.ids.map(id=>{const r={...resolved,source,hash,elements,element:elements.find(e=>e.id===id)};return {...html.describe(r),...css.describe(r),...require('./html-text-styles.cjs').describe(r),...require('./html-color-styles.cjs').describe(r)};});
+ const selection=op.ids.map(id=>{const r={...resolved,source,hash,elements,element:elements.find(e=>e.id===id)};return {...html.describe(r),...css.describe(r),...require('./html-text-styles.cjs').describe(r),...require('./html-color-styles.cjs').describe(r),...require('./html-effect-styles.cjs').describe(r)};});
  return {ok:true,hash,selection,edits:source===resolved.source?[]:[{file:resolved.file,before:resolved.source,after:source}]};
 }
 module.exports={plan};
