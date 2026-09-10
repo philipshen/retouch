@@ -1,8 +1,10 @@
 'use strict';
 // A copied structural type must not refer to bindings from the old function.
 const allowed=new Set(['TSTypeAnnotation','TSTypeLiteral','TSPropertySignature','TSMethodSignature','TSIndexSignature','TSFunctionType','TSArrayType','TSTupleType','TSNamedTupleMember','TSOptionalType','TSRestType','TSLiteralType','TSUnionType','TSParenthesizedType','TSTypeOperator',...'TSStringKeyword TSNumberKeyword TSBooleanKeyword TSBigIntKeyword TSSymbolKeyword TSAnyKeyword TSNeverKeyword TSVoidKeyword TSUndefinedKeyword TSNullKeyword'.split(' ')]);
+function withUndefined(type){return {type:'TSUnionType',optionalCapture:type};}
 function renderType(node,source,resolve,budget={left:2000},depth=0){
  if(!node||depth>20||--budget.left<0)return null;
+ if(node.optionalCapture){const text=renderType(resolve(node.optionalCapture),source,resolve,budget,depth+1);return text===null?null:'('+text+') | undefined';}
  if(node.captureText){
   const members=node.members.map(member=>renderType(member,source,resolve,budget,depth+1));
   return members.some(member=>member===null)?null:'{ '+members.join('; ')+' }';
@@ -26,7 +28,7 @@ function renderType(node,source,resolve,budget={left:2000},depth=0){
  for(const edit of edits.sort((a,b)=>b.start-a.start))text=text.slice(0,edit.start)+edit.text+text.slice(edit.end);
  return text;
 }
-function patternType(pattern,contract,name,resolve,depth=0){
+function patternType(pattern,contract,name,resolve,source,depth=0){
  if(!pattern||!contract||depth>20||pattern.optional)return null;
  contract=resolve(contract);if(!contract)return null;
  if(pattern.type==='Identifier')return pattern.name===name?contract:null;
@@ -35,13 +37,16 @@ function patternType(pattern,contract,name,resolve,depth=0){
   for(const property of pattern.properties){
    if(property.type!=='ObjectProperty'||property.computed)continue;
    const key=property.key.name??property.key.value,members=contract.members.filter(member=>['TSPropertySignature','TSMethodSignature'].includes(member.type)&&!member.computed&&(member.key.name??member.key.value)===key);
-   if(members.length!==1||members[0].optional)continue;
+   if(members.length!==1)continue;
    const member=members[0];let type=member.typeAnnotation?.typeAnnotation;
    if(member.type==='TSMethodSignature'){
     if(!type||member.kind&&member.kind!=='method')continue;
-    type={type:'TSFunctionType',methodFunction:true,parameters:member.parameters,typeParameters:member.typeParameters,typeAnnotation:member.typeAnnotation,start:member.key.end,end:type.end};
+    let start=member.key.end;
+    if(member.optional){const marker=source.slice(start).match(/^(?:\s|\/\*[\s\S]*?\*\/|\/\/[^\n]*(?:\n|$))*\?/);if(!marker)continue;start+=marker[0].length;}
+    type={type:'TSFunctionType',methodFunction:true,parameters:member.parameters,typeParameters:member.typeParameters,typeAnnotation:member.typeAnnotation,start,end:type.end};
    }
-   const result=patternType(property.value,type,name,resolve,depth+1);if(result)return result;
+   if(member.optional){if(property.value.type==='Identifier'&&property.value.name===name&&type)return withUndefined(type);continue;}
+   const result=patternType(property.value,type,name,resolve,source,depth+1);if(result)return result;
   }
  }
  if(pattern.type==='ArrayPattern'&&contract.type==='TSTupleType'){
@@ -50,7 +55,7 @@ function patternType(pattern,contract,name,resolve,depth=0){
    if(member.optional||['TSRestType','TSOptionalType'].includes(member.type))return null;
    if(member.type==='TSNamedTupleMember')member=member.elementType;
    if(['TSRestType','TSOptionalType'].includes(member.type))return null;
-   const result=patternType(pattern.elements[index],member,name,resolve,depth+1);if(result)return result;
+   const result=patternType(pattern.elements[index],member,name,resolve,source,depth+1);if(result)return result;
   }
  }
  // Defaults and rest bindings need separate narrowing/shape analysis.
@@ -105,8 +110,10 @@ function typeResolver(binding,source){
 }
 module.exports=function captureType(binding,source){
  const pattern=binding.path.node.type==='VariableDeclarator'?binding.path.node.id:binding.path.node;
- const resolve=typeResolver(binding,source),type=resolve(binding.identifier.typeAnnotation?.typeAnnotation||patternType(pattern,pattern.typeAnnotation?.typeAnnotation,binding.identifier.name,resolve));
+ const resolve=typeResolver(binding,source);let type=resolve(binding.identifier.typeAnnotation?.typeAnnotation||patternType(pattern,pattern.typeAnnotation?.typeAnnotation,binding.identifier.name,resolve,source));
  // Initializers can narrow a local union even without an explicit guard.
- if(binding.identifier.optional||!type||type.type==='TSUnionType'&&binding.kind!=='param')return null;
+ if(!type)return null;
+ if(binding.identifier.optional)type=withUndefined(type);
+ if(type.type==='TSUnionType'&&binding.kind!=='param')return null;
  const text=renderType(type,source,resolve);return text===null?null:'('+text+')';
 };

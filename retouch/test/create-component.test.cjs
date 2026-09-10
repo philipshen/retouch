@@ -168,7 +168,7 @@ test('TypeScript extraction carries explicit structural capture types into compo
  }finally{f.close();}
 });
 test('TypeScript extraction refuses capture types requiring scope or narrowing analysis',()=>{
- for(const source of ['function Page<T>({value}:{value:T}){return <article>{value}</article>}', 'function Page({value}:{value?:string}){return <article>{value}</article>}', 'function Page({value="x"}:{value?:string}){return <article>{value}</article>}']){
+ for(const source of ['function Page<T>({value}:{value:T}){return <article>{value}</article>}', 'function Page({value="x"}:{value?:string}){return <article>{value}</article>}']){
   const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/explicit type/);assert.equal(fs.readFileSync(f.selected.file,'utf8'),source);}finally{f.close();}
  }
 });
@@ -249,7 +249,7 @@ test('typed extraction converts destructured method signatures to callable props
  const f=fixture('type Label=string;interface Base{onSelect(value:Label):void}interface Props extends Base {}function Page({onSelect}:Props){return <article onClick={()=>onSelect("Hi")}>Hi</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);assert.ok(result.edits[0].after.includes('"onSelect": ((value:(string))=>void)'));}finally{f.close();}
 });
 test('typed extraction does not treat optional methods or accessors as required callables',()=>{
- for(const member of ['onSelect?(value:string):void','get onSelect():string']){const f=fixture('interface Props{'+member+'}function Page({onSelect}:Props){return <article>{String(onSelect)}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);}finally{f.close();}}
+ for(const member of ['onSelect?(value:string):void','get onSelect():string']){const f=fixture('interface Props{'+member+'}function Page({onSelect}:Props){return <article>{String(onSelect)}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});if(member.startsWith('onSelect?')){assert.ok(result.ok,result.reason);assert.ok(result.edits[0].after.includes('((value:string)=>void) | undefined'));}else assert.equal(result.ok,false);}finally{f.close();}}
 });
 
 test('typed extraction does not substitute module aliases for shadowing local classes or enums',()=>{
@@ -301,3 +301,9 @@ test('overlapping contracts retain readonly and optional differences as unresolv
  const f=fixture('type Tone="quiet"|"loud";function Page(tone:Tone){return <article>{tone==="quiet"?"Quiet":"Loud"}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);assert.ok(result.edits[0].after.includes('"tone": ("quiet"|"loud")'));}finally{f.close();}
  const source='type Value=string|number;function Page(){const value:Value="Hi";return <article>{value.toUpperCase()}</article>}',local=fixture(source,'page.tsx');try{const result=create.plan(local.selected,{name:'Card',fileHash:local.selected.hash});assert.equal(result.ok,false);assert.equal(fs.readFileSync(local.selected.file,'utf8'),source);}finally{local.close();}
  });
+
+test('typed extraction keeps undefined in optional parameter contracts',()=>{
+ for(const source of ['function Page(value?:string){return <article>{value??"Default"}</article>}','interface Props{value?:string}function Page({value}:Props){return <article>{value??"Default"}</article>}']){
+ const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);assert.ok(result.edits[0].after.includes('"value": ((string) | undefined)'));}finally{f.close();}
+ }
+});

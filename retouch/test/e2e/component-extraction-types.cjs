@@ -7,6 +7,10 @@ const ts=require(path.join(fixture,'node_modules/typescript'));
 const {makeApp,cleanup,Index}=require('../helpers.cjs'),create=require('../../src/create-component.cjs');
 const jsx='declare namespace JSX {interface ElementChildrenAttribute {children:{}} interface IntrinsicElements {article:{title?:string;onClick?:()=>void;children?:unknown}}}\n';
 const cases=[
+ ['optional parameter','function Page(title?:string){return <article title={title??"Hi"}>Hi</article>}'],
+ ['optional destructured property','type Label=string;interface Props{title?:Label}function Page({title}:Props){return <article title={title??"Hi"}>Hi</article>}'],
+ ['optional destructured method','interface Props{onSelect?():void}function Page({onSelect}:Props){return <article onClick={()=>onSelect?.()}>Hi</article>}'],
+ ['optional nested property','interface Props{data:{title?:string}}function Page({data:{title}}:Props){return <article title={title??"Hi"}>Hi</article>}'],
  ['literal variant union','type Tone="quiet"|"loud";function Page(tone:Tone){return <article title={tone}>{tone==="quiet"?"Quiet":"Loud"}</article>}'],
  ['nullable union prop','type Label=string|null;function Page({title}:{title:Label}){return <article title={title??"Hi"}>Hi</article>}'],
  ['discriminated union','type Data={kind:"text";text:string}|{kind:"count";count:number};function Page(data:Data){return <article>{data.kind==="text"?data.text.toUpperCase():data.count.toFixed()}</article>}'],
