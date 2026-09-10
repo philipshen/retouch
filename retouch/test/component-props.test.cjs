@@ -120,7 +120,7 @@ test('nested choice expansion rejects recursive, mixed, unbounded and oversized 
 
 test('component descriptors expose omitted declared choices from a typed props object',()=>{
  const source='type Tone="calm"|"bold";interface Base {tone?:Tone}type Props=Base & {label?:string};function Page(){return <main><Card/></main>}function Card(props:Props){return <h1>{props.label}</h1>}',root=fs.realpathSync(makeApp({'page.tsx':source})),index=new Index(root);index.scanAll();try{
-  const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.kind==='instance'),component=adapter.describeComponent(usage);assert.ok(component.ok,component.reason);assert.deepEqual(component.props.map(p=>p.name),['tone','label']);const tone=component.props.find(p=>p.name==='tone');assert.deepEqual(tone.editor.choices,['calm','bold']);assert.equal(tone.editor.unset,true);assert.equal(component.props.find(p=>p.name==='label').editor.editable,undefined);
+  const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.kind==='instance'),component=adapter.describeComponent(usage);assert.ok(component.ok,component.reason);assert.deepEqual(component.props.map(p=>p.name),['tone','label']);const tone=component.props.find(p=>p.name==='tone');assert.deepEqual(tone.editor.choices,['calm','bold']);assert.equal(tone.editor.unset,true);assert.equal(component.props.find(p=>p.name==='label').editor.type,'string');assert.equal(component.props.find(p=>p.name==='label').editor.unset,true);
   const plan=props.plan(usage,{name:'tone',value:'bold',fileHash:usage.hash,definitionHash:tone.editor.definitionHash});assert.ok(plan.ok,plan.reason);assert.ok(plan.edits[0].after.includes('<Card tone={"bold"}/>'));assert.equal(plan.edits[0].after.split('function Card')[1],source.split('function Card')[1]);
  }finally{index.close();cleanup(root);}
 });
@@ -196,4 +196,17 @@ test('variant filtering rejects recursive, shadowed, empty and unknown filter co
   ['', 'Exclude<"small",Missing>'],
   ['', 'Extract<"small">'],
  ]){const source=prefix+'function Card(props:{size:'+type+'}){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),definition={source,fn:ast.program.body.find(n=>n.type==='FunctionDeclaration')};assert.equal(discover({},'size',definition),null);}
+});
+
+test('omitted declared text and number props preserve empty, zero and unset states',()=>{
+ for(const [type,value,invalid] of [['string','',0],['number',0,'0']]){const source='interface Props {value?:'+type+'}function Page(){return <main><Card/></main>}function Card(props:Props){return <h1/>}',root=fs.realpathSync(makeApp({'page.tsx':source})),index=new Index(root);index.scanAll();try{
+  const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.kind==='instance'),info=props.describe(usage,'value');assert.equal(info.type,type);assert.equal(info.unset,true);assert.equal(info.contractDefined,true);assert.equal(info.choices,undefined);const op={name:'value',fileHash:usage.hash,definitionHash:info.definitionHash};assert.equal(props.plan(usage,{...op,value:invalid}).ok,false);assert.equal(props.plan(usage,{...op,value,definitionHash:'stale'}).ok,false);
+  const plan=props.plan(usage,{...op,value});assert.ok(plan.ok,plan.reason);assert.ok(require('../src/transactions.cjs').applyPlan(root,plan).ok);index.scanAll();const fresh=index.resolve(usage.element.id),current=props.describe(fresh,'value');assert.equal(current.value,value);assert.equal(current.canClear,true);const clear=props.plan(fresh,{name:'value',clear:true,fileHash:fresh.hash,definitionHash:current.definitionHash});assert.ok(clear.ok,clear.reason);assert.ok(!clear.edits[0].after.includes('value={'));
+ }finally{index.close();cleanup(root);}}
+});
+test('declared primitive props reject incompatible literals and guard imported type changes',()=>{
+ const root=fs.realpathSync(makeApp({'page.tsx':'import Card from "./Card";function Page(){return <main><Card value="wrong"/></main>}','Card.tsx':'export default function Card(props:{value:number}){return <h1/>}'})),index=new Index(root);index.scanAll();try{
+  const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.kind==='instance');assert.equal(props.describe(usage,'value').editable,undefined);assert.equal(props.plan(usage,{name:'value',value:2,fileHash:usage.hash}).ok,false);
+  fs.writeFileSync(usage.file,usage.source.replace(' value="wrong"',''));index.scanAll();const fresh=index.resolve(usage.element.id),info=props.describe(fresh,'value'),plan=props.plan(fresh,{name:'value',value:2,fileHash:fresh.hash,definitionHash:info.definitionHash});assert.ok(plan.ok,plan.reason);assert.equal(plan.edits.length,2);const guard=plan.edits.find(e=>e.file.endsWith('Card.tsx'));fs.appendFileSync(guard.file,'\n// type changed');assert.equal(require('../src/transactions.cjs').applyPlan(root,plan).ok,false);assert.equal(fs.readFileSync(fresh.file,'utf8'),fresh.source);
+ }finally{index.close();cleanup(root);}
 });

@@ -8175,3 +8175,20 @@ This remains a bounded type reader, not a complete TypeScript checker.
 nested Extract/Exclude, checks that the excluded value is absent, and exercises
 rendered size changes, optional props, defaults, focus and exact Undo/Redo. Full
 Figma parity remains incomplete. Native app launches remain paused.
+
+
+## Omitted declared text and number properties (2026-09-10)
+
+Module-local string and number contracts now create editable fields even without
+an instance attribute or literal default. Optional props can be unset. Text has an
+explicit Set empty text action so an empty string differs from source omission;
+zero remains a numeric value. Escape cancels an unset text draft back to its empty
+placeholder. Writes enforce the declared primitive type and definition revision,
+including imported-file compare-and-swap guards. Incompatible existing primitive
+literals are reported instead of silently changing their displayed type.
+
+636 unit tests pass. Chromium and WebKit exercise empty/custom labels, a visible
+160px width, clearing both props, cancellation and exact Undo/Redo. Screenshot
+review confirms the fields fit the inspector. General nullable/union primitives,
+complete type resolution and full component parity remain unfinished. Native app
+launches remain paused.

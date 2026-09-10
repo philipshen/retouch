@@ -1,6 +1,6 @@
 'use strict';
 const {parseSource}=require('./id.cjs');
-// Read finite primitive choices from module-local TypeScript contracts. Never
+// Read supported primitive properties from module-local TypeScript contracts. Never
 // execute source or guess a contract from values observed at other usages.
 function inspect(resolved,name,definition){
  try{
@@ -68,6 +68,8 @@ function inspect(resolved,name,definition){
   // Diamond inheritance can reach the same declaration more than once. Distinct
   // declarations of one property still need type-level conflict/narrowing checks.
   const fields=[...new Set(members)].filter(p=>p.type==='TSPropertySignature'&&!p.computed&&(p.key.name??p.key.value)===name);if(fields.length!==1)return null;
+  const primitive=resolve(fields[0].typeAnnotation?.typeAnnotation);
+  if(['TSStringKeyword','TSNumberKeyword'].includes(primitive?.type))return {type:primitive.type==='TSStringKeyword'?'string':'number',optional:!!fields[0].optional,definition:def};
   let filterVisits=0;
   function matchesFilter(value,node,seen=new Set()){
    node=resolve(node);if(!node||++filterVisits>1000||seen.has(node)||seen.size>=20)return null;
@@ -107,4 +109,4 @@ function inspect(resolved,name,definition){
   return {choices:[...new Set(values)],type:typeof values[0],optional:!!fields[0].optional,definition:def};
  }catch{return null;}
 }
-module.exports={choices:(resolved,name,definition)=>inspect(resolved,name,definition),names:(resolved,definition)=>inspect(resolved,null,definition)?.names||[]};
+module.exports={property:(resolved,name,definition)=>inspect(resolved,name,definition),choices:(resolved,name,definition)=>{const result=inspect(resolved,name,definition);return result?.choices?result:null;},names:(resolved,definition)=>inspect(resolved,null,definition)?.names||[]};
