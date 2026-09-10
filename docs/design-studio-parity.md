@@ -9521,3 +9521,32 @@ property editing, exiting zero with no page errors. Evidence:
 /private/tmp/retouch-reparent-cycles-chromium.log. The final restored member
 own-definition guard is covered by the final unit suite; the browser fixture
 uses an imported component. git diff --check passed.
+
+### Find component instances by their layer names (2026-09-10)
+
+The project component library now searches authored layer names and usage-file
+paths as well as component names and definition files. Instance pickers include
+custom names beside source locations; a single matching occurrence displays its
+name directly. Usage-specific searches limit canvas selection to matching source
+usages, retain the total on-page count and show the matching count separately.
+When a named usage is off-page, canvas selection is disabled and View component
+resolves that matching usage instead of the first unrelated usage.
+
+Focused browser tests cover case-insensitive names, multiple named usages,
+usage-file search, off-page source routing, clearing search with Escape and
+explicit picker selection. Both Chromium and WebKit passed. Evidence:
+/private/tmp/retouch-library-search-chromium.log,
+/private/tmp/retouch-library-search-webkit.log. The full Chromium component suite
+also passed name search and real canvas selection with unchanged source, followed
+by naming history, duplication, deletion and property editing. Evidence:
+/private/tmp/retouch-library-name-chromium.log. The WebKit screenshot at
+/private/tmp/retouch-library-name.png was inspected: the named result and controls
+fit a 720px workspace, with no horizontal overflow. Syntax and diff checks pass.
+
+Shared cross-project libraries, previews for unmounted instances, independent
+per-render names and full Figma parity remain unfinished. Native launches remain
+paused, and trusted brew installation remains unverified.
+The full WebKit component suite also exited zero with no page errors, covering
+real named-usage selection, naming history, duplication, deletion and property
+editing: /private/tmp/retouch-library-name-webkit.log. The final off-page label
+addition is covered by both focused browser runs.

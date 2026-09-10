@@ -1442,7 +1442,7 @@ componentLibraryButton.addEventListener('click',()=>RetouchComponentLibrary.open
  insert:window.__RT_RENDERING?.componentInsertion?insertLibraryComponent:undefined,
  swapTarget:sel?.info.kind==='instance'?{swap:true,id:sel.info.id,hash:sel.info.hash,definitionId:sel.info.definitionId,context:sel.info.context}:null,
 
- instances:item=>item.usages.length?item.usages.flatMap(usage=>RetouchComponentInstances.group(matchingInDocument(doc(),usage.id),item.rootGroups).map(group=>({...group,id:usage.id,label:usage.file+(usage.line?':'+usage.line:'')+(group.elements.length>1?' · '+group.elements.length+' layers':'')}))):matchingInDocument(doc(),item.definitionId).map(element=>({id:item.definitionId,definition:true,element,label:item.file})),
+ instances:item=>item.usages.length?item.usages.flatMap(usage=>RetouchComponentInstances.group(matchingInDocument(doc(),usage.id),item.rootGroups).map(group=>({...group,id:usage.id,layerName:usage.layerName,label:(usage.layerName?usage.layerName+' · ':'')+usage.file+(usage.line?':'+usage.line:'')+(group.elements.length>1?' · '+group.elements.length+' layers':'')}))):matchingInDocument(doc(),item.definitionId).map(element=>({id:item.definitionId,definition:true,element,label:item.file})),
  select:async(instance,isActive)=>{
   if(!instance?.element?.isConnected)throw Error('This instance is no longer on the page. Refresh the component list.');
   if(panelTasks||sourceRequests||undoBusy)throw Error('Wait for the current edit to finish.');
