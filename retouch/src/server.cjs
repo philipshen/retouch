@@ -118,7 +118,13 @@ function handle(req, res, ctx) {
     return readBinary(req,library.LIMIT,bytes=>{
       if(!bytes)return json(res,413,{ok:false,reason:'Variable collection requests must be 2 MiB or smaller.'});
       let operation;try{operation=JSON.parse(bytes.toString('utf8'));}catch{return json(res,400,{ok:false,reason:'Invalid variable collection JSON.'});}
-      try{const applied=library.commitPlan(ctx.appRoot,library.planChange(ctx.appRoot,operation),(root,plan)=>ctx.history.commit(root,plan,{route:historyRoute(req)}));ctx.sourceMonitor?.acknowledge(applied.edits);return json(res,200,{ok:true,...applied.result,undoId:applied.undoId,historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired});}
+      try{
+        const plan=ctx.adapter.capabilities?.ops?.includes('setCSS')?require('./variable-update.cjs').plan(ctx.appRoot,operation):library.planChange(ctx.appRoot,operation);
+        if(!plan.ok)return json(res,plan.statusCode||409,plan);
+        const applied=library.commitPlan(ctx.appRoot,plan,(root,planned)=>ctx.history.commit(root,planned,{route:historyRoute(req)}));
+        for(const edit of applied.edits)if(ctx.adapter.matches(edit.file))ctx.index.indexFile(edit.file);
+        ctx.sourceMonitor?.acknowledge(applied.edits);return json(res,200,{ok:true,...applied.result,undoId:applied.undoId,updated:applied.updated||0,historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired});
+      }
       catch(error){return json(res,error.statusCode||500,{ok:false,reason:error.message,historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired});}
     });
   }
@@ -235,7 +241,17 @@ function handle(req, res, ctx) {
       const applyPlan=(root,plan)=>ctx.history.commit(root,plan,{group:op.historyGroup,route:historyRoute(req)});
       try {
         resolved.context = renderContext(op.context);
-        if(['applyEffectStyle','resetEffectStyle','detachEffectStyle','updateEffectStyle','applyEffectStyleSelection','resetEffectStyleSelection','detachEffectStyleSelection'].includes(op.type)){
+        if(['applyVariable','resetVariable','detachVariable'].includes(op.type)){
+          if(!ctx.adapter.capabilities?.ops?.includes('setCSS'))return json(res,409,{ok:false,reason:'Collection bindings currently need an HTML project.'});
+          if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source changed. Re-select the layer.'});
+          let model;
+          if(op.type!=='detachVariable'){
+            const library=require('./variable-library.cjs').read(ctx.appRoot);
+            if(library.revision!==op.libraryRevision)return json(res,409,{ok:false,reason:'Variable collections changed. Reload before binding.'});
+            model={version:library.version,collections:library.collections,variables:library.variables};
+          }
+          result=applyPlan(ctx.appRoot,require('./html-variable-bindings.cjs').plan(resolved,op,model));
+        }else if(['applyEffectStyle','resetEffectStyle','detachEffectStyle','updateEffectStyle','applyEffectStyleSelection','resetEffectStyleSelection','detachEffectStyleSelection'].includes(op.type)){
           const reactEffects=ctx.adapter.name==='react',liquidEffects=ctx.adapter.name==='liquid';
           if(!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!reactEffects&&!liquidEffects)return json(res,409,{ok:false,reason:'Linked effect styles need an HTML, React or Liquid project.'});
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source changed. Re-select the layer.'});

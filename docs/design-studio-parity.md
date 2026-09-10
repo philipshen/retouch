@@ -7362,3 +7362,32 @@ screenshot `/private/tmp/retouch-variable-mode-preview.png` was visually checked
 This previews values in the collection editor; it does not activate modes on
 canvas layers. Source bindings, propagation and canvas activation remain next
 work. Native app launches remain paused; full parity remains incomplete.
+
+### Source-backed HTML collection bindings (2026-09-10)
+
+HTML now exposes authenticated apply/reset/detach variable operations. Binding
+metadata preserves the stable variable ID, collection mode selections, optional
+numeric unit, last resolved value and local override state per property and
+minimum-width scope. Typed conversion supports paint, numeric dimensions and
+spacing, visibility and font families; incompatible values are refused before
+source writes. Detach retains the current CSS appearance.
+
+HTML collection replacement plans all indexed project pages, including unvisited
+pages, before committing library and source changes together through source
+history. Alias resolution uses each binding's mode map. Missing referenced
+variables or modes, cyclic bound mode combinations, malformed/unindexed links,
+and stale page before-images refuse the operation. Local overrides persist until
+reset even if a library value temporarily matches them. The inventory is bounded
+to 1,000 pages and 32 MB of source and excludes symlinks/hidden directories under
+the existing HTML page inventory policy.
+
+All 559 unit tests pass in `/private/tmp/retouch-variable-bindings-units.log`.
+Real HTTP API tests cover stale library refusal, mode-specific binding, unvisited
+page propagation, referenced variable/mode deletion refusal and byte-exact Undo
+of both pages and the library. Planner tests also cover cyclic bound modes,
+unindexed template links and external page edits with unchanged library bytes.
+
+This is API/source support; inspector binding controls, multi-selection,
+inherited collection modes, React/Liquid bindings and live canvas mode activation
+remain unfinished. No new browser UX is claimed. Native app launches remain
+paused and full Figma parity remains incomplete.

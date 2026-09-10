@@ -31,3 +31,37 @@ test('mode preview resolves exact revisions without writes and rejects cyclic mo
  const root=setup(t),input=data(),dark=id(4);input.collections[0].modes.push({id:dark,name:'Dark'});input.variables[0].values[dark]={alias:id(3)};library.commitPlan(root,library.planChange(root,{type:'replace',revision:null,library:input}));const saved=library.read(root),file=path.join(root,'.retouch/variables.json'),bytes=fs.readFileSync(file,'utf8');
  assert.equal(library.resolve(root,{revision:saved.revision,modes:{}}).values[0].value,'#ffffffff');assert.throws(()=>library.resolve(root,{revision:saved.revision,modes:{[id(1)]:dark}}),/cycle/);assert.throws(()=>library.resolve(root,{revision:null,modes:{}}),/changed/);assert.throws(()=>library.resolve(root,{revision:saved.revision,modes:{[id(1)]:id(99)}}),/selected mode/);assert.equal(fs.readFileSync(file,'utf8'),bytes);
 });
+
+test('HTML variable API binds modes and updates unvisited pages in one undoable transaction',async t=>{
+ const root=setup(t),html=require('../src/adapters/html.cjs'),linked=require('../src/html-variable-bindings.cjs'),css=require('../src/html-css.cjs');
+ const page=path.join(root,'index.html'),other=path.join(root,'other.html'),original='<html><head></head><body><p>Bound</p></body></html>';fs.writeFileSync(page,original);
+ const previous=process.env.RETOUCH_STATE_DIR;process.env.RETOUCH_STATE_DIR=path.join(root,'history');let server;
+ const resolve=(file,source)=>({file,relPath:path.basename(file),source,hash:html.contentHash(source),element:html.collect(source,path.basename(file)).elements.find(e=>e.tag==='p')});
+ try{
+  server=require('../src/html-site.cjs').start({root,port:0,quiet:true});await once(server,'listening');const base='http://127.0.0.1:'+server.address().port,markup=await fetch(base+'/rt').then(r=>r.text()),headers={'x-retouch-token':/window\.__RT_TOKEN = "([a-f0-9]+)"/.exec(markup)[1],'content-type':'application/json'};
+  const post=async(url,body)=>{const r=await fetch(base+url,{method:'POST',headers,body:JSON.stringify(body)});return {status:r.status,body:await r.json()};};
+  const input=data();input.collections[0].modes.push({id:id(4),name:'Dark'});input.variables[0].values[id(4)]='#000000';
+  const saved=await post('/rt/__api/variables',{type:'replace',revision:null,library:input});assert.equal(saved.status,200,JSON.stringify(saved.body));
+  const r=resolve(page,original),operation={type:'applyVariable',id:r.element.id,fileHash:r.hash,property:'color',width:768,libraryRevision:saved.body.revision,binding:{id:id(3),modes:{[id(1)]:id(4)}}};
+  assert.equal((await post('/rt/__api/op',{...operation,libraryRevision:null})).status,409);assert.equal(fs.readFileSync(page,'utf8'),original);
+  const bound=await post('/rt/__api/op',operation);assert.equal(bound.status,200,JSON.stringify(bound.body));assert.ok(bound.body.undoId);
+  const beforePage=fs.readFileSync(page,'utf8');assert.equal(css.describe(resolve(page,beforePage)).cssRules[768].color,'#000000ff');
+  const planned=linked.plan(resolve(other,original),{type:'applyVariable',property:'color',width:0,binding:{id:id(3)}},input);assert.equal(planned.ok,true,planned.reason);fs.writeFileSync(other,planned.edits[0].after);const beforeOther=fs.readFileSync(other,'utf8'),catalog=path.join(root,'.retouch/variables.json'),beforeCatalog=fs.readFileSync(catalog,'utf8');
+  input.variables[0].values[id(2)]='#ff0000';input.variables[0].values[id(4)]='#00ff00';
+  const updated=await post('/rt/__api/variables',{type:'replace',revision:saved.body.revision,library:input});assert.equal(updated.status,200,JSON.stringify(updated.body));assert.equal(updated.body.updated,2);assert.equal(css.describe(resolve(page,fs.readFileSync(page,'utf8'))).cssRules[768].color,'#00ff00ff');assert.equal(css.describe(resolve(other,fs.readFileSync(other,'utf8'))).cssRules[0].color,'#ff0000ff');
+  const removed=structuredClone(input);removed.variables=[];const rejected=await post('/rt/__api/variables',{type:'replace',revision:updated.body.revision,library:removed});assert.equal(rejected.status,409);assert.equal(library.read(root).revision,updated.body.revision);
+  const missingMode=structuredClone(input);missingMode.collections[0].modes.pop();delete missingMode.variables[0].values[id(4)];assert.equal((await post('/rt/__api/variables',{type:'replace',revision:updated.body.revision,library:missingMode})).status,409);
+  assert.equal((await post('/rt/__api/op',{type:'undo',undoId:updated.body.undoId})).status,200);assert.equal(fs.readFileSync(page,'utf8'),beforePage);assert.equal(fs.readFileSync(other,'utf8'),beforeOther);assert.equal(fs.readFileSync(catalog,'utf8'),beforeCatalog);
+  assert.equal((await post('/rt/__api/op',{type:'undo',undoId:bound.body.undoId})).status,200);assert.equal(fs.readFileSync(page,'utf8'),original);
+ }finally{if(server){server.retouchIndex.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}if(previous===undefined)delete process.env.RETOUCH_STATE_DIR;else process.env.RETOUCH_STATE_DIR=previous;}
+});
+
+test('project variable planning refuses cyclic bound modes, unindexed links and stale page writes atomically',t=>{
+ const root=setup(t),planner=require('../src/variable-update.cjs'),linked=require('../src/html-variable-bindings.cjs'),html=require('../src/adapters/html.cjs'),input=data(),file=path.join(root,'index.html'),source='<html><head></head><body><p>Value</p></body></html>';
+ input.collections[0].modes.push({id:id(4),name:'Dark'});input.variables[0].values[id(4)]='#000000';library.commitPlan(root,library.planChange(root,{type:'replace',revision:null,library:input}));
+ const binding=linked.plan({file,relPath:'index.html',source,hash:html.contentHash(source),element:html.collect(source,'index.html').elements.find(e=>e.tag==='p')},{type:'applyVariable',property:'color',width:0,binding:{id:id(3),modes:{[id(1)]:id(4)}}},input);assert.equal(binding.ok,true,binding.reason);fs.writeFileSync(file,binding.edits[0].after);
+ const before=fs.readFileSync(file,'utf8'),saved=library.read(root),operation=()=>({type:'replace',revision:saved.revision,library:input});
+ input.variables[0].values[id(4)]={alias:id(3)};const cycle=planner.plan(root,operation());assert.equal(cycle.ok,false);assert.match(cycle.reason,/cycle/);assert.equal(cycle.edits,undefined);
+ input.variables[0].values[id(4)]='#ff0000';const badFile=path.join(root,'unvisited.html');fs.writeFileSync(badFile,'<template><p data-rt-variables="{}">Hidden</p></template>');const invalid=planner.plan(root,operation());assert.equal(invalid.ok,false);assert.match(invalid.reason,/unindexed/);assert.equal(invalid.edits,undefined);fs.unlinkSync(badFile);
+ const prepared=planner.plan(root,operation());assert.equal(prepared.ok,true,prepared.reason);assert.equal(prepared.edits.length,2);fs.writeFileSync(file,before+'<!-- external edit -->');assert.throws(()=>library.commitPlan(root,prepared),/source changed/);assert.deepEqual(library.read(root),saved);assert.equal(fs.readFileSync(file,'utf8'),before+'<!-- external edit -->');
+});
