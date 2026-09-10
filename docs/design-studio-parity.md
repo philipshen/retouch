@@ -9245,3 +9245,46 @@ naming, independent per-render names, component movement/copy, full variants and
 slots, arbitrary-site durable authoring and other Figma Design requirements remain
 open. Full parity is incomplete. Native app launches remain paused and trusted
 brew distribution remains unverified.
+
+
+### Name ordinary React layers alongside component instances (2026-09-10)
+
+React hosts now expose the same Layer name field and F2 action as instances.
+The renamed jsx-layer-name module handles both kinds. Authored names remain
+opening-tag comments; the development stamper exposes host names through the
+reserved data-rt-layer-name attribute. Layers uses that name ahead of page labels
+and observes it for updates. Instance names continue through catalogue metadata.
+Saving a host name waits for the compiled source revision, with existing source
+history providing Undo/Redo. Production markup is unchanged by the comments.
+
+The first edit-persistence test found that inserting a class attribute could move
+a comment beyond the first attribute. Metadata lookup now scans opening-tag
+comments outside attribute-expression ranges, retaining names through class/tag
+changes while ignoring marker-like comments inside props. The compiler also now
+inserts identity attributes after generic type arguments, fixing invalid stamped
+syntax for Card<string> usages. Catalogue/stamper naming reads reuse their parsed
+AST instead of reparsing for every element.
+
+Validation: 733 unit tests passed. New checks cover text/SVG host names, escaped
+labels, existing comments and accessibility attributes, class/tag changes,
+duplication/movement, nested prop comments, compiled host-only metadata and generic
+component syntax. Chromium and WebKit each passed F2, naming, Layers search,
+clearing, exact Undo/Redo and switching the preview to 375px and back without
+source changes. Both also passed component naming, duplicate/delete, keyboard,
+root swap and detach history; both processes exited zero with strict empty page
+error assertions. A TypeScript transpilation probe confirms production HTML/SVG
+JSX output is byte-identical before and after naming with comments removed.
+The screenshot was inspected: selected h1 · Page heading in Layers and its name
+field are visible; rendered text remains Headline. git diff --check passed.
+Evidence: /private/tmp/retouch-host-names-units-final.log,
+/private/tmp/retouch-host-names-chromium-final.log,
+/private/tmp/retouch-host-names-webkit-final.log,
+/private/tmp/retouch-host-names-transpile.log,
+/private/tmp/retouch-host-names.png.
+
+Names still belong to source elements, so repeated renderings share a name.
+Independent per-render naming, bulk naming, Liquid naming, component library
+occurrence labels, component movement/copy, full variants/slots, arbitrary-site
+durable authoring and other Figma Design requirements remain open. Full parity
+is incomplete. Native app launches remain paused; trusted brew distribution is
+unverified.

@@ -10,13 +10,13 @@ function catalogue(index) {
     try {
       const source=fs.readFileSync(file,'utf8');
       const relPath=path.relative(index.appRoot,file).split(path.sep).join('/');
-      const {elements}=index.adapter.collect(source,relPath);
+      const {elements,ast}=index.adapter.collect(source,relPath);
       for(const element of elements) {
         if(element.kind!=='instance')continue;
         const info=index.adapter.describeComponent({appRoot:index.appRoot,file,relPath,source,element,elements,hash:index.adapter.contentHash(source)});
         if(!info.ok || !info.definitionId)continue;
         const key=info.file+'#'+info.definitionId;
-        entries.set(element.id,{layerName:index.adapter.name==='react'?require('./component-layer-name.cjs').describe({source,relPath,element}).layerName:undefined,key,definitionId:info.definitionId,canDeleteComponent:info.canDelete===true,canDuplicateComponent:info.canDuplicate===true,componentDuplicateReason:info.duplicateReason,rootGroups:info.rootGroups,explicitComponent:info.explicitComponent===true,name:info.name,file:info.file,usageFile:relPath,line:element.node?.loc?.start?.line||null});
+        entries.set(element.id,{layerName:index.adapter.name==='react'?require('./jsx-layer-name.cjs').describe({source,relPath,element,ast}).layerName:undefined,key,definitionId:info.definitionId,canDeleteComponent:info.canDelete===true,canDuplicateComponent:info.canDuplicate===true,componentDuplicateReason:info.duplicateReason,rootGroups:info.rootGroups,explicitComponent:info.explicitComponent===true,name:info.name,file:info.file,usageFile:relPath,line:element.node?.loc?.start?.line||null});
         counts.set(key,(counts.get(key)||0)+1);
       }
     } catch {}

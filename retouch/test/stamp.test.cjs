@@ -144,3 +144,11 @@ test('React fragment bindings and aliases are transparent while shadowed and cus
   const out=stamp(source,file,ROOT).code,{elements}=require('../src/id.cjs').collectElements(out,'C.tsx');assert.equal(elements[0].kind,'instance');assert.ok(elements[0].node.openingElement.attributes.some(attr=>attr.name?.name==='data-rt-i'));assert.equal(elements[1].node.openingElement.attributes.some(attr=>attr.name?.name==='data-rt-i'),false);
  }
 });
+test('host layer names are compiled metadata with escaped values, while instance names remain comments',()=>{
+ const {collectElements}=require('../src/id.cjs'),names=require('../src/jsx-layer-name.cjs'),label='Hero */ "& <tag> 🌞',source='export default ()=> <main'+names.comment(label)+' {...props} data-rt-layer-name="old" aria-label="Accessible"><Card'+names.comment('Instance')+'/><svg><rect'+names.comment('Shape')+'/></svg></main>;',output=stamp(source,file,ROOT).code,elements=collectElements(output,'C.tsx').elements;
+ const main=elements.find(e=>e.node.openingElement.name.name==='main').node.openingElement,attr=main.attributes.filter(a=>a.name?.name==='data-rt-layer-name');assert.equal(attr.length,1);assert.equal(attr[0].value.expression.value,label);assert.ok(attr[0].start>main.attributes.find(a=>a.type==='JSXSpreadAttribute').end);assert.equal(main.attributes.find(a=>a.name?.name==='aria-label').value.value,'Accessible');assert.equal(elements.find(e=>e.kind==='instance').node.openingElement.attributes.some(a=>a.name?.name==='data-rt-layer-name'),false);assert.equal(elements.find(e=>e.node.openingElement.name.name==='rect').node.openingElement.attributes.find(a=>a.name?.name==='data-rt-layer-name').value.expression.value,'Shape');assert.ok(!source.includes('data-rt-layer-name={'));
+});
+test('generic component stamps follow type arguments and retain layer comments',()=>{
+ const source='export default ()=> <Card<string> /* @retouch-layer "Hero" */ value="x"/>;',output=stamp(source,file,ROOT).code;
+ assert.doesNotThrow(()=>require('../src/id.cjs').parseSource(output));assert.match(output,/<Card<string> data-rt-i=/);assert.match(output,/@retouch-layer "Hero"/);
+});

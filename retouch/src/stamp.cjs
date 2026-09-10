@@ -30,7 +30,15 @@ function stamp(source, filePath, appRoot) {
   for (const el of elements) {
     ms.appendLeft(el.node.openingElement.end-(el.node.openingElement.selfClosing?2:1),` ${el.kind==='host'?'data-rt-revision':'data-rt-i-revision'}="${revision}"`);
     const attr = el.kind === 'host' ? HOST_ATTR : INSTANCE_ATTR;
-    const insertAt = el.node.openingElement.name.end;
+    const opening=el.node.openingElement;
+    const insertAt = (opening.typeParameters||opening.typeArguments||opening.name).end;
+    if(el.kind==='host'){
+      const name=require('./jsx-layer-name.cjs').describe({source,relPath,element:el,ast}).layerName;
+      if(name){
+        for(const attr of opening.attributes)if(attr.name?.name==='data-rt-layer-name')ms.remove(attr.start,attr.end);
+        ms.appendLeft(opening.end-(opening.selfClosing?2:1),' data-rt-layer-name={'+JSON.stringify(name)+'}');
+      }
+    }
     ms.appendLeft(insertAt, ` ${attr}="${el.id}"`);
   }
   // Discoverable exported functions and explicitly created components forward

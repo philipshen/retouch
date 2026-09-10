@@ -1,6 +1,6 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
-const {makeApp,cleanup,Index}=require('./helpers.cjs'),names=require('../src/component-layer-name.cjs'),{applyPlan}=require('../src/transactions.cjs');
+const {makeApp,cleanup,Index}=require('./helpers.cjs'),names=require('../src/jsx-layer-name.cjs'),{applyPlan}=require('../src/transactions.cjs');
 for(const jsx of ['<Card/>','<Card<string> value="x"/>','<Cards.Card /* keep */ value={1}/>'])test('component layer names preserve props, comments and source IDs: '+jsx,()=>{
  const source='export default ()=> <main>'+jsx+'<aside/></main>',root=fs.realpathSync(makeApp({'Page.tsx':source})),index=new Index(root);try{
   index.scanAll();const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.kind==='instance'),ids=[...index.idToFile.keys()],attrs=usage.element.node.openingElement.attributes.map(a=>source.slice(a.start,a.end));
@@ -11,4 +11,15 @@ for(const jsx of ['<Card/>','<Card<string> value="x"/>','<Cards.Card /* keep */ 
 });
 test('component library carries distinct usage names without renaming the definition',()=>{
  const root=fs.realpathSync(makeApp({'Page.tsx':'import {Card} from "./Card";export default ()=> <><Card/><Card/></>','Card.tsx':'export function Card(){return <article/>}'})),index=new Index(root);try{index.scanAll();const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.kind==='instance'),result=names.plan(usage,{fileHash:usage.hash,name:'Hero'});assert.equal(applyPlan(root,result).ok,true);index.scanAll();const library=require('../src/component-usage.cjs').library(index),card=library.components.find(c=>c.name==='Card');assert.equal(card.usages.length,2);assert.deepEqual(card.usages.map(u=>u.layerName),['Hero','']);}finally{index.close();cleanup(root);}
+});
+test('host names survive typography, tag, duplicate and move edits without changing content or accessibility',()=>{
+ const root=fs.realpathSync(makeApp({'Page.tsx':'export default ()=> <main><h1 aria-label="Accessible title">Heading</h1><p>Sibling</p></main>'})),index=new Index(root);try{
+  index.scanAll();let selected=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.node.openingElement.name.name==='h1');
+  for(const op of [{type:'renameElement',name:'Page heading'},{type:'setClasses',classes:'text-xl'},{type:'setTag',tag:'h2'}]){const plan=index.adapter.planOp(selected,{...op,fileHash:selected.hash});assert.equal(plan.ok,true,plan.reason);assert.equal(applyPlan(root,plan).ok,true);index.scanAll();selected=index.resolve(selected.element.id);assert.equal(names.describe(selected).layerName,'Page heading');assert.match(selected.source,/aria-label="Accessible title">Heading/);}
+  for(const op of [{type:'duplicateElement'},{type:'moveElement',direction:'after'}]){const plan=index.adapter.planOp(selected,{...op,fileHash:selected.hash});assert.equal(plan.ok,true,plan.reason);assert.match(plan.edits[0].after,/@retouch-layer "Page heading"/);if(op.type==='duplicateElement')assert.equal((plan.edits[0].after.match(/@retouch-layer/g)||[]).length,2);}
+ }finally{index.close();cleanup(root);}
+});
+test('layer metadata survives inserted attributes and ignores markers nested inside prop expressions',()=>{
+ const {collectElements,contentHash}=require('../src/id.cjs'),source='export default ()=> <Card className="new" /* @retouch-layer "Visible" */ value={/* @retouch-layer "Not a label" */ "x"}/>;',parsed=collectElements(source,'Page.tsx'),resolved={source,relPath:'Page.tsx',file:'/tmp/Page.tsx',elements:parsed.elements,element:parsed.elements[0],hash:contentHash(source)};
+ assert.equal(names.describe(resolved).layerName,'Visible');const plan=names.plan(resolved,{fileHash:resolved.hash,name:'Changed'});assert.equal(plan.ok,true,plan.reason);assert.match(plan.edits[0].after,/@retouch-layer "Changed"/);assert.match(plan.edits[0].after,/value=\{\/\* @retouch-layer "Not a label" \*\/ "x"\}/);assert.doesNotMatch(plan.edits[0].after,/@retouch-layer "Visible"/);
 });

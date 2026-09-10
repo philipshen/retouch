@@ -52,7 +52,7 @@ function plan(resolved,op){
    importText='\nimport '+spec+' from '+JSON.stringify(specifier)+';\n';
   }
   const cleanup=swapping?require('./component-import-cleanup.cjs')(ast,selected,resolved.source,local):null;
-  const naming=require('./component-layer-name.cjs'),layerComment=swapping?naming.comment(naming.describe(resolved).layerName):'';
+  const naming=require('./jsx-layer-name.cjs'),layerComment=swapping?naming.comment(naming.describe(resolved).layerName):'';
   const jsx='<'+local+layerComment+(attributes.length?' '+attributes.join(' '):'')+'/>',ms=new MagicString(resolved.source);
   let position;
   if(swapping){position=node.start;ms.overwrite(node.start,node.end,jsx);}

@@ -2,7 +2,7 @@
   'use strict';
   function label(el) {
     const tag=el.tagName.toLowerCase();
-    const name=el.getAttribute('data-rt-name') || el.getAttribute('aria-label') || el.getAttribute('alt') || el.id ||
+    const name=el.getAttribute('data-rt-layer-name') || el.getAttribute('data-rt-name') || el.getAttribute('aria-label') || el.getAttribute('alt') || el.id ||
       [...el.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join(' ').trim().replace(/\s+/g,' ');
     return tag+(name?' · '+name.slice(0,70):'');
   }
@@ -148,7 +148,7 @@
     function attach(next) {
       if(d===next)return;
       observer?.disconnect();clearTimeout(timer);endDrag();rangeAnchor=null;d=next;components=[];componentRequest++;collapsed=new WeakSet();render();void loadComponents();
-      if(d?.body){observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(()=>{render();void loadComponents();},100);});observer.observe(d.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['data-rt','data-rt-i','data-rt-revision','data-rt-name','id','aria-label','alt']});}
+      if(d?.body){observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(()=>{render();void loadComponents();},100);});observer.observe(d.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['data-rt','data-rt-i','data-rt-revision','data-rt-name','data-rt-layer-name','id','aria-label','alt']});}
     }
     function selection(el,info,busy=false,multiple=[],readOnly=false) {
       const scopeChanged=selectedInfo?.kind!==info?.kind||selectedInfo?.id!==info?.id;selectedInfo=info;

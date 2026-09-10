@@ -1816,7 +1816,7 @@ async function renameLayer(name){
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not name layer','err');
     if(result.undoId)editorHistory.record({type:info.kind==='instance'?'renameComponent':'renameElement',id:info.id,undoId:result.undoId});
     if(info.kind==='instance'){await refreshSwappedComponent(info.id,null);await selectInsertedComponent(info.id,null);layers.refresh();}
-    else{sel.info=result.element;await reloadFrame();renderPanel();}toast('Layer named','ok');
+    else{sel.info=result.element;if(sel.info.renderRevisionAttribute)await refreshWrittenElement(sel.info,el=>(el.getAttribute('data-rt-layer-name')||'')===sel.info.layerName);else await reloadFrame();layers.refresh();renderPanel();}toast('Layer named','ok');
   }finally{busyPanel(false);}
 }
 async function setSelectionColorOverride(property,value){
