@@ -80,7 +80,22 @@ function plan(resolved,op) {
     const instance=next.elements.find(e=>e.id===resolved.element.id&&e.kind==='instance');
     const definition=next.elements.find(e=>e.kind==='host'&&e.node.start>resolved.source.length-node.end+node.start+replacement.length);
     if(!instance||!definition)return refuse('The extracted component could not be mapped back to source.');
-    return {ok:true,hash:contentHash(after),createdComponent:{name:op.name,props:props.map(({name,prop})=>({name:prop,local:name})),instanceId:instance.id,definitionId:definition.id},edits:[{file:resolved.file,before:resolved.source,after}]};
+    const original=collectElements(resolved.source,resolved.relPath).elements,sourceIdMap=[],mapped=new Set();
+    for(const element of original){
+      let target;
+      if(element.node.start===node.start)target=instance;
+      else {
+        let at=element.node.start;
+        if(inside(element.node)){
+          if(key&&element.node.start>=key.start&&element.node.end<=key.end)at=node.start+op.name.length+2+element.node.start-key.start;
+          else at=definition.node.start+element.node.start-node.start-(key&&element.node.start>=key.end?key.end-key.start:0);
+        }else if(element.node.start>=node.end)at+=replacement.length-(node.end-node.start);
+        target=next.elements.find(candidate=>candidate.node.start===at&&candidate.kind===element.kind);
+      }
+      if(!target||mapped.has(target.id))return refuse('The extracted layer identities could not be mapped back to source.');
+      mapped.add(target.id);sourceIdMap.push([element.id,target.id]);
+    }
+    return {ok:true,hash:contentHash(after),createdComponent:{name:op.name,props:props.map(({name,prop})=>({name:prop,local:name})),instanceId:instance.id,definitionId:definition.id,sourceIdMap},edits:[{file:resolved.file,before:resolved.source,after}]};
   }catch(error){return refuse('Could not create the component: '+error.message);}
 }
 module.exports={plan};

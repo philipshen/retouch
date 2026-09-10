@@ -138,3 +138,22 @@ test('component duplication maps original usages and descendants across wrapping
   }finally{f.close();}
  }
 });
+
+test('creation maps extracted descendants and retained key JSX to their corresponding layers',()=>{
+ for(const key of ['', ' key={<i>Identity</i>}']){
+  const source=`export default function Page(){return <main><article${key}><section><h2>Title</h2></section><aside>Detail</aside></article><footer>After</footer></main>}`;
+  const f=fixture(source);try{
+   const before=require('../src/id.cjs').collectElements(source,'page.jsx').elements;
+   const result=create.plan(f.selected,{name:'ProductCard',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);
+   const after=require('../src/id.cjs').collectElements(result.edits[0].after,'page.jsx').elements,map=new Map(result.createdComponent.sourceIdMap);
+   assert.equal(map.size,before.length);assert.equal(new Set(map.values()).size,before.length);
+   for(const old of before){
+    const next=after.find(e=>e.id===map.get(old.id));assert.ok(next,old.id);
+    if(old.id===f.selected.element.id){assert.equal(next.id,result.createdComponent.instanceId);assert.equal(next.kind,'instance');continue;}
+    assert.equal(next.kind,old.kind);assert.equal(next.node.openingElement.name.name,old.node.openingElement.name.name);
+    if(['section','h2','aside'].includes(old.node.openingElement.name.name)){assert.notEqual(next.id,old.id);assert.ok(next.node.start>result.edits[0].after.indexOf('function ProductCard'));}
+    if(old.node.openingElement.name.name==='i')assert.ok(next.node.start<result.edits[0].after.indexOf('function ProductCard'));
+   }
+  }finally{f.close();}
+ }
+});

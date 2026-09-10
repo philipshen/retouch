@@ -1214,7 +1214,8 @@ function createComponentSection(info) {
     try{
       const result=await api('POST','/rt/__api/op',{type:'createComponent',id:info.id,fileHash:info.hash,name:input.value});
       if(!result?.ok){RetouchInspector.note(body,result?.reason||result?.error||'Could not create the component.','refused');return;}
-      editorHistory.record({type:'createComponent',id:info.id,undoId:result.undoId});
+      editorHistory.record({type:'createComponent',id:info.id,sourceIdMap:result.createdComponent.sourceIdMap,undoId:result.undoId});
+      layerLocks.remap(result.createdComponent.sourceIdMap);
       const created=result.createdComponent;
       await refreshWrittenElement(result.element,el=>el.getAttribute('data-rt')===created.definitionId);
       sel={hostId:created.definitionId,instanceId:created.instanceId,scope:'instance',info:result.element};
