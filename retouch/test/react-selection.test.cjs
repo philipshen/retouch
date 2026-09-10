@@ -15,3 +15,15 @@ test('React shared style controls validate values before generating any source c
  assert.equal(change(null,'','visibility','hidden'),'invisible');
  const original='opacity-80 hover:opacity-95 md:opacity-90';assert.equal(change(original,'','visibility',null),original);assert.equal(change(original,'lg:','opacity',null),original);
 });
+test('shared typography edits canonical linked classes and retain other scopes and priorities',()=>{
+ const cases=[['font-size',40,'[font-size:40px]'],['font-weight',550,'[font-weight:550]'],['line-height',42,'[line-height:42px]'],['letter-spacing',-1.5,'[letter-spacing:-1.5px]'],['text-align','center','[text-align:center]'],['font-style','italic','[font-style:italic]'],['text-transform','uppercase','[text-transform:uppercase]']];
+ const source='p-4 md:![font-size:32px] md:![font-weight:700] md:![line-height:38px] md:![letter-spacing:2px] md:![text-align:left] md:![font-style:normal] md:![text-transform:none] hover:text-red-500 text-sm';
+ for(const [property,value,token]of cases){const next=change(source,'md:',property,value);assert.ok(next.includes('md:!'+token),next);assert.ok(next.includes('p-4'));assert.ok(next.includes('hover:text-red-500'));assert.ok(next.includes('text-sm'));assert.equal(change(next,'md:',property,value),next);assert.ok(!change(next,'md:',property,null).includes('md:!'+token));}
+ assert.equal(change('!text-lg','md:','font-size',40),'!text-lg md:![font-size:40px]');
+});
+test('shared typography rejects invalid values and coupled source ownership without changing classes',()=>{
+ for(const [property,value]of [['font-size',-1],['font-size',2001],['font-weight',0],['font-weight',500.5],['line-height',Infinity],['letter-spacing',-1001],['text-align','left;bad'],['font-style','oblique 90deg'],['text-transform','bad']])assert.throws(()=>change('p-4','',property,value));
+ assert.throws(()=>change('md:text-lg/7','md:','font-size',40),/combines/);assert.throws(()=>change('md:text-lg/7','md:','line-height',null),/combines/);
+ assert.throws(()=>change('[font:italic_16px_serif]','','font-weight',500),/shorthand/);
+ assert.equal(change('md:text-lg/7','','font-size',40),'md:text-lg/7 [font-size:40px]');
+});

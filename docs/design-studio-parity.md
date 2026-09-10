@@ -5926,3 +5926,27 @@ detach together and undo to exact source snapshots, while checking rendered size
 and visible link/override counts. Existing single-layer and library flows pass.
 Cross-file and Liquid selection support remain unfinished. Native launches remain
 paused; full Figma parity and verified desktop distribution remain incomplete.
+
+### Direct typography controls for React multi-selection (2026-09-09)
+
+React shared styles now include numeric font size, weight, line height and letter
+spacing, plus alignment, slant and text case. Mixed values display as mixed rather
+than showing the primary layer's value. Edits preserve individual unrelated
+classes, variants, screen scopes and important priority, and use the existing
+atomic selection transaction/history path. Canonical linked-style properties
+are replaced by manual edits and reported as local overrides. Each property has
+a scoped reset. Combined size/leading utilities and font shorthands currently
+refuse independent edits to avoid silently changing another property; full
+shorthand decomposition and remaining typography controls are unfinished.
+
+All 447 unit tests passed, exit 0:
+/private/tmp/retouch-shared-typography-units.log. Tests exercise every added
+property, canonical tokens, important priority, responsive scopes, idempotence,
+reset and invalid/coupled representations. React Chromium and WebKit browser
+processes exited 0: /private/tmp/retouch-shared-typography-chromium.log and
+/private/tmp/retouch-shared-typography-webkit.log. Both change all seven controls,
+verify computed styles on both selected layers, check 14 aggregate overrides,
+and undo to exact source. WebKit additionally checks the mixed size input after
+editing one member. Existing linked-style reset/detach and library workflows
+continue to pass without page errors. Native launches remain paused; full design
+parity and verified desktop distribution remain incomplete.
