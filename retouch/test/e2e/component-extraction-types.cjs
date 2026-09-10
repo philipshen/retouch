@@ -7,6 +7,10 @@ const ts=require(path.join(fixture,'node_modules/typescript'));
 const {makeApp,cleanup,Index}=require('../helpers.cjs'),create=require('../../src/create-component.cjs');
 const jsx='declare namespace JSX {interface ElementChildrenAttribute {children:{}} interface IntrinsicElements {article:{title?:string;onClick?:()=>void;children?:unknown}}}\n';
 const cases=[
+ ['optional tuple parameter','function Page([title]:[string?]){return <article title={title??"Hi"}>Hi</article>}'],
+ ['optional named tuple parameter','type Data=[unused?:number,title?:string];function Page([,title]:Data){return <article title={title??"Hi"}>Hi</article>}'],
+ ['defaulted tuple local','function Page(){const [title="Hi"]:[string?]=[];return <article title={title.toUpperCase()}>Hi</article>}'],
+ ['defaulted nested tuple','interface Props{data:[title?:string]}function Page({data:[title="Hi"]}:Props){return <article title={title.toUpperCase()}>Hi</article>}'],
  ['negative literal default','interface Props{count?:-2}function Page({count=-2}:Props){return <article>{count.toFixed()}</article>}'],
  ['optional string default','type Label=string;interface Props{title?:Label}function Page({title="Hi"}:Props){return <article title={title.toUpperCase()}>Hi</article>}'],
  ['numeric and boolean defaults','interface Props{count?:number;enabled?:boolean}function Page({count=-2,enabled=true}:Props){return <article>{enabled?count.toFixed():"None"}</article>}'],

@@ -184,11 +184,11 @@ test('typed extraction reads object locals and positional tuple contracts',()=>{
   'function Page(){const [label,,count]:[text:string,unused:boolean,total:number]=["Hello",true,2];return <article title={label}>{count+1}</article>}'
  ]){const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);assert.ok(result.edits[0].after.includes('"label": (string)'));assert.ok(result.edits[0].after.includes('"count": (number)'));}finally{f.close();}}
 });
-test('typed tuple extraction refuses optional, rest, and defaulted positions',()=>{
+test('typed tuple extraction refuses optional locals, rest, and dynamic defaults',()=>{
  for(const source of [
   'function Page(){const [label]:[string?]=[];return <article>{label}</article>}',
   'function Page(){const [label]:[...string[]]=[];return <article>{label}</article>}',
-  'function Page(){const [label="Hello"]:[string?]=[];return <article>{label}</article>}'
+  'function Page(){const [label=String("Hello")]:[string?]=[];return <article>{label}</article>}'
  ]){const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/explicit type/);}finally{f.close();}}
 });
 
@@ -200,7 +200,7 @@ test('typed extraction follows nested object and tuple destructuring contracts',
  ]){const f=fixture('function Page(){'+declaration+'return <article title={label}>{count+1}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);assert.ok(result.edits[0].after.includes('"label": (string)'));assert.ok(result.edits[0].after.includes('"count": (number)'));}finally{f.close();}}
 });
 test('typed extraction does not lose optional or defaulted ancestor contracts',()=>{
- for(const pattern of ['{data:{label}={label:"Hi"}}:{data?:{label:string}}','{data:[label="Hi"]}:{data:[string?]}']){
+ for(const pattern of ['{data:{label}={label:"Hi"}}:{data?:{label:string}}','{data:[label=String("Hi")]}:{data:[string?]}']){
   const f=fixture('function Page('+pattern+'){return <article>{label}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/explicit type/);}finally{f.close();}
  }
 });
@@ -311,4 +311,12 @@ test('typed extraction keeps undefined in optional parameter contracts',()=>{
 test('typed extraction preserves primitive literal defaults at the call site',()=>{
  const source='type Label=string;interface Props{title?:Label;count?:number;enabled?:boolean}function Page({title="Hi",count=-2,enabled=true}:Props){return <article title={title.toUpperCase()}>{enabled?count+1:0}</article>}';
  const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);const after=result.edits[0].after;assert.ok(after.includes('title="Hi",count=-2,enabled=true'));for(const [name,type]of [['title','string'],['count','number'],['enabled','boolean']])assert.ok(after.includes('"'+name+'": ('+type+')'));}finally{f.close();}
+});
+
+test('typed tuple captures preserve optional positions and resolved literal defaults',()=>{
+ for(const [source,type]of [
+ ['function Page([label]:[string?]){return <article>{label??"Hi"}</article>}','((string) | undefined)'],
+ ['function Page([,label="Hi"]:[unused?:number,title?:string]){return <article>{label.toUpperCase()}</article>}','(string)'],
+ ['function Page(){const [label="Hi"]:[string?]=[];return <article>{label.toUpperCase()}</article>}','(string)']
+ ]){const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);assert.ok(result.edits[0].after.includes('"label": '+type));}finally{f.close();}}
 });

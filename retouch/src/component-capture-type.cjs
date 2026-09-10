@@ -60,13 +60,15 @@ function patternType(pattern,contract,name,resolve,source,depth=0){
  if(pattern.type==='ArrayPattern'&&contract.type==='TSTupleType'){
   for(let index=0;index<pattern.elements.length;index++){
    let member=contract.elementTypes[index];if(!member)return null;
-   if(member.optional||['TSRestType','TSOptionalType'].includes(member.type))return null;
+   let optional=!!member.optional;
    if(member.type==='TSNamedTupleMember')member=member.elementType;
-   if(['TSRestType','TSOptionalType'].includes(member.type))return null;
-   const result=patternType(pattern.elements[index],member,name,resolve,source,depth+1);if(result)return result;
+   if(member.type==='TSOptionalType'){optional=true;member=member.typeAnnotation;}
+   if(member.type==='TSRestType')return null;
+   const element=pattern.elements[index],result=patternType(element,member,name,resolve,source,depth+1);
+   if(result)return optional&&element.type!=='AssignmentPattern'?withUndefined(result):result;
   }
  }
- // Non-literal defaults, optional tuple positions, and rest bindings need further analysis.
+ // Non-literal defaults and rest bindings need further analysis.
  return null;
 }
 function typeResolver(binding,source){
