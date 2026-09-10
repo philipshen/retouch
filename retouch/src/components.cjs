@@ -122,7 +122,9 @@ function describe(resolved) {
     const {elements,ast}=collectElements(def.source,rel);
     const declaration=ast.program.body.find(item=>['ExportNamedDeclaration','ExportDefaultDeclaration'].includes(item.type)&&item.declaration?.start===def.fn.start);
     const explicitComponent=[...(def.fn.leadingComments||[]),...(declaration?.leadingComments||[])].some(comment=>comment.value.trim()==='* @retouch-component');
-    const host=elements.find(e=>e.kind==='host'&&e.node.start>=def.fn.start&&e.node.end<=def.fn.end);
+    const roots=require('./component-return-roots.cjs')(def.fn),returned=new Set(roots.map(node=>node.start));
+    const host=elements.find(element=>element.kind==='host'&&(roots.length?roots.some(root=>element.node.start>=root.start&&element.node.end<=root.end):element.node.start>=def.fn.start&&element.node.end<=def.fn.end));
+    const definitionIds=elements.filter(element=>element.kind==='host'&&returned.has(element.node.start)).map(element=>element.id);
     const props=new Map();
     let param=def.fn.params[0];if(param?.type==='AssignmentPattern')param=param.left;
     if(param?.type==='ObjectPattern')for(const p of param.properties) {
@@ -141,7 +143,7 @@ function describe(resolved) {
     if(children?.length)props.set('children',{name:'children',default:'—',value:resolved.source.slice(children[0].start,children.at(-1).end)});
     const detached=def.file.includes('.retouch-'+resolved.element.id+'.');
     const duplication=require('./duplicate-component.cjs').describe(resolved);
-    return {ok:true,usageHash:resolved.hash,canDuplicate:duplication.ok,duplicateReason:duplication.reason||null,explicitComponent,name:def.name,file:rel,hash:contentHash(def.source),source:def.source.slice(def.fn.start,def.fn.end),props:[...props.values()].map(prop=>({...prop,editor:require('./component-props.cjs').describe(resolved,prop.name,def)})),definitionId:host?.id||null,detached,canDetach:!detached};
+    return {ok:true,usageHash:resolved.hash,canDuplicate:duplication.ok,duplicateReason:duplication.reason||null,explicitComponent,name:def.name,file:rel,hash:contentHash(def.source),source:def.source.slice(def.fn.start,def.fn.end),props:[...props.values()].map(prop=>({...prop,editor:require('./component-props.cjs').describe(resolved,prop.name,def)})),definitionId:host?.id||null,definitionIds,detached,canDetach:!detached};
   }catch(err){return refuse(err.message);}
 }
 function planDetach(resolved,op) {

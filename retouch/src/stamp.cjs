@@ -36,16 +36,16 @@ function stamp(source, filePath, appRoot) {
   // Discoverable exported functions and explicitly created components forward
   // their instance marker without adding editor attributes to production source.
   const componentFunctions=new Set(require('./component-definitions.cjs').definitions(source,relPath,{ast,elements}).map(definition=>definition.fn.start));
-  require('@babel/traverse').default(ast,{FunctionDeclaration(p){
+  function forward(p){
     const exported=p.parentPath.isExportNamedDeclaration()||p.parentPath.isExportDefaultDeclaration();
     if(!componentFunctions.has(p.node.start)&&![...(p.node.leadingComments||[]),...(exported?p.parentPath.node.leadingComments||[]:[])].some(comment=>comment.value.trim()==='* @retouch-component'))return;
-    for(const statement of p.node.body.body){
-      const node=statement.type==='ReturnStatement'?statement.argument:null;
-      if(node?.type!=='JSXElement'||!elements.some(el=>el.node===node&&el.kind==='host'))continue;
+    for(const node of require('./component-return-roots.cjs')(p.node)){
+      if(node.type!=='JSXElement'||!elements.some(el=>el.node===node&&el.kind==='host'))continue;
       if(node.openingElement.attributes.some(attr=>attr.name?.name===INSTANCE_ATTR))continue;
       ms.appendLeft(node.openingElement.end-(node.openingElement.selfClosing?2:1),` data-rt-i={arguments[0]?.["data-rt-i"]}`);
     }
-  }});
+  }
+  require('@babel/traverse').default(ast,{FunctionDeclaration:forward,FunctionExpression:forward});
   return {
     code: ms.toString(),
     map: ms.generateMap({ hires: true, source: filePath }),

@@ -65,3 +65,12 @@ test('exported function component roots forward their incoming instance marker w
  }
  const existing='export function Card(){return <article data-rt-i="authored"/>}';assert.equal((stamp(existing,file,ROOT).code.match(/arguments\[0\]/g)||[]).length,0);
 });
+test('conditional and nested-statement returns forward identity on each own host branch',()=>{
+ const source='export function Card({mode}){function helper(){return <nav/>} if(mode===1){return <article><span/></article>} switch(mode){case 2:return <aside/>;default:return mode ? <section/> : <footer/>}}';
+ const output=stamp(source,file,ROOT).code,hosts=require('../src/id.cjs').collectElements(output,'C.tsx').elements.filter(element=>element.kind==='host');
+ for(const host of hosts)assert.equal(host.node.openingElement.attributes.some(attr=>attr.name?.name==='data-rt-i'),['article','aside','section','footer'].includes(host.node.openingElement.name.name));assert.equal((output.match(/arguments\[0\]/g)||[]).length,4);assert.ok(!source.includes('data-rt-i'));
+});
+test('exported regular function expressions and wrapped logical returns retain their own arguments',()=>{
+ const source='export const Card=function Named(props){return props.show && (<article/> as JSX.Element)};export function Other(){return (()=> <aside/>)()}';
+ const output=stamp(source,file,ROOT).code;assert.equal((output.match(/arguments\[0\]/g)||[]).length,1);assert.doesNotThrow(()=>require('../src/id.cjs').parseSource(output));
+});

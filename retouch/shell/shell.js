@@ -1294,11 +1294,19 @@ function propTable(props,instanceId,fileHash,options={}) {
   };
   search.addEventListener('input',filter);search.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();search.value='';filter();}});group.append(search,status,table);filter();return group;
 }
+function mountedComponentHost(instanceId,component,context){
+ const ids=component.definitionIds?.length?component.definitionIds:[component.definitionId].filter(Boolean);
+ for(const root of matchingInDocument(doc(),instanceId,{...component,context})){
+  if(ids.includes(root.getAttribute('data-rt')))return root;
+  for(const id of ids){const host=root.querySelector('[data-rt="'+id+'"]');if(host)return host;}
+ }
+ return null;
+}
 async function refreshComponentProperty(instanceId,parentId){
   const parent=parentId?await api('GET',resolveUrl(parentId)):null;
   if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else await reloadFrame();
   const usage=await api('GET',resolveUrl(instanceId)),component=await api('GET',componentUrl(instanceId));
-  if(usage?.ok&&component?.ok){sel={hostId:component.definitionId,instanceId,scope:'instance',info:usage.element};renderPanel();}else clearSelection();
+  if(usage?.ok&&component?.ok){sel={hostId:mountedComponentHost(instanceId,component,usage.element.context)?.getAttribute('data-rt')||component.definitionId,instanceId,scope:'instance',info:usage.element};renderPanel();}else clearSelection();
 }
 async function setComponentProperty(instanceId,name,value,fileHash,options={}){
   busyPanel(true);try{
@@ -1308,11 +1316,10 @@ async function setComponentProperty(instanceId,name,value,fileHash,options={}){
 }
 async function editDefinition(instanceId, component) {
   if (!component.definitionId) return;
-  const roots=matchingInDocument(doc(),instanceId,component);
-  const target=roots.map(root=>root.getAttribute('data-rt')===component.definitionId?root:root.querySelector(`[data-rt="${component.definitionId}"]`)).find(Boolean);
-  const response = await api('GET', resolveUrl(component.definitionId, target?renderContext(target):sel?.info?.context));
+  const target=mountedComponentHost(instanceId,component,sel?.info?.context),hostId=target?.getAttribute('data-rt')||component.definitionId;
+  const response = await api('GET', resolveUrl(hostId, target?renderContext(target):sel?.info?.context));
   if (!response?.ok) return toast('The definition changed. Re-select the component.', 'err');
-  sel = { hostId: component.definitionId, instanceId:component.definitionOnly?null:instanceId, scope: 'host', info: response.element };
+  sel = { hostId, instanceId:component.definitionOnly?null:instanceId, scope: 'host', info: response.element };
   renderPanel(); toast(component.detached ? 'Editing detached definition' : 'Editing shared definition', 'ok');
 }
 async function duplicateInstance(id,context) {
@@ -1362,7 +1369,7 @@ componentLibraryButton.addEventListener('click',()=>RetouchComponentLibrary.open
   if(!instance.element.isConnected)throw Error('This instance is no longer on the page. Refresh the list.');
   if(!usage?.ok||!component?.ok)throw Error('This component no longer resolves. Refresh the list.');
   if(!instance.definition){componentLibrarySelections.add(instance.id);if(componentLibrarySelections.size>1000)componentLibrarySelections.delete(componentLibrarySelections.values().next().value);}
-  stopDrawing?.();classificationSerial++;sel={hostId:component.definitionId,instanceId:instance.definition?null:instance.id,scope:instance.definition?'host':'instance',info:usage.element};renderPanel();instance.element.scrollIntoView({block:'nearest',inline:'nearest'});
+  stopDrawing?.();classificationSerial++;sel={hostId:mountedComponentHost(instance.id,component,context)?.getAttribute('data-rt')||component.definitionId,instanceId:instance.definition?null:instance.id,scope:instance.definition?'host':'instance',info:usage.element};renderPanel();instance.element.scrollIntoView({block:'nearest',inline:'nearest'});
  },
  view:async(id,onPage,isActive,definitionOnly)=>{const component=await api('GET',definitionOnly?'/rt/__api/component-definition?id='+id:componentUrl(id));if(!isActive())return;if(!component?.ok)throw Error(component?.reason||'This component no longer resolves.');openComponent(id,component,{preview:onPage});}
 }));

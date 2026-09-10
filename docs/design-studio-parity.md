@@ -8457,3 +8457,31 @@ propagation remain incomplete. Discovery remains bounded by the React source ind
 and does not prove generic isolated previews or Liquid/live Shopify parity. Full
 Figma/any-site parity and trusted brew distribution remain incomplete. Native
 launches stay paused.
+
+
+### Conditional component roots and definition selection
+
+Exported and explicitly marked regular React functions now forward their compiled
+instance identity to their own returned host branches, including conditional and
+logical expressions and returns nested inside control-flow blocks. Regular
+function expressions are covered. A shared return-root reader excludes nested
+callbacks and helpers; component descriptors expose all direct returned host IDs
+and choose their primary definition from returned JSX rather than helper markup.
+The inspector resolves the mounted root for property refresh, library selection,
+and Edit definition, so the Component tab follows the visible branch.
+
+Validation: 670 unit tests passed. Chromium and WebKit passed the complete
+component property/library flow with a boolean property switching an exported
+single-use component between footer and section roots. Checks cover Edit
+definition, selecting the changed instance from the library, Component/This
+instance scopes, exact source Undo/Redo, rendered branch changes, and unchanged
+definition source. Both browser processes exited successfully.
+Logs: /private/tmp/retouch-branch-identity-units.log,
+/private/tmp/retouch-branch-identity-chromium.log, and
+/private/tmp/retouch-branch-identity-webkit.log.
+
+Arrow identity forwarding, fragment/multiple-root identity, branch-aware duplicate
+selection, full component variants/insertion and arbitrary-site authoring remain
+incomplete. This verifies conditional-root property editing, not complete Figma
+variant parity. Full Figma Design parity and trusted brew distribution remain
+unachieved. Native app launches and native launch tests remain paused.

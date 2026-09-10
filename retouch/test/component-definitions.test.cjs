@@ -15,3 +15,8 @@ test('unused definitions expose imported property types and literal defaults wit
 test('definition inspection refuses nested host ids and non-component functions',()=>{
  const root=fs.realpathSync(makeApp({'Card.tsx':'export function Card(){return <section><span/></section>}function helper(){return <aside/>}'})),index=new Index(root);try{index.scanAll();const all=[...index.idToFile.keys()].map(id=>index.resolve(id));assert.equal(definitions.describe(all.find(r=>r.element.node.openingElement.name.name==='span')).ok,false);assert.equal(definitions.describe(all.find(r=>r.element.node.openingElement.name.name==='aside')).ok,false);}finally{index.close();cleanup(root);}
 });
+test('used and unused definitions agree on returned roots rather than nested helper markup',()=>{
+ const root=fs.realpathSync(makeApp({'Card.tsx':'export function Card({alternate=false}){function Helper(){return <nav/>}if(alternate){return <article/>}return <footer/>}','Page.tsx':'import {Card} from "./Card";export default function Page(){return <main><Card/></main>}'})),index=new Index(root);try{
+  index.scanAll();const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(resolved=>resolved.element.kind==='instance'),info=require('../src/components.cjs').describe(usage);assert.ok(info.ok);assert.equal(index.resolve(info.definitionId).element.node.openingElement.name.name,'article');assert.deepEqual(info.definitionIds.map(id=>index.resolve(id).element.node.openingElement.name.name),['article','footer']);const components=library(index).components.filter(item=>item.file==='Card.tsx');assert.equal(components.length,1);assert.equal(components[0].usageCount,1);assert.equal(components[0].definitionId,info.definitionId);
+ }finally{index.close();cleanup(root);}
+});
