@@ -31,7 +31,7 @@ module.exports = {
   describe: resolved => {
     const svgDeletion=svgDelete.describe(resolved),svgMovement=svgMove.describe(resolved),svgDuplication=svgDuplicate.describe(resolved);
     const base={...structure.describe(resolved,'react'),...svgMovement};
-    return {...describeElement(resolved),...require('../jsx-text-styles.cjs').describe(resolved),classSelection:resolved.element.kind==='host',svgDeletion,svgMovement,svgDuplication,context:resolved.context||null,
+    return {...describeElement(resolved),...require('../jsx-text-styles.cjs').describe(resolved),...require('../jsx-color-styles.cjs').describe(resolved),classSelection:resolved.element.kind==='host',svgDeletion,svgMovement,svgDuplication,context:resolved.context||null,
       structure:svgDeletion?{...base,canDelete:true,canDuplicate:!!svgDuplication||base.canDuplicate,canCopy:base.canDuplicate,canPaste:base.canPaste,parentId:svgDeletion.parentId,reason:base.reason?'SVG structural actions depend on the selected source subtree.':null}:base};
   },
   applyOp: (resolved,op) => {

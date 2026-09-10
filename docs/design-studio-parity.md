@@ -6244,3 +6244,26 @@ This is source-planner groundwork: React adapter/API/palette integration,
 project-wide propagation wiring and live editor flows are not yet implemented.
 Liquid paint links and other renderer parity remain unfinished. Native launches
 remain paused; this does not establish full Figma or arbitrary-site parity.
+
+### React palette integration and project updates (2026-09-09)
+
+React host-layer descriptions now expose color links and override metadata to the
+palette. Single and multi-layer application/reset/detach route through the source
+API; selection edits use shared class history and compiler-aware refresh. Palette
+updates compose React JSX/TSX source edits across the project with the catalog in
+one transaction. React inheritance uses discovered breakpoint conditions per
+paint property. Class edits refresh color-link metadata, and frame convergence
+checks include both text-style and color-style attributes.
+
+All 470 unit tests passed, exit 0: /private/tmp/retouch-react-palette-units.log.
+Live Next/Tailwind editor flows passed in Chromium and WebKit, exit 0:
+/private/tmp/retouch-react-palette-chromium.log and
+/private/tmp/retouch-react-palette-webkit.log. Both verify md background application,
+alpha paint, updating an unopened JSX file, catalog/source undo, unchanged phone
+paint, single and multi-layer detach/application, and exact source restoration.
+Existing palette CRUD/import/export/stale-revision checks also pass. HTML browser
+regression passed, exit 0: /private/tmp/retouch-react-palette-html-regression.log.
+React local paint inspector controls still need canonical linked-property editing
+parity; reset ownership has source tests but not a React live override/reset flow.
+Important utility conflict handling remains conservative. Liquid colors and full
+renderer parity remain incomplete. Native launches remain paused.

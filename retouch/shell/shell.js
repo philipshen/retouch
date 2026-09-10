@@ -897,7 +897,9 @@ function renderPanelContents() {
   head.appendChild(file);
   head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
-  {const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;RetouchColorStyles.mount(panelBody,sel.multiple?.length>1?selectionColorOptions(width):!sel.multiple?.length&&info.colorStyles?{width,allLinks:info.colorStyleLinks,links:info.colorStyleLinks?.[width],overrides:info.colorStyleOverrides?.[width]||[],apply:(styleId,libraryRevision,property)=>writeTextStyle('applyColorStyle',width,{styleId,libraryRevision,property}),reset:(styleId,libraryRevision,property)=>writeTextStyle('resetColorStyle',width,{styleId,libraryRevision,property}),detach:property=>writeTextStyle('detachColorStyle',width,{property})}:{});}
+  {const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,scope=info.classColorStyles?styleScope:width;
+   RetouchColorStyles.mount(panelBody,sel.multiple?.length>1?selectionColorOptions(scope):info.colorStyles||info.classColorStyles?{width:scope,allLinks:info.colorStyleLinks,links:info.colorStyleLinks?.[scope],overrides:info.colorStyleOverrides?.[scope]||[],inherited:info.classColorStyles?property=>RetouchResponsive.inheritedLink(Object.fromEntries(Object.entries(info.colorStyleLinks||{}).filter(([,group])=>group[property]).map(([key,group])=>[key,group[property]])),styleScope,matchingEls(info.id)[0]?.ownerDocument):undefined,apply:(styleId,libraryRevision,property)=>writeTextStyle('applyColorStyle',width,{scope:styleScope,styleId,libraryRevision,property}),reset:(styleId,libraryRevision,property)=>writeTextStyle('resetColorStyle',width,{scope:styleScope,styleId,libraryRevision,property}),detach:property=>writeTextStyle('detachColorStyle',width,{scope:styleScope,property})}:{});
+  }
 
   if(sel.multiple?.length>1){mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
@@ -1563,14 +1565,14 @@ async function renameLayer(name){
 }
 function selectionColorOptions(width){
   const selection=sel.multiple;
-  if(!selection.every(info=>info.colorStyles))return {};
+  if(!selection.every(info=>info.colorStyles||info.classColorStyles))return {};
   async function write(type,property,styleId,libraryRevision){
-    const info=sel.info,ids=selection.map(item=>item.id);busyPanel(true);
+    const info=sel.info,ids=selection.map(item=>item.id),react=!!info.classColorStyles;busyPanel(true);
     try{
-      const result=await api('POST','/rt/__api/op',{type,id:info.id,ids,fileHash:info.hash,width,property,styleId,libraryRevision});
+      const result=await api('POST','/rt/__api/op',{type,id:info.id,ids,fileHash:info.hash,width:react?0:width,scope:react?width:undefined,property,styleId,libraryRevision});
       if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update selected colors.');
-      if(result.undoId)editorHistory.record({type:'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
-      sel.info=result.element;sel.multiple=result.selection;await reloadFrame();renderPanel();toast('Selected colors updated','ok');
+      if(result.undoId)editorHistory.record({type:react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
+      sel.info=result.element;sel.multiple=result.selection;if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();renderPanel();toast('Selected colors updated','ok');
     }finally{busyPanel(false);}
   }
   return {width,selection,apply:(id,revision,property)=>write('applyColorStyleSelection',property,id,revision),resetSelection:(revision,property)=>write('resetColorStyleSelection',property,undefined,revision),detachSelection:property=>write('detachColorStyleSelection',property)};
@@ -1681,7 +1683,7 @@ window.RetouchColorStyleRequest=async operation=>{
  try{
   const result=await api('POST','/rt/__api/color-styles',operation);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save color styles');
   if(result.undoId)editorHistory.record({type:'colorStyleCatalog',id:info?.id,context:info?.context,undoId:result.undoId});
-  if(result.updated){const fresh=info?await api('GET',resolveUrl(info.id,info.context)):null;if(fresh?.ok&&sel?.info.id===info.id)sel.info=fresh.element;await reloadFrame();if(sel)renderPanel();}
+  if(result.updated){const fresh=info?await api('GET',resolveUrl(info.id,info.context)):null;if(fresh?.ok&&sel?.info.id===info.id){sel.info=fresh.element;await refreshTextStyleElement(fresh.element);}else await reloadFrame();if(sel)renderPanel();}
   return result;
  }finally{busyPanel(false);}
 };
@@ -1701,7 +1703,7 @@ window.RetouchTextStyleRequest=async operation=>{
 };
 async function refreshTextStyleElement(info){
   if(info.classTextStyles)await refreshWrittenElement(info,el=>{
-    try{return JSON.stringify(JSON.parse(el.getAttribute('data-rt-text-styles')||'{}'))===JSON.stringify(info.textStyleLinks||{})&&(info.className||'').split(/\s+/).filter(Boolean).every(token=>el.classList.contains(token));}catch{return false;}
+    try{return JSON.stringify(JSON.parse(el.getAttribute('data-rt-text-styles')||'{}'))===JSON.stringify(info.textStyleLinks||{})&&JSON.stringify(JSON.parse(el.getAttribute('data-rt-color-styles')||'{}'))===JSON.stringify(info.colorStyleLinks||{})&&(info.className||'').split(/\s+/).filter(Boolean).every(token=>el.classList.contains(token));}catch{return false;}
   });else await reloadFrame();
 }
 async function writeTextStyle(type,width,extra={}){
@@ -1747,6 +1749,7 @@ async function writeClasses(classes, isUndo) {
     info.className = res.element?.className ?? classes;
     info.hash = res.hash;
     if(info.classTextStyles&&res.element)for(const key of ['textStyleLinks','textStyleOverrides','classTextStyles','textStyleLinkReason'])info[key]=res.element[key];
+    if(res.element)for(const key of ['colorStyleLinks','colorStyleOverrides','classColorStyles','colorStyleLinkReason'])info[key]=res.element[key];
     if (window.__RT_RENDERING?.reloadAfterWrite||info.renderRevisionAttribute) await refreshWrittenElement(info, el => info.className.split(/\s+/).filter(Boolean).every(token => el.classList.contains(token)));
     toast('Saved', 'ok');
     renderPanel();

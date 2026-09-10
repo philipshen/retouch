@@ -35,7 +35,7 @@
     if(link){const definition=library.styles.find(item=>item.id===link.id),overridden=options.overrides?.includes(target);I.note(controls,'Linked color: '+(definition?.name||'Unavailable style')+(overridden?' · Local override.':'.'));
      const reset=I.button('Reset linked color',()=>run(()=>options.reset(link.id,library.revision,target),'Linked color reset.'));reset.disabled=!definition||!overridden;controls.append(reset,I.button('Detach linked color',()=>run(()=>options.detach(target),'Color detached.')));
     }
-    const inherited=!link&&inheritedLink(options.allLinks,options.width,target);
+    const inherited=!link&&(options.inherited?options.inherited(target):inheritedLink(options.allLinks,options.width,target));
     if(inherited){
      const definition=library.styles.find(item=>item.id===inherited.link.id);
      I.note(controls,'Inherited color: '+(definition?.name||'Unavailable style')+' · '+inherited.label);
