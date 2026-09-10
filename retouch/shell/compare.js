@@ -11,6 +11,11 @@
   const valid=v=>Number.isInteger(v)&&v>=240&&v<=7680;
   try{const saved=JSON.parse(localStorage.getItem(storageKey));if(Array.isArray(saved)&&saved.length<=8&&saved.every(s=>Array.isArray(s)&&s.length===3&&typeof s[0]==='string'&&s[0].length<=80&&valid(s[1])&&valid(s[2])))sizes=saved;}catch{}
   function remember(){try{localStorage.setItem(storageKey,JSON.stringify(sizes));localStorage.setItem(storageKey+'.collapsed',JSON.stringify(sizes.map(size=>size[0]).filter(name=>collapsedNames.has(name))));}catch{}window.RetouchScreens?.setSaved(sizes);}
+  function snapshotSize(size){
+    const copy=[...size],history=sizeHistories.get(size);
+    if(history)sizeHistories.set(copy,{undo:history.undo.map(entry=>({before:[...entry.before],after:[...entry.after]})),redo:history.redo.map(entry=>({before:[...entry.before],after:[...entry.after]}))});
+    return copy;
+  }
   function current(){return {width:Number(document.getElementById('screenWidth').value),height:Number(document.getElementById('screenHeight').value)};}
   function layoutPreviews(){
     const railBounds=rail.getBoundingClientRect();
@@ -130,7 +135,7 @@
       try{
         if(selectedFile.size>65536)throw Error('Screen-set files must be 64 KB or smaller.');
         const next=parseSet(await selectedFile.text());if(revision!==loadRevision||!open)return;
-        const undo={sizes:sizes.map(size=>[...size]),removed:removed.map(entry=>({size:[...entry.size],index:entry.index}))};
+        const undo={sizes:sizes.map(snapshotSize),removed:removed.map(entry=>({size:snapshotSize(entry.size),index:entry.index}))};
         await replaceSet(next,[],undo,'Loaded '+next.length+' comparison views.');
       }catch(error){if(revision===loadRevision){setMessage=error.message;setStatus.textContent=setMessage;}}
     };

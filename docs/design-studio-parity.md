@@ -9969,3 +9969,9 @@ Validation: project-screens passed in Chromium (`/private/tmp/retouch-comparison
 Comparison size history now belongs to the in-memory screen record through a WeakMap, rather than to its disposable controls. Removing a view retains that record in removal history, so Undo remove restores its size Undo/Redo stacks. Rebuilding the comparison rail also retains the stacks. Histories remain bounded and do not keep discarded screen records alive.
 
 Validation: project-screens passed in Chromium (`/private/tmp/retouch-comparison-history-restore-chromium.log`) and WebKit (`/private/tmp/retouch-comparison-history-restore-webkit.log`), terminal exit 0. New assertions replay size Redo/Undo after restoring a removed view and reopening the rail; existing size editing/history, reload persistence and project isolation checks also passed. Size history still does not persist across page reload or screen-set replacement. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Screen-set load Undo restores dimension history
+
+Screen-set snapshots now copy dimension history along with each screen record, including removed-screen records. Undo load restores independent Undo/Redo stacks instead of discarding them when recreating the prior set. Snapshots copy entry arrays so later edits do not mutate the saved history.
+
+Validation: project-screens passed in Chromium (`/private/tmp/retouch-screen-set-history-chromium-final.log`) and WebKit (`/private/tmp/retouch-screen-set-history-webkit.log`), both terminal exit 0. Tests replace a set, undo the load, replay size history on a restored active comparison, restore a previously removed Phone comparison, and replay its size history too. Existing keyboard, remove/reopen, persistence and project-isolation checks passed. Size history remains in-memory across the session, not persisted across reload. Full Figma parity remains incomplete; native launches remain paused.
