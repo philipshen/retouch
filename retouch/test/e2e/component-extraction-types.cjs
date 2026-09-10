@@ -7,6 +7,7 @@ const ts=require(path.join(fixture,'node_modules/typescript'));
 const {makeApp,cleanup,Index}=require('../helpers.cjs'),create=require('../../src/create-component.cjs');
 const jsx='declare namespace JSX {interface ElementChildrenAttribute {children:{}} interface IntrinsicElements {article:{title?:string;onClick?:()=>void;children?:unknown}}}\n';
 const cases=[
+ ['method prop','type Label=string;interface Base{onSelect(value:Label):void}interface Props extends Base{}function Page({onSelect}:Props){return <article onClick={()=>onSelect("Hi")}>Hi</article>}'],
  ['inline props','function Page({title,count}:{title:string;count:number}){return <article title={title}>{count+1}</article>}'],
  ['local callback','function Page(){const title:string="Hi",onClick:()=>void=()=>{};return <article title={title} onClick={onClick}>Hi</article>}'],
  ['object aliases','function Page(){const {text:title,count}:{text:string;count:number}={text:"Hi",count:2};return <article title={title}>{count+1}</article>}'],

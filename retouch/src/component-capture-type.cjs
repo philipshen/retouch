@@ -7,7 +7,7 @@ function renderType(node,source,resolve,budget={left:2000},depth=0){
   const members=node.members.map(member=>renderType(member,source,resolve,budget,depth+1));
   return members.some(member=>member===null)?null:'{ '+members.join('; ')+' }';
  }
- const edits=[];let valid=true;
+ const edits=node.methodFunction?[{start:node.typeAnnotation.start-node.start,end:node.typeAnnotation.typeAnnotation.start-node.start,text:'=>'}]:[];let valid=true;
  function inspect(value){
   if(!valid||!value||typeof value!=='object')return;
   if(--budget.left<0){valid=false;return;}
@@ -34,9 +34,14 @@ function patternType(pattern,contract,name,resolve,depth=0){
  if(pattern.type==='ObjectPattern'&&contract.type==='TSTypeLiteral'){
   for(const property of pattern.properties){
    if(property.type!=='ObjectProperty'||property.computed)continue;
-   const key=property.key.name??property.key.value,members=contract.members.filter(member=>member.type==='TSPropertySignature'&&!member.computed&&(member.key.name??member.key.value)===key);
+   const key=property.key.name??property.key.value,members=contract.members.filter(member=>['TSPropertySignature','TSMethodSignature'].includes(member.type)&&!member.computed&&(member.key.name??member.key.value)===key);
    if(members.length!==1||members[0].optional)continue;
-   const result=patternType(property.value,members[0].typeAnnotation?.typeAnnotation,name,resolve,depth+1);if(result)return result;
+   const member=members[0];let type=member.typeAnnotation?.typeAnnotation;
+   if(member.type==='TSMethodSignature'){
+    if(!type||member.kind&&member.kind!=='method')continue;
+    type={type:'TSFunctionType',methodFunction:true,parameters:member.parameters,typeParameters:member.typeParameters,typeAnnotation:member.typeAnnotation,start:member.key.end,end:type.end};
+   }
+   const result=patternType(property.value,type,name,resolve,depth+1);if(result)return result;
   }
  }
  if(pattern.type==='ArrayPattern'&&contract.type==='TSTupleType'){

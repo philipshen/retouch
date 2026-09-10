@@ -10053,3 +10053,9 @@ Validation: all 801 unit tests passed (`/private/tmp/retouch-readonly-captures-u
 Added `npm run test:types:extraction`, using TypeScript from RT_INSPECTOR_FIXTURE without adding a runtime dependency. The suite compiles original and extracted source for 13 scenarios: inline props, callbacks, object aliases, named/nested tuples, nested objects, interfaces, alias chains, inherited objects, nested named types and readonly captures. JSX attributes have explicit string/callback contracts rather than an unrestricted intrinsic type.
 
 Validation: `RT_INSPECTOR_FIXTURE=/private/tmp/retouch-responsive-fixture npm --prefix retouch run test:types:extraction` passed with TypeScript 5.9.3 (`/private/tmp/retouch-extraction-types-suite.log`, exit 0). This makes the previously manual compiler probes repeatable. No production code or native launch changed in this stage. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Method-style TypeScript prop captures
+
+Extraction now converts destructured method signatures into callable prop annotations, including inherited methods and named argument aliases. It retains the return type and parameters while changing method syntax into function-type syntax. Optional methods and accessors are refused rather than treated as required functions.
+
+Validation: all 803 unit tests passed (`/private/tmp/retouch-method-captures-units.log`). The reusable strict compiler suite now contains 14 scenarios and passed (`/private/tmp/retouch-method-captures-compiler.log`), including an inherited method invoked by the extracted click handler. No browser run in this planner expansion. Full Figma parity remains incomplete; native launches remain paused.

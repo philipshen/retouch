@@ -244,3 +244,10 @@ test('typed extraction preserves readonly arrays and whole tuples while resolvin
   ['const values:readonly Label[]=["Hi"];','<article>{values.join(",")}</article>','"values": (readonly (string)[])']
  ]){const f=fixture('type Label=string;function Page(){'+declaration+'return '+body+'}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);assert.ok(result.edits[0].after.includes(expected));}finally{f.close();}}
 });
+
+test('typed extraction converts destructured method signatures to callable props',()=>{
+ const f=fixture('type Label=string;interface Base{onSelect(value:Label):void}interface Props extends Base {}function Page({onSelect}:Props){return <article onClick={()=>onSelect("Hi")}>Hi</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);assert.ok(result.edits[0].after.includes('"onSelect": ((value:(string))=>void)'));}finally{f.close();}
+});
+test('typed extraction does not treat optional methods or accessors as required callables',()=>{
+ for(const member of ['onSelect?(value:string):void','get onSelect():string']){const f=fixture('interface Props{'+member+'}function Page({onSelect}:Props){return <article>{String(onSelect)}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);}finally{f.close();}}
+});
