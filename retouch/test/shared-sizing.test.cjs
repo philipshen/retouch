@@ -89,3 +89,12 @@ test('shared item alignment preserves the companion axis of place-self shorthand
  assert.ok(shared.change('md:![place-self:start_end]','md:','align-self','last baseline').includes('md:![align-self:last_baseline]'));
  assert.throws(()=>shared.change(source,'md:','align-self','space-between'),/supported shared style/);
 });
+
+
+test('shared grid spans replace one placement axis while preserving the other and shorthand priority',()=>{
+ const source='col-span-1 md:!col-start-2 md:col-end-4 md:row-start-2 lg:col-span-4';
+ const result=shared.change(source,'md:','grid-column','2');assert.ok(result.includes('md:!col-span-2'));assert.ok(!result.includes('md:!col-start-2'));assert.ok(!result.includes('md:col-end-4'));assert.ok(result.includes('md:row-start-2'));assert.ok(result.includes('lg:col-span-4'));
+ assert.ok(shared.change('md:![grid-area:1_/_2_/_3_/_4] md:[grid-row-start:2]','md:','grid-row','full').includes('md:!row-span-full'));
+ const row=shared.change(result,'md:','grid-row',2);assert.ok(row.includes('md:row-span-2'));assert.ok(!row.includes('md:row-start-2'));assert.ok(row.includes('md:!col-span-2'));
+ for(const value of [0,25,1.5,'span 2','2;display:none'])assert.throws(()=>shared.change(source,'md:','grid-column',value),/supported shared style/);
+});
