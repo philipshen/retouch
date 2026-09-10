@@ -8205,3 +8205,16 @@ that a saved 160px width stays rendered while its empty draft is rejected, then
 verifies Escape, explicit unset and exact Undo/Redo. This is a targeted UI change;
 the unit suite was not rerun. Full parity remains incomplete and native launches
 remain paused.
+
+
+## Focus after property actions (2026-09-10)
+
+Reset, Unset and Set empty text now queue focus for the resulting property control
+by accessible label. This uses the existing selection, expiry and deliberate-input
+cancellation checks; matching a label also permits a reset to change control type.
+The source operation and history behavior remain unchanged.
+
+Chromium and WebKit verify focus after reset, unset, and keyboard activation of Set empty
+text/Unset, then continue through validation and exact Undo/Redo. This was a
+focused UI change; the unit suite was not rerun. Full parity remains incomplete,
+and native launches remain paused.

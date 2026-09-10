@@ -40,12 +40,15 @@ window.RetouchPanelFocus={queue(target,label){
   if(!panelBody.contains(target))return;
   const identityTarget=target.cloneNode(true);if(label)identityTarget.setAttribute('aria-label',label);
   pendingPanelFocus={selection:panelSelectionKey(),identity:controlIdentity(identityTarget),index:0,expires:0,retain:true};
+},queueControl(target,label){
+  if(!panelBody.contains(target)||typeof label!=='string')return;
+  pendingPanelFocus={selection:panelSelectionKey(),controlLabel:label,index:0,expires:0,retain:true};
 }};
 function restorePanelFocus(){
   const pending=pendingPanelFocus;if(!pending||panelBody.disabled)return;
   if(!pending.expires)pending.expires=Date.now()+3000;
   if(pending.selection!==panelSelectionKey()||Date.now()>pending.expires){pendingPanelFocus=null;return;}
-  const candidates=[...panelBody.querySelectorAll('input,select,textarea,button,summary,[tabindex]')].filter(el=>controlIdentity(el)===pending.identity);
+  const candidates=[...panelBody.querySelectorAll('input,select,textarea,button,summary,[tabindex]')].filter(el=>pending.controlLabel?el.matches('input,select,textarea')&&el.getAttribute('aria-label')===pending.controlLabel:controlIdentity(el)===pending.identity);
   const target=candidates[pending.index];
   if(target&&!target.matches(':disabled')&&target.getClientRects().length){if(!pending.retain)pendingPanelFocus=null;if(document.activeElement!==target)target.focus();}
 }
@@ -1265,10 +1268,10 @@ function propTable(props,instanceId,fileHash) {
         if(!input.reportValidity())return;const next=meta.type==='boolean'?input.checked:meta.type==='number'?Number(input.value):input.value;if(next!==meta.value)setComponentProperty(instanceId,prop.name,next,fileHash,{definitionHash:meta.definitionHash});
       });
       input.addEventListener('keydown',event=>{if(event.isComposing)return;if(event.key==='Enter'&&(meta.type!=='string'||event.metaKey||event.ctrlKey)){event.preventDefault();event.stopPropagation();window.RetouchPanelFocus.queue(input);input.blur();restorePanelFocus();}if(event.key==='Escape'){event.preventDefault();event.stopPropagation();clearError();if(meta.type==='boolean')input.checked=meta.value;else input.value=meta.unset?'':String(meta.value);if(emptyButton)emptyButton.hidden=false;if(meta.type==='string')sizeComponentText(input);input.blur();}});value.append(input);
-      if(meta.unset&&meta.type==='string'){emptyButton=RetouchInspector.button('Set empty text',()=>setComponentProperty(instanceId,prop.name,'',fileHash,{definitionHash:meta.definitionHash}));emptyButton.setAttribute('aria-label','Set '+prop.name+' to empty text');input.addEventListener('input',()=>{emptyButton.hidden=input.value!=='';});value.append(emptyButton);}
+      if(meta.unset&&meta.type==='string'){emptyButton=RetouchInspector.button('Set empty text',()=>{window.RetouchPanelFocus.queueControl(emptyButton,'Component property '+prop.name);setComponentProperty(instanceId,prop.name,'',fileHash,{definitionHash:meta.definitionHash});});emptyButton.setAttribute('aria-label','Set '+prop.name+' to empty text');input.addEventListener('input',()=>{emptyButton.hidden=input.value!=='';});value.append(emptyButton);}
     }else{value.textContent=prop.value;value.title=prop.editor?.reason||'';}
-    if(instanceId&&prop.editor?.canReset){const reset=RetouchInspector.button('Reset',()=>setComponentProperty(instanceId,prop.name,undefined,fileHash,{reset:true,definitionHash:prop.editor.definitionHash}));reset.setAttribute('aria-label','Reset '+prop.name+' to default');reset.title='Remove this instance override and use the component default.';value.append(reset);}
-    if(instanceId&&prop.editor?.canClear&&!prop.editor.choices){const clear=RetouchInspector.button('Unset',()=>setComponentProperty(instanceId,prop.name,undefined,fileHash,{clear:true,definitionHash:prop.editor.definitionHash}));clear.setAttribute('aria-label','Unset property '+prop.name);value.append(clear);}
+    if(instanceId&&prop.editor?.canReset){const reset=RetouchInspector.button('Reset',()=>{window.RetouchPanelFocus.queueControl(reset,'Component property '+prop.name);setComponentProperty(instanceId,prop.name,undefined,fileHash,{reset:true,definitionHash:prop.editor.definitionHash});});reset.setAttribute('aria-label','Reset '+prop.name+' to default');reset.title='Remove this instance override and use the component default.';value.append(reset);}
+    if(instanceId&&prop.editor?.canClear&&!prop.editor.choices){const clear=RetouchInspector.button('Unset',()=>{window.RetouchPanelFocus.queueControl(clear,'Component property '+prop.name);setComponentProperty(instanceId,prop.name,undefined,fileHash,{clear:true,definitionHash:prop.editor.definitionHash});});clear.setAttribute('aria-label','Unset property '+prop.name);value.append(clear);}
     if(prop.editor?.inherited){const note=document.createElement('small');note.textContent='Default';value.append(note);}
     row.append(name,value,fallback);body.append(row);
   }
