@@ -3,7 +3,7 @@
   const toggle=document.getElementById('compareScreens'),rail=document.getElementById('screenComparisons'),main=document.getElementById('app');
   const project=window.__RT_RENDERING?.stateScope?.project;
   const storageKey='retouch.comparisons.v1'+(typeof project==='string'&&/^[a-f0-9]{64}$/.test(project)?':'+project:'');
-  let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore,allPreviews;
+  let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore,allPreviews,revealAll;
   const collapsedNames=new Set(),sizeHistories=new WeakMap(),lockedRatios=new WeakSet();let previewSerial=0;
   try{const saved=JSON.parse(localStorage.getItem(storageKey+'.collapsed'));if(Array.isArray(saved)&&saved.length<=8)for(const name of saved)if(typeof name==='string'&&name.length<=80)collapsedNames.add(name);}catch{}
   const removed=[],orderUndo=[],orderRedo=[];let removals=0,undoOrder,redoOrder;
@@ -24,6 +24,7 @@
     for(const item of cards){if(item.previewBody.hidden)continue;const bounds=item.viewport.getBoundingClientRect();Object.assign(item.surface.style,{left:bounds.left-railBounds.left+rail.scrollLeft-rail.clientLeft+'px',top:bounds.top-railBounds.top+rail.scrollTop-rail.clientTop+'px',width:bounds.width+'px',height:bounds.height+'px'});}
   }
   function updateControls(){
+    if(revealAll)revealAll.disabled=!selected||!cards.length;
     if(allPreviews){allPreviews.disabled=!cards.length;allPreviews.textContent=cards.some(card=>!card.previewBody.hidden)?'Hide all previews':'Show all previews';allPreviews.setAttribute('aria-controls',cards.map(card=>card.previewBody.id).join(' '));}
     const size=current();
     if(undoOrder)undoOrder.disabled=!orderUndo.length||removals>0||loadingSet;
@@ -128,6 +129,8 @@
     const files=document.createElement('div');files.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px';
     allPreviews=document.createElement('button');allPreviews.type='button';allPreviews.className='control-button';allPreviews.title='Collapse previews to manage screen sizes, or expand them again. Keeps each page loaded.';
     allPreviews.onclick=()=>{const hide=cards.some(card=>!card.previewBody.hidden);for(const card of cards)card.setCollapsed(hide);remember();updateControls();};files.append(allPreviews);
+    revealAll=document.createElement('button');revealAll.type='button';revealAll.className='control-button';revealAll.textContent='Show selection in all previews';revealAll.title='Expand comparisons and scroll each page to the selected layer. Repeat to cycle repeated instances.';
+    revealAll.onclick=()=>{if(!selected)return;for(const card of cards)card.setCollapsed(false);remember();updateControls();clearTimeout(timer);paint();for(const card of cards)card.reveal.click();};files.append(revealAll);
     const saveSet=document.createElement('button');saveSet.type='button';saveSet.className='control-button';saveSet.textContent='Save screen set';
     saveSet.onclick=()=>{
       const text=JSON.stringify({version:1,screens:sizes.map(size=>({name:size[0],width:size[1],height:size[2],lockAspectRatio:lockedRatios.has(size)}))},null,2)+'\n';

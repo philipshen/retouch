@@ -17,7 +17,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   await wait(async()=>await card('Desktop').locator('.compare-selection').count()===0&&await card('Desktop').locator('p.hint').textContent()==='Selected layer is outside this viewport');
   const mainScrollBefore=await app.locator('body').evaluate(()=>[scrollX,scrollY]);
   assert.equal(await page.getByRole('button',{name:'Show selection in Phone comparison',exact:true}).isDisabled(),true);
-  await page.getByRole('button',{name:'Show selection in Desktop comparison',exact:true}).click();
+  await preview('Desktop').locator('body').evaluate(()=>{window.bulkRevealMarker='retained';});await page.getByRole('button',{name:'Hide all previews',exact:true}).click();await page.getByRole('button',{name:'Show selection in all previews',exact:true}).click();assert.equal(await page.locator('.compare-surface:visible').count(),3);assert.equal(await preview('Desktop').locator('body').evaluate(()=>window.bulkRevealMarker),'retained');assert.equal(await page.getByRole('button',{name:'Show selection in Phone comparison',exact:true}).isDisabled(),true,'hidden responsive layers remain unavailable');
   assert.deepEqual(await app.locator('body').evaluate(()=>[scrollX,scrollY]),mainScrollBefore);assert.equal(fs.readFileSync(file,'utf8'),original);
   await wait(async()=>await card('Desktop').locator('.compare-selection').count()===1&&await card('Desktop').locator('p.hint').textContent()==='Selected layer · 1 instance');
   await preview('Desktop').locator('article').evaluate(el=>{
@@ -93,7 +93,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   assert.deepEqual(await page.locator('.compare-card').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('aria-label'))),beforeRemoval);
   assert.equal(await preview('Desktop').locator('body').evaluate(()=>window.restoreSiblingMarker),'preserved');assert.equal(fs.readFileSync(file,'utf8'),original);
   const savedEvent=page.waitForEvent('download');await page.getByRole('button',{name:'Save screen set',exact:true}).click();const savedDownload=await savedEvent;assert.equal(savedDownload.suggestedFilename(),'retouch-screens.json');const savedPath=path.join(root,'saved-screens.json');await savedDownload.saveAs(savedPath);
-  const savedSet=JSON.parse(fs.readFileSync(savedPath,'utf8'));assert.equal(savedSet.version,1);assert.equal(savedSet.screens.length,4);assert.deepEqual(savedSet.screens.at(-1),{name:'Checkout narrow',width:820,height:500});
+  const savedSet=JSON.parse(fs.readFileSync(savedPath,'utf8'));assert.equal(savedSet.version,1);assert.equal(savedSet.screens.length,4);assert.deepEqual(savedSet.screens.at(-1),{name:'Checkout narrow',width:820,height:500,lockAspectRatio:false});
   const load=async value=>page.getByLabel('Screen set file',{exact:true}).setInputFiles({name:'screens.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(value))});
   await load({version:1,screens:[{name:'One',width:400,height:600},{name:'Two',width:400,height:600}]});await wait(async()=>/unique/.test(await page.getByLabel('Screen set status',{exact:true}).textContent()));
   assert.deepEqual(await page.locator('.compare-card').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('aria-label'))),beforeRemoval);assert.equal(await preview('Desktop').locator('body').evaluate(()=>window.restoreSiblingMarker),'preserved');
