@@ -9061,3 +9061,40 @@ persistent runtime identity, independent per-render overrides and full fragment
 layout editing remain open. Full Figma Design parity and arbitrary-site support
 are incomplete. Native launches remain paused; trusted brew distribution is
 unverified.
+
+### Duplicate component roots and expression results (2026-09-10)
+
+Component duplication no longer requires the selected usage to be a JSX sibling.
+A direct return or expression result is wrapped in a transparent fragment holding
+the retained usage and its linked copy. The planner maps both new source IDs and
+keeps the previous ID for exact history restoration. Unkeyed roots use shorthand
+fragments. Keyed roots use a collision-free imported React Fragment alias and
+move the existing key to that outer fragment; the key expression remains present
+once and the copy gets a distinct key. No DOM layout wrapper or duplicate
+component definition is introduced.
+
+Root duplicate refresh now waits for the new usage revision. Duplicate Undo/Redo
+has an explicit usage-based refresh/selection path instead of relying on a parent
+ID that may not exist after a root's structural path changes. Fixed DOM identities,
+refs and spreads retain their existing duplication guards.
+
+Validation: 710 unit tests passed. A subsequent 14-test source suite also passed
+after adding an unkeyed-root case. Source tests cover direct returns, ternaries,
+logical-expression results, keyed callback results, alias collisions, single key
+expression evaluation, mapping both usages and exact reverse transactions.
+Chromium and WebKit passed root Layers-button and keyboard duplication, independent
+copy label editing, Undo/Redo, and subsequent detach history. The broader framed
+sibling insertion/required-props/branch/duplicate/property flow passed in Chromium.
+All browser processes terminated with exit zero and strict empty page-error
+assertions. Evidence:
+/private/tmp/retouch-root-duplicate-units-keyed.log,
+/private/tmp/retouch-root-duplicate-source-final.log,
+/private/tmp/retouch-root-duplicate-chromium-keyed.log,
+/private/tmp/retouch-root-duplicate-webkit-keyed.log,
+/private/tmp/retouch-root-duplicate-framed.log.
+
+Wrapping a root changes the React component tree; preserving transient runtime
+state across that structural edit is not established. Component tree move/rename/
+copy/delete, persistent runtime identity, per-render overrides and fragment layout
+editing remain open. Full Figma Design parity and arbitrary-site support remain
+incomplete. Native launches remain paused; trusted brew distribution is unverified.

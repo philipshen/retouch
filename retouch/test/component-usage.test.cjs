@@ -48,7 +48,7 @@ test('component library groups aliases, keeps exports and explicit single usages
 
 test('usage descriptors expose source-supported component duplication and its refusal reason',()=>{
  const {makeApp,cleanup}=require('./helpers.cjs'),root=fs.realpathSync(makeApp({'Card.tsx':'export function Card(){return <article/>}','Page.tsx':'import {Card} from "./Card";export function Page(){return <main><Card/></main>}export function Root(){return <Card/>}'})),index=new Index(root);try{
-  index.scanAll();const instances=[...index.idToFile.keys()].map(id=>index.resolve(id)).filter(item=>item.element.kind==='instance');assert.equal(instances.length,2);const supported=describe(index,instances[0]),rootUsage=describe(index,instances[1]);assert.equal(supported.canDuplicateComponent,true);assert.equal(rootUsage.canDuplicateComponent,false);assert.match(rootUsage.componentDuplicateReason,/containing frame/);
+  index.scanAll();const instances=[...index.idToFile.keys()].map(id=>index.resolve(id)).filter(item=>item.element.kind==='instance');assert.equal(instances.length,2);const supported=describe(index,instances[0]),rootUsage=describe(index,instances[1]);assert.equal(supported.canDuplicateComponent,true);assert.equal(rootUsage.canDuplicateComponent,true);
   fs.writeFileSync(path.join(root,'Card.tsx'),'export function Card(){return <article id="fixed"/>}');index.indexFile(path.join(root,'Card.tsx'));assert.equal(describe(index,index.resolve(instances[0].element.id)).canDuplicateComponent,false);assert.match(describe(index,index.resolve(instances[0].element.id)).componentDuplicateReason,/fixed DOM id/);
  }finally{index.close();cleanup(root);}
 });

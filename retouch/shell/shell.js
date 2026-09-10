@@ -1344,7 +1344,7 @@ async function duplicateInstance(id,context) {
     editorHistory.record({type:'duplicateComponent',id:copied.parentId||id,instanceCopyId:copied.instanceId,instanceOriginalId:id,undoId:result.undoId});
     const copy=await api('GET',resolveUrl(copied.instanceId)),parent=copied.parentId?await api('GET',resolveUrl(copied.parentId)):null;
     if(parent?.ok)await refreshWrittenElement(parent.element,el=>!!el.ownerDocument.querySelector('[data-rt-i="'+copied.instanceId+'"]'));
-    else if(copy?.ok)await refreshWrittenElement({...copy.element,renderRevisionAttribute:null},el=>el.getAttribute('data-rt-i')===copied.instanceId);
+    else if(copy?.ok)await refreshWrittenElement(copy.element,el=>el.getAttribute('data-rt-i')===copied.instanceId);
     else await reloadFrame();
     const component=await api('GET',componentUrl(copied.instanceId));
     if(copy?.ok&&component?.ok){sel={hostId:mountedComponentHost(copied.instanceId,component,copy.element.context)?.getAttribute('data-rt')||component.definitionId,instanceId:copied.instanceId,scope:'instance',info:copy.element};renderPanel();}
@@ -2172,6 +2172,7 @@ async function restoreHistory(direction,op) {
   try {
     await showHistoryPage(op.route);
     if(['insertComponent','swapComponent'].includes(op.type)){const parentId=direction==='redo'?op.id:op.previousParentId,parent=parentId?await api('GET',resolveUrl(parentId)):null;if(op.type==='swapComponent')await refreshSwappedComponent(direction==='redo'?op.instanceId:op.previousInstanceId,parentId);else if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else await reloadFrame();if(direction==='redo')await selectInsertedComponent(op.instanceId,op.id);else if(op.type==='swapComponent')await selectInsertedComponent(op.previousInstanceId,op.previousParentId);else if(parent?.ok){sel={hostId:parentId,instanceId:null,scope:'host',info:parent.element};renderPanel();}else clearSelection();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='collectionSelection'){await reloadFrame();await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
@@ -2184,7 +2185,6 @@ async function restoreHistory(direction,op) {
       const component = op.type === 'detachComponent'||op.type==='createComponent'&&direction==='redo' ? await api('GET', componentUrl(op.id,op.context)) : null;
       await refreshWrittenElement(info, el => {
         if(selectionResult)return selectionResult.every(result=>result?.ok)&&classSelectionMatches(selectionResult.map(result=>result.element),el.ownerDocument);
-        if(op.type==='duplicateComponent'){const found=!!el.ownerDocument.querySelector('[data-rt-i="'+op.instanceCopyId+'"]');return direction==='undo'?!found:found;}
         if(op.svgCreatedId){const found=matchingInDocument(el.ownerDocument,op.svgCreatedId,null).length>0;return direction==='undo'?!found:found;}
         if(op.type==='createComponent'&&direction==='undo')return el.getAttribute('data-rt')===op.id;
         if (component?.ok) return (component.definitionIds || [component.definitionId]).includes(el.getAttribute('data-rt'));
@@ -2199,7 +2199,7 @@ async function restoreHistory(direction,op) {
       });
       if(op.type==='createComponent'&&component?.ok)sel={hostId:component.definitionId,instanceId:op.id,scope:'instance',info};
     } else await reloadFrame();
-    if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId,usage=await api('GET',resolveUrl(id)),component=await api('GET',componentUrl(id));if(usage?.ok&&component?.ok)sel={hostId:mountedComponentHost(id,component,usage.element.context)?.getAttribute('data-rt')||component.definitionId,instanceId:id,scope:'instance',info:usage.element};}
+
     const selectionIds=direction==='undo'?op.selectionBefore||op.selectionIds:op.selectionAfter||op.selectionIds;
     if(sel&&selectionIds)await restoreLayerSelection(selectionIds);
     if (sel) renderPanel();

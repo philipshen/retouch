@@ -74,8 +74,8 @@ test('component duplication keeps a shared definition and gives the copy a disti
   assert.ok(require('../src/transactions.cjs').applyPlan(f.root,plan).ok);f.index.scanAll();const original=adapter.describeComponent(f.index.resolve(usage.element.id)),copy=adapter.describeComponent(f.index.resolve(plan.duplicatedComponent.instanceId));assert.ok(copy.ok,copy.reason);assert.equal(original.definitionId,copy.definitionId);assert.equal(require('../src/component-usage.cjs').usage(f.index,usage.element.id).usageCount,2);
  }finally{f.close();}
 });
-test('component duplication refuses roots and ambiguous identities without writing',()=>{
- for(const jsx of ['<Card/>','<main><Card ref={ref}/></main>','<main><Card {...props}/></main>','<main><Card><span id="unique"/></Card></main>']){
+test('component duplication refuses ambiguous identities without writing',()=>{
+ for(const jsx of ['<main><Card ref={ref}/></main>','<main><Card {...props}/></main>','<main><Card><span id="unique"/></Card></main>']){
   const source='function Page(){return '+jsx+'} function Card(){return <article/>}',f=fixture(source);try{const usage=[...f.index.idToFile.keys()].map(id=>f.index.resolve(id)).find(r=>r.element.kind==='instance');assert.equal(require('../src/duplicate-component.cjs').plan(usage,{fileHash:usage.hash}).ok,false);assert.equal(fs.readFileSync(usage.file,'utf8'),source);}finally{f.close();}
  }
 });
@@ -112,4 +112,20 @@ test('extraction refuses untyped TS props and deferred reads before local initia
 
 test('prototype-named captures use safe JSX prop names',()=>{
  const f=fixture('function Page({__proto__}){return <article>{__proto__}</article>}');try{const plan=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(plan.ok,plan.reason);assert.ok(plan.edits[0].after.includes('<Card retouchValue0={__proto__} />'));assert.ok(plan.edits[0].after.includes('function Card({ retouchValue0: __proto__ })'));}finally{f.close();}
+});
+
+
+test('root and expression duplication uses a transparent fragment and maps both linked usages',()=>{
+ for(const jsx of ['<Card/>','<Card key="original"/>','enabled ? <Card key="original"/> : null','<main>{enabled && <Card key="original"/>}</main>']){
+  const source='export function Page({enabled}){return '+jsx+'} export function Card(){return <article/>}',f=fixture(source);try{
+   const usage=[...f.index.idToFile.keys()].map(id=>f.index.resolve(id)).find(r=>r.element.kind==='instance'),plan=require('../src/duplicate-component.cjs').plan(usage,{fileHash:usage.hash});assert.equal(plan.ok,true,plan.reason);assert.equal(plan.duplicatedComponent.wrapped,true);if(jsx.includes('key='))assert.match(plan.edits[0].after,/<RetouchFragment key="original"><Card \/>/);else assert.match(plan.edits[0].after,/<><Card\/>/);assert.ok(require('../src/transactions.cjs').applyPlan(f.root,plan).ok);f.index.scanAll();const original=f.index.resolve(plan.duplicatedComponent.retainedInstanceId),copy=f.index.resolve(plan.duplicatedComponent.instanceId);assert.ok(original&&copy);assert.notEqual(original.element.id,copy.element.id);assert.equal(adapter.describeComponent(original).definitionId,adapter.describeComponent(copy).definitionId);assert.equal((plan.edits[0].after.match(/function Card/g)||[]).length,1);const undo={ok:true,edits:plan.edits.map(edit=>({file:edit.file,before:edit.after,after:edit.before}))};assert.equal(require('../src/transactions.cjs').applyPlan(f.root,undo).ok,true);assert.equal(fs.readFileSync(usage.file,'utf8'),source);
+  }finally{f.close();}
+ }
+});
+
+
+test('duplicated keyed callback results retain the list key without reevaluating its expression',()=>{
+ const source='export function Page({items}){const RetouchFragment=1;return <main>{items.map(item=><Card key={item.key()} title={item.title}/>)}</main>}export function Card(){return <article/>}',f=fixture(source);try{
+  const usage=[...f.index.idToFile.keys()].map(id=>f.index.resolve(id)).find(r=>r.element.kind==='instance'),plan=require('../src/duplicate-component.cjs').plan(usage,{fileHash:usage.hash});assert.equal(plan.ok,true,plan.reason);const after=plan.edits[0].after;assert.match(after,/<RetouchFragment1 key=\{item.key\(\)\}>/);assert.equal((after.match(/item.key\(\)/g)||[]).length,1);assert.match(after,/import \{ Fragment as RetouchFragment1 \} from "react"/);assert.equal(require('../src/id.cjs').collectElements(after,'page.jsx').elements.filter(el=>el.kind==='instance').length,2);assert.equal(fs.readFileSync(usage.file,'utf8'),source);
+ }finally{f.close();}
 });
