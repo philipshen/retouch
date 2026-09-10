@@ -7275,3 +7275,28 @@ Undo. Next.js and local Liquid flows verify tablet-to-desktop overrides, tablet
 isolation and exact Undo in
 `/private/tmp/retouch-inherited-var-{react,liquid}.log`. Native launches remain
 paused; full Figma parity remains incomplete.
+
+### Linked variable collection model (2026-09-10)
+
+Added `src/variable-collections.cjs` as the foundation for named collection modes.
+Versioned data assigns stable UUIDs to collections, modes and variables, with
+collection-local names, explicit default modes and complete per-mode values.
+Color, number, boolean and string values retain their types. Color values retain
+explicit sRGB/Display P3; CSS identifiers derive from stable IDs rather than
+editable names. Bounds cover collection/mode/variable counts and serialized size.
+
+Aliases reference variable identity and must target the same type. Resolution
+uses each target collection's independently selected mode and returns the exact
+variable/collection/mode path. Cycle checks use the actual complete mode
+selection, so a cycle present only when two collections choose particular modes
+is refused without treating every possible union of alias edges as cyclic.
+Structural validation permits such conditional graphs; consumers must resolve
+before applying a mode selection.
+
+All 549 unit tests pass in
+`/private/tmp/retouch-variable-collection-units.log`. Four new tests cover
+cross-collection modes, provenance, rename-stable identities, complete values,
+invalid/missing references, typed literals and combination-specific cycles.
+This module is not yet connected to persistence, binding adapters or UI; it does
+not claim user-visible collection/mode support. Those integrations remain next
+work toward the full feature. Native launches remain paused.
