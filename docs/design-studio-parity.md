@@ -7846,3 +7846,27 @@ but this turn's Liquid browser checks do not establish comprehensive coverage of
 those controls. Cross-file selection, general flow-layout editing, live Shopify,
 ancestor collection modes and full Figma parity remain incomplete. Native launches
 remain paused.
+
+### Liquid selection resize and gap verification (2026-09-10)
+
+The dynamic Liquid shared-class browser flow now also verifies group resize and
+gap editing. Resize preview does not write source; Escape restores the measured
+bounds. Shift plus a resize arrow preserves proportions, and committing scales
+both members' widths and heights. Numeric vertical gap editing keeps the leading
+layer fixed. The vertical gap handle responds to Up/Down; its canceled preview
+leaves source and bounds unchanged, and Enter commits the expected gap. All new
+edits participate in the existing exact multi-step source Undo check.
+
+Both Chromium and WebKit pass:
+`/private/tmp/retouch-liquid-resize-gaps-final-chromium.log` and
+`/private/tmp/retouch-liquid-resize-gaps-final-webkit.log`.
+The screenshot `/private/tmp/retouch-liquid-resize-gaps.png` was inspected.
+The first test run used incorrect keyboard expectations (ten-pixel Shift resize
+and a horizontal arrow for vertical spacing); the corrected tests follow the
+existing proportional-resize and axis-specific spacing behavior. No production
+behavior was changed for those assumptions.
+
+This adds rendered verification for two-layer local Liquid selections. It does
+not establish independent-gap isolation across three or more Liquid layers,
+complete pointer/zoom coverage, live Shopify behavior, or full Figma parity.
+Native launches remain paused.
