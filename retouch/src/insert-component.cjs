@@ -34,6 +34,8 @@ function plan(resolved,op){
   if(file===resolved.file){
    const binding=selected.scope.getBinding(local),bindingStart=binding?.path.node.init?.start??binding?.path.node.start;
    if(bindingStart!==def.fn.start)throw Error('This component name is not accessible in the selected frame.');
+  }else if(local=require('./component-import-binding.cjs')(ast,selected,root,file,{...def,usageFile:resolved.file},checks)){
+   // Keep the existing module import and all pre-existing source IDs unchanged.
   }else{
    const exported=def.exports.find(name=>name==='default'||/^[A-Z][\w$]*$/.test(name));if(!exported)throw Error('Export this component before inserting it into another file.');
    let specifier=path.relative(path.dirname(resolved.file),file).split(path.sep).join('/').replace(/\.(jsx|tsx)$/,'');if(!specifier.startsWith('.'))specifier='./'+specifier;

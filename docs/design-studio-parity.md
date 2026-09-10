@@ -8639,3 +8639,33 @@ contracts, optional property configuration before insertion, import reuse,
 client/server boundaries, full variants and arbitrary-site authoring remain
 incomplete. Full Figma Design parity and trusted brew distribution are unachieved.
 Native app launches and native launch tests remain paused.
+
+
+### Reuse compatible component imports during insertion
+
+Insertion now reuses visible direct named, aliased, default and namespace value
+imports that refer to the chosen definition/export. It checks the lexical binding
+at the selected frame, so a shadowed import is not reused. Type-only imports and
+lowercase plain names that would become host tags also receive a fresh generated
+binding. Namespace members retain their authored object binding. Existing import
+text is preserved, and insertion without a new import keeps the parent source ID.
+Explicit-extension imports can be reused even when another file shares the stem;
+extensionless imports retain candidate snapshots and reject changed/ambiguous
+resolution before writes.
+
+Validation: 683 unit tests passed. New cases cover named/default/alias/namespace
+resolution back to the selected function, parent-ID stability, lexical shadowing,
+type-only imports, lowercase aliases, explicit extensions, and a competing module
+appearing between planning and commit. Chromium passed the full insertion and
+property/library workflow with an existing named import; WebKit passed with an
+existing namespace import. Both assert no redundant import, correct inserted JSX,
+independent edits, required-property insertion and exact Undo/Redo, and retain
+strict empty page-error checks. Both browser handles ended with exit zero.
+Logs: /private/tmp/retouch-import-reuse-units.log,
+/private/tmp/retouch-import-reuse-chromium.log and
+/private/tmp/retouch-import-reuse-webkit.log.
+
+Reuse through configured path aliases, directory indexes and re-export barrels
+remains incomplete. Other component, arbitrary-site, responsive-design and full
+Figma Design parity gaps remain open, as does trusted brew distribution. Native
+app launches and native launch tests stay paused.

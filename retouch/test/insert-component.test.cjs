@@ -32,3 +32,27 @@ test('insertion descriptors expose required controls and reject stale form contr
   const file=path.join(f.root,'parts/types.ts');fs.writeFileSync(file,'export interface Props {label:string;count:number;enabled:boolean;tone:"calm"|"bold";note?:string}');f.index.scanAll();const descriptor=definitions.describe(f.index.resolve(f.op.definitionId));assert.ok(descriptor.insertion.ok);assert.deepEqual(descriptor.insertion.properties.filter(prop=>prop.required).map(prop=>[prop.name,prop.type,prop.supported]),[['label','string',true],['count','number',true],['enabled','boolean',true],['tone','string',true]]);assert.equal(descriptor.insertion.properties.find(prop=>prop.name==='note').required,false);const op={...f.op,contractHash:descriptor.insertion.revision,props:{label:'',count:0,enabled:false,tone:'bold'}};assert.ok(planner.plan(f.resolved,op).ok);fs.appendFileSync(file,'\n// changed');assert.match(planner.plan(f.resolved,op).reason,/properties changed/);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.page);
  }finally{f.close();}
 });
+test('insertion reuses visible named, aliased, default and namespace value imports',()=>{
+ for(const [header,component,tag] of [
+  ['import {Card} from "./parts/Card";','export function Card(){return <article/>}','Card'],
+  ['import {PublicCard as Existing} from "./parts/Card";','function Card(){return <article/>}export {Card as PublicCard};','Existing'],
+  ['import Existing from "./parts/Card";','export default function Card(){return <article/>}','Existing'],
+  ['import * as cards from "./parts/Card";','export function Card(){return <article/>}','cards.Card'],
+  ['import * as cards from "./parts/Card";','export default function Card(){return <article/>}','cards.default'],
+ ]){
+  const f=fixture(header+'export default function Page(){return <main/>}',component);try{const plan=planner.plan(f.resolved,f.op);assert.ok(plan.ok,plan.reason);assert.equal((plan.edits[0].after.match(/import /g)||[]).length,1);assert.ok(plan.edits[0].after.includes('<'+tag+'/>'));assert.equal(plan.insertedComponent.parentId,f.resolved.element.id);assert.ok(tx.applyPlan(f.root,plan).ok);f.index.scanAll();const inserted=f.index.resolve(plan.insertedComponent.instanceId),def=require('../src/components.cjs').definition(inserted);assert.equal(def.file,path.join(f.root,'parts/Card.tsx'));assert.equal(def.fn.start,definitions.definitions(component,'parts/Card.tsx')[0].fn.start);}finally{f.close();}
+ }
+});
+test('shadowed, type-only and lowercase host-like imports are not reused as component bindings',()=>{
+ for(const [header,body] of [
+  ['import {Card} from "./parts/Card";','const Card=()=>null;'],
+  ['import * as cards from "./parts/Card";','const cards={};'],
+  ['import type {Card} from "./parts/Card";',''],
+  ['import {type Card} from "./parts/Card";',''],
+  ['import {Card as card} from "./parts/Card";',''],
+ ]){const f=fixture(header+'export default function Page(){'+body+'return <main/>}');try{const plan=planner.plan(f.resolved,f.op);assert.ok(plan.ok,plan.reason);assert.equal((plan.edits[0].after.match(/import /g)||[]).length,2);assert.ok(!plan.edits[0].after.includes('<card/>'));}finally{f.close();}}
+});
+test('explicit-extension imports can be reused despite sibling stems, while reuse guards later path changes',()=>{
+ const f=fixture('import {Card as Existing} from "./parts/Card.tsx";export default function Page(){return <main/>}');try{fs.writeFileSync(path.join(f.root,'parts/Card.ts'),'export const Card=0;');const plan=planner.plan(f.resolved,f.op);assert.ok(plan.ok,plan.reason);assert.ok(plan.edits[0].after.includes('<Existing/>'));assert.equal((plan.edits[0].after.match(/import /g)||[]).length,1);}finally{f.close();}
+ const g=fixture('import {Card} from "./parts/Card";export default function Page(){return <main/>}');try{const plan=planner.plan(g.resolved,g.op);assert.ok(plan.ok,plan.reason);fs.writeFileSync(path.join(g.root,'parts/Card.js'),'export const Card=0;');assert.equal(tx.applyPlan(g.root,plan).ok,false);assert.equal(fs.readFileSync(g.resolved.file,'utf8'),g.page);}finally{g.close();}
+});
