@@ -248,7 +248,7 @@
       const undoSize=document.createElement('button'),redoSize=document.createElement('button');
       for(const button of [undoSize,redoSize]){button.type='button';button.className='control-button';button.disabled=true;}
       undoSize.textContent='Undo size';redoSize.textContent='Redo size';sizeHistory.append(undoSize,redoSize);
-      const updateSizeHistory=()=>{undoSize.disabled=!sizeUndo.length;redoSize.disabled=!sizeRedo.length;};
+      const updateSizeHistory=()=>{undoSize.disabled=!sizeUndo.length;redoSize.disabled=!sizeRedo.length;sizeHistory.hidden=!sizeUndo.length&&!sizeRedo.length;};
       const applyDimensions=(nextWidth,nextHeight,record=true,axis)=>{
         if(axis&&lockedRatios.has(size)){const next=window.RetouchScreens.constrain({width:nextWidth,height:nextHeight},axis,{width:history.ratio[0],height:history.ratio[1]},true);nextWidth=next.width;nextHeight=next.height;}
         if(!valid(nextWidth)||!valid(nextHeight))return;
