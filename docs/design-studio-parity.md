@@ -9987,3 +9987,9 @@ Validation: all 790 unit tests passed (`/private/tmp/retouch-create-types-units-
 Added a TSX extraction fixture with explicitly typed string captures and a callback that updates React state. The browser flow checks the generated prop annotations, creates the component through the inspector, clicks the extracted heading on a separate live page, edits its shared definition, and restores exact source/appearance through Undo/Redo.
 
 Validation: Chromium (`/private/tmp/retouch-typed-extraction-chromium.log`) and WebKit (`/private/tmp/retouch-typed-extraction-webkit.log`) both completed with exit 0. This is live Next/React behavior for explicit local type annotations; it does not expand support to inferred hook tuple types or complex TypeScript scopes. No production code changed in this verification stage. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Typed destructured locals and tuple captures
+
+Component extraction now reads explicit structural contracts on local object destructuring and tuple patterns. Renamed object properties and skipped tuple positions keep the correct capture types; named tuple members contribute their element type rather than their label. Optional, rest and defaulted positions remain refused where positional/type narrowing is not established.
+
+Validation: all 792 unit tests passed (`/private/tmp/retouch-capture-patterns-units.log`). Strict TypeScript compiler probes passed for generated components from object locals, plain tuples and named tuples with a skipped slot, including numeric arithmetic and string attributes. No live browser run in this planner-only expansion. Full Figma parity remains incomplete; native launches remain paused.

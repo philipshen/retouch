@@ -176,3 +176,18 @@ test('TypeScript extraction refuses capture types requiring scope or narrowing a
 test('typed extraction retains guards that narrow captured values outside the subtree',()=>{
  const f=fixture('function Page(value:unknown){if(typeof value==="string")return <article>{value.toUpperCase()}</article>}','page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/narrowing/);}finally{f.close();}
 });
+
+test('typed extraction reads object locals and positional tuple contracts',()=>{
+ for(const source of [
+  'function Page(){const {text:label,count}:{text:string;count:number}={text:"Hello",count:2};return <article title={label}>{count+1}</article>}',
+  'function Page(){const [label,count]:[string,number]=["Hello",2];return <article title={label}>{count+1}</article>}',
+  'function Page(){const [label,,count]:[text:string,unused:boolean,total:number]=["Hello",true,2];return <article title={label}>{count+1}</article>}'
+ ]){const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.ok(result.ok,result.reason);assert.ok(result.edits[0].after.includes('"label": (string)'));assert.ok(result.edits[0].after.includes('"count": (number)'));}finally{f.close();}}
+});
+test('typed tuple extraction refuses optional, rest, and defaulted positions',()=>{
+ for(const source of [
+  'function Page(){const [label]:[string?]=[];return <article>{label}</article>}',
+  'function Page(){const [label]:[...string[]]=[];return <article>{label}</article>}',
+  'function Page(){const [label="Hello"]:[string?]=[];return <article>{label}</article>}'
+ ]){const f=fixture(source,'page.tsx');try{const result=create.plan(f.selected,{name:'Card',fileHash:f.selected.hash});assert.equal(result.ok,false);assert.match(result.reason,/explicit type/);}finally{f.close();}}
+});
