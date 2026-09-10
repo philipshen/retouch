@@ -2412,7 +2412,8 @@ async function moveLayerInto(info,destinationId,position='inside'){
   try{
     const result=await api('POST','/rt/__api/op',{type:'reparentElement',id:info.id,fileHash:info.hash,destinationId,position});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not move layer','err');
-    editorHistory.record({type:'structure',id:result.parentId,undoId:result.undoId});await reloadFrame();
+    editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:[info.id],selectionAfter:[result.movedId],sourceIdMap:result.sourceIdMap,undoId:result.undoId});
+    if(result.sourceIdMap)layerLocks.remap(result.sourceIdMap);await reloadFrame();
     const fresh=await api('GET',resolveUrl(result.movedId));if(fresh?.ok){sel={hostId:result.movedId,instanceId:null,scope:'host',info:fresh.element};renderPanel();}
     toast('Layer moved','ok');
   }finally{busyPanel(false);}

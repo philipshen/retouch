@@ -45,3 +45,11 @@ test('HTML relative placement supports list siblings and refuses invalid placeme
  const outer=resolve('<html><body><main><section><p>Nested</p></section><aside></aside></main></body></html>','section');
  assert.equal(html.planOp(outer,{type:'reparentElement',destinationId:outer.elements.find(e=>e.tag==='p').id,position:'after'}).refused,true);
 });
+test('Single-layer moves map nested descendants and every sibling across placements',()=>{
+ for(const position of ['inside','before','after'])for(const markup of ['<section><h1>Title</h1><em>Child</em></section><p>Stays</p><aside><span>Anchor</span><b>Other</b></aside>','<aside><span>Anchor</span><b>Other</b></aside><p>Stays</p><section><h1>Title</h1><em>Child</em></section>']){
+  const r=resolve('<html><body><main>'+markup+'</main></body></html>','section'),result=html.planOp(r,{type:'reparentElement',destinationId:r.elements.find(e=>e.tag===(position==='inside'?'aside':'span')).id,position,fileHash:r.hash});assert.equal(result.ok,true,result.reason);
+  const fresh=html.collect(result.edits[0].after,r.relPath).elements,mapping=new Map(result.sourceIdMap);assert.deepEqual(r.elements.map(e=>mapping.get(e.id)||e.id).sort(),fresh.map(e=>e.id).sort());
+  for(const element of r.elements)assert.equal(fresh.find(e=>e.id===(mapping.get(element.id)||element.id)).tag,element.tag);
+  assert.equal(mapping.get(r.element.id),result.movedId);assert.ok(mapping.has(r.elements.find(e=>e.tag==='h1').id));
+ }
+});

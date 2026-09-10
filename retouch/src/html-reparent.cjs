@@ -30,7 +30,9 @@ function plan(resolved,op){
   const expectedParentStart=destination.location.startOffset-(range.end<=destination.location.startOffset?range.end-range.start:0);
   if(newParent?.location.startOffset!==expectedParentStart)return refuse('This move changes the parsed parent.');
   if(elements.length!==resolved.elements.length||!moved||!newParent||newParent.tag!==destination.tag||moved.tag!==resolved.element.tag)return refuse('This move changes the parsed HTML structure.');
-  return {ok:true,hash:html.contentHash(after),parentId,movedId:moved.id,destinationId:newParent.id,structural:true,edits:[{file:resolved.file,before:source,after}]};
+  const sourceIdMap=[],mapped=new Set();
+  for(const element of resolved.elements){const before=element.location.startOffset,inMoved=before>=range.start&&before<range.end,shifted=inMoved?movedStart+before-range.start:before-(before>=range.end?chunk.length:0)+(before>=offset?prefix.length+chunk.length+1:0),next=elements.find(item=>item.location.startOffset===shifted&&item.tag===element.tag);if(!next||mapped.has(next.id))return refuse('An original layer lost its source identity.');mapped.add(next.id);if(next.id!==element.id)sourceIdMap.push([element.id,next.id]);}
+  return {ok:true,sourceIdMap,hash:html.contentHash(after),parentId,movedId:moved.id,destinationId:newParent.id,structural:true,edits:[{file:resolved.file,before:source,after}]};
  }catch(error){return refuse(error.message);}
 }
 module.exports={plan};
