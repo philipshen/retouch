@@ -20,7 +20,7 @@ changing those files. The original checkout may continue to evolve independently
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML supports linear/radial gradient stacks with draggable stops, shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A searchable page-font picker now discovers declared and used families, with React/HTML and local Liquid browser coverage. Explicit variable-axis editing, declared-file range/default inspection and bounded axis sliders have HTML/React/local Liquid browser coverage. Full font browsing, actual glyph-font resolution, live Shopify font verification, full rich-text/paragraph/list controls and complete typography parity remain. |
 | Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | Existing React and Liquid component inspection/detach; full creation/variants/library workflows remain. Live Shopify proof is incomplete. |
-| Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Not implemented or verified. |
+| Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Reusable text styles support responsive links, inherited-scope display, local override/reset, project-wide updates and shared undo in HTML, React and local Liquid. Validated JSON library import/export preserves style identity. Color/effect styles, variables, aliases, collections/modes and shared remote library workflows remain. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload and SVG-canvas SVG/PNG/JPEG downloads exist, including shared local definitions and bitmap embedding. Arbitrary-layer export, fonts, symbols and the full export/import pipeline remain. |
 | History/collaboration | Reliable undo/redo across all actions, persistence, version restoration, multiplayer behavior and review | Shared undo/redo controller is now connected to all shell history records, toolbar buttons and keyboard shortcuts. Source and browser tests cover ordered restores, refusal/retry, branch invalidation and structural redo. Persistence across editor restarts, complete gesture grouping, version browsing and collaborative editing remain. |
@@ -5856,3 +5856,26 @@ unopened copied templates, catalog update and exact shared undo alongside prior
 responsive/reset/detach flows. The first Chromium run failed on copied patch
 identity; the fixed rerun passed. Live Shopify remains unverified. Native app
 launches remain paused; full parity and verified desktop distribution are pending.
+
+### Portable text style libraries (2026-09-09)
+
+Saved text styles now offer JSON import/export. Export fetches the current library
+and includes version, stable IDs, names and property values. Import merges new
+styles into the current catalog in one shared undo transaction. Matching IDs and
+definitions are idempotent; conflicting IDs or names refuse the entire import.
+Existing style definitions and linked source files are unchanged by an import.
+Validation, library size/count limits, stale revision checks and regular-file
+requirements remain enforced. The UI explains that fonts must be available in the
+destination project; font files and remote shared-library synchronization are not
+included. Conflict-resolution/replace workflows remain future work.
+
+All 439 unit tests passed, exit 0, in
+/private/tmp/retouch-style-transfer-units.log. Browser flows exited 0 in
+/private/tmp/retouch-style-transfer-chromium.log (HTML) and
+/private/tmp/retouch-style-transfer-webkit.log (conditional Liquid).
+They exercise actual file upload and downloaded JSON, stable IDs, exact undo/redo,
+conflict refusal without mutation, idempotent reimport without an extra history
+entry, and no source/page errors. Existing linked style workflows still pass.
+The requirement matrix now records implemented reusable text styles accurately;
+variables, aliases, other style types and full design parity remain unfinished.
+Native launches remain paused.

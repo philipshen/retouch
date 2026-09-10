@@ -38,3 +38,18 @@ test('corrupt, oversized and symlinked libraries are refused without writing',t=
  const target=path.join(outside,'target');fs.writeFileSync(target,'untouched');fs.symlinkSync(target,file);assert.throws(()=>create(root),{statusCode:409});assert.equal(fs.readFileSync(target,'utf8'),'untouched');
  fs.unlinkSync(file);fs.rmdirSync(dir);fs.symlinkSync(outside,dir);assert.throws(()=>library.read(root),{statusCode:409});
 });
+test('portable style imports preserve identity, merge atomically and are idempotent',t=>{
+ const root=fixture(t),other=fixture(t),first=create(root),incoming=create(other,null,'Body'),operation={type:'import',revision:first.revision,library:{version:1,styles:incoming.styles}};
+ const plan=library.planChange(root,operation);assert.equal(plan.result.added,1);assert.equal(library.read(root).styles.length,1);
+ const result=library.commitPlan(root,plan).result;assert.deepEqual(result.styles,[...first.styles,...incoming.styles]);
+ const repeated=library.planChange(root,{...operation,revision:result.revision});assert.deepEqual(repeated.edits,[]);assert.equal(repeated.result.revision,result.revision);assert.equal(repeated.result.added,0);
+});
+test('imports reject conflicting IDs, names, invalid properties and stale revisions without partial writes',t=>{
+ const root=fixture(t),first=create(root),other=fixture(t),incoming=create(other,null,'Body'),before=library.read(root);
+ const attempt=styles=>library.planChange(root,{type:'import',revision:before.revision,library:{version:1,styles}});
+ for(const bad of [{...first.styles[0],properties:{'font-size':'99px'}},{...incoming.styles[0],name:'Heading'},{...incoming.styles[0],id:'11111111-1111-4111-8111-111111111111',name:'Bad',properties:{'background-image':'url(evil)'}}]){
+  assert.throws(()=>attempt([incoming.styles[0],bad]));assert.deepEqual(library.read(root),before);
+ }
+ assert.throws(()=>library.planChange(root,{type:'import',revision:'stale',library:{version:1,styles:incoming.styles}}),/changed/);
+ assert.throws(()=>attempt(Array.from({length:101},()=>incoming.styles[0])));
+});

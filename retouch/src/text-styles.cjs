@@ -29,14 +29,23 @@ function read(root){
  let parsed;try{parsed=JSON.parse(source);}catch{fail('The text style library is not valid JSON.',409);}return {...validate(parsed),revision:revision(source)};
 }
 function planChange(root,operation){
- if(!object(operation)||!['create','update','delete'].includes(operation.type)||Object.keys(operation).some(key=>!['type','revision','id','name','properties'].includes(key)))fail('Invalid text style operation.');
+ if(!object(operation)||!['create','update','delete','import'].includes(operation.type)||Object.keys(operation).some(key=>!(operation.type==='import'?['type','revision','library']:['type','revision','id','name','properties']).includes(key)))fail('Invalid text style operation.');
  const {directory,file}=paths(root),source=fs.existsSync(file)?fs.readFileSync(file,'utf8'):null,current=read(root);
  if(operation.revision!==current.revision||revision(source)!==current.revision)fail('Text styles changed. Reload the library before saving.',409);
- const styles=current.styles.map(style=>({...style}));let id=operation.id;
- if(operation.type==='create'){if(id!==undefined)fail('New style IDs are assigned by the library.');if(styles.length>=MAX_STYLES)fail('The library supports up to 100 text styles.');id=crypto.randomUUID();styles.push({id,name:name(operation.name),properties:values(operation.properties)});}
+ const styles=current.styles.map(style=>({...style}));let id=operation.id,added=0;
+ if(operation.type==='import'){
+  const incoming=validate(operation.library);
+  for(const style of incoming.styles){
+   const existing=styles.find(item=>item.id===style.id);
+   if(existing){if(JSON.stringify(existing)!==JSON.stringify(style))fail('A different version of '+style.name+' already exists. No styles were imported.',409);continue;}
+   if(styles.some(item=>item.name.toLowerCase()===style.name.toLowerCase()))fail('A style named '+style.name+' already exists with a different ID. Rename it before importing.',409);
+   styles.push(style);added++;
+  }
+  if(!added)return {ok:true,edits:[],result:{...current,added:0}};
+ }else if(operation.type==='create'){if(id!==undefined)fail('New style IDs are assigned by the library.');if(styles.length>=MAX_STYLES)fail('The library supports up to 100 text styles.');id=crypto.randomUUID();styles.push({id,name:name(operation.name),properties:values(operation.properties)});}
  else{const index=styles.findIndex(style=>style.id===id);if(index<0)fail('That text style no longer exists.',409);if(operation.type==='delete')styles.splice(index,1);else styles[index]={id,name:name(operation.name),properties:values(operation.properties)};}
  const library=validate({version:1,styles}),after=JSON.stringify(library,null,2)+'\n';if(Buffer.byteLength(after)>LIMIT)fail('The text style library is too large.',413);
- return {ok:true,edits:source===after?[]:[{file,before:source,after}],result:{...library,revision:revision(after),id}};
+ return {ok:true,edits:source===after?[]:[{file,before:source,after}],result:{...library,revision:revision(after),id,...(operation.type==='import'?{added}:{})}};
 }
 function commitPlan(root,plan){
  if(!plan?.ok)return plan;const {directory}=paths(root);
