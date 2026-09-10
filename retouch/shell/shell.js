@@ -933,7 +933,7 @@ function renderPanelContents() {
   }
 
   if((sel.multiple?.length>1?sel.multiple.every(item=>item.variables):info.variables)){const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;RetouchCollectionBindings.mount(panelBody,sel.multiple?.length>1?sel.multiple:info,width,sel.multiple?.length>1?writeVariableSelection:writeTextStyle);}
-  else if(!sel.multiple?.length&&info.classVariables){const scope=styleScope;RetouchCollectionBindings.mount(panelBody,info,scope,(type,_width,extra)=>writeTextStyle(type,0,{scope,...extra}),{scopeLabel:document.querySelector('[aria-label="Style screen scope"]')?.selectedOptions[0]?.textContent||scope||'all screen sizes'});}
+  else if(sel.multiple?.length>1?sel.multiple.every(item=>item.classVariables):info.classVariables){const scope=styleScope;RetouchCollectionBindings.mount(panelBody,sel.multiple?.length>1?sel.multiple:info,scope,(type,_width,extra)=>sel.multiple?.length>1?writeVariableSelection(type,0,{scope,...extra}):writeTextStyle(type,0,{scope,...extra}),{scopeLabel:document.querySelector('[aria-label="Style screen scope"]')?.selectedOptions[0]?.textContent||scope||'all screen sizes'});}
 
   if(!sel.multiple?.length&&(info.cssAuthoring||info.classEffectStyles)&&!info.effectStyleLinkReason){
    const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,scope=info.classEffectStyles?styleScope:width,links=info.effectStyleLinks||{},inheritedWidth=Object.keys(links).map(Number).filter(value=>value<width).sort((a,b)=>b-a)[0];
@@ -1613,12 +1613,12 @@ async function setSelectionColorOverride(property,value){
  }finally{busyPanel(false);}
 }
 async function writeVariableSelection(type,width,extra){
- const selection=sel?.multiple,info=sel?.info;if(!selection?.length)return;const ids=selection.map(item=>item.id);busyPanel(true);
+ const selection=sel?.multiple,info=sel?.info;if(!selection?.length)return;const ids=selection.map(item=>item.id),react=!!info.classVariables;busyPanel(true);
  try{
   const result=await api('POST','/rt/__api/op',{type:type+'Selection',id:info.id,ids,fileHash:info.hash,width,...extra});
   if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update selected variable bindings.');
-  if(result.undoId)editorHistory.record({type:'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
-  sel.info=result.element;sel.multiple=result.selection;await reloadFrame();renderPanel();toast('Selected bindings updated','ok');
+  if(result.undoId)editorHistory.record({type:react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
+  sel.info=result.element;sel.multiple=result.selection;if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();renderPanel();toast('Selected bindings updated','ok');
  }finally{busyPanel(false);}
 }
 function selectionColorOptions(width){

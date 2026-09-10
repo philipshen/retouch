@@ -7568,3 +7568,32 @@ The React screenshot `/private/tmp/retouch-react-collection.png` was visually
 inspected. React multi-layer binding and inherited-binding controls remain
 unfinished, as do Liquid collection support and ancestor mode semantics. Full
 Figma parity is still incomplete; native launches remain paused.
+
+### React multi-layer collection bindings (2026-09-10)
+
+React selections now use the shared atomic variable-selection planner and
+collection inspector. Apply writes one chosen binding to all selected host layers;
+reset preserves each layer's variable and mode choices; detach retains distinct
+rendered appearances. Selection writes wait for compiler revisions and all selected
+class lists, and use the class-selection history entry so Undo restores selection.
+
+The planner supports HTML body layers and React host layers through their source
+adapters, validates responsive scopes, and plans every mutation before returning
+one source edit. Any ambiguous selected JSX layer, dynamic classes, spread
+attributes or conflicting important utility refuses the batch without partial
+edits. Unbound layers remain unchanged during reset/detach.
+
+All 573 unit tests pass (`/private/tmp/retouch-react-multi-collection-units.log`).
+The real Next.js Chromium and WebKit flows verify mixed Light/Dark bindings,
+batch apply, shared literal color overrides, reset to each layer's own mode,
+detach preserving distinct colors, and exact Undo. The HTML collection flow also
+passes. Logs: `/private/tmp/retouch-react-multi-collection-chromium.log` and
+`/private/tmp/retouch-react-multi-collection-webkit.log`. The screenshot
+`/private/tmp/retouch-react-multi-collection.png` was visually inspected.
+
+An initial WebKit run completed functional assertions but reported Next.js HMR
+access-control errors. The expanded rerun passed with no page errors; their cause
+is unconfirmed, so this does not prove those dev-server errors are eliminated.
+React inheritance controls, Liquid bindings, ancestor modes and cross-file
+selections remain unfinished. Native launches remain paused; full parity is not
+achieved.

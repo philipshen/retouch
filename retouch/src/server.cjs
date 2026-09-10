@@ -244,7 +244,6 @@ function handle(req, res, ctx) {
         if(['applyVariable','resetVariable','detachVariable','removeVariable','applyVariableSelection','resetVariableSelection','detachVariableSelection','removeVariableSelection'].includes(op.type)){
           const reactVariables=ctx.adapter.name==='react';
           if(!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!reactVariables)return json(res,409,{ok:false,reason:'Collection bindings currently need an HTML or React project.'});
-          if(reactVariables&&op.type.endsWith('Selection'))return json(res,409,{ok:false,reason:'React collection bindings currently need a single layer.'});
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source changed. Re-select the layer.'});
           let model;
           if(!op.type.startsWith('detachVariable')&&!op.type.startsWith('removeVariable')){

@@ -71,4 +71,4 @@ function planFile(file,relPath,before,library){
   return {ok:true,updated:targets.length,edits:source===before?[]:[{file,before,after:source}]};
  }catch(error){return refuse(error.message);}
 }
-module.exports={describe,plan,planFile};
+module.exports={describe,plan,planFile,links:resolved=>metadata(resolved.element).links};
