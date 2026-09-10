@@ -1213,6 +1213,7 @@ function componentSection(id) {
     actions.append(RetouchInspector.button('View component', () => openComponent(id, component)));
     const edit = RetouchInspector.button('Edit definition', () => editDefinition(id, component));
     edit.disabled = !component.definitionId; actions.append(edit);
+    const duplicate=RetouchInspector.button('Duplicate instance',()=>duplicateInstance(id,sel?.info?.context));duplicate.disabled=!component.canDuplicate;duplicate.title=component.duplicateReason||'Duplicate this source usage, keeping the shared definition.';actions.append(duplicate);
     const detach = RetouchInspector.button('Detach instance', () => detachInstance(id, component, detach));
     detach.disabled = !component.canDetach; if (!component.detached) actions.append(detach); sec.append(actions);
     const count=matchingInDocument(doc(),id,component).length;
@@ -1240,6 +1241,23 @@ async function editDefinition(instanceId, component) {
   sel = { hostId: component.definitionId, instanceId, scope: 'host', info: response.element };
   renderPanel(); toast(component.detached ? 'Editing detached definition' : 'Editing shared definition', 'ok');
 }
+async function duplicateInstance(id,context) {
+  busyPanel(true);
+  try{
+    const usage=await api('GET',resolveUrl(id,context));if(!usage?.ok)throw Error('Re-select the component before duplicating.');
+    const result=await api('POST','/rt/__api/op',{type:'duplicateComponent',id,fileHash:usage.element.hash});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not duplicate the instance.');
+    const copied=result.duplicatedComponent;
+    editorHistory.record({type:'duplicateComponent',id:copied.parentId||id,instanceCopyId:copied.instanceId,instanceOriginalId:id,undoId:result.undoId});
+    const copy=await api('GET',resolveUrl(copied.instanceId)),parent=copied.parentId?await api('GET',resolveUrl(copied.parentId)):null;
+    if(parent?.ok)await refreshWrittenElement(parent.element,el=>!!el.ownerDocument.querySelector('[data-rt-i="'+copied.instanceId+'"]'));
+    else if(copy?.ok)await refreshWrittenElement({...copy.element,renderRevisionAttribute:null},el=>el.getAttribute('data-rt-i')===copied.instanceId);
+    else await reloadFrame();
+    const component=await api('GET',componentUrl(copied.instanceId));
+    if(copy?.ok&&component?.ok){sel={hostId:component.definitionId,instanceId:copied.instanceId,scope:'instance',info:copy.element};renderPanel();}
+    toast('Instance duplicated; definition remains shared','ok');
+  }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
+}
+
 async function detachInstance(id, component, button, context=sel?.info?.context) {
   button.disabled = true;
   try {
@@ -2009,6 +2027,7 @@ async function restoreHistory(direction,op) {
       const component = op.type === 'detachComponent'||op.type==='createComponent'&&direction==='redo' ? await api('GET', componentUrl(op.id,op.context)) : null;
       await refreshWrittenElement(info, el => {
         if(selectionResult)return selectionResult.every(result=>result?.ok)&&classSelectionMatches(selectionResult.map(result=>result.element),el.ownerDocument);
+        if(op.type==='duplicateComponent'){const found=!!el.ownerDocument.querySelector('[data-rt-i="'+op.instanceCopyId+'"]');return direction==='undo'?!found:found;}
         if(op.svgCreatedId){const found=matchingInDocument(el.ownerDocument,op.svgCreatedId,null).length>0;return direction==='undo'?!found:found;}
         if(op.type==='createComponent'&&direction==='undo')return el.getAttribute('data-rt')===op.id;
         if (component?.ok) return el.getAttribute('data-rt') === component.definitionId;
@@ -2023,6 +2042,7 @@ async function restoreHistory(direction,op) {
       });
       if(op.type==='createComponent'&&component?.ok)sel={hostId:component.definitionId,instanceId:op.id,scope:'instance',info};
     } else await reloadFrame();
+    if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId,usage=await api('GET',resolveUrl(id)),component=await api('GET',componentUrl(id));if(usage?.ok&&component?.ok)sel={hostId:component.definitionId,instanceId:id,scope:'instance',info:usage.element};}
     const selectionIds=direction==='undo'?op.selectionBefore||op.selectionIds:op.selectionAfter||op.selectionIds;
     if(sel&&selectionIds)await restoreLayerSelection(selectionIds);
     if (sel) renderPanel();

@@ -64,3 +64,23 @@ test('created components retain explicit identity when their declaration becomes
   }finally{f.close();}
  }
 });
+
+
+test('component duplication keeps a shared definition and gives the copy a distinct key',()=>{
+ const source='function Page({label}){return <main><Card key={label} title={label}/><footer>After</footer></main>}\n/** @retouch-component */\nfunction Card(){return <article>Hi</article>}';
+ const f=fixture(source,'Cards.jsx');try{
+  const usage=[...f.index.idToFile.keys()].map(id=>f.index.resolve(id)).find(r=>r.element.kind==='instance');
+  const plan=require('../src/duplicate-component.cjs').plan(usage,{fileHash:usage.hash});assert.ok(plan.ok,plan.reason);const after=plan.edits[0].after;assert.match(after,/<Card key="retouch-copy-[a-f0-9]+" title=\{label\}\/>/);assert.equal((after.match(/function Card/g)||[]).length,1);assert.equal(fs.readFileSync(usage.file,'utf8'),source);
+  assert.ok(require('../src/transactions.cjs').applyPlan(f.root,plan).ok);f.index.scanAll();const original=adapter.describeComponent(f.index.resolve(usage.element.id)),copy=adapter.describeComponent(f.index.resolve(plan.duplicatedComponent.instanceId));assert.ok(copy.ok,copy.reason);assert.equal(original.definitionId,copy.definitionId);assert.equal(require('../src/component-usage.cjs').usage(f.index,usage.element.id).usageCount,2);
+ }finally{f.close();}
+});
+test('component duplication refuses roots and ambiguous identities without writing',()=>{
+ for(const jsx of ['<Card/>','<main><Card ref={ref}/></main>','<main><Card {...props}/></main>','<main><Card><span id="unique"/></Card></main>']){
+  const source='function Page(){return '+jsx+'} function Card(){return <article/>}',f=fixture(source);try{const usage=[...f.index.idToFile.keys()].map(id=>f.index.resolve(id)).find(r=>r.element.kind==='instance');assert.equal(require('../src/duplicate-component.cjs').plan(usage,{fileHash:usage.hash}).ok,false);assert.equal(fs.readFileSync(usage.file,'utf8'),source);}finally{f.close();}
+ }
+});
+
+
+test('component duplication refuses a fixed DOM identity in its shared definition',()=>{
+ const f=fixture('function Page(){return <main><Card/></main>} function Card(){return <article id="fixed"/>}');try{const usage=[...f.index.idToFile.keys()].map(id=>f.index.resolve(id)).find(r=>r.element.kind==='instance');const result=require('../src/duplicate-component.cjs').plan(usage,{fileHash:usage.hash});assert.equal(result.ok,false);assert.match(result.reason,/fixed DOM id/);assert.equal(adapter.describeComponent(usage).canDuplicate,false);}finally{f.close();}
+});
