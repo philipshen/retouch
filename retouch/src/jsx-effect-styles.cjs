@@ -23,12 +23,12 @@ function metadata(element){
 function describe(resolved){if(resolved.element.kind!=='host')return {};try{
  const links=metadata(resolved.element).links,info=require('./writer.cjs').describeElement(resolved);
  if(info.classNameDynamic)throw Error('Effect style links need literal classes.');
- const overrides=info.classNameDynamic?{}:Object.fromEntries(Object.entries(links).map(([scope,link])=>[scope,[...new Set([...(link.overrides||[]),...classes.overrides(info.className||'',link.properties,scope)])].sort()]));
+ const overrides=Object.fromEntries(Object.entries(links).map(([scope,link])=>[scope,[...new Set([...(link.overrides||[]),...classes.overrides(info.className||'',link.properties,scope)])].sort()]));
  return {classEffectStyles:true,effectStyleLinks:links,effectStyleOverrides:overrides};
 }catch(error){return {classEffectStyles:false,effectStyleLinkReason:error.message};}}
 function plan(resolved,op,style){
  try{
-  if(resolved.element.kind!=='host')return refuse('Select a host layer to apply a effect style.');
+  if(resolved.element.kind!=='host')return refuse('Select a host layer to apply an effect style.');
   if(op.fileHash&&op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the layer.');
   const scope=op.scope??'';responsive.replaceScope('','',scope);
   const current=metadata(resolved.element).links;let source=resolved.source;

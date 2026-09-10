@@ -6609,3 +6609,30 @@ RT_E2E_EFFECT_RELOAD=1 variant explicitly verifies fresh-document rendering only
 This is not a live-update pass. Resolve or accommodate the WebKit invalidation
 behavior before enabling React linked effects in the inspector. Native launches
 remain paused; broad Figma parity and arbitrary-site support are incomplete.
+
+### React effect API and project propagation (2026-09-09)
+
+React adapter descriptions now expose effect links and override ownership. The
+real HTTP operation path supports single-layer and selection apply/reset/detach,
+as well as catalog or selected-layer updates across JSX/TSX source inventory.
+Project updates include unopened components and preserve local overrides. All
+source/catalog edits share one history transaction. React effect controls are
+still not mounted in the inspector.
+
+All 499 unit tests passed (exit 0):
+/private/tmp/retouch-react-effect-api-units.log. New real-server tests cover
+selection metadata, detach retaining classes, project updates spanning four links
+in two files, local override preservation, selection reset, exact shared undo,
+stale source/library refusal and malformed metadata refusing all writes. A final
+focused run also passed the added successful selected-layer update/undo path.
+
+The WebKit issue was reduced locally to `.a{@media(min-width:768px){filter:
+blur(2px)!important}}` and an equivalent `.b` rule with blur(8px). Changing a live
+element from a to b retained blur(2px), while unnested rules updated correctly.
+The probe at /private/tmp/retouch-effect-invalidation-probe.cjs found that layout
+reads, toggling stylesheet.disabled and adding an empty sheet did not refresh it;
+replacing stylesheet text, replacing the element or temporarily changing display
+and forcing layout did. These are diagnostic observations in the bundled WebKit,
+not a general claim about all Safari releases. No such workaround has been added
+to product code. Reliable live preview remains required before enabling the React
+effect library UI. Native app launches remain paused; full parity is incomplete.

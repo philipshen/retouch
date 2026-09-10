@@ -86,7 +86,7 @@ function handle(req, res, ctx) {
       if(!bytes)return json(res,413,{ok:false,reason:kind+' style requests must be 512 KB or smaller.'});
       let operation;try{operation=JSON.parse(bytes.toString('utf8'));}catch{return json(res,400,{ok:false,reason:'Invalid '+kind+' style JSON.'});}
       try{
-        const renderer=['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html',linked=ctx.adapter.capabilities?.ops?.includes('setCSS')||kind!=='effect'&&['react','liquid'].includes(ctx.adapter.name);
+        const renderer=['react','liquid'].includes(ctx.adapter.name)?ctx.adapter.name:'html',linked=ctx.adapter.capabilities?.ops?.includes('setCSS')||ctx.adapter.name==='react'||kind!=='effect'&&ctx.adapter.name==='liquid';
         const plan=operation?.type==='update'&&linked?require('./text-style-update.cjs').plan(ctx.appRoot,operation,renderer,kind):library.planChange(ctx.appRoot,operation);
         if(!plan.ok)return json(res,409,plan);
         const applied=library.commitPlan(ctx.appRoot,plan);
@@ -190,10 +190,11 @@ function handle(req, res, ctx) {
       try {
         resolved.context = renderContext(op.context);
         if(['applyEffectStyle','resetEffectStyle','detachEffectStyle','updateEffectStyle','applyEffectStyleSelection','resetEffectStyleSelection','detachEffectStyleSelection'].includes(op.type)){
-          if(!ctx.adapter.capabilities?.ops?.includes('setCSS'))return json(res,409,{ok:false,reason:'Linked effect styles need an HTML project.'});
+          const reactEffects=ctx.adapter.name==='react';
+          if(!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!reactEffects)return json(res,409,{ok:false,reason:'Linked effect styles need an HTML or React project.'});
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source changed. Re-select the layer.'});
-          if(op.type==='updateEffectStyle')result=applyPlan(ctx.appRoot,require('./text-style-update.cjs').plan(ctx.appRoot,{type:'update',revision:op.libraryRevision,id:op.styleId,name:op.name,properties:op.properties},'html','effect'));
-          else {let style;if(!op.type.startsWith('detachEffectStyle')){const library=require('./effect-styles.cjs').read(ctx.appRoot);if(library.revision!==op.libraryRevision)return json(res,409,{ok:false,reason:'Effect styles changed. Reload the library.'});style=op.type==='resetEffectStyleSelection'?library:library.styles.find(item=>item.id===op.styleId);if(!style)return json(res,409,{ok:false,reason:'That effect style no longer exists.'});}result=applyPlan(ctx.appRoot,op.type.endsWith('Selection')?require('./text-style-selection.cjs').plan(resolved,op,style,ctx.adapter,'effect'):require('./html-effect-styles.cjs').plan(resolved,op,style));}
+          if(op.type==='updateEffectStyle')result=applyPlan(ctx.appRoot,require('./text-style-update.cjs').plan(ctx.appRoot,{type:'update',revision:op.libraryRevision,id:op.styleId,name:op.name,properties:op.properties},reactEffects?'react':'html','effect'));
+          else {let style;if(!op.type.startsWith('detachEffectStyle')){const library=require('./effect-styles.cjs').read(ctx.appRoot);if(library.revision!==op.libraryRevision)return json(res,409,{ok:false,reason:'Effect styles changed. Reload the library.'});style=op.type==='resetEffectStyleSelection'?library:library.styles.find(item=>item.id===op.styleId);if(!style)return json(res,409,{ok:false,reason:'That effect style no longer exists.'});}result=applyPlan(ctx.appRoot,op.type.endsWith('Selection')?require('./text-style-selection.cjs').plan(resolved,op,style,ctx.adapter,'effect'):require(reactEffects?'./jsx-effect-styles.cjs':'./html-effect-styles.cjs').plan(resolved,op,style));}
         }else if(op.type==='setColorOverrideSelection'){
           if(ctx.adapter.name!=='react')return json(res,409,{ok:false,reason:'Shared class color editing needs a React selection.'});
           result=applyPlan(ctx.appRoot,require('./color-override-selection.cjs').plan(resolved,op));

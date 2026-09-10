@@ -11,8 +11,8 @@ function plan(root,operation,renderer='html',family='text'){
  const catalog=family==='color'?require('./color-styles.cjs'):family==='effect'?require('./effect-styles.cjs'):require('./text-styles.cjs');
  try{
   if(!['html','react','liquid'].includes(renderer))throw Error('Unsupported text style renderer.');
-  if(family==='effect'&&renderer!=='html')throw Error('Linked effect updates need an HTML project.');
-  const linked=require(family==='effect'?'./html-effect-styles.cjs':family==='color'?(renderer==='react'?'./jsx-color-styles.cjs':renderer==='liquid'?'./liquid-color-styles.cjs':'./html-color-styles.cjs'):renderer==='react'?'./jsx-text-styles.cjs':renderer==='liquid'?'./liquid-text-styles.cjs':'./html-text-styles.cjs');
+  if(family==='effect'&&!['html','react'].includes(renderer))throw Error('Linked effect updates need an HTML or React project.');
+  const linked=require(family==='effect'?(renderer==='react'?'./jsx-effect-styles.cjs':'./html-effect-styles.cjs'):family==='color'?(renderer==='react'?'./jsx-color-styles.cjs':renderer==='liquid'?'./liquid-color-styles.cjs':'./html-color-styles.cjs'):renderer==='react'?'./jsx-text-styles.cjs':renderer==='liquid'?'./liquid-text-styles.cjs':'./html-text-styles.cjs');
   if(operation?.type!=='update')throw Error('Use a text style update operation.');
   const before=catalog.read(root),change=catalog.planChange(root,operation);
   const previous=before.styles.find(style=>style.id===operation.id),next=change.result.styles.find(style=>style.id===operation.id);
