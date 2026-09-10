@@ -24,6 +24,7 @@ function plan(resolved,op){
   if(!fresh)return refuse('The move would change the surrounding document structure.');mapped.set(e.node,fresh);
  }
  if(next.length!==resolved.elements.length||resolved.elements.some(e=>mapped.has(e.node.parentNode)&&mapped.get(e.node).node.parentNode!==mapped.get(e.node.parentNode).node))return refuse('The move would change the surrounding document structure.');
- return {ok:true,hash:html.contentHash(after),parentId:mapped.get(resolved.element.node.parentNode).id,movedId:mapped.get(resolved.element.node).id,structural:true,edits:[{file:resolved.file,before:source,after}]};
+ const sourceIdMap=resolved.elements.flatMap(element=>{const id=mapped.get(element.node).id;return id===element.id?[]:[[element.id,id]];});
+ return {ok:true,sourceIdMap,hash:html.contentHash(after),parentId:mapped.get(resolved.element.node.parentNode).id,movedId:mapped.get(resolved.element.node).id,structural:true,edits:[{file:resolved.file,before:source,after}]};
 }
 module.exports={describe,plan};

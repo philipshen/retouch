@@ -2516,7 +2516,8 @@ async function structureAction(action) {
       const result=await api('POST','/rt/__api/op',{type:deleting?'deleteElement':duplicating?'duplicateElement':'moveElement',direction:action,id:info.id,fileHash:info.hash});
       if(!result?.ok)return toast(result?.reason||result?.error||'Could not update SVG layer','err');
       const selectionAfter=[deleting?result.parentId:duplicating?result.createdId:result.movedId];
-      editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:[info.id],selectionAfter,undoId:result.undoId});
+      editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:[info.id],selectionAfter,undoId:result.undoId,...(result.sourceIdMap?{sourceIdMap:result.sourceIdMap}:{})});
+      if(result.sourceIdMap)layerLocks.remap(result.sourceIdMap);
       await restoreLayerSelection(selectionAfter);
       if(sel?.info.renderRevisionAttribute)await refreshWrittenElement(sel.info,()=>true);else await reloadFrame();
       renderPanel();toast(deleting?'Layer deleted':duplicating?'Layer duplicated':'Layer moved','ok');

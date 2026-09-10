@@ -21,3 +21,13 @@ test('SVG first/last moves cross all supported siblings atomically and preserve 
  for(const [tag,direction,expected]of [['rect','last',b+gap+c+'\n'+d+' '+a],['line','first',d+gap+a+'\n'+b+' '+c]]){const r=resolve(source,tag),result=move.plan(r,{direction,fileHash:r.hash});assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);assert.equal(result.edits[0].after,'<svg>'+expected+'</svg><p>After</p>');assert.equal(html.collect(result.edits[0].after,r.relPath).elements.find(e=>e.id===result.movedId).tag,tag);}
  const barrier=resolve('<svg><rect/><circle/><defs/><line/></svg>');assert.equal(move.describe(barrier).canMoveAfter,true);assert.equal(move.describe(barrier).canMoveLast,false);assert.equal(move.plan(barrier,{direction:'last',fileHash:barrier.hash}).refused,true);
 });
+
+test('SVG ordering returns a complete identity mapping for lock history',()=>{
+ const markup='<svg><rect/><g><circle/><ellipse/></g><line/></svg>';
+ const source=markup;
+ for(const [tag,direction]of [['rect','after'],['line','before'],['line','first'],['rect','last']]){
+  const r=resolve(source,tag),result=move.plan(r,{direction,fileHash:r.hash});assert.equal(result.ok,true,result.reason);
+  const fresh=html.collect(result.edits[0].after,r.relPath).elements,mapping=new Map(result.sourceIdMap);assert.deepEqual(r.elements.map(e=>mapping.get(e.id)||e.id).sort(),fresh.map(e=>e.id).sort());
+  for(const element of r.elements){const next=fresh.find(e=>e.id===(mapping.get(element.id)||element.id));assert.equal(next.tag,element.tag);}
+ }
+});

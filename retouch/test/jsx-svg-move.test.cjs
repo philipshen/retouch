@@ -15,3 +15,13 @@ test('React SVG first/last moves preserve source subtrees and refuse distant exp
  for(const [tag,direction,expected]of [['rect','last',b+gap+c+'\n'+d+' '+a],['line','first',d+gap+a+'\n'+b+' '+c]]){const r=resolve(source,tag),result=react.planOp(r,{type:'moveElement',direction,fileHash:r.hash});assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);assert.equal(result.edits[0].after,prefix+expected+'</svg>');assert.equal(ids.jsxElementName(ids.collectElements(result.edits[0].after,r.relPath).elements.find(e=>e.id===result.movedId).node),tag);}
  for(const barrier of ['{show && <circle/>}','<Icon/>','<defs/>','text']){const r=resolve(prefix+'<rect/><circle/>'+barrier+'<line/></svg>');assert.equal(react.describe(r).structure.canMoveAfter,true);assert.equal(react.describe(r).structure.canMoveLast,false);assert.equal(react.planOp(r,{type:'moveElement',direction:'last',fileHash:r.hash}).refused,true);}
 });
+
+test('SVG ordering returns a complete identity mapping for lock history',()=>{
+ const markup='<svg><rect/><g><circle/><ellipse/></g><line/></svg>';
+ const source='export default()=>'+markup;
+ for(const [tag,direction]of [['rect','after'],['line','before'],['line','first'],['rect','last']]){
+  const r=resolve(source,tag),result=react.planOp(r,{type:'moveElement',direction,fileHash:r.hash});assert.equal(result.ok,true,result.reason);
+  const fresh=ids.collectElements(result.edits[0].after,r.relPath).elements,mapping=new Map(result.sourceIdMap);assert.deepEqual(r.elements.map(e=>mapping.get(e.id)||e.id).sort(),fresh.map(e=>e.id).sort());
+  for(const element of r.elements){const next=fresh.find(e=>e.id===(mapping.get(element.id)||element.id));assert.equal(ids.jsxElementName(next.node),ids.jsxElementName(element.node));}
+ }
+});

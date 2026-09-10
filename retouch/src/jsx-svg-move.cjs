@@ -16,6 +16,6 @@ function plan(resolved,op){
  const ordered=require('./source-order.cjs').reorder(source,ctx.movable.slice(lo,hi+1).map(e=>({start:e.node.start,end:e.node.end})),ctx.index-lo,target-lo),after=ordered.after,next=ids.collectElements(after,resolved.relPath).elements,mapping=new Map();
  for(const e of resolved.elements){const offset=ordered.offset(e.node.start),fresh=next.find(n=>n.node.start===offset&&ids.jsxElementName(n.node)===ids.jsxElementName(e.node));if(!fresh)return refuse('The move would change surrounding JSX structure.');mapping.set(e.id,fresh.id);}
  const oldParents=deletion.parents(resolved.elements),newParents=deletion.parents(next);if(next.length!==resolved.elements.length||resolved.elements.some(e=>newParents.get(mapping.get(e.id))!==(mapping.get(oldParents.get(e.id))??null)))return refuse('The move would change surrounding JSX ancestry.');
- return {ok:true,hash:ids.contentHash(after),parentId:mapping.get(ctx.parent.id),movedId:mapping.get(resolved.element.id),structural:true,edits:[{file:resolved.file,before:source,after}]};
+ return {ok:true,sourceIdMap:[...mapping].filter(([before,after])=>before!==after),hash:ids.contentHash(after),parentId:mapping.get(ctx.parent.id),movedId:mapping.get(resolved.element.id),structural:true,edits:[{file:resolved.file,before:source,after}]};
 }
 module.exports={describe,plan};
