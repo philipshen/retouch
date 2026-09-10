@@ -6311,3 +6311,25 @@ checks passed in Chromium and WebKit, exit 0:
 plus exact phone paint restoration across viewport changes. Named important
 color-utility replacement, broader CSS cascade ownership, Liquid links and full
 Figma parity remain unfinished. Native app launches remain paused.
+
+### Direct replacement of recognizable important colors (2026-09-09)
+
+Linked and local class paint composition now replaces recognized standard
+Tailwind palette colors, explicit color values, typed color variables and
+physical/logical border-color declarations at the selected scope. This includes
+important and alpha-modified utilities. Hover/state variants and other responsive
+scopes are retained. Unrecognized custom names and overlapping shorthands still
+refuse rather than guessing at ownership; important geometry and image utilities
+remain preserved. Reset can therefore remove a recognized competing important
+color override without requiring a separate source edit.
+
+All 473 tests passed, exit 0: /private/tmp/retouch-paint-replace-units.log.
+Source checks cover named/explicit/typed colors, alpha, per-edge border colors,
+scope isolation, override classification and ambiguous custom utility refusal.
+Rendered Tailwind checks passed in Chromium and WebKit, exit 0:
+/private/tmp/retouch-paint-replace-chromium.log and
+/private/tmp/retouch-paint-replace-webkit.log. They replace scoped important text,
+background and top-border colors, compare resulting alpha paint with inline CSS,
+and preserve important font size, border width, background sizing/image and phone
+appearance. Arbitrary custom utility ownership, Liquid color links and complete
+Figma parity remain unfinished. Native app launches remain paused.

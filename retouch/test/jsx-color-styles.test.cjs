@@ -27,7 +27,7 @@ test('React project planner refreshes each paint link and refuses malformed unin
 });
 test('explicit linked paint classes keep ordinary utilities and refuse important shorthand ownership',()=>{
  assert.equal(classes.compose('text-lg/7 border-2 bg-cover','color','#abc'),'text-lg/7 border-2 bg-cover ![color:#abc]');
- for(const [property,token]of [['color','!text-red-500'],['background-color','!bg-red-500'],['border-color','![border:2px_solid_red]'],['color','![all:unset]']])assert.throws(()=>classes.compose(token,property,'#fff'),/important/);
+ for(const [property,token]of [['color','!text-custom-effect'],['background-color','!bg-custom-effect'],['border-color','![border:2px_solid_red]'],['color','![all:unset]']])assert.throws(()=>classes.compose(token,property,'#fff'),/important/);
  assert.equal(classes.overridden('![color:#abc] text-red-500','color','#abc'),false);assert.equal(classes.overridden('![color:#abc] !text-red-500','color','#abc'),true);
  assert.equal(classes.compose('md:!bg-red-500','background-color','#fff'),'md:!bg-red-500 ![background-color:#fff]');
 });
@@ -39,5 +39,12 @@ test('important geometry and background image utilities neither block paint nor 
   'color':['!text-lg/7','!text-center','!text-balance']
  };
  for(const [property,values]of Object.entries(cases))for(const token of values){const composed=classes.compose(token,property,'#1234');assert.ok(composed.split(' ').includes(token),token);assert.equal(classes.overridden(composed,property,'#1234'),false,token);}
- for(const [property,token]of [['border-color','![border-inline:2px_solid_red]'],['border-color','!border-t-red-500'],['background-color','![background:red]'],['background-color','!bg-(--unknown)']])assert.throws(()=>classes.compose(token,property,'#fff'),/important/);
+ for(const [property,token]of [['border-color','![border-inline:2px_solid_red]'],['border-color','!border-t-custom-effect'],['background-color','![background:red]'],['background-color','!bg-(--unknown)']])assert.throws(()=>classes.compose(token,property,'#fff'),/important/);
+});
+
+test('linked paint replaces only recognized color utilities at its own scope',()=>{
+ for(const [property,utilities]of Object.entries({'color':['!text-red-500','text-white/50!','!text-[#1234]','!text-[color:var(--brand)]','!text-(color:--brand)'],'background-color':['!bg-emerald-950/25','!bg-[rgb(1_2_3)]','bg-transparent!'],'border-color':['!border-t-red-500','!border-x-[#ff0000]','![border-inline-color:red]']})){
+  for(const utility of utilities){const source='p-4 md:'+utility+' hover:'+utility+' '+utility,composed=classes.compose(source,property,'#12345678','md:');assert.ok(!composed.split(' ').includes('md:'+utility),utility);assert.ok(composed.split(' ').includes('hover:'+utility));assert.ok(composed.split(' ').includes(utility));assert.ok(composed.includes('md:!['+property+':#12345678]'));assert.equal(classes.overridden(composed,property,'#12345678','md:'),false);}
+ }
+ assert.throws(()=>classes.compose('!bg-(--custom)','background-color','#fff'),/important/);
 });
