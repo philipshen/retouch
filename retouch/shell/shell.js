@@ -782,7 +782,7 @@ function paintLoop() {
     const id=activeId();
     let first=true;
     const targets=matchingInDocument(d,id,sel.info).filter(el=>inTextScope(el,sel.info));
-    const groups=sel.info.kind==='instance'?RetouchComponentInstances.prioritize(RetouchComponentInstances.group(targets,sel.info.rootGroups),renderedSelection?.id===id?renderedSelection.element:null):targets.map(el=>({element:el,elements:[el]}));
+    const groups=RetouchComponentInstances.prioritize(sel.info.kind==='instance'?RetouchComponentInstances.group(targets,sel.info.rootGroups):targets.map(el=>({element:el,elements:[el]})),renderedSelection?.id===id?renderedSelection.element:null);
     for(const group of groups) {
       const el=group.element,kind=outlineKind(el,sel.info);
       const bounds=RetouchComponentInstances.bounds(group.elements);if(bounds)drawBounds(bounds,first?'sel':'co',kind);
@@ -2118,7 +2118,7 @@ function matchingEls(id) {
   const d = doc();
   if (!d) return [];
   const info=sel?.info?.id===id?sel.info:sel?.multiple?.find(info=>info.id===id)||null;
-  return info?.kind==='instance'?selectedComponentGroups(d,id,info).flatMap(group=>group.elements):matchingInDocument(d,id,info);
+  return info?.kind==='instance'?selectedComponentGroups(d,id,info).flatMap(group=>group.elements):RetouchComponentInstances.prioritize(matchingInDocument(d,id,info).map(el=>({element:el,elements:[el]})),renderedSelection?.id===id?renderedSelection.element:null).flatMap(group=>group.elements);
 }
 function selectedComponentGroups(d,id,info){
  return RetouchComponentInstances.prioritize(RetouchComponentInstances.group(matchingInDocument(d,id,info),info?.rootGroups),renderedSelection?.id===id?renderedSelection.element:null);
