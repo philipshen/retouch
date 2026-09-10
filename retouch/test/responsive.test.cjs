@@ -107,3 +107,11 @@ test('reversed inclusive media ranges reuse and inherit minimum-width scopes',()
  for(const condition of ['(768px < width)','(768px >= width)','(768px <= width <= 1024px)'])assert.notEqual(R.atWidth(d,768,[{prefix:'conditional:',condition}]).prefix,'conditional:');
  assert.equal(R.atWidth(d,900,[{prefix:'bounded:',condition:'(48rem <= width <= 64rem)'}]).prefix,'min-[56.25rem]:');
 });
+
+test('screen media wrappers preserve simple minimum-width scope reuse',()=>{
+ const d={createElement:()=>({style:{},remove(){}}),documentElement:{append(){}},defaultView:{getComputedStyle:()=>({fontSize:'16px'})}};
+ for(const choice of [{queries:[['screen','(min-width:768px)']]},{condition:'screen and (min-width:768px)'},{condition:'only screen and (48rem <= width)'},{queries:[['all','only screen','(width >= 768px)']]}]){
+  const scope={prefix:'tablet:',label:'Tablet',...choice};assert.equal(R.atWidth(d,768,[scope]).prefix,'tablet:');assert.equal(R.inherited('left-0 tablet:left-4','min-[1000px]:',d,[scope]),'left-0 left-4');
+ }
+ for(const condition of ['print and (min-width:768px)','not screen and (min-width:768px)','screen and (min-width:768px) and (min-height:900px)'])assert.notEqual(R.atWidth(d,768,[{prefix:'conditional:',condition}]).prefix,'conditional:');
+});

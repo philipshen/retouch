@@ -58,8 +58,10 @@
     try{return groups.some(group=>group.every(query=>w.matchMedia(query).matches));}catch{return null;}
   }
   function minimumCondition(item){
-    if(item?.queries&&(item.queries.length!==1||item.queries[0].length!==1))return null;
-    return item?.queries?.[0][0]||item?.condition||null;
+    if(item?.queries&&item.queries.length!==1)return null;
+    const queries=item?.queries?.[0]||(item?.condition?[item.condition]:[]);
+    const conditions=queries.map(query=>query.trim().replace(/^(?:only\s+)?(?:screen|all)\s+and\s*/i,'')).filter(query=>! /^(?:only\s+)?(?:screen|all)$/i.test(query));
+    return conditions.length===1?conditions[0]:null;
   }
   const absolutePixels={px:1,in:96,cm:96/2.54,mm:96/25.4,q:96/101.6,pt:96/72,pc:16};
   const lengthPixels=(value,unit,initial)=>Number(value)*(absolutePixels[unit.toLowerCase()]??initial);
