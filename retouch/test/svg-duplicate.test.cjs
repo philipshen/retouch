@@ -16,3 +16,12 @@ test('SVG duplicate refuses identity collisions, templates, unsupported descenda
  for(const [source,tag]of [[original.replace('<rect ','<rect id="box" '),'g'],[original.replace('<g>','<g v-if="shown">'),'rect'],[original.replace('<g>','<g><text>Hello</text>'),'g']]){const r=resolve(source,tag);assert.equal(duplicate.describe(r),null);assert.equal(duplicate.plan(r,{fileHash:r.hash}).refused,true);}
  const r=resolve();assert.equal(duplicate.plan(r,{fileHash:'stale'}).refused,true);assert.equal(duplicate.plan(r,{}).refused,true);
 });
+
+test('SVG duplication maps originals without assigning their identities to copies',()=>{
+ const markup='<main><svg><rect/><g><circle/><ellipse/></g><line/></svg><p>After</p></main>',source=markup;
+ for(const tag of ['rect','g','svg']){
+  const r=resolve(source,tag),result=duplicate.plan(r,{fileHash:r.hash});assert.equal(result.ok,true,result.reason);
+  const fresh=html.collect(result.edits[0].after,r.relPath).elements,mapping=new Map(result.sourceIdMap),originalIds=r.elements.map(e=>mapping.get(e.id)||e.id);assert.equal(new Set(originalIds).size,r.elements.length);assert.ok(!originalIds.includes(result.createdId));
+  for(const element of r.elements){const next=fresh.find(e=>e.id===(mapping.get(element.id)||element.id));assert.ok(next);assert.equal(next.tag,element.tag);}
+ }
+});

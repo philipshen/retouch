@@ -15,6 +15,6 @@ function plan(resolved,op){
  for(const old of before){const offset=old.node.start+(old.node.start>=end?chunk.length:0),fresh=next.find(e=>e.node.start===offset&&ids.jsxElementName(e.node)===ids.jsxElementName(old.node));if(!fresh)return refuse('The copy would change surrounding JSX structure.');mapping.set(old.id,fresh.id);}
  const oldParents=deletion.parents(before),newParents=deletion.parents(next),copyMapping=new Map(originals.map((e,i)=>[e.id,copies[i]?.id]));
  if(next.length!==before.length+originals.length||copies.length!==originals.length||before.some(e=>newParents.get(mapping.get(e.id))!==(mapping.get(oldParents.get(e.id))??null))||originals.some((e,i)=>ids.jsxElementName(e.node)!==ids.jsxElementName(copies[i].node)||newParents.get(copies[i].id)!==(copyMapping.get(oldParents.get(e.id))??mapping.get(oldParents.get(e.id))??null)))return refuse('The copied SVG ancestry could not be preserved.');
- return {ok:true,hash:ids.contentHash(after),parentId:mapping.get(oldParents.get(resolved.element.id)),createdId:copies[0].id,structural:true,edits:[{file:resolved.file,before:source,after}]};
+ return {ok:true,sourceIdMap:[...mapping].filter(([a,b])=>a!==b),hash:ids.contentHash(after),parentId:mapping.get(oldParents.get(resolved.element.id)),createdId:copies[0].id,structural:true,edits:[{file:resolved.file,before:source,after}]};
 }
 module.exports={describe,plan};

@@ -23,7 +23,8 @@ function plan(resolved,op){
   for(let i=1;i<originals.length;i++){const parentIndex=originals.findIndex(e=>e.node===originals[i].node.parentNode);if(parentIndex<0||copies[i].node.parentNode!==copies[parentIndex].node)return refuse('The copied SVG nesting changed.');}
   const after=copy.append(inserted),final=html.collect(after,resolved.relPath).elements;
   if(final.length!==next.length||next.some((e,i)=>e.id!==final[i].id||e.tag!==final[i].tag))return refuse('The copied styles would change document identities.');
-  return {ok:true,hash:html.contentHash(after),parentId:mapped.get(resolved.element.node.parentNode).id,createdId:created.id,structural:true,edits:[{file:resolved.file,before:source,after}]};
+  const sourceIdMap=resolved.elements.flatMap(element=>{const id=mapped.get(element.node).id;return id===element.id?[]:[[element.id,id]];});
+  return {ok:true,sourceIdMap,hash:html.contentHash(after),parentId:mapped.get(resolved.element.node.parentNode).id,createdId:created.id,structural:true,edits:[{file:resolved.file,before:source,after}]};
  }catch(error){return refuse(error.message);}
 }
 module.exports={describe,plan};

@@ -103,6 +103,15 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
    await page.getByRole('treeitem',{name:tag,exact:true}).click();await settled();await page.getByRole('button',{name:'Duplicate layer',exact:true}).click();await settled();await wait(async()=>await app.locator(tag).count()===2);assert.equal(await app.locator('circle').count(),2);assert.equal(await app.locator('ellipse').count(),2);
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);assert.equal(await page.getByRole('treeitem',{name:tag,exact:true}).getAttribute('aria-selected'),'true');
   }
+  for(const label of ['rect · Box','circle','line'])await page.getByRole('button',{name:'Lock '+label,exact:true}).click();
+  const copyLocks=()=>page.evaluate(()=>['rect','circle','line'].every(tag=>[...doc().querySelectorAll(tag)].every((el,i)=>layerLocks.direct(el)===(i===0))));
+  for(const tag of ['rect','g','svg']){
+   await page.getByRole('treeitem',{name:tag==='rect'?'rect · Box':tag,exact:true}).click();await settled();await page.getByRole('button',{name:'Duplicate layer',exact:true}).click();await settled();await wait(async()=>await app.locator(tag).count()===2);await wait(copyLocks);const copy=read();
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(copyLocks);
+   await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===copy);await wait(copyLocks);
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(copyLocks);
+  }
+  console.log('SVG COPY/ORIGINAL AND SIBLING LOCKS/UNLOCKED COPIES/UNDO/REDO PASS',engine);
   assert.equal(await app.locator('p').textContent(),'Unchanged');
   assert.deepEqual(errors,[]);console.log(engine+': PASS inline SVG canvas/tree selection, primitive geometry, viewBox scaling, responsive paint, stroke styles, shape creation/deletion/reordering/duplication and exact source/selection undo/redo');
  }finally{await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}

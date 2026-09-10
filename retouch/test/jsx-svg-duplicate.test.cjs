@@ -13,3 +13,12 @@ test('React SVG duplication protects authored identity, dynamic expressions and 
 test('Existing generic literal SVG duplication remains available outside the specialized subtree vocabulary',()=>{
  const r=resolve('export default()=> <main><svg><foreignObject><div>Hello</div></foreignObject></svg></main>','svg');assert.equal(react.describe(r).svgDuplication,null);assert.equal(react.describe(r).structure.canDuplicate,true);assert.equal(react.describe(r).structure.canCopy,true);assert.equal(react.planOp(r,{type:'duplicateElement',fileHash:r.hash}).ok,true);
 });
+
+test('SVG duplication maps originals without assigning their identities to copies',()=>{
+ const markup='<main><svg><rect/><g><circle/><ellipse/></g><line/></svg><p>After</p></main>',source='export default()=>'+markup;
+ for(const tag of ['rect','g','svg']){
+  const r=resolve(source,tag),result=react.planOp(r,{type:'duplicateElement',fileHash:r.hash});assert.equal(result.ok,true,result.reason);
+  const fresh=ids.collectElements(result.edits[0].after,r.relPath).elements,mapping=new Map(result.sourceIdMap),originalIds=r.elements.map(e=>mapping.get(e.id)||e.id);assert.equal(new Set(originalIds).size,r.elements.length);assert.ok(!originalIds.includes(result.createdId));
+  for(const element of r.elements){const next=fresh.find(e=>e.id===(mapping.get(element.id)||element.id));assert.ok(next);assert.equal(ids.jsxElementName(next.node),ids.jsxElementName(element.node));}
+ }
+});
