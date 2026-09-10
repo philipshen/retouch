@@ -11,7 +11,7 @@
   const frame=document.getElementById('app'),canvas=document.getElementById('frameWrap'),screens=window.RetouchScreens,handles={};
   let drag=null,pending=null,applying=false;
   const dimensions=()=>({width:frame.offsetWidth,height:screens.get()?.height||canvas.clientHeight});
-  const apply=(next,persist,axis)=>{applying=true;try{screens.set(screens.constrain(next,axis),{persist,preservePan:true});}finally{applying=false;}};
+  const apply=(next,persist,axis)=>{applying=true;try{screens.set(screens.constrainMain(next,axis),{persist,preservePan:true,preserveRatio:true});}finally{applying=false;}};
   function position(){
    const f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),top=Math.max(f.top,c.top),bottom=Math.min(f.bottom,c.bottom),left=Math.max(f.left,c.left),right=Math.min(f.right,c.right),size=dimensions();
    for(const [axis,handle]of Object.entries(handles)){
@@ -40,8 +40,8 @@
    if((drag.axis==='width'?dx===0:drag.axis==='height'?dy===0:dx===0&&dy===0)&&!drag.changed)return;drag.changed=true;
    if(drag.axis!=='height')drag.width=widthAtRight(drag.right+dx,drag.canvasWidth,drag.scale);
    if(drag.axis!=='width')drag.height=heightAtDelta(drag.initialHeight,dy,drag.scale);
-   Object.assign(drag,screens.constrain({width:drag.width,height:drag.height},drag.axis,{width:drag.initialWidth,height:drag.initialHeight}));
-   if(drag.axis==='both'&&e.shiftKey)Object.assign(drag,preserveAspect(drag.width,drag.height,drag.initialWidth,drag.initialHeight));
+   Object.assign(drag,screens.constrainMain({width:drag.width,height:drag.height},drag.axis,{width:drag.initialWidth,height:drag.initialHeight}));
+   if(drag.axis==='both'&&e.shiftKey&&!screens.isRatioLocked())Object.assign(drag,preserveAspect(drag.width,drag.height,drag.initialWidth,drag.initialHeight));
    if(pending===null)pending=requestAnimationFrame(flush);
   }
   for(const axis of ['width','height','both']){
