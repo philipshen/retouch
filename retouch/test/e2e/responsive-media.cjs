@@ -34,5 +34,17 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
  });
  assert.equal(previews.before,previews.after);
  for(const item of previews.cases){if(Object.hasOwn(item,'expected'))assert.deepEqual(item.actual,item.expected);if(!Object.hasOwn(item,'expected')||item.expected!==null)assert.ok(item.actual,JSON.stringify(item));if(item.actual){await page.setViewportSize(item.actual);assert.equal(await page.evaluate(choice=>RetouchResponsive.matches(choice,window),item.choice),true);}}
+ const boundaries=await page.evaluate(()=>{
+  const choices=RetouchResponsive.discover(document),current={width:390,height:844};
+  return choices.map(choice=>{const match=RetouchResponsive.previewSize(choice,document,current),outside=match&&RetouchResponsive.previewSize(choice,document,match,false),inside=outside&&RetouchResponsive.previewSize(choice,document,outside);return {choice,outside,inside};});
+ });
+ for(const {choice,outside,inside}of boundaries){
+  assert.ok(outside&&inside,JSON.stringify({choice,outside,inside}));
+  for(const [size,expected]of [[outside,false],[inside,true]]){
+   await page.setViewportSize(size);const actual=await page.evaluate(choice=>{const el=[...document.querySelectorAll('div')].find(el=>el.className.startsWith(choice.prefix));return {matches:RetouchResponsive.matches(choice,window),styled:getComputedStyle(el).opacity!=='1'};},choice);assert.deepEqual(actual,{matches:expected,styled:expected},JSON.stringify({choice,size}));
+  }
+ }
+ assert.equal(await page.evaluate(()=>RetouchResponsive.previewSize({condition:'(min-width:240px)'},document,{width:390,height:844},false)),null);
+ assert.equal(await page.locator('iframe').count(),0);console.log('COMPOUND BREAKPOINT BOUNDARY/CSS/UNIVERSAL SCOPE/PROBE CLEANUP PASS',engine);
  console.log(engine+': PASS nested and repeated media alternatives, query lists, CSS nesting, runtime CSS agreement, initial rem units and conditional-breakpoint non-reuse');
 }finally{await browser.close();}})().catch(error=>{console.error(error);process.exitCode=1});
