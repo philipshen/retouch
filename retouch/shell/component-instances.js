@@ -55,7 +55,8 @@
     if(matches.length!==1)return null;
     return JSON.stringify([id,source,path]);
    }
-   const parent=node.parentElement;path.push([...source,parent?[...parent.children].indexOf(node):0]);
+   const parent=node.parentElement,siblings=parent?[...parent.children].filter(other=>other.tagName===source[0]&&other.getAttribute('data-rt')===source[1]&&other.getAttribute('data-rt-i')===source[2]):[node];
+   path.push([...source,siblings.indexOf(node),siblings.length]);
   }
   return null;
  }
