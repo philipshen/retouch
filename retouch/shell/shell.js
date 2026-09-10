@@ -268,7 +268,7 @@ function hookFrame(d, w) {
   d.addEventListener('pointerdown',cancelOpacityEntry,true);
   d.addEventListener('keydown', (e) => {
     if(mode==='edit'&&!editing&&window.RetouchActions?.shortcut(e)){cancelOpacityEntry();return;}
-    if(opacityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e))return;
+    if(opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e))return;
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'i')) {
@@ -2269,7 +2269,7 @@ routeInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') navigatePage(routeInput.value || '/');
 });
 window.addEventListener('keydown', (e) => {
-  if(opacityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e))return;
+  if(opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e))return;
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.target.closest?.('input,textarea,[contenteditable="true"]')) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
@@ -2364,6 +2364,16 @@ function opacityShortcut(e){
     input.value=String(digits.length===1?(digits==='0'?100:Number(digits)*10):Number(digits));input.dispatchEvent(new Event('change',{bubbles:true}));
   },450);
   return true;
+}
+function visibilityShortcut(e){
+  if(e.defaultPrevented||e.isComposing||!(e.metaKey||e.ctrlKey)||!e.shiftKey||e.altKey||e.key.toLowerCase()!=='h')return false;
+  if(mode!=='edit'||editing||!sel||e.target.isContentEditable||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable="true"],[contenteditable=""]'))return false;
+  const input=panelBody.querySelector('select[aria-label="Shared Visibility"],select[aria-label="Visibility"],input[aria-label="Visible layer"]');
+  if(!input||input.matches(':disabled')||input.closest('[inert]'))return false;
+  e.preventDefault();e.stopImmediatePropagation();
+  if(e.repeat||panelTasks||undoBusy||sourceRequests)return true;
+  if(input.type==='checkbox')input.checked=!input.checked;else input.value=['hidden','collapse'].includes(input.value)?'visible':'hidden';
+  input.dispatchEvent(new Event('change',{bubbles:true}));return true;
 }
 function canvasZoomShortcut(e){
   if(!e.shiftKey||e.metaKey||e.ctrlKey||e.altKey||!['Digit1','Digit2'].includes(e.code))return false;
