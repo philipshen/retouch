@@ -4,15 +4,16 @@
   const project=window.__RT_RENDERING?.stateScope?.project;
   const storageKey='retouch.comparisons.v1'+(typeof project==='string'&&/^[a-f0-9]{64}$/.test(project)?':'+project:'');
   let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore;
-  const collapsedNames=new Set(),sizeHistories=new WeakMap();let previewSerial=0;
+  const collapsedNames=new Set(),sizeHistories=new WeakMap(),lockedRatios=new WeakSet();let previewSerial=0;
   try{const saved=JSON.parse(localStorage.getItem(storageKey+'.collapsed'));if(Array.isArray(saved)&&saved.length<=8)for(const name of saved)if(typeof name==='string'&&name.length<=80)collapsedNames.add(name);}catch{}
   const removed=[],orderUndo=[],orderRedo=[];let removals=0,undoOrder,redoOrder;
   function clearOrderHistory(){orderUndo.length=0;orderRedo.length=0;}
   const valid=v=>Number.isInteger(v)&&v>=240&&v<=7680;
   try{const saved=JSON.parse(localStorage.getItem(storageKey));if(Array.isArray(saved)&&saved.length<=8&&saved.every(s=>Array.isArray(s)&&s.length===3&&typeof s[0]==='string'&&s[0].length<=80&&valid(s[1])&&valid(s[2])))sizes=saved;}catch{}
-  function remember(){try{localStorage.setItem(storageKey,JSON.stringify(sizes));localStorage.setItem(storageKey+'.collapsed',JSON.stringify(sizes.map(size=>size[0]).filter(name=>collapsedNames.has(name))));}catch{}window.RetouchScreens?.setSaved(sizes);}
+  try{const names=JSON.parse(localStorage.getItem(storageKey+'.aspect'));if(Array.isArray(names)&&names.length<=8)for(const size of sizes)if(names.includes(size[0]))lockedRatios.add(size);}catch{}
+  function remember(){try{localStorage.setItem(storageKey+'.aspect',JSON.stringify(sizes.filter(size=>lockedRatios.has(size)).map(size=>size[0])));localStorage.setItem(storageKey,JSON.stringify(sizes));localStorage.setItem(storageKey+'.collapsed',JSON.stringify(sizes.map(size=>size[0]).filter(name=>collapsedNames.has(name))));}catch{}window.RetouchScreens?.setSaved(sizes);}
   function snapshotSize(size){
-    const copy=[...size],history=sizeHistories.get(size);
+    const copy=[...size],history=sizeHistories.get(size);if(lockedRatios.has(size))lockedRatios.add(copy);
     if(history)sizeHistories.set(copy,{undo:history.undo.map(entry=>({before:[...entry.before],after:[...entry.after]})),redo:history.redo.map(entry=>({before:[...entry.before],after:[...entry.after]}))});
     return copy;
   }
@@ -213,7 +214,8 @@
       for(const button of [undoSize,redoSize]){button.type='button';button.className='control-button';button.disabled=true;}
       undoSize.textContent='Undo size';redoSize.textContent='Redo size';sizeHistory.append(undoSize,redoSize);
       const updateSizeHistory=()=>{undoSize.disabled=!sizeUndo.length;redoSize.disabled=!sizeRedo.length;};
-      const applyDimensions=(nextWidth,nextHeight,record=true)=>{
+      const applyDimensions=(nextWidth,nextHeight,record=true,axis)=>{
+        if(axis&&lockedRatios.has(size)){const next=window.RetouchScreens.constrain({width:nextWidth,height:nextHeight},axis,{width,height},true);nextWidth=next.width;nextHeight=next.height;}
         if(!valid(nextWidth)||!valid(nextHeight))return;
         if(sizes.some(other=>other!==size&&other[1]===nextWidth&&other[2]===nextHeight)){
           dimensionError.textContent='This size is already pinned.';dimensionError.hidden=false;inputs.width.value=width;inputs.height.value=height;return;
@@ -245,7 +247,7 @@
       for(const axis of ['width','height']){
         const field=document.createElement('label');field.textContent=axis==='width'?'W':'H';
         const input=document.createElement('input');input.type='number';input.min=240;input.max=7680;input.step=1;input.value=axis==='width'?width:height;input.setAttribute('aria-label',name+' comparison '+axis);inputs[axis]=input;
-        input.onchange=()=>{if(input.value!==''&&input.checkValidity())applyDimensions(axis==='width'?Number(input.value):width,axis==='height'?Number(input.value):height);};
+        input.onchange=()=>{if(input.value!==''&&input.checkValidity())applyDimensions(axis==='width'?Number(input.value):width,axis==='height'?Number(input.value):height,true,axis);};
         input.title='Pixels. Shift+Up/Down steps 10 pixels; Enter applies; Escape discards typed changes; Command/Ctrl+Z undoes a committed size.';
         input.onkeydown=event=>{
           if(event.key==='Escape'){input.value=axis==='width'?width:height;event.preventDefault();event.stopPropagation();input.select();}
@@ -254,7 +256,7 @@
             event.preventDefault();const value=Number(input.value);
             if(input.value!==''&&Number.isFinite(value)){
               const next=Math.max(240,Math.min(7680,Math.round(value)+(event.key==='ArrowUp'?10:-10)));
-              applyDimensions(axis==='width'?next:width,axis==='height'?next:height);
+              applyDimensions(axis==='width'?next:width,axis==='height'?next:height,true,axis);
             }
           }
         };
@@ -273,12 +275,16 @@
         const control=delta<0?up:down;if(control.disabled)(delta<0?down:up).focus();else control.focus();return true;
       }
       up.onclick=()=>move(-1);down.onclick=()=>move(1);
+      const aspect=document.createElement('button');aspect.type='button';aspect.className='control-button';aspect.title='Keep width and height proportional. Rotate establishes a new ratio.';
+      const updateAspect=()=>{aspect.setAttribute('aria-label','Lock '+name+' comparison aspect ratio');aspect.setAttribute('aria-pressed',String(lockedRatios.has(size)));aspect.textContent=lockedRatios.has(size)?'Ratio locked':'Lock ratio';};
+      aspect.onclick=()=>{if(lockedRatios.has(size))lockedRatios.delete(size);else lockedRatios.add(size);updateAspect();remember();};updateAspect();dimensions.append(aspect);
       const rotate=document.createElement('button');rotate.type='button';rotate.className='control-button';rotate.textContent='Rotate';rotate.setAttribute('aria-label','Rotate '+name+' comparison');rotate.onclick=()=>applyDimensions(height,width);dimensions.append(rotate);
       const previewBody=document.createElement('div');previewBody.id='comparison-preview-'+(++previewSerial);previewBody.hidden=collapsedNames.has(name);surface.hidden=previewBody.hidden;
       const disclosure=document.createElement('button');disclosure.type='button';disclosure.className='control-button';disclosure.setAttribute('aria-controls',previewBody.id);
       function updateDisclosure(){disclosure.textContent=previewBody.hidden?'Show preview':'Hide preview';disclosure.setAttribute('aria-label',(previewBody.hidden?'Show ':'Hide ')+name+' preview');disclosure.setAttribute('aria-expanded',String(!previewBody.hidden));}
       disclosure.onclick=()=>{previewBody.hidden=!previewBody.hidden;if(previewBody.hidden)collapsedNames.add(name);else collapsedNames.delete(name);remember();updateDisclosure();layoutPreviews();};
       function updateLabels(){
+        updateAspect();
         updateDisclosure();
         label.textContent=name===`Custom ${width} × ${height}`?name:`${name} · ${width} × ${height}`;
         label.setAttribute('aria-label','Rename '+name+' comparison');nameInput.setAttribute('aria-label','Comparison name');

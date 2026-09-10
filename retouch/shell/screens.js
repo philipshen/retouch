@@ -15,8 +15,8 @@
   let linked=false;try{linked=localStorage.getItem(key+'.aspect')==='true';}catch{}
   const updateAspect=()=>{aspect.setAttribute('aria-pressed',String(linked));aspect.textContent=linked?'Ratio locked':'Lock ratio';};updateAspect();
   aspect.onclick=()=>{linked=!linked;updateAspect();try{localStorage.setItem(key+'.aspect',String(linked));}catch{}};
-  function constrain(next,axis,base=screen||viewport){
-    if(!linked||!axis||!base||!base.width||!base.height)return next;
+  function constrain(next,axis,base=screen||viewport,enabled=linked){
+    if(!enabled||!axis||!base||!base.width||!base.height)return next;
     const x=next.width/base.width,y=next.height/base.height,requested=axis==='width'?x:axis==='height'?y:Math.abs(x-1)>Math.abs(y-1)?x:y;
     const scale=Math.max(240/base.width,240/base.height,Math.min(7680/base.width,7680/base.height,requested));
     return {width:Math.round(base.width*scale),height:Math.round(base.height*scale)};
