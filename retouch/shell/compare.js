@@ -70,6 +70,10 @@
     }
     return right>left&&bottom>top?{left,top,width:right-left,height:bottom-top}:null;
   }
+  function updateOutlines(card,boxes){
+    const key=JSON.stringify(boxes);if(card.outlineKey===key)return;card.outlineKey=key;
+    card.overlay.replaceChildren(...boxes.map(bounds=>{const box=document.createElement('div');box.className='compare-selection';for(const [axis,value]of Object.entries(bounds))box.style[axis]=value+'px';return box;}));
+  }
   function paint(){
     if(!open)return;
     layoutPreviews();
@@ -78,7 +82,7 @@
       const {frame,overlay,message,scopeMessage,width,height,reveal}=card;
       scopeMessage.textContent='Checking style scope…';scopeMessage.dataset.scopeApplies='unknown';
       const scale=card.viewport.clientWidth/width;
-      overlay.replaceChildren();
+      const boxes=[];
       try{
         const d=frame.contentDocument;if(!d?.body||d.URL==='about:blank'){reveal.disabled=true;continue;}
         const applies=!scope.prefix?true:window.RetouchResponsive.matches(scope,d.defaultView);
@@ -92,11 +96,10 @@
           if(!rect.width||!rect.height||['hidden','collapse'].includes(css.visibility))continue;
           const bounds=visibleBounds(el,width,height);
           if(!bounds){offscreen++;continue;}visible++;
-          const box=document.createElement('div');box.className='compare-selection';
-          Object.assign(box.style,{left:bounds.left*scale+'px',top:bounds.top*scale+'px',width:bounds.width*scale+'px',height:bounds.height*scale+'px'});overlay.append(box);
+          boxes.push({left:bounds.left*scale,top:bounds.top*scale,width:bounds.width*scale,height:bounds.height*scale});
         }
         message.textContent=selected?(visible?'Selected layer · '+visible+(visible===1?' instance':' instances'):offscreen?'Selected layer is outside this viewport':nodes.length?'Selected layer is hidden':'Selected layer is absent on this screen'):'Same page · independent viewport';
-      }catch{reveal.disabled=true;message.textContent='Preview unavailable for this page';}
+      }catch{boxes.length=0;reveal.disabled=true;message.textContent='Preview unavailable for this page';}finally{updateOutlines(card,boxes);}
     }
     timer=setTimeout(paint,100);
   }
