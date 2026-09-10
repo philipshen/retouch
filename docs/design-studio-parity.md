@@ -10535,3 +10535,11 @@ Comparison keyboard navigation now starts at the preview center and scrolls the 
 The regression first reproduced Arrow Down scrolling the underlying page while leaving its fixed nested panel unmoved. The fixture now verifies nested horizontal/vertical movement, panel-relative paging, endpoints, ancestor continuation, containment, and nested scrolling while the page viewport has hidden overflow. Chromium and WebKit pass in standards and quirks modes, preserving the existing focus/modifier/source/scope checks. Paired-breakpoint comparison flows also pass in both engines, and all 821 unit tests pass.
 
 Evidence: `/private/tmp/retouch-nested-keyboard-before.log`, `/private/tmp/retouch-nested-keyboard-{chromium,webkit}.log`, `/private/tmp/retouch-nested-keyboard-{chromium,webkit}-{standards,boundary}.log`, `/private/tmp/retouch-nested-keyboard-units.log`. Native launches remain paused; full parity remains incomplete.
+
+### Layer locks in comparison picking (2026-09-10)
+
+Comparison clicks now use the same lock-aware picker as the main canvas. Directly locked layers and descendants of locked ancestors are skipped in favor of eligible layers underneath. When nothing eligible remains, the existing selection and main viewport stay unchanged. The main-canvas handoff also rechecks locks after resolving the target, before selecting it. Locks remain editor state; selecting a locked layer explicitly in Layers remains available.
+
+The new disposable HTML regression first reproduced a comparison click selecting a child of a locked article. Chromium and WebKit now verify inherited/direct lock pass-through, unlock and lock Undo, hidden-layer pass-through, preserved responsive scope/source, and unchanged selection/size when all hit targets are locked. Both engines also pass the full existing HTML comparison-edit suite, including live scoped edits, reveal/instance cycling, clipped outlines, screen management and history. All 821 unit tests pass.
+
+Evidence: `/private/tmp/retouch-comparison-locks-before.log`, `/private/tmp/retouch-comparison-locks-{chromium,webkit}-{locks,edit}.log`, `/private/tmp/retouch-comparison-locks-units.log`. These browser checks cover HTML host layers; they do not prove every framework/component selection path. Native launches remain paused; full parity remains incomplete.

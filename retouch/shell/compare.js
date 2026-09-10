@@ -365,8 +365,9 @@
           const d=frame.contentDocument,loc=frame.contentWindow.location;
           if(!d?.body||loc.origin!==location.origin||loc.pathname+loc.search+loc.hash!==path()){message.textContent='Wait for this comparison to finish loading.';return;}
           const bounds=viewport.getBoundingClientRect(),scale=viewport.clientWidth/width;
-          const node=event?d.elementFromPoint((event.clientX-bounds.left)/scale,(event.clientY-bounds.top)/scale)?.closest('[data-rt],[data-rt-i]'):null;
-          if(event&&!node){message.textContent='This layer is not editable yet.';return;}
+          const x=event?(event.clientX-bounds.left)/scale:0,y=event?(event.clientY-bounds.top)/scale:0;
+          const node=event?window.RetouchCanvasSelection?.pick(d.elementFromPoint(x,y),x,y):null;
+          if(event&&!node){message.textContent='No unlocked editable layer here. Select locked layers in Layers.';return;}
           const hostId=node?.getAttribute('data-rt'),instanceId=node?.getAttribute('data-rt-i');
           const peers=node?[...d.querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===hostId&&el.getAttribute('data-rt-i')===instanceId):[];
           window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,hostId,instanceId,occurrence:node?peers.indexOf(node):0,route:path()}}));
