@@ -99,6 +99,7 @@
           b.ondragend=endDrag;
           b.onkeydown=async e=>{
             if(item.parent?.componentId&&(e.key==='F2'||e.key==='Delete'||e.key==='Backspace'||(e.metaKey||e.ctrlKey)&&['c','v','d'].includes(e.key.toLowerCase())))await choose(item);
+            if(item.componentId&&(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='d'){e.preventDefault();e.stopPropagation();if(!isBusy&&!e.repeat){await choose(item);await onAction('duplicateElement');}return;}
             if(item.componentId&&(e.key==='F2'||e.key==='Delete'||e.key==='Backspace'||(e.metaKey||e.ctrlKey)&&['c','v','d'].includes(e.key.toLowerCase()))){e.preventDefault();await choose(item);return;}
             if(multiEnabled&&(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='a'){e.preventDefault();e.stopPropagation();await selectVisible();return;}
             if(e.key==='F2'){e.preventDefault();if(!isBusy){if(!selectedSet.has(item.el))await onSelect(item.el);onAction('renameElement');}return;}
@@ -169,10 +170,10 @@
       const s=info?.structure;
       const copied=getClipboard();
       const compatible=!!copied&&copied.file===info?.file&&copied.parentId===s?.parentId&&copied.hash===(info?.fileHash||info?.hash);
-      const capabilities=JSON.stringify([!!info,!!info?.svgMovement,s,busy,copied,compatible,selectedSet.size]);
+      const capabilities=JSON.stringify([!!info,info?.kind,info?.canDuplicateComponent,info?.componentDuplicateReason,!!info?.svgMovement,s,busy,copied,compatible,selectedSet.size]);
       if(capabilities===lastCapabilities)return;
       lastCapabilities=capabilities;
-      actionButtons.duplicateElement.textContent=selectedSet.size>1?'Duplicate layers':'Duplicate layer';actionButtons.deleteElement.textContent=selectedSet.size>1?'Delete layers':'Delete layer';
+      actionButtons.duplicateElement.textContent=info?.kind==='instance'?'Duplicate component':selectedSet.size>1?'Duplicate layers':'Duplicate layer';actionButtons.deleteElement.textContent=selectedSet.size>1?'Delete layers':'Delete layer';
       for(const action of ['insertText','insertFrame']){actionButtons[action].hidden=s?.canInsert===undefined;actionButtons[action].disabled=busy||!s?.canInsert;actionButtons[action].title=s?.insertReason||'Insert inside the selected container.';}
       actionButtons.reparentElement.hidden=s?.canReparent===undefined;actionButtons.reparentElement.disabled=busy||!s?.canReparent;
       actionButtons.frameSelection.hidden=s?.canFrame===undefined;actionButtons.frameSelection.disabled=busy||!s?.canFrame;actionButtons.frameSelection.title='Wrap consecutive sibling layers in a new layout container.';
@@ -180,14 +181,14 @@
       actionButtons.copyElement.disabled=busy||!(s?.canCopy??s?.canDuplicate);
       actionButtons.pasteElement.disabled=busy||!s?.canPaste||!compatible;
       actionButtons.pasteElement.title=!copied?'Copy a layer first.':!compatible?'Paste requires an unchanged copied sibling in this source parent.':'Paste after the selected layer.';
-      actionButtons.duplicateElement.disabled=busy||!s?.canDuplicate;
+      actionButtons.duplicateElement.disabled=busy||!(info?.kind==='instance'?info.canDuplicateComponent:s?.canDuplicate);actionButtons.duplicateElement.title=info?.kind==='instance'?info.componentDuplicateReason||'Create another linked instance.':'';
       actionButtons.deleteElement.disabled=busy||!s?.canDelete;
       actionButtons.before.textContent=info?.svgMovement?'Send backward':'Move layer up';actionButtons.after.textContent=info?.svgMovement?'Bring forward':'Move layer down';
       for(const [action,cap] of [['first','canMoveFirst'],['last','canMoveLast']]){actionButtons[action].hidden=!info?.svgMovement;actionButtons[action].disabled=busy||!s?.[cap];}
       actionButtons.before.disabled=busy||!s?.canMoveBefore;
       actionButtons.after.disabled=busy||!s?.canMoveAfter;
       if(selectedSet.size>1){for(const button of Object.values(actionButtons))button.disabled=true;if(!info?.cssAuthoring){reason.textContent=selectedSet.size+' source layers selected. Shared styles apply together.';return;}actionButtons.duplicateElement.disabled=busy;actionButtons.deleteElement.disabled=busy;actionButtons.reparentElement.disabled=busy;actionButtons.frameSelection.disabled=busy||!s?.canFrame;reason.textContent=selectedSet.size+' layers selected. Frame, move, duplicate and delete apply to the selection.';return;}
-      reason.textContent=info?.svgMovement?'Send backward or bring forward changes which SVG shape appears on top.':info?.svgDeletion?'Delete removes this SVG layer and its contents. Undo restores it.':info?(s?.canInsert&&!s?.canDuplicate?'Add text or a frame inside this container.':s?.reason || (!s?.canDuplicate?'Duplicate is unavailable for a layer with an authored ID, key, or ref.':'')):'Select a layer to organize it.';
+      reason.textContent=info?.kind==='instance'?(info.componentDuplicateReason||'Duplicate creates another instance with the shared definition.'):info?.svgMovement?'Send backward or bring forward changes which SVG shape appears on top.':info?.svgDeletion?'Delete removes this SVG layer and its contents. Undo restores it.':info?(s?.canInsert&&!s?.canDuplicate?'Add text or a frame inside this container.':s?.reason || (!s?.canDuplicate?'Duplicate is unavailable for a layer with an authored ID, key, or ref.':'')):'Select a layer to organize it.';
     }
     return {attach,selection,refresh:()=>{render();void loadComponents();}};
   }

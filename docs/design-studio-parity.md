@@ -9033,3 +9033,31 @@ Virtual-row structural move/rename/copy operations, persistent runtime identity,
 unverified dynamic root shapes, per-render source overrides and fragment layout
 editing remain open. Full Figma Design parity and arbitrary-site support are
 incomplete. Native launches remain paused; trusted brew distribution is unverified.
+
+### Duplicate linked instances from component tree rows (2026-09-10)
+
+Selected component rows expose Duplicate component when the source duplication
+planner supports that usage. Cmd/Ctrl+D on a component row selects that occurrence
+and routes to the existing linked-instance duplication transaction. Keyboard
+repeat/busy guards prevent concurrent duplicate requests. Host child rows keep
+their source-layer action path. Unsupported placement, fixed IDs, refs and spreads
+retain the planner's refusal behavior; capability metadata supplies the reason
+instead of inferring support from a DOM row.
+
+Validation: 708 unit tests passed. New descriptor tests distinguish sibling
+usages from direct roots and verify capability invalidation after a definition
+acquires a fixed DOM ID. Chromium and WebKit both passed Duplicate component from
+the Layers action, independent label editing on the new copy, exact property and
+duplication Undo, and Ctrl+D from the component row followed by exact Undo. Shared
+definition source stayed unchanged. Both browsers also completed the full framed
+insertion/required-properties/swap/conditional-branch/duplicate/property flow.
+Both processes terminated with exit zero and strict empty page-error assertions.
+Evidence: /private/tmp/retouch-tree-duplicate-units-final.log,
+/private/tmp/retouch-tree-duplicate-chromium.log,
+/private/tmp/retouch-tree-duplicate-webkit.log.
+
+Root/expression placement duplication, component tree move/rename/copy/delete,
+persistent runtime identity, independent per-render overrides and full fragment
+layout editing remain open. Full Figma Design parity and arbitrary-site support
+are incomplete. Native launches remain paused; trusted brew distribution is
+unverified.
