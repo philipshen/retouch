@@ -6,16 +6,37 @@
   const project=window.__RT_RENDERING?.stateScope?.project;
   const key = 'retouch.screen.v1'+(typeof project==='string'&&/^[a-f0-9]{64}$/.test(project)?':'+project:'');
   const savedGroup=document.createElement('optgroup');savedGroup.label='Project screens';preset.append(savedGroup);
-  let screen = null, viewport = null;
+  let screen = null, viewport = null, committed = null;
+  const undoStack=[],redoStack=[],undoButton=document.getElementById('screenUndo'),redoButton=document.getElementById('screenRedo');
+  const copy=value=>value?{...value}:null;
+  const same=(a,b)=>a?.width===b?.width&&a?.height===b?.height;
+  const updateHistory=()=>{undoButton.disabled=!undoStack.length;redoButton.disabled=!redoStack.length;};
   function valid(value) { return Number.isInteger(value) && value >= 240 && value <= 7680; }
   function apply(next, options = {}) {
-    screen = next;
+    if(options.persist!==false){
+      if(options.history!==false&&!same(committed,next)){undoStack.push({before:copy(committed),after:copy(next)});if(undoStack.length>50)undoStack.shift();redoStack.length=0;}
+      committed=copy(next);updateHistory();
+    }
+    screen = copy(next);
     const name = next ? `${next.width}x${next.height}` : 'fluid';
     preset.value = [...preset.options].some(o => o.value === name) ? name : [...savedGroup.children].some(o=>o.value==='saved:'+name)?'saved:'+name:'custom';
     if (next) { width.value = next.width; height.value = next.height; }
     if(options.persist!==false)try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
     window.dispatchEvent(Object.assign(new CustomEvent('retouch:screen', { detail: next }), {preservePan:!!options.preservePan}));
   }
+  function replay(redo,moveFocus=false){
+    const from=redo?redoStack:undoStack,to=redo?undoStack:redoStack,entry=from.pop();if(!entry)return;
+    to.push(entry);width.setCustomValidity('');height.setCustomValidity('');apply(copy(redo?entry.after:entry.before),{history:false,preservePan:true});
+    if(moveFocus){const button=redo?redoButton:undoButton;(button.disabled?(redo?undoButton:redoButton):button).focus();}
+  }
+  undoButton.onclick=()=>replay(false,true);redoButton.onclick=()=>replay(true,true);
+  document.addEventListener('keydown',event=>{
+    if(event.defaultPrevented||event.isComposing||event.altKey||!(event.metaKey||event.ctrlKey))return;
+    const target=event.target;if(![preset,width,height,undoButton,redoButton,document.getElementById('screenRotate')].includes(target)&&!target.matches?.('.screen-resize-handle'))return;
+    const key=event.key.toLowerCase();if(key!=='z'&&key!=='y')return;
+    if((target===width||target===height)&&target.value!==String((screen||viewport)?.[target===width?'width':'height']))return;
+    event.preventDefault();event.stopPropagation();replay(key==='y'||event.shiftKey,target===undoButton||target===redoButton);
+  });
   function custom() {
     const w = Number(width.value), h = Number(height.value);
     if (!valid(w) || !valid(h)) {
@@ -66,7 +87,7 @@
   }, get() { return screen ? {...screen} : null; }, set(next, options) { if(next===null || next && valid(next.width) && valid(next.height))apply(next, options); }, restore() {
     try {
       const saved = JSON.parse(localStorage.getItem(key));
-      if (saved && valid(saved.width) && valid(saved.height)) apply(saved);
+      if (saved && valid(saved.width) && valid(saved.height)) apply(saved,{history:false});
     } catch {}
   } };
 })();

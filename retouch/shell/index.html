@@ -32,6 +32,8 @@
   <span aria-hidden="true">×</span>
   <label>H <input id="screenHeight" title="Height in pixels. Shift+Up/Down steps 10 pixels; Escape discards typed changes." aria-label="Screen height" type="number" min="240" max="7680" step="1"></label>
   <button id="screenRotate" title="Swap screen width and height">Rotate</button>
+  <button id="screenUndo" disabled aria-label="Undo preview size" title="Undo preview size (Command/Ctrl+Z in screen controls)">↶</button>
+  <button id="screenRedo" disabled aria-label="Redo preview size" title="Redo preview size (Command/Ctrl+Shift+Z in screen controls)">↷</button>
   <label>Zoom <input id="canvasZoom" aria-label="Canvas zoom (%)" type="number" min="25" max="6400" step="any" value="100">%</label>
   <button id="canvasHand" aria-pressed="false" title="Pan the canvas, or hold Space and drag">Hand</button>
   <button id="fitScreen" aria-keyshortcuts="Shift+1" title="Fit the preview viewport in the canvas (Shift+1)">Fit screen</button>

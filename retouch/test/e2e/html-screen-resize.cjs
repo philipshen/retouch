@@ -9,6 +9,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
  const start=async()=>{const b=await handle.boundingBox();assert.ok(b);const x=b.x+b.width/2,y=b.y+b.height/2;await page.mouse.move(x,y);await page.mouse.down();return{x,y};};
  try{
   await page.goto(`http://localhost:${server.address().port}/rt`);await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await wait(async()=>await width()===390);
+  await page.getByRole('button',{name:'Undo preview size',exact:true}).click();assert.equal(await saved(),null);await page.getByRole('button',{name:'Redo preview size',exact:true}).click();await wait(async()=>await width()===390);
   for(const [label,initial]of [['Screen width',390],['Screen height',844]]){
    const field=page.getByLabel(label,{exact:true});await field.fill('1200');await field.press('Escape');assert.equal(await field.inputValue(),String(initial));await field.press('Tab');assert.deepEqual(await saved(),{width:390,height:844});
    await field.fill('12');await field.press('Tab');assert.equal(await field.evaluate(el=>el.checkValidity()),false);await field.press('Escape');assert.equal(await field.inputValue(),String(initial));assert.equal(await field.evaluate(el=>el.checkValidity()),true);
@@ -16,10 +17,11 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   }
   await page.getByRole('treeitem',{name:'main',exact:true}).click();await wait(async()=>await page.getByLabel('Style screen scope').count()===1);const scope=await page.getByLabel('Style screen scope').inputValue();
   let p=await start();await page.mouse.move(p.x+110,p.y,{steps:10});await wait(async()=>await width()===610);assert.equal((await saved()).width,390,'drag preview is not persisted before release');await page.mouse.up();await wait(async()=>(await saved()).width===610);
+  await handle.press('Meta+z');await wait(async()=>await width()===390);assert.deepEqual(await saved(),{width:390,height:844});await handle.press('Meta+Shift+z');await wait(async()=>await width()===610);
   assert.equal(await app.locator('main').evaluate(el=>getComputedStyle(el).flexDirection),'row');assert.equal(await page.getByLabel('Style screen scope').inputValue(),scope);assert.equal(fs.readFileSync(file,'utf8'),original);
-  p=await start();await page.mouse.move(p.x-60,p.y,{steps:5});await wait(async()=>await width()===490);await page.keyboard.press('Escape');await page.mouse.up();await wait(async()=>await width()===610);assert.equal((await saved()).width,610);
+  p=await start();await page.mouse.move(p.x-60,p.y,{steps:5});await wait(async()=>await width()===490);await page.keyboard.press('Escape');await page.mouse.up();await wait(async()=>await width()===610);assert.equal((await saved()).width,610);await handle.press('Control+z');await wait(async()=>await width()===390);await handle.press('Control+y');await wait(async()=>await width()===610);
   await handle.focus();await page.keyboard.press('Shift+ArrowLeft');await wait(async()=>await width()===600);await page.keyboard.press('ArrowLeft');await wait(async()=>await width()===599);assert.equal(await app.locator('main').evaluate(el=>getComputedStyle(el).flexDirection),'column');
-  await page.reload();await wait(async()=>await width()===599);
+  await page.reload();await wait(async()=>await width()===599);assert.equal(await page.getByRole('button',{name:'Undo preview size',exact:true}).isDisabled(),true);assert.equal(await page.getByRole('button',{name:'Redo preview size',exact:true}).isDisabled(),true);
   const canvas=page.locator('#frameWrap');await canvas.dispatchEvent('wheel',{deltaY:100,ctrlKey:true,bubbles:true,cancelable:true});const scale=await page.locator('#app').evaluate(el=>el.getBoundingClientRect().width/el.offsetWidth);assert.ok(scale<1);p=await start();await page.mouse.move(p.x+50,p.y,{steps:5});await page.mouse.up();const expected=Math.round(599+100/scale);await wait(async()=>Math.abs(await width()-expected)<=1);
   if(process.env.RT_E2E_SCREEN_RESIZE_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_SCREEN_RESIZE_SCREENSHOT});
   await handle.focus();await page.keyboard.press('Home');await wait(async()=>await width()===240);assert.equal(await handle.getAttribute('aria-valuenow'),'240');
