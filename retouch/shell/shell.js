@@ -1243,7 +1243,12 @@ function propTable(props,instanceId,fileHash) {
   const body=document.createElement('tbody');
   for(const prop of props){
     const row=document.createElement('tr'),name=document.createElement('td'),value=document.createElement('td'),fallback=document.createElement('td');name.textContent=prop.name;fallback.textContent=prop.default;
-    if(instanceId&&prop.editor?.editable){
+    if(instanceId&&prop.editor?.editable&&prop.editor.choices){
+      const meta=prop.editor,input=document.createElement('select');input.setAttribute('aria-label','Component property '+prop.name);
+      meta.choices.forEach((choice,index)=>{const option=document.createElement('option');option.value=String(index);option.textContent=String(choice);input.append(option);});
+      const selected=meta.choices.indexOf(meta.value);if(selected<0){const option=document.createElement('option');option.value='-1';option.disabled=true;option.textContent=String(meta.value)+' (outside declared choices)';input.append(option);}input.value=String(selected);
+      input.addEventListener('change',()=>setComponentProperty(instanceId,prop.name,meta.choices[Number(input.value)],fileHash,{definitionHash:meta.definitionHash}));value.append(input);
+    }else if(instanceId&&prop.editor?.editable){
       const meta=prop.editor,input=document.createElement(meta.type==='string'?'textarea':'input');input.setAttribute('aria-label','Component property '+prop.name);if(meta.type!=='string')input.type=meta.type==='boolean'?'checkbox':'number';
       if(meta.type==='string'){const resize=()=>sizeComponentText(input);input.className='component-prop-text';input.rows=1;input.title='Enter adds a line. Command/Ctrl+Enter saves. Escape cancels.';input.addEventListener('input',resize);requestAnimationFrame(resize);}
       if(meta.type==='boolean')input.checked=meta.value;else input.value=String(meta.value);if(meta.type==='number')input.step='any';

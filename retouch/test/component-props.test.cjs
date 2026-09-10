@@ -37,3 +37,32 @@ test('default-dependent plans check an imported definition again at transaction 
   const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.kind==='instance'),info=props.describe(usage,'title'),plan=props.plan(usage,{name:'title',value:'Override',fileHash:usage.hash,definitionHash:info.definitionHash});assert.ok(plan.ok,plan.reason);assert.equal(plan.edits.length,2);const guard=plan.edits.find(e=>e.file.endsWith('Card.jsx'));assert.equal(guard.before,guard.after);fs.appendFileSync(guard.file,'\n// changed');assert.equal(require('../src/transactions.cjs').applyPlan(root,plan).ok,false);assert.equal(fs.readFileSync(usage.file,'utf8'),usage.source);
  }finally{index.close();cleanup(root);}
 });
+
+test('TypeScript literal choices constrain existing props and inherited defaults',()=>{
+ const sources=[
+ 'function Card({title="small"}:{title:"small"|"large"}){return <h1/>}',
+ 'type Size="small"|"large";type Props={title:Size};function Card({title="small"}:Props){return <h1/>}',
+ 'interface Props {title?:"small"|"large"} function Card({title="small"}:Props){return <h1/>}',
+ ];
+ for(const definition of sources){const root=fs.realpathSync(makeApp({'page.tsx':'function Page(){return <main><Card title="small"/></main>}'+definition})),index=new Index(root);index.scanAll();try{
+  const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.kind==='instance'),info=props.describe(usage,'title');assert.deepEqual(info.choices,['small','large']);
+  assert.equal(props.plan(usage,{name:'title',value:'medium',fileHash:usage.hash,definitionHash:info.definitionHash}).ok,false);
+  assert.equal(props.plan(usage,{name:'title',value:'large',fileHash:usage.hash,definitionHash:'stale'}).ok,false);
+  assert.ok(props.plan(usage,{name:'title',value:'large',fileHash:usage.hash,definitionHash:info.definitionHash}).ok);
+  const reset=props.plan(usage,{name:'title',reset:true,fileHash:usage.hash,definitionHash:info.definitionHash});assert.ok(reset.ok,reset.reason);assert.ok(require('../src/transactions.cjs').applyPlan(root,reset).ok);index.scanAll();const inherited=props.describe(index.resolve(usage.element.id),'title');assert.equal(inherited.inherited,true);assert.deepEqual(inherited.choices,['small','large']);
+ }finally{index.close();cleanup(root);}}
+});
+test('choice discovery preserves primitive types and refuses unresolved or unbounded contracts',()=>{
+ const choice=require('../src/component-prop-choices.cjs').choices;
+ for(const [type,expected] of [['-1|2',[-1,2]],['true|false',[true,false]],['string|null',null],['"a"|string',null],['Missing',null]]){
+  const source='function Card({title}:{title:'+type+'}){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),result=choice({},'title',{source,fn:ast.program.body[0]});assert.deepEqual(result?.choices||null,expected);
+ }
+});
+
+test('choice-only writes guard an imported definition without adding it to history',()=>{
+ const root=fs.realpathSync(makeApp({'page.tsx':'import Card from "./Card";function Page(){return <main><Card title="small"/></main>}','Card.tsx':'export default function Card({title}:{title:"small"|"large"}){return <h1>{title}</h1>}'})),index=new Index(root);index.scanAll();try{
+  const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.kind==='instance'),info=props.describe(usage,'title'),plan=props.plan(usage,{name:'title',value:'large',fileHash:usage.hash,definitionHash:info.definitionHash});assert.ok(plan.ok,plan.reason);assert.equal(plan.edits.length,2);const guard=plan.edits.find(e=>e.file.endsWith('Card.tsx'));assert.equal(guard.before,guard.after);
+  fs.writeFileSync(guard.file,guard.before.replace('"large"','"medium"'));assert.equal(require('../src/transactions.cjs').applyPlan(root,plan).ok,false);assert.equal(fs.readFileSync(usage.file,'utf8'),usage.source);
+  fs.writeFileSync(guard.file,guard.before);const applied=require('../src/transactions.cjs').applyPlan(root,plan);assert.ok(applied.ok,applied.reason);assert.equal(applied.edits.length,1);assert.equal(applied.edits[0].file,usage.file);
+ }finally{index.close();cleanup(root);}
+});

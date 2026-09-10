@@ -8018,3 +8018,22 @@ scrolls and remains manually resizable. Escape restores the original field heigh
 as well as the value. Chromium and WebKit verify unclipped wrapped text, bounded long-text
 height, cancellation without writes, and the existing property/history workflow.
 Native launches remain paused; full parity remains unfinished.
+
+
+## Source-defined TypeScript component choices (2026-09-10)
+
+Literal component props now use a dropdown when the definition declares a finite,
+homogeneous string/number/boolean literal type or union. Inline contracts and
+module-local type aliases/interfaces are resolved without executing source.
+Existing literal values and literal inherited defaults retain reset/history support.
+Out-of-contract current literals remain visible; writes must choose a declared
+value. The definition hash and imported-file transaction guard prevent stale choice
+writes. Generic/extended/intersection contracts, imported type aliases, mixed or
+unbounded unions and full variant authoring remain unfinished.
+
+621 unit tests pass, including invalid choice refusal, primitive types, inherited
+choices, and imported definition guards excluded from the applied history edits.
+The Chromium and WebKit TypeScript browser flows choose a size variant, verify the selected
+instance renders at 48px while its sibling stays 32px, and check exact Undo/Redo.
+The temporary fixture needed Node TypeScript declarations before this TSX flow
+could render; test failures now include server logs. Native launches remain paused.
