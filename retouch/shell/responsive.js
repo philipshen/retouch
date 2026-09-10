@@ -39,7 +39,7 @@
         const own=rule.media?.mediaText,queries=own&&own!=='all'&&!media.includes(own)?[...media,own]:media;
         const selector=rule.selectorText || parentSelector;
         const declarations=rule.style?(rule.style.length===undefined||rule.style.length>0):!rule.cssRules;
-        if(declarations&&queries.some(query=>/width/.test(query))&&selector){
+        if(declarations&&queries.some(query=>/\b(?:width|height|orientation|aspect-ratio)\b/.test(query))&&selector){
           for(const match of selector.matchAll(/\.([a-zA-Z][\w-]*)\\:/g))add(match[1]+':',queries);
         }
         if(rule.styleSheet)scanSheet(rule.styleSheet,queries,ancestors);
@@ -103,16 +103,33 @@
     try{
       const w=probe.contentWindow;if(!w)return null;
       const initial=parseFloat(w.getComputedStyle(w.document.documentElement).fontSize)||16;
-      const widths=new Set([current.width,240,7680]),heights=new Set([current.height,240,7680]);
+      const widths=new Set([current.width,240,7680]),heights=new Set([current.height,240,7680]),ratios=[];
       const add=(set,value)=>{for(const n of [Math.floor(value)-1,Math.floor(value),Math.ceil(value),Math.ceil(value)+1])if(n>=240&&n<=7680)set.add(n);};
       for(const query of groups.flat())for(const part of query.matchAll(/\(([^()]*)\)/g)){
+        if(/\baspect-ratio\b/.test(part[1]))for(const match of part[1].matchAll(/(\d+(?:\.\d+)?)\s*(?:\/\s*(\d+(?:\.\d+)?))?/g)){
+          const a=match[1],b=match[2]||'1',scale=10**Math.max(a.split('.')[1]?.length||0,b.split('.')[1]?.length||0);
+          let numerator=Math.round(Number(a)*scale),denominator=Math.round(Number(b)*scale);
+          if(!Number.isSafeInteger(numerator)||!Number.isSafeInteger(denominator)||numerator<=0||denominator<=0)continue;
+          let x=numerator,y=denominator;while(y){const remainder=x%y;x=y;y=remainder;}
+          ratios.push({numerator:numerator/x,denominator:denominator/x});
+        }
         const axes=part[1].match(/(?:min-|max-)?(width|height)\b/g)||[];
         for(const value of part[1].matchAll(/(\d+(?:\.\d+)?)(px|rem|em)\b/g))for(const axis of axes)add(axis.endsWith('width')?widths:heights,Number(value[1])*(value[2]==='px'?1:initial));
       }
       // Orientation can require crossing the other dimension without an
       // explicit numerical boundary in the query.
       for(const value of [...widths,...heights]){add(widths,value);add(heights,value);}
-      const candidates=[];for(const width of widths)for(const height of heights)candidates.push({width,height});
+      const pairs=new Map(),pair=(width,height)=>{if(Number.isInteger(width)&&Number.isInteger(height)&&width>=240&&width<=7680&&height>=240&&height<=7680)pairs.set(width+'x'+height,{width,height});};
+      for(const width of widths)for(const height of heights)pair(width,height);
+      for(const {numerator:a,denominator:b}of ratios){
+        // Near-boundary pairs cover inequalities. Integer multiples of the
+        // reduced fraction also cover exact ratios without rounding drift.
+        for(const height of heights){const near=new Set();add(near,height*a/b);for(const width of near)pair(width,height);}
+        for(const width of widths){const near=new Set();add(near,width*b/a);for(const height of near)pair(width,height);}
+        const low=Math.ceil(Math.max(240/a,240/b)),high=Math.floor(Math.min(7680/a,7680/b));
+        for(const multiple of [low,high,...[...widths].map(width=>width/a),...[...heights].map(height=>height/b)])for(const k of [Math.floor(multiple),Math.ceil(multiple)])if(k>=low&&k<=high)pair(k*a,k*b);
+      }
+      const candidates=[...pairs.values()];
       candidates.sort((a,b)=>(Math.abs(a.width-current.width)+Math.abs(a.height-current.height))-(Math.abs(b.width-current.width)+Math.abs(b.height-current.height)));
       for(const size of candidates.slice(0,2000)){
         probe.style.setProperty('width',size.width+'px','important');probe.style.setProperty('height',size.height+'px','important');
