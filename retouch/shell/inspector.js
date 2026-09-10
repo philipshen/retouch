@@ -393,7 +393,7 @@
   const isTextLayer=tag=>/^(h[1-6]|p|span|a|label|blockquote|li|button)$/.test(tag);
   const lineHeightToken=t=>/^(?:leading-.+|\[line-height:.+\])$/.test(t);
   const fontWeightToken=t=>/^\[font-weight:.+\]$/.test(t)||/^font-(?:thin|extralight|light|normal|medium|semibold|bold|extrabold|black|\[\d+(?:\.\d+)?\])$/.test(t);
-  const fontSizeToken=t=>/^\[font-size:.+\]$/.test(t)||/^text-(?:xs|sm|base|lg|[2-9]?xl|\[(?:length:)?[-.\d][^\]]*\])(?:\/.*)?$/.test(t);
+  const fontSizeToken=t=>/^\[font-size:.+\]$/.test(t)||/^text-(?:xs|sm|base|lg|[2-9]?xl|\[(?:length:[^\]]+|(?:[-.\d]|(?:calc|min|max|clamp)\()[^\]]*)\]|\(length:--[\w-]+\))(?:\/.*)?$/.test(t);
   const letterSpacingToken=t=>/^(?:-?tracking-.+|\[letter-spacing:.+\])$/.test(t);
   const textAlignToken=t=>/^(?:text-(?:left|center|right|justify|start|end)|\[text-align:.+\])$/.test(t);
   const fontStyleToken=t=>/^(?:italic|not-italic|\[font-style:.+\])$/.test(t);

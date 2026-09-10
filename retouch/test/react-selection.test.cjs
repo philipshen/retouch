@@ -54,3 +54,11 @@ test('single-layer typography replacement matches shared decomposition for numer
  assert.equal(I.replaceTypography(original,I.fontSizeToken,'text-4xl'),'p-4 !leading-7 md:text-xl/9 !text-4xl');
  assert.equal(I.replaceTypography(original,I.lineHeightToken,''),'p-4 !text-lg md:text-xl/9');
 });
+
+test('fluid and explicitly typed font sizes remain editable without consuming text colors',()=>{
+ const I=require('../shell/inspector.js');
+ for(const token of ['text-[clamp(16px,2vw,24px)]','text-[length:var(--body-size)]','text-(length:--body-size)','text-[length:calc(20px/2)]/[1.4]','text-[min(3vw,24px)]'])assert.equal(I.fontSizeToken(token),true,token);
+ for(const token of ['text-red-500','text-[color:var(--brand)]','text-[rgb(20,30,40)]','text-[var(--ambiguous)]','text-(--ambiguous)'])assert.equal(I.fontSizeToken(token),false,token);
+ assert.equal(I.replaceTypography('text-[length:calc(20px/2)]/[1.4] text-[color:var(--brand)]',I.fontSizeToken,'text-[40px]'),'leading-[1.4] text-[color:var(--brand)] text-[40px]');
+ assert.equal(change('md:!text-[clamp(16px,2vw,24px)]/9 hover:text-red-500','md:','font-size',40),'hover:text-red-500 md:!leading-9 md:![font-size:40px]');
+});

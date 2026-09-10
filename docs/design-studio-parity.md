@@ -6027,3 +6027,27 @@ Initial runs also passed, but the final fixture strengthens reset verification b
 starting from a non-default leading. General font shorthands and unsupported
 arbitrary-size expressions remain unfinished. Native launches stay paused;
 full Figma parity and verified desktop distribution remain incomplete.
+
+### Fluid and typed-variable font-size ownership (2026-09-09)
+
+The common typography matcher now recognizes math-based arbitrary font sizes
+(calc/min/max/clamp), explicit `length:` values, and typed variable shorthand such
+as `text-(length:--body-size)`. Single-layer, multi-selection and linked-style
+composition can replace those size utilities without leaving a competing class.
+Combined line height is still decomposed and preserved independently. Explicit
+text colors and ambiguous untyped variable tokens remain outside size ownership.
+This does not claim complete arbitrary Tailwind syntax or cascade resolution.
+
+All 452 unit tests passed, exit 0:
+/private/tmp/retouch-fluid-size-units.log. Ownership tests cover typed variables,
+math expressions with internal slashes, responsive important variants and color
+exclusions. React Chromium and Liquid WebKit inspector flows exited 0:
+/private/tmp/retouch-fluid-size-react.log and
+/private/tmp/retouch-fluid-size-liquid.log. They start with a length-typed clamp
+size and combined leading, verify numeric and preset edits preserve leading,
+verify line-height reset preserves size, and restore exact source on undo.
+Standalone compiled/rendered typed-variable style tests passed in Chromium and
+WebKit, exit 0: /private/tmp/retouch-fluid-size-variable-render.log and
+/private/tmp/retouch-fluid-size-variable-webkit.log. They prove a 22px variable
+size becomes 40px while keeping 36px leading. Native launches remain paused;
+full design parity and verified desktop distribution remain unfinished.
