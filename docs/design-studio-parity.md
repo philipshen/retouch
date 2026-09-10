@@ -7145,3 +7145,20 @@ change, incompatible spacing variables are excluded from a color target, detach
 retains the visible color and two Undo operations restore the binding and exact
 original source. The panel screenshot `/private/tmp/retouch-site-variables.png`
 was visually inspected. Native app launches remain paused.
+
+### Multi-layer site variable bindings (2026-09-09)
+
+The HTML shared-style inspector now includes Site variables. Candidate variables
+must resolve to compatible values on every selected layer; differing inherited
+values are labelled “Varies by layer.” Applying creates the same reference on
+all selected layers using one source-history operation. Detach captures each
+bound layer's own computed value into individual atomic change sets. Reset and
+detach leave unbound layers untouched; mixed binding counts are displayed.
+
+Chromium and WebKit pass the expanded `test/e2e/site-variables.cjs` flow: missing
+variables are excluded, one alias resolves to different colors across layers,
+responsive values remain live, detach preserves each color independently, and
+mixed reset preserves an unbound layer's authored color. Undo restores exact
+source for each batch. All 537 unit tests pass in
+`/private/tmp/retouch-multi-variable-units.log`. Variable definitions/modes and
+React/Liquid binding controls remain unfinished. Native app launches stay paused.
