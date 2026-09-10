@@ -2,6 +2,17 @@
  'use strict';
  let expanded=false,preferred='',target='color';
  function normalize(value){if(typeof value!=='string'||!/^#(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})$/i.test(value))throw Error('Enter a hex color with 3, 4, 6 or 8 digits.');let hex=value.slice(1).toLowerCase();if(hex.length<5)hex=[...hex].map(c=>c+c).join('');return '#'+hex+(hex.length===6?'ff':'');}
+ function fromComputed(value){
+  const refuse=()=>{throw Error('This paint is not a solid sRGB color. Enter a hex color explicitly.');};
+  if(typeof value!=='string')return refuse();value=value.trim();if(value.startsWith('#'))return normalize(value);if(value==='transparent')return '#00000000';
+  const rgb=/^rgba?\(([^()]+)\)$/.exec(value),srgb=/^color\(srgb\s+([^()]+)\)$/.exec(value);if(!rgb&&!srgb)return refuse();
+  const raw=(rgb||srgb)[1];let channels,alpha='1';
+  if(raw.includes(',')){if(!rgb||raw.includes('/'))return refuse();channels=raw.split(',').map(part=>part.trim());if(channels.length===4)alpha=channels.pop();}
+  else {const parts=raw.split('/');if(parts.length>2)return refuse();channels=parts[0].trim().split(/\s+/);if(parts.length===2)alpha=parts[1].trim();}
+  if(channels.length!==3)return refuse();
+  const number=(part,max)=>{if(!/^(?:\d+(?:\.\d*)?|\.\d+)%?$/.test(part))return refuse();const n=parseFloat(part),limit=part.endsWith('%')?100:max;if(n>limit)return refuse();return Math.round(n/limit*255).toString(16).padStart(2,'0');};
+  return '#'+channels.map(part=>number(part,srgb?1:255)).join('')+number(alpha,1);
+ }
  // Resolve each paint property independently: an unrelated link at a nearer
  // breakpoint must not hide this property's narrower-scope connection.
  function inheritedLink(links,width,property){
@@ -51,6 +62,7 @@
    const opacity=document.createElement('input');opacity.type='number';opacity.min=0;opacity.max=100;opacity.step='any';I.field(controls,'Color opacity (%)',opacity);
    const background=document.createElement('div');background.style.cssText='height:32px;background:conic-gradient(#bbb 25%,#fff 0 50%,#bbb 0 75%,#fff 0) 0 0/12px 12px';const swatch=document.createElement('div');swatch.style.height='100%';swatch.setAttribute('role','img');background.append(swatch);controls.append(background);
    function sync(updateOpacity=true){try{const value=normalize(hex.value.trim());hex.setCustomValidity('');picker.value=value.slice(0,7);if(updateOpacity)opacity.value=String(Math.round(parseInt(value.slice(7),16)/255*10000)/100);swatch.style.backgroundColor=value;swatch.setAttribute('aria-label','Color preview '+value);}catch(error){hex.setCustomValidity(error.message);}}
+   if(options.readColor)controls.append(I.button('Use selected layer color',()=>{try{hex.value=fromComputed(options.readColor(target));sync();status.textContent='Layer color copied into the editor. Save to update the palette.';}catch(error){status.textContent=error.message;}}));
    hex.oninput=sync;picker.oninput=()=>{let alpha='ff';try{alpha=normalize(hex.value.trim()).slice(7);}catch{}hex.value=picker.value+alpha;sync();};opacity.oninput=()=>{if(opacity.value!==''&&opacity.checkValidity()){hex.value=picker.value+Math.round(Number(opacity.value)/100*255).toString(16).padStart(2,'0');sync(false);}};sync();
    controls.append(I.button(style?'Update color style':'Create color style',()=>{if(!name.value.trim()){name.setCustomValidity('Give the color style a name.');name.reportValidity();return;}name.setCustomValidity('');if(!hex.checkValidity()){hex.reportValidity();return;}if(!opacity.checkValidity()){opacity.reportValidity();return;}run(async()=>{library=await request({type:style?'update':'create',revision:library.revision,...(style?{id:style.id}:{}),name:name.value.trim(),properties:{color:normalize(hex.value.trim())}});selected=library.id;preferred=selected;},'Color style saved.');}));name.oninput=()=>name.setCustomValidity('');
    if(style){const remove=I.button('Delete color style',()=>{const confirm=I.button('Confirm delete color '+style.name,()=>run(async()=>{library=await request({type:'delete',revision:library.revision,id:style.id});selected='';preferred='';},'Color style deleted.'));remove.replaceWith(confirm,I.button('Cancel color deletion',render));confirm.focus();});controls.append(remove);}
@@ -62,5 +74,5 @@
   }
   render();details.ontoggle=()=>{if(!details.isConnected)return;expanded=details.open;if(details.open&&!library)load();};details.open=expanded;
  }
- root.RetouchColorStyles={mount,normalize,inheritedLink};
+ root.RetouchColorStyles={mount,normalize,inheritedLink,fromComputed};
 })(window);

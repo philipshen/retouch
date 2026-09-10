@@ -16,3 +16,9 @@ test('inherited palette links follow the nearest narrower scope per paint proper
  for(const [width,property]of [[0,'background-color'],[768,'background-color'],[390,'color'],[1440,'border-color'],[NaN,'color'],[-1,'color']])assert.equal(inheritedLink(links,width,property),null);
  assert.equal(inheritedLink({},1440,'color'),null);
 });
+
+test('capturing computed sRGB paint retains alpha and refuses non-solid or wide-gamut paint',()=>{
+ const {fromComputed}=window.RetouchColorStyles;
+ for(const [input,expected]of [['rgb(51, 102, 153)','#336699ff'],['rgba(51, 102, 153, 0.533333)','#33669988'],['rgb(100% 0% 50% / 50%)','#ff008080'],['color(srgb 0.2 0.4 0.6 / 0.5)','#33669980'],['transparent','#00000000'],['#1234','#11223344']])assert.equal(fromComputed(input),expected);
+ for(const input of ['none','url(#gradient)','color(display-p3 1 0 0)','oklch(50% 0.2 30)','rgb(300 0 0)','rgb(1 2 3 / 2)','rgb(1 2)','rgb(1,2,3/0.5)',null])assert.throws(()=>fromComputed(input),/solid sRGB/);
+});

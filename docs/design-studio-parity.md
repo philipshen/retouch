@@ -6443,3 +6443,24 @@ both selected layers, retains override indicators and undoes the batch exactly.
 The existing palette reset and library flows continue to pass. Liquid batch
 operations, arbitrary custom utility ownership and full parity remain unfinished.
 Native launches remain paused; live Shopify remains unverified.
+
+### Capture selected paint into the palette draft (2026-09-09)
+
+The single-layer palette now offers “Use selected layer color”, reading the
+chosen text/background/border/SVG paint target from the actual preview. Solid
+computed rgb/rgba and color(srgb) values, percentage channels and transparent
+paint become the palette's existing 8-bit RGBA hex representation. Capturing
+only updates the draft and swatch; explicit Create/Update still controls the
+library mutation. Wide-gamut colors and non-solid paint-server values refuse
+with an explanation instead of silently converting to sRGB.
+
+All 483 tests passed, exit 0: /private/tmp/retouch-capture-color-units.log.
+Conversion tests cover alpha, percentages, normalized sRGB, transparent paint,
+malformed/out-of-range input and wide-gamut/paint-server refusal. HTML Chromium
+and local Liquid WebKit browser flows passed, exit 0:
+/private/tmp/retouch-capture-color-html.log and
+/private/tmp/retouch-capture-color-liquid.log. Both capture opaque text and a
+transparent background into the palette and verify no source/library write,
+then complete the existing create/apply/update/reset/undo flows. Wide-gamut
+palette storage/editing, multi-layer capture and full parity remain unfinished.
+Native launches remain paused; no live Shopify verification was performed.
