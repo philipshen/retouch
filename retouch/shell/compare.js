@@ -1,12 +1,13 @@
 (function(){
   'use strict';
   const toggle=document.getElementById('compareScreens'),rail=document.getElementById('screenComparisons'),main=document.getElementById('app');
-  const storageKey='retouch.comparisons.v1';
+  const project=window.__RT_RENDERING?.stateScope?.project;
+  const storageKey='retouch.comparisons.v1'+(typeof project==='string'&&/^[a-f0-9]{64}$/.test(project)?':'+project:'');
   let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore;
   const removed=[];let removals=0;
   const valid=v=>Number.isInteger(v)&&v>=240&&v<=7680;
   try{const saved=JSON.parse(localStorage.getItem(storageKey));if(Array.isArray(saved)&&saved.length<=8&&saved.every(s=>Array.isArray(s)&&s.length===3&&typeof s[0]==='string'&&s[0].length<=80&&valid(s[1])&&valid(s[2])))sizes=saved;}catch{}
-  function remember(){try{localStorage.setItem(storageKey,JSON.stringify(sizes));}catch{}}
+  function remember(){try{localStorage.setItem(storageKey,JSON.stringify(sizes));}catch{}window.RetouchScreens?.setSaved(sizes);}
   function current(){return {width:Number(document.getElementById('screenWidth').value),height:Number(document.getElementById('screenHeight').value)};}
   function updateControls(){
     const size=current();
@@ -274,4 +275,5 @@
   main.addEventListener('load',()=>sync(true));
   window.addEventListener('retouch:viewport',updateControls);
   window.addEventListener('retouch:screen',updateControls);
+  window.RetouchScreens?.setSaved(sizes);
 })();

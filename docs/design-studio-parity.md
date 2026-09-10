@@ -7098,3 +7098,25 @@ empty history after cancelling an interrupted new edit. Unit tests cover stale
 reviews, external changes, deletion references and interrupted Undo/Redo sides.
 The screenshot `/private/tmp/retouch-recovery-restore.png` was visually inspected.
 Native launches remain paused; full Figma parity remains incomplete.
+
+### Project screen picker integration (2026-09-09)
+
+Pinned comparison screens now populate a Project screens group in the main size
+picker, including custom names and exact dimensions. Rename, resize, import,
+remove and undo-remove update the picker through the comparison persistence path.
+Removing the active preset retains its viewport as Custom rather than changing
+the canvas dimensions. Opening the comparison rail is not required to select a
+previously saved screen after reload.
+
+Canvas dimensions and comparison sets now use the server's canonical project
+identity in their browser-storage keys, avoiding leakage between projects served
+at the same origin. Old global values remain untouched; project-aware sessions
+start with project defaults rather than copying another project's global state.
+This is browser-local persistence, not a shared source-controlled project set or
+cross-origin synchronization.
+
+Validation: the self-contained `retouch/test/e2e/project-screens.cjs` passes in
+Chromium and WebKit. It verifies pin/rename/picker selection, exact iframe width,
+remove/undo-remove, reload and switching two real HTML project servers at the
+same origin with independent dimensions and pinned sets. All 536 unit tests pass
+in `/private/tmp/retouch-project-screens-units.log`. Native launches remain paused.
