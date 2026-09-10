@@ -9137,3 +9137,37 @@ Null-placeholder/import cleanup, component move/rename/copy, persistent runtime
 identity, per-render overrides and fragment layout editing remain open. Full
 Figma Design parity and arbitrary-site support remain incomplete. Native launches
 remain paused; trusted brew distribution is unverified.
+
+### Cleanup the deleted component's unused import binding (2026-09-10)
+
+Deleting a component usage now removes its imported binding when no references
+remain outside the deleted subtree. References inside its deleted key no longer
+keep that binding alive. Other usages or value/type references retain the import.
+Module evaluation remains explicit through a side-effect import. When only type
+specifiers remain, the side-effect import is appended at the end of the file so
+existing statement indices and unrelated source IDs stay stable. The planner
+verifies that every source element outside the deleted subtree still resolves.
+Swap cleanup keeps its existing key-preservation and import placement behavior.
+
+Validation: 722 unit tests passed. Added cases cover default, named and namespace
+imports, remaining type specifiers, deleted-key references, external references
+and unrelated source IDs. A TypeScript 5.9.3 compiler probe reproduces the unused
+binding error under noUnusedLocals without cleanup, then verifies the planned
+source typechecks and emitted code evaluates the original module exactly once.
+The first probe lacked an explicit React type root; the corrected probe uses the
+existing fixture's installed types and passes. Chromium and WebKit both passed
+root duplicate/delete/Undo/Redo, keyboard deletion, preserving another usage,
+library availability and subsequent detach history. Both processes ended with
+exit zero and strict empty page-error assertions. Evidence:
+/private/tmp/retouch-delete-imports-units-final.log,
+/private/tmp/retouch-delete-import-typecheck.cjs,
+/private/tmp/retouch-delete-import-typecheck.log,
+/private/tmp/retouch-delete-imports-chromium.log,
+/private/tmp/retouch-delete-imports-webkit.log.
+
+Cleanup targets the selected component binding only; other imports referenced
+solely by deleted props/children and unused local declarations remain future work.
+Null-placeholder cleanup, component move/rename/copy, persistent runtime identity,
+per-render overrides and fragment layout editing remain open. Full Figma Design
+parity and arbitrary-site support are incomplete. Native launches remain paused;
+trusted brew distribution is unverified.

@@ -9,3 +9,14 @@ for(const value of ['<Card/>','show ? <Card/> : null','<><Card/><Other/></>','<m
 test('delete refuses a stale source hash without writing',()=>{
  const root=fs.realpathSync(makeApp({'Page.tsx':'export default ()=> <Card/>;function Card(){return <div/>}'})),index=new Index(root);try{index.scanAll();const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(item=>item.element.kind==='instance'),before=fs.readFileSync(usage.file,'utf8');assert.equal(plan(usage,{fileHash:'stale'}).ok,false);assert.equal(fs.readFileSync(usage.file,'utf8'),before);}finally{index.close();cleanup(root);}
 });
+
+for(const declaration of ['import {Card} from "./Card";','import Card from "./Card";','import * as Cards from "./Card";','import {Card, type Label} from "./Card";'])test('deleting the last usage cleans its import binding while preserving module evaluation: '+declaration,()=>{
+ const tag=declaration.includes('* as')?'Cards.Card':'Card',typed=declaration.includes('type Label'),source=declaration+(typed?'export const label:Label="ready";':'')+'export default function Page(){return <main><'+tag+'/><footer/></main>}',root=fs.realpathSync(makeApp({'Page.tsx':source,'Card.tsx':'export type Label=string;export function Card(){return <article/>}export default Card;'})),index=new Index(root);try{
+  index.scanAll();const all=[...index.idToFile.keys()].map(id=>index.resolve(id)),usage=all.find(item=>item.element.kind==='instance'),result=plan(usage,{fileHash:usage.hash});assert.equal(result.ok,true,result.reason);const after=result.edits[0].after;assert.match(after,/import "\.\/Card";/);assert.doesNotMatch(after,/import (?:Card|\* as Cards|\{Card)/);if(typed)assert.match(after,/import \{ type Label \} from "\.\/Card";/);assert.equal(applyPlan(root,result).ok,true);index.scanAll();for(const item of all.filter(item=>item.element.id!==usage.element.id))assert.ok(index.resolve(item.element.id));
+ }finally{index.close();cleanup(root);}
+});
+test('deletion keeps imports used elsewhere, but can remove a binding referenced only inside the deleted key',()=>{
+ for(const outside of [false,true]){
+  const source='import {Card} from "./Card";export default function Page(){return <Card key={Card.name}/>}'+(outside?'export const another=Card;':''),root=fs.realpathSync(makeApp({'Page.tsx':source,'Card.tsx':'export function Card(){return <article/>}'})),index=new Index(root);try{index.scanAll();const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(item=>item.element.kind==='instance'),result=plan(usage,{fileHash:usage.hash});assert.equal(result.ok,true,result.reason);assert.equal(result.edits[0].after.includes('import {Card}'),outside);assert.equal(result.edits[0].after.includes('key='),false);}finally{index.close();cleanup(root);}
+ }
+});
