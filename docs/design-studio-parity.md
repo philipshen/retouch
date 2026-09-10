@@ -10233,3 +10233,7 @@ Component extraction now preserves undefined for optional tuple parameters, incl
 ### Live optional tuple-default extraction (2026-09-10)
 
 The React creation fixture now covers a missing named optional tuple value with a literal local default. Chromium and WebKit verify the default stays at its original declaration, the generated prop resolves to string, appearance and live callbacks survive extraction, Layers duplication works immediately, shared definition styling applies, and source Undo/Redo remains exact. Evidence: `/private/tmp/retouch-tuple-default-browser-chromium.log`, `/private/tmp/retouch-tuple-default-browser-webkit.log`. This validates the local tuple-default flow; other tuple contracts have compiler coverage only. Native launches remain paused; full parity is incomplete.
+
+### Rename comparison screens from Actions (2026-09-10)
+
+Actions search now exposes each comparison header rename command using the same stable card identity and current accessible name as other screen commands. Chromium and WebKit full Actions suites pass focused name entry, command-label updates after renaming, editing the renamed size, Escape cancellation, and preservation of a marker in the mounted preview document. Existing responsive and source-edit history flows remain covered. Evidence: `/private/tmp/retouch-rename-actions-chromium.log`, `/private/tmp/retouch-rename-actions-webkit.log`. Native launches remain paused; full parity is incomplete.

@@ -310,7 +310,7 @@
         undoSize.setAttribute('aria-label','Undo '+name+' comparison size');redoSize.setAttribute('aria-label','Redo '+name+' comparison size');
         rotate.setAttribute('aria-label','Rotate '+name+' comparison');reveal.setAttribute('aria-label','Show selection in '+name+' comparison');
       }
-      for(const [control,action]of [[edit,'edit'],[reveal,'reveal'],[disclosure,'visibility']]){control.dataset.comparisonAction=action;control.dataset.comparisonCommand=previewBody.id+'-'+action;}
+      for(const [control,action]of [[label,'rename'],[edit,'edit'],[reveal,'reveal'],[disclosure,'visibility']]){control.dataset.comparisonAction=action;control.dataset.comparisonCommand=previewBody.id+'-'+action;}
       updateLabels();updateSizeHistory();
       viewport.append(overlay);previewBody.append(viewport,message,reveal,scopeMessage,scopeButton);card.append(header,dimensions,dimensionError,sizeHistory,order,disclosure,previewBody);rail.insertBefore(card,before);
       function activate(event){
