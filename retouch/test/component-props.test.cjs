@@ -116,3 +116,11 @@ test('nested choice expansion rejects recursive, mixed, unbounded and oversized 
  ];
  for(const prefix of declarations){const source=prefix+'function Card({size}:{size:Size}){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),fn=ast.program.body.find(n=>n.type==='FunctionDeclaration');assert.equal(require('../src/component-prop-choices.cjs').choices({},'size',{source,fn}),null);}
 });
+
+
+test('component descriptors expose omitted declared choices from a typed props object',()=>{
+ const source='type Tone="calm"|"bold";interface Base {tone?:Tone}type Props=Base & {label?:string};function Page(){return <main><Card/></main>}function Card(props:Props){return <h1>{props.label}</h1>}',root=fs.realpathSync(makeApp({'page.tsx':source})),index=new Index(root);index.scanAll();try{
+  const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(r=>r.element.kind==='instance'),component=adapter.describeComponent(usage);assert.ok(component.ok,component.reason);assert.deepEqual(component.props.map(p=>p.name),['tone','label']);const tone=component.props.find(p=>p.name==='tone');assert.deepEqual(tone.editor.choices,['calm','bold']);assert.equal(tone.editor.unset,true);assert.equal(component.props.find(p=>p.name==='label').editor.editable,undefined);
+  const plan=props.plan(usage,{name:'tone',value:'bold',fileHash:usage.hash,definitionHash:tone.editor.definitionHash});assert.ok(plan.ok,plan.reason);assert.ok(plan.edits[0].after.includes('<Card tone={"bold"}/>'));assert.equal(plan.edits[0].after.split('function Card')[1],source.split('function Card')[1]);
+ }finally{index.close();cleanup(root);}
+});

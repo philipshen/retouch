@@ -8084,3 +8084,19 @@ aliases with a duplicate literal; Chromium and WebKit verification covers dropdo
 size changes, sibling isolation, optional unset, defaults and exact Undo/Redo.
 Full variant authoring and cross-framework parity remain incomplete. Native app
 launches remain paused.
+
+
+## Declared properties on typed props objects (2026-09-10)
+
+The component inspector now includes property names from supported module-local
+TypeScript contracts, even when a component takes one props object and the source
+usage omits those properties. Finite choices become editable without requiring a
+destructured parameter. Other newly discovered properties remain read-only unless
+the existing literal/default writer supports them. Inherited/intersected contract
+discovery and revision guards are reused; no runtime code is evaluated.
+
+627 unit tests pass, including omitted choice discovery and a source write that
+leaves the typed props-object definition unchanged. Chromium and WebKit exercise
+an optional tone choice on Badge(props: BadgeProps), a rendered background change,
+and exact source Undo/Redo. Full component parity remains incomplete and native
+launches remain paused.

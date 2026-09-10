@@ -130,6 +130,7 @@ function describe(resolved) {
       const name=p.key.name||p.key.value;
       props.set(name,{name,default:p.value?.type==='AssignmentPattern'?def.source.slice(p.value.right.start,p.value.right.end):'—',value:'—'});
     }
+    for(const name of require('./component-prop-choices.cjs').names(resolved,def))if(!props.has(name)&&!name.startsWith('data-rt'))props.set(name,{name,default:'—',value:'—'});
     for(const attr of resolved.element.node.openingElement.attributes) {
       if(attr.type==='JSXSpreadAttribute'){const name='…'+resolved.source.slice(attr.argument.start,attr.argument.end);props.set(name,{name,value:'Spread expression',default:'—'});continue;}
       const name=attr.name.name;if(typeof name!=='string'||name.startsWith('data-rt'))continue;

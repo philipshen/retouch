@@ -2,7 +2,7 @@
 const {parseSource}=require('./id.cjs');
 // Read finite primitive choices from module-local TypeScript contracts. Never
 // execute source or guess a contract from values observed at other usages.
-function choices(resolved,name,definition){
+function inspect(resolved,name,definition){
  try{
   const def=definition||require('./components.cjs').definition(resolved),ast=parseSource(def.source);
   let param=def.fn.params[0];if(param?.type==='AssignmentPattern')param=param.left;
@@ -36,6 +36,7 @@ function choices(resolved,name,definition){
    return [...inherited,...declaration.body.body];
   }
   const members=contractMembers(param?.typeAnnotation?.typeAnnotation);if(!members)return null;
+  if(name===null)return {names:[...new Set(members.filter(p=>p.type==='TSPropertySignature'&&!p.computed).map(p=>p.key.name??p.key.value).filter(name=>typeof name==='string'))]};
   // Diamond inheritance can reach the same declaration more than once. Distinct
   // declarations of one property still need type-level conflict/narrowing checks.
   const fields=[...new Set(members)].filter(p=>p.type==='TSPropertySignature'&&!p.computed&&(p.key.name??p.key.value)===name);if(fields.length!==1)return null;
@@ -55,4 +56,4 @@ function choices(resolved,name,definition){
   return {choices:[...new Set(values)],type:typeof values[0],optional:!!fields[0].optional,definition:def};
  }catch{return null;}
 }
-module.exports={choices};
+module.exports={choices:(resolved,name,definition)=>inspect(resolved,name,definition),names:(resolved,definition)=>inspect(resolved,null,definition)?.names||[]};
