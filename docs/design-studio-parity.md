@@ -8116,3 +8116,17 @@ unfinished. Behavior was checked against the installed TypeScript utility types.
 Readonly/Partial/Pick and exercises omitted choice editing, a rendered background
 change and exact Undo/Redo alongside the existing variant workflow. Full Figma
 parity remains incomplete. Native app launches remain paused.
+
+
+## Component property keyboard focus (2026-09-10)
+
+Browser verification confirmed dropdown edits already retain focus, but an explicit
+Command/Ctrl+Enter text commit lost it. That path now queues the existing panel
+focus manager before blur and restores immediately when no save is necessary.
+Existing deliberate-input cancellation and selection checks still govern focus.
+
+Chromium reproduced the failed active-element assertion before the fix. Chromium
+and WebKit now pass focus retention for saved text, unchanged commits without source
+writes, and variant dropdowns, alongside rendered edits and exact Undo/Redo. This
+was a targeted UI fix; the unit suite was not rerun. Full parity remains unfinished.
+Native app launches remain paused.
