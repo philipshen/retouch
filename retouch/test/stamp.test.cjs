@@ -125,3 +125,13 @@ test('host roots forward the caller revision for functions and arrow parameter f
   const rendered=evaluatedArrow(source)({'data-rt-i':'instance','data-rt-i-revision':'usage revision',label:'A'});assert.equal(rendered['data-rt-i'],'instance');assert.equal(rendered['data-rt-i-revision'],'usage revision');assert.equal(rendered['data-rt-revision'],require('../src/id.cjs').contentHash(source));
  }
 });
+
+test('fragment roots forward caller identity and revision without stamping nested hosts or callbacks',()=>{
+ const source='export const Card=({show})=><><header><b/></header><>{show && <aside/>}{show ? <section/> : <footer/>}</>{[1].map(n=><nav/>)}<Child/></>';
+ const output=stamp(source,file,ROOT).code,{elements}=require('../src/id.cjs').collectElements(output,'C.tsx');
+ for(const element of elements.filter(el=>el.kind==='host')){
+  const attrs=element.node.openingElement.attributes.map(attr=>attr.name?.name),expected=['header','aside','section','footer'].includes(element.node.openingElement.name.name);
+  assert.equal(attrs.includes('data-rt-i'),expected);assert.equal(attrs.includes('data-rt-i-revision'),expected);
+ }
+ assert.doesNotThrow(()=>require('../src/id.cjs').parseSource(output));assert.ok(!source.includes('data-rt-i'));
+});

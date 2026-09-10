@@ -20,3 +20,9 @@ test('used and unused definitions agree on returned roots rather than nested hel
   index.scanAll();const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(resolved=>resolved.element.kind==='instance'),info=require('../src/components.cjs').describe(usage);assert.ok(info.ok);assert.equal(index.resolve(info.definitionId).element.node.openingElement.name.name,'article');assert.deepEqual(info.definitionIds.map(id=>index.resolve(id).element.node.openingElement.name.name),['article','footer']);const components=library(index).components.filter(item=>item.file==='Card.tsx');assert.equal(components.length,1);assert.equal(components[0].usageCount,1);assert.equal(components[0].definitionId,info.definitionId);
  }finally{index.close();cleanup(root);}
 });
+
+test('fragment descriptors include top-level conditional hosts and exclude their descendants',()=>{
+ const root=fs.realpathSync(makeApp({'Card.tsx':'export function Card({show}){return <><header><b/></header><>{show&&<aside/>}{show?<section/>:<footer/>}</>{[1].map(n=><nav/>)}</>}','Page.tsx':'import {Card} from "./Card";export default function Page(){return <Card/>}'})),index=new Index(root);try{
+  index.scanAll();const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(resolved=>resolved.element.kind==='instance'),info=require('../src/components.cjs').describe(usage);assert.equal(info.ok,true);assert.deepEqual(info.definitionIds.map(id=>index.resolve(id).element.node.openingElement.name.name),['header','aside','section','footer']);assert.equal(index.resolve(info.definitionId).element.node.openingElement.name.name,'header');
+ }finally{index.close();cleanup(root);}
+});

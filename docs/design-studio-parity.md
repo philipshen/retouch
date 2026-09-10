@@ -8776,3 +8776,31 @@ expression/content swaps, full variants and nested overrides, arbitrary-site
 authoring and the other outstanding design-feature gaps remain open. Trusted brew
 distribution is unverified. Native app launches and native launch tests remain
 paused at the user's request.
+
+### Transparent fragment instance identity (2026-09-10)
+
+The preview now forwards usage identity and caller revision onto top-level host
+roots inside shorthand JSX fragments, including nested fragments and conditional
+or logical children. A shared render-root collector supplies the same roots to
+component descriptors and instrumentation. It stops at JSX elements, so nested
+hosts, callback output and child-component internals are not relabeled as the
+parent instance. No extra DOM wrapper is introduced and authored source remains
+unchanged by instrumentation.
+
+Validation: the 694-test unit suite passed, followed by a five-test definition
+suite that includes the newly added fragment descriptor regression. Stamp tests
+verify root markers and exclusion of nested/callback hosts. Chromium and WebKit
+both passed the root property/swap/detach flow with a real two-host fragment,
+including exact Undo/Redo and shared-source preservation. Both browser processes
+terminated with exit zero and empty page-error assertions. Evidence:
+/private/tmp/retouch-fragment-units-final.log,
+/private/tmp/retouch-fragment-definition-tests.log,
+/private/tmp/retouch-fragment-chromium.log,
+/private/tmp/retouch-fragment-webkit.log.
+
+This establishes editable identity for fragment roots, not a complete multi-root
+instance selection model. The library currently enumerates DOM roots separately;
+selection outlines, root grouping/counts, named React.Fragment forms, nested
+component wrappers and callback-generated fragment roots still need work. Full
+Figma Design parity and arbitrary-site support remain incomplete. Native launches
+remain paused and trusted brew distribution remains unverified.

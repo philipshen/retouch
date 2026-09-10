@@ -39,7 +39,7 @@ function stamp(source, filePath, appRoot) {
   function forward(p){
     const exported=p.parentPath.isExportNamedDeclaration()||p.parentPath.isExportDefaultDeclaration();
     if(!componentFunctions.has(p.node.start)&&![...(p.node.leadingComments||[]),...(exported?p.parentPath.node.leadingComments||[]:[])].some(comment=>comment.value.trim()==='* @retouch-component'))return;
-    const roots=require('./component-return-roots.cjs')(p.node).filter(node=>node.type==='JSXElement'&&elements.some(el=>el.node===node&&el.kind==='host')&&!node.openingElement.attributes.some(attr=>attr.name?.name===INSTANCE_ATTR));
+    const roots=require('./component-render-roots.cjs')(p.node).filter(node=>node.type==='JSXElement'&&elements.some(el=>el.node===node&&el.kind==='host')&&!node.openingElement.attributes.some(attr=>attr.name?.name===INSTANCE_ATTR));
     if(!roots.length)return;
     const marker=p.isArrowFunctionExpression()?require('./arrow-instance-marker.cjs')(p,source,ms):{identity:'arguments[0]?.["data-rt-i"]',revision:'arguments[0]?.["data-rt-i-revision"]'};
     if(!marker)return;
