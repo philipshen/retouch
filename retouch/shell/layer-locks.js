@@ -31,6 +31,11 @@
    for(const change of changes){const next=direction==='undo'?change.before:change.after,locks=entries(change.route);if(next)locks.add(change.id);else locks.delete(change.id);}remember();return {ok:true};
   }
   function restore(change,direction){return restoreMany([change],direction);}
+  function remap(pairs,direction='redo'){
+   if(!Array.isArray(pairs)||pairs.some(pair=>!Array.isArray(pair)||pair.length!==2||pair.some(id=>typeof id!=='string'||!/^[a-f0-9]{10}$/.test(id)))||new Set(pairs.map(pair=>pair[0])).size!==pairs.length||new Set(pairs.map(pair=>pair[1])).size!==pairs.length)throw Error('Invalid source layer mapping');
+   const mapping=new Map(pairs.map(pair=>direction==='undo'?[pair[1],pair[0]]:pair));
+   for(const [page,ids]of pages)pages.set(page,new Set([...ids].map(id=>mapping.get(id)||id)));remember();
+  }
   function pick(node,x,y){
    const selector='[data-rt], [data-rt-i]',first=node?.closest?.(selector);
    if(!first||!locked(first))return first||null;
@@ -41,7 +46,7 @@
    }
    return null;
   }
-  return {direct,locked,set,change,changeMany,restore,restoreMany,pick};
+  return {direct,locked,set,change,changeMany,restore,restoreMany,remap,pick};
  }
  const api={create};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayerLocks=api;
 })(typeof window==='object'?window:globalThis);

@@ -36,3 +36,6 @@ test('malformed lock storage is discarded atomically and unavailable storage pre
  const locks=create({scope,storage:corrupt,route:()=>'/'});assert.equal(locks.direct(a),false);locks.set(a,true);assert.equal(locks.direct(a),true);
  const unavailable=create({scope,storage:{getItem(){throw Error('disabled');},setItem(){throw Error('disabled');}}});unavailable.changeMany([a],true);assert.equal(unavailable.direct(a),true);
 });
+test('source reordering remaps locks simultaneously on every route and reverses with history',()=>{
+ let route='/a';const locks=create({route:()=>route}),a=node('aaaaaaaaaa'),b=node('bbbbbbbbbb'),c=node('cccccccccc'),mapping=[['aaaaaaaaaa','bbbbbbbbbb'],['bbbbbbbbbb','aaaaaaaaaa']];locks.set(a,true);route='/b';locks.set(b,true);locks.set(c,true);locks.remap(mapping);assert.equal(locks.direct(a),true);assert.equal(locks.direct(b),false);assert.equal(locks.direct(c),true);route='/a';assert.equal(locks.direct(a),false);assert.equal(locks.direct(b),true);locks.remap(mapping,'undo');assert.equal(locks.direct(a),true);assert.equal(locks.direct(b),false);route='/b';assert.equal(locks.direct(b),true);assert.equal(locks.direct(c),true);assert.throws(()=>locks.remap([['aaaaaaaaaa','bbbbbbbbbb'],['cccccccccc','bbbbbbbbbb']]));assert.equal(locks.direct(b),true);
+});

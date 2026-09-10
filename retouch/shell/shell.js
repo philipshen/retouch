@@ -1349,6 +1349,13 @@ async function refreshDeletedComponent(id,parentId){
  }
  throw Error('The usage was deleted, but its preview has not refreshed yet.');
 }
+async function moveInstance(info,direction){
+ busyPanel(true);try{
+  const result=await api('POST','/rt/__api/op',{type:'moveComponent',id:info.id,fileHash:info.hash,direction});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not move the component.');
+  const moved=result.movedComponent;editorHistory.record({type:'moveComponent',id:moved.instanceId,previousInstanceId:moved.previousInstanceId,sourceIdMap:moved.sourceIdMap,undoId:result.undoId});
+  layerLocks.remap(moved.sourceIdMap);await refreshSwappedComponent(moved.instanceId,null);await selectInsertedComponent(moved.instanceId,null);layers.refresh();toast('Component moved','ok');
+ }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
+}
 async function deleteInstance(id,context){
  busyPanel(true);try{
   const usage=await api('GET',resolveUrl(id,context));if(!usage?.ok)throw Error('Re-select the component before deleting.');
@@ -2195,6 +2202,7 @@ async function restoreHistory(direction,op) {
   try {
     await showHistoryPage(op.route);
     if(['insertComponent','swapComponent'].includes(op.type)){const parentId=direction==='redo'?op.id:op.previousParentId,parent=parentId?await api('GET',resolveUrl(parentId)):null;if(op.type==='swapComponent')await refreshSwappedComponent(direction==='redo'?op.instanceId:op.previousInstanceId,parentId);else if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else await reloadFrame();if(direction==='redo')await selectInsertedComponent(op.instanceId,op.id);else if(op.type==='swapComponent')await selectInsertedComponent(op.previousInstanceId,op.previousParentId);else if(parent?.ok){sel={hostId:parentId,instanceId:null,scope:'host',info:parent.element};renderPanel();}else clearSelection();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='moveComponent'){layerLocks.remap(op.sourceIdMap,direction);const id=direction==='undo'?op.previousInstanceId:op.id;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);layers.refresh();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='renameComponent'){await refreshSwappedComponent(op.id,null);await selectInsertedComponent(op.id,null);layers.refresh();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='deleteComponent'){if(direction==='undo'){await refreshSwappedComponent(op.id,null);await selectInsertedComponent(op.id,op.parentId);}else{await refreshDeletedComponent(op.id,op.parentId);clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
@@ -2478,6 +2486,7 @@ async function structureAction(action) {
   if(sel.multiple?.length>1){if(action==='reparentElement')return chooseLayerParent(sel.info);if(['duplicateElement','deleteElement'].includes(action))return structureSelection(action);return toast('Choose one layer for this structural edit.','err');}
   await commitInlineEdit();
   const info=sel?.info;if(!info)return;
+  if(['before','after','first','last'].includes(action)&&info.kind==='instance')return moveInstance(info,action);
   if(action==='deleteElement'&&info.kind==='instance'){if(!info.canDeleteComponent)return toast('This component usage cannot be deleted here.','err');return deleteInstance(info.id,info.context);}
   if(action==='duplicateElement'&&info.kind==='instance'){if(!info.canDuplicateComponent)return toast(info.componentDuplicateReason||'This instance cannot be duplicated here.','err');return duplicateInstance(info.id,info.context);}
   if(action==='deleteElement'&&info.svgDeletion||action==='duplicateElement'&&info.svgDuplication||['before','after','first','last'].includes(action)&&info.svgMovement){

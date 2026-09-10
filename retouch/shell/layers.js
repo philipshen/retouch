@@ -172,7 +172,7 @@
       const s=info?.structure;
       const copied=getClipboard();
       const compatible=!!copied&&copied.file===info?.file&&copied.parentId===s?.parentId&&copied.hash===(info?.fileHash||info?.hash);
-      const capabilities=JSON.stringify([!!info,info?.kind,info?.canDuplicateComponent,info?.canDeleteComponent,info?.componentDuplicateReason,!!info?.svgMovement,s,busy,copied,compatible,selectedSet.size]);
+      const capabilities=JSON.stringify([!!info,info?.kind,info?.canDuplicateComponent,info?.canDeleteComponent,info?.componentMovement,info?.componentDuplicateReason,!!info?.svgMovement,s,busy,copied,compatible,selectedSet.size]);
       if(capabilities===lastCapabilities)return;
       lastCapabilities=capabilities;
       actionButtons.duplicateElement.textContent=info?.kind==='instance'?'Duplicate component':selectedSet.size>1?'Duplicate layers':'Duplicate layer';actionButtons.deleteElement.textContent=info?.kind==='instance'?'Delete component':selectedSet.size>1?'Delete layers':'Delete layer';
@@ -185,12 +185,13 @@
       actionButtons.pasteElement.title=!copied?'Copy a layer first.':!compatible?'Paste requires an unchanged copied sibling in this source parent.':'Paste after the selected layer.';
       actionButtons.duplicateElement.disabled=busy||!(info?.kind==='instance'?info.canDuplicateComponent:s?.canDuplicate);actionButtons.duplicateElement.title=info?.kind==='instance'?info.componentDuplicateReason||'Create another linked instance.':'';
       actionButtons.deleteElement.disabled=busy||!(info?.kind==='instance'?info.canDeleteComponent:s?.canDelete);
-      actionButtons.before.textContent=info?.svgMovement?'Send backward':'Move layer up';actionButtons.after.textContent=info?.svgMovement?'Bring forward':'Move layer down';
-      for(const [action,cap] of [['first','canMoveFirst'],['last','canMoveLast']]){actionButtons[action].hidden=!info?.svgMovement;actionButtons[action].disabled=busy||!s?.[cap];}
-      actionButtons.before.disabled=busy||!s?.canMoveBefore;
-      actionButtons.after.disabled=busy||!s?.canMoveAfter;
+      actionButtons.before.textContent=info?.svgMovement?'Send backward':info?.kind==='instance'?'Move component up':'Move layer up';actionButtons.after.textContent=info?.svgMovement?'Bring forward':info?.kind==='instance'?'Move component down':'Move layer down';
+      const movement=info?.kind==='instance'?info.componentMovement:s;
+      for(const [action,cap] of [['first','canMoveFirst'],['last','canMoveLast']]){actionButtons[action].hidden=!info?.svgMovement&&info?.kind!=='instance';actionButtons[action].disabled=busy||!movement?.[cap];}
+      actionButtons.before.disabled=busy||!movement?.canMoveBefore;
+      actionButtons.after.disabled=busy||!movement?.canMoveAfter;
       if(selectedSet.size>1){for(const button of Object.values(actionButtons))button.disabled=true;if(!info?.cssAuthoring){reason.textContent=selectedSet.size+' source layers selected. Shared styles apply together.';return;}actionButtons.duplicateElement.disabled=busy;actionButtons.deleteElement.disabled=busy;actionButtons.reparentElement.disabled=busy;actionButtons.frameSelection.disabled=busy||!s?.canFrame;reason.textContent=selectedSet.size+' layers selected. Frame, move, duplicate and delete apply to the selection.';return;}
-      reason.textContent=info?.kind==='instance'?(info.componentDuplicateReason||'Duplicate creates another instance with the shared definition.'):info?.svgMovement?'Send backward or bring forward changes which SVG shape appears on top.':info?.svgDeletion?'Delete removes this SVG layer and its contents. Undo restores it.':info?(s?.canInsert&&!s?.canDuplicate?'Add text or a frame inside this container.':s?.reason || (!s?.canDuplicate?'Duplicate is unavailable for a layer with an authored ID, key, or ref.':'')):'Select a layer to organize it.';
+      reason.textContent=info?.kind==='instance'?(info.componentMovement?.ok?'Ordering changes sibling source order at every screen size. CSS layout can affect visual order.':info.componentDuplicateReason||'Duplicate creates another instance with the shared definition.'):info?.svgMovement?'Send backward or bring forward changes which SVG shape appears on top.':info?.svgDeletion?'Delete removes this SVG layer and its contents. Undo restores it.':info?(s?.canInsert&&!s?.canDuplicate?'Add text or a frame inside this container.':s?.reason || (!s?.canDuplicate?'Duplicate is unavailable for a layer with an authored ID, key, or ref.':'')):'Select a layer to organize it.';
     }
     return {attach,selection,refresh:()=>{render();void loadComponents();}};
   }

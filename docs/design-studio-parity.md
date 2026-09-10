@@ -9330,3 +9330,46 @@ library occurrence labels, component movement/copy, full variants/slots and
 arbitrary-site durable authoring remain open among the full Figma Design goals.
 Full parity is incomplete. Native launches remain paused and trusted brew
 installation remains unverified.
+
+
+### Reorder component usages from Layers (2026-09-10)
+
+React component selections now expose Move component up/down and Send to back /
+Bring to front. The planner reorders complete source sibling nodes under the same
+JSX element or fragment, including expression/text siblings. It retains the exact
+component chunk, including names, props, keys, refs and children; non-rendering
+sibling comments and whitespace remain in their source slots. Root expressions
+without sibling children and exhausted directions are unavailable. Source hashes
+guard edits, and the planner reparses and maps the moved selection to its new ID.
+No shared component definitions or imports are rewritten.
+
+Every source layer is mapped one-to-one after reordering. Editor locks follow
+those ID changes simultaneously across stored routes, and inverse mappings restore
+locks during Undo. Source history carries old/new selection IDs and the map;
+caller revision checks restore the correct rendered usage after move/Undo/Redo.
+The Layers note explains that these controls change source sibling order and that
+CSS layout can affect visual order.
+
+Validation: 744 unit tests passed. Planner checks cover all four directions,
+complete chunk preservation, mixed expression/text/fragment siblings, every source
+ID mapping, stale sources, root guards and boundary capabilities. Lock tests verify
+simultaneous swaps, route separation and inverse remapping. Initial Chromium and
+WebKit ordering/history runs passed; review then identified the need to remap
+locked siblings. The final browser runs explicitly lock the original usage, move
+the edited copy around it through all four controls and exact Undo/Redo, assert
+the original stays locked and the copy stays selected/unlocked, then undo the lock.
+Both engines also pass the subsequent duplicate/delete/keyboard and root detach /
+swap flows, returning exit zero with no page errors. The screenshot was inspected:
+the moved first component is selected, its copy override is visible, the later
+original remains locked and boundary buttons are disabled. git diff --check passed.
+Evidence: /private/tmp/retouch-component-move-units-final.log,
+/private/tmp/retouch-component-move-chromium-final.log,
+/private/tmp/retouch-component-move-webkit-final.log,
+/private/tmp/retouch-component-move.png.
+
+This adds sibling source ordering. Cross-parent/cross-file moves, drag ordering,
+independent per-render structure, CSS-order/z-index authoring, full component
+variants/slots and arbitrary-site durable authoring remain incomplete. Preservation
+of component runtime state across source hot reload is not established. Full Figma
+Design parity is still open. Native launches remain paused and trusted brew
+installation remains unverified.
