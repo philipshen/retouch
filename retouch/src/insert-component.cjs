@@ -63,8 +63,12 @@ function plan(resolved,op){
   const after=ms.toString(),elements=collectElements(after,resolved.relPath).elements,offset=pos=>importText.length+(cleanup&&cleanup.end<=pos?cleanup.after.length-(cleanup.end-cleanup.start):0);
   const inserted=elements.find(element=>element.kind==='instance'&&element.node.start===position+offset(position)),parent=parentBefore?elements.find(element=>element.kind==='host'&&element.node.start===parentBefore.node.start+offset(parentBefore.node.start)):null;
   if(!inserted||parentBefore&&!parent)throw Error('The inserted component could not be mapped to source.');
+  const sourceIdMap=[],mapped=new Set(),editStart=swapping?node.start:node.openingElement.selfClosing?node.openingElement.end-2:node.closingElement.start,editEnd=swapping?node.end:node.openingElement.selfClosing?node.openingElement.end:editStart,editLength=swapping?jsx.length:node.openingElement.selfClosing?jsx.length+tag.length+6:jsx.length+2;
+  for(const element of resolved.elements){const before=element.node.start;let at=before+offset(before)+(before>=editEnd?editLength-(editEnd-editStart):0);
+   if(swapping&&before>=node.start&&before<node.end){if(element.id===resolved.element.id)at=inserted.node.start;else{const oldKey=node.openingElement.attributes.find(a=>a.name?.name==='key'),newKey=inserted.node.openingElement.attributes.find(a=>a.name?.name==='key');if(!oldKey||!newKey||before<oldKey.start||element.node.end>oldKey.end)throw Error('An original usage descendant could not be preserved.');at=newKey.start+before-oldKey.start;}}
+   const fresh=elements.find(e=>e.kind===element.kind&&e.node.start===at);if(!fresh||mapped.has(fresh.id))throw Error('An original layer could not be mapped after component insertion.');mapped.add(fresh.id);if(fresh.id!==element.id)sourceIdMap.push([element.id,fresh.id]);}
   const edits=[{file:resolved.file,before:resolved.source,after}];for(const [dependency,before] of dependencies)if(dependency!==resolved.file)edits.push({file:dependency,before,after:before});
-  return {ok:true,hash:contentHash(after),insertedComponent:{instanceId:inserted.id,parentId:parent?.id||null,previousParentId:parentBefore?.id||null,...(swapping?{previousInstanceId:resolved.element.id}: {})},edits,pathChecks:[...checks.values()]};
+  return {ok:true,hash:contentHash(after),insertedComponent:{instanceId:inserted.id,parentId:parent?.id||null,previousParentId:parentBefore?.id||null,sourceIdMap,...(swapping?{previousInstanceId:resolved.element.id}: {})},edits,pathChecks:[...checks.values()]};
  }catch(error){return refuse(error.message);}
 }
 module.exports={plan,canContain};

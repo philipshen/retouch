@@ -56,3 +56,8 @@ test('explicit-extension imports can be reused despite sibling stems, while reus
  const f=fixture('import {Card as Existing} from "./parts/Card.tsx";export default function Page(){return <main/>}');try{fs.writeFileSync(path.join(f.root,'parts/Card.ts'),'export const Card=0;');const plan=planner.plan(f.resolved,f.op);assert.ok(plan.ok,plan.reason);assert.ok(plan.edits[0].after.includes('<Existing/>'));assert.equal((plan.edits[0].after.match(/import /g)||[]).length,1);}finally{f.close();}
  const g=fixture('import {Card} from "./parts/Card";export default function Page(){return <main/>}');try{const plan=planner.plan(g.resolved,g.op);assert.ok(plan.ok,plan.reason);fs.writeFileSync(path.join(g.root,'parts/Card.js'),'export const Card=0;');assert.equal(tx.applyPlan(g.root,plan).ok,false);assert.equal(fs.readFileSync(g.resolved.file,'utf8'),g.page);}finally{g.close();}
 });
+test('component insertion maps every existing source identity with imports and self-closing frames',()=>{
+ for(const source of ['"use client";export default function Page(){return <main><h1>Existing</h1></main>}','export default function Page(){return <><main/><aside>Sibling</aside></>}']){
+  const f=fixture(source);try{const plan=planner.plan(f.resolved,f.op);assert.equal(plan.ok,true,plan.reason);const after=require('../src/id.cjs').collectElements(plan.edits[0].after,f.resolved.relPath).elements,mapping=new Map(plan.insertedComponent.sourceIdMap);for(const element of f.resolved.elements){const next=after.find(e=>e.id===(mapping.get(element.id)||element.id));assert.ok(next);assert.equal(next.kind,element.kind);}assert.ok(!f.resolved.elements.some(e=>e.id===plan.insertedComponent.instanceId));}finally{f.close();}
+ }
+});

@@ -47,3 +47,6 @@ test('swap retains the instance layer name without turning it into a component p
   const names=require('../src/jsx-layer-name.cjs'),named=names.plan(f.resolved,{fileHash:f.resolved.hash,name:'Hero */ summary'});assert.ok(tx.applyPlan(f.root,named).ok);f.index.scanAll();const resolved=f.index.resolve(f.resolved.element.id),plan=planner.plan(resolved,{...f.op,fileHash:resolved.hash});assert.ok(plan.ok,plan.reason);assert.ok(tx.applyPlan(f.root,plan).ok);f.index.scanAll();const swapped=f.index.resolve(plan.insertedComponent.instanceId);assert.equal(names.describe(swapped).layerName,'Hero */ summary');assert.deepEqual(swapped.element.node.openingElement.attributes.map(attr=>attr.name.name),['key','label','width']);
  }finally{f.close();}
 });
+test('component swapping maps its replacement usage and preserves sibling identities through import changes',()=>{
+ const f=fixture();try{const plan=planner.plan(f.resolved,f.op);assert.equal(plan.ok,true,plan.reason);const mapping=new Map(plan.insertedComponent.sourceIdMap);assert.equal(mapping.get(f.resolved.element.id),plan.insertedComponent.instanceId);const next=id.collectElements(plan.edits[0].after,f.resolved.relPath).elements;assert.deepEqual(next.map(e=>e.id).sort(),f.resolved.elements.map(e=>mapping.get(e.id)||e.id).sort());}finally{f.close();}
+});
