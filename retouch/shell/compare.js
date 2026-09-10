@@ -10,6 +10,11 @@
   try{const saved=JSON.parse(localStorage.getItem(storageKey));if(Array.isArray(saved)&&saved.length<=8&&saved.every(s=>Array.isArray(s)&&s.length===3&&typeof s[0]==='string'&&s[0].length<=80&&valid(s[1])&&valid(s[2])))sizes=saved;}catch{}
   function remember(){try{localStorage.setItem(storageKey,JSON.stringify(sizes));}catch{}window.RetouchScreens?.setSaved(sizes);}
   function current(){return {width:Number(document.getElementById('screenWidth').value),height:Number(document.getElementById('screenHeight').value)};}
+  function layoutPreviews(){
+    const railBounds=rail.getBoundingClientRect();
+    for(const item of cards){const scale=item.viewport.clientWidth/item.width;item.frame.style.transform=`scale(${scale})`;item.viewport.style.height=item.height*scale+'px';}
+    for(const item of cards){const bounds=item.viewport.getBoundingClientRect();Object.assign(item.surface.style,{left:bounds.left-railBounds.left+rail.scrollLeft-rail.clientLeft+'px',top:bounds.top-railBounds.top+rail.scrollTop-rail.clientTop+'px',width:bounds.width+'px',height:bounds.height+'px'});}
+  }
   function updateControls(){
     const size=current();
     if(undoOrder)undoOrder.disabled=!orderUndo.length||removals>0||loadingSet;
@@ -20,6 +25,7 @@
       restore.textContent=last?'Undo remove: '+last.size[0]:'Undo remove';restore.title=restore.disabled?'Finish removing views, or free the name and dimensions before restoring.':'Restore the last removed comparison in its original position.';
     }
     for(const [index,card] of cards.entries()){card.up.disabled=index===0||removals>0;card.down.disabled=index===cards.length-1||removals>0;card.edit.setAttribute('aria-pressed',String(size.width===card.width&&size.height===card.height));card.scopeButton.disabled=!selected;}
+    layoutPreviews();
   }
   let cards=[],selected=null,route=null,open=false,timer=null,scope={prefix:'',label:'All sizes · base',condition:null},scopeSummary;
   function path(){try{const loc=main.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
@@ -56,11 +62,11 @@
   }
   function paint(){
     if(!open)return;
+    layoutPreviews();
     for(const card of cards){
       const {frame,overlay,message,scopeMessage,width,height,reveal}=card;
       scopeMessage.textContent='Checking style scope…';scopeMessage.dataset.scopeApplies='unknown';
       const scale=card.viewport.clientWidth/width;
-      frame.style.transform=`scale(${scale})`;card.viewport.style.height=height*scale+'px';
       overlay.replaceChildren();
       try{
         const d=frame.contentDocument;if(!d?.body||d.URL==='about:blank'){reveal.disabled=true;continue;}
@@ -169,9 +175,10 @@
       const edit=document.createElement('button');edit.className='control-button';edit.textContent='Edit';edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');
       edit.onclick=()=>window.RetouchScreens.set({width,height});header.append(edit);
       const remove=document.createElement('button');remove.className='control-button';remove.textContent='×';remove.setAttribute('aria-label','Remove '+name+' comparison');header.append(remove);
-      remove.onclick=async()=>{remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;card.inert=true;clearOrderHistory();removals++;removed.push({size:[...size],index});if(removed.length>8)removed.shift();sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);cards=cards.filter(c=>c!==item);updateControls();await unload(frame);card.remove();removals--;updateControls();};
+      remove.onclick=async()=>{remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;card.inert=true;clearOrderHistory();removals++;removed.push({size:[...size],index});if(removed.length>8)removed.shift();sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);cards=cards.filter(c=>c!==item);updateControls();await unload(frame);surface.remove();card.remove();removals--;updateControls();};
       const viewport=document.createElement('div');viewport.className='compare-viewport';viewport.tabIndex=0;viewport.setAttribute('role','button');viewport.setAttribute('aria-label','Edit from '+name+' comparison');viewport.title='Click a layer to select it on the main canvas at this size. Style scope stays unchanged.';
       const frame=document.createElement('iframe');frame.title=name+' comparison preview';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');frame.style.width=width+'px';frame.style.height=height+'px';
+      const surface=document.createElement('div');surface.className='compare-surface';surface.setAttribute('aria-hidden','true');surface.append(frame);rail.append(surface);
       const overlay=document.createElement('div');overlay.className='compare-overlay';
       const message=document.createElement('p');message.className='hint';
       const scopeMessage=document.createElement('p');scopeMessage.className='compare-scope-message';scopeMessage.style.cssText='font:11px/1.4 system-ui;color:#aeb3bd;margin:8px 0;';scopeMessage.setAttribute('aria-label',name+' scope coverage');
@@ -221,10 +228,9 @@
       function move(delta,record=true){
         const index=sizes.indexOf(size),next=index+delta;if(index<0||next<0||next>=sizes.length||loadingSet||removals)return;
         const item=cards[index],anchor=delta<0?cards[next].card:cards[next].card.nextSibling;
-        // moveBefore retains the iframe's browsing context. Older engines reload
-        // moved frames, so restore the document scroll after that load.
-        if(typeof rail.moveBefore==='function')rail.moveBefore(card,anchor);
-        else{let scroll;try{scroll={x:frame.contentWindow.scrollX,y:frame.contentWindow.scrollY};}catch{}if(scroll)frame.addEventListener('load',()=>{try{frame.contentWindow.scrollTo({left:scroll.x,top:scroll.y,behavior:'instant'});}catch{}},{once:true});rail.insertBefore(card,anchor);}
+        // Only move the controls and hit target. The iframe stays mounted in
+        // its stable surface, without detaching its browsing context.
+        rail.insertBefore(card,anchor);
         sizes.splice(index,1);sizes.splice(next,0,size);cards.splice(index,1);cards.splice(next,0,item);if(record){orderUndo.push({move,delta});if(orderUndo.length>50)orderUndo.shift();orderRedo.length=0;}remember();updateControls();
         const control=delta<0?up:down;if(control.disabled)(delta<0?down:up).focus();else control.focus();return true;
       }
@@ -239,7 +245,7 @@
         rotate.setAttribute('aria-label','Rotate '+name+' comparison');reveal.setAttribute('aria-label','Show selection in '+name+' comparison');
       }
       updateLabels();
-      viewport.append(frame,overlay);card.append(header,dimensions,dimensionError,order,viewport,message,reveal,scopeMessage,scopeButton);rail.insertBefore(card,before);
+      viewport.append(overlay);card.append(header,dimensions,dimensionError,order,viewport,message,reveal,scopeMessage,scopeButton);rail.insertBefore(card,before);
       function activate(event){
         try{
           const d=frame.contentDocument,loc=frame.contentWindow.location;
@@ -276,7 +282,7 @@
           if(root){const style=w.getComputedStyle(root);w.scrollBy({left:/hidden|clip/.test(style.overflowX)?0:dx,top:/hidden|clip/.test(style.overflowY)?0:dy,behavior:'instant'});}
         }catch{}
       },{passive:false});
-      cards.push({card,frame,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal,up,down});
+      cards.push({card,frame,surface,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal,up,down});
   }
   function unload(frame){return new Promise(resolve=>{
     let timeout;
@@ -302,5 +308,6 @@
   main.addEventListener('load',()=>sync(true));
   window.addEventListener('retouch:viewport',updateControls);
   window.addEventListener('retouch:screen',updateControls);
+  new ResizeObserver(()=>{if(open)layoutPreviews();}).observe(rail);
   window.RetouchScreens?.setSaved(sizes);
 })();

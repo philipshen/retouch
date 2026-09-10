@@ -9596,3 +9596,31 @@ Syntax and git diff --check passed. The existing WebKit move fallback still
 reloads preview application state while restoring document scroll. Persistent
 screen history across sessions and unified document history remain unfinished,
 as do full Figma parity and trusted brew installation. Native launches stay paused.
+
+### Preserve live comparison state while reordering in WebKit (2026-09-10)
+
+Comparison iframes now stay mounted in stable, clipped surfaces inside the rail.
+Only their cards and accessible interaction targets move. Surface geometry tracks
+each viewport after ordering, sizing and rail layout changes; selection overlays
+and wheel/click targets remain above the previews. Removing or closing views still
+explicitly unloads their frames and removes the surfaces.
+
+This replaces the reload-and-scroll-restore fallback described in the preceding
+ordering entries. Chromium and WebKit now both retain a live JavaScript marker,
+an unsaved input value and nested scroll through reorder and multistep Undo/Redo.
+Geometry checks verify surface/viewport alignment while scrolling the rail. Both
+engines also passed the existing comparison scrolling and full HTML comparison
+editing suites: selection, outlines/clipping, responsive edits, keyboard, resize,
+rotation, renaming, screen-set load/Undo, remove/restore and unchanged source where
+expected. All runs exited zero with no page errors. Evidence:
+/private/tmp/retouch-stable-previews-chromium-final.log,
+/private/tmp/retouch-stable-previews-webkit-final.log,
+/private/tmp/retouch-stable-preview-edit-chromium.log,
+/private/tmp/retouch-stable-preview-edit-webkit.log.
+The WebKit layout was visually inspected in
+/private/tmp/retouch-stable-previews-webkit.png. Syntax and diff checks passed.
+
+This establishes state preservation for reordering the tested live previews;
+route/source reloads and closing/reopening comparisons still recreate previews.
+Full Figma parity, arbitrary-site authoring and trusted brew installation remain
+unfinished. Native Retouch launches remain paused.
