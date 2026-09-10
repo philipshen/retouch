@@ -1,6 +1,6 @@
 (function(){
  'use strict';
- const I=RetouchInspector,open=document.createElement('button');open.type='button';open.textContent='Variables';document.getElementById('toolbar').append(open);
+ const I=RetouchInspector,open=document.createElement('button');open.type='button';open.id='variableLibrary';open.textContent='Variables';document.getElementById('toolbar').append(open);
  const dialog=document.createElement('dialog');dialog.className='variable-library';dialog.setAttribute('aria-label','Variable collections');document.body.append(dialog);
  const heading=document.createElement('h2');heading.textContent='Variable collections';const close=I.button('Close variable collections',()=>dialog.close()),status=document.createElement('p'),body=document.createElement('fieldset');status.setAttribute('role','status');body.style.cssText='border:0;padding:0;min-width:0';dialog.append(heading,close,status,body);
  let library=null,collectionId='',variableId='',newType='color',busy=false,previewOpen=false,previewSerial=0;const previewModes={};

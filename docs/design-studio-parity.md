@@ -9709,3 +9709,33 @@ Syntax and git diff --check passed.
 This verifies the tested compact desktop workspace, not every tiny viewport,
 mobile touch workflow or arbitrary-site interface. Full Figma parity and trusted
 brew installation remain unfinished. Native launches remain paused.
+
+### Search and execute common design actions (2026-09-10)
+
+The toolbar now includes Actions, a searchable command dialog available through
+Cmd/Ctrl+K in the editor or the editable page iframe. The shortcut leaves text
+inputs and the page's Interact mode alone. Commands cover panels, canvas zoom/pan,
+comparison views, screen presets, edit mode, source Undo/Redo, project components
+and variable collections. Matching uses words and aliases. Default project screens
+are deduplicated against equivalent named presets, while custom screen names stay
+discoverable. Hidden capabilities are omitted; disabled controls explain why they
+are unavailable and are rechecked before execution.
+
+The dialog supports arrow keys, Home/End, Enter, explicit Escape dismissal, an
+accessible combobox/listbox and click selection. Commands invoke the existing
+controls and source-history operations. This is a curated initial action set;
+full inspector/selection operations, configurable shortcuts and comprehensive
+command discovery remain unfinished.
+
+Chromium and WebKit passed searching, disabled/no results, keyboard navigation,
+shell and focused iframe shortcuts, native input/Interact-mode isolation, panel
+toggling, screen selection, variables opening and real source-edit Undo. Both
+processes exited zero without page errors. The 720px layout was inspected in
+/private/tmp/retouch-actions-clean.png. Evidence:
+/private/tmp/retouch-actions-chromium-clean.log,
+/private/tmp/retouch-actions-webkit-clean.log.
+Initial tests exposed Escape/search behavior and a missing plural alias; both were
+fixed. Test selectors were scoped to the dialog, iframe focus was made explicit,
+and expected navigation replacement is tolerated during rendered-source waits.
+Syntax and diff checks passed. Full Figma parity and trusted brew installation
+remain unfinished. Native app launches remain paused.

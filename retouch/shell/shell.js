@@ -266,6 +266,7 @@ function hookFrame(d, w) {
     }
   }, true);
   d.addEventListener('keydown', (e) => {
+    if(mode==='edit'&&!editing&&window.RetouchActions?.shortcut(e))return;
     if(canvasZoomShortcut(e)||lockShortcut(e))return;
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out

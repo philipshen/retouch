@@ -1,0 +1,33 @@
+(function(){
+ 'use strict';
+ const trigger=document.getElementById('quickActions');let dialog;
+ function commands(){
+  const button=(id,label,keywords='',reason='Finish the current operation first.')=>({id,label,keywords,element:document.getElementById(id),reason});
+  const rows=[button('undoBtn','Undo last edit','history revert','No edit to undo, or an edit is still in progress.'),button('redoBtn','Redo last edit','history restore','No edit to redo, or an edit is still in progress.'),button('fitScreen','Fit screen','zoom canvas'),button('zoomSelection','Zoom to selection','focus layer','Select an editable layer first.'),button('canvasHand','Toggle Hand tool','pan canvas'),button('compareScreens','Toggle screen comparisons','responsive phone tablet desktop'),button('toggleLayers','Toggle Layers panel','sidebar tree'),button('toggleInspector','Toggle Inspector panel','properties styles sidebar'),button('componentLibrary','Browse project components','library instances'),button('variableLibrary','Browse variable collections','variables tokens design system'),button('modeBtn','Toggle edit / interact mode','preview navigation')].filter(row=>row.element&&!row.element.hidden);
+  const preset=document.getElementById('screenPreset'),seen=new Set();for(const option of preset.options){if(option.value==='custom')continue;const identity=option.value.replace(/^saved:/,'')+'|'+option.textContent.split(' · ')[0];if(seen.has(identity))continue;seen.add(identity);rows.push({id:'screen-'+option.value,label:'Preview: '+option.textContent,keywords:'screen size responsive viewport',element:preset,run:()=>{preset.value=option.value;preset.dispatchEvent(new Event('change',{bubbles:true}));},reason:'Screen controls are unavailable.'});}
+  return rows;
+ }
+ function open(){
+  if(dialog?.open||document.querySelector('dialog[open]'))return;
+  dialog=document.createElement('dialog');dialog.className='quick-actions';dialog.setAttribute('aria-label','Actions');
+  const header=document.createElement('header'),heading=document.createElement('h2'),close=document.createElement('button');heading.textContent='Actions';close.type='button';close.className='control-button';close.textContent='Close';close.onclick=()=>dialog.close();header.append(heading,close);
+  const input=document.createElement('input');input.type='search';input.placeholder='Find an action…';input.setAttribute('aria-label','Search actions');input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');input.setAttribute('aria-expanded','true');input.setAttribute('aria-controls','quickActionResults');
+  const status=document.createElement('p');status.setAttribute('role','status');const list=document.createElement('div');list.id='quickActionResults';list.setAttribute('role','listbox');list.setAttribute('aria-label','Matching actions');
+  dialog.append(header,input,status,list);document.body.append(dialog);let rows=[],active=-1;
+  const enabled=row=>row?.element?.isConnected&&!row.element.disabled&&!row.element.hidden;
+  function highlight(){[...list.children].forEach((el,index)=>el.setAttribute('aria-selected',String(index===active)));if(active>=0){input.setAttribute('aria-activedescendant','quickAction-'+active);list.children[active]?.scrollIntoView({block:'nearest'});}else input.removeAttribute('aria-activedescendant');}
+  function render(){const terms=input.value.trim().toLowerCase().split(/\s+/).filter(Boolean);rows=commands().filter(row=>terms.every(term=>(row.label+' '+row.keywords).toLowerCase().includes(term)));list.replaceChildren();active=rows.findIndex(enabled);for(const [index,row]of rows.entries()){const option=document.createElement('div');option.id='quickAction-'+index;option.setAttribute('role','option');option.setAttribute('aria-disabled',String(!enabled(row)));option.textContent=row.label;if(!enabled(row)){const reason=document.createElement('small');reason.textContent=row.reason;option.append(reason);}option.onmousedown=event=>event.preventDefault();option.onclick=()=>execute(index);list.append(option);}status.textContent=rows.length?rows.length+' matching actions':'No matching actions.';highlight();}
+  function execute(index){const row=rows[index];if(!enabled(row)){status.textContent=row?.reason||'Choose an available action.';return;}dialog.close();if(row.run)row.run();else row.element.click();}
+  input.addEventListener('input',render);input.addEventListener('keydown',event=>{
+   if(event.isComposing)return;
+   if(event.key==='Escape'){event.preventDefault();event.stopPropagation();dialog.close();return;}
+   if(event.key==='Enter'){event.preventDefault();execute(active);return;}
+   if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return;event.preventDefault();
+   const indices=rows.map((row,index)=>enabled(row)?index:-1).filter(index=>index>=0);if(!indices.length)return;
+   const position=indices.indexOf(active);active=event.key==='Home'?indices[0]:event.key==='End'?indices.at(-1):indices[(position+(event.key==='ArrowDown'?1:-1)+indices.length)%indices.length];highlight();
+  });
+  const current=dialog;current.addEventListener('close',()=>{current.remove();if(dialog===current)dialog=null;});current.showModal();render();input.focus();
+ }
+ function shortcut(event){if(event.defaultPrevented||event.isComposing||!(event.metaKey||event.ctrlKey)||event.altKey||event.shiftKey||event.key.toLowerCase()!=='k'||event.target.closest?.('input,textarea,select,[contenteditable="true"]')||document.querySelector('dialog[open]'))return false;event.preventDefault();event.stopPropagation();open();return true;}
+ trigger.onclick=open;window.addEventListener('keydown',shortcut);window.RetouchActions={open,shortcut};
+})();
