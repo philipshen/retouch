@@ -7448,3 +7448,22 @@ parity remain unfinished. Native application launches remain paused.
 The inherited-state screenshot `/private/tmp/retouch-inherited-collection.png`
 was visually inspected; the scope label, mode selection and override action fit
 the inspector without horizontal clipping.
+
+### Binding previews isolate unrelated alias cycles (2026-09-10)
+
+The inspector now requests resolution of the selected variable and its alias
+chain. A cycle in an unrelated variable no longer prevents applying a valid
+binding in the same collection mode. Changing the selected variable fetches a
+fresh preview, with controls disabled while resolving and old values cleared.
+The collection-wide preview still resolves all variables and reports any cycle.
+
+The authenticated preview API accepts an optional validated variable ID while
+retaining revision checks, mode validation and read-only behavior. Tests verify
+alias paths, missing/malformed IDs, stale revisions, byte-unchanged library data,
+and the distinction between focused and whole-library resolution.
+
+All 564 unit tests pass (`/private/tmp/retouch-focused-variable-preview-units.log`).
+Chromium and WebKit inspector flows confirm that the cyclic color variable is
+refused while a numeric padding binding in that same mode succeeds. Existing
+screen-scope inheritance, reset/detach, propagation and Undo flows still pass.
+Full parity remains incomplete; native app launches remain paused.

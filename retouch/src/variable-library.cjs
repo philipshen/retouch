@@ -25,8 +25,10 @@ function commitPlan(root,plan,apply=applyPlan){
  const result=apply(root,plan);if(!result.ok)fail(result.reason);return result;
 }
 function resolve(root,request){
- if(!request||typeof request!=='object'||Array.isArray(request)||Object.keys(request).some(key=>!['revision','modes'].includes(key)))fail('Invalid variable mode preview.',422);
+ if(!request||typeof request!=='object'||Array.isArray(request)||Object.keys(request).some(key=>!['revision','modes','variableId'].includes(key)))fail('Invalid variable mode preview.',422);
  const current=read(root);if(request.revision!==current.revision)fail('Variable collections changed. Reload before previewing modes.');
- const values=model.resolver({version:current.version,collections:current.collections,variables:current.variables},request.modes).resolveAll();return {revision:current.revision,values};
+ const resolver=model.resolver({version:current.version,collections:current.collections,variables:current.variables},request.modes);
+ if(request.variableId!==undefined)model.cssName(request.variableId);
+ const values=request.variableId===undefined?resolver.resolveAll():[resolver.resolve(request.variableId)];return {revision:current.revision,values};
 }
 module.exports={LIMIT,read,planChange,commitPlan,resolve};

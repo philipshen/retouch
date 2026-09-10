@@ -21,7 +21,7 @@
   const link=()=>info.variableLinks?.[width]?.[target];
   const init=()=>{const current=link()||inherited(info,width,target)?.link;selected=current?.id||'';modes={...current?.modes};unit=current?.unit??(unitless.includes(target)?'':'px');};init();
   async function run(action){if(busy)return;busy=true;controls.disabled=true;status.textContent='Working…';try{await action();if(details.isConnected){render();status.textContent='';}}catch(error){values=[];if(details.isConnected){render();status.textContent=error.message;}}finally{busy=false;controls.disabled=false;}}
-  const preview=async()=>{values=(await RetouchVariableModePreview({revision:library.revision,modes})).values;};
+  const preview=async()=>{values=[];if(selected)values=(await RetouchVariableModePreview({revision:library.revision,modes,variableId:selected})).values;};
   const load=()=>run(async()=>{library=await RetouchVariableLibraryRequest();await preview();});
   function render(){
    controls.replaceChildren();controls.append(I.button('Reload collection bindings',load));if(!library)return;
@@ -30,7 +30,7 @@
    I.select(controls,'Collection binding target',properties.map(p=>[p,labels.get(p)||p]),target,value=>{target=value;init();run(preview);});
    const type=paints.includes(target)?'color':numbers.includes(target)?'number':target==='visibility'?'boolean':'string';
    const choices=library.variables.filter(v=>v.type===type);if(!choices.length)I.note(controls,'No '+type+' variables yet. Use Variables in the toolbar to create one.');if(!choices.some(v=>v.id===selected))selected='';
-   I.select(controls,'Bound collection variable',[['','Choose a variable…'],...choices.map(v=>[v.id,library.collections.find(c=>c.id===v.collectionId).name+' / '+v.name])],selected,value=>{selected=value;render();});
+   I.select(controls,'Bound collection variable',[['','Choose a variable…'],...choices.map(v=>[v.id,library.collections.find(c=>c.id===v.collectionId).name+' / '+v.name])],selected,value=>{selected=value;run(preview);});
    for(const collection of library.collections)I.select(controls,'Binding mode for '+collection.name,[['','Default ('+collection.modes.find(m=>m.id===collection.defaultMode).name+')'],...collection.modes.map(m=>[m.id,m.name])],modes[collection.id]||'',value=>{if(value)modes[collection.id]=value;else delete modes[collection.id];run(preview);});
    if(type==='number')I.select(controls,'Binding unit',[...(unitless.includes(target)?[['','Unitless']]:[]),...(!['opacity','font-weight','flex-grow','flex-shrink'].includes(target)?['px','rem','em','%','vw','vh','ch'].map(v=>[v,v]):[])],unit,value=>{unit=value;render();});
    const resolved=values.find(v=>v.id===selected),value=resolved?(type==='boolean'?(resolved.value?'visible':'hidden'):String(resolved.value)+(type==='number'?unit:'')):null;
