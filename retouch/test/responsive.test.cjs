@@ -98,3 +98,12 @@ test('automatic width scopes do not arbitrarily select among equivalent named br
  assert.equal(R.atWidth(d,768,choices).prefix,'min-[768px]:');assert.equal(R.atWidth(d,768,[...choices].reverse()).prefix,'min-[768px]:');
  assert.equal(R.atWidth(d,768,[choices[0],choices[0]]).prefix,'tablet:','repeated entries for one scope are not distinct choices');
 });
+
+test('reversed inclusive media ranges reuse and inherit minimum-width scopes',()=>{
+ const d={createElement:()=>({style:{},remove(){}}),documentElement:{append(){}},defaultView:{getComputedStyle:()=>({fontSize:'16px'})}},choices=[{prefix:'small:',label:'Small',condition:'(24rem <= width)'},{prefix:'tablet:',label:'Tablet',condition:'(48rem <= width)'},{prefix:'large:',condition:'(1024px <= width)'}];
+ assert.equal(R.atWidth(d,768,choices).prefix,'tablet:');assert.equal(R.atWidth(d,900,choices).prefix,'min-[56.25rem]:');
+ assert.equal(R.inherited('left-0 small:left-4 tablet:right-0','large:',d,choices),'left-0 left-4 right-0');
+ assert.deepEqual(R.inheritedLink({'':{id:'base'},'tablet:':{id:'tablet'}},'large:',d,choices),{scope:'tablet:',label:'Tablet',link:{id:'tablet'}});
+ for(const condition of ['(768px < width)','(768px >= width)','(768px <= width <= 1024px)'])assert.notEqual(R.atWidth(d,768,[{prefix:'conditional:',condition}]).prefix,'conditional:');
+ assert.equal(R.atWidth(d,900,[{prefix:'bounded:',condition:'(48rem <= width <= 64rem)'}]).prefix,'min-[56.25rem]:');
+});

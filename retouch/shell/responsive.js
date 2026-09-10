@@ -63,7 +63,7 @@
   }
   const absolutePixels={px:1,in:96,cm:96/2.54,mm:96/25.4,q:96/101.6,pt:96/72,pc:16};
   const lengthPixels=(value,unit,initial)=>Number(value)*(absolutePixels[unit.toLowerCase()]??initial);
-  const minimumLength=item=>minimumCondition(item)?.match(/^\(\s*(?:min-width\s*:\s*|width\s*>=\s*)([\d.]+)(px|rem|em|in|cm|mm|q|pt|pc)\s*\)$/i);
+  const minimumLength=item=>{const condition=minimumCondition(item);return condition?.match(/^\(\s*(?:min-width\s*:\s*|width\s*>=\s*)([\d.]+)(px|rem|em|in|cm|mm|q|pt|pc)\s*\)$/i)||condition?.match(/^\(\s*([\d.]+)(px|rem|em|in|cm|mm|q|pt|pc)\s*<=\s*width\s*\)$/i);};
   // Anchor fallback for distinct, ascending minimum-width scopes. Complex media
   // conditions and state variants are excluded rather than treated as breakpoints.
   function inherited(classes,prefix,d,choices=d?discover(d):[]){
@@ -91,7 +91,7 @@
     const existing=[...new Map(minima.filter(item=>Math.abs(item.px-width)<.01).map(item=>[item.prefix,item])).values()];
     if(existing.length===1)return existing[0];
     if(existing.length>1)return {prefix:`min-[${width}px]:`,label:`${width} px and larger`};
-    const units=choices.flatMap(item=>item.queries?item.queries.flat():[item.condition||'']).map(query=>query.match(/(?:min-width\s*:\s*|width\s*>=\s*)[\d.]+(px|rem|em)/)?.[1]).filter(Boolean);
+    const units=choices.flatMap(item=>item.queries?item.queries.flat():[item.condition||'']).map(query=>(query.match(/(?:min-width\s*:\s*|width\s*>=\s*)[\d.]+(px|rem|em)/i)?.[1]||query.match(/[\d.]+(px|rem|em)\s*<=\s*width/i)?.[1])?.toLowerCase()).filter(Boolean);
     const unit=units.includes('rem')?'rem':minima.find(item=>['px','rem','em'].includes(item.unit))?.unit||units[0]||'px';
     const size=Math.round((unit==='px'?width:width/initial)*100000)/100000;
     return {prefix:`min-[${size}${unit}]:`,label:`${width} px and larger`};
