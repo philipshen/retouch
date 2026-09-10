@@ -9373,3 +9373,42 @@ variants/slots and arbitrary-site durable authoring remain incomplete. Preservat
 of component runtime state across source hot reload is not established. Full Figma
 Design parity is still open. Native launches remain paused and trusted brew
 installation remains unverified.
+
+
+### Drag component rows to reorder source siblings (2026-09-10)
+
+Component Layers rows now support native drag-and-drop before or after source
+siblings. Catalogue metadata exposes eligible destination IDs and a source hash.
+Dragging is enabled when that hash matches the rendered caller revision; the drop
+keeps the hash captured at drag start. The planner resolves destinations as direct
+siblings under the same JSX parent and refuses nested/unrelated targets. Drop
+indicators reuse the existing before/after styles. Locked sources cannot start a
+drag, and the drop callback rechecks locks and history recovery state.
+
+Drops use the component movement history path, retaining exact source chunks,
+selection and lock remapping. Dropping at the existing position returns unchanged
+with no source edits or history entry, then selects the component without an error.
+
+Validation: 747 unit tests passed, covering explicit before/after destinations,
+eligible target metadata, rejecting nested/self destinations and no-op edits.
+Chromium and WebKit initially passed real Playwright dragTo interactions in both
+directions around a locked sibling, selection/lock restoration and exact Undo/Redo.
+After adding no-op coverage, Chromium passed; WebKit completed the interaction
+assertions but failed its final page-error assertion with an object Event and a
+Next.js original-stack-frames request blocked by access control checks. A fresh
+WebKit run with network/error tracing passed, exited zero and recorded no page
+errors. The transient error did not reproduce and its cause remains unestablished;
+it is not treated as a permanently fixed runtime issue. Final browser checks also
+prove no-op drops return no undo ID and do not consume the preceding real move's
+Undo. Both successful runs cover later ordering/duplicate/delete/detach/swap flows.
+git diff --check and shell syntax checks passed. Evidence:
+/private/tmp/retouch-component-drag-units-final.log,
+/private/tmp/retouch-component-drag-chromium-final.log,
+/private/tmp/retouch-component-drag-webkit-final.log (failed runtime-error check),
+/private/tmp/retouch-component-drag-webkit-trace.log (passing diagnostic rerun).
+
+Component dragging is currently sibling ordering, including direct host-row
+destinations supported by the source planner. Cross-parent/cross-file moves,
+multi-component drags, independent per-render structure, full variants/slots and
+arbitrary-site durable authoring remain open. Full Figma Design parity is incomplete.
+Native launches remain paused and trusted brew installation remains unverified.

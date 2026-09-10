@@ -10,11 +10,17 @@ function context(resolved){
  if(index<0)throw Error('The component usage no longer resolves.');
  return {siblings,index};
 }
-function describe(resolved){try{const {siblings,index}=context(resolved);return {ok:true,canMoveBefore:index>0,canMoveAfter:index<siblings.length-1,canMoveFirst:index>0,canMoveLast:index<siblings.length-1};}catch(error){return refuse(error.message);}}
+function describe(resolved){try{const {siblings,index}=context(resolved);return {ok:true,fileHash:resolved.hash,targets:siblings.filter((_,i)=>i!==index).map(node=>resolved.elements.find(el=>el.node.start===node.start)?.id).filter(Boolean),canMoveBefore:index>0,canMoveAfter:index<siblings.length-1,canMoveFirst:index>0,canMoveLast:index<siblings.length-1};}catch(error){return refuse(error.message);}}
 function plan(resolved,op){
  if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the component before moving it.');
  try{
-  const {siblings,index}=context(resolved),destination=({before:index-1,after:index+1,first:0,last:siblings.length-1})[op.direction];
+  const {siblings,index}=context(resolved);let destination=({before:index-1,after:index+1,first:0,last:siblings.length-1})[op.direction];
+  if(op.destinationId!==undefined){
+   if(!['before','after'].includes(op.direction))throw Error('Choose a position before or after the destination.');
+   const target=resolved.elements.find(el=>el.id===op.destinationId),other=siblings.find(node=>node.start===target?.node.start);if(!other||other===siblings[index])throw Error('Choose another sibling layer in this source container.');
+   destination=siblings.filter((_,i)=>i!==index).indexOf(other)+(op.direction==='after'?1:0);
+  }
+  if(op.destinationId!==undefined&&destination===index)return {ok:true,unchanged:true,hash:resolved.hash,edits:[]};
   if(!Number.isInteger(destination)||destination<0||destination>=siblings.length||destination===index)throw Error('The component cannot move farther in that direction.');
   const reordered=[...siblings],[moved]=reordered.splice(index,1);reordered.splice(destination,0,moved);
   const ms=new MagicString(resolved.source);let shift=0,movedStart;const positions=[];

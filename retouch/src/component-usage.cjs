@@ -16,7 +16,7 @@ function catalogue(index) {
         const info=index.adapter.describeComponent({appRoot:index.appRoot,file,relPath,source,element,elements,hash:index.adapter.contentHash(source)});
         if(!info.ok || !info.definitionId)continue;
         const key=info.file+'#'+info.definitionId;
-        entries.set(element.id,{layerName:index.adapter.name==='react'?require('./jsx-layer-name.cjs').describe({source,relPath,element,ast}).layerName:undefined,key,definitionId:info.definitionId,canDeleteComponent:info.canDelete===true,canDuplicateComponent:info.canDuplicate===true,componentDuplicateReason:info.duplicateReason,rootGroups:info.rootGroups,explicitComponent:info.explicitComponent===true,name:info.name,file:info.file,usageFile:relPath,line:element.node?.loc?.start?.line||null});
+        entries.set(element.id,{movement:info.movement,layerName:index.adapter.name==='react'?require('./jsx-layer-name.cjs').describe({source,relPath,element,ast}).layerName:undefined,key,definitionId:info.definitionId,canDeleteComponent:info.canDelete===true,canDuplicateComponent:info.canDuplicate===true,componentDuplicateReason:info.duplicateReason,rootGroups:info.rootGroups,explicitComponent:info.explicitComponent===true,name:info.name,file:info.file,usageFile:relPath,line:element.node?.loc?.start?.line||null});
         counts.set(key,(counts.get(key)||0)+1);
       }
     } catch {}
@@ -39,7 +39,7 @@ function library(index){
   if(counts.get(entry.key)<2&&!entry.explicitComponent)continue;
   let group=groups.get(entry.key);if(!group){group={key:entry.key,definitionId:entry.definitionId,rootGroups:entry.rootGroups,file:entry.file,names:[],usages:[]};groups.set(entry.key,group);}
   if(!group.names.includes(entry.name))group.names.push(entry.name);
-  group.usages.push({id,name:entry.name,layerName:entry.layerName,file:entry.usageFile,line:entry.line});
+  group.usages.push({id,name:entry.name,layerName:entry.layerName,movement:entry.movement,file:entry.usageFile,line:entry.line});
  }
  if(index.adapter.name==='react')for(const file of index.fileIds.keys()){
   try{
@@ -47,7 +47,7 @@ function library(index){
    for(const definition of require('./component-definitions.cjs').definitions(source,rel)){
     const key=rel+'#'+definition.definitionId,group=groups.get(key);
     if(group){for(const name of definition.names)if(!group.names.includes(name))group.names.push(name);continue;}
-    const usages=[...entries].filter(([,entry])=>entry.key===key).map(([id,entry])=>({id,name:entry.name,layerName:entry.layerName,file:entry.usageFile,line:entry.line}));
+    const usages=[...entries].filter(([,entry])=>entry.key===key).map(([id,entry])=>({id,name:entry.name,layerName:entry.layerName,movement:entry.movement,file:entry.usageFile,line:entry.line}));
     groups.set(key,{key,definitionId:definition.definitionId,rootGroups:[...entries.values()].find(entry=>entry.key===key)?.rootGroups,file:rel,names:[...new Set([...definition.names,...usages.map(usage=>usage.name)])],usages,...(!usages.length?{definitionOnly:true}:{})});
    }
   }catch{}

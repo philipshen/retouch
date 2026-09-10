@@ -24,7 +24,7 @@
     if(!target.parentElement?.hasAttribute('data-rt')||['HTML','BODY'].includes(target.tagName))return null;
     return fraction<.5?'before':'after';
   }
-  function mount({host,onSelect,onAction,getClipboard=()=>null,dragEnabled=false,multiSelectEnabled=dragEnabled,onMove,onSelectMany,locks,onLock,readComponents}) {
+  function mount({host,onSelect,onAction,getClipboard=()=>null,dragEnabled=false,multiSelectEnabled=dragEnabled,onMove,onMoveComponent,onSelectMany,locks,onLock,readComponents}) {
     const header=document.createElement('h2');header.textContent='Layers';
     const search=document.createElement('input');search.type='search';search.placeholder='Find a layer…';search.setAttribute('aria-label','Find a layer');
     const tree=document.createElement('div');tree.className='layer-tree';tree.setAttribute('role','tree');tree.setAttribute('aria-label','Site layers');
@@ -57,9 +57,9 @@
     const selectedRoots=()=>selectedInfo?.kind==='instance'?virtualItems.find(item=>item.componentId===selectedInfo.id&&item.componentRoots.includes(selected))?.componentRoots||[...selectedSet]:[...selectedSet];
     const choose=item=>onSelect(item.el,{sourceId:item.componentId|| (item.parent?.componentId?item.el.getAttribute('data-rt'):undefined),component:!!item.componentId});
     async function loadComponents(){if(!readComponents||!d)return;const request=++componentRequest,current=d;try{const result=await readComponents();if(request===componentRequest&&d===current&&result?.ok){components=result.components||[];render();}}catch{}}
-    let d=null,observer=null,timer=null,selected=null,rows=[],collapsed=new WeakSet(),lastCapabilities=null,isBusy=false,dragged=null,selectedSet=new Set(),rangeAnchor=null;
+    let d=null,observer=null,timer=null,selected=null,rows=[],collapsed=new WeakSet(),lastCapabilities=null,isBusy=false,dragged=null,draggedItem=null,selectedSet=new Set(),rangeAnchor=null;
     function clearTargets(){for(const row of rows)row.button.classList.remove('drop-target','drop-before','drop-after');}
-    function endDrag(){dragged=null;clearTargets();for(const row of rows)row.button.classList.remove('dragging');}
+    function endDrag(){dragged=null;draggedItem=null;clearTargets();for(const row of rows)row.button.classList.remove('dragging');}
     function selectionRows(){const query=search.value.trim().toLowerCase();return rows.filter(row=>!row.item.componentId&&!['HTML','BODY'].includes(row.item.el.tagName)&&!locks?.locked(row.item.el)&&(!query||row.item.label.toLowerCase().includes(query)));}
     async function selectRange(target,append=false){
       if(isBusy)return;const candidates=selectionRows(),end=candidates.findIndex(row=>row.item.el===target);
@@ -90,12 +90,12 @@
           b.tabIndex=isSelected(item)?0:-1;b.disabled=isBusy;
           if(item.children.length)b.setAttribute('aria-expanded',String(expanded));else b.removeAttribute('aria-expanded');
           b.onclick=e=>{if(item.componentId||item.parent?.componentId)return choose(item);if(multiEnabled&&e.shiftKey)return selectRange(item.el,e.metaKey||e.ctrlKey);rangeAnchor=item.el;return onSelect(item.el,{toggle:e.metaKey||e.ctrlKey});};
-          b.draggable=!item.componentId&&dragEnabled&&item.el.namespaceURI==='http://www.w3.org/1999/xhtml'&&!['HTML','BODY'].includes(item.el.tagName);
-          b.ondragstart=e=>{if(isBusy||!b.draggable){e.preventDefault();return;}dragged=item.el;e.dataTransfer.setData('text/plain','retouch-layer:'+item.el.getAttribute('data-rt'));e.dataTransfer.effectAllowed='move';for(const row of rows)if(row.item.el===dragged||selectedSet.has(dragged)&&selectedSet.has(row.item.el))row.button.classList.add('dragging');};
-          const dropPosition=e=>{const box=b.getBoundingClientRect();return isBusy||item.componentId?null:placement(selectedSet.has(dragged)?[...selectedSet]:[dragged],item.el,(e.clientY-box.top)/box.height);};
+          b.draggable=item.componentId?!!onMoveComponent&&!!item.movement?.targets?.length&&item.movement.fileHash===item.el.getAttribute('data-rt-i-revision'):dragEnabled&&item.el.namespaceURI==='http://www.w3.org/1999/xhtml'&&!['HTML','BODY'].includes(item.el.tagName);
+          b.ondragstart=e=>{if(isBusy||!b.draggable||locks?.locked(item.el)){e.preventDefault();return;}dragged=item.el;draggedItem=item;e.dataTransfer.setData('text/plain','retouch-layer:'+(item.componentId||item.el.getAttribute('data-rt')));e.dataTransfer.effectAllowed='move';for(const row of rows)if(row.item.el===dragged||selectedSet.has(dragged)&&selectedSet.has(row.item.el))row.button.classList.add('dragging');};
+          const dropPosition=e=>{const box=b.getBoundingClientRect(),fraction=(e.clientY-box.top)/box.height;if(isBusy)return null;if(draggedItem?.componentId)return draggedItem.movement.targets.includes(item.componentId||item.el.getAttribute('data-rt'))?(fraction<.5?'before':'after'):null;return item.componentId?null:placement(selectedSet.has(dragged)?[...selectedSet]:[dragged],item.el,fraction);};
           b.ondragover=e=>{clearTargets();const position=dropPosition(e);if(position){e.preventDefault();e.dataTransfer.dropEffect='move';b.classList.add(position==='inside'?'drop-target':'drop-'+position);}};
           b.ondragleave=clearTargets;
-          b.ondrop=e=>{const position=dropPosition(e);if(position){e.preventDefault();const source=dragged;endDrag();onMove?.(source,item.el,position);}};
+          b.ondrop=e=>{const position=dropPosition(e);if(position){e.preventDefault();const source=dragged,component=draggedItem?.componentId?{id:draggedItem.componentId,fileHash:draggedItem.movement.fileHash,destinationId:item.componentId||item.el.getAttribute('data-rt')}:null;endDrag();if(component)onMoveComponent?.(source,item.el,position,component);else onMove?.(source,item.el,position);}};
           b.ondragend=endDrag;
           b.onkeydown=async e=>{
             if(item.parent?.componentId&&(e.key==='F2'||e.key==='Delete'||e.key==='Backspace'||(e.metaKey||e.ctrlKey)&&['c','v','d'].includes(e.key.toLowerCase())))await choose(item);

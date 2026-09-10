@@ -1349,9 +1349,10 @@ async function refreshDeletedComponent(id,parentId){
  }
  throw Error('The usage was deleted, but its preview has not refreshed yet.');
 }
-async function moveInstance(info,direction){
+async function moveInstance(info,direction,destinationId){
  busyPanel(true);try{
-  const result=await api('POST','/rt/__api/op',{type:'moveComponent',id:info.id,fileHash:info.hash,direction});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not move the component.');
+  const result=await api('POST','/rt/__api/op',{type:'moveComponent',id:info.id,fileHash:info.hash,direction,destinationId});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not move the component.');
+  if(result.unchanged){await selectInsertedComponent(info.id,null);return;}
   const moved=result.movedComponent;editorHistory.record({type:'moveComponent',id:moved.instanceId,previousInstanceId:moved.previousInstanceId,sourceIdMap:moved.sourceIdMap,undoId:result.undoId});
   layerLocks.remap(moved.sourceIdMap);await refreshSwappedComponent(moved.instanceId,null);await selectInsertedComponent(moved.instanceId,null);layers.refresh();toast('Component moved','ok');
  }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
@@ -2367,6 +2368,10 @@ const layers = RetouchLayers.mount({
   getClipboard:()=>layerClipboard,
   dragEnabled:window.__RT_RENDERING?.layerReparenting===true&&!historyRecoveryRequired,
   multiSelectEnabled:window.__RT_RENDERING?.selectionStyling===true,
+  onMoveComponent:window.__RT_RENDERING?.componentInsertion&&!historyRecoveryRequired?async(source,destination,position,move)=>{
+    if(historyRecoveryRequired||panelTasks||undoBusy||sourceRequests||!source.isConnected||!destination.isConnected||layerLocks.locked(source))return;
+    await commitInlineEdit();await moveInstance({id:move.id,hash:move.fileHash},position,move.destinationId);
+  }:undefined,
   onMove:async(source,destination,position)=>{
     if(historyRecoveryRequired||panelTasks||undoBusy||sourceRequests||!source.isConnected||!destination.isConnected)return;
     await commitInlineEdit();if(sel?.multiple?.some(info=>info.id===source.getAttribute('data-rt')))return structureSelection('reparentElement',{destinationId:destination.getAttribute('data-rt'),position});await select(source);
