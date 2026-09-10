@@ -282,3 +282,36 @@ test('wildcard graphs handle cycles but refuse ambiguous, default and unresolved
 test('an explicit namespace export is not mistaken for a wildcard type with the same name',()=>{
  const f=importedTypes({'contracts.ts':'export * from "./base";export * as Props from "./other";','base.ts':'export interface Props {title?:"small"|"large"}','other.ts':'export type Title="other";'});try{assert.equal(props.describe(f.resolved,'title').choices,undefined);}finally{f.close();}
 });
+
+test('nested namespace re-exports expose contracts, inheritance and choices through renamed imports',()=>{
+ const f=importedTypes({
+  'Card.tsx':'import type {Design as Kit} from "./contracts";export default function Card({title="small"}:Kit.Button.Props){return <h1>{title}</h1>}',
+  'contracts.ts':'import type * as Library from "./library";export type {Library as Design};',
+  'library.ts':'export * as Button from "./button";',
+  'button.ts':'import type * as Tokens from "./tokens";export interface Props extends Tokens.Base {title?:Tokens.Sizes.Title}',
+  'tokens.ts':'export interface Base {count?:number} export * as Sizes from "./sizes";',
+  'sizes.ts':'export type Title="small"|"large";'
+ });try{
+  const info=props.describe(f.resolved,'title');assert.deepEqual(info.choices,['small','large']);assert.equal(props.describe(f.resolved,'count').type,'number');
+  const op={name:'title',value:'large',fileHash:f.resolved.hash,definitionHash:info.definitionHash},plan=props.plan(f.resolved,op);assert.ok(plan.ok,plan.reason);assert.equal(plan.edits.length,7);
+  fs.appendFileSync(require('node:path').join(f.root,'sizes.ts'),'\n// external revision');assert.equal(props.plan(f.resolved,op).ok,false);assert.equal(require('../src/transactions.cjs').applyPlan(f.root,plan).ok,false);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.resolved.source);
+ }finally{f.close();}
+});
+test('namespace re-export diamonds share identity but different namespace targets are ambiguous',()=>{
+ for(const same of [true,false]){
+  const f=importedTypes({'Card.tsx':'import type {Design} from "./contracts";export default function Card({title="small"}:Design.Props){return <h1/>}',
+   'contracts.ts':'export * from "./left";export * from "./right";',
+   'left.ts':'export * as Design from "./base";',
+   'right.ts':'export * as Design from "'+(same?'./base':'./other')+'";',
+   'base.ts':'export interface Props {title?:"small"|"large"}',
+   'other.ts':'export interface Props {title?:"small"|"large"}'
+  });try{assert.deepEqual(props.describe(f.resolved,'title').choices,same?['small','large']:undefined);}finally{f.close();}
+ }
+});
+test('qualified property types refuse private names, type-member guesses and unbounded paths',()=>{
+ for(const type of ['Design.Private','Design.Props.title','Design.'+'Self.'.repeat(22)+'Props']){
+  const f=importedTypes({'Card.tsx':'import type * as Design from "./contracts";export default function Card({title="small"}:'+type+'){return <h1/>}',
+   'contracts.ts':'interface Private {title?:"small"|"large"} export interface Props {title?:"small"|"large"} export * as Self from "./contracts";'
+  });try{assert.equal(props.describe(f.resolved,'title').choices,undefined);}finally{f.close();}
+ }
+});

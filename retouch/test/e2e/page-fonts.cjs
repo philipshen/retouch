@@ -29,6 +29,10 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    const barrel=path.join(root,'app/contracts.ts'),text='export * from "./headline-types"; export * from "./badge-types";';fs.writeFileSync(barrel,text);importedTypeSources.set(barrel,text);
    fs.writeFileSync(file,'import type * as Contracts from "./contracts";\n'+source.replace(':Props)',':Contracts.Props)').replace(':BadgeProps)',':Contracts.BadgeProps)'));
   }
+  if(process.env.RT_E2E_COMPONENT_NESTED_NAMESPACE){
+   for(const [name,text] of [['library.ts','export * as Headline from "./headline-types"; export * as Badge from "./badge-types";'],['contracts.ts','import type * as Library from "./library"; export type {Library as Design};']]){const target=path.join(root,'app',name);fs.writeFileSync(target,text);importedTypeSources.set(target,text);}
+   fs.writeFileSync(file,'import type {Design} from "./contracts";\n'+source.replace(':Props)',':Design.Headline.Props)').replace(':BadgeProps)',':Design.Badge.BadgeProps)'));
+  }
  }
  if(process.env.RT_E2E_COMPONENT_PROPS){assert.equal(kind,'react');fs.writeFileSync(file,fs.readFileSync(file,'utf8').replace('export default function Page(){return','\"use client\"; import {useState} from \"react\"; export default function Page(){const [label,setLabel]=useState(\"Headline\"), title=\"Local title\", onClick=()=>setLabel(\"Clicked\");return').replace('>Headline</h1>',' title={title} onClick={onClick}>{label}</h1>'));}
  if(process.env.RT_E2E_CREATE_COMPONENT){assert.equal(kind,'react');process.env.RETOUCH_STATE_DIR=path.join(root,'.history-cache');}

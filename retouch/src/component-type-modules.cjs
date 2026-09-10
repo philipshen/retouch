@@ -14,7 +14,7 @@ module.exports=function typeModules(resolved,def,ast){
    if(item.type==='ExportAllDeclaration')mod.stars.push(item.source.value);
    const declaration=['ExportNamedDeclaration','ExportDefaultDeclaration'].includes(item.type)?item.declaration:item;
    if(declaration?.id?.name){const name=declaration.id.name;mod.shadowed.add(name);if(['TSTypeAliasDeclaration','TSInterfaceDeclaration'].includes(declaration.type)){if(mod.declarations.has(name))throw Error('Merged type declarations are unsupported');mod.declarations.set(name,declaration);if(item.type==='ExportNamedDeclaration')mod.exports.set(name,{local:name});if(item.type==='ExportDefaultDeclaration')mod.exports.set('default',{local:name});}}
-   if(item.type==='ExportNamedDeclaration')for(const spec of item.specifiers){if(spec.type!=='ExportSpecifier'){if(spec.exported)mod.exports.set(spec.exported.name??spec.exported.value,{unsupported:true});continue;}mod.exports.set(spec.exported.name??spec.exported.value,{local:spec.local.name??spec.local.value,source:item.source?.value});}
+   if(item.type==='ExportNamedDeclaration')for(const spec of item.specifiers){if(spec.type!=='ExportSpecifier'){if(spec.exported)mod.exports.set(spec.exported.name??spec.exported.value,spec.type==='ExportNamespaceSpecifier'&&item.source?{namespace:true,source:item.source.value}:{unsupported:true});continue;}mod.exports.set(spec.exported.name??spec.exported.value,{local:spec.local.name??spec.local.value,source:item.source?.value});}
   }
   return mod;
  }
@@ -32,18 +32,19 @@ module.exports=function typeModules(resolved,def,ast){
   }
   throw Error('Type module is missing');
  }
+ function namespace(mod){return mod.namespace||(mod.namespace={type:'RetouchTypeNamespace',module:mod});}
  let resolutionVisits=0;
  function binding(mod,name,seen=new Set()){
   if(++resolutionVisits>2000)throw Error('Type module resolution is too complex');
   const key=String(mod.file)+'#local#'+name;if(seen.has(key)||seen.size>=40)return null;const next=new Set(seen);next.add(key);
   if(mod.declarations.has(name))return mod.declarations.get(name);
-  const link=mod.imports.get(name);return link&&!link.namespace?exported(imported(mod,link.source),link.name,next):null;
+  const link=mod.imports.get(name);if(!link)return null;const target=imported(mod,link.source);return link.namespace?namespace(target):exported(target,link.name,next);
  }
  function exported(mod,name,seen){
   if(++resolutionVisits>2000)throw Error('Type module resolution is too complex');
   const key=String(mod.file)+'#export#'+name;if(seen.has(key)||seen.size>=40)return null;const next=new Set(seen);next.add(key);
   const link=mod.exports.get(name);
-  if(link){if(link.unsupported)throw Error('Unsupported explicit type export');const result=link.source?exported(imported(mod,link.source),link.local,next):binding(mod,link.local,next);if(!result)throw Error('Explicit type export does not resolve');return result;}
+  if(link){if(link.namespace)return namespace(imported(mod,link.source));if(link.unsupported)throw Error('Unsupported explicit type export');const result=link.source?exported(imported(mod,link.source),link.local,next):binding(mod,link.local,next);if(!result)throw Error('Explicit type export does not resolve');return result;}
   // Star exports do not forward default. Check every branch, including branches
   // without this name: a later addition there can make today's result ambiguous.
   if(name==='default')return null;
@@ -52,10 +53,15 @@ module.exports=function typeModules(resolved,def,ast){
  }
  return {
   lookup(node){
-   const mod=owners.get(node)||main,typeName=node.typeName;
-   if(typeName?.type==='Identifier')return binding(mod,typeName.name);
-   if(typeName?.type!=='TSQualifiedName'||typeName.left.type!=='Identifier'||typeName.right.type!=='Identifier')return null;
-   const link=mod.imports.get(typeName.left.name);return link?.namespace?exported(imported(mod,link.source),typeName.right.name,new Set()):null;
+   const mod=owners.get(node)||main,parts=[];let typeName=node.typeName;
+   while(typeName?.type==='TSQualifiedName'){
+    if(parts.length>=20||typeName.right.type!=='Identifier')return null;
+    parts.unshift(typeName.right.name);typeName=typeName.left;
+   }
+   if(typeName?.type!=='Identifier')return null;
+   let result=binding(mod,typeName.name);
+   for(const name of parts){if(result?.type!=='RetouchTypeNamespace')return null;result=exported(result.module,name,new Set());}
+   return ['TSTypeAliasDeclaration','TSInterfaceDeclaration'].includes(result?.type)?result:null;
   },
   builtin(node,name){return !(owners.get(node)||main).shadowed.has(name);},
   inherit(node,from){owners.set(node,owners.get(from)||main);return node;},
