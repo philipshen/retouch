@@ -14,3 +14,9 @@ test('shared local paint refuses every edit when a selected layer or value canno
  const r=resolve(source);for(const patch of [{fileHash:'stale'},{ids:[r.element.id,r.element.id]},{property:'opacity'},{value:'url(evil)'},{ids:[r.element.id,'aaaaaaaaaa']}]){const result=planner.plan(r,{...op(r),...patch});assert.equal(result.ok,false);assert.equal(result.edits,undefined);}
  for(const modified of [source.replace('className="bg-blue-500 md:!bg-blue-500 border-2"','className={dynamic}'),source.replace('bg-blue-500 md:!bg-blue-500 border-2','bg-blue-500 md:![background:red] border-2')]){const state=resolve(modified),result=planner.plan(state,op(state));assert.equal(result.ok,false);assert.equal(result.edits,undefined);}
 });
+
+test('clearing shared paint removes only the chosen scope and property',()=>{
+ const r=resolve(source),result=planner.plan(r,{...op(r),value:null});assert.equal(result.ok,true,result.reason);
+ assert.deepEqual(result.selection.map(info=>info.className),['bg-red-500 text-lg','bg-blue-500 border-2']);
+ const next=resolve(result.edits[0].after);assert.deepEqual(planner.plan(next,{...op(next),value:null}).edits,[]);
+});

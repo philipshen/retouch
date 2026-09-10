@@ -56,3 +56,9 @@ test('SVG palette paint owns fill and stroke without taking stroke width or back
  assert.ok(classes.compose('!bg-none','background-color','#fff').includes('!bg-none'));
  assert.ok(!classes.compose('!fill-none','fill','#fff').includes('!fill-none'));assert.ok(!classes.compose('!stroke-none','stroke','#fff').includes('!stroke-none'));
 });
+
+test('clearing linked paint keeps the connection as an override that palette reset can restore',()=>{
+ const applied=links.plan(resolve(source),{type:'applyColorStyle',property:'color',scope:'md:'},style).edits[0].after,r=resolve(applied),className=classes.compose(react.describe(r).className,'color',null,'md:'),cleared=react.planOp(r,{type:'setClasses',classes:className,fileHash:r.hash});assert.equal(cleared.ok,true,cleared.reason);
+ const next=resolve(cleared.edits[0].after);assert.equal(links.describe(next).colorStyleLinks['md:'].color.id,style.id);assert.deepEqual(links.describe(next).colorStyleOverrides['md:'],['color']);
+ const reset=links.plan(next,{type:'resetColorStyle',property:'color',scope:'md:'},style);assert.equal(reset.ok,true,reset.reason);assert.deepEqual(links.describe(resolve(reset.edits[0].after)).colorStyleOverrides['md:'],[]);
+});

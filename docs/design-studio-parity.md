@@ -6422,3 +6422,24 @@ palette, and undo both source states exactly before continuing existing color
 library flows. Shared SVG/text/border inputs use this route but lack dedicated
 live selection receipts. Liquid batch editing, cross-file selections and full
 Figma parity remain incomplete. Native launches remain paused.
+
+### Clear selected-scope local paint (2026-09-09)
+
+React and Liquid local paint controls now clear a property from the selected
+screen scope; React shared paint controls do the same atomically for a selection.
+Recognized paint classes are removed while other properties/scopes remain.
+Saved links stay attached and report a local override, allowing palette reset to
+restore their definition. Inspector copy distinguishes clearing to inherited
+paint from resetting to a saved color. Ambiguous important shorthands still
+refuse instead of silently removing unrelated declarations.
+
+All 482 tests passed, exit 0: /private/tmp/retouch-clear-paint-units.log.
+Source tests cover scope/property isolation, idempotent clearing and a retained
+link that palette reset restores. React Chromium and local Liquid WebKit browser
+flows passed, exit 0: /private/tmp/retouch-clear-paint-react.log and
+/private/tmp/retouch-clear-paint-liquid.log. Both clear an alpha local background,
+verify revealed transparent paint and undo to exact source; React also clears
+both selected layers, retains override indicators and undoes the batch exactly.
+The existing palette reset and library flows continue to pass. Liquid batch
+operations, arbitrary custom utility ownership and full parity remain unfinished.
+Native launches remain paused; live Shopify remains unverified.

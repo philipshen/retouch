@@ -42,7 +42,8 @@ function own(plain,property){
  return new RegExp('^'+named+alpha+'$').test(value)||new RegExp('^\\[(?:#[a-fA-F0-9]{3,8}|color:[^\\]]+|(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color|color-mix)\\([^\\]]+\\))\\]'+alpha+'$').test(value)||new RegExp('^\\(color:[^)]+\\)'+alpha+'$').test(value);
 }
 function compose(className,property,value,scope=''){
- const encoded=encode(property,value);if(typeof className!=='string')throw Error('Color styles require literal classes.');responsive.replaceScope('','',scope);
+ if(!properties.includes(property))throw Error('Choose a supported color property.');
+ const encoded=value===null?null:encode(property,value);if(typeof className!=='string')throw Error('Color styles require literal classes.');responsive.replaceScope('','',scope);
  const kept=[];
  for(const token of className.split(/\s+/).filter(Boolean)){
   if(!tokens.valid(token))throw Error('The source contains unsupported class syntax.');
@@ -54,7 +55,7 @@ function compose(className,property,value,scope=''){
   if(/^!|!$/.test(part.value)&&related(plain,property))throw Error('Resolve the important '+property+' utility before linking this color.');
   kept.push(token);
  }
- return kept.concat(scope+encoded).join(' ');
+ return (encoded===null?kept:kept.concat(scope+encoded)).join(' ');
 }
 function overridden(className,property,value,scope=''){
  const encoded=encode(property,value),projected=responsive.project(className,scope).split(/\s+/).filter(Boolean);
