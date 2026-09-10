@@ -9098,3 +9098,42 @@ state across that structural edit is not established. Component tree move/rename
 copy/delete, persistent runtime identity, per-render overrides and fragment layout
 editing remain open. Full Figma Design parity and arbitrary-site support remain
 incomplete. Native launches remain paused; trusted brew distribution is unverified.
+
+### Delete component usages from Layers with exact history (2026-09-10)
+
+Component rows now expose Delete component and handle Delete/Backspace. The React
+transaction removes the selected usage by replacing it with null; JSX child slots
+use {null}, preserving unrelated structural source IDs. Direct returns, conditional
+expressions, fragment siblings and JSX attribute values remain parseable. The
+shared definition and imports are retained, so deleting the last usage leaves the
+exported definition available in the project library. No shared definition is
+removed and no component source is executed during planning.
+
+Deletion checks the selected source hash. Refresh waits for the deleted usage to
+leave the compiled preview, including roots without a source host parent. Undo
+restores and selects the usage with revision-aware refresh; Redo deletes it again.
+A successful source transaction remains in history even if preview refresh fails.
+
+Validation: 717 unit tests passed. Tests cover supported expression positions,
+unrelated sibling/source ID preservation, a second usage of the same definition,
+stale-hash refusal and exact reverse transactions. WebKit and the diagnostic
+Chromium root run passed button/keyboard deletion, library availability after the
+last usage is removed, Undo/Redo, and deleting an edited copy while its original
+stays rendered. The full framed Chromium editing flow also passed. Final browser
+processes ended with exit zero and strict empty page-error assertions. An initial
+WebKit assertion read the inspector while it was still loading; it now waits for
+the loaded state. One Chromium root run logged a Next.js JSON parsing error and
+later timed out during keyboard duplication; the diagnostic rerun passed without
+reproducing it. Its underlying cause is not established. An optional fixture-only
+failure trace captures UI/source state for future diagnosis. Evidence:
+/private/tmp/retouch-component-delete-units-final.log,
+/private/tmp/retouch-component-delete-chromium-diagnostic.log,
+/private/tmp/retouch-component-delete-webkit-final.log,
+/private/tmp/retouch-component-delete-framed.log.
+The failed Chromium evidence is retained at
+/private/tmp/retouch-component-delete-chromium-final.log.
+
+Null-placeholder/import cleanup, component move/rename/copy, persistent runtime
+identity, per-render overrides and fragment layout editing remain open. Full
+Figma Design parity and arbitrary-site support remain incomplete. Native launches
+remain paused; trusted brew distribution is unverified.

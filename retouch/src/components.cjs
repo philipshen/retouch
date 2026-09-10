@@ -143,7 +143,7 @@ function describe(resolved) {
     if(children?.length)props.set('children',{name:'children',default:'—',value:resolved.source.slice(children[0].start,children.at(-1).end)});
     const detached=def.file.includes('.retouch-'+resolved.element.id+'.');
     const duplication=require('./duplicate-component.cjs').describe(resolved);
-    return {ok:true,swap:require('./component-swap-props.cjs').read(resolved),usageHash:resolved.hash,canDuplicate:duplication.ok,duplicateReason:duplication.reason||null,explicitComponent,name:def.name,file:rel,hash:contentHash(def.source),source:def.source.slice(def.fn.start,def.fn.end),props:[...props.values()].map(prop=>({...prop,editor:require('./component-props.cjs').describe(resolved,prop.name,def)})),definitionId:host?.id||null,definitionIds,rootGroups:require('./component-root-groups.cjs')(def.fn,elements,fragments),detached,canDetach:!detached};
+    return {ok:true,canDelete:true,swap:require('./component-swap-props.cjs').read(resolved),usageHash:resolved.hash,canDuplicate:duplication.ok,duplicateReason:duplication.reason||null,explicitComponent,name:def.name,file:rel,hash:contentHash(def.source),source:def.source.slice(def.fn.start,def.fn.end),props:[...props.values()].map(prop=>({...prop,editor:require('./component-props.cjs').describe(resolved,prop.name,def)})),definitionId:host?.id||null,definitionIds,rootGroups:require('./component-root-groups.cjs')(def.fn,elements,fragments),detached,canDetach:!detached};
   }catch(err){return refuse(err.message);}
 }
 function planDetach(resolved,op) {

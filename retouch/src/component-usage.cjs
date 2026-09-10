@@ -16,7 +16,7 @@ function catalogue(index) {
         const info=index.adapter.describeComponent({appRoot:index.appRoot,file,relPath,source,element,elements,hash:index.adapter.contentHash(source)});
         if(!info.ok || !info.definitionId)continue;
         const key=info.file+'#'+info.definitionId;
-        entries.set(element.id,{key,definitionId:info.definitionId,canDuplicateComponent:info.canDuplicate===true,componentDuplicateReason:info.duplicateReason,rootGroups:info.rootGroups,explicitComponent:info.explicitComponent===true,name:info.name,file:info.file,usageFile:relPath,line:element.node?.loc?.start?.line||null});
+        entries.set(element.id,{key,definitionId:info.definitionId,canDeleteComponent:info.canDelete===true,canDuplicateComponent:info.canDuplicate===true,componentDuplicateReason:info.duplicateReason,rootGroups:info.rootGroups,explicitComponent:info.explicitComponent===true,name:info.name,file:info.file,usageFile:relPath,line:element.node?.loc?.start?.line||null});
         counts.set(key,(counts.get(key)||0)+1);
       }
     } catch {}
@@ -25,7 +25,7 @@ function catalogue(index) {
 }
 function usage(index,id) {
   const {entries,counts}=catalogue(index),entry=entries.get(id);
-  return entry?{usageCount:counts.get(entry.key),definitionId:entry.definitionId,canDuplicateComponent:entry.canDuplicateComponent,componentDuplicateReason:entry.componentDuplicateReason,rootGroups:entry.rootGroups,inlineComponent:counts.get(entry.key)===1&&!entry.explicitComponent}:null;
+  return entry?{usageCount:counts.get(entry.key),definitionId:entry.definitionId,canDeleteComponent:entry.canDeleteComponent,canDuplicateComponent:entry.canDuplicateComponent,componentDuplicateReason:entry.componentDuplicateReason,rootGroups:entry.rootGroups,inlineComponent:counts.get(entry.key)===1&&!entry.explicitComponent}:null;
 }
 function describe(index,resolved) {
   const info=index.adapter.describe(resolved);

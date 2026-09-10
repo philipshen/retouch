@@ -99,6 +99,7 @@
           b.ondragend=endDrag;
           b.onkeydown=async e=>{
             if(item.parent?.componentId&&(e.key==='F2'||e.key==='Delete'||e.key==='Backspace'||(e.metaKey||e.ctrlKey)&&['c','v','d'].includes(e.key.toLowerCase())))await choose(item);
+            if(item.componentId&&['Delete','Backspace'].includes(e.key)){e.preventDefault();e.stopPropagation();if(!isBusy&&!e.repeat){await choose(item);await onAction('deleteElement');}return;}
             if(item.componentId&&(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='d'){e.preventDefault();e.stopPropagation();if(!isBusy&&!e.repeat){await choose(item);await onAction('duplicateElement');}return;}
             if(item.componentId&&(e.key==='F2'||e.key==='Delete'||e.key==='Backspace'||(e.metaKey||e.ctrlKey)&&['c','v','d'].includes(e.key.toLowerCase()))){e.preventDefault();await choose(item);return;}
             if(multiEnabled&&(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='a'){e.preventDefault();e.stopPropagation();await selectVisible();return;}
@@ -170,10 +171,10 @@
       const s=info?.structure;
       const copied=getClipboard();
       const compatible=!!copied&&copied.file===info?.file&&copied.parentId===s?.parentId&&copied.hash===(info?.fileHash||info?.hash);
-      const capabilities=JSON.stringify([!!info,info?.kind,info?.canDuplicateComponent,info?.componentDuplicateReason,!!info?.svgMovement,s,busy,copied,compatible,selectedSet.size]);
+      const capabilities=JSON.stringify([!!info,info?.kind,info?.canDuplicateComponent,info?.canDeleteComponent,info?.componentDuplicateReason,!!info?.svgMovement,s,busy,copied,compatible,selectedSet.size]);
       if(capabilities===lastCapabilities)return;
       lastCapabilities=capabilities;
-      actionButtons.duplicateElement.textContent=info?.kind==='instance'?'Duplicate component':selectedSet.size>1?'Duplicate layers':'Duplicate layer';actionButtons.deleteElement.textContent=selectedSet.size>1?'Delete layers':'Delete layer';
+      actionButtons.duplicateElement.textContent=info?.kind==='instance'?'Duplicate component':selectedSet.size>1?'Duplicate layers':'Duplicate layer';actionButtons.deleteElement.textContent=info?.kind==='instance'?'Delete component':selectedSet.size>1?'Delete layers':'Delete layer';
       for(const action of ['insertText','insertFrame']){actionButtons[action].hidden=s?.canInsert===undefined;actionButtons[action].disabled=busy||!s?.canInsert;actionButtons[action].title=s?.insertReason||'Insert inside the selected container.';}
       actionButtons.reparentElement.hidden=s?.canReparent===undefined;actionButtons.reparentElement.disabled=busy||!s?.canReparent;
       actionButtons.frameSelection.hidden=s?.canFrame===undefined;actionButtons.frameSelection.disabled=busy||!s?.canFrame;actionButtons.frameSelection.title='Wrap consecutive sibling layers in a new layout container.';
@@ -182,7 +183,7 @@
       actionButtons.pasteElement.disabled=busy||!s?.canPaste||!compatible;
       actionButtons.pasteElement.title=!copied?'Copy a layer first.':!compatible?'Paste requires an unchanged copied sibling in this source parent.':'Paste after the selected layer.';
       actionButtons.duplicateElement.disabled=busy||!(info?.kind==='instance'?info.canDuplicateComponent:s?.canDuplicate);actionButtons.duplicateElement.title=info?.kind==='instance'?info.componentDuplicateReason||'Create another linked instance.':'';
-      actionButtons.deleteElement.disabled=busy||!s?.canDelete;
+      actionButtons.deleteElement.disabled=busy||!(info?.kind==='instance'?info.canDeleteComponent:s?.canDelete);
       actionButtons.before.textContent=info?.svgMovement?'Send backward':'Move layer up';actionButtons.after.textContent=info?.svgMovement?'Bring forward':'Move layer down';
       for(const [action,cap] of [['first','canMoveFirst'],['last','canMoveLast']]){actionButtons[action].hidden=!info?.svgMovement;actionButtons[action].disabled=busy||!s?.[cap];}
       actionButtons.before.disabled=busy||!s?.canMoveBefore;

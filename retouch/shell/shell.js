@@ -1335,6 +1335,26 @@ async function editDefinition(instanceId, component) {
   sel = { hostId, instanceId:component.definitionOnly?null:instanceId, scope: 'host', info: response.element };
   renderPanel(); toast(component.detached ? 'Editing detached definition' : 'Editing shared definition', 'ok');
 }
+async function refreshDeletedComponent(id,parentId){
+ const parent=parentId?await api('GET',resolveUrl(parentId)):null;
+ if(parent?.ok){await refreshWrittenElement(parent.element,el=>!matchingInDocument(el.ownerDocument,id).length);if(!matchingInDocument(doc(),id).length)return;}
+ const location=iframe.contentWindow.location.href;
+ for(let attempt=0;attempt<30;attempt++){
+  if(iframe.contentWindow.location.href!==location)return;
+  const response=await fetch(location,{cache:'no-store'});
+  if(response.ok&&!matchingInDocument(new DOMParser().parseFromString(await response.text(),'text/html'),id).length){if(matchingInDocument(doc(),id).length)await reloadFrame();if(!matchingInDocument(doc(),id).length)return;}
+  await new Promise(resolve=>setTimeout(resolve,150));
+ }
+ throw Error('The usage was deleted, but its preview has not refreshed yet.');
+}
+async function deleteInstance(id,context){
+ busyPanel(true);try{
+  const usage=await api('GET',resolveUrl(id,context));if(!usage?.ok)throw Error('Re-select the component before deleting.');
+  const result=await api('POST','/rt/__api/op',{type:'deleteComponent',id,fileHash:sel?.info.id===id?sel.info.hash:usage.element.hash});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not delete the component usage.');
+  editorHistory.record({type:'deleteComponent',id,parentId:result.deletedComponent.parentId,undoId:result.undoId});
+  await refreshDeletedComponent(id,result.deletedComponent.parentId);clearSelection();toast('Component usage deleted; definition remains available','ok');
+ }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
+}
 async function duplicateInstance(id,context) {
   busyPanel(true);
   try{
@@ -2172,6 +2192,7 @@ async function restoreHistory(direction,op) {
   try {
     await showHistoryPage(op.route);
     if(['insertComponent','swapComponent'].includes(op.type)){const parentId=direction==='redo'?op.id:op.previousParentId,parent=parentId?await api('GET',resolveUrl(parentId)):null;if(op.type==='swapComponent')await refreshSwappedComponent(direction==='redo'?op.instanceId:op.previousInstanceId,parentId);else if(parent?.ok)await refreshWrittenElement(parent.element,()=>true);else await reloadFrame();if(direction==='redo')await selectInsertedComponent(op.instanceId,op.id);else if(op.type==='swapComponent')await selectInsertedComponent(op.previousInstanceId,op.previousParentId);else if(parent?.ok){sel={hostId:parentId,instanceId:null,scope:'host',info:parent.element};renderPanel();}else clearSelection();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='deleteComponent'){if(direction==='undo'){await refreshSwappedComponent(op.id,null);await selectInsertedComponent(op.id,op.parentId);}else{await refreshDeletedComponent(op.id,op.parentId);clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
@@ -2453,6 +2474,7 @@ async function structureAction(action) {
   if(sel.multiple?.length>1){if(action==='reparentElement')return chooseLayerParent(sel.info);if(['duplicateElement','deleteElement'].includes(action))return structureSelection(action);return toast('Choose one layer for this structural edit.','err');}
   await commitInlineEdit();
   const info=sel?.info;if(!info)return;
+  if(action==='deleteElement'&&info.kind==='instance'){if(!info.canDeleteComponent)return toast('This component usage cannot be deleted here.','err');return deleteInstance(info.id,info.context);}
   if(action==='duplicateElement'&&info.kind==='instance'){if(!info.canDuplicateComponent)return toast(info.componentDuplicateReason||'This instance cannot be duplicated here.','err');return duplicateInstance(info.id,info.context);}
   if(action==='deleteElement'&&info.svgDeletion||action==='duplicateElement'&&info.svgDuplication||['before','after','first','last'].includes(action)&&info.svgMovement){
     const deleting=action==='deleteElement',duplicating=action==='duplicateElement';

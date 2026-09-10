@@ -1,0 +1,11 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
+const {makeApp,cleanup,Index}=require('./helpers.cjs'),{plan}=require('../src/delete-component.cjs'),{applyPlan}=require('../src/transactions.cjs');
+for(const value of ['<Card/>','show ? <Card/> : null','<><Card/><Other/></>','<main><Card/><Other/></main>','<main><Card/><Card/><Other/></main>','<Other content=<Card/>/>'])test('delete component usage preserves surrounding structure: '+value,()=>{
+ const source='export function Page({show}){return '+value+'}export function Card(){return <article id="shared"/>}export function Other(){return <aside/>}',root=fs.realpathSync(makeApp({'Page.tsx':source})),index=new Index(root);try{
+  index.scanAll();const all=[...index.idToFile.keys()].map(id=>index.resolve(id)),usage=all.find(item=>item.element.kind==='instance'&&item.element.node.openingElement.name.name==='Card'),others=all.filter(item=>item!==usage&&!((item.element.node.start>usage.element.node.start)&&(item.element.node.end<usage.element.node.end))).map(item=>item.element.id),result=plan(usage,{fileHash:usage.hash});assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);assert.equal(fs.readFileSync(usage.file,'utf8'),source);assert.equal(applyPlan(root,result).ok,true);index.scanAll();assert.equal(index.resolve(usage.element.id),null);for(const id of others)assert.ok(index.resolve(id),'Preserve unrelated source ID '+id);assert.match(result.edits[0].after,/function Card\(\)\{return <article id="shared"\/>\}/);assert.equal(applyPlan(root,{ok:true,edits:result.edits.map(edit=>({file:edit.file,before:edit.after,after:edit.before}))}).ok,true);assert.equal(fs.readFileSync(usage.file,'utf8'),source);
+ }finally{index.close();cleanup(root);}
+});
+test('delete refuses a stale source hash without writing',()=>{
+ const root=fs.realpathSync(makeApp({'Page.tsx':'export default ()=> <Card/>;function Card(){return <div/>}'})),index=new Index(root);try{index.scanAll();const usage=[...index.idToFile.keys()].map(id=>index.resolve(id)).find(item=>item.element.kind==='instance'),before=fs.readFileSync(usage.file,'utf8');assert.equal(plan(usage,{fileHash:'stale'}).ok,false);assert.equal(fs.readFileSync(usage.file,'utf8'),before);}finally{index.close();cleanup(root);}
+});
