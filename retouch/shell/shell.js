@@ -265,9 +265,10 @@ function hookFrame(d, w) {
       e.preventDefault();
     }
   }, true);
+  d.addEventListener('pointerdown',cancelOpacityEntry,true);
   d.addEventListener('keydown', (e) => {
-    if(mode==='edit'&&!editing&&window.RetouchActions?.shortcut(e))return;
-    if(canvasZoomShortcut(e)||lockShortcut(e)||opacityShortcut(e))return;
+    if(mode==='edit'&&!editing&&window.RetouchActions?.shortcut(e)){cancelOpacityEntry();return;}
+    if(opacityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e))return;
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'i')) {
@@ -2268,7 +2269,7 @@ routeInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') navigatePage(routeInput.value || '/');
 });
 window.addEventListener('keydown', (e) => {
-  if(canvasZoomShortcut(e)||lockShortcut(e)||opacityShortcut(e))return;
+  if(opacityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e))return;
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.target.closest?.('input,textarea,[contenteditable="true"]')) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
@@ -2342,6 +2343,8 @@ async function setLayerLocks(el,value){
 }
 let opacityEntry=null;
 function cancelOpacityEntry(){if(opacityEntry){clearTimeout(opacityEntry.timer);opacityEntry=null;}}
+document.addEventListener('pointerdown',cancelOpacityEntry,true);
+window.addEventListener('blur',cancelOpacityEntry);
 function opacityShortcut(e){
   if(opacityEntry&&(e.key==='Escape'||(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z')){cancelOpacityEntry();e.preventDefault();e.stopImmediatePropagation();return true;}
   if(e.defaultPrevented||e.isComposing||e.metaKey||e.ctrlKey||e.altKey||e.shiftKey||!/^\d$/.test(e.key)){cancelOpacityEntry();return false;}
