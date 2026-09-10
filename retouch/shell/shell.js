@@ -907,10 +907,12 @@ function screenScopeSection() {
   const arbitrary = /^(min|max)-\[([\d.]+(?:px|rem|em))\]:$/.exec(styleScope);
   const condition = chosen?.condition || (arbitrary ? `(${arbitrary[1]}-width: ${arbitrary[2]})` : null);
   window.dispatchEvent(new CustomEvent('retouch:style-scope',{detail:{prefix:styleScope,label:chosen?.label||styleScope,condition,queries:chosen?.queries}}));
-  if (condition && RetouchResponsive.matches({condition,queries:chosen?.queries},iframe.contentWindow)===false) {
-    RetouchInspector.note(section, 'This breakpoint does not match the current preview. Its conditions may include width, height or orientation.');
-    const previewSize=RetouchResponsive.previewSize({condition,queries:chosen?.queries},document,{width:iframe.contentWindow.innerWidth,height:iframe.contentWindow.innerHeight});
-    if(previewSize){const preview=RetouchInspector.button('Preview this breakpoint',()=>{stopDrawing?.();preview.blur();window.RetouchScreens?.set(previewSize);});preview.id='previewBreakpoint';preview.title=`Preview at ${previewSize.width} × ${previewSize.height}. Undo preview size restores the previous screen.`;section.append(preview);
+  if (condition) {
+    const applies=RetouchResponsive.matches({condition,queries:chosen?.queries},iframe.contentWindow),currentSize={width:iframe.contentWindow.innerWidth,height:iframe.contentWindow.innerHeight};
+    if(applies===false)RetouchInspector.note(section, 'This breakpoint does not match the current preview. Its conditions may include width, height or orientation.');
+    const previewSize=applies===true?currentSize:RetouchResponsive.previewSize({condition,queries:chosen?.queries},document,currentSize);
+    if(previewSize){
+      if(applies!==true){const preview=RetouchInspector.button('Preview this breakpoint',()=>{stopDrawing?.();preview.blur();window.RetouchScreens?.set(previewSize);});preview.id='previewBreakpoint';preview.title=`Preview at ${previewSize.width} × ${previewSize.height}. Undo preview size restores the previous screen.`;section.append(preview);}
       const compare=RetouchInspector.button('Compare this breakpoint',()=>{if(!window.RetouchComparisons?.showSize({...previewSize,label:chosen?.label||styleScope}))toast('Remove a comparison or finish the current operation first.','err');});compare.id='compareBreakpoint';compare.dataset.width=previewSize.width;compare.dataset.height=previewSize.height;compare.disabled=!window.RetouchComparisons?.canShowSize(previewSize);compare.title='Keep the main canvas size and open a matching comparison. Reuses an existing screen with the same dimensions.';section.append(compare);
     }
   }
