@@ -16,3 +16,24 @@ test('journal refuses traversal, symlinks, corruption and competing writers with
 test('persistence failures retain usable in-memory source history and report the failure',t=>{
  const {root}=setup(t),file=path.join(root,'a');fs.writeFileSync(file,'after');const history=new SourceHistory(100,{store:{load:()=>({undo:[],redo:[]}),save:()=>{throw Error('disk full');}}});const id=history.record([{file,before:'before',after:'after'}]);assert.equal(history.persistenceError,'disk full');assert.equal(history.apply(root,'undo',id,{}).ok,true);assert.equal(fs.readFileSync(file,'utf8'),'before');assert.equal(history.persistenceError,'disk full');
 });
+test('abrupt process exit before or after source restore recovers the correct undo and redo sides',t=>{
+ const {spawnSync}=require('node:child_process');
+ for(const direction of ['undo','redo'])for(const phase of ['prepared','applied']){
+  const {root,directory,open}=setup(t),file=path.join(root,'a');fs.writeFileSync(file,'after');let history=open();const id=history.record([{file,before:'before',after:'after'}],undefined,'/original?view=one');if(direction==='redo')assert.equal(history.apply(root,'undo',id,{}).ok,true);
+  const code=`const {createHistoryStore}=require(${JSON.stringify(require.resolve('../src/history-store.cjs'))});const {SourceHistory}=require(${JSON.stringify(require.resolve('../src/history.cjs'))});const disk=createHistoryStore(process.argv[1],process.argv[2]);const history=new SourceHistory(100,{store:{load:()=>disk.load(),save(state){if(!state.pending&&process.argv[4]==='applied')process.exit(70);disk.save(state);if(state.pending&&process.argv[4]==='prepared')process.exit(70);}}});history.apply(process.argv[1],process.argv[3],process.argv[5],{});`;
+  const child=spawnSync(process.execPath,['-e',code,root,directory,direction,phase,id],{encoding:'utf8',timeout:10000});assert.equal(child.status,70,child.stderr);
+  const completed=phase==='applied',expected=direction==='undo'?(completed?'before':'after'):(completed?'after':'before');assert.equal(fs.readFileSync(file,'utf8'),expected);
+  history=open();const stack=completed?(direction==='undo'?'redo':'undo'):direction;assert.equal(history[stack].at(-1).id,id);assert.equal(history[stack].at(-1).route,'/original?view=one');assert.equal(history.apply(root,stack,id,{}).ok,true);assert.equal(fs.readFileSync(file,'utf8'),expected==='before'?'after':'before');
+ }
+});
+test('mixed interrupted restores and redirected source paths are reported without mutating source or journal',t=>{
+ const {root,directory,open,base}=setup(t),a=path.join(root,'a'),b=path.join(root,'b');fs.writeFileSync(a,'after-a');fs.writeFileSync(b,'after-b');const history=open(),id=history.record([{file:a,before:'before-a',after:'after-a'},{file:b,before:'before-b',after:'after-b'}]);
+ const store=createHistoryStore(root,directory),state=store.load();store.save({...state,pending:{type:'undo',id}});const journal=fs.readFileSync(store.file,'utf8');fs.writeFileSync(a,'before-a');assert.throws(()=>open(),/mixed files/);assert.equal(fs.readFileSync(a,'utf8'),'before-a');assert.equal(fs.readFileSync(b,'utf8'),'after-b');assert.equal(fs.readFileSync(store.file,'utf8'),journal);
+ const outside=path.join(base,'outside');fs.writeFileSync(outside,'before-b');fs.unlinkSync(b);fs.symlinkSync(outside,b);assert.throws(()=>open(),/regular file/);assert.equal(fs.readFileSync(outside,'utf8'),'before-b');assert.equal(fs.readFileSync(store.file,'utf8'),journal);
+});
+test('a failed multi-file rollback retains its pending marker and prevents further restore attempts',t=>{
+ const {root,directory,open}=setup(t),a=path.join(root,'a'),b=path.join(root,'b');fs.writeFileSync(a,'after-a');fs.writeFileSync(b,'after-b');const history=open(),id=history.record([{file:a,before:'before-a',after:'after-a'},{file:b,before:'before-b',after:'after-b'}]);
+ const rename=fs.renameSync;t.mock.method(fs,'renameSync',(from,to)=>{if(to===a||to===b&&fs.readFileSync(b,'utf8')==='before-b')throw Error('Simulated replacement failure');return rename(from,to);});
+ const result=history.apply(root,'undo',id,{});assert.equal(result.ok,false);assert.equal(result.rollbackFailed,true);assert.equal(fs.readFileSync(a,'utf8'),'after-a');assert.equal(fs.readFileSync(b,'utf8'),'before-b');assert.match(history.persistenceError,/requires recovery/);assert.match(history.apply(root,'undo',id,{}).reason,/requires recovery/);
+ const journal=JSON.parse(fs.readFileSync(createHistoryStore(root,directory).file,'utf8'));assert.deepEqual(journal.pending,{type:'undo',id});assert.throws(()=>open(),/mixed files/);
+});

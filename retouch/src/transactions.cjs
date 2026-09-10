@@ -42,7 +42,7 @@ function applyPlan(root, plan) {
       try { replace({file:edit.file,before:edit.after,after:edit.before}); }
       catch(rollback) { failures.push(rollback.message); }
     }
-    return refuse(err.message+(failures.length?' Rollback failed: '+failures.join('; '):''));
+    return {...refuse(err.message+(failures.length?' Rollback failed: '+failures.join('; '):'')),...(failures.length?{rollbackFailed:true}:{})};
   }
 }
 module.exports = {applyPlan};

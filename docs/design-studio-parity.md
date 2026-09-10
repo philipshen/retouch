@@ -6968,3 +6968,26 @@ This is normal-restart persistence, not crash-atomic source/history storage:
 interrupted writes, stale save-lock recovery, synchronized active clients and
 version browsing remain unfinished. Native launches remain paused, and full
 Figma parity and arbitrary-site editing remain incomplete.
+
+
+### Interrupted Undo/Redo recovery markers (2026-09-09)
+
+Source history now persists a pending restore marker before Undo or Redo writes
+source files. On load, it compares every touched file with the expected before
+and after snapshots. An unstarted restore keeps the previous stack position; a
+fully applied restore advances the history stacks. Neither path rewrites source.
+Mixed or externally changed files, unsafe paths and symlinks leave the journal
+intact and report unresolved recovery. Failed multi-file rollback retains the
+marker and blocks subsequent restore attempts in that running history instance.
+
+All 530 tests passed (`/private/tmp/retouch-history-pending-units-final.log`). New
+tests abruptly exit child Node processes immediately after marker persistence or
+source application for both Undo and Redo, then reopen the store and verify the
+correct stack, route and exact source restoration. Other tests inject mixed-file
+states, symlinks and a rollback failure. Existing Chromium/WebKit restart flows
+also pass (`/private/tmp/retouch-history-pending-{chromium,webkit}.log`).
+
+This covers those Undo/Redo interruption boundaries. New source edits still need
+a write-ahead integration; crashes during journal replacement can leave save
+locks requiring recovery. Power-loss durability, automatic resolution of mixed
+files and complete crash recovery remain unproven. Native launches remain paused.
