@@ -37,3 +37,8 @@ test('repeating gradient stacks retain their period and independent repeat setti
  const single=V.serializeGradients([{...parsed[0],repeat:false}]);assert.ok(single.startsWith('linear-gradient('));assert.deepEqual(V.parseGradients(single)[0].stops,parsed[0].stops);
  assert.ok(G.classes('!bg-[repeating-linear-gradient(red,blue)] bg-cover',value).startsWith('bg-cover ![background-image:'));
 });
+
+test('gradient color interpolation preserves geometry, color space, and polar hue direction',()=>{
+ for(const value of ['linear-gradient(45deg in oklab, red, blue)','linear-gradient(in srgb-linear, red, blue)','radial-gradient(in oklch longer hue circle at 25% 60%, red, blue)','conic-gradient(from 45deg at 25% 60% in hsl decreasing hue, red, blue)','repeating-linear-gradient(in display-p3 90deg, red 0%, blue 20%)']){const parsed=V.parseGradients(value);assert.ok(parsed,value);assert.deepEqual(V.parseGradients(V.serializeGradients(parsed)),parsed);}
+ for(const value of ['linear-gradient(red in oklab, blue)','linear-gradient(in srgb longer hue, red, blue)','linear-gradient(in unknown, red, blue)','linear-gradient(in oklab in srgb, red, blue)','linear-gradient(in oklch sideways hue, red, blue)'])assert.equal(V.parseGradients(value),null,value);
+});

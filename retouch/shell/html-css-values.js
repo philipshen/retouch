@@ -166,6 +166,7 @@
   for(let i=0;i<value.length;i++){if(value[i]==='(')depth++;if(value[i]===')'&&--depth<0)return null;if(value[i]===','&&!depth){parts.push(value.slice(start,i).trim());start=i+1;}}
   if(depth)return null;parts.push(value.slice(start).trim());return parts;
  }
+ const gradientColorSpaces=['srgb','srgb-linear','display-p3','display-p3-linear','a98-rgb','prophoto-rgb','rec2020','lab','oklab','xyz','xyz-d50','xyz-d65','hsl','hwb','lch','oklch'];
  function parseGradients(value){
   if(typeof value!=='string'||!value.trim()||value.length>8192)return null;
   if(value.trim()==='none')return [];
@@ -176,6 +177,16 @@
    const args=splitLayers(match[2]);if(!args)return null;
    const gradient={type:match[1],angle:match[1]==='conic'?0:180,x:50,y:50,shape:'ellipse',stops:[]};
    if(layer.startsWith('repeating-'))gradient.repeat=true;
+   let needsGeometry=false;
+   const blending=/(?:^|\s)in ([a-z0-9-]+)(?: (shorter|longer|increasing|decreasing) hue)?(?=\s|$)/.exec(args[0]);
+   if(blending){
+    if(!gradientColorSpaces.includes(blending[1])||blending[2]&&!['hsl','hwb','lch','oklch'].includes(blending[1]))return null;
+    gradient.colorSpace=blending[1];if(blending[2])gradient.hue=blending[2];
+    args[0]=(args[0].slice(0,blending.index)+' '+args[0].slice(blending.index+blending[0].length)).trim();
+    needsGeometry=!!args[0];if(!args[0])args.shift();
+   }
+
+   const headerCount=args.length;
    if(gradient.type==='linear'){
     const angle=/^(-?(?:\d*\.)?\d+)deg$/.exec(args[0]);
     const directions={'to top':0,'to right':90,'to bottom':180,'to left':270};
@@ -193,6 +204,7 @@
     const radial=/^(ellipse|circle)(?: at ((?:\d*\.)?\d+)% ((?:\d*\.)?\d+)%)?$/.exec(args[0].startsWith('at ')?'ellipse '+args[0]:args[0]);
     if(radial){gradient.shape=radial[1];gradient.x=Number(radial[2]??50);gradient.y=Number(radial[3]??50);args.shift();if(gradient.x>100||gradient.y>100)return null;}
    }
+   if(needsGeometry&&args.length===headerCount)return null;
    if(args.length<2||args.length>16)return null;
    const positionPattern=gradient.type==='conic'?/^(.*)\s+((?:\d*\.)?\d+)(%|deg|turn|rad|grad)$/:/^(.*)\s+((?:\d*\.)?\d+)(%)$/;
    for(const arg of args){
@@ -220,7 +232,7 @@
   }
   return result;
  }
- function serializeGradients(gradients){return gradients.length?gradients.map(g=>`${g.repeat?'repeating-':''}${g.type}-gradient(${g.type==='linear'?g.angle+'deg':g.type==='conic'?'from '+g.angle+'deg at '+g.x+'% '+g.y+'%':g.shape+' at '+g.x+'% '+g.y+'%'}, ${g.stops.map(s=>s.color+' '+s.position+'%').join(', ')})`).join(', '):'none';}
+ function serializeGradients(gradients){return gradients.length?gradients.map(g=>`${g.repeat?'repeating-':''}${g.type}-gradient(${g.type==='linear'?g.angle+'deg':g.type==='conic'?'from '+g.angle+'deg at '+g.x+'% '+g.y+'%':g.shape+' at '+g.x+'% '+g.y+'%'}${g.colorSpace?' in '+g.colorSpace+(g.hue?' '+g.hue+' hue':''):''}, ${g.stops.map(s=>s.color+' '+s.position+'%').join(', ')})`).join(', '):'none';}
  function affected(property){
   if(property==='border')return sides.flatMap(side=>['width','style','color'].map(part=>'border-'+side+'-'+part));
   if(/^border-(top|right|bottom|left)$/.test(property))return ['width','style','color'].map(part=>property+'-'+part);
@@ -228,5 +240,5 @@
   return families[property]||[property];
  }
  function overlaps(a,b){if(a==='-webkit-backdrop-filter')a='backdrop-filter';if(b==='-webkit-backdrop-filter')b='backdrop-filter';return a==='all'||b==='all'||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(a)&&sides.includes(b)||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(b)&&sides.includes(a)||a==='background'&&b.startsWith('background-')||b==='background'&&a.startsWith('background-')||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')&&!b.endsWith('radius')||b==='border'&&a.startsWith('border-')&&!a.endsWith('radius')||['font','font-variant'].includes(a)&&b==='font-variant-numeric'||['font','font-variant'].includes(b)&&a==='font-variant-numeric'||a==='font'&&['font-family','font-weight','font-style','font-size','line-height','font-variation-settings','font-optical-sizing'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
- return {parseVariations,serializeVariations,numericGroups,numericValid,numericChange,options,fields,svgFields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients};
+ return {parseVariations,serializeVariations,numericGroups,numericValid,numericChange,options,fields,svgFields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients,gradientColorSpaces};
 });

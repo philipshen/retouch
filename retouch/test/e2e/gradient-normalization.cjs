@@ -7,6 +7,9 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   const page=await browser.newPage({viewport:{width:400,height:400},deviceScaleFactor:1});await page.setContent('<div id="paint" style="width:300px;height:240px"></div>');const paint=page.locator('#paint');
   for(const value of [
    'linear-gradient(90deg, red, green, blue)',
+   'linear-gradient(45deg in oklab, red, blue)',
+   'radial-gradient(circle at 25% 60% in oklch longer hue, red, blue)',
+   'conic-gradient(from 45deg in hsl decreasing hue, red, blue)',
    'repeating-linear-gradient(45deg, red 0% 10%, blue 10% 20%)',
    'repeating-radial-gradient(circle at 25% 60%, red, green, blue 20%)',
    'repeating-conic-gradient(from 45deg, red 0deg 45deg, blue 45deg 90deg)',
@@ -17,6 +20,7 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
    'linear-gradient(red, green 70% 30%, blue)',
    'linear-gradient(rgba(255,0,0,.5), transparent, blue), radial-gradient(red 0% 30%, green 30% 100%)'
   ]){
+   assert.equal(await page.evaluate(value=>CSS.supports('background-image',value),value),true,value);
    await paint.evaluate((el,value)=>el.style.backgroundImage=value,value);const original=await paint.screenshot();
    const normalized=V.serializeGradients(V.parseGradients(value));await paint.evaluate((el,value)=>el.style.backgroundImage=value,normalized);
    assert.deepEqual(await paint.screenshot(),original,'same rendered pixels: '+value);
