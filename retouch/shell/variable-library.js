@@ -28,7 +28,7 @@
  }
  function render(){
   previewSerial++;body.replaceChildren();body.append(I.button('Reload collections',load));if(!library)return;
-  I.note(body,'Collections share typed variables across named modes. These definitions are saved to the project; layer binding and mode activation are not connected yet.');
+  I.note(body,'Collections share typed variables across named modes. Definitions are saved to the project. In HTML projects, select a layer and open Collection bindings to apply variables and choose modes.');
   if(library.collections.length)body.append(modePreview());
   if(!library.collections.some(item=>item.id===collectionId))collectionId=library.collections[0]?.id||'';
   I.select(body,'Variable collection',[['','Choose a collection…'],...library.collections.map(item=>[item.id,item.name])],collectionId,value=>{collectionId=value;variableId='';render();});
@@ -44,7 +44,7 @@
   const typePicker=I.select(body,'Variable type',['color','number','boolean','string'].map(value=>[value,value[0].toUpperCase()+value.slice(1)]),type,value=>{newType=value;render();});typePicker.disabled=!!variable;
   const readers={};
   for(const mode of collection.modes){const row=document.createElement('fieldset'),legend=document.createElement('legend');legend.textContent=mode.name;row.append(legend);body.append(row);let current=variable?.values[mode.id]??blank(type);const editor=document.createElement('div');
-   function valueEditor(kind){editor.replaceChildren();if(kind==='alias'){const options=library.variables.filter(item=>item.type===type&&item.id!==variableId).map(item=>[item.id,library.collections.find(c=>c.id===item.collectionId).name+' / '+item.name]),pick=I.select(editor,mode.name+' alias',[['','Choose a variable…'],...options],typeof current==='object'?current.alias:'',()=>{});readers[mode.id]=()=>({alias:pick.value});}
+   function valueEditor(kind){editor.replaceChildren();if(kind==='alias'){const options=library.variables.filter(item=>item.type===type&&(item.id!==variableId||typeof current==='object'&&item.id===current.alias)).map(item=>[item.id,library.collections.find(c=>c.id===item.collectionId).name+' / '+item.name]),pick=I.select(editor,mode.name+' alias',[['','Choose a variable…'],...options],typeof current==='object'?current.alias:'',()=>{});readers[mode.id]=()=>({alias:pick.value});}
     else if(type==='boolean'){const pick=I.select(editor,mode.name+' value',[['false','False'],['true','True']],String(typeof current==='boolean'?current:false),()=>{});readers[mode.id]=()=>pick.value==='true';}
     else{const field=input(editor,mode.name+' value',typeof current==='object'?blank(type):current);field.maxLength=type==='string'?4096:150;if(type==='number'){field.type='number';field.step='any';}readers[mode.id]=()=>{if(type==='number'&&field.value.trim()==='')throw Error('Enter a number for '+mode.name+'.');return type==='number'?Number(field.value):field.value;};}}
    I.select(row,mode.name+' value source',[['literal','Value'],['alias','Alias']],typeof current==='object'?'alias':'literal',valueEditor);row.append(editor);valueEditor(typeof current==='object'?'alias':'literal');

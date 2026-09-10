@@ -7391,3 +7391,31 @@ This is API/source support; inspector binding controls, multi-selection,
 inherited collection modes, React/Liquid bindings and live canvas mode activation
 remain unfinished. No new browser UX is claimed. Native app launches remain
 paused and full Figma parity remains incomplete.
+
+### HTML inspector collection binding controls (2026-09-10)
+
+A selected HTML layer now has a Collection bindings inspector section. It filters
+variables by property type, previews the resolved CSS value, supports explicit
+numeric units, and offers independent collection modes (or their current default)
+for the selected minimum-width screen scope. Apply, reset and detach use the
+source-backed API and existing source Undo. Override status is shown explicitly.
+Invalid values disable Apply; failed mode resolution clears preview values so a
+previous successful value cannot be applied as if it belonged to a cyclic mode.
+The reload control remains available after errors. Empty lists explain where to
+create variables.
+
+Collection edits that propagate to HTML now reload the canvas and refresh selected
+source metadata. The collection form also preserves an existing self-alias while
+editing other modes; the alias remains subject to mode-resolution cycle checks.
+
+All 559 unit tests passed (`/private/tmp/retouch-collection-binding-ui-units.log`).
+The new `test/e2e/collection-bindings.cjs` passes Chromium and WebKit: real controls
+verify type filtering, cyclic-mode refusal and recovery without source changes,
+phone/tablet isolation, numeric padding, local override reset, detach preserving
+appearance, collection edits updating the canvas, and byte-exact source Undo.
+The existing Chromium collection-editor flow also passes. The inspector screenshot
+`/private/tmp/retouch-collection-bindings.png` was visually inspected.
+
+Multi-layer binding, inherited collection mode controls, React/Liquid collection
+bindings, and broader Figma variable semantics remain unfinished. Native app
+launches remain paused. Full Figma parity is not achieved.
