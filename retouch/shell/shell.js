@@ -932,7 +932,7 @@ function renderPanelContents() {
    RetouchColorStyles.mount(panelBody,sel.multiple?.length>1?selectionColorOptions(scope):info.colorStyles||info.classColorStyles?{width:scope,readColor:property=>{const element=matchingEls(info.id)[0];if(!element)throw Error('Re-select the layer to read its color.');return element.ownerDocument.defaultView.getComputedStyle(element).getPropertyValue(property);},allLinks:info.colorStyleLinks,links:info.colorStyleLinks?.[scope],overrides:info.colorStyleOverrides?.[scope]||[],inherited:info.classColorStyles?property=>RetouchResponsive.inheritedLink(Object.fromEntries(Object.entries(info.colorStyleLinks||{}).filter(([,group])=>group[property]).map(([key,group])=>[key,group[property]])),styleScope,matchingEls(info.id)[0]?.ownerDocument):undefined,apply:(styleId,libraryRevision,property)=>writeTextStyle('applyColorStyle',width,{scope:styleScope,styleId,libraryRevision,property}),reset:(styleId,libraryRevision,property)=>writeTextStyle('resetColorStyle',width,{scope:styleScope,styleId,libraryRevision,property}),detach:property=>writeTextStyle('detachColorStyle',width,{scope:styleScope,property})}:{});
   }
 
-  if(!sel.multiple?.length&&info.variables){const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;RetouchCollectionBindings.mount(panelBody,info,width,writeTextStyle);}
+  if((sel.multiple?.length>1?sel.multiple.every(item=>item.variables):info.variables)){const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;RetouchCollectionBindings.mount(panelBody,sel.multiple?.length>1?sel.multiple:info,width,sel.multiple?.length>1?writeVariableSelection:writeTextStyle);}
 
   if(!sel.multiple?.length&&(info.cssAuthoring||info.classEffectStyles)&&!info.effectStyleLinkReason){
    const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,scope=info.classEffectStyles?styleScope:width,links=info.effectStyleLinks||{},inheritedWidth=Object.keys(links).map(Number).filter(value=>value<width).sort((a,b)=>b-a)[0];
@@ -1611,6 +1611,15 @@ async function setSelectionColorOverride(property,value){
   sel.info=result.element;sel.multiple=result.selection;await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));renderPanel();
  }finally{busyPanel(false);}
 }
+async function writeVariableSelection(type,width,extra){
+ const selection=sel?.multiple,info=sel?.info;if(!selection?.length)return;const ids=selection.map(item=>item.id);busyPanel(true);
+ try{
+  const result=await api('POST','/rt/__api/op',{type:type+'Selection',id:info.id,ids,fileHash:info.hash,width,...extra});
+  if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update selected variable bindings.');
+  if(result.undoId)editorHistory.record({type:'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
+  sel.info=result.element;sel.multiple=result.selection;await reloadFrame();renderPanel();toast('Selected bindings updated','ok');
+ }finally{busyPanel(false);}
+}
 function selectionColorOptions(width){
   const selection=sel.multiple;
   if(!selection.every(info=>info.colorStyles||info.classColorStyles))return {};
@@ -1748,7 +1757,7 @@ function moveHTMLLayer(info,target,width,g,action='move',opener){
 window.RetouchVariableModePreview=async request=>{const result=await api('POST','/rt/__api/variables/resolve',request);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not preview variable modes.');return result;};
 window.RetouchVariableLibraryRequest=async operation=>{
  if(!operation){const result=await api('GET','/rt/__api/variables');if(!result?.ok)throw Error(result?.reason||result?.error||'Could not load variable collections.');return result;}
- busyPanel(true);try{const result=await api('POST','/rt/__api/variables',operation);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save variable collections.');if(result.undoId)editorHistory.record({type:'sourceHistory',undoId:result.undoId});if(result.updated){const info=sel?.info,fresh=info?await api('GET',resolveUrl(info.id,info.context)):null;if(fresh?.ok&&sel?.info.id===info.id)sel.info=fresh.element;await reloadFrame();if(sel)renderPanel();}return result;}finally{busyPanel(false);}
+ busyPanel(true);try{const result=await api('POST','/rt/__api/variables',operation);if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save variable collections.');if(result.undoId)editorHistory.record({type:'sourceHistory',undoId:result.undoId});if(result.updated){const info=sel?.info,ids=sel?.multiple?.map(item=>item.id),fresh=info?await api('GET',resolveUrl(info.id,info.context)):null;if(fresh?.ok&&sel?.info.id===info.id)sel.info=fresh.element;await reloadFrame();if(ids?.length>1)await restoreLayerSelection(ids);else if(sel)renderPanel();}return result;}finally{busyPanel(false);}
 };
 window.RetouchColorStyleRequest=async operation=>{
  const info=sel?.info;busyPanel(true);

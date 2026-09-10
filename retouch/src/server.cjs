@@ -241,16 +241,16 @@ function handle(req, res, ctx) {
       const applyPlan=(root,plan)=>ctx.history.commit(root,plan,{group:op.historyGroup,route:historyRoute(req)});
       try {
         resolved.context = renderContext(op.context);
-        if(['applyVariable','resetVariable','detachVariable','removeVariable'].includes(op.type)){
+        if(['applyVariable','resetVariable','detachVariable','removeVariable','applyVariableSelection','resetVariableSelection','detachVariableSelection','removeVariableSelection'].includes(op.type)){
           if(!ctx.adapter.capabilities?.ops?.includes('setCSS'))return json(res,409,{ok:false,reason:'Collection bindings currently need an HTML project.'});
           if(op.fileHash!==resolved.hash)return json(res,409,{ok:false,reason:'The source changed. Re-select the layer.'});
           let model;
-          if(!['detachVariable','removeVariable'].includes(op.type)){
+          if(!op.type.startsWith('detachVariable')&&!op.type.startsWith('removeVariable')){
             const library=require('./variable-library.cjs').read(ctx.appRoot);
             if(library.revision!==op.libraryRevision)return json(res,409,{ok:false,reason:'Variable collections changed. Reload before binding.'});
             model={version:library.version,collections:library.collections,variables:library.variables};
           }
-          result=applyPlan(ctx.appRoot,require('./html-variable-bindings.cjs').plan(resolved,op,model));
+          result=applyPlan(ctx.appRoot,op.type.endsWith('Selection')?require('./variable-selection.cjs').plan(resolved,op,model,ctx.adapter):require('./html-variable-bindings.cjs').plan(resolved,op,model));
         }else if(['applyEffectStyle','resetEffectStyle','detachEffectStyle','updateEffectStyle','applyEffectStyleSelection','resetEffectStyleSelection','detachEffectStyleSelection'].includes(op.type)){
           const reactEffects=ctx.adapter.name==='react',liquidEffects=ctx.adapter.name==='liquid';
           if(!ctx.adapter.capabilities?.ops?.includes('setCSS')&&!reactEffects&&!liquidEffects)return json(res,409,{ok:false,reason:'Linked effect styles need an HTML, React or Liquid project.'});

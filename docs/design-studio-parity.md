@@ -7467,3 +7467,28 @@ Chromium and WebKit inspector flows confirm that the cyclic color variable is
 refused while a numeric padding binding in that same mode succeeds. Existing
 screen-scope inheritance, reset/detach, propagation and Undo flows still pass.
 Full parity remains incomplete; native app launches remain paused.
+
+### Multi-layer HTML collection bindings (2026-09-10)
+
+The collection inspector now supports multiple selected HTML layers in one source
+document. Apply assigns the chosen variable, modes and unit to every selected
+layer. Reset resolves each layer's own binding and modes; detach preserves each
+layer's current appearance. Reset/detach skip unbound layers. The panel reports
+bound counts and mixed bindings, with explicit per-layer reset semantics.
+
+The new selection planner validates 2–100 distinct body layers, the source hash,
+property and scope, then plans all changes against private source snapshots.
+One edit reaches source history only after every selected layer succeeds. A
+conflicting important inline style on a later layer returns no partial edits.
+Selection descriptions retain binding metadata after shared CSS overrides, and
+collection-library saves refresh the complete active selection.
+
+All 566 unit tests pass (`/private/tmp/retouch-multi-collection-units.log`).
+Chromium and WebKit flows verify mixed Light/Dark bindings, shared local overrides,
+reset preserving each mode, detach preserving different appearances, batch apply,
+collection edits while multiple layers remain selected, and byte-exact Undo.
+The screenshot `/private/tmp/retouch-multi-collection.png` was visually inspected.
+
+Selection inheritance controls, cross-document selection, ancestor collection
+modes and React/Liquid collection bindings remain unfinished. Full Figma parity
+remains incomplete and native app launches remain paused.

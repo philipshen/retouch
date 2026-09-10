@@ -1,0 +1,17 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),html=require('../src/adapters/html.cjs'),linked=require('../src/html-variable-bindings.cjs'),css=require('../src/html-css.cjs'),batch=require('../src/variable-selection.cjs');
+const id=n=>'00000000-0000-4000-8000-'+String(n).padStart(12,'0'),library={version:1,collections:[{id:id(1),name:'Theme',defaultMode:id(2),modes:[{id:id(2),name:'Light'},{id:id(3),name:'Dark'}]}],variables:[{id:id(4),collectionId:id(1),name:'Brand',type:'color',values:{[id(2)]:'#123456',[id(3)]:'#cc3300'}}]},original='<html><head></head><body><h1>First</h1><p>Second</p></body></html>';
+function resolve(source){const elements=html.collect(source,'index.html').elements;return {file:'/tmp/index.html',relPath:'index.html',source,hash:html.contentHash(source),elements,element:elements.find(e=>e.tag==='h1')};}
+function operation(source,type,extra={}){const r=resolve(source);return {type,id:r.element.id,ids:r.elements.filter(e=>['h1','p'].includes(e.tag)).map(e=>e.id),fileHash:r.hash,width:0,property:'color',...extra};}
+test('batch bindings produce one source edit and preserve each layer mode when resetting',()=>{
+ let r=resolve(original),first=linked.plan(r,{type:'applyVariable',width:0,property:'color',binding:{id:id(4)}},library);let source=first.edits[0].after;r=resolve(source);r.element=r.elements.find(e=>e.tag==='p');source=linked.plan(r,{type:'applyVariable',width:0,property:'color',binding:{id:id(4),modes:{[id(1)]:id(3)}}},library).edits[0].after;
+ for(const tag of ['h1','p']){r=resolve(source);r.element=r.elements.find(e=>e.tag===tag);source=css.plan(r,{width:0,property:'color',value:'#00ff00'}).edits[0].after;}
+ const reset=batch.plan(resolve(source),operation(source,'resetVariableSelection'),library);assert.equal(reset.ok,true,reset.reason);assert.equal(reset.edits.length,1);assert.deepEqual(reset.selection.map(info=>info.variableLinks[0].color.value),['#123456ff','#cc3300ff']);
+ const applied=batch.plan(resolve(original),operation(original,'applyVariableSelection',{binding:{id:id(4)}}),library);assert.equal(applied.ok,true,applied.reason);assert.equal(applied.selection.length,2);assert.equal(applied.edits.length,1);assert.ok(applied.selection.every(info=>info.variableLinks[0].color.id===id(4)));
+});
+test('batch failures never return partial edits; reset and detach leave unbound layers untouched',()=>{
+ const blocked=original.replace('<p>','<p style="color:red!important">');const fail=batch.plan(resolve(blocked),operation(blocked,'applyVariableSelection',{binding:{id:id(4)}}),library);assert.equal(fail.ok,false);assert.equal(fail.edits,undefined);
+ const first=linked.plan(resolve(original),{type:'applyVariable',width:0,property:'color',binding:{id:id(4)}},library).edits[0].after;
+ const detached=batch.plan(resolve(first),operation(first,'detachVariableSelection'));assert.equal(detached.ok,true,detached.reason);assert.ok(detached.edits[0].after.includes('<p>Second</p>'));assert.ok(detached.selection.every(info=>!Object.keys(info.variableLinks).length));assert.equal(css.describe(resolve(detached.edits[0].after)).cssRules[0].color,'#123456ff');
+ for(const extra of [{fileHash:'old'},{ids:['bad','bad']},{property:'unknown'},{width:-1}]){const result=batch.plan(resolve(original),operation(original,'applyVariableSelection',{binding:{id:id(4)},...extra}),library);assert.equal(result.ok,false);assert.equal(result.edits,undefined);}
+});

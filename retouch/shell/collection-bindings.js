@@ -14,18 +14,20 @@
   }
   return null;
  }
- function mount(parent,info,width,write){
+ function mount(parent,input,width,write){
+  const selection=Array.isArray(input)?input:[input],info=selection[0],multiple=selection.length>1;
   const I=RetouchInspector,details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Collection bindings';details.append(summary);parent.append(details);details.open=expanded;
   const status=I.note(details,''),controls=document.createElement('fieldset');status.setAttribute('role','status');controls.style.cssText='border:0;padding:0;margin:0;min-width:0';details.append(controls);
   let library=null,values=[],selected='',modes={},unit='',busy=false;
-  const link=()=>info.variableLinks?.[width]?.[target];
-  const init=()=>{const current=link()||inherited(info,width,target)?.link;selected=current?.id||'';modes={...current?.modes};unit=current?.unit??(unitless.includes(target)?'':'px');};init();
+  const ownLinks=()=>selection.map(item=>item.variableLinks?.[width]?.[target]);
+  const link=()=>{const links=ownLinks();return links[0]&&links.every(item=>JSON.stringify(item)===JSON.stringify(links[0]))?links[0]:null;};
+  const init=()=>{const current=link()||(!multiple&&inherited(info,width,target)?.link);selected=current?.id||'';modes={...current?.modes};unit=current?.unit??(unitless.includes(target)?'':'px');};init();
   async function run(action){if(busy)return;busy=true;controls.disabled=true;status.textContent='Working…';try{await action();if(details.isConnected){render();status.textContent='';}}catch(error){values=[];if(details.isConnected){render();status.textContent=error.message;}}finally{busy=false;controls.disabled=false;}}
   const preview=async()=>{values=[];if(selected)values=(await RetouchVariableModePreview({revision:library.revision,modes,variableId:selected})).values;};
   const load=()=>run(async()=>{library=await RetouchVariableLibraryRequest();await preview();});
   function render(){
    controls.replaceChildren();controls.append(I.button('Reload collection bindings',load));if(!library)return;
-   I.note(controls,'Bind this layer at '+(width?width+'px and larger':'all screen sizes')+'. Collection edits update linked pages.');
+   I.note(controls,'Bind '+(multiple?selection.length+' layers':'this layer')+' at '+(width?width+'px and larger':'all screen sizes')+'. Collection edits update linked pages.');
    const labels=new Map(RetouchHTMLCSSValues.fields),properties=[...paints,...numbers,'visibility','font-family'];
    I.select(controls,'Collection binding target',properties.map(p=>[p,labels.get(p)||p]),target,value=>{target=value;init();run(preview);});
    const type=paints.includes(target)?'color':numbers.includes(target)?'number':target==='visibility'?'boolean':'string';
@@ -37,15 +39,18 @@
    if(resolved)I.note(controls,'Resolved value: '+value);
    const valid=value!==null&&RetouchHTMLCSSValues.valid(target,value),apply=I.button('Apply collection binding',()=>run(()=>write('applyVariable',width,{property:target,libraryRevision:library.revision,binding:{id:selected,modes,...(type==='number'?{unit}:{})}})));apply.disabled=!valid;controls.append(apply);
    if(resolved&&!valid)I.note(controls,'This value cannot control the selected property. Choose another variable or unit.');
-   const from=inherited(info,width,target);
+   const from=multiple?null:inherited(info,width,target);
    if(from){
     const variable=library.variables.find(v=>v.id===from.link.id);I.note(controls,'Inherited: '+(variable?.name||'Missing variable')+' · '+from.label+(from.override?' · Local override in that scope':''));
     const copy=I.button('Override collection binding here',()=>run(()=>write('applyVariable',width,{property:target,libraryRevision:library.revision,binding:{id:from.link.id,modes:from.link.modes,...(from.link.unit!==undefined?{unit:from.link.unit}:{})}})));controls.append(copy);
     I.note(controls,'Creates a binding here using the inherited variable and modes. It uses the library value; smaller screen scopes stay unchanged.');
    }
-   if(link()){
-    const variable=library.variables.find(v=>v.id===link().id);I.note(controls,'Linked: '+(variable?.name||'Missing variable')+(info.variableOverrides?.[width]?.includes(target)?' · Local override':''));
-    const fallback=inherited(info,width,target,true);if(fallback){controls.append(I.button('Use smaller-screen binding',()=>run(()=>write('removeVariable',width,{property:target}))));I.note(controls,'Removes this scope’s binding and property override to reveal '+fallback.label+'.');}
+   const bound=ownLinks().filter(Boolean).length;
+   if(multiple)I.note(controls,bound+' of '+selection.length+' layers bound in this scope'+(bound&&!link()?' · Mixed bindings': '')+'.');
+   if(bound){
+    if(!multiple){const variable=library.variables.find(v=>v.id===link().id);I.note(controls,'Linked: '+(variable?.name||'Missing variable')+(info.variableOverrides?.[width]?.includes(target)?' · Local override':''));}
+    else I.note(controls,'Reset preserves each layer’s variable and modes. Unbound layers stay unchanged when resetting or detaching.');
+    const fallback=multiple?null:inherited(info,width,target,true);if(fallback){controls.append(I.button('Use smaller-screen binding',()=>run(()=>write('removeVariable',width,{property:target}))));I.note(controls,'Removes this scope’s binding and property override to reveal '+fallback.label+'.');}
     controls.append(I.button('Reset collection binding',()=>run(()=>write('resetVariable',width,{property:target,libraryRevision:library.revision}))),I.button('Detach collection binding',()=>run(()=>write('detachVariable',width,{property:target}))));
    }
   }
