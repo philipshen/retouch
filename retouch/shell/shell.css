@@ -345,6 +345,10 @@ details.advanced > summary:hover { color: var(--ink); }
 .text-style-properties dt { color: var(--muted); margin-top: 5px; }
 .text-style-properties dd { margin: 0; }
 
-.gradient-preview:has(.gradient-center-handle) { height:88px; }
+.gradient-preview:has(.gradient-center-handle, .gradient-angle-handle) { height:88px; }
 .gradient-center-handle { position:absolute; width:16px; height:16px; padding:0; transform:translate(-50%,-50%); border:2px solid white; border-radius:50%; background:#17191d; box-shadow:0 0 0 1px #17191d; cursor:move; touch-action:none; }
 .gradient-center-handle:focus { outline:2px solid var(--accent); outline-offset:3px; }
+
+.gradient-angle-handle { position:absolute; z-index:2; width:14px; height:14px; padding:0; transform:translate(-50%,-50%); border:2px solid white; background:#17191d; box-shadow:0 0 0 1px #17191d; cursor:crosshair; touch-action:none; }
+.gradient-angle-handle:focus { outline:2px solid var(--accent); outline-offset:3px; }
+.gradient-angle-line { position:absolute; pointer-events:none; width:1px; height:26px; margin-top:-26px; transform-origin:bottom; background:white; box-shadow:1px 0 #17191d; }

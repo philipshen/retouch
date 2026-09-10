@@ -113,7 +113,7 @@
     const group=document.createElement('fieldset');group.className='gradient-controls';const legend=document.createElement('legend');legend.textContent='Fill '+(index+1);group.append(legend);
     const preview=document.createElement('div');preview.className='gradient-preview';preview.style.backgroundImage=serializeGradients([gradient]);preview.setAttribute('aria-label','Fill '+(index+1)+' preview');group.append(preview);
     const update=next=>writeGradients(gradients.map((g,i)=>i===index?next:g));
-    RetouchGradientCenter({gradient,index,el,preview,gradients,update});
+    RetouchGradientGeometry({gradient,index,el,preview,gradients,update});
     group.append(stopRail({gradient,index,info,el,preview,gradients,update}));
     const type=document.createElement('select');for(const value of ['linear','radial','conic']){const option=document.createElement('option');option.value=value;option.textContent=value==='linear'?'Linear':value==='radial'?'Radial':'Angular';type.append(option);}type.value=gradient.type;type.onchange=()=>update({...gradient,type:type.value});I.field(group,'Type',type).setAttribute('aria-label','Fill '+(index+1)+' type');
     I.select(group,'Fill '+(index+1)+' Color blending',[['','Browser default'],...RetouchHTMLCSSValues.gradientColorSpaces.filter(space=>CSS.supports('background-image',serializeGradients([{...gradient,colorSpace:space,hue:undefined}]))).map(space=>[space,space])],gradient.colorSpace||'',colorSpace=>update({...gradient,colorSpace,hue:undefined}));

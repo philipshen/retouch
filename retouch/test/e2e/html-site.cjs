@@ -261,6 +261,7 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await size('390x844');await page.getByLabel('Style screen scope').selectOption('');
   await page.getByRole('button',{name:'Add gradient',exact:true}).click();await wait(async()=>(await effect('background-image')).startsWith('linear-gradient(90deg'),'add gradient');await settled();
   await page.getByLabel('Fill 1 Angle (°)',{exact:true}).fill('45');await page.getByLabel('Fill 1 Angle (°)',{exact:true}).press('Tab');await wait(async()=>(await effect('background-image')).startsWith('linear-gradient(45deg'),'gradient angle');await settled();
+  const beforeAngleKey=read();await page.getByRole('slider',{name:'Fill 1 angle',exact:true}).press('Shift+ArrowRight');await wait(async()=>(await effect('background-image')).startsWith('linear-gradient(60deg'),'keyboard rotation');await settled();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===beforeAngleKey,'rotation exact undo');await settled();
   await page.getByLabel('Add stop to fill 1',{exact:true}).click();await wait(async()=>await page.getByLabel('Fill 1 stop 3 color',{exact:true}).count()===1,'gradient stop');await settled();
   await page.getByLabel('Fill 1 stop 2 color',{exact:true}).fill('#00ff00');await page.getByLabel('Fill 1 stop 2 color',{exact:true}).press('Tab');await wait(async()=>(await effect('background-image')).includes('rgb(0, 255, 0) 50%'),'gradient stop color');await settled();
   const beforeStopDrag=read();

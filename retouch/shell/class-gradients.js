@@ -15,7 +15,7 @@
   else{
    gradients.forEach((gradient,index)=>{const group=d.createElement('fieldset'),legend=d.createElement('legend'),label='Gradient '+(index+1);legend.textContent=label;group.className='gradient-controls';group.append(legend);const update=next=>write(gradients.map((item,i)=>i===index?next:item));
     const preview=d.createElement('div');preview.className='gradient-preview';preview.style.backgroundImage=V().serializeGradients([gradient]);preview.setAttribute('aria-label',label+' preview');group.append(preview,root.RetouchGradientStopRail({gradient,index,info,el:element,preview,gradients,update,label:'Gradient'}));
-    root.RetouchGradientCenter({gradient,index,el:element,preview,gradients,update,label:'Gradient'});
+    root.RetouchGradientGeometry({gradient,index,el:element,preview,gradients,update,label:'Gradient'});
     inspector.select(group,label+' type',[['linear','Linear'],['radial','Radial'],['conic','Angular']],gradient.type,type=>update({...gradient,type}));
     inspector.select(group,label+' Color blending',[['','Browser default'],...V().gradientColorSpaces.filter(space=>d.defaultView.CSS.supports('background-image',V().serializeGradients([{...gradient,colorSpace:space,hue:undefined}]))).map(space=>[space,space])],gradient.colorSpace||'',colorSpace=>update({...gradient,colorSpace,hue:undefined}));
     if(['hsl','hwb','lch','oklch'].includes(gradient.colorSpace))inspector.select(group,label+' Hue direction',[['','Default'],['shorter','Shorter'],['longer','Longer'],['increasing','Increasing'],['decreasing','Decreasing']],gradient.hue||'',hue=>update({...gradient,hue}));
