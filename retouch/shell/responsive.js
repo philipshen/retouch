@@ -94,7 +94,7 @@
   }
   // Candidate boundaries suggest sizes; the browser remains authoritative for
   // nested alternatives, orientation, range syntax and environment conditions.
-  function previewSize(choice,d,current){
+  function previewSize(choice,d,current,wanted=true){
     const groups=choice?.queries||(choice?.condition?[[choice.condition]]:null);
     if(!groups?.length||!d||!current)return null;
     const probe=d.createElement('iframe');probe.title='Breakpoint preview measurement';probe.setAttribute('aria-hidden','true');probe.tabIndex=-1;
@@ -134,7 +134,7 @@
       for(const size of candidates.slice(0,2000)){
         probe.style.setProperty('width',size.width+'px','important');probe.style.setProperty('height',size.height+'px','important');
         void probe.offsetWidth;
-        if(matches(choice,w)===true)return size;
+        if(matches(choice,w)===wanted)return size;
       }
       return null;
     }finally{probe.remove();}

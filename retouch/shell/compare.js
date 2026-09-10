@@ -399,6 +399,8 @@
   window.addEventListener('retouch:screen',updateControls);
   new ResizeObserver(()=>{if(open)layoutPreviews();}).observe(rail);
   window.RetouchComparisons={
+    canShowSizes(requested){return Array.isArray(requested)&&requested.length>0&&requested.every(size=>this.canShowSize(size))&&sizes.length+new Set(requested.filter(size=>!sizes.some(existing=>existing[1]===size.width&&existing[2]===size.height)).map(size=>size.width+'x'+size.height)).size<=8;},
+    showSizes(requested){if(!this.canShowSizes(requested))return false;for(const size of requested)this.showSize(size);return true;},
     canShowSize:({width,height})=>valid(width)&&valid(height)&&!toggle.disabled&&!loadingSet&&!removals&&(sizes.length<8||sizes.some(size=>size[1]===width&&size[2]===height)),
     showSize(size){
       if(!this.canShowSize(size))return false;

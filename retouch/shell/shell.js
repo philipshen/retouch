@@ -914,6 +914,9 @@ function screenScopeSection() {
     if(previewSize){
       if(applies!==true){const preview=RetouchInspector.button('Preview this breakpoint',()=>{stopDrawing?.();preview.blur();window.RetouchScreens?.set(previewSize);});preview.id='previewBreakpoint';preview.title=`Preview at ${previewSize.width} × ${previewSize.height}. Undo preview size restores the previous screen.`;section.append(preview);}
       const compare=RetouchInspector.button('Compare this breakpoint',()=>{if(!window.RetouchComparisons?.showSize({...previewSize,label:chosen?.label||styleScope}))toast('Remove a comparison or finish the current operation first.','err');});compare.id='compareBreakpoint';compare.dataset.width=previewSize.width;compare.dataset.height=previewSize.height;compare.disabled=!window.RetouchComparisons?.canShowSize(previewSize);compare.title='Keep the main canvas size and open a matching comparison. Reuses an existing screen with the same dimensions.';section.append(compare);
+      const outside=RetouchResponsive.previewSize({condition,queries:chosen?.queries},document,previewSize,false),inside=outside&&RetouchResponsive.previewSize({condition,queries:chosen?.queries},document,outside);
+      if(inside){const pair=[{...outside,label:'Outside '+(chosen?.label||styleScope)},{...inside,label:chosen?.label||styleScope}],across=RetouchInspector.button('Compare across breakpoint',()=>{if(!window.RetouchComparisons?.showSizes(pair))toast('Make room for both comparison sizes or finish the current operation first.','err');});across.id='compareBreakpointBoundary';across.dataset.sizes=JSON.stringify(pair);across.disabled=!window.RetouchComparisons?.canShowSizes(pair);across.title=`Compare ${outside.width} × ${outside.height} with ${inside.width} × ${inside.height}. The main canvas stays unchanged.`;section.append(across);}
+
     }
   }
   if (!sel.multiple?.length && !sel.info.cssAuthoring && styleScope && RetouchResponsive.project(sel.info.className,styleScope)) {
@@ -921,7 +924,7 @@ function screenScopeSection() {
   }
   return section;
 }
-window.addEventListener('retouch:comparisons',()=>{const button=document.getElementById('compareBreakpoint');if(button)button.disabled=!window.RetouchComparisons?.canShowSize({width:Number(button.dataset.width),height:Number(button.dataset.height)});});
+window.addEventListener('retouch:comparisons',()=>{const across=document.getElementById('compareBreakpointBoundary');if(across)across.disabled=!window.RetouchComparisons?.canShowSizes(JSON.parse(across.dataset.sizes));const button=document.getElementById('compareBreakpoint');if(button)button.disabled=!window.RetouchComparisons?.canShowSize({width:Number(button.dataset.width),height:Number(button.dataset.height)});});
 function panelInteractionFocused(){return panelBody.contains(document.activeElement)&&!document.activeElement.matches('[data-canvas-tool]');}
 let viewportRenderPending = false;
 window.addEventListener('retouch:viewport',()=>{
