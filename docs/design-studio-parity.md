@@ -6853,3 +6853,29 @@ computed filter alongside its existing blur, and undo each source snapshot
 exactly. Existing filter ordering, duplicate blur and backdrop checks also pass.
 Full Figma parity and arbitrary-site authoring remain incomplete. Native app
 launches remain paused.
+
+### React and Liquid gradient-fill stacks (2026-09-09)
+
+Class-renderer Appearance now includes gradient fills: up to eight ordered linear
+or radial layers, per-layer angle/shape/center, up to sixteen color stops with
+positions, stop and layer removal, upward layer movement, clear and scope reset.
+Gradient edits write canonical background-image classes and preserve background
+color, size, position, repeat and unrelated variants. Existing image backgrounds
+are not silently flattened: unsupported images require an explicit clear before
+starting a gradient. Important background shorthand conflicts refuse writes.
+
+All 516 unit tests passed, exit 0: /private/tmp/retouch-gradients-units.log. Source
+checks cover property ownership, multiple layers, P3 stops, scope retention,
+important conflicts and unsupported images. React/Chromium and conditional
+Liquid/WebKit flows passed, exit 0: /private/tmp/retouch-gradients-react-final.log
+and /private/tmp/retouch-gradients-liquid.log. They add two layers, edit a P3 stop,
+add/reposition a stop, change a layer to radial, edit its center, reorder layers,
+verify preserved background settings per layer, check mobile isolation, and undo
+each source snapshot exactly. The final React run includes the cosmetic panel
+cleanup; the Liquid run preceded that labels/borders-only cleanup. Screenshot
+/private/tmp/retouch-gradients-react-final.png was visually inspected.
+
+Class-renderer stops currently use fields rather than the HTML draggable stop
+rail. Conic/repeating gradients, arbitrary image-layer mixing, full Figma parity
+and arbitrary-site authoring remain incomplete. Live Shopify is unverified.
+Native Retouch launches remain paused.

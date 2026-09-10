@@ -373,7 +373,7 @@
       const field=number(corners,name+' radius (px)',radius(css[property]),0,10000,v=>save(replace(info.className,t=>t.startsWith('rounded-'+token+'-'),`rounded-${token}-[${v}px]`)));field.placeholder=css[property];
     }
     corners.open=cornersExpanded;corners.ontoggle=()=>{if(corners.isConnected)cornersExpanded=corners.open;};
-    sec.append(corners);return sec;
+    sec.append(corners);root.RetouchClassGradients.mount(sec,info,el,save);return sec;
   }
   function filterClasses(classes,property,value){
     const values=typeof module==='object'&&module.exports?require('./html-css-values.js'):root.RetouchHTMLCSSValues;
