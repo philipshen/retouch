@@ -6763,3 +6763,23 @@ Arbitrary shadow expressions/colors beyond the existing parser, full filter-stac
 authoring, arbitrary-site support and full Figma parity remain incomplete. Local
 Liquid fixtures do not establish live Shopify behavior. Native app launches
 remain paused.
+
+### Display P3 shadow-stack colors (2026-09-09)
+
+Shadow parsing now splits layers and tokens at balanced function boundaries,
+allowing the already-supported Display P3 color syntax inside inner/outer shadow
+stacks. Channels and alpha remain intact through serialization and class writing.
+Drop-shadow length counting now ignores numbers inside color functions. Existing
+color validation remains authoritative: this does not introduce arbitrary color
+expressions, color-mix, Lab or OKLCH support.
+
+All 510 tests passed, exit 0: /private/tmp/retouch-p3-shadows-units.log. New checks
+cover P3 stack round-trips, P3 drop-shadow combined with editable blur, malformed
+parentheses, invalid channels, unsupported variables and illegal spread lengths.
+React/Chromium and conditional Liquid/WebKit browser flows passed, exit 0:
+/private/tmp/retouch-p3-shadows-react.log and
+/private/tmp/retouch-p3-shadows-liquid.log. Both enter a P3 color in the second
+shadow, confirm the computed color space, then edit blur, reorder and remove
+shadows, and undo each source snapshot exactly. This proves preserved CSS values
+and browser rendering behavior, not monitor gamut or color calibration. Full
+Figma parity remains incomplete; native app launches remain paused.

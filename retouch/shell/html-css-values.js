@@ -94,13 +94,22 @@
    return false;
   });
  }
+ function shadowTokens(value){
+  const result=[];let depth=0,start=0;
+  for(let i=0;i<value.length;i++){
+   if(value[i]==='(')depth++;
+   else if(value[i]===')'&&--depth<0)return null;
+   if(/\s/.test(value[i])&&depth===0){if(i>start)result.push(value.slice(start,i));start=i+1;}
+  }
+  if(depth)return null;if(start<value.length)result.push(value.slice(start));return result;
+ }
  function parseShadows(value){
   if(typeof value!=='string'||!value.trim()||value.length>4096)return null;
   if(value.trim()==='none')return [];
-  const parts=value.split(/,(?![^()]*\))/);if(parts.length>16)return null;
+  const parts=splitLayers(value);if(!parts||parts.length>16)return null;
   const result=[];
   for(const part of parts){
-   const tokens=part.trim().match(/(?:rgba?|hsla?)\([^()]*\)|[^\s]+/g)||[];
+   const tokens=shadowTokens(part.trim());if(!tokens)return null;
    let color=null,inset=false;const lengths=[];
    for(const token of tokens){
     if(token==='inset'&&!inset){inset=true;continue;}
@@ -128,7 +137,7 @@
    else if(name==='hue-rotate'){if(!/^-?(?:\d*\.)?\d+(?:deg|rad|turn)$/.test(arg)||Math.abs(parseFloat(arg))>10000)return null;}
    else if(['brightness','contrast','grayscale','invert','opacity','saturate','sepia'].includes(name)){if(!/^(?:\d*\.)?\d+%?$/.test(arg)||parseFloat(arg)>10000)return null;}
    else if(name==='drop-shadow'){
-    const shadows=parseShadows(arg),lengths=arg.match(/(?:^|\s)-?(?:\d*\.)?\d+(?:px)?(?=\s|$)/g)||[];
+    const shadows=parseShadows(arg),lengths=(shadowTokens(arg)||[]).filter(token=>/^-?(?:\d*\.)?\d+(?:px)?$/.test(token));
     if(!shadows||shadows.length!==1||shadows[0].inset||lengths.length<2||lengths.length>3)return null;
    }else return null;
    result.push({name,arg,raw});rest=rest.slice(end).trimStart();
