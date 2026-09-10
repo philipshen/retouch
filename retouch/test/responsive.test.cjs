@@ -115,3 +115,8 @@ test('screen media wrappers preserve simple minimum-width scope reuse',()=>{
  }
  for(const condition of ['print and (min-width:768px)','not screen and (min-width:768px)','screen and (min-width:768px) and (min-height:900px)'])assert.notEqual(R.atWidth(d,768,[{prefix:'conditional:',condition}]).prefix,'conditional:');
 });
+
+test('style scope ordering follows actual widths including generated scopes and keeps complex conditions separate',()=>{
+ const d={createElement:()=>({style:{},remove(){}}),documentElement:{append(){}},defaultView:{getComputedStyle:()=>({fontSize:'20px'})}},choices=[{prefix:'desktop:',label:'Desktop',condition:'(min-width:1200px)'},{prefix:'',label:'All sizes'},{prefix:'min-[900px]:',label:'900 px and larger'},{prefix:'tablet:',label:'Tablet',condition:'(40rem <= width)'},{prefix:'phone:',label:'Phone',condition:'screen and (min-width:4in)'},{prefix:'portrait:',label:'Portrait',condition:'(orientation:portrait)'}],original=[...choices];
+ assert.deepEqual(R.orderedScopes(d,choices).map(item=>item.prefix),['','phone:','tablet:','min-[900px]:','desktop:','portrait:']);assert.deepEqual(choices,original);
+});

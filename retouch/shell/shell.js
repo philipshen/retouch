@@ -885,7 +885,7 @@ function screenScopeSection() {
     if (!options.some(o=>o.prefix===atWidth.prefix)) options.push(atWidth);
   }
   if (styleScope && !options.some(o=>o.prefix===styleScope)) options.push({prefix:styleScope,label:styleScope.slice(0,-1)});
-  for (const item of options) {
+  for (const item of RetouchResponsive.orderedScopes(doc(),options)) {
     const option = document.createElement('option');
     option.value = item.prefix;
     option.textContent = item.label + (item.condition ? ` · ${item.condition}` : '');

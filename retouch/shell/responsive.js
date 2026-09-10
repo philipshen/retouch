@@ -66,6 +66,11 @@
   const absolutePixels={px:1,in:96,cm:96/2.54,mm:96/25.4,q:96/101.6,pt:96/72,pc:16};
   const lengthPixels=(value,unit,initial)=>Number(value)*(absolutePixels[unit.toLowerCase()]??initial);
   const minimumLength=item=>{const condition=minimumCondition(item);return condition?.match(/^\(\s*(?:min-width\s*:\s*|width\s*>=\s*)([\d.]+)(px|rem|em|in|cm|mm|q|pt|pc)\s*\)$/i)||condition?.match(/^\(\s*([\d.]+)(px|rem|em|in|cm|mm|q|pt|pc)\s*<=\s*width\s*\)$/i);};
+  function orderedScopes(d,choices){
+    const probe=d.createElement('span');probe.style.cssText='font-size:initial;position:absolute;visibility:hidden';d.documentElement.append(probe);const initial=parseFloat(d.defaultView.getComputedStyle(probe).fontSize)||16;probe.remove();
+    const width=item=>{if(!item.prefix)return -Infinity;const match=minimumLength(item)||/^min-\[(\d+(?:\.\d+)?)(px|rem|em)\]:$/.exec(item.prefix);return match?lengthPixels(match[1],match[2],initial):Infinity;};
+    return choices.map(item=>({item,width:width(item)})).sort((a,b)=>a.width-b.width||(a.item.label||a.item.prefix).localeCompare(b.item.label||b.item.prefix)).map(entry=>entry.item);
+  }
   // Anchor fallback for distinct, ascending minimum-width scopes. Complex media
   // conditions and state variants are excluded rather than treated as breakpoints.
   function inherited(classes,prefix,d,choices=d?discover(d):[]){
@@ -167,7 +172,7 @@
     if(!candidates.length||candidates.length>1&&candidates[0].width===candidates[1].width)return null;
     const {scope,link,label}=candidates[0];return {scope,link,label};
   }
-  const api={split,project,replaceScope,discover,matches,inherited,atWidth,inheritedLink,previewSize};
+  const api={split,project,replaceScope,discover,matches,inherited,atWidth,inheritedLink,previewSize,orderedScopes};
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.RetouchResponsive=api;
 })(typeof window==='object'?window:globalThis);
