@@ -6194,3 +6194,27 @@ exact source undo, plus the existing project propagation, local override/reset,
 phone isolation, detach, catalog transfer and stale-revision flows. React/Liquid
 color links, batch paint links, SVG paint targets and wide-gamut palettes remain
 unfinished. Native app launches remain paused; full parity is not achieved.
+
+### Multi-layer HTML palette operations (2026-09-09)
+
+HTML selections now apply a saved text/background/border color to 2–100 layers
+in one source file and selected screen scope. The palette reports link coverage,
+mixed colors and local override counts. Reset follows each layer's own linked
+color; detach preserves its paint. Unlinked layers are skipped for reset/detach.
+Planning uses private source snapshots and commits only after every layer passes,
+so stale sources, invalid selections, malformed links and unavailable reset
+styles refuse without partial edits. One shared undo restores the entire edit.
+Shared HTML CSS responses retain color-link metadata after local paint edits.
+
+All 465 unit tests passed, exit 0:
+/private/tmp/retouch-color-selection-units.log. Dedicated source tests cover
+scoped application, idempotence, mixed-style reset, missing-definition refusal,
+detach paint preservation and invalid/stale selection refusal. Browser flows
+passed in Chromium and WebKit, exit 0:
+/private/tmp/retouch-color-selection-chromium.log and
+/private/tmp/retouch-color-selection-webkit.log. Both apply to two paragraphs,
+edit one local override, reset both through the palette, detach without visual
+change and undo to exact source; existing single-layer inheritance, project
+propagation, catalog transfer and stale-revision flows also pass. React/Liquid
+color links, cross-file batch operations, SVG paint targets and wide-gamut colors
+remain incomplete. Native launches remain paused; full parity is not achieved.

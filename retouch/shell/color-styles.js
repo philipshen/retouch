@@ -22,6 +22,15 @@
    I.select(controls,'Saved color style',[['','New color…'],...library.styles.map(item=>[item.id,item.name])],selected,value=>{selected=value;preferred=value;render();});
    if(options.apply){
     I.select(controls,'Color target',[['color','Text'],['background-color','Background'],['border-color','Border']],target,value=>{target=value;render();});
+    if(options.selection){
+     const links=options.selection.map(info=>info.colorStyleLinks?.[options.width]?.[target]).filter(Boolean),overrides=options.selection.filter(info=>info.colorStyleOverrides?.[options.width]?.includes(target)).length;
+     I.note(controls,links.length+' of '+options.selection.length+' layers linked in this screen scope'+(new Set(links.map(link=>link.id)).size>1?' · Mixed colors.':'.'));
+     if(links.length){
+      I.note(controls,overrides+' local '+(overrides===1?'override.':'overrides.'));
+      const reset=I.button('Reset selected color overrides',()=>run(()=>options.resetSelection(library.revision,target),'Selected colors reset.'));reset.disabled=!overrides;controls.append(reset,I.button('Detach selected colors',()=>run(()=>options.detachSelection(target),'Selected colors detached.')));
+      I.note(controls,'Reset follows each layer’s linked color. Detach keeps its appearance. Unlinked layers stay unchanged.');
+     }
+    }
     const link=options.links?.[target];
     if(link){const definition=library.styles.find(item=>item.id===link.id),overridden=options.overrides?.includes(target);I.note(controls,'Linked color: '+(definition?.name||'Unavailable style')+(overridden?' · Local override.':'.'));
      const reset=I.button('Reset linked color',()=>run(()=>options.reset(link.id,library.revision,target),'Linked color reset.'));reset.disabled=!definition||!overridden;controls.append(reset,I.button('Detach linked color',()=>run(()=>options.detach(target),'Color detached.')));
