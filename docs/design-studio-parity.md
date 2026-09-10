@@ -6218,3 +6218,29 @@ change and undo to exact source; existing single-layer inheritance, project
 propagation, catalog transfer and stale-revision flows also pass. React/Liquid
 color links, cross-file batch operations, SVG paint targets and wide-gamut colors
 remain incomplete. Native launches remain paused; full parity is not achieved.
+
+### React linked-color source planning and rendered class checks (2026-09-09)
+
+Added a JSX color-link planner for text, background and border paint, with
+independent responsive scope/property links. Apply/reset generate explicit
+important CSS-property classes; ordinary utilities remain intact underneath.
+Detach leaves class paint untouched. Refresh preserves removed/changed canonical
+paint and retained override ownership even when a new definition temporarily
+matches the override. File planning enumerates linked properties and rejects
+malformed/unindexed metadata without returning partial edits. Spread attributes,
+dynamic classes and ambiguous important paint-family utilities are refused.
+The important-utility check is conservative and may also refuse geometry/image
+utilities within the same family; resolving these overlaps remains future work.
+
+Five new source tests passed, and all 470 unit tests passed (exit 0), recorded in
+/private/tmp/retouch-react-color-source-units.log. The standalone browser verifier
+retouch/test/e2e/color-style-classes.cjs passed in Chromium and WebKit (exit 0),
+compiling actual Tailwind classes and comparing computed alpha text/background/
+border paint against inline CSS. Font size, line height, border width and
+background sizing remain unchanged; phone paint restores after desktop resize.
+WebKit receipt: /private/tmp/retouch-react-color-source-webkit.log.
+
+This is source-planner groundwork: React adapter/API/palette integration,
+project-wide propagation wiring and live editor flows are not yet implemented.
+Liquid paint links and other renderer parity remain unfinished. Native launches
+remain paused; this does not establish full Figma or arbitrary-site parity.
