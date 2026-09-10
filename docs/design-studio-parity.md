@@ -9957,3 +9957,9 @@ Validation: the complete HTML screen-resize browser flow passed in Chromium (`/p
 Named comparison width/height controls now support Shift+Up/Down for bounded 10-pixel steps and Enter to apply and leave the field. Escape restores the committed value and selects it for replacement. These controls retain the existing duplicate-size checks and update saved screen presets through the normal dimension-change path.
 
 Validation: project-screens completed in Chromium and WebKit (`/private/tmp/retouch-comparison-fields-chromium.log`, `/private/tmp/retouch-comparison-fields-webkit.log`, both exit 0). New checks verify rendered comparison dimensions after coarse steps, typed Enter commits, and Escape cancellation on both axes; existing rename, preset selection, removal/restoration, reload persistence and isolation between two projects also passed. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Undo/Redo for comparison dimensions
+
+Each mounted comparison now retains up to 50 dimension changes, including rotation, typed sizes and keyboard steps. Undo size/Redo size use the existing dimension validation, preset persistence and live iframe resizing path. New edits clear redo; duplicate-size refusals leave history available. History is local to the mounted comparison and is not persisted across reload/removal.
+
+Validation: project-screens passed in Chromium (`/private/tmp/retouch-comparison-history-chromium-final.log`) and WebKit (`/private/tmp/retouch-comparison-history-webkit.log`), both exit 0. Tests cover rotation Undo/Redo, saved preset restoration, redo invalidation after a new edit, retained preview browsing context, keyboard dimensions and existing reload/project isolation. No production native launch occurred. Full Figma parity remains incomplete.

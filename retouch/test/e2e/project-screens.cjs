@@ -25,6 +25,14 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
    await field.fill(String(initial));await field.press('Enter');
   }
 
+  const comparisonSize=()=>page.frameLocator('iframe[title="Reading view comparison preview"]').locator('body').evaluate(()=>[innerWidth,innerHeight]);
+  await page.frameLocator('iframe[title="Reading view comparison preview"]').locator('body').evaluate(()=>{window.resizeHistoryMarker='retained';});
+  await page.getByRole('button',{name:'Rotate Reading view comparison',exact:true}).click();await page.waitForFunction(()=>document.querySelector('iframe[title="Reading view comparison preview"]').contentWindow.innerWidth===844);assert.deepEqual(await comparisonSize(),[844,1120]);
+  await page.getByRole('button',{name:'Undo Reading view comparison size',exact:true}).click();assert.deepEqual(await comparisonSize(),[1120,844]);assert.equal(await picker.locator('option[value="saved:1120x844"]').count(),1);
+  await page.getByRole('button',{name:'Redo Reading view comparison size',exact:true}).click();assert.deepEqual(await comparisonSize(),[844,1120]);
+  await page.getByRole('button',{name:'Undo Reading view comparison size',exact:true}).click();assert.deepEqual(await comparisonSize(),[1120,844]);
+  assert.equal(await page.frameLocator('iframe[title="Reading view comparison preview"]').locator('body').evaluate(()=>window.resizeHistoryMarker),'retained','size history retains the preview browsing context');
+  const readingWidth=page.getByLabel('Reading view comparison width',{exact:true});await readingWidth.fill('1130');await readingWidth.press('Enter');assert.equal(await page.getByRole('button',{name:'Redo Reading view comparison size',exact:true}).isDisabled(),true,'a new size edit clears redo');await page.getByRole('button',{name:'Undo Reading view comparison size',exact:true}).click();assert.deepEqual(await comparisonSize(),[1120,844]);
   await picker.selectOption('390x844');await picker.selectOption('saved:1120x844');await page.waitForFunction(()=>document.querySelector('#app').contentWindow.innerWidth===1120);assert.equal(await page.getByLabel('Screen height',{exact:true}).inputValue(),'844');
   await page.getByRole('button',{name:'Remove Reading view comparison',exact:true}).click();assert.equal(await picker.inputValue(),'custom');assert.equal(await page.getByLabel('Screen width',{exact:true}).inputValue(),'1120');
   await page.getByRole('button',{name:'Undo remove: Reading view',exact:true}).click();assert.equal(await picker.inputValue(),'saved:1120x844');

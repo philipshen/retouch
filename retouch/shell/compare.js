@@ -202,12 +202,19 @@
       scopeButton.onclick=()=>{if(!selected)return;window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,occurrence:0,scopeAtWidth:true,route:path()}}));};
       const dimensions=document.createElement('div');dimensions.className='compare-dimensions';
       const inputs={},dimensionError=document.createElement('p');dimensionError.className='compare-dimension-error';dimensionError.setAttribute('role','status');dimensionError.hidden=true;
-      const applyDimensions=(nextWidth,nextHeight)=>{
+      const sizeUndo=[],sizeRedo=[],sizeHistory=document.createElement('div');sizeHistory.className='compare-header';
+      const undoSize=document.createElement('button'),redoSize=document.createElement('button');
+      for(const button of [undoSize,redoSize]){button.type='button';button.className='control-button';button.disabled=true;}
+      undoSize.textContent='Undo size';redoSize.textContent='Redo size';sizeHistory.append(undoSize,redoSize);
+      const updateSizeHistory=()=>{undoSize.disabled=!sizeUndo.length;redoSize.disabled=!sizeRedo.length;};
+      const applyDimensions=(nextWidth,nextHeight,record=true)=>{
         if(!valid(nextWidth)||!valid(nextHeight))return;
         if(sizes.some(other=>other!==size&&other[1]===nextWidth&&other[2]===nextHeight)){
           dimensionError.textContent='This size is already pinned.';dimensionError.hidden=false;inputs.width.value=width;inputs.height.value=height;return;
         }
         dimensionError.hidden=true;dimensionError.textContent='';
+        if(nextWidth===width&&nextHeight===height)return true;
+        if(record){sizeUndo.push({before:[width,height],after:[nextWidth,nextHeight]});if(sizeUndo.length>50)sizeUndo.shift();sizeRedo.length=0;}
         const automatic=name===`Custom ${width} × ${height}`;
         width=nextWidth;height=nextHeight;size[1]=width;size[2]=height;
         if(automatic){name=`Custom ${width} × ${height}`;size[0]=name;}
@@ -216,8 +223,10 @@
         frame.style.width=width+'px';frame.style.height=height+'px';
         inputs.width.value=width;inputs.height.value=height;
         scopeButton.textContent='Edit styles: '+width+' px and larger';scopeButton.setAttribute('aria-label','Edit styles from '+width+' px');
-        remember();updateControls();
+        remember();updateControls();updateSizeHistory();return true;
       };
+      const replaySize=(from,to,undo)=>{const entry=from.at(-1);if(!entry)return;const target=undo?entry.before:entry.after;if(applyDimensions(...target,false)){from.pop();to.push(entry);updateSizeHistory();const button=undo?undoSize:redoSize;(button.disabled?(undo?redoSize:undoSize):button).focus();}};
+      undoSize.onclick=()=>replaySize(sizeUndo,sizeRedo,true);redoSize.onclick=()=>replaySize(sizeRedo,sizeUndo,false);
       for(const axis of ['width','height']){
         const field=document.createElement('label');field.textContent=axis==='width'?'W':'H';
         const input=document.createElement('input');input.type='number';input.min=240;input.max=7680;input.step=1;input.value=axis==='width'?width:height;input.setAttribute('aria-label',name+' comparison '+axis);inputs[axis]=input;
@@ -261,10 +270,11 @@
         card.setAttribute('aria-label',name+' comparison');edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');remove.setAttribute('aria-label','Remove '+name+' comparison');viewport.setAttribute('aria-label','Edit from '+name+' comparison');frame.title=name+' comparison preview';scopeMessage.setAttribute('aria-label',name+' scope coverage');
         for(const axis of ['width','height'])inputs[axis].setAttribute('aria-label',name+' comparison '+axis);
         up.setAttribute('aria-label','Move '+name+' comparison up');down.setAttribute('aria-label','Move '+name+' comparison down');
+        undoSize.setAttribute('aria-label','Undo '+name+' comparison size');redoSize.setAttribute('aria-label','Redo '+name+' comparison size');
         rotate.setAttribute('aria-label','Rotate '+name+' comparison');reveal.setAttribute('aria-label','Show selection in '+name+' comparison');
       }
       updateLabels();
-      viewport.append(overlay);previewBody.append(viewport,message,reveal,scopeMessage,scopeButton);card.append(header,dimensions,dimensionError,order,disclosure,previewBody);rail.insertBefore(card,before);
+      viewport.append(overlay);previewBody.append(viewport,message,reveal,scopeMessage,scopeButton);card.append(header,dimensions,dimensionError,sizeHistory,order,disclosure,previewBody);rail.insertBefore(card,before);
       function activate(event){
         try{
           const d=frame.contentDocument,loc=frame.contentWindow.location;
