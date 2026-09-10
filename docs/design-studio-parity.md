@@ -6464,3 +6464,28 @@ transparent background into the palette and verify no source/library write,
 then complete the existing create/apply/update/reset/undo flows. Wide-gamut
 palette storage/editing, multi-layer capture and full parity remain unfinished.
 Native launches remain paused; no live Shopify verification was performed.
+
+### Display P3 palette storage and authoring (2026-09-09)
+
+Palette colors now accept explicit Display P3 alongside sRGB hex, retaining the
+color space and alpha through catalog validation, imports/exports, CSS source and
+Tailwind arbitrary-property encoding. A shared value parser validates finite
+0–1 P3 channels/alpha and rejects unsupported spaces, malformed or injected input.
+The palette value field accepts P3 syntax and exposes red/green/blue channel
+controls for P3 entries. Opacity edits preserve the P3 channels. The sRGB picker
+is disabled for P3 entries to prevent implicit gamut conversion. Capturing a P3
+layer keeps its P3 representation. Local single/shared paint inputs also accept
+P3, and HTML CSS validation supports it for color, background, border and SVG
+paint. Other color spaces and out-of-range P3 components remain unsupported.
+
+All 485 tests passed, exit 0: /private/tmp/retouch-p3-units.log. The focused parser
+suite passed again after making HTML CSS function-name matching case-insensitive.
+Browser flows passed in HTML Chromium, React Chromium and local Liquid WebKit,
+exit 0: /private/tmp/retouch-p3-html.log, /private/tmp/retouch-p3-react.log and
+/private/tmp/retouch-p3-liquid.log. They create/store/apply/capture an alpha P3
+background and undo catalog/source exactly before the existing sRGB flows.
+React/Liquid additionally verify channel controls and opacity retain P3. These
+receipts verify browser CSS values, not physical monitor gamut or calibration.
+More intuitive color-space creation/conversion, other spaces, complete P3
+project-update/selection receipts and full Figma parity remain unfinished.
+Native launches remain paused; live Shopify remains unverified.

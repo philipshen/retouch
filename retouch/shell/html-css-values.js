@@ -72,6 +72,7 @@
   if(property==='object-position'){const parts=value.split(/\s+/);return parts.length===2&&parts.every(p=>/^(?:\d*\.)?\d+%$/.test(p)&&parseFloat(p)>=0&&parseFloat(p)<=100);}
   if(sides.includes(property)&&/^calc\(50% [+-] (?:\d*\.)?\d+px\)$/.test(value))return true;
   if(Object.hasOwn(options,property))return options[property].includes(value);
+  if(colors.has(property)&&/^color\(display-p3\s/i.test(value))return (typeof module==='object'&&module.exports?require('./palette-values.js'):globalThis.RetouchPaletteValues).valid(value);
   if(colors.has(property))return /^(?:#(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})|[a-z]+|(?:rgb|rgba|hsl|hsla)\([\d.%,\s/]+\))$/i.test(value);
   if(!lengths.has(property))return false;
   const parts=value.trim().split(/\s+/),limit=property==='gap'||families['border-radius'].includes(property)?2:['padding','margin','border-width','border-radius'].includes(property)?4:1;

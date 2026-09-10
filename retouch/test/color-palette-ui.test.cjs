@@ -1,6 +1,6 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-const window={};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../shell/color-styles.js'),'utf8'),{window});const {normalize}=window.RetouchColorStyles;
+const window={RetouchPaletteValues:require('../shell/palette-values.js')};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../shell/color-styles.js'),'utf8'),{window});const {normalize}=window.RetouchColorStyles;
 test('palette color entry expands shorthand and retains explicit alpha exactly',()=>{
  for(const [input,expected]of [['#abc','#aabbccff'],['#AbC8','#aabbcc88'],['#ABCDEF','#abcdefff'],['#12345600','#12345600'],['#0000','#00000000']])assert.equal(normalize(input),expected);
  for(const input of ['',null,42,'red','#12','#12345','#123456789','var(--color)','#123;bad'])assert.throws(()=>normalize(input),/hex color/);
@@ -17,8 +17,8 @@ test('inherited palette links follow the nearest narrower scope per paint proper
  assert.equal(inheritedLink({},1440,'color'),null);
 });
 
-test('capturing computed sRGB paint retains alpha and refuses non-solid or wide-gamut paint',()=>{
+test('capturing computed sRGB paint retains alpha and refuses non-solid or unsupported color spaces',()=>{
  const {fromComputed}=window.RetouchColorStyles;
  for(const [input,expected]of [['rgb(51, 102, 153)','#336699ff'],['rgba(51, 102, 153, 0.533333)','#33669988'],['rgb(100% 0% 50% / 50%)','#ff008080'],['color(srgb 0.2 0.4 0.6 / 0.5)','#33669980'],['transparent','#00000000'],['#1234','#11223344']])assert.equal(fromComputed(input),expected);
- for(const input of ['none','url(#gradient)','color(display-p3 1 0 0)','oklch(50% 0.2 30)','rgb(300 0 0)','rgb(1 2 3 / 2)','rgb(1 2)','rgb(1,2,3/0.5)',null])assert.throws(()=>fromComputed(input),/solid sRGB/);
+ for(const input of ['none','url(#gradient)','oklch(50% 0.2 30)','rgb(300 0 0)','rgb(1 2 3 / 2)','rgb(1 2)','rgb(1,2,3/0.5)',null])assert.throws(()=>fromComputed(input),/solid color/);
 });

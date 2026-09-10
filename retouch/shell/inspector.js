@@ -341,7 +341,7 @@
         // explicit sRGB value without silently flattening alpha or wide gamut.
         field(sec,label+' with alpha',input);note(sec,computed,'computed-value');
         sec.append(button('Clear local '+label.toLowerCase(),()=>colorAction(property,null).catch(error=>{input.setCustomValidity(error.message);input.reportValidity();})));
-        input.onchange=()=>{const value=input.value.trim();if(!/^#(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})$/i.test(value)){input.setCustomValidity('Enter a hex color with 3, 4, 6 or 8 digits.');input.reportValidity();return;}input.setCustomValidity('');colorAction(property,value).catch(error=>{input.setCustomValidity(error.message);input.reportValidity();});};input.oninput=()=>input.setCustomValidity('');
+        input.onchange=()=>{const value=input.value.trim();if(!root.RetouchPaletteValues.valid(value)){input.setCustomValidity('Enter a hex color or color(display-p3 r g b / alpha).');input.reportValidity();return;}input.setCustomValidity('');colorAction(property,value).catch(error=>{input.setCustomValidity(error.message);input.reportValidity();});};input.oninput=()=>input.setCustomValidity('');
       }
     }
     if(colorAction)note(sec,'Clear removes paint from this screen scope to reveal inherited styles. Saved color links stay attached; reset them from the palette.');

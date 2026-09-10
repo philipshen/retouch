@@ -31,7 +31,7 @@
    const values=computed.map(css=>css.getPropertyValue(property)),mixed=values.some(value=>value!==values[0]),input=root.document.createElement('input');input.type='text';input.spellcheck=false;input.placeholder=mixed?'Mixed · enter hex with alpha':'#RRGGBB or #RRGGBBAA';input.disabled=elements.some(el=>el.style.getPropertyValue(property));
    I.field(sec,'Shared '+label+' with alpha',input);I.note(sec,mixed?'Mixed colors':values[0]);
    const clear=I.button('Clear selected '+label.toLowerCase(),()=>saveColor(property,null).catch(error=>I.note(sec,error.message,'refused')));clear.disabled=input.disabled;sec.append(clear);
-   input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{const value=input.value.trim();if(!/^#(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})$/i.test(value)){input.setCustomValidity('Enter a hex color with 3, 4, 6 or 8 digits.');input.reportValidity();return;}saveColor(property,value).catch(error=>{input.setCustomValidity(error.message);input.reportValidity();});};
+   input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{const value=input.value.trim();if(!root.RetouchPaletteValues.valid(value)){input.setCustomValidity('Enter a hex color or color(display-p3 r g b / alpha).');input.reportValidity();return;}saveColor(property,value).catch(error=>{input.setCustomValidity(error.message);input.reportValidity();});};
   }
 
   if(saveColor)I.note(sec,'Clear removes selected-scope paint to reveal inherited styles. Saved links stay attached; palette reset restores their definitions.');

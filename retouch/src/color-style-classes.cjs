@@ -4,7 +4,7 @@ const properties=['color','background-color','border-color','fill','stroke'];
 function encode(property,value){
  if(!properties.includes(property))throw Error('Choose a supported color property.');
  catalog.validate({version:1,styles:[{id:'11111111-1111-4111-8111-111111111111',name:'Color',properties:{color:value}}]});
- return '!['+property+':'+value+']';
+ return '!['+property+':'+value.replace(/\s+/g,'_')+']';
 }
 function related(plain,property){
  if(/^\[all:/.test(plain))return true;
