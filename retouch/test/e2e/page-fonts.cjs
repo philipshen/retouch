@@ -83,6 +83,12 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    if(kind==='html'||kind==='react'){
     await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click();await page.getByRole('treeitem',{name:'p · Named text',exact:true}).click({modifiers:['Shift']});await settled();await openLibrary();await page.getByLabel('Saved text style',{exact:true}).selectOption(saved.id);
     assert.equal(await page.getByRole('button',{name:'Save current typography',exact:true}).count(),0);
+    if(kind==='react'){
+     const picker=page.getByLabel('Shared Page font',{exact:true});assert.equal(await picker.inputValue(),'');assert.equal(await picker.locator('option:checked').innerText(),'Mixed');
+     const families=await app.locator('p').evaluateAll(nodes=>nodes.map(el=>getComputedStyle(el).fontFamily));await picker.selectOption('monospace');await wait(()=>read()!==original);await settled();await wait(async()=>await app.locator('p').evaluateAll(nodes=>nodes.every(el=>getComputedStyle(el).fontFamily==='monospace')));assert.ok(read().includes('other-font'));assert.ok(read().includes('named-font'));
+     await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();assert.deepEqual(await app.locator('p').evaluateAll(nodes=>nodes.map(el=>getComputedStyle(el).fontFamily)),families);await openLibrary();await page.getByLabel('Saved text style',{exact:true}).selectOption(saved.id);
+    }
+
     await page.getByRole('button',{name:'Apply text style',exact:true}).click();await wait(()=>read()!==original);await settled();await wait(async()=>await app.locator('p').evaluateAll(nodes=>nodes.every(el=>getComputedStyle(el).fontSize==='32px')));
     assert.deepEqual(await app.locator('p').evaluateAll(nodes=>nodes.map(el=>JSON.parse(el.getAttribute('data-rt-text-styles')))),[{[kind==='html'?'0':'']:{id:saved.id,properties:saved.properties}},{[kind==='html'?'0':'']:{id:saved.id,properties:saved.properties}}]);
     if(kind==='react'){

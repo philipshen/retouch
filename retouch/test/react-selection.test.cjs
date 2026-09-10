@@ -27,3 +27,15 @@ test('shared typography rejects invalid values and coupled source ownership with
  assert.throws(()=>change('[font:italic_16px_serif]','','font-weight',500),/shorthand/);
  assert.equal(change('md:text-lg/7','','font-size',40),'md:text-lg/7 [font-size:40px]');
 });
+test('shared font families preserve quotes, Unicode, underscores and responsive ownership',()=>{
+ const I=require('../shell/inspector.js'),value='"Example_Font 字", serif',token=I.fontFamilyClass(value),source='font-sans md:!font-serif font-bold hover:font-mono p-4';
+ const next=change(source,'md:','font-family',value);assert.ok(next.includes('md:!'+token));assert.ok(next.includes('font-bold'));assert.ok(next.includes('font-sans'));assert.ok(next.includes('hover:font-mono'));assert.equal(change(next,'md:','font-family',value),next);assert.equal(change(next,'md:','font-family',null),'font-sans font-bold hover:font-mono p-4');
+ for(const bad of ['',42,'serif; color:red','url(evil)'])assert.throws(()=>change(source,'','font-family',bad));
+ assert.throws(()=>change('[font:italic_16px_serif]','','font-family','serif'),/shorthand/);
+});
+test('shared explicit typography overrides named page styles without removing them',()=>{
+ const document={styleSheets:[{cssRules:[{selectorText:'.editorial',style:{getPropertyValue:property=>property==='font-family'?'Georgia, serif':''}}]}]};
+ assert.equal(change('editorial p-4','','font-family','monospace',document),'editorial p-4 ![font-family:monospace]');
+ assert.equal(change('editorial p-4','','font-size',40,document),'editorial p-4 ![font-size:40px]');
+ assert.equal(change('editorial p-4 ![font-family:monospace]','','font-family',null,document),'editorial p-4');
+});

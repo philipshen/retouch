@@ -445,9 +445,9 @@
     if(!counts)return 'No page font declaration';
     return [['loading','loading'],['error','failed'],['unloaded','not loaded'],['loaded','loaded']].filter(([key])=>counts[key]).map(([key,label])=>`${counts[key]} ${label}`).join(' · ')||'Font status unavailable';
   }
-  function fontPicker(parent,d,current,onChange){
+  function fontPicker(parent,d,current,onChange,options={}){
     const choices=fontFamilies(d,current),supported=choices.some(([value])=>value===current);
-    const quick=select(parent,'Page font',supported?choices:[[current,current],...choices],current,onChange);
+    const quick=select(parent,options.label||'Page font',supported?choices:[[current,options.mixed?'Mixed':current],...choices],current,onChange);
     if(!supported)quick.options[0].disabled=true;
     const currentStatus=note(parent,'');currentStatus.setAttribute('aria-label','Current font files');currentStatus.setAttribute('role','status');
     const browse=document.createElement('details');browse.className='font-browser';
@@ -458,7 +458,7 @@
     const pages=document.createElement('div');pages.className='font-pages';let offset=0,scanning=false,cancelScan;
     const previous=button('Previous fonts',()=>{offset=Math.max(0,offset-50);render();}),next=button('Next fonts',()=>{offset+=50;render();});pages.append(previous,next);browse.append(pages);
     const render=()=>{
-      const states=fontFaceStates(d);currentStatus.textContent=fontFaceLabel(current,states);
+      const states=fontFaceStates(d);currentStatus.textContent=options.mixed?'Multiple font families in this selection.':fontFaceLabel(current,states);
       const matches=filterFonts(choices,search.value),focused=results.contains(document.activeElement)?document.activeElement.dataset.font:null;
       if(offset>=matches.length)offset=0;
       status.textContent=(matches.length?`${matches.length} font ${matches.length===1?'choice':'choices'}`:scanning?'No matches yet.':'No matching fonts. Try another name.')+(scanning?' · Scanning page…':'');status.dataset.scanning=String(scanning);

@@ -5950,3 +5950,29 @@ and undo to exact source. WebKit additionally checks the mixed size input after
 editing one member. Existing linked-style reset/detach and library workflows
 continue to pass without page errors. Native launches remain paused; full design
 parity and verified desktop distribution remain incomplete.
+
+### Shared page-font selection (2026-09-09)
+
+React multi-selection now uses the existing searchable page-font picker, including
+mixed-family display and scoped family reset. One change writes all selected
+layers and undoes together. Family serialization preserves quoted names, Unicode,
+literal underscores, unrelated font properties and responsive/state variants.
+Inline-controlled families disable the shared picker. Font-file status remains
+based on declarations, not proof of the font used for every glyph.
+
+Shared explicit typography now detects named page styles and applies important
+property overrides, matching the single-layer control behavior. This fixes normal
+utilities losing to named styles outside CSS layers while preserving the authored
+class and its unrelated properties. Complex selectors, inline authoring and full
+font-shorthand decomposition still need further work.
+
+All 449 unit tests passed, exit 0:
+/private/tmp/retouch-shared-font-final-units.log. Tests cover family serialization,
+validation, important/scoped ownership, reset and named-style precedence. React
+browser processes exited 0 in /private/tmp/retouch-shared-font-chromium.log and
+/private/tmp/retouch-shared-font-webkit.log. They start with different page-defined
+families, verify the Mixed picker, apply monospace to both layers, preserve both
+named classes and undo to the exact source and original computed families. Prior
+shared typography, linked-style, history and transfer flows also pass. Native
+launches remain paused; full design parity and verified desktop distribution
+remain unfinished.
