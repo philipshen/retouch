@@ -267,7 +267,7 @@ function hookFrame(d, w) {
   }, true);
   d.addEventListener('keydown', (e) => {
     if(mode==='edit'&&!editing&&window.RetouchActions?.shortcut(e))return;
-    if(canvasZoomShortcut(e)||lockShortcut(e))return;
+    if(canvasZoomShortcut(e)||lockShortcut(e)||opacityShortcut(e))return;
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'i')) {
@@ -2268,7 +2268,7 @@ routeInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') navigatePage(routeInput.value || '/');
 });
 window.addEventListener('keydown', (e) => {
-  if(canvasZoomShortcut(e)||lockShortcut(e))return;
+  if(canvasZoomShortcut(e)||lockShortcut(e)||opacityShortcut(e))return;
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.target.closest?.('input,textarea,[contenteditable="true"]')) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
@@ -2339,6 +2339,15 @@ async function setLayerLocks(el,value){
   if(value)clearSelection();
   layers.refresh();
   toast(value?'Selection locked on the canvas. Select it in Layers to edit.':'Selection unlocked.','ok');
+}
+function opacityShortcut(e){
+  if(e.defaultPrevented||e.isComposing||e.metaKey||e.ctrlKey||e.altKey||e.shiftKey||!/^\d$/.test(e.key))return false;
+  if(mode!=='edit'||editing||!sel||e.target.isContentEditable||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable="true"],[contenteditable=""]'))return false;
+  const input=panelBody.querySelector('input[aria-label="Shared Opacity (%)"],input[aria-label="Opacity (%)"]');
+  if(!input||input.matches(':disabled')||input.closest('[inert]'))return false;
+  e.preventDefault();e.stopImmediatePropagation();
+  if(e.repeat||panelTasks||undoBusy||sourceRequests)return true;
+  input.value=String(e.key==='0'?100:Number(e.key)*10);input.dispatchEvent(new Event('change',{bubbles:true}));return true;
 }
 function canvasZoomShortcut(e){
   if(!e.shiftKey||e.metaKey||e.ctrlKey||e.altKey||!['Digit1','Digit2'].includes(e.code))return false;
