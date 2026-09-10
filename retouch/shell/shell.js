@@ -1812,9 +1812,9 @@ async function writeSrc(src, isUndo, info) {
 async function renameLayer(name){
   if(!sel?.info.canRename)return;const info=sel.info;busyPanel(true);
   try{
-    const result=await api('POST','/rt/__api/op',{type:'renameElement',id:info.id,fileHash:info.hash,name});
+    const result=await api('POST','/rt/__api/op',{type:'renameElement',id:info.id,fileHash:info.hash,name,context:info.context});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not name layer','err');
-    if(result.undoId)editorHistory.record({type:info.kind==='instance'?'renameComponent':'renameElement',id:info.id,undoId:result.undoId});
+    if(result.undoId)editorHistory.record({type:info.kind==='instance'?'renameComponent':'renameElement',id:info.id,context:info.context,undoId:result.undoId});
     if(info.kind==='instance'){await refreshSwappedComponent(info.id,null);await selectInsertedComponent(info.id,null);layers.refresh();}
     else{sel.info=result.element;if(sel.info.renderRevisionAttribute)await refreshWrittenElement(sel.info,el=>(el.getAttribute('data-rt-layer-name')||'')===sel.info.layerName);else await reloadFrame();layers.refresh();renderPanel();}toast('Layer named','ok');
   }finally{busyPanel(false);}

@@ -41,7 +41,7 @@ function liquidRange(resolved) {
   }
   if(parent.closeStart==null) throw Error('The parent markup is incomplete.');
   const inner=resolved.source.slice(parent.openEnd,parent.closeStart);
-  if(/\{[%{]/.test(inner)) throw Error('Structural editing requires literal HTML siblings without Liquid expressions.');
+  if(/\{[%{]/.test(require('./liquid-layer-name.cjs').strip(inner))) throw Error('Structural editing requires literal HTML siblings without Liquid expressions.');
   const complete = n => n.kind==='host' && !n.dynamicTag && !unsafeTags.has(n.tag) && Number.isInteger(n.closeEnd) && n.children.every(complete);
   if(!parent.children.every(complete)) throw Error('Structural editing requires complete literal HTML siblings.');
   const ranges=parent.children.map(n=>({start:n.tagStart,end:n.closeEnd,selected:n===node}));

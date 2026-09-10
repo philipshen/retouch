@@ -17,6 +17,7 @@ const classes = require('../liquid-classes.cjs');
 const components = require('../liquid-components.cjs');
 const images = require('../liquid-images.cjs');
 const theme = require('../liquid-theme.cjs');
+const layerNames = require('../liquid-layer-name.cjs');
 const {validateChildrenTree}=require('../rich-text.cjs');
 
 const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
@@ -135,7 +136,7 @@ function readOpenTag(source, start) {
   const tag = dynamicTag ? source.slice(start + 1, j) : source.slice(start + 1, j).toLowerCase();
   const nameEnd = j;
   let k = j;
-  const attributes = [];
+  const attributes = [],names = [];
   let attributeExpressions = false;
   let classAttr = null;
   let srcAttr = null;
@@ -144,6 +145,7 @@ function readOpenTag(source, start) {
   let selfClosing = false;
   let openEnd = N;
   while (k < N) {
+    const savedName=layerNames.read(source,k);if(savedName){names.push(savedName);k=savedName.end;continue;}
     if (source.startsWith('{%', k)) { attributeExpressions = true; const e = source.indexOf('%}', k); k = e === -1 ? N : e + 2; continue; }
     if (source.startsWith('{{', k)) { attributeExpressions = true; const e = source.indexOf('}}', k); k = e === -1 ? N : e + 2; continue; }
     const c = source[k];
@@ -193,7 +195,7 @@ function readOpenTag(source, start) {
   }
   return {
     tag, dynamicTag, kind: 'host', tagStart: start, nameEnd, openEnd, selfClosing,
-    attributes, attributeExpressions, classAttr, srcAttr, srcSet, textBinding, childrenStart: openEnd, children: [],
+    attributes, layerNames:names, attributeExpressions, classAttr, srcAttr, srcSet, textBinding, childrenStart: openEnd, children: [],
   };
 }
 
@@ -230,6 +232,8 @@ function stamp(source, filePath, appRoot) {
       continue;
     }
     if(el.generatedImage){images.stamp(ms,el,relPath.startsWith('snippets/')&&!el.parent);continue;}
+    const name=layerNames.describe({element:el}).layerName;
+    if(name){for(const attr of el.attributes||[])if(attr.name==='data-rt-layer-name')ms.remove(attr.attrStart,attr.attrEnd);ms.appendLeft(el.openEnd-(el.selfClosing?2:1),layerNames.attribute(name));}
     const instance=relPath.startsWith('snippets/')&&!el.parent?' data-rt-i="{{ __rt_instance }}"':'';
     const binding = sources.textBinding(source, el, plan);
     const tagBinding=dynamicTagBinding(source,el,relPath);
@@ -275,7 +279,7 @@ function describeElement(resolved) {
   const traced = text === null && !node.textBinding ? sources.resolve(resolved) : null;
   if (traced?.target) text = traced.target.value;
   const inner = node.closeStart != null ? source.slice(node.childrenStart, node.childrenEnd) : '';
-  const hasLiquid = /\{[%{]/.test(inner);
+  const hasLiquid = /\{[%{]/.test(layerNames.strip(inner));
   const canSetChildren=node.closeStart!=null&&!node.textBinding&&!hasLiquid&&inner.trim()!=='';
   const asset = node.srcAttr?.value?.match(/^\s*\{\{\s*['"]([\w.\/-]+)['"]\s*\|\s*asset_url\s*\}\}\s*$/);
   const imageUrl=!!node.srcAttr&&/^\s*\{\{[\s\S]*\|\s*image_url\s*:[\s\S]*\}\}\s*$/.test(node.srcAttr.value||'');
@@ -316,7 +320,7 @@ function describeElement(resolved) {
 }
 
 function describe(resolved) {
-  return {...describeElement(resolved),...require('../liquid-text-styles.cjs').describe(resolved),...require('../liquid-color-styles.cjs').describe(resolved),...require('../liquid-effect-styles.cjs').describe(resolved),...require('../liquid-variable-bindings.cjs').describe(resolved),components:theme.ancestry(resolved),structure:structure.describe(resolved,'liquid')};
+  return {...describeElement(resolved),...layerNames.describe(resolved),...require('../liquid-text-styles.cjs').describe(resolved),...require('../liquid-color-styles.cjs').describe(resolved),...require('../liquid-effect-styles.cjs').describe(resolved),...require('../liquid-variable-bindings.cjs').describe(resolved),components:theme.ancestry(resolved),structure:structure.describe(resolved,'liquid')};
 }
 
 function refuse(reason) { return { ok: false, refused: true, reason }; }
@@ -326,6 +330,7 @@ function escapeText(t) {
 }
 
 function planOp(resolved, op) {
+  if(op.type==='renameElement')return layerNames.plan(resolved,op);
   if(op.type==='setClassesSelection')return require('../liquid-class-selection.cjs').plan(resolved,op);
   if(structure.types.has(op.type)) return structure.planOp(resolved,op,'liquid');
   if (op.fileHash && op.fileHash !== resolved.hash) {
@@ -380,7 +385,7 @@ function planOp(resolved, op) {
       if (!kept||seen.has(c.id)) throw new Error('A kept element is not a unique descendant of this source.');
       seen.add(c.id);
       if (!c.children) return resolved.source.slice(kept.tagStart,kept.closeEnd);
-      if (kept.closeStart==null||kept.textBinding||/\{[%{]/.test(resolved.source.slice(kept.childrenStart,kept.childrenEnd))) throw new Error('A kept child contains expressions.');
+      if (kept.closeStart==null||kept.textBinding||/\{[%{]/.test(layerNames.strip(resolved.source.slice(kept.childrenStart,kept.childrenEnd)))) throw new Error('A kept child contains expressions.');
       return resolved.source.slice(kept.tagStart,kept.openEnd)+build(c.children)+resolved.source.slice(kept.closeStart,kept.closeEnd);
     }).join('');
     let value;try{value=build(op.children);}catch(err){return refuse(err.message);}
@@ -424,6 +429,6 @@ module.exports = {
   describeComponent: resolved=>resolved.element.theme?theme.describe(resolved):components.describe(resolved),
   hasReference: components.hasReference,
   assets: { directory: 'assets', urlPrefix: '/assets/', uploadDirectory: '' },
-  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types] },
+  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types] },
   _parse: parse, // exported for tests
 };

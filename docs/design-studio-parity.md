@@ -9288,3 +9288,45 @@ occurrence labels, component movement/copy, full variants/slots, arbitrary-site
 durable authoring and other Figma Design requirements remain open. Full parity
 is incomplete. Native app launches remain paused; trusted brew distribution is
 unverified.
+
+
+### Name Liquid template layers without changing rendered content (2026-09-10)
+
+Indexed Liquid HTML hosts now share the Layer name field, F2, Layers search,
+clearing and source Undo/Redo used by React and HTML. Names are base64 JSON inside
+non-rendering Liquid comments in opening tags. The tokenizer records these owned
+comments without treating them as dynamic attributes. The development stamper
+exposes a fully HTML/Liquid-escaped data-rt-layer-name; production templates render
+without added attributes or text. Clearing restores the original source exactly.
+Source hashes guard writes and all indexed structural IDs must remain unchanged.
+
+Named literal siblings retain duplicate/move support. Rich-text capability checks
+ignore only validated owned comments, while actual Liquid expressions continue to
+block unsupported structural edits. Names survive class/tag edits and dynamic tag
+bindings. Generated image_tag hosts and Liquid component/theme instances do not
+yet support this naming representation.
+
+Validation: 737 unit tests passed. LiquidJS render comparisons are identical before
+and after naming across conditional attributes and dynamic tags. Tests also cover
+quotes/Unicode/Liquid-like label text, invalid and stale input, class/tag changes,
+structural capability preservation, and guards against hiding real expressions.
+Initial Chromium/WebKit naming assertions passed, but screenshot inspection found
+that the save dropped rendered-class context, disabling style controls. The shell
+now includes context in naming operations and history records; added assertions
+verify dynamic-class editing remains available after save, Undo and Redo. The
+corrected Chromium/WebKit runs both exited zero, covering name/search/clear/F2,
+375px preview switching and existing typography/conditional-render/history flows,
+with no page errors. The corrected screenshot was inspected: the named row and
+field are visible and typography controls are available without reload errors.
+git diff --check passed. Evidence:
+/private/tmp/retouch-liquid-names-units.log,
+/private/tmp/retouch-liquid-names-chromium-fixed.log,
+/private/tmp/retouch-liquid-names-webkit-fixed.log,
+/private/tmp/retouch-liquid-names-fixed.png.
+
+Verification uses disposable local Liquid fixtures; no live Shopify theme was
+modified or verified in this turn. Bulk/independent per-render names, component
+library occurrence labels, component movement/copy, full variants/slots and
+arbitrary-site durable authoring remain open among the full Figma Design goals.
+Full parity is incomplete. Native launches remain paused and trusted brew
+installation remains unverified.
