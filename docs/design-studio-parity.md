@@ -8905,3 +8905,31 @@ component outline enclosing both roots with one badge. Evidence:
 Grouped layer-tree presentation, per-render source overrides, dynamic grouping,
 fragment layout editing and the broader full-Figma/arbitrary-site gaps remain
 open. Native launches remain paused and trusted brew distribution is unverified.
+
+### Conditional children inside fragment groups (2026-09-10)
+
+Fragment group metadata can now enumerate ternary JSX children, including null
+and boolean empty branches and nested transparent fragments/TypeScript wrappers.
+It computes possible host sequences without executing the condition. A shared
+host anchors each multi-variant return shape. Unknown text, component children,
+callbacks and independently optional roots without a common anchor remain
+ungrouped. Expansion is bounded at 64 alternatives per expression/combination;
+source exceeding that bound falls back to individual selectable roots.
+
+Validation: 703 unit tests passed. New tests verify mixed repeated two/three-root
+instances, absence of common anchors, unknown text branches and bounded expansion.
+Chromium (aliased Fragment) and WebKit (namespace React.Fragment) passed the real
+property/swap/detach fixture with an optional middle host. Checking showDetails
+renders that third host while retaining one inspector instance and an exact
+grouped hover boundary; Undo restores the original source and two-root rendering.
+Existing root swap/detach/Undo/Redo checks also pass. Both browser processes ended
+with exit zero and strict empty page-error assertions. Evidence:
+/private/tmp/retouch-conditional-fragment-units.log,
+/private/tmp/retouch-conditional-fragment-chromium.log,
+/private/tmp/retouch-conditional-fragment-webkit.log.
+
+Ambiguous prefix/suffix shapes still fall back rather than guessing boundaries.
+Logical expressions, arrays, portals, dynamic text, grouped layer-tree rows,
+per-render overrides and fragment layout editing remain open. Full Figma Design
+parity and arbitrary-site authoring remain incomplete. Native launches remain
+paused; trusted brew distribution is unverified.

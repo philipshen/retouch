@@ -19,3 +19,13 @@ test('source groups cover fixed shorthand and named fragments but refuse unknown
   const source='export function Card(){return <><footer/>'+content+'</>}',parsed=collectElements(source,'Card.tsx');assert.deepEqual(rootGroups(parsed.ast.program.body[0].declaration,parsed.elements,parsed.fragments),[]);
  }
 });
+
+test('conditional fragment children group both states around their shared host anchor',()=>{
+ const source='export function Card({show}){return <><header/>{show ? <aside/> : null}<footer/></>}',parsed=collectElements(source,'Card.tsx'),patterns=rootGroups(parsed.ast.program.body[0].declaration,parsed.elements,parsed.fragments),ids=Object.fromEntries(parsed.elements.map(el=>[el.node.openingElement.name.name,el.id]));assert.deepEqual(patterns,[[ids.header,ids.aside,ids.footer],[ids.header,ids.footer]]);
+ const rendered=nodes([ids.header,ids.footer,ids.header,ids.aside,ids.footer]);assert.deepEqual(group(rendered,patterns).map(item=>[item.elements.length,item.complete]),[[2,true],[3,true]]);
+});
+test('conditional root enumeration refuses unknown text, missing anchors and exponential alternatives',()=>{
+ for(const children of ['{a?<header/>:null}{b?<footer/>:null}','<header/>{show?<aside/>:label}<footer/>','<header/>'+Array.from({length:7},(_,i)=>'{show'+i+'?<aside/>:null}').join('')+'<footer/>']){
+  const parsed=collectElements('export function Card(){return <>'+children+'</>}','Card.tsx');assert.deepEqual(rootGroups(parsed.ast.program.body[0].declaration,parsed.elements,parsed.fragments),[]);
+ }
+});
