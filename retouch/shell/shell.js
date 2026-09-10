@@ -1264,12 +1264,12 @@ function componentSection(id) {
     description.textContent = component.name + ' · ' + component.file;
     if (component.detached) sec.querySelector('h3').textContent = 'Detached component';
     const actions = document.createElement('div'); actions.className = 'component-actions';
-    actions.append(RetouchInspector.button('View component', () => openComponent(id, component)));
+    const view=RetouchInspector.button('View component', () => openComponent(id, component));view.dataset.componentAction='view';actions.append(view);
     const edit = RetouchInspector.button('Edit definition', () => editDefinition(id, component));
-    edit.disabled = !component.definitionId; actions.append(edit);
+    edit.dataset.componentAction='definition';edit.disabled = !component.definitionId; actions.append(edit);
     const duplicate=RetouchInspector.button('Duplicate instance',()=>duplicateInstance(id,sel?.info?.context));duplicate.disabled=!component.canDuplicate;duplicate.title=component.duplicateReason||'Duplicate this source usage, keeping the shared definition.';actions.append(duplicate);
     const detach = RetouchInspector.button('Detach instance', () => detachInstance(id, component, detach));detach.disabled=!component.canDetach;
-    detach.disabled = !component.canDetach; if (!component.detached) actions.append(detach); sec.append(actions);
+    detach.dataset.componentAction='detach';detach.title=component.reason||'Create an independent definition for this instance.';detach.disabled = !component.canDetach; if (!component.detached) actions.append(detach); sec.append(actions);
     const groups=RetouchComponentInstances.group(matchingInDocument(doc(),id,component),component.rootGroups),count=groups.length,unit=groups.every(group=>group.complete)?'instance':groups.every(group=>!group.complete)?'rendered layer':'selection target';
     RetouchInspector.note(sec, `${count} ${unit}${count === 1 ? '' : 's'} at this usage. ${component.detached ? 'This module is independent of the original component.' : 'Definition edits are shared.'}`);
     if(!component.canDetach&&!component.detached&&component.reason)RetouchInspector.note(sec,component.reason);
