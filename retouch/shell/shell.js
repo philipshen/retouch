@@ -268,7 +268,7 @@ function hookFrame(d, w) {
   d.addEventListener('pointerdown',cancelOpacityEntry,true);
   d.addEventListener('keydown', (e) => {
     if(mode==='edit'&&!editing&&window.RetouchActions?.shortcut(e)){cancelOpacityEntry();return;}
-    if(opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e))return;
+    if(opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||layerNavigationShortcut(e))return;
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'i')) {
@@ -2340,6 +2340,11 @@ async function setLayerLocks(el,value){
   if(value)clearSelection();
   layers.refresh();
   toast(value?'Selection locked on the canvas. Select it in Layers to edit.':'Selection unlocked.','ok');
+}
+function layerNavigationShortcut(e){
+  if(e.defaultPrevented||e.isComposing||e.metaKey||e.ctrlKey||e.altKey||!['Enter','Tab'].includes(e.key)||mode!=='edit'||editing||!sel||sel.multiple?.length>1||e.target.isContentEditable||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||document.querySelector('dialog[open]'))return false;
+  e.preventDefault();e.stopPropagation();if(e.repeat||panelTasks||undoBusy||sourceRequests)return true;
+  const direction=e.key==='Enter'?(e.shiftKey?'parent':'child'):(e.shiftKey?'previous':'next');void layers.navigate(direction).catch(error=>toast(error.message,'err'));return true;
 }
 function sourceHistoryShortcut(e,canvas=false){
   if(e.defaultPrevented||e.isComposing||e.altKey||!(e.metaKey||e.ctrlKey)||canvas&&mode!=='edit'||e.target.isContentEditable||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||document.querySelector('dialog[open]'))return false;
