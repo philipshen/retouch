@@ -10119,3 +10119,9 @@ Validation: Chromium (`/private/tmp/retouch-intersection-browser-chromium.log`) 
 Contract combination now coalesces structurally identical declarations across inheritance diamonds and intersections. Source locations, comments and literal spelling metadata do not make otherwise identical declarations conflict. Optional/readonly/type differences remain unresolved; repeated identical inherited index signatures are emitted once.
 
 Validation: all 811 unit tests passed (`/private/tmp/retouch-identical-contracts-units.log`). The strict compiler suite passed 24 extraction scenarios and three guarded refusals (`/private/tmp/retouch-identical-contracts-compiler.log`), including diamond fields, identical intersection fields and a diamond readonly index signature. No browser run in this planner expansion. Full Figma parity remains incomplete; native launches remain paused.
+
+### 2026-09-10 — Accurate component-property guidance
+
+Visual inspection of the live editor showed an instruction to edit properties above even when the component exposed no property controls. Property guidance now lives in the loaded component section: editable properties explain their scope, read-only properties are identified, and the empty state points to definition editing. Removed the unconditional instruction beneath the section.
+
+Validation: Chromium and WebKit creation flows passed with an explicit assertion for the empty state (`/private/tmp/retouch-component-empty-state-chromium-final.log`, `/private/tmp/retouch-component-empty-state-webkit.log`, both exit 0). Inspected the final Chromium screenshot at `/private/tmp/retouch-component-empty-state-final.png`; the empty-state guidance sits below the component actions without the old misleading instruction. The final runs supersede an initial successful run before wording refinement. No unit rerun for this presentation change. Full Figma parity remains incomplete; native launches remain paused.

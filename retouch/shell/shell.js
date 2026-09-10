@@ -1005,7 +1005,6 @@ function renderPanelContents() {
   const componentId = sel.instanceId || componentTarget?.getAttribute('data-rt-i');
   if (componentId && !info.textLeaf) panelBody.appendChild(componentSection(componentId));
   if (info.kind === 'instance' && !info.canSetSrc) {
-    RetouchInspector.note(panelBody, 'Edit literal instance props above. Changes apply to this source usage at every screen size. Edit the definition for shared styles.');
     return;
   }
 
@@ -1244,7 +1243,10 @@ function componentSection(id) {
     const groups=RetouchComponentInstances.group(matchingInDocument(doc(),id,component),component.rootGroups),count=groups.length,unit=groups.every(group=>group.complete)?'instance':groups.every(group=>!group.complete)?'rendered layer':'selection target';
     RetouchInspector.note(sec, `${count} ${unit}${count === 1 ? '' : 's'} at this usage. ${component.detached ? 'This module is independent of the original component.' : 'Definition edits are shared.'}`);
     if(!component.canDetach&&!component.detached&&component.reason)RetouchInspector.note(sec,component.reason);
-    if (component.props.length) sec.append(propTable(component.props,id,component.usageHash));
+    if (component.props.length) {
+      sec.append(propTable(component.props,id,component.usageHash));
+      RetouchInspector.note(sec,component.props.some(prop=>prop.editor?.editable)?'Property changes apply to this source usage at every screen size. Edit the definition for shared styles.':'These properties are read-only here. Edit the definition for shared styles.');
+    } else RetouchInspector.note(sec,'No instance properties to edit here. Edit the definition for shared styles and content.');
   });
   return sec;
 }
