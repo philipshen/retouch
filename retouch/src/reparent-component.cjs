@@ -4,15 +4,19 @@ const refuse=reason=>({ok:false,refused:true,reason});
 function context(resolved){
  if(resolved.element.kind!=='instance')throw Error('Select a component usage to move.');
  const {ast}=collectElements(resolved.source,resolved.relPath),paths=new Map();traverse(ast,{JSXElement(p){paths.set(p.node.start,p);}});
- const source=paths.get(resolved.element.node.start),owner=source?.getFunctionParent();if(!source||!owner)throw Error('Move components within their render function.');
- const references=[];let typed=false;source.traverse({TSType(){typed=true;},ReferencedIdentifier(p){const binding=p.scope.getBinding(p.node.name);if(binding&&binding.path.node.start>=source.node.start&&binding.path.node.end<=source.node.end)return;references.push({name:p.node.name,binding});}});
+ const source=paths.get(resolved.element.node.start),owner=source?.getFunctionParent();if(!source||!owner)throw Error('Select a component usage inside a render function.');
+ const references=[];let typed=false,contextual=false;source.traverse({TSType(){typed=true;},ThisExpression(){contextual=true;},Super(){contextual=true;},MetaProperty(){contextual=true;},AwaitExpression(){contextual=true;},YieldExpression(){contextual=true;},PrivateName(){contextual=true;},ReferencedIdentifier(p){if(['arguments','eval'].includes(p.node.name))contextual=true;const binding=p.scope.getBinding(p.node.name);if(binding&&binding.path.node.start>=source.node.start&&binding.path.node.end<=source.node.end)return;references.push({name:p.node.name,binding});}});
  function destination(element){
   const target=paths.get(element?.node?.start);if(!target||!require('./insert-component.cjs').canContain({...resolved,element}))throw Error('Choose a container that accepts child layers.');
   if(target.node.openingElement.attributes.some(attr=>attr.type==='JSXSpreadAttribute'))throw Error('This container spreads properties that may supply children.');
   if(target.node.start>=source.node.start&&target.node.end<=source.node.end)throw Error('A component cannot contain itself.');
-  if(target.getFunctionParent()!==owner)throw Error('Move components within their render function so their data stays in scope.');
+  const targetOwner=target.getFunctionParent();if(!targetOwner)throw Error('Choose a container inside a render function.');
+  if(contextual&&targetOwner!==owner)throw Error('This component uses execution context that must stay in its render function.');
+  // A locally defined component cannot be moved into its own implementation.
+  let name=source.node.openingElement.name;while(name.type==='JSXMemberExpression')name=name.object;
+  const componentBinding=source.scope.getBinding(name.name);if(componentBinding&&target.node.start>=componentBinding.path.node.start&&target.node.end<=componentBinding.path.node.end)throw Error('A component cannot be moved into its own definition.');
   if(typed&&target.scope!==source.scope)throw Error('Typed expressions must stay in the same lexical scope.');
-  for(const {name,binding}of references){if(target.scope.getBinding(name)!==binding)throw Error('Moving here would change what "'+name+'" refers to.');if(binding&&binding.scope.getFunctionParent()?.path===owner&&!['module','hoisted','param','local'].includes(binding.kind)&&binding.path.node.end>target.node.start)throw Error('The value "'+name+'" is not available when this container is created.');}
+  for(const {name,binding}of references){if(target.scope.getBinding(name)!==binding)throw Error('Moving here would change what "'+name+'" refers to.');if(binding&&binding.scope.getFunctionParent()&&!['module','hoisted','param','local'].includes(binding.kind)&&binding.path.node.end>target.node.start)throw Error('The value "'+name+'" is not available when this container is created.');}
   return target;
  }
  return {source,destination};

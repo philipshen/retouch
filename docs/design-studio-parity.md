@@ -9463,3 +9463,33 @@ independent per-render structure remain unfinished. Runtime component state and
 appearance preservation across new parent layouts are not established. Full Figma
 Design parity and arbitrary-site authoring remain incomplete. Native launches
 remain paused and trusted brew installation remains unverified.
+
+### Move component usages across compatible render functions (2026-09-10)
+
+Component destination discovery and movement now accept other functions in the
+same source file when all referenced bindings remain accessible and unchanged.
+This includes moving into and out of callback-rendered containers with shared
+outer props, and between independent functions using imported components and
+literal props. The existing source identity map, layer locks, drag/drop, Move
+into dialog and transaction history apply to these destinations.
+
+Lost loop parameters, shadowed imports/values, potentially early local reads,
+local self-recursion, changed type scopes and cross-function execution-context
+expressions (this, super, arguments, new.target, await/yield, private names and
+eval) remain refused. Context detection is conservative, including nested
+expressions. This is lexical compatibility, not a guarantee that changing a
+render function preserves execution frequency, lifecycle, layout or application
+semantics. Cross-file moves, automatic captured-data relocation, indirect
+component-cycle analysis and complete type resolution remain unfinished.
+
+Validation: all 755 unit tests passed. Chromium and WebKit both passed the full
+framed component editing suite with the destination rendered inside a map
+callback, including drag, dialog movement back out, preserved destination-child
+locks, exact source Undo/Redo, duplication, deletion and property editing. Both
+processes exited zero with no page errors. Evidence:
+/private/tmp/retouch-cross-function-units.log,
+/private/tmp/retouch-cross-function-chromium.log,
+/private/tmp/retouch-cross-function-webkit.log. git diff --check passed.
+
+Full Figma Design parity and arbitrary-site authoring remain incomplete. Native
+Retouch launches remain paused; trusted brew installation remains unverified.
