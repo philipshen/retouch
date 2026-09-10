@@ -6004,3 +6004,26 @@ partial saved styles passed in Chromium and WebKit, exit 0:
 /private/tmp/retouch-coupled-style-render-webkit.log. These assert the unchanged
 computed counterpart property. Native launches remain paused; full design parity
 and verified desktop distribution remain incomplete.
+
+### Single-layer combined typography parity (2026-09-09)
+
+Moved size/leading decomposition into the common inspector typography helpers.
+React and Liquid single-layer numeric size/leading controls, size presets and
+line-height reset now preserve the independently authored counterpart from a
+combined utility. Shared selection edits and saved-style composition reuse the
+same helper. Reset availability recognizes leading embedded in a combined token.
+Other breakpoint/state variants and important markers remain intact.
+
+All 451 unit tests passed, exit 0:
+/private/tmp/retouch-single-coupled-units.log. Focused tests verify shared and
+single-layer numeric, preset and reset paths. Final browser processes exited 0:
+/private/tmp/retouch-single-coupled-react-final.log (React Chromium) and
+/private/tmp/retouch-single-coupled-liquid-final.log (local Liquid WebKit).
+They begin with text-lg/9 (36px leading), verify that changing size to 40px and
+then selecting a 36px preset preserves 36px leading, verify that a 50px leading
+edit preserves font size, and reset leading to the size utility's 28px default
+without changing size. Each operation undoes to exact source and computed values.
+Initial runs also passed, but the final fixture strengthens reset verification by
+starting from a non-default leading. General font shorthands and unsupported
+arbitrary-size expressions remain unfinished. Native launches stay paused;
+full Figma parity and verified desktop distribution remain incomplete.

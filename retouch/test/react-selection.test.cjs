@@ -47,3 +47,10 @@ test('shared edits split combined size and leading while retaining scope and imp
  assert.equal(change('text-lg/7','','font-size',null),'leading-7');
  assert.throws(()=>change('text-lg/','','font-size',24),/incomplete/);
 });
+
+test('single-layer typography replacement matches shared decomposition for numeric, preset and reset paths',()=>{
+ const I=require('../shell/inspector.js'),original='p-4 !text-lg/7 md:text-xl/9';
+ assert.equal(I.replaceTypography(original,I.fontSizeToken,'text-[40px]'),'p-4 !leading-7 md:text-xl/9 !text-[40px]');
+ assert.equal(I.replaceTypography(original,I.fontSizeToken,'text-4xl'),'p-4 !leading-7 md:text-xl/9 !text-4xl');
+ assert.equal(I.replaceTypography(original,I.lineHeightToken,''),'p-4 !text-lg md:text-xl/9');
+});

@@ -12,15 +12,6 @@
   'font-style':{label:'Font slant',matches:t=>inspector().fontStyleToken(t),options:['normal','italic','oblique'],token:v=>'[font-style:'+v+']'},
   'text-transform':{label:'Text case',matches:t=>inspector().caseToken(t),options:['none','uppercase','lowercase','capitalize'],token:v=>'[text-transform:'+v+']'}
  });
- function expandSizeLeading(projected){
-  const I=inspector();return projected.split(/\s+/).filter(Boolean).flatMap(token=>{
-   const base=I.base(token);if(!base||!I.fontSizeToken(base))return [token];
-   let depth=0,slash=-1;for(let i=0;i<base.length;i++){const c=base[i];if(c==='['||c==='(')depth++;else if(c===']'||c===')')depth--;else if(c==='/'&&!depth){slash=i;break;}}
-   if(slash<0)return [token];const size=base.slice(0,slash),leading=base.slice(slash+1),important=/^!|!$/.test(token)?'!':'';
-   if(!leading)throw Error('A selected layer has an incomplete line-height utility.');
-   return [important+size,important+'leading-'+leading];
-  }).join(' ');
- }
  function change(classes,scope,property,value,document=null){
   const field=fields[property];if(!field||value!==null&&(field.valid?!field.valid(value):field.options?!field.options.includes(value):!Number.isFinite(value)||value<(field.min??0)||value>(field.max??100)||field.step===1&&!Number.isInteger(value)))throw Error('Choose a supported shared style value.');
   const I=root.RetouchInspector||require('./inspector.js'),R=root.RetouchResponsive||require('./responsive.js');
@@ -28,7 +19,7 @@
   if(['font-family','font-size','font-weight','line-height','font-style'].includes(property)&&active.some(token=>/^\[font:/.test(token)))throw Error('A selected layer uses a font shorthand. Edit that shorthand before changing its typography.');
   let addition=value===null?'':field.token(value);if(scope&&value!==null&&R.inherited(classes,scope,document).split(/\s+/).some(token=>I.base(token)!==null&&field.matches(I.base(token))&&/^!|!$/.test(token)))addition='!'+addition;
   if(addition&&document&&!['opacity','visibility','mix-blend-mode','isolation'].includes(property)&&I.catalog(document).some(name=>(classes||'').split(/\s+/).includes(name))&&!addition.startsWith('!'))addition='!'+addition;
-  const projected=R.project(classes,scope),expanded=['font-size','line-height'].includes(property)?expandSizeLeading(projected):projected,next=I.replace(expanded,field.matches,addition);return next===projected?(classes||''):R.replaceScope(classes,next,scope);
+  const projected=R.project(classes,scope),expanded=['font-size','line-height'].includes(property)?I.expandSizeLeading(projected):projected,next=I.replace(expanded,field.matches,addition);return next===projected?(classes||''):R.replaceScope(classes,next,scope);
  }
  function mount(infos,elements,scope,save){
   const I=root.RetouchInspector,sec=I.section('Shared styles');
@@ -54,5 +45,5 @@
   }
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={change,mount,expandSizeLeading};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={change,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);
