@@ -245,3 +245,10 @@ test('React text style API applies a scoped link and restores exact source throu
  const response=await req(port,'POST','/rt/__api/op',{headers:AUTH(),body:JSON.stringify({type:'applyTextStyle',id,fileHash:resolved.hash,scope:'md:',styleId:created.id,libraryRevision:created.revision})});assert.strictEqual(response.status,200);const applied=JSON.parse(response.body);assert.ok(applied.undoId);assert.strictEqual(applied.element.textStyleLinks['md:'].id,created.id);assert.ok(applied.element.className.includes('md:![font-size:36px]'));
  const undone=await req(port,'POST','/rt/__api/op',{headers:AUTH(),body:JSON.stringify({type:'undo',undoId:applied.undoId})});assert.strictEqual(undone.status,200);assert.strictEqual(fs.readFileSync(file,'utf8'),before);
 });
+test('project component library requires a token and refreshes source-index discoveries',async()=>{
+ const denied=await req(port,'GET','/rt/__api/components');assert.notEqual(denied.status,200);
+ const file=path.join(root,'LibraryExample.tsx'),source='/** @retouch-component */\nfunction LibraryBadge(){return <aside/>} export default function Example(){return <LibraryBadge/>}';fs.writeFileSync(file,source);
+ try{const response=await req(port,'GET','/rt/__api/components',{headers:{'X-Retouch-Token':token}});assert.equal(response.status,200,response.body);const data=JSON.parse(response.body),component=data.components.find(item=>item.name==='LibraryBadge');assert.ok(component);assert.equal(component.usageCount,1);assert.equal(component.file,'LibraryExample.tsx');assert.equal(fs.readFileSync(file,'utf8'),source);
+  fs.unlinkSync(file);const refresh=await req(port,'GET','/rt/__api/components',{headers:{'X-Retouch-Token':token}});assert.equal(JSON.parse(refresh.body).components.some(item=>item.name==='LibraryBadge'),false);
+ }finally{if(fs.existsSync(file))fs.unlinkSync(file);}
+});

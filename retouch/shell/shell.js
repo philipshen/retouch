@@ -1348,22 +1348,38 @@ async function detachInstance(id, component, button, context=sel?.info?.context)
     toast('Detached to ' + result.detachedFile, 'ok');
   } finally { button.disabled = false; }
 }
-function openComponent(id, component) {
-  const modal = document.createElement('dialog');modal.className = 'component-modal';
+const componentLibraryButton=document.getElementById('componentLibrary');
+componentLibraryButton.hidden=!window.__RT_RENDERING?.componentLibrary;
+componentLibraryButton.addEventListener('click',()=>RetouchComponentLibrary.open({
+ read:()=>api('GET','/rt/__api/components'),
+ instances:item=>item.usages.flatMap(usage=>matchingInDocument(doc(),usage.id).map(element=>({id:usage.id,element,label:usage.file+(usage.line?':'+usage.line:'')}))),
+ select:async(instance,isActive)=>{
+  if(!instance?.element?.isConnected)throw Error('This instance is no longer on the page. Refresh the component list.');
+  if(panelTasks||sourceRequests||undoBusy)throw Error('Wait for the current edit to finish.');
+  const serial=classificationSerial,context=renderContext(instance.element),usage=await api('GET',resolveUrl(instance.id,context)),component=await api('GET',componentUrl(instance.id,context));
+  if(!isActive()||serial!==classificationSerial)return;
+  if(!instance.element.isConnected)throw Error('This instance is no longer on the page. Refresh the list.');
+  if(!usage?.ok||!component?.ok)throw Error('This component no longer resolves. Refresh the list.');
+  stopDrawing?.();classificationSerial++;sel={hostId:component.definitionId,instanceId:instance.id,scope:'instance',info:usage.element};renderPanel();instance.element.scrollIntoView({block:'nearest',inline:'nearest'});
+ },
+ view:async(id,onPage,isActive)=>{const component=await api('GET',componentUrl(id));if(!isActive())return;if(!component?.ok)throw Error(component?.reason||'This component no longer resolves.');openComponent(id,component,{preview:onPage});}
+}));
+function openComponent(id, component,options={}) {
+  const modal = document.createElement('dialog');modal.className = 'component-modal';modal.setAttribute('aria-label',component.name+' component');
   const header = document.createElement('header');
   const title = document.createElement('h2');title.textContent = component.name;
   const close = RetouchInspector.button('Close',()=>modal.close());header.append(title,close);modal.append(header);
   RetouchInspector.note(modal, component.file, 'filepath');
-  const content=document.createElement('div');content.className='component-workspace';
+  const content=document.createElement('div');content.className='component-workspace';if(options.preview===false)content.classList.add('component-source-only');
   const canvas=document.createElement('div');canvas.className='component-canvas';
-  RetouchInspector.note(canvas,'Live preview · current instance props');
+  RetouchInspector.note(canvas,options.preview===false?'This component is not mounted on the current page. Its source and property definitions are shown here.':'Live preview · current instance props');
   const preview=document.createElement('iframe');preview.title='Component preview';canvas.append(preview);
   const sidebar=document.createElement('div');sidebar.className='component-details';
   const h=document.createElement('h3');h.textContent='Props';sidebar.append(h,propTable(component.props));
   RetouchInspector.note(sidebar,'Values show the usage source. Expressions keep their application context.');
-  const details=document.createElement('details');const summary=document.createElement('summary');summary.textContent='Component definition';
+  const details=document.createElement('details');details.open=options.preview===false;const summary=document.createElement('summary');summary.textContent='Component definition';
   const code=document.createElement('pre');code.textContent=component.source;details.append(summary,code);sidebar.append(details);
-  const edit=RetouchInspector.button('Edit definition',()=>{modal.close();editDefinition(id,component);});edit.disabled=!component.definitionId;sidebar.append(edit);
+  const edit=RetouchInspector.button('Edit definition',()=>{modal.close();editDefinition(id,component);});edit.disabled=!component.definitionId||options.preview===false;sidebar.append(edit);
   content.append(canvas,sidebar);modal.append(content);document.body.append(modal);
   let stop;
   preview.onload=()=>{
@@ -1395,7 +1411,7 @@ function openComponent(id, component) {
       d.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();},true);
     }catch{RetouchInspector.note(canvas,'Preview could not attach to this page.');}
   };
-  preview.src=iframe.contentWindow.location.href;
+  if(options.preview===false)preview.remove();else preview.src=iframe.contentWindow.location.href;
   modal.addEventListener('close',()=>{stop?.();modal.remove();});
   modal.showModal();close.focus();
 }

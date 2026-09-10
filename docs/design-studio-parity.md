@@ -19,7 +19,7 @@ changing those files. The original checkout may continue to evolve independently
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. HTML absolute placement now supports edge, center, stretch and proportional anchors with screen-scoped writes. Transformed constraints, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML, React and local Liquid support linear/radial/angular gradient stacks, repetition, color interpolation, explicit radial sizing, draggable stops/centers/rotation, keyboard editing and exact undo. HTML also supports shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A searchable page-font picker now discovers declared and used families, with React/HTML and local Liquid browser coverage. Explicit variable-axis editing, declared-file range/default inspection and bounded axis sliders have HTML/React/local Liquid browser coverage. Full font browsing, actual glyph-font resolution, live Shopify font verification, full rich-text/paragraph/list controls and complete typography parity remain. |
-| Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | React can extract a source subtree into an explicitly reusable same-file component, preserve call-site keys/module references, select and duplicate linked instances, and Undo/Redo through the UI. Chromium/WebKit checks verify unchanged rendering and exact source restoration. Stable JavaScript parent-local values become explicit props, with browser-verified callback/state behavior. Typed captures, scoped JSX styles and other context-dependent expressions still need extraction support. React instance text/number/boolean props have source-backed controls and Undo/Redo, including omitted values, literal defaults, finite typed choices and searchable property lists. Local imported TypeScript contracts resolve through aliases, wildcard barrels, nested namespace re-exports and project path mappings with dependency revision guards. Existing React/Liquid inspection and detach remain; cross-file creation, variants, computed-default/expression/enum prop authoring, libraries and live Shopify proof remain incomplete. |
+| Components | Create/reuse, variants, exposed properties, overrides, nested instances, swap/reset/detach, shared libraries | React can extract a source subtree into an explicitly reusable same-file component, preserve call-site keys/module references, select and duplicate linked instances, and Undo/Redo through the UI. Chromium/WebKit checks verify unchanged rendering and exact source restoration. Stable JavaScript parent-local values become explicit props, with browser-verified callback/state behavior. Typed captures, scoped JSX styles and other context-dependent expressions still need extraction support. React instance text/number/boolean props have source-backed controls and Undo/Redo, including omitted values, literal defaults, finite typed choices and searchable property lists. Local imported TypeScript contracts resolve through aliases, wildcard barrels, nested namespace re-exports and project path mappings with dependency revision guards. A searchable project component browser groups source aliases, shows authored/on-page counts, selects mounted instances and views off-page definitions. Existing React/Liquid inspection and detach remain; unused-export discovery, insertion, cross-file creation, variants, computed-default/expression/enum prop authoring, shared libraries and live Shopify proof remain incomplete. |
 | Design systems | Reusable styles, tokens/variables, aliases, collections/modes, import/export and updates | Reusable text styles support responsive links, inherited-scope display, local override/reset, project-wide updates and shared undo in HTML, React and local Liquid. Validated JSON library import/export preserves style identity. HTML, React and local Liquid color styles link text/background/border/SVG paint with scoped overrides and project updates; palettes support sRGB and Display P3. HTML effect styles link shadows and layer/backdrop filters with project updates, overrides and undo. React/Liquid effect links, variables, aliases, collections/modes and shared remote library workflows remain. |
 | Prototypes | Connections, interactions, states, transitions/animation, overlays, scrolling, variables/conditions, presentation | App interact mode exists; design authoring workflow remains. |
 | Assets/export | SVG/raster/PDF export, scales, selections/frames, asset libraries/import | Image upload and SVG-canvas SVG/PNG/JPEG downloads exist, including shared local definitions and bitmap embedding. Arbitrary-layer export, fonts, symbols and the full export/import pipeline remain. |
@@ -8380,3 +8380,35 @@ The preconditions cover the supported component type resolver, not every source
 resolver or framework. They are checked before writes; cross-process locking and
 power-loss atomicity remain incomplete. Full Figma/any-site parity and trusted brew
 distribution remain unproven. Native launches stay paused.
+
+## Project component browser (2026-09-10)
+
+The Components toolbar action opens a searchable source-index catalogue of explicitly
+created Retouch components and definitions reused at multiple authored call sites.
+Aliases share a definition group; name/file filtering, no-match feedback, refresh,
+source usage counts and mounted-instance counts help locate the desired component.
+Multiple mounted instances have a picker before Select on canvas. Selection opens
+the instance inspector without writing source. The authenticated endpoint rescans
+project files on refresh and reports source parse errors and catalogue truncation.
+
+View component reuses the live instance preview when mounted. Off-page definitions
+instead show expanded source and props without mounting the unrelated current page
+or offering an unavailable canvas definition edit. Dialogs have accessible names;
+closed library actions do not later open a view or override a newer selection.
+
+Validation: 662 unit tests passed. Catalogue/API checks cover alias grouping,
+explicit single usages, ordinary wrapper exclusion, token protection and file
+addition/removal refresh. Chromium and WebKit pass library search/empty results,
+refresh, off-page source viewing, single/multiple mounted selection, exact page
+source preservation, and the subsequent property/default/unset/Undo/Redo workflow.
+Both verify the library fits a 720-pixel workspace without horizontal overflow.
+Screenshot review caught default browser buttons; the final styled screenshot was
+reviewed at /private/tmp/retouch-component-library-final.png.
+Logs: /private/tmp/retouch-component-library-units.log and
+/private/tmp/retouch-component-library-{chromium,webkit}-final.log.
+
+This catalogue uses existing authored usages and the established reusable-component
+classification. It does not yet discover unused exports, insert new instances,
+manage shared external libraries or supply generic isolated previews. React browser
+coverage does not establish Liquid/live Shopify library parity. Full Figma/any-site
+parity and trusted brew distribution remain incomplete. Native launches stay paused.

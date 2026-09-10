@@ -35,3 +35,13 @@ test('React counts definitions separately within one module and follows re-expor
   assert.deepEqual(ids.map(id=>usage(i,id).usageCount),[2,1]);
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
+test('component library groups aliases, keeps explicit single usages and excludes ordinary single-use wrappers',()=>{
+ const {makeApp,cleanup}=require('./helpers.cjs'),root=fs.realpathSync(makeApp({
+  'Cards.tsx':'export function Card(){return <div/>} export function Wrapper(){return <main/>}',
+  'App.tsx':'import {Card,Wrapper} from "./Cards";function App(){return <><Card/><Wrapper/><Badge/></>} /** @retouch-component */\nfunction Badge(){return <aside/>}',
+  'Other.tsx':'import {Card as Renamed} from "./Cards";function Other(){return <Renamed/>}'
+ })),index=new Index(root);try{
+  index.scanAll();const result=require('../src/component-usage.cjs').library(index);assert.equal(result.total,2);const shared=result.components.find(item=>item.file==='Cards.tsx');assert.deepEqual(shared.names,['Card','Renamed']);assert.equal(shared.usageCount,2);assert.deepEqual(shared.usages.map(usage=>usage.file),['App.tsx','Other.tsx']);assert.ok(shared.usages.every(usage=>usage.line===1));assert.equal(result.components.find(item=>item.name==='Badge').usageCount,1);
+  fs.unlinkSync(path.join(root,'Other.tsx'));index.indexFile(path.join(root,'Other.tsx'));assert.deepEqual(require('../src/component-usage.cjs').library(index).components.map(item=>item.name),['Badge']);
+ }finally{index.close();cleanup(root);}
+});

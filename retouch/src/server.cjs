@@ -195,6 +195,13 @@ function handle(req, res, ctx) {
     return json(res, 200, { ok: true, element: require('./component-usage.cjs').describe(ctx.index,resolved) });
   }
 
+  if(p==='/rt/__api/components'&&req.method==='GET'){
+    requireToken(req,ctx.token);
+    if(!ctx.adapter.describeComponent)return json(res,409,{ok:false,reason:'Project component discovery is unavailable for this renderer.'});
+    ctx.index.scanAll();ctx.index.componentUsage=null;
+    return json(res,200,{ok:true,...require('./component-usage.cjs').library(ctx.index)});
+  }
+
   if (p === '/rt/__api/component' && req.method === 'GET') {
     requireToken(req, ctx.token);
     const id = url.searchParams.get('id') || '';
@@ -342,7 +349,7 @@ function handle(req, res, ctx) {
     const html = fs
       .readFileSync(path.join(SHELL_DIR, 'index.html'), 'utf8')
       .replace('__RETOUCH_TOKEN__', ctx.token)
-      .replace('__RETOUCH_RENDERING__', JSON.stringify({history:ctx.history.snapshot(),historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired,stateScope:ctx.stateScope,selectionStyling:ctx.adapter.capabilities?.collectionSelection===true||ctx.adapter.capabilities?.ops?.some(op=>['setClassesSelection','setCSSSelection'].includes(op))===true,layerReparenting:ctx.adapter.capabilities?.ops?.includes('reparentElement')===true,reloadAfterWrite:ctx.rendering.reloadAfterWrite===true,revalidateStyles:ctx.rendering.revalidateStyles===true}).replace(/</g,'\\u003c'));
+      .replace('__RETOUCH_RENDERING__', JSON.stringify({componentLibrary:!!ctx.adapter.describeComponent,history:ctx.history.snapshot(),historyPersistenceError:ctx.history.persistenceError,historyRecoveryRequired:ctx.history.recoveryRequired,stateScope:ctx.stateScope,selectionStyling:ctx.adapter.capabilities?.collectionSelection===true||ctx.adapter.capabilities?.ops?.some(op=>['setClassesSelection','setCSSSelection'].includes(op))===true,layerReparenting:ctx.adapter.capabilities?.ops?.includes('reparentElement')===true,reloadAfterWrite:ctx.rendering.reloadAfterWrite===true,revalidateStyles:ctx.rendering.revalidateStyles===true}).replace(/</g,'\\u003c'));
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
     return res.end(html);
   }
