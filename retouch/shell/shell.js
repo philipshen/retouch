@@ -1670,9 +1670,10 @@ componentLibraryButton.addEventListener('click',()=>RetouchComponentLibrary.open
   if(!instance.definition){componentLibrarySelections.add(instance.id);if(componentLibrarySelections.size>1000)componentLibrarySelections.delete(componentLibrarySelections.values().next().value);}
   stopDrawing?.();classificationSerial++;renderedSelection={id:instance.id,element:instance.element};sel={hostId:mountedComponentHost(instance.id,component,context)?.getAttribute('data-rt')||component.definitionId,instanceId:instance.definition?null:instance.id,scope:instance.definition?'host':'instance',info:usage.element};renderPanel();instance.element.scrollIntoView({block:'nearest',inline:'nearest'});
  },
- view:async(id,onPage,isActive,definitionOnly)=>{const component=await api('GET',definitionOnly?'/rt/__api/component-definition?id='+id:componentUrl(id));if(!isActive())return;if(!component?.ok)throw Error(component?.reason||'This component no longer resolves.');openComponent(id,component,{preview:onPage});}
+ view:async(id,onPage,isActive,definitionOnly,element)=>{const component=await api('GET',definitionOnly?'/rt/__api/component-definition?id='+id:componentUrl(id));if(!isActive())return;if(!component?.ok)throw Error(component?.reason||'This component no longer resolves.');openComponent(id,component,{preview:onPage,element});}
 }));
 function openComponent(id, component,options={}) {
+  const selectedElement=options.element||(renderedSelection?.id===id?renderedSelection.element:null),sourceGroups=RetouchComponentInstances.group(matchingInDocument(doc(),id,component),component.rootGroups),previewOccurrence=Math.max(0,sourceGroups.findIndex(group=>group.elements.includes(selectedElement)));
   const modal = document.createElement('dialog');modal.className = 'component-modal';modal.setAttribute('aria-label',component.name+' component');
   const header = document.createElement('header');
   const title = document.createElement('h2');title.textContent = component.name;
@@ -1705,7 +1706,7 @@ function openComponent(id, component,options={}) {
         return 'html'+(parts.length?' > '+parts.join(' > '):'');
       };
       const isolate=()=>{
-        const group=RetouchComponentInstances.group(matchingInDocument(d,id,component),component.rootGroups)[0];if(!group)return;
+        const group=RetouchComponentInstances.group(matchingInDocument(d,id,component),component.rootGroups)[previewOccurrence];if(!group)return;
         const roots=group.elements,retained=new Set(roots),ancestors=new Set(),rules=[];
         for(const el of roots)for(let parent=el.parentElement;parent;parent=parent.parentElement){retained.add(parent);ancestors.add(parent);}
         for(const parent of ancestors){
