@@ -8,8 +8,11 @@ const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const zlib = require('node:zlib');
 const { Index } = require('./indexer.cjs');
-const components = require('./components.cjs');
+const { applyPlan } = require('./transactions.cjs');
+const { SourceHistory } = require('./history.cjs');
+const { MARKER, isMirrorRequest, stripReloadClient, watchSource } = require('./mirror-sync.cjs');
 
 // Hop-by-hop headers must not be forwarded when proxying.
 const HOP = new Set(['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
@@ -19,12 +22,13 @@ const SHELL_DIR = path.join(__dirname, '..', 'shell');
 const HOST_RE = /^(localhost|127\.0\.0\.1)(:\d+)?$/;
 const TOKEN_HEADER = 'x-retouch-token';
 
-function startServer({ appRoot, port, adapter, proxyTo, quiet = false }) {
+function startServer({ appRoot, port, adapter, proxyTo, rendering = {}, quiet = false }) {
   adapter = adapter || require('./adapter.cjs').defaultAdapter();
   const token = crypto.randomBytes(16).toString('hex');
   const index = new Index(appRoot, adapter);
   const fileCount = index.scanAll();
-  const undoEntries = new Map();
+  const history = new SourceHistory();
+  const sourceMonitor = proxyTo && rendering.reloadAfterWrite ? watchSource(appRoot) : null;
   index.watch();
   if (!quiet) console.log(
     `[retouch] adapter=${adapter.name}; indexed ${fileCount} files under ${appRoot} (${index.idToFile.size} elements)`
@@ -32,15 +36,17 @@ function startServer({ appRoot, port, adapter, proxyTo, quiet = false }) {
 
   const server = http.createServer((req, res) => {
     try {
-      handle(req, res, { index, token, appRoot, adapter, proxyTo, undoEntries });
+      handle(req, res, { index, token, appRoot, adapter, proxyTo, rendering, history, sourceMonitor });
     } catch (err) {
       res.writeHead(err.statusCode || 500, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: false, error: err.message }));
     }
   });
 
+  server.on('close', () => sourceMonitor?.close());
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
+      sourceMonitor?.close();
       // Another process (a config reload, a second worker) already runs the
       // sidecar; that instance serves everything.
       return;
@@ -66,11 +72,16 @@ function handle(req, res, ctx) {
   const p = url.pathname;
 
   if (p.startsWith('/rt/__assets/')) return serveAsset(p.slice('/rt/__assets/'.length), res);
+  if (p === '/rt/__api/source-revision' && req.method === 'GET') {
+    requireToken(req, ctx.token);
+    return json(res, 200, { ok: true, ...(ctx.sourceMonitor?.state() || { revision: 0, styleRevision: 0, available: false }) });
+  }
   if (p === '/rt/__api/health') return json(res, 200, { ok: true });
   if (p === '/rt/__api/images' && req.method === 'GET') {
     requireToken(req, ctx.token);
-    const liquid = ctx.adapter.name === 'liquid';
-    const dir = path.join(ctx.appRoot, liquid ? 'assets' : 'public');
+    const assets = ctx.adapter.assets;
+    if (!assets) return json(res, 409, {ok:false,reason:'This adapter has no static asset directory.'});
+    const dir = path.join(ctx.appRoot, assets.directory);
     const images = [];
     function scan(folder, prefix) {
       if (images.length >= 500 || !fs.existsSync(folder)) return;
@@ -82,7 +93,7 @@ function handle(req, res, ctx) {
         if (images.length >= 500) break;
       }
     }
-    if (fs.existsSync(dir) && fs.realpathSync(dir).startsWith(fs.realpathSync(ctx.appRoot) + path.sep)) scan(dir, liquid ? '/assets/' : '/');
+    if (fs.existsSync(dir) && fs.realpathSync(dir).startsWith(fs.realpathSync(ctx.appRoot) + path.sep)) scan(dir, assets.urlPrefix);
     return json(res, 200, { ok: true, images });
   }
 
@@ -93,7 +104,7 @@ function handle(req, res, ctx) {
     const resolved = ctx.index.resolve(id);
     if (!resolved) return json(res, 404, { ok: false, error: 'unknown id' });
     resolved.context = renderContext(url.searchParams.get('context'));
-    return json(res, 200, { ok: true, element: ctx.adapter.describe(resolved) });
+    return json(res, 200, { ok: true, element: require('./component-usage.cjs').describe(ctx.index,resolved) });
   }
 
   if (p === '/rt/__api/component' && req.method === 'GET') {
@@ -101,8 +112,11 @@ function handle(req, res, ctx) {
     const id = url.searchParams.get('id') || '';
     if (!/^[0-9a-f]{10}$/.test(id)) return json(res, 400, { ok: false, error: 'bad id' });
     const resolved = ctx.index.resolve(id);
-    if (!resolved || ctx.adapter.name !== 'react') return json(res, 409, { ok: false, reason: 'Select a local React component instance.' });
-    const result = components.describe(resolved);
+    if (!resolved || !ctx.adapter.describeComponent) return json(res, 409, { ok: false, reason: 'Select a local component instance.' });
+    resolved.context = renderContext(url.searchParams.get('context'));
+    const result = ctx.adapter.describeComponent(resolved);
+    const usage=require('./component-usage.cjs').usage(ctx.index,id);
+    if(result.ok && usage){Object.assign(result,usage);if(usage.inlineComponent)result.canDetach=false;}
     return json(res, result.ok ? 200 : 409, result);
   }
 
@@ -117,27 +131,14 @@ function handle(req, res, ctx) {
         return json(res, 400, { ok: false, error: 'bad json' });
       }
       if (!op || typeof op !== 'object' || Array.isArray(op)) return json(res, 400, { ok: false, error: 'bad op' });
-      if (op.type === 'undo') {
-        const entry = ctx.undoEntries.get(op.undoId);
-        if (!entry) return json(res, 409, { ok: false, reason: 'This undo is no longer available.' });
-        const current = fs.readFileSync(entry.file, 'utf8');
-        if (ctx.adapter.contentHash(current) !== entry.hash) return json(res, 409, { ok: false, reason: 'The file changed after this edit. Undo was not applied.' });
-        if (entry.createdFile) {
-          if (!fs.existsSync(entry.createdFile) || ctx.adapter.contentHash(fs.readFileSync(entry.createdFile, 'utf8')) !== entry.createdHash) return json(res, 409, { ok: false, reason: 'The detached module changed. Undo was not applied.' });
-          if (hasDetachedReference(ctx.appRoot, entry)) return json(res, 409, { ok: false, reason: 'Another file now refers to the detached module. Undo was not applied.' });
-        }
-        const tmp = entry.file + '.retouch-' + crypto.randomBytes(8).toString('hex') + '.tmp';
-        fs.writeFileSync(tmp, entry.source); fs.renameSync(tmp, entry.file);
-        if (entry.createdFile) {
-          try { fs.unlinkSync(entry.createdFile); }
-          catch (err) {
-            fs.writeFileSync(tmp, current); fs.renameSync(tmp, entry.file);
-            return json(res, 409, { ok: false, reason: 'Could not remove the detached module; the usage was restored. ' + err.message });
-          }
-          ctx.index.indexFile(entry.createdFile);
-        }
-        ctx.index.indexFile(entry.file); ctx.undoEntries.delete(op.undoId);
-        return json(res, 200, { ok: true, hash: ctx.adapter.contentHash(entry.source) });
+      if (op.historyGroup !== undefined && (typeof op.historyGroup !== 'string' || op.historyGroup.length > 200)) return json(res, 400, {ok:false,error:'bad history group'});
+      if (op.type === 'undo' || op.type === 'redo') {
+        const result = ctx.history.apply(ctx.appRoot, op.type, op.undoId, ctx.adapter);
+        if (!result.ok) return json(res,409,result);
+        for (const edit of result.edits) if (ctx.adapter.matches(edit.file)) ctx.index.indexFile(edit.file);
+        ctx.sourceMonitor?.acknowledge(result.edits);
+        delete result.edits;
+        return json(res,200,result);
       }
       if (!/^[0-9a-f]{10}$/.test(op.id || '')) return json(res, 400, { ok: false, error: 'bad id' });
       const resolved = ctx.index.resolve(op.id);
@@ -153,23 +154,20 @@ function handle(req, res, ctx) {
       let result;
       try {
         resolved.context = renderContext(op.context);
-        result = op.type === 'detachComponent' && ctx.adapter.name === 'react' ? components.detach(resolved, op) : ctx.adapter.applyOp(resolved, op);
+        result = applyPlan(ctx.appRoot, ctx.adapter.planOp(resolved, op));
       } catch (err) {
         return json(res, err.statusCode || 500, { ok: false, error: err.message });
       }
       // Keep the index fresh immediately (the watcher would also catch it).
       if (result.ok) {
-        ctx.index.indexFile(resolved.file);
-        const updated = fs.readFileSync(resolved.file, 'utf8');
-        if (updated !== resolved.source) {
-          result.undoId = crypto.randomBytes(16).toString('hex');
-          ctx.undoEntries.set(result.undoId, { file: resolved.file, source: resolved.source, hash: ctx.adapter.contentHash(updated), createdFile: result.createdFile, createdHash: result.createdHash });
-          if (ctx.undoEntries.size > 100) ctx.undoEntries.delete(ctx.undoEntries.keys().next().value);
+        for (const edit of result.edits) if (ctx.adapter.matches(edit.file)) ctx.index.indexFile(edit.file);
+        if (result.edits.length) {
+          result.undoId = ctx.history.record(result.edits, op.historyGroup);
         }
-        if (result.createdFile) ctx.index.indexFile(result.createdFile);
-        delete result.createdFile; delete result.createdHash;
+        ctx.sourceMonitor?.acknowledge(result.edits);
+        delete result.edits; delete result.createdFile; delete result.createdHash;
         const fresh = ctx.index.resolve(op.id);
-        if (fresh) result.element = ctx.adapter.describe(fresh);
+        if (fresh) { fresh.context = resolved.context; result.element = ctx.adapter.describe(fresh); }
       }
       return json(res, result.ok ? 200 : 409, result);
       } catch (err) {
@@ -182,32 +180,34 @@ function handle(req, res, ctx) {
     requireToken(req, ctx.token);
     return readBinary(req, 10_000_000, (buf) => {
       if (!buf) return json(res, 413, { ok: false, error: 'file too large (max 10 MB)' });
-      const liquid = ctx.adapter.name === 'liquid';
-      const assetRoot = path.join(ctx.appRoot, liquid ? 'assets' : 'public');
+      const assets = ctx.adapter.assets;
+      if (!assets) return json(res, 409, {ok:false,reason:'This adapter has no static asset directory.'});
+      const assetRoot = path.join(ctx.appRoot, assets.directory);
       if (!fs.existsSync(assetRoot)) {
         return json(res, 409, {
           ok: false,
           refused: true,
-          reason: `This app has no ${liquid ? 'assets' : 'public'}/ directory for static assets.`,
+          reason: `This app has no ${assets.directory}/ directory for static assets.`,
         });
       }
       const rawName = url.searchParams.get('name') || 'image';
       const safe =
         rawName.toLowerCase().replace(/[^a-z0-9._-]/g, '-').replace(/^[.-]+/, '').slice(-80) || 'image';
-      const dir = liquid ? assetRoot : path.join(assetRoot, 'rt-assets');
+      const dir = path.join(assetRoot, assets.uploadDirectory);
       if (!fs.realpathSync(assetRoot).startsWith(fs.realpathSync(ctx.appRoot) + path.sep)) return json(res, 409, { ok: false, reason: 'Asset directory is outside the project.' });
       fs.mkdirSync(dir, { recursive: true });
       if (!fs.realpathSync(dir).startsWith(fs.realpathSync(ctx.appRoot) + path.sep)) return json(res, 409, { ok: false, reason: 'Asset directory is outside the project.' });
       const name = 'rt-' + crypto.randomBytes(6).toString('hex') + '-' + safe;
       fs.writeFileSync(path.join(dir, name), buf);
-      return json(res, 200, { ok: true, src: (liquid ? '/assets/' : '/rt-assets/') + name });
+      return json(res, 200, { ok: true, src: assets.urlPrefix + (assets.uploadDirectory ? assets.uploadDirectory + '/' : '') + name });
     });
   }
 
   if (req.method === 'GET' && (p === '/rt' || p.startsWith('/rt/'))) {
     const html = fs
       .readFileSync(path.join(SHELL_DIR, 'index.html'), 'utf8')
-      .replace('__RETOUCH_TOKEN__', ctx.token);
+      .replace('__RETOUCH_TOKEN__', ctx.token)
+      .replace('__RETOUCH_RENDERING__', JSON.stringify({reloadAfterWrite:ctx.rendering.reloadAfterWrite===true,revalidateStyles:ctx.rendering.revalidateStyles===true}));
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
     return res.end(html);
   }
@@ -215,38 +215,27 @@ function handle(req, res, ctx) {
   // Proxy mode (Liquid/Shopify): everything that is not a /rt path is forwarded
   // to the upstream renderer (shopify theme dev), so the mirror and the theme
   // share one origin. The stamped theme already carries data-rt in its render.
-  if (ctx.proxyTo) return proxy(req, res, ctx.proxyTo);
+  if (ctx.proxyTo) return proxy(req, res, ctx.proxyTo, !!ctx.sourceMonitor);
 
   res.writeHead(404);
   res.end('not found');
 }
 
-function hasDetachedReference(root, entry) {
-  const stem = path.basename(entry.createdFile, path.extname(entry.createdFile));
-  const skip = new Set(['node_modules', 'dist', 'build', 'out', 'public', 'coverage']);
-  function scan(dir) {
-    for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (item.name.startsWith('.') || item.isSymbolicLink() || skip.has(item.name)) continue;
-      const file = path.join(dir, item.name);
-      if (item.isDirectory()) { if (scan(file)) return true; }
-      else if (/\.[cm]?[jt]sx?$/.test(item.name) && file !== entry.file && file !== entry.createdFile && fs.readFileSync(file, 'utf8').includes(stem)) return true;
-    }
-    return false;
-  }
-  return scan(root);
-}
 
-function proxy(req, res, upstream) {
+function proxy(req, res, upstream, managedMirror = false) {
+  const mirror = managedMirror && isMirrorRequest(req);
   const target = new URL(upstream);
   // Treat even a //host/path request as a path on the fixed renderer.
   const requested = new URL(req.url, 'http://localhost');
   target.pathname = req.url.startsWith('//') ? req.url.split('?')[0] : requested.pathname;
+  requested.searchParams.delete(MARKER);
   target.search = requested.search;
   const headers = {};
   for (const [k, v] of Object.entries(req.headers)) {
     if (!HOP.has(k.toLowerCase())) headers[k] = v;
   }
   headers.host = target.host;
+  if (mirror) headers['accept-encoding'] = 'identity';
   const up = http.request(
     { hostname: target.hostname, port: target.port || 80, path: target.pathname + target.search, method: req.method, headers },
     (ur) => {
@@ -265,8 +254,29 @@ function proxy(req, res, upstream) {
         const redirect = new URL(out.location, target);
         if (redirect.origin === target.origin) out.location = redirect.pathname + redirect.search + redirect.hash;
       }
-      res.writeHead(ur.statusCode || 502, out);
-      ur.pipe(res);
+      if (mirror && String(out['content-type'] || '').includes('text/html')) {
+        const chunks = [];
+        ur.on('data', chunk => chunks.push(chunk));
+        ur.on('end', () => {
+          let body = Buffer.concat(chunks);
+          try {
+            const encoding = out['content-encoding'];
+            if (encoding === 'gzip') body = zlib.gunzipSync(body);
+            else if (encoding === 'br') body = zlib.brotliDecompressSync(body);
+            else if (encoding === 'deflate') body = zlib.inflateSync(body);
+            else if (encoding && encoding !== 'identity') throw new Error('Unsupported renderer encoding');
+          } catch { res.writeHead(502); res.end('Retouch could not decode the renderer preview safely.'); return; }
+          const html = stripReloadClient(body.toString('utf8'));
+          delete out['content-encoding'];
+          delete out['content-length']; delete out.etag; delete out['last-modified'];
+          out['cache-control'] = 'no-store';
+          res.writeHead(ur.statusCode || 502, out); res.end(html);
+        });
+        ur.on('error', () => res.destroy());
+      } else {
+        res.writeHead(ur.statusCode || 502, out);
+        ur.pipe(res);
+      }
     }
   );
   up.on('error', () => {
@@ -278,16 +288,13 @@ function proxy(req, res, upstream) {
 
 function renderContext(input) {
   if (!input) return null;
-  if (typeof input === 'string') {
-    if (input.length > 4096) throw Object.assign(new Error('Context too large'), { statusCode: 400 });
-    try { input = JSON.parse(input); } catch { throw Object.assign(new Error('Bad context'), { statusCode: 400 }); }
-  }
-  const context = {};
-  for (const key of ['section', 'block', 'template', 'locale', 'origin', 'tag']) {
-    if (typeof input?.[key] === 'string' && input[key].length <= 256) context[key] = input[key];
-  }
-  if (Array.isArray(input?.blocks)) context.blocks = input.blocks.filter(v => typeof v === 'string' && v.length <= 256).slice(0, 30);
-  return context;
+  const serialized = typeof input==='string' ? input : JSON.stringify(input);
+  if (serialized.length>32768) throw Object.assign(new Error('Context too large'),{statusCode:400});
+  try {
+    const value=JSON.parse(serialized);
+    if (!value || typeof value!=='object' || Array.isArray(value)) throw new Error();
+    return value;
+  } catch { throw Object.assign(new Error('Bad context'),{statusCode:400}); }
 }
 
 function requireToken(req, token) {

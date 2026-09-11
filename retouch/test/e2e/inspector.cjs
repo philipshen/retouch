@@ -27,6 +27,12 @@ const read = () => fs.readFileSync(file,'utf8');
  };
  const css=(selector,prop)=>frame.locator(selector).evaluate((el,p)=>getComputedStyle(el)[p],prop);
  const rect=selector=>frame.locator(selector).evaluate(el=>el.getBoundingClientRect().toJSON());
+ // Source writes precede React/Tailwind revalidation. Measure only after the
+ // inspector has completed that synchronization and the frame has laid out.
+ const settled=async()=>{
+   await page.waitForFunction(()=>document.querySelector('#panelBody').getAttribute('aria-busy')==='false' && document.querySelector('#previewStatus').hidden);
+   await frame.locator('body').evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ };
  async function reset() {
    if(read()!==original){fs.writeFileSync(file,original);await sleep(400);}
    await page.goto(url+'/rt');await frame.locator('#anchor-target').waitFor();
@@ -34,7 +40,7 @@ const read = () => fs.readFileSync(file,'utf8');
  try {
    await reset();
    const panel=await page.locator('#panel').boundingBox(), app=await page.locator('#app').boundingBox();
-   assert.ok(panel.x+panel.width<=app.x+1,'inspector is on the left');
+   assert.ok(app.x+app.width<=panel.x+1,'inspector is on the right');
    await select('#anchor-target');
    const before=await rect('#anchor-target');
    await page.getByLabel('Positioning',{exact:true}).selectOption('absolute');
@@ -45,6 +51,8 @@ const read = () => fs.readFileSync(file,'utf8');
    await select('#anchor-target');
    await page.getByLabel('Horizontal anchor',{exact:true}).selectOption('end');
    await until(()=>/right-\[[\d.]+px\]/.test(read()),'right anchor source');
+   const authoredRight=Number(/right-\[([\d.]+)px\]/.exec(read())[1]);
+   await until(async()=>{const c=await rect('#anchor-target'),p=await rect('#anchor-parent');return Math.abs(p.right-c.right-authoredRight)<1;},'right anchor CSS before measuring resize');
    let child=await rect('#anchor-target'), parent=await rect('#anchor-parent');
    const right=parent.right-child.right;
    await page.setViewportSize({width:1520,height:900});
@@ -54,22 +62,25 @@ const read = () => fs.readFileSync(file,'utf8');
    await select('#anchor-target');
    await page.getByLabel('Horizontal anchor',{exact:true}).selectOption('center');
    await until(()=>read().includes('left-[calc(50%'),'center source');
-   await sleep(500);
+   await settled();
+   assert.match(await frame.locator('#anchor-target').getAttribute('class'), /left-\[calc\(50%/);
    child=await rect('#anchor-target');parent=await rect('#anchor-parent');
    const center=child.x+child.width/2-(parent.x+parent.width/2);
    await page.setViewportSize({width:1320,height:900});
    child=await rect('#anchor-target');parent=await rect('#anchor-parent');
-   assert.ok(Math.abs(child.x+child.width/2-(parent.x+parent.width/2)-center)<1,'center anchor follows resize');
+   await until(async()=>{const c=await rect('#anchor-target'),p=await rect('#anchor-parent');return Math.abs(c.x+c.width/2-(p.x+p.width/2)-center)<1;},'center anchor follows resize');
    await select('#anchor-target');
    await page.getByLabel('Horizontal anchor',{exact:true}).selectOption('stretch');
-   await until(()=>read().includes('w-auto'),'stretch source');await sleep(500);
+   await until(()=>read().includes('w-auto'),'stretch source');
+   await settled();
+   assert.match(await frame.locator('#anchor-target').getAttribute('class'), /(?:^| )w-auto(?: |$)/);
    const width=(await rect('#anchor-target')).width;
    await page.setViewportSize({width:1420,height:900});
-   assert.ok(Math.abs((await rect('#anchor-target')).width-width-100)<1,'both edges stretch with parent');
+   await until(async()=>Math.abs((await rect('#anchor-target')).width-width-100)<1,'both edges stretch with parent');
    await page.screenshot({path:'/tmp/retouch-inspector-anchors.png'});
    for(let n=0;n<4;n++) {const prior=read();await page.getByRole('button',{name:'Undo',exact:true}).click();await until(()=>read()!==prior,'undo source');await frame.locator('#anchor-target').waitFor();}
    assert.equal(read(),original,'anchor undo restores exact bytes');
-   console.log('PASS left panel, absolute bounds, right/center/stretch anchors, resize, preserved variants, exact undo');
+   console.log('PASS right panel, absolute bounds, right/center/stretch anchors, resize, preserved variants, exact undo');
 
    await reset();await select('h1');
    await page.getByLabel('Typography class',{exact:true}).selectOption('type-caption');
@@ -121,7 +132,7 @@ const read = () => fs.readFileSync(file,'utf8');
    assert.equal(await frame.locator('#swap-image').evaluate(el=>el.complete&&el.naturalWidth>0),true);
    await page.getByRole('button',{name:'Undo',exact:true}).click();
    await until(()=>read()===original,'image undo');
-   await until(async()=>!await page.getByRole('button',{name:'Undo',exact:true}).isDisabled(),'image undo refreshed');
+   await until(async()=>await page.locator('#panelBody').getAttribute('aria-busy')==='false','image undo refreshed');
    await select('#swap-image');
    await page.locator('#panel input[type="file"]').setInputFiles({name:'upload.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="red"/></svg>')});
    await until(async()=>String(await frame.locator('#swap-image').getAttribute('src')).startsWith('/rt-assets/'),'uploaded image rendered');

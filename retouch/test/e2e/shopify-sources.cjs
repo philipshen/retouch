@@ -53,7 +53,7 @@ async function select(selector, text) {
     await select(account, 'Account');
     assert.ok(evaluate(`document.querySelector('#panelBody').textContent.includes('Shared translation: locales/en.default.json')`));
     browser('fill', '#textEdit', 'Profile');
-    browser('click', '#textApply');
+    browser('press', 'Tab');
     await until(() => value('locales/en.default.json', ['header', 'account']) === 'Profile', 'translation writes to locale file');
     assert.equal(read('locales/en.default.json'), originals.get('locales/en.default.json').replace('"account": "Account"', '"account": "Profile"'));
     await until(() => evaluate(`Array.from(document.querySelector('iframe').contentDocument?.querySelectorAll('span[data-rt-origin]') || []).some(el=>el.textContent.trim()==='Profile')`), 'changed locale value renders in the preview');
@@ -67,7 +67,7 @@ async function select(selector, text) {
     await until(() => evaluate(`!!document.querySelector('#textEdit')?.value.startsWith('<p>')`), 'stored richtext HTML is editable in inspector');
     const originalHTML = evaluate(`document.querySelector('#textEdit').value`);
     browser('fill', '#textEdit', '<p>Retouch richtext check</p>');
-    browser('click', '#textApply');
+    browser('press', 'Tab');
     await until(() => read('templates/index.json').includes('<p>Retouch richtext check</p>'), 'richtext writes to JSON');
     await until(() => evaluate(`document.querySelector('iframe').contentDocument?.body.textContent.includes('Retouch richtext check')`), 'changed richtext renders in the preview');
     browser('click', '#undoBtn');

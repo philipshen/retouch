@@ -110,7 +110,7 @@ source remain read-only. Run the theme's CSS watcher for new Tailwind classes.
 
 ## Design inspector
 
-The left inspector includes explicit positioning and anchors, Alt/Option-hover
+The right inspector includes explicit positioning and anchors, Alt/Option-hover
 padding and spacing measurements, image browsing/uploads, typography classes and
 font previews, fill/text colors, shadows, and opacity. Local React components
 have a live preview and props panel, shared-definition editing, and module

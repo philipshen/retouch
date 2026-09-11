@@ -43,10 +43,10 @@ function expression(expr, file, key, start) {
     origin = { kind: 'setting', scope: 'theme', key: base.slice(9) };
   } else if (value !== null) {
     origin = { kind: 'literal', value, start, end: start + base.length };
-  } else if (IDENT.test(base)) return { alias: base, code: variable(base) };
+  } else if (IDENT.test(base)) return { alias: base, code: variable(base), escaped:filters.includes('escape') };
   else return null;
   const id = marker(file, key);
-  return { ...origin, id, file, code: `'${id}'` };
+  return { ...origin, id, file, code: `'${id}'`, escaped:filters.includes('escape') };
 }
 
 function plan(source, file) {
@@ -239,11 +239,11 @@ function reachable(binding, p, before, all, visited = new Set()) {
   }
   return found;
 }
-function resolve(resolved) {
+function resolve(resolved, bindingOverride) {
   const p = plan(resolved.source, resolved.relPath);
-  const binding = textBinding(resolved.source, resolved.element, p);
+  const binding = bindingOverride || textBinding(resolved.source, resolved.element, p);
   if (!binding) return { reason: 'The text is computed or contains mixed markup, rather than one traceable string.' };
-  const context = resolved.context || {};
+  const context = require('./liquid-context.cjs').context(resolved.context);
   try {
     let origin = binding;
     if (binding.alias) {
@@ -266,12 +266,16 @@ function resolve(resolved) {
     if (origin.kind === 'setting' && /\{[%{]/.test(target.value)) throw new Error('This setting is connected to a Shopify dynamic source, rather than a stored local string.');
     const id = hash(target.rel + '|' + (target.keys ? JSON.stringify(target.keys) : origin.id)).slice(0, 16);
     const format = /<[^>]+>/.test(target.value) ? 'html' : /\{[%{]/.test(target.value) ? 'template' : 'text';
-    return { target, origin, descriptor: { id, file: target.rel, path: target.keys?.join('.') || origin.kind, hash: hash(target.source), kind: origin.kind, scope: origin.scope || 'shared', format } };
+    let richText=null;
+    if(!binding.escaped&&!origin.escaped&&!/\{%/.test(target.value)) {
+      try { richText=require('./rich-text-source.cjs').describe(target.value,id,richOptions(target.value)).descriptor; } catch {}
+    }
+    return { target, origin, richText, descriptor: { id, file: target.rel, path: target.keys?.join('.') || origin.kind, hash: hash(target.source), kind: origin.kind, scope: origin.scope || 'shared', format } };
   } catch (err) { return { reason: err.message }; }
 }
-function write(resolved, op) {
+function planWrite(resolved, op, bindingOverride) {
   if (op.fileHash !== resolved.hash) return { ok: false, refused: true, reason: 'The markup changed. Re-select the element before saving.' };
-  const result = resolve(resolved);
+  const result = resolve(resolved, bindingOverride);
   if (!result.target) return { ok: false, refused: true, reason: result.reason };
   const { target, descriptor } = result;
   if (op.sourceId !== descriptor.id || op.sourceHash !== descriptor.hash) return { ok: false, refused: true, reason: 'The string source changed. Re-select the element before saving.' };
@@ -288,9 +292,21 @@ function write(resolved, op) {
   }
   const next = target.source.slice(0, target.start) + replacement + target.source.slice(target.end);
   if (target.kind === 'json') json.parse(next);
-  const tmp = path.join(path.dirname(target.file), `.retouch-${process.pid}-${crypto.randomBytes(6).toString('hex')}.tmp`);
-  try { fs.writeFileSync(tmp, next); fs.renameSync(tmp, target.file); }
-  finally { if (fs.existsSync(tmp)) fs.unlinkSync(tmp); }
-  return { ok: true, hash: target.file === resolved.file ? hash(next) : resolved.hash, sourceHash: hash(next), sourceId: descriptor.id };
+  return { ok: true, hash: target.file === resolved.file ? hash(next) : resolved.hash, sourceHash: hash(next), sourceId: descriptor.id,
+    edits: [{file:target.file,before:target.source,after:next}] };
 }
-module.exports = { plan, textBinding, resolve, write, variable, marker };
+function write(resolved,op) {
+  return require('./transactions.cjs').applyPlan(resolved.appRoot,planWrite(resolved,op));
+}
+
+function richOptions(value) {return {tokens:[...new Set(value.match(/\{\{[\s\S]*?\}\}/g)||[])]};}
+function planWriteChildren(resolved,op) {
+  const result=resolve(resolved);
+  if(!result.richText)return {ok:false,refused:true,reason:'This source cannot preserve inline formatting.'};
+  try {
+    const text=require('./rich-text-source.cjs').rewrite(result.target.value,result.descriptor.id,op.children,richOptions(result.target.value));
+    return planWrite(resolved,{...op,text});
+  } catch(err) {return {ok:false,refused:true,reason:err.message};}
+}
+
+module.exports = { plan, textBinding, resolve, write, planWrite, planWriteChildren, expression, variable, marker };

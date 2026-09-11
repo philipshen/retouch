@@ -72,3 +72,26 @@ sends no write operation when the text is unchanged.
 checks the property popup and snapped preview, verifies CSS refresh and one
 class write, then checks exact undo and Escape cancellation. `max-width.test.cjs`
 checks nearest-token snapping and preservation of other properties and variants.
+
+`component-usage.test.cjs` checks source call-site counts for Liquid and React,
+source-definition writes for single-use components, re-export aliases, and cache
+invalidation. `node test/e2e/selection-chrome.cjs` checks the live Moses selection
+colors, component badge/detach target, single-use selection, and edge cursors.
+Set `RT_AGENT_BROWSER_BIN` to a local agent-browser executable to skip npx.
+
+`node test/e2e/heading-typing.cjs` verifies a real click and native keyboard typing
+on the Moses heading, exact backing JSON changes, rendered updates, and undo.
+It accepts `RT_AGENT_BROWSER_BIN` and restores the JSON fixture on failure.
+
+`node test/e2e/zoom.cjs` verifies pinch gestures, gray side margins, increased
+vertical coverage, stable viewport-height sections, restored CSS units, scaled
+selection geometry, text focus, and correct drag snapping/cancellation at 50%. It accepts `RT_AGENT_BROWSER_BIN`.
+
+`node test/e2e/interaction-history.cjs` uses the disposable inspector fixture
+(`RT_INSPECTOR_FIXTURE`) to verify immediate text/rich-text writes, exact undo
+and redo, source-backed structural commands, keyboard gesture coalescing, and
+preserved React state and iframe document identity.
+
+`node test/e2e/source-sync.cjs` creates a local Liquid renderer and proxy to
+verify no-reload synchronization, CSS updates, and external-source guards. Set
+`RT_PLAYWRIGHT_MODULE` to the installed Playwright module path if needed.

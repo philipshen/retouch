@@ -22,13 +22,26 @@
 //   describe(resolved): descriptor
 //       Given a resolved element bundle, return what the panel can edit
 //       (className, text, src, tag, mixedText, capabilities…).
-//   applyOp(resolved, op): { ok, hash } | { refused: true, reason }
-//       Apply a typed op to source deterministically, or refuse (R-6).
+//   planOp(resolved, op): { ok, edits, ...result } | { refused: true, reason }
+//       Resolve a typed op to source edits without writing. Each edit is
+//       {file, before, after}; null means creation/deletion. The shared
+//       transaction layer validates containment and versions, writes, rolls
+//       back failures, and retains these exact snapshots for undo.
+//   describeComponent(resolved): component descriptor (optional)
+//   hasReference(appRoot, createdFile, excludedFiles): boolean (optional)
+//       Language-specific reference detection before undo removes a module.
+//   assets: {directory, urlPrefix, uploadDirectory} (optional)
+//       Static asset mapping; the server handles listing and uploads.
+//   applyOp(resolved, op)
+//       Convenience wrapper for direct callers: plan, then shared transaction.
 //   capabilities: { ops: string[], classAttr: string, ... }
 //
 // `resolved` (built by the core Index) is { file, relPath, source, hash,
 // element, elements }. Only `element`/`elements` are adapter-specific; the
-// rest are generic.
+// rest are generic. `context` is an opaque renderer snapshot. Only adapters
+// interpret its metadata. Descriptors may return renderScope attribute/value
+// pairs for generic co-highlighting. Rendering integrations separately declare
+// whether source writes need page reloads and local stylesheet revalidation.
 
 const registry = new Map();
 

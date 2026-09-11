@@ -55,16 +55,22 @@
     return prefix;
   }
   function mount({container, getTarget, beforeDrag, save, notify}) {
-    const handle=document.createElement('button');
+    const handle=document.createElement('div');
     handle.className='max-width-handle';
-    handle.setAttribute('aria-label','Drag to change max width');
-    handle.textContent='↔';
+    handle.tabIndex=-1;
+    for(const edge of ['left','right','top','bottom']) {
+      const hit=document.createElement('button');
+      hit.className='max-width-edge '+edge;
+      hit.dataset.edge=edge;
+      hit.setAttribute('aria-label',`Drag ${edge} edge to change max width`);
+      handle.appendChild(hit);
+    }
     const popup=document.createElement('div');
     popup.className='max-width-popup';
     popup.setAttribute('role','status');
     const shield=document.createElement('div');shield.className='max-width-shield';shield.hidden=true;
     container.append(shield,handle,popup);
-    let drag=null, hovered=false, target=null;
+    let drag=null, target=null;
     const restore=ed=>{if(ed.style===null || (ed.style==='' && ed.initialStyle===null))ed.el.removeAttribute('style');else ed.el.setAttribute('style',ed.style);};
     function label(point, prefix='', suffix='') {
       popup.textContent=point ? `Max width · ${Math.round(point.px*100)/100}px · ${prefix}${point.token}${suffix}` : 'Max width · drag to snap to Tailwind sizes';
@@ -72,7 +78,7 @@
     async function finish(cancel=false) {
       const ed=drag;if(!ed)return;drag=null;
       if(cancel || !ed.point || !ed.moved){shield.hidden=true;restore(ed);return;}
-      handle.disabled=true;
+      handle.inert=true;
       try {
         if(await save(replace(ed.classes,ed.prefix+ed.point.token+ed.suffix,ed.prefix))) {
           // Keep the local preview until the compiler produces the utility.
@@ -104,13 +110,14 @@
             else await new Promise(resolve=>setTimeout(resolve,500));
           }
         }
-      } finally {restore(ed);shield.hidden=true;handle.disabled=false;}
+      } finally {restore(ed);shield.hidden=true;handle.inert=false;}
     }
-    handle.onpointerenter=()=>{hovered=true;};handle.onpointerleave=()=>{hovered=false;};
-    handle.onfocus=()=>{hovered=true;};handle.onblur=()=>{hovered=false;};
     handle.onpointerdown=async e=>{
       if(e.button!==0 || drag || !target)return;
       e.preventDefault();e.stopPropagation();
+      const edge=e.target.closest('[data-edge]')?.dataset.edge;
+      if(!edge)return;
+      shield.style.cursor=handle.style.cursor=(edge==='top'||edge==='bottom')?'ns-resize':'ew-resize';
       const initial=target;
       handle.setPointerCapture(e.pointerId);
       shield.hidden=false;
@@ -122,17 +129,18 @@
       const scale=points(el);
       if(!scale.length){shield.hidden=true;notify('No Tailwind max-width sizes found');return;}
       const rect=el.getBoundingClientRect(), css=el.ownerDocument.defaultView.getComputedStyle(el);
-      const zoom=el.offsetWidth ? rect.width/el.offsetWidth : 1;
+      const localZoom=el.offsetWidth ? rect.width/el.offsetWidth : 1;
+      const zoom=localZoom*(container.offsetWidth ? container.getBoundingClientRect().width/container.offsetWidth : 1);
       const extra=css.boxSizing==='content-box' ? ['paddingLeft','paddingRight','borderLeftWidth','borderRightWidth'].reduce((n,k)=>n+(parseFloat(css[k])||0),0) : 0;
       const prefix=scope(el,initial.info.className||'');
       const suffix=(initial.info.className||'').split(/\s+/).some(t=>t.startsWith(prefix+'max-w-')&&t.endsWith('!')) ? '!' : '';
-      drag={el,id:initial.info.id,initialStyle:el.getAttribute('style'),classes:initial.info.className||'',style:el.getAttribute('style'),start:e.clientX,width:rect.width/zoom-extra,zoom,scale,prefix,suffix,moved:false};
+      drag={el,direction:edge==='left'?-1:1,id:initial.info.id,initialStyle:el.getAttribute('style'),classes:initial.info.className||'',style:el.getAttribute('style'),start:e.clientX,width:rect.width/localZoom-extra,zoom,scale,prefix,suffix,moved:false};
     };
     handle.onpointermove=e=>{
       if(!drag)return;
       if(Math.abs(e.clientX-drag.start)<3 && !drag.moved)return;
       drag.moved=true;
-      drag.point=nearest(drag.scale,drag.width+(e.clientX-drag.start)/drag.zoom);
+      drag.point=nearest(drag.scale,drag.width+drag.direction*(e.clientX-drag.start)/drag.zoom);
       drag.el.style.setProperty('max-width',drag.point.px+'px','important');
       label(drag.point,drag.prefix,drag.suffix);
     };
@@ -143,11 +151,13 @@
     function paint() {
       target=getTarget();
       if(drag && (!drag.el.isConnected || !target || target.el!==drag.el))finish(true);
-      handle.hidden=!target;popup.hidden=!target || (!drag && !hovered);
+      handle.hidden=!target;popup.hidden=!target || !drag;
       if(target){
         const r=target.el.getBoundingClientRect();
-        handle.style.left=Math.max(0,Math.min(container.clientWidth-16,r.right-8))+'px';
-        handle.style.top=Math.max(0,r.top+r.height/2-14)+'px';
+        handle.style.left=r.left+'px';
+        handle.style.top=r.top+'px';
+        handle.style.width=r.width+'px';
+        handle.style.height=r.height+'px';
         popup.style.left=Math.max(8,Math.min(container.clientWidth-350,r.right-340))+'px';
         popup.style.top=Math.max(6,r.top+r.height/2-54)+'px';
         if(!drag)label();

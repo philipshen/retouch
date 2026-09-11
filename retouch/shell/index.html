@@ -6,19 +6,25 @@
 <title>Retouch</title>
 <link rel="stylesheet" href="/rt/__assets/shell.css">
 <script>window.__RT_TOKEN = "__RETOUCH_TOKEN__";</script>
+<script>window.__RT_RENDERING = __RETOUCH_RENDERING__;</script>
 </head>
 <body>
 <div id="toolbar">
   <span id="logo">Retouch</span>
   <button id="modeBtn" class="mode-edit" title="Toggle edit / interact (Esc clears selection)">Edit mode</button>
   <input id="routeInput" type="text" spellcheck="false" placeholder="/">
-  <button id="undoBtn" title="Undo (Cmd+Z)">Undo</button>
+  <button id="undoBtn" title="Undo (Cmd/Ctrl+Z)" disabled>Undo</button>
+  <button id="redoBtn" title="Redo (Cmd/Ctrl+Shift+Z)" disabled>Redo</button>
+  <button id="retryPreview" hidden>Retry preview</button>
   <span id="status"></span>
 </div>
+<div id="previewStatus" role="status" hidden></div>
 <div id="main">
   <div id="frameWrap">
+    <div id="canvasExtent"><div id="siteStage">
     <iframe id="app" title="Your app"></iframe>
     <div id="overlayLayer"></div>
+    </div></div>
   </div>
   <div id="panel">
     <div id="panelEmpty">Click an element to select it.<br>
@@ -30,8 +36,13 @@
 </div>
 <div id="toasts"></div>
 <script src="/rt/__assets/serialize.js"></script>
+<script src="/rt/__assets/rich-text-source.js"></script>
 <script src="/rt/__assets/max-width.js"></script>
 <script src="/rt/__assets/inspector.js"></script>
+<script src="/rt/__assets/zoom.js"></script>
+<script src="/rt/__assets/history.js"></script>
+<script src="/rt/__assets/render-sync.js"></script>
+<script src="/rt/__assets/interactions.js"></script>
 <script src="/rt/__assets/shell.js"></script>
 </body>
 </html>

@@ -59,6 +59,7 @@ function start({
     port: proxyPort,
     adapter: liquid,
     proxyTo: `http://127.0.0.1:${themePort}`,
+    rendering: { reloadAfterWrite: true, revalidateStyles: true },
   });
   console.log(`[retouch] proxy + mirror on :${proxyPort} → theme dev :${themePort}`);
   console.log(`[retouch] open  http://localhost:${proxyPort}/rt`);

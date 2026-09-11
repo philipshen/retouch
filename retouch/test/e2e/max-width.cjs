@@ -14,43 +14,50 @@ const evaluate=s=>browser('eval',s);
 const el=`document.querySelector('iframe').contentDocument.querySelector('[data-rt="${id}"]')`;
 async function until(code){for(let i=0;i<30;i++){if(evaluate(code))return;await new Promise(r=>setTimeout(r,100));}assert.fail(code);}
 async function select(){evaluate(`${el}.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}))`);await until(`!document.querySelector('.max-width-handle').hidden`);}
-function rect(){return evaluate(`document.querySelector('.max-width-handle').getBoundingClientRect().toJSON()`);}
+function rect(edge='right'){return evaluate(`(()=>{const r=document.querySelector('.max-width-edge.${edge}').getBoundingClientRect();return {x:r.x+r.width/2-8,y:r.y+r.height/2-14}})()`);}
 (async()=>{
  try{
   browser('open',(process.env.RT_E2E_URL||'http://127.0.0.1:9400')+'/rt');
   await until(`!!${el}`);await select();
   evaluate(`window.__widthOps=[];const f=window.fetch;window.fetch=(url,o)=>{if(String(url).endsWith('/rt/__api/op'))window.__widthOps.push(JSON.parse(o.body));return f(url,o);}`);
+  assert.equal(evaluate(`document.querySelector('.max-width-handle').textContent`),'','no visible resize button');
+  for(const edge of ['left','right','top','bottom']) {
+    const hit=evaluate(`(()=>{const e=document.querySelector('.max-width-edge.${edge}'),r=e.getBoundingClientRect(),s=getComputedStyle(e);return {hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===e,cursor:s.cursor,background:s.backgroundColor}})()`);
+    assert.deepEqual(hit,{hit:true,cursor:['top','bottom'].includes(edge)?'ns-resize':'ew-resize',background:'rgba(0, 0, 0, 0)'},edge+' is an invisible edge target');
+  }
+  assert.equal(evaluate(`(()=>{const r=document.querySelector('.max-width-handle').getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===document.querySelector('iframe')})()`),true,'selection interior stays interactive');
   const originalStyle=evaluate(`${el}.getAttribute('style')`);
   const originalClass=evaluate(`${el}.className`);
   const width=evaluate(`${el}.getBoundingClientRect().width`);
   const h=rect();
   browser('mouse','move',String(h.x+8),String(h.y+14));browser('mouse','down');
-  browser('mouse','move',String(h.x+8+768-width),String(h.y+14));
-  assert.match(evaluate(`document.querySelector('.max-width-popup').textContent`),/Max width · 768px · max-w-3xl/);
-  assert.equal(evaluate(`${el}.getBoundingClientRect().width`),768);
+  browser('mouse','move',String(h.x+8+1024-width),String(h.y+14));
+  assert.match(evaluate(`document.querySelector('.max-width-popup').textContent`),/Max width · 1024px · max-w-5xl/);
+  assert.equal(evaluate(`${el}.getBoundingClientRect().width`),Math.min(width,1024));
   assert.equal(fs.readFileSync(file,'utf8'),original,'drag preview does not write source');
   browser('screenshot','/tmp/retouch-max-width-drag.png');
   browser('mouse','up');
   await until(`window.__widthOps.length===1`);
-  assert.match(fs.readFileSync(file,'utf8'),/overflow-hidden max-w-3xl/);
-  await until(`getComputedStyle(${el}).maxWidth==='768px' && !${el}.style.maxWidth`);
-  assert.match(fs.readFileSync(file,'utf8'),/w-full flex-col flex-nowrap overflow-hidden max-w-3xl/);
-  assert.equal(evaluate(`${el}.getAttribute('style')`),originalStyle,'temporary preview removed');
+  assert.match(fs.readFileSync(file,'utf8'),/overflow-hidden max-w-5xl/);
+  await until(`getComputedStyle(${el}).maxWidth==='1024px' && !${el}.style.maxWidth`);
+  assert.match(fs.readFileSync(file,'utf8'),/w-full flex-col flex-nowrap overflow-hidden max-w-5xl/);
+  assert.equal(evaluate(`${el}.getAttribute('style')`) || null,originalStyle || null,'temporary preview removed');
   assert.equal(evaluate(`window.__widthOps[0].type`),'setClasses');
-  console.log('PASS real drag snaps to max-w-3xl, labels Max width, previews locally, and writes once');
+  console.log('PASS real drag snaps to max-w-5xl, labels Max width, previews locally, and writes once');
+  await until(`!document.querySelector('.max-width-handle').inert`);
   browser('click','#undoBtn');
   await until(`${el}.className===${JSON.stringify(originalClass)}`);
   assert.equal(fs.readFileSync(file,'utf8'),original,'undo restores exact source');
   await select();
-  const next=rect();browser('mouse','move',String(next.x+8),String(next.y+14));browser('mouse','down');
+  const next=rect('left');browser('mouse','move',String(next.x+8),String(next.y+14));browser('mouse','down');
   browser('mouse','move',String(next.x-250),String(next.y+14));browser('press','Escape');browser('mouse','up');
-  assert.equal(evaluate(`${el}.getAttribute('style')`),originalStyle);
+  assert.equal(evaluate(`${el}.getAttribute('style')`) || null,originalStyle || null);
   assert.equal(fs.readFileSync(file,'utf8'),original,'Escape cancels without writing');
   assert.equal(evaluate('window.__widthOps.length'),2,'only save and undo write');
   console.log('PASS exact undo and Escape cancellation');
   // CSS variables and compiled custom utilities must override default scale values.
-  const custom=evaluate(`(()=>{const d=${el}.ownerDocument;const style=d.createElement('style');style.textContent=':root{--container-3xl:40rem;--container-card:33rem}.max-w-special{max-width:700px}';d.head.append(style);const p=RetouchMaxWidth.points(${el});style.remove();return p;})()`);
-  assert.equal(custom.find(p=>p.token==='max-w-3xl').px,640); // project theme overrides the default
+  const custom=evaluate(`(()=>{const d=${el}.ownerDocument;const style=d.createElement('style');style.textContent=':root{--container-5xl:40rem;--container-card:33rem}.max-w-special{max-width:700px}';d.head.append(style);const p=RetouchMaxWidth.points(${el});style.remove();return p;})()`);
+  assert.equal(custom.find(p=>p.token==='max-w-5xl').px,640); // project theme overrides the default
   assert.equal(custom.find(p=>p.token==='max-w-card').px,528);
   assert.equal(custom.find(p=>p.token==='max-w-special').px,700);
   console.log('PASS project custom Tailwind sizes are discovered');

@@ -6,11 +6,18 @@
 // remain opaque (R-6, DR-0017).
 
 const fs = require('node:fs');
+const structure = require('../structure.cjs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const MagicString = require('magic-string');
 const { twMerge } = require('tailwind-merge');
 const sources = require('../liquid-sources.cjs');
+const render = require('../liquid-context.cjs');
+const classes = require('../liquid-classes.cjs');
+const components = require('../liquid-components.cjs');
+const images = require('../liquid-images.cjs');
+const theme = require('../liquid-theme.cjs');
+const {validateChildrenTree}=require('../rich-text.cjs');
 
 const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
   'link', 'meta', 'param', 'source', 'track', 'wbr']);
@@ -27,7 +34,7 @@ function hashId(relPath, pathLoc) {
   return crypto.createHash('sha1').update(relPath + '|' + pathLoc).digest('hex').slice(0, 10);
 }
 function matches(filePath) {
-  return /\.liquid$/.test(filePath);
+  return /\.liquid$/.test(filePath)||theme.matches(filePath);
 }
 
 // --- tolerant tokenizer + tree builder -------------------------------------
@@ -65,6 +72,7 @@ function parse(source) {
     }
     if (source.startsWith('{{', i)) {
       const end = source.indexOf('}}', i);
+      if(end>=0){const image=images.read(source,i,end+2);if(image)pushChild(image);}
       i = end === -1 ? N : end + 2;
       continue;
     }
@@ -124,7 +132,7 @@ function readOpenTag(source, start) {
     const end = source.indexOf('}}', j);
     j = end < 0 ? N : end + 2;
   } else while (j < N && /[a-zA-Z0-9:-]/.test(source[j])) j++;
-  const tag = source.slice(start + 1, j).toLowerCase();
+  const tag = dynamicTag ? source.slice(start + 1, j) : source.slice(start + 1, j).toLowerCase();
   const nameEnd = j;
   let k = j;
   let classAttr = null;
@@ -151,10 +159,18 @@ function readOpenTag(source, start) {
       const q = source[k];
       if (q === '"' || q === "'") {
         valueStart = k + 1;
-        const e = source.indexOf(q, k + 1);
-        valueEnd = e === -1 ? N : e;
+        let e = k+1;
+        while (e<N) {
+          if (source.startsWith('{{',e)||source.startsWith('{%',e)) {
+            const close=source.startsWith('{{',e)?'}}':'%}';
+            const end=source.indexOf(close,e+2); e=end<0?N:end+2; continue;
+          }
+          if (source[e]===q) break;
+          e++;
+        }
+        valueEnd = e;
         value = source.slice(valueStart, valueEnd);
-        k = e === -1 ? N : e + 1;
+        k = e >= N ? N : e + 1;
       } else {
         valueStart = k;
         while (k < N && !/[\s>]/.test(source[k])) k++;
@@ -178,6 +194,7 @@ function readOpenTag(source, start) {
 // --- adapter interface ------------------------------------------------------
 
 function collect(source, relPath) {
+  if(theme.matches(relPath))return theme.collect(source,relPath);
   const { all } = parse(source);
   const elements = [];
   for (const node of all) {
@@ -186,11 +203,12 @@ function collect(source, relPath) {
     node.node = node; // the "node" the resolved bundle carries is the parse node
     elements.push(node);
   }
+  elements.push(...components.calls(source,relPath));
   return { elements };
 }
 
 function stamp(source, filePath, appRoot) {
-  if (!matches(filePath)) return null;
+  if (!/\.liquid$/.test(filePath)) return null;
   // The ID must be computed from the SAME relative path the writer's index
   // uses, or the stamped DOM and the index disagree.
   const relPath = appRoot ? path.relative(appRoot, filePath).split(path.sep).join('/') : filePath;
@@ -198,13 +216,35 @@ function stamp(source, filePath, appRoot) {
   const plan = sources.plan(source, relPath);
   if (elements.length === 0 && plan.injections.length === 0) return null;
   const ms = new MagicString(source);
+  if(elements.some(el=>el.generatedImage))ms.prepend('{% capture __rt_template %}{{ template.name }}{% if template.suffix %}.{{ template.suffix }}{% endif %}{% endcapture %}');
   for (const injection of plan.injections) ms.appendLeft(injection.at, injection.text);
   for (const el of elements) {
+    if (el.kind==='instance') {
+      ms.appendLeft(el.insert,`, __rt_instance: '${el.id}' `);
+      continue;
+    }
+    if(el.generatedImage){images.stamp(ms,el,relPath.startsWith('snippets/')&&!el.parent);continue;}
+    const instance=relPath.startsWith('snippets/')&&!el.parent?' data-rt-i="{{ __rt_instance }}"':'';
     const binding = sources.textBinding(source, el, plan);
+    const tagBinding=dynamicTagBinding(source,el,relPath);
+    const tagOrigin=tagBinding?` data-rt-tag-origin="{{ ${tagBinding.code} | escape }}"`:'';
     const origin = binding ? ` data-rt-origin="{{ ${binding.code} | escape }}"` : '';
-    ms.appendLeft(el.nameEnd, ` data-rt="${el.id}" data-rt-section="{{ section.id | escape }}" data-rt-block="{{ block.id | escape }}" data-rt-block-type="{{ block.type | escape }}" data-rt-template="{{ template.name | escape }}{% if template.suffix %}.{{ template.suffix | escape }}{% endif %}" data-rt-locale="{{ request.locale.iso_code | escape }}"${origin}`);
+    ms.appendLeft(el.nameEnd, ` data-rt="${el.id}"${instance} data-rt-section="{{ section.id | escape }}" data-rt-block="{{ block.id | escape }}" data-rt-block-type="{{ block.type | escape }}" data-rt-template="{{ template.name | escape }}{% if template.suffix %}.{{ template.suffix | escape }}{% endif %}" data-rt-locale="{{ request.locale.iso_code | escape }}"${origin}${tagOrigin}`);
   }
   return { code: ms.toString(), map: ms.generateMap({ hires: true, source: filePath }) };
+}
+
+function dynamicTagBinding(source,node,file) {
+  if (!node.dynamicTag) return null;
+  const expr=node.tag.replace(/^\{\{-?\s*|\s*-?\}\}$/g,'');
+  return sources.expression(expr,file,'tag:'+node.pathLoc,node.tagStart+1+node.tag.indexOf(expr));
+}
+function tagResolution(resolved) {
+  const binding=dynamicTagBinding(resolved.source,resolved.element,resolved.relPath);
+  if (!binding) return null;
+  const context={...render.context(resolved.context),origin:resolved.context?.attributes?.['data-rt-tag-origin']||resolved.context?.tagOrigin};
+  const target={...resolved,context};
+  return {binding,resolved:target,result:sources.resolve(target,binding)};
 }
 
 function literalText(node, source) {
@@ -215,39 +255,60 @@ function literalText(node, source) {
   return text === '' ? null : text;
 }
 
-function describe(resolved) {
+function describeElement(resolved) {
   const node = resolved.element;
   const source = resolved.source;
+  if (node.kind==='instance') return {id:node.id,kind:'instance',tag:node.snippet||node.moduleName,file:resolved.relPath,hash:resolved.hash,context:resolved.context||null,renderScope:node.theme?theme.scope(node,resolved.context):null,
+    className:null,classNameDynamic:false,src:null,srcDynamic:false,canSetSrc:false,canSetTag:false,text:null,textDynamic:false,canSetChildren:false,mixedText:false};
+  if(node.generatedImage){
+    const info=images.describe(source,node,render.context(resolved.context));
+    const picture=resolved.elements.some(e=>e.tag==='picture'&&e.tagStart<node.tagStart&&e.closeStart>=node.openEnd);
+    return {id:node.id,kind:'host',tag:'img',file:resolved.relPath,hash:resolved.hash,context:resolved.context||null,...info,canSetSrc:info.canSetSrc&&!picture,srcReason:picture?'This image has authored responsive sources. Editing those choices is deferred.':info.srcReason||null};
+  }
   let text = literalText(node, source);
   const traced = text === null && !node.textBinding ? sources.resolve(resolved) : null;
   if (traced?.target) text = traced.target.value;
   const inner = node.closeStart != null ? source.slice(node.childrenStart, node.childrenEnd) : '';
   const hasLiquid = /\{[%{]/.test(inner);
+  const canSetChildren=node.closeStart!=null&&!node.textBinding&&!hasLiquid&&inner.trim()!=='';
   const asset = node.srcAttr?.value?.match(/^\s*\{\{\s*['"]([\w.\/-]+)['"]\s*\|\s*asset_url\s*\}\}\s*$/);
-  const srcDynamic = !!node.srcAttr && /\{[%{]/.test(node.srcAttr.value || '') && !asset;
-  const picture = resolved.elements?.some(e => e.tag === 'picture' && e.tagStart < node.tagStart && e.closeStart > node.openEnd);
+  const imageUrl=!!node.srcAttr&&/^\s*\{\{[\s\S]*\|\s*image_url\s*:[\s\S]*\}\}\s*$/.test(node.srcAttr.value||'');
+  const srcDynamic = !!node.srcAttr && /\{[%{]/.test(node.srcAttr.value || '') && !asset && !imageUrl;
+  const tagSource=node.dynamicTag?tagResolution(resolved):null;
+  const classSnapshot=render.context(resolved.context).className;
+  const classEditable=!node.classAttr?.dynamic||typeof classSnapshot==='string';
+  const className=node.classAttr?.dynamic&&classEditable?classes.effective(node.classAttr.value,node.id,classSnapshot):node.classAttr?.value||'';
+  const picture = resolved.elements?.some(e => e.tag === 'picture' && e.tagStart < node.tagStart && e.closeStart >= node.openEnd);
   return {
     id: node.id,
     kind: 'host',
-    tag: node.dynamicTag ? (resolved.context?.tag || node.tag) : node.tag,
+    tag: node.dynamicTag ? (render.context(resolved.context).tag || node.tag) : node.tag,
     file: resolved.relPath,
     hash: resolved.hash,
-    className: node.classAttr && !node.classAttr.dynamic ? node.classAttr.value : null,
-    classNameDynamic: !!(node.classAttr && node.classAttr.dynamic),
-    classNameReason: node.classAttr?.dynamic ? 'Classes come from Liquid expressions. Editing those expressions is not supported yet.' : null,
-    src: asset ? '/assets/' + asset[1] : srcDynamic ? null : node.srcAttr?.value ?? null,
+    className: classEditable ? className : null,
+    classNameDynamic: !classEditable,
+    classNameReason: !classEditable ? 'Reload the preview to read this element’s rendered classes.' : null,
+    src: asset ? '/assets/' + asset[1] : imageUrl ? render.context(resolved.context).src||null : srcDynamic ? null : node.srcAttr?.value ?? null,
+    srcMatch:asset?{pathnameSuffix:'/'+asset[1]}:null,
     srcDynamic,
     canSetSrc: !!node.srcAttr && !node.srcSet && !picture && !srcDynamic && ['img','source','image'].includes(node.tag),
     srcReason: node.srcSet || picture ? 'This image has authored responsive sources. Editing those choices is deferred.' : null,
-    canSetTag: TEXT_TAGS.has(node.tag) && node.closeStart != null,
+    canSetTag: node.closeStart != null && (TEXT_TAGS.has(node.tag) || !!tagSource?.result.target && TEXT_TAGS.has(tagSource.result.target.value)),
+    tagSource:tagSource?.result.descriptor||null,
     text,
     textDynamic: text === null && (hasLiquid || node.textBinding),
     textSource: traced?.descriptor || null,
     textReason: traced?.reason || null,
     context: resolved.context || null,
-    canSetChildren: false,
-    mixedText: false,
+    renderScope: render.scope(traced?.descriptor,resolved.context),
+    richText:traced?.richText||null,
+    canSetChildren:canSetChildren||!!traced?.richText,
+    mixedText:canSetChildren&&node.children.length>0||!!traced?.richText&&traced.descriptor.format!=='text',
   };
+}
+
+function describe(resolved) {
+  return {...describeElement(resolved),components:theme.ancestry(resolved),structure:structure.describe(resolved,'liquid')};
 }
 
 function refuse(reason) { return { ok: false, refused: true, reason }; }
@@ -256,11 +317,14 @@ function escapeText(t) {
     .replace(/\{/g, '&#123;').replace(/\}/g, '&#125;');
 }
 
-function applyOp(resolved, op) {
+function planOp(resolved, op) {
+  if(structure.types.has(op.type)) return structure.planOp(resolved,op,'liquid');
   if (op.fileHash && op.fileHash !== resolved.hash) {
     return refuse('The file changed since it was last read. Re-select the element and retry.');
   }
+  if (op.type==='detachComponent') return resolved.element.theme?theme.planDetach(resolved,op):components.planDetach(resolved,op);
   const node = resolved.element;
+  if (node.kind==='instance') return refuse('Edit the component definition or detach this instance first.');
   const ms = new MagicString(resolved.source);
 
   if (op.type === 'setClasses') {
@@ -268,26 +332,56 @@ function applyOp(resolved, op) {
     const tokens = op.classes.split(/\s+/).filter(Boolean);
     for (const t of tokens) if (!CLASS_TOKEN_RE.test(t)) return refuse(`Class token not allowed: ${JSON.stringify(t)}`);
     const merged = twMerge(tokens.join(' '));
-    if (node.classAttr) {
-      if (node.classAttr.dynamic) return refuse(`class here contains Liquid (${resolved.relPath}); it cannot be edited deterministically.`);
-      ms.overwrite(node.classAttr.valueStart, node.classAttr.valueEnd, merged);
+    if(node.generatedImage) {
+      try{images.setClasses(ms,resolved,merged);}catch(err){return refuse(err.message);}
+    } else if (node.classAttr) {
+      let value=merged;
+      if (node.classAttr.dynamic) {
+        try { value=classes.edit(node.classAttr.value,node.id,render.context(resolved.context).className,merged,resolved.source); }
+        catch(err) { return refuse(err.message); }
+      }
+      ms.overwrite(node.classAttr.valueStart, node.classAttr.valueEnd, value);
     } else if (merged !== '') {
       ms.appendLeft(node.nameEnd, ` class="${merged}"`);
     }
   } else if (op.type === 'setSrc') {
     const info = describe(resolved);
-    if (!info.canSetSrc) return refuse('This image source is computed by Liquid. Select an image with a literal source or asset_url.');
+    if (!info.canSetSrc) return refuse(info.srcReason || 'This image source has no editable project image mapping.');
     if (typeof op.src !== 'string' || op.src.length > 500 || !/^\/[A-Za-z0-9_\-./]+$/.test(op.src) || op.src.startsWith('//') || op.src.split('/').includes('..')) return refuse('Image paths must be root-relative project paths.');
     const value = op.src.startsWith('/assets/') ? `{{ '${op.src.slice(8)}' | asset_url }}` : op.src;
-    ms.overwrite(node.srcAttr.valueStart, node.srcAttr.valueEnd, value);
+    if(node.generatedImage) images.setSrc(ms,resolved,op.src);
+    else ms.overwrite(node.srcAttr.valueStart, node.srcAttr.valueEnd, value);
   } else if (op.type === 'setText') {
     if (typeof op.text !== 'string') return refuse('setText needs a string.');
     const text = literalText(node, resolved.source);
-    if (text === null) return sources.write(resolved, op);
+    if (text === null) return sources.planWrite(resolved, op);
     ms.overwrite(node.childrenStart, node.childrenEnd, escapeText(op.text));
+  } else if (op.type === 'setChildren') {
+    const err=validateChildrenTree(op.children,0); if (err) return refuse(err);
+    if (describe(resolved).richText) return sources.planWriteChildren(resolved,op);
+    if (!describe(resolved).canSetChildren) return refuse('The children contain expressions that cannot be rewritten as rich text.');
+    const descendants=new Map(resolved.elements.filter(e=>e.tagStart>=node.openEnd&&e.closeEnd<=node.closeStart).map(e=>[e.id,e]));
+    const seen=new Set();
+    const build=items=>items.map(c=>{
+      if (c.t==='text') return escapeText(c.value);
+      if (c.t==='wrap') return `<${c.tag}>${build(c.children)}</${c.tag}>`;
+      const kept=descendants.get(c.id);
+      if (!kept||seen.has(c.id)) throw new Error('A kept element is not a unique descendant of this source.');
+      seen.add(c.id);
+      if (!c.children) return resolved.source.slice(kept.tagStart,kept.closeEnd);
+      if (kept.closeStart==null||kept.textBinding||/\{[%{]/.test(resolved.source.slice(kept.childrenStart,kept.childrenEnd))) throw new Error('A kept child contains expressions.');
+      return resolved.source.slice(kept.tagStart,kept.openEnd)+build(c.children)+resolved.source.slice(kept.closeStart,kept.closeEnd);
+    }).join('');
+    let value;try{value=build(op.children);}catch(err){return refuse(err.message);}
+    if (!value.trim()||value.length>50000) return refuse('The rich text is empty or too large.');
+    ms.overwrite(node.childrenStart,node.childrenEnd,value);
   } else if (op.type === 'setTag') {
-    if (node.dynamicTag) return refuse('The tag is selected by Liquid; edit its setting instead.');
     if (!TEXT_TAGS.has(op.tag)) return refuse('Unsupported target tag.');
+    if (node.dynamicTag) {
+      const tag=tagResolution(resolved);
+      if (!tag?.result.target) return refuse(tag?.result.reason||'The tag has no editable source.');
+      return sources.planWrite(tag.resolved,{...op,text:op.tag},tag.binding);
+    }
     if (node.closeStart == null) return refuse('This element has no closing tag and cannot change tag.');
     ms.overwrite(node.tagStart + 1, node.nameEnd, op.tag);
     if (node.closeNameStart != null) ms.overwrite(node.closeNameStart, node.closeNameEnd, op.tag);
@@ -300,12 +394,10 @@ function applyOp(resolved, op) {
   try { collect(next, resolved.relPath); } catch (err) {
     return refuse(`The edit produced malformed markup and was not written: ${err.message}`);
   }
-  // R-11(c): atomic write in the same directory.
-  const dir = path.dirname(resolved.file);
-  const tmp = path.join(dir, `.retouch-${process.pid}-${Date.now()}.tmp`);
-  fs.writeFileSync(tmp, next, 'utf8');
-  fs.renameSync(tmp, resolved.file);
-  return { ok: true, hash: contentHash(next) };
+  return { ok: true, hash: contentHash(next), edits: [{file:resolved.file,before:resolved.source,after:next}] };
+}
+function applyOp(resolved,op) {
+  return require('../transactions.cjs').applyPlan(resolved.appRoot || path.dirname(resolved.file),planOp(resolved,op));
 }
 
 module.exports = {
@@ -316,6 +408,10 @@ module.exports = {
   contentHash,
   describe,
   applyOp,
-  capabilities: { classAttr: 'class', ops: ['setClasses', 'setText', 'setTag', 'setSrc'] },
+  planOp,
+  describeComponent: resolved=>resolved.element.theme?theme.describe(resolved):components.describe(resolved),
+  hasReference: components.hasReference,
+  assets: { directory: 'assets', urlPrefix: '/assets/', uploadDirectory: '' },
+  capabilities: { classAttr: 'class', ops: ['setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types] },
   _parse: parse, // exported for tests
 };

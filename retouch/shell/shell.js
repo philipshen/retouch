@@ -8,6 +8,8 @@ const overlayLayer = document.getElementById('overlayLayer');
 const modeBtn = document.getElementById('modeBtn');
 const routeInput = document.getElementById('routeInput');
 const undoBtn = document.getElementById('undoBtn');
+const redoBtn = document.getElementById('redoBtn');
+const retryBtn = document.getElementById('retryPreview');
 const statusEl = document.getElementById('status');
 const panelEmpty = document.getElementById('panelEmpty');
 const panelBody = document.getElementById('panelBody');
@@ -16,31 +18,103 @@ const SPACING_STEPS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11,
 
 let mode = 'edit'; // 'edit' | 'interact'
 let sel = null; // { hostId, instanceId, scope: 'host'|'instance', info }
-let editing = null; // { el, id, info, original, originalHTML, snapshot, originalTree } during inline text editing
+let editing = null; // Original DOM nodes and source metadata retained during inline editing
 let hoverEl = null;
 let measuring = false;
-let undoStack = [];
-let undoBusy = false;
+let previewStale = false;
+let staleEpoch = 0;
+let retryPreview = null;
+let clipboard = null;
+let menuComponent = null;
+let nudgeState = null;
+let frameCleanup = null;
+let sourceRevision = null;
+let styleRevision = null;
+let revisionPoll = null;
+let restoringControlFocus = false;
+const gestures = RetouchHistory.createGestureGroups();
+const editHistory = RetouchHistory.createHistory({apply: restoreHistory, onChange: updateHistoryButtons});
+function updateHistoryButtons() {
+  undoBtn.disabled = editHistory.busy || previewStale || panelTasks > 0 || !editHistory.canUndo;
+  redoBtn.disabled = editHistory.busy || previewStale || panelTasks > 0 || !editHistory.canRedo;
+}
+function recordEdit(result, info, type, before, after, syncInfo = info) {
+  editHistory.record({undoId: result.undoId, id: info.id, context: info.context, type, before, after, syncInfo});
+}
+function textValue(value) { return (value || '').replace(/\s+/g, ' ').trim(); }
+function fingerprint(el) {
+  return JSON.stringify([el.tagName, textValue(el.textContent), [...el.attributes].filter(a => !a.name.startsWith('data-rt') && a.name !== 'contenteditable').map(a => [a.name,a.value]).sort(), [...el.children].filter(child => !child.hasAttribute('data-rt-token')).map(child => JSON.parse(fingerprint(child)))]);
+}
+function storedTextMatch(info, value) {
+  const html = info.textSource?.format === 'html' ? new DOMParser().parseFromString(value || '', 'text/html').body : null;
+  const rendered = html ? html.textContent : value;
+  // Translation interpolation remains renderer-owned. Validate the literal
+  // spans around preserved placeholders rather than comparing raw HTML or
+  // interpolation syntax to the rendered text.
+  const escape = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const tokens = info.textSource ? [...String(info.text || '').matchAll(/\{\{[^]*?\}\}/g)].map(match=>match[0]) : [];
+  let pattern = escape(textValue(rendered));
+  for (const token of tokens) pattern = pattern.split(escape(token)).join('[\\s\\S]*?');
+  const expected = new RegExp('^'+pattern+'$');
+  const shape = node => JSON.stringify([...node.children].map(child => [child.tagName, [...child.attributes].filter(a=>!a.name.startsWith('data-rt')).map(a=>[a.name,a.value]).sort(), shape(child)]));
+  const expectedShape = html ? shape(html) : null;
+  return el => expected.test(textValue(el.textContent)) && (!html || shape(el) === expectedShape);
+}
+function allContexts(info) { return {...info, renderScope: {}, verifyContext: info.context?.attributes || {}}; }
+function classMatch(value) {
+  const normalize = s => (s || '').split(/\s+/).filter(Boolean).sort().join(' ');
+  return el => normalize(el.getAttribute('class')) === normalize(value);
+}
+function inputKey(el) { return (sel?.info?.id || '') + ':' + (el?.getAttribute?.('aria-label') || el?.id || el?.name || el?.type || 'control'); }
+// Focus and pointer/key gestures are explicit boundaries, never a timer that
+// accidentally joins two distinct actions.
+document.addEventListener('focusin', e => {
+  if (panelBody.contains(e.target) && !restoringControlFocus) gestures.begin('focus', inputKey(e.target));
+}, true);
+document.addEventListener('pointerdown', e => {
+  if (panelBody.contains(e.target)) gestures.begin('pointer', inputKey(e.target));
+  else gestures.end();
+}, true);
+document.addEventListener('pointerup', () => { setTimeout(() => gestures.end('pointer'), 0); }, true);
+document.addEventListener('keydown', e => {
+  if (panelBody.contains(e.target) && !e.metaKey && !e.ctrlKey && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) gestures.begin('key', inputKey(e.target));
+}, true);
+document.addEventListener('keyup', () => { setTimeout(() => gestures.end('key'), 0); }, true);
+document.addEventListener('focusout', e => {
+  if (e.relatedTarget && e.relatedTarget !== e.target) gestures.end('focus');
+}, true);
 let classificationSerial = 0;
 let panelTasks = 0;
 function busyPanel(start) {
   panelTasks += start ? 1 : -1;
-  panelBody.disabled = panelTasks > 0;
-  panelBody.inert = panelTasks > 0;
+  panelBody.disabled = panelTasks > 0 || previewStale;
+  panelBody.inert = panelTasks > 0 || previewStale;
   panelBody.setAttribute('aria-busy', String(panelTasks > 0));
+  updateHistoryButtons();
 }
 let lastAppPath = null;
 
 /* ---------- boot ---------- */
 const appPath = (location.pathname.replace(/^\/rt\/?/, '/') || '/') + location.search + location.hash;
-iframe.src = appPath;
+iframe.src = mirrorPath(appPath);
 routeInput.value = appPath;
 
 iframe.addEventListener('load', () => {
   try {
     if (!iframe.contentDocument || iframe.contentWindow.location.origin !== location.origin) return;
+    classificationSerial++;
+    staleEpoch++;previewStale=false;retryPreview=null;retryBtn.hidden=true;
+    document.getElementById('previewStatus').hidden=true;
+    panelBody.disabled=panelTasks>0;panelBody.inert=panelTasks>0;updateHistoryButtons();
+    if (window.__RT_RENDERING?.reloadAfterWrite) {
+      const url = new URL(iframe.contentWindow.location.href); url.searchParams.set('__rt_mirror','1');
+      iframe.contentWindow.history.replaceState(iframe.contentWindow.history.state, '', url);
+    }
+    if (editing?.el.ownerDocument !== iframe.contentDocument) editing = null;
+    hoverEl = null;
     hookFrame(iframe.contentDocument, iframe.contentWindow);
     onNavigated();
+    if (window.__RT_RENDERING?.reloadAfterWrite) void pollSourceRevision(true);
   } catch (err) {
     toast('Could not attach to the app frame: ' + err.message, 'err');
   }
@@ -49,11 +123,53 @@ iframe.addEventListener('load', () => {
 window.addEventListener('pagehide', () => {});
 requestAnimationFrame(paintLoop);
 setInterval(pollNavigation, 300);
+setInterval(() => pollSourceRevision(), 1000);
+function mirrorPath(value) {
+  if (!window.__RT_RENDERING?.reloadAfterWrite) return value;
+  const url = new URL(value, location.origin);url.searchParams.set('__rt_mirror','1');return url.pathname+url.search+url.hash;
+}
+function cleanAppPath(loc) {
+  const url = new URL(loc.href);url.searchParams.delete('__rt_mirror');return url.pathname+url.search+url.hash;
+}
+function pollSourceRevision(baseline = false) {
+  if (!window.__RT_RENDERING?.reloadAfterWrite) return Promise.resolve();
+  if (revisionPoll) return revisionPoll;
+  revisionPoll = (async () => {
+    const result = await api('GET', '/rt/__api/source-revision');
+    if (!result?.ok || !result.available) {markPreviewStale('Preview monitoring is unavailable. Check the Retouch server.');return;}
+    if (baseline || sourceRevision === null) {sourceRevision=result.revision;styleRevision=result.styleRevision;return;}
+    if (sourceRevision !== result.revision) {
+      sourceRevision=result.revision;
+      markPreviewStale('Source files changed outside Retouch. The preview is paused to avoid editing stale content.');
+    }
+    if (styleRevision !== result.styleRevision) {
+      styleRevision=result.styleRevision;
+      try {await RetouchRenderSync.revalidateStyles(doc(),String(Date.now()));}
+      catch (err) {
+        // A stylesheet retry cannot recover an unrelated runtime/code change.
+        if (previewStale && !retryPreview) return;
+        markPreviewStale('Styles changed; preview is out of date. '+err.message, async () => {
+          const epoch=staleEpoch;
+          try {
+            await RetouchRenderSync.revalidateStyles(doc(),String(Date.now()));
+            await pollSourceRevision();
+            if (epoch!==staleEpoch) return;
+            previewStale=false;retryPreview=null;retryBtn.hidden=true;
+            document.getElementById('previewStatus').hidden=true;
+            panelBody.disabled=panelTasks>0;panelBody.inert=panelTasks>0;updateHistoryButtons();
+          } catch (error) {toast(error.message,'err');}
+        });
+      }
+    }
+  })().finally(() => {revisionPoll=null;});
+  return revisionPoll;
+}
 
 /* ---------- frame hooks ---------- */
 function doc() { return iframe.contentDocument; }
 
 function hookFrame(d, w) {
+  frameCleanup?.();frameCleanup = interactions.bindDocument(d, {canvas: true, toShellPoint: framePoint});
   const suppress = (e) => {
     if (mode !== 'edit') return;
     if (editing && editing.el.contains(e.target)) return; // let the text being edited behave
@@ -62,6 +178,7 @@ function hookFrame(d, w) {
   // Selection: capture-phase click; prevent the app from reacting (OQ-E4).
   d.addEventListener('click', (e) => {
     if (mode !== 'edit') return;
+    if (panelTasks > 0 || previewStale || editHistory.busy) { e.preventDefault(); e.stopPropagation(); return; }
     if (editing) {
       if (editing.el.contains(e.target)) return;
       commitInlineEdit(); // clicking away commits (R-5)
@@ -135,9 +252,9 @@ function hookFrame(d, w) {
   d.addEventListener('keydown', (e) => {
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
-      if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'i')) {
+      if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'b' || e.key.toLowerCase() === 'i')) {
         e.preventDefault(); // never let the browser's own rich-edit commands run (R-5)
-        toggleWrap(e.key === 'b' ? 'strong' : 'em');
+        toggleWrap(e.key.toLowerCase() === 'b' ? 'strong' : 'em');
         return;
       }
       if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
@@ -146,7 +263,6 @@ function hookFrame(d, w) {
       }
       return;
     }
-    if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); e.stopPropagation(); undo(); }
   }, true);
 
   // Follow SPA navigations (OQ-B6 rule 2).
@@ -163,7 +279,7 @@ function pollNavigation() {
   try {
     const loc = iframe.contentWindow.location;
     if (loc.origin !== location.origin) return;
-    const p = loc.pathname + loc.search + loc.hash;
+    const p = cleanAppPath(loc);
     if (p !== lastAppPath) onNavigated();
   } catch {}
 }
@@ -172,7 +288,7 @@ function onNavigated() {
   try {
     const loc = iframe.contentWindow.location;
     if (loc.origin !== location.origin) return;
-    const p = loc.pathname + loc.search + loc.hash;
+    const p = cleanAppPath(loc);
     lastAppPath = p;
     routeInput.value = p;
     history.replaceState(null, '', '/rt' + (p === '/' ? '' : p));
@@ -185,21 +301,17 @@ function idsOf(el) {
 }
 
 function renderContext(el) {
-  if (!el.hasAttribute('data-rt-template')) return null;
-  const blocks = [];
-  for (let node = el; node; node = node.parentElement) {
-    const block = node.getAttribute('data-rt-block');
-    if (block && !blocks.includes(block)) blocks.unshift(block);
-  }
-  return { section: el.dataset.rtSection, block: el.dataset.rtBlock, blocks,
-    template: el.dataset.rtTemplate, locale: el.dataset.rtLocale,
-    origin: el.dataset.rtOrigin, tag: el.tagName.toLowerCase() };
+  const attributes = node => Object.fromEntries([...node.attributes].filter(a=>a.name.startsWith('data-rt-')).map(a=>[a.name,a.value]));
+  const ancestors = [];
+  for (let node=el.parentElement;node&&ancestors.length<30;node=node.parentElement) ancestors.push(attributes(node));
+  return {attributes:attributes(el),ancestors,tag:el.tagName.toLowerCase(),className:el.getAttribute('class')||'',src:el.getAttribute('src')};
 }
 function resolveUrl(id, context) {
   return '/rt/__api/resolve?id=' + id + (context ? '&context=' + encodeURIComponent(JSON.stringify(context)) : '');
 }
-function sourcePayload(info) {
-  return { context: info.context, sourceId: info.textSource?.id, sourceHash: info.textSource?.hash };
+function componentUrl(id,context) {return resolveUrl(id,context).replace('/resolve?','/component?');}
+function sourcePayload(info, source=info.textSource) {
+  return { context: info.context, sourceId: source?.id, sourceHash: source?.hash };
 }
 function updateSource(info, result) {
   info.hash = result.hash;
@@ -221,14 +333,29 @@ async function classify(node) {
     busyPanel(false);
   }
 }
+function isStandaloneText(el, info) {
+  if(!info || (info.text==null && !info.mixedText))return false;
+  if(!/^(H[1-6]|P|SPAN|LABEL|BLOCKQUOTE|DIV)$/.test(el.tagName))return false;
+  return !!el.textContent.trim() && [...el.querySelectorAll('*')].every(child=>
+    /^(SPAN|STRONG|EM|B|I|U|S|DEL|BR|A|CODE|SMALL|SUB|SUP)$/.test(child.tagName));
+}
 async function classifyNode(node) {
   let el = node && node.closest ? node.closest('[data-rt], [data-rt-i]') : null;
   while (el) {
     const { hostId, instanceId } = idsOf(el);
+    let inlineComponent=false;
+    if(hostId && instanceId) {
+      const host=await api('GET',resolveUrl(hostId,renderContext(el)));
+      if(host?.ok && isStandaloneText(el,host.element)) {
+        const usage=await api('GET',resolveUrl(instanceId,renderContext(el)));
+        return {el,info:{...host.element,textLeaf:true},hostId,instanceId:usage?.element?.inlineComponent?null:instanceId};
+      }
+    }
     for (const id of [instanceId, hostId]) {
       if (!id || !/^[0-9a-f]{10}$/.test(id)) continue;
       const res = await api('GET', resolveUrl(id, renderContext(el)));
-      if (res && res.ok) return { el, info: res.element, hostId, instanceId };
+      if(res?.ok && res.element.inlineComponent){inlineComponent=true;continue;}
+      if (res && res.ok) return { el, info: res.element, hostId, instanceId:inlineComponent?null:instanceId };
     }
     el = el.parentElement ? el.parentElement.closest('[data-rt], [data-rt-i]') : null;
   }
@@ -236,6 +363,7 @@ async function classifyNode(node) {
 }
 
 async function select(node) {
+  gestures.end();menuComponent=null;
   const c = await classify(node);
   if (c?.superseded) return;
   if (!c) return clearSelection();
@@ -245,6 +373,13 @@ async function select(node) {
     scope: c.instanceId && c.info.id === c.instanceId ? 'instance' : 'host',
     info: c.info,
   };
+  const componentId = c.instanceId || c.el.closest('[data-rt-i]')?.getAttribute('data-rt-i');
+  if (componentId) {
+    const selectedInfo = sel.info;
+    const response = await api('GET', componentUrl(componentId, renderContext(c.el)));
+    if (sel?.info !== selectedInfo) return;
+    if (response?.ok && !response.inlineComponent) menuComponent = response;
+  }
   renderPanel();
 }
 
@@ -263,6 +398,7 @@ async function loadScope() {
 }
 
 function clearSelection() {
+  gestures.end();menuComponent=null;
   sel = null;
   panelBody.hidden = true;
   panelEmpty.hidden = false;
@@ -270,6 +406,7 @@ function clearSelection() {
 
 /* ---------- inline text editing ---------- */
 async function startInlineEdit(node, evt, quiet) {
+  if (previewStale || editHistory.busy || panelTasks) return;
   const c = await classify(node);
   if (c?.superseded) return;
   if (!c) return clearSelection(); // nothing editable here — no error
@@ -288,21 +425,28 @@ async function startInlineEdit(node, evt, quiet) {
     }
     return;
   }
-  if (info.textSource && info.textSource.format !== 'text') { renderPanel(); return; }
+  if (info.textSource && info.textSource.format !== 'text' && !info.richText) { renderPanel(); return; }
   const editId = info.id;
   renderPanel();
+  const originalDOM = RetouchRenderSync.capture(el);
+  const originalFingerprint = fingerprint(el);
+  if (info.richText) {
+    try { RetouchRichTextSource.prepare(el,info.richText); }
+    catch(err) { RetouchRenderSync.restore(originalDOM);toast(err.message,'err');return; }
+  }
   editing = {
     el,
     id: editId,
     info,
     original: el.textContent,
-    originalHTML: el.innerHTML,
+    originalDOM,
+    originalFingerprint,
     snapshot: new Map(),
     originalTree: null,
   };
-  for (const c of el.querySelectorAll('[data-rt], [data-rt-i]')) {
-    const cid = c.getAttribute('data-rt') || c.getAttribute('data-rt-i');
-    if (cid) editing.snapshot.set(cid, c.textContent);
+  for (const c of el.querySelectorAll('[data-rt], [data-rt-i], [data-rt-keep]')) {
+    const cid = c.getAttribute('data-rt-keep') || c.getAttribute('data-rt') || c.getAttribute('data-rt-i');
+    if (cid) editing.snapshot.set(cid, {html:c.innerHTML});
   }
   editing.originalTree = serializeChildren(el, editing.snapshot);
   // plaintext-only forces pre-wrap in Chromium even over author !important
@@ -322,12 +466,13 @@ async function startInlineEdit(node, evt, quiet) {
 }
 
 async function commitInlineEdit() {
+  if (previewStale) {if(editing)RetouchRenderSync.restore(editing.originalDOM);editing=null;return;}
   if (!editing) return;
   const ed = editing;
   editing = null;
   ed.el.removeAttribute('contenteditable');
   const children = serializeChildren(ed.el, ed.snapshot);
-  if (JSON.stringify(children) === JSON.stringify(ed.originalTree)) return;
+  if (JSON.stringify(children) === JSON.stringify(ed.originalTree)) { RetouchRenderSync.restore(ed.originalDOM);return; }
 
   // A pure-text element with a pure-text result uses setText (smaller diff).
   // An element whose SOURCE has mixed children must use setChildren even when
@@ -336,90 +481,77 @@ async function commitInlineEdit() {
   let op;
   if (!ed.info.mixedText && children.every((c) => c.t === 'text')) {
     op = { type: 'setText', id: ed.id, text: children.map((c) => c.value).join(''), fileHash: ed.info.hash };
+    if(ed.info.textSource?.format==='text')op.text=RetouchRichTextSource.storedText(op.text,ed.original,ed.info.text);
   } else {
     op = { type: 'setChildren', id: ed.id, children, fileHash: ed.info.hash };
   }
-  // Structural edits change child node identities that the app framework
-  // tracks by reference. Letting React (dev Fast Refresh) reconcile against
-  // our hand-mutated DOM crashes its committer (removeChild NotFoundError),
-  // so a structural commit reloads the frame after the write: React remounts
-  // clean from the new source. Text-only commits keep the smooth HMR path.
-  const structural = op.type === 'setChildren';
+  const afterFingerprint = fingerprint(ed.el);
+  const beforeFingerprint = ed.originalFingerprint;
+  // Return the precise original nodes to React before source/HMR changes its
+  // children. innerHTML restoration would clone nodes and break reconciliation.
+  RetouchRenderSync.restore(ed.originalDOM);
   Object.assign(op, sourcePayload(ed.info));
-  const res = await api('POST', '/rt/__api/op', op);
-  if (res && res.ok) {
-    undoStack.push(op.type === 'setText'
-      ? { type: 'setText', id: ed.id, text: ed.info.textSource ? ed.info.text : ed.original, context: ed.info.context, sourceId: ed.info.textSource?.id }
-      : { type: 'setChildren', id: ed.id, children: ed.originalTree });
-    updateSource(ed.info, res);
-    if (op.type === 'setText') {
-      ed.info.text = op.text;
-      for (const m of (ed.info.textSource ? [] : matchingEls(ed.id))) if (m !== ed.el) m.textContent = op.text;
-    }
-    if (structural) reloadFrame();
-    else if (sel && sel.info && sel.info.id === ed.id) {
-      sel.info.hash = res.hash;
-      renderPanel();
-    }
-    toast('Saved', 'ok');
-  } else {
-    ed.el.innerHTML = ed.originalHTML;
-    toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
-  }
+  busyPanel(true);
+  try {
+    const res = await api('POST', '/rt/__api/op', op);
+    if (res?.ok) {
+      recordEdit(res, ed.info, op.type, el => fingerprint(el) === beforeFingerprint, el => fingerprint(el) === afterFingerprint);
+      updateSource(ed.info, res);
+      if (op.type === 'setText') ed.info.text = op.text;
+      const synced = await refreshWrittenElement(ed.info, el => fingerprint(el) === afterFingerprint);
+      if (sel?.info?.id === ed.id) { sel.info = res.element || ed.info; renderPanel(); }
+      if (synced) toast('Saved', 'ok');
+    } else toast(res?.reason || res?.error || 'Write failed', 'err');
+  } finally { busyPanel(false); }
 }
 
-// Reload the iframe to its current path, preserving scroll where possible.
-function reloadFrame() {
-  return new Promise(resolve => {
-    const y = iframe.contentWindow?.scrollY || 0;
-    let timeout;
-    const done = () => {
-      clearTimeout(timeout); iframe.removeEventListener('load', done);
-      try { iframe.contentWindow.scrollTo(0, y); } catch {}
-      resolve();
-    };
-    iframe.addEventListener('load', done);
-    timeout = setTimeout(done, 8000);
-    try { iframe.contentWindow.location.reload(); } catch { iframe.src = iframe.src; }
-  });
+// Source remains authoritative. A failed renderer is visibly out of date and
+// cannot accept more edits until synchronization succeeds. No reload fallback.
+function markPreviewStale(message, retry) {
+  if (previewStale && document.getElementById('previewStatus').textContent === message) return;
+  staleEpoch++;
+  if (editing) {RetouchRenderSync.restore(editing.originalDOM);editing = null;}
+  if (nudgeState) {const ed=nudgeState;nudgeState=null;if(ed.style===null)ed.el.removeAttribute('style');else ed.el.setAttribute('style',ed.style);}
+  previewStale = true; retryPreview = retry;updateHistoryButtons();
+  panelBody.disabled = true; panelBody.inert = true;
+  retryBtn.hidden = !retry;
+  document.getElementById('previewStatus').hidden = false;
+  document.getElementById('previewStatus').textContent = message;
+  toast(message, 'err');
 }
-
-// A source write can finish before the framework invalidates its rendered
-// module. Reloading immediately can miss HMR and strand an old render.
 async function refreshWrittenElement(info, matches) {
-  const location = iframe.contentWindow.location.href;
-  for (let attempt = 0; attempt < 20; attempt++) {
-    if (iframe.contentWindow.location.href !== location) return;
-    try {
-      const response = await fetch(location, { cache: 'no-store' });
-      if (response.ok) {
-        const html = new DOMParser().parseFromString(await response.text(), 'text/html');
-        const el = html.querySelector(`[data-rt="${info.id}"], [data-rt-i="${info.id}"]`);
-        if (el && matches(el)) { await reloadFrame(); return; }
-      }
-    } catch {}
-    await new Promise(resolve => setTimeout(resolve, 150));
+  const epoch = staleEpoch;
+  const attempt = () => RetouchRenderSync.sync({
+    frame: iframe, serverRendered: !!window.__RT_RENDERING?.reloadAfterWrite,
+    select: d => matchingInDocument(d, info.id, info).filter(el => inTextScope(el,info)),
+    verifySelect: info.verifyContext ? d => matchingInDocument(d,info.id,info).filter(el => Object.entries(info.verifyContext).every(([name,value])=>el.getAttribute(name)===value)) : undefined,
+    matches,
+    revalidate: !!window.__RT_RENDERING?.revalidateStyles,
+  });
+  try {
+    await attempt();
+    if (window.__RT_RENDERING?.reloadAfterWrite) await pollSourceRevision();
+    if (epoch !== staleEpoch) return false;
+    previewStale = false; retryPreview = null; retryBtn.hidden = true;updateHistoryButtons();
+    document.getElementById('previewStatus').hidden = true;
+    panelBody.disabled = panelTasks > 0; panelBody.inert = panelTasks > 0;
+    return true;
+  } catch (err) {
+    if (epoch !== staleEpoch) return false;
+    markPreviewStale('Source saved; preview is out of date. ' + err.message, async () => refreshWrittenElement(info, matches));
+    return false;
   }
-  await reloadFrame();
 }
 
 // DOM -> op children tree. Implemented in serialize.js (loaded first) so it
 // can be unit-tested in Node against a fake DOM.
 const serializeChildren = window.RetouchSerialize.serializeChildren;
 
-async function applyChildren(id, children) {
-  const r = await api('GET', '/rt/__api/resolve?id=' + id);
-  if (!r || !r.ok) return toast('Cannot resolve the element for undo', 'err');
-  const res = await api('POST', '/rt/__api/op', { type: 'setChildren', id, children, fileHash: r.element.hash });
-  if (res && res.ok) toast('Saved', 'ok');
-  else toast((res && res.reason) || (res && res.error) || 'Undo failed', 'err');
-}
-
 /* ---------- bold / italic on selection (Cmd+B / Cmd+I) ---------- */
 function toggleWrap(tag) {
   const d = doc();
   if (!d || !editing) return;
-  if (editing.info.canSetChildren === false) return toast('Rich text formatting is not supported for Liquid yet.', 'err');
+  if (editing.info.canSetChildren === false) return toast('This source cannot preserve rich text formatting.', 'err');
   const s = d.getSelection();
   if (!s || !s.rangeCount) return;
   const r = s.getRangeAt(0);
@@ -465,61 +597,95 @@ function toggleWrap(tag) {
 }
 
 /* ---------- overlays ---------- */
+const hoverDescriptions = new WeakMap();
+function hoverDescription(el) {
+  let entry=hoverDescriptions.get(el);
+  if(!entry || (!entry.pending && Date.now()-entry.updated>2000)) {
+    entry={info:entry?.info || null,pending:true,updated:Date.now()};
+    hoverDescriptions.set(el,entry);
+    classifyNode(el).then(result=>{
+      entry.info=result?.info || {unresolved:true};entry.pending=false;entry.updated=Date.now();
+    });
+  }
+  return entry.info;
+}
+function outlineKind(el, info) {
+  if(info?.kind==='instance' && !info.inlineComponent)return 'instance';
+  if(!info)return null;
+  return !info.unresolved && (info.classNameDynamic===false || info.text!=null || info.canSetChildren || info.canSetSrc || info.canSetTag) ? 'editable' : 'readonly';
+}
+const componentBadge=document.createElement('div');
+componentBadge.className='component-badge';componentBadge.hidden=true;
+componentBadge.innerHTML='<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0 11.5 3.5 8 7 4.5 3.5ZM3.5 4.5 7 8 3.5 11.5 0 8ZM12.5 4.5 16 8 12.5 11.5 9 8ZM8 9 11.5 12.5 8 16 4.5 12.5Z"/></svg><span>component</span><button type="button" title="detach" aria-label="detach"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="m6 2-4 6 6 6m4-12 4 6-4 6M9 1 7 15" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></button>';
+overlayLayer.parentElement.appendChild(componentBadge);
+let badgeTarget=null;
+componentBadge.querySelector('button').onclick=async()=>{
+  const target=badgeTarget;if(!target)return;
+  const button=componentBadge.querySelector('button');button.disabled=true;
+  try {
+    await commitInlineEdit();
+    const context=renderContext(target.el);
+    const component=await api('GET',componentUrl(target.id,context));
+    if(!component?.ok || !component.canDetach)return toast(component?.reason || 'This component cannot be detached.','err');
+    await detachInstance(target.id,component,button,context);
+  } finally {button.disabled=false;}
+};
 function paintLoop() {
   overlayLayer.textContent = '';
   const d = doc();
-  if (d && sel) {
-    const id = activeId();
-    const attr = sel.scope === 'instance' && sel.instanceId ? 'data-rt-i' : 'data-rt';
-    const els = d.querySelectorAll(`[${attr}="${id}"]`);
-    let first = true;
-    for (const el of els) {
-      if (!inTextScope(el, sel.info)) continue;
-      drawBox(el, first ? 'sel' : 'co', sel.scope === 'instance', first ? labelFor() : null);
-      first = false;
+  let badge=null;
+  if (d && sel && mode==='edit') {
+    const id=activeId();
+    let first=true;
+    for(const el of matchingInDocument(d,id,sel.info)) {
+      if(!inTextScope(el,sel.info))continue;
+      const kind=outlineKind(el,sel.info);
+      drawBox(el,first?'sel':'co',kind);
+      if(first && kind==='instance')badge={el,id:el.getAttribute('data-rt-i') || id};
+      first=false;
     }
   }
-  if (d && editing && editing.el.isConnected) drawBox(editing.el, 'editing', false, 'text ⏎');
-  if (d && hoverEl && hoverEl.isConnected && mode === 'edit' && !editing) drawBox(hoverEl, 'hover', !!hoverEl.getAttribute('data-rt-i'), null);
+  if(d && editing?.el.isConnected)drawBox(editing.el,'editing',outlineKind(editing.el,editing.info));
+  if(d && hoverEl?.isConnected && mode==='edit' && !editing) {
+    const kind=outlineKind(hoverEl,hoverDescription(hoverEl));
+    if(kind)drawBox(hoverEl,'hover',kind);
+    if(kind==='instance')badge={el:hoverEl,id:hoverEl.getAttribute('data-rt-i')};
+  }
+  // Keep the badge mounted so pointer/focus events survive animation frames.
+  if(componentBadge.matches(':hover') || componentBadge.contains(document.activeElement))badge=badgeTarget;
+  if(mode!=='edit' || !badge?.el.isConnected)badge=null;
+  badgeTarget=badge;componentBadge.hidden=!badge;
+  if(badge){const r=badge.el.getBoundingClientRect();componentBadge.style.left=Math.max(0,r.left)+'px';componentBadge.style.top=Math.max(0,r.top-22)+'px';}
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
   requestAnimationFrame(paintLoop);
 }
 
 function inTextScope(el, info) {
-  const source = info.textSource;
-  const context = info.context;
-  if (!source || !context) return true;
-  if (source.kind === 'locale') return el.dataset.rtLocale === context.locale;
-  if (source.kind !== 'setting' || source.scope === 'theme') return true;
-  return el.dataset.rtSection === context.section && el.dataset.rtTemplate === context.template &&
-    (source.scope !== 'block' || el.dataset.rtBlock === context.block);
+  return Object.entries(info.renderScope || {}).every(([name,value])=>el.getAttribute(name)===value);
 }
-
-function labelFor() {
-  if (!sel || !sel.info) return null;
-  return (sel.scope === 'instance' ? '⟐ ' : '') + sel.info.tag;
-}
-
-function drawBox(el, cls, isInstance, label) {
+function drawBox(el, cls, kind) {
   const r = el.getBoundingClientRect();
   if (r.width === 0 && r.height === 0) return;
   const b = document.createElement('div');
-  b.className = 'box ' + cls + (isInstance ? ' instance' : '');
+  b.className = 'box ' + cls + ' ' + kind;
   b.style.left = r.left + 'px';
   b.style.top = r.top + 'px';
   b.style.width = r.width + 'px';
   b.style.height = r.height + 'px';
-  if (label) {
-    const chip = document.createElement('span');
-    chip.className = 'tagchip';
-    chip.textContent = label;
-    b.appendChild(chip);
-  }
   overlayLayer.appendChild(b);
 }
 
 /* ---------- panel ---------- */
 function renderPanel() {
+  if (!sel?.info) return;
+  const focused = panelBody.contains(document.activeElement) ? document.activeElement : null;
+  const focusId = focused?.id, focusLabel = focused?.getAttribute('aria-label');
+  const openDetails = [...panelBody.querySelectorAll('details')].map(d => d.open);
+  const restoreFocus = () => {
+    [...panelBody.querySelectorAll('details')].forEach((d,i) => {if (openDetails[i]) d.open = true;});
+    const target = focusId ? document.getElementById(focusId) : focusLabel ? [...panelBody.querySelectorAll('[aria-label]')].find(el => el.getAttribute('aria-label') === focusLabel) : null;
+    if (target && !previewStale) requestAnimationFrame(() => {if (target.isConnected && !editing) {restoringControlFocus = true;target.focus({preventScroll:true});restoringControlFocus = false;}});
+  };
   const info = sel.info;
   panelEmpty.hidden = true;
   panelBody.hidden = false;
@@ -529,7 +695,7 @@ function renderPanel() {
   head.className = 'sec';
   const badge = document.createElement('span');
   badge.className = 'kindbadge' + (info.kind === 'instance' ? ' instance' : '');
-  badge.textContent = info.kind === 'instance' ? 'instance' : '<' + info.tag + '>';
+  badge.textContent = info.kind === 'instance' ? 'component' : '<' + info.tag + '>';
   head.appendChild(badge);
   const file = document.createElement('div');
   file.className = 'filepath';
@@ -539,6 +705,21 @@ function renderPanel() {
     RetouchInspector.note(head, 'Editing base styles. Existing breakpoint and state styles may override them.');
   }
   panelBody.appendChild(head);
+
+  if(info.components?.length) {
+    const label=document.createElement('label');label.textContent='Component scope';
+    const select=document.createElement('select');select.setAttribute('aria-label','Component scope');
+    const prompt=document.createElement('option');prompt.value='';prompt.textContent='Choose a containing component';select.append(prompt);
+    for(const component of info.components){const option=document.createElement('option');option.value=component.id;option.textContent=component.label;select.append(option);}
+    select.value=info.components.some(c=>c.id===info.id)?info.id:'';
+    select.onchange=async()=>{
+      if(!select.value)return;
+      const result=await api('GET',resolveUrl(select.value,info.context));
+      if(result?.ok){sel={...sel,scope:'instance',instanceId:select.value,info:result.element};renderPanel();}
+      else toast('This component no longer resolves. Re-select it.','err');
+    };
+    label.append(select);head.append(label);
+  }
 
   // Scope switch when both IDs exist (R-12 a: instance is the default).
   if (sel.hostId && sel.instanceId) {
@@ -556,13 +737,13 @@ function renderPanel() {
 
   const componentTarget = matchingEls(activeId())[0]?.closest('[data-rt-i]');
   const componentId = sel.instanceId || componentTarget?.getAttribute('data-rt-i');
-  if (componentId) panelBody.appendChild(componentSection(componentId));
+  if (componentId && !info.textLeaf) panelBody.appendChild(componentSection(componentId));
   if (info.kind === 'instance' && !info.canSetSrc) {
     RetouchInspector.note(panelBody, 'Instance props are listed above. Edit the definition for shared styles, or detach this usage for independent styles.');
-    return;
+    restoreFocus();return;
   }
 
-  const target = editing?.el || matchingEls(activeId()).find(el => inTextScope(el, info));
+  const target = (editing?.el.ownerDocument === doc() ? editing.el : null) || matchingEls(activeId()).find(el => inTextScope(el, info));
   panelBody.appendChild(RetouchInspector.position(info, target, setClasses, message => toast(message, 'err')));
   panelBody.appendChild(RetouchInspector.appearance(info, target, setClasses));
   if (info.src !== null || info.srcDynamic) panelBody.appendChild(imageSection(info));
@@ -580,7 +761,11 @@ function renderPanel() {
     provenance.className = 'filepath';
     provenance.textContent = (info.textSource.kind === 'locale' ? 'Shared translation: ' : 'Text source: ') + info.textSource.file + ' · ' + info.textSource.path;
     tsec.appendChild(provenance);
-    if (info.textSource.format !== 'text') {
+    if (info.richText) {
+      const hint=document.createElement('p');
+      hint.textContent='Edit in place. Select text, then Cmd+B or Cmd+I. Preserved placeholders stay connected to their source.';
+      tsec.appendChild(hint);
+    } else if (info.textSource.format !== 'text') {
       const label = document.createElement('p');
       label.textContent = info.textSource.format === 'html' ? 'Edit the stored HTML below.' : 'Edit the stored translation; keep its placeholders.';
       tsec.appendChild(label);
@@ -591,12 +776,7 @@ function renderPanel() {
     ta.id = 'textEdit';
     ta.value = info.text;
     tsec.appendChild(ta);
-    const btn = document.createElement('button');
-    btn.id = 'textApply';
-    btn.textContent = 'Apply text';
-    btn.onclick = () => setText(ta.value);
-    tsec.appendChild(document.createElement('br'));
-    tsec.appendChild(btn);
+    ta.onchange = () => { if (ta.value !== info.text) setText(ta.value); };
   } else if (info.mixedText) {
     const p = document.createElement('p');
     p.style.color = 'var(--muted)';
@@ -628,7 +808,7 @@ function renderPanel() {
   if (info.classNameDynamic) {
     const p = document.createElement('p');
     p.className = 'refused';
-    p.textContent = info.classNameReason || 'className here is a dynamic expression; Retouch edits literal class strings only (R-6).';
+    p.textContent = info.classNameReason || 'This class value has no editable source.';
     csec.appendChild(p);
   } else {
     const chips = document.createElement('div');
@@ -672,8 +852,9 @@ function renderPanel() {
   const hint = document.createElement('p');hint.className = 'hint';
   hint.textContent = info.classNameDynamic
     ? 'Max-width dragging is unavailable here because the class attribute contains expressions. Select a container with literal classes.'
-    : 'Drag the right-edge ↔ handle to snap the maximum width to a Tailwind size. The popup shows the exact class being changed.';
+    : 'Drag horizontally from any selection edge to snap the maximum width to a Tailwind size. The popup shows the exact class being changed.';
   sizing.append(title, hint);panelBody.appendChild(sizing);
+  restoreFocus();
 
 }
 
@@ -681,8 +862,9 @@ function componentSection(id) {
   const sec = RetouchInspector.section('Component');
   sec.classList.add('component-section');
   const description = RetouchInspector.note(sec, 'Loading definition…');
-  api('GET', '/rt/__api/component?id=' + id).then(component => {
+  api('GET', componentUrl(id,sel?.info?.context)).then(component => {
     if (!sec.isConnected) return;
+    if(component?.inlineComponent){sec.remove();return;}
     if (!component?.ok) { description.textContent = component?.reason || 'Definition unavailable.'; return; }
     description.textContent = component.name + ' · ' + component.file;
     if (component.detached) sec.querySelector('h3').textContent = 'Detached component';
@@ -692,7 +874,9 @@ function componentSection(id) {
     edit.disabled = !component.definitionId; actions.append(edit);
     const detach = RetouchInspector.button('Detach instance', () => detachInstance(id, component, detach));
     detach.disabled = !component.canDetach; if (!component.detached) actions.append(detach); sec.append(actions);
-    RetouchInspector.note(sec, `${matchingEls(id).length} rendered instance${matchingEls(id).length === 1 ? '' : 's'} at this usage. ${component.detached ? 'This module is independent of the original component.' : 'Definition edits are shared.'}`);
+    const count=matchingInDocument(doc(),id,component).length;
+    RetouchInspector.note(sec, `${count} rendered instance${count === 1 ? '' : 's'} at this usage. ${component.detached ? 'This module is independent of the original component.' : 'Definition edits are shared.'}`);
+    if(!component.canDetach&&!component.detached&&component.reason)RetouchInspector.note(sec,component.reason);
     if (component.props.length) sec.append(propTable(component.props));
   });
   return sec;
@@ -708,26 +892,32 @@ function propTable(props) {
 }
 async function editDefinition(instanceId, component) {
   if (!component.definitionId) return;
-  const response = await api('GET', resolveUrl(component.definitionId));
+  const roots=matchingInDocument(doc(),instanceId,component);
+  const target=roots.map(root=>root.getAttribute('data-rt')===component.definitionId?root:root.querySelector(`[data-rt="${component.definitionId}"]`)).find(Boolean);
+  const response = await api('GET', resolveUrl(component.definitionId, target?renderContext(target):sel?.info?.context));
   if (!response?.ok) return toast('The definition changed. Re-select the component.', 'err');
   sel = { hostId: component.definitionId, instanceId, scope: 'host', info: response.element };
   renderPanel(); toast(component.detached ? 'Editing detached definition' : 'Editing shared definition', 'ok');
 }
-async function detachInstance(id, component, button) {
+async function detachInstance(id, component, button, context=sel?.info?.context) {
+  if (previewStale || editHistory.busy || panelTasks) return;
+  gestures.end();busyPanel(true);
   button.disabled = true;
   try {
-    const usage = await api('GET', resolveUrl(id));
+    const usage = await api('GET', resolveUrl(id,context));
     if (!usage?.ok) return toast('The usage no longer resolves.', 'err');
-    const result = await api('POST', '/rt/__api/op', { type: 'detachComponent', id, fileHash: usage.element.hash, definitionHash: component.hash });
+    const result = await api('POST', '/rt/__api/op', { type: 'detachComponent', id, fileHash: usage.element.hash, definitionHash: component.hash, context:usage.element.context });
     if (!result?.ok) return toast(result?.reason || result?.error || 'Detach failed', 'err');
-    undoStack.push({ type: 'detachComponent', id, undoId: result.undoId });
-    const detached = await api('GET', '/rt/__api/component?id=' + id);
+    recordEdit(result, usage.element, 'detachComponent', el => el.getAttribute('data-rt') === component.definitionId, el => el.getAttribute('data-rt') === result.definitionId);
+    const detached = await api('GET', componentUrl(id,usage.element.context));
     if (detached?.ok) {
-      await refreshWrittenElement(usage.element, el => el.getAttribute('data-rt') === detached.definitionId);
+      const entryMatch = el => el.getAttribute('data-rt') === detached.definitionId;
+      recordEdit(result, usage.element, 'detachComponent', el => el.getAttribute('data-rt') === component.definitionId, entryMatch);
+      await refreshWrittenElement(usage.element, entryMatch);
       await editDefinition(id, detached);
     }
     toast('Detached to ' + result.detachedFile, 'ok');
-  } finally { button.disabled = false; }
+  } finally { button.disabled = false;busyPanel(false); }
 }
 function openComponent(id, component) {
   const modal = document.createElement('dialog');modal.className = 'component-modal';
@@ -752,15 +942,25 @@ function openComponent(id, component) {
       const d=preview.contentDocument;
       // Keep the actual mounted component, its providers, and HMR alive. Hide
       // surrounding layout in this separate frame instead of cloning markup.
+      // A constructed stylesheet leaves React-owned DOM attributes intact
+      // even when its hydration completes after the frame load event.
+      const sheet=new preview.contentWindow.CSSStyleSheet();
+      d.adoptedStyleSheets=[...d.adoptedStyleSheets,sheet];
+      const selector=node=>{
+        const parts=[];
+        for(let n=node;n&&n!==d.documentElement;n=n.parentElement)parts.unshift(n.tagName.toLowerCase()+':nth-child('+([...n.parentElement.children].indexOf(n)+1)+')');
+        return 'html'+(parts.length?' > '+parts.join(' > '):'');
+      };
       const isolate=()=>{
-        const el=d.querySelector(`[data-rt-i="${id}"]`);if(!el)return;
+        const el=matchingInDocument(d,id,component)[0];if(!el)return;
+        const rules=[];
         let child=el;
         for(let parent=el.parentElement;parent;parent=parent.parentElement){
-          for(const sibling of parent.children)if(sibling!==child&&!['STYLE','LINK','SCRIPT','HEAD'].includes(sibling.tagName))sibling.style.setProperty('display','none','important');
-          if(parent!==d.documentElement)for(const [p,v] of Object.entries({display:'block',position:'static',width:'auto',height:'auto','min-height':'0',margin:'0',padding:parent===d.body?'32px':'0',transform:'none',overflow:'visible'}))parent.style.setProperty(p,v,'important');
+          for(const sibling of parent.children)if(sibling!==child&&!['STYLE','LINK','SCRIPT','HEAD'].includes(sibling.tagName))rules.push(selector(sibling)+'{display:none!important}');
+          if(parent!==d.documentElement)rules.push(selector(parent)+'{'+Object.entries({display:'block',position:'static',width:'auto',height:'auto','min-height':'0',margin:'0',padding:parent===d.body?'32px':'0',transform:'none',overflow:'visible'}).map(([p,v])=>p+':'+v+'!important').join(';')+'}');
           child=parent;
         }
-        el.style.setProperty('margin','0','important');
+        rules.push(selector(el)+'{margin:0!important}');sheet.replaceSync(rules.join('\n'));
       };
       isolate(); const observer=new MutationObserver(isolate);observer.observe(d.body,{childList:true,subtree:true});stop=()=>observer.disconnect();
       d.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();},true);
@@ -772,6 +972,7 @@ function openComponent(id, component) {
 }
 
 async function setTag(tag) {
+  if (previewStale || editHistory.busy) return;
   busyPanel(true);
   try { return await writeTag(tag); } finally { busyPanel(false); }
 }
@@ -779,11 +980,12 @@ async function writeTag(tag) {
   if (!sel || !sel.info || sel.info.tag === tag) return;
   const info = sel.info;
   const prev = info.tag;
-  const res = await api('POST', '/rt/__api/op', { type: 'setTag', id: info.id, tag, fileHash: info.hash });
+  const res = await api('POST', '/rt/__api/op', { type: 'setTag', id: info.id, tag, fileHash: info.hash, ...sourcePayload(info,info.tagSource) });
   if (res && res.ok) {
-    undoStack.push({ type: 'setTag', id: info.id, tag: prev, undoId: res.undoId });
+    recordEdit(res, info, 'setTag', el => el.tagName.toLowerCase() === prev, el => el.tagName.toLowerCase() === tag);
     info.tag = tag;
     info.hash = res.hash;
+    if (res.element?.tagSource) info.tagSource=res.element.tagSource;
     toast('Saved', 'ok');
     await refreshWrittenElement(info, el => el.tagName.toLowerCase() === tag);
     renderPanel();
@@ -792,14 +994,6 @@ async function writeTag(tag) {
   }
 }
 
-// Undo path: resolve the element fresh and set its tag by id.
-async function applyTag(id, tag) {
-  const r = await api('GET', '/rt/__api/resolve?id=' + id);
-  if (!r || !r.ok) return toast('Cannot resolve the element for undo', 'err');
-  const res = await api('POST', '/rt/__api/op', { type: 'setTag', id, tag, fileHash: r.element.hash });
-  if (res && res.ok) { toast('Saved', 'ok'); reloadFrame(); }
-  else toast((res && res.reason) || (res && res.error) || 'Undo failed', 'err');
-}
 
 function makeStepper(prefix, tokens) {
   const re = new RegExp('^' + prefix + '-([0-9]+(?:\\.5)?)$');
@@ -983,7 +1177,7 @@ function imageSection(info) {
   if (info.srcDynamic || info.canSetSrc === false) {
     const p = document.createElement('p');
     p.className = 'refused';
-    p.textContent = info.srcReason || 'This image source is computed. Literal sources, static image imports, and Liquid asset_url images can be swapped.';
+    p.textContent = info.srcReason || 'This image source is computed. Choose an image with an editable source.';
     sec.appendChild(p);
     return sec;
   }
@@ -1043,25 +1237,30 @@ function imageSection(info) {
 }
 
 async function setSrc(src, isUndo, info = sel?.info) {
+  if (previewStale || editHistory.busy) return;
   busyPanel(true);
   try { return await writeSrc(src, isUndo, info); } finally { busyPanel(false); }
+}
+function imageMatches(el,src,matcher) {
+  const value=new URL(el.getAttribute('src')||'',location.origin);
+  return value.href===new URL(src||'',location.origin).href || value.searchParams.get('url')===src ||
+    !!matcher?.pathnameSuffix&&value.pathname.endsWith(matcher.pathnameSuffix);
 }
 async function writeSrc(src, isUndo, info) {
   if (!info) return;
   const prev = info.src;
+  const previousSrcMatch = info.srcMatch;
   const target = matchingEls(info.id)[0];
   const dimensions = target ? { width: Number(target.getAttribute('width')) || target.naturalWidth, height: Number(target.getAttribute('height')) || target.naturalHeight } : undefined;
-  const res = await api('POST', '/rt/__api/op', { type: 'setSrc', id: info.id, src, fileHash: info.hash, dimensions });
+  const res = await api('POST', '/rt/__api/op', { type: 'setSrc', id: info.id, src, fileHash: info.hash, dimensions, context:info.context });
   if (res && res.ok) {
-    if (!isUndo) undoStack.push({ type: 'setSrc', id: info.id, src: prev, undoId: res.undoId });
+    recordEdit(res, info, 'setSrc', el => imageMatches(el, prev, previousSrcMatch), el => imageMatches(el, src, res.element?.srcMatch));
     info.src = src;
     info.srcImported = false;
     info.hash = res.hash;
     toast('Saved', 'ok');
-    await refreshWrittenElement(info, el => {
-      const value = new URL(el.getAttribute('src') || '', location.origin);
-      return value.pathname === src || value.searchParams.get('url') === src || (src.startsWith('/assets/') && value.pathname.endsWith('/' + src.slice(8)));
-    });
+    info.srcMatch=res.element?.srcMatch;
+    await refreshWrittenElement(info, el => imageMatches(el,src,info.srcMatch));
     if (sel?.info === info) renderPanel();
   } else {
     toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
@@ -1071,6 +1270,7 @@ async function writeSrc(src, isUndo, info) {
 
 /* ---------- ops ---------- */
 async function setClasses(classes, isUndo) {
+  if (previewStale || editHistory.busy) return false;
   busyPanel(true);
   try { return await writeClasses(classes, isUndo); } finally { busyPanel(false); }
 }
@@ -1078,18 +1278,16 @@ async function writeClasses(classes, isUndo) {
   if (!sel || !sel.info) return;
   const info = sel.info;
   const prev = info.className || '';
-  optimisticClasses(classes);
   const res = await api('POST', '/rt/__api/op', {
-    type: 'setClasses', id: info.id, classes, fileHash: info.fileHash || info.hash,
+    type: 'setClasses', id: info.id, classes, fileHash: info.fileHash || info.hash, context: info.context,
   });
   if (res && res.ok) {
-    if (!isUndo) undoStack.push({ type: 'setClasses', id: info.id, classes: prev, undoId: res.undoId });
+    recordEdit(res, info, 'setClasses', classMatch(prev), classMatch(res.element?.className ?? classes), allContexts(info));
     info.className = res.element?.className ?? classes;
     info.hash = res.hash;
-    toast('Saved', 'ok');
+    if (await refreshWrittenElement(allContexts(info), classMatch(info.className))) toast('Saved', 'ok');
     renderPanel();
   } else {
-    optimisticClasses(prev);
     toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
     loadScope();
   }
@@ -1097,20 +1295,24 @@ async function writeClasses(classes, isUndo) {
 }
 
 async function setText(text, isUndo) {
+  if (previewStale || editHistory.busy) return;
+  busyPanel(true);
+  try {return await writeText(text, isUndo);} finally {busyPanel(false);}
+}
+async function writeText(text, isUndo) {
   if (!sel || !sel.info) return;
   const info = sel.info;
   const prev = info.text;
-  optimisticText(text);
   const res = await api('POST', '/rt/__api/op', {
     type: 'setText', id: info.id, text, fileHash: info.fileHash || info.hash, ...sourcePayload(info),
   });
   if (res && res.ok) {
-    if (!isUndo) undoStack.push({ type: 'setText', id: info.id, text: prev, context: info.context, sourceId: info.textSource?.id });
+    recordEdit(res, info, 'setText', storedTextMatch(info, prev), storedTextMatch(info, text));
+    const matches = storedTextMatch(info, text);
     info.text = text;
     updateSource(info, res);
-    toast('Saved', 'ok');
+    if (await refreshWrittenElement(info, matches)) toast('Saved', 'ok');
   } else {
-    optimisticText(prev);
     toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
     loadScope();
   }
@@ -1119,60 +1321,147 @@ async function setText(text, isUndo) {
 function matchingEls(id) {
   const d = doc();
   if (!d) return [];
-  return [...d.querySelectorAll(`[data-rt="${id}"], [data-rt-i="${id}"]`)];
+  return matchingInDocument(d,id,sel?.info?.id===id?sel.info:null);
+}
+function matchingInDocument(d,id,info) {
+  if(!d)return [];
+  const direct=[...d.querySelectorAll(`[data-rt="${id}"], [data-rt-i="${id}"]`)];
+  if(direct.length){
+    const attrs=info?.context?.attributes;
+    if(attrs){const preferred=el=>Object.entries(attrs).every(([name,value])=>el.getAttribute(name)===value);direct.sort((a,b)=>Number(preferred(b))-Number(preferred(a)));}
+    return direct;
+  }
+  const scope=info?.renderScope;
+  if(!scope||!Object.keys(scope).length)return [];
+  const matches=[...d.querySelectorAll('[data-rt], [data-rt-i]')].filter(el=>Object.entries(scope).every(([name,value])=>el.getAttribute(name)===value));
+  const set=new Set(matches);
+  return matches.filter(el=>{for(let parent=el.parentElement;parent;parent=parent.parentElement)if(set.has(parent))return false;return true;});
 }
 
-function optimisticClasses(classes) {
-  for (const el of matchingEls(sel.info.id)) el.setAttribute('class', classes);
+async function restoreHistory(type, entry) {
+  busyPanel(true);
+  try {return await restoreHistorySource(type, entry);} finally {busyPanel(false);}
 }
-
-function optimisticText(text) {
-  if (sel.info.textSource) return;
-  for (const el of matchingEls(sel.info.id)) el.textContent = text;
-}
-
-async function undo() {
-  if (undoBusy) return;
-  undoBusy = true; undoBtn.disabled = true;
-  try { await undoNext(); } finally { undoBusy = false; undoBtn.disabled = false; }
-}
-async function undoNext() {
-  const op = undoStack[undoStack.length - 1];
-  if (!op) return toast('Nothing to undo');
-  if (op.undoId) {
-    const result = await api('POST', '/rt/__api/op', { type: 'undo', undoId: op.undoId });
-    if (!result?.ok) return toast(result?.reason || result?.error || 'Undo failed', 'err');
-    undoStack.pop();
-    const fresh = await api('GET', resolveUrl(op.id, op.context));
-    if (fresh?.ok) { sel = { hostId: op.id, instanceId: null, scope: 'host', info: fresh.element }; renderPanel(); }
+async function restoreHistorySource(type, entry) {
+  const result = await api('POST', '/rt/__api/op', {type, undoId: entry.undoId});
+  if (!result?.ok) { toast(result?.reason || result?.error || 'History could not be restored', 'err'); return result; }
+  // Source already changed: always advance history even if the renderer fails.
+  try {
+    const syncInfo = entry.syncInfo;
+    const synced = await refreshWrittenElement(syncInfo, type === 'undo' ? entry.before : entry.after);
+    const fresh = await api('GET', resolveUrl(syncInfo.id, syncInfo.context));
+    if (fresh?.ok) { sel = {hostId: syncInfo.id, instanceId: null, scope: 'host', info: fresh.element}; renderPanel(); }
     else clearSelection();
-    if (fresh?.ok) {
-      const info = fresh.element;
-      const component = op.type === 'detachComponent' ? await api('GET', '/rt/__api/component?id=' + op.id) : null;
-      await refreshWrittenElement(info, el => {
-        if (component?.ok) return el.getAttribute('data-rt') === component.definitionId;
-        if (op.type === 'setSrc') return el.getAttribute('src') === info.src || new URL(el.getAttribute('src') || '', location.origin).searchParams.get('url') === info.src;
-        if (op.type === 'setTag') return el.tagName.toLowerCase() === info.tag;
-        return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
-      });
-    } else await reloadFrame();
-    toast('Undone', 'ok'); return;
-  }
-  undoStack.pop();
-  if (op.type === 'setText' || !sel || !sel.info || sel.info.id !== op.id) {
-    // Re-resolve the op's element so the write path stays identical.
-    const res = await api('GET', resolveUrl(op.id, op.context));
-    if (!res || !res.ok) return toast('Undo target no longer resolves', 'err');
-    if (op.sourceId && res.element.textSource?.id !== op.sourceId) return toast('The original string source changed; undo was not applied.', 'err');
-    sel = { hostId: op.id, instanceId: null, scope: 'host', info: res.element };
-  }
-  if (op.type === 'setClasses') await setClasses(op.classes, true);
-  else if (op.type === 'setText') await setText(op.text, true);
-  else if (op.type === 'setSrc') await setSrc(op.src, true);
-  else if (op.type === 'setChildren') await applyChildren(op.id, op.children);
-  else if (op.type === 'setTag') await applyTag(op.id, op.tag);
-  renderPanel();
+    if (synced) toast(type === 'undo' ? 'Undone' : 'Redone', 'ok');
+  } catch (err) { markPreviewStale('Source restored; preview is out of date. ' + err.message); }
+  return result;
 }
+async function undo() {
+  if (panelTasks || editHistory.busy || previewStale) return;
+  await commitInlineEdit(); gestures.end();
+  const result = await editHistory.undo();
+  if (result?.empty) toast('Nothing to undo');
+}
+async function redo() {
+  if (panelTasks || editHistory.busy || previewStale) return;
+  await commitInlineEdit(); gestures.end();
+  const result = await editHistory.redo();
+  if (result?.empty) toast('Nothing to redo');
+}
+function selectedElement() { return sel && matchingEls(activeId()).find(el => inTextScope(el, sel.info)); }
+function framePoint(x, y) {
+  const rect = iframe.getBoundingClientRect();
+  return {x: rect.left + x * rect.width / iframe.offsetWidth, y: rect.top + y * rect.height / iframe.offsetHeight};
+}
+async function selectedComponent(action) {
+  await commitInlineEdit();
+  const el = selectedElement();
+  const id = sel?.instanceId || el?.closest('[data-rt-i]')?.getAttribute('data-rt-i');
+  if (!id) return;
+  const component = await api('GET', componentUrl(id, renderContext(el)));
+  if (!component?.ok) return toast(component?.reason || 'Component unavailable', 'err');
+  if (action === 'edit') return editDefinition(id, component);
+  return detachInstance(id, component, {disabled: false}, renderContext(el));
+}
+async function structureEdit(type, direction) {
+  if (!sel?.info || previewStale || editHistory.busy || panelTasks) return;
+  const info = sel.info, el = selectedElement(), parentId = info.structure?.parentId;
+  if (!parentId || !el?.parentElement) return toast('Select a literal element with an editable parent.', 'err');
+  gestures.end();busyPanel(true);
+  try {
+  const parentResult = await api('GET', resolveUrl(parentId, renderContext(el.parentElement)));
+  if (!parentResult?.ok) return toast('The parent no longer resolves.', 'err');
+  const parentInfo = parentResult.element;
+  const parent = matchingInDocument(doc(), parentId, parentInfo).find(node => node.contains(el));
+  if (!parent || el.parentElement !== parent) return toast('The rendered sibling relationship differs from source.', 'err');
+  const beforeValue = fingerprint(parent), copy = parent.cloneNode(true);
+  const index = [...parent.children].indexOf(el), child = copy.children[index];
+  if (type === 'duplicateElement') child.after(child.cloneNode(true));
+  if (type === 'deleteElement') child.remove();
+  if (type === 'moveElement') {
+    const other = direction === 'before' ? child.previousElementSibling : child.nextElementSibling;
+    if (!other) return;
+    if (direction === 'before') other.before(child); else other.after(child);
+  }
+  if (type === 'pasteElement') {
+    const copied = clipboard && matchingInDocument(doc(), clipboard.id, info)[0];
+    if (!copied || copied.parentElement !== parent) return toast('Copy a sibling from this container first.', 'err');
+    child.after(copied.cloneNode(true));
+  }
+  const afterValue = fingerprint(copy);
+    const res = await api('POST', '/rt/__api/op', {type, id: info.id, fileHash: info.hash, context: info.context, direction,
+      ...(type === 'pasteElement' ? {copiedId: clipboard.id, copiedHash: clipboard.hash} : {})});
+    if (!res?.ok) return toast(res?.reason || res?.error || 'Edit refused', 'err');
+    recordEdit(res, info, type, node => fingerprint(node) === beforeValue, node => fingerprint(node) === afterValue, parentInfo);
+    if (await refreshWrittenElement(parentInfo, node => fingerprint(node) === afterValue)) {
+      await select(parent); toast('Saved', 'ok');
+    }
+  } finally { busyPanel(false); }
+}
+function canNudge() {
+  const el = selectedElement();
+  return !!el && !sel.info.classNameDynamic && ['relative','absolute','fixed'].includes(el.ownerDocument.defaultView.getComputedStyle(el).position);
+}
+function nudge(dx, dy, {gestureKey}) {
+  if (!canNudge()) return;
+  const el = selectedElement();
+  if (nudgeState && nudgeState.key !== gestureKey) finishNudge();
+  if (!nudgeState) {
+    const css = el.ownerDocument.defaultView.getComputedStyle(el);
+    nudgeState = {key: gestureKey, el, info: sel.info, style: el.getAttribute('style'), classes: sel.info.className,
+      x: css.left !== 'auto' ? 'left' : css.right !== 'auto' ? 'right' : 'left',
+      y: css.top !== 'auto' ? 'top' : css.bottom !== 'auto' ? 'bottom' : 'top', values: {}};
+    for (const side of ['left','right','top','bottom']) nudgeState.values[side] = parseFloat(css[side]) || 0;
+  }
+  const ed = nudgeState, side = dx ? ed.x : ed.y;
+  ed.values[side] += (dx || dy) * (side === 'right' || side === 'bottom' ? -1 : 1);
+  const value = Math.round(ed.values[side] * 100) / 100;
+  ed.classes = RetouchInspector.replace(ed.classes, token => token.replace(/^-/, '').startsWith(side+'-'), `${side}-[${value}px]`);
+  el.style.setProperty(side, value + 'px', 'important');
+}
+async function finishNudge() {
+  const ed = nudgeState;if (!ed) return;nudgeState = null;
+  if (ed.style === null) ed.el.removeAttribute('style');else ed.el.setAttribute('style', ed.style);
+  gestures.begin('nudge', ed.key);
+  try {await setClasses(ed.classes);} finally {gestures.end('nudge');}
+}
+const interactions = RetouchInteractions.create({document, getState: () => {
+  const selected = selectedElement(), structure = sel?.info?.structure;
+  return {mode, selected, editing: !!editing, busy: panelTasks > 0 || previewStale || editHistory.busy,
+    canUndo: editHistory.canUndo, canRedo: editHistory.canRedo, canNudge: canNudge(),
+    canEditText: sel?.info?.text != null || !!sel?.info?.mixedText,
+    structure: {...structure, canPaste: !!clipboard && !!structure?.canPaste},
+    component: selected?.closest('[data-rt-i]') ? menuComponent : null};
+}, actions: {
+  undo, redo, select, clearSelection, nudge, endNudgeGesture: finishNudge,
+  editText: () => {const el = selectedElement(); if (el) {const r = el.getBoundingClientRect(); return startInlineEdit(el, {clientX:r.left+4, clientY:r.top+4});}},
+  editDefinition: () => selectedComponent('edit'), detachComponent: () => selectedComponent('detach'),
+  duplicate: () => structureEdit('duplicateElement'), delete: () => structureEdit('deleteElement'),
+  moveBackward: () => structureEdit('moveElement', 'before'), moveForward: () => structureEdit('moveElement', 'after'),
+  copy: () => {if (sel?.info?.structure?.canDuplicate) {clipboard = {id: sel.info.id, hash: sel.info.hash}; toast('Copied');}},
+  paste: () => structureEdit('pasteElement'),
+}, onError: err => toast(err.message, 'err')});
+interactions.bindDocument(document);
 
 /* ---------- chrome ---------- */
 modeBtn.onclick = () => {
@@ -1182,14 +1471,15 @@ modeBtn.onclick = () => {
   if (mode === 'interact') { hoverEl = null; }
 };
 undoBtn.onclick = () => undo();
+redoBtn.onclick = () => redo();
+retryBtn.onclick = async () => { retryBtn.disabled = true; try { await retryPreview?.(); } finally { retryBtn.disabled = false; } };
+updateHistoryButtons();
 routeInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') iframe.src = routeInput.value || '/';
+  if (e.key === 'Enter') iframe.src = mirrorPath(routeInput.value || '/');
 });
 window.addEventListener('keydown', (e) => {
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
-  if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); undo(); }
-  if (e.key === 'Escape') clearSelection();
 });
 window.addEventListener('keyup', (e) => { if (!e.altKey) measuring = false; });
 window.addEventListener('blur', () => { measuring = false; });
@@ -1200,7 +1490,7 @@ async function api(method, url, body) {
     const res = await fetch(url, {
       method,
       headers: { 'x-retouch-token': TOKEN, ...(body ? { 'content-type': 'application/json' } : {}) },
-      body: body ? JSON.stringify(body) : undefined,
+      body: body ? JSON.stringify(url === '/rt/__api/op' && !['undo','redo'].includes(body.type) ? {historyGroup: gestures.current(), ...body} : body) : undefined,
     });
     return await res.json();
   } catch (err) {

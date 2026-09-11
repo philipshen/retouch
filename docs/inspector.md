@@ -1,6 +1,8 @@
 # Design inspector
 
-The inspector sits on the left of the live page. Select an element in Edit mode.
+The inspector sits on the right of the live page. Select an element in Edit mode.
+Liquid parity work and its remaining verification gates are tracked in
+[the parity checklist](liquid-parity.md).
 
 | Control | Behavior |
 |---|---|
@@ -74,3 +76,5 @@ resizing, source persistence after reload, image replacement/upload, and undo.
 The second checks props and live preview isolation, shared definition edits,
 detachment, independent edits, and exact two-file undo. Both collect browser
 errors and restore their disposable sources.
+
+See [editing workflow](editing-workflow.md) for grouped undo/redo, keyboard commands, the right-click menu, and preview synchronization boundaries.
