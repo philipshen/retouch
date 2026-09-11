@@ -23,6 +23,16 @@
     if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(rule.match(I.base(token)||'')||rule.shorthand(I.base(token)||''))))addition='!'+addition;
     return I.replace(classes,rule.match,addition);
   }
+  function paddingClasses(classes,side,value,inherited=''){
+    const short={top:'t',right:'r',bottom:'b',left:'l'}[side];
+    if(!short)throw Error('Choose a padding edge.');
+    if(value!==null&&(!Number.isFinite(value)||value<0||value>10000))throw Error('Use padding from 0 to 10000 pixels.');
+    const axis=side==='top'||side==='bottom'?'y':'x';
+    const matches=t=>t.startsWith('p'+short+'-')||t.startsWith('[padding-'+side+':');
+    let addition=value===null?'':'p'+short+'-['+value+'px]';
+    if(addition&&[...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(matches(I.base(token)||'')||new RegExp('^p(?:'+axis+')?-|^\\[padding:').test(I.base(token)||''))))addition='!'+addition;
+    return I.replace(classes,matches,addition);
+  }
   function layoutAxes(parent={}){
     const inline=/^(vertical|sideways)-/.test(parent.writingMode||'')?'height':'width',block=inline==='width'?'height':'width';
     return {inline,block,main:/^column/.test(parent.direction||'')?block:inline};
@@ -137,8 +147,11 @@
       }
       I.note(sec,'Choosing a span replaces explicit line placement on that axis. Other dimensions stay unchanged.');
     }
-    for(const [side,short] of [['Top','t'],['Right','r'],['Bottom','b'],['Left','l']]) {
-      numeric('Padding '+side.toLowerCase(),parseFloat(css['padding'+side])||0,0,10000,v=>save(I.replace(classes,t=>t.startsWith('p'+short+'-'),`p${short}-[${v}px]`)));
+    for(const side of ['Top','Right','Bottom','Left']) {
+      const edge=side.toLowerCase();
+      numeric('Padding '+edge,parseFloat(css['padding'+side])||0,0,10000,v=>save(paddingClasses(classes,edge,v,inherited)));
+      const reset=I.button('Reset padding '+edge,()=>save(paddingClasses(classes,edge,null)));
+      reset.disabled=paddingClasses(classes,edge,null)===classes;sec.append(reset);
     }
     const geometry=root.RetouchReactSelection||require('./react-selection.js');
     const dims=Object.fromEntries(['width','height'].map(axis=>{const value=geometry.dimensionSize(css,axis);return [axis,Number.isFinite(value)?value:el[axis==='width'?'offsetWidth':'offsetHeight']];}));
@@ -171,6 +184,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={paddingClasses,arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

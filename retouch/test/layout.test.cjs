@@ -160,3 +160,15 @@ test('arrangement controls replace arbitrary properties and override relevant in
  assert.throws(()=>L.arrangementClasses('','columns',1.5));
  assert.throws(()=>L.arrangementClasses('','wrap','bad'));
 });
+
+
+test('padding edges preserve shorthands and other edges with scoped important priority and reset',()=>{
+ assert.equal(L.paddingClasses('p-4 px-8 [padding-left:8px] pr-2 md:pl-2','left',30,'!p-6'),'p-4 px-8 pr-2 md:pl-2 !pl-[30px]');
+ assert.equal(L.paddingClasses('![padding:12px_16px]','bottom',20),'![padding:12px_16px] !pb-[20px]');
+ assert.equal(L.paddingClasses('','left',30,'!px-4'),'!pl-[30px]');
+ assert.equal(L.paddingClasses('','top',30,'!px-4 !pb-2'),'pt-[30px]');
+ assert.equal(L.paddingClasses('!pl-4 [padding-left:8px] p-2 pr-3','left',null),'p-2 pr-3');
+ assert.equal(L.paddingClasses('','right',0),'pr-[0px]');
+ for(const value of [-1,10001,Infinity,NaN,'20'])assert.throws(()=>L.paddingClasses('','left',value));
+ assert.throws(()=>L.paddingClasses('','wrong',20));
+});

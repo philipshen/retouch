@@ -277,3 +277,10 @@ Arrange children now considers inherited important display, flex direction and f
 Wrap children, Align children, Distribute children and Columns now replace their active arbitrary CSS properties and account for inherited important declarations, including relevant flex-flow, place-items, place-content and grid shorthands. Shorthands remain intact so their other properties survive. Invalid arrangement values are rejected by the planner.
 
 874 unit tests pass. The expanded layout-mode browser fixture passes in Chromium and WebKit: actual computed wrapping, alignment, distribution and three-column grid override smaller-breakpoint important shorthands, with exact Undo/Redo. Existing six-mode ordering, wrapping and Phone isolation checks still pass. Evidence: `/private/tmp/retouch-arrangement-{chromium,webkit}.log` and `/private/tmp/retouch-arrangement-units.log`. Complex conditional/state inheritance, full Figma parity and trusted macOS distribution remain unfinished; the desktop package predates these changes.
+
+
+## Physical padding edits and per-edge reset
+
+Padding fields now replace active physical edge classes and arbitrary physical padding declarations. Relevant important physical-axis/all-edge shorthands in the active or inherited scope promote the new edge override. Each edge has a Reset control that removes its active override while preserving shorthands, other edges and other scopes.
+
+875 unit tests pass. Chromium/WebKit verify all four edges against an inherited important two-value padding shorthand: changing to 30px affects only that edge, Reset restores inherited spacing, Phone stays at 10px on every edge, and exact source Undo/Redo passes. Evidence: `/private/tmp/retouch-padding-{chromium,webkit}.log` and `/private/tmp/retouch-padding-units.log`. Logical padding properties and complex conditional/state cascade remain outside this verification. Full parity and trusted macOS distribution remain unfinished; the desktop package predates this editor change.
