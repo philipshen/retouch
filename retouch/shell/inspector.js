@@ -132,9 +132,23 @@
     const n=key=>parseFloat(css[key])||0,r=grid.getBoundingClientRect(),px=n('paddingLeft')+n('paddingRight'),py=n('paddingTop')+n('paddingBottom'),bx=n('borderLeftWidth')+n('borderRightWidth'),by=n('borderTopWidth')+n('borderBottomWidth');
     const width=n('width')+(css.boxSizing==='border-box'?0:px+bx),height=n('height')+(css.boxSizing==='border-box'?0:py+by);if(!width||!height)return;
     const sx=r.width/width,sy=r.height/height,w=width-px-bx,h=height-py-by,x=r.left+(n('borderLeftWidth')+n('paddingLeft')-grid.scrollLeft)*sx,y=r.top+(n('borderTopWidth')+n('paddingTop')-grid.scrollTop)*sy;
+    const clip={left:0,top:0,right:view.innerWidth,bottom:view.innerHeight};
+    for(let node=grid;node;node=node.parentElement){
+      const style=view.getComputedStyle(node),bounds=node.getBoundingClientRect(),scaleX=node.offsetWidth?bounds.width/node.offsetWidth:1,scaleY=node.offsetHeight?bounds.height/node.offsetHeight:1;
+      const left=bounds.left+node.clientLeft*scaleX,top=bounds.top+node.clientTop*scaleY,paint=/(?:paint|strict|content)/.test(style.contain);
+      if(paint||style.overflowX!=='visible'){clip.left=Math.max(clip.left,left);clip.right=Math.min(clip.right,left+node.clientWidth*scaleX);}
+      if(paint||style.overflowY!=='visible'){clip.top=Math.max(clip.top,top);clip.bottom=Math.min(clip.bottom,top+node.clientHeight*scaleY);}
+    }
+    if(clip.right<=clip.left||clip.bottom<=clip.top)return;
     const gap=(value,size)=>value.endsWith('%')?parseFloat(value)*size/100:parseFloat(value)||0;
     const axes=[['column',gridAxisEdges(css.gridTemplateColumns,gap(css.columnGap,w),w,css.justifyContent,css.direction==='rtl')],['row',gridAxisEdges(css.gridTemplateRows,gap(css.rowGap,h),h,css.alignContent)]];
-    for(const [axis,edges]of axes)for(const edge of edges){const line=document.createElement('div');line.className='grid-guide '+axis;line.setAttribute('aria-hidden','true');line.style.left=(axis==='column'?x+edge*sx:x)+'px';line.style.top=(axis==='row'?y+edge*sy:y)+'px';line.style.width=(axis==='row'?w*sx:0)+'px';line.style.height=(axis==='column'?h*sy:0)+'px';overlay.append(line);}
+    const left=x+Math.min(0,...axes[0][1])*sx,right=x+Math.max(w,...axes[0][1])*sx,top=y+Math.min(0,...axes[1][1])*sy,bottom=y+Math.max(h,...axes[1][1])*sy;
+    for(const [axis,edges]of axes)for(const edge of edges){
+      const vertical=axis==='column',position=vertical?x+edge*sx:y+edge*sy;
+      if(position<(vertical?clip.left:clip.top)||position>(vertical?clip.right:clip.bottom))continue;
+      const start=Math.max(vertical?top:left,vertical?clip.top:clip.left),end=Math.min(vertical?bottom:right,vertical?clip.bottom:clip.right);if(end<=start)continue;
+      const line=document.createElement('div');line.className='grid-guide '+axis;line.setAttribute('aria-hidden','true');line.style.left=(vertical?position:start)+'px';line.style.top=(vertical?start:position)+'px';line.style.width=(vertical?0:end-start)+'px';line.style.height=(vertical?end-start:0)+'px';overlay.append(line);
+    }
   }
   function gridPlacementSuggestions(template){
     const groups=[...String(template||'').matchAll(/\[([^\]]+)\]/g)].map(match=>match[1].trim().split(/\s+/).filter(name=>/^[A-Za-z_][\w-]*$/.test(name)&&!['auto','span','initial','inherit','unset','revert','revert-layer'].includes(name.toLowerCase()))).filter(names=>names.length);
