@@ -10,9 +10,12 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   browser=await browserType.launch();const page=await browser.newPage({viewport:{width:1500,height:1100}}),errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));
   await page.goto('http://localhost:'+server.address().port+'/rt');await page.getByRole('treeitem',{name:'h1 · Original heading',exact:true}).click();
   const field=page.locator('#panelBody textarea'),heading=page.frameLocator('#app').locator('h1'),read=()=>fs.readFileSync(file,'utf8');
-  const settled=()=>page.waitForFunction(()=>!panelTasks&&!sourceRequests&&!undoBusy);
-  const check=async text=>{await settled();await page.waitForFunction(text=>document.querySelector('#app').contentDocument.querySelector('h1')?.textContent===text,text);assert.equal(await field.inputValue(),text,'Inspector agrees with restored source and canvas');assert.equal(read(),original.replace('Original heading',text));assert.equal(await heading.textContent(),text);};
+  const settled=()=>page.waitForFunction(()=>!panelTasks&&!sourceRequests&&!undoBusy,null,{polling:50});
+  const check=async text=>{await settled();await page.waitForFunction(text=>document.querySelector('#app').contentDocument.querySelector('h1')?.textContent===text,text,{polling:50});assert.equal(await field.inputValue(),text,'Inspector agrees with restored source and canvas');assert.equal(read(),original.replace('Original heading',text));assert.equal(await heading.textContent(),text);};
   const activate=async name=>{const button=page.getByRole('button',{name,exact:true});if(process.env.RT_E2E_NATIVE_CLICK)await button.evaluate(button=>{button.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:1,button:0}));button.click();});else await button.click();};
+  // A background native WebView can delay paints indefinitely after activation.
+  // History and completed-click cleanup must not need another animation frame.
+  if(process.env.RT_E2E_NATIVE_CLICK)await page.evaluate(()=>{window.requestAnimationFrame=()=>0;});
   await field.fill('Edited in inspector');await activate('Apply text');await check('Edited in inspector');
   // WebKit buttons may leave the textarea focused; history must still replace
   // a submitted value. Explicitly focus it to cover that behavior in both engines.

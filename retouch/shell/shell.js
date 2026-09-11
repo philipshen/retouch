@@ -968,7 +968,16 @@ window.addEventListener('pointerup',releasePanelPointer,true);
 window.addEventListener('pointercancel',releasePanelPointer,true);
 // Native accessibility activation can finish with click without delivering a
 // pointerup. The completed click also ends our control-preservation window.
-window.addEventListener('click',()=>releasePanelPointer(),true);
+window.addEventListener('click',()=>{
+  const pointer=panelPointer;
+  // The click handler must finish, but a background native WebView may not
+  // paint again promptly. A microtask releases only this completed gesture.
+  queueMicrotask(()=>{
+    if(!pointer||panelPointer!==pointer)return;
+    panelPointer=null;
+    if(panelRenderDeferred&&sel&&!panelInteractionFocused())renderPanel();
+  });
+});
 window.addEventListener('blur',()=>releasePanelPointer());
 function renderPanel() {
   // A reload or document.open() can leave the preview without a root. Keep

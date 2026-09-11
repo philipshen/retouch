@@ -9,11 +9,15 @@ window, verified through accessibility and a screenshot without a manual
 approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
-The newest local artifact packages editor commit `d9cd994`, including stable
-selection fitting and preservation of pressed inspector controls. All 88 packaged
-source files match that commit. Eleven of twelve bundled browser workflows pass;
-WebKit's React workflow reports development-runtime page errors. The archive is
-not release-ready. No public, notarized release is published.
+The latest local development archive is
+`/private/tmp/retouch-desktop-click-completion-20260911/Retouch-0.1.0-mac.zip`.
+All 171 packaged source files match the tested checkout; the source hashes and
+native verification scope are in [the receipt](verification/2026-09-11-click-completion.json).
+The universal binary has a verified ad hoc development signature. Native HTML
+startup, text editing, synchronized Undo/Redo, exact source restoration and Stop
+passed. This is not a notarized or release-ready build. Developer ID signing was
+attempted on an earlier candidate but macOS canceled access to its signing key;
+that prompt has not been retried. No public release is published.
 
 Build with Apple's command line developer tools installed:
 
@@ -52,9 +56,10 @@ the owned server. This used the older d9cd994 bundle, not current packaged HEAD.
 The stale inspector value observed after Undo was subsequently reproduced against
 current source and fixed in the shell's click-completion handling. The running
 Mac app connected to current source then verified synchronized inspector/canvas
-Apply, Undo and Redo with exact file checks. A new bundled release has not yet
-been built or verified. Other native workflows and trusted distribution remain
-unverified.
+Apply, Undo and Redo with exact file checks. The latest development package now includes the fix and passed the same HTML
+workflow, including an additional completed-click fix that does not depend on
+another native-window repaint. Other native workflows and trusted distribution
+remain unverified.
 See the latest native-workflow entry in `docs/design-studio-parity.md`.
 
 ## Cask artifact
