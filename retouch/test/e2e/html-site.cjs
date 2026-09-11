@@ -272,6 +272,7 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await size('768x1024');await wait(async()=>await effect('filter')==='contrast(0.8) blur(5px)','tablet blur retained');
   await page.getByRole('button',{name:'Reset layer blur',exact:true}).click();await wait(async()=>await effect('filter')==='contrast(0.8) blur(2px)','blur reset inheritance');await settled();
   await size('390x844');await page.getByLabel('Style screen scope').selectOption('');
+  await page.getByText('Effect options',{exact:true}).click();
   await page.getByRole('button',{name:'Clear layer filters',exact:true}).click();await wait(async()=>await effect('filter')==='none','clear layer filters');await settled();
   for(let i=0;i<7;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'blur and blending exact undo');await wait(async()=>await effect('filter')==='contrast(0.8)','authored filter restored');
@@ -311,7 +312,7 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await page.getByRole('button',{name:'Add gradient',exact:true}).click();await wait(async()=>await page.getByLabel('Fill 2 type',{exact:true}).count()===1,'second gradient');await settled();
   await page.getByRole('button',{name:'Move fill 2 up',exact:true}).click();await wait(async()=>(await effect('background-image')).startsWith('linear-gradient(90deg'),'gradient stack ordering');await settled();
   await size('390x844');await wait(async()=>await effect('background-image')===baseGradient,'base gradient unchanged');
-  await size('768x1024');await page.getByRole('button',{name:'Reset gradient fills',exact:true}).click();await wait(async()=>await effect('background-image')===baseGradient,'gradient reset inheritance');await settled();
+  await size('768x1024');await page.getByText('Fill options',{exact:true}).click();await page.getByRole('button',{name:'Reset gradient fills',exact:true}).click();await wait(async()=>await effect('background-image')===baseGradient,'gradient reset inheritance');await settled();
   for(let i=0;i<16;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'gradient exact undo');
   await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await settled();

@@ -11080,3 +11080,10 @@ Desktop refresh: /private/tmp/retouch-desktop-responsive-light-20260911/Retouch-
 HTML typography already belonged to Typography; its CSS-labeled fields now receive the same compact presentation as React: paired weight/size and line-height/letter-spacing, physical text alignment icon buttons, and less common style/decoration/case controls in Type settings. Paint labels are shortened without changing accessible field names or write handlers.
 
 Full HTML browser workflows passed in Chromium and WebKit, including the added alignment edit/exact undo check and paired-field assertion, and the explicit Type settings disclosure for italic/underline edits. Final label shortening was checked in a fresh Chromium preview with alignment/undo and a visually inspected screenshot at /private/tmp/retouch-html-type-chromium.png. The current f8394de desktop archive predates this refinement. Full parity remains incomplete.
+
+
+### Compact Fill and Effects actions (2026-09-11)
+
+The HTML Add gradient action is now a plus button on the Fill header, retaining its accessible name and original callback. Clear background images/reset gradient fills and clear layer/background filter actions live in Fill options/Effect options disclosures. This removes standalone inactive actions from the main field list. Background blur also has a shorter visible label.
+
+Full HTML workflows passed in Chromium and WebKit after explicitly opening the disclosures where needed, including adding and editing multiple gradients, clearing filters, responsive gradient reset, and exact undo. The current screenshot was visually inspected at /private/tmp/retouch-html-type-chromium.png. Current desktop archive f8394de predates this and the preceding HTML typography presentation changes. Full parity remains incomplete.

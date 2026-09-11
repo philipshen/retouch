@@ -48,6 +48,14 @@
   if(advanced.children.length>1)panel.append(advanced);
   for(const section of panel.querySelectorAll('.inspector-section')){
    const name=title(section);section.dataset.section=name.toLowerCase().replace(/\s+/g,'-');
+   if(name==='Fill'||name==='Effects'){
+    const options=disclosure(name==='Fill'?'Fill options':'Effect options',name+'-options');
+    for(const button of [...section.querySelectorAll(':scope > .control-button')]){
+     if(['Clear background images','Reset gradient fills','Clear layer filters','Clear background filters'].includes(button.textContent))options.append(button);
+     else if(name==='Fill'&&button.textContent==='Add gradient'){button.setAttribute('aria-label','Add gradient');button.title='Add gradient';button.textContent='+';button.classList.add('section-add');}
+    }
+    if(options.children.length>1)section.append(options);
+   }
    if(name==='Typography'){
     const preview=section.querySelector(':scope > .type-preview');if(preview){const details=disclosure('Text preview','text-preview');details.append(preview);section.append(details);}
     const options=disclosure('Type settings','type-settings');
@@ -89,7 +97,7 @@
      if(dimension)row.after(dimension);if(behavior&&dimension)dimension.after(behavior);const clip=section.querySelector('[aria-label="Clip content"]')?.closest('.property-row');if(clip)(behavior||dimension||row).after(clip);
     }
    }
-   for(const row of section.querySelectorAll('.inspector-field')){const control=row.querySelector('[aria-label]'),label=control?.getAttribute('aria-label');if(['Width behavior','Height behavior'].includes(label))for(const option of control.options)option.textContent=({'':'Auto',fixed:'Fixed',hug:'Hug',fill:'Fill'})[option.value]||option.textContent;const short={'Border width (CSS)':'Weight','Border style (CSS)':'Style','Border color (CSS)':'Color','Background color (CSS)':'Color','Layer blur (px)':'Blur','Backdrop blur (px)':'Background','Font family (CSS)':'Font family','Font weight (CSS)':'Weight','Font size (CSS)':'Size','Line height (CSS)':'↕','Letter spacing (CSS)':'↔','Text color (CSS)':'Color','Font weight (1–1000)':'Weight','Font size (px)':'Size','Line height (px)':'↕','Letter spacing (px)':'↔','Text alignment':'','Width (CSS)':'W','Height (CSS)':'H','Border width (px)':'Weight','Border style':'Style','Border color':'Color','Place grid items':'Flow','Align children':'Alignment','Distribute children':'Distribution','Width (px)':'W','Height (px)':'H','Opacity (%)':'Opacity','Corner radius (px)':'Radius','Padding top':'Top','Padding bottom':'Bottom','Padding left':'Left','Padding right':'Right','Horizontal gap':'↔','Vertical gap':'↕','Width behavior':'Width','Height behavior':'Height'}[label];if(short){row.querySelector('span').textContent=short;row.title=label;}}
+   for(const row of section.querySelectorAll('.inspector-field')){const control=row.querySelector('[aria-label]'),label=control?.getAttribute('aria-label');if(['Width behavior','Height behavior'].includes(label))for(const option of control.options)option.textContent=({'':'Auto',fixed:'Fixed',hug:'Hug',fill:'Fill'})[option.value]||option.textContent;const short={'Border width (CSS)':'Weight','Border style (CSS)':'Style','Border color (CSS)':'Color','Background color (CSS)':'Color','Layer blur (px)':'Blur','Backdrop blur (px)':'Background','Background blur (px)':'Background','Font family (CSS)':'Font family','Font weight (CSS)':'Weight','Font size (CSS)':'Size','Line height (CSS)':'↕','Letter spacing (CSS)':'↔','Text color (CSS)':'Color','Font weight (1–1000)':'Weight','Font size (px)':'Size','Line height (px)':'↕','Letter spacing (px)':'↔','Text alignment':'','Width (CSS)':'W','Height (CSS)':'H','Border width (px)':'Weight','Border style':'Style','Border color':'Color','Place grid items':'Flow','Align children':'Alignment','Distribute children':'Distribution','Width (px)':'W','Height (px)':'H','Opacity (%)':'Opacity','Corner radius (px)':'Radius','Padding top':'Top','Padding bottom':'Bottom','Padding left':'Left','Padding right':'Right','Horizontal gap':'↔','Vertical gap':'↕','Width behavior':'Width','Height behavior':'Height'}[label];if(short){row.querySelector('span').textContent=short;row.title=label;}}
   }
  }
  const dock=document.createElement('nav');dock.className='design-tool-dock';dock.setAttribute('aria-label','Canvas tools');
