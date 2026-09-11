@@ -614,3 +614,10 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 
 .component-library > .component-library-keyhint { font-size:10px;margin-bottom:0; }
 .component-library-list li:focus-within { background:var(--bg); }
+
+.component-props-editable { font:11px/1.5 var(--font); }
+.component-props-editable th:first-child,.component-props-editable td:first-child { width:32%;padding-left:0;color:var(--muted); }
+.component-props-editable th:nth-child(2),.component-props-editable td:nth-child(2) { width:68%;padding-right:0; }
+.component-props-editable th:nth-child(3),.component-props-editable td:nth-child(3) { display:none; }
+.component-props-editable input:not([type=checkbox]),.component-props-editable select { min-height:28px; }
+.component-props-editable td > button[aria-label^="Reset "] { font-size:14px;line-height:18px;min-width:24px; }
