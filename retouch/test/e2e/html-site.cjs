@@ -66,6 +66,7 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
   await wait(()=>read()===original,'typography exact undo');
 
 
+  if(await page.locator('details:not([open])').filter({has:page.locator('summary', {hasText:/^Text content$/})}).count())await page.getByText('Text content',{exact:true}).click();
   await page.locator('#panelBody textarea').fill('Saved & clear');await page.getByRole('button',{name:'Apply text',exact:true}).click();
   await wait(async()=>await app.locator('h1').textContent()==='Saved & clear','text rendered');assert.ok(fs.readFileSync(file,'utf8').includes('Saved &amp; clear'));
   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>fs.readFileSync(file,'utf8')===original,'text undo');
@@ -105,6 +106,7 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await page.getByLabel('Project page',{exact:true}).selectOption('/about%20us.html');
   await wait(async()=>await app.locator('h1').textContent()==='About this site','page navigation');
   await page.getByRole('treeitem',{name:'h1 · About this site',exact:true}).click();
+  if(await page.locator('details:not([open])').filter({has:page.locator('summary', {hasText:/^Text content$/})}).count())await page.getByText('Text content',{exact:true}).click();
   await page.locator('#panelBody textarea').fill('Edited about page');await page.getByRole('button',{name:'Apply text',exact:true}).click();
   await wait(()=>fs.readFileSync(secondFile,'utf8').includes('Edited about page'),'second page edit');await settled();
   assert.equal(read(),original,'first page unchanged');
@@ -158,6 +160,7 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await wait(async()=>await app.locator('main > div[aria-label="Frame"]').count()===1,'create frame');await settled();
   assert.ok(await app.locator('div[aria-label="Frame"]').evaluate(el=>el.getBoundingClientRect().height)>=100);
   await page.getByRole('button',{name:'Add text',exact:true}).click();await wait(async()=>await app.locator('div[aria-label="Frame"] > p').textContent()==='New text','create text inside frame');await settled();
+  if(await page.locator('details:not([open])').filter({has:page.locator('summary', {hasText:/^Text content$/})}).count())await page.getByText('Text content',{exact:true}).click();
   await page.locator('#panelBody textarea').fill('Inside my frame');await page.getByRole('button',{name:'Apply text',exact:true}).click();
   await wait(async()=>await app.locator('div[aria-label="Frame"] > p').textContent()==='Inside my frame','edit new text');await settled();
   for(let i=0;i<3;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}

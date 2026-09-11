@@ -48,6 +48,19 @@
   if(advanced.children.length>1)panel.append(advanced);
   for(const section of panel.querySelectorAll('.inspector-section')){
    const name=title(section);section.dataset.section=name.toLowerCase().replace(/\s+/g,'-');
+   if(name==='Typography'){
+    const preview=section.querySelector(':scope > .type-preview');if(preview){const details=disclosure('Text preview','text-preview');details.append(preview);section.append(details);}
+    const options=disclosure('Type settings','type-settings');
+    for(const row of [...section.querySelectorAll(':scope > .inspector-field')])if(['Font size','Font weight','Font slant','Text decoration','Text case','Optical sizing','HTML element'].includes(row.querySelector('[aria-label]')?.getAttribute('aria-label'))){const next=row.nextElementSibling;options.append(row);if(next?.classList.contains('control-button')&&/^Reset /.test(next.textContent))options.append(next);}
+    for(const row of [...section.querySelectorAll(':scope > .relative-field')])options.append(row);
+    for(const child of [...section.children])if((child.classList.contains('control-button')&&(/^(Reset |Automatic line height)/.test(child.textContent)))||(child.tagName==='DETAILS'&&['Variable font axes','Number formatting'].includes(child.querySelector('summary')?.textContent)))options.append(child);
+    const content=section.querySelector(':scope > textarea');if(content){const details=disclosure('Text content','text-content'),action=section.querySelector('#textApply'),breakLine=content.nextElementSibling;details.append(content);if(breakLine?.tagName==='BR')breakLine.remove();if(action)details.append(action);section.insertBefore(details,section.children[1]);}
+    if(options.children.length>1)section.append(options);
+    const align=section.querySelector('[aria-label="Text alignment"]');
+    if(align){const row=align.closest('.inspector-field');row.classList.add('text-align-modes');const group=document.createElement('div');group.className='layout-mode-segments';
+     for(const value of ['left','center','right','justify']){const button=document.createElement('button');button.type='button';button.setAttribute('aria-label','Align text '+value);button.title='Align text '+value;button.setAttribute('aria-pressed',String(align.value===value));const short=value==='left'?'M3 7h9 M3 15h9':value==='right'?'M8 7h9 M8 15h9':value==='center'?'M6 7h8 M6 15h8':'M3 7h14 M3 15h14';button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h14 M3 11h14 '+short+'"/></svg>';button.onclick=()=>{align.value=value;align.dispatchEvent(new Event('change',{bubbles:true}));};group.append(button);}row.insertBefore(group,align);
+    }
+   }
    if(name==='Effects'&&!css){
     const shadow=disclosure('Add shadow','add-shadow');for(const child of [...section.children])if(child.tagName!=='DETAILS'&&(child.querySelector('[aria-label^="Shadow "]')||child.querySelector('[aria-label="Inner shadow"]')||child.textContent==='Apply custom shadow'))shadow.append(child);if(shadow.children.length>1)section.append(shadow);
    }
@@ -61,7 +74,7 @@
     const label=button.textContent;button.setAttribute('aria-label',label);button.title=label;button.textContent='↺';button.classList.add('property-reset');const previous=button.previousElementSibling;
     if(previous?.classList.contains('inspector-field')){const row=document.createElement('div');row.className='property-row';section.insertBefore(row,previous);row.append(previous,button);}
    }
-   for(const names of [['Width (CSS)','Height (CSS)'],['Width (px)','Height (px)'],['Width behavior','Height behavior'],['Columns','Rows'],['Horizontal gap','Vertical gap'],['Padding top','Padding bottom'],['Padding left','Padding right'],['X','Y'],['Opacity (%)','Corner radius (px)']])pair(section,names);
+   for(const names of [['Font weight (1–1000)','Font size (px)'],['Line height (px)','Letter spacing (px)'],['Width (CSS)','Height (CSS)'],['Width (px)','Height (px)'],['Width behavior','Height behavior'],['Columns','Rows'],['Horizontal gap','Vertical gap'],['Padding top','Padding bottom'],['Padding left','Padding right'],['X','Y'],['Opacity (%)','Corner radius (px)']])pair(section,names);
    if(name==='Layout'){
     const select=section.querySelector('[aria-label="Arrange children"]');
     if(select){const row=select.closest('.inspector-field');row.classList.add('layout-modes');row.querySelector('span').textContent='';
@@ -72,7 +85,7 @@
      if(dimension)row.after(dimension);if(behavior&&dimension)dimension.after(behavior);
     }
    }
-   for(const row of section.querySelectorAll('.inspector-field')){const control=row.querySelector('[aria-label]'),label=control?.getAttribute('aria-label');if(['Width behavior','Height behavior'].includes(label))for(const option of control.options)option.textContent=({'':'Auto',fixed:'Fixed',hug:'Hug',fill:'Fill'})[option.value]||option.textContent;const short={'Border width (px)':'Weight','Border style':'Style','Border color':'Color','Place grid items':'Flow','Align children':'Alignment','Distribute children':'Distribution','Width (px)':'W','Height (px)':'H','Opacity (%)':'Opacity','Corner radius (px)':'Radius','Padding top':'Top','Padding bottom':'Bottom','Padding left':'Left','Padding right':'Right','Horizontal gap':'↔','Vertical gap':'↕','Width behavior':'Width','Height behavior':'Height'}[label];if(short){row.querySelector('span').textContent=short;row.title=label;}}
+   for(const row of section.querySelectorAll('.inspector-field')){const control=row.querySelector('[aria-label]'),label=control?.getAttribute('aria-label');if(['Width behavior','Height behavior'].includes(label))for(const option of control.options)option.textContent=({'':'Auto',fixed:'Fixed',hug:'Hug',fill:'Fill'})[option.value]||option.textContent;const short={'Font weight (1–1000)':'Weight','Font size (px)':'Size','Line height (px)':'↕','Letter spacing (px)':'↔','Text alignment':'','Width (CSS)':'W','Height (CSS)':'H','Border width (px)':'Weight','Border style':'Style','Border color':'Color','Place grid items':'Flow','Align children':'Alignment','Distribute children':'Distribution','Width (px)':'W','Height (px)':'H','Opacity (%)':'Opacity','Corner radius (px)':'Radius','Padding top':'Top','Padding bottom':'Bottom','Padding left':'Left','Padding right':'Right','Horizontal gap':'↔','Vertical gap':'↕','Width behavior':'Width','Height behavior':'Height'}[label];if(short){row.querySelector('span').textContent=short;row.title=label;}}
   }
  }
  const dock=document.createElement('nav');dock.className='design-tool-dock';dock.setAttribute('aria-label','Canvas tools');

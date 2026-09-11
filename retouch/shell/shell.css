@@ -536,3 +536,8 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .layer-title > span { display:none; }
 .layer-title input { background:transparent;font-size:13px;font-weight:600;padding:0; }
 .layer-title input::placeholder { color:var(--ink);opacity:1; }
+
+.text-align-modes > span { display:none; }
+.text-align-modes .layout-mode-segments { flex:1; }
+.text-align-modes select { width:24px;flex:0 0 24px;padding:0;font-size:0;background:transparent; }
+.text-align-modes select option { font-size:12px; }

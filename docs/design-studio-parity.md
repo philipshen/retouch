@@ -11023,3 +11023,12 @@ This is a concrete visual baseline, not proof of pixel-identical Figma behavior 
 ## Desktop bundle includes the Figma light baseline
 
 Clean source commit `ca6dae186908015a0aeff54d479c7212ecc95c1e` is packaged at `/private/tmp/retouch-desktop-figma-light-20260911/Retouch-0.1.0-mac.zip`, SHA-256 `46b0162d8c6e81b296e03221c6a14a4b1e3572d1a848b8987e6caa6df7ea05f2`. All 175 packaged runtime files match the checkout, including the inspector organizer, Inter font and license. Universal architecture, strict ad hoc signature, extracted ZIP and cask syntax checks pass. The light-inspector workflow passes in Chromium/WebKit using the runtime inside this app. Receipt: `desktop/verification/2026-09-11-figma-light.json`. Native launch and installation were not attempted; trusted signing/notarization remain unfinished.
+
+
+### Typography presentation refinement (2026-09-11)
+
+Continued the Figma light-panel direction: paired weight/size and line-height/letter-spacing fields, SVG text alignment segments backed by the original select callbacks, and disclosures for text content, preview, and advanced type settings. Existing accessible input names and source mutation handlers are preserved. Width/height CSS labels now use W/H.
+
+Validation: 880 unit tests passed; inspector-light.cjs passed in Chromium and WebKit, including alignment editing, exact source undo, content disclosure visibility, and screenshots. Screenshot: /private/tmp/retouch-figma-type-chromium.png. This source refinement is newer than the ca6dae1 desktop bundle; no new native launch or packaging claim. Full pixel parity remains unfinished.
+
+The full HTML browser workflow also passed in Chromium after updating its text-content disclosure interactions.
