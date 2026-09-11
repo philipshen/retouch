@@ -58,10 +58,18 @@
     const selectedRoots=()=>selectedInfo?.selectionIds?.length>1?[...new Set(virtualItems.filter(isSelected).flatMap(item=>item.componentRoots||[item.el]))]:selectedInfo?.kind==='instance'?virtualItems.find(item=>item.componentId===selectedInfo.id&&item.componentRoots.includes(selected))?.componentRoots||[...selectedSet]:[...selectedSet];
     const choose=(item,toggle=false)=>onSelect(item.el,{toggle,sourceId:item.componentId|| (item.parent?.componentId?item.el.getAttribute('data-rt'):undefined),component:!!item.componentId});
     async function loadComponents(){if(!readComponents||!d)return;const request=++componentRequest,current=d;try{const result=await readComponents();if(request===componentRequest&&d===current&&result?.ok){components=result.components||[];render();}}catch{}}
-    let d=null,observer=null,timer=null,selected=null,rows=[],collapsed=new WeakSet(),lastCapabilities=null,isBusy=false,dragged=null,draggedItem=null,selectedSet=new Set(),rangeAnchor=null;
+    let d=null,observer=null,timer=null,selected=null,rows=[],collapsed=new WeakSet(),lastCapabilities=null,isBusy=false,dragged=null,draggedItem=null,selectedSet=new Set(),rangeAnchor=null,componentRangeAnchor=null;
     function clearTargets(){for(const row of rows)row.button.classList.remove('drop-target','drop-before','drop-after');}
     function endDrag(){dragged=null;draggedItem=null;clearTargets();for(const row of rows)row.button.classList.remove('dragging');}
     function selectionRows(){const query=search.value.trim().toLowerCase();return rows.filter(row=>!row.item.componentId&&!['HTML','BODY'].includes(row.item.el.tagName)&&!locks?.locked(row.item.el)&&(!query||row.item.label.toLowerCase().includes(query)));}
+    function componentRows(){const query=search.value.trim().toLowerCase();return rows.filter(row=>row.item.componentId&&!row.item.componentRoots.some(el=>locks?.locked(el))&&(!query||row.item.label.toLowerCase().includes(query)));}
+    async function selectComponentRange(item,append=false){
+      if(isBusy)return;const candidates=componentRows(),end=candidates.findIndex(row=>key(row.item)===key(item));if(end<0)return;
+      let start=candidates.findIndex(row=>key(row.item)===componentRangeAnchor);
+      if(start<0)start=candidates.findIndex(row=>isSelected(row.item));if(start<0)start=end;
+      componentRangeAnchor=key(candidates[start].item);
+      await onSelectMany(candidates.slice(Math.min(start,end),Math.max(start,end)+1).map(row=>row.item.el),{active:item.el,append,component:true});
+    }
     async function selectRange(target,append=false){
       if(isBusy)return;const candidates=selectionRows(),end=candidates.findIndex(row=>row.item.el===target);
       if(end<0)return onSelect(target);
@@ -90,7 +98,7 @@
           b.setAttribute('role','treeitem');b.setAttribute('aria-level',depth);b.setAttribute('aria-selected',String(isSelected(item)));
           b.tabIndex=isSelected(item)?0:-1;b.disabled=isBusy;
           if(item.children.length)b.setAttribute('aria-expanded',String(expanded));else b.removeAttribute('aria-expanded');
-          b.onclick=e=>{if(item.componentId)return choose(item,multiEnabled&&(e.shiftKey||e.metaKey||e.ctrlKey));if(item.parent?.componentId)return choose(item);if(multiEnabled&&e.shiftKey)return selectRange(item.el,e.metaKey||e.ctrlKey);rangeAnchor=item.el;return onSelect(item.el,{toggle:e.metaKey||e.ctrlKey});};
+          b.onclick=e=>{if(item.componentId){if(multiEnabled&&e.shiftKey)return selectComponentRange(item,e.metaKey||e.ctrlKey);componentRangeAnchor=key(item);return choose(item,multiEnabled&&(e.metaKey||e.ctrlKey));}if(item.parent?.componentId)return choose(item);if(multiEnabled&&e.shiftKey)return selectRange(item.el,e.metaKey||e.ctrlKey);rangeAnchor=item.el;return onSelect(item.el,{toggle:e.metaKey||e.ctrlKey});};
           b.oncontextmenu=event=>onContextMenu?.({event,select:()=>choose(item),selected:isSelected(item),opener:b});
           b.draggable=item.componentId?!!onMoveComponent&&!!(item.movement?.targets?.length||item.movement?.containers?.length)&&item.movement.fileHash===item.el.getAttribute('data-rt-i-revision'):dragEnabled&&item.el.namespaceURI==='http://www.w3.org/1999/xhtml'&&!['HTML','BODY'].includes(item.el.tagName);
           b.ondragstart=e=>{if(isBusy||selectedInfo?.selectionIds?.length>1||!b.draggable||locks?.locked(item.el)){e.preventDefault();return;}dragged=item.el;draggedItem=item;e.dataTransfer.setData('text/plain','retouch-layer:'+(item.componentId||item.el.getAttribute('data-rt')));e.dataTransfer.effectAllowed='move';for(const row of rows)if(row.item.el===dragged||selectedSet.has(dragged)&&selectedSet.has(row.item.el))row.button.classList.add('dragging');};
@@ -115,6 +123,7 @@
             const index=rows.findIndex(r=>r.button===b);
             if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)) {
               e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?rows.length-1:index+(e.key==='ArrowDown'?1:-1);
+              if(multiEnabled&&e.shiftKey&&item.componentId){const candidates=componentRows(),current=candidates.findIndex(row=>key(row.item)===key(item)),target=e.key==='Home'?0:e.key==='End'?candidates.length-1:current+(e.key==='ArrowDown'?1:-1),destination=candidates[Math.max(0,Math.min(candidates.length-1,target))];if(destination){await selectComponentRange(destination.item,e.metaKey||e.ctrlKey);destination.button.focus();}return;}
               const destination=rows[Math.max(0,Math.min(rows.length-1,next))];if(multiEnabled&&e.shiftKey&&destination)await selectRange(destination.item.el,e.metaKey||e.ctrlKey);destination?.button.focus();
             } else if(e.key==='ArrowRight') {
               e.preventDefault();if(item.children.length){if(!expanded){collapsed.delete(key(item));render();}else rows[index+1]?.button.focus();}
@@ -151,13 +160,13 @@
     search.oninput=render;lockedOnly.onchange=render;
     function attach(next) {
       if(d===next)return;
-      observer?.disconnect();clearTimeout(timer);endDrag();rangeAnchor=null;d=next;components=[];componentRequest++;collapsed=new WeakSet();render();void loadComponents();
+      observer?.disconnect();clearTimeout(timer);endDrag();rangeAnchor=null;componentRangeAnchor=null;d=next;components=[];componentRequest++;collapsed=new WeakSet();render();void loadComponents();
       if(d?.body){observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(()=>{render();void loadComponents();},100);});observer.observe(d.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['data-rt','data-rt-i','data-rt-revision','data-rt-name','data-rt-layer-name','id','aria-label','alt']});}
     }
     function selection(el,info,busy=false,multiple=[],readOnly=false) {
       const scopeChanged=selectedInfo?.kind!==info?.kind||selectedInfo?.id!==info?.id;selectedInfo=info;
       const nextSet=new Set(multiple.length?multiple:el?[el]:[]),changed=nextSet.size!==selectedSet.size||[...nextSet].some(item=>!selectedSet.has(item));selectedSet=nextSet;tree.setAttribute('aria-multiselectable',String(!!(info?.cssAuthoring||info?.classSelection||info?.kind==='instance')));
-      if(!el)rangeAnchor=null;
+      if(!el){rangeAnchor=null;componentRangeAnchor=null;}
       if(isBusy!==busy){isBusy=busy;selectAll.disabled=busy||!selectionRows().length;for(const r of rows){r.button.disabled=busy;r.toggle.disabled=busy||!r.item.children.length;if(r.lock)r.lock.disabled=busy||!locks.direct(r.item.el)&&locks.locked(r.item.el);}host.setAttribute('aria-busy',String(busy));}
       if(selected!==el||changed||scopeChanged){
         selected=el;

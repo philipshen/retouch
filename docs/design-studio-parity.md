@@ -10647,3 +10647,11 @@ The shared component browser fixture now renders nested span markup. Chromium an
 This is not full component selection parity: range/marquee, mixed host/usage selections, cross-file editing, repeated-render identity and fragment outlines still need work. Comparison modifier paths share the selection function but were not verified in this slice. No desktop package or signing changes were made.
 
 The Chromium React host multi-selection regression also passes (`/private/tmp/retouch-component-canvas-hosts.log`), covering existing canvas/range selection, shared responsive edits and source history.
+
+### Component ranges in Layers (2026-09-11)
+
+Shift-click on component rows now selects a contiguous range of visible component rows, with a retained anchor so the range can expand and contract. Command/Ctrl-click retains individual toggling. Shift-Up/Down navigates component rows rather than entering their host children; Shift-Home/End uses the component range endpoints. The range collector excludes locked roots and rows outside the active name filter. A component-aware `selectMany` resolves usage IDs, validates compatible metadata in one unchanged source file, and preserves instance scope for the shared inspector. Mixed host/usage batches remain unsupported.
+
+Chromium and WebKit verify three-component range expansion, contraction to two, Shift-arrow expansion/contraction, shared source/compiled-preview edits, and exact Undo retaining both selected rows. The existing component API/inspector/default/expression/canvas checks remain passing. Initial toggle tests used Control-click, which opens a macOS context menu; corrected tests use Command-click. All 827 unit tests pass, along with Chromium host-selection and Layers-interaction regressions.
+
+Evidence: `/private/tmp/retouch-component-range-{chromium,webkit}.log`, `/private/tmp/retouch-component-range-units.log`, `/private/tmp/retouch-component-range-host-regression.log`, `/private/tmp/retouch-component-range-layer-regression.log`. Filter/lock and Home/End branches were inspected but do not yet have dedicated component-range browser coverage. Marquee selection, mixed selections, cross-file operations, repeated occurrence identity and full fragment outlines remain incomplete. The existing desktop artifact has not been rebuilt for this change.

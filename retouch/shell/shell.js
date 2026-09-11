@@ -492,19 +492,21 @@ window.addEventListener('retouch:comparison-edit',async event=>{
   toast('This layer is not present on the main canvas at this size.','err');
 });
 
-async function selectMany(nodes,{active=nodes[0],append=false}={}){
+async function selectMany(nodes,{active=nodes[0],append=false,component=false}={}){
   stopDrawing?.();
   const serial=++classificationSerial;
-  const ids=[...new Set([...(append?(sel?.multiple||[sel?.info]).filter(Boolean).map(info=>info.id):[]),...nodes.map(node=>node.getAttribute('data-rt'))])];
+  const attribute=component?'data-rt-i':'data-rt';
+  const ids=[...new Set([...(append?(sel?.multiple||[sel?.info]).filter(Boolean).map(info=>info.id):[]),...nodes.map(node=>node.getAttribute(attribute))])];
   if(!ids.length)return clearSelection();if(ids.length>100)return toast('Select up to 100 layers. Narrow the layer search first.','err');
   busyPanel(true);
   try{
     const results=await Promise.all(ids.map(id=>{const element=matchingEls(id)[0];return api('GET',resolveUrl(id,element?renderContext(element):undefined));}));if(serial!==classificationSerial)return;
-    if(nodes.some(node=>!node.isConnected)||results.some(result=>!result?.ok||!(result.element.cssAuthoring||result.element.classSelection||result.element.collectionSelection)))return toast('These layers cannot be selected together.','err');
+    if(nodes.some(node=>!node.isConnected)||results.some(result=>!result?.ok||!(component?result.element.kind==='instance':result.element.cssAuthoring||result.element.classSelection||result.element.collectionSelection)))return toast('These layers cannot be selected together.','err');
     const infos=results.map(result=>result.element),first=infos[0];
     if(infos.some(info=>info.file!==first.file||info.hash!==first.hash))return toast('Select layers from one unchanged source file.','err');
-    const primary=infos.find(info=>info.id===active?.getAttribute('data-rt'))||first;
-    sel={hostId:primary.id,instanceId:null,scope:'host',info:primary,multiple:infos.length>1?infos:undefined};renderPanel();
+    const primary=infos.find(info=>info.id===active?.getAttribute(attribute))||first;
+    if(component)for(const info of infos)componentLibrarySelections.add(info.id);
+    sel={hostId:primary.id,instanceId:component?primary.id:null,scope:component?'instance':'host',info:primary,multiple:infos.length>1?infos:undefined};renderPanel();
   }finally{busyPanel(false);}
 }
 
