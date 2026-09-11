@@ -1673,7 +1673,7 @@ componentLibraryButton.addEventListener('click',()=>RetouchComponentLibrary.open
  view:async(id,onPage,isActive,definitionOnly,element)=>{const component=await api('GET',definitionOnly?'/rt/__api/component-definition?id='+id:componentUrl(id));if(!isActive())return;if(!component?.ok)throw Error(component?.reason||'This component no longer resolves.');openComponent(id,component,{preview:onPage,element});}
 }));
 function openComponent(id, component,options={}) {
-  const selectedElement=options.element||(renderedSelection?.id===id?renderedSelection.element:null),sourceGroups=RetouchComponentInstances.group(matchingInDocument(doc(),id,component),component.rootGroups),previewOccurrence=Math.max(0,sourceGroups.findIndex(group=>group.elements.includes(selectedElement)));
+  const selectedElement=options.element||(renderedSelection?.id===id?renderedSelection.element:null),sourceMatches=matchingInDocument(doc(),id,component),sourceGroups=RetouchComponentInstances.group(sourceMatches,component.rootGroups),sourceGroup=sourceGroups.find(group=>group.elements.includes(selectedElement))||sourceGroups[0],previewBookmark=RetouchComponentInstances.captureOccurrence(sourceMatches,sourceGroup?.element);
   const modal = document.createElement('dialog');modal.className = 'component-modal';modal.setAttribute('aria-label',component.name+' component');
   const header = document.createElement('header');
   const title = document.createElement('h2');title.textContent = component.name;
@@ -1706,7 +1706,7 @@ function openComponent(id, component,options={}) {
         return 'html'+(parts.length?' > '+parts.join(' > '):'');
       };
       const isolate=()=>{
-        const group=RetouchComponentInstances.group(matchingInDocument(d,id,component),component.rootGroups)[previewOccurrence];if(!group)return;
+        const matches=matchingInDocument(d,id,component),target=RetouchComponentInstances.restoreOccurrence(matches,previewBookmark),group=RetouchComponentInstances.group(matches,component.rootGroups).find(group=>group.elements.includes(target));if(!group){preview.style.visibility='hidden';preview.setAttribute('aria-busy','true');loading.textContent='Waiting for the selected component…';if(!loading.isConnected)canvas.append(loading);return;}
         const roots=group.elements,retained=new Set(roots),ancestors=new Set(),rules=[];
         for(const el of roots)for(let parent=el.parentElement;parent;parent=parent.parentElement){retained.add(parent);ancestors.add(parent);}
         for(const parent of ancestors){
@@ -1715,7 +1715,7 @@ function openComponent(id, component,options={}) {
         }
         for(const el of roots)rules.push(selector(el)+'{margin:0!important}');sheet.replaceSync(rules.join('\n'));preview.style.visibility='visible';preview.setAttribute('aria-busy','false');loading.remove();
       };
-      isolate(); const observer=new MutationObserver(isolate);observer.observe(d.body,{childList:true,subtree:true});stop=()=>observer.disconnect();
+      isolate(); const observer=new MutationObserver(isolate);observer.observe(d.body,{childList:true,subtree:true,attributes:true,attributeFilter:['id','data-rt','data-rt-i']});stop=()=>observer.disconnect();
       d.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();},true);
     }catch{loading.textContent='Preview could not attach to this page.';}
   };
