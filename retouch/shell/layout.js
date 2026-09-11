@@ -211,12 +211,13 @@
         I.select(sec,'Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>save(arrangementClasses(classes,'wrap',v,inherited)));
       }
       for(const [prop,label,axis] of [['columnGap',verticalInline?'Vertical gap':'Horizontal gap',verticalInline?'height':'width'],['rowGap',verticalInline?'Horizontal gap':'Vertical gap',verticalInline?'width':'height']]) {
-        const input=document.createElement('input');input.type='text';input.value=css[prop].replace(/px$/,'');input.placeholder='0';input.title='Pixels by default; also accepts %, rem, em, vw, vh, ch or normal';
+        const input=document.createElement('input');input.type='text';input.value=css[prop].replace(/px$/,'');input.placeholder='0';input.title='Pixels by default; also accepts %, rem, em, vw, vh, ch or normal. Enter saves. Escape cancels.';const initial=input.value;
         input.oninput=()=>input.setCustomValidity('');
-        input.onchange=()=>{try{save(gapClasses(classes,axis,input.value,css.writingMode,info.styleScope?info.anchorInheritedClasses||'':''));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
-        I.field(sec,label,input);
-        const reset=I.button('Reset '+label.toLowerCase(),()=>save(gapClasses(classes,axis,null,css.writingMode)));
-        reset.disabled=gapClasses(classes,axis,null,css.writingMode)===classes;sec.append(reset);
+        input.onchange=()=>{if(input.value===initial)return;try{save(gapClasses(classes,axis,input.value,css.writingMode,info.styleScope?info.anchorInheritedClasses||'':''));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+        input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};
+        const row=document.createElement('div');row.className='property-row';sec.append(row);I.field(row,label,input);
+        const resetLabel='Reset '+label.toLowerCase(),reset=I.button('↺',()=>save(gapClasses(classes,axis,null,css.writingMode)));reset.setAttribute('aria-label',resetLabel);reset.title=resetLabel;reset.classList.add('property-reset');
+        reset.disabled=gapClasses(classes,axis,null,css.writingMode)===classes;row.append(reset);
       }
       if(mode!=='grid'){
         const values=root.RetouchHTMLCSSValues||require('./html-css-values.js');
