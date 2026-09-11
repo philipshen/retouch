@@ -240,6 +240,7 @@ shared size, using the fallback when that variable is unset.
 For HTML and Tailwind grid children, **Layout → Custom grid placement** chooses column and row
 lines independently: `2 / 4`, `2 / span 2`, `-2 / -1`, or `content_start / content_end`.
 Placement follows the selected screen scope, with separate resets and Enter/Escape editing.
+The fields suggest numbered tracks and named lines from the current parent grid.
 
 The CSS properties panel edits dimensions, flex direction/wrapping, gap, padding,
 typography, colors and borders. Padding and margin support one to four values

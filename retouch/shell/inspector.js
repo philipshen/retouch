@@ -105,6 +105,23 @@
   function button(text, action) {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'control-button'; b.textContent = text; b.onclick = action; return b;
   }
+  function gridPlacementSuggestions(template){
+    const groups=[...String(template||'').matchAll(/\[([^\]]+)\]/g)].map(match=>match[1].trim().split(/\s+/).filter(name=>/^[A-Za-z_][\w-]*$/.test(name)&&!['auto','span','initial','inherit','unset','revert','revert-layer'].includes(name.toLowerCase()))).filter(names=>names.length);
+    const values=['auto','1 / -1'];
+    for(let i=0;i<groups.length&&values.length<50;i++){
+      if(i+1<groups.length&&groups[i][0]!==groups[i+1][0])values.push(groups[i][0]+' / '+groups[i+1][0]);
+      for(const name of groups[i])if(values.length<50)values.push(name+' / auto');
+    }
+    const tracks=String(template||'').replace(/\[[^\]]*\]/g,' ').trim().split(/\s+/);
+    if(tracks.every(value=>/^(?:\d+(?:\.\d+)?|\.\d+)px$/.test(value)))for(let i=1;i<=Math.min(24,tracks.length);i++)values.push(i+' / '+(i+1));
+    return [...new Set(values)];
+  }
+  let gridSuggestionId=0;
+  function suggestGridPlacement(input,template){
+    const list=document.createElement('datalist');list.id='rt-grid-lines-'+(++gridSuggestionId);
+    for(const value of gridPlacementSuggestions(template)){const option=document.createElement('option');option.value=value;list.append(option);}
+    input.setAttribute('list',list.id);input.parentElement.append(list);
+  }
   function field(parent, label, control) {
     const row = document.createElement('label'); row.className = 'inspector-field';
     const text = document.createElement('span'); text.textContent = label;
@@ -680,6 +697,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

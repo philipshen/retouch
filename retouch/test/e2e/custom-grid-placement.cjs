@@ -18,6 +18,8 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   const position=()=>item.evaluate(el=>{const a=el.getBoundingClientRect(),b=el.parentElement.getBoundingClientRect();return [a.left-b.left,a.top-b.top];});
   for(const [axis,label] of [['column','Column placement'],['row','Row placement']])for(const [value,offset] of [['2 / 3',110],['middle / right',110],['content_start / middle',0],['2 / span 2',110],['-2 / -1',220]]){
    const before=read(),input=page.getByLabel(label,{exact:true}),initial=await input.inputValue(),index=axis==='column'?0:1;
+   const suggestions=await input.evaluate(el=>[...el.list.options].map(option=>option.value));
+   assert.ok(suggestions.includes('middle / right')&&suggestions.includes('2 / 3'),'Placement offers actual parent lines');assert.ok(!suggestions.includes('4 / 5'),'Suggestions do not invent extra tracks');
    await input.fill('0 / 3');await input.press('Enter');assert.equal(await input.evaluate(el=>el.checkValidity()),false);assert.equal(read(),before);
    await input.press('Escape');assert.equal(await input.inputValue(),initial);assert.equal(await input.evaluate(el=>el.checkValidity()),true);
    await input.fill(value);await input.press('Enter');await settled();await wait(async()=>{const p=await position();return p[index]===offset&&p[1-index]===0;});

@@ -253,3 +253,12 @@ test('custom grid placement replaces one axis and preserves inherited priority a
  assert.equal(L.gridPlacementClasses('','row','-2 / -1'),'[grid-row:-2_/_-1]');
  assert.throws(()=>L.gridPlacementClasses('','column','0 / 3'));
 });
+
+
+test('grid placement suggestions use actual named lines and resolved track counts',()=>{
+ const I=require('../shell/inspector.js');
+ const values=I.gridPlacementSuggestions('[content_start alias] 100px [middle] 200px [end]');
+ assert.ok(values.includes('content_start / middle'));assert.ok(values.includes('middle / end'));assert.ok(values.includes('alias / auto'));assert.ok(values.includes('2 / 3'));assert.ok(!values.includes('3 / 4'));
+ assert.deepEqual(I.gridPlacementSuggestions('none'),['auto','1 / -1']);
+ assert.ok(I.gridPlacementSuggestions(Array(1000).fill('10px').join(' ')).length<=26);
+});
