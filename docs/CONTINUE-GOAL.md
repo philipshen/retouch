@@ -437,3 +437,10 @@ Desktop refresh: /private/tmp/retouch-desktop-inspector-refresh-20260911/Retouch
 Reproduced a React corner edit failing to override sm:!rounded-[20px] at the md scope. Added cornerRadiusClasses for single/all-corner writes: preserve unrelated corners/scopes, remove conflicting active physical radius declarations, and promote the authored utility when active or inherited radius rules are important. The existing numeric radius controls now use this planner.
 
 The inherited-radius Chromium browser regression failed before wiring the fix. Chromium and WebKit inspector-light now pass single-corner edits with other-corner preservation, shared radius edits affecting all four corners, and exact undo. 884 unit tests passed, including arbitrary physical radius replacement and scope preservation. This verifies the tested class cascade; general complex/logical/inline cascade parity remains unfinished. Source changes postdate desktop archive af62db6. Full parity remains incomplete.
+
+
+### Radius override reset controls (2026-09-11)
+
+React radius controls now expose a compact shared reset and one reset per physical corner. The planner accepts null to remove active overrides: a single-corner reset preserves shared shorthand radii and other corners; the shared reset removes all active radius overrides. Other breakpoint/state tokens remain intact. Individual reset buttons are organized alongside their spatial corner fields.
+
+885 unit tests passed. Chromium and WebKit inspector-light passed edits against inherited important radii, single/shared resets revealing the inherited 20px radius, undo restoring the edited radii, and final exact source undo. Source changes postdate desktop archive af62db6. Full parity remains incomplete.

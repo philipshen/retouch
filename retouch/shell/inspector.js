@@ -333,11 +333,11 @@
   function cornerRadiusClasses(classes,corner,value,inherited=''){
     const names={tl:'top-left',tr:'top-right',bl:'bottom-left',br:'bottom-right'};
     if(corner!==null&&!Object.hasOwn(names,corner))throw Error('Choose a corner.');
-    if(!Number.isFinite(value)||value<0||value>10000)throw Error('Use a radius from 0 to 10000 pixels.');
+    if(value!==null&&(!Number.isFinite(value)||value<0||value>10000))throw Error('Use a radius from 0 to 10000 pixels.');
     const radius=t=>/^rounded(?:-|$)|^\[border(?:-[a-z]+-[a-z]+)?-radius:/.test(t);
     const matches=corner===null?radius:t=>t.startsWith('rounded-'+corner+'-')||t.startsWith('[border-'+names[corner]+'-radius:');
-    let addition='rounded-'+(corner?corner+'-':'')+'['+value+'px]';
-    if([...tokens(classes),...tokens(inherited)].some(token=>/^!|!$/.test(token)&&radius(base(token)||'')))addition='!'+addition;
+    let addition=value===null?'':'rounded-'+(corner?corner+'-':'')+'['+value+'px]';
+    if(addition&&[...tokens(classes),...tokens(inherited)].some(token=>/^!|!$/.test(token)&&radius(base(token)||'')))addition='!'+addition;
     return replace(classes,matches,addition);
   }
   function appearance(info, el, save, colorAction) {
@@ -396,10 +396,12 @@
     const radius=value=>/^[\d.]+px$/.test(value)?parseFloat(value):NaN;
     const radii=[css.borderTopLeftRadius,css.borderTopRightRadius,css.borderBottomRightRadius,css.borderBottomLeftRadius];
     const allRadius=number(sec,'Corner radius (px)',radii.every(v=>v===radii[0])?radius(radii[0]):NaN,0,10000,v=>save(cornerRadiusClasses(info.className,null,v,info.anchorInheritedClasses)));
+    const resetRadius=button('Reset corner radius',()=>save(cornerRadiusClasses(info.className,null,null)));resetRadius.disabled=cornerRadiusClasses(info.className,null,null)===info.className;sec.append(resetRadius);
     allRadius.placeholder=radii.every(v=>v===radii[0])?radii[0]:'Mixed';
-    const corners=document.createElement('details');const summary=document.createElement('summary');summary.textContent='Individual corners';corners.append(summary);
+    const corners=document.createElement('details');corners.className='radius-corners';const summary=document.createElement('summary');summary.textContent='Individual corners';corners.append(summary);
     for(const [name,token,property] of [['Top left','tl','borderTopLeftRadius'],['Top right','tr','borderTopRightRadius'],['Bottom right','br','borderBottomRightRadius'],['Bottom left','bl','borderBottomLeftRadius']]) {
       const field=number(corners,name+' radius (px)',radius(css[property]),0,10000,v=>save(cornerRadiusClasses(info.className,token,v,info.anchorInheritedClasses)));field.placeholder=css[property];
+      const reset=button('Reset '+name.toLowerCase()+' radius',()=>save(cornerRadiusClasses(info.className,token,null)));reset.disabled=cornerRadiusClasses(info.className,token,null)===info.className;corners.append(reset);
     }
     corners.open=cornersExpanded;corners.ontoggle=()=>{if(corners.isConnected)cornersExpanded=corners.open;};
     sec.append(corners);root.RetouchClassGradients.mount(sec,info,el,save);return sec;

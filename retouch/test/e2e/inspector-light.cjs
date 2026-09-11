@@ -54,9 +54,13 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   await page.getByText('Individual corners',{exact:true}).click();
   const corner=page.getByLabel('Top left radius (px)',{exact:true});await corner.fill('12');await corner.press('Tab');await settled();
   await wait(async()=>parent.evaluate(el=>getComputedStyle(el).borderTopLeftRadius==='12px'&&getComputedStyle(el).borderTopRightRadius==='20px'));
+  await page.getByRole('button',{name:'Reset top left radius',exact:true}).click();await settled();await wait(async()=>parent.evaluate(el=>getComputedStyle(el).borderTopLeftRadius==='20px'));
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(async()=>parent.evaluate(el=>getComputedStyle(el).borderTopLeftRadius==='12px'));
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),originalSource);
   const sharedRadius=page.getByLabel('Corner radius (px)',{exact:true});await sharedRadius.fill('6');await sharedRadius.press('Tab');await settled();
   await wait(async()=>parent.evaluate(el=>['borderTopLeftRadius','borderTopRightRadius','borderBottomLeftRadius','borderBottomRightRadius'].every(property=>getComputedStyle(el)[property]==='6px')));
+  await page.getByRole('button',{name:'Reset corner radius',exact:true}).click();await settled();await wait(async()=>parent.evaluate(el=>getComputedStyle(el).borderTopLeftRadius==='20px'));
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(async()=>parent.evaluate(el=>getComputedStyle(el).borderTopLeftRadius==='6px'));
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),originalSource);
   await page.locator('#panel').evaluate(panel=>{panel.scrollTop+=panel.querySelector('[data-section=appearance]').getBoundingClientRect().top-panel.getBoundingClientRect().top-48;});await page.locator('#panel').screenshot({path:'/private/tmp/retouch-corners-'+engine+'.png'});
   await page.getByText('Layer actions',{exact:true}).click();assert.equal(await page.getByRole('button',{name:'Lock selection',exact:true}).isVisible(),true);await page.getByText('Layer actions',{exact:true}).click();

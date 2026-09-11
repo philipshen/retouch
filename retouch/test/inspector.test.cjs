@@ -121,3 +121,9 @@ test('corner radius edits preserve other corners and scopes while overriding inh
  assert.equal(radius('',null,0,'[border-radius:12px]!'),'!rounded-[0px]');
  assert.throws(()=>radius('','bad',12));assert.throws(()=>radius('',null,-1));
 });
+
+test('corner reset removes local physical overrides and preserves shared radii and other scopes',()=>{
+ const radius=require('../shell/inspector.js').cornerRadiusClasses;
+ assert.equal(radius('rounded-lg !rounded-tl-[12px] [border-top-left-radius:4px] md:rounded-sm','tl',null),'rounded-lg md:rounded-sm');
+ assert.equal(radius('!rounded-lg rounded-tr-md [border-bottom-left-radius:4px] md:rounded-sm',null,null),'md:rounded-sm');
+});
