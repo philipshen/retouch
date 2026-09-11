@@ -16,9 +16,12 @@ const engine=process.env.RT_E2E_BROWSER||'chromium';
   const tracks=axis=>parent.evaluate((el,axis)=>getComputedStyle(el).getPropertyValue('grid-template-'+axis).replace(/\[[^\]]*\]/g,' ').trim().split(/\s+/).map(parseFloat),axis);
   for(const axis of ['columns','rows'])for(const value of (['80px minmax(0, 1fr)','repeat(3, minmax(0, 1fr))','[content_start] 80px [rest] 1fr','auto 1fr'])){
    const before=read(),label=axis==='columns'?'Column sizes':'Row sizes',input=page.getByLabel(label,{exact:true}),reset=page.getByRole('button',{name:'Reset '+label.toLowerCase(),exact:true}),total=axis==='columns'?400:300;
+   const initial=await input.inputValue();
    await input.fill('1fr; display:none');await input.press('Tab');await settled();assert.equal(read(),before);assert.equal(await input.evaluate(el=>el.checkValidity()),false);
    await input.fill('nonsense');await input.press('Tab');await settled();assert.equal(read(),before);assert.equal(await input.evaluate(el=>el.checkValidity()),false);
-   await input.fill(value);await input.press('Tab');await settled();const expected=value.startsWith('repeat')?Array(3).fill((total-20)/3):value.startsWith('auto')?[40,total-50]:[80,total-90];
+   await input.press('Escape');assert.equal(await input.inputValue(),initial);assert.equal(await input.evaluate(el=>el.checkValidity()),true);assert.equal(read(),before,'Escape discards an invalid grid draft');
+   await input.fill('120px 1fr');await input.press('Escape');assert.equal(await input.inputValue(),initial);assert.equal(read(),before,'Escape discards a valid unfinished grid draft');
+   await input.fill(value);await input.press('Enter');await settled();const expected=value.startsWith('repeat')?Array(3).fill((total-20)/3):value.startsWith('auto')?[40,total-50]:[80,total-90];
    try{await wait(async()=>{const actual=await tracks(axis);return actual.length===expected.length&&actual.every((v,i)=>Math.abs(v-expected[i])<0.03);});}catch(error){console.error(JSON.stringify({axis,value,expected,actual:await tracks(axis),source:read(),validity:await input.evaluate(el=>el.validationMessage)}));throw error;}assert.equal(await input.inputValue(),value);assert.deepEqual(await tracks(axis==='columns'?'rows':'columns'),[100,100]);const edited=read();assert.notEqual(edited,before);if(process.env.RT_E2E_GRID_TRACKS_SCREENSHOT&&axis==='columns'){await input.scrollIntoViewIfNeeded();await page.locator('#panel').screenshot({path:process.env.RT_E2E_GRID_TRACKS_SCREENSHOT});}
    // Render only the saved markup in a separate page with JavaScript disabled.
    await standalone.setContent(edited);assert.equal(await standalone.locator('script').count(),0);

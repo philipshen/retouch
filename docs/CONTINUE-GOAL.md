@@ -709,3 +709,10 @@ HTML grid containers now expose the same Custom grid tracks disclosure with sepa
 The custom HTML grid browser workflow now renders each saved markup version in a separate page with JavaScript disabled and no editor scripts. Both axes are checked at 768, 767, 390 and 1024 viewport pixels, covering the exact breakpoint boundary, original narrow-screen layout and custom larger-screen tracks. Named grid lines must survive in the computed standalone template.
 
 Chromium/WebKit passed all static-export checks together with fixed-flex/minmax/repeat/named lines/auto editing, invalid input refusal, axis preservation, resets and exact source history. Logs /private/tmp/retouch-html-grid-export-{chromium,webkit}.log. This verifies self-contained saved HTML/CSS for these grid workflows; arbitrary site/framework export remains incomplete. No runtime source changes or new package in this turn. Full Figma parity remains incomplete.
+
+
+### Keyboard commit and cancellation for custom grid tracks (2026-09-11)
+
+HTML and Tailwind custom track fields now save with Enter and discard drafts with Escape. Escape restores the displayed authored/computed value and clears validation errors. An unchanged-value guard prevents cancellation blur from creating a source edit. IME composition is ignored; handled keys do not reach canvas shortcuts. Each field exposes the shortcuts in its title.
+
+Four full browser workflows passed: HTML and Next/Tailwind, each in Chromium/WebKit. Tests cancel both invalid and valid unfinished drafts without source changes, commit all track forms through Enter, and retain responsive isolation, per-axis reset and exact history. HTML standalone export checks with JavaScript disabled also passed. Logs /private/tmp/retouch-{html-grid,grid}-keyboard-{chromium,webkit}.log. Source postdates packaged archive 4dba5a3; full Figma parity remains incomplete.

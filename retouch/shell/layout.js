@@ -182,9 +182,11 @@
         for(const axis of ['columns','rows']){
           const property='grid-template-'+axis,label=axis==='columns'?'Column sizes':'Row sizes';
           const input=document.createElement('input');input.type='text';input.value=ownGridTemplate(classes,axis)??css.getPropertyValue(property);
-          input.oninput=()=>input.setCustomValidity('');
-          input.onchange=()=>{try{const value=input.value.trim(),next=gridTemplateClasses(classes,axis,value,inherited);if(!el.ownerDocument.defaultView.CSS.supports(property,value))throw Error('Enter supported grid track sizes.');save(next);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+          const initial=input.value;input.oninput=()=>input.setCustomValidity('');
+          input.onchange=()=>{try{const value=input.value.trim();if(value===initial)return;const next=gridTemplateClasses(classes,axis,value,inherited);if(!el.ownerDocument.defaultView.CSS.supports(property,value))throw Error('Enter supported grid track sizes.');save(next);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
           const row=document.createElement('div');row.className='property-row';custom.append(row);I.field(row,label,input);
+          input.title='Enter saves. Escape cancels.';
+          input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};
           const reset=I.button('Reset '+label.toLowerCase(),()=>save(gridTemplateClasses(classes,axis,null)));reset.setAttribute('aria-label','Reset '+label.toLowerCase());reset.title='Reset '+label.toLowerCase();reset.textContent='↺';reset.classList.add('property-reset');reset.disabled=gridTemplateClasses(classes,axis,null)===classes;row.append(reset);
         }
         I.note(custom,'Separate tracks with spaces: 160px 1fr makes a fixed track and a flexible track. auto fits content; minmax(80px, 1fr) sets a minimum.');sec.append(custom);
