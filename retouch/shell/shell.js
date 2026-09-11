@@ -2469,7 +2469,7 @@ routeInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') navigatePage(routeInput.value || '/');
 });
 window.addEventListener('keydown', (e) => {
-  if(opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e))return;
+  if(opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||((e.metaKey||e.ctrlKey)&&['[',']','{','}'].includes(e.key)&&canvasLayerShortcut(e)))return;
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
   if(sourceHistoryShortcut(e))return;

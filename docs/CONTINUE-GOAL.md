@@ -119,3 +119,7 @@ Layers now accepts before/after drops for selected usages sharing an unselected 
 ## Component group ordering buttons
 
 Layers provides Move components up/down/to start/to end for a group of direct sibling usages. Source movement descriptors now include ordered sibling identities, allowing the UI to disable unavailable directions. The source planner independently validates membership/container and resolves omitted destinations by direction; boundary operations are no-ops. The existing atomic selection/history path handles each command. Chromium/WebKit verify all four controls, boundary disabled states, source order and exact Undo/Redo with selection retained; 845 unit tests pass. Keyboard shortcuts, cross-container placement and broader component parity remain open.
+
+## Ordering keyboard access
+
+Command/Ctrl+[ and ] move selections earlier/later; adding Shift moves to start/end. Bracket commands now reach the existing guarded action dispatcher from the outer editor as well as the canvas iframe, fixing no action when a Layers row had focus. Ordering buttons expose aria-keyshortcuts and platform-specific hover hints. Chromium/WebKit verify all four group shortcuts from Layers, exact Undo/Redo, disabled-boundary no-op, repeated/composing/Alt-key refusal and zero source writes while the shared title textarea is focused. All 845 unit tests pass. The earlier blanket keyboard-ordering gap is superseded for this supported flow; cross-container/cross-file ordering and broader parity remain open.
