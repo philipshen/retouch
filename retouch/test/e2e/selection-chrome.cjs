@@ -25,7 +25,7 @@ function browser(...args){const r=JSON.parse(execFileSync(process.env.RT_AGENT_B
   sel={hostId:h.dataset.rt,instanceId:h.dataset.rtI,scope:'instance',info:shared.element};
   renderPanel();await wait(()=>!document.querySelector('.component-badge').hidden);
   const badge=document.querySelector('.component-badge'),button=badge.querySelector('button');
-  if(badge.querySelector('span').textContent!=='component'||button.title!=='detach')throw Error('Incorrect component badge');
+  if(badge.querySelector('span').textContent!==(shared.element.tag||'Component')||button.title!=='detach')throw Error('Incorrect component badge');
   if(document.querySelector('.tagchip'))throw Error('Old source label remains');
   const purple=getComputedStyle(document.querySelector('.box.instance')).borderColor;
   drawBox(inline,'sel','editable');const blue=getComputedStyle(overlayLayer.lastChild).borderColor;

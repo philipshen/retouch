@@ -875,7 +875,7 @@ function paintLoop() {
     for(const group of groups) {
       const el=group.element,kind=outlineKind(el,sel.info);
       const bounds=RetouchComponentInstances.bounds(group.elements);if(bounds)drawBounds(bounds,first?'sel':'co',kind);
-      if(first && kind==='instance')badge={el,elements:group.elements,id:el.getAttribute('data-rt-i') || id};
+      if(first && kind==='instance')badge={el,elements:group.elements,id:el.getAttribute('data-rt-i') || id,name:sel.info.tag};
       first=false;
     }
   }
@@ -890,13 +890,13 @@ function paintLoop() {
     const group=kind==='instance'?RetouchComponentInstances.group(matchingInDocument(d,info.id,info),info.rootGroups).find(group=>group.elements.includes(target)):null;
     const elements=group?.elements||[target],bounds=RetouchComponentInstances.bounds(elements);
     if(kind&&bounds)drawBounds(bounds,'hover',kind);
-    if(kind==='instance')badge={el:target,elements,id:info.id};
+    if(kind==='instance')badge={el:target,elements,id:info.id,name:info.tag};
   }
   // Keep the badge mounted so pointer/focus events survive animation frames.
   if(componentBadge.matches(':hover') || componentBadge.contains(document.activeElement))badge=badgeTarget;
   if(mode!=='edit' || sel?.multiple?.length>1 || !badge?.el.isConnected)badge=null;
   badgeTarget=badge;componentBadge.hidden=!badge;
-  if(badge){const r=RetouchComponentInstances.bounds((badge.elements||[badge.el]).filter(el=>el.isConnected))||badge.el.getBoundingClientRect();componentBadge.style.left=Math.max(0,r.left)+'px';componentBadge.style.top=Math.max(0,r.top-22)+'px';}
+  if(badge){componentBadge.querySelector('span').textContent=badge.name||'Component';const r=RetouchComponentInstances.bounds((badge.elements||[badge.el]).filter(el=>el.isConnected))||badge.el.getBoundingClientRect();componentBadge.style.left=Math.max(0,r.left)+'px';componentBadge.style.top=Math.max(0,r.top-22)+'px';}
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
   marqueeSurface.textContent='';
   if(selectionMarquee?.document===d){

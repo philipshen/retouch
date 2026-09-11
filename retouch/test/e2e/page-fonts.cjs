@@ -231,6 +231,24 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    await page.setViewportSize({width:720,height:800});assert.equal(await library.evaluate(el=>{const r=el.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&el.scrollWidth<=el.clientWidth;}),true,'Component library fits a narrow workspace');if(process.env.RT_E2E_COMPONENT_LIBRARY_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_COMPONENT_LIBRARY_SCREENSHOT});await page.setViewportSize({width:1600,height:1100});
    await search().fill('HeadlineCard');const headline=library.getByRole('listitem',{name:'HeadlineCard · app/page.tsx',exact:true});await headline.getByRole('button',{name:'Select on canvas'}).click();await library.waitFor({state:'hidden'});await settled();assert.equal(await page.getByLabel('Component property title',{exact:true}).inputValue(),'First');assert.equal(read(),beforeLibrary,'Browsing and selecting components never writes page source');assert.equal(await page.getByRole('button',{name:'This instance',exact:true}).isVisible(),true,'Component editing scope stays visible after library selection');const editScope=page.getByRole('group',{name:'Component editing scope',exact:true});await editScope.getByRole('button',{name:'Component',exact:true}).click();await settled();await wait(async()=>await editScope.getByRole('button',{name:'Component',exact:true}).getAttribute('aria-pressed')==='true');await editScope.getByRole('button',{name:'This instance',exact:true}).click();await settled();await wait(async()=>await editScope.getByRole('button',{name:'This instance',exact:true}).getAttribute('aria-pressed')==='true');assert.equal(read(),beforeLibrary,'Changing component scope does not write source');
    assert.equal(await page.locator('.selection-heading > .kindbadge').textContent(),'HeadlineCard','Inspector identifies the selected component by name');
+   await wait(async()=>await page.locator('.component-badge > span').textContent()==='HeadlineCard');
+   assert.match(await page.locator('.component-badge').evaluate(el=>getComputedStyle(el).fontFamily),/^Inter/);
+   await app.locator('aside').hover();await wait(async()=>await page.locator('.component-badge > span').textContent()==='Badge');
+   await page.getByLabel('Find a layer',{exact:true}).hover();await wait(async()=>await page.locator('.component-badge > span').textContent()==='HeadlineCard');
+   const componentLayer=page.getByRole('tree',{name:'Site layers',exact:true}).getByRole('treeitem',{name:'HeadlineCard · component',exact:true});
+   await componentLayer.waitFor();await componentLayer.hover();
+   assert.equal(await componentLayer.getAttribute('data-layer-kind'),'component');
+   assert.equal(await componentLayer.getAttribute('aria-selected'),'true');
+   assert.equal(await componentLayer.evaluate(el=>getComputedStyle(el).color),'rgb(151, 71, 255)','Component selection keeps the component accent');
+   assert.equal(await componentLayer.evaluate(el=>getComputedStyle(el.parentElement).backgroundColor),'rgb(241, 229, 255)','Component selection fills the row while hovered');
+   assert.notEqual(await componentLayer.evaluate(el=>getComputedStyle(el,'::before').maskImage),'none');
+   const componentDisclosure=page.getByRole('button',{name:'Collapse HeadlineCard · component',exact:true});
+   await componentDisclosure.click();assert.equal(await componentLayer.getAttribute('aria-expanded'),'false');
+   assert.notEqual(await componentLayer.evaluate(el=>getComputedStyle(el.parentElement.querySelector('.layer-toggle'),'::before').transform),'none');
+   await page.getByRole('button',{name:'Expand HeadlineCard · component',exact:true}).click();
+   assert.equal(await componentLayer.getAttribute('aria-selected'),'true');
+   assert.equal(read(),beforeLibrary,'Layer disclosure preserves component selection and source');
+   if(process.env.RT_E2E_COMPONENT_LAYER_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_COMPONENT_LAYER_SCREENSHOT});
    if(process.env.RT_E2E_COMPONENT_LIBRARY_ONLY){assert.deepEqual(errors,[]);console.log(engine+' '+kind+': PASS component library search, navigation, refresh, compact bounds and enabled insertion workflows');return;}
   }
   if(process.env.RT_E2E_COMPONENT_PROPERTY_EDIT){
