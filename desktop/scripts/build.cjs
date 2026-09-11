@@ -6,7 +6,15 @@ const {execFileSync: run} = require('node:child_process');
 const crypto = require('node:crypto');
 const os = require('node:os');
 const root = path.resolve(__dirname, '..');
-const out = path.resolve(process.argv[2] || path.join(root, 'dist'));
+const destination = path.resolve(process.argv[2] || path.join(root, 'dist'));
+fs.mkdirSync(destination,{recursive:true});
+const lock=path.join(destination,'.retouch-build.lock');
+let lockFD;
+try { lockFD=fs.openSync(lock,'wx'); } catch(error) { if(error.code==='EEXIST')throw Error('Another build owns '+lock+'. Check that build before removing a stale lock.');throw error; }
+let out,preserveStaging=false;
+try {
+fs.writeFileSync(lockFD,JSON.stringify({pid:process.pid,startedAt:new Date().toISOString()})+'\n');
+out=fs.mkdtempSync(path.join(destination,'.retouch-build-'));
 const app = path.join(out, 'Retouch.app');
 const macos = path.join(app, 'Contents/MacOS');
 fs.mkdirSync(macos, {recursive:true});
@@ -62,9 +70,15 @@ else console.log('SKIP native launch tests (set RETOUCH_RUN_NATIVE_TESTS=1 only 
 const verification = require('./verify-package.cjs').verify(app);
 console.log(JSON.stringify({packageVerification:verification}));
 const zip = path.join(out, 'Retouch-0.1.0-mac.zip');
-// ditto can append to an existing archive; remove only this generated output.
-if (fs.existsSync(zip)) fs.unlinkSync(zip);
+// This archive is new inside the isolated build directory.
 run('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', app, zip], {stdio:'inherit'});
 const sha = crypto.createHash('sha256').update(fs.readFileSync(zip)).digest('hex');
 fs.writeFileSync(zip + '.sha256', sha + '\n');
-console.log(JSON.stringify({app,zip,sha256:sha,nativeSelfTests:nativeTests?'passed':'not run',signing:identity?'Developer ID (notarization still required)':'ad hoc development build'},null,2));
+require('./publish-package.cjs')(out,destination,['Retouch.app',path.basename(zip),path.basename(zip)+'.sha256']);
+console.log(JSON.stringify({app:path.join(destination,'Retouch.app'),zip:path.join(destination,path.basename(zip)),sha256:sha,nativeSelfTests:nativeTests?'passed':'not run',signing:identity?'Developer ID (notarization still required)':'ad hoc development build'},null,2));
+
+} catch(error) { preserveStaging=!!error.preserveStaging;throw error; }
+finally {
+  try { if(out&&!preserveStaging)fs.rmSync(out,{recursive:true,force:true}); }
+  finally { fs.closeSync(lockFD);fs.unlinkSync(lock); }
+}

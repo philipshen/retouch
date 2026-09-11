@@ -10,13 +10,13 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest local development archive is
-`/private/tmp/retouch-desktop-manifest-final-20260911/Retouch-0.1.0-mac.zip`.
+`/private/tmp/retouch-desktop-staged-20260911/Retouch-0.1.0-mac.zip`.
 Its SHA-256 is
-`4fd349295a6eed679d8cfc4f832e89f253b45bb7b1e92e7ac21f286d0587a361`.
+`f30de5ee113c1f66e27693ab1e9858ff539ba48342327e1e6c8fbc61313206f8`.
 It includes a source manifest inside the signed resources. All 172 source hashes
 match the prior six-workflow browser-verified editor-refresh package. Both
 architectures, strict ad hoc signature, ZIP contents and local cask syntax pass.
-See [the package receipt](verification/2026-09-11-package-manifest.json).
+See [the package receipt](verification/2026-09-11-staged-build.json).
 
 Native launch was not attempted for this manifest build. The preceding package's
 process ran but CUA could not inspect its window; it was stopped. Native editing,
@@ -393,3 +393,20 @@ uses a disposable copy to exercise altered source, omitted/duplicate/invalid
 entries, unlisted source, plist changes and symlinks, then checks the restored
 copy and original. Neither command launches the app. These integrity checks do
 not establish signing identity, notarization or Gatekeeper trust.
+
+## Rebuilding an existing output directory
+
+Builds take an exclusive `.retouch-build.lock` and prepare the app/archive/hash in
+a unique sibling staging directory. Existing outputs remain untouched until
+compilation, signing, verification and archiving succeed. Publication retains
+backups until all three outputs are installed; ordinary publication errors
+restore the previous set. If restoration fails, the error names retained recovery
+files. A process crash or power loss is not an atomic multi-file transaction.
+A leftover lock is never removed automatically: inspect the recorded process
+before removing a stale lock.
+
+Run the filesystem failure and lock checks without launching Retouch:
+
+```sh
+node --test desktop/test/publish-package.test.cjs
+```

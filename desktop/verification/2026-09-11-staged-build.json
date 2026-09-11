@@ -1,0 +1,24 @@
+{
+  "archive": "/private/tmp/retouch-desktop-staged-20260911/Retouch-0.1.0-mac.zip",
+  "sha256": "f30de5ee113c1f66e27693ab1e9858ff539ba48342327e1e6c8fbc61313206f8",
+  "sourceCommit": "d8b889758109cd30ffaca5ec5415d242095d66b7",
+  "sourceTreeDirty": true,
+  "manifestSha256": "8cfdbb9f3af0e184ebcdccad845f9893fa1e46d0ff12969c4aec13bb79b4d9dc",
+  "sourceFiles": 172,
+  "runtimeComparison": "All source hashes match 2026-09-11-editor-refresh.json",
+  "validation": [
+    "5 publication/rollback/lock tests passed",
+    "deliberately failed npm build preserved prior verified app and exact archive",
+    "successful staged rebuild replaced the prior outputs",
+    "published and relocated package verifier/tamper tests passed",
+    "ZIP manifest/source hashes verified",
+    "staging directories and owned lock absent",
+    "local cask Ruby syntax passed"
+  ],
+  "nativeLaunch": "not attempted",
+  "signing": "strict ad hoc signature verified; Developer ID and notarization unfinished",
+  "limitations": [
+    "Recovery covers ordinary filesystem errors; process crashes or power loss are not an atomic multi-file transaction",
+    "Native interaction, cask install/upgrade and trusted distribution remain unverified"
+  ]
+}
