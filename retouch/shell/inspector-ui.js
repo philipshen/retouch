@@ -75,7 +75,12 @@
     for(const action of ['up','down','duplicate','remove']){
      const pattern=action==='up'||action==='down'?new RegExp('^Move (?:fill|gradient) \\d+ '+action+'$'):new RegExp('^'+(action==='duplicate'?'Duplicate':'Remove')+' (?:fill|gradient) \\d+$');
      const button=buttons.find(item=>pattern.test(item.textContent));if(!button)continue;
-     const label=button.textContent;button.setAttribute('aria-label',label);button.title=label;button.classList.add('gradient-action');button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true">'+icons[action]+'</svg>';actions.append(button);
+     const label=button.textContent;button.setAttribute('aria-label',label);button.title=label;button.classList.add('gradient-action');button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true">'+icons[action]+'</svg>';
+     const activate=button.onclick;button.onclick=event=>{
+      const match=group.querySelector(':scope > legend').textContent.trim().match(/^(Gradient|Fill) (\d+)$/),count=section.querySelectorAll('.gradient-controls').length;
+      if(match){const index=Number(match[2]),next=action==='up'?index-1:action==='down'||action==='duplicate'?index+1:Math.min(index,count-1);if(next>0)root.RetouchPanelFocus?.queueControl(button,match[1]+' '+next+' type');else{const add=section.querySelector('.section-add');if(add)root.RetouchPanelFocus?.queue(add);}}
+      return activate?.call(button,event);
+     };actions.append(button);
     }
     if(actions.children.length){
      const legend=group.querySelector(':scope > legend');actions.setAttribute('role','toolbar');actions.setAttribute('aria-label',legend.textContent.trim()+' actions');
