@@ -1,0 +1,78 @@
+{
+  "sourceCommit": "8388be84ec197217c2f96c1562dc150e784ea1cd",
+  "sourceTreeDirty": false,
+  "sourceFiles": 175,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-layout-20260911/Retouch-0.1.0-mac.zip",
+  "sha256": "a5ddfde0e0fdbdba22491b1d4909f6cc3e4b1bc685169f8bf62e578d33f1b7e3",
+  "sourceMatchesCheckout": true,
+  "units": "897 passed",
+  "workflows": [
+    {
+      "name": "html-grid-placement-chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-layout-20260911/html-grid-placement-chromium.log"
+    },
+    {
+      "name": "custom-grid-placement-chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-layout-20260911/custom-grid-placement-chromium.log"
+    },
+    {
+      "name": "layout-padding-chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-layout-20260911/layout-padding-chromium.log"
+    },
+    {
+      "name": "layout-physical-gap-chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-layout-20260911/layout-physical-gap-chromium.log"
+    },
+    {
+      "name": "html-grid-placement-webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-layout-20260911/html-grid-placement-webkit.log"
+    },
+    {
+      "name": "custom-grid-placement-webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-layout-20260911/custom-grid-placement-webkit.log"
+    },
+    {
+      "name": "layout-padding-webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-layout-20260911/layout-padding-webkit.log"
+    },
+    {
+      "name": "layout-physical-gap-webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-layout-20260911/layout-physical-gap-webkit.log"
+    }
+  ],
+  "installation": {
+    "installedVerification": {
+      "sourceCommit": "8388be84ec197217c2f96c1562dc150e784ea1cd",
+      "sourceTreeDirty": false,
+      "sourceFiles": 175,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "quarantinePreserved": true,
+    "cask": "Temporary tap install and uninstall passed. Upgrade not tested.",
+    "cleanup": "App directory, cask registration, tap and cask trust entry verified absent; developer mode disabled",
+    "logs": [
+      "/private/tmp/retouch-desktop-layout-20260911/install.log",
+      "/private/tmp/retouch-desktop-layout-20260911/uninstall.log"
+    ]
+  },
+  "nativeLaunch": "Not attempted for this archive. Earlier cgWindowNotFound investigation remains unresolved.",
+  "signing": "Ad hoc development build. Developer ID, notarization and trusted distribution remain unfinished.",
+  "harness": "External browser harness linked to extracted signed bundle; removed after eight terminal passing workflows."
+}
