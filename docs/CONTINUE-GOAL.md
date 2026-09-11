@@ -284,3 +284,10 @@ Wrap children, Align children, Distribute children and Columns now replace their
 Padding fields now replace active physical edge classes and arbitrary physical padding declarations. Relevant important physical-axis/all-edge shorthands in the active or inherited scope promote the new edge override. Each edge has a Reset control that removes its active override while preserving shorthands, other edges and other scopes.
 
 875 unit tests pass. Chromium/WebKit verify all four edges against an inherited important two-value padding shorthand: changing to 30px affects only that edge, Reset restores inherited spacing, Phone stays at 10px on every edge, and exact source Undo/Redo passes. Evidence: `/private/tmp/retouch-padding-{chromium,webkit}.log` and `/private/tmp/retouch-padding-units.log`. Logical padding properties and complex conditional/state cascade remain outside this verification. Full parity and trusted macOS distribution remain unfinished; the desktop package predates this editor change.
+
+
+## Responsive size-limit priority and arbitrary declarations
+
+Minimum/maximum width and height now replace active arbitrary physical constraint declarations as well as utility classes. Matching inherited important constraints promote the new scoped value. Reset recognizes both declaration forms; own-value lookup recognizes arbitrary properties and prefers important active declarations.
+
+876 unit tests pass. Chromium/WebKit verify all four constraints against smaller-breakpoint important arbitrary properties, including the actual constrained dimension, retained opposite dimension, invalid negative input without source writes, Reset, Phone isolation and exact source Undo/Redo. Evidence: `/private/tmp/retouch-limits-{chromium,webkit}.log` and `/private/tmp/retouch-limits-units.log`. Logical dimensions, arbitrary conditional/state inheritance, full Figma parity and trusted macOS distribution remain unfinished. The desktop package predates these editor changes.

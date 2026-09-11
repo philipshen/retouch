@@ -89,16 +89,20 @@
     if(!/^(?:\d*\.?\d+(?:px|%|rem|em|vw|vh|svw|svh|dvw|dvh|ch)|min-content|max-content|fit-content)$/.test(value)&&value!==(key.startsWith('min-')?'auto':'none'))throw Error('Use a nonnegative CSS size, or a sizing keyword');
     return value;
   }
-  function limitClasses(classes,key,value) {
+  function limitClasses(classes,key,value,inherited='') {
     if(!limitKeys.includes(key))throw Error('Unknown size limit');
     const prefix=key.replace('width','w').replace('height','h')+'-';
-    const addition=value===null?'':prefix+'['+limitValue(value,key)+']';
-    return I.replace(classes,t=>t.startsWith(prefix),addition);
+    const matches=t=>t.startsWith(prefix)||t.startsWith('['+key+':');
+    let addition=value===null?'':prefix+'['+limitValue(value,key)+']';
+    if(addition&&inherited.split(/\s+/).some(t=>/^!|!$/.test(t)&&matches(I.base(t)||'')))addition='!'+addition;
+    return I.replace(classes,matches,addition);
   }
   function ownLimit(classes,key) {
+    if(!limitKeys.includes(key))throw Error('Unknown size limit');
     const prefix=key.replace('width','w').replace('height','h')+'-';
-    const token=classes.split(/\s+/).map(t=>t.replace(/^!|!$/g,'')).find(t=>t.startsWith(prefix));
-    if(!token)return null;
+    const tokens=classes.split(/\s+/).filter(t=>{const base=I.base(t);return base!==null&&(base.startsWith(prefix)||base.startsWith('['+key+':'));});
+    const token=I.base(tokens.find(t=>/^!|!$/.test(t))||tokens[0]||'');
+    if(token.startsWith('['+key+':'))return token.slice(key.length+2,-1).replace(/_/g,' ');
     const value=token.slice(prefix.length);
     return value.startsWith('[')&&value.endsWith(']')?value.slice(1,-1).replace(/_/g,' '):null;
   }
@@ -174,11 +178,10 @@
       const label=key.replace('min-','Minimum ').replace('max-','Maximum ');
       const input=document.createElement('input');input.type='text';input.value=ownLimit(classes,key)??css.getPropertyValue(key);input.placeholder=key.startsWith('min-')?'auto':'none';
       input.oninput=()=>input.setCustomValidity('');
-      input.onchange=()=>{try{const value=limitValue(input.value,key);input.setCustomValidity('');save(limitClasses(classes,key,value));}catch(e){input.setCustomValidity(e.message);input.reportValidity();}};
+      input.onchange=()=>{try{const value=limitValue(input.value,key);input.setCustomValidity('');save(limitClasses(classes,key,value,inherited));}catch(e){input.setCustomValidity(e.message);input.reportValidity();}};
       I.field(limits,label,input);
       const reset=I.button('Reset '+label.toLowerCase(),()=>save(limitClasses(classes,key,null)));
-      const prefix=key.replace('width','w').replace('height','h')+'-';
-      reset.disabled=!classes.split(/\s+/).some(t=>t.replace(/^!|!$/g,'').startsWith(prefix));limits.append(reset);
+      reset.disabled=limitClasses(classes,key,null)===classes;limits.append(reset);
     }
     I.note(limits,'Use px, %, rem or other CSS units. Reset removes this scope’s override. Minimums take precedence over smaller maximums.');
     sec.append(limits);

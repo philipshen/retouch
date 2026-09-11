@@ -172,3 +172,14 @@ test('padding edges preserve shorthands and other edges with scoped important pr
  for(const value of [-1,10001,Infinity,NaN,'20'])assert.throws(()=>L.paddingClasses('','left',value));
  assert.throws(()=>L.paddingClasses('','wrong',20));
 });
+
+
+test('size limits replace arbitrary declarations and respect inherited important constraints',()=>{
+ assert.equal(L.limitClasses('[max-width:200px] min-w-4 md:max-w-2','max-width','300','!max-w-40'),'min-w-4 md:max-w-2 !max-w-[300px]');
+ assert.equal(L.limitClasses('','min-height','120','![min-height:80px]'),'!min-h-[120px]');
+ assert.equal(L.limitClasses('','min-height','120','!max-h-40 !min-w-20'),'min-h-[120px]');
+ assert.equal(L.limitClasses('[min-width:20px] !min-w-4 max-w-40','min-width',null),'max-w-40');
+ assert.equal(L.ownLimit('min-w-[20px] ![min-width:30px]','min-width'),'30px');
+ assert.equal(L.ownLimit('md:![min-width:30px]','min-width'),null);
+ assert.equal(L.ownLimit('[max-height:calc(100%_-_20px)]','max-height'),'calc(100% - 20px)');
+});
