@@ -12,11 +12,16 @@
    if(stack.length)return null;const end=text.slice(start).trim();if(end)result.push(end);else if(comma)return null;return result;
   }
   const length=v=>/^(?:0|(?:\d+(?:\.\d+)?|\.\d+)(?:px|em|rem|%|vw|vh|vmin|vmax|ch|ex|cm|mm|in|pt|pc))$/.test(v);
-  const breadth=(v,flex=true)=>length(v)||['auto','min-content','max-content'].includes(v)||flex&&/^(?:\d+(?:\.\d+)?|\.\d+)fr$/.test(v);
+  function variable(v,fallback,depth){
+   if(depth>=4)return false;const match=/^var\((.*)\)$/.exec(v),args=match&&split(match[1],true);
+   return !!args&&args.length<=2&&/^--[a-zA-Z_][a-zA-Z0-9_-]{0,127}$/.test(args[0])&&(args.length===1||fallback(args[1],depth+1));
+  }
+  const trackLength=(v,depth=0)=>length(v)||variable(v,trackLength,depth);
+  const breadth=(v,flex=true,depth=0)=>length(v)||['auto','min-content','max-content'].includes(v)||flex&&/^(?:\d+(?:\.\d+)?|\.\d+)fr$/.test(v)||variable(v,(fallback,next)=>breadth(fallback,flex,next),depth);
   function size(v){
    if(breadth(v))return true;
    const match=/^(minmax|fit-content)\((.*)\)$/.exec(v);if(!match)return false;
-   const args=split(match[2],true);return !!args&&(match[1]==='minmax'?args.length===2&&breadth(args[0],false)&&breadth(args[1]):args.length===1&&length(args[0]));
+   const args=split(match[2],true);return !!args&&(match[1]==='minmax'?args.length===2&&breadth(args[0],false)&&breadth(args[1]):args.length===1&&trackLength(args[0]));
   }
   function list(text,repeated=false){
    const parts=split(text);if(!parts?.length)return 0;let count=0;

@@ -234,6 +234,8 @@ column and row sizes, such as `160px 1fr`, `repeat(3, minmax(0, 1fr))`, or
 `[content_start] 80px [rest] 1fr`. These fields follow the selected screen scope.
 Each axis has its own reset; invalid track expressions leave the source unchanged.
 Press Enter to save a track expression or Escape to discard the draft.
+CSS variables remain live: `var(--sidebar_width, 160px) 1fr` follows the page’s
+shared size, using the fallback when that variable is unset.
 
 The CSS properties panel edits dimensions, flex direction/wrapping, gap, padding,
 typography, colors and borders. Padding and margin support one to four values

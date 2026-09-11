@@ -11397,3 +11397,10 @@ Chromium/WebKit passed all static-export checks together with fixed-flex/minmax/
 HTML and Tailwind custom track fields now save with Enter and discard drafts with Escape. Escape restores the displayed authored/computed value and clears validation errors. An unchanged-value guard prevents cancellation blur from creating a source edit. IME composition is ignored; handled keys do not reach canvas shortcuts. Each field exposes the shortcuts in its title.
 
 Four full browser workflows passed: HTML and Next/Tailwind, each in Chromium/WebKit. Tests cancel both invalid and valid unfinished drafts without source changes, commit all track forms through Enter, and retain responsive isolation, per-axis reset and exact history. HTML standalone export checks with JavaScript disabled also passed. Logs /private/tmp/retouch-{html-grid,grid}-keyboard-{chromium,webkit}.log. Source postdates packaged archive 4dba5a3; full Figma parity remains incomplete.
+
+
+### Live CSS variables in custom grid tracks (2026-09-11)
+
+HTML track validation now accepts CSS variable references in track breadths, minmax and fit-content, with bounded simple fallbacks and nesting. The HTML parser still rejects malformed variable names, unsafe functions and invalid fallback breadths. Tailwind's existing variable syntax was exercised without a runtime implementation change.
+
+889 unit tests passed. Full HTML and Next/Tailwind grid workflows passed Chromium/WebKit, now including var(--track_size) minmax(0, 1fr) and var(--missing, 80px) 1fr for both axes. Tests change the runtime custom property from 80px to 90px and back, confirm rendered tracks follow it, and verify the authored reference/source remains unchanged. Existing validation, Enter/Escape, responsive isolation, reset and exact history checks pass; HTML standalone CSS export checks with JavaScript disabled also pass. Logs /private/tmp/retouch-{html-grid,grid}-vars-{chromium,webkit}.log. New syntax support is bounded rather than arbitrary CSS expression support. Source postdates packaged archive 4dba5a3; full Figma parity remains incomplete.
