@@ -18,13 +18,14 @@
     if(!/^(?:\d+\.?\d*|\.\d+)(?:px|%|rem|em|vw|vh|ch)$/.test(value)||parseFloat(value)>10000)throw Error('Use a nonnegative gap up to 10000, with px, %, rem, em, vw, vh or ch, or normal.');
     return value;
   }
-  function gapClasses(classes,axis,value,writingMode){
+  function gapClasses(classes,axis,value,writingMode,inherited=''){
     if(!['width','height'].includes(axis))throw Error('Choose a horizontal or vertical gap.');
     if(value!==null)value=gapValue(value);
     const inline=layoutAxes({writingMode}).inline===axis,kind=inline?'x':'y',property=inline?'column-gap':'row-gap';
     let addition=value===null?'':'gap-'+kind+'-['+value+']';
-    if(addition&&classes.split(/\s+/).some(token=>/^!|!$/.test(token)&&/^(?:gap-(?![xy]-)|\[gap:)/.test(I.base(token)||'')))addition='!'+addition;
-    return I.replace(classes,token=>token.startsWith('gap-'+kind+'-')||token.startsWith('['+property+':'),addition);
+    const matches=token=>token.startsWith('gap-'+kind+'-')||token.startsWith('['+property+':');
+    if(addition&&[...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(/^(?:gap-(?![xy]-)|\[gap:)/.test(I.base(token)||'')||matches(I.base(token)||''))))addition='!'+addition;
+    return I.replace(classes,matches,addition);
   }
   function sizeClasses(classes,axis,mode,value,parent={}) {
     if(!['width','height'].includes(axis)||!['fixed','hug','fill','reset'].includes(mode))throw Error('Unknown sizing mode');
@@ -103,7 +104,7 @@
       for(const [prop,label,axis] of [['columnGap',verticalInline?'Vertical gap':'Horizontal gap',verticalInline?'height':'width'],['rowGap',verticalInline?'Horizontal gap':'Vertical gap',verticalInline?'width':'height']]) {
         const input=document.createElement('input');input.type='text';input.value=css[prop].replace(/px$/,'');input.placeholder='0';input.title='Pixels by default; also accepts %, rem, em, vw, vh, ch or normal';
         input.oninput=()=>input.setCustomValidity('');
-        input.onchange=()=>{try{save(gapClasses(classes,axis,input.value,css.writingMode));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+        input.onchange=()=>{try{save(gapClasses(classes,axis,input.value,css.writingMode,info.styleScope?info.anchorInheritedClasses||'':''));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
         I.field(sec,label,input);
         const reset=I.button('Reset '+label.toLowerCase(),()=>save(gapClasses(classes,axis,null,css.writingMode)));
         reset.disabled=gapClasses(classes,axis,null,css.writingMode)===classes;sec.append(reset);

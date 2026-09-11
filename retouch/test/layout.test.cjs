@@ -125,3 +125,10 @@ test('resetting one gap preserves shorthand, opposite axis and other breakpoints
  const source='gap-4 md:!gap-[10%] md:!gap-x-[15%] md:gap-y-8 lg:gap-10';
  assert.equal(R.replaceScope(source,L.gapClasses(R.project(source,'md:'),'width',null),'md:'),'gap-4 lg:gap-10 md:!gap-[10%] md:gap-y-8');
 });
+
+test('breakpoint gap edits can override inherited important shorthand or axis declarations',()=>{
+ assert.equal(L.gapClasses('gap-4','width',30,'horizontal-tb','!gap-2'),'gap-4 !gap-x-[30px]');
+ assert.equal(L.gapClasses('','height','15%','vertical-lr','![column-gap:10%]'),'!gap-x-[15%]');
+ assert.equal(L.gapClasses('','width',30,'horizontal-tb','!gap-y-2'),'gap-x-[30px]');
+ assert.equal(L.gapClasses('gap-x-4 gap-y-2','width',null,'horizontal-tb','!gap-2'),'gap-y-2');
+});

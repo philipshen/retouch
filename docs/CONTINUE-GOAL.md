@@ -249,3 +249,10 @@ The Layout gap fields now display computed percentages verbatim rather than stri
 Layout now offers Reset horizontal gap and Reset vertical gap. Each removes only the selected physical axis's gap class/arbitrary property from the active scope, preserving the opposite gap, shorthand and other breakpoints. The button is disabled when there is no matching axis override. Reset restores the shorthand/inherited spacing rather than writing a hard-coded zero.
 
 870 unit tests pass. Chromium/WebKit pass the percentage-gap fixture in verified vertical-lr for row/column flex and both grid axes, including disabled/enabled reset states, retained shorthand and other-axis gap, actual distance after reset, exact Undo/Redo, validation and Phone isolation. Evidence: `/private/tmp/retouch-gap-reset-{chromium,webkit}.log` and `/private/tmp/retouch-gap-reset-units.log`. Full layout/framework/native parity remains unfinished.
+
+
+## Gap override priority across smaller breakpoints
+
+Scoped gap writes now inspect the existing inherited-class metadata as well as the active scope. An important inherited gap shorthand or matching gap axis promotes the new breakpoint override; an important opposite-axis declaration does not. Reset still removes only the active axis override. The existing inherited-scope resolver is reused, with its existing base/ascending-minimum-breakpoint boundary.
+
+871 unit tests pass. Chromium/WebKit verify a base important 10px gap, a smaller-breakpoint important 12px gap and a normal tablet 20px shorthand. Editing the tablet axis produces a visible 30px gap, keeps the other gap at 12px, resets to 12px, leaves Phone at 10px and restores exact source/history. Both flex directions and both grid axes pass in verified vertical-lr. Evidence: `/private/tmp/retouch-inherited-gap-{chromium,webkit}.log` and `/private/tmp/retouch-inherited-gap-units.log`. Complex conditional/state inheritance and full parity remain unfinished.
