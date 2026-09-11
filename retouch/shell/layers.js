@@ -54,12 +54,19 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
     unlockShown.title='Unlock direct locks shown in this filtered tree as one undoable action.';
     unlockShown.onclick=()=>onLock(rows.filter(row=>!row.item.componentId&&locks.direct(row.item.el)).map(row=>row.item.el),false);
     host.append(header,search,lockFilter,unlockShown,selectAll,tree,empty,actions,reason);
-    let components=[],componentRequest=0,selectedInfo=null,treeRoots=[],virtualItems=[];const componentKeys=new WeakMap();
+    let components=[],componentRequest=0,componentLoad=null,selectedInfo=null,treeRoots=[],virtualItems=[];const componentKeys=new WeakMap();
     const key=item=>{if(!item.componentId)return item.el;let keys=componentKeys.get(item.el);if(!keys)componentKeys.set(item.el,keys=new Map());if(!keys.has(item.componentId))keys.set(item.componentId,{});return keys.get(item.componentId);};
     const isSelected=item=>item.componentId?selectedInfo?.kind==='instance'&&(selectedInfo.selectionIds||[selectedInfo.id]).includes(item.componentId)&&item.componentRoots.some(el=>selectedSet.has(el)):!(selectedInfo?.kind==='instance'&&virtualItems.some(row=>(selectedInfo.selectionIds||[selectedInfo.id]).includes(row.componentId)&&row.componentRoots.some(el=>selectedSet.has(el))))&&selectedSet.has(item.el);
     const selectedRoots=()=>selectedInfo?.selectionIds?.length>1?[...new Set(virtualItems.filter(isSelected).flatMap(item=>item.componentRoots||[item.el]))]:selectedInfo?.kind==='instance'?virtualItems.find(item=>item.componentId===selectedInfo.id&&item.componentRoots.includes(selected))?.componentRoots||[...selectedSet]:[...selectedSet];
     const choose=(item,toggle=false)=>onSelect(item.el,{toggle,sourceId:item.componentId|| (item.parent?.componentId?item.el.getAttribute('data-rt'):undefined),component:!!item.componentId});
-    async function loadComponents(){if(!readComponents||!d)return;const request=++componentRequest,current=d;try{const result=await readComponents();if(request===componentRequest&&d===current&&result?.ok){components=result.components||[];render();}}catch{}}
+    async function loadComponents(){
+      if(!readComponents||!d)return;const request=++componentRequest,current=d;
+      const task=(async()=>{try{const result=await readComponents();if(request===componentRequest&&d===current&&result?.ok){components=result.components||[];render();}}catch{}})();componentLoad=task;
+      await task;
+      // A newer scan can supersede this request while an edit awaits refresh.
+      // Complete only after that scan has populated the current tree as well.
+      while(d===current&&componentLoad!==task){const latest=componentLoad;await latest;if(componentLoad===latest)break;}
+    }
     let d=null,observer=null,timer=null,selected=null,rows=[],collapsed=new WeakSet(),lastCapabilities=null,isBusy=false,dragged=null,draggedItem=null,draggedGroup=null,selectedSet=new Set(),rangeAnchor=null,componentRangeAnchor=null;
     function clearTargets(){for(const row of rows)row.button.classList.remove('drop-target','drop-before','drop-after');}
     function endDrag(){stopDragScroll();dragged=null;draggedItem=null;draggedGroup=null;clearTargets();for(const row of rows)row.button.classList.remove('dragging');}

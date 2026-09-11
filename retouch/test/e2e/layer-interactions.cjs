@@ -29,6 +29,11 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   await page.getByLabel('Find a layer').fill('Renamed');assert.equal(await item('div · A').count(),0);assert.equal(await item('div · Renamed').count(),1);
   await page.getByLabel('Find a layer').fill('');await page.getByRole('button',{name:'Collapse section · Other',exact:true}).click();assert.equal(await item('div · Renamed').count(),0);
   await page.getByRole('button',{name:'Expand section · Other',exact:true}).click();assert.equal(await item('div · Renamed').count(),1);
+  await page.addScriptTag({path:path.resolve(__dirname,'../../shell/component-instances.js')});
+  const scanRace=await page.evaluate(async()=>{
+   const host=document.createElement('div');document.body.append(host);const pending=[],scans=RetouchLayers.mount({host,onSelect(){},onAction(){},readComponents:()=>new Promise(resolve=>pending.push(resolve))});scans.attach(source);pending[0]({ok:true,components:[]});await Promise.resolve();await Promise.resolve();
+   let firstDone=false;const first=scans.refresh().then(()=>{firstDone=true;}),second=scans.refresh();pending[1]({ok:true,components:[]});for(let i=0;i<8;i++)await Promise.resolve();const premature=firstDone;pending[2]({ok:true,components:[]});await Promise.all([first,second]);return {premature,firstDone,count:pending.length};
+  });assert.deepEqual(scanRace,{premature:false,firstDone:true,count:3});
   assert.deepEqual(errors,[]);console.log(engine+': PASS layer click across live refresh, modifier selection, button identity, rename focus, reparented keyboard navigation, search and disclosure');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
