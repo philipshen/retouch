@@ -2494,7 +2494,8 @@ async function api(method, url, body) {
   if(writes && editorHistory.busy && !['undo','redo'].includes(body?.type)) return {ok:false,reason:'Wait for history restoration to finish.'};
   if(writes){sourceRequests++;syncHistoryControls();}
   try {
-  if(writes&&!await waitForClientMount(doc()))return {ok:false,reason:'The preview has not finished mounting. Wait for it to load before editing.'};
+    // History must remain usable to recover from a change that cannot mount.
+    if(writes&&!(url==='/rt/__api/op'&&['undo','redo'].includes(body?.type))&&!await waitForClientMount(doc()))return {ok:false,reason:'The preview has not finished mounting. Wait for it to load before editing.'};
     const res = await fetch(url, {
       method,
       headers: { 'x-retouch-token': TOKEN, ...(route?{'x-retouch-route':encodeURIComponent(route)}:{}), ...(body ? { 'content-type': 'application/json' } : {}) },
