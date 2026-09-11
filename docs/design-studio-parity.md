@@ -11049,3 +11049,10 @@ Desktop refresh: /private/tmp/retouch-desktop-layout-clip-20260911/Retouch-0.1.0
 React flex layouts now have the same nine-point physical alignment picker as the HTML adapter. A click writes justify-content, align-items, and (for wrapping) align-content in one class update/history operation. It reuses the existing writing-mode, RTL, reversed-direction, and reverse-wrap mapping. Local conflicting utilities are replaced; inherited important place-items/place-content and individual alignment rules promote overrides. Inline-controlled alignment disables the picker. Grid retains its existing controls.
 
 The light inspector places the picker beside the horizontal/vertical gap fields. Chromium and WebKit inspector-light workflows passed with actual child bounding-box checks for top-left and bottom-right placement across row, column, row-reverse, and column-reverse, including inherited important rules and exact undo. 882 unit tests passed. Screenshot: /private/tmp/retouch-figma-alignment-chromium.png. This source change is newer than the 20fdbe5 desktop archive. Full Figma/any-site parity remains unfinished.
+
+
+### Physical layout mode buttons across writing directions (2026-09-11)
+
+Fixed a presentation mismatch: the native layout menu already mapped CSS row/column to physical directions, but the segmented icon buttons assumed horizontal writing. Layout now supplies its inline-axis orientation to the organizer; Vertical and Horizontal buttons keep their visual order/icons and choose the corresponding CSS direction.
+
+Validation: 882 unit tests passed. Full inspector-light workflows passed for vertical-rl RTL in Chromium and WebKit, plus horizontal-tb RTL and sideways-lr RTL in Chromium. The latter runs explicitly test both physical mode buttons. All runs exercise four flex directions with actual corner placement, inherited important styles, clipping, typography, and exact undo. These source changes and the preceding alignment picker are newer than the 20fdbe5 desktop archive. Full parity remains incomplete.

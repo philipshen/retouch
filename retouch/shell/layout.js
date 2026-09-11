@@ -144,7 +144,8 @@
     const classes=info.className||'',inherited=info.styleScope?info.anchorInheritedClasses||'':'';
     const mode=/grid/.test(css.display)?'grid':/flex/.test(css.display)?css.flexDirection:'flow';
     const verticalInline=layoutAxes({writingMode:css.writingMode}).inline==='height',rowLabel=verticalInline?'Vertical':'Horizontal',columnLabel=verticalInline?'Horizontal':'Vertical';
-    I.select(sec,'Arrange children',[['flow','Normal flow'],['row',rowLabel],['column',columnLabel],['row-reverse',rowLabel+' · reverse'],['column-reverse',columnLabel+' · reverse'],['grid','Grid']],mode,value=>save(modeClasses(classes,value,info.styleScope?info.anchorInheritedClasses||'':'')));
+    const modeSelect=I.select(sec,'Arrange children',[['flow','Normal flow'],['row',rowLabel],['column',columnLabel],['row-reverse',rowLabel+' · reverse'],['column-reverse',columnLabel+' · reverse'],['grid','Grid']],mode,value=>save(modeClasses(classes,value,info.styleScope?info.anchorInheritedClasses||'':'')));
+    modeSelect.dataset.inlineAxis=verticalInline?'vertical':'horizontal';
     function numeric(label,value,min,max,change) {
       const input=document.createElement('input');input.type='number';input.min=min;input.max=max;input.step='any';
       input.value=Number.isFinite(value)?Math.round(value*100)/100:0;
