@@ -19,7 +19,7 @@ Work autonomously, validate changes with meaningful source/API/browser checks, r
 - `main` preserves earlier local inspector/Shopify work at `fed7f3c` (186 unit tests passed on the source machine). It is a separate line of development; do not merge it into the design branch blindly.
 - The design branch's last implementation commit before this handoff is `bc55434`, following `707ac01`. Its 821 unit tests passed again during migration.
 - The design branch already includes an earlier checkpoint of local work (`cf3b539`) and extensive subsequent editor development. Continue this branch, not main.
-- No component multi-property operation was implemented in the interrupted investigation. Do not assume a `setComponentPropSelection` operation exists.
+- Migration-era investigation was initially read-only. Subsequent work implemented and verified `setComponentPropSelection` in the React source/API layer; the multi-instance selection UI and shared inspector remain to be implemented. See the latest parity-log entry.
 - No public notarized desktop release or usable published Homebrew cask was established. Source push is not a desktop release.
 - Historical `/private/tmp/...` logs, screenshots, bundles, browser installations, node_modules symlinks, and app fixtures were local to the old machine and are not portable evidence. Credentials, target-site checkouts, generated artifacts and dependencies are not included. Regenerate evidence locally.
 
@@ -75,13 +75,13 @@ Repeat relevant checks with `RT_E2E_BROWSER=webkit`. Check each test's own envir
 The interrupted next task was component-instance multi-selection. Current host multi-selection should not be mistaken for component-instance parity.
 
 - `retouch/shell/shell.js`: `classifyNode`, `select`, `selectMany`, `renderPanelContents`, `propTable`, and history/selection restoration. `selectMany` currently collects data-rt host IDs and requires compatible metadata in one source file. Shift-click compatibility also excludes component-instance selections.
-- `retouch/src/adapters/react.cjs`: classSelection is exposed only for host elements. Single-instance properties delegate to `component-props.cjs`; there is no implemented atomic component-property selection operation.
+- `retouch/src/adapters/react.cjs`: classSelection is exposed only for host elements. Single-instance properties delegate to `component-props.cjs`; `setComponentPropSelection` now delegates to `component-props.cjs.planSelection` for one atomic source/API transaction. It does not yet enable component multi-selection in the UI.
 - `retouch/src/component-props.cjs`: preserves literals/types, checks defaults and TypeScript contracts, rejects uncontrolled expression/spread writes, and includes dependency/path checks.
-- `retouch/src/jsx-class-selection.cjs` and `transactions.cjs`: existing batch planning and atomic application patterns. A component-property batch must validate every member before writing, preserve dependency checks, and produce one exact Undo step. Avoid sequential writes or using stale definition hashes after in-memory edits to a file that also contains the definition.
+- `retouch/src/jsx-class-selection.cjs` and `transactions.cjs`: existing batch planning and atomic application patterns. The component-property batch now validates every member against the same original source snapshot, combines non-overlapping property changes, retains dependency checks, and produces one exact Undo step. Preserve those guarantees when connecting the UI.
 - `retouch/shell/component-instances.js`: root grouping and occurrence identity. Selection, outlines, edits, and history must agree on whether they target a usage, a shared definition, or a repeated rendered occurrence.
 - Existing coverage: `retouch/test/component-props.test.cjs`, React selection e2e tests, component/root/repeated-occurrence fixtures found by searching `retouch/test/e2e`.
 
-The next agent should inspect and implement a complete usable slice through selection → shared inspector → atomic source operation → compiled preview → Undo/Redo, while retaining the broader goal. The prior investigation was read-only and left no partial implementation to finish.
+The next agent should inspect and implement a complete usable slice through selection → shared inspector → atomic source operation → compiled preview → Undo/Redo, while retaining the broader goal. The atomic API operation is now implemented and tested; continue through usable multi-instance selection, common-property controls, compiled preview and client history. See component-props-selection.test.cjs and test/e2e/component-property-selection.cjs for the source/API contract.
 
 ## Broader unfinished scope (not an exhaustive audit)
 

@@ -1,6 +1,6 @@
 'use strict';
 const MagicString=require('magic-string'),traverse=require('@babel/traverse').default;
-const {parseSource,contentHash}=require('./id.cjs');
+const {parseSource,contentHash,collectElements}=require('./id.cjs');
 const refuse=reason=>({ok:false,refused:true,reason});
 function literal(attr){
  if(!attr.value)return {type:'boolean',value:true};
@@ -63,4 +63,48 @@ function plan(resolved,op){
   return {ok:true,hash:contentHash(ms.toString()),componentProp:{instanceId:resolved.element.id,parentId},edits,pathChecks:choice?.pathChecks||[]};
  }catch(error){return refuse('Could not edit the component property: '+error.message);}
 }
-module.exports={describe,plan,literal};
+function planSelection(resolved,op){
+ try{
+  if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the instances.');
+  const ids=op.ids,hashes=op.definitionHashes===undefined?{}:op.definitionHashes;
+  if(!Array.isArray(ids)||ids.length<2||ids.length>100||new Set(ids).size!==ids.length||!ids.includes(resolved.element.id)||ids.some(id=>typeof id!=='string'||!/^[a-f0-9]{10}$/.test(id)))return refuse('Choose between 2 and 100 distinct component usages in one source file.');
+  if(!hashes||typeof hashes!=='object'||Array.isArray(hashes)||Object.keys(hashes).some(id=>!ids.includes(id)||typeof hashes[id]!=='string'))return refuse('Provide definition hashes only for selected instances.');
+  const elements=collectElements(resolved.source,resolved.relPath).elements,members=ids.map(id=>elements.find(element=>element.id===id));
+  if(members.some(element=>element?.kind!=='instance'))return refuse('Select component usages from the same source file.');
+  const ranges=[],dependencies=new Map(),pathChecks=[];
+  // Validate every usage against the SAME snapshot. Sequential planning would
+  // change a local definition's revision after editing its first usage.
+  for(const element of members){
+   const current={...resolved,elements,element},info=describe(current,op.name);
+   const result=plan(current,{...op,id:element.id,definitionHash:hashes[element.id]});
+   if(!result.ok)return result;
+   for(const edit of result.edits){
+    if(edit.file===resolved.file)continue;
+    if(edit.before!==edit.after)return refuse('A component dependency requires a separate source operation.');
+    const previous=dependencies.get(edit.file);if(previous&&previous.before!==edit.before)return refuse('A component dependency changed while planning the selection.');
+    dependencies.set(edit.file,edit);
+   }
+   pathChecks.push(...(result.pathChecks||[]));
+   // Keep equivalent explicit literals byte-for-byte, but still validate their
+   // contracts and include their dependency guards above.
+   if(op.reset!==true&&op.clear!==true&&!info.inherited&&!info.unset&&info.value===op.value)continue;
+   const edit=result.edits.find(edit=>edit.file===resolved.file),before=resolved.source,after=edit?.after;
+   if(typeof after!=='string'||edit.before!==before)return refuse('The component edit does not match the selection snapshot.');
+   if(after===before)continue;
+   let start=0,end=before.length,afterEnd=after.length;
+   while(start<end&&start<afterEnd&&before[start]===after[start])start++;
+   while(end>start&&afterEnd>start&&before[end-1]===after[afterEnd-1]){end--;afterEnd--;}
+   const opening=element.node.openingElement;
+   if(start<opening.start||end>opening.end)return refuse('A property edit extends outside its component usage.');
+   ranges.push({start,end,text:after.slice(start,afterEnd)});
+  }
+  ranges.sort((a,b)=>a.start-b.start);
+  if(ranges.some((range,i)=>i&&(range.start<ranges[i-1].end||range.start===ranges[i-1].start)))return refuse('Selected property edits overlap.');
+  const ms=new MagicString(resolved.source);
+  for(const range of ranges)if(range.start===range.end)ms.appendLeft(range.start,range.text);else ms.overwrite(range.start,range.end,range.text);
+  const source=ms.toString(),hash=contentHash(source),fresh=collectElements(source,resolved.relPath).elements;
+  const selection=ids.map(id=>{const element=fresh.find(element=>element.id===id);if(element?.kind!=='instance')throw Error('A component usage lost its source identity.');return require('./adapters/react.cjs').describe({...resolved,source,hash,elements:fresh,element});});
+  return {ok:true,hash,selection,edits:[{file:resolved.file,before:resolved.source,after:source},...dependencies.values()],pathChecks};
+ }catch(error){return refuse('Could not edit selected component properties: '+error.message);}
+}
+module.exports={describe,plan,planSelection,literal};
