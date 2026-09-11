@@ -1070,10 +1070,10 @@ function renderPanelContents() {
   panelBody.innerHTML = '';
 
   const head = document.createElement('div');
-  head.className = 'sec';
+  head.className = 'sec';head.dataset.layerTag=info.kind==='instance'?'':info.tag;
   const badge = document.createElement('span');
   badge.className = 'kindbadge' + (info.kind === 'instance' ? ' instance' : '');
-  badge.textContent = sel.multiple?.length>1?sel.multiple.length+(info.kind==='instance'?' components':' layers'):info.kind === 'instance' ? 'component' : info.tag.charAt(0).toUpperCase()+info.tag.slice(1);
+  badge.textContent = sel.multiple?.length>1?sel.multiple.length+(info.kind==='instance'?' components':' layers'):info.kind === 'instance' ? info.tag : info.tag.charAt(0).toUpperCase()+info.tag.slice(1);
   head.appendChild(badge);
   const file = document.createElement('div');
   file.className = 'filepath';

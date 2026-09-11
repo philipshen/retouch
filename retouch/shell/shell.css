@@ -445,7 +445,7 @@ details.advanced > summary:hover { color: var(--ink); }
 .component-insert .component-library-actions { justify-content:flex-end;margin-top:18px; }
 .component-insert [role=alert] { font-size:12px;overflow-wrap:anywhere; }
 
-.component-tree-row > .layer-item { color:#c49aff; font-weight:600; }
+.component-tree-row > .layer-item { color:var(--instance); font-weight:600; }
 .component-tree-row > .layer-item[aria-selected="true"] { background:#f1e5ff; }
 
 #comparisonResizeHandle { flex:0 0 6px; cursor:col-resize; touch-action:none; background:var(--bg); border-left:1px solid var(--line); }
@@ -621,3 +621,5 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .component-props-editable th:nth-child(3),.component-props-editable td:nth-child(3) { display:none; }
 .component-props-editable input:not([type=checkbox]),.component-props-editable select { min-height:28px; }
 .component-props-editable td > button[aria-label^="Reset "] { font-size:14px;line-height:18px;min-width:24px; }
+
+.selection-heading > .kindbadge { overflow-wrap:anywhere; }

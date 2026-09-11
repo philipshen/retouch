@@ -18,7 +18,7 @@ async function until(fn,label){for(let i=0;i<120;i++){if(await fn())return;await
    await page.goto((process.env.RT_E2E_URL||'http://localhost:3491')+'/rt');
    await frame.locator('article').first().click({position:{x:8,y:8}});
    await page.getByRole('button',{name:'View component',exact:true}).waitFor();
-   assert.equal(await page.locator('.kindbadge').textContent(),'component');
+   assert.equal(await page.locator('.kindbadge').textContent(),'Card');
    assert.match(await page.locator('.component-props').textContent(),/First card/);
    await page.getByRole('button',{name:'View component',exact:true}).click();
    const modal=page.locator('dialog');await modal.waitFor();

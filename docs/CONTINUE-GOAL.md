@@ -597,3 +597,10 @@ Chromium/WebKit CSS-backed library tests passed keyboard navigation across 30 co
 Editable component property tables now use Inter and two visible columns, giving value controls 68% of available width. Defaults remain in label tooltips and aria-description on fields; read-only component-detail tables retain all three columns. Reset buttons use a compact icon with their existing accessible names. Typed editors, explicit text commit/cancel, reset/unset and validation callbacks are unchanged.
 
 Full component-property UI/source/render workflows passed in Chromium/WebKit with choices, booleans, numbers, multiline text, empty/unset values, reset, repeated-instance isolation, draft focus, bounded long-text scrolling and exact undo/redo. The short-text size assertion was updated because wider controls no longer need the old narrow-column wrapping; long-text overflow/cap checks remain. Logs /private/tmp/retouch-component-fields-{chromium,webkit}.log. Screenshot /private/tmp/retouch-component-fields-chromium.png visually inspected. Native package refresh and full Figma parity remain incomplete.
+
+
+### Identify selected components by name (2026-09-11)
+
+The selection heading now displays the component tag/name instead of generic component text. Component layer rows use the theme's purple rather than the previous pale purple. The organizer uses explicit host-tag metadata for text-section ordering, independently of displayed component names. Multiple-selection headings retain their counts.
+
+Chromium/WebKit real React library workflows passed the explicit HeadlineCard heading check plus source/instance scope switching and unchanged source. Chromium inspector-light passed typography/section ordering, layout and appearance edits, exact undo and workspace checks. Logs /private/tmp/retouch-component-heading-{chromium,webkit}.log and /private/tmp/retouch-component-heading-inspector.log. Updated the older Card fixture's generic badge assertion to Card. Source postdates native archive; full parity remains incomplete.
