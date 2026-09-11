@@ -1681,7 +1681,7 @@ function openComponent(id, component,options={}) {
   const content=document.createElement('div');content.className='component-workspace';if(options.preview===false)content.classList.add('component-source-only');
   const canvas=document.createElement('div');canvas.className='component-canvas';
   RetouchInspector.note(canvas,options.preview===false?'No matching instance was found on this page. Its source and property definitions are shown here.':component.definitionOnly?'Live preview · current page rendering':'Live preview · current instance props');
-  const preview=document.createElement('iframe');preview.title='Component preview';canvas.append(preview);
+  const preview=document.createElement('iframe');preview.title='Component preview';preview.style.visibility='hidden';preview.setAttribute('aria-busy','true');canvas.append(preview);const loading=RetouchInspector.note(canvas,'Loading component preview…');loading.setAttribute('role','status');
   const sidebar=document.createElement('div');sidebar.className='component-details';
   const h=document.createElement('h3');h.textContent='Props';sidebar.append(h,propTable(component.props,null,null,{definitionOnly:component.definitionOnly}));
   RetouchInspector.note(sidebar,component.definitionOnly?'Declared properties and defaults. No instance values are applied.':'Values show the usage source. Expressions keep their application context.');
@@ -1713,13 +1713,13 @@ function openComponent(id, component,options={}) {
           if(parent!==d.documentElement)rules.push(selector(parent)+'{'+Object.entries({display:'block',position:'static',width:'auto',height:'auto','min-height':'0',margin:'0',padding:parent===d.body?'32px':'0',transform:'none',overflow:'visible'}).map(([p,v])=>p+':'+v+'!important').join(';')+'}');
           child=parent;
         }
-        rules.push(selector(el)+'{margin:0!important}');sheet.replaceSync(rules.join('\n'));
+        rules.push(selector(el)+'{margin:0!important}');sheet.replaceSync(rules.join('\n'));preview.style.visibility='visible';preview.setAttribute('aria-busy','false');loading.remove();
       };
       isolate(); const observer=new MutationObserver(isolate);observer.observe(d.body,{childList:true,subtree:true});stop=()=>observer.disconnect();
       d.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();},true);
-    }catch{RetouchInspector.note(canvas,'Preview could not attach to this page.');}
+    }catch{loading.textContent='Preview could not attach to this page.';}
   };
-  if(options.preview===false)preview.remove();else preview.src=iframe.contentWindow.location.href;
+  if(options.preview===false){preview.remove();loading.remove();}else preview.src=iframe.contentWindow.location.href;
   modal.addEventListener('close',()=>{stop?.();modal.remove();});
   modal.showModal();close.focus();
 }
