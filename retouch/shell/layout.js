@@ -7,12 +7,16 @@
     if(!Object.hasOwn(additions,mode))throw Error('Unknown layout');
     return I.replace(classes,t=>display(t)||/^flex-(row|col)(-reverse)?$/.test(t),additions[mode]);
   }
+  function layoutAxes(parent={}){
+    const inline=/^(vertical|sideways)-/.test(parent.writingMode||'')?'height':'width',block=inline==='width'?'height':'width';
+    return {inline,block,main:/^column/.test(parent.direction||'')?block:inline};
+  }
   function sizeClasses(classes,axis,mode,value,parent={}) {
     if(!['width','height'].includes(axis)||!['fixed','hug','fill','reset'].includes(mode))throw Error('Unknown sizing mode');
     if(mode==='fixed'&&(!Number.isFinite(value)||value<0||value>100000))throw Error('Invalid size');
     const dim=axis==='width'?'w':'h';
-    const alongFlex=/flex/.test(parent.display||'') && (axis==='width'?!/^column/.test(parent.direction||''):/^column/.test(parent.direction||''));
-    const stretchAxis=!alongFlex&&/flex/.test(parent.display||'')||/grid/.test(parent.display||''),stretch=mode==='fill'&&stretchAxis,inlineStretch=stretchAxis&&/grid/.test(parent.display||'')&&axis==='width';
+    const axes=layoutAxes(parent),alongFlex=/flex/.test(parent.display||'')&&axis===axes.main;
+    const stretchAxis=!alongFlex&&/flex/.test(parent.display||'')||/grid/.test(parent.display||''),stretch=mode==='fill'&&stretchAxis,inlineStretch=stretchAxis&&/grid/.test(parent.display||'')&&axis===axes.inline;
     const match=t=>t.startsWith(dim+'-') || t.startsWith('['+axis+':') || mode==='reset'&&stretchAxis&&(inlineStretch?/^justify-self-stretch$|^\[justify-self:stretch\]$/.test(t):/^self-stretch$|^\[align-self:stretch\]$/.test(t)) || stretch&&(inlineStretch?/^justify-self-|^\[justify-self:/.test(t):/^self-|^\[align-self:/.test(t)) || (alongFlex&&(/^(?:grow|shrink)(?:-|$)|^basis-/.test(t)||/^flex-(?:\d+(?:\/\d+)?|auto|initial|none|\[.*\]|\(.*\))$|^\[flex(?:-(?:grow|shrink|basis))?:/.test(t)));
     if(mode==='reset')return I.replace(classes,match,'');
     let addition=mode==='fixed'?`${dim}-[${value}px]`:mode==='hug'?`${dim}-fit`:`${dim}-full`;
@@ -64,7 +68,8 @@
     const parent=el.parentElement&&el.ownerDocument.defaultView.getComputedStyle(el.parentElement);
     const classes=info.className||'';
     const mode=/grid/.test(css.display)?'grid':/flex/.test(css.display)?css.flexDirection:'flow';
-    I.select(sec,'Arrange children',[['flow','Normal flow'],['row','Horizontal'],['column','Vertical'],['row-reverse','Horizontal · reverse'],['column-reverse','Vertical · reverse'],['grid','Grid']],mode,value=>save(modeClasses(classes,value)));
+    const verticalInline=layoutAxes({writingMode:css.writingMode}).inline==='height',rowLabel=verticalInline?'Vertical':'Horizontal',columnLabel=verticalInline?'Horizontal':'Vertical';
+    I.select(sec,'Arrange children',[['flow','Normal flow'],['row',rowLabel],['column',columnLabel],['row-reverse',rowLabel+' · reverse'],['column-reverse',columnLabel+' · reverse'],['grid','Grid']],mode,value=>save(modeClasses(classes,value)));
     function numeric(label,value,min,max,change) {
       const input=document.createElement('input');input.type='number';input.min=min;input.max=max;input.step='any';
       input.value=Number.isFinite(value)?Math.round(value*100)/100:0;
@@ -104,9 +109,9 @@
       const title=axis[0].toUpperCase()+axis.slice(1),dim=axis==='width'?'w':'h';
       const sizingTokens=classes.split(/\s+/).filter(token=>I.base(token)!==null),ownToken=sizingTokens.find(token=>/^!|!$/.test(token)&&I.base(token).startsWith(dim+'-'))||sizingTokens.find(token=>/^!|!$/.test(token)&&I.base(token).startsWith('size-'))||sizingTokens.find(token=>I.base(token).startsWith(dim+'-'))||sizingTokens.find(token=>I.base(token).startsWith('size-'));
       const own=ownToken&&I.base(ownToken).replace(/^size-/,dim+'-');
-      const stretchFill=own===dim+'-auto'&&parent&&(/grid/.test(parent.display)?axis==='width'?css.justifySelf==='stretch':css.alignSelf==='stretch':/flex/.test(parent.display)&&(axis==='width'?parent.flexDirection.startsWith('column'):!parent.flexDirection.startsWith('column'))&&css.alignSelf==='stretch');
-      const sizing=own===dim+'-fit'?'hug':own===dim+'-full'||stretchFill||/\bflex-1\b/.test(classes)&&parent&&/flex/.test(parent.display)&&(axis==='width'?!parent.flexDirection.startsWith('column'):parent.flexDirection.startsWith('column'))?'fill':own&&own!==dim+'-auto'?'fixed':'';
-      const context={display:parent?.display,direction:parent?.flexDirection};
+      const context={display:parent?.display,direction:parent?.flexDirection,writingMode:parent?.writingMode},axes=layoutAxes(context);
+      const stretchFill=own===dim+'-auto'&&parent&&(/grid/.test(parent.display)?axis===axes.inline?css.justifySelf==='stretch':css.alignSelf==='stretch':/flex/.test(parent.display)&&axis!==axes.main&&css.alignSelf==='stretch');
+      const sizing=own===dim+'-fit'?'hug':own===dim+'-full'||stretchFill||/\bflex-1\b/.test(classes)&&parent&&/flex/.test(parent.display)&&axis===axes.main?'fill':own&&own!==dim+'-auto'?'fixed':'';
       const size=(mode,value)=>save(sizeClasses(classes,axis,mode,mode==='fixed'?geometry.dimensionValue(css,axis,value):value,context));
       I.select(sec,title+' behavior',[['','Inherited / auto'],['fixed','Fixed'],['hug','Hug content'],['fill','Fill available']],sizing,v=>size(v||'reset',Math.round(dims[axis]*100)/100));
       numeric(title+' (px)',dims[axis],0,100000,v=>size('fixed',v));
@@ -129,6 +134,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

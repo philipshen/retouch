@@ -91,3 +91,14 @@ test('reset removes stretch sizing alignment but preserves other alignment choic
  assert.equal(L.sizeClasses('h-auto [align-self:stretch] justify-self-center','height','reset',0,{display:'flex',direction:'row'}),'justify-self-center');
  assert.equal(L.sizeClasses('w-auto self-center','width','reset',0,{display:'flex',direction:'column'}),'self-center');
 });
+
+test('vertical writing modes map physical dimensions to flex and grid axes',()=>{
+ for(const writingMode of ['vertical-rl','vertical-lr','sideways-rl','sideways-lr']){
+  assert.deepEqual(L.layoutAxes({writingMode,direction:'row-reverse'}),{inline:'height',block:'width',main:'height'});
+  assert.equal(L.sizeClasses('h-20','height','fill',0,{display:'flex',direction:'row',writingMode}),'h-auto flex-1');
+  assert.equal(L.sizeClasses('w-20','width','fill',0,{display:'flex',direction:'row',writingMode}),'w-auto self-stretch');
+  assert.equal(L.sizeClasses('w-20','width','fill',0,{display:'flex',direction:'column-reverse',writingMode}),'w-auto flex-1');
+  assert.equal(L.sizeClasses('h-20','height','fill',0,{display:'grid',writingMode}),'h-auto justify-self-stretch');
+  assert.equal(L.sizeClasses('w-20','width','fill',0,{display:'grid',writingMode}),'w-auto self-stretch');
+ }
+});
