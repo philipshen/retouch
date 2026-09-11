@@ -392,3 +392,10 @@ Validation: 883 unit tests passed; the focused responsive suite passed again aft
 
 
 Desktop refresh: /private/tmp/retouch-desktop-responsive-light-20260911/Retouch-0.1.0-mac.zip. SHA256 97a1fae340349bb8a069c01f71d41ec87d8b115cb311c2b832add49a1a5fbada. Clean source f8394de, 175 source files matching the extracted archive, universal arm64/x86_64, strict ad hoc signature verification. Bundled inspector-light passed Chromium/WebKit; bundled breakpoint-preview passed Chromium comparison edit/history, reload/persistence/reuse, source and preview-history checks. Local cask Ruby syntax passed. Native launch, installation, upgrades and trusted distribution remain unverified. Receipt: desktop/verification/2026-09-11-responsive-light.json. Desktop README now names this current artifact and distinguishes historical native evidence. Full parity remains incomplete.
+
+
+### HTML typography presentation parity (2026-09-11)
+
+HTML typography already belonged to Typography; its CSS-labeled fields now receive the same compact presentation as React: paired weight/size and line-height/letter-spacing, physical text alignment icon buttons, and less common style/decoration/case controls in Type settings. Paint labels are shortened without changing accessible field names or write handlers.
+
+Full HTML browser workflows passed in Chromium and WebKit, including the added alignment edit/exact undo check and paired-field assertion, and the explicit Type settings disclosure for italic/underline edits. Final label shortening was checked in a fresh Chromium preview with alignment/undo and a visually inspected screenshot at /private/tmp/retouch-html-type-chromium.png. The current f8394de desktop archive predates this refinement. Full parity remains incomplete.
