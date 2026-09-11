@@ -148,3 +148,15 @@ test('layout modes override inherited important display and flow while retaining
  assert.equal(L.modeClasses('flex flex-col','flow','![display:grid]'),'!block');
  assert.equal(L.modeClasses('block','grid','!w-40'),'grid');
 });
+
+
+test('arrangement controls replace arbitrary properties and override relevant inherited shorthands',()=>{
+ assert.equal(L.arrangementClasses('[flex-wrap:wrap] p-4','wrap','nowrap','![flex-flow:column_wrap]'),'p-4 !flex-nowrap');
+ assert.equal(L.arrangementClasses('[align-items:start] justify-items-end','align','center','!place-items-end'),'justify-items-end !items-center');
+ assert.equal(L.arrangementClasses('[justify-content:end] justify-self-end','justify','between','[place-content:center]!'),'justify-self-end !justify-between');
+ assert.equal(L.arrangementClasses('[grid-template-columns:1fr] grid-rows-2','columns',3,'![grid-template:100px/1fr]'),'grid-rows-2 !grid-cols-3');
+ assert.equal(L.arrangementClasses('![flex-flow:column_wrap]','wrap','nowrap'),'![flex-flow:column_wrap] !flex-nowrap');
+ assert.equal(L.arrangementClasses('','align','center','!place-content-end'),'items-center');
+ assert.throws(()=>L.arrangementClasses('','columns',1.5));
+ assert.throws(()=>L.arrangementClasses('','wrap','bad'));
+});

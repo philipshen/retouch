@@ -10,6 +10,19 @@
     if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(matches(I.base(token)||'')||/^\[flex-flow:/.test(I.base(token)||''))))addition=addition.split(' ').map(token=>'!'+token).join(' ');
     return I.replace(classes,matches,addition);
   }
+  function arrangementClasses(classes,property,value,inherited=''){
+    const options={wrap:['nowrap','wrap','wrap-reverse'],align:['start','center','end','stretch','baseline'],justify:['start','center','end','between','around','evenly']};
+    if(property==='columns'?!Number.isInteger(value)||value<1||value>24:!options[property]?.includes(value))throw Error('Unknown arrangement value');
+    const rules={
+      wrap:{match:t=>/^flex-(wrap|wrap-reverse|nowrap)$|^\[flex-wrap:/.test(t),shorthand:t=>/^\[flex-flow:/.test(t),addition:'flex-'+value},
+      align:{match:t=>/^items-|^\[align-items:/.test(t),shorthand:t=>/^place-items-|^\[place-items:/.test(t),addition:'items-'+value},
+      justify:{match:t=>/^justify-(?!items-|self-)|^\[justify-content:/.test(t),shorthand:t=>/^place-content-|^\[place-content:/.test(t),addition:'justify-'+value},
+      columns:{match:t=>/^grid-cols-|^\[grid-template-columns:/.test(t),shorthand:t=>/^\[grid(?:-template)?:/.test(t),addition:'grid-cols-'+value}
+    };
+    const rule=rules[property];let addition=rule.addition;
+    if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(rule.match(I.base(token)||'')||rule.shorthand(I.base(token)||''))))addition='!'+addition;
+    return I.replace(classes,rule.match,addition);
+  }
   function layoutAxes(parent={}){
     const inline=/^(vertical|sideways)-/.test(parent.writingMode||'')?'height':'width',block=inline==='width'?'height':'width';
     return {inline,block,main:/^column/.test(parent.direction||'')?block:inline};
@@ -85,7 +98,7 @@
     if(info.classNameDynamic){I.note(sec,info.classNameReason||'This layout has computed classes.','refused');return sec;}
     const css=el.ownerDocument.defaultView.getComputedStyle(el);
     const parent=el.parentElement&&el.ownerDocument.defaultView.getComputedStyle(el.parentElement);
-    const classes=info.className||'';
+    const classes=info.className||'',inherited=info.styleScope?info.anchorInheritedClasses||'':'';
     const mode=/grid/.test(css.display)?'grid':/flex/.test(css.display)?css.flexDirection:'flow';
     const verticalInline=layoutAxes({writingMode:css.writingMode}).inline==='height',rowLabel=verticalInline?'Vertical':'Horizontal',columnLabel=verticalInline?'Horizontal':'Vertical';
     I.select(sec,'Arrange children',[['flow','Normal flow'],['row',rowLabel],['column',columnLabel],['row-reverse',rowLabel+' · reverse'],['column-reverse',columnLabel+' · reverse'],['grid','Grid']],mode,value=>save(modeClasses(classes,value,info.styleScope?info.anchorInheritedClasses||'':'')));
@@ -100,9 +113,9 @@
       if(mode==='grid') {
         const explicit=(classes.match(/(?:^|\s)grid-cols-(\d+)(?:\s|$)/)||[])[1];
         const tracks=css.gridTemplateColumns.split(/\s+/).filter(Boolean).length;
-        const columns=numeric('Columns',Number(explicit)||tracks||1,1,24,v=>{if(Number.isInteger(v))save(I.replace(classes,t=>t.startsWith('grid-cols-'),`grid-cols-${v}`));});columns.step='1';
+        const columns=numeric('Columns',Number(explicit)||tracks||1,1,24,v=>{if(Number.isInteger(v))save(arrangementClasses(classes,'columns',v,inherited));});columns.step='1';
       } else {
-        I.select(sec,'Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>save(I.replace(classes,t=>/^flex-(wrap|wrap-reverse|nowrap)$/.test(t),'flex-'+v)));
+        I.select(sec,'Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>save(arrangementClasses(classes,'wrap',v,inherited)));
       }
       for(const [prop,label,axis] of [['columnGap',verticalInline?'Vertical gap':'Horizontal gap',verticalInline?'height':'width'],['rowGap',verticalInline?'Horizontal gap':'Vertical gap',verticalInline?'width':'height']]) {
         const input=document.createElement('input');input.type='text';input.value=css[prop].replace(/px$/,'');input.placeholder='0';input.title='Pixels by default; also accepts %, rem, em, vw, vh, ch or normal';
@@ -112,9 +125,9 @@
         const reset=I.button('Reset '+label.toLowerCase(),()=>save(gapClasses(classes,axis,null,css.writingMode)));
         reset.disabled=gapClasses(classes,axis,null,css.writingMode)===classes;sec.append(reset);
       }
-      I.select(sec,'Align children',[['start','Start'],['center','Center'],['end','End'],['stretch','Stretch'],['baseline','Baseline']],(css.alignItems==='normal'?'stretch':css.alignItems.replace('flex-','')),v=>save(I.replace(classes,t=>t.startsWith('items-'),'items-'+v)));
+      I.select(sec,'Align children',[['start','Start'],['center','Center'],['end','End'],['stretch','Stretch'],['baseline','Baseline']],(css.alignItems==='normal'?'stretch':css.alignItems.replace('flex-','')),v=>save(arrangementClasses(classes,'align',v,inherited)));
       const justify=css.justifyContent==='normal'?'start':css.justifyContent.replace('flex-','').replace('space-','');
-      I.select(sec,'Distribute children',[['start','Start'],['center','Center'],['end','End'],['between','Space between'],['around','Space around'],['evenly','Space evenly']],justify,v=>save(I.replace(classes,t=>/^justify-(?!items-|self-)/.test(t),'justify-'+v)));
+      I.select(sec,'Distribute children',[['start','Start'],['center','Center'],['end','End'],['between','Space between'],['around','Space around'],['evenly','Space evenly']],justify,v=>save(arrangementClasses(classes,'justify',v,inherited)));
     }
     if(parent&&/grid/.test(parent.display)&&!['absolute','fixed'].includes(css.position)) {
       const counts=Array.from({length:24},(_,i)=>[String(i+1),String(i+1)]);
@@ -158,6 +171,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

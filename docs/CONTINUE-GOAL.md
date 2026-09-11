@@ -270,3 +270,10 @@ Single-layer sizing now considers inherited important dimensions, size shorthand
 Arrange children now considers inherited important display, flex direction and flex-flow when writing a scoped layout mode. It replaces active arbitrary display/direction properties and preserves flex-flow wrapping while overriding its direction. Unrelated important properties do not promote the new classes.
 
 873 unit tests pass. Chromium and WebKit verify all six modes at Tablet, actual flex child ordering, inherited wrapping, unchanged Phone display and exact source Undo/Redo. Evidence: `/private/tmp/retouch-layout-mode-{chromium,webkit}.log` and `/private/tmp/retouch-layout-mode-units.log`. The existing minimum-breakpoint inheritance boundary still applies. The packaged desktop runtime predates this change; full parity and trusted native distribution remain unfinished.
+
+
+## Arrangement controls respect inherited priority
+
+Wrap children, Align children, Distribute children and Columns now replace their active arbitrary CSS properties and account for inherited important declarations, including relevant flex-flow, place-items, place-content and grid shorthands. Shorthands remain intact so their other properties survive. Invalid arrangement values are rejected by the planner.
+
+874 unit tests pass. The expanded layout-mode browser fixture passes in Chromium and WebKit: actual computed wrapping, alignment, distribution and three-column grid override smaller-breakpoint important shorthands, with exact Undo/Redo. Existing six-mode ordering, wrapping and Phone isolation checks still pass. Evidence: `/private/tmp/retouch-arrangement-{chromium,webkit}.log` and `/private/tmp/retouch-arrangement-units.log`. Complex conditional/state inheritance, full Figma parity and trusted macOS distribution remain unfinished; the desktop package predates these changes.
