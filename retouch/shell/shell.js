@@ -1444,17 +1444,19 @@ function componentSelectionSection(infos){
    const metas=components.map(component=>component.props.find(other=>other.name===prop.name).editor||{}),type=metas[0].type;
    const editable=metas.every(meta=>meta.editable&&meta.type===type),mixed=metas.some(meta=>meta.value!==metas[0].value||!!meta.unset!==!!metas[0].unset);
    const constrained=metas.filter(meta=>meta.choices),choices=constrained.length?constrained[0].choices.filter(value=>constrained.every(meta=>meta.choices.includes(value))):null;
+   const booleanToggle=type==='boolean'&&(!choices||choices.length===2&&choices.includes(true)&&choices.includes(false));
    const hashes=Object.fromEntries(ids.map((id,i)=>[id,metas[i].definitionHash]).filter(([,hash])=>hash!==undefined));
    const row=document.createElement('div');row.className='field';const label=document.createElement('label');label.textContent=prop.name;
-   const input=document.createElement(choices?'select':type==='string'?'textarea':'input');input.setAttribute('aria-label','Shared component property '+prop.name);input.disabled=!editable||choices?.length===0;
-   if(choices){if(mixed||metas[0].unset){const option=new Option(mixed?'Mixed':'Not set','');option.disabled=true;input.append(option);}choices.forEach((value,i)=>input.append(new Option(String(value),String(i))));input.value=mixed||metas[0].unset?'':String(choices.indexOf(metas[0].value));}
-   else if(type==='boolean'){input.type='checkbox';input.checked=!!metas[0].value;input.indeterminate=mixed;}
+   const input=document.createElement(choices&&!booleanToggle?'select':type==='string'?'textarea':'input');input.setAttribute('aria-label','Shared component property '+prop.name);input.disabled=!editable||choices?.length===0;
+   if(choices&&!booleanToggle){if(mixed||metas[0].unset){const option=new Option(mixed?'Mixed':'Not set','');option.disabled=true;input.append(option);}choices.forEach((value,i)=>input.append(new Option(String(value),String(i))));input.value=mixed||metas[0].unset?'':String(choices.indexOf(metas[0].value));}
+   else if(type==='boolean'){input.type='checkbox';input.checked=!mixed&&!!metas[0].value;input.indeterminate=mixed;}
    else{if(type!=='string'){input.type='number';input.step='any';}else{input.rows=1;input.className='component-prop-text';}input.value=mixed||metas[0].unset?'':String(metas[0].value??'');input.placeholder=mixed?'Mixed':metas[0].unset?'Not set':'';}
    const save=(value,options={})=>setComponentPropertySelection(infos,key,prop.name,value,hashes,options);
    input.oninput=()=>input.setCustomValidity('');
-   input.onchange=()=>{if(input.disabled)return;if(type==='number'&&(!input.value.trim()||!Number.isFinite(Number(input.value)))){input.setCustomValidity('Enter a finite number.');input.reportValidity();return;}if(!input.reportValidity())return;save(choices?choices[Number(input.value)]:type==='boolean'?input.checked:type==='number'?Number(input.value):input.value);};
+   input.onchange=()=>{if(input.disabled)return;if(type==='number'&&(!input.value.trim()||!Number.isFinite(Number(input.value)))){input.setCustomValidity('Enter a finite number.');input.reportValidity();return;}if(!input.reportValidity())return;save(booleanToggle?input.checked:choices?choices[Number(input.value)]:type==='boolean'?input.checked:type==='number'?Number(input.value):input.value);};
    input.onkeydown=event=>{if(event.isComposing)return;if(event.key==='Enter'&&(type!=='string'||event.metaKey||event.ctrlKey)){event.preventDefault();input.blur();}};
    label.append(input);row.append(label);
+   if(editable&&!choices&&type==='string'&&(mixed||metas.some(meta=>meta.unset)))row.append(RetouchInspector.button('Set '+prop.name+' to empty text',()=>save('')));
    if(!editable)RetouchInspector.note(row,metas.find(meta=>!meta.editable)?.reason||'These properties have different types.');
    if(choices?.length===0)RetouchInspector.note(row,'These properties have no allowed value in common.');
    if(metas.every(meta=>meta.canReset))row.append(RetouchInspector.button('Reset '+prop.name+' to defaults',()=>save(undefined,{reset:true})));
