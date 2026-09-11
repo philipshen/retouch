@@ -19,12 +19,15 @@ focused-scope refresh recovery. All 175 packaged source hashes match that checko
 The extracted archive passes universal architecture and strict ad hoc signature
 checks. Six bundled-editor workflows passed: variable collections, Actions, and
 viewport refresh, each in Chromium and WebKit. The accompanying local cask passes
-Ruby syntax validation; installation was not tested.
+Ruby syntax validation. Installation and uninstallation from a temporary local
+tap passed using an isolated app directory. The installed bundle passed package
+verification with quarantine intact; the test app, tap and cask trust entry were
+removed. Upgrade was not tested.
 See [the package receipt](verification/2026-09-11-variable-editor.json).
 
 Native launch was not attempted for this build. An older controlled launch's
 process ran but CUA could not inspect its window; it was stopped. Native editing,
-trusted installation, upgrades, Developer ID signing and notarization remain
+trusted distribution, upgrades, Developer ID signing and notarization remain
 unverified for the latest archive. Key access remains paused after the earlier
 canceled attempt. No public release is published.
 

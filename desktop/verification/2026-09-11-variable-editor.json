@@ -36,7 +36,22 @@
       "result": "VIEWPORT REFRESH AFTER BUSY PANEL PASS webkit"
     }
   ],
-  "cask": "Local cask generated; Ruby syntax passed. Installation not attempted.",
+  "cask": "Local temporary-tap install and uninstall passed in an isolated app directory. Quarantine preserved. Upgrade not tested.",
   "nativeLaunch": "not attempted",
-  "signing": "ad hoc development build; Developer ID/notarization and trusted distribution unfinished"
+  "signing": "ad hoc development build; Developer ID/notarization and trusted distribution unfinished",
+  "installation": {
+    "sourceCommit": "64eb2aa5562790675f45663f8406a43070ad24f5",
+    "tap": "philipshen/retouch-local-verification",
+    "appDirectory": "/private/tmp/retouch-cask-install-check-20260911",
+    "install": "passed",
+    "installedPackageVerification": "175 source hashes, universal architectures and strict signature passed",
+    "quarantine": "com.apple.quarantine present; not removed or modified",
+    "nativeLaunch": "not attempted",
+    "uninstall": "passed",
+    "cleanup": "App directory, cask registration, temporary tap and trust entry verified absent; Homebrew developer mode restored to disabled",
+    "logs": [
+      "/private/tmp/retouch-cask-install-20260911.log",
+      "/private/tmp/retouch-cask-uninstall-20260911.log"
+    ]
+  }
 }
