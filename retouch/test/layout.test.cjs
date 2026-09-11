@@ -49,3 +49,12 @@ test('grid spans replace axis placement without altering other axes, sizes or sc
  assert.equal(L.spanValue('span 3','span 3'),'3');
  assert.equal(L.spanValue('1','-1'),'full');
 });
+
+test('single sizing overrides important shorthand without replacing the other dimension',()=>{
+ const source='!size-[120px] [width:80px] h-[90px] md:size-[200px]';
+ assert.equal(L.sizeClasses(source,'width','fixed',160),'!size-[120px] h-[90px] md:size-[200px] !w-[160px]');
+ assert.equal(L.sizeClasses('size-[120px]! [height:80px] w-[90px]','height','hug',0),'size-[120px]! w-[90px] !h-fit');
+ assert.equal(L.sizeClasses('!size-20 basis-40','width','fill',0,{display:'flex',direction:'row'}),'!size-20 !w-auto !flex-1');
+ assert.equal(L.sizeClasses('md:!size-20 w-10','width','fixed',100),'md:!size-20 w-[100px]');
+ assert.equal(L.sizeClasses('![width:80px] size-20','width','fixed',100),'size-20 !w-[100px]');
+});
