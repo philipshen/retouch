@@ -49,8 +49,12 @@ Open project → automatic HTML mode → Start project → connected native edit
 An inspector text edit changed exactly the expected source text; Undo and Redo
 restored exact original/edited bytes and the visible canvas heading. Stop closed
 the owned server. This used the older d9cd994 bundle, not current packaged HEAD.
-The inspector textarea's accessibility value appeared stale after Undo and needs
-follow-up. Other native workflows and trusted distribution remain unverified.
+The stale inspector value observed after Undo was subsequently reproduced against
+current source and fixed in the shell's click-completion handling. The running
+Mac app connected to current source then verified synchronized inspector/canvas
+Apply, Undo and Redo with exact file checks. A new bundled release has not yet
+been built or verified. Other native workflows and trusted distribution remain
+unverified.
 See the latest native-workflow entry in `docs/design-studio-parity.md`.
 
 ## Cask artifact

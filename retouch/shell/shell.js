@@ -966,6 +966,9 @@ panelBody.addEventListener('focusout',()=>requestAnimationFrame(()=>{
 }));
 window.addEventListener('pointerup',releasePanelPointer,true);
 window.addEventListener('pointercancel',releasePanelPointer,true);
+// Native accessibility activation can finish with click without delivering a
+// pointerup. The completed click also ends our control-preservation window.
+window.addEventListener('click',()=>releasePanelPointer(),true);
 window.addEventListener('blur',()=>releasePanelPointer());
 function renderPanel() {
   // A reload or document.open() can leave the preview without a root. Keep
@@ -2162,6 +2165,7 @@ async function setText(text, isUndo) {
     if (!isUndo) editorHistory.record({ type: 'setText', id: info.id, text: prev, undoId: res.undoId, context: info.context, sourceId: info.textSource?.id });
     info.text = text;
     updateSource(info, res);
+    if(sel?.info===info)renderPanel();
     toast('Saved', 'ok');
   } else {
     optimisticText(prev);
