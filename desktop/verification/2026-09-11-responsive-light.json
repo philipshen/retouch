@@ -1,0 +1,30 @@
+{
+  "sourceCommit": "f8394de7ebd3d8a1a8fa8deb22e66c9454d56b79",
+  "sourceTreeDirty": false,
+  "sourceFiles": 175,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-responsive-light-20260911/Retouch-0.1.0-mac.zip",
+  "sha256": "97a1fae340349bb8a069c01f71d41ec87d8b115cb311c2b832add49a1a5fbada",
+  "sourceMatchesCheckout": true,
+  "workflows": [
+    {
+      "name": "inspector-light-chromium",
+      "result": "chromium horizontal-tb ltr: PASS light workspace, section order, segmented layout edits, opacity edits, exact undo, layer actions and screenshot"
+    },
+    {
+      "name": "inspector-light-webkit",
+      "result": "webkit horizontal-tb ltr: PASS light workspace, section order, segmented layout edits, opacity edits, exact undo, layer actions and screenshot"
+    },
+    {
+      "name": "breakpoint-preview-chromium",
+      "result": "LINKED BREAKPOINT COMPARISON EDIT/UNDO/REDO PASS chromium\nBREAKPOINT COMPARISON RELOAD/PERSISTENCE/REUSE PASS chromium\nBREAKPOINT PREVIEW MATCHING SIZE/SCOPE/SOURCE/PREVIEW HISTORY PASS chromium"
+    }
+  ],
+  "cask": "Local cask generated; Ruby syntax passed. Installation not attempted.",
+  "nativeLaunch": "not attempted",
+  "signing": "ad hoc development build; Developer ID/notarization and trusted distribution unfinished"
+}

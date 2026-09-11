@@ -10,15 +10,19 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest local development archive is
-`/private/tmp/retouch-desktop-staged-20260911/Retouch-0.1.0-mac.zip`.
+`/private/tmp/retouch-desktop-responsive-light-20260911/Retouch-0.1.0-mac.zip`.
 Its SHA-256 is
-`f30de5ee113c1f66e27693ab1e9858ff539ba48342327e1e6c8fbc61313206f8`.
-It includes a source manifest inside the signed resources. All 172 source hashes
-match the prior six-workflow browser-verified editor-refresh package. Both
-architectures, strict ad hoc signature, ZIP contents and local cask syntax pass.
-See [the package receipt](verification/2026-09-11-staged-build.json).
+`97a1fae340349bb8a069c01f71d41ec87d8b115cb311c2b832add49a1a5fbada`.
+It contains clean source commit `f8394de`, including the light inspector,
+physical alignment picker, and visible responsive range controls. All 175
+packaged source hashes match that checkout. The extracted archive passes
+universal architecture and strict ad hoc signature checks. Its bundled editor
+passes the inspector workflow in Chromium and WebKit and the breakpoint
+comparison/history workflow in Chromium. The accompanying local cask passes
+Ruby syntax validation; installation was not tested.
+See [the package receipt](verification/2026-09-11-responsive-light.json).
 
-Native launch was not attempted for this manifest build. The preceding package's
+Native launch was not attempted for this build. The preceding package's
 process ran but CUA could not inspect its window; it was stopped. Native editing,
 trusted installation, upgrades, Developer ID signing and notarization remain
 unverified for the latest archive. Key access remains paused after the earlier
@@ -65,7 +69,7 @@ the owned server. This used the older d9cd994 bundle, not current packaged HEAD.
 The stale inspector value observed after Undo was subsequently reproduced against
 current source and fixed in the shell's click-completion handling. The running
 Mac app connected to current source then verified synchronized inspector/canvas
-Apply, Undo and Redo with exact file checks. The latest development package now includes the fix and passed the same HTML
+Apply, Undo and Redo with exact file checks. The earlier click-completion package included the fix and passed the same HTML
 workflow, including an additional completed-click fix that does not depend on
 another native-window repaint. Other native workflows and trusted distribution
 remain unverified.
@@ -171,7 +175,7 @@ logs, automatic connection, a source width edit, button/keyboard undo and redo,
 comparison-size switching and Stop. File upload, complete WebKit editor parity,
 quit-during-startup and Intel runtime tests remain outstanding.
 
-The current universal build passes the URL/quoting self-test. To verify native
+Earlier universal builds passed the URL/quoting self-test; it was not rerun for the latest archive. To verify native
 launch arguments against a local CLI checkout (working directory and exit code):
 
 ```sh
@@ -227,7 +231,7 @@ folder path containing spaces and shell punctuation and dynamic port discovery.
 
 ## Earlier local package (1701d24)
 
-The current editor bundle includes inline SVG geometry, paint, creation,
+That earlier editor bundle included inline SVG geometry, paint, creation,
 duplication, deletion and stacking; width/height preview handles; and selection
 from comparison previews. Its archive is:
 
