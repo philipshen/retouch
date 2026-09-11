@@ -112,3 +112,12 @@ test('canonical typography property classes replace cleanly while preserving unr
  const encoded=Object.values(require('../src/text-style-classes.cjs').encode({'font-family':'serif','font-size':'32px','font-weight':'700','font-style':'oblique','font-optical-sizing':'auto','font-variation-settings':'normal','font-variant-numeric':'tabular-nums','line-height':'1.4','letter-spacing':'2px','text-align':'center','text-decoration-line':'underline line-through','text-transform':'uppercase'}));
  assert.equal(I.replace(encoded.join(' ')+' p-4 hover:text-red-500',I.textOverrideToken,''),'p-4 hover:text-red-500');
 });
+
+test('corner radius edits preserve other corners and scopes while overriding inherited important radii',()=>{
+ const {cornerRadiusClasses:radius}=require('../shell/inspector.js');
+ assert.equal(radius('rounded-[8px] rounded-tr-[4px] md:rounded-xl','tl',12,'!rounded-lg'),'rounded-[8px] rounded-tr-[4px] md:rounded-xl !rounded-tl-[12px]');
+ assert.equal(radius('[border-top-left-radius:4px] rounded-br-sm','tl',6),'rounded-br-sm rounded-tl-[6px]');
+ assert.equal(radius('!rounded-tl-sm [border-bottom-right-radius:8px] md:rounded-xl',null,4),'md:rounded-xl !rounded-[4px]');
+ assert.equal(radius('',null,0,'[border-radius:12px]!'),'!rounded-[0px]');
+ assert.throws(()=>radius('','bad',12));assert.throws(()=>radius('',null,-1));
+});

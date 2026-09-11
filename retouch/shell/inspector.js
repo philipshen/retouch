@@ -330,6 +330,16 @@
     const ctx=canvas.getContext('2d');ctx.fillStyle=value;ctx.fillRect(0,0,1,1);
     return '#'+[...ctx.getImageData(0,0,1,1).data].slice(0,3).map(v=>v.toString(16).padStart(2,'0')).join('');
   }
+  function cornerRadiusClasses(classes,corner,value,inherited=''){
+    const names={tl:'top-left',tr:'top-right',bl:'bottom-left',br:'bottom-right'};
+    if(corner!==null&&!Object.hasOwn(names,corner))throw Error('Choose a corner.');
+    if(!Number.isFinite(value)||value<0||value>10000)throw Error('Use a radius from 0 to 10000 pixels.');
+    const radius=t=>/^rounded(?:-|$)|^\[border(?:-[a-z]+-[a-z]+)?-radius:/.test(t);
+    const matches=corner===null?radius:t=>t.startsWith('rounded-'+corner+'-')||t.startsWith('[border-'+names[corner]+'-radius:');
+    let addition='rounded-'+(corner?corner+'-':'')+'['+value+'px]';
+    if([...tokens(classes),...tokens(inherited)].some(token=>/^!|!$/.test(token)&&radius(base(token)||'')))addition='!'+addition;
+    return replace(classes,matches,addition);
+  }
   function appearance(info, el, save, colorAction) {
     const sec = section('Appearance');
     if (!el) return sec;
@@ -385,11 +395,11 @@
     borderColor.onchange=()=>colorAction?colorAction('border-color',borderColor.value).catch(error=>{borderColor.setCustomValidity(error.message);borderColor.reportValidity();}):save(replace(info.className,t=>t.startsWith('border-')&&!widthToken(t)&&!/^border(?:-[trblxyse])?-(solid|dashed|dotted|double|hidden|none|collapse|separate|spacing-|opacity-)/.test(t),`border-[${borderColor.value}]`));
     const radius=value=>/^[\d.]+px$/.test(value)?parseFloat(value):NaN;
     const radii=[css.borderTopLeftRadius,css.borderTopRightRadius,css.borderBottomRightRadius,css.borderBottomLeftRadius];
-    const allRadius=number(sec,'Corner radius (px)',radii.every(v=>v===radii[0])?radius(radii[0]):NaN,0,10000,v=>save(replace(info.className,t=>/^rounded(?:-|$)/.test(t),`rounded-[${v}px]`)));
+    const allRadius=number(sec,'Corner radius (px)',radii.every(v=>v===radii[0])?radius(radii[0]):NaN,0,10000,v=>save(cornerRadiusClasses(info.className,null,v,info.anchorInheritedClasses)));
     allRadius.placeholder=radii.every(v=>v===radii[0])?radii[0]:'Mixed';
     const corners=document.createElement('details');const summary=document.createElement('summary');summary.textContent='Individual corners';corners.append(summary);
     for(const [name,token,property] of [['Top left','tl','borderTopLeftRadius'],['Top right','tr','borderTopRightRadius'],['Bottom right','br','borderBottomRightRadius'],['Bottom left','bl','borderBottomLeftRadius']]) {
-      const field=number(corners,name+' radius (px)',radius(css[property]),0,10000,v=>save(replace(info.className,t=>t.startsWith('rounded-'+token+'-'),`rounded-${token}-[${v}px]`)));field.placeholder=css[property];
+      const field=number(corners,name+' radius (px)',radius(css[property]),0,10000,v=>save(cornerRadiusClasses(info.className,token,v,info.anchorInheritedClasses)));field.placeholder=css[property];
     }
     corners.open=cornersExpanded;corners.ontoggle=()=>{if(corners.isConnected)cornersExpanded=corners.open;};
     sec.append(corners);root.RetouchClassGradients.mount(sec,info,el,save);return sec;
@@ -657,6 +667,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

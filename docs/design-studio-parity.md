@@ -11111,3 +11111,10 @@ New viewport-busy.cjs failed before the change and passed afterward in Chromium/
 
 
 Desktop refresh: /private/tmp/retouch-desktop-inspector-refresh-20260911/Retouch-0.1.0-mac.zip. SHA256 8be2210219b5cab2ddf41915fbcc7da73c709c95558e6e73e3c22d27c9a3ed33. Clean source af62db6, 175 source files matching the extracted archive, universal arm64/x86_64, strict ad hoc signature verification. Six bundled-runtime workflows passed: HTML editing, compact workspace panels, and busy viewport refresh/draft preservation, each in Chromium and WebKit. Cask Ruby syntax passed. Native launch, installation, upgrades, Developer ID signing and notarization remain unverified. Receipt: desktop/verification/2026-09-11-inspector-refresh.json. Full parity remains incomplete.
+
+
+### Corner radius inherited priority (2026-09-11)
+
+Reproduced a React corner edit failing to override sm:!rounded-[20px] at the md scope. Added cornerRadiusClasses for single/all-corner writes: preserve unrelated corners/scopes, remove conflicting active physical radius declarations, and promote the authored utility when active or inherited radius rules are important. The existing numeric radius controls now use this planner.
+
+The inherited-radius Chromium browser regression failed before wiring the fix. Chromium and WebKit inspector-light now pass single-corner edits with other-corner preservation, shared radius edits affecting all four corners, and exact undo. 884 unit tests passed, including arbitrary physical radius replacement and scope preservation. This verifies the tested class cascade; general complex/logical/inline cascade parity remains unfinished. Source changes postdate desktop archive af62db6. Full parity remains incomplete.
