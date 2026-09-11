@@ -1,0 +1,51 @@
+{
+  "sourceCommit": "910447cd637ae9b01071e3d1bac9986312065225",
+  "sourceTreeDirty": false,
+  "sourceFiles": 175,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-components-20260911/Retouch-0.1.0-mac.zip",
+  "sha256": "a6216639105d53de6adf2a8ab9f744d09f89c5bc939d6a2c886a936212d032e9",
+  "sourceMatchesCheckout": true,
+  "workflows": [
+    {
+      "name": "fields-chromium",
+      "result": "COMPONENT PROPERTY UI/SOURCE/RENDER PASS react chromium"
+    },
+    {
+      "name": "fields-webkit",
+      "result": "COMPONENT PROPERTY UI/SOURCE/RENDER PASS react webkit"
+    },
+    {
+      "name": "identity-chromium",
+      "result": "REPEATED COMPONENT PREVIEW OCCURRENCE PASS chromium"
+    },
+    {
+      "name": "identity-webkit",
+      "result": "REPEATED COMPONENT PREVIEW OCCURRENCE PASS webkit"
+    },
+    {
+      "name": "library-chromium",
+      "result": "LIBRARY NAMED INSTANCE/USAGE FILE/OFF-PAGE/ESCAPE/SELECTION PASS chromium"
+    },
+    {
+      "name": "library-webkit",
+      "result": "LIBRARY NAMED INSTANCE/USAGE FILE/OFF-PAGE/ESCAPE/SELECTION PASS webkit"
+    }
+  ],
+  "units": "886 passed",
+  "cask": "Local temporary-tap install and uninstall passed in an isolated app directory. Quarantine preserved. Upgrade not tested.",
+  "installation": {
+    "installedVerification": "175 source files, universal architecture and strict signature passed",
+    "cleanup": "App directory, cask registration, temporary tap and cask trust entry verified absent; developer mode restored to disabled",
+    "logs": [
+      "/private/tmp/retouch-desktop-components-20260911/install.log",
+      "/private/tmp/retouch-desktop-components-20260911/uninstall.log"
+    ]
+  },
+  "nativeLaunch": "not attempted",
+  "signing": "ad hoc development build; Developer ID/notarization and trusted distribution unfinished"
+}

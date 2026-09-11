@@ -10,20 +10,21 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest local development archive is
-`/private/tmp/retouch-desktop-variables-20260911/Retouch-0.1.0-mac.zip`.
+`/private/tmp/retouch-desktop-components-20260911/Retouch-0.1.0-mac.zip`.
 Its SHA-256 is
-`49ed3997c07c592e8d3acb0b3c7ae4e0a7cf1ff8b5befb7a22f79ea5377aad99`.
-It contains clean source commit `64eb2aa`, including the light action palette,
-inline variable tables, alias conversion, named-mode validation, search, and
-focused-scope refresh recovery. All 175 packaged source hashes match that checkout.
-The extracted archive passes universal architecture and strict ad hoc signature
-checks. Six bundled-editor workflows passed: variable collections, Actions, and
-viewport refresh, each in Chromium and WebKit. The accompanying local cask passes
-Ruby syntax validation. Installation and uninstallation from a temporary local
-tap passed using an isolated app directory. The installed bundle passed package
-verification with quarantine intact; the test app, tap and cask trust entry were
-removed. Upgrade was not tested.
-See [the package receipt](verification/2026-09-11-variable-editor.json).
+`a6216639105d53de6adf2a8ab9f744d09f89c5bc939d6a2c886a936212d032e9`.
+It contains clean source commit `910447c`, including the light component library,
+compact property fields, visible scope/name controls, keyboard navigation, and
+fragment/occurrence preview identity with refresh. All 175 packaged source hashes
+match that checkout. The extracted archive passes universal architecture and
+strict ad hoc signature checks. Six bundled-editor workflows passed: component
+fields, preview identity/recovery, and library keyboard browsing, each in Chromium
+and WebKit. All 886 unit tests passed before packaging verification.
+
+Local cask installation and uninstallation passed using a temporary tap and
+isolated app directory. The installed bundle passed package verification with
+quarantine intact. The test app, tap and cask trust entry were removed. Upgrade
+was not tested. See [the package receipt](verification/2026-09-11-component-editor.json).
 
 Native launch was not attempted for this build. An older controlled launch's
 process ran but CUA could not inspect its window; it was stopped. Native editing,
