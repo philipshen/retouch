@@ -26,13 +26,18 @@ function stamp(source, filePath, appRoot) {
   const { ast, elements, fragments } = collectElements(source, relPath);
   if (elements.length === 0) return null;
 
-  const ms = new MagicString(source),revision=contentHash(source);
+  const ms = new MagicString(source),revision=contentHash(source),clientModule=ast.program.directives.some(d=>d.value.value==='use client');
   for (const el of elements) {
     ms.appendLeft(el.node.openingElement.end-(el.node.openingElement.selfClosing?2:1),` ${el.kind==='host'?'data-rt-revision':'data-rt-i-revision'}="${revision}"`);
     const attr = el.kind === 'host' ? HOST_ATTR : INSTANCE_ATTR;
     const opening=el.node.openingElement;
     const insertAt = (opening.typeParameters||opening.typeArguments||opening.name).end;
     if(el.kind==='host'){
+      // A callback ref runs at client commit, unlike server-rendered attributes.
+      // Do not replace authored refs or refs potentially supplied by a spread.
+      if(clientModule&&!opening.attributes.some(a=>a.type==='JSXSpreadAttribute'||['ref','data-rt-client-revision','data-rt-client-mounted'].includes(a.name?.name))){
+        ms.appendLeft(opening.end-(opening.selfClosing?2:1),` data-rt-client-revision="${revision}" ref={(__rtMountedNode)=>{if(__rtMountedNode)__rtMountedNode.setAttribute("data-rt-client-mounted","${revision}");}}`);
+      }
       const name=require('./jsx-layer-name.cjs').describe({source,relPath,element:el,ast}).layerName;
       if(name){
         for(const attr of opening.attributes)if(attr.name?.name==='data-rt-layer-name')ms.remove(attr.start,attr.end);

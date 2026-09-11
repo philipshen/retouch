@@ -152,3 +152,10 @@ test('generic component stamps follow type arguments and retain layer comments',
  const source='export default ()=> <Card<string> /* @retouch-layer "Hero" */ value="x"/>;',output=stamp(source,file,ROOT).code;
  assert.doesNotThrow(()=>require('../src/id.cjs').parseSource(output));assert.match(output,/<Card<string> data-rt-i=/);assert.match(output,/@retouch-layer "Hero"/);
 });
+
+test('client module mount markers use callback refs without changing authored refs or spread contracts',()=>{
+ const source='"use client";export function Page(){return <main><p>Ready</p><span ref={existing}/><div {...props}/></main>}',result=stamp(source,'/app/page.jsx','/app'),hash=require('../src/id.cjs').contentHash(source),elements=require('../src/id.cjs').collectElements(result.code,'page.jsx').elements;
+ for(const name of ['main','p']){const node=elements.find(el=>el.node.openingElement.name.name===name).node;assert.ok(node.openingElement.attributes.some(a=>a.name?.name==='ref'&&a.value.expression.type==='ArrowFunctionExpression'));assert.equal(node.openingElement.attributes.find(a=>a.name?.name==='data-rt-client-revision').value.value,hash);assert.equal(node.openingElement.attributes.some(a=>a.name?.name==='data-rt-client-mounted'),false);}
+ for(const name of ['span','div'])assert.equal(elements.find(el=>el.node.openingElement.name.name===name).node.openingElement.attributes.some(a=>a.name?.name==='data-rt-client-revision'),false);
+ assert.ok(result.code.includes('ref={existing}'));assert.equal(stamp('export default function Page(){return <p/>}','/app/page.jsx','/app').code.includes('data-rt-client-revision'),false);assert.equal(source.includes('data-rt-client'),false);
+});

@@ -479,7 +479,7 @@
     // while their hot-update fetch is in flight can abort WebKit's update.
     for(let attempt=0,stable=0;attempt<40;attempt++){
       if(revision!==mainLoadRevision||!open||path()!==next)return;
-      const ready=cards.every(card=>expected.every(({id,hash})=>[...card.frame.contentDocument?.querySelectorAll('[data-rt-i="'+id+'"]')||[]].some(el=>el.getAttribute('data-rt-i-revision')===hash)));
+      const ready=window.RetouchClientMount.ready(main.contentDocument)&&cards.every(card=>window.RetouchClientMount.ready(card.frame.contentDocument)&&expected.every(({id,hash})=>[...card.frame.contentDocument?.querySelectorAll('[data-rt-i="'+id+'"]')||[]].some(el=>el.getAttribute('data-rt-i-revision')===hash)));
       stable=ready?stable+1:0;if(stable>=3)return;
       await new Promise(resolve=>setTimeout(resolve,50));
     }

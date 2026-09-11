@@ -674,6 +674,9 @@ async function commitInlineEdit() {
 }
 
 // Reload the iframe to its current path, preserving scroll where possible.
+function clientMountReady(d){return !!d?.body&&[...d.querySelectorAll('[data-rt-client-revision]')].every(el=>el.getAttribute('data-rt-client-mounted')===el.getAttribute('data-rt-client-revision'));}
+async function waitForClientMount(d){for(let attempt=0;attempt<80;attempt++){if(d!==doc())return false;if(clientMountReady(d))return true;await new Promise(resolve=>setTimeout(resolve,50));}return false;}
+window.RetouchClientMount={ready:clientMountReady};
 function reloadFrame() {
   stopDrawing?.();
   const selectionBefore=sel,anchorBefore=renderedSelection,routeBefore=iframe.contentWindow?.location.href;
@@ -705,6 +708,7 @@ function reloadFrame() {
           });
         }));
       } catch {}
+      await waitForClientMount(doc());
       try {
         if(bookmark)await layers.refresh();
         if(bookmark&&sel===selectionBefore&&renderedSelection===anchorBefore&&iframe.contentWindow.location.href===routeBefore){
@@ -736,7 +740,7 @@ async function refreshWrittenElement(info, matches) {
       try{
         const d=doc(),el=matchingInDocument(d,info.id,info)[0];
         const stylesReady=[...d.querySelectorAll('link[rel="stylesheet"]')].every(link=>link.disabled||!!link.sheet);
-        const ready=el&&el.getAttribute(info.renderRevisionAttribute)===info.hash&&matches(el)&&stylesReady;
+        const ready=el&&el.getAttribute(info.renderRevisionAttribute)===info.hash&&matches(el)&&stylesReady&&clientMountReady(d);
         stable=ready?stable+1:0;
         if(stable>=3)return true;
       }catch{stable=0;}
@@ -2490,6 +2494,7 @@ async function api(method, url, body) {
   if(writes && editorHistory.busy && !['undo','redo'].includes(body?.type)) return {ok:false,reason:'Wait for history restoration to finish.'};
   if(writes){sourceRequests++;syncHistoryControls();}
   try {
+  if(writes&&!await waitForClientMount(doc()))return {ok:false,reason:'The preview has not finished mounting. Wait for it to load before editing.'};
     const res = await fetch(url, {
       method,
       headers: { 'x-retouch-token': TOKEN, ...(route?{'x-retouch-route':encodeURIComponent(route)}:{}), ...(body ? { 'content-type': 'application/json' } : {}) },
