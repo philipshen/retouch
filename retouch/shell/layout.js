@@ -64,7 +64,8 @@
     function numeric(label,value,min,max,change) {
       const input=document.createElement('input');input.type='number';input.min=min;input.max=max;input.step='any';
       input.value=Number.isFinite(value)?Math.round(value*100)/100:0;
-      input.onchange=()=>{if(input.value!==''&&input.checkValidity())change(Number(input.value));};
+      input.oninput=()=>input.setCustomValidity('');
+      input.onchange=()=>{if(input.value!==''&&input.checkValidity())try{change(Number(input.value));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
       return I.field(sec,label,input);
     }
     if(mode!=='flow') {
@@ -93,15 +94,18 @@
     for(const [side,short] of [['Top','t'],['Right','r'],['Bottom','b'],['Left','l']]) {
       numeric('Padding '+side.toLowerCase(),parseFloat(css['padding'+side])||0,0,10000,v=>save(I.replace(classes,t=>t.startsWith('p'+short+'-'),`p${short}-[${v}px]`)));
     }
-    const dims=el.getBoundingClientRect();
+    const geometry=root.RetouchReactSelection||require('./react-selection.js');
+    const dims=Object.fromEntries(['width','height'].map(axis=>{const value=geometry.dimensionSize(css,axis);return [axis,Number.isFinite(value)?value:el[axis==='width'?'offsetWidth':'offsetHeight']];}));
     for(const axis of ['width','height']) {
       const title=axis[0].toUpperCase()+axis.slice(1),dim=axis==='width'?'w':'h';
       const own=classes.split(/\s+/).find(t=>t.startsWith(dim+'-'));
       const sizing=own===dim+'-fit'?'hug':own===dim+'-full'||/\bflex-1\b/.test(classes)&&parent&&/flex/.test(parent.display)&&(axis==='width'?!parent.flexDirection.startsWith('column'):parent.flexDirection.startsWith('column'))?'fill':own&&own!==dim+'-auto'?'fixed':'';
       const context={display:parent?.display,direction:parent?.flexDirection};
-      I.select(sec,title+' behavior',[['','Inherited / auto'],['fixed','Fixed'],['hug','Hug content'],['fill','Fill available']],sizing,v=>{if(v)save(sizeClasses(classes,axis,v,Math.round(dims[axis]*100)/100,context));});
-      numeric(title+' (px)',dims[axis],0,100000,v=>save(sizeClasses(classes,axis,'fixed',v,context)));
+      const size=(mode,value)=>save(sizeClasses(classes,axis,mode,mode==='fixed'?geometry.dimensionValue(css,axis,value):value,context));
+      I.select(sec,title+' behavior',[['','Inherited / auto'],['fixed','Fixed'],['hug','Hug content'],['fill','Fill available']],sizing,v=>{if(v)size(v,Math.round(dims[axis]*100)/100);});
+      numeric(title+' (px)',dims[axis],0,100000,v=>size('fixed',v));
     }
+    I.note(sec,'Pixel sizes include padding and borders, before transforms.');
     const limits=document.createElement('details');limits.className='advanced';limits.open=limitsOpen;
     limits.ontoggle=()=>{limitsOpen=limits.open;};
     const title=document.createElement('summary');title.textContent='Size limits';limits.append(title);
