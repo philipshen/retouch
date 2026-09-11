@@ -42,6 +42,17 @@ and logs. You can also start a project externally through
 opening the editor. Cmd+L focuses the address and Cmd+R reloads the editor.
 It remembers the last successful URL. This version does not edit arbitrary remote sites.
 
+## Controlled native workflow verification (2026-09-11)
+
+After testing resumed, the existing navigation-fixed development app completed
+Open project → automatic HTML mode → Start project → connected native editor.
+An inspector text edit changed exactly the expected source text; Undo and Redo
+restored exact original/edited bytes and the visible canvas heading. Stop closed
+the owned server. This used the older d9cd994 bundle, not current packaged HEAD.
+The inspector textarea's accessibility value appeared stale after Undo and needs
+follow-up. Other native workflows and trusted distribution remain unverified.
+See the latest native-workflow entry in `docs/design-studio-parity.md`.
+
 ## Cask artifact
 
 The build creates `desktop/dist/Retouch-0.1.0-mac.zip` and its SHA-256 file.
