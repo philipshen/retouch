@@ -97,3 +97,7 @@ The source/API and Layers UI now support `duplicateComponentSelection`: one atom
 ## Selected component deletion
 
 `deleteComponentSelection` and the Layers button/Delete key now delete a selected usage group in one transaction. Null child slots preserve unrelated identities; import cleanup retains side effects and type references. Undo restores exact source, selected usages and their editor locks; Redo removes them again. Chromium/WebKit combined component workflows and all 837 unit tests pass. See `src/delete-component.cjs`, `test/delete-component-selection.test.cjs` and the component selection e2e fixture. Group reparenting and cross-file structure edits remain open.
+
+## Selected component reparenting
+
+`reparentComponentSelection` plus Layers Move into now moves a group to a shared compatible container in one file, preserving source order, bindings, identities, selection and locks through Undo/Redo. Current-parent destinations support no-op moves without history. Both browser engines and all 841 unit tests pass. See `src/reparent-component.cjs` and `test/reparent-component-selection.test.cjs`. Group drag/drop and sibling ordering, cross-file moves and preserved visual coordinates under arbitrary layout changes remain open; prior entries listing all group reparenting as unfinished are superseded by this slice.

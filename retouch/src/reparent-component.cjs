@@ -23,7 +23,7 @@ function context(resolved){
  }
  return {source,destination};
 }
-function describe(resolved){try{const ctx=context(resolved),containers=[];for(const element of resolved.elements)try{const target=ctx.destination(element);if(target!==ctx.source.parentPath)containers.push(element.id);}catch{}return {containers,canReparent:containers.length>0};}catch{return {containers:[],canReparent:false};}}
+function describe(resolved){try{const ctx=context(resolved),containers=[],selectionContainers=[];for(const element of resolved.elements)try{const target=ctx.destination(element);selectionContainers.push(element.id);if(target!==ctx.source.parentPath)containers.push(element.id);}catch{}return {containers,selectionContainers,canReparent:containers.length>0};}catch{return {containers:[],canReparent:false};}}
 function plan(resolved,op){
  if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the component before moving it.');
  try{
@@ -38,4 +38,25 @@ function plan(resolved,op){
   return {ok:true,hash:contentHash(after),movedComponent:{instanceId:selected.id,previousInstanceId:resolved.element.id,sourceIdMap},edits:[{file:resolved.file,before:resolved.source,after}]};
  }catch(error){return refuse(error.message);}
 }
-module.exports={describe,plan};
+function planSelection(resolved,op){
+ try{
+  if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the components.');
+  const ids=op.ids;
+  if(!Array.isArray(ids)||ids.length<2||ids.length>100||new Set(ids).size!==ids.length||!ids.includes(resolved.element.id)||ids.some(id=>typeof id!=='string'||!/^[a-f0-9]{10}$/.test(id)))return refuse('Choose 2 to 100 distinct component usages in one source file.');
+  const original=collectElements(resolved.source,resolved.relPath).elements,members=ids.map(id=>original.find(element=>element.id===id)),destination=original.find(element=>element.id===op.destinationId);
+  if(members.some(element=>element?.kind!=='instance'))return refuse('Select component usages from the same source file.');
+  const roots=members.filter(element=>!members.some(parent=>parent!==element&&parent.node.start<element.node.start&&parent.node.end>element.node.end)).sort((a,b)=>a.node.start-b.node.start);
+  for(const element of roots)context({...resolved,elements:original,element}).destination(destination);
+  let source=resolved.source,elements=original;const identities=new Map(original.map(element=>[element.id,element.id]));
+  for(const root of roots){
+   const id=identities.get(root.id),element=elements.find(item=>item.id===id);if(!element)return refuse('A selected component lost its source identity.');
+   const current={...resolved,source,elements,element,hash:contentHash(source)},result=plan(current,{type:'moveComponent',id,fileHash:current.hash,direction:'inside',destinationId:identities.get(op.destinationId)});if(!result.ok)return result;if(result.unchanged)continue;
+   const mapping=new Map(result.movedComponent.sourceIdMap);for(const [before,now]of identities)identities.set(before,mapping.get(now)||now);
+   source=result.edits[0].after;elements=collectElements(source,resolved.relPath).elements;
+  }
+  const selectionIds=roots.map(element=>identities.get(element.id)),sourceIdMap=[...identities].filter(([before,after])=>before!==after);
+  if(new Set(identities.values()).size!==original.length||elements.length!==original.length)throw Error('Moving changed the number of source layers.');
+  return {ok:true,unchanged:source===resolved.source,hash:contentHash(source),selectionIds,sourceIdMap,destinationId:identities.get(op.destinationId),rootCount:roots.length,edits:source===resolved.source?[]:[{file:resolved.file,before:resolved.source,after:source}]};
+ }catch(error){return refuse(error.message);}
+}
+module.exports={describe,plan,planSelection};

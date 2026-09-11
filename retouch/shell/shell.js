@@ -906,7 +906,7 @@ function paintLoop() {
 }
 
 function syncLayerSelection() {
-  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent),selectionCanDelete:sel.multiple.every(info=>info.canDeleteComponent)}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
+  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent),selectionCanDelete:sel.multiple.every(info=>info.canDeleteComponent),selectionCanReparent:sharedComponentContainers(sel.multiple).length>0}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
 }
 
 function inTextScope(el, info) {
@@ -2414,6 +2414,7 @@ async function restoreHistory(direction,op) {
     if(op.type==='renameComponent'){await refreshSwappedComponent(op.id,null);await selectInsertedComponent(op.id,null);layers.refresh();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='deleteComponentSelection'){if(direction==='undo')await refreshComponentSelection(op.selectionBefore);else{await refreshDeletedComponent(op.deletedComponentIds,op.parentId);clearSelection();await layers.refresh();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='deleteComponent'){if(direction==='undo'){await refreshSwappedComponent(op.id,null);await selectInsertedComponent(op.id,op.parentId);}else{await refreshDeletedComponent(op.id,op.parentId);clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='reparentComponentSelection'){await refreshComponentSelection(direction==='undo'?op.selectionBefore:op.selectionAfter);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='duplicateComponentSelection'){await refreshComponentSelection(direction==='undo'?op.selectionBefore:op.selectionAfter);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
@@ -2656,12 +2657,25 @@ window.RetouchLayerNavigation={
   available:direction=>mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&(direction==='siblings'?layers.canSelectSiblings():layers.canNavigate(direction)),
   run:direction=>{if(window.RetouchLayerNavigation.available(direction))return (direction==='siblings'?layers.selectSiblings():layers.navigate(direction)).catch(error=>toast(error.message,'err'));}
 };
+function sharedComponentContainers(infos){
+ const candidates=infos[0]?.componentMovement?.selectionContainers||infos[0]?.componentMovement?.containers||[];
+ return candidates.filter(id=>infos.every(info=>(info.componentMovement?.selectionContainers||info.componentMovement?.containers||[]).includes(id)));
+}
+async function reparentComponentSelection(infos,destinationId){
+ if(panelTasks||undoBusy||sourceRequests)return;const ids=infos.map(info=>info.id);busyPanel(true);
+ try{
+  const result=await api('POST','/rt/__api/op',{type:'reparentComponentSelection',id:ids[0],ids,destinationId,fileHash:infos[0].hash});if(!result?.ok)throw Error(result?.reason||'Could not move the selected components.');
+  if(result.unchanged)return toast('The selected components are already in this position.','ok');
+  editorHistory.record({type:'reparentComponentSelection',id:ids[0],selectionBefore:ids,selectionAfter:result.selectionIds,sourceIdMap:result.sourceIdMap,undoId:result.undoId});layerLocks.remap(result.sourceIdMap);
+  await refreshComponentSelection(result.selectionIds);toast(result.rootCount+' components moved','ok');
+ }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
+}
 function chooseComponentParent(info){
- const ids=new Set(info.componentMovement?.containers||[]),candidates=[...doc().querySelectorAll('[data-rt]')].filter(el=>ids.has(el.getAttribute('data-rt'))&&!layerLocks.locked(el));
+ const selection=sel?.multiple?.length>1?sel.multiple:[info],group=selection.length>1,ids=new Set(group?sharedComponentContainers(selection):info.componentMovement?.containers||[]),candidates=[...doc().querySelectorAll('[data-rt]')].filter(el=>ids.has(el.getAttribute('data-rt'))&&!layerLocks.locked(el));
  if(!candidates.length)return toast('No compatible container is visible on this page.','err');
- const modal=document.createElement('dialog'),heading=document.createElement('h3');heading.textContent='Move component into';modal.setAttribute('aria-label','Move component into');modal.className='layer-move-dialog';modal.append(heading);
+ const modal=document.createElement('dialog'),heading=document.createElement('h3');heading.textContent=group?'Move components into':'Move component into';modal.setAttribute('aria-label',heading.textContent);modal.className='layer-move-dialog';modal.append(heading);
  const picker=document.createElement('select');picker.setAttribute('aria-label','Destination container');const seen=new Set();for(const el of candidates){const id=el.getAttribute('data-rt');if(seen.has(id))continue;seen.add(id);const option=document.createElement('option');option.value=id;option.textContent=RetouchLayers.label(el);picker.append(option);}modal.append(picker);
- const close=()=>{modal.close();modal.remove();};modal.append(RetouchInspector.button('Move component',()=>{const destinationId=picker.value;close();moveInstance(info,'inside',destinationId);}),RetouchInspector.button('Cancel',close));modal.addEventListener('cancel',()=>modal.remove());document.body.append(modal);modal.showModal();picker.focus();
+ const close=()=>{modal.close();modal.remove();};modal.append(RetouchInspector.button(group?'Move components':'Move component',()=>{const destinationId=picker.value;close();if(group)reparentComponentSelection(selection,destinationId);else moveInstance(info,'inside',destinationId);}),RetouchInspector.button('Cancel',close));modal.addEventListener('cancel',()=>modal.remove());document.body.append(modal);modal.showModal();picker.focus();
 }
 function chooseLayerParent(info){
   const selected=matchingEls(info.id)[0];if(!selected)return;
@@ -2770,7 +2784,7 @@ async function structureSelection(action,extra={}){
 }
 async function structureAction(action) {
   if(!sel || panelTasks || undoBusy || sourceRequests)return;
-  if(sel.info.kind==='instance'&&sel.multiple?.length>1){if(action==='duplicateElement')return duplicateComponentSelection();if(action==='deleteElement')return deleteComponentSelection();return toast('Choose one component for this structural edit.','err');}
+  if(sel.info.kind==='instance'&&sel.multiple?.length>1){if(action==='duplicateElement')return duplicateComponentSelection();if(action==='deleteElement')return deleteComponentSelection();if(action==='reparentElement')return chooseComponentParent(sel.info);return toast('Choose one component for this structural edit.','err');}
   if(['frameSelection','removeFrame'].includes(action)){await commitInlineEdit();if(sel)return structureSelection(action);return;}
   if(sel.multiple?.length>1){if(action==='reparentElement')return chooseLayerParent(sel.info);if(['duplicateElement','deleteElement'].includes(action))return structureSelection(action);return toast('Choose one layer for this structural edit.','err');}
   await commitInlineEdit();
