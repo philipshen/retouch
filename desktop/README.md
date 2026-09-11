@@ -10,17 +10,17 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest local development archive is
-`/private/tmp/retouch-desktop-responsive-light-20260911/Retouch-0.1.0-mac.zip`.
+`/private/tmp/retouch-desktop-inspector-refresh-20260911/Retouch-0.1.0-mac.zip`.
 Its SHA-256 is
-`97a1fae340349bb8a069c01f71d41ec87d8b115cb311c2b832add49a1a5fbada`.
-It contains clean source commit `f8394de`, including the light inspector,
-physical alignment picker, and visible responsive range controls. All 175
-packaged source hashes match that checkout. The extracted archive passes
-universal architecture and strict ad hoc signature checks. Its bundled editor
-passes the inspector workflow in Chromium and WebKit and the breakpoint
-comparison/history workflow in Chromium. The accompanying local cask passes
-Ruby syntax validation; installation was not tested.
-See [the package receipt](verification/2026-09-11-responsive-light.json).
+`8be2210219b5cab2ddf41915fbcc7da73c709c95558e6e73e3c22d27c9a3ed33`.
+It contains clean source commit `af62db6`, including the HTML typography/paint
+refinements, spatial corner fields, compact toolbar placement, and deferred
+viewport refresh fix. All 175 packaged source hashes match that checkout.
+The extracted archive passes universal architecture and strict ad hoc signature
+checks. Its bundled editor passes HTML editing, compact workspace, and busy
+viewport refresh workflows in both Chromium and WebKit. The accompanying local
+cask passes Ruby syntax validation; installation was not tested.
+See [the package receipt](verification/2026-09-11-inspector-refresh.json).
 
 Native launch was not attempted for this build. The preceding package's
 process ran but CUA could not inspect its window; it was stopped. Native editing,

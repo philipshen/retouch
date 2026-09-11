@@ -1,0 +1,42 @@
+{
+  "sourceCommit": "af62db6ee07c0247f2434b107728b12dcc55971c",
+  "sourceTreeDirty": false,
+  "sourceFiles": 175,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-inspector-refresh-20260911/Retouch-0.1.0-mac.zip",
+  "sha256": "8be2210219b5cab2ddf41915fbcc7da73c709c95558e6e73e3c22d27c9a3ed33",
+  "sourceMatchesCheckout": true,
+  "workflows": [
+    {
+      "name": "html-site-chromium",
+      "result": "chromium: PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo"
+    },
+    {
+      "name": "html-site-webkit",
+      "result": "webkit: PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo"
+    },
+    {
+      "name": "workspace-panels-chromium",
+      "result": "WORKSPACE PANELS/PERSISTENCE/COMPACT DRAWERS/SELECTION/ESCAPE/SOURCE PASS chromium"
+    },
+    {
+      "name": "workspace-panels-webkit",
+      "result": "WORKSPACE PANELS/PERSISTENCE/COMPACT DRAWERS/SELECTION/ESCAPE/SOURCE PASS webkit"
+    },
+    {
+      "name": "viewport-busy-chromium",
+      "result": "VIEWPORT REFRESH AFTER BUSY PANEL PASS chromium"
+    },
+    {
+      "name": "viewport-busy-webkit",
+      "result": "VIEWPORT REFRESH AFTER BUSY PANEL PASS webkit"
+    }
+  ],
+  "cask": "Local cask generated; Ruby syntax passed. Installation not attempted.",
+  "nativeLaunch": "not attempted",
+  "signing": "ad hoc development build; Developer ID/notarization and trusted distribution unfinished"
+}
