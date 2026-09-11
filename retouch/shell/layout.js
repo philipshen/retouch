@@ -12,11 +12,13 @@
     if(mode==='fixed'&&(!Number.isFinite(value)||value<0||value>100000))throw Error('Invalid size');
     const dim=axis==='width'?'w':'h';
     const alongFlex=/flex/.test(parent.display||'') && (axis==='width'?!/^column/.test(parent.direction||''):/^column/.test(parent.direction||''));
-    const match=t=>t.startsWith(dim+'-') || t.startsWith('['+axis+':') || (alongFlex&&(/^(?:grow|shrink)(?:-|$)|^basis-/.test(t)||/^flex-(?:\d+(?:\/\d+)?|auto|initial|none|\[.*\]|\(.*\))$|^\[flex(?:-(?:grow|shrink|basis))?:/.test(t)));
+    const stretchAxis=!alongFlex&&/flex/.test(parent.display||'')||/grid/.test(parent.display||''),stretch=mode==='fill'&&stretchAxis,inlineStretch=stretchAxis&&/grid/.test(parent.display||'')&&axis==='width';
+    const match=t=>t.startsWith(dim+'-') || t.startsWith('['+axis+':') || mode==='reset'&&stretchAxis&&(inlineStretch?/^justify-self-stretch$|^\[justify-self:stretch\]$/.test(t):/^self-stretch$|^\[align-self:stretch\]$/.test(t)) || stretch&&(inlineStretch?/^justify-self-|^\[justify-self:/.test(t):/^self-|^\[align-self:/.test(t)) || (alongFlex&&(/^(?:grow|shrink)(?:-|$)|^basis-/.test(t)||/^flex-(?:\d+(?:\/\d+)?|auto|initial|none|\[.*\]|\(.*\))$|^\[flex(?:-(?:grow|shrink|basis))?:/.test(t)));
     if(mode==='reset')return I.replace(classes,match,'');
     let addition=mode==='fixed'?`${dim}-[${value}px]`:mode==='hug'?`${dim}-fit`:`${dim}-full`;
+    if(stretch)addition=dim+'-auto '+(inlineStretch?'justify-self-stretch':'self-stretch');
     if(alongFlex)addition=mode==='fill'?`${dim}-auto flex-1`:addition+' flex-none';
-    if(classes.split(/\s+/).some(token=>I.base(token)?.startsWith('size-')&&/^!|!$/.test(token)))addition=addition.split(' ').map(token=>'!'+token).join(' ');
+    if(classes.split(/\s+/).some(token=>(I.base(token)?.startsWith('size-')||stretch&&/^place-self-|^\[place-self:/.test(I.base(token)||''))&&/^!|!$/.test(token)))addition=addition.split(' ').map(token=>'!'+token).join(' ');
     return I.replace(classes,match,addition);
   }
   function spanClasses(classes,axis,value) {
@@ -102,7 +104,8 @@
       const title=axis[0].toUpperCase()+axis.slice(1),dim=axis==='width'?'w':'h';
       const sizingTokens=classes.split(/\s+/).filter(token=>I.base(token)!==null),ownToken=sizingTokens.find(token=>/^!|!$/.test(token)&&I.base(token).startsWith(dim+'-'))||sizingTokens.find(token=>/^!|!$/.test(token)&&I.base(token).startsWith('size-'))||sizingTokens.find(token=>I.base(token).startsWith(dim+'-'))||sizingTokens.find(token=>I.base(token).startsWith('size-'));
       const own=ownToken&&I.base(ownToken).replace(/^size-/,dim+'-');
-      const sizing=own===dim+'-fit'?'hug':own===dim+'-full'||/\bflex-1\b/.test(classes)&&parent&&/flex/.test(parent.display)&&(axis==='width'?!parent.flexDirection.startsWith('column'):parent.flexDirection.startsWith('column'))?'fill':own&&own!==dim+'-auto'?'fixed':'';
+      const stretchFill=own===dim+'-auto'&&parent&&(/grid/.test(parent.display)?axis==='width'?css.justifySelf==='stretch':css.alignSelf==='stretch':/flex/.test(parent.display)&&(axis==='width'?parent.flexDirection.startsWith('column'):!parent.flexDirection.startsWith('column'))&&css.alignSelf==='stretch');
+      const sizing=own===dim+'-fit'?'hug':own===dim+'-full'||stretchFill||/\bflex-1\b/.test(classes)&&parent&&/flex/.test(parent.display)&&(axis==='width'?!parent.flexDirection.startsWith('column'):parent.flexDirection.startsWith('column'))?'fill':own&&own!==dim+'-auto'?'fixed':'';
       const context={display:parent?.display,direction:parent?.flexDirection};
       const size=(mode,value)=>save(sizeClasses(classes,axis,mode,mode==='fixed'?geometry.dimensionValue(css,axis,value):value,context));
       I.select(sec,title+' behavior',[['','Inherited / auto'],['fixed','Fixed'],['hug','Hug content'],['fill','Fill available']],sizing,v=>size(v||'reset',Math.round(dims[axis]*100)/100));

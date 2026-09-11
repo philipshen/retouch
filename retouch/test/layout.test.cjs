@@ -10,7 +10,7 @@ test('fill and fixed sizing account for the parent flex axis without losing cons
  assert.equal(L.sizeClasses('w-40 min-w-4 md:w-20','width','fill',0,{display:'flex',direction:'row'}),'min-w-4 md:w-20 w-auto flex-1');
  assert.equal(L.sizeClasses('h-40 flex-1','height','fixed',100,{display:'flex',direction:'column'}),'h-[100px] flex-none');
  assert.equal(L.sizeClasses('w-full','width','hug',0),'w-fit');
- assert.equal(L.sizeClasses('h-40','height','fill',0,{display:'grid'}),'h-full');
+ assert.equal(L.sizeClasses('h-40','height','fill',0,{display:'grid'}),'h-auto self-stretch');
  assert.throws(()=>L.sizeClasses('','width','fixed',NaN));
 });
 test('responsive layout proposals preserve source base and other variants',()=>{
@@ -72,4 +72,22 @@ test('main-axis size changes replace arbitrary flex geometry and retain cross-ax
  const source='[flex:2_1_40px] [flex-grow:3] [flex-shrink:0] [flex-basis:60px] flex-2/3 flex-(--layout) h-20 md:[flex:1] flex-col';
  for(const mode of ['fixed','hug','fill','reset']){const result=L.sizeClasses(source,'width',mode,100,{display:'flex',direction:'row'});assert.ok(!result.includes('[flex:2_1_40px]'));assert.ok(!result.includes('[flex-grow:3]'));assert.ok(!result.includes('[flex-shrink:0]'));assert.ok(!result.includes('[flex-basis:60px]'));assert.ok(!result.includes('flex-2/3'));assert.ok(!result.includes('flex-(--layout)'));assert.ok(result.includes('h-20 md:[flex:1] flex-col'));}
  assert.equal(L.sizeClasses('[flex-basis:60px] h-20','height','reset',0,{display:'flex',direction:'row'}),'[flex-basis:60px]');
+});
+
+test('cross-axis and grid fill stretch the margin box instead of using content-box percentages',()=>{
+ assert.equal(L.sizeClasses('w-full self-center h-40','width','fill',0,{display:'flex',direction:'column'}),'h-40 w-auto self-stretch');
+ assert.equal(L.sizeClasses('h-20 [align-self:center] w-40','height','fill',0,{display:'flex',direction:'row'}),'w-40 h-auto self-stretch');
+ assert.equal(L.sizeClasses('w-full justify-self-end self-center','width','fill',0,{display:'grid'}),'self-center w-auto justify-self-stretch');
+ assert.equal(L.sizeClasses('!size-20 !self-start justify-self-end','height','fill',0,{display:'grid'}),'!size-20 justify-self-end !h-auto !self-stretch');
+});
+
+test('stretch fill overrides important alignment shorthand while preserving its other axis',()=>{
+ assert.equal(L.sizeClasses('!place-self-center size-20','width','fill',0,{display:'grid'}),'!place-self-center size-20 !w-auto !justify-self-stretch');
+ assert.equal(L.sizeClasses('![place-self:center] w-20','height','fill',0,{display:'flex',direction:'row'}),'![place-self:center] w-20 !h-auto !self-stretch');
+});
+
+test('reset removes stretch sizing alignment but preserves other alignment choices',()=>{
+ assert.equal(L.sizeClasses('w-auto !justify-self-stretch self-center','width','reset',0,{display:'grid'}),'self-center');
+ assert.equal(L.sizeClasses('h-auto [align-self:stretch] justify-self-center','height','reset',0,{display:'flex',direction:'row'}),'justify-self-center');
+ assert.equal(L.sizeClasses('w-auto self-center','width','reset',0,{display:'flex',direction:'column'}),'self-center');
 });
