@@ -475,3 +475,10 @@ The first Chromium full run reproduced the missing breakpoint option after resiz
 
 
 Desktop refresh: /private/tmp/retouch-desktop-design-controls-20260911/Retouch-0.1.0-mac.zip. SHA256 8432e7e52ecb8d763d765c59af9fab53bb0326019ec8f63c25a7400d2e2a569b. Clean source 843f6ef, 175 source files matching the extracted archive, universal arm64/x86_64, strict ad hoc signature verification. Eight bundled-runtime workflows passed: inspector-light, HTML editing, context menus, and viewport-busy/focused-scope/draft preservation, each in Chromium/WebKit. Local cask Ruby syntax passed. Native launch, installation, upgrades, Developer ID signing and notarization remain unverified. Receipt: desktop/verification/2026-09-11-design-controls.json. Full parity remains incomplete.
+
+
+### Scope refresh through pointer completion with focus preservation (2026-09-11)
+
+Reproduced another scope refresh stall by holding the panel pointer-preservation window across a resize, then releasing it while the scope selector retained focus. Scope navigation now uses the same non-draft focus rule throughout viewport, pointer-release, click-completion, and focusout refresh paths. Rebuilt scope selectors explicitly regain focus without scrolling.
+
+The pointer regression failed before the change. Final viewport-busy tests passed in Chromium/WebKit for synthetic pointerup and click completion, new width options, preserved selector focus, busy-refresh recovery, and focused editable drafts. The broader breakpoint-preview test caught focus loss during implementation; after explicit focus restoration it passed in both browsers with comparison edit/undo/redo, persistence/reuse, and preview history. Workspace-panels also passed both browsers during the change, and 886 unit tests passed. These browser event tests do not establish native macOS interaction verification. Source changes postdate desktop archive 843f6ef. Full parity remains incomplete.

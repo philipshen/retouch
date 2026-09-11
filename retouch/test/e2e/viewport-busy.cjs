@@ -17,6 +17,13 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   await wait(async()=>await page.getByLabel('Style screen scope').locator('option[value="min-[820px]:"]').count()===1);
   await page.evaluate(()=>{RetouchScreens.set({width:940,height:900});document.querySelector('[aria-label="Style screen scope"]').focus();});
   await wait(async()=>await page.getByLabel('Style screen scope').locator('option[value="min-[940px]:"]').count()===1);
+  for(const [type,width,pointerId] of [['pointerup',1000,31],['click',1020,32]]){
+   await page.evaluate(({width,pointerId})=>{const scope=document.querySelector('[aria-label="Style screen scope"]');scope.focus();scope.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0,pointerId}));RetouchScreens.set({width,height:900});},{width,pointerId});
+   await page.waitForFunction(width=>doc().defaultView.innerWidth===width,width);await page.waitForTimeout(200);
+   await page.evaluate(({type,pointerId})=>window.dispatchEvent(new PointerEvent(type,{bubbles:true,button:0,pointerId})),{type,pointerId});
+   await wait(async()=>await page.getByLabel('Style screen scope').locator('option[value="min-['+width+'px]:"]').count()===1);
+   assert.equal(await page.getByLabel('Style screen scope').evaluate(el=>el===document.activeElement),true);
+  }
   const draft=page.getByLabel('Font size (CSS)',{exact:true});await draft.fill('77px');const field=await draft.elementHandle();
   await page.evaluate(()=>RetouchScreens.set({width:1060,height:900}));
   await page.waitForFunction(()=>doc().defaultView.innerWidth===1060);await page.waitForTimeout(200);

@@ -994,14 +994,15 @@ function screenScopeSection() {
   return section;
 }
 window.addEventListener('retouch:comparisons',()=>{const across=document.getElementById('compareBreakpointBoundary');if(across)across.disabled=!window.RetouchComparisons?.canShowSizes(JSON.parse(across.dataset.sizes));const button=document.getElementById('compareBreakpoint');if(button)button.disabled=!window.RetouchComparisons?.canShowSize({width:Number(button.dataset.width),height:Number(button.dataset.height)});});
-function panelInteractionFocused(){return panelBody.contains(document.activeElement)&&!document.activeElement.matches('[data-canvas-tool]');}
+// Scope navigation needs fresh viewport choices even while its selector has focus.
+function panelInteractionFocused(){return panelBody.contains(document.activeElement)&&!document.activeElement.matches('[data-canvas-tool], [aria-label="Style screen scope"]');}
 let viewportRenderPending = false;
 function queueViewportPanelRefresh(){
   if(viewportRenderPending)return;
   viewportRenderPending=true;
   requestAnimationFrame(()=>{
     viewportRenderPending=false;
-    if(sel){const scopeFocused=document.activeElement?.getAttribute('aria-label')==='Style screen scope';if(panelTasks||panelInteractionFocused()&&!scopeFocused)panelRenderDeferred=true;else renderPanel();}
+    if(sel){if(panelTasks||panelInteractionFocused())panelRenderDeferred=true;else renderPanel();}
   });
 }
 window.addEventListener('retouch:viewport',queueViewportPanelRefresh);
@@ -1051,11 +1052,12 @@ function renderPanel() {
   if((panelPointer||focusedDraft)&&key===renderedPanelSelection){panelRenderDeferred=true;return;}
   panelRenderDeferred=false;
   const top=key===renderedPanelSelection?panel.scrollTop:0;
+  const focusedScope=key===renderedPanelSelection&&document.activeElement?.getAttribute('aria-label')==='Style screen scope';
   const focusedTool=key===renderedPanelSelection&&panelBody.contains(document.activeElement)?document.activeElement.dataset.canvasTool:null;
   renderedPanelSelection=key;
   // Rebuilding an empty fieldset can clamp its scroll container to zero.
   // Restore synchronously after all sections (including early returns) exist.
-  try { renderPanelContents(); panelBody.dataset.organized='false';RetouchInspectorUI.organize(panelBody); } finally { panel.scrollTop=top;if(focusedTool)[...panelBody.querySelectorAll('[data-canvas-tool]')].find(el=>el.dataset.canvasTool===focusedTool)?.focus({preventScroll:true}); }
+  try { renderPanelContents(); panelBody.dataset.organized='false';RetouchInspectorUI.organize(panelBody); } finally { panel.scrollTop=top;if(focusedScope)panelBody.querySelector('[aria-label="Style screen scope"]')?.focus({preventScroll:true});if(focusedTool)[...panelBody.querySelectorAll('[data-canvas-tool]')].find(el=>el.dataset.canvasTool===focusedTool)?.focus({preventScroll:true}); }
 }
 function renderPanelContents() {
   window.dispatchEvent(new CustomEvent('retouch:selection',{detail:activeId()}));
