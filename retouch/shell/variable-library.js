@@ -3,7 +3,7 @@
  const I=RetouchInspector,open=document.createElement('button');open.type='button';open.id='variableLibrary';open.textContent='Variables';document.getElementById('toolbar').append(open);
  const dialog=document.createElement('dialog');dialog.className='variable-library';dialog.setAttribute('aria-label','Variable collections');document.body.append(dialog);
  const heading=document.createElement('h2');heading.textContent='Variable collections';const close=I.button('Close variable collections',()=>dialog.close()),status=document.createElement('p'),body=document.createElement('fieldset');status.setAttribute('role','status');body.style.cssText='border:0;padding:0;min-width:0';const header=document.createElement('header');header.append(heading,close);dialog.append(header,status,body);
- let library=null,collectionId='',variableId='',newType='color',busy=false,previewOpen=false,previewSerial=0;const previewModes={};
+ let library=null,collectionId='',variableId='',newType='color',busy=false,previewOpen=false,previewSerial=0;const previewModes={},collectionSearch={};
  const clone=value=>JSON.parse(JSON.stringify(value));
  const data=()=>({version:1,collections:clone(library.collections),variables:clone(library.variables)});
  const blank=type=>({color:'#2563eb',number:0,boolean:false,string:''})[type];
@@ -42,6 +42,8 @@
   const variables=library.variables.filter(item=>item.collectionId===collectionId);if(!variables.some(item=>item.id===variableId))variableId='';
   if(variables.length){
    const wrap=document.createElement('div'),table=document.createElement('table'),thead=document.createElement('thead'),head=document.createElement('tr'),tbody=document.createElement('tbody');wrap.className='variable-grid-scroll';wrap.tabIndex=0;wrap.setAttribute('aria-label','Scroll collection values');table.className='variable-grid';table.setAttribute('aria-label',collection.name+' variables');
+   const search=document.createElement('input'),count=document.createElement('p');search.type='search';search.className='variable-grid-search';search.placeholder='Search variables';search.setAttribute('aria-label','Search collection variables');search.value=collectionSearch[collectionId]||'';count.className='variable-grid-count';count.setAttribute('role','status');count.setAttribute('aria-label','Variable search results');
+   function filter(){const terms=search.value.trim().toLowerCase().split(/\s+/).filter(Boolean);let visible=0;for(const row of tbody.children){row.hidden=!terms.every(term=>row.dataset.search.includes(term));if(!row.hidden)visible++;}count.textContent=visible?visible+' of '+variables.length+' variables':'No matching variables';collectionSearch[collectionId]=search.value;}search.addEventListener('input',filter);
    for(const text of ['Name',...collection.modes.map(mode=>mode.name)]){const cell=document.createElement('th');cell.scope='col';cell.textContent=text;head.append(cell);}thead.append(head);table.append(thead,tbody);
    let cancelCell=null;
    function editCell(cell,button,item,mode){
@@ -58,9 +60,9 @@
     const apply=I.button('Save value',commit),discard=I.button('Cancel edit',cancel);editor.append(source,valueHost,apply,discard);editor.addEventListener('keydown',event=>{if(event.isComposing)return;if(event.key==='Escape'){event.preventDefault();event.stopPropagation();cancel();}else if(event.key==='Enter'&&event.target===field){event.preventDefault();commit();}});cell.replaceChildren(editor);field.focus();if(field.tagName==='INPUT')field.select();
    }
    function choose(item,mode){variableId=item.id;render();const label=mode?mode.name+(typeof item.values[mode.id]==='object'?' alias':' value'):'Collection variable name';[...body.querySelectorAll('[aria-label]')].find(el=>el.getAttribute('aria-label')===label)?.focus();}
-   for(const item of variables){const row=document.createElement('tr');row.dataset.selected=String(item.id===variableId);const name=document.createElement('th');name.scope='row';const pick=I.button(item.name,()=>choose(item));pick.setAttribute('aria-label','Edit variable '+item.name);const kind=document.createElement('small');kind.textContent=item.type;pick.append(kind);name.append(pick);row.append(name);
+   for(const item of variables){const row=document.createElement('tr');row.dataset.search=(item.name+' '+item.type).toLowerCase();row.dataset.selected=String(item.id===variableId);const name=document.createElement('th');name.scope='row';const pick=I.button(item.name,()=>choose(item));pick.setAttribute('aria-label','Edit variable '+item.name);const kind=document.createElement('small');kind.textContent=item.type;pick.append(kind);name.append(pick);row.append(name);
     for(const mode of collection.modes){const cell=document.createElement('td'),value=item.values[mode.id],alias=typeof value==='object'?library.variables.find(other=>other.id===value.alias):null,button=I.button(alias?'↗ '+alias.name:String(value),()=>editCell(cell,button,item,mode));button.setAttribute('aria-label','Edit '+item.name+' in '+mode.name);if(item.type==='color'&&!alias){const swatch=document.createElement('span');swatch.className='variable-color-swatch';swatch.style.backgroundColor=String(value);button.prepend(swatch);}cell.append(button);row.append(cell);}tbody.append(row);
-   }wrap.append(table);body.append(wrap);
+   }wrap.append(table);body.append(search,count,wrap);filter();
   }
   I.select(body,'Collection variable',[['','New variable…'],...variables.map(item=>[item.id,item.name])],variableId,value=>{variableId=value;render();});const variable=variables.find(item=>item.id===variableId),type=variable?.type||newType,variableName=input(body,'Collection variable name',variable?.name||'');
   const typePicker=I.select(body,'Variable type',['color','number','boolean','string'].map(value=>[value,value[0].toUpperCase()+value.slice(1)]),type,value=>{newType=value;render();});typePicker.disabled=!!variable;

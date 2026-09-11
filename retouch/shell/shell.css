@@ -588,3 +588,9 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .variable-cell-editor button { width:auto; min-height:24px; padding:4px 6px; font-size:10px; background:var(--bg); }
 
 .variable-cell-value { width:100%; min-width:0; }
+
+.variable-grid-search { width:100%; height:30px; border:1px solid var(--line); border-radius:5px; padding:6px 8px; background:var(--bg); color:var(--ink); }
+.variable-grid-count { color:var(--muted); font-size:10px; margin:6px 0; }
+.variable-grid tbody th { position:sticky; left:0; background:var(--panel); z-index:1; }
+.variable-grid tr[data-selected=true] th { background:#e5f4ff; }
+.variable-grid thead th:first-child { left:0; z-index:2; }
