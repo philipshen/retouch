@@ -80,6 +80,7 @@ function busyPanel(start) {
   if(start)stopDrawing?.();
   panelTasks += start ? 1 : -1;
   syncHistoryControls();
+  if(!panelTasks&&panelRenderDeferred)queueViewportPanelRefresh();
 }
 let lastAppPath = null;
 let styleScope = '';
@@ -198,7 +199,7 @@ function hookFrame(d, w) {
     clearTimeout(styleRefresh);
     styleRefresh = setTimeout(() => {
       const viewport=viewportStyleRefresh;viewportStyleRefresh=false;
-      if (doc() === d && sel && !panelTasks && (viewport?!panelInteractionFocused():!panelBody.contains(document.activeElement))) renderPanel();
+      if(doc()===d&&sel){if(viewport)queueViewportPanelRefresh();else if(!panelTasks&&!panelBody.contains(document.activeElement))renderPanel();}
     }, 100);
   };
   // WebKit can settle the child viewport after the parent's animation frame.
@@ -995,14 +996,15 @@ function screenScopeSection() {
 window.addEventListener('retouch:comparisons',()=>{const across=document.getElementById('compareBreakpointBoundary');if(across)across.disabled=!window.RetouchComparisons?.canShowSizes(JSON.parse(across.dataset.sizes));const button=document.getElementById('compareBreakpoint');if(button)button.disabled=!window.RetouchComparisons?.canShowSize({width:Number(button.dataset.width),height:Number(button.dataset.height)});});
 function panelInteractionFocused(){return panelBody.contains(document.activeElement)&&!document.activeElement.matches('[data-canvas-tool]');}
 let viewportRenderPending = false;
-window.addEventListener('retouch:viewport',()=>{
+function queueViewportPanelRefresh(){
   if(viewportRenderPending)return;
   viewportRenderPending=true;
   requestAnimationFrame(()=>{
     viewportRenderPending=false;
-    if(sel && !panelTasks){if(panelInteractionFocused())panelRenderDeferred=true;else renderPanel();}
+    if(sel){if(panelTasks||panelInteractionFocused())panelRenderDeferred=true;else renderPanel();}
   });
-});
+}
+window.addEventListener('retouch:viewport',queueViewportPanelRefresh);
 let renderedPanelSelection=null,panelPointer=null,panelRenderDeferred=false;
 window.addEventListener('pointerdown',event=>{
   if(event.button===0&&panelBody.contains(event.target))panelPointer={id:event.pointerId};

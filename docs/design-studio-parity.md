@@ -11101,3 +11101,10 @@ The added no-overlap regression failed before the fix and passed afterward in Ch
 Both HTML and React individual-corner fields now use a spatial 2x2 grid: top-left/top-right above bottom-left/bottom-right. HTML corners live in an Individual corners disclosure, with the shared CSS radius paired with opacity. Original accessible field names and write callbacks are retained.
 
 React Chromium inspector-light and HTML WebKit workflows passed one-corner edits with other-corner preservation and exact undo. The first HTML Chromium full run passed the corner checks but timed out later at a missing breakpoint option in the shadow workflow (line 254); an unchanged rerun passed the full workflow. That intermittent resize/scope synchronization remains unexplained. Screenshot /private/tmp/retouch-corners-chromium.png was visually inspected. These source changes postdate the f8394de desktop archive. Full parity remains incomplete.
+
+
+### Retain viewport refreshes while inspector work is pending (2026-09-11)
+
+Found a reproducible dropped refresh: both viewport refresh paths discarded changes when panelTasks was nonzero. The shared queued refresh now marks the panel deferred in that state, and busyPanel completion queues a retry. Focused inspector interaction continues to defer replacement. Embedded-window resize uses the same queue.
+
+New viewport-busy.cjs failed before the change and passed afterward in Chromium/WebKit: hold the inspector busy across an actual iframe resize, release it, and verify the new 820px breakpoint option appears without a source change. A separate normal-resize case preserves a focused 77px draft and its DOM control. Artificially making a draft field busy was excluded from that draft test because busy-state disabling itself commits/blurs the field. The full Chromium HTML workflow and 883 unit tests passed. This is a proven refresh gap; the precise cause of the previous intermittent shadow-workflow failure remains unproven. Source changes postdate desktop archive f8394de. Full parity remains incomplete.
