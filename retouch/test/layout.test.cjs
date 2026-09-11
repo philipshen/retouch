@@ -308,3 +308,15 @@ test('padding retains authored relative units without displaying masked override
  assert.equal(L.ownPadding('pl-[2rem] md:pl-[4rem]','left'),'2rem');
  assert.equal(L.ownPadding('pl-[var(--padding)]','left'),null);
 });
+
+
+test('gap fields preserve owned relative units with physical-axis mapping and important masking',()=>{
+ assert.equal(L.ownGap('!gap-x-[1.5rem]','width','horizontal-tb','!gap-4'),'1.5rem');
+ assert.equal(L.ownGap('gap-y-[5%]','width','vertical-rl'),'5%');
+ assert.equal(L.ownGap('[column-gap:2em]','height','vertical-rl'),'2em');
+ assert.equal(L.ownGap('gap-x-[2rem]','width','horizontal-tb','!gap-4'),null);
+ assert.equal(L.ownGap('gap-x-[2rem] ![gap:20px]','width','horizontal-tb'),null);
+ assert.equal(L.ownGap('gap-x-[var(--gap)]','width','horizontal-tb'),null);
+ assert.equal(L.ownGap('gap-x-[2rem] md:gap-x-[4rem]','width','horizontal-tb'),'2rem');
+ assert.equal(L.ownGap('gap-x-[normal]','width','horizontal-tb'),'normal');
+});

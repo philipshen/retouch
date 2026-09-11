@@ -108,6 +108,14 @@
     if(!/^(?:\d+\.?\d*|\.\d+)(?:px|%|rem|em|vw|vh|ch)$/.test(value)||parseFloat(value)>10000)throw Error('Use a nonnegative gap up to 10000, with px, %, rem, em, vw, vh or ch, or normal.');
     return value;
   }
+  function ownGap(classes,axis,writingMode,inherited=''){
+    const inline=layoutAxes({writingMode}).inline===axis,kind=inline?'x':'y',property=inline?'column-gap':'row-gap';
+    const candidates=classes.split(/\s+/).map(token=>({token,base:I.base(token)})).filter(({base})=>base&&(base.startsWith('gap-'+kind+'-[')||base.startsWith('['+property+':')));
+    const own=candidates.find(({token})=>/^!|!$/.test(token))||candidates[0];if(!own)return null;
+    if(!/^!|!$/.test(own.token)&&gapClasses('',axis,0,writingMode,classes+' '+inherited).startsWith('!'))return null;
+    const value=own.base.startsWith('[')?own.base.slice(('['+property+':').length,-1):own.base.slice(('gap-'+kind+'-[').length,-1);
+    try{return gapValue(value).replace(/px$/,'');}catch{return null;}
+  }
   function gapClasses(classes,axis,value,writingMode,inherited=''){
     if(!['width','height'].includes(axis))throw Error('Choose a horizontal or vertical gap.');
     if(value!==null)value=gapValue(value);
@@ -231,7 +239,7 @@
         I.select(sec,'Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>save(arrangementClasses(classes,'wrap',v,inherited)));
       }
       for(const [prop,label,axis] of [['columnGap',verticalInline?'Vertical gap':'Horizontal gap',verticalInline?'height':'width'],['rowGap',verticalInline?'Horizontal gap':'Vertical gap',verticalInline?'width':'height']]) {
-        const input=document.createElement('input');input.type='text';input.value=css[prop].replace(/px$/,'');input.placeholder='0';input.title='Pixels by default; also accepts %, rem, em, vw, vh, ch or normal. Enter saves. Escape cancels.';const initial=input.value;
+        const input=document.createElement('input');input.type='text';input.value=ownGap(classes,axis,css.writingMode,inherited)??css[prop].replace(/px$/,'');input.placeholder='0';input.title='Pixels by default; also accepts %, rem, em, vw, vh, ch or normal. Enter saves. Escape cancels.';const initial=input.value;
         input.oninput=()=>input.setCustomValidity('');
         input.onchange=()=>{if(input.value===initial)return;try{save(gapClasses(classes,axis,input.value,css.writingMode,info.styleScope?info.anchorInheritedClasses||'':''));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
         input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};
@@ -322,6 +330,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);
