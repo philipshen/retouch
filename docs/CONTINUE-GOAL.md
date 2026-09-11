@@ -681,3 +681,10 @@ Homebrew temporary-tap install/uninstall passed with isolated app directory and 
 Component canvas badges now cap at 240 CSS pixels, truncate long names with an ellipsis, expose the full name through a native title, and prevent the icon/detach button from shrinking. The paint loop avoids rewriting unchanged label text.
 
 Chromium and WebKit React library workflows passed. A synthetic long resolved component name exercises the actual badge renderer; checks verify truncation, full title, maximum width, and the detach button remaining inside the badge at full width. Existing selected/hovered name and component layer checks also pass. Screenshot /private/tmp/retouch-long-component-badge.png visually inspected; logs /private/tmp/retouch-long-badge-{chromium,webkit}.log. This does not establish viewport-edge clamping or arbitrary zoom placement. Source postdates the 4dba5a3 packaged archive; full parity remains incomplete.
+
+
+### Keep component badges inside page edges (2026-09-11)
+
+Component badge horizontal placement now clamps against the iframe page width, accounting for inverse badge scaling at canvas zoom. Its maximum width also shrinks with the rendered page width, with a 60px floor to preserve the icon and action.
+
+Chromium and WebKit React library workflows passed. A synthetic long name and temporary runtime positioning put the selected component at the right edge; browser checks require the badge to remain within the iframe bounds at 50%, 200% and 100% zoom. Runtime fixture styling is restored and the existing source-preservation assertion passes. Logs /private/tmp/retouch-edge-badge-{chromium,webkit}.log. This covers page-edge clamping, not clipping against a panned canvas viewport or pages rendered narrower than the minimum badge width. Source postdates the 4dba5a3 archive; full parity remains incomplete.

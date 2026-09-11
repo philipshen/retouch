@@ -240,6 +240,13 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    await wait(async()=>await page.locator('.component-badge > span').textContent()===longComponentName);
    const badgeGeometry=await page.locator('.component-badge').evaluate(el=>{const label=el.querySelector('span'),button=el.querySelector('button'),r=el.getBoundingClientRect(),b=button.getBoundingClientRect();return {width:r.width,truncated:label.scrollWidth>label.clientWidth,title:label.title,buttonInside:b.right<=r.right&&b.left>=r.left,buttonWidth:b.width};});
    assert.ok(badgeGeometry.width<=240&&badgeGeometry.truncated&&badgeGeometry.buttonInside&&badgeGeometry.buttonWidth>=20,'Long component name truncates without shrinking its action');assert.equal(badgeGeometry.title,longComponentName);
+   const originalHeadingStyle=await app.locator('h1').getAttribute('style');
+   await app.locator('h1').evaluate(el=>{el.style.width='20px';el.style.marginLeft=(el.ownerDocument.defaultView.innerWidth-20)+'px';});
+   for(const percent of [50,200,100]){
+    await page.locator('#canvasZoom').fill(String(percent));await page.locator('#canvasZoom').press('Enter');
+    await wait(async()=>await page.locator('.component-badge').evaluate(el=>{const badge=el.getBoundingClientRect(),frame=document.getElementById('app').getBoundingClientRect();return badge.width>0&&badge.left>=frame.left-1&&badge.right<=frame.right+1;}));
+   }
+   await app.locator('h1').evaluate((el,style)=>style===null?el.removeAttribute('style'):el.setAttribute('style',style),originalHeadingStyle);
    if(process.env.RT_E2E_LONG_BADGE_SCREENSHOT)await page.locator('.component-badge').screenshot({path:process.env.RT_E2E_LONG_BADGE_SCREENSHOT});
    await page.evaluate(()=>{sel.info.tag='HeadlineCard';});await wait(async()=>await page.locator('.component-badge > span').textContent()==='HeadlineCard');
    const componentLayer=page.getByRole('tree',{name:'Site layers',exact:true}).getByRole('treeitem',{name:'HeadlineCard · component',exact:true});
