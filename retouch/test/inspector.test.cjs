@@ -127,3 +127,12 @@ test('corner reset removes local physical overrides and preserves shared radii a
  assert.equal(radius('rounded-lg !rounded-tl-[12px] [border-top-left-radius:4px] md:rounded-sm','tl',null),'rounded-lg md:rounded-sm');
  assert.equal(radius('!rounded-lg rounded-tr-md [border-bottom-left-radius:4px] md:rounded-sm',null,null),'md:rounded-sm');
 });
+
+test('stroke width and style edits retain inherited priority and reset local declarations',()=>{
+ const stroke=require('../shell/inspector.js').borderClasses;
+ assert.equal(stroke('[border-top-width:2px] border-b-4 border-red-500 md:border-8','width',6,'!border-2'),'border-red-500 md:border-8 !border-[6px]');
+ assert.equal(stroke('border-dashed [border-left-style:double] border-2','style','solid','!border-dotted'),'border-2 !border-solid');
+ assert.equal(stroke('!border-4 border-dashed md:border-8','width',null),'border-dashed md:border-8');
+ assert.equal(stroke('border-4 !border-dashed','style',null),'border-4');
+ assert.throws(()=>stroke('','width',-1));assert.throws(()=>stroke('','style','bad'));
+});

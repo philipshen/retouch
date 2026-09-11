@@ -330,6 +330,15 @@
     const ctx=canvas.getContext('2d');ctx.fillStyle=value;ctx.fillRect(0,0,1,1);
     return '#'+[...ctx.getImageData(0,0,1,1).data].slice(0,3).map(v=>v.toString(16).padStart(2,'0')).join('');
   }
+  const borderWidthToken=t=>/^border(?:-(?:[trblxyse]))?(?:-(?:\d+(?:\.\d+)?|\[(?:length:[^\]]+|[-.\d][^\]]*)\]))?$/.test(t);
+  function borderClasses(classes,property,value,inherited=''){
+    if(!['width','style'].includes(property))throw Error('Choose a stroke property.');
+    if(value!==null&&(property==='width'? !Number.isFinite(value)||value<0||value>100:!['solid','dashed','dotted','double','none','hidden'].includes(value)))throw Error('Unsupported stroke value.');
+    const matches=t=>(property==='width'?borderWidthToken(t):/^border(?:-[trblxyse])?-(solid|dashed|dotted|double|hidden|none)$/.test(t))||new RegExp('^\\[border(?:-[a-z]+(?:-[a-z]+)?)?-'+property+':').test(t);
+    let addition=value===null?'':property==='width'?'border-['+value+'px]':'border-'+value;
+    if(addition&&[...tokens(classes),...tokens(inherited)].some(token=>/^!|!$/.test(token)&&(matches(base(token)||'')||/^\[border(?:-[trblxyse]|-top|-right|-bottom|-left)?:/.test(base(token)||''))))addition='!'+addition;
+    return replace(classes,matches,addition);
+  }
   function cornerRadiusClasses(classes,corner,value,inherited=''){
     const names={tl:'top-left',tr:'top-right',bl:'bottom-left',br:'bottom-right'};
     if(corner!==null&&!Object.hasOwn(names,corner))throw Error('Choose a corner.');
@@ -378,15 +387,17 @@
       if(el.style.getPropertyValue(property)){control.disabled=true;reset.disabled=true;note(sec,'An inline '+label.toLowerCase()+' controls this layer.');}
       if(property==='visibility')note(sec,'Hidden layers keep their layout space. Select them in Layers to show them again.');
     }
-    const widthToken=t=>/^border(?:-(?:[trblxyse]))?(?:-(?:\d+(?:\.\d+)?|\[(?:length:[^\]]+|[-.\d][^\]]*)\]))?$/.test(t);
+    const widthToken=borderWidthToken;
     const borderWidths=['Top','Right','Bottom','Left'].map(side=>css['border'+side+'Width']);
     const borderWidth=number(sec,'Border width (px)',borderWidths.every(v=>v===borderWidths[0])?parseFloat(borderWidths[0]):NaN,0,100,v=>{
-      let next=replace(info.className,widthToken,`border-[${v}px]`);
-      if(v>0&&css.borderTopStyle==='none')next=replace(next,t=>/^border(?:-[trblxyse])?-(solid|dashed|dotted|double|hidden|none)$/.test(t),'border-solid');
+      let next=borderClasses(info.className,'width',v,info.anchorInheritedClasses);
+      if(v>0&&css.borderTopStyle==='none')next=borderClasses(next,'style','solid',info.anchorInheritedClasses);
       save(next);
     });
     borderWidth.placeholder='Mixed';
-    select(sec,'Border style',['solid','dashed','dotted','double','none'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.borderTopStyle,v=>save(replace(info.className,t=>/^border(?:-[trblxyse])?-(solid|dashed|dotted|double|hidden|none)$/.test(t),'border-'+v)));
+    const resetWidth=button('Reset border width',()=>save(borderClasses(info.className,'width',null)));resetWidth.disabled=borderClasses(info.className,'width',null)===info.className;sec.append(resetWidth);
+    select(sec,'Border style',['solid','dashed','dotted','double','none'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.borderTopStyle,v=>save(borderClasses(info.className,'style',v,info.anchorInheritedClasses)));
+    const resetStyle=button('Reset border style',()=>save(borderClasses(info.className,'style',null)));resetStyle.disabled=borderClasses(info.className,'style',null)===info.className;sec.append(resetStyle);
     const borderColor=document.createElement('input');borderColor.type='color';borderColor.value='#000000';
     try {const c=colorHex(css.borderTopColor,el.ownerDocument);if(c)borderColor.value=c;} catch {}
     // Color inputs accept sRGB hex, while computed CSS may use lab/oklch.
@@ -669,6 +680,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);
