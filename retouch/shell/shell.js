@@ -215,7 +215,7 @@ function hookFrame(d, w) {
   d.addEventListener('click', async (e) => {
     if (mode !== 'edit') return;
     if (panelTasks > 0 || undoBusy || sourceRequests) { e.preventDefault(); e.stopPropagation(); return; }
-    if ((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection||sel?.info.contextSelection)){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=layerLocks.pick(e.target,e.clientX,e.clientY);if(target)await select(target,{toggle:true});return;}
+    if ((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection||sel?.info.contextSelection||sel?.info.kind==='instance')){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=layerLocks.pick(e.target,e.clientX,e.clientY);if(target)await select(target,{toggle:true});return;}
     if (editing) {
       if (editing.el.contains(e.target)) return;
       commitInlineEdit(); // clicking away commits (R-5)
@@ -433,10 +433,10 @@ async function select(node,{toggle=false,sourceId}={}) {
   const c = await classify(node,sourceId);
   if (c?.superseded) return;
   if (!c) return clearSelection();
-  if(toggle&&(c.info.cssAuthoring&&sel?.info.cssAuthoring||c.info.classSelection&&sel?.info.classSelection||c.info.contextSelection&&sel?.info.contextSelection)&&c.info.file===sel.info.file&&c.info.hash===sel.info.hash){
+  if(toggle&&(c.info.cssAuthoring&&sel?.info.cssAuthoring||c.info.classSelection&&sel?.info.classSelection||c.info.contextSelection&&sel?.info.contextSelection||c.info.kind==='instance'&&sel?.info.kind==='instance')&&c.info.file===sel.info.file&&c.info.hash===sel.info.hash){
     let multiple=sel.multiple||[sel.info];multiple=multiple.some(info=>info.id===c.info.id)?multiple.filter(info=>info.id!==c.info.id):[...multiple,c.info];
     if(!multiple.length)return clearSelection();if(multiple.length>100)return toast('Select up to 100 layers.','err');
-    const primary=multiple.find(info=>info.id===c.info.id)||multiple[0];sel={hostId:primary.id,instanceId:null,scope:'host',info:primary,multiple:multiple.length>1?multiple:undefined};renderPanel();return;
+    const primary=multiple.find(info=>info.id===c.info.id)||multiple[0];sel={hostId:primary.id,instanceId:primary.kind==='instance'?primary.id:null,scope:primary.kind==='instance'?'instance':'host',info:primary,multiple:multiple.length>1?multiple:undefined};renderPanel();return;
   }
   renderedSelection={id:c.info.id,element:c.el};
   sel = {
@@ -842,7 +842,7 @@ function paintLoop() {
   }
   // Keep the badge mounted so pointer/focus events survive animation frames.
   if(componentBadge.matches(':hover') || componentBadge.contains(document.activeElement))badge=badgeTarget;
-  if(mode!=='edit' || !badge?.el.isConnected)badge=null;
+  if(mode!=='edit' || sel?.multiple?.length>1 || !badge?.el.isConnected)badge=null;
   badgeTarget=badge;componentBadge.hidden=!badge;
   if(badge){const r=RetouchComponentInstances.bounds((badge.elements||[badge.el]).filter(el=>el.isConnected))||badge.el.getBoundingClientRect();componentBadge.style.left=Math.max(0,r.left)+'px';componentBadge.style.top=Math.max(0,r.top-22)+'px';}
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
@@ -859,7 +859,7 @@ function paintLoop() {
 }
 
 function syncLayerSelection() {
-  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
+  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id)}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
 }
 
 function inTextScope(el, info) {
@@ -1011,12 +1011,13 @@ function renderPanelContents() {
   head.className = 'sec';
   const badge = document.createElement('span');
   badge.className = 'kindbadge' + (info.kind === 'instance' ? ' instance' : '');
-  badge.textContent = sel.multiple?.length>1?sel.multiple.length+' layers':info.kind === 'instance' ? 'component' : '<' + info.tag + '>';
+  badge.textContent = sel.multiple?.length>1?sel.multiple.length+(info.kind==='instance'?' components':' layers'):info.kind === 'instance' ? 'component' : '<' + info.tag + '>';
   head.appendChild(badge);
   const file = document.createElement('div');
   file.className = 'filepath';
   file.textContent = info.file;
   head.appendChild(file);
+  if(info.kind==='instance'&&sel.multiple?.length>1){panelBody.append(head,componentSelectionSection(sel.multiple));return;}
   head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
   {const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,scope=info.classColorStyles?styleScope:width;
@@ -1380,6 +1381,56 @@ function propTable(props,instanceId,fileHash,options={}) {
     requestAnimationFrame(()=>{if(group.isConnected)group.querySelectorAll('.component-prop-text').forEach(sizeComponentText);});
   };
   search.addEventListener('input',filter);search.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();search.value='';filter();}});group.append(search,status,table);filter();return group;
+}
+function componentSelectionSection(infos){
+ const section=RetouchInspector.section('Shared component properties'),key=panelSelectionKey(),ids=infos.map(info=>info.id);
+ RetouchInspector.note(section,'Changes apply to these component usages at every screen size.');
+ const pending=document.createElement('p');pending.textContent='Loading shared properties…';section.append(pending);
+ Promise.all(ids.map(id=>api('GET',componentUrl(id)))).then(components=>{
+  if(!section.isConnected||key!==panelSelectionKey())return;
+  pending.remove();
+  if(components.some((component,i)=>!component?.ok||component.usageHash!==infos[i].hash)){RetouchInspector.note(section,'The component source changed. Select the instances again.');return;}
+  const shared=components[0].props.filter(prop=>components.every(component=>component.props.some(other=>other.name===prop.name)));
+  if(!shared.length){RetouchInspector.note(section,'These components have no shared properties.');return;}
+  for(const prop of shared){
+   const metas=components.map(component=>component.props.find(other=>other.name===prop.name).editor||{}),type=metas[0].type;
+   const editable=metas.every(meta=>meta.editable&&meta.type===type),mixed=metas.some(meta=>meta.value!==metas[0].value||!!meta.unset!==!!metas[0].unset);
+   const constrained=metas.filter(meta=>meta.choices),choices=constrained.length?constrained[0].choices.filter(value=>constrained.every(meta=>meta.choices.includes(value))):null;
+   const hashes=Object.fromEntries(ids.map((id,i)=>[id,metas[i].definitionHash]).filter(([,hash])=>hash!==undefined));
+   const row=document.createElement('div');row.className='field';const label=document.createElement('label');label.textContent=prop.name;
+   const input=document.createElement(choices?'select':type==='string'?'textarea':'input');input.setAttribute('aria-label','Shared component property '+prop.name);input.disabled=!editable||choices?.length===0;
+   if(choices){if(mixed||metas[0].unset){const option=new Option(mixed?'Mixed':'Not set','');option.disabled=true;input.append(option);}choices.forEach((value,i)=>input.append(new Option(String(value),String(i))));input.value=mixed||metas[0].unset?'':String(choices.indexOf(metas[0].value));}
+   else if(type==='boolean'){input.type='checkbox';input.checked=!!metas[0].value;input.indeterminate=mixed;}
+   else{if(type!=='string'){input.type='number';input.step='any';}else{input.rows=1;input.className='component-prop-text';}input.value=mixed||metas[0].unset?'':String(metas[0].value??'');input.placeholder=mixed?'Mixed':metas[0].unset?'Not set':'';}
+   const save=(value,options={})=>setComponentPropertySelection(infos,key,prop.name,value,hashes,options);
+   input.oninput=()=>input.setCustomValidity('');
+   input.onchange=()=>{if(input.disabled)return;if(type==='number'&&(!input.value.trim()||!Number.isFinite(Number(input.value)))){input.setCustomValidity('Enter a finite number.');input.reportValidity();return;}if(!input.reportValidity())return;save(choices?choices[Number(input.value)]:type==='boolean'?input.checked:type==='number'?Number(input.value):input.value);};
+   input.onkeydown=event=>{if(event.isComposing)return;if(event.key==='Enter'&&(type!=='string'||event.metaKey||event.ctrlKey)){event.preventDefault();input.blur();}};
+   label.append(input);row.append(label);
+   if(!editable)RetouchInspector.note(row,metas.find(meta=>!meta.editable)?.reason||'These properties have different types.');
+   if(choices?.length===0)RetouchInspector.note(row,'These properties have no allowed value in common.');
+   if(metas.every(meta=>meta.canReset))row.append(RetouchInspector.button('Reset '+prop.name+' to defaults',()=>save(undefined,{reset:true})));
+   if(metas.every(meta=>meta.canClear))row.append(RetouchInspector.button('Unset '+prop.name,()=>save(undefined,{clear:true})));
+   section.append(row);
+  }
+ }).catch(error=>{if(section.isConnected)RetouchInspector.note(section,'Could not load shared properties: '+error.message);});
+ return section;
+}
+async function refreshComponentSelection(ids){
+ await restoreLayerSelection(ids);
+ if(sel?.info.kind==='instance')await refreshWrittenElement(sel.info,el=>(sel.multiple||[sel.info]).every(info=>matchingInDocument(el.ownerDocument,info.id,info).some(root=>root.getAttribute(info.renderRevisionAttribute)===info.hash)));
+ else await reloadFrame();
+ await layers.refresh();if(sel)renderPanel();
+}
+async function setComponentPropertySelection(infos,key,name,value,definitionHashes,options={}){
+ if(key!==panelSelectionKey()||panelTasks||undoBusy||sourceRequests)return;
+ const ids=infos.map(info=>info.id);busyPanel(true);
+ try{
+  const result=await api('POST','/rt/__api/op',{type:'setComponentPropSelection',id:ids[0],ids,fileHash:infos[0].hash,name,value,definitionHashes,...options});
+  if(!result?.ok){toast(result?.reason||result?.error||'Could not edit the selected properties','err');return;}
+  if(result.undoId)editorHistory.record({type:'setComponentPropSelection',id:ids[0],selectionIds:ids,undoId:result.undoId});
+  await refreshComponentSelection(ids);toast('Component properties updated','ok');
+ }catch(error){toast(error.message||'Could not edit the selected properties','err');}finally{busyPanel(false);}
 }
 function mountedComponentHost(instanceId,component,context){
  const ids=component.definitionIds?.length?component.definitionIds:[component.definitionId].filter(Boolean);
@@ -2289,6 +2340,7 @@ async function restoreHistory(direction,op) {
     if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='setComponentPropSelection'){await refreshComponentSelection(op.selectionIds);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='collectionSelection'){await reloadFrame();await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     const fresh = await api('GET', resolveUrl(op.id, op.context));
     if (fresh?.ok) { sel = { hostId: op.id, instanceId: null, scope: 'host', info: fresh.element }; renderPanel(); }
@@ -2622,7 +2674,7 @@ async function insertLayer(preset,info,type='insertElement',extra={}){
 async function restoreLayerSelection(ids){
   const selected=await Promise.all(ids.map(id=>{const element=matchingEls(id)[0];return api('GET',resolveUrl(id,element?renderContext(element):undefined));}));
   if(!selected.length||selected.some(result=>!result?.ok))return;
-  const infos=selected.map(result=>result.element),first=infos[0];sel={hostId:first.id,instanceId:null,scope:'host',info:first,multiple:infos.length>1?infos:undefined};
+  const infos=selected.map(result=>result.element),first=infos[0];sel={hostId:first.id,instanceId:first.kind==='instance'?first.id:null,scope:first.kind==='instance'?'instance':'host',info:first,multiple:infos.length>1?infos:undefined};
 }
 async function structureSelection(action,extra={}){
   if(sel.multiple?.length>1&&!sel.info.cssAuthoring)return toast('React selection structure editing is not available yet.','err');
@@ -2640,6 +2692,7 @@ async function structureSelection(action,extra={}){
 }
 async function structureAction(action) {
   if(!sel || panelTasks || undoBusy || sourceRequests)return;
+  if(sel.info.kind==='instance'&&sel.multiple?.length>1)return toast('Choose one component for this structural edit.','err');
   if(['frameSelection','removeFrame'].includes(action)){await commitInlineEdit();if(sel)return structureSelection(action);return;}
   if(sel.multiple?.length>1){if(action==='reparentElement')return chooseLayerParent(sel.info);if(['duplicateElement','deleteElement'].includes(action))return structureSelection(action);return toast('Choose one layer for this structural edit.','err');}
   await commitInlineEdit();

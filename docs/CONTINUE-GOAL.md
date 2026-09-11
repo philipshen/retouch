@@ -72,16 +72,11 @@ Repeat relevant checks with `RT_E2E_BROWSER=webkit`. Check each test's own envir
 
 ## Next investigation and implementation pointers
 
-The interrupted next task was component-instance multi-selection. Current host multi-selection should not be mistaken for component-instance parity.
+The Layers → shared inspector → atomic source operation → compiled preview → Undo/Redo slice now passes Chromium and WebKit. Modifier-click toggles compatible component usages in one source file. Shared controls include mixed values and compatible property editors, default reset and clear. History preserves the selection; preview refresh waits for compiler-stamped usage revisions.
 
-- `retouch/shell/shell.js`: `classifyNode`, `select`, `selectMany`, `renderPanelContents`, `propTable`, and history/selection restoration. `selectMany` currently collects data-rt host IDs and requires compatible metadata in one source file. Shift-click compatibility also excludes component-instance selections.
-- `retouch/src/adapters/react.cjs`: classSelection is exposed only for host elements. Single-instance properties delegate to `component-props.cjs`; `setComponentPropSelection` now delegates to `component-props.cjs.planSelection` for one atomic source/API transaction. It does not yet enable component multi-selection in the UI.
-- `retouch/src/component-props.cjs`: preserves literals/types, checks defaults and TypeScript contracts, rejects uncontrolled expression/spread writes, and includes dependency/path checks.
-- `retouch/src/jsx-class-selection.cjs` and `transactions.cjs`: existing batch planning and atomic application patterns. The component-property batch now validates every member against the same original source snapshot, combines non-overlapping property changes, retains dependency checks, and produces one exact Undo step. Preserve those guarantees when connecting the UI.
-- `retouch/shell/component-instances.js`: root grouping and occurrence identity. Selection, outlines, edits, and history must agree on whether they target a usage, a shared definition, or a repeated rendered occurrence.
-- Existing coverage: `retouch/test/component-props.test.cjs`, React selection e2e tests, component/root/repeated-occurrence fixtures found by searching `retouch/test/e2e`.
+Key files: `retouch/shell/shell.js` (`componentSelectionSection`, `refreshComponentSelection`, `setComponentPropertySelection`), `retouch/shell/layers.js`, `retouch/src/component-props.cjs` (`planSelection`), and `retouch/test/e2e/component-property-selection.cjs`. The source planner validates all usages against one original snapshot and retains dependency guards. Preserve its atomicity and exact Undo guarantees.
 
-The next agent should inspect and implement a complete usable slice through selection → shared inspector → atomic source operation → compiled preview → Undo/Redo, while retaining the broader goal. The atomic API operation is now implemented and tested; continue through usable multi-instance selection, common-property controls, compiled preview and client history. See component-props-selection.test.cjs and test/e2e/component-property-selection.cjs for the source/API contract.
+Continue with broader component picking/range/marquee selection, repeated and fragment-root identity, mixed host/instance behavior, and richer property-control UI coverage. Structural group actions are unavailable. The browser fixture verifies strings, default reset, expression protection and toggle/history; it does not establish every control type or arbitrary local-function component discovery. `selectMany` still targets host IDs.
 
 ## Broader unfinished scope (not an exhaustive audit)
 

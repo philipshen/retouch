@@ -54,9 +54,9 @@
     host.append(header,search,lockFilter,unlockShown,selectAll,tree,empty,actions,reason);
     let components=[],componentRequest=0,selectedInfo=null,treeRoots=[],virtualItems=[];const componentKeys=new WeakMap();
     const key=item=>{if(!item.componentId)return item.el;let keys=componentKeys.get(item.el);if(!keys)componentKeys.set(item.el,keys=new Map());if(!keys.has(item.componentId))keys.set(item.componentId,{});return keys.get(item.componentId);};
-    const isSelected=item=>item.componentId?selectedInfo?.kind==='instance'&&selectedInfo.id===item.componentId&&item.componentRoots.includes(selected):!(selectedInfo?.kind==='instance'&&virtualItems.some(row=>row.componentId===selectedInfo.id&&row.componentRoots.includes(selected)))&&selectedSet.has(item.el);
-    const selectedRoots=()=>selectedInfo?.kind==='instance'?virtualItems.find(item=>item.componentId===selectedInfo.id&&item.componentRoots.includes(selected))?.componentRoots||[...selectedSet]:[...selectedSet];
-    const choose=item=>onSelect(item.el,{sourceId:item.componentId|| (item.parent?.componentId?item.el.getAttribute('data-rt'):undefined),component:!!item.componentId});
+    const isSelected=item=>item.componentId?selectedInfo?.kind==='instance'&&(selectedInfo.selectionIds||[selectedInfo.id]).includes(item.componentId)&&item.componentRoots.some(el=>selectedSet.has(el)):!(selectedInfo?.kind==='instance'&&virtualItems.some(row=>(selectedInfo.selectionIds||[selectedInfo.id]).includes(row.componentId)&&row.componentRoots.some(el=>selectedSet.has(el))))&&selectedSet.has(item.el);
+    const selectedRoots=()=>selectedInfo?.selectionIds?.length>1?[...new Set(virtualItems.filter(isSelected).flatMap(item=>item.componentRoots||[item.el]))]:selectedInfo?.kind==='instance'?virtualItems.find(item=>item.componentId===selectedInfo.id&&item.componentRoots.includes(selected))?.componentRoots||[...selectedSet]:[...selectedSet];
+    const choose=(item,toggle=false)=>onSelect(item.el,{toggle,sourceId:item.componentId|| (item.parent?.componentId?item.el.getAttribute('data-rt'):undefined),component:!!item.componentId});
     async function loadComponents(){if(!readComponents||!d)return;const request=++componentRequest,current=d;try{const result=await readComponents();if(request===componentRequest&&d===current&&result?.ok){components=result.components||[];render();}}catch{}}
     let d=null,observer=null,timer=null,selected=null,rows=[],collapsed=new WeakSet(),lastCapabilities=null,isBusy=false,dragged=null,draggedItem=null,selectedSet=new Set(),rangeAnchor=null;
     function clearTargets(){for(const row of rows)row.button.classList.remove('drop-target','drop-before','drop-after');}
@@ -90,10 +90,10 @@
           b.setAttribute('role','treeitem');b.setAttribute('aria-level',depth);b.setAttribute('aria-selected',String(isSelected(item)));
           b.tabIndex=isSelected(item)?0:-1;b.disabled=isBusy;
           if(item.children.length)b.setAttribute('aria-expanded',String(expanded));else b.removeAttribute('aria-expanded');
-          b.onclick=e=>{if(item.componentId||item.parent?.componentId)return choose(item);if(multiEnabled&&e.shiftKey)return selectRange(item.el,e.metaKey||e.ctrlKey);rangeAnchor=item.el;return onSelect(item.el,{toggle:e.metaKey||e.ctrlKey});};
+          b.onclick=e=>{if(item.componentId)return choose(item,multiEnabled&&(e.shiftKey||e.metaKey||e.ctrlKey));if(item.parent?.componentId)return choose(item);if(multiEnabled&&e.shiftKey)return selectRange(item.el,e.metaKey||e.ctrlKey);rangeAnchor=item.el;return onSelect(item.el,{toggle:e.metaKey||e.ctrlKey});};
           b.oncontextmenu=event=>onContextMenu?.({event,select:()=>choose(item),selected:isSelected(item),opener:b});
           b.draggable=item.componentId?!!onMoveComponent&&!!(item.movement?.targets?.length||item.movement?.containers?.length)&&item.movement.fileHash===item.el.getAttribute('data-rt-i-revision'):dragEnabled&&item.el.namespaceURI==='http://www.w3.org/1999/xhtml'&&!['HTML','BODY'].includes(item.el.tagName);
-          b.ondragstart=e=>{if(isBusy||!b.draggable||locks?.locked(item.el)){e.preventDefault();return;}dragged=item.el;draggedItem=item;e.dataTransfer.setData('text/plain','retouch-layer:'+(item.componentId||item.el.getAttribute('data-rt')));e.dataTransfer.effectAllowed='move';for(const row of rows)if(row.item.el===dragged||selectedSet.has(dragged)&&selectedSet.has(row.item.el))row.button.classList.add('dragging');};
+          b.ondragstart=e=>{if(isBusy||selectedInfo?.selectionIds?.length>1||!b.draggable||locks?.locked(item.el)){e.preventDefault();return;}dragged=item.el;draggedItem=item;e.dataTransfer.setData('text/plain','retouch-layer:'+(item.componentId||item.el.getAttribute('data-rt')));e.dataTransfer.effectAllowed='move';for(const row of rows)if(row.item.el===dragged||selectedSet.has(dragged)&&selectedSet.has(row.item.el))row.button.classList.add('dragging');};
           const dropPosition=e=>{const box=b.getBoundingClientRect(),fraction=(e.clientY-box.top)/box.height;if(isBusy)return null;if(draggedItem?.componentId){const id=item.componentId||item.el.getAttribute('data-rt');if(!item.componentId&&fraction>=.25&&fraction<=.75&&draggedItem.movement.containers?.includes(id)&&!locks?.locked(item.el))return 'inside';return draggedItem.movement.targets.includes(id)?(fraction<.5?'before':'after'):null;}return item.componentId?null:placement(selectedSet.has(dragged)?[...selectedSet]:[dragged],item.el,fraction);};
           b.ondragover=e=>{clearTargets();const position=dropPosition(e);if(position){e.preventDefault();e.dataTransfer.dropEffect='move';b.classList.add(position==='inside'?'drop-target':'drop-'+position);}};
           b.ondragleave=clearTargets;
@@ -101,6 +101,7 @@
           b.ondragend=endDrag;
           b.onkeydown=async e=>{
             if(onContextMenu&&(e.key==='ContextMenu'||e.key==='F10'&&e.shiftKey)){await onContextMenu({event:e,select:()=>choose(item),selected:isSelected(item),opener:b,keyboard:true});return;}
+            if(item.componentId&&selectedInfo?.selectionIds?.length>1&&(['F2','Delete','Backspace'].includes(e.key)||(e.metaKey||e.ctrlKey)&&['c','v','d'].includes(e.key.toLowerCase()))){e.preventDefault();return;}
             if(item.parent?.componentId&&(e.key==='F2'||e.key==='Delete'||e.key==='Backspace'||(e.metaKey||e.ctrlKey)&&['c','v','d'].includes(e.key.toLowerCase())))await choose(item);
             if(item.componentId&&['Delete','Backspace'].includes(e.key)){e.preventDefault();e.stopPropagation();if(!isBusy&&!e.repeat){await choose(item);await onAction('deleteElement');}return;}
             if(item.componentId&&(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='d'){e.preventDefault();e.stopPropagation();if(!isBusy&&!e.repeat){await choose(item);await onAction('duplicateElement');}return;}
@@ -155,7 +156,7 @@
     }
     function selection(el,info,busy=false,multiple=[],readOnly=false) {
       const scopeChanged=selectedInfo?.kind!==info?.kind||selectedInfo?.id!==info?.id;selectedInfo=info;
-      const nextSet=new Set(multiple.length?multiple:el?[el]:[]),changed=nextSet.size!==selectedSet.size||[...nextSet].some(item=>!selectedSet.has(item));selectedSet=nextSet;tree.setAttribute('aria-multiselectable',String(!!(info?.cssAuthoring||info?.classSelection)));
+      const nextSet=new Set(multiple.length?multiple:el?[el]:[]),changed=nextSet.size!==selectedSet.size||[...nextSet].some(item=>!selectedSet.has(item));selectedSet=nextSet;tree.setAttribute('aria-multiselectable',String(!!(info?.cssAuthoring||info?.classSelection||info?.kind==='instance')));
       if(!el)rangeAnchor=null;
       if(isBusy!==busy){isBusy=busy;selectAll.disabled=busy||!selectionRows().length;for(const r of rows){r.button.disabled=busy;r.toggle.disabled=busy||!r.item.children.length;if(r.lock)r.lock.disabled=busy||!locks.direct(r.item.el)&&locks.locked(r.item.el);}host.setAttribute('aria-busy',String(busy));}
       if(selected!==el||changed||scopeChanged){
@@ -172,9 +173,11 @@
       unlockShown.disabled=busy||!rows.some(row=>locks?.direct(row.item.el));
       lockSelection.disabled=busy||!selectedRoots().some(el=>!locks?.direct(el));
       unlockSelection.disabled=busy||!selectedRoots().some(el=>locks?.direct(el));
+      const componentGroup=info?.kind==='instance'&&info.selectionIds?.length>1;
       const s=info?.structure;
       const copied=getClipboard();
       const compatible=!!copied&&copied.file===info?.file&&copied.parentId===s?.parentId&&copied.hash===(info?.fileHash||info?.hash);
+      if(componentGroup){lastCapabilities=null;for(const button of Object.values(actionButtons))button.disabled=true;return;}
       const capabilities=JSON.stringify([!!info,info?.kind,info?.canDuplicateComponent,info?.canDeleteComponent,info?.componentMovement,info?.componentDuplicateReason,!!info?.svgMovement,s,busy,copied,compatible,selectedSet.size]);
       if(capabilities===lastCapabilities)return;
       lastCapabilities=capabilities;
