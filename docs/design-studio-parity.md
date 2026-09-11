@@ -11168,3 +11168,10 @@ The pointer regression failed before the change. Final viewport-busy tests passe
 ### Compact light action palette (2026-09-11)
 
 The Actions dialog now uses compact Inter typography, a white surface, a lighter backdrop/shadow, and 32px result rows. Viewport-relative limits keep the search and scrollable results usable in short windows. Chromium and WebKit passed the full actions workflow, including source edits, history, layer operations, availability, native input shortcut guards, and keyboard navigation to the final result at 360x320. The test's stale <h1> badge expectation was updated to H1. Screenshot /private/tmp/retouch-actions-light-chromium.png was visually inspected; both browser logs are /private/tmp/retouch-actions-light-{chromium,webkit}.log. These source changes postdate the latest packaged desktop archive. Full Figma parity remains incomplete.
+
+
+### Variable collection table (2026-09-11)
+
+Added a light collection table with variable rows and named-mode columns, color swatches, alias names, type labels, and selected-variable highlighting. Clicking names focuses the name editor; clicking mode values focuses the matching typed literal/alias editor. Existing save, validation, revision conflict handling, and history paths remain in use. This is table-based browsing with the existing detailed editor, not complete Figma inline-table parity. The light dialog uses compact typography, a sticky heading/Close control, and bounded horizontal table scrolling.
+
+Final variable-library browser workflows passed in Chromium and WebKit: color/number/boolean/string persistence, alias resolution, protected deletion, exact undo, stale revision protection, table navigation/focus, and compact 420x640 containment with visible Close. Final Chromium screenshot /private/tmp/retouch-variable-grid-chromium.png visually inspected; logs /private/tmp/retouch-variable-grid-{chromium,webkit}.log. Source postdates the packaged desktop archive; native verification and full Figma parity remain incomplete.
