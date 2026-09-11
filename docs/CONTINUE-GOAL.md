@@ -609,3 +609,10 @@ Chromium/WebKit real React library workflows passed the explicit HeadlineCard he
 ### Packaged component editor and Homebrew verification (2026-09-11)
 
 New archive /private/tmp/retouch-desktop-components-20260911/Retouch-0.1.0-mac.zip, SHA256 a6216639105d53de6adf2a8ab9f744d09f89c5bc939d6a2c886a936212d032e9, clean source 910447c. All 175 extracted source hashes match; universal arm64/x86_64 and strict ad hoc signature checks passed. Six bundled runtime workflows passed: editable component fields, repeated-fragment preview identity/recovery/refresh, library keyboard browsing, each Chromium/WebKit. All 886 units passed. Local cask Ruby syntax, temporary-tap install and uninstall passed. Installed bundle verification passed with quarantine intact. App directory, cask registration, temporary tap and auto-added trust entry were verified removed; developer mode restored to disabled. No native launch attempted. Upgrade, Developer ID signing, notarization and public trusted distribution remain unverified. Receipt desktop/verification/2026-09-11-component-editor.json. Full Figma parity remains incomplete.
+
+
+### Find filtered selections in Layers (2026-09-11)
+
+Layer search Up/Down focuses matching rows without choosing contextual ancestor rows for a text query. Escape clears a nonempty query. Show selected layer appears when search/lock filtering hides the selection; it clears filters, expands selected ancestors and focuses the existing selection. No source writes are involved.
+
+Chromium/WebKit layer-navigation workflows passed descendant-match focus, empty-result key behavior, reveal/focus recovery, unchanged selection/source, and existing child/parent/sibling/locks/collapse/native-input checks. Screenshot /private/tmp/retouch-layer-search.png visually inspected; logs /private/tmp/retouch-layer-search-{chromium,webkit}.log. Source postdates desktop archive 910447c; full Figma parity remains incomplete.

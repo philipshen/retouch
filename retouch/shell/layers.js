@@ -27,6 +27,7 @@
   function mount({host,onSelect,onAction,onContextMenu,getClipboard=()=>null,dragEnabled=false,multiSelectEnabled=dragEnabled,onMove,onMoveComponent,onSelectMany,locks,onLock,readComponents}) {
     const header=document.createElement('h2');header.textContent='Layers';header.title='On the canvas: Enter selects a child, Shift+Enter selects its parent, and Tab/Shift+Tab selects siblings.';
     const search=document.createElement('input');search.type='search';search.placeholder='Find a layer…';search.setAttribute('aria-label','Find a layer');
+    const revealSelection=document.createElement('button');revealSelection.type='button';revealSelection.className='layer-reveal-selection';revealSelection.textContent='Show selected layer';revealSelection.hidden=true;
     const tree=document.createElement('div');tree.className='layer-tree';tree.setAttribute('role','tree');tree.setAttribute('aria-label','Site layers');
     const empty=document.createElement('p');empty.className='layer-empty';
     const actions=document.createElement('div');actions.className='layer-actions';
@@ -54,7 +55,7 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
     unlockShown.title='Unlock direct locks shown in this filtered tree as one undoable action.';
     unlockShown.onclick=()=>onLock(rows.filter(row=>!row.item.componentId&&locks.direct(row.item.el)).map(row=>row.item.el),false);
     const tools=document.createElement('details'),toolsTitle=document.createElement('summary');tools.className='layer-tools';toolsTitle.textContent='Layer actions';tools.append(toolsTitle,lockFilter,unlockShown,selectAll,actions,reason);
-    host.append(header,search,tree,empty,tools);
+    host.append(header,search,revealSelection,tree,empty,tools);
     let components=[],componentRequest=0,componentLoad=null,selectedInfo=null,treeRoots=[],virtualItems=[];const componentKeys=new WeakMap();
     const key=item=>{if(!item.componentId)return item.el;let keys=componentKeys.get(item.el);if(!keys)componentKeys.set(item.el,keys=new Map());if(!keys.has(item.componentId))keys.set(item.componentId,{});return keys.get(item.componentId);};
     const isSelected=item=>item.componentId?selectedInfo?.kind==='instance'&&(selectedInfo.selectionIds||[selectedInfo.id]).includes(item.componentId)&&item.componentRoots.some(el=>selectedSet.has(el)):!(selectedInfo?.kind==='instance'&&virtualItems.some(row=>(selectedInfo.selectionIds||[selectedInfo.id]).includes(row.componentId)&&row.componentRoots.some(el=>selectedSet.has(el))))&&selectedSet.has(item.el);
@@ -184,9 +185,13 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
       empty.hidden=!!rows.length;
       selectAll.disabled=isBusy||!selectionRows().length;
       unlockShown.disabled=isBusy||!rows.some(row=>locks?.direct(row.item.el));
-      if(focused)rows.find(r=>key(r.item)===key(focused))?.button.focus();
+      updateReveal();if(focused)rows.find(r=>key(r.item)===key(focused))?.button.focus();
     }
+    function updateReveal(){revealSelection.hidden=!selected||!(search.value.trim()||lockedOnly.checked)||rows.some(row=>isSelected(row.item));revealSelection.disabled=isBusy;}
+    revealSelection.onclick=()=>{search.value='';lockedOnly.checked=false;function expand(items){let found=false;for(const item of items){const child=expand(item.children);if(child)collapsed.delete(key(item));if(child||isSelected(item))found=true;}return found;}expand(treeRoots);render();rows.find(row=>isSelected(row.item))?.button.focus();};
     search.oninput=render;lockedOnly.onchange=render;
+    search.addEventListener('keydown',event=>{if(event.isComposing)return;if(event.key==='Escape'&&search.value){event.preventDefault();event.stopPropagation();search.value='';render();return;}if(!['ArrowDown','ArrowUp'].includes(event.key)||event.altKey||event.ctrlKey||event.metaKey)return;const query=search.value.trim().toLowerCase(),matches=rows.filter(row=>!row.button.disabled&&(!query||row.item.label.toLowerCase().includes(query)));const target=event.key==='ArrowDown'?matches[0]:matches.at(-1);if(target){event.preventDefault();target.button.focus();}});
+
     function attach(next) {
       if(d===next)return;
       observer?.disconnect();clearTimeout(timer);endDrag();rangeAnchor=null;componentRangeAnchor=null;d=next;components=[];componentRequest++;collapsed=new WeakSet();render();void loadComponents();
@@ -211,7 +216,7 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
       unlockShown.disabled=busy||!rows.some(row=>locks?.direct(row.item.el));
       lockSelection.disabled=busy||!selectedRoots().some(el=>!locks?.direct(el));
       unlockSelection.disabled=busy||!selectedRoots().some(el=>locks?.direct(el));
-      const componentGroup=info?.kind==='instance'&&info.selectionIds?.length>1;
+      updateReveal();const componentGroup=info?.kind==='instance'&&info.selectionIds?.length>1;
       const s=info?.structure;
       const copied=getClipboard();
       const compatible=!!copied&&copied.file===info?.file&&copied.parentId===s?.parentId&&copied.hash===(info?.fileHash||info?.hash);
