@@ -69,10 +69,11 @@
   }
   function spanClasses(classes,axis,value,inherited='') {
     if(!['column','row'].includes(axis))throw Error('Unknown grid axis');
-    if(!['auto','full'].includes(value)&&!(Number.isInteger(value)&&value>=1&&value<=24))throw Error('Choose a span from 1 to 24');
+    if(value!==null&&!['auto','full'].includes(value)&&!(Number.isInteger(value)&&value>=1&&value<=24))throw Error('Choose a span from 1 to 24');
     const prefix=axis==='column'?'col':'row';
     const placement=new RegExp('^-?'+prefix+'-(?:auto|span-(?:full|\\d+|\\[.+\\])|(?:start|end)-(?:auto|\\d+|\\[.+\\])|\\d+|\\[.+\\])$');
     const matches=t=>placement.test(t)||t.startsWith('[grid-'+axis+':')||t.startsWith('[grid-'+axis+'-start:')||t.startsWith('[grid-'+axis+'-end:');
+    if(value===null)return I.replace(classes,matches,'');
     let addition=prefix+'-'+(typeof value==='number'?'span-'+value:value==='full'?'span-full':'auto');
     if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(t=>/^!|!$/.test(t)&&(matches(I.base(t)||'')||(I.base(t)||'').startsWith('[grid-area:'))))addition='!'+addition;
     return I.replace(classes,matches,addition);
@@ -151,8 +152,10 @@
       for(const axis of ['column','row']) {
         const prop=axis==='column'?'gridColumn':'gridRow';
         I.select(sec,axis==='column'?'Span columns':'Span rows',[['','Custom placement'],['auto','Auto'],['full',axis==='column'?'All columns':'All rows'],...counts],spanValue(css[prop+'Start'],css[prop+'End']),v=>{if(v)save(spanClasses(classes,axis,/^\d+$/.test(v)?Number(v):v,inherited));});
+        const reset=I.button('Reset '+axis+' placement',()=>save(spanClasses(classes,axis,null)));
+        reset.disabled=spanClasses(classes,axis,null)===classes;sec.append(reset);
       }
-      I.note(sec,'Choosing a span replaces explicit line placement on that axis. Other dimensions stay unchanged.');
+      I.note(sec,'Choosing a span replaces line placement on that axis. Reset removes this scope’s axis override, retaining any shared grid area.');
     }
     for(const side of ['Top','Right','Bottom','Left']) {
       const edge=side.toLowerCase();

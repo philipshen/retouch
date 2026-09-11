@@ -10979,3 +10979,10 @@ Minimum/maximum width and height now replace active arbitrary physical constrain
 Row/column span writes now replace active arbitrary grid-axis shorthand/start/end declarations alongside placement utilities. Relevant important inherited placement and grid-area shorthand promote the new span. Grid-area itself remains intact to preserve the other axis.
 
 877 unit tests pass. Chromium/WebKit verify numeric, full and auto spans on both axes against an inherited important grid-area, including measured dimensions, unchanged opposite axis, Phone isolation and exact source Undo/Redo. Evidence: `/private/tmp/retouch-grid-span-{chromium,webkit}.log` and `/private/tmp/retouch-grid-span-units.log`. Named-area authoring, complex conditional/state cascade, full Figma parity and trusted macOS distribution remain unfinished. The desktop package predates these changes.
+
+
+## Reset grid placement independently by axis
+
+Grid children now expose Reset column placement and Reset row placement. These remove active axis placement classes/arbitrary declarations without writing auto or removing shared grid-area rules. Buttons are disabled when that scope has no removable axis override.
+
+878 unit tests pass. Chromium/WebKit verify Reset after numeric/full/auto spans on both axes, restored inherited geometry, disabled state after removal, preserved opposite-axis source, exact Reset Undo/Redo and existing Phone isolation. Evidence: `/private/tmp/retouch-grid-reset-{chromium,webkit}.log` and `/private/tmp/retouch-grid-reset-units.log`. Full Figma parity and trusted macOS distribution remain unfinished; the packaged desktop runtime predates this change.

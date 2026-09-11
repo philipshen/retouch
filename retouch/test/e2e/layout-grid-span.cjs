@@ -18,12 +18,18 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   for(const [axis,label] of [[0,'Span columns'],[1,'Span rows']])for(const [value,size] of [['3',200],['full',270],['auto',60]]){
    const before=read(),control=page.getByLabel(label,{exact:true});await control.selectOption(value);await settled();const expected=[130,130];expected[axis]=size;
    await wait(async()=>JSON.stringify(await dimensions())===JSON.stringify(expected));assert.equal(await control.inputValue(),value);const edited=read();assert.notEqual(edited,before);assert.ok(edited.includes('![grid-area:1/1/2/2] sm:![grid-area:1/1/3/3]'));
+   const reset=page.getByRole('button',{name:'Reset '+(axis===0?'column':'row')+' placement',exact:true});assert.equal(await reset.isDisabled(),false);
+   await reset.click();await settled();await wait(async()=>JSON.stringify(await dimensions())==='[130,130]');const resetSource=read();assert.notEqual(resetSource,edited);assert.equal(await reset.isDisabled(),true);
+   assert.ok(resetSource.includes(axis===0?'md:[grid-row-end:4]':'md:[grid-column-start:3]'));
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),edited);await wait(async()=>JSON.stringify(await dimensions())===JSON.stringify(expected));
+   await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();assert.equal(read(),resetSource);
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),edited);
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),before);await wait(async()=>JSON.stringify(await dimensions())==='[130,130]');
    await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();assert.equal(read(),edited);await wait(async()=>JSON.stringify(await dimensions())===JSON.stringify(expected));
    await page.getByLabel('Screen size',{exact:true}).focus();await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await wait(async()=>JSON.stringify(await dimensions())==='[60,60]');
    await page.getByLabel('Screen size',{exact:true}).focus();await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();await wait(async()=>JSON.stringify(await dimensions())===JSON.stringify(expected));
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),before);await wait(async()=>JSON.stringify(await dimensions())==='[130,130]');
   }
-  assert.equal(read(),original);assert.deepEqual(errors,[]);console.log(engine+': PASS grid row/column numeric, full and auto spans, inherited important area, opposite-axis preservation, Phone isolation and exact history');
+  assert.equal(read(),original);assert.deepEqual(errors,[]);console.log(engine+': PASS grid row/column numeric, full and auto spans, inherited important area, opposite-axis preservation, placement reset, Phone isolation and exact history');
  }finally{if(browser)await browser.close();if(!exited)child.kill('SIGTERM');await stopped;fs.rmSync(root,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

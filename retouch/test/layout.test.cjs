@@ -191,3 +191,11 @@ test('grid span priority handles arbitrary placement and inherited area without 
  assert.equal(L.spanClasses('','row','full','!row-start-2'),'!row-span-full');
  assert.equal(L.spanClasses('','column',2,'!row-span-2'),'col-span-2');
 });
+
+
+test('grid placement reset removes only active axis declarations and preserves shared area',()=>{
+ const source='![grid-area:1/1/3/3] col-start-2 ![grid-column-end:4] row-span-2 md:col-span-3';
+ assert.equal(L.spanClasses(source,'column',null),'![grid-area:1/1/3/3] row-span-2 md:col-span-3');
+ assert.equal(L.spanClasses('row-auto [grid-row:2/4] col-span-2','row',null),'col-span-2');
+ assert.equal(L.spanClasses('![grid-area:1/1/3/3]','row',null),'![grid-area:1/1/3/3]');
+});
