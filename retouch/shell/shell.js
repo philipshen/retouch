@@ -1705,15 +1705,14 @@ function openComponent(id, component,options={}) {
         return 'html'+(parts.length?' > '+parts.join(' > '):'');
       };
       const isolate=()=>{
-        const el=matchingInDocument(d,id,component)[0];if(!el)return;
-        const rules=[];
-        let child=el;
-        for(let parent=el.parentElement;parent;parent=parent.parentElement){
-          for(const sibling of parent.children)if(sibling!==child&&!['STYLE','LINK','SCRIPT','HEAD'].includes(sibling.tagName))rules.push(selector(sibling)+'{display:none!important}');
+        const group=RetouchComponentInstances.group(matchingInDocument(d,id,component),component.rootGroups)[0];if(!group)return;
+        const roots=group.elements,retained=new Set(roots),ancestors=new Set(),rules=[];
+        for(const el of roots)for(let parent=el.parentElement;parent;parent=parent.parentElement){retained.add(parent);ancestors.add(parent);}
+        for(const parent of ancestors){
+          for(const sibling of parent.children)if(!retained.has(sibling)&&!['STYLE','LINK','SCRIPT','HEAD'].includes(sibling.tagName))rules.push(selector(sibling)+'{display:none!important}');
           if(parent!==d.documentElement)rules.push(selector(parent)+'{'+Object.entries({display:'block',position:'static',width:'auto',height:'auto','min-height':'0',margin:'0',padding:parent===d.body?'32px':'0',transform:'none',overflow:'visible'}).map(([p,v])=>p+':'+v+'!important').join(';')+'}');
-          child=parent;
         }
-        rules.push(selector(el)+'{margin:0!important}');sheet.replaceSync(rules.join('\n'));preview.style.visibility='visible';preview.setAttribute('aria-busy','false');loading.remove();
+        for(const el of roots)rules.push(selector(el)+'{margin:0!important}');sheet.replaceSync(rules.join('\n'));preview.style.visibility='visible';preview.setAttribute('aria-busy','false');loading.remove();
       };
       isolate(); const observer=new MutationObserver(isolate);observer.observe(d.body,{childList:true,subtree:true});stop=()=>observer.disconnect();
       d.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();},true);
