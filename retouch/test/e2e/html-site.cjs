@@ -118,6 +118,7 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
 
   await page.getByLabel('Project page',{exact:true}).selectOption('/');await wait(async()=>await app.locator('h1').textContent()==='Hello HTML','return to home');
 
+  await page.getByText('Layer actions',{exact:true}).click();
   await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await page.getByRole('button',{name:'Duplicate layer',exact:true}).click();
   await wait(async()=>await app.locator('h1').count()===2,'duplicate HTML layer');await settled();
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'duplicate undo');
@@ -247,6 +248,7 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
    await page.getByLabel(label,{exact:true}).fill(value);await page.getByLabel(label,{exact:true}).press('Tab');await wait(async()=>await effect(property)===expected,label);await settled();
   }
   await page.getByLabel('Blend mode',{exact:true}).selectOption('multiply');await wait(async()=>await effect('mix-blend-mode')==='multiply','blend mode');await settled();
+  await page.getByText('More appearance options',{exact:true}).click();
   await page.getByLabel('Blend group',{exact:true}).selectOption('isolate');await wait(async()=>await effect('isolation')==='isolate','blend isolation');await settled();
   await size('768x1024');await page.getByLabel('Style screen scope').selectOption('min-[768px]:');
   await page.getByLabel('Layer blur (px)',{exact:true}).fill('5');await page.getByLabel('Layer blur (px)',{exact:true}).press('Tab');await wait(async()=>await effect('filter')==='contrast(0.8) blur(5px)','tablet blur');await settled();

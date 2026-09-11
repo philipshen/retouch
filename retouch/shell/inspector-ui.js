@@ -1,0 +1,83 @@
+(function(root){
+ 'use strict';
+ const openGroups=new Set();
+ function disclosure(title,key){const d=document.createElement('details'),s=document.createElement('summary');d.className='inspector-disclosure';s.textContent=title;d.append(s);d.open=openGroups.has(key);d.ontoggle=()=>d.open?openGroups.add(key):openGroups.delete(key);return d;}
+ function title(section){return section.querySelector(':scope > h3')?.textContent||'';}
+ function pair(section,names){
+  const rows=names.map(name=>[...section.querySelectorAll('.inspector-field')].find(row=>row.querySelector('[aria-label]')?.getAttribute('aria-label')===name)).map(row=>row?.closest('.property-row')||row);
+  if(rows.some(row=>!row)||rows[0].parentElement!==section||rows[1].parentElement!==section)return;
+  const group=document.createElement('div');group.className='property-pair';section.insertBefore(group,rows[0]);rows.forEach(row=>group.append(row));
+ }
+ function organize(panel){
+  if(panel.dataset.organized==='true')return;panel.dataset.organized='true';
+  const head=panel.firstElementChild;if(!head)return;head.classList.add('selection-heading');
+  const file=head.querySelector(':scope > .filepath');if(file){const source=disclosure('Source','source');source.append(file);head.append(source);}
+  const scope=head.querySelector('.screen-scope');if(scope){const more=disclosure('Breakpoint options','breakpoint');[...scope.children].filter(el=>el.tagName!=='LABEL').forEach(el=>more.append(el));if(more.children.length>1)scope.append(more);}
+  // Put properties in the same reading order as the Design panel reference.
+  for(const section of [...panel.children]){const aliases={'Shared styles':'Layout','Align selected layers':'Position'},name=aliases[title(section)];if(name)section.querySelector(':scope > h3').textContent=name;}
+
+  for(const container of [...panel.children])if(container!==head&&[...container.children].some(el=>title(el)==='CSS properties')){[...container.children].forEach(el=>panel.insertBefore(el,container));container.remove();}
+  const css=[...panel.children].find(el=>title(el)==='CSS properties');
+  if(css){
+   const getSection=name=>{let section=[...panel.children].find(el=>title(el)===name);if(!section){section=document.createElement('section');section.className='sec inspector-section';const h=document.createElement('h3');h.textContent=name;section.append(h);panel.append(section);}return section;};
+   for(const row of [...css.querySelectorAll(':scope > .inspector-field')]){const label=row.querySelector('[aria-label]')?.getAttribute('aria-label')||'',target=getSection(label.startsWith('Border ')?'Stroke':label.startsWith('Background ')?'Fill':'Layout'),reset=row.nextElementSibling;target.append(row);if(reset?.classList.contains('control-button'))target.append(reset);}
+   for(const [from,to] of [['Grid','Layout'],['Flex sizing','Layout'],['Blur','Effects'],['Shadows','Effects'],['Gradient fills','Fill']]){const source=[...panel.children].find(el=>title(el)===from);if(source){const target=getSection(to);[...source.children].filter(el=>el.tagName!=='H3').forEach(el=>target.append(el));source.remove();}}
+   const corners=[...panel.children].find(el=>title(el)==='Corners');if(corners){const appearance=getSection('Appearance');[...corners.children].filter(el=>el.tagName!=='H3').forEach(el=>appearance.append(el));corners.remove();}
+  }
+  const layer=[...panel.children].find(el=>title(el)==='Layer'),nameField=layer?.querySelector('[aria-label="Layer name"]')?.closest('.inspector-field');if(nameField){nameField.classList.add('layer-title');const badge=head.querySelector('.kindbadge');nameField.querySelector('input').placeholder=badge?.textContent||'Layer';if(badge)badge.style.display='none';head.prepend(nameField);}
+  const appearance=[...panel.children].find(el=>title(el)==='Appearance');
+  if(appearance){
+   const colors=disclosure('Color overrides','color-overrides');
+   for(const row of [...appearance.querySelectorAll(':scope > .inspector-field')])if(/with alpha$/.test(row.querySelector('[aria-label]')?.getAttribute('aria-label')||'')){
+    const value=row.nextElementSibling,clear=value?.nextElementSibling;colors.append(row);if(value?.classList.contains('computed-value'))colors.append(value);if(clear?.classList.contains('control-button'))colors.append(clear);
+   }
+   if(colors.children.length>1)appearance.append(colors);
+   const options=disclosure('More appearance options','appearance-options');
+   for(const row of [...appearance.querySelectorAll(':scope > .inspector-field')])if(['Visibility','Blend group'].includes(row.querySelector('[aria-label]')?.getAttribute('aria-label'))){const reset=row.nextElementSibling;options.append(row);if(reset?.classList.contains('control-button'))options.append(reset);}
+   const slider=appearance.querySelector(':scope > .opacity-row');if(slider){const field=slider.querySelector('.inspector-field');if(field)appearance.insertBefore(field,slider);options.append(slider);}if(options.children.length>1)appearance.append(options);
+  }
+
+  if(appearance){const stroke=document.createElement('section');stroke.className='sec inspector-section';const h=document.createElement('h3');h.textContent='Stroke';stroke.append(h);for(const row of [...appearance.querySelectorAll(':scope > .inspector-field')]){if(/^Border /.test(row.querySelector('[aria-label]')?.getAttribute('aria-label')||'')){const next=row.nextElementSibling;stroke.append(row);if(next?.classList.contains('computed-value'))stroke.append(next);}}if(stroke.children.length>1)panel.append(stroke);}
+  const fill=[...panel.children].find(el=>title(el)==='Fill');if(fill&&appearance){const gradients=[...appearance.children].find(el=>el.tagName==='DETAILS'&&el.querySelector('summary')?.textContent==='Gradient fills');if(gradients)fill.append(gradients);}
+  const text=[...panel.children].find(el=>title(el)==='Text'),typography=[...panel.children].find(el=>title(el)==='Typography');if(text&&typography){[...text.children].filter(el=>el.tagName!=='H3').reverse().forEach(el=>typography.insertBefore(el,typography.children[1]||null));text.remove();}
+  const order=['Component','Shared component properties','Position','Layout','Appearance',...(RetouchInspector.isTextLayer(head.querySelector('.kindbadge')?.textContent.toLowerCase()||'')?['Typography']:[]),'Fill','Stroke','Effects','Image framing','Image','Export'];
+  const advanced=disclosure('More properties','advanced');advanced.classList.add('inspector-more');
+  const children=[...panel.children].filter(el=>el!==head);
+  for(const name of order)for(const el of children.filter(el=>title(el)===name)){el.classList.add('inspector-section');panel.append(el);}
+  for(const el of children.filter(el=>!order.includes(title(el))))advanced.append(el);
+  if(advanced.children.length>1)panel.append(advanced);
+  for(const section of panel.querySelectorAll('.inspector-section')){
+   const name=title(section);section.dataset.section=name.toLowerCase().replace(/\s+/g,'-');
+   if(name==='Effects'&&!css){
+    const shadow=disclosure('Add shadow','add-shadow');for(const child of [...section.children])if(child.tagName!=='DETAILS'&&(child.querySelector('[aria-label^="Shadow "]')||child.querySelector('[aria-label="Inner shadow"]')||child.textContent==='Apply custom shadow'))shadow.append(child);if(shadow.children.length>1)section.append(shadow);
+   }
+   for(const input of section.querySelectorAll('input[type="color"]')){
+    const row=input.closest('.inspector-field');if(!row||input.parentElement!==row)continue;
+    const control=document.createElement('span');control.className='color-control';const value=document.createElement('span');value.textContent=input.value.replace('#','').toUpperCase();input.after(control);control.append(input,value);input.addEventListener('input',()=>value.textContent=input.value.replace('#','').toUpperCase());
+   }
+
+   const help=disclosure('Details',name+'-help');for(const hint of [...section.children].filter(el=>el.classList.contains('hint')||el.classList.contains('computed-value')))help.append(hint);if(help.children.length>1)section.append(help);
+   for(const button of [...section.querySelectorAll(':scope > .control-button')])if(/^Reset /.test(button.textContent)){
+    const label=button.textContent;button.setAttribute('aria-label',label);button.title=label;button.textContent='↺';button.classList.add('property-reset');const previous=button.previousElementSibling;
+    if(previous?.classList.contains('inspector-field')){const row=document.createElement('div');row.className='property-row';section.insertBefore(row,previous);row.append(previous,button);}
+   }
+   for(const names of [['Width (CSS)','Height (CSS)'],['Width (px)','Height (px)'],['Width behavior','Height behavior'],['Columns','Rows'],['Horizontal gap','Vertical gap'],['Padding top','Padding bottom'],['Padding left','Padding right'],['X','Y'],['Opacity (%)','Corner radius (px)']])pair(section,names);
+   if(name==='Layout'){
+    const select=section.querySelector('[aria-label="Arrange children"]');
+    if(select){const row=select.closest('.inspector-field');row.classList.add('layout-modes');row.querySelector('span').textContent='';
+     const icons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',row:'M3 5v10 M8 5v10 M13 5v10 M16 10h4 M18 8l2 2-2 2',column:'M5 3h10 M5 8h10 M5 13h10 M10 16v4 M8 18l2 2 2-2',grid:'M3 3h14v14H3z M10 3v14 M3 10h14'};
+     const group=document.createElement('div');group.className='layout-mode-segments';
+     for(const [value,label] of [['flow','Normal flow'],['column','Vertical layout'],['row','Horizontal layout'],['grid','Grid layout']]){const button=document.createElement('button');button.type='button';button.title=label;button.setAttribute('aria-label',label);button.setAttribute('aria-pressed',String(select.value.replace('-reverse','')===value));button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+icons[value]+'"/></svg>';button.onclick=()=>{select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));};group.append(button);}row.insertBefore(group,select);
+     const dimension=section.querySelector('[aria-label="Width (px)"]')?.closest('.property-pair'),behavior=section.querySelector('[aria-label="Width behavior"]')?.closest('.property-pair');
+     if(dimension)row.after(dimension);if(behavior&&dimension)dimension.after(behavior);
+    }
+   }
+   for(const row of section.querySelectorAll('.inspector-field')){const control=row.querySelector('[aria-label]'),label=control?.getAttribute('aria-label');if(['Width behavior','Height behavior'].includes(label))for(const option of control.options)option.textContent=({'':'Auto',fixed:'Fixed',hug:'Hug',fill:'Fill'})[option.value]||option.textContent;const short={'Border width (px)':'Weight','Border style':'Style','Border color':'Color','Place grid items':'Flow','Align children':'Alignment','Distribute children':'Distribution','Width (px)':'W','Height (px)':'H','Opacity (%)':'Opacity','Corner radius (px)':'Radius','Padding top':'Top','Padding bottom':'Bottom','Padding left':'Left','Padding right':'Right','Horizontal gap':'↔','Vertical gap':'↕','Width behavior':'Width','Height behavior':'Height'}[label];if(short){row.querySelector('span').textContent=short;row.title=label;}}
+  }
+ }
+ const dock=document.createElement('nav');dock.className='design-tool-dock';dock.setAttribute('aria-label','Canvas tools');
+ for(const id of ['modeBtn','canvasHand','quickActions','undoBtn','redoBtn']){const button=document.getElementById(id);if(button){button.setAttribute('aria-label',button.textContent.trim());new MutationObserver(()=>button.setAttribute('aria-label',button.textContent.trim())).observe(button,{childList:true,characterData:true,subtree:true});dock.append(button);}}
+ const main=document.getElementById('main'),canvas=document.getElementById('frameWrap');main.append(dock);
+ const place=()=>{const c=canvas.getBoundingClientRect(),m=main.getBoundingClientRect();dock.style.left=(c.left-m.left+c.width/2)+'px';};new ResizeObserver(place).observe(canvas);place();
+ root.RetouchInspectorUI={organize};
+})(window);

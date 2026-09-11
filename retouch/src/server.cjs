@@ -457,7 +457,7 @@ function serveAsset(name, res) {
     res.writeHead(404);
     return res.end();
   }
-  const types = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html' };
+  const types = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.woff2': 'font/woff2' };
   res.writeHead(200, {
     'content-type': types[path.extname(file)] || 'application/octet-stream',
     'cache-control': 'no-store',

@@ -1047,7 +1047,7 @@ function renderPanel() {
   renderedPanelSelection=key;
   // Rebuilding an empty fieldset can clamp its scroll container to zero.
   // Restore synchronously after all sections (including early returns) exist.
-  try { renderPanelContents(); } finally { panel.scrollTop=top;if(focusedTool)[...panelBody.querySelectorAll('[data-canvas-tool]')].find(el=>el.dataset.canvasTool===focusedTool)?.focus({preventScroll:true}); }
+  try { renderPanelContents(); panelBody.dataset.organized='false';RetouchInspectorUI.organize(panelBody); } finally { panel.scrollTop=top;if(focusedTool)[...panelBody.querySelectorAll('[data-canvas-tool]')].find(el=>el.dataset.canvasTool===focusedTool)?.focus({preventScroll:true}); }
 }
 function renderPanelContents() {
   window.dispatchEvent(new CustomEvent('retouch:selection',{detail:activeId()}));
@@ -1063,7 +1063,7 @@ function renderPanelContents() {
   head.className = 'sec';
   const badge = document.createElement('span');
   badge.className = 'kindbadge' + (info.kind === 'instance' ? ' instance' : '');
-  badge.textContent = sel.multiple?.length>1?sel.multiple.length+(info.kind==='instance'?' components':' layers'):info.kind === 'instance' ? 'component' : '<' + info.tag + '>';
+  badge.textContent = sel.multiple?.length>1?sel.multiple.length+(info.kind==='instance'?' components':' layers'):info.kind === 'instance' ? 'component' : info.tag.charAt(0).toUpperCase()+info.tag.slice(1);
   head.appendChild(badge);
   const file = document.createElement('div');
   file.className = 'filepath';
