@@ -421,5 +421,6 @@ if CommandLine.arguments.contains("--self-test") {
             app.terminate(nil)
         }
     }
-    app.run()
+    // NSApplication.delegate is weak; keep Studio alive throughout the event loop.
+    withExtendedLifetime(delegate) { app.run() }
 }

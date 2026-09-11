@@ -11425,3 +11425,12 @@ Tailwind grid children now expose Custom grid placement with Column/Row expressi
 HTML and Tailwind placement fields now attach native datalists derived from the selected item's computed parent grid. Suggestions include adjacent named line pairs, named starts with auto ends, numbered tracks, automatic placement and full-grid span. Invalid/reserved names are excluded, suggestions are de-duplicated and bounded, and unknown/non-resolved track counts do not invent numeric options.
 
 892 unit tests passed. All four HTML/Next-Tailwind Chromium/WebKit placement workflows passed with actual-parent suggestion assertions plus placement, responsive, validation and history coverage; HTML standalone export checks remain green. Tests inspect linked datalist values and use normal field editing; native suggestion-popup interaction is not automated in this receipt. Logs /private/tmp/retouch-{html,tw}-grid-suggestions-{chromium,webkit}.log. Source postdates archive 4dba5a3; full Figma parity remains incomplete.
+
+
+### Controlled native launch investigation (2026-09-11)
+
+The previously verified 4dba5a3 archive was launched once. Process 5449 ran, but two CUA inspections returned cgWindowNotFound. A one-second sample showed an idle AppKit event loop; this does not prove a startup hang or a visible warning. The owned process was stopped.
+
+Source inspection confirmed NSApplication.delegate is weak in the installed SDK. The launcher now uses withExtendedLifetime(delegate) around app.run() to make ownership explicit. A universal diagnostic build compiled and passed strict package verification, but its single launch (process 6078) also returned cgWindowNotFound through CUA. That process was stopped and absence of both owned PIDs verified. The change has not established the cause or fixed native window visibility. Native tests were not run and no quarantine/security settings were changed.
+
+Diagnostic artifact /private/tmp/retouch-desktop-lifetime-20260911/Retouch-0.1.0-mac.zip is based on 71e36b0 with sourceTreeDirty true for the delegate edit, not a clean release. Receipt desktop/verification/2026-09-11-native-lifetime.json; original archive receipt updated with its native attempt. Do not repeat launches without new evidence or a concrete next diagnostic. Browser/source work remains available; full parity and trusted desktop delivery remain incomplete.

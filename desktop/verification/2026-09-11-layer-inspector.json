@@ -63,7 +63,7 @@
       "/private/tmp/retouch-desktop-layers-20260911/uninstall.log"
     ]
   },
-  "nativeLaunch": "not attempted",
+  "nativeLaunch": "Controlled launch attempted: process 5449 started, but two CUA inspections returned cgWindowNotFound. A process sample showed an idle AppKit event loop. Owned process stopped; native GUI remains unverified.",
   "signing": "Ad hoc development build; Developer ID, notarization and trusted distribution unfinished",
   "testHarness": "Reset layout checks now wait and sample both controls in one DOM evaluation, avoiding a render race after library navigation. Harness tests are external to the signed app."
 }

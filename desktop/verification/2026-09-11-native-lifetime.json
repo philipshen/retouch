@@ -1,0 +1,18 @@
+{
+  "sourceCommit": "71e36b0fae9b7e1dfd827818b2800c38b91da6dc",
+  "sourceTreeDirty": true,
+  "sourceFiles": 175,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-lifetime-20260911/Retouch-0.1.0-mac.zip",
+  "sha256": "b6d617f94e3ec98b679d719d7aeb558068da7a541ada5814a3901d320eb61d56",
+  "purpose": "Diagnostic development build with explicit application delegate lifetime",
+  "nativeSourceSha256": "d5ba933e7b1f3c11cf9cee04438fa29f3465e67fbc3ce1196385f718059d638a",
+  "nativeLaunch": "One launch of rebuilt app started process 6078; CUA returned cgWindowNotFound. Process stopped. No native GUI verification.",
+  "nativeTests": "Not run: the specific build has not been verified to expose a native window",
+  "scope": "Explicit delegate lifetime is defensive; this result does not establish the cause of missing capture or fix it",
+  "sample": "/private/tmp/retouch-native-layers-sample.txt"
+}
