@@ -846,3 +846,9 @@ Compact gradient stop color fields now include a decorative inline swatch with a
 ### 2026-09-11 — Consistent Fill section actions
 
 React gradient creation now uses the compact plus action in the Fill heading, matching the HTML section treatment. Adding from a collapsed gradient list opens the editing controls. Clear background images and Reset gradient fills move under Fill options while preserving their original handlers, accessible labels and disabled state. React gradient workflows passed Chromium/WebKit with collapsed-list creation and initial hidden clear controls; full Chromium HTML workflow passed. Screenshot `/private/tmp/retouch-fill-actions-chromium.png` inspected. Logs `/private/tmp/retouch-fill-actions-{page-fonts-chromium,page-fonts-webkit,html-site-chromium}.log`. Full Figma parity remains incomplete.
+
+### 2026-09-11 — Duplicate gradient fills
+
+HTML and React gradient cards now provide an accessible duplicate action in the card heading. It inserts an identical fill immediately behind the selected fill, retaining stops, geometry, repeat and color-interpolation settings, with the existing eight-fill bound. Edits use the current screen scope and the normal single source transaction.
+
+React gradient workflows passed Chromium/WebKit and full Chromium HTML workflow passed. Tests compare complete parsed stacks, edit the duplicated fill independently, preserve original/neighbor fills, and verify exact source undo/redo. Screenshot `/private/tmp/retouch-duplicate-fill-chromium.png` inspected; logs `/private/tmp/retouch-duplicate-fill-{page-fonts-chromium,page-fonts-webkit,html-site-chromium}.log`. Full Figma parity and native foreground/capture usability remain incomplete.
