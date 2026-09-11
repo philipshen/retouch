@@ -685,7 +685,7 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .gradient-action svg { width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.4; }
 
 .paint-picker { position:fixed;inset:auto;margin:0;width:280px;max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);overflow:auto;padding:16px;border:1px solid var(--line);border-radius:10px;background:white;color:var(--ink);box-shadow:0 12px 40px #0003; }
-.paint-picker::backdrop { background:#0002; }
+.paint-picker::backdrop { background:transparent; }
 .paint-picker h3 { margin:0 0 12px;font-size:12px; }
 .paint-plane { position:relative;height:180px;margin-bottom:12px;border-radius:4px;background-image:linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,transparent);touch-action:none; }
 .paint-plane > span { position:absolute;width:12px;height:12px;border:2px solid white;border-radius:50%;box-shadow:0 0 0 1px #0008;transform:translate(-50%,-50%);pointer-events:none; }
