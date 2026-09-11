@@ -11515,3 +11515,7 @@ New `html-history-selection.cjs` duplicates and deletes a real two-layer HTML se
 ### 2026-09-11 — Gradient-stop keyboard drafts
 
 HTML and React gradient stop colors/positions now share Enter-to-save and Escape-to-cancel handling. Cancel restores the initial value, clears custom validation and suppresses unchanged writes without clearing selection; IME composition is ignored. React Chromium/WebKit gradient workflows passed invalid-color Enter rejection, error clearing, valid-color/position cancellation, color/position Enter commits and existing source/render/history behavior. Full Chromium HTML workflow passed with the same cancellation checks and color Enter commit. Logs `/private/tmp/retouch-gradient-keyboard-{page-fonts-chromium,page-fonts-webkit,html-site-chromium}.log`. Full parity and native foreground/capture usability remain incomplete.
+
+### 2026-09-11 — Focused gradient defaults
+
+HTML and React gradients now group Color blending, Hue direction, Repeat and repeat guidance under a per-gradient Gradient options disclosure. Type, geometry and compact stops stay visible. Disclosure state survives source refresh and newly revealed hue controls, and accessible summary names identify each fill. React Chromium/WebKit gradient workflows and full Chromium HTML workflow passed; screenshot `/private/tmp/retouch-gradient-options-chromium.png` inspected. Logs `/private/tmp/retouch-gradient-options-{page-fonts-chromium,page-fonts-webkit,html-site-chromium}.log`. Full Figma parity remains incomplete.

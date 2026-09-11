@@ -57,6 +57,14 @@
     }
     if(options.children.length>1)section.append(options);
    }
+   if(name==='Fill')for(const group of section.querySelectorAll('.gradient-controls')){
+    const rows=[...group.querySelectorAll(':scope > .inspector-field')].filter(row=>/^(?:Gradient|Fill) \d+ (?:Color blending|Hue direction|Repeat)$/.test(row.querySelector('[aria-label]')?.getAttribute('aria-label')||''));
+    if(!rows.length)continue;
+    const prefix=rows[0].querySelector('[aria-label]').getAttribute('aria-label').replace(/ (?:Color blending|Hue direction|Repeat)$/,''),options=disclosure('Gradient options','gradient-options-'+prefix);
+    options.querySelector('summary').setAttribute('aria-label',prefix+' options');
+    for(const row of rows){const hint=row.nextElementSibling,label=row.querySelector('[aria-label]').getAttribute('aria-label');options.append(row);row.querySelector('span').textContent=label.slice(prefix.length+1);if(label.endsWith(' Repeat')&&hint?.classList.contains('hint'))options.append(hint);}
+    group.append(options);
+   }
    if(name==='Typography'){
     const preview=section.querySelector(':scope > .type-preview');if(preview){const details=disclosure('Text preview','text-preview');details.append(preview);section.append(details);}
     const options=disclosure('Type settings','type-settings');
