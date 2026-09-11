@@ -12,6 +12,13 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   assert.equal(await layers.getAttribute('aria-expanded'),'true');assert.equal(await inspector.getAttribute('aria-expanded'),'true');const wide=await canvas.evaluate(el=>el.clientWidth);
   await layers.click();await inspector.click();await wait(async()=>await canvas.evaluate(el=>el.clientWidth)>wide+500);await page.reload();await page.frameLocator('#app').getByRole('heading').waitFor();assert.equal(await layerPanel.isVisible(),false);assert.equal(await inspectorPanel.isVisible(),false);await layers.click();await inspector.click();
   await page.setViewportSize({width:720,height:900});await wait(async()=>!await layerPanel.isVisible()&&!await inspectorPanel.isVisible());assert.ok(await canvas.evaluate(el=>el.clientWidth)>=700);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await inspector.click();await inspectorPanel.waitFor({state:'visible'});
+  const dock=page.getByRole('navigation',{name:'Canvas tools',exact:true});
+  await wait(async()=>{const d=await dock.boundingBox(),p=await inspectorPanel.boundingBox();return d.x+d.width<=p.x;});
+  await inspector.click();await inspectorPanel.waitFor({state:'hidden'});
+  await layers.click();await layerPanel.waitFor({state:'visible'});
+  await wait(async()=>{const d=await dock.boundingBox(),p=await layerPanel.boundingBox();return d.x>=p.x+p.width;});
+  await layers.click();await layerPanel.waitFor({state:'hidden'});
   await page.getByRole('button',{name:'Compare screens',exact:true}).click();await page.frameLocator('iframe[title="Phone comparison preview"]').locator('body').waitFor();const compactWidth=await canvas.evaluate(el=>el.clientWidth);assert.ok(compactWidth>=400);
   await layers.click();await layerPanel.waitFor({state:'visible'});assert.equal(await canvas.evaluate(el=>el.clientWidth),compactWidth);await page.getByRole('treeitem',{name:'h1 · Heading',exact:true}).click();await inspectorPanel.waitFor({state:'visible'});assert.equal(await layerPanel.isVisible(),false);assert.equal(await canvas.evaluate(el=>el.clientWidth),compactWidth);const selected=await page.locator('#panelBody').textContent();assert.ok(selected.length>0);
   await inspector.focus();await page.keyboard.press('Escape');await inspectorPanel.waitFor({state:'hidden'});assert.equal(await inspector.getAttribute('aria-expanded'),'false');assert.equal(await inspector.evaluate(el=>el===document.activeElement),true);await inspector.click();await inspectorPanel.waitFor({state:'visible'});assert.equal(await page.locator('#panelBody').textContent(),selected);

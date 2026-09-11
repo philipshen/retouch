@@ -103,6 +103,14 @@
  const dock=document.createElement('nav');dock.className='design-tool-dock';dock.setAttribute('aria-label','Canvas tools');
  for(const id of ['modeBtn','canvasHand','quickActions','undoBtn','redoBtn']){const button=document.getElementById(id);if(button){button.setAttribute('aria-label',button.textContent.trim());new MutationObserver(()=>button.setAttribute('aria-label',button.textContent.trim())).observe(button,{childList:true,characterData:true,subtree:true});dock.append(button);}}
  const main=document.getElementById('main'),canvas=document.getElementById('frameWrap');main.append(dock);
- const place=()=>{const c=canvas.getBoundingClientRect(),m=main.getBoundingClientRect();dock.style.left=(c.left-m.left+c.width/2)+'px';};new ResizeObserver(place).observe(canvas);place();
+ const place=()=>{
+  const c=canvas.getBoundingClientRect(),m=main.getBoundingClientRect();let left=c.left,right=c.right;
+  if(main.classList.contains('compact-workspace')){
+   const layers=document.getElementById('layersPanel'),panel=document.getElementById('panel');
+   if(!layers.hidden)left=Math.max(left,Math.min(right,layers.getBoundingClientRect().right));
+   if(!panel.hidden)right=Math.min(right,Math.max(left,panel.getBoundingClientRect().left));
+  }
+  dock.style.left=(left-m.left+(right-left)/2)+'px';
+ };new ResizeObserver(place).observe(canvas);window.addEventListener('retouch:workspace-layout',place);place();
  root.RetouchInspectorUI={organize};
 })(window);

@@ -406,3 +406,10 @@ Full HTML browser workflows passed in Chromium and WebKit, including the added a
 The HTML Add gradient action is now a plus button on the Fill header, retaining its accessible name and original callback. Clear background images/reset gradient fills and clear layer/background filter actions live in Fill options/Effect options disclosures. This removes standalone inactive actions from the main field list. Background blur also has a shorter visible label.
 
 Full HTML workflows passed in Chromium and WebKit after explicitly opening the disclosures where needed, including adding and editing multiple gradients, clearing filters, responsive gradient reset, and exact undo. The current screenshot was visually inspected at /private/tmp/retouch-html-type-chromium.png. Current desktop archive f8394de predates this and the preceding HTML typography presentation changes. Full parity remains incomplete.
+
+
+### Compact workspace toolbar visibility (2026-09-11)
+
+Reproduced a light-toolbar regression at 720px window width: opening the right inspector drawer covered the dock's right edge. Dock placement now considers the canvas area left visible by compact Layers/Inspector drawers and responds to workspace-layout changes even when canvas dimensions do not change.
+
+The added no-overlap regression failed before the fix and passed afterward in Chromium and WebKit. The full workspace-panels workflow also passed panel persistence, compact drawers, selection, Escape/focus, source edits/undo, and return to wide layout. Screenshot inspected: /private/tmp/retouch-compact-chromium.png. This source change is newer than the f8394de desktop archive. Full parity remains unfinished.
