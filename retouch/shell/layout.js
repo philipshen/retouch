@@ -11,6 +11,13 @@
     const inline=/^(vertical|sideways)-/.test(parent.writingMode||'')?'height':'width',block=inline==='width'?'height':'width';
     return {inline,block,main:/^column/.test(parent.direction||'')?block:inline};
   }
+  function gapClasses(classes,axis,value,writingMode){
+    if(!['width','height'].includes(axis)||!Number.isFinite(value)||value<0||value>10000)throw Error('Choose a gap from 0 to 10000 pixels.');
+    const inline=layoutAxes({writingMode}).inline===axis,kind=inline?'x':'y',property=inline?'column-gap':'row-gap';
+    let addition='gap-'+kind+'-['+value+'px]';
+    if(classes.split(/\s+/).some(token=>/^!|!$/.test(token)&&/^(?:gap-(?![xy]-)|\[gap:)/.test(I.base(token)||'')))addition='!'+addition;
+    return I.replace(classes,token=>token.startsWith('gap-'+kind+'-')||token.startsWith('['+property+':'),addition);
+  }
   function sizeClasses(classes,axis,mode,value,parent={}) {
     if(!['width','height'].includes(axis)||!['fixed','hug','fill','reset'].includes(mode))throw Error('Unknown sizing mode');
     if(mode==='fixed'&&(!Number.isFinite(value)||value<0||value>100000))throw Error('Invalid size');
@@ -85,8 +92,8 @@
       } else {
         I.select(sec,'Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>save(I.replace(classes,t=>/^flex-(wrap|wrap-reverse|nowrap)$/.test(t),'flex-'+v)));
       }
-      for(const [prop,label,kind] of [['columnGap','Horizontal gap','x'],['rowGap','Vertical gap','y']]) {
-        numeric(label,parseFloat(css[prop])||0,0,10000,v=>save(I.replace(classes,t=>t.startsWith('gap-'+kind+'-'),`gap-${kind}-[${v}px]`)));
+      for(const [prop,label,axis] of [['columnGap',verticalInline?'Vertical gap':'Horizontal gap',verticalInline?'height':'width'],['rowGap',verticalInline?'Horizontal gap':'Vertical gap',verticalInline?'width':'height']]) {
+        numeric(label,parseFloat(css[prop])||0,0,10000,v=>save(gapClasses(classes,axis,v,css.writingMode)));
       }
       I.select(sec,'Align children',[['start','Start'],['center','Center'],['end','End'],['stretch','Stretch'],['baseline','Baseline']],(css.alignItems==='normal'?'stretch':css.alignItems.replace('flex-','')),v=>save(I.replace(classes,t=>t.startsWith('items-'),'items-'+v)));
       const justify=css.justifyContent==='normal'?'start':css.justifyContent.replace('flex-','').replace('space-','');
@@ -134,6 +141,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

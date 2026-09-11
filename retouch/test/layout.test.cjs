@@ -102,3 +102,11 @@ test('vertical writing modes map physical dimensions to flex and grid axes',()=>
   assert.equal(L.sizeClasses('w-20','width','fill',0,{display:'grid',writingMode}),'w-auto self-stretch');
  }
 });
+
+test('physical gap edits follow writing mode and preserve the other shorthand axis',()=>{
+ assert.equal(L.gapClasses('!gap-4 gap-x-2 [column-gap:8px] gap-y-3 md:gap-10','width',30,'horizontal-tb'),'!gap-4 gap-y-3 md:gap-10 !gap-x-[30px]');
+ assert.equal(L.gapClasses('!gap-4 gap-y-2 [row-gap:8px] gap-x-3','width',30,'vertical-lr'),'!gap-4 gap-x-3 !gap-y-[30px]');
+ assert.equal(L.gapClasses('[gap:12px_20px]! gap-x-4','height',15,'vertical-rl'),'[gap:12px_20px]! !gap-x-[15px]');
+ assert.equal(L.gapClasses('md:!gap-4 gap-x-2','width',30,'horizontal-tb'),'md:!gap-4 gap-x-[30px]');
+ for(const value of [-1,NaN,10001])assert.throws(()=>L.gapClasses('','width',value));
+});
