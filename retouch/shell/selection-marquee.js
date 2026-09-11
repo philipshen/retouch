@@ -30,7 +30,7 @@
    }
    onChange(null);
    if(!current.moved&&commit&&!current.outer&&!['HTML','BODY'].includes(current.target.tagName)&&current.target.isConnected&&onClick){const marker=ignoreClick={...current.rawLast,outer:false,time:Date.now()};root.setTimeout(()=>{if(ignoreClick===marker)ignoreClick=null;},0);onClick(current.target,{toggle:current.append,point:current.last});}
-   if(current.moved){ignoreClick={...current.rawLast,outer:current.outer,time:Date.now()};if(commit)onSelect(pick(d,clip(rectangle(current.start,current.last),w.innerWidth,w.innerHeight),selectable),{append:current.append});}
+   if(current.moved){ignoreClick={...current.rawLast,outer:current.outer,time:Date.now()};if(commit){const rect=clip(rectangle(current.start,current.last),w.innerWidth,w.innerHeight);onSelect(pick(d,rect,selectable),{append:current.append,rect});}}
   }
   function down(e,outer){
    const allowed=outer?(outerBackground?outerBackground(e,point(e,true)):[surface,root.document.getElementById('canvasExtent'),root.document.getElementById('siteStage')].includes(e.target)):background(e.target)||!selectable(e.target);

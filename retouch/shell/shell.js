@@ -187,7 +187,7 @@ function hookFrame(d, w) {
   stopMarquee=RetouchMarquee.mount({document:d,frame:iframe,surface:canvasSurface,enabled:()=>window.__RT_RENDERING?.selectionStyling===true&&mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests,
     onChange:rect=>{selectionMarquee=rect?{document:d,rect}:null;},
     selectable:node=>!layerLocks.locked(node),
-    onSelect:(nodes,options)=>selectMany(nodes,options),
+    onSelect:(nodes,options)=>selectMarquee(d,nodes,options),
     onClick:(node,options)=>{if(panelTasks||undoBusy||sourceRequests)return;const target=layerLocks.pick(node,options.point?.x,options.point?.y);if(target)select(target,options);else if(!options.toggle)clearSelection();},
   });
   // The compiler may deliver CSS after the source-write response. Refresh
@@ -491,6 +491,27 @@ window.addEventListener('retouch:comparison-edit',async event=>{
   }
   toast('This layer is not present on the main canvas at this size.','err');
 });
+
+async function selectMarquee(d,nodes,options){
+ if(sel?.info.kind!=='instance')return selectMany(nodes,options);
+ const serial=++classificationSerial,selection=sel;busyPanel(true);
+ try{
+  const library=await api('GET','/rt/__api/components');
+  if(serial!==classificationSerial||sel!==selection||doc()!==d)return;
+  if(!library?.ok)return toast('Could not resolve components for this selection.','err');
+  const candidates=[],byUsage=new Map();
+  for(const el of d.querySelectorAll('[data-rt-i]')){const id=el.getAttribute('data-rt-i');if(!byUsage.has(id))byUsage.set(id,[]);byUsage.get(id).push(el);}
+  for(const component of library.components||[])for(const usage of component.usages||[]){
+   const roots=byUsage.get(usage.id)||[];
+   for(const group of RetouchComponentInstances.group(roots,component.rootGroups)){
+    if(!group.complete||!group.elements.every(el=>!layerLocks.locked(el)&&!['hidden','collapse'].includes(d.defaultView.getComputedStyle(el).visibility)&&RetouchMarquee.enclosed(options.rect,el.getBoundingClientRect())))continue;
+    candidates.push(group);
+   }
+  }
+  const targets=candidates.filter(group=>!candidates.some(parent=>parent!==group&&parent.elements.some(root=>root!==group.element&&root.contains(group.element)))).map(group=>group.element);
+  await selectMany(targets,{append:options.append,component:true});
+ }catch(error){toast(error.message||'Could not select these components.','err');}finally{busyPanel(false);}
+}
 
 async function selectMany(nodes,{active=nodes[0],append=false,component=false}={}){
   stopDrawing?.();
