@@ -39,6 +39,7 @@ function plan(resolved,op){
  }catch(error){return refuse(error.message);}
 }
 function planSelection(resolved,op){
+ if(op.direction!==undefined&&op.direction!=='inside')return require('./move-component.cjs').planSelection(resolved,op);
  try{
   if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the components.');
   const ids=op.ids;

@@ -127,6 +127,18 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   }else assert.deepEqual(await dragGroup(),{started:true,accepted:true});await rendered(['Dynamic','First','Second']);await page.waitForFunction(()=>!panelTasks&&!sourceRequests);assert.equal(read(),movedSource);assert.equal(await page.getByRole('treeitem',{selected:true}).count(),2);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await rendered(['First','Second','Dynamic']);await page.waitForFunction(()=>!undoBusy&&!panelTasks&&!sourceRequests);assert.equal(read(),original);
   await page.getByRole('button',{name:'Redo',exact:true}).click();await rendered(['Dynamic','First','Second']);await page.waitForFunction(()=>!undoBusy&&!panelTasks&&!sourceRequests);assert.equal(read(),movedSource);assert.deepEqual(errors,[]);
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await rendered(['First','Second','Dynamic']);await page.waitForFunction(()=>!undoBusy&&!panelTasks&&!sourceRequests);assert.equal(read(),original);
+  const reorderGroup=async()=>page.evaluate(()=>{
+   const source=document.querySelector('.component-tree-row [aria-selected="true"]'),target=document.querySelector('.component-tree-row [aria-selected="false"]'),box=target.getBoundingClientRect(),dataTransfer=new DataTransfer();
+   const start=new DragEvent('dragstart',{bubbles:true,cancelable:true,dataTransfer});source.dispatchEvent(start);if(start.defaultPrevented)return false;
+   const over=new DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer,clientY:box.bottom-2});target.dispatchEvent(over);if(!over.defaultPrevented){source.dispatchEvent(new DragEvent('dragend',{bubbles:true,dataTransfer}));return false;}
+   target.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer,clientY:box.bottom-2}));source.dispatchEvent(new DragEvent('dragend',{bubbles:true,dataTransfer}));return true;
+  });
+  assert.equal(await reorderGroup(),true);await rendered(['Dynamic','First','Second']);await page.waitForFunction(()=>!panelTasks&&!sourceRequests);const reorderedSource=read();assert.equal(reorderedSource,original.replace('<Card title="First"/><Card title="Second"/><Card title={dynamic}/>','<Card title={dynamic}/><Card title="First"/><Card title="Second"/>'));assert.equal(await page.getByRole('treeitem',{selected:true}).count(),2);
+  assert.equal(await reorderGroup(),true);await page.waitForFunction(()=>!panelTasks&&!sourceRequests);assert.equal(read(),reorderedSource);
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await rendered(['First','Second','Dynamic']);await page.waitForFunction(()=>!undoBusy&&!panelTasks&&!sourceRequests);assert.equal(read(),original);
+  await page.getByRole('button',{name:'Redo',exact:true}).click();await rendered(['Dynamic','First','Second']);await page.waitForFunction(()=>!undoBusy&&!panelTasks&&!sourceRequests);assert.equal(read(),reorderedSource);assert.deepEqual(errors,[]);
+  console.log('COMPONENT GROUP SIBLING DROP/ORDER/NOOP/EXACT UNDO REDO PASS',engine);
   console.log('COMPONENT GROUP DRAG LOCK REFUSAL/CANCEL/MOVE/EXACT UNDO REDO PASS',engine);
   console.log('COMPONENT GROUP REPARENT DESTINATION/ORDER/LOCKS/SELECTION/EXACT UNDO REDO/NOOP PASS',engine);
   console.log('COMPONENT GROUP DELETE BUTTON/KEYBOARD/LOCK RESTORATION/EXACT SOURCE AND SELECTION UNDO REDO PASS',engine);

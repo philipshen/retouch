@@ -40,4 +40,22 @@ function plan(resolved,op){
   return {ok:true,hash:contentHash(after),movedComponent:{instanceId:selected.id,previousInstanceId:resolved.element.id,sourceIdMap},edits:[{file:resolved.file,before:resolved.source,after}]};
  }catch(error){return refuse(error.message);}
 }
-module.exports={describe,plan};
+function planSelection(resolved,op){
+ try{
+  if(op.fileHash!==resolved.hash)throw Error('The source changed. Re-select the components.');
+  const ids=op.ids;if(!Array.isArray(ids)||ids.length<2||ids.length>100||new Set(ids).size!==ids.length||!ids.includes(resolved.element.id)||ids.some(id=>typeof id!=='string'||!/^[a-f0-9]{10}$/.test(id)))throw Error('Choose 2 to 100 distinct component usages in one source file.');
+  if(!['before','after'].includes(op.direction))throw Error('Choose a position before or after another sibling layer.');
+  const original=collectElements(resolved.source,resolved.relPath).elements,members=ids.map(id=>original.find(el=>el.id===id));if(members.some(el=>el?.kind!=='instance'))throw Error('Select component usages from the same source file.');
+  const roots=members.filter(el=>!members.some(parent=>parent!==el&&parent.node.start<el.node.start&&parent.node.end>el.node.end)).sort((a,b)=>a.node.start-b.node.start),{siblings}=context({...resolved,element:roots[0]});
+  const starts=new Set(roots.map(el=>el.node.start));if(roots.some(el=>!siblings.some(node=>node.start===el.node.start)))throw Error('Select component usages in the same source container.');
+  const destination=original.find(el=>el.id===op.destinationId),target=siblings.find(node=>node.start===destination?.node.start);if(!target||starts.has(target.start))throw Error('Choose an unselected sibling layer.');
+  const selected=siblings.filter(node=>starts.has(node.start)),reordered=siblings.filter(node=>!starts.has(node.start));reordered.splice(reordered.indexOf(target)+(op.direction==='after'?1:0),0,...selected);
+  const ms=new MagicString(resolved.source),positions=[];let shift=0;
+  for(let i=0;i<siblings.length;i++){const slot=siblings[i],replacement=reordered[i],chunk=resolved.source.slice(replacement.start,replacement.end);positions.push({original:replacement,start:slot.start+shift});if(slot!==replacement)ms.overwrite(slot.start,slot.end,chunk);shift+=chunk.length-(slot.end-slot.start);}
+  const after=ms.toString(),elements=collectElements(after,resolved.relPath).elements,identities=new Map(),mapped=new Set();
+  for(const element of original){const position=positions.find(item=>element.node.start>=item.original.start&&element.node.end<=item.original.end),start=position?position.start+element.node.start-position.original.start:element.node.start,next=elements.find(item=>item.kind===element.kind&&item.node.start===start);if(!next||mapped.has(next.id))throw Error('The reordered layers could not be mapped back to source.');mapped.add(next.id);identities.set(element.id,next.id);}
+  if(mapped.size!==elements.length)throw Error('Reordering changed the number of source layers.');
+  return {ok:true,unchanged:after===resolved.source,hash:contentHash(after),selectionIds:roots.map(el=>identities.get(el.id)),sourceIdMap:[...identities].filter(([a,b])=>a!==b),rootCount:roots.length,destinationId:identities.get(op.destinationId),edits:after===resolved.source?[]:[{file:resolved.file,before:resolved.source,after}]};
+ }catch(error){return refuse(error.message);}
+}
+module.exports={describe,plan,planSelection};

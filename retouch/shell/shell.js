@@ -906,7 +906,7 @@ function paintLoop() {
 }
 
 function syncLayerSelection() {
-  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent),selectionCanDelete:sel.multiple.every(info=>info.canDeleteComponent),selectionCanReparent:sharedComponentContainers(sel.multiple).length>0,selectionContainers:sharedComponentContainers(sel.multiple)}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
+  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent),selectionCanDelete:sel.multiple.every(info=>info.canDeleteComponent),selectionCanReparent:sharedComponentContainers(sel.multiple).length>0,selectionContainers:sharedComponentContainers(sel.multiple),selectionTargets:sharedComponentTargets(sel.multiple)}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
 }
 
 function inTextScope(el, info) {
@@ -2636,7 +2636,7 @@ const layers = RetouchLayers.mount({
   onMoveComponent:window.__RT_RENDERING?.componentInsertion&&!historyRecoveryRequired?async(source,destination,position,move)=>{
     if(historyRecoveryRequired||panelTasks||undoBusy||sourceRequests||!source.isConnected||!destination.isConnected||layerLocks.locked(source)||position==='inside'&&layerLocks.locked(destination))return;
     await commitInlineEdit();
-    if(move.ids?.length>1){const infos=sel?.multiple;if(position!=='inside'||!infos||infos.length!==move.ids.length||infos.some(info=>!move.ids.includes(info.id)||info.hash!==move.fileHash)||!sharedComponentContainers(infos).includes(move.destinationId)||infos.some(info=>matchingEls(info.id).some(el=>layerLocks.locked(el))))return;await reparentComponentSelection(infos,move.destinationId);return;}
+    if(move.ids?.length>1){const infos=sel?.multiple;if(!['inside','before','after'].includes(position)||!infos||infos.length!==move.ids.length||infos.some(info=>!move.ids.includes(info.id)||info.hash!==move.fileHash)||!(position==='inside'?sharedComponentContainers(infos):sharedComponentTargets(infos)).includes(move.destinationId)||infos.some(info=>matchingEls(info.id).some(el=>layerLocks.locked(el))))return;await reparentComponentSelection(infos,move.destinationId,position);return;}
     await moveInstance({id:move.id,hash:move.fileHash},position,move.destinationId);
   }:undefined,
   onMove:async(source,destination,position)=>{
@@ -2663,10 +2663,11 @@ function sharedComponentContainers(infos){
  const candidates=infos[0]?.componentMovement?.selectionContainers||infos[0]?.componentMovement?.containers||[];
  return candidates.filter(id=>infos.every(info=>(info.componentMovement?.selectionContainers||info.componentMovement?.containers||[]).includes(id)));
 }
-async function reparentComponentSelection(infos,destinationId){
+function sharedComponentTargets(infos){return (infos[0]?.componentMovement?.targets||[]).filter(id=>infos.every(info=>info.componentMovement?.targets?.includes(id)));}
+async function reparentComponentSelection(infos,destinationId,direction='inside'){
  if(panelTasks||undoBusy||sourceRequests)return;const ids=infos.map(info=>info.id);busyPanel(true);
  try{
-  const result=await api('POST','/rt/__api/op',{type:'reparentComponentSelection',id:ids[0],ids,destinationId,fileHash:infos[0].hash});if(!result?.ok)throw Error(result?.reason||'Could not move the selected components.');
+  const result=await api('POST','/rt/__api/op',{type:'reparentComponentSelection',id:ids[0],ids,destinationId,direction,fileHash:infos[0].hash});if(!result?.ok)throw Error(result?.reason||'Could not move the selected components.');
   if(result.unchanged)return toast('The selected components are already in this position.','ok');
   editorHistory.record({type:'reparentComponentSelection',id:ids[0],selectionBefore:ids,selectionAfter:result.selectionIds,sourceIdMap:result.sourceIdMap,undoId:result.undoId});layerLocks.remap(result.sourceIdMap);
   await refreshComponentSelection(result.selectionIds);toast(result.rootCount+' components moved','ok');
