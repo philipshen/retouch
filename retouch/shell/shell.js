@@ -861,7 +861,11 @@ function paintLoop() {
       first=false;
     }
   }
-  if(d&&sel?.multiple&&mode==='edit')for(const info of sel.multiple)if(info.id!==activeId())for(const el of matchingEls(info.id))drawBox(el,'co',outlineKind(el,info));
+  if(d&&sel?.multiple&&mode==='edit')for(const info of sel.multiple)if(info.id!==activeId()){
+    const targets=matchingEls(info.id).filter(el=>inTextScope(el,info));
+    const groups=info.kind==='instance'?RetouchComponentInstances.group(targets,info.rootGroups):targets.map(el=>({element:el,elements:[el]}));
+    for(const group of groups){const bounds=RetouchComponentInstances.bounds(group.elements);if(bounds)drawBounds(bounds,'co',outlineKind(group.element,info));}
+  }
   if(d && editing?.el.isConnected)drawBox(editing.el,'editing',outlineKind(editing.el,editing.info));
   if(d && hoverEl?.isConnected && mode==='edit' && !editing) {
     const hovered=hoverDescription(hoverEl),target=hovered.element,info=hovered.info,kind=outlineKind(target,info);
