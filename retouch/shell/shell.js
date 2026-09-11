@@ -1003,7 +1003,8 @@ function screenScopeSection() {
 }
 window.addEventListener('retouch:comparisons',()=>{const across=document.getElementById('compareBreakpointBoundary');if(across)across.disabled=!window.RetouchComparisons?.canShowSizes(JSON.parse(across.dataset.sizes));const button=document.getElementById('compareBreakpoint');if(button)button.disabled=!window.RetouchComparisons?.canShowSize({width:Number(button.dataset.width),height:Number(button.dataset.height)});});
 // Scope navigation needs fresh viewport choices even while its selector has focus.
-function panelInteractionFocused(){return panelBody.contains(document.activeElement)&&!document.activeElement.matches('[data-canvas-tool], [aria-label="Style screen scope"]');}
+function panelPaintDraftFocused(){const picker=document.querySelector('.paint-picker[open]');return !!picker&&panelBody.contains(picker.retouchSourceInput);}
+function panelInteractionFocused(){return panelPaintDraftFocused()||panelBody.contains(document.activeElement)&&!document.activeElement.matches('[data-canvas-tool], [aria-label="Style screen scope"]');}
 let viewportRenderPending = false;
 function queueViewportPanelRefresh(){
   if(viewportRenderPending)return;
@@ -1056,7 +1057,7 @@ function renderPanel() {
   syncLayerSelection();
   const panel=document.getElementById('panel');
   const key=JSON.stringify([sel.info.file,sel.scope,sel.instanceId,(sel.multiple||[sel.info]).map(info=>info.id).sort()]);
-  const focusedDraft=panelInteractionFocused()&&document.activeElement.matches('input,textarea')&&(document.activeElement.matches('.component-props-search')||!panelTasks&&!sourceRequests&&!undoBusy);
+  const focusedDraft=panelPaintDraftFocused()||panelInteractionFocused()&&document.activeElement.matches('input,textarea')&&(document.activeElement.matches('.component-props-search')||!panelTasks&&!sourceRequests&&!undoBusy);
   if((panelPointer||focusedDraft)&&key===renderedPanelSelection){panelRenderDeferred=true;return;}
   panelRenderDeferred=false;
   const top=key===renderedPanelSelection?panel.scrollTop:0;
