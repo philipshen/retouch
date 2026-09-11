@@ -3,10 +3,11 @@
 A native AppKit window hosts the same Retouch editor used in the browser.
 macOS 13 or later; universal Apple Silicon and Intel binary.
 
-Native launch testing is paused at the user's request after recurring macOS
-verification warnings. Builds now skip native launch tests by default. Do not
-run GUI diagnostics or native test commands below unless the user explicitly
-resumes that testing; see [AGENTS.md](AGENTS.md).
+Controlled native testing resumed with user authorization on 2026-09-11.
+The existing navigation-fixed development bundle opened to its native welcome
+window, verified through accessibility and a screenshot without a manual
+approval step. Rebuilt bundles and complete native workflows remain unverified.
+Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The newest local artifact packages editor commit `d9cd994`, including stable
 selection fitting and preservation of pressed inspector controls. All 88 packaged
