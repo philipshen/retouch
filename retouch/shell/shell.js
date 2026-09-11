@@ -2636,7 +2636,7 @@ const layers = RetouchLayers.mount({
   onMoveComponent:window.__RT_RENDERING?.componentInsertion&&!historyRecoveryRequired?async(source,destination,position,move)=>{
     if(historyRecoveryRequired||panelTasks||undoBusy||sourceRequests||!source.isConnected||!destination.isConnected||layerLocks.locked(source)||position==='inside'&&layerLocks.locked(destination))return;
     await commitInlineEdit();
-    if(move.ids?.length>1){const infos=sel?.multiple;if(!['inside','before','after'].includes(position)||!infos||infos.length!==move.ids.length||infos.some(info=>!move.ids.includes(info.id)||info.hash!==move.fileHash)||!(position==='inside'?sharedComponentContainers(infos):sharedComponentTargets(infos)).includes(move.destinationId)||infos.some(info=>matchingEls(info.id).some(el=>layerLocks.locked(el))))return;await reparentComponentSelection(infos,move.destinationId,position);return;}
+    if(move.ids?.length>1){const infos=sel?.multiple;if(position!=='inside'&&layerLocks.locked(destination.parentElement))return;if(!['inside','before','after'].includes(position)||!infos||infos.length!==move.ids.length||infos.some(info=>!move.ids.includes(info.id)||info.hash!==move.fileHash)||!(position==='inside'?sharedComponentContainers(infos):sharedComponentTargets(infos)).includes(move.destinationId)||infos.some(info=>matchingEls(info.id).some(el=>layerLocks.locked(el))))return;await reparentComponentSelection(infos,move.destinationId,position);return;}
     await moveInstance({id:move.id,hash:move.fileHash},position,move.destinationId);
   }:undefined,
   onMove:async(source,destination,position)=>{
@@ -2668,7 +2668,7 @@ function sharedComponentOrdering(infos){
  const first=siblings.findIndex(id=>ids.has(id)),last=siblings.findLastIndex(id=>ids.has(id)),gaps=last-first+1>ids.size;
  return {before:first>0,after:last<siblings.length-1,first:first>0||gaps,last:last<siblings.length-1||gaps};
 }
-function sharedComponentTargets(infos){return (infos[0]?.componentMovement?.targets||[]).filter(id=>infos.every(info=>info.componentMovement?.targets?.includes(id)));}
+function sharedComponentTargets(infos){const targets=info=>[...new Set([...(info.componentMovement?.targets||[]),...(info.componentMovement?.crossTargets||[])])];return targets(infos[0]).filter(id=>!infos.some(info=>info.id===id)&&infos.every(info=>targets(info).includes(id)));}
 async function reparentComponentSelection(infos,destinationId,direction='inside'){
  if(panelTasks||undoBusy||sourceRequests)return;const ids=infos.map(info=>info.id);busyPanel(true);
  try{

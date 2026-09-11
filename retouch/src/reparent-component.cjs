@@ -21,9 +21,10 @@ function context(resolved){
   for(const {name,binding}of references){if(target.scope.getBinding(name)!==binding)throw Error('Moving here would change what "'+name+'" refers to.');if(binding&&binding.scope.getFunctionParent()&&!['module','hoisted','param','local'].includes(binding.kind)&&binding.path.node.end>target.node.start)throw Error('The value "'+name+'" is not available when this container is created.');}
   return target;
  }
- return {source,destination};
+ function siblingDestination(element){const anchor=paths.get(element?.node?.start);if(!anchor||anchor.listKey!=='children'||anchor.parent.type!=='JSXElement')throw Error('Choose a layer inside a source container.');if(anchor.node.start>=source.node.start&&anchor.node.end<=source.node.end)throw Error('Choose a layer outside the selected component.');const parent=resolved.elements.find(el=>el.node.start===anchor.parent.start);destination(parent);return parent;}
+ return {source,destination,siblingDestination};
 }
-function describe(resolved){try{const ctx=context(resolved),containers=[],selectionContainers=[];for(const element of resolved.elements)try{const target=ctx.destination(element);selectionContainers.push(element.id);if(target!==ctx.source.parentPath)containers.push(element.id);}catch{}return {containers,selectionContainers,canReparent:containers.length>0};}catch{return {containers:[],canReparent:false};}}
+function describe(resolved){try{const ctx=context(resolved),containers=[],selectionContainers=[];for(const element of resolved.elements)try{const target=ctx.destination(element);selectionContainers.push(element.id);if(target!==ctx.source.parentPath)containers.push(element.id);}catch{}const crossTargets=[];for(const element of resolved.elements)try{ctx.siblingDestination(element);crossTargets.push(element.id);}catch{}return {containers,selectionContainers,crossTargets,canReparent:containers.length>0};}catch{return {containers:[],canReparent:false};}}
 function plan(resolved,op){
  if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the component before moving it.');
  try{
@@ -39,7 +40,8 @@ function plan(resolved,op){
  }catch(error){return refuse(error.message);}
 }
 function planSelection(resolved,op){
- if(op.direction!==undefined&&op.direction!=='inside')return require('./move-component.cjs').planSelection(resolved,op);
+ const positioned=['before','after'].includes(op.direction)&&op.destinationId!==undefined;
+ if(op.direction!==undefined&&op.direction!=='inside'){const direct=require('./move-component.cjs').planSelection(resolved,op);if(direct.ok||!positioned)return direct;}
  try{
   if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the components.');
   const ids=op.ids;
@@ -47,13 +49,17 @@ function planSelection(resolved,op){
   const original=collectElements(resolved.source,resolved.relPath).elements,members=ids.map(id=>original.find(element=>element.id===id)),destination=original.find(element=>element.id===op.destinationId);
   if(members.some(element=>element?.kind!=='instance'))return refuse('Select component usages from the same source file.');
   const roots=members.filter(element=>!members.some(parent=>parent!==element&&parent.node.start<element.node.start&&parent.node.end>element.node.end)).sort((a,b)=>a.node.start-b.node.start);
-  for(const element of roots)context({...resolved,elements:original,element}).destination(destination);
+  let container=destination;for(const element of roots){const ctx=context({...resolved,elements:original,element});if(positioned)container=ctx.siblingDestination(destination);else ctx.destination(destination);}
   let source=resolved.source,elements=original;const identities=new Map(original.map(element=>[element.id,element.id]));
   for(const root of roots){
    const id=identities.get(root.id),element=elements.find(item=>item.id===id);if(!element)return refuse('A selected component lost its source identity.');
-   const current={...resolved,source,elements,element,hash:contentHash(source)},result=plan(current,{type:'moveComponent',id,fileHash:current.hash,direction:'inside',destinationId:identities.get(op.destinationId)});if(!result.ok)return result;if(result.unchanged)continue;
+   const current={...resolved,source,elements,element,hash:contentHash(source)},result=plan(current,{type:'moveComponent',id,fileHash:current.hash,direction:'inside',destinationId:identities.get(container.id)});if(!result.ok)return result;if(result.unchanged)continue;
    const mapping=new Map(result.movedComponent.sourceIdMap);for(const [before,now]of identities)identities.set(before,mapping.get(now)||now);
    source=result.edits[0].after;elements=collectElements(source,resolved.relPath).elements;
+  }
+  if(positioned)for(const root of op.direction==='after'?[...roots].reverse():roots){
+   const id=identities.get(root.id),element=elements.find(item=>item.id===id),current={...resolved,source,elements,element,hash:contentHash(source)},result=require('./move-component.cjs').plan(current,{id,fileHash:current.hash,direction:op.direction,destinationId:identities.get(op.destinationId)});if(!result.ok)return result;if(result.unchanged)continue;
+   const mapping=new Map(result.movedComponent.sourceIdMap);for(const [before,now]of identities)identities.set(before,mapping.get(now)||now);source=result.edits[0].after;elements=collectElements(source,resolved.relPath).elements;
   }
   const selectionIds=roots.map(element=>identities.get(element.id)),sourceIdMap=[...identities].filter(([before,after])=>before!==after);
   if(new Set(identities.values()).size!==original.length||elements.length!==original.length)throw Error('Moving changed the number of source layers.');
