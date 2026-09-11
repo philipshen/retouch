@@ -451,3 +451,10 @@ React radius controls now expose a compact shared reset and one reset per physic
 React stroke width and style now use a shared class planner that replaces active utility/arbitrary-property overrides and preserves priority against inherited important border rules. Width edits that need to enable a visible style use the same planner. Compact reset controls remove local width/style overrides and stay in the Stroke section. Color behavior is unchanged.
 
 886 unit tests passed. Chromium and WebKit inspector-light passed edits against inherited sm:!border-[2px] and sm:!border-dashed, width edits preserving style, style edits preserving width, resets revealing inherited values, and exact source undo. Arbitrary physical width/style replacement and reset scope preservation have unit coverage. General shorthand/logical/inline cascade completeness remains unproven. Source changes postdate desktop archive af62db6. Full parity remains incomplete.
+
+
+### Light context menus and drawer shadows (2026-09-11)
+
+Removed the canvas context menu's hard-coded dark background, separator colors, and system font. It now uses the light workspace palette and Inter, with a visible keyboard-focus outline and lighter shadow. Compact drawer shadows also match the lighter elevation treatment.
+
+Chromium/WebKit canvas-context-menu workflows passed explicit light background/text assertions, selection and duplication, exact undo, framing/reparenting, keyboard navigation/focus return, native-input guards, and compact bounds/scrolling. Screenshot /private/tmp/retouch-light-menu-chromium.png was visually inspected. Source changes postdate desktop archive af62db6. Full parity remains incomplete.
