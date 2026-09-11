@@ -229,7 +229,7 @@ Set a container’s **Display** to grid to expose **Grid columns** and **Grid ro
 Counts create equal tracks; grid children expose column and row spans. Controls
 follow the screen scope and reset to the authored layout.
 
-For Tailwind-backed layouts, **Layout → Custom grid tracks** accepts separate
+For HTML and Tailwind-backed layouts, **Layout → Custom grid tracks** accepts separate
 column and row sizes, such as `160px 1fr`, `repeat(3, minmax(0, 1fr))`, or
 `[content_start] 80px [rest] 1fr`. These fields follow the selected screen scope.
 Each axis has its own reset; invalid track expressions leave the source unchanged.

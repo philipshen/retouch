@@ -52,3 +52,12 @@ test('Visibility writes preserve authored display and can override or reset at a
  const reset=css.plan(r,{property:'visibility',value:null,width:768});assert.equal(reset.ok,true);assert.deepEqual(css.describe(resolve(reset.edits[0].after)).cssRules,{0:{visibility:'hidden'}});
  assert.equal(valid('visibility','hidden;display:none'),false);
 });
+
+
+test('custom grid track validation accepts bounded track lists and rejects injected or invalid expressions',()=>{
+ for(const axis of ['columns','rows']){
+  const property='grid-template-'+axis;
+  for(const value of ['160px 1fr','80px minmax(0, 1fr)','repeat(3, minmax(0, 1fr))','[content_start] 80px [rest] 1fr','auto 1fr','fit-content(30%) 2fr'])assert.equal(valid(property,value),true,value);
+  for(const value of ['','[name]','minmax(1fr, 80px)','repeat(999, 1fr)','repeat(2, repeat(2, 1fr))','1fr; color:red','url(x)','var(--unknown)','1fr]','[span] 1fr','repeat(2,,1fr)'])assert.equal(valid(property,value),false,value);
+ }
+});

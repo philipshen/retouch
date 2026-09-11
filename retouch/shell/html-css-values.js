@@ -1,4 +1,36 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchHTMLCSSValues=api;})(typeof window==='object'?window:globalThis,function(){
+ function gridTracks(value){
+  if(typeof value!=='string'||value.length>2048)return false;
+  if(value==='none')return true;
+  function split(text,comma=false){
+   const result=[],stack=[];let start=0;
+   for(let i=0;i<text.length;i++){
+    const c=text[i];if(c==='('||c==='[')stack.push(c);
+    else if(c===')'||c===']'){if(stack.pop()!==(c===')'?'(':'['))return null;}
+    else if(!stack.length&&(comma?c===',':/\s/.test(c))){const part=text.slice(start,i).trim();if(part)result.push(part);else if(comma)return null;start=i+1;}
+   }
+   if(stack.length)return null;const end=text.slice(start).trim();if(end)result.push(end);else if(comma)return null;return result;
+  }
+  const length=v=>/^(?:0|(?:\d+(?:\.\d+)?|\.\d+)(?:px|em|rem|%|vw|vh|vmin|vmax|ch|ex|cm|mm|in|pt|pc))$/.test(v);
+  const breadth=(v,flex=true)=>length(v)||['auto','min-content','max-content'].includes(v)||flex&&/^(?:\d+(?:\.\d+)?|\.\d+)fr$/.test(v);
+  function size(v){
+   if(breadth(v))return true;
+   const match=/^(minmax|fit-content)\((.*)\)$/.exec(v);if(!match)return false;
+   const args=split(match[2],true);return !!args&&(match[1]==='minmax'?args.length===2&&breadth(args[0],false)&&breadth(args[1]):args.length===1&&length(args[0]));
+  }
+  function list(text,repeated=false){
+   const parts=split(text);if(!parts?.length)return 0;let count=0;
+   for(const part of parts){
+    if(/^\[(?:[A-Za-z_][\w-]*(?:\s+[A-Za-z_][\w-]*)*)\]$/.test(part)){if(part.slice(1,-1).split(/\s+/).some(n=>['auto','span'].includes(n.toLowerCase())))return 0;continue;}
+    if(size(part)){count++;continue;}
+    const repeat=/^repeat\((.*)\)$/.exec(part),args=repeat&&split(repeat[1],true);
+    if(repeated||!args||args.length!==2||! /^(?:[1-9]|1[0-9]|2[0-4])$/.test(args[0]))return 0;
+    const tracks=list(args[1],true);if(!tracks)return 0;count+=Number(args[0])*tracks;
+   }
+   return count<=128?count:0;
+  }
+  return list(value)>0;
+ }
  function parseVariations(value){
   if(value==='normal')return [];
   if(typeof value!=='string'||value.length>500)return null;
@@ -85,11 +117,12 @@
   if(property==='font-variant-numeric')return value===null||numericValid(value);
   if(property==='box-shadow')return value===null||parseShadows(value)!==null;
   if(value===null)return ['flex-grow','flex-shrink','grid-template-columns','grid-template-rows','grid-column','grid-row','opacity','rotate','object-position'].includes(property)||lengths.has(property)||colors.has(property)||Object.hasOwn(options,property);
+  if(['grid-template-columns','grid-template-rows'].includes(property))return gridTracks(value)||property==='grid-template-columns'&&parseAdaptiveColumns(value)!==null;
   if(typeof value!=='string'||!value||value.length>150)return false;
   if(property==='border-radius'&&value.includes('/')){const axes=value.split('/');return axes.length===2&&axes.every(axis=>{const tokens=axis.trim().split(/\s+/);return tokens.length>=1&&tokens.length<=4&&tokens.every(token=>valid('border-top-left-radius',token));});}
   if(['flex-grow','flex-shrink'].includes(property))return /^(?:\d*\.)?\d+$/.test(value)&&Number(value)>=0&&Number(value)<=1000;
   if(property==='flex-basis'&&['auto','content'].includes(value))return true;
-  if(['grid-template-columns','grid-template-rows'].includes(property)){const match=/^repeat\(([1-9]|1[0-9]|2[0-4]), minmax\(0, 1fr\)\)$/.exec(value);return !!match||value==='none'||property==='grid-template-columns'&&parseAdaptiveColumns(value)!==null;}
+
   if(['grid-column','grid-row'].includes(property)){const match=/^span ([1-9]|1[0-9]|2[0-4]) \/ span ([1-9]|1[0-9]|2[0-4])$/.exec(value);return !!match&&match[1]===match[2]||value==='auto';}
   if(property==='font-family')return value.split(',').every(part=>{const name=part.trim();return /^(?:[\p{L}\p{N}_-]+(?: +[\p{L}\p{N}_-]+)*|"[\p{L}\p{N} _-]+"|'[\p{L}\p{N} _-]+')$/u.test(name);});
   if(property==='font-weight')return ['normal','bold'].includes(value)||/^(?:\d*\.)?\d+$/.test(value)&&Number(value)>=1&&Number(value)<=1000;

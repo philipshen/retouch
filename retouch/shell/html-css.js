@@ -1,5 +1,6 @@
 (function(){
  const I=RetouchInspector;
+ let customTracksOpen=false;
  const {options,fields,svgFields,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients}=RetouchHTMLCSSValues;
  const stopRail=RetouchGradientStopRail;
  function inheritedVariables(info,width){return Object.entries(info.cssRules||{}).filter(([scope])=>Number(scope)<width).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,rules])=>Object.assign(all,rules),{});}
@@ -163,6 +164,17 @@
    I.field(grid,label,input);const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);grid.append(reset);
   }
   if(gridFields.length)I.note(grid,'Track counts create equal-sized tracks. Reset restores the page’s authored layout.');
+  if(isGrid){
+   const custom=document.createElement('details'),summary=document.createElement('summary');custom.className='inspector-disclosure';summary.textContent='Custom grid tracks';custom.append(summary);custom.open=customTracksOpen;custom.ontoggle=()=>{customTracksOpen=custom.open;};
+   for(const [property,label] of [['grid-template-columns','Column sizes'],['grid-template-rows','Row sizes']]){
+    const row=document.createElement('div');row.className='property-row';custom.append(row);
+    const input=document.createElement('input');input.type='text';input.value=own[property]??css.getPropertyValue(property);input.oninput=()=>input.setCustomValidity('');
+    input.onchange=()=>{const value=input.value.trim();if(!valid(property,value)||!CSS.supports(property,value)){input.setCustomValidity('Enter track sizes such as 160px 1fr or repeat(3, minmax(0, 1fr)).');input.reportValidity();return;}save(property,value,width);};I.field(row,label,input);
+    const reset=I.button('↺',()=>save(property,null,width));reset.classList.add('property-reset');reset.setAttribute('aria-label','Reset '+label.toLowerCase());reset.title='Reset '+label.toLowerCase();reset.disabled=!Object.hasOwn(own,property);row.append(reset);
+   }
+   I.note(custom,'Separate sizes with spaces. 160px 1fr makes a fixed track and a flexible track.');grid.append(custom);
+  }
+
   for(const [property,label] of fields){
    const value=own[property]??css.getPropertyValue(property),input=document.createElement(options[property]?'select':'input');
    if(options[property])for(const item of new Set([value,...options[property]])){const option=document.createElement('option');option.value=item;option.textContent=item;input.append(option);}
