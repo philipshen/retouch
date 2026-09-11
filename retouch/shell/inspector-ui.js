@@ -51,9 +51,14 @@
    const name=title(section);section.dataset.section=name.toLowerCase().replace(/\s+/g,'-');
    if(name==='Fill'||name==='Effects'){
     const options=disclosure(name==='Fill'?'Fill options':'Effect options',name+'-options');
-    for(const button of [...section.querySelectorAll(':scope > .control-button')]){
+    const gradientDetails=name==='Fill'?[...section.children].find(el=>el.tagName==='DETAILS'&&el.querySelector('summary')?.textContent==='Gradient fills'):null;
+    const buttons=[...section.querySelectorAll(':scope > .control-button'),...(gradientDetails?[...gradientDetails.querySelectorAll(':scope > .control-button')]:[])];
+    for(const button of buttons){
      if(['Clear background images','Reset gradient fills','Clear layer filters','Clear background filters'].includes(button.textContent))options.append(button);
-     else if(name==='Fill'&&button.textContent==='Add gradient'){button.setAttribute('aria-label','Add gradient');button.title='Add gradient';button.textContent='+';button.classList.add('section-add');}
+     else if(name==='Fill'&&['Add gradient','Add gradient fill'].includes(button.textContent)){
+      const label=button.textContent,add=button.onclick;button.setAttribute('aria-label',label);button.title=label;button.textContent='+';button.classList.add('section-add');
+      if(gradientDetails){button.onclick=event=>{gradientDetails.open=true;return add?.call(button,event);};section.append(button);}
+     }
     }
     if(options.children.length>1)section.append(options);
    }
