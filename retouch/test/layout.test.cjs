@@ -58,3 +58,18 @@ test('single sizing overrides important shorthand without replacing the other di
  assert.equal(L.sizeClasses('md:!size-20 w-10','width','fixed',100),'md:!size-20 w-[100px]');
  assert.equal(L.sizeClasses('![width:80px] size-20','width','fixed',100),'size-20 !w-[100px]');
 });
+
+test('reset sizing removes the selected axis overrides and flex main-axis sizing only',()=>{
+ const source='!size-20 !w-[100px] [width:90px] h-40 min-w-10 md:w-60 flex-1 basis-20 grow shrink-0';
+ assert.equal(L.sizeClasses(source,'width','reset',0),'!size-20 h-40 min-w-10 md:w-60 flex-1 basis-20 grow shrink-0');
+ assert.equal(L.sizeClasses(source,'width','reset',0,{display:'flex',direction:'row'}),'!size-20 h-40 min-w-10 md:w-60');
+ assert.equal(L.sizeClasses('h-20 w-10 flex-1','height','reset',0,{display:'flex',direction:'row'}),'w-10 flex-1');
+ const scoped='w-20 md:!size-40 md:!w-60 md:h-40 lg:w-80';
+ assert.equal(R.replaceScope(scoped,L.sizeClasses(R.project(scoped,'md:'),'width','reset',0),'md:'),'w-20 lg:w-80 md:!size-40 md:h-40');
+});
+
+test('main-axis size changes replace arbitrary flex geometry and retain cross-axis styles',()=>{
+ const source='[flex:2_1_40px] [flex-grow:3] [flex-shrink:0] [flex-basis:60px] flex-2/3 flex-(--layout) h-20 md:[flex:1] flex-col';
+ for(const mode of ['fixed','hug','fill','reset']){const result=L.sizeClasses(source,'width',mode,100,{display:'flex',direction:'row'});assert.ok(!result.includes('[flex:2_1_40px]'));assert.ok(!result.includes('[flex-grow:3]'));assert.ok(!result.includes('[flex-shrink:0]'));assert.ok(!result.includes('[flex-basis:60px]'));assert.ok(!result.includes('flex-2/3'));assert.ok(!result.includes('flex-(--layout)'));assert.ok(result.includes('h-20 md:[flex:1] flex-col'));}
+ assert.equal(L.sizeClasses('[flex-basis:60px] h-20','height','reset',0,{display:'flex',direction:'row'}),'[flex-basis:60px]');
+});

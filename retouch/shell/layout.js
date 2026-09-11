@@ -8,11 +8,12 @@
     return I.replace(classes,t=>display(t)||/^flex-(row|col)(-reverse)?$/.test(t),additions[mode]);
   }
   function sizeClasses(classes,axis,mode,value,parent={}) {
-    if(!['width','height'].includes(axis)||!['fixed','hug','fill'].includes(mode))throw Error('Unknown sizing mode');
+    if(!['width','height'].includes(axis)||!['fixed','hug','fill','reset'].includes(mode))throw Error('Unknown sizing mode');
     if(mode==='fixed'&&(!Number.isFinite(value)||value<0||value>100000))throw Error('Invalid size');
     const dim=axis==='width'?'w':'h';
     const alongFlex=/flex/.test(parent.display||'') && (axis==='width'?!/^column/.test(parent.direction||''):/^column/.test(parent.direction||''));
-    const match=t=>t.startsWith(dim+'-') || t.startsWith('['+axis+':') || (alongFlex&&(/^(?:grow|shrink)(?:-|$)|^basis-/.test(t)||/^flex-(?:1|auto|initial|none|\[.*\])$/.test(t)));
+    const match=t=>t.startsWith(dim+'-') || t.startsWith('['+axis+':') || (alongFlex&&(/^(?:grow|shrink)(?:-|$)|^basis-/.test(t)||/^flex-(?:\d+(?:\/\d+)?|auto|initial|none|\[.*\]|\(.*\))$|^\[flex(?:-(?:grow|shrink|basis))?:/.test(t)));
+    if(mode==='reset')return I.replace(classes,match,'');
     let addition=mode==='fixed'?`${dim}-[${value}px]`:mode==='hug'?`${dim}-fit`:`${dim}-full`;
     if(alongFlex)addition=mode==='fill'?`${dim}-auto flex-1`:addition+' flex-none';
     if(classes.split(/\s+/).some(token=>I.base(token)?.startsWith('size-')&&/^!|!$/.test(token)))addition=addition.split(' ').map(token=>'!'+token).join(' ');
@@ -104,7 +105,7 @@
       const sizing=own===dim+'-fit'?'hug':own===dim+'-full'||/\bflex-1\b/.test(classes)&&parent&&/flex/.test(parent.display)&&(axis==='width'?!parent.flexDirection.startsWith('column'):parent.flexDirection.startsWith('column'))?'fill':own&&own!==dim+'-auto'?'fixed':'';
       const context={display:parent?.display,direction:parent?.flexDirection};
       const size=(mode,value)=>save(sizeClasses(classes,axis,mode,mode==='fixed'?geometry.dimensionValue(css,axis,value):value,context));
-      I.select(sec,title+' behavior',[['','Inherited / auto'],['fixed','Fixed'],['hug','Hug content'],['fill','Fill available']],sizing,v=>{if(v)size(v,Math.round(dims[axis]*100)/100);});
+      I.select(sec,title+' behavior',[['','Inherited / auto'],['fixed','Fixed'],['hug','Hug content'],['fill','Fill available']],sizing,v=>size(v||'reset',Math.round(dims[axis]*100)/100));
       numeric(title+' (px)',dims[axis],0,100000,v=>size('fixed',v));
     }
     I.note(sec,'Pixel sizes include padding and borders, before transforms.');
