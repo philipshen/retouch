@@ -906,7 +906,7 @@ function paintLoop() {
 }
 
 function syncLayerSelection() {
-  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent),selectionCanDelete:sel.multiple.every(info=>info.canDeleteComponent),selectionCanReparent:sharedComponentContainers(sel.multiple).length>0}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
+  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent),selectionCanDelete:sel.multiple.every(info=>info.canDeleteComponent),selectionCanReparent:sharedComponentContainers(sel.multiple).length>0,selectionContainers:sharedComponentContainers(sel.multiple)}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
 }
 
 function inTextScope(el, info) {
@@ -2635,7 +2635,9 @@ const layers = RetouchLayers.mount({
   multiSelectEnabled:window.__RT_RENDERING?.selectionStyling===true,
   onMoveComponent:window.__RT_RENDERING?.componentInsertion&&!historyRecoveryRequired?async(source,destination,position,move)=>{
     if(historyRecoveryRequired||panelTasks||undoBusy||sourceRequests||!source.isConnected||!destination.isConnected||layerLocks.locked(source)||position==='inside'&&layerLocks.locked(destination))return;
-    await commitInlineEdit();await moveInstance({id:move.id,hash:move.fileHash},position,move.destinationId);
+    await commitInlineEdit();
+    if(move.ids?.length>1){const infos=sel?.multiple;if(position!=='inside'||!infos||infos.length!==move.ids.length||infos.some(info=>!move.ids.includes(info.id)||info.hash!==move.fileHash)||!sharedComponentContainers(infos).includes(move.destinationId)||infos.some(info=>matchingEls(info.id).some(el=>layerLocks.locked(el))))return;await reparentComponentSelection(infos,move.destinationId);return;}
+    await moveInstance({id:move.id,hash:move.fileHash},position,move.destinationId);
   }:undefined,
   onMove:async(source,destination,position)=>{
     if(historyRecoveryRequired||panelTasks||undoBusy||sourceRequests||!source.isConnected||!destination.isConnected)return;

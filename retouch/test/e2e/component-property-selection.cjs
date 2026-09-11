@@ -94,6 +94,22 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   await page.getByRole('button',{name:'Undo',exact:true}).click();await rendered(['First','Second','Dynamic']);await page.waitForFunction(()=>!undoBusy&&!panelTasks&&!sourceRequests);assert.equal(read(),original);assert.deepEqual(await page.evaluate(()=>sel.multiple.map(info=>info.id).sort()),ids.slice(0,2).sort());assert.deepEqual(await page.evaluate(()=>[...doc().querySelectorAll('h2')].map(el=>layerLocks.direct(el))),[true,true,false]);
   await page.getByRole('button',{name:'Redo',exact:true}).click();await rendered(['Dynamic','First','Second']);await page.waitForFunction(()=>!undoBusy&&!panelTasks&&!sourceRequests);assert.equal(read(),movedSource);assert.deepEqual(await page.evaluate(()=>sel.multiple.map(info=>info.id)),movedIds);await moveGroup();await page.waitForFunction(()=>!panelTasks&&!sourceRequests);assert.equal(read(),movedSource);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await rendered(['First','Second','Dynamic']);await page.waitForFunction(()=>!undoBusy&&!panelTasks&&!sourceRequests);assert.equal(read(),original);assert.deepEqual(errors,[]);
+  const dragGroup=async({cancel=false}={})=>page.evaluate(({cancel})=>{
+   const source=document.querySelector('.component-tree-row [aria-selected="true"]'),target=[...document.querySelectorAll('.layer-item')].find(el=>el.textContent==='aside · Destination'),dataTransfer=new DataTransfer(),box=target.getBoundingClientRect();
+   const start=new DragEvent('dragstart',{bubbles:true,cancelable:true,dataTransfer});source.dispatchEvent(start);
+   if(start.defaultPrevented)return {started:false,accepted:false};
+   const over=new DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer,clientY:box.top+box.height/2});target.dispatchEvent(over);const accepted=over.defaultPrevented;
+   if(!cancel)target.dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer,clientY:box.top+box.height/2}));
+   source.dispatchEvent(new DragEvent('dragend',{bubbles:true,dataTransfer}));return {started:true,accepted};
+  },{cancel});
+  assert.deepEqual(await dragGroup(),{started:false,accepted:false});assert.equal(read(),original);
+  await page.getByRole('button',{name:'Unlock selection',exact:true}).click();await page.waitForFunction(()=>!panelTasks);await rows.nth(0).click();await page.waitForFunction(()=>!panelTasks);await rows.nth(1).click({modifiers:['Meta']});await page.waitForFunction(()=>sel?.multiple?.length===2&&!panelTasks);
+  assert.deepEqual(await dragGroup({cancel:true}),{started:true,accepted:true});assert.equal(read(),original);assert.equal(await page.locator('.dragging,.drop-target').count(),0);
+  await page.setViewportSize({width:1280,height:1400});
+  if(engine==='chromium')await page.locator('.component-tree-row [aria-selected="true"]').first().dragTo(page.getByRole('treeitem',{name:'aside · Destination',exact:true}));else assert.deepEqual(await dragGroup(),{started:true,accepted:true});await rendered(['Dynamic','First','Second']);await page.waitForFunction(()=>!panelTasks&&!sourceRequests);assert.equal(read(),movedSource);assert.equal(await page.getByRole('treeitem',{selected:true}).count(),2);
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await rendered(['First','Second','Dynamic']);await page.waitForFunction(()=>!undoBusy&&!panelTasks&&!sourceRequests);assert.equal(read(),original);
+  await page.getByRole('button',{name:'Redo',exact:true}).click();await rendered(['Dynamic','First','Second']);await page.waitForFunction(()=>!undoBusy&&!panelTasks&&!sourceRequests);assert.equal(read(),movedSource);assert.deepEqual(errors,[]);
+  console.log('COMPONENT GROUP DRAG LOCK REFUSAL/CANCEL/MOVE/EXACT UNDO REDO PASS',engine);
   console.log('COMPONENT GROUP REPARENT DESTINATION/ORDER/LOCKS/SELECTION/EXACT UNDO REDO/NOOP PASS',engine);
   console.log('COMPONENT GROUP DELETE BUTTON/KEYBOARD/LOCK RESTORATION/EXACT SOURCE AND SELECTION UNDO REDO PASS',engine);
   console.log('COMPONENT GROUP DUPLICATION BUTTON/KEYBOARD/COMPILED PREVIEW/SELECTION/EXACT UNDO REDO PASS',engine);
