@@ -583,3 +583,10 @@ Uninstallation passed. App directory, cask registration, temporary tap and auto-
 Mounted component detail views now have an accessible Refresh preview control in the fixed header. Refresh hides the old frame, restores loading status, loads the captured route, and reuses the selected occurrence bookmark. Existing observers disconnect before reload/onload; close clears both the observer and load handler. Source-only views do not get a refresh control.
 
 Chromium/WebKit mapped-fragment identity workflows passed including DOM reorder, missing-instance recovery, then an explicit refresh. A marker in the old preview document proves a new document loaded; tests verify the selected second occurrence remains visible, first hidden, and source unchanged. Compact preview/source checks passed. Screenshot /private/tmp/retouch-preview-refresh-chromium.png.preview.png visually inspected; logs /private/tmp/retouch-preview-refresh-{chromium,webkit}.log. Native package refresh and full Figma parity remain incomplete.
+
+
+### Keyboard component browsing (2026-09-11)
+
+Component search Up/Down enters results. Result buttons use Up/Down to move between components while retaining an available action, Left/Right to move between enabled actions, Home/End to reach boundary rows, and Escape/Up-from-first to return to search. Native select keys are preserved. The light dialog shows a small navigation hint and focused-row background.
+
+Chromium/WebKit CSS-backed library tests passed keyboard navigation across 30 compact-window results, disabled-action skipping, native instance-picker arrows, search return, and keyboard insertion callback. Real React mapped-fragment workflows used search Down/Right/Enter to open the selected occurrence preview, then passed identity reorder/removal/recovery and refresh checks in both browsers. Logs /private/tmp/retouch-component-keyboard-{chromium,webkit}.log and /private/tmp/retouch-component-keyboard-react-{chromium,webkit}.log. Screenshot /private/tmp/retouch-component-keyboard-chromium.png visually inspected. Source postdates current native archive; full parity remains incomplete.

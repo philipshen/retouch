@@ -11,7 +11,8 @@ window.RetouchComponentLibrary={open({read,instances,select,view,insert,insertTa
  const refresh=button('Refresh',load);tools.append(search,refresh);
  const status=document.createElement('p');status.setAttribute('role','status');
  const list=document.createElement('ul');list.className='component-library-list';
- dialog.append(header,description,tools,status,list);document.body.append(dialog);
+ const hint=document.createElement('p');hint.className='component-library-keyhint';hint.textContent='↑↓ Browse · ←→ Actions · Esc Search';
+ dialog.append(header,description,tools,status,list,hint);document.body.append(dialog);
  let data,serial=0;
  function render(){
   list.replaceChildren();if(!data)return;
@@ -33,6 +34,17 @@ window.RetouchComponentLibrary={open({read,instances,select,view,insert,insertTa
   }
  }
  async function load(){const request=++serial;refresh.disabled=true;status.textContent='Loading project components…';try{const result=await read();if(request!==serial||!dialog.isConnected)return;if(!result?.ok)throw Error(result?.reason||'Could not load project components.');data=result;render();}catch(error){if(request===serial&&dialog.isConnected)status.textContent=error.message;}finally{if(request===serial)refresh.disabled=false;}}
+ const buttons=row=>[...row.querySelectorAll('button')].filter(button=>!button.disabled&&!button.hidden);
+ search.addEventListener('keydown',event=>{if(event.isComposing||!['ArrowDown','ArrowUp'].includes(event.key))return;const rows=[...list.children].filter(row=>buttons(row).length);if(!rows.length)return;event.preventDefault();buttons(event.key==='ArrowDown'?rows[0]:rows.at(-1))[0]?.focus();});
+ list.addEventListener('keydown',event=>{
+  if(event.isComposing||event.altKey||event.ctrlKey||event.metaKey||!event.target.matches('button'))return;
+  if(event.key==='Escape'){event.preventDefault();event.stopPropagation();search.focus();return;}
+  if(!['ArrowDown','ArrowUp','ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+  const rows=[...list.children].filter(row=>buttons(row).length),row=event.target.closest('li'),index=rows.indexOf(row);if(index<0)return;event.preventDefault();
+  if(event.key==='ArrowLeft'||event.key==='ArrowRight'){const actions=buttons(row),next=Math.max(0,Math.min(actions.length-1,actions.indexOf(event.target)+(event.key==='ArrowRight'?1:-1)));actions[next]?.focus();return;}
+  if(event.key==='ArrowUp'&&index===0){search.focus();return;}
+  const next=event.key==='Home'?0:event.key==='End'?rows.length-1:Math.max(0,Math.min(rows.length-1,index+(event.key==='ArrowDown'?1:-1))),actions=buttons(rows[next]);(actions.find(button=>button.textContent===event.target.textContent)||actions[0])?.focus();
+ });
  search.addEventListener('input',render);search.addEventListener('keydown',event=>{if(event.key==='Escape'&&search.value){event.preventDefault();event.stopPropagation();search.value='';render();}});
  dialog.addEventListener('close',()=>{serial++;dialog.remove();});dialog.showModal();search.focus();load();return dialog;
 }};
