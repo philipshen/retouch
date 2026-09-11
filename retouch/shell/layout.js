@@ -25,6 +25,19 @@
     if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(rule.match(I.base(token)||'')||rule.shorthand(I.base(token)||''))))addition='!'+addition;
     return I.replace(classes,rule.match,addition);
   }
+  function alignmentClasses(classes,x,y,context={},inherited=''){
+    if(![0,1,2].includes(x)||![0,1,2].includes(y))throw Error('Choose an alignment point.');
+    const values=root.RetouchHTMLCSSValues||require('./html-css-values.js');
+    const changes=values.flexAlignment(x,y,context);
+    for(const [property,value] of Object.entries(changes)){
+      const matches=token=>token.startsWith('['+property+':')||(property==='justify-content'?/^justify-(?!items-|self-)/.test(token):property==='align-items'?/^items-/.test(token):/^content-(normal|center|start|end|between|around|evenly|baseline|stretch)$/.test(token));
+      const shorthand=token=>property==='align-items'?/^place-items-|^\[place-items:/.test(token):/^place-content-|^\[place-content:/.test(token);
+      let addition='['+property+':'+value+']';
+      if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(matches(I.base(token)||'')||shorthand(I.base(token)||''))))addition='!'+addition;
+      classes=I.replace(classes,matches,addition);
+    }
+    return classes;
+  }
   function clipClasses(classes,value,inherited=''){
     if(value!==null&&typeof value!=='boolean')throw Error('Choose whether to clip content.');
     const matches=t=>/^overflow-(?:(?:x|y)-)?(?:auto|hidden|clip|visible|scroll)$|^\[overflow(?:-[xy])?:/.test(t);
@@ -159,6 +172,18 @@
         const reset=I.button('Reset '+label.toLowerCase(),()=>save(gapClasses(classes,axis,null,css.writingMode)));
         reset.disabled=gapClasses(classes,axis,null,css.writingMode)===classes;sec.append(reset);
       }
+      if(mode!=='grid'){
+        const values=root.RetouchHTMLCSSValues||require('./html-css-values.js');
+        const picker=document.createElement('div');picker.className='layout-alignment';picker.setAttribute('role','group');picker.setAttribute('aria-label','Align children');
+        for(let y=0;y<3;y++)for(let x=0;x<3;x++){
+          const changes=values.flexAlignment(x,y,css),label='Align children '+['top','middle','bottom'][y]+' '+['left','center','right'][x];
+          const button=I.button('•',()=>save(alignmentClasses(classes,x,y,css,inherited)));button.setAttribute('aria-label',label);button.title=label;
+          button.setAttribute('aria-pressed',String(Object.entries(changes).every(([property,value])=>css.getPropertyValue(property)===value)));
+          if(Object.keys(changes).some(property=>el.style.getPropertyValue(property)))button.disabled=true;
+          picker.append(button);
+        }
+        sec.append(picker);
+      }
       I.select(sec,'Align children',[['start','Start'],['center','Center'],['end','End'],['stretch','Stretch'],['baseline','Baseline']],(css.alignItems==='normal'?'stretch':css.alignItems.replace('flex-','')),v=>save(arrangementClasses(classes,'align',v,inherited)));
       const justify=css.justifyContent==='normal'?'start':css.justifyContent.replace('flex-','').replace('space-','');
       I.select(sec,'Distribute children',[['start','Start'],['center','Center'],['end','End'],['between','Space between'],['around','Space around'],['evenly','Space evenly']],justify,v=>save(arrangementClasses(classes,'justify',v,inherited)));
@@ -215,6 +240,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={clipClasses,gridTrackCount,paddingClasses,arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={alignmentClasses,clipClasses,gridTrackCount,paddingClasses,arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

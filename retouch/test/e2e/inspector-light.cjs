@@ -25,6 +25,17 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   await clipping.uncheck();await settled();await wait(async()=>parent.evaluate(el=>getComputedStyle(el).overflowX==='visible'&&getComputedStyle(el).overflowY==='visible'));
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(await clipping.isChecked(),true);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),originalSource);assert.equal(await clipping.evaluate(el=>el.indeterminate),true);
+  for(const direction of ['row','column','row-reverse','column-reverse']){
+   await page.getByLabel('Arrange children',{exact:true}).selectOption(direction);await settled();const beforeAlignment=read();
+   for(const corner of ['top left','bottom right']){
+    await page.getByRole('button',{name:'Align children '+corner,exact:true}).click();await settled();
+    await wait(async()=>parent.evaluate((el,corner)=>{const p=el.getBoundingClientRect(),r=[...el.children].map(child=>child.getBoundingClientRect());return corner==='top left'?Math.abs(Math.min(...r.map(r=>r.left))-p.left)<1&&Math.abs(Math.min(...r.map(r=>r.top))-p.top)<1:Math.abs(Math.max(...r.map(r=>r.right))-p.right)<1&&Math.abs(Math.max(...r.map(r=>r.bottom))-p.bottom)<1;},corner));
+    assert.equal(await page.getByRole('button',{name:'Align children '+corner,exact:true}).getAttribute('aria-pressed'),'true');
+    if(direction==='row'&&corner==='bottom right'){await page.locator('#panel').evaluate(panel=>{panel.scrollTop+=panel.querySelector('[data-section=layout]').getBoundingClientRect().top-panel.getBoundingClientRect().top-48;});await page.locator('#panel').screenshot({path:'/private/tmp/retouch-figma-alignment-'+engine+'.png'});}
+    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),beforeAlignment);
+   }
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),originalSource);
+  }
   const opacity=page.getByLabel('Opacity (%)',{exact:true});await opacity.fill('75');await opacity.press('Tab');await settled();await wait(async()=>parent.evaluate(el=>getComputedStyle(el).opacity==='0.75'));
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),originalSource);
   await page.getByText('Layer actions',{exact:true}).click();assert.equal(await page.getByRole('button',{name:'Lock selection',exact:true}).isVisible(),true);await page.getByText('Layer actions',{exact:true}).click();

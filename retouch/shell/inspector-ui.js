@@ -77,6 +77,9 @@
    for(const names of [['Font weight (1–1000)','Font size (px)'],['Line height (px)','Letter spacing (px)'],['Width (CSS)','Height (CSS)'],['Width (px)','Height (px)'],['Width behavior','Height behavior'],['Columns','Rows'],['Horizontal gap','Vertical gap'],['Padding top','Padding bottom'],['Padding left','Padding right'],['X','Y'],['Opacity (%)','Corner radius (px)']])pair(section,names);
    for(const checkbox of section.querySelectorAll('input[type="checkbox"]'))checkbox.closest('.inspector-field')?.classList.add('checkbox-field');
    if(name==='Layout'){
+    const picker=section.querySelector(':scope > .layout-alignment'),gaps=section.querySelector('[aria-label="Horizontal gap"]')?.closest('.property-pair');
+    if(picker&&gaps&&gaps.parentElement===section){const group=document.createElement('div');group.className='layout-alignment-spacing';section.insertBefore(group,gaps);group.append(picker,gaps);}
+
     const select=section.querySelector('[aria-label="Arrange children"]');
     if(select){const row=select.closest('.inspector-field');row.classList.add('layout-modes');row.querySelector('span').textContent='';
      const icons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',row:'M3 5v10 M8 5v10 M13 5v10 M16 10h4 M18 8l2 2-2 2',column:'M5 3h10 M5 8h10 M5 13h10 M10 16v4 M8 18l2 2 2-2',grid:'M3 3h14v14H3z M10 3v14 M3 10h14'};

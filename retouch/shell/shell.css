@@ -545,3 +545,12 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .inspector-field.checkbox-field { flex-direction:row-reverse;justify-content:flex-end;gap:8px; }
 .inspector-field.checkbox-field > span { flex:1;color:var(--ink); }
 .inspector-field.checkbox-field input[type="checkbox"] { flex:0 0 14px;width:14px;height:14px;margin:0;accent-color:var(--accent); }
+
+.layout-alignment { grid-template-columns:repeat(3,24px);gap:0;padding:4px;border:1px solid var(--line);border-radius:6px;background:var(--control); }
+.layout-alignment button { width:24px;height:24px;border:0;border-radius:3px;background:transparent;color:#999;font-size:15px; }
+.layout-alignment button:hover { background:#e6e6e6;color:var(--ink); }
+.layout-alignment button[aria-pressed="true"] { color:var(--accent);background:#e5f4ff; }
+
+.layout-alignment-spacing { display:flex;align-items:center;gap:16px;margin:8px 0; }
+.layout-alignment-spacing .layout-alignment { flex:0 0 auto;margin:0; }
+.layout-alignment-spacing > .property-pair { flex:1;min-width:0;grid-template-columns:minmax(0,1fr);gap:0; }

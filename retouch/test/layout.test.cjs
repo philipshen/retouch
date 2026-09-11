@@ -227,3 +227,10 @@ test('clipping replaces both local axes, preserves other scopes, and beats inher
  assert.equal(L.clipClasses('!overflow-clip md:overflow-auto',null),'md:overflow-auto');
  assert.throws(()=>L.clipClasses('','hidden'));
 });
+
+test('alignment points author physical flex placement as one class update with inherited priority',()=>{
+ assert.equal(L.alignmentClasses('items-stretch justify-between p-4',2,0), 'p-4 [justify-content:flex-end] [align-items:flex-start]');
+ assert.equal(L.alignmentClasses('content-between before:content-[a]',0,2,{flexDirection:'column-reverse',flexWrap:'wrap-reverse'},'!place-content-end !place-items-end'),'before:content-[a] ![justify-content:flex-start] ![align-items:flex-end] ![align-content:flex-end]');
+ assert.equal(L.alignmentClasses('md:items-center',0,0,{direction:'rtl'}),'md:items-center [justify-content:flex-end] [align-items:flex-start]');
+ assert.throws(()=>L.alignmentClasses('',3,0));
+});

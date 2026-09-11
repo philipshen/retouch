@@ -361,3 +361,10 @@ Validation: 881 unit tests passed. Chromium and WebKit inspector-light workflows
 
 
 Desktop refresh: /private/tmp/retouch-desktop-layout-clip-20260911/Retouch-0.1.0-mac.zip. SHA256 aeaa6e24d6188fce2d6e3dea80ee75e1efc1c5b29275b0ffa2ac9ed56ab2e0ff. Clean source commit 20fdbe5, 175 packaged source files, universal arm64/x86_64, strict ad hoc signature verification. Extracted archive hashes match checkout. Bundled inspector-light browser workflows passed in Chromium and WebKit, including typography and clipping. Local cask Ruby syntax passed; native launch, cask installation, Developer ID signing, and notarization were not verified. Receipt: desktop/verification/2026-09-11-layout-clip.json. The full HTML Chromium browser workflow also passed after the clipping changes.
+
+
+### Physical flex alignment picker (2026-09-11)
+
+React flex layouts now have the same nine-point physical alignment picker as the HTML adapter. A click writes justify-content, align-items, and (for wrapping) align-content in one class update/history operation. It reuses the existing writing-mode, RTL, reversed-direction, and reverse-wrap mapping. Local conflicting utilities are replaced; inherited important place-items/place-content and individual alignment rules promote overrides. Inline-controlled alignment disables the picker. Grid retains its existing controls.
+
+The light inspector places the picker beside the horizontal/vertical gap fields. Chromium and WebKit inspector-light workflows passed with actual child bounding-box checks for top-left and bottom-right placement across row, column, row-reverse, and column-reverse, including inherited important rules and exact undo. 882 unit tests passed. Screenshot: /private/tmp/retouch-figma-alignment-chromium.png. This source change is newer than the 20fdbe5 desktop archive. Full Figma/any-site parity remains unfinished.
