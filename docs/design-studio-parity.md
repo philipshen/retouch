@@ -11196,3 +11196,10 @@ Chromium and WebKit full variable-library workflows passed, including alias-to-l
 Collection tables now filter by case-insensitive name/type terms, show matching counts and an empty state, and retain each collection's search query across rerenders. Filtering toggles existing rows rather than rebuilding cells, preserving hidden unfinished drafts without writing files. Name cells and their header stay pinned while scrolling horizontally across modes.
 
 Full variable-library workflows passed in Chromium and WebKit with multi-term filtering, empty results, selection/query persistence, hide/reveal draft preservation with unchanged source, and pinned names in a compact horizontally scrolled table. Existing inline edits, aliases, cycle rejection, undo, conflicts, and mode preview passed. Logs /private/tmp/retouch-variable-search-{chromium,webkit}.log; screenshot /private/tmp/retouch-variable-search-chromium.png visually inspected. Maximum-size collection performance has not been benchmarked. Native package refresh and full Figma parity remain unfinished.
+
+
+### Table-focused variable dialog (2026-09-11)
+
+Collection creation, rename, deletion and reload now live in Collection settings, initially expanded for an empty library and collapsed after creation. Explanatory copy moves to About variables. Search, modes and the value table remain directly accessible. Visual review also found canceled inline drafts left stale validation errors; cancel now reports Edit canceled.
+
+Final full variable-library workflows passed in Chromium/WebKit, including initial collection creation, collapsed management controls, reopening settings for revision-conflict protection, and clearing canceled numeric-validation errors. Existing direct values, alias conversion/cycle rejection, exact undo, search draft preservation, and compact scrolling checks passed. Final /private/tmp/retouch-variable-layout-chromium.png visually inspected; browser logs /private/tmp/retouch-variable-layout-{chromium,webkit}.log. Native package refresh and full parity remain incomplete.
