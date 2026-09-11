@@ -312,3 +312,10 @@ Grid children now expose Reset column placement and Reset row placement. These r
 Built the universal desktop app from clean commit `a7c55aef5e4e12c28c5ea19b90c4efb737e89dbf`. Archive: `/private/tmp/retouch-desktop-layout-refresh-20260911/Retouch-0.1.0-mac.zip`, SHA-256 `dcd66381c8f31b6ffaa17852c6f9637e00c800bf48b1aa37a48b5172df15f8d3`. All 172 packaged source hashes match the checkout; the extracted ZIP, strict ad hoc signature, relocation/tamper checks and local cask Ruby syntax pass.
 
 Eight browser workflows passed against the runtime inside the app: layout modes/arrangement, padding, size limits and grid spans/reset in Chromium and WebKit. Browser harness was removed after completion; logs remain beside the artifact. Receipt: `desktop/verification/2026-09-11-layout-refresh.json`. No native launch, signing-key prompt, cask installation or notarization occurred. Native interaction and trusted distribution remain unverified; full Figma parity remains unfinished.
+
+
+## Grid row count control
+
+The grid inspector now exposes Rows alongside Columns. Both use the rendered track count, excluding named-line labels, and create equal tracks through scoped utilities. Row writes replace active arbitrary row templates and respect inherited important row/grid templates without changing column templates. The inspector explains that content can create additional implicit tracks.
+
+879 unit tests pass, including row priority/validation and named-line count parsing. Chromium/WebKit verify Rows and Columns each produce three computed tracks despite inherited important templates, preserve the opposite template, show the new count and pass exact Undo/Redo. Existing layout-mode and Phone checks pass. Evidence: `/private/tmp/retouch-grid-rows-{chromium,webkit}.log` and `/private/tmp/retouch-grid-rows-units.log`. Custom track sizing, subgrid authoring, full Figma parity and trusted macOS distribution remain unfinished. The latest desktop package predates this change.

@@ -199,3 +199,15 @@ test('grid placement reset removes only active axis declarations and preserves s
  assert.equal(L.spanClasses('row-auto [grid-row:2/4] col-span-2','row',null),'col-span-2');
  assert.equal(L.spanClasses('![grid-area:1/1/3/3]','row',null),'![grid-area:1/1/3/3]');
 });
+
+
+test('grid row count replaces row templates and preserves column tracks',()=>{
+ assert.equal(L.arrangementClasses('[grid-template-rows:40px_60px] grid-cols-2','rows',3,'![grid-template:40px/60px]'),'grid-cols-2 !grid-rows-3');
+ assert.equal(L.arrangementClasses('grid-rows-2','rows',4,'!grid-cols-2'),'grid-rows-4');
+ assert.equal(L.arrangementClasses('','rows',2,'![grid-template-rows:40px_60px]'),'!grid-rows-2');
+ for(const value of [0,25,1.5,NaN])assert.throws(()=>L.arrangementClasses('','rows',value));
+ assert.equal(L.gridTrackCount('[start first] 40px [middle] 60px [end]'),2);
+ assert.equal(L.gridTrackCount('100px 100px 100px'),3);
+ assert.equal(L.gridTrackCount('none'),0);
+ assert.equal(L.gridTrackCount('subgrid [first] [last]'),0);
+});

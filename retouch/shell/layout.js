@@ -12,16 +12,20 @@
   }
   function arrangementClasses(classes,property,value,inherited=''){
     const options={wrap:['nowrap','wrap','wrap-reverse'],align:['start','center','end','stretch','baseline'],justify:['start','center','end','between','around','evenly']};
-    if(property==='columns'?!Number.isInteger(value)||value<1||value>24:!options[property]?.includes(value))throw Error('Unknown arrangement value');
+    if(['columns','rows'].includes(property)?!Number.isInteger(value)||value<1||value>24:!options[property]?.includes(value))throw Error('Unknown arrangement value');
     const rules={
       wrap:{match:t=>/^flex-(wrap|wrap-reverse|nowrap)$|^\[flex-wrap:/.test(t),shorthand:t=>/^\[flex-flow:/.test(t),addition:'flex-'+value},
       align:{match:t=>/^items-|^\[align-items:/.test(t),shorthand:t=>/^place-items-|^\[place-items:/.test(t),addition:'items-'+value},
       justify:{match:t=>/^justify-(?!items-|self-)|^\[justify-content:/.test(t),shorthand:t=>/^place-content-|^\[place-content:/.test(t),addition:'justify-'+value},
-      columns:{match:t=>/^grid-cols-|^\[grid-template-columns:/.test(t),shorthand:t=>/^\[grid(?:-template)?:/.test(t),addition:'grid-cols-'+value}
+      columns:{match:t=>/^grid-cols-|^\[grid-template-columns:/.test(t),shorthand:t=>/^\[grid(?:-template)?:/.test(t),addition:'grid-cols-'+value},
+      rows:{match:t=>/^grid-rows-|^\[grid-template-rows:/.test(t),shorthand:t=>/^\[grid(?:-template)?:/.test(t),addition:'grid-rows-'+value}
     };
     const rule=rules[property];let addition=rule.addition;
     if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(rule.match(I.base(token)||'')||rule.shorthand(I.base(token)||''))))addition='!'+addition;
     return I.replace(classes,rule.match,addition);
+  }
+  function gridTrackCount(value){
+    return String(value||'').replace(/\[[^\]]*\]/g,' ').trim().split(/\s+/).filter(t=>t&&!['none','subgrid','masonry'].includes(t)).length;
   }
   function paddingClasses(classes,side,value,inherited=''){
     const short={top:'t',right:'r',bottom:'b',left:'l'}[side];
@@ -129,9 +133,10 @@
     }
     if(mode!=='flow') {
       if(mode==='grid') {
-        const explicit=(classes.match(/(?:^|\s)grid-cols-(\d+)(?:\s|$)/)||[])[1];
-        const tracks=css.gridTemplateColumns.split(/\s+/).filter(Boolean).length;
-        const columns=numeric('Columns',Number(explicit)||tracks||1,1,24,v=>{if(Number.isInteger(v))save(arrangementClasses(classes,'columns',v,inherited));});columns.step='1';
+        for(const [label,property,computed] of [['Columns','columns',css.gridTemplateColumns],['Rows','rows',css.gridTemplateRows]]){
+          const field=numeric(label,gridTrackCount(computed)||1,1,24,v=>save(arrangementClasses(classes,property,v,inherited)));field.step='1';
+        }
+        I.note(sec,'Counts create equal tracks. Content may create additional implicit tracks.');
       } else {
         I.select(sec,'Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>save(arrangementClasses(classes,'wrap',v,inherited)));
       }
@@ -193,6 +198,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={paddingClasses,arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={gridTrackCount,paddingClasses,arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);
