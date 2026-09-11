@@ -72,7 +72,27 @@
       "/private/tmp/retouch-desktop-layout-20260911/uninstall.log"
     ]
   },
-  "nativeLaunch": "Not attempted for this archive. Earlier cgWindowNotFound investigation remains unresolved.",
+  "nativeLaunch": {
+    "diagnostic": "One bounded --diagnose-window launch completed and exited normally",
+    "state": {
+      "applicationActive": false,
+      "applicationHidden": false,
+      "screenCount": 1,
+      "screenFrame": "{{0, 0}, {1728, 1117}}",
+      "webFrame": "{{0, 0}, {1440, 894}}",
+      "webLoading": false,
+      "windowCreated": true,
+      "windowFrame": "{{144, 69}, {1440, 992}}",
+      "windowMiniaturized": false,
+      "windowNumber": 16294,
+      "windowOcclusionVisible": false,
+      "windowVisible": true
+    },
+    "stderrEmpty": true,
+    "capture": "CUA getApp started process 18935 but returned cgWindowNotFound; a second inspection of that running process also failed",
+    "cleanup": "Owned process 18935 terminated after capture checks",
+    "interpretation": "Window creation and web-view load are confirmed by application diagnostics. Application was inactive and window was occluded. Native visual correctness and foreground usability remain unverified."
+  },
   "signing": "Ad hoc development build. Developer ID, notarization and trusted distribution remain unfinished.",
   "harness": "External browser harness linked to extracted signed bundle; removed after eight terminal passing workflows."
 }
