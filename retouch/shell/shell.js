@@ -896,7 +896,7 @@ function paintLoop() {
   if(componentBadge.matches(':hover') || componentBadge.contains(document.activeElement))badge=badgeTarget;
   if(mode!=='edit' || sel?.multiple?.length>1 || !badge?.el.isConnected)badge=null;
   badgeTarget=badge;componentBadge.hidden=!badge;
-  if(badge){componentBadge.querySelector('span').textContent=badge.name||'Component';const r=RetouchComponentInstances.bounds((badge.elements||[badge.el]).filter(el=>el.isConnected))||badge.el.getBoundingClientRect();componentBadge.style.left=Math.max(0,r.left)+'px';componentBadge.style.top=Math.max(0,r.top-22)+'px';}
+  if(badge){const label=componentBadge.querySelector('span'),name=badge.name||'Component';if(label.textContent!==name)label.textContent=name;label.title=name;const r=RetouchComponentInstances.bounds((badge.elements||[badge.el]).filter(el=>el.isConnected))||badge.el.getBoundingClientRect();componentBadge.style.left=Math.max(0,r.left)+'px';componentBadge.style.top=Math.max(0,r.top-22)+'px';}
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
   marqueeSurface.textContent='';
   if(selectionMarquee?.document===d){

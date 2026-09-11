@@ -674,3 +674,10 @@ Universal ad hoc development archive /private/tmp/retouch-desktop-layers-2026091
 Eight bundled-runtime browser workflows passed: Layers navigation, broad layer locks, HTML editing and combined React library/property editing in Chromium and WebKit. The combined React run exposed a geometry-test race across a panel refresh; the test now waits and reads both controls in a single DOM evaluation. Final combined workflows passed against unchanged bundled app source. External browser harness removed after jobs finished.
 
 Homebrew temporary-tap install/uninstall passed with isolated app directory and quarantine retained. Installed bundle verification passed; app directory, cask registration, temporary tap and trust entry verified removed, developer mode disabled. Native launch was not attempted; upgrade, Developer ID/notarization and trusted distribution remain unverified. Receipt: desktop/verification/2026-09-11-layer-inspector.json. Full Figma parity remains incomplete.
+
+
+### Bound long component canvas names (2026-09-11)
+
+Component canvas badges now cap at 240 CSS pixels, truncate long names with an ellipsis, expose the full name through a native title, and prevent the icon/detach button from shrinking. The paint loop avoids rewriting unchanged label text.
+
+Chromium and WebKit React library workflows passed. A synthetic long resolved component name exercises the actual badge renderer; checks verify truncation, full title, maximum width, and the detach button remaining inside the badge at full width. Existing selected/hovered name and component layer checks also pass. Screenshot /private/tmp/retouch-long-component-badge.png visually inspected; logs /private/tmp/retouch-long-badge-{chromium,webkit}.log. This does not establish viewport-edge clamping or arbitrary zoom placement. Source postdates the 4dba5a3 packaged archive; full parity remains incomplete.

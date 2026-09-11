@@ -235,6 +235,13 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    assert.match(await page.locator('.component-badge').evaluate(el=>getComputedStyle(el).fontFamily),/^Inter/);
    await app.locator('aside').hover();await wait(async()=>await page.locator('.component-badge > span').textContent()==='Badge');
    await page.getByLabel('Find a layer',{exact:true}).hover();await wait(async()=>await page.locator('.component-badge > span').textContent()==='HeadlineCard');
+   const longComponentName='ResponsiveProductRecommendationCardWithLocalizedContentAndOptionalActions';
+   await page.evaluate(name=>{sel.info.tag=name;},longComponentName);
+   await wait(async()=>await page.locator('.component-badge > span').textContent()===longComponentName);
+   const badgeGeometry=await page.locator('.component-badge').evaluate(el=>{const label=el.querySelector('span'),button=el.querySelector('button'),r=el.getBoundingClientRect(),b=button.getBoundingClientRect();return {width:r.width,truncated:label.scrollWidth>label.clientWidth,title:label.title,buttonInside:b.right<=r.right&&b.left>=r.left,buttonWidth:b.width};});
+   assert.ok(badgeGeometry.width<=240&&badgeGeometry.truncated&&badgeGeometry.buttonInside&&badgeGeometry.buttonWidth>=20,'Long component name truncates without shrinking its action');assert.equal(badgeGeometry.title,longComponentName);
+   if(process.env.RT_E2E_LONG_BADGE_SCREENSHOT)await page.locator('.component-badge').screenshot({path:process.env.RT_E2E_LONG_BADGE_SCREENSHOT});
+   await page.evaluate(()=>{sel.info.tag='HeadlineCard';});await wait(async()=>await page.locator('.component-badge > span').textContent()==='HeadlineCard');
    const componentLayer=page.getByRole('tree',{name:'Site layers',exact:true}).getByRole('treeitem',{name:'HeadlineCard · component',exact:true});
    await componentLayer.waitFor();await componentLayer.hover();
    assert.equal(await componentLayer.getAttribute('data-layer-kind'),'component');

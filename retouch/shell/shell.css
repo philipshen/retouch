@@ -34,9 +34,11 @@ body { background: var(--bg); color: var(--ink); font-family: var(--font); font-
 .box.readonly { border-color:var(--danger); }
 .box.editing { border-style:solid; }
 .component-badge { position:absolute; z-index:7; display:flex; align-items:center; gap:5px;
-  height:22px; padding:2px 5px; border-radius:3px; background:var(--instance); color:#191026;
+  height:22px; max-width:240px; padding:2px 5px; border-radius:3px; background:var(--instance); color:#191026;
   font:600 11px var(--font); }
 .component-badge[hidden] { display:none; }
+.component-badge > span { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.component-badge > svg,.component-badge > button { flex-shrink:0; }
 .component-badge button { display:flex; align-items:center; justify-content:center; width:20px;
   height:18px; padding:0; border:0; border-left:1px solid #19102640; background:transparent;
   color:inherit; cursor:pointer; }
