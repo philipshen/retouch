@@ -665,3 +665,12 @@ The actual Next/React component library workflow passed Chromium and WebKit with
 Editable component property reset buttons now occupy a reserved trailing slot beside the field, reducing row height and keeping multiline text resets at the top. Reset-bearing rows have a 40px minimum table-cell height so checkbox reset buttons remain inside their row. Readonly tables and existing reset callbacks are unchanged.
 
 Full React component property UI/source/render workflows passed Chromium and WebKit after the final height correction, including text drafts, keyboard commits, validation, choices, resets and undo/redo. Added geometry checks cover text/number/select reset placement and checkbox row containment. Logs /private/tmp/retouch-inline-reset-{chromium,webkit}.log. The initial-state screenshot /private/tmp/retouch-inline-reset-initial.png was inspected and exposed the checkbox height issue; it predates the final 40px correction, which is covered by geometry checks. Source postdates native archive 910447c; full parity remains incomplete.
+
+
+### Packaged layer and inspector updates (2026-09-11)
+
+Universal ad hoc development archive /private/tmp/retouch-desktop-layers-20260911/Retouch-0.1.0-mac.zip was built from clean source 4dba5a35ca73e5d68771c5e003021645f5ea2082. SHA256 322e198e63aa131e1ea6773738c795818debf863372b9074e47eb64c9b41bdf8. All 175 packaged source hashes match the checkout, arm64/x86_64 architecture and strict signature checks passed, and 886 units passed.
+
+Eight bundled-runtime browser workflows passed: Layers navigation, broad layer locks, HTML editing and combined React library/property editing in Chromium and WebKit. The combined React run exposed a geometry-test race across a panel refresh; the test now waits and reads both controls in a single DOM evaluation. Final combined workflows passed against unchanged bundled app source. External browser harness removed after jobs finished.
+
+Homebrew temporary-tap install/uninstall passed with isolated app directory and quarantine retained. Installed bundle verification passed; app directory, cask registration, temporary tap and trust entry verified removed, developer mode disabled. Native launch was not attempted; upgrade, Developer ID/notarization and trusted distribution remain unverified. Receipt: desktop/verification/2026-09-11-layer-inspector.json. Full Figma parity remains incomplete.

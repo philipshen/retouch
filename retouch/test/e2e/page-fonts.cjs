@@ -257,9 +257,11 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    const editedTitle='New \"title\" & <tag>\nSecond line',before=read(),definition=before.slice(before.indexOf('/** @retouch-component */')),input=name=>page.getByLabel('Component property '+name,{exact:true}),state=()=>app.locator('h1').evaluate(el=>[el.title,el.dataset.count,el.dataset.enabled]);
    await input('title').waitFor();
    for(const name of ['title','count','size']){
-    const control=input(name),reset=page.getByRole('button',{name:'Reset '+name+' to default',exact:true});
-    const fieldBounds=await control.boundingBox(),resetBounds=await reset.boundingBox();
-    assert.ok(fieldBounds&&resetBounds&&resetBounds.x>=fieldBounds.x+fieldBounds.width&&Math.abs(resetBounds.y-fieldBounds.y)<2,'Reset '+name+' stays beside its field');
+    await wait(async()=>await input(name).evaluate(el=>{
+     const reset=el.closest('td').querySelector('button[aria-label^="Reset "]');if(!reset)return false;
+     const fieldBounds=el.getBoundingClientRect(),resetBounds=reset.getBoundingClientRect();
+     return fieldBounds.width>0&&resetBounds.width>0&&resetBounds.x>=fieldBounds.right&&Math.abs(resetBounds.y-fieldBounds.y)<2;
+    }));
    }
    const checkboxReset=page.getByRole('button',{name:'Reset enabled to default',exact:true});
    assert.equal(await checkboxReset.evaluate(el=>{const a=el.getBoundingClientRect(),b=el.closest('td').getBoundingClientRect();return a.top>=b.top&&a.bottom<=b.bottom;}),true,'Checkbox reset stays within its property row');

@@ -1,0 +1,69 @@
+{
+  "sourceCommit": "4dba5a35ca73e5d68771c5e003021645f5ea2082",
+  "sourceTreeDirty": false,
+  "sourceFiles": 175,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-layers-20260911/Retouch-0.1.0-mac.zip",
+  "sha256": "322e198e63aa131e1ea6773738c795818debf863372b9074e47eb64c9b41bdf8",
+  "sourceMatchesCheckout": true,
+  "workflows": [
+    {
+      "name": "navigation-chromium",
+      "result": "LAYER NAVIGATION CHILD/PARENT/SIBLINGS/LOCKS/COLLAPSE/NATIVE INPUT PASS chromium"
+    },
+    {
+      "name": "locks-chromium",
+      "result": "chromium: PASS layer locks exclude canvas click/text/modifier/marquee, inherit through frames, survive iframe reload, retain child locks, allow deliberate tree selection and share ordered source/lock undo, redo, route restoration and branch invalidation plus atomic mixed-state batch locking and editor-reload persistence and guarded parent/iframe lock shortcuts and filtered lock recovery"
+    },
+    {
+      "name": "html-chromium",
+      "result": "chromium: PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo"
+    },
+    {
+      "name": "components-chromium",
+      "result": "COMPONENT PROPERTY UI/SOURCE/RENDER PASS react chromium"
+    },
+    {
+      "name": "navigation-webkit",
+      "result": "LAYER NAVIGATION CHILD/PARENT/SIBLINGS/LOCKS/COLLAPSE/NATIVE INPUT PASS webkit"
+    },
+    {
+      "name": "locks-webkit",
+      "result": "webkit: PASS layer locks exclude canvas click/text/modifier/marquee, inherit through frames, survive iframe reload, retain child locks, allow deliberate tree selection and share ordered source/lock undo, redo, route restoration and branch invalidation plus atomic mixed-state batch locking and editor-reload persistence and guarded parent/iframe lock shortcuts and filtered lock recovery"
+    },
+    {
+      "name": "html-webkit",
+      "result": "webkit: PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo"
+    },
+    {
+      "name": "components-webkit",
+      "result": "COMPONENT PROPERTY UI/SOURCE/RENDER PASS react webkit"
+    }
+  ],
+  "units": "886 passed",
+  "cask": "Temporary-tap Homebrew install and uninstall passed with quarantine preserved. Upgrade not tested.",
+  "installation": {
+    "installedVerification": {
+      "sourceCommit": "4dba5a35ca73e5d68771c5e003021645f5ea2082",
+      "sourceTreeDirty": false,
+      "sourceFiles": 175,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "cleanup": "App directory, cask registration, temporary tap and cask trust entry verified absent; developer mode disabled",
+    "logs": [
+      "/private/tmp/retouch-desktop-layers-20260911/install.log",
+      "/private/tmp/retouch-desktop-layers-20260911/uninstall.log"
+    ]
+  },
+  "nativeLaunch": "not attempted",
+  "signing": "Ad hoc development build; Developer ID, notarization and trusted distribution unfinished",
+  "testHarness": "Reset layout checks now wait and sample both controls in one DOM evaluation, avoiding a render race after library navigation. Harness tests are external to the signed app."
+}
