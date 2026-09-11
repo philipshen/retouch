@@ -259,7 +259,7 @@
       const surface=document.createElement('div');surface.className='compare-surface';surface.setAttribute('aria-hidden','true');surface.append(frame);rail.append(surface);
       const overlay=document.createElement('div');overlay.className='compare-overlay';
       const message=document.createElement('p');message.className='hint';
-      const marquee=document.createElement('div');marquee.className='selection-marquee';marquee.hidden=true;viewport.append(marquee);let stopMarquee=null,marqueeDocument=null;
+      const marquee=document.createElement('div');marquee.className='selection-marquee';marquee.hidden=true;viewport.append(marquee);let stopMarquee=null,marqueeDocument=null,marqueeRequest=0;
       function attachMarquee(){
         try{
           const d=frame.contentDocument;if(d===marqueeDocument&&stopMarquee)return;
@@ -271,11 +271,15 @@
             selectable:node=>window.RetouchCanvasSelection.selectable(node),
             outerBackground:(event,point)=>{const node=d.elementFromPoint(point.x,point.y);return window.RetouchMarquee.background(node)||node&&!window.RetouchCanvasSelection.selectable(node);},
             onChange:rect=>{marquee.hidden=!rect;if(rect){const scale=viewport.clientWidth/width;for(const key of ['left','top','width','height'])marquee.style[key]=rect[key]*scale+'px';}},
-            onSelect:(nodes,options)=>{
-              if(!ready())return;
+            onSelect:async(nodes,options)=>{
+              const request=++marqueeRequest;if(!ready())return;
+              try{
+              const picked=await window.RetouchCanvasSelection.marqueeTargets(d,nodes,options.rect);
+              if(!picked||request!==marqueeRequest||!ready())return;nodes=picked.nodes;
               if(nodes.length>100){message.textContent='Select up to 100 layers. Draw a smaller selection.';return;}
               const all=[...d.querySelectorAll('[data-rt],[data-rt-i]')],selection=nodes.map(node=>{const hostId=node.getAttribute('data-rt'),instanceId=node.getAttribute('data-rt-i');return {hostId,instanceId,occurrence:all.filter(el=>el.getAttribute('data-rt')===hostId&&el.getAttribute('data-rt-i')===instanceId).indexOf(node)};});
-              window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,selection,append:options.append,occurrence:0,route:path()}}));
+              window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,selection,component:picked.component,append:options.append,occurrence:0,route:path()}}));
+              }catch(error){if(request===marqueeRequest&&ready())message.textContent=error.message||'Could not select components in this preview.';}
             }
           });marqueeDocument=d;
         }catch{}
@@ -464,7 +468,23 @@
   window.addEventListener('retouch:selection-details',e=>{selectionDetails=new Map(e.detail.map(info=>[info.id,info]));});
   window.addEventListener('retouch:style-scope',e=>{scope=e.detail;if(scopeSummary)scopeSummary.textContent='Style scope: '+scope.label;});
   window.addEventListener('retouch:route',()=>sync());
-  main.addEventListener('load',()=>sync(true));
+  let mainLoadRevision=0;
+  main.addEventListener('load',async()=>{
+    const revision=++mainLoadRevision,next=path();
+    if(!open)return;
+    if(next!==route||window.__RT_RENDERING?.reloadAfterWrite||!selectedIds.length||selectedIds.some(id=>selectionDetails.get(id)?.kind!=='instance'))return sync(true);
+    const expected=selectedIds.map(id=>({id,hash:main.contentDocument?.querySelector('[data-rt-i="'+id+'"]')?.getAttribute('data-rt-i-revision')}));
+    if(expected.some(item=>!item.hash))return sync(true);
+    // Let component HMR finish before replacing comparison documents. Reloading
+    // while their hot-update fetch is in flight can abort WebKit's update.
+    for(let attempt=0,stable=0;attempt<40;attempt++){
+      if(revision!==mainLoadRevision||!open||path()!==next)return;
+      const ready=cards.every(card=>expected.every(({id,hash})=>[...card.frame.contentDocument?.querySelectorAll('[data-rt-i="'+id+'"]')||[]].some(el=>el.getAttribute('data-rt-i-revision')===hash)));
+      stable=ready?stable+1:0;if(stable>=3)return;
+      await new Promise(resolve=>setTimeout(resolve,50));
+    }
+    if(revision===mainLoadRevision&&open&&path()===next)sync(true);
+  });
   window.addEventListener('retouch:viewport',updateControls);
   window.addEventListener('retouch:screen',updateControls);
   new ResizeObserver(()=>{if(open)layoutPreviews();}).observe(rail);

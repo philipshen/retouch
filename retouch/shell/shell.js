@@ -89,7 +89,7 @@ function scopedInfo(info) { return {...info,styleScope,anchorInheritedClasses:Re
 
 let lockStorage;try{lockStorage=sessionStorage;}catch{}
 const layerLocks=RetouchLayerLocks.create({route:()=>currentPageRoute()||'',storage:lockStorage,scope:window.__RT_RENDERING?.stateScope});
-window.RetouchCanvasSelection={pick:(node,x,y)=>layerLocks.pick(node,x,y),selectable:node=>!layerLocks.locked(node),canMarquee:()=>window.__RT_RENDERING?.selectionStyling===true&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests};
+window.RetouchCanvasSelection={marqueeTargets:resolveMarqueeTargets,pick:(node,x,y)=>layerLocks.pick(node,x,y),selectable:node=>!layerLocks.locked(node),canMarquee:()=>window.__RT_RENDERING?.selectionStyling===true&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests};
 const historyRoutes = new Map();
 function currentPageRoute(){try{const loc=iframe.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
 const editorHistory = RetouchHistory.createHistory({apply:restoreHistory,onChange:syncHistoryControls,storage:lockStorage,scope:window.__RT_RENDERING?.stateScope,initialState:window.__RT_RENDERING?.history,capture:entry=>({route:historyRoutes.get(entry.undoId)||currentPageRoute()})});
@@ -461,7 +461,8 @@ window.addEventListener('retouch:comparison-edit',async event=>{
   if(panelTasks||undoBusy||sourceRequests||!['width','height'].every(key=>Number.isInteger(detail[key])&&detail[key]>=240&&detail[key]<=7680))return;
   const validId=id=>id===null||id===undefined||/^[a-f0-9]{10}$/.test(id);
   if(!validId(detail.hostId)||!validId(detail.instanceId)||!Number.isInteger(detail.occurrence)||detail.occurrence<0||detail.occurrence>10000)return;
-  const group=detail.selection;if(group!==undefined&&(!Array.isArray(group)||group.length>100||group.some(item=>!item||!item.hostId||!validId(item.hostId)||!validId(item.instanceId)||!Number.isInteger(item.occurrence)||item.occurrence<0||item.occurrence>10000)))return;
+  const group=detail.selection;if(detail.component!==undefined&&typeof detail.component!=='boolean')return;
+  if(group!==undefined&&(!Array.isArray(group)||group.length>100||group.some(item=>!item||!item.hostId||!validId(item.hostId)||!validId(item.instanceId)||!Number.isInteger(item.occurrence)||item.occurrence<0||item.occurrence>10000)))return;
   await commitInlineEdit();if(serial!==comparisonSelectionSerial)return;
   const sameRoute=()=>{try{const loc=iframe.contentWindow.location;return loc.pathname+loc.search+loc.hash===detail.route;}catch{return false;}};
   if(!sameRoute())return toast('The page changed. Select the layer in the refreshed comparison.','err');
@@ -482,7 +483,7 @@ window.addEventListener('retouch:comparison-edit',async event=>{
       const nodes=[...doc().querySelectorAll('[data-rt],[data-rt-i]')],targets=group.map(item=>nodes.filter(el=>el.getAttribute('data-rt')===item.hostId&&el.getAttribute('data-rt-i')===item.instanceId)[item.occurrence]);
       if(targets.some(target=>!target))continue;
       if(targets.some(target=>layerLocks.locked(target)))return toast('A selected layer is now locked. Select the group again.','err');
-      await selectMany(targets,{append:detail.append===true});return;
+      await selectMany(targets,{append:detail.append===true,component:detail.component===true});return;
     }
     const matches=[...doc().querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===detail.hostId&&el.getAttribute('data-rt-i')===detail.instanceId),target=matches[detail.occurrence];
     if(!target||iframe.contentWindow.innerWidth!==detail.width)continue;
@@ -492,6 +493,27 @@ window.addEventListener('retouch:comparison-edit',async event=>{
   toast('This layer is not present on the main canvas at this size.','err');
 });
 
+function componentMarqueeTargets(d,rect,library){
+  const candidates=[],byUsage=new Map();
+  for(const el of d.querySelectorAll('[data-rt-i]')){const id=el.getAttribute('data-rt-i');if(!byUsage.has(id))byUsage.set(id,[]);byUsage.get(id).push(el);}
+  for(const component of library.components||[])for(const usage of component.usages||[]){
+   const roots=byUsage.get(usage.id)||[];
+   for(const group of RetouchComponentInstances.group(roots,component.rootGroups)){
+    if(!group.complete||!group.elements.every(el=>!layerLocks.locked(el)&&!['hidden','collapse'].includes(d.defaultView.getComputedStyle(el).visibility)&&RetouchMarquee.enclosed(rect,el.getBoundingClientRect())))continue;
+    candidates.push(group);
+   }
+  }
+  return candidates.filter(group=>!candidates.some(parent=>parent!==group&&parent.elements.some(root=>root!==group.element&&root.contains(group.element)))).map(group=>group.element);
+}
+async function resolveMarqueeTargets(d,nodes,rect){
+ if(sel?.info.kind!=='instance')return {nodes,component:false};
+ const selection=sel,serial=classificationSerial;
+ const library=await api('GET','/rt/__api/components');
+ if(sel!==selection||serial!==classificationSerial||d.defaultView?.document!==d)return null;
+ if(!library?.ok)throw Error('Could not resolve components for this selection.');
+ return {nodes:componentMarqueeTargets(d,rect,library),component:true};
+}
+
 async function selectMarquee(d,nodes,options){
  if(sel?.info.kind!=='instance')return selectMany(nodes,options);
  const serial=++classificationSerial,selection=sel;busyPanel(true);
@@ -499,16 +521,7 @@ async function selectMarquee(d,nodes,options){
   const library=await api('GET','/rt/__api/components');
   if(serial!==classificationSerial||sel!==selection||doc()!==d)return;
   if(!library?.ok)return toast('Could not resolve components for this selection.','err');
-  const candidates=[],byUsage=new Map();
-  for(const el of d.querySelectorAll('[data-rt-i]')){const id=el.getAttribute('data-rt-i');if(!byUsage.has(id))byUsage.set(id,[]);byUsage.get(id).push(el);}
-  for(const component of library.components||[])for(const usage of component.usages||[]){
-   const roots=byUsage.get(usage.id)||[];
-   for(const group of RetouchComponentInstances.group(roots,component.rootGroups)){
-    if(!group.complete||!group.elements.every(el=>!layerLocks.locked(el)&&!['hidden','collapse'].includes(d.defaultView.getComputedStyle(el).visibility)&&RetouchMarquee.enclosed(options.rect,el.getBoundingClientRect())))continue;
-    candidates.push(group);
-   }
-  }
-  const targets=candidates.filter(group=>!candidates.some(parent=>parent!==group&&parent.elements.some(root=>root!==group.element&&root.contains(group.element)))).map(group=>group.element);
+  const targets=componentMarqueeTargets(d,options.rect,library);
   await selectMany(targets,{append:options.append,component:true});
  }catch(error){toast(error.message||'Could not select these components.','err');}finally{busyPanel(false);}
 }
