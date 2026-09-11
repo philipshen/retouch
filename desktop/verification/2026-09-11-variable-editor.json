@@ -1,0 +1,42 @@
+{
+  "sourceCommit": "64eb2aa5562790675f45663f8406a43070ad24f5",
+  "sourceTreeDirty": false,
+  "sourceFiles": 175,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-variables-20260911/Retouch-0.1.0-mac.zip",
+  "sha256": "49ed3997c07c592e8d3acb0b3c7ae4e0a7cf1ff8b5befb7a22f79ea5377aad99",
+  "sourceMatchesCheckout": true,
+  "workflows": [
+    {
+      "name": "variable-library-chromium",
+      "result": "VARIABLE COLLECTION UI PASS chromium"
+    },
+    {
+      "name": "variable-library-webkit",
+      "result": "VARIABLE COLLECTION UI PASS webkit"
+    },
+    {
+      "name": "actions-chromium",
+      "result": "ACTIONS SEARCH/KEYBOARD/AVAILABILITY/IFRAME/PANELS/PRESETS/SOURCE UNDO PASS chromium"
+    },
+    {
+      "name": "actions-webkit",
+      "result": "ACTIONS SEARCH/KEYBOARD/AVAILABILITY/IFRAME/PANELS/PRESETS/SOURCE UNDO PASS webkit"
+    },
+    {
+      "name": "viewport-busy-chromium",
+      "result": "VIEWPORT REFRESH AFTER BUSY PANEL PASS chromium"
+    },
+    {
+      "name": "viewport-busy-webkit",
+      "result": "VIEWPORT REFRESH AFTER BUSY PANEL PASS webkit"
+    }
+  ],
+  "cask": "Local cask generated; Ruby syntax passed. Installation not attempted.",
+  "nativeLaunch": "not attempted",
+  "signing": "ad hoc development build; Developer ID/notarization and trusted distribution unfinished"
+}

@@ -10,19 +10,19 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest local development archive is
-`/private/tmp/retouch-desktop-design-controls-20260911/Retouch-0.1.0-mac.zip`.
+`/private/tmp/retouch-desktop-variables-20260911/Retouch-0.1.0-mac.zip`.
 Its SHA-256 is
-`8432e7e52ecb8d763d765c59af9fab53bb0326019ec8f63c25a7400d2e2a569b`.
-It contains clean source commit `843f6ef`, including radius/stroke priority and
-resets, light context menus, contextual HTML layout fields, and focused-scope
-refresh recovery. All 175 packaged source hashes match that checkout.
+`49ed3997c07c592e8d3acb0b3c7ae4e0a7cf1ff8b5befb7a22f79ea5377aad99`.
+It contains clean source commit `64eb2aa`, including the light action palette,
+inline variable tables, alias conversion, named-mode validation, search, and
+focused-scope refresh recovery. All 175 packaged source hashes match that checkout.
 The extracted archive passes universal architecture and strict ad hoc signature
-checks. Eight bundled-editor workflows passed: React inspector, HTML editing,
-context menus, and viewport refresh, each in Chromium and WebKit. The accompanying
-local cask passes Ruby syntax validation; installation was not tested.
-See [the package receipt](verification/2026-09-11-design-controls.json).
+checks. Six bundled-editor workflows passed: variable collections, Actions, and
+viewport refresh, each in Chromium and WebKit. The accompanying local cask passes
+Ruby syntax validation; installation was not tested.
+See [the package receipt](verification/2026-09-11-variable-editor.json).
 
-Native launch was not attempted for this build. The preceding package's
+Native launch was not attempted for this build. An older controlled launch's
 process ran but CUA could not inspect its window; it was stopped. Native editing,
 trusted installation, upgrades, Developer ID signing and notarization remain
 unverified for the latest archive. Key access remains paused after the earlier
