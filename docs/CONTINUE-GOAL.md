@@ -465,3 +465,10 @@ Chromium/WebKit canvas-context-menu workflows passed explicit light background/t
 HTML Layout now pairs physical padding edges, groups minimum/maximum dimensions under Size limits, and groups margins under Outer spacing. CSS-heavy visible labels are shortened while accessible names and existing callbacks remain intact. Common width/height and padding controls stay visible.
 
 Full HTML workflows passed in Chromium/WebKit with the added minimum-width edit/undo and disclosure checks, alongside existing padding/shorthand coverage. A focused fresh Chromium preview additionally passed margin editing/exact undo and visually verified final labels at /private/tmp/retouch-html-layout-chromium.png. Source changes postdate desktop archive af62db6. Full parity remains incomplete.
+
+
+### Contextual HTML layout and focused-scope refresh (2026-09-11)
+
+Flow layouts now place inactive direction/wrap/alignment/gap fields in Layout options. Flex exposes these fields; grid exposes its applicable alignment/gap controls while retaining flex-only direction/wrap in options. Dimensions and padding stay prominent. Mode changes and exact undo are covered in the HTML browser workflow; screenshot /private/tmp/retouch-contextual-layout-chromium.png was visually inspected.
+
+The first Chromium full run reproduced the missing breakpoint option after resize. A new deterministic viewport-busy case reproduced it by resizing and immediately focusing the style-scope selector: focus preservation prevented its options from refreshing. The viewport queue now permits refresh while that selector is focused, while editable drafts remain protected. The targeted case failed before the fix and passed afterward in Chromium/WebKit, alongside busy-refresh and draft-preservation cases. Both full HTML workflows and 886 unit tests passed after the fix. Source changes postdate desktop archive af62db6. Full parity remains incomplete.

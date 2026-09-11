@@ -15,9 +15,11 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   assert.equal(await page.evaluate(()=>panelTasks),1);
   await page.evaluate(()=>busyPanel(false));
   await wait(async()=>await page.getByLabel('Style screen scope').locator('option[value="min-[820px]:"]').count()===1);
+  await page.evaluate(()=>{RetouchScreens.set({width:940,height:900});document.querySelector('[aria-label="Style screen scope"]').focus();});
+  await wait(async()=>await page.getByLabel('Style screen scope').locator('option[value="min-[940px]:"]').count()===1);
   const draft=page.getByLabel('Font size (CSS)',{exact:true});await draft.fill('77px');const field=await draft.elementHandle();
-  await page.evaluate(()=>RetouchScreens.set({width:940,height:900}));
-  await page.waitForFunction(()=>doc().defaultView.innerWidth===940);await page.waitForTimeout(200);
+  await page.evaluate(()=>RetouchScreens.set({width:1060,height:900}));
+  await page.waitForFunction(()=>doc().defaultView.innerWidth===1060);await page.waitForTimeout(200);
   assert.equal(await field.evaluate(el=>el.isConnected&&el===document.activeElement&&el.value==='77px'),true);
   assert.equal(fs.readFileSync(file,'utf8'),source);assert.deepEqual(errors,[]);
   console.log('VIEWPORT REFRESH AFTER BUSY PANEL PASS',engine);

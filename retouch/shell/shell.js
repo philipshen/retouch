@@ -1001,7 +1001,7 @@ function queueViewportPanelRefresh(){
   viewportRenderPending=true;
   requestAnimationFrame(()=>{
     viewportRenderPending=false;
-    if(sel){if(panelTasks||panelInteractionFocused())panelRenderDeferred=true;else renderPanel();}
+    if(sel){const scopeFocused=document.activeElement?.getAttribute('aria-label')==='Style screen scope';if(panelTasks||panelInteractionFocused()&&!scopeFocused)panelRenderDeferred=true;else renderPanel();}
   });
 }
 window.addEventListener('retouch:viewport',queueViewportPanelRefresh);

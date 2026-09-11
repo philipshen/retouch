@@ -96,6 +96,11 @@
    for(const checkbox of section.querySelectorAll('input[type="checkbox"]'))checkbox.closest('.inspector-field')?.classList.add('checkbox-field');
    if(name==='Layout'){
     if(css){
+     const display=section.querySelector('[aria-label="Display (CSS)"]')?.value||'',flex=/^(inline-)?flex$/.test(display),grid=/^(inline-)?grid$/.test(display);
+     const inactive=flex?[]:grid?['Direction','Wrap']:['Direction','Wrap','Align items','Align lines','Distribute items','Gap'];
+     const options=disclosure('Layout options','html-layout-options');
+     for(const label of inactive){const row=section.querySelector('[aria-label="'+label+' (CSS)"]')?.closest('.property-row');if(row?.parentElement===section)options.append(row);}
+     if(options.children.length>1)section.append(options);
      for(const [heading,key,labels] of [['Size limits','html-size-limits',['Minimum width','Minimum height','Maximum width','Maximum height']],['Outer spacing','html-margin',['Margin','Margin top','Margin right','Margin bottom','Margin left']]]){
       const rows=labels.map(label=>section.querySelector('[aria-label="'+label+' (CSS)"]')?.closest('.property-row')).filter(row=>row?.parentElement===section);
       if(rows.length){const details=disclosure(heading,key);section.insertBefore(details,rows[0]);rows.forEach(row=>details.append(row));for(const names of [['Minimum width (CSS)','Minimum height (CSS)'],['Maximum width (CSS)','Maximum height (CSS)'],['Margin top (CSS)','Margin bottom (CSS)'],['Margin left (CSS)','Margin right (CSS)']])pair(details,names);}
