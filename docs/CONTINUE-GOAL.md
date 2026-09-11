@@ -1,0 +1,90 @@
+# Continue Retouch on another machine
+
+## Goal prompt
+
+Continue the existing Retouch goal in https://github.com/philipshen/retouch on branch `feat/figma-design-studio`. Establish this as an active, unbounded goal if the new session does not already have it. Use an isolated worktree, preserving the existing branch history and all unrelated work.
+
+The full objective is: achieve FULL feature parity with Figma Design, creating a Figma-like experience that works for ANY site. Also create a macOS desktop app installable through Homebrew cask. Go all-out on the design experience and innovate on intuitive management of different screen sizes. The product principles are (1) “It just works” and (2) “Intuitive controls, easy to learn.” Preserve the user's existing startup command, including Make, shell scripts, monorepo orchestrators, containers, and other methods.
+
+Do not redefine success as the features already implemented, a limited set of frameworks, or a passing test suite. Audit the current implementation against the full objective, maintain a concrete gap list, and keep making substantial end-to-end progress. Do not mark the goal complete until its full scope is implemented and verified against real behavior. Prefer source-backed edits with exact Undo/Redo, correct repeated-instance identity, and responsive behavior that corresponds to actual browser rendering. Do not silently substitute transient DOM-only edits for durable editing.
+
+Read this entire handoff, applicable AGENTS.md files, README.md, retouch/README.md, retouch/test/README.md, desktop/README.md, and the relevant sections of docs/design-studio-parity.md. That parity document is a long chronological evidence log, not proof of current complete parity; search it and read its recent tail rather than loading it all at once. Inspect current code and Git state before trusting any historical statement.
+
+IMPORTANT: Native Retouch launches remain paused because repeated macOS “Retouch Not Opened” dialogs disrupted the user. Follow desktop/AGENTS.md. Do not launch .app bundles, native executables, native self-tests, GUI diagnostics, or cask launch checks, and do not set RETOUCH_RUN_NATIVE_TESTS=1, unless the user explicitly resumes native testing. Moving to another machine does not lift this pause. Never remove quarantine or weaken macOS security to suppress the warning. Browser-only development and packaging may continue. This restriction does not shrink the desktop delivery requirement; trusted distribution remains unfinished.
+
+Work autonomously, validate changes with meaningful source/API/browser checks, record accurate evidence and limitations, and commit coherent changes. Do not claim universal support from narrow fixtures. Keep the full goal active when a turn ends with incomplete work.
+
+## Migration snapshot, 2026-09-11
+
+- `main` preserves earlier local inspector/Shopify work at `fed7f3c` (186 unit tests passed on the source machine). It is a separate line of development; do not merge it into the design branch blindly.
+- The design branch's last implementation commit before this handoff is `bc55434`, following `707ac01`. Its 821 unit tests passed again during migration.
+- The design branch already includes an earlier checkpoint of local work (`cf3b539`) and extensive subsequent editor development. Continue this branch, not main.
+- No component multi-property operation was implemented in the interrupted investigation. Do not assume a `setComponentPropSelection` operation exists.
+- No public notarized desktop release or usable published Homebrew cask was established. Source push is not a desktop release.
+- Historical `/private/tmp/...` logs, screenshots, bundles, browser installations, node_modules symlinks, and app fixtures were local to the old machine and are not portable evidence. Credentials, target-site checkouts, generated artifacts and dependencies are not included. Regenerate evidence locally.
+
+## Setup on a fresh machine
+
+Node 22 or later is required by the project. The source machine used Node 26.8.2; verify the chosen runtime locally. From a parent directory:
+
+```sh
+git clone git@github.com:philipshen/retouch.git
+cd retouch
+git fetch origin
+git worktree add ../retouch-design-studio --track -b feat/figma-design-studio origin/feat/figma-design-studio
+cd ../retouch-design-studio
+npm --prefix retouch ci
+npm --prefix retouch test
+```
+
+If the branch already exists locally, inspect `git worktree list` and use its existing worktree or attach a new one without recreating/overwriting it. The repository root has no package.json; the package is `retouch/`.
+
+The locked browser fixture environment is included under `docs/continuation/browser-fixture/`. It preserves the source machine's Next 16.2.5, React 19.2.0, Tailwind 4.1.13, and Playwright 1.58.2 environment. The e2e scripts create and clean their own disposable apps using these dependencies. From the worktree root:
+
+```sh
+npm --prefix docs/continuation/browser-fixture ci
+export RT_INSPECTOR_FIXTURE="$PWD/docs/continuation/browser-fixture"
+node "$RT_INSPECTOR_FIXTURE/node_modules/playwright/cli.js" install chromium webkit
+RT_E2E_REACT_RELOAD_VIEWPORT=1 node retouch/test/e2e/react-selection.cjs
+RT_E2E_BROWSER=webkit RT_E2E_REACT_RELOAD_VIEWPORT=1 node retouch/test/e2e/react-selection.cjs
+```
+
+Install platform browser dependencies if Playwright reports them missing. Do not reuse the old machine's PLAYWRIGHT_BROWSERS_PATH. These fresh-install instructions and copied lockfile must be verified on the destination; the migration did not perform a fresh dependency install.
+
+Other focused browser checks, from the worktree root with RT_INSPECTOR_FIXTURE exported:
+
+```sh
+RT_E2E_REACT_COMPARISON_SELECTION=1 RT_E2E_REACT_COMPARISON_MARQUEE=1 node retouch/test/e2e/react-selection.cjs
+RT_E2E_COMPARISON_MARQUEE=1 node retouch/test/e2e/comparison-multiselect.cjs
+node retouch/test/e2e/comparison-locks.cjs
+node retouch/test/e2e/html-compare-edit.cjs
+```
+
+Repeat relevant checks with `RT_E2E_BROWSER=webkit`. Check each test's own environment prerequisites before running it; `npm test` excludes browser e2e tests, and the generic `npm run test:e2e` expects a separately running fixture. Shopify/Moses checks need a real authorized development theme and fresh authentication; do not test changes against live/named themes.
+
+## Recent verified behavior and unresolved bugs
+
+- Comparison previews support host-layer Shift-click and background drag selection, lock-aware picking, scaled outlines, cross-size handoff, shared responsive editing, and history. React host-layer tests verify main/Tablet/Phone compiled CSS and preservation of unselected/other-scope styles.
+- Comparison gestures attach idempotently when the iframe body becomes ready. Shared React field commits resolve live source elements after reload instead of using detached elements captured when the field was created.
+- `bc55434` defers inspector rendering while the preview has no documentElement/body/defaultView. Chromium and WebKit passed a real document.open() interval, repeated reloads with viewport updates, preserved two-layer selection, a subsequent shared md opacity edit, and exact source Undo without page errors.
+- The deterministic empty-document test reproduced an atWidth null-append stack. It does not retrospectively prove the stack of an older untraced intermittent error.
+- An earlier WebKit comparison-removal timeout passed a diagnostic rerun; its cause remains unconfirmed. See the recent parity-log entries, not an assumption that all intermittent failures are resolved.
+
+## Next investigation and implementation pointers
+
+The interrupted next task was component-instance multi-selection. Current host multi-selection should not be mistaken for component-instance parity.
+
+- `retouch/shell/shell.js`: `classifyNode`, `select`, `selectMany`, `renderPanelContents`, `propTable`, and history/selection restoration. `selectMany` currently collects data-rt host IDs and requires compatible metadata in one source file. Shift-click compatibility also excludes component-instance selections.
+- `retouch/src/adapters/react.cjs`: classSelection is exposed only for host elements. Single-instance properties delegate to `component-props.cjs`; there is no implemented atomic component-property selection operation.
+- `retouch/src/component-props.cjs`: preserves literals/types, checks defaults and TypeScript contracts, rejects uncontrolled expression/spread writes, and includes dependency/path checks.
+- `retouch/src/jsx-class-selection.cjs` and `transactions.cjs`: existing batch planning and atomic application patterns. A component-property batch must validate every member before writing, preserve dependency checks, and produce one exact Undo step. Avoid sequential writes or using stale definition hashes after in-memory edits to a file that also contains the definition.
+- `retouch/shell/component-instances.js`: root grouping and occurrence identity. Selection, outlines, edits, and history must agree on whether they target a usage, a shared definition, or a repeated rendered occurrence.
+- Existing coverage: `retouch/test/component-props.test.cjs`, React selection e2e tests, component/root/repeated-occurrence fixtures found by searching `retouch/test/e2e`.
+
+The next agent should inspect and implement a complete usable slice through selection → shared inspector → atomic source operation → compiled preview → Undo/Redo, while retaining the broader goal. The prior investigation was read-only and left no partial implementation to finish.
+
+## Broader unfinished scope (not an exhaustive audit)
+
+Mixed/component-instance multi-selection; variants and shared libraries; nested overrides, slots and expression swaps; semantic identity across reordered data, portals and frameworks; multi-component/cross-file relocation; richer TypeScript contracts; arbitrary-framework and remote-site durable authoring; full document/pages/sections/guides model; vector/boolean/mask/transform parity; complete responsive auto-layout and hug/fill behavior; rich text and font resolution; assets and export; prototypes, collaboration and version browsing; cross-process atomicity; and trusted notarized Homebrew distribution with upgrade/Intel/native verification.
+
+Responsive helpers currently have bounded media-query solving (up to 2,000 candidates and dimensions 240–7,680), and equal-width named-scope CSS cascade inheritance remains unresolved. Existing app/CLI instrumentation supports specific integrations; accepting arbitrary startup commands is not proof of automatic instrumentation for ANY site. Re-audit these gaps against current code rather than treating this list as the complete specification.
