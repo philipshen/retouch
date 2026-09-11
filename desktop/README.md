@@ -10,14 +10,25 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest local development archive is
-`/private/tmp/retouch-desktop-click-completion-20260911/Retouch-0.1.0-mac.zip`.
-All 171 packaged source files match the tested checkout; the source hashes and
-native verification scope are in [the receipt](verification/2026-09-11-click-completion.json).
-The universal binary has a verified ad hoc development signature. Native HTML
-startup, text editing, synchronized Undo/Redo, exact source restoration and Stop
-passed. This is not a notarized or release-ready build. Developer ID signing was
-attempted on an earlier candidate but macOS canceled access to its signing key;
-that prompt has not been retried. No public release is published.
+`/private/tmp/retouch-desktop-editor-refresh-20260911/Retouch-0.1.0-mac.zip`,
+built from `be8e911`. Its SHA-256 is
+`848e8ae4196017e403875c297df7ac31086d35ad92711992ba3561e8cd4d4080`.
+All 172 packaged source files match the checkout and the ZIP. Both universal
+architectures and the strict ad hoc signature verify. Six Chromium/WebKit
+component, gap and sizing workflows pass against the bundled runtime; see
+[the receipt](verification/2026-09-11-editor-refresh.json).
+
+A single controlled launch created a running process, but CUA could not discover
+its window, including when inspecting the already-running process. The owned
+process was stopped and verified absent. Native interaction on this package is
+unverified. A local cask was generated and passed Ruby syntax validation; this
+package has not been cask-installed or upgrade-tested. It is not a notarized or
+release-ready build. Developer ID key access remains paused after the earlier
+canceled attempt. No public release is published.
+
+The earlier click-completion package passed a native HTML workflow; that evidence
+is retained in [its receipt](verification/2026-09-11-click-completion.json) and does
+not establish native success for this refreshed package.
 
 Build with Apple's command line developer tools installed:
 

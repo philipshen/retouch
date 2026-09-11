@@ -1,0 +1,761 @@
+{
+  "sourceCommit": "be8e9112606dc2235b4c6b1c4fad8d9bc4d9d234",
+  "archive": "/private/tmp/retouch-desktop-editor-refresh-20260911/Retouch-0.1.0-mac.zip",
+  "sha256": "848e8ae4196017e403875c297df7ac31086d35ad92711992ba3561e8cd4d4080",
+  "architectures": [
+    "x86_64",
+    "arm64"
+  ],
+  "signing": "verified strict ad hoc development signature",
+  "nativeSelfTests": "not run",
+  "nativeUI": {
+    "result": "unverified",
+    "attempts": 1,
+    "processObserved": 1757,
+    "inspection": "CUA cgWindowNotFound at initial launch and inspection of the already-running process",
+    "cleanup": "owned app process stopped and verified absent"
+  },
+  "notarization": "not performed",
+  "cask": "generated local file URL, Ruby syntax checked; installation not performed",
+  "files": [
+    {
+      "path": "bin/retouch.cjs",
+      "sha256": "9c6a708c87a344c4ae085cffde1b17c02280f49b627dee900ccbcf5f4442bb83"
+    },
+    {
+      "path": "src/adapter.cjs",
+      "sha256": "c63d390be8c70bbdf14ef75bd0f0487881009e569b757e6a53dd2cf76474b971"
+    },
+    {
+      "path": "src/adapters/html.cjs",
+      "sha256": "edbeb713f88a7833f0c56d658a355177ea860ddb62cbe868f02b057f9cb17afc"
+    },
+    {
+      "path": "src/adapters/liquid.cjs",
+      "sha256": "f4565e0b85458b00f7ccdbfd3194c5e68b0461c5c2f8388705b3f8643bf3ef8d"
+    },
+    {
+      "path": "src/adapters/react.cjs",
+      "sha256": "35e63387113a79e1cf7d93946ab594c0fd44199478b8a794e97386ec6c33ac33"
+    },
+    {
+      "path": "src/arrow-instance-marker.cjs",
+      "sha256": "5482f7b8328e6d045b446d20a639e8a5f350bfd60ea6dbda617e26d83a2e76f3"
+    },
+    {
+      "path": "src/class-tokens.cjs",
+      "sha256": "2df863a3a03199422f3404e0d44fe7a2913d09b7a4fe555f5f1e96b45be8c1c4"
+    },
+    {
+      "path": "src/color-override-selection.cjs",
+      "sha256": "b05f5ddfb8d0470e432ac5f24909d6b5511b055155ab87521241ed5509856321"
+    },
+    {
+      "path": "src/color-style-classes.cjs",
+      "sha256": "f37ce5b20187968c4c2dcfcb9e2cd17ea4524855c093be0d7c7f8ec46c521160"
+    },
+    {
+      "path": "src/color-styles.cjs",
+      "sha256": "a6a57408aa5ac8692eaae604f7ec987bdefad438a60c275e7b2d747df8e53df3"
+    },
+    {
+      "path": "src/component-capture-type.cjs",
+      "sha256": "0607862753098107c85366e74ab284ff41bf27a2140e842134c3d0e4f5fd5c28"
+    },
+    {
+      "path": "src/component-definitions.cjs",
+      "sha256": "b1e6c741d188c5a671469a0f2e80a339facf8c63dab28ce21bdf8f0f3c0e2f23"
+    },
+    {
+      "path": "src/component-import-binding.cjs",
+      "sha256": "80fcd866863e2dc3addf6b708d873fac3f286006007c06d1a23bfe5530aab878"
+    },
+    {
+      "path": "src/component-import-cleanup.cjs",
+      "sha256": "69f33490d6e71fa5f6867d042df8f738e39336c65235e9b57b626a19582da242"
+    },
+    {
+      "path": "src/component-insertion-props.cjs",
+      "sha256": "442f77feed6e0e1dfd22e8bb54913742ae5021261f03486a629f8c8c6d316b5f"
+    },
+    {
+      "path": "src/component-move-cycles.cjs",
+      "sha256": "9bfd3821fb3644a0c1757567b633ec82cce71e59cbaf37518e0155c635048c92"
+    },
+    {
+      "path": "src/component-move-keys.cjs",
+      "sha256": "04e26b85ae2f137bac944842c118b887a922696ab4e30b4c63de18b271b68dd8"
+    },
+    {
+      "path": "src/component-prop-choices.cjs",
+      "sha256": "e06882320f8f7d41c75c557ca747902783c5e8c489c27d91ccd5cc7f83e7c310"
+    },
+    {
+      "path": "src/component-props.cjs",
+      "sha256": "2e6da1250b8a50518720569995974b70f2b162f13dcf751c7accf9bfdb45fe9d"
+    },
+    {
+      "path": "src/component-render-roots.cjs",
+      "sha256": "a88eee9e7a372e3023a74ee879896285b8cf98007cdb3fa36bfa05376d49c5d8"
+    },
+    {
+      "path": "src/component-return-roots.cjs",
+      "sha256": "e6c3f1a7d55d8709704121b456d1c27b4e60f07f3ef120c22a84d8a359180eac"
+    },
+    {
+      "path": "src/component-root-groups.cjs",
+      "sha256": "60227ec755d9a245f5f823e3d848bfedfa99091c3a9c23612c2a135d666a244d"
+    },
+    {
+      "path": "src/component-swap-props.cjs",
+      "sha256": "51e43c3bb1bd79842089418c31963988f5a8c9a5b23f62af5fe2063c38a9c72f"
+    },
+    {
+      "path": "src/component-type-modules.cjs",
+      "sha256": "e0739b2d341a2eebe955dfbb965051e46ecf679627e65a01f46612eb3c2fce4a"
+    },
+    {
+      "path": "src/component-type-paths.cjs",
+      "sha256": "b164b7198108886591168198d50c4c5605ddef20e8cd754d1ee7be13ee3afc53"
+    },
+    {
+      "path": "src/component-usage.cjs",
+      "sha256": "45e84fcf9c729afb6bc181c206709f13d75cb6bd7d3a650de109300fd9fde9d9"
+    },
+    {
+      "path": "src/components.cjs",
+      "sha256": "de7ca957a53d0fc74e62c5a9293c1c8955658fed8bd6ece4d3d4ef4d809862c0"
+    },
+    {
+      "path": "src/create-component.cjs",
+      "sha256": "1af2fe6678a17363dc250a2f6571f2e5f8b54e57dd599f1e5ad3f2e5994768c8"
+    },
+    {
+      "path": "src/delete-component.cjs",
+      "sha256": "6906cf5c75a6f652d0ad05e071efb598873b2b8faf2720cc64431b3091fd3d23"
+    },
+    {
+      "path": "src/doctor.cjs",
+      "sha256": "d40000bf0d3ef0cacef16ef059fd4c7925bbe3b4502a79aa997db8c2bcbe4875"
+    },
+    {
+      "path": "src/duplicate-component.cjs",
+      "sha256": "1244b15d05c46b937d592c36f8fa330b02fa6e6e686a1c9880500570b89687e5"
+    },
+    {
+      "path": "src/effect-style-classes.cjs",
+      "sha256": "7ae84dc918b27b11bc9a7ff101fe405e0fea9022da1e9e430969f41def38b8a9"
+    },
+    {
+      "path": "src/effect-styles.cjs",
+      "sha256": "1dd9845968bc2a5f0f81c2b33ba0ab59b9795d89ebce2b24e7e8bd5940900e34"
+    },
+    {
+      "path": "src/font-axes.cjs",
+      "sha256": "81d7308b0b3f19a0f24ced311cc4c4b47d0af0637ea3cec4b0fc08fd2d8aba9c"
+    },
+    {
+      "path": "src/history-render-revisions.cjs",
+      "sha256": "6d99c21262c02162d3b790cae205ca59395a9bd01ea4700ebbe629be7193d0b7"
+    },
+    {
+      "path": "src/history-store.cjs",
+      "sha256": "eab4a2d2a732d7f19105be993d63a8dfb18e7816ddc46d2c586db7b56e089876"
+    },
+    {
+      "path": "src/history.cjs",
+      "sha256": "9bb701e5862b446fa8c4186261b0eb173649e6ea3689701d901d87003c45d685"
+    },
+    {
+      "path": "src/html-color-styles.cjs",
+      "sha256": "d52eb1b82325fac7b46e91da87a2119829f0de6acf24f9a6772b2f9e0c5b7f39"
+    },
+    {
+      "path": "src/html-css-selection.cjs",
+      "sha256": "0ad1b79835027b21cd80af2fdd9527bccd98b51c350d8dc6d74518e69f9d0453"
+    },
+    {
+      "path": "src/html-css.cjs",
+      "sha256": "bc0c4d142fec2e322e6350c5c773bc972315fb7555c36951c8a43b21da13b0c0"
+    },
+    {
+      "path": "src/html-effect-styles.cjs",
+      "sha256": "ec97fcf5da45914b5364f4a7b4cc39ee920c4877cb51f560a0cf58a632a3395a"
+    },
+    {
+      "path": "src/html-frame-selection.cjs",
+      "sha256": "66ca74b2eafdb640aee99c0521197d0539ab5195caef42b47ca22fafcf2c52c4"
+    },
+    {
+      "path": "src/html-insert.cjs",
+      "sha256": "3d3d3aaa5c394c14405ebb430cfc59b65f5aa2fbcc23b2e4310ad1cb9ebbd383"
+    },
+    {
+      "path": "src/html-pages.cjs",
+      "sha256": "9522928a82121748c1871e0d8f07886d3716a1efa16e0e81c221c3072f6a1eb8"
+    },
+    {
+      "path": "src/html-reparent-selection.cjs",
+      "sha256": "93cb71c06776b33c1f9771822f3c3043b7db7de71b15552e37c0b44cf723a3b5"
+    },
+    {
+      "path": "src/html-reparent.cjs",
+      "sha256": "1971e4fd9f7554dcd92e2679ee1f091664827dab3436600df6334b66ea563289"
+    },
+    {
+      "path": "src/html-site.cjs",
+      "sha256": "ad2832265bda4615a7260733e6788f97b712039f8fbcdb54e62174d97ed84efd"
+    },
+    {
+      "path": "src/html-structure-selection.cjs",
+      "sha256": "aacaa7921dd717804991b7d6b272fada70baf5ec34521eef99ebef3253224965"
+    },
+    {
+      "path": "src/html-text-styles.cjs",
+      "sha256": "b6d0f6e82461f120ac2dea81c0e46bcc49e96c71d380e1ef7e401f2216f76d7f"
+    },
+    {
+      "path": "src/html-variable-bindings.cjs",
+      "sha256": "a78058436092e4b86032ab48f0d858212cbc0da8d669ff26d7d72e2ff5e4bb86"
+    },
+    {
+      "path": "src/id.cjs",
+      "sha256": "8f7c02b0a9ce1c2313f5bf5270cd275826a5b067e1184eee27f4036b170f2c57"
+    },
+    {
+      "path": "src/index.cjs",
+      "sha256": "3244126f498a7534128ec4ab02a5032414087b1ae4cd635a544e521abd745e65"
+    },
+    {
+      "path": "src/indexer.cjs",
+      "sha256": "a19eeb20be8c86fb8747721dbb41687e50bc2e967ba87fbc24163b8f9f3334be"
+    },
+    {
+      "path": "src/insert-component.cjs",
+      "sha256": "8fbd7ca6d5e5c7c95731e1461159ac236a2b0cf38b5440c33cc460261b28b32c"
+    },
+    {
+      "path": "src/json-source.cjs",
+      "sha256": "bb59ddbe91c91ba907c2b58ab162e2295acff646c2501395a7b83fb409e35553"
+    },
+    {
+      "path": "src/jsx-class-selection.cjs",
+      "sha256": "3b63e26add95fd49f3fb16987c48f89345ce54a40102b2faff434b0619986c91"
+    },
+    {
+      "path": "src/jsx-color-styles.cjs",
+      "sha256": "2e27c5aa0b7dc872a323b7b220196fecba647752a91f9748ebd7e58c8997e458"
+    },
+    {
+      "path": "src/jsx-effect-styles.cjs",
+      "sha256": "8e3bfaac6fd1d452636b49278bf9b93990f862a8a3c4c102c376e22c5245b4c7"
+    },
+    {
+      "path": "src/jsx-layer-name.cjs",
+      "sha256": "497caa37cd9b04e78ba51b20992e04d0355c3ff982a2cde411e6ccb9a7c9ba2b"
+    },
+    {
+      "path": "src/jsx-svg-delete.cjs",
+      "sha256": "d8b279efb8db39a3c16c4bb56b6979b0b983fab8872ae33af219dc7bd8517631"
+    },
+    {
+      "path": "src/jsx-svg-duplicate.cjs",
+      "sha256": "dfec86c39b09e03cd3a1a4619698e13e41745bf773bd2add4ffff82eb1a99ab2"
+    },
+    {
+      "path": "src/jsx-svg-geometry.cjs",
+      "sha256": "f2f617387d832b20be85a6d85798fdaee4cd3b89e3aa2ae3797fea6021b191c5"
+    },
+    {
+      "path": "src/jsx-svg-insert.cjs",
+      "sha256": "77b25b50d31b7cf534f7cf9f540d0786834c6e9e7fe63bcdc89f596ec55be9bc"
+    },
+    {
+      "path": "src/jsx-svg-move.cjs",
+      "sha256": "37fe62724fc144fbdd53d4967aa0edba80ba42067a9a2baa624b34e9547ae916"
+    },
+    {
+      "path": "src/jsx-text-styles.cjs",
+      "sha256": "56ba95fa6cc46d62940d8c07b08ebc9ffd9d8d92909e0c317fb964afc4c948dd"
+    },
+    {
+      "path": "src/jsx-variable-bindings.cjs",
+      "sha256": "529438eff1de56b289c6606229bb0c0e1c8fd4a86e2cb8a69441b5ae8e6c5f03"
+    },
+    {
+      "path": "src/liquid-class-selection.cjs",
+      "sha256": "dce5fa04e659ae9738cc9c668d1734300569b4dfdba4366407f563e31dc043e7"
+    },
+    {
+      "path": "src/liquid-classes.cjs",
+      "sha256": "7541c0f0598b2287768eb22eae6fd2819aa921d02dd25a81f37df1fb76ce4fb2"
+    },
+    {
+      "path": "src/liquid-color-styles.cjs",
+      "sha256": "5c06fbe97971a5d885b848eeef5b08f4ffdf23b27cabd48dcb6ab0eabc04e976"
+    },
+    {
+      "path": "src/liquid-components.cjs",
+      "sha256": "b31d0d3c179cd6225878628f9c502bbb92cd90069b07cc0df1772abc3845dcd1"
+    },
+    {
+      "path": "src/liquid-context.cjs",
+      "sha256": "7f708daac9b05de387ac53876265aca32d87798c73e3da0b66ef8652a848d30d"
+    },
+    {
+      "path": "src/liquid-effect-styles.cjs",
+      "sha256": "f5be23114410f0fa12c2aa68eada585ef0241ce817112db0751c3b6ac693bf2c"
+    },
+    {
+      "path": "src/liquid-images.cjs",
+      "sha256": "69318302cabbd9e29ab1915e813f2142f51d2eb2b822ae24e55bdb90a85d3c79"
+    },
+    {
+      "path": "src/liquid-layer-name.cjs",
+      "sha256": "ac167843baee4e4fa609e42b6c7a70714c608a35e9de27e523bdfb6202502e88"
+    },
+    {
+      "path": "src/liquid-sources.cjs",
+      "sha256": "8bad675834257dbdd10b86671acbf44dda579ab0778b9907c73e359c37f49a9c"
+    },
+    {
+      "path": "src/liquid-text-styles.cjs",
+      "sha256": "64322ce3316c32526cfcce14c3f599514c25d08d950645691078c36b974df79c"
+    },
+    {
+      "path": "src/liquid-theme.cjs",
+      "sha256": "33a338ae56dae2b0da42dcba3ff6fc211c63a1d0e2aaabe212a4e66282d403a8"
+    },
+    {
+      "path": "src/liquid-variable-bindings.cjs",
+      "sha256": "ff1aaaf98738506480e80a7afd25d299da2d955bf42ec1993351ef7fc0532ee4"
+    },
+    {
+      "path": "src/loader.cjs",
+      "sha256": "22dd5bfcecfced5b6fee92cff11fa21be52e40af7d14247d6d011e8b378789fc"
+    },
+    {
+      "path": "src/mirror-sync.cjs",
+      "sha256": "ff917ba85e2ef891547bb7a03572e5cd4243189d5b87316715f2d1c2eef102ee"
+    },
+    {
+      "path": "src/move-component.cjs",
+      "sha256": "8e6f8d463a2716a9464753c90b9415225306888c99a25fc407e946fd341010d7"
+    },
+    {
+      "path": "src/next.cjs",
+      "sha256": "18e4aa19111fe9a0587fb212393f327f753e04b70405021fe116a7f1afcfa311"
+    },
+    {
+      "path": "src/preload.cjs",
+      "sha256": "029845030f7f01f4ada3610b68232702a86e2ab5f77aa40edb9b062dd552070f"
+    },
+    {
+      "path": "src/react-fragment.cjs",
+      "sha256": "99c87d8368fe9f1dc66defb67f72dc4f755be7474149fafcd56b691e159167ff"
+    },
+    {
+      "path": "src/reparent-component.cjs",
+      "sha256": "3955195485f4778c0864187e4787ac2a16c945063aeeb9e57847bc3a43525178"
+    },
+    {
+      "path": "src/rich-text-source.cjs",
+      "sha256": "ef3ec6808a541965e22d0f79820c4f0823c3d864a34efaabb551c6c95fde3f49"
+    },
+    {
+      "path": "src/rich-text.cjs",
+      "sha256": "c6f30ca8acc969d76fbfe80007c65d3e9f09c02b7a6bbd53c42eabcfb4480c31"
+    },
+    {
+      "path": "src/server.cjs",
+      "sha256": "74ecec9c42ea4503c39d0d38f9924cafb62fb2247422d117c124888e5bddfb5f"
+    },
+    {
+      "path": "src/session-client.cjs",
+      "sha256": "27ebc7a2b3445b41924c6501e9413d6e7b7dd1076c72db6b741a74411deb307e"
+    },
+    {
+      "path": "src/session.cjs",
+      "sha256": "de84b246baf166bcf225904f5f8d3159d091786dcf590fe6988b81f54500c9eb"
+    },
+    {
+      "path": "src/shopify.cjs",
+      "sha256": "01af0efaa7e48f7d3f8d07e32a47b57a4dfd6f19d6214b569f3dfbd193e586cd"
+    },
+    {
+      "path": "src/source-order.cjs",
+      "sha256": "098109c9fad16376d5748149316693a1ee913caf20041e87391edef856abd716"
+    },
+    {
+      "path": "src/source-path-checks.cjs",
+      "sha256": "13c63d3a63b7d11ab8548a406763a604f163a058b19cb782a5cd575074ba3b6a"
+    },
+    {
+      "path": "src/stamp.cjs",
+      "sha256": "1295cfa50b21d81457cda29f7c64a7ec8b6436fe522d83e0fabd03adce4e1542"
+    },
+    {
+      "path": "src/structure.cjs",
+      "sha256": "ae7efbebd2ea4ebc98ade9a8b62978a09028a9aed5a811e480f7788cea4c3401"
+    },
+    {
+      "path": "src/style-library.cjs",
+      "sha256": "53c772d7b6df41d6b4eb6a5cf47c6e50d36c27db565b2f52b3419819788afb2a"
+    },
+    {
+      "path": "src/svg-delete.cjs",
+      "sha256": "f3313f00782f00b9ab7b716716931231b9f948a1c79559ce8f1fdf29da51cad9"
+    },
+    {
+      "path": "src/svg-duplicate.cjs",
+      "sha256": "5bb6ab2993f3826f79a74cc18486af6c068b217351a79f2efa99ae8738483ae8"
+    },
+    {
+      "path": "src/svg-geometry.cjs",
+      "sha256": "80b7be84008d7f9b827b2e6d88d0b364dd2125c0e7469e9b70378a5d54e2a43a"
+    },
+    {
+      "path": "src/svg-insert.cjs",
+      "sha256": "05811a5c90ca2e77d2a05c870fa90dd48dcc5c5cdd76631df6d35cf8e505408c"
+    },
+    {
+      "path": "src/svg-move.cjs",
+      "sha256": "0f3f0eca1d32a1d76bfa6e457b9949e1e055719e111d15e91e22eb827f71e0c2"
+    },
+    {
+      "path": "src/text-style-classes.cjs",
+      "sha256": "2650384a57f8d7c20c44bf73dac24715572e02ee6450325ccad29660da160a51"
+    },
+    {
+      "path": "src/text-style-selection.cjs",
+      "sha256": "10530d794cc9c7baaee66ea6aa5feac3069afeb1248cbb6f760e1562a54564f0"
+    },
+    {
+      "path": "src/text-style-update.cjs",
+      "sha256": "9891c1b3233dca08d357ca90287733ac92ad74675e668d714281573c21577184"
+    },
+    {
+      "path": "src/text-styles.cjs",
+      "sha256": "9d1a9892040f4b42d421f65fa4052f7a72d4a2da6c89cece28b837efc0e4a6de"
+    },
+    {
+      "path": "src/transactions.cjs",
+      "sha256": "e996e8da27fdb553249aadbb8be8a7a48c6e2f95b967cde64ef6e259f6e6075a"
+    },
+    {
+      "path": "src/variable-bindings.cjs",
+      "sha256": "6f9c4ec2efec5965a75742fe4522c76f6c174698d78d12ab2b07cefcca739f47"
+    },
+    {
+      "path": "src/variable-classes.cjs",
+      "sha256": "9b678acb10bde74aa42ed14b9089c8e4f6a88f6f5e8fdc73a2bd664ab6be4691"
+    },
+    {
+      "path": "src/variable-collections.cjs",
+      "sha256": "e46d12d0b1acf79a6cc58e2cfa84a4eaa1ae0ce8bbaf6b372e86524017186556"
+    },
+    {
+      "path": "src/variable-library.cjs",
+      "sha256": "1eadb15a17f90faaeb8fe686c4e05b5ca0e351e444adc38f8fed34250a0cf409"
+    },
+    {
+      "path": "src/variable-selection.cjs",
+      "sha256": "6c61c1effc8b3b1b7e82006559ba8e3fa7ac08526d44914c378311d6d9b0a24e"
+    },
+    {
+      "path": "src/variable-update.cjs",
+      "sha256": "6332e8bc8d93aad612c16cbaa6930835f59b5421bb6ba11ec93d9614d59347cc"
+    },
+    {
+      "path": "src/writer.cjs",
+      "sha256": "4b22192696c98f0b2b83248ea97d28ef31821dbd3003586dcbf82cb155a79701"
+    },
+    {
+      "path": "shell/actions.js",
+      "sha256": "5e4ee68a17fc1c8c8dfcadf4167413785661564e00a1be73a2d193f827f3ceb9"
+    },
+    {
+      "path": "shell/canvas-move.js",
+      "sha256": "c50ddd25c5dd2139aacd2eb816e1ffb582ec66ab144740ddc1101ca246fcab70"
+    },
+    {
+      "path": "shell/canvas-pan.js",
+      "sha256": "bfa966babca464078b9f7c6d57d3bd4b96cbfab3dce6aba4ed2bfdd103112cc4"
+    },
+    {
+      "path": "shell/class-gradients.js",
+      "sha256": "7fc585a8e66c07fdba994bb4e45d9d1045b2bc5ed9148bcaff66951739d7285d"
+    },
+    {
+      "path": "shell/class-site-variables.js",
+      "sha256": "4ffa4f2dc35c1ab01d351d6b070f0e45c2f0e0c2105a6585b1a6fee4fe258af8"
+    },
+    {
+      "path": "shell/collection-bindings.js",
+      "sha256": "f090482955a86c59bd2ba399d84cab91e01e2f53d95198d33fcb18eb60855ff3"
+    },
+    {
+      "path": "shell/color-styles.js",
+      "sha256": "63a0543106c43013fc127260436fd70b40aed5154e25bca0f611c7e9c0f07f4f"
+    },
+    {
+      "path": "shell/compare.js",
+      "sha256": "b19938ee23afa670a61ce6817bbcb7f65c003f4bb0cb00c0b26d09c4c2a54ded"
+    },
+    {
+      "path": "shell/comparison-resize.js",
+      "sha256": "f0c5e3091d03d1c2b84500de19a8abb903dfaf19f19eacc3e11f54bbd808b3a8"
+    },
+    {
+      "path": "shell/component-instances.js",
+      "sha256": "cf7cd73df7012b8f76b45a1136c76ab150fd5d2a205d5b9af82719e3d44e0586"
+    },
+    {
+      "path": "shell/component-library.js",
+      "sha256": "d02796f45aee66fb37beeb02b8e3315bb890a22833f0bb2695fd2efb1d774986"
+    },
+    {
+      "path": "shell/effect-styles.js",
+      "sha256": "c93ee6eef00da2496fb585a02c7e40b8339170d6ce8690e9b667a7207490a23e"
+    },
+    {
+      "path": "shell/filter-stack.js",
+      "sha256": "133dd49b73675a5c66c2ae53da75a5c95acee0252165ed844fc3035e46aed398"
+    },
+    {
+      "path": "shell/font-metadata.js",
+      "sha256": "7a049acec1217fe4599ff7b95e490c3adcf53a2e7d724ecc571faca1607773f9"
+    },
+    {
+      "path": "shell/gradient-geometry.js",
+      "sha256": "4bf7a84562856082751653d9f521e8f33d8b54510a6195218821ad7d684a4053"
+    },
+    {
+      "path": "shell/gradient-stop-rail.js",
+      "sha256": "f14914e099ab448472bd2ddaacd03aa60cfc8fe8b3c1e470e9736bfe204873ab"
+    },
+    {
+      "path": "shell/history-render.js",
+      "sha256": "509dc45c96cb0a6aa0ec26da4401e8a39968d4bc3accf9dab0d365bbb0662dff"
+    },
+    {
+      "path": "shell/history.js",
+      "sha256": "aae3d4f7c074599dab9748a4524405ec3e696f5f4dcdaf6ce899762ef6d360fd"
+    },
+    {
+      "path": "shell/html-css-values.js",
+      "sha256": "5951c365e4af93489fd104880fa95efad51f3e87979a989fc1444ae39ab3b382"
+    },
+    {
+      "path": "shell/html-css.js",
+      "sha256": "fd8e6a28455abe717c4d7e97df8c65d69b1134ab312051b8f09d313ad6329334"
+    },
+    {
+      "path": "shell/html-position.js",
+      "sha256": "b576abf9b0f2d792475f79f7e2ec83914332b2469f05b3c387c330b4ebd33412"
+    },
+    {
+      "path": "shell/image-style.js",
+      "sha256": "e0b8fad5ee742d1fdb10bde497687d296f635dd493d7693ccddcec1ee0dbb519"
+    },
+    {
+      "path": "shell/index.html",
+      "sha256": "ee50fd00ef1a8702250b1d2a2dd7cf48ba43614adaaad8d7c260753b33a55c3f"
+    },
+    {
+      "path": "shell/inspector.js",
+      "sha256": "9959dd8c34704571ec30c4bcfdc7ec0f4468c81db18f340955e1d6557a89834a"
+    },
+    {
+      "path": "shell/interactions.js",
+      "sha256": "bd6cf42765e5e6dc0273398779d591cd86f0b5f8f423d035bce62c3248b796c3"
+    },
+    {
+      "path": "shell/layer-locks.js",
+      "sha256": "f7ae93ca607e4279c06afb26084c682ca0a265db0d8fac26c737d6af3286a3de"
+    },
+    {
+      "path": "shell/layers.js",
+      "sha256": "f47e18cb2b1d720f5723789414eaff51b16d1669789b7d5298972a32af881c29"
+    },
+    {
+      "path": "shell/layout.js",
+      "sha256": "8d8da84b87575c9f18d3a7809baa9349e5bce0755b003f71a158db4c714e1472"
+    },
+    {
+      "path": "shell/max-width.js",
+      "sha256": "4672539dcc37f9ad464a7386e62e6f1a1d86c70c689350237501abb782bbe7e0"
+    },
+    {
+      "path": "shell/palette-values.js",
+      "sha256": "cec0297aa3e9fdc15467dc8ab228c38663b16860c93b7beefcefb79cd4778f20"
+    },
+    {
+      "path": "shell/radial-gradient.js",
+      "sha256": "3e8476b7baa3c31cf68e60d1251fff7714f915c8662fed0aa1a822d8edc56c5d"
+    },
+    {
+      "path": "shell/react-selection-geometry.js",
+      "sha256": "a9d68b4a72a22347cd2315be9881120af9bc80af0e66232a76a8fd32571c07de"
+    },
+    {
+      "path": "shell/react-selection.js",
+      "sha256": "81e3f230c59dbad6cf887924b1fd13925a86568936372824d69a28d6a03b98bf"
+    },
+    {
+      "path": "shell/render-sync.js",
+      "sha256": "6e44ea36e3f4d9dfcdc53f9416d284d655cd2be83b8b5afd2d7c7c3b38f0e048"
+    },
+    {
+      "path": "shell/responsive.js",
+      "sha256": "1eeaa7c3a491d9829213c02d53b4eb5053ff73ed844584bf8564e8d0c20cf2b1"
+    },
+    {
+      "path": "shell/rich-text-source.js",
+      "sha256": "84b9a19416bf837699069256e7cd73bdd0bf8ab0e2ee708410c574897032bd09"
+    },
+    {
+      "path": "shell/screen-resize.js",
+      "sha256": "d4a7f42efe6f3966dd29df2b9a9bdb1308657f235f2121f398bfb4b85abf1c8b"
+    },
+    {
+      "path": "shell/screens.js",
+      "sha256": "15e2917b6a87d2734edfa2de784a8298eaf5648b0b5d2037be7e3b39904f9c6c"
+    },
+    {
+      "path": "shell/selection-layout.js",
+      "sha256": "c01d39a096e39b688e659d0b75dc6974526900a34a94fddf1173e3f269605046"
+    },
+    {
+      "path": "shell/selection-marquee.js",
+      "sha256": "a9d4a3ec5d8a9c31f01f8f739bd9e5c1ccfd4ae205c5cb45bc0dbae1e1f128dc"
+    },
+    {
+      "path": "shell/serialize.js",
+      "sha256": "da11a4556bc505babc168a7b5c6cf4742d4f8313ca5aa0a0f9ae028f7be50d83"
+    },
+    {
+      "path": "shell/shell.css",
+      "sha256": "f242d6a6220fee83d86b49ea8a85f14a761355959008214a0c98ec9b7b88bec9"
+    },
+    {
+      "path": "shell/shell.js",
+      "sha256": "49e8d1ff09f93d2c02b11cdc39f1787649029060907839a8aa5960c8763ed114"
+    },
+    {
+      "path": "shell/site-variables.js",
+      "sha256": "9823a655a04f49fbcf84604ff8f991714ce2c5db410c6ae69eb97f3079276f82"
+    },
+    {
+      "path": "shell/svg-draw.js",
+      "sha256": "6da939f54f8154c4ee9610e1388c8ce6265ca05c7767e721b5e57366993393f9"
+    },
+    {
+      "path": "shell/svg-export.js",
+      "sha256": "2c7e5baf23aebdae91bb6b53d1a7c45b6c847137012f940e2fcf134126e0c55d"
+    },
+    {
+      "path": "shell/svg-paint.js",
+      "sha256": "15d73dd2c3b55b24da391987d07dcead0b849924b8f709fd5deb915f97aff2f3"
+    },
+    {
+      "path": "shell/svg-path.js",
+      "sha256": "9c19e5e24b469f3b229947393dcbaf5b50c8f18305c79297beabd6b10ca46d15"
+    },
+    {
+      "path": "shell/svg-pen.js",
+      "sha256": "712af7a2d79c6c222a096ee76e4185f28fbd264cbf4f2617e5cb5bfa686af4b5"
+    },
+    {
+      "path": "shell/svg-points.js",
+      "sha256": "885f0bb3db27032716a1c5b1bb3285cb84b841d19d8639d4809b9f2d7423b21f"
+    },
+    {
+      "path": "shell/svg-vertices.js",
+      "sha256": "4d00edbdad2b0b13f14374093b9bc34705292fd0a9a4da83cf60f8f3dcfed7a1"
+    },
+    {
+      "path": "shell/text-styles.js",
+      "sha256": "182969bd7396b49cb7827d79acd8918d11170cf6dbdd0c5e24ac0f3e94404171"
+    },
+    {
+      "path": "shell/variable-library.js",
+      "sha256": "15b70222ede0257edbfcd63daaf09abb7e0130d0ff5fd5449b0bdff527e18ca7"
+    },
+    {
+      "path": "shell/workspace-panels.js",
+      "sha256": "542e32ceb350bc6da1fa172032d4d728fc532963ce8d66962d44a3fe909d8323"
+    },
+    {
+      "path": "shell/zoom.js",
+      "sha256": "bf746e204ea11537679b851cc8e4b78eaa392cb348242a550da616246aa3df94"
+    },
+    {
+      "path": "package.json",
+      "sha256": "f78ba82e9fb871439a645b89e47628860a682005abcbb8728a46750865c07611"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "b91d5a1485b61625d3f9f9babf19aca62bd6a339edf5264dd2bae285b1c2b651"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "4d1103f2d830d554763e896f05707872eb593aa1ced0508bae39920912163434"
+    },
+    {
+      "path": "README.md",
+      "sha256": "6edc1a81acce0252dbcc737f92dff3fe007d8ac1c2db6e812252de70386952e1"
+    }
+  ],
+  "date": "2026-09-11",
+  "archiveContents": "172 source files, universal executable, Info.plist and signature resources verified against ZIP",
+  "browserVerification": [
+    {
+      "test": "component-property-selection",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editor-refresh-20260911/component-property-selection-chromium.log",
+      "sha256": "e14ffd6f9da8295a560d68be4968e1c412fa755b35762dc97e32ec7ec86ba076"
+    },
+    {
+      "test": "layout-physical-gap",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editor-refresh-20260911/layout-physical-gap-chromium.log",
+      "sha256": "a89df6f969b3c69c0f7c6544e3cff5e4212fb292a1c9373d50d1fe0a26979237"
+    },
+    {
+      "test": "layout-stretch-fill",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editor-refresh-20260911/layout-stretch-fill-chromium.log",
+      "sha256": "2138d0d35d5def9826dd1e87b084e3f69cb67a05a44f61a17b10cb8377704113"
+    },
+    {
+      "test": "component-property-selection",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editor-refresh-20260911/component-property-selection-webkit.log",
+      "sha256": "3f8bf3b6b4d8cffce43468cf991a4ed22aefa5125865a1c83b7dcb802f501319"
+    },
+    {
+      "test": "layout-physical-gap",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editor-refresh-20260911/layout-physical-gap-webkit.log",
+      "sha256": "85382dd8ce8b89c7c1f14d219fb9ad4dee68c4796ae50fe43043461e00c8ac0c"
+    },
+    {
+      "test": "layout-stretch-fill",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editor-refresh-20260911/layout-stretch-fill-webkit.log",
+      "sha256": "be93754355c2816de5e7c585feef4707cc08662cb61278066edfd29fb173704f"
+    }
+  ],
+  "limitations": [
+    "Developer ID key access remains paused after the earlier canceled attempt",
+    "No notarization, trusted launch, cask install/upgrade, Intel execution or public release verified for this package",
+    "Browser engine tests do not establish native AppKit/WKWebView interaction"
+  ]
+}
