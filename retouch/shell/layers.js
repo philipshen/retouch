@@ -187,10 +187,10 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
       unlockShown.disabled=isBusy||!rows.some(row=>locks?.direct(row.item.el));
       updateReveal();if(focused)rows.find(r=>key(r.item)===key(focused))?.button.focus();
     }
-    function updateReveal(){revealSelection.hidden=!selected||!(search.value.trim()||lockedOnly.checked)||rows.some(row=>isSelected(row.item));revealSelection.disabled=isBusy;}
+    function updateReveal(){const visible=new Set(rows.map(row=>key(row.item)));let count=0,hidden=0;function scan(items){for(const item of items){if(isSelected(item)){count++;if(!visible.has(key(item)))hidden++;}scan(item.children);}}scan(treeRoots);revealSelection.textContent=count>1?'Show selected layers':'Show selected layer';revealSelection.hidden=!selected||!(search.value.trim()||lockedOnly.checked)||!hidden;revealSelection.disabled=isBusy;}
     revealSelection.onclick=()=>{search.value='';lockedOnly.checked=false;function expand(items){let found=false;for(const item of items){const child=expand(item.children);if(child)collapsed.delete(key(item));if(child||isSelected(item))found=true;}return found;}expand(treeRoots);render();rows.find(row=>isSelected(row.item))?.button.focus();};
     search.oninput=render;lockedOnly.onchange=render;
-    search.addEventListener('keydown',event=>{if(event.isComposing)return;if(event.key==='Escape'&&search.value){event.preventDefault();event.stopPropagation();search.value='';render();return;}if(!['ArrowDown','ArrowUp'].includes(event.key)||event.altKey||event.ctrlKey||event.metaKey)return;const query=search.value.trim().toLowerCase(),matches=rows.filter(row=>!row.button.disabled&&(!query||row.item.label.toLowerCase().includes(query)));const target=event.key==='ArrowDown'?matches[0]:matches.at(-1);if(target){event.preventDefault();target.button.focus();}});
+    search.addEventListener('keydown',event=>{if(event.isComposing)return;if(event.key==='Escape'&&search.value){event.preventDefault();event.stopPropagation();search.value='';render();return;}if(!['ArrowDown','ArrowUp'].includes(event.key)||event.altKey||event.ctrlKey||event.metaKey)return;const query=search.value.trim().toLowerCase(),matches=rows.filter(row=>!row.button.disabled&&(!lockedOnly.checked||locks?.locked(row.item.el))&&(!query||row.item.label.toLowerCase().includes(query)));const target=event.key==='ArrowDown'?matches[0]:matches.at(-1);if(target){event.preventDefault();target.button.focus();}});
 
     function attach(next) {
       if(d===next)return;

@@ -616,3 +616,10 @@ New archive /private/tmp/retouch-desktop-components-20260911/Retouch-0.1.0-mac.z
 Layer search Up/Down focuses matching rows without choosing contextual ancestor rows for a text query. Escape clears a nonempty query. Show selected layer appears when search/lock filtering hides the selection; it clears filters, expands selected ancestors and focuses the existing selection. No source writes are involved.
 
 Chromium/WebKit layer-navigation workflows passed descendant-match focus, empty-result key behavior, reveal/focus recovery, unchanged selection/source, and existing child/parent/sibling/locks/collapse/native-input checks. Screenshot /private/tmp/retouch-layer-search.png visually inspected; logs /private/tmp/retouch-layer-search-{chromium,webkit}.log. Source postdates desktop archive 910447c; full Figma parity remains incomplete.
+
+
+### Recover partially filtered multi-selections (2026-09-11)
+
+Layer selection recovery now checks all selected tree items, so it appears when only part of a multi-selection is hidden. The label becomes Show selected layers for multiple selected items. Locked-only keyboard search skips unlocked context ancestors. Revealing clears filters without removing locks or changing selected items.
+
+Chromium/WebKit layer-navigation workflows passed locked-only focus, filter clearing with the original lock preserved, and partial multi-selection recovery with exact selected-row preservation. Existing navigation/native-input/source-preservation checks also passed. Logs /private/tmp/retouch-layer-filter-selection-{chromium,webkit}.log. Source postdates native archive 910447c; full Figma parity remains incomplete.
