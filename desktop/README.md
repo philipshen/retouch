@@ -10,17 +10,17 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest local development archive is
-`/private/tmp/retouch-desktop-inspector-refresh-20260911/Retouch-0.1.0-mac.zip`.
+`/private/tmp/retouch-desktop-design-controls-20260911/Retouch-0.1.0-mac.zip`.
 Its SHA-256 is
-`8be2210219b5cab2ddf41915fbcc7da73c709c95558e6e73e3c22d27c9a3ed33`.
-It contains clean source commit `af62db6`, including the HTML typography/paint
-refinements, spatial corner fields, compact toolbar placement, and deferred
-viewport refresh fix. All 175 packaged source hashes match that checkout.
+`8432e7e52ecb8d763d765c59af9fab53bb0326019ec8f63c25a7400d2e2a569b`.
+It contains clean source commit `843f6ef`, including radius/stroke priority and
+resets, light context menus, contextual HTML layout fields, and focused-scope
+refresh recovery. All 175 packaged source hashes match that checkout.
 The extracted archive passes universal architecture and strict ad hoc signature
-checks. Its bundled editor passes HTML editing, compact workspace, and busy
-viewport refresh workflows in both Chromium and WebKit. The accompanying local
-cask passes Ruby syntax validation; installation was not tested.
-See [the package receipt](verification/2026-09-11-inspector-refresh.json).
+checks. Eight bundled-editor workflows passed: React inspector, HTML editing,
+context menus, and viewport refresh, each in Chromium and WebKit. The accompanying
+local cask passes Ruby syntax validation; installation was not tested.
+See [the package receipt](verification/2026-09-11-design-controls.json).
 
 Native launch was not attempted for this build. The preceding package's
 process ran but CUA could not inspect its window; it was stopped. Native editing,

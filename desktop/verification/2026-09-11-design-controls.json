@@ -1,0 +1,50 @@
+{
+  "sourceCommit": "843f6ef79b32711029d83cad144f1a2f0c0ffc80",
+  "sourceTreeDirty": false,
+  "sourceFiles": 175,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-design-controls-20260911/Retouch-0.1.0-mac.zip",
+  "sha256": "8432e7e52ecb8d763d765c59af9fab53bb0326019ec8f63c25a7400d2e2a569b",
+  "sourceMatchesCheckout": true,
+  "workflows": [
+    {
+      "name": "inspector-light-chromium",
+      "result": "chromium horizontal-tb ltr: PASS light workspace, section order, segmented layout edits, opacity edits, exact undo, layer actions and screenshot"
+    },
+    {
+      "name": "inspector-light-webkit",
+      "result": "webkit horizontal-tb ltr: PASS light workspace, section order, segmented layout edits, opacity edits, exact undo, layer actions and screenshot"
+    },
+    {
+      "name": "html-site-chromium",
+      "result": "chromium: PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo"
+    },
+    {
+      "name": "html-site-webkit",
+      "result": "webkit: PASS HTML browser responsive CSS, shorthand and edge spacing, isolated styling, standalone export, reset, text/image edits, asset search/upload, page navigation and exact undo"
+    },
+    {
+      "name": "canvas-context-menu-chromium",
+      "result": "CANVAS CONTEXT MENU SELECTION/DUPLICATE/UNDO/NAVIGATION/KEYBOARD/NATIVE GUARDS PASS chromium"
+    },
+    {
+      "name": "canvas-context-menu-webkit",
+      "result": "CANVAS CONTEXT MENU SELECTION/DUPLICATE/UNDO/NAVIGATION/KEYBOARD/NATIVE GUARDS PASS webkit"
+    },
+    {
+      "name": "viewport-busy-chromium",
+      "result": "VIEWPORT REFRESH AFTER BUSY PANEL PASS chromium"
+    },
+    {
+      "name": "viewport-busy-webkit",
+      "result": "VIEWPORT REFRESH AFTER BUSY PANEL PASS webkit"
+    }
+  ],
+  "cask": "Local cask generated; Ruby syntax passed. Installation not attempted.",
+  "nativeLaunch": "not attempted",
+  "signing": "ad hoc development build; Developer ID/notarization and trusted distribution unfinished"
+}
