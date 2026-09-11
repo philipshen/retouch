@@ -1432,6 +1432,7 @@ function propTable(props,instanceId,fileHash,options={}) {
 }
 function componentSelectionSection(infos){
  const section=RetouchInspector.section('Shared component properties'),key=panelSelectionKey(),ids=infos.map(info=>info.id);
+ section.classList.add('shared-component-props');
  RetouchInspector.note(section,'Changes apply to these component usages at every screen size.');
  const pending=document.createElement('p');pending.textContent='Loading shared properties…';section.append(pending);
  Promise.all(ids.map(id=>api('GET',componentUrl(id)))).then(components=>{
@@ -1452,9 +1453,16 @@ function componentSelectionSection(infos){
    else if(type==='boolean'){input.type='checkbox';input.checked=!mixed&&!!metas[0].value;input.indeterminate=mixed;}
    else{if(type!=='string'){input.type='number';input.step='any';}else{input.rows=1;input.className='component-prop-text';}input.value=mixed||metas[0].unset?'':String(metas[0].value??'');input.placeholder=mixed?'Mixed':metas[0].unset?'Not set':'';}
    const save=(value,options={})=>setComponentPropertySelection(infos,key,prop.name,value,hashes,options);
-   input.oninput=()=>input.setCustomValidity('');
-   input.onchange=()=>{if(input.disabled)return;if(type==='number'&&(!input.value.trim()||!Number.isFinite(Number(input.value)))){input.setCustomValidity('Enter a finite number.');input.reportValidity();return;}if(!input.reportValidity())return;save(booleanToggle?input.checked:choices?choices[Number(input.value)]:type==='boolean'?input.checked:type==='number'?Number(input.value):input.value);};
-   input.onkeydown=event=>{if(event.isComposing)return;if(event.key==='Enter'&&(type!=='string'||event.metaKey||event.ctrlKey)){event.preventDefault();input.blur();}};
+   const initial={value:input.value,checked:input.checked,indeterminate:input.indeterminate};let canceled=false;
+   const multiline=type==='string'&&!choices;
+   if(multiline){input.title='Enter adds a line. Command/Ctrl+Enter saves. Escape cancels.';requestAnimationFrame(()=>sizeComponentText(input));}
+   input.oninput=()=>{canceled=false;input.setCustomValidity('');if(multiline)sizeComponentText(input);};
+   input.onchange=()=>{if(input.disabled||canceled)return;if(type==='number'&&(!input.value.trim()||!Number.isFinite(Number(input.value)))){input.setCustomValidity('Enter a finite number.');input.reportValidity();return;}if(!input.reportValidity())return;save(booleanToggle?input.checked:choices?choices[Number(input.value)]:type==='boolean'?input.checked:type==='number'?Number(input.value):input.value);};
+   input.onkeydown=event=>{
+    if(event.isComposing)return;
+    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();canceled=true;input.setCustomValidity('');input.value=initial.value;input.checked=initial.checked;input.indeterminate=initial.indeterminate;if(multiline)sizeComponentText(input);input.blur();return;}
+    if(event.key==='Enter'&&(type!=='string'||event.metaKey||event.ctrlKey)){event.preventDefault();event.stopPropagation();input.blur();}
+   };
    label.append(input);row.append(label);
    if(editable&&!choices&&type==='string'&&(mixed||metas.some(meta=>meta.unset)))row.append(RetouchInspector.button('Set '+prop.name+' to empty text',()=>save('')));
    if(!editable)RetouchInspector.note(row,metas.find(meta=>!meta.editable)?.reason||'These properties have different types.');
