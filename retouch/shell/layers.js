@@ -6,6 +6,15 @@
       [...el.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join(' ').trim().replace(/\s+/g,' ');
     return tag+(name?' · '+name.slice(0,70):'');
   }
+  function layerKind(item) {
+    if(item.componentId)return 'component';
+    const tag=item.el.localName?.toLowerCase();
+    if(['img','picture','video','canvas'].includes(tag))return 'image';
+    if(item.el.namespaceURI==='http://www.w3.org/2000/svg')return 'vector';
+    if(['h1','h2','h3','h4','h5','h6','p','span','a','label','strong','em','small','blockquote','code','pre'].includes(tag))return 'text';
+    if(['body','main','div','section','article','aside','header','footer','nav','form','ul','ol','li','table'].includes(tag))return 'frame';
+    return 'element';
+  }
   function collect(d) {
     const roots=[],map=new Map();
     for(const el of d.querySelectorAll('[data-rt], [data-rt-i]')) {
@@ -119,7 +128,7 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
           toggle.textContent=item.children.length?(expanded?'▾':'▸'):'';
           toggle.disabled=isBusy||!item.children.length;toggle.setAttribute('aria-label',(expanded?'Collapse ':'Expand ')+item.label);
           toggle.onclick=()=>{if(expanded)collapsed.add(key(item));else collapsed.delete(key(item));render();};
-          const b=prior?.button||document.createElement('button');b.className='layer-item';if(b.textContent!==item.label)b.textContent=item.label;b.title=item.label;
+          const b=prior?.button||document.createElement('button');b.className='layer-item';if(b.textContent!==item.label)b.textContent=item.label;b.title=item.label;b.dataset.layerKind=layerKind(item);
           b.setAttribute('role','treeitem');b.setAttribute('aria-level',depth);b.setAttribute('aria-selected',String(isSelected(item)));
           b.tabIndex=isSelected(item)?0:-1;b.disabled=isBusy;
           if(item.children.length)b.setAttribute('aria-expanded',String(expanded));else b.removeAttribute('aria-expanded');

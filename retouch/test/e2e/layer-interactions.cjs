@@ -6,7 +6,7 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
  const browser=await browserType.launch();
  try{
   const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.setContent('<div id="host"></div>');await page.addScriptTag({path:path.resolve(__dirname,'../../shell/layers.js')});
+  await page.setContent('<div id="host" style="width:240px"></div>');await page.addStyleTag({path:path.resolve(__dirname,'../../shell/shell.css')});await page.addScriptTag({path:path.resolve(__dirname,'../../shell/layers.js')});
   await page.evaluate(()=>{
    window.source=new DOMParser().parseFromString('<main data-rt="main"><div data-rt="a" aria-label="A">A</div><div data-rt="b" aria-label="B">B</div></main><section data-rt="other" aria-label="Other"></section>','text/html');
    window.events=[];window.chosen=[];
@@ -34,6 +34,17 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
    const host=document.createElement('div');document.body.append(host);const pending=[],scans=RetouchLayers.mount({host,onSelect(){},onAction(){},readComponents:()=>new Promise(resolve=>pending.push(resolve))});scans.attach(source);pending[0]({ok:true,components:[]});await Promise.resolve();await Promise.resolve();
    let firstDone=false;const first=scans.refresh().then(()=>{firstDone=true;}),second=scans.refresh();pending[1]({ok:true,components:[]});for(let i=0;i<8;i++)await Promise.resolve();const premature=firstDone;pending[2]({ok:true,components:[]});await Promise.all([first,second]);return {premature,firstDone,count:pending.length};
   });assert.deepEqual(scanRace,{premature:false,firstDone:true,count:3});
+  await page.evaluate(()=>{
+   const kinds=document.createElement('div');document.body.append(kinds);
+   window.iconLayers=RetouchLayers.mount({host:kinds,onSelect(){},onAction(){}});
+   iconLayers.attach(new DOMParser().parseFromString('<main data-rt="frame"><h1 data-rt="text">Title</h1><img data-rt="image" alt="Photo"><svg data-rt="vector"></svg><input data-rt="element"></main>','text/html'));
+  });
+  for(const [name,kind] of [['main','frame'],['h1 · Title','text'],['img · Photo','image'],['svg','vector'],['input','element']]){
+   const row=page.getByRole('treeitem',{name,exact:true});
+   assert.equal(await row.getAttribute('data-layer-kind'),kind);
+   assert.notEqual(await row.evaluate(el=>getComputedStyle(el,'::before').maskImage),'none');
+  }
+  if(process.env.RT_E2E_LAYER_TYPES_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_LAYER_TYPES_SCREENSHOT});
   assert.deepEqual(errors,[]);console.log(engine+': PASS layer click across live refresh, modifier selection, button identity, rename focus, reparented keyboard navigation, search and disclosure');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -11311,3 +11311,10 @@ Chromium/WebKit layer-navigation workflows passed locked-only focus, filter clea
 Layer lock/unlock controls now use compact monochrome SVG masks rather than platform emoji. Existing accessible labels, aria-pressed state, hover/focus visibility and inherited-lock disabling are preserved.
 
 Full layer-lock workflows passed Chromium/WebKit: canvas selection exclusions, parent inheritance, child-lock preservation, iframe/editor reload, deliberate tree selection, ordered source/lock undo/redo, batch locking, route/branch restoration, guarded shortcuts and filtered recovery. Tests check rendered mask and accessible state; a stale filter step now opens Layer actions first. Screenshot /private/tmp/retouch-layer-lock-icon-chromium.png visually inspected; logs /private/tmp/retouch-layer-lock-icon-{chromium,webkit}.log. Source postdates archive 910447c; full parity remains incomplete.
+
+
+### Light-theme layer type icons (2026-09-11)
+
+Layers now identify text, image/media, container, SVG, component, and generic elements with compact monochrome vector icons. Icons inherit selection/component colors while retaining existing row text, accessible names, and stable button identity.
+
+Chromium and WebKit layer-interactions workflows passed live-refresh click preservation, modifier selection, rename focus, reparented keyboard navigation, search and disclosure. Added rendered-mask checks for host layer types; the Chromium isolated-layer screenshot /private/tmp/retouch-layer-types.png was inspected. Component icon classification is implemented but not separately exercised by this focused workflow. This source change postdates the packaged 910447c archive. Full Figma visual and functional parity remains incomplete.
