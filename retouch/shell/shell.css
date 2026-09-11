@@ -541,3 +541,7 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .text-align-modes .layout-mode-segments { flex:1; }
 .text-align-modes select { width:24px;flex:0 0 24px;padding:0;font-size:0;background:transparent; }
 .text-align-modes select option { font-size:12px; }
+
+.inspector-field.checkbox-field { flex-direction:row-reverse;justify-content:flex-end;gap:8px; }
+.inspector-field.checkbox-field > span { flex:1;color:var(--ink); }
+.inspector-field.checkbox-field input[type="checkbox"] { flex:0 0 14px;width:14px;height:14px;margin:0;accent-color:var(--accent); }

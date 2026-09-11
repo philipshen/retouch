@@ -219,3 +219,11 @@ test('grid item flow replaces active declarations and respects inherited grid pr
  assert.equal(L.arrangementClasses('','flow','row','!grid-cols-3'),'grid-flow-row');
  assert.throws(()=>L.arrangementClasses('','flow','invalid'));
 });
+
+test('clipping replaces both local axes, preserves other scopes, and beats inherited important overflow',()=>{
+ assert.equal(L.clipClasses('overflow-x-auto [overflow-y:scroll] p-4 md:overflow-visible',true),'p-4 md:overflow-visible overflow-clip');
+ assert.equal(L.clipClasses('!overflow-y-hidden [overflow:clip]',false),'!overflow-visible');
+ assert.equal(L.clipClasses('overflow-auto',true,'[overflow-x:hidden]!'),'!overflow-clip');
+ assert.equal(L.clipClasses('!overflow-clip md:overflow-auto',null),'md:overflow-auto');
+ assert.throws(()=>L.clipClasses('','hidden'));
+});

@@ -11032,3 +11032,10 @@ Continued the Figma light-panel direction: paired weight/size and line-height/le
 Validation: 880 unit tests passed; inspector-light.cjs passed in Chromium and WebKit, including alignment editing, exact source undo, content disclosure visibility, and screenshots. Screenshot: /private/tmp/retouch-figma-type-chromium.png. This source refinement is newer than the ca6dae1 desktop bundle; no new native launch or packaging claim. Full pixel parity remains unfinished.
 
 The full HTML browser workflow also passed in Chromium after updating its text-content disclosure interactions.
+
+
+### Figma layout clipping control (2026-09-11)
+
+React layout now exposes Clip content under sizing, with mixed overflow shown as an indeterminate checkbox. The class planner replaces local shorthand/axis overflow together, retains other scopes, and promotes overrides when inherited overflow is important. Reset reveals inherited rules; inline-controlled overflow is disabled. HTML clipping now clears local axis overrides in the same operation. Checkbox fields use a compact label/control layout.
+
+Validation: 881 unit tests passed. Chromium and WebKit inspector-light workflows passed, including mixed state, important inherited clipping, unclipping, and exact undo. Full Figma/any-site parity remains incomplete.

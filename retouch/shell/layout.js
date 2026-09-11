@@ -25,6 +25,13 @@
     if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(rule.match(I.base(token)||'')||rule.shorthand(I.base(token)||''))))addition='!'+addition;
     return I.replace(classes,rule.match,addition);
   }
+  function clipClasses(classes,value,inherited=''){
+    if(value!==null&&typeof value!=='boolean')throw Error('Choose whether to clip content.');
+    const matches=t=>/^overflow-(?:(?:x|y)-)?(?:auto|hidden|clip|visible|scroll)$|^\[overflow(?:-[xy])?:/.test(t);
+    let addition=value===null?'':value?'overflow-clip':'overflow-visible';
+    if(addition&&inherited.split(/\s+/).some(token=>/^!|!$/.test(token)&&matches(I.base(token)||'')))addition='!'+addition;
+    return I.replace(classes,matches,addition);
+  }
   function gridTrackCount(value){
     return String(value||'').replace(/\[[^\]]*\]/g,' ').trim().split(/\s+/).filter(t=>t&&!['none','subgrid','masonry'].includes(t)).length;
   }
@@ -185,6 +192,12 @@
       I.select(sec,title+' behavior',[['','Inherited / auto'],['fixed','Fixed'],['hug','Hug content'],['fill','Fill available']],sizing,v=>size(v||'reset',Math.round(dims[axis]*100)/100));
       numeric(title+' (px)',dims[axis],0,100000,v=>size('fixed',v));
     }
+    const clipping=document.createElement('input');clipping.type='checkbox';
+    clipping.checked=['hidden','clip'].includes(css.overflowX)&&['hidden','clip'].includes(css.overflowY);
+    clipping.indeterminate=!clipping.checked&&!(css.overflowX==='visible'&&css.overflowY==='visible');
+    clipping.onchange=()=>save(clipClasses(classes,clipping.checked,inherited));I.field(sec,'Clip content',clipping);
+    const resetClipping=I.button('Reset clipping',()=>save(clipClasses(classes,null)));resetClipping.disabled=clipClasses(classes,null)===classes;sec.append(resetClipping);
+    if(['overflow','overflow-x','overflow-y'].some(property=>el.style.getPropertyValue(property))){clipping.disabled=true;resetClipping.disabled=true;I.note(sec,'Inline overflow controls clipping on this layer.');}
     I.note(sec,'Pixel sizes include padding and borders, before transforms.');
     const limits=document.createElement('details');limits.className='advanced';limits.open=limitsOpen;
     limits.ontoggle=()=>{limitsOpen=limits.open;};
@@ -202,6 +215,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={gridTrackCount,paddingClasses,arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={clipClasses,gridTrackCount,paddingClasses,arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

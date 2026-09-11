@@ -20,6 +20,13 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
   const settled=()=>wait(async()=>await page.locator('#panelBody').getAttribute('aria-busy')!=='true','panel settled');
   const size=async value=>{await page.getByLabel('Screen size',{exact:true}).focus();await page.getByLabel('Screen size',{exact:true}).selectOption(value);await wait(()=>page.locator('#app').evaluate((el,w)=>el.contentWindow.innerWidth===w,Number(value.split('x')[0])),'screen width');};
   const width=async value=>{await page.getByLabel('Width (CSS)',{exact:true}).fill(value);await page.getByLabel('Width (CSS)',{exact:true}).press('Tab');await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).width)===value,'CSS width '+value);await settled();};
+  await page.getByRole('treeitem',{name:'main',exact:true}).click();await settled();
+  const clip=page.getByLabel('Clip content',{exact:true});await clip.check();await settled();
+  await wait(async()=>await app.locator('main').evaluate(el=>getComputedStyle(el).overflowX==='clip'&&getComputedStyle(el).overflowY==='clip'),'HTML clipping');
+  await clip.uncheck();await settled();await wait(async()=>await app.locator('main').evaluate(el=>getComputedStyle(el).overflowX==='visible'&&getComputedStyle(el).overflowY==='visible'),'HTML unclipping');
+  for(let i=0;i<2;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
+  await wait(()=>read()===original,'HTML clipping exact undo');
+  await page.getByRole('treeitem',{name:'h1 · Hello HTML',exact:true}).click();await settled();
   // Author larger-screen rules first; a later base edit must not override them.
   await size('768x1024');await page.getByLabel('Style screen scope').selectOption('min-[768px]:');await width('320px');
   await size('390x844');await page.getByLabel('Style screen scope').selectOption('');await width('240px');
