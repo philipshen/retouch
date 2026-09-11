@@ -10,7 +10,7 @@ function context(resolved){
  if(index<0)throw Error('The component usage no longer resolves.');
  return {siblings,index};
 }
-function describe(resolved){const parents=require('./reparent-component.cjs').describe(resolved);try{const {siblings,index}=context(resolved);return {...parents,ok:true,fileHash:resolved.hash,targets:siblings.filter((_,i)=>i!==index).map(node=>resolved.elements.find(el=>el.node.start===node.start)?.id).filter(Boolean),canMoveBefore:index>0,canMoveAfter:index<siblings.length-1,canMoveFirst:index>0,canMoveLast:index<siblings.length-1};}catch(error){return {...refuse(error.message),...parents,fileHash:resolved.hash,targets:[]};}}
+function describe(resolved){const parents=require('./reparent-component.cjs').describe(resolved);try{const {siblings,index}=context(resolved);return {...parents,ok:true,fileHash:resolved.hash,siblingIds:siblings.map(node=>resolved.elements.find(el=>el.node.start===node.start)?.id||null),targets:siblings.filter((_,i)=>i!==index).map(node=>resolved.elements.find(el=>el.node.start===node.start)?.id).filter(Boolean),canMoveBefore:index>0,canMoveAfter:index<siblings.length-1,canMoveFirst:index>0,canMoveLast:index<siblings.length-1};}catch(error){return {...refuse(error.message),...parents,fileHash:resolved.hash,targets:[]};}}
 function plan(resolved,op){
  if(op.direction==='inside')return require('./reparent-component.cjs').plan(resolved,op);
  if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the component before moving it.');
@@ -44,12 +44,14 @@ function planSelection(resolved,op){
  try{
   if(op.fileHash!==resolved.hash)throw Error('The source changed. Re-select the components.');
   const ids=op.ids;if(!Array.isArray(ids)||ids.length<2||ids.length>100||new Set(ids).size!==ids.length||!ids.includes(resolved.element.id)||ids.some(id=>typeof id!=='string'||!/^[a-f0-9]{10}$/.test(id)))throw Error('Choose 2 to 100 distinct component usages in one source file.');
-  if(!['before','after'].includes(op.direction))throw Error('Choose a position before or after another sibling layer.');
+  if(!['before','after','first','last'].includes(op.direction))throw Error('Choose a position before or after another sibling layer.');
   const original=collectElements(resolved.source,resolved.relPath).elements,members=ids.map(id=>original.find(el=>el.id===id));if(members.some(el=>el?.kind!=='instance'))throw Error('Select component usages from the same source file.');
   const roots=members.filter(el=>!members.some(parent=>parent!==el&&parent.node.start<el.node.start&&parent.node.end>el.node.end)).sort((a,b)=>a.node.start-b.node.start),{siblings}=context({...resolved,element:roots[0]});
   const starts=new Set(roots.map(el=>el.node.start));if(roots.some(el=>!siblings.some(node=>node.start===el.node.start)))throw Error('Select component usages in the same source container.');
-  const destination=original.find(el=>el.id===op.destinationId),target=siblings.find(node=>node.start===destination?.node.start);if(!target||starts.has(target.start))throw Error('Choose an unselected sibling layer.');
-  const selected=siblings.filter(node=>starts.has(node.start)),reordered=siblings.filter(node=>!starts.has(node.start));reordered.splice(reordered.indexOf(target)+(op.direction==='after'?1:0),0,...selected);
+  let target,direction=op.direction;
+  if(op.destinationId!==undefined){if(!['before','after'].includes(direction))throw Error('Choose before or after for an explicit destination.');const destination=original.find(el=>el.id===op.destinationId);target=siblings.find(node=>node.start===destination?.node.start);if(!target||starts.has(target.start))throw Error('Choose an unselected sibling layer.');}
+  else{const first=siblings.findIndex(node=>starts.has(node.start)),last=siblings.findLastIndex(node=>starts.has(node.start));target=direction==='first'?siblings.find(node=>!starts.has(node.start)):direction==='last'?siblings.findLast(node=>!starts.has(node.start)):direction==='before'?siblings[first-1]:siblings[last+1];if(!target)return {ok:true,unchanged:true,hash:resolved.hash,selectionIds:roots.map(el=>el.id),sourceIdMap:[],rootCount:roots.length,edits:[]};direction=['first','before'].includes(direction)?'before':'after';}
+  const selected=siblings.filter(node=>starts.has(node.start)),reordered=siblings.filter(node=>!starts.has(node.start));reordered.splice(reordered.indexOf(target)+(direction==='after'?1:0),0,...selected);
   const ms=new MagicString(resolved.source),positions=[];let shift=0;
   for(let i=0;i<siblings.length;i++){const slot=siblings[i],replacement=reordered[i],chunk=resolved.source.slice(replacement.start,replacement.end);positions.push({original:replacement,start:slot.start+shift});if(slot!==replacement)ms.overwrite(slot.start,slot.end,chunk);shift+=chunk.length-(slot.end-slot.start);}
   const after=ms.toString(),elements=collectElements(after,resolved.relPath).elements,identities=new Map(),mapped=new Set();

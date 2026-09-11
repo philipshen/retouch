@@ -906,7 +906,7 @@ function paintLoop() {
 }
 
 function syncLayerSelection() {
-  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent),selectionCanDelete:sel.multiple.every(info=>info.canDeleteComponent),selectionCanReparent:sharedComponentContainers(sel.multiple).length>0,selectionContainers:sharedComponentContainers(sel.multiple),selectionTargets:sharedComponentTargets(sel.multiple)}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
+  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent),selectionCanDelete:sel.multiple.every(info=>info.canDeleteComponent),selectionCanReparent:sharedComponentContainers(sel.multiple).length>0,selectionContainers:sharedComponentContainers(sel.multiple),selectionTargets:sharedComponentTargets(sel.multiple),selectionOrdering:sharedComponentOrdering(sel.multiple)}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
 }
 
 function inTextScope(el, info) {
@@ -2663,6 +2663,11 @@ function sharedComponentContainers(infos){
  const candidates=infos[0]?.componentMovement?.selectionContainers||infos[0]?.componentMovement?.containers||[];
  return candidates.filter(id=>infos.every(info=>(info.componentMovement?.selectionContainers||info.componentMovement?.containers||[]).includes(id)));
 }
+function sharedComponentOrdering(infos){
+ const siblings=infos[0]?.componentMovement?.siblingIds,ids=new Set(infos.map(info=>info.id));if(!siblings||!infos.every(info=>siblings.includes(info.id)&&JSON.stringify(info.componentMovement?.siblingIds)===JSON.stringify(siblings)))return {};
+ const first=siblings.findIndex(id=>ids.has(id)),last=siblings.findLastIndex(id=>ids.has(id)),gaps=last-first+1>ids.size;
+ return {before:first>0,after:last<siblings.length-1,first:first>0||gaps,last:last<siblings.length-1||gaps};
+}
 function sharedComponentTargets(infos){return (infos[0]?.componentMovement?.targets||[]).filter(id=>infos.every(info=>info.componentMovement?.targets?.includes(id)));}
 async function reparentComponentSelection(infos,destinationId,direction='inside'){
  if(panelTasks||undoBusy||sourceRequests)return;const ids=infos.map(info=>info.id);busyPanel(true);
@@ -2787,7 +2792,7 @@ async function structureSelection(action,extra={}){
 }
 async function structureAction(action) {
   if(!sel || panelTasks || undoBusy || sourceRequests)return;
-  if(sel.info.kind==='instance'&&sel.multiple?.length>1){if(action==='duplicateElement')return duplicateComponentSelection();if(action==='deleteElement')return deleteComponentSelection();if(action==='reparentElement')return chooseComponentParent(sel.info);return toast('Choose one component for this structural edit.','err');}
+  if(sel.info.kind==='instance'&&sel.multiple?.length>1){if(action==='duplicateElement')return duplicateComponentSelection();if(action==='deleteElement')return deleteComponentSelection();if(action==='reparentElement')return chooseComponentParent(sel.info);if(['before','after','first','last'].includes(action)&&sharedComponentOrdering(sel.multiple)[action])return reparentComponentSelection(sel.multiple,undefined,action);return toast('Choose one component for this structural edit.','err');}
   if(['frameSelection','removeFrame'].includes(action)){await commitInlineEdit();if(sel)return structureSelection(action);return;}
   if(sel.multiple?.length>1){if(action==='reparentElement')return chooseLayerParent(sel.info);if(['duplicateElement','deleteElement'].includes(action))return structureSelection(action);return toast('Choose one layer for this structural edit.','err');}
   await commitInlineEdit();

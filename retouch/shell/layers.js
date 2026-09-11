@@ -205,7 +205,7 @@
       const s=info?.structure;
       const copied=getClipboard();
       const compatible=!!copied&&copied.file===info?.file&&copied.parentId===s?.parentId&&copied.hash===(info?.fileHash||info?.hash);
-      if(componentGroup){lastCapabilities=null;for(const button of Object.values(actionButtons))button.disabled=true;actionButtons.duplicateElement.textContent='Duplicate components';actionButtons.duplicateElement.disabled=busy||!info.selectionCanDuplicate;actionButtons.duplicateElement.title='Duplicate the selected usages as one undoable action.';actionButtons.deleteElement.textContent='Delete components';actionButtons.deleteElement.disabled=busy||!info.selectionCanDelete;actionButtons.deleteElement.title='Delete the selected usages as one undoable action.';actionButtons.reparentElement.hidden=false;actionButtons.reparentElement.disabled=busy||!info.selectionCanReparent;return;}
+      if(componentGroup){lastCapabilities=null;for(const button of Object.values(actionButtons))button.disabled=true;actionButtons.duplicateElement.textContent='Duplicate components';actionButtons.duplicateElement.disabled=busy||!info.selectionCanDuplicate;actionButtons.duplicateElement.title='Duplicate the selected usages as one undoable action.';actionButtons.deleteElement.textContent='Delete components';actionButtons.deleteElement.disabled=busy||!info.selectionCanDelete;actionButtons.deleteElement.title='Delete the selected usages as one undoable action.';actionButtons.reparentElement.hidden=false;actionButtons.reparentElement.disabled=busy||!info.selectionCanReparent;for(const [action,name]of [['before','Move components up'],['after','Move components down'],['first','Move components to start'],['last','Move components to end']]){actionButtons[action].textContent=name;actionButtons[action].hidden=false;actionButtons[action].disabled=busy||!info.selectionOrdering?.[action];}return;}
       const capabilities=JSON.stringify([!!info,info?.kind,info?.canDuplicateComponent,info?.canDeleteComponent,info?.componentMovement,info?.componentDuplicateReason,!!info?.svgMovement,s,busy,copied,compatible,selectedSet.size]);
       if(capabilities===lastCapabilities)return;
       lastCapabilities=capabilities;
@@ -220,6 +220,7 @@
       actionButtons.duplicateElement.disabled=busy||!(info?.kind==='instance'?info.canDuplicateComponent:s?.canDuplicate);actionButtons.duplicateElement.title=info?.kind==='instance'?info.componentDuplicateReason||'Create another linked instance.':'';
       actionButtons.deleteElement.disabled=busy||!(info?.kind==='instance'?info.canDeleteComponent:s?.canDelete);
       actionButtons.before.textContent=info?.svgMovement?'Send backward':info?.kind==='instance'?'Move component up':'Move layer up';actionButtons.after.textContent=info?.svgMovement?'Bring forward':info?.kind==='instance'?'Move component down':'Move layer down';
+      actionButtons.first.textContent='Send to back';actionButtons.last.textContent='Bring to front';
       const movement=info?.kind==='instance'?info.componentMovement:s;
       for(const [action,cap] of [['first','canMoveFirst'],['last','canMoveLast']]){actionButtons[action].hidden=!info?.svgMovement&&info?.kind!=='instance'&&typeof s?.canMoveFirst!=='boolean';actionButtons[action].disabled=busy||!movement?.[cap];}
       actionButtons.before.disabled=busy||!movement?.canMoveBefore;
