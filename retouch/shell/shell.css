@@ -703,3 +703,8 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .paint-opacity-controls { display:flex;align-items:center;gap:8px;flex:1;min-width:0; }
 .paint-opacity-controls input[type=number] { flex:0 0 52px;width:52px;padding:4px; }
 .paint-picker .paint-opacity { appearance:none;height:10px;border:0;border-radius:5px;background-size:100% 100%,6px 6px; }
+
+.paint-channels { display:flex;gap:8px;margin:10px 0; }
+.paint-channels > .inspector-field { display:flex;flex-direction:column-reverse;gap:4px;flex:1;min-width:0;margin:0; }
+.paint-channels > .inspector-field > span { flex:0; }
+.paint-channels input { flex:none;width:100%;text-align:center; }
