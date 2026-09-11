@@ -13,6 +13,7 @@ function context(resolved){
   return validateTarget(target);
  }
  function validateTarget(target){
+  require('./component-move-keys.cjs')(target,[source]);
   if(target.node.start>=source.node.start&&target.node.end<=source.node.end)throw Error('A component cannot contain itself.');
   const targetOwner=target.getFunctionParent();if(!targetOwner)throw Error('Choose a container inside a render function.');
   if(contextual&&targetOwner!==owner)throw Error('This component uses execution context that must stay in its render function.');
@@ -52,7 +53,8 @@ function planSelection(resolved,op,allowSingle=false){
   const original=collectElements(resolved.source,resolved.relPath).elements,members=ids.map(id=>original.find(element=>element.id===id)),destination=original.find(element=>element.id===op.destinationId);
   if(members.some(element=>element?.kind!=='instance'))return refuse('Select component usages from the same source file.');
   const roots=members.filter(element=>!members.some(parent=>parent!==element&&parent.node.start<element.node.start&&parent.node.end>element.node.end)).sort((a,b)=>a.node.start-b.node.start);
-  const contexts=roots.map(element=>context({...resolved,elements:original,element}));for(const ctx of contexts){if(positioned)ctx.siblingDestination(destination);else ctx.destination(destination);}
+  const contexts=roots.map(element=>context({...resolved,elements:original,element}));let target;for(const ctx of contexts){target=positioned?ctx.siblingDestination(destination):ctx.destination(destination);}
+  require('./component-move-keys.cjs')(target,contexts.map(ctx=>ctx.source));
   if(positioned)return positionedSelection(resolved,op,original,roots,contexts,destination);
   let source=resolved.source,elements=original;const identities=new Map(original.map(element=>[element.id,element.id]));
   for(const root of roots){
