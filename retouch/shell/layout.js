@@ -11,10 +11,18 @@
     const inline=/^(vertical|sideways)-/.test(parent.writingMode||'')?'height':'width',block=inline==='width'?'height':'width';
     return {inline,block,main:/^column/.test(parent.direction||'')?block:inline};
   }
+  function gapValue(value){
+    value=String(value).trim();
+    if(/^(?:\d+\.?\d*|\.\d+)$/.test(value))value+='px';
+    if(value==='normal')return value;
+    if(!/^(?:\d+\.?\d*|\.\d+)(?:px|%|rem|em|vw|vh|ch)$/.test(value)||parseFloat(value)>10000)throw Error('Use a nonnegative gap up to 10000, with px, %, rem, em, vw, vh or ch, or normal.');
+    return value;
+  }
   function gapClasses(classes,axis,value,writingMode){
-    if(!['width','height'].includes(axis)||!Number.isFinite(value)||value<0||value>10000)throw Error('Choose a gap from 0 to 10000 pixels.');
+    if(!['width','height'].includes(axis))throw Error('Choose a horizontal or vertical gap.');
+    value=gapValue(value);
     const inline=layoutAxes({writingMode}).inline===axis,kind=inline?'x':'y',property=inline?'column-gap':'row-gap';
-    let addition='gap-'+kind+'-['+value+'px]';
+    let addition='gap-'+kind+'-['+value+']';
     if(classes.split(/\s+/).some(token=>/^!|!$/.test(token)&&/^(?:gap-(?![xy]-)|\[gap:)/.test(I.base(token)||'')))addition='!'+addition;
     return I.replace(classes,token=>token.startsWith('gap-'+kind+'-')||token.startsWith('['+property+':'),addition);
   }
@@ -93,7 +101,10 @@
         I.select(sec,'Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>save(I.replace(classes,t=>/^flex-(wrap|wrap-reverse|nowrap)$/.test(t),'flex-'+v)));
       }
       for(const [prop,label,axis] of [['columnGap',verticalInline?'Vertical gap':'Horizontal gap',verticalInline?'height':'width'],['rowGap',verticalInline?'Horizontal gap':'Vertical gap',verticalInline?'width':'height']]) {
-        numeric(label,parseFloat(css[prop])||0,0,10000,v=>save(gapClasses(classes,axis,v,css.writingMode)));
+        const input=document.createElement('input');input.type='text';input.value=css[prop].replace(/px$/,'');input.placeholder='0';input.title='Pixels by default; also accepts %, rem, em, vw, vh, ch or normal';
+        input.oninput=()=>input.setCustomValidity('');
+        input.onchange=()=>{try{save(gapClasses(classes,axis,input.value,css.writingMode));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+        I.field(sec,label,input);
       }
       I.select(sec,'Align children',[['start','Start'],['center','Center'],['end','End'],['stretch','Stretch'],['baseline','Baseline']],(css.alignItems==='normal'?'stretch':css.alignItems.replace('flex-','')),v=>save(I.replace(classes,t=>t.startsWith('items-'),'items-'+v)));
       const justify=css.justifyContent==='normal'?'start':css.justifyContent.replace('flex-','').replace('space-','');
@@ -141,6 +152,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

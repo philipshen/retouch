@@ -110,3 +110,9 @@ test('physical gap edits follow writing mode and preserve the other shorthand ax
  assert.equal(L.gapClasses('md:!gap-4 gap-x-2','width',30,'horizontal-tb'),'md:!gap-4 gap-x-[30px]');
  for(const value of [-1,NaN,10001])assert.throws(()=>L.gapClasses('','width',value));
 });
+
+test('gap values preserve supported units and reject invalid or oversized source tokens',()=>{
+ for(const value of ['10%','1.5rem','.5em','2vw','2vh','4ch','normal'])assert.equal(L.gapValue(value),value);
+ assert.equal(L.gapValue(' 12.5 '),'12.5px');assert.equal(L.gapClasses('!gap-4','width','15%'),'!gap-4 !gap-x-[15%]');
+ for(const value of ['',-1,Infinity,'10001px','2px hidden','calc(10% + 2px)','auto','-1%'])assert.throws(()=>L.gapValue(value));
+});
