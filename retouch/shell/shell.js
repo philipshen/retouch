@@ -2473,7 +2473,9 @@ async function restoreHistory(direction,op) {
     } else await reloadFrame();
 
     const selectionIds=direction==='undo'?op.selectionBefore||op.selectionIds:op.selectionAfter||op.selectionIds;
-    if(sel&&selectionIds)await restoreLayerSelection(selectionIds);
+    // Refresh can invalidate a stale occurrence and clear sel. History owns
+    // the target selection independently of that temporary preview state.
+    if(selectionIds)await restoreLayerSelection(selectionIds);
     if (sel) renderPanel();
 
   } catch(error){toast('Source restored; preview refresh failed: '+error.message,'err');}
