@@ -30,4 +30,24 @@ function plan(resolved,op){
   return {ok:true,hash:contentHash(after),deletedComponent:{instanceId:resolved.element.id,parentId,removedSourceIds:resolved.elements.filter(el=>el.node.start>=target.node.start&&el.node.end<=target.node.end).map(el=>el.id)},edits:[{file:resolved.file,before:resolved.source,after}]};
  }catch(error){return refuse(error.message);}
 }
-module.exports={plan};
+function planSelection(resolved,op){
+ const refuse=reason=>({ok:false,refused:true,reason});
+ try{
+  if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the components.');
+  const ids=op.ids;
+  if(!Array.isArray(ids)||ids.length<2||ids.length>100||new Set(ids).size!==ids.length||!ids.includes(resolved.element.id)||ids.some(id=>typeof id!=='string'||!/^[a-f0-9]{10}$/.test(id)))return refuse('Choose 2 to 100 distinct component usages from one source file.');
+  const original=collectElements(resolved.source,resolved.relPath).elements,members=ids.map(id=>original.find(element=>element.id===id));
+  if(members.some(element=>element?.kind!=='instance'))return refuse('Select component usages from the same source file.');
+  const roots=members.filter(element=>!members.some(parent=>parent!==element&&parent.node.start<element.node.start&&parent.node.end>element.node.end));
+  let source=resolved.source,elements=original;const removed=new Set(),parents=new Set();
+  for(const root of [...roots].sort((a,b)=>b.node.start-a.node.start)){
+   const element=elements.find(item=>item.id===root.id);if(!element)return refuse('A selected component lost its source identity.');
+   const current={...resolved,source,elements,element,hash:contentHash(source)},result=plan(current,{type:'deleteComponent',id:element.id,fileHash:current.hash});if(!result.ok)return result;
+   for(const id of result.deletedComponent.removedSourceIds)removed.add(id);parents.add(result.deletedComponent.parentId);
+   source=result.edits[0].after;elements=collectElements(source,resolved.relPath).elements;
+  }
+  if(original.some(element=>!removed.has(element.id)&&!elements.some(item=>item.id===element.id&&item.kind===element.kind)))return refuse('The deletion could not preserve unrelated source identities.');
+  return {ok:true,hash:contentHash(source),removedSourceIds:[...removed],deletedComponentIds:roots.map(element=>element.id),parentId:parents.size===1?[...parents][0]:null,rootCount:roots.length,edits:[{file:resolved.file,before:resolved.source,after:source}]};
+ }catch(error){return refuse(error.message);}
+}
+module.exports={plan,planSelection};

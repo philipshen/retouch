@@ -906,7 +906,7 @@ function paintLoop() {
 }
 
 function syncLayerSelection() {
-  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent)}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
+  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent),selectionCanDelete:sel.multiple.every(info=>info.canDeleteComponent)}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
 }
 
 function inTextScope(el, info) {
@@ -1520,13 +1520,14 @@ async function editDefinition(instanceId, component) {
   renderPanel(); toast(component.detached ? 'Editing detached definition' : 'Editing shared definition', 'ok');
 }
 async function refreshDeletedComponent(id,parentId){
+ const ids=Array.isArray(id)?id:[id],absent=d=>ids.every(id=>!matchingInDocument(d,id).length);
  const parent=parentId?await api('GET',resolveUrl(parentId)):null;
- if(parent?.ok){await refreshWrittenElement(parent.element,el=>!matchingInDocument(el.ownerDocument,id).length);if(!matchingInDocument(doc(),id).length)return;}
+ if(parent?.ok){await refreshWrittenElement(parent.element,el=>absent(el.ownerDocument));if(absent(doc()))return;}
  const location=iframe.contentWindow.location.href;
  for(let attempt=0;attempt<30;attempt++){
   if(iframe.contentWindow.location.href!==location)return;
   const response=await fetch(location,{cache:'no-store'});
-  if(response.ok&&!matchingInDocument(new DOMParser().parseFromString(await response.text(),'text/html'),id).length){if(matchingInDocument(doc(),id).length)await reloadFrame();if(!matchingInDocument(doc(),id).length)return;}
+  if(response.ok&&absent(new DOMParser().parseFromString(await response.text(),'text/html'))){if(!absent(doc()))await reloadFrame();if(absent(doc()))return;}
   await new Promise(resolve=>setTimeout(resolve,150));
  }
  throw Error('The usage was deleted, but its preview has not refreshed yet.');
@@ -1537,6 +1538,15 @@ async function moveInstance(info,direction,destinationId){
   if(result.unchanged){await selectInsertedComponent(info.id,null);return;}
   const moved=result.movedComponent;editorHistory.record({type:'moveComponent',id:moved.instanceId,previousInstanceId:moved.previousInstanceId,sourceIdMap:moved.sourceIdMap,undoId:result.undoId});
   layerLocks.remap(moved.sourceIdMap);await refreshSwappedComponent(moved.instanceId,null);await selectInsertedComponent(moved.instanceId,null);layers.refresh();toast('Component moved','ok');
+ }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
+}
+async function deleteComponentSelection(){
+ const ids=sel.multiple.map(info=>info.id),hash=sel.info.hash;busyPanel(true);
+ try{
+  const result=await api('POST','/rt/__api/op',{type:'deleteComponentSelection',id:ids[0],ids,fileHash:hash});if(!result?.ok)throw Error(result?.reason||'Could not delete the selected components.');
+  const deletedLocks=layerLocks.removeSourceIds(result.removedSourceIds);
+  editorHistory.record({type:'deleteComponentSelection',id:ids[0],selectionBefore:ids,deletedComponentIds:result.deletedComponentIds,parentId:result.parentId,removedSourceIds:result.removedSourceIds,deletedLocks,undoId:result.undoId});
+  await refreshDeletedComponent(result.deletedComponentIds,result.parentId);clearSelection();await layers.refresh();toast(result.rootCount+' components deleted','ok');
  }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
 }
 async function deleteInstance(id,context){
@@ -2402,6 +2412,7 @@ async function restoreHistory(direction,op) {
     if(op.sourceIdMap)layerLocks.remap(op.sourceIdMap,direction);
     if(op.deletedLocks&&direction==='undo'){const restored=layerLocks.restoreMany(op.deletedLocks,'undo');if(!restored.ok)toast(restored.reason,'err');}
     if(op.type==='renameComponent'){await refreshSwappedComponent(op.id,null);await selectInsertedComponent(op.id,null);layers.refresh();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='deleteComponentSelection'){if(direction==='undo')await refreshComponentSelection(op.selectionBefore);else{await refreshDeletedComponent(op.deletedComponentIds,op.parentId);clearSelection();await layers.refresh();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='deleteComponent'){if(direction==='undo'){await refreshSwappedComponent(op.id,null);await selectInsertedComponent(op.id,op.parentId);}else{await refreshDeletedComponent(op.id,op.parentId);clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='duplicateComponentSelection'){await refreshComponentSelection(direction==='undo'?op.selectionBefore:op.selectionAfter);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
@@ -2759,7 +2770,7 @@ async function structureSelection(action,extra={}){
 }
 async function structureAction(action) {
   if(!sel || panelTasks || undoBusy || sourceRequests)return;
-  if(sel.info.kind==='instance'&&sel.multiple?.length>1){if(action==='duplicateElement')return duplicateComponentSelection();return toast('Choose one component for this structural edit.','err');}
+  if(sel.info.kind==='instance'&&sel.multiple?.length>1){if(action==='duplicateElement')return duplicateComponentSelection();if(action==='deleteElement')return deleteComponentSelection();return toast('Choose one component for this structural edit.','err');}
   if(['frameSelection','removeFrame'].includes(action)){await commitInlineEdit();if(sel)return structureSelection(action);return;}
   if(sel.multiple?.length>1){if(action==='reparentElement')return chooseLayerParent(sel.info);if(['duplicateElement','deleteElement'].includes(action))return structureSelection(action);return toast('Choose one layer for this structural edit.','err');}
   await commitInlineEdit();

@@ -109,6 +109,7 @@
           b.ondragend=endDrag;
           b.onkeydown=async e=>{
             if(onContextMenu&&(e.key==='ContextMenu'||e.key==='F10'&&e.shiftKey)){await onContextMenu({event:e,select:()=>choose(item),selected:isSelected(item),opener:b,keyboard:true});return;}
+            if(item.componentId&&selectedInfo?.selectionIds?.length>1&&['Delete','Backspace'].includes(e.key)){e.preventDefault();e.stopPropagation();if(!isBusy&&!e.repeat)await onAction('deleteElement');return;}
             if(item.componentId&&selectedInfo?.selectionIds?.length>1&&(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='d'){e.preventDefault();e.stopPropagation();if(!isBusy&&!e.repeat)await onAction('duplicateElement');return;}
             if(item.componentId&&selectedInfo?.selectionIds?.length>1&&(['F2','Delete','Backspace'].includes(e.key)||(e.metaKey||e.ctrlKey)&&['c','v','d'].includes(e.key.toLowerCase()))){e.preventDefault();return;}
             if(item.parent?.componentId&&(e.key==='F2'||e.key==='Delete'||e.key==='Backspace'||(e.metaKey||e.ctrlKey)&&['c','v','d'].includes(e.key.toLowerCase())))await choose(item);
@@ -187,7 +188,7 @@
       const s=info?.structure;
       const copied=getClipboard();
       const compatible=!!copied&&copied.file===info?.file&&copied.parentId===s?.parentId&&copied.hash===(info?.fileHash||info?.hash);
-      if(componentGroup){lastCapabilities=null;for(const button of Object.values(actionButtons))button.disabled=true;actionButtons.duplicateElement.textContent='Duplicate components';actionButtons.duplicateElement.disabled=busy||!info.selectionCanDuplicate;actionButtons.duplicateElement.title='Duplicate the selected usages as one undoable action.';return;}
+      if(componentGroup){lastCapabilities=null;for(const button of Object.values(actionButtons))button.disabled=true;actionButtons.duplicateElement.textContent='Duplicate components';actionButtons.duplicateElement.disabled=busy||!info.selectionCanDuplicate;actionButtons.duplicateElement.title='Duplicate the selected usages as one undoable action.';actionButtons.deleteElement.textContent='Delete components';actionButtons.deleteElement.disabled=busy||!info.selectionCanDelete;actionButtons.deleteElement.title='Delete the selected usages as one undoable action.';return;}
       const capabilities=JSON.stringify([!!info,info?.kind,info?.canDuplicateComponent,info?.canDeleteComponent,info?.componentMovement,info?.componentDuplicateReason,!!info?.svgMovement,s,busy,copied,compatible,selectedSet.size]);
       if(capabilities===lastCapabilities)return;
       lastCapabilities=capabilities;
