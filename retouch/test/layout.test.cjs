@@ -279,3 +279,19 @@ test('reset all padding removes scoped physical and logical overrides while reta
  assert.equal(L.resetPaddingClasses('![padding:12px_16px] [padding-top:4px] [padding-right:4px] [padding-bottom:4px] [padding-left:4px] [padding-inline:2px] [padding-block:3px] [padding-inline-start:8px] [padding-inline-end:8px] [padding-block-start:8px] [padding-block-end:8px] [scroll-padding:4px] [padding-custom:4px]'),'[scroll-padding:4px] [padding-custom:4px]');
  assert.equal(L.resetPaddingClasses('md:![padding:8px] focus:p-4 w-20'),'md:![padding:8px] focus:p-4 w-20');
 });
+
+
+test('physical padding edits map logical priority and owned edges through writing direction',()=>{
+ const vertical={writingMode:'vertical-rl',direction:'ltr'},rtl={direction:'rtl'};
+ assert.equal(L.paddingClasses('','top',30,'!ps-4',vertical),'!pt-[30px]');
+ assert.equal(L.paddingClasses('','bottom',30,'![padding-inline:12px_16px]',vertical),'!pb-[30px]');
+ assert.equal(L.paddingClasses('','left',30,'!py-4',vertical),'!pl-[30px]');
+ assert.equal(L.paddingClasses('','top',30,'!py-4',vertical),'pt-[30px]');
+ assert.equal(L.paddingClasses('','right',30,'!ps-4',rtl),'!pr-[30px]');
+ assert.equal(L.paddingClasses('','left',30,'!ps-4',rtl),'pl-[30px]');
+ assert.equal(L.paddingClasses('ps-4 pe-8 pr-2 md:ps-2','right',30,'',rtl),'pe-8 md:ps-2 pr-[30px]');
+ assert.equal(L.paddingClasses('ps-4 pe-8 pr-2','right',null,'',rtl),'pe-8');
+ assert.equal(L.paddingClasses('','bottom',30,'!ps-4',{writingMode:'sideways-lr'}),'!pb-[30px]');
+ assert.equal(L.paddingClasses('','top',30,'!ps-4',{writingMode:'sideways-lr',direction:'rtl'}),'!pt-[30px]');
+ assert.equal(L.paddingClasses('![padding-block-end:12px] [padding-inline-start:8px]','left',30,'',vertical),'[padding-inline-start:8px] !pl-[30px]');
+});

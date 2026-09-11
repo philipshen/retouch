@@ -70,14 +70,19 @@
   function resetPaddingClasses(classes){
     return I.replace(classes,token=>/^p(?:[xytrblse]|b[se])?-/.test(token)||/^\[padding(?:-(?:top|right|bottom|left|(?:inline|block)(?:-(?:start|end))?))?:/.test(token),'');
   }
-  function paddingClasses(classes,side,value,inherited=''){
+  function paddingClasses(classes,side,value,inherited='',{writingMode='horizontal-tb',direction='ltr'}={}){
     const short={top:'t',right:'r',bottom:'b',left:'l'}[side];
     if(!short)throw Error('Choose a padding edge.');
     if(value!==null&&(!Number.isFinite(value)||value<0||value>10000))throw Error('Use padding from 0 to 10000 pixels.');
-    const axis=side==='top'||side==='bottom'?'y':'x';
-    const matches=t=>t.startsWith('p'+short+'-')||t.startsWith('[padding-'+side+':');
+    const vertical=/^(vertical|sideways)-/.test(writingMode),reverseInline=(direction==='rtl')!==(writingMode==='sideways-lr');
+    const inlineStart=vertical?(reverseInline?'bottom':'top'):(reverseInline?'right':'left'),blockStart=vertical?(writingMode.endsWith('-rl')?'right':'left'):'top',opposite={top:'bottom',bottom:'top',left:'right',right:'left'};
+    const logical=Object.entries({'inline-start':inlineStart,'inline-end':opposite[inlineStart],'block-start':blockStart,'block-end':opposite[blockStart]}).find(([,edge])=>edge===side)[0];
+    const logicalShort={'inline-start':'s','inline-end':'e','block-start':'bs','block-end':'be'}[logical],axis=logical.startsWith('inline')?'x':'y',family=logical.split('-')[0];
+    const matches=t=>t.startsWith('p'+short+'-')||t.startsWith('[padding-'+side+':')||t.startsWith('p'+logicalShort+'-')||t.startsWith('[padding-'+logical+':');
     let addition=value===null?'':'p'+short+'-['+value+'px]';
-    if(addition&&[...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(matches(I.base(token)||'')||new RegExp('^p(?:'+axis+')?-|^\\[padding:').test(I.base(token)||''))))addition='!'+addition;
+    if(addition&&[...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>{
+      const base=I.base(token)||'';return /^!|!$/.test(token)&&(matches(base)||base.startsWith('p-')||base.startsWith('p'+axis+'-')||base.startsWith('[padding:')||base.startsWith('[padding-'+family+':'));
+    }))addition='!'+addition;
     return I.replace(classes,matches,addition);
   }
   function layoutAxes(parent={}){
@@ -261,13 +266,13 @@
       const initial=input.value,commit=input.onchange;input.onchange=()=>{if(input.value!==initial)commit();};
       input.title='Enter saves. Escape cancels.';input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};return input;
     }
-    paddingInput('Padding',paddingValues.every(value=>value===paddingValues[0])?paddingValues[0]:null,value=>save(paddingEdges.reduce((next,edge)=>paddingClasses(next,edge,value,inherited),classes)));
+    paddingInput('Padding',paddingValues.every(value=>value===paddingValues[0])?paddingValues[0]:null,value=>save(paddingEdges.reduce((next,edge)=>paddingClasses(next,edge,value,inherited,css),classes)));
     const resetPadding=I.button('Reset padding',()=>save(resetPaddingClasses(classes)));resetPadding.disabled=resetPaddingClasses(classes)===classes;resetPadding.title='Remove padding overrides at this edit range';sec.append(resetPadding);
     for(const side of ['Top','Right','Bottom','Left']) {
       const edge=side.toLowerCase();
-      paddingInput('Padding '+edge,parseFloat(css['padding'+side])||0,v=>save(paddingClasses(classes,edge,v,inherited)));
-      const reset=I.button('Reset padding '+edge,()=>save(paddingClasses(classes,edge,null)));
-      reset.disabled=paddingClasses(classes,edge,null)===classes;sec.append(reset);
+      paddingInput('Padding '+edge,parseFloat(css['padding'+side])||0,v=>save(paddingClasses(classes,edge,v,inherited,css)));
+      const reset=I.button('Reset padding '+edge,()=>save(paddingClasses(classes,edge,null,'',css)));
+      reset.disabled=paddingClasses(classes,edge,null,'',css)===classes;sec.append(reset);
     }
     const geometry=root.RetouchReactSelection||require('./react-selection.js');
     const dims=Object.fromEntries(['width','height'].map(axis=>{const value=geometry.dimensionSize(css,axis);return [axis,Number.isFinite(value)?value:el[axis==='width'?'offsetWidth':'offsetHeight']];}));
