@@ -637,3 +637,10 @@ Full layer-lock workflows passed Chromium/WebKit: canvas selection exclusions, p
 Layers now identify text, image/media, container, SVG, component, and generic elements with compact monochrome vector icons. Icons inherit selection/component colors while retaining existing row text, accessible names, and stable button identity.
 
 Chromium and WebKit layer-interactions workflows passed live-refresh click preservation, modifier selection, rename focus, reparented keyboard navigation, search and disclosure. Added rendered-mask checks for host layer types; the Chromium isolated-layer screenshot /private/tmp/retouch-layer-types.png was inspected. Component icon classification is implemented but not separately exercised by this focused workflow. This source change postdates the packaged 910447c archive. Full Figma visual and functional parity remains incomplete.
+
+
+### Continuous layer selection and disclosure controls (2026-09-11)
+
+Selection and hover backgrounds now span each full layer row, including indentation, disclosure, type icon, name and lock. Hover no longer overrides the selected background. Component rows retain purple selection styling. Disclosure arrows use consistent vector chevrons with collapsed rotation and hidden leaf indicators.
+
+Chromium and WebKit layer-navigation workflows passed parent/child/sibling navigation, locking, collapse, filtered selection recovery, multi-selection, native input guards and unchanged source. New checks confirm full-row selected color survives hover, the name button is transparent, and leaf chevrons are hidden. The complete Chromium workspace screenshot /private/tmp/retouch-layer-row.png was visually inspected. Native archive remains at source 910447c; these changes are not packaged. Full Figma parity remains incomplete.
