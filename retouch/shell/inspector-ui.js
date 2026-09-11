@@ -77,7 +77,14 @@
      const button=buttons.find(item=>pattern.test(item.textContent));if(!button)continue;
      const label=button.textContent;button.setAttribute('aria-label',label);button.title=label;button.classList.add('gradient-action');button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true">'+icons[action]+'</svg>';actions.append(button);
     }
-    if(actions.children.length)group.querySelector(':scope > legend').append(actions);
+    if(actions.children.length){
+     const legend=group.querySelector(':scope > legend');actions.setAttribute('role','toolbar');actions.setAttribute('aria-label',legend.textContent.trim()+' actions');
+     const enabled=()=>[...actions.querySelectorAll('button:not(:disabled)')];
+     for(const button of actions.children){button.tabIndex=-1;button.addEventListener('focus',()=>{for(const item of actions.children)item.tabIndex=item===button?0:-1;});}
+     if(enabled()[0])enabled()[0].tabIndex=0;
+     actions.addEventListener('keydown',event=>{if(event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;const items=enabled(),index=items.indexOf(document.activeElement);if(index<0)return;event.preventDefault();event.stopPropagation();const next=event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowRight'?1:-1)+items.length)%items.length;items[next].focus();});
+     legend.append(actions);
+    }
     const rows=[...group.querySelectorAll(':scope > .inspector-field')].filter(row=>/^(?:Gradient|Fill) \d+ (?:Color blending|Hue direction|Repeat)$/.test(row.querySelector('[aria-label]')?.getAttribute('aria-label')||''));
     if(!rows.length)continue;
     const prefix=rows[0].querySelector('[aria-label]').getAttribute('aria-label').replace(/ (?:Color blending|Hue direction|Repeat)$/,''),options=disclosure('Gradient options','gradient-options-'+prefix);
