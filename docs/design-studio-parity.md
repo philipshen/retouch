@@ -11094,3 +11094,10 @@ Full HTML workflows passed in Chromium and WebKit after explicitly opening the d
 Reproduced a light-toolbar regression at 720px window width: opening the right inspector drawer covered the dock's right edge. Dock placement now considers the canvas area left visible by compact Layers/Inspector drawers and responds to workspace-layout changes even when canvas dimensions do not change.
 
 The added no-overlap regression failed before the fix and passed afterward in Chromium and WebKit. The full workspace-panels workflow also passed panel persistence, compact drawers, selection, Escape/focus, source edits/undo, and return to wide layout. Screenshot inspected: /private/tmp/retouch-compact-chromium.png. This source change is newer than the f8394de desktop archive. Full parity remains unfinished.
+
+
+### Spatial individual-corner fields (2026-09-11)
+
+Both HTML and React individual-corner fields now use a spatial 2x2 grid: top-left/top-right above bottom-left/bottom-right. HTML corners live in an Individual corners disclosure, with the shared CSS radius paired with opacity. Original accessible field names and write callbacks are retained.
+
+React Chromium inspector-light and HTML WebKit workflows passed one-corner edits with other-corner preservation and exact undo. The first HTML Chromium full run passed the corner checks but timed out later at a missing breakpoint option in the shadow workflow (line 254); an unchanged rerun passed the full workflow. That intermittent resize/scope synchronization remains unexplained. Screenshot /private/tmp/retouch-corners-chromium.png was visually inspected. These source changes postdate the f8394de desktop archive. Full parity remains incomplete.
