@@ -165,7 +165,7 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
           if(locks&&onLock&&!item.componentId){
             lock ||= document.createElement('button');lock.className='layer-lock';
             const direct=locks.direct(item.el),inherited=!direct&&locks.locked(item.el);
-            lock.textContent=direct||inherited?'🔒':'🔓';lock.setAttribute('aria-label',(direct?'Unlock ':inherited?'Locked by parent: ':'Lock ')+item.label);
+            lock.textContent='';lock.setAttribute('aria-label',(direct?'Unlock ':inherited?'Locked by parent: ':'Lock ')+item.label);
             lock.title=inherited?'Unlock the parent layer first.':direct?'Unlock canvas selection':'Lock canvas selection for this editor session; select from Layers to edit';
             lock.setAttribute('aria-pressed',String(direct||inherited));lock.disabled=isBusy||inherited;
             lock.onclick=async()=>{await onLock(item.el,!locks.direct(item.el));render();};

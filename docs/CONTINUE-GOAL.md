@@ -623,3 +623,10 @@ Chromium/WebKit layer-navigation workflows passed descendant-match focus, empty-
 Layer selection recovery now checks all selected tree items, so it appears when only part of a multi-selection is hidden. The label becomes Show selected layers for multiple selected items. Locked-only keyboard search skips unlocked context ancestors. Revealing clears filters without removing locks or changing selected items.
 
 Chromium/WebKit layer-navigation workflows passed locked-only focus, filter clearing with the original lock preserved, and partial multi-selection recovery with exact selected-row preservation. Existing navigation/native-input/source-preservation checks also passed. Logs /private/tmp/retouch-layer-filter-selection-{chromium,webkit}.log. Source postdates native archive 910447c; full Figma parity remains incomplete.
+
+
+### Consistent vector lock controls (2026-09-11)
+
+Layer lock/unlock controls now use compact monochrome SVG masks rather than platform emoji. Existing accessible labels, aria-pressed state, hover/focus visibility and inherited-lock disabling are preserved.
+
+Full layer-lock workflows passed Chromium/WebKit: canvas selection exclusions, parent inheritance, child-lock preservation, iframe/editor reload, deliberate tree selection, ordered source/lock undo/redo, batch locking, route/branch restoration, guarded shortcuts and filtered recovery. Tests check rendered mask and accessible state; a stale filter step now opens Layer actions first. Screenshot /private/tmp/retouch-layer-lock-icon-chromium.png visually inspected; logs /private/tmp/retouch-layer-lock-icon-{chromium,webkit}.log. Source postdates archive 910447c; full parity remains incomplete.
