@@ -2634,9 +2634,9 @@ const layers = RetouchLayers.mount({
   dragEnabled:window.__RT_RENDERING?.layerReparenting===true&&!historyRecoveryRequired,
   multiSelectEnabled:window.__RT_RENDERING?.selectionStyling===true,
   onMoveComponent:window.__RT_RENDERING?.componentInsertion&&!historyRecoveryRequired?async(source,destination,position,move)=>{
-    if(historyRecoveryRequired||panelTasks||undoBusy||sourceRequests||!source.isConnected||!destination.isConnected||layerLocks.locked(source)||position==='inside'&&layerLocks.locked(destination))return;
+    if(historyRecoveryRequired||panelTasks||undoBusy||sourceRequests||!source.isConnected||!destination.isConnected||layerLocks.locked(source)||(position==='inside'?layerLocks.locked(destination):layerLocks.locked(destination.parentElement)))return;
     await commitInlineEdit();
-    if(move.ids?.length>1){const infos=sel?.multiple;if(position!=='inside'&&layerLocks.locked(destination.parentElement))return;if(!['inside','before','after'].includes(position)||!infos||infos.length!==move.ids.length||infos.some(info=>!move.ids.includes(info.id)||info.hash!==move.fileHash)||!(position==='inside'?sharedComponentContainers(infos):sharedComponentTargets(infos)).includes(move.destinationId)||infos.some(info=>matchingEls(info.id).some(el=>layerLocks.locked(el))))return;await reparentComponentSelection(infos,move.destinationId,position);return;}
+    if(move.ids?.length>1){const infos=sel?.multiple;if(!['inside','before','after'].includes(position)||!infos||infos.length!==move.ids.length||infos.some(info=>!move.ids.includes(info.id)||info.hash!==move.fileHash)||!(position==='inside'?sharedComponentContainers(infos):sharedComponentTargets(infos)).includes(move.destinationId)||infos.some(info=>matchingEls(info.id).some(el=>layerLocks.locked(el))))return;await reparentComponentSelection(infos,move.destinationId,position);return;}
     await moveInstance({id:move.id,hash:move.fileHash},position,move.destinationId);
   }:undefined,
   onMove:async(source,destination,position)=>{

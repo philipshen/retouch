@@ -14,6 +14,7 @@ function describe(resolved){const parents=require('./reparent-component.cjs').de
 function plan(resolved,op){
  if(op.direction==='inside')return require('./reparent-component.cjs').plan(resolved,op);
  if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the component before moving it.');
+ if(op.destinationId!==undefined&&['before','after'].includes(op.direction)){let sibling=false;try{const target=resolved.elements.find(el=>el.id===op.destinationId);sibling=context(resolved).siblings.some(node=>node.start===target?.node.start);}catch{}if(!sibling)return require('./reparent-component.cjs').planPosition(resolved,op);}
  try{
   const {siblings,index}=context(resolved);let destination=({before:index-1,after:index+1,first:0,last:siblings.length-1})[op.direction];
   if(op.destinationId!==undefined){

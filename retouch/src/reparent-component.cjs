@@ -39,13 +39,13 @@ function plan(resolved,op){
   return {ok:true,hash:contentHash(after),movedComponent:{instanceId:selected.id,previousInstanceId:resolved.element.id,sourceIdMap},edits:[{file:resolved.file,before:resolved.source,after}]};
  }catch(error){return refuse(error.message);}
 }
-function planSelection(resolved,op){
+function planSelection(resolved,op,allowSingle=false){
  const positioned=['before','after'].includes(op.direction)&&op.destinationId!==undefined;
  if(op.direction!==undefined&&op.direction!=='inside'){const direct=require('./move-component.cjs').planSelection(resolved,op);if(direct.ok||!positioned)return direct;}
  try{
   if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the components.');
   const ids=op.ids;
-  if(!Array.isArray(ids)||ids.length<2||ids.length>100||new Set(ids).size!==ids.length||!ids.includes(resolved.element.id)||ids.some(id=>typeof id!=='string'||!/^[a-f0-9]{10}$/.test(id)))return refuse('Choose 2 to 100 distinct component usages in one source file.');
+  if(!Array.isArray(ids)||ids.length<(allowSingle?1:2)||ids.length>100||new Set(ids).size!==ids.length||!ids.includes(resolved.element.id)||ids.some(id=>typeof id!=='string'||!/^[a-f0-9]{10}$/.test(id)))return refuse('Choose 2 to 100 distinct component usages in one source file.');
   const original=collectElements(resolved.source,resolved.relPath).elements,members=ids.map(id=>original.find(element=>element.id===id)),destination=original.find(element=>element.id===op.destinationId);
   if(members.some(element=>element?.kind!=='instance'))return refuse('Select component usages from the same source file.');
   const roots=members.filter(element=>!members.some(parent=>parent!==element&&parent.node.start<element.node.start&&parent.node.end>element.node.end)).sort((a,b)=>a.node.start-b.node.start);
@@ -66,4 +66,8 @@ function planSelection(resolved,op){
   return {ok:true,unchanged:source===resolved.source,hash:contentHash(source),selectionIds,sourceIdMap,destinationId:identities.get(op.destinationId),rootCount:roots.length,edits:source===resolved.source?[]:[{file:resolved.file,before:resolved.source,after:source}]};
  }catch(error){return refuse(error.message);}
 }
-module.exports={describe,plan,planSelection};
+function planPosition(resolved,op){
+ const result=planSelection(resolved,{...op,ids:[resolved.element.id]},true);if(!result.ok||result.unchanged)return result;
+ return {...result,movedComponent:{instanceId:result.selectionIds[0],previousInstanceId:resolved.element.id,sourceIdMap:result.sourceIdMap}};
+}
+module.exports={describe,plan,planSelection,planPosition};
