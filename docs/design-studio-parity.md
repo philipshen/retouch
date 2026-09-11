@@ -11434,3 +11434,12 @@ The previously verified 4dba5a3 archive was launched once. Process 5449 ran, but
 Source inspection confirmed NSApplication.delegate is weak in the installed SDK. The launcher now uses withExtendedLifetime(delegate) around app.run() to make ownership explicit. A universal diagnostic build compiled and passed strict package verification, but its single launch (process 6078) also returned cgWindowNotFound through CUA. That process was stopped and absence of both owned PIDs verified. The change has not established the cause or fixed native window visibility. Native tests were not run and no quarantine/security settings were changed.
 
 Diagnostic artifact /private/tmp/retouch-desktop-lifetime-20260911/Retouch-0.1.0-mac.zip is based on 71e36b0 with sourceTreeDirty true for the delegate edit, not a clean release. Receipt desktop/verification/2026-09-11-native-lifetime.json; original archive receipt updated with its native attempt. Do not repeat launches without new evidence or a concrete next diagnostic. Browser/source work remains available; full parity and trusted desktop delivery remain incomplete.
+
+
+### Light native welcome screen (2026-09-11)
+
+The native window now explicitly requests Aqua appearance, and its welcome HTML uses the light editor palette, compact typography, white cards and clear Open a project/Connect to an editor instructions. It continues to point at the real native controls and preserves the user's normal startup command, including Make and shell scripts.
+
+The exact HTML extracted from Swift passed Chromium/WebKit rendering checks at 1440x900 and 800x500 under a dark system color preference. All headings remain visible and the content fits without scrolling. Screenshot /private/tmp/retouch-native-welcome-light.png visually inspected. Universal Swift compilation and strict package verification passed. Native launch was not attempted; the previous cgWindowNotFound result remains unresolved, and Aqua appearance is compiled rather than native-verified.
+
+Diagnostic artifact /private/tmp/retouch-desktop-welcome-light-20260911/Retouch-0.1.0-mac.zip has sourceTreeDirty true relative to 26781f9 and SHA256 d84dd8cfbb86763e024b7fe0ab0a2a73bf121cdd0e6c5b0a83985ff84431c01d. Receipt desktop/verification/2026-09-11-light-welcome.json. This is not a clean release or proof of notarized distribution. Full Figma parity remains incomplete.

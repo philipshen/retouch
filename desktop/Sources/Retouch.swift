@@ -181,6 +181,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
                           styleMask: [.titled, .closable, .miniaturizable, .resizable],
                           backing: .buffered, defer: false)
         window.title = "Retouch"
+        window.appearance = NSAppearance(named: .aqua)
         window.minSize = NSSize(width: 800, height: 600)
         window.center()
         let root = NSView()
@@ -219,13 +220,15 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
             web.bottomAnchor.constraint(equalTo: root.bottomAnchor)
         ])
         web.loadHTMLString("""
-        <!doctype html><meta name="viewport" content="width=device-width"><style>
-        body{background:#17181b;color:#e8e9eb;font:16px -apple-system;padding:12vh 10vw;line-height:1.6}
-        h1{font-size:40px;letter-spacing:-1px}p{color:#aaa;max-width:600px}code{color:#87c8ff;background:#252830;padding:8px 12px;border-radius:6px}
-        </style><h1>Your site. Your design canvas.</h1>
-        <p>Choose Open project above, select your project folder, and choose HTML files or enter your usual startup command. Retouch opens the editor when it is ready.</p>
-        <p><code>npm run dev</code></p>
-        <p>Already using Make or a shell script? Enter that same command. For a project already running with Retouch, enter its editor URL above.</p>
+        <!doctype html><html lang="en"><meta name="viewport" content="width=device-width"><meta name="color-scheme" content="light"><style>
+        *{box-sizing:border-box}body{margin:0;background:#f5f5f5;color:#1e1e1e;font:13px/1.6 -apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased}
+        main{max-width:800px;margin:0 auto;padding:clamp(28px,7vh,72px) 32px}header{margin-bottom:28px}.brand{font-size:12px;font-weight:600;color:#757575}h1{font-size:32px;line-height:1.2;letter-spacing:-1px;margin:12px 0}p{margin:8px 0;color:#757575}
+        .paths{display:grid;grid-template-columns:1fr 1fr;gap:16px}article{background:white;border:1px solid #e6e6e6;border-radius:12px;padding:24px;min-width:0}h2{font-size:14px;font-weight:600;margin:0 0 12px}strong{color:#1e1e1e;font-weight:600}code{display:block;margin-top:18px;background:#f5f5f5;border-radius:5px;padding:8px 12px;color:#1e1e1e;font:12px/1.6 "SF Mono",Menlo,monospace;overflow-wrap:anywhere}.note{margin-top:20px;font-size:12px}
+        @media(max-width:600px){main{padding:24px}.paths{grid-template-columns:1fr}h1{font-size:28px}}
+        </style><main><header><div class="brand">Retouch</div><h1>Open your design canvas</h1><p>Use your existing site as the starting point.</p></header>
+        <section class="paths" aria-label="Ways to open your site"><article><h2>Open a project</h2><p>Choose <strong>Open project…</strong> above and select your project folder.</p><p>Open HTML files directly, or enter the command you already use to start your site.</p><code>npm run dev</code></article>
+        <article><h2>Connect to an editor</h2><p>Already running Retouch? Paste its editor URL into the address field above, then choose <strong>Open editor</strong>.</p><p>Use the <strong>/rt</strong> URL shown in your terminal.</p></article></section>
+        <p class="note">Make, shell scripts, and other startup commands work too. Keep using your project's existing command.</p></main></html>
         """, baseURL: nil)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

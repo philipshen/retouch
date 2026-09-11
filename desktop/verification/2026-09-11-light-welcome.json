@@ -1,0 +1,18 @@
+{
+  "sourceCommit": "26781f9362a9c76afb44ed9484c0090f90813cc7",
+  "sourceTreeDirty": true,
+  "sourceFiles": 175,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-welcome-light-20260911/Retouch-0.1.0-mac.zip",
+  "sha256": "d84dd8cfbb86763e024b7fe0ab0a2a73bf121cdd0e6c5b0a83985ff84431c01d",
+  "nativeSourceSha256": "817a5bfb37d33ad12f8b3daa4eb210cce9c03c8d56c4bab7765b9c6a1bab8dd4",
+  "welcomeHTML": "Extracted exact Swift HTML verified in Chromium/WebKit at 1440x900 and 800x500, with dark preferred color scheme. Light backgrounds, headings and viewport bounds passed.",
+  "screenshot": "/private/tmp/retouch-native-welcome-light.png",
+  "nativeLaunch": "Not attempted; prior cgWindowNotFound result remains unresolved",
+  "nativeAppearance": "NSWindow Aqua appearance compiled but not verified in native UI",
+  "signing": "Ad hoc diagnostic build, not Developer ID/notarized distribution"
+}
