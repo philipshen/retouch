@@ -43,7 +43,7 @@
     for(const [index,card] of cards.entries()){card.up.disabled=index===0||removals>0;card.down.disabled=index===cards.length-1||removals>0;card.edit.setAttribute('aria-pressed',String(size.width===card.width&&size.height===card.height));card.scopeButton.disabled=!selected;}
     layoutPreviews();
   }
-  let cards=[],selected=null,selectedIds=[],route=null,open=false,timer=null,scope={prefix:'',label:'All sizes · base',condition:null},scopeSummary;
+  let cards=[],selected=null,selectedIds=[],selectionDetails=new Map(),route=null,open=false,timer=null,scope={prefix:'',label:'All sizes · base',condition:null},scopeSummary;
   function path(){try{const loc=main.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
   function scrollViewport(w,dx,dy){
     const d=w.document,html=w.getComputedStyle(d.documentElement),body=d.body&&w.getComputedStyle(d.body);
@@ -73,6 +73,14 @@
     for(const card of cards){card.message.textContent='Loading…';card.frame.src=next;}
   }
   function selectedNodes(d){const ids=new Set(selectedIds);return ids.size?[...d.querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>ids.has(el.getAttribute('data-rt'))||ids.has(el.getAttribute('data-rt-i'))):[];}
+  function selectedGroups(d){
+    const nodes=selectedNodes(d),groups=[];
+    for(const id of selectedIds){
+      const info=selectionDetails.get(id),matches=nodes.filter(el=>(info?.kind==='instance'?el.getAttribute('data-rt-i')===id:el.getAttribute('data-rt')===id||el.getAttribute('data-rt-i')===id)&&Object.entries(info?.renderScope||{}).every(([name,value])=>el.getAttribute(name)===value));
+      groups.push(...(info?.kind==='instance'?RetouchComponentInstances.group(matches,info.rootGroups):matches.map(el=>({element:el,elements:[el]}))));
+    }
+    return groups;
+  }
   function rendered(el){const rect=el.getBoundingClientRect(),css=el.ownerDocument.defaultView.getComputedStyle(el);return rect.width>0&&rect.height>0&&!['hidden','collapse'].includes(css.visibility);}
   function visibleBounds(el,width,height){
     const w=el.ownerDocument.defaultView,raw=el.getBoundingClientRect();
@@ -115,15 +123,15 @@
         const d=frame.contentDocument;card.attachMarquee?.();if(!d?.body||d.URL==='about:blank'){updateProperty(reveal,'disabled',true);updateScope(scopeMessage,'unknown','Checking style scope…');continue;}
         const applies=!scope.prefix?true:window.RetouchResponsive.matches(scope,d.defaultView);
         updateScope(scopeMessage,applies===null?'unknown':String(applies),!scope.prefix?'Base styles apply here; breakpoint overrides may take precedence.':applies===null?'Scope coverage is unavailable for this breakpoint.':applies?'Current breakpoint applies here; other overrides may take precedence.':'Current breakpoint does not apply in this preview.');
-        const nodes=selectedNodes(d);
-        const count=nodes.filter(rendered).length;updateProperty(reveal,'disabled',!count);updateProperty(reveal,'textContent',count>1?'Show next instance':'Show selection');updateProperty(reveal,'title',count>1?'Reveal the next rendered instance of this layer.':'Scroll this comparison to the selected layer.');
+        const groups=selectedGroups(d),nodes=groups.flatMap(group=>group.elements);
+        const count=groups.filter(group=>group.elements.some(rendered)).length;updateProperty(reveal,'disabled',!count);updateProperty(reveal,'textContent',count>1?'Show next instance':'Show selection');updateProperty(reveal,'title',count>1?'Reveal the next rendered instance of this layer.':'Scroll this comparison to the selected layer.');
         let visible=0,offscreen=0;
-        for(const el of nodes){
-          const rect=el.getBoundingClientRect(),css=d.defaultView.getComputedStyle(el);
-          if(!rect.width||!rect.height||['hidden','collapse'].includes(css.visibility))continue;
-          const bounds=visibleBounds(el,width,height);
-          if(!bounds){offscreen++;continue;}visible++;
-          boxes.push({left:bounds.left*scale,top:bounds.top*scale,width:bounds.width*scale,height:bounds.height*scale});
+        for(const group of groups){
+          const roots=group.elements.filter(rendered);if(!roots.length)continue;
+          const rects=roots.map(el=>visibleBounds(el,width,height)).filter(Boolean);
+          if(!rects.length){offscreen++;continue;}visible++;
+          const left=Math.min(...rects.map(rect=>rect.left)),top=Math.min(...rects.map(rect=>rect.top));
+          boxes.push({left:left*scale,top:top*scale,width:(Math.max(...rects.map(rect=>rect.left+rect.width))-left)*scale,height:(Math.max(...rects.map(rect=>rect.top+rect.height))-top)*scale});
         }
         updateProperty(message,'textContent',selected?(visible?(selectedIds.length>1?'Selection · ':'Selected layer · ')+visible+(visible===1?' instance':' instances'):offscreen?'Selected layer is outside this viewport':nodes.length?'Selected layer is hidden':'Selected layer is absent on this screen'):'Same page · independent viewport');
       }catch{boxes.length=0;updateProperty(reveal,'disabled',true);updateScope(scopeMessage,'unknown','Scope coverage is unavailable for this page.');updateProperty(message,'textContent','Preview unavailable for this page');}finally{updateOutlines(card,boxes);}
@@ -281,7 +289,7 @@
         try{
           const d=frame.contentDocument,loc=frame.contentWindow.location;
           if(!selected||!d?.body||loc.origin!==location.origin||loc.pathname+loc.search+loc.hash!==path())return;
-          const nodes=selectedNodes(d).filter(rendered);if(!nodes.length)return;
+          const nodes=selectedGroups(d).map(group=>group.elements.find(rendered)).filter(Boolean);if(!nodes.length)return;
           if(revealSelection!==selected){revealSelection=selected;revealIndex=-1;}
           revealIndex=(revealIndex+1)%nodes.length;
           // Native scrolling reveals the layer through nested scroll containers.
@@ -451,8 +459,9 @@
     clearTimeout(timer);open=!open;toggle.setAttribute('aria-pressed',String(open));rail.hidden=!open;
     if(open){mount();sync(true);paint();}else{toggle.disabled=true;updateControls();try{await dispose();}finally{toggle.disabled=false;updateControls();}}
   };
-  window.addEventListener('retouch:selection',e=>{selected=e.detail;selectedIds=selected?[selected]:[];updateControls();});
+  window.addEventListener('retouch:selection',e=>{selected=e.detail;selectedIds=selected?[selected]:[];selectionDetails.clear();updateControls();});
   window.addEventListener('retouch:selection-set',e=>{selectedIds=e.detail;});
+  window.addEventListener('retouch:selection-details',e=>{selectionDetails=new Map(e.detail.map(info=>[info.id,info]));});
   window.addEventListener('retouch:style-scope',e=>{scope=e.detail;if(scopeSummary)scopeSummary.textContent='Style scope: '+scope.label;});
   window.addEventListener('retouch:route',()=>sync());
   main.addEventListener('load',()=>sync(true));

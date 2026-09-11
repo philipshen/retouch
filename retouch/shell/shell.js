@@ -1035,6 +1035,7 @@ function renderPanel() {
 function renderPanelContents() {
   window.dispatchEvent(new CustomEvent('retouch:selection',{detail:activeId()}));
   window.dispatchEvent(new CustomEvent('retouch:selection-set',{detail:(sel.multiple||[sel.info]).map(info=>info.id)}));
+  window.dispatchEvent(new CustomEvent('retouch:selection-details',{detail:(sel.multiple||[sel.info]).map(({id,kind,rootGroups,renderScope})=>({id,kind,rootGroups,renderScope}))}));
   const info = sel.info;
   const style = scopedInfo(info);
   panelEmpty.hidden = true;

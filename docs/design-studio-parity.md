@@ -10673,3 +10673,11 @@ The component browser fixture checks actual overlay coordinates against the unio
 This verifies the main canvas for the fixture's two-root components; repeated occurrence identity, comparison previews, mixed selections and universal framework identity remain separate incomplete work. Comparison painting and gesture handoff live in `retouch/shell/compare.js`; continue there for cross-screen component consistency. No desktop rebuild or signing action occurred.
 
 Chromium React host-selection regression also passes (`/private/tmp/retouch-component-outlines-hosts.log`), retaining existing shared styling, responsive scopes and selection history.
+
+### Component grouping across comparison screens (2026-09-11)
+
+Selection metadata now carries usage kind, root patterns and render scope into comparison previews. Comparison painting groups a fragment's roots before computing the union of their individually clipped visible bounds. Instance counts and reveal cycling likewise use component groups rather than counting each fragment root. Host-only selection remains per-host. Metadata resets with selection identity and is refreshed when the inspector publishes a selection.
+
+The component browser fixture opens Phone and Tablet previews and checks exactly two scaled component boxes against the union of each fragment's DOM roots. Shared property edits and Undo verify the compiled values on the main canvas and both previews, along with exact source restoration and grouped outlines. Initial test runs looked for iframes inside comparison cards, but the implementation mounts iframe surfaces as siblings; the test now resolves preview frames by title. All 827 unit tests pass. Chromium's existing React comparison marquee/selection regression also passes cross-size handoff, shared responsive styles, compiled CSS and Undo/Redo.
+
+Evidence: `/private/tmp/retouch-component-comparison-{chromium,webkit}.log`, `/private/tmp/retouch-component-comparison-units.log`, `/private/tmp/retouch-component-comparison-hosts.log`. Main-canvas component range/marquee tests remain in the same fixture. Dedicated component reveal-cycling and overflow/clipping tests remain to be added; the browser geometry fixture is unclipped. Comparison component marquee, repeated occurrence identity and mixed selections remain unfinished. No desktop rebuild or signing action occurred.
