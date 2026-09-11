@@ -12,6 +12,7 @@ const engine=process.env.RT_E2E_BROWSER||'chromium';
   const settled=()=>page.waitForFunction(()=>!panelTasks&&!sourceRequests&&!undoBusy);
   const wait=async fn=>{for(let i=0;i<200;i++){try{if(await fn())return;}catch(error){if(!/Execution context was destroyed/.test(error.message))throw error;}await page.waitForTimeout(50);}throw Error('Timed out: '+await page.locator('#toasts').textContent());};
   await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await page.getByRole('treeitem',{name:'section · layout',exact:true}).click();await settled();await page.getByLabel('Style screen scope',{exact:true}).selectOption('min-[768px]:');await settled();await page.getByText('Custom grid tracks',{exact:true}).click();
+  const standalone=await browser.newPage({javaScriptEnabled:false,viewport:{width:768,height:1024}});
   const tracks=axis=>parent.evaluate((el,axis)=>getComputedStyle(el).getPropertyValue('grid-template-'+axis).replace(/\[[^\]]*\]/g,' ').trim().split(/\s+/).map(parseFloat),axis);
   for(const axis of ['columns','rows'])for(const value of (['80px minmax(0, 1fr)','repeat(3, minmax(0, 1fr))','[content_start] 80px [rest] 1fr','auto 1fr'])){
    const before=read(),label=axis==='columns'?'Column sizes':'Row sizes',input=page.getByLabel(label,{exact:true}),reset=page.getByRole('button',{name:'Reset '+label.toLowerCase(),exact:true}),total=axis==='columns'?400:300;
@@ -19,6 +20,15 @@ const engine=process.env.RT_E2E_BROWSER||'chromium';
    await input.fill('nonsense');await input.press('Tab');await settled();assert.equal(read(),before);assert.equal(await input.evaluate(el=>el.checkValidity()),false);
    await input.fill(value);await input.press('Tab');await settled();const expected=value.startsWith('repeat')?Array(3).fill((total-20)/3):value.startsWith('auto')?[40,total-50]:[80,total-90];
    try{await wait(async()=>{const actual=await tracks(axis);return actual.length===expected.length&&actual.every((v,i)=>Math.abs(v-expected[i])<0.03);});}catch(error){console.error(JSON.stringify({axis,value,expected,actual:await tracks(axis),source:read(),validity:await input.evaluate(el=>el.validationMessage)}));throw error;}assert.equal(await input.inputValue(),value);assert.deepEqual(await tracks(axis==='columns'?'rows':'columns'),[100,100]);const edited=read();assert.notEqual(edited,before);if(process.env.RT_E2E_GRID_TRACKS_SCREENSHOT&&axis==='columns'){await input.scrollIntoViewIfNeeded();await page.locator('#panel').screenshot({path:process.env.RT_E2E_GRID_TRACKS_SCREENSHOT});}
+   // Render only the saved markup in a separate page with JavaScript disabled.
+   await standalone.setContent(edited);assert.equal(await standalone.locator('script').count(),0);
+   const standaloneTracks=()=>standalone.locator('#layout').evaluate((el,axis)=>getComputedStyle(el).getPropertyValue('grid-template-'+axis).replace(/\[[^\]]*\]/g,' ').trim().split(/\s+/).map(parseFloat),axis);
+   for(const viewportWidth of [768,767,390,1024]){
+    await standalone.setViewportSize({width:viewportWidth,height:1024});
+    const wanted=viewportWidth>=768?expected:[100,100];
+    await wait(async()=>{const actual=await standaloneTracks();return actual.length===wanted.length&&actual.every((v,i)=>Math.abs(v-wanted[i])<0.03);});
+   }
+   if(value.includes('[content_start]'))assert.match(await standalone.locator('#layout').evaluate((el,axis)=>getComputedStyle(el).getPropertyValue('grid-template-'+axis),axis),/\[content_start\]/);
    await reset.click();await settled();assert.deepEqual(await tracks(axis),[100,100]);assert.equal(await reset.isDisabled(),true);const resetSource=read();
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),edited);
    await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();assert.equal(read(),resetSource);
@@ -27,6 +37,6 @@ const engine=process.env.RT_E2E_BROWSER||'chromium';
    await page.getByLabel('Screen size',{exact:true}).focus();await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();await wait(async()=>await input.inputValue()===value);
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),before);
   }
-  assert.equal(read(),original);assert.deepEqual(errors,[]);console.log('HTML CUSTOM GRID TRACKS VALIDATION/RENDER/RESET/RESPONSIVE/EXACT HISTORY PASS',engine);
+  assert.equal(read(),original);assert.deepEqual(errors,[]);console.log('HTML CUSTOM GRID TRACKS VALIDATION/RENDER/STATIC EXPORT/RESET/RESPONSIVE/EXACT HISTORY PASS',engine);
  }finally{if(browser)await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

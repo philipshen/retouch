@@ -702,3 +702,10 @@ Layout now exposes Custom grid tracks for grid containers, with independent colu
 HTML grid containers now expose the same Custom grid tracks disclosure with separate Column sizes/Row sizes fields, compact inline resets, validation feedback and persistent expansion. Writes use the existing responsive HTML CSS authoring path. A bounded shared browser/server parser accepts fixed/fractional tracks, auto/min-content/max-content, minmax, fit-content, named lines and numeric repeat. Existing adaptive column syntax remains supported. Expressions are limited to 2048 characters, repeat counts up to 24 and at most 128 expanded tracks; arbitrary functions/CSS variables are not newly supported.
 
 889 unit tests passed. New self-contained HTML browser workflows passed Chromium/WebKit for both axes with fixed-flex/minmax/repeat/named lines/auto, malformed input refusal, other-axis preservation, reset, phone breakpoint isolation and exact source undo/redo. Original inline authored grid values restore after reset. Logs /private/tmp/retouch-html-grid-{chromium,webkit}.log; screenshot /private/tmp/retouch-html-grid-inspector.png visually inspected. Source postdates packaged archive 4dba5a3. Full Figma parity remains incomplete.
+
+
+### Standalone HTML grid export verification (2026-09-11)
+
+The custom HTML grid browser workflow now renders each saved markup version in a separate page with JavaScript disabled and no editor scripts. Both axes are checked at 768, 767, 390 and 1024 viewport pixels, covering the exact breakpoint boundary, original narrow-screen layout and custom larger-screen tracks. Named grid lines must survive in the computed standalone template.
+
+Chromium/WebKit passed all static-export checks together with fixed-flex/minmax/repeat/named lines/auto editing, invalid input refusal, axis preservation, resets and exact source history. Logs /private/tmp/retouch-html-grid-export-{chromium,webkit}.log. This verifies self-contained saved HTML/CSS for these grid workflows; arbitrary site/framework export remains incomplete. No runtime source changes or new package in this turn. Full Figma parity remains incomplete.
