@@ -13,7 +13,6 @@ function context(resolved){
   return validateTarget(target);
  }
  function validateTarget(target){
-  require('./component-move-keys.cjs')(target,[source]);
   if(target.node.start>=source.node.start&&target.node.end<=source.node.end)throw Error('A component cannot contain itself.');
   const targetOwner=target.getFunctionParent();if(!targetOwner)throw Error('Choose a container inside a render function.');
   if(contextual&&targetOwner!==owner)throw Error('This component uses execution context that must stay in its render function.');
@@ -34,6 +33,7 @@ function plan(resolved,op){
  try{
   const ctx=context(resolved),target=ctx.destination(resolved.elements.find(el=>el.id===op.destinationId)),source=ctx.source,node=source.node;
   if(target===source.parentPath){const move=require('./move-component.cjs');return move.describe(resolved).canMoveLast?move.plan(resolved,{...op,destinationId:undefined,direction:'last'}):{ok:true,unchanged:true,hash:resolved.hash,edits:[]};}
+  const repaired=require('./component-move-keys.cjs')(resolved,op,target,[source],plan);if(repaired)return repaired;
   const chunk=resolved.source.slice(node.start,node.end),placeholder=source.listKey==='children'?'':source.parent.type==='JSXAttribute'?'{null}':'null',opening=target.node.openingElement,tag=resolved.source.slice(opening.name.start,opening.name.end);
   const removal={start:node.start,end:node.end,text:placeholder},insertion=opening.selfClosing?{start:opening.end-2,end:opening.end,text:'>\n'+chunk+'\n</'+tag+'>',offset:2}:{start:target.node.closingElement.start,end:target.node.closingElement.start,text:'\n'+chunk+'\n',offset:1},edits=[removal,insertion],ms=new MagicString(resolved.source);
   for(const edit of edits){if(edit.start===edit.end)ms.appendLeft(edit.start,edit.text);else ms.overwrite(edit.start,edit.end,edit.text);}
@@ -54,7 +54,7 @@ function planSelection(resolved,op,allowSingle=false){
   if(members.some(element=>element?.kind!=='instance'))return refuse('Select component usages from the same source file.');
   const roots=members.filter(element=>!members.some(parent=>parent!==element&&parent.node.start<element.node.start&&parent.node.end>element.node.end)).sort((a,b)=>a.node.start-b.node.start);
   const contexts=roots.map(element=>context({...resolved,elements:original,element}));let target;for(const ctx of contexts){target=positioned?ctx.siblingDestination(destination):ctx.destination(destination);}
-  require('./component-move-keys.cjs')(target,contexts.map(ctx=>ctx.source));
+  const repaired=require('./component-move-keys.cjs')(resolved,op,target,contexts.map(ctx=>ctx.source),(current,operation)=>planSelection(current,operation,allowSingle));if(repaired)return repaired;
   if(positioned)return positionedSelection(resolved,op,original,roots,contexts,destination);
   let source=resolved.source,elements=original;const identities=new Map(original.map(element=>[element.id,element.id]));
   for(const root of roots){
