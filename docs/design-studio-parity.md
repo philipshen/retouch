@@ -11325,3 +11325,10 @@ Chromium and WebKit layer-interactions workflows passed live-refresh click prese
 Selection and hover backgrounds now span each full layer row, including indentation, disclosure, type icon, name and lock. Hover no longer overrides the selected background. Component rows retain purple selection styling. Disclosure arrows use consistent vector chevrons with collapsed rotation and hidden leaf indicators.
 
 Chromium and WebKit layer-navigation workflows passed parent/child/sibling navigation, locking, collapse, filtered selection recovery, multi-selection, native input guards and unchanged source. New checks confirm full-row selected color survives hover, the name button is transparent, and leaf chevrons are hidden. The complete Chromium workspace screenshot /private/tmp/retouch-layer-row.png was visually inspected. Native archive remains at source 910447c; these changes are not packaged. Full Figma parity remains incomplete.
+
+
+### Compact HTML padding controls (2026-09-11)
+
+The HTML Layout section keeps the shared padding field visible and groups individual side controls under Individual padding, reducing the default section height while retaining existing controls and reset callbacks. Disclosure state persists across inspector renders.
+
+The complete HTML browser workflow passed Chromium and WebKit. Added checks cover uniform padding, a top-only override preserving the other sides, disclosure persistence after save, and exact source restoration through undo. The existing later edge-spacing sequence now opens the disclosure before editing. Responsive CSS, standalone export, reset, text/image editing, asset search/upload and page navigation also passed. Logs: /private/tmp/retouch-padding-{chromium,webkit}.log. Inspector screenshot /private/tmp/retouch-padding-inspector.png inspected. React spacing controls are unchanged. This source postdates archive 910447c; full Figma parity remains incomplete.
