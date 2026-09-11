@@ -18,10 +18,11 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   await page.getByLabel('Screen size',{exact:true}).focus();await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await page.getByRole('treeitem',{name:'section · layout',exact:true}).click();const mode=page.getByLabel('Arrange children',{exact:true});await mode.waitFor();await settled();await page.getByLabel('Style screen scope',{exact:true}).selectOption('md:');await settled();
   const snapshot=()=>parent.evaluate(el=>{const css=getComputedStyle(el);return ['Top','Right','Bottom','Left'].map(side=>parseFloat(css['padding'+side]));});
   const initial=logical==='rtl'?[18,12,22,16]:logical==='vertical-rl'?[12,18,16,22]:logical==='sideways-lr'?[16,22,12,18]:[12,16,12,16];assert.deepEqual(await snapshot(),initial);
+  const units=process.env.RT_E2E_PADDING_UNITS||'px',sharedValue=units==='rem'?'1.5rem':units==='%'?'3.125%':'24',edgeValue=units==='rem'?'1.875rem':units==='%'?'6.25%':'30',edgePixels=units==='%'?48:30;
   const shared=page.getByLabel('Padding',{exact:true});assert.equal(await shared.inputValue(),'');assert.equal(await shared.getAttribute('placeholder'),'Mixed');assert.equal(await page.getByLabel('Padding top',{exact:true}).isVisible(),false);
   await shared.fill('24');await shared.press('Escape');await settled();assert.equal(read(),original);assert.equal(await shared.inputValue(),'');
   await shared.fill('-1');await shared.press('Enter');await settled();assert.equal(read(),original);assert.equal(await shared.evaluate(el=>el.checkValidity()),false);await shared.press('Escape');assert.equal(await shared.evaluate(el=>el.checkValidity()),true);
-  await shared.fill('24');await shared.press('Enter');await settled();await wait(async()=>JSON.stringify(await snapshot())==='[24,24,24,24]');const uniform=read();assert.equal(await shared.inputValue(),'24');
+  await shared.fill(sharedValue);await shared.press('Enter');await settled();await wait(async()=>JSON.stringify(await snapshot())==='[24,24,24,24]');const uniform=read();assert.equal(await shared.inputValue(),sharedValue);
   await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await settled();await wait(async()=>JSON.stringify(await snapshot())==='[10,10,10,10]');
   await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();await wait(async()=>JSON.stringify(await snapshot())==='[24,24,24,24]');
   const resetAll=page.getByRole('button',{name:'Reset padding',exact:true});assert.equal(await resetAll.isEnabled(),true);await resetAll.click();await settled();await wait(async()=>JSON.stringify(await snapshot())===JSON.stringify(initial));const resetAllSource=read();assert.equal(await resetAll.isEnabled(),false);assert.ok(!resetAllSource.includes('md:[padding-left:20px]'));assert.ok(resetAllSource.includes(basePadding+' '+inheritedClasses));
@@ -36,8 +37,13 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
    const before=read(),input=page.getByLabel('Padding '+edge,{exact:true}),reset=page.getByRole('button',{name:'Reset padding '+edge,exact:true});
    assert.equal(await reset.isDisabled(),edge!=='left');
    await input.fill('45');await input.press('Escape');await settled();assert.equal(read(),before);
-   await input.fill('30');await input.press('Enter');await settled();const expected=initial.map((v,i)=>i===index?30:v);
-   await wait(async()=>JSON.stringify(await snapshot())===JSON.stringify(expected));const edited=read();assert.notEqual(edited,before);assert.ok(edited.includes(inheritedClasses));
+   await input.fill(edgeValue);await input.press('Enter');await settled();const expected=initial.map((v,i)=>i===index?edgePixels:v);
+   await wait(async()=>JSON.stringify(await snapshot())===JSON.stringify(expected));const edited=read();assert.notEqual(edited,before);assert.ok(edited.includes(inheritedClasses));assert.equal(await input.inputValue(),edgeValue);assert.ok(edited.includes('md:!p'+edge[0]+'-['+(units==='px'?'30px':edgeValue)+']'));
+   if(units!=='px'){
+    const previous=await parent.evaluate((el,units)=>{const target=units==='rem'?el.ownerDocument.documentElement:el.parentElement,old=target.style.cssText;if(units==='rem')target.style.fontSize='20px';else target.style.width='400px';return old;},units);
+    await wait(async()=>Math.abs((await snapshot())[index]-(units==='rem'?37.5:25))<0.01);assert.equal(await input.inputValue(),edgeValue);assert.equal(read(),edited,'relative padding responds without source mutation');
+    await parent.evaluate((el,{units,previous})=>{(units==='rem'?el.ownerDocument.documentElement:el.parentElement).style.cssText=previous;},{units,previous});await wait(async()=>JSON.stringify(await snapshot())===JSON.stringify(expected));
+   }
    assert.equal(await input.isVisible(),true,'individual padding disclosure survives source refresh');if(process.env.RT_E2E_PADDING_SCREENSHOT&&index===0)await page.screenshot({path:process.env.RT_E2E_PADDING_SCREENSHOT});assert.equal(await reset.isDisabled(),false);await reset.click();await settled();await wait(async()=>JSON.stringify(await snapshot())===JSON.stringify(initial));const resetSource=read();
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),edited);await wait(async()=>JSON.stringify(await snapshot())===JSON.stringify(expected));
    await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();assert.equal(read(),resetSource);

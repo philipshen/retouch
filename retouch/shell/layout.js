@@ -67,19 +67,31 @@
   function gridTrackCount(value){
     return String(value||'').replace(/\[[^\]]*\]/g,' ').trim().split(/\s+/).filter(t=>t&&!['none','subgrid','masonry'].includes(t)).length;
   }
+  function paddingValue(value){
+    if(typeof value!=='number'&&typeof value!=='string')throw Error('Enter a padding length.');
+    try{const parsed=gapValue(value);if(parsed==='normal')throw Error();return parsed;}catch{throw Error('Use nonnegative padding up to 10000, with px, %, rem, em, vw, vh or ch.');}
+  }
+  function ownPadding(classes,side,inherited='',css={}){
+    const short={top:'t',right:'r',bottom:'b',left:'l'}[side];
+    const candidates=classes.split(/\s+/).map(token=>({token,base:I.base(token)})).filter(({base})=>base&&(base.startsWith('p'+short+'-[')||base.startsWith('[padding-'+side+':')));
+    const own=candidates.find(({token})=>/^!|!$/.test(token))||candidates[0];if(!own)return null;
+    if(!/^!|!$/.test(own.token)&&paddingClasses('',side,0,classes+' '+inherited,css).startsWith('!'))return null;
+    const value=own.base.startsWith('[')?own.base.slice(('['+'padding-'+side+':').length,-1):own.base.slice(('p'+short+'-[').length,-1);
+    try{return paddingValue(value).replace(/px$/,'');}catch{return null;}
+  }
   function resetPaddingClasses(classes){
     return I.replace(classes,token=>/^p(?:[xytrblse]|b[se])?-/.test(token)||/^\[padding(?:-(?:top|right|bottom|left|(?:inline|block)(?:-(?:start|end))?))?:/.test(token),'');
   }
   function paddingClasses(classes,side,value,inherited='',{writingMode='horizontal-tb',direction='ltr'}={}){
     const short={top:'t',right:'r',bottom:'b',left:'l'}[side];
     if(!short)throw Error('Choose a padding edge.');
-    if(value!==null&&(!Number.isFinite(value)||value<0||value>10000))throw Error('Use padding from 0 to 10000 pixels.');
+    if(value!==null)value=paddingValue(value);
     const vertical=/^(vertical|sideways)-/.test(writingMode),reverseInline=(direction==='rtl')!==(writingMode==='sideways-lr');
     const inlineStart=vertical?(reverseInline?'bottom':'top'):(reverseInline?'right':'left'),blockStart=vertical?(writingMode.endsWith('-rl')?'right':'left'):'top',opposite={top:'bottom',bottom:'top',left:'right',right:'left'};
     const logical=Object.entries({'inline-start':inlineStart,'inline-end':opposite[inlineStart],'block-start':blockStart,'block-end':opposite[blockStart]}).find(([,edge])=>edge===side)[0];
     const logicalShort={'inline-start':'s','inline-end':'e','block-start':'bs','block-end':'be'}[logical],axis=logical.startsWith('inline')?'x':'y',family=logical.split('-')[0];
     const matches=t=>t.startsWith('p'+short+'-')||t.startsWith('[padding-'+side+':')||t.startsWith('p'+logicalShort+'-')||t.startsWith('[padding-'+logical+':');
-    let addition=value===null?'':'p'+short+'-['+value+'px]';
+    let addition=value===null?'':'p'+short+'-['+value+']';
     if(addition&&[...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>{
       const base=I.base(token)||'';return /^!|!$/.test(token)&&(matches(base)||base.startsWith('p-')||base.startsWith('p'+axis+'-')||base.startsWith('[padding:')||base.startsWith('[padding-'+family+':'));
     }))addition='!'+addition;
@@ -260,17 +272,17 @@
       sec.append(custom);I.note(custom,'Choose start and end lines, such as 2 / 4 or content_start / content_end.');
       I.note(sec,'Choosing a span replaces line placement on that axis. Reset removes this scope’s axis override, retaining any shared grid area.');
     }
-    const paddingEdges=['top','right','bottom','left'],paddingValues=paddingEdges.map(edge=>parseFloat(css.getPropertyValue('padding-'+edge))||0);
+    const paddingEdges=['top','right','bottom','left'],paddingValues=paddingEdges.map(edge=>ownPadding(classes,edge,inherited,css)??css.getPropertyValue('padding-'+edge).replace(/px$/,''));
     function paddingInput(label,value,change){
-      const input=numeric(label,value,0,10000,change);if(value===null){input.value='';input.placeholder='Mixed';}
-      const initial=input.value,commit=input.onchange;input.onchange=()=>{if(input.value!==initial)commit();};
-      input.title='Enter saves. Escape cancels.';input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};return input;
+      const input=document.createElement('input');input.type='text';input.value=value??'';input.placeholder=value===null?'Mixed':'0';I.field(sec,label,input);
+      const initial=input.value;input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(input.value===initial||input.value.trim()==='')return;try{change(paddingValue(input.value));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+      input.title='Pixels by default; also accepts %, rem, em, vw, vh or ch. Enter saves. Escape cancels.';input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};return input;
     }
     paddingInput('Padding',paddingValues.every(value=>value===paddingValues[0])?paddingValues[0]:null,value=>save(paddingEdges.reduce((next,edge)=>paddingClasses(next,edge,value,inherited,css),classes)));
     const resetPadding=I.button('Reset padding',()=>save(resetPaddingClasses(classes)));resetPadding.disabled=resetPaddingClasses(classes)===classes;resetPadding.title='Remove padding overrides at this edit range';sec.append(resetPadding);
     for(const side of ['Top','Right','Bottom','Left']) {
       const edge=side.toLowerCase();
-      paddingInput('Padding '+edge,parseFloat(css['padding'+side])||0,v=>save(paddingClasses(classes,edge,v,inherited,css)));
+      paddingInput('Padding '+edge,paddingValues[paddingEdges.indexOf(edge)],v=>save(paddingClasses(classes,edge,v,inherited,css)));
       const reset=I.button('Reset padding '+edge,()=>save(paddingClasses(classes,edge,null,'',css)));
       reset.disabled=paddingClasses(classes,edge,null,'',css)===classes;sec.append(reset);
     }
@@ -310,6 +322,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

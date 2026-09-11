@@ -169,7 +169,7 @@ test('padding edges preserve shorthands and other edges with scoped important pr
  assert.equal(L.paddingClasses('','top',30,'!px-4 !pb-2'),'pt-[30px]');
  assert.equal(L.paddingClasses('!pl-4 [padding-left:8px] p-2 pr-3','left',null),'p-2 pr-3');
  assert.equal(L.paddingClasses('','right',0),'pr-[0px]');
- for(const value of [-1,10001,Infinity,NaN,'20'])assert.throws(()=>L.paddingClasses('','left',value));
+ for(const value of [-1,10001,Infinity,NaN,'normal','auto','-1rem','1px;display:none',{},true])assert.throws(()=>L.paddingClasses('','left',value));
  assert.throws(()=>L.paddingClasses('','wrong',20));
 });
 
@@ -294,4 +294,17 @@ test('physical padding edits map logical priority and owned edges through writin
  assert.equal(L.paddingClasses('','bottom',30,'!ps-4',{writingMode:'sideways-lr'}),'!pb-[30px]');
  assert.equal(L.paddingClasses('','top',30,'!ps-4',{writingMode:'sideways-lr',direction:'rtl'}),'!pt-[30px]');
  assert.equal(L.paddingClasses('![padding-block-end:12px] [padding-inline-start:8px]','left',30,'',vertical),'[padding-inline-start:8px] !pl-[30px]');
+});
+
+
+test('padding retains authored relative units without displaying masked overrides',()=>{
+ for(const value of ['2rem','5%','1.5em','2vw','3vh','4ch'])assert.equal(L.paddingClasses('','left',value),'pl-['+value+']');
+ assert.equal(L.paddingClasses('','top','20'),'pt-[20px]');
+ assert.equal(L.ownPadding('!pl-[2rem]','left','!p-4'),'2rem');
+ assert.equal(L.ownPadding('[padding-top:5%]','top'),'5%');
+ assert.equal(L.ownPadding('pl-[20px]','left','!p-4'),null);
+ assert.equal(L.ownPadding('pl-[20px] !px-4','left'),null);
+ assert.equal(L.ownPadding('pt-[20px]','top','!ps-4',{writingMode:'vertical-rl'}),null);
+ assert.equal(L.ownPadding('pl-[2rem] md:pl-[4rem]','left'),'2rem');
+ assert.equal(L.ownPadding('pl-[var(--padding)]','left'),null);
 });
