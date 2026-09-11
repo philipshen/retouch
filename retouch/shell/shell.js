@@ -906,7 +906,7 @@ function paintLoop() {
 }
 
 function syncLayerSelection() {
-  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id)}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
+  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent)}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
 }
 
 function inTextScope(el, info) {
@@ -1546,6 +1546,14 @@ async function deleteInstance(id,context){
   const removedSourceIds=result.deletedComponent.removedSourceIds||[id],deletedLocks=layerLocks.removeSourceIds(removedSourceIds);
   editorHistory.record({type:'deleteComponent',id,parentId:result.deletedComponent.parentId,removedSourceIds,deletedLocks,undoId:result.undoId});
   await refreshDeletedComponent(id,result.deletedComponent.parentId);clearSelection();toast('Component usage deleted; definition remains available','ok');
+ }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
+}
+async function duplicateComponentSelection(){
+ const infos=sel.multiple,ids=infos.map(info=>info.id);busyPanel(true);
+ try{
+  const result=await api('POST','/rt/__api/op',{type:'duplicateComponentSelection',id:ids[0],ids,fileHash:infos[0].hash});if(!result?.ok)throw Error(result?.reason||'Could not duplicate the selected components.');
+  editorHistory.record({type:'duplicateComponentSelection',id:ids[0],selectionBefore:ids,selectionAfter:result.selectionIds,sourceIdMap:result.sourceIdMap,undoId:result.undoId});
+  layerLocks.remap(result.sourceIdMap);await refreshComponentSelection(result.selectionIds);toast(result.rootCount+' components duplicated','ok');
  }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
 }
 async function duplicateInstance(id,context) {
@@ -2395,6 +2403,7 @@ async function restoreHistory(direction,op) {
     if(op.deletedLocks&&direction==='undo'){const restored=layerLocks.restoreMany(op.deletedLocks,'undo');if(!restored.ok)toast(restored.reason,'err');}
     if(op.type==='renameComponent'){await refreshSwappedComponent(op.id,null);await selectInsertedComponent(op.id,null);layers.refresh();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='deleteComponent'){if(direction==='undo'){await refreshSwappedComponent(op.id,null);await selectInsertedComponent(op.id,op.parentId);}else{await refreshDeletedComponent(op.id,op.parentId);clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='duplicateComponentSelection'){await refreshComponentSelection(direction==='undo'?op.selectionBefore:op.selectionAfter);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='duplicateComponent'){const id=direction==='redo'?op.instanceCopyId:op.instanceOriginalId;await refreshSwappedComponent(id,null);await selectInsertedComponent(id,null);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
@@ -2750,7 +2759,7 @@ async function structureSelection(action,extra={}){
 }
 async function structureAction(action) {
   if(!sel || panelTasks || undoBusy || sourceRequests)return;
-  if(sel.info.kind==='instance'&&sel.multiple?.length>1)return toast('Choose one component for this structural edit.','err');
+  if(sel.info.kind==='instance'&&sel.multiple?.length>1){if(action==='duplicateElement')return duplicateComponentSelection();return toast('Choose one component for this structural edit.','err');}
   if(['frameSelection','removeFrame'].includes(action)){await commitInlineEdit();if(sel)return structureSelection(action);return;}
   if(sel.multiple?.length>1){if(action==='reparentElement')return chooseLayerParent(sel.info);if(['duplicateElement','deleteElement'].includes(action))return structureSelection(action);return toast('Choose one layer for this structural edit.','err');}
   await commitInlineEdit();

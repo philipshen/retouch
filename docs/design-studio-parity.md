@@ -10709,3 +10709,13 @@ Chromium and WebKit verify numeric and multiline draft cancellation with no oper
 This covers the shared primitive inspector, not richer component contracts, variants, slots, arbitrary expression authoring or complete Figma parity. No desktop rebuild or signing action occurred.
 
 The Chromium component selection regression also passes (`/private/tmp/retouch-component-keyboard-regression.log`), including range/marquee, cross-screen component selection, grouped outlines and shared text history.
+
+### Atomic selected-component duplication (2026-09-11)
+
+`duplicateComponentSelection` now plans duplication of 2–100 selected usages in one source file. Selected descendants are normalized beneath selected ancestors so a subtree is copied once. The planner applies the existing usage duplication rules to virtual source snapshots, composes identity maps across insertions, regenerates explicit React keys for copies, and returns final copy IDs. Original usages, unselected siblings and shared definitions remain in place. Each selected root is copied immediately after its original usage, rather than moving all copies to one parent. Imported terminal definitions are retained as read-only transaction dependencies; full re-export/config/missing-resolution-path guarding remains a separate limitation of this resolver path.
+
+Layers exposes Duplicate components and Command/Ctrl+D for groups. The transaction selects the copies, remaps layer-lock identities, and records one client history entry. Undo restores exact source and the original selection; Redo restores the copies. Four new unit tests cover composed original/copy identity, one reversible source snapshot, keys, unsafe members and stale files, selected ancestor normalization, wrapped keyed usages, and changed imported definitions. All 831 unit tests pass.
+
+Chromium and WebKit verify the actual button and keyboard paths against the exported fragment-component fixture: two usages duplicate, the copies become selected, Undo/Redo restore exact source and selection, the copies can be duplicated again, and successive Undo operations return to the original file. Existing shared property, canvas/range/marquee and comparison checks pass in the same runs. An initial direct-API Chromium test timed out waiting for HMR without an explicit editor refresh; the final UI path uses the existing compiler-revision-aware refresh before completing.
+
+Evidence: `/private/tmp/retouch-component-duplicate-ui-{chromium,webkit}.log`, `/private/tmp/retouch-component-duplicate-units.log`. Group delete/reparent, cross-file duplication, semantic repeated-occurrence identity, full resolver dependency guarding and universal framework behavior remain incomplete. No desktop rebuild or signing action occurred.
