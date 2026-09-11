@@ -406,20 +406,25 @@ details.advanced > summary:hover { color: var(--ink); }
 .shared-inspector-group { margin-top: 10px; }
 .shared-inspector-group-body { padding: 0 12px 12px; min-width: 0; }
 .shared-inspector-group-body > .inspector-field:first-child { margin-top: 0; }
-.component-library { margin:auto;width:min(800px,92vw);max-height:88vh;padding:20px;border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink); }
-.component-library::backdrop { background:#0009; }
-.component-library header,.component-library-tools,.component-library-actions { display:flex;align-items:center;gap:10px; }
+.component-library { margin:auto;width:min(720px,calc(100vw - 24px));max-height:calc(100dvh - 32px);padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);box-shadow:0 8px 32px #0002;font:11px var(--font); }
+.component-library[open] { display:flex;flex-direction:column;overflow:auto; }
+.component-library::backdrop { background:#0002; }
+.component-library header,.component-library-tools,.component-library-actions { display:flex;align-items:center;gap:8px; }
+.component-library header,.component-library-tools { flex-shrink:0; }
 .component-library header { justify-content:space-between; }
-.component-library h2 { font-size:20px;color:var(--instance); }
-.component-library>p { margin:12px 0;color:var(--muted);font-size:12px; }
-.component-library-tools input { flex:1;min-width:0;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink); }
-.component-library-list { list-style:none;padding:0;margin:0;display:grid;gap:10px; }
-.component-library-list li { border:1px solid var(--line);border-radius:8px;padding:12px;min-width:0; }
-.component-library-list h3 { margin:0 0 6px;font-size:14px; }
-.component-library-list p { margin:6px 0;font-size:12px;overflow-wrap:anywhere; }
-.component-library-actions { flex-wrap:wrap;margin-top:10px; }
-.component-library-actions select { max-width:100%;min-width:0; }
-.component-library-actions select { padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:12px var(--font); }
+.component-library h2 { font-size:13px;font-weight:600;color:var(--ink); }
+.component-library button { font:11px var(--font);padding:6px 8px;border:0;background:var(--bg);border-radius:4px; }
+.component-library header button { background:transparent; }
+.component-library>p { margin:8px 0;color:var(--muted);font-size:11px;flex-shrink:0; }
+.component-library-tools input { flex:1;min-width:0;height:30px;padding:6px 8px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink);font:11px var(--font); }
+.component-library-list { list-style:none;padding:0;margin:0;display:grid;gap:0;min-height:0;overflow:auto;overscroll-behavior:contain;border:1px solid var(--line);border-radius:5px; }
+.component-library-list li { border-bottom:1px solid var(--line);padding:12px;min-width:0; }
+.component-library-list li:last-child { border-bottom:0; }
+.component-library-list h3 { margin:0 0 6px;font-size:12px;font-weight:600; }
+.component-library-list h3::before { content:'◇';color:var(--instance);margin-right:6px; }
+.component-library-list p { margin:6px 0;font-size:11px;overflow-wrap:anywhere; }
+.component-library-actions { flex-wrap:wrap;margin-top:8px; }
+.component-library-actions select { max-width:100%;min-width:0;padding:6px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink);font:11px var(--font); }
 .component-workspace.component-source-only { display:block;overflow:auto; }
 .component-source-only .component-canvas { margin-bottom:18px; }
 .component-insert { width:min(540px,92vw); }
