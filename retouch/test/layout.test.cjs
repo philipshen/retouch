@@ -211,3 +211,11 @@ test('grid row count replaces row templates and preserves column tracks',()=>{
  assert.equal(L.gridTrackCount('none'),0);
  assert.equal(L.gridTrackCount('subgrid [first] [last]'),0);
 });
+
+
+test('grid item flow replaces active declarations and respects inherited grid priority',()=>{
+ assert.equal(L.arrangementClasses('grid-flow-col [grid-auto-flow:dense] grid-cols-3','flow','row-dense','![grid:auto-flow/1fr]'),'grid-cols-3 !grid-flow-row-dense');
+ assert.equal(L.arrangementClasses('','flow','col','![grid-auto-flow:row]'),'!grid-flow-col');
+ assert.equal(L.arrangementClasses('','flow','row','!grid-cols-3'),'grid-flow-row');
+ assert.throws(()=>L.arrangementClasses('','flow','invalid'));
+});

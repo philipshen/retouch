@@ -11,9 +11,10 @@
     return I.replace(classes,matches,addition);
   }
   function arrangementClasses(classes,property,value,inherited=''){
-    const options={wrap:['nowrap','wrap','wrap-reverse'],align:['start','center','end','stretch','baseline'],justify:['start','center','end','between','around','evenly']};
+    const options={flow:['row','col','row-dense','col-dense'],wrap:['nowrap','wrap','wrap-reverse'],align:['start','center','end','stretch','baseline'],justify:['start','center','end','between','around','evenly']};
     if(['columns','rows'].includes(property)?!Number.isInteger(value)||value<1||value>24:!options[property]?.includes(value))throw Error('Unknown arrangement value');
     const rules={
+      flow:{match:t=>/^grid-flow-|^\[grid-auto-flow:/.test(t),shorthand:t=>/^\[grid:/.test(t),addition:'grid-flow-'+value},
       wrap:{match:t=>/^flex-(wrap|wrap-reverse|nowrap)$|^\[flex-wrap:/.test(t),shorthand:t=>/^\[flex-flow:/.test(t),addition:'flex-'+value},
       align:{match:t=>/^items-|^\[align-items:/.test(t),shorthand:t=>/^place-items-|^\[place-items:/.test(t),addition:'items-'+value},
       justify:{match:t=>/^justify-(?!items-|self-)|^\[justify-content:/.test(t),shorthand:t=>/^place-content-|^\[place-content:/.test(t),addition:'justify-'+value},
@@ -137,6 +138,9 @@
           const field=numeric(label,gridTrackCount(computed)||1,1,24,v=>save(arrangementClasses(classes,property,v,inherited)));field.step='1';
         }
         I.note(sec,'Counts create equal tracks. Content may create additional implicit tracks.');
+        const flow=css.gridAutoFlow==='dense'?'row-dense':css.gridAutoFlow.replace('column','col').replace(/\s+/g,'-');
+        I.select(sec,'Place grid items',[['row','Across rows'],['col','Down columns'],['row-dense','Across rows · fill gaps'],['col-dense','Down columns · fill gaps']],flow,v=>save(arrangementClasses(classes,'flow',v,inherited)));
+        I.note(sec,'Fill gaps can move later items into earlier empty spaces.');
       } else {
         I.select(sec,'Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>save(arrangementClasses(classes,'wrap',v,inherited)));
       }

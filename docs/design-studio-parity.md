@@ -11000,3 +11000,10 @@ Eight browser workflows passed against the runtime inside the app: layout modes/
 The grid inspector now exposes Rows alongside Columns. Both use the rendered track count, excluding named-line labels, and create equal tracks through scoped utilities. Row writes replace active arbitrary row templates and respect inherited important row/grid templates without changing column templates. The inspector explains that content can create additional implicit tracks.
 
 879 unit tests pass, including row priority/validation and named-line count parsing. Chromium/WebKit verify Rows and Columns each produce three computed tracks despite inherited important templates, preserve the opposite template, show the new count and pass exact Undo/Redo. Existing layout-mode and Phone checks pass. Evidence: `/private/tmp/retouch-grid-rows-{chromium,webkit}.log` and `/private/tmp/retouch-grid-rows-units.log`. Custom track sizing, subgrid authoring, full Figma parity and trusted macOS distribution remain unfinished. The latest desktop package predates this change.
+
+
+## Grid item flow and gap filling
+
+Grid containers now expose Place grid items with Across rows, Down columns and gap-filling variants. Writes replace active flow utilities/arbitrary properties and respect relevant inherited important grid/flow declarations. The UI explains that filling gaps may move later items into earlier empty spaces and normalizes the computed `dense` form to row gap filling.
+
+880 unit tests pass. Chromium/WebKit verify all four modes with measured positions in a grid containing holes, inherited important flow, Phone isolation and exact source Undo/Redo. Test assertions wait for responsive rendering and handle the browser's `dense` serialization (confirmed by a direct Chromium probe); initial premature/exact-serialization assertions were corrected. Evidence: `/private/tmp/retouch-grid-flow-{chromium,webkit}.log` and `/private/tmp/retouch-grid-flow-units.log`. Full Figma parity, general custom-track authoring and trusted macOS distribution remain unfinished; the desktop package predates this change.
