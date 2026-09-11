@@ -20,10 +20,10 @@
   }
   function gapClasses(classes,axis,value,writingMode){
     if(!['width','height'].includes(axis))throw Error('Choose a horizontal or vertical gap.');
-    value=gapValue(value);
+    if(value!==null)value=gapValue(value);
     const inline=layoutAxes({writingMode}).inline===axis,kind=inline?'x':'y',property=inline?'column-gap':'row-gap';
-    let addition='gap-'+kind+'-['+value+']';
-    if(classes.split(/\s+/).some(token=>/^!|!$/.test(token)&&/^(?:gap-(?![xy]-)|\[gap:)/.test(I.base(token)||'')))addition='!'+addition;
+    let addition=value===null?'':'gap-'+kind+'-['+value+']';
+    if(addition&&classes.split(/\s+/).some(token=>/^!|!$/.test(token)&&/^(?:gap-(?![xy]-)|\[gap:)/.test(I.base(token)||'')))addition='!'+addition;
     return I.replace(classes,token=>token.startsWith('gap-'+kind+'-')||token.startsWith('['+property+':'),addition);
   }
   function sizeClasses(classes,axis,mode,value,parent={}) {
@@ -105,6 +105,8 @@
         input.oninput=()=>input.setCustomValidity('');
         input.onchange=()=>{try{save(gapClasses(classes,axis,input.value,css.writingMode));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
         I.field(sec,label,input);
+        const reset=I.button('Reset '+label.toLowerCase(),()=>save(gapClasses(classes,axis,null,css.writingMode)));
+        reset.disabled=gapClasses(classes,axis,null,css.writingMode)===classes;sec.append(reset);
       }
       I.select(sec,'Align children',[['start','Start'],['center','Center'],['end','End'],['stretch','Stretch'],['baseline','Baseline']],(css.alignItems==='normal'?'stretch':css.alignItems.replace('flex-','')),v=>save(I.replace(classes,t=>t.startsWith('items-'),'items-'+v)));
       const justify=css.justifyContent==='normal'?'start':css.justifyContent.replace('flex-','').replace('space-','');

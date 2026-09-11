@@ -116,3 +116,12 @@ test('gap values preserve supported units and reject invalid or oversized source
  assert.equal(L.gapValue(' 12.5 '),'12.5px');assert.equal(L.gapClasses('!gap-4','width','15%'),'!gap-4 !gap-x-[15%]');
  for(const value of ['',-1,Infinity,'10001px','2px hidden','calc(10% + 2px)','auto','-1%'])assert.throws(()=>L.gapValue(value));
 });
+
+test('resetting one gap preserves shorthand, opposite axis and other breakpoints',()=>{
+ const classes='!gap-4 !gap-x-[15%] [column-gap:8px] gap-y-3 md:gap-x-10';
+ assert.equal(L.gapClasses(classes,'width',null,'horizontal-tb'),'!gap-4 gap-y-3 md:gap-x-10');
+ assert.equal(L.gapClasses(classes,'height',null,'vertical-lr'),'!gap-4 gap-y-3 md:gap-x-10');
+ assert.equal(L.gapClasses('!gap-4 gap-y-3','width',null,'horizontal-tb'),'!gap-4 gap-y-3');
+ const source='gap-4 md:!gap-[10%] md:!gap-x-[15%] md:gap-y-8 lg:gap-10';
+ assert.equal(R.replaceScope(source,L.gapClasses(R.project(source,'md:'),'width',null),'md:'),'gap-4 lg:gap-10 md:!gap-[10%] md:gap-y-8');
+});

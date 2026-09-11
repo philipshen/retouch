@@ -242,3 +242,10 @@ Five filesystem publication/rollback/lock tests pass. An actual deliberately fai
 The Layout gap fields now display computed percentages verbatim rather than stripping their units and presenting them as pixel counts. They accept nonnegative px, %, rem, em, vw, vh and ch values plus normal; unitless numbers remain pixel input. Invalid/oversized values show field validation without a source write. The class planner retains units and existing axis/shorthand priority behavior. Relative lengths may display their browser-computed pixel value after editing; arbitrary calc expressions and variable editing are not implemented by this field.
 
 869 unit tests pass. Chromium/WebKit each pass percentage gap editing in horizontal-tb and verified vertical-lr with actual child-rectangle measurements, unchanged opposite gap, Phone isolation and exact Undo/Redo. Separate pixel runs pass in both engines, including rejected negative percentage input and subsequent valid edits. Evidence: `/private/tmp/retouch-gap-units-{chromium,webkit}-{horizontal-tb,vertical-lr,pixel-validation}.log` and `/private/tmp/retouch-gap-units-units.log`. The newest desktop package predates this editor change; full parity remains unfinished.
+
+
+## Per-axis gap reset controls
+
+Layout now offers Reset horizontal gap and Reset vertical gap. Each removes only the selected physical axis's gap class/arbitrary property from the active scope, preserving the opposite gap, shorthand and other breakpoints. The button is disabled when there is no matching axis override. Reset restores the shorthand/inherited spacing rather than writing a hard-coded zero.
+
+870 unit tests pass. Chromium/WebKit pass the percentage-gap fixture in verified vertical-lr for row/column flex and both grid axes, including disabled/enabled reset states, retained shorthand and other-axis gap, actual distance after reset, exact Undo/Redo, validation and Phone isolation. Evidence: `/private/tmp/retouch-gap-reset-{chromium,webkit}.log` and `/private/tmp/retouch-gap-reset-units.log`. Full layout/framework/native parity remains unfinished.
