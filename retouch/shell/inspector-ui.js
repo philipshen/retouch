@@ -69,8 +69,15 @@
     input.addEventListener('input',paint);input.addEventListener('change',paint);input.addEventListener('keydown',event=>{if(event.key==='Escape')queueMicrotask(paint);});paint();
    }
    if(name==='Fill')for(const group of section.querySelectorAll('.gradient-controls')){
-    const duplicate=[...group.querySelectorAll(':scope > button')].find(button=>/^Duplicate (?:fill|gradient) \d+$/.test(button.textContent));
-    if(duplicate){const label=duplicate.textContent;duplicate.setAttribute('aria-label',label);duplicate.title=label;duplicate.classList.add('gradient-duplicate');duplicate.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="9" height="9" rx="1"/><path d="M12 5V4H4v8h1"/></svg>';group.querySelector(':scope > legend').append(duplicate);}
+    const actions=document.createElement('span');actions.className='gradient-actions';
+    const icons={up:'<path d="M5 12l5-5 5 5"/>',down:'<path d="M5 8l5 5 5-5"/>',duplicate:'<rect x="7" y="7" width="9" height="9" rx="1"/><path d="M12 5V4H4v8h1"/>',remove:'<path d="M5 10h10"/>'};
+    const buttons=[...group.querySelectorAll(':scope > button')];
+    for(const action of ['up','down','duplicate','remove']){
+     const pattern=action==='up'||action==='down'?new RegExp('^Move (?:fill|gradient) \\d+ '+action+'$'):new RegExp('^'+(action==='duplicate'?'Duplicate':'Remove')+' (?:fill|gradient) \\d+$');
+     const button=buttons.find(item=>pattern.test(item.textContent));if(!button)continue;
+     const label=button.textContent;button.setAttribute('aria-label',label);button.title=label;button.classList.add('gradient-action');button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true">'+icons[action]+'</svg>';actions.append(button);
+    }
+    if(actions.children.length)group.querySelector(':scope > legend').append(actions);
     const rows=[...group.querySelectorAll(':scope > .inspector-field')].filter(row=>/^(?:Gradient|Fill) \d+ (?:Color blending|Hue direction|Repeat)$/.test(row.querySelector('[aria-label]')?.getAttribute('aria-label')||''));
     if(!rows.length)continue;
     const prefix=rows[0].querySelector('[aria-label]').getAttribute('aria-label').replace(/ (?:Color blending|Hue direction|Repeat)$/,''),options=disclosure('Gradient options','gradient-options-'+prefix);
