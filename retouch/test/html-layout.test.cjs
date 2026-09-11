@@ -61,3 +61,11 @@ test('custom grid track validation accepts bounded track lists and rejects injec
   for(const value of ['','[name]','minmax(1fr, 80px)','repeat(999, 1fr)','repeat(2, repeat(2, 1fr))','1fr; color:red','url(x)','var(bad)','var(--x, url(x))','minmax(var(--x, 1fr), 80px)','1fr]','[span] 1fr','repeat(2,,1fr)'])assert.equal(valid(property,value),false,value);
  }
 });
+
+
+test('grid item placement accepts bounded numeric and named lines',()=>{
+ for(const property of ['grid-column','grid-row']){
+  for(const value of ['2 / 4','2 / span 2','-2 / -1','content_start / content_end','auto','middle','span 3 / span 3'])assert.equal(valid(property,value),true,value);
+  for(const value of ['0 / 2','129 / 130','span 0','span -2','2 / 3 / 4','x;display:none','span','inherit / end','2 /','span 2 / span 3'])assert.equal(valid(property,value),false,value);
+ }
+});

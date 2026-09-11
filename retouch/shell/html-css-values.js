@@ -1,4 +1,10 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchHTMLCSSValues=api;})(typeof window==='object'?window:globalThis,function(){
+ function gridPlacement(value){
+  if(typeof value!=='string'||value.length>150)return false;
+  const parts=value.split('/').map(v=>v.trim());if(parts.length>2)return false;
+  const line=v=>v==='auto'||/^-?[1-9][0-9]{0,2}$/.test(v)&&Math.abs(Number(v))<=128||/^span (?:[1-9]|1[0-9]|2[0-4])$/.test(v)||/^[A-Za-z_][\w-]*$/.test(v)&&!['span','initial','inherit','unset','revert','revert-layer'].includes(v.toLowerCase());
+  return parts.every(line)&&!(parts.length===2&&parts.every(v=>v.startsWith('span '))&&parts[0]!==parts[1]);
+ }
  function gridTracks(value){
   if(typeof value!=='string'||value.length>2048)return false;
   if(value==='none')return true;
@@ -128,7 +134,7 @@
   if(['flex-grow','flex-shrink'].includes(property))return /^(?:\d*\.)?\d+$/.test(value)&&Number(value)>=0&&Number(value)<=1000;
   if(property==='flex-basis'&&['auto','content'].includes(value))return true;
 
-  if(['grid-column','grid-row'].includes(property)){const match=/^span ([1-9]|1[0-9]|2[0-4]) \/ span ([1-9]|1[0-9]|2[0-4])$/.exec(value);return !!match&&match[1]===match[2]||value==='auto';}
+  if(['grid-column','grid-row'].includes(property))return gridPlacement(value);
   if(property==='font-family')return value.split(',').every(part=>{const name=part.trim();return /^(?:[\p{L}\p{N}_-]+(?: +[\p{L}\p{N}_-]+)*|"[\p{L}\p{N} _-]+"|'[\p{L}\p{N} _-]+')$/u.test(name);});
   if(property==='font-weight')return ['normal','bold'].includes(value)||/^(?:\d*\.)?\d+$/.test(value)&&Number(value)>=1&&Number(value)<=1000;
   if(property==='opacity')return /^(?:\d*\.)?\d+$/.test(value)&&Number(value)>=0&&Number(value)<=1;
