@@ -95,6 +95,8 @@
     const prefix=rows[0].querySelector('[aria-label]').getAttribute('aria-label').replace(/ (?:Color blending|Hue direction|Repeat)$/,''),options=disclosure('Gradient options','gradient-options-'+prefix);
     options.querySelector('summary').setAttribute('aria-label',prefix+' options');
     for(const row of rows){const hint=row.nextElementSibling,label=row.querySelector('[aria-label]').getAttribute('aria-label');options.append(row);row.querySelector('span').textContent=label.slice(prefix.length+1);if(label.endsWith(' Repeat')&&hint?.classList.contains('hint'))options.append(hint);}
+    const reverse=[...group.querySelectorAll(':scope > button')].find(button=>/^Reverse (?:fill|gradient) \d+ stops$/.test(button.textContent));
+    if(reverse){const label=reverse.textContent;reverse.setAttribute('aria-label',label);reverse.title=label;reverse.textContent='Reverse stops';const activate=reverse.onclick;reverse.onclick=event=>{root.RetouchPanelFocus?.queue(reverse);return activate?.call(reverse,event);};options.append(reverse);}
     group.append(options);
    }
    if(name==='Typography'){
