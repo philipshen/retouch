@@ -237,7 +237,7 @@ Press Enter to save a track expression or Escape to discard the draft.
 CSS variables remain live: `var(--sidebar_width, 160px) 1fr` follows the page’s
 shared size, using the fallback when that variable is unset.
 
-For HTML grid children, **Layout → Custom grid placement** chooses column and row
+For HTML and Tailwind grid children, **Layout → Custom grid placement** chooses column and row
 lines independently: `2 / 4`, `2 / span 2`, `-2 / -1`, or `content_start / content_end`.
 Placement follows the selected screen scope, with separate resets and Enter/Escape editing.
 

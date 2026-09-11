@@ -122,6 +122,19 @@
     if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(t=>/^!|!$/.test(t)&&(matches(I.base(t)||'')||(I.base(t)||'').startsWith('[grid-area:'))))addition='!'+addition;
     return I.replace(classes,matches,addition);
   }
+  function gridPlacementClasses(classes,axis,value,inherited=''){
+    if(!['column','row'].includes(axis))throw Error('Unknown grid axis');
+    if(value===null)return spanClasses(classes,axis,null);
+    value=String(value).trim();const values=typeof module==='object'&&module.exports?require('./html-css-values.js'):root.RetouchHTMLCSSValues;
+    if(!values.valid('grid-'+axis,value))throw Error('Enter grid lines such as 2 / 4, 2 / span 2, or content_start / content_end.');
+    const prefix=axis==='column'?'col':'row',important=spanClasses(classes,axis,'auto',inherited).split(/\s+/).includes('!'+prefix+'-auto');
+    return [spanClasses(classes,axis,null),(important?'!':'')+'[grid-'+axis+':'+value.replace(/_/g,'\\_').replace(/\s+/g,'_')+']'].filter(Boolean).join(' ');
+  }
+  function ownGridPlacement(classes,axis){
+    const tokens=classes.split(/\s+/).filter(t=>I.base(t)?.startsWith('[grid-'+axis+':'));
+    const token=I.base(tokens.find(t=>/^!|!$/.test(t))||tokens[0]||'');
+    return token?token.slice(('[grid-'+axis+':').length,-1).replace(/\\_|_/g,t=>t==='\\_'?'_':' '):null;
+  }
   function spanValue(start,end) {
     if(start==='auto'&&end==='auto')return 'auto';
     if(start==='1'&&end==='-1')return 'full';
@@ -154,7 +167,7 @@
     const value=token.slice(prefix.length);
     return value.startsWith('[')&&value.endsWith(']')?value.slice(1,-1).replace(/_/g,' '):null;
   }
-  let limitsOpen=false,customTracksOpen=false;
+  let limitsOpen=false,customTracksOpen=false,customPlacementOpen=false;
   function mount(info,el,save) {
     const sec=I.section('Layout');if(!el)return sec;
     if(info.classNameDynamic){I.note(sec,info.classNameReason||'This layout has computed classes.','refused');return sec;}
@@ -222,13 +235,19 @@
       I.select(sec,'Distribute children',[['start','Start'],['center','Center'],['end','End'],['between','Space between'],['around','Space around'],['evenly','Space evenly']],justify,v=>save(arrangementClasses(classes,'justify',v,inherited)));
     }
     if(parent&&/grid/.test(parent.display)&&!['absolute','fixed'].includes(css.position)) {
+      const custom=document.createElement('details'),summary=document.createElement('summary');custom.className='inspector-disclosure';summary.textContent='Custom grid placement';custom.append(summary);custom.open=customPlacementOpen;custom.ontoggle=()=>{customPlacementOpen=custom.open;};
       const counts=Array.from({length:24},(_,i)=>[String(i+1),String(i+1)]);
       for(const axis of ['column','row']) {
         const prop=axis==='column'?'gridColumn':'gridRow';
         I.select(sec,axis==='column'?'Span columns':'Span rows',[['','Custom placement'],['auto','Auto'],['full',axis==='column'?'All columns':'All rows'],...counts],spanValue(css[prop+'Start'],css[prop+'End']),v=>{if(v)save(spanClasses(classes,axis,/^\d+$/.test(v)?Number(v):v,inherited));});
-        const reset=I.button('Reset '+axis+' placement',()=>save(spanClasses(classes,axis,null)));
-        reset.disabled=spanClasses(classes,axis,null)===classes;sec.append(reset);
+        const row=document.createElement('div');row.className='property-row';custom.append(row);
+        const label=axis==='column'?'Column placement':'Row placement',input=document.createElement('input');input.type='text';input.value=ownGridPlacement(classes,axis)??css.getPropertyValue('grid-'+axis);const initial=input.value;
+        input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{try{const value=input.value.trim();if(value===initial)return;const next=gridPlacementClasses(classes,axis,value,inherited);if(!el.ownerDocument.defaultView.CSS.supports('grid-'+axis,value))throw Error('Enter supported grid line placement.');save(next);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+        input.title='Enter saves. Escape cancels.';input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};I.field(row,label,input);input.parentElement.querySelector('span').textContent=axis==='column'?'Column':'Row';
+        const reset=I.button('↺',()=>save(spanClasses(classes,axis,null)));reset.classList.add('property-reset');reset.title='Reset '+axis+' placement';reset.setAttribute('aria-label',reset.title);
+        reset.disabled=spanClasses(classes,axis,null)===classes;row.append(reset);
       }
+      sec.append(custom);I.note(custom,'Choose start and end lines, such as 2 / 4 or content_start / content_end.');
       I.note(sec,'Choosing a span replaces line placement on that axis. Reset removes this scope’s axis override, retaining any shared grid area.');
     }
     for(const side of ['Top','Right','Bottom','Left']) {
@@ -273,6 +292,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

@@ -244,3 +244,12 @@ test('custom grid templates retain track expressions, scope priority and axis re
  assert.equal(L.gridTemplateClasses('grid-cols-2 [grid-template-columns:1fr] grid-rows-3','columns',null),'grid-rows-3');
  for(const value of ['', '1fr;display:none','repeat(3,1fr','1fr]','1fr!'])assert.throws(()=>L.gridTemplateClasses('','columns',value));
 });
+
+test('custom grid placement replaces one axis and preserves inherited priority and named lines',()=>{
+ const next=L.gridPlacementClasses('col-span-2 col-start-1 row-span-3','column','content_start / content_end','![grid-area:1/1/3/3]');
+ assert.equal(next,String.raw`row-span-3 ![grid-column:content\_start_/_content\_end]`);
+ assert.equal(L.ownGridPlacement(next,'column'),'content_start / content_end');
+ assert.equal(L.gridPlacementClasses(next,'column',null),'row-span-3');
+ assert.equal(L.gridPlacementClasses('','row','-2 / -1'),'[grid-row:-2_/_-1]');
+ assert.throws(()=>L.gridPlacementClasses('','column','0 / 3'));
+});

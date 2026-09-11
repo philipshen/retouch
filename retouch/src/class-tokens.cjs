@@ -10,7 +10,7 @@ function fontVariations(token){
 }
 function gridTracks(token){
  // Only Tailwind's escaped literal underscores are needed for named grid lines.
- if(token.length>4096||!/^(?:[^\s"'`\\<>{}]*:)?!?(?:grid-(?:cols|rows)-\[|\[grid-template-(?:columns|rows):)/u.test(token))return false;
+ if(token.length>4096||!/^(?:[^\s"'`\\<>{}]*:)?!?(?:grid-(?:cols|rows)-\[|\[grid-(?:template-(?:columns|rows)|column|row):)/u.test(token))return false;
  return plain.test(token.replace(/\\_/g,'_'))&&/\]!?$/.test(token);
 }
 const valid=token=>plain.test(token)||fontFamily(token)||fontVariations(token)||gridTracks(token);
