@@ -234,3 +234,13 @@ test('alignment points author physical flex placement as one class update with i
  assert.equal(L.alignmentClasses('md:items-center',0,0,{direction:'rtl'}),'md:items-center [justify-content:flex-end] [align-items:flex-start]');
  assert.throws(()=>L.alignmentClasses('',3,0));
 });
+
+test('custom grid templates retain track expressions, scope priority and axis reset',()=>{
+ assert.equal(L.gridTemplateClasses('grid-cols-2 grid-rows-3 [grid-template-columns:1fr]','columns','160px minmax(80px, 1fr)','!grid-cols-4'),'grid-rows-3 !grid-cols-[160px_minmax(80px,_1fr)]');
+ const named=L.gridTemplateClasses('','rows','[row_start] 40px [end]','![grid:40px/1fr]');
+ assert.equal(named,'!grid-rows-[[row\\_start]_40px_[end]]');
+ assert.equal(L.ownGridTemplate(named,'rows'),'[row_start] 40px [end]');
+ assert.equal(L.ownGridTemplate('md:grid-cols-[1fr]','columns'),null);
+ assert.equal(L.gridTemplateClasses('grid-cols-2 [grid-template-columns:1fr] grid-rows-3','columns',null),'grid-rows-3');
+ for(const value of ['', '1fr;display:none','repeat(3,1fr','1fr]','1fr!'])assert.throws(()=>L.gridTemplateClasses('','columns',value));
+});

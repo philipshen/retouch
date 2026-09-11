@@ -45,6 +45,25 @@
     if(addition&&inherited.split(/\s+/).some(token=>/^!|!$/.test(token)&&matches(I.base(token)||'')))addition='!'+addition;
     return I.replace(classes,matches,addition);
   }
+  function gridTemplateClasses(classes,axis,value,inherited=''){
+    if(!['columns','rows'].includes(axis))throw Error('Choose rows or columns.');
+    const prefix=axis==='columns'?'grid-cols-':'grid-rows-',property='grid-template-'+axis;
+    const matches=t=>t.startsWith(prefix)||t.startsWith('['+property+':');
+    if(value===null)return I.replace(classes,matches,'');
+    value=String(value).trim();
+    if(!value||value.length>2048||!/^[a-zA-Z0-9_.,%()+\-\[\]\s]+$/.test(value))throw Error('Enter grid track sizes such as 160px 1fr or repeat(3, minmax(0, 1fr)).');
+    const stack=[];for(const c of value){if(c==='('||c==='[')stack.push(c);else if(c===')'||c===']'){if(stack.pop()!==(c===')'?'(':'['))throw Error('Close each track-size bracket.');}}if(stack.length)throw Error('Close each track-size bracket.');
+    let addition=prefix+'['+value.replace(/_/g,'\\_').replace(/\s+/g,'_')+']';
+    if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(t=>/^!|!$/.test(t)&&(matches(I.base(t)||'')||/^\[grid(?:-template)?:/.test(I.base(t)||''))))addition='!'+addition;
+    return I.replace(classes,matches,addition);
+  }
+  function ownGridTemplate(classes,axis){
+    const prefix=axis==='columns'?'grid-cols-[':'grid-rows-[',property='[grid-template-'+axis+':';
+    const tokens=classes.split(/\s+/).filter(t=>{const b=I.base(t);return b!==null&&(b.startsWith(prefix)||b.startsWith(property));});
+    const token=I.base(tokens.find(t=>/^!|!$/.test(t))||tokens[0]||'');if(!token)return null;
+    return token.slice(token.startsWith(prefix)?prefix.length:property.length,-1).replace(/\\_|_/g,t=>t==='\\_'?'_':' ');
+  }
+
   function gridTrackCount(value){
     return String(value||'').replace(/\[[^\]]*\]/g,' ').trim().split(/\s+/).filter(t=>t&&!['none','subgrid','masonry'].includes(t)).length;
   }
@@ -135,7 +154,7 @@
     const value=token.slice(prefix.length);
     return value.startsWith('[')&&value.endsWith(']')?value.slice(1,-1).replace(/_/g,' '):null;
   }
-  let limitsOpen=false;
+  let limitsOpen=false,customTracksOpen=false;
   function mount(info,el,save) {
     const sec=I.section('Layout');if(!el)return sec;
     if(info.classNameDynamic){I.note(sec,info.classNameReason||'This layout has computed classes.','refused');return sec;}
@@ -159,6 +178,17 @@
           const field=numeric(label,gridTrackCount(computed)||1,1,24,v=>save(arrangementClasses(classes,property,v,inherited)));field.step='1';
         }
         I.note(sec,'Counts create equal tracks. Content may create additional implicit tracks.');
+        const custom=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Custom grid tracks';custom.className='inspector-disclosure';custom.append(summary);custom.open=customTracksOpen;custom.ontoggle=()=>{customTracksOpen=custom.open;};
+        for(const axis of ['columns','rows']){
+          const property='grid-template-'+axis,label=axis==='columns'?'Column sizes':'Row sizes';
+          const input=document.createElement('input');input.type='text';input.value=ownGridTemplate(classes,axis)??css.getPropertyValue(property);
+          input.oninput=()=>input.setCustomValidity('');
+          input.onchange=()=>{try{const value=input.value.trim(),next=gridTemplateClasses(classes,axis,value,inherited);if(!el.ownerDocument.defaultView.CSS.supports(property,value))throw Error('Enter supported grid track sizes.');save(next);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+          const row=document.createElement('div');row.className='property-row';custom.append(row);I.field(row,label,input);
+          const reset=I.button('Reset '+label.toLowerCase(),()=>save(gridTemplateClasses(classes,axis,null)));reset.setAttribute('aria-label','Reset '+label.toLowerCase());reset.title='Reset '+label.toLowerCase();reset.textContent='↺';reset.classList.add('property-reset');reset.disabled=gridTemplateClasses(classes,axis,null)===classes;row.append(reset);
+        }
+        I.note(custom,'Separate tracks with spaces: 160px 1fr makes a fixed track and a flexible track. auto fits content; minmax(80px, 1fr) sets a minimum.');sec.append(custom);
+
         const flow=css.gridAutoFlow==='dense'?'row-dense':css.gridAutoFlow.replace('column','col').replace(/\s+/g,'-');
         I.select(sec,'Place grid items',[['row','Across rows'],['col','Down columns'],['row-dense','Across rows · fill gaps'],['col-dense','Down columns · fill gaps']],flow,v=>save(arrangementClasses(classes,'flow',v,inherited)));
         I.note(sec,'Fill gaps can move later items into earlier empty spaces.');
@@ -241,6 +271,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={alignmentClasses,clipClasses,gridTrackCount,paddingClasses,arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

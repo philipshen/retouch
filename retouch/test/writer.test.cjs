@@ -243,3 +243,13 @@ test('class writes preserve raw arbitrary selectors and round-trip entity-like t
  assert.strictEqual(writer.describeElement(pick(index,root,'Card.tsx','h2').resolved).className,classes);
  assert.ok(read(root,'Card.tsx').includes('[&:hover]:opacity-50'));
 });
+
+
+test('named grid lines preserve escaped underscores through JSX source writes',()=>{
+ const {resolved}=pick(index,root,'Card.tsx','h2');
+ const classes=String.raw`grid md:!grid-cols-[[content\_start]_80px_[rest]_1fr] grid-rows-[repeat(3,_minmax(0,_1fr))]`;
+ const result=writer.applyOp(resolved,{type:'setClasses',classes,fileHash:resolved.hash});assert.ok(result.ok,JSON.stringify(result));
+ index.scanAll();assert.strictEqual(writer.describeElement(pick(index,root,'Card.tsx','h2').resolved).className,classes);
+ const tokens=require('../src/class-tokens.cjs');
+ for(const value of [String.raw`grid-cols-[foo\x]`,String.raw`grid-cols-[foo\_"bar"]`,String.raw`other-[foo\_bar]`])assert.strictEqual(tokens.valid(value),false);
+});
