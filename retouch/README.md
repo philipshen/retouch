@@ -241,6 +241,9 @@ For HTML and Tailwind grid children, **Layout → Custom grid placement** choose
 lines independently: `2 / 4`, `2 / span 2`, `-2 / -1`, or `content_start / content_end`.
 Placement follows the selected screen scope, with separate resets and Enter/Escape editing.
 The fields suggest numbered tracks and named lines from the current parent grid.
+Enable **Show grid guides** in Layout to see track boundaries for the selected grid
+or its item. Guides are visual only and do not modify the site. Axis-aligned,
+horizontal-writing grids with resolved track sizes are supported.
 
 The CSS properties panel edits dimensions, flex direction/wrapping, gap, padding,
 typography, colors and borders. Padding and margin support one to four values

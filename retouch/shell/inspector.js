@@ -105,6 +105,37 @@
   function button(text, action) {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'control-button'; b.textContent = text; b.onclick = action; return b;
   }
+  function gridAxisEdges(template,gap,available,alignment,reverse=false){
+    const raw=String(template||'').replace(/\[[^\]]*\]/g,' ').trim().split(/\s+/);
+    if(!raw.length||raw.length>64||!raw.every(value=>/^(?:\d+(?:\.\d+)?|\.\d+)px$/.test(value)))return [];
+    const tracks=raw.map(parseFloat),free=available-tracks.reduce((a,b)=>a+b,0)-gap*(tracks.length-1),safe=/^safe /.test(alignment);
+    alignment=alignment.replace(/^(?:safe|unsafe) /,'');let offset=0,spacing=gap,extra=safe?Math.max(0,free):free;
+    if(alignment==='center')offset=extra/2;
+    else if(alignment==='end'||alignment==='flex-end'||alignment===(reverse?'left':'right'))offset=extra;
+    else if(free>0&&alignment==='space-between'&&tracks.length>1)spacing+=free/(tracks.length-1);
+    else if(free>0&&alignment==='space-around'){spacing+=free/tracks.length;offset=free/tracks.length/2;}
+    else if(free>0&&alignment==='space-evenly'){spacing+=free/(tracks.length+1);offset=free/(tracks.length+1);}
+    const edges=[];for(const track of tracks){edges.push(offset,offset+track);offset+=track+spacing;}
+    return [...new Set(edges.map(value=>reverse?available-value:value))];
+  }
+  function gridGuideControl(parent){
+    const input=document.createElement('input');input.type='checkbox';input.checked=!!root.RetouchGridGuidesEnabled;
+    input.onchange=()=>{root.RetouchGridGuidesEnabled=input.checked;};field(parent,'Show grid guides',input);
+  }
+  function drawGridGuides(overlay,selected){
+    if(!selected?.isConnected)return;
+    const view=selected.ownerDocument.defaultView;let grid=selected,css=view.getComputedStyle(grid);
+    if(!['grid','inline-grid'].includes(css.display)){grid=selected.parentElement;if(!grid)return;css=view.getComputedStyle(grid);}
+    if(!['grid','inline-grid'].includes(css.display)||css.writingMode!=='horizontal-tb')return;
+    // Axis-aligned geometry only: do not show misleading guides on rotated grids.
+    for(let node=grid;node;node=node.parentElement){const style=view.getComputedStyle(node);if(!['none','0deg'].includes(style.rotate))return;if(style.transform!=='none'){const m=/^matrix\(([^)]+)\)$/.exec(style.transform);if(!m)return;const values=m[1].split(',').map(Number);if(values[1]||values[2]||values[0]<=0||values[3]<=0)return;}}
+    const n=key=>parseFloat(css[key])||0,r=grid.getBoundingClientRect(),px=n('paddingLeft')+n('paddingRight'),py=n('paddingTop')+n('paddingBottom'),bx=n('borderLeftWidth')+n('borderRightWidth'),by=n('borderTopWidth')+n('borderBottomWidth');
+    const width=n('width')+(css.boxSizing==='border-box'?0:px+bx),height=n('height')+(css.boxSizing==='border-box'?0:py+by);if(!width||!height)return;
+    const sx=r.width/width,sy=r.height/height,w=width-px-bx,h=height-py-by,x=r.left+(n('borderLeftWidth')+n('paddingLeft')-grid.scrollLeft)*sx,y=r.top+(n('borderTopWidth')+n('paddingTop')-grid.scrollTop)*sy;
+    const gap=(value,size)=>value.endsWith('%')?parseFloat(value)*size/100:parseFloat(value)||0;
+    const axes=[['column',gridAxisEdges(css.gridTemplateColumns,gap(css.columnGap,w),w,css.justifyContent,css.direction==='rtl')],['row',gridAxisEdges(css.gridTemplateRows,gap(css.rowGap,h),h,css.alignContent)]];
+    for(const [axis,edges]of axes)for(const edge of edges){const line=document.createElement('div');line.className='grid-guide '+axis;line.setAttribute('aria-hidden','true');line.style.left=(axis==='column'?x+edge*sx:x)+'px';line.style.top=(axis==='row'?y+edge*sy:y)+'px';line.style.width=(axis==='row'?w*sx:0)+'px';line.style.height=(axis==='column'?h*sy:0)+'px';overlay.append(line);}
+  }
   function gridPlacementSuggestions(template){
     const groups=[...String(template||'').matchAll(/\[([^\]]+)\]/g)].map(match=>match[1].trim().split(/\s+/).filter(name=>/^[A-Za-z_][\w-]*$/.test(name)&&!['auto','span','initial','inherit','unset','revert','revert-layer'].includes(name.toLowerCase()))).filter(names=>names.length);
     const values=['auto','1 / -1'];
@@ -697,6 +728,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,note,button,select,number,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

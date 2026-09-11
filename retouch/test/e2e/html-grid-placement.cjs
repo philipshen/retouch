@@ -14,6 +14,17 @@ const engine=process.env.RT_E2E_BROWSER||'chromium';
   await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await page.getByRole('treeitem',{name:'div · item',exact:true}).click();await settled();await page.getByLabel('Style screen scope',{exact:true}).selectOption('min-[768px]:');await settled();await page.getByText('Custom grid placement',{exact:true}).click();
   const item=page.frameLocator('#app').locator('#item'),standalone=await browser.newPage({javaScriptEnabled:false,viewport:{width:768,height:1024}});
   const position=()=>item.evaluate(el=>{const a=el.getBoundingClientRect(),b=el.parentElement.getBoundingClientRect();return [a.left-b.left,a.top-b.top];});
+  const guides=page.getByLabel('Show grid guides',{exact:true});await guides.check();
+  await wait(async()=>await page.locator('.grid-guide').count()===12);
+  const guideGeometry=await page.evaluate(()=>{const grid=document.getElementById('app').contentDocument.getElementById('layout').getBoundingClientRect();return {columns:[...document.querySelectorAll('.grid-guide.column')].map(el=>parseFloat(el.style.left)-grid.left),rows:[...document.querySelectorAll('.grid-guide.row')].map(el=>parseFloat(el.style.top)-grid.top),noninteractive:[...document.querySelectorAll('.grid-guide')].every(el=>getComputedStyle(el).pointerEvents==='none')};});
+  assert.deepEqual(guideGeometry,{columns:[0,100,110,210,220,320],rows:[0,100,110,210,220,320],noninteractive:true});assert.equal(read(),original,'Guides do not change source');
+  const parentStyle=await parent.getAttribute('style');
+  await parent.evaluate(el=>{Object.assign(el.style,{boxSizing:'content-box',width:'420px',padding:'12px',border:'2px solid black',justifyContent:'center',direction:'rtl',transform:'scale(1.25)',transformOrigin:'top left'});});
+  await wait(async()=>await page.evaluate(()=>{const grid=document.getElementById('app').contentDocument.getElementById('layout').getBoundingClientRect(),positions=[...document.querySelectorAll('.grid-guide.column')].map(el=>parseFloat(el.style.left)-grid.left),expected=[384,284,274,174,164,64].map(v=>v*1.25);return positions.length===expected.length&&positions.every((v,i)=>Math.abs(v-expected[i])<.05);}));
+  await parent.evaluate(el=>el.style.transform='rotate(15deg)');await wait(async()=>await page.locator('.grid-guide').count()===0);
+  await parent.evaluate((el,style)=>style===null?el.removeAttribute('style'):el.setAttribute('style',style),parentStyle);await wait(async()=>await page.locator('.grid-guide').count()===12);assert.equal(read(),original);
+  if(process.env.RT_E2E_GRID_GUIDES_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_GRID_GUIDES_SCREENSHOT});
+  await guides.uncheck();await wait(async()=>await page.locator('.grid-guide').count()===0);
   for(const [axis,label] of [['column','Column placement'],['row','Row placement']])for(const [value,offset] of [['2 / 3',110],['middle / right',110],['2 / span 2',110],['-2 / -1',220]]){
    const before=read(),input=page.getByLabel(label,{exact:true}),initial=await input.inputValue(),index=axis==='column'?0:1;
    const suggestions=await input.evaluate(el=>[...el.list.options].map(option=>option.value));

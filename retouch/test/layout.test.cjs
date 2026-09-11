@@ -262,3 +262,13 @@ test('grid placement suggestions use actual named lines and resolved track count
  assert.deepEqual(I.gridPlacementSuggestions('none'),['auto','1 / -1']);
  assert.ok(I.gridPlacementSuggestions(Array(1000).fill('10px').join(' ')).length<=26);
 });
+
+
+test('grid guide edges follow gaps, alignment, named lines and RTL',()=>{
+ const {gridAxisEdges}=require('../shell/inspector.js');
+ assert.deepEqual(gridAxisEdges('[a] 100px [b] 100px',10,320,'start'),[0,100,110,210]);
+ assert.deepEqual(gridAxisEdges('100px 100px',10,320,'center'),[55,155,165,265]);
+ assert.deepEqual(gridAxisEdges('100px 100px',10,320,'space-between'),[0,100,220,320]);
+ assert.deepEqual(gridAxisEdges('100px 100px',10,320,'start',true),[320,220,210,110]);
+ assert.deepEqual(gridAxisEdges('subgrid [a]',10,320,'start'),[]);
+});

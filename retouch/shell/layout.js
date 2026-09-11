@@ -234,6 +234,7 @@
       const justify=css.justifyContent==='normal'?'start':css.justifyContent.replace('flex-','').replace('space-','');
       I.select(sec,'Distribute children',[['start','Start'],['center','Center'],['end','End'],['between','Space between'],['around','Space around'],['evenly','Space evenly']],justify,v=>save(arrangementClasses(classes,'justify',v,inherited)));
     }
+    if(/grid/.test(css.display)||parent&&/grid/.test(parent.display))I.gridGuideControl(sec);
     if(parent&&/grid/.test(parent.display)&&!['absolute','fixed'].includes(css.position)) {
       const custom=document.createElement('details'),summary=document.createElement('summary');custom.className='inspector-disclosure';summary.textContent='Custom grid placement';custom.append(summary);custom.open=customPlacementOpen;custom.ontoggle=()=>{customPlacementOpen=custom.open;};
       const counts=Array.from({length:24},(_,i)=>[String(i+1),String(i+1)]);

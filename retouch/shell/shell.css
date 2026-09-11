@@ -660,3 +660,7 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .component-props-editable td:nth-child(2):has(> button[aria-label^="Reset "]) { position:relative;padding-right:30px;height:40px; }
 .component-props-editable td > button[aria-label^="Reset "] { position:absolute;right:0;top:6px;margin:0;width:24px;height:28px;padding:0;border:0;background:transparent;color:var(--muted); }
 .component-props-editable td > button[aria-label^="Reset "]:hover { background:var(--control);color:var(--ink); }
+
+.grid-guide { position:absolute;pointer-events:none;opacity:.45;border:0 dashed var(--instance); }
+.grid-guide.column { border-left-width:calc(1px / var(--canvas-zoom, 1)); }
+.grid-guide.row { border-top-width:calc(1px / var(--canvas-zoom, 1)); }

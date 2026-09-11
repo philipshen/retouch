@@ -904,6 +904,7 @@ function paintLoop() {
     componentBadge.style.left=Math.max(0,Math.min(r.left,pageWidth-componentBadge.offsetWidth/zoom))+'px';
     componentBadge.style.top=Math.max(0,r.top-22)+'px';
   }
+  if(d&&sel&&mode==='edit'&&!editing&&window.RetouchGridGuidesEnabled)RetouchInspector.drawGridGuides(overlayLayer,renderedSelection?.element||matchingEls(activeId())[0]);
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
   marqueeSurface.textContent='';
   if(selectionMarquee?.document===d){

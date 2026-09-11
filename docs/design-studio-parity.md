@@ -11443,3 +11443,10 @@ The native window now explicitly requests Aqua appearance, and its welcome HTML 
 The exact HTML extracted from Swift passed Chromium/WebKit rendering checks at 1440x900 and 800x500 under a dark system color preference. All headings remain visible and the content fits without scrolling. Screenshot /private/tmp/retouch-native-welcome-light.png visually inspected. Universal Swift compilation and strict package verification passed. Native launch was not attempted; the previous cgWindowNotFound result remains unresolved, and Aqua appearance is compiled rather than native-verified.
 
 Diagnostic artifact /private/tmp/retouch-desktop-welcome-light-20260911/Retouch-0.1.0-mac.zip has sourceTreeDirty true relative to 26781f9 and SHA256 d84dd8cfbb86763e024b7fe0ab0a2a73bf121cdd0e6c5b0a83985ff84431c01d. Receipt desktop/verification/2026-09-11-light-welcome.json. This is not a clean release or proof of notarized distribution. Full Figma parity remains incomplete.
+
+
+### Optional canvas grid guides (2026-09-11)
+
+HTML and Tailwind grid selections now expose Show grid guides. When enabled, the canvas draws non-interactive dashed boundaries for the selected grid or the immediate grid parent of a selected item. Geometry uses resolved track sizes, gaps, content alignment, RTL direction, padding, borders and positive axis-aligned scaling. Unresolved/subgrid track sizes, more than 64 tracks per axis, rotations and vertical writing are not drawn. Guides are session state only and do not change source.
+
+893 unit tests passed. All four HTML/Tailwind Chromium/WebKit placement workflows passed with guide toggle/geometry/source-preservation checks plus existing editing/history coverage. New runtime tests cover padding, borders, centered RTL alignment and scale(1.25), and require guides to disappear on rotation. Screenshot /private/tmp/retouch-html-grid-guides.png visually inspected. Logs /private/tmp/retouch-{html,tw}-grid-guides-{chromium,webkit}.log. Complex scrolling/clipping and other transform/writing-mode geometry remain incomplete. Native window visibility remains unresolved; no native launch in this turn. Full Figma parity remains incomplete.
