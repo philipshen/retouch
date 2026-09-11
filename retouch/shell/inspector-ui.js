@@ -57,6 +57,12 @@
     }
     if(options.children.length>1)section.append(options);
    }
+   if(name==='Fill')for(const row of section.querySelectorAll('.gradient-stop-row')){
+    const input=row.querySelector('input:not([type="number"])');if(!input)continue;
+    const swatch=document.createElement('span');swatch.className='gradient-stop-swatch';swatch.setAttribute('aria-hidden','true');input.parentElement.classList.add('gradient-stop-color');input.before(swatch);
+    const paint=()=>{const color=input.value.trim();if(CSS.supports('color',color))swatch.style.backgroundImage='linear-gradient('+color+','+color+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)';};
+    input.addEventListener('input',paint);input.addEventListener('change',paint);input.addEventListener('keydown',event=>{if(event.key==='Escape')queueMicrotask(paint);});paint();
+   }
    if(name==='Fill')for(const group of section.querySelectorAll('.gradient-controls')){
     const rows=[...group.querySelectorAll(':scope > .inspector-field')].filter(row=>/^(?:Gradient|Fill) \d+ (?:Color blending|Hue direction|Repeat)$/.test(row.querySelector('[aria-label]')?.getAttribute('aria-label')||''));
     if(!rows.length)continue;
