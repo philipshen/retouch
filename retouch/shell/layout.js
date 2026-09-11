@@ -252,9 +252,16 @@
       sec.append(custom);I.note(custom,'Choose start and end lines, such as 2 / 4 or content_start / content_end.');
       I.note(sec,'Choosing a span replaces line placement on that axis. Reset removes this scope’s axis override, retaining any shared grid area.');
     }
+    const paddingEdges=['top','right','bottom','left'],paddingValues=paddingEdges.map(edge=>parseFloat(css.getPropertyValue('padding-'+edge))||0);
+    function paddingInput(label,value,change){
+      const input=numeric(label,value,0,10000,change);if(value===null){input.value='';input.placeholder='Mixed';}
+      const initial=input.value,commit=input.onchange;input.onchange=()=>{if(input.value!==initial)commit();};
+      input.title='Enter saves. Escape cancels.';input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};return input;
+    }
+    paddingInput('Padding',paddingValues.every(value=>value===paddingValues[0])?paddingValues[0]:null,value=>save(paddingEdges.reduce((next,edge)=>paddingClasses(next,edge,value,inherited),classes)));
     for(const side of ['Top','Right','Bottom','Left']) {
       const edge=side.toLowerCase();
-      numeric('Padding '+edge,parseFloat(css['padding'+side])||0,0,10000,v=>save(paddingClasses(classes,edge,v,inherited)));
+      paddingInput('Padding '+edge,parseFloat(css['padding'+side])||0,v=>save(paddingClasses(classes,edge,v,inherited)));
       const reset=I.button('Reset padding '+edge,()=>save(paddingClasses(classes,edge,null)));
       reset.disabled=paddingClasses(classes,edge,null)===classes;sec.append(reset);
     }

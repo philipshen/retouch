@@ -96,9 +96,11 @@
    }
    for(const checkbox of section.querySelectorAll('input[type="checkbox"]'))checkbox.closest('.inspector-field')?.classList.add('checkbox-field');
    if(name==='Layout'){
+    {
+     const paddingPairs=[...section.querySelectorAll(':scope > .property-pair')].filter(group=>group.querySelector('[aria-label="Padding top (CSS)"], [aria-label="Padding left (CSS)"], [aria-label="Padding top"], [aria-label="Padding left"]'));
+     if(paddingPairs.length){const sides=disclosure('Individual padding',css?'html-padding':'react-padding');section.insertBefore(sides,paddingPairs[0]);paddingPairs.forEach(group=>sides.append(group));}
+    }
     if(css){
-     const paddingPairs=[...section.querySelectorAll(':scope > .property-pair')].filter(group=>group.querySelector('[aria-label="Padding top (CSS)"], [aria-label="Padding left (CSS)"]'));
-     if(paddingPairs.length){const sides=disclosure('Individual padding','html-padding');section.insertBefore(sides,paddingPairs[0]);paddingPairs.forEach(group=>sides.append(group));}
      const display=section.querySelector('[aria-label="Display (CSS)"]')?.value||'',flex=/^(inline-)?flex$/.test(display),grid=/^(inline-)?grid$/.test(display);
      const inactive=flex?[]:grid?['Direction','Wrap']:['Direction','Wrap','Align items','Align lines','Distribute items','Gap'];
      const options=disclosure('Layout options','html-layout-options');

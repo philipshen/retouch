@@ -780,3 +780,9 @@ All four HTML/Tailwind Chromium/WebKit placement workflows passed. New checks sc
 ### 2026-09-11 — Compact layout gap fields
 
 Tailwind flex/grid gap fields now use inline accessible reset controls and Enter-to-save/Escape-to-cancel, with unchanged drafts producing no write. The physical-gap browser workflow checks cancellation of valid and invalid drafts, reset alignment, actual spacing, responsive isolation and exact history. Chromium horizontal pixel gaps and WebKit vertical-rl percentage gaps passed all four flex/grid cases. Screenshot `/private/tmp/retouch-gap-fields.png` inspected. Playwright fallback used because agent-browser is unavailable. Full Figma parity remains incomplete; native visibility and trusted distribution remain unverified.
+
+### 2026-09-11 — Shared React padding and individual-edge disclosure
+
+React/Tailwind Layout now shows one Padding field, displaying Mixed when physical edges differ. A shared edit writes all four edge overrides in one source transaction. Individual padding uses the same compact disclosure structure as HTML, retains its open state during source refresh, and keeps per-edge reset controls. Shared and individual fields support Enter/Escape and unchanged-draft suppression. Chromium and WebKit passed shared mixed/uniform editing, invalid input, one-step undo/redo, inherited important shorthand, phone isolation, four independent edges and disclosure persistence. Screenshot `/private/tmp/retouch-shared-padding.png` inspected. Full parity remains incomplete; this control currently accepts pixel values, while HTML has broader CSS value support.
+
+The shared organizer also passed the full Chromium HTML editing workflow, including spacing, standalone export, responsive styles, reset and exact undo.

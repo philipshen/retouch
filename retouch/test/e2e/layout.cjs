@@ -19,6 +19,7 @@ const read=()=>fs.readFileSync(file,'utf8');
   await action(()=>page.getByLabel('Arrange children').selectOption('row'),async()=>await css('display')==='flex'&&await css('flexDirection')==='row','row layout');
   await action(()=>page.getByLabel('Wrap children').selectOption('wrap'),async()=>await css('flexWrap')==='wrap','wrapping');
   await action(()=>number('Horizontal gap','24'),async()=>await css('columnGap')==='24px','gap');
+  await page.getByText('Individual padding',{exact:true}).click();
   await action(()=>number('Padding left','32'),async()=>await css('paddingLeft')==='32px','padding');
   await action(()=>page.getByLabel('Align children').selectOption('center'),async()=>await css('alignItems')==='center','alignment');
   await choose('div · anchor-target');
