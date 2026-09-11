@@ -10,6 +10,9 @@ function context(resolved){
  function destination(element){
   const target=paths.get(element?.node?.start);if(!target||!require('./insert-component.cjs').canContain({...resolved,element}))throw Error('Choose a container that accepts child layers.');
   if(target.node.openingElement.attributes.some(attr=>attr.type==='JSXSpreadAttribute'))throw Error('This container spreads properties that may supply children.');
+  return validateTarget(target);
+ }
+ function validateTarget(target){
   if(target.node.start>=source.node.start&&target.node.end<=source.node.end)throw Error('A component cannot contain itself.');
   const targetOwner=target.getFunctionParent();if(!targetOwner)throw Error('Choose a container inside a render function.');
   if(contextual&&targetOwner!==owner)throw Error('This component uses execution context that must stay in its render function.');
@@ -21,10 +24,10 @@ function context(resolved){
   for(const {name,binding}of references){if(target.scope.getBinding(name)!==binding)throw Error('Moving here would change what "'+name+'" refers to.');if(binding&&binding.scope.getFunctionParent()&&!['module','hoisted','param','local'].includes(binding.kind)&&binding.path.node.end>target.node.start)throw Error('The value "'+name+'" is not available when this container is created.');}
   return target;
  }
- function siblingDestination(element){const anchor=paths.get(element?.node?.start);if(!anchor||anchor.listKey!=='children'||anchor.parent.type!=='JSXElement')throw Error('Choose a layer inside a source container.');if(anchor.node.start>=source.node.start&&anchor.node.end<=source.node.end)throw Error('Choose a layer outside the selected component.');const parent=resolved.elements.find(el=>el.node.start===anchor.parent.start);destination(parent);return parent;}
+ function siblingDestination(element){const anchor=paths.get(element?.node?.start);if(!anchor||anchor.listKey!=='children'||!['JSXElement','JSXFragment'].includes(anchor.parent.type))throw Error('Choose a layer inside a source container.');if(anchor.node.start>=source.node.start&&anchor.node.end<=source.node.end)throw Error('Choose a layer outside the selected component.');if(anchor.parent.type==='JSXFragment'){validateTarget(anchor.parentPath);return anchor.parentPath;}const parent=resolved.elements.find(el=>el.node.start===anchor.parent.start);destination(parent);return anchor.parentPath;}
  return {source,destination,siblingDestination};
 }
-function describe(resolved){try{const ctx=context(resolved),containers=[],selectionContainers=[];for(const element of resolved.elements)try{const target=ctx.destination(element);selectionContainers.push(element.id);if(target!==ctx.source.parentPath)containers.push(element.id);}catch{}const crossTargets=[];for(const element of resolved.elements)try{ctx.siblingDestination(element);crossTargets.push(element.id);}catch{}return {containers,selectionContainers,crossTargets,canReparent:containers.length>0};}catch{return {containers:[],canReparent:false};}}
+function describe(resolved){try{const ctx=context(resolved),containers=[],selectionContainers=[];for(const element of resolved.elements)try{const target=ctx.destination(element);selectionContainers.push(element.id);if(target!==ctx.source.parentPath)containers.push(element.id);}catch{}const crossTargets=[];for(const element of resolved.elements)try{if(ctx.siblingDestination(element)!==ctx.source.parentPath)crossTargets.push(element.id);}catch{}return {containers,selectionContainers,crossTargets,canReparent:containers.length>0};}catch{return {containers:[],canReparent:false};}}
 function plan(resolved,op){
  if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the component before moving it.');
  try{
@@ -49,22 +52,29 @@ function planSelection(resolved,op,allowSingle=false){
   const original=collectElements(resolved.source,resolved.relPath).elements,members=ids.map(id=>original.find(element=>element.id===id)),destination=original.find(element=>element.id===op.destinationId);
   if(members.some(element=>element?.kind!=='instance'))return refuse('Select component usages from the same source file.');
   const roots=members.filter(element=>!members.some(parent=>parent!==element&&parent.node.start<element.node.start&&parent.node.end>element.node.end)).sort((a,b)=>a.node.start-b.node.start);
-  let container=destination;for(const element of roots){const ctx=context({...resolved,elements:original,element});if(positioned)container=ctx.siblingDestination(destination);else ctx.destination(destination);}
+  const contexts=roots.map(element=>context({...resolved,elements:original,element}));for(const ctx of contexts){if(positioned)ctx.siblingDestination(destination);else ctx.destination(destination);}
+  if(positioned)return positionedSelection(resolved,op,original,roots,contexts,destination);
   let source=resolved.source,elements=original;const identities=new Map(original.map(element=>[element.id,element.id]));
   for(const root of roots){
    const id=identities.get(root.id),element=elements.find(item=>item.id===id);if(!element)return refuse('A selected component lost its source identity.');
-   const current={...resolved,source,elements,element,hash:contentHash(source)},result=plan(current,{type:'moveComponent',id,fileHash:current.hash,direction:'inside',destinationId:identities.get(container.id)});if(!result.ok)return result;if(result.unchanged)continue;
+   const current={...resolved,source,elements,element,hash:contentHash(source)},result=plan(current,{type:'moveComponent',id,fileHash:current.hash,direction:'inside',destinationId:identities.get(destination.id)});if(!result.ok)return result;if(result.unchanged)continue;
    const mapping=new Map(result.movedComponent.sourceIdMap);for(const [before,now]of identities)identities.set(before,mapping.get(now)||now);
    source=result.edits[0].after;elements=collectElements(source,resolved.relPath).elements;
-  }
-  if(positioned)for(const root of op.direction==='after'?[...roots].reverse():roots){
-   const id=identities.get(root.id),element=elements.find(item=>item.id===id),current={...resolved,source,elements,element,hash:contentHash(source)},result=require('./move-component.cjs').plan(current,{id,fileHash:current.hash,direction:op.direction,destinationId:identities.get(op.destinationId)});if(!result.ok)return result;if(result.unchanged)continue;
-   const mapping=new Map(result.movedComponent.sourceIdMap);for(const [before,now]of identities)identities.set(before,mapping.get(now)||now);source=result.edits[0].after;elements=collectElements(source,resolved.relPath).elements;
   }
   const selectionIds=roots.map(element=>identities.get(element.id)),sourceIdMap=[...identities].filter(([before,after])=>before!==after);
   if(new Set(identities.values()).size!==original.length||elements.length!==original.length)throw Error('Moving changed the number of source layers.');
   return {ok:true,unchanged:source===resolved.source,hash:contentHash(source),selectionIds,sourceIdMap,destinationId:identities.get(op.destinationId),rootCount:roots.length,edits:source===resolved.source?[]:[{file:resolved.file,before:resolved.source,after:source}]};
  }catch(error){return refuse(error.message);}
+}
+function positionedSelection(resolved,op,original,roots,contexts,destination){
+ const point=op.direction==='before'?destination.node.start:destination.node.end,removals=contexts.map(ctx=>({start:ctx.source.node.start,end:ctx.source.node.end,text:ctx.source.listKey==='children'?'':ctx.source.parent.type==='JSXAttribute'?'{null}':'null'})),offset=position=>removals.filter(edit=>edit.end<=position).reduce((sum,edit)=>sum+edit.text.length-(edit.end-edit.start),0),positions=new Map();
+ let inserted='\n';for(const root of roots){positions.set(root.id,point+offset(point)+inserted.length);inserted+=resolved.source.slice(root.node.start,root.node.end)+'\n';}
+ const ms=new MagicString(resolved.source);for(const edit of removals)ms.overwrite(edit.start,edit.end,edit.text);ms.appendLeft(point,inserted);
+ const after=ms.toString(),elements=collectElements(after,resolved.relPath).elements,identities=new Map(),mapped=new Set();
+ for(const element of original){const root=roots.find(root=>element.node.start>=root.node.start&&element.node.end<=root.node.end),start=root?positions.get(root.id)+element.node.start-root.node.start:element.node.start+offset(element.node.start)+(point<=element.node.start?inserted.length:0),next=elements.find(el=>el.kind===element.kind&&el.node.start===start);if(!next||mapped.has(next.id))throw Error('The positioned layers could not be mapped back to source.');mapped.add(next.id);identities.set(element.id,next.id);}
+ if(mapped.size!==elements.length)throw Error('Positioning changed the number of source layers.');
+ for(const root of roots){const next=elements.find(el=>el.id===identities.get(root.id));if(after.slice(next.node.start,next.node.end)!==resolved.source.slice(root.node.start,root.node.end))throw Error('Positioning changed component contents.');}
+ return {ok:true,unchanged:after===resolved.source,hash:contentHash(after),selectionIds:roots.map(root=>identities.get(root.id)),sourceIdMap:[...identities].filter(([a,b])=>a!==b),destinationId:identities.get(destination.id),rootCount:roots.length,edits:after===resolved.source?[]:[{file:resolved.file,before:resolved.source,after}]};
 }
 function planPosition(resolved,op){
  const result=planSelection(resolved,{...op,ids:[resolved.element.id]},true);if(!result.ok||result.unchanged)return result;
