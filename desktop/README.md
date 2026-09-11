@@ -10,20 +10,18 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest local development archive is
-`/private/tmp/retouch-desktop-editor-refresh-20260911/Retouch-0.1.0-mac.zip`,
-built from `be8e911`. Its SHA-256 is
-`848e8ae4196017e403875c297df7ac31086d35ad92711992ba3561e8cd4d4080`.
-All 172 packaged source files match the checkout and the ZIP. Both universal
-architectures and the strict ad hoc signature verify. Six Chromium/WebKit
-component, gap and sizing workflows pass against the bundled runtime; see
-[the receipt](verification/2026-09-11-editor-refresh.json).
+`/private/tmp/retouch-desktop-manifest-final-20260911/Retouch-0.1.0-mac.zip`.
+Its SHA-256 is
+`4fd349295a6eed679d8cfc4f832e89f253b45bb7b1e92e7ac21f286d0587a361`.
+It includes a source manifest inside the signed resources. All 172 source hashes
+match the prior six-workflow browser-verified editor-refresh package. Both
+architectures, strict ad hoc signature, ZIP contents and local cask syntax pass.
+See [the package receipt](verification/2026-09-11-package-manifest.json).
 
-A single controlled launch created a running process, but CUA could not discover
-its window, including when inspecting the already-running process. The owned
-process was stopped and verified absent. Native interaction on this package is
-unverified. A local cask was generated and passed Ruby syntax validation; this
-package has not been cask-installed or upgrade-tested. It is not a notarized or
-release-ready build. Developer ID key access remains paused after the earlier
+Native launch was not attempted for this manifest build. The preceding package's
+process ran but CUA could not inspect its window; it was stopped. Native editing,
+trusted installation, upgrades, Developer ID signing and notarization remain
+unverified for the latest archive. Key access remains paused after the earlier
 canceled attempt. No public release is published.
 
 The earlier click-completion package passed a native HTML workflow; that evidence
@@ -376,3 +374,22 @@ artifact's bounded launch produced no output. The cask, temporary tap and trust
 entry, isolated app directory and test processes were removed; Homebrew developer
 mode was restored to disabled. The separate Developer ID build still awaits
 local keychain authorization and packages older editor source `7708416`.
+
+## Verify a built package
+
+The build embeds `Contents/Resources/build-manifest.json` and runs the verifier
+before archiving. The manifest records copied source hashes, the Git base commit
+and dirty-state flag, native-source/build/verifier hashes and the Info.plist hash.
+File hashes identify the actual snapshot when a build uses uncommitted changes.
+
+```sh
+node desktop/scripts/verify-package.cjs /path/to/Retouch.app
+node desktop/scripts/test-package-verifier.cjs /path/to/Retouch.app
+```
+
+Verification checks the complete packaged source inventory, content hashes,
+Info.plist, universal architectures and strict code signature. The test command
+uses a disposable copy to exercise altered source, omitted/duplicate/invalid
+entries, unlisted source, plist changes and symlinks, then checks the restored
+copy and original. Neither command launches the app. These integrity checks do
+not establish signing identity, notarization or Gatekeeper trust.
