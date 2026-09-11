@@ -429,17 +429,20 @@ details.advanced > summary:hover { color: var(--ink); }
 .compact-workspace #layersPanel { left:0; }
 .compact-workspace #panel { right:0; }
 
-.quick-actions { margin:auto; width:min(580px,92vw); max-height:80vh; border:1px solid var(--line); border-radius:12px; padding:16px; background:var(--panel); color:var(--ink); }
-.quick-actions::backdrop { background:#0008; }
-.quick-actions header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
-.quick-actions h2 { font-size:18px; }
-.quick-actions input { width:100%; padding:10px; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:6px; }
-.quick-actions [role=status] { margin:8px 0; color:var(--muted); font-size:12px; }
-.quick-actions [role=listbox] { max-height:50vh; overflow:auto; }
-.quick-actions [role=option] { padding:10px; border-radius:5px; cursor:pointer; }
+.quick-actions { margin:auto; width:min(480px,calc(100vw - 24px)); max-height:calc(100dvh - 32px); border:1px solid var(--line); border-radius:12px; padding:8px; background:var(--panel); color:var(--ink); box-shadow:0 8px 32px #0002; font:11px var(--font); }
+.quick-actions::backdrop { background:#0002; }
+.quick-actions header { display:flex; justify-content:space-between; align-items:center; padding:0 4px 8px; }
+.quick-actions h2 { font-size:12px; font-weight:600; }
+.quick-actions header button { border:0; background:transparent; padding:4px 8px; font:11px var(--font); }
+.quick-actions input { width:100%; height:36px; padding:0 10px; background:var(--bg); color:var(--ink); border:1px solid transparent; border-radius:5px; font:12px var(--font); }
+.quick-actions input:focus { outline:1px solid var(--accent); outline-offset:-1px; }
+.quick-actions [role=status] { padding:10px 8px 6px; color:var(--muted); font-size:10px; }
+.quick-actions [role=listbox] { max-height:min(360px,calc(100dvh - 160px)); overflow:auto; overscroll-behavior:contain; }
+.quick-actions [role=option] { padding:8px; min-height:32px; border-radius:4px; cursor:pointer; overflow-wrap:anywhere; }
+.quick-actions [role=option]:hover { background:var(--bg); }
 .quick-actions [role=option][aria-selected=true] { background:#e5f4ff; outline:1px solid var(--accent); outline-offset:-1px; }
 .quick-actions [aria-disabled=true] { color:var(--muted); cursor:default; }
-.quick-actions small { display:block; margin-top:3px; }
+.quick-actions small { display:block; margin-top:3px; font-size:10px; line-height:1.4; }
 
 /* Figma UI3 light Design workspace reference. */
 :root { color-scheme:light;--control:#f5f5f5;--hover:#ebebeb; }
