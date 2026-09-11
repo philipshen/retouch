@@ -67,6 +67,9 @@
   function gridTrackCount(value){
     return String(value||'').replace(/\[[^\]]*\]/g,' ').trim().split(/\s+/).filter(t=>t&&!['none','subgrid','masonry'].includes(t)).length;
   }
+  function resetPaddingClasses(classes){
+    return I.replace(classes,token=>/^p(?:[xytrblse]|b[se])?-/.test(token)||/^\[padding(?:-(?:top|right|bottom|left|(?:inline|block)(?:-(?:start|end))?))?:/.test(token),'');
+  }
   function paddingClasses(classes,side,value,inherited=''){
     const short={top:'t',right:'r',bottom:'b',left:'l'}[side];
     if(!short)throw Error('Choose a padding edge.');
@@ -259,6 +262,7 @@
       input.title='Enter saves. Escape cancels.';input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};return input;
     }
     paddingInput('Padding',paddingValues.every(value=>value===paddingValues[0])?paddingValues[0]:null,value=>save(paddingEdges.reduce((next,edge)=>paddingClasses(next,edge,value,inherited),classes)));
+    const resetPadding=I.button('Reset padding',()=>save(resetPaddingClasses(classes)));resetPadding.disabled=resetPaddingClasses(classes)===classes;resetPadding.title='Remove padding overrides at this edit range';sec.append(resetPadding);
     for(const side of ['Top','Right','Bottom','Left']) {
       const edge=side.toLowerCase();
       paddingInput('Padding '+edge,parseFloat(css['padding'+side])||0,v=>save(paddingClasses(classes,edge,v,inherited)));
@@ -301,6 +305,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

@@ -272,3 +272,10 @@ test('grid guide edges follow gaps, alignment, named lines and RTL',()=>{
  assert.deepEqual(gridAxisEdges('100px 100px',10,320,'start',true),[320,220,210,110]);
  assert.deepEqual(gridAxisEdges('subgrid [a]',10,320,'start'),[]);
 });
+
+
+test('reset all padding removes scoped physical and logical overrides while retaining variants and unrelated properties',()=>{
+ assert.equal(L.resetPaddingClasses('p-4 !px-2 py-3! pt-1 pr-1 pb-1 pl-1 ps-2 pe-2 pbs-2 pbe-2 m-4 gap-2 md:p-8 hover:pl-2'),'m-4 gap-2 md:p-8 hover:pl-2');
+ assert.equal(L.resetPaddingClasses('![padding:12px_16px] [padding-top:4px] [padding-right:4px] [padding-bottom:4px] [padding-left:4px] [padding-inline:2px] [padding-block:3px] [padding-inline-start:8px] [padding-inline-end:8px] [padding-block-start:8px] [padding-block-end:8px] [scroll-padding:4px] [padding-custom:4px]'),'[scroll-padding:4px] [padding-custom:4px]');
+ assert.equal(L.resetPaddingClasses('md:![padding:8px] focus:p-4 w-20'),'md:![padding:8px] focus:p-4 w-20');
+});

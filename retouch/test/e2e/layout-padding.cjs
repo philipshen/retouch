@@ -21,6 +21,10 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   await shared.fill('24');await shared.press('Enter');await settled();await wait(async()=>JSON.stringify(await snapshot())==='[24,24,24,24]');const uniform=read();assert.equal(await shared.inputValue(),'24');
   await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await settled();await wait(async()=>JSON.stringify(await snapshot())==='[10,10,10,10]');
   await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();await wait(async()=>JSON.stringify(await snapshot())==='[24,24,24,24]');
+  const resetAll=page.getByRole('button',{name:'Reset padding',exact:true});assert.equal(await resetAll.isEnabled(),true);await resetAll.click();await settled();await wait(async()=>JSON.stringify(await snapshot())===JSON.stringify(initial));const resetAllSource=read();assert.equal(await resetAll.isEnabled(),false);assert.ok(!resetAllSource.includes('md:[padding-left:20px]'));assert.ok(resetAllSource.includes('!p-[10px] sm:![padding:12px_16px]'));
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),uniform);await wait(async()=>JSON.stringify(await snapshot())==='[24,24,24,24]');
+  await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();assert.equal(read(),resetAllSource);
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),uniform);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),original);assert.deepEqual(await snapshot(),initial);
   await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();assert.equal(read(),uniform);assert.deepEqual(await snapshot(),[24,24,24,24]);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),original);
