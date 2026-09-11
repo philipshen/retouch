@@ -104,9 +104,27 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   },{cancel});
   assert.deepEqual(await dragGroup(),{started:false,accepted:false});assert.equal(read(),original);
   await page.getByRole('button',{name:'Unlock selection',exact:true}).click();await page.waitForFunction(()=>!panelTasks);await rows.nth(0).click();await page.waitForFunction(()=>!panelTasks);await rows.nth(1).click({modifiers:['Meta']});await page.waitForFunction(()=>sel?.multiple?.length===2&&!panelTasks);
+  await page.waitForFunction(()=>document.querySelectorAll('.component-tree-row [aria-selected="true"]').length===2);
   assert.deepEqual(await dragGroup({cancel:true}),{started:true,accepted:true});assert.equal(read(),original);assert.equal(await page.locator('.dragging,.drop-target').count(),0);
-  await page.setViewportSize({width:1280,height:1400});
-  if(engine==='chromium')await page.locator('.component-tree-row [aria-selected="true"]').first().dragTo(page.getByRole('treeitem',{name:'aside · Destination',exact:true}));else assert.deepEqual(await dragGroup(),{started:true,accepted:true});await rendered(['Dynamic','First','Second']);await page.waitForFunction(()=>!panelTasks&&!sourceRequests);assert.equal(read(),movedSource);assert.equal(await page.getByRole('treeitem',{selected:true}).count(),2);
+  const edgeScroll=await page.evaluate(async()=>{
+   const tree=document.querySelector('.layer-tree'),source=document.querySelector('.component-tree-row [aria-selected="true"]'),frame=()=>new Promise(resolve=>requestAnimationFrame(resolve)),results=[];
+   for(const direction of [1,-1]){
+    tree.scrollTop=direction===1?0:tree.scrollHeight;const before=tree.scrollTop,box=tree.getBoundingClientRect(),dataTransfer=new DataTransfer();source.dispatchEvent(new DragEvent('dragstart',{bubbles:true,cancelable:true,dataTransfer}));
+    tree.dispatchEvent(new DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer,clientX:box.left+box.width/2,clientY:direction===1?box.bottom-3:box.top+3}));
+    tree.dispatchEvent(new DragEvent('dragleave',{bubbles:true,clientX:box.left+box.width/2,clientY:direction===1?box.bottom-3:box.top+3}));
+    for(let i=0;i<120&&Math.abs(tree.scrollTop-before)<25;i++)await frame();const after=tree.scrollTop;
+    if(direction===1)source.dispatchEvent(new DragEvent('dragend',{bubbles:true,dataTransfer}));else tree.dispatchEvent(new DragEvent('dragleave',{bubbles:true,clientX:box.right+10,clientY:box.top+3}));await frame();await frame();results.push({moved:(after-before)*direction>0,stopped:tree.scrollTop===after});source.dispatchEvent(new DragEvent('dragend',{bubbles:true,dataTransfer}));
+   }
+   return results;
+  });assert.deepEqual(edgeScroll,[{moved:true,stopped:true},{moved:true,stopped:true}]);assert.equal(read(),original);
+  if(engine==='chromium'){
+   const source=page.locator('.component-tree-row [aria-selected="true"]').first(),destination=page.getByRole('treeitem',{name:'aside · Destination',exact:true}),tree=page.locator('.layer-tree');
+   await source.scrollIntoViewIfNeeded();const sourceBox=await source.boundingBox(),treeBox=await tree.boundingBox(),destinationBefore=await destination.boundingBox();assert.ok(destinationBefore.y+destinationBefore.height>treeBox.y+treeBox.height,'destination starts below the visible tree');
+   await page.mouse.move(sourceBox.x+sourceBox.width/2,sourceBox.y+sourceBox.height/2);await page.mouse.down();await page.mouse.move(sourceBox.x+sourceBox.width/2+8,sourceBox.y+sourceBox.height/2,{steps:4});
+   await page.mouse.move(treeBox.x+treeBox.width/2,treeBox.y+treeBox.height-5,{steps:8});
+   await page.waitForFunction(()=>{const tree=document.querySelector('.layer-tree'),target=[...tree.querySelectorAll('.layer-item')].find(el=>el.textContent==='aside · Destination'),a=tree.getBoundingClientRect(),b=target.getBoundingClientRect();return b.bottom<=a.bottom+1&&b.top>=a.top-1;});
+   const destinationBox=await destination.boundingBox();await page.mouse.move(destinationBox.x+destinationBox.width/2,destinationBox.y+destinationBox.height/2,{steps:3});await page.mouse.up();
+  }else assert.deepEqual(await dragGroup(),{started:true,accepted:true});await rendered(['Dynamic','First','Second']);await page.waitForFunction(()=>!panelTasks&&!sourceRequests);assert.equal(read(),movedSource);assert.equal(await page.getByRole('treeitem',{selected:true}).count(),2);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await rendered(['First','Second','Dynamic']);await page.waitForFunction(()=>!undoBusy&&!panelTasks&&!sourceRequests);assert.equal(read(),original);
   await page.getByRole('button',{name:'Redo',exact:true}).click();await rendered(['Dynamic','First','Second']);await page.waitForFunction(()=>!undoBusy&&!panelTasks&&!sourceRequests);assert.equal(read(),movedSource);assert.deepEqual(errors,[]);
   console.log('COMPONENT GROUP DRAG LOCK REFUSAL/CANCEL/MOVE/EXACT UNDO REDO PASS',engine);

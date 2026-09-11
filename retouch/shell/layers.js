@@ -60,7 +60,21 @@
     async function loadComponents(){if(!readComponents||!d)return;const request=++componentRequest,current=d;try{const result=await readComponents();if(request===componentRequest&&d===current&&result?.ok){components=result.components||[];render();}}catch{}}
     let d=null,observer=null,timer=null,selected=null,rows=[],collapsed=new WeakSet(),lastCapabilities=null,isBusy=false,dragged=null,draggedItem=null,draggedGroup=null,selectedSet=new Set(),rangeAnchor=null,componentRangeAnchor=null;
     function clearTargets(){for(const row of rows)row.button.classList.remove('drop-target','drop-before','drop-after');}
-    function endDrag(){dragged=null;draggedItem=null;draggedGroup=null;clearTargets();for(const row of rows)row.button.classList.remove('dragging');}
+    function endDrag(){stopDragScroll();dragged=null;draggedItem=null;draggedGroup=null;clearTargets();for(const row of rows)row.button.classList.remove('dragging');}
+    let dragScrollFrame=null,dragScrollPointer=null,dragScrollTime=null;
+    function stopDragScroll(){if(dragScrollFrame!==null)cancelAnimationFrame(dragScrollFrame);dragScrollFrame=null;dragScrollPointer=null;dragScrollTime=null;}
+    function scrollDrag(time){
+      dragScrollFrame=null;if(!dragged||isBusy||!dragScrollPointer||!tree.isConnected){stopDragScroll();return;}
+      const box=tree.getBoundingClientRect(),edge=Math.min(40,box.height/3),{x,y}=dragScrollPointer;
+      const velocity=x<box.left||x>box.right||y<box.top||y>box.bottom?0:y<box.top+edge?-Math.min(1,(box.top+edge-y)/edge):y>box.bottom-edge?Math.min(1,(y-box.bottom+edge)/edge):0;
+      const elapsed=dragScrollTime===null?16:Math.min(40,time-dragScrollTime);dragScrollTime=time;
+      if(velocity){const before=tree.scrollTop;tree.scrollTop+=velocity*600*elapsed/1000;if(tree.scrollTop!==before)clearTargets();}
+      if(velocity)dragScrollFrame=requestAnimationFrame(scrollDrag);else stopDragScroll();
+    }
+    tree.addEventListener('dragover',event=>{if(!dragged||isBusy)return;dragScrollPointer={x:event.clientX,y:event.clientY};if(dragScrollFrame===null)dragScrollFrame=requestAnimationFrame(scrollDrag);});
+    // Native drags can leave a child with no relatedTarget while still inside the scrolling tree.
+    tree.addEventListener('dragleave',event=>{const box=tree.getBoundingClientRect();if(!tree.contains(event.relatedTarget)&&(event.clientX<box.left||event.clientX>box.right||event.clientY<box.top||event.clientY>box.bottom))stopDragScroll();});
+    window.addEventListener('dragend',endDrag);window.addEventListener('drop',endDrag);window.addEventListener('pagehide',endDrag);
     function selectionRows(){const query=search.value.trim().toLowerCase();return rows.filter(row=>!row.item.componentId&&!['HTML','BODY'].includes(row.item.el.tagName)&&!locks?.locked(row.item.el)&&(!query||row.item.label.toLowerCase().includes(query)));}
     function componentRows(){const query=search.value.trim().toLowerCase();return rows.filter(row=>row.item.componentId&&!row.item.componentRoots.some(el=>locks?.locked(el))&&(!query||row.item.label.toLowerCase().includes(query)));}
     async function selectComponentRange(item,append=false){
