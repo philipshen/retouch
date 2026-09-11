@@ -120,3 +120,13 @@ test('style scope ordering follows actual widths including generated scopes and 
  const d={createElement:()=>({style:{},remove(){}}),documentElement:{append(){}},defaultView:{getComputedStyle:()=>({fontSize:'20px'})}},choices=[{prefix:'desktop:',label:'Desktop',condition:'(min-width:1200px)'},{prefix:'',label:'All sizes'},{prefix:'min-[900px]:',label:'900 px and larger'},{prefix:'tablet:',label:'Tablet',condition:'(40rem <= width)'},{prefix:'phone:',label:'Phone',condition:'screen and (min-width:4in)'},{prefix:'portrait:',label:'Portrait',condition:'(orientation:portrait)'}],original=[...choices];
  assert.deepEqual(R.orderedScopes(d,choices).map(item=>item.prefix),['','phone:','tablet:','min-[900px]:','desktop:','portrait:']);assert.deepEqual(choices,original);
 });
+
+test('scope labels describe simple width ranges without losing named identity or complex conditions',()=>{
+ const d={createElement:()=>({style:{},remove(){}}),documentElement:{append(){}},defaultView:{getComputedStyle:()=>({fontSize:'20px'})}};
+ assert.equal(R.scopeLabel(d,{prefix:'tablet:',label:'Tablet',condition:'(40rem <= width)'}),'800 px and larger · Tablet');
+ assert.equal(R.scopeLabel(d,{prefix:'min-[40em]:'}),'800 px and larger');
+ assert.equal(R.scopeLabel(d,{prefix:'wide:',label:'Wide',condition:'screen and (min-width:10in)'}),'960 px and larger · Wide');
+ const complex={prefix:'portrait:',label:'Portrait',condition:'(min-width:768px) and (orientation:portrait)'};assert.equal(R.scopeLabel(d,complex),'Portrait · '+complex.condition);
+ assert.equal(R.scopeLabel(d,{prefix:'min-[768px]:',condition:'(max-height:500px)'}),'min-[768px] · (max-height:500px)');
+ assert.equal(R.scopeLabel(d,{prefix:'',label:'All sizes · base'}),'All sizes · base');
+});

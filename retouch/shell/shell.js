@@ -950,7 +950,8 @@ function screenScopeSection() {
   for (const item of RetouchResponsive.orderedScopes(doc(),options)) {
     const option = document.createElement('option');
     option.value = item.prefix;
-    option.textContent = item.label + (item.condition ? ` · ${item.condition}` : '');
+    option.textContent = RetouchResponsive.scopeLabel(doc(),item);
+    option.title = item.condition || item.label;
     picker.append(option);
   }
   picker.value = styleScope;

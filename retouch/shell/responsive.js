@@ -66,6 +66,14 @@
   const absolutePixels={px:1,in:96,cm:96/2.54,mm:96/25.4,q:96/101.6,pt:96/72,pc:16};
   const lengthPixels=(value,unit,initial)=>Number(value)*(absolutePixels[unit.toLowerCase()]??initial);
   const minimumLength=item=>{const condition=minimumCondition(item);return condition?.match(/^\(\s*(?:min-width\s*:\s*|width\s*>=\s*)([\d.]+)(px|rem|em|in|cm|mm|q|pt|pc)\s*\)$/i)||condition?.match(/^\(\s*([\d.]+)(px|rem|em|in|cm|mm|q|pt|pc)\s*<=\s*width\s*\)$/i);};
+  function scopeLabel(d,item){
+    if(!item.prefix)return item.label||'All sizes · base';
+    const match=minimumLength(item)||(!item.condition&&!item.queries?/^min-\[(\d+(?:\.\d+)?)(px|rem|em)\]:$/.exec(item.prefix):null);
+    if(!match)return (item.label||item.prefix.slice(0,-1))+(item.condition?' · '+item.condition:'');
+    const probe=d.createElement('span');probe.style.cssText='font-size:initial;position:absolute;visibility:hidden';d.documentElement.append(probe);const initial=parseFloat(d.defaultView.getComputedStyle(probe).fontSize)||16;probe.remove();
+    const width=lengthPixels(match[1],match[2],initial),value=String(width);
+    return value+' px and larger'+(/^min-\[/.test(item.prefix)?'':' · '+(item.label||item.prefix.slice(0,-1)));
+  }
   function orderedScopes(d,choices){
     const probe=d.createElement('span');probe.style.cssText='font-size:initial;position:absolute;visibility:hidden';d.documentElement.append(probe);const initial=parseFloat(d.defaultView.getComputedStyle(probe).fontSize)||16;probe.remove();
     const width=item=>{if(!item.prefix)return -Infinity;const match=minimumLength(item)||/^min-\[(\d+(?:\.\d+)?)(px|rem|em)\]:$/.exec(item.prefix);return match?lengthPixels(match[1],match[2],initial):Infinity;};
@@ -172,7 +180,7 @@
     if(!candidates.length||candidates.length>1&&candidates[0].width===candidates[1].width)return null;
     const {scope,link,label}=candidates[0];return {scope,link,label};
   }
-  const api={split,project,replaceScope,discover,matches,inherited,atWidth,inheritedLink,previewSize,orderedScopes};
+  const api={scopeLabel,split,project,replaceScope,discover,matches,inherited,atWidth,inheritedLink,previewSize,orderedScopes};
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.RetouchResponsive=api;
 })(typeof window==='object'?window:globalThis);

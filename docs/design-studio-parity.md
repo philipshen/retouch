@@ -11063,3 +11063,10 @@ Validation: 882 unit tests passed. Full inspector-light workflows passed for ver
 The inspector now labels the scope selector Edit styles for and keeps an accessible edit-range status visible below it. Base scope, matching preview, mismatched preview, and unknown match are distinct states. A mismatched scope keeps Preview this breakpoint directly accessible; supporting comparison actions and explanatory details remain in Breakpoint options. This fixes the light organizer hiding the mismatch warning/action alongside advanced details.
 
 Chromium and WebKit inspector-light passed: switching a Tablet edit scope to Phone visibly reports mismatch, the direct preview action restores a matching viewport, and preview-only changes preserve source. Chromium breakpoint-preview also passed comparison editing/undo/redo, reload/persistence/reuse, source integrity, and separate preview history after updating its flow to open Breakpoint options for comparison buttons. This source refinement is newer than the packaged 20fdbe5 desktop archive. Full parity remains unfinished.
+
+
+### Readable breakpoint labels (2026-09-11)
+
+The style scope selector now presents simple minimum-width conditions as pixel ranges, for example 768 px and larger · md, retaining named identity when multiple scopes share a threshold. Generated scopes omit raw min-[...] syntax. Complex and non-width conditions retain their original descriptions. em/rem ranges use the initial font size, and absolute CSS units use their pixel conversion; labels do not round away fractional thresholds. Underlying scope values and authoring behavior are unchanged.
+
+Validation: 883 unit tests passed; the focused responsive suite passed again after removing label rounding. Chromium and WebKit inspector-light workflows passed with the named 768 px label assertion, responsive match/preview recovery, physical layout edits, clipping, typography, and exact source undo. New source UI remains newer than the 20fdbe5 desktop archive. Full Figma/any-site parity remains incomplete.
