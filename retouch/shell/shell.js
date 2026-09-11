@@ -430,9 +430,16 @@ async function classifyNode(node) {
 
 async function select(node,{toggle=false,sourceId}={}) {
   stopDrawing?.();
+  const componentToggle=toggle&&sel?.info.kind==='instance';
+  if(componentToggle&&!sourceId){
+    const root=node?.closest?.('[data-rt-i]');
+    if(!root||layerLocks.locked(root))return toast('Choose an unlocked component to add to this selection.','err');
+    node=root;sourceId=root.getAttribute('data-rt-i');
+  }
   const c = await classify(node,sourceId);
   if (c?.superseded) return;
-  if (!c) return clearSelection();
+  if (!c) return componentToggle?toast('This component is no longer available. Select it again.','err'):clearSelection();
+  if(componentToggle&&(c.info.kind!=='instance'||c.info.file!==sel?.info.file||c.info.hash!==sel?.info.hash))return toast('Select components from one unchanged source file.','err');
   if(toggle&&(c.info.cssAuthoring&&sel?.info.cssAuthoring||c.info.classSelection&&sel?.info.classSelection||c.info.contextSelection&&sel?.info.contextSelection||c.info.kind==='instance'&&sel?.info.kind==='instance')&&c.info.file===sel.info.file&&c.info.hash===sel.info.hash){
     let multiple=sel.multiple||[sel.info];multiple=multiple.some(info=>info.id===c.info.id)?multiple.filter(info=>info.id!==c.info.id):[...multiple,c.info];
     if(!multiple.length)return clearSelection();if(multiple.length>100)return toast('Select up to 100 layers.','err');
