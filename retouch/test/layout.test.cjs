@@ -183,3 +183,11 @@ test('size limits replace arbitrary declarations and respect inherited important
  assert.equal(L.ownLimit('md:![min-width:30px]','min-width'),null);
  assert.equal(L.ownLimit('[max-height:calc(100%_-_20px)]','max-height'),'calc(100% - 20px)');
 });
+
+
+test('grid span priority handles arbitrary placement and inherited area without changing the other axis',()=>{
+ assert.equal(L.spanClasses('[grid-column:2/4] [grid-column-start:3] [grid-column-end:5] row-span-2','column',3,'![grid-area:1/1/3/3]'),'row-span-2 !col-span-3');
+ assert.equal(L.spanClasses('![grid-area:1/1/3/3]','row','auto'),'![grid-area:1/1/3/3] !row-auto');
+ assert.equal(L.spanClasses('','row','full','!row-start-2'),'!row-span-full');
+ assert.equal(L.spanClasses('','column',2,'!row-span-2'),'col-span-2');
+});

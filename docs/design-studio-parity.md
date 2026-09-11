@@ -10972,3 +10972,10 @@ Padding fields now replace active physical edge classes and arbitrary physical p
 Minimum/maximum width and height now replace active arbitrary physical constraint declarations as well as utility classes. Matching inherited important constraints promote the new scoped value. Reset recognizes both declaration forms; own-value lookup recognizes arbitrary properties and prefers important active declarations.
 
 876 unit tests pass. Chromium/WebKit verify all four constraints against smaller-breakpoint important arbitrary properties, including the actual constrained dimension, retained opposite dimension, invalid negative input without source writes, Reset, Phone isolation and exact source Undo/Redo. Evidence: `/private/tmp/retouch-limits-{chromium,webkit}.log` and `/private/tmp/retouch-limits-units.log`. Logical dimensions, arbitrary conditional/state inheritance, full Figma parity and trusted macOS distribution remain unfinished. The desktop package predates these editor changes.
+
+
+## Grid span priority and arbitrary placement
+
+Row/column span writes now replace active arbitrary grid-axis shorthand/start/end declarations alongside placement utilities. Relevant important inherited placement and grid-area shorthand promote the new span. Grid-area itself remains intact to preserve the other axis.
+
+877 unit tests pass. Chromium/WebKit verify numeric, full and auto spans on both axes against an inherited important grid-area, including measured dimensions, unchanged opposite axis, Phone isolation and exact source Undo/Redo. Evidence: `/private/tmp/retouch-grid-span-{chromium,webkit}.log` and `/private/tmp/retouch-grid-span-units.log`. Named-area authoring, complex conditional/state cascade, full Figma parity and trusted macOS distribution remain unfinished. The desktop package predates these changes.

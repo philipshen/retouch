@@ -67,12 +67,15 @@
     if([...classes.split(/\s+/),...(parent.inheritedClasses||'').split(/\s+/)].some(token=>(I.base(token)?.startsWith('size-')||match(I.base(token)||'')||stretch&&/^place-self-|^\[place-self:/.test(I.base(token)||''))&&/^!|!$/.test(token)))addition=addition.split(' ').map(token=>'!'+token).join(' ');
     return I.replace(classes,match,addition);
   }
-  function spanClasses(classes,axis,value) {
+  function spanClasses(classes,axis,value,inherited='') {
     if(!['column','row'].includes(axis))throw Error('Unknown grid axis');
     if(!['auto','full'].includes(value)&&!(Number.isInteger(value)&&value>=1&&value<=24))throw Error('Choose a span from 1 to 24');
     const prefix=axis==='column'?'col':'row';
     const placement=new RegExp('^-?'+prefix+'-(?:auto|span-(?:full|\\d+|\\[.+\\])|(?:start|end)-(?:auto|\\d+|\\[.+\\])|\\d+|\\[.+\\])$');
-    return I.replace(classes,t=>placement.test(t),prefix+'-'+(typeof value==='number'?'span-'+value:value==='full'?'span-full':'auto'));
+    const matches=t=>placement.test(t)||t.startsWith('[grid-'+axis+':')||t.startsWith('[grid-'+axis+'-start:')||t.startsWith('[grid-'+axis+'-end:');
+    let addition=prefix+'-'+(typeof value==='number'?'span-'+value:value==='full'?'span-full':'auto');
+    if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(t=>/^!|!$/.test(t)&&(matches(I.base(t)||'')||(I.base(t)||'').startsWith('[grid-area:'))))addition='!'+addition;
+    return I.replace(classes,matches,addition);
   }
   function spanValue(start,end) {
     if(start==='auto'&&end==='auto')return 'auto';
@@ -147,7 +150,7 @@
       const counts=Array.from({length:24},(_,i)=>[String(i+1),String(i+1)]);
       for(const axis of ['column','row']) {
         const prop=axis==='column'?'gridColumn':'gridRow';
-        I.select(sec,axis==='column'?'Span columns':'Span rows',[['','Custom placement'],['auto','Auto'],['full',axis==='column'?'All columns':'All rows'],...counts],spanValue(css[prop+'Start'],css[prop+'End']),v=>{if(v)save(spanClasses(classes,axis,/^\d+$/.test(v)?Number(v):v));});
+        I.select(sec,axis==='column'?'Span columns':'Span rows',[['','Custom placement'],['auto','Auto'],['full',axis==='column'?'All columns':'All rows'],...counts],spanValue(css[prop+'Start'],css[prop+'End']),v=>{if(v)save(spanClasses(classes,axis,/^\d+$/.test(v)?Number(v):v,inherited));});
       }
       I.note(sec,'Choosing a span replaces explicit line placement on that axis. Other dimensions stay unchanged.');
     }
