@@ -11139,3 +11139,10 @@ React stroke width and style now use a shared class planner that replaces active
 Removed the canvas context menu's hard-coded dark background, separator colors, and system font. It now uses the light workspace palette and Inter, with a visible keyboard-focus outline and lighter shadow. Compact drawer shadows also match the lighter elevation treatment.
 
 Chromium/WebKit canvas-context-menu workflows passed explicit light background/text assertions, selection and duplication, exact undo, framing/reparenting, keyboard navigation/focus return, native-input guards, and compact bounds/scrolling. Screenshot /private/tmp/retouch-light-menu-chromium.png was visually inspected. Source changes postdate desktop archive af62db6. Full parity remains incomplete.
+
+
+### Compact HTML layout groups (2026-09-11)
+
+HTML Layout now pairs physical padding edges, groups minimum/maximum dimensions under Size limits, and groups margins under Outer spacing. CSS-heavy visible labels are shortened while accessible names and existing callbacks remain intact. Common width/height and padding controls stay visible.
+
+Full HTML workflows passed in Chromium/WebKit with the added minimum-width edit/undo and disclosure checks, alongside existing padding/shorthand coverage. A focused fresh Chromium preview additionally passed margin editing/exact undo and visually verified final labels at /private/tmp/retouch-html-layout-chromium.png. Source changes postdate desktop archive af62db6. Full parity remains incomplete.
