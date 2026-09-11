@@ -132,3 +132,12 @@ test('breakpoint gap edits can override inherited important shorthand or axis de
  assert.equal(L.gapClasses('','width',30,'horizontal-tb','!gap-y-2'),'gap-x-[30px]');
  assert.equal(L.gapClasses('gap-x-4 gap-y-2','width',null,'horizontal-tb','!gap-2'),'gap-y-2');
 });
+
+test('breakpoint sizing overrides inherited important dimensions and main-axis flex values',()=>{
+ assert.equal(L.sizeClasses('','width','fixed',200,{inheritedClasses:'!w-40 !h-20'}),'!w-[200px]');
+ assert.equal(L.sizeClasses('','height','hug',0,{inheritedClasses:'!size-40'}),'!h-fit');
+ assert.equal(L.sizeClasses('','width','fill',0,{display:'flex',direction:'row',inheritedClasses:'![flex-basis:100px]'}),'!w-auto !flex-1');
+ assert.equal(L.sizeClasses('','width','fill',0,{display:'grid',inheritedClasses:'!place-self-center'}),'!w-auto !justify-self-stretch');
+ assert.equal(L.sizeClasses('','width','fixed',200,{inheritedClasses:'!h-20 !min-w-40'}),'w-[200px]');
+ assert.equal(L.sizeClasses('w-40 h-20','width','reset',0,{inheritedClasses:'!size-40'}),'h-20');
+});

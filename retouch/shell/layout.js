@@ -38,7 +38,7 @@
     let addition=mode==='fixed'?`${dim}-[${value}px]`:mode==='hug'?`${dim}-fit`:`${dim}-full`;
     if(stretch)addition=dim+'-auto '+(inlineStretch?'justify-self-stretch':'self-stretch');
     if(alongFlex)addition=mode==='fill'?`${dim}-auto flex-1`:addition+' flex-none';
-    if(classes.split(/\s+/).some(token=>(I.base(token)?.startsWith('size-')||stretch&&/^place-self-|^\[place-self:/.test(I.base(token)||''))&&/^!|!$/.test(token)))addition=addition.split(' ').map(token=>'!'+token).join(' ');
+    if([...classes.split(/\s+/),...(parent.inheritedClasses||'').split(/\s+/)].some(token=>(I.base(token)?.startsWith('size-')||match(I.base(token)||'')||stretch&&/^place-self-|^\[place-self:/.test(I.base(token)||''))&&/^!|!$/.test(token)))addition=addition.split(' ').map(token=>'!'+token).join(' ');
     return I.replace(classes,match,addition);
   }
   function spanClasses(classes,axis,value) {
@@ -130,7 +130,7 @@
       const title=axis[0].toUpperCase()+axis.slice(1),dim=axis==='width'?'w':'h';
       const sizingTokens=classes.split(/\s+/).filter(token=>I.base(token)!==null),ownToken=sizingTokens.find(token=>/^!|!$/.test(token)&&I.base(token).startsWith(dim+'-'))||sizingTokens.find(token=>/^!|!$/.test(token)&&I.base(token).startsWith('size-'))||sizingTokens.find(token=>I.base(token).startsWith(dim+'-'))||sizingTokens.find(token=>I.base(token).startsWith('size-'));
       const own=ownToken&&I.base(ownToken).replace(/^size-/,dim+'-');
-      const context={display:parent?.display,direction:parent?.flexDirection,writingMode:parent?.writingMode},axes=layoutAxes(context);
+      const context={display:parent?.display,direction:parent?.flexDirection,writingMode:parent?.writingMode,inheritedClasses:info.styleScope?info.anchorInheritedClasses||'':''},axes=layoutAxes(context);
       const stretchFill=own===dim+'-auto'&&parent&&(/grid/.test(parent.display)?axis===axes.inline?css.justifySelf==='stretch':css.alignSelf==='stretch':/flex/.test(parent.display)&&axis!==axes.main&&css.alignSelf==='stretch');
       const sizing=own===dim+'-fit'?'hug':own===dim+'-full'||stretchFill||/\bflex-1\b/.test(classes)&&parent&&/flex/.test(parent.display)&&axis===axes.main?'fill':own&&own!==dim+'-auto'?'fixed':'';
       const size=(mode,value)=>save(sizeClasses(classes,axis,mode,mode==='fixed'?geometry.dimensionValue(css,axis,value):value,context));

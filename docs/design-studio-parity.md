@@ -10937,3 +10937,10 @@ Layout now offers Reset horizontal gap and Reset vertical gap. Each removes only
 Scoped gap writes now inspect the existing inherited-class metadata as well as the active scope. An important inherited gap shorthand or matching gap axis promotes the new breakpoint override; an important opposite-axis declaration does not. Reset still removes only the active axis override. The existing inherited-scope resolver is reused, with its existing base/ascending-minimum-breakpoint boundary.
 
 871 unit tests pass. Chromium/WebKit verify a base important 10px gap, a smaller-breakpoint important 12px gap and a normal tablet 20px shorthand. Editing the tablet axis produces a visible 30px gap, keeps the other gap at 12px, resets to 12px, leaves Phone at 10px and restores exact source/history. Both flex directions and both grid axes pass in verified vertical-lr. Evidence: `/private/tmp/retouch-inherited-gap-{chromium,webkit}.log` and `/private/tmp/retouch-inherited-gap-units.log`. Complex conditional/state inheritance and full parity remain unfinished.
+
+
+## Sizing priority across smaller breakpoints
+
+Single-layer sizing now considers inherited important dimensions, size shorthand, relevant main-axis flex declarations and stretch alignment when choosing the priority of a breakpoint override. Only relevant inherited properties promote the new classes; opposite dimensions and min/max constraints remain intact. Reset removes active-scope classes without rewriting inherited source.
+
+872 unit tests pass. Chromium/WebKit exercise base important width/height plus a smaller-breakpoint important size and flex basis. At Tablet, Fixed writes the correct content-box dimension, Hug-to-Fixed retains size, Fill occupies available width, and Reset restores the inherited 120px content size. Phone stays at its original dimensions, and exact Undo/Redo passes. Evidence: `/private/tmp/retouch-inherited-size-{chromium,webkit}.log` and `/private/tmp/retouch-inherited-size-units.log`. This reuses the existing inherited-class resolver; arbitrary conditional/state cascade, full parity and trusted native distribution remain unfinished.
