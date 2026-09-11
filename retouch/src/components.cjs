@@ -6,9 +6,10 @@ const MagicString = require('magic-string');
 const traverse = require('@babel/traverse').default;
 const { parseSource, collectElements, contentHash, jsxElementName } = require('./id.cjs');
 const refuse = reason => ({ ok: false, refused: true, reason });
-function readConfig(file) {
+function readConfig(file,audit) {
   // JSONC is parsed as syntax, never executed. Only JSON-shaped AST nodes pass.
-  const ast = parseSource('const config = ' + fs.readFileSync(file, 'utf8'));
+  audit?.path(file);const source=fs.readFileSync(file,'utf8');audit?.read(file,source);
+  const ast = parseSource('const config = ' + source);
   function value(node) {
     if (node.type === 'ObjectExpression') {
       const result = Object.create(null);
@@ -31,13 +32,13 @@ function contained(root, file) {
   if (!real.startsWith(fs.realpathSync(root) + path.sep) || real.split(path.sep).includes('node_modules')) throw new Error('The component definition is outside this project.');
   return real;
 }
-function moduleFile(root, from, specifier) {
+function moduleFile(root, from, specifier,audit) {
   const candidates = [];
   if (specifier.startsWith('.')) candidates.push(path.resolve(path.dirname(from),specifier));
   else {
     for (const name of ['tsconfig.json','jsconfig.json']) {
       try {
-        const config = readConfig(path.join(root,name));
+        const config = readConfig(path.join(root,name),audit);
         const base = path.resolve(root,config.compilerOptions?.baseUrl || '.');
         for (const [pattern,values] of Object.entries(config.compilerOptions?.paths || {})) {
           const [prefix,suffix=''] = pattern.split('*');
@@ -51,6 +52,10 @@ function moduleFile(root, from, specifier) {
   }
   for (const candidate of candidates) for (const ext of ['', '.tsx','.jsx','.ts','.js','/index.tsx','/index.jsx','/index.ts','/index.js']) {
     const file=candidate+ext;
+    // A directory import at the project root may try sibling extension paths.
+    // Those cannot be valid project modules; continue to its index candidates.
+    if(!path.resolve(file).startsWith(path.resolve(root)+path.sep))continue;
+    audit?.path(file);
     if(fs.existsSync(file)&&fs.statSync(file).isFile()&&/\.[jt]sx?$/.test(file))return contained(root,file);
   }
   throw new Error(`Cannot resolve local component module ${specifier}.`);
@@ -67,9 +72,9 @@ function bindingIn(ast,name) {
   traverse(ast,{Program(p){found=p.scope.getBinding(name)?.path.node;p.stop();}});
   return found;
 }
-function exported(root,file,name,seen=new Set()) {
+function exported(root,file,name,seen=new Set(),audit) {
   const key=file+'#'+name;if(seen.has(key))throw new Error('Component exports form a cycle.');seen.add(key);
-  const source=fs.readFileSync(file,'utf8'),ast=parseSource(source);
+  audit?.path(file);const source=fs.readFileSync(file,'utf8');audit?.read(file,source);const ast=parseSource(source);
   for(const item of ast.program.body) {
     if(item.type==='ExportDefaultDeclaration'&&name==='default') {
       const node=item.declaration.type==='Identifier'?bindingIn(ast,item.declaration.name):item.declaration;
@@ -81,22 +86,22 @@ function exported(root,file,name,seen=new Set()) {
       if(decl?.type==='VariableDeclaration')for(const d of decl.declarations)if(d.id.name===name&&functionNode(d))return {file,source,fn:functionNode(d),exportName:name};
       for(const spec of item.specifiers)if((spec.exported.name||spec.exported.value)===name) {
         const local=spec.local?.name||spec.local?.value;
-        if(item.source)return exported(root,moduleFile(root,file,item.source.value),local,seen);
+        if(item.source)return exported(root,moduleFile(root,file,item.source.value,audit),local,seen,audit);
         const node=bindingIn(ast,local),fn=functionNode(node);
         if(fn)return {file,source,fn,exportName:name};
         if(node?.type==='ImportSpecifier'||node?.type==='ImportDefaultSpecifier') {
           const imp=ast.program.body.find(n=>n.type==='ImportDeclaration'&&n.specifiers.includes(node));
-          return exported(root,moduleFile(root,file,imp.source.value),node.type==='ImportDefaultSpecifier'?'default':node.imported.name,seen);
+          return exported(root,moduleFile(root,file,imp.source.value,audit),node.type==='ImportDefaultSpecifier'?'default':node.imported.name,seen,audit);
         }
       }
     }
     if(item.type==='ExportAllDeclaration'&&name!=='default') {
-      try{return exported(root,moduleFile(root,file,item.source.value),name,seen);}catch{}
+      try{return exported(root,moduleFile(root,file,item.source.value,audit),name,seen,audit);}catch{}
     }
   }
   throw new Error('This export is not a locally resolvable function component.');
 }
-function definition(resolved) {
+function definition(resolved,audit) {
   if(resolved.element.kind!=='instance')throw new Error('Select a component instance to inspect its definition.');
   const name=jsxElementName(resolved.element.node),parts=name.split('.'),ast=parseSource(resolved.source);
   if(parts.length>2)throw new Error('Deep component member bindings cannot be resolved.');
@@ -108,7 +113,7 @@ function definition(resolved) {
     const imp=binding.path.parentPath.node;
     const exportName=node.type==='ImportDefaultSpecifier'?'default':node.type==='ImportNamespaceSpecifier'?parts[1]:node.imported.name||node.imported.value;
     if(!exportName||(parts.length>1&&node.type!=='ImportNamespaceSpecifier'))throw new Error('Computed component members cannot be resolved.');
-    return {...exported(resolved.appRoot,moduleFile(resolved.appRoot,resolved.file,imp.source.value),exportName),name};
+    return {...exported(resolved.appRoot,moduleFile(resolved.appRoot,resolved.file,imp.source.value,audit),exportName,new Set(),audit),name};
   }
   const fn=functionNode(node);if(!fn)throw new Error('The local component is not a function component.');
   if(!binding.scope.path.isProgram())throw new Error('Nested components capture local values and cannot be detached as a module.');

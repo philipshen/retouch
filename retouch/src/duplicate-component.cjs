@@ -2,14 +2,22 @@
 const traverse=require('@babel/traverse').default,MagicString=require('magic-string');
 const {parseSource,collectElements,contentHash}=require('./id.cjs');
 const refuse=reason=>({ok:false,refused:true,reason});
-function context(resolved){
+function dependencyAudit(resolved){
+ const dependencies=new Map(),checks=new Map();let invalid=null;
+ const audit={
+  path(file){try{const check=require('./source-path-checks.cjs').snapshot(resolved.appRoot,file),prior=checks.get(file);if(prior&&JSON.stringify(prior)!==JSON.stringify(check))throw Error('Component resolution changed during planning.');checks.set(file,check);if(checks.size>1000)throw Error('The component resolution is too large to duplicate safely.');}catch(error){invalid=error;throw error;}},
+  read(file,source){const key=checks.get(file)?.realPath||file;if(key===resolved.file)return;const prior=dependencies.get(key);if(prior!==undefined&&prior!==source){invalid=Error('A component dependency changed during planning.');throw invalid;}dependencies.set(key,source);},
+ };
+ return {audit,finish(){if(invalid)throw invalid;return {edits:[...dependencies].map(([file,before])=>({file,before,after:before})),pathChecks:[...checks.values()]};}};
+}
+function context(resolved,audit){
  if(resolved.element.kind!=='instance')throw Error('Select a component instance to duplicate.');
  let target;traverse(parseSource(resolved.source),{JSXElement(p){if(p.node.start===resolved.element.node.start){target=p;p.stop();}}});
  if(!target)throw Error('The component usage no longer resolves.');
  const wrapped=!['JSXElement','JSXFragment'].includes(target.parent.type)||target.listKey!=='children';
  let unsafe=false;target.traverse({JSXSpreadAttribute(){unsafe=true;},JSXAttribute(p){if(['id','ref'].includes(p.node.name?.name))unsafe=true;}});
  if(unsafe)throw Error('This usage contains an id, ref, or spread attribute. Give the copy an explicit independent identity before duplicating.');
- const definition=require('./components.cjs').definition(resolved);let fixedId=false;
+ const definition=require('./components.cjs').definition(resolved,audit);let fixedId=false;
  traverse(definition.fn,{noScope:true,JSXAttribute(p){if(p.node.name?.name==='id'&&p.node.value?.type==='StringLiteral')fixedId=true;}});
  if(fixedId)throw Error('This definition contains a fixed DOM id. Make that identity instance-specific before duplicating.');
  const keys=target.node.openingElement.attributes.filter(a=>a.name?.name==='key');if(keys.length>1)throw Error('Resolve duplicate key attributes before duplicating.');
@@ -20,7 +28,7 @@ function describe(resolved){try{return {ok:true,parentId:context(resolved).paren
 function plan(resolved,op){
  if(op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the instance before duplicating.');
  try{
-  const {target,key,parentId,wrapped}=context(resolved),chunk=new MagicString(resolved.source.slice(target.start,target.end));
+  const dependencies=dependencyAudit(resolved),{target,key,parentId,wrapped}=context(resolved,dependencies.audit),chunk=new MagicString(resolved.source.slice(target.start,target.end));
   if(key){let value='retouch-copy-'+contentHash(resolved.source+'|'+resolved.element.id).slice(0,12);while(resolved.source.includes(value))value+='x';chunk.overwrite(key.start-target.start,key.end-target.start,'key='+JSON.stringify(value));}
   const copy=chunk.toString(),gap='\n'+(resolved.source.slice(0,target.start).match(/(?:^|\n)([ \t]*)$/)?.[1]||'');
   let original=resolved.source.slice(target.start,target.end),open='<>',close='</>',importText='';
@@ -37,7 +45,8 @@ function plan(resolved,op){
   if(!duplicate||!retained)throw Error('The copied usage could not be mapped back to source.');
   const originalElements=resolved.elements||collectElements(resolved.source,resolved.relPath).elements,delta=after.length-resolved.source.length-importText.length,sourceIdMap=[],mapped=new Set();
   for(const element of originalElements){const before=element.node.start,inside=before>=target.start&&before<target.end,offset=inside?before+(wrapped?open.length:0)-(wrapped&&key&&before>=key.end?key.end-key.start:0):before+(before>=target.end?delta:0),next=elements.find(item=>item.kind===element.kind&&item.node.start===offset);if(!next||mapped.has(next.id))throw Error('An original layer lost its source identity during duplication.');mapped.add(next.id);if(next.id!==element.id)sourceIdMap.push([element.id,next.id]);}
-  return {ok:true,hash:contentHash(after),duplicatedComponent:{instanceId:duplicate.id,originalId:resolved.element.id,retainedInstanceId:retained.id,sourceIdMap,parentId,wrapped},edits:[{file:resolved.file,before:resolved.source,after}]};
+  const guarded=dependencies.finish();
+  return {ok:true,hash:contentHash(after),pathChecks:guarded.pathChecks,duplicatedComponent:{instanceId:duplicate.id,originalId:resolved.element.id,retainedInstanceId:retained.id,sourceIdMap,parentId,wrapped},edits:[{file:resolved.file,before:resolved.source,after},...guarded.edits]};
  }catch(error){return refuse(error.message);}
 }
 function planSelection(resolved,op){
@@ -49,12 +58,9 @@ function planSelection(resolved,op){
   if(members.some(element=>element?.kind!=='instance'))return refuse('Select component usages from the same source file.');
   // A selected parent already includes its selected descendants in its copy.
   const roots=members.filter(element=>!members.some(parent=>parent!==element&&parent.node.start<element.node.start&&parent.node.end>element.node.end));
-  const dependencies=new Map();
-  for(const element of roots){
-   const current={...resolved,elements:original,element};context(current);
-   const definition=require('./components.cjs').definition(current);
-   if(definition.file!==resolved.file){const prior=dependencies.get(definition.file);if(prior!==undefined&&prior!==definition.source)return refuse('A component definition changed during planning.');dependencies.set(definition.file,definition.source);}
-  }
+  const dependencies=dependencyAudit(resolved);
+  for(const element of roots)context({...resolved,elements:original,element},dependencies.audit);
+  const guarded=dependencies.finish();
   let source=resolved.source,elements=original;const identities=new Map(original.map(element=>[element.id,element.id])),copies=[];
   for(const root of [...roots].sort((a,b)=>b.node.start-a.node.start)){
    const id=identities.get(root.id),element=elements.find(item=>item.id===id);
@@ -70,7 +76,7 @@ function planSelection(resolved,op){
   copies.sort((a,b)=>elements.find(item=>item.id===a.instanceId).node.start-elements.find(item=>item.id===b.instanceId).node.start);
   const sourceIdMap=[...identities].filter(([before,after])=>before!==after),selectionIds=copies.map(copy=>copy.instanceId);
   if(new Set(selectionIds).size!==roots.length||selectionIds.some(id=>!elements.some(element=>element.id===id&&element.kind==='instance')))return refuse('The copied components could not be mapped back to source.');
-  return {ok:true,hash:contentHash(source),selectionIds,sourceIdMap,copiedComponents:copies,rootCount:roots.length,edits:[{file:resolved.file,before:resolved.source,after:source},...[...dependencies].map(([file,before])=>({file,before,after:before}))]};
+  return {ok:true,hash:contentHash(source),pathChecks:guarded.pathChecks,selectionIds,sourceIdMap,copiedComponents:copies,rootCount:roots.length,edits:[{file:resolved.file,before:resolved.source,after:source},...guarded.edits]};
  }catch(error){return refuse(error.message);}
 }
 module.exports={describe,plan,planSelection};
