@@ -1,0 +1,62 @@
+{
+  "archive": "/private/tmp/retouch-desktop-layout-refresh-20260911/Retouch-0.1.0-mac.zip",
+  "sha256": "dcd66381c8f31b6ffaa17852c6f9637e00c800bf48b1aa37a48b5172df15f8d3",
+  "sourceCommit": "a7c55aef5e4e12c28c5ea19b90c4efb737e89dbf",
+  "sourceTreeDirty": false,
+  "sourceFiles": 172,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "sourceMatchesCheckout": true,
+  "workflows": [
+    {
+      "test": "layout-mode-priority",
+      "engine": "chromium",
+      "result": "chromium: PASS arrangement controls and breakpoint layout modes, inherited display/flow priority, real child ordering, wrap preservation, Phone isolation and exact history"
+    },
+    {
+      "test": "layout-mode-priority",
+      "engine": "webkit",
+      "result": "webkit: PASS arrangement controls and breakpoint layout modes, inherited display/flow priority, real child ordering, wrap preservation, Phone isolation and exact history"
+    },
+    {
+      "test": "layout-padding",
+      "engine": "chromium",
+      "result": "chromium: PASS four padding edges, inherited important shorthand, other-edge preservation, reset, Phone isolation and exact history"
+    },
+    {
+      "test": "layout-padding",
+      "engine": "webkit",
+      "result": "webkit: PASS four padding edges, inherited important shorthand, other-edge preservation, reset, Phone isolation and exact history"
+    },
+    {
+      "test": "layout-limits",
+      "engine": "chromium",
+      "result": "chromium: PASS four size limits, inherited important constraints, actual dimensions, reset, validation, Phone isolation and exact history"
+    },
+    {
+      "test": "layout-limits",
+      "engine": "webkit",
+      "result": "webkit: PASS four size limits, inherited important constraints, actual dimensions, reset, validation, Phone isolation and exact history"
+    },
+    {
+      "test": "layout-grid-span",
+      "engine": "chromium",
+      "result": "chromium: PASS grid row/column numeric, full and auto spans, inherited important area, opposite-axis preservation, placement reset, Phone isolation and exact history"
+    },
+    {
+      "test": "layout-grid-span",
+      "engine": "webkit",
+      "result": "webkit: PASS grid row/column numeric, full and auto spans, inherited important area, opposite-axis preservation, placement reset, Phone isolation and exact history"
+    }
+  ],
+  "packageChecks": "Package and relocation/tamper checks passed; extracted ZIP source matches checkout; local cask Ruby syntax passed",
+  "nativeLaunch": "not attempted",
+  "signing": "ad hoc development build; Developer ID and notarization unfinished",
+  "limitations": [
+    "Native interaction and cask install/upgrade unverified",
+    "Full Figma parity and universal site support unfinished"
+  ]
+}

@@ -305,3 +305,10 @@ Row/column span writes now replace active arbitrary grid-axis shorthand/start/en
 Grid children now expose Reset column placement and Reset row placement. These remove active axis placement classes/arbitrary declarations without writing auto or removing shared grid-area rules. Buttons are disabled when that scope has no removable axis override.
 
 878 unit tests pass. Chromium/WebKit verify Reset after numeric/full/auto spans on both axes, restored inherited geometry, disabled state after removal, preserved opposite-axis source, exact Reset Undo/Redo and existing Phone isolation. Evidence: `/private/tmp/retouch-grid-reset-{chromium,webkit}.log` and `/private/tmp/retouch-grid-reset-units.log`. Full Figma parity and trusted macOS distribution remain unfinished; the packaged desktop runtime predates this change.
+
+
+## Desktop artifact refreshed with responsive layout changes
+
+Built the universal desktop app from clean commit `a7c55aef5e4e12c28c5ea19b90c4efb737e89dbf`. Archive: `/private/tmp/retouch-desktop-layout-refresh-20260911/Retouch-0.1.0-mac.zip`, SHA-256 `dcd66381c8f31b6ffaa17852c6f9637e00c800bf48b1aa37a48b5172df15f8d3`. All 172 packaged source hashes match the checkout; the extracted ZIP, strict ad hoc signature, relocation/tamper checks and local cask Ruby syntax pass.
+
+Eight browser workflows passed against the runtime inside the app: layout modes/arrangement, padding, size limits and grid spans/reset in Chromium and WebKit. Browser harness was removed after completion; logs remain beside the artifact. Receipt: `desktop/verification/2026-09-11-layout-refresh.json`. No native launch, signing-key prompt, cask installation or notarization occurred. Native interaction and trusted distribution remain unverified; full Figma parity remains unfinished.
