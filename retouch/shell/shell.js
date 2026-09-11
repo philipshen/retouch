@@ -1116,11 +1116,11 @@ function renderPanelContents() {
   // Scope switch when both IDs exist (R-12 a: instance is the default).
   if (sel.hostId && sel.instanceId) {
     const scopes = document.createElement('div');
-    scopes.className = 'scopes sec';
+    scopes.className = 'scopes sec';scopes.setAttribute('role','group');scopes.setAttribute('aria-label','Component editing scope');
     for (const s of ['instance', 'host']) {
       const b = document.createElement('button');
       b.textContent = s === 'instance' ? 'This instance' : 'Component';
-      if (sel.scope === s) b.classList.add('active');
+      b.setAttribute('aria-pressed',String(sel.scope===s));if (sel.scope === s) b.classList.add('active');
       b.onclick = () => { sel.scope = s; loadScope(); };
       scopes.appendChild(b);
     }
