@@ -1,0 +1,38 @@
+{
+  "sourceCommit": "20fdbe5e9fd263e10d572268f9cf8356e0232d92",
+  "sourceTreeDirty": false,
+  "sourceFiles": 175,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-layout-clip-20260911/Retouch-0.1.0-mac.zip",
+  "sha256": "aeaa6e24d6188fce2d6e3dea80ee75e1efc1c5b29275b0ffa2ac9ed56ab2e0ff",
+  "sourceMatchesCheckout": true,
+  "workflows": [
+    {
+      "engine": "chromium",
+      "result": "chromium: PASS light workspace, section order, segmented layout edits, opacity edits, exact undo, layer actions and screenshot",
+      "additionalCoverage": [
+        "typography alignment and text disclosure",
+        "mixed clipping state",
+        "important inherited overflow",
+        "unclipping and exact undo"
+      ]
+    },
+    {
+      "engine": "webkit",
+      "result": "webkit: PASS light workspace, section order, segmented layout edits, opacity edits, exact undo, layer actions and screenshot",
+      "additionalCoverage": [
+        "typography alignment and text disclosure",
+        "mixed clipping state",
+        "important inherited overflow",
+        "unclipping and exact undo"
+      ]
+    }
+  ],
+  "cask": "Local cask generated; Ruby syntax passed. Installation not attempted.",
+  "nativeLaunch": "not attempted",
+  "signing": "ad hoc development build; Developer ID/notarization and trusted distribution unfinished"
+}
