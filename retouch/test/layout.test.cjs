@@ -141,3 +141,10 @@ test('breakpoint sizing overrides inherited important dimensions and main-axis f
  assert.equal(L.sizeClasses('','width','fixed',200,{inheritedClasses:'!h-20 !min-w-40'}),'w-[200px]');
  assert.equal(L.sizeClasses('w-40 h-20','width','reset',0,{inheritedClasses:'!size-40'}),'h-20');
 });
+
+test('layout modes override inherited important display and flow while retaining wrapping and other scopes',()=>{
+ assert.equal(L.modeClasses('[display:grid] [flex-direction:column] p-4 md:block','row','!grid'),'p-4 md:block !flex !flex-row');
+ assert.equal(L.modeClasses('grid [flex-flow:column_wrap]!','row'),'[flex-flow:column_wrap]! !flex !flex-row');
+ assert.equal(L.modeClasses('flex flex-col','flow','![display:grid]'),'!block');
+ assert.equal(L.modeClasses('block','grid','!w-40'),'grid');
+});

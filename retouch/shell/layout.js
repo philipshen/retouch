@@ -2,10 +2,13 @@
   'use strict';
   const I=typeof module==='object'&&module.exports?require('./inspector.js'):root.RetouchInspector;
   const display=t=>/^(block|inline|inline-block|flex|inline-flex|grid|inline-grid|hidden|contents|flow-root)$/.test(t);
-  function modeClasses(classes,mode) {
+  function modeClasses(classes,mode,inherited='') {
     const additions={flow:'block',row:'flex flex-row',column:'flex flex-col','row-reverse':'flex flex-row-reverse','column-reverse':'flex flex-col-reverse',grid:'grid'};
     if(!Object.hasOwn(additions,mode))throw Error('Unknown layout');
-    return I.replace(classes,t=>display(t)||/^flex-(row|col)(-reverse)?$/.test(t),additions[mode]);
+    const matches=t=>display(t)||/^flex-(row|col)(-reverse)?$|^\[(?:display|flex-direction):/.test(t);
+    let addition=additions[mode];
+    if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(matches(I.base(token)||'')||/^\[flex-flow:/.test(I.base(token)||''))))addition=addition.split(' ').map(token=>'!'+token).join(' ');
+    return I.replace(classes,matches,addition);
   }
   function layoutAxes(parent={}){
     const inline=/^(vertical|sideways)-/.test(parent.writingMode||'')?'height':'width',block=inline==='width'?'height':'width';
@@ -85,7 +88,7 @@
     const classes=info.className||'';
     const mode=/grid/.test(css.display)?'grid':/flex/.test(css.display)?css.flexDirection:'flow';
     const verticalInline=layoutAxes({writingMode:css.writingMode}).inline==='height',rowLabel=verticalInline?'Vertical':'Horizontal',columnLabel=verticalInline?'Horizontal':'Vertical';
-    I.select(sec,'Arrange children',[['flow','Normal flow'],['row',rowLabel],['column',columnLabel],['row-reverse',rowLabel+' · reverse'],['column-reverse',columnLabel+' · reverse'],['grid','Grid']],mode,value=>save(modeClasses(classes,value)));
+    I.select(sec,'Arrange children',[['flow','Normal flow'],['row',rowLabel],['column',columnLabel],['row-reverse',rowLabel+' · reverse'],['column-reverse',columnLabel+' · reverse'],['grid','Grid']],mode,value=>save(modeClasses(classes,value,info.styleScope?info.anchorInheritedClasses||'':'')));
     function numeric(label,value,min,max,change) {
       const input=document.createElement('input');input.type='number';input.min=min;input.max=max;input.step='any';
       input.value=Number.isFinite(value)?Math.round(value*100)/100:0;
