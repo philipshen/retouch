@@ -1692,6 +1692,7 @@ function openComponent(id, component,options={}) {
   content.append(canvas,sidebar);modal.append(content);document.body.append(modal);
   let stop;
   preview.onload=()=>{
+    stop?.();stop=null;if(!modal.isConnected)return;
     try {
       const d=preview.contentDocument;
       // Keep the actual mounted component, its providers, and HMR alive. Hide
@@ -1719,8 +1720,11 @@ function openComponent(id, component,options={}) {
       d.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();},true);
     }catch{loading.textContent='Preview could not attach to this page.';}
   };
-  if(options.preview===false){preview.remove();loading.remove();}else preview.src=iframe.contentWindow.location.href;
-  modal.addEventListener('close',()=>{stop?.();modal.remove();});
+  if(options.preview===false){preview.remove();loading.remove();}else{
+    const url=iframe.contentWindow.location.href;
+    const refresh=RetouchInspector.button('Refresh preview',()=>{stop?.();stop=null;preview.style.visibility='hidden';preview.setAttribute('aria-busy','true');loading.textContent='Loading component preview…';if(!loading.isConnected)canvas.append(loading);preview.src=url;});refresh.setAttribute('aria-label','Refresh preview');refresh.title='Refresh preview';refresh.textContent='↻';refresh.className+=' component-preview-refresh';header.insertBefore(refresh,close);preview.src=url;
+  }
+  modal.addEventListener('close',()=>{stop?.();stop=null;preview.onload=null;modal.remove();});
   modal.showModal();close.focus();
 }
 

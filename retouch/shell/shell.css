@@ -609,3 +609,5 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .variable-grid tbody th { position:sticky; left:0; background:var(--panel); z-index:1; }
 .variable-grid tr[data-selected=true] th { background:#e5f4ff; }
 .variable-grid thead th:first-child { left:0; z-index:2; }
+
+.component-modal .component-preview-refresh { margin-left:auto; font-size:16px; line-height:16px; }

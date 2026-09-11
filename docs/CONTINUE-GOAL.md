@@ -576,3 +576,10 @@ Chromium/WebKit repeated-fragment tests passed after moving the selected second 
 Verified the 64eb2aa archive via Homebrew in /private/tmp/retouch-cask-install-check-20260911. Direct standalone cask loading was rejected because current Homebrew requires a tap; a temporary philipshen/retouch-local-verification tap installed successfully with --require-sha and --appdir. Installed bundle passed all 175 source hashes, universal architecture and strict signature checks. com.apple.quarantine was present and untouched. No native launch attempted.
 
 Uninstallation passed. App directory, cask registration, temporary tap and auto-added cask trust entry were verified absent. tap-new help automatically enabled Homebrew developer mode; it was restored to disabled and verified. No other tap trust entries were modified. Install/uninstall logs /private/tmp/retouch-cask-{install,uninstall}-20260911.log. Receipt desktop/verification/2026-09-11-variable-editor.json updated. This establishes local quarantined install/uninstall for archive 64eb2aa, not later source commits, upgrades, native editing, public release, Developer ID signing or notarization. Full parity remains incomplete.
+
+
+### Refresh component previews (2026-09-11)
+
+Mounted component detail views now have an accessible Refresh preview control in the fixed header. Refresh hides the old frame, restores loading status, loads the captured route, and reuses the selected occurrence bookmark. Existing observers disconnect before reload/onload; close clears both the observer and load handler. Source-only views do not get a refresh control.
+
+Chromium/WebKit mapped-fragment identity workflows passed including DOM reorder, missing-instance recovery, then an explicit refresh. A marker in the old preview document proves a new document loaded; tests verify the selected second occurrence remains visible, first hidden, and source unchanged. Compact preview/source checks passed. Screenshot /private/tmp/retouch-preview-refresh-chromium.png.preview.png visually inspected; logs /private/tmp/retouch-preview-refresh-{chromium,webkit}.log. Native package refresh and full Figma parity remain incomplete.
