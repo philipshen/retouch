@@ -935,7 +935,7 @@ function screenScopeSection() {
   const section = document.createElement('div');
   section.className = 'screen-scope';
   const label = document.createElement('label');
-  label.textContent = 'Style changes';
+  label.textContent = 'Edit styles for';
   const picker = document.createElement('select');
   picker.setAttribute('aria-label', 'Style screen scope');
   const options = [{prefix:'',label:'All sizes · base'}];
@@ -968,6 +968,11 @@ function screenScopeSection() {
   const chosen = options.find(o=>o.prefix===styleScope);
   const arbitrary = /^(min|max)-\[([\d.]+(?:px|rem|em))\]:$/.exec(styleScope);
   const condition = chosen?.condition || (arbitrary ? `(${arbitrary[1]}-width: ${arbitrary[2]})` : null);
+  const scopeStatus=document.createElement('div');scopeStatus.className='scope-status';scopeStatus.setAttribute('role','status');scopeStatus.setAttribute('aria-label','Edit range status');
+  const matchesPreview=styleScope?(condition?RetouchResponsive.matches({condition,queries:chosen?.queries},iframe.contentWindow):null):true;
+  scopeStatus.dataset.match=matchesPreview===null?'unknown':String(matchesPreview);
+  scopeStatus.textContent=!styleScope?'Base styles · all screen sizes':matchesPreview===true?'Preview matches edit range':matchesPreview===false?'Preview is outside edit range':'Preview match is unknown';
+  section.append(scopeStatus);
   window.dispatchEvent(new CustomEvent('retouch:style-scope',{detail:{prefix:styleScope,label:chosen?.label||styleScope,condition,queries:chosen?.queries}}));
   if (condition) {
     const applies=RetouchResponsive.matches({condition,queries:chosen?.queries},iframe.contentWindow),currentSize={width:iframe.contentWindow.innerWidth,height:iframe.contentWindow.innerHeight};

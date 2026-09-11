@@ -12,7 +12,7 @@
   if(panel.dataset.organized==='true')return;panel.dataset.organized='true';
   const head=panel.firstElementChild;if(!head)return;head.classList.add('selection-heading');
   const file=head.querySelector(':scope > .filepath');if(file){const source=disclosure('Source','source');source.append(file);head.append(source);}
-  const scope=head.querySelector('.screen-scope');if(scope){const more=disclosure('Breakpoint options','breakpoint');[...scope.children].filter(el=>el.tagName!=='LABEL').forEach(el=>more.append(el));if(more.children.length>1)scope.append(more);}
+  const scope=head.querySelector('.screen-scope');if(scope){const more=disclosure('Breakpoint options','breakpoint');[...scope.children].filter(el=>el.tagName!=='LABEL'&&!el.classList.contains('scope-status')&&el.id!=='previewBreakpoint').forEach(el=>more.append(el));if(more.children.length>1)scope.append(more);}
   // Put properties in the same reading order as the Design panel reference.
   for(const section of [...panel.children]){const aliases={'Shared styles':'Layout','Align selected layers':'Position'},name=aliases[title(section)];if(name)section.querySelector(':scope > h3').textContent=name;}
 

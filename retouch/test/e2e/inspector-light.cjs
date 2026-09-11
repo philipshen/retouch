@@ -15,6 +15,12 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
  try{
   await wait(()=>url);await wait(async()=>(await fetch(url+'/rt/__api/health')).ok);browser=await browserType.launch();const page=await browser.newPage({viewport:{width:1500,height:1100}}),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.goto(url+'/rt',{timeout:90000});const parent=page.frameLocator('#app').locator('#layout');await parent.waitFor({timeout:90000});const settled=()=>page.waitForFunction(()=>!panelTasks&&!sourceRequests&&!undoBusy);
   await page.getByLabel('Screen size',{exact:true}).focus();await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await page.getByRole('treeitem',{name:'section · layout',exact:true}).click();const mode=page.getByLabel('Arrange children',{exact:true});await mode.waitFor();await settled();await page.getByLabel('Style screen scope',{exact:true}).selectOption('md:');await settled();
+  const rangeStatus=page.getByRole('status',{name:'Edit range status',exact:true});assert.equal(await rangeStatus.getAttribute('data-match'),'true');
+  const beforePreview=read();await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await settled();
+  await wait(async()=>await rangeStatus.getAttribute('data-match')==='false');assert.equal(await rangeStatus.isVisible(),true);
+  const previewBreakpoint=page.getByRole('button',{name:'Preview this breakpoint',exact:true});assert.equal(await previewBreakpoint.isVisible(),true);
+  await previewBreakpoint.click();await settled();await wait(async()=>await rangeStatus.getAttribute('data-match')==='true');assert.equal(read(),beforePreview);
+  await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();
   await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>[...document.fonts].some(font=>font.family==='Inter'&&font.status==='loaded')),true);
   const originalSource=read();
   assert.equal(await page.locator('#panel').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');

@@ -11056,3 +11056,10 @@ The light inspector places the picker beside the horizontal/vertical gap fields.
 Fixed a presentation mismatch: the native layout menu already mapped CSS row/column to physical directions, but the segmented icon buttons assumed horizontal writing. Layout now supplies its inline-axis orientation to the organizer; Vertical and Horizontal buttons keep their visual order/icons and choose the corresponding CSS direction.
 
 Validation: 882 unit tests passed. Full inspector-light workflows passed for vertical-rl RTL in Chromium and WebKit, plus horizontal-tb RTL and sideways-lr RTL in Chromium. The latter runs explicitly test both physical mode buttons. All runs exercise four flex directions with actual corner placement, inherited important styles, clipping, typography, and exact undo. These source changes and the preceding alignment picker are newer than the 20fdbe5 desktop archive. Full parity remains incomplete.
+
+
+### Visible responsive edit-range feedback (2026-09-11)
+
+The inspector now labels the scope selector Edit styles for and keeps an accessible edit-range status visible below it. Base scope, matching preview, mismatched preview, and unknown match are distinct states. A mismatched scope keeps Preview this breakpoint directly accessible; supporting comparison actions and explanatory details remain in Breakpoint options. This fixes the light organizer hiding the mismatch warning/action alongside advanced details.
+
+Chromium and WebKit inspector-light passed: switching a Tablet edit scope to Phone visibly reports mismatch, the direct preview action restores a matching viewport, and preview-only changes preserve source. Chromium breakpoint-preview also passed comparison editing/undo/redo, reload/persistence/reuse, source integrity, and separate preview history after updating its flow to open Breakpoint options for comparison buttons. This source refinement is newer than the packaged 20fdbe5 desktop archive. Full parity remains unfinished.

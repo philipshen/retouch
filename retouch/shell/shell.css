@@ -554,3 +554,10 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .layout-alignment-spacing { display:flex;align-items:center;gap:16px;margin:8px 0; }
 .layout-alignment-spacing .layout-alignment { flex:0 0 auto;margin:0; }
 .layout-alignment-spacing > .property-pair { flex:1;min-width:0;grid-template-columns:minmax(0,1fr);gap:0; }
+
+.scope-status { display:flex;align-items:center;gap:6px;font-size:10px;line-height:16px;margin-top:8px;color:var(--muted); }
+.scope-status::before { content:"";width:5px;height:5px;flex:0 0 5px;border-radius:50%;background:#14ae5c; }
+.scope-status[data-match="false"] { color:#8a5700; }
+.scope-status[data-match="false"]::before { background:#e5a000; }
+.scope-status[data-match="unknown"]::before { background:#999; }
+.screen-scope > #previewBreakpoint { margin-top:6px;background:var(--control); }
