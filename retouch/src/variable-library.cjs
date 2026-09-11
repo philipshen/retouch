@@ -16,6 +16,9 @@ function planChange(root,operation){
  const {file}=paths(root),source=readSource(root),current=decode(source);
  if(operation.revision!==revision(source))fail('Variable collections changed. Reload before saving.');
  const library=model.validate(operation.library);model.resolver(library).resolveAll();
+ // Check each named mode with other collections at their defaults. Combined
+ // cross-collection mode choices are also validated when previewed or applied.
+ for(const collection of library.collections)for(const mode of collection.modes)if(mode.id!==collection.defaultMode)model.resolver(library,{[collection.id]:mode.id}).resolveAll();
  if(JSON.stringify(library)===JSON.stringify(current))return {ok:true,edits:[],result:{...current,revision:revision(source)}};
  const after=JSON.stringify(library,null,2)+'\n';if(Buffer.byteLength(after)>LIMIT)fail('Variable library exceeds 2 MiB.',413);
  return {ok:true,edits:[{file,before:source,after}],result:{...library,revision:revision(after)}};

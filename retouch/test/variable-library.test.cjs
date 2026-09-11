@@ -28,8 +28,8 @@ test('authenticated variable API persists across restart and restores history',a
  }finally{if(server)await stop();if(previous===undefined)delete process.env.RETOUCH_STATE_DIR;else process.env.RETOUCH_STATE_DIR=previous;}
 });
 
-test('mode preview resolves exact revisions without writes and rejects cyclic mode combinations',t=>{
- const root=setup(t),input=data(),dark=id(4);input.collections[0].modes.push({id:dark,name:'Dark'});input.variables[0].values[dark]={alias:id(3)};library.commitPlan(root,library.planChange(root,{type:'replace',revision:null,library:input}));const saved=library.read(root),file=path.join(root,'.retouch/variables.json'),bytes=fs.readFileSync(file,'utf8');
+test('named-mode cycles are rejected on save and in externally supplied preview libraries',t=>{
+ const root=setup(t),input=data(),dark=id(4);input.collections[0].modes.push({id:dark,name:'Dark'});input.variables[0].values[dark]={alias:id(3)};assert.throws(()=>library.planChange(root,{type:'replace',revision:null,library:input}),/cycle/);assert.equal(fs.existsSync(path.join(root,'.retouch/variables.json')),false);fs.mkdirSync(path.join(root,'.retouch'));fs.writeFileSync(path.join(root,'.retouch/variables.json'),JSON.stringify(input));const saved=library.read(root),file=path.join(root,'.retouch/variables.json'),bytes=fs.readFileSync(file,'utf8');
  assert.equal(library.resolve(root,{revision:saved.revision,modes:{}}).values[0].value,'#ffffffff');assert.throws(()=>library.resolve(root,{revision:saved.revision,modes:{[id(1)]:dark}}),/cycle/);assert.throws(()=>library.resolve(root,{revision:null,modes:{}}),/changed/);assert.throws(()=>library.resolve(root,{revision:saved.revision,modes:{[id(1)]:id(99)}}),/selected mode/);assert.equal(fs.readFileSync(file,'utf8'),bytes);
 });
 
@@ -70,7 +70,7 @@ test('project variable planning refuses cyclic bound modes, unindexed links and 
 test('focused binding previews resolve only the requested alias chain without hiding whole-library cycles',t=>{
  const root=setup(t),input=data(),dark=id(4);input.collections[0].modes.push({id:dark,name:'Dark'});input.variables[0].values[dark]={alias:id(3)};
  input.variables.push({id:id(5),collectionId:id(1),name:'Space',type:'number',values:{[id(2)]:24,[dark]:48}},{id:id(6),collectionId:id(1),name:'Gap',type:'number',values:{[id(2)]:{alias:id(5)},[dark]:{alias:id(5)}}});
- library.commitPlan(root,library.planChange(root,{type:'replace',revision:null,library:input}));const saved=library.read(root),file=path.join(root,'.retouch/variables.json'),before=fs.readFileSync(file,'utf8'),request={revision:saved.revision,modes:{[id(1)]:dark}};
+ fs.mkdirSync(path.join(root,'.retouch'));fs.writeFileSync(path.join(root,'.retouch/variables.json'),JSON.stringify(input));const saved=library.read(root),file=path.join(root,'.retouch/variables.json'),before=fs.readFileSync(file,'utf8'),request={revision:saved.revision,modes:{[id(1)]:dark}};
  const focused=library.resolve(root,{...request,variableId:id(6)});assert.equal(focused.values.length,1);assert.equal(focused.values[0].id,id(6));assert.equal(focused.values[0].value,48);assert.deepEqual(focused.values[0].path.map(p=>p.variableId),[id(6),id(5)]);
  assert.throws(()=>library.resolve(root,request),/cycle/);assert.throws(()=>library.resolve(root,{...request,variableId:id(3)}),/cycle/);assert.throws(()=>library.resolve(root,{...request,variableId:id(99)}),/Unknown variable/);for(const variableId of [null,[],{},'',123])assert.throws(()=>library.resolve(root,{...request,variableId}),/identity/);assert.throws(()=>library.resolve(root,{...request,variableId:id(5),revision:null}),/changed/);assert.equal(fs.readFileSync(file,'utf8'),before);
 });

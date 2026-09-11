@@ -586,3 +586,5 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .variable-cell-editor { display:flex; flex-wrap:wrap; gap:4px; padding:6px; min-width:180px; }
 .variable-cell-editor input,.variable-cell-editor select { width:100%; height:28px; border:1px solid var(--accent); border-radius:3px; background:var(--panel); color:var(--ink); padding:4px; }
 .variable-cell-editor button { width:auto; min-height:24px; padding:4px 6px; font-size:10px; background:var(--bg); }
+
+.variable-cell-value { width:100%; min-width:0; }
