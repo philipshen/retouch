@@ -162,3 +162,12 @@ test('shared sizing modes use each parent axis and preserve responsive prioritie
  assert.ok(verticalGrid.includes('md:self-stretch'));assert.ok(!verticalGrid.includes('justify-self'));
  assert.throws(()=>changeSizeMode('[inline-size:100px]','','width','fill',0,row));
 });
+
+test('shared rotation retains responsive and axis ownership and important priority',()=>{
+ const {rotationDegrees}=require('../shell/react-selection.js');
+ const original='rotate-12 md:!rotate-45 hover:rotate-90 rotate-x-12 scale-125';
+ assert.equal(change(original,'md:','rotate',-30),'rotate-12 hover:rotate-90 rotate-x-12 scale-125 md:![rotate:-30deg]');
+ assert.equal(change(original,'md:','rotate',null),'rotate-12 hover:rotate-90 rotate-x-12 scale-125');
+ for(const value of [NaN,Infinity,-361,361,'90'])assert.throws(()=>change(original,'','rotate',value));
+ assert.equal(rotationDegrees('none'),0);assert.equal(rotationDegrees('.25turn'),90);assert.equal(rotationDegrees('100grad'),90);assert.equal(rotationDegrees('z 30deg'),30);assert.ok(Math.abs(rotationDegrees('3.141592653589793rad')-180)<1e-8);assert.ok(Number.isNaN(rotationDegrees('x 30deg')));
+});
