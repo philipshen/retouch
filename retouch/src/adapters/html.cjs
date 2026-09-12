@@ -75,7 +75,7 @@ function planOp(resolved,op){
  }else if(op.type==='setText'){
   if(!plain(el))return refuse('Editing nested markup or implicit closing tags needs a structured HTML operation.');
   if(typeof op.text!=='string'||op.text.length>1000000)return refuse('Invalid text.');
-  const start=el.location.startTag.endOffset,end=el.location.endTag.startOffset;if(start===end)out.appendLeft(start,escapeText(op.text));else out.overwrite(start,end,escapeText(op.text));
+  if(op.text!==el.node.childNodes.map(child=>child.value).join('')){const start=el.location.startTag.endOffset,end=el.location.endTag.startOffset;if(start===end)out.appendLeft(start,escapeText(op.text));else out.overwrite(start,end,escapeText(op.text));}
  }else if(op.type==='setTag'){
   if(!describe(resolved).canSetTag||!textTags.has(op.tag))return refuse('Unsupported HTML tag change.');
   out.overwrite(el.location.startTag.startOffset+1,el.location.startTag.startOffset+1+el.tag.length,op.tag);

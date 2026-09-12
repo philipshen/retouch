@@ -375,7 +375,7 @@ function planOp(resolved, op) {
     if (typeof op.text !== 'string') return refuse('setText needs a string.');
     const text = literalText(node, resolved.source);
     if (text === null) return sources.planWrite(resolved, op);
-    if(node.childrenStart===node.childrenEnd)ms.appendLeft(node.childrenStart,escapeText(op.text));else ms.overwrite(node.childrenStart, node.childrenEnd, escapeText(op.text));
+    if(op.text!==text){if(node.childrenStart===node.childrenEnd)ms.appendLeft(node.childrenStart,escapeText(op.text));else ms.overwrite(node.childrenStart, node.childrenEnd, escapeText(op.text));}
   } else if (op.type === 'setChildren') {
     const err=validateChildrenTree(op.children,0); if (err) return refuse(err);
     if (describe(resolved).richText) return sources.planWriteChildren(resolved,op);
