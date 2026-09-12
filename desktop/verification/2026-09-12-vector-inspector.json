@@ -1,0 +1,69 @@
+{
+  "sourceCommit": "edcea30f974144f08d823c3cd65907a75182db21",
+  "sourceTreeDirty": false,
+  "sourceFiles": 177,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-vectors-20260912-edcea30/Retouch-0.1.0-mac.zip",
+  "sha256": "1e0fa12823b8715dbbb0316ad7a4735e75dfe8826bcabc38bf2fc1a03dd9e6d6",
+  "sourceMatchesCheckout": true,
+  "units": {
+    "passed": 903,
+    "log": "/private/tmp/retouch-desktop-vector-all-tests.log"
+  },
+  "workflows": [
+    {
+      "name": "numeric-handles-html",
+      "exit": 0,
+      "log": "/private/tmp/retouch-desktop-vectors-20260912-edcea30/handles-html.log"
+    },
+    {
+      "name": "liquid-webkit-initial-harness",
+      "exit": 1,
+      "log": "/private/tmp/retouch-desktop-vectors-20260912-edcea30/liquid-webkit.log",
+      "reason": "External test harness lacked its dev-only liquidjs dependency; bundled source was not changed."
+    },
+    {
+      "name": "liquid-path-entry-and-position-webkit",
+      "exit": 0,
+      "log": "/private/tmp/retouch-desktop-vectors-20260912-edcea30/liquid-webkit-harness-fixed.log"
+    },
+    {
+      "name": "delete-handles-react-webkit",
+      "exit": 0,
+      "log": "/private/tmp/retouch-desktop-vectors-20260912-edcea30/delete-react-webkit.log"
+    }
+  ],
+  "installation": {
+    "verification": {
+      "sourceCommit": "edcea30f974144f08d823c3cd65907a75182db21",
+      "sourceTreeDirty": false,
+      "sourceFiles": 177,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "quarantinePreserved": true,
+    "cask": "/private/tmp/retouch-desktop-vectors-20260912-edcea30/retouch-studio.rb",
+    "logs": [
+      "/private/tmp/retouch-desktop-vectors-20260912-edcea30/install.log",
+      "/private/tmp/retouch-desktop-vectors-20260912-edcea30/uninstall.log"
+    ],
+    "cleanup": "Temporary app directory, Caskroom registration, tap and specific trust entry verified absent; developer mode restored to disabled. Existing unrelated trust entries preserved."
+  },
+  "nativeLaunch": {
+    "attempts": 1,
+    "processStarted": true,
+    "pid": 89497,
+    "windowInspection": "CUA getApp returned -10005 cgWindowNotFound; one inspection of the already-running app returned the same error.",
+    "result": "Foreground window and usability remain unverified; native automated self-tests not run.",
+    "cleanup": "Owned test process terminated and its PID verified absent."
+  },
+  "signing": "Ad hoc development build. Developer ID signing, notarization, trusted public distribution and upgrades remain unfinished.",
+  "harness": "External harness used bundled bin/src/shell and development test dependencies; removed after all workflows reached terminal states. Extracted signature verified again after testing and the native launch attempt."
+}
