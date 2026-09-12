@@ -64,7 +64,7 @@
    const value=property==='opacity'?Number(raw)*100:raw==='none'?0:/^-?[\d.]+deg$/.test(raw)?parseFloat(raw):NaN;
    input.value=Number.isFinite(value)?value:'';input.placeholder=raw;
    input.onchange=()=>{if(input.value!==''&&input.checkValidity()){const value=property==='opacity'?String(Number(input.value)/100):input.value+unit;if(valid(property,value)&&CSS.supports(property,value))save(property,value,width);}};
-   I.field(appearance,label,input);
+   I.numericLabelDrag(I.field(appearance,label,input));I.numericPreview(input,el,property,value=>property==='opacity'?String(value/100):value+unit);
    const reset=I.button('Reset '+property,()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);appearance.append(reset);
   }
   if(css.transform!=='none')I.note(appearance,'Rotation combines with the page’s existing transform.');
@@ -80,7 +80,7 @@
    const input=document.createElement('input');input.type='number';input.min=0;input.max=1000;input.step='any';
    input.disabled=!CSS.supports(property,'blur(1px)')||!filters||blurFilters.length>1;input.value=input.disabled?'':blurFilters.length?parseFloat(blurFilters[0].arg):0;
    input.onchange=()=>{if(input.value!==''&&input.checkValidity()){const value=withBlur(raw,Number(input.value));if(value!==null&&CSS.supports(property,value))save(property,value,width);}};
-   I.field(blur,label+' (px)',input);
+   I.numericLabelDrag(I.field(blur,label+' (px)',input));I.numericPreview(input,el,property,value=>withBlur(raw,value));
    if(input.disabled)I.note(blur,label+' cannot be adjusted with this browser or filter stack.');
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);blur.append(reset);
    const clear=I.button('Clear '+(property==='filter'?'layer':'background')+' filters',()=>save(property,'none',width));clear.disabled=raw==='none';blur.append(clear);
@@ -97,7 +97,7 @@
     const type=document.createElement('select');for(const [value,label]of [['drop','Drop shadow'],['inner','Inner shadow']]){const option=document.createElement('option');option.value=value;option.textContent=label;type.append(option);}type.value=shadow.inset?'inner':'drop';type.onchange=()=>update('inset',type.value==='inner');I.field(group,'Type',type).setAttribute('aria-label','Shadow '+(index+1)+' type');
     for(const [key,label]of [['x','X'],['y','Y'],['blur','Blur'],['spread','Spread']]){
      const input=document.createElement('input');input.type='number';input.step='any';input.min=key==='blur'?0:-10000;input.max=10000;input.value=shadow[key];
-     input.onchange=()=>{if(input.value!==''&&input.checkValidity())update(key,Number(input.value));};I.field(group,label+' (px)',input).setAttribute('aria-label','Shadow '+(index+1)+' '+label+' (px)');
+     input.onchange=()=>{if(input.value!==''&&input.checkValidity())update(key,Number(input.value));};I.numericLabelDrag(I.field(group,label+' (px)',input)).setAttribute('aria-label','Shadow '+(index+1)+' '+label+' (px)');I.numericPreview(input,el,'box-shadow',value=>serializeShadows(shadows.map((item,i)=>i===index?{...item,[key]:value}:item)));
     }
     const color=document.createElement('input');color.value=shadow.color;color.retouchPaintPreview=()=>RetouchPaintPicker.shadowPreview({el,group,shadows,index});color.oninput=()=>color.setCustomValidity('');color.onchange=()=>{const value=color.value.trim();if(!valid('color',value)||!CSS.supports('color',value)){color.setCustomValidity('Use a CSS color, such as #00000040 or rgba(0, 0, 0, 0.25).');color.reportValidity();return;}update('color',value);};I.field(group,'Color',color).setAttribute('aria-label','Shadow '+(index+1)+' color');
     group.append(I.button('Remove shadow '+(index+1),()=>writeShadows(shadows.filter((_,i)=>i!==index))));
