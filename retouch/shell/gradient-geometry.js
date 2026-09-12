@@ -1,6 +1,12 @@
 (function(root){
  'use strict';
  const serialize=root.RetouchHTMLCSSValues.serializeGradients,clamp=value=>Math.max(0,Math.min(100,Math.round(value)));
+ root.RetouchGradientNumeric=function({element,group,preview,gradient,gradients,index,paintGeometry}){
+  return (input,changed,stopIndex=null)=>root.RetouchInspector.numericPreview(input,element,'background-image',value=>serialize(gradients.map((item,i)=>i===index?changed(value):item)),value=>{
+     const next=value===null?gradient:changed(value);paintGeometry(next);preview.style.backgroundImage=serialize([next]);const strip=group.querySelector('.gradient-stop-strip');if(strip)strip.style.backgroundImage=serialize([{...next,type:'linear',angle:90}]);
+     if(stopIndex!==null){const handle=group.querySelector('[data-stop-index="'+stopIndex+'"]'),position=value===null?gradient.stops[stopIndex].position:value;if(handle){handle.style.left=position+'%';handle.setAttribute('aria-valuenow',position);}}
+    });
+ };
  root.RetouchGradientGeometry=function({gradient,index,el,preview,gradients,update,label='Fill'}){
   const positions=[];const position=next=>positions.forEach(render=>render(next));
   for(const mode of gradient.type==='linear'?['angle']:gradient.type==='radial'?['center']:['center','angle']){
