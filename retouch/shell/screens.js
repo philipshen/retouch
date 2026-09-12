@@ -97,6 +97,13 @@
     viewport={width:e.detail.width,height:e.detail.height};
     if (!screen) { width.value = e.detail.width; height.value = e.detail.height; }
   });
+  const toolbar=document.getElementById('screenToolbar'),options=document.createElement('details'),summary=document.createElement('summary'),optionsBody=document.createElement('div'),dimensions=document.createElement('div');
+  options.id='screenOptions';options.className='screen-options';summary.textContent='Preview options';optionsBody.className='screen-options-body';options.append(summary,optionsBody);
+  dimensions.className='screen-dimensions';const widthLabel=width.parentElement,heightLabel=height.parentElement,separator=widthLabel.nextElementSibling;toolbar.insertBefore(dimensions,widthLabel);dimensions.append(widthLabel,separator,heightLabel);
+  for(const id of ['screenAspect','screenRotate','screenUndo','screenRedo','canvasZoom','fitScreen','zoomSelection','compareScreens']){const control=document.getElementById(id);optionsBody.append(id==='canvasZoom'?control.parentElement:control);}toolbar.append(options);
+  const compactToolbar=matchMedia('(max-width:600px)'),layoutOptions=()=>{options.open=!compactToolbar.matches||optionsBody.contains(document.activeElement);};compactToolbar.addEventListener('change',layoutOptions);layoutOptions();
+  options.addEventListener('keydown',event=>{if(event.key==='Escape'&&!event.isComposing&&compactToolbar.matches&&options.open){event.preventDefault();event.stopPropagation();options.open=false;summary.focus();}});
+  document.addEventListener('pointerdown',event=>{if(compactToolbar.matches&&options.open&&!options.contains(event.target))options.open=false;},true);
   window.RetouchScreens = { constrain, constrainMain, isRatioLocked:()=>linked, setSaved(sizes) {
     savedGroup.replaceChildren();
     for(const [label,w,h] of sizes){if(typeof label!=='string'||!valid(w)||!valid(h))continue;const option=document.createElement('option');option.value='saved:'+w+'x'+h;option.textContent=label+' · '+w+' × '+h;savedGroup.append(option);}

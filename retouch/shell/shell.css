@@ -896,3 +896,17 @@ html, body { overflow:clip; }
  #toolbar { flex-wrap:wrap; }
  #routeInput { flex:1 1 180px; }
 }
+
+/* Keep screen dimensions together and leave room for the canvas on small windows. */
+.screen-dimensions { display:flex;align-items:center;gap:8px; }
+.screen-options,.screen-options-body { display:contents; }
+.screen-options > summary { display:none; }
+@media (max-width:600px) {
+ .screen-options { display:block;position:relative;margin-left:auto; }
+ .screen-options > summary { display:block;cursor:pointer;list-style:none;border-radius:5px;background:var(--control);padding:7px 10px;font-size:11px; }
+ .screen-options > summary::-webkit-details-marker { display:none; }
+ .screen-options[open] > summary { background:var(--hover); }
+ .screen-options[open] > .screen-options-body { position:absolute;right:0;top:calc(100% + 8px);z-index:60;display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:min(320px,calc(100vw - 24px));max-height:calc(100dvh - 200px);overflow:auto;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 18px #0002; }
+ .screen-options:not([open]) > .screen-options-body { display:none; }
+}
+.screen-options::details-content { display:contents; }
