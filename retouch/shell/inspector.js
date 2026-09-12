@@ -199,7 +199,7 @@
     };
     return input;
   }
-  function numericLabelDrag(input){
+  function numericLabelDrag(input,read=raw=>({value:Number(raw)})){
     const label=input.parentElement.querySelector('span');let drag=null;
     label.style.cursor='ew-resize';label.style.touchAction='none';label.style.userSelect='none';
     label.title='Drag to adjust. Shift: 10 units; Alt/Option: 0.1 units. Escape cancels.';
@@ -215,16 +215,17 @@
     input.addEventListener('blur',abort);
     label.addEventListener('pointerdown',event=>{
       if(event.button!==0||drag||input.disabled||input.readOnly||input.value===''||!input.checkValidity())return;
+      const parsed=read(input.value);if(!parsed||!Number.isFinite(parsed.value))return;
       event.preventDefault();event.stopPropagation();input.focus({preventScroll:true});
-      drag={id:event.pointerId,x:event.clientX,initial:input.value,value:Number(input.value)};
+      drag={id:event.pointerId,x:event.clientX,initial:input.value,value:parsed.value,format:parsed.format||String,min:parsed.min,max:parsed.max};
       drag.preview=input.retouchNumericPreview?.();drag.observer=new MutationObserver(()=>{if(!input.isConnected||drag?.preview?.current?.()===false)abort();});drag.observer.observe(document.body,{childList:true,subtree:true});
       label.setPointerCapture(event.pointerId);root.addEventListener('blur',abort);
     });
     label.addEventListener('pointermove',event=>{
       if(!drag||drag.id!==event.pointerId)return;event.preventDefault();event.stopPropagation();
       const delta=event.clientX-drag.x;drag.x=event.clientX;
-      const min=input.min===''?-Infinity:Number(input.min),max=input.max===''?Infinity:Number(input.max);
-      drag.value=Math.max(min,Math.min(max,Math.round((drag.value+delta*(event.altKey?0.1:event.shiftKey?10:1))*1e6)/1e6));input.value=String(drag.value);drag.preview?.update(drag.value);
+      const min=drag.min??(input.min===''?-Infinity:Number(input.min)),max=drag.max??(input.max===''?Infinity:Number(input.max));
+      drag.value=Math.max(min,Math.min(max,Math.round((drag.value+delta*(event.altKey?0.1:event.shiftKey?10:1))*1e6)/1e6));input.value=drag.format(drag.value);drag.preview?.update(drag.value);
     });
     label.addEventListener('pointerup',event=>{if(drag?.id===event.pointerId){event.preventDefault();event.stopPropagation();stop(false);}});
     for(const type of ['pointercancel','lostpointercapture'])label.addEventListener(type,event=>{if(drag?.id===event.pointerId)stop(true);});

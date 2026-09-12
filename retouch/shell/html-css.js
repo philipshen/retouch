@@ -194,6 +194,11 @@
    input.onchange=()=>{const value=input.value.trim();if(!CSS.supports(property,value)||!valid(property,value)){input.setCustomValidity('Use simple CSS lengths with units, keywords, or colors. Spacing accepts up to four values; gap accepts two.');input.reportValidity();return;}save(property,value,width);};
    const target=property.endsWith('radius')?corners:/^(font-|line-height|letter-spacing|text-)/.test(property)||property==='color'?typography:sec;
    I.field(target,label+' (CSS)',input);
+   if(input.tagName==='INPUT'&&['font-size','font-weight','line-height','letter-spacing'].includes(property)){
+    let unit='';I.numericLabelDrag(input,raw=>{const match=/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))(px|em|rem|%|ex|ch|vw|vh|vmin|vmax|pt|pc|in|cm|mm)?$/i.exec(raw.trim());if(!match||!CSS.supports(property,raw)||!valid(property,raw)||!match[2]&&!['font-weight','line-height'].includes(property))return null;unit=match[2]||'';return {value:Number(match[1]),format:value=>value+unit,min:property==='font-weight'?1:property==='letter-spacing'?-100000:0,max:property==='font-weight'?1000:100000};});
+    I.numericPreview(input,el,property,value=>value+unit);
+   }
+
    if(['color','background-color','border-color'].includes(property)){I.fieldDraft(input);input.dataset.paintProperty=property;input.retouchPaintPreview=()=>RetouchPaintPicker.propertyPreview({el,input,property});}
    if(property==='line-height')target.append(I.button('Automatic line height',()=>save(property,'normal',width)));
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);target.append(reset);
