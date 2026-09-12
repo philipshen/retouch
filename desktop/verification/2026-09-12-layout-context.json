@@ -1,0 +1,83 @@
+{
+  "sourceCommit": "7f42a31244a8ab614a0a599c88aa0f7744398850",
+  "sourceTreeDirty": false,
+  "sourceFiles": 178,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict ad hoc verification passed after archive extraction and packaged workflows",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "archive": "/private/tmp/retouch-desktop-layout-7f42a31/Retouch-0.1.0-mac.zip",
+  "sha256": "6c0616bb49d8dc7d40cd5deebe6944fb7c1313e5e19ab190346c70fd51169817",
+  "status": "development candidate with known failing browser regression; not a release",
+  "units": {
+    "passed": 923,
+    "log": "/private/tmp/retouch-desktop-layout-units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "shared grid Fill through contents wrappers, fixed/numeric sizing, drag cancellation, scope and Undo",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-layout-7f42a31/grid-contents.log"
+    },
+    {
+      "name": "contextual shared layout controls, responsive switching and Undo",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "result": "passed after test waits for scheduled viewport refresh",
+      "log": "/private/tmp/retouch-desktop-layout-7f42a31/context-final.log",
+      "initialFailureLog": "/private/tmp/retouch-desktop-layout-7f42a31/context.log"
+    },
+    {
+      "name": "HTML Fill/Hug through contents wrappers, responsive scope and exact Undo",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-layout-7f42a31/html-contents.log"
+    },
+    {
+      "name": "normal-flow Fill height with vertical margins",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "result": "failed",
+      "expectedBounds": [
+        [
+          250,
+          180
+        ],
+        [
+          210,
+          170
+        ]
+      ],
+      "actualBounds": [
+        [
+          250,
+          180
+        ],
+        [
+          210,
+          180
+        ]
+      ],
+      "log": "/private/tmp/retouch-desktop-layout-7f42a31/known-webkit-height.log"
+    }
+  ],
+  "cask": {
+    "path": "/private/tmp/retouch-desktop-layout-7f42a31/retouch-studio.rb",
+    "syntax": "passed",
+    "installation": "not repeated for this archive"
+  },
+  "harnessCleanup": "verified absent",
+  "nativeLaunch": {
+    "result": "unverified; not attempted",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed",
+    "appsLaunched": false
+  },
+  "nativeSelfTests": "not run",
+  "notarization": "not performed",
+  "published": false
+}
