@@ -33,7 +33,7 @@
     if(!target.parentElement?.hasAttribute('data-rt')||['HTML','BODY'].includes(target.tagName))return null;
     return fraction<.5?'before':'after';
   }
-  function mount({host,onSelect,onAction,onContextMenu,getClipboard=()=>null,dragEnabled=false,multiSelectEnabled=dragEnabled,onMove,onMoveComponent,onSelectMany,locks,onLock,readComponents}) {
+  function mount({host,onSelect,canSelectWhileBusy=()=>false,onAction,onContextMenu,getClipboard=()=>null,dragEnabled=false,multiSelectEnabled=dragEnabled,onMove,onMoveComponent,onSelectMany,locks,onLock,readComponents}) {
     const header=document.createElement('h2');header.textContent='Layers';header.title='On the canvas: Enter selects a child, Shift+Enter selects its parent, and Tab/Shift+Tab selects siblings.';
     const search=document.createElement('input');search.type='search';search.placeholder='Find a layer…';search.setAttribute('aria-label','Find a layer');
     const revealSelection=document.createElement('button');revealSelection.type='button';revealSelection.className='layer-reveal-selection';revealSelection.textContent='Show selected layer';revealSelection.hidden=true;
@@ -130,7 +130,7 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
           toggle.onclick=()=>{if(expanded)collapsed.add(key(item));else collapsed.delete(key(item));render();};
           const b=prior?.button||document.createElement('button');b.className='layer-item';if(b.textContent!==item.label)b.textContent=item.label;b.title=item.label;b.dataset.layerKind=layerKind(item);
           b.setAttribute('role','treeitem');b.setAttribute('aria-level',depth);b.setAttribute('aria-selected',String(isSelected(item)));
-          b.tabIndex=isSelected(item)?0:-1;b.disabled=isBusy;
+          b.tabIndex=isSelected(item)?0:-1;b.disabled=isBusy&&!canSelectWhileBusy();
           if(item.children.length)b.setAttribute('aria-expanded',String(expanded));else b.removeAttribute('aria-expanded');
           b.onclick=e=>{if(item.componentId){if(multiEnabled&&e.shiftKey)return selectComponentRange(item,e.metaKey||e.ctrlKey);componentRangeAnchor=key(item);return choose(item,multiEnabled&&(e.metaKey||e.ctrlKey));}if(item.parent?.componentId)return choose(item);if(multiEnabled&&e.shiftKey)return selectRange(item.el,e.metaKey||e.ctrlKey);rangeAnchor=item.el;return onSelect(item.el,{toggle:e.metaKey||e.ctrlKey});};
           b.oncontextmenu=event=>onContextMenu?.({event,select:()=>choose(item),selected:isSelected(item),opener:b});
@@ -210,7 +210,7 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
       const scopeChanged=selectedInfo?.kind!==info?.kind||selectedInfo?.id!==info?.id;selectedInfo=info;
       const nextSet=new Set(multiple.length?multiple:el?[el]:[]),changed=nextSet.size!==selectedSet.size||[...nextSet].some(item=>!selectedSet.has(item));selectedSet=nextSet;tree.setAttribute('aria-multiselectable',String(!!(info?.cssAuthoring||info?.classSelection||info?.kind==='instance')));
       if(!el){rangeAnchor=null;componentRangeAnchor=null;}
-      if(isBusy!==busy){isBusy=busy;selectAll.disabled=busy||!selectionRows().length;for(const r of rows){r.button.disabled=busy;r.toggle.disabled=busy||!r.item.children.length;if(r.lock)r.lock.disabled=busy||!locks.direct(r.item.el)&&locks.locked(r.item.el);}host.setAttribute('aria-busy',String(busy));}
+      if(isBusy!==busy){isBusy=busy;selectAll.disabled=busy||!selectionRows().length;for(const r of rows){r.button.disabled=busy&&!canSelectWhileBusy();r.toggle.disabled=busy||!r.item.children.length;if(r.lock)r.lock.disabled=busy||!locks.direct(r.item.el)&&locks.locked(r.item.el);}host.setAttribute('aria-busy',String(busy));}
       if(selected!==el||changed||scopeChanged){
         selected=el;
         let reveal=false;

@@ -23,6 +23,7 @@ let mode = historyRecoveryRequired?'interact':'edit'; // 'edit' | 'interact'
 let renderedSelection=null; // Live DOM anchor for the explicitly chosen occurrence.
 let sel = null; // { hostId, instanceId, scope: 'host'|'instance', info }
 let editing = null; // { el, id, info, original, originalHTML, snapshot, originalTree } during inline text editing
+let inspectorTextCommit=null,inspectorSelectionSerial=0;
 let hoverEl = null;
 let measuring = false;
 let selectionMarquee=null,stopMarquee=null,stopDrawing=null;
@@ -223,6 +224,11 @@ function hookFrame(d, w) {
   // Selection: capture-phase click; prevent the app from reacting (OQ-E4).
   d.addEventListener('click', async (e) => {
     if (mode !== 'edit') return;
+    if(inspectorTextCommit){
+      e.preventDefault();e.stopPropagation();const serial=++inspectorSelectionSerial,target=captureInspectorSelectionTarget(layerLocks.pick(e.target,e.clientX,e.clientY));
+      await inspectorTextCommit;if(serial!==inspectorSelectionSerial||mode!=='edit'||panelTasks||undoBusy||sourceRequests)return;
+      const next=target();if(next&&!layerLocks.locked(next)){if((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection||sel?.info.contextSelection||sel?.info.kind==='instance'))await select(next,{toggle:true});else await startInlineEdit(next,e,true);}else if(!next)clearSelection();return;
+    }
     if (panelTasks > 0 || undoBusy || sourceRequests) { e.preventDefault(); e.stopPropagation(); return; }
     if ((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection||sel?.info.contextSelection||sel?.info.kind==='instance')){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=layerLocks.pick(e.target,e.clientX,e.clientY);if(target)await select(target,{toggle:true});return;}
     if (editing) {
@@ -439,6 +445,11 @@ async function classifyNode(node) {
   return null;
 }
 
+function captureInspectorSelectionTarget(el,sourceId){
+  if(!el)return ()=>null;
+  const id=sourceId||el.getAttribute('data-rt-i')||el.getAttribute('data-rt'),context=renderContext(el),occurrence=matchingInDocument(el.ownerDocument,id,{context}).indexOf(el);
+  return ()=>el.isConnected&&el.ownerDocument===doc()?el:occurrence>=0?matchingInDocument(doc(),id,{context})[occurrence]:null;
+}
 async function select(node,{toggle=false,sourceId}={}) {
   stopDrawing?.();
   const componentToggle=toggle&&sel?.info.kind==='instance';
@@ -1296,7 +1307,7 @@ function renderPanelContents() {
     let committing=false;
     const saveTextDraft=async()=>{
       if(committing||!ta.isConnected||sel?.info!==info||panelTasks||undoBusy||sourceRequests||ta.value===info.text)return;
-      committing=true;try{await setText(ta.value);}finally{committing=false;}
+      committing=true;const value=ta.value,task=Promise.resolve().then(()=>setText(value));inspectorTextCommit=task;try{await task;}finally{committing=false;if(inspectorTextCommit===task)inspectorTextCommit=null;}
     };
     ta.addEventListener('blur',saveTextDraft);
     ta.addEventListener('keydown',event=>{
@@ -2422,6 +2433,8 @@ async function setText(text, isUndo) {
     if (!isUndo) editorHistory.record({ type: 'setText', id: info.id, text: prev, undoId: res.undoId, context: info.context, sourceId: info.textSource?.id });
     info.text = text;
     updateSource(info, res);
+    // A preview navigation may have replaced the optimistically edited node.
+    if(info.kind==='host'&&!info.textSource)for(const el of matchingInDocument(doc(),info.id,info))if(el.textContent!==text)el.textContent=text;
     if(sel?.info===info)renderPanel();
     toast('Saved', 'ok');
   } else {
@@ -2460,7 +2473,7 @@ function optimisticClasses(classes) {
 }
 
 function optimisticText(text) {
-  if (sel.info.textSource) return;
+  if (!sel?.info || sel.info.textSource) return;
   for (const el of matchingEls(sel.info.id)) el.textContent = text;
 }
 
@@ -2769,6 +2782,7 @@ document.getElementById('zoomSelection').onclick=async e=>{
 
 let layerClipboard=null;
 const layers = RetouchLayers.mount({
+  canSelectWhileBusy:()=>!!inspectorTextCommit&&!panelTasks&&!undoBusy&&!historyRecoveryRequired,
   readComponents:window.__RT_RENDERING?.componentInsertion?()=>api('GET','/rt/__api/components'):undefined,
   locks:layerLocks,
   onLock:setLayerLocks,
@@ -2788,7 +2802,13 @@ const layers = RetouchLayers.mount({
     await moveLayerInto(sel.info,destination.getAttribute('data-rt'),position);
   },
   host:document.getElementById('layersPanel'),
-  onSelect:async(el,options)=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();if(options?.component&&options.sourceId)componentLibrarySelections.add(options.sourceId);await select(el,options);el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});},
+  onSelect:async(el,options)=>{
+    const serial=++inspectorSelectionSerial,pending=inspectorTextCommit,target=captureInspectorSelectionTarget(el,options?.sourceId);
+    if(pending)await pending;
+    if(serial!==inspectorSelectionSerial||panelTasks||undoBusy||sourceRequests)return;
+    el=target();if(!el)return;
+    await commitInlineEdit();if(options?.component&&options.sourceId)componentLibrarySelections.add(options.sourceId);await select(el,options);el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});
+  },
   onSelectMany:async(nodes,options)=>{if(panelTasks||undoBusy||sourceRequests)return;await commitInlineEdit();await selectMany(nodes,options);},
   onAction:action=>structureAction(action),
   onContextMenu:async({event,select:choose,selected,opener,keyboard})=>{
