@@ -141,3 +141,11 @@ test('layout parent skips nested contents wrappers but stops at a real box',()=>
  const {layoutParent}=require('../shell/inspector.js'),document={defaultView:{getComputedStyle:el=>({display:el.display})}},grid={display:'grid',parentElement:null},outer={display:'contents',parentElement:grid},inner={display:'contents',parentElement:outer},child={ownerDocument:document,parentElement:inner};
  assert.equal(layoutParent(child),grid);inner.display='block';assert.equal(layoutParent(child),inner);child.parentElement=null;assert.equal(layoutParent(child),null);
 });
+
+test('rotation layout recovery handles off-center origins and negative quarter turns',()=>{
+ const {rotationLayoutRect}=require('../shell/inspector.js');
+ const g=rotationLayoutRect({left:90,top:220},100,50,90,[20,10]);
+ assert.ok(Math.abs(g.left-110)<1e-9);assert.ok(Math.abs(g.top-230)<1e-9);assert.equal(g.width,100);assert.equal(g.height,50);
+ const negative=rotationLayoutRect({left:200,top:100},100,50,-90,[0,0]);assert.ok(Math.abs(negative.left-200)<1e-9);assert.ok(Math.abs(negative.top-200)<1e-9);
+ assert.throws(()=>rotationLayoutRect({left:0,top:0},0,20,30,[0,0]));
+});

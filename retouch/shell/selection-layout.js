@@ -85,7 +85,7 @@
   }
  function singlePosition(el,save,report){
   const I=root.RetouchInspector,group=root.document.createElement('div'),fields=root.document.createElement('div');fields.className='property-pair';
-  function measure(){if(!el?.isConnected||el.ownerDocument.defaultView.getComputedStyle(el).position!=='absolute')throw Error('Choose an absolute layer in the current screen.');return I.geometry(el);}
+  function measure(){if(!el?.isConnected||el.ownerDocument.defaultView.getComputedStyle(el).position!=='absolute')throw Error('Choose an absolute layer in the current screen.');return I.geometry(el,{allowRotation:true});}
   function write(next,before,control){
    if(!['x','y','width','height'].every(key=>Number.isFinite(next[key])&&Math.abs(next[key])<=100000))throw Error('Keep layer bounds within 100,000 pixels.');
    if(['x','y'].every(key=>Math.abs(next[key]-before[key])<1/32))return;

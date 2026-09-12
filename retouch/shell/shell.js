@@ -2239,7 +2239,7 @@ async function writeReactBounds(info,classes,expected){
   busyPanel(true);try{
     if(!await setClasses(classes))return false;
     const current=sel.info;await refreshWrittenElement(current,el=>current.className.split(/\s+/).filter(Boolean).every(token=>el.classList.contains(token)));
-    for(let i=0;i<50;i++){const target=matchingEls(current.id)[0];if(target?.isConnected&&target.ownerDocument.defaultView.getComputedStyle(target).position==='absolute'){const actual=RetouchInspector.geometry(target);if(['x','y','width','height'].every(key=>Math.abs(actual[key]-expected[key])<.6)){renderPanel();return true;}}await new Promise(resolve=>setTimeout(resolve,100));}
+    for(let i=0;i<50;i++){const target=matchingEls(current.id)[0];if(target?.isConnected&&target.ownerDocument.defaultView.getComputedStyle(target).position==='absolute'){const actual=RetouchInspector.geometry(target,{allowRotation:Object.hasOwn(expected,'rotation')});if(['x','y','width','height'].every(key=>Math.abs(actual[key]-expected[key])<.6)){renderPanel();return true;}}await new Promise(resolve=>setTimeout(resolve,100));}
     renderPanel();toast('Saved classes, but the bounds did not settle. Check responsive or inline overrides.','err');return false;
   }catch(error){toast(error.message,'err');return false;}finally{busyPanel(false);}
 }

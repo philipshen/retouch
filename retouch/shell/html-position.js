@@ -36,11 +36,12 @@
    else write({position:value,...(value==='static'?{left:'auto',right:'auto',top:'auto',bottom:'auto'}:{})});}catch(error){positioning.value=mode;report(error);}
   });
   if(mode==='absolute'){
-   if(!g){I.note(sec,reason,'refused');return sec;}
-   sec.insertBefore(root.RetouchSelectionLayout.singlePosition(el,next=>{if(width>el.ownerDocument.defaultView.innerWidth)throw Error('Choose a screen where this scope is active.');write(root.RetouchSelectionLayout.preserveBox(placement(next,effective()),next,el.ownerDocument.defaultView.getComputedStyle(el)));},message=>report(Error(message))),sec.children[1]);
+   const effective=()=>Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{});
+   try{sec.insertBefore(root.RetouchSelectionLayout.singlePosition(el,next=>{if(width>el.ownerDocument.defaultView.innerWidth)throw Error('Choose a screen where this scope is active.');write(root.RetouchSelectionLayout.preserveBox(placement(next,effective()),next,el.ownerDocument.defaultView.getComputedStyle(el)));},message=>report(Error(message))),sec.children[1]);}catch(error){report(error);}
+   if(!g){const coordinates=sec.querySelector('[aria-label="X"]');I.note(sec,coordinates?'Canvas move, resize and anchor presets for rotated layers are not available yet.':reason,coordinates?'':'refused');return sec;}
    I.note(sec,'Anchored to '+g.parentLabel);
    if(onMove){const tools=document.createElement('div');tools.className='stack-presets';for(const action of ['move','resize']){const button=I.button((action==='move'?'Move':'Resize')+' on canvas',event=>onMove(g,action,event.currentTarget));button.dataset.canvasTool=action;tools.append(button);}sec.append(tools);}
-   const effective=()=>Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{});let inherited=effective();
+   let inherited=effective();
    for(const [dimension,label,choices]of [['x','Horizontal anchor',[['start','Left'],['center','Center'],['end','Right'],['stretch','Left + right'],['scale','Scale']]],['y','Vertical anchor',[['start','Top'],['center','Center'],['end','Bottom'],['stretch','Top + bottom'],['scale','Scale']]]]){
     const input=I.select(sec,label,[['','Custom / inherited'],...choices],infer(inherited,dimension),value=>{if(value)try{g=measure();inherited=effective();write({margin:'0','box-sizing':'border-box',...axis(g,'x',dimension==='x'?value:infer(inherited,'x')||I.nearestAnchor(g.x,g.width,g.parentWidth)),...axis(g,'y',dimension==='y'?value:infer(inherited,'y')||I.nearestAnchor(g.y,g.height,g.parentHeight))});}catch(error){report(error);}});
     if(g[dimension==='x'?'parentWidth':'parentHeight']===0){const option=input.querySelector('option[value=scale]');option.disabled=true;option.textContent='Scale (needs container '+(dimension==='x'?'width':'height')+')';}
