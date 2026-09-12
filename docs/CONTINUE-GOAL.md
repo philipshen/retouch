@@ -1453,3 +1453,10 @@ WebKit verification exposed the capture draft being replaced by a deferred inspe
 All 913 unit tests passed before the final focus addition; affected browser workflows were rerun afterward. Existing Display P3/color-library lifecycle, picker model conversion and linked-style context regressions passed HTML Chromium. Syntax/diff checks passed. Logs /private/tmp/retouch-computed-capture-{html-final,react-final,liquid-final,catalog,models,context,units}.log. The initial WebKit failure is retained in /private/tmp/retouch-computed-capture-liquid.log.
 
 No desktop rebuild/launch, push or Shopify changes. Latest package uses 671f988, predating this increment. Full Figma/native/arbitrary-site goal remains incomplete.
+
+
+### 2026-09-12 — compact dimension controls
+
+Reviewed the full light inspector again against Figma's properties-panel reference (https://help.figma.com/hc/en-us/articles/360039832014-Design-prototype-and-explore-layer-properties-in-the-right-sidebar). Combined each pixel width/height field with its existing Auto/Fixed/Hug/Fill select in one control, removing the separate resizing row. Existing accessible labels and event handlers remain on their original controls. This applies where the pixel-size and resizing controls exist; raw CSS sizing remains separate.
+
+Validation: 16 inspector unit tests passed; inspector-light browser flow passed in Chromium and WebKit, including layout edits, opacity, corners and exact Undo; WebKit numeric-scrub flow passed. Full screenshots inspected at /private/tmp/retouch-compact-dimensions.png and /private/tmp/retouch-compact-dimensions-webkit.png. Logs: /private/tmp/retouch-dimensions-unit.log, /private/tmp/retouch-compact-dimensions.log, /private/tmp/retouch-compact-dimensions-webkit-layout.log, /private/tmp/retouch-compact-dimensions-webkit.log. No new desktop package or native UI verification. Full Figma parity remains incomplete and the goal stays active.
