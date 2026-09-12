@@ -61,11 +61,12 @@
 
   for(const [property,label,min,max,unit]of [['opacity','Opacity (%)',0,100,''],['rotate','Rotation (°)',-360,360,'deg']]){
    const raw=own[property]??css.getPropertyValue(property),input=document.createElement('input');input.type='number';input.min=min;input.max=max;input.step='any';
-   const value=property==='opacity'?Number(raw)*100:raw==='none'?0:/^-?[\d.]+deg$/.test(raw)?parseFloat(raw):NaN;
+   const value=property==='opacity'?Number(raw)*100:RetouchReactSelection.rotationDegrees(raw),host=property==='rotate'&&position?position:appearance;
    input.value=Number.isFinite(value)?value:'';input.placeholder=raw;
    input.onchange=()=>{if(input.value!==''&&input.checkValidity()){const value=property==='opacity'?String(Number(input.value)/100):input.value+unit;if(valid(property,value)&&CSS.supports(property,value))save(property,value,width);}};
-   I.numericLabelDrag(I.field(appearance,label,input));I.numericPreview(input,el,property,value=>property==='opacity'?String(value/100):value+unit);
-   const reset=I.button('Reset '+property,()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);appearance.append(reset);
+   I.numericLabelDrag(I.field(host,label,input));I.fieldDraft(input);I.numericPreview(input,el,property,value=>property==='opacity'?String(value/100):value+unit);
+   const reset=I.button('Reset '+property,()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);host.append(reset);
+   if(property==='rotate'&&(el.style.getPropertyValue('rotate')||!Number.isFinite(value))){input.disabled=true;reset.disabled=true;input.title='Edit this layer’s inline or 3D rotation in its source first.';}
   }
   if(css.transform!=='none')I.note(appearance,'Rotation combines with the page’s existing transform.');
   for(const [property,label]of [['mix-blend-mode','Blend mode'],['isolation','Blend group']]){

@@ -402,6 +402,20 @@
     const css = el.ownerDocument.defaultView.getComputedStyle(el);
     const classes = info.className || '';
     const mode = tokens(classes).map(base).find(positionToken) || css.position;
+    const rotationValue=()=>root.RetouchReactSelection.rotationDegrees(el.ownerDocument.defaultView.getComputedStyle(el).rotate);
+    const rotationBlocked=()=>!el.isConnected||el.style.getPropertyValue('rotate')||!Number.isFinite(rotationValue());
+    const writeRotation=value=>{
+      if(rotationBlocked()){notify('Edit this layer’s inline or 3D rotation in its source first.');return;}
+      try{
+        let next=root.RetouchReactSelection.change(classes,'','rotate',value,el.ownerDocument);
+        const matches=token=>/^-?rotate-(?![xyz]-)|^\[rotate:/.test(token);
+        if(value!==null&&tokens(info.anchorInheritedClasses).some(token=>/^!|!$/.test(token)&&matches(base(token)||'')))next=replace(next,matches,'![rotate:'+value+'deg]');
+        save(next);
+      }catch(error){notify(error.message);}
+    };
+    const rotation=number(sec,'Rotation (°)',rotationValue(),-360,360,writeRotation);fieldDraft(rotation);numericPreview(rotation,el,'rotate',value=>value+'deg');
+    const resetRotation=button('Reset rotation',()=>writeRotation(null));resetRotation.disabled=root.RetouchReactSelection.change(classes,'','rotate',null)===classes;sec.append(resetRotation);
+    if(rotationBlocked()){rotation.disabled=true;resetRotation.disabled=true;rotation.title='Edit this layer’s inline or 3D rotation in its source first.';}
     const applyAnchor = (x, y) => {
       try { const g=geometry(el),next=anchorClasses(classes,g,x,y,info.anchorInheritedClasses);if(onGeometry)onGeometry(next,g);else save(next); } catch (e) { notify(e.message); }
     };
