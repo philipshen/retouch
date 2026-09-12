@@ -12123,3 +12123,14 @@ Built clean 671f988 into /private/tmp/retouch-desktop-palette-20260912-671f988/R
 Generated cask passed syntax and installed/uninstalled in an isolated app directory through a temporary local tap and isolated XDG trust configuration. Installed quarantine retained. Cleanup verified app, registration, tap and temporary trust/config absent; developer mode remains disabled. Homebrew uninstall unexpectedly auto-removed git 2.55.0. Restored identical version, verified binary and restored not-installed-on-request status. Future isolated installation tests must set HOMEBREW_NO_AUTOREMOVE=1 and HOMEBREW_NO_INSTALL_CLEANUP=1; README records this. Receipt desktop/verification/2026-09-12-palette-creation.json includes logs and the incident.
 
 No native launch, system sampling, notarization, upgrade or public release verification. Latest native preflight remains cgWindowNotFound; no launch was retried. No push or live Shopify mutation. Full Figma/native/arbitrary-site goal remains incomplete.
+
+
+### 2026-09-12 — Preserve computed paint precision and copied drafts
+
+Use selected layer color now retains reported fractional sRGB channels and alpha instead of quantizing them to hex bytes. RGB percentage/literal and explicit sRGB inputs normalize through the exact palette serializer. Values that are byte-representable still use hex. This also improves the picker parser, which uses the same capture helper. Browser-side computed-style rounding remains a limit; this change avoids adding further rounding and cannot recover unavailable source precision.
+
+WebKit verification exposed the capture draft being replaced by a deferred inspector refresh, yielding the catalog value instead of the just-copied computed value. The capture action now focuses the color-value input after copying, preserving the draft. Final precision workflows passed HTML Chromium, React Chromium and Liquid WebKit, explicitly checking focus and exact equality with the browser-reported channel/alpha numbers, unchanged source on capture, and existing source Undo/reopen behavior. Added helper tests for fractional RGB channels/percent alpha and high-precision explicit sRGB. Updated older tests that expected intentional hex rounding; the refreshed-field check now validates known channels with a narrow tolerance for browser alpha serialization.
+
+All 913 unit tests passed before the final focus addition; affected browser workflows were rerun afterward. Existing Display P3/color-library lifecycle, picker model conversion and linked-style context regressions passed HTML Chromium. Syntax/diff checks passed. Logs /private/tmp/retouch-computed-capture-{html-final,react-final,liquid-final,catalog,models,context,units}.log. The initial WebKit failure is retained in /private/tmp/retouch-computed-capture-liquid.log.
+
+No desktop rebuild/launch, push or Shopify changes. Latest package uses 671f988, predating this increment. Full Figma/native/arbitrary-site goal remains incomplete.

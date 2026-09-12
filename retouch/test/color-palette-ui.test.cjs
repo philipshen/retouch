@@ -19,7 +19,7 @@ test('inherited palette links follow the nearest narrower scope per paint proper
 
 test('capturing computed sRGB paint retains alpha and refuses non-solid or unsupported color spaces',()=>{
  const {fromComputed}=window.RetouchColorStyles;
- for(const [input,expected]of [['rgb(51, 102, 153)','#336699ff'],['rgba(51, 102, 153, 0.533333)','#33669988'],['rgb(100% 0% 50% / 50%)','#ff008080'],['color(srgb 0.2 0.4 0.6 / 0.5)','#33669980'],['transparent','#00000000'],['#1234','#11223344']])assert.equal(fromComputed(input),expected);
+ for(const [input,expected]of [['rgb(51, 102, 153)','#336699ff'],['rgba(51, 102, 153, 0.533333)','color(srgb 0.2 0.4 0.6 / 0.533333)'],['rgb(100% 0% 50% / 50%)','color(srgb 1 0 0.5 / 0.5)'],['color(srgb 0.2 0.4 0.6 / 0.5)','color(srgb 0.2 0.4 0.6 / 0.5)'],['transparent','#00000000'],['#1234','#11223344']])assert.equal(fromComputed(input),expected);
  for(const input of ['none','url(#gradient)','oklch(50% 0.2 30)','rgb(300 0 0)','rgb(1 2 3 / 2)','rgb(1 2)','rgb(1,2,3/0.5)',null])assert.throws(()=>fromComputed(input),/solid color/);
 });
 
@@ -38,4 +38,11 @@ test('shared inherited paint context follows each layer and preserves mixed sour
  const mixed=selectionState([base,{colorStyleLinks:{0:{color:b}}}],1024,'color');assert.equal(mixed.inherited,null);assert.equal(mixed.inheritedCount,2);
  const own=selectionState([base,{colorStyleLinks:{1024:{color:a}}}],1024,'color');assert.equal(own.inherited,null);assert.equal(own.inheritedCount,1);assert.equal(own.linked,1);
  const custom=selectionState([base,base],'md:','color',()=>({link:a,label:'All sizes'}));assert.equal(custom.inherited.link,a);assert.equal(custom.inheritedCount,2);
+});
+
+
+test('computed capture does not quantize fractional RGB channels or alpha',()=>{
+ const {fromComputed}=window.RetouchColorStyles,parse=window.RetouchPaletteValues.parse;
+ const rgb=parse(fromComputed('rgb(12.5 34.25 56.75 / 23.45%)'));assert.deepEqual(Array.from(rgb.channels),[12.5/255,34.25/255,56.75/255]);assert.equal(rgb.alpha,.2345);
+ const precise='color(srgb 0.123456789 0.234567891 0.345678912 / 0.456789123)';assert.equal(fromComputed(precise),precise);
 });
