@@ -14,6 +14,19 @@
   }};
  }
  function srgbValue(channels,alpha){const bytes=channels.map(n=>Math.round(clamp(n)*255));return Math.abs(alpha*255-Math.round(alpha*255))<1e-8?'#'+[...bytes,Math.round(alpha*255)].map(n=>n.toString(16).padStart(2,'0')).join(''):'rgb('+bytes.join(' ')+' / '+alpha+')';}
+ const contextualColors=new Set('currentcolor inherit initial unset revert revert-layer accentcolor accentcolortext activetext buttonborder buttonface buttontext canvas canvastext field fieldtext graytext highlight highlighttext linktext mark marktext selecteditem selecteditemtext visitedtext activeborder activecaption appworkspace background buttonhighlight buttonshadow captiontext inactiveborder inactivecaption inactivecaptiontext infobackground infotext menu menutext scrollbar threeddarkshadow threedface threedhighlight threedlightshadow threedshadow window windowframe windowtext'.split(' '));
+ function parsePaint(raw){
+  let normalized;
+  try{normalized=root.RetouchColorStyles.fromComputed(raw);}catch{
+   const literalHSL=/^hsla?\([^()]+\)$/i.test(raw)&&! /\bfrom\b/i.test(raw),named=/^[a-z]+$/i.test(raw)&&!contextualColors.has(raw.toLowerCase());
+   if((!literalHSL&&!named)||!CSS.supports('color',raw))return null;
+   const probe=document.createElement('span');probe.style.cssText='position:fixed;visibility:hidden;pointer-events:none';probe.style.color=raw;document.body.append(probe);
+   try{normalized=root.RetouchColorStyles.fromComputed(getComputedStyle(probe).color);}finally{probe.remove();}
+  }
+  const color=root.RetouchPaletteValues.parse(normalized);
+  if(color.space==='srgb'&&raw.endsWith(')')){const body=raw.slice(raw.indexOf('(')+1,-1),parts=body.split(','),alpha=body.includes('/')?body.split('/').at(-1).trim():parts.length===4?parts[3].trim():null;if(alpha!==null&&/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?%?$/i.test(alpha))color.alpha=clamp(parseFloat(alpha)/(alpha.endsWith('%')?100:1));}
+  return color;
+ }
  function open(input){
   if(!input.isConnected||input.matches(':disabled'))return;
   const draftPreview=input.retouchPaintPreview?.();
@@ -30,7 +43,7 @@
   const value=document.createElement('input');value.value=original;value.spellcheck=false;I.field(dialog,'Color value',value);
   const status=I.note(dialog,'');status.setAttribute('role','status');
   let parsed=null,h=0,s=0,v=0,drag=null;
-  function read(){try{const raw=value.value.trim(),color=root.RetouchPaletteValues.parse(root.RetouchColorStyles.fromComputed(raw));if(color.space==='srgb'&&raw.endsWith(')')){const body=raw.slice(raw.indexOf('(')+1,-1),parts=body.split(','),alpha=body.includes('/')?body.split('/').at(-1).trim():parts.length===4?parts[3].trim():null;if(alpha!==null)color.alpha=parseFloat(alpha)/(alpha.endsWith('%')?100:1);}return color;}catch{return null;}}
+  function read(){try{return parsePaint(value.value.trim());}catch{return null;}}
   function valid(){const color=value.value.trim();return root.RetouchHTMLCSSValues.valid('color',color)&&CSS.supports('color',color);}
   function paint(){plane.style.backgroundColor='hsl('+h+' 100% 50%)';handle.style.left=s*100+'%';handle.style.top=(1-v)*100+'%';plane.setAttribute('aria-valuenow',String(Math.round(v*100)));plane.setAttribute('aria-valuetext',Math.round(s*100)+'% saturation, '+Math.round(v*100)+'% brightness');hue.value=String(h);}
   function sync(preserveOpacity=false,preserveChannel=null){

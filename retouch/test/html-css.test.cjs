@@ -243,3 +243,11 @@ test('alias cycles are refused across managed HTML screen scopes while acyclic c
  assert.equal(edit(source,768,'var(--c)','--a').ok,true,'undefined references are not cycles');
  const V=require('../shell/html-css-values.js');assert.deepEqual(V.variableCycle({'--a':'var(--b)','--b':'var(--c)','--c':'var(--a)'}),['--a','--b','--c','--a']);assert.equal(V.variableCycle({'--a':'var(--b)','--b':'24px'}),null);
 });
+
+test('literal HSL supports signed hue units and alpha while rejecting mixed syntax and injection',()=>{
+ const values=require('../shell/html-css-values.js');
+ for(const color of ['hsl(120deg 100% 50% / 12.34567%)','hsla(-240, 100%, 50%, 0.1234)','hsl(.5turn 20% 40%)','hsl(200grad 30% 40% / .2)','hsl(3.14rad 20% 40%)']){
+  assert.equal(values.valid('color',color),true,color);const result=edit(original,768,color,'color');assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(color));
+ }
+ for(const color of ['hsl(120deg, 100% 50%)','hsl(120 100 50)','hsl(120foo 100% 50%)','hsl(120 100% 50%);display:none','hsl(from red h s l)','hsl(var(--hue) 100% 50%)'])assert.equal(values.valid('color',color),false,color);
+});

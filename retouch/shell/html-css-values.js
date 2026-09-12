@@ -71,6 +71,9 @@
  const fields=[['width','Width'],['height','Height'],['min-width','Minimum width'],['max-width','Maximum width'],['min-height','Minimum height'],['max-height','Maximum height'],['display','Display'],['flex-direction','Direction'],['flex-wrap','Wrap'],['align-items','Align items'],['align-content','Align lines'],['justify-content','Distribute items'],['gap','Gap'],['padding','Padding'],...sides.map(s=>['padding-'+s,'Padding '+s]),['margin','Margin'],...sides.map(s=>['margin-'+s,'Margin '+s]),['font-family','Font family'],['font-weight','Font weight'],['font-style','Font style'],['text-decoration-line','Text decoration'],['text-transform','Text case'],['font-size','Font size'],['line-height','Line height'],['letter-spacing','Letter spacing'],['text-align','Text alignment'],['color','Text color'],['background-color','Background color'],['border-width','Border width'],['border-style','Border style'],['border-color','Border color'],['border-radius','Corner radius'],...corners.map(c=>['border-'+c+'-radius',c.split('-').map((word,i)=>i?word:word[0].toUpperCase()+word.slice(1)).join(' ')+' corner'])];
  const lengths=new Set([...sides,...fields.map(([p])=>p).filter(p=>!options[p]&&!p.endsWith('color')),'flex-basis','row-gap','column-gap',...families['border-width']]);
  const colors=new Set(['color','background-color','border-color']);
+ const colorNumber='[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:e[+-]?\\d+)?',hslHue=colorNumber+'(?:deg|grad|rad|turn)?',hslPercent=colorNumber+'%',hslAlpha=colorNumber+'%?';
+ const literalHSL=new RegExp('^hsla?\\(\\s*'+hslHue+'(?:\\s*,\\s*'+hslPercent+'\\s*,\\s*'+hslPercent+'(?:\\s*,\\s*'+hslAlpha+')?|\\s+'+hslPercent+'\\s+'+hslPercent+'(?:\\s*/\\s*'+hslAlpha+')?)\\s*\\)$','i');
+
  function adaptiveColumns(size){return Number.isInteger(size)&&size>=1&&size<=2000?`repeat(auto-fit, minmax(min(100%, ${size}px), 1fr))`:null;}
  function parseAdaptiveColumns(value){const match=/^repeat\(auto-fit, minmax\(min\(100%, ([1-9][0-9]{0,3})px\), 1fr\)\)$/.exec(value||'');return match&&Number(match[1])<=2000?Number(match[1]):null;}
  function stackLayout(axis,writingMode='horizontal-tb'){
@@ -142,6 +145,7 @@
   if(property==='object-position'){const parts=value.split(/\s+/);return parts.length===2&&parts.every(p=>/^(?:\d*\.)?\d+%$/.test(p)&&parseFloat(p)>=0&&parseFloat(p)<=100);}
   if(sides.includes(property)&&/^calc\(50% [+-] (?:\d*\.)?\d+px\)$/.test(value))return true;
   if(Object.hasOwn(options,property))return options[property].includes(value);
+  if(colors.has(property)&&/^hsla?\(/i.test(value))return literalHSL.test(value);
   if(colors.has(property)&&/^okl(?:ab|ch)\(/i.test(value))return okColor(value);
   if(colors.has(property)&&/^color\(display-p3\s/i.test(value))return (typeof module==='object'&&module.exports?require('./palette-values.js'):globalThis.RetouchPaletteValues).valid(value);
   if(colors.has(property))return /^(?:#(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})|[a-z]+|(?:rgb|rgba|hsl|hsla)\([\d.%,\s/]+\))$/i.test(value);
