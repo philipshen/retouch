@@ -39,6 +39,13 @@
   const seen=new Set(),colors=[];for(const value of entries.slice(0,48)){if(typeof value!=='string'||value.length>256||!CSS.supports('color',value))continue;const key=colorKey(value);if(!key||seen.has(key))continue;seen.add(key);colors.push(value);if(colors.length===12)break;}return colors;
  }
  function rememberColor(value){const key=colorKey(value);if(!key)return;recentMemory=[value,...recentColors().filter(color=>colorKey(color)!==key)].slice(0,12);try{localStorage.setItem(recentKey,JSON.stringify(recentMemory));}catch{}}
+ function mountSelectionField(input,elements,property){
+  input.dataset.paintProperty=property;root.RetouchInspector.fieldDraft(input);
+  input.retouchPaintPreview=()=>{const previews=elements.map(el=>propertyPreview({el,input,property}));return {update:value=>previews.forEach(preview=>preview.update(value)),restore:()=>previews.forEach(preview=>preview.restore())};};
+  const control=document.createElement('span');control.className='paint-field-control gradient-stop-color';input.replaceWith(control);control.append(input);
+  const swatch=root.RetouchInspector.button('',()=>open(input));swatch.className='gradient-stop-swatch';swatch.setAttribute('aria-label','Edit '+input.getAttribute('aria-label'));swatch.title='Edit selected colors';swatch.disabled=input.disabled;control.prepend(swatch);
+  const paint=()=>{const color=input.value.trim();swatch.style.backgroundImage=CSS.supports('color',color)?'linear-gradient('+color+','+color+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)':'repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)';};input.addEventListener('input',paint);input.addEventListener('change',paint);input.addEventListener('keydown',event=>{if(event.key==='Escape')queueMicrotask(paint);});paint();
+ }
  function open(input){
   if(!input.isConnected||input.matches(':disabled'))return;
   let draftPreview=input.retouchPaintPreview?.();
@@ -46,6 +53,7 @@
   const styleOptions=input.closest('[data-retouch-color-style-scope]')?.retouchColorStyleOptions,styleProperty=input.dataset.paintProperty;let pickedStyle=null,styleRevision=null,styleBusy=false,refreshAfterClose=false;const libraryAbort=new AbortController();let updateStyleChoice=()=>{};
   let recentButtons=[];const updateRecent=()=>{const key=colorKey(value.value);for(const button of recentButtons)button.setAttribute('aria-pressed',String(key!==null&&key===colorKey(button.dataset.color)));};
   const header=document.createElement('div');header.className='paint-picker-header';const heading=document.createElement('h3');heading.textContent='Color';header.append(heading);dialog.append(header);
+  if(styleOptions?.selection&&original===''){const note=I.note(dialog,'Mixed colors. Choose a color to apply to all selected layers.');note.className='paint-scope-note';note.setAttribute('role','status');note.setAttribute('aria-label','Selected paint values');}
   if(document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false'){const scope=document.querySelector('[aria-label="Style screen scope"]')?.selectedOptions[0]?.textContent||'the selected breakpoint',note=document.createElement('p');note.className='paint-scope-note';note.setAttribute('role','status');note.setAttribute('aria-label','Color edit range');note.textContent='Applies to '+scope+'. The current canvas is outside this range.';dialog.append(note);}
   const plane=document.createElement('div');plane.className='paint-plane';plane.tabIndex=0;plane.setAttribute('role','slider');plane.setAttribute('aria-label','Saturation and brightness');plane.setAttribute('aria-valuemin','0');plane.setAttribute('aria-valuemax','100');const handle=document.createElement('span');plane.append(handle);dialog.append(plane);
   const hue=document.createElement('input');hue.type='range';hue.min=0;hue.max=359;hue.step=1;I.field(dialog,'Hue',hue);hue.className='paint-hue';
@@ -151,5 +159,5 @@ handle.style.left=s*100+'%';handle.style.top=(1-v)*100+'%';plane.setAttribute('a
   dialog.addEventListener('close',()=>{libraryAbort.abort();sampling?.abort();resizeObserver.disconnect();observer.disconnect();draftPreview?.restore();root.removeEventListener('resize',position);dialog.remove();if(refreshAfterClose&&root.RetouchPanelFocus?.refreshSavedControl)root.RetouchPanelFocus.refreshSavedControl(input);else if(input.isConnected)input.focus();},{once:true});
   dialog.addEventListener('keydown',event=>{event.stopPropagation();if(event.key==='Enter'&&!event.isComposing&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&event.target.matches('input:not([type=range])')){event.preventDefault();apply();}});sync();dialog.showModal();position();root.addEventListener('resize',position);value.focus();
  }
- root.RetouchPaintPicker={open,gradientPreview,shadowPreview,propertyPreview};
+ root.RetouchPaintPicker={open,mountSelectionField,gradientPreview,shadowPreview,propertyPreview};
 })(window);

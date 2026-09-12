@@ -71,10 +71,10 @@
 
   if(saveColor)for(const [property,label]of [['color','Text color'],['background-color','Background color'],['border-color','Border color'],...(elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg')?[['fill','SVG fill'],['stroke','SVG stroke']]:[])]){
    const sec=groups.appearance;
-   const values=computed.map(css=>css.getPropertyValue(property)),mixed=values.some(value=>value!==values[0]),input=root.document.createElement('input');input.type='text';input.spellcheck=false;input.placeholder=mixed?'Mixed · enter hex with alpha':'#RRGGBB or #RRGGBBAA';input.disabled=elements.some(el=>el.style.getPropertyValue(property));
-   I.field(sec,'Shared '+label+' with alpha',input);I.note(sec,mixed?'Mixed colors':values[0]);
+   const values=computed.map(css=>css.getPropertyValue(property)),mixed=values.some(value=>value!==values[0]),input=root.document.createElement('input');input.type='text';input.spellcheck=false;input.placeholder=mixed?'Mixed · enter CSS color':'CSS color';input.disabled=elements.some(el=>el.style.getPropertyValue(property));
+   input.value=mixed?'':values[0];I.field(sec,'Shared '+label+' with alpha',input);root.RetouchPaintPicker.mountSelectionField(input,elements,property);I.note(sec,mixed?'Mixed colors':values[0]);
    const clear=I.button('Clear selected '+label.toLowerCase(),()=>saveColor(property,null).catch(error=>I.note(sec,error.message,'refused')));clear.disabled=input.disabled;sec.append(clear);
-   input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{const value=input.value.trim();if(!root.RetouchPaletteValues.valid(value)){input.setCustomValidity('Enter a hex color or color(display-p3 r g b / alpha).');input.reportValidity();return;}saveColor(property,value).catch(error=>{input.setCustomValidity(error.message);input.reportValidity();});};
+   input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{const value=input.value.trim();if(!root.RetouchHTMLCSSValues.valid('color',value,false)||!elements[0].ownerDocument.defaultView.CSS.supports('color',value)){input.setCustomValidity('Enter a supported literal CSS color.');input.reportValidity();return;}saveColor(property,value).catch(error=>{input.setCustomValidity(error.message);input.reportValidity();});};
   }
 
   if(saveColor)I.note(groups.appearance,'Clear removes selected-scope paint to reveal inherited styles. Saved links stay attached; palette reset restores their definitions.');
