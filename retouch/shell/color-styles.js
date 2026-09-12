@@ -2,9 +2,10 @@
  'use strict';
  let expanded=false,preferred='',target='color';
  function normalize(value){return root.RetouchPaletteValues.parse(value).value;}
- function selectionState(selection,width,property){
+ function selectionState(selection,width,property,resolveInherited){
   const links=selection.map(info=>info.colorStyleLinks?.[width]?.[property]).filter(Boolean),overrides=selection.filter(info=>info.colorStyleOverrides?.[width]?.includes(property)).length;
-  return {total:selection.length,linked:links.length,distinct:new Set(links.map(link=>link.id)).size,overrides,link:links.length===selection.length&&links.length&&links.every(link=>link.id===links[0].id)?links[0]:null};
+  const inherited=selection.filter(info=>!info.colorStyleLinks?.[width]?.[property]).map(info=>resolveInherited?resolveInherited(info,property):inheritedLink(info.colorStyleLinks,width,property)).filter(Boolean),common=inherited.length===selection.length&&inherited.length&&inherited.every(item=>item.link.id===inherited[0].link.id)?{link:inherited[0].link,label:inherited.every(item=>item.label===inherited[0].label)?inherited[0].label:'Multiple ranges'}:null;
+  return {total:selection.length,inherited:common,inheritedCount:inherited.length,linked:links.length,distinct:new Set(links.map(link=>link.id)).size,overrides,link:links.length===selection.length&&links.length&&links.every(link=>link.id===links[0].id)?links[0]:null};
  }
  function fromComputed(value){
   const refuse=()=>{throw Error('This paint is not a supported solid color. Enter hex or Display P3 explicitly.');};

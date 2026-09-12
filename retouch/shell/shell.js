@@ -70,6 +70,8 @@ panelBody.addEventListener('keydown',event=>{
 window.addEventListener('pointerdown',()=>{pendingPanelFocus=null;},true);
 window.addEventListener('keydown',()=>{pendingPanelFocus=null;},true);
 window.addEventListener('blur',()=>{pendingPanelFocus=null;});
+// Accessibility activation may change screen controls without a pointer/key event.
+window.addEventListener('change',event=>{if(!panelBody.contains(event.target)||event.target.getAttribute('aria-label')==='Style screen scope')pendingPanelFocus=null;},true);
 // Metadata can rebuild an input after the source save has completed.
 new MutationObserver(restorePanelFocus).observe(panelBody,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','disabled']});
 
@@ -2117,7 +2119,8 @@ function selectionColorOptions(width){
       sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();renderPanel();toast('Selected colors updated','ok');
     }finally{busyPanel(false);}
   }
-  return {width,selection,apply:(id,revision,property)=>write('applyColorStyleSelection',property,id,revision),resetSelection:(revision,property)=>write('resetColorStyleSelection',property,undefined,revision),detachSelection:property=>write('detachColorStyleSelection',property)};
+  const inheritedForSelection=(info,property)=>info.classColorStyles?RetouchResponsive.inheritedLink(Object.fromEntries(Object.entries(info.colorStyleLinks||{}).filter(([,group])=>group[property]).map(([key,group])=>[key,group[property]])),width,matchingEls(info.id)[0]?.ownerDocument):RetouchColorStyles.inheritedLink(info.colorStyleLinks,width,property);
+  return {width,selection,inheritedForSelection,apply:(id,revision,property)=>write('applyColorStyleSelection',property,id,revision),resetSelection:(revision,property)=>write('resetColorStyleSelection',property,undefined,revision),detachSelection:property=>write('detachColorStyleSelection',property)};
 }
 function mountSelectionEffectStyles(){
   const selection=sel.multiple,element=matchingEls(sel.info.id)[0];

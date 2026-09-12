@@ -30,3 +30,12 @@ test('shared palette context requires the same explicit link on every selected l
  for(const selection of [[layer(a),layer(b)],[layer(a),layer(null)]]){const state=selectionState(selection,768,'color');assert.equal(state.link,null);assert.equal(state.total,2);}
  assert.equal(selectionState([layer(a),layer(a)],1024,'color').linked,0,'inherited links are not reported as explicit links in this range');assert.equal(selectionState([],0,'color').link,null);assert.equal(selectionState([layer(a,['background-color'])],768,'color').overrides,0);
 });
+
+
+test('shared inherited paint context follows each layer and preserves mixed sources',()=>{
+ const {selectionState}=window.RetouchColorStyles,a={id:'a'},b={id:'b'},base={colorStyleLinks:{0:{color:a}}},tablet={colorStyleLinks:{768:{color:a}}};
+ assert.equal(selectionState([base,base],1024,'color').inherited.label,'All sizes');assert.equal(selectionState([base,tablet],1024,'color').inherited.label,'Multiple ranges');
+ const mixed=selectionState([base,{colorStyleLinks:{0:{color:b}}}],1024,'color');assert.equal(mixed.inherited,null);assert.equal(mixed.inheritedCount,2);
+ const own=selectionState([base,{colorStyleLinks:{1024:{color:a}}}],1024,'color');assert.equal(own.inherited,null);assert.equal(own.inheritedCount,1);assert.equal(own.linked,1);
+ const custom=selectionState([base,base],'md:','color',()=>({link:a,label:'All sizes'}));assert.equal(custom.inherited.link,a);assert.equal(custom.inheritedCount,2);
+});
