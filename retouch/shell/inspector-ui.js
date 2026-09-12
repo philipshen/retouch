@@ -47,7 +47,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   const heading=section.querySelector(':scope > h3');if(!heading)return;
   const name=heading.textContent,key=section.dataset.section||name,button=document.createElement('button');button.type='button';button.className='section-toggle';button.textContent=name;
   const set=(collapsed,persist=false)=>{section.dataset.collapsed=String(collapsed);button.setAttribute('aria-expanded',String(!collapsed));button.setAttribute('aria-label',(collapsed?'Expand ':'Collapse ')+name+' section');if(collapsed)collapsedSections.add(key);else collapsedSections.delete(key);if(persist)saveSectionPreferences();};
-  button.onclick=()=>set(section.dataset.collapsed!=='true',true);heading.setAttribute('aria-label',name);heading.replaceChildren(button);set(collapsedSections.has(key));
+  section.retouchSetCollapsed=set;button.onclick=()=>set(section.dataset.collapsed!=='true',true);heading.setAttribute('aria-label',name);heading.replaceChildren(button);set(collapsedSections.has(key));
   for(const action of section.querySelectorAll(':scope > .section-add'))action.addEventListener('click',()=>set(false,true),true);
  }
  function organize(panel){
@@ -268,5 +268,11 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   }
   dock.style.left=(left-m.left+(right-left)/2)+'px';
  };new ResizeObserver(place).observe(canvas);window.addEventListener('retouch:workspace-layout',place);place();
- root.RetouchInspectorUI={organize};
+ function reveal(control){
+  if(!control?.isConnected||control.matches(':disabled')||control.closest('[inert]'))return false;
+  root.RetouchWorkspacePanels?.showInspector();
+  for(let parent=control.parentElement;parent;parent=parent.parentElement){if(parent.retouchSetCollapsed)parent.retouchSetCollapsed(false,true);if(parent.tagName==='DETAILS'){if(parent.retouchSetOpen)parent.retouchSetOpen(true);else parent.open=true;}}
+  control.scrollIntoView({block:'nearest',inline:'nearest'});control.focus({preventScroll:true});if(typeof control.select==='function')try{control.select();}catch{}return true;
+ }
+ root.RetouchInspectorUI={organize,reveal};
 })(window);
