@@ -148,3 +148,17 @@ test('shared clipping replaces both overflow axes only in the edited scope',()=>
  assert.equal(changeClip('[overflow-inline:auto] ![overflow-block:hidden]','',false),'!overflow-visible');
  assert.throws(()=>changeClip('','', 'auto'));
 });
+
+test('shared sizing modes use each parent axis and preserve responsive priorities',()=>{
+ const {changeSizeMode}=require('../shell/react-selection.js');
+ const source='w-20 md:!basis-20 md:grow-0 hover:w-40',row={display:'flex',direction:'row'};
+ const fill=changeSizeMode(source,'md:','width','fill',0,row);
+ assert.ok(fill.includes('md:!flex-1'));assert.ok(fill.includes('hover:w-40'));assert.ok(!fill.includes('basis-20'));
+ const fixed=changeSizeMode(fill,'md:','width','fixed',100,row);assert.ok(fixed.includes('md:!flex-none'));assert.ok(fixed.includes('md:!w-[100px]'));
+ assert.ok(changeSizeMode(fill,'md:','width','hug',0,row).includes('md:!w-fit'));
+ assert.equal(changeSizeMode(fill,'md:','width','reset',0,row),'w-20 hover:w-40');
+ assert.ok(!changeSizeMode(fill,'md:','width','auto',0,row).includes('flex-1'));
+ const verticalGrid=changeSizeMode('h-10','md:','width','fill',0,{display:'grid',writingMode:'vertical-rl'});
+ assert.ok(verticalGrid.includes('md:self-stretch'));assert.ok(!verticalGrid.includes('justify-self'));
+ assert.throws(()=>changeSizeMode('[inline-size:100px]','','width','fill',0,row));
+});

@@ -61,6 +61,23 @@
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
   return R.replaceScope(classes,L.alignmentClasses(R.project(classes,scope),x,y,context,R.inherited(classes,scope,document)),scope);
  }
+ function changeSizeMode(classes,scope,axis,mode,value,parent={},document=null){
+  if(!['fixed','hug','fill','auto','reset'].includes(mode))throw Error('Choose a supported sizing mode.');
+  const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
+  const inherited=R.inherited(classes,scope,document),context={...parent,inheritedClasses:inherited};
+  if(mode==='reset'||mode==='auto'){
+   const reset=R.replaceScope(classes,L.sizeClasses(R.project(classes,scope),axis,'reset',0,context),scope);
+   return mode==='reset'?reset:change(reset,scope,axis,'auto',document);
+  }
+  const normalized=change(classes,scope,axis,mode==='fixed'?value:mode==='hug'?'fit-content':'auto',document);
+  return R.replaceScope(normalized,L.sizeClasses(R.project(normalized,scope),axis,mode,value,context),scope);
+ }
+ function sizeContext(el,axis){
+  const css=el.ownerDocument.defaultView.getComputedStyle(el),parent=el.parentElement&&!['absolute','fixed'].includes(css.position)?el.ownerDocument.defaultView.getComputedStyle(el.parentElement):null;
+  const context={display:parent?.display,direction:parent?.flexDirection,writingMode:parent?.writingMode},axes=(root.RetouchLayout||require('./layout.js')).layoutAxes(context),flex=/flex/.test(context.display||''),grid=/grid/.test(context.display||'');
+  const inline=[axis,'inline-size','block-size','min-inline-size','min-block-size','max-inline-size','max-block-size',...(flex&&axis===axes.main?['flex','flex-grow','flex-shrink','flex-basis']:flex||grid?['place-self',grid&&axis===axes.inline?'justify-self':'align-self']:[])];
+  return {css,context,blocked:inline.some(property=>el.style.getPropertyValue(property))};
+ }
  function changeClip(classes,scope,value,document=null){
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
   return R.replaceScope(classes,L.clipClasses(R.project(classes,scope),value,R.inherited(classes,scope,document)),scope);
@@ -216,29 +233,31 @@
     const reset=I.button('Reset shared font family',()=>write(null));try{reset.disabled=infos.every(info=>change(info.className,scope,property,null)===(info.className||''));}catch(error){reset.disabled=true;reset.title=error.message;}group.append(reset);continue;
    }
 
-   const dimension=['width','height'].includes(property),sizing=dimension||field.constraint,values=elements.map(el=>{const css=el.ownerDocument.defaultView.getComputedStyle(el);return field.read?field.read(css):sizing&&Number.isFinite(dimensionSize(css,property))?dimensionSize(css,property)+'px':css.getPropertyValue(property);}),mixed=values.some(v=>v!==values[0]),input=root.document.createElement(field.options?'select':'input'),blocked=elements.some(el=>{const css=el.ownerDocument.defaultView.getComputedStyle(el);return el.style.getPropertyValue(property)||field.layoutItem&&((field.gridPlacement?['grid-area',property+'-start',property+'-end'].some(key=>el.style.getPropertyValue(key)):el.style.getPropertyValue('place-self'))||!el.parentElement||!(field.gridItem?['grid','inline-grid']:['flex','inline-flex','grid','inline-grid']).includes(el.ownerDocument.defaultView.getComputedStyle(el.parentElement).display)||['absolute','fixed'].includes(css.position))||field.flexItem&&(el.style.getPropertyValue('flex')||!el.parentElement||!['flex','inline-flex'].includes(el.ownerDocument.defaultView.getComputedStyle(el.parentElement).display)||['absolute','fixed'].includes(css.position))||sizing&&(['inline-size','block-size','min-inline-size','min-block-size','max-inline-size','max-block-size'].some(key=>el.style.getPropertyValue(key))||['inline','contents'].includes(css.display)||dimension&&!Number.isFinite(dimensionSize(css,property)));});
+   const dimension=['width','height'].includes(property),sizing=dimension||field.constraint,values=elements.map(el=>{const css=el.ownerDocument.defaultView.getComputedStyle(el);return field.read?field.read(css):sizing&&Number.isFinite(dimensionSize(css,property))?dimensionSize(css,property)+'px':css.getPropertyValue(property);}),mixed=values.some(v=>v!==values[0]),input=root.document.createElement(field.options?'select':'input'),blocked=elements.some(el=>{const css=el.ownerDocument.defaultView.getComputedStyle(el);return dimension&&sizeContext(el,property).blocked||el.style.getPropertyValue(property)||field.layoutItem&&((field.gridPlacement?['grid-area',property+'-start',property+'-end'].some(key=>el.style.getPropertyValue(key)):el.style.getPropertyValue('place-self'))||!el.parentElement||!(field.gridItem?['grid','inline-grid']:['flex','inline-flex','grid','inline-grid']).includes(el.ownerDocument.defaultView.getComputedStyle(el.parentElement).display)||['absolute','fixed'].includes(css.position))||field.flexItem&&(el.style.getPropertyValue('flex')||!el.parentElement||!['flex','inline-flex'].includes(el.ownerDocument.defaultView.getComputedStyle(el.parentElement).display)||['absolute','fixed'].includes(css.position))||sizing&&(['inline-size','block-size','min-inline-size','min-block-size','max-inline-size','max-block-size'].some(key=>el.style.getPropertyValue(key))||['inline','contents'].includes(css.display)||dimension&&!Number.isFinite(dimensionSize(css,property)));});
    if(field.options){if(mixed){const o=root.document.createElement('option');o.value='';o.textContent='Mixed';o.disabled=true;input.append(o);}else if(!field.options.includes(values[0])){const o=root.document.createElement('option');o.value=values[0];o.textContent=values[0]||'Custom';o.disabled=true;input.append(o);}for(const value of field.options){const o=root.document.createElement('option');o.value=value;o.textContent=value;input.append(o);}}
    else if(field.text){input.type='text';input.placeholder=mixed?'Mixed':'auto, 100px, 50%';}
    else{input.type='number';input.min=String(field.min??0);input.max=String(field.max??100);input.step=String(field.step??'any');input.placeholder=mixed?'Mixed':'';}
    const display=mixed?'':field.options||field.text?values[0]:property==='opacity'?String(Math.round(Number(values[0])*10000)/100):(!sizing||/px$/.test(values[0]))&&Number.isFinite(parseFloat(values[0]))?String(parseFloat(values[0])):'';
    if(field.constraint&&!mixed&&!display)input.placeholder=values[0]==='auto'?'Automatic':values[0]==='none'?'No limit':values[0];input.value=display;input.disabled=blocked;input.title=blocked?(field.layoutItem?'Select in-flow items in '+(field.gridItem?'a grid':'a flex or grid')+' layout without an inline alignment override.':field.flexItem?'Select in-flow items in a flex layout without an inline flex override.':'An inline style controls this property on a selected layer. Edit that source style first.'):'';
-   const write=value=>{try{save(Object.fromEntries(infos.map((info,i)=>[info.id,change(info.className,scope,property,sizing?dimensionValue(liveElement(i).ownerDocument.defaultView.getComputedStyle(liveElement(i)),property,value):value,liveElement(i).ownerDocument)])));}catch(error){I.note(sec,error.message,'refused');}};
+   const writeSize=(mode,value)=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i),{css,context,blocked}=sizeContext(el,property);if(blocked)throw Error('An inline sizing or layout style controls a selected layer.');const pixels=mode==='fixed'?dimensionValue(css,property,value??dimensionSize(css,property)):0;return [info.id,changeSizeMode(info.className,scope,property,mode,pixels,context,el.ownerDocument)];})));}catch(error){I.note(sec,error.message,'refused');}};
+   const write=value=>{if(dimension)return writeSize(value===null?'reset':value==='auto'?'auto':value==='fit-content'?'hug':'fixed',value);try{save(Object.fromEntries(infos.map((info,i)=>[info.id,change(info.className,scope,property,sizing?dimensionValue(liveElement(i).ownerDocument.defaultView.getComputedStyle(liveElement(i)),property,value):value,liveElement(i).ownerDocument)])));}catch(error){I.note(sec,error.message,'refused');}};
    input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(field.text&&!field.valid(input.value.trim())){input.setCustomValidity('Enter auto, content, a positive length such as 100px, or a percentage such as 50%.');input.reportValidity();return;}if(input.value!==''&&input.checkValidity())write(field.options||field.text?input.value.trim():Number(input.value));};input.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();input.value=display;input.setCustomValidity('');input.blur();}else if(event.key==='Enter'){event.preventDefault();event.stopPropagation();input.blur();}};I.field(sec,'Shared '+field.label,input);
    if(!field.options&&!field.text){
     const format=value=>String(field.step===1?Math.round(value):value),minimum=sizing?Math.max(field.min??0,...elements.map(el=>decoration(el.ownerDocument.defaultView.getComputedStyle(el),property))):field.min??0;
     I.numericLabelDrag(input,raw=>({value:Number(raw),min:minimum,max:field.max??100,format}));
     input.retouchNumericPreview=()=>{
      const targets=infos.map((_,i)=>liveElement(i)),previews=targets.map(el=>root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true}));
+     const flexPreviews=dimension?targets.flatMap(el=>{const {context}=sizeContext(el,property);return /flex/.test(context.display||'')&&root.RetouchLayout.layoutAxes(context).main===property?[['flex-grow','0'],['flex-shrink','0'],['flex-basis','auto']].map(([property,value])=>({preview:root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true}),value})):[];}):[];
      return {current:()=>targets.every((el,i)=>el.isConnected&&(!resolveElement||resolveElement(infos[i].id)===el)),update:value=>{
       const amount=Number(format(value));
       const values=targets.map(el=>sizing?dimensionValue(el.ownerDocument.defaultView.getComputedStyle(el),property,amount)+'px':property==='opacity'?String(amount/100):['font-size','line-height','letter-spacing'].includes(property)?amount+'px':String(amount));
-      previews.forEach((preview,i)=>preview.update(values[i]));
-     },restore:()=>previews.forEach(preview=>preview.restore())};
+      flexPreviews.forEach(({preview,value})=>preview.update(value));previews.forEach((preview,i)=>preview.update(values[i]));
+     },restore:()=>{previews.forEach(preview=>preview.restore());flexPreviews.forEach(({preview})=>preview.restore());}};
     };
    }
 
    if(dimension){
-    const mode=I.select(sec,'Shared '+property[0].toUpperCase()+property.slice(1)+' sizing',[['',''],['fixed','Fixed'],['auto','Auto'],['fit-content','Hug']],'',value=>{mode.value='';if(value==='fixed'){try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i),css=el.ownerDocument.defaultView.getComputedStyle(el);return [info.id,change(info.className,scope,property,dimensionValue(css,property,dimensionSize(css,property)),el.ownerDocument)];})));}catch(error){I.note(sec,error.message,'refused');}}else write(value);});mode.options[0].disabled=true;mode.disabled=blocked;mode.title='Fixed keeps each layer’s current size. Auto follows page layout. Hug fits content.';
+    const mode=I.select(sec,'Shared '+property[0].toUpperCase()+property.slice(1)+' sizing',[['',''],['fixed','Fixed'],['auto','Auto'],['hug','Hug'],['fill','Fill']],'',value=>{mode.value='';writeSize(value);});mode.options[0].disabled=true;mode.disabled=blocked;mode.title='Fixed preserves each layer’s current size. Auto follows page layout. Hug fits content. Fill uses available parent space.';
     const field=input.closest('.inspector-field'),modeField=mode.closest('.inspector-field');modeField.classList.add('dimension-mode');field.retouchSizingMode=modeField;
    }
    if(property==='grid-row')I.note(sec,'Spans replace start/end placement on that axis and let the grid position each item. Full spans the explicit grid; large spans can create extra tracks. Reset reveals inherited placement; Undo restores the previous placement.');
@@ -246,7 +265,7 @@
    if(property==='flex-basis'){const presets=root.document.createElement('div');presets.className='stack-presets';for(const [value,label]of [['auto','Automatic shared flex basis'],['content','Content shared flex basis']]){const button=I.button(label,()=>write(value));button.disabled=blocked;presets.append(button);}sec.append(presets);I.note(sec,'Basis is the starting size along the flex direction, before Grow and Shrink. Percentages follow the parent’s size. Pixel values follow each layer’s box sizing.');}
    if(property==='flex-shrink')I.note(sec,'Grow shares extra space; Shrink distributes compression relative to each item’s basis. Zero prevents that behavior. These controls apply to items in a flex layout; minimum sizes may still limit shrinking.');
    if(field.constraint){const button=I.button((field.keyword==='auto'?'Automatic shared minimum ':'No shared maximum ')+(property.endsWith('width')?'width':'height'),()=>write(field.keyword));button.disabled=blocked;sec.append(button);}
-   const reset=I.button('Reset shared '+field.label.toLowerCase(),()=>write(null));try{reset.disabled=infos.every(info=>change(info.className,scope,property,null)===(info.className||''));}catch(error){reset.disabled=true;reset.title=error.message;}sec.append(reset);
+   const reset=I.button('Reset shared '+field.label.toLowerCase(),()=>write(null));try{reset.disabled=infos.every((info,i)=>(dimension?changeSizeMode(info.className,scope,property,'reset',0,sizeContext(elements[i],property).context,elements[i].ownerDocument):change(info.className,scope,property,null))===(info.className||''));}catch(error){reset.disabled=true;reset.title=error.message;}sec.append(reset);
   }
   I.note(groups.item,'These controls position and size each selected layer within its parent’s flex or grid layout. Layout above controls the selected layers’ own children.');
   I.note(groups.size,'Pixel sizes include padding and borders. Automatic sizing follows the page layout; fit content follows each layer’s content within the available space. Minimum and maximum sizes bound the result; when they conflict, the minimum takes precedence.');
@@ -287,5 +306,5 @@
   }
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={changeClip,changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={changeSizeMode,changeClip,changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);
