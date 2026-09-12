@@ -67,7 +67,7 @@
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
   return R.replaceScope(classes,L.gapClasses(R.project(classes,scope),axis,value,writingMode,R.inherited(classes,scope,document)),scope);
  }
- const groupNames={size:'Size',layout:'Layout',appearance:'Appearance',typography:'Typography',fill:'Fill',stroke:'Stroke',effects:'Effects'};
+ const groupNames={size:'Size',layout:'Layout',item:'Layout item',appearance:'Appearance',typography:'Typography',fill:'Fill',stroke:'Stroke',effects:'Effects'};
  let groupState=null;
  function sharedGroups(parent){
   if(groupState===null){groupState={};try{const saved=JSON.parse(root.localStorage.getItem('retouch.shared-inspector-sections.v1')||'{}');for(const key of Object.keys(groupNames))if(typeof saved?.[key]==='boolean')groupState[key]=saved[key];}catch{}}
@@ -164,7 +164,7 @@
   const automatic=I.button('Automatic shared line height',()=>relativeWrite('line-height','normal',false));automatic.disabled=elements.some(el=>el.style.getPropertyValue('line-height'));relativeGroup.append(automatic);
   I.note(groups.typography,'Relative spacing follows each layer’s own font size. Pixel controls and resets are available below.');
   for(const [property,field]of Object.entries(fields).filter(([,field])=>!field.constraint).flatMap(entry=>['width','height'].includes(entry[0])?[entry,...['min-','max-'].map(prefix=>[prefix+entry[0],fields[prefix+entry[0]]])]:[entry])){
-   const sec=field.constraint||field.ratio||['width','height'].includes(property)?groups.size:field.flexItem||field.layoutItem?groups.layout:['opacity','visibility','mix-blend-mode','isolation'].includes(property)?groups.appearance:groups.typography;
+   const sec=field.constraint||field.ratio||['width','height'].includes(property)?groups.size:field.flexItem||field.layoutItem?groups.item:['opacity','visibility','mix-blend-mode','isolation'].includes(property)?groups.appearance:groups.typography;
    if(field.ratio){
     const values=computed.map(css=>css.getPropertyValue(property)),mixed=values.some(value=>value!==values[0]),input=root.document.createElement('input');input.type='text';input.value=mixed?'':values[0];input.placeholder=mixed?'Mixed':'auto, 1 / 1, 16 / 9';
     const blocked=elements.some((el,i)=>el.style.getPropertyValue(property)||el.style.getPropertyValue('height')||el.style.getPropertyValue('inline-size')||el.style.getPropertyValue('block-size')||['inline','contents'].includes(computed[i].display));input.disabled=blocked;
@@ -211,6 +211,7 @@
    if(field.constraint){const button=I.button((field.keyword==='auto'?'Automatic shared minimum ':'No shared maximum ')+(property.endsWith('width')?'width':'height'),()=>write(field.keyword));button.disabled=blocked;sec.append(button);}
    const reset=I.button('Reset shared '+field.label.toLowerCase(),()=>write(null));try{reset.disabled=infos.every(info=>change(info.className,scope,property,null)===(info.className||''));}catch(error){reset.disabled=true;reset.title=error.message;}sec.append(reset);
   }
+  I.note(groups.item,'These controls position and size each selected layer within its parent’s flex or grid layout. Layout above controls the selected layers’ own children.');
   I.note(groups.size,'Pixel sizes include padding and borders. Automatic sizing follows the page layout; fit content follows each layer’s content within the available space. Minimum and maximum sizes bound the result; when they conflict, the minimum takes precedence.');
   for(const body of Object.values(groups)){
    const rows=[...body.querySelectorAll('.inspector-field')],control=row=>row.querySelector('input[aria-label],select[aria-label],textarea[aria-label]');
@@ -238,8 +239,8 @@
     pair.after(presets);
    }
   }
-  for(const button of groups.size.querySelectorAll('button.control-button:not(.property-reset)')){
-   const label=button.getAttribute('aria-label')||button.textContent,short={'Automatic shared width':'Auto width','Fit shared width to content':'Hug width','Automatic shared height':'Auto height','Fit shared height to content':'Hug height','Automatic shared minimum width':'Auto min W','Automatic shared minimum height':'Auto min H','No shared maximum width':'No max W','No shared maximum height':'No max H'}[label];
+  for(const button of [...groups.size.querySelectorAll('button.control-button:not(.property-reset)'),...groups.item.querySelectorAll('button.control-button:not(.property-reset)')]){
+   const label=button.getAttribute('aria-label')||button.textContent,short={'Automatic shared flex basis':'Auto basis','Content shared flex basis':'Content basis','Automatic shared width':'Auto width','Fit shared width to content':'Hug width','Automatic shared height':'Auto height','Fit shared height to content':'Hug height','Automatic shared minimum width':'Auto min W','Automatic shared minimum height':'Auto min H','No shared maximum width':'No max W','No shared maximum height':'No max H'}[label];
    if(short){button.setAttribute('aria-label',label);button.title=label;button.textContent=short;}
   }
   for(const body of Object.values(groups)){
