@@ -73,7 +73,7 @@
   const opacityNumber=document.createElement('input');opacityNumber.type='number';opacityNumber.min=0;opacityNumber.max=100;opacityNumber.step='any';opacityNumber.setAttribute('aria-label','Opacity value (%)');
   const opacityRow=document.createElement('div');opacityRow.className='inspector-field';const opacityLabel=document.createElement('span');opacityLabel.textContent='Opacity %';const opacityControls=document.createElement('div');opacityControls.className='paint-opacity-controls';opacityControls.append(opacity,opacityNumber);opacityRow.append(opacityLabel,opacityControls);dialog.append(opacityRow);
   const preview=document.createElement('div');preview.className='paint-preview';preview.setAttribute('role','img');preview.setAttribute('aria-label','Color preview');dialog.append(preview);
-  const value=document.createElement('input');value.value=original==='none'&&['fill','stroke'].includes(input.dataset.paintProperty)?'#000000':original;value.spellcheck=false;I.field(dialog,'Color value',value);
+  const value=document.createElement('input');value.value=original==='none'&&['fill','stroke'].includes(input.dataset.paintProperty)?'#000000':original;value.spellcheck=false;value.placeholder='CSS color';I.field(dialog,'Color value',value);
   const status=I.note(dialog,'');status.setAttribute('role','status');
   let sampling=null;const EyeDropper=typeof root.EyeDropper==='function'?root.EyeDropper:root.RetouchNativeEyeDropper;
   const sampleStatus=I.note(dialog,'');sampleStatus.hidden=true;sampleStatus.setAttribute('role','status');sampleStatus.setAttribute('aria-label','Screen color sampling');
@@ -96,8 +96,9 @@
    else{plane.style.removeProperty('background-image');hue.style.removeProperty('background-image');}
 handle.style.left=s*100+'%';handle.style.top=(1-v)*100+'%';plane.setAttribute('aria-valuenow',String(Math.round(v*100)));plane.setAttribute('aria-valuetext',Math.round(s*100)+'% saturation, '+Math.round(v*100)+'% brightness');hue.value=String(h);}
   function sync(preserveOpacity=false,preserveChannel=null,preserveHSV=null,preserveHSL=null){
-   value.setCustomValidity(valid()?'':'Enter a supported CSS color.');if(valid())draftPreview?.update(value.value.trim());if(valid())preview.style.setProperty('--paint-color',value.value);
+   applyButton.disabled=!valid();value.setCustomValidity(valid()?'':'Enter a supported CSS color.');if(valid())draftPreview?.update(value.value.trim());if(valid())preview.style.setProperty('--paint-color',value.value);
    parsed=read();conversion.replaceChildren();profile.disabled=!parsed;profile.value=parsed?.space||'srgb';plane.hidden=!parsed;hue.parentElement.hidden=!parsed;channels.hidden=!parsed;hexRow.hidden=true;opacity.disabled=!parsed;opacityNumber.disabled=!parsed;model.disabled=!parsed;model.value=channelModel;
+   tracks.hidden=!parsed;sliders.hidden=!parsed&&typeof EyeDropper!=='function';notationRow.hidden=!parsed&&channelModel!=='css';
    status.textContent=parsed?'':valid()?'Use the CSS value to edit this color.':'';
    if(parsed){opacity.value=String(parsed.alpha*100);if(preserveOpacity!==true)opacityNumber.value=String(Number((parsed.alpha*100).toPrecision(12)));paintOpacity();[h,s,v]=preserveHSV||hsv(parsed.channels);hslDraft=preserveHSL||hsl(parsed.channels);if(!preserveHSL)hslDraft[0]=h;paint();syncChannels(preserveChannel);}updateRecent();updateStyleChoice();
   }
