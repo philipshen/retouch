@@ -1,0 +1,100 @@
+{
+  "sourceCommit": "432012328dea014a984cc0cb756105cb3c0cf347",
+  "sourceTreeDirty": false,
+  "sourceFiles": 178,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-rotation-4320123/Retouch-0.1.0-mac.zip",
+  "sha256": "67cb76044d99d987c39dd350b9c61f79b5d60b37efe11d3f6f7b4e424f9680b7",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "status": "development candidate with known failing browser regression; not a release",
+  "units": {
+    "passed": 929,
+    "log": "/private/tmp/retouch-shared-rotated-units.log",
+    "scope": "source runtime matching packaged hashes"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "rotated single X/Y, six alignments, label scrub, keyboard/pointer canvas move, cancellation, scope and exact Undo",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-rotation-4320123/react-rotated.log"
+    },
+    {
+      "name": "rotated shared alignment, Shift group-to-frame alignment, X, move, gaps, scope, exact Undo and stale geometry refusal",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-rotation-4320123/liquid-rotated.log"
+    },
+    {
+      "name": "viewport resize mount, neutral body rotation geometry, single X/Y/alignment/move/constrained resize",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-rotation-4320123/html-canvas.log"
+    },
+    {
+      "name": "normal-flow Fill height with vertical margins",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "result": "failed",
+      "expectedBounds": [
+        [
+          250,
+          180
+        ],
+        [
+          210,
+          170
+        ]
+      ],
+      "actualBounds": [
+        [
+          250,
+          180
+        ],
+        [
+          210,
+          180
+        ]
+      ],
+      "log": "/private/tmp/retouch-desktop-rotation-4320123/known-webkit-height.log"
+    }
+  ],
+  "installation": {
+    "result": "Homebrew cask installation and removal passed in isolated app directory",
+    "verification": {
+      "sourceCommit": "432012328dea014a984cc0cb756105cb3c0cf347",
+      "sourceTreeDirty": false,
+      "sourceFiles": 178,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "quarantinePreserved": true,
+    "cask": "/private/tmp/retouch-desktop-rotation-4320123/retouch-studio.rb",
+    "syntax": "passed",
+    "logs": [
+      "/private/tmp/retouch-desktop-rotation-4320123/install.log",
+      "/private/tmp/retouch-desktop-rotation-4320123/uninstall.log"
+    ],
+    "cleanup": "App directory, cask registration, temporary tap, isolated trust configuration and harness verified absent; original cask inventory unchanged; Git remains installed",
+    "automaticDependencyRemoval": false
+  },
+  "nativeLaunch": {
+    "result": "unverified; not attempted",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed",
+    "appsLaunched": false
+  },
+  "nativeSelfTests": "not run",
+  "notarization": "not performed",
+  "published": false,
+  "buildLog": "/private/tmp/retouch-desktop-rotation-build.log"
+}

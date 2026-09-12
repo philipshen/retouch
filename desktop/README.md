@@ -10,17 +10,19 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-canvas-2970d3c/Retouch-0.1.0-mac.zip`
-(SHA-256 `2c31515d9c1b590633aac70e2b5b9ec7c80af60e108c6a0ae0aedb67f298ca58`).
-It contains clean commit `2970d3c`, including single/shared frame alignment,
-keyboard shortcuts, Liquid canvas transforms and content-box resize limits.
-All 178 source hashes match; universal architecture, extracted signature,
-927 source unit tests and packaged React/Liquid/HTML canvas workflows passed.
+`/private/tmp/retouch-desktop-rotation-4320123/Retouch-0.1.0-mac.zip`
+(SHA-256 `67cb76044d99d987c39dd350b9c61f79b5d60b37efe11d3f6f7b4e424f9680b7`).
+It contains clean commit `4320123`, including single/shared rotation, rotated
+X/Y and alignment, single/group canvas movement and viewport resize fixes.
+All 178 source hashes match; universal architecture, extracted/installed signatures,
+929 source unit tests and packaged React/Liquid/HTML workflows passed.
+Homebrew installed and uninstalled this archive in an isolated app directory,
+retaining quarantine. Temporary installation, tap, trust configuration and test
+harness were removed; automatic dependency removal was disabled.
 The packaged Liquid/WebKit normal-flow Fill-height test still fails with vertical
 margins (180px instead of 170px). Native launch was not attempted because CUA's
-native connection failed. Cask syntax passed; installation was not repeated.
-This candidate is not a trusted or published release.
-See [the candidate receipt](verification/2026-09-12-canvas-controls.json).
+native connection failed. This candidate is not a trusted or published release.
+See [the candidate receipt](verification/2026-09-12-rotation-controls.json).
 
 The previous archive with native workflow evidence is
 `/private/tmp/retouch-desktop-shared-e948266/Retouch-0.1.0-mac.zip`.
