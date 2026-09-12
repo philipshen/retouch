@@ -669,6 +669,12 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    assert.equal(await horizontal.inputValue(),'');assert.equal(await horizontal.getAttribute('placeholder'),'Mixed');
    await horizontal.fill('12');await horizontal.press('Enter');await settled();await wait(async()=>JSON.stringify(await gaps())===JSON.stringify([['12px','4px'],['12px','8px']]));const first=read();
    await vertical.fill('20');await vertical.press('Enter');await settled();await wait(async()=>(await gaps()).every(values=>values.join(',')==='12px,20px'));const second=read();
+   if(process.env.RT_E2E_SHARED_SPACING_SCRUB){
+    const label=horizontal.locator('..').locator(':scope > span');await label.scrollIntoViewIfNeeded();
+    const begin=async()=>{const box=await label.boundingBox();assert.ok(box);await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();return box.x+box.width/2;};
+    let x=await begin();await page.mouse.move(x+8,(await label.boundingBox()).y+8);await wait(async()=>(await gaps()).every(v=>v[0]==='20px'));assert.equal(read(),second,'drag previews do not write source');await page.keyboard.press('Escape');await page.mouse.up();await wait(async()=>(await gaps()).every(v=>v[0]==='12px'));assert.equal(read(),second,'cancel preserves source');
+    x=await begin();await page.mouse.move(x+6,(await label.boundingBox()).y+8);await page.mouse.up();await settled();await wait(async()=>(await gaps()).every(v=>v[0]==='18px'));assert.notEqual(read(),second);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),second,'one Undo restores drag source');await wait(async()=>(await gaps()).every(v=>v[0]==='12px'));
+   }
    assert.ok(Math.abs(await app.locator('h1').evaluate(el=>{const [a,b]=[...el.children].map(e=>e.getBoundingClientRect());return b.left-a.right;})-12)<.1);
    assert.deepEqual(await app.locator('p.other-font').evaluate(el=>{const [a,b,c]=[...el.children].map(e=>e.getBoundingClientRect());return [Math.round(a.left-c.right),Math.round(a.top-b.bottom)];}),[12,20]);
    assert.equal(await app.locator('p.named-font').evaluate(el=>getComputedStyle(el).gap),'normal');
@@ -687,6 +693,12 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click({modifiers:['Shift']});await settled();
    const field=page.getByLabel('Shared Padding',{exact:true}),padding=()=>app.locator('h1,p.other-font').evaluateAll(nodes=>nodes.map(el=>['top','right','bottom','left'].map(side=>getComputedStyle(el).getPropertyValue('padding-'+side))));
    await field.fill('12');await field.press('Enter');await wait(()=>read()!==before);await settled();await wait(async()=>(await padding()).every(row=>row.every(v=>v==='12px')));const uniform=read();
+   if(process.env.RT_E2E_SHARED_SPACING_SCRUB){
+    const label=field.locator('..').locator(':scope > span');await label.scrollIntoViewIfNeeded();
+    const begin=async()=>{const b=await label.boundingBox();assert.ok(b);await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();return b;};
+    let b=await begin();await page.keyboard.down('Shift');await page.mouse.move(b.x+b.width/2+1,b.y+b.height/2);await page.keyboard.up('Shift');await wait(async()=>(await padding()).every(row=>row.every(v=>v==='22px')));assert.equal(read(),uniform);await page.keyboard.press('Escape');await page.mouse.up();await wait(async()=>(await padding()).every(row=>row.every(v=>v==='12px')));
+    b=await begin();await page.keyboard.down('Alt');await page.mouse.move(b.x+b.width/2+5,b.y+b.height/2);await page.keyboard.up('Alt');await page.mouse.up();await settled();await wait(async()=>(await padding()).every(row=>row.every(v=>v==='12.5px')));assert.notEqual(read(),uniform);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),uniform);await wait(async()=>(await padding()).every(row=>row.every(v=>v==='12px')));
+   }
    assert.equal(await app.locator('p.named-font').evaluate(el=>getComputedStyle(el).padding),'0px');
    await page.getByLabel('Shared Padding left',{exact:true}).fill('24');await page.getByLabel('Shared Padding left',{exact:true}).press('Enter');await settled();await wait(async()=>(await padding()).every(row=>row.join(',')==='12px,12px,12px,24px'));
    assert.equal(await field.inputValue(),'');assert.equal(await field.getAttribute('placeholder'),'Mixed');
