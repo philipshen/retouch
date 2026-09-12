@@ -200,13 +200,13 @@
     return input;
   }
   function numericLabelDrag(input,read=raw=>({value:Number(raw)})){
-    const label=input.parentElement.querySelector('span');let drag=null;
+    const label=input.parentElement.querySelector('span'),interruptions=['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'];let drag=null;
     label.style.cursor='ew-resize';label.style.touchAction='none';label.style.userSelect='none';
     label.title='Drag to adjust. Shift: 10 units; Alt/Option: 0.1 units. Escape cancels.';
     label.dataset.numericScrub='';
     const stop=cancel=>{
       if(!drag)return;const saved=drag;drag=null;
-      root.removeEventListener('blur',abort);saved.observer.disconnect();saved.preview?.restore();
+      for(const type of interruptions)root.removeEventListener(type,abort);saved.observer.disconnect();saved.preview?.restore();
       if(cancel)input.value=saved.initial;
       if(label.hasPointerCapture(saved.id))label.releasePointerCapture(saved.id);
       if(!cancel&&input.isConnected&&input.value!==saved.initial&&input.checkValidity())input.dispatchEvent(new Event('change',{bubbles:true}));
@@ -219,7 +219,7 @@
       event.preventDefault();event.stopPropagation();input.focus({preventScroll:true});
       drag={id:event.pointerId,x:event.clientX,initial:input.value,value:parsed.value,format:parsed.format||String,min:parsed.min,max:parsed.max};
       drag.preview=input.retouchNumericPreview?.();drag.observer=new MutationObserver(()=>{if(!input.isConnected||drag?.preview?.current?.()===false)abort();});drag.observer.observe(document.body,{childList:true,subtree:true});
-      label.setPointerCapture(event.pointerId);root.addEventListener('blur',abort);
+      label.setPointerCapture(event.pointerId);for(const type of interruptions)root.addEventListener(type,abort);
     });
     label.addEventListener('pointermove',event=>{
       if(!drag||drag.id!==event.pointerId)return;event.preventDefault();event.stopPropagation();
