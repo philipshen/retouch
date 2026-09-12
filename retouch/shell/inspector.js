@@ -198,7 +198,7 @@
     label.dataset.numericScrub='';
     const stop=cancel=>{
       if(!drag)return;const saved=drag;drag=null;
-      root.removeEventListener('blur',abort);
+      root.removeEventListener('blur',abort);saved.observer.disconnect();saved.preview?.restore();
       if(cancel)input.value=saved.initial;
       if(label.hasPointerCapture(saved.id))label.releasePointerCapture(saved.id);
       if(!cancel&&input.isConnected&&input.value!==saved.initial&&input.checkValidity())input.dispatchEvent(new Event('change',{bubbles:true}));
@@ -209,13 +209,14 @@
       if(event.button!==0||drag||input.disabled||input.readOnly||input.value===''||!input.checkValidity())return;
       event.preventDefault();event.stopPropagation();input.focus({preventScroll:true});
       drag={id:event.pointerId,x:event.clientX,initial:input.value,value:Number(input.value)};
+      drag.preview=input.retouchNumericPreview?.();drag.observer=new MutationObserver(()=>{if(!input.isConnected||drag?.preview?.current?.()===false)abort();});drag.observer.observe(document.body,{childList:true,subtree:true});
       label.setPointerCapture(event.pointerId);root.addEventListener('blur',abort);
     });
     label.addEventListener('pointermove',event=>{
       if(!drag||drag.id!==event.pointerId)return;event.preventDefault();event.stopPropagation();
       const delta=event.clientX-drag.x;drag.x=event.clientX;
       const min=input.min===''?-Infinity:Number(input.min),max=input.max===''?Infinity:Number(input.max);
-      drag.value=Math.max(min,Math.min(max,Math.round((drag.value+delta*(event.altKey?0.1:event.shiftKey?10:1))*1e6)/1e6));input.value=String(drag.value);
+      drag.value=Math.max(min,Math.min(max,Math.round((drag.value+delta*(event.altKey?0.1:event.shiftKey?10:1))*1e6)/1e6));input.value=String(drag.value);drag.preview?.update(drag.value);
     });
     label.addEventListener('pointerup',event=>{if(drag?.id===event.pointerId){event.preventDefault();event.stopPropagation();stop(false);}});
     for(const type of ['pointercancel','lostpointercapture'])label.addEventListener(type,event=>{if(drag?.id===event.pointerId)stop(true);});
@@ -478,6 +479,7 @@
     }
     const row = document.createElement('div'); row.className='opacity-row';
     const input = number(row,'Opacity (%)',Number(css.opacity)*100,0,100,value=>writeAppearance('opacity',value));
+    input.retouchNumericPreview=()=>{if(document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false')return null;const preview=root.RetouchPaintPicker.propertyPreview({el,input,property:'opacity'});return {current:()=>el.isConnected,update:value=>preview.update(String(value/100)),restore:()=>preview.restore()};};
     const slider = document.createElement('input'); slider.type='range'; slider.min=0; slider.max=100; slider.value=input.value; slider.setAttribute('aria-label','Opacity');
     slider.oninput=()=>{input.value=slider.value;}; slider.onchange=()=>input.onchange(); row.append(slider); sec.append(row);
     const resetOpacity=button('Reset opacity',()=>writeAppearance('opacity',null));resetOpacity.disabled=root.RetouchReactSelection.change(info.className,'','opacity',null)===info.className;sec.append(resetOpacity);
