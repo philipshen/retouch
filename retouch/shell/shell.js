@@ -2183,6 +2183,7 @@ async function convertSVGToPath(info){
   const targets=matchingEls(info.id);if(targets.length!==1)return toast('Select a shape rendered once to convert it.','err');
   const target=targets[0],w=target.ownerDocument.defaultView,probe=target.ownerDocument.createElementNS('http://www.w3.org/2000/svg','path');
   for(const attr of target.attributes)if(!info.svgConversion.properties.includes(attr.name)&&!/^on/i.test(attr.name))probe.setAttribute(attr.name,attr.value);
+  for(const child of target.children)if(['title','desc'].includes(child.tagName.toLowerCase())){const copy=child.cloneNode(false);for(const attr of [...copy.attributes])if(/^on/i.test(attr.name))copy.removeAttribute(attr.name);copy.textContent=child.textContent;probe.append(copy);}
   probe.setAttribute('d',info.svgConversion.path);probe.style.setProperty('visibility','hidden','important');
   try{
     const before=w.getComputedStyle(target),paint=['fill','fill-opacity','fill-rule','stroke','stroke-width','stroke-opacity','stroke-linecap','stroke-linejoin','stroke-miterlimit','stroke-dasharray','stroke-dashoffset','opacity','transform','vector-effect','filter','clip-path','mask','marker-start','marker-mid','marker-end'],expected=Object.fromEntries(paint.map(p=>[p,before.getPropertyValue(p)]));

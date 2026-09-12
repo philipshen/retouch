@@ -11,6 +11,15 @@ function pathFor(tag,fields){
  }else if(tag==='line')d=`M ${n('x1')} ${n('y1')} L ${n('x2')} ${n('y2')}`;
  return d&&paths.parseCompound(d)?d:null;
 }
+function metadataOnly(kind,node,source,start,end){
+ if(end==null)return true;
+ if(kind==='react')return node.children.every(child=>child.type==='JSXText'?!child.value.trim():child.type==='JSXExpressionContainer'?child.expression.type==='JSXEmptyExpression':child.type==='JSXElement'&&['title','desc'].includes(require('./id.cjs').jsxElementName(child)));
+ const children=kind==='html'?(node.childNodes||[]).filter(child=>child.tagName):node.children||[];
+ if(children.some(child=>!['title','desc'].includes(kind==='html'?child.tagName:child.tag)))return false;
+ let cursor=start,remainder='';
+ for(const child of children){const a=kind==='html'?child.sourceCodeLocation?.startOffset:child.tagStart,b=kind==='html'?child.sourceCodeLocation?.endOffset:child.closeEnd;if(a==null||b==null||a<cursor||b>end)return false;remainder+=source.slice(cursor,a);cursor=b;}
+ remainder+=source.slice(cursor,end);return !remainder.replace(/<!--[\s\S]*?-->/g,'').trim();
+}
 function context(resolved){
  const node=resolved.element.node||resolved.element,kind=node.openingElement?'react':node.namespaceURI?'html':'liquid';
  const tag=kind==='react'?require('./id.cjs').jsxElementName(node):resolved.element.tag;
@@ -21,12 +30,12 @@ function context(resolved){
  if(attrs.some(a=>['d','ref','v-for','v-if','x-for','x-if'].includes(typeof a.name==='string'?a.name:a.name?.name)))return null;
  const start=kind==='react'?node.openingElement.end:kind==='html'?resolved.element.location.startTag.endOffset:node.openEnd;
  const end=kind==='react'?node.closingElement?.start:kind==='html'?resolved.element.location.endTag?.startOffset:node.selfClosing?null:node.closeStart;
- if(end!=null&&resolved.source.slice(start,end).trim())return null;
+ if(!metadataOnly(kind,node,resolved.source,start,end))return null;
  const d=pathFor(tag,geometry.fields);return d?{kind,node,tag,fields:geometry.fields,d}:null;
 }
 function describe(resolved){const c=context(resolved);return c?{path:c.d,properties:c.fields.map(f=>f.name)}:null;}
 function plan(resolved,op){
- const refuse=reason=>({ok:false,refused:true,reason}),c=context(resolved);if(!c)return refuse('Convert a literal SVG primitive without dynamic geometry or child content.');if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the shape.');
+ const refuse=reason=>({ok:false,refused:true,reason}),c=context(resolved);if(!c)return refuse('Convert a literal SVG primitive without dynamic geometry or non-metadata child content.');if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the shape.');
  const out=new MagicString(resolved.source),{node,kind,tag}=c;let collect,name;
  if(kind==='react'){
   const ids=require('./id.cjs');collect=s=>ids.collectElements(s,resolved.relPath).elements;name=e=>ids.jsxElementName(e.node);

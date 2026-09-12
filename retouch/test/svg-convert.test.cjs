@@ -13,11 +13,20 @@ test('conversion rejects dynamic geometry and uses exact clamped rounded-rect ar
  const d=convert.pathFor('rect',fields('rect',{x:'10',y:'20',width:'80',height:'40',rx:'50'}));assert.match(d,/A 40 20 0 0 1/);assert.equal((d.match(/A /g)||[]).length,4);
  for(const kind of ['react','liquid']){const a=require('../src/adapters/'+kind+'.cjs'),s=(kind==='react'?'export default()=>':'')+'<svg><rect width="40" height="20" '+(kind==='react'?'x={position}':'x="{{ position }}"')+'/></svg>',relPath='main.'+(kind==='react'?'jsx':'liquid'),elements=a.collect(s,relPath).elements,r={source:s,relPath,elements,element:elements.find(e=>(kind==='react'?ids.jsxElementName(e.node):e.tag)==='rect')};assert.equal(convert.describe(r),null);}
 });
-test('paired tags preserve closing names; child content and generated geometry are refused',()=>{
+test('paired tags preserve closing names; non-metadata child content and generated geometry are refused',()=>{
  for(const kind of ['html','react','liquid']){
   const a=require('../src/adapters/'+kind+'.cjs'),relPath='main.'+(kind==='react'?'jsx':kind==='liquid'?'liquid':'html'),resolve=body=>{const source=(kind==='react'?'export default()=>':'')+'<svg>'+body+'</svg>',elements=a.collect(source,relPath).elements;return {source,elements,relPath,file:'/tmp/'+relPath,hash:ids.contentHash(source),element:elements.find(e=>(kind==='react'?ids.jsxElementName(e.node):e.tag)==='rect')};};
   const r=resolve('<rect width="40" height="20"> </rect>'),result=convert.plan(r,{fileHash:r.hash});assert.equal(result.ok,true,result.reason);assert.match(result.edits[0].after,/<path[^>]*> <\/path>/);
-  assert.equal(convert.describe(resolve('<rect width="40" height="20"><title>Keep metadata</title></rect>')),null);assert.equal(convert.describe(resolve('<rect width="40" height="20" d="M0 0L1 1"/>')),null);
+  assert.equal(convert.describe(resolve('<rect width="40" height="20"><animate attributeName="width" values="40;60"/></rect>')),null);assert.equal(convert.describe(resolve('<rect width="40" height="20" d="M0 0L1 1"/>')),null);
  }
  const html=require('../src/adapters/html.cjs'),source='<svg><g v-for="item in items"><rect width="40" height="20"/></g></svg>',elements=html.collect(source,'index.html').elements;assert.equal(convert.describe({source,relPath:'index.html',elements,element:elements.find(e=>e.tag==='rect')}),null);
+});
+test('conversion retains accessible SVG metadata, bindings and comments byte for byte',()=>{
+ for(const kind of ['html','react','liquid']){
+  const adapter=require('../src/adapters/'+kind+'.cjs'),relPath='main.'+(kind==='react'?'jsx':kind==='liquid'?'liquid':'html');
+  const metadata=(kind==='react'?' {/* Keep comment */} ':' <!-- Keep comment --> ')+'<title id="shape-title">'+(kind==='react'?'{label}':kind==='liquid'?'{{ label }}':'Shape &amp; label')+'</title>\n<desc id="shape-description">Keep this description</desc>';
+  const resolve=content=>{const source=(kind==='react'?'export default()=>':'')+'<svg><rect width="40" height="20" role="img" aria-labelledby="shape-title" aria-describedby="shape-description">'+content+'</rect></svg>',elements=adapter.collect(source,relPath).elements;return {source,elements,relPath,file:'/tmp/'+relPath,hash:ids.contentHash(source),element:elements.find(e=>(kind==='react'?ids.jsxElementName(e.node):e.tag)==='rect')};};
+  const r=resolve(metadata),result=adapter.planOp(r,{type:'convertSVGToPath',fileHash:r.hash});assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(metadata));assert.ok(result.edits[0].after.includes('role="img" aria-labelledby="shape-title" aria-describedby="shape-description"'));assert.deepEqual(adapter.collect(result.edits[0].after,relPath).elements.map(e=>e.id),r.elements.map(e=>e.id));
+  assert.equal(convert.describe(resolve(metadata+'<g/>')),null);assert.equal(convert.describe(resolve(metadata+(kind==='react'?'{children}':kind==='liquid'?'{% render "child" %}':'unexpected text'))),null);
+ }
 });
