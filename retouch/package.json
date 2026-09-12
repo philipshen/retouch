@@ -55,6 +55,7 @@
     "test:e2e:svg-contour-actions": "RT_E2E_COMPOUND=1 RT_E2E_CONTOUR_ACTIONS=1 node test/e2e/svg-vertices.cjs",
     "test:e2e:native-sampler": "RT_E2E_EYEDROPPER=1 RT_E2E_NATIVE_SAMPLER=1 node test/e2e/page-fonts.cjs",
     "test:e2e:picker-link-context": "RT_E2E_PICKER_STYLES=1 RT_E2E_PICKER_LINK_CONTEXT=1 node test/e2e/page-fonts.cjs",
+    "test:e2e:picker-small-window": "RT_E2E_PICKER_STYLES=1 RT_E2E_PICKER_LINK_CONTEXT=1 RT_E2E_PICKER_SMALL_WINDOW=1 node test/e2e/page-fonts.cjs",
     "test:e2e:picker-style-scope": "RT_E2E_PICKER_STYLES=1 RT_E2E_PICKER_STYLES_SCOPE=1 RT_E2E_SVG_COLORS=1 node test/e2e/page-fonts.cjs",
     "test:e2e:picker-styles": "RT_E2E_PICKER_STYLES=1 node test/e2e/page-fonts.cjs",
     "test:e2e:hsl-draft": "RT_E2E_HSL_DRAFT=1 node test/e2e/page-fonts.cjs",

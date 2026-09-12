@@ -1310,3 +1310,12 @@ Verification exposed a stale inspector after a successful style save: rendering 
 New test:e2e:picker-link-context covers context labels, draft cancellation, local override save, reset preview/cancel/apply, inherited links outside the current viewport, exact source Undo and refreshed-field focus/value. HTML Chromium, HTML WebKit, React Chromium and Liquid WebKit passed; final caption/focus assertions passed HTML Chromium and Liquid WebKit. The prior complete picker-style regression passed, including revision rejection/retry. All 909 unit tests passed; syntax/diff checks passed. Inspected /private/tmp/retouch-picker-link-context-final.png. Logs /private/tmp/retouch-picker-link-context-{html-final,liquid-webkit-final,html-webkit,react,styles-regression,all-tests}.log; stale-panel reproduction /private/tmp/retouch-picker-link-context-stale-panel.log.
 
 Full Figma parity remains incomplete. No desktop rebuild/native launch, push or live Shopify verification; the latest f8eaccd package predates this picker work. Multiple-selection style links, gradient/shadow links, complete visual parity, arbitrary-site support and trusted native delivery remain open.
+
+
+### 2026-09-12 — Paint controls in short windows
+
+Confirmed that an expanded linked-color picker scrolls Apply out of view at a 1024x600 viewport. The light header and transaction footer now remain sticky within the scrolling dialog; scroll padding reserves their space when fields receive focus. The color plane, values and library continue scrolling between them.
+
+New test:e2e:picker-small-window checks actual hit-test visibility of Close and Apply at the top, midpoint and bottom of the dialog, then edits a draft and closes without source writes. HTML Chromium and Liquid WebKit passed. The existing HTML Chromium linked-context workflow passed, including override/reset/inherited source writes and Undo. Syntax/diff checks passed; inspected /private/tmp/retouch-picker-small-webkit.png. Logs /private/tmp/retouch-picker-small-{html-final,webkit-final}.log and /private/tmp/retouch-picker-sticky-regression.log. Original failure evidence /private/tmp/retouch-picker-small-before-final.log. Initial test setup resized before opening and encountered inspector refresh; the final test resizes an open picker and waits for scroll layout before hit testing. No full unit repeat for this CSS-only runtime change.
+
+Full Figma parity remains active and incomplete. No desktop build/launch, push or live Shopify changes. Current desktop package still predates the recent picker work.

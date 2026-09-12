@@ -799,3 +799,8 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .paint-linked-style { padding:8px 10px;border-top:1px solid var(--line); }
 .paint-linked-style p { margin:0 0 6px;font-size:11px;line-height:1.4; }
 .paint-linked-style button { font-size:11px; }
+
+/* Keep the paint transaction controls reachable in short windows. */
+.paint-picker { scroll-padding:48px 0 54px; }
+.paint-picker-header { position:sticky;top:0;z-index:2;background:white; }
+.paint-picker-actions { position:sticky;bottom:0;z-index:2;background:white; }
