@@ -39,6 +39,7 @@
     "test:e2e:page-fonts": "node test/e2e/page-fonts.cjs",
     "test:e2e:responsive-stylesheets": "node test/e2e/responsive-stylesheets.cjs",
     "test:e2e:responsive-media": "node test/e2e/responsive-media.cjs",
+    "test:e2e:svg-handle-position": "RT_E2E_COMPOUND=1 RT_E2E_MULTI_POINTS=1 RT_E2E_HANDLE_POSITION=1 node test/e2e/svg-vertices.cjs",
     "test:e2e:svg-point-position": "RT_E2E_COMPOUND=1 RT_E2E_MULTI_POINTS=1 RT_E2E_POINT_POSITION=1 node test/e2e/svg-vertices.cjs",
     "test:e2e:svg-arrange-points": "RT_E2E_COMPOUND=1 RT_E2E_MULTI_POINTS=1 RT_E2E_ARRANGE_POINTS=1 node test/e2e/svg-vertices.cjs",
     "test:e2e:svg-marquee": "RT_E2E_COMPOUND=1 RT_E2E_MULTI_POINTS=1 RT_E2E_MARQUEE=1 node test/e2e/svg-vertices.cjs",

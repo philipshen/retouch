@@ -85,7 +85,7 @@
       const label=root.document.createElement('label');label.textContent='Move handles ';label.style.cssText='font:12px Inter,system-ui;color:var(--ink, #1e1e1e);';
       handleMode=root.document.createElement('select');handleMode.setAttribute('aria-label','Handle movement');handleMode.title='Applies to paired handles while editing. Independent moves one; aligned keeps the opposite length; mirrored keeps equal lengths.';
       for(const [value,text] of [['independent','Independent'],['aligned','Aligned'],['mirrored','Mirrored']]){const option=root.document.createElement('option');option.value=value;option.textContent=text;handleMode.append(option);}
-      handleMode.value=handleMovement;handleMode.style.cssText='padding:6px;background:var(--control, #f5f5f5);color:var(--ink, #1e1e1e);border:1px solid var(--line, #e6e6e6);border-radius:4px;';handleMode.onchange=()=>{handleMovement=handleMode.value;};label.append(handleMode);toolbar.append(label);
+      handleMode.value=handleMovement;handleMode.style.cssText='padding:6px;background:var(--control, #f5f5f5);color:var(--ink, #1e1e1e);border:1px solid var(--line, #e6e6e6);border-radius:4px;';handleMode.onchange=()=>{handleMovement=handleMode.value;refreshPosition();};label.append(handleMode);toolbar.append(label);
       const visibilityLabel=root.document.createElement('label'),visibility=root.document.createElement('input');visibilityLabel.style.cssText='display:flex;align-items:center;gap:4px;font:12px Inter,system-ui;color:var(--ink, #1e1e1e);';visibility.type='checkbox';visibility.setAttribute('aria-label','Show all handles');visibility.onchange=()=>{showAllHandles=visibility.checked;paint();};visibilityLabel.append(visibility,root.document.createTextNode('Show all handles'));visibilityLabel.title='Normally only the selected point’s curve handles are shown. Select any point to reshape it.';optionsPanel.append(visibilityLabel);
     }
     if(subpaths){
@@ -164,16 +164,20 @@
     if(propertiesPane)propertiesPane.prepend(positionPanel);else toolbar.append(positionPanel);
     listen(positionPanel,'keydown',event=>{event.stopPropagation();if(event.isComposing)return;if(event.key==='Escape'){event.preventDefault();cancel();}else if(event.key==='Enter'){event.preventDefault();commit();}},true);
     function refreshPosition(reset=false){
-      const visible=!moveContourMode&&!cancelPen&&!activeHandle&&selectedPoints.size>0;positionPanel.style.display=visible?'block':'none';if(!visible)return;
-      positionHeading.textContent=selectedPoints.size>1?'Selected points':'Point position';positionNote.textContent=selectedPoints.size>1?'SVG coordinates · Top-left of selected anchors. Moves points together.':'SVG coordinates · Shared across screen sizes';
-      for(const axis of ['x','y']){const input=positionInputs[axis];if(reset){input.setCustomValidity('');input.removeAttribute('aria-invalid');}if(reset||root.document.activeElement!==input&&input.getAttribute('aria-invalid')!=='true')input.value=String(Math.min(...[...selectedPoints].map(i=>vertices[i][axis])));}
+      const visible=!moveContourMode&&!cancelPen&&selectedPoints.size>0;positionPanel.style.display=visible?'block':'none';if(!visible)return;
+      positionHeading.textContent=activeHandle?(activeHandle==='in'?'Incoming handle':'Outgoing handle'):selectedPoints.size>1?'Selected points':'Point position';positionNote.textContent=activeHandle?'SVG coordinates · '+({independent:'Independent handle',aligned:'Aligned handles',mirrored:'Mirrored handles'}[handleMovement]):selectedPoints.size>1?'SVG coordinates · Top-left of selected anchors. Moves points together.':'SVG coordinates · Shared across screen sizes';
+      for(const axis of ['x','y']){const input=positionInputs[axis];if(reset){input.setCustomValidity('');input.removeAttribute('aria-invalid');}if(reset||root.document.activeElement!==input&&input.getAttribute('aria-invalid')!=='true')input.value=String(activeHandle?vertices[active][activeHandle][axis]:Math.min(...[...selectedPoints].map(i=>vertices[i][axis])));}
     }
     function changePosition(axis,input){
-      if(drag||cancelPen||moveContourMode||activeHandle||!selectedPoints.size||!verify())return;
+      if(drag||cancelPen||moveContourMode||!selectedPoints.size||!verify())return;
       const value=input.value===''?NaN:Number(input.value),start=Math.min(...[...selectedPoints].map(i=>vertices[i][axis]));
-      const result=Number.isFinite(value)&&Math.abs(value)<=100000?root.RetouchSVGPath.translatePoints({nodes:vertices,closed},[...selectedPoints],axis==='x'?value-start:0,axis==='y'?value-start:0):null;
+      let result=null;
+      if(Number.isFinite(value)&&Math.abs(value)<=100000){
+        if(activeHandle){const node=root.RetouchSVGPath.moveHandle(vertices[active],activeHandle,{...vertices[active][activeHandle],[axis]:value},handleMovement);if(node){const nodes=vertices.map((original,i)=>i===active?node:original);if(root.RetouchSVGPath.serialize(nodes,closed))result={nodes};}}
+        else result=root.RetouchSVGPath.translatePoints({nodes:vertices,closed},[...selectedPoints],axis==='x'?value-start:0,axis==='y'?value-start:0);
+      }
       input.setCustomValidity(result?'':'Keep anchors and handles within supported SVG coordinates.');input.setAttribute('aria-invalid',String(!result));if(!result)return;
-      vertices.splice(0,vertices.length,...result.nodes);paint();status.textContent='Point position updated in preview. Done saves; Escape cancels.';
+      vertices.splice(0,vertices.length,...result.nodes);paint();status.textContent=(activeHandle?'Handle':'Point')+' position updated in preview. Done saves; Escape cancels.';
     }
     const arrangePanel=root.document.createElement('div');arrangePanel.setAttribute('role','group');arrangePanel.setAttribute('aria-label','Arrange points');arrangePanel.style.cssText='display:none;padding:16px;border-bottom:1px solid var(--line, #e6e6e6);color:var(--ink, #1e1e1e);font:12px Inter,system-ui;';
     const arrangeHeading=root.document.createElement('strong');arrangeHeading.textContent='Arrange points';arrangePanel.append(arrangeHeading);const arrangeButtons=[];
@@ -184,7 +188,7 @@
     for(const [axis,label] of [['x','Space horizontally'],['y','Space vertically']]){const button=action(label,()=>arrange(axis,'distribute'));button.style.marginTop='8px';button.style.width='100%';arrangePanel.append(button);arrangeButtons.push({button,min:3});}
     const arrangeHelp=root.document.createElement('p');arrangeHelp.textContent='Aligns point centers on the canvas. Handles move with their points. Done saves; Escape cancels.';arrangeHelp.style.cssText='font-size:11px;line-height:1.4;color:var(--muted, #757575);margin:8px 0 0;';arrangePanel.append(arrangeHelp);if(propertiesPane)positionPanel.after(arrangePanel);else toolbar.append(arrangePanel);
     listen(arrangePanel,'keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancel();}},true);
-    function refreshArrange(){arrangePanel.style.display=!moveContourMode&&!cancelPen&&selectedPoints.size>1?'block':'none';for(const {button,min} of arrangeButtons)button.disabled=selectedPoints.size<min;}
+    function refreshArrange(){arrangePanel.style.display=!moveContourMode&&!cancelPen&&!activeHandle&&selectedPoints.size>1?'block':'none';for(const {button,min} of arrangeButtons)button.disabled=selectedPoints.size<min;}
     function arrange(axis,mode){
       if(drag||cancelPen||moveContourMode||!verify())return;
       const result=root.RetouchSVGPath.arrangePoints({nodes:vertices,closed},[...selectedPoints],axis,mode,initialMatrix);
@@ -267,7 +271,7 @@
       function position(b,p,half){const q=new w.DOMPoint(p.x,p.y).matrixTransform(m);Object.assign(b.style,{left:f.left+q.x*scale-r.left-half+'px',top:f.top+q.y*scale-r.top-half+'px'});}
       vertices.forEach((p,i)=>{position(handles[i],p,6);handles[i].style.background=selectedPoints.has(i)?'var(--accent, #0d99ff)':'white';handles[i].setAttribute('aria-pressed',String(selectedPoints.has(i)));});
       insertions.forEach((b,i)=>{b.hidden=moveContourMode||!!pathData&&!selectedPoints.has(i)&&!selectedPoints.has((i+1)%vertices.length);const a=vertices[i],next=vertices[(i+1)%vertices.length];position(b,pathData?root.RetouchSVGPath.segmentMiddle(a,next):{x:(a.x+next.x)/2,y:(a.y+next.y)/2},9);});
-      tangentLines.replaceChildren();curveHandles.forEach(h=>{h.button.hidden=moveContourMode||!showAllHandles&&!selectedPoints.has(h.index);if(h.button.hidden)return;const a=vertices[h.index],b=a[h.key];position(h.button,b,5);const line=root.document.createElementNS(ns,'line'),p=new w.DOMPoint(a.x,a.y).matrixTransform(m),q=new w.DOMPoint(b.x,b.y).matrixTransform(m);line.setAttribute('x1',f.left+p.x*scale-r.left);line.setAttribute('y1',f.top+p.y*scale-r.top);line.setAttribute('x2',f.left+q.x*scale-r.left);line.setAttribute('y2',f.top+q.y*scale-r.top);line.style.cssText='stroke:var(--accent, #0d99ff)!important;stroke-width:1!important;';tangentLines.append(line);});
+      tangentLines.replaceChildren();curveHandles.forEach(h=>{h.button.hidden=moveContourMode||!showAllHandles&&!selectedPoints.has(h.index);if(h.button.hidden)return;const a=vertices[h.index],b=a[h.key];const selected=h.index===active&&h.key===activeHandle;h.button.style.background=selected?'var(--accent, #0d99ff)':'white';h.button.setAttribute('aria-pressed',String(selected));position(h.button,b,5);const line=root.document.createElementNS(ns,'line'),p=new w.DOMPoint(a.x,a.y).matrixTransform(m),q=new w.DOMPoint(b.x,b.y).matrixTransform(m);line.setAttribute('x1',f.left+p.x*scale-r.left);line.setAttribute('y1',f.top+p.y*scale-r.top);line.setAttribute('x2',f.left+q.x*scale-r.left);line.setAttribute('y2',f.top+q.y*scale-r.top);line.style.cssText='stroke:var(--accent, #0d99ff)!important;stroke-width:1!important;';tangentLines.append(line);});
 
     }
     function commit(){
