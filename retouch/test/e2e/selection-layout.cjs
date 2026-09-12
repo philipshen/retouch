@@ -14,6 +14,12 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
  const size=async value=>{await page.getByLabel('Screen size',{exact:true}).selectOption(value);await wait(async()=>await app.locator('body').evaluate(()=>innerWidth)===Number(value.split('x')[0]));await settled();};
  try{
   await page.goto(`http://localhost:${server.address().port}/rt`);await size('768x1024');await select();const baseline=await boxes();
+  for(const [label,axis,dim,fraction]of [['Align left','x','width',0],['Align horizontal centers','x','width',.5],['Align right','x','width',1],['Align top','y','height',0],['Align vertical centers','y','height',.5],['Align bottom','y','height',1]]){
+   const parent=await app.locator('main').evaluate(el=>({width:el.clientWidth,height:el.clientHeight})),start=Math.min(...baseline.map(r=>r[axis])),end=Math.max(...baseline.map(r=>r[axis]+r[dim])),delta=parent[dim]*fraction-start-(end-start)*fraction;
+   await page.getByRole('button',{name:label,exact:true}).click({modifiers:['Shift']});await wait(()=>read()!==original);await settled();const result=await boxes();
+   for(let i=0;i<result.length;i++){close(result[i][axis],baseline[i][axis]+delta);close(result[i][axis==='x'?'y':'x'],baseline[i][axis==='x'?'y':'x']);close(result[i].width,baseline[i].width);close(result[i].height,baseline[i].height);}
+   assert.equal(await page.getByLabel('Align to',{exact:true}).inputValue(),'selection');await undo();
+  }
   for(const [label,axis,dim,fraction]of [['Align left','x','width',0],['Align horizontal centers','x','width',.5],['Align right','x','width',1],['Align top','y','height',0],['Align vertical centers','y','height',.5],['Align bottom','y','height',1],['Distribute horizontal spacing','x','width',null],['Distribute vertical spacing','y','height',null]]){
    await page.getByRole('button',{name:label,exact:true}).click();await wait(()=>read()!==original);await settled();const result=await boxes();
    for(let i=0;i<result.length;i++){close(result[i].width,baseline[i].width);close(result[i].height,baseline[i].height);close(result[i][axis==='x'?'y':'x'],baseline[i][axis==='x'?'y':'x']);}

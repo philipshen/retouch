@@ -46,3 +46,13 @@ test('gap vectors reject invalid counts and changes that reverse order while ret
  const overlapping=[{left:0,top:0,width:50,height:10},{left:0,top:20,width:20,height:10},{left:100,top:40,width:20,height:10}];
  assert.deepEqual(setGaps(overlapping,'x',[-50,90]),[{x:0,y:0},{x:0,y:0},{x:10,y:0}]);
 });
+
+test('frame alignment moves each sibling group as a unit on all six edges and centers',()=>{
+ const {alignGroups}=require('../shell/selection-layout.js'),a={left:10,top:20,width:500,height:400},b={left:600,top:300,width:200,height:150},frames=[a,a,b];
+ for(const [mode,axis,pos,size,fraction]of [['left','x','left','width',0],['center','x','left','width',.5],['right','x','left','width',1],['top','y','top','height',0],['middle','y','top','height',.5],['bottom','y','top','height',1]]){
+  const result=alignGroups(rects,mode,frames);assert.equal(result[0][axis],result[1][axis]);
+  for(const [frame,indices]of [[a,[0,1]],[b,[2]]]){const start=Math.min(...indices.map(i=>rects[i][pos]+result[i][axis])),end=Math.max(...indices.map(i=>rects[i][pos]+result[i][axis]+rects[i][size]));assert.equal(start+(end-start)*fraction,frame[pos]+frame[size]*fraction);}
+  for(const delta of result)assert.equal(delta[axis==='x'?'y':'x'],0);
+ }
+ assert.throws(()=>alignGroups(rects,'gap-x',frames));assert.throws(()=>alignGroups(rects,'left',[a]));assert.throws(()=>alignGroups(rects,'left',[a,a,{...b,width:NaN}]));
+});

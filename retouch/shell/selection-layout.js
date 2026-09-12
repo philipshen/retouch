@@ -17,6 +17,21 @@
   }
   return result;
  }
+ function alignGroups(rects,mode,frames){
+  if(!['left','center','right','top','middle','bottom'].includes(mode))throw Error('Choose an alignment for the containing frames.');
+  arrange(rects,mode);if(!Array.isArray(frames)||frames.length!==rects.length)throw Error('Resolve a containing frame for every layer.');
+  const groups=new Map(),result=rects.map(()=>({x:0,y:0}));
+  for(let i=0;i<rects.length;i++){
+   const frame=frames[i];if(!frame||!['left','top','width','height'].every(key=>Number.isFinite(frame[key]))||frame.width<0||frame.height<0)throw Error('Choose measurable containing frames.');
+   if(!groups.has(frame))groups.set(frame,[]);groups.get(frame).push(i);
+  }
+  const [axis,position,size,fraction]={left:['x','left','width',0],center:['x','left','width',.5],right:['x','left','width',1],top:['y','top','height',0],middle:['y','top','height',.5],bottom:['y','top','height',1]}[mode];
+  for(const [frame,indices]of groups){
+   const start=Math.min(...indices.map(i=>rects[i][position])),end=Math.max(...indices.map(i=>rects[i][position]+rects[i][size])),delta=frame[position]+frame[size]*fraction-start-(end-start)*fraction;
+   for(const i of indices)result[i][axis]=delta;
+  }
+  return result;
+ }
  function gaps(rects,axis){
   if(!['x','y'].includes(axis))throw Error('Choose horizontal or vertical spacing.');
   const position=axis==='x'?'left':'top',size=axis==='x'?'width':'height',sorted=rects.map((r,i)=>({position:r[position],size:r[size],i})).sort((a,b)=>a.position-b.position);
@@ -80,13 +95,16 @@
   if(targetChoice==='parent'&&!commonParent())targetChoice='selection';
   const choices=[['selection','Selection bounds'],['parent','Containing frame'],...infos.map((info,i)=>['layer:'+info.id,'Layer: '+(i+1)+'. '+(info.layerName||elements[i].getAttribute('aria-label')||elements[i].id||info.text?.trim().slice(0,32)||info.tag)])];
   const controls=root.document.createElement('div');controls.className='selection-alignment';controls.setAttribute('role','toolbar');controls.setAttribute('aria-label','Align selected layers');const description=root.document.createElement('p');description.className='hint';
-  const update=()=>{description.textContent=(targetChoice==='selection'?'Align within the selection bounds. Distribution keeps the outer layers in place.':targetChoice==='parent'?'Align to the containing frame. Distribution spreads layers across its bounds.':'The chosen layer stays unchanged. Alignment moves the other selected layers.')+' Changes follow this screen scope and undo together.';for(const button of controls.querySelectorAll('[data-distribution]'))button.disabled=infos.length<3||targetChoice.startsWith('layer:');};
+  const update=()=>{description.textContent=(targetChoice==='selection'?'Align within the selection bounds. Distribution keeps the outer layers in place.':targetChoice==='parent'?'Align to the containing frame. Distribution spreads layers across its bounds.':'The chosen layer stays unchanged. Alignment moves the other selected layers.')+' Shift-align moves sibling layers together within each containing frame. Changes follow this screen scope and undo together.';for(const button of controls.querySelectorAll('[data-distribution]'))button.disabled=infos.length<3||targetChoice.startsWith('layer:');};
   const choice=I.select(sec,'Align to',choices,targetChoice,value=>{targetChoice=value;root.dispatchEvent(new root.Event('retouch:selection-layout'));update();});if(!commonParent()){const option=choice.querySelector('[value=parent]');option.disabled=true;option.textContent='Containing frame (different containers)';}sec.append(description);
   function targetBounds(measured){
    if(targetChoice==='selection')return null;
    if(targetChoice.startsWith('layer:')){const index=infos.findIndex(info=>'layer:'+info.id===targetChoice);if(index<0)throw Error('Choose a selected layer as the alignment target.');return measured[index].rect;}
    if(!commonParent())throw Error('Choose layers with the same containing frame.');
-   const parent=elements[0].offsetParent,d=elements[0].ownerDocument,w=d.defaultView;
+   return frameBounds(elements[0]);
+  }
+  function frameBounds(el){
+   const parent=el.offsetParent,d=el.ownerDocument,w=d.defaultView;
    if(!parent||parent===d.body&&w.getComputedStyle(parent).position==='static')return {left:0,top:0,width:d.documentElement.clientWidth,height:w.innerHeight};
    const rect=parent.getBoundingClientRect();return {left:rect.left+parent.clientLeft,top:rect.top+parent.clientTop,width:parent.clientWidth,height:parent.clientHeight};
   }
@@ -98,10 +116,11 @@
   }
   const icons={left:'M3 3v14 M6 5h10v3H6z M6 12h6v3H6z',center:'M10 2v16 M3 5h14v3H3z M6 12h8v3H6z',right:'M17 3v14 M4 5h10v3H4z M8 12h6v3H8z',top:'M3 3h14 M5 6h3v10H5z M12 6h3v6h-3z',middle:'M2 10h16 M5 3h3v14H5z M12 6h3v8h-3z',bottom:'M3 17h14 M5 4h3v10H5z M12 8h3v6h-3z','gap-x':'M2 3v14 M18 3v14 M6 5h3v10H6z M12 5h3v10h-3z','gap-y':'M3 2h14 M3 18h14 M5 6h10v3H5z M5 12h10v3H5z'};
   for(const [mode,label]of [['left','Align left'],['center','Align horizontal centers'],['right','Align right'],['top','Align top'],['middle','Align vertical centers'],['bottom','Align bottom'],['gap-x','Distribute horizontal spacing'],['gap-y','Distribute vertical spacing']]){
-   const button=I.button(label,()=>{try{
-    const measured=measure(),deltas=arrange(measured.map(item=>item.rect),mode,targetBounds(measured));if(deltas.every(d=>Math.abs(d.x)+Math.abs(d.y)<1/32))return;
+   const button=I.button(label,event=>{try{
+    const measured=measure(),rects=measured.map(item=>item.rect),frames=new Map();
+    const deltas=event.shiftKey&&!mode.startsWith('gap-')?alignGroups(rects,mode,elements.map(el=>{const key=el.offsetParent;if(!frames.has(key))frames.set(key,frameBounds(el));return frames.get(key);})):arrange(rects,mode,targetBounds(measured));if(deltas.every(d=>Math.abs(d.x)+Math.abs(d.y)<1/32))return;
     root.RetouchPanelFocus?.queue(button);write(measured,deltas);
-   }catch(error){I.note(sec,error.message,'refused');}});button.setAttribute('aria-label',label);button.title=label;button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+icons[mode]+'"/></svg>';button.tabIndex=mode==='left'?0:-1;button.addEventListener('focus',()=>{for(const item of controls.children)item.tabIndex=item===button?0:-1;});if(mode.startsWith('gap-'))button.dataset.distribution=mode;controls.append(button);
+   }catch(error){I.note(sec,error.message,'refused');}});button.setAttribute('aria-label',label);button.title=label+(mode.startsWith('gap-')?'':' · Shift: align group to containing frame');button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+icons[mode]+'"/></svg>';button.tabIndex=mode==='left'?0:-1;button.addEventListener('focus',()=>{for(const item of controls.children)item.tabIndex=item===button?0:-1;});if(mode.startsWith('gap-'))button.dataset.distribution=mode;controls.append(button);
   }
   controls.addEventListener('keydown',event=>{
    if(event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
@@ -123,5 +142,5 @@
   I.note(sec,'Exact gaps keep the first layer fixed, or the chosen reference layer. With a frame target, spacing starts at its left or top edge. Negative gaps overlap layers without reversing their order.');
   update();return sec;
  }
- const api={arrange,gaps,setGaps,setSpacing,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSelectionLayout=api;
+ const api={arrange,alignGroups,gaps,setGaps,setSpacing,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSelectionLayout=api;
 })(typeof window==='object'?window:globalThis);
