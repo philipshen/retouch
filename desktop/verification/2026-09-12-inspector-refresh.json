@@ -1,0 +1,47 @@
+{
+  "sourceCommit": "f8f5e83c5a19e7977f94015dc7a7a06457e6ff12",
+  "sourceTreeDirty": false,
+  "sourceFiles": 178,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict ad hoc verification passed before and after packaged workflows",
+  "archive": "/private/tmp/retouch-desktop-inspector-f8f5e83/Retouch-0.1.0-mac.zip",
+  "sha256": "54fec87747a5c678da481542e7762f14466cb0f98c96d7a4073345353b59f5e8",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "units": {
+    "passed": 913,
+    "log": "/private/tmp/retouch-inspector-refresh-units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "fonts",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-inspector-f8f5e83/fonts.log"
+    },
+    {
+      "name": "breakpoints",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-inspector-f8f5e83/breakpoints.log"
+    },
+    {
+      "name": "inspector",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-inspector-f8f5e83/inspector.log"
+    }
+  ],
+  "cask": {
+    "path": "/private/tmp/retouch-desktop-inspector-f8f5e83/retouch-studio.rb",
+    "syntax": "passed",
+    "installation": "not tested for this archive"
+  },
+  "harnessCleanup": "verified absent",
+  "nativeLaunch": "not attempted",
+  "nativeSampling": "unverified",
+  "notarization": "not performed",
+  "published": false
+}

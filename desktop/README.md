@@ -10,23 +10,25 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest local development archive is
-`/private/tmp/retouch-desktop-palette-20260912-671f988/Retouch-0.1.0-mac.zip`.
+`/private/tmp/retouch-desktop-inspector-f8f5e83/Retouch-0.1.0-mac.zip`.
 Its SHA-256 is
-`a4c5a231e635a089d922ee5d0010d4f5c4e44473b008286fc73d33c4b793cb0a`.
-It contains clean source commit `671f988`, including shared paint editing,
-inherited styles, detachment, exact sRGB alpha and picker style creation.
-All 178 packaged source files and native/build/verifier hashes match that
-checkout. Universal architecture, archive extraction and strict ad hoc signature
-checks passed. All 912 unit tests passed. Packaged WebKit workflows passed HTML
-style creation, Liquid inherited links and overridden-paint detachment/retry.
-See [the package receipt](verification/2026-09-12-palette-creation.json).
+`54fec87747a5c678da481542e7762f14466cb0f98c96d7a4073345353b59f5e8`.
+It contains clean source commit `f8f5e83`, including the updated light inspector,
+compact sizing, consistent dropdowns, current-preview edit-range action and font
+controls. All 178 packaged source files and native/build/verifier hashes match
+that checkout. Universal architecture, archive extraction and strict ad hoc
+signature checks passed before and after packaged workflows. All 913 unit tests
+passed. Packaged font editing (WebKit), breakpoint comparisons/editing (Chromium)
+and React inspector editing (WebKit) passed, including exact source Undo.
+See [the package receipt](verification/2026-09-12-inspector-refresh.json).
 
-The generated local cask installed and uninstalled successfully in an isolated
-app directory. The installed copy passed verification and retained quarantine.
-The temporary app, cask registration, tap and isolated trust configuration were
-removed. Homebrew unexpectedly auto-removed Git during uninstall; Git 2.55.0 was
-restored and verified. Future isolated cask checks must use
-`HOMEBREW_NO_AUTOREMOVE=1 HOMEBREW_NO_INSTALL_CLEANUP=1` to avoid this side effect.
+The generated local cask passes Ruby syntax validation; installation was not
+repeated for this archive. The previous `671f988` archive installed and uninstalled
+through Homebrew in an isolated app directory, retaining quarantine. See
+[its installation receipt](verification/2026-09-12-palette-creation.json).
+Future isolated cask checks must use `HOMEBREW_NO_AUTOREMOVE=1` and
+`HOMEBREW_NO_INSTALL_CLEANUP=1`: the earlier uninstall unexpectedly removed Git,
+which was restored and verified.
 
 Native launch, actual screen sampling, native editing and upgrades remain
 unverified for this build. Developer ID signing, notarization and trusted public
