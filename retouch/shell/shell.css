@@ -732,3 +732,7 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .paint-eyedropper { display:grid;place-items:center;width:24px;height:24px;padding:0;border:0;background:transparent;color:var(--ink);border-radius:4px; }
 .paint-eyedropper:hover:not(:disabled) { background:var(--hover); }
 .paint-eyedropper:disabled { opacity:.4;cursor:default; }
+
+.paint-conversion:empty { display:none; }
+.paint-conversion { margin-bottom:10px; }
+.paint-conversion button { margin:4px 4px 0 0;font-size:11px; }
