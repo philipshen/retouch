@@ -62,6 +62,11 @@
     }
     if(options.children.length>1)section.append(options);
    }
+   if(name==='Effects')for(const group of section.querySelectorAll('.shadow-controls')){
+    const prefix=group.querySelector(':scope > legend')?.textContent.trim();if(!prefix)continue;
+    for(const row of group.querySelectorAll(':scope > .inspector-field')){const label=row.querySelector('[aria-label]')?.getAttribute('aria-label');if(!label?.startsWith(prefix+' '))continue;const text=row.querySelector(':scope > span');if(text){const short=label.slice(prefix.length+1).replace(' (px)','');text.textContent=short[0].toUpperCase()+short.slice(1);}}
+    pair(group,[prefix+' X (px)',prefix+' Y (px)']);pair(group,[prefix+' Blur (px)',prefix+' Spread (px)']);
+   }
    const paintInputs=name==='Fill'?[...section.querySelectorAll('.gradient-stop-row input:not([type="number"])')]:name==='Effects'?[...section.querySelectorAll('.shadow-controls input')].filter(input=>/^Shadow \d+ color$/.test(input.getAttribute('aria-label')||'')):[];
    for(const input of paintInputs){
     if(name==='Effects'){const control=document.createElement('span');control.className='paint-field-control';input.replaceWith(control);control.append(input);}
