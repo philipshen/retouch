@@ -845,3 +845,11 @@ body input[type="number"]::-webkit-outer-spin-button { appearance:none;margin:0;
 .property-row > .dimension-control { flex:1;min-width:0; }
 
 .shared-inspector-group .property-pair .dimension-control > .dimension-mode { flex-basis:20px; }
+
+/* Physical layer alignment follows the compact Design-panel action row. */
+.selection-alignment { display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:2px;margin:0 0 8px; }
+.selection-alignment .control-button { display:flex;align-items:center;justify-content:center;width:100%;height:28px;min-width:0;padding:0;background:transparent; }
+.selection-alignment .control-button:hover:not(:disabled) { background:var(--hover); }
+.selection-alignment .control-button:disabled { opacity:.3;cursor:default; }
+.selection-alignment .control-button:focus-visible { outline:2px solid var(--accent);outline-offset:-2px; }
+.selection-alignment svg { width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none; }
