@@ -237,7 +237,10 @@
     };
    }
 
-   if(dimension){const presets=root.document.createElement('div');presets.className='stack-presets';for(const [value,label]of [['auto','Automatic shared '+property],['fit-content','Fit shared '+property+' to content']]){const button=I.button(label,()=>write(value));button.disabled=blocked;presets.append(button);}sec.append(presets);}
+   if(dimension){
+    const mode=I.select(sec,'Shared '+property[0].toUpperCase()+property.slice(1)+' sizing',[['',''],['fixed','Fixed'],['auto','Auto'],['fit-content','Hug']],'',value=>{mode.value='';if(value==='fixed'){try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i),css=el.ownerDocument.defaultView.getComputedStyle(el);return [info.id,change(info.className,scope,property,dimensionValue(css,property,dimensionSize(css,property)),el.ownerDocument)];})));}catch(error){I.note(sec,error.message,'refused');}}else write(value);});mode.options[0].disabled=true;mode.disabled=blocked;mode.title='Fixed keeps each layer’s current size. Auto follows page layout. Hug fits content.';
+    const field=input.closest('.inspector-field'),modeField=mode.closest('.inspector-field');modeField.classList.add('dimension-mode');field.retouchSizingMode=modeField;
+   }
    if(property==='grid-row')I.note(sec,'Spans replace start/end placement on that axis and let the grid position each item. Full spans the explicit grid; large spans can create extra tracks. Reset reveals inherited placement; Undo restores the previous placement.');
    if(property==='justify-self')I.note(sec,'Item alignment follows the flex cross axis or grid block axis. Grid inline alignment follows the text direction. Stretch needs an automatic size; auto margins can take precedence.');
    if(property==='flex-basis'){const presets=root.document.createElement('div');presets.className='stack-presets';for(const [value,label]of [['auto','Automatic shared flex basis'],['content','Content shared flex basis']]){const button=I.button(label,()=>write(value));button.disabled=blocked;presets.append(button);}sec.append(presets);I.note(sec,'Basis is the starting size along the flex direction, before Grow and Shrink. Percentages follow the parent’s size. Pixel values follow each layer’s box sizing.');}
@@ -264,7 +267,8 @@
    if(rows.some(row=>!row)||rows[0].parentElement!==rows[1].parentElement)continue;
    const pair=root.document.createElement('div');pair.className='property-pair';rows[0].before(pair);rows.forEach(row=>pair.append(row));
    rows.forEach((row,i)=>{row.querySelector('.inspector-field > span').textContent=({'Grid columns':'Cols','Grid rows':'Rows','Width (px)':'W','Height (px)':'H','Minimum width (px)':'Min W','Minimum height (px)':'Min H','Maximum width (px)':'Max W','Maximum height (px)':'Max H'})[names[i]]||names[i];});
-   if(!['Grow','Grid columns'].includes(names[0])){
+   if(names[0]==='Width (px)'){for(const row of rows){const field=row.querySelector('.inspector-field'),mode=field.retouchSizingMode;if(!mode)continue;const group=root.document.createElement('div');group.className='dimension-control';field.before(group);group.append(field,mode);}}
+   if(!['Grow','Grid columns','Width (px)'].includes(names[0])){
     const presets=root.document.createElement('div');presets.className='property-pair shared-sizing-presets';
     for(const name of names){const cell=root.document.createElement('div'),axis=name.toLowerCase().includes('width')?'width':'height',labels=name.startsWith('Minimum')?['Automatic shared minimum '+axis]:name.startsWith('Maximum')?['No shared maximum '+axis]:['Automatic shared '+axis,'Fit shared '+axis+' to content'];
      for(const label of labels){const button=[...groups.size.querySelectorAll('button.control-button')].find(el=>(el.getAttribute('aria-label')||el.textContent)===label);if(button){const previous=button.parentElement;cell.append(button);if(previous.classList.contains('stack-presets')&&!previous.children.length)previous.remove();}}
