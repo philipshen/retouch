@@ -161,6 +161,16 @@
   }
   I.note(groups.size,'Pixel sizes include padding and borders. Automatic sizing follows the page layout; fit content follows each layer’s content within the available space. Minimum and maximum sizes bound the result; when they conflict, the minimum takes precedence.');
   for(const body of Object.values(groups)){
+   const rows=[...body.querySelectorAll('.inspector-field')],control=row=>row.querySelector('input[aria-label],select[aria-label],textarea[aria-label]');
+   for(const row of rows){const name=control(row)?.getAttribute('aria-label'),label=row.querySelector(':scope > span');if(!name?.startsWith('Shared ')||!label||row.parentElement.classList.contains('property-row'))continue;const short=name.slice(7);label.textContent=({'Page font':'Font','Font size (px)':'Size','Font weight (1–1000)':'Weight','Font family':'Font family','Flex basis':'Basis','Item alignment':'Alignment','Grid inline alignment':'Grid alignment','Grid column span':'Column span','Grid row span':'Row span','Text color with alpha':'Color','Background color with alpha':'Color','Border color with alpha':'Color','SVG fill with alpha':'Fill','SVG stroke with alpha':'Stroke'})[short]||short;row.title=name;}
+   for(const reset of [...body.querySelectorAll('button.control-button')]){
+    if(!reset.textContent.startsWith('Reset shared ')||reset.classList.contains('property-reset'))continue;
+    const name=reset.textContent.slice(6).toLowerCase(),field=rows.find(row=>control(row)?.getAttribute('aria-label').toLowerCase()===name||name==='shared font family'&&control(row)?.getAttribute('aria-label')==='Shared Page font');if(!field)continue;
+    let row=field.parentElement;if(!row.classList.contains('property-row')){row=root.document.createElement('div');row.className='property-row';field.before(row);row.append(field);}
+    reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');row.append(reset);
+   }
+  }
+  for(const body of Object.values(groups)){
    const hints=[...body.children].filter(el=>el.classList.contains('hint')&&!el.classList.contains('refused')&&!el.hasAttribute('role'));
    if(hints.length){const details=root.document.createElement('details'),summary=root.document.createElement('summary');details.className='inspector-disclosure';summary.textContent='Details';details.append(summary,...hints);body.append(details);}
   }
