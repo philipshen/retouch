@@ -128,3 +128,11 @@ test('shared custom grid tracks preserve responsive and important templates',()=
  assert.throws(()=>changeGridTracks('grid','','columns','repeat(2, 1fr'));
  assert.throws(()=>changeGridTracks('grid','','columns','1fr;display:none'));
 });
+test('shared physical child alignment follows each writing mode and preserves scope',()=>{
+ const {changeContainerAlignment}=require('../shell/react-selection.js');
+ const horizontal=changeContainerAlignment('flex md:items-center hover:justify-center','md:',2,2,{flexDirection:'column',flexWrap:'wrap'});
+ assert.equal(horizontal,'flex hover:justify-center md:[justify-content:flex-end] md:[align-items:flex-end] md:[align-content:flex-end]');
+ const vertical=changeContainerAlignment('!place-items-center','md:',2,2,{writingMode:'vertical-rl',flexDirection:'column',flexWrap:'wrap'});
+ assert.ok(vertical.includes('md:[justify-content:flex-start]'));assert.ok(vertical.includes('md:![align-items:flex-end]'));assert.ok(vertical.includes('md:[align-content:flex-end]'));
+ assert.throws(()=>changeContainerAlignment('flex','',3,0));
+});

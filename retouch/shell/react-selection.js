@@ -57,6 +57,10 @@
   return R.replaceScope(classes,active,scope);
  }
  const containerRules={columns:/^grid-cols-|^\[grid-template-columns:/,rows:/^grid-rows-|^\[grid-template-rows:/,flow:/^grid-flow-|^\[grid-auto-flow:/,mode:/^(?:block|inline|inline-block|flex|inline-flex|grid|inline-grid|hidden|contents|flow-root)$|^flex-(?:row|col)(?:-reverse)?$|^\[(?:display|flex-direction):/,wrap:/^flex-(?:wrap|wrap-reverse|nowrap)$|^\[flex-wrap:/,align:/^items-|^\[align-items:/,justify:/^justify-(?!items-|self-)|^\[justify-content:/};
+ function changeContainerAlignment(classes,scope,x,y,context={},document=null){
+  const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
+  return R.replaceScope(classes,L.alignmentClasses(R.project(classes,scope),x,y,context,R.inherited(classes,scope,document)),scope);
+ }
  function changeGridTracks(classes,scope,axis,value,document=null){
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
   return R.replaceScope(classes,L.gridTemplateClasses(R.project(classes,scope),axis,value,R.inherited(classes,scope,document)),scope);
@@ -94,6 +98,14 @@
    const blocked=el=>inline.some(key=>el.style.getPropertyValue(key)),write=value=>{try{const changes=Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(blocked(el))throw Error('A selected layer has an inline layout override. Edit that source style first.');return [info.id,changeContainer(info.className,scope,property,value,el.ownerDocument)];}));save(changes);}catch(error){I.note(groups.layout,error.message,'refused');}};
    const input=I.select(groups.layout,'Shared '+label,options,mixed?'':values[0],write);input.disabled=elements.some(blocked);if(mixed)input.options[0].disabled=true;
    const reset=I.button('Reset shared '+label.toLowerCase(),()=>write(null));reset.disabled=input.disabled||infos.every(info=>changeContainer(info.className,scope,property,null)===info.className);groups.layout.append(reset);
+  }
+  if(computed.every(css=>['flex','inline-flex'].includes(css.display))){
+   const picker=root.document.createElement('div'),V=root.RetouchHTMLCSSValues;picker.className='layout-alignment';picker.setAttribute('role','group');picker.setAttribute('aria-label','Shared child alignment');groups.layout.append(picker);
+   const blocked=(el,css,x,y)=>['place-items','place-content',...Object.keys(V.flexAlignment(x,y,css))].some(key=>el.style.getPropertyValue(key));
+   for(let y=0;y<3;y++)for(let x=0;x<3;x++){
+    const label='Shared Align children '+['top','middle','bottom'][y]+' '+['left','center','right'][x],button=I.button('•',()=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i),css=el.ownerDocument.defaultView.getComputedStyle(el);if(!['flex','inline-flex'].includes(css.display)||blocked(el,css,x,y))throw Error('Select flex containers without inline alignment overrides.');return [info.id,changeContainerAlignment(info.className,scope,x,y,css,el.ownerDocument)];})));}catch(error){I.note(groups.layout,error.message,'refused');}});
+    button.setAttribute('aria-label',label);button.title=label;button.disabled=elements.some((el,i)=>blocked(el,computed[i],x,y));button.setAttribute('aria-pressed',String(computed.every(css=>Object.entries(V.flexAlignment(x,y,css)).every(([property,value])=>css.getPropertyValue(property)===value))));picker.append(button);
+   }
   }
   if(computed.every(css=>['grid','inline-grid'].includes(css.display))){
    const L=root.RetouchLayout,write=(property,value,inline)=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(!['grid','inline-grid'].includes(el.ownerDocument.defaultView.getComputedStyle(el).display)||inline.some(key=>el.style.getPropertyValue(key)))throw Error('Select grid containers without inline grid overrides.');return [info.id,changeContainer(info.className,scope,property,value,el.ownerDocument)];})));}catch(error){I.note(groups.layout,error.message,'refused');}};
@@ -140,7 +152,7 @@
    }
   }
   {
-   const L=root.RetouchLayout,inlineGap=el=>['gap','row-gap','column-gap'].some(property=>el.style.getPropertyValue(property)),blocked=elements.some(inlineGap),pair=root.document.createElement('div');pair.className='property-pair';groups.layout.prepend(pair);
+   const L=root.RetouchLayout,inlineGap=el=>['gap','row-gap','column-gap'].some(property=>el.style.getPropertyValue(property)),blocked=elements.some(inlineGap),pair=root.document.createElement('div');pair.className='property-pair';const alignment=groups.layout.querySelector(':scope > .layout-alignment');if(alignment){const spacing=root.document.createElement('div');spacing.className='layout-alignment-spacing';groups.layout.prepend(spacing);spacing.append(alignment,pair);}else groups.layout.prepend(pair);
    for(const [axis,label,icon]of [['width','Horizontal gap','↔'],['height','Vertical gap','↕']]){
     const values=computed.map(css=>css.getPropertyValue(L.layoutAxes({writingMode:css.writingMode}).inline===axis?'column-gap':'row-gap').replace(/px$/,'')),mixed=values.some(value=>value!==values[0]),initial=mixed?'':values[0],input=root.document.createElement('input');input.type='text';input.value=initial;input.placeholder=mixed?'Mixed':'normal';input.disabled=blocked;input.title=blocked?'A selected layer has an inline gap. Edit that source style first.':label+'; px, %, rem, em, vw, vh, ch or normal.';
     const write=value=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(inlineGap(el))throw Error('A selected layer has an inline gap. Edit that source style first.');return [info.id,changeGap(info.className,scope,axis,value,el.ownerDocument,el.ownerDocument.defaultView.getComputedStyle(el).writingMode)];})));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
@@ -261,5 +273,5 @@
   }
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);
