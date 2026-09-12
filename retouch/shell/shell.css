@@ -719,3 +719,10 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .gradient-stop-row > .gradient-stop-position input::-webkit-inner-spin-button { display:none; }
 
 .paint-picker .paint-scope-note { margin:0 0 12px;color:var(--muted);font-size:11px;line-height:1.45; }
+
+.paint-recents { margin-top:12px;padding-top:10px;border-top:1px solid var(--line); }
+.paint-recents-heading { display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:11px;margin-bottom:8px; }
+.paint-recents-heading button { border:0;background:transparent;color:var(--muted);padding:2px;font-size:11px; }
+.paint-recent-swatches { display:grid;grid-template-columns:repeat(8,24px);gap:6px; }
+.paint-recent-swatches button { width:24px;height:24px;min-width:0;padding:0;border:1px solid #0002;border-radius:4px;background-size:100% 100%,6px 6px; }
+.paint-recent-swatches button[aria-pressed=true],.paint-recent-swatches button:focus-visible { outline:2px solid var(--accent);outline-offset:1px; }

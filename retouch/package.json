@@ -53,6 +53,7 @@
     "test:e2e:svg-move-contour": "RT_E2E_COMPOUND=1 RT_E2E_MOVE_CONTOUR=1 node test/e2e/svg-vertices.cjs",
     "test:e2e:svg-draw-contour": "RT_E2E_COMPOUND=1 RT_E2E_DRAW_CONTOUR=1 node test/e2e/svg-vertices.cjs",
     "test:e2e:svg-contour-actions": "RT_E2E_COMPOUND=1 RT_E2E_CONTOUR_ACTIONS=1 node test/e2e/svg-vertices.cjs",
+    "test:e2e:recent-colors": "RT_E2E_RECENT_COLORS=1 node test/e2e/page-fonts.cjs",
     "test:e2e:paint-scope": "RT_E2E_PAINT_SCOPE=1 node test/e2e/page-fonts.cjs",
     "test:e2e:gradient-scope": "RT_E2E_GRADIENT_SCOPE=1 node test/e2e/page-fonts.cjs",
     "test:e2e:gradient-interruption": "RT_E2E_GRADIENT_INTERRUPTION=1 node test/e2e/page-fonts.cjs",
