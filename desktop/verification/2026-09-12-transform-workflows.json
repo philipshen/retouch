@@ -1,0 +1,154 @@
+{
+  "sourceCommit": "2ac28b1bed29b45584c1d377d4ec42b7029af69a",
+  "sourceFiles": 182,
+  "sourceTreeDirty": false,
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-transforms-2ac28b1/Retouch-0.1.0-mac.zip",
+  "sha256": "58a6b213b46fa7933f60d5bb3d2a9fc1df159271ed2e1152e9a5bd75d507d212",
+  "status": "development candidate; native workflows and trusted release unverified",
+  "units": {
+    "passed": 962,
+    "scope": "source runtime matching packaged hashes",
+    "log": "/private/tmp/retouch-desktop-transforms-2ac28b1/all-units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "group reflection, transformed outlines, zoom, movement, alignment, history and scope isolation",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-transforms-2ac28b1/html-group-flips.log"
+    },
+    {
+      "name": "group reflection, transformed outlines, zoom, movement, alignment, history and scope isolation",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-transforms-2ac28b1/react-group-flips.log"
+    },
+    {
+      "name": "group reflection, transformed outlines, zoom, movement, alignment, history and scope isolation",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-transforms-2ac28b1/liquid-group-flips.log"
+    },
+    {
+      "name": "all ten transformed anchor choices, container resize, source Undo and screen isolation",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-transforms-2ac28b1/html-anchors.log"
+    },
+    {
+      "name": "all ten transformed anchor choices, container resize, source Undo and screen isolation",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-transforms-2ac28b1/react-anchors.log"
+    },
+    {
+      "name": "all ten transformed anchor choices, container resize, source Undo and screen isolation",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-transforms-2ac28b1/liquid-anchors-final.log"
+    },
+    {
+      "name": "scaled single-layer coordinates, alignment, scrub, pointer and keyboard movement, flips and history",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-transforms-2ac28b1/react-single-position.log"
+    },
+    {
+      "name": "compact and wide screen controls",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-transforms-2ac28b1/compact-chromium.log"
+    },
+    {
+      "name": "compact and wide screen controls",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-transforms-2ac28b1/compact-webkit.log"
+    }
+  ],
+  "harness": {
+    "location": "external to signed app; removed after tests",
+    "dependencies": "Bundled runtime uses locked production dependencies; external harness uses development dependencies for Liquid rendering and browser fixtures",
+    "timingFix": "Initial Liquid anchor layout assertion encountered an unmounted row. Diagnostic rerun passed; the test now waits for the same layout condition and the final packaged run passed.",
+    "initialLog": "/private/tmp/retouch-desktop-transforms-2ac28b1/liquid-anchors.log",
+    "diagnosticLog": "/private/tmp/retouch-desktop-transforms-2ac28b1/liquid-anchors-diagnostic.log"
+  },
+  "installation": {
+    "result": "isolated Homebrew cask install and uninstall passed",
+    "verification": {
+      "sourceCommit": "2ac28b1bed29b45584c1d377d4ec42b7029af69a",
+      "sourceTreeDirty": false,
+      "sourceFiles": 182,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "quarantine": {
+      "preserved": true,
+      "value": "0381;6aa5d43d;;7D628B3C-1755-42CA-90F2-FD68E12E6518"
+    },
+    "logs": [
+      "/private/tmp/retouch-desktop-transforms-2ac28b1/install.log",
+      "/private/tmp/retouch-desktop-transforms-2ac28b1/uninstall.log"
+    ],
+    "cleanup": {
+      "caskInventoryUnchanged": true,
+      "appAndCaskRegistrationAbsent": true,
+      "temporaryTapAndTrustAbsent": true,
+      "automaticDependencyRemoval": false
+    }
+  },
+  "nativeLaunch": {
+    "result": "not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "nativeSelfTests": "not run",
+  "notarization": "not performed",
+  "published": false,
+  "knownFailure": {
+    "name": "Liquid/WebKit Fill-height with vertical margins",
+    "result": "reproduced against this archive",
+    "expected": [
+      [
+        250,
+        180
+      ],
+      [
+        210,
+        170
+      ]
+    ],
+    "actual": [
+      [
+        250,
+        180
+      ],
+      [
+        210,
+        180
+      ]
+    ],
+    "log": "/private/tmp/retouch-desktop-transforms-2ac28b1/liquid-fill-height-regression.log"
+  },
+  "unresolved": [
+    "Liquid/WebKit Fill-height with vertical margins remains incorrect",
+    "React editing during cold comparison bootstrap remains unverified",
+    "Native full editing flows, sampler and shutdown verification remain incomplete"
+  ],
+  "buildLog": "/private/tmp/retouch-desktop-transforms-build.log"
+}

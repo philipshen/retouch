@@ -10,25 +10,30 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-text-7da33af/Retouch-0.1.0-mac.zip`
-(SHA-256 `1201675c34beb7aeaf031ec09f38df7b48578cd1158dcaa3d179089b1531c993`).
-It contains clean commit `7da33af`, including compact screen controls, text-field
-completion and selection fixes, comparison text synchronization, preserved
-server-rendered text history state, and Liquid boundary-whitespace fidelity.
-All 181 source hashes match; universal architecture, strict extracted/installed
-signatures, and 955 matching-source unit tests pass. Packaged HTML, React and
-Liquid text/comparison history workflows pass. Compact controls pass in Chromium
-and WebKit. React creation and Undo pass with five HMR refresh messages withheld.
+`/private/tmp/retouch-desktop-transforms-2ac28b1/Retouch-0.1.0-mac.zip`
+(SHA-256 `58a6b213b46fa7933f60d5bb3d2a9fc1df159271ed2e1152e9a5bd75d507d212`).
+It contains clean commit `2ac28b1`, including single/group flips, transformed
+selection outlines and move previews, scaled position editing, anchor presets,
+and the compact light inspector. All 182 packaged source hashes and native/build/
+verifier hashes match; universal architecture, strict extracted/installed
+signatures, and 962 matching-source unit tests pass. Nine packaged workflow
+suites pass: group reflection and transformed canvas behavior in HTML, React and
+Liquid; all ten anchor choices with container resizing in all three formats;
+React scaled single-layer editing; and compact screen controls in Chromium/WebKit.
 Homebrew installed and uninstalled this exact archive in an isolated app directory,
 retaining quarantine and preserving the original cask inventory. The temporary
-tap, trust configuration, app installation and external test harness were removed.
+tap, isolated trust configuration, app installation and external test harness
+were removed. The Liquid anchor test now waits for the inspector rows to mount
+before asserting their placement; its final packaged run passes.
+
+The known Liquid/WebKit Fill-height regression reproduces in this archive:
+a layer with vertical margins renders 180px high where 170px is expected.
+Editing during cold React comparison bootstrap remains unverified.
 Native launch was not attempted because CUA's native connection failed.
-The prior Liquid/WebKit Fill-height regression remains open and was not retested
-in this package; editing during cold React comparison bootstrap is unverified.
 This is an installable development candidate, not a trusted or verified release.
-See [the candidate receipt](verification/2026-09-12-text-comparisons.json).
-The older creation candidate and its original intermittent React Undo failure
-remain documented in [its receipt](verification/2026-09-12-creation-workflows.json).
+See [the candidate receipt](verification/2026-09-12-transform-workflows.json).
+The prior text/comparison candidate remains documented in
+[its receipt](verification/2026-09-12-text-comparisons.json).
 
 The previous archive with native workflow evidence is
 `/private/tmp/retouch-desktop-shared-e948266/Retouch-0.1.0-mac.zip`.
