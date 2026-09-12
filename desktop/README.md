@@ -10,21 +10,23 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-flow-96e71ef/Retouch-0.1.0-mac.zip`
-(SHA-256 `d229d281b1d5713892e9e26bb4513bc2d563e5f6ef9c93ea3c86800f5eb736e5`).
-It contains clean commit `96e71ef`, including live flow resizing, centered and
-reversed layout handles, proportional size constraints, the updated typography
-layout, and logical alignment with continuous keyboard editing. All 180 source
-hashes match; universal architecture, extracted/installed signatures and 938
-matching-source unit tests pass. Five packaged React/Liquid/HTML workflows pass.
+`/private/tmp/retouch-desktop-creation-30db6f8/Retouch-0.1.0-mac.zip`
+(SHA-256 `dfc1f8dc9596587b4d7d9831884dc2d95a71ef9235f2677588834f7f6269818f`).
+It contains clean commit `30db6f8`, including compact creation tools, React/Liquid
+text and frame insertion, editable frame height, automatic inline text entry,
+collapsible inspector sections, and Actions navigation to shared properties.
+All 181 source hashes match; universal architecture, strict extracted/installed
+signatures, and 944 matching-source unit tests pass. Packaged HTML and Liquid
+creation workflows pass. The React workflow timed out once waiting for the
+placeholder after source Undo; a diagnostic rerun passed. That intermittent
+failure is unresolved. The Liquid/WebKit normal-flow Fill-height regression
+also reproduces (180px instead of 170px with vertical margins).
 Homebrew installed and uninstalled this exact archive in an isolated app directory,
-retaining quarantine. Temporary installation, tap, trust configuration and test
-harness were removed; automatic dependency removal was disabled and the original
-cask inventory was preserved.
-The packaged Liquid/WebKit normal-flow Fill-height test still fails with vertical
-margins (180px instead of 170px). Native launch was not attempted because CUA's
-native connection failed. This candidate is not a trusted or published release.
-See [the candidate receipt](verification/2026-09-12-flow-and-typography.json).
+retaining quarantine and preserving the original cask inventory. Temporary tap,
+trust configuration, app installation and test harness were removed.
+Native launch was not attempted because CUA's native connection failed.
+This is an installable development candidate, not a trusted or verified release.
+See [the candidate receipt](verification/2026-09-12-creation-workflows.json).
 
 The previous archive with native workflow evidence is
 `/private/tmp/retouch-desktop-shared-e948266/Retouch-0.1.0-mac.zip`.

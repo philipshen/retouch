@@ -1,0 +1,124 @@
+{
+  "sourceCommit": "30db6f845dd07141eee880e992db01fc4470fe20",
+  "sourceTreeDirty": false,
+  "sourceFiles": 181,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-creation-30db6f8/Retouch-0.1.0-mac.zip",
+  "sha256": "dfc1f8dc9596587b4d7d9831884dc2d95a71ef9235f2677588834f7f6269818f",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "status": "development candidate with unresolved browser failures; not a release",
+  "units": {
+    "passed": 944,
+    "log": "/private/tmp/retouch-desktop-creation-30db6f8/units.log",
+    "scope": "source runtime matching packaged hashes"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "creation, automatic text entry, frame height, exact Undo/Redo, compact toolbar",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed",
+      "logs": [
+        "/private/tmp/retouch-desktop-creation-30db6f8/html-creation.log"
+      ]
+    },
+    {
+      "name": "creation, automatic text entry, frame height, exact Undo/Redo, compact toolbar",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "result": "passed",
+      "logs": [
+        "/private/tmp/retouch-desktop-creation-30db6f8/liquid-creation.log"
+      ]
+    },
+    {
+      "name": "creation, automatic text entry, frame height, exact Undo/Redo, compact toolbar",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "intermittent failure: original run timed out waiting for New text after source Undo; diagnostic rerun passed",
+      "logs": [
+        "/private/tmp/retouch-desktop-creation-30db6f8/react-creation.log",
+        "/private/tmp/retouch-desktop-creation-30db6f8/react-creation-trace.log"
+      ]
+    }
+  ],
+  "knownFillRegression": {
+    "renderer": "liquid",
+    "engine": "webkit",
+    "result": "failed",
+    "expectedBounds": [
+      [
+        250,
+        180
+      ],
+      [
+        210,
+        170
+      ]
+    ],
+    "actualBounds": [
+      [
+        250,
+        180
+      ],
+      [
+        210,
+        180
+      ]
+    ],
+    "log": "/private/tmp/retouch-desktop-creation-30db6f8/liquid-known-fill.log"
+  },
+  "installation": {
+    "result": "isolated Homebrew cask install and uninstall passed",
+    "verification": {
+      "sourceCommit": "30db6f845dd07141eee880e992db01fc4470fe20",
+      "sourceTreeDirty": false,
+      "sourceFiles": 181,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "quarantine": {
+      "preserved": true,
+      "value": "0381;6aa5b491;;24EF9B75-0AC3-4D6D-AE24-85AB10267995"
+    },
+    "cask": "/private/tmp/retouch-desktop-creation-30db6f8/retouch-studio.rb",
+    "syntax": "passed",
+    "logs": [
+      "/private/tmp/retouch-desktop-creation-30db6f8/install.log",
+      "/private/tmp/retouch-desktop-creation-30db6f8/uninstall.log"
+    ],
+    "cleanup": {
+      "caskInventoryUnchanged": true,
+      "appAndCaskRegistrationAbsent": true,
+      "temporaryTapAndTrustAbsent": true,
+      "automaticDependencyRemoval": false
+    }
+  },
+  "externalHarnessRemoved": true,
+  "postWorkflowVerification": {
+    "sourceCommit": "30db6f845dd07141eee880e992db01fc4470fe20",
+    "sourceTreeDirty": false,
+    "sourceFiles": 181,
+    "architectures": [
+      "arm64",
+      "x86_64"
+    ],
+    "signature": "strict verification passed; trust and notarization are separate checks"
+  },
+  "nativeLaunch": {
+    "result": "unverified; not attempted",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed",
+    "appsLaunched": false
+  },
+  "nativeSelfTests": "not run",
+  "notarization": "not performed",
+  "published": false,
+  "buildLog": "/private/tmp/retouch-desktop-creation-build.log"
+}
