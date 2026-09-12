@@ -717,3 +717,5 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .gradient-stop-row > .gradient-stop-position input { padding-right:20px; }
 
 .gradient-stop-row > .gradient-stop-position input::-webkit-inner-spin-button { display:none; }
+
+.paint-picker .paint-scope-note { margin:0 0 12px;color:var(--muted);font-size:11px;line-height:1.45; }
