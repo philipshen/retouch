@@ -202,7 +202,7 @@
     if(subpaths||pathData)toolbar.append(options);
     action('Done',commit);action('Cancel',cancel);surface.append(toolbar);
     function adjacentArc(){return [...selectedPoints].some(i=>vertices[i]?.arc||(vertices[i+1]||(closed?vertices[0]:null))?.arc);}
-    function announce(message){refreshArc();refreshArrange();refreshPosition(true);if(cornerButton){const arcEndpoint=adjacentArc(),disabled=moveContourMode||!selectedPoints.size||arcEndpoint;cornerButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or use Arc properties.':'Remove the selected anchor’s handles';smoothButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or use Arc properties.':'Create aligned handles along the neighboring anchors';cornerButton.disabled=disabled;smoothButton.disabled=disabled;for(const button of [cornerButton,smoothButton])button.style.opacity=disabled?'.5':'1';}status.textContent=message||(!selectedPoints.size?'No points selected. Drag a box to select points.':null)||(selectedPoints.size>1&&!activeHandle?`${selectedPoints.size} points selected. Shift-click adds or removes points.`:null)||`${activeHandle?activeHandle==='in'?'Incoming handle on point':'Outgoing handle on point':'Point'} ${active+1} of ${vertices.length}`;removeButton.disabled=moveContourMode||!selectedPoints.size||vertices.length-selectedPoints.size<minimum;removeButton.setAttribute('aria-label',selectedPoints.size>1?'Delete points':'Delete point');removeButton.title=removeButton.getAttribute('aria-label');removeButton.style.opacity=removeButton.disabled?'.5':'1';}
+    function announce(message){refreshArc();refreshArrange();refreshPosition(true);if(cornerButton){const arcEndpoint=adjacentArc(),disabled=moveContourMode||!selectedPoints.size||arcEndpoint;cornerButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or use Arc properties.':'Remove the selected anchor’s handles';smoothButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or use Arc properties.':'Create aligned handles along the neighboring anchors';cornerButton.disabled=disabled;smoothButton.disabled=disabled;for(const button of [cornerButton,smoothButton])button.style.opacity=disabled?'.5':'1';}status.textContent=message||(!selectedPoints.size?'No points selected. Drag a box to select points.':null)||(selectedPoints.size>1&&!activeHandle?`${selectedPoints.size} points selected. Shift-click adds or removes points.`:null)||`${activeHandle?activeHandle==='in'?'Incoming handle on point':'Outgoing handle on point':'Point'} ${active+1} of ${vertices.length}`;removeButton.disabled=moveContourMode||!selectedPoints.size||!activeHandle&&vertices.length-selectedPoints.size<minimum;removeButton.setAttribute('aria-label',activeHandle?'Delete handle':selectedPoints.size>1?'Delete points':'Delete point');removeButton.title=removeButton.getAttribute('aria-label');removeButton.style.opacity=removeButton.disabled?'.5':'1';}
     const totalPoints=()=>subpaths?subpaths.reduce((sum,part)=>sum+part.nodes.length,0):vertices.length;
     function refreshContours(){
       if(!contourPicker)return;contourPicker.replaceChildren();
@@ -252,6 +252,11 @@
     }
     function removePoint(){
       if(drag||!selectedPoints.size||!verify())return;
+      if(activeHandle){
+        const nodes=vertices.map((node,i)=>{if(i!==active)return node;const next={...node};delete next[activeHandle];return next;});
+        if(!root.RetouchSVGPath.serialize(nodes,closed)){announce('Keep a valid contour with distinct anchors.');return;}
+        vertices.splice(0,vertices.length,...nodes);activeHandle=null;rebuild(false);handles[active].focus({preventScroll:true});return;
+      }
       const remaining=vertices.filter((_,i)=>!selectedPoints.has(i));
       if(remaining.length<minimum){announce(`Keep at least ${minimum} points in this ${closed?'polygon':'line'}.`);return;}
       if(pathData&&!root.RetouchSVGPath.serialize(remaining,closed)){announce('Keep a valid contour with distinct anchors.');return;}
