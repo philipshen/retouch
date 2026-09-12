@@ -1004,3 +1004,9 @@ Validation: React Chromium/WebKit and local Liquid Chromium solid workflows pass
 Solid paint fields now use the existing draft keyboard behavior: Enter applies through validation, Escape restores the original field value, and unchanged values do not write. HTML fill/stroke/text fields and class-based color override fields share this behavior with gradient stop editing. Picker application retains the same source handler.
 
 Validation: solid workflows passed HTML Chromium, React Chromium/WebKit and local Liquid Chromium. Each property checks Escape cancellation, invalid Enter rejection, composing Enter no-op, precise-alpha direct Enter application and exact undo, followed by the existing visual picker, reset and preset workflow. Logs `/private/tmp/retouch-paint-keys-{html,react,webkit,liquid}.log`. Syntax/diff checks passed. No desktop rebuild/native launch was performed; full parity remains incomplete.
+
+### 2026-09-12 — Hex color model
+
+The shared visual picker now offers Hex alongside RGB/HSL. The Hex field accepts three or six digits with an optional #, displays six uppercase digits when synchronized, and preserves the separate opacity value. Switching models does not alter the draft. Empty or invalid Hex input blocks Apply/Enter; Display P3 retains its existing channel model without implicit gamut conversion.
+
+Validation: focused picker tests passed Chromium/WebKit for shorthand, optional prefix, model-switch no-op, precise alpha retention, invalid/empty rejection, opacity synchronization and Enter Apply. Solid editing workflows passed HTML Chromium, React Chromium/WebKit and local Liquid Chromium using Hex edits with 0.1234 alpha followed by exact undo. Logs `/private/tmp/retouch-picker-hex-{html,react,webkit,liquid}.log`; screenshot `/private/tmp/retouch-picker-hex.png` inspected. Syntax/diff checks passed. No desktop rebuild/native launch was performed; full parity remains incomplete.
