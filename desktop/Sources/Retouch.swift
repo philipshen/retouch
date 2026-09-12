@@ -222,7 +222,21 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
                 guard let self = self, self.projectProcess === finished else { return }
                 self.appendLog("\nProject exited (" + String(finished.terminationStatus) + ").\n")
                 self.status.stringValue = finished.terminationStatus == 127 ? "Startup executable not found. Check Project logs and ensure Node and your command are available." : "Project stopped. See Project logs for details."
-                self.stopDiscovery(); self.projectProcess = nil; self.projectPipe = nil
+                self.stopDiscovery()
+                // Only retire the editor owned by this process; a manually connected
+                // editor on another origin can remain open when the project exits.
+                let owns: (URL?) -> Bool = { url in
+                    guard let url = url else { return false }
+                    return self.candidateURLs.contains { candidate in
+                        candidate.scheme == url.scheme && candidate.host == url.host && candidate.port == url.port
+                    }
+                }
+                if owns(Self.editorURL(self.address.stringValue)) { self.pending?.cancel(); self.pending = nil; self.requestID = UUID() }
+                if owns(self.connectedEditor) {
+                    self.connectedEditor = nil; self.editorDocument = UUID()
+                    self.web.stopLoading(); self.showWelcome(stopped: true)
+                }
+                self.projectProcess = nil; self.projectPipe = nil
                 self.projectButton.isEnabled = true; self.stopButton.isEnabled = false
             }
         }
@@ -288,19 +302,23 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
             web.trailingAnchor.constraint(equalTo: root.trailingAnchor),
             web.bottomAnchor.constraint(equalTo: root.bottomAnchor)
         ])
+        showWelcome()
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func showWelcome(stopped: Bool = false) {
         web.loadHTMLString("""
         <!doctype html><html lang="en"><meta name="viewport" content="width=device-width"><meta name="color-scheme" content="light"><style>
         *{box-sizing:border-box}body{margin:0;background:#f5f5f5;color:#1e1e1e;font:13px/1.6 -apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased}
         main{max-width:800px;margin:0 auto;padding:clamp(28px,7vh,72px) 32px}header{margin-bottom:28px}.brand{font-size:12px;font-weight:600;color:#757575}h1{font-size:32px;line-height:1.2;letter-spacing:-1px;margin:12px 0}p{margin:8px 0;color:#757575}
         .paths{display:grid;grid-template-columns:1fr 1fr;gap:16px}article{background:white;border:1px solid #e6e6e6;border-radius:12px;padding:24px;min-width:0}h2{font-size:14px;font-weight:600;margin:0 0 12px}strong{color:#1e1e1e;font-weight:600}code{display:block;margin-top:18px;background:#f5f5f5;border-radius:5px;padding:8px 12px;color:#1e1e1e;font:12px/1.6 "SF Mono",Menlo,monospace;overflow-wrap:anywhere}.note{margin-top:20px;font-size:12px}
         @media(max-width:600px){main{padding:24px}.paths{grid-template-columns:1fr}h1{font-size:28px}}
-        </style><main><header><div class="brand">Retouch</div><h1>Open your design canvas</h1><p>Use your existing site as the starting point.</p></header>
+        </style><main><header><div class="brand">Retouch</div><h1>\(stopped ? "Project stopped" : "Open your design canvas")</h1><p>\(stopped ? "Saved edits remain in your project. Open a project to continue editing." : "Use your existing site as the starting point.")</p></header>
         <section class="paths" aria-label="Ways to open your site"><article><h2>Open a project</h2><p>Choose <strong>Open project…</strong> above and select your project folder.</p><p>Open HTML files directly, or enter the command you already use to start your site.</p><code>npm run dev</code></article>
         <article><h2>Connect to an editor</h2><p>Already running Retouch? Paste its editor URL into the address field above, then choose <strong>Open editor</strong>.</p><p>Use the <strong>/rt</strong> URL shown in your terminal.</p></article></section>
         <p class="note">Make, shell scripts, and other startup commands work too. Keep using your project's existing command.</p></main></html>
         """, baseURL: nil)
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     func reportWindowState() {
