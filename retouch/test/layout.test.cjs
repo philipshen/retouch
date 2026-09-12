@@ -320,3 +320,10 @@ test('gap fields preserve owned relative units with physical-axis mapping and im
  assert.equal(L.ownGap('gap-x-[2rem] md:gap-x-[4rem]','width','horizontal-tb'),'2rem');
  assert.equal(L.ownGap('gap-x-[normal]','width','horizontal-tb'),'normal');
 });
+
+test('normal-flow Fill emits stretch fallbacks and resets them together',()=>{
+ const filled=L.sizeClasses('!w-20 h-10 md:w-40','width','fill',0,{display:'block'});
+ assert.equal(filled,'h-10 md:w-40 !w-[-webkit-fill-available] ![width:stretch]');
+ assert.equal(L.sizeClasses(filled,'width','reset',0,{display:'block'}),'h-10 md:w-40');
+ assert.equal(L.sizeClasses(filled,'width','fixed',80,{display:'block'}),'h-10 md:w-40 !w-[80px]');
+});

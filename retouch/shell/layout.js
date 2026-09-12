@@ -133,7 +133,9 @@
     const stretchAxis=!alongFlex&&/flex/.test(parent.display||'')||/grid/.test(parent.display||''),stretch=mode==='fill'&&stretchAxis,inlineStretch=stretchAxis&&/grid/.test(parent.display||'')&&axis===axes.inline;
     const match=t=>t.startsWith(dim+'-') || t.startsWith('['+axis+':') || mode==='reset'&&stretchAxis&&(inlineStretch?/^justify-self-stretch$|^\[justify-self:stretch\]$/.test(t):/^self-stretch$|^\[align-self:stretch\]$/.test(t)) || stretch&&(inlineStretch?/^justify-self-|^\[justify-self:/.test(t):/^self-|^\[align-self:/.test(t)) || (alongFlex&&(/^(?:grow|shrink)(?:-|$)|^basis-/.test(t)||/^flex-(?:\d+(?:\/\d+)?|auto|initial|none|\[.*\]|\(.*\))$|^\[flex(?:-(?:grow|shrink|basis))?:/.test(t)));
     if(mode==='reset')return I.replace(classes,match,'');
-    let addition=mode==='fixed'?`${dim}-[${value}px]`:mode==='hug'?`${dim}-fit`:`${dim}-full`;
+    // Keep the vendor fallback in a utility and the standard value in an arbitrary
+    // property so class merging preserves both declarations for older WebKit.
+    let addition=mode==='fixed'?`${dim}-[${value}px]`:mode==='hug'?`${dim}-fit`:`${dim}-[-webkit-fill-available] [${axis}:stretch]`;
     if(stretch)addition=dim+'-auto '+(inlineStretch?'justify-self-stretch':'self-stretch');
     if(alongFlex)addition=mode==='fill'?`${dim}-auto flex-1`:addition+' flex-none';
     if([...classes.split(/\s+/),...(parent.inheritedClasses||'').split(/\s+/)].some(token=>(I.base(token)?.startsWith('size-')||match(I.base(token)||'')||stretch&&/^place-self-|^\[place-self:/.test(I.base(token)||''))&&/^!|!$/.test(token)))addition=addition.split(' ').map(token=>'!'+token).join(' ');
@@ -302,7 +304,7 @@
       const own=ownToken&&I.base(ownToken).replace(/^size-/,dim+'-');
       const context={display:parent?.display,direction:parent?.flexDirection,writingMode:parent?.writingMode,inheritedClasses:info.styleScope?info.anchorInheritedClasses||'':''},axes=layoutAxes(context);
       const stretchFill=own===dim+'-auto'&&parent&&(/grid/.test(parent.display)?axis===axes.inline?css.justifySelf==='stretch':css.alignSelf==='stretch':/flex/.test(parent.display)&&axis!==axes.main&&css.alignSelf==='stretch');
-      const sizing=own===dim+'-fit'?'hug':own===dim+'-full'||stretchFill||/\bflex-1\b/.test(classes)&&parent&&/flex/.test(parent.display)&&axis===axes.main?'fill':own&&own!==dim+'-auto'?'fixed':'';
+      const sizing=own===dim+'-fit'?'hug':own===dim+'-full'||['-webkit-fill-available','-moz-available','stretch'].some(value=>own===dim+'-['+value+']')||stretchFill||/\bflex-1\b/.test(classes)&&parent&&/flex/.test(parent.display)&&axis===axes.main?'fill':own&&own!==dim+'-auto'?'fixed':'';
       const size=(mode,value)=>save(sizeClasses(classes,axis,mode,mode==='fixed'?geometry.dimensionValue(css,axis,value):value,context));
       I.select(sec,title+' behavior',[['','Inherited / auto'],['fixed','Fixed'],['hug','Hug content'],['fill','Fill available']],sizing,v=>size(v||'reset',Math.round(dims[axis]*100)/100));
       numeric(title+' (px)',dims[axis],0,100000,v=>size('fixed',v));
