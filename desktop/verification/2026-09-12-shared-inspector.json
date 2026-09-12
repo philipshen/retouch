@@ -1,0 +1,49 @@
+{
+  "sourceCommit": "e9482665c8d6ff7c4bc5339d6d45227dd0f9cd54",
+  "sourceTreeDirty": false,
+  "sourceFiles": 178,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict ad hoc verification passed before and after packaged workflows and native launch",
+  "archive": "/private/tmp/retouch-desktop-shared-e948266/Retouch-0.1.0-mac.zip",
+  "sha256": "a0d685fad8b5bbe2c629d5938be38ae0fbb7b746ded557dc187f56406e0ce480",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "units": {
+    "passed": 915,
+    "log": "/private/tmp/retouch-shared-desktop-units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "shared gap geometry, scope, reset and Undo",
+      "engine": "chromium",
+      "renderer": "react",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-shared-e948266/gaps.log"
+    },
+    {
+      "name": "shared section collapse, keyboard, editing, Undo and reload persistence",
+      "engine": "webkit",
+      "renderer": "liquid",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-shared-e948266/sections.log"
+    }
+  ],
+  "cask": {
+    "path": "/private/tmp/retouch-desktop-shared-e948266/retouch-studio.rb",
+    "syntax": "passed",
+    "installation": "not tested for this archive"
+  },
+  "harnessCleanup": "verified absent",
+  "nativeLaunch": {
+    "result": "passed",
+    "method": "CUA getApp exact extracted bundle path",
+    "evidence": "Accessibility tree showed Retouch welcome window, Open project, editor URL and Open editor controls. No approval dialog appeared. Process 91169 confirmed exact extracted executable path.",
+    "leftRunning": true
+  },
+  "nativeEditing": "unverified",
+  "nativeSampling": "unverified",
+  "notarization": "not performed",
+  "published": false
+}

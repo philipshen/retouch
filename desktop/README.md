@@ -10,17 +10,19 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest local development archive is
-`/private/tmp/retouch-desktop-inspector-f8f5e83/Retouch-0.1.0-mac.zip`.
+`/private/tmp/retouch-desktop-shared-e948266/Retouch-0.1.0-mac.zip`.
 Its SHA-256 is
-`54fec87747a5c678da481542e7762f14466cb0f98c96d7a4073345353b59f5e8`.
-It contains clean source commit `f8f5e83`, including the updated light inspector,
-compact sizing, consistent dropdowns, current-preview edit-range action and font
-controls. All 178 packaged source files and native/build/verifier hashes match
-that checkout. Universal architecture, archive extraction and strict ad hoc
-signature checks passed before and after packaged workflows. All 913 unit tests
-passed. Packaged font editing (WebKit), breakpoint comparisons/editing (Chromium)
-and React inspector editing (WebKit) passed, including exact source Undo.
-See [the package receipt](verification/2026-09-12-inspector-refresh.json).
+`a0d685fad8b5bbe2c629d5938be38ae0fbb7b746ded557dc187f56406e0ce480`.
+It contains clean source commit `e948266`, including shared padding/gaps,
+separate shared paint sections, inline resets and paired sizing controls.
+All 178 packaged source files and native/build/verifier hashes match that checkout.
+Universal architecture, archive extraction and strict ad hoc signature checks
+passed before and after packaged workflows and the controlled native launch.
+All 915 unit tests passed. Packaged React shared-gap editing (Chromium) and
+Liquid shared-section persistence (WebKit) passed, including source Undo.
+The exact extracted app opened once through CUA and exposed its welcome window
+and controls through accessibility without an approval dialog.
+See [the package receipt](verification/2026-09-12-shared-inspector.json).
 
 The generated local cask passes Ruby syntax validation; installation was not
 repeated for this archive. The previous `671f988` archive installed and uninstalled
@@ -30,7 +32,7 @@ Future isolated cask checks must use `HOMEBREW_NO_AUTOREMOVE=1` and
 `HOMEBREW_NO_INSTALL_CLEANUP=1`: the earlier uninstall unexpectedly removed Git,
 which was restored and verified.
 
-Native launch, actual screen sampling, native editing and upgrades remain
+Actual screen sampling, native editing and upgrades remain
 unverified for this build. Developer ID signing, notarization and trusted public
 distribution remain unfinished; no public release is published.
 
