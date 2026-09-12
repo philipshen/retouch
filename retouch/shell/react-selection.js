@@ -108,15 +108,16 @@
   if(elements.some(el=>!el?.isConnected)||infos.some(info=>info.classNameDynamic||info.svgPaint?.reason)){I.note(sec,'Shared styles need literal class names without spread props on every selected layer.','refused');return sec;}
   I.note(sec,'Shift-click a range in Layers; Cmd/Ctrl-click toggles layers. On the canvas, Shift-click toggles. Each edit updates these source layers and undoes together, including every rendered instance.');
   const liveElement=i=>{const el=resolveElement?resolveElement(infos[i].id):elements[i];if(!el?.isConnected||!el.ownerDocument.defaultView)throw Error('The preview changed. Select the layers again.');return el;};
-  const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el)),groups=sharedGroups(sec);
+  const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el)),groups=sharedGroups(sec),flex=css=>['flex','inline-flex'].includes(css.display),layout=css=>flex(css)||['grid','inline-grid'].includes(css.display),arrangementApplies=(property,css)=>property==='mode'||(property==='wrap'?flex(css):layout(css));
   for(const [property,label,choices,read,inline]of [
    ['mode','Arrange children',[['flow','Normal flow'],['row','Row'],['column','Column'],['row-reverse','Row reversed'],['column-reverse','Column reversed'],['grid','Grid']],css=>/grid/.test(css.display)?'grid':/flex/.test(css.display)?css.flexDirection:'flow',['display','flex-direction','flex-flow']],
    ['wrap','Wrap children',['nowrap','wrap','wrap-reverse'],css=>css.flexWrap,['flex-wrap','flex-flow']],
    ['align','Align children',['start','center','end','stretch','baseline'],css=>css.alignItems==='normal'?'stretch':css.alignItems.replace('flex-',''),['align-items','place-items']],
    ['justify','Distribute children',['start','center','end','between','around','evenly'],css=>css.justifyContent==='normal'?'start':css.justifyContent.replace('flex-','').replace('space-',''),['justify-content','place-content']]
   ]){
+   if(!computed.every(css=>arrangementApplies(property,css)))continue;
    const values=computed.map(read),mixed=values.some(value=>value!==values[0]),options=choices.map(choice=>Array.isArray(choice)?choice:[choice,({nowrap:'No wrap',wrap:'Wrap','wrap-reverse':'Wrap reversed',between:'Space between',around:'Space around',evenly:'Space evenly'})[choice]||choice[0].toUpperCase()+choice.slice(1)]);if(mixed)options.unshift(['','Mixed']);else if(!options.some(([value])=>value===values[0]))options.unshift([values[0],values[0]]);
-   const blocked=el=>inline.some(key=>el.style.getPropertyValue(key)),write=value=>{try{const changes=Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(blocked(el))throw Error('A selected layer has an inline layout override. Edit that source style first.');return [info.id,changeContainer(info.className,scope,property,value,el.ownerDocument)];}));save(changes);}catch(error){I.note(groups.layout,error.message,'refused');}};
+   const blocked=el=>inline.some(key=>el.style.getPropertyValue(key)),write=value=>{try{const changes=Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(blocked(el)||!arrangementApplies(property,el.ownerDocument.defaultView.getComputedStyle(el)))throw Error('Select compatible containers without inline layout overrides.');return [info.id,changeContainer(info.className,scope,property,value,el.ownerDocument)];}));save(changes);}catch(error){I.note(groups.layout,error.message,'refused');}};
    const input=I.select(groups.layout,'Shared '+label,options,mixed?'':values[0],write);input.disabled=elements.some(blocked);if(mixed)input.options[0].disabled=true;
    const reset=I.button('Reset shared '+label.toLowerCase(),()=>write(null));reset.disabled=input.disabled||infos.every(info=>changeContainer(info.className,scope,property,null)===info.className);groups.layout.append(reset);
   }
@@ -152,7 +153,7 @@
    input.type='checkbox';input.checked=values.every(value=>value===true);input.indeterminate=!values.every(value=>value===true)&&!values.every(value=>value===false);input.disabled=elements.some(blocked);input.title=input.disabled?'Inline overflow controls clipping on a selected layer.':'Hide content outside the selected layers without adding scrollbars.';input.onchange=()=>write(input.checked);I.field(groups.layout,'Shared Clip content',input);
    const reset=I.button('Reset shared clip content',()=>write(null));reset.disabled=input.disabled||infos.every(info=>changeClip(info.className,scope,null)===info.className);groups.layout.append(reset);
   }
-  I.note(groups.layout,'Row and column follow each container’s writing direction. Wrapping and child alignment take effect in flex or grid layouts. Reset reveals inherited layout styles.');
+  I.note(groups.layout,'Row and column follow each container’s writing direction. Flex supports wrapping; flex and grid support child alignment. Reset reveals inherited layout styles.');
   const lengthDrag=(input,properties)=>{
    const parse=raw=>{const match=/^(\d+(?:\.\d+)?|\.\d+)(px|%|rem|em|vw|vh|ch)?$/.exec(raw.trim());return match?{value:Number(match[1]),min:0,max:10000,format:value=>String(value)+(match[2]||'')}:null;};
    I.numericLabelDrag(input,parse);
@@ -180,14 +181,17 @@
   }
   {
    const L=root.RetouchLayout,inlineGap=el=>['gap','row-gap','column-gap'].some(property=>el.style.getPropertyValue(property)),blocked=elements.some(inlineGap),pair=root.document.createElement('div');pair.className='property-pair';const alignment=groups.layout.querySelector(':scope > .layout-alignment');if(alignment){const spacing=root.document.createElement('div');spacing.className='layout-alignment-spacing';groups.layout.prepend(spacing);spacing.append(alignment,pair);}else groups.layout.prepend(pair);
+   const gapApplies=(css,axis)=>layout(css)||((parseInt(css.columnCount)>1||css.columnWidth&&css.columnWidth!=='auto')&&L.layoutAxes({writingMode:css.writingMode}).inline===axis);
    for(const [axis,label,icon]of [['width','Horizontal gap','↔'],['height','Vertical gap','↕']]){
+    if(!computed.every(css=>gapApplies(css,axis)))continue;
     const values=computed.map(css=>css.getPropertyValue(L.layoutAxes({writingMode:css.writingMode}).inline===axis?'column-gap':'row-gap').replace(/px$/,'')),mixed=values.some(value=>value!==values[0]),initial=mixed?'':values[0],input=root.document.createElement('input');input.type='text';input.value=initial;input.placeholder=mixed?'Mixed':'normal';input.disabled=blocked;input.title=blocked?'A selected layer has an inline gap. Edit that source style first.':label+'; px, %, rem, em, vw, vh, ch or normal.';
-    const write=value=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(inlineGap(el))throw Error('A selected layer has an inline gap. Edit that source style first.');return [info.id,changeGap(info.className,scope,axis,value,el.ownerDocument,el.ownerDocument.defaultView.getComputedStyle(el).writingMode)];})));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+    const write=value=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(inlineGap(el)||!gapApplies(el.ownerDocument.defaultView.getComputedStyle(el),axis))throw Error('Select compatible containers without inline gap overrides.');return [info.id,changeGap(info.className,scope,axis,value,el.ownerDocument,el.ownerDocument.defaultView.getComputedStyle(el).writingMode)];})));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
     input.oninput=()=>input.setCustomValidity('');input.onchange=()=>write(input.value);input.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();input.value=initial;input.setCustomValidity('');input.blur();}else if(event.key==='Enter'){event.preventDefault();event.stopPropagation();input.blur();}};
     const row=root.document.createElement('div');row.className='property-row';pair.append(row);I.field(row,'Shared '+label,input);input.parentElement.querySelector('span').textContent=icon;lengthDrag(input,el=>[L.layoutAxes({writingMode:el.ownerDocument.defaultView.getComputedStyle(el).writingMode}).inline===axis?'column-gap':'row-gap']);
     const reset=I.button('Reset selected '+label.toLowerCase(),()=>write(null));reset.disabled=blocked||infos.every((info,i)=>changeGap(info.className,scope,axis,null,elements[i].ownerDocument,computed[i].writingMode)===info.className);reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');row.append(reset);
    }
-   I.note(groups.layout,'Gaps space children in flex and grid layouts. Horizontal and vertical follow each container’s writing direction. Reset removes the selected axis override and reveals a shorthand or inherited gap.');
+   if(!pair.children.length)pair.remove();
+   else I.note(groups.layout,'Gaps space children in flex and grid layouts. Horizontal and vertical follow each container’s writing direction. Reset removes the selected axis override and reveals a shorthand or inherited gap.');
   }
   for(const [property,label]of [['filter','Shared Layer blur (px)'],['backdrop-filter','Shared Backdrop blur (px)']]){
    const sec=groups.effects;
