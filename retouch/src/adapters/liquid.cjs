@@ -261,8 +261,8 @@ function literalText(node, source) {
   if (node.closeStart == null || node.textBinding) return null;
   const inner = source.slice(node.childrenStart, node.childrenEnd);
   if (/[<]|\{[%{]/.test(inner)) return null; // nested tag or liquid → not literal
-  const text = inner.trim();
-  if(text === '' && (!TEXT_TAGS.has(node.tag)&&node.tag!=='button'||node.selfClosing||!Number.isInteger(node.closeNameStart)))return null;
+  const text = inner;
+  if(text.trim() === '' && (!TEXT_TAGS.has(node.tag)&&node.tag!=='button'||node.selfClosing||!Number.isInteger(node.closeNameStart)))return null;
   return require('parse5').parseFragment(text).childNodes.map(child=>child.value||'').join('');
 }
 
