@@ -10,31 +10,22 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest local development archive is
-`/private/tmp/retouch-desktop-components-20260911/Retouch-0.1.0-mac.zip`.
+`/private/tmp/retouch-desktop-sampler-20260912-f8eaccd/Retouch-0.1.0-mac.zip`.
 Its SHA-256 is
-`a6216639105d53de6adf2a8ab9f744d09f89c5bc939d6a2c886a936212d032e9`.
-It contains clean source commit `910447c`, including the light component library,
-compact property fields, visible scope/name controls, keyboard navigation, and
-fragment/occurrence preview identity with refresh. All 175 packaged source hashes
-match that checkout. The extracted archive passes universal architecture and
-strict ad hoc signature checks. Six bundled-editor workflows passed: component
-fields, preview identity/recovery, and library keyboard browsing, each in Chromium
-and WebKit. All 886 unit tests passed before packaging verification.
+`979623c2db072fcd7ff6c82519eaea12cac1bfac62f3b948f5c90e72d064df8c`.
+It contains clean source commit `f8eaccd`, including recent colors, responsive
+paint previews and the native screen-sampling bridge. All 178 packaged source
+files and the native source hash match that checkout. Universal architecture,
+archive extraction and strict ad hoc signature checks passed. All 909 unit tests
+passed; packaged HTML and Liquid WebKit picker workflows passed with simulated
+native sampling replies. See [the package receipt](verification/2026-09-12-native-sampler.json).
 
-Local cask installation and uninstallation passed using a temporary tap and
-isolated app directory. The installed bundle passed package verification with
-quarantine intact. The test app, tap and cask trust entry were removed. Upgrade
-was not tested. See [the package receipt](verification/2026-09-11-component-editor.json).
-
-Native launch was not attempted for this build. An older controlled launch's
-process ran but CUA could not inspect its window; it was stopped. Native editing,
-trusted distribution, upgrades, Developer ID signing and notarization remain
-unverified for the latest archive. Key access remains paused after the earlier
-canceled attempt. No public release is published.
-
-The earlier click-completion package passed a native HTML workflow; that evidence
-is retained in [its receipt](verification/2026-09-11-click-completion.json) and does
-not establish native success for this refreshed package.
+A local cask was generated and passed Ruby syntax checking. Installation was not
+rerun for this archive. Earlier isolated installation/uninstallation evidence is
+retained in [the previous receipt](verification/2026-09-12-numeric-inspector.json).
+Native launch, actual screen sampling, native editing and upgrades remain
+unverified for this build. Developer ID signing, notarization and trusted public
+distribution remain unfinished; no public release is published.
 
 Build with Apple's command line developer tools installed:
 

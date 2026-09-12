@@ -1,0 +1,50 @@
+{
+  "sourceCommit": "f8eaccdedb07f48f3984bd58d29c527075c88352",
+  "sourceTreeDirty": false,
+  "sourceFiles": 178,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict ad hoc verification passed; trust and notarization unverified",
+  "archive": "/private/tmp/retouch-desktop-sampler-20260912-f8eaccd/Retouch-0.1.0-mac.zip",
+  "sha256": "979623c2db072fcd7ff6c82519eaea12cac1bfac62f3b948f5c90e72d064df8c",
+  "sourceMatchesCheckout": true,
+  "nativeSourceMatchesCheckout": true,
+  "units": {
+    "passed": 909,
+    "log": "/private/tmp/retouch-desktop-sampler-all-tests.log"
+  },
+  "adapterUnitTests": {
+    "passed": 5,
+    "log": "/private/tmp/retouch-native-sampler-adapter-units.log"
+  },
+  "nativeHelperPolicyCheck": {
+    "result": "passed through Swift toolchain without app/window/sampler creation",
+    "log": "/private/tmp/retouch-native-sampler-policy.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "html",
+      "result": "passed",
+      "nativeReplies": "simulated",
+      "log": "/private/tmp/retouch-desktop-sampler-20260912-f8eaccd/html-sampler.log"
+    },
+    {
+      "name": "liquid",
+      "result": "passed",
+      "nativeReplies": "simulated",
+      "log": "/private/tmp/retouch-desktop-sampler-20260912-f8eaccd/liquid-sampler.log"
+    }
+  ],
+  "cask": {
+    "generated": "/private/tmp/retouch-desktop-sampler-20260912-f8eaccd/retouch-studio.rb",
+    "syntax": "passed",
+    "installation": "not run for this build"
+  },
+  "nativeLaunch": "not attempted",
+  "nativeScreenSampling": "unverified; actual WK message delivery and system sampler UI not exercised",
+  "notarization": "not performed",
+  "published": false,
+  "harness": "External; packaged source symlinks and separate development dependencies; removed after both workflows completed"
+}
