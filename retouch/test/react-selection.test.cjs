@@ -91,3 +91,12 @@ test('shared padding preserves scopes, important shorthands and logical edges',(
  for(const value of ['-1','auto','red','10001','1px; color:red'])assert.throws(()=>changePadding(source,'md:','all',value));
  assert.throws(()=>changePadding(source,'','diagonal',1));
 });
+
+test('shared gaps map physical axes per writing mode and preserve scoped priority',()=>{
+ const {changeGap}=require('../shell/react-selection.js');
+ assert.equal(changeGap('!gap-2 hover:gap-4 md:gap-x-1','md:','width','2rem'),'!gap-2 hover:gap-4 md:!gap-x-[2rem]');
+ assert.equal(changeGap('gap-2 md:gap-y-1','md:','width','5%',null,'vertical-rl'),'gap-2 md:gap-y-[5%]');
+ assert.equal(changeGap('gap-2 md:gap-y-1','md:','height','normal',null,'vertical-rl'),'gap-2 md:gap-y-1 md:gap-x-[normal]');
+ assert.equal(changeGap('gap-2 md:gap-y-1','md:','width',null,null,'vertical-rl'),'gap-2');
+ for(const value of ['-2','auto','1px;display:none','10001px'])assert.throws(()=>changeGap('','','width',value));
+});

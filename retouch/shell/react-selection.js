@@ -56,6 +56,10 @@
   else for(const side of edge==='all'?['top','right','bottom','left']:[edge])active=L.paddingClasses(active,side,value,inherited,css);
   return R.replaceScope(classes,active,scope);
  }
+ function changeGap(classes,scope,axis,value,document=null,writingMode='horizontal-tb'){
+  const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
+  return R.replaceScope(classes,L.gapClasses(R.project(classes,scope),axis,value,writingMode,R.inherited(classes,scope,document)),scope);
+ }
  const groupNames={size:'Size',layout:'Layout',typography:'Typography',appearance:'Appearance',effects:'Effects'};
  let groupState=null;
  function sharedGroups(parent){
@@ -83,6 +87,17 @@
     I.field(row,edge==='all'?'Shared Padding':'Shared Padding '+edge,input);input.parentElement.querySelector('span').textContent=edge==='all'?'Padding':edge[0].toUpperCase()+edge.slice(1);
     const reset=I.button(edge==='all'?'Reset selected padding':'Reset selected padding '+edge,()=>write(edge,null,input));reset.disabled=blocked||infos.every((info,i)=>changePadding(info.className,scope,edge,null,elements[i].ownerDocument,computed[i])===info.className);reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');row.append(reset);
    }
+  }
+  {
+   const L=root.RetouchLayout,inlineGap=el=>['gap','row-gap','column-gap'].some(property=>el.style.getPropertyValue(property)),blocked=elements.some(inlineGap),pair=root.document.createElement('div');pair.className='property-pair';groups.layout.prepend(pair);
+   for(const [axis,label,icon]of [['width','Horizontal gap','↔'],['height','Vertical gap','↕']]){
+    const values=computed.map(css=>css.getPropertyValue(L.layoutAxes({writingMode:css.writingMode}).inline===axis?'column-gap':'row-gap').replace(/px$/,'')),mixed=values.some(value=>value!==values[0]),initial=mixed?'':values[0],input=root.document.createElement('input');input.type='text';input.value=initial;input.placeholder=mixed?'Mixed':'normal';input.disabled=blocked;input.title=blocked?'A selected layer has an inline gap. Edit that source style first.':label+'; px, %, rem, em, vw, vh, ch or normal.';
+    const write=value=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(inlineGap(el))throw Error('A selected layer has an inline gap. Edit that source style first.');return [info.id,changeGap(info.className,scope,axis,value,el.ownerDocument,el.ownerDocument.defaultView.getComputedStyle(el).writingMode)];})));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+    input.oninput=()=>input.setCustomValidity('');input.onchange=()=>write(input.value);input.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();input.value=initial;input.setCustomValidity('');input.blur();}else if(event.key==='Enter'){event.preventDefault();event.stopPropagation();input.blur();}};
+    const row=root.document.createElement('div');row.className='property-row';pair.append(row);I.field(row,'Shared '+label,input);input.parentElement.querySelector('span').textContent=icon;
+    const reset=I.button('Reset selected '+label.toLowerCase(),()=>write(null));reset.disabled=blocked||infos.every((info,i)=>changeGap(info.className,scope,axis,null,elements[i].ownerDocument,computed[i].writingMode)===info.className);reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');row.append(reset);
+   }
+   I.note(groups.layout,'Gaps space children in flex and grid layouts. Horizontal and vertical follow each container’s writing direction. Reset removes the selected axis override and reveals a shorthand or inherited gap.');
   }
   for(const [property,label]of [['filter','Shared Layer blur (px)'],['backdrop-filter','Shared Backdrop blur (px)']]){
    const sec=groups.effects;
@@ -151,5 +166,5 @@
   }
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);
