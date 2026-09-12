@@ -86,7 +86,7 @@
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
   return R.replaceScope(classes,L.gridTemplateClasses(R.project(classes,scope),axis,value,R.inherited(classes,scope,document)),scope);
  }
- let sharedGridTracksOpen=false;
+ let sharedGridTracksOpen=false,sharedSizeLimitsOpen=false;
  function changeContainer(classes,scope,property,value,document=null){
   if(!containerRules[property])throw Error('Unknown container layout control');
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js'),active=R.project(classes,scope),inherited=R.inherited(classes,scope,document);
@@ -281,6 +281,7 @@
    }
   }
   // Pair related measurements while keeping each original field and reset handler.
+  let sizeLimits;
   for(const names of [['Width (px)','Height (px)'],['Minimum width (px)','Minimum height (px)'],['Maximum width (px)','Maximum height (px)'],['Grow','Shrink'],['Grid columns','Grid rows']]){
    const rows=names.map(name=>[...sec.querySelectorAll('.inspector-field')].find(row=>row.querySelector('input[aria-label]')?.getAttribute('aria-label')==='Shared '+name)?.closest('.property-row'));
    if(rows.some(row=>!row)||rows[0].parentElement!==rows[1].parentElement)continue;
@@ -294,6 +295,10 @@
      presets.append(cell);
     }
     pair.after(presets);
+    if(names[0].startsWith('Minimum')||names[0].startsWith('Maximum')){
+     if(!sizeLimits){sizeLimits=root.document.createElement('details');const summary=root.document.createElement('summary');summary.textContent='Size limits';sizeLimits.className='inspector-disclosure';sizeLimits.setAttribute('aria-label','Shared size limits');sizeLimits.open=sharedSizeLimitsOpen;sizeLimits.ontoggle=()=>{if(sizeLimits.isConnected)sharedSizeLimitsOpen=sizeLimits.open;};sizeLimits.append(summary);pair.before(sizeLimits);}
+     sizeLimits.append(pair,presets);
+    }
    }
   }
   for(const button of [...groups.size.querySelectorAll('button.control-button:not(.property-reset)'),...groups.item.querySelectorAll('button.control-button:not(.property-reset)')]){
