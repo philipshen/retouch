@@ -1,3 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),R=require('../shell/canvas-rotate.js');
 test('rotation unwraps crossing the atan2 seam in either direction',()=>{assert.equal(R.difference(-179,179),2);assert.equal(R.difference(179,-179),-2);assert.equal(R.angle(0,1,{x:0,y:0}),90);});
 test('rotation snaps absolute angles and respects the existing source field range',()=>{assert.equal(R.value(-10,32,true),15);assert.equal(R.value(350,40),360);assert.equal(R.value(-350,-40),-360);assert.equal(R.value(30,.126),30.13);});
+
+test('corner hit regions follow the authored pivot and retain a ten pixel offset at every zoom',()=>{const g={layoutLeft:20,layoutTop:30,width:100,height:50,rotation:0,transformOrigin:'0px 0px'};assert.deepEqual(R.corners(g,.5),[{x:0,y:5},{x:70,y:5},{x:70,y:50},{x:0,y:50}]);const a=R.corners({...g,rotation:90})[1];assert.ok(Math.abs(a.x-30)<1e-9);assert.ok(Math.abs(a.y-140)<1e-9);assert.throws(()=>R.corners({...g,transformOrigin:'0px 0px 20px'}));});

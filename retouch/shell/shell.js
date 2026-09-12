@@ -877,6 +877,7 @@ componentBadge.querySelector('button').onclick=async()=>{
     await detachInstance(target.id,component,button,context);
   } finally {button.disabled=false;}
 };
+const rotationCorners=RetouchCanvasRotate.cornerControls({frame:iframe,canvas:canvasSurface,onStart:rotateLayerOnCanvas});
 function paintLoop() {
   overlayLayer.textContent = '';
   const d = doc();
@@ -918,6 +919,8 @@ function paintLoop() {
     componentBadge.style.left=Math.max(0,Math.min(r.left,pageWidth-componentBadge.offsetWidth/zoom))+'px';
     componentBadge.style.top=Math.max(0,r.top-22)+'px';
   }
+  const rotationInput=mode==='edit'&&!editing&&!stopDrawing&&!canvasPan.active&&!panelTasks&&!undoBusy&&!sourceRequests&&!sel?.multiple?.length&&!document.querySelector('dialog[open]')&&document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false'?panelBody.querySelector('input[aria-label="Rotation (°)"]'):null;
+  rotationCorners.update(rotationInput?.retouchPreviewTarget,rotationInput);
   if(d&&sel&&mode==='edit'&&!editing&&window.RetouchGridGuidesEnabled)RetouchInspector.drawGridGuides(overlayLayer,renderedSelection?.element||matchingEls(activeId())[0]);
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
   marqueeSurface.textContent='';
@@ -1086,7 +1089,7 @@ function renderPanel() {
   const panel=document.getElementById('panel');
   const key=JSON.stringify([sel.info.file,sel.scope,sel.instanceId,(sel.multiple||[sel.info]).map(info=>info.id).sort()]);
   const focusedDraft=panelPaintDraftFocused()||panelInteractionFocused()&&document.activeElement.matches('input,textarea')&&(document.activeElement.matches('.component-props-search')||!panelTasks&&!sourceRequests&&!undoBusy);
-  if((panelPointer||focusedDraft||document.querySelector('.svg-vertex-surface'))&&key===renderedPanelSelection){panelRenderDeferred=true;return;}
+  if((panelPointer||focusedDraft||document.querySelector('.svg-vertex-surface, .canvas-rotate-surface'))&&key===renderedPanelSelection){panelRenderDeferred=true;return;}
   panelRenderDeferred=false;
   const top=key===renderedPanelSelection?panel.scrollTop:0;
   const focusedScope=key===renderedPanelSelection&&document.activeElement?.getAttribute('aria-label')==='Style screen scope';
@@ -2247,13 +2250,13 @@ async function writeReactBounds(info,classes,expected){
   }catch(error){toast(error.message,'err');return false;}finally{busyPanel(false);}
 }
 
-function rotateLayerOnCanvas(target,input){
+function rotateLayerOnCanvas(target,input,initialPointer=null){
   stopDrawing?.();
   const key=JSON.stringify([sel?.info.id,sel?.info.hash,styleScope]);
   const current=()=>mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&!sel?.multiple?.length&&!document.querySelector('dialog[open]')&&input.isConnected&&!input.matches(':disabled')&&!input.closest('[inert]')&&document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false'&&key===JSON.stringify([sel?.info.id,sel?.info.hash,styleScope]);
   if(!current())return;
   canvasPan.cancel();
-  stopDrawing=RetouchCanvasRotate.mount({target,frame:iframe,canvas:canvasSurface,input,current,onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
+  stopDrawing=RetouchCanvasRotate.mount({target,frame:iframe,canvas:canvasSurface,input,current,initialPointer,onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
 }
 
 function transformReactLayer(info,target,action,opener){

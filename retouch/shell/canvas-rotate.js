@@ -3,9 +3,14 @@
  const difference=(a,b)=>((a-b+540)%360+360)%360-180;
  const angle=(x,y,pivot)=>Math.atan2(y-pivot.y,x-pivot.x)*180/Math.PI;
  function value(start,change,snap=false){const n=start+change;return Math.max(-360,Math.min(360,snap?Math.round(n/15)*15:Math.round(n*100)/100));}
- function mount({target,frame,canvas,input,current,onEnd,onError}){
-  const doc=root.document,w=target.ownerDocument.defaultView,measure=()=>root.RetouchInspector.geometry(target,{allowRotation:true,layoutOnly:true});let g;
-  try{const css=w.getComputedStyle(target.ownerDocument.documentElement);if(css.transform!=='none'||['rotate','scale','translate'].some(key=>css[key]&&!['none','0deg'].includes(css[key]))||css.zoom&&Number(css.zoom)!==1)throw Error('Canvas rotation requires a page root without transforms or zoom.');g=measure();if(g.width<=0||g.height<=0)throw Error('Choose a visible layer with a nonzero size.');}catch(error){onError(error.message);return null;}
+ function geometry(target){
+  const css=target.ownerDocument.defaultView.getComputedStyle(target.ownerDocument.documentElement);
+  if(css.transform!=='none'||['rotate','scale','translate'].some(key=>css[key]&&!['none','0deg'].includes(css[key]))||css.zoom&&Number(css.zoom)!==1)throw Error('Canvas rotation requires a page root without transforms or zoom.');
+  const g=root.RetouchInspector.geometry(target,{allowRotation:true,layoutOnly:true});if(g.width<=0||g.height<=0)throw Error('Choose a visible layer with a nonzero size.');return g;
+ }
+ function mount({target,frame,canvas,input,current,onEnd,onError,initialPointer=null}){
+  const doc=root.document,w=target.ownerDocument.defaultView,measure=()=>geometry(target);let g;
+  try{g=measure();}catch(error){onError(error.message);return null;}
   const origin=g.transformOrigin.split(/\s+/).map(parseFloat),f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/w.innerWidth;
   if(origin.length<2||origin.some(n=>!Number.isFinite(n))||origin[2]||!Number.isFinite(scale)||scale<=0){onError('This layer’s rotation origin cannot be edited on canvas yet.');return null;}
   const pivot={x:f.left+(g.layoutLeft+origin[0])*scale,y:f.top+(g.layoutTop+origin[1])*scale};
@@ -24,7 +29,8 @@
   function end(commit=false){if(ended)return;const save=commit&&valid();ended=true;root.cancelAnimationFrame(raf);cleanups.forEach(fn=>fn());surface.remove();preview.restore();onEnd();if(save&&Math.abs(rotation-g.rotation)>.005){input.value=String(rotation);input.dispatchEvent(new root.Event('change',{bubbles:true}));}}
   function paint(){const radians=base+rotation*Math.PI/180;handle.style.left=Math.max(16,Math.min(clip.right-clip.left-16,pivot.x+Math.cos(radians)*radius-clip.left))+'px';handle.style.top=Math.max(16,Math.min(clip.bottom-clip.top-16,pivot.y+Math.sin(radians)*radius-clip.top))+'px';hint.textContent=rotation+'° · Drag to rotate · Shift: 15° · Arrows: 1° · Enter applies · Escape cancels';}
   function update(next){if(!valid()){end();return;}rotation=next;preview.update(rotation);previewed=true;paint();}
-  listen(handle,'pointerdown',e=>{if(e.button!==0)return;e.preventDefault();drag={id:e.pointerId,last:angle(e.clientX,e.clientY,pivot),change:0,start:rotation};handle.setPointerCapture(e.pointerId);});
+  function begin(e){if(e.button!==0)return;e.preventDefault();drag={id:e.pointerId,last:angle(e.clientX,e.clientY,pivot),change:0,start:rotation};handle.setPointerCapture(e.pointerId);}
+  listen(handle,'pointerdown',begin);
   listen(handle,'pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;const next=angle(e.clientX,e.clientY,pivot);drag.change+=difference(next,drag.last);drag.last=next;update(value(drag.start,drag.change,e.shiftKey));});
   listen(handle,'pointerup',e=>{if(drag&&e.pointerId===drag.id){drag=null;end(true);}});
   listen(handle,'pointercancel',()=>end());
@@ -32,7 +38,27 @@
   for(const name of ['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'])listen(root,name,()=>end());
   listen(w,'scroll',()=>end(),true);listen(canvas,'scroll',()=>end(),true);
   function tick(){if(!valid()){end();return;}raf=root.requestAnimationFrame(tick);}
-  paint();surface.focus({preventScroll:true});raf=root.requestAnimationFrame(tick);return ()=>end();
+  paint();surface.focus({preventScroll:true});if(initialPointer)begin(initialPointer);raf=root.requestAnimationFrame(tick);return ()=>end();
  }
- const api={difference,angle,value,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchCanvasRotate=api;
+ function corners(g,scale=1){
+  const o=g.transformOrigin.split(/\s+/).map(parseFloat),a=g.rotation*Math.PI/180,cos=Math.cos(a),sin=Math.sin(a);
+  if(o.length<2||o.some(n=>!Number.isFinite(n))||o[2]||!Number.isFinite(scale)||scale<=0)throw Error('Unsupported rotation origin.');
+  return [[0,0,-1,-1],[g.width,0,1,-1],[g.width,g.height,1,1],[0,g.height,-1,1]].map(([x,y,sx,sy])=>{
+   const dx=(x-o[0])*scale+sx*10,dy=(y-o[1])*scale+sy*10;
+   return {x:(g.layoutLeft+o[0])*scale+dx*cos-dy*sin,y:(g.layoutTop+o[1])*scale+dx*sin+dy*cos};
+  });
+ }
+ function cornerControls({frame,canvas,onStart}){
+  const doc=root.document,container=doc.createElement('div');container.className='canvas-rotation-corners';container.hidden=true;doc.body.append(container);let active=null;
+  const buttons=['top left','top right','bottom right','bottom left'].map(name=>{const button=doc.createElement('button');button.type='button';button.className='canvas-rotation-corner';button.setAttribute('aria-label','Rotate from '+name+' corner');button.title='Drag to rotate · Shift: 15°';button.textContent='↻';button.tabIndex=-1;
+   button.addEventListener('pointerdown',e=>{if(e.button!==0||!active)return;e.preventDefault();e.stopPropagation();onStart(active.target,active.input,e);});
+   button.addEventListener('click',e=>{if(e.detail===0&&active)onStart(active.target,active.input);});container.append(button);return button;});
+  return {update(target,input){active=null;container.hidden=true;if(!target?.isConnected||!input?.isConnected||input.matches(':disabled')||input.closest('[inert]'))return;
+   try{const g=geometry(target),f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/frame.contentWindow.innerWidth,points=corners(g,scale),left=Math.max(c.left,f.left),top=Math.max(c.top,f.top),right=Math.min(c.right,f.right),bottom=Math.min(c.bottom,f.bottom);if(g.width<=0||g.height<=0||right<=left||bottom<=top)return;
+    Object.assign(container.style,{left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px'});
+    buttons.forEach((button,i)=>{const x=f.left+points[i].x-left,y=f.top+points[i].y-top;button.hidden=x<8||y<8||x>right-left-8||y>bottom-top-8;button.style.left=x+'px';button.style.top=y+'px';});active={target,input};container.hidden=false;
+   }catch{}
+  }};
+ }
+ const api={difference,angle,value,mount,corners,cornerControls};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchCanvasRotate=api;
 })(typeof window==='object'?window:globalThis);

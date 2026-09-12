@@ -209,6 +209,7 @@
     return input;
   }
   function numericPreview(input,el,property,format=value=>value+'px',render=null){
+    input.retouchPreviewTarget=el;
     input.retouchNumericPreview=()=>{
       const preview=root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true});
       return {current:()=>el.isConnected,update:value=>{preview.update(format(value));render?.(value);},restore:()=>{preview.restore();render?.(null);}};
