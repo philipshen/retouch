@@ -26,11 +26,11 @@
    const corners=[...panel.children].find(el=>title(el)==='Corners');if(corners){const appearance=getSection('Appearance');[...corners.children].filter(el=>el.tagName!=='H3').forEach(el=>appearance.append(el));corners.remove();}
   }
   const layer=[...panel.children].find(el=>title(el)==='Layer'),nameField=layer?.querySelector('[aria-label="Layer name"]')?.closest('.inspector-field');if(nameField){nameField.classList.add('layer-title');const badge=head.querySelector('.kindbadge');nameField.querySelector('input').placeholder=badge?.textContent||'Layer';if(badge)badge.style.display='none';head.prepend(nameField);}
-  const appearance=[...panel.children].find(el=>title(el)==='Appearance');
+  const paints=[],appearance=[...panel.children].find(el=>title(el)==='Appearance');
   if(appearance){
    const colors=disclosure('Color overrides','color-overrides');
    for(const row of [...appearance.querySelectorAll(':scope > .inspector-field')])if(/with alpha$/.test(row.querySelector('[aria-label]')?.getAttribute('aria-label')||'')){
-    const value=row.nextElementSibling,clear=value?.nextElementSibling;colors.append(row);if(value?.classList.contains('computed-value'))colors.append(value);if(clear?.classList.contains('control-button'))colors.append(clear);
+    const value=row.nextElementSibling,clear=value?.nextElementSibling,property=row.querySelector('input')?.dataset.paintProperty;if(['color','background-color','border-color'].includes(property)){paints.push({property,row,clear});row.remove();value?.remove();if(clear?.classList.contains('control-button'))clear.remove();continue;}colors.append(row);if(value?.classList.contains('computed-value'))colors.append(value);if(clear?.classList.contains('control-button'))colors.append(clear);
    }
    if(colors.children.length>1)appearance.append(colors);
    const options=disclosure('More appearance options','appearance-options');
@@ -39,6 +39,12 @@
   }
 
   if(appearance){const stroke=document.createElement('section');stroke.className='sec inspector-section';const h=document.createElement('h3');h.textContent='Stroke';stroke.append(h);for(const row of [...appearance.querySelectorAll(':scope > .inspector-field')]){if(/^Border /.test(row.querySelector('[aria-label]')?.getAttribute('aria-label')||'')){const next=row.nextElementSibling;stroke.append(row);if(next?.classList.contains('computed-value')||next?.classList.contains('control-button'))stroke.append(next);}}if(stroke.children.length>1)panel.append(stroke);}
+  for(const {property,row,clear}of paints){
+   const name=property==='background-color'?'Fill':property==='border-color'?'Stroke':'Typography';let target=[...panel.children].find(el=>title(el)===name);if(!target){target=document.createElement('section');target.className='sec inspector-section';const heading=document.createElement('h3');heading.textContent=name;target.append(heading);panel.append(target);}
+   if(property==='border-color'){const old=target.querySelector('[aria-label="Border color"]')?.closest('.inspector-field'),note=old?.nextElementSibling;old?.remove();if(note?.classList.contains('computed-value'))note.remove();}
+   else{const old=property==='background-color'?target:[...panel.children].find(el=>title(el)==='Text color'),palette=old?.querySelector('.palette');if(palette){const input=row.querySelector('input'),apply=value=>{root.RetouchPanelFocus?.queue(input);input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));};for(const button of palette.querySelectorAll('.palbtn')){button.setAttribute('aria-label',button.title);button.onclick=()=>apply(button.style.backgroundColor);}const hex=palette.querySelector('.hexinput');if(hex)hex.onkeydown=event=>{if(event.key==='Enter'&&!event.isComposing&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey){event.preventDefault();const value='#'+hex.value.trim().replace(/^#/,'');if(/^#(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})$/i.test(value))apply(value);}};const presets=disclosure('Color presets','paint-presets-'+property);palette.hidden=false;presets.append(palette);if(old===target)[...old.children].filter(el=>el.tagName!=='H3').forEach(el=>el.remove());else old.remove();target.append(presets);}}
+   row.querySelector(':scope > span').textContent='Color';target.insertBefore(row,target.children[1]||null);if(clear?.classList.contains('control-button'))row.after(clear);
+  }
   const fill=[...panel.children].find(el=>title(el)==='Fill');if(fill&&appearance){const gradients=[...appearance.children].find(el=>el.tagName==='DETAILS'&&el.querySelector('summary')?.textContent==='Gradient fills');if(gradients)fill.append(gradients);}
   const text=[...panel.children].find(el=>title(el)==='Text'),typography=[...panel.children].find(el=>title(el)==='Typography');if(text&&typography){[...text.children].filter(el=>el.tagName!=='H3').reverse().forEach(el=>typography.insertBefore(el,typography.children[1]||null));text.remove();}
   const order=['Component','Shared component properties','Position','Layout','Appearance',...(RetouchInspector.isTextLayer(head.dataset.layerTag||'')?['Typography']:[]),'Fill','Stroke','Effects','Image framing','Image','Export'];
@@ -130,7 +136,7 @@
    }
 
    const help=disclosure('Details',name+'-help');for(const hint of [...section.children].filter(el=>el.classList.contains('hint')||el.classList.contains('computed-value')))help.append(hint);if(help.children.length>1)section.append(help);
-   for(const button of [...section.querySelectorAll(':scope > .control-button, :scope > .radius-corners > .control-button')])if(/^Reset /.test(button.textContent)){
+   for(const button of [...section.querySelectorAll(':scope > .control-button, :scope > .radius-corners > .control-button')])if(/^(Reset |Clear local (?:text|background|border) color$)/.test(button.textContent)){
     const label=button.textContent;button.setAttribute('aria-label',label);button.title=label;button.textContent='↺';button.classList.add('property-reset');const previous=button.previousElementSibling;
     if(previous?.classList.contains('inspector-field')){const row=document.createElement('div');row.className='property-row';previous.parentElement.insertBefore(row,previous);row.append(previous,button);}
    }
