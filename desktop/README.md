@@ -10,21 +10,21 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-rotation-4320123/Retouch-0.1.0-mac.zip`
-(SHA-256 `67cb76044d99d987c39dd350b9c61f79b5d60b37efe11d3f6f7b4e424f9680b7`).
-It contains clean commit `4320123`, including single/shared rotation, rotated
-X/Y and alignment, single/group canvas movement and viewport resize fixes.
-All 178 source hashes match; universal architecture, extracted/installed signatures,
-929 source unit tests and packaged React/Liquid/HTML workflows passed.
+`/private/tmp/retouch-desktop-direct-6107d56/Retouch-0.1.0-mac.zip`
+(SHA-256 `9068bf6aef261ab9e247e07a284f79ebdd724cec9d7e56252492f2ddb8467fe7`).
+It contains clean commit `6107d56`, including direct corner rotation, direct
+selection resize handles, rotated resizing with percentage origins, and the
+rotated flow-to-absolute and outline fixes. All 179 source hashes match;
+universal architecture, extracted/installed signatures, 934 matching-source
+unit tests and packaged React/Liquid/HTML workflows passed.
 Homebrew installed and uninstalled this archive in an isolated app directory,
 retaining quarantine. Temporary installation, tap, trust configuration and test
-harness were removed; automatic dependency removal was disabled.
+harness were removed; automatic dependency removal was disabled. The original
+cask inventory and Git installation were preserved.
 The packaged Liquid/WebKit normal-flow Fill-height test still fails with vertical
 margins (180px instead of 170px). Native launch was not attempted because CUA's
 native connection failed. This candidate is not a trusted or published release.
-See [the candidate receipt](verification/2026-09-12-rotation-controls.json).
-The source branch additionally fixes rotated flow-to-absolute size preservation;
-that fix is not included in this archive.
+See [the candidate receipt](verification/2026-09-12-direct-manipulation.json).
 
 The previous archive with native workflow evidence is
 `/private/tmp/retouch-desktop-shared-e948266/Retouch-0.1.0-mac.zip`.
