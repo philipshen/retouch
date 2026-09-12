@@ -516,7 +516,9 @@
         for(const [key,label]of [['x','X'],['y','Y'],['blur','Blur'],['spread','Spread']])number(group,'Shadow '+(index+1)+' '+label+' (px)',shadow[key],key==='blur'?0:-10000,10000,value=>update(key,value));
         const color=document.createElement('input');color.value=shadow.color;color.retouchPaintPreview=()=>root.RetouchPaintPicker.shadowPreview({el,group,shadows,index});field(group,'Shadow '+(index+1)+' color',color);color.oninput=()=>color.setCustomValidity('');color.onchange=()=>{const value=color.value.trim();if(!V.valid('color',value)||!el.ownerDocument.defaultView.CSS.supports('color',value)){color.setCustomValidity('Enter a supported CSS color.');color.reportValidity();return;}update('color',value);};
         group.append(button('Remove shadow '+(index+1),()=>write(shadows.filter((_,i)=>i!==index))));
-        if(index>0)group.append(button('Move shadow '+(index+1)+' up',()=>{const next=[...shadows];[next[index-1],next[index]]=[next[index],next[index-1]];write(next);}));details.append(group);
+        if(index>0)group.append(button('Move shadow '+(index+1)+' up',()=>{const next=[...shadows];[next[index-1],next[index]]=[next[index],next[index-1]];write(next);}));
+        if(index<shadows.length-1)group.append(button('Move shadow '+(index+1)+' down',()=>{const next=[...shadows];[next[index],next[index+1]]=[next[index+1],next[index]];write(next);}));
+        const duplicate=button('Duplicate shadow '+(index+1),()=>write([...shadows.slice(0,index+1),{...shadow},...shadows.slice(index+1)]));duplicate.disabled=shadows.length>=16;group.append(duplicate);details.append(group);
       });
       const add=button('Add shadow',()=>write([...shadows,{x:0,y:4,blur:8,spread:0,color:'rgba(0, 0, 0, 0.25)',inset:false}]));add.disabled=shadows.length>=16;details.append(add);
     }
