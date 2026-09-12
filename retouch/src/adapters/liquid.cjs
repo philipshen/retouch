@@ -262,7 +262,8 @@ function literalText(node, source) {
   const inner = source.slice(node.childrenStart, node.childrenEnd);
   if (/[<]|\{[%{]/.test(inner)) return null; // nested tag or liquid → not literal
   const text = inner.trim();
-  return text === '' ? null : text;
+  if(text === '' && (!TEXT_TAGS.has(node.tag)&&node.tag!=='button'||node.selfClosing||!Number.isInteger(node.closeNameStart)))return null;
+  return require('parse5').parseFragment(text).childNodes.map(child=>child.value||'').join('');
 }
 
 function describeElement(resolved) {
@@ -374,7 +375,7 @@ function planOp(resolved, op) {
     if (typeof op.text !== 'string') return refuse('setText needs a string.');
     const text = literalText(node, resolved.source);
     if (text === null) return sources.planWrite(resolved, op);
-    ms.overwrite(node.childrenStart, node.childrenEnd, escapeText(op.text));
+    if(node.childrenStart===node.childrenEnd)ms.appendLeft(node.childrenStart,escapeText(op.text));else ms.overwrite(node.childrenStart, node.childrenEnd, escapeText(op.text));
   } else if (op.type === 'setChildren') {
     const err=validateChildrenTree(op.children,0); if (err) return refuse(err);
     if (describe(resolved).richText) return sources.planWriteChildren(resolved,op);

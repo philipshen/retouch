@@ -603,6 +603,7 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
     return;
   }
   if (info.textSource && info.textSource.format !== 'text' && !info.richText) { renderPanel(); return; }
+  if(info.text===''&&!['h1','h2','h3','h4','h5','h6','p','span','blockquote','label','a','button'].includes(el.tagName.toLowerCase())){renderPanel();return;}
   const editId = info.id;
   renderPanel();
   const originalHTML=el.innerHTML;
@@ -1285,6 +1286,7 @@ function renderPanelContents() {
   if (info.text !== null) {
     const ta = document.createElement('textarea');
     ta.id = 'textEdit';
+    ta.setAttribute('aria-label','Text content');
     ta.value = info.text;
     tsec.appendChild(ta);
     const btn = document.createElement('button');
