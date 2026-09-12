@@ -784,3 +784,14 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .paint-picker .paint-profile-field select,.paint-picker .paint-model-field select { appearance:none;padding-right:14px; }
 .paint-profile-field::after,.paint-model-field::after { content:"";position:absolute;right:5px;top:10px;width:5px;height:5px;border-right:1px solid currentColor;border-bottom:1px solid currentColor;transform:rotate(45deg);pointer-events:none; }
 .paint-profile-field::after { top:8px; }
+
+.paint-style-library { border-top:1px solid var(--line);padding:10px; }
+.paint-style-library summary { font-size:11px;color:var(--muted);cursor:pointer; }
+.paint-style-library > input { box-sizing:border-box;width:100%;margin:8px 0;padding:6px;border:1px solid var(--line);border-radius:5px;font:11px var(--font); }
+.paint-style-library > button { margin-top:8px;font-size:11px; }
+.paint-style-library p { font-size:11px; }
+.paint-style-list { display:flex;flex-direction:column;gap:2px;max-height:144px;overflow:auto; }
+.paint-style-choice { display:flex;align-items:center;gap:8px;border:0;background:transparent;padding:6px;text-align:left;font-size:11px; }
+.paint-style-choice[aria-pressed=true] { background:#e5f4ff; }
+.paint-style-swatch { position:relative;flex:0 0 20px;height:20px;border:1px solid #0002;border-radius:3px;background:repeating-conic-gradient(#ddd 0% 25%,white 0% 50%) 0 0/6px 6px; }
+.paint-style-swatch::after { content:"";position:absolute;inset:0;border-radius:inherit;background:var(--paint-color); }

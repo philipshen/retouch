@@ -21,6 +21,7 @@
   return scope===undefined?null:{link:links[scope][property],width:scope,label:scope?scope+'px and larger':'All sizes'};
  }
  function mount(parent,options={}){
+  parent.dataset.retouchColorStyleScope='';parent.retouchColorStyleOptions=options;
   const I=root.RetouchInspector,details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Saved color styles';details.append(summary);parent.append(details);
   const status=I.note(details,'');status.setAttribute('role','status');status.setAttribute('aria-live','polite');const controls=document.createElement('fieldset');controls.style.cssText='border:0;padding:0;margin:0;min-width:0';details.append(controls);
   let library=null,selected=preferred,busy=false;
