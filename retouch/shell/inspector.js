@@ -629,9 +629,10 @@
   function replaceTypography(classes,match,additions){return replace(match===fontSizeToken||match===lineHeightToken?expandSizeLeading(classes):classes,match,additions);}
   const textOverrideToken=t=>[fontSizeToken,fontWeightToken,fontFamilyToken,lineHeightToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,opticalToken,variationToken,numericToken].some(match=>match(t));
   function fontWeightClass(value){return typeof value==='number'&&Number.isFinite(value)&&value>=1&&value<=1000?`font-[${value}]`:null;}
+  function fontDisplayName(value){return value.trim().toLowerCase()==='-webkit-standard'?'Browser default':value.replace(/["']/g,'');}
   function fontFamilies(d,current){
     const found=new Map([['system-ui','System UI'],['sans-serif','Sans serif'],['serif','Serif'],['monospace','Monospace']]);
-    function add(value,label){value=value?.trim();if(value&&fontFamilyClass(value)&&!found.has(value)&&found.size<100)found.set(value,label||value.replace(/["']/g,''));}
+    function add(value,label){value=value?.trim();if(value&&fontFamilyClass(value)&&!found.has(value)&&found.size<100)found.set(value,label||fontDisplayName(value));}
     add(current);let count=0;
     for(const face of d.fonts||[]){add(face.family);if(++count>=200)break;}
     count=0;for(const value of pageTextFonts(d)){add(value);if(++count>=300)break;}
@@ -666,6 +667,7 @@
     const states=new Map();for(const face of d.fonts||[]){const key=face.family.trim().replace(/^(["'])(.*)\1$/,'$2').toLocaleLowerCase();let counts=states.get(key);if(!counts)states.set(key,counts={loaded:0,loading:0,unloaded:0,error:0});if(Object.hasOwn(counts,face.status))counts[face.status]++;}return states;
   }
   function fontFaceLabel(value,states){
+    if(typeof value==='string'&&value.trim().toLowerCase()==='-webkit-standard')return 'Browser default family';
     if(!fontFamilyClass(value))return 'Font status unavailable';
     const family=value.split(',')[0].trim();
     if(/^(system-ui|sans-serif|serif|monospace|cursive|fantasy|ui-serif|ui-sans-serif|ui-monospace|ui-rounded)$/i.test(family))return 'System / fallback family';
@@ -675,7 +677,7 @@
   }
   function fontPicker(parent,d,current,onChange,options={}){
     const choices=fontFamilies(d,current),supported=choices.some(([value])=>value===current);
-    const quick=select(parent,options.label||'Page font',supported?choices:[[current,options.mixed?'Mixed':current],...choices],current,onChange);
+    const quick=select(parent,options.label||'Page font',supported?choices:[[current,options.mixed?'Mixed':fontDisplayName(current)],...choices],current,onChange);
     if(!supported)quick.options[0].disabled=true;
     const currentStatus=note(parent,'');currentStatus.setAttribute('aria-label','Current font files');currentStatus.setAttribute('role','status');
     const browse=document.createElement('details');browse.className='font-browser';
@@ -696,7 +698,7 @@
     };
     search.oninput=()=>{offset=0;render();};browse.ontoggle=()=>{
       cancelScan?.();scanning=browse.open;
-      if(browse.open){search.focus();choices.splice(0,choices.length,...fontFamilies(d,current));offset=0;const known=new Set(choices.map(([value])=>value));cancelScan=scanPageFonts(d,(batch,done)=>{let changed=false;for(const value of batch)if(!known.has(value)){known.add(value);choices.push([value,value.replace(/["']/g,'')]);changed=true;}scanning=!done;if(changed||done)render();},()=>browse.isConnected&&browse.open);}
+      if(browse.open){search.focus();choices.splice(0,choices.length,...fontFamilies(d,current));offset=0;const known=new Set(choices.map(([value])=>value));cancelScan=scanPageFonts(d,(batch,done)=>{let changed=false;for(const value of batch)if(!known.has(value)){known.add(value);choices.push([value,fontDisplayName(value)]);changed=true;}scanning=!done;if(changed||done)render();},()=>browse.isConnected&&browse.open);}
       render();
     };
     browse.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();browse.open=false;summary.focus();}});
