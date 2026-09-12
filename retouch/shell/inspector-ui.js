@@ -258,7 +258,14 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
  }
  const dock=document.createElement('nav');dock.className='design-tool-dock';dock.setAttribute('aria-label','Canvas tools');
  for(const id of ['modeBtn','canvasHand','quickActions','undoBtn','redoBtn']){const button=document.getElementById(id);if(button){button.setAttribute('aria-label',button.textContent.trim());new MutationObserver(()=>button.setAttribute('aria-label',button.textContent.trim())).observe(button,{childList:true,characterData:true,subtree:true});dock.append(button);}}
+ const creationTools=[];
+ for(const [action,label,path]of [['insertFrame','Insert frame into selection','M5 2v20 M19 2v20 M2 5h20 M2 19h20'],['insertText','Insert text into selection','M4 5V3h16v2 M12 3v18 M8 21h8']]){
+  const button=document.createElement('button');button.type='button';button.className='creation-tool';button.setAttribute('aria-label',label);button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+path+'"/></svg>';button.onclick=()=>{if(!button.disabled)root.RetouchActions?.run('layer-'+action);};dock.insertBefore(button,dock.querySelector('#quickActions'));creationTools.push({action,button,label});
+ }
+ const updateCreationTools=()=>{const editing=document.getElementById('modeBtn').classList.contains('mode-edit');for(const {action,button,label}of creationTools){const source=document.querySelector('#layersPanel button[data-design-action="'+action+'"]');button.disabled=!editing||!source||source.hidden||source.matches(':disabled')||!!source.closest('[inert]');button.title=!editing?'Switch to Edit mode to add a layer.':button.disabled?source?.title||'Select an editable container first.':label;}};
  const main=document.getElementById('main'),canvas=document.getElementById('frameWrap');main.append(dock);
+ new MutationObserver(updateCreationTools).observe(document.getElementById('layersPanel'),{subtree:true,childList:true,attributes:true,attributeFilter:['disabled','hidden','inert','title']});new MutationObserver(updateCreationTools).observe(document.getElementById('modeBtn'),{attributes:true,attributeFilter:['class']});updateCreationTools();
+
  const place=()=>{
   const c=canvas.getBoundingClientRect(),m=main.getBoundingClientRect();let left=c.left,right=c.right;
   if(main.classList.contains('compact-workspace')){
@@ -266,7 +273,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    if(!layers.hidden)left=Math.max(left,Math.min(right,layers.getBoundingClientRect().right));
    if(!panel.hidden)right=Math.min(right,Math.max(left,panel.getBoundingClientRect().left));
   }
-  dock.style.left=(left-m.left+(right-left)/2)+'px';
+  const half=Math.min(dock.offsetWidth/2+8,m.width/2);dock.style.left=Math.max(half,Math.min(m.width-half,left-m.left+(right-left)/2))+'px';
  };new ResizeObserver(place).observe(canvas);window.addEventListener('retouch:workspace-layout',place);place();
  function reveal(control){
   if(!control?.isConnected||control.matches(':disabled')||control.closest('[inert]'))return false;

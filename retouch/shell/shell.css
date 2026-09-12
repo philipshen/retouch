@@ -455,7 +455,7 @@ details.advanced > summary:hover { color: var(--ink); }
 #comparisonResizeHandle[hidden] { display:none; }
 
 #layersPanel[hidden],#panel[hidden] { display:none; }
-.compact-workspace #layersPanel,.compact-workspace #panel { position:absolute; top:0; bottom:0; z-index:45; box-shadow:0 4px 24px #0002; max-width:calc(100% - 32px); }
+.compact-workspace #layersPanel,.compact-workspace #panel { position:absolute; top:0; bottom:80px; z-index:45; box-shadow:0 4px 24px #0002; max-width:calc(100% - 32px); }
 .compact-workspace #layersPanel { left:0; }
 .compact-workspace #panel { right:0; }
 
@@ -881,3 +881,18 @@ body input[type="number"]::-webkit-outer-spin-button { appearance:none;margin:0;
 .inspector-section[data-collapsed="true"] > :not(h3):not(.section-add) { display:none!important; }
 .inspector-section[data-collapsed="true"] > h3 { margin-bottom:0; }
 .inspector-section:has(> .section-add) > h3 > .section-toggle { padding-right:30px; }
+
+.design-tool-dock .creation-tool { display:flex;align-items:center;justify-content:center; }
+.design-tool-dock .creation-tool::before { display:none; }
+.design-tool-dock .creation-tool svg { width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round; }
+
+/* Reserve a reachable tool strip beneath compact overlay panels. */
+.compact-workspace .design-tool-dock { z-index:46; }
+
+/* The editor viewport must not scroll when a focused tool moves on resize. */
+html, body { overflow:clip; }
+
+@media (max-width:600px) {
+ #toolbar { flex-wrap:wrap; }
+ #routeInput { flex:1 1 180px; }
+}
