@@ -3,6 +3,7 @@
   const ns='http://www.w3.org/2000/svg';
   let handleMovement='independent';
   function mount({target,frame,canvas,points,pathData=null,propertiesPane=null,onCommit,onEnd,onError}){
+    let clearHint=()=>{};
     const w=target.ownerDocument.defaultView,property=pathData?'d':'points',original=target.getAttribute(property);
     const initialCSS=pathData?w.getComputedStyle(target).getPropertyValue('d'):null;
     const subpaths=pathData?.subpaths.map(part=>({closed:part.closed,nodes:part.nodes.map(p=>root.RetouchSVGPath.translate(p,0,0))}));
@@ -23,7 +24,7 @@
     const initialMatrix=target.getScreenCTM(),matrixValues=m=>m&&[m.a,m.b,m.c,m.d,m.e,m.f];
     const initial=matrixValues(initialMatrix);
     function listen(el,type,fn,options){el.addEventListener(type,fn,options);cleanup.push(()=>el.removeEventListener(type,fn,options));}
-    function cancel(){if(ended)return;ended=true;cancelPen?.();root.cancelAnimationFrame(raf);cleanup.forEach(f=>f());surface.remove();arcPanel.remove();arrangePanel.remove();positionPanel.remove();onEnd();}
+    function cancel(){if(ended)return;ended=true;cancelPen?.();root.cancelAnimationFrame(raf);cleanup.forEach(f=>f());clearHint();surface.remove();arcPanel.remove();arrangePanel.remove();positionPanel.remove();onEnd();}
     function animated(){
       // WebKit can cache animatedPoints across React attribute updates. Inspect
       // SMIL targets instead of treating that stale list as the rendered geometry.
@@ -353,6 +354,7 @@
     if(bottom-top<180)toolbar.style.bottom='12px';
     listen(root.document,'pointerdown',event=>{if(options.open&&!options.contains(event.target))options.open=false;},true);
     root.document.body.append(surface);rebuild();handles[0].focus({preventScroll:true});
+    clearHint=root.RetouchCanvasHint?.show('Vector editing · Enter to save · Escape to cancel','Drag a box to select points. Shift adds points; arrow keys move them. Enter or Done saves; Escape cancels.')||(()=>{});
     function watch(){if(!ended&&verify())raf=root.requestAnimationFrame(watch);}raf=root.requestAnimationFrame(watch);
     return cancel;
   }

@@ -2,6 +2,7 @@
   'use strict';
   const ns='http://www.w3.org/2000/svg';
   function mount({target,frame,canvas,onCommit,onEnd,onError,maxPoints=512,isCurrent=()=>true,contextPath=null}){
+    let clearHint=()=>{};
     const w=target.ownerDocument.defaultView,viewport=target.tagName.toLowerCase()==='svg'?target:target.ownerSVGElement;
     const surface=root.document.createElement('div');surface.className='svg-pen-surface';surface.setAttribute('role','group');surface.setAttribute('aria-label','Draw vector');surface.tabIndex=0;
     Object.assign(surface.style,{position:'fixed',zIndex:40,cursor:'crosshair',touchAction:'none',overflow:'hidden'});
@@ -14,7 +15,7 @@
     const status=root.document.createElement('span');status.setAttribute('role','status');status.style.cssText='font:12px Inter,system-ui;color:var(--ink, #1e1e1e);';toolbar.append(status);surface.append(toolbar);
     const points=[],dots=[],cleanup=[],initial=target.getScreenCTM(),revision=target.getAttribute('data-rt-revision');let hover=null,ended=false,raf,drag=null;
     function listen(el,type,fn,options){el.addEventListener(type,fn,options);cleanup.push(()=>el.removeEventListener(type,fn,options));}
-    function cancel(){if(ended)return;ended=true;root.cancelAnimationFrame(raf);cleanup.forEach(fn=>fn());surface.remove();onEnd();}
+    function cancel(){if(ended)return;ended=true;root.cancelAnimationFrame(raf);cleanup.forEach(fn=>fn());clearHint();surface.remove();onEnd();}
     function current(){const m=target.getScreenCTM();return isCurrent()&&target.isConnected&&target.getAttribute('data-rt-revision')===revision&&m&&initial&&['a','b','c','d','e','f'].every(key=>Math.abs(m[key]-initial[key])<1e-6);}
     function verify(){if(current())return true;cancel();onError('The SVG canvas changed while drawing. Select it again.');return false;}
     function action(label,fn){const b=root.document.createElement('button');b.type='button';b.textContent=label;b.onclick=fn;Object.assign(b.style,{padding:'0 8px',minHeight:'28px',border:'1px solid var(--line, #e6e6e6)',borderRadius:'4px',background:'var(--control, #f5f5f5)',color:'var(--ink, #1e1e1e)',font:'12px Inter,system-ui',cursor:'pointer'});toolbar.append(b);return b;}
@@ -89,6 +90,7 @@
     if(right<=left||bottom<=top||area.right<=area.left||area.bottom<=area.top){cancel();onError('Bring the SVG canvas into view before drawing.');return null;}
     Object.assign(surface.style,{left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px'});if(bottom-top<180)toolbar.style.bottom='12px';
     root.document.body.append(surface);update();surface.focus({preventScroll:true});
+    clearHint=root.RetouchCanvasHint?.show('Pen · Click for corners, drag for curves · Enter to finish','Shift constrains direction. Click the first point to close. Enter finishes; Backspace removes the last point; Escape cancels.')||(()=>{});
     function watch(){if(!ended&&verify())raf=root.requestAnimationFrame(watch);}raf=root.requestAnimationFrame(watch);
     return cancel;
   }

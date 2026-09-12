@@ -2589,6 +2589,14 @@ function toast(msg, cls) {
 }
 
 
+window.RetouchCanvasHint={show(message,details){
+  const previous={message:statusEl.textContent,details:statusEl.title};
+  document.querySelectorAll('#toasts .toast.ok').forEach(el=>el.remove());
+  statusEl.textContent=message;statusEl.title=details;
+  return ()=>{if(statusEl.textContent===message&&statusEl.title===details){statusEl.textContent=previous.message;statusEl.title=previous.details;}};
+}};
+
+
 RetouchMaxWidth.mount({
   container: overlayLayer.parentElement,
   getTarget() {
@@ -2817,7 +2825,6 @@ async function editSVGPoints(info){
   stopDrawing=RetouchSVGVertices.mount({target,points,pathData,propertiesPane:panelBody,frame:iframe,canvas:canvasSurface,
     onCommit:value=>{if(sel?.info===info)setSVGGeometry(field.name,value);},
     onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
-  if(stopDrawing)toast('Drag a box to select points; Shift adds to the selection. Drag points or use arrows to move. Done/Enter saves; Escape cancels.','ok');
 }
 async function drawVector(info){
   if(panelTasks||undoBusy||sourceRequests||editing)return;
@@ -2827,7 +2834,6 @@ async function drawVector(info){
   stopDrawing=RetouchSVGPen.mount({target:targets[0],frame:iframe,canvas:canvasSurface,
     onCommit:(points,closed,nodes)=>insertLayer(nodes?'path':closed?'polygon':'polyline',info,'insertSVG',nodes?{nodes,closed}:{points}),
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
-  if(stopDrawing)toast('Click for corners; drag for curves. Shift constrains direction. Click the first point to close, or Enter to finish a line. Backspace removes the last point; Escape cancels.','ok');
 }
 function drawShape(preset,info){
   if(panelTasks||undoBusy||sourceRequests||editing)return;

@@ -40,6 +40,7 @@
     "test:e2e:page-fonts": "node test/e2e/page-fonts.cjs",
     "test:e2e:responsive-stylesheets": "node test/e2e/responsive-stylesheets.cjs",
     "test:e2e:responsive-media": "node test/e2e/responsive-media.cjs",
+    "test:e2e:vector-hints": "RT_E2E_COMPOUND=1 RT_E2E_DRAW_CONTOUR=1 RT_E2E_VECTOR_HINT=1 node test/e2e/svg-vertices.cjs",
     "test:e2e:svg-delete-handle": "RT_E2E_COMPOUND=1 RT_E2E_MULTI_POINTS=1 RT_E2E_DELETE_HANDLE=1 node test/e2e/svg-vertices.cjs",
     "test:e2e:svg-handle-position": "RT_E2E_COMPOUND=1 RT_E2E_MULTI_POINTS=1 RT_E2E_HANDLE_POSITION=1 node test/e2e/svg-vertices.cjs",
     "test:e2e:svg-point-position": "RT_E2E_COMPOUND=1 RT_E2E_MULTI_POINTS=1 RT_E2E_POINT_POSITION=1 node test/e2e/svg-vertices.cjs",
