@@ -1066,7 +1066,7 @@ function renderPanel() {
   const panel=document.getElementById('panel');
   const key=JSON.stringify([sel.info.file,sel.scope,sel.instanceId,(sel.multiple||[sel.info]).map(info=>info.id).sort()]);
   const focusedDraft=panelPaintDraftFocused()||panelInteractionFocused()&&document.activeElement.matches('input,textarea')&&(document.activeElement.matches('.component-props-search')||!panelTasks&&!sourceRequests&&!undoBusy);
-  if((panelPointer||focusedDraft)&&key===renderedPanelSelection){panelRenderDeferred=true;return;}
+  if((panelPointer||focusedDraft||document.querySelector('.svg-vertex-surface'))&&key===renderedPanelSelection){panelRenderDeferred=true;return;}
   panelRenderDeferred=false;
   const top=key===renderedPanelSelection?panel.scrollTop:0;
   const focusedScope=key===renderedPanelSelection&&document.activeElement?.getAttribute('aria-label')==='Style screen scope';
@@ -2798,7 +2798,7 @@ async function editSVGPoints(info){
   if(!await prepareVectorCanvas(info,target))return;
   stopDrawing=RetouchSVGVertices.mount({target,points,pathData,propertiesPane:panelBody,frame:iframe,canvas:canvasSurface,
     onCommit:value=>{if(sel?.info===info)setSVGGeometry(field.name,value);},
-    onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
+    onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
   if(stopDrawing)toast('Drag a box to select points; Shift adds to the selection. Drag points or use arrows to move. Done/Enter saves; Escape cancels.','ok');
 }
 async function drawVector(info){

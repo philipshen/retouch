@@ -23,7 +23,7 @@
     const initialMatrix=target.getScreenCTM(),matrixValues=m=>m&&[m.a,m.b,m.c,m.d,m.e,m.f];
     const initial=matrixValues(initialMatrix);
     function listen(el,type,fn,options){el.addEventListener(type,fn,options);cleanup.push(()=>el.removeEventListener(type,fn,options));}
-    function cancel(){if(ended)return;ended=true;cancelPen?.();root.cancelAnimationFrame(raf);cleanup.forEach(f=>f());surface.remove();arcPanel.remove();arrangePanel.remove();onEnd();}
+    function cancel(){if(ended)return;ended=true;cancelPen?.();root.cancelAnimationFrame(raf);cleanup.forEach(f=>f());surface.remove();arcPanel.remove();arrangePanel.remove();positionPanel.remove();onEnd();}
     function animated(){
       // WebKit can cache animatedPoints across React attribute updates. Inspect
       // SMIL targets instead of treating that stale list as the rendered geometry.
@@ -99,7 +99,7 @@
     function drawContour(){
       if(drag||!verify()||cancelPen)return;
       if(totalPoints()>510||subpaths.length>=128){announce('This path has no room for another contour.');return;}
-      surface.style.display='none';arcPanel.style.display='none';arrangePanel.style.display='none';
+      surface.style.display='none';arcPanel.style.display='none';arrangePanel.style.display='none';positionPanel.style.display='none';
       cancelPen=root.RetouchSVGPen.mount({target,frame,canvas,maxPoints:512-totalPoints(),isCurrent:current,contextPath:root.RetouchSVGPath.serializeCompound({subpaths}),
         onEnd:()=>{cancelPen=null;if(!ended){surface.style.display='';rebuild(false);(moveContourMode?contourHit:handles[active]).focus({preventScroll:true});}},
         onError,
@@ -153,14 +153,36 @@
       if(!result){status.textContent='Enter finite radii from 0 to 100000 and a rotation from −100000 to 100000.';return;}
       vertices[arcIndex].arc=result.nodes[arcIndex].arc;paint();status.textContent='Arc updated in preview. Done saves; Escape cancels.';
     }
-    const arrangePanel=root.document.createElement('div');arrangePanel.setAttribute('role','group');arrangePanel.setAttribute('aria-label','Arrange points');arrangePanel.style.cssText='display:none;padding:12px;margin-bottom:12px;border:1px solid var(--line, #e6e6e6);border-radius:6px;color:var(--ink, #1e1e1e);font:12px Inter,system-ui;';
+    const positionPanel=root.document.createElement('div');positionPanel.setAttribute('role','group');positionPanel.setAttribute('aria-label','Vector position');positionPanel.style.cssText='padding:12px 16px;border-bottom:1px solid var(--line, #e6e6e6);color:var(--ink, #1e1e1e);font:12px Inter,system-ui;';
+    const positionHeading=root.document.createElement('strong');positionHeading.textContent='Point position';positionPanel.append(positionHeading);
+    const positionRow=root.document.createElement('div');positionRow.style.cssText='display:flex;gap:8px;margin-top:12px;';positionPanel.append(positionRow);const positionInputs={};
+    for(const axis of ['x','y']){
+      const label=root.document.createElement('label');label.style.cssText='display:flex;align-items:center;gap:8px;flex:1;min-width:0;padding:0 8px;height:28px;border-radius:4px;background:var(--control, #f5f5f5);color:var(--muted, #757575);';label.append(root.document.createTextNode(axis.toUpperCase()));
+      const input=root.document.createElement('input');input.type='number';input.step='any';input.min='-100000';input.max='100000';input.setAttribute('aria-label','Vector '+axis.toUpperCase());input.style.cssText='width:100%;min-width:0;border:0;background:transparent;color:var(--ink, #1e1e1e);font:12px Inter,system-ui;';input.oninput=()=>changePosition(axis,input);label.append(input);positionInputs[axis]=input;positionRow.append(label);
+    }
+    const positionNote=root.document.createElement('p');positionNote.style.cssText='margin:8px 0 0;color:var(--muted, #757575);font-size:11px;line-height:1.4;';positionPanel.append(positionNote);
+    if(propertiesPane)propertiesPane.prepend(positionPanel);else toolbar.append(positionPanel);
+    listen(positionPanel,'keydown',event=>{event.stopPropagation();if(event.isComposing)return;if(event.key==='Escape'){event.preventDefault();cancel();}else if(event.key==='Enter'){event.preventDefault();commit();}},true);
+    function refreshPosition(reset=false){
+      const visible=!moveContourMode&&!cancelPen&&!activeHandle&&selectedPoints.size>0;positionPanel.style.display=visible?'block':'none';if(!visible)return;
+      positionHeading.textContent=selectedPoints.size>1?'Selected points':'Point position';positionNote.textContent=selectedPoints.size>1?'SVG coordinates · Top-left of selected anchors. Moves points together.':'SVG coordinates · Shared across screen sizes';
+      for(const axis of ['x','y']){const input=positionInputs[axis];if(reset){input.setCustomValidity('');input.removeAttribute('aria-invalid');}if(reset||root.document.activeElement!==input&&input.getAttribute('aria-invalid')!=='true')input.value=String(Math.min(...[...selectedPoints].map(i=>vertices[i][axis])));}
+    }
+    function changePosition(axis,input){
+      if(drag||cancelPen||moveContourMode||activeHandle||!selectedPoints.size||!verify())return;
+      const value=input.value===''?NaN:Number(input.value),start=Math.min(...[...selectedPoints].map(i=>vertices[i][axis]));
+      const result=Number.isFinite(value)&&Math.abs(value)<=100000?root.RetouchSVGPath.translatePoints({nodes:vertices,closed},[...selectedPoints],axis==='x'?value-start:0,axis==='y'?value-start:0):null;
+      input.setCustomValidity(result?'':'Keep anchors and handles within supported SVG coordinates.');input.setAttribute('aria-invalid',String(!result));if(!result)return;
+      vertices.splice(0,vertices.length,...result.nodes);paint();status.textContent='Point position updated in preview. Done saves; Escape cancels.';
+    }
+    const arrangePanel=root.document.createElement('div');arrangePanel.setAttribute('role','group');arrangePanel.setAttribute('aria-label','Arrange points');arrangePanel.style.cssText='display:none;padding:16px;border-bottom:1px solid var(--line, #e6e6e6);color:var(--ink, #1e1e1e);font:12px Inter,system-ui;';
     const arrangeHeading=root.document.createElement('strong');arrangeHeading.textContent='Arrange points';arrangePanel.append(arrangeHeading);const arrangeButtons=[];
     for(const [axis,labels] of [['x',['Left','Center','Right']],['y',['Top','Middle','Bottom']]]){
       const row=root.document.createElement('div');row.style.cssText='display:flex;gap:4px;margin-top:8px;';arrangePanel.append(row);
       labels.forEach((label,i)=>{const button=action('Align points '+label.toLowerCase(),()=>arrange(axis,['min','center','max'][i]));button.setAttribute('aria-label',button.textContent);button.textContent=label;button.style.flex='1';row.append(button);arrangeButtons.push({button,min:2});});
     }
     for(const [axis,label] of [['x','Space horizontally'],['y','Space vertically']]){const button=action(label,()=>arrange(axis,'distribute'));button.style.marginTop='8px';button.style.width='100%';arrangePanel.append(button);arrangeButtons.push({button,min:3});}
-    const arrangeHelp=root.document.createElement('p');arrangeHelp.textContent='Aligns point centers on the canvas. Handles move with their points. Done saves; Escape cancels.';arrangeHelp.style.cssText='font-size:11px;line-height:1.4;color:var(--muted, #757575);margin:8px 0 0;';arrangePanel.append(arrangeHelp);if(propertiesPane)propertiesPane.prepend(arrangePanel);else toolbar.append(arrangePanel);
+    const arrangeHelp=root.document.createElement('p');arrangeHelp.textContent='Aligns point centers on the canvas. Handles move with their points. Done saves; Escape cancels.';arrangeHelp.style.cssText='font-size:11px;line-height:1.4;color:var(--muted, #757575);margin:8px 0 0;';arrangePanel.append(arrangeHelp);if(propertiesPane)positionPanel.after(arrangePanel);else toolbar.append(arrangePanel);
     listen(arrangePanel,'keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancel();}},true);
     function refreshArrange(){arrangePanel.style.display=!moveContourMode&&!cancelPen&&selectedPoints.size>1?'block':'none';for(const {button,min} of arrangeButtons)button.disabled=selectedPoints.size<min;}
     function arrange(axis,mode){
@@ -176,7 +198,7 @@
     if(subpaths||pathData)toolbar.append(options);
     action('Done',commit);action('Cancel',cancel);surface.append(toolbar);
     function adjacentArc(){return [...selectedPoints].some(i=>vertices[i]?.arc||(vertices[i+1]||(closed?vertices[0]:null))?.arc);}
-    function announce(message){refreshArc();refreshArrange();if(cornerButton){const arcEndpoint=adjacentArc(),disabled=moveContourMode||!selectedPoints.size||arcEndpoint;cornerButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or use Arc properties.':'Remove the selected anchor’s handles';smoothButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or use Arc properties.':'Create aligned handles along the neighboring anchors';cornerButton.disabled=disabled;smoothButton.disabled=disabled;for(const button of [cornerButton,smoothButton])button.style.opacity=disabled?'.5':'1';}status.textContent=message||(!selectedPoints.size?'No points selected. Drag a box to select points.':null)||(selectedPoints.size>1&&!activeHandle?`${selectedPoints.size} points selected. Shift-click adds or removes points.`:null)||`${activeHandle?activeHandle==='in'?'Incoming handle on point':'Outgoing handle on point':'Point'} ${active+1} of ${vertices.length}`;removeButton.disabled=moveContourMode||!selectedPoints.size||vertices.length-selectedPoints.size<minimum;removeButton.setAttribute('aria-label',selectedPoints.size>1?'Delete points':'Delete point');removeButton.title=removeButton.getAttribute('aria-label');removeButton.style.opacity=removeButton.disabled?'.5':'1';}
+    function announce(message){refreshArc();refreshArrange();refreshPosition(true);if(cornerButton){const arcEndpoint=adjacentArc(),disabled=moveContourMode||!selectedPoints.size||arcEndpoint;cornerButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or use Arc properties.':'Remove the selected anchor’s handles';smoothButton.title=arcEndpoint?'Arc endpoints retain arc geometry. Move them or use Arc properties.':'Create aligned handles along the neighboring anchors';cornerButton.disabled=disabled;smoothButton.disabled=disabled;for(const button of [cornerButton,smoothButton])button.style.opacity=disabled?'.5':'1';}status.textContent=message||(!selectedPoints.size?'No points selected. Drag a box to select points.':null)||(selectedPoints.size>1&&!activeHandle?`${selectedPoints.size} points selected. Shift-click adds or removes points.`:null)||`${activeHandle?activeHandle==='in'?'Incoming handle on point':'Outgoing handle on point':'Point'} ${active+1} of ${vertices.length}`;removeButton.disabled=moveContourMode||!selectedPoints.size||vertices.length-selectedPoints.size<minimum;removeButton.setAttribute('aria-label',selectedPoints.size>1?'Delete points':'Delete point');removeButton.title=removeButton.getAttribute('aria-label');removeButton.style.opacity=removeButton.disabled?'.5':'1';}
     const totalPoints=()=>subpaths?subpaths.reduce((sum,part)=>sum+part.nodes.length,0):vertices.length;
     function refreshContours(){
       if(!contourPicker)return;contourPicker.replaceChildren();
@@ -234,7 +256,7 @@
     listen(surface,'focusin',e=>{if(e.target.dataset.vertex!==undefined){active=Number(e.target.dataset.vertex);activeHandle=e.target.dataset.curveHandle||null;if(!selectedPoints.has(active))selectedPoints=new Set([active]);announce();paint();}});
     listen(surface,'click',e=>{if(e.target.dataset.contour!==undefined){e.preventDefault();e.stopImmediatePropagation();selectContour(Number(e.target.dataset.contour));return;}if(e.target.dataset.insertVertex!==undefined){e.preventDefault();e.stopImmediatePropagation();insertPoint(Number(e.target.dataset.insertVertex));}});
     function paint(){
-      updateArcHint();
+      updateArcHint();refreshPosition();
       const f=frame.getBoundingClientRect(),r=surface.getBoundingClientRect(),scale=f.width/w.innerWidth,m=initialMatrix;
       preview.setAttribute(property,pathData?root.RetouchSVGPath.serialize(vertices,closed)||'':root.RetouchSVGPoints.format(vertices));
       preview.setAttribute('transform',`matrix(${m.a*scale} ${m.b*scale} ${m.c*scale} ${m.d*scale} ${m.e*scale+f.left-r.left} ${m.f*scale+f.top-r.top})`);
@@ -250,6 +272,7 @@
     }
     function commit(){
       if(!verify())return;
+      if(positionPanel.style.display!=='none'&&Object.values(positionInputs).some(input=>!input.checkValidity())){Object.values(positionInputs).find(input=>!input.checkValidity())?.reportValidity();return;}
       if(arcPanel.style.display!=='none'&&Object.values(arcInputs).some(input=>input.getAttribute('aria-invalid')==='true')){status.textContent='Correct the arc properties before saving.';return;}
       const value=pathData?root.RetouchSVGPath.serializeCompound({subpaths}):root.RetouchSVGPoints.format(vertices),changed=pathData?JSON.stringify(subpaths)!==JSON.stringify(pathData.subpaths):JSON.stringify(vertices)!==JSON.stringify(points);
       if(pathData?!value:!root.RetouchSVGPoints.parse(value)){cancel();onError('Vector points must stay within supported SVG coordinates.');return;}
