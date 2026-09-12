@@ -1,5 +1,6 @@
 (function(root){
  'use strict';
+const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',row:'M3 5v10 M8 5v10 M13 5v10 M16 10h4 M18 8l2 2-2 2',column:'M5 3h10 M5 8h10 M5 13h10 M10 16v4 M8 18l2 2 2-2',grid:'M3 3h14v14H3z M10 3v14 M3 10h14'};
  const openGroups=new Set();
  function disclosure(title,key){const d=document.createElement('details'),s=document.createElement('summary');d.className='inspector-disclosure';s.textContent=title;d.append(s);d.open=openGroups.has(key);d.ontoggle=()=>d.open?openGroups.add(key):openGroups.delete(key);return d;}
  function title(section){return section.querySelector(':scope > h3')?.textContent||'';}
@@ -192,7 +193,7 @@
    for(const checkbox of section.querySelectorAll('input[type="checkbox"]'))checkbox.closest('.inspector-field')?.classList.add('checkbox-field');
    if(name==='Layout'){
     const alignment=section.querySelector('.layout-alignment');if(alignment)keyboardToolbar(alignment,'Align children',{columns:3,role:'group'});
-    const stacks=section.querySelector(':scope > .stack-presets');if(stacks)keyboardToolbar(stacks,'Layout preset buttons');
+    const stacks=section.querySelector(':scope > .stack-presets');if(stacks){stacks.classList.add('layout-mode-segments');for(const button of stacks.querySelectorAll(':scope > button')){const label=button.textContent,icon={'Normal flow':'flow','Vertical stack':'column','Horizontal stack':'row','Adaptive grid':'grid'}[label];if(!icon)continue;button.setAttribute('aria-label',label);button.title=label;button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+layoutIcons[icon]+'"/></svg>';}keyboardToolbar(stacks,'Layout preset buttons');}
     {
      const paddingPairs=[...section.querySelectorAll(':scope > .property-pair')].filter(group=>group.querySelector('[aria-label="Padding top (CSS)"], [aria-label="Padding left (CSS)"], [aria-label="Padding top"], [aria-label="Padding left"]'));
      if(paddingPairs.length){const sides=disclosure('Individual padding',css?'html-padding':'react-padding');section.insertBefore(sides,paddingPairs[0]);paddingPairs.forEach(group=>sides.append(group));}
@@ -214,9 +215,9 @@
 
     const select=section.querySelector('[aria-label="Arrange children"]');
     if(select){const row=select.closest('.inspector-field');row.classList.add('layout-modes');row.querySelector('span').textContent='';
-     const icons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',row:'M3 5v10 M8 5v10 M13 5v10 M16 10h4 M18 8l2 2-2 2',column:'M5 3h10 M5 8h10 M5 13h10 M10 16v4 M8 18l2 2 2-2',grid:'M3 3h14v14H3z M10 3v14 M3 10h14'};
+
      const group=document.createElement('div');group.className='layout-mode-segments';
-     for(const [value,label,icon] of [['flow','Normal flow','flow'],[select.dataset.inlineAxis==='vertical'?'row':'column','Vertical layout','column'],[select.dataset.inlineAxis==='vertical'?'column':'row','Horizontal layout','row'],['grid','Grid layout','grid']]){const button=document.createElement('button');button.type='button';button.title=label;button.setAttribute('aria-label',label);button.setAttribute('aria-pressed',String(select.value.replace('-reverse','')===value));button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+icons[icon]+'"/></svg>';button.onclick=()=>{select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));};group.append(button);}row.insertBefore(group,select);keyboardToolbar(group,'Layout mode buttons');
+     for(const [value,label,icon] of [['flow','Normal flow','flow'],[select.dataset.inlineAxis==='vertical'?'row':'column','Vertical layout','column'],[select.dataset.inlineAxis==='vertical'?'column':'row','Horizontal layout','row'],['grid','Grid layout','grid']]){const button=document.createElement('button');button.type='button';button.title=label;button.setAttribute('aria-label',label);button.setAttribute('aria-pressed',String(select.value.replace('-reverse','')===value));button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+layoutIcons[icon]+'"/></svg>';button.onclick=()=>{select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));};group.append(button);}row.insertBefore(group,select);keyboardToolbar(group,'Layout mode buttons');
      const dimension=section.querySelector('[aria-label="Width (px)"]')?.closest('.property-pair'),behavior=section.querySelector('[aria-label="Width behavior"]')?.closest('.property-pair');
      if(dimension)row.after(dimension);
      if(behavior&&dimension){

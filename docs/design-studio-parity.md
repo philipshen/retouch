@@ -12654,3 +12654,10 @@ HTML Chromium, React Chromium and Liquid WebKit pass consecutive keyboard change
 The nine-point child-alignment picker now has one Tab stop, spatial Left/Right/Up/Down navigation, edge clamping, Home/End navigation and retained focus after applying a source change. Disabled points are skipped along the requested direction. The existing alignment group name and source callbacks remain intact.
 
 HTML Chromium, React Chromium and Liquid WebKit verify initial center selection, arrow navigation to top-left without a write, edge clamping, Space activation and actual child movement, focus retention, a second bottom-right alignment, and two independent exact source/geometry Undo steps. Logs /private/tmp/retouch-alignment-grid-{html,react,liquid}.log. One-dimensional layout and text alignment toolbar regressions pass (/private/tmp/retouch-spatial-{layout,text}-regression.log), as do all 18 inspector unit tests (/private/tmp/retouch-spatial-inspector-units.log). No desktop rebuild, native launch or push. Full parity remains incomplete.
+
+
+### 2026-09-12 — consistent HTML layout mode row
+
+HTML stack/adaptive-grid presets now use the same compact SVG icon vocabulary and segmented treatment as class-based layout modes. Their accessible names and keyboard behavior are retained. A Normal flow action writes display:block as one source transaction; the row order is normal, vertical, horizontal, adaptive grid. Active normal flow includes existing ordinary block/inline/flow-root/list-item layouts. Detailed CSS controls remain available.
+
+HTML Chromium, React Chromium and Liquid WebKit pass the extended keyboard sequence normal flow to vertical flex to grid to normal flow, followed by three independent exact source Undo steps. Logs /private/tmp/retouch-layout-modes-{html,react,liquid}.log. Inspected /private/tmp/retouch-layout-modes-html.png for row order, selected/focused state and layout. All 18 inspector unit tests pass (/private/tmp/retouch-layout-modes-units.log). No desktop rebuild, native launch or push; full parity remains incomplete.
