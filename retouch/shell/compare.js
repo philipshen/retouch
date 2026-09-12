@@ -133,7 +133,7 @@
           const left=Math.min(...rects.map(rect=>rect.left)),top=Math.min(...rects.map(rect=>rect.top));
           boxes.push({left:left*scale,top:top*scale,width:(Math.max(...rects.map(rect=>rect.left+rect.width))-left)*scale,height:(Math.max(...rects.map(rect=>rect.top+rect.height))-top)*scale});
         }
-        updateProperty(message,'textContent',selected?(visible?(selectedIds.length>1?'Selection · ':'Selected layer · ')+visible+(visible===1?' instance':' instances'):offscreen?'Selected layer is outside this viewport':nodes.length?'Selected layer is hidden':'Selected layer is absent on this screen'):'Same page · independent viewport');
+        updateProperty(message,'textContent',card.textSyncError|| (selected?(visible?(selectedIds.length>1?'Selection · ':'Selected layer · ')+visible+(visible===1?' instance':' instances'):offscreen?'Selected layer is outside this viewport':nodes.length?'Selected layer is hidden':'Selected layer is absent on this screen'):'Same page · independent viewport'));
       }catch{boxes.length=0;updateProperty(reveal,'disabled',true);updateScope(scopeMessage,'unknown','Scope coverage is unavailable for this page.');updateProperty(message,'textContent','Preview unavailable for this page');}finally{updateOutlines(card,boxes);}
     }
     timer=setTimeout(paint,100);
@@ -489,6 +489,26 @@
   window.addEventListener('retouch:screen',updateControls);
   new ResizeObserver(()=>{if(open)layoutPreviews();}).observe(rail);
   window.RetouchComparisons={
+    async syncText(info){
+      if(!open||!window.__RT_RENDERING?.reloadAfterWrite||info.kind!=='host'||info.textSource)return;
+      const targets=[...cards];
+      await Promise.all(targets.map(async card=>{
+        const select=d=>[...d.querySelectorAll('[data-rt]')].filter(el=>el.getAttribute('data-rt')===info.id);
+        card.textSyncError=null;
+        try{
+          for(let attempt=0;attempt<80;attempt++){
+            if(!open||!cards.includes(card))return;
+            const d=card.frame.contentDocument;
+            if(d?.body&&d.URL!=='about:blank')break;
+            await new Promise(resolve=>setTimeout(resolve,50));
+          }
+          const d=card.frame.contentDocument;
+          if(!d?.body||d.URL==='about:blank')throw Error('Preview is still loading.');
+          if(!select(d).length)return;
+          await RetouchRenderSync.sync({frame:card.frame,serverRendered:true,select,matches:el=>el.textContent===info.text});
+        }catch(error){if(open&&cards.includes(card))card.textSyncError='Text saved; comparison refresh failed: '+error.message;}
+      }));
+    },
     canShowSizes(requested){return Array.isArray(requested)&&requested.length>0&&requested.every(size=>this.canShowSize(size))&&sizes.length+new Set(requested.filter(size=>!sizes.some(existing=>existing[1]===size.width&&existing[2]===size.height)).map(size=>size.width+'x'+size.height)).size<=8;},
     showSizes(requested){
       if(!this.canShowSizes(requested))return false;for(const size of requested)this.showSize(size);

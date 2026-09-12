@@ -2437,6 +2437,7 @@ async function setText(text, isUndo) {
     updateSource(info, res);
     // A preview navigation may have replaced the optimistically edited node.
     if(info.kind==='host'&&!info.textSource)for(const el of matchingInDocument(doc(),info.id,info))if(el.textContent!==text)el.textContent=text;
+    await window.RetouchComparisons?.syncText(info);
     if(sel?.info===info)renderPanel();
     toast('Saved', 'ok');
   } else {
@@ -2579,6 +2580,7 @@ async function restoreHistory(direction,op) {
         }
         return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
       },{verifyText:op.type==='setText'&&!info.textSource});
+      if(op.type==='setText')await window.RetouchComparisons?.syncText(info);
       if(op.type==='createComponent'&&component?.ok)sel={hostId:component.definitionId,instanceId:op.id,scope:'instance',info};
     } else await reloadFrame();
 
