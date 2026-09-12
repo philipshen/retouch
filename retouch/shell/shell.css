@@ -839,3 +839,5 @@ body input[type="number"]::-webkit-outer-spin-button { appearance:none;margin:0;
 #panelBody > details.shared-inspector-group.advanced > summary::before { display:inline-block;width:12px;margin-left:-2px;color:var(--muted); }
 #panelBody > details.shared-inspector-group.advanced > .shared-inspector-group-body { padding:0 16px 16px; }
 #panelBody > .shared-inspector-notes { padding:12px 16px;border-bottom:1px solid var(--line); }
+
+.shared-sizing-presets > div { display:flex;gap:4px;flex-wrap:wrap;min-width:0; }

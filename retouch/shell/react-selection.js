@@ -171,6 +171,25 @@
     reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');row.append(reset);
    }
   }
+  // Pair related measurements while keeping each original field and reset handler.
+  for(const names of [['Width (px)','Height (px)'],['Minimum width (px)','Minimum height (px)'],['Maximum width (px)','Maximum height (px)'],['Grow','Shrink']]){
+   const rows=names.map(name=>[...sec.querySelectorAll('.inspector-field')].find(row=>row.querySelector('input[aria-label]')?.getAttribute('aria-label')==='Shared '+name)?.closest('.property-row'));
+   if(rows.some(row=>!row)||rows[0].parentElement!==rows[1].parentElement)continue;
+   const pair=root.document.createElement('div');pair.className='property-pair';rows[0].before(pair);rows.forEach(row=>pair.append(row));
+   rows.forEach((row,i)=>{row.querySelector('.inspector-field > span').textContent=({'Width (px)':'W','Height (px)':'H','Minimum width (px)':'Min W','Minimum height (px)':'Min H','Maximum width (px)':'Max W','Maximum height (px)':'Max H'})[names[i]]||names[i];});
+   if(names[0]!=='Grow'){
+    const presets=root.document.createElement('div');presets.className='property-pair shared-sizing-presets';
+    for(const name of names){const cell=root.document.createElement('div'),axis=name.toLowerCase().includes('width')?'width':'height',labels=name.startsWith('Minimum')?['Automatic shared minimum '+axis]:name.startsWith('Maximum')?['No shared maximum '+axis]:['Automatic shared '+axis,'Fit shared '+axis+' to content'];
+     for(const label of labels){const button=[...groups.size.querySelectorAll('button.control-button')].find(el=>(el.getAttribute('aria-label')||el.textContent)===label);if(button){const previous=button.parentElement;cell.append(button);if(previous.classList.contains('stack-presets')&&!previous.children.length)previous.remove();}}
+     presets.append(cell);
+    }
+    pair.after(presets);
+   }
+  }
+  for(const button of groups.size.querySelectorAll('button.control-button:not(.property-reset)')){
+   const label=button.getAttribute('aria-label')||button.textContent,short={'Automatic shared width':'Auto width','Fit shared width to content':'Hug width','Automatic shared height':'Auto height','Fit shared height to content':'Hug height','Automatic shared minimum width':'Auto min W','Automatic shared minimum height':'Auto min H','No shared maximum width':'No max W','No shared maximum height':'No max H'}[label];
+   if(short){button.setAttribute('aria-label',label);button.title=label;button.textContent=short;}
+  }
   for(const body of Object.values(groups)){
    const hints=[...body.children].filter(el=>el.classList.contains('hint')&&!el.classList.contains('refused')&&!el.hasAttribute('role'));
    if(hints.length){const details=root.document.createElement('details'),summary=root.document.createElement('summary');details.className='inspector-disclosure';summary.textContent='Details';details.append(summary,...hints);body.append(details);}

@@ -12216,3 +12216,10 @@ Validation: 35 inspector/shared/palette units passed. React Chromium and Liquid 
 Shared text/background/border/SVG paint clear actions now sit beside their matching field using the existing reset icon style. Full accessible names, tooltips, disabled states and source callbacks remain intact. Reset guidance lives in Typography/Fill/Stroke Details with the corresponding controls instead of Appearance. This continues the compact light inspector treatment.
 
 Validation: 35 inspector/shared/palette units passed; Liquid WebKit shared-section persistence flow passed and /private/tmp/retouch-shared-paint-rows.png was visually inspected. React Chromium complete color-style flow passed, including clearing shared background overrides, retaining links and exact source Undo. Logs: /private/tmp/retouch-shared-paint-rows-unit.log, /private/tmp/retouch-shared-paint-rows.log, /private/tmp/retouch-shared-paint-reset.log. No desktop rebuild/native launch/push. Full goal remains active.
+
+
+### 2026-09-12 — paired shared sizing and flex controls
+
+Shared width/height, min width/height, max width/height, and flex Grow/Shrink use paired rows with per-field resets. Sizing preset buttons sit directly below their own axis, with concise visible labels and unchanged accessible names/tooltips. Original controls and source handlers remain intact. A first screenshot exposed stranded presets after pairing; final layout groups them by axis.
+
+Validation: 29 shared/inspector units passed. React Chromium shared sizing flow passed. Liquid WebKit shared constraints flow passed after final preset grouping, including responsive geometry and exact Undo. Final screenshot visually inspected: /private/tmp/retouch-shared-size-pairs-final.png. Logs: /private/tmp/retouch-shared-sizing-compact.log, /private/tmp/retouch-shared-size-pairs-final.log, /private/tmp/retouch-shared-size-pairs-unit.log. No desktop rebuild/native launch/push. Full goal remains active.
