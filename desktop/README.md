@@ -25,6 +25,8 @@ The packaged Liquid/WebKit normal-flow Fill-height test still fails with vertica
 margins (180px instead of 170px). Native launch was not attempted because CUA's
 native connection failed. This candidate is not a trusted or published release.
 See [the candidate receipt](verification/2026-09-12-direct-manipulation.json).
+The source branch additionally supports resizing layers in normal flow; that
+feature is not included in this archive.
 
 The previous archive with native workflow evidence is
 `/private/tmp/retouch-desktop-shared-e948266/Retouch-0.1.0-mac.zip`.

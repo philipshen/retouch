@@ -204,6 +204,7 @@
     const css=el.ownerDocument.defaultView.getComputedStyle(el);
     const parentElement=I.layoutParent(el),parent=parentElement&&el.ownerDocument.defaultView.getComputedStyle(parentElement);
     const classes=info.className||'',inherited=info.styleScope?info.anchorInheritedClasses||'':'';
+    const flowControl=root.RetouchFlowResize?.control(el,sizes=>{const context={display:parent?.display,direction:parent?.flexDirection,writingMode:parent?.writingMode,inheritedClasses:inherited};save(Object.entries(sizes).reduce((next,[axis,value])=>sizeClasses(next,axis,'fixed',root.RetouchReactSelection.dimensionValue(css,axis,value),context),classes));});if(flowControl)sec.append(flowControl);
     const mode=/grid/.test(css.display)?'grid':/flex/.test(css.display)?css.flexDirection:'flow';
     const verticalInline=layoutAxes({writingMode:css.writingMode}).inline==='height',rowLabel=verticalInline?'Vertical':'Horizontal',columnLabel=verticalInline?'Horizontal':'Vertical';
     const modeSelect=I.select(sec,'Arrange children',[['flow','Normal flow'],['row',rowLabel],['column',columnLabel],['row-reverse',rowLabel+' · reverse'],['column-reverse',columnLabel+' · reverse'],['grid','Grid']],mode,value=>save(modeClasses(classes,value,info.styleScope?info.anchorInheritedClasses||'':'')));

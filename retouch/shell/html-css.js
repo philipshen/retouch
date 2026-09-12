@@ -23,7 +23,7 @@
    }
    I.note(paint,'Paint follows the selected screen scope. Use none for no fill or stroke. Stroke width and dashes accept SVG units, px or %. Reset reveals the inherited CSS or original attribute.');
   }
-  const layout=I.section('Layout');
+  const layout=I.section('Layout');const flowControl=RetouchFlowResize.control(el,sizes=>save(RetouchFlowResize.changes(el,sizes),null,width));if(flowControl)layout.append(flowControl);
   if(info.structure?.canInsert){
    const stacks=document.createElement('div');stacks.className='stack-presets';
    for(const [axis,label]of [['horizontal','Horizontal stack'],['vertical','Vertical stack']]){const changes=stackLayout(axis,css.writingMode),button=I.button(label,()=>save(changes,null,width));button.setAttribute('aria-pressed',String(['flex','inline-flex'].includes(css.display)&&css.flexDirection===changes['flex-direction']&&css.flexWrap==='nowrap'));stacks.append(button);}layout.append(stacks);
@@ -209,7 +209,7 @@
   container.append(RetouchSiteVariables.mount(el,width,save,own,null,[inheritedVariables(info,width)]));
   if(textLayer)container.append(typography);
   if(position)container.append(position);
-  if(paint)container.append(paint);if(info.structure?.canInsert)container.append(layout);
+  if(paint)container.append(paint);if(info.structure?.canInsert||flowControl)container.append(layout);
   container.append(appearance,corners,fills,blur,effects);if(isFlexItem)container.append(flex);if(gridFields.length)container.append(grid);
   if(!textLayer)container.append(typography);container.append(sec);return container;
  }

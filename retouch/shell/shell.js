@@ -1089,7 +1089,7 @@ function renderPanel() {
   const panel=document.getElementById('panel');
   const key=JSON.stringify([sel.info.file,sel.scope,sel.instanceId,(sel.multiple||[sel.info]).map(info=>info.id).sort()]);
   const focusedDraft=panelPaintDraftFocused()||panelInteractionFocused()&&document.activeElement.matches('input,textarea')&&(document.activeElement.matches('.component-props-search')||!panelTasks&&!sourceRequests&&!undoBusy);
-  if((panelPointer||focusedDraft||document.querySelector('.svg-vertex-surface, .canvas-rotate-surface'))&&key===renderedPanelSelection){panelRenderDeferred=true;return;}
+  if((panelPointer||focusedDraft||document.querySelector('.svg-vertex-surface, .canvas-rotate-surface, .canvas-flow-resize-surface'))&&key===renderedPanelSelection){panelRenderDeferred=true;return;}
   panelRenderDeferred=false;
   const top=key===renderedPanelSelection?panel.scrollTop:0;
   const focusedScope=key===renderedPanelSelection&&document.activeElement?.getAttribute('aria-label')==='Style screen scope';
@@ -2250,6 +2250,10 @@ async function writeReactBounds(info,classes,expected){
   }catch(error){toast(error.message,'err');return false;}finally{busyPanel(false);}
 }
 
+function resizeFlowOnCanvas(target,control,save,initial=null){
+  stopDrawing?.();const key=JSON.stringify([sel?.info.id,sel?.info.hash,styleScope]);const current=()=>mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&!sel?.multiple?.length&&!document.querySelector('dialog[open]')&&key===JSON.stringify([sel?.info.id,sel?.info.hash,styleScope])&&document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false';if(!current())return;canvasPan.cancel();
+  stopDrawing=RetouchFlowResize.mount({target,frame:iframe,canvas:canvasSurface,control,save,current,initial,onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
+}
 function rotateLayerOnCanvas(target,input,initialPointer=null){
   stopDrawing?.();
   const key=JSON.stringify([sel?.info.id,sel?.info.hash,styleScope]);
