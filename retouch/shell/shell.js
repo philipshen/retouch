@@ -1292,7 +1292,19 @@ function renderPanelContents() {
     const btn = document.createElement('button');
     btn.id = 'textApply';
     btn.textContent = 'Apply text';
-    btn.onclick = () => setText(ta.value);
+    ta.title='Enter adds a line. Command/Ctrl+Enter saves. Leaving the field saves. Escape cancels the draft.';
+    let committing=false;
+    const saveTextDraft=async()=>{
+      if(committing||!ta.isConnected||sel?.info!==info||panelTasks||undoBusy||sourceRequests||ta.value===info.text)return;
+      committing=true;try{await setText(ta.value);}finally{committing=false;}
+    };
+    ta.addEventListener('blur',saveTextDraft);
+    ta.addEventListener('keydown',event=>{
+      if(event.isComposing)return;
+      if(event.key==='Escape'){event.preventDefault();event.stopPropagation();ta.value=info.text;ta.blur();}
+      else if(event.key==='Enter'&&(event.metaKey||event.ctrlKey)){event.preventDefault();event.stopPropagation();window.RetouchPanelFocus.queue(ta);saveTextDraft();}
+    });
+    btn.onclick = saveTextDraft;
     tsec.appendChild(document.createElement('br'));
     tsec.appendChild(btn);
   } else if (info.mixedText) {
