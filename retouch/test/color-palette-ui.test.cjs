@@ -22,3 +22,11 @@ test('capturing computed sRGB paint retains alpha and refuses non-solid or unsup
  for(const [input,expected]of [['rgb(51, 102, 153)','#336699ff'],['rgba(51, 102, 153, 0.533333)','#33669988'],['rgb(100% 0% 50% / 50%)','#ff008080'],['color(srgb 0.2 0.4 0.6 / 0.5)','#33669980'],['transparent','#00000000'],['#1234','#11223344']])assert.equal(fromComputed(input),expected);
  for(const input of ['none','url(#gradient)','oklch(50% 0.2 30)','rgb(300 0 0)','rgb(1 2 3 / 2)','rgb(1 2)','rgb(1,2,3/0.5)',null])assert.throws(()=>fromComputed(input),/solid color/);
 });
+
+
+test('shared palette context requires the same explicit link on every selected layer',()=>{
+ const {selectionState}=window.RetouchColorStyles,a={id:'a'},b={id:'b'},layer=(link,overrides=[])=>({colorStyleLinks:{768:{color:link},0:{color:b}},colorStyleOverrides:{768:overrides}});
+ const same=selectionState([layer(a),layer(a,['color'])],768,'color');assert.equal(same.link,a);assert.equal(same.linked,2);assert.equal(same.overrides,1);
+ for(const selection of [[layer(a),layer(b)],[layer(a),layer(null)]]){const state=selectionState(selection,768,'color');assert.equal(state.link,null);assert.equal(state.total,2);}
+ assert.equal(selectionState([layer(a),layer(a)],1024,'color').linked,0,'inherited links are not reported as explicit links in this range');assert.equal(selectionState([],0,'color').link,null);assert.equal(selectionState([layer(a,['background-color'])],768,'color').overrides,0);
+});

@@ -2,6 +2,10 @@
  'use strict';
  let expanded=false,preferred='',target='color';
  function normalize(value){return root.RetouchPaletteValues.parse(value).value;}
+ function selectionState(selection,width,property){
+  const links=selection.map(info=>info.colorStyleLinks?.[width]?.[property]).filter(Boolean),overrides=selection.filter(info=>info.colorStyleOverrides?.[width]?.includes(property)).length;
+  return {total:selection.length,linked:links.length,distinct:new Set(links.map(link=>link.id)).size,overrides,link:links.length===selection.length&&links.length&&links.every(link=>link.id===links[0].id)?links[0]:null};
+ }
  function fromComputed(value){
   const refuse=()=>{throw Error('This paint is not a supported solid color. Enter hex or Display P3 explicitly.');};
   if(typeof value!=='string')return refuse();value=value.trim();if(value.startsWith('#')||value.startsWith('color(display-p3 '))return normalize(value);if(value==='transparent')return '#00000000';
@@ -79,5 +83,5 @@
   }
   render();details.ontoggle=()=>{if(!details.isConnected)return;expanded=details.open;if(details.open&&!library)load();};details.open=expanded;
  }
- root.RetouchColorStyles={mount,normalize,inheritedLink,fromComputed};
+ root.RetouchColorStyles={mount,normalize,selectionState,inheritedLink,fromComputed};
 })(window);
