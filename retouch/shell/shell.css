@@ -860,3 +860,16 @@ body input[type="number"]::-webkit-outer-spin-button { appearance:none;margin:0;
 
 .canvas-selection-resize { position:absolute; width:9px; height:9px; padding:0; border:1px solid var(--accent); border-radius:0; background:white; translate:-50% -50%; pointer-events:auto; touch-action:none; }
 .canvas-selection-resize:hover { background:var(--accent); }
+
+/* Primary typography follows the font, size, spacing and alignment sequence. */
+.typography-primary { display:flex;flex-direction:column;gap:8px;margin:12px 0; }
+.typography-primary .inspector-field { margin:0; }
+.typography-family > span,.typography-family > .inspector-field > span { display:none; }
+.typography-family select { width:100%;height:28px; }
+.typography-size .inspector-field > span { flex:0 0 auto; }
+.typography-spacing { padding-top:18px; }
+.typography-spacing-cell { position:relative; }
+.typography-spacing-cell::before { content:attr(data-caption);position:absolute;left:0;top:-18px;color:var(--muted);font-size:11px;white-space:nowrap; }
+.typography-spacing svg { display:block;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round; }
+.typography-primary .typography-alignment { display:flex;flex-wrap:wrap;gap:6px; }
+.typography-alignment > span,.typography-alignment > .inspector-field > span { display:block;flex:0 0 100%;font-size:11px;color:var(--muted); }

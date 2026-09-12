@@ -10,6 +10,20 @@
   if(rows.some(row=>!row)||rows[0].parentElement!==section||rows[1].parentElement!==section)return;
   const group=document.createElement('div');group.className='property-pair';section.insertBefore(group,rows[0]);rows.forEach(row=>group.append(row));
  }
+ function typographyPrimary(section){
+  const find=labels=>labels.map(label=>section.querySelector('[aria-label="'+label+'"]')).find(Boolean),row=control=>control?.closest('.property-row')||control?.closest('.inspector-field');
+  const font=row(find(['Page font'])),weight=find(['Font weight (1–1000)','Font weight (CSS)']),spacing=find(['Line height (px)','Line height (CSS)']),align=row(find(['Text alignment','Text alignment (CSS)']));
+  const sizePair=weight?.closest('.property-pair'),spacingPair=spacing?.closest('.property-pair'),parts=[font,sizePair,spacingPair,align].filter(part=>part?.parentElement===section);
+  if(!parts.length)return;
+  const primary=document.createElement('div');primary.className='typography-primary';section.querySelector(':scope > h3').after(primary);parts.forEach(part=>primary.append(part));
+  font?.classList.add('typography-family');sizePair?.classList.add('typography-size');spacingPair?.classList.add('typography-spacing');
+  for(const [labels,title,path] of [[['Line height (px)','Line height (CSS)'],'Line height','M4 3h12 M4 17h12 M6 14l4-8 4 8 M8 11h4'],[['Letter spacing (px)','Letter spacing (CSS)'],'Letter spacing','M3 4v12 M17 4v12 M6 14l4-8 4 8 M8 11h4']]){
+   const input=find(labels),field=input?.closest('.inspector-field');if(!field)continue;
+   const icon=field.querySelector(':scope > span');icon.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+path+'"/></svg>';
+   const cell=field.closest('.property-row')||field;cell.classList.add('typography-spacing-cell');cell.dataset.caption=title;
+  }
+  if(align){align.classList.add('typography-alignment');const label=align.querySelector('.inspector-field > span, :scope > span');if(label)label.textContent='Alignment';}
+ }
  function organize(panel){
   if(panel.dataset.organized==='true')return;panel.dataset.organized='true';
   const head=panel.firstElementChild;if(!head)return;head.classList.add('selection-heading');
@@ -200,6 +214,7 @@
     }
    }
    for(const row of section.querySelectorAll('.inspector-field')){const control=fieldControl(row),label=control?.getAttribute('aria-label');if(['Width behavior','Height behavior'].includes(label))for(const option of control.options)option.textContent=({'':'Auto',fixed:'Fixed',hug:'Hug',fill:'Fill'})[option.value]||option.textContent;const short={'Page font':'Font','Shared Page font':'Font','Display (CSS)':'Display','Direction (CSS)':'Direction','Wrap (CSS)':'Wrap','Align items (CSS)':'Alignment','Align lines (CSS)':'Lines','Distribute items (CSS)':'Distribution','Minimum width (CSS)':'Min W','Minimum height (CSS)':'Min H','Maximum width (CSS)':'Max W','Maximum height (CSS)':'Max H','Padding (CSS)':'Padding','Padding top (CSS)':'Top','Padding bottom (CSS)':'Bottom','Padding left (CSS)':'Left','Padding right (CSS)':'Right','Margin (CSS)':'Margin','Margin top (CSS)':'Top','Margin bottom (CSS)':'Bottom','Margin left (CSS)':'Left','Margin right (CSS)':'Right','Gap (CSS)':'Gap','Corner radius (CSS)':'Radius','Border width (CSS)':'Weight','Border style (CSS)':'Style','Border color (CSS)':'Color','Background color (CSS)':'Color','Layer blur (px)':'Blur','Backdrop blur (px)':'Background','Background blur (px)':'Background','Font family (CSS)':'Font family','Font weight (CSS)':'Weight','Font size (CSS)':'Size','Line height (CSS)':'↕','Letter spacing (CSS)':'↔','Text color (CSS)':'Color','Font weight (1–1000)':'Weight','Font size (px)':'Size','Line height (px)':'↕','Letter spacing (px)':'↔','Text alignment':'','Width (CSS)':'W','Height (CSS)':'H','Border width (px)':'Weight','Border style':'Style','Border color':'Color','Place grid items':'Flow','Align children':'Alignment','Distribute children':'Distribution','Width (px)':'W','Height (px)':'H','Opacity (%)':'Opacity','Corner radius (px)':'Radius','Padding top':'Top','Padding bottom':'Bottom','Padding left':'Left','Padding right':'Right','Horizontal gap':'↔','Vertical gap':'↕','Width behavior':'Width','Height behavior':'Height'}[label];if(short){row.querySelector('span').textContent=short;row.title=label;}}
+   if(name==='Typography')typographyPrimary(section);
   }
 
   // Keep the shared disclosures themselves so their saved state and handlers survive.
