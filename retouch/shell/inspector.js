@@ -420,6 +420,7 @@
     const css = el.ownerDocument.defaultView.getComputedStyle(el);
     const classes = info.className || '';
     const mode = tokens(classes).map(base).find(positionToken) || css.position;
+    sec.append(root.RetouchFlip.mount(el,value=>{const inherited=tokens(info.anchorInheritedClasses).some(word=>/^!|!$/.test(word)&&root.RetouchFlip.token(base(word)||''));save(replace(classes,root.RetouchFlip.token,(inherited?'!':'')+'[scale:'+value.replaceAll(' ','_')+']'));}));
     const rotationValue=()=>root.RetouchReactSelection.rotationDegrees(el.ownerDocument.defaultView.getComputedStyle(el).rotate);
     const rotationBlocked=()=>!el.isConnected||el.style.getPropertyValue('rotate')||!Number.isFinite(rotationValue());
     const writeRotation=value=>{

@@ -131,7 +131,7 @@
   if(property==='font-variation-settings')return value===null||parseVariations(value)!==null;
   if(property==='font-variant-numeric')return value===null||numericValid(value);
   if(property==='box-shadow')return value===null||parseShadows(value)!==null;
-  if(value===null)return ['flex-grow','flex-shrink','grid-template-columns','grid-template-rows','grid-column','grid-row','opacity','rotate','object-position'].includes(property)||lengths.has(property)||colors.has(property)||Object.hasOwn(options,property);
+  if(value===null)return ['flex-grow','flex-shrink','grid-template-columns','grid-template-rows','grid-column','grid-row','opacity','rotate','scale','object-position'].includes(property)||lengths.has(property)||colors.has(property)||Object.hasOwn(options,property);
   if(['grid-template-columns','grid-template-rows'].includes(property))return gridTracks(value)||property==='grid-template-columns'&&parseAdaptiveColumns(value)!==null;
   if(typeof value!=='string'||!value||value.length>150)return false;
   if(property==='border-radius'&&value.includes('/')){const axes=value.split('/');return axes.length===2&&axes.every(axis=>{const tokens=axis.trim().split(/\s+/);return tokens.length>=1&&tokens.length<=4&&tokens.every(token=>valid('border-top-left-radius',token));});}
@@ -142,6 +142,7 @@
   if(property==='font-family')return value.split(',').every(part=>{const name=part.trim();return /^(?:[\p{L}\p{N}_-]+(?: +[\p{L}\p{N}_-]+)*|"[\p{L}\p{N} _-]+"|'[\p{L}\p{N} _-]+')$/u.test(name);});
   if(property==='font-weight')return ['normal','bold'].includes(value)||/^(?:\d*\.)?\d+$/.test(value)&&Number(value)>=1&&Number(value)<=1000;
   if(property==='opacity')return /^(?:\d*\.)?\d+$/.test(value)&&Number(value)>=0&&Number(value)<=1;
+  if(property==='scale')return typeof value==='string'&&value.split(' ').length>=2&&value.split(' ').length<=3&&value.split(' ').every(part=>/^-?(?:\d*\.)?\d+(?:e[-+]?\d+)?$/i.test(part)&&Number.isFinite(Number(part))&&Math.abs(Number(part))<=10000);
   if(property==='rotate')return /^-?(?:\d*\.)?\d+deg$/.test(value)&&Math.abs(parseFloat(value))<=360;
   if(property==='object-position'){const parts=value.split(/\s+/);return parts.length===2&&parts.every(p=>/^(?:\d*\.)?\d+%$/.test(p)&&parseFloat(p)>=0&&parseFloat(p)<=100);}
   if(sides.includes(property)&&/^calc\(50% [+-] (?:\d*\.)?\d+px\)$/.test(value))return true;

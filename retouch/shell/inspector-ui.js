@@ -195,7 +195,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     const input=section.querySelector('[aria-label="Rotation (°)"]'),field=input?.closest('.inspector-field'),row=field?.closest('.property-row')||field,action=section.querySelector(':scope > [data-canvas-tool="rotate"]');
     if(row?.parentElement===section&&action){
      const group=document.createElement('div');group.className='property-pair rotation-controls';row.before(group);group.append(row);
-     const actions=document.createElement('div');actions.className='rotation-actions';group.append(actions);const reset=section.querySelector(':scope > [aria-label="Reset rotate"], :scope > [aria-label="Reset rotation"]');actions.append(action);if(reset)actions.append(reset);
+     const actions=document.createElement('div');actions.className='rotation-actions';group.append(actions);const reset=section.querySelector(':scope > [aria-label="Reset rotate"], :scope > [aria-label="Reset rotation"]');const flips=section.querySelector(':scope > .flip-controls');if(flips){actions.append(...flips.children);flips.remove();}actions.append(action);if(reset)actions.append(reset);
      const label=field.querySelector(':scope > span');label.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3v13h13 M4 8a8 8 0 0 1 8 8"/></svg>';
      action.setAttribute('aria-label','Rotate on canvas');action.title=action.title||'Rotate on canvas';action.classList.add('rotation-canvas-action');action.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 7l5 5-5 5-5-5Z M4 7a7 7 0 0 1 12-2 M16 2v4h-4"/></svg>';
     }

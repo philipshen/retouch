@@ -69,6 +69,7 @@
    const reset=I.button('Reset '+property,()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);host.append(reset);
    if(property==='rotate'&&(el.style.getPropertyValue('rotate')||!Number.isFinite(value))){input.disabled=true;reset.disabled=true;input.title='Edit this layer’s inline or 3D rotation in its source first.';}
   }
+  if(position&&el)position.append(RetouchFlip.mount(el,value=>save('scale',value,width)));
   if(css.transform!=='none')I.note(appearance,'Rotation combines with the page’s existing transform.');
   for(const [property,label]of [['mix-blend-mode','Blend mode'],['isolation','Blend group']]){
    const current=own[property]??css.getPropertyValue(property),input=document.createElement('select');
