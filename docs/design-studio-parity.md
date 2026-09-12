@@ -12085,3 +12085,12 @@ Extracted the existing style-write lifecycle into a shared helper for Apply and 
 New test:e2e:picker-detach passed single-layer HTML Chromium and Liquid WebKit with injected conflict, unchanged source on failure, retry, draft-disable behavior, preserved paint and exact Undo. RT_E2E_PICKER_MULTI=1 variants passed React Chromium and Liquid WebKit with two removed links, preserved per-layer appearance and exact Undo. Existing full picker-style regression passed HTML Chromium, including revision conflict/reload/retry and other property targets. All 911 unit tests and syntax/diff checks passed. Inspected /private/tmp/retouch-picker-detach.png. Logs /private/tmp/retouch-picker-detach-{html-final,single-liquid,multi-liquid,multi-react,style-regression,units}.log.
 
 No native launch/rebuild, push or Shopify changes. Full Figma/native parity remains incomplete; latest packaged source is still bce2bdf. Further mixed/overridden detachment and broader interaction coverage remain useful; gradient/shadow style links and trusted native delivery remain unfinished.
+
+
+### 2026-09-12 — Overridden and partially linked detachment verification
+
+Expanded test:e2e:picker-detach to create a saved local rgb(12 34 56 / 0.2345) override before detaching. HTML Chromium, React Chromium and Liquid WebKit passed preservation of appearance and exact fractional-alpha source, pending-draft detachment disablement, conflict/retry without writes, removal of the style link, and exact three-step Undo through detached, overridden and linked source states.
+
+Expanded test:e2e:picker-multi-context to detach a one-of-two linked selection. HTML Chromium, React Chromium and Liquid WebKit passed: the unlinked selected layer and third unselected layer retain their paint; the explicit link is removed; Undo restores the partially linked source exactly. The inherited-only picker test now asserts no Detach style action and passed Liquid WebKit. No runtime fix was required. Syntax/diff checks passed. Logs /private/tmp/retouch-detach-override-{html,react,liquid}.log, /private/tmp/retouch-detach-partial-{html,react,liquid}.log and /private/tmp/retouch-detach-inherited-liquid.log. Unit suite not repeated for test-only changes.
+
+Full Figma/native parity remains incomplete. No desktop rebuild/launch, push or live Shopify changes; packaged source remains bce2bdf. Native window access remains unverified after the last cgWindowNotFound preflight; no launch was retried this turn.
