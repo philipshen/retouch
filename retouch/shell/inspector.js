@@ -459,7 +459,7 @@
     if (mode === 'absolute') {
       if(onAlign&&css.position==='absolute')try{sec.insertBefore(root.RetouchSelectionLayout.singlePosition(el,onAlign,notify),sec.children[1]);}catch(error){note(sec,error.message,'refused');}
       let g;
-      try { g = geometry(el); } catch (e) { const coordinates=sec.querySelector('[aria-label="X"]');if(coordinates&&onTransform){for(const action of ['move','resize']){const control=canvasTool(action,(opener,initial)=>onTransform(action,opener,initial));sec.append(control);}}note(sec,coordinates?'Anchor presets for rotated layers are not available yet.':e.message,coordinates?'':'refused'); return sec; }
+      try { g = geometry(el); } catch (e) { const coordinates=sec.querySelector('[aria-label="X"]');if(coordinates&&onTransform){for(const action of ['move','resize']){const control=canvasTool(action,(opener,initial)=>onTransform(action,opener,initial));if(action==='resize'&&css.scale&&css.scale!=='none'){control.disabled=true;control.title='Canvas resizing for scaled layers is not available yet.';}sec.append(control);}}note(sec,coordinates?'Anchor presets for rotated or scaled layers are not available yet.':e.message,coordinates?'':'refused'); return sec; }
       note(sec, `Anchored to ${g.parentLabel}`);
       if(onTransform){const tools=document.createElement('div');tools.className='stack-presets';for(const action of ['move','resize']){const control=canvasTool(action,(opener,initial)=>onTransform(action,opener,initial));tools.append(control);}sec.append(tools);}
       const x = inferredAnchor(classes,'x',info.anchorInheritedClasses), y = inferredAnchor(classes,'y',info.anchorInheritedClasses);
