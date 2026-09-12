@@ -12957,3 +12957,23 @@ Eight packaged workflow suites pass: HTML/React scaled absolute resize and exact
 Homebrew installed/uninstalled the exact archive in an isolated app directory. The installed manifest matched the extracted archive, quarantine remained present, and the cask inventory before/after was identical. The app, cask registration, temporary tap and isolated trust configuration were removed. Automatic dependency removal and install cleanup were disabled throughout. No native launch was attempted: CUA preflight returned `Sky Computer Use native pipe startup failed`. No macOS security settings were changed. Native editing/sampler/shutdown, Developer ID/notarization, public cask distribution, full Figma parity and universal-site support remain incomplete.
 
 The known older WebKit 26.0 Fill-height case was freshly reproduced against this archive, expected `[[250,180],[210,170]]`, actual `[[250,180],[210,180]]`. Newer WebKit's pass does not establish native WKWebView behavior or older-engine compatibility. Artifact hashes, individual workflow logs, installation checks, cleanup and known failure are recorded in `desktop/verification/2026-09-13-sizing-workflows.json`. No push or public release for this increment.
+
+### 2026-09-13 — Cold React comparison startup regression (unresolved)
+
+Added `RT_E2E_COMPARISON_COLD=1` to `retouch/test/e2e/page-fonts.cjs`. This targets the previously unverified bootstrap interval: the main canvas first mounts a fixture client component, then Phone, Tablet and Desktop comparison frames receive server-rendered content while their fetched JavaScript responses are held. A text edit must save in the main canvas before those scripts are released. The released responses are the pre-edit assets, not replacement responses fetched after saving. Every comparison must mount and reach the saved text without page errors, followed by exact source/text Undo, Redo and Undo. The fixture mount marker distinguishes React mounting from `document.readyState`; the startup error assertion runs before history actions.
+
+The first harness attempt masked its failure with `Route is already handled!` during teardown. The test now keeps routing installed through the scenario, releases the gate in `finally`, and waits for active handlers before closing the browser. Syntax and diff checks pass. This is an opt-in regression scenario, not a passing acceptance gate or a production fix.
+
+Fresh Chromium 145 / Next.js 16.2.5 evidence: `/private/tmp/retouch-comparison-cold-mounted-chromium.log` fails the startup assertion with `Internal Next.js error: Router action dispatched before initialization.` The stack traces HMR's `serverComponentChanges` through `hmrRefresh` to `dispatchAppRouterAction`, where the installed Next.js client still has a null dispatch function. The main fixture had already mounted; the failure occurs before the test begins Undo. An earlier fixture without the mount marker intermittently passed, so timing-dependent passes do not establish safety.
+
+Fresh WebKit 26.0 evidence: `/private/tmp/retouch-comparison-cold-mounted-webkit.log` reaches the final source/text checks but fails the page-error assertion with an access-control error fetching Next.js original stack frames during the later refresh sequence. It does not prove the same exception or a clean startup/history lifecycle. Both failures remain open. A subsequent fix must preserve ready comparison document state and avoid making main-canvas editing wait indefinitely for slow comparison assets; suppressing the errors or merely extending test sleeps does not satisfy that requirement.
+
+Reproduce from this worktree:
+
+```sh
+RT_INSPECTOR_FIXTURE=/private/tmp/retouch-responsive-fixture RT_E2E_RENDERER=react RT_E2E_COMPARISON_COLD=1 RT_E2E_NETWORK_TRACE=1 node retouch/test/e2e/page-fonts.cjs
+```
+
+For the baseline WebKit run, additionally set `RT_E2E_BROWSER=webkit` and `PLAYWRIGHT_BROWSERS_PATH=/private/tmp/retouch-playwright-browsers`. Run React fixture builds sequentially. No runtime change, desktop rebuild, native launch, public release or push for this increment. Full Figma parity and universal-site support remain incomplete.
+
+The existing ready-preview control passes on Chromium 145: `/private/tmp/retouch-comparison-ready-control.log`, using `RT_E2E_TEXT_FIELD_SWITCH=1 RT_E2E_TEXT_FIELD_SWITCH_COMPARISON=1 RT_E2E_COMPARISON_TEXT_SYNC=1`. It verifies immediate selection switching after the text save, comparison text convergence, retained comparison document identity and unsaved input, and exact source Undo/Redo. This control does not cover the cold bootstrap interval.
