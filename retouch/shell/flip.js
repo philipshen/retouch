@@ -12,7 +12,7 @@
  function mount(el,save){
   const group=document.createElement('div');group.className='flip-controls';group.setAttribute('role','group');group.setAttribute('aria-label','Flip layer');
   for(const [axis,label,path]of [['x','Flip horizontally','M10 2v16 M7 5v10L2 10Z M13 5v10l5-5Z'],['y','Flip vertically','M2 10h16 M5 7h10l-5-5Z M5 13h10l-5 5Z']]){
-   const button=document.createElement('button');button.type='button';button.className='control-button flip-action';button.setAttribute('aria-label',label);button.title=label+' around the layer’s transform origin';button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+path+'"/></svg>';
+   const button=document.createElement('button');button.type='button';button.className='control-button flip-action';button.dataset.flipAxis=axis;button.setAttribute('aria-keyshortcuts','Shift+'+(axis==='x'?'H':'V'));button.setAttribute('aria-label',label);button.title=label+' around the layer’s transform origin';button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+path+'"/></svg>';
    const next=()=>el.isConnected&&!el.style.getPropertyValue('scale')?flip(el.ownerDocument.defaultView.getComputedStyle(el).scale,axis):null;
    button.disabled=next()===null;if(button.disabled)button.title='Edit this layer’s inline or unsupported scale in source first.';
    button.onclick=()=>{const value=next();if(value!==null){root.RetouchPanelFocus?.queue(button);save(value);}};group.append(button);
