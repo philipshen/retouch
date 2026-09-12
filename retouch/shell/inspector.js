@@ -504,7 +504,7 @@
     return replace(classes,t=>/^shadow(?:-|$)/.test(t)||/^\[box-shadow:/.test(t),value===null?'':'![box-shadow:'+value.replace(/\s/g,'_')+']');
   }
   function shadowStack(parent,info,el,save,notify){
-    const V=root.RetouchHTMLCSSValues,shadows=V.parseShadows(el.ownerDocument.defaultView.getComputedStyle(el).boxShadow),details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Shadow stack';details.append(summary);details.open=shadowStackExpanded;details.ontoggle=()=>{if(details.isConnected)shadowStackExpanded=details.open;};parent.append(details);
+    const V=root.RetouchHTMLCSSValues,shadows=V.parseShadows(el.ownerDocument.defaultView.getComputedStyle(el).boxShadow),details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Shadow stack';details.append(summary);details.open=shadowStackExpanded;details.retouchSetOpen=value=>{shadowStackExpanded=!!value;details.open=shadowStackExpanded;};details.ontoggle=()=>{if(details.isConnected)shadowStackExpanded=details.open;};parent.append(details);
     const write=next=>{try{save(shadowClasses(info.className,next===null?null:V.serializeShadows(next)));}catch(error){notify(error.message);}};
     if(shadows===null)note(details,'This shadow stack contains values these controls cannot edit.');
     else{

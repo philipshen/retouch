@@ -8,7 +8,7 @@
   return I().replace(current,imageToken,value===null?'':'![background-image:'+value.replace(/\s/g,'_')+']');
  }
  function mount(parent,info,element,save){
-  const inspector=I(),d=parent.ownerDocument,details=d.createElement('details'),summary=d.createElement('summary');summary.textContent='Gradient fills';details.append(summary);details.open=expanded;details.ontoggle=()=>{if(details.isConnected)expanded=details.open;};parent.append(details);
+  const inspector=I(),d=parent.ownerDocument,details=d.createElement('details'),summary=d.createElement('summary');summary.textContent='Gradient fills';details.append(summary);details.open=expanded;details.retouchSetOpen=value=>{expanded=!!value;details.open=expanded;};details.ontoggle=()=>{if(details.isConnected)expanded=details.open;};parent.append(details);
   const gradients=V().parseGradients(element.ownerDocument.defaultView.getComputedStyle(element).backgroundImage);
   const write=async next=>{try{await save(classes(info.className,next===null?null:V().serializeGradients(next)));}catch(error){inspector.note(details,error.message,'refused');}};
   if(!gradients)inspector.note(details,'This background image cannot be edited as a gradient. Clear background images to start a gradient fill.');

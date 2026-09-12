@@ -63,7 +63,7 @@
      if(['Clear background images','Reset gradient fills','Clear layer filters','Clear background filters','Clear shadows','Reset shadows'].includes(button.textContent))options.append(button);
      else if((name==='Fill'?['Add gradient','Add gradient fill']:['Add shadow']).includes(button.textContent)){
       const label=button.textContent,add=button.onclick;button.setAttribute('aria-label',label);button.title=label;button.textContent='+';button.classList.add('section-add');
-      button.onclick=event=>{if(stackDetails)stackDetails.open=true;if(name==='Effects')root.RetouchPanelFocus?.queueControl(button,'Shadow '+(section.querySelectorAll('.shadow-controls').length+1)+' type');return add?.call(button,event);};section.append(button);
+      button.onclick=event=>{if(stackDetails){if(stackDetails.retouchSetOpen)stackDetails.retouchSetOpen(true);else stackDetails.open=true;}if(name==='Effects')root.RetouchPanelFocus?.queueControl(button,'Shadow '+(section.querySelectorAll('.shadow-controls').length+1)+' type');return add?.call(button,event);};section.append(button);
      }
     }
     if(options.children.length>1)section.append(options);
