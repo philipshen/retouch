@@ -149,7 +149,7 @@
   if(colors.has(property)&&/^rgba?\(/i.test(value))return literalRGB.test(value);
   if(colors.has(property)&&/^hsla?\(/i.test(value))return literalHSL.test(value);
   if(colors.has(property)&&/^okl(?:ab|ch)\(/i.test(value))return okColor(value);
-  if(colors.has(property)&&/^color\(display-p3\s/i.test(value))return (typeof module==='object'&&module.exports?require('./palette-values.js'):globalThis.RetouchPaletteValues).valid(value);
+  if(colors.has(property)&&/^color\((?:srgb|display-p3)\s/i.test(value))return (typeof module==='object'&&module.exports?require('./palette-values.js'):globalThis.RetouchPaletteValues).valid(value);
   if(colors.has(property))return /^(?:#(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})|[a-z]+|(?:rgb|rgba|hsl|hsla)\([\d.%,\s/]+\))$/i.test(value);
   if(!lengths.has(property))return false;
   const parts=value.trim().split(/\s+/),limit=property==='gap'||families['border-radius'].includes(property)?2:['padding','margin','border-width','border-radius'].includes(property)?4:1;

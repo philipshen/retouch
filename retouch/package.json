@@ -59,6 +59,7 @@
     "test:e2e:panel-resize-draft": "RT_E2E_PICKER_STYLES=1 RT_E2E_PICKER_LINK_CONTEXT=1 RT_E2E_PICKER_RESIZE_CLOSED=1 node test/e2e/page-fonts.cjs",
     "test:e2e:picker-style-scope": "RT_E2E_PICKER_STYLES=1 RT_E2E_PICKER_STYLES_SCOPE=1 RT_E2E_SVG_COLORS=1 node test/e2e/page-fonts.cjs",
     "test:e2e:picker-styles": "RT_E2E_PICKER_STYLES=1 node test/e2e/page-fonts.cjs",
+    "test:e2e:palette-precision": "RT_E2E_PICKER_STYLES=1 RT_E2E_PALETTE_PRECISION=1 node test/e2e/page-fonts.cjs",
     "test:e2e:picker-detach": "RT_E2E_PICKER_STYLES=1 RT_E2E_PICKER_DETACH=1 node test/e2e/page-fonts.cjs",
     "test:e2e:picker-multi": "RT_E2E_PICKER_STYLES=1 RT_E2E_PICKER_MULTI=1 node test/e2e/page-fonts.cjs",
     "test:e2e:picker-multi-context": "RT_E2E_PICKER_STYLES=1 RT_E2E_PICKER_MULTI=1 RT_E2E_PICKER_MULTI_CONTEXT=1 node test/e2e/page-fonts.cjs",
