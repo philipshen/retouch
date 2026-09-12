@@ -1,0 +1,43 @@
+{
+  "sourceCommit": "bce2bdfbc72500a86a41711fd30cf748dc203d79",
+  "sourceTreeDirty": false,
+  "sourceFiles": 178,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict ad hoc verification passed; trust and notarization unverified",
+  "archive": "/private/tmp/retouch-desktop-light-20260912-bce2bdf/Retouch-0.1.0-mac.zip",
+  "sha256": "1aa55d440a1870c23b9ef55e9565b8d30dda814b88d86c02e1b66fd8f88717f3",
+  "sourceMatchesCheckout": true,
+  "nativeSourceMatchesCheckout": true,
+  "buildAndVerifierMatchCheckout": true,
+  "units": {
+    "passed": 909,
+    "log": "/private/tmp/retouch-desktop-light-units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "HTML linked color context, override/reset/inherited writes and Undo",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-light-20260912-bce2bdf/html-links.log"
+    },
+    {
+      "name": "Liquid compact transitions preserve draft, focus and selection",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-light-20260912-bce2bdf/liquid-resize.log"
+    }
+  ],
+  "cask": {
+    "generated": "/private/tmp/retouch-desktop-light-20260912-bce2bdf/retouch-studio.rb",
+    "syntax": "passed",
+    "installation": "not run for this build"
+  },
+  "nativeLaunch": "not attempted",
+  "nativeScreenSampling": "unverified",
+  "notarization": "not performed",
+  "published": false,
+  "harness": "External test copy, source symlinks to extracted signed package, development dependencies from checkout; removed after terminal workflows"
+}

@@ -10,15 +10,16 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest local development archive is
-`/private/tmp/retouch-desktop-sampler-20260912-f8eaccd/Retouch-0.1.0-mac.zip`.
+`/private/tmp/retouch-desktop-light-20260912-bce2bdf/Retouch-0.1.0-mac.zip`.
 Its SHA-256 is
-`979623c2db072fcd7ff6c82519eaea12cac1bfac62f3b948f5c90e72d064df8c`.
-It contains clean source commit `f8eaccd`, including recent colors, responsive
-paint previews and the native screen-sampling bridge. All 178 packaged source
-files and the native source hash match that checkout. Universal architecture,
-archive extraction and strict ad hoc signature checks passed. All 909 unit tests
-passed; packaged HTML and Liquid WebKit picker workflows passed with simulated
-native sampling replies. See [the package receipt](verification/2026-09-12-native-sampler.json).
+`1aa55d440a1870c23b9ef55e9565b8d30dda814b88d86c02e1b66fd8f88717f3`.
+It contains clean source commit `bce2bdf`, including the compact light paint
+picker, color models/profiles, linked color styles and responsive panel fixes.
+All 178 packaged source files and native/build/verifier hashes match that
+checkout. Universal architecture, archive extraction and strict ad hoc signature
+checks passed. All 909 unit tests passed. Packaged WebKit workflows passed HTML
+linked-style writes/reset/Undo and Liquid draft/focus preservation across compact
+transitions. See [the package receipt](verification/2026-09-12-light-picker.json).
 
 A local cask was generated and passed Ruby syntax checking. Installation was not
 rerun for this archive. Earlier isolated installation/uninstallation evidence is
