@@ -9,12 +9,12 @@
   const g=root.RetouchInspector.geometry(target,{allowRotation:true,allowScale,layoutOnly:true});if(g.width<=0||g.height<=0)throw Error('Choose a visible layer with a nonzero size.');return g;
  }
  function mount({target,frame,canvas,input,current,onEnd,onError,initialPointer=null}){
-  const doc=root.document,w=target.ownerDocument.defaultView,measure=()=>geometry(target);let g;
+  const doc=root.document,w=target.ownerDocument.defaultView,measure=()=>geometry(target,true);let g;
   try{g=measure();}catch(error){onError(error.message);return null;}
   const origin=g.transformOrigin.split(/\s+/).map(parseFloat),f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/w.innerWidth;
   if(origin.length<2||origin.some(n=>!Number.isFinite(n))||origin[2]||!Number.isFinite(scale)||scale<=0){onError('This layer’s rotation origin cannot be edited on canvas yet.');return null;}
   const pivot={x:f.left+(g.layoutLeft+origin[0])*scale,y:f.top+(g.layoutTop+origin[1])*scale};
-  const radius=Math.max(32,Math.hypot(g.width-origin[0],-origin[1])*scale+24),base=Math.atan2(-origin[1],g.width-origin[0]);
+  const vx=(g.width-origin[0])*g.scaleX,vy=-origin[1]*g.scaleY,radius=Math.max(32,Math.hypot(vx,vy)*scale+24),base=Math.atan2(vy,vx);
   const surface=doc.createElement('div');surface.className='canvas-rotate-surface';surface.tabIndex=0;surface.setAttribute('aria-label','Rotate layer on canvas');
   Object.assign(surface.style,{position:'fixed',left:Math.max(c.left,f.left)+'px',top:Math.max(c.top,f.top)+'px',right:Math.max(0,root.innerWidth-Math.min(c.right,f.right))+'px',bottom:Math.max(0,root.innerHeight-Math.min(c.bottom,f.bottom))+'px',zIndex:40,overflow:'hidden',touchAction:'none'});
   const clip={left:Math.max(c.left,f.left),top:Math.max(c.top,f.top),right:Math.min(c.right,f.right),bottom:Math.min(c.bottom,f.bottom)};
@@ -23,11 +23,11 @@
   const marker=doc.createElement('div');Object.assign(marker.style,{position:'absolute',left:pivot.x-clip.left+'px',top:pivot.y-clip.top+'px',width:'6px',height:'6px',border:'1px solid var(--accent)',borderRadius:'50%',background:'white',transform:'translate(-50%,-50%)',pointerEvents:'none'});
   const hint=doc.createElement('div');Object.assign(hint.style,{position:'fixed',bottom:'76px',left:'50%',transform:'translateX(-50%)',padding:'8px 12px',border:'1px solid var(--line)',borderRadius:'6px',background:'var(--panel)',color:'var(--ink)',fontSize:'11px',pointerEvents:'none'});
   surface.append(marker,handle,hint);doc.body.append(surface);
-  let ended=false,rotation=g.rotation,previewed=false,drag=null,raf;const preview=input.retouchNumericPreview(),cleanups=[];
+  let ended=false,rotation=g.rotation,previewed=false,drag=null,raf;const initialValue=input.value,preview=input.retouchNumericPreview(),cleanups=[];
   const listen=(el,name,fn,options)=>{el.addEventListener(name,fn,options);cleanups.push(()=>el.removeEventListener(name,fn,options));};
-  function valid(){if(!current()||!target.isConnected||!input.isConnected)return false;try{const next=measure(),now=frame.getBoundingClientRect();if(['left','top','width','height'].some(key=>Math.abs(now[key]-f[key])>.5))return false;return ['layoutLeft','layoutTop','width','height'].every(key=>Math.abs(next[key]-g[key])<.6)&&next.transformOrigin===g.transformOrigin&&Math.abs(next.rotation-(previewed?rotation:g.rotation))<.05;}catch{return false;}}
-  function end(commit=false){if(ended)return;const save=commit&&valid();ended=true;root.cancelAnimationFrame(raf);cleanups.forEach(fn=>fn());surface.remove();preview.restore();onEnd();if(save&&Math.abs(rotation-g.rotation)>.005){input.value=String(rotation);input.dispatchEvent(new root.Event('change',{bubbles:true}));}}
-  function paint(){const radians=base+rotation*Math.PI/180;handle.style.left=Math.max(16,Math.min(clip.right-clip.left-16,pivot.x+Math.cos(radians)*radius-clip.left))+'px';handle.style.top=Math.max(16,Math.min(clip.bottom-clip.top-16,pivot.y+Math.sin(radians)*radius-clip.top))+'px';hint.textContent=rotation+'° · Drag to rotate · Shift: 15° · Arrows: 1° · Enter applies · Escape cancels';}
+  function valid(){if(!current()||!target.isConnected||!input.isConnected)return false;try{const next=measure(),now=frame.getBoundingClientRect();if(['left','top','width','height'].some(key=>Math.abs(now[key]-f[key])>.5))return false;return ['layoutLeft','layoutTop','width','height'].every(key=>Math.abs(next[key]-g[key])<.6)&&next.transformOrigin===g.transformOrigin&&Math.abs(next.scaleX-g.scaleX)<1e-9&&Math.abs(next.scaleY-g.scaleY)<1e-9&&Math.abs(next.rotation-(previewed?rotation:g.rotation))<.05;}catch{return false;}}
+  function end(commit=false){if(ended)return;const save=commit&&valid();ended=true;root.cancelAnimationFrame(raf);cleanups.forEach(fn=>fn());surface.remove();preview.restore();input.value=initialValue;onEnd();if(save&&Math.abs(rotation-g.rotation)>.005){input.value=String(rotation);input.dispatchEvent(new root.Event('change',{bubbles:true}));}}
+  function paint(){input.value=String(rotation);const radians=base+rotation*Math.PI/180;handle.style.left=Math.max(16,Math.min(clip.right-clip.left-16,pivot.x+Math.cos(radians)*radius-clip.left))+'px';handle.style.top=Math.max(16,Math.min(clip.bottom-clip.top-16,pivot.y+Math.sin(radians)*radius-clip.top))+'px';hint.textContent=rotation+'° · Drag to rotate · Shift: 15° · Arrows: 1° · Enter applies · Escape cancels';}
   function update(next){if(!valid()){end();return;}rotation=next;preview.update(rotation);previewed=true;paint();}
   function begin(e){if(e.button!==0)return;e.preventDefault();drag={id:e.pointerId,last:angle(e.clientX,e.clientY,pivot),change:0,start:rotation};handle.setPointerCapture(e.pointerId);}
   listen(handle,'pointerdown',begin);
@@ -44,7 +44,7 @@
   const o=g.transformOrigin.split(/\s+/).map(parseFloat),a=g.rotation*Math.PI/180,cos=Math.cos(a),sin=Math.sin(a);
   if(o.length<2||o.some(n=>!Number.isFinite(n))||o[2]||!Number.isFinite(scale)||scale<=0)throw Error('Unsupported rotation origin.');
   return [[0,0,-1,-1],[g.width,0,1,-1],[g.width,g.height,1,1],[0,g.height,-1,1]].map(([x,y,sx,sy])=>{
-   const dx=(x-o[0])*scale+sx*10,dy=(y-o[1])*scale+sy*10;
+   const scaleX=g.scaleX??1,scaleY=g.scaleY??1,dx=(x-o[0])*scaleX*scale+sx*Math.sign(scaleX)*10,dy=(y-o[1])*scaleY*scale+sy*Math.sign(scaleY)*10;
    return {x:(g.layoutLeft+o[0])*scale+dx*cos-dy*sin,y:(g.layoutTop+o[1])*scale+dx*sin+dy*cos};
   });
  }
@@ -66,7 +66,7 @@
   return {update(target,input,resizeControl){active=null;container.hidden=true;if(!target?.isConnected||!input?.isConnected||input.closest('[inert]'))return;const canRotate=!input.matches(':disabled'),canResize=resizeControl?.retouchCanvasStart&&!resizeControl.matches(':disabled')&&!resizeControl.closest('[inert]');
    try{const g=geometry(target,true),f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/frame.contentWindow.innerWidth,points=corners(g,scale),left=Math.max(c.left,f.left),top=Math.max(c.top,f.top),right=Math.min(c.right,f.right),bottom=Math.min(c.bottom,f.bottom);if(g.width<=0||g.height<=0||right<=left||bottom<=top)return;
     Object.assign(container.style,{left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px'});
-    buttons.forEach((button,i)=>{const x=f.left+points[i].x-left,y=f.top+points[i].y-top;button.hidden=!canRotate||!['none',''].includes(target.ownerDocument.defaultView.getComputedStyle(target).scale||'')||x<8||y<8||x>right-left-8||y>bottom-top-8;button.style.left=x+'px';button.style.top=y+'px';});const positions=resizeHandles(g,scale),flowDirections=resizeControl?.retouchFlowHandles?.();resizeButtons.forEach((button,i)=>{button.title=resizeControl?.dataset.flowResize==='true'?'Drag to resize in layout · Shift: keep proportions':'Drag to resize · Shift: keep proportions · Option / Alt: from center';const p=positions[i],x=f.left+p.x-left,y=f.top+p.y-top;button.hidden=!canResize||resizeControl.dataset.flowResize==='true'&&!flowDirections?.includes(p.handle)||x<5||y<5||x>right-left-5||y>bottom-top-5;Object.assign(button.style,{left:x+'px',top:y+'px',cursor:resizeCursor(p.handle,g.rotation,g.scaleX,g.scaleY),rotate:g.rotation+'deg'});});active={target,input,resizeControl};container.hidden=false;
+    buttons.forEach((button,i)=>{const x=f.left+points[i].x-left,y=f.top+points[i].y-top;button.hidden=!canRotate||x<8||y<8||x>right-left-8||y>bottom-top-8;button.style.left=x+'px';button.style.top=y+'px';});const positions=resizeHandles(g,scale),flowDirections=resizeControl?.retouchFlowHandles?.();resizeButtons.forEach((button,i)=>{button.title=resizeControl?.dataset.flowResize==='true'?'Drag to resize in layout · Shift: keep proportions':'Drag to resize · Shift: keep proportions · Option / Alt: from center';const p=positions[i],x=f.left+p.x-left,y=f.top+p.y-top;button.hidden=!canResize||resizeControl.dataset.flowResize==='true'&&!flowDirections?.includes(p.handle)||x<5||y<5||x>right-left-5||y>bottom-top-5;Object.assign(button.style,{left:x+'px',top:y+'px',cursor:resizeCursor(p.handle,g.rotation,g.scaleX,g.scaleY),rotate:g.rotation+'deg'});});active={target,input,resizeControl};container.hidden=false;
    }catch{}
   }};
  }

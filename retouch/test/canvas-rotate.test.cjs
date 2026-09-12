@@ -14,3 +14,12 @@ test('flipped resize handles follow signed scale without scaling their hit targe
  assert.equal(R.resizeCursor('se',0,-1,1),'nesw-resize');
  assert.equal(R.resizeCursor('se',0,1,1),'nwse-resize');
 });
+
+
+test('rotation corner hit areas follow signed scale with a fixed screen-space offset',()=>{
+ for(const scaleX of [-1.5,.8])for(const scaleY of [-2,.75])for(const zoom of [.5,1,1.25])for(const rotation of [-120,0,30,90]){
+  const g={layoutLeft:220,layoutTop:160,width:180,height:80,rotation,transformOrigin:'45px 60px',scaleX,scaleY};
+  const handles=R.resizeHandles(g,zoom).filter(p=>p.handle.length===2),corners=R.corners(g,zoom);
+  corners.forEach((p,i)=>{const edge=handles[i],a=rotation*Math.PI/180,dx=p.x-edge.x,dy=p.y-edge.y,localX=dx*Math.cos(a)+dy*Math.sin(a),localY=-dx*Math.sin(a)+dy*Math.cos(a);assert.ok(Math.abs(Math.abs(localX)-10)<1e-8);assert.ok(Math.abs(Math.abs(localY)-10)<1e-8);assert.equal(Math.sign(localX),(i===0||i===3?-1:1)*Math.sign(scaleX));assert.equal(Math.sign(localY),(i<2?-1:1)*Math.sign(scaleY));});
+ }
+});
