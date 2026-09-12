@@ -38,7 +38,7 @@
   if(mode==='absolute'){
    const effective=()=>Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{});
    try{sec.insertBefore(root.RetouchSelectionLayout.singlePosition(el,next=>{if(width>el.ownerDocument.defaultView.innerWidth)throw Error('Choose a screen where this scope is active.');write(root.RetouchSelectionLayout.preserveBox(placement(next,effective()),next,el.ownerDocument.defaultView.getComputedStyle(el)));},message=>report(Error(message))),sec.children[1]);}catch(error){report(error);}
-   if(!g){const coordinates=sec.querySelector('[aria-label="X"]');I.note(sec,coordinates?'Canvas move, resize and anchor presets for rotated layers are not available yet.':reason,coordinates?'':'refused');return sec;}
+   if(!g){const coordinates=sec.querySelector('[aria-label="X"]');if(coordinates&&onMove){const move=I.button('Move on canvas',event=>onMove(I.geometry(el,{allowRotation:true}),'move',event.currentTarget));move.dataset.canvasTool='move';sec.append(move);}I.note(sec,coordinates?'Canvas resize and anchor presets for rotated layers are not available yet.':reason,coordinates?'':'refused');return sec;}
    I.note(sec,'Anchored to '+g.parentLabel);
    if(onMove){const tools=document.createElement('div');tools.className='stack-presets';for(const action of ['move','resize']){const button=I.button((action==='move'?'Move':'Resize')+' on canvas',event=>onMove(g,action,event.currentTarget));button.dataset.canvasTool=action;tools.append(button);}sec.append(tools);}
    let inherited=effective();
