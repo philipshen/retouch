@@ -61,6 +61,10 @@
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
   return R.replaceScope(classes,L.alignmentClasses(R.project(classes,scope),x,y,context,R.inherited(classes,scope,document)),scope);
  }
+ function changeClip(classes,scope,value,document=null){
+  const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
+  return R.replaceScope(classes,L.clipClasses(R.project(classes,scope),value,R.inherited(classes,scope,document)),scope);
+ }
  function changeGridTracks(classes,scope,axis,value,document=null){
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
   return R.replaceScope(classes,L.gridTemplateClasses(R.project(classes,scope),axis,value,R.inherited(classes,scope,document)),scope);
@@ -124,6 +128,12 @@
     const label=axis==='columns'?'Column sizes':'Row sizes';I.field(custom,'Shared '+label,input);const reset=I.button('Reset shared '+label.toLowerCase(),()=>write(null));reset.disabled=input.disabled||infos.every(info=>changeGridTracks(info.className,scope,axis,null)===info.className);custom.append(reset);
    }
    I.note(groups.layout,'Track counts replace the selected axis with equal fractions. Content can create additional implicit tracks. Grid flow controls placement of children without explicit positions.');
+  }
+  {
+   const state=css=>['hidden','clip'].includes(css.overflowX)&&['hidden','clip'].includes(css.overflowY)?true:css.overflowX==='visible'&&css.overflowY==='visible'?false:null,values=computed.map(state),input=root.document.createElement('input'),blocked=el=>['overflow','overflow-x','overflow-y','overflow-inline','overflow-block'].some(property=>el.style.getPropertyValue(property));
+   const write=value=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(blocked(el))throw Error('A selected layer has inline overflow. Edit that source style first.');return [info.id,changeClip(info.className,scope,value,el.ownerDocument)];})));}catch(error){I.note(groups.layout,error.message,'refused');}};
+   input.type='checkbox';input.checked=values.every(value=>value===true);input.indeterminate=!values.every(value=>value===true)&&!values.every(value=>value===false);input.disabled=elements.some(blocked);input.title=input.disabled?'Inline overflow controls clipping on a selected layer.':'Hide content outside the selected layers without adding scrollbars.';input.onchange=()=>write(input.checked);I.field(groups.layout,'Shared Clip content',input);
+   const reset=I.button('Reset shared clip content',()=>write(null));reset.disabled=input.disabled||infos.every(info=>changeClip(info.className,scope,null)===info.className);groups.layout.append(reset);
   }
   I.note(groups.layout,'Row and column follow each container’s writing direction. Wrapping and child alignment take effect in flex or grid layouts. Reset reveals inherited layout styles.');
   const lengthDrag=(input,properties)=>{
@@ -273,5 +283,5 @@
   }
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={changeClip,changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);

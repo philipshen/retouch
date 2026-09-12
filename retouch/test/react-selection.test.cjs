@@ -136,3 +136,15 @@ test('shared physical child alignment follows each writing mode and preserves sc
  assert.ok(vertical.includes('md:[justify-content:flex-start]'));assert.ok(vertical.includes('md:![align-items:flex-end]'));assert.ok(vertical.includes('md:[align-content:flex-end]'));
  assert.throws(()=>changeContainerAlignment('flex','',3,0));
 });
+
+test('shared clipping replaces both overflow axes only in the edited scope',()=>{
+ const {changeClip}=require('../shell/react-selection.js');
+ const source='overflow-x-auto overflow-y-hidden md:overflow-x-scroll hover:overflow-visible';
+ const clipped=changeClip(source,'md:',true);
+ assert.equal(clipped,'overflow-x-auto overflow-y-hidden hover:overflow-visible md:overflow-clip');
+ assert.equal(changeClip(clipped,'md:',false),'overflow-x-auto overflow-y-hidden hover:overflow-visible md:overflow-visible');
+ assert.equal(changeClip(clipped,'md:',null),'overflow-x-auto overflow-y-hidden hover:overflow-visible');
+ assert.equal(changeClip('!overflow-hidden','md:',false),'!overflow-hidden md:!overflow-visible');
+ assert.equal(changeClip('[overflow-inline:auto] ![overflow-block:hidden]','',false),'!overflow-visible');
+ assert.throws(()=>changeClip('','', 'auto'));
+});

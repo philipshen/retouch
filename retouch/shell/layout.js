@@ -40,7 +40,7 @@
   }
   function clipClasses(classes,value,inherited=''){
     if(value!==null&&typeof value!=='boolean')throw Error('Choose whether to clip content.');
-    const matches=t=>/^overflow-(?:(?:x|y)-)?(?:auto|hidden|clip|visible|scroll)$|^\[overflow(?:-[xy])?:/.test(t);
+    const matches=t=>/^overflow-(?:(?:x|y)-)?(?:auto|hidden|clip|visible|scroll)$|^\[overflow(?:-(?:[xy]|inline|block))?:/.test(t);
     let addition=value===null?'':value?'overflow-clip':'overflow-visible';
     if(addition&&inherited.split(/\s+/).some(token=>/^!|!$/.test(token)&&matches(I.base(token)||'')))addition='!'+addition;
     return I.replace(classes,matches,addition);
@@ -312,7 +312,7 @@
     clipping.indeterminate=!clipping.checked&&!(css.overflowX==='visible'&&css.overflowY==='visible');
     clipping.onchange=()=>save(clipClasses(classes,clipping.checked,inherited));I.field(sec,'Clip content',clipping);
     const resetClipping=I.button('Reset clipping',()=>save(clipClasses(classes,null)));resetClipping.disabled=clipClasses(classes,null)===classes;sec.append(resetClipping);
-    if(['overflow','overflow-x','overflow-y'].some(property=>el.style.getPropertyValue(property))){clipping.disabled=true;resetClipping.disabled=true;I.note(sec,'Inline overflow controls clipping on this layer.');}
+    if(['overflow','overflow-x','overflow-y','overflow-inline','overflow-block'].some(property=>el.style.getPropertyValue(property))){clipping.disabled=true;resetClipping.disabled=true;I.note(sec,'Inline overflow controls clipping on this layer.');}
     I.note(sec,'Pixel sizes include padding and borders, before transforms.');
     const limits=document.createElement('details');limits.className='advanced';limits.open=limitsOpen;
     limits.ontoggle=()=>{limitsOpen=limits.open;};

@@ -1631,3 +1631,10 @@ Validation: 33 shared/inspector units passed, including mixed writing modes, sco
 ### 2026-09-12 — shared alignment geometry verification before push
 
 Added browser assertions for all nine physical alignment points across row, column, row-reverse and column-reverse flow, including wrapping, reverse wrapping and overflow. The fixture checks the union of three child rectangles in horizontal-tb and vertical-rl containers (72 bounds checks per browser flow). React Chromium and Liquid WebKit passed. Fresh shared-selection/inspector units: 33 passed. Logs: /private/tmp/retouch-alignment-geometry-all-react.log, /private/tmp/retouch-alignment-geometry-all-liquid.log, /private/tmp/retouch-push-unit.log. No new native build or native UI verification. Full parity goal remains incomplete.
+
+
+### 2026-09-12 — shared Clip content
+
+Added a shared Clip content checkbox and inline reset to Layout. Checked means both overflow axes are hidden/clip on every selected layer; differing, partial or scrolling states are indeterminate. Edits reuse clipClasses with per-layer responsive inheritance and one batch save. Inline physical/logical overflow disables the control and is checked again before writing. The common clipping helper now replaces arbitrary logical overflow declarations too, preserving important priority.
+
+Validation: 34 shared-selection/inspector and 37 layout tests passed. React Chromium and Liquid WebKit verified mixed state, clip/visible changes, Space activation, reset, untouched third layer, phone breakpoint isolation, and exact grouped source Undo. Light inspector screenshot /private/tmp/retouch-shared-clip.png inspected. Logs /private/tmp/retouch-shared-clip-react.log, /private/tmp/retouch-shared-clip-liquid.log, /private/tmp/retouch-shared-clip-units.log, /private/tmp/retouch-shared-clip-layout-units.log. No native build or launch. This increment is local; full Figma parity remains incomplete.
