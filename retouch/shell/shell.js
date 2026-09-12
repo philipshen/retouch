@@ -2247,6 +2247,15 @@ async function writeReactBounds(info,classes,expected){
   }catch(error){toast(error.message,'err');return false;}finally{busyPanel(false);}
 }
 
+function rotateLayerOnCanvas(target,input){
+  stopDrawing?.();
+  const key=JSON.stringify([sel?.info.id,sel?.info.hash,styleScope]);
+  const current=()=>mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&!sel?.multiple?.length&&!document.querySelector('dialog[open]')&&input.isConnected&&!input.matches(':disabled')&&!input.closest('[inert]')&&document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false'&&key===JSON.stringify([sel?.info.id,sel?.info.hash,styleScope]);
+  if(!current())return;
+  canvasPan.cancel();
+  stopDrawing=RetouchCanvasRotate.mount({target,frame:iframe,canvas:canvasSurface,input,current,onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
+}
+
 function transformReactLayer(info,target,action,opener){
   stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!target?.isConnected||info.classNameDynamic)return;
   let g;try{if(info.classSelection)classGeometryStrategy(info,target).validate();const reason=reactGeometryReason(info,target);if(reason)throw Error(reason);if(target.ownerDocument.defaultView.getComputedStyle(target).position!=='absolute')throw Error('Choose a screen where this layer is absolute before transforming it.');g=RetouchInspector.geometry(target,{allowRotation:action==='move'});}catch(error){toast(error.message,'err');return;}

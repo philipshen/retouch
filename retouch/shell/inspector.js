@@ -213,6 +213,7 @@
       const preview=root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true});
       return {current:()=>el.isConnected,update:value=>{preview.update(format(value));render?.(value);},restore:()=>{preview.restore();render?.(null);}};
     };
+    if(property==='rotate'){const control=button('Rotate on canvas',()=>root.rotateLayerOnCanvas?.(el,input));control.dataset.canvasTool='rotate';input.parentElement.after(control);}
     return input;
   }
   function numericLabelDrag(input,read=raw=>({value:Number(raw)})){
