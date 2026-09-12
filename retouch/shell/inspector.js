@@ -790,7 +790,7 @@
       const resetLineHeight=button('Reset line height',()=>save(replaceTypography(info.className,lineHeightToken,'')));try{resetLineHeight.disabled=replaceTypography(info.className,lineHeightToken,'')===info.className;}catch{resetLineHeight.disabled=true;}sec.append(resetLineHeight);
       numericPreview(relativeNumber(sec,'Letter spacing (%)',(parseFloat(css.letterSpacing)||0)/parseFloat(css.fontSize)*100,-100,1000,v=>change(letterSpacingToken,`tracking-[${Math.round(v*1e6)/1e8}em]`)),el,'letter-spacing',value=>Math.round(value*1e6)/1e8+'em').title='Relative to this layer’s font size.';
       numericPreview(number(sec,'Letter spacing (px)',parseFloat(css.letterSpacing)||0,-100,100,v=>change(letterSpacingToken,`tracking-[${v}px]`)),el,'letter-spacing');
-      select(sec,'Text alignment',['left','center','right','justify','start','end'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.textAlign,v=>change(textAlignToken,'text-'+v));
+      select(sec,'Text alignment',['left','center','right','justify','start','end'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.textAlign,v=>change(textAlignToken,'text-'+v)).dataset.textDirection=css.direction;
       select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(fontStyleToken,v==='italic'?'italic':'not-italic'));
       select(sec,'Text decoration',[['none','None'],['underline','Underline'],['line-through','Strikethrough'],['overline','Overline']],css.textDecorationLine,v=>change(decorationToken,v==='none'?'no-underline':v));
       select(sec,'Text case',[['none','As written'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']],css.textTransform,v=>change(caseToken,v==='none'?'normal-case':v));

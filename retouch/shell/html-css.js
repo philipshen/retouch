@@ -190,6 +190,7 @@
    if(options[property])for(const item of new Set([value,...options[property]])){const option=document.createElement('option');option.value=item;option.textContent=item;input.append(option);}
    else input.type='text';
    if(property==='font-family'){input.placeholder='Inter, sans-serif';input.title='Use a font loaded by this page or installed on your computer.';}
+   if(property==='text-align')input.dataset.textDirection=css.direction;
    if(property==='font-weight'){input.placeholder='400';input.inputMode='decimal';}
    input.value=value;input.oninput=()=>input.setCustomValidity('');
    input.onchange=()=>{const value=input.value.trim();if(!CSS.supports(property,value)||!valid(property,value)){input.setCustomValidity('Use simple CSS lengths with units, keywords, or colors. Spacing accepts up to four values; gap accepts two.');input.reportValidity();return;}save(property,value,width);};
