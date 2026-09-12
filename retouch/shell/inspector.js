@@ -435,7 +435,7 @@
         input.value=computed;input.dataset.paintProperty=property;input.retouchPaintPreview=()=>root.RetouchPaintPicker.propertyPreview({el,input,property});
         field(sec,label+' with alpha',input);note(sec,computed,'computed-value');
         sec.append(button('Clear local '+label.toLowerCase(),()=>colorAction(property,null).catch(error=>{input.setCustomValidity(error.message);input.reportValidity();})));
-        input.onchange=()=>{const value=input.value.trim();if(!root.RetouchHTMLCSSValues.valid('color',value,false)||!el.ownerDocument.defaultView.CSS.supports('color',value)){input.setCustomValidity('Enter a supported literal CSS color.');input.reportValidity();return;}input.setCustomValidity('');colorAction(property,value).catch(error=>{input.setCustomValidity(error.message);input.reportValidity();});};input.oninput=()=>input.setCustomValidity('');
+        input.onchange=()=>{const value=input.value.trim();if(!root.RetouchHTMLCSSValues.valid('color',value,false)||!el.ownerDocument.defaultView.CSS.supports('color',value)){input.setCustomValidity('Enter a supported literal CSS color.');input.reportValidity();return;}input.setCustomValidity('');colorAction(property,value).catch(error=>{input.setCustomValidity(error.message);input.reportValidity();});};input.oninput=()=>input.setCustomValidity('');fieldDraft(input);
       }
     }
     if(colorAction)note(sec,'Clear removes paint from this screen scope to reveal inherited styles. Saved color links stay attached; reset them from the palette.');

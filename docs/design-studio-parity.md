@@ -11679,3 +11679,9 @@ New `paint-stack-refresh.cjs` replaces the inspector synchronously inside the so
 Background/text preset palettes now expose named toolbars and swatches with one roving swatch Tab stop. Left/right traverse swatches, up/down move between palette rows, and Home/End reach the first/last swatch. Navigation skips disabled buttons, stops canvas shortcuts and does not write source. Hex entry retains its normal Tab stop and Enter activation remains native on swatches.
 
 Validation: React Chromium/WebKit and local Liquid Chromium solid workflows passed with one swatch Tab stop, horizontal/vertical navigation, end/wrap behavior, Tab into hex input, no source writes during navigation, Enter preset application and exact undo. Logs `/private/tmp/retouch-preset-keyboard-{react,webkit,liquid}.log`. Syntax/diff checks passed. No desktop rebuild/native launch was performed; full parity remains incomplete.
+
+### 2026-09-12 — Direct paint field commit and cancel
+
+Solid paint fields now use the existing draft keyboard behavior: Enter applies through validation, Escape restores the original field value, and unchanged values do not write. HTML fill/stroke/text fields and class-based color override fields share this behavior with gradient stop editing. Picker application retains the same source handler.
+
+Validation: solid workflows passed HTML Chromium, React Chromium/WebKit and local Liquid Chromium. Each property checks Escape cancellation, invalid Enter rejection, composing Enter no-op, precise-alpha direct Enter application and exact undo, followed by the existing visual picker, reset and preset workflow. Logs `/private/tmp/retouch-paint-keys-{html,react,webkit,liquid}.log`. Syntax/diff checks passed. No desktop rebuild/native launch was performed; full parity remains incomplete.
