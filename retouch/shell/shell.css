@@ -710,3 +710,10 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .paint-channels input { flex:none;width:100%;text-align:center; }
 
 .inspector-field > .paint-field-control { position:relative;display:flex;flex:1;min-width:0; }
+
+/* Keep a drag target in compact gradient stop position fields. */
+.gradient-stop-row > .gradient-stop-position { position:relative; }
+.gradient-stop-row > .gradient-stop-position > [data-numeric-scrub] { display:block;position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:10px; }
+.gradient-stop-row > .gradient-stop-position input { padding-right:20px; }
+
+.gradient-stop-row > .gradient-stop-position input::-webkit-inner-spin-button { display:none; }
