@@ -554,7 +554,7 @@
         const group=document.createElement('fieldset'),legend=document.createElement('legend');group.className='shadow-controls';legend.textContent='Shadow '+(index+1);group.append(legend);
         const update=(key,value)=>write(shadows.map((item,i)=>i===index?{...item,[key]:value}:item));
         select(group,'Shadow '+(index+1)+' type',[['drop','Drop shadow'],['inner','Inner shadow']],shadow.inset?'inner':'drop',value=>update('inset',value==='inner'));
-        for(const [key,label]of [['x','X'],['y','Y'],['blur','Blur'],['spread','Spread']])number(group,'Shadow '+(index+1)+' '+label+' (px)',shadow[key],key==='blur'?0:-10000,10000,value=>update(key,value));
+        for(const [key,label]of [['x','X'],['y','Y'],['blur','Blur'],['spread','Spread']])numericPreview(number(group,'Shadow '+(index+1)+' '+label+' (px)',shadow[key],key==='blur'?0:-10000,10000,value=>update(key,value)),el,'box-shadow',value=>V.serializeShadows(shadows.map((item,i)=>i===index?{...item,[key]:value}:item)));
         const color=document.createElement('input');color.value=shadow.color;color.retouchPaintPreview=()=>root.RetouchPaintPicker.shadowPreview({el,group,shadows,index});field(group,'Shadow '+(index+1)+' color',color);color.oninput=()=>color.setCustomValidity('');color.onchange=()=>{const value=color.value.trim();if(!V.valid('color',value)||!el.ownerDocument.defaultView.CSS.supports('color',value)){color.setCustomValidity('Enter a supported CSS color.');color.reportValidity();return;}update('color',value);};
         group.append(button('Remove shadow '+(index+1),()=>write(shadows.filter((_,i)=>i!==index))));
         if(index>0)group.append(button('Move shadow '+(index+1)+' up',()=>{const next=[...shadows];[next[index-1],next[index]]=[next[index],next[index-1]];write(next);}));
@@ -578,6 +578,7 @@
         const next=root.RetouchHTMLCSSValues.withBlur(value,amount);if(next===null)return notify('This filter stack cannot be edited with a single blur control.');
         try{save(filterClasses(info.className,property,next));}catch(error){notify(error.message);}
       });
+      numericPreview(input,el,property,amount=>root.RetouchHTMLCSSValues.withBlur(value,amount));
       if(!parsed||blurs.length>1||el.style.getPropertyPriority(property)==='important'){input.disabled=true;note(sec,'This '+(property==='filter'?'layer':'backdrop')+' filter cannot be adjusted with a single blur value.');}
       note(sec,value,'computed-value');
       root.RetouchFilterStack.mount(sec,property,value,next=>save(filterClasses(info.className,property,next)),{disabled:el.style.getPropertyPriority(property)==='important',reset:true});
