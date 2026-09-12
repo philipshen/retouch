@@ -10,6 +10,13 @@
   if(rows.some(row=>!row)||rows[0].parentElement!==section||rows[1].parentElement!==section)return;
   const group=document.createElement('div');group.className='property-pair';section.insertBefore(group,rows[0]);rows.forEach(row=>group.append(row));
  }
+ function keyboardToolbar(group,label){
+  group.setAttribute('role','toolbar');group.setAttribute('aria-label',label);
+  const buttons=[...group.querySelectorAll(':scope > button')],enabled=()=>buttons.filter(button=>!button.disabled);
+  for(const button of buttons){button.tabIndex=-1;button.addEventListener('focus',()=>buttons.forEach(item=>item.tabIndex=item===button?0:-1));const activate=button.onclick;button.onclick=event=>{root.RetouchPanelFocus?.queue(button);return activate?.call(button,event);};}
+  const selected=enabled().find(button=>button.getAttribute('aria-pressed')==='true')||enabled()[0];if(selected)selected.tabIndex=0;
+  group.addEventListener('keydown',event=>{if(event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;const items=enabled(),index=items.indexOf(document.activeElement);if(index<0)return;event.preventDefault();event.stopPropagation();items[event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowRight'?1:-1)+items.length)%items.length].focus();});
+ }
  function typographyPrimary(section){
   const find=labels=>labels.map(label=>section.querySelector('[aria-label="'+label+'"]')).find(Boolean),row=control=>control?.closest('.property-row')||control?.closest('.inspector-field');
   const font=row(find(['Page font'])),weight=find(['Font weight (1–1000)','Font weight (CSS)']),spacing=find(['Line height (px)','Line height (CSS)']),align=row(find(['Text alignment','Text alignment (CSS)']));
@@ -145,10 +152,9 @@
     const content=section.querySelector(':scope > textarea');if(content){const details=disclosure('Text content','text-content'),action=section.querySelector('#textApply'),breakLine=content.nextElementSibling;details.append(content);if(breakLine?.tagName==='BR')breakLine.remove();if(action)details.append(action);section.insertBefore(details,section.children[1]);}
     if(options.children.length>1)section.append(options);
     const align=section.querySelector('[aria-label="Text alignment"], [aria-label="Text alignment (CSS)"]');
-    if(align){const row=align.closest('.inspector-field');row.classList.add('text-align-modes');const group=document.createElement('div');group.className='layout-mode-segments';group.setAttribute('role','toolbar');group.setAttribute('aria-label','Text alignment buttons');const logical={start:align.dataset.textDirection==='rtl'?'right':'left',end:align.dataset.textDirection==='rtl'?'left':'right'},active=logical[align.value]||align.value;
-     for(const value of ['left','center','right','justify']){const button=document.createElement('button');button.type='button';button.setAttribute('aria-label','Align text '+value);button.title='Align text '+value;button.setAttribute('aria-pressed',String(active===value));const short=value==='left'?'M3 7h9 M3 15h9':value==='right'?'M8 7h9 M8 15h9':value==='center'?'M6 7h8 M6 15h8':'M3 7h14 M3 15h14';button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h14 M3 11h14 '+short+'"/></svg>';button.onclick=()=>{root.RetouchPanelFocus?.queue(button);align.value=value;align.dispatchEvent(new Event('change',{bubbles:true}));};group.append(button);}row.insertBefore(group,align);
-     const buttons=[...group.children];for(const button of buttons){button.tabIndex=button.getAttribute('aria-pressed')==='true'?0:-1;button.addEventListener('focus',()=>buttons.forEach(item=>item.tabIndex=item===button?0:-1));}if(!buttons.some(button=>button.tabIndex===0))buttons[0].tabIndex=0;
-     group.addEventListener('keydown',event=>{if(event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;const index=buttons.indexOf(document.activeElement);if(index<0)return;event.preventDefault();event.stopPropagation();buttons[event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length].focus();});
+    if(align){const row=align.closest('.inspector-field');row.classList.add('text-align-modes');const group=document.createElement('div');group.className='layout-mode-segments';const logical={start:align.dataset.textDirection==='rtl'?'right':'left',end:align.dataset.textDirection==='rtl'?'left':'right'},active=logical[align.value]||align.value;
+     for(const value of ['left','center','right','justify']){const button=document.createElement('button');button.type='button';button.setAttribute('aria-label','Align text '+value);button.title='Align text '+value;button.setAttribute('aria-pressed',String(active===value));const short=value==='left'?'M3 7h9 M3 15h9':value==='right'?'M8 7h9 M8 15h9':value==='center'?'M6 7h8 M6 15h8':'M3 7h14 M3 15h14';button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 3h14 M3 11h14 '+short+'"/></svg>';button.onclick=()=>{align.value=value;align.dispatchEvent(new Event('change',{bubbles:true}));};group.append(button);}row.insertBefore(group,align);
+     keyboardToolbar(group,'Text alignment buttons');
     }
    }
    if(name==='Effects'&&!css){
@@ -178,6 +184,7 @@
    }
    for(const checkbox of section.querySelectorAll('input[type="checkbox"]'))checkbox.closest('.inspector-field')?.classList.add('checkbox-field');
    if(name==='Layout'){
+    const stacks=section.querySelector(':scope > .stack-presets');if(stacks)keyboardToolbar(stacks,'Layout preset buttons');
     {
      const paddingPairs=[...section.querySelectorAll(':scope > .property-pair')].filter(group=>group.querySelector('[aria-label="Padding top (CSS)"], [aria-label="Padding left (CSS)"], [aria-label="Padding top"], [aria-label="Padding left"]'));
      if(paddingPairs.length){const sides=disclosure('Individual padding',css?'html-padding':'react-padding');section.insertBefore(sides,paddingPairs[0]);paddingPairs.forEach(group=>sides.append(group));}
@@ -201,7 +208,7 @@
     if(select){const row=select.closest('.inspector-field');row.classList.add('layout-modes');row.querySelector('span').textContent='';
      const icons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',row:'M3 5v10 M8 5v10 M13 5v10 M16 10h4 M18 8l2 2-2 2',column:'M5 3h10 M5 8h10 M5 13h10 M10 16v4 M8 18l2 2 2-2',grid:'M3 3h14v14H3z M10 3v14 M3 10h14'};
      const group=document.createElement('div');group.className='layout-mode-segments';
-     for(const [value,label,icon] of [['flow','Normal flow','flow'],[select.dataset.inlineAxis==='vertical'?'row':'column','Vertical layout','column'],[select.dataset.inlineAxis==='vertical'?'column':'row','Horizontal layout','row'],['grid','Grid layout','grid']]){const button=document.createElement('button');button.type='button';button.title=label;button.setAttribute('aria-label',label);button.setAttribute('aria-pressed',String(select.value.replace('-reverse','')===value));button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+icons[icon]+'"/></svg>';button.onclick=()=>{select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));};group.append(button);}row.insertBefore(group,select);
+     for(const [value,label,icon] of [['flow','Normal flow','flow'],[select.dataset.inlineAxis==='vertical'?'row':'column','Vertical layout','column'],[select.dataset.inlineAxis==='vertical'?'column':'row','Horizontal layout','row'],['grid','Grid layout','grid']]){const button=document.createElement('button');button.type='button';button.title=label;button.setAttribute('aria-label',label);button.setAttribute('aria-pressed',String(select.value.replace('-reverse','')===value));button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+icons[icon]+'"/></svg>';button.onclick=()=>{select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));};group.append(button);}row.insertBefore(group,select);keyboardToolbar(group,'Layout mode buttons');
      const dimension=section.querySelector('[aria-label="Width (px)"]')?.closest('.property-pair'),behavior=section.querySelector('[aria-label="Width behavior"]')?.closest('.property-pair');
      if(dimension)row.after(dimension);
      if(behavior&&dimension){
