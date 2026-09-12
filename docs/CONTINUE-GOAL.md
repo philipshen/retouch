@@ -1393,3 +1393,14 @@ Continued editor work: empty mixed-color pickers now hide unusable model/channel
 Extended multi-picker workflow passed HTML Chromium and Liquid WebKit, including disabled/enabled controls, swatch keyboard choice, invalid input, per-layer cancellation and existing literal/style save/Undo paths. Existing color-model conversion and browser sampler workflows passed HTML Chromium (sampling replies simulated). Syntax/diff checks passed. Inspected /private/tmp/retouch-mixed-controls.png before the placeholder-only addition. Logs /private/tmp/retouch-mixed-controls-{html,liquid,models,sampler}.log. No full unit repeat for this dialog state change.
 
 Full Figma/native parity remains active. No desktop rebuild, install, launch, push or live Shopify changes. Latest packaged source remains bce2bdf; native trusted distribution and broader feature/visual/site coverage remain incomplete.
+
+
+### 2026-09-12 — Detach saved paint styles from the picker
+
+Linked paints now expose Detach style in the picker. It commits the existing single/selection detach operation immediately, preserving saved appearance, removing explicit links in the selected range and remaining undoable. It is hidden for inherited-only links and disabled while a different color draft or style choice is pending. This prevents detachment from silently discarding that draft. The tooltip explains that the saved paint is kept.
+
+Extracted the existing style-write lifecycle into a shared helper for Apply and Detach: restore owned previews before writing, disable controls during the request, retain the dialog with retry feedback on error, then close and refresh/focus the source field after success. Detach does not add a recent color.
+
+New test:e2e:picker-detach passed single-layer HTML Chromium and Liquid WebKit with injected conflict, unchanged source on failure, retry, draft-disable behavior, preserved paint and exact Undo. RT_E2E_PICKER_MULTI=1 variants passed React Chromium and Liquid WebKit with two removed links, preserved per-layer appearance and exact Undo. Existing full picker-style regression passed HTML Chromium, including revision conflict/reload/retry and other property targets. All 911 unit tests and syntax/diff checks passed. Inspected /private/tmp/retouch-picker-detach.png. Logs /private/tmp/retouch-picker-detach-{html-final,single-liquid,multi-liquid,multi-react,style-regression,units}.log.
+
+No native launch/rebuild, push or Shopify changes. Full Figma/native parity remains incomplete; latest packaged source is still bce2bdf. Further mixed/overridden detachment and broader interaction coverage remain useful; gradient/shadow style links and trusted native delivery remain unfinished.
