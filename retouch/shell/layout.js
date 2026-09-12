@@ -308,7 +308,7 @@
       const sizing=own===dim+'-fit'?'hug':own===dim+'-full'||['-webkit-fill-available','-moz-available','stretch'].some(value=>own===dim+'-['+value+']')||stretchFill||/\bflex-1\b/.test(classes)&&parent&&/flex/.test(parent.display)&&axis===axes.main?'fill':own&&own!==dim+'-auto'?'fixed':'';
       const size=(mode,value)=>save(sizeClasses(classes,axis,mode,mode==='fixed'?geometry.dimensionValue(css,axis,value):value,context));
       I.select(sec,title+' behavior',[['','Inherited / auto'],['fixed','Fixed'],['hug','Hug content'],['fill','Fill available']],sizing,v=>size(v||'reset',Math.round(dims[axis]*100)/100));
-      numeric(title+' (px)',dims[axis],0,100000,v=>size('fixed',v));
+      numeric(title+' (px)',dims[axis],0,100000,v=>size('fixed',v)).retouchDimension={target:el,axis,box:'border'};
     }
     const clipping=document.createElement('input');clipping.type='checkbox';
     clipping.checked=['hidden','clip'].includes(css.overflowX)&&['hidden','clip'].includes(css.overflowY);
