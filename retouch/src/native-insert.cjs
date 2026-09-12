@@ -36,7 +36,7 @@ function plan(resolved,op,language){
   const capability=describe(resolved,language);if(!capability.canInsert)return refuse(capability.insertReason);
   if(!['text','frame'].includes(op.preset))return refuse('Choose a text layer or frame.');
   const react=language==='react',adapter=require(react?'./id.cjs':'./adapters/liquid.cjs'),collect=react?adapter.collectElements:adapter.collect;
-  const content=op.preset==='text'?'<p>New text</p>':react?'<div aria-label="Frame" className="min-h-[100px] p-4 border border-dashed border-[#999]"></div>':'<div aria-label="Frame" class="min-h-[100px] p-4 border border-dashed border-[#999]"></div>';
+  const content=op.preset==='text'?'<p>New text</p>':react?'<div aria-label="Frame" className="box-border h-[100px] p-4 border border-dashed border-[#999]"></div>':'<div aria-label="Frame" class="box-border h-[100px] p-4 border border-dashed border-[#999]"></div>';
   const node=resolved.element.node,selfClosing=react&&node.openingElement.selfClosing;
   const offset=react?(selfClosing?node.openingElement.end-2:node.closingElement.start):node.closeStart;
   const prefix=selfClosing?'>':'',suffix=selfClosing?'</'+node.openingElement.name.name+'>':'';

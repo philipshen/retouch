@@ -1,7 +1,7 @@
 'use strict';
 const MagicString=require('magic-string');
 const containers=new Set(['body','div','main','section','article','aside','header','footer','nav','form','li','td','th','blockquote']);
-const presets={text:'<p>New text</p>',frame:'<div aria-label="Frame" style="min-height:100px;padding:16px;border:1px dashed #999"></div>'};
+const presets={text:'<p>New text</p>',frame:'<div aria-label="Frame" style="box-sizing:border-box;height:100px;padding:16px;border:1px dashed #999"></div>'};
 function describe(resolved){
  const element=resolved.element;
  if(!containers.has(element.tag)||!element.location.endTag)return {canInsert:false,insertReason:'Select an explicitly closed content container to add a layer.'};
