@@ -32,8 +32,9 @@ Future isolated cask checks must use `HOMEBREW_NO_AUTOREMOVE=1` and
 `HOMEBREW_NO_INSTALL_CLEANUP=1`: the earlier uninstall unexpectedly removed Git,
 which was restored and verified.
 
-Actual screen sampling, native editing and upgrades remain
-unverified for this build. Developer ID signing, notarization and trusted public
+A native static-HTML flow passed folder selection, automatic project startup,
+font-size editing, exact source Undo and Stop. Actual screen sampling and
+upgrades remain unverified; other native editing flows are not yet covered. Developer ID signing, notarization and trusted public
 distribution remain unfinished; no public release is published.
 
 Build with Apple's command line developer tools installed:

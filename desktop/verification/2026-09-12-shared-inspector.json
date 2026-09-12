@@ -6,7 +6,7 @@
     "arm64",
     "x86_64"
   ],
-  "signature": "strict ad hoc verification passed before and after packaged workflows and native launch",
+  "signature": "strict ad hoc verification passed after native project edit, Undo and Stop",
   "archive": "/private/tmp/retouch-desktop-shared-e948266/Retouch-0.1.0-mac.zip",
   "sha256": "a0d685fad8b5bbe2c629d5938be38ae0fbb7b746ded557dc187f56406e0ce480",
   "sourceNativeBuildVerifierHashesMatch": true,
@@ -42,8 +42,22 @@
     "evidence": "Accessibility tree showed Retouch welcome window, Open project, editor URL and Open editor controls. No approval dialog appeared. Process 91169 confirmed exact extracted executable path.",
     "leftRunning": true
   },
-  "nativeEditing": "unverified",
-  "nativeSampling": "unverified",
+  "nativeEditing": {
+    "result": "passed for isolated static HTML font-size workflow",
+    "fixture": "/private/var/folders/4t/xyt8km1s59l4th8pdwkwg2_m0000gn/T/retouch-native-edit-gp14xvbb",
+    "steps": [
+      "CUA Open project folder picker and automatically selected Edit HTML files mode",
+      "Start project launched packaged CLI and automatically connected WKWebView at localhost:54543/rt",
+      "Selected h1 through Layers; typed 48px into Font size (CSS); inspector showed 48px and source contained font-size:48px",
+      "Clicked Undo; inspector returned to 32px and source matched original.txt byte for byte",
+      "Stop button disabled and status reported stopped; TCP listener 54543 independently confirmed closed"
+    ],
+    "scopeLimit": "Does not verify all native editor features or other adapters"
+  },
+  "nativeSampling": {
+    "result": "unverified",
+    "evidence": "Pick color from screen became disabled while sampling. CUA coordinate click failed -10005 noWindowsAvailable. Escape returned to editor; source remained exact original. No successful color sample was observed."
+  },
   "notarization": "not performed",
   "published": false
 }
