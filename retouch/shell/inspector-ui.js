@@ -10,12 +10,19 @@
   if(rows.some(row=>!row)||rows[0].parentElement!==section||rows[1].parentElement!==section)return;
   const group=document.createElement('div');group.className='property-pair';section.insertBefore(group,rows[0]);rows.forEach(row=>group.append(row));
  }
- function keyboardToolbar(group,label){
-  group.setAttribute('role','toolbar');group.setAttribute('aria-label',label);
+ function keyboardToolbar(group,label,{columns=1,role='toolbar'}={}){
+  group.setAttribute('role',role);group.setAttribute('aria-label',label);
   const buttons=[...group.querySelectorAll(':scope > button')],enabled=()=>buttons.filter(button=>!button.disabled);
   for(const button of buttons){button.tabIndex=-1;button.addEventListener('focus',()=>buttons.forEach(item=>item.tabIndex=item===button?0:-1));const activate=button.onclick;button.onclick=event=>{root.RetouchPanelFocus?.queue(button);return activate?.call(button,event);};}
   const selected=enabled().find(button=>button.getAttribute('aria-pressed')==='true')||enabled()[0];if(selected)selected.tabIndex=0;
-  group.addEventListener('keydown',event=>{if(event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;const items=enabled(),index=items.indexOf(document.activeElement);if(index<0)return;event.preventDefault();event.stopPropagation();items[event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowRight'?1:-1)+items.length)%items.length].focus();});
+  group.addEventListener('keydown',event=>{
+   const keys=columns>1?['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End']:['ArrowLeft','ArrowRight','Home','End'];if(event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||!keys.includes(event.key))return;
+   const items=enabled(),index=items.indexOf(document.activeElement);if(index<0)return;event.preventDefault();event.stopPropagation();
+   if(event.key==='Home'||event.key==='End'){items[event.key==='Home'?0:items.length-1].focus();return;}
+   if(columns===1){items[(index+(event.key==='ArrowRight'?1:-1)+items.length)%items.length].focus();return;}
+   const start=buttons.indexOf(document.activeElement),step={ArrowLeft:-1,ArrowRight:1,ArrowUp:-columns,ArrowDown:columns}[event.key];
+   for(let next=start+step;next>=0&&next<buttons.length;next+=step){if(Math.abs(step)===1&&Math.floor(next/columns)!==Math.floor(start/columns))break;if(!buttons[next].disabled){buttons[next].focus();break;}}
+  });
  }
  function typographyPrimary(section){
   const find=labels=>labels.map(label=>section.querySelector('[aria-label="'+label+'"]')).find(Boolean),row=control=>control?.closest('.property-row')||control?.closest('.inspector-field');
@@ -184,6 +191,7 @@
    }
    for(const checkbox of section.querySelectorAll('input[type="checkbox"]'))checkbox.closest('.inspector-field')?.classList.add('checkbox-field');
    if(name==='Layout'){
+    const alignment=section.querySelector('.layout-alignment');if(alignment)keyboardToolbar(alignment,'Align children',{columns:3,role:'group'});
     const stacks=section.querySelector(':scope > .stack-presets');if(stacks)keyboardToolbar(stacks,'Layout preset buttons');
     {
      const paddingPairs=[...section.querySelectorAll(':scope > .property-pair')].filter(group=>group.querySelector('[aria-label="Padding top (CSS)"], [aria-label="Padding left (CSS)"], [aria-label="Padding top"], [aria-label="Padding left"]'));
