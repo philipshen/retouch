@@ -22,7 +22,29 @@
   const horizontal=signs.x<0?'w':'e',height=signs.y<0?'n':'s',center=centeredAxes(parent,child),xs=center.x?['e','w']:[horizontal],ys=center.y?['s','n']:[height];return [...xs,...ys,...ys.flatMap(y=>xs.map(x=>y+x))];
  }
  function centersFor(el){const parent=root.RetouchInspector.layoutParent(el),w=el.ownerDocument.defaultView;return centeredAxes(parent?w.getComputedStyle(parent):{},w.getComputedStyle(el));}
- function handlesFor(el){const parent=root.RetouchInspector.layoutParent(el),w=el.ownerDocument.defaultView;return flowHandles(parent?w.getComputedStyle(parent):{},w.getComputedStyle(el));}
+ function movingHandles(handles,rotation,scale,originRates){
+  const xs=handles.filter(h=>h==='e'||h==='w'),ys=handles.filter(h=>h==='s'||h==='n'),a=rotation*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+  const choose=(edges,index)=>{const end=index===0?'e':'s',other=index===0?'w':'n',anchor=edges.length===2?-.5:edges[0]===end?0:-1;
+   const response=edge=>Math.max(...originRates[index].map(origin=>{const transformed=((edge===end?1:0)-origin)*scale[index];return index===0?Math.hypot(anchor+origin+c*transformed,s*transformed):Math.hypot(-s*transformed,anchor+origin+c*transformed);}));
+   return [...new Set(edges.map(edge=>response(edge)<1e-3&&response(edge===end?other:end)>=1e-3?(edge===end?other:end):edge))];
+  };
+  const x=choose(xs,0),y=choose(ys,1);return [...x,...y,...y.flatMap(v=>x.map(h=>v+h))];
+ }
+ // Typed OM preserves percentages that resolved getComputedStyle pixels lose.
+ // Check both sides of piecewise origins without mutating the page element.
+ function originRates(value,dimensions,Numeric){
+  const tokens=[];let depth=0,start=0;for(let i=0;i<=value.length;i++){const char=value[i];if(char==='(')depth++;if(char===')')depth--;if(i===value.length||/\s/.test(char)&&depth===0){if(i>start)tokens.push(value.slice(start,i));start=i+1;}}
+  if(tokens.length<2)throw Error('Unresolved transform origin.');
+  const evaluate=(node,size)=>{if(node.unit)return node.unit==='percent'?node.value*size/100:node.unit==='number'?node.value:node.to('px').value;
+   const values=node.values&&[...node.values].map(v=>evaluate(v,size));switch(node.operator){case 'sum':return values.reduce((a,b)=>a+b,0);case 'product':return values.reduce((a,b)=>a*b,1);case 'negate':return -evaluate(node.value,size);case 'invert':return 1/evaluate(node.value,size);case 'min':return Math.min(...values);case 'max':return Math.max(...values);case 'clamp':return Math.max(evaluate(node.lower,size),Math.min(evaluate(node.upper,size),evaluate(node.value,size)));default:throw Error('Unsupported origin expression.');}
+  };
+  return tokens.slice(0,2).map((token,i)=>{const node=Numeric.parse(token),size=dimensions[i],base=evaluate(node,size),rates=[base-evaluate(node,size-1),evaluate(node,size+1)-base];if(!rates.every(Number.isFinite))throw Error('Unresolved origin rate.');return rates;});
+ }
+ function handlesFor(el){
+  const parent=root.RetouchInspector.layoutParent(el),w=el.ownerDocument.defaultView,css=w.getComputedStyle(el),handles=flowHandles(parent?w.getComputedStyle(parent):{},css),scale=root.RetouchFlip.parse(css.scale||'none'),rotation=root.RetouchReactSelection.rotationDegrees(css.rotate);
+  if(!scale||scale.length!==2||!Number.isFinite(rotation)||rotation===0&&scale.every(n=>n===1))return handles;
+  try{const raw=el.computedStyleMap().get('transform-origin').toString(),dimensions=['width','height'].map(axis=>root.RetouchReactSelection.dimensionSize(css,axis));return movingHandles(handles,rotation,scale,originRates(raw,dimensions,w.CSSNumericValue));}catch{return handles;}
+ }
  function ratioCorrection(base,requested,actual){
   const axes=['width','height'];if(axes.some(axis=>![base[axis],requested[axis],actual[axis]].every(value=>Number.isFinite(value)&&value>0)))throw Error('Use positive layer dimensions for proportional resizing.');
   const tolerance=.04,unit=Math.min(base.width,base.height);
@@ -83,7 +105,7 @@
   function update(e){
    if(!state||!valid()){finish();return;}
    try{
-    const base=state.base||g,delta=state.keyboard?{x:state.dx,y:state.dy}:root.RetouchCanvasMove.rotateVector(state.dx/scale,state.dy/scale,-g.rotation),r=root.RetouchCanvasMove.resize(base.width,base.height,state.handle,delta.x*(!state.keyboard&&center.x?2:1),delta.y*(!state.keyboard&&center.y?2:1),{shiftKey:e.shiftKey});let requested={...state.previous};
+    const base=state.base||g,delta=state.keyboard?{x:state.dx,y:state.dy}:root.RetouchCanvasMove.rotateVector(state.dx/scale,state.dy/scale,-g.rotation),r=root.RetouchCanvasMove.resize(base.width,base.height,state.handle,delta.x*(!state.keyboard&&center.x?2:1)/(state.keyboard?1:g.scaleX),delta.y*(!state.keyboard&&center.y?2:1)/(state.keyboard?1:g.scaleY),{shiftKey:e.shiftKey});let requested={...state.previous};
     if(/[ew]/.test(state.handle)||e.shiftKey)requested.width=r.width;if(/[ns]/.test(state.handle)||e.shiftKey)requested.height=r.height;
     let actual=applyPreview(requested);
     if(!state.keyboard&&(g.rotation||g.scaleX!==1||g.scaleY!==1))({requested,actual}=followPointer(requested,actual,base,e.shiftKey));
@@ -99,5 +121,5 @@
   function tick(){if(!valid()){finish();return;}try{paint();}catch{finish();return;}raf=root.requestAnimationFrame(tick);}
   doc.body.append(surface);paint();handles.at(-1).focus({preventScroll:true});if(initial)begin(initial.event,initial.handle);raf=root.requestAnimationFrame(tick);return ()=>finish();
  }
- const api={pointerCorrection,centeredAxes,ratioCorrection,flowHandles,available,changes,control,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchFlowResize=api;
+ const api={movingHandles,originRates,pointerCorrection,centeredAxes,ratioCorrection,flowHandles,available,changes,control,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchFlowResize=api;
 })(typeof window==='object'?window:globalThis);

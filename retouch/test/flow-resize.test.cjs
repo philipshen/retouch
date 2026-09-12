@@ -36,3 +36,17 @@ test('flow pointer correction inverts coupled transform response and projects co
  assert.deepEqual(solve([{x:0,y:0},{x:0,y:2}],{x:50,y:10}),[0,5]);
  assert.deepEqual(solve([{x:0,y:0}],{x:50,y:10}),[0]);
 });
+
+
+test('flow handles switch only stationary transformed edges and preserve fixed origins',()=>{
+ const {movingHandles:choose}=require('../shell/flow-resize.js'),base=['e','s','se'],center=[[.5,.5],[.5,.5]],fixed=[[0,0],[0,0]];
+ assert.deepEqual(choose(base,0,[-1,1],center),['w','s','sw']);
+ assert.deepEqual(choose(base,0,[1,-1],center),['e','n','ne']);
+ assert.deepEqual(choose(base,0,[-1,-1],center),['w','n','nw']);
+ assert.deepEqual(choose(base,0,[-1,1],fixed),base);
+ assert.deepEqual(choose(base,0,[-1.5,.75],center),base);
+ assert.deepEqual(choose(['w','n','nw'],0,[-1,-1],center),base);
+ assert.deepEqual(choose(['e','w','s','se','sw'],0,[-1,1],center),['e','w','s','se','sw']);
+ assert.deepEqual(choose(base,180,[1,1],center),['w','n','nw']);
+ assert.deepEqual(choose(base,0,[-1,1],[[.5,0],[.5,.5]]),base);
+});
