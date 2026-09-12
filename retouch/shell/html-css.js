@@ -227,7 +227,7 @@
   }
   typography.append(I.button('Automatic shared line height',()=>save('line-height','normal',width)));
   I.note(typography,'Relative spacing follows each layer’s own font size. Raw CSS values and property resets are available below.');
-  const sharedFields=[['visibility','Visibility'],['opacity','Opacity (%)'],['rotate','Rotation (°)'],['mix-blend-mode','Blend mode'],['isolation','Blend group'],...fields];
+  const sharedFields=[['visibility','Visibility'],['opacity','Opacity (%)'],['rotate','Rotation (°)'],['mix-blend-mode','Blend mode'],['isolation','Blend group'],...fields,...(elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg')?svgFields.filter(([property])=>['fill','stroke'].includes(property)):[])];
   for(const [property,label]of sharedFields){
    const values=infos.map((info,i)=>info.cssRules?.[width]?.[property]??computed[i].getPropertyValue(property)),mixed=values.some(value=>value!==values[0]),numeric=['opacity','rotate'].includes(property);
    const input=document.createElement(options[property]?'select':'input');
