@@ -12633,3 +12633,10 @@ React Chromium and Liquid WebKit RTL fixtures verify start highlights right, end
 Alignment activation now queues the activated button through the existing selection-scoped inspector focus restoration. The inspector can rebuild after a source save without dropping keyboard focus, allowing a second arrow/Space alignment edit immediately. Existing deliberate input, selection changes and expiry still cancel queued focus.
 
 Before-fix HTML Chromium timed out waiting for focus on the applied Center button (/private/tmp/retouch-text-focus-before.log). HTML Chromium, React Chromium and Liquid WebKit now pass that check, two consecutive keyboard edits with independent exact source Undo, and the existing logical RTL start/end assertions. Logs: /private/tmp/retouch-text-focus-{html,react,liquid}.log. No desktop rebuild, native launch or push; the full goal remains incomplete.
+
+
+### 2026-09-12 — desktop flow resize and typography candidate
+
+Built clean commit 96e71ef into /private/tmp/retouch-desktop-flow-96e71ef/Retouch-0.1.0-mac.zip, SHA-256 d229d281b1d5713892e9e26bb4513bc2d563e5f6ef9c93ea3c86800f5eb736e5. Verified all 180 source hashes and native/build/verifier hashes, arm64/x86_64 architecture, strict signature after extraction and workflows, and 938 matching-source units. Five workflows against the extracted bundled runtime pass: centered flex resizing, proportional constraints, rotated grid flow resizing, logical alignment with consecutive keyboard edits, and primary typography edits. The known Liquid WebKit normal-flow Fill-height regression remains (180px instead of 170px).
+
+Exact-archive Homebrew install/uninstall passes in an isolated app directory with quarantine retained, automatic dependency removal disabled, unchanged cask inventory, and temporary app/tap/trust/harness removed. CUA native pipe startup still fails; no native launch/selftests, notarization or publication occurred. Receipt: desktop/verification/2026-09-12-flow-and-typography.json. Full parity and trusted desktop distribution remain incomplete.

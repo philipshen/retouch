@@ -10,23 +10,21 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-direct-6107d56/Retouch-0.1.0-mac.zip`
-(SHA-256 `9068bf6aef261ab9e247e07a284f79ebdd724cec9d7e56252492f2ddb8467fe7`).
-It contains clean commit `6107d56`, including direct corner rotation, direct
-selection resize handles, rotated resizing with percentage origins, and the
-rotated flow-to-absolute and outline fixes. All 179 source hashes match;
-universal architecture, extracted/installed signatures, 934 matching-source
-unit tests and packaged React/Liquid/HTML workflows passed.
-Homebrew installed and uninstalled this archive in an isolated app directory,
+`/private/tmp/retouch-desktop-flow-96e71ef/Retouch-0.1.0-mac.zip`
+(SHA-256 `d229d281b1d5713892e9e26bb4513bc2d563e5f6ef9c93ea3c86800f5eb736e5`).
+It contains clean commit `96e71ef`, including live flow resizing, centered and
+reversed layout handles, proportional size constraints, the updated typography
+layout, and logical alignment with continuous keyboard editing. All 180 source
+hashes match; universal architecture, extracted/installed signatures and 938
+matching-source unit tests pass. Five packaged React/Liquid/HTML workflows pass.
+Homebrew installed and uninstalled this exact archive in an isolated app directory,
 retaining quarantine. Temporary installation, tap, trust configuration and test
-harness were removed; automatic dependency removal was disabled. The original
-cask inventory and Git installation were preserved.
+harness were removed; automatic dependency removal was disabled and the original
+cask inventory was preserved.
 The packaged Liquid/WebKit normal-flow Fill-height test still fails with vertical
 margins (180px instead of 170px). Native launch was not attempted because CUA's
 native connection failed. This candidate is not a trusted or published release.
-See [the candidate receipt](verification/2026-09-12-direct-manipulation.json).
-The source branch additionally supports resizing layers in normal flow; that
-feature is not included in this archive.
+See [the candidate receipt](verification/2026-09-12-flow-and-typography.json).
 
 The previous archive with native workflow evidence is
 `/private/tmp/retouch-desktop-shared-e948266/Retouch-0.1.0-mac.zip`.
