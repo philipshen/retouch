@@ -14,8 +14,15 @@ for(const language of ['html','react','liquid']){
  });
 }
 
-for(const language of ['react','liquid'])test(language+' empty text keeps bound, self-closing and non-text elements guarded',()=>{
+for(const language of ['react','liquid'])test(language+' empty text preserves unsupported child bindings and element guards',()=>{
  const adapter=require('../src/adapters/'+language+'.cjs'),relPath=language==='react'?'page.jsx':'main.liquid';
- const cases=language==='react'?['<p/>','<p children={value}></p>','<p {...props}></p>','<p dangerouslySetInnerHTML={{__html:value}}></p>','<section></section>']:['<p/>','<p x-text="value"></p>','<p>{{ value }}</p>','<section></section>'];
+ const cases=language==='react'?['<p children={value}/>','<p children={value}></p>','<p {...props}></p>','<p dangerouslySetInnerHTML={{__html:value}}></p>','<section></section>']:['<p/>','<p x-text="value"></p>','<p>{{ value }}</p>','<section></section>'];
  for(const markup of cases){const source=language==='react'?'export default ()=>'+markup:markup,elements=adapter.collect(source,relPath).elements,resolved={source,relPath,file:'/tmp/'+relPath,hash:adapter.contentHash(source),elements,element:elements[0]};assert.equal(adapter.describe(resolved).text,null,markup);}
+});
+
+test('self-closing JSX text expands without changing props or sibling identities',()=>{
+ const adapter=require('../src/adapters/react.cjs'),source='export default ()=> <main><p className="text-lg" aria-label="Caption" /><aside>Keep</aside></main>',relPath='page.jsx',elements=adapter.collect(source,relPath).elements,resolved={source,relPath,file:'/tmp/page.jsx',hash:adapter.contentHash(source),elements,element:elements.find(e=>e.node.openingElement.name.name==='p')};
+ assert.equal(adapter.describe(resolved).text,'');
+ const result=adapter.planOp(resolved,{type:'setText',text:'New <label> & {value}',fileHash:resolved.hash});assert.equal(result.ok,true,result.reason);const after=result.edits[0].after,next=adapter.collect(after,relPath).elements;assert.ok(after.includes('<p className="text-lg" aria-label="Caption" >New &lt;label&gt; &amp; &#123;value&#125;</p>'));assert.ok(after.includes('<aside>Keep</aside>'));assert.deepEqual(next.map(e=>e.id),elements.map(e=>e.id));
+ const noop=adapter.planOp(resolved,{type:'setText',text:'',fileHash:resolved.hash});assert.equal(noop.ok,true);assert.ok(noop.edits.every(edit=>edit.after===source));
 });

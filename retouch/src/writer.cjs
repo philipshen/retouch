@@ -128,12 +128,13 @@ function hasChildren(node) {
 // If the element's significant children are text only, return the source
 // range covering all children plus the decoded text. Otherwise null.
 function literalTextRange(node, source) {
-  if (!node.closingElement) return null;
+  const emptyTextAllowed=['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','button'].includes(tagOf(node))&&!node.openingElement.attributes.some(attr=>attr.type==='JSXSpreadAttribute'||['children','dangerouslySetInnerHTML'].includes(attr.name?.name));
+  if (!node.closingElement) return node.openingElement.selfClosing&&emptyTextAllowed?{start:node.openingElement.end-2,end:node.openingElement.end,text:'',selfClosing:true}:null;
   const children = node.children || [];
   const significant = children.filter(
     (c) => !(c.type === 'JSXText' && c.value.trim() === '')
   );
-  if (significant.length === 0 && (!['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','button'].includes(tagOf(node))||node.openingElement.attributes.some(attr=>attr.type==='JSXSpreadAttribute'||['children','dangerouslySetInnerHTML'].includes(attr.name?.name)))) return null;
+  if (significant.length === 0 && !emptyTextAllowed) return null;
   if (!significant.every((c) => c.type === 'JSXText')) return null;
   const start = node.openingElement.end;
   const end = node.closingElement.start;
@@ -212,7 +213,8 @@ function planOp(resolved, op) {
         `The text of this element is dynamic or mixed with other elements (${resolved.relPath}); it cannot be edited deterministically here.`
       );
     }
-    if(range.start===range.end)ms.appendLeft(range.start,escapeJsxText(op.text));else ms.overwrite(range.start, range.end, escapeJsxText(op.text));
+    if(range.selfClosing){if(op.text!=='')ms.overwrite(range.start,range.end,'>'+escapeJsxText(op.text)+'</'+tagOf(node)+'>');}
+    else if(range.start===range.end)ms.appendLeft(range.start,escapeJsxText(op.text));else ms.overwrite(range.start, range.end, escapeJsxText(op.text));
   } else if (op.type === 'setChildren') {
     // Rich in-place editing (DR-0014). The tree is constrained: escaped
     // text, kept stamped descendants written as verbatim source slices,
