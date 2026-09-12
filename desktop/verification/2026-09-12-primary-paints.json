@@ -1,0 +1,77 @@
+{
+  "sourceCommit": "78ca0faa34258584db1ff007710b5af2a69f050b",
+  "sourceTreeDirty": false,
+  "sourceFiles": 176,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-paints-20260912-78ca0fa/Retouch-0.1.0-mac.zip",
+  "sha256": "cb0c19d9e8477491fa067606b5c17ce4a9496c5eaf05ced451104d217c44a631",
+  "sourceMatchesCheckout": true,
+  "units": {
+    "passed": 899,
+    "log": "/private/tmp/retouch-desktop-paints-units.log"
+  },
+  "workflows": [
+    {
+      "name": "solid-html",
+      "exit": 0,
+      "log": "/private/tmp/retouch-desktop-paints-20260912-78ca0fa/solid-html.log"
+    },
+    {
+      "name": "solid-react",
+      "exit": 0,
+      "log": "/private/tmp/retouch-desktop-paints-20260912-78ca0fa/solid-react.log"
+    },
+    {
+      "name": "solid-webkit",
+      "exit": 0,
+      "log": "/private/tmp/retouch-desktop-paints-20260912-78ca0fa/solid-webkit.log"
+    },
+    {
+      "name": "shadow-chromium",
+      "exit": 1,
+      "log": "/private/tmp/retouch-desktop-paints-20260912-78ca0fa/shadow-chromium.log"
+    },
+    {
+      "name": "shadow-chromium-diagnostic",
+      "exit": 0,
+      "log": "/private/tmp/retouch-desktop-paints-20260912-78ca0fa/shadow-chromium-diagnostic.log"
+    },
+    {
+      "name": "shadow-webkit",
+      "exit": 0,
+      "log": "/private/tmp/retouch-desktop-paints-20260912-78ca0fa/shadow-webkit.log"
+    },
+    {
+      "name": "html-full",
+      "exit": 0,
+      "log": "/private/tmp/retouch-desktop-paints-20260912-78ca0fa/html-full.log"
+    }
+  ],
+  "installation": {
+    "verification": {
+      "sourceCommit": "78ca0faa34258584db1ff007710b5af2a69f050b",
+      "sourceTreeDirty": false,
+      "sourceFiles": 176,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "quarantinePreserved": true,
+    "cask": "/private/tmp/retouch-desktop-paints-20260912-78ca0fa/retouch-studio.rb",
+    "cleanup": "Temporary app directory, Caskroom registration, tap and trust entry verified absent; developer mode restored to disabled.",
+    "logs": [
+      "/private/tmp/retouch-desktop-paints-20260912-78ca0fa/install.log",
+      "/private/tmp/retouch-desktop-paints-20260912-78ca0fa/uninstall.log"
+    ]
+  },
+  "nativeLaunch": "Not run for this build; foreground usability unverified.",
+  "signing": "Ad hoc development build. Developer ID, notarization, trusted distribution and upgrades remain unfinished.",
+  "testLimitation": "Initial Chromium shadow workflow timed out waiting for the new shadow stack to open. Diagnostic rerun and WebKit passed; the initial cause remains unconfirmed.",
+  "harness": "External harness removed after all launched processes reached terminal states; extracted signature verified again afterward."
+}
