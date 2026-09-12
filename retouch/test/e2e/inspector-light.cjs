@@ -19,6 +19,17 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   const rangeStatus=page.getByRole('status',{name:'Edit range status',exact:true});assert.equal(await rangeStatus.getAttribute('data-match'),'true');
   const beforePreview=read();await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await settled();
   await wait(async()=>await rangeStatus.getAttribute('data-match')==='false');assert.equal(await rangeStatus.isVisible(),true);
+  const editPreview=page.getByRole('button',{name:'Edit 390 px and larger',exact:true});assert.equal(await editPreview.isVisible(),true);
+  if(process.env.RT_E2E_EDIT_PREVIEW_SCREENSHOT)await page.locator('#panel').screenshot({path:process.env.RT_E2E_EDIT_PREVIEW_SCREENSHOT});
+  await editPreview.click();await settled();await wait(async()=>await rangeStatus.getAttribute('data-match')==='true');
+  assert.match(await page.getByLabel('Style screen scope',{exact:true}).locator('option:checked').textContent(),/390 px and larger/);
+  assert.equal(read(),beforePreview,'switching the edit range does not write source');assert.equal(await parent.evaluate(()=>innerWidth),390);
+  assert.equal(await editPreview.count(),0);
+  await page.getByLabel('Opacity (%)',{exact:true}).fill('75');await page.getByLabel('Opacity (%)',{exact:true}).press('Tab');await settled();
+  await wait(async()=>parent.evaluate(el=>getComputedStyle(el).opacity==='0.75'));
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),beforePreview);
+  await page.getByLabel('Style screen scope',{exact:true}).focus();await page.getByLabel('Style screen scope',{exact:true}).selectOption('md:');await settled();
+  await wait(async()=>await rangeStatus.getAttribute('data-match')==='false');
   const previewBreakpoint=page.getByRole('button',{name:'Preview this breakpoint',exact:true});assert.equal(await previewBreakpoint.isVisible(),true);
   await previewBreakpoint.click();await settled();await wait(async()=>await rangeStatus.getAttribute('data-match')==='true');assert.equal(read(),beforePreview);
   await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();

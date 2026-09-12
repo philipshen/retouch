@@ -601,6 +601,7 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .scope-status[data-match="false"]::before { background:#e5a000; }
 .scope-status[data-match="unknown"]::before { background:#999; }
 .screen-scope > #previewBreakpoint { margin-top:6px;background:var(--control); }
+.screen-scope > #editPreviewBreakpoint { margin-top:6px;background:var(--control); }
 
 .inspector-section { position:relative; }
 .inspector-section > .section-add { position:absolute;right:12px;top:10px;width:28px;height:28px;padding:0;font-size:20px;line-height:28px;background:transparent;color:var(--ink); }

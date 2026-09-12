@@ -965,8 +965,10 @@ function screenScopeSection() {
   if(sel?.info.cssAuthoring) options.push(...Object.keys(sel.info.cssRules||{}).map(Number).filter(w=>w>0).sort((a,b)=>a-b).map(w=>({prefix:`min-[${w}px]:`,label:`${w} px and larger`})));
   else if (doc()) options.push(...RetouchResponsive.discover(doc()));
   const width = iframe.contentWindow?.innerWidth;
+  let previewScope = null;
   if (Number.isInteger(width) && width >= 240) {
     const atWidth = sel?.info.cssAuthoring?{prefix:`min-[${width}px]:`,label:`${width} px and larger`}:RetouchResponsive.atWidth(doc(),width,options.slice(1));
+    previewScope = atWidth;
     if (!options.some(o=>o.prefix===atWidth.prefix)) options.push(atWidth);
   }
   if (styleScope && !options.some(o=>o.prefix===styleScope)) options.push({prefix:styleScope,label:styleScope.slice(0,-1)});
@@ -997,6 +999,15 @@ function screenScopeSection() {
   scopeStatus.dataset.match=matchesPreview===null?'unknown':String(matchesPreview);
   scopeStatus.textContent=!styleScope?'Base styles · all screen sizes':matchesPreview===true?'Preview matches edit range':matchesPreview===false?'Preview is outside edit range':'Preview match is unknown';
   section.append(scopeStatus);
+  if(matchesPreview===false&&previewScope&&previewScope.prefix!==styleScope){
+    const edit=RetouchInspector.button('Edit '+previewScope.label,()=>{
+      picker.value=previewScope.prefix;
+      picker.dispatchEvent(new Event('change',{bubbles:true}));
+    });
+    edit.id='editPreviewBreakpoint';
+    edit.title='Keep the current preview and change the range for subsequent style edits. Switching ranges does not change the site.';
+    section.append(edit);
+  }
   window.dispatchEvent(new CustomEvent('retouch:style-scope',{detail:{prefix:styleScope,label:chosen?.label||styleScope,condition,queries:chosen?.queries}}));
   if (condition) {
     const applies=RetouchResponsive.matches({condition,queries:chosen?.queries},iframe.contentWindow),currentSize={width:iframe.contentWindow.innerWidth,height:iframe.contentWindow.innerHeight};
