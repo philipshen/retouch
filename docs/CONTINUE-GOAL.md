@@ -1950,3 +1950,10 @@ HTML/React Chromium and Liquid WebKit verify size and alignment changes with exa
 Text alignment segments now indicate the physical equivalent of CSS start/end using the selected text's computed direction, while leaving the logical authored value unchanged until an explicit edit. HTML's menu now includes end, matching the class editor. Alignment buttons form a roving-tabindex toolbar: Left/Right and Home/End move focus, Space activates the focused choice, and focus movement alone does not write source.
 
 React Chromium and Liquid WebKit RTL fixtures verify start highlights right, end highlights left, keyboard activation writes center, and exact source Undo restores logical start and its active indicator. HTML initially exposed the missing end menu option; after adding it, the same workflow passes. Logs: /private/tmp/retouch-logical-text-{react,liquid}.log and /private/tmp/retouch-logical-text-html-final.log. All 938 unit tests pass (/private/tmp/retouch-logical-text-all-units.log). No desktop rebuild, native launch or push. Full design parity and previously documented platform/layout gaps remain open.
+
+
+### 2026-09-12 — consecutive keyboard alignment edits
+
+Alignment activation now queues the activated button through the existing selection-scoped inspector focus restoration. The inspector can rebuild after a source save without dropping keyboard focus, allowing a second arrow/Space alignment edit immediately. Existing deliberate input, selection changes and expiry still cancel queued focus.
+
+Before-fix HTML Chromium timed out waiting for focus on the applied Center button (/private/tmp/retouch-text-focus-before.log). HTML Chromium, React Chromium and Liquid WebKit now pass that check, two consecutive keyboard edits with independent exact source Undo, and the existing logical RTL start/end assertions. Logs: /private/tmp/retouch-text-focus-{html,react,liquid}.log. No desktop rebuild, native launch or push; the full goal remains incomplete.
