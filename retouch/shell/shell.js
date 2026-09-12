@@ -32,6 +32,7 @@ let sourceRequests = 0;
 let undoBusy = false;
 let classificationSerial = 0;
 let panelTasks = 0;
+let pendingVectorEntry=null,vectorEntrySerial=0;
 let pendingPanelFocus=null;
 const panelSelectionKey=()=>sel?JSON.stringify([sel.info.file,sel.scope,sel.instanceId,(sel.multiple||[sel.info]).map(info=>info.id).sort()]):null;
 const controlIdentity=el=>JSON.stringify([el.tagName,el.getAttribute('aria-label'),el.getAttribute('name'),el.dataset.canvasTool,el.matches('button,summary')?el.textContent:null]);
@@ -81,6 +82,7 @@ function busyPanel(start) {
   panelTasks += start ? 1 : -1;
   syncHistoryControls();
   if(!panelTasks&&panelRenderDeferred)queueViewportPanelRefresh();
+  if(!panelTasks&&pendingVectorEntry)queueMicrotask(openPendingVectorEntry);
 }
 let lastAppPath = null;
 let styleScope = '';
@@ -229,9 +231,10 @@ function hookFrame(d, w) {
     if (t&&!layerLocks.locked(t)) startInlineEdit(t, e, true);
     else clearSelection();
   }, true);
-  // Double-click also starts inline text editing (kept as a fallback).
+  // Double-click opens vector points or starts inline text editing.
   d.addEventListener('dblclick', (e) => {
     if (mode !== 'edit') return;
+    if(undoBusy||sourceRequests){e.preventDefault();e.stopPropagation();return;}
     if (editing) {
       if (editing.el.contains(e.target)) return;
       commitInlineEdit(); // moving to another element commits the current one
@@ -239,7 +242,7 @@ function hookFrame(d, w) {
     e.preventDefault();
     e.stopPropagation();
     const t = layerLocks.pick(e.target,e.clientX,e.clientY);
-    if (t&&!layerLocks.locked(t)) startInlineEdit(t, e);
+    if (t&&!layerLocks.locked(t)) startInlineEdit(t, e, false, true);
   }, true);
   d.addEventListener('mousemove', (e) => {
     if (mode !== 'edit') { hoverEl = null; return; }
@@ -289,6 +292,7 @@ function hookFrame(d, w) {
   }, true);
   d.addEventListener('pointerdown',cancelOpacityEntry,true);
   d.addEventListener('keydown', (e) => {
+    if(e.key==='Escape'){vectorEntrySerial++;if(pendingVectorEntry){pendingVectorEntry=null;e.preventDefault();e.stopPropagation();return;}}
     if(mode==='edit'&&!editing&&window.RetouchActions?.shortcut(e)){cancelOpacityEntry();return;}
     if(opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||layerNavigationShortcut(e)||canvasLayerShortcut(e))return;
     if (editing) {
@@ -560,6 +564,7 @@ async function loadScope() {
 }
 
 function clearSelection() {
+  vectorEntrySerial++;pendingVectorEntry=null;
   stopDrawing?.();
   classificationSerial++;sel = null;renderedSelection=null;renderedPanelSelection=null;
   window.dispatchEvent(new CustomEvent('retouch:selection',{detail:null}));
@@ -568,8 +573,10 @@ function clearSelection() {
 }
 
 /* ---------- inline text editing ---------- */
-async function startInlineEdit(node, evt, quiet) {
+async function startInlineEdit(node, evt, quiet, openVector=false) {
+  const vectorRequest=openVector?++vectorEntrySerial:null;
   const c = await classify(node);
+  if(openVector&&vectorRequest!==vectorEntrySerial)return;
   if (c?.superseded) return;
   if (!c) return clearSelection(); // nothing editable here — no error
   const { el, info } = c;
@@ -580,6 +587,7 @@ async function startInlineEdit(node, evt, quiet) {
     scope: c.instanceId && info.id === c.instanceId ? 'instance' : 'host',
     info,
   };
+  if(openVector&&editableVectorField(info)){renderPanel();pendingVectorEntry={info,serial:classificationSerial};openPendingVectorEntry();return;}
   // Only literal or rich text can be edited in place; otherwise just select.
   if (info.text === null && !info.mixedText) {
     renderPanel();
@@ -1194,7 +1202,7 @@ function renderPanelContents() {
   if(info.svgGeometry){
     const geometry=RetouchInspector.section('SVG geometry');
     const pointField=info.svgGeometry.fields.find(field=>['points','d'].includes(field.name));
-    if(pointField&&pointField.editable!==false&&(pointField.name==='d'?RetouchSVGPath.parseCompound(pointField.value)?.subpaths[0].nodes:RetouchSVGPoints.parse(pointField.value))?.length>=2){const editPoints=RetouchInspector.button('Edit vector points',()=>editSVGPoints(info));editPoints.dataset.canvasTool='vertices';geometry.append(editPoints);}
+    if(editableVectorField(info)){const editPoints=RetouchInspector.button('Edit vector points',()=>editSVGPoints(info));editPoints.dataset.canvasTool='vertices';editPoints.title='Edit vector points · Enter or double-click on the canvas';geometry.append(editPoints);}
     for(const field of info.svgGeometry.fields){const input=document.createElement('input');input.type='text';input.value=field.value??'';input.placeholder=field.editable===false?'Dynamic value':'Default';input.disabled=field.editable===false;if(field.reason)input.title=field.reason;input.onchange=()=>setSVGGeometry(field.name,input.value.trim()||null);RetouchInspector.field(geometry,'Shape '+field.label,input);const reset=RetouchInspector.button('Reset shape '+field.label.toLowerCase(),()=>setSVGGeometry(field.name,null));reset.disabled=field.value===null||field.editable===false;geometry.append(reset);}
     RetouchInspector.note(geometry,pointField?'Drag empty space to select points. Shift-click or Shift-drag adds to the selection. Drag selected points or use arrows (Shift: 10 units). Click + to add; Delete removes selected points. Done/Enter saves; Escape cancels. Points are shared across screen sizes.':'Geometry is shared across screen sizes. Values use SVG coordinates, px or %. The SVG viewport and page CSS can affect the rendered result.');panelBody.append(geometry);
   }
@@ -2510,6 +2518,7 @@ routeInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') navigatePage(routeInput.value || '/');
 });
 window.addEventListener('keydown', (e) => {
+  if(e.key==='Escape'){vectorEntrySerial++;if(pendingVectorEntry){pendingVectorEntry=null;e.preventDefault();return;}}
   if(opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||((e.metaKey||e.ctrlKey)&&['[',']','{','}'].includes(e.key)&&canvasLayerShortcut(e)))return;
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
@@ -2596,6 +2605,7 @@ function canvasLayerShortcut(e){
 function layerNavigationShortcut(e){
   if(e.defaultPrevented||e.isComposing||e.metaKey||e.ctrlKey||e.altKey||!['Enter','Tab'].includes(e.key)||mode!=='edit'||editing||!sel||sel.multiple?.length>1||e.target.isContentEditable||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||document.querySelector('dialog[open]'))return false;
   e.preventDefault();e.stopPropagation();if(e.repeat||panelTasks||undoBusy||sourceRequests)return true;
+  if(e.key==='Enter'&&!e.shiftKey&&editableVectorField(sel.info)){void editSVGPoints(sel.info).catch(error=>toast(error.message,'err'));return true;}
   const direction=e.key==='Enter'?(e.shiftKey?'parent':'child'):(e.shiftKey?'previous':'next');void layers.navigate(direction).catch(error=>toast(error.message,'err'));return true;
 }
 function sourceHistoryShortcut(e,canvas=false){
@@ -2765,6 +2775,17 @@ async function prepareVectorCanvas(info,target){
   if(cancelled)return false;
   stopDrawing=null;
   return sel?.info===info&&mode==='edit'&&!panelTasks&&!undoBusy&&!sourceRequests&&!editing&&target.isConnected;
+}
+function openPendingVectorEntry(){
+  if(panelTasks||!pendingVectorEntry)return;
+  const {info,serial}=pendingVectorEntry;pendingVectorEntry=null;
+  if(sel?.info===info&&classificationSerial===serial)void editSVGPoints(info).catch(error=>toast(error.message,'err'));
+}
+function editableVectorField(info){
+  const field=info.svgGeometry?.fields.find(field=>['points','d'].includes(field.name));
+  if(!field||field.editable===false)return null;
+  const points=field.name==='d'?RetouchSVGPath.parseCompound(field.value)?.subpaths[0].nodes:RetouchSVGPoints.parse(field.value);
+  return points?.length>=2?field:null;
 }
 async function editSVGPoints(info){
   if(panelTasks||undoBusy||sourceRequests||editing)return;
