@@ -1,0 +1,150 @@
+{
+  "sourceCommit": "23b15e9d1cf935f1d859fad2a180e5f04b1e940d",
+  "sourceTreeDirty": false,
+  "sourceFiles": 182,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "archive": "/private/tmp/retouch-desktop-sizing-23b15e9/Retouch-0.1.0-mac.zip",
+  "sha256": "32505549b89affa4ff39a94effc48b328600033d28a30261451e8b55bfc92a1f",
+  "status": "development candidate; native workflows and trusted release unverified",
+  "units": {
+    "passed": 968,
+    "scope": "source runtime matching packaged hashes",
+    "log": "/private/tmp/retouch-desktop-sizing-23b15e9/all-units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "scaled and rotated absolute resize, preview, zoom, position, flip and exact history",
+      "renderer": "html",
+      "engine": "chromium",
+      "engineVersion": "145.0.7632.6",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-sizing-23b15e9/html-scaled-resize.log"
+    },
+    {
+      "name": "scaled absolute resize with percentage origin and scoped source history",
+      "renderer": "react",
+      "engine": "chromium",
+      "engineVersion": "145.0.7632.6",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-sizing-23b15e9/react-scaled-resize.log"
+    },
+    {
+      "name": "scaled rotation handles, live angle, cancellation, scope and exact history",
+      "renderer": "react",
+      "engine": "chromium",
+      "engineVersion": "145.0.7632.6",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-sizing-23b15e9/react-scaled-rotation.log"
+    },
+    {
+      "name": "exact vertical flip flow handles, measured resize and maximum bounds",
+      "renderer": "html",
+      "engine": "chromium",
+      "engineVersion": "145.0.7632.6",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-sizing-23b15e9/html-exact-flow.log"
+    },
+    {
+      "name": "exact double-flip flow handles, origin math, measured resize, maximum bounds and exact history",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "engineVersion": "26.0",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-sizing-23b15e9/liquid-exact-flow.log"
+    },
+    {
+      "name": "standard stretch wins over legacy Fill fallback in newer WebKit",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "engineVersion": "26.6",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-sizing-23b15e9/liquid-modern-fill.log"
+    },
+    {
+      "name": "compact screen controls",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-sizing-23b15e9/compact-chromium.log"
+    },
+    {
+      "name": "compact screen controls",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-sizing-23b15e9/compact-webkit.log"
+    }
+  ],
+  "installation": {
+    "result": "isolated Homebrew cask install and uninstall passed",
+    "verification": {
+      "sourceCommit": "23b15e9d1cf935f1d859fad2a180e5f04b1e940d",
+      "sourceTreeDirty": false,
+      "sourceFiles": 182,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesExtractedArchive": true,
+    "quarantine": {
+      "preserved": true,
+      "value": "0381;6aa5e30b;;559EC02A-21E2-4159-B5B7-BEB973DDFE31"
+    },
+    "logs": [
+      "/private/tmp/retouch-desktop-sizing-23b15e9/install.log",
+      "/private/tmp/retouch-desktop-sizing-23b15e9/uninstall.log"
+    ],
+    "cleanup": {
+      "caskInventoryUnchanged": true,
+      "appAndCaskRegistrationAbsent": true,
+      "temporaryTapAndTrustAbsent": true,
+      "externalHarnessRemoved": true,
+      "automaticDependencyRemoval": false
+    }
+  },
+  "nativeLaunch": {
+    "result": "not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "nativeSelfTests": "not run",
+  "notarization": "not performed",
+  "published": false,
+  "knownFailure": {
+    "name": "Liquid/older WebKit Fill height with vertical margins",
+    "engineVersion": "26.0",
+    "result": "reproduced against this archive",
+    "expected": [
+      [
+        250,
+        180
+      ],
+      [
+        210,
+        170
+      ]
+    ],
+    "actual": [
+      [
+        250,
+        180
+      ],
+      [
+        210,
+        180
+      ]
+    ],
+    "log": "/private/tmp/retouch-desktop-sizing-23b15e9/liquid-old-fill.log"
+  },
+  "remaining": [
+    "Native full editing, sampler and shutdown workflows remain unverified",
+    "Developer ID signing, notarization and public cask distribution remain incomplete",
+    "Full Figma parity and universal site support remain incomplete"
+  ]
+}

@@ -10,30 +10,32 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-transforms-2ac28b1/Retouch-0.1.0-mac.zip`
-(SHA-256 `58a6b213b46fa7933f60d5bb3d2a9fc1df159271ed2e1152e9a5bd75d507d212`).
-It contains clean commit `2ac28b1`, including single/group flips, transformed
-selection outlines and move previews, scaled position editing, anchor presets,
-and the compact light inspector. All 182 packaged source hashes and native/build/
-verifier hashes match; universal architecture, strict extracted/installed
-signatures, and 962 matching-source unit tests pass. Nine packaged workflow
-suites pass: group reflection and transformed canvas behavior in HTML, React and
-Liquid; all ten anchor choices with container resizing in all three formats;
-React scaled single-layer editing; and compact screen controls in Chromium/WebKit.
-Homebrew installed and uninstalled this exact archive in an isolated app directory,
+`/private/tmp/retouch-desktop-sizing-23b15e9/Retouch-0.1.0-mac.zip`
+(SHA-256 `32505549b89affa4ff39a94effc48b328600033d28a30261451e8b55bfc92a1f`).
+It contains clean commit `23b15e9`, including scaled/flipped canvas resizing and
+rotation, live angle feedback, measured flow resizing, exact-flip flow handles,
+and corrected standard-stretch Fill precedence. All 182 packaged source hashes
+and native/build/verifier hashes match; universal architecture, strict extracted/
+installed signatures, and 968 matching-source unit tests pass.
+
+Eight packaged workflow suites pass: HTML/React scaled absolute resizing, React
+scaled rotation, HTML/Liquid exact-flip flow sizing and limits, newer-WebKit
+margin-aware Fill, and compact screen controls in Chromium/WebKit. Homebrew
+installed and uninstalled this exact archive in an isolated app directory,
 retaining quarantine and preserving the original cask inventory. The temporary
 tap, isolated trust configuration, app installation and external test harness
-were removed. The Liquid anchor test now waits for the inspector rows to mount
-before asserting their placement; its final packaged run passes.
+were removed. Strict package verification passes after the browser workflows.
 
-The known Liquid/WebKit Fill-height regression reproduces in this archive:
-a layer with vertical margins renders 180px high where 170px is expected.
-Editing during cold React comparison bootstrap remains unverified.
-Native launch was not attempted because CUA's native connection failed.
+The older Playwright WebKit 26.0 Fill-height regression still reproduces in this
+archive: a layer with vertical margins renders 180px high where 170px is expected.
+The same packaged workflow passes in Playwright WebKit 26.6. This does not verify
+native Safari/WKWebView behavior. Native launch was not attempted because CUA's
+native connection failed; native editing, sampler and shutdown remain unverified.
 This is an installable development candidate, not a trusted or verified release.
-See [the candidate receipt](verification/2026-09-12-transform-workflows.json).
-The prior text/comparison candidate remains documented in
-[its receipt](verification/2026-09-12-text-comparisons.json).
+See [the candidate receipt](verification/2026-09-13-sizing-workflows.json).
+Earlier candidates remain documented in the
+[transform workflow receipt](verification/2026-09-12-transform-workflows.json) and
+[text/comparison receipt](verification/2026-09-12-text-comparisons.json).
 
 The previous archive with native workflow evidence is
 `/private/tmp/retouch-desktop-shared-e948266/Retouch-0.1.0-mac.zip`.
