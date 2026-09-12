@@ -25,19 +25,18 @@
   };
   handle.onpointerdown=event=>{
    if(event.button!==0)return;event.preventDefault();event.stopPropagation();handle.focus({preventScroll:true});
-   const box=preview.getBoundingClientRect(),pointerId=event.pointerId,originalStyle=el.getAttribute('style'),originalValue=el.style.getPropertyValue('background-image'),originalPriority=el.style.getPropertyPriority('background-image');
-   let next=gradient,active=true,moved=false,lastStyle=originalStyle,lastValue=originalValue;
-   const move=e=>{if(!active||e.pointerId!==pointerId)return;if(!moved&&Math.hypot(e.clientX-event.clientX,e.clientY-event.clientY)<2)return;moved=true;if(rotation){const cx=box.left+box.width*(gradient.type==='linear'?.5:gradient.x/100),cy=box.top+box.height*(gradient.type==='linear'?.5:gradient.y/100);const angle=(Math.atan2(e.clientX-cx,cy-e.clientY)*180/Math.PI+360)%360;next={...gradient,angle:Math.round(angle/(e.shiftKey?15:1))*(e.shiftKey?15:1)%360};}else next={...gradient,x:clamp(gradient.x+(e.clientX-event.clientX)/box.width*100),y:clamp(gradient.y+(e.clientY-event.clientY)/box.height*100)};position(next);preview.style.backgroundImage=serialize([next]);el.style.setProperty('background-image',serialize(gradients.map((g,i)=>i===index?next:g)),'important');lastStyle=el.getAttribute('style');lastValue=el.style.getPropertyValue('background-image');};
+   const box=preview.getBoundingClientRect(),pointerId=event.pointerId,interruptions=['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'],propertyPreview=root.RetouchPaintPicker.propertyPreview({el,input:preview,property:'background-image'});
+   let next=gradient,active=true,moved=false;
+   const move=e=>{if(!active||e.pointerId!==pointerId)return;if(!moved&&Math.hypot(e.clientX-event.clientX,e.clientY-event.clientY)<2)return;moved=true;if(rotation){const cx=box.left+box.width*(gradient.type==='linear'?.5:gradient.x/100),cy=box.top+box.height*(gradient.type==='linear'?.5:gradient.y/100);const angle=(Math.atan2(e.clientX-cx,cy-e.clientY)*180/Math.PI+360)%360;next={...gradient,angle:Math.round(angle/(e.shiftKey?15:1))*(e.shiftKey?15:1)%360};}else next={...gradient,x:clamp(gradient.x+(e.clientX-event.clientX)/box.width*100),y:clamp(gradient.y+(e.clientY-event.clientY)/box.height*100)};position(next);preview.style.backgroundImage=serialize([next]);propertyPreview.update(serialize(gradients.map((g,i)=>i===index?next:g)));};
    const finish=save=>{
-    if(!active)return;active=false;observer.disconnect();window.removeEventListener('pointermove',move,true);window.removeEventListener('pointerup',up,true);window.removeEventListener('pointercancel',cancel,true);window.removeEventListener('blur',cancel);document.removeEventListener('keydown',escape,true);handle.removeEventListener('lostpointercapture',cancel);
+    if(!active)return;active=false;observer.disconnect();window.removeEventListener('pointermove',move,true);window.removeEventListener('pointerup',up,true);window.removeEventListener('pointercancel',cancel,true);for(const type of interruptions)window.removeEventListener(type,cancel);document.removeEventListener('keydown',escape,true);handle.removeEventListener('lostpointercapture',cancel);
     if(handle.hasPointerCapture(pointerId))handle.releasePointerCapture(pointerId);
-    if(el.getAttribute('style')===lastStyle){if(originalStyle===null)el.removeAttribute('style');else el.setAttribute('style',originalStyle);}
-    else if(el.style.getPropertyValue('background-image')===lastValue){if(originalValue)el.style.setProperty('background-image',originalValue,originalPriority);else el.style.removeProperty('background-image');}
+    propertyPreview.restore();
     position(gradient);preview.style.backgroundImage=serialize([gradient]);if(save&&preview.isConnected&&el.isConnected)commit(next);
    };
    const up=e=>{if(e.pointerId===pointerId){move(e);finish(true);}},cancel=()=>finish(false),escape=e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancel();}};
    const observer=new MutationObserver(()=>{if(!preview.isConnected||!el.isConnected)cancel();});observer.observe(document.body,{childList:true,subtree:true});
-   window.addEventListener('pointermove',move,true);window.addEventListener('pointerup',up,true);window.addEventListener('pointercancel',cancel,true);window.addEventListener('blur',cancel);document.addEventListener('keydown',escape,true);handle.addEventListener('lostpointercapture',cancel);handle.setPointerCapture(pointerId);
+   window.addEventListener('pointermove',move,true);window.addEventListener('pointerup',up,true);window.addEventListener('pointercancel',cancel,true);for(const type of interruptions)window.addEventListener(type,cancel);document.addEventListener('keydown',escape,true);handle.addEventListener('lostpointercapture',cancel);handle.setPointerCapture(pointerId);
   };
   }
   return position;

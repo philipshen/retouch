@@ -23,22 +23,21 @@
    };
    handle.onpointerdown=e=>{
     if(e.button!==0)return;e.preventDefault();e.stopPropagation();handle.focus({preventScroll:true});
-    const box=rail.getBoundingClientRect(),pointerId=e.pointerId,originalStyle=el.getAttribute('style'),originalValue=el.style.getPropertyValue('background-image'),originalPriority=el.style.getPropertyPriority('background-image');
-    let position=stop.position,lastStyle=originalStyle,active=true;
-    const render=()=>{const {next}=changed(position);preview.style.backgroundImage=serializeGradients([next]);strip.style.backgroundImage=serializeGradients([{...next,type:'linear',angle:90}]);handle.style.left=position+'%';handle.setAttribute('aria-valuenow',position);el.style.setProperty('background-image',serializeGradients(gradients.map((g,i)=>i===index?next:g)),'important');lastStyle=el.getAttribute('style');};
+    const box=rail.getBoundingClientRect(),pointerId=e.pointerId,interruptions=['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'],propertyPreview=root.RetouchPaintPicker.propertyPreview({el,input:rail,property:'background-image'});
+    let position=stop.position,active=true;
+    const render=()=>{const {next}=changed(position);preview.style.backgroundImage=serializeGradients([next]);strip.style.backgroundImage=serializeGradients([{...next,type:'linear',angle:90}]);handle.style.left=position+'%';handle.setAttribute('aria-valuenow',position);propertyPreview.update(serializeGradients(gradients.map((g,i)=>i===index?next:g)));};
     const move=event=>{if(event.pointerId!==pointerId||!active)return;position=Math.max(0,Math.min(100,Math.round(stop.position+(event.clientX-e.clientX)/box.width*100)));render();};
     const finish=save=>{
-     if(!active)return;active=false;observer.disconnect();window.removeEventListener('pointermove',move,true);window.removeEventListener('pointerup',up,true);window.removeEventListener('pointercancel',cancel,true);window.removeEventListener('blur',cancel);document.removeEventListener('keydown',escape,true);handle.removeEventListener('lostpointercapture',cancel);
+     if(!active)return;active=false;observer.disconnect();window.removeEventListener('pointermove',move,true);window.removeEventListener('pointerup',up,true);window.removeEventListener('pointercancel',cancel,true);for(const type of interruptions)window.removeEventListener(type,cancel);document.removeEventListener('keydown',escape,true);handle.removeEventListener('lostpointercapture',cancel);
      if(handle.hasPointerCapture(pointerId))handle.releasePointerCapture(pointerId);
-     if(el.getAttribute('style')===lastStyle){if(originalStyle===null)el.removeAttribute('style');else el.setAttribute('style',originalStyle);}
-     else if(originalValue)el.style.setProperty('background-image',originalValue,originalPriority);else el.style.removeProperty('background-image');
+     propertyPreview.restore();
      preview.style.backgroundImage=serializeGradients([gradient]);strip.style.backgroundImage=serializeGradients([{...gradient,type:'linear',angle:90}]);handle.style.left=stop.position+'%';handle.setAttribute('aria-valuenow',stop.position);
      if(save&&rail.isConnected&&el.isConnected)commit(position);
     };
     const up=event=>{if(event.pointerId===pointerId){move(event);finish(true);}};
     const cancel=()=>finish(false),escape=event=>{if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();cancel();}};
     const observer=new MutationObserver(()=>{if(!rail.isConnected||!el.isConnected)cancel();});observer.observe(document.body,{childList:true,subtree:true});
-    window.addEventListener('pointermove',move,true);window.addEventListener('pointerup',up,true);window.addEventListener('pointercancel',cancel,true);window.addEventListener('blur',cancel);document.addEventListener('keydown',escape,true);handle.addEventListener('lostpointercapture',cancel);handle.setPointerCapture(pointerId);
+    window.addEventListener('pointermove',move,true);window.addEventListener('pointerup',up,true);window.addEventListener('pointercancel',cancel,true);for(const type of interruptions)window.addEventListener(type,cancel);document.addEventListener('keydown',escape,true);handle.addEventListener('lostpointercapture',cancel);handle.setPointerCapture(pointerId);
    };
    rail.append(handle);
   });
