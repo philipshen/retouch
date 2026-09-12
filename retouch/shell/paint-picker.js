@@ -44,7 +44,7 @@
   const draftPreview=input.retouchPaintPreview?.();
   const original=input.value,I=root.RetouchInspector,dialog=document.createElement('dialog');dialog.className='paint-picker';dialog.retouchSourceInput=input;dialog.setAttribute('aria-label','Edit '+input.getAttribute('aria-label'));document.body.append(dialog);
   let recentButtons=[];const updateRecent=()=>{const key=colorKey(value.value);for(const button of recentButtons)button.setAttribute('aria-pressed',String(key!==null&&key===colorKey(button.dataset.color)));};
-  const heading=document.createElement('h3');heading.textContent='Color';dialog.append(heading);
+  const header=document.createElement('div');header.className='paint-picker-header';const heading=document.createElement('h3');heading.textContent='Color';header.append(heading);dialog.append(header);
   if(document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false'){const scope=document.querySelector('[aria-label="Style screen scope"]')?.selectedOptions[0]?.textContent||'the selected breakpoint',note=document.createElement('p');note.className='paint-scope-note';note.setAttribute('role','status');note.setAttribute('aria-label','Color edit range');note.textContent='Applies to '+scope+'. The current canvas is outside this range.';dialog.append(note);}
   const plane=document.createElement('div');plane.className='paint-plane';plane.tabIndex=0;plane.setAttribute('role','slider');plane.setAttribute('aria-label','Saturation and brightness');plane.setAttribute('aria-valuemin','0');plane.setAttribute('aria-valuemax','100');const handle=document.createElement('span');plane.append(handle);dialog.append(plane);
   const hue=document.createElement('input');hue.type='range';hue.min=0;hue.max=359;hue.step=1;I.field(dialog,'Hue',hue);hue.className='paint-hue';
@@ -57,6 +57,16 @@
   const preview=document.createElement('div');preview.className='paint-preview';preview.setAttribute('role','img');preview.setAttribute('aria-label','Color preview');dialog.append(preview);
   const value=document.createElement('input');value.value=original==='none'&&['fill','stroke'].includes(input.dataset.paintProperty)?'#000000':original;value.spellcheck=false;I.field(dialog,'Color value',value);
   const status=I.note(dialog,'');status.setAttribute('role','status');
+  let sampling=null;
+  const sampleStatus=I.note(dialog,'');sampleStatus.hidden=true;sampleStatus.setAttribute('role','status');sampleStatus.setAttribute('aria-label','Screen color sampling');
+  const sample=I.button('',async()=>{
+   if(sampling)return;const controller=new AbortController();sampling=controller;sample.disabled=true;sample.setAttribute('aria-busy','true');sampleStatus.hidden=true;const alpha=read()?.alpha??1;
+   try{const result=await new root.EyeDropper().open({signal:controller.signal});if(controller.signal.aborted||!dialog.open||!input.isConnected)return;if(!/^#[a-f\d]{6}$/i.test(result?.sRGBHex))throw Error('Invalid sampled color');value.value=srgbValue([1,3,5].map(index=>parseInt(result.sRGBHex.slice(index,index+2),16)/255),alpha);sync();}
+   catch(error){if(dialog.open&&!controller.signal.aborted&&error?.name!=='AbortError'){sampleStatus.textContent='Could not sample a screen color. Try again or enter a color.';sampleStatus.hidden=false;}}
+   finally{if(sampling===controller){sampling=null;sample.disabled=false;sample.removeAttribute('aria-busy');if(dialog.open)sample.focus();}}
+  });
+  sample.className='paint-eyedropper';sample.setAttribute('aria-label','Pick color from screen');sample.title=typeof root.EyeDropper==='function'?'Pick color from screen':'Screen color sampling is unavailable in this browser';sample.disabled=typeof root.EyeDropper!=='function';
+  sample.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5 5 5M13 6 4 15v5h5l9-9M15 7l3-3a2.1 2.1 0 0 1 3 3l-3 3M4 20l-1 1"/></svg>';header.append(sample);
   let parsed=null,h=0,s=0,v=0,drag=null;
   function read(){try{return parsePaint(value.value.trim());}catch{return null;}}
   function valid(){const color=value.value.trim();return root.RetouchHTMLCSSValues.valid('color',color)&&CSS.supports('color',color);}
@@ -90,7 +100,7 @@
   const resizeObserver=new ResizeObserver(position);resizeObserver.observe(dialog);
   const observer=new MutationObserver(()=>{if(!input.isConnected){draftPreview?.restore();dialog.close();}});observer.observe(document.body,{childList:true,subtree:true});
   dialog.addEventListener('cancel',()=>draftPreview?.restore());
-  dialog.addEventListener('close',()=>{resizeObserver.disconnect();observer.disconnect();draftPreview?.restore();root.removeEventListener('resize',position);dialog.remove();if(input.isConnected)input.focus();},{once:true});
+  dialog.addEventListener('close',()=>{sampling?.abort();resizeObserver.disconnect();observer.disconnect();draftPreview?.restore();root.removeEventListener('resize',position);dialog.remove();if(input.isConnected)input.focus();},{once:true});
   dialog.addEventListener('keydown',event=>{event.stopPropagation();if(event.key==='Enter'&&!event.isComposing&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&event.target.matches('input:not([type=range])')){event.preventDefault();apply();}});sync();dialog.showModal();position();root.addEventListener('resize',position);value.focus();
  }
  root.RetouchPaintPicker={open,gradientPreview,shadowPreview,propertyPreview};

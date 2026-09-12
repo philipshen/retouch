@@ -726,3 +726,9 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .paint-recent-swatches { display:grid;grid-template-columns:repeat(8,24px);gap:6px; }
 .paint-recent-swatches button { width:24px;height:24px;min-width:0;padding:0;border:1px solid #0002;border-radius:4px;background-size:100% 100%,6px 6px; }
 .paint-recent-swatches button[aria-pressed=true],.paint-recent-swatches button:focus-visible { outline:2px solid var(--accent);outline-offset:1px; }
+
+.paint-picker-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:12px; }
+.paint-picker-header h3 { margin:0; }
+.paint-eyedropper { display:grid;place-items:center;width:24px;height:24px;padding:0;border:0;background:transparent;color:var(--ink);border-radius:4px; }
+.paint-eyedropper:hover:not(:disabled) { background:var(--hover); }
+.paint-eyedropper:disabled { opacity:.4;cursor:default; }
