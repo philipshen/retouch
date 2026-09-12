@@ -191,6 +191,14 @@
     });
     return input;
   }
+  function numericPreview(input,el,property,format=value=>value+'px'){
+    input.retouchNumericPreview=()=>{
+      if(document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false')return null;
+      const preview=root.RetouchPaintPicker.propertyPreview({el,input,property});
+      return {current:()=>el.isConnected,update:value=>preview.update(format(value)),restore:()=>preview.restore()};
+    };
+    return input;
+  }
   function numericLabelDrag(input){
     const label=input.parentElement.querySelector('span');let drag=null;
     label.style.cursor='ew-resize';label.style.touchAction='none';label.style.userSelect='none';
@@ -479,7 +487,7 @@
     }
     const row = document.createElement('div'); row.className='opacity-row';
     const input = number(row,'Opacity (%)',Number(css.opacity)*100,0,100,value=>writeAppearance('opacity',value));
-    input.retouchNumericPreview=()=>{if(document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false')return null;const preview=root.RetouchPaintPicker.propertyPreview({el,input,property:'opacity'});return {current:()=>el.isConnected,update:value=>preview.update(String(value/100)),restore:()=>preview.restore()};};
+    numericPreview(input,el,'opacity',value=>String(value/100));
     const slider = document.createElement('input'); slider.type='range'; slider.min=0; slider.max=100; slider.value=input.value; slider.setAttribute('aria-label','Opacity');
     slider.oninput=()=>{input.value=slider.value;}; slider.onchange=()=>input.onchange(); row.append(slider); sec.append(row);
     const resetOpacity=button('Reset opacity',()=>writeAppearance('opacity',null));resetOpacity.disabled=root.RetouchReactSelection.change(info.className,'','opacity',null)===info.className;sec.append(resetOpacity);
@@ -513,11 +521,12 @@
     const radius=value=>/^[\d.]+px$/.test(value)?parseFloat(value):NaN;
     const radii=[css.borderTopLeftRadius,css.borderTopRightRadius,css.borderBottomRightRadius,css.borderBottomLeftRadius];
     const allRadius=number(sec,'Corner radius (px)',radii.every(v=>v===radii[0])?radius(radii[0]):NaN,0,10000,v=>save(cornerRadiusClasses(info.className,null,v,info.anchorInheritedClasses)));
+    numericPreview(allRadius,el,'border-radius');
     const resetRadius=button('Reset corner radius',()=>save(cornerRadiusClasses(info.className,null,null)));resetRadius.disabled=cornerRadiusClasses(info.className,null,null)===info.className;sec.append(resetRadius);
     allRadius.placeholder=radii.every(v=>v===radii[0])?radii[0]:'Mixed';
     const corners=document.createElement('details');corners.className='radius-corners';const summary=document.createElement('summary');summary.textContent='Individual corners';corners.append(summary);
     for(const [name,token,property] of [['Top left','tl','borderTopLeftRadius'],['Top right','tr','borderTopRightRadius'],['Bottom right','br','borderBottomRightRadius'],['Bottom left','bl','borderBottomLeftRadius']]) {
-      const field=number(corners,name+' radius (px)',radius(css[property]),0,10000,v=>save(cornerRadiusClasses(info.className,token,v,info.anchorInheritedClasses)));field.placeholder=css[property];
+      const field=number(corners,name+' radius (px)',radius(css[property]),0,10000,v=>save(cornerRadiusClasses(info.className,token,v,info.anchorInheritedClasses)));field.placeholder=css[property];numericPreview(field,el,property.replace(/[A-Z]/g,char=>'-'+char.toLowerCase()));
       const reset=button('Reset '+name.toLowerCase()+' radius',()=>save(cornerRadiusClasses(info.className,token,null)));reset.disabled=cornerRadiusClasses(info.className,token,null)===info.className;corners.append(reset);
     }
     corners.open=cornersExpanded;corners.ontoggle=()=>{if(corners.isConnected)cornersExpanded=corners.open;};
@@ -730,16 +739,17 @@
       fontPicker(sec,d,css.fontFamily,value=>{const token=fontFamilyClass(value);if(token)change(fontFamilyToken,token);});
       const resetFamily=button('Reset font family',()=>save(replace(info.className,fontFamilyToken,'')));resetFamily.disabled=!tokens(info.className).map(base).some(t=>t&&fontFamilyToken(t));sec.append(resetFamily);
       for(const [label,re,choices] of controls){const token=tokens(info.className).map(base).find(t=>re.test(t));select(sec,label,[['','Inherited / custom'],...choices],choices.some(([value])=>value===token)?token:'',value=>{if(value)change(re.test,value);});}
-      number(sec,'Font weight (1–1000)',parseFloat(css.fontWeight),1,1000,v=>{const token=fontWeightClass(v);if(token)change(fontWeightToken,token);});
+      numericPreview(number(sec,'Font weight (1–1000)',parseFloat(css.fontWeight),1,1000,v=>{const token=fontWeightClass(v);if(token)change(fontWeightToken,token);}),el,'font-weight',String);
       const resetWeight=button('Reset font weight',()=>save(replace(info.className,fontWeightToken,'')));resetWeight.disabled=!tokens(info.className).map(base).some(t=>t&&fontWeightToken(t));sec.append(resetWeight);
-      number(sec,'Font size (px)',parseFloat(css.fontSize),1,1000,v=>change(fontSizeToken,`text-[${v}px]`));
+      numericPreview(number(sec,'Font size (px)',parseFloat(css.fontSize),1,1000,v=>change(fontSizeToken,`text-[${v}px]`)),el,'font-size');
       const relativeLineHeight=relativeNumber(sec,'Line height (%)',parseFloat(css.lineHeight)/parseFloat(css.fontSize)*100,0,1000,v=>change(lineHeightToken,`[line-height:${Math.round(v*1e6)/1e8}]`));relativeLineHeight.title='Relative to this layer’s font size.';
       const lineHeight=number(sec,'Line height (px)',parseFloat(css.lineHeight),0,2000,v=>change(lineHeightToken,`leading-[${v}px]`));
+      numericPreview(lineHeight,el,'line-height');numericPreview(relativeLineHeight,el,'line-height',value=>String(Math.round(value*1e6)/1e8));
       if(css.lineHeight==='normal'){lineHeight.value='';lineHeight.placeholder='Automatic';relativeLineHeight.placeholder='Automatic';}
       sec.append(button('Automatic line height',()=>change(lineHeightToken,'[line-height:normal]')));
       const resetLineHeight=button('Reset line height',()=>save(replaceTypography(info.className,lineHeightToken,'')));try{resetLineHeight.disabled=replaceTypography(info.className,lineHeightToken,'')===info.className;}catch{resetLineHeight.disabled=true;}sec.append(resetLineHeight);
-      relativeNumber(sec,'Letter spacing (%)',(parseFloat(css.letterSpacing)||0)/parseFloat(css.fontSize)*100,-100,1000,v=>change(letterSpacingToken,`tracking-[${Math.round(v*1e6)/1e8}em]`)).title='Relative to this layer’s font size.';
-      number(sec,'Letter spacing (px)',parseFloat(css.letterSpacing)||0,-100,100,v=>change(letterSpacingToken,`tracking-[${v}px]`));
+      numericPreview(relativeNumber(sec,'Letter spacing (%)',(parseFloat(css.letterSpacing)||0)/parseFloat(css.fontSize)*100,-100,1000,v=>change(letterSpacingToken,`tracking-[${Math.round(v*1e6)/1e8}em]`)),el,'letter-spacing',value=>Math.round(value*1e6)/1e8+'em').title='Relative to this layer’s font size.';
+      numericPreview(number(sec,'Letter spacing (px)',parseFloat(css.letterSpacing)||0,-100,100,v=>change(letterSpacingToken,`tracking-[${v}px]`)),el,'letter-spacing');
       select(sec,'Text alignment',['left','center','right','justify','start','end'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.textAlign,v=>change(textAlignToken,'text-'+v));
       select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(fontStyleToken,v==='italic'?'italic':'not-italic'));
       select(sec,'Text decoration',[['none','None'],['underline','Underline'],['line-through','Strikethrough'],['overline','Overline']],css.textDecorationLine,v=>change(decorationToken,v==='none'?'no-underline':v));
