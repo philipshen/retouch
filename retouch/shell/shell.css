@@ -910,3 +910,6 @@ html, body { overflow:clip; }
  .screen-options:not([open]) > .screen-options-body { display:none; }
 }
 .screen-options::details-content { display:contents; }
+
+.inspector-section > .canvas-resize-action { display:flex;align-items:center;justify-content:center; }
+.canvas-resize-action svg { width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round; }

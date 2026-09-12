@@ -203,6 +203,8 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    }
    for(const checkbox of section.querySelectorAll('input[type="checkbox"]'))checkbox.closest('.inspector-field')?.classList.add('checkbox-field');
    if(name==='Layout'){
+    const resize=section.querySelector(':scope > button[data-canvas-tool="resize"]');
+    if(resize){const label=resize.textContent;resize.setAttribute('aria-label',label);resize.title=resize.title||label;resize.classList.add('section-add','canvas-resize-action');resize.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7V3h4 M13 3h4v4 M17 13v4h-4 M7 17H3v-4 M7 7l-4-4 M13 7l4-4 M13 13l4 4 M7 13l-4 4"/></svg>';}
     const alignment=section.querySelector('.layout-alignment');if(alignment)keyboardToolbar(alignment,'Align children',{columns:3,role:'group'});
     const stacks=section.querySelector(':scope > .stack-presets');if(stacks){stacks.classList.add('layout-mode-segments');for(const button of stacks.querySelectorAll(':scope > button')){const label=button.textContent,icon={'Normal flow':'flow','Vertical stack':'column','Horizontal stack':'row','Adaptive grid':'grid'}[label];if(!icon)continue;button.setAttribute('aria-label',label);button.title=label;button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+layoutIcons[icon]+'"/></svg>';}keyboardToolbar(stacks,'Layout preset buttons');}
     {
@@ -210,6 +212,8 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
      if(paddingPairs.length){const sides=disclosure('Individual padding',css?'html-padding':'react-padding');section.insertBefore(sides,paddingPairs[0]);paddingPairs.forEach(group=>sides.append(group));}
     }
     if(css){
+     const dimensions=section.querySelector('[aria-label="Width (CSS)"]')?.closest('.property-pair'),clip=section.querySelector('[aria-label="Clip content"]')?.closest('.property-row');
+     if(stacks&&dimensions){stacks.after(dimensions);if(clip)dimensions.after(clip);}
      const display=section.querySelector('[aria-label="Display (CSS)"]')?.value||'',flex=/^(inline-)?flex$/.test(display),grid=/^(inline-)?grid$/.test(display);
      const inactive=flex?[]:grid?['Direction','Wrap']:['Direction','Wrap','Align items','Align lines','Distribute items','Gap'];
      const options=disclosure('Layout options','html-layout-options');
