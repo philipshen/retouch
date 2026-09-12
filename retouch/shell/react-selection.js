@@ -56,6 +56,13 @@
   else for(const side of edge==='all'?['top','right','bottom','left']:[edge])active=L.paddingClasses(active,side,value,inherited,css);
   return R.replaceScope(classes,active,scope);
  }
+ const containerRules={mode:/^(?:block|inline|inline-block|flex|inline-flex|grid|inline-grid|hidden|contents|flow-root)$|^flex-(?:row|col)(?:-reverse)?$|^\[(?:display|flex-direction):/,wrap:/^flex-(?:wrap|wrap-reverse|nowrap)$|^\[flex-wrap:/,align:/^items-|^\[align-items:/,justify:/^justify-(?!items-|self-)|^\[justify-content:/};
+ function changeContainer(classes,scope,property,value,document=null){
+  if(!containerRules[property])throw Error('Unknown container layout control');
+  const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js'),active=R.project(classes,scope),inherited=R.inherited(classes,scope,document);
+  const next=value===null?inspector().replace(active,token=>containerRules[property].test(token),''):property==='mode'?L.modeClasses(active,value,inherited):L.arrangementClasses(active,property,value,inherited);
+  return R.replaceScope(classes,next,scope);
+ }
  function changeGap(classes,scope,axis,value,document=null,writingMode='horizontal-tb'){
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
   return R.replaceScope(classes,L.gapClasses(R.project(classes,scope),axis,value,writingMode,R.inherited(classes,scope,document)),scope);
@@ -72,6 +79,18 @@
   I.note(sec,'Shift-click a range in Layers; Cmd/Ctrl-click toggles layers. On the canvas, Shift-click toggles. Each edit updates these source layers and undoes together, including every rendered instance.');
   const liveElement=i=>{const el=resolveElement?resolveElement(infos[i].id):elements[i];if(!el?.isConnected||!el.ownerDocument.defaultView)throw Error('The preview changed. Select the layers again.');return el;};
   const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el)),groups=sharedGroups(sec);
+  for(const [property,label,choices,read,inline]of [
+   ['mode','Arrange children',[['flow','Normal flow'],['row','Row'],['column','Column'],['row-reverse','Row reversed'],['column-reverse','Column reversed'],['grid','Grid']],css=>/grid/.test(css.display)?'grid':/flex/.test(css.display)?css.flexDirection:'flow',['display','flex-direction','flex-flow']],
+   ['wrap','Wrap children',['nowrap','wrap','wrap-reverse'],css=>css.flexWrap,['flex-wrap','flex-flow']],
+   ['align','Align children',['start','center','end','stretch','baseline'],css=>css.alignItems==='normal'?'stretch':css.alignItems.replace('flex-',''),['align-items','place-items']],
+   ['justify','Distribute children',['start','center','end','between','around','evenly'],css=>css.justifyContent==='normal'?'start':css.justifyContent.replace('flex-','').replace('space-',''),['justify-content','place-content']]
+  ]){
+   const values=computed.map(read),mixed=values.some(value=>value!==values[0]),options=choices.map(choice=>Array.isArray(choice)?choice:[choice,({nowrap:'No wrap',wrap:'Wrap','wrap-reverse':'Wrap reversed',between:'Space between',around:'Space around',evenly:'Space evenly'})[choice]||choice[0].toUpperCase()+choice.slice(1)]);if(mixed)options.unshift(['','Mixed']);else if(!options.some(([value])=>value===values[0]))options.unshift([values[0],values[0]]);
+   const blocked=el=>inline.some(key=>el.style.getPropertyValue(key)),write=value=>{try{const changes=Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(blocked(el))throw Error('A selected layer has an inline layout override. Edit that source style first.');return [info.id,changeContainer(info.className,scope,property,value,el.ownerDocument)];}));save(changes);}catch(error){I.note(groups.layout,error.message,'refused');}};
+   const input=I.select(groups.layout,'Shared '+label,options,mixed?'':values[0],write);input.disabled=elements.some(blocked);if(mixed)input.options[0].disabled=true;
+   const reset=I.button('Reset shared '+label.toLowerCase(),()=>write(null));reset.disabled=input.disabled||infos.every(info=>changeContainer(info.className,scope,property,null)===info.className);groups.layout.append(reset);
+  }
+  I.note(groups.layout,'Row and column follow each container’s writing direction. Wrapping and child alignment take effect in flex or grid layouts. Reset reveals inherited layout styles.');
   const lengthDrag=(input,properties)=>{
    const parse=raw=>{const match=/^(\d+(?:\.\d+)?|\.\d+)(px|%|rem|em|vw|vh|ch)?$/.exec(raw.trim());return match?{value:Number(match[1]),min:0,max:10000,format:value=>String(value)+(match[2]||'')}:null;};
    I.numericLabelDrag(input,parse);
@@ -184,7 +203,7 @@
   I.note(groups.size,'Pixel sizes include padding and borders. Automatic sizing follows the page layout; fit content follows each layer’s content within the available space. Minimum and maximum sizes bound the result; when they conflict, the minimum takes precedence.');
   for(const body of Object.values(groups)){
    const rows=[...body.querySelectorAll('.inspector-field')],control=row=>row.querySelector('input[aria-label],select[aria-label],textarea[aria-label]');
-   for(const row of rows){const name=control(row)?.getAttribute('aria-label'),label=row.querySelector(':scope > span');if(!name?.startsWith('Shared ')||!label||row.parentElement.classList.contains('property-row'))continue;const short=name.slice(7);label.textContent=({'Page font':'Font','Font size (px)':'Size','Font weight (1–1000)':'Weight','Font family':'Font family','Flex basis':'Basis','Item alignment':'Alignment','Grid inline alignment':'Grid alignment','Grid column span':'Column span','Grid row span':'Row span','Text color with alpha':'Color','Background color with alpha':'Color','Border color with alpha':'Color','SVG fill with alpha':'Fill','SVG stroke with alpha':'Stroke'})[short]||short;row.title=name;}
+   for(const row of rows){const name=control(row)?.getAttribute('aria-label'),label=row.querySelector(':scope > span');if(!name?.startsWith('Shared ')||!label||row.parentElement.classList.contains('property-row'))continue;const short=name.slice(7);label.textContent=({'Arrange children':'Layout','Wrap children':'Wrap','Align children':'Alignment','Distribute children':'Distribution','Page font':'Font','Font size (px)':'Size','Font weight (1–1000)':'Weight','Font family':'Font family','Flex basis':'Basis','Item alignment':'Alignment','Grid inline alignment':'Grid alignment','Grid column span':'Column span','Grid row span':'Row span','Text color with alpha':'Color','Background color with alpha':'Color','Border color with alpha':'Color','SVG fill with alpha':'Fill','SVG stroke with alpha':'Stroke'})[short]||short;row.title=name;}
    for(const reset of [...body.querySelectorAll('button.control-button')]){
     const clearPaint=reset.textContent.startsWith('Clear selected ');
     if((!reset.textContent.startsWith('Reset shared ')&&!clearPaint)||reset.classList.contains('property-reset'))continue;
@@ -218,5 +237,5 @@
   }
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);

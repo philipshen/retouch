@@ -100,3 +100,14 @@ test('shared gaps map physical axes per writing mode and preserve scoped priorit
  assert.equal(changeGap('gap-2 md:gap-y-1','md:','width',null,null,'vertical-rl'),'gap-2');
  for(const value of ['-2','auto','1px;display:none','10001px'])assert.throws(()=>changeGap('','','width',value));
 });
+test('shared container layout preserves scopes, shorthand priorities and unrelated alignment',()=>{
+ const {changeContainer}=require('../shell/react-selection.js');
+ assert.equal(changeContainer('block md:grid hover:flex gap-2','md:','mode','column'),'block hover:flex gap-2 md:flex md:flex-col');
+ assert.equal(changeContainer('!flex !flex-row','md:','mode','column'),'!flex !flex-row md:!flex md:!flex-col');
+ assert.equal(changeContainer('![flex-flow:row_wrap]','md:','wrap','nowrap'),'![flex-flow:row_wrap] md:!flex-nowrap');
+ assert.equal(changeContainer('place-items-center md:items-start justify-items-end','md:','align','stretch'),'place-items-center justify-items-end md:items-stretch');
+ assert.equal(changeContainer('justify-items-end justify-self-center md:justify-between','md:','justify','end'),'justify-items-end justify-self-center md:justify-end');
+ assert.equal(changeContainer('flex flex-row md:flex md:flex-col hover:grid','md:','mode',null),'flex flex-row hover:grid');
+ assert.throws(()=>changeContainer('flex','','mode','invalid'));
+ assert.throws(()=>changeContainer('flex','','unknown','row'));
+});
