@@ -832,3 +832,10 @@ body input[type="number"]::-webkit-outer-spin-button { appearance:none;margin:0;
 @media (forced-colors:active) {
   body select:not([multiple]):not([size]), #screenToolbar select:not([multiple]):not([size]) { appearance:auto;background-image:none; }
 }
+
+/* Shared selection sections follow the same panel rhythm as single-layer sections. */
+#panelBody > details.shared-inspector-group.advanced { padding:0;margin:0;border-bottom:1px solid var(--line);border-radius:0; }
+#panelBody > details.shared-inspector-group.advanced > summary { padding:16px;font-size:12px;font-weight:600;color:var(--ink); }
+#panelBody > details.shared-inspector-group.advanced > summary::before { display:inline-block;width:12px;margin-left:-2px;color:var(--muted); }
+#panelBody > details.shared-inspector-group.advanced > .shared-inspector-group-body { padding:0 16px 16px; }
+#panelBody > .shared-inspector-notes { padding:12px 16px;border-bottom:1px solid var(--line); }
