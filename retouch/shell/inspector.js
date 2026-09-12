@@ -414,7 +414,7 @@
     if (mode === 'absolute') {
       let g;
       try { g = geometry(el); } catch (e) { note(sec,e.message,'refused'); return sec; }
-      if(onAlign&&css.position==='absolute')sec.insertBefore(root.RetouchSelectionLayout.singleToolbar(el,onAlign,notify),sec.children[1]);
+      if(onAlign&&css.position==='absolute')sec.insertBefore(root.RetouchSelectionLayout.singlePosition(el,onAlign,notify),sec.children[1]);
       note(sec, `Anchored to ${g.parentLabel}`);
       if(onTransform){const tools=document.createElement('div');tools.className='stack-presets';for(const action of ['move','resize']){const control=button((action==='move'?'Move':'Resize')+' on canvas',event=>onTransform(action,event.currentTarget));control.dataset.canvasTool=action;tools.append(control);}sec.append(tools);}
       const x = inferredAnchor(classes,'x',info.anchorInheritedClasses), y = inferredAnchor(classes,'y',info.anchorInheritedClasses);

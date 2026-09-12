@@ -37,7 +37,7 @@
   });
   if(mode==='absolute'){
    if(!g){I.note(sec,reason,'refused');return sec;}
-   sec.insertBefore(root.RetouchSelectionLayout.singleToolbar(el,next=>{if(width>el.ownerDocument.defaultView.innerWidth)throw Error('Choose a screen where this scope is active.');write(root.RetouchSelectionLayout.preserveBox(placement(next,effective()),next,el.ownerDocument.defaultView.getComputedStyle(el)));},message=>report(Error(message))),sec.children[1]);
+   sec.insertBefore(root.RetouchSelectionLayout.singlePosition(el,next=>{if(width>el.ownerDocument.defaultView.innerWidth)throw Error('Choose a screen where this scope is active.');write(root.RetouchSelectionLayout.preserveBox(placement(next,effective()),next,el.ownerDocument.defaultView.getComputedStyle(el)));},message=>report(Error(message))),sec.children[1]);
    I.note(sec,'Anchored to '+g.parentLabel);
    if(onMove){const tools=document.createElement('div');tools.className='stack-presets';for(const action of ['move','resize']){const button=I.button((action==='move'?'Move':'Resize')+' on canvas',event=>onMove(g,action,event.currentTarget));button.dataset.canvasTool=action;tools.append(button);}sec.append(tools);}
    const effective=()=>Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{});let inherited=effective();

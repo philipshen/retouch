@@ -83,13 +83,27 @@
    if(!parent||parent===d.body&&w.getComputedStyle(parent).position==='static')return {left:0,top:0,width:d.documentElement.clientWidth,height:w.innerHeight};
    const rect=parent.getBoundingClientRect();return {left:rect.left+parent.clientLeft,top:rect.top+parent.clientTop,width:parent.clientWidth,height:parent.clientHeight};
   }
- function singleToolbar(el,save,report){
-  return alignmentToolbar((mode,event,button)=>{try{
-   if(!el?.isConnected||el.ownerDocument.defaultView.getComputedStyle(el).position!=='absolute')throw Error('Choose an absolute layer in the current screen.');
-   const before=root.RetouchInspector.geometry(el),delta=arrange([el.getBoundingClientRect()],mode,frameBounds(el))[0];if(Math.abs(delta.x)+Math.abs(delta.y)<1/32)return;
-   const next={...before,x:before.x+delta.x,y:before.y+delta.y};if(!['x','y','width','height'].every(key=>Number.isFinite(next[key])&&Math.abs(next[key])<=100000))throw Error('Keep layer bounds within 100,000 pixels.');
-   if(root.document.activeElement===button)root.RetouchPanelFocus?.queue(button);save(next,before);
-  }catch(error){report(error.message);}});
+ function singlePosition(el,save,report){
+  const I=root.RetouchInspector,group=root.document.createElement('div'),fields=root.document.createElement('div');fields.className='property-pair';
+  function measure(){if(!el?.isConnected||el.ownerDocument.defaultView.getComputedStyle(el).position!=='absolute')throw Error('Choose an absolute layer in the current screen.');return I.geometry(el);}
+  function write(next,before,control){
+   if(!['x','y','width','height'].every(key=>Number.isFinite(next[key])&&Math.abs(next[key])<=100000))throw Error('Keep layer bounds within 100,000 pixels.');
+   if(['x','y'].every(key=>Math.abs(next[key]-before[key])<1/32))return;
+   if(root.document.activeElement===control)root.RetouchPanelFocus?.queue(control);return save(next,before);
+  }
+  group.append(alignmentToolbar((mode,event,button)=>{try{
+   const before=measure(),delta=arrange([el.getBoundingClientRect()],mode,frameBounds(el))[0];write({...before,x:before.x+delta.x,y:before.y+delta.y},before,button);
+  }catch(error){report(error.message);}}),fields);
+  const initial=measure();
+  for(const [axis,label]of [['x','X'],['y','Y']]){
+   const input=I.number(fields,label,initial[axis],-100000,100000,value=>{try{const before=measure();write({...before,[axis]:value},before,input);}catch(error){report(error.message);}});I.fieldDraft(input);input.title='Position from the containing frame in pixels. '+input.title;
+   input.retouchNumericPreview=()=>{
+    let before;try{before=measure();}catch(error){report(error.message);return {current:()=>false,update(){},restore(){}};}
+    const preview=root.RetouchPaintPicker.propertyPreview({el,input,property:'translate'});
+    return {current:()=>el.isConnected,update:value=>preview.update(axis==='x'?(value-before.x)+'px 0':'0 '+(value-before.y)+'px'),restore:()=>preview.restore()};
+   };
+  }
+  return group;
  }
  function mount(infos,elements,width,save,onTransform,strategy=null){
   const I=root.RetouchInspector,P=root.RetouchHTMLPosition,sec=I.section('Align selected layers');
@@ -159,5 +173,5 @@
   I.note(sec,'Exact gaps keep the first layer fixed, or the chosen reference layer. With a frame target, spacing starts at its left or top edge. Negative gaps overlap layers without reversing their order.');
   update();return sec;
  }
- const api={arrange,alignGroups,alignmentKey,alignmentToolbar,singleToolbar,preserveBox,gaps,setGaps,setSpacing,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSelectionLayout=api;
+ const api={arrange,alignGroups,alignmentKey,alignmentToolbar,singlePosition,preserveBox,gaps,setGaps,setSpacing,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSelectionLayout=api;
 })(typeof window==='object'?window:globalThis);
