@@ -16,7 +16,8 @@
    const f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),top=Math.max(f.top,c.top),bottom=Math.min(f.bottom,c.bottom),left=Math.max(f.left,c.left),right=Math.min(f.right,c.right),size=dimensions();
    for(const [axis,handle]of Object.entries(handles)){
     const rightHidden=f.right<c.left+8||f.right>c.right+1,bottomHidden=f.bottom<c.top+8||f.bottom>c.bottom+1;
-    handle.hidden=drag?.axis!==axis&&(axis==='both'?rightHidden||bottomHidden:axis==='width'?rightHidden||bottom-top<48:bottomHidden||right-left<48);
+    const focused=document.activeElement===handle&&right>left&&bottom>top;
+    handle.hidden=!focused&&drag?.axis!==axis&&(axis==='both'?rightHidden||bottomHidden:axis==='width'?rightHidden||bottom-top<48:bottomHidden||right-left<48);
     handle.style.left=(axis==='height'?(left+right)/2:Math.min(f.right,c.right))+'px';handle.style.top=(axis==='width'?(top+bottom)/2:Math.min(f.bottom,c.bottom))+'px';
     if(axis==='both')handle.title=size.width+' × '+size.height+' px. Drag both dimensions; hold Shift to keep the starting ratio. Arrow keys resize one axis; Shift steps 10 px. Escape cancels.';
     else{handle.setAttribute('aria-valuenow',size[axis]);handle.setAttribute('aria-valuetext',size[axis]+' pixels');}
@@ -52,6 +53,7 @@
     const initialHeight=axis!=='width'?frame.offsetHeight:clamp(size.height);
     drag={axis,handle,pointerId:e.pointerId,original:screens.get(),width:size.width,initialWidth:size.width,height:initialHeight,initialHeight,x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,right:f.right-c.left+canvas.scrollLeft,canvasWidth:canvas.clientWidth,canvasHeight:canvas.clientHeight,scale:f.width/frame.offsetWidth,scrollLeft:canvas.scrollLeft,scrollTop:canvas.scrollTop,changed:false};handle.setPointerCapture(e.pointerId);handle.classList.add('dragging');
    });
+   handle.addEventListener('focus',position);handle.addEventListener('blur',()=>queueMicrotask(position));
    handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',e=>{if(drag&&e.pointerId===drag.pointerId){move(e);finish(true);}});
    handle.addEventListener('pointercancel',()=>finish(false));handle.addEventListener('lostpointercapture',()=>finish(false));
    handle.addEventListener('keydown',e=>{
