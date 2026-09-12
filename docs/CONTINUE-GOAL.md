@@ -912,3 +912,11 @@ Validation: 897 unit tests passed. Focused picker tests passed Chromium/WebKit w
 Enter in the color picker's CSS or numeric channel/opacity fields now runs the same validated Apply action as the button. It rejects incomplete/out-of-range fields, preserves no-op behavior and performs one source edit. IME composition and modified Enter keys are ignored, and range/select/button keyboard behavior remains native.
 
 Focused picker tests passed Chromium/WebKit with text/numeric Enter commits, invalid channel Enter rejection, composition and modified Enter no-op checks. React gradient Chromium passed (`/private/tmp/retouch-picker-enter-page-fonts-chromium.log`). Initial concurrent WebKit/HTML runs timed out later in the workflows; individual reruns passed (`/private/tmp/retouch-picker-enter-webkit-retry.log`, `/private/tmp/retouch-picker-enter-html-retry.log`), including real source application and exact undo. Syntax/diff checks passed. Full Figma parity and native foreground/capture usability remain incomplete.
+
+### 2026-09-12 — Packaged color editor verification
+
+Built a fresh universal desktop archive from clean source `9ddf6634191d95ae997d574433b78b4b8fa310db`, including the visual RGB/HSL/P3 gradient picker, precise opacity, live canvas previews, cancellation cleanup and Enter Apply. Archive `/private/tmp/retouch-desktop-color-20260912-9ddf663/Retouch-0.1.0-mac.zip`, SHA-256 `511392a53013595f5da37c97184908c4095b5c42f01cae86041cfcec20af87b7`. All 176 manifest source hashes match checkout; arm64/x86_64 and strict ad-hoc signature verification passed. Source suite: 897 passed with concurrency 4.
+
+Five browser workflows against an extracted-bundle harness passed: focused picker Chromium/WebKit, React gradients Chromium/WebKit, full HTML Chromium. The extracted signature still verified after testing and the external harness was removed. Temporary Homebrew cask install/verification/uninstall passed with quarantine preserved; app directory, registration, tap and trust entry were verified absent, and developer mode returned to disabled. Receipt `desktop/verification/2026-09-12-color-picker.json` records logs and provenance.
+
+Native launch tests were not run for this build. Native foreground/capture, Developer ID signing, notarization, trusted public brew distribution and upgrades remain unfinished, as does full Figma parity.

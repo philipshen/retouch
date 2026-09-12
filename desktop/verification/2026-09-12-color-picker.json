@@ -1,0 +1,63 @@
+{
+  "sourceCommit": "9ddf6634191d95ae997d574433b78b4b8fa310db",
+  "sourceTreeDirty": false,
+  "sourceFiles": 176,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-color-20260912-9ddf663/Retouch-0.1.0-mac.zip",
+  "sha256": "511392a53013595f5da37c97184908c4095b5c42f01cae86041cfcec20af87b7",
+  "sourceMatchesCheckout": true,
+  "units": "897 passed on source commit 9ddf663; node --test --test-concurrency=4 test/*.test.cjs",
+  "workflows": [
+    {
+      "name": "paint-picker-chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-color-20260912-9ddf663/paint-picker-chromium.log"
+    },
+    {
+      "name": "paint-picker-webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-color-20260912-9ddf663/paint-picker-webkit.log"
+    },
+    {
+      "name": "gradient-chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-color-20260912-9ddf663/gradient-chromium.log"
+    },
+    {
+      "name": "gradient-webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-color-20260912-9ddf663/gradient-webkit.log"
+    },
+    {
+      "name": "html-chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-color-20260912-9ddf663/html-chromium.log"
+    }
+  ],
+  "installation": {
+    "installedVerification": {
+      "sourceCommit": "9ddf6634191d95ae997d574433b78b4b8fa310db",
+      "sourceTreeDirty": false,
+      "sourceFiles": 176,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "quarantinePreserved": true,
+    "cask": "Temporary tap install and uninstall passed. Upgrade not tested.",
+    "cleanup": "Temporary app directory, cask registration, tap and trust entry verified absent; developer mode restored to disabled.",
+    "logs": [
+      "/private/tmp/retouch-desktop-color-20260912-9ddf663/install.log",
+      "/private/tmp/retouch-desktop-color-20260912-9ddf663/uninstall.log"
+    ]
+  },
+  "nativeLaunch": "Not run. Native foreground/capture usability remains unverified; no native launch or Gatekeeper override attempted for this archive.",
+  "signing": "Ad hoc development build. Developer ID, notarization and trusted distribution remain unfinished.",
+  "harness": "External tests linked to extracted bundle; removed after all five workflows reached passing terminal states. Extracted signature verified again afterward."
+}
