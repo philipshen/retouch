@@ -1929,13 +1929,24 @@ function buildPalette(kind, tokens, current) {
     PALETTE[name].forEach((hexv, i) => row.appendChild(palBtn(tokens, current, `${kind}-${name}-${SHADES[i]}`, hexv)));
     pal.appendChild(row);
   }
+  pal.setAttribute('role','toolbar');pal.setAttribute('aria-label',kind==='bg'?'Fill color presets':'Text color presets');
+  const swatches=[...pal.querySelectorAll('.palbtn')],initial=swatches.find(button=>button.classList.contains('cur')&&!button.disabled)||swatches.find(button=>!button.disabled);
+  for(const button of swatches){button.tabIndex=button===initial?0:-1;button.addEventListener('focus',()=>{for(const item of swatches)item.tabIndex=item===button?0:-1;});}
+  pal.addEventListener('keydown',event=>{
+    if(event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(event.key))return;
+    const items=swatches.filter(button=>!button.matches(':disabled')),index=items.indexOf(document.activeElement);if(index<0)return;event.preventDefault();event.stopPropagation();let next;
+    if(event.key==='Home'||event.key==='End')next=event.key==='Home'?items[0]:items.at(-1);
+    else if(event.key==='ArrowLeft'||event.key==='ArrowRight')next=items[(index+(event.key==='ArrowRight'?1:-1)+items.length)%items.length];
+    else{const rows=[...pal.querySelectorAll('.palrow')].map(row=>[...row.querySelectorAll('.palbtn')].filter(button=>items.includes(button))).filter(row=>row.length),rowIndex=rows.findIndex(row=>row.includes(items[index])),column=rows[rowIndex].indexOf(items[index]),row=rows[(rowIndex+(event.key==='ArrowDown'?1:-1)+rows.length)%rows.length];next=row[Math.min(column,row.length-1)];}
+    next?.focus();
+  });
   return pal;
 }
 
 function palBtn(tokens, current, token, color) {
   const b = document.createElement('button');
   b.className = 'palbtn' + (token === current ? ' cur' : '');
-  b.title = token;
+  b.title = token;b.setAttribute('aria-label',token);
   b.style.background = color;
   b.onclick = () => applyColor(tokens, current, token);
   return b;
