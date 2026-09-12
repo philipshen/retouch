@@ -659,6 +659,25 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    await model().selectOption('hsb');await dialog.getByLabel('Brightness (%)',{exact:true}).fill('0');await dialog.getByLabel('Hue (deg)',{exact:true}).fill('240');await dialog.getByLabel('Saturation (%)',{exact:true}).fill('100');await dialog.getByLabel('Opacity value (%)',{exact:true}).fill('23.45');await dialog.getByLabel('Brightness (%)',{exact:true}).fill('100');assert.equal(await value().inputValue(),'color(display-p3 0 0 1 / 0.2345)');if(process.env.RT_E2E_P3_PICKER_SCREENSHOT)await dialog.screenshot({path:process.env.RT_E2E_P3_PICKER_SCREENSHOT});assert.equal(read(),before);await dialog.getByRole('button',{name:'Apply color',exact:true}).click();await wait(()=>read()!==before);await settled();assert.ok(read().includes('0.2345'));dialog=await open();assert.equal(await profile().inputValue(),'display-p3');assert.deepEqual((await parsed()).channels,[0,0,1]);await page.keyboard.press('Escape');await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();assert.equal(await target.getAttribute('style'),style);
    dialog=await open();await value().fill(initial);await value().fill('#336699');assert.equal(await plane().evaluate(el=>el.style.backgroundImage),'');assert.equal(await dialog.getByRole('slider',{name:'Hue',exact:true}).evaluate(el=>el.style.backgroundImage),'');await page.keyboard.press('Escape');assert.equal(read(),before);assert.deepEqual(errors,[]);console.log('P3 PICKER PASS',kind,engine);return;
   }
+  if(process.env.RT_E2E_SHARED_PADDING){
+   assert.notEqual(kind,'html');const before=read();
+   await page.getByLabel('Screen size',{exact:true}).focus();await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();
+   await page.getByLabel('Style screen scope',{exact:true}).selectOption('md:');await settled();
+   await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click({modifiers:['Shift']});await settled();
+   const field=page.getByLabel('Shared Padding',{exact:true}),padding=()=>app.locator('h1,p.other-font').evaluateAll(nodes=>nodes.map(el=>['top','right','bottom','left'].map(side=>getComputedStyle(el).getPropertyValue('padding-'+side))));
+   await field.fill('12');await field.press('Enter');await wait(()=>read()!==before);await settled();await wait(async()=>(await padding()).every(row=>row.every(v=>v==='12px')));const uniform=read();
+   assert.equal(await app.locator('p.named-font').evaluate(el=>getComputedStyle(el).padding),'0px');
+   await page.getByLabel('Shared Padding left',{exact:true}).fill('24');await page.getByLabel('Shared Padding left',{exact:true}).press('Enter');await settled();await wait(async()=>(await padding()).every(row=>row.join(',')==='12px,12px,12px,24px'));
+   assert.equal(await field.inputValue(),'');assert.equal(await field.getAttribute('placeholder'),'Mixed');
+   if(process.env.RT_E2E_SHARED_PADDING_SCREENSHOT){await page.locator('#panel').evaluate(panel=>{panel.scrollTop+=panel.querySelector('[data-shared-section=layout]').getBoundingClientRect().top-panel.getBoundingClientRect().top-50;});await page.locator('#panel').screenshot({path:process.env.RT_E2E_SHARED_PADDING_SCREENSHOT});}
+   const edged=read();await page.getByRole('button',{name:'Reset selected padding',exact:true}).click();await settled();await wait(async()=>(await padding()).every(row=>row.every(v=>v==='0px')));assert.doesNotMatch(read(),/md:!?p[trbl]-\[/);
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),edged);
+   await field.fill('-1');await field.press('Enter');assert.equal(await field.evaluate(el=>el.checkValidity()),false);await field.press('Escape');
+   await page.getByLabel('Screen size',{exact:true}).focus();await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await settled();await wait(async()=>(await padding()).every(row=>row.every(v=>v==='0px')));
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),uniform);
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),before);
+   console.log('SHARED PADDING SCOPED EDIT/MIXED/VALIDATION/UNDO PASS',kind,engine);return;
+  }
   if(process.env.RT_E2E_PAINT_MODELS){
    const before=read(),target=app.locator('h1'),style=await target.getAttribute('style'),label=kind==='html'?'Text color (CSS)':'Text color with alpha',open=async()=>{await page.getByRole('button',{name:'Edit '+label,exact:true}).click();return page.getByRole('dialog',{name:'Edit '+label,exact:true});};
    let dialog=await open();const value=()=>dialog.getByLabel('Color value',{exact:true}),model=()=>dialog.getByLabel('Color model',{exact:true}),profile=()=>dialog.getByLabel('Color profile',{exact:true});

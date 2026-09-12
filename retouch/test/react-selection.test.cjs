@@ -80,3 +80,14 @@ test('shared blur keeps each layer stack and unrelated responsive classes',()=>{
  for(const value of ['url(#external)','blur(1px) blur(2px)'])assert.throws(()=>changeBlur('','md:','filter',value,4),/single blur/);
  for(const amount of [-1,1001,Infinity])assert.throws(()=>changeBlur('','md:','filter','none',amount));
 });
+
+test('shared padding preserves scopes, important shorthands and logical edges',()=>{
+ const {changePadding}=require('../shell/react-selection.js');
+ const source='!p-4 hover:p-8 md:ps-2 text-red-500';
+ const next=changePadding(source,'md:','right','2rem',null,{direction:'rtl'});
+ assert.equal(next,'!p-4 hover:p-8 text-red-500 md:!pr-[2rem]');
+ assert.equal(changePadding(next,'md:','all',null),'!p-4 hover:p-8 text-red-500');
+ assert.equal(changePadding('py-2 md:p-4','md:','all','5%'),'py-2 md:p-4 md:pt-[5%] md:pr-[5%] md:pb-[5%] md:pl-[5%]');
+ for(const value of ['-1','auto','red','10001','1px; color:red'])assert.throws(()=>changePadding(source,'md:','all',value));
+ assert.throws(()=>changePadding(source,'','diagonal',1));
+});

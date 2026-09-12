@@ -49,6 +49,13 @@
   if(next===null)throw Error('A selected filter cannot be adjusted with a single blur value.');
   return R.replaceScope(classes,inspector().filterClasses(R.project(classes,scope),property,next),scope);
  }
+ function changePadding(classes,scope,edge,value,document=null,css={}){
+  const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
+  let active=R.project(classes,scope),inherited=R.inherited(classes,scope,document);
+  if(edge==='all'&&value===null)active=L.resetPaddingClasses(active);
+  else for(const side of edge==='all'?['top','right','bottom','left']:[edge])active=L.paddingClasses(active,side,value,inherited,css);
+  return R.replaceScope(classes,active,scope);
+ }
  const groupNames={size:'Size',layout:'Layout',typography:'Typography',appearance:'Appearance',effects:'Effects'};
  let groupState=null;
  function sharedGroups(parent){
@@ -61,6 +68,22 @@
   I.note(sec,'Shift-click a range in Layers; Cmd/Ctrl-click toggles layers. On the canvas, Shift-click toggles. Each edit updates these source layers and undoes together, including every rendered instance.');
   const liveElement=i=>{const el=resolveElement?resolveElement(infos[i].id):elements[i];if(!el?.isConnected||!el.ownerDocument.defaultView)throw Error('The preview changed. Select the layers again.');return el;};
   const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el)),groups=sharedGroups(sec);
+  {
+   const sides=['top','right','bottom','left'],L=root.RetouchLayout;
+   const inlinePadding=el=>Array.from(el.style).some(property=>property==='padding'||property.startsWith('padding-')),blocked=elements.some(inlinePadding);
+   const write=(edge,value,input)=>{try{const changes=Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(inlinePadding(el))throw Error('A selected layer has inline padding. Edit that source style first.');return [info.id,changePadding(info.className,scope,edge,value,el.ownerDocument,el.ownerDocument.defaultView.getComputedStyle(el))];}));save(changes);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+   const edges=root.document.createElement('div');edges.className='property-pair';
+   for(const edge of ['all','top','bottom','left','right']){
+    const values=computed.flatMap(css=>(edge==='all'?sides:[edge]).map(side=>css.getPropertyValue('padding-'+side).replace(/px$/,''))),mixed=values.some(value=>value!==values[0]),initial=mixed?'':values[0],input=root.document.createElement('input');
+    input.type='text';input.value=initial;input.placeholder=mixed?'Mixed':'0';input.disabled=blocked;input.title=blocked?'A selected layer has inline padding. Edit that source style first.':'Nonnegative padding: px, %, rem, em, vw, vh or ch.';
+    input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{try{write(edge,L.paddingValue(input.value),input);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+    input.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();input.value=initial;input.setCustomValidity('');input.blur();}else if(event.key==='Enter'){event.preventDefault();event.stopPropagation();input.blur();}};
+    const row=root.document.createElement('div');row.className='property-row';
+    if(edge==='all')groups.layout.append(row);else{if(!edges.parentElement)groups.layout.append(edges);edges.append(row);}
+    I.field(row,edge==='all'?'Shared Padding':'Shared Padding '+edge,input);input.parentElement.querySelector('span').textContent=edge==='all'?'Padding':edge[0].toUpperCase()+edge.slice(1);
+    const reset=I.button(edge==='all'?'Reset selected padding':'Reset selected padding '+edge,()=>write(edge,null,input));reset.disabled=blocked||infos.every((info,i)=>changePadding(info.className,scope,edge,null,elements[i].ownerDocument,computed[i])===info.className);reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');row.append(reset);
+   }
+  }
   for(const [property,label]of [['filter','Shared Layer blur (px)'],['backdrop-filter','Shared Backdrop blur (px)']]){
    const sec=groups.effects;
    const values=computed.map(css=>css.getPropertyValue(property).trim()),parsed=values.map(value=>root.RetouchHTMLCSSValues.parseFilters(value)),blurs=parsed.map(stack=>stack?.filter(item=>item.name==='blur')),amounts=blurs.map(stack=>stack?.length===1?parseFloat(stack[0].arg):stack?.length===0?0:NaN),mixed=amounts.some(amount=>amount!==amounts[0]);
@@ -122,7 +145,11 @@
    const reset=I.button('Reset shared '+field.label.toLowerCase(),()=>write(null));try{reset.disabled=infos.every(info=>change(info.className,scope,property,null)===(info.className||''));}catch(error){reset.disabled=true;reset.title=error.message;}sec.append(reset);
   }
   I.note(groups.size,'Pixel sizes include padding and borders. Automatic sizing follows the page layout; fit content follows each layer’s content within the available space. Minimum and maximum sizes bound the result; when they conflict, the minimum takes precedence.');
+  for(const body of Object.values(groups)){
+   const hints=[...body.children].filter(el=>el.classList.contains('hint')&&!el.classList.contains('refused')&&!el.hasAttribute('role'));
+   if(hints.length){const details=root.document.createElement('details'),summary=root.document.createElement('summary');details.className='inspector-disclosure';summary.textContent='Details';details.append(summary,...hints);body.append(details);}
+  }
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);
