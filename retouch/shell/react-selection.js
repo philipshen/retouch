@@ -57,6 +57,11 @@
   return R.replaceScope(classes,active,scope);
  }
  const containerRules={columns:/^grid-cols-|^\[grid-template-columns:/,rows:/^grid-rows-|^\[grid-template-rows:/,flow:/^grid-flow-|^\[grid-auto-flow:/,mode:/^(?:block|inline|inline-block|flex|inline-flex|grid|inline-grid|hidden|contents|flow-root)$|^flex-(?:row|col)(?:-reverse)?$|^\[(?:display|flex-direction):/,wrap:/^flex-(?:wrap|wrap-reverse|nowrap)$|^\[flex-wrap:/,align:/^items-|^\[align-items:/,justify:/^justify-(?!items-|self-)|^\[justify-content:/};
+ function changeGridTracks(classes,scope,axis,value,document=null){
+  const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
+  return R.replaceScope(classes,L.gridTemplateClasses(R.project(classes,scope),axis,value,R.inherited(classes,scope,document)),scope);
+ }
+ let sharedGridTracksOpen=false;
  function changeContainer(classes,scope,property,value,document=null){
   if(!containerRules[property])throw Error('Unknown container layout control');
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js'),active=R.project(classes,scope),inherited=R.inherited(classes,scope,document);
@@ -99,6 +104,13 @@
    const values=computed.map(css=>(css.gridAutoFlow.includes('column')?'col':'row')+(css.gridAutoFlow.includes('dense')?'-dense':'')),mixed=values.some(value=>value!==values[0]),choices=[['row','By row'],['col','By column'],['row-dense','By row · dense'],['col-dense','By column · dense']],inline=['grid','grid-auto-flow'];if(mixed)choices.unshift(['','Mixed']);
    const input=I.select(groups.layout,'Shared Grid flow',choices,mixed?'':values[0],value=>write('flow',value,inline));input.disabled=elements.some(el=>inline.some(key=>el.style.getPropertyValue(key)));if(mixed)input.options[0].disabled=true;
    const reset=I.button('Reset shared grid flow',()=>write('flow',null,inline));reset.disabled=input.disabled||infos.every(info=>changeContainer(info.className,scope,'flow',null)===info.className);groups.layout.append(reset);
+   const custom=root.document.createElement('details'),summary=root.document.createElement('summary');custom.className='inspector-disclosure';summary.textContent='Custom grid tracks';custom.append(summary);custom.open=sharedGridTracksOpen;custom.ontoggle=()=>{if(custom.isConnected)sharedGridTracksOpen=custom.open;};groups.layout.append(custom);
+   for(const axis of ['columns','rows']){
+    const property='grid-template-'+axis,values=infos.map((info,i)=>L.ownGridTemplate(root.RetouchResponsive.project(info.className,scope),axis)??computed[i].getPropertyValue(property)),mixed=values.some(value=>value!==values[0]),initial=mixed?'':values[0],input=root.document.createElement('input'),inline=['grid','grid-template',property];input.type='text';input.value=initial;input.placeholder=mixed?'Mixed':'160px 1fr';input.disabled=elements.some(el=>inline.some(key=>el.style.getPropertyValue(key)));
+    const write=value=>{try{const changes=Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(inline.some(key=>el.style.getPropertyValue(key))||!['grid','inline-grid'].includes(el.ownerDocument.defaultView.getComputedStyle(el).display))throw Error('Select grid containers without inline grid overrides.');if(value!==null&&!el.ownerDocument.defaultView.CSS.supports(property,value))throw Error('Enter supported grid track sizes.');return [info.id,changeGridTracks(info.className,scope,axis,value,el.ownerDocument)];}));save(changes);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+    input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(input.value.trim()!==initial)write(input.value.trim());};input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};
+    const label=axis==='columns'?'Column sizes':'Row sizes';I.field(custom,'Shared '+label,input);const reset=I.button('Reset shared '+label.toLowerCase(),()=>write(null));reset.disabled=input.disabled||infos.every(info=>changeGridTracks(info.className,scope,axis,null)===info.className);custom.append(reset);
+   }
    I.note(groups.layout,'Track counts replace the selected axis with equal fractions. Content can create additional implicit tracks. Grid flow controls placement of children without explicit positions.');
   }
   I.note(groups.layout,'Row and column follow each container’s writing direction. Wrapping and child alignment take effect in flex or grid layouts. Reset reveals inherited layout styles.');
@@ -249,5 +261,5 @@
   }
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);

@@ -120,3 +120,11 @@ test('shared grid track counts and flow preserve scope and shorthand priorities'
  for(const value of [0,25,2.5,NaN,'3'])assert.throws(()=>changeContainer('grid','','columns',value));
  assert.throws(()=>changeContainer('grid','','flow','invalid'));
 });
+test('shared custom grid tracks preserve responsive and important templates',()=>{
+ const {changeGridTracks}=require('../shell/react-selection.js');
+ assert.equal(changeGridTracks('grid-cols-2 md:grid-cols-3 hover:grid-cols-4','md:','columns','40px 1fr'),'grid-cols-2 hover:grid-cols-4 md:grid-cols-[40px_1fr]');
+ assert.equal(changeGridTracks('![grid:100px_/_1fr_1fr]','md:','rows','repeat(4, 30px)'),'![grid:100px_/_1fr_1fr] md:!grid-rows-[repeat(4,_30px)]');
+ assert.equal(changeGridTracks('grid-cols-2 md:grid-cols-[40px_1fr]','md:','columns',null),'grid-cols-2');
+ assert.throws(()=>changeGridTracks('grid','','columns','repeat(2, 1fr'));
+ assert.throws(()=>changeGridTracks('grid','','columns','1fr;display:none'));
+});
