@@ -857,3 +857,6 @@ body input[type="number"]::-webkit-outer-spin-button { appearance:none;margin:0;
 .canvas-rotation-corners { position:fixed; z-index:12; overflow:hidden; pointer-events:none; }
 .canvas-rotation-corner { position:absolute; width:16px; height:16px; padding:0; border:0; border-radius:50%; background:transparent; color:transparent; transform:translate(-50%,-50%); pointer-events:auto; touch-action:none; cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M5 18A8 8 0 1 1 19 7M19 2v6h-6' fill='none' stroke='white' stroke-width='4'/%3E%3Cpath d='M5 18A8 8 0 1 1 19 7M19 2v6h-6' fill='none' stroke='%23222222' stroke-width='1.5'/%3E%3C/svg%3E") 12 12, crosshair; font-size:14px; line-height:16px; }
 .canvas-rotation-corner:hover, .canvas-rotation-corner:focus-visible { color:var(--accent); background:var(--panel); outline:1px solid var(--accent); }
+
+.canvas-selection-resize { position:absolute; width:9px; height:9px; padding:0; border:1px solid var(--accent); border-radius:0; background:white; translate:-50% -50%; pointer-events:auto; touch-action:none; }
+.canvas-selection-resize:hover { background:var(--accent); }

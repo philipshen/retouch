@@ -48,17 +48,27 @@
    return {x:(g.layoutLeft+o[0])*scale+dx*cos-dy*sin,y:(g.layoutTop+o[1])*scale+dx*sin+dy*cos};
   });
  }
+ function resizeHandles(g,scale=1){
+  const o=g.transformOrigin.split(/\s+/).map(parseFloat),a=g.rotation*Math.PI/180;
+  return [['nw',0,0],['n',.5,0],['ne',1,0],['e',1,.5],['se',1,1],['s',.5,1],['sw',0,1],['w',0,.5]].map(([handle,fx,fy])=>{
+   const x=g.width*fx-o[0],y=g.height*fy-o[1];return {handle,x:(g.layoutLeft+o[0]+x*Math.cos(a)-y*Math.sin(a))*scale,y:(g.layoutTop+o[1]+x*Math.sin(a)+y*Math.cos(a))*scale};
+  });
+ }
+ function resizeCursor(handle,rotation=0){const angles={e:0,se:45,s:90,sw:135,w:180,nw:225,n:270,ne:315},i=((Math.round((angles[handle]+rotation)/45)%4)+4)%4;return ['ew','nwse','ns','nesw'][i]+'-resize';}
  function cornerControls({frame,canvas,onStart}){
   const doc=root.document,container=doc.createElement('div');container.className='canvas-rotation-corners';container.hidden=true;doc.body.append(container);let active=null;
   const buttons=['top left','top right','bottom right','bottom left'].map(name=>{const button=doc.createElement('button');button.type='button';button.className='canvas-rotation-corner';button.setAttribute('aria-label','Rotate from '+name+' corner');button.title='Drag to rotate · Shift: 15°';button.textContent='↻';button.tabIndex=-1;
    button.addEventListener('pointerdown',e=>{if(e.button!==0||!active)return;e.preventDefault();e.stopPropagation();onStart(active.target,active.input,e);});
    button.addEventListener('click',e=>{if(e.detail===0&&active)onStart(active.target,active.input);});container.append(button);return button;});
-  return {update(target,input){active=null;container.hidden=true;if(!target?.isConnected||!input?.isConnected||input.matches(':disabled')||input.closest('[inert]'))return;
+  const names={nw:'top left',n:'top',ne:'top right',e:'right',se:'bottom right',s:'bottom',sw:'bottom left',w:'left'};
+  const resizeButtons=Object.entries(names).map(([handle,name])=>{const button=doc.createElement('button');button.type='button';button.className='canvas-selection-resize';button.tabIndex=-1;button.setAttribute('aria-label','Drag '+name+' to resize selected layer');button.title='Drag to resize · Shift: keep proportions · Option / Alt: from center';button.dataset.selectionResize=handle;
+   button.addEventListener('pointerdown',event=>{if(event.button!==0||!active?.resizeControl?.isConnected)return;event.preventDefault();event.stopPropagation();active.resizeControl.retouchCanvasStart({event,handle});});container.append(button);return button;});
+  return {update(target,input,resizeControl){active=null;container.hidden=true;if(!target?.isConnected||!input?.isConnected||input.closest('[inert]'))return;const canRotate=!input.matches(':disabled'),canResize=resizeControl?.retouchCanvasStart&&!resizeControl.matches(':disabled')&&!resizeControl.closest('[inert]');
    try{const g=geometry(target),f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/frame.contentWindow.innerWidth,points=corners(g,scale),left=Math.max(c.left,f.left),top=Math.max(c.top,f.top),right=Math.min(c.right,f.right),bottom=Math.min(c.bottom,f.bottom);if(g.width<=0||g.height<=0||right<=left||bottom<=top)return;
     Object.assign(container.style,{left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px'});
-    buttons.forEach((button,i)=>{const x=f.left+points[i].x-left,y=f.top+points[i].y-top;button.hidden=x<8||y<8||x>right-left-8||y>bottom-top-8;button.style.left=x+'px';button.style.top=y+'px';});active={target,input};container.hidden=false;
+    buttons.forEach((button,i)=>{const x=f.left+points[i].x-left,y=f.top+points[i].y-top;button.hidden=!canRotate||x<8||y<8||x>right-left-8||y>bottom-top-8;button.style.left=x+'px';button.style.top=y+'px';});const positions=resizeHandles(g,scale);resizeButtons.forEach((button,i)=>{const p=positions[i],x=f.left+p.x-left,y=f.top+p.y-top;button.hidden=!canResize||x<5||y<5||x>right-left-5||y>bottom-top-5;Object.assign(button.style,{left:x+'px',top:y+'px',cursor:resizeCursor(p.handle,g.rotation),rotate:g.rotation+'deg'});});active={target,input,resizeControl};container.hidden=false;
    }catch{}
   }};
  }
- const api={difference,angle,value,mount,corners,cornerControls};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchCanvasRotate=api;
+ const api={difference,angle,value,mount,corners,resizeHandles,resizeCursor,cornerControls};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchCanvasRotate=api;
 })(typeof window==='object'?window:globalThis);

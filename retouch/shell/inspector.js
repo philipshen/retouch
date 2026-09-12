@@ -208,6 +208,9 @@
     });
     return input;
   }
+  function canvasTool(action,start){
+    const control=button((action==='move'?'Move':'Resize')+' on canvas',()=>start(control));control.dataset.canvasTool=action;control.retouchCanvasStart=initial=>start(control,initial);return control;
+  }
   function numericPreview(input,el,property,format=value=>value+'px',render=null){
     input.retouchPreviewTarget=el;
     input.retouchNumericPreview=()=>{
@@ -443,9 +446,9 @@
     if (mode === 'absolute') {
       if(onAlign&&css.position==='absolute')try{sec.insertBefore(root.RetouchSelectionLayout.singlePosition(el,onAlign,notify),sec.children[1]);}catch(error){note(sec,error.message,'refused');}
       let g;
-      try { g = geometry(el); } catch (e) { const coordinates=sec.querySelector('[aria-label="X"]');if(coordinates&&onTransform){for(const action of ['move','resize']){const control=button((action==='move'?'Move':'Resize')+' on canvas',event=>onTransform(action,event.currentTarget));control.dataset.canvasTool=action;sec.append(control);}}note(sec,coordinates?'Anchor presets for rotated layers are not available yet.':e.message,coordinates?'':'refused'); return sec; }
+      try { g = geometry(el); } catch (e) { const coordinates=sec.querySelector('[aria-label="X"]');if(coordinates&&onTransform){for(const action of ['move','resize']){const control=canvasTool(action,(opener,initial)=>onTransform(action,opener,initial));sec.append(control);}}note(sec,coordinates?'Anchor presets for rotated layers are not available yet.':e.message,coordinates?'':'refused'); return sec; }
       note(sec, `Anchored to ${g.parentLabel}`);
-      if(onTransform){const tools=document.createElement('div');tools.className='stack-presets';for(const action of ['move','resize']){const control=button((action==='move'?'Move':'Resize')+' on canvas',event=>onTransform(action,event.currentTarget));control.dataset.canvasTool=action;tools.append(control);}sec.append(tools);}
+      if(onTransform){const tools=document.createElement('div');tools.className='stack-presets';for(const action of ['move','resize']){const control=canvasTool(action,(opener,initial)=>onTransform(action,opener,initial));tools.append(control);}sec.append(tools);}
       const x = inferredAnchor(classes,'x',info.anchorInheritedClasses), y = inferredAnchor(classes,'y',info.anchorInheritedClasses);
       const horizontal=select(sec,'Horizontal anchor',[['start','Left'],['center','Center'],['end','Right'],['stretch','Left + right'],['scale','Scale']],x,v=>applyAnchor(v,y));
       const vertical=select(sec,'Vertical anchor',[['start','Top'],['center','Center'],['end','Bottom'],['stretch','Top + bottom'],['scale','Scale']],y,v=>applyAnchor(x,v));
@@ -835,6 +838,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

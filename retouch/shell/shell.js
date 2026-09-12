@@ -920,7 +920,7 @@ function paintLoop() {
     componentBadge.style.top=Math.max(0,r.top-22)+'px';
   }
   const rotationInput=mode==='edit'&&!editing&&!stopDrawing&&!canvasPan.active&&!panelTasks&&!undoBusy&&!sourceRequests&&!sel?.multiple?.length&&!document.querySelector('dialog[open]')&&document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false'?panelBody.querySelector('input[aria-label="Rotation (°)"]'):null;
-  rotationCorners.update(rotationInput?.retouchPreviewTarget,rotationInput);
+  rotationCorners.update(rotationInput?.retouchPreviewTarget,rotationInput,rotationInput?panelBody.querySelector('[data-canvas-tool=resize]'):null);
   if(d&&sel&&mode==='edit'&&!editing&&window.RetouchGridGuidesEnabled)RetouchInspector.drawGridGuides(overlayLayer,renderedSelection?.element||matchingEls(activeId())[0]);
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
   marqueeSurface.textContent='';
@@ -1239,7 +1239,7 @@ function renderPanelContents() {
   }
   if(info.cssAuthoring){
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
-    const position=target?.namespaceURI!=='http://www.w3.org/2000/svg'?RetouchHTMLPosition.mount(info,target,width,setHTMLCSS,(g,action,opener)=>moveHTMLLayer(info,target,width,g,action,opener)):null;
+    const position=target?.namespaceURI!=='http://www.w3.org/2000/svg'?RetouchHTMLPosition.mount(info,target,width,setHTMLCSS,(g,action,opener,initial)=>moveHTMLLayer(info,target,width,g,action,opener,initial)):null;
     panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS,position,writeTextStyle));
     if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{}));
     if(info.canSetTag){const section=RetouchInspector.section('Element');RetouchInspector.select(section,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','li'].map(tag=>[tag,tag]),info.tag,setTag);panelBody.appendChild(section);}
@@ -1249,7 +1249,7 @@ function renderPanelContents() {
   if(target?.namespaceURI==='http://www.w3.org/2000/svg')panelBody.appendChild(RetouchSVGPaint.mount(style,target,setClasses));
   const textLayer=RetouchInspector.isTextLayer(info.tag);
   if(textLayer) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag,(type,scope,extra)=>writeTextStyle(type,undefined,{scope,...extra})));
-  panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err'),(info.renderRevisionAttribute||info.classSelection)&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(action,opener)=>transformReactLayer(info,target,action,opener):null,info.renderRevisionAttribute&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(classes,g)=>writeReactBounds(info,classes,g):null,info.classSelection&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(g,before)=>writeClassLayerGeometry(info,target,g,before):null));
+  panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err'),(info.renderRevisionAttribute||info.classSelection)&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(action,opener,initial)=>transformReactLayer(info,target,action,opener,initial):null,info.renderRevisionAttribute&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(classes,g)=>writeReactBounds(info,classes,g):null,info.classSelection&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(g,before)=>writeClassLayerGeometry(info,target,g,before):null));
   panelBody.appendChild(RetouchLayout.mount(style, target, setClasses));
   panelBody.appendChild(RetouchInspector.appearance(style, target, setClasses,info.classColorStyles?(property,value)=>writeTextStyle('setColorOverride',undefined,{scope:styleScope,property,value}):undefined));
   if (info.src !== null || info.srcDynamic) {
@@ -2259,12 +2259,12 @@ function rotateLayerOnCanvas(target,input,initialPointer=null){
   stopDrawing=RetouchCanvasRotate.mount({target,frame:iframe,canvas:canvasSurface,input,current,initialPointer,onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
 }
 
-function transformReactLayer(info,target,action,opener){
+function transformReactLayer(info,target,action,opener,initial=null){
   stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!target?.isConnected||info.classNameDynamic)return;
   let g;try{if(info.classSelection)classGeometryStrategy(info,target).validate();const reason=reactGeometryReason(info,target);if(reason)throw Error(reason);if(target.ownerDocument.defaultView.getComputedStyle(target).position!=='absolute')throw Error('Choose a screen where this layer is absolute before transforming it.');g=RetouchInspector.geometry(target,{allowRotation:true});}catch(error){toast(error.message,'err');return;}
   const scope=styleScope,hash=info.hash,classes=RetouchResponsive.project(info.className,scope),base=RetouchResponsive.inherited(info.className,scope,doc()),x=RetouchInspector.inferredAnchor(classes,'x',base),y=RetouchInspector.inferredAnchor(classes,'y',base);
   canvasPan.cancel();
-  stopDrawing=RetouchCanvasMove.mount({target,frame:iframe,canvas:canvasSurface,mode:action,preserveBox:!!info.classSelection,opener,
+  stopDrawing=RetouchCanvasMove.mount({target,frame:iframe,canvas:canvasSurface,mode:action,preserveBox:!!info.classSelection,opener,initial,
     onCommit:async(delta,options)=>{if(sel?.info.id!==info.id||sel?.info.hash!==hash||styleScope!==scope)return;try{const current=RetouchInspector.geometry(target,{allowRotation:true});if(['x','y','width','height','parentWidth','parentHeight','rotation'].some(key=>Math.abs((current[key]??0)-(g[key]??0))>.5))throw Error('The layer changed during the gesture. Re-select it and try again.');const geometry={...g,...(action==='resize'?{width:delta.width,height:delta.height}:{}),x:g.x+delta.x,y:g.y+delta.y};if(![geometry.x,geometry.y,geometry.width,geometry.height].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Keep layer bounds within 100,000 pixels.');if(await (info.classSelection?writeClassLayerGeometry(info,target,geometry,g):writeReactBounds(info,RetouchInspector.anchorClasses(classes,geometry,x,y,base),geometry))){if(options?.keyboard)document.querySelector('[data-canvas-tool='+action+']')?.focus({preventScroll:true});}}catch(error){toast(error.message,'err');}},
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
 }
@@ -2278,13 +2278,13 @@ function transformLayerSelection(elements,commit,opener,action='move',spacing=nu
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
 }
 
-function moveHTMLLayer(info,target,width,g,action='move',opener){
+function moveHTMLLayer(info,target,width,g,action='move',opener,initial=null){
   stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!target?.isConnected)return;
   const scope=styleScope;
   try{if(!Number.isInteger(width)||width>target.ownerDocument.defaultView.innerWidth)throw Error('Choose a screen where this scope is active.');if(target.ownerDocument.defaultView.getComputedStyle(target).position!=='absolute')throw Error('Choose an absolute layer in the current screen.');g=RetouchInspector.geometry(target,{allowRotation:true});}catch(error){toast(error.message,'err');return;}
   const inherited=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=target.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{});
   canvasPan.cancel();
-  stopDrawing=RetouchCanvasMove.mount({target,frame:iframe,canvas:canvasSurface,mode:action,preserveBox:true,opener,
+  stopDrawing=RetouchCanvasMove.mount({target,frame:iframe,canvas:canvasSurface,mode:action,preserveBox:true,opener,initial,
     onCommit:(delta,options)=>{if(sel?.info.id!==info.id||sel?.info.hash!==info.hash||styleScope!==scope)return;try{const current=RetouchInspector.geometry(target,{allowRotation:true});if(['x','y','width','height','parentWidth','parentHeight','rotation'].some(key=>Math.abs((current[key]??0)-(g[key]??0))>.5))throw Error('The layer changed during the gesture. Re-select it and try again.');const geometry={...g,...(action==='resize'?{width:delta.width,height:delta.height}:{}),x:g.x+delta.x,y:g.y+delta.y};if(![geometry.x,geometry.y,geometry.width,geometry.height].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Move within 100,000 pixels of the container.');setHTMLCSS(RetouchSelectionLayout.preserveBox(RetouchHTMLPosition.placement(geometry,inherited),geometry,target.ownerDocument.defaultView.getComputedStyle(target)),null,width).then(()=>{if(options?.keyboard&&sel?.info.id===info.id)document.querySelector('[data-canvas-tool='+action+']')?.focus({preventScroll:true});});}catch(error){toast(error.message,'err');}},
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
 }
