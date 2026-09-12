@@ -736,3 +736,51 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .paint-conversion:empty { display:none; }
 .paint-conversion { margin-bottom:10px; }
 .paint-conversion button { margin:4px 4px 0 0;font-size:11px; }
+
+/* Figma-style paint layout: full-width plane, paired tracks, compact values. */
+.paint-picker { padding:0;border-radius:8px; }
+.paint-picker-header { height:40px;padding:0 10px;margin:0;gap:8px; }
+.paint-picker-header h3 { flex:1;font-size:11px; }
+.paint-picker-header .paint-preview { flex:0 0 16px;width:16px;height:16px;margin:0;background-size:100% 100%,4px 4px; }
+.paint-picker-header .paint-profile-field { flex:0 0 90px;width:90px;margin:0; }
+.paint-profile-field > span,.paint-model-field > span,.paint-hue-row > span,.paint-slider-tracks .inspector-field > span,.paint-notation-row .inspector-field > span,.paint-css-field > span { display:none; }
+.paint-picker .paint-profile-field select { width:100%;font-size:11px;background:transparent;padding:2px; }
+.paint-close { display:grid;place-items:center;flex:0 0 24px;width:24px;height:24px;border:0;padding:0;background:transparent;font-size:20px;line-height:1;color:var(--ink); }
+.paint-close:hover { background:var(--hover); }
+.paint-plane { height:278px;border-radius:0;margin:0; }
+.paint-sliders { display:flex;align-items:center;gap:12px;padding:16px 12px 12px; }
+.paint-sliders .paint-eyedropper { flex:0 0 24px; }
+.paint-slider-tracks { display:flex;flex-direction:column;gap:12px;flex:1;min-width:0; }
+.paint-slider-tracks .inspector-field { margin:0;min-height:10px; }
+.paint-slider-tracks input[type=range] { width:100%;min-width:0;flex:1; }
+.paint-notation-row { display:flex;align-items:center;gap:4px;margin:0 10px 10px;min-height:28px; }
+.paint-notation-row .inspector-field { margin:0;min-width:0; }
+.paint-notation-row .paint-model-field { flex:0 0 52px; }
+.paint-notation-row .paint-model-field select { width:52px;padding:4px 2px;font-size:11px;background:transparent; }
+.paint-notation-row .paint-channels { flex:1;gap:2px;margin:0;min-width:0; }
+.paint-notation-row .paint-channels > .inspector-field { gap:0; }
+.paint-notation-row input { height:28px;min-width:0;padding:4px 2px;font-size:11px;text-align:center; }
+.paint-notation-row > .inspector-field:not(.paint-model-field) { flex:1; }
+.paint-alpha-field { position:relative;flex:0 0 52px; }
+.paint-alpha-field input { width:52px;padding-right:12px; }
+.paint-alpha-field > span { position:absolute;right:3px;top:7px;font-size:10px;pointer-events:none;color:var(--muted); }
+.paint-notation-row input[type=number]::-webkit-inner-spin-button { display:none; }
+.paint-notation-row input[type=number] { appearance:textfield; }
+.paint-picker > .paint-css-field { margin:0 10px 10px; }
+.paint-css-field input { width:100%;min-width:0;font-size:11px;font-family:ui-monospace,monospace; }
+.paint-notation-row .paint-css-field input { text-align:left; }
+.paint-picker > .paint-conversion,.paint-picker > .inspector-note { margin-left:10px;margin-right:10px; }
+.paint-picker .paint-scope-note { margin:0;padding:0 10px 10px; }
+.paint-recents { margin:0;padding:12px 10px;border-top:1px solid var(--line); }
+.paint-recent-swatches { grid-template-columns:repeat(9,24px);gap:4px; }
+.paint-picker-actions { margin:0;padding:8px 10px 10px;border-top:1px solid var(--line); }
+.paint-alpha-field input { border:1px solid transparent;border-radius:5px;background:var(--control);color:var(--ink);font-family:var(--font); }
+.paint-alpha-field input:hover { background:var(--hover); }
+.paint-alpha-field input:focus { border-color:var(--accent);background:white;outline:0;box-shadow:0 0 0 1px var(--accent); }
+
+.paint-picker-header .paint-preview { position:relative;background-image:repeating-conic-gradient(#ddd 0% 25%,white 0% 50%);background-size:4px 4px; }
+.paint-picker-header .paint-preview::after { content:"";position:absolute;inset:0;border-radius:inherit;background:var(--paint-color,transparent); }
+.paint-profile-field,.paint-model-field { position:relative; }
+.paint-picker .paint-profile-field select,.paint-picker .paint-model-field select { appearance:none;padding-right:14px; }
+.paint-profile-field::after,.paint-model-field::after { content:"";position:absolute;right:5px;top:10px;width:5px;height:5px;border-right:1px solid currentColor;border-bottom:1px solid currentColor;transform:rotate(45deg);pointer-events:none; }
+.paint-profile-field::after { top:8px; }
