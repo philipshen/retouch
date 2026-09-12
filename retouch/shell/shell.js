@@ -300,7 +300,7 @@ function hookFrame(d, w) {
   d.addEventListener('keydown', (e) => {
     if(e.key==='Escape'){vectorEntrySerial++;if(pendingVectorEntry){pendingVectorEntry=null;e.preventDefault();e.stopPropagation();return;}}
     if(mode==='edit'&&!editing&&window.RetouchActions?.shortcut(e)){cancelOpacityEntry();return;}
-    if(opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||layerNavigationShortcut(e)||canvasLayerShortcut(e))return;
+    if(alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||layerNavigationShortcut(e)||canvasLayerShortcut(e))return;
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'i')) {
@@ -2555,7 +2555,7 @@ routeInput.addEventListener('keydown', (e) => {
 });
 window.addEventListener('keydown', (e) => {
   if(e.key==='Escape'){vectorEntrySerial++;if(pendingVectorEntry){pendingVectorEntry=null;e.preventDefault();return;}}
-  if(opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||((e.metaKey||e.ctrlKey)&&['[',']','{','}'].includes(e.key)&&canvasLayerShortcut(e)))return;
+  if(alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||((e.metaKey||e.ctrlKey)&&['[',']','{','}'].includes(e.key)&&canvasLayerShortcut(e)))return;
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
   if(sourceHistoryShortcut(e))return;
@@ -2636,6 +2636,12 @@ async function setLayerLocks(el,value){
   if(value)clearSelection();
   layers.refresh();
   toast(value?'Selection locked on the canvas. Select it in Layers to edit.':'Selection unlocked.','ok');
+}
+function alignmentShortcut(e){
+ const alignment=window.RetouchSelectionLayout?.alignmentKey(e);
+ if(!alignment||mode!=='edit'||editing||stopDrawing||canvasPan.active||!sel||panelTasks||undoBusy||sourceRequests||e.target.isContentEditable||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="menu"]')||document.querySelector('dialog[open]'))return false;
+ const button=panelBody.querySelector('[data-align="'+alignment+'"]');if(!button||button.matches(':disabled')||button.closest('[inert]'))return false;
+ e.preventDefault();e.stopPropagation();if(!e.repeat)button.dispatchEvent(new MouseEvent('click',{bubbles:true,shiftKey:e.shiftKey}));return true;
 }
 function canvasLayerShortcut(e){
  if(e.defaultPrevented||e.isComposing||e.altKey||mode!=='edit'||editing||!sel||e.target.isContentEditable||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||document.querySelector('dialog[open]'))return false;

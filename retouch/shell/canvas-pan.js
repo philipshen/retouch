@@ -45,7 +45,7 @@
   },{passive:false});
   root.addEventListener('blur',cancel);root.addEventListener('retouch:before-zoom',cancel);root.addEventListener('retouch:screen',cancel);
   new ResizeObserver(()=>{if(drag)cancel();paint();}).observe(canvas);paint();
-  return {cancel};
+  return {cancel,get active(){return held||toggled||!!drag;}};
  }
  root.RetouchCanvasPan={mount};
 })(window);

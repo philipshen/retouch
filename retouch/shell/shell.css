@@ -552,7 +552,7 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .layout-modes select option { font-size:12px; }
 #panel details.advanced { border:0;background:transparent;padding:0; }
 #panel details.advanced > summary { font-size:10px;text-transform:none;letter-spacing:0;color:var(--muted); }
-.design-tool-dock { position:absolute;z-index:40;bottom:16px;transform:translateX(-50%);display:flex;gap:4px;padding:6px;background:white;border:1px solid #e5e5e5;border-radius:13px;box-shadow:0 3px 12px #00000014; }
+.design-tool-dock { position:absolute;z-index:41;bottom:16px;transform:translateX(-50%);display:flex;gap:4px;padding:6px;background:white;border:1px solid #e5e5e5;border-radius:13px;box-shadow:0 3px 12px #00000014; }
 .design-tool-dock button { width:36px;height:36px;border:0;border-radius:7px;background:white;color:var(--ink);font-size:0;cursor:pointer; }
 .design-tool-dock button:hover { background:var(--control); }
 .design-tool-dock button:disabled { opacity:.3;cursor:default; }

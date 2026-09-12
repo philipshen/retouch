@@ -56,3 +56,9 @@ test('frame alignment moves each sibling group as a unit on all six edges and ce
  }
  assert.throws(()=>alignGroups(rects,'gap-x',frames));assert.throws(()=>alignGroups(rects,'left',[a]));assert.throws(()=>alignGroups(rects,'left',[a,a,{...b,width:NaN}]));
 });
+
+test('alignment keys use physical codes for macOS Option characters and exclude competing modifiers',()=>{
+ const {alignmentKey}=require('../shell/selection-layout.js'),base={altKey:true,key:'å',code:'KeyA'};
+ assert.equal(alignmentKey(base),'left');assert.equal(alignmentKey({...base,key:'',code:'KeyH'}),'center');assert.equal(alignmentKey({altKey:true,key:'w'}),'top');assert.equal(alignmentKey({...base,shiftKey:true}),'left');
+ for(const override of [{altKey:false},{metaKey:true},{ctrlKey:true},{isComposing:true},{defaultPrevented:true},{code:'KeyX'},{getModifierState:name=>name==='AltGraph'}])assert.equal(alignmentKey({...base,...override}),null);
+});

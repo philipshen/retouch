@@ -17,6 +17,11 @@
   }
   return result;
  }
+ function alignmentKey(event){
+  if(event.defaultPrevented||event.isComposing||!event.altKey||event.metaKey||event.ctrlKey||event.getModifierState?.('AltGraph'))return null;
+  const code=event.code||'Key'+String(event.key).toUpperCase();
+  return {KeyA:'left',KeyH:'center',KeyD:'right',KeyW:'top',KeyV:'middle',KeyS:'bottom'}[code]||null;
+ }
  function alignGroups(rects,mode,frames){
   if(!['left','center','right','top','middle','bottom'].includes(mode))throw Error('Choose an alignment for the containing frames.');
   arrange(rects,mode);if(!Array.isArray(frames)||frames.length!==rects.length)throw Error('Resolve a containing frame for every layer.');
@@ -119,8 +124,8 @@
    const button=I.button(label,event=>{try{
     const measured=measure(),rects=measured.map(item=>item.rect),frames=new Map();
     const deltas=event.shiftKey&&!mode.startsWith('gap-')?alignGroups(rects,mode,elements.map(el=>{const key=el.offsetParent;if(!frames.has(key))frames.set(key,frameBounds(el));return frames.get(key);})):arrange(rects,mode,targetBounds(measured));if(deltas.every(d=>Math.abs(d.x)+Math.abs(d.y)<1/32))return;
-    root.RetouchPanelFocus?.queue(button);write(measured,deltas);
-   }catch(error){I.note(sec,error.message,'refused');}});button.setAttribute('aria-label',label);button.title=label+(mode.startsWith('gap-')?'':' · Shift: align group to containing frame');button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+icons[mode]+'"/></svg>';button.tabIndex=mode==='left'?0:-1;button.addEventListener('focus',()=>{for(const item of controls.children)item.tabIndex=item===button?0:-1;});if(mode.startsWith('gap-'))button.dataset.distribution=mode;controls.append(button);
+    if(root.document.activeElement===button)root.RetouchPanelFocus?.queue(button);write(measured,deltas);
+   }catch(error){I.note(sec,error.message,'refused');}});button.dataset.align=mode;button.setAttribute('aria-label',label);const key={left:'A',center:'H',right:'D',top:'W',middle:'V',bottom:'S'}[mode];if(key)button.setAttribute('aria-keyshortcuts','Alt+'+key);button.title=label+(key?' · Alt+'+key:'')+(mode.startsWith('gap-')?'':' · Shift: align group to containing frame');button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+icons[mode]+'"/></svg>';button.tabIndex=mode==='left'?0:-1;button.addEventListener('focus',()=>{for(const item of controls.children)item.tabIndex=item===button?0:-1;});if(mode.startsWith('gap-'))button.dataset.distribution=mode;controls.append(button);
   }
   controls.addEventListener('keydown',event=>{
    if(event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
@@ -142,5 +147,5 @@
   I.note(sec,'Exact gaps keep the first layer fixed, or the chosen reference layer. With a frame target, spacing starts at its left or top edge. Negative gaps overlap layers without reversing their order.');
   update();return sec;
  }
- const api={arrange,alignGroups,gaps,setGaps,setSpacing,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSelectionLayout=api;
+ const api={arrange,alignGroups,alignmentKey,gaps,setGaps,setSpacing,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSelectionLayout=api;
 })(typeof window==='object'?window:globalThis);
