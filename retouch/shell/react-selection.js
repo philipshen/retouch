@@ -115,7 +115,7 @@
    input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{const value=input.value.trim();if(!root.RetouchHTMLCSSValues.valid('color',value,false)||!elements[0].ownerDocument.defaultView.CSS.supports('color',value)){input.setCustomValidity('Enter a supported literal CSS color.');input.reportValidity();return;}saveColor(property,value).catch(error=>{input.setCustomValidity(error.message);input.reportValidity();});};
   }
 
-  if(saveColor)I.note(groups.appearance,'Clear removes selected-scope paint to reveal inherited styles. Saved links stay attached; palette reset restores their definitions.');
+  if(saveColor)for(const body of [groups.typography,groups.fill,groups.stroke])I.note(body,'Reset beside a color removes selected-scope paint to reveal inherited styles. Saved links stay attached; palette reset restores their definitions.');
   const relativeGroup=root.document.createElement('fieldset');relativeGroup.style.cssText='border:0;padding:0;margin:0;min-width:0';groups.typography.append(relativeGroup);
   const relativeWrite=(property,value,relative=true)=>{try{save(Object.fromEntries(infos.map((info,i)=>[info.id,change(info.className,scope,property,value,liveElement(i).ownerDocument,relative)])));}catch(error){I.note(groups.typography,error.message,'refused');}};
   for(const [property,label,min]of [['line-height','Shared Line height (%)',0],['letter-spacing','Shared Letter spacing (%)',-100]]){
@@ -164,8 +164,9 @@
    const rows=[...body.querySelectorAll('.inspector-field')],control=row=>row.querySelector('input[aria-label],select[aria-label],textarea[aria-label]');
    for(const row of rows){const name=control(row)?.getAttribute('aria-label'),label=row.querySelector(':scope > span');if(!name?.startsWith('Shared ')||!label||row.parentElement.classList.contains('property-row'))continue;const short=name.slice(7);label.textContent=({'Page font':'Font','Font size (px)':'Size','Font weight (1–1000)':'Weight','Font family':'Font family','Flex basis':'Basis','Item alignment':'Alignment','Grid inline alignment':'Grid alignment','Grid column span':'Column span','Grid row span':'Row span','Text color with alpha':'Color','Background color with alpha':'Color','Border color with alpha':'Color','SVG fill with alpha':'Fill','SVG stroke with alpha':'Stroke'})[short]||short;row.title=name;}
    for(const reset of [...body.querySelectorAll('button.control-button')]){
-    if(!reset.textContent.startsWith('Reset shared ')||reset.classList.contains('property-reset'))continue;
-    const name=reset.textContent.slice(6).toLowerCase(),field=rows.find(row=>control(row)?.getAttribute('aria-label').toLowerCase()===name||name==='shared font family'&&control(row)?.getAttribute('aria-label')==='Shared Page font');if(!field)continue;
+    const clearPaint=reset.textContent.startsWith('Clear selected ');
+    if((!reset.textContent.startsWith('Reset shared ')&&!clearPaint)||reset.classList.contains('property-reset'))continue;
+    const name=clearPaint?'shared '+reset.textContent.slice(15).toLowerCase()+' with alpha':reset.textContent.slice(6).toLowerCase(),field=rows.find(row=>control(row)?.getAttribute('aria-label').toLowerCase()===name||name==='shared font family'&&control(row)?.getAttribute('aria-label')==='Shared Page font');if(!field)continue;
     let row=field.parentElement;if(!row.classList.contains('property-row')){row=root.document.createElement('div');row.className='property-row';field.before(row);row.append(field);}
     reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');row.append(reset);
    }
