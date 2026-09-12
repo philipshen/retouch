@@ -25,7 +25,7 @@
   };
   handle.onpointerdown=event=>{
    if(event.button!==0)return;event.preventDefault();event.stopPropagation();handle.focus({preventScroll:true});
-   const box=preview.getBoundingClientRect(),pointerId=event.pointerId,interruptions=['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'],propertyPreview=root.RetouchPaintPicker.propertyPreview({el,input:preview,property:'background-image'});
+   const box=preview.getBoundingClientRect(),pointerId=event.pointerId,interruptions=['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'],propertyPreview=root.RetouchPaintPicker.propertyPreview({el,input:preview,property:'background-image',respectScope:true});
    let next=gradient,active=true,moved=false;
    const move=e=>{if(!active||e.pointerId!==pointerId)return;if(!moved&&Math.hypot(e.clientX-event.clientX,e.clientY-event.clientY)<2)return;moved=true;if(rotation){const cx=box.left+box.width*(gradient.type==='linear'?.5:gradient.x/100),cy=box.top+box.height*(gradient.type==='linear'?.5:gradient.y/100);const angle=(Math.atan2(e.clientX-cx,cy-e.clientY)*180/Math.PI+360)%360;next={...gradient,angle:Math.round(angle/(e.shiftKey?15:1))*(e.shiftKey?15:1)%360};}else next={...gradient,x:clamp(gradient.x+(e.clientX-event.clientX)/box.width*100),y:clamp(gradient.y+(e.clientY-event.clientY)/box.height*100)};position(next);preview.style.backgroundImage=serialize([next]);propertyPreview.update(serialize(gradients.map((g,i)=>i===index?next:g)));};
    const finish=save=>{

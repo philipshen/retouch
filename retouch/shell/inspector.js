@@ -193,8 +193,7 @@
   }
   function numericPreview(input,el,property,format=value=>value+'px',render=null){
     input.retouchNumericPreview=()=>{
-      if(document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false')return null;
-      const preview=root.RetouchPaintPicker.propertyPreview({el,input,property});
+      const preview=root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true});
       return {current:()=>el.isConnected,update:value=>{preview.update(format(value));render?.(value);},restore:()=>{preview.restore();render?.(null);}};
     };
     return input;

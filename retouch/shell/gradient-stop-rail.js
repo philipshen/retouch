@@ -23,7 +23,7 @@
    };
    handle.onpointerdown=e=>{
     if(e.button!==0)return;e.preventDefault();e.stopPropagation();handle.focus({preventScroll:true});
-    const box=rail.getBoundingClientRect(),pointerId=e.pointerId,interruptions=['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'],propertyPreview=root.RetouchPaintPicker.propertyPreview({el,input:rail,property:'background-image'});
+    const box=rail.getBoundingClientRect(),pointerId=e.pointerId,interruptions=['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'],propertyPreview=root.RetouchPaintPicker.propertyPreview({el,input:rail,property:'background-image',respectScope:true});
     let position=stop.position,active=true;
     const render=()=>{const {next}=changed(position);preview.style.backgroundImage=serializeGradients([next]);strip.style.backgroundImage=serializeGradients([{...next,type:'linear',angle:90}]);handle.style.left=position+'%';handle.setAttribute('aria-valuenow',position);propertyPreview.update(serializeGradients(gradients.map((g,i)=>i===index?next:g)));};
     const move=event=>{if(event.pointerId!==pointerId||!active)return;position=Math.max(0,Math.min(100,Math.round(stop.position+(event.clientX-e.clientX)/box.width*100)));render();};
