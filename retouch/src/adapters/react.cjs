@@ -59,6 +59,6 @@ module.exports = {
   assets: { directory: 'public', urlPrefix: '/', uploadDirectory: 'rt-assets' },
   capabilities: {
     classAttr: 'className',
-    ops: ['renameElement', 'insertSVG', 'setSVGGeometry', 'setClasses', 'setClassesSelection', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types],
+    ops: ['renameElement', 'insertSVG', 'setSVGGeometry', 'convertSVGToPath', 'setClasses', 'setClassesSelection', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types],
   },
 };
