@@ -320,7 +320,7 @@ function describeElement(resolved) {
 }
 
 function describe(resolved) {
-  return {...describeElement(resolved),...layerNames.describe(resolved),...require('../liquid-text-styles.cjs').describe(resolved),...require('../liquid-color-styles.cjs').describe(resolved),...require('../liquid-effect-styles.cjs').describe(resolved),...require('../liquid-variable-bindings.cjs').describe(resolved),components:theme.ancestry(resolved),structure:structure.describe(resolved,'liquid')};
+  return {...describeElement(resolved),svgGeometry:require('../liquid-svg-geometry.cjs').describe(resolved),...layerNames.describe(resolved),...require('../liquid-text-styles.cjs').describe(resolved),...require('../liquid-color-styles.cjs').describe(resolved),...require('../liquid-effect-styles.cjs').describe(resolved),...require('../liquid-variable-bindings.cjs').describe(resolved),components:theme.ancestry(resolved),structure:structure.describe(resolved,'liquid')};
 }
 
 function refuse(reason) { return { ok: false, refused: true, reason }; }
@@ -330,6 +330,7 @@ function escapeText(t) {
 }
 
 function planOp(resolved, op) {
+  if(op.type==='setSVGGeometry')return require('../liquid-svg-geometry.cjs').plan(resolved,op);
   if(op.type==='renameElement')return layerNames.plan(resolved,op);
   if(op.type==='setClassesSelection')return require('../liquid-class-selection.cjs').plan(resolved,op);
   if(structure.types.has(op.type)) return structure.planOp(resolved,op,'liquid');
@@ -429,6 +430,6 @@ module.exports = {
   describeComponent: resolved=>resolved.element.theme?theme.describe(resolved):components.describe(resolved),
   hasReference: components.hasReference,
   assets: { directory: 'assets', urlPrefix: '/assets/', uploadDirectory: '' },
-  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types] },
+  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['setSVGGeometry', 'renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types] },
   _parse: parse, // exported for tests
 };
