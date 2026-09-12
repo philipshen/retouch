@@ -744,9 +744,9 @@ function reloadFrame() {
 // A source write can finish before the framework invalidates its rendered
 // module. Wait for that revision, retaining the live session when HMR applies it.
 // Reload only when the renderer cannot confirm a matching live update.
-async function refreshWrittenElement(info, matches) {
+async function refreshWrittenElement(info, matches, {verifyText=false}={}) {
   const location = iframe.contentWindow.location.href;
-  async function liveUpdateReady(){
+  async function liveUpdateReady(expectedText=null){
     // Only compiler-stamped revisions can prove the live page reflects this write.
     if(!info.renderRevisionAttribute)return false;
     let stable=0;
@@ -755,7 +755,7 @@ async function refreshWrittenElement(info, matches) {
       try{
         const d=doc(),el=matchingInDocument(d,info.id,info)[0];
         const stylesReady=[...d.querySelectorAll('link[rel="stylesheet"]')].every(link=>link.disabled||!!link.sheet);
-        const ready=el&&el.getAttribute(info.renderRevisionAttribute)===info.hash&&matches(el)&&stylesReady&&clientMountReady(d);
+        const ready=el&&el.getAttribute(info.renderRevisionAttribute)===info.hash&&matches(el)&&(expectedText===null||el.textContent===expectedText)&&stylesReady&&clientMountReady(d);
         stable=ready?stable+1:0;
         if(stable>=3)return true;
       }catch{stable=0;}
@@ -771,7 +771,8 @@ async function refreshWrittenElement(info, matches) {
         const html = new DOMParser().parseFromString(await response.text(), 'text/html');
         const el = matchingInDocument(html,info.id,info)[0];
         if (el && (!info.renderRevisionAttribute||el.getAttribute(info.renderRevisionAttribute)===info.hash) && matches(el)) {
-          if(await liveUpdateReady())return;
+          // Use rendered text so JSX whitespace and HTML entities match the browser.
+          if(await liveUpdateReady(verifyText?el.textContent:null))return;
           if(iframe.contentWindow.location.href===location)await reloadFrame();
           return;
         }
@@ -2548,7 +2549,7 @@ async function restoreHistory(direction,op) {
           return tokens(el.getAttribute('class')) === tokens(info.className);
         }
         return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
-      });
+      },{verifyText:op.type==='setText'&&!info.textSource});
       if(op.type==='createComponent'&&component?.ok)sel={hostId:component.definitionId,instanceId:op.id,scope:'instance',info};
     } else await reloadFrame();
 
