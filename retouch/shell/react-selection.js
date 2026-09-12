@@ -56,7 +56,7 @@
   else for(const side of edge==='all'?['top','right','bottom','left']:[edge])active=L.paddingClasses(active,side,value,inherited,css);
   return R.replaceScope(classes,active,scope);
  }
- const containerRules={mode:/^(?:block|inline|inline-block|flex|inline-flex|grid|inline-grid|hidden|contents|flow-root)$|^flex-(?:row|col)(?:-reverse)?$|^\[(?:display|flex-direction):/,wrap:/^flex-(?:wrap|wrap-reverse|nowrap)$|^\[flex-wrap:/,align:/^items-|^\[align-items:/,justify:/^justify-(?!items-|self-)|^\[justify-content:/};
+ const containerRules={columns:/^grid-cols-|^\[grid-template-columns:/,rows:/^grid-rows-|^\[grid-template-rows:/,flow:/^grid-flow-|^\[grid-auto-flow:/,mode:/^(?:block|inline|inline-block|flex|inline-flex|grid|inline-grid|hidden|contents|flow-root)$|^flex-(?:row|col)(?:-reverse)?$|^\[(?:display|flex-direction):/,wrap:/^flex-(?:wrap|wrap-reverse|nowrap)$|^\[flex-wrap:/,align:/^items-|^\[align-items:/,justify:/^justify-(?!items-|self-)|^\[justify-content:/};
  function changeContainer(classes,scope,property,value,document=null){
   if(!containerRules[property])throw Error('Unknown container layout control');
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js'),active=R.project(classes,scope),inherited=R.inherited(classes,scope,document);
@@ -89,6 +89,17 @@
    const blocked=el=>inline.some(key=>el.style.getPropertyValue(key)),write=value=>{try{const changes=Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(blocked(el))throw Error('A selected layer has an inline layout override. Edit that source style first.');return [info.id,changeContainer(info.className,scope,property,value,el.ownerDocument)];}));save(changes);}catch(error){I.note(groups.layout,error.message,'refused');}};
    const input=I.select(groups.layout,'Shared '+label,options,mixed?'':values[0],write);input.disabled=elements.some(blocked);if(mixed)input.options[0].disabled=true;
    const reset=I.button('Reset shared '+label.toLowerCase(),()=>write(null));reset.disabled=input.disabled||infos.every(info=>changeContainer(info.className,scope,property,null)===info.className);groups.layout.append(reset);
+  }
+  if(computed.every(css=>['grid','inline-grid'].includes(css.display))){
+   const L=root.RetouchLayout,write=(property,value,inline)=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(!['grid','inline-grid'].includes(el.ownerDocument.defaultView.getComputedStyle(el).display)||inline.some(key=>el.style.getPropertyValue(key)))throw Error('Select grid containers without inline grid overrides.');return [info.id,changeContainer(info.className,scope,property,value,el.ownerDocument)];})));}catch(error){I.note(groups.layout,error.message,'refused');}};
+   for(const [property,label]of [['columns','Grid columns'],['rows','Grid rows']]){
+    const cssProperty='grid-template-'+property,inline=['grid','grid-template',cssProperty],counts=computed.map(css=>L.gridTrackCount(css.getPropertyValue(cssProperty))),mixed=counts.some(count=>count!==counts[0]),input=I.number(groups.layout,'Shared '+label,mixed?NaN:counts[0]||NaN,1,24,value=>write(property,value,inline));input.step='1';const initial=input.value;input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};input.placeholder=mixed?'Mixed':'Auto';input.disabled=elements.some(el=>inline.some(key=>el.style.getPropertyValue(key)));
+    const reset=I.button('Reset shared '+label.toLowerCase(),()=>write(property,null,inline));reset.disabled=input.disabled||infos.every(info=>changeContainer(info.className,scope,property,null)===info.className);groups.layout.append(reset);
+   }
+   const values=computed.map(css=>(css.gridAutoFlow.includes('column')?'col':'row')+(css.gridAutoFlow.includes('dense')?'-dense':'')),mixed=values.some(value=>value!==values[0]),choices=[['row','By row'],['col','By column'],['row-dense','By row · dense'],['col-dense','By column · dense']],inline=['grid','grid-auto-flow'];if(mixed)choices.unshift(['','Mixed']);
+   const input=I.select(groups.layout,'Shared Grid flow',choices,mixed?'':values[0],value=>write('flow',value,inline));input.disabled=elements.some(el=>inline.some(key=>el.style.getPropertyValue(key)));if(mixed)input.options[0].disabled=true;
+   const reset=I.button('Reset shared grid flow',()=>write('flow',null,inline));reset.disabled=input.disabled||infos.every(info=>changeContainer(info.className,scope,'flow',null)===info.className);groups.layout.append(reset);
+   I.note(groups.layout,'Track counts replace the selected axis with equal fractions. Content can create additional implicit tracks. Grid flow controls placement of children without explicit positions.');
   }
   I.note(groups.layout,'Row and column follow each container’s writing direction. Wrapping and child alignment take effect in flex or grid layouts. Reset reveals inherited layout styles.');
   const lengthDrag=(input,properties)=>{
@@ -213,12 +224,12 @@
    }
   }
   // Pair related measurements while keeping each original field and reset handler.
-  for(const names of [['Width (px)','Height (px)'],['Minimum width (px)','Minimum height (px)'],['Maximum width (px)','Maximum height (px)'],['Grow','Shrink']]){
+  for(const names of [['Width (px)','Height (px)'],['Minimum width (px)','Minimum height (px)'],['Maximum width (px)','Maximum height (px)'],['Grow','Shrink'],['Grid columns','Grid rows']]){
    const rows=names.map(name=>[...sec.querySelectorAll('.inspector-field')].find(row=>row.querySelector('input[aria-label]')?.getAttribute('aria-label')==='Shared '+name)?.closest('.property-row'));
    if(rows.some(row=>!row)||rows[0].parentElement!==rows[1].parentElement)continue;
    const pair=root.document.createElement('div');pair.className='property-pair';rows[0].before(pair);rows.forEach(row=>pair.append(row));
-   rows.forEach((row,i)=>{row.querySelector('.inspector-field > span').textContent=({'Width (px)':'W','Height (px)':'H','Minimum width (px)':'Min W','Minimum height (px)':'Min H','Maximum width (px)':'Max W','Maximum height (px)':'Max H'})[names[i]]||names[i];});
-   if(names[0]!=='Grow'){
+   rows.forEach((row,i)=>{row.querySelector('.inspector-field > span').textContent=({'Grid columns':'Cols','Grid rows':'Rows','Width (px)':'W','Height (px)':'H','Minimum width (px)':'Min W','Minimum height (px)':'Min H','Maximum width (px)':'Max W','Maximum height (px)':'Max H'})[names[i]]||names[i];});
+   if(!['Grow','Grid columns'].includes(names[0])){
     const presets=root.document.createElement('div');presets.className='property-pair shared-sizing-presets';
     for(const name of names){const cell=root.document.createElement('div'),axis=name.toLowerCase().includes('width')?'width':'height',labels=name.startsWith('Minimum')?['Automatic shared minimum '+axis]:name.startsWith('Maximum')?['No shared maximum '+axis]:['Automatic shared '+axis,'Fit shared '+axis+' to content'];
      for(const label of labels){const button=[...groups.size.querySelectorAll('button.control-button')].find(el=>(el.getAttribute('aria-label')||el.textContent)===label);if(button){const previous=button.parentElement;cell.append(button);if(previous.classList.contains('stack-presets')&&!previous.children.length)previous.remove();}}

@@ -111,3 +111,12 @@ test('shared container layout preserves scopes, shorthand priorities and unrelat
  assert.throws(()=>changeContainer('flex','','mode','invalid'));
  assert.throws(()=>changeContainer('flex','','unknown','row'));
 });
+test('shared grid track counts and flow preserve scope and shorthand priorities',()=>{
+ const {changeContainer}=require('../shell/react-selection.js');
+ assert.equal(changeContainer('grid-cols-2 md:grid-cols-4 hover:grid-cols-6','md:','columns',3),'grid-cols-2 hover:grid-cols-6 md:grid-cols-3');
+ assert.equal(changeContainer('![grid:100px_/_1fr_1fr]','md:','rows',4),'![grid:100px_/_1fr_1fr] md:!grid-rows-4');
+ assert.equal(changeContainer('grid-flow-row md:grid-flow-col','md:','flow','col-dense'),'grid-flow-row md:grid-flow-col-dense');
+ assert.equal(changeContainer('grid-cols-2 md:grid-cols-3 md:grid-rows-4','md:','columns',null),'grid-cols-2 md:grid-rows-4');
+ for(const value of [0,25,2.5,NaN,'3'])assert.throws(()=>changeContainer('grid','','columns',value));
+ assert.throws(()=>changeContainer('grid','','flow','invalid'));
+});
