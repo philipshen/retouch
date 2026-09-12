@@ -1,0 +1,64 @@
+{
+  "sourceCommit": "04837dfde7e03399735bf351f2c907eb5c299097",
+  "sourceTreeDirty": false,
+  "sourceFiles": 178,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-inspector-20260912-04837df/Retouch-0.1.0-mac.zip",
+  "sha256": "9b3ffa2c8d19070cee87ce6ac858d774431b9d8666d9ea8392c961d361c32242",
+  "sourceMatchesCheckout": true,
+  "units": {
+    "passed": 909,
+    "log": "/private/tmp/retouch-inspector-desktop-all-tests.log"
+  },
+  "workflows": [
+    {
+      "name": "react-inspector",
+      "exit": 0,
+      "log": "/private/tmp/retouch-desktop-inspector-20260912-04837df/react-inspector.log"
+    },
+    {
+      "name": "html-effects",
+      "exit": 0,
+      "log": "/private/tmp/retouch-desktop-inspector-20260912-04837df/html-effects.log"
+    },
+    {
+      "name": "liquid-gradients",
+      "exit": 0,
+      "log": "/private/tmp/retouch-desktop-inspector-20260912-04837df/liquid-gradients.log"
+    },
+    {
+      "name": "vector-scrub",
+      "exit": 0,
+      "log": "/private/tmp/retouch-desktop-inspector-20260912-04837df/vector-scrub.log"
+    }
+  ],
+  "installation": {
+    "verification": {
+      "sourceCommit": "04837dfde7e03399735bf351f2c907eb5c299097",
+      "sourceTreeDirty": false,
+      "sourceFiles": 178,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "quarantinePreserved": true,
+    "cask": "/private/tmp/retouch-desktop-inspector-20260912-04837df/retouch-studio.rb",
+    "logs": [
+      "/private/tmp/retouch-desktop-inspector-20260912-04837df/install.log",
+      "/private/tmp/retouch-desktop-inspector-20260912-04837df/uninstall.log"
+    ],
+    "cleanup": "Temporary app directory, cask registration, tap and trust entry verified absent. Trust state matches pre-test JSON exactly; developer mode restored to disabled."
+  },
+  "nativeLaunch": {
+    "attempts": 0,
+    "result": "Native window usability and automated native self-tests remain unverified. Prior vector-inspector receipt records cgWindowNotFound; no native implementation fix has been made since that attempt."
+  },
+  "signing": "Ad hoc development build. Developer ID signing, notarization, trusted public distribution and upgrades remain unfinished.",
+  "harness": "External harness used extracted bundled bin/src/shell with external development dependencies; removed after all workflows terminated. Extracted strict signature verified again afterward."
+}
