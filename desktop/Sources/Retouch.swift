@@ -9,6 +9,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
     private var address: NSTextField!
     private var status: NSTextField!
     private var pending: URLSessionDataTask?
+    private var pendingEditor: URL?
     private var requestID = UUID()
     private var projectProcess: Process?
     private var projectPipe: Pipe?
@@ -231,7 +232,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
                         candidate.scheme == url.scheme && candidate.host == url.host && candidate.port == url.port
                     }
                 }
-                if owns(Self.editorURL(self.address.stringValue)) { self.pending?.cancel(); self.pending = nil; self.requestID = UUID() }
+                if owns(self.pendingEditor) { self.pending?.cancel(); self.pending = nil; self.pendingEditor = nil; self.requestID = UUID() }
                 if owns(self.connectedEditor) {
                     self.connectedEditor = nil; self.editorDocument = UUID()
                     self.web.stopLoading(); self.showWelcome(stopped: true)
@@ -358,7 +359,7 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
     }
     @objc private func connect() {
         stopDiscovery()
-        pending?.cancel()
+        pending?.cancel(); pending = nil; pendingEditor = nil
         requestID = UUID()
         guard let url = Self.editorURL(address.stringValue) else {
             status.stringValue = "Enter a local Retouch URL, such as http://localhost:3000/rt."
@@ -370,10 +371,12 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         var request = URLRequest(url: health.url!)
         request.timeoutInterval = 8
         status.stringValue = "Connecting…"
+        pendingEditor = url
         pending = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             let ok = Self.isRetouchHealth(data, response, error)
             DispatchQueue.main.async {
                 guard let self = self, self.requestID == id else { return }
+                self.pending = nil; self.pendingEditor = nil
                 if ok {
                     self.address.stringValue = url.absoluteString
                     UserDefaults.standard.set(url.absoluteString, forKey: "editorURL")
