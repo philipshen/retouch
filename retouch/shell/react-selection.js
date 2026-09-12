@@ -160,6 +160,19 @@
    if(field.constraint&&!mixed&&!display)input.placeholder=values[0]==='auto'?'Automatic':values[0]==='none'?'No limit':values[0];input.value=display;input.disabled=blocked;input.title=blocked?(field.layoutItem?'Select in-flow items in '+(field.gridItem?'a grid':'a flex or grid')+' layout without an inline alignment override.':field.flexItem?'Select in-flow items in a flex layout without an inline flex override.':'An inline style controls this property on a selected layer. Edit that source style first.'):'';
    const write=value=>{try{save(Object.fromEntries(infos.map((info,i)=>[info.id,change(info.className,scope,property,sizing?dimensionValue(liveElement(i).ownerDocument.defaultView.getComputedStyle(liveElement(i)),property,value):value,liveElement(i).ownerDocument)])));}catch(error){I.note(sec,error.message,'refused');}};
    input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(field.text&&!field.valid(input.value.trim())){input.setCustomValidity('Enter auto, content, a positive length such as 100px, or a percentage such as 50%.');input.reportValidity();return;}if(input.value!==''&&input.checkValidity())write(field.options||field.text?input.value.trim():Number(input.value));};input.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();input.value=display;input.setCustomValidity('');input.blur();}else if(event.key==='Enter'){event.preventDefault();event.stopPropagation();input.blur();}};I.field(sec,'Shared '+field.label,input);
+   if(!field.options&&!field.text){
+    const format=value=>String(field.step===1?Math.round(value):value),minimum=sizing?Math.max(field.min??0,...elements.map(el=>decoration(el.ownerDocument.defaultView.getComputedStyle(el),property))):field.min??0;
+    I.numericLabelDrag(input,raw=>({value:Number(raw),min:minimum,max:field.max??100,format}));
+    input.retouchNumericPreview=()=>{
+     const targets=infos.map((_,i)=>liveElement(i)),previews=targets.map(el=>root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true}));
+     return {current:()=>targets.every((el,i)=>el.isConnected&&(!resolveElement||resolveElement(infos[i].id)===el)),update:value=>{
+      const amount=Number(format(value));
+      const values=targets.map(el=>sizing?dimensionValue(el.ownerDocument.defaultView.getComputedStyle(el),property,amount)+'px':property==='opacity'?String(amount/100):['font-size','line-height','letter-spacing'].includes(property)?amount+'px':String(amount));
+      previews.forEach((preview,i)=>preview.update(values[i]));
+     },restore:()=>previews.forEach(preview=>preview.restore())};
+    };
+   }
+
    if(dimension){const presets=root.document.createElement('div');presets.className='stack-presets';for(const [value,label]of [['auto','Automatic shared '+property],['fit-content','Fit shared '+property+' to content']]){const button=I.button(label,()=>write(value));button.disabled=blocked;presets.append(button);}sec.append(presets);}
    if(property==='grid-row')I.note(sec,'Spans replace start/end placement on that axis and let the grid position each item. Full spans the explicit grid; large spans can create extra tracks. Reset reveals inherited placement; Undo restores the previous placement.');
    if(property==='justify-self')I.note(sec,'Item alignment follows the flex cross axis or grid block axis. Grid inline alignment follows the text direction. Stretch needs an automatic size; auto margins can take precedence.');
