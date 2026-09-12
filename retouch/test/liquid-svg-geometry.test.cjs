@@ -21,3 +21,12 @@ test('Liquid SVG geometry follows SVG and foreignObject namespace boundaries',()
  assert.ok(geometry.describe(resolve('<svg><foreignObject><svg><rect/></svg></foreignObject></svg>')));
  for(const [tag,property]of [['circle','r'],['ellipse','rx'],['line','x2'],['polygon','points'],['polyline','points']]){const r=resolve('<svg><'+tag+'/></svg>',tag);assert.ok(geometry.describe(r).fields.some(field=>field.name===property));}
 });
+
+test('Liquid SVG paths are indexed, stamped and rewritten without changing neighboring identities',()=>{
+ const source='<svg><rect width="5"/><path d="M0 0L20 0L10 20Z M30 0C40 0 40 20 30 20" fill="{{ color }}"/></svg><p>Keep</p>',r=resolve(source,'path'),value='M0 0 L25 0 L10 20 Z M30 0 C40 0 40 20 30 20';assert.ok(r.element);assert.equal(liquid.describe(r).svgGeometry.fields[0].name,'d');assert.ok(liquid.stamp(source,'/tmp/main.liquid','/tmp').code.includes('<path data-rt="'));
+ const result=liquid.planOp(r,{type:'setSVGGeometry',property:'d',value,fileHash:r.hash});assert.equal(result.ok,true,result.reason);assert.equal(result.edits[0].after,source.replace(r.element.attributes.find(a=>a.name==='d').value,value));assert.deepEqual(liquid.collect(result.edits[0].after,r.relPath).elements.map(e=>e.id),r.elements.map(e=>e.id));
+ for(const d of ['{{ path_data }}','{% if a %}M0 0L10 10{% else %}M0 0L20 20{% endif %}']){const dynamic=resolve('<svg><path d="'+d+'"/></svg>','path');assert.equal(geometry.describe(dynamic).fields[0].editable,false);assert.equal(liquid.planOp(dynamic,{type:'setSVGGeometry',property:'d',value,fileHash:dynamic.hash}).ok,false);}
+ assert.equal(liquid.collect('<div><path/></div>','main.liquid').elements.some(e=>e.tag==='path'),false);
+ assert.equal(liquid.collect('<svg><foreignObject><path/></foreignObject></svg>','main.liquid').elements.some(e=>e.tag==='path'),false);
+ assert.equal(liquid.planOp(r,{type:'setSVGGeometry',property:'d',value:'M0 0 BAD',fileHash:r.hash}).ok,false);
+});

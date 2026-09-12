@@ -206,7 +206,7 @@ function collect(source, relPath) {
   const { all } = parse(source);
   const elements = [];
   for (const node of all) {
-    if (SKIP_TAGS.has(node.tag)) continue;
+    if (SKIP_TAGS.has(node.tag)&&!(node.tag==='path'&&require('../liquid-svg-geometry.cjs').describe({element:node}))) continue;
     node.id = hashId(relPath, node.pathLoc);
     node.node = node; // the "node" the resolved bundle carries is the parse node
     elements.push(node);
