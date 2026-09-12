@@ -191,10 +191,41 @@
     });
     return input;
   }
+  function numericLabelDrag(input){
+    const label=input.parentElement.querySelector('span');let drag=null;
+    label.style.cursor='ew-resize';label.style.touchAction='none';label.style.userSelect='none';
+    label.title='Drag to adjust. Shift: 10 units; Alt/Option: 0.1 units. Escape cancels.';
+    label.dataset.numericScrub='';
+    const stop=cancel=>{
+      if(!drag)return;const saved=drag;drag=null;
+      root.removeEventListener('blur',abort);
+      if(cancel)input.value=saved.initial;
+      if(label.hasPointerCapture(saved.id))label.releasePointerCapture(saved.id);
+      if(!cancel&&input.isConnected&&input.value!==saved.initial&&input.checkValidity())input.dispatchEvent(new Event('change',{bubbles:true}));
+    };
+    const abort=()=>stop(true);
+    input.addEventListener('blur',abort);
+    label.addEventListener('pointerdown',event=>{
+      if(event.button!==0||drag||input.disabled||input.readOnly||input.value===''||!input.checkValidity())return;
+      event.preventDefault();event.stopPropagation();input.focus({preventScroll:true});
+      drag={id:event.pointerId,x:event.clientX,initial:input.value,value:Number(input.value)};
+      label.setPointerCapture(event.pointerId);root.addEventListener('blur',abort);
+    });
+    label.addEventListener('pointermove',event=>{
+      if(!drag||drag.id!==event.pointerId)return;event.preventDefault();event.stopPropagation();
+      const delta=event.clientX-drag.x;drag.x=event.clientX;
+      const min=input.min===''?-Infinity:Number(input.min),max=input.max===''?Infinity:Number(input.max);
+      drag.value=Math.max(min,Math.min(max,Math.round((drag.value+delta*(event.altKey?0.1:event.shiftKey?10:1))*1e6)/1e6));input.value=String(drag.value);
+    });
+    label.addEventListener('pointerup',event=>{if(drag?.id===event.pointerId){event.preventDefault();event.stopPropagation();stop(false);}});
+    for(const type of ['pointercancel','lostpointercapture'])label.addEventListener(type,event=>{if(drag?.id===event.pointerId)stop(true);});
+    input.addEventListener('keydown',event=>{if(drag&&!event.isComposing&&['Escape','Enter'].includes(event.key)){event.preventDefault();event.stopImmediatePropagation();stop(event.key==='Escape');}},true);
+    return input;
+  }
   function number(parent, label, value, min, max, onChange) {
     const input = document.createElement('input'); input.type = 'number'; input.min = min; input.max = max; input.step = 'any'; input.value = Number.isFinite(value) ? round(value) : '';
     input.onchange = () => { if (input.value !== '' && input.checkValidity()) onChange(Number(input.value)); };
-    return field(parent, label, input);
+    return numericLabelDrag(field(parent, label, input));
   }
   function relativeNumber(parent,label,value,min,max,onChange) {
     const row=document.createElement('div');row.className='relative-field';parent.append(row);

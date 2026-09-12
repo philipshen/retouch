@@ -24,6 +24,14 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();
   await page.evaluate(()=>document.fonts.ready);assert.equal(await page.evaluate(()=>[...document.fonts].some(font=>font.family==='Inter'&&font.status==='loaded')),true);
   const originalSource=read();
+  if(process.env.RT_E2E_NUMERIC_SCRUB){
+   const field=page.getByLabel('Corner radius (px)',{exact:true});
+   const scrub=async(delta,modifier,cancel=false)=>{await wait(async()=>{try{await field.scrollIntoViewIfNeeded();return true;}catch(error){if(/not attached/.test(error.message))return false;throw error;}});const label=field.locator('xpath=..').locator('[data-numeric-scrub]'),box=await label.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);if(modifier)await page.keyboard.down(modifier);await page.mouse.down();await page.mouse.move(box.x+box.width/2+delta,box.y+box.height/2,{steps:3});assert.equal(read(),originalSource,'drag does not write source');if(cancel)await page.keyboard.press(typeof cancel==='string'?cancel:'Escape');await page.mouse.up();if(modifier)await page.keyboard.up(modifier);};
+   for(const [delta,modifier,expected] of [[12,null,32],[3,'Shift',50],[15,'Alt',21.5],[-100,null,0]]){
+    assert.equal(Number(await field.inputValue()),20);await scrub(delta,modifier);await wait(()=>read()!==originalSource);await settled();await wait(async()=>parent.evaluate((el,n)=>parseFloat(getComputedStyle(el).borderTopLeftRadius)===n,expected));assert.match(read(),/md:!rounded-/);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),originalSource,'one undo restores entire drag');
+   }
+   for(const cancellation of [true,'Tab']){await scrub(15,null,cancellation);assert.equal(await field.inputValue(),'20');assert.equal(read(),originalSource);}await scrub(0,null);assert.equal(read(),originalSource);await field.fill('27');await field.press('Tab');await wait(()=>read()!==originalSource);await settled();await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),originalSource);assert.deepEqual(errors,[]);console.log(engine+': PASS inspector numeric label dragging, modifiers, lower bound, draft cancellation, responsive source, single undo and direct typing');return;
+  }
   assert.equal(await page.locator('#panel').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
   assert.equal(await page.locator('#frameWrap').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(229, 229, 229)');
   assert.deepEqual(await page.locator('#panelBody > .inspector-section > h3').allTextContents(),['Position','Layout','Appearance','Fill','Stroke','Effects']);
