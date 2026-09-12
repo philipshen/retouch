@@ -12114,3 +12114,12 @@ Creation is disabled before library loading or without a concrete parsed color. 
 New test:e2e:picker-create passed HTML Chromium, React Chromium and Liquid WebKit for precise sRGB and Display P3 alpha. It verifies required name, injected conflict/retry, unchanged source during creation, exact saved/selected color, Cancel persistence, catalog Undo/Redo, source Apply and separate Undo. RT_E2E_PICKER_CREATE_EMPTY=1 passed HTML Chromium for a missing catalog and Undo restoring its absence. Existing full picker-style regression and all 912 unit tests passed. Syntax/diff checks passed. Inspected /private/tmp/retouch-picker-create.png. Logs /private/tmp/retouch-picker-create-{html,liquid,react,empty,existing-regression,units}.log.
 
 No desktop rebuild/launch, push or live Shopify changes. Latest packaged source remains bce2bdf and lacks this work and explicit sRGB palette support. Full Figma/native parity, gradient/shadow links and broader arbitrary-site/native delivery remain incomplete.
+
+
+### 2026-09-12 — Packaged shared palettes and cask installation
+
+Built clean 671f988 into /private/tmp/retouch-desktop-palette-20260912-671f988/Retouch-0.1.0-mac.zip, SHA-256 a4c5a231e635a089d922ee5d0010d4f5c4e44473b008286fc73d33c4b793cb0a. All 178 source files and native/build/verifier hashes match checkout; extracted and installed copies verify universal arm64/x86_64 and strict ad hoc signature. All 912 unit tests passed. External harness against extracted packaged source passed WebKit HTML style creation and Liquid inherited links plus overridden-paint detachment/retry. Harness removed and extracted signature reverified.
+
+Generated cask passed syntax and installed/uninstalled in an isolated app directory through a temporary local tap and isolated XDG trust configuration. Installed quarantine retained. Cleanup verified app, registration, tap and temporary trust/config absent; developer mode remains disabled. Homebrew uninstall unexpectedly auto-removed git 2.55.0. Restored identical version, verified binary and restored not-installed-on-request status. Future isolated installation tests must set HOMEBREW_NO_AUTOREMOVE=1 and HOMEBREW_NO_INSTALL_CLEANUP=1; README records this. Receipt desktop/verification/2026-09-12-palette-creation.json includes logs and the incident.
+
+No native launch, system sampling, notarization, upgrade or public release verification. Latest native preflight remains cgWindowNotFound; no launch was retried. No push or live Shopify mutation. Full Figma/native/arbitrary-site goal remains incomplete.

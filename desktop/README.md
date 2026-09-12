@@ -10,20 +10,24 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest local development archive is
-`/private/tmp/retouch-desktop-light-20260912-bce2bdf/Retouch-0.1.0-mac.zip`.
+`/private/tmp/retouch-desktop-palette-20260912-671f988/Retouch-0.1.0-mac.zip`.
 Its SHA-256 is
-`1aa55d440a1870c23b9ef55e9565b8d30dda814b88d86c02e1b66fd8f88717f3`.
-It contains clean source commit `bce2bdf`, including the compact light paint
-picker, color models/profiles, linked color styles and responsive panel fixes.
+`a4c5a231e635a089d922ee5d0010d4f5c4e44473b008286fc73d33c4b793cb0a`.
+It contains clean source commit `671f988`, including shared paint editing,
+inherited styles, detachment, exact sRGB alpha and picker style creation.
 All 178 packaged source files and native/build/verifier hashes match that
 checkout. Universal architecture, archive extraction and strict ad hoc signature
-checks passed. All 909 unit tests passed. Packaged WebKit workflows passed HTML
-linked-style writes/reset/Undo and Liquid draft/focus preservation across compact
-transitions. See [the package receipt](verification/2026-09-12-light-picker.json).
+checks passed. All 912 unit tests passed. Packaged WebKit workflows passed HTML
+style creation, Liquid inherited links and overridden-paint detachment/retry.
+See [the package receipt](verification/2026-09-12-palette-creation.json).
 
-A local cask was generated and passed Ruby syntax checking. Installation was not
-rerun for this archive. Earlier isolated installation/uninstallation evidence is
-retained in [the previous receipt](verification/2026-09-12-numeric-inspector.json).
+The generated local cask installed and uninstalled successfully in an isolated
+app directory. The installed copy passed verification and retained quarantine.
+The temporary app, cask registration, tap and isolated trust configuration were
+removed. Homebrew unexpectedly auto-removed Git during uninstall; Git 2.55.0 was
+restored and verified. Future isolated cask checks must use
+`HOMEBREW_NO_AUTOREMOVE=1 HOMEBREW_NO_INSTALL_CLEANUP=1` to avoid this side effect.
+
 Native launch, actual screen sampling, native editing and upgrades remain
 unverified for this build. Developer ID signing, notarization and trusted public
 distribution remain unfinished; no public release is published.

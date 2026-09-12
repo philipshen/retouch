@@ -1,0 +1,63 @@
+{
+  "sourceCommit": "671f98868e230a9bd7cc4fdd13f996049d8b9697",
+  "sourceTreeDirty": false,
+  "sourceFiles": 178,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "archive": "/private/tmp/retouch-desktop-palette-20260912-671f988/Retouch-0.1.0-mac.zip",
+  "sha256": "a4c5a231e635a089d922ee5d0010d4f5c4e44473b008286fc73d33c4b793cb0a",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "signature": "strict ad hoc verification passed for extracted and installed copies",
+  "units": {
+    "passed": 912,
+    "log": "/private/tmp/retouch-desktop-palette-units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "create-html",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-palette-20260912-671f988/create-html.log"
+    },
+    {
+      "name": "inherited-liquid",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-palette-20260912-671f988/inherited-liquid.log"
+    },
+    {
+      "name": "detach-liquid",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-palette-20260912-671f988/detach-liquid.log"
+    }
+  ],
+  "installation": {
+    "result": "Homebrew cask installation and removal passed in isolated app directory",
+    "verification": {
+      "sourceCommit": "671f98868e230a9bd7cc4fdd13f996049d8b9697",
+      "sourceTreeDirty": false,
+      "sourceFiles": 178,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "quarantinePreserved": true,
+    "cask": "/private/tmp/retouch-desktop-palette-20260912-671f988/retouch-studio.rb",
+    "logs": [
+      "/private/tmp/retouch-desktop-palette-20260912-671f988/install.log",
+      "/private/tmp/retouch-desktop-palette-20260912-671f988/uninstall.log",
+      "/private/tmp/retouch-desktop-palette-20260912-671f988/restore-git.log"
+    ],
+    "cleanup": "App directory, cask registration, temporary tap, isolated XDG trust configuration and harness verified absent; developer mode remains disabled",
+    "sideEffect": "Homebrew uninstall auto-removed git 2.55.0. Reinstalled identical version, verified binary and restored not-installed-on-request flag. Use HOMEBREW_NO_AUTOREMOVE=1 and HOMEBREW_NO_INSTALL_CLEANUP=1 for future isolated cask verification."
+  },
+  "nativeLaunch": "not attempted; latest native preflight cgWindowNotFound",
+  "nativeSampling": "unverified",
+  "notarization": "not performed",
+  "published": false
+}
