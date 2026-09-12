@@ -80,7 +80,7 @@
  }
   function frameBounds(el){
    const parent=el.offsetParent,d=el.ownerDocument,w=d.defaultView;
-   if(!parent||parent===d.body&&w.getComputedStyle(parent).position==='static')return {left:0,top:0,width:d.documentElement.clientWidth,height:w.innerHeight};
+   if(!parent||parent===d.body&&w.getComputedStyle(parent).position==='static'&&['none',''].includes(w.getComputedStyle(parent).rotate||''))return {left:0,top:0,width:d.documentElement.clientWidth,height:w.innerHeight};
    const rect=parent.getBoundingClientRect();return {left:rect.left+parent.clientLeft,top:rect.top+parent.clientTop,width:parent.clientWidth,height:parent.clientHeight};
   }
  function singlePosition(el,save,report){

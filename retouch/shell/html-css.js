@@ -230,13 +230,19 @@
   I.note(typography,'Relative spacing follows each layer’s own font size. Raw CSS values and property resets are available below.');
   const sharedFields=[['visibility','Visibility'],['opacity','Opacity (%)'],['rotate','Rotation (°)'],['mix-blend-mode','Blend mode'],['isolation','Blend group'],...fields,...(elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg')?svgFields.filter(([property])=>['fill','stroke'].includes(property)):[])];
   for(const [property,label]of sharedFields){
-   const values=infos.map((info,i)=>info.cssRules?.[width]?.[property]??computed[i].getPropertyValue(property)),mixed=values.some(value=>value!==values[0]),numeric=['opacity','rotate'].includes(property);
+   const values=infos.map((info,i)=>{const raw=info.cssRules?.[width]?.[property]??computed[i].getPropertyValue(property);return property==='rotate'?String(RetouchReactSelection.rotationDegrees(raw)):raw;}),mixed=values.some(value=>value!==values[0]),numeric=['opacity','rotate'].includes(property);
    const input=document.createElement(options[property]?'select':'input');
    if(options[property]){if(mixed){const option=document.createElement('option');option.value='';option.textContent='Mixed';option.disabled=true;input.append(option);}for(const value of new Set([...values,...options[property]])){const option=document.createElement('option');option.value=value;option.textContent=value;input.append(option);}}
    else {input.type=numeric?'number':'text';input.placeholder=mixed?'Mixed':'';if(numeric){input.min=property==='opacity'?0:-360;input.max=property==='opacity'?100:360;input.step='any';}}
    input.value=mixed?'':property==='opacity'?Number(values[0])*100:property==='rotate'?(values[0]==='none'?0:parseFloat(values[0])):values[0];
    input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(!input.value.trim()||!input.checkValidity())return;const value=property==='opacity'?String(Number(input.value)/100):property==='rotate'?input.value+'deg':input.value.trim();if(!valid(property,value)||!CSS.supports(property,value)){input.setCustomValidity('Enter a supported CSS value.');input.reportValidity();return;}save(property,value,width);};
-   I.field(section,'Shared '+label,input);if(['color','background-color','border-color','fill','stroke'].includes(property))RetouchPaintPicker.mountSelectionField(input,elements,property);
+   I.field(section,'Shared '+label,input);
+   if(numeric){
+    I.fieldDraft(input);I.numericLabelDrag(input);
+    input.retouchNumericPreview=()=>{const previews=elements.map(el=>RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true}));return {current:()=>elements.every(el=>el.isConnected),update:value=>previews.forEach(preview=>preview.update(property==='rotate'?value+'deg':String(value/100))),restore:()=>previews.forEach(preview=>preview.restore())};};
+    if(elements.some(el=>el.style.getPropertyValue(property))||property==='rotate'&&values.some(value=>!Number.isFinite(Number(value)))){input.disabled=true;input.title='Edit the selected layer’s inline or 3D property in its source first.';}
+   }
+   if(['color','background-color','border-color','fill','stroke'].includes(property))RetouchPaintPicker.mountSelectionField(input,elements,property);
    const reset=I.button('Reset shared '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=infos.every(info=>!Object.hasOwn(info.cssRules?.[width]||{},property));section.append(reset);
   }
   return section;

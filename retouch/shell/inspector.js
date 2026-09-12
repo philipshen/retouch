@@ -52,7 +52,7 @@
     const d = el.ownerDocument, w = d.defaultView;
     for (let n = el; n && n !== d.documentElement; n = n.parentElement) {
       const s = w.getComputedStyle(n);
-      if (s.transform !== 'none' || (s.rotate && s.rotate !== 'none') || (s.scale && s.scale !== 'none') || (s.translate && s.translate !== 'none') || (s.zoom && Number(s.zoom) !== 1)) {
+      if (s.transform !== 'none' || (s.rotate && !['none','0deg'].includes(s.rotate)) || (s.scale && s.scale !== 'none') || (s.translate && s.translate !== 'none') || (s.zoom && Number(s.zoom) !== 1)) {
         throw new Error('Anchor placement requires an element and ancestors without transforms or zoom.');
       }
     }
@@ -63,7 +63,7 @@
     if(!alreadyAbsolute)el.style.setProperty('position', 'absolute', 'important');
     const parent = el.offsetParent;
     if(!alreadyAbsolute){if (original === null) el.removeAttribute('style'); else el.setAttribute('style', original);}
-    const viewport = !parent || (parent === d.body && w.getComputedStyle(parent).position === 'static');
+    const viewport = !parent || (parent === d.body && w.getComputedStyle(parent).position === 'static' && ['none',''].includes(w.getComputedStyle(parent).rotate||''));
     const pr = viewport ? { left: -w.scrollX, top: -w.scrollY } : parent.getBoundingClientRect();
     return {
       x: rect.left - pr.left - (viewport ? 0 : parent.clientLeft) + (viewport ? 0 : parent.scrollLeft),
