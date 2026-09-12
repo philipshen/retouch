@@ -873,3 +873,11 @@ body input[type="number"]::-webkit-outer-spin-button { appearance:none;margin:0;
 .typography-spacing svg { display:block;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round; }
 .typography-primary .typography-alignment { display:flex;flex-wrap:wrap;gap:6px; }
 .typography-alignment > span,.typography-alignment > .inspector-field > span { display:block;flex:0 0 100%;font-size:11px;color:var(--muted); }
+
+.section-toggle { display:flex;align-items:center;gap:6px;width:100%;padding:0;border:0;border-radius:3px;background:transparent;color:inherit;font:inherit;font-weight:inherit;text-align:left;cursor:pointer; }
+.section-toggle::before { content:"";width:4px;height:4px;border-right:1px solid currentColor;border-bottom:1px solid currentColor;transform:rotate(45deg);margin:0 2px;color:var(--muted); }
+.section-toggle[aria-expanded="false"]::before { transform:rotate(-45deg); }
+.section-toggle:hover { color:var(--ink);background:transparent; }
+.inspector-section[data-collapsed="true"] > :not(h3):not(.section-add) { display:none!important; }
+.inspector-section[data-collapsed="true"] > h3 { margin-bottom:0; }
+.inspector-section:has(> .section-add) > h3 > .section-toggle { padding-right:30px; }
