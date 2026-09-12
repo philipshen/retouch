@@ -76,3 +76,11 @@ test('group limits combine the tightest per-member ratios and respect CSS minimu
  const {groupLimits}=require('../shell/canvas-move.js'),rects=[{left:10,top:20,width:100,height:50},{left:150,top:100,width:50,height:100}],limits=[{minWidth:50,maxWidth:200,minHeight:25,maxHeight:100},{minWidth:20,maxWidth:60,minHeight:40,maxHeight:150}];
  assert.deepEqual(groupLimits(rects,limits),{minWidth:95,maxWidth:228,minHeight:90,maxHeight:270});assert.equal(groupLimits(rects,[{...limits[0],maxWidth:20},limits[1]]).maxWidth,95);assert.throws(()=>groupLimits(rects,[{...limits[0],minWidth:200},limits[1]]));assert.throws(()=>groupLimits(rects,[]));
 });
+
+test('rotated resizing preserves the opposite local anchor with fixed and percentage origins',()=>{
+ const {resize,rotatedBounds,rotateVector}=require('../shell/canvas-move.js');
+ for(const angle of [-120,30,90])for(const handle of ['n','s','e','w','ne','nw','se','sw'])for(const percent of [false,true]){
+  const width=100,height=60,result=resize(width,height,handle,15,20),origin=[25,15],next=percent?[result.width*.25,result.height*.25]:origin,actual=rotatedBounds(result,angle,origin,next),anchor={x:handle.includes('w')?width:handle.includes('e')?0:width/2,y:handle.includes('n')?height:handle.includes('s')?0:height/2},newAnchor={x:anchor.x-result.x,y:anchor.y-result.y},before=rotateVector(anchor.x-origin[0],anchor.y-origin[1],angle),after=rotateVector(newAnchor.x-next[0],newAnchor.y-next[1],angle);
+  assert.ok(Math.abs(origin[0]+before.x-(actual.x+next[0]+after.x))<1e-8);assert.ok(Math.abs(origin[1]+before.y-(actual.y+next[1]+after.y))<1e-8);
+ }
+});
