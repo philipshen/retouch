@@ -1,9 +1,9 @@
 import AppKit
 import WebKit
 
-// The editor remains the same shell as /rt. No Node or native command bridge is
-// exposed to a page. Native project startup delegates to the bundled CLI.
-final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTextFieldDelegate {
+// The editor remains the same shell as /rt. The only page bridge samples a
+// user-selected screen color. Project startup stays in the native UI and CLI.
+final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTextFieldDelegate, WKScriptMessageHandlerWithReply {
     private var window: NSWindow!
     private var web: WKWebView!
     private var address: NSTextField!
@@ -21,6 +21,73 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
     private var discoveryID = UUID()
     private var outputLines = StartupLines()
     private var candidateURLs: [URL] = []
+    private var connectedEditor: URL?
+    private var editorDocument = UUID()
+    private var colorSampler: NSColorSampler?
+
+    // Native sampling has no programmatic cancel API. JavaScript abort discards
+    // the result; Escape dismisses the system sampler. Keep one sampler at a time.
+    static let colorSamplerScript = #"""
+    (()=>{
+      if(window!==window.top||!['/rt','/rt/'].includes(location.pathname))return;
+      const handler=window.webkit?.messageHandlers?.retouchColorSampler;if(!handler)return;
+      class NativeEyeDropper {
+        open({signal}={}) {
+          if(signal?.aborted)return Promise.reject(new DOMException('Sampling cancelled','AbortError'));
+          if(navigator.userActivation&&!navigator.userActivation.isActive)return Promise.reject(new DOMException('Click the eyedropper to sample a color','NotAllowedError'));
+          return new Promise((resolve,reject)=>{
+            let done=false;
+            const finish=(error,result)=>{if(done)return;done=true;signal?.removeEventListener('abort',abort);error?reject(error):resolve(result);};
+            const abort=()=>finish(new DOMException('Sampling cancelled','AbortError'));
+            signal?.addEventListener('abort',abort,{once:true});
+            try{Promise.resolve(handler.postMessage({action:'sample'})).then(result=>{
+              if(result?.error)finish(new DOMException('Screen sampling did not finish',result.error));
+              else if(/^#[a-f\d]{6}$/i.test(result?.sRGBHex))finish(null,{sRGBHex:result.sRGBHex});
+              else finish(new DOMException('Invalid screen color','OperationError'));
+            },()=>finish(new DOMException('Screen sampling unavailable','OperationError')));}catch{finish(new DOMException('Screen sampling unavailable','OperationError'));}
+          });
+        }
+      }
+      Object.defineProperty(window,'RetouchNativeEyeDropper',{value:NativeEyeDropper});
+    })();
+    """#
+
+    static func acceptsColorSampling(frameURL: URL?, editorURL: URL?, mainFrame: Bool) -> Bool {
+        guard mainFrame, let frame = frameURL, let editor = editorURL,
+              Self.editorURL(frame.absoluteString) != nil,
+              ["/rt", "/rt/"].contains(frame.path),
+              frame.scheme?.lowercased() == editor.scheme?.lowercased(),
+              frame.host?.lowercased() == editor.host?.lowercased() else { return false }
+        let defaultPort = frame.scheme?.lowercased() == "https" ? 443 : 80
+        return (frame.port ?? defaultPort) == (editor.port ?? defaultPort)
+    }
+    static func sampledHex(_ color: NSColor) -> String? {
+        guard let rgb = color.usingColorSpace(.sRGB) else { return nil }
+        let channels = [rgb.redComponent, rgb.greenComponent, rgb.blueComponent]
+        guard channels.allSatisfy({ $0.isFinite }) else { return nil }
+        return "#" + channels.map { String(format: "%02x", Int((min(1, max(0, $0)) * 255).rounded())) }.joined()
+    }
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping (Any?, String?) -> Void) {
+        guard message.name == "retouchColorSampler", message.webView === web,
+              let body = message.body as? [String: String], body == ["action": "sample"],
+              Self.acceptsColorSampling(frameURL: message.frameInfo.request.url, editorURL: connectedEditor, mainFrame: message.frameInfo.isMainFrame),
+              Self.acceptsColorSampling(frameURL: web.url, editorURL: connectedEditor, mainFrame: true),
+              NSApp.isActive, window.isKeyWindow else { replyHandler(["error": "NotAllowedError"], nil); return }
+        guard colorSampler == nil else { replyHandler(["error": "InvalidStateError"], nil); return }
+        let document = editorDocument, sampler = NSColorSampler()
+        colorSampler = sampler
+        sampler.show { [weak self] color in
+            guard let self = self else { replyHandler(["error": "AbortError"], nil); return }
+            self.colorSampler = nil
+            guard self.editorDocument == document, let color = color else { replyHandler(["error": "AbortError"], nil); return }
+            guard let hex = Self.sampledHex(color) else { replyHandler(["error": "OperationError"], nil); return }
+            replyHandler(["sRGBHex": hex], nil)
+        }
+    }
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        editorDocument = UUID()
+    }
+
 
     struct StartupLines {
         var pending = ""
@@ -187,6 +254,8 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
         let root = NSView()
         window.contentView = root
         let configuration = WKWebViewConfiguration()
+        configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "retouchColorSampler")
+        configuration.userContentController.addUserScript(WKUserScript(source: Self.colorSamplerScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         web = WKWebView(frame: .zero, configuration: configuration)
         web.navigationDelegate = self
         web.allowsBackForwardNavigationGestures = true
@@ -291,6 +360,8 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
                     self.address.stringValue = url.absoluteString
                     UserDefaults.standard.set(url.absoluteString, forKey: "editorURL")
                     self.status.stringValue = "Connected · edits save to your project's source"
+                    self.connectedEditor = url
+                    self.editorDocument = UUID()
                     self.web.load(URLRequest(url: url))
                     self.window.makeKeyAndOrderFront(nil)
                 } else {
@@ -302,6 +373,9 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
     }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         if (error as NSError).code != NSURLErrorCancelled { status.stringValue = "Could not load editor: \(error.localizedDescription)" }
+    }
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        editorDocument = UUID()
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
     func applicationWillTerminate(_ notification: Notification) { stopDiscovery(); pending?.cancel(); if projectProcess?.isRunning == true { projectProcess?.terminate() } }

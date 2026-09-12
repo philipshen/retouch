@@ -418,3 +418,18 @@ Run the filesystem failure and lock checks without launching Retouch:
 ```sh
 node --test desktop/test/publish-package.test.cjs
 ```
+
+### Screen color sampling (development source)
+
+The color picker falls back to a macOS NSColorSampler bridge when WebKit lacks
+the browser eyedropper. The bridge accepts only the connected local editor main
+frame in the active app window and returns the user-selected sRGB color. The
+existing paint opacity is preserved. Escape dismisses the system sampler; closing
+the picker or navigating discards a late result. The API has no programmatic
+cancel method. Actual native sampling remains unverified. Adapter tests use
+simulated replies; the standalone policy check does not launch the app.
+
+```sh
+node --test desktop/test/color-sampler.test.cjs
+node desktop/test/color-sampler-policy.cjs
+```

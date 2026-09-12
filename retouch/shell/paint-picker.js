@@ -57,15 +57,15 @@
   const preview=document.createElement('div');preview.className='paint-preview';preview.setAttribute('role','img');preview.setAttribute('aria-label','Color preview');dialog.append(preview);
   const value=document.createElement('input');value.value=original==='none'&&['fill','stroke'].includes(input.dataset.paintProperty)?'#000000':original;value.spellcheck=false;I.field(dialog,'Color value',value);
   const status=I.note(dialog,'');status.setAttribute('role','status');
-  let sampling=null;
+  let sampling=null;const EyeDropper=typeof root.EyeDropper==='function'?root.EyeDropper:root.RetouchNativeEyeDropper;
   const sampleStatus=I.note(dialog,'');sampleStatus.hidden=true;sampleStatus.setAttribute('role','status');sampleStatus.setAttribute('aria-label','Screen color sampling');
   const sample=I.button('',async()=>{
    if(sampling)return;const controller=new AbortController();sampling=controller;sample.disabled=true;sample.setAttribute('aria-busy','true');sampleStatus.hidden=true;const alpha=read()?.alpha??1;
-   try{const result=await new root.EyeDropper().open({signal:controller.signal});if(controller.signal.aborted||!dialog.open||!input.isConnected)return;if(!/^#[a-f\d]{6}$/i.test(result?.sRGBHex))throw Error('Invalid sampled color');value.value=srgbValue([1,3,5].map(index=>parseInt(result.sRGBHex.slice(index,index+2),16)/255),alpha);sync();}
+   try{const result=await new EyeDropper().open({signal:controller.signal});if(controller.signal.aborted||!dialog.open||!input.isConnected)return;if(!/^#[a-f\d]{6}$/i.test(result?.sRGBHex))throw Error('Invalid sampled color');value.value=srgbValue([1,3,5].map(index=>parseInt(result.sRGBHex.slice(index,index+2),16)/255),alpha);sync();}
    catch(error){if(dialog.open&&!controller.signal.aborted&&error?.name!=='AbortError'){sampleStatus.textContent='Could not sample a screen color. Try again or enter a color.';sampleStatus.hidden=false;}}
    finally{if(sampling===controller){sampling=null;sample.disabled=false;sample.removeAttribute('aria-busy');if(dialog.open)sample.focus();}}
   });
-  sample.className='paint-eyedropper';sample.setAttribute('aria-label','Pick color from screen');sample.title=typeof root.EyeDropper==='function'?'Pick color from screen':'Screen color sampling is unavailable in this browser';sample.disabled=typeof root.EyeDropper!=='function';
+  sample.className='paint-eyedropper';sample.setAttribute('aria-label','Pick color from screen');sample.title=typeof EyeDropper==='function'?'Pick color from screen':'Screen color sampling is unavailable in this browser';sample.disabled=typeof EyeDropper!=='function';
   sample.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5 5 5M13 6 4 15v5h5l9-9M15 7l3-3a2.1 2.1 0 0 1 3 3l-3 3M4 20l-1 1"/></svg>';header.append(sample);
   let parsed=null,h=0,s=0,v=0,drag=null;
   function read(){try{return parsePaint(value.value.trim());}catch{return null;}}
