@@ -806,3 +806,7 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .paint-picker-actions { position:sticky;bottom:0;z-index:2;background:white; }
 
 .paint-linked-style > button:not([hidden]) + button { margin-left:6px; }
+
+.paint-style-create { margin-top:10px;padding-top:8px;border-top:1px solid var(--line); }
+.paint-style-create .inspector-field { margin-top:8px; }
+.paint-style-create button { font-size:11px; }
