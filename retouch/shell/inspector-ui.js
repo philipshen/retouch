@@ -68,8 +68,9 @@
     pair(group,[prefix+' X (px)',prefix+' Y (px)']);pair(group,[prefix+' Blur (px)',prefix+' Spread (px)']);
    }
    const paintInputs=name==='Fill'?[...section.querySelectorAll('.gradient-stop-row input:not([type="number"])')]:name==='Effects'?[...section.querySelectorAll('.shadow-controls input')].filter(input=>/^Shadow \d+ color$/.test(input.getAttribute('aria-label')||'')):[];
+   paintInputs.push(...section.querySelectorAll('input[data-paint-property]'));
    for(const input of paintInputs){
-    if(name==='Effects'){const control=document.createElement('span');control.className='paint-field-control';input.replaceWith(control);control.append(input);}
+    if(name==='Effects'||input.dataset.paintProperty){const control=document.createElement('span');control.className='paint-field-control';input.replaceWith(control);control.append(input);}
 
     const swatch=document.createElement('button');swatch.type='button';swatch.className='gradient-stop-swatch';swatch.setAttribute('aria-label','Edit '+input.getAttribute('aria-label'));swatch.title='Edit color';swatch.disabled=input.disabled;swatch.onclick=()=>root.RetouchPaintPicker.open(input);input.parentElement.classList.add('gradient-stop-color');input.before(swatch);
     const paint=()=>{const color=input.value.trim();if(CSS.supports('color',color))swatch.style.backgroundImage='linear-gradient('+color+','+color+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)';};

@@ -193,6 +193,7 @@
    input.onchange=()=>{const value=input.value.trim();if(!CSS.supports(property,value)||!valid(property,value)){input.setCustomValidity('Use simple CSS lengths with units, keywords, or colors. Spacing accepts up to four values; gap accepts two.');input.reportValidity();return;}save(property,value,width);};
    const target=property.endsWith('radius')?corners:/^(font-|line-height|letter-spacing|text-)/.test(property)||property==='color'?typography:sec;
    I.field(target,label+' (CSS)',input);
+   if(['color','background-color','border-color'].includes(property)){input.dataset.paintProperty=property;input.retouchPaintPreview=()=>RetouchPaintPicker.propertyPreview({el,input,property});}
    if(property==='line-height')target.append(I.button('Automatic line height',()=>save(property,'normal',width)));
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);target.append(reset);
   }
