@@ -33,22 +33,29 @@
   const factor=Math.max(lower,Math.min(upper,requested.width/base.width)),next={width:base.width*factor,height:base.height*factor};
   if(!Number.isFinite(factor)||axes.every(axis=>Math.abs(next[axis]-requested[axis])<=tolerance))throw Error('The layout’s size rules prevent proportional resizing.');return next;
  }
+ // Solve the measured handle response. One degree of freedom projects onto its
+ // allowed direction; a singular two-axis response retains the movable axis.
+ function pointerCorrection(columns,error){
+  const dot=(a,b)=>a.x*b.x+a.y*b.y,norm=columns.map(c=>dot(c,c));
+  if(columns.length===2){const [a,b]=columns,det=a.x*b.y-a.y*b.x;if(Math.abs(det)>1e-8*Math.max(1,Math.sqrt(norm[0]*norm[1])))return [(error.x*b.y-error.y*b.x)/det,(a.x*error.y-a.y*error.x)/det];}
+  const index=norm.indexOf(Math.max(...norm));return columns.map((c,i)=>i===index&&norm[i]>1e-8?dot(c,error)/norm[i]:0);
+ }
  function available(el){const css=el.ownerDocument.defaultView.getComputedStyle(el);return !['absolute','fixed'].includes(css.position)&&!['inline','contents','none'].includes(css.display)&&!['width','height','inline-size','block-size','flex','flex-grow','flex-shrink','flex-basis'].some(p=>el.style.getPropertyValue(p));}
  function changes(el,sizes){const css=el.ownerDocument.defaultView.getComputedStyle(el),parent=root.RetouchInspector.layoutParent(el),p=parent&&el.ownerDocument.defaultView.getComputedStyle(parent),result={};for(const [axis,value]of Object.entries(sizes))result[axis]=root.RetouchReactSelection.dimensionValue(css,axis,value)+'px';if(p&&/flex/.test(p.display)&&Object.hasOwn(sizes,root.RetouchLayout.layoutAxes({direction:p.flexDirection,writingMode:p.writingMode}).main))Object.assign(result,{'flex-grow':'0','flex-shrink':'0','flex-basis':'auto'});return result;}
  function control(el,save){if(!available(el))return null;const button=root.RetouchInspector.canvasTool('resize',(opener,initial)=>root.resizeFlowOnCanvas(el,opener,save,initial));button.dataset.flowResize='true';button.retouchFlowHandles=()=>handlesFor(el);return button;}
  function mount({target,frame,canvas,control,save,current,onEnd,onError,initial=null}){
-  let g;const measure=()=>root.RetouchInspector.geometry(target,{allowRotation:true,layoutOnly:true});try{if(!available(target))throw Error('Choose a layer whose flow size can be edited.');g=measure();}catch(error){onError(error.message);return null;}
+  let g;const measure=()=>root.RetouchInspector.geometry(target,{allowRotation:true,allowScale:true,layoutOnly:true});try{if(!available(target))throw Error('Choose a layer whose flow size can be edited.');g=measure();}catch(error){onError(error.message);return null;}
   const doc=root.document,w=target.ownerDocument.defaultView,f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/w.innerWidth,left=Math.max(f.left,c.left),top=Math.max(f.top,c.top),right=Math.min(f.right,c.right),bottom=Math.min(f.bottom,c.bottom);
   if(!Number.isFinite(scale)||scale<=0||right<=left||bottom<=top||g.width<=0||g.height<=0){onError('Bring a visible layer into view before resizing.');return null;}
   const surface=doc.createElement('div');surface.className='canvas-flow-resize-surface';surface.tabIndex=0;surface.setAttribute('aria-label','Resize layer in flow');Object.assign(surface.style,{position:'fixed',left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px',overflow:'hidden',zIndex:40,touchAction:'none'});
   const directions=handlesFor(target),center=centersFor(target),names={e:'right',w:'left',n:'top',s:'bottom',ne:'top right',nw:'top left',se:'bottom right',sw:'bottom left'};const handles=directions.map(handle=>{const b=doc.createElement('button');b.type='button';b.dataset.flowHandle=handle;b.className='canvas-selection-resize';b.setAttribute('aria-label','Resize flow '+names[handle]);surface.append(b);return b;});
   const hint=doc.createElement('div');Object.assign(hint.style,{position:'fixed',bottom:'76px',left:'50%',transform:'translateX(-50%)',padding:'8px 12px',background:'var(--panel)',color:'var(--ink)',border:'1px solid var(--line)',borderRadius:'6px',fontSize:'11px',pointerEvents:'none'});hint.textContent='Drag to resize in layout · Shift keeps proportions · Arrows: 1px · Enter applies · Escape cancels';surface.append(hint);
   const readouts=[...doc.querySelectorAll('input')].filter(input=>input.retouchDimension?.target===target).map(input=>({input,original:input.value,last:null,...input.retouchDimension}));
-  let state=null,ended=false,raf,sizes=null,expectedStyle=target.getAttribute('style');const previews=new Map(),cleanups=[];
+  const originalStyle=target.getAttribute('style');let state=null,ended=false,raf,sizes=null,expectedStyle=originalStyle;const previews=new Map(),cleanups=[];
   const listen=(el,name,fn,options)=>{el.addEventListener(name,fn,options);cleanups.push(()=>el.removeEventListener(name,fn,options));};
-  function valid(){return target.isConnected&&control.isConnected&&target.getAttribute('style')===expectedStyle&&handlesFor(target).join(',')===directions.join(',')&&current();}
-  function finish(commit=false){if(ended)return;const next=commit&&valid()?sizes:null;ended=true;root.cancelAnimationFrame(raf);surface.remove();cleanups.forEach(fn=>fn());[...previews.values()].reverse().forEach(p=>p.restore());for(const field of readouts)if(field.last!==null&&field.input.value===field.last)field.input.value=field.original;onEnd();if(next&&Object.entries(next).some(([axis,value])=>Math.abs(value-g[axis])>.01))save(next);}
-  function paint(){const next=measure();if(sizes){const css=w.getComputedStyle(target);for(const field of readouts){if(!field.input.isConnected)continue;field.last=field.box==='css'?css.getPropertyValue(field.axis):String(Math.round(next[field.axis]*100)/100);field.input.value=field.last;}}hint.textContent=Math.round(next.width*100)/100+' × '+Math.round(next.height*100)/100+' px · Resize in layout · Shift keeps proportions · Arrows: 1px · Enter applies · Escape cancels';const points=root.RetouchCanvasRotate.resizeHandles(next,scale);for(const b of handles){const p=points.find(p=>p.handle===b.dataset.flowHandle);Object.assign(b.style,{left:f.left+p.x-left+'px',top:f.top+p.y-top+'px',rotate:next.rotation+'deg',cursor:root.RetouchCanvasRotate.resizeCursor(p.handle,next.rotation)});}}
+  function valid(){if(!target.isConnected||!control.isConnected)return false;const css=w.getComputedStyle(target),signed=(root.RetouchFlip.parse(css.scale||'none'));return signed?.length===2&&signed[0]===g.scaleX&&signed[1]===g.scaleY&&root.RetouchReactSelection.rotationDegrees(css.rotate)===g.rotation&&target.isConnected&&control.isConnected&&target.getAttribute('style')===expectedStyle&&handlesFor(target).join(',')===directions.join(',')&&current();}
+  function finish(commit=false){if(ended)return;const next=commit&&valid()?sizes:null,ownStyle=target.getAttribute('style')===expectedStyle;ended=true;root.cancelAnimationFrame(raf);surface.remove();cleanups.forEach(fn=>fn());[...previews.values()].reverse().forEach(p=>p.restore());if(ownStyle&&originalStyle===null&&target.getAttribute('style')==='')target.removeAttribute('style');for(const field of readouts)if(field.last!==null&&field.input.value===field.last)field.input.value=field.original;onEnd();if(next&&Object.entries(next).some(([axis,value])=>Math.abs(value-g[axis])>.01))save(next);}
+  function paint(){const next=measure();if(sizes){const css=w.getComputedStyle(target);for(const field of readouts){if(!field.input.isConnected)continue;field.last=field.box==='css'?css.getPropertyValue(field.axis):String(Math.round(next[field.axis]*100)/100);field.input.value=field.last;}}hint.textContent=Math.round(next.width*100)/100+' × '+Math.round(next.height*100)/100+' px · Resize in layout · Shift keeps proportions · Arrows: 1px · Enter applies · Escape cancels';const points=root.RetouchCanvasRotate.resizeHandles(next,scale);for(const b of handles){const p=points.find(p=>p.handle===b.dataset.flowHandle);Object.assign(b.style,{left:f.left+p.x-left+'px',top:f.top+p.y-top+'px',rotate:next.rotation+'deg',cursor:root.RetouchCanvasRotate.resizeCursor(p.handle,next.rotation,next.scaleX,next.scaleY)});}}
   function applyPreview(requested){
    const css=w.getComputedStyle(target),safe={...requested};
    for(const axis of Object.keys(safe)){const edges=axis==='width'?['left','right']:['top','bottom'],minimum=edges.reduce((sum,edge)=>sum+(parseFloat(css.getPropertyValue('padding-'+edge))||0)+(parseFloat(css.getPropertyValue('border-'+edge+'-width'))||0),0);safe[axis]=Math.max(minimum,safe[axis]);}
@@ -58,12 +65,28 @@
    for(const [property,value]of Object.entries(values))previews.get(property).update(value);
    expectedStyle=target.getAttribute('style');return measure();
   }
+  function followPointer(requested,actual,base,proportional){
+   const point=g=>root.RetouchCanvasRotate.resizeHandles(g).find(p=>p.handle===state.handle),start=point(g),goal={x:start.x+state.dx/scale,y:start.y+state.dy/scale},axes=proportional?['width']:Object.keys(requested),ratio=base.height/base.width;
+   for(let attempt=0;attempt<4;attempt++){
+    const here=point(actual),error={x:goal.x-here.x,y:goal.y-here.y},columns=[];
+    if(Math.hypot(error.x,error.y)<.04)break;
+    for(const axis of axes){let column;
+     for(const step of [4,-4]){const probe={...requested,[axis]:Math.max(1,requested[axis]+step)};if(proportional)probe.height=probe.width*ratio;const p=point(applyPreview(probe)),distance=probe[axis]-requested[axis];column=distance?{x:(p.x-here.x)/distance,y:(p.y-here.y)/distance}:{x:0,y:0};if(Math.hypot(column.x,column.y)>1e-5)break;}
+     columns.push(column);
+    }
+    const correction=pointerCorrection(columns,error);if(correction.every(n=>Math.abs(n)<.01)){actual=applyPreview(requested);break;}
+    axes.forEach((axis,i)=>requested[axis]=Math.max(1,Math.min(100000,requested[axis]+correction[i])));if(proportional)requested.height=requested.width*ratio;actual=applyPreview(requested);
+   }
+   // The last probe may have changed the page even when the correction is zero.
+   return {requested,actual:applyPreview(requested)};
+  }
   function update(e){
    if(!state||!valid()){finish();return;}
    try{
     const base=state.base||g,delta=state.keyboard?{x:state.dx,y:state.dy}:root.RetouchCanvasMove.rotateVector(state.dx/scale,state.dy/scale,-g.rotation),r=root.RetouchCanvasMove.resize(base.width,base.height,state.handle,delta.x*(!state.keyboard&&center.x?2:1),delta.y*(!state.keyboard&&center.y?2:1),{shiftKey:e.shiftKey});let requested={...state.previous};
     if(/[ew]/.test(state.handle)||e.shiftKey)requested.width=r.width;if(/[ns]/.test(state.handle)||e.shiftKey)requested.height=r.height;
     let actual=applyPreview(requested);
+    if(!state.keyboard&&(g.rotation||g.scaleX!==1||g.scaleY!==1))({requested,actual}=followPointer(requested,actual,base,e.shiftKey));
     if(e.shiftKey){for(let attempt=0;attempt<4;attempt++){const corrected=ratioCorrection(base,requested,actual);if(!corrected)break;requested=corrected;actual=applyPreview(requested);}if(ratioCorrection(base,requested,actual))throw Error('The layout’s size rules did not settle at this aspect ratio.');}
     sizes=Object.fromEntries(Object.keys(requested).map(axis=>[axis,actual[axis]]));paint();
    }catch(error){finish();onError(error.message);}
@@ -76,5 +99,5 @@
   function tick(){if(!valid()){finish();return;}try{paint();}catch{finish();return;}raf=root.requestAnimationFrame(tick);}
   doc.body.append(surface);paint();handles.at(-1).focus({preventScroll:true});if(initial)begin(initial.event,initial.handle);raf=root.requestAnimationFrame(tick);return ()=>finish();
  }
- const api={centeredAxes,ratioCorrection,flowHandles,available,changes,control,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchFlowResize=api;
+ const api={pointerCorrection,centeredAxes,ratioCorrection,flowHandles,available,changes,control,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchFlowResize=api;
 })(typeof window==='object'?window:globalThis);

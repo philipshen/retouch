@@ -27,3 +27,12 @@ test('centered grid and flex cross axes expose both growth edges',()=>{
  assert.deepEqual(centeredAxes({display:'flex',flexDirection:'row-reverse',alignItems:'center'}),{x:false,y:true});
  assert.deepEqual(centeredAxes({display:'grid',justifyItems:'center',alignItems:'center'},{justifySelf:'end',alignSelf:'start'}),{x:false,y:false});
 });
+
+
+test('flow pointer correction inverts coupled transform response and projects constrained edges',()=>{
+ const {pointerCorrection:solve}=require('../shell/flow-resize.js');
+ assert.deepEqual(solve([{x:-1.5,y:.5},{x:.25,y:.75}],{x:-12.5,y:12.5}),[10,10]);
+ assert.deepEqual(solve([{x:0,y:-.5}],{x:50,y:-10}),[20]);
+ assert.deepEqual(solve([{x:0,y:0},{x:0,y:2}],{x:50,y:10}),[0,5]);
+ assert.deepEqual(solve([{x:0,y:0}],{x:50,y:10}),[0]);
+});
