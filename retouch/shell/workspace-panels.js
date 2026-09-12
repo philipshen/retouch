@@ -5,7 +5,14 @@
  let hidden={layers:false,inspector:false},compact=null,opened=null,lastSelection=null;
  try{const value=JSON.parse(localStorage.getItem(key));if(value&&typeof value.layers==='boolean'&&typeof value.inspector==='boolean')hidden=value;}catch{}
  function layout(){
-  const next=main.clientWidth<1100;if(next!==compact){compact=next;opened=null;}main.classList.toggle('compact-workspace',compact);
+  const next=main.clientWidth<1100;
+  if(next!==compact){
+   // Keep an in-progress panel edit visible when sidebars become overlays.
+   const active=document.querySelector('.paint-picker[open]')?.retouchSourceInput||document.activeElement;
+   opened=next&&compact!==null?Object.keys(panels).find(name=>!panels[name].hidden&&panels[name].contains(active))||null:null;
+   compact=next;
+  }
+  main.classList.toggle('compact-workspace',compact);
   for(const [name,panel]of Object.entries(panels)){const visible=compact?opened===name:!hidden[name];panel.hidden=!visible;buttons[name].setAttribute('aria-expanded',String(visible));}
   window.dispatchEvent(new Event('retouch:workspace-layout'));
  }
