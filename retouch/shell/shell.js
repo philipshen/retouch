@@ -479,7 +479,9 @@ async function select(node,{toggle=false,sourceId}={}) {
 
 let comparisonSelectionSerial=0;
 window.addEventListener('retouch:comparison-edit',async event=>{
-  const detail=event.detail||{},serial=++comparisonSelectionSerial;
+  const detail=event.detail||{},serial=++comparisonSelectionSerial,selectionSerial=++inspectorSelectionSerial;
+  if(inspectorTextCommit)await inspectorTextCommit;
+  if(serial!==comparisonSelectionSerial||selectionSerial!==inspectorSelectionSerial)return;
   if(panelTasks||undoBusy||sourceRequests||!['width','height'].every(key=>Number.isInteger(detail[key])&&detail[key]>=240&&detail[key]<=7680))return;
   const validId=id=>id===null||id===undefined||/^[a-f0-9]{10}$/.test(id);
   if(!validId(detail.hostId)||!validId(detail.instanceId)||!Number.isInteger(detail.occurrence)||detail.occurrence<0||detail.occurrence>10000)return;
