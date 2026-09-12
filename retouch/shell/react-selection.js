@@ -60,7 +60,7 @@
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
   return R.replaceScope(classes,L.gapClasses(R.project(classes,scope),axis,value,writingMode,R.inherited(classes,scope,document)),scope);
  }
- const groupNames={size:'Size',layout:'Layout',typography:'Typography',appearance:'Appearance',effects:'Effects'};
+ const groupNames={size:'Size',layout:'Layout',appearance:'Appearance',typography:'Typography',fill:'Fill',stroke:'Stroke',effects:'Effects'};
  let groupState=null;
  function sharedGroups(parent){
   if(groupState===null){groupState={};try{const saved=JSON.parse(root.localStorage.getItem('retouch.shared-inspector-sections.v1')||'{}');for(const key of Object.keys(groupNames))if(typeof saved?.[key]==='boolean')groupState[key]=saved[key];}catch{}}
@@ -108,7 +108,7 @@
   }
 
   if(saveColor)for(const [property,label]of [['color','Text color'],['background-color','Background color'],['border-color','Border color'],...(elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg')?[['fill','SVG fill'],['stroke','SVG stroke']]:[])]){
-   const sec=groups.appearance;
+   const sec=property==='color'?groups.typography:['background-color','fill'].includes(property)?groups.fill:groups.stroke;
    const values=computed.map(css=>css.getPropertyValue(property)),mixed=values.some(value=>value!==values[0]),input=root.document.createElement('input');input.type='text';input.spellcheck=false;input.placeholder=mixed?'Mixed · enter CSS color':'CSS color';input.disabled=elements.some(el=>el.style.getPropertyValue(property));
    input.value=mixed?'':values[0];I.field(sec,'Shared '+label+' with alpha',input);root.RetouchPaintPicker.mountSelectionField(input,elements,property);I.note(sec,mixed?'Mixed colors':values[0]);
    const clear=I.button('Clear selected '+label.toLowerCase(),()=>saveColor(property,null).catch(error=>I.note(sec,error.message,'refused')));clear.disabled=input.disabled;sec.append(clear);
@@ -123,7 +123,7 @@
    const input=I.relativeNumber(group,label,mixed?NaN:values[0],min,1000,value=>relativeWrite(property,value));if(mixed)input.placeholder='Mixed / automatic';input.title='Relative to each selected layer’s own font size.';group.disabled=elements.some(el=>el.style.getPropertyValue(property));
   }
   const automatic=I.button('Automatic shared line height',()=>relativeWrite('line-height','normal',false));automatic.disabled=elements.some(el=>el.style.getPropertyValue('line-height'));relativeGroup.append(automatic);
-  I.note(relativeGroup,'Relative spacing follows each layer’s own font size. Pixel controls and resets are available below.');
+  I.note(groups.typography,'Relative spacing follows each layer’s own font size. Pixel controls and resets are available below.');
   for(const [property,field]of Object.entries(fields).filter(([,field])=>!field.constraint).flatMap(entry=>['width','height'].includes(entry[0])?[entry,...['min-','max-'].map(prefix=>[prefix+entry[0],fields[prefix+entry[0]]])]:[entry])){
    const sec=field.constraint||field.ratio||['width','height'].includes(property)?groups.size:field.flexItem||field.layoutItem?groups.layout:['opacity','visibility','mix-blend-mode','isolation'].includes(property)?groups.appearance:groups.typography;
    if(field.ratio){
