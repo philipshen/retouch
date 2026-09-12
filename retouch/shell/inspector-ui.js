@@ -2,6 +2,10 @@
  'use strict';
 const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',row:'M3 5v10 M8 5v10 M13 5v10 M16 10h4 M18 8l2 2-2 2',column:'M5 3h10 M5 8h10 M5 13h10 M10 16v4 M8 18l2 2 2-2',grid:'M3 3h14v14H3z M10 3v14 M3 10h14'};
  const openGroups=new Set(),collapsedSections=new Set();
+ const sectionPreferenceKey='retouch.inspector.sections.v1';
+ try{const saved=JSON.parse(root.localStorage.getItem(sectionPreferenceKey));if(Array.isArray(saved))for(const name of saved.slice(0,64))if(typeof name==='string'&&name.length<=64)collapsedSections.add(name);}catch{}
+ function saveSectionPreferences(){try{root.localStorage.setItem(sectionPreferenceKey,JSON.stringify([...collapsedSections].slice(0,64)));}catch{}}
+
  function disclosure(title,key){const d=document.createElement('details'),s=document.createElement('summary');d.className='inspector-disclosure';s.textContent=title;d.append(s);d.open=openGroups.has(key);d.ontoggle=()=>d.open?openGroups.add(key):openGroups.delete(key);return d;}
  function title(section){return section.querySelector(':scope > h3')?.textContent||'';}
  // A paint swatch has its own accessible name but does not identify the property.
@@ -42,9 +46,9 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
  function collapsibleSection(section){
   const heading=section.querySelector(':scope > h3');if(!heading)return;
   const name=heading.textContent,key=section.dataset.section||name,button=document.createElement('button');button.type='button';button.className='section-toggle';button.textContent=name;
-  const set=collapsed=>{section.dataset.collapsed=String(collapsed);button.setAttribute('aria-expanded',String(!collapsed));button.setAttribute('aria-label',(collapsed?'Expand ':'Collapse ')+name+' section');if(collapsed)collapsedSections.add(key);else collapsedSections.delete(key);};
-  button.onclick=()=>set(section.dataset.collapsed!=='true');heading.setAttribute('aria-label',name);heading.replaceChildren(button);set(collapsedSections.has(key));
-  for(const action of section.querySelectorAll(':scope > .section-add'))action.addEventListener('click',()=>set(false),true);
+  const set=(collapsed,persist=false)=>{section.dataset.collapsed=String(collapsed);button.setAttribute('aria-expanded',String(!collapsed));button.setAttribute('aria-label',(collapsed?'Expand ':'Collapse ')+name+' section');if(collapsed)collapsedSections.add(key);else collapsedSections.delete(key);if(persist)saveSectionPreferences();};
+  button.onclick=()=>set(section.dataset.collapsed!=='true',true);heading.setAttribute('aria-label',name);heading.replaceChildren(button);set(collapsedSections.has(key));
+  for(const action of section.querySelectorAll(':scope > .section-add'))action.addEventListener('click',()=>set(false,true),true);
  }
  function organize(panel){
   if(panel.dataset.organized==='true')return;panel.dataset.organized='true';

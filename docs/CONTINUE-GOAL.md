@@ -1999,3 +1999,10 @@ HTML Chromium, React Chromium and Liquid WebKit pass collapse persistence across
 Added cross-renderer verification that collapsed Layout and Position sections keep their backing controls connected: direct bottom-handle flow resizing and direct corner rotation still author changes and undo exactly, without opening the sections. Both previews leave source unchanged until commit. HTML Chromium, React Chromium and Liquid WebKit pass (/private/tmp/retouch-collapsed-canvas-{html,react,liquid}.log).
 
 Corrected the flow resize handle tooltip to describe resizing in layout and Shift proportions; it no longer advertises the positioned-layer Option/Alt center-resize behavior. Positioned resize retains that hint. HTML repeats the collapsed-canvas workflow with tooltip assertions (/private/tmp/retouch-collapsed-canvas-hint.log); all 4 canvas-rotation units pass (/private/tmp/retouch-collapsed-canvas-units.log). No desktop rebuild, native launch or push. Full parity remains incomplete.
+
+
+### 2026-09-12 — section preferences survive editor reload
+
+Collapsed section identities now persist under the versioned retouch.inspector.sections.v1 browser preference key. Reads validate the bounded string array; unavailable/corrupt storage falls back to in-session behavior. Writes occur on user toggles/add actions, not on every render. Persistence is scoped to the editor origin, matching browser storage boundaries; it does not claim to synchronize machines or changing server origins.
+
+HTML Chromium, React Chromium and Liquid WebKit pass reload retention for both collapsed and re-expanded Typography, plus the selection/scope/edit/Undo/collapsed-Fill-add workflow. Logs /private/tmp/retouch-section-storage-{html,react,liquid}.log. A separate HTML run makes preference reads and writes throw SecurityError; editing, in-session collapse and Undo still pass (/private/tmp/retouch-section-storage-denied.log). All 18 inspector unit tests pass (/private/tmp/retouch-section-storage-units.log). No desktop rebuild, native launch or push; full parity remains incomplete.
