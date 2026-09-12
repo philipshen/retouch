@@ -128,7 +128,7 @@
      // Remove all selected layers from flow together before resolving their
      // containing blocks, which may move when earlier content disappears.
      elements.forEach(el=>el.style.setProperty('position','absolute','important'));
-     measured=elements.map((el,i)=>{const g=I.geometry(el,{allowRotation:true}),r=el.getBoundingClientRect(),original=before[i].rect;return {rect:original,geometry:{...g,x:g.x+original.left-r.left,y:g.y+original.top-r.top,width:original.width,height:original.height}};});
+     measured=elements.map((el,i)=>{const g=I.geometry(el,{allowRotation:true}),original=before[i].rect;return {rect:original,geometry:{...g,x:g.x+before[i].geometry.layoutLeft-g.layoutLeft,y:g.y+before[i].geometry.layoutTop-g.layoutTop,width:before[i].geometry.width,height:before[i].geometry.height}};});
     }finally{elements.forEach((el,i)=>styles[i]===null?el.removeAttribute('style'):el.setAttribute('style',styles[i]));}
     if(measured.some(({geometry:g})=>!['x','y','width','height'].every(key=>Number.isFinite(g[key])&&Math.abs(g[key])<=100000)))throw Error('Keep layer bounds within 100,000 pixels.');
     if(strategy)return strategy.makeAbsolute(measured);

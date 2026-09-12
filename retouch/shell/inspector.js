@@ -77,7 +77,7 @@
     const viewport = !parent || (parent === d.body && w.getComputedStyle(parent).position === 'static' && ['none',''].includes(w.getComputedStyle(parent).rotate||''));
     const pr = viewport ? { left: -w.scrollX, top: -w.scrollY } : parent.getBoundingClientRect();
     return {
-      ...(allowRotation?{rotation}:{}),
+      ...(allowRotation?{rotation,layoutLeft:rect.left,layoutTop:rect.top}:{}),
       x: rect.left - pr.left - (viewport ? 0 : parent.clientLeft) + (viewport ? 0 : parent.scrollLeft),
       y: rect.top - pr.top - (viewport ? 0 : parent.clientTop) + (viewport ? 0 : parent.scrollTop),
       width: rect.width, height: rect.height,
