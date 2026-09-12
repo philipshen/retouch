@@ -1264,7 +1264,7 @@ function renderPanelContents() {
   if(target?.namespaceURI==='http://www.w3.org/2000/svg')panelBody.appendChild(RetouchSVGPaint.mount(style,target,setClasses));
   const textLayer=RetouchInspector.isTextLayer(info.tag);
   if(textLayer) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag,(type,scope,extra)=>writeTextStyle(type,undefined,{scope,...extra})));
-  panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err'),(info.renderRevisionAttribute||info.classSelection)&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(action,opener,initial)=>transformReactLayer(info,target,action,opener,initial):null,info.renderRevisionAttribute&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(classes,g)=>writeReactBounds(info,classes,g):null,info.classSelection&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(g,before)=>writeClassLayerGeometry(info,target,g,before):null));
+  panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err'),(info.renderRevisionAttribute||info.classSelection)&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(action,opener,initial)=>transformReactLayer(info,target,action,opener,initial):null,info.renderRevisionAttribute&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(classes,g)=>writeReactBounds(info,classes,g):null,info.classSelection&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(g,before,anchors)=>writeClassLayerGeometry(info,target,g,before,anchors):null));
   panelBody.appendChild(RetouchLayout.mount(style, target, setClasses));
   panelBody.appendChild(RetouchInspector.appearance(style, target, setClasses,info.classColorStyles?(property,value)=>writeTextStyle('setColorOverride',undefined,{scope:styleScope,property,value}):undefined));
   if (info.src !== null || info.srcDynamic) {
@@ -2265,7 +2265,8 @@ function classGeometryStrategy(info,target,scope=styleScope){
  // A null member means unchanged; never project it into an empty scope.
  return RetouchReactSelectionGeometry.strategy([info],[target],scope,{reason:reactGeometryReason,matches:matchingEls,save:(changes,expected)=>changes[info.id]==null?false:writeReactBounds(info,RetouchResponsive.project(changes[info.id],scope),expected[info.id])});
 }
-function writeClassLayerGeometry(info,target,g,before){
+function writeClassLayerGeometry(info,target,g,before,anchors=null){
+ if(anchors){try{classGeometryStrategy(info,target).validate();const classes=RetouchReactSelectionGeometry.classesForBounds(info.className,styleScope,g,target.ownerDocument.defaultView.getComputedStyle(target),target.ownerDocument,anchors);return writeReactBounds(info,RetouchResponsive.project(classes,styleScope),g);}catch(error){toast(error.message,'err');return false;}}
  return classGeometryStrategy(info,target).write([{geometry:before}],[{x:g.x-before.x,y:g.y-before.y,width:g.width,height:g.height}]);
 }
 async function writeReactBounds(info,classes,expected){
