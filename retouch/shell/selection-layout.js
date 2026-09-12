@@ -159,6 +159,18 @@
    const changes=Object.fromEntries(infos.map((info,i)=>{const g=measured[i].geometry,d=deltas[i];if(!changed(g,d))return [info.id,{}];const el=elements[i],effective=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{}),next={...g,x:g.x+d.x,y:g.y+d.y,width:d.width??g.width,height:d.height??g.height};if(!['x','y','width','height'].every(p=>Number.isFinite(next[p])&&Math.abs(next[p])<=100000))throw Error('Keep layer bounds within 100,000 pixels.');return [info.id,preserveBox(P.placement(next,effective),next,el.ownerDocument.defaultView.getComputedStyle(el))];}));return save(changes,width);
   }
   sec.insertBefore(controls,choice.closest('.inspector-field'));
+  const coordinates=root.document.createElement('div');coordinates.className='property-pair';controls.after(coordinates);
+  const coordinate=(measured,axis)=>commonParent()?Math.min(...measured.map(item=>item.geometry[axis])):Math.min(...measured.map(item=>item.rect[axis==='x'?'left':'top']))+elements[0].ownerDocument.defaultView[axis==='x'?'scrollX':'scrollY'];
+  for(const [axis,label]of [['x','Shared X'],['y','Shared Y']]){
+   const input=I.number(coordinates,label,coordinate(measure(),axis),-100000,100000,value=>{try{const measured=measure(),delta=value-coordinate(measured,axis);if(root.document.activeElement===input)root.RetouchPanelFocus?.queue(input);write(measured,measured.map(()=>({x:axis==='x'?delta:0,y:axis==='y'?delta:0})));}catch(error){I.note(sec,error.message,'refused');}});I.fieldDraft(input);input.parentElement.querySelector('span').textContent=axis.toUpperCase();
+   input.title=(commonParent()?'Selection position in the containing frame.':'Selection position on the page; layers have different containing frames.')+' '+input.title;
+   input.retouchNumericPreview=()=>{
+    let start;try{start=coordinate(measure(),axis);}catch(error){I.note(sec,error.message,'refused');return {current:()=>false,update(){},restore(){}};}
+    const previews=elements.map(el=>root.RetouchPaintPicker.propertyPreview({el,input,property:'translate'}));
+    return {current:()=>elements.every(el=>el.isConnected),update:value=>previews.forEach(preview=>preview.update(axis==='x'?(value-start)+'px 0':'0 '+(value-start)+'px')),restore:()=>previews.forEach(preview=>preview.restore())};
+   };
+  }
+
   const transforms=root.document.createElement('div');transforms.className='stack-presets';
   if(onTransform)for(const action of ['move','resize']){const control=I.button((action==='move'?'Move':'Resize')+' selection on canvas',event=>{try{const measured=measure();onTransform(elements,delta=>write(measured,action==='resize'?root.RetouchCanvasMove.memberBounds(measured.map(item=>item.rect),delta):measured.map(()=>delta)),event.currentTarget,action);}catch(error){I.note(sec,error.message,'refused');}});control.dataset.canvasTool=action;transforms.append(control);}
   if(transforms.children.length)sec.append(transforms);

@@ -14,6 +14,8 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
  const size=async value=>{await page.getByLabel('Screen size',{exact:true}).selectOption(value);await wait(async()=>await app.locator('body').evaluate(()=>innerWidth)===Number(value.split('x')[0]));await settled();};
  try{
   await page.goto(`http://localhost:${server.address().port}/rt`);await size('768x1024');await select();const baseline=await boxes();
+  assert.equal(await page.getByLabel('Shared X',{exact:true}).inputValue(),'20');assert.equal(await page.getByLabel('Shared Y',{exact:true}).inputValue(),'40');
+  await page.getByLabel('Shared X',{exact:true}).fill('35');await page.getByLabel('Shared X',{exact:true}).press('Enter');await wait(()=>read()!==original);await settled();for(const [i,b]of (await boxes()).entries()){close(b.x,baseline[i].x+15);close(b.y,baseline[i].y);close(b.width,baseline[i].width);close(b.height,baseline[i].height);}await undo();
   for(const [label,axis,dim,fraction]of [['Align left','x','width',0],['Align horizontal centers','x','width',.5],['Align right','x','width',1],['Align top','y','height',0],['Align vertical centers','y','height',.5],['Align bottom','y','height',1]]){
    const parent=await app.locator('main').evaluate(el=>({width:el.clientWidth,height:el.clientHeight})),start=Math.min(...baseline.map(r=>r[axis])),end=Math.max(...baseline.map(r=>r[axis]+r[dim])),delta=parent[dim]*fraction-start-(end-start)*fraction;
    await page.getByRole('button',{name:label,exact:true}).click({modifiers:['Shift']});await wait(()=>read()!==original);await settled();const result=await boxes();
