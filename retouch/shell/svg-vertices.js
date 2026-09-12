@@ -156,14 +156,23 @@
     }
     const positionPanel=root.document.createElement('div');positionPanel.setAttribute('role','group');positionPanel.setAttribute('aria-label','Vector position');positionPanel.style.cssText='padding:12px 16px;border-bottom:1px solid var(--line, #e6e6e6);color:var(--ink, #1e1e1e);font:12px Inter,system-ui;';
     const positionHeading=root.document.createElement('strong');positionHeading.textContent='Point position';positionPanel.append(positionHeading);
-    const positionRow=root.document.createElement('div');positionRow.style.cssText='display:flex;gap:8px;margin-top:12px;';positionPanel.append(positionRow);const positionInputs={};
+    const positionRow=root.document.createElement('div');positionRow.style.cssText='display:flex;gap:8px;margin-top:12px;';positionPanel.append(positionRow);const positionInputs={};let fieldScrub=null;
     for(const axis of ['x','y']){
-      const label=root.document.createElement('label');label.style.cssText='display:flex;align-items:center;gap:8px;flex:1;min-width:0;padding:0 8px;height:28px;border-radius:4px;background:var(--control, #f5f5f5);color:var(--muted, #757575);';label.append(root.document.createTextNode(axis.toUpperCase()));
+      const label=root.document.createElement('label');label.style.cssText='display:flex;align-items:center;gap:8px;flex:1;min-width:0;padding:0 8px;height:28px;border-radius:4px;background:var(--control, #f5f5f5);color:var(--muted, #757575);';label.dataset.vectorScrub=axis;label.style.cursor='ew-resize';label.style.touchAction='none';label.style.userSelect='none';label.title='Drag to adjust '+axis.toUpperCase()+'. Shift: 10 units; Alt/Option: 0.1 units. Escape cancels the drag.';label.append(root.document.createTextNode(axis.toUpperCase()));
       const input=root.document.createElement('input');input.type='number';input.step='any';input.min='-100000';input.max='100000';input.setAttribute('aria-label','Vector '+axis.toUpperCase());input.style.cssText='width:100%;min-width:0;border:0;background:transparent;color:var(--ink, #1e1e1e);font:12px Inter,system-ui;';input.oninput=()=>changePosition(axis,input);label.append(input);positionInputs[axis]=input;positionRow.append(label);
+      listen(label,'pointerdown',event=>{if(event.button!==0||event.target===input||drag||fieldScrub||!input.checkValidity()||input.value===''||!verify())return;event.preventDefault();event.stopPropagation();input.focus({preventScroll:true});fieldScrub={id:event.pointerId,label,input,axis,lastX:event.clientX,value:Number(input.value),nodes:vertices.map(node=>root.RetouchSVGPath.translate(node,0,0))};label.setPointerCapture(event.pointerId);});
+      listen(label,'pointermove',event=>{if(!fieldScrub||fieldScrub.id!==event.pointerId)return;event.preventDefault();event.stopPropagation();const delta=event.clientX-fieldScrub.lastX;fieldScrub.lastX=event.clientX;if(!delta)return;fieldScrub.value=Math.max(-100000,Math.min(100000,Math.round((fieldScrub.value+delta*(event.altKey?0.1:event.shiftKey?10:1))*1e6)/1e6));input.value=String(fieldScrub.value);changePosition(axis,input);});
+      listen(label,'pointerup',event=>{if(fieldScrub?.id===event.pointerId){event.preventDefault();event.stopPropagation();finishFieldScrub(false);}});
+      for(const type of ['pointercancel','lostpointercapture'])listen(label,type,event=>{if(fieldScrub?.id===event.pointerId)finishFieldScrub(true);});
+    }
+    function finishFieldScrub(cancelled){
+      if(!fieldScrub)return;const saved=fieldScrub;fieldScrub=null;
+      if(cancelled){vertices.splice(0,vertices.length,...saved.nodes);refreshPosition(true);paint();}
+      if(saved.label.hasPointerCapture(saved.id))saved.label.releasePointerCapture(saved.id);saved.input.focus({preventScroll:true});
     }
     const positionNote=root.document.createElement('p');positionNote.style.cssText='margin:8px 0 0;color:var(--muted, #757575);font-size:11px;line-height:1.4;';positionPanel.append(positionNote);
     if(propertiesPane)propertiesPane.prepend(positionPanel);else toolbar.append(positionPanel);
-    listen(positionPanel,'keydown',event=>{event.stopPropagation();if(event.isComposing)return;if(event.key==='Escape'){event.preventDefault();cancel();}else if(event.key==='Enter'){event.preventDefault();commit();}},true);
+    listen(positionPanel,'keydown',event=>{event.stopPropagation();if(event.isComposing)return;if(event.key==='Escape'){event.preventDefault();if(fieldScrub)finishFieldScrub(true);else cancel();}else if(event.key==='Enter'){event.preventDefault();finishFieldScrub(false);commit();}},true);
     function refreshPosition(reset=false){
       const visible=!moveContourMode&&!cancelPen&&selectedPoints.size>0;positionPanel.style.display=visible?'block':'none';if(!visible)return;
       positionHeading.textContent=activeHandle?(activeHandle==='in'?'Incoming handle':'Outgoing handle'):selectedPoints.size>1?'Selected points':'Point position';positionNote.textContent=activeHandle?'SVG coordinates · '+({independent:'Independent handle',aligned:'Aligned handles',mirrored:'Mirrored handles'}[handleMovement]):selectedPoints.size>1?'SVG coordinates · Top-left of selected anchors. Moves points together.':'SVG coordinates · Shared across screen sizes';
