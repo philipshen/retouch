@@ -138,14 +138,18 @@ function literalTextRange(node, source) {
   if (!significant.every((c) => c.type === 'JSXText')) return null;
   const start = node.openingElement.end;
   const end = node.closingElement.start;
-  const raw = source.slice(start, end);
-  const text = raw
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&#123;/g, '{')
-    .replace(/&#125;/g, '}')
-    .trim();
+  // Babel decodes character references once. Fold only JSX formatting
+  // whitespace; preserve inline spaces and nonbreaking spaces as React does.
+  const text = children.map(child=>{
+    const lines=child.value.split(/\r\n|\n|\r/);
+    let last=0;for(let i=0;i<lines.length;i++)if(/[^ \t]/.test(lines[i]))last=i;
+    return lines.map((line,i)=>{
+      let value=line.replace(/\t/g,' ');
+      if(i>0)value=value.replace(/^ +/,'');
+      if(i<lines.length-1)value=value.replace(/ +$/,'');
+      return value+(value&&i<last?' ':'');
+    }).join('');
+  }).join('');
   return { start, end, text };
 }
 
@@ -213,8 +217,10 @@ function planOp(resolved, op) {
         `The text of this element is dynamic or mixed with other elements (${resolved.relPath}); it cannot be edited deterministically here.`
       );
     }
-    if(range.selfClosing){if(op.text!=='')ms.overwrite(range.start,range.end,'>'+escapeJsxText(op.text)+'</'+tagOf(node)+'>');}
-    else if(range.start===range.end)ms.appendLeft(range.start,escapeJsxText(op.text));else ms.overwrite(range.start, range.end, escapeJsxText(op.text));
+    if(op.text!==range.text){
+      if(range.selfClosing)ms.overwrite(range.start,range.end,'>'+escapeJsxText(op.text)+'</'+tagOf(node)+'>');
+      else if(range.start===range.end)ms.appendLeft(range.start,escapeJsxText(op.text));else ms.overwrite(range.start, range.end, escapeJsxText(op.text));
+    }
   } else if (op.type === 'setChildren') {
     // Rich in-place editing (DR-0014). The tree is constrained: escaped
     // text, kept stamped descendants written as verbatim source slices,
