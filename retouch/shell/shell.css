@@ -788,8 +788,6 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .paint-picker-header .paint-preview::after { content:"";position:absolute;inset:0;border-radius:inherit;background:var(--paint-color,transparent); }
 .paint-profile-field,.paint-model-field { position:relative; }
 .paint-picker .paint-profile-field select,.paint-picker .paint-model-field select { appearance:none;padding-right:14px; }
-.paint-profile-field::after,.paint-model-field::after { content:"";position:absolute;right:5px;top:10px;width:5px;height:5px;border-right:1px solid currentColor;border-bottom:1px solid currentColor;transform:rotate(45deg);pointer-events:none; }
-.paint-profile-field::after { top:8px; }
 
 .paint-style-library { border-top:1px solid var(--line);padding:10px; }
 .paint-style-library summary { font-size:11px;color:var(--muted);cursor:pointer; }
@@ -816,3 +814,20 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .paint-style-create { margin-top:10px;padding-top:8px;border-top:1px solid var(--line); }
 .paint-style-create .inspector-field { margin-top:8px; }
 .paint-style-create button { font-size:11px; }
+
+/* Keep the editor's collapsed controls consistent in Chromium and WKWebView.
+   The select itself retains its native menu and keyboard behavior. */
+body select:not([multiple]):not([size]), #screenToolbar select:not([multiple]):not([size]) {
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='m3.5 5 2.5 2.5L8.5 5' fill='none' stroke='%231e1e1e' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position:right 5px center;
+  background-repeat:no-repeat;
+  background-size:12px 12px;
+  padding-right:20px;
+}
+body input[type="number"] { appearance:textfield; }
+body input[type="number"]::-webkit-inner-spin-button,
+body input[type="number"]::-webkit-outer-spin-button { appearance:none;margin:0; }
+@media (forced-colors:active) {
+  body select:not([multiple]):not([size]), #screenToolbar select:not([multiple]):not([size]) { appearance:auto;background-image:none; }
+}
