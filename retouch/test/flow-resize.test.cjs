@@ -17,3 +17,13 @@ test('proportional flow resizing corrects to browser-resolved minimum and maximu
  assert.equal(ratioCorrection(base,{width:250.666666,height:94},{width:250.65625,height:94}),null);
  assert.throws(()=>ratioCorrection(base,{width:224,height:84},{width:300,height:70}),/bounds/);
 });
+
+
+test('centered grid and flex cross axes expose both growth edges',()=>{
+ const {centeredAxes}=require('../shell/flow-resize.js');
+ assert.deepEqual(flowHandles({display:'grid',justifyItems:'center',alignItems:'center'}),['e','w','s','n','se','sw','ne','nw']);
+ assert.deepEqual(flowHandles({display:'flex',flexDirection:'column',alignItems:'center'}),['e','w','s','se','sw']);
+ assert.deepEqual(centeredAxes({display:'grid',writingMode:'vertical-rl',justifyItems:'center'}),{x:false,y:true});
+ assert.deepEqual(centeredAxes({display:'flex',flexDirection:'row-reverse',alignItems:'center'}),{x:false,y:true});
+ assert.deepEqual(centeredAxes({display:'grid',justifyItems:'center',alignItems:'center'},{justifySelf:'end',alignSelf:'start'}),{x:false,y:false});
+});
