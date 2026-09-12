@@ -795,3 +795,7 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .paint-style-choice[aria-pressed=true] { background:#e5f4ff; }
 .paint-style-swatch { position:relative;flex:0 0 20px;height:20px;border:1px solid #0002;border-radius:3px;background:repeating-conic-gradient(#ddd 0% 25%,white 0% 50%) 0 0/6px 6px; }
 .paint-style-swatch::after { content:"";position:absolute;inset:0;border-radius:inherit;background:var(--paint-color); }
+
+.paint-linked-style { padding:8px 10px;border-top:1px solid var(--line); }
+.paint-linked-style p { margin:0 0 6px;font-size:11px;line-height:1.4; }
+.paint-linked-style button { font-size:11px; }
