@@ -49,7 +49,7 @@
   const opacityNumber=document.createElement('input');opacityNumber.type='number';opacityNumber.min=0;opacityNumber.max=100;opacityNumber.step='any';opacityNumber.setAttribute('aria-label','Opacity value (%)');
   const opacityRow=document.createElement('div');opacityRow.className='inspector-field';const opacityLabel=document.createElement('span');opacityLabel.textContent='Opacity %';const opacityControls=document.createElement('div');opacityControls.className='paint-opacity-controls';opacityControls.append(opacity,opacityNumber);opacityRow.append(opacityLabel,opacityControls);dialog.append(opacityRow);
   const preview=document.createElement('div');preview.className='paint-preview';preview.setAttribute('role','img');preview.setAttribute('aria-label','Color preview');dialog.append(preview);
-  const value=document.createElement('input');value.value=original;value.spellcheck=false;I.field(dialog,'Color value',value);
+  const value=document.createElement('input');value.value=original==='none'&&['fill','stroke'].includes(input.dataset.paintProperty)?'#000000':original;value.spellcheck=false;I.field(dialog,'Color value',value);
   const status=I.note(dialog,'');status.setAttribute('role','status');
   let parsed=null,h=0,s=0,v=0,drag=null;
   function read(){try{return parsePaint(value.value.trim());}catch{return null;}}

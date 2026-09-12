@@ -16,6 +16,7 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
  try{
   await page.goto(`http://localhost:${server.address().port}/rt`);await app.locator('rect').click();await settled();await wait(async()=>await page.getByLabel('Shape Width',{exact:true}).count()===1);
   await wait(async()=>await page.getByRole('treeitem',{name:'rect · Box',exact:true}).getAttribute('aria-selected')==='true');
+  const more=page.getByText('More properties',{exact:true});if(await more.count()&&!await more.evaluate(el=>el.parentElement.open))await more.click();
   const fill=async(label,value)=>{await page.getByLabel('Shape '+label,{exact:true}).fill(value);await page.getByLabel('Shape '+label,{exact:true}).press('Tab');await settled();};
   await fill('Width','80');await wait(async()=>await app.locator('rect').evaluate(el=>el.getBBox().width)===80);assert.equal(await app.locator('rect').evaluate(el=>el.getBoundingClientRect().width),120,'SVG viewBox scales source geometry');const wideSource=read();
   if(process.env.RT_E2E_SVG_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_SVG_SCREENSHOT});
@@ -60,6 +61,7 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(insertionLocks);
   for(const tag of ['circle','rect']){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(async()=>!await page.evaluate(tag=>layerLocks.direct(doc().querySelector(tag)),tag));}console.log('SVG INSERT/EXISTING LOCKS/UNLOCKED SHAPES/SELECTION/UNDO/REDO PASS',engine);
   await page.getByRole('treeitem',{name:'rect · Box',exact:true}).click();await settled();await paint('fill','#ff00ff');const painted=read();
+  const actions=page.getByText('Layer actions',{exact:true});if(!await actions.evaluate(el=>el.parentElement.open))await actions.click();
   await page.getByRole('button',{name:'Delete layer',exact:true}).click();await settled();await wait(async()=>await app.locator('rect').count()===0);const deleted=read();assert.equal(await page.getByRole('treeitem',{name:'svg',exact:true}).getAttribute('aria-selected'),'true');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===painted);assert.equal(await page.getByRole('treeitem',{name:'rect · Box',exact:true}).getAttribute('aria-selected'),'true');await wait(async()=>await computed('fill')==='rgb(255, 0, 255)');
   await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===deleted);await wait(async()=>await app.locator('rect').count()===0);

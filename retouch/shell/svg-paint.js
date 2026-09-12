@@ -25,6 +25,7 @@
    if(V.options[key])for(const item of new Set([current,...V.options[key]])){const option=document.createElement('option');option.value=item;option.textContent=item;input.append(option);}else input.type='text';
    input.value=current;const locked=!!el.style.getPropertyValue(key);input.disabled=locked;if(locked)input.title='An inline style controls this property.';
    input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{try{if(!CSS.supports(key,input.value))throw Error('Use a supported SVG paint value.');save(update(info.className,key,input.value,info.anchorInheritedClasses));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+   if(['fill','stroke'].includes(key)){I.fieldDraft(input);input.dataset.paintProperty=key;input.retouchPaintPreview=()=>root.RetouchPaintPicker.propertyPreview({el,input,property:key});}
    I.field(sec,label,input);const reset=I.button('Reset '+label.toLowerCase(),()=>save(update(info.className,key,null)));reset.disabled=locked||!(info.className||'').split(/\s+/).some(t=>property(t)===key);sec.append(reset);
   }
   I.note(sec,'Paint follows the selected screen scope through Tailwind classes. Reset reveals inherited paint or the original SVG attribute.');return sec;
