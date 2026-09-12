@@ -47,7 +47,7 @@
  }
  function mount(infos,elements,width,save,onTransform,strategy=null){
   const I=root.RetouchInspector,P=root.RetouchHTMLPosition,sec=I.section('Align selected layers');
-  function measure(){
+  function measure(allowFlow=false){
    strategy?.validate();
    if(!Number.isInteger(width)||elements.some(el=>!el?.isConnected)||infos.some(info=>info.cssReason))throw Error('Re-select the layers and choose a pixel screen scope.');
    if(width>elements[0].ownerDocument.defaultView.innerWidth)throw Error('Choose a screen at least '+width+' pixels wide for this scope.');
@@ -55,11 +55,26 @@
     if(el.namespaceURI!=='http://www.w3.org/1999/xhtml'||elements.some(other=>other!==el&&el.contains(other)))throw Error('Choose separate page layers without selecting their ancestors.');
     for(let ancestor=el.parentElement;ancestor;ancestor=ancestor.parentElement)if(ancestor.namespaceURI==='http://www.w3.org/2000/svg')throw Error('Alignment inside an SVG viewport is not available yet.');
     const css=el.ownerDocument.defaultView.getComputedStyle(el);if(css.visibility!=='visible'||!el.getClientRects().length)throw Error('Choose visible layers to align their canvas bounds.');
-    if(css.position!=='absolute')throw Error('Choose Absolute positioning for each layer to align its canvas bounds.');
+    if(!allowFlow&&css.position!=='absolute')throw Error('Choose Absolute positioning for each layer to align its canvas bounds.');
    }
    return elements.map(el=>({geometry:I.geometry(el),rect:el.getBoundingClientRect()}));
   }
-  try{measure();}catch(error){I.note(sec,error.message,'refused');return sec;}
+  try{measure();}catch(error){
+   try{measure(true);}catch(reason){I.note(sec,reason.message,'refused');return sec;}
+   I.note(sec,'These layers follow page layout. Use absolute positioning to move and align them freely. Other page content may reflow.');
+   sec.append(I.button('Use absolute positioning',()=>{try{
+    const before=measure(true),styles=elements.map(el=>el.getAttribute('style'));let measured;
+    try{
+     // Remove all selected layers from flow together before resolving their
+     // containing blocks, which may move when earlier content disappears.
+     elements.forEach(el=>el.style.setProperty('position','absolute','important'));
+     measured=elements.map((el,i)=>{const g=I.geometry(el),r=el.getBoundingClientRect(),original=before[i].rect;return {rect:original,geometry:{...g,x:g.x+original.left-r.left,y:g.y+original.top-r.top,width:original.width,height:original.height}};});
+    }finally{elements.forEach((el,i)=>styles[i]===null?el.removeAttribute('style'):el.setAttribute('style',styles[i]));}
+    if(measured.some(({geometry:g})=>!['x','y','width','height'].every(key=>Number.isFinite(g[key])&&Math.abs(g[key])<=100000)))throw Error('Keep layer bounds within 100,000 pixels.');
+    if(strategy)return strategy.makeAbsolute(measured);
+    return save(Object.fromEntries(infos.map((info,i)=>{const g=measured[i].geometry,css=elements[i].ownerDocument.defaultView.getComputedStyle(elements[i]);return [info.id,{position:'absolute',...preserveBox({margin:'0',...P.axis(g,'x','start'),...P.axis(g,'y','start')},g,css)}];})),width);
+   }catch(reason){I.note(sec,reason.message,'refused');}}));return sec;
+  }
   const key=infos.map(info=>info.id).sort().join(',');if(key!==selectionKey){selectionKey=key;targetChoice='selection';}
   const commonParent=()=>elements.every(el=>el.offsetParent===elements[0].offsetParent);
   if(targetChoice==='parent'&&!commonParent())targetChoice='selection';

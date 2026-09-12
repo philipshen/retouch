@@ -1,7 +1,7 @@
 (function(root){
  'use strict';
- function classesForBounds(classes,scope,g,css,document=null){
-  const I=root.RetouchInspector||require('./inspector.js'),R=root.RetouchResponsive||require('./responsive.js'),current=R.project(classes,scope),base=R.inherited(classes,scope,document),anchors={x:I.inferredAnchor(current,'x',base),y:I.inferredAnchor(current,'y',base)};
+ function classesForBounds(classes,scope,g,css,document=null,anchorOverride=null){
+  const I=root.RetouchInspector||require('./inspector.js'),R=root.RetouchResponsive||require('./responsive.js'),current=R.project(classes,scope),base=R.inherited(classes,scope,document),anchors=anchorOverride||{x:I.inferredAnchor(current,'x',base),y:I.inferredAnchor(current,'y',base)};
   let next=I.anchorClasses(current,g,anchors.x,anchors.y,base);
   if(css.boxSizing==='content-box'){
    next=I.replace(next,t=>/^box-(border|content)$/.test(t),'box-content');
@@ -29,6 +29,10 @@
      if(matches(infos[i].id).length!==1)throw Error('This source layer renders more than once. Choose unique source layers for selection geometry.');
      const refusal=reason(infos[i],elements[i]);if(refusal)throw Error(refusal);
     }
+   },
+   makeAbsolute(measured){
+    this.validate();const expected=Object.fromEntries(infos.map((info,i)=>[info.id,measured[i].geometry]));
+    return save(Object.fromEntries(infos.map((info,i)=>[info.id,classesForBounds(info.className,scope,measured[i].geometry,elements[i].ownerDocument.defaultView.getComputedStyle(elements[i]),elements[i].ownerDocument,{x:'start',y:'start'})])),expected);
    },
    write(measured,deltas){
     this.validate();

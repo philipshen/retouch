@@ -10,3 +10,9 @@ test('React group bounds retain percentage/stretch models and inherited importan
  const stretch=classesForBounds('absolute left-0 right-0 top-0 bottom-0 w-auto h-auto box-content','',g,css);assert.ok(stretch.includes('w-auto')&&stretch.includes('h-auto')&&stretch.includes('right-[456px]')&&stretch.includes('bottom-[396px]'),stretch);
  const scoped=classesForBounds('absolute right-0! top-0 w-[80px] h-[40px] hover:opacity-50','md:',g,{boxSizing:'border-box'},null);assert.ok(scoped.includes('md:!right-[456px]')&&scoped.includes('md:w-[114px]')&&!scoped.includes('md:!w-')&&scoped.includes('hover:opacity-50'),scoped);
 });
+
+test('absolute conversion replaces inherited end anchors while preserving responsive priority and content size',()=>{
+ const result=classesForBounds('relative right-0! bottom-0! box-content w-[100px] h-[50px] p-[5px] border-[2px] hover:opacity-50','md:',g,css,null,{x:'start',y:'start'});
+ for(const token of ['md:absolute','md:!left-[30px]','md:!right-auto','md:!top-[40px]','md:!bottom-auto','md:box-content','md:w-[100px]','md:h-[50px]','hover:opacity-50'])assert.ok(result.split(' ').includes(token),result);
+ assert.ok(result.includes('right-0!')&&result.includes('bottom-0!'),result);
+});
