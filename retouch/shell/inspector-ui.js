@@ -51,13 +51,13 @@
    const name=title(section);section.dataset.section=name.toLowerCase().replace(/\s+/g,'-');
    if(name==='Fill'||name==='Effects'){
     const options=disclosure(name==='Fill'?'Fill options':'Effect options',name+'-options');
-    const gradientDetails=name==='Fill'?[...section.children].find(el=>el.tagName==='DETAILS'&&el.querySelector('summary')?.textContent==='Gradient fills'):null;
-    const buttons=[...section.querySelectorAll(':scope > .control-button'),...(gradientDetails?[...gradientDetails.querySelectorAll(':scope > .control-button')]:[])];
+    const stackDetails=[...section.children].find(el=>el.tagName==='DETAILS'&&el.querySelector('summary')?.textContent===(name==='Fill'?'Gradient fills':'Shadow stack'));
+    const buttons=[...section.querySelectorAll(':scope > .control-button'),...(stackDetails?[...stackDetails.querySelectorAll(':scope > .control-button')]:[])];
     for(const button of buttons){
-     if(['Clear background images','Reset gradient fills','Clear layer filters','Clear background filters'].includes(button.textContent))options.append(button);
-     else if(name==='Fill'&&['Add gradient','Add gradient fill'].includes(button.textContent)){
+     if(['Clear background images','Reset gradient fills','Clear layer filters','Clear background filters','Clear shadows','Reset shadows'].includes(button.textContent))options.append(button);
+     else if((name==='Fill'?['Add gradient','Add gradient fill']:['Add shadow']).includes(button.textContent)){
       const label=button.textContent,add=button.onclick;button.setAttribute('aria-label',label);button.title=label;button.textContent='+';button.classList.add('section-add');
-      if(gradientDetails){button.onclick=event=>{gradientDetails.open=true;return add?.call(button,event);};section.append(button);}
+      button.onclick=event=>{if(stackDetails)stackDetails.open=true;if(name==='Effects')root.RetouchPanelFocus?.queueControl(button,'Shadow '+(section.querySelectorAll('.shadow-controls').length+1)+' type');return add?.call(button,event);};section.append(button);
      }
     }
     if(options.children.length>1)section.append(options);
@@ -85,7 +85,7 @@
      const label=button.textContent;button.setAttribute('aria-label',label);button.title=label;button.classList.add('gradient-action');button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true">'+icons[action]+'</svg>';
      const activate=button.onclick;button.onclick=event=>{
       const match=group.querySelector(':scope > legend').textContent.trim().match(/^(Gradient|Fill|Shadow) (\d+)$/),count=section.querySelectorAll(name==='Fill'?'.gradient-controls':'.shadow-controls').length;
-      if(match){const index=Number(match[2]),next=action==='up'?index-1:action==='down'||action==='duplicate'?index+1:Math.min(index,count-1);if(next>0)root.RetouchPanelFocus?.queueControl(button,match[1]+' '+next+' type');else{const add=name==='Fill'?section.querySelector('.section-add'):[...section.querySelectorAll('button')].find(button=>button.textContent==='Add shadow');if(add)root.RetouchPanelFocus?.queue(add);}}
+      if(match){const index=Number(match[2]),next=action==='up'?index-1:action==='down'||action==='duplicate'?index+1:Math.min(index,count-1);if(next>0)root.RetouchPanelFocus?.queueControl(button,match[1]+' '+next+' type');else{const add=section.querySelector('.section-add');if(add)root.RetouchPanelFocus?.queue(add);}}
       return activate?.call(button,event);
      };actions.append(button);
     }

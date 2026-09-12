@@ -284,6 +284,7 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await page.getByRole('button',{name:'Move shadow 2 up',exact:true}).click();await wait(async()=>await page.getByLabel('Shadow 1 type',{exact:true}).inputValue()==='inner','shadow reorder');await settled();
   await size('390x844');await wait(async()=>await shadowValue()===baseShadow,'base shadow unchanged');
   await size('768x1024');await wait(async()=>(await shadowValue()).includes('inset'),'tablet shadow retained');
+  if(!await page.getByText('Effect options',{exact:true}).evaluate(el=>el.parentElement.open))await page.getByText('Effect options',{exact:true}).click();
   await page.getByRole('button',{name:'Reset shadows',exact:true}).click();await wait(async()=>await shadowValue()===baseShadow,'shadow reset inheritance');await settled();
   await size('390x844');await page.getByLabel('Style screen scope').selectOption('');await page.getByRole('button',{name:'Clear shadows',exact:true}).click();await wait(async()=>await shadowValue()==='none','clear shadows');await settled();
   for(let i=0;i<7;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
@@ -304,7 +305,7 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await size('768x1024');await wait(async()=>await effect('filter')==='contrast(0.8) blur(5px)','tablet blur retained');
   await page.getByRole('button',{name:'Reset layer blur',exact:true}).click();await wait(async()=>await effect('filter')==='contrast(0.8) blur(2px)','blur reset inheritance');await settled();
   await size('390x844');await page.getByLabel('Style screen scope').selectOption('');
-  await page.getByText('Effect options',{exact:true}).click();
+  if(!await page.getByText('Effect options',{exact:true}).evaluate(el=>el.parentElement.open))await page.getByText('Effect options',{exact:true}).click();
   await page.getByRole('button',{name:'Clear layer filters',exact:true}).click();await wait(async()=>await effect('filter')==='none','clear layer filters');await settled();
   for(let i=0;i<7;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'blur and blending exact undo');await wait(async()=>await effect('filter')==='contrast(0.8)','authored filter restored');
