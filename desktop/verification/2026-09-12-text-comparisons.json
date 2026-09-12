@@ -1,0 +1,106 @@
+{
+  "sourceCommit": "7da33af66dfb4ca948a4a4fbadd79075b8af2818",
+  "sourceFiles": 181,
+  "sourceTreeDirty": false,
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/private/tmp/retouch-desktop-text-7da33af/Retouch-0.1.0-mac.zip",
+  "sha256": "1201675c34beb7aeaf031ec09f38df7b48578cd1158dcaa3d179089b1531c993",
+  "status": "development candidate; native workflows and trusted release unverified",
+  "units": {
+    "passed": 955,
+    "scope": "source runtime matching packaged hashes",
+    "log": "/private/tmp/retouch-liquid-whitespace-all-units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "text save, selection switch, comparison synchronization, exact Undo/Redo and retained document/input state",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-text-7da33af/html-text-history.log"
+    },
+    {
+      "name": "text save, selection switch, comparison synchronization, exact Undo/Redo and retained document/input state",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-text-7da33af/liquid-text-history-final.log"
+    },
+    {
+      "name": "text save, selection switch, comparison synchronization, exact Undo/Redo and retained document/input state",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-text-7da33af/react-text-history.log"
+    },
+    {
+      "name": "compact and wide screen controls",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-text-7da33af/compact-chromium.log"
+    },
+    {
+      "name": "compact and wide screen controls",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-text-7da33af/compact-webkit.log"
+    },
+    {
+      "name": "React creation and Undo while five HMR refresh notifications are withheld",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-text-7da33af/react-creation-held.log"
+    }
+  ],
+  "harness": {
+    "location": "external to signed app; removed after tests",
+    "dependencies": "Bundled runtime uses its locked production dependencies; external harness uses development dependencies for Liquid test rendering and browser fixtures",
+    "setupIssue": "Initial Liquid harness run lacked liquidjs; fixed external dependency link and reran successfully",
+    "initialLog": "/private/tmp/retouch-desktop-text-7da33af/liquid-text-history.log"
+  },
+  "installation": {
+    "result": "isolated Homebrew cask install and uninstall passed",
+    "verification": {
+      "sourceCommit": "7da33af66dfb4ca948a4a4fbadd79075b8af2818",
+      "sourceTreeDirty": false,
+      "sourceFiles": 181,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "quarantine": {
+      "preserved": true,
+      "value": "0381;6aa5c651;;A8D5A27E-9F3B-4F0F-9ED6-969ED59F5C19"
+    },
+    "logs": [
+      "/private/tmp/retouch-desktop-text-7da33af/install.log",
+      "/private/tmp/retouch-desktop-text-7da33af/uninstall.log"
+    ],
+    "cleanup": {
+      "caskInventoryUnchanged": true,
+      "appAndCaskRegistrationAbsent": true,
+      "temporaryTapAndTrustAbsent": true,
+      "automaticDependencyRemoval": false
+    }
+  },
+  "nativeLaunch": {
+    "result": "not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "nativeSelfTests": "not run",
+  "notarization": "not performed",
+  "published": false,
+  "unresolved": [
+    "Liquid/WebKit Fill-height with vertical margins: prior regression remains open; not retested in this package",
+    "React editing during cold comparison bootstrap: remains unverified",
+    "Native full editing flows, sampler and shutdown verification remain incomplete"
+  ],
+  "buildLog": "/private/tmp/retouch-desktop-text-build.log"
+}

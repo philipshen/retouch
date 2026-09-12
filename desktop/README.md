@@ -10,23 +10,25 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-creation-30db6f8/Retouch-0.1.0-mac.zip`
-(SHA-256 `dfc1f8dc9596587b4d7d9831884dc2d95a71ef9235f2677588834f7f6269818f`).
-It contains clean commit `30db6f8`, including compact creation tools, React/Liquid
-text and frame insertion, editable frame height, automatic inline text entry,
-collapsible inspector sections, and Actions navigation to shared properties.
+`/private/tmp/retouch-desktop-text-7da33af/Retouch-0.1.0-mac.zip`
+(SHA-256 `1201675c34beb7aeaf031ec09f38df7b48578cd1158dcaa3d179089b1531c993`).
+It contains clean commit `7da33af`, including compact screen controls, text-field
+completion and selection fixes, comparison text synchronization, preserved
+server-rendered text history state, and Liquid boundary-whitespace fidelity.
 All 181 source hashes match; universal architecture, strict extracted/installed
-signatures, and 944 matching-source unit tests pass. Packaged HTML and Liquid
-creation workflows pass. The React workflow timed out once waiting for the
-placeholder after source Undo; a diagnostic rerun passed. That intermittent
-failure is unresolved. The Liquid/WebKit normal-flow Fill-height regression
-also reproduces (180px instead of 170px with vertical margins).
+signatures, and 955 matching-source unit tests pass. Packaged HTML, React and
+Liquid text/comparison history workflows pass. Compact controls pass in Chromium
+and WebKit. React creation and Undo pass with five HMR refresh messages withheld.
 Homebrew installed and uninstalled this exact archive in an isolated app directory,
-retaining quarantine and preserving the original cask inventory. Temporary tap,
-trust configuration, app installation and test harness were removed.
+retaining quarantine and preserving the original cask inventory. The temporary
+tap, trust configuration, app installation and external test harness were removed.
 Native launch was not attempted because CUA's native connection failed.
+The prior Liquid/WebKit Fill-height regression remains open and was not retested
+in this package; editing during cold React comparison bootstrap is unverified.
 This is an installable development candidate, not a trusted or verified release.
-See [the candidate receipt](verification/2026-09-12-creation-workflows.json).
+See [the candidate receipt](verification/2026-09-12-text-comparisons.json).
+The older creation candidate and its original intermittent React Undo failure
+remain documented in [its receipt](verification/2026-09-12-creation-workflows.json).
 
 The previous archive with native workflow evidence is
 `/private/tmp/retouch-desktop-shared-e948266/Retouch-0.1.0-mac.zip`.
