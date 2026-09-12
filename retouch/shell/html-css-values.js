@@ -73,6 +73,7 @@
  const colors=new Set(['color','background-color','border-color']);
  const colorNumber='[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:e[+-]?\\d+)?',hslHue=colorNumber+'(?:deg|grad|rad|turn)?',hslPercent=colorNumber+'%',hslAlpha=colorNumber+'%?';
  const literalHSL=new RegExp('^hsla?\\(\\s*'+hslHue+'(?:\\s*,\\s*'+hslPercent+'\\s*,\\s*'+hslPercent+'(?:\\s*,\\s*'+hslAlpha+')?|\\s+'+hslPercent+'\\s+'+hslPercent+'(?:\\s*/\\s*'+hslAlpha+')?)\\s*\\)$','i');
+ const rgbChannel=colorNumber+'%?',literalRGB=new RegExp('^rgba?\\(\\s*'+rgbChannel+'(?:\\s*,\\s*'+rgbChannel+'\\s*,\\s*'+rgbChannel+'(?:\\s*,\\s*'+hslAlpha+')?|\\s+'+rgbChannel+'\\s+'+rgbChannel+'(?:\\s*/\\s*'+hslAlpha+')?)\\s*\\)$','i');
 
  function adaptiveColumns(size){return Number.isInteger(size)&&size>=1&&size<=2000?`repeat(auto-fit, minmax(min(100%, ${size}px), 1fr))`:null;}
  function parseAdaptiveColumns(value){const match=/^repeat\(auto-fit, minmax\(min\(100%, ([1-9][0-9]{0,3})px\), 1fr\)\)$/.exec(value||'');return match&&Number(match[1])<=2000?Number(match[1]):null;}
@@ -145,6 +146,7 @@
   if(property==='object-position'){const parts=value.split(/\s+/);return parts.length===2&&parts.every(p=>/^(?:\d*\.)?\d+%$/.test(p)&&parseFloat(p)>=0&&parseFloat(p)<=100);}
   if(sides.includes(property)&&/^calc\(50% [+-] (?:\d*\.)?\d+px\)$/.test(value))return true;
   if(Object.hasOwn(options,property))return options[property].includes(value);
+  if(colors.has(property)&&/^rgba?\(/i.test(value))return literalRGB.test(value);
   if(colors.has(property)&&/^hsla?\(/i.test(value))return literalHSL.test(value);
   if(colors.has(property)&&/^okl(?:ab|ch)\(/i.test(value))return okColor(value);
   if(colors.has(property)&&/^color\(display-p3\s/i.test(value))return (typeof module==='object'&&module.exports?require('./palette-values.js'):globalThis.RetouchPaletteValues).valid(value);

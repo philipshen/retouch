@@ -1,9 +1,9 @@
 'use strict';
-const catalog=require('./color-styles.cjs'),responsive=require('../shell/responsive.js'),inspector=require('../shell/inspector.js'),tokens=require('./class-tokens.cjs');
+const colors=require('../shell/html-css-values.js'),responsive=require('../shell/responsive.js'),inspector=require('../shell/inspector.js'),tokens=require('./class-tokens.cjs');
 const properties=['color','background-color','border-color','fill','stroke'];
 function encode(property,value){
  if(!properties.includes(property))throw Error('Choose a supported color property.');
- catalog.validate({version:1,styles:[{id:'11111111-1111-4111-8111-111111111111',name:'Color',properties:{color:value}}]});
+ if(typeof value!=='string'||!colors.valid('color',value,false))throw Error('Enter a supported literal CSS color.');
  return '!['+property+':'+value.replace(/\s+/g,'_')+']';
 }
 function related(plain,property){

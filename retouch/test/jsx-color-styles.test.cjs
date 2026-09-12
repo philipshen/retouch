@@ -66,3 +66,8 @@ test('clearing linked paint keeps the connection as an override that palette res
 test('selection reset refuses malformed React color metadata instead of treating it as unlinked',()=>{
  const r=resolve(source.replace('<h1','<h1 data-rt-color-styles="bad"')),result=require('../src/text-style-selection.cjs').plan(r,{type:'resetColorStyleSelection',ids:r.elements.map(e=>e.id),fileHash:r.hash,scope:'md:',property:'color'},{styles:[]},react,'color');assert.equal(result.ok,false);assert.equal(result.edits,undefined);
 });
+
+test('literal paint overrides preserve precise RGB alpha and reject malformed colors',()=>{
+ for(const value of ['rgb(25 90 170 / 0.1234)','rgba(25, 90, 170, 0.1234)','hsl(210deg 50% 40% / 12.34%)']){const next=classes.compose('bg-red-500 md:bg-blue-500','background-color',value,'md:');assert.ok(next.includes('md:![background-color:'+value.replace(/\s+/g,'_')+']'));assert.ok(next.includes('bg-red-500'));const r=resolve(source),plan=react.planOp(r,{type:'setClasses',classes:next,fileHash:r.hash});assert.equal(plan.ok,true,plan.reason);assert.equal(react.describe(resolve(plan.edits[0].after)).className,next);}
+ for(const value of ['rgb(1 2)','rgb(1, 2 3)','rgb(1 2 3 / 1 / 2)','rgb(1px 2 3)','red;display:none','var(--color)'])assert.throws(()=>classes.compose('','color',value));
+});

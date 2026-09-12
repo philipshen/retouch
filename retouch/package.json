@@ -11,6 +11,7 @@
     "test:e2e": "node test/e2e/run.cjs",
     "test:types:extraction": "node test/e2e/component-extraction-types.cjs",
     "test:e2e:png-export": "RT_E2E_PNG=1 node test/e2e/svg-export.cjs",
+    "test:e2e:class-solid-picker": "RT_E2E_SOLID_PICKER=1 node test/e2e/page-fonts.cjs",
     "test:e2e:solid-picker": "RT_E2E_RENDERER=html RT_E2E_SOLID_PICKER=1 node test/e2e/page-fonts.cjs",
     "test:e2e:shadow-picker": "RT_E2E_SHADOW_PICKER=1 node test/e2e/page-fonts.cjs",
     "test:e2e:svg-export": "node test/e2e/svg-export.cjs",
