@@ -888,7 +888,7 @@ function paintLoop() {
     const groups=RetouchComponentInstances.prioritize(sel.info.kind==='instance'?RetouchComponentInstances.group(targets,sel.info.rootGroups):targets.map(el=>({element:el,elements:[el]})),renderedSelection?.id===id?renderedSelection.element:null);
     for(const group of groups) {
       const el=group.element,kind=outlineKind(el,sel.info);
-      const bounds=RetouchComponentInstances.bounds(group.elements);if(bounds)drawBounds(bounds,first?'sel':'co',kind);
+      const bounds=RetouchComponentInstances.bounds(group.elements);if(bounds){if(group.elements.length===1)drawBox(el,first?'sel':'co',kind);else drawBounds(bounds,first?'sel':'co',kind);}
       if(first && kind==='instance')badge={el,elements:group.elements,id:el.getAttribute('data-rt-i') || id,name:sel.info.tag};
       first=false;
     }
@@ -896,14 +896,14 @@ function paintLoop() {
   if(d&&sel?.multiple&&mode==='edit')for(const info of sel.multiple)if(info.id!==activeId()){
     const targets=matchingEls(info.id).filter(el=>inTextScope(el,info));
     const groups=info.kind==='instance'?RetouchComponentInstances.group(targets,info.rootGroups):targets.map(el=>({element:el,elements:[el]}));
-    for(const group of groups){const bounds=RetouchComponentInstances.bounds(group.elements);if(bounds)drawBounds(bounds,'co',outlineKind(group.element,info));}
+    for(const group of groups){const bounds=RetouchComponentInstances.bounds(group.elements);if(bounds){if(group.elements.length===1)drawBox(group.element,'co',outlineKind(group.element,info));else drawBounds(bounds,'co',outlineKind(group.element,info));}}
   }
   if(d && editing?.el.isConnected)drawBox(editing.el,'editing',outlineKind(editing.el,editing.info));
   if(d && hoverEl?.isConnected && mode==='edit' && !editing) {
     const hovered=hoverDescription(hoverEl),target=hovered.element,info=hovered.info,kind=outlineKind(target,info);
     const group=kind==='instance'?RetouchComponentInstances.group(matchingInDocument(d,info.id,info),info.rootGroups).find(group=>group.elements.includes(target)):null;
     const elements=group?.elements||[target],bounds=RetouchComponentInstances.bounds(elements);
-    if(kind&&bounds)drawBounds(bounds,'hover',kind);
+    if(kind&&bounds){if(elements.length===1)drawBox(target,'hover',kind);else drawBounds(bounds,'hover',kind);}
     if(kind==='instance')badge={el:target,elements,id:info.id,name:info.tag};
   }
   // Keep the badge mounted so pointer/focus events survive animation frames.
@@ -940,9 +940,11 @@ function inTextScope(el, info) {
   return Object.entries(info.renderScope || {}).every(([name,value])=>el.getAttribute(name)===value);
 }
 function drawBox(el, cls, kind) {
+  const rotate=el.ownerDocument.defaultView.getComputedStyle(el).rotate;
+  if(rotate&&rotate!=='none'&&rotate!=='0deg')try{const g=RetouchInspector.geometry(el,{allowRotation:true,layoutOnly:true});if(g.rotation){drawBounds({left:g.layoutLeft,top:g.layoutTop,width:g.width,height:g.height},cls,kind,{rotation:g.rotation,origin:g.transformOrigin});return;}}catch{}
   drawBounds(el.getBoundingClientRect(),cls,kind);
 }
-function drawBounds(r,cls,kind){
+function drawBounds(r,cls,kind,{rotation=0,origin='center'}={}){
   if (r.width === 0 && r.height === 0) return;
   const b = document.createElement('div');
   b.className = 'box ' + cls + ' ' + kind;
@@ -950,6 +952,7 @@ function drawBounds(r,cls,kind){
   b.style.top = r.top + 'px';
   b.style.width = r.width + 'px';
   b.style.height = r.height + 'px';
+  if(rotation){b.style.rotate=rotation+'deg';b.style.transformOrigin=origin;b.style.borderRadius='0';}
   overlayLayer.appendChild(b);
 }
 

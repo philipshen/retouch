@@ -53,7 +53,7 @@
     const radians=angle*Math.PI/180,c=Math.cos(radians),s=Math.sin(radians),corners=[[0,0],[width,0],[0,height],[width,height]].map(([x,y])=>({x:origin[0]+(x-origin[0])*c-(y-origin[1])*s,y:origin[1]+(x-origin[0])*s+(y-origin[1])*c}));
     return {left:rect.left-Math.min(...corners.map(p=>p.x)),top:rect.top-Math.min(...corners.map(p=>p.y)),width,height};
   }
-  function geometry(el,{allowRotation=false}={}) {
+  function geometry(el,{allowRotation=false,layoutOnly=false}={}) {
     const d = el.ownerDocument, w = d.defaultView;
     for (let n = el; n && n !== d.documentElement; n = n.parentElement) {
       const s = w.getComputedStyle(n);
@@ -68,6 +68,7 @@
       const origin=css.transformOrigin.split(/\s+/);if(origin.length>2&&parseFloat(origin[2])!==0)throw Error('A three-dimensional transform origin is not supported for positioning yet.');
       rect=rotationLayoutRect(rect,dimension('width'),dimension('height'),rotation,origin.slice(0,2).map(value=>/^-?(?:\d*\.)?\d+px$/.test(value)?parseFloat(value):NaN));
     }
+    if(layoutOnly)return {layoutLeft:rect.left,layoutTop:rect.top,width:rect.width,height:rect.height,rotation,transformOrigin:css.transformOrigin};
     const original = el.getAttribute('style');
     // Ask layout for the real containing block after switching to absolute.
     const alreadyAbsolute=w.getComputedStyle(el).position==='absolute';
