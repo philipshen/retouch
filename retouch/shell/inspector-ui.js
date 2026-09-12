@@ -191,6 +191,15 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    }
    if(name==='Geometry'){for(const labels of [['X','Y'],['Width','Height'],['Horizontal radius','Vertical radius'],['Center X','Center Y'],['Start X','Start Y'],['End X','End Y']])pair(section,labels.map(label=>'Shape '+label));for(const row of section.querySelectorAll('.inspector-field')){const input=row.querySelector('input'),label=input?.getAttribute('aria-label')?.replace(/^Shape /,'');if(label)row.querySelector(':scope > span').textContent=({Width:'W',Height:'H','Horizontal radius':'RX','Vertical radius':'RY','Center X':'CX','Center Y':'CY','Start X':'X1','Start Y':'Y1','End X':'X2','End Y':'Y2'})[label]||label;}const scope=document.createElement('p');scope.className='hint geometry-scope';scope.textContent='SVG coordinates · Shared across screen sizes';section.insertBefore(scope,section.children[1]||null);}
    for(const names of [['Padding top (CSS)','Padding bottom (CSS)'],['Padding left (CSS)','Padding right (CSS)'],['Font weight (CSS)','Font size (CSS)'],['Line height (CSS)','Letter spacing (CSS)'],['Font weight (1–1000)','Font size (px)'],['Line height (px)','Letter spacing (px)'],['Width (CSS)','Height (CSS)'],['Width (px)','Height (px)'],['Width behavior','Height behavior'],['Columns','Rows'],['Horizontal gap','Vertical gap'],['Padding top','Padding bottom'],['Padding left','Padding right'],['X','Y'],['Opacity (%)','Corner radius (px)'],['Opacity (%)','Corner radius (CSS)']])pair(section,names);
+   if(name==='Position'){
+    const input=section.querySelector('[aria-label="Rotation (°)"]'),field=input?.closest('.inspector-field'),row=field?.closest('.property-row')||field,action=section.querySelector(':scope > [data-canvas-tool="rotate"]');
+    if(row?.parentElement===section&&action){
+     const group=document.createElement('div');group.className='property-pair rotation-controls';row.before(group);group.append(row);
+     const actions=document.createElement('div');actions.className='rotation-actions';group.append(actions);const reset=section.querySelector(':scope > [aria-label="Reset rotate"], :scope > [aria-label="Reset rotation"]');actions.append(action);if(reset)actions.append(reset);
+     const label=field.querySelector(':scope > span');label.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3v13h13 M4 8a8 8 0 0 1 8 8"/></svg>';
+     action.setAttribute('aria-label','Rotate on canvas');action.title=action.title||'Rotate on canvas';action.classList.add('rotation-canvas-action');action.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 7l5 5-5 5-5-5Z M4 7a7 7 0 0 1 12-2 M16 2v4h-4"/></svg>';
+    }
+   }
    if(name==='Appearance'){
     for(const suffix of [' corner (CSS)',' radius (px)']){
      const labels=['Top left','Top right','Bottom left','Bottom right'].map(corner=>corner+suffix);
