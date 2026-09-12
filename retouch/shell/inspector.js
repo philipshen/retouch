@@ -118,6 +118,10 @@
     const edges=[];for(const track of tracks){edges.push(offset,offset+track);offset+=track+spacing;}
     return [...new Set(edges.map(value=>reverse?available-value:value))];
   }
+  function layoutParent(el){
+    for(let parent=el.parentElement;parent;parent=parent.parentElement)if(el.ownerDocument.defaultView.getComputedStyle(parent).display!=='contents')return parent;
+    return null;
+  }
   function gridGuideControl(parent){
     const input=document.createElement('input');input.type='checkbox';input.checked=!!root.RetouchGridGuidesEnabled;
     input.onchange=()=>{root.RetouchGridGuidesEnabled=input.checked;};field(parent,'Show grid guides',input);
@@ -125,7 +129,7 @@
   function drawGridGuides(overlay,selected){
     if(!selected?.isConnected)return;
     const view=selected.ownerDocument.defaultView;let grid=selected,css=view.getComputedStyle(grid);
-    if(!['grid','inline-grid'].includes(css.display)){grid=selected.parentElement;if(!grid)return;css=view.getComputedStyle(grid);}
+    if(!['grid','inline-grid'].includes(css.display)){grid=layoutParent(selected);if(!grid)return;css=view.getComputedStyle(grid);}
     if(!['grid','inline-grid'].includes(css.display)||css.writingMode!=='horizontal-tb')return;
     // Axis-aligned geometry only: do not show misleading guides on rotated grids.
     for(let node=grid;node;node=node.parentElement){const style=view.getComputedStyle(node);if(!['none','0deg'].includes(style.rotate))return;if(style.transform!=='none'){const m=/^matrix\(([^)]+)\)$/.exec(style.transform);if(!m)return;const values=m[1].split(',').map(Number);if(values[1]||values[2]||values[0]<=0||values[3]<=0)return;}}
@@ -801,6 +805,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

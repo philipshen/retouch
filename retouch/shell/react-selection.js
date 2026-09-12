@@ -73,8 +73,7 @@
   return R.replaceScope(normalized,L.sizeClasses(R.project(normalized,scope),axis,mode,value,context),scope);
  }
  function layoutParent(el){
-  for(let parent=el.parentElement;parent;parent=parent.parentElement){const css=el.ownerDocument.defaultView.getComputedStyle(parent);if(css.display!=='contents')return css;}
-  return null;
+  const parent=inspector().layoutParent(el);return parent?el.ownerDocument.defaultView.getComputedStyle(parent):null;
  }
  function itemApplies(el,field){
   if(!field.flexItem&&!field.layoutItem)return true;

@@ -136,3 +136,8 @@ test('stroke width and style edits retain inherited priority and reset local dec
  assert.equal(stroke('border-4 !border-dashed','style',null),'border-4');
  assert.throws(()=>stroke('','width',-1));assert.throws(()=>stroke('','style','bad'));
 });
+
+test('layout parent skips nested contents wrappers but stops at a real box',()=>{
+ const {layoutParent}=require('../shell/inspector.js'),document={defaultView:{getComputedStyle:el=>({display:el.display})}},grid={display:'grid',parentElement:null},outer={display:'contents',parentElement:grid},inner={display:'contents',parentElement:outer},child={ownerDocument:document,parentElement:inner};
+ assert.equal(layoutParent(child),grid);inner.display='block';assert.equal(layoutParent(child),inner);child.parentElement=null;assert.equal(layoutParent(child),null);
+});

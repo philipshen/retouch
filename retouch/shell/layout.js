@@ -202,7 +202,7 @@
     const sec=I.section('Layout');if(!el)return sec;
     if(info.classNameDynamic){I.note(sec,info.classNameReason||'This layout has computed classes.','refused');return sec;}
     const css=el.ownerDocument.defaultView.getComputedStyle(el);
-    const parent=el.parentElement&&el.ownerDocument.defaultView.getComputedStyle(el.parentElement);
+    const parentElement=I.layoutParent(el),parent=parentElement&&el.ownerDocument.defaultView.getComputedStyle(parentElement);
     const classes=info.className||'',inherited=info.styleScope?info.anchorInheritedClasses||'':'';
     const mode=/grid/.test(css.display)?'grid':/flex/.test(css.display)?css.flexDirection:'flow';
     const verticalInline=layoutAxes({writingMode:css.writingMode}).inline==='height',rowLabel=verticalInline?'Vertical':'Horizontal',columnLabel=verticalInline?'Horizontal':'Vertical';
@@ -275,7 +275,7 @@
         const row=document.createElement('div');row.className='property-row';custom.append(row);
         const label=axis==='column'?'Column placement':'Row placement',input=document.createElement('input');input.type='text';input.value=ownGridPlacement(classes,axis)??css.getPropertyValue('grid-'+axis);const initial=input.value;
         input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{try{const value=input.value.trim();if(value===initial)return;const next=gridPlacementClasses(classes,axis,value,inherited);if(!el.ownerDocument.defaultView.CSS.supports('grid-'+axis,value))throw Error('Enter supported grid line placement.');save(next);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
-        input.title='Enter saves. Escape cancels.';input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};I.field(row,label,input);input.parentElement.querySelector('span').textContent=axis==='column'?'Column':'Row';I.suggestGridPlacement(input,el.ownerDocument.defaultView.getComputedStyle(el.parentElement).getPropertyValue(axis==='column'?'grid-template-columns':'grid-template-rows'));
+        input.title='Enter saves. Escape cancels.';input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};I.field(row,label,input);input.parentElement.querySelector('span').textContent=axis==='column'?'Column':'Row';I.suggestGridPlacement(input,parent.getPropertyValue(axis==='column'?'grid-template-columns':'grid-template-rows'));
         const reset=I.button('↺',()=>save(spanClasses(classes,axis,null)));reset.classList.add('property-reset');reset.title='Reset '+axis+' placement';reset.setAttribute('aria-label',reset.title);
         reset.disabled=spanClasses(classes,axis,null)===classes;row.append(reset);
       }

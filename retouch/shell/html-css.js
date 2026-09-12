@@ -145,7 +145,7 @@
   const clearFills=I.button('Clear background images',()=>save('background-image','none',width));clearFills.disabled=gradients?.length===0;fills.append(clearFills);
   const resetFills=I.button('Reset gradient fills',()=>save('background-image',null,width));resetFills.disabled=!Object.hasOwn(own,'background-image');fills.append(resetFills);
   I.note(fills,'Fills stack from front to back over the background color. Drag stops on the rail, or enter percentages. Escape cancels a drag.');
-  const parentCSS=el.parentElement&&el.ownerDocument.defaultView.getComputedStyle(el.parentElement),isFlexItem=parentCSS&&['flex','inline-flex'].includes(parentCSS.display);
+  const parentElement=I.layoutParent(el),parentCSS=parentElement&&el.ownerDocument.defaultView.getComputedStyle(parentElement),inFlow=!['absolute','fixed'].includes(css.position),isFlexItem=inFlow&&parentCSS&&['flex','inline-flex'].includes(parentCSS.display);
   const flex=I.section('Flex sizing');
   if(isFlexItem){
    const inlineAxis=/^(vertical|sideways)/.test(parentCSS.writingMode)?'height':'width';
@@ -160,7 +160,7 @@
    I.note(flex,'Fill and Hug change '+axis+' sizing along the parent’s flex direction. Each action is one undo step.');
   }
   const grid=I.section('Grid');
-  const isGrid=['grid','inline-grid'].includes(css.display),parentGrid=el.parentElement&&['grid','inline-grid'].includes(el.ownerDocument.defaultView.getComputedStyle(el.parentElement).display);
+  const isGrid=['grid','inline-grid'].includes(css.display),parentGrid=inFlow&&parentCSS&&['grid','inline-grid'].includes(parentCSS.display);
   if(isGrid||parentGrid)I.gridGuideControl(grid);
   const gridFields=[...(isGrid?[['grid-template-columns','Grid columns'],['grid-template-rows','Grid rows']]:[]),...(parentGrid?[['grid-column','Column span'],['grid-row','Row span']]:[])];
   for(const [property,label]of gridFields){
@@ -176,7 +176,7 @@
    for(const [property,label] of properties){
     const row=document.createElement('div');row.className='property-row';custom.append(row);
     const input=document.createElement('input');input.type='text';input.value=own[property]??css.getPropertyValue(property);const initial=input.value;input.oninput=()=>input.setCustomValidity('');
-    input.onchange=()=>{const value=input.value.trim();if(value===initial)return;if(!valid(property,value)||!CSS.supports(property,value)){input.setCustomValidity(title==='Custom grid tracks'?'Enter track sizes such as 160px 1fr or repeat(3, minmax(0, 1fr)).':'Enter grid lines such as 2 / 4, 2 / span 2, or content_start / content_end.');input.reportValidity();return;}save(property,value,width);};I.field(row,label,input);if(title==='Custom grid placement'){input.parentElement.querySelector('span').textContent=label.replace(' placement','');I.suggestGridPlacement(input,el.ownerDocument.defaultView.getComputedStyle(el.parentElement).getPropertyValue(property==='grid-column'?'grid-template-columns':'grid-template-rows'));}
+    input.onchange=()=>{const value=input.value.trim();if(value===initial)return;if(!valid(property,value)||!CSS.supports(property,value)){input.setCustomValidity(title==='Custom grid tracks'?'Enter track sizes such as 160px 1fr or repeat(3, minmax(0, 1fr)).':'Enter grid lines such as 2 / 4, 2 / span 2, or content_start / content_end.');input.reportValidity();return;}save(property,value,width);};I.field(row,label,input);if(title==='Custom grid placement'){input.parentElement.querySelector('span').textContent=label.replace(' placement','');I.suggestGridPlacement(input,parentCSS.getPropertyValue(property==='grid-column'?'grid-template-columns':'grid-template-rows'));}
     input.title='Enter saves. Escape cancels.';
     input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};
     const reset=I.button('↺',()=>save(property,null,width));reset.classList.add('property-reset');reset.setAttribute('aria-label','Reset '+label.toLowerCase());reset.title='Reset '+label.toLowerCase();reset.disabled=!Object.hasOwn(own,property);row.append(reset);
