@@ -323,7 +323,22 @@ test('gap fields preserve owned relative units with physical-axis mapping and im
 
 test('normal-flow Fill emits stretch fallbacks and resets them together',()=>{
  const filled=L.sizeClasses('!w-20 h-10 md:w-40','width','fill',0,{display:'block'});
- assert.equal(filled,'h-10 md:w-40 !w-[-webkit-fill-available] ![width:stretch]');
+ assert.equal(filled,'h-10 md:w-40 ![width:-webkit-fill-available] !w-[stretch]');
  assert.equal(L.sizeClasses(filled,'width','reset',0,{display:'block'}),'h-10 md:w-40');
  assert.equal(L.sizeClasses(filled,'width','fixed',80,{display:'block'}),'h-10 md:w-40 !w-[80px]');
+});
+
+
+test('flow Fill retains fallback through class merging and migrates previous declarations',()=>{
+ const {twMerge}=require('tailwind-merge');
+ for(const axis of ['width','height']){
+  const dim=axis==='width'?'w':'h',legacy=`!${dim}-[-webkit-fill-available] ![${axis}:stretch]`;
+  const filled=L.sizeClasses(legacy,axis,'fill',0,{display:'flow-root'});
+  assert.equal(filled,`![${axis}:-webkit-fill-available] !${dim}-[stretch]`);
+  assert.equal(twMerge(filled),filled);
+  const scoped=R.replaceScope('text-red-500 md:'+legacy.split(' ').join(' md:'),filled,'md:');
+  assert.equal(twMerge(scoped),scoped);
+  assert.equal(R.project(scoped,'md:'),filled);
+  assert.equal(L.sizeClasses(filled,axis,'reset',0,{display:'flow-root'}),'');
+ }
 });

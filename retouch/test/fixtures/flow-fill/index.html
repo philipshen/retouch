@@ -1,0 +1,15 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Margin-aware flow Fill regression</title>
+<style>
+  body { font: 14px system-ui; }
+  .parent { display: flow-root; width: 220px; height: 180px; background: #eee; margin: 24px; }
+  .child { margin: var(--margin, 5px); padding: 10px; border: 2px solid #09f;
+    width: -webkit-fill-available; width: stretch;
+    height: -webkit-fill-available; height: stretch; }
+  [data-box="content-box"] .child { box-sizing: content-box; }
+  [data-box="border-box"] .child { box-sizing: border-box; }
+</style>
+<p>Each blue margin box should fill its gray containing block. This case has no Retouch runtime, Tailwind, or source adapter.</p>
+<section data-box="content-box"><h2>Content box</h2><div class="parent"><div class="child">Fill</div></div></section>
+<section data-box="border-box"><h2>Border box</h2><div class="parent"><div class="child">Fill</div></div></section>
