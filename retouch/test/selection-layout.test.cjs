@@ -62,3 +62,7 @@ test('alignment keys use physical codes for macOS Option characters and exclude 
  assert.equal(alignmentKey(base),'left');assert.equal(alignmentKey({...base,key:'',code:'KeyH'}),'center');assert.equal(alignmentKey({altKey:true,key:'w'}),'top');assert.equal(alignmentKey({...base,shiftKey:true}),'left');
  for(const override of [{altKey:false},{metaKey:true},{ctrlKey:true},{isComposing:true},{defaultPrevented:true},{code:'KeyX'},{getModifierState:name=>name==='AltGraph'}])assert.equal(alignmentKey({...base,...override}),null);
 });
+
+test('one layer can align to an explicit frame but has no selection distribution',()=>{
+ const frame={left:10,top:20,width:200,height:150};assert.deepEqual(arrange([rects[0]],'right',frame),[{x:150,y:0}]);assert.deepEqual(arrange([rects[0]],'middle',frame),[{x:0,y:40}]);assert.throws(()=>arrange([rects[0]],'left'));assert.throws(()=>arrange([rects[0]],'gap-x',frame));
+});

@@ -2,7 +2,7 @@
  'use strict';
  let targetChoice='selection',selectionKey='',gapMode='equal';
  function arrange(rects,mode,target=null){
-  if(rects.length<2||rects.length>100||rects.some(r=>!['left','top','width','height'].every(p=>Number.isFinite(r[p]))||r.width<=0||r.height<=0))throw Error('Choose between 2 and 100 visible layers.');
+  if(rects.length<(target?1:2)||rects.length>100||rects.some(r=>!['left','top','width','height'].every(p=>Number.isFinite(r[p]))||r.width<=0||r.height<=0))throw Error('Choose between 2 and 100 visible layers.');
   if(target&&(!['left','top','width','height'].every(p=>Number.isFinite(target[p]))||target.width<0||target.height<0))throw Error('The alignment target needs measurable bounds.');
   const modes={left:['x',0],center:['x',.5],right:['x',1],top:['y',0],middle:['y',.5],bottom:['y',1],'gap-x':['x','gap'],'gap-y':['y','gap']};
   if(!modes[mode])throw Error('Choose an alignment.');
@@ -65,6 +65,32 @@
   }
   return changes;
  }
+ function alignmentToolbar(onAlign,distribution=false){
+  const I=root.RetouchInspector,controls=root.document.createElement('div');controls.className='selection-alignment';controls.setAttribute('role','toolbar');controls.setAttribute('aria-label',distribution?'Align selected layers':'Align layer to frame');controls.style.gridTemplateColumns='repeat('+(distribution?8:6)+',minmax(0,1fr))';
+  const icons={left:'M3 3v14 M6 5h10v3H6z M6 12h6v3H6z',center:'M10 2v16 M3 5h14v3H3z M6 12h8v3H6z',right:'M17 3v14 M4 5h10v3H4z M8 12h6v3H8z',top:'M3 3h14 M5 6h3v10H5z M12 6h3v6h-3z',middle:'M2 10h16 M5 3h3v14H5z M12 6h3v8h-3z',bottom:'M3 17h14 M5 4h3v10H5z M12 8h3v6h-3z','gap-x':'M2 3v14 M18 3v14 M6 5h3v10H6z M12 5h3v10h-3z','gap-y':'M3 2h14 M3 18h14 M5 6h10v3H5z M5 12h10v3H5z'};
+  for(const [mode,label]of [['left','Align left'],['center','Align horizontal centers'],['right','Align right'],['top','Align top'],['middle','Align vertical centers'],['bottom','Align bottom'],['gap-x','Distribute horizontal spacing'],['gap-y','Distribute vertical spacing']].filter(([mode])=>distribution||!mode.startsWith('gap-'))){
+   const button=I.button(label,event=>onAlign(mode,event,button));button.dataset.align=mode;button.setAttribute('aria-label',label);const key={left:'A',center:'H',right:'D',top:'W',middle:'V',bottom:'S'}[mode];if(key)button.setAttribute('aria-keyshortcuts','Alt+'+key);button.title=label+(key?' · Alt+'+key:'')+(distribution&&!mode.startsWith('gap-')?' · Shift: align group to containing frame':'');button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+icons[mode]+'"/></svg>';button.tabIndex=mode==='left'?0:-1;button.addEventListener('focus',()=>{for(const item of controls.children)item.tabIndex=item===button?0:-1;});if(mode.startsWith('gap-'))button.dataset.distribution=mode;controls.append(button);
+  }
+  controls.addEventListener('keydown',event=>{
+   if(event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+   const items=[...controls.querySelectorAll('button:not(:disabled)')],index=items.indexOf(root.document.activeElement);if(index<0)return;
+   event.preventDefault();event.stopPropagation();items[event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowRight'?1:-1)+items.length)%items.length].focus();
+  });
+  return controls;
+ }
+  function frameBounds(el){
+   const parent=el.offsetParent,d=el.ownerDocument,w=d.defaultView;
+   if(!parent||parent===d.body&&w.getComputedStyle(parent).position==='static')return {left:0,top:0,width:d.documentElement.clientWidth,height:w.innerHeight};
+   const rect=parent.getBoundingClientRect();return {left:rect.left+parent.clientLeft,top:rect.top+parent.clientTop,width:parent.clientWidth,height:parent.clientHeight};
+  }
+ function singleToolbar(el,save,report){
+  return alignmentToolbar((mode,event,button)=>{try{
+   if(!el?.isConnected||el.ownerDocument.defaultView.getComputedStyle(el).position!=='absolute')throw Error('Choose an absolute layer in the current screen.');
+   const before=root.RetouchInspector.geometry(el),delta=arrange([el.getBoundingClientRect()],mode,frameBounds(el))[0];if(Math.abs(delta.x)+Math.abs(delta.y)<1/32)return;
+   const next={...before,x:before.x+delta.x,y:before.y+delta.y};if(!['x','y','width','height'].every(key=>Number.isFinite(next[key])&&Math.abs(next[key])<=100000))throw Error('Keep layer bounds within 100,000 pixels.');
+   if(root.document.activeElement===button)root.RetouchPanelFocus?.queue(button);save(next,before);
+  }catch(error){report(error.message);}});
+ }
  function mount(infos,elements,width,save,onTransform,strategy=null){
   const I=root.RetouchInspector,P=root.RetouchHTMLPosition,sec=I.section('Align selected layers');
   function measure(allowFlow=false){
@@ -99,7 +125,11 @@
   const commonParent=()=>elements.every(el=>el.offsetParent===elements[0].offsetParent);
   if(targetChoice==='parent'&&!commonParent())targetChoice='selection';
   const choices=[['selection','Selection bounds'],['parent','Containing frame'],...infos.map((info,i)=>['layer:'+info.id,'Layer: '+(i+1)+'. '+(info.layerName||elements[i].getAttribute('aria-label')||elements[i].id||info.text?.trim().slice(0,32)||info.tag)])];
-  const controls=root.document.createElement('div');controls.className='selection-alignment';controls.setAttribute('role','toolbar');controls.setAttribute('aria-label','Align selected layers');const description=root.document.createElement('p');description.className='hint';
+  const controls=alignmentToolbar((mode,event,button)=>{try{
+   const measured=measure(),rects=measured.map(item=>item.rect),frames=new Map();
+   const deltas=event.shiftKey&&!mode.startsWith('gap-')?alignGroups(rects,mode,elements.map(el=>{const key=el.offsetParent;if(!frames.has(key))frames.set(key,frameBounds(el));return frames.get(key);})):arrange(rects,mode,targetBounds(measured));if(deltas.every(d=>Math.abs(d.x)+Math.abs(d.y)<1/32))return;
+   if(root.document.activeElement===button)root.RetouchPanelFocus?.queue(button);write(measured,deltas);
+  }catch(error){I.note(sec,error.message,'refused');}},true);const description=root.document.createElement('p');description.className='hint';
   const update=()=>{description.textContent=(targetChoice==='selection'?'Align within the selection bounds. Distribution keeps the outer layers in place.':targetChoice==='parent'?'Align to the containing frame. Distribution spreads layers across its bounds.':'The chosen layer stays unchanged. Alignment moves the other selected layers.')+' Shift-align moves sibling layers together within each containing frame. Changes follow this screen scope and undo together.';for(const button of controls.querySelectorAll('[data-distribution]'))button.disabled=infos.length<3||targetChoice.startsWith('layer:');};
   const choice=I.select(sec,'Align to',choices,targetChoice,value=>{targetChoice=value;root.dispatchEvent(new root.Event('retouch:selection-layout'));update();});if(!commonParent()){const option=choice.querySelector('[value=parent]');option.disabled=true;option.textContent='Containing frame (different containers)';}sec.append(description);
   function targetBounds(measured){
@@ -108,30 +138,12 @@
    if(!commonParent())throw Error('Choose layers with the same containing frame.');
    return frameBounds(elements[0]);
   }
-  function frameBounds(el){
-   const parent=el.offsetParent,d=el.ownerDocument,w=d.defaultView;
-   if(!parent||parent===d.body&&w.getComputedStyle(parent).position==='static')return {left:0,top:0,width:d.documentElement.clientWidth,height:w.innerHeight};
-   const rect=parent.getBoundingClientRect();return {left:rect.left+parent.clientLeft,top:rect.top+parent.clientTop,width:parent.clientWidth,height:parent.clientHeight};
-  }
   function write(measured,deltas){
    const changed=(g,d)=>Math.abs(d.x)+Math.abs(d.y)+Math.abs((d.width??g.width)-g.width)+Math.abs((d.height??g.height)-g.height)>=1/32;
    if(!deltas.some((d,i)=>changed(measured[i].geometry,d)))return;
    if(strategy)return strategy.write(measured,deltas);
    const changes=Object.fromEntries(infos.map((info,i)=>{const g=measured[i].geometry,d=deltas[i];if(!changed(g,d))return [info.id,{}];const el=elements[i],effective=Object.entries(info.cssRules||{}).filter(([w])=>Number(w)<=el.ownerDocument.defaultView.innerWidth).sort(([a],[b])=>Number(a)-Number(b)).reduce((all,[,values])=>Object.assign(all,values),{}),next={...g,x:g.x+d.x,y:g.y+d.y,width:d.width??g.width,height:d.height??g.height};if(!['x','y','width','height'].every(p=>Number.isFinite(next[p])&&Math.abs(next[p])<=100000))throw Error('Keep layer bounds within 100,000 pixels.');return [info.id,preserveBox(P.placement(next,effective),next,el.ownerDocument.defaultView.getComputedStyle(el))];}));return save(changes,width);
   }
-  const icons={left:'M3 3v14 M6 5h10v3H6z M6 12h6v3H6z',center:'M10 2v16 M3 5h14v3H3z M6 12h8v3H6z',right:'M17 3v14 M4 5h10v3H4z M8 12h6v3H8z',top:'M3 3h14 M5 6h3v10H5z M12 6h3v6h-3z',middle:'M2 10h16 M5 3h3v14H5z M12 6h3v8h-3z',bottom:'M3 17h14 M5 4h3v10H5z M12 8h3v6h-3z','gap-x':'M2 3v14 M18 3v14 M6 5h3v10H6z M12 5h3v10h-3z','gap-y':'M3 2h14 M3 18h14 M5 6h10v3H5z M5 12h10v3H5z'};
-  for(const [mode,label]of [['left','Align left'],['center','Align horizontal centers'],['right','Align right'],['top','Align top'],['middle','Align vertical centers'],['bottom','Align bottom'],['gap-x','Distribute horizontal spacing'],['gap-y','Distribute vertical spacing']]){
-   const button=I.button(label,event=>{try{
-    const measured=measure(),rects=measured.map(item=>item.rect),frames=new Map();
-    const deltas=event.shiftKey&&!mode.startsWith('gap-')?alignGroups(rects,mode,elements.map(el=>{const key=el.offsetParent;if(!frames.has(key))frames.set(key,frameBounds(el));return frames.get(key);})):arrange(rects,mode,targetBounds(measured));if(deltas.every(d=>Math.abs(d.x)+Math.abs(d.y)<1/32))return;
-    if(root.document.activeElement===button)root.RetouchPanelFocus?.queue(button);write(measured,deltas);
-   }catch(error){I.note(sec,error.message,'refused');}});button.dataset.align=mode;button.setAttribute('aria-label',label);const key={left:'A',center:'H',right:'D',top:'W',middle:'V',bottom:'S'}[mode];if(key)button.setAttribute('aria-keyshortcuts','Alt+'+key);button.title=label+(key?' · Alt+'+key:'')+(mode.startsWith('gap-')?'':' · Shift: align group to containing frame');button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+icons[mode]+'"/></svg>';button.tabIndex=mode==='left'?0:-1;button.addEventListener('focus',()=>{for(const item of controls.children)item.tabIndex=item===button?0:-1;});if(mode.startsWith('gap-'))button.dataset.distribution=mode;controls.append(button);
-  }
-  controls.addEventListener('keydown',event=>{
-   if(event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
-   const items=[...controls.querySelectorAll('button:not(:disabled)')],index=items.indexOf(root.document.activeElement);if(index<0)return;
-   event.preventDefault();event.stopPropagation();items[event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowRight'?1:-1)+items.length)%items.length].focus();
-  });
   sec.insertBefore(controls,choice.closest('.inspector-field'));
   const transforms=root.document.createElement('div');transforms.className='stack-presets';
   if(onTransform)for(const action of ['move','resize']){const control=I.button((action==='move'?'Move':'Resize')+' selection on canvas',event=>{try{const measured=measure();onTransform(elements,delta=>write(measured,action==='resize'?root.RetouchCanvasMove.memberBounds(measured.map(item=>item.rect),delta):measured.map(()=>delta)),event.currentTarget,action);}catch(error){I.note(sec,error.message,'refused');}});control.dataset.canvasTool=action;transforms.append(control);}
@@ -147,5 +159,5 @@
   I.note(sec,'Exact gaps keep the first layer fixed, or the chosen reference layer. With a frame target, spacing starts at its left or top edge. Negative gaps overlap layers without reversing their order.');
   update();return sec;
  }
- const api={arrange,alignGroups,alignmentKey,gaps,setGaps,setSpacing,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSelectionLayout=api;
+ const api={arrange,alignGroups,alignmentKey,alignmentToolbar,singleToolbar,preserveBox,gaps,setGaps,setSpacing,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSelectionLayout=api;
 })(typeof window==='object'?window:globalThis);

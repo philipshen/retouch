@@ -396,7 +396,7 @@
     if(active(a)&&active(b)&&(!size||size==='auto'))return 'stretch';
     return !active(a)&&active(b)?'end':'start';
   }
-  function position(info, el, save, notify, onTransform, onGeometry) {
+  function position(info, el, save, notify, onTransform, onGeometry, onAlign) {
     const sec = section('Position');
     if (!el || locked(sec, info)) return sec;
     const css = el.ownerDocument.defaultView.getComputedStyle(el);
@@ -414,6 +414,7 @@
     if (mode === 'absolute') {
       let g;
       try { g = geometry(el); } catch (e) { note(sec,e.message,'refused'); return sec; }
+      if(onAlign&&css.position==='absolute')sec.insertBefore(root.RetouchSelectionLayout.singleToolbar(el,onAlign,notify),sec.children[1]);
       note(sec, `Anchored to ${g.parentLabel}`);
       if(onTransform){const tools=document.createElement('div');tools.className='stack-presets';for(const action of ['move','resize']){const control=button((action==='move'?'Move':'Resize')+' on canvas',event=>onTransform(action,event.currentTarget));control.dataset.canvasTool=action;tools.append(control);}sec.append(tools);}
       const x = inferredAnchor(classes,'x',info.anchorInheritedClasses), y = inferredAnchor(classes,'y',info.anchorInheritedClasses);
@@ -429,7 +430,7 @@
       note(sec,'Edge distances stay constant as the container resizes. Both edges stretch the element. Scale changes position and size proportionally.');
     }
     if (mode !== 'static') {
-      const row = document.createElement('div'); row.className = 'control-grid';
+      const row = document.createElement('div'); row.className = 'control-grid property-pair';
       for (const side of ['top','right','bottom','left']) {
         const input = document.createElement('input'); input.value = css[side]; input.placeholder = 'auto';
         input.onchange = () => {
