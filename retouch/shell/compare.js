@@ -472,14 +472,17 @@
   main.addEventListener('load',async()=>{
     const revision=++mainLoadRevision,next=path();
     if(!open)return;
-    if(next!==route||window.__RT_RENDERING?.reloadAfterWrite||!selectedIds.length||selectedIds.some(id=>selectionDetails.get(id)?.kind!=='instance'))return sync(true);
-    const expected=selectedIds.map(id=>({id,hash:main.contentDocument?.querySelector('[data-rt-i="'+id+'"]')?.getAttribute('data-rt-i-revision')}));
+    if(next!==route||window.__RT_RENDERING?.reloadAfterWrite||!selectedIds.length)return sync(true);
+    const expected=selectedIds.map(id=>{
+      const instance=selectionDetails.get(id)?.kind==='instance',attribute=instance?'data-rt-i':'data-rt',revisionAttribute=attribute+'-revision',selector='['+attribute+'="'+id+'"]';
+      return {selector,revisionAttribute,hash:main.contentDocument?.querySelector(selector)?.getAttribute(revisionAttribute)};
+    });
     if(expected.some(item=>!item.hash))return sync(true);
-    // Let component HMR finish before replacing comparison documents. Reloading
+    // Let host or component HMR finish before replacing comparison documents. Reloading
     // while their hot-update fetch is in flight can abort WebKit's update.
     for(let attempt=0,stable=0;attempt<40;attempt++){
       if(revision!==mainLoadRevision||!open||path()!==next)return;
-      const ready=window.RetouchClientMount.ready(main.contentDocument)&&cards.every(card=>window.RetouchClientMount.ready(card.frame.contentDocument)&&expected.every(({id,hash})=>[...card.frame.contentDocument?.querySelectorAll('[data-rt-i="'+id+'"]')||[]].some(el=>el.getAttribute('data-rt-i-revision')===hash)));
+      const ready=window.RetouchClientMount.ready(main.contentDocument)&&cards.every(card=>window.RetouchClientMount.ready(card.frame.contentDocument)&&expected.every(({selector,revisionAttribute,hash})=>[...card.frame.contentDocument?.querySelectorAll(selector)||[]].some(el=>el.getAttribute(revisionAttribute)===hash)));
       stable=ready?stable+1:0;if(stable>=3)return;
       await new Promise(resolve=>setTimeout(resolve,50));
     }
