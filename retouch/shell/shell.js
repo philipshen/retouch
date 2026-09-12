@@ -631,7 +631,7 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
   el.focus();
   try {
     const d = doc();
-    const range = d.caretRangeFromPoint(evt.clientX, evt.clientY);
+    const range = evt && d.caretRangeFromPoint(evt.clientX, evt.clientY);
     if (range) {
       const s = d.getSelection();
       s.removeAllRanges();
@@ -2896,6 +2896,7 @@ function drawShape(preset,info){
 }
 async function insertLayer(preset,info,type='insertElement',extra={}){
   if(panelTasks||undoBusy||sourceRequests)return;
+  let textTarget=null;
   busyPanel(true);
   try{
     const result=await api('POST','/rt/__api/op',{type,id:info.id,fileHash:info.fileHash||info.hash,preset,...extra});
@@ -2903,9 +2904,13 @@ async function insertLayer(preset,info,type='insertElement',extra={}){
     editorHistory.record({type:'structureSelection',id:info.id,selectionBefore:[info.id],selectionAfter:[result.createdId],undoId:result.undoId,...(type==='insertSVG'?{svgCreatedId:result.createdId}:{})});
     const fresh=await api('GET',resolveUrl(result.createdId));
     if(fresh?.ok)await refreshWrittenElement(fresh.element,el=>el.getAttribute('data-rt')===result.createdId);else await reloadFrame();
-    if(fresh?.ok){sel={hostId:result.createdId,instanceId:null,scope:'host',info:fresh.element};renderPanel();}
+    if(fresh?.ok){sel={hostId:result.createdId,instanceId:null,scope:'host',info:fresh.element};renderPanel();if(type==='insertElement'&&preset==='text')textTarget=matchingEls(result.createdId)[0];}
     toast('Layer added','ok');
   }finally{busyPanel(false);}
+  if(textTarget?.isConnected&&mode==='edit'&&sel?.hostId===textTarget.getAttribute('data-rt')){
+    await startInlineEdit(textTarget,null,true);
+    if(editing?.el===textTarget){const d=textTarget.ownerDocument,range=d.createRange(),selection=d.getSelection();range.selectNodeContents(textTarget);selection.removeAllRanges();selection.addRange(range);}
+  }
 }
 async function restoreLayerSelection(ids){
   const selected=await Promise.all(ids.map(id=>{const element=matchingEls(id)[0];return api('GET',resolveUrl(id,element?renderContext(element):undefined));}));
