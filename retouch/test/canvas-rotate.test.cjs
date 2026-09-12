@@ -5,3 +5,12 @@ test('rotation snaps absolute angles and respects the existing source field rang
 test('corner hit regions follow the authored pivot and retain a ten pixel offset at every zoom',()=>{const g={layoutLeft:20,layoutTop:30,width:100,height:50,rotation:0,transformOrigin:'0px 0px'};assert.deepEqual(R.corners(g,.5),[{x:0,y:5},{x:70,y:5},{x:70,y:50},{x:0,y:50}]);const a=R.corners({...g,rotation:90})[1];assert.ok(Math.abs(a.x-30)<1e-9);assert.ok(Math.abs(a.y-140)<1e-9);assert.throws(()=>R.corners({...g,transformOrigin:'0px 0px 20px'}));});
 
 test('resize handles and cursors follow the rotated local axes at canvas zoom',()=>{const g={layoutLeft:20,layoutTop:30,width:100,height:60,rotation:90,transformOrigin:'0px 0px'},east=R.resizeHandles(g,.5).find(p=>p.handle==='e');assert.ok(Math.abs(east.x+5)<1e-9);assert.ok(Math.abs(east.y-65)<1e-9);assert.equal(R.resizeCursor('e',90),'ns-resize');assert.equal(R.resizeCursor('n',30),'nesw-resize');assert.equal(R.resizeCursor('se',-45),'ew-resize');});
+
+
+test('flipped resize handles follow signed scale without scaling their hit targets',()=>{
+ const g={layoutLeft:20,layoutTop:30,width:100,height:60,rotation:0,transformOrigin:'25px 45px',scaleX:-1.5,scaleY:.75};
+ const east=R.resizeHandles(g,.5).find(p=>p.handle==='e');
+ assert.deepEqual(east,{handle:'e',x:-33.75,y:31.875});
+ assert.equal(R.resizeCursor('se',0,-1,1),'nesw-resize');
+ assert.equal(R.resizeCursor('se',0,1,1),'nwse-resize');
+});

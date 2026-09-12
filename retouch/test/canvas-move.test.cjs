@@ -84,3 +84,15 @@ test('rotated resizing preserves the opposite local anchor with fixed and percen
   assert.ok(Math.abs(origin[0]+before.x-(actual.x+next[0]+after.x))<1e-8);assert.ok(Math.abs(origin[1]+before.y-(actual.y+next[1]+after.y))<1e-8);
  }
 });
+
+
+test('scaled and flipped resizing preserves opposite anchors and center across every handle',()=>{
+ const {resize,rotatedBounds,rotateVector}=require('../shell/canvas-move.js');
+ for(const scale of [[-1,1],[1,-1],[-1.5,.75],[.8,-2],[-2,-.5]])for(const angle of [0,-120,30,90])for(const handle of ['n','s','e','w','ne','nw','se','sw'])for(const percent of [false,true])for(const altKey of [false,true]){
+  const width=100,height=60,result=resize(width,height,handle,15,20,{altKey}),origin=[25,45],next=percent?[result.width*.25,result.height*.75]:origin,actual=rotatedBounds(result,angle,origin,next,scale);
+  const anchor={x:altKey?width/2:handle.includes('w')?width:handle.includes('e')?0:width/2,y:altKey?height/2:handle.includes('n')?height:handle.includes('s')?0:height/2},newAnchor={x:anchor.x-result.x,y:anchor.y-result.y};
+  const before=rotateVector((anchor.x-origin[0])*scale[0],(anchor.y-origin[1])*scale[1],angle),after=rotateVector((newAnchor.x-next[0])*scale[0],(newAnchor.y-next[1])*scale[1],angle);
+  assert.ok(Math.abs(origin[0]+before.x-(actual.x+next[0]+after.x))<1e-8);
+  assert.ok(Math.abs(origin[1]+before.y-(actual.y+next[1]+after.y))<1e-8);
+ }
+});

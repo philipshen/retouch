@@ -3,10 +3,10 @@
  const difference=(a,b)=>((a-b+540)%360+360)%360-180;
  const angle=(x,y,pivot)=>Math.atan2(y-pivot.y,x-pivot.x)*180/Math.PI;
  function value(start,change,snap=false){const n=start+change;return Math.max(-360,Math.min(360,snap?Math.round(n/15)*15:Math.round(n*100)/100));}
- function geometry(target){
+ function geometry(target,allowScale=false){
   const css=target.ownerDocument.defaultView.getComputedStyle(target.ownerDocument.documentElement);
   if(css.transform!=='none'||['rotate','scale','translate'].some(key=>css[key]&&!['none','0deg'].includes(css[key]))||css.zoom&&Number(css.zoom)!==1)throw Error('Canvas rotation requires a page root without transforms or zoom.');
-  const g=root.RetouchInspector.geometry(target,{allowRotation:true,layoutOnly:true});if(g.width<=0||g.height<=0)throw Error('Choose a visible layer with a nonzero size.');return g;
+  const g=root.RetouchInspector.geometry(target,{allowRotation:true,allowScale,layoutOnly:true});if(g.width<=0||g.height<=0)throw Error('Choose a visible layer with a nonzero size.');return g;
  }
  function mount({target,frame,canvas,input,current,onEnd,onError,initialPointer=null}){
   const doc=root.document,w=target.ownerDocument.defaultView,measure=()=>geometry(target);let g;
@@ -51,10 +51,10 @@
  function resizeHandles(g,scale=1){
   const o=g.transformOrigin.split(/\s+/).map(parseFloat),a=g.rotation*Math.PI/180;
   return [['nw',0,0],['n',.5,0],['ne',1,0],['e',1,.5],['se',1,1],['s',.5,1],['sw',0,1],['w',0,.5]].map(([handle,fx,fy])=>{
-   const x=g.width*fx-o[0],y=g.height*fy-o[1];return {handle,x:(g.layoutLeft+o[0]+x*Math.cos(a)-y*Math.sin(a))*scale,y:(g.layoutTop+o[1]+x*Math.sin(a)+y*Math.cos(a))*scale};
+   const x=(g.width*fx-o[0])*(g.scaleX??1),y=(g.height*fy-o[1])*(g.scaleY??1);return {handle,x:(g.layoutLeft+o[0]+x*Math.cos(a)-y*Math.sin(a))*scale,y:(g.layoutTop+o[1]+x*Math.sin(a)+y*Math.cos(a))*scale};
   });
  }
- function resizeCursor(handle,rotation=0){const angles={e:0,se:45,s:90,sw:135,w:180,nw:225,n:270,ne:315},i=((Math.round((angles[handle]+rotation)/45)%4)+4)%4;return ['ew','nwse','ns','nesw'][i]+'-resize';}
+ function resizeCursor(handle,rotation=0,sx=1,sy=1){const angles={e:0,se:45,s:90,sw:135,w:180,nw:225,n:270,ne:315},a=angles[handle]*Math.PI/180,angle=Math.atan2(Math.sin(a)*sy,Math.cos(a)*sx)*180/Math.PI,i=((Math.round((angle+rotation)/45)%4)+4)%4;return ['ew','nwse','ns','nesw'][i]+'-resize';}
  function cornerControls({frame,canvas,onStart}){
   const doc=root.document,container=doc.createElement('div');container.className='canvas-rotation-corners';container.hidden=true;doc.body.append(container);let active=null;
   const buttons=['top left','top right','bottom right','bottom left'].map(name=>{const button=doc.createElement('button');button.type='button';button.className='canvas-rotation-corner';button.setAttribute('aria-label','Rotate from '+name+' corner');button.title='Drag to rotate · Shift: 15°';button.textContent='↻';button.tabIndex=-1;
@@ -64,9 +64,9 @@
   const resizeButtons=Object.entries(names).map(([handle,name])=>{const button=doc.createElement('button');button.type='button';button.className='canvas-selection-resize';button.tabIndex=-1;button.setAttribute('aria-label','Drag '+name+' to resize selected layer');button.title='Drag to resize · Shift: keep proportions · Option / Alt: from center';button.dataset.selectionResize=handle;
    button.addEventListener('pointerdown',event=>{if(event.button!==0||!active?.resizeControl?.isConnected)return;event.preventDefault();event.stopPropagation();active.resizeControl.retouchCanvasStart({event,handle});});container.append(button);return button;});
   return {update(target,input,resizeControl){active=null;container.hidden=true;if(!target?.isConnected||!input?.isConnected||input.closest('[inert]'))return;const canRotate=!input.matches(':disabled'),canResize=resizeControl?.retouchCanvasStart&&!resizeControl.matches(':disabled')&&!resizeControl.closest('[inert]');
-   try{const g=geometry(target),f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/frame.contentWindow.innerWidth,points=corners(g,scale),left=Math.max(c.left,f.left),top=Math.max(c.top,f.top),right=Math.min(c.right,f.right),bottom=Math.min(c.bottom,f.bottom);if(g.width<=0||g.height<=0||right<=left||bottom<=top)return;
+   try{const g=geometry(target,true),f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/frame.contentWindow.innerWidth,points=corners(g,scale),left=Math.max(c.left,f.left),top=Math.max(c.top,f.top),right=Math.min(c.right,f.right),bottom=Math.min(c.bottom,f.bottom);if(g.width<=0||g.height<=0||right<=left||bottom<=top)return;
     Object.assign(container.style,{left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px'});
-    buttons.forEach((button,i)=>{const x=f.left+points[i].x-left,y=f.top+points[i].y-top;button.hidden=!canRotate||x<8||y<8||x>right-left-8||y>bottom-top-8;button.style.left=x+'px';button.style.top=y+'px';});const positions=resizeHandles(g,scale),flowDirections=resizeControl?.retouchFlowHandles?.();resizeButtons.forEach((button,i)=>{button.title=resizeControl?.dataset.flowResize==='true'?'Drag to resize in layout · Shift: keep proportions':'Drag to resize · Shift: keep proportions · Option / Alt: from center';const p=positions[i],x=f.left+p.x-left,y=f.top+p.y-top;button.hidden=!canResize||resizeControl.dataset.flowResize==='true'&&!flowDirections?.includes(p.handle)||x<5||y<5||x>right-left-5||y>bottom-top-5;Object.assign(button.style,{left:x+'px',top:y+'px',cursor:resizeCursor(p.handle,g.rotation),rotate:g.rotation+'deg'});});active={target,input,resizeControl};container.hidden=false;
+    buttons.forEach((button,i)=>{const x=f.left+points[i].x-left,y=f.top+points[i].y-top;button.hidden=!canRotate||!['none',''].includes(target.ownerDocument.defaultView.getComputedStyle(target).scale||'')||x<8||y<8||x>right-left-8||y>bottom-top-8;button.style.left=x+'px';button.style.top=y+'px';});const positions=resizeHandles(g,scale),flowDirections=resizeControl?.retouchFlowHandles?.();resizeButtons.forEach((button,i)=>{button.title=resizeControl?.dataset.flowResize==='true'?'Drag to resize in layout · Shift: keep proportions':'Drag to resize · Shift: keep proportions · Option / Alt: from center';const p=positions[i],x=f.left+p.x-left,y=f.top+p.y-top;button.hidden=!canResize||resizeControl.dataset.flowResize==='true'&&!flowDirections?.includes(p.handle)||x<5||y<5||x>right-left-5||y>bottom-top-5;Object.assign(button.style,{left:x+'px',top:y+'px',cursor:resizeCursor(p.handle,g.rotation,g.scaleX,g.scaleY),rotate:g.rotation+'deg'});});active={target,input,resizeControl};container.hidden=false;
    }catch{}
   }};
  }
