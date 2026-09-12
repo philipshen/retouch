@@ -149,3 +149,13 @@ test('rotation layout recovery handles off-center origins and negative quarter t
  const negative=rotationLayoutRect({left:200,top:100},100,50,-90,[0,0]);assert.ok(Math.abs(negative.left-200)<1e-9);assert.ok(Math.abs(negative.top-200)<1e-9);
  assert.throws(()=>rotationLayoutRect({left:0,top:0},0,20,30,[0,0]));
 });
+test('scaled outlines retain all transformed corners without scaling the outline stroke',()=>{
+ const {scaledOutline}=require('../shell/inspector.js');
+ const corners=g=>{const [ox,oy]=g.transformOrigin.split(/\s+/).map(parseFloat),a=g.rotation*Math.PI/180,c=Math.cos(a),s=Math.sin(a);return [[0,0],[g.width,0],[0,g.height],[g.width,g.height]].map(([x,y])=>({x:g.layoutLeft+ox+(x-ox)*(g.scaleX??1)*c-(y-oy)*(g.scaleY??1)*s,y:g.layoutTop+oy+(x-ox)*(g.scaleX??1)*s+(y-oy)*(g.scaleY??1)*c}));};
+ for(const rotation of [0,30,-20,90])for(const scaleX of [-2,.75])for(const scaleY of [-1.3,2]){
+  const g={layoutLeft:123,layoutTop:-14,width:80,height:50,rotation,transformOrigin:'20px 75px',scaleX,scaleY},outline=scaledOutline(g),expected=corners(g),actual=corners({...outline,scaleX:1,scaleY:1});
+  assert.ok(outline.width>0&&outline.height>0);assert.equal(outline.sourceTransformOrigin,g.transformOrigin);
+  for(const p of expected)assert.ok(actual.some(q=>Math.abs(q.x-p.x)<1e-9&&Math.abs(q.y-p.y)<1e-9));
+ }
+ assert.throws(()=>scaledOutline({layoutLeft:0,layoutTop:0,width:20,height:30,rotation:0,transformOrigin:'0px 0px',scaleX:0}));
+});

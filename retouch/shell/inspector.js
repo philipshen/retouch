@@ -53,6 +53,15 @@
     const radians=angle*Math.PI/180,c=Math.cos(radians),s=Math.sin(radians),corners=[[0,0],[width,0],[0,height],[width,height]].map(([x,y])=>({x:origin[0]+(x-origin[0])*scale[0]*c-(y-origin[1])*scale[1]*s,y:origin[1]+(x-origin[0])*scale[0]*s+(y-origin[1])*scale[1]*c}));
     return {left:rect.left-Math.min(...corners.map(p=>p.x)),top:rect.top-Math.min(...corners.map(p=>p.y)),width,height};
   }
+  function scaledOutline(g){
+    const origin=g.transformOrigin.split(/\s+/).slice(0,2).map(parseFloat),sx=g.scaleX??1,sy=g.scaleY??1;
+    if(origin.length!==2||![g.layoutLeft,g.layoutTop,g.width,g.height,g.rotation,sx,sy,...origin].every(Number.isFinite)||g.width<=0||g.height<=0||sx===0||sy===0)throw Error('The layer needs measurable two-dimensional bounds.');
+    const minX=Math.min(0,g.width*sx),minY=Math.min(0,g.height*sy),x=origin[0]*(1-sx)+minX,y=origin[1]*(1-sy)+minY;
+    // Absorb signed scale into the rectangle, preserving the rotation pivot.
+    // Keep layer scale from distorting the outline stroke.
+    return {...g,layoutLeft:g.layoutLeft+x,layoutTop:g.layoutTop+y,width:Math.abs(g.width*sx),height:Math.abs(g.height*sy),sourceTransformOrigin:g.transformOrigin,transformOrigin:(origin[0]-x)+'px '+(origin[1]-y)+'px'};
+  }
+  function outlineGeometry(el){const g=geometry(el,{allowRotation:true,allowScale:true,layoutOnly:true});return {...scaledOutline(g),sourceScale:el.ownerDocument.defaultView.getComputedStyle(el).scale};}
   function geometry(el,{allowRotation=false,allowScale=false,layoutOnly=false}={}) {
     const d = el.ownerDocument, w = d.defaultView;
     for (let n = el; n && n !== d.documentElement; n = n.parentElement) {
@@ -70,7 +79,7 @@
       const origin=css.transformOrigin.split(/\s+/);if(origin.length>2&&parseFloat(origin[2])!==0)throw Error('A three-dimensional transform origin is not supported for positioning yet.');
       rect=rotationLayoutRect(rect,dimension('width'),dimension('height'),rotation,origin.slice(0,2).map(value=>/^-?(?:\d*\.)?\d+px$/.test(value)?parseFloat(value):NaN),scale);
     }
-    if(layoutOnly)return {layoutLeft:rect.left,layoutTop:rect.top,width:rect.width,height:rect.height,rotation,transformOrigin:css.transformOrigin};
+    if(layoutOnly)return {layoutLeft:rect.left,layoutTop:rect.top,width:rect.width,height:rect.height,rotation,transformOrigin:css.transformOrigin,...(allowScale?{scaleX:scale[0],scaleY:scale[1]}:{})};
     const original = el.getAttribute('style');
     // Ask layout for the real containing block after switching to absolute.
     const alreadyAbsolute=w.getComputedStyle(el).position==='absolute';
@@ -842,6 +851,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

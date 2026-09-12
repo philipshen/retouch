@@ -958,8 +958,8 @@ function inTextScope(el, info) {
   return Object.entries(info.renderScope || {}).every(([name,value])=>el.getAttribute(name)===value);
 }
 function drawBox(el, cls, kind) {
-  const rotate=el.ownerDocument.defaultView.getComputedStyle(el).rotate;
-  if(rotate&&rotate!=='none'&&rotate!=='0deg')try{const g=RetouchInspector.geometry(el,{allowRotation:true,layoutOnly:true});if(g.rotation){drawBounds({left:g.layoutLeft,top:g.layoutTop,width:g.width,height:g.height},cls,kind,{rotation:g.rotation,origin:g.transformOrigin});return;}}catch{}
+  const css=el.ownerDocument.defaultView.getComputedStyle(el);
+  if(css.rotate&&css.rotate!=='none'&&css.rotate!=='0deg'||css.scale&&css.scale!=='none')try{const g=RetouchInspector.outlineGeometry(el);if(g.rotation||g.scaleX!==1||g.scaleY!==1){drawBounds({left:g.layoutLeft,top:g.layoutTop,width:g.width,height:g.height},cls,kind,{rotation:g.rotation,origin:g.transformOrigin});return;}}catch{}
   drawBounds(el.getBoundingClientRect(),cls,kind);
 }
 function drawBounds(r,cls,kind,{rotation=0,origin='center'}={}){
