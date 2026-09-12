@@ -1,0 +1,84 @@
+{
+  "sourceCommit": "2970d3c5e029b4a8776a39b56def9cd4ec37b376",
+  "sourceTreeDirty": false,
+  "sourceFiles": 178,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict ad hoc verification passed after extraction and packaged workflows",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "archive": "/private/tmp/retouch-desktop-canvas-2970d3c/Retouch-0.1.0-mac.zip",
+  "sha256": "2c31515d9c1b590633aac70e2b5b9ec7c80af60e108c6a0ae0aedb67f298ca58",
+  "status": "development candidate with known failing browser regression; not a release",
+  "units": {
+    "passed": 927,
+    "log": "/private/tmp/retouch-canvas-box-limits-units.log",
+    "scope": "source runtime matching packaged hashes"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "single alignment, keyboard move, constrained content-box pointer resize, cancellation, responsive scope and exact Undo",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-canvas-2970d3c/react-canvas.log"
+    },
+    {
+      "name": "shared absolute conversion, Shift frame alignment, Alt shortcuts, Actions search, focus/input/Hand guards and exact Undo/Redo",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-canvas-2970d3c/liquid-shared.log"
+    },
+    {
+      "name": "single alignment, keyboard move, constrained content-box pointer resize, cancellation, responsive scope and exact Undo",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-canvas-2970d3c/html-canvas.log"
+    },
+    {
+      "name": "normal-flow Fill height with vertical margins",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "result": "failed",
+      "expectedBounds": [
+        [
+          250,
+          180
+        ],
+        [
+          210,
+          170
+        ]
+      ],
+      "actualBounds": [
+        [
+          250,
+          180
+        ],
+        [
+          210,
+          180
+        ]
+      ],
+      "log": "/private/tmp/retouch-desktop-canvas-2970d3c/known-webkit-height.log"
+    }
+  ],
+  "cask": {
+    "path": "/private/tmp/retouch-desktop-canvas-2970d3c/retouch-studio.rb",
+    "syntax": "passed",
+    "installation": "not repeated for this archive"
+  },
+  "harnessCleanup": "verified absent",
+  "nativeLaunch": {
+    "result": "unverified; not attempted",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed",
+    "appsLaunched": false
+  },
+  "nativeSelfTests": "not run",
+  "notarization": "not performed",
+  "published": false,
+  "buildLog": "/private/tmp/retouch-desktop-canvas-build.log"
+}

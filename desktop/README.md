@@ -10,17 +10,17 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-layout-7f42a31/Retouch-0.1.0-mac.zip`
-(SHA-256 `6c0616bb49d8dc7d40cd5deebe6944fb7c1313e5e19ab190346c70fd51169817`).
-It contains clean commit `7f42a31`, including contextual layout controls,
-shared sizing menus, contents-wrapper editing and the pending-editor Stop fix.
+`/private/tmp/retouch-desktop-canvas-2970d3c/Retouch-0.1.0-mac.zip`
+(SHA-256 `2c31515d9c1b590633aac70e2b5b9ec7c80af60e108c6a0ae0aedb67f298ca58`).
+It contains clean commit `2970d3c`, including single/shared frame alignment,
+keyboard shortcuts, Liquid canvas transforms and content-box resize limits.
 All 178 source hashes match; universal architecture, extracted signature,
-923 unit tests and packaged React/Liquid/HTML workflows passed.
-A known Liquid/WebKit normal-flow Fill-height test still fails when vertical
-margins are present (180px instead of 170px). Native launch was not attempted
-because CUA's native connection failed. Cask syntax passed; installation was
-not repeated. This candidate is not a trusted or published release.
-See [the candidate receipt](verification/2026-09-12-layout-context.json).
+927 source unit tests and packaged React/Liquid/HTML canvas workflows passed.
+The packaged Liquid/WebKit normal-flow Fill-height test still fails with vertical
+margins (180px instead of 170px). Native launch was not attempted because CUA's
+native connection failed. Cask syntax passed; installation was not repeated.
+This candidate is not a trusted or published release.
+See [the candidate receipt](verification/2026-09-12-canvas-controls.json).
 
 The previous archive with native workflow evidence is
 `/private/tmp/retouch-desktop-shared-e948266/Retouch-0.1.0-mac.zip`.
