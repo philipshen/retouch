@@ -117,7 +117,7 @@
     const css=el.ownerDocument.defaultView.getComputedStyle(el);if(css.visibility!=='visible'||!el.getClientRects().length)throw Error('Choose visible layers to align their canvas bounds.');
     if(!allowFlow&&css.position!=='absolute')throw Error('Choose Absolute positioning for each layer to align its canvas bounds.');
    }
-   return elements.map(el=>({geometry:I.geometry(el,{allowRotation:true}),rect:el.getBoundingClientRect()}));
+   return elements.map(el=>({geometry:I.geometry(el,{allowRotation:true,allowScale:true}),rect:el.getBoundingClientRect()}));
   }
   try{measure();}catch(error){
    try{measure(true);}catch(reason){I.note(sec,reason.message,'refused');return sec;}
@@ -128,7 +128,7 @@
      // Remove all selected layers from flow together before resolving their
      // containing blocks, which may move when earlier content disappears.
      elements.forEach(el=>el.style.setProperty('position','absolute','important'));
-     measured=elements.map((el,i)=>{const g=I.geometry(el,{allowRotation:true}),original=before[i].rect;return {rect:original,geometry:{...g,x:g.x+before[i].geometry.layoutLeft-g.layoutLeft,y:g.y+before[i].geometry.layoutTop-g.layoutTop,width:before[i].geometry.width,height:before[i].geometry.height}};});
+     measured=elements.map((el,i)=>{const g=I.geometry(el,{allowRotation:true,allowScale:true}),original=before[i].rect;return {rect:original,geometry:{...g,x:g.x+before[i].geometry.layoutLeft-g.layoutLeft,y:g.y+before[i].geometry.layoutTop-g.layoutTop,width:before[i].geometry.width,height:before[i].geometry.height}};});
     }finally{elements.forEach((el,i)=>styles[i]===null?el.removeAttribute('style'):el.setAttribute('style',styles[i]));}
     if(measured.some(({geometry:g})=>!['x','y','width','height'].every(key=>Number.isFinite(g[key])&&Math.abs(g[key])<=100000)))throw Error('Keep layer bounds within 100,000 pixels.');
     if(strategy)return strategy.makeAbsolute(measured);
@@ -153,7 +153,7 @@
    return frameBounds(elements[0]);
   }
   function write(measured,deltas){
-   const current=measure();if(current.some((item,i)=>['x','y','width','height','parentWidth','parentHeight','rotation'].some(key=>Math.abs((item.geometry[key]??0)-(measured[i].geometry[key]??0))>.5)))throw Error('The selection changed during the gesture. Re-select it and try again.');
+   const current=measure();if(current.some((item,i)=>['x','y','width','height','parentWidth','parentHeight','rotation','scaleX','scaleY'].some(key=>Math.abs((item.geometry[key]??0)-(measured[i].geometry[key]??0))>(key.startsWith('scale')?1e-9:.5))))throw Error('The selection changed during the gesture. Re-select it and try again.');
    const changed=(g,d)=>Math.abs(d.x)+Math.abs(d.y)+Math.abs((d.width??g.width)-g.width)+Math.abs((d.height??g.height)-g.height)>=1/32;
    if(!deltas.some((d,i)=>changed(measured[i].geometry,d)))return;
    if(strategy)return strategy.write(measured,deltas);
@@ -173,7 +173,7 @@
   }
 
   const transforms=root.document.createElement('div');transforms.className='stack-presets';
-  if(onTransform)for(const action of ['move','resize']){const control=I.button((action==='move'?'Move':'Resize')+' selection on canvas',event=>{try{const measured=measure();if(action==='resize')elements.forEach(el=>I.geometry(el));onTransform(elements,delta=>write(measured,action==='resize'?root.RetouchCanvasMove.memberBounds(measured.map(item=>item.rect),delta):measured.map(()=>delta)),event.currentTarget,action);}catch(error){I.note(sec,error.message,'refused');}});control.dataset.canvasTool=action;if(action==='resize'&&measure().some(item=>item.geometry.rotation)){control.disabled=true;control.title='Resizing selections with rotated layers is not available yet.';}transforms.append(control);}
+  if(onTransform)for(const action of ['move','resize']){const control=I.button((action==='move'?'Move':'Resize')+' selection on canvas',event=>{try{const measured=measure();if(action==='resize')elements.forEach(el=>I.geometry(el,{allowScale:true}));onTransform(elements,delta=>write(measured,action==='resize'?root.RetouchCanvasMove.memberBounds(measured.map(item=>item.rect),delta):measured.map(()=>delta)),event.currentTarget,action);}catch(error){I.note(sec,error.message,'refused');}});control.dataset.canvasTool=action;if(action==='resize'&&measure().some(item=>item.geometry.rotation||item.geometry.scaleX!==1||item.geometry.scaleY!==1)){control.disabled=true;control.title='Resizing selections with rotated or scaled layers is not available yet.';}transforms.append(control);}
   if(transforms.children.length)sec.append(transforms);
   if(onTransform)I.select(sec,'Canvas gap adjustment',[['equal','All gaps equally'],['individual','Only the dragged gap']],gapMode,value=>{gapMode=value;root.dispatchEvent(new root.Event('retouch:selection-layout'));});
   for(const [axis,label]of [['x','Horizontal gap (px)'],['y','Vertical gap (px)']]){

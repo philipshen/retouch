@@ -30,6 +30,18 @@
      const refusal=reason(infos[i],elements[i]);if(refusal)throw Error(refusal);
     }
    },
+   flip(planned){
+    this.validate();
+    return save(Object.fromEntries(infos.map((info,i)=>{
+     const el=elements[i],next=planned[i],classes=classesForBounds(info.className,scope,next.geometry,el.ownerDocument.defaultView.getComputedStyle(el),el.ownerDocument),inherited=R.inherited(classes,scope,el.ownerDocument);
+     let current=R.project(classes,scope);
+     for(const [property,value,match]of [['scale',next.scale.replaceAll(' ','_'),root.RetouchFlip.token],['rotate',next.geometry.rotation+'deg',token=>/^-?rotate-(?![xyz]-)|^\[rotate:/.test(token)]]){
+      const important=el.style.getPropertyValue(property)||inherited.split(/\s+/).some(token=>/^!|!$/.test(token)&&match(I.base(token)||''));
+      current=I.replace(current,match,(important?'!':'')+'['+property+':'+value+']');
+     }
+     return [info.id,R.replaceScope(classes,current,scope)];
+    })));
+   },
    makeAbsolute(measured){
     this.validate();const expected=Object.fromEntries(infos.map((info,i)=>[info.id,measured[i].geometry]));
     return save(Object.fromEntries(infos.map((info,i)=>[info.id,classesForBounds(info.className,scope,measured[i].geometry,elements[i].ownerDocument.defaultView.getComputedStyle(elements[i]),elements[i].ownerDocument,{x:'start',y:'start'})])),expected);

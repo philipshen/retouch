@@ -48,25 +48,27 @@
     if(tokens(fallback).some(t=>base(t)!==null&&match(base(t))&&(/^!|!$/.test(t))))additions=tokens(additions).map(t=>'!'+t).join(' ');
     return replace(classes,match,additions);
   }
-  function rotationLayoutRect(rect,width,height,angle,origin){
-    if(![rect.left,rect.top,width,height,angle,...origin].every(Number.isFinite)||width<=0||height<=0||origin.length!==2)throw Error('The rotated layer needs measurable dimensions and a two-dimensional origin.');
-    const radians=angle*Math.PI/180,c=Math.cos(radians),s=Math.sin(radians),corners=[[0,0],[width,0],[0,height],[width,height]].map(([x,y])=>({x:origin[0]+(x-origin[0])*c-(y-origin[1])*s,y:origin[1]+(x-origin[0])*s+(y-origin[1])*c}));
+  function rotationLayoutRect(rect,width,height,angle,origin,scale=[1,1]){
+    if(![rect.left,rect.top,width,height,angle,...origin,...scale].every(Number.isFinite)||width<=0||height<=0||origin.length!==2||scale.length!==2||scale.some(value=>value===0))throw Error('The rotated layer needs measurable dimensions and a two-dimensional origin.');
+    const radians=angle*Math.PI/180,c=Math.cos(radians),s=Math.sin(radians),corners=[[0,0],[width,0],[0,height],[width,height]].map(([x,y])=>({x:origin[0]+(x-origin[0])*scale[0]*c-(y-origin[1])*scale[1]*s,y:origin[1]+(x-origin[0])*scale[0]*s+(y-origin[1])*scale[1]*c}));
     return {left:rect.left-Math.min(...corners.map(p=>p.x)),top:rect.top-Math.min(...corners.map(p=>p.y)),width,height};
   }
-  function geometry(el,{allowRotation=false,layoutOnly=false}={}) {
+  function geometry(el,{allowRotation=false,allowScale=false,layoutOnly=false}={}) {
     const d = el.ownerDocument, w = d.defaultView;
     for (let n = el; n && n !== d.documentElement; n = n.parentElement) {
       const s = w.getComputedStyle(n);
-      if (s.transform !== 'none' || (s.rotate && !['none','0deg'].includes(s.rotate) && !(allowRotation&&n===el&&Number.isFinite(root.RetouchReactSelection.rotationDegrees(s.rotate)))) || (s.scale && s.scale !== 'none') || (s.translate && s.translate !== 'none') || (s.zoom && Number(s.zoom) !== 1)) {
+      if (s.transform !== 'none' || (s.rotate && !['none','0deg'].includes(s.rotate) && !(allowRotation&&n===el&&Number.isFinite(root.RetouchReactSelection.rotationDegrees(s.rotate)))) || (s.scale && s.scale !== 'none' && !(allowScale&&n===el)) || (s.translate && s.translate !== 'none') || (s.zoom && Number(s.zoom) !== 1)) {
         throw new Error('Anchor placement requires an element and ancestors without transforms or zoom.');
       }
     }
     let rect = el.getBoundingClientRect();
     const css=w.getComputedStyle(el),rotation=allowRotation?root.RetouchReactSelection.rotationDegrees(css.rotate):0;
-    if(rotation){
+    const scale=allowScale?(root.RetouchFlip||require('./flip.js')).parse(css.scale||'none'):[1,1];
+    if(!scale||scale.length>2||scale.some(value=>value===0))throw Error('Selection reflection needs a nonzero two-dimensional scale.');
+    if(rotation||allowScale){
       const dimension=axis=>{const value=css.getPropertyValue(axis);if(!/^-?(?:\d*\.)?\d+px$/.test(value))throw Error('The rotated layer needs resolved pixel dimensions.');return parseFloat(value)+(css.boxSizing==='content-box'?(axis==='width'?['left','right']:['top','bottom']).reduce((sum,edge)=>sum+(parseFloat(css.getPropertyValue('padding-'+edge))||0)+(parseFloat(css.getPropertyValue('border-'+edge+'-width'))||0),0):0);};
       const origin=css.transformOrigin.split(/\s+/);if(origin.length>2&&parseFloat(origin[2])!==0)throw Error('A three-dimensional transform origin is not supported for positioning yet.');
-      rect=rotationLayoutRect(rect,dimension('width'),dimension('height'),rotation,origin.slice(0,2).map(value=>/^-?(?:\d*\.)?\d+px$/.test(value)?parseFloat(value):NaN));
+      rect=rotationLayoutRect(rect,dimension('width'),dimension('height'),rotation,origin.slice(0,2).map(value=>/^-?(?:\d*\.)?\d+px$/.test(value)?parseFloat(value):NaN),scale);
     }
     if(layoutOnly)return {layoutLeft:rect.left,layoutTop:rect.top,width:rect.width,height:rect.height,rotation,transformOrigin:css.transformOrigin};
     const original = el.getAttribute('style');
@@ -79,6 +81,7 @@
     const pr = viewport ? { left: -w.scrollX, top: -w.scrollY } : parent.getBoundingClientRect();
     return {
       ...(allowRotation?{rotation,layoutLeft:rect.left,layoutTop:rect.top}:{}),
+      ...(allowScale?{scaleX:scale[0],scaleY:scale[1]}:{}),
       x: rect.left - pr.left - (viewport ? 0 : parent.clientLeft) + (viewport ? 0 : parent.scrollLeft),
       y: rect.top - pr.top - (viewport ? 0 : parent.clientTop) + (viewport ? 0 : parent.scrollTop),
       width: rect.width, height: rect.height,

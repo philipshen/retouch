@@ -113,6 +113,9 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
  if(process.env.RT_E2E_SHARED_ROTATED_GEOMETRY){
   process.env.RETOUCH_STATE_DIR=path.join(root,'.history-cache');const attr=kind==='react'?'className':'class';let source=fs.readFileSync(file,'utf8').replace('<main>','<main '+attr+'="relative w-[400px] h-[400px]">').replace('type-editorial font-bold','type-editorial font-bold md:absolute md:left-[20px] md:top-[40px] md:w-[80px] md:h-[50px] md:rotate-[30deg] [transform-origin:0px_0px]').replace(attr+'="other-font',attr+'="other-font md:absolute md:left-[160px] md:top-[140px] md:w-[90px] md:h-[70px] md:rotate-[-20deg] [transform-origin:20px_10px]');if(kind==='html')source=source.replace('</style>','main{position:relative;width:400px;height:400px}@media(min-width:768px){h1,p.other-font{position:absolute;margin:0}h1{left:20px;top:40px;width:80px;height:50px;rotate:30deg;transform-origin:0 0}p.other-font{left:160px;top:140px;width:90px;height:70px;rotate:-20deg;transform-origin:20px 10px}}</style>');fs.writeFileSync(file,source);
  }
+ if(process.env.RT_E2E_GROUP_FLIP){
+  assert.ok(process.env.RT_E2E_SHARED_ROTATED_GEOMETRY);let source=fs.readFileSync(file,'utf8').replace('md:rotate-[30deg]','md:rotate-[30deg] md:![scale:1.5_0.75]').replace('md:rotate-[-20deg]','md:rotate-[-20deg] md:[scale:-0.8_1.2]');if(kind==='html')source=source.replace('</style>','@media(min-width:768px){h1{scale:1.5 .75!important}p.other-font{scale:-.8 1.2}}</style>');fs.writeFileSync(file,source);
+ }
  if(process.env.RT_E2E_SHARED_ABSOLUTE){
   process.env.RETOUCH_STATE_DIR=path.join(root,'.history-cache');const attr=kind==='react'?'className':'class';let source=fs.readFileSync(file,'utf8');
   source=source.replace(/<h1[^>]*>Headline<\/h1>|<p[^>]*other-font[^>]*>Other text<\/p>/g,element=>'<section '+attr+'="relative flow-root p-[12px] ml-[20px]">'+element+'</section>').replace('type-editorial font-bold','type-editorial font-bold w-[160px] h-[60px] m-[8px]').replace(attr+'="other-font',attr+'="other-font box-content w-[100px] h-[40px] p-[10px] border-[2px] m-[5px]');
@@ -687,6 +690,23 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   if(process.env.RT_E2E_SHARED_ROTATED_GEOMETRY){
    const before=read(),bounds=()=>app.locator('h1,p.other-font').evaluateAll(nodes=>nodes.map(el=>{const r=el.getBoundingClientRect(),css=getComputedStyle(el);return {x:r.x,y:r.y,width:r.width,height:r.height,rotate:css.rotate};})),close=(a,b)=>assert.ok(Math.abs(a-b)<.6,`${a} differs from ${b}`);
    await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await page.getByLabel('Style screen scope',{exact:true}).selectOption(kind==='html'?'min-[768px]:':'md:');await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click({modifiers:['Meta']});await settled();const initial=await bounds();
+   if(process.env.RT_E2E_GROUP_FLIP){
+    const scales=()=>app.locator('h1,p.other-font').evaluateAll(nodes=>nodes.map(el=>getComputedStyle(el).scale)),states=[before],snapshots=[initial],scaleStates=[await scales()];
+    for(const axis of ['x','y','x']){
+     const previous=await bounds(),horizontal=axis==='x',coordinate=horizontal?'x':'y',dimension=horizontal?'width':'height',sum=Math.min(...previous.map(r=>r[coordinate]))+Math.max(...previous.map(r=>r[coordinate]+r[dimension]));
+     await page.getByRole('button',{name:horizontal?'Flip horizontally':'Flip vertically',exact:true}).click();await settled();await wait(()=>read()!==states.at(-1));
+     try{await wait(async()=>(await bounds()).every((r,i)=>Math.abs(r[coordinate]-(sum-previous[i][coordinate]-previous[i][dimension]))<.6&&Math.abs(r[horizontal?'y':'x']-previous[i][horizontal?'y':'x'])<.6));}catch(error){throw Error('Group flip '+axis+' bounds '+JSON.stringify(await bounds())+' from '+JSON.stringify(previous),{cause:error});}
+     for(const [i,r]of (await bounds()).entries()){close(r.width,previous[i].width);close(r.height,previous[i].height);close(parseFloat(r.rotate),-parseFloat(previous[i].rotate));}
+     states.push(read());snapshots.push(await bounds());scaleStates.push(await scales());
+    }
+    assert.deepEqual(scaleStates,[['1.5 0.75','-0.8 1.2'],['-1.5 0.75','0.8 1.2'],['-1.5 -0.75','0.8 -1.2'],['1.5 -0.75','-0.8 -1.2']]);
+    const reflected=await bounds(),left=Math.min(...reflected.map(r=>r.x));await page.getByRole('button',{name:'Align left',exact:true}).click();await settled();await wait(async()=>(await bounds()).every(r=>Math.abs(r.x-left)<.6));assert.deepEqual(await scales(),scaleStates.at(-1));await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states.at(-1));await wait(async()=>(await bounds()).every((r,i)=>Math.abs(r.x-reflected[i].x)<.6&&Math.abs(r.y-reflected[i].y)<.6));
+    await page.screenshot({path:'/private/tmp/retouch-group-flip-'+kind+'-'+engine+'.png'});
+    for(let index=2;index>=0;index--){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states[index]);await wait(async()=>(await bounds()).every((r,i)=>Math.abs(r.x-snapshots[index][i].x)<.6&&Math.abs(r.y-snapshots[index][i].y)<.6));assert.deepEqual(await scales(),scaleStates[index]);}
+    await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===states[1]);await wait(async()=>JSON.stringify(await scales())===JSON.stringify(scaleStates[1]));
+    await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await wait(async()=>await app.locator('h1,p.other-font').evaluateAll(nodes=>nodes.every(el=>getComputedStyle(el).scale==='none'&&getComputedStyle(el).rotate==='none')));
+    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===before);assert.deepEqual(errors,[]);console.log('GROUP FLIP PASS',kind,engine);return;
+   }
    if(process.env.RT_E2E_ROTATED_OUTLINE)await wait(async()=>JSON.stringify(await page.locator('#overlayLayer .box.sel, #overlayLayer .box.co').evaluateAll(nodes=>nodes.map(el=>el.style.rotate).sort()))===JSON.stringify(['-20deg','30deg']));
    const undo=async()=>{await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===before);await wait(async()=>(await bounds()).every((r,i)=>Math.abs(r.x-initial[i].x)<.6&&Math.abs(r.y-initial[i].y)<.6));};
    assert.equal(await page.getByRole('button',{name:'Resize selection on canvas',exact:true}).isDisabled(),true);
