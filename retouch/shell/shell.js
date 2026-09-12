@@ -1243,7 +1243,7 @@ function renderPanelContents() {
   if(target?.namespaceURI==='http://www.w3.org/2000/svg')panelBody.appendChild(RetouchSVGPaint.mount(style,target,setClasses));
   const textLayer=RetouchInspector.isTextLayer(info.tag);
   if(textLayer) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag,(type,scope,extra)=>writeTextStyle(type,undefined,{scope,...extra})));
-  panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err'),info.renderRevisionAttribute&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(action,opener)=>transformReactLayer(info,target,action,opener):null,info.renderRevisionAttribute&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(classes,g)=>writeReactBounds(info,classes,g):null,info.classSelection&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(g,before)=>alignClassLayer(info,target,g,before):null));
+  panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err'),(info.renderRevisionAttribute||info.classSelection)&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(action,opener)=>transformReactLayer(info,target,action,opener):null,info.renderRevisionAttribute&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(classes,g)=>writeReactBounds(info,classes,g):null,info.classSelection&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(g,before)=>writeClassLayerGeometry(info,target,g,before):null));
   panelBody.appendChild(RetouchLayout.mount(style, target, setClasses));
   panelBody.appendChild(RetouchInspector.appearance(style, target, setClasses,info.classColorStyles?(property,value)=>writeTextStyle('setColorOverride',undefined,{scope:styleScope,property,value}):undefined));
   if (info.src !== null || info.srcDynamic) {
@@ -2227,9 +2227,12 @@ function reactGeometryReason(info,target){
   return null;
 }
 
-function alignClassLayer(info,target,g,before){
- const scope=styleScope,strategy=RetouchReactSelectionGeometry.strategy([info],[target],scope,{reason:reactGeometryReason,matches:matchingEls,save:(changes,expected)=>writeReactBounds(info,RetouchResponsive.project(changes[info.id],scope),expected[info.id])});
- return strategy.write([{geometry:before}],[{x:g.x-before.x,y:g.y-before.y}]);
+function classGeometryStrategy(info,target,scope=styleScope){
+ // A null member means unchanged; never project it into an empty scope.
+ return RetouchReactSelectionGeometry.strategy([info],[target],scope,{reason:reactGeometryReason,matches:matchingEls,save:(changes,expected)=>changes[info.id]==null?false:writeReactBounds(info,RetouchResponsive.project(changes[info.id],scope),expected[info.id])});
+}
+function writeClassLayerGeometry(info,target,g,before){
+ return classGeometryStrategy(info,target).write([{geometry:before}],[{x:g.x-before.x,y:g.y-before.y,width:g.width,height:g.height}]);
 }
 async function writeReactBounds(info,classes,expected){
   const reason=reactGeometryReason(info,matchingEls(info.id)[0]);if(reason){toast(reason,'err');renderPanel();return false;}
@@ -2243,11 +2246,11 @@ async function writeReactBounds(info,classes,expected){
 
 function transformReactLayer(info,target,action,opener){
   stopDrawing?.();if(panelTasks||undoBusy||sourceRequests||!target?.isConnected||info.classNameDynamic)return;
-  let g;try{const reason=reactGeometryReason(info,target);if(reason)throw Error(reason);if(target.ownerDocument.defaultView.getComputedStyle(target).position!=='absolute')throw Error('Choose a screen where this layer is absolute before transforming it.');g=RetouchInspector.geometry(target);}catch(error){toast(error.message,'err');return;}
+  let g;try{if(info.classSelection)classGeometryStrategy(info,target).validate();const reason=reactGeometryReason(info,target);if(reason)throw Error(reason);if(target.ownerDocument.defaultView.getComputedStyle(target).position!=='absolute')throw Error('Choose a screen where this layer is absolute before transforming it.');g=RetouchInspector.geometry(target);}catch(error){toast(error.message,'err');return;}
   const scope=styleScope,hash=info.hash,classes=RetouchResponsive.project(info.className,scope),base=RetouchResponsive.inherited(info.className,scope,doc()),x=RetouchInspector.inferredAnchor(classes,'x',base),y=RetouchInspector.inferredAnchor(classes,'y',base);
   canvasPan.cancel();
   stopDrawing=RetouchCanvasMove.mount({target,frame:iframe,canvas:canvasSurface,mode:action,opener,
-    onCommit:async(delta,options)=>{if(sel?.info.id!==info.id||sel?.info.hash!==hash||styleScope!==scope)return;try{const geometry={...g,...(action==='resize'?{width:delta.width,height:delta.height}:{}),x:g.x+delta.x,y:g.y+delta.y};if(![geometry.x,geometry.y,geometry.width,geometry.height].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Keep layer bounds within 100,000 pixels.');if(await writeReactBounds(info,RetouchInspector.anchorClasses(classes,geometry,x,y,base),geometry)){if(options?.keyboard)document.querySelector('[data-canvas-tool='+action+']')?.focus({preventScroll:true});}}catch(error){toast(error.message,'err');}},
+    onCommit:async(delta,options)=>{if(sel?.info.id!==info.id||sel?.info.hash!==hash||styleScope!==scope)return;try{const geometry={...g,...(action==='resize'?{width:delta.width,height:delta.height}:{}),x:g.x+delta.x,y:g.y+delta.y};if(![geometry.x,geometry.y,geometry.width,geometry.height].every(n=>Number.isFinite(n)&&Math.abs(n)<=100000))throw Error('Keep layer bounds within 100,000 pixels.');if(await (info.classSelection?writeClassLayerGeometry(info,target,geometry,g):writeReactBounds(info,RetouchInspector.anchorClasses(classes,geometry,x,y,base),geometry))){if(options?.keyboard)document.querySelector('[data-canvas-tool='+action+']')?.focus({preventScroll:true});}}catch(error){toast(error.message,'err');}},
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
   if(stopDrawing)toast(action==='resize'?'Drag a handle or use arrow keys. Shift keeps proportions; Option/Alt centers. Enter applies keyboard changes; Escape cancels.':'Drag the outline or use arrow keys (Shift: 10px). Enter applies keyboard changes; Escape cancels.','ok');
 }
