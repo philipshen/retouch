@@ -66,6 +66,9 @@
     const prefix=group.querySelector(':scope > legend')?.textContent.trim();if(!prefix)continue;
     for(const row of group.querySelectorAll(':scope > .inspector-field')){const label=row.querySelector('[aria-label]')?.getAttribute('aria-label');if(!label?.startsWith(prefix+' '))continue;const text=row.querySelector(':scope > span');if(text){const short=label.slice(prefix.length+1).replace(' (px)','');text.textContent=short[0].toUpperCase()+short.slice(1);}}
     pair(group,[prefix+' X (px)',prefix+' Y (px)']);pair(group,[prefix+' Blur (px)',prefix+' Spread (px)']);
+    const remove=[...group.querySelectorAll(':scope > button')].find(button=>/^Remove shadow \d+$/.test(button.textContent));
+    if(remove){const label=remove.textContent,activate=remove.onclick,actions=document.createElement('span');actions.className='gradient-actions';remove.setAttribute('aria-label',label);remove.title=label;remove.classList.add('gradient-action');remove.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10h10"/></svg>';remove.onclick=event=>{const index=Number(prefix.match(/\d+$/)[0]),count=section.querySelectorAll('.shadow-controls').length,next=Math.min(index,count-1);if(next>0)root.RetouchPanelFocus?.queueControl(remove,'Shadow '+next+' type');else{const add=[...section.querySelectorAll('button')].find(button=>button.textContent==='Add shadow');if(add)root.RetouchPanelFocus?.queue(add);}return activate?.call(remove,event);};actions.append(remove);group.querySelector(':scope > legend').append(actions);}
+
    }
    const paintInputs=name==='Fill'?[...section.querySelectorAll('.gradient-stop-row input:not([type="number"])')]:name==='Effects'?[...section.querySelectorAll('.shadow-controls input')].filter(input=>/^Shadow \d+ color$/.test(input.getAttribute('aria-label')||'')):[];
    for(const input of paintInputs){

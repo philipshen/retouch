@@ -678,7 +678,7 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .gradient-stop-color input { padding-left:28px; }
 .gradient-stop-row > .inspector-field > .gradient-stop-swatch, .paint-field-control > .gradient-stop-swatch { display:block;position:absolute;left:7px;top:50%;transform:translateY(-50%);width:14px;height:14px;border:1px solid #0002;border-radius:2px;background-size:100% 100%,6px 6px;padding:0;min-width:0;cursor:pointer; }
 
-.gradient-controls > legend { display:flex;align-items:center;justify-content:space-between;width:100%; }
+.gradient-controls > legend, .shadow-controls > legend { display:flex;align-items:center;justify-content:space-between;width:100%; }
 .gradient-actions { display:inline-flex;align-items:center;gap:2px; }
 .gradient-actions > .gradient-action { width:22px;height:22px;min-width:22px;margin:0;padding:2px;background:transparent;color:var(--muted); }
 .gradient-actions > .gradient-action:hover { background:var(--control);color:var(--ink); }
