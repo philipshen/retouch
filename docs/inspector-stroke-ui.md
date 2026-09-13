@@ -310,3 +310,33 @@ HTML/React border widths in `/private/tmp/retouch-stroke-keyboard-html.log` and
 CSS paints in `/private/tmp/retouch-stroke-keyboard-paints-{html,liquid}.log`;
 HTML/React Chromium and Liquid WebKit SVG controls in
 `/private/tmp/retouch-stroke-keyboard-svg-{html,react,liquid}.log`.
+
+## Calculations in stroke and opacity fields
+
+Stroke widths, individual dash/gap lengths, dash offset, miter limit and compact
+paint opacity accept arithmetic using the same bounded parser as vector geometry.
+Examples: `2 * 3`, `(12 + 4) / 2`, and `(2 + 3)px`. A trailing unit applies to
+the complete result; omitted units retain the field's current unit, with pixels
+as the default for an empty CSS border-width field. Pixel number fields and
+opacity percentages reject other units. Existing CSS writers still validate
+non-calculation syntax and the final value. Dash-pattern lists remain list fields.
+
+The parser supports numbers, parentheses, arithmetic and powers; it does not
+execute JavaScript. Invalid expressions, division by zero and out-of-range
+numeric results are refused before writes. Ordinary CSS shorthand/variable
+syntax is passed to its existing validator instead of being evaluated.
+
+Former number fields retain Up/Down adjustment (Shift uses ten-unit steps).
+Repeated keydown events update the field; key release commits one transaction.
+Escape cancels, and blurring finishes a pending adjustment. Browser tests check
+that repeated arrow presses make no intermediate source writes and that one
+Undo restores the prior opacity. Enter/Escape and responsive history tests now
+use arithmetic for widths, SVG values and opacity. The desktop archive predates
+this calculation support.
+Validation: 1,157 unit tests in `/private/tmp/retouch-stroke-math-units.log`;
+HTML/React width calculations in
+`/private/tmp/retouch-stroke-math-widths-{html,react}.log`; HTML and Liquid/WebKit
+opacity calculations and grouped key changes in
+`/private/tmp/retouch-stroke-math-paints-{html,liquid}.log`; HTML/React Chromium
+and Liquid WebKit SVG calculations in
+`/private/tmp/retouch-stroke-math-svg-{html,react,liquid}.log`.

@@ -10,3 +10,13 @@ test('Invalid calculations cannot execute code or return nonfinite values',()=>{
 test('Escape restores rounded display values without applying them to precise source values',()=>{
  const {field}=require('../shell/numeric-expression.js');let writes=0;const input={value:'0',onchange:()=>writes++,setCustomValidity:()=>{},blur(){this.onchange({});}};field(input);input.value='2+3';input.onkeydown({key:'Escape',preventDefault(){},stopPropagation(){}});assert.equal(input.value,'0');assert.equal(writes,0);input.value='2+3';input.onkeydown({key:'Enter',preventDefault(){},stopPropagation(){}});assert.equal(writes,1);
 });
+
+test('calculated quantities keep CSS units and preserve ordinary CSS syntax for its own validator',()=>{
+ const {quantity}=require('../shell/numeric-expression.js');
+ assert.deepEqual(quantity('(2 + 3) * 2px'),{value:10,unit:'px'});
+ assert.deepEqual(quantity('100 / 4','%'),{value:25,unit:'%'});
+ assert.deepEqual(quantity('2^3rem'),{value:8,unit:'rem'});
+ assert.deepEqual(quantity('1e2 / 10','em'),{value:10,unit:'em'});
+ for(const value of ['var(--width)','2px 3px','calc(1em + 2px)','red','alert(1)'])assert.equal(quantity(value),null);
+ for(const value of ['1/0px','1+','1 2','1e999'])assert.throws(()=>quantity(value));
+});
