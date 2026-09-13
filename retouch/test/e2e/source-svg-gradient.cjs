@@ -1,11 +1,12 @@
 'use strict';
 const fs=require('node:fs'),assert=require('node:assert/strict');
-const markup='<svg width="400" height="240" viewBox="0 0 400 240"><defs><linearGradient id="paint"><stop offset="0" stop-color="#ff0000"/><stop offset="100%" stop-color="#0000ff"/></linearGradient><radialGradient id="radial"><stop offset="0" stop-color="white"/><stop offset="1" stop-color="black"/></radialGradient></defs><rect aria-label="Gradient box" x="10" y="10" width="180" height="100" fill="url(#paint)"/><circle aria-label="Shared gradient" cx="260" cy="60" r="50" fill="url(#paint)"/><rect aria-label="Radial box" x="10" y="140" width="180" height="80" fill="url(#radial)"/><rect aria-label="Stroke gradient" x="210" y="140" width="160" height="80" fill="none" stroke="url(#paint)" stroke-width="8"/></svg>';
+const markup='<svg width="400" height="240" viewBox="0 0 400 240"><defs><linearGradient id="paint"><stop offset="0" stop-color="#ff0000"/><stop offset="100%" stop-color="#0000ff"/></linearGradient><radialGradient id="radial"><stop offset="0" stop-color="white"/><stop offset="1" stop-color="black"/></radialGradient></defs><rect aria-label="Gradient box" x="10" y="10" width="180" height="100" fill="url(#paint)"/><circle aria-label="Shared gradient" cx="260" cy="60" r="50" fill="url(#paint)"/><rect aria-label="Radial box" x="10" y="140" width="180" height="80" fill="url(#radial)"/><rect aria-label="Stroke gradient" x="210" y="140" width="160" height="80" fill="none" stroke="url(#paint)" stroke-width="8"/><rect aria-label="Solid box" x="330" y="110" width="50" height="25" fill="#22aa44" stroke="#4466aa" stroke-width="3"/></svg>';
 exports.markup=kind=>kind==='react'?markup.replaceAll('stop-color','stopColor').replaceAll('stroke-width','strokeWidth'):markup;
 exports.run=async function({page,app,file,wait,settled,kind,errors}){
  const read=()=>fs.readFileSync(file,'utf8'),original=read();
  const edit=async(label,value)=>{const input=page.getByLabel(label,{exact:true});await input.fill(value);await input.press('Tab');await settled();};
  await app.locator('[aria-label="Gradient box"]').click();await settled();await wait(async()=>await page.getByLabel('Stop 1 color',{exact:true}).count()===1);
+  if(process.env.RT_E2E_SVG_CREATE_ONLY){await require('./svg-gradient-create.cjs').run({page,app,file,wait,settled});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SVG_REVERSE_ONLY){await require('./svg-gradient-reverse.cjs').run({page,app,file,wait,settled});return;}
   if(process.env.RT_E2E_SVG_TYPE_ONLY){await require('./svg-gradient-type.cjs').run({page,app,file,wait,settled});return;}
   if(process.env.RT_E2E_SVG_REORDER_ONLY){await require('./svg-gradient-stop-reorder.cjs').run({page,app,file,wait,settled});assert.deepEqual(errors,[]);return;}
@@ -15,6 +16,7 @@ exports.run=async function({page,app,file,wait,settled,kind,errors}){
   await require('./svg-gradient-stop-picker.cjs').run({page,app,file,wait,settled});
   await require('./svg-gradient-detach.cjs').run({page,app,file,wait,settled});await require('./svg-gradient-type.cjs').run({page,app,file,wait,settled});
   await require('./svg-gradient-reverse.cjs').run({page,app,file,wait,settled});
+  await require('./svg-gradient-create.cjs').run({page,app,file,wait,settled});
   for(const [label,value,selector,attribute]of [['Stop 1 color','#00ff00','#paint stop:first-child','stop-color'],['Stop 2 position','75%','#paint stop:last-child','offset'],['Stop 2 opacity','0.5','#paint stop:last-child','stop-opacity'],['Gradient x2','60%','#paint','x2']]){
    await edit(label,value);await wait(async()=>await app.locator(selector).getAttribute(attribute)===value);if(attribute==='stop-color')assert.equal(await app.locator(selector).evaluate(el=>getComputedStyle(el).stopColor),'rgb(0, 255, 0)');const changed=read();assert.notEqual(changed,original);assert.equal(await app.locator('circle').getAttribute('fill'),'url(#paint)');
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(async()=>await app.locator(selector).getAttribute(attribute)!==value);

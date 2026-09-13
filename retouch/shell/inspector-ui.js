@@ -99,6 +99,9 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    }
    if(appearance){for(const row of [...appearance.querySelectorAll('.inspector-field')])if(/^(?:Corner radius|(?:Top|Bottom) (?:left|right) corner)/.test(fieldControl(row)?.getAttribute('aria-label')||'')){const reset=row.nextElementSibling;row.remove();if(reset?.classList.contains('control-button'))reset.remove();}appearance.querySelectorAll('.radius-corners').forEach(el=>el.remove());}
   }
+  const creation=[...panel.children].find(el=>title(el)==='Create gradient');if(creation&&!creation.querySelector('.refused')){
+   for(const row of [...creation.querySelectorAll(':scope > .inspector-field')]){const name=fieldControl(row)?.getAttribute('aria-label')==='Fill type'?'Fill':'Stroke';let target=[...panel.children].find(el=>title(el)===name);if(!target){target=document.createElement('section');target.className='sec';const h=document.createElement('h3');h.textContent=name;target.append(h);panel.append(target);}row.querySelector(':scope > span').textContent='Type';target.insertBefore(row,target.children[1]||null);const hint=creation.querySelector('.hint');if(hint)target.append(hint.cloneNode(true));}creation.remove();
+  }
   const text=[...panel.children].find(el=>title(el)==='Text'),typography=[...panel.children].find(el=>title(el)==='Typography');if(text&&typography){[...text.children].filter(el=>el.tagName!=='H3').reverse().forEach(el=>typography.insertBefore(el,typography.children[1]||null));text.remove();}
   if([...panel.children].some(el=>title(el)==='Vector position')){for(const flips of panel.querySelectorAll('.flip-controls:not(.svg-flip-controls)'))flips.remove();
    let cssPosition=[...panel.children].find(el=>title(el)==='Position');if(cssPosition)cssPosition.querySelector(':scope > h3').textContent='CSS position';

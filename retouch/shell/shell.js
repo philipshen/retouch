@@ -1267,6 +1267,7 @@ function renderPanelContents() {
   }
   if(info.svgTransform){const position=RetouchInspector.section('Vector position');RetouchSVGResize.positionFields(position,info,target,{onCanvas:()=>resizeSVGOnCanvas(info,target,null,'ne','rotate'),current:()=>sel?.info===info&&!panelTasks&&!undoBusy&&!sourceRequests&&!editing,save:matrix=>writeSVGTransform(info,target,matrix)});panelBody.append(position);}
   if(info.svgTransform){const size=RetouchInspector.section('Vector size');RetouchSVGResize.sizeFields(size,info,target,{current:()=>sel?.info===info&&!panelTasks&&!undoBusy&&!sourceRequests&&!editing,save:matrix=>writeSVGTransform(info,target,matrix)});panelBody.append(size);}
+  if(info.svgGradientCreation)mountSVGGradientCreation(info,target);
   if(info.svgGradients?.length)mountSVGGradients(info,target);
   if(info.svgGeometry){
     const geometry=RetouchInspector.section('SVG geometry');
@@ -2357,6 +2358,16 @@ function mountSVGGradientStopRail(section,info,target,gradient){
    input.retouchNumericHandle(handle,{axis:'x',canvas:true,scale:()=>strip.getBoundingClientRect().width/100,initialValue:()=>stop.offset*100+'%',onCommit:()=>{RetouchPanelFocus.queue(handle,'Select gradient stop '+(destination()+1));if(pendingPanelFocus)pendingPanelFocus.gradientPaint=gradient.paint;}});
   }
  };
+}
+function mountSVGGradientCreation(info,target){
+ const creation=info.svgGradientCreation;if(!creation.paints.length||!target)return;
+ const section=RetouchInspector.section('Create gradient');
+ if(creation.reason){RetouchInspector.note(section,creation.reason,'refused');panelBody.append(section);return;}
+ for(const paint of creation.paints){const select=RetouchInspector.select(section,paint==='fill'?'Fill type':'Stroke type',[['solid','Solid'],['linearGradient','Linear'],['radialGradient','Radial']],'solid',type=>{
+  if(type==='solid')return;const color=target.ownerDocument.defaultView.getComputedStyle(target).getPropertyValue(paint).trim();
+  setSVGGradient(info,paint,undefined,undefined,'create',{type,color:color==='none'?'#000000':color});
+ });select.title='Create a gradient from the current color to transparent';}
+ RetouchInspector.note(section,'Creates shared SVG paint from the current color to transparent. Page styles can override attribute paint.');panelBody.append(section);
 }
 function mountSVGGradients(info,target){
  for(const gradient of info.svgGradients){

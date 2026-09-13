@@ -34,6 +34,7 @@ function valid(property,value){
  return Math.abs(n)<=100000&&(!['r','fr'].includes(property)||n>=0);
 }
 function plan(resolved,op){
+ if(op.action==='create')return require('./svg-gradient-create.cjs').plan(resolved,op,'html');
  const refuse=reason=>({ok:false,refused:true,reason}),state=inspect(resolved,op.paint);
  if(!state)return refuse('Select a layer with a local linear or radial gradient attribute.');
  if(state.reason)return refuse(state.reason);

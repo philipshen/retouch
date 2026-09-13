@@ -1,0 +1,15 @@
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict');
+exports.run=async({page,app,file,wait,settled})=>{
+ const read=()=>fs.readFileSync(file,'utf8'),original=read();
+ for(const paint of ['fill','stroke'])for(const type of ['linearGradient','radialGradient']){
+  await page.getByRole('treeitem',{name:'rect · Solid box',exact:true}).click();await settled();const layer=app.locator('[aria-label="Solid box"]'),sourceId=await layer.getAttribute('data-rt'),prior=await layer.getAttribute(paint),computed=await layer.evaluate((el,p)=>getComputedStyle(el).getPropertyValue(p),paint);
+  await page.getByLabel(paint==='fill'?'Fill type':'Stroke type',{exact:true}).selectOption(type);await settled();await wait(async()=>/^url\(#rt-gradient-/.test(await layer.getAttribute(paint)));const id=(await layer.getAttribute(paint)).slice(5,-1);await wait(async()=>await app.locator('#'+id).count()===1);assert.equal(await app.locator('#'+id).evaluate(el=>el.localName),type);assert.equal(await layer.getAttribute('data-rt'),sourceId);assert.equal(await app.locator('#'+id+' > stop').first().evaluate(el=>getComputedStyle(el).stopColor),computed);assert.equal(await app.locator('#'+id+' > stop').last().getAttribute('stop-opacity'),'0');const created=read();
+  const field=page.getByLabel('Stop 1 color',{exact:true});await field.fill('#ff0000');await field.press('Tab');await settled();await wait(async()=>await app.locator('#'+id+' > stop').first().getAttribute('stop-color')==='#ff0000');const edited=read();
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===created);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(async()=>await app.locator('#'+id).count()===0);assert.equal(await layer.getAttribute(paint),prior);
+  await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===created);await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===edited);await wait(async()=>await app.locator('#'+id+' > stop').first().getAttribute('stop-color')==='#ff0000');
+  if(process.env.RT_E2E_GRADIENT_CREATE_SCREENSHOT){await page.locator('[data-gradient-paint="'+paint+'"]').evaluate(el=>el.scrollIntoView({block:'start'}));await page.screenshot({path:process.env.RT_E2E_GRADIENT_CREATE_SCREENSHOT});}
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===created);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);
+ }
+ await page.getByRole('treeitem',{name:'rect · Gradient box',exact:true}).click();await settled();console.log('PASS create SVG gradients: linear/radial fill/stroke, computed color, editing, identity and exact undo/redo cleanup');
+};

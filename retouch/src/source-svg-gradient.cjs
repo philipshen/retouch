@@ -41,6 +41,7 @@ function inspect(resolved,kind,paint){
 }
 function describe(resolved,kind){return ['fill','stroke'].flatMap(paint=>{const state=inspect(resolved,kind,paint);if(!state)return [];const {node,stops,id,reason}=state;return [{paint,id,type:node.tag,reason,fields:[...coordinates[node.tag],'gradientUnits','spreadMethod'].map(name=>({name,value:attr(node,name)})),stops:stops.map(stop=>({offset:attr(stop,'offset'),color:attr(stop,'stop-color'),opacity:attr(stop,'stop-opacity')}))}];});}
 function plan(resolved,op,kind){
+ if(op.action==='create')return require('./svg-gradient-create.cjs').plan(resolved,op,kind);
  const refuse=reason=>({ok:false,refused:true,reason}),state=inspect(resolved,kind,op.paint);
  if(!state)return refuse('Select a layer with a local linear or radial gradient attribute.');if(state.reason)return refuse(state.reason);
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the gradient layer.');
@@ -58,4 +59,4 @@ function plan(resolved,op,kind){
  if(before.length!==next.length||before.some((el,i)=>el.id!==next[i].id||el.kind!==next[i].kind))return refuse('The gradient edit changes the document structure.');
  return {ok:true,hash:ids.contentHash(after),edits:after===resolved.source?[]:[{file:resolved.file,before:resolved.source,after}]};
 }
-module.exports={describe,plan};
+module.exports={describe,plan,records,svg};

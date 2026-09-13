@@ -89,7 +89,7 @@ function describeElement(resolved) {
   return {
     svgPaint: {reason:node.openingElement.attributes.some(a=>a.type==='JSXSpreadAttribute')?'Spread props may control this layer’s classes.':null},
     svgInsertion: require('./jsx-svg-insert.cjs').describe(resolved),
-    svgGradients: require('./source-svg-gradient.cjs').describe(resolved,'react'),
+    svgGradientCreation:require('./svg-gradient-create.cjs').describe(resolved,'react'),svgGradients: require('./source-svg-gradient.cjs').describe(resolved,'react'),
     svgGeometry: require('./jsx-svg-geometry.cjs').describe(resolved),
     svgTransform: require('./svg-transform.cjs').describe(resolved,'react'),
     svgConversion: require('./svg-convert.cjs').describe(resolved),
