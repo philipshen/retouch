@@ -1922,6 +1922,7 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
    await input.press('Tab');assert.equal(await next.evaluate(el=>el===el.ownerDocument.activeElement),true);
    await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();
    assert.equal(await page.getByRole('button',{name:'Undo',exact:true}).evaluate(el=>el.ownerDocument.activeElement?.getAttribute('aria-label'))==='Line height (%)',false);
+   const typeOpener=page.locator('summary[aria-label="Type settings"]');if(!await typeOpener.evaluate(el=>el.parentElement.open))await typeOpener.click();
    let release,intercepted=false;const gate=new Promise(resolve=>{release=resolve;});
    const hold=async route=>{intercepted=true;await gate;await route.continue();};
    await page.route('**/rt/__api/op',hold);
@@ -1934,12 +1935,14 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
    await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();
    console.log(engine+' '+kind+': PASS Tab retains next control after save/rebuild, Shift+Tab returns, unchanged Tab does not write, explicit click cancels queued focus, exact undo');
   }
+  if(process.env.RT_E2E_TYPE_SETTINGS_POPOVER)await require('./type-settings-popover.cjs')({page,read,wait,settled});
   if(process.env.RT_E2E_WEIGHT_STYLE)await require('./font-weight-style.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_SHARED_TYPE_CALCULATIONS)await require('./shared-typography-calculations.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_TYPOGRAPHY_CALCULATIONS)await require('./typography-calculations.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_RELATIVE_CALCULATIONS)await require('./relative-typography-calculations.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_CONVERT_SPACING){
    await page.getByLabel('Style screen scope').selectOption('');await settled();
+   const settings=page.locator('summary[aria-label="Type settings"]');if(!await settings.evaluate(el=>el.parentElement.open))await settings.click();
    const write=async action=>{snapshots.push(read());await action();await wait(()=>read()!==snapshots.at(-1));await settled();};
    const edit=async(label,value)=>write(async()=>{const input=page.getByLabel(label,{exact:true});await input.fill(value);await input.press('Tab');});
    const metrics=()=>app.locator('h1').evaluate(el=>{const s=getComputedStyle(el);return [parseFloat(s.lineHeight),parseFloat(s.letterSpacing)];});

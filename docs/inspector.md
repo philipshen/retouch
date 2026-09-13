@@ -336,3 +336,46 @@ workflow additionally proves that focused selection stays on the primary
 weight dropdown after its save/rebuild. The Liquid text-style library workflow
 passed on WebKit. All five final workflow processes exited 0. This pass changes
 regression coverage and documentation only; production code is unchanged.
+
+### Floating Type settings (2026-09-13)
+
+The Type settings icon now sits beside text alignment and opens a floating
+panel. It retains custom weight, relative spacing, font properties, variable
+axes, number formatting, and resets. Custom… in the weight selector opens and
+positions this panel before focusing the numeric input. Close and Escape from
+panel controls return focus to the opener; a click elsewhere dismisses it.
+Escape in an editable field retains that field's cancellation behavior.
+Native selects no longer let Escape clear the canvas selection.
+
+The panel shares the bounded positioning and resize observation used by
+Stroke settings, with a sticky close header and internal scrolling. The
+compact-window stacking order keeps its bottom controls above the tool dock.
+The original inline disclosure's open preference is retained. Figma's
+Basics/Details/Variable tab organization and preview area remain unfinished.
+
+`RT_E2E_TYPE_SETTINGS_POPOVER=1` tests close, Escape, outside dismissal, native
+select Escape, Custom focus, viewport bounds, actual scrolling, and bottom
+control hit testing at 1000 x 280, all without source writes. Combined with the
+named-weight workflow, it passed for HTML/React on Chromium 145 and Liquid on
+WebKit 26, all with terminal exit 0. The small-window screenshot was inspected
+at `/private/tmp/retouch-type-settings-small.png`. Stroke's compact-window and
+border-visibility regression also passed. The final-source unit suite passed
+1,159 tests.
+
+The relative-spacing, conversion, and Tab-focus workflows passed for HTML and
+React on Chromium after updating their navigation to reopen a popup dismissed
+by an outside click. The full HTML-site workflow also passed, covering page
+navigation/export, image previews and uploads, gradients, geometry, selection,
+frames, responsive styles, and exact undo. That older harness was refreshed to
+scroll lazy thumbnails into view, assert disabled invalid-color submission,
+compare color channels/alpha instead of a hex serialization, and start marquee
+selection clear of the rotation handles with a top-level hit test.
+
+Action-search reveal uses the popup's immediate open method before focusing a
+hidden control. The popup workflow exercises Command/Ctrl+K, Edit font weight,
+and focus inside the opened panel. Visible labels now say Style, Decoration,
+and Case. The normal-window screenshot was inspected at
+`/private/tmp/retouch-type-settings-labels.png.regular.png`.
+
+The final popup/action-search/named-weight runs exited 0 for HTML and React
+on Chromium 145 and Liquid on WebKit 26. The final unit run passed 1,159 tests.

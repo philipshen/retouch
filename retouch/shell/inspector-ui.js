@@ -46,17 +46,19 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    select.hidden=true;select.setAttribute('aria-hidden','true');select.tabIndex=-1;field.append(group);keyboardToolbar(group,name);
   }
  }
- function strokePopover(settings,weight,key='svg-stroke-settings'){
+ function strokePopover(settings,weight,key='svg-stroke-settings',dialogTitle='Stroke settings',openerLabel='Advanced stroke settings'){
   const summary=settings.firstElementChild,body=document.createElement('div'),heading=document.createElement('header'),name=document.createElement('strong'),closeButton=document.createElement('button');
-  settings.classList.add('stroke-settings-popover');summary.setAttribute('aria-label','Advanced stroke settings');summary.title='Advanced stroke settings';summary.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v7m0 4v7M17 3v3m0 4v11M4 12a3 3 0 1 0 6 0a3 3 0 1 0-6 0M14 8a3 3 0 1 0 6 0a3 3 0 1 0-6 0"/></svg>';
-  body.className='stroke-settings-body';body.hidden=true;body.setAttribute('role','dialog');body.setAttribute('aria-label','Stroke settings');name.textContent='Stroke settings';closeButton.type='button';closeButton.className='control-button';closeButton.textContent='×';closeButton.setAttribute('aria-label','Close stroke settings');heading.append(name,closeButton);body.append(heading);
+  settings.classList.add('stroke-settings-popover');summary.setAttribute('aria-label',openerLabel);summary.title=openerLabel;summary.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v7m0 4v7M17 3v3m0 4v11M4 12a3 3 0 1 0 6 0a3 3 0 1 0-6 0M14 8a3 3 0 1 0 6 0a3 3 0 1 0-6 0"/></svg>';
+  if(dialogTitle==='Type settings'){settings.classList.add('type-settings-popover');const label=document.createElement('span');label.className='settings-name';label.textContent=dialogTitle;summary.append(label);}
+  body.className='stroke-settings-body';body.hidden=true;body.setAttribute('role','dialog');body.setAttribute('aria-label',dialogTitle);name.textContent=dialogTitle;closeButton.type='button';closeButton.className='control-button';closeButton.textContent='×';closeButton.setAttribute('aria-label','Close '+dialogTitle.toLowerCase());heading.append(name,closeButton);body.append(heading);
   for(const child of [...settings.children])if(child!==summary)body.append(child);settings.append(body);weight.append(settings);
   let cleanup=()=>{},observing=false;
   const close=(focus=false)=>{settings.open=false;openGroups.delete(key);cleanup();if(focus&&summary.isConnected)summary.focus({preventScroll:true});};
   const position=()=>{if(!settings.isConnected){cleanup();return;}body.hidden=false;const box=summary.getBoundingClientRect(),panel=summary.closest('#panel')?.getBoundingClientRect();body.style.left=Math.max(8,Math.min(innerWidth-body.offsetWidth-8,(panel?.left??box.left)-body.offsetWidth-8))+'px';body.style.top=Math.max(8,Math.min(innerHeight-body.offsetHeight-8,box.top))+'px';};
   const outside=event=>{if(!settings.contains(event.target))close();};
   const watch=()=>{if(observing||!settings.isConnected||!settings.open)return;observing=true;const observer=new MutationObserver(()=>{if(!settings.isConnected)cleanup();else position();});observer.observe(document.body,{childList:true,subtree:true});const sizeObserver=new ResizeObserver(position);sizeObserver.observe(body);document.addEventListener('pointerdown',outside,true);root.addEventListener('resize',position);root.addEventListener('scroll',position,true);cleanup=()=>{observer.disconnect();sizeObserver.disconnect();document.removeEventListener('pointerdown',outside,true);root.removeEventListener('resize',position);root.removeEventListener('scroll',position,true);observing=false;};position();};
-  summary.onclick=event=>{event.preventDefault();if(settings.open)close();else{settings.open=true;openGroups.add(key);watch();}};
+  settings.retouchOpen=()=>{settings.open=true;openGroups.add(key);watch();};
+  summary.onclick=event=>{event.preventDefault();if(settings.open)close();else settings.retouchOpen();};
   settings.ontoggle=()=>{if(!settings.isConnected){cleanup();return;}if(settings.open){openGroups.add(key);watch();}else{openGroups.delete(key);cleanup();}};
   settings.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close(true);}});closeButton.onclick=()=>close(true);requestAnimationFrame(watch);
  }
@@ -115,10 +117,10 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     for(const [value,name] of names){const option=document.createElement('option');option.value=value;option.textContent=name;select.append(option);}
     if(!names.some(([value])=>value===current)){const option=document.createElement('option');option.value=current;option.textContent=current||'Custom';select.prepend(option);}
     const custom=document.createElement('option');custom.value='custom';custom.textContent='Custom…';select.append(custom);select.value=current;
-    weightRow.before(cell);cell.append(select);settings.prepend(weightRow);
+    weightRow.before(cell);cell.append(select);settings.querySelector(':scope > summary').after(weightRow);
     root.RetouchNumericExpression.calculation(weight);root.RetouchInspector.fieldDraft(weight);
     select.onchange=()=>{
-     if(select.value==='custom'){select.value=current;settings.open=true;weight.focus();weight.select();return;}
+     if(select.value==='custom'){select.value=current;if(settings.retouchOpen)settings.retouchOpen();else settings.open=true;weight.focus();weight.select();return;}
      weight.value=select.value;weight.dispatchEvent(new Event('change',{bubbles:true}));
     };
    }
@@ -130,6 +132,12 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    const cell=field.closest('.property-row')||field;cell.classList.add('typography-spacing-cell');cell.dataset.caption=title;
   }
   if(align){align.classList.add('typography-alignment');const label=align.querySelector('.inspector-field > span, :scope > span');if(label)label.textContent='Alignment';}
+  const typeSettings=[...section.querySelectorAll('details')].find(details=>details.querySelector(':scope > summary')?.textContent==='Type settings');
+  if(align&&typeSettings){
+   const tools=document.createElement('div');tools.className='typography-alignment-tools';align.before(tools);tools.append(align);
+   strokePopover(typeSettings,tools,'type-settings','Type settings','Type settings');
+  }
+
  }
  function collapsibleSection(section){
   const heading=section.querySelector(':scope > h3');if(!heading)return;
@@ -427,7 +435,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
      const clip=section.querySelector('[aria-label="Clip content"]')?.closest('.property-row');if(clip)(behavior?.isConnected?behavior:dimension||row).after(clip);
     }
    }
-   for(const row of section.querySelectorAll('.inspector-field')){const control=fieldControl(row),label=control?.getAttribute('aria-label');if(['Width behavior','Height behavior'].includes(label))for(const option of control.options)option.textContent=({'':'Auto',fixed:'Fixed',hug:'Hug',fill:'Fill'})[option.value]||option.textContent;const short={'Page font':'Font','Shared Page font':'Font','Display (CSS)':'Display','Direction (CSS)':'Direction','Wrap (CSS)':'Wrap','Align items (CSS)':'Alignment','Align lines (CSS)':'Lines','Distribute items (CSS)':'Distribution','Minimum width (CSS)':'Min W','Minimum height (CSS)':'Min H','Maximum width (CSS)':'Max W','Maximum height (CSS)':'Max H','Padding (CSS)':'Padding','Padding top (CSS)':'Top','Padding bottom (CSS)':'Bottom','Padding left (CSS)':'Left','Padding right (CSS)':'Right','Margin (CSS)':'Margin','Margin top (CSS)':'Top','Margin bottom (CSS)':'Bottom','Margin left (CSS)':'Left','Margin right (CSS)':'Right','Gap (CSS)':'Gap','Rectangle corner radius':'Radius','Shape Horizontal radius':'X radius','Shape Vertical radius':'Y radius','Corner radius (CSS)':'Radius','Border width (CSS)':'Weight','Border style (CSS)':'Style','Border color (CSS)':'Color','Background color (CSS)':'Color','Layer blur (px)':'Blur','Backdrop blur (px)':'Background','Background blur (px)':'Background','Font family (CSS)':'Font family','Font weight (CSS)':'Weight','Font size (CSS)':'Size','Line height (CSS)':'↕','Letter spacing (CSS)':'↔','Text color (CSS)':'Color','Font weight (1–1000)':'Weight','Font size (px)':'Size','Line height (px)':'↕','Letter spacing (px)':'↔','Text alignment':'','Width (CSS)':'W','Height (CSS)':'H','Border width (px)':'Weight','Border style':'Style','Border color':'Color','Place grid items':'Flow','Align children':'Alignment','Distribute children':'Distribution','Width (px)':'W','Height (px)':'H','Opacity (%)':'Opacity','Corner radius (px)':'Radius','Padding top':'Top','Padding bottom':'Bottom','Padding left':'Left','Padding right':'Right','Horizontal gap':'↔','Vertical gap':'↕','Width behavior':'Width','Height behavior':'Height'}[label];if(short){row.querySelector('span').textContent=short;row.title=label;}}
+   for(const row of section.querySelectorAll('.inspector-field')){const control=fieldControl(row),label=control?.getAttribute('aria-label');if(['Width behavior','Height behavior'].includes(label))for(const option of control.options)option.textContent=({'':'Auto',fixed:'Fixed',hug:'Hug',fill:'Fill'})[option.value]||option.textContent;const short={'Page font':'Font','Shared Page font':'Font','Display (CSS)':'Display','Direction (CSS)':'Direction','Wrap (CSS)':'Wrap','Align items (CSS)':'Alignment','Align lines (CSS)':'Lines','Distribute items (CSS)':'Distribution','Minimum width (CSS)':'Min W','Minimum height (CSS)':'Min H','Maximum width (CSS)':'Max W','Maximum height (CSS)':'Max H','Padding (CSS)':'Padding','Padding top (CSS)':'Top','Padding bottom (CSS)':'Bottom','Padding left (CSS)':'Left','Padding right (CSS)':'Right','Margin (CSS)':'Margin','Margin top (CSS)':'Top','Margin bottom (CSS)':'Bottom','Margin left (CSS)':'Left','Margin right (CSS)':'Right','Gap (CSS)':'Gap','Rectangle corner radius':'Radius','Shape Horizontal radius':'X radius','Shape Vertical radius':'Y radius','Corner radius (CSS)':'Radius','Border width (CSS)':'Weight','Border style (CSS)':'Style','Border color (CSS)':'Color','Background color (CSS)':'Color','Layer blur (px)':'Blur','Backdrop blur (px)':'Background','Background blur (px)':'Background','Font family (CSS)':'Font family','Font style (CSS)':'Style','Text decoration (CSS)':'Decoration','Text case (CSS)':'Case','Font weight (CSS)':'Weight','Font size (CSS)':'Size','Line height (CSS)':'↕','Letter spacing (CSS)':'↔','Text color (CSS)':'Color','Font weight (1–1000)':'Weight','Font size (px)':'Size','Line height (px)':'↕','Letter spacing (px)':'↔','Text alignment':'','Width (CSS)':'W','Height (CSS)':'H','Border width (px)':'Weight','Border style':'Style','Border color':'Color','Place grid items':'Flow','Align children':'Alignment','Distribute children':'Distribution','Width (px)':'W','Height (px)':'H','Opacity (%)':'Opacity','Corner radius (px)':'Radius','Padding top':'Top','Padding bottom':'Bottom','Padding left':'Left','Padding right':'Right','Horizontal gap':'↔','Vertical gap':'↕','Width behavior':'Width','Height behavior':'Height'}[label];if(short){row.querySelector('span').textContent=short;row.title=label;}}
    if(name==='Typography')typographyPrimary(section);
   }
 
@@ -521,7 +529,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
  function reveal(control){
   if(!control?.isConnected||control.matches(':disabled')||control.closest('[inert]'))return false;
   root.RetouchWorkspacePanels?.showInspector();
-  for(let parent=control.parentElement;parent;parent=parent.parentElement){if(parent.retouchSetCollapsed)parent.retouchSetCollapsed(false,true);if(parent.tagName==='DETAILS'){if(parent.retouchSetOpen)parent.retouchSetOpen(true);else parent.open=true;}}
+  for(let parent=control.parentElement;parent;parent=parent.parentElement){if(parent.retouchSetCollapsed)parent.retouchSetCollapsed(false,true);if(parent.tagName==='DETAILS'){if(parent.retouchSetOpen)parent.retouchSetOpen(true);else if(parent.retouchOpen)parent.retouchOpen();else parent.open=true;}}
   control.scrollIntoView({block:'nearest',inline:'nearest'});control.focus({preventScroll:true});if(typeof control.select==='function')try{control.select();}catch{}return true;
  }
  root.RetouchInspectorUI={organize,reveal};

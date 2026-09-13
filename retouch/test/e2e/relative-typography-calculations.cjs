@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict');
 module.exports=async({page,app,kind,read,wait,settled})=>{
  await page.getByLabel('Style screen scope').selectOption('');await settled();
+ const settings=page.locator('summary[aria-label="Type settings"]');if(!await settings.evaluate(el=>el.parentElement.open))await settings.click();
  const initial=read(),states=[initial];
  const edit=async(label,value,check,button)=>{
   const input=page.getByLabel(label,{exact:true}),before=read();await input.fill(value);

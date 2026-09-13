@@ -2850,7 +2850,8 @@ window.addEventListener('keydown', (e) => {
   if(sourceHistoryShortcut(e))return;
   if (e.key === 'Escape') {
     if(stopDrawing){e.preventDefault();stopDrawing();return;}
-    if(!e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')&&window.RetouchWorkspacePanels?.closeIfOpen()){e.preventDefault();return;}
+    if(e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]'))return;
+    if(window.RetouchWorkspacePanels?.closeIfOpen()){e.preventDefault();return;}
     clearSelection();
   }
 });

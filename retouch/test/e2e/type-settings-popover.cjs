@@ -1,0 +1,21 @@
+'use strict';
+const assert=require('node:assert/strict');
+module.exports=async({page,read,wait,settled})=>{
+ const source=read(),original=page.viewportSize(),opener=page.locator('summary[aria-label="Type settings"]'),dialog=page.getByRole('dialog',{name:'Type settings',exact:true}),close=page.getByRole('button',{name:'Close type settings',exact:true});
+ const bounded=async()=>{const b=await dialog.boundingBox(),v=page.viewportSize();return b&&b.x>=0&&b.y>=0&&b.x+b.width<=v.width&&b.y+b.height<=v.height;};
+ if(await dialog.isVisible())await close.click();
+ assert.equal(await opener.evaluate(el=>Boolean(el.closest('.typography-alignment-tools'))),true);
+ await opener.click();await dialog.waitFor();await wait(bounded);if(process.env.RT_E2E_TYPE_SETTINGS_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_TYPE_SETTINGS_SCREENSHOT+'.regular.png'});await close.focus();await page.keyboard.press('Escape');assert.equal(await dialog.isVisible(),false);assert.equal(await opener.evaluate(el=>el===document.activeElement),true);
+ await opener.click();await dialog.waitFor();await page.getByLabel('Font weight style',{exact:true}).click();assert.equal(await dialog.isVisible(),false);await page.keyboard.press('Escape');
+ await page.getByLabel('Font weight style',{exact:true}).selectOption('custom');await dialog.waitFor();await wait(bounded);
+ assert.ok(await dialog.evaluate(el=>el.contains(document.activeElement)),'Custom weight focuses a visible control inside the popup');await close.click();
+ await page.keyboard.press('ControlOrMeta+k');await page.getByRole('combobox',{name:'Search actions',exact:true}).fill('Edit font weight');await page.getByRole('combobox',{name:'Search actions',exact:true}).press('Enter');await dialog.waitFor();assert.ok(await dialog.evaluate(el=>el.contains(document.activeElement)),'action search focuses the revealed field');await close.click();
+ await page.setViewportSize({width:1000,height:280});await settled();const toggle=page.getByRole('button',{name:'Toggle Inspector panel',exact:true});if(await toggle.getAttribute('aria-expanded')==='false')await toggle.click();
+ await opener.click();await dialog.waitFor();await wait(bounded);await dialog.evaluate(el=>{el.scrollTop=el.scrollHeight;});assert.ok(await dialog.evaluate(el=>el.scrollTop)>0);
+ await wait(async()=>{const a=await close.boundingBox(),b=await dialog.boundingBox();return a&&b&&a.y>=b.y&&a.y+a.height<=b.y+b.height;});
+ const visibleLast=dialog.locator('button').last();await visibleLast.scrollIntoViewIfNeeded();assert.equal(await visibleLast.evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),true);
+ if(process.env.RT_E2E_TYPE_SETTINGS_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_TYPE_SETTINGS_SCREENSHOT});
+ await close.click();assert.equal(await dialog.isVisible(),false);assert.equal(await opener.evaluate(el=>el===document.activeElement),true);assert.equal(read(),source);
+ await page.setViewportSize(original);await settled();assert.equal(read(),source);
+ console.log('TYPE SETTINGS POPOVER PASS: close, Escape, outside dismissal, Custom focus, compact scrolling and no source writes');
+};
