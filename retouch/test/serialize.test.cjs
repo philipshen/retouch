@@ -144,3 +144,12 @@ test('new text links serialize a literal URL and preserved source links stay kep
  const invalid=el('a',[text('Read')],{href:'javascript:alert(1)'});assert.deepEqual(serializeChildren(el('p',[invalid])),[{t:'text',value:'Read'}]);
  const kept=el('a',[text('Read')],{href:'/source',id:'source-link','data-rt':'1234567890'});assert.deepEqual(serializeChildren(el('p',[kept]),new Map([['1234567890','Read']])),[{t:'keep',id:'1234567890'}]);
 });
+test('kept anchor href edits serialize even when its children remain unchanged',()=>{
+ const id='abcdef0123',anchor=el('a',[text('Read')],{'data-rt':id,href:'/new'});anchor.__rtLinkHref='/new';
+ assert.deepStrictEqual(serializeChildren(el('p',[anchor]),new Map([[id,'Read']])),[{t:'keep',id,href:'/new'}]);
+});
+
+test('returning a kept link to its initial href avoids rewriting original source syntax',()=>{
+ const id='abcdef0123',anchor=el('a',[text('Read')],{'data-rt':id,href:'/old'});anchor.__rtLinkHref='/old';anchor.innerHTML='Read';
+ assert.deepStrictEqual(serializeChildren(el('p',[anchor]),new Map([[id,{html:'Read',href:'/old'}]])),[{t:'keep',id}]);
+});

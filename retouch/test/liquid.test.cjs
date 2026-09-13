@@ -175,3 +175,11 @@ test('literal rich text remains editable around preserved attribute output',()=>
  assert.equal(liquid.describeElement(resolved).canSetChildren,true);
  for(const blocked of ['<p>Head{{ text }}</p>','<p>{% if show %}<a href="/x">line</a>{% endif %}</p>','<p><a {% if show %}href="/x"{% endif %}>line</a></p>'])assert.equal(liquid.describeElement(resolvedFor(blocked,elByTag(blocked,'p'))).canSetChildren,false,blocked);
 });
+test('kept Liquid link URL edits preserve other attributes and reject dynamic URLs',()=>{
+ for(const [href,allowed]of [['/old',true],['{{ destination }}',false]]){
+  const source=`<p><a id='site' href="${href}" class="{{ style }}">Read</a></p>`,resolved=resolvedFor(source,elByTag(source,'p')),id=elByTag(source,'a').id;
+  const result=liquid.planOp(resolved,{type:'setChildren',fileHash:resolved.hash,children:[{t:'keep',id,href:'/new',children:[{t:'wrap',tag:'em',children:[{t:'text',value:'Read'}]}]}]});
+  assert.equal(!!result.ok,allowed,JSON.stringify(result));
+  if(allowed)assert.equal(result.edits[0].after,`<p><a id='site' href="/new" class="{{ style }}"><em>Read</em></a></p>`);
+ }
+});

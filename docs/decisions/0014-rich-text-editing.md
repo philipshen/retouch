@@ -63,9 +63,9 @@ smooth optimistic + HMR path. The reload preserves scroll position.
   styling, and bold/italic on a selection.
 - Selected text supports links through the typography inspector. New links use
   a validated URL node; existing literal, unadorned links can be updated or
-  removed, including partial selections. Dynamic URLs and attributed anchors
-  retain their original source identity. Their URL field is read-only and
-  copyable, while formatting inside the link remains editable.
+  removed, including partial selections. Attributed anchors retain their original source identity: changing their URL
+  updates the whole link and preserves every other attribute. Dynamic URLs stay
+  read-only and copyable, while formatting inside the link remains editable.
 - During text editing, Cmd+K / Ctrl+K focuses the link field without losing the
   selected range. Escape returns to text editing without applying a draft URL.
 - Arbitrary tags and attributes remain outside the rich-text command model.

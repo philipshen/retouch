@@ -34,9 +34,10 @@ function describe(value,sourceId,{tokens=[]}={}) {
       if (!loc) throw new Error('The stored HTML needs browser repairs; edit its source before formatting it.');
       const nodeId=id(key),raw=value.slice(loc.startOffset,loc.endOffset);
       if (!node.tagName) {kept.set(nodeId,{raw,opaque:true});return {t:'comment',id:nodeId};}
+      const hrefSource=require('./link-source.cjs').htmlHref(value,node);
       const opaque=['script','style','svg','template','iframe'].includes(node.tagName);
-      kept.set(nodeId,{raw,opaque,open:value.slice(loc.startOffset,loc.startTag.endOffset),close:loc.endTag?value.slice(loc.endTag.startOffset,loc.endOffset):null});
-      return {t:'element',id:nodeId,tag:node.tagName,opaque,plainLink:node.tagName==='a'&&node.attrs.length===1&&node.attrs[0].name==='href'&&require('../shell/link-values.js').valid(node.attrs[0].value)&&!/\{[%{]/.test(value.slice(loc.startOffset,loc.startTag.endOffset)),children:opaque?[]:visit(node.childNodes,key)};
+      kept.set(nodeId,{raw,opaque,hrefSource:hrefSource?{start:hrefSource.start-loc.startOffset,end:hrefSource.end-loc.startOffset}:null,open:value.slice(loc.startOffset,loc.startTag.endOffset),close:loc.endTag?value.slice(loc.endTag.startOffset,loc.endOffset):null});
+      return {t:'element',id:nodeId,tag:node.tagName,opaque,editableLink:!!hrefSource,plainLink:!!hrefSource&&node.tagName==='a'&&node.attrs.length===1&&node.attrs[0].name==='href'&&require('../shell/link-values.js').valid(node.attrs[0].value)&&!/\{[%{]/.test(value.slice(loc.startOffset,loc.startTag.endOffset)),children:opaque?[]:visit(node.childNodes,key)};
     });
   }
   return {descriptor:{children:visit(tree.childNodes,'')},kept};
@@ -55,10 +56,11 @@ function rewrite(value,sourceId,children,options) {
       const original=kept.get(item.id);
       if(!original||seen.has(item.id))throw new Error('A kept node is not unique to this text source.');
       seen.add(item.id);
-      if(!item.children)return original.raw;
+      const patch=raw=>{if(!Object.hasOwn(item,'href'))return raw;if(!original.hrefSource)throw Error('This link URL is controlled by its source.');return raw.slice(0,original.hrefSource.start)+'href='+require('./rich-text.cjs').hrefMarkup(item.href)+raw.slice(original.hrefSource.end);};
+      if(!item.children)return patch(original.raw);
       if(/^<a(?:\s|>)/i.test(original.open||original.raw)&&hasLink(item.children))throw Error('Text links cannot be nested.');
       if(original.opaque||!original.close)throw new Error('This preserved node cannot have editable children.');
-      return original.open+build(item.children)+original.close;
+      return patch(original.open)+build(item.children)+original.close;
     }).join('');
   }
   const result=build(children);

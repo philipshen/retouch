@@ -25,6 +25,7 @@ function validateChildrenTree(children, depth, inLink=false) {
       if (err) return err;
     } else if (c.t === 'keep') {
       if(inLink)return 'Source-owned nodes cannot be moved inside a new text link.';
+      if(Object.hasOwn(c,'href')&&!links.valid(c.href))return 'Invalid kept link URL.';
       if (!/^[0-9a-f]{10}$/.test(c.id || '')) return 'Bad keep id.';
       if (c.children) {
         const err = validateChildrenTree(c.children, depth + 1,inLink);
@@ -46,10 +47,12 @@ function styleMarkup(node,content,jsx=false) {
   return '<span '+attribute+'>'+content+'</span>';
 }
 
+function hrefMarkup(value,jsx=false){
+  if(!links.valid(value))throw Error('Invalid text link.');
+  return jsx?'{'+JSON.stringify(value)+'}':'"'+value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\{/g,'&#123;').replace(/\}/g,'&#125;')+'"';
+}
 function linkMarkup(node,content,jsx=false){
-  if(!links.valid(node.href))throw Error('Invalid text link.');
-  const href=jsx?'{'+JSON.stringify(node.href)+'}':'"'+node.href.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\{/g,'&#123;').replace(/\}/g,'&#125;')+'"';
-  return '<a href='+href+'>'+content+'</a>';
+  return '<a href='+hrefMarkup(node.href,jsx)+'>'+content+'</a>';
 }
 function hasLink(children){return Array.isArray(children)&&children.some(node=>node&&(node.t==='link'||node.children&&hasLink(node.children)));}
-module.exports={validateChildrenTree,styleMarkup,linkMarkup,hasLink};
+module.exports={validateChildrenTree,styleMarkup,linkMarkup,hrefMarkup,hasLink};

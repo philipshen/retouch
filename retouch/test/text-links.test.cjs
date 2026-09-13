@@ -25,3 +25,13 @@ test('link reconstruction proof excludes dynamic URLs and attributed source anch
  const descriptor=source.describe(markup,'source').descriptor.children[0].children;
  assert.deepEqual(descriptor.map(node=>node.plainLink),[true,false,false]);
 });
+test('kept HTML link URL changes preserve all other attributes and refuse dynamic or ambiguous hrefs',()=>{
+ const original=`<a id='owned' href='/old' class="site" target="_blank">Read <em>more</em></a>`,node=source.describe(original,'s').descriptor.children[0];
+ assert.equal(node.editableLink,true);const changed=source.rewrite(original,'s',[{t:'keep',id:node.id,href:'/new?x="&y={{value}}'}]);
+ assert.equal(changed,`<a id='owned' href="/new?x=&quot;&amp;y=&#123;&#123;value&#125;&#125;" class="site" target="_blank">Read <em>more</em></a>`);
+ assert.match(source.rewrite(original,'s',[{t:'keep',id:node.id,href:'/new',children:[{t:'text',value:'Changed'}]}]),/>Changed<\/a>$/);
+ for(const html of ['<a href="{{ url }}">x</a>','<a href="/one" href="/two">x</a>','<span href="/old">x</span>']){
+  const kept=source.describe(html,'s').descriptor.children[0];assert.equal(kept.plainLink,false);assert.throws(()=>source.rewrite(html,'s',[{t:'keep',id:kept.id,href:'/new'}]),/controlled/);
+ }
+ assert.match(rich.validateChildrenTree([{t:'keep',id:node.id,href:'javascript:alert(1)'}],0),/Invalid/);
+});

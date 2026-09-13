@@ -27,8 +27,10 @@
       if (id && snapshot && snapshot.has(id) && !n.__rtReplaceRangeStyle) {
         var before = snapshot.get(id);
         var unchanged = typeof before === 'string' ? n.textContent === before : n.innerHTML === before.html;
-        if (unchanged) out.push({ t: 'keep', id: id });
-        else out.push({ t: 'keep', id: id, children: serializeChildren(n, snapshot) });
+        var kept={t:'keep',id:id};
+        if(!unchanged)kept.children=serializeChildren(n,snapshot);
+        if(n.tagName==='A'&&links.valid(n.__rtLinkHref)&&!(before&&typeof before==='object'&&before.href===n.__rtLinkHref))kept.href=n.__rtLinkHref;
+        out.push(kept);
         continue;
       }
       // Only validated range styles can create new styled spans.

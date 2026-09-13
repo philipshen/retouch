@@ -408,10 +408,11 @@ function planOp(resolved, op) {
       const kept=descendants.get(c.id);
       if (!kept||seen.has(c.id)) throw new Error('A kept element is not a unique descendant of this source.');
       seen.add(c.id);
-      if (!c.children) return resolved.source.slice(kept.tagStart,kept.closeEnd);
+      const hrefEdit=Object.hasOwn(c,'href');
+      if (!c.children) return hrefEdit?require('../link-source.cjs').patch(resolved,kept,'liquid',c.href):resolved.source.slice(kept.tagStart,kept.closeEnd);
       if(kept.tag==='a'&&hasLink(c.children))throw Error('Text links cannot be nested.');
       if (kept.closeStart==null||kept.textBinding||/\{[%{]/.test(layerNames.strip(resolved.source.slice(kept.childrenStart,kept.childrenEnd)))) throw new Error('A kept child contains expressions.');
-      return resolved.source.slice(kept.tagStart,kept.openEnd)+build(c.children)+resolved.source.slice(kept.closeStart,kept.closeEnd);
+      return (hrefEdit?require('../link-source.cjs').patch(resolved,kept,'liquid',c.href,true):resolved.source.slice(kept.tagStart,kept.openEnd))+build(c.children)+resolved.source.slice(kept.closeStart,kept.closeEnd);
     }).join('');
     let value;try{value=build(op.children);}catch(err){return refuse(err.message);}
     if (!value.trim()||value.length>50000) return refuse('The rich text is empty or too large.');

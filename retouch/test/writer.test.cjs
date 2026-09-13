@@ -332,3 +332,9 @@ test('text links write literal JSX URLs and keep attributed anchors outside reco
  const result=writer.applyOp(resolved,{type:'setChildren',fileHash:resolved.hash,children:[{t:'link',href:'/docs?x="&y={{literal}}',children:[{t:'wrap',tag:'em',children:[{t:'text',value:'Read'}]}]}]});assert.ok(result.ok,JSON.stringify(result));
  assert.match(read(root,'Links.tsx'),/<a href=\{"\/docs\?x=\\"&y=\{\{literal\}\}"\}><em>Read<\/em><\/a>/);
 });
+test('kept JSX link href edits preserve attributes and refuse expressions or spreads',()=>{
+ for(const [attr,allowed]of [['href="/old"',true],['href={url}',false],['href="/old" {...props}',false]]){
+  const original=`export const Text=()=> <p><a id="owned" ${attr} className={style}>Read</a></p>`;fs.writeFileSync(path.join(root,'OwnedLinks.tsx'),original);index.scanAll();const {resolved}=pick(index,root,'OwnedLinks.tsx','p'),id=pick(index,root,'OwnedLinks.tsx','a').el.id;
+  const result=writer.applyOp(resolved,{type:'setChildren',fileHash:resolved.hash,children:[{t:'keep',id,href:'/new'}]});assert.equal(!!result.ok,allowed,JSON.stringify(result));assert.equal(read(root,'OwnedLinks.tsx'),allowed?original.replace('href="/old"','href={"/new"}'):original);
+ }
+});

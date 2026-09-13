@@ -665,7 +665,7 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
     if(rangeStyle){c.__rtRangeStyleValues={};for(const [property,value]of Object.entries(rangeStyle.properties||{[rangeStyle.property]:rangeStyle.value})){const probe=el.ownerDocument.createElement('span');probe.style.setProperty(property,value);const css=probe.style.getPropertyValue(property);if(c.style.getPropertyValue(property)===css){c.__rtRangeStyleValues[property]={value,css};if(property==='color'){c.__rtRangeStyleValue=value;c.__rtRangeStyleCSS=css;}}}}
 
     const cid = c.getAttribute('data-rt-keep') || c.getAttribute('data-rt') || c.getAttribute('data-rt-i');
-    if (cid) editing.snapshot.set(cid, {html:c.innerHTML});
+    if (cid) editing.snapshot.set(cid, {html:c.innerHTML,href:c.tagName==='A'?c.getAttribute('href'):undefined});
   }
   editing.originalTree = serializeChildren(el, editing.snapshot);
   // plaintext-only forces pre-wrap in Chromium even over author !important
@@ -934,7 +934,7 @@ function styleInsertedTextContent(current,start,end,properties,script,decoration
 }
 // Keep the actual nodes (and their source evidence) so restoring a local
 // insertion does not invalidate preceding native text undo transactions.
-const caretMetadataNames=['__rtCaretPlaceholder','__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
+const caretMetadataNames=['__rtLinkHref','__rtCaretPlaceholder','__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
 function captureCaretEdit(current){
   const d=current.el.ownerDocument,selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
   const capture=node=>({node,text:typeof node.data==='string'?node.data:null,attributes:node.nodeType===1?[...node.attributes].map(a=>[a.name,a.value]):null,metadata:Object.fromEntries(caretMetadataNames.filter(key=>Object.hasOwn(node,key)).map(key=>[key,structuredClone(node[key])])),children:[...node.childNodes].map(capture)});
@@ -1219,9 +1219,9 @@ function showInlineFormatToolbar(){
     }
     const linkParent=valid?(range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer):null;
     const selectedLink=linkParent?.closest('a'),withinLink=selectedLink&&selectedLink!==editing?.el&&selectedLink.contains(range?.endContainer);
-    const ownedLink=withinLink&&!plainInlineFormatting(selectedLink);
-    linkField.disabled=!valid||range.collapsed&&!withinLink;linkField.readOnly=!!ownedLink;removeLink.disabled=!valid||!withinLink||ownedLink;
-    linkField.title=ownedLink?'This link is controlled by the site. You can copy its URL.':'Edit link (⌘K / Ctrl+K)';
+    const ownedLink=withinLink&&!plainInlineFormatting(selectedLink),editableOwned=ownedLink&&editableLinkURL(selectedLink);
+    linkField.disabled=!valid||range.collapsed&&!withinLink;linkField.readOnly=!!ownedLink&&!editableOwned;removeLink.disabled=!valid||!withinLink||ownedLink;
+    linkField.title=ownedLink?(editableOwned?'Updates this whole link and preserves its attributes.':'This link is controlled by the site. You can copy its URL.'):'Edit link (⌘K / Ctrl+K)';
     if(document.activeElement!==linkField)linkField.value=withinLink?selectedLink.getAttribute('href')||'':'';
     if(!valid)return;savedRange=range.cloneRange();
     colorField.retouchPaintScopeLabel=(range.collapsed?'Text you type next':'Selected text')+' · Applies across all screen sizes.';
@@ -1270,6 +1270,12 @@ function showInlineFormatToolbar(){
   inlineFormatCleanup=()=>{window.removeEventListener('pointerdown',preservePanelFocus,true);window.removeEventListener('retouch:workspace-layout',mount);window.removeEventListener('retouch:viewport',update);d.removeEventListener('selectionchange',update);bar.remove();section?.removeAttribute('data-range-editing');for(const {node,hidden}of originals)node.hidden=hidden;section?.querySelector(':scope > h3')?.removeEventListener('click',trackCollapse);if(!collapseChanged)section?.retouchSetCollapsed?.(collapsed);inlineFormatCleanup=()=>{};if(panelRenderDeferred)queueViewportPanelRefresh();};
 }
 
+function editableLinkURL(node){
+  const id=node.getAttribute('data-rt'),keepId=node.getAttribute('data-rt-keep');
+  const proven=nodes=>(nodes||[]).some(item=>item.id===keepId&&item.editableLink||proven(item.children));
+  return editing?.info.editableLinkIds?.includes(id)||!!keepId&&proven(editing?.info.richText?.children);
+}
+
 function applyInlineLink(href){return inlineFormattingTransaction(()=>{
   if(!editing||href!==null&&!RetouchLinkValues.valid(href))return false;
   const current=editing,d=doc(),selection=d.getSelection();if(!selection?.rangeCount)return false;
@@ -1277,8 +1283,11 @@ function applyInlineLink(href){return inlineFormattingTransaction(()=>{
   const parent=range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer,anchor=parent.closest('a');
   if(anchor===current.el){toast('Select the parent text layer to edit this link.','err');return false;}
   if(anchor&&current.el.contains(anchor)&&anchor.contains(range.endContainer)){
-    if(!plainInlineFormatting(anchor)){toast('Edit this source-owned link in its source.','err');return false;}
     if(href!==null&&href===anchor.getAttribute('href'))return true;
+    if(!plainInlineFormatting(anchor)){
+      if(href!==null&&editableLinkURL(anchor)){anchor.setAttribute('href',href);anchor.__rtLinkHref=href;range.selectNodeContents(anchor);selection.removeAllRanges();selection.addRange(range);return true;}
+      toast('Edit this source-owned link in its source.','err');return false;
+    }
     if(range.collapsed)range.selectNodeContents(anchor);
     range=splitInlineFormatting(anchor,range,'a','a');if(!range)return false;
     selection.removeAllRanges();selection.addRange(range);

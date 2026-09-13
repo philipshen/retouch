@@ -272,13 +272,15 @@ function planOp(resolved, op) {
           if (!kept) {
             throw refuseError('A kept element is not a descendant of the target in source; the edit cannot be mapped.');
           }
-          if (!c.children) return source.slice(kept.start, kept.end);
+          const hrefEdit=Object.hasOwn(c,'href'),keptElement={node:kept};
+          if(hrefEdit&&!require('./link-source.cjs').literalHref(resolved,keptElement,'react'))throw refuseError('This link URL is controlled by its source.');
+          if (!c.children) return hrefEdit?require('./link-source.cjs').patch(resolved,keptElement,'react',c.href):source.slice(kept.start, kept.end);
           if(tagOf(kept)==='a'&&hasLink(c.children))throw refuseError('Text links cannot be nested.');
           if (!childrenAreMappable(kept)) {
             throw refuseError('A styled child whose text was edited contains expressions; it cannot be edited deterministically.');
           }
           return (
-            source.slice(kept.start, kept.openingElement.end) +
+            (hrefEdit?require('./link-source.cjs').patch(resolved,keptElement,'react',c.href,true):source.slice(kept.start, kept.openingElement.end)) +
             build(c.children) +
             source.slice(kept.closingElement.start, kept.end)
           );
