@@ -899,12 +899,14 @@
       // other font properties. Scope wrapping is handled by the shell afterward.
       const styled=[...el.classList].some(t=>names.includes(t));
       const change=(match,value)=>save(replaceTypography(info.className,match,styled?'!'+value:value));
+      const resetProperty=(label,match)=>{const reset=button(label,()=>save(replaceTypography(info.className,match,'')));try{reset.disabled=replaceTypography(info.className,match,'')===info.className;}catch{reset.disabled=true;}sec.append(reset);};
       fontPicker(sec,d,css.fontFamily,value=>{const token=fontFamilyClass(value);if(token)change(fontFamilyToken,token);});
       const resetFamily=button('Reset font family',()=>save(replace(info.className,fontFamilyToken,'')));resetFamily.disabled=!tokens(info.className).map(base).some(t=>t&&fontFamilyToken(t));sec.append(resetFamily);
       for(const [label,re,choices] of controls){const token=tokens(info.className).map(base).find(t=>re.test(t));select(sec,label,[['','Inherited / custom'],...choices],choices.some(([value])=>value===token)?token:'',value=>{if(value)change(re.test,value);});}
       numericPreview(number(sec,'Font weight (1–1000)',parseFloat(css.fontWeight),1,1000,v=>{const token=fontWeightClass(v);if(token)change(fontWeightToken,token);}),el,'font-weight',String);
       const resetWeight=button('Reset font weight',()=>save(replace(info.className,fontWeightToken,'')));resetWeight.disabled=!tokens(info.className).map(base).some(t=>t&&fontWeightToken(t));sec.append(resetWeight);
       numericPreview(number(sec,'Font size (px)',parseFloat(css.fontSize),1,1000,v=>change(fontSizeToken,`text-[${v}px]`)),el,'font-size');
+      resetProperty('Reset font size',fontSizeToken);
       const relativeLineHeight=relativeNumber(sec,'Line height (%)',parseFloat(css.lineHeight)/parseFloat(css.fontSize)*100,0,1000,v=>change(lineHeightToken,`[line-height:${Math.round(v*1e6)/1e8}]`));relativeLineHeight.title='Relative to this layer’s font size.';
       const lineHeight=number(sec,'Line height (px)',parseFloat(css.lineHeight),0,2000,v=>change(lineHeightToken,`leading-[${v}px]`));
       numericPreview(lineHeight,el,'line-height');numericPreview(relativeLineHeight,el,'line-height',value=>String(Math.round(value*1e6)/1e8));
@@ -913,16 +915,21 @@
       const resetLineHeight=button('Reset line height',()=>save(replaceTypography(info.className,lineHeightToken,'')));try{resetLineHeight.disabled=replaceTypography(info.className,lineHeightToken,'')===info.className;}catch{resetLineHeight.disabled=true;}sec.append(resetLineHeight);
       numericPreview(relativeNumber(sec,'Letter spacing (%)',(parseFloat(css.letterSpacing)||0)/parseFloat(css.fontSize)*100,-100,1000,v=>change(letterSpacingToken,`tracking-[${Math.round(v*1e6)/1e8}em]`)),el,'letter-spacing',value=>Math.round(value*1e6)/1e8+'em').title='Relative to this layer’s font size.';
       numericPreview(number(sec,'Letter spacing (px)',parseFloat(css.letterSpacing)||0,-100,100,v=>change(letterSpacingToken,`tracking-[${v}px]`)),el,'letter-spacing');
+      resetProperty('Reset letter spacing',letterSpacingToken);
       const indent=number(sec,'Paragraph indent (px)',/^-?[\d.]+px$/.test(css.textIndent)?parseFloat(css.textIndent):NaN,-10000,10000,v=>change(textIndentToken,`[text-indent:${v}px]`));
       if(!indent.value)indent.placeholder=css.textIndent;indent.title='Offsets the first line of each paragraph. Negative values create a hanging indent.';numericPreview(indent,el,'text-indent');
       const resetIndent=button('Reset paragraph indent',()=>save(replace(info.className,textIndentToken,'')));resetIndent.disabled=!tokens(info.className).map(base).some(t=>t&&textIndentToken(t));sec.append(resetIndent);
       wrapTypography(sec,css,value=>change(textWrapToken,`[text-wrap:${value}]`),()=>save(replace(info.className,textWrapToken,'')),tokens(info.className).map(base).some(t=>t&&textWrapToken(t)));
       truncationTypography(sec,css,value=>save(replace(info.className,truncationToken,'!line-clamp-'+(value===null?'none':value))),()=>save(replace(info.className,truncationToken,'')),tokens(info.className).map(base).some(t=>t&&truncationToken(t)));
       select(sec,'Text alignment',['left','center','right','justify','start','end'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.textAlign,v=>change(textAlignToken,'text-'+v)).dataset.textDirection=css.direction;
+      resetProperty('Reset text alignment',textAlignToken);
       select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(fontStyleToken,v==='italic'?'italic':'not-italic'));
+      resetProperty('Reset font style',fontStyleToken);
       select(sec,'Text decoration',[['none','None'],['underline','Underline'],['line-through','Strikethrough'],['overline','Overline']],css.textDecorationLine,v=>change(decorationToken,v==='none'?'no-underline':v));
+      resetProperty('Reset text decoration',decorationToken);
       underlineTypography(sec,css,(property,value)=>change(decorationMatchers[property],`[${property}:${value.replace(/ /g,'_')}]`),property=>save(replace(info.className,decorationMatchers[property],'')),property=>tokens(info.className).map(base).some(t=>t&&decorationMatchers[property](t)),el);
       select(sec,'Text case',[['none','As written'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']],css.textTransform,v=>change(caseToken,v==='none'?'normal-case':v));
+      resetProperty('Reset text case',caseToken);
       opticalTypography(sec,css,value=>change(opticalToken,`[font-optical-sizing:${value}]`),()=>save(replace(info.className,opticalToken,'')),tokens(info.className).map(base).some(t=>t&&opticalToken(t)));
       variationTypography(sec,css,value=>change(variationToken,`[font-variation-settings:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,variationToken,'')),tokens(info.className).map(base).some(t=>t&&variationToken(t)),el);
       fontPositionTypography(sec,css.fontVariantPosition,value=>change(fontPositionToken,`[font-variant-position:${value}]`),()=>save(replace(info.className,fontPositionToken,'')),tokens(info.className).map(base).some(t=>t&&fontPositionToken(t)));

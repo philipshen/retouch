@@ -101,8 +101,43 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    for(let next=start+step;next>=0&&next<buttons.length;next+=step){if(Math.abs(step)===1&&Math.floor(next/columns)!==Math.floor(start/columns))break;if(!buttons[next].disabled){buttons[next].focus();break;}}
   });
  }
+ function compactTypeSettings(body,section){
+  const targets={
+   'Reset font weight':['Font weight (1–1000)','Font weight (CSS)'],
+   'Reset font size':['Font size (px)','Font size (CSS)'],
+   'Reset line height':['Line height (px)','Line height (CSS)'],
+   'Reset letter spacing':['Letter spacing (px)','Letter spacing (CSS)'],
+   'Reset text alignment':['Text alignment','Text alignment (CSS)'],
+   'Reset text color':['Text color (CSS)'],
+   'Reset font style':['Font slant','Font style (CSS)'],
+   'Reset text decoration':['Text decoration','Text decoration (CSS)'],
+   'Reset text case':['Text case','Text case (CSS)'],
+   'Reset optical sizing':['Optical sizing'],
+   'Reset paragraph indent':['Paragraph indent (px)','Paragraph indent (CSS)']
+  };
+  for(const button of [...body.querySelectorAll(':scope > button')]){
+   const label=button.getAttribute('aria-label')||button.textContent,labels=targets[label];if(!labels)continue;
+   const control=labels.map(name=>section.querySelector('[aria-label="'+name+'"]')).find(Boolean),field=control?.closest('.inspector-field');if(!field)continue;
+   let row=field.closest('.property-row');if(!row){row=document.createElement('div');row.className='property-row';if(field.dataset.typeCategory)row.dataset.typeCategory=field.dataset.typeCategory;field.before(row);row.append(field);}
+   button.setAttribute('aria-label',label);button.title=label;button.textContent='↺';button.classList.add('property-reset');row.append(button);
+  }
+  for(const [labels,caption,names]of [
+   [['Font slant','Font style (CSS)'],'Style',{normal:'Normal',italic:'Italic',oblique:'Oblique'}],
+   [['Text decoration','Text decoration (CSS)'],'Decoration',{none:'None',underline:'Underline','line-through':'Strikethrough',overline:'Overline','underline line-through':'Underline + strikethrough'}],
+   [['Text case','Text case (CSS)'],'Case',{none:'As written',uppercase:'Uppercase',lowercase:'Lowercase',capitalize:'Capitalize'}]
+  ]){const control=labels.map(label=>body.querySelector('[aria-label="'+label+'"]')).find(Boolean);if(!control)continue;const label=control.closest('.inspector-field')?.querySelector(':scope > span');if(label)label.textContent=caption;for(const option of control.options||[])if(names[option.value])option.textContent=names[option.value];}
+  const fontSettings=disclosure('More font settings','type-font-settings');
+  for(const label of ['Font weight (1–1000)','Font weight (CSS)','Font family (CSS)','Font size','Font weight','HTML element']){
+   const control=body.querySelector('[aria-label="'+label+'"]'),field=control?.closest('.inspector-field'),row=field?.closest('.property-row')||field;if(row?.parentElement===body)fontSettings.append(row);
+  }
+  const automatic=[...body.querySelectorAll(':scope > button')].find(button=>button.textContent==='Automatic line height');
+  if(automatic){automatic.setAttribute('aria-label','Automatic line height');automatic.textContent='Auto';automatic.title='Automatic line height';fontSettings.append(automatic);}
+  const resetAll=[...body.querySelectorAll(':scope > button')].find(button=>button.textContent==='Reset text overrides');if(resetAll)fontSettings.append(resetAll);
+  if(fontSettings.children.length>1)body.append(fontSettings);
+ }
  function typeSettingsTabs(settings,section){
-  const body=settings.querySelector('.stroke-settings-body'),children=[...body.children].filter(el=>el.tagName!=='HEADER');
+  const body=settings.querySelector('.stroke-settings-body');compactTypeSettings(body,section);
+  const children=[...body.children].filter(el=>el.tagName!=='HEADER');
   const tabs=document.createElement('div');tabs.className='type-settings-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Type settings categories');
   const preview=section.querySelector('.type-preview'),groups=new Map();
   const samples={'Number position':'123 abc','Capital forms':'Aa Bb Cc Abc','Number width':'111111 · 888888','Number style':'0123456789','Fractions':'1/2 1/3 3/4','Ordinals':'1st 2nd 3rd','Zero style':'0 O 00 OO','Common ligatures':'fi fl ffi ffl','Rare ligatures':'st ct','Historical ligatures':'st ct tz','Contextual alternates':'affinity office'};
@@ -139,7 +174,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     weightRow.before(cell);cell.append(select);settings.querySelector(':scope > summary').after(weightRow);
     root.RetouchNumericExpression.calculation(weight);root.RetouchInspector.fieldDraft(weight);
     select.onchange=()=>{
-     if(select.value==='custom'){select.value=current;weight.closest('[role=tabpanel]')?.retouchReveal?.();if(settings.retouchOpen)settings.retouchOpen();else settings.open=true;weight.focus();weight.select();return;}
+     if(select.value==='custom'){select.value=current;weight.closest('[role=tabpanel]')?.retouchReveal?.();if(settings.retouchOpen)settings.retouchOpen();else settings.open=true;for(let parent=weight.parentElement;parent&&parent!==settings;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;weight.focus();weight.select();return;}
      weight.value=select.value;weight.dispatchEvent(new Event('change',{bubbles:true}));
     };
    }

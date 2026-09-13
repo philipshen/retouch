@@ -1971,7 +1971,7 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
   if(process.env.RT_E2E_FONT_POSITION)await require('./font-position.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_CAPS)await require('./capital-forms.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_LIGATURES)await require('./ligatures.cjs')({page,app,kind,read,wait,settled});
-  if(process.env.RT_E2E_TYPE_SETTINGS_POPOVER)await require('./type-settings-popover.cjs')({page,read,wait,settled});
+  if(process.env.RT_E2E_TYPE_SETTINGS_POPOVER)await require('./type-settings-popover.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_WEIGHT_STYLE)await require('./font-weight-style.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_SHARED_TYPE_CALCULATIONS)await require('./shared-typography-calculations.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_TYPOGRAPHY_CALCULATIONS)await require('./typography-calculations.cjs')({page,app,kind,read,wait,settled});

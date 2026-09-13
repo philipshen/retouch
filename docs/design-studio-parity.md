@@ -14682,3 +14682,33 @@ to a fixed text-box height. Per-paragraph/range truncation, arbitrary complex
 inline layout, saved truncation styles and full Figma text-layout parity remain
 open. Existing desktop candidate 015bffb predates this change; no new native
 launch or desktop rebuild was attempted for it.
+
+### Compact Type settings and consistent resets (2026-09-13)
+
+The light Type settings popup places reset icons beside their fields instead of
+stacking full-width reset buttons. Primary size, line height, letter spacing
+and alignment resets stay beside the primary controls. Duplicate font presets,
+the raw font-family field, numeric weight, HTML element choice, automatic line
+height action and global override reset remain available in More font settings.
+Custom weight opens that disclosure and focuses the numeric field; action-search
+reveal continues to open the appropriate tab and disclosure. Style, Decoration
+and Case now use consistent captions and readable option labels across adapters.
+
+React/Liquid now also expose dedicated size, letter-spacing, alignment, slant,
+decoration and case resets, matching the existing HTML controls. Size reset uses
+the existing coupled size/leading expansion so it retains a line-height setting.
+All resets operate within the selected screen scope and retain exact history.
+
+The expanded `RT_E2E_TYPE_SETTINGS_POPOVER=1` workflow checks field-level edits
+and resets for size, spacing, slant, decoration, case and alignment, followed by
+exact source Undo. It also checks compact organization, primary controls staying
+visible, tabs and keyboard navigation, field-specific preview samples, Custom
+weight and action-search focus, outside/Escape dismissal, sticky close controls,
+and scrolling at a 280px window height. HTML/React/Liquid Chromium and HTML WebKit
+26.0 runs are recorded in `/private/tmp/retouch-type-resets-{html,react,liquid,webkit}.log`.
+Earlier runs combined custom fractional-weight editing and responsive resets
+with the popup checks in `/private/tmp/retouch-type-compact-final-{html,react,liquid,webkit}.log`.
+The HTML regular-window screenshot was visually inspected. All 1,214 unit tests
+passed (`/private/tmp/retouch-type-compact-units.log`). The desktop candidate
+predates these changes; full Figma UI/design parity and arbitrary-site support
+remain incomplete.
