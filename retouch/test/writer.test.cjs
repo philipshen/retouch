@@ -318,3 +318,9 @@ test('rich edits retain attributed children at both exact JSX content boundaries
  const result=writer.applyOp(resolved,{type:'setChildren',fileHash:resolved.hash,children:[{t:'keep',id:first,children:[{t:'text',value:'changed first'}]},{t:'keep',id:last,children:[{t:'text',value:'changed last'}]}]});
  assert.ok(result.ok,JSON.stringify(result));assert.equal(read(root,'Boundary.tsx'),`export const Text=()=> <p><sup id="first" data-note="keep">changed first</sup><sub id="last" className="authored">changed last</sub></p>`);
 });
+
+test('plain formatting proof admits bare line breaks but preserves attributed break ownership',()=>{
+ fs.writeFileSync(path.join(root,'DecoratedBreak.tsx'),`export const Text=()=> <p><u>a<br />b</u><s>a<br className="authored" />b</s></p>`);
+ index.scanAll();const {resolved}=pick(index,root,'DecoratedBreak.tsx','p'),ids=writer.describeElement(resolved).plainFormattingIds;
+ assert.ok(ids.includes(pick(index,root,'DecoratedBreak.tsx','u').el.id));assert.ok(!ids.includes(pick(index,root,'DecoratedBreak.tsx','s').el.id));
+});

@@ -1231,3 +1231,26 @@ local/source undo/redo, and the explicit script-position boundary. HTML/Liquid
 multiline-paste and cursor-script regressions, including ownership-change
 rollback, passed in `retouch-owned-script-regression-{html,liquid}.log` under
 `/private/tmp`.
+### Underline and strikethrough while editing text (2026-09-13)
+
+The typography inspector now exposes underline and strikethrough for selected
+text and text typed at the cursor. Cmd/Ctrl+U toggles underline. Cursor choices
+remain pending until text is inserted, and each decoration can be switched off
+independently while retaining other typography. Plain-text multiline paste and
+local undo/redo retain these choices; saved edits use exact source undo/redo.
+
+Splitting a plain formatting run now preserves bare line breaks. React's source
+proof admits bare JSX breaks while keeping attributed breaks protected. These
+controls manage semantic underline/strike wrappers; overriding arbitrary
+inherited CSS decorations or reconstructing attributed wrappers remains outside
+their supported scope.
+
+Validation: 1,195 unit tests passed in
+`/private/tmp/retouch-decorations-final-units.log`. HTML/React Chromium 145 and
+Liquid WebKit 26 browser checks passed in
+`/private/tmp/retouch-decorations-{html,react,liquid}.log`, including independent
+toggles, retained color, multiline splits and local/source history. React and
+Liquid also passed multiline-paste and cursor-script regressions. The six-button
+inspector layout was visually inspected in `/private/tmp/retouch-decorations.png`.
+The existing desktop archive predates this work; full Figma parity remains
+unfinished.

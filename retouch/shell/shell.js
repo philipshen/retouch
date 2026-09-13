@@ -324,9 +324,9 @@ function hookFrame(d, w) {
       if(e.isComposing)return;
       if(e.key==='Enter'&&e.shiftKey){e.preventDefault();insertInlineBreak();return;}
       if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&caretHistoryStep(e.shiftKey)){e.preventDefault();return;}
-      if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'i')) {
+      if ((e.metaKey || e.ctrlKey) && ['b','i','u'].includes(e.key.toLowerCase())) {
         e.preventDefault(); // never let the browser's own rich-edit commands run (R-5)
-        toggleWrap(e.key === 'b' ? 'strong' : 'em');
+        toggleWrap(e.key.toLowerCase()==='b'?'strong':e.key.toLowerCase()==='i'?'em':'u');
         return;
       }
       if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
@@ -894,9 +894,9 @@ function caretDraft(){
   if(!editing||!range||!sameCaret(range,editing.caretStyle?.range)||!editing.el.contains(range.startContainer))return null;
   const parent=range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer;
   if(parent.closest('[contenteditable="false"]'))return null;
-  return {current:editing,selection,range,properties:{...editing.caretStyle.properties},script:editing.caretStyle.script};
+  return {current:editing,selection,range,properties:{...editing.caretStyle.properties},script:editing.caretStyle.script,decorations:{...editing.caretStyle.decorations}};
 }
-function styleInsertedText(current,start,end,properties,script){
+function styleInsertedText(current,start,end,properties,script,decorations={}){
   if(editing!==current||!current.el.isConnected)return;
   const d=current.el.ownerDocument,range=inlineRangeAt(current.el,start,end),selection=d.getSelection();if(!range)return;
   selection.removeAllRanges();selection.addRange(range);
@@ -913,8 +913,9 @@ function styleInsertedText(current,start,end,properties,script){
       if(desired&&desired!=='normal')toggleWrap(desired);
     }
   }
+  if(start!==end)for(const [tag,enabled]of Object.entries(decorations)){const active=inlineRangeAt(current.el,start,end);if(!active){current.caretStyle=null;return;}selection.removeAllRanges();selection.addRange(active);const parent=active.startContainer.nodeType===3?active.startContainer.parentElement:active.startContainer,ancestor=parent.closest(tag);if((enabled&&!ancestor||!enabled&&ancestor)&&!toggleWrap(tag)){current.caretStyle=null;return;}}
   const caret=selection.getRangeAt(0).cloneRange();caret.collapse(false);selection.removeAllRanges();selection.addRange(caret);
-  current.caretStyle={properties,script,range:caret.cloneRange()};
+  current.caretStyle={properties,script,decorations,range:caret.cloneRange()};
   d.dispatchEvent(new Event('selectionchange'));
 }
 // Keep the actual nodes (and their source evidence) so restoring a local
@@ -923,7 +924,7 @@ const caretMetadataNames=['__rtCaretPlaceholder','__rtKeep','__rtRangeStyle','__
 function captureCaretEdit(current){
   const d=current.el.ownerDocument,selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
   const capture=node=>({node,text:typeof node.data==='string'?node.data:null,attributes:node.nodeType===1?[...node.attributes].map(a=>[a.name,a.value]):null,metadata:Object.fromEntries(caretMetadataNames.filter(key=>Object.hasOwn(node,key)).map(key=>[key,structuredClone(node[key])])),children:[...node.childNodes].map(capture)});
-  return {html:current.el.innerHTML,nodes:[...current.el.childNodes].map(capture),range:range?{start:range.startContainer,from:range.startOffset,end:range.endContainer,to:range.endOffset}:null,properties:current.caretStyle?{...current.caretStyle.properties}:null,script:current.caretStyle?.script};
+  return {html:current.el.innerHTML,nodes:[...current.el.childNodes].map(capture),range:range?{start:range.startContainer,from:range.startOffset,end:range.endContainer,to:range.endOffset}:null,properties:current.caretStyle?{...current.caretStyle.properties}:null,script:current.caretStyle?.script,decorations:{...current.caretStyle?.decorations}};
 }
 function recordCaretEdit(current,before){
   if(current.caretHistoryBatch)return;
@@ -942,7 +943,7 @@ function restoreCaretEdit(current,target){
   const restore=state=>{const node=state.node;if(state.text!==null)node.data=state.text;else{if(state.attributes){for(const a of [...node.attributes])node.removeAttribute(a.name);for(const [name,value]of state.attributes)node.setAttribute(name,value);}node.replaceChildren(...state.children.map(restore));}for(const key of caretMetadataNames)delete node[key];Object.assign(node,structuredClone(state.metadata));return node;};
   current.el.replaceChildren(...target.nodes.map(restore));
   const d=current.el.ownerDocument,selection=d.getSelection(),range=d.createRange();if(target.range){range.setStart(target.range.start,target.range.from);range.setEnd(target.range.end,target.range.to);}else{range.selectNodeContents(current.el);range.collapse(false);}
-  selection.removeAllRanges();selection.addRange(range);current.caretStyle=target.properties?{properties:{...target.properties},script:target.script,range:range.cloneRange()}:null;
+  selection.removeAllRanges();selection.addRange(range);current.caretStyle=target.properties?{properties:{...target.properties},script:target.script,decorations:{...target.decorations},range:range.cloneRange()}:null;
   d.dispatchEvent(new Event('selectionchange'));
 }
 function caretPlaceholders(current){return [...current.el.querySelectorAll('br')].filter(node=>node.__rtCaretPlaceholder);}
@@ -957,14 +958,14 @@ function insertInlineBreak(){
   if(current?.info.canSetChildren===false){toast('This text source cannot preserve line breaks.','err');return;}
   if(!current||!range||!current.el.contains(range.startContainer)||!current.el.contains(range.endContainer))return;
   if([...current.el.querySelectorAll('[contenteditable="false"]')].some(node=>range.intersectsNode(node))){toast('This selection includes source-owned text.','err');return;}
-  const before=current.caretHistoryBatch?null:captureCaretEdit(current),draft=caretDraft(),properties=draft?.properties||{},script=draft?.script;
+  const before=current.caretHistoryBatch?null:captureCaretEdit(current),draft=caretDraft(),properties=draft?.properties||{},script=draft?.script,decorations=draft?.decorations||{};
   removeCaretPlaceholders(current);range.deleteContents();
   const br=d.createElement('br'),text=d.createTextNode(''),fragment=d.createDocumentFragment();fragment.append(br,text);range.insertNode(fragment);
   // A trailing layout-only BR lets browsers draw the cursor on the empty line.
   // It is excluded from source and removed when actual text is inserted.
   if(!hasInlineContentAfter(text,current.el)){const placeholder=d.createElement('br');placeholder.__rtCaretPlaceholder=true;text.after(placeholder);}
   const caret=d.createRange();caret.setStart(text,0);caret.collapse(true);selection.removeAllRanges();selection.addRange(caret);
-  current.caretStyle={properties,script,range:caret.cloneRange()};recordCaretEdit(current,before);d.dispatchEvent(new Event('selectionchange'));
+  current.caretStyle={properties,script,decorations,range:caret.cloneRange()};recordCaretEdit(current,before);d.dispatchEvent(new Event('selectionchange'));
 }
 
 function pasteInlineText(value){
@@ -974,11 +975,11 @@ function pasteInlineText(value){
   if(current.caretComposition)return;
   if(text.includes('\n')&&current.info.canSetChildren===false){toast('This text source cannot preserve line breaks.','err');return;}
   if([...current.el.querySelectorAll('[contenteditable="false"]')].some(node=>range.intersectsNode(node))){toast('This selection includes source-owned text.','err');return;}
-  const before=captureCaretEdit(current),draft=caretDraft(),properties=draft?.properties||{},script=draft?.script;
+  const before=captureCaretEdit(current),draft=caretDraft(),properties=draft?.properties||{},script=draft?.script,decorations=draft?.decorations||{};
   current.caretHistoryBatch=true;
   try{
     removeCaretPlaceholders(current);range.deleteContents();range.collapse(true);selection.removeAllRanges();selection.addRange(range);
-    current.caretStyle={properties,script,range:range.cloneRange()};
+    current.caretStyle={properties,script,decorations,range:range.cloneRange()};
     const lines=text.split('\n');
     for(let index=0;index<lines.length;index++){
       if(index)insertInlineBreak();
@@ -992,35 +993,35 @@ function pasteInlineText(value){
 function insertCaretText(text){
   const draft=caretDraft();if(!draft||editing.caretComposition)return false;
   if(!text)return true;
-  const {current,selection,range,properties,script}=draft,before=current.caretHistoryBatch?null:captureCaretEdit(current),d=current.el.ownerDocument,prefix=d.createRange();prefix.selectNodeContents(current.el);prefix.setEnd(range.startContainer,range.startOffset);const start=prefix.toString().length;
+  const {current,selection,range,properties,script,decorations}=draft,before=current.caretHistoryBatch?null:captureCaretEdit(current),d=current.el.ownerDocument,prefix=d.createRange();prefix.selectNodeContents(current.el);prefix.setEnd(range.startContainer,range.startOffset);const start=prefix.toString().length;
   removeCaretPlaceholders(current);
   // Retain a plain source run's node identity so its existing styles can split
   // around the inserted text through the same proven range-editing path.
   if(range.startContainer.nodeType===3)range.startContainer.insertData(range.startOffset,text);
   else {const node=d.createTextNode(text);range.insertNode(node);}
-  styleInsertedText(current,start,start+text.length,properties,script);recordCaretEdit(current,before);return true;
+  styleInsertedText(current,start,start+text.length,properties,script,decorations);recordCaretEdit(current,before);return true;
 }
 function beginCaretComposition(){
   const draft=caretDraft();if(!draft)return;
-  const {current,range,properties,script}=draft,prefix=current.el.ownerDocument.createRange();prefix.selectNodeContents(current.el);prefix.setEnd(range.startContainer,range.startOffset);
+  const {current,range,properties,script,decorations}=draft,prefix=current.el.ownerDocument.createRange();prefix.selectNodeContents(current.el);prefix.setEnd(range.startContainer,range.startOffset);
   const start=prefix.toString().length,text=current.el.textContent;
-  current.caretComposition={start,before:text.slice(0,start),after:text.slice(start),properties,script,snapshot:captureCaretEdit(current)};
+  current.caretComposition={start,before:text.slice(0,start),after:text.slice(start),properties,script,decorations,snapshot:captureCaretEdit(current)};
 }
 function finishCaretComposition(){
   const current=editing,composition=current?.caretComposition;if(!composition)return;
   requestAnimationFrame(()=>{
     if(editing!==current||current.caretComposition!==composition)return;
     current.caretComposition=null;
-    const text=current.el.textContent,{start,before,after,properties,script}=composition;
+    const text=current.el.textContent,{start,before,after,properties,script,decorations}=composition;
     if(!text.startsWith(before)||!text.endsWith(after)||text.length<before.length+after.length){current.caretStyle=null;return;}
-    styleInsertedText(current,start,text.length-after.length,properties,script);if(text.length>before.length+after.length)recordCaretEdit(current,composition.snapshot);
+    styleInsertedText(current,start,text.length-after.length,properties,script,decorations);if(text.length>before.length+after.length)recordCaretEdit(current,composition.snapshot);
   });
 }
 
 function showInlineFormatToolbar(){
   inlineFormatCleanup();if(!editing||editing.info.canSetChildren===false)return;
   const d=doc(),bar=document.createElement('div');bar.className='inline-format-toolbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Selected text formatting');
-  for(const [tag,label,text]of [['strong','Bold selected text','B'],['em','Italic selected text','I'],['sup','Superscript selected text','x²'],['sub','Subscript selected text','x₂']]){const button=document.createElement('button');button.type='button';button.textContent=text;button.setAttribute('aria-label',label);button.title=label;button.onpointerdown=event=>event.preventDefault();button.onclick=()=>{toggleWrap(tag);update();};bar.append(button);}
+  for(const [tag,label,text]of [['strong','Bold selected text','B'],['em','Italic selected text','I'],['u','Underline selected text','U'],['s','Strikethrough selected text','S'],['sup','Superscript selected text','x²'],['sub','Subscript selected text','x₂']]){const button=document.createElement('button');button.type='button';button.textContent=text;button.dataset.formatTag=tag;if(tag==='u'||tag==='s')button.style.textDecoration=tag==='u'?'underline':'line-through';button.setAttribute('aria-label',label);button.title=label;button.onpointerdown=event=>event.preventDefault();button.onclick=()=>{toggleWrap(tag);update();};bar.append(button);}
   let savedRange=null;const fields=[];
   for(const [property,label,options] of [['font-weight','Selected text weight',[['100','Thin'],['200','Extra light'],['300','Light'],['400','Regular'],['500','Medium'],['600','Semibold'],['700','Bold'],['800','Extra bold'],['900','Black'],['custom','Custom…']]],['font-style','Selected text style',[['normal','Upright'],['italic','Italic']]],['text-transform','Selected text case',[['none','As typed'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']]],['font-variant-caps','Selected text caps',[['normal','Normal'],['small-caps','Small caps'],['all-small-caps','All small caps']]]]){
     const field=document.createElement('select');field.setAttribute('aria-label',label);field.title=label;
@@ -1106,7 +1107,7 @@ function showInlineFormatToolbar(){
     for(const control of bar.querySelectorAll('button,input,select'))if(!control.dataset.rangeAlwaysEnabled)control.disabled=!valid;
     selectionNote.textContent=valid?(range.collapsed?'Text you type next':'Selected text'):'Select text to format';
     if(valid&&!editing.caretComposition&&editing.caretStyle&&!sameCaret(range,editing.caretStyle.range))editing.caretStyle=null;
-    for(const button of commands.querySelectorAll('button')){button.disabled=!valid;const tag=button.getAttribute('aria-label')==='Superscript selected text'?'sup':button.getAttribute('aria-label')==='Subscript selected text'?'sub':null;if(tag){const parent=valid?(range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer):null;const ancestor=parent?.closest('sup,sub'),inherited=ancestor?.contains(range?.endContainer)?ancestor.tagName.toLowerCase():null;const active=valid?(range.collapsed?(editing.caretStyle?.script??inherited):inherited):null;button.setAttribute('aria-pressed',String(active===tag));}}
+    for(const button of commands.querySelectorAll('button')){button.disabled=!valid;const tag=['sup','sub','u','s'].includes(button.dataset.formatTag)?button.dataset.formatTag:null;if(tag){const parent=valid?(range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer):null;const decoration=tag==='u'||tag==='s',ancestor=parent?.closest(decoration?tag:'sup,sub'),inherited=ancestor?.contains(range?.endContainer)?ancestor.tagName.toLowerCase():null;const active=valid?(range.collapsed?(decoration?(editing.caretStyle?.decorations?.[tag]??!!inherited):((editing.caretStyle?.script??inherited)===tag)):inherited===tag):false;button.setAttribute('aria-pressed',String(active));}}
     if(!valid)return;savedRange=range.cloneRange();
     colorField.retouchPaintScopeLabel=(range.collapsed?'Text you type next':'Selected text')+' · Applies across all screen sizes.';
     const values=new Map(fields.map(({property})=>[property,new Set()])),walker=d.createTreeWalker(editing.el,NodeFilter.SHOW_TEXT);
@@ -1210,6 +1211,7 @@ function plainInlineFormatting(node){
   if(node.nodeType===3)return true;if(node.nodeType!==1||node.getAttribute('data-rt-i'))return false;
   const stamps=['data-rt','data-rt-keep','data-rt-revision','data-rt-client-revision','data-rt-client-mounted','data-rt-section','data-rt-block','data-rt-block-type','data-rt-template','data-rt-locale'];
   const id=node.getAttribute('data-rt'),span=node.tagName==='SPAN';
+  if(node.tagName==='BR')return !node.childNodes.length&&[...node.attributes].every(attribute=>stamps.includes(attribute.name))&&(!id||!editing.info.plainFormattingIds||editing.info.plainFormattingIds.includes(id));
   if(span){if(!node.__rtRangeStyle&&!editing.info.rangeStyleIds?.[id])return false;if(!RetouchRangeStyles.validProperties(Object.fromEntries([...node.style].map(name=>[name,node.style.getPropertyValue(name)]))))return false;}
   else if(!/^(STRONG|B|EM|I|U|S|SUP|SUB)$/.test(node.tagName)||id&&editing.info.plainFormattingIds&&!editing.info.plainFormattingIds.includes(id))return false;
   return [...node.attributes].every(attribute=>stamps.includes(attribute.name)||span&&attribute.name==='style')&&[...node.childNodes].every(plainInlineFormatting);
@@ -1229,7 +1231,7 @@ function toggleWrap(tag) {
   if (!s || !s.rangeCount) return;
   const r = s.getRangeAt(0);
   if (!editing.el.contains(r.startContainer)||!editing.el.contains(r.endContainer)) return;
-  if(r.collapsed){if(tag==='sup'||tag==='sub'){const parent=r.startContainer.nodeType===3?r.startContainer.parentElement:r.startContainer,ancestor=parent.closest('sup,sub');if(ancestor===editing.el){toast('Select the parent text layer to change this script position.','err');return;}if(ancestor&&!plainInlineFormatting(ancestor)){toast('Edit this source-owned formatting in its source.','err');return;}if(!sameCaret(r,editing.caretStyle?.range))editing.caretStyle={properties:{},range:r.cloneRange()};const current=editing.caretStyle.script??(ancestor&&ancestor!==editing.el?ancestor.tagName.toLowerCase():'normal');editing.caretStyle.script=current===tag?'normal':tag;d.dispatchEvent(new Event('selectionchange'));return;}const property=tag==='strong'?'font-weight':tag==='em'?'font-style':null;if(!property)return;const parent=r.startContainer.nodeType===3?r.startContainer.parentElement:r.startContainer,value=editing.caretStyle?.properties[property]||d.defaultView.getComputedStyle(parent).getPropertyValue(property);applyTextRangeStyle(property,tag==='strong'?(parseFloat(value)>=600?'400':'700'):(value==='italic'?'normal':'italic'));d.dispatchEvent(new Event('selectionchange'));return;}
+  if(r.collapsed){if(tag==='u'||tag==='s'){const parent=r.startContainer.nodeType===3?r.startContainer.parentElement:r.startContainer,ancestor=parent.closest(tag);if(ancestor===editing.el||ancestor&&!plainInlineFormatting(ancestor)){toast('Select the parent text layer or edit this source-owned formatting in source.','err');return;}if(!sameCaret(r,editing.caretStyle?.range))editing.caretStyle={properties:{},range:r.cloneRange()};const decorations=editing.caretStyle.decorations||={};decorations[tag]=!(decorations[tag]??!!ancestor);d.dispatchEvent(new Event('selectionchange'));return;}if(tag==='sup'||tag==='sub'){const parent=r.startContainer.nodeType===3?r.startContainer.parentElement:r.startContainer,ancestor=parent.closest('sup,sub');if(ancestor===editing.el){toast('Select the parent text layer to change this script position.','err');return;}if(ancestor&&!plainInlineFormatting(ancestor)){toast('Edit this source-owned formatting in its source.','err');return;}if(!sameCaret(r,editing.caretStyle?.range))editing.caretStyle={properties:{},range:r.cloneRange()};const current=editing.caretStyle.script??(ancestor&&ancestor!==editing.el?ancestor.tagName.toLowerCase():'normal');editing.caretStyle.script=current===tag?'normal':tag;d.dispatchEvent(new Event('selectionchange'));return;}const property=tag==='strong'?'font-weight':tag==='em'?'font-style':null;if(!property)return;const parent=r.startContainer.nodeType===3?r.startContainer.parentElement:r.startContainer,value=editing.caretStyle?.properties[property]||d.defaultView.getComputedStyle(parent).getPropertyValue(property);applyTextRangeStyle(property,tag==='strong'?(parseFloat(value)>=600?'400':'700'):(value==='italic'?'normal':'italic'));d.dispatchEvent(new Event('selectionchange'));return;}
   // Split only the selected portion when toggling existing formatting.
   const cac = r.commonAncestorContainer;
   const start = cac.nodeType === 1 ? cac : cac.parentElement;
@@ -1246,9 +1248,10 @@ function toggleWrap(tag) {
       const slice=(from,to,remove)=>{
         let offset=0;
         const visit=node=>{
+          if(node.tagName==='BR')return offset>=from&&(offset<to||offset===total&&to===total)?d.createElement('br'):d.createDocumentFragment();
           if(node.nodeType===3){const start=offset;offset+=node.textContent.length;return d.createTextNode(node.textContent.slice(Math.max(0,from-start),Math.max(0,Math.min(to,offset)-start)));}
           const result=remove&&node.matches(selector)?d.createDocumentFragment():cloneInlineFormatting(node);
-          for(const child of node.childNodes){const next=visit(child);if(next.textContent)result.append(next);}
+          for(const child of node.childNodes){const next=visit(child);if(next.textContent||next.tagName==='BR'||next.querySelector?.('br'))result.append(next);}
           return result;
         };
         return visit(previous);
