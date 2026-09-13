@@ -889,9 +889,9 @@ function showInlineFormatToolbar(){
   const d=doc(),bar=document.createElement('div');bar.className='inline-format-toolbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Selected text formatting');
   for(const [tag,label,text]of [['strong','Bold selected text','B'],['em','Italic selected text','I'],['sup','Superscript selected text','x²'],['sub','Subscript selected text','x₂']]){const button=document.createElement('button');button.type='button';button.textContent=text;button.setAttribute('aria-label',label);button.title=label;button.onpointerdown=event=>event.preventDefault();button.onclick=()=>{toggleWrap(tag);update();};bar.append(button);}
   let savedRange=null;const fields=[];
-  for(const [property,label,options] of [['font-weight','Selected text weight',[['100','Thin'],['200','Extra light'],['300','Light'],['400','Regular'],['500','Medium'],['600','Semibold'],['700','Bold'],['800','Extra bold'],['900','Black'],['custom','Custom…']]],['font-style','Selected text style',[['normal','Upright'],['italic','Italic']]]]){
+  for(const [property,label,options] of [['font-weight','Selected text weight',[['100','Thin'],['200','Extra light'],['300','Light'],['400','Regular'],['500','Medium'],['600','Semibold'],['700','Bold'],['800','Extra bold'],['900','Black'],['custom','Custom…']]],['font-style','Selected text style',[['normal','Upright'],['italic','Italic']]],['text-transform','Selected text case',[['none','As typed'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']]],['font-variant-caps','Selected text caps',[['normal','Normal'],['small-caps','Small caps'],['all-small-caps','All small caps']]]]){
     const field=document.createElement('select');field.setAttribute('aria-label',label);field.title=label;
-    field.append(new Option(property==='font-weight'?'Weight':'Style',''));field.options[0].disabled=true;
+    field.append(new Option(property==='font-weight'?'Weight':'Mixed',''));field.options[0].disabled=true;
     for(const [value,label]of options)field.append(new Option(label,value));
     field.onchange=()=>{if(property==='font-weight'&&field.value==='custom'){const custom=bar.querySelector('[aria-label="Selected text custom weight"]');custom.hidden=false;custom.focus();custom.select();return;}if(savedRange&&editing){const selection=d.getSelection();selection.removeAllRanges();selection.addRange(savedRange.cloneRange());applyTextRangeStyle(property,field.value);update();}};
     fields.push({field,property});bar.append(field);
@@ -995,7 +995,7 @@ function showInlineFormatToolbar(){
   const weight=fields.find(item=>item.property==='font-weight'&&item.field.tagName==='SELECT').field,style=fields.find(item=>item.property==='font-style').field,size=fields.find(item=>item.property==='font-size').field;
   const colorControls=document.createElement('div');colorControls.className='range-color-controls';colorControls.append(swatch,colorField);
   const scopeNote=document.createElement('small');scopeNote.className='range-scope-note';scopeNote.textContent='Applies across all screen sizes.';
-  bar.replaceChildren(header,row('Font',[familyButton],'range-family-field'),row('Weight',[weight,customWeight]),row('Size',[size]),row('Line height',[spacingFields['line-height']]),row('Letter spacing',[spacingFields['letter-spacing']]),row('Style',[style]),row('Color',[colorControls]),commands,scopeNote);
+  bar.replaceChildren(header,row('Font',[familyButton],'range-family-field'),row('Weight',[weight,customWeight]),row('Size',[size]),row('Line height',[spacingFields['line-height']]),row('Letter spacing',[spacingFields['letter-spacing']]),row('Style',[style]),row('Color',[colorControls]),row('Case',[fields.find(item=>item.property==='text-transform').field]),row('Caps',[fields.find(item=>item.property==='font-variant-caps').field]),commands,scopeNote);
   const mount=()=>{
     const docked=!!section?.isConnected&&!panel.hidden,focused=bar.contains(document.activeElement)?document.activeElement:null;
     bar.classList.toggle('range-inspector',docked);if(section)section.toggleAttribute('data-range-editing',docked);

@@ -29,3 +29,10 @@ test('range spacing distinguishes pixels, percentages and line-height multiplier
  for(const [property,value]of [['line-height','-1px'],['line-height','var(--height)'],['letter-spacing','1.2x'],['letter-spacing','1px;color:red'],['line-height','Infinity']])assert.throws(()=>values.spacingValue(property,value));
  assert.equal(values.validProperties({'line-height':'150%','letter-spacing':'-0.01em'}),true);
 });
+
+test('range case and caps accept explicit CSS choices without contextual declarations',()=>{
+ for(const value of ['none','uppercase','lowercase','capitalize'])assert.equal(values.valid('text-transform',value),true);
+ for(const value of ['normal','small-caps','all-small-caps'])assert.equal(values.valid('font-variant-caps',value),true);
+ for(const property of ['text-transform','font-variant-caps'])for(const value of ['inherit','initial','var(--case)','uppercase;color:red',''])assert.equal(values.valid(property,value),false);
+ assert.equal(values.camel('text-transform'),'textTransform');assert.equal(values.camel('font-variant-caps'),'fontVariantCaps');
+});

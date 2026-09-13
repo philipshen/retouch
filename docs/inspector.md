@@ -1017,3 +1017,33 @@ undo/redo. Additional checks covered inspector docking (HTML), combined range
 styles (React), and color-picker previews (Liquid). Logs are
 `/private/tmp/retouch-push-{units,html,react,liquid}.log`; the inspected light-theme
 capture is `/private/tmp/retouch-push-spacing.png`.
+
+### Selected-text case and small caps (2026-09-13)
+
+The selected-text Typography inspector now includes Case (As typed, Uppercase,
+Lowercase, Capitalize) and Caps (Normal, Small caps, All small caps). The reference
+is Figma's [non-destructive letter-case controls](https://help.figma.com/hc/en-us/articles/360039956634-Explore-text-properties).
+Case and caps compose with the existing range styles and preserve the original
+text nodes in source. Choosing As typed resets the CSS transformation; Normal
+resets the caps variant. Selection changes show the saved values, or Mixed when
+the selection spans different values. A selection is required.
+
+The implementation uses literal `text-transform` and `font-variant-caps` values
+through the shared HTML, JSX, and Liquid range model. Plain source-proven runs
+reuse their wrapper, partial selections split runs, and identical adjacent style
+sets merge. Done commits the draft through the existing exact source history.
+Capitalize follows browser word boundaries and does not lowercase the remaining
+letters in each word. Small-cap glyphs depend on the font and browser. These are
+all-screen-size styles; responsive range overrides, caret formatting for future
+text, and broader Figma parity remain incomplete. The existing desktop archive
+predates these controls.
+
+Validation: 1,189 unit tests passed in
+`/private/tmp/retouch-range-case-units.log`. HTML/React Chromium 145 and Liquid
+WebKit 26.0 checks passed in
+`/private/tmp/retouch-range-case-{html,react,liquid}.log`, verifying original-copy
+preservation, rendered case changes, small-cap CSS values, saved control values,
+partial split/merge, draft/Done behavior, and exact source undo/redo. The same
+runs passed React spacing/combined-style regressions and Liquid inspector
+interaction checks. The inspected sidebar capture is
+`/private/tmp/retouch-range-case.png`.

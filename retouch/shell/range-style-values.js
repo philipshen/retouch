@@ -1,6 +1,6 @@
 (function(root){
   const palette=typeof module!=='undefined'&&module.exports?require('./palette-values.js'):root.RetouchPaletteValues;
-  const names={'font-family':'fontFamily','font-weight':'fontWeight','font-style':'fontStyle','font-size':'fontSize','line-height':'lineHeight','letter-spacing':'letterSpacing','color':'color'};
+  const names={'font-family':'fontFamily','font-weight':'fontWeight','font-style':'fontStyle','font-size':'fontSize','line-height':'lineHeight','letter-spacing':'letterSpacing','text-transform':'textTransform','font-variant-caps':'fontVariantCaps','color':'color'};
   function valid(property,value){
     if(typeof value!=='string')return false;
     if(property==='font-family')return value.length>0&&value.length<=500&&!/^(inherit|initial|unset|revert|revert-layer)$/i.test(value.trim())&&value.split(',').every(part=>/^(?:[\p{L}_-][\p{L}\p{N}_-]*(?: +[\p{L}\p{N}_-]+)*|"[\p{L}\p{N} _-]+"|'[\p{L}\p{N} _-]+')$/u.test(part.trim()));
@@ -8,6 +8,8 @@
     if(property==='font-weight')return /^(?:[1-9]\d{0,3})(?:\.\d{1,3})?$/.test(value)&&Number(value)>=1&&Number(value)<=1000;
     if(property==='line-height')return value==='normal'||/^(?:0|[1-9]\d{0,5})(?:\.\d{1,6})?(?:px|em|%)?$/.test(value);
     if(property==='letter-spacing')return value==='normal'||/^-?(?:0|[1-9]\d{0,5})(?:\.\d{1,6})?(?:px|em)$/.test(value);
+    if(property==='text-transform')return ['none','uppercase','lowercase','capitalize'].includes(value);
+    if(property==='font-variant-caps')return ['normal','small-caps','all-small-caps'].includes(value);
     if(property==='font-style')return value==='normal'||value==='italic';
     return property==='font-size'&&/^(?:0|[1-9]\d{0,3})(?:\.\d{1,3})?px$/.test(value)&&parseFloat(value)>=0.1&&parseFloat(value)<=1000;
   }
