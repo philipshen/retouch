@@ -1,0 +1,110 @@
+{
+  "sourceCommit": "9b39c834a3766c01ef570f52f200fca165b702fb",
+  "sourceTreeDirty": false,
+  "sourceFiles": 194,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "allSourceNativeBuildVerifierHashesMatch": true,
+  "verifiedAt": "2026-09-13T07:44:28.435396+00:00",
+  "archive": "/private/tmp/retouch-desktop-alignment-9b39c83/Retouch-0.1.0-mac.zip",
+  "sha256": "e032bc3dd230b647667954f41ae6c4041f4a65d089e98c26843aa1b6f70ad68e",
+  "status": "development candidate; packaged runtime and isolated Homebrew install verified; native workflows and trusted distribution unverified",
+  "buildLog": "/private/tmp/retouch-desktop-alignment-build.log",
+  "units": {
+    "passed": 1037,
+    "scope": "actual packaged runtime with external development test harness",
+    "log": "/private/tmp/retouch-desktop-alignment-9b39c83/units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "Complete SVG vector and selection editing including alignment and scrubbing",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-alignment-9b39c83/vectors-html.log"
+    },
+    {
+      "name": "Complete SVG vector and selection editing including alignment and scrubbing",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-alignment-9b39c83/vectors-react.log"
+    },
+    {
+      "name": "Complete SVG vector and selection editing including alignment and scrubbing",
+      "renderer": "liquid",
+      "engine": "chromium",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-alignment-9b39c83/vectors-liquid.log"
+    },
+    {
+      "name": "Responsive comparison editing and persistence",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-alignment-9b39c83/comparison.log"
+    },
+    {
+      "name": "Responsive stroke controls",
+      "renderer": "liquid",
+      "engine": "chromium",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-alignment-9b39c83/responsive-strokes.log"
+    },
+    {
+      "name": "Canvas corner radius",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-alignment-9b39c83/radius-html.log"
+    }
+  ],
+  "harness": {
+    "testFiles": 289,
+    "inventory": "/private/tmp/retouch-desktop-alignment-9b39c83/harness-inventory.json",
+    "inventorySha256": "d35c3cdc334382764690776a2e7d79898520fad3886a09704c7131dd8432cb68",
+    "archive": "/private/tmp/retouch-desktop-alignment-9b39c83/harness-tests.tar.gz",
+    "archiveSha256": "b7e69c105a80d32ea7bd6634d1edb46664b0a091ac7f333583054b6abb2c4078",
+    "removedAfterTerminalResults": true
+  },
+  "homebrew": {
+    "verification": {
+      "sourceCommit": "9b39c834a3766c01ef570f52f200fca165b702fb",
+      "sourceTreeDirty": false,
+      "sourceFiles": 194,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesArchive": true,
+    "quarantinePreserved": true,
+    "quarantine": "0381;6aa65303;;5F00F2CA-93AB-450D-9856-9F44F42E5CF2",
+    "result": "isolated install and uninstall passed",
+    "caskInventoryUnchanged": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "automaticDependencyRemovalDisabled": true
+  },
+  "tamperVerification": {
+    "result": "passed on disposable copy; original unchanged",
+    "log": "/private/tmp/retouch-desktop-alignment-9b39c83/verifier-tamper.log"
+  },
+  "native": {
+    "preflight": "Native apps: Error: Sky Computer Use native pipe startup failed",
+    "launchAttempted": false,
+    "tests": "unverified"
+  },
+  "signing": "ad hoc development build; Developer ID not retried",
+  "unverified": [
+    "native editing workflows",
+    "Developer ID signing",
+    "notarization",
+    "public cask distribution",
+    "Intel runtime execution",
+    "trusted upgrades"
+  ]
+}

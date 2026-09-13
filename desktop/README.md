@@ -10,22 +10,21 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-selection-c945247/Retouch-0.1.0-mac.zip`
-(SHA-256 `2514510722a421ca7f947e090d72249e13f2f7afc0be44142cbd4c4f2377214d`).
-It packages clean commit `c945247`, including multi-vector inspector transforms,
-nested selections, proportions locking, arrow-key nudges, direct dragging,
-canvas resize/rotation handles and snapping. All 194 source hashes and the
-native/build/verifier hashes match. Universal architecture, strict signature
-verification before and after workflows, tamper checks on a disposable copy,
-and 1,034 tests importing the actual bundled runtime pass.
+`/private/tmp/retouch-desktop-alignment-9b39c83/Retouch-0.1.0-mac.zip`
+(SHA-256 `e032bc3dd230b647667954f41ae6c4041f4a65d089e98c26843aa1b6f70ad68e`).
+It packages clean commit `9b39c83`, including single/selection alignment,
+parent and SVG viewport targets, variable-speed field scrubbing, synchronized
+pose fields, and cancellation when page geometry changes. All 194 source hashes
+and native/build/verifier hashes match. Universal architecture, strict signature
+verification before and after workflows, disposable-copy tamper checks, and
+1,037 tests importing the actual bundled runtime pass.
 
 The exact archive installed and uninstalled through Homebrew in an isolated app
 directory with quarantine intact. The original cask inventory is unchanged;
 the temporary app, tap, trust configuration and external harness were removed.
-Packaged HTML/WebKit, React/Chromium and Liquid/Chromium vector workflows pass,
-including the new selection gestures, modifier changes, zoom and exact history.
-Responsive comparison editing, scoped stroke controls and on-canvas radius checks
-also pass. See [the candidate receipt](verification/2026-09-13-selection-transforms.json).
+Packaged HTML/WebKit, React/Chromium and Liquid/Chromium full vector workflows pass.
+Responsive comparison editing, scoped stroke controls and canvas radius checks
+also pass. See [the candidate receipt](verification/2026-09-13-alignment-scrubbing.json).
 
 This is an ad hoc development build, not a trusted release. Native launch was
 not attempted because the CUA native connection failed. Developer ID signing was
