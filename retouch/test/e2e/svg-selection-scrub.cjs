@@ -23,5 +23,6 @@ module.exports=async({page,app,select,read,wait,settled,original,kind})=>{
  await circle.evaluate(el=>el.setAttribute('transform','translate(777 888)'));await hint.waitFor({state:'detached'});assert.equal(await circle.getAttribute('transform'),'translate(777 888)');assert.equal(read(),original);await page.mouse.up();await page.keyboard.up('Alt');
  // Restore the external DOM-only fixture edit after verifying the scrubber preserves it.
  await circle.evaluate((el,value)=>value===null?el.removeAttribute('transform'):el.setAttribute('transform',value),circleOriginal);await select('rect','Box');
+ await require('./svg-scrub-interruption.cjs')({page,app,select,read,settled,original,kind,multiple:true});
  console.log('SVG SELECTION SCRUB: five fields, ordinary and nested selection previews, Escape and exact history PASS '+kind);
 };

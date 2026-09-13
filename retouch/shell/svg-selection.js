@@ -106,12 +106,13 @@
    input.retouchNumericPreview=()=>{
     if(!current())throw Error('Re-select these vectors before transforming.');
     const {members,box,w}=capture(infos,elements),originals=members.map(m=>m.el.getAttribute('transform')),last=[...originals],values=Object.fromEntries(Object.entries(inputs).map(([k,el])=>[k,el.value]));
-    const valid=()=>current()&&members.every((m,i)=>m.el.isConnected&&m.el.getAttribute('transform')===last[i]);
+    const screens=members.map(m=>array(m.el.getScreenCTM())),geometry=members.map(m=>{const g=m.el.getBBox();return [g.x,g.y,g.width,g.height];});let global=[1,0,0,1,0,0];
+    const valid=()=>{if(!current())return false;try{return members.every((m,i)=>{if(!m.el.isConnected||m.el.getAttribute('transform')!==last[i])return false;const screen=array(m.el.getScreenCTM()),expected=A().multiply(global,screens[i]),g=m.el.getBBox();return screen.every((v,j)=>Math.abs(v-expected[j])<.1)&&[g.x,g.y,g.width,g.height].every((v,j)=>Math.abs(v-geometry[i][j])<.01);});}catch{return false;}};
     return {current:valid,update(value){
      if(!valid())throw Error('The selection changed. Re-select it.');
-     const matrices=matricesFor(members,fieldMatrix(box,w,kind,value));
+     const next=fieldMatrix(box,w,kind,value),matrices=matricesFor(members,next);
      if(Object.values(matrices).some(m=>!A().valid(m)))throw Error('Keep every transformed vector within the supported range.');
-     members.forEach((m,i)=>{if(!m.covered){last[i]=A().format(matrices[m.info.id]);m.el.setAttribute('transform',last[i]);}});
+     global=next;members.forEach((m,i)=>{if(!m.covered){last[i]=A().format(matrices[m.info.id]);m.el.setAttribute('transform',last[i]);}});
      const rects=members.filter(m=>!m.covered).map(m=>m.el.getBoundingClientRect()),left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top)),right=Math.max(...rects.map(r=>r.right)),bottom=Math.max(...rects.map(r=>r.bottom));
      for(const [k,v]of Object.entries({x:left+w.scrollX,y:top+w.scrollY,width:right-left,height:bottom-top}))if(k!==kind)inputs[k].value=rounded(v);
     },restore(){members.forEach((m,i)=>{if(m.el.getAttribute('transform')===last[i]){if(originals[i]===null)m.el.removeAttribute('transform');else m.el.setAttribute('transform',originals[i]);}});for(const [k,v]of Object.entries(values))if(k!==kind)inputs[k].value=v;}};

@@ -29,9 +29,9 @@
  function scrubField(input,info,target,{current,matrixFor,min,max,render=()=>{}}){
   root.RetouchInspector.numericLabelDrag(input,raw=>{try{return {value:root.RetouchNumericExpression.evaluate(raw),min,max};}catch{return null;}});
   input.retouchNumericPreview=()=>{
-   const blocked=reason(target,info,true);if(blocked)throw Error(blocked);if(!current())throw Error('Re-select this vector before editing.');const original=target.getAttribute('transform'),g=measure(target).g;let last=original;
-   const valid=()=>current()&&target.isConnected&&target.getAttribute('transform')===last;
-   return {current:valid,update:value=>{if(!valid())throw Error('The vector changed. Re-select it.');const matrix=matrixFor(value,g);if(!matrix)throw Error('Keep this value within the supported range.');last=A().format(matrix);target.setAttribute('transform',last);render(matrix);},restore:()=>{if(target.getAttribute('transform')===last){if(original===null)target.removeAttribute('transform');else target.setAttribute('transform',original);}render(info.svgTransform.matrix);}};
+   const blocked=reason(target,info,true);if(blocked)throw Error(blocked);if(!current())throw Error('Re-select this vector before editing.');const original=target.getAttribute('transform'),data=measure(target),g=data.g,w=target.ownerDocument.defaultView,parent=new w.DOMMatrix(matrix(data.m)).multiply(new w.DOMMatrix(info.svgTransform.matrix).inverse());let last=original,expected=data.m;
+   const valid=()=>{if(!current()||!target.isConnected||target.getAttribute('transform')!==last)return false;try{const actual=target.getBBox(),screen=matrix(target.getScreenCTM()),want=matrix(expected);return ['x','y','width','height'].every(k=>Math.abs(actual[k]-g[k])<.01)&&screen.every((v,i)=>Math.abs(v-want[i])<.1);}catch{return false;}};
+   return {current:valid,update:value=>{if(!valid())throw Error('The vector changed. Re-select it.');const matrix=matrixFor(value,g);if(!matrix)throw Error('Keep this value within the supported range.');last=A().format(matrix);expected=parent.multiply(new w.DOMMatrix(matrix));target.setAttribute('transform',last);render(matrix);},restore:()=>{if(target.getAttribute('transform')===last){if(original===null)target.removeAttribute('transform');else target.setAttribute('transform',original);}render(info.svgTransform.matrix);}};
   };return input;
  }
  function positionFields(section,info,target,{save,current,onCanvas}){
