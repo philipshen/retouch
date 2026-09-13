@@ -36,3 +36,7 @@ test('Vector position and rotation preserve center, scale, skew and reflection',
  const translated=A.setPose(m,g,'x',-99);assert.ok(Math.abs(A.pose(translated,g).x+99)<1e-8);assert.equal(A.pose(translated,g).y,A.pose(m,g).y);assert.deepEqual(translated.slice(0,4),m.slice(0,4));}
  for(const [axis,value]of [['x',Infinity],['y',100001],['rotation',361],['unknown',0]])assert.equal(A.setPose(A.identity(),g,axis,value),null);
 });
+test('SVG rotation hit targets remain outside corners at every editor scale',()=>{
+ const R=require('../shell/svg-resize.js'),g={x:10,y:20,width:60,height:40},m={a:1.2,b:.3,c:-.2,d:.8,e:25,f:17};
+ for(const scale of [.5,1,2]){const bounds=R.positions(g,m,scale),handles=R.rotationPositions(g,m,scale);handles.forEach((p,i)=>{const corner=bounds[[0,2,4,6][i]];assert.ok(Math.abs(Math.hypot(p.x-corner.x,p.y-corner.y)*scale-18)<1e-8);});}
+});

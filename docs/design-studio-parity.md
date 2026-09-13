@@ -13684,3 +13684,38 @@ The Liquid inspector screenshot was visually inspected at
 /private/tmp/retouch-svg-pose-liquid.png. The final cosmetic label change only
 capitalizes Rotation. No desktop build or push was performed. Full Figma Design
 and arbitrary-site parity remain incomplete.
+
+## 2026-09-13 — Direct SVG canvas rotation
+
+Vectors now rotate from targets outside their four corners, a compact inspector
+button, or Rotate vector on canvas in Actions. The tool measures angles in the
+SVG parent's coordinate space, preserving the vector center through rotated and
+non-uniformly scaled parents. Shift snaps to 15 degrees; arrows use 1 degree
+(Shift: 15), Enter commits, and Escape cancels. Preview leaves source untouched;
+release applies one matrix transaction with exact Undo/Redo. Existing external
+geometry, selection, viewport, focus and source ownership cancellation is shared
+with resizing. External transform changes are preserved when cancelling.
+
+The shared gesture code converts legacy SVG matrices to DOMMatrix before mixed
+matrix multiplication. Resize handles take stacking precedence over nearby
+rotation targets; the browser test explicitly checks the resize hit target.
+The primary inspector uses the existing light rotation control layout. Shared
+write feedback now says Vector updated for both size and rotation operations.
+
+Validation: 1,011 unit tests passed, including fixed screen-distance placement
+of rotation targets at 50%, 100% and 200% editor scale. Full HTML/WebKit 26,
+React/Chromium and Liquid/Chromium browser workflows passed with terminal zero
+exits. Each covers 13 resized and 13 rotated vector cases, exact history,
+center preservation, snapped rotation, numeric dimensions/pose, keyboard,
+external-change cancellation, and CSS ownership. Rotation of the Group case
+also uses a translated, rotated, non-uniformly scaled parent. Final compact
+inspector entry was reverified in Liquid. HTML/WebKit corner-radius canvas
+regression passed, including zoom and transformed pointer mapping.
+
+Logs: /private/tmp/retouch-svg-rotate-{units,html,react,liquid}.log and
+/private/tmp/retouch-svg-rotate-radius.log. The screenshot at
+/private/tmp/retouch-svg-rotate-liquid.png was visually inspected. Final status
+copy changed from Vector resized to Vector updated after those runs.
+No desktop rebuild, push or public release was performed. Multi-selection
+vector transforms, direct movement, flips, responsive SVG geometry authoring,
+and full Figma/any-site parity remain open.
