@@ -89,6 +89,7 @@ function describeElement(resolved) {
   return {
     svgPaint: {reason:node.openingElement.attributes.some(a=>a.type==='JSXSpreadAttribute')?'Spread props may control this layer’s classes.':null},
     svgInsertion: require('./jsx-svg-insert.cjs').describe(resolved),
+    svgGradients: require('./source-svg-gradient.cjs').describe(resolved,'react'),
     svgGeometry: require('./jsx-svg-geometry.cjs').describe(resolved),
     svgTransform: require('./svg-transform.cjs').describe(resolved,'react'),
     svgConversion: require('./svg-convert.cjs').describe(resolved),
@@ -180,6 +181,7 @@ function planOp(resolved, op) {
   if(op.type==='convertSVGToPath')return require('./svg-convert.cjs').plan(resolved,op);
   if(op.type==='setSVGTransforms')return require('./svg-transform.cjs').planSelection(resolved,op,'react');
   if(op.type==='setSVGTransform')return require('./svg-transform.cjs').plan(resolved,op,'react');
+  if(op.type==='setSVGGradient')return require('./source-svg-gradient.cjs').plan(resolved,op,'react');
   if(op.type==='setSVGGeometry')return require('./jsx-svg-geometry.cjs').plan(resolved,op);
   if (op.fileHash && op.fileHash !== resolved.hash) {
     return refuse('The file changed since it was last read. Re-select the element and retry.');
