@@ -24,14 +24,19 @@ function context(resolved){
  const node=resolved.element.node||resolved.element,kind=node.openingElement?'react':node.namespaceURI?'html':'liquid';
  const tag=kind==='react'?require('./id.cjs').jsxElementName(node):resolved.element.tag;
  const geometry=kind==='react'?require('./jsx-svg-geometry.cjs').describe(resolved):kind==='html'?require('./svg-geometry.cjs').describe(resolved.element):require('./liquid-svg-geometry.cjs').describe(resolved);
- if(!geometry||!['rect','circle','ellipse','line'].includes(tag))return null;
+ if(!geometry||!['rect','circle','ellipse','line','polyline'].includes(tag))return null;
  if(kind==='html')for(let ancestor=node;ancestor;ancestor=ancestor.parentNode)if(ancestor.attrs?.some(a=>['v-for','v-if','x-for','x-if'].includes(a.name)))return null;
  const attrs=kind==='react'?node.openingElement.attributes:kind==='html'?node.attrs:node.attributes;
  if(attrs.some(a=>['d','ref','v-for','v-if','x-for','x-if'].includes(typeof a.name==='string'?a.name:a.name?.name)))return null;
  const start=kind==='react'?node.openingElement.end:kind==='html'?resolved.element.location.startTag.endOffset:node.openEnd;
  const end=kind==='react'?node.closingElement?.start:kind==='html'?resolved.element.location.endTag?.startOffset:node.selfClosing?null:node.closeStart;
  if(!metadataOnly(kind,node,resolved.source,start,end))return null;
- const d=pathFor(tag,geometry.fields);return d?{kind,node,tag,fields:geometry.fields,d}:null;
+ if(tag==='polyline'){
+  if(geometry.parametric?.kind!=='arrow')return null;const fill=attrs.find(attribute=>(typeof attribute.name==='string'?attribute.name:attribute.name?.name)==='fill');
+  if((kind==='react'?require('./jsx-svg-geometry.cjs').literal(fill):fill?.value)!=='none')return null;
+ }
+
+ const d=tag==='polyline'?require('../shell/svg-parametric.js').arrowPath(geometry.fields.find(field=>field.name==='points')?.value):pathFor(tag,geometry.fields);return d?{kind,node,tag,fields:geometry.fields,d}:null;
 }
 function arrowFor(c){
  if(!c||c.tag!=='line')return null;

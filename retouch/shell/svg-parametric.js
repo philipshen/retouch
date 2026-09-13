@@ -51,6 +51,19 @@
   if(!generated)return null;const expected=pointsAPI().parse(generated);if(points.some((p,i)=>Math.abs(p.x-expected[i].x)>0.00001||Math.abs(p.y-expected[i].y)>0.00001))return null;
   return model;
  }
+ function arrowPath(value){
+  const spec=describe(value,'arrow');if(!spec)return null;const points=pointsAPI().parse(value),[a,b]=points,parts=[[a,b]];
+  if(spec.endArrow!==false)parts.push([points[2],b,points[4]]);if(spec.startArrow){const head=points.slice(-4);parts.push([head[1],a,head[3]]);}
+  return parts.map(part=>part.map((p,i)=>(i?'L':'M')+p.x+','+p.y).join(' ')).join(' ');
+ }
+ function pointsFromPath(value){
+  const paths=typeof module==='object'&&module.exports?require('./svg-path.js'):root.RetouchSVGPath,parsed=paths.parseCompound(value),parts=parsed?.subpaths;
+  if(!parts||parts.length>3||parts[0].nodes.length!==2||parts.some(part=>part.closed||part.nodes.some(node=>Object.keys(node).some(key=>!['x','y'].includes(key)))))return null;
+  const [a,b]=parts[0].nodes,match=(p,q)=>p.x===q.x&&p.y===q.y;let end,start;
+  for(const part of parts.slice(1)){if(part.nodes.length!==3)return null;const head=part.nodes;if(match(head[1],b)&&!end)end=head;else if(match(head[1],a)&&!start)start=head;else return null;}
+  const points=[a,b];if(end)points.push(end[0],b,end[2]);if(start){if(end)points.push(b);points.push(a,start[0],a,start[2]);}
+  const result=pointsAPI().format(points);return describe(result,'arrow')?result:null;
+ }
  function changeArrow(value,changes){
   const spec=describe(value,'arrow');if(!spec||!changes||Object.keys(changes).some(key=>!['headLength','headWidth','startArrow','endArrow','startHeadLength','startHeadWidth'].includes(key)))return null;
   const generated=generate({...spec,...changes});if(!generated)return null;const before=pointsAPI().parse(value),after=pointsAPI().parse(generated);
@@ -72,5 +85,5 @@
   const points=original.map(reflect);
   return points.some(p=>Math.abs(p.x)>100000||Math.abs(p.y)>100000)?null:pointsAPI().format(points);
  }
- const api={generate,describe,reverseArrow,changeArrow,swapArrowheads};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGParametric=api;
+ const api={generate,describe,reverseArrow,changeArrow,swapArrowheads,arrowPath,pointsFromPath};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGParametric=api;
 })(typeof window==='object'?window:globalThis);

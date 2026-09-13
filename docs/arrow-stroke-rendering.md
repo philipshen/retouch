@@ -1,8 +1,10 @@
 # Arrow stroke rendering
 
-The current polyline arrow model changes dashed shaft appearance when a start
-head is enabled. This remains an open product defect, despite the passing
-solid-stroke arrow editing and history tests.
+The legacy polyline arrow model changes dashed shaft appearance when a start
+head is enabled. Existing arrows can now use **Convert to vector path** to
+separate the shaft and heads into path sections while retaining the arrow
+inspector. Newly drawn arrows still use polylines, so automatic migration remains
+an open product defect.
 
 The regression was run against source `9b8c0d6801f832c0a30285658a36f30936b19e10`.
 It renders the actual `svg-parametric.js` point output into an SVG image and
@@ -35,7 +37,7 @@ PLAYWRIGHT_BROWSERS_PATH=/private/tmp/retouch-playwright-browsers \
 Logs: `/private/tmp/retouch-arrow-dashes-chromium.log` and
 `/private/tmp/retouch-arrow-dashes-webkit.log`.
 
-## Cause and implementation direction
+## Cause and implementation
 
 The start-head polyline returns from the end of the shaft to its beginning
 before drawing the start head. That extra traversal paints a second dash
@@ -44,12 +46,26 @@ underlying topology.
 
 The reference renders one shaft and separate undashed head polylines. It passes
 the same pixel comparison in both engines. This proves a viable rendering
-approach for the tested cases; it is not yet integrated into Retouch's source
-writers or inspector.
+approach for the tested cases. Source-backed arrow paths now also pass all
+108 shaft comparisons in both engines. Their head sections still inherit the
+stroke dash pattern; independently styled solid or filled caps remain unfinished.
 
-The next implementation must separate shaft and head geometry in authored
-source, preserve source layer identity and selection, retain independent head
-parameters, and support exact undo/redo in HTML, React and Liquid. It must also
-handle fill/stroke ownership and transforms. A preview-only overlay would leave
+Conversion now preserves source layer identity, metadata children and unrelated
+attributes. All three adapters recognize the resulting path and retain endpoint
+selectors, dimensions, reversal and swap. The live conversion probe checks CSS
+path overrides using browser-normalized coordinates and refuses active fills
+or markers that would change appearance. The next step is to migrate creation
+and legacy arrow edits automatically, then provide separately styled cap shapes. A preview-only overlay would leave
 the exported or served site incorrect. Additional cap shapes should build on
 that representation rather than extend the retraced polyline.
+
+
+## Converted-path gate
+
+Set `RT_E2E_ARROW_PATH=1` with either reproduction command to require the
+converted path representation to preserve all shaft pixels. This mode exits
+zero in Chromium and WebKit while still reporting the legacy failures. The
+default mode retains the failing legacy-polyline assertion.
+
+Logs: `/private/tmp/retouch-arrow-path-pixels-chromium.log` and
+`/private/tmp/retouch-arrow-path-pixels-webkit.log`.
