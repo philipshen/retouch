@@ -190,6 +190,11 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     const label=button.textContent;button.setAttribute('aria-label',label);button.title=label;button.textContent='↺';button.classList.add('property-reset');const previous=button.previousElementSibling;
     if(previous?.classList.contains('inspector-field')){const row=document.createElement('div');row.className='property-row';previous.parentElement.insertBefore(row,previous);row.append(previous,button);}
    }
+   if(name==='Stroke'&&section.querySelector('[aria-label="SVG stroke width"]')){
+    const labels={'SVG stroke width':'Width','SVG line ends':'Caps','SVG line joins':'Join','SVG dash pattern':'Dashes','SVG dash offset':'Offset','SVG miter limit':'Miter limit','SVG stroke scaling':'Scaling'},settings=disclosure('Stroke settings','svg-stroke-settings');
+    for(const [label,short]of Object.entries(labels)){const input=section.querySelector('[aria-label="'+label+'"]'),field=input?.closest('.inspector-field');if(!field)continue;field.querySelector(':scope > span').textContent=short;if(label!=='SVG stroke width')settings.append(field.closest('.property-row')||field);if(label==='SVG stroke scaling')for(const option of input.options)option.textContent=option.value==='none'?'Scale':option.value==='non-scaling-stroke'?'Fixed':option.value;}
+    pair(settings,['SVG line ends','SVG line joins']);pair(settings,['SVG dash pattern','SVG dash offset']);pair(settings,['SVG miter limit','SVG stroke scaling']);section.append(settings);
+   }
    if(name==='Geometry'&&section.querySelector('[aria-label="Star points"],[aria-label="Polygon sides"]')){
     pair(section,['Star points','Star inner ratio (%)']);const field=section.querySelector('[aria-label="Shape Points"]')?.closest('.inspector-field');if(field){const reset=field.nextElementSibling,details=disclosure('Vector data','parametric-vector-data');details.append(field);if(reset?.classList.contains('control-button'))details.append(reset);section.append(details);}
    }

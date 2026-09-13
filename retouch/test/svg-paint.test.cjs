@@ -19,3 +19,11 @@ test('SVG local responsive paint retains inherited importance and typed stroke w
  const source='!stroke-(length:--outline-width) !stroke-red-500';assert.equal(paint.update(source,'stroke','#1234'),'!stroke-(length:--outline-width) ![stroke:#1234]');assert.equal(paint.update(source,'stroke-width','4'),'!stroke-red-500 ![stroke-width:4]');
  assert.equal(paint.update('','fill','#1234','![fill:#abcdef]'),'![fill:#1234]');assert.equal(paint.update('','stroke','none','!stroke-blue-500'),'![stroke:none]');assert.equal(paint.update('','fill','#1234','!stroke-blue-500'),'[fill:#1234]');assert.equal(paint.update('![fill:#1234]','fill',null,'![fill:#abcdef]'),'');
 });
+
+test('Stroke settings validate signed dash offsets, miter limits and fixed-width strokes independently',()=>{
+ for(const [key,value]of [['stroke-dashoffset','-3.5%'],['stroke-miterlimit','2.5'],['vector-effect','non-scaling-stroke']]){
+  const original='stroke-red-500 stroke-2 [stroke-dasharray:4_2] md:[stroke-dashoffset:8]';const changed=paint.update(original,key,value);assert.ok(changed.startsWith(original));assert.equal(paint.value(changed,key),value);assert.equal(paint.update(changed,key,null),original);
+  const important=paint.update('',key,value,'!['+key+':'+value+']');assert.equal(important,'!['+key+':'+value+']');
+ }
+ for(const [key,value]of [['stroke-dashoffset','1 2'],['stroke-dashoffset','Infinity'],['stroke-dashoffset','100001px'],['stroke-miterlimit','0'],['stroke-miterlimit','-1'],['stroke-miterlimit','2px'],['vector-effect','scale'],['vector-effect','non-scaling-stroke;fill:red']])assert.throws(()=>paint.update('',key,value));
+});

@@ -4,7 +4,7 @@
  const I=typeof module==='object'&&module.exports?require('./inspector.js'):root.RetouchInspector;
  function property(token){
   const base=I.base(token);if(base===null)return null;
-  const arbitrary=/^\[(fill|stroke|stroke-width|stroke-linecap|stroke-linejoin|stroke-dasharray):(.+)\]$/.exec(base);if(arbitrary)return arbitrary[1];
+  const arbitrary=/^\[(fill|stroke|stroke-width|stroke-linecap|stroke-linejoin|stroke-dasharray|stroke-dashoffset|stroke-miterlimit|vector-effect):(.+)\]$/.exec(base);if(arbitrary)return arbitrary[1];
   if(base.startsWith('fill-'))return 'fill';
   if(base.startsWith('stroke-')){const suffix=base.slice(7);if(suffix.startsWith('[length:')||suffix.startsWith('(length:')||/^\d+(?:\.\d+)?$/.test(suffix)||/^\[(?:length:)?(?:\d+\.?\d*|\.\d+)(?:px|%)?\]$/.test(suffix))return 'stroke-width';return 'stroke';}
   return null;

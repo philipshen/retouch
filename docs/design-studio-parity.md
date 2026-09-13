@@ -13461,3 +13461,20 @@ No app launch or native self-tests were attempted. This is an ad hoc development
 candidate, not a Developer ID-signed/notarized public release. Native workflows,
 Intel execution, trusted upgrades and full Figma/any-site parity remain unverified
 or unfinished. No push or public release was performed.
+
+### 2026-09-13 — Compact SVG stroke settings
+
+Grouped caps, joins, dash pattern, dash offset, miter limit and stroke scaling
+under a compact Stroke settings disclosure, keeping color and width visible.
+Added validated signed dash offsets, unitless miter limits and non-scaling
+strokes to the shared HTML/React/Liquid paint fields and class ownership logic.
+Updated SVG browser workflows to use public Actions commands after the earlier
+inspector cleanup.
+
+Validation: 997 unit tests passed. HTML/WebKit and real Next/React Chromium SVG
+workflows passed, covering computed paint, exact source undo/redo, geometry,
+creation, duplication, deletion, ordering and locks. Liquid-specific browser
+coverage for the new stroke settings and a rebuilt desktop package remain pending.
+A subsequent React rerun timed out waiting for the existing line-drawing preview;
+the preceding full run passed. This intermittent drawing-test timeout is retained
+as a validation limitation.

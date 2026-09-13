@@ -29,10 +29,10 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);
   }
   await page.getByRole('treeitem',{name:'rect · Box',exact:true}).click();await settled();
-  const paint=async(label,value)=>{const field=page.getByLabel('SVG '+label,{exact:true});if(await field.evaluate(el=>el.tagName)==='SELECT')await field.selectOption(value);else{await field.fill(value);await field.press('Tab');}await settled();};
+  const paint=async(label,value)=>{const settings=page.getByText('Stroke settings',{exact:true});if(!['fill','stroke','stroke width'].includes(label)&&await settings.count()&&!await settings.evaluate(el=>el.parentElement.open))await settings.click();const field=page.getByLabel('SVG '+label,{exact:true});if(await field.evaluate(el=>el.tagName)==='SELECT')await field.selectOption(value);else{await field.fill(value);await field.press('Tab');}await settled();};
   const computed=p=>app.locator('rect').evaluate((el,p)=>getComputedStyle(el).getPropertyValue(p),p);
   const snapshots=[original];
-  for(const [label,value,property,expected]of [['fill','#00ff00','fill','rgb(0, 255, 0)'],['stroke','#0000ff','stroke','rgb(0, 0, 255)'],['stroke width','4','stroke-width','4px'],['line ends','round','stroke-linecap','round'],['line joins','bevel','stroke-linejoin','bevel'],['dash pattern','4 2','stroke-dasharray','4px, 2px']]){
+  for(const [label,value,property,expected]of [['fill','#00ff00','fill','rgb(0, 255, 0)'],['stroke','#0000ff','stroke','rgb(0, 0, 255)'],['stroke width','4','stroke-width','4px'],['line ends','round','stroke-linecap','round'],['line joins','bevel','stroke-linejoin','bevel'],['dash pattern','4 2','stroke-dasharray','4px, 2px'],['dash offset','-3','stroke-dashoffset','-3px'],['miter limit','2.5','stroke-miterlimit','2.5'],['stroke scaling','non-scaling-stroke','vector-effect','non-scaling-stroke']]){
    await paint(label,value);await wait(async()=>await computed(property)===expected);snapshots.push(read());
   }
   assert.equal(await app.locator('rect').getAttribute('fill'),'red','original attribute is retained');
@@ -57,22 +57,22 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
    if(preset==='rectangle'&&process.env.RT_E2E_SVG_INSERT_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_SVG_INSERT_SCREENSHOT});
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(insertionLocks);
   }
-  await page.getByRole('treeitem',{name:'svg',exact:true}).click();await settled();await page.getByRole('button',{name:'Add circle',exact:true}).click();await settled();await wait(async()=>await app.locator('circle').count()===2);
+  await page.getByRole('treeitem',{name:'svg',exact:true}).click();await settled();await require('./shape-tools.cjs').run(page,'Add circle');await settled();await wait(async()=>await app.locator('circle').count()===2);
   await wait(insertionLocks);assert.equal(await app.locator('svg').count(),1);assert.equal(await app.locator('circle').last().getAttribute('r'),'30');assert.equal(await app.locator('circle').last().getAttribute('cy'),'50');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(insertionLocks);
   for(const tag of ['circle','rect']){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(async()=>!await page.evaluate(tag=>layerLocks.direct(doc().querySelector(tag)),tag));}console.log('SVG INSERT/EXISTING LOCKS/UNLOCKED SHAPES/SELECTION/UNDO/REDO PASS',engine);
   await page.getByRole('treeitem',{name:'rect · Box',exact:true}).click();await settled();await paint('fill','#ff00ff');const painted=read();
   const actions=page.getByText('Layer actions',{exact:true});if(!await actions.evaluate(el=>el.parentElement.open))await actions.click();
-  await page.getByRole('button',{name:'Delete layer',exact:true}).click();await settled();await wait(async()=>await app.locator('rect').count()===0);const deleted=read();assert.equal(await page.getByRole('treeitem',{name:'svg',exact:true}).getAttribute('aria-selected'),'true');
+  await require('./shape-tools.cjs').run(page,'Delete layer');await settled();await wait(async()=>await app.locator('rect').count()===0);const deleted=read();assert.equal(await page.getByRole('treeitem',{name:'svg',exact:true}).getAttribute('aria-selected'),'true');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===painted);assert.equal(await page.getByRole('treeitem',{name:'rect · Box',exact:true}).getAttribute('aria-selected'),'true');await wait(async()=>await computed('fill')==='rgb(255, 0, 255)');
   await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===deleted);await wait(async()=>await app.locator('rect').count()===0);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===painted);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);
-  await page.getByRole('treeitem',{name:'svg',exact:true}).click();await settled();await page.getByRole('button',{name:'Delete layer',exact:true}).click();await settled();await wait(async()=>await app.locator('svg').count()===0);assert.equal(await page.getByRole('treeitem',{name:'body',exact:true}).getAttribute('aria-selected'),'true');
+  await page.getByRole('treeitem',{name:'svg',exact:true}).click();await settled();await require('./shape-tools.cjs').run(page,'Delete layer');await settled();await wait(async()=>await app.locator('svg').count()===0);assert.equal(await page.getByRole('treeitem',{name:'body',exact:true}).getAttribute('aria-selected'),'true');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);assert.equal(await page.getByRole('treeitem',{name:'svg',exact:true}).getAttribute('aria-selected'),'true');
   await page.getByRole('button',{name:'Lock circle',exact:true}).click();await page.getByRole('button',{name:'Lock line',exact:true}).click();
   const survivingLocks=()=>page.evaluate(()=>layerLocks.direct(doc().querySelector('line'))&&!layerLocks.direct(doc().querySelector('rect'))),restoredLocks=()=>page.evaluate(()=>layerLocks.direct(doc().querySelector('circle'))&&layerLocks.direct(doc().querySelector('line'))&&!layerLocks.direct(doc().querySelector('rect')));
-  await page.getByRole('treeitem',{name:'g',exact:true}).click();await settled();await page.getByRole('button',{name:'Delete layer',exact:true}).click();await settled();await wait(async()=>await app.locator('g').count()===0);assert.equal(await app.locator('circle,ellipse').count(),0);assert.equal(await app.locator('rect,line').count(),2);await wait(survivingLocks);
+  await page.getByRole('treeitem',{name:'g',exact:true}).click();await settled();await require('./shape-tools.cjs').run(page,'Delete layer');await settled();await wait(async()=>await app.locator('g').count()===0);assert.equal(await app.locator('circle,ellipse').count(),0);assert.equal(await app.locator('rect,line').count(),2);await wait(survivingLocks);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(restoredLocks);assert.equal(await page.getByRole('treeitem',{name:'g',exact:true}).getAttribute('aria-selected'),'true');
   await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(async()=>await app.locator('g').count()===0);await wait(survivingLocks);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(restoredLocks);
