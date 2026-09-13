@@ -1243,6 +1243,7 @@ function renderPanelContents() {
     }
     preview.className='hint';preview.setAttribute('aria-label','Export filename preview');exports.append(options,preview,download,batch);refreshOptions();RetouchInspector.note(exports,'Exports the containing SVG canvas at this screen size.');panelBody.append(exports);
   }
+  if(info.svgTransform){const size=RetouchInspector.section('Vector size');RetouchSVGResize.sizeFields(size,info,target,{current:()=>sel?.info===info&&!panelTasks&&!undoBusy&&!sourceRequests&&!editing,save:matrix=>writeSVGTransform(info,target,matrix)});panelBody.append(size);}
   if(info.svgGeometry){
     const geometry=RetouchInspector.section('SVG geometry');
     if(info.svgConversion)geometry.append(RetouchInspector.button('Convert to vector path',()=>convertSVGToPath(info)));
@@ -2259,9 +2260,13 @@ async function resizeSVGOnCanvas(info,target=null,initialPointer=null,handle='se
   if(!initialPointer&&!await prepareVectorCanvas(info,target))return;
   const key=JSON.stringify([info.id,info.hash,styleScope]),current=()=>mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&!(sel?.multiple?.length>1)&&!panelBody.inert&&!document.querySelector('dialog[open]')&&key===JSON.stringify([sel?.info.id,sel?.info.hash,styleScope]);if(!current())return;canvasPan.cancel();
   stopDrawing=RetouchSVGResize.mount({target,info,frame:iframe,canvas:canvasSurface,current,initialPointer,handle,onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err'),onCommit:async matrix=>{
-   if(!current())return;const reason=RetouchSVGResize.reason(target,info,true);if(reason)return toast(reason,'err');busyPanel(true);
-   try{const result=await api('POST','/rt/__api/op',{type:'setSVGTransform',id:info.id,fileHash:info.hash,matrix});if(!result?.ok)return toast(result?.reason||result?.error||'Could not resize vector','err');if(result.undoId)editorHistory.record({type:'setSVGTransform',id:info.id,undoId:result.undoId});sel.info=result.element;await refreshWrittenElement(sel.info,el=>el.getAttribute('transform')===sel.info.svgTransform?.value);renderPanel();toast('Vector resized','ok');}finally{busyPanel(false);}
+   if(current())await writeSVGTransform(info,target,matrix);
   }});
+}
+async function writeSVGTransform(info,target,matrix){
+  if(sel?.info!==info||panelTasks||undoBusy||sourceRequests||editing)return;
+  const reason=RetouchSVGResize.reason(target,info,true);if(reason)return toast(reason,'err');busyPanel(true);
+   try{const result=await api('POST','/rt/__api/op',{type:'setSVGTransform',id:info.id,fileHash:info.hash,matrix});if(!result?.ok)return toast(result?.reason||result?.error||'Could not resize vector','err');if(result.undoId)editorHistory.record({type:'setSVGTransform',id:info.id,undoId:result.undoId});sel.info=result.element;await refreshWrittenElement(sel.info,el=>el.getAttribute('transform')===sel.info.svgTransform?.value);renderPanel();toast('Vector resized','ok');}finally{busyPanel(false);}
 }
 async function setSVGGeometry(property,value){
   if(!sel||panelTasks||undoBusy||sourceRequests)return;const info=sel.info;busyPanel(true);

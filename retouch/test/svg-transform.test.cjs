@@ -23,3 +23,10 @@ for(const kind of ['html','react','liquid'])test(kind+' SVG transform edits pres
  if(kind!=='html'){const body=kind==='react'?'<rect transform={position} />':'<rect transform="{{ position }}"/>',r=resolve(wrap(body),'rect');assert.equal(adapter.describe(r).svgTransform.editable,false);assert.equal(adapter.planOp(r,{type:'setSVGTransform',matrix:A.identity(),fileHash:r.hash}).refused,true);}
  const outside=resolve(kind==='react'?'export default()=> <rect/>':'<html><body><rect></rect></body></html>','rect');assert.equal(adapter.describe(outside).svgTransform,null);
 });
+test('Vector dimensions include authored scale, preserve rotation and lock proportions',()=>{
+ const m=A.parse('translate(10 20) rotate(30) scale(2 3)'),g={x:5,y:7,width:40,height:20},size=A.dimensions(m,g);assert.ok(Math.abs(size.width-80)<1e-8);assert.equal(size.height,60);
+ const next=A.resizeDimension(m,g,'width',160,true),result=A.dimensions(next,g);assert.ok(Math.abs(result.width-160)<1e-8);assert.ok(Math.abs(result.height-120)<1e-8);assert.ok(Math.abs(Math.atan2(next[1],next[0])-Math.PI/6)<1e-8);
+ const point=m=>[m[0]*g.x+m[2]*g.y+m[4],m[1]*g.x+m[3]*g.y+m[5]];point(m).forEach((v,i)=>assert.ok(Math.abs(v-point(next)[i])<1e-8));
+ for(const value of [0,-1,Infinity,100001])assert.equal(A.resizeDimension(m,g,'width',value),null);
+ assert.equal(A.resizeDimension(m,{...g,height:0},'height',10,true),null);
+});

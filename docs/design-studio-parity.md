@@ -13630,3 +13630,29 @@ the separate native iOS checkout was not edited. Recovery inventory is at
 This increment is local source work; no new desktop archive or push was made.
 Numeric transformed bounds, flipping through zero, multi-selection vector
 resizing, full Figma parity, and arbitrary-site coverage remain open.
+
+## 2026-09-13 — Precise vector dimensions in the inspector
+
+Vector W/H now includes the authored SVG transform's axis scales. Numeric edits
+compose a transform, preserve the opposite corner and rotation, and share the
+canvas operation's exact history. A compact proportions control persists for
+the selected source layer across inspector refreshes. Invalid, stale, dynamic,
+or CSS-owned dimensions are guarded. The canvas size hint uses the same axis
+measurements. Values are SVG user units, not an axis-aligned screen rectangle.
+
+The light inspector puts these fields in Vector size. Raw attributes are labeled
+Source geometry; CSS Layout controls remain available under More properties
+for graphical vectors, avoiding a third primary pair of size fields.
+
+Validation: 1,009 unit tests passed. Extended HTML/WebKit 26, React/Chromium,
+and Liquid/Chromium workflows passed with terminal zero exits. A rotated 60x40
+rectangle changes to 90x40, then 180x80 with locked proportions; invalid input
+leaves source unchanged and two undos restore exact original source. The shared
+workflow also reruns all 13 canvas resize cases and cancellation/history checks.
+Final inspector presentation and lock persistence were reverified in Liquid;
+/private/tmp/retouch-svg-size.png was visually inspected. Logs are
+/private/tmp/retouch-svg-size-{units,html,react,liquid}.log.
+
+No desktop rebuild or push. Full Figma/any-site parity remains unproven; notably
+SVG position/rotation inspector consistency, multi-vector bounds editing, flips,
+and screen-specific SVG geometry authoring need further work.

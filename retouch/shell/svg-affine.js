@@ -22,5 +22,8 @@
   const result=multiply(matrix,local);return valid(result)?result:null;
  }
 
- const api={identity,valid,multiply,parse,format,equivalent,resize};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGAffine=api;
+ function dimensions(matrix,g){if(!valid(matrix)||!g)return null;const sx=Math.hypot(matrix[0],matrix[1]),sy=Math.hypot(matrix[2],matrix[3]);return sx>1e-9&&sy>1e-9?{width:g.width*sx,height:g.height*sy,sx,sy}:null;}
+ function resizeDimension(matrix,g,axis,value,locked=false){const size=dimensions(matrix,g);if(!size||!['width','height'].includes(axis)||!Number.isFinite(value)||value<=0||value>100000)return null;const other=axis==='width'?'height':'width',after={...g,[axis]:value/size[axis==='width'?'sx':'sy']};if(locked){if(!size[axis]||!size[other])return null;after[other]=g[other]*value/size[axis];}return resize(matrix,g,after);}
+
+ const api={identity,valid,multiply,parse,format,equivalent,resize,dimensions,resizeDimension};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGAffine=api;
 })(typeof window==='object'?window:globalThis);
