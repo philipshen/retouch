@@ -13503,3 +13503,30 @@ and Liquid/Chromium. All test processes exited successfully. Logs are
 `/private/tmp/retouch-strokes-picker-{html,liquid}.log` and
 `/private/tmp/retouch-strokes-units.log`. The desktop archive has not been rebuilt
 for these changes. Full Figma/any-site parity and native release work remain open.
+
+### 2026-09-13 — Shared SVG rectangle corner radius
+
+Added a primary Radius control for SVG rectangles, replacing the non-rendering
+CSS border-radius controls on graphical SVG selections. Equal radii show one
+value; unequal radii show Mixed. Elliptical corners retains the separate X/Y
+radii. A shared edit or reset writes both axes in one source transaction and one
+undo step across HTML, JSX and Liquid. Batch geometry changes validate every
+member before generating edits, preserving dynamic-value and revision guards.
+
+The new control detects CSS-controlled corners with a temporary hidden sibling
+probe, removed synchronously in finally, and refuses to override dynamic or
+animated radius ownership. Ordinary HTML and SVG viewport corner controls remain.
+The reference is Figma's shared corner-radius interaction:
+https://help.figma.com/hc/en-us/articles/360050986854-Adjust-corner-radius-and-smoothing
+SVG axes and fallback follow:
+https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/rx
+Per-corner vector rounding, on-canvas corner handles and smoothing remain open.
+
+Validation: 1,001 unit tests passed, plus focused radius-model checks after numeric
+normalization. Real HTML/WebKit 26, Next/React Chromium 145 and compiled Liquid
+Chromium 145 workflows passed shared edits/reset, unequal axes, invalid input,
+CSS ownership, source/DOM preservation and exact single-step undo/redo. Screenshot
+`/private/tmp/retouch-radius-liquid.png` was inspected. Logs:
+`/private/tmp/retouch-radius-{html,react,liquid}.log` and
+`/private/tmp/retouch-radius-units.log`. Desktop has not been rebuilt for this
+increment; full Figma/any-site parity remains unfinished.

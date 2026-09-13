@@ -1,0 +1,22 @@
+'use strict';
+const assert=require('node:assert/strict');
+module.exports=async function radiusWorkflow({page,app,kind,read,wait,settled}){
+ const original=read(),rect=app.locator('main > svg > rect'),input=page.getByLabel('Rectangle corner radius',{exact:true}),states=[original];
+ const select=async()=>{await page.getByRole('treeitem',{name:'rect',exact:true}).click();await settled();};
+ const rendered=()=>rect.evaluate(el=>({rx:getComputedStyle(el).rx,ry:getComputedStyle(el).ry}));
+ await select();assert.equal(await input.inputValue(),'');assert.equal(await input.getAttribute('placeholder'),'Mixed');assert.equal(await page.getByLabel(/^Corner radius/).count(),0);
+ const set=async value=>{await input.fill(value);await input.press('Tab');await settled();};
+ await set('-1');assert.equal(await input.evaluate(el=>el.checkValidity()),false);assert.equal(read(),original);
+ await set('10');await wait(async()=>JSON.stringify(await rendered())===JSON.stringify({rx:'10px',ry:'10px'}));states.push(read());assert.notEqual(states[1],original);
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);assert.equal(await input.getAttribute('placeholder'),'Mixed');
+ await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===states[1]);assert.equal(await input.inputValue(),'10');
+ await page.getByRole('button',{name:'Reset rectangle corner radius',exact:true}).click();await settled();await wait(async()=>await rect.getAttribute('rx')===null&&await rect.getAttribute('ry')===null);states.push(read());assert.equal(await input.inputValue(),'0');
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states[1]);
+ await page.getByText('Elliptical corners',{exact:true}).click();const x=page.getByLabel('Shape Horizontal radius',{exact:true});await x.fill('20');await x.press('Tab');await settled();await wait(async()=>JSON.stringify(await rendered())===JSON.stringify({rx:'20px',ry:'10px'}));assert.equal(await input.getAttribute('placeholder'),'Mixed');
+ if(process.env.RT_E2E_SVG_RADIUS_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_SVG_RADIUS_SCREENSHOT});
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states[1]);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);
+ await rect.evaluate(el=>{const style=el.ownerDocument.createElement('style');style.id='radius-test-style';style.textContent='rect { rx: 9px; ry: 11px }';el.ownerDocument.head.append(style);});
+ await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await settled();await select();assert.equal(await input.isDisabled(),true);assert.match(await input.getAttribute('title'),/CSS controls/);assert.equal(read(),original);
+ await rect.evaluate(el=>el.ownerDocument.getElementById('radius-test-style').remove());await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await settled();await select();assert.equal(await input.isDisabled(),false);
+ assert.equal(await rect.count(),1);assert.equal(read(),original);console.log('SVG RECTANGLE RADIUS: paired edits/reset, elliptical axes, CSS ownership, validation and exact history PASS '+kind);
+};

@@ -1242,6 +1242,7 @@ function renderPanelContents() {
     if(info.svgConversion)geometry.append(RetouchInspector.button('Convert to vector path',()=>convertSVGToPath(info)));
     const pointField=info.svgGeometry.fields.find(field=>['points','d'].includes(field.name));
     if(editableVectorField(info)){const editPoints=RetouchInspector.button('Edit vector points',()=>editSVGPoints(info));editPoints.dataset.canvasTool='vertices';editPoints.title='Edit vector points · Enter or double-click on the canvas';geometry.append(editPoints);}
+    RetouchSVGRadius.mount(geometry,info,target,changes=>setSVGGeometry(changes));
     const parametric=info.svgGeometry.parametric;
     if(parametric){
       const change=updates=>{const points=RetouchSVGParametric.generate({...parametric,...updates});if(points)setSVGGeometry('points',points);else toast('Choose a valid shape count and ratio.','err');};
@@ -2248,7 +2249,7 @@ async function convertSVGToPath(info){
 async function setSVGGeometry(property,value){
   if(!sel||panelTasks||undoBusy||sourceRequests)return;const info=sel.info;busyPanel(true);
   try{
-    const result=await api('POST','/rt/__api/op',{type:'setSVGGeometry',id:info.id,fileHash:info.hash,property,value});
+    const result=await api('POST','/rt/__api/op',{type:'setSVGGeometry',id:info.id,fileHash:info.hash,...(typeof property==='object'?{changes:property}:{property,value})});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not update shape','err');
     if(result.undoId)editorHistory.record({type:'setSVGGeometry',id:info.id,undoId:result.undoId});
     sel.info=result.element;await refreshWrittenElement(sel.info,el=>svgGeometryMatches(el,sel.info));renderPanel();toast('Shape updated','ok');

@@ -8,11 +8,14 @@ function describe(resolved){
  return {parametric:node.tag==='polygon'&&!node.attributeExpressions&&metadata.length===1&&coordinates.length===1?require('../shell/svg-parametric.js').describe(coordinates[0].value,metadata[0].value):null,fields:shape.fields.map(field=>{const attrs=(node.attributes||[]).filter(attr=>attr.name===field.name),attr=attrs[0],dynamic=attr&&/\{[%{]/.test(attr.value||''),editable=!node.attributeExpressions&&attrs.length<2&&!dynamic;return {...field,value:attr?.value??null,editable,reason:editable?null:node.attributeExpressions?'Liquid attribute expressions may control this value.':dynamic?'This coordinate is controlled by a Liquid expression.':'This coordinate has duplicate attributes.'};})};
 }
 function plan(resolved,op){
- const refuse=reason=>({ok:false,refused:true,reason}),field=describe(resolved)?.fields.find(field=>field.name===op.property);
- if(!field?.editable||!svg.valid(op.property,op.value))return refuse(field?.reason||'Choose an editable SVG coordinate or size.');
+ const refuse=reason=>({ok:false,refused:true,reason}),shape=describe(resolved),entries=svg.changes(op);
+ if(!shape||!entries)return refuse('Choose editable SVG coordinates or sizes.');
+ for(const [property,value]of entries){const field=shape.fields.find(f=>f.name===property);if(!field?.editable||!svg.valid(property,value))return refuse(field?.reason||'Choose an editable SVG coordinate or size.');}
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the shape.');
- const node=resolved.element,attr=node.attributes.find(attr=>attr.name===op.property),out=new MagicString(resolved.source);
- if(op.value===null){if(attr)out.remove(attr.attrStart,attr.attrEnd);}else if(attr&&attr.valueStart>=0&&['"',"'"].includes(resolved.source[attr.valueStart-1]))out.overwrite(attr.valueStart,attr.valueEnd,op.value);else{const token=op.property+'="'+op.value+'"';if(attr)out.overwrite(attr.attrStart,attr.attrEnd,token);else out.appendLeft(node.nameEnd,' '+token);}
+ const node=resolved.element,out=new MagicString(resolved.source);
+ for(const [property,value]of entries){const attr=node.attributes.find(attr=>attr.name===property);
+ if(value===null){if(attr)out.remove(attr.attrStart,attr.attrEnd);}else if(attr&&attr.valueStart>=0&&['"',"'"].includes(resolved.source[attr.valueStart-1]))out.overwrite(attr.valueStart,attr.valueEnd,value);else{const token=property+'="'+value+'"';if(attr)out.overwrite(attr.attrStart,attr.attrEnd,token);else out.appendLeft(node.nameEnd,' '+token);}
+ }
  const after=out.toString(),adapter=require('./adapters/liquid.cjs'),before=adapter.collect(resolved.source,resolved.relPath).elements,next=adapter.collect(after,resolved.relPath).elements;
  if(before.length!==next.length||before.some((el,i)=>el.id!==next[i].id||el.tag!==next[i].tag||el.kind!==next[i].kind))return refuse('The edit would change the Liquid document structure.');
  return {ok:true,hash:adapter.contentHash(after),edits:after===resolved.source?[]:[{file:resolved.file,before:resolved.source,after}]};

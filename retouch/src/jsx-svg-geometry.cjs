@@ -16,11 +16,14 @@ function describe(resolved){
  return {parametric:tag==='polygon'&&!spread&&metadata.length===1&&coordinates.length===1?require('../shell/svg-parametric.js').describe(literal(coordinates[0]),literal(metadata[0])):null,fields:base.fields.map(field=>{const matches=attrs.filter(a=>a.type==='JSXAttribute'&&a.name.name===field.name),value=literal(matches[0]),editable=!spread&&matches.length<2&&value!==undefined;return {...field,value:value??null,editable,reason:editable?null:spread?'Spread props may control this value.':'This value is dynamic or duplicated in JSX.'};})};
 }
 function plan(resolved,op){
- const refuse=reason=>({ok:false,refused:true,reason}),field=describe(resolved)?.fields.find(f=>f.name===op.property);
- if(!field||!field.editable||!svg.valid(op.property,op.value))return refuse(field?.reason||'Choose an editable SVG coordinate or size.');
+ const refuse=reason=>({ok:false,refused:true,reason}),shape=describe(resolved),entries=svg.changes(op);
+ if(!shape||!entries)return refuse('Choose editable SVG coordinates or sizes.');
+ for(const [property,value]of entries){const field=shape.fields.find(f=>f.name===property);if(!field?.editable||!svg.valid(property,value))return refuse(field?.reason||'Choose an editable SVG coordinate or size.');}
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the shape.');
- const node=resolved.element.node,attr=node.openingElement.attributes.find(a=>a.type==='JSXAttribute'&&a.name.name===op.property),out=new MagicString(resolved.source);
- if(op.value===null){if(attr)out.remove(attr.start,attr.end);}else{const token=op.property+'="'+op.value+'"';if(attr)out.overwrite(attr.start,attr.end,token);else out.appendLeft(node.openingElement.name.end,' '+token);}
+ const node=resolved.element.node,out=new MagicString(resolved.source);
+ for(const [property,value]of entries){const attr=node.openingElement.attributes.find(a=>a.type==='JSXAttribute'&&a.name.name===property);
+ if(value===null){if(attr)out.remove(attr.start,attr.end);}else{const token=property+'="'+value+'"';if(attr)out.overwrite(attr.start,attr.end,token);else out.appendLeft(node.openingElement.name.end,' '+token);}
+ }
  const after=out.toString(),before=resolved.elements||ids.collectElements(resolved.source,resolved.relPath).elements,next=ids.collectElements(after,resolved.relPath).elements;
  if(before.length!==next.length||before.some((e,i)=>e.id!==next[i].id||ids.jsxElementName(e.node)!==ids.jsxElementName(next[i].node)))return refuse('The edit would change the JSX document structure.');
  return {ok:true,hash:ids.contentHash(after),edits:after===resolved.source?[]:[{file:resolved.file,before:resolved.source,after}]};
