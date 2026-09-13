@@ -53,6 +53,13 @@ function composeNext(nextConfig = {}, { port, appRoot }) {
     rules[pattern] = previous ? { ...previous, loaders: [...previous.loaders, loader] } : loaderRule;
   }
 
+  for (const pattern of ['**/next/dist/client/components/use-action-queue.js', '**/next/dist/esm/client/components/use-action-queue.js']) {
+    const previous = rules[pattern];
+    if (previous && (Array.isArray(previous) || !Array.isArray(previous.loaders))) throw new Error(`[retouch] Cannot safely compose Turbopack rule ${pattern}; use a supported loader rule object`);
+    const guard = { loader: require.resolve('./next-hmr-loader.cjs') };
+    rules[pattern] = previous ? { ...previous, loaders: [...previous.loaders, guard] } : { loaders: [guard] };
+  }
+
   return {
     ...nextConfig,
     [COMPOSED]: true,
@@ -68,6 +75,11 @@ function composeNext(nextConfig = {}, { port, appRoot }) {
         exclude: /node_modules/,
         enforce: 'pre',
         use: [loader],
+      });
+      if (ctx.dev !== false) cfg.module.rules.push({
+        test: /[\\/]next[\\/]dist[\\/](?:esm[\\/])?client[\\/]components[\\/]use-action-queue\.js$/,
+        enforce: 'pre',
+        use: [{ loader: require.resolve('./next-hmr-loader.cjs') }],
       });
       return nextConfig.webpack ? nextConfig.webpack(cfg, ctx) : cfg;
     },

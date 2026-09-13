@@ -72,6 +72,47 @@
     if(!force&&next===route)return;route=next;
     for(const card of cards){card.message.textContent='Loading…';card.frame.src=next;}
   }
+  function syncColdText(info){
+    const {id,text,hash,renderRevisionAttribute}=info;
+    for(const card of cards){
+      card.cancelColdText?.();delete card.cancelColdText;card.textSyncError=null;
+      const frame=card.frame,initial=frame.contentDocument,href=new URL(path()||'/',location.href).href;
+      if(initial?.readyState==='complete'&&window.RetouchClientMount.ready(initial))continue;
+      if(!renderRevisionAttribute)continue;
+      let cancelled=false,running=false;
+      const controller=new AbortController();
+      const cancel=()=>{cancelled=true;frame.removeEventListener('load',run);controller.abort();};
+      card.cancelColdText=cancel;
+      const current=()=>{try{return !cancelled&&open&&cards.includes(card)&&new URL(path()||'/',location.href).href===href&&frame.contentWindow.location.href===href;}catch{return false;}};
+      const select=d=>[...d.querySelectorAll('[data-rt]')].find(el=>el.getAttribute('data-rt')===id);
+      const matches=el=>el&&el.getAttribute(renderRevisionAttribute)===hash&&el.textContent===text;
+      async function run(){
+        if(running||!current()||frame.contentDocument?.readyState!=='complete')return;
+        running=true;frame.removeEventListener('load',run);
+        let timeout;
+        try{
+          const d=frame.contentDocument;
+          for(let attempt=0;attempt<80&&!window.RetouchClientMount.ready(d);attempt++){
+            if(!current()||frame.contentDocument!==d)return;
+            await new Promise(resolve=>setTimeout(resolve,50));
+          }
+          if(!current()||frame.contentDocument!==d)return;
+          if(!window.RetouchClientMount.ready(d))throw Error('Preview is still mounting.');
+          if(matches(select(d)))return;
+          timeout=setTimeout(()=>controller.abort(),8000);
+          const response=await fetch(href,{cache:'no-store',signal:controller.signal});
+          if(!response.ok)throw Error('Could not render the saved page.');
+          const fresh=new DOMParser().parseFromString(await response.text(),'text/html');
+          if(!current()||frame.contentDocument!==d)return;
+          // A preview that connected after the write can miss the dev server's
+          // update entirely. Reload only a verified stale startup document.
+          if(matches(select(fresh))&&!matches(select(d)))frame.contentWindow.location.reload();
+        }catch(error){if(current())card.textSyncError='Text saved; comparison refresh failed: '+error.message;}
+        finally{clearTimeout(timeout);if(card.cancelColdText===cancel)delete card.cancelColdText;}
+      }
+      frame.addEventListener('load',run);void run();
+    }
+  }
   function selectedNodes(d){const ids=new Set(selectedIds);return ids.size?[...d.querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>ids.has(el.getAttribute('data-rt'))||ids.has(el.getAttribute('data-rt-i'))):[];}
   function selectedGroups(d){
     const nodes=selectedNodes(d),groups=[];
@@ -253,7 +294,7 @@
       const edit=document.createElement('button');edit.className='control-button';edit.textContent='Edit';edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');
       edit.onclick=()=>window.RetouchScreens.set({width,height});header.append(edit);
       const remove=document.createElement('button');remove.className='control-button';remove.textContent='×';remove.setAttribute('aria-label','Remove '+name+' comparison');header.append(remove);
-      remove.onclick=async()=>{remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;card.inert=true;clearOrderHistory();removals++;removed.push({size,index});if(removed.length>8)removed.shift();sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);cards=cards.filter(c=>c!==item);updateControls();await unload(frame);surface.remove();card.remove();removals--;updateControls();};
+      remove.onclick=async()=>{remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;card.inert=true;clearOrderHistory();removals++;removed.push({size,index});if(removed.length>8)removed.shift();sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);item?.cancelColdText?.();cards=cards.filter(c=>c!==item);updateControls();await unload(frame);surface.remove();card.remove();removals--;updateControls();};
       const viewport=document.createElement('div');viewport.className='compare-viewport';viewport.tabIndex=0;viewport.setAttribute('role','button');viewport.setAttribute('aria-label','Edit from '+name+' comparison');viewport.title='Click a layer to select it on the main canvas at this size. Style scope stays unchanged.';viewport.setAttribute('aria-describedby','comparisonNavigationHint');viewport.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight PageUp PageDown Home End Enter Space');
       const frame=document.createElement('iframe');frame.title=name+' comparison preview';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');frame.style.width=width+'px';frame.style.height=height+'px';
       const surface=document.createElement('div');surface.className='compare-surface';surface.setAttribute('aria-hidden','true');surface.append(frame);rail.append(surface);
@@ -445,7 +486,7 @@
       },{passive:false});
       cards.push({card,frame,surface,previewBody,setCollapsed,attachMarquee,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal,up,down,move});
   }
-  function unload(frame){marqueeCleanup.get(frame)?.();marqueeCleanup.delete(frame);return new Promise(resolve=>{
+  function unload(frame){cards.find(card=>card.frame===frame)?.cancelColdText?.();marqueeCleanup.get(frame)?.();marqueeCleanup.delete(frame);return new Promise(resolve=>{
     let timeout;
     const done=()=>{clearTimeout(timeout);frame.removeEventListener('load',done);frame.remove();resolve();};
     frame.addEventListener('load',done);timeout=setTimeout(done,1000);
@@ -493,7 +534,8 @@
   new ResizeObserver(()=>{if(open)layoutPreviews();}).observe(rail);
   window.RetouchComparisons={
     async syncText(info){
-      if(!open||!window.__RT_RENDERING?.reloadAfterWrite||info.kind!=='host'||info.textSource)return;
+      if(!open||info.kind!=='host'||info.textSource)return;
+      if(!window.__RT_RENDERING?.reloadAfterWrite){syncColdText(info);return;}
       const targets=[...cards];
       await Promise.all(targets.map(async card=>{
         const select=d=>[...d.querySelectorAll('[data-rt]')].filter(el=>el.getAttribute('data-rt')===info.id);

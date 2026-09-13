@@ -37,3 +37,24 @@ test('explicit session hook is inert outside a session', async () => {
   const original = { fixture: true };
   assert.equal(await require('../src/next.cjs').withRetouchSession(original), original);
 });
+
+test('HMR guard targets only Next action queues and is absent from production webpack', () => {
+  const config = composeNext({}, options);
+  const rules = config.webpack({ module: { rules: [] } }, { dev: true }).module.rules;
+  const guard = rules.find(rule => rule.use[0].loader.endsWith('next-hmr-loader.cjs'));
+  assert.ok(guard.test.test('/repo/node_modules/next/dist/client/components/use-action-queue.js'));
+  assert.ok(guard.test.test('/repo/node_modules/next/dist/esm/client/components/use-action-queue.js'));
+  assert.equal(guard.test.test('/repo/app/use-action-queue.js'), false);
+  assert.equal(config.webpack({ module: { rules: [] } }, { dev: false }).module.rules.some(rule => rule.use[0].loader.endsWith('next-hmr-loader.cjs')), false);
+});
+
+test('Turbopack HMR guard composes existing loaders without changing their options', () => {
+  const pattern = '**/next/dist/client/components/use-action-queue.js';
+  const previous = { loaders: ['existing-loader'], as: '*.js' };
+  const config = composeNext({ turbopack: { rules: { [pattern]: previous } } }, options);
+  assert.equal(config.turbopack.rules[pattern].as, '*.js');
+  assert.equal(config.turbopack.rules[pattern].loaders[0], 'existing-loader');
+  assert.ok(config.turbopack.rules[pattern].loaders[1].loader.endsWith('next-hmr-loader.cjs'));
+  assert.deepEqual(previous.loaders, ['existing-loader']);
+  assert.throws(() => composeNext({ turbopack: { rules: { [pattern]: [] } } }, options), /Cannot safely compose/);
+});
