@@ -10,23 +10,26 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-canvas-c121619/Retouch-0.1.0-mac.zip`
-(SHA-256 `918d6623dd9e5cc97ce14cccd615759c79faadda42abc48c7c2a8bb014e287dc`).
-It packages clean commit `c121619`, including SVG gradient creation, linear/radial
-switching, reversal, solid conversion, canvas handles, whole-gradient movement
-and persistent editing sessions. All 204 source hashes and native/build/verifier
+`/private/tmp/retouch-desktop-stops-d4c9fb3/Retouch-0.1.0-mac.zip`
+(SHA-256 `5cd7c791df1b01763a387e678e92afba3726c60fe9eceee332a0bdab935ce2bb`).
+It packages clean commit `d4c9fb3`, including gradient controls inside Fill and
+Stroke, radial inner-radius handles, and canvas color-stop movement, reordering,
+insertion, deletion and color picking. All 204 source hashes and native/build/verifier
 hashes match. Universal architecture, strict signature verification before and
-after workflows, disposable-copy tamper checks, and 1,105 tests importing the
+after workflows, disposable-copy tamper checks, and 1,111 tests importing the
 actual bundled runtime pass.
 
 The exact archive installed and uninstalled through Homebrew in an isolated app
 directory with quarantine intact. The original cask inventory is unchanged;
 the temporary app, tap, trust configuration and external harness were removed.
 Packaged HTML/WebKit, React/Chromium and Liquid/Chromium full gradient workflows
-pass, including exact source history and cancellation during a pending save.
-Canvas transform/viewport cases and responsive comparison editing also pass.
-See [the candidate receipt](verification/2026-09-13-canvas-gradients.json).
-The [previous gradient candidate](verification/2026-09-13-svg-gradients.json)
+pass, including exact source history, color preview cancellation, no-op Apply,
+and cancellation during a pending save. The combined canvas transform/viewport
+case and responsive comparison editing also pass.
+See [the candidate receipt](verification/2026-09-13-canvas-stop-controls.json).
+The [previous canvas candidate](verification/2026-09-13-canvas-gradients.json)
+records the earlier geometry-handle and persistent-session build.
+The [earlier gradient candidate](verification/2026-09-13-svg-gradients.json)
 records equal canvas-gap checks; those were not rerun on this archive.
 The [alignment candidate](verification/2026-09-13-alignment-scrubbing.json)
 records broader vector, scoped stroke and canvas radius workflows.
