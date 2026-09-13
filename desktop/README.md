@@ -10,33 +10,32 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-vectors-78bbcd0/Retouch-0.1.0-mac.zip`
-(SHA-256 `7007ed609ad045536e54060f5d957acc6bced56e3cb6ab63ab1e039008fe2411`).
-It contains clean commit `78bbcd0`: queued Next startup refreshes, compiled-render
-retry recovery, the light comparison panel, and Liquid/React vector creation.
-All 184 packaged source hashes and native/build/verifier hashes match. Universal
-architecture, strict signatures and all 980 tests importing the bundled runtime
-pass. Strict verification also passes after the browser workflows.
+`/private/tmp/retouch-desktop-transform-04cf8fd/Retouch-0.1.0-mac.zip`
+(SHA-256 `d93c3cff06f6011a9b197420b4270ed48bdde4cb18046d7645d863cdafe1d4b8`).
+It packages clean commit `04cf8fd`, including SVG resizing, rotation, flips,
+one-gesture selection/dragging, grouped arrow-key nudges and alignment/spacing
+guides. All 192 source hashes and native/build/verifier hashes match. Universal
+architecture, strict signature verification and 1,018 tests importing the actual
+bundled runtime pass.
 
-This exact archive installed and uninstalled through Homebrew in an isolated app
+The exact archive installed and uninstalled through Homebrew in an isolated app
 directory with quarantine intact. The original cask inventory is unchanged; the
-temporary app, tap, trust configuration and external test harness were removed.
+temporary app, tap, trust configuration and external harness were removed.
+Packaged HTML/WebKit, React/Chromium and Liquid/Chromium vector workflows pass,
+including snapping at multiple zoom levels, keyboard gestures and exact history.
+Responsive comparison editing, scoped stroke controls and on-canvas radius checks
+also pass. See [the candidate receipt](verification/2026-09-13-vector-transforms.json).
 
-Packaged workflows pass cold-startup text editing with preview removal/restoration,
-three deliberately stale compiled renders, bounded timeout/error recovery, and
-ready-preview document/input preservation with exact history. Liquid primitive
-and curved Pen drawing, React new-canvas/self-closing SVG creation, and the light
-comparison panel help/focus workflow also pass. These are targeted Chromium and
-WebKit checks, not a claim that every startup timing or native workflow is proven.
-See [the candidate receipt](verification/2026-09-13-vectors-recovery.json).
+This is an ad hoc development build, not a trusted release. Native launch was
+not attempted because the CUA native connection failed. A single Developer ID
+signing attempt on a separate copy reached SecurityAgent and exceeded its
+45-second bound; the owned signing process was stopped and that copy removed.
+Developer ID signing, notarization, public distribution, native editing, Intel
+execution and trusted upgrades remain unverified.
 
-This is an ad hoc development build, not a verified release. Native launch was
-not attempted because the CUA native connection failed; native editing, sampler,
-shutdown and Intel execution remain unverified. Developer ID signing,
-notarization, public distribution and trusted upgrades remain unfinished.
-The [previous startup candidate](verification/2026-09-13-startup-workflows.json)
-retains its intermittent stale-preview failure; it predates the compiled-render
-retry fix included and tested in this candidate.
+The [previous startup-recovery candidate](verification/2026-09-13-vectors-recovery.json)
+records targeted cold-start recovery and ready-preview preservation checks.
+Those startup scenarios and native Pen workflows were not rerun on this archive.
 
 The [previous sizing candidate](verification/2026-09-13-sizing-workflows.json)
 records scaled/flipped sizing and rotation workflows, plus the older WebKit 26.0

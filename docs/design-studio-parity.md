@@ -13898,3 +13898,28 @@ The alignment screenshot /private/tmp/retouch-svg-snap.png was visually inspecte
 No desktop rebuild or push. Multi-selection snapping, snapping during SVG resize,
 vector-point snapping parity, persistent snapping preferences and arbitrary-site/
 full Figma parity remain open.
+
+## 2026-09-13 — Packaged SVG transform tools and cask verification
+
+Built the clean 04cf8fd runtime into a universal macOS development archive.
+All 192 packaged source files and native/build/verifier hashes match; strict
+signature verification passed before and after testing. An external harness
+importing the actual extracted package passed 1,018 unit tests and six targeted
+browser workflows: vector tools in HTML/WebKit, React/Chromium and Liquid/Chromium,
+responsive comparison editing, responsive strokes and on-canvas radius editing.
+The nudge test now restores body tabindex after iframe reload before moving focus;
+its initial packaged WebKit attempt failed at that test-focus step, and the final
+workflow passed with the correction.
+
+The exact ZIP installed and uninstalled through an isolated Homebrew cask with
+quarantine preserved. The original cask inventory is unchanged and temporary
+app/tap/trust/harness resources are removed. Native UI automation remains unavailable,
+so no native launch was attempted. One bounded Developer ID signing attempt
+reached SecurityAgent but did not finish; its owned process and separate copy
+were removed. The archive remains ad hoc signed, with no notarization or public
+release claim. Full Figma, arbitrary-site and native workflow parity remain open.
+
+Receipt: desktop/verification/2026-09-13-vector-transforms.json.
+Archive: /private/tmp/retouch-desktop-transform-04cf8fd/Retouch-0.1.0-mac.zip.
+SHA-256: d93c3cff06f6011a9b197420b4270ed48bdde4cb18046d7645d863cdafe1d4b8.
+No push was performed.

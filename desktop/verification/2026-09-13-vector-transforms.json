@@ -1,0 +1,189 @@
+{
+  "sourceCommit": "04cf8fda556e7199ce76049008af4c9e9e32be42",
+  "sourceTreeDirty": false,
+  "sourceFiles": 192,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "archive": "/private/tmp/retouch-desktop-transform-04cf8fd/Retouch-0.1.0-mac.zip",
+  "sha256": "d93c3cff06f6011a9b197420b4270ed48bdde4cb18046d7645d863cdafe1d4b8",
+  "status": "development candidate; targeted packaged runtime and isolated cask install verified; native workflows and trusted distribution unverified",
+  "buildLog": "/private/tmp/retouch-desktop-transform-build.log",
+  "units": {
+    "passed": 1018,
+    "scope": "external harness importing actual packaged runtime; development dependencies outside signed app",
+    "log": "/private/tmp/retouch-desktop-transform-04cf8fd/units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "Vector resize, flips, direct movement, snapping, rotation and exact history",
+      "renderer": "liquid",
+      "engine": "chromium",
+      "result": "passed including terminal zero exit",
+      "log": "/private/tmp/retouch-desktop-transform-04cf8fd/vectors-liquid.log"
+    },
+    {
+      "name": "Vector resize, direct movement, snapping, nudges and exact history",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed including terminal zero exit",
+      "log": "/private/tmp/retouch-desktop-transform-04cf8fd/vectors-react.log"
+    },
+    {
+      "name": "Vector resize, direct movement, snapping, nudges and exact history",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed including terminal zero exit",
+      "log": "/private/tmp/retouch-desktop-transform-04cf8fd/vectors-html-final.log"
+    },
+    {
+      "name": "Responsive comparison editing and persistence",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed including terminal zero exit",
+      "log": "/private/tmp/retouch-desktop-transform-04cf8fd/comparison.log"
+    },
+    {
+      "name": "Responsive stroke settings and exact history",
+      "renderer": "liquid",
+      "engine": "chromium",
+      "result": "passed including terminal zero exit",
+      "log": "/private/tmp/retouch-desktop-transform-04cf8fd/responsive-strokes.log"
+    },
+    {
+      "name": "On-canvas rectangle radius and history",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed including terminal zero exit",
+      "log": "/private/tmp/retouch-desktop-transform-04cf8fd/radius-html.log"
+    }
+  ],
+  "harness": {
+    "sources": [
+      {
+        "source": "retouch/test/e2e/page-fonts.cjs",
+        "sha256": "8ee523f6ec7621954735bb34b3e72acf950cc57d0d2000837b6f15ae5b71bcc8",
+        "snapshot": "/private/tmp/retouch-desktop-transform-04cf8fd/harness-snapshots/page-fonts.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/svg-resize.cjs",
+        "sha256": "f8b3966b7057193b0739ee4489a2f49d57976ff96328ac4c3d4dfd710fe60a00",
+        "snapshot": "/private/tmp/retouch-desktop-transform-04cf8fd/harness-snapshots/svg-resize.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/svg-ratio.cjs",
+        "sha256": "27650ca2ee90eede3636e3b08129e03c92e07b441e0d4e3108fab4eb3ff9b1c9",
+        "snapshot": "/private/tmp/retouch-desktop-transform-04cf8fd/harness-snapshots/svg-ratio.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/svg-move-canvas.cjs",
+        "sha256": "0edbda345fd8642a57b77aa26b309a22bffa3ca382aebb880468b04911619d4a",
+        "snapshot": "/private/tmp/retouch-desktop-transform-04cf8fd/harness-snapshots/svg-move-canvas.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/svg-nudge.cjs",
+        "sha256": "fa35bba9bdef6b9059169d9c91595a9150cf5c72a33641f1f869e12c4fedb9bc",
+        "snapshot": "/private/tmp/retouch-desktop-transform-04cf8fd/harness-snapshots/svg-nudge.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/svg-snap.cjs",
+        "sha256": "3434fb799974663911c18b92309f5807dabf0fd00cc9cc61815ede4036cf1792",
+        "snapshot": "/private/tmp/retouch-desktop-transform-04cf8fd/harness-snapshots/svg-snap.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/svg-rotate.cjs",
+        "sha256": "5a21b4fd6458d910cf69e3d77eb9117727850fcc003aa30b89c9393dbda3005f",
+        "snapshot": "/private/tmp/retouch-desktop-transform-04cf8fd/harness-snapshots/svg-rotate.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/svg-flip.cjs",
+        "sha256": "040a2c930351c1b370b48a55914d351b0a70e61cf1dbcbc5a0dd5ad3d1c60ab5",
+        "snapshot": "/private/tmp/retouch-desktop-transform-04cf8fd/harness-snapshots/svg-flip.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/svg-radius.cjs",
+        "sha256": "189b541c0e450e9b1aff2f05a186cc6c2b0439d8274332a68b0c0bf1875f2bc5",
+        "snapshot": "/private/tmp/retouch-desktop-transform-04cf8fd/harness-snapshots/svg-radius.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/svg-radius-canvas.cjs",
+        "sha256": "37b58723d358d9aa6317bfb7a16ed7adfa4c1ad2ceb7403f627b789e72d2d92c",
+        "snapshot": "/private/tmp/retouch-desktop-transform-04cf8fd/harness-snapshots/svg-radius-canvas.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/svg-stroke-settings.cjs",
+        "sha256": "74c8571dd310b34b4b6b3d407409a96ea73451dfd615d4876d8f55a5df2f722a",
+        "snapshot": "/private/tmp/retouch-desktop-transform-04cf8fd/harness-snapshots/svg-stroke-settings.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/html-compare-edit.cjs",
+        "sha256": "5cf62705aa0b89c21f1d0734306e7dc1d381ffc938760ad7edada652c1eb8595",
+        "snapshot": "/private/tmp/retouch-desktop-transform-04cf8fd/harness-snapshots/html-compare-edit.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/shape-tools.cjs",
+        "sha256": "bbc9961f235fe3089775e25c671903988e7fa87c47045015725e9cac14fa8954",
+        "snapshot": "/private/tmp/retouch-desktop-transform-04cf8fd/harness-snapshots/shape-tools.cjs"
+      }
+    ],
+    "inventory": "/private/tmp/retouch-desktop-transform-04cf8fd/harness-inventory.json",
+    "inventorySha256": "2d2b2927d60c030f0f8b133af3b9dd3ef9e98c1e67d89587ad50464f64f98c5f",
+    "testCorrection": "svg-nudge.cjs restores body tabindex after iframe reload before focusing it; first packaged HTML attempt failed at this test-focus step",
+    "initialHTMLLog": "/private/tmp/retouch-desktop-transform-04cf8fd/vectors-html.log",
+    "externalHarnessRemoved": true
+  },
+  "installation": {
+    "verification": {
+      "sourceCommit": "04cf8fda556e7199ce76049008af4c9e9e32be42",
+      "sourceTreeDirty": false,
+      "sourceFiles": 192,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesArchive": true,
+    "quarantinePreserved": true,
+    "quarantine": "0381;6aa631a0;;AD0D9BD7-EFA6-45F0-B59F-4297C87CC887",
+    "result": "isolated cask install and uninstall passed",
+    "cleanup": {
+      "caskInventoryUnchanged": true,
+      "appAndCaskRegistrationAbsent": true,
+      "temporaryTapAndTrustAbsent": true,
+      "automaticDependencyRemoval": false,
+      "incompleteSignedCopyRemoved": true
+    },
+    "logs": [
+      "/private/tmp/retouch-desktop-transform-04cf8fd/tap.log",
+      "/private/tmp/retouch-desktop-transform-04cf8fd/trust.log",
+      "/private/tmp/retouch-desktop-transform-04cf8fd/install.log",
+      "/private/tmp/retouch-desktop-transform-04cf8fd/uninstall.log",
+      "/private/tmp/retouch-desktop-transform-04cf8fd/untap.log"
+    ]
+  },
+  "nativeLaunch": {
+    "result": "not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "release": {
+    "signing": "ad hoc development build",
+    "developerID": false,
+    "notarization": false,
+    "publicRelease": false,
+    "developerIDAttempt": {
+      "timedOut": true,
+      "result": "Signing did not finish within 45 seconds; the owned codesign process was stopped. No native launch attempted.",
+      "observed": "Owned codesign and SecurityAgent processes were present while signing was pending; no codesign process remained after timeout",
+      "separateCopyRemoved": true
+    }
+  },
+  "otherKnownLimits": [
+    "Native editing, startup/shutdown, Intel execution, trusted installation and upgrades remain unverified.",
+    "Native Pen and cold-start recovery workflows were not rerun on this archive.",
+    "Full Figma Design and arbitrary-site parity remain unfinished."
+  ]
+}
