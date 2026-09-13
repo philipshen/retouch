@@ -1,13 +1,13 @@
 (function(root){
  'use strict';
  let rotatingSelection=false;
- const sizeLocks=new Set(),selectionKey=infos=>JSON.stringify(infos.map(i=>[i.file,i.id]).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))));
+ const alignmentTargets=new Map(),sizeLocks=new Set(),selectionKey=infos=>JSON.stringify(infos.map(i=>[i.file,i.id]).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))));
  const A=()=>root.RetouchSVGAffine||require('./svg-affine.js'),array=m=>[m.a,m.b,m.c,m.d,m.e,m.f];
  function inverse(m){const d=m[0]*m[3]-m[1]*m[2];return Math.abs(d)<1e-9?null:[m[3]/d,-m[1]/d,-m[2]/d,m[0]/d,(m[2]*m[5]-m[3]*m[4])/d,(m[1]*m[4]-m[0]*m[5])/d];}
  function transform(parent,global,own){const inv=inverse(parent);return inv&&A().multiply(A().multiply(A().multiply(inv,global),parent),own);}
  function matricesFor(members,global){return Object.fromEntries(members.map(m=>[m.info.id,m.covered?m.info.svgTransform.matrix:transform(m.parent,global,m.info.svgTransform.matrix)]));}
- function alignmentMatrices(members,mode){
-  const outer=members.filter(m=>!m.covered),layout=root.RetouchSelectionLayout||require('./selection-layout.js'),deltas=layout.arrange(outer.map(m=>m.rect),mode,null,{allowDegenerate:true}),moves=new Map(outer.map((m,i)=>[m,deltas[i]]));
+ function alignmentMatrices(members,mode,target=null,asGroup=false){
+  const outer=members.filter(m=>!m.covered),layout=root.RetouchSelectionLayout||require('./selection-layout.js'),rects=outer.map(m=>m.rect),left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top)),bounds={left,top,width:Math.max(...rects.map(r=>r.left+r.width))-left,height:Math.max(...rects.map(r=>r.top+r.height))-top},deltas=asGroup?outer.map(()=>layout.arrange([bounds],mode,target,{allowDegenerate:true})[0]):layout.arrange(rects,mode,target,{allowDegenerate:true}),moves=new Map(outer.map((m,i)=>[m,deltas[i]]));
   const result=Object.fromEntries(members.map(m=>{const delta=moves.get(m);return [m.info.id,delta?transform(m.parent,[1,0,0,1,delta.x,delta.y],m.info.svgTransform.matrix):m.info.svgTransform.matrix];}));
   if(Object.values(result).some(m=>!A().valid(m)))throw Error('Keep every aligned vector within the supported range.');return result;
  }
@@ -105,8 +105,10 @@
   function apply(kind,value){if(!current())throw Error('Re-select these vectors before transforming.');const {members,box,w}=capture(infos,elements),g=fieldMatrix(box,w,kind,value);
    const matrices=matricesFor(members,g);if(Object.values(matrices).some(m=>!A().valid(m)))throw Error('Keep every transformed vector within the supported range.');if(members.some(m=>!A().equivalent(matrices[m.info.id],m.info.svgTransform.matrix)))save(matrices);
   }
-  const toolbar=root.RetouchSelectionLayout.alignmentToolbar((mode,_event,button)=>{try{if(!current())throw Error('Re-select these vectors before aligning.');const {members}=capture(infos,elements),matrices=alignmentMatrices(members,mode);if(members.some(m=>!A().equivalent(matrices[m.info.id],m.info.svgTransform.matrix))){root.RetouchPanelFocus?.queue(button);save(matrices);}}catch(error){I.note(section,error.message,'refused');}},true);
-  const count=initial.members.filter(m=>!m.covered).length;for(const button of toolbar.querySelectorAll('button')){button.disabled=count<(button.dataset.distribution?3:2);button.title=button.title.replace(' · Shift: align group to containing frame','');}section.append(toolbar);
+  const viewport=()=>{const owners=initial.members.filter(m=>!m.covered).map(m=>m.el.ownerSVGElement);return owners[0]&&owners.every(el=>el===owners[0])?owners[0]:null;};let alignTarget=viewport()&&alignmentTargets.get(key)==='viewport'?'viewport':'selection';
+  const toolbar=root.RetouchSelectionLayout.alignmentToolbar((mode,event,button)=>{try{if(!current())throw Error('Re-select these vectors before aligning.');const {members}=capture(infos,elements),asGroup=event.shiftKey&&!mode.startsWith('gap-'),owner=viewport(),target=alignTarget==='viewport'||asGroup?owner?.getBoundingClientRect():null;if((alignTarget==='viewport'||asGroup)&&!target)throw Error('Select vectors in the same SVG viewport.');const matrices=alignmentMatrices(members,mode,target,asGroup);if(members.some(m=>!A().equivalent(matrices[m.info.id],m.info.svgTransform.matrix))){root.RetouchPanelFocus?.queue(button);save(matrices);}}catch(error){I.note(section,error.message,'refused');}},true);
+  const count=initial.members.filter(m=>!m.covered).length,updateAlignment=()=>{for(const button of toolbar.querySelectorAll('button'))button.disabled=count<(button.dataset.distribution?3:alignTarget==='viewport'?1:2);};for(const button of toolbar.querySelectorAll('button'))button.title=button.title.replace('containing frame','SVG viewport');section.append(toolbar);
+  const targetChoice=I.select(section,'Align to',[['selection','Selection'],['viewport','SVG viewport']],alignTarget,value=>{alignTarget=value;alignmentTargets.set(key,value);updateAlignment();});if(!viewport())targetChoice.querySelector('[value=viewport]').disabled=true;updateAlignment();
   const inputs={},rounded=value=>String(Math.round(value*10000)/10000);
   function scrub(input,kind){
    I.numericLabelDrag(input,raw=>({value:root.RetouchNumericExpression.evaluate(raw),min:kind==='rotation'?-360:(['width','height'].includes(kind)?0.0001:-100000),max:kind==='rotation'?360:100000}));

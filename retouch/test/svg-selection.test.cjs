@@ -63,3 +63,10 @@ test('SVG alignment handles transformed parents, nested children and zero-height
  const parent=A.parse('rotate(30) scale(2 3)'),own=A.parse('translate(4 6)'),members=[{info:{id:'a',svgTransform:{matrix:own}},parent,rect:{left:10,top:20,width:30,height:0}},{info:{id:'b',svgTransform:{matrix:own}},parent,rect:{left:70,top:40,width:20,height:10}},{info:{id:'child',svgTransform:{matrix:own}},parent,covered:true}];
  const result=S.alignmentMatrices(members,'left');assert.deepEqual(result.child,own);assert.ok(A.equivalent(result.a,own));assert.ok(A.equivalent(A.multiply(parent,result.b),A.multiply([1,0,0,1,-60,0],A.multiply(parent,own))));assert.throws(()=>S.alignmentMatrices(members,'gap-x'),/three/);
 });
+
+test('SVG alignment can target viewport bounds individually or preserve group arrangement',()=>{
+ const members=[{info:{id:'a',svgTransform:{matrix:A.identity()}},parent:A.identity(),rect:{left:10,top:20,width:30,height:40}},{info:{id:'b',svgTransform:{matrix:A.identity()}},parent:A.identity(),rect:{left:70,top:90,width:20,height:10}}],target={left:0,top:0,width:200,height:200};
+ const individual=S.alignmentMatrices(members,'center',target);assert.equal(individual.a[4],75);assert.equal(individual.b[4],20);
+ const group=S.alignmentMatrices(members,'center',target,true);assert.equal(group.a[4],50);assert.equal(group.b[4],50);
+ const single=S.alignmentMatrices(members.slice(0,1),'bottom',target);assert.equal(single.a[5],140);
+});
