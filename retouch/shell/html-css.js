@@ -247,6 +247,9 @@
    input.value=mixed?'':property==='opacity'?Number(values[0])*100:property==='rotate'?(values[0]==='none'?0:parseFloat(values[0])):values[0];
    input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(!input.value.trim()||!input.checkValidity())return;const value=property==='opacity'?String(Number(input.value)/100):property==='rotate'?input.value+'deg':input.value.trim();if(!valid(property,value)||!CSS.supports(property,value)){input.setCustomValidity('Enter a supported CSS value.');input.reportValidity();return;}save(property,value,width);};
    I.field(section,'Shared '+label,input);
+   if(['font-size','line-height','letter-spacing'].includes(property)){
+    RetouchNumericExpression.calculation(input,{unit:property==='line-height'?'':'px'});I.fieldDraft(input);
+   }
    if(numeric){
     I.fieldDraft(input);I.numericLabelDrag(input);
     input.retouchNumericPreview=()=>{const previews=elements.map(el=>RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true}));return {current:()=>elements.every(el=>el.isConnected),update:value=>previews.forEach(preview=>preview.update(property==='rotate'?value+'deg':String(value/100))),restore:()=>previews.forEach(preview=>preview.restore())};};

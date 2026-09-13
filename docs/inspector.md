@@ -26,8 +26,11 @@ unit conversion are not supported. Relative line-height and letter-spacing
 fields, including shared selections, also accept percentage calculations such
 as `(100 + 75)%`. Their conversion buttons validate calculations before saving;
 unchanged-value conversion retains the original precision. Held arrow keys
-change the draft and commit one source edit on release. Shared pixel/CSS fields
-retain their existing controls.
+change the draft and commit one source edit on release. Shared font size,
+line height, and letter spacing also accept calculations in pixel/CSS fields.
+A mixed selection shows an empty field with a Mixed placeholder; Escape
+preserves each original value, while a saved result applies to every selected
+layer in one undo transaction.
 
 Style controls follow the selected breakpoint scope. Other breakpoint and state
 classes stay intact and may override an edit at the current viewport. Authored
@@ -232,3 +235,10 @@ focus across saves. HTML/React on Chromium 145 and Liquid on WebKit 26 passed;
 all processes exited 0. The first runs exposed an outdated harness that did
 not open Type settings; the harness now opens that disclosure through its
 summary before interacting. The full unit suite again passed 1,158 tests.
+
+`RT_E2E_SHARED_TYPE_CALCULATIONS=1` verifies shared font size, line height,
+and letter spacing starting from different font sizes. It covers cancelling
+mixed and uniform drafts, invalid arithmetic, one transaction for each shared
+edit, tablet/phone isolation, restoration of each original size, and exact
+source undo/redo. HTML and React passed on Chromium 145; Liquid passed on
+WebKit 26, all with exit 0. The full unit suite passed 1,158 tests.
