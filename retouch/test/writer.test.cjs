@@ -253,3 +253,13 @@ test('named grid lines preserve escaped underscores through JSX source writes',(
  const tokens=require('../src/class-tokens.cjs');
  for(const value of [String.raw`grid-cols-[foo\x]`,String.raw`grid-cols-[foo\_"bar"]`,String.raw`other-[foo\_bar]`])assert.strictEqual(tokens.valid(value),false);
 });
+
+test('plain formatting identities exclude JSX expressions, attributes and components', () => {
+  fs.writeFileSync(path.join(root,'Formatting.tsx'),`export const Text=({value})=><p>H<strong><em>plain</em></strong><sup>{value}</sup><b className="special">owned</b><i><Label /></i></p>`);
+  index.scanAll();
+  const {resolved}=pick(index,root,'Formatting.tsx','p');
+  const ids=writer.describeElement(resolved).plainFormattingIds;
+  assert.ok(ids.includes(pick(index,root,'Formatting.tsx','strong').el.id));
+  assert.ok(ids.includes(pick(index,root,'Formatting.tsx','em').el.id));
+  for(const tag of ['sup','b','i'])assert.ok(!ids.includes(pick(index,root,'Formatting.tsx',tag).el.id));
+});

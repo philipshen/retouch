@@ -635,3 +635,33 @@ of authored metadata. Validation logs are
 `/private/tmp/retouch-saved-emphasis-{html,react,liquid}.log`; unit validation is
 `/private/tmp/retouch-saved-emphasis-units.log` (1,164 passing tests).
 Desktop packaging has not been rebuilt with this change.
+
+### Nested plain formatting ranges (2026-09-13)
+
+Partial toggles now reconstruct the selected text interval through a tree of
+plain formatting nodes. Removing bold from part of a bold-and-italic range
+retains italic on that text, and removing italic retains bold. The two unselected
+intervals keep their original formatting. Fresh nodes do not duplicate source
+identities. Script switching uses the same slicing path and retains nested
+emphasis. The selected result stays selected for subsequent toolbar operations.
+
+React descriptors now expose `plainFormattingIds`, derived from JSX syntax.
+Only attribute-free formatting trees containing literal JSX text are eligible;
+expressions, component calls, and authored attributes are excluded. The shell
+requires this evidence before reconstructing a stamped React wrapper. DOM text
+alone is insufficient because it could be the rendered value of a binding.
+HTML rich-text descriptors and Liquid binding metadata retain their existing
+preservation boundaries. Dynamic rich-text editing, arbitrary attributed nodes,
+and general normalization across independent wrappers remain incomplete.
+Removing semantic markup also does not override bold/italic inherited from a
+layer's CSS; a full range-level style model remains necessary for Figma parity.
+
+`RT_E2E_NESTED_EMPHASIS=1` exercises saved nested ranges in both nesting orders,
+independent partial removal, reopen, unchanged surrounding text, and exact source
+undo/redo. Combined browser runs include saved emphasis, saved scripts, and
+immediate script switching with smaller rendered glyphs. Logs:
+`/private/tmp/retouch-nested-final-{html,react,liquid}.log`.
+The unit suite passed 1,165 tests in
+`/private/tmp/retouch-nested-emphasis-units.log`, including source-identity
+exclusions for expressions, attributes, and components. Desktop packaging has
+not been rebuilt with this change.

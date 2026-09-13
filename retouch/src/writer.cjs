@@ -85,6 +85,13 @@ function describeElement(resolved) {
     else srcDynamic = true;
   }
 
+  // Rendered text alone cannot prove that replacing a wrapper preserves JSX.
+  const plainFormatting = candidate => candidate.type === 'JSXText' ||
+    candidate.type === 'JSXElement' && /^(strong|b|em|i|u|s|sup|sub)$/.test(tagOf(candidate)) &&
+    candidate.openingElement.attributes.length === 0 && !!candidate.closingElement &&
+    candidate.children.every(plainFormatting);
+  const plainFormattingIds = (resolved.elements || []).filter(item =>
+    item.node.start > node.start && item.node.end < node.end && plainFormatting(item.node)).map(item => item.id);
   const textInfo = literalTextRange(node, source);
   return {
     svgPaint: {reason:node.openingElement.attributes.some(a=>a.type==='JSXSpreadAttribute')?'Spread props may control this layer’s classes.':null},
@@ -107,6 +114,7 @@ function describeElement(resolved) {
     canSetSrc: !!image && !authoredSrcSet && !picture && (/^(img|source|video|image)$/i.test(tagOf(node)) || /Image$/.test(tagOf(node))),
     srcReason: authoredSrcSet || picture ? 'This image has authored responsive sources. Editing those choices is deferred.' : null,
     canSetTag,
+    plainFormattingIds,
     text: textInfo ? textInfo.text : null,
     textDynamic: textInfo ? false : hasChildren(node),
     mixedText:

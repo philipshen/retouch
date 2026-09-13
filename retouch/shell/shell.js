@@ -858,13 +858,37 @@ function toggleWrap(tag) {
   {
     const previous=start?.closest(tag==='sup'||tag==='sub'?'sup,sub':selector);
     if(previous&&previous!==editing.el&&editing.el.contains(previous)&&previous.contains(r.startContainer)&&previous.contains(r.endContainer)){
-      // Only location/revision stamps may be discarded when splitting a saved wrapper.
-      // Authored attributes, component instances and dynamic bindings retain their identity.
-      if(previous.childNodes.length!==1||previous.firstChild.nodeType!==3||previous.getAttribute('data-rt-i')||[...previous.attributes].some(attribute=>!['data-rt','data-rt-i','data-rt-keep','data-rt-revision','data-rt-client-revision','data-rt-client-mounted','data-rt-section','data-rt-block','data-rt-block-type','data-rt-template','data-rt-locale'].includes(attribute.name))){toast('Edit this nested formatting in its source.','err');return;}
-      const prefix=d.createRange();prefix.selectNodeContents(previous);prefix.setEnd(r.startContainer,r.startOffset);const suffix=d.createRange();suffix.selectNodeContents(previous);suffix.setStart(r.endContainer,r.endOffset);
-      const parts=d.createDocumentFragment(),before=prefix.toString(),after=suffix.toString(),middle=previous.matches(selector)?d.createTextNode(r.toString()):d.createElement(tag);if(middle.nodeType===1)middle.textContent=r.toString();
-      if(before){const node=d.createElement(previous.tagName.toLowerCase());node.textContent=before;parts.append(node);}parts.append(middle);if(after){const node=d.createElement(previous.tagName.toLowerCase());node.textContent=after;parts.append(node);}previous.replaceWith(parts);
-      const selected=d.createRange();selected.selectNodeContents(middle);s.removeAllRanges();s.addRange(selected);return;
+      // Reconstruct only plain formatting whose source ownership is known.
+      const stamps=['data-rt','data-rt-i','data-rt-keep','data-rt-revision','data-rt-client-revision','data-rt-client-mounted','data-rt-section','data-rt-block','data-rt-block-type','data-rt-template','data-rt-locale'];
+      const plain=node=>node.nodeType===3||node.nodeType===1&&/^(STRONG|B|EM|I|U|S|SUP|SUB)$/.test(node.tagName)&&
+        !node.getAttribute('data-rt-i')&&[...node.attributes].every(attribute=>stamps.includes(attribute.name))&&
+        (!node.getAttribute('data-rt')||!editing.info.plainFormattingIds||editing.info.plainFormattingIds.includes(node.getAttribute('data-rt')))&&
+        [...node.childNodes].every(plain);
+      if(!plain(previous)){toast('Edit this source-owned formatting in its source.','err');return;}
+      const prefix=d.createRange();prefix.selectNodeContents(previous);prefix.setEnd(r.startContainer,r.startOffset);
+      const from=prefix.toString().length,to=from+r.toString().length,total=previous.textContent.length;
+      if(from===to)return;
+      // Slice each text interval through the same tree, retaining other inline styles.
+      const slice=(from,to,remove)=>{
+        let offset=0;
+        const visit=node=>{
+          if(node.nodeType===3){const start=offset;offset+=node.textContent.length;return d.createTextNode(node.textContent.slice(Math.max(0,from-start),Math.max(0,Math.min(to,offset)-start)));}
+          const result=remove&&node.matches(selector)?d.createDocumentFragment():d.createElement(node.tagName.toLowerCase());
+          for(const child of node.childNodes){const next=visit(child);if(next.textContent)result.append(next);}
+          return result;
+        };
+        return visit(previous);
+      };
+      const parts=d.createDocumentFragment();if(from)parts.append(slice(0,from,false));
+      let middle=slice(from,to,true);
+      if(!previous.matches(selector)){
+        // Superscript and subscript are mutually exclusive; retain nested emphasis.
+        const content=d.createDocumentFragment();while(middle.firstChild)content.append(middle.firstChild);
+        middle=d.createElement(tag);middle.append(content);
+      }
+      const selectedNodes=middle.nodeType===11?[...middle.childNodes]:[middle];
+      parts.append(middle);if(to<total)parts.append(slice(to,total,false));previous.replaceWith(parts);
+      const selected=d.createRange();if(selectedNodes.length===1)selected.selectNodeContents(selectedNodes[0]);else {selected.setStartBefore(selectedNodes[0]);selected.setEndAfter(selectedNodes.at(-1));}s.removeAllRanges();s.addRange(selected);return;
     }
   }
   const w = d.createElement(tag);
