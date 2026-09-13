@@ -14565,3 +14565,34 @@ Arrow drawing, Add arrow and Convert line to arrow now write the separate-subpat
 The default dash gate now verifies the source insertion writer and requires all 108 path cases to preserve shaft pixels; both Chromium and WebKit pass. Legacy diagnostics remain 55/108, and `RT_E2E_LEGACY_ARROW=1` deliberately restores their failing assertion. Source gate logs: `/private/tmp/retouch-new-arrow-path-pixels-chromium.log` and `/private/tmp/retouch-new-arrow-path-pixels-webkit.log`.
 
 Verification: 1,148 unit tests passed (`/private/tmp/retouch-new-arrow-path-units-final.log`), followed by insertion/conversion checks including sub-precision degenerate draws (`/private/tmp/retouch-new-arrow-path-final-focused.log`). HTML/Chromium and Liquid/WebKit passed new drawing, line conversion, endpoint/dimension/swap controls and exact history. React/Chromium passed the combined native-container, self-closing SVG/group creation and line-conversion suite. Native HTML drawing passed relative, static, transformed, grid and flex containers. Logs: `/private/tmp/retouch-new-arrow-path-convert-html.log`, `/private/tmp/retouch-new-arrow-path-convert-liquid.log`, `/private/tmp/retouch-new-arrow-path-react-final.log`, `/private/tmp/retouch-new-arrow-path-native-html.log`. All listed processes exited zero. React's test selector was scoped to the fixture group to avoid matching unrelated Next.js dev-tools paths. The macOS archive predates this change; separate solid/filled caps and complete parity remain unfinished.
+
+
+### 2026-09-13 — Verify generated Fill across logical axes and engine versions
+
+Added `retouch/test/e2e/generated-fill-layout.cjs`. Unlike the raw engine probe,
+this check calls the editor's actual `sizeClasses`, compiles its output through
+Tailwind, and measures the resulting browser geometry. Its 1,440 cases cover
+five writing modes, LTR/RTL, normal flow, grid, four flex directions, both box
+models, both physical dimensions, two container sizes, and positive pixel,
+percentage, and negative margins. Each case checks margin-aware available space
+and preservation of the other dimension. No production sizing behavior changed.
+
+All 1,440 cases pass Chromium 145.0.7632.6 and WebKit 26.6. WebKit 26.0 passes
+1,320 and fails 120; the gate remains failing rather than skipping unsupported
+behavior. The independent 72-case engine probe likewise passes WebKit 26.6 and
+fails 12 cases on WebKit 26.0. The current full React and Liquid editor workflow
+also passes WebKit 26.6: width/height Fill, responsive growth, fixed dimensions,
+phone/tablet isolation, and exact source Undo. These are browser-engine results,
+not native Safari/WKWebView or macOS application verification.
+
+Evidence: `/private/tmp/retouch-generated-fill-{chromium,modern,legacy}.log`,
+`/private/tmp/retouch-fill-engine-current-{webkit,modern}.log`, and
+`/private/tmp/retouch-current-flow-fill-{react,liquid}.log`.
+
+The older engine's legacy height/margin problem remains unresolved. It aligns
+with WebKit issue https://bugs.webkit.org/show_bug.cgi?id=300661; standard
+stretch support is described in
+https://webkit.org/blog/17967/news-from-wwdc26-webkit-in-safari-27-beta/.
+The existing fallback-first production cascade already selects standard stretch
+when available. This verification does not claim a fix for older engines,
+universal site/layout support, trusted native distribution, or full Figma parity.
