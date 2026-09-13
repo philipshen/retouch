@@ -295,18 +295,7 @@ function hookFrame(d, w) {
     if (!editing || !editing.el.contains(e.target)) return;
     e.preventDefault();
     e.stopPropagation();
-    const selection = d.getSelection();
-    if (!selection?.rangeCount) return;
-    const range = selection.getRangeAt(0);
-    if (!editing.el.contains(range.commonAncestorContainer)) return;
-    if(insertCaretText(e.clipboardData?.getData('text/plain') || ''))return;
-    range.deleteContents();
-    const text = d.createTextNode(e.clipboardData?.getData('text/plain') || '');
-    range.insertNode(text);
-    range.setStartAfter(text);
-    range.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(range);
+    pasteInlineText(e.clipboardData?.getData('text/plain') || '');
   }, true);
   d.addEventListener('drop', (e) => {
     if (!editing || !editing.el.contains(e.target)) return;
@@ -933,6 +922,7 @@ function captureCaretEdit(current){
   return {html:current.el.innerHTML,nodes:[...current.el.childNodes].map(capture),range:range?{start:range.startContainer,from:range.startOffset,end:range.endContainer,to:range.endOffset}:null,properties:current.caretStyle?{...current.caretStyle.properties}:null,script:current.caretStyle?.script};
 }
 function recordCaretEdit(current,before){
+  if(current.caretHistoryBatch)return;
   const history=current.caretHistory||={undo:[],redo:[]};history.undo.push({before,after:captureCaretEdit(current)});if(history.undo.length>100)history.undo.shift();history.redo=[];
 }
 function caretHistoryStep(redo=false){
@@ -942,11 +932,14 @@ function caretHistoryStep(redo=false){
   // A later native edit must undo through the browser first. Never restore a
   // stale custom snapshot over unrelated page or typing changes.
   if(current.el.innerHTML!==expected.html)return false;
+  restoreCaretEdit(current,target);source.pop();destination.push(entry);return true;
+}
+function restoreCaretEdit(current,target){
   const restore=state=>{const node=state.node;if(state.text!==null)node.data=state.text;else{if(state.attributes){for(const a of [...node.attributes])node.removeAttribute(a.name);for(const [name,value]of state.attributes)node.setAttribute(name,value);}node.replaceChildren(...state.children.map(restore));}for(const key of caretMetadataNames)delete node[key];Object.assign(node,structuredClone(state.metadata));return node;};
-  current.el.replaceChildren(...target.nodes.map(restore));source.pop();destination.push(entry);
+  current.el.replaceChildren(...target.nodes.map(restore));
   const d=current.el.ownerDocument,selection=d.getSelection(),range=d.createRange();if(target.range){range.setStart(target.range.start,target.range.from);range.setEnd(target.range.end,target.range.to);}else{range.selectNodeContents(current.el);range.collapse(false);}
   selection.removeAllRanges();selection.addRange(range);current.caretStyle=target.properties?{properties:{...target.properties},script:target.script,range:range.cloneRange()}:null;
-  d.dispatchEvent(new Event('selectionchange'));return true;
+  d.dispatchEvent(new Event('selectionchange'));
 }
 function caretPlaceholders(current){return [...current.el.querySelectorAll('br')].filter(node=>node.__rtCaretPlaceholder);}
 function normalizeCaretPlaceholders(current){for(const node of caretPlaceholders(current))if(hasInlineContentAfter(node,current.el))delete node.__rtCaretPlaceholder;}
@@ -960,7 +953,7 @@ function insertInlineBreak(){
   if(current?.info.canSetChildren===false){toast('This text source cannot preserve line breaks.','err');return;}
   if(!current||!range||!current.el.contains(range.startContainer)||!current.el.contains(range.endContainer))return;
   if([...current.el.querySelectorAll('[contenteditable="false"]')].some(node=>range.intersectsNode(node))){toast('This selection includes source-owned text.','err');return;}
-  const before=captureCaretEdit(current),draft=caretDraft(),properties=draft?.properties||{},script=draft?.script;
+  const before=current.caretHistoryBatch?null:captureCaretEdit(current),draft=caretDraft(),properties=draft?.properties||{},script=draft?.script;
   removeCaretPlaceholders(current);range.deleteContents();
   const br=d.createElement('br'),text=d.createTextNode(''),fragment=d.createDocumentFragment();fragment.append(br,text);range.insertNode(fragment);
   // A trailing layout-only BR lets browsers draw the cursor on the empty line.
@@ -970,10 +963,32 @@ function insertInlineBreak(){
   current.caretStyle={properties,script,range:caret.cloneRange()};recordCaretEdit(current,before);d.dispatchEvent(new Event('selectionchange'));
 }
 
+function pasteInlineText(value){
+  const current=editing,d=doc(),selection=d?.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
+  const text=String(value).replace(/\r\n?/g,'\n');
+  if(!current||!text||!range||!current.el.contains(range.startContainer)||!current.el.contains(range.endContainer))return;
+  if(current.caretComposition)return;
+  if(text.includes('\n')&&current.info.canSetChildren===false){toast('This text source cannot preserve line breaks.','err');return;}
+  if([...current.el.querySelectorAll('[contenteditable="false"]')].some(node=>range.intersectsNode(node))){toast('This selection includes source-owned text.','err');return;}
+  const before=captureCaretEdit(current),draft=caretDraft(),properties=draft?.properties||{},script=draft?.script;
+  current.caretHistoryBatch=true;
+  try{
+    removeCaretPlaceholders(current);range.deleteContents();range.collapse(true);selection.removeAllRanges();selection.addRange(range);
+    current.caretStyle={properties,script,range:range.cloneRange()};
+    const lines=text.split('\n');
+    for(let index=0;index<lines.length;index++){
+      if(index)insertInlineBreak();
+      if(lines[index]&&(!insertCaretText(lines[index])||!current.caretStyle))throw new Error('This source structure cannot preserve the pasted formatting.');
+    }
+  }catch(error){restoreCaretEdit(current,before);toast(error.message,'err');return;}
+  finally{current.caretHistoryBatch=false;}
+  recordCaretEdit(current,before);
+}
+
 function insertCaretText(text){
   const draft=caretDraft();if(!draft||editing.caretComposition)return false;
   if(!text)return true;
-  const {current,selection,range,properties,script}=draft,before=captureCaretEdit(current),d=current.el.ownerDocument,prefix=d.createRange();prefix.selectNodeContents(current.el);prefix.setEnd(range.startContainer,range.startOffset);const start=prefix.toString().length;
+  const {current,selection,range,properties,script}=draft,before=current.caretHistoryBatch?null:captureCaretEdit(current),d=current.el.ownerDocument,prefix=d.createRange();prefix.selectNodeContents(current.el);prefix.setEnd(range.startContainer,range.startOffset);const start=prefix.toString().length;
   removeCaretPlaceholders(current);
   // Retain a plain source run's node identity so its existing styles can split
   // around the inserted text through the same proven range-editing path.

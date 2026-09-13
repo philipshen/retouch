@@ -1162,3 +1162,35 @@ font size on the next line, no extra compiled placeholder, unchanged reopening,
 and exact local/source undo/redo. Cursor typography and script regressions also
 passed on Liquid and the preceding React run. The inspected saved rendering is
 `/private/tmp/retouch-line-break.png`.
+
+### Multiline plain-text paste (2026-09-13)
+
+Inline paste now normalizes LF, CRLF, and CR into explicit line breaks, retaining
+blank and trailing lines. It replaces the active selection or inserts at the
+cursor, preserving pending typography through the existing styled insertion
+path. The clipboard's plain text is used; HTML markup is not imported. An empty
+clipboard does not delete the selected text.
+
+The whole paste is one local undo/redo transaction, including replaced text,
+selection position, style state, and temporary trailing-break metadata. Internal
+line insertions avoid separate history snapshots. A formatting failure restores
+the original DOM and selection rather than leaving a partial paste. Selection
+replacement cannot remove protected source tokens. Done retains the existing
+exact source-history and compiled-render verification path.
+
+Sources without rich-child support still cannot accept multiline paste. Rich
+clipboard import, paragraph/list editing, arbitrary source-owned rich-text
+normalization, and complete physical IME workflows remain unfinished, along with
+responsive range overrides and the broader Figma/desktop distribution goal. The
+existing desktop archive predates these changes.
+
+Validation: all 1,193 unit tests passed in
+`/private/tmp/retouch-multiline-paste-units.log`. HTML/React Chromium 145 and
+Liquid WebKit 26.0 browser checks passed in
+`/private/tmp/retouch-multiline-paste-final-{html,react,liquid}.log`. They cover
+line-ending normalization, blank/trailing lines, literal clipboard text,
+selection replacement, typography, one-step local undo, exact source undo/redo,
+protected tokens, and rollback on unsupported source formatting. The preceding
+React/Liquid runs also passed cursor-typography and line-break regressions. These
+checks use browser clipboard events, not an automated operating-system clipboard.
+The inspected saved rendering is `/private/tmp/retouch-multiline-paste.png`.
