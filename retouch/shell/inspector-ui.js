@@ -299,6 +299,20 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    if(name==='Typography')typographyPrimary(section);
   }
 
+  // A gradient is the selected paint's editor, so keep it inside Fill or Stroke.
+  // Preserve its wrapper: stop focus restoration and gesture handlers scope to it.
+  for(const gradient of panel.querySelectorAll(':scope > [data-gradient-paint]')){
+   const paint=gradient.dataset.gradientPaint,section=[...panel.children].find(el=>el.dataset.section===paint);
+   if(!section)continue;
+   if(!gradient.querySelector('.refused')){
+    const field=section.querySelector('[aria-label="SVG '+paint+'"]')?.closest('.inspector-field');
+    (field?.closest('.property-row')||field)?.remove();
+   }
+   gradient.querySelector(':scope > h3')?.remove();
+   gradient.classList.remove('sec','inspector-section');gradient.classList.add('svg-gradient-editor');
+   section.insertBefore(gradient,section.children[1]||null);
+  }
+
   // Keep the shared disclosures themselves so their saved state and handlers survive.
   for(const shared of [...panel.children].filter(el=>el.querySelector(':scope > .shared-inspector-group'))){
    const groups=[...shared.querySelectorAll(':scope > .shared-inspector-group')],notes=disclosure('Shared editing details','shared-editing-details');

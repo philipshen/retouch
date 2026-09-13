@@ -52,6 +52,7 @@ body { background: var(--bg); color: var(--ink); font-family: var(--font); font-
 .hint { font-size: 12px; }
 .inspector-section { border-bottom: 1px solid var(--line); padding-bottom: 16px; }
 .inspector-section .hint { color: var(--muted); line-height: 1.5; margin: 7px 0; }
+.svg-gradient-editor { border:0; padding:0; margin:0; min-width:0; }
 .inspector-field { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 7px 0; font-size: 12px; }
 .inspector-field > span { flex: 1; min-width: 0; color: var(--muted); }
 .inspector-field input, .inspector-field select { min-width: 0; width: 155px; background: #f5f5f5; color: var(--ink); border: 1px solid var(--line); border-radius: 5px; padding: 6px; font: 12px var(--font); }
