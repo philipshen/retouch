@@ -1,7 +1,7 @@
 'use strict';
 const MagicString=require('magic-string'),{contentHash}=require('./id.cjs');
-function inlinePaintOwnership(selected,kind){
- const style=selected.attrs.find(a=>a.name==='style');if(!style)return {properties:[]};
+function inlinePaintOwnership(selected,kind,source){
+ let style=selected.attrs.find(a=>a.name==='style');if(!style)return {properties:[]};
  const unsafe=()=>({reason:'Dynamic or malformed inline styles control this SVG layer.',properties:[]});
  if(kind==='react'){
   const attribute=selected.node.openingElement.attributes.find(a=>a.type==='JSXAttribute'&&a.name.name==='style'),object=attribute?.value?.expression;
@@ -16,15 +16,16 @@ function inlinePaintOwnership(selected,kind){
   for(const paint of ['fill','stroke']){
    const matches=object.properties.filter(property=>(property.key.name??property.key.value)===paint);
    const value=matches.length===1?matches[0].value:null;
-   if(value?.type==='StringLiteral'&&require('./html-svg-gradient.cjs').valid('stop-color',value.value))conversions[paint]={start:value.start,end:value.end,text:'null'};
+   if(value?.type==='StringLiteral'&&!/\bvar\(/i.test(value.value)&&require('./html-svg-gradient.cjs').valid('stop-color',value.value))conversions[paint]={start:value.start,end:value.end,text:'null'};
   }
   return {properties,conversions};
  }
  if(typeof style.value!=='string')return unsafe();
- const properties=[],stack=[];let text='',quote=null,comment=false;
- const declaration=()=>{const clean=text.trim();text='';if(!clean)return true;const colon=clean.indexOf(':');if(colon<1)return false;
+ if(kind==='liquid'){const parsed=require('parse5').parseFragment('<i '+source.slice(style.start,style.end)+'>').childNodes[0];style={...style,value:parsed?.attrs.find(attribute=>attribute.name==='style')?.value};if(typeof style.value!=='string')return unsafe();}
+ const properties=[],declarations=[],stack=[];let text='',quote=null,comment=false,segmentStart=0;
+ const declaration=end=>{const start=segmentStart;segmentStart=end;const clean=text.trim();text='';if(!clean)return true;const colon=clean.indexOf(':');if(colon<1)return false;
   const name=clean.slice(0,colon).trim().replace(/\\([a-f\d]{1,6})(?:\r\n|[\t\n\r\f ])?|\\([^\n\r\f])/gi,(_,hex,char)=>hex?String.fromCodePoint(Math.min(parseInt(hex,16)||0xfffd,0x10ffff)):char).toLowerCase();
-  if(!/^(?:--[\w-]+|[a-z-]+)$/.test(name))return false;properties.push(name);return true;
+  if(!/^(?:--[\w-]+|[a-z-]+)$/.test(name))return false;properties.push(name);declarations.push({name,value:clean.slice(colon+1).trim(),start,end});return true;
  };
  for(let i=0;i<style.value.length;i++){
   const c=style.value[i],next=style.value[i+1];if(comment){if(c==='*'&&next==='/'){comment=false;i++;}continue;}
@@ -32,9 +33,17 @@ function inlinePaintOwnership(selected,kind){
   if(c==='/'&&next==='*'){comment=true;i++;continue;}if(c==='"'||c==="'"){quote=c;text+=c;continue;}
   if(c==='\\'){text+=c;if(next!==undefined)text+=style.value[++i];continue;}
   if('([{'.includes(c))stack.push(c);else if(')]}'.includes(c)){if(stack.pop()!==({')':'(',']':'[','}':'{'})[c])return unsafe();}
-  if(c===';'&&!stack.length){if(!declaration())return unsafe();}else text+=c;
+  if(c===';'&&!stack.length){if(!declaration(i+1))return unsafe();}else text+=c;
  }
- if(quote||comment||stack.length||!declaration())return unsafe();return {properties};
+ if(quote||comment||stack.length||!declaration(style.value.length))return unsafe();
+ const conversions={},raw=source.slice(style.start,style.end),quoted=/^style\s*=\s*(["'])([\s\S]*)\1$/i.exec(raw);
+ for(const paint of ['fill','stroke']){
+  const matches=declarations.filter(declaration=>declaration.name===paint),declaration=matches.length===1?matches[0]:null;
+  if(!declaration||/\bvar\(/i.test(declaration.value)||!require('./html-svg-gradient.cjs').valid('stop-color',declaration.value.replace(/\s*!important\s*$/i,'')))continue;
+  if(quoted&&quoted[2]===style.value){const offset=style.start+raw.indexOf(quoted[1])+1;conversions[paint]={start:offset+declaration.start,end:offset+declaration.end,text:''};}
+  else{const remaining=style.value.slice(0,declaration.start)+style.value.slice(declaration.end);conversions[paint]={start:style.start,end:style.end,text:'style="'+remaining.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'"'};}
+ }
+ return {properties,conversions};
 }
 function inspect(resolved,kind){
  const tag=kind==='react'?require('./id.cjs').jsxElementName(resolved.element.node):resolved.element.tag;if(!['rect','circle','ellipse','line','path','polygon','polyline','text','g'].includes(tag))return null;
@@ -48,7 +57,7 @@ function inspect(resolved,kind){
  }else{const source=require('./source-svg-gradient.cjs'),records=source.records(resolved,kind);nodes=records.nodes;selected=records.selected;if(!selected||!source.svg(selected))return null;for(let n=selected.parent;n;n=n.parent)if(n.tag==='svg'){viewport={...n,close:kind==='react'?n.node.closingElement?.start:n.node.closeStart};break;}}
  if(!['rect','circle','ellipse','line','path','polygon','polyline','text','g'].includes(selected.tag))return null;
  let reason=null;if(!viewport||!Number.isInteger(viewport.close)||resolved.source.slice(viewport.close,viewport.close+2)!=='</')reason='This layer needs an explicit SVG viewport closing tag.';
- const inline=inlinePaintOwnership(selected,kind);
+ const inline=inlinePaintOwnership(selected,kind,resolved.source);
  const unknownAttributes=selected.attrs.some(a=>a.value===undefined&&a.name!=='style'&&(kind!=='react'||['class','className','dangerouslySetInnerHTML'].includes(a.name)));
  if(selected.unsafe||unknownAttributes||selected.attrs.some((a,i)=>selected.attrs.findIndex(b=>b.name===a.name)!==i))reason='Dynamic or duplicate attributes control this SVG layer.';
  if(inline.reason)reason=inline.reason;

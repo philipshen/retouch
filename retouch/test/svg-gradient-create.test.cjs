@@ -9,7 +9,7 @@ for(const kind of ['html','react','liquid']){
  });
  test(kind+' creation rejects stale, dynamic, styled and invalid values',()=>{
   for(const extra of [{fileHash:'stale'},{paint:'color'},{stop:0},{changes:{x1:'0'}},{value:{type:'conicGradient',color:'red'}},{value:{type:'linearGradient',color:'red" onclick="x'}}])assert.equal(create(original,extra).refused,true);
-  assert.equal(create(original.replace('fill="red"','style="fill:red"')).refused,true);assert.equal(create(original.replace('fill="red"','class="fill-red"')).refused,true);
+  if(kind==='react')assert.equal(create(original.replace('fill="red"','style="fill:red"')).refused,true);else assert.equal(create(original.replace('fill="red"','style="fill:red"')).ok,true);assert.equal(create(original.replace('fill="red"','class="fill-red"')).refused,true);
  });
  test(kind+' creation preserves unrelated classes and distinguishes fill from stroke utilities',()=>{
   const name=kind==='react'?'className':'class',source=original.replace('<rect ','<rect '+name+'="layout-marker opacity-50 stroke-2" '),result=create(source);assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(name+'="layout-marker opacity-50 stroke-2"'));
@@ -20,13 +20,21 @@ for(const kind of ['html','react','liquid']){
   const styles=kind==='react'?['style={{opacity:0.8,strokeWidth:3}}','style={{fill:null,stroke:"",opacity:0.5}}','style={null}']:['style="opacity:.8;stroke-width:3px"',`style="--note:'fill:red;stroke:blue';opacity:calc(1 - .2)"`,'style="/* fill:red */ opacity:.8;--tokens:{fill:red;stroke:blue}"'];
   for(const style of styles)for(const paint of ['fill','stroke']){const result=create(original.replace('<rect ','<rect '+style+' '),{paint});assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(style));}
   for(const paint of ['fill','stroke'])for(const style of kind==='react'?['style={{'+paint+':"red",opacity:.8}}']:['style="'+paint+':red;opacity:.8"','style="'+(paint==='fill'?'\\66 ill':'\\73 troke')+':red"']){
-   const source=original.replace('<rect ','<rect '+style+' '),description=adapter.describe(resolve(source)).svgGradientCreation;assert.equal(description.reason,null);if(kind==='react'){assert.equal(description.paintReasons[paint],null);const converted=create(source,{paint});assert.equal(converted.ok,true,converted.reason);assert.ok(converted.edits[0].after.includes('style={{'+paint+':null,opacity:.8}}'));assert.equal(adapter.describe(resolve(converted.edits[0].after)).svgGradients[0].paint,paint);}else{assert.match(description.paintReasons[paint],/Inline styles/);assert.equal(create(source,{paint}).refused,true);}const other=paint==='fill'?'stroke':'fill',result=create(source,{paint:other});assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(style));
+   const source=original.replace('<rect ','<rect '+style+' '),description=adapter.describe(resolve(source)).svgGradientCreation;assert.equal(description.reason,null);if(kind==='react'){assert.equal(description.paintReasons[paint],null);const converted=create(source,{paint});assert.equal(converted.ok,true,converted.reason);assert.ok(converted.edits[0].after.includes('style={{'+paint+':null,opacity:.8}}'));assert.equal(adapter.describe(resolve(converted.edits[0].after)).svgGradients[0].paint,paint);}else{assert.equal(description.paintReasons[paint],null);const converted=create(source,{paint});assert.equal(converted.ok,true,converted.reason);assert.equal(adapter.describe(resolve(converted.edits[0].after)).svgGradients[0].paint,paint);}const other=paint==='fill'?'stroke':'fill',result=create(source,{paint:other});assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(style));
   }
   const all=kind==='react'?'style={{all:"inherit"}}':'style="all:inherit"';for(const paint of ['fill','stroke'])assert.equal(create(original.replace('<rect ','<rect '+all+' '),{paint}).refused,true);
  });
  test(kind+' creation refuses dynamic or malformed inline styles',()=>{
   const styles=kind==='react'?['style={styles}','style={{...styles}}','style={{[key]:"red"}}','style={{get fill(){return "red"}}}']:['style="opacity:calc(1"','style="opacity:.5;fill"','style="opacity:.5;/*"'];
   for(const style of styles)assert.equal(create(original.replace('<rect ','<rect '+style+' ')).refused,true,style);
+ });
+ if(kind!=='react')test(kind+' inline conversion handles entities, comments and declaration boundaries',()=>{
+  for(const style of ['style="opacity:.8;fill:red;stroke-width:3"',`style='--note:"a;b"; /* paint */ fill:rgb(1, 2, 3);opacity:.8'`,'style="fill:red;--note:&quot;a;b&quot;;opacity:.8"','style=fill:red','style="fill:red !important;opacity:.8"']){
+   const source=original.replace('<rect ','<rect '+style+' '),result=create(source);assert.equal(result.ok,true,result.reason);assert.equal(adapter.describe(resolve(result.edits[0].after)).svgGradients[0].paint,'fill');
+   if(style.includes('--note:')){const tree=require('parse5').parseFragment(result.edits[0].after),rect=tree.childNodes[0].childNodes.find(node=>node.tagName==='rect'),remaining=rect.attrs.find(attribute=>attribute.name==='style').value;assert.ok(remaining.includes('--note:"a;b";'));}
+   if(style.includes('opacity:.8'))assert.ok(result.edits[0].after.includes('opacity:.8'));if(style.includes('stroke-width:3'))assert.ok(result.edits[0].after.includes('stroke-width:3'));
+  }
+  for(const value of ['fill:red;fill:blue','fill:var(--paint)','fill:url(#paint)','all:inherit;fill:red'])assert.equal(create(original.replace('<rect ','<rect style="'+value+'" ')).refused,true,value);
  });
  if(kind==='react'){
   test('react creation preserves event handlers and dynamic non-paint attributes',()=>{
