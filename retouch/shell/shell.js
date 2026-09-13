@@ -876,19 +876,49 @@ function applyTextRangeStyle(property,value){
   }
   if(!runs.length)return;
   if(runs.some(({node})=>node.parentElement.closest('[contenteditable="false"]'))){toast('This selection includes source-owned text.','err');return;}
+  const prefix=d.createRange();prefix.selectNodeContents(editing.el);prefix.setEnd(range.startContainer,range.startOffset);
+  const selectionStart=prefix.toString().length,selectionEnd=selectionStart+range.toString().length;
+  const reusable=element=>{
+    if(!element||element===editing.el||element.tagName!=='SPAN'||element.childNodes.length!==1||element.firstChild.nodeType!==3)return false;
+    const evidence=editing.info.rangeStyleIds?.[element.getAttribute('data-rt')];
+    return (element.__rtRangeStyle===property||evidence?.property===property)&&element.style.length===1&&element.style[0]===property&&
+      ({'font-weight':['400','700'],'font-style':['normal','italic']}[property].includes(element.style.getPropertyValue(property)))&&
+      !element.getAttribute('data-rt-i')&&[...element.attributes].every(attr=>['style','data-rt','data-rt-keep','data-rt-revision','data-rt-client-revision','data-rt-client-mounted','data-rt-section','data-rt-block','data-rt-block-type','data-rt-template','data-rt-locale'].includes(attr.name));
+  };
+  const styled=(text,value)=>{const wrapper=d.createElement('span');wrapper.__rtRangeStyle=property;wrapper.style.setProperty(property,value);wrapper.textContent=text;return wrapper;};
   // Apply at text leaves, so existing child styles cannot override the choice.
-  // Each source-owned ancestor keeps its identity and untouched attributes.
   const wrappers=[];
   for(const {node,from,to}of runs){
-    const parent=node.parentElement,id=parent.getAttribute('data-rt'),evidence=editing.info.rangeStyleIds?.[id];
-    const replaceable=parent!==editing.el&&parent.tagName==='SPAN'&&parent.childNodes.length===1&&from===0&&to===node.textContent.length&&
-      (parent.__rtRangeStyle===property||evidence?.property===property)&&parent.style.length===1&&parent.style[0]===property&&
-      !parent.getAttribute('data-rt-i')&&[...parent.attributes].every(attr=>['style','data-rt','data-rt-keep','data-rt-revision','data-rt-client-revision','data-rt-client-mounted','data-rt-section','data-rt-block','data-rt-block-type','data-rt-template','data-rt-locale'].includes(attr.name));
-    if(replaceable){parent.__rtRangeStyle=property;parent.__rtReplaceRangeStyle=true;parent.style.setProperty(property,value);wrappers.push(parent);continue;}
+    const parent=node.parentElement;
+    if(reusable(parent)){
+      if(from===0&&to===node.textContent.length){parent.__rtRangeStyle=property;parent.__rtReplaceRangeStyle=true;parent.style.setProperty(property,value);wrappers.push(parent);}
+      else{
+        const oldValue=parent.style.getPropertyValue(property),fragment=d.createDocumentFragment(),text=node.textContent;
+        if(from)fragment.append(styled(text.slice(0,from),oldValue));
+        const middle=styled(text.slice(from,to),value);fragment.append(middle);wrappers.push(middle);
+        if(to<text.length)fragment.append(styled(text.slice(to),oldValue));parent.replaceWith(fragment);
+      }
+      continue;
+    }
     const part=d.createRange();part.setStart(node,from);part.setEnd(node,to);
-    const wrapper=d.createElement('span');wrapper.__rtRangeStyle=property;wrapper.style.setProperty(property,value);part.surroundContents(wrapper);wrappers.push(wrapper);
+    const wrapper=styled('',value);part.surroundContents(wrapper);wrappers.push(wrapper);
   }
-  const next=d.createRange();next.setStart(wrappers[0].firstChild,0);const last=wrappers.at(-1).firstChild;next.setEnd(last,last.textContent.length);selection.removeAllRanges();selection.addRange(next);
+  // Coalesce only equivalent plain neighbors touching a changed run.
+  for(let wrapper of wrappers){
+    if(!editing.el.contains(wrapper))continue;
+    const equivalent=other=>reusable(other)&&other.style.getPropertyValue(property)===wrapper.style.getPropertyValue(property);
+    if(equivalent(wrapper.previousSibling)){const previous=wrapper.previousSibling;previous.textContent+=wrapper.textContent;wrapper.remove();wrapper=previous;}
+    while(equivalent(wrapper.nextSibling)){const next=wrapper.nextSibling;wrapper.textContent+=next.textContent;next.remove();}
+    wrapper.__rtRangeStyle=property;wrapper.__rtReplaceRangeStyle=true;
+  }
+  // Node identities can change during splitting/merging; restore by text offsets.
+  const next=d.createRange(),texts=d.createTreeWalker(editing.el,NodeFilter.SHOW_TEXT);let offset=0,started=false;
+  while(texts.nextNode()){
+    const node=texts.currentNode,end=offset+node.textContent.length;
+    if(!started&&selectionStart<end){next.setStart(node,selectionStart-offset);started=true;}
+    if(started&&selectionEnd<=end){next.setEnd(node,selectionEnd-offset);break;}offset=end;
+  }
+  selection.removeAllRanges();selection.addRange(next);
 }
 
 /* ---------- bold / italic on selection (Cmd+B / Cmd+I) ---------- */

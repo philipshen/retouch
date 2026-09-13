@@ -734,3 +734,29 @@ Reuse currently requires a complete plain-text span for the same style property.
 Partial selections, differently nested properties, attributed spans, and rich
 text stored through indirect bindings still need broader normalization support.
 Desktop packaging has not been rebuilt with this change.
+
+### Split and merge plain range overrides (2026-09-13)
+
+Partial selections inside a source-approved plain style span now split into
+before, selected, and after runs. The unselected text retains the old style;
+the selected run receives the chosen value without another nesting level.
+Equivalent plain neighbors touching an edited run merge back together. This
+uses the same source evidence as complete-run reuse and does not merge across
+attributes, bindings, separating text, or nested structures.
+
+Splitting and merging replace DOM node identities, so the selected range is
+restored from its text offsets inside the edited layer. Changing a middle run
+back to match its neighbors therefore retains the original character selection,
+even though the result has become one span again.
+
+Validation: `RT_E2E_PARTIAL_RANGES=1` passed on HTML/React Chromium and Liquid
+WebKit in `/private/tmp/retouch-partial-ranges-{html,react,liquid}.log`. Checks cover
+saved partial splits, computed outer/inner weights, no nested spans, neighbor
+merging, retained selection, resplitting after reopening, and exact undo/redo.
+The same runs passed the existing explicit range-style workflow, including
+mixed ranges and inherited styles. All 1,172 unit tests passed in
+`/private/tmp/retouch-partial-ranges-units.log`.
+
+Broader normalization across different properties, nested or attributed runs,
+and indirectly stored rich text remains unfinished. Desktop packaging has not
+been rebuilt with this change.
