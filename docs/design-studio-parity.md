@@ -14811,3 +14811,40 @@ Geometry is checked because native empty DIVs can add an extra innerText newline
 without adding a visible text line. Physical IME/input-device behavior, semantic
 paragraph/list editing and arbitrary source-layout preservation remain unverified.
 The desktop archive has not been rebuilt for this change.
+
+### Paragraph/list source model (2026-09-14)
+
+The constrained rich-text tree now accepts semantic p, ul, ol and li block nodes,
+with an optional bounded integer start for ordered lists. HTML, JSX, Liquid and
+backed HTML-string writers emit that structure while retaining source-owned
+inline markup. Placement checks use the actual source parent and kept descendant
+structure: list items need lists, lists need items, and paragraphs cannot contain
+blocks or unknown component output. New lists support five indentation levels
+without weakening the existing eight-level inline-formatting limit. JSX also
+refuses repeated references to the same kept node, matching the other writers.
+Native UL/OL/LI nodes now serialize as list structure rather than flattened text.
+
+The reference is Figma's paragraph/list model and five-level indentation:
+https://help.figma.com/hc/en-us/articles/360040449773-Create-bulleted-and-numbered-lists
+
+All 1,225 unit tests pass (`/private/tmp/retouch-block-model-units-verified.log`).
+Tests cover nested ordered/unordered structure, start numbers, text escaping,
+source-owned links, invalid content models, depth limits, duplicate keeps, refusal
+without source changes, and exact transaction undo/redo in all three adapters.
+`RT_E2E_NATIVE_LISTS=1` passes HTML/React/Liquid Chromium 145.0.7632.6 and HTML
+WebKit 26.0 (`/private/tmp/retouch-block-browser-{html,react,liquid,webkit}-pass.log`).
+It changes a text root to div, invokes the browser's native unordered-list command,
+saves semantic markup, reopens the root without rewriting source, and verifies
+exact undo/redo plus no page errors. Root reentry uses a dispatched double-click;
+this is source/browser integration evidence, not pointer-selection parity.
+The tag change exposed a late inspector render after reload cleared selection;
+renderPanel now returns when there is no selected element.
+
+This is the source-model foundation, not completed paragraph/list UI. List style
+controls, list conversion with source-owned attributes, Enter/Tab/Backspace
+behavior, paragraph/list spacing, hanging markers and typography-matched counters
+remain pending. The emitted blocks currently inherit site CSS, which can suppress
+markers; no marker appearance parity is claimed. New block structure is refused
+inside phrasing-only roots such as headings/paragraphs; an intuitive, atomic
+conversion path is still needed. Existing native DIV/P preservation still uses
+line breaks. No desktop rebuild/native launch or trusted distribution occurred.

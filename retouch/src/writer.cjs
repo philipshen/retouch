@@ -259,19 +259,24 @@ function planOp(resolved, op) {
         descendants.set(el.id, el.node);
       }
     }
-    const source = resolved.source;
+    const blocks=require('./rich-text-blocks.cjs');
+    const inlineNode=element=>blocks.inlineTag(tagOf(element))&&(element.children||[]).every(child=>child.type==='JSXText'||child.type==='JSXElement'&&inlineNode(child));
+    if(blocks.contains(op.children)){const error=blocks.placement(op.children,tagOf(node),id=>{const kept=descendants.get(id);return kept?{tag:tagOf(kept),inline:inlineNode(kept)}:null;});if(error)return refuse(error);}
+    const source = resolved.source,seen=new Set();
     const build = (children) =>
       children
         .map((c) => {
           if (c.t === 'text') return escapeJsxText(c.value);
           if(c.t==='link')return linkMarkup(c,build(c.children),true);
           if (c.t === 'break') return '<br />';
+          if (c.t === 'block') return blocks.markup(c,build(c.children));
           if (c.t === 'style' || c.t === 'styles') return styleMarkup(c,build(c.children),true);
           if (c.t === 'wrap') return `<${c.tag}>${build(c.children)}</${c.tag}>`;
           const kept = descendants.get(c.id);
-          if (!kept) {
+          if (!kept||seen.has(c.id)) {
             throw refuseError('A kept element is not a descendant of the target in source; the edit cannot be mapped.');
           }
+          seen.add(c.id);
           const hrefEdit=Object.hasOwn(c,'href'),keptElement={node:kept};
           if(hrefEdit&&!require('./link-source.cjs').literalHref(resolved,keptElement,'react'))throw refuseError('This link URL is controlled by its source.');
           if (!c.children) return hrefEdit?require('./link-source.cjs').patch(resolved,keptElement,'react',c.href):source.slice(kept.start, kept.end);

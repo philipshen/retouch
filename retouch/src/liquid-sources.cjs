@@ -304,7 +304,7 @@ function planWriteChildren(resolved,op) {
   const result=resolve(resolved);
   if(!result.richText)return {ok:false,refused:true,reason:'This source cannot preserve inline formatting.'};
   try {
-    const text=require('./rich-text-source.cjs').rewrite(result.target.value,result.descriptor.id,op.children,richOptions(result.target.value));
+    const text=require('./rich-text-source.cjs').rewrite(result.target.value,result.descriptor.id,op.children,{...richOptions(result.target.value),parentTag:resolved.element.tag});
     return planWrite(resolved,{...op,text});
   } catch(err) {return {ok:false,refused:true,reason:err.message};}
 }

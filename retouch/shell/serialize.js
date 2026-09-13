@@ -70,6 +70,14 @@
         append({ t: 'break' });
         continue;
       }
+      if(/^(UL|OL|LI)$/.test(n.tagName)){
+        var list={t:'block',tag:n.tagName.toLowerCase(),children:serializeChildren(n,snapshot)};
+        if(n.tagName==='OL'&&n.getAttribute('start')!==null){
+          var start=Number(n.getAttribute('start'));
+          if(Number.isInteger(start)&&start>=1&&start<=1000000)list.start=start;
+        }
+        append(list,true);continue;
+      }
       // Native paragraph input can introduce unstamped DIV/P containers.
       // Preserve their visible boundaries in the inline source vocabulary.
       // Source-owned blocks above retain their own original markup instead.

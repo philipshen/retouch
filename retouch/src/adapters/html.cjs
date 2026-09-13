@@ -86,7 +86,7 @@ function planOp(resolved,op){
  }else if(op.type==='setChildren'){
   if(el.node.tagName==='a'&&require('../rich-text.cjs').hasLink(op.children))return refuse('Text links cannot be nested.');
   if(!describe(resolved).canSetChildren)return refuse('This HTML region cannot preserve structured text edits.');
-  const start=el.location.startTag.endOffset,end=el.location.endTag.startOffset;let replacement;try{replacement=richText.rewrite(resolved.source.slice(start,end),el.id,op.children);}catch(error){return refuse(error.message);}
+  const start=el.location.startTag.endOffset,end=el.location.endTag.startOffset;let replacement;try{replacement=richText.rewrite(resolved.source.slice(start,end),el.id,op.children,{parentTag:el.tag});}catch(error){return refuse(error.message);}
   if(start===end)out.appendLeft(start,replacement);else out.overwrite(start,end,replacement);
  }else if(op.type==='setTag'){
   if(!describe(resolved).canSetTag||!textTags.has(op.tag))return refuse('Unsupported HTML tag change.');

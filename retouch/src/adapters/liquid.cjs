@@ -398,10 +398,13 @@ function planOp(resolved, op) {
     if (describe(resolved).richText) return sources.planWriteChildren(resolved,op);
     if (!describe(resolved).canSetChildren) return refuse('The children contain expressions that cannot be rewritten as rich text.');
     const descendants=new Map(resolved.elements.filter(e=>e.tagStart>=node.openEnd&&e.closeEnd<=node.closeStart).map(e=>[e.id,e]));
+    const blocks=require('../rich-text-blocks.cjs');
+    if(blocks.contains(op.children)){const error=blocks.placement(op.children,node.tag,id=>{const kept=descendants.get(id);return kept?{tag:kept.tag,inline:blocks.inlineTag(kept.tag)&&!kept.dynamicTag&&![...descendants.values()].some(child=>child.tagStart>kept.tagStart&&child.closeEnd<=kept.closeEnd&&(!blocks.inlineTag(child.tag)||child.dynamicTag))&&!/\{[%{]/.test(resolved.source.slice(kept.childrenStart,kept.childrenEnd))}:null;});if(error)return refuse(error);}
     const seen=new Set();
     const build=items=>items.map(c=>{
       if (c.t==='text') return escapeText(c.value);
       if (c.t==='break') return '<br>';
+      if (c.t==='block') return blocks.markup(c,build(c.children));
       if (c.t==='style'||c.t==='styles') return styleMarkup(c,build(c.children));
       if(c.t==='link')return linkMarkup(c,build(c.children));
       if (c.t==='wrap') return `<${c.tag}>${build(c.children)}</${c.tag}>`;

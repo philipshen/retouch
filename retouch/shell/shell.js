@@ -1736,6 +1736,8 @@ window.addEventListener('click',()=>{
 });
 window.addEventListener('blur',()=>releasePanelPointer());
 function renderPanel() {
+  // A completed source write can outlive selection cleared by the frame reload.
+  if(!sel?.info)return;
   // A reload or document.open() can leave the preview without a root. Keep
   // the current inspector until the frame load restores measurable content.
   const previewDocument=doc();

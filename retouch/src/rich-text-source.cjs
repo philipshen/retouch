@@ -5,6 +5,8 @@
 const {parseFragment}=require('parse5');
 const crypto=require('node:crypto');
 const {validateChildrenTree,styleMarkup,linkMarkup,hasLink}=require('./rich-text.cjs');
+const blockValues=require('./rich-text-blocks.cjs');
+const inlineNode=node=>blockValues.inlineTag(node.tagName||node.nodeName)&&(node.childNodes||[]).every(inlineNode);
 const escapeText=value=>value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\{/g,'&#123;').replace(/\}/g,'&#125;');
 
 function describe(value,sourceId,{tokens=[]}={}) {
@@ -26,17 +28,17 @@ function describe(value,sourceId,{tokens=[]}={}) {
           if (!found) {parts.push({t:'text',value:node.value.slice(at)});break;}
           if (found.start>at) parts.push({t:'text',value:node.value.slice(at,found.start)});
           const tokenId=id(key+':token:'+ordinal++);
-          kept.set(tokenId,{raw:found.token,opaque:true});
+          kept.set(tokenId,{tag:'#text',inline:true,raw:found.token,opaque:true});
           parts.push({t:'token',id:tokenId});at=found.start+found.token.length;
         }
         return {t:'text',value:node.value,parts};
       }
       if (!loc) throw new Error('The stored HTML needs browser repairs; edit its source before formatting it.');
       const nodeId=id(key),raw=value.slice(loc.startOffset,loc.endOffset);
-      if (!node.tagName) {kept.set(nodeId,{raw,opaque:true});return {t:'comment',id:nodeId};}
+      if (!node.tagName) {kept.set(nodeId,{tag:'#comment',inline:true,raw,opaque:true});return {t:'comment',id:nodeId};}
       const hrefSource=require('./link-source.cjs').htmlHref(value,node);
       const opaque=['script','style','svg','template','iframe'].includes(node.tagName);
-      kept.set(nodeId,{raw,opaque,hrefSource:hrefSource?{missing:!!hrefSource.missing,start:hrefSource.start-loc.startOffset,end:hrefSource.end-loc.startOffset}:null,open:value.slice(loc.startOffset,loc.startTag.endOffset),close:loc.endTag?value.slice(loc.endTag.startOffset,loc.endOffset):null});
+      kept.set(nodeId,{tag:node.tagName,inline:inlineNode(node),raw,opaque,hrefSource:hrefSource?{missing:!!hrefSource.missing,start:hrefSource.start-loc.startOffset,end:hrefSource.end-loc.startOffset}:null,open:value.slice(loc.startOffset,loc.startTag.endOffset),close:loc.endTag?value.slice(loc.endTag.startOffset,loc.endOffset):null});
       return {t:'element',id:nodeId,tag:node.tagName,opaque,editableLink:!!hrefSource,plainLink:!!hrefSource&&node.tagName==='a'&&node.attrs.length===1&&node.attrs[0].name==='href'&&require('../shell/link-values.js').valid(node.attrs[0].value)&&!/\{[%{]/.test(value.slice(loc.startOffset,loc.startTag.endOffset)),children:opaque?[]:visit(node.childNodes,key)};
     });
   }
@@ -46,10 +48,13 @@ function describe(value,sourceId,{tokens=[]}={}) {
 function rewrite(value,sourceId,children,options) {
   const error=validateChildrenTree(children,0);if(error)throw new Error(error);
   const {kept}=describe(value,sourceId,options),seen=new Set();
+  const blocks=require('./rich-text-blocks.cjs');
+  if(blocks.contains(children)){const error=blocks.placement(children,options?.parentTag||'div',id=>kept.get(id));if(error)throw Error(error);}
   function build(items) {
     return items.map(item=>{
       if(item.t==='text')return escapeText(item.value);
       if(item.t==='break')return '<br>';
+      if(item.t==='block')return blocks.markup(item,build(item.children));
       if(item.t==='style'||item.t==='styles')return styleMarkup(item,build(item.children));
       if(item.t==='link')return linkMarkup(item,build(item.children));
       if(item.t==='wrap')return `<${item.tag}>${build(item.children)}</${item.tag}>`;

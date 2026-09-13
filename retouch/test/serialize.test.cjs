@@ -180,3 +180,9 @@ test('block detection respects inline display and never reads computed styles fo
  kept.ownerDocument={defaultView:{getComputedStyle:()=>{throw Error('Text is not an Element');}}};
  assert.deepStrictEqual(serializeChildren(el('p',[kept])),[{t:'keep',id:'0123456789'}]);
 });
+
+test('native lists retain item hierarchy, numbering and inline formatting',()=>{
+ const tree=serializeChildren(el('div',[el('ol',[el('li',[el('strong',[text('First')]),el('ul',[el('li',[text('Nested')])])]),el('li',[text('Second')])],{start:'3'})]));
+ assert.deepStrictEqual(tree,[{t:'block',tag:'ol',start:3,children:[{t:'block',tag:'li',children:[{t:'wrap',tag:'strong',children:[{t:'text',value:'First'}]},{t:'block',tag:'ul',children:[{t:'block',tag:'li',children:[{t:'text',value:'Nested'}]}]}]},{t:'block',tag:'li',children:[{t:'text',value:'Second'}]}]}]);
+ assert.equal(require('../src/rich-text.cjs').validateChildrenTree(tree,0),null);
+});
