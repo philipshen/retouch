@@ -1194,3 +1194,40 @@ protected tokens, and rollback on unsupported source formatting. The preceding
 React/Liquid runs also passed cursor-typography and line-break regressions. These
 checks use browser clipboard events, not an automated operating-system clipboard.
 The inspected saved rendering is `/private/tmp/retouch-multiline-paste.png`.
+
+### Typography inside authored script wrappers (2026-09-13)
+
+Cursor typing and plain-text paste can now apply typography inside an existing
+superscript/subscript wrapper that has authored attributes. When no script
+position change is requested, the editor keeps that wrapper and styles only the
+inserted text. It no longer attempts to reconstruct the wrapper merely to change
+font size or color. Multiline paste retains the wrapper around its text and
+breaks. This preserves classes, IDs, data attributes, and the existing source
+identity without duplicating it.
+
+Explicit script-position changes still require a reconstructable wrapper. If
+source ownership changes after choosing a script position, paste restores its
+original snapshot. The regression test now distinguishes that case from an
+ordinary typography-only edit inside an attributed wrapper, which is supported.
+This does not establish arbitrary framework/site or dynamic-text parity, and
+paragraph/list editing, rich clipboard import, responsive range overrides, and
+trusted desktop distribution remain unfinished.
+
+React's kept-descendant lookup also now includes children whose start or end
+exactly matches the parent's content boundary. The former strict comparisons
+incorrectly rejected a first or last child, including an attributed script at
+the end of a text layer. The bounds remain restricted to the target's children
+range. A source regression test verifies edits to both boundary children while
+retaining their exact authored attributes.
+
+Validation: 1,194 unit tests passed in
+`/private/tmp/retouch-owned-script-final-units.log`. HTML Chromium 145, React
+Chromium 145, and Liquid WebKit 26.0 browser checks passed in
+`/private/tmp/retouch-owned-script-html.log`,
+`/private/tmp/retouch-owned-script-final-react.log`, and
+`/private/tmp/retouch-owned-script-liquid.log`. They verify cursor font size,
+multiline color paste, original class/ID/data attributes, unique identity,
+local/source undo/redo, and the explicit script-position boundary. HTML/Liquid
+multiline-paste and cursor-script regressions, including ownership-change
+rollback, passed in `retouch-owned-script-regression-{html,liquid}.log` under
+`/private/tmp`.

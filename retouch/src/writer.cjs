@@ -251,7 +251,7 @@ function planOp(resolved, op) {
     }
     const descendants = new Map();
     for (const el of resolved.elements) {
-      if (el.node.start > node.openingElement.end && el.node.end < node.closingElement.start) {
+      if (el.node.start >= node.openingElement.end && el.node.end <= node.closingElement.start) {
         descendants.set(el.id, el.node);
       }
     }

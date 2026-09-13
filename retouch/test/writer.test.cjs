@@ -311,3 +311,10 @@ test('line breaks write self-closing JSX without turning into literal whitespace
  const {resolved}=pick(index,root,'Card.tsx','p');const result=writer.applyOp(resolved,{type:'setChildren',fileHash:resolved.hash,children:[{t:'text',value:'one'},{t:'break'},{t:'text',value:'two'}]});
  assert.ok(result.ok,JSON.stringify(result));assert.ok(read(root,'Card.tsx').includes('<p>one<br />two</p>'));
 });
+
+test('rich edits retain attributed children at both exact JSX content boundaries',()=>{
+ fs.writeFileSync(path.join(root,'Boundary.tsx'),`export const Text=()=> <p><sup id="first" data-note="keep">first</sup><sub id="last" className="authored">last</sub></p>`);
+ index.scanAll();const {resolved}=pick(index,root,'Boundary.tsx','p'),first=pick(index,root,'Boundary.tsx','sup').el.id,last=pick(index,root,'Boundary.tsx','sub').el.id;
+ const result=writer.applyOp(resolved,{type:'setChildren',fileHash:resolved.hash,children:[{t:'keep',id:first,children:[{t:'text',value:'changed first'}]},{t:'keep',id:last,children:[{t:'text',value:'changed last'}]}]});
+ assert.ok(result.ok,JSON.stringify(result));assert.equal(read(root,'Boundary.tsx'),`export const Text=()=> <p><sup id="first" data-note="keep">changed first</sup><sub id="last" className="authored">changed last</sub></p>`);
+});

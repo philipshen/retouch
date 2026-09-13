@@ -903,7 +903,11 @@ function styleInsertedText(current,start,end,properties,script){
   if(start!==end){
     const parent=range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer,previous=parent.closest('sup,sub'),inherited=previous&&previous!==current.el&&current.el.contains(previous)?previous.tagName.toLowerCase():null,desired=script===undefined?inherited:script;
     const sameProperties=element=>!!element&&Object.entries(properties).every(([name,value])=>{const probe=d.createElement('span');probe.style.setProperty(name,value);return element.style.getPropertyValue(name)===probe.style.getPropertyValue(name);});
-    if(!(inherited===desired&&inherited&&sameProperties(previous.parentElement))){
+    if(inherited&&script===undefined&&!plainInlineFormatting(previous)){
+      // Typography-only edits can retain an authored script wrapper intact.
+      // Reconstructing it would unnecessarily discard attributes or identity.
+      for(const [property,value]of Object.entries(properties))applyTextRangeStyle(property,value);
+    }else if(!(inherited===desired&&inherited&&sameProperties(previous.parentElement))){
       if(inherited&&!toggleWrap(inherited)){current.caretStyle=null;return;}
       for(const [property,value]of Object.entries(properties))applyTextRangeStyle(property,value);
       if(desired&&desired!=='normal')toggleWrap(desired);
