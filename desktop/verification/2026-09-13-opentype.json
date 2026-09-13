@@ -1,0 +1,187 @@
+{
+  "sourceCommit": "6c82b08ae7528d566c3dd803ae66049897c76774",
+  "sourceTreeDirty": false,
+  "sourceFiles": 204,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "status": "ad hoc development candidate; native editing and trusted distribution unverified",
+  "archive": "/private/tmp/retouch-desktop-caps-6c82b08/Retouch-0.1.0-mac.zip",
+  "sha256": "ec1f202331b4cb0fb42ffe837166f3375388fef2906042a51eed8d3f5d9575a8",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "signatureAfterWorkflows": "strict verification passed on original and extracted bundles",
+  "units": {
+    "passed": 1161,
+    "exitCode": 0,
+    "scope": "tests import actual extracted packaged runtime",
+    "log": "/private/tmp/retouch-desktop-caps-6c82b08/units.log"
+  },
+  "harness": {
+    "testFiles": 338,
+    "inventorySha256": "d8bdb379bd6fb2c2504220f16d1ed4e9a1e3a089041236c504109afcdecb018c",
+    "archiveSha256": "c11c6abf8aff70ebf3899781a84a71178ce2ead8376454795b158e21a41b6da0",
+    "runtime": "/private/tmp/retouch-desktop-caps-6c82b08/extracted/Retouch.app/Contents/Resources/retouch",
+    "testsExternalToBundle": true,
+    "removedAfterAllProcessesExited": true
+  },
+  "workflows": [
+    {
+      "name": "typography-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-caps-6c82b08/typography-html.log",
+      "scope": "Primary/shared calculations, percent spacing, named weights, category keyboard controls and contextual preview samples with exact history"
+    },
+    {
+      "name": "typography-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-caps-6c82b08/typography-liquid.log",
+      "scope": "Primary/shared calculations, percent spacing, named weights, category keyboard controls and contextual preview samples with exact history"
+    },
+    {
+      "name": "opentype-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-caps-6c82b08/opentype-html.log",
+      "scope": "Optical sizing, variable axes, number formatting, capital forms and ligatures, preview values, responsive fallback/reset and exact history"
+    },
+    {
+      "name": "paints-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-caps-6c82b08/paints-html.log",
+      "scope": "Compact CSS paints, bare hex entry, RGB/P3 and four-edge alpha preservation, invalid input, Escape, responsive overrides and exact history"
+    },
+    {
+      "name": "styles-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-caps-6c82b08/styles-html.log",
+      "scope": "Missing-edge creation, individual styles, mixed state, screen fallback, reset and exact width/style history"
+    },
+    {
+      "name": "opentype-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-caps-6c82b08/opentype-liquid.log",
+      "scope": "Optical sizing, variable axes, number formatting, capital forms and ligatures, preview values, responsive fallback/reset and exact history"
+    },
+    {
+      "name": "typography-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-caps-6c82b08/typography-react.log",
+      "scope": "Primary/shared calculations, percent spacing, named weights, category keyboard controls and contextual preview samples with exact history"
+    },
+    {
+      "name": "svg-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-caps-6c82b08/svg-html.log",
+      "scope": "SVG compact paints and advanced stroke settings, keyboard focus, responsive overrides, reset and exact history"
+    },
+    {
+      "name": "paints-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-caps-6c82b08/paints-liquid.log",
+      "scope": "Compact CSS paints, bare hex entry, RGB/P3 and four-edge alpha preservation, invalid input, Escape, responsive overrides and exact history"
+    },
+    {
+      "name": "styles-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-caps-6c82b08/styles-liquid.log",
+      "scope": "Missing-edge creation, individual styles, mixed state, screen fallback, reset and exact width/style history"
+    },
+    {
+      "name": "opentype-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-caps-6c82b08/opentype-react.log",
+      "scope": "Optical sizing, variable axes, number formatting, capital forms and ligatures, preview values, responsive fallback/reset and exact history"
+    },
+    {
+      "name": "site-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-caps-6c82b08/site-html.log",
+      "scope": "Full HTML editing, responsive CSS, text/images/assets/navigation, effects, geometry, selection and source history"
+    },
+    {
+      "name": "paints-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-caps-6c82b08/paints-react.log",
+      "scope": "Compact CSS paints, bare hex entry, RGB/P3 and four-edge alpha preservation, invalid input, Escape, responsive overrides and exact history"
+    },
+    {
+      "name": "styles-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-caps-6c82b08/styles-react.log",
+      "scope": "Missing-edge creation, individual styles, mixed state, screen fallback, reset and exact width/style history"
+    }
+  ],
+  "tamperChecks": {
+    "result": "passed on disposable bundle copy",
+    "exitCode": 0,
+    "scope": "altered source, omitted manifest entry, unlisted source, restored copy and original signature",
+    "log": "/private/tmp/retouch-desktop-caps-6c82b08/tamper.log"
+  },
+  "installation": {
+    "verification": {
+      "sourceCommit": "6c82b08ae7528d566c3dd803ae66049897c76774",
+      "sourceTreeDirty": false,
+      "sourceFiles": 204,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesArchive": true,
+    "quarantinePreserved": true,
+    "quarantine": "0381;6aa6d779;;BA905E4E-E578-4737-ADEF-368B48AA73C4",
+    "result": "isolated install and uninstall passed",
+    "caskInventoryUnchanged": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "automaticDependencyRemovalDisabled": true,
+    "exitCode": 0,
+    "log": "/private/tmp/retouch-desktop-caps-6c82b08/homebrew.log"
+  },
+  "nativeLaunch": {
+    "result": "not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "nativeSelfTests": "not run",
+  "developerID": "not retried",
+  "notarization": "not performed",
+  "published": false,
+  "remaining": [
+    "Native full editing, sampler and shutdown workflows remain unverified",
+    "Developer ID signing, notarization, public cask and trusted upgrades remain incomplete",
+    "Intel runtime execution remains unverified",
+    "Older WebKit normal-flow block-axis Fill sizing remains incorrect; not rerun on this archive",
+    "Dedicated arrow pixel and gradient-canvas matrices were not rerun on this archive",
+    "Font-specific OpenType feature detection and alternate-glyph rendering across all fonts remain unverified",
+    "Full Figma Design parity and universal site support remain incomplete"
+  ]
+}
