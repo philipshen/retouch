@@ -18,12 +18,18 @@
   const match=/^([\d.eE+\-*/^()\s]+?)(px|rem|em|vw|vh|ch|%)?$/.exec(text.trim());
   return match?{value:evaluate(match[1]),unit:match[2]||unit}:null;
  }
+ function decimal(value){
+  if(typeof value!=='number'||!Number.isFinite(value))throw Error('Use a finite number.');
+  const text=String(value);if(!text.includes('e'))return text;
+  const [mantissa,power]=text.split('e'),negative=mantissa.startsWith('-'),unsigned=negative?mantissa.slice(1):mantissa,parts=unsigned.split('.'),digits=parts.join(''),point=parts[0].length+Number(power);
+  return (negative?'-':'')+(point<=0?'0.'+'0'.repeat(-point)+digits:point>=digits.length?digits+'0'.repeat(point-digits.length):digits.slice(0,point)+'.'+digits.slice(point));
+ }
  function calculation(input,{unit=''}={}){
   const numeric=input.type==='number',initial=input.value,min=input.min===''?-Infinity:Number(input.min),max=input.max===''?Infinity:Number(input.max);
   let currentUnit=unit,held=false;try{currentUnit=quantity(initial,unit)?.unit||unit;}catch{}
   if(numeric){input.type='text';input.inputMode='decimal';}
   const parse=()=>{const result=quantity(input.value,currentUnit);if(!result){if(numeric)throw Error('Enter a number or a calculation.');return null;}if(numeric&&result.unit!==unit)throw Error('Use '+(unit==='%'?'percent':unit==='px'?'pixels':'a unitless value')+' in this field.');if(numeric&&(result.value<min||result.value>max))throw Error('Enter a value from '+min+' to '+max+'.');return result;};
-  const format=result=>String(result.value)+(numeric?'':result.unit);
+  const format=result=>decimal(result.value)+(numeric?'':result.unit);
   input.addEventListener('input',()=>input.setCustomValidity(''));
   input.addEventListener('change',event=>{held=false;if(input.disabled||input.value===initial)return;try{const result=parse();if(result){input.value=format(result);currentUnit=result.unit;}input.setCustomValidity('');}catch(error){event.stopImmediatePropagation();input.setCustomValidity(error.message);input.reportValidity();}},true);
   if(numeric){
@@ -35,5 +41,5 @@
   input.title=(input.title?input.title+' ':'')+'Calculations: 2 * 3 or (12 + 4) / 2. A trailing CSS unit applies to the result.';
  }
  function field(input){const original=input.value,change=input.onchange;input.onchange=e=>{if(input.value===original){input.setCustomValidity('');return;}change?.(e);};input.title='Calculations: append +24 or *1.5, or enter (120 - 16) / 2';input.onkeydown=e=>{if(e.isComposing||e.ctrlKey||e.metaKey||e.altKey)return;if(e.key==='Enter'){e.preventDefault();e.stopPropagation();input.blur();}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();input.value=original;input.setCustomValidity('');input.blur();}};}
- const api={evaluate,quantity,calculation,field};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchNumericExpression=api;
+ const api={evaluate,quantity,decimal,calculation,field};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchNumericExpression=api;
 })(typeof window==='object'?window:globalThis);

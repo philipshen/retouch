@@ -20,3 +20,10 @@ test('calculated quantities keep CSS units and preserve ordinary CSS syntax for 
  for(const value of ['var(--width)','2px 3px','calc(1em + 2px)','red','alert(1)'])assert.equal(quantity(value),null);
  for(const value of ['1/0px','1+','1 2','1e999'])assert.throws(()=>quantity(value));
 });
+
+test('calculated decimals avoid CSS exponent notation without rounding numeric precision',()=>{
+ const {decimal,quantity}=require('../shell/numeric-expression.js'),V=require('../shell/html-css-values.js');
+ for(const number of [0,-0,.123456789123456,1e-7,-1.2345e-7,1e21,Number.MIN_VALUE,Number.MAX_VALUE]){const text=decimal(number);assert.ok(!/[eE]/.test(text));assert.equal(Number(text),number===0?0:number);}
+ assert.equal(decimal(quantity('1 / 10000000px').value),'0.0000001');assert.ok(V.valid('border-width',decimal(1e-7)+'px'));assert.ok(V.valid('stroke-width',decimal(1e-7)+'px'));
+ for(const bad of [NaN,Infinity,-Infinity,'1'])assert.throws(()=>decimal(bad));
+});

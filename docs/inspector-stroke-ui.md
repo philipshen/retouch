@@ -340,3 +340,32 @@ opacity calculations and grouped key changes in
 `/private/tmp/retouch-stroke-math-paints-{html,liquid}.log`; HTML/React Chromium
 and Liquid WebKit SVG calculations in
 `/private/tmp/retouch-stroke-math-svg-{html,react,liquid}.log`.
+
+## Decimal calculation serialization
+
+Calculated scalar results now expand scientific notation into decimal text
+before the existing CSS validator runs. For example, `1 / 10000000px` writes
+`0.0000001px` instead of the previously refused `1e-7px`. This expands the
+number's normal string representation without another precision-rounding step;
+it does not introduce arbitrary-precision arithmetic or bypass writer limits.
+
+Unit coverage checks numeric round trips, negative values, very small/large
+finite values, nonfinite refusal, and CSS/SVG validation of the tiny width.
+The SVG workflow writes the precise width, verifies the stored decimal and
+computed width, and includes it in the complete source Undo/Redo sequence.
+The desktop archive predates this change.
+
+WebKit 26 serializes a plain CSS `0.0000001px` SVG stroke width as `0px` in
+both authored CSSOM and computed style; `0.000001px` remains nonzero in the
+same standalone probe. This is distinct from Retouch's saved source, which
+must retain the decimal exactly. The WebKit integration check compares against
+an independent inline literal on a temporary SVG element and does not claim
+pixel-rendering precision from computed-style text. Chromium retained the
+expected small computed width.
+
+Validation: 1,158 unit tests in
+`/private/tmp/retouch-calculation-decimal-units.log`; HTML/React Chromium in
+`/private/tmp/retouch-calculation-decimal-{html,react}-verified.log`; Liquid
+WebKit in `/private/tmp/retouch-calculation-decimal-liquid-final.log`.
+The initial WebKit numeric comparison failed on native serialization; the
+final check retains exact source assertions and uses the measured native result.
