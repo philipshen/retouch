@@ -1,6 +1,6 @@
 (function (root) {
   'use strict';
-  let cornersExpanded=false,numericExpanded=false,variationExpanded=false,shadowStackExpanded=false;
+  let cornersExpanded=false,ligatureExpanded=false,numericExpanded=false,variationExpanded=false,shadowStackExpanded=false;
   const tokens = value => (value || '').split(/\s+/).filter(Boolean);
   // Colons inside arbitrary CSS values are not variant separators.
   function base(token) {
@@ -99,7 +99,7 @@
       parentLabel: viewport ? 'Page viewport' : `<${parent.tagName.toLowerCase()}>${parent.id ? ' #' + parent.id : ''}`,
     };
   }
-  const typeProperties = ['font-family', 'font-size', 'font-weight', 'font-style', 'font-stretch', 'font-variation-settings', 'font-optical-sizing', 'font-variant-numeric', 'line-height', 'letter-spacing', 'text-transform', 'text-decoration-line'];
+  const typeProperties = ['font-family', 'font-size', 'font-weight', 'font-style', 'font-stretch', 'font-variation-settings', 'font-optical-sizing', 'font-variant-numeric', 'font-variant-ligatures', 'line-height', 'letter-spacing', 'text-transform', 'text-decoration-line'];
   function catalog(d) {
     const result = new Map();
     function scan(rules) {
@@ -302,6 +302,12 @@
     action.setAttribute('aria-label','Use relative '+label.replace(' (%)','').toLowerCase());
     action.title='Convert to spacing relative to the font size.';row.append(action);
     return input;
+  }
+  const ligatureToken=t=>/^\[font-variant-ligatures:.+\]$/.test(t);
+  function ligatureTypography(parent,current,onChange,onReset,canReset=true){
+    const values=root.RetouchHTMLCSSValues,details=document.createElement('details'),summary=document.createElement('summary');details.className='ligature-typography';details.open=ligatureExpanded;details.ontoggle=()=>{if(details.isConnected)ligatureExpanded=details.open;};summary.textContent='Ligatures';details.append(summary);parent.append(details);
+    for(const [label,choices]of values.ligatureGroups){const active=current==='none'?choices[2][0]:choices.find(([v])=>v&&current.split(/\s+/).includes(v))?.[0]||'';select(details,label,choices,active,value=>{const next=values.ligatureChange(current,label,value);if(next!==null)onChange(next);});}
+    note(details,'Appearance depends on the selected font’s supported features.');const reset=button('Reset ligatures',onReset);reset.disabled=!canReset;details.append(reset);
   }
   function numericTypography(parent,current,onChange,onReset,canReset=true){
     const values=root.RetouchHTMLCSSValues;
@@ -709,7 +715,7 @@
   }).join(' ');
  }
   function replaceTypography(classes,match,additions){return replace(match===fontSizeToken||match===lineHeightToken?expandSizeLeading(classes):classes,match,additions);}
-  const textOverrideToken=t=>[fontSizeToken,fontWeightToken,fontFamilyToken,lineHeightToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,opticalToken,variationToken,numericToken].some(match=>match(t));
+  const textOverrideToken=t=>[fontSizeToken,fontWeightToken,fontFamilyToken,lineHeightToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,opticalToken,variationToken,numericToken,ligatureToken].some(match=>match(t));
   function fontWeightClass(value){return typeof value==='number'&&Number.isFinite(value)&&value>=1&&value<=1000?`font-[${value}]`:null;}
   function fontDisplayName(value){return value.trim().toLowerCase()==='-webkit-standard'?'Browser default':value.replace(/["']/g,'');}
   function fontFamilies(d,current){
@@ -855,6 +861,7 @@
       select(sec,'Text case',[['none','As written'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']],css.textTransform,v=>change(caseToken,v==='none'?'normal-case':v));
       opticalTypography(sec,css,value=>change(opticalToken,`[font-optical-sizing:${value}]`),()=>save(replace(info.className,opticalToken,'')),tokens(info.className).map(base).some(t=>t&&opticalToken(t)));
       variationTypography(sec,css,value=>change(variationToken,`[font-variation-settings:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,variationToken,'')),tokens(info.className).map(base).some(t=>t&&variationToken(t)),el);
+      ligatureTypography(sec,css.fontVariantLigatures,value=>change(ligatureToken,`[font-variant-ligatures:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,ligatureToken,'')),tokens(info.className).map(base).some(t=>t&&ligatureToken(t)));
       numericTypography(sec,css.fontVariantNumeric,value=>change(numericToken,`[font-variant-numeric:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,numericToken,'')),tokens(info.className).map(base).some(t=>t&&numericToken(t)));
       const textOverride=textOverrideToken;
       const reset=button('Reset text overrides',()=>save(replace(info.className,textOverride,'')));
@@ -906,6 +913,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

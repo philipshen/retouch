@@ -1937,6 +1937,7 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
    await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();
    console.log(engine+' '+kind+': PASS Tab retains next control after save/rebuild, Shift+Tab returns, unchanged Tab does not write, explicit click cancels queued focus, exact undo');
   }
+  if(process.env.RT_E2E_LIGATURES)await require('./ligatures.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_TYPE_SETTINGS_POPOVER)await require('./type-settings-popover.cjs')({page,read,wait,settled});
   if(process.env.RT_E2E_WEIGHT_STYLE)await require('./font-weight-style.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_SHARED_TYPE_CALCULATIONS)await require('./shared-typography-calculations.cjs')({page,app,kind,read,wait,settled});

@@ -181,3 +181,17 @@ test('relative spacing display uses authored units rather than interpreting pixe
  for(const [property,value,expected] of [['line-height','1.5',150],['line-height','150%',150],['line-height','1.5em',150],['letter-spacing','0.1em',10],['letter-spacing','-0.05em',-5],['line-height','0',0]])assert.equal(spacingPercent(property,value),expected);
  for(const [property,value] of [['line-height','24px'],['line-height','normal'],['line-height','var(--leading)'],['line-height','calc(1.5)'],['letter-spacing','10%'],['letter-spacing','1.5'],['letter-spacing','0.1rem'],['font-size','1.5em'],['line-height',undefined]])assert.equal(spacingPercent(property,value),null);
 });
+
+
+test('ligature controls preserve independent groups and none semantics',()=>{
+ const v=require('../shell/html-css-values.js'),i=require('../shell/inspector.js');
+ assert.equal(v.ligatureChange('none','Common ligatures','common-ligatures'),'no-discretionary-ligatures no-historical-ligatures no-contextual common-ligatures');
+ assert.equal(v.ligatureChange('common-ligatures no-contextual','Common ligatures',''),'no-contextual');
+ assert.equal(v.ligatureChange('no-contextual','Contextual alternates',''),'normal');
+ for(const value of ['normal contextual','none common-ligatures','common-ligatures no-common-ligatures','contextual contextual','url(x)',''])assert.equal(v.valid('font-variant-ligatures',value),false,value);
+ assert.equal(v.valid('font-variant-ligatures','none'),true);assert.equal(v.valid('font-variant-ligatures',null),true);
+ assert.equal(v.overlaps('font','font-variant-ligatures'),true);assert.equal(v.overlaps('font-variant-ligatures','font-variant'),true);
+ assert.equal(i.replace('font-bold [font-variant-ligatures:none] md:[font-variant-ligatures:normal]',i.ligatureToken,'[font-variant-ligatures:common-ligatures]'),'font-bold md:[font-variant-ligatures:normal] [font-variant-ligatures:common-ligatures]');
+ const c=require('../src/text-style-classes.cjs');assert.equal(c.encode({'font-variant-ligatures':'common-ligatures no-contextual'})['font-variant-ligatures'],'![font-variant-ligatures:common-ligatures_no-contextual]');
+ assert.throws(()=>c.compose('[font-variant:none]',{'font-variant-ligatures':'normal'}),/shorthand/);
+});

@@ -458,3 +458,34 @@ behavior and compact scrolling. Both passed in
 in `/private/tmp/retouch-type-samples-units.log`. These samples demonstrate the
 currently applied font settings; they do not yet preview alternative dropdown
 choices before applying them or prove that the font supports every feature.
+
+
+### Ligatures and contextual alternates (2026-09-13)
+
+Type settings > Details now has Common ligatures, Rare ligatures, Historical
+ligatures and Contextual alternates, each with Font default / On / Off. The
+controls compose independent `font-variant-ligatures` groups, retain the expanded
+disclosure after edits, support scoped reset, and show letter samples on focus
+or hover. HTML declarations and React/Liquid arbitrary classes use the same
+validated values. The preview and saved text style property sets include
+ligatures; class-style encoding and shorthand overlap guards recognize them.
+
+CSS `none` disables all four categories. Editing one category expands the other
+three into explicit disabled values so their meaning is preserved. Validation
+rejects duplicate/conflicting categories, mixed global keywords and unsupported
+syntax. Reference: [CSS ligature values](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/font-variant-ligatures).
+Font feature availability is not yet detected; these controls do not guarantee
+that every font contains every requested glyph substitution.
+
+Validation: 1,160 unit tests passed in `/private/tmp/retouch-ligatures-units.log`;
+29 focused inspector/style-class tests passed after expanding the full property
+encoding fixture in `/private/tmp/retouch-ligatures-models-final.log`.
+HTML Chromium and Liquid WebKit browser tests passed in
+`/private/tmp/retouch-ligatures-{html,liquid}.log`; React Chromium passed in
+`/private/tmp/retouch-ligatures-react-final.log`. Coverage includes independent
+groups, computed preview values, responsive override/fallback/reset and exact
+source undo/redo; React also verifies the focused letter sample with unchanged
+source. The screenshot `/private/tmp/retouch-ligatures.png` was inspected.
+The initial React run lost the editor page during baseline font-family checks,
+before the ligature flow, and exited 1; the completed rerun passed. This does not
+establish a cause for that initial page loss or validate every font's rendering.
