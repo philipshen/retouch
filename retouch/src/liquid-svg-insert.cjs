@@ -7,17 +7,17 @@ function describe(resolved){
  if(el.kind!=='host'||el.dynamicTag||el.generatedImage)return null;
  const canvas=['svg','g'].includes(el.tag)&&viewport(el);
  if(canvas?!native.liquidContainer(resolved,true).canInsert:!native.describe(resolved,'liquid').canInsert)return null;
- return {createsViewport:!canvas,presets,pen:!!canvas};
+ return {createsViewport:!canvas,presets,pen:true};
 }
 function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason}),cap=describe(resolved);
  if(!cap||!presets.includes(op.preset)&&!['polygon','polyline','path'].includes(op.preset))return refuse('Select a content container, SVG canvas or group to add a shape.');
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the container.');
  if(['polygon','polyline'].includes(op.preset)&&op.points===undefined)return refuse('Place vector points before creating a line or polygon.');
- const native=op.nativeCanvas===true&&cap.createsViewport?svg.nativeDrawing(op.preset,op.points,false):null;
+ const native=op.nativeCanvas===true&&cap.createsViewport?svg.nativeDrawing(op.preset,op.points,false,op.nodes,op.closed):null;
  if(op.nativeCanvas!==undefined&&(!native||op.nativeCanvas!==true))return refuse('Draw a bounded shape into a native content container.');
- const drawn=op.preset==='path'?svg.pathShape(op.nodes,op.closed):op.points===undefined?null:svg.drawnShape(op.preset,native?.points||op.points);
- if(op.preset==='path'&&(cap.createsViewport||!drawn))return refuse('Draw valid path anchors and handles inside an SVG canvas or group.');
+ const drawn=op.preset==='path'?svg.pathShape(native?.nodes||op.nodes,op.closed):op.points===undefined?null:svg.drawnShape(op.preset,native?.points||op.points);
+ if(op.preset==='path'&&(cap.createsViewport&&!native||!drawn))return refuse('Draw valid path anchors and handles inside an SVG canvas or group.');
  if(op.points!==undefined&&(cap.createsViewport&&!native||!drawn))return refuse('Draw a nonempty shape inside an existing SVG canvas or group.');
  const el=resolved.element,view=viewport(el),attrs=(view?.attributes||[]).map(a=>({name:a.name==='viewbox'?'viewBox':a.name,value:a.value}));
  const opening=native?.opening||(cap.createsViewport?'<svg width="200" height="200" viewBox="0 0 200 200" aria-label="Shapes">':'');

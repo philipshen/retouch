@@ -12,7 +12,7 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
   if(process.env.RT_E2E_DRAW_CONTOUR==='1'||process.env.RT_E2E_MOVE_CONTOUR==='1')body=body.replace('aria-label="Compound icon"','aria-label="Compound icon" transform="translate(5 7) rotate(-12) scale(.8 1.1)"');
   if(process.env.RT_E2E_CONTOUR_ACTIONS==='1')body=body.replace('evenodd','nonzero');
   if(process.env.RT_E2E_SVG_CREATE==='1')body='<div><main aria-label="Empty frame"/><svg aria-label="Empty canvas" width="200" height="200"/><svg width="200" height="200"><g aria-label="Empty group"/></svg><p>Keep this text</p></div>';
-  const nativeDraw=!!(process.env.RT_E2E_SVG_NATIVE_DRAW||process.env.RT_E2E_SVG_SHORTCUTS);if(nativeDraw)body=body.replace('aria-label="Empty frame"/','aria-label="Empty frame" style={{position:"relative",width:500,height:300,padding:20,border:"3px solid gray",transform:"rotate(9deg) scale(.8,1.1)"}}/');
+  const nativeDraw=!!(process.env.RT_E2E_SVG_NATIVE_DRAW||process.env.RT_E2E_SVG_SHORTCUTS||process.env.RT_E2E_SVG_NATIVE_PEN);if(nativeDraw)body=body.replace('aria-label="Empty frame"/','aria-label="Empty frame" style={{position:"relative",width:500,height:300,padding:20,border:"3px solid gray",transform:"rotate(9deg) scale(.8,1.1)"}}/');
   const original=kind==='react'?'"use client"; export default function Page(){return '+body+';}':'<html><body>'+body+'</body></html>';fs.writeFileSync(file,original);
   let url,server,child,stopped,browser,logs='';
   const read=()=>fs.readFileSync(file,'utf8'),wait=async(fn)=>{for(let i=0;i<300;i++){try{if(await fn())return;}catch(e){if(!/Execution context was destroyed|fetch failed/.test(e.message))throw e;}await new Promise(r=>setTimeout(r,100));}throw Error('Timed out '+logs.slice(-2000));};
@@ -29,6 +29,7 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
     const select=async(name)=>{await page.getByRole('treeitem',{name,exact:true}).click();await settled();};
     if(process.env.RT_E2E_SVG_CREATE==='1'){
       assert.equal(kind,'react','self-closing HTML content is not a valid fixture');
+      if(process.env.RT_E2E_SVG_NATIVE_PEN){await require('./native-pen-workflow.cjs')({page,app,target:app.locator('main'),select:()=>select('main · Empty frame'),read,original,wait,settled});assert.deepEqual(errors,[]);console.log(engine+' React: PASS native Pen in a transformed self-closing container, editable vectors and source history');return;}
       for(const [name,selector]of [['main · Empty frame','main'],['svg · Empty canvas','svg[aria-label="Empty canvas"]'],['g · Empty group','g']])for(const [preset,tag]of [['rectangle','rect'],['circle','circle'],['ellipse','ellipse'],['line','line'],['triangle','polygon'],['star','polygon']]){
         await select(name);let preview;
         if(nativeDraw&&selector==='main'){

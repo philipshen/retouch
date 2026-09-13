@@ -1,0 +1,26 @@
+'use strict';
+const assert=require('node:assert/strict');
+module.exports=async function({page,app,target,select,read,original,wait,settled,screenshot}){
+ for(const kind of ['polyline','polygon','curve','closed-curve']){
+  await select();await settled();const beforeDOM=await target.innerHTML(),before=await target.locator('p').count()?await target.locator('p').boundingBox():null;
+  await page.getByRole('button',{name:'Pen tool',exact:true}).focus();await page.keyboard.press('p');await page.getByRole('group',{name:'Draw vector',exact:true}).waitFor();assert.equal(await target.innerHTML(),beforeDOM);const actionsBox=await page.getByRole('toolbar',{name:'Pen actions',exact:true}).boundingBox(),dockBox=await page.getByRole('navigation',{name:'Canvas tools',exact:true}).boundingBox();assert.ok(actionsBox.y+actionsBox.height<=dockBox.y&&actionsBox.x>=0&&actionsBox.y>=0,'Pen actions stay above the tool dock');
+  const box=await target.boundingBox(),curved=kind.includes('curve'),closed=kind==='polygon'||kind==='closed-curve';
+  const points=curved?[[.25,.35,25,-15],[.65,.65,20,20]]:[[.25,.35,0,0],[.65,.35,0,0],[.5,.7,0,0]];
+  for(const [x,y,dx,dy]of points){const px=box.x+box.width*x,py=box.y+box.height*y;await page.mouse.move(px,py);await page.mouse.down();if(curved)await page.mouse.move(px+dx,py+dy,{steps:4});await page.mouse.up();}
+  const controls=await page.getByRole('toolbar',{name:'Pen actions',exact:true}).boundingBox();assert.ok(Math.abs(controls.x+controls.width/2-dockBox.x-dockBox.width/2)<1,'Pen actions remain centered as point count and labels change');
+  const preview=page.locator('.svg-pen-surface > svg > path');
+  if(closed)await preview.evaluate(el=>{const part=RetouchSVGPath.parse(el.getAttribute('d')),first=part.nodes[0],last=part.nodes.at(-1);if(first.out)first.in={x:2*first.x-first.out.x,y:2*first.y-first.out.y};if(last.in)last.out={x:2*last.x-last.in.x,y:2*last.y-last.in.y};el.setAttribute('d',RetouchSVGPath.serialize(part.nodes,true));});
+  const expected=await preview.evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};});assert.equal(read(),original);assert.equal(await target.innerHTML(),beforeDOM);if(screenshot&&kind==='closed-curve')await page.screenshot({path:screenshot});
+  await page.getByRole('button',{name:closed?'Close shape':curved?'Finish path':'Finish line',exact:true}).click();await wait(()=>read()!==original);await settled();assert.equal(await page.getByRole('toolbar',{name:'Pen actions',exact:true}).count(),0);
+  const shape=target.locator('svg > '+(curved?'path':kind));await shape.waitFor();const f=await page.locator('#app').boundingBox(),r=await shape.evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,iw:innerWidth};}),scale=f.width/r.iw,rendered={x:f.x+r.x*scale,y:f.y+r.y*scale,width:r.width*scale,height:r.height*scale};
+  for(const key of ['x','y','width','height'])assert.ok(Math.abs(expected[key]-rendered[key])<.7,kind+' '+key+' '+JSON.stringify({expected,rendered}));
+  const fit=await shape.evaluate(el=>{const b=el.getBBox(),view=el.ownerSVGElement.viewBox.baseVal;return {x:b.x,y:b.y,width:b.width,height:b.height,vw:view.width,vh:view.height};});assert.ok(Math.abs(fit.x-1)<1e-4&&Math.abs(fit.y-1)<1e-4);assert.ok(Math.abs(fit.vw-fit.width-2)<1e-4&&Math.abs(fit.vh-fit.height-2)<1e-4,'viewport fits geometry rather than handles');
+  if(before)assert.deepEqual(await target.locator('p').boundingBox(),before);const saved=read();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===saved);await settled();await shape.waitFor();
+  if(kind==='curve'){await page.getByRole('button',{name:'Edit vector points',exact:true}).click();await page.getByRole('button',{name:'Vector point 1',exact:true}).click();await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');await wait(()=>read()!==saved);await settled();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===saved);await settled();}
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();console.log('Native Pen',kind,'PASS');
+ }
+ for(const cancel of ['escape','layout','border']){
+  await select();await settled();await page.getByRole('button',{name:'Pen tool',exact:true}).click();await page.getByRole('group',{name:'Draw vector',exact:true}).waitFor();const box=await target.boundingBox();await page.mouse.click(box.x+box.width*.3,box.y+box.height*.3);const style=await target.getAttribute('style');
+  if(cancel==='escape'){await page.getByRole('button',{name:'Cancel',exact:true}).focus();await page.keyboard.press('Escape');}else if(cancel==='layout')await target.evaluate(el=>el.style.width='520px');else await target.evaluate(el=>el.style.borderLeftWidth='23px');await page.locator('.svg-pen-surface').waitFor({state:'detached'});assert.equal(await page.getByRole('toolbar',{name:'Pen actions',exact:true}).count(),0);if(cancel!=='escape')await target.evaluate((el,style)=>style===null?el.removeAttribute('style'):el.setAttribute('style',style),style);assert.equal(read(),original);console.log('Native Pen cancel',cancel,'PASS');
+ }
+};

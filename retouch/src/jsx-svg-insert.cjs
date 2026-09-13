@@ -7,16 +7,16 @@ function describe(resolved){
  const canvas=['svg','g'].includes(tag)&&ids.jsxElementName(viewport(resolved)?.node||node)==='svg';
  if(!canvas&&!require('./native-insert.cjs').describe({...resolved,elements:resolved.elements||ids.collectElements(resolved.source,resolved.relPath).elements},'react').canInsert)return null;
  if(node.openingElement.attributes.some(a=>a.type==='JSXSpreadAttribute'||['children','dangerouslySetInnerHTML'].includes(a.name?.name)))return null;
- return {createsViewport:!canvas,presets,pen:canvas};
+ return {createsViewport:!canvas,presets,pen:true};
 }
 function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason}),cap=describe(resolved);
  if(!cap||!presets.includes(op.preset)&&!['polygon','polyline','path'].includes(op.preset))return refuse('Select a native JSX content container, SVG canvas or group without spread or children props.');
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the SVG container.');
  if(['polygon','polyline'].includes(op.preset)&&op.points===undefined)return refuse('Place vector points before creating a line or polygon.');
- const native=op.nativeCanvas===true&&cap.createsViewport?svg.nativeDrawing(op.preset,op.points,true):null;
+ const native=op.nativeCanvas===true&&cap.createsViewport?svg.nativeDrawing(op.preset,op.points,true,op.nodes,op.closed):null;
  if(op.nativeCanvas!==undefined&&(!native||op.nativeCanvas!==true))return refuse('Draw a bounded shape into a native content container.');
- const drawn=op.preset==='path'?svg.pathShape(op.nodes,op.closed):op.points===undefined?null:svg.drawnShape(op.preset,native?.points||op.points);if(op.preset==='path'&&(cap.createsViewport||!drawn))return refuse('Draw valid path anchors and handles.');if(op.points!==undefined&&(cap.createsViewport&&!native||!drawn))return refuse('Draw a nonempty shape with bounded SVG coordinates.');
+ const drawn=op.preset==='path'?svg.pathShape(native?.nodes||op.nodes,op.closed):op.points===undefined?null:svg.drawnShape(op.preset,native?.points||op.points);if(op.preset==='path'&&(cap.createsViewport&&!native||!drawn))return refuse('Draw valid path anchors and handles.');if(op.points!==undefined&&(cap.createsViewport&&!native||!drawn))return refuse('Draw a nonempty shape with bounded SVG coordinates.');
  const view=viewport(resolved)?.node,attrs=(view?.openingElement.attributes||[]).filter(a=>a.type==='JSXAttribute').map(a=>({name:a.name.name,value:literal(a)})).filter(a=>a.value!==undefined&&a.value!==null);
  const opening=native?.opening||(cap.createsViewport?'<svg width="200" height="200" viewBox="0 0 200 200" aria-label="Shapes">':'');
  const content=opening+(drawn||svg.shape({element:{node:{tagName:'svg',namespaceURI:'http://www.w3.org/2000/svg',attrs:cap.createsViewport?[]:attrs}}},op.preset)).replace(/stroke-width=/g,'strokeWidth=')+(cap.createsViewport?'</svg>':'');

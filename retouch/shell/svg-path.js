@@ -177,5 +177,20 @@
     return (!next.in||coordinate(next.in))&&(!next.out||coordinate(next.out))?next:null;
   }
   function equivalent(a,b){return !!a&&!!b&&a.closed===b.closed&&a.nodes.length===b.nodes.length&&a.nodes.every((p,i)=>(!p.arc&&!b.nodes[i].arc||p.arc&&b.nodes[i].arc&&['rx','ry','rotation','large','sweep'].every(key=>Math.abs(p.arc[key]-b.nodes[i].arc[key])<1e-6))&&['','in','out'].every(key=>{const x=key?p[key]:p,y=key?b.nodes[i][key]:b.nodes[i];return !x&&!y||x&&y&&Math.abs(x.x-y.x)<1e-6&&Math.abs(x.y-y.y)<1e-6;}));}
-  const api={serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,translatePoints,arrangePoints,setArc,split,segmentMiddle,arcCenter,arcPoint,arcToCubics,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
+  function bounds(nodes,closed=false){
+    if(!serialize(nodes,closed))return null;
+    const points=nodes.map(({x,y})=>({x,y})),at=(a,b,c,d,t)=>{const u=1-t;return u*u*u*a+3*u*u*t*b+3*u*t*t*c+t*t*t*d;};
+    const roots=(p0,p1,p2,p3)=>{const a=-p0+3*p1-3*p2+p3,b=2*(p0-2*p1+p2),c=p1-p0,epsilon=1e-12*Math.max(1,Math.abs(a),Math.abs(b),Math.abs(c));if(Math.abs(a)<epsilon)return Math.abs(b)<epsilon?[]:[-c/b];const discriminant=b*b-4*a*c;if(discriminant<0)return [];const q=-.5*(b+(b<0?-1:1)*Math.sqrt(discriminant));return q?[q/a,c/q]:[-b/(2*a)];};
+    for(let i=closed?0:1;i<nodes.length;i++){
+      const a=nodes[(i+nodes.length-1)%nodes.length],b=nodes[i];
+      if(b.arc){
+        const center=arcCenter(a,b);if(!center){if(b.arc.rx&&b.arc.ry&&(a.x!==b.x||a.y!==b.y))return null;continue;}
+        const tau=2*Math.PI,sign=Math.sign(center.delta),span=Math.abs(center.delta),normalize=value=>(value%tau+tau)%tau;
+        for(const angle of [Math.atan2(-center.ry*center.s,center.rx*center.c),Math.atan2(center.ry*center.c,center.rx*center.s)])for(const candidate of [angle,angle+Math.PI]){const travel=normalize((candidate-center.start)*sign);if(travel<=span+1e-12)points.push(arcPoint(center,Math.min(1,travel/span)));}
+      }else if(a.out||b.in){const c=a.out||a,d=b.in||b;for(const t of [...roots(a.x,c.x,d.x,b.x),...roots(a.y,c.y,d.y,b.y)])if(t>0&&t<1)points.push({x:at(a.x,c.x,d.x,b.x,t),y:at(a.y,c.y,d.y,b.y,t)});}
+    }
+    const xs=points.map(p=>p.x),ys=points.map(p=>p.y),x=Math.min(...xs),y=Math.min(...ys),width=Math.max(...xs)-x,height=Math.max(...ys)-y;
+    return [x,y,width,height].every(Number.isFinite)?{x,y,width,height}:null;
+  }
+  const api={bounds,serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,translatePoints,arrangePoints,setArc,split,segmentMiddle,arcCenter,arcPoint,arcToCubics,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
 })(typeof window==='object'?window:globalThis);

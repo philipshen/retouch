@@ -1,23 +1,24 @@
 (function(root){
   'use strict';
   const ns='http://www.w3.org/2000/svg';
-  function mount({target,frame,canvas,onCommit,onEnd,onError,maxPoints=512,isCurrent=()=>true,contextPath=null}){
+  function mount({target,frame,canvas,onCommit,onEnd,onError,maxPoints=512,isCurrent=()=>true,contextPath=null,native=false}){
     let clearHint=()=>{};
-    const w=target.ownerDocument.defaultView,viewport=target.tagName.toLowerCase()==='svg'?target:target.ownerSVGElement;
-    const surface=root.document.createElement('div');surface.className='svg-pen-surface';surface.setAttribute('role','group');surface.setAttribute('aria-label','Draw vector');surface.tabIndex=0;
+    const w=target.ownerDocument.defaultView,viewport=native?null:target.tagName.toLowerCase()==='svg'?target:target.ownerSVGElement;
+    let space;try{space=native?root.RetouchSVGDraw.nativeSpace(target):null;}catch(error){onError(error.message);onEnd();return null;}
+    const surface=root.document.createElement('div');surface.className='svg-pen-surface';surface.id='svgPenSurface';surface.setAttribute('role','group');surface.setAttribute('aria-label','Draw vector');surface.tabIndex=0;
     Object.assign(surface.style,{position:'fixed',zIndex:40,cursor:'crosshair',touchAction:'none',overflow:'hidden'});
     const drawing=root.document.createElementNS(ns,'svg'),preview=root.document.createElementNS(ns,'path');
     Object.assign(drawing.style,{position:'absolute',inset:'0',width:'100%',height:'100%',pointerEvents:'none'});
     const context=root.document.createElementNS(ns,'g'),contextOutline=root.document.createElementNS(ns,'path');context.classList.add('svg-pen-context');contextOutline.style.cssText='fill:none!important;stroke:#99d6ff!important;stroke-width:1.5!important;';contextOutline.setAttribute('vector-effect','non-scaling-stroke');if(contextPath){contextOutline.setAttribute('d',contextPath);context.append(contextOutline);drawing.append(context);}
     preview.style.cssText='fill:none!important;stroke:var(--accent, #0d99ff)!important;stroke-width:2!important;';preview.setAttribute('vector-effect','non-scaling-stroke');const tangents=root.document.createElementNS(ns,'g');drawing.append(preview,tangents);surface.append(drawing);
-    const toolbar=root.document.createElement('div');toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label','Pen actions');
-    Object.assign(toolbar.style,{position:'absolute',left:'12px',bottom:'72px',maxWidth:'calc(100% - 24px)',display:'flex',flexWrap:'wrap',gap:'8px',alignItems:'center',padding:'8px',background:'#ffffff',border:'1px solid var(--line, #e6e6e6)',borderRadius:'8px',boxShadow:'0 4px 16px #0002',zIndex:2,cursor:'default'});
-    const status=root.document.createElement('span');status.setAttribute('role','status');status.style.cssText='font:12px Inter,system-ui;color:var(--ink, #1e1e1e);';toolbar.append(status);surface.append(toolbar);
-    const points=[],dots=[],cleanup=[],initial=target.getScreenCTM(),revision=target.getAttribute('data-rt-revision');let hover=null,ended=false,raf,drag=null;
+    const toolbar=root.document.createElement('div');toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label','Pen actions');toolbar.setAttribute('aria-controls',surface.id);
+    Object.assign(toolbar.style,{position:'fixed',left:'12px',bottom:'12px',maxWidth:'calc(100% - 24px)',display:'flex',flexWrap:'wrap',gap:'8px',alignItems:'center',padding:'8px',background:'#ffffff',border:'1px solid var(--line, #e6e6e6)',borderRadius:'8px',boxShadow:'0 4px 16px #0002',zIndex:41,cursor:'default'});
+    const status=root.document.createElement('span');status.setAttribute('role','status');status.style.cssText='font:12px Inter,system-ui;color:var(--ink, #1e1e1e);';toolbar.append(status);
+    const points=[],dots=[],cleanup=[],initial=space?.matrix||target.getScreenCTM(),revision=target.getAttribute('data-rt-revision');let hover=null,ended=false,raf,drag=null;
     function listen(el,type,fn,options){el.addEventListener(type,fn,options);cleanup.push(()=>el.removeEventListener(type,fn,options));}
-    function cancel(){if(ended)return;ended=true;root.cancelAnimationFrame(raf);cleanup.forEach(fn=>fn());clearHint();surface.remove();onEnd();}
-    function current(){const m=target.getScreenCTM();return isCurrent()&&target.isConnected&&target.getAttribute('data-rt-revision')===revision&&m&&initial&&['a','b','c','d','e','f'].every(key=>Math.abs(m[key]-initial[key])<1e-6);}
-    function verify(){if(current())return true;cancel();onError('The SVG canvas changed while drawing. Select it again.');return false;}
+    function cancel(){if(ended)return;ended=true;root.cancelAnimationFrame(raf);cleanup.forEach(fn=>fn());clearHint();toolbar.remove();surface.remove();onEnd();}
+    function current(){const m=space?.matrix||target.getScreenCTM();return (!space||space.current())&&isCurrent()&&target.isConnected&&target.getAttribute('data-rt-revision')===revision&&m&&initial&&['a','b','c','d','e','f'].every(key=>Math.abs(m[key]-initial[key])<1e-6);}
+    function verify(){if(current())return true;cancel();onError(native?'The container changed while drawing. Select it again.':'The SVG canvas changed while drawing. Select it again.');return false;}
     function action(label,fn){const b=root.document.createElement('button');b.type='button';b.textContent=label;b.onclick=fn;Object.assign(b.style,{padding:'0 8px',minHeight:'28px',border:'1px solid var(--line, #e6e6e6)',borderRadius:'4px',background:'var(--control, #f5f5f5)',color:'var(--ink, #1e1e1e)',font:'12px Inter,system-ui',cursor:'pointer'});toolbar.append(b);return b;}
     const finishButton=action('Finish line',()=>finish(false)),closeButton=action('Close shape',()=>finish(true)),backButton=action('Remove last point',back);action('Cancel',cancel);
     function update(){
@@ -28,7 +29,7 @@
       points.forEach((_,i)=>{const dot=root.document.createElement(i?'span':'button');
         if(!i){dot.type='button';dot.setAttribute('aria-label','Close vector at first point');dot.title='Close the shape';dot.disabled=!root.RetouchSVGPath.serialize(points,true);dot.onclick=()=>finish(true);}
         Object.assign(dot.style,{position:'absolute',width:'12px',height:'12px',padding:'0',boxSizing:'border-box',border:'2px solid var(--accent, #0d99ff)',background:'white',borderRadius:'50%',pointerEvents:i?'none':'auto',cursor:'crosshair'});surface.append(dot);dots.push(dot);
-      });paint();
+      });paint();if(toolbar.isConnected)placeToolbar();
     }
     function point(event,last=points.at(-1)){
       const f=frame.getBoundingClientRect(),scale=f.width/w.innerWidth;
@@ -75,21 +76,22 @@
     listen(surface,'pointerup',event=>{if(!drag||event.pointerId!==drag.id)return;event.preventDefault();event.stopImmediatePropagation();move(event);if(ended)return;drag=null;hover=null;if(surface.hasPointerCapture(event.pointerId))surface.releasePointerCapture(event.pointerId);paint();});
     listen(surface,'pointercancel',cancel);listen(surface,'lostpointercapture',()=>{if(drag)cancel();});
     listen(surface,'dblclick',event=>{if(event.target.closest('button')||toolbar.contains(event.target))return;event.preventDefault();event.stopImmediatePropagation();finish(false);});
-    listen(surface,'keydown',event=>{
+    const keydown=event=>{
       if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();cancel();}
       else if(event.key==='Backspace'||event.key==='Delete'){event.preventDefault();event.stopImmediatePropagation();back();}
       else if(event.key==='Enter'&&event.target===surface){event.preventDefault();event.stopImmediatePropagation();finish(false);}
-    },true);
+    };listen(surface,'keydown',keydown,true);listen(toolbar,'keydown',keydown,true);
     for(const event of ['retouch:before-zoom','retouch:screen','retouch:viewport','resize','blur','pagehide'])listen(root,event,cancel);
     listen(frame,'load',cancel);listen(w,'scroll',cancel,true);listen(canvas,'scroll',cancel);
     if(!initial||Math.abs(initial.a*initial.d-initial.b*initial.c)<1e-12){cancel();onError('This SVG transform cannot be drawn into.');return null;}
-    const f=frame.getBoundingClientRect(),r=viewport.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/w.innerWidth;
+    const f=frame.getBoundingClientRect(),r=viewport?viewport.getBoundingClientRect():{left:0,top:0,right:w.innerWidth,bottom:w.innerHeight},c=canvas.getBoundingClientRect(),scale=f.width/w.innerWidth;
     const area={left:Math.max(f.left+r.left*scale,f.left,c.left),top:Math.max(f.top+r.top*scale,f.top,c.top),right:Math.min(f.left+r.right*scale,f.right,c.right),bottom:Math.min(f.top+r.bottom*scale,f.bottom,c.bottom)};
     function inside(event){return event.clientX>=area.left&&event.clientX<=area.right&&event.clientY>=area.top&&event.clientY<=area.bottom;}
     const left=Math.max(f.left,c.left),top=Math.max(f.top,c.top),right=Math.min(f.right,c.right),bottom=Math.min(f.bottom,c.bottom);
     if(right<=left||bottom<=top||area.right<=area.left||area.bottom<=area.top){cancel();onError('Bring the SVG canvas into view before drawing.');return null;}
-    Object.assign(surface.style,{left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px'});if(bottom-top<180)toolbar.style.bottom='12px';
-    root.document.body.append(surface);update();surface.focus({preventScroll:true});
+    Object.assign(surface.style,{left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px'});
+    function placeToolbar(){const dock=root.document.querySelector('.design-tool-dock')?.getBoundingClientRect();toolbar.style.maxWidth=Math.max(0,c.width-24)+'px';toolbar.style.bottom=Math.max(12,dock?root.innerHeight-dock.top+12:root.innerHeight-c.bottom+12)+'px';toolbar.style.left=Math.max(c.left+12,c.left+(c.width-toolbar.offsetWidth)/2)+'px';}
+    root.document.body.append(surface,toolbar);update();surface.focus({preventScroll:true});
     clearHint=root.RetouchCanvasHint?.show('Pen · Click for corners, drag for curves · Enter to finish','Shift constrains direction. Click the first point to close. Enter finishes; Backspace removes the last point; Escape cancels.')||(()=>{});
     function watch(){if(!ended&&verify())raf=root.requestAnimationFrame(watch);}raf=root.requestAnimationFrame(watch);
     return cancel;

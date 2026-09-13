@@ -15,3 +15,14 @@ for(const kind of ['html','react','liquid'])test(kind+' native drawings preserve
  const horizontal=adapter.planOp(r,{type:'insertSVG',preset:'line',points:[20,30,70,30],nativeCanvas:true,fileHash:r.hash});assert.equal(horizontal.ok,true,horizontal.reason);assert.match(horizontal.edits[0].after,/viewBox="0 0 52 2"/);assert.match(horizontal.edits[0].after,/<line x1="1" y1="1" x2="51" y2="1"/);
  assert.equal(adapter.planOp(r,{type:'insertSVG',preset:'rectangle',points:[0,0,20,30],nativeCanvas:true,fileHash:'stale'}).refused,true);
 });
+
+for(const kind of ['html','react','liquid'])test(kind+' native Pen creates bounded editable paths, polylines and polygons atomically',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),ids=kind==='react'?require('../src/id.cjs'):adapter,path=require('../shell/svg-path.js'),collect=kind==='react'?ids.collectElements:ids.collect,tag=e=>kind==='react'?ids.jsxElementName(e.node):e.tag;
+ const source=kind==='react'?'export default()=> <main><p>Keep</p></main>':'<main><p>Keep</p></main>',elements=collect(source,'page.'+kind).elements,r={source,elements,element:elements.find(e=>tag(e)==='main'),hash:ids.contentHash(source),relPath:'page.'+kind,file:'/tmp/page.'+kind};
+ const nodes=[{x:20,y:50,in:{x:20,y:0},out:{x:20,y:100}},{x:120,y:50,in:{x:120,y:100},out:{x:120,y:0}}];
+ for(const op of [{preset:'path',nodes,closed:false},{preset:'path',nodes,closed:true},{preset:'polyline',points:[20,30,120,30]},{preset:'polygon',points:[20,30,120,30,70,90]}]){
+  const result=adapter.planOp(r,{type:'insertSVG',nativeCanvas:true,fileHash:r.hash,...op});assert.equal(result.ok,true,result.reason);const after=result.edits[0].after,next=collect(after,r.relPath).elements;assert.equal(next.length,elements.length+2);assert.ok(elements.every(e=>next.some(n=>n.id===e.id)));assert.equal(tag(next.find(e=>e.id===result.createdId)),op.preset);assert.ok(after.includes('<p>Keep</p>'));
+  if(op.preset==='path'){assert.match(after,op.closed?/viewBox="0 0 102 77"/:/viewBox="0 0 102 39.5"/);const d=/ d="([^"]+)"/.exec(after)[1],parsed=path.parse(d);assert.equal(parsed.closed,op.closed);assert.equal(parsed.nodes.length,2);const b=path.bounds(parsed.nodes,parsed.closed);assert.ok(Math.abs(b.x-1)<1e-6&&Math.abs(b.y-1)<1e-6);}
+ }
+ for(const op of [{preset:'path',nodes:[{x:0,y:0}]},{preset:'path',nodes,closed:'yes'},{preset:'path',nodes:[nodes[0],{x:120,y:50,in:{x:Infinity,y:0}}]},{preset:'polygon',points:[0,0,10,10]}]){const result=adapter.planOp(r,{type:'insertSVG',nativeCanvas:true,fileHash:r.hash,...op});assert.equal(result.refused,true);assert.equal(result.edits,undefined);}
+});

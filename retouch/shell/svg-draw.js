@@ -26,19 +26,24 @@
   const probes=[[0,0],[100,0],[0,100]].map(([x,y])=>{const probe=d.createElement('div');Object.assign(probe.style,viewportStyle(x,y,0,0),{visibility:'hidden',pointerEvents:'none'});return probe;});
   try{target.append(...probes);const [o,x,y]=probes.map(el=>el.getBoundingClientRect()),matrix=new w.DOMMatrix([(x.x-o.x)/100,(x.y-o.y)/100,(y.x-o.x)/100,(y.y-o.y)/100,o.x,o.y]);if(![matrix.a,matrix.b,matrix.c,matrix.d,matrix.e,matrix.f].every(Number.isFinite)||Math.abs(matrix.a*matrix.d-matrix.b*matrix.c)<1e-9)throw Error('This container has no drawable coordinate system.');return matrix;}finally{probes.forEach(probe=>probe.remove());}
  }
+ function nativeSpace(target){
+  const w=target.ownerDocument.defaultView,matrix=nativeMatrix(target);
+  const nativeSnapshots=[];
+  for(let el=target;el;el=el.parentElement){const css=w.getComputedStyle(el);nativeSnapshots.push({el,rect:el.getBoundingClientRect(),metrics:[el.clientLeft,el.clientTop,el.clientWidth,el.clientHeight],css:[css.position,css.transform,css.rotate,css.scale,css.translate,css.zoom,css.contain,css.willChange,css.filter,css.backdropFilter,css.perspective].join('|')});}
+  function current(){return nativeSnapshots.every(({el,rect,metrics,css})=>{if(!el.isConnected)return false;const now=el.getBoundingClientRect(),style=w.getComputedStyle(el);return [el.clientLeft,el.clientTop,el.clientWidth,el.clientHeight].every((value,i)=>value===metrics[i])&&['x','y','width','height'].every(key=>Math.abs(now[key]-rect[key])<.1)&&css===[style.position,style.transform,style.rotate,style.scale,style.translate,style.zoom,style.contain,style.willChange,style.filter,style.backdropFilter,style.perspective].join('|');});}
+  return {matrix,current};
+ }
  function mount({target,frame,canvas,preset,onCommit,onEnd,onError,native=false}){
   const d=target.ownerDocument,w=d.defaultView,viewport=native?null:target.tagName.toLowerCase()==='svg'?target:target.ownerSVGElement;
-  let basis;try{basis=native?nativeMatrix(target):null;}catch(error){onError(error.message);onEnd();return null;}
-  const matrix=()=>basis||target.getScreenCTM();
+  let space;try{space=native?nativeSpace(target):null;}catch(error){onError(error.message);onEnd();return null;}
+  const matrix=()=>space?.matrix||target.getScreenCTM();
   const surface=root.document.createElement('div');surface.className='svg-draw-surface';surface.dataset.shape=preset;surface.setAttribute('aria-label','Draw '+preset);surface.tabIndex=0;
   Object.assign(surface.style,{position:'fixed',zIndex:40,cursor:'crosshair',touchAction:'none'});
   const drawing=root.document.createElementNS(ns,'svg');Object.assign(drawing.style,{position:'absolute',inset:'0',width:'100%',height:'100%',pointerEvents:'none',overflow:'hidden'});surface.append(drawing);
   const preview=root.document.createElementNS(ns,{rectangle:'rect',circle:'circle',ellipse:'ellipse',line:'line',triangle:'polygon',star:'polygon'}[preset]);
   preview.style.cssText='pointer-events:none!important;fill:#a5b4fc!important;stroke:#6366f1!important;stroke-width:1!important;opacity:.7!important;';preview.setAttribute('vector-effect','non-scaling-stroke');if(preset==='line')preview.style.setProperty('fill','none','important');
   let state=null,ended=false;const cleanup=[];
-  const nativeSnapshots=[];
-  if(native)for(let el=target;el;el=el.parentElement){const css=w.getComputedStyle(el);nativeSnapshots.push({el,rect:el.getBoundingClientRect(),css:[css.position,css.transform,css.rotate,css.scale,css.translate,css.zoom,css.contain,css.willChange].join('|')});}
-  function current(){return !native||nativeSnapshots.every(({el,rect,css})=>{if(!el.isConnected)return false;const now=el.getBoundingClientRect(),style=w.getComputedStyle(el);return ['x','y','width','height'].every(key=>Math.abs(now[key]-rect[key])<.1)&&css===[style.position,style.transform,style.rotate,style.scale,style.translate,style.zoom,style.contain,style.willChange].join('|');});}
+  const current=()=>!space||space.current();
   if(native){let raf;const check=()=>{if(!current()){cancel();return;}raf=root.requestAnimationFrame(check);};raf=root.requestAnimationFrame(check);cleanup.push(()=>root.cancelAnimationFrame(raf));}
   function listen(el,event,fn,options){el.addEventListener(event,fn,options);cleanup.push(()=>el.removeEventListener(event,fn,options));}
   function cancel(){if(ended)return;ended=true;preview.remove();surface.remove();cleanup.forEach(f=>f());onEnd();}
@@ -58,5 +63,5 @@
   if(right<=left||bottom<=top){cancel();onError('Bring the SVG canvas into view before drawing.');return null;}
   Object.assign(surface.style,{left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px'});root.document.body.append(surface);surface.focus({preventScroll:true});return cancel;
  }
- const api={mount,geometry,constrained,viewportStyle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGDraw=api;
+ const api={mount,geometry,constrained,viewportStyle,nativeSpace};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGDraw=api;
 })(typeof window==='object'?window:globalThis);

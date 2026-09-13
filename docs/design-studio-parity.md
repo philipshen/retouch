@@ -13381,3 +13381,53 @@ was inspected: `/private/tmp/retouch-native-dock-clean.png`.
 This resolves the crowded shape-action section noted in the previous increment.
 It does not establish complete Figma visual or feature parity. No desktop rebuild,
 native launch or push was performed.
+
+
+## 2026-09-13: native Pen creation with fitted SVG viewports
+
+P and the Pen dock button now work in supported native HTML, React and Liquid
+containers. Straight open paths, polygons, open cubic paths and closed cubic
+paths create a positioned SVG viewport automatically. Parent styles and existing
+content remain unchanged. Coordinates are normalized into the new viewport and
+use the existing source transaction, selection and Undo/Redo mechanisms; created
+vectors remain editable with the vector-point tools.
+
+The shared path module computes geometric bounds from cubic derivative roots and
+elliptical arc extrema, including closing segments and excluding unused endpoint
+handles. Native Pen viewports fit these bounds with one SVG unit of stroke padding.
+The coordinate measurement and live-layout guard are shared with native shapes;
+client box metrics now detect border-origin changes even when outer dimensions
+stay fixed. Malformed paths, stale source and excessive geometry remain refused.
+
+Pen actions now sit above the main tool dock and stay centered when point counts
+or button labels change. They are removed on finish/cancel and support Escape
+from their buttons. This avoids covering paths near the preview's lower edge.
+A WebKit regression exposed shape activation racing the resize after hiding the
+inspector; shapes now await the same guarded layout preparation used by Pen.
+
+Validation: 996 units passed (`/private/tmp/retouch-native-pen-complete-units.log`).
+New unit coverage verifies geometric extrema/closure/degeneracy and all three
+adapters' fitted native paths, source identity preservation and malformed-input
+refusal. HTML WebKit and local Liquid Chromium each passed open lines, polygons,
+open/closed curves in relative and transformed containers, preview/render bounds,
+tight viewport sizing, unchanged content, continued vertex editing and exact
+Undo/Redo. Escape, width changes and border changes cancel without writing.
+Final logs: `/private/tmp/retouch-native-pen-centered-webkit.log` and
+`/private/tmp/retouch-native-pen-centered-liquid.log`. React Chromium passed the
+same path types, editing/history and cancellation in a transformed self-closing
+native container, including Escape from a Pen action button
+(`/private/tmp/retouch-native-pen-dock-react.log`).
+The existing WebKit SVG drawing/Pen/shortcut regression passed after the layout
+preparation fix (`/private/tmp/retouch-native-pen-ready-svg.log`). All 30 native
+Liquid shape cases and cancellation also passed
+(`/private/tmp/retouch-native-pen-ready-shapes.log`). These processes exited
+successfully. The final centered light-theme Pen screenshot was inspected:
+`/private/tmp/retouch-native-pen-centered.png`.
+
+The HTML Chromium compound-contour regression also passed, including Pen append,
+nested cancellation, pending edits, holes and exact Undo/Redo at 50/100/200% zoom
+(`/private/tmp/retouch-native-pen-contours.log`), and exited successfully.
+
+Full vector-network, boolean, perspective-container, arbitrary-site and responsive
+constraint parity remain unproven or unfinished. No desktop rebuild, native launch
+or push was performed in this increment.

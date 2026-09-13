@@ -169,3 +169,16 @@ test('Point arrangement uses projected axes and carries handles without changing
   assert.equal(path.arrangePoints(path.parse('M99990 99990L-99990 -99990L-99980 99990'),[0,1,2],'x','min',{a:1,b:1,c:-1,d:1}),null);
   assert.equal(JSON.stringify(part),before);
 });
+
+test('Path bounds use curve extrema, include curved closure, and ignore unused endpoint handles',()=>{
+ assert.deepEqual(path.bounds(nodes),{x:0,y:0,width:100,height:37.5});
+ assert.deepEqual(path.bounds(nodes,true),{x:0,y:-37.5,width:100,height:75});
+ assert.deepEqual(path.bounds([{x:10,y:20,in:{x:-100,y:-100}},{x:40,y:20,out:{x:500,y:500}}]),{x:10,y:20,width:30,height:0});
+ assert.equal(path.bounds([{x:0,y:0}]),null);
+ const extreme=[{x:0,y:0,out:{x:100,y:0}},{x:0,y:1,in:{x:-100,y:1}}],b=path.bounds(extreme);assert.ok(Math.abs(b.x+50/Math.sqrt(3))<1e-9);assert.ok(Math.abs(b.width-100/Math.sqrt(3))<1e-9);
+ for(const source of ['M0 0A50 50 0 0 1 100 0','M20 70A50 30 20 1 0 120 70','M0 0A0 50 0 0 1 100 0']){
+  const part=path.parse(source),bounds=path.bounds(part.nodes,part.closed),center=path.arcCenter(part.nodes[0],part.nodes[1]);assert.ok(bounds);
+  if(center)for(let i=0;i<=2000;i++){const p=path.arcPoint(center,i/2000);assert.ok(p.x>=bounds.x-1e-8&&p.y>=bounds.y-1e-8&&p.x<=bounds.x+bounds.width+1e-8&&p.y<=bounds.y+bounds.height+1e-8);}
+ }
+ const semi=path.bounds(path.parse('M0 0A50 50 0 0 1 100 0').nodes);assert.ok(Math.abs(semi.height-50)<1e-9);assert.equal(semi.width,100);
+});

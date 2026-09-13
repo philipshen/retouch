@@ -2925,18 +2925,17 @@ async function editSVGPoints(info){
 async function drawVector(info){
   if(panelTasks||undoBusy||sourceRequests||editing)return;
   stopDrawing?.();const targets=matchingEls(info.id);
-  if(targets.length!==1)return toast('Select an SVG container rendered once to draw into.','err');
+  if(targets.length!==1)return toast('Select a container rendered once to draw into.','err');
   if(!await prepareVectorCanvas(info,targets[0]))return;
-  stopDrawing=RetouchSVGPen.mount({target:targets[0],frame:iframe,canvas:canvasSurface,
-    onCommit:(points,closed,nodes)=>insertLayer(nodes?'path':closed?'polygon':'polyline',info,'insertSVG',nodes?{nodes,closed}:{points}),
+  stopDrawing=RetouchSVGPen.mount({target:targets[0],frame:iframe,canvas:canvasSurface,native:info.svgInsertion.createsViewport,
+    onCommit:(points,closed,nodes)=>insertLayer(nodes?'path':closed?'polygon':'polyline',info,'insertSVG',{...(nodes?{nodes,closed}:{points}),...(info.svgInsertion.createsViewport?{nativeCanvas:true}:{})}),
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
 }
-function drawShape(preset,info){
+async function drawShape(preset,info){
   if(panelTasks||undoBusy||sourceRequests||editing)return;
   stopDrawing?.();
   const target=matchingEls(info.id)[0];if(!target)return;
-  if(mode!=='edit')modeBtn.click();
-  canvasPan.cancel();
+  if(!await prepareVectorCanvas(info,target))return;
   stopDrawing=RetouchSVGDraw.mount({target,frame:iframe,canvas:canvasSurface,preset,native:info.svgInsertion.createsViewport,
     onCommit:points=>insertLayer(preset,info,'insertSVG',{points,...(info.svgInsertion.createsViewport?{nativeCanvas:true}:{})}),
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
