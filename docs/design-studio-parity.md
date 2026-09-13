@@ -13787,3 +13787,21 @@ No desktop rebuild or push. Multi-selection SVG reflection, default-mode nudges,
 snapping, screen-specific geometry, and full Figma/any-site parity remain open.
 The aspect-ratio preference also still needs to govern canvas resizing, beyond
 its existing numeric-field behavior and Shift gesture constraint.
+
+## 2026-09-13 — Shared vector proportions lock
+
+Canvas resizing now honors the inspector's proportions lock. Control temporarily
+unlocks the ratio; Shift constrains an unlocked vector. Modifier presses and
+releases update the existing drag preview without another pointer move. The
+shared move and rotation preview dispatch also responds to modifier changes.
+The lock remains an in-memory session preference, not project-persisted state.
+
+Validation: 1,014 unit tests passed. HTML/WebKit, React/Chromium, and
+Liquid/Chromium logs cover locked resizing, live Control/Shift overrides,
+source unchanged during preview, exact Undo/Redo, and cancellation. The Liquid
+screenshot at /private/tmp/retouch-svg-ratio-liquid.png was visually inspected.
+Before publication, unit tests and the combined Liquid resize/flip/move/rotation
+workflow were rerun; logs: /private/tmp/retouch-push-units.log and
+/private/tmp/retouch-push-combined.log. No desktop rebuild is included; the latest
+verified packaged candidate still predates the newer SVG transform tools.
+Full Figma and arbitrary-site parity remain open.

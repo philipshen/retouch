@@ -45,3 +45,7 @@ test('SVG flips reflect local axes without moving the center or changing scale a
  for(const axis of ['x','y']){const next=A.reflect(m,g,axis);center(m).forEach((v,i)=>assert.ok(Math.abs(v-center(next)[i])<1e-8));for(const key of ['width','height'])assert.ok(Math.abs(A.dimensions(m,g)[key]-A.dimensions(next,g)[key])<1e-8);assert.ok(A.equivalent(A.reflect(next,g,axis),m));assert.ok(Math.abs((m[0]*m[3]-m[1]*m[2])+(next[0]*next[3]-next[1]*next[2]))<1e-8);}
  assert.equal(A.reflect(m,g,'z'),null);
 });
+test('Vector proportions follow the lock preference with temporary modifier overrides',()=>{
+ const {constrainRatio}=require('../shell/svg-resize.js');
+ assert.equal(constrainRatio(false),false);assert.equal(constrainRatio(true),true);assert.equal(constrainRatio(false,{shiftKey:true}),true);assert.equal(constrainRatio(true,{shiftKey:true}),true);assert.equal(constrainRatio(true,{ctrlKey:true}),false);assert.equal(constrainRatio(true,{ctrlKey:true,shiftKey:true}),false);
+});
