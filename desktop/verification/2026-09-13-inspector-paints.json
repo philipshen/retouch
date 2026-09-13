@@ -1,0 +1,152 @@
+{
+  "sourceCommit": "812cfe606fe83c9ab582ee49ea26721b84e9e760",
+  "sourceTreeDirty": false,
+  "sourceFiles": 204,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "status": "ad hoc development candidate; native editing and trusted distribution unverified",
+  "archive": "/private/tmp/retouch-desktop-inspector-812cfe6/Retouch-0.1.0-mac.zip",
+  "sha256": "d463a9496b7a8e41c03e404e7a66dda11d43ad61375f232fb3b77ff0f8cc6e8e",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "signatureAfterWorkflows": "strict verification passed on original and extracted bundles",
+  "units": {
+    "passed": 1152,
+    "exitCode": 0,
+    "scope": "tests import actual extracted packaged runtime",
+    "log": "/private/tmp/retouch-desktop-inspector-812cfe6/units.log"
+  },
+  "harness": {
+    "testFiles": 327,
+    "inventorySha256": "f00f90a7c9b36ff3779d3f7594ecb9c88850c15c5f164e4a030c816878cc32a6",
+    "archiveSha256": "edd7d3b38a3d33d622bb5983310e58b0e474b35b13f85c588653a394825ca217",
+    "sourceNativeBuildVerifierHashesMatch": true,
+    "runtimePaths": {
+      "bin": "/private/tmp/retouch-desktop-inspector-812cfe6/extracted/Retouch.app/Contents/Resources/retouch/bin",
+      "src": "/private/tmp/retouch-desktop-inspector-812cfe6/extracted/Retouch.app/Contents/Resources/retouch/src",
+      "shell": "/private/tmp/retouch-desktop-inspector-812cfe6/extracted/Retouch.app/Contents/Resources/retouch/shell"
+    },
+    "testAdjustments": [
+      {
+        "path": "test/e2e/line-to-arrow.cjs",
+        "reason": "Wait for attached arrow dimension controls before the shared helper opens their collapsed group.",
+        "packagedRuntimeChanged": false
+      }
+    ],
+    "initialHarnessPreserved": true,
+    "removedAfterAllProcessesExited": true
+  },
+  "workflows": [
+    {
+      "name": "Compact paint rows, color alpha and Display P3 preservation; stroke types and icon controls; keyboard focus, screen scope/fallback, reset and exact history",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-inspector-812cfe6/stroke-html.log"
+    },
+    {
+      "name": "Compact paint rows, color alpha and Display P3 preservation; stroke types and icon controls; keyboard focus, screen scope/fallback, reset and exact history",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-inspector-812cfe6/stroke-react.log"
+    },
+    {
+      "name": "Compact paint rows, color alpha and Display P3 preservation; stroke types and icon controls; keyboard focus, screen scope/fallback, reset and exact history",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "result": "passed",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-inspector-812cfe6/stroke-liquid.log"
+    },
+    {
+      "name": "Seven drawing presets, pen paths, shortcuts, line-to-arrow conversion, editable arrow paths and exact history",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-inspector-812cfe6/arrows-html-final.log"
+    },
+    {
+      "name": "Legacy polyline arrow parameter edits migrate atomically to paths with exact Undo/Redo",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "result": "passed",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-inspector-812cfe6/legacy-liquid.log"
+    }
+  ],
+  "arrowRendering": [
+    {
+      "engine": "chromium",
+      "version": "145.0.7632.6",
+      "cases": 108,
+      "passed": 108,
+      "legacyPolylinePassed": 55,
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-inspector-812cfe6/pixels-chromium.log"
+    },
+    {
+      "engine": "webkit",
+      "version": "26.0",
+      "cases": 108,
+      "passed": 108,
+      "legacyPolylinePassed": 55,
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-inspector-812cfe6/pixels-webkit.log"
+    }
+  ],
+  "initialWorkflowFailure": {
+    "log": "/private/tmp/retouch-desktop-inspector-812cfe6/arrows-html.log",
+    "reason": "Test waited for a visible arrow dimension now inside the intentionally collapsed Arrowhead sizes group.",
+    "testFix": "Wait for attached controls before the existing shared helper opens the group.",
+    "packagedRuntimeChanged": false,
+    "retested": "arrows-html-final.log passed with exit 0"
+  },
+  "tamperChecks": {
+    "result": "passed on disposable bundle copy",
+    "exitCode": 0,
+    "scope": "altered source, omitted manifest entry, unlisted source, restored copy and original signature",
+    "log": "/private/tmp/retouch-desktop-inspector-812cfe6/tamper.log"
+  },
+  "installation": {
+    "verification": {
+      "sourceCommit": "812cfe606fe83c9ab582ee49ea26721b84e9e760",
+      "sourceTreeDirty": false,
+      "sourceFiles": 204,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesArchive": true,
+    "quarantinePreserved": true,
+    "quarantine": "0381;6aa6adfb;;45685E6E-04D5-4726-851C-C80A61165752",
+    "result": "isolated install and uninstall passed",
+    "caskInventoryUnchanged": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "automaticDependencyRemovalDisabled": true,
+    "exitCode": 0,
+    "log": "/private/tmp/retouch-desktop-inspector-812cfe6/homebrew.log"
+  },
+  "nativeLaunch": {
+    "result": "not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "nativeSelfTests": "not run",
+  "developerID": "not retried",
+  "notarization": "not performed",
+  "published": false,
+  "remaining": [
+    "Native full editing, sampler and shutdown workflows remain unverified",
+    "Developer ID signing, notarization, public cask and trusted upgrades remain incomplete",
+    "Intel runtime execution remains unverified",
+    "Older WebKit normal-flow block-axis Fill sizing remains incorrect; not rerun on this archive",
+    "Full Figma Design parity and universal site support remain incomplete"
+  ]
+}

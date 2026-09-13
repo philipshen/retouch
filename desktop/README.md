@@ -10,28 +10,38 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-paints-1251b59/Retouch-0.1.0-mac.zip`
-(SHA-256 `754d633a69c4dc195be6cb61ed9cc11ca27fe603357721150277fb2d9d91c37c`).
-It packages clean commit `1251b59`, including compact empty SVG paint controls,
-responsive Add paint menu retention, line-to-arrow conversion, and HTML/React/Liquid
-inline color conversion to editable gradients. All 204 source hashes and the
-native/build/verifier hashes match. The 1,136 tests importing the actual bundled
-runtime pass, with universal architecture and strict signatures verified before
-and after workflows.
+`/private/tmp/retouch-desktop-inspector-812cfe6/Retouch-0.1.0-mac.zip`
+(SHA-256 `d463a9496b7a8e41c03e404e7a66dda11d43ad61375f232fb3b77ff0f8cc6e8e`).
+It packages clean commit `812cfe6`: compact Fill/Stroke rows with color alpha,
+floating stroke settings, keyboard-accessible cap/join icons, regular/custom
+stroke controls, independent arrowheads and automatic legacy-arrow migration.
+All 204 source hashes and native/build/verifier hashes match. All 1,152 tests
+importing the extracted bundled runtime pass. Universal architecture and strict
+signatures verify before and after workflows.
 
 The exact ZIP installed and uninstalled through Homebrew in an isolated app
 directory with quarantine retained and the original cask inventory unchanged.
-Temporary app, tap, trust configuration and external harness were removed.
-Packaged HTML/Chromium and React/Chromium inline-gradient workflows pass, as do
-Liquid/WebKit tablet paint controls with unchanged phone paint, HTML drawing and
-line-to-arrow controls, stateful React opacity/geometry, and the full HTML/WebKit
-gradient canvas workflow. Disposable-copy tamper checks pass.
-See [the candidate receipt](verification/2026-09-13-inline-paints.json).
+Temporary app, tap, trust configuration and external test harness were removed.
+Packaged HTML/Chromium, React/Chromium and Liquid/WebKit workflows pass for
+compact paints, Display P3 alpha, stroke controls, keyboard focus, responsive
+scope/fallback, reset and exact history. HTML drawing/line-to-arrow workflows
+and Liquid legacy-arrow migration pass. Dashed arrow paths preserve shaft pixels
+in all 108 cases in each engine. Disposable-copy tamper checks pass.
+See [the candidate receipt](verification/2026-09-13-inspector-paints.json).
+
+The drawing harness initially expected a dimension field to be visible before
+opening its newly collapsed group. That test was corrected and rerun against
+the same unchanged archive. Both harness revisions and the failed log are
+retained with the receipt.
 
 This is an ad hoc development build, not a trusted release. Native launch was
 not attempted because the CUA native connection failed. Developer ID signing,
 notarization, public distribution, native editing, Intel execution and trusted
 upgrades remain unverified. No signing or launch retry was attempted.
+
+The [previous inline-paints candidate](verification/2026-09-13-inline-paints.json)
+records packaged inline-gradient creation, stateful React geometry/paint and full
+gradient-canvas workflows, which were not repeated for this archive.
 
 The [previous arrow-controls candidate](verification/2026-09-13-arrow-controls.json)
 records packaged React/Liquid drawing and HTML responsive comparison workflows,
