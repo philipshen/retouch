@@ -1757,7 +1757,9 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
    while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===expected);await settled();}await wait(async()=>await weight()==='700');assert.equal(read(),original);
    console.log(engine+' '+kind+': PASS custom fractional weights, scope isolation, reset, family retention and exact undo'+(kind==='html'?'':', range validation and preset replacement'));
   }
+  const chooseTypeTab=async name=>{const opener=page.locator('summary[aria-label="Type settings"]');if(!await opener.evaluate(el=>el.parentElement.open))await opener.click();await page.getByRole('tab',{name,exact:true}).click();};
   if(process.env.RT_E2E_OPTICAL_SIZING){
+    await chooseTypeTab('Basics');
     await page.getByLabel('Style screen scope').selectOption('');await settled();
     const extent=()=>app.locator('h1').evaluate(async el=>{await el.ownerDocument.fonts.ready;const range=el.ownerDocument.createRange();range.selectNodeContents(el);return range.getBoundingClientRect().width;}),autoWidth=await extent();
     const optical=()=>app.locator('h1').evaluate(el=>getComputedStyle(el).fontOpticalSizing);
@@ -1766,7 +1768,7 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
     await page.getByLabel('Style screen scope').selectOption(kind==='html'?'min-[768px]:':'md:');await settled();await change(()=>page.getByLabel('Optical sizing',{exact:true}).selectOption('auto'),'auto');
     await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await settled();await wait(async()=>await optical()==='none');await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();await wait(async()=>await optical()==='auto');
     await change(()=>page.getByRole('button',{name:'Reset optical sizing',exact:true}).click(),'none');
-    const axisSection=page.locator('details').filter({has:page.locator('summary').getByText('Variable font axes',{exact:true})});if(await axisSection.getAttribute('open')===null)await page.getByText('Variable font axes',{exact:true}).click();
+    await chooseTypeTab('Variable');const axisSection=page.getByText('Variable font axes',{exact:true}).locator('..');if(await axisSection.getAttribute('open')===null)await page.getByText('Variable font axes',{exact:true}).click();
     await change(()=>page.getByLabel('Add font axis',{exact:true}).selectOption('opsz'),'none');await wait(async()=>await page.getByText('The explicit Optical size axis overrides automatic sizing. Remove that axis to let the font adapt to text size.',{exact:true}).count()===1);
     if(process.env.RT_E2E_OPTICAL_FONT){
       await page.getByRole('button',{name:'Inspect declared font axes',exact:true}).click();await wait(async()=>/Optical Size \(opsz\): 8 to 144 · default 14/.test(await page.getByRole('group',{name:'Optical size axis controls',exact:true}).textContent()));
@@ -1785,10 +1787,10 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
       }
       let reinspections=0;const metadataRequest=request=>{if(request.url().endsWith('/rt/__api/font-axes'))reinspections++;};page.on('request',metadataRequest);
       await change(async()=>{await input.fill('8');await input.press('Tab');},'none');await wait(async()=>await input.getAttribute('max')==='144');assert.equal(await page.getByRole('slider',{name:'Adjust Optical Size axis',exact:true}).count(),1);const small=await extent();await change(async()=>{await input.fill('144');await input.press('Tab');},'none');const large=await extent();assert.ok(Math.abs(small-large)>.1,JSON.stringify({small,large}));
-      await change(()=>page.getByLabel('Optical sizing',{exact:true}).selectOption('auto'),'auto');assert.ok(Math.abs((await extent())-large)<.05);await wait(async()=>await input.getAttribute('max')==='144');assert.equal(reinspections,0);page.off('request',metadataRequest);console.log(engine+' '+kind+': PASS real opsz metadata, cached ranges after source reload, visible axis changes and explicit-axis precedence '+JSON.stringify({small,large}));
+      await chooseTypeTab('Basics');await change(()=>page.getByLabel('Optical sizing',{exact:true}).selectOption('auto'),'auto');await chooseTypeTab('Variable');assert.ok(Math.abs((await extent())-large)<.05);await wait(async()=>await input.getAttribute('max')==='144');assert.equal(reinspections,0);page.off('request',metadataRequest);console.log(engine+' '+kind+': PASS real opsz metadata, cached ranges after source reload, visible axis changes and explicit-axis precedence '+JSON.stringify({small,large}));
     }
     while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===expected);await settled();}assert.equal(read(),original);await wait(async()=>await optical()==='auto');
-    if(await axisSection.getAttribute('open')!==null)await page.getByText('Variable font axes',{exact:true}).click();
+    await chooseTypeTab('Variable');if(await axisSection.getAttribute('open')!==null)await page.getByText('Variable font axes',{exact:true}).click();
     console.log(engine+' '+kind+': PASS optical sizing, responsive isolation, scoped reset, explicit-axis explanation, type preview and exact undo');
   }
   if(process.env.RT_E2E_FONT_AXES){
@@ -1798,7 +1800,7 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
     assert.equal(metadata.status,200);assert.equal(metadata.ok,true);assert.deepEqual(metadata.axes,[{tag:'wght',name:'Weight',min:100,default:400,max:900,hidden:false}]);assert.equal(read(),beforeMetadata);
     console.log(engine+' '+kind+': PASS authenticated real WOFF2 metadata API without source changes');
    }
-   await page.getByLabel('Style screen scope').selectOption('');await settled();await page.getByText('Variable font axes',{exact:true}).click();
+   await page.getByLabel('Style screen scope').selectOption('');await settled();await chooseTypeTab('Variable');const axisSummary=page.getByText('Variable font axes',{exact:true});if(!await axisSummary.evaluate(el=>el.parentElement.open))await axisSummary.click();
    const axes=()=>app.locator('h1').evaluate(el=>getComputedStyle(el).fontVariationSettings);
    const write=async(action,expected)=>{snapshots.push(read());await action();await wait(()=>read()!==snapshots.at(-1));await settled();await wait(async()=>expected.test(await axes()));if(kind!=='html')await wait(async()=>{try{return expected.test(await page.frameLocator('iframe[title="Typography preview"]').locator('body div').evaluate(el=>getComputedStyle(el).fontVariationSettings));}catch(error){if(/Frame was detached|Execution context was destroyed/.test(error.message))return false;throw error;}});};
    await write(()=>page.getByLabel('Add font axis',{exact:true}).selectOption('wght'),/wght/);
@@ -1888,7 +1890,7 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
    const change=async(label,value,expected)=>{snapshots.push(read());await page.getByLabel(label,{exact:true}).selectOption(value);await wait(()=>read()!==snapshots.at(-1));await settled();await wait(async()=>same(await numeric(),expected));assert.equal(await page.locator('.numeric-typography').getAttribute('open'),'');};
    await page.getByLabel('Style screen scope').selectOption('');await settled();
    if(process.env.RT_E2E_VARIABLE_FONT){snapshots.push(read());const weight=page.getByLabel(kind==='html'?'Font weight (CSS)':'Font weight (1–1000)',{exact:true});await page.getByLabel('Font weight style',{exact:true}).selectOption('custom');await weight.fill('400');await weight.press('Tab');await wait(()=>read()!==snapshots.at(-1));await settled();await wait(()=>app.locator('h1').evaluate(el=>getComputedStyle(el).fontWeight==='400'));}
-   await page.getByText('Number formatting',{exact:true}).click();
+   await chooseTypeTab('Details');await page.getByText('Number formatting',{exact:true}).click();
    const digitWidths=()=>app.locator('h1').evaluate(async el=>{const d=el.ownerDocument;await d.fonts.ready;const css=d.defaultView.getComputedStyle(el),probe=d.createElement('span');probe.style.cssText='position:absolute;visibility:hidden;white-space:pre;';for(const property of ['font-family','font-size','font-weight','font-variant-numeric'])probe.style.setProperty(property,css.getPropertyValue(property));d.body.append(probe);try{return ['111111','888888'].map(text=>{probe.textContent=text;return probe.getBoundingClientRect().width;});}finally{probe.remove();}});
    await change('Number width','tabular-nums','tabular-nums');
    if(process.env.RT_E2E_VARIABLE_FONT){const widths=await digitWidths();assert.ok(Math.abs(widths[0]-widths[1])<.1,JSON.stringify(widths));console.log('TABULAR DIGIT WIDTHS',JSON.stringify(widths));}

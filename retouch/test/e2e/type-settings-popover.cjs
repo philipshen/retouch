@@ -5,15 +5,22 @@ module.exports=async({page,read,wait,settled})=>{
  const bounded=async()=>{const b=await dialog.boundingBox(),v=page.viewportSize();return b&&b.x>=0&&b.y>=0&&b.x+b.width<=v.width&&b.y+b.height<=v.height;};
  if(await dialog.isVisible())await close.click();
  assert.equal(await opener.evaluate(el=>Boolean(el.closest('.typography-alignment-tools'))),true);
+ await opener.click();await dialog.waitFor();
+ const tabs=dialog.getByRole('tablist',{name:'Type settings categories'}),basics=tabs.getByRole('tab',{name:'Basics',exact:true}),details=tabs.getByRole('tab',{name:'Details',exact:true}),variable=tabs.getByRole('tab',{name:'Variable',exact:true});
+ await basics.click();await basics.press('ArrowRight');assert.equal(await details.getAttribute('aria-selected'),'true');assert.equal(await details.evaluate(el=>el===document.activeElement),true);assert.equal(await dialog.getByRole('tabpanel',{name:'Basics',exact:true}).isVisible(),false);assert.equal(await dialog.getByRole('tabpanel',{name:'Details',exact:true}).isVisible(),true);
+ await details.press('End');assert.equal(await variable.getAttribute('aria-selected'),'true');assert.equal(await dialog.getByRole('tabpanel',{name:'Variable',exact:true}).isVisible(),true);await variable.press('Home');assert.equal(await basics.getAttribute('aria-selected'),'true');assert.equal(read(),source);await close.click();
+
  await opener.click();await dialog.waitFor();await wait(bounded);if(process.env.RT_E2E_TYPE_SETTINGS_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_TYPE_SETTINGS_SCREENSHOT+'.regular.png'});await close.focus();await page.keyboard.press('Escape');assert.equal(await dialog.isVisible(),false);assert.equal(await opener.evaluate(el=>el===document.activeElement),true);
  await opener.click();await dialog.waitFor();await page.getByLabel('Font weight style',{exact:true}).click();assert.equal(await dialog.isVisible(),false);await page.keyboard.press('Escape');
+ await opener.click();await details.click();await close.click();
  await page.getByLabel('Font weight style',{exact:true}).selectOption('custom');await dialog.waitFor();await wait(bounded);
  assert.ok(await dialog.evaluate(el=>el.contains(document.activeElement)),'Custom weight focuses a visible control inside the popup');await close.click();
+ await opener.click();await variable.click();await close.click();
  await page.keyboard.press('ControlOrMeta+k');await page.getByRole('combobox',{name:'Search actions',exact:true}).fill('Edit font weight');await page.getByRole('combobox',{name:'Search actions',exact:true}).press('Enter');await dialog.waitFor();assert.ok(await dialog.evaluate(el=>el.contains(document.activeElement)),'action search focuses the revealed field');await close.click();
  await page.setViewportSize({width:1000,height:280});await wait(()=>page.locator('#main').evaluate(el=>el.classList.contains('compact-workspace')));await settled();const toggle=page.getByRole('button',{name:'Toggle Inspector panel',exact:true});if(await toggle.getAttribute('aria-expanded')==='false')await toggle.click();
  await opener.click();await dialog.waitFor();await wait(bounded);await dialog.evaluate(el=>{el.scrollTop=el.scrollHeight;});assert.ok(await dialog.evaluate(el=>el.scrollTop)>0);
  await wait(async()=>{const a=await close.boundingBox(),b=await dialog.boundingBox();return a&&b&&a.y>=b.y&&a.y+a.height<=b.y+b.height;});
- const visibleLast=dialog.locator('button').last();await visibleLast.scrollIntoViewIfNeeded();assert.equal(await visibleLast.evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),true);
+ const visibleLast=dialog.getByRole('tabpanel',{name:'Basics',exact:true}).locator('button').last();await visibleLast.scrollIntoViewIfNeeded();assert.equal(await visibleLast.evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),true);
  if(process.env.RT_E2E_TYPE_SETTINGS_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_TYPE_SETTINGS_SCREENSHOT});
  await close.click();assert.equal(await dialog.isVisible(),false);assert.equal(await opener.evaluate(el=>el===document.activeElement),true);assert.equal(read(),source);
  await page.setViewportSize(original);await settled();assert.equal(read(),source);

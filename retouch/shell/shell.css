@@ -997,3 +997,9 @@ html, body { overflow:clip; }
 .type-settings-popover > .stroke-settings-body { width:320px; }
 .typography-primary .type-settings-popover .inspector-field { margin:7px 0; }
 .settings-name { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap; }
+
+.type-settings-tabs { display:flex;gap:16px;border-bottom:1px solid var(--line);margin:0 -4px 12px;padding:0 4px; }
+.type-settings-tabs [role="tab"] { border:0;border-radius:0;background:transparent;color:var(--muted);padding:9px 0;font-size:11px; }
+.type-settings-tabs [aria-selected="true"] { color:var(--ink);font-weight:600;box-shadow:inset 0 -2px var(--ink); }
+.type-settings-page[hidden] { display:none; }
+.type-settings-popover .type-preview { display:block;height:96px;margin-bottom:8px; }

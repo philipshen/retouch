@@ -379,3 +379,41 @@ and Case. The normal-window screenshot was inspected at
 
 The final popup/action-search/named-weight runs exited 0 for HTML and React
 on Chromium 145 and Liquid on WebKit 26. The final unit run passed 1,159 tests.
+
+
+### Type settings categories (2026-09-13)
+
+Type settings now groups the existing controls into Basics, Details (number
+formatting), and Variable (font axes), following the category organization in
+[Figma's text property reference](https://help.figma.com/hc/en-us/articles/360039956634-Explore-text-properties).
+The existing React/Liquid font preview sits above the tabs inside the popup.
+Tabs have linked tabpanels, selected state and roving keyboard focus; Left/Right,
+Home and End navigate them. The selected category survives inspector rebuilds.
+Custom weight and action search select the target category before focusing its
+field. Tab changes never write source.
+
+This is organization of the controls already implemented, not complete Figma
+text parity. The Variable category remains available for manual axis editing
+when font metadata is unknown; it is not yet conditional on detected variable
+font support. HTML does not yet have the equivalent embedded type preview, and
+feature-specific hover previews and the full OpenType control set remain missing.
+
+Validation: 1,159 unit tests passed in
+`/private/tmp/retouch-type-tabs-units.log`. React Chromium and Liquid WebKit
+popup, category navigation, weight editing and responsive history checks passed
+in `/private/tmp/retouch-type-tabs-{react,liquid}-final.log`. HTML axes, number
+formatting, category navigation and exact history passed in
+`/private/tmp/retouch-type-tabs-html-verified.log`; switching from another category
+to Custom weight and action-search focus passed in
+`/private/tmp/retouch-type-tabs-focus.log`. Regular and 1000-by-280 screenshots
+were inspected at `/private/tmp/retouch-type-tabs.png.regular.png` and
+`/private/tmp/retouch-type-tabs.png`. These changes are newer than the packaged
+`90ab1c6` desktop candidate.
+
+The combined React optical-sizing, variable-axis and number-formatting workflow
+also passed in `/private/tmp/retouch-type-tabs-react-features-complete.log`.
+The harness now explicitly opens the popup/category after outside Undo clicks,
+uses the direct axis disclosure rather than matching its outer popup, and opens
+that disclosure only when closed. These checks retain preview, responsive scope,
+reset and exact source history assertions; the non-variable fixture does not
+prove variable-font glyph rendering.

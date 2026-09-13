@@ -1,6 +1,7 @@
 (function(root){
  'use strict';
 const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',row:'M3 5v10 M8 5v10 M13 5v10 M16 10h4 M18 8l2 2-2 2',column:'M5 3h10 M5 8h10 M5 13h10 M10 16v4 M8 18l2 2 2-2',grid:'M3 3h14v14H3z M10 3v14 M3 10h14'};
+ let activeTypeTab='Basics',typeTabId=0;
  const openGroups=new Set(),collapsedSections=new Set();
  const sectionPreferenceKey='retouch.inspector.sections.v1';
  try{const saved=JSON.parse(root.localStorage.getItem(sectionPreferenceKey));if(Array.isArray(saved))for(const name of saved.slice(0,64))if(typeof name==='string'&&name.length<=64)collapsedSections.add(name);}catch{}
@@ -100,6 +101,20 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    for(let next=start+step;next>=0&&next<buttons.length;next+=step){if(Math.abs(step)===1&&Math.floor(next/columns)!==Math.floor(start/columns))break;if(!buttons[next].disabled){buttons[next].focus();break;}}
   });
  }
+ function typeSettingsTabs(settings,section){
+  const body=settings.querySelector('.stroke-settings-body'),children=[...body.children].filter(el=>el.tagName!=='HEADER');
+  const tabs=document.createElement('div');tabs.className='type-settings-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Type settings categories');
+  const groups=new Map();
+  for(const name of ['Basics','Details','Variable']){
+   const tab=document.createElement('button'),panel=document.createElement('div'),id='type-tab-'+(++typeTabId);tab.type='button';tab.textContent=name;tab.id=id;tab.setAttribute('role','tab');tab.setAttribute('aria-controls',id+'-panel');panel.id=id+'-panel';panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',id);panel.className='type-settings-page';groups.set(name,{tab,panel});tabs.append(tab);
+  }
+  for(const child of children){const summary=child.querySelector(':scope > summary')?.textContent;groups.get(summary==='Variable font axes'?'Variable':summary==='Number formatting'?'Details':'Basics').panel.append(child);}
+  const select=(name,focus=false)=>{activeTypeTab=name;for(const [key,{tab,panel}]of groups){const chosen=key===name;tab.setAttribute('aria-selected',String(chosen));tab.tabIndex=chosen?0:-1;panel.hidden=!chosen;}body.scrollTop=0;if(focus)groups.get(name).tab.focus();};
+  for(const [name,{tab,panel}]of groups){tab.onclick=()=>select(name);panel.retouchReveal=()=>select(name);}
+  tabs.onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)||event.altKey||event.metaKey||event.ctrlKey)return;const names=[...groups.keys()],index=names.findIndex(name=>groups.get(name).tab===event.target);if(index<0)return;event.preventDefault();event.stopPropagation();select(names[event.key==='Home'?0:event.key==='End'?names.length-1:(index+(event.key==='ArrowRight'?1:-1)+names.length)%names.length],true);};
+  const preview=section.querySelector('.type-preview');if(preview){const old=preview.closest('details');body.append(preview);if(old&&old!==settings)old.remove();}
+  body.append(tabs,...[...groups.values()].map(group=>group.panel));select(groups.has(activeTypeTab)?activeTypeTab:'Basics');
+ }
  function typographyPrimary(section){
   const find=labels=>labels.map(label=>section.querySelector('[aria-label="'+label+'"]')).find(Boolean),row=control=>control?.closest('.property-row')||control?.closest('.inspector-field');
   const font=row(find(['Page font'])),weight=find(['Font weight (1–1000)','Font weight (CSS)']),spacing=find(['Line height (px)','Line height (CSS)']),align=row(find(['Text alignment','Text alignment (CSS)']));
@@ -120,7 +135,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     weightRow.before(cell);cell.append(select);settings.querySelector(':scope > summary').after(weightRow);
     root.RetouchNumericExpression.calculation(weight);root.RetouchInspector.fieldDraft(weight);
     select.onchange=()=>{
-     if(select.value==='custom'){select.value=current;if(settings.retouchOpen)settings.retouchOpen();else settings.open=true;weight.focus();weight.select();return;}
+     if(select.value==='custom'){select.value=current;weight.closest('[role=tabpanel]')?.retouchReveal?.();if(settings.retouchOpen)settings.retouchOpen();else settings.open=true;weight.focus();weight.select();return;}
      weight.value=select.value;weight.dispatchEvent(new Event('change',{bubbles:true}));
     };
    }
@@ -135,7 +150,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   const typeSettings=[...section.querySelectorAll('details')].find(details=>details.querySelector(':scope > summary')?.textContent==='Type settings');
   if(align&&typeSettings){
    const tools=document.createElement('div');tools.className='typography-alignment-tools';align.before(tools);tools.append(align);
-   strokePopover(typeSettings,tools,'type-settings','Type settings','Type settings');
+   strokePopover(typeSettings,tools,'type-settings','Type settings','Type settings');typeSettingsTabs(typeSettings,section);
   }
 
  }
@@ -529,7 +544,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
  function reveal(control){
   if(!control?.isConnected||control.matches(':disabled')||control.closest('[inert]'))return false;
   root.RetouchWorkspacePanels?.showInspector();
-  for(let parent=control.parentElement;parent;parent=parent.parentElement){if(parent.retouchSetCollapsed)parent.retouchSetCollapsed(false,true);if(parent.tagName==='DETAILS'){if(parent.retouchSetOpen)parent.retouchSetOpen(true);else if(parent.retouchOpen)parent.retouchOpen();else parent.open=true;}}
+  for(let parent=control.parentElement;parent;parent=parent.parentElement){parent.retouchReveal?.();if(parent.retouchSetCollapsed)parent.retouchSetCollapsed(false,true);if(parent.tagName==='DETAILS'){if(parent.retouchSetOpen)parent.retouchSetOpen(true);else if(parent.retouchOpen)parent.retouchOpen();else parent.open=true;}}
   control.scrollIntoView({block:'nearest',inline:'nearest'});control.focus({preventScroll:true});if(typeof control.select==='function')try{control.select();}catch{}return true;
  }
  root.RetouchInspectorUI={organize,reveal};
