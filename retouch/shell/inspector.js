@@ -798,12 +798,9 @@
     const percent=Number(match[1])*(match[2]==='%'?1:100);
     return Number.isFinite(percent)?percent:null;
   }
-  function typography(info, el, save, changeTag, textStyleAction) {
-    const sec=section('Typography'); if(!el)return sec;
-    const d=el.ownerDocument, css=d.defaultView.getComputedStyle(el);
-    root.RetouchTextStyles?.mount(sec,el,info.classTextStyles&&!info.classNameDynamic&&textStyleAction?{inherited:root.RetouchResponsive.inheritedLink(info.textStyleLinks,info.styleScope||'',d),update:info.textStyleUpdates===false?undefined:(styleId,libraryRevision,name,properties)=>textStyleAction('updateTextStyle',info.styleScope||'',{styleId,libraryRevision,name,properties}),link:info.textStyleLinks?.[info.styleScope||''],overrides:info.textStyleOverrides?.[info.styleScope||'']||[],reset:(styleId,libraryRevision)=>textStyleAction('resetTextStyle',info.styleScope||'',{styleId,libraryRevision}),apply:(styleId,libraryRevision)=>textStyleAction('applyTextStyle',info.styleScope||'',{styleId,libraryRevision}),detach:()=>textStyleAction('detachTextStyle',info.styleScope||'',{})}:{});
-    note(sec,`${css.fontFamily} · ${css.fontSize} / ${css.lineHeight} · ${css.fontWeight}`,'computed-value');
-    const preview=document.createElement('iframe');preview.className='type-preview';preview.title='Typography preview';preview.setAttribute('sandbox','allow-same-origin');sec.append(preview);
+  function typographyPreview(parent,el){
+    const d=el.ownerDocument,css=d.defaultView.getComputedStyle(el);
+    const preview=document.createElement('iframe');preview.className='type-preview';preview.title='Typography preview';preview.setAttribute('sandbox','allow-same-origin');parent.append(preview);
     preview.onload=()=>{
       const pd=preview.contentDocument;if(!pd||!preview.isConnected||!el.isConnected||!d.location)return;
       const base=pd.createElement('base');base.href=d.location.href;pd.head.append(base);
@@ -813,6 +810,14 @@
       for(const p of typeProperties)sample.style.setProperty(p,css.getPropertyValue(p));pd.body.append(sample);
     };
     preview.srcdoc='<!doctype html><html><head></head><body></body></html>';
+    return preview;
+  }
+  function typography(info, el, save, changeTag, textStyleAction) {
+    const sec=section('Typography'); if(!el)return sec;
+    const d=el.ownerDocument, css=d.defaultView.getComputedStyle(el);
+    root.RetouchTextStyles?.mount(sec,el,info.classTextStyles&&!info.classNameDynamic&&textStyleAction?{inherited:root.RetouchResponsive.inheritedLink(info.textStyleLinks,info.styleScope||'',d),update:info.textStyleUpdates===false?undefined:(styleId,libraryRevision,name,properties)=>textStyleAction('updateTextStyle',info.styleScope||'',{styleId,libraryRevision,name,properties}),link:info.textStyleLinks?.[info.styleScope||''],overrides:info.textStyleOverrides?.[info.styleScope||'']||[],reset:(styleId,libraryRevision)=>textStyleAction('resetTextStyle',info.styleScope||'',{styleId,libraryRevision}),apply:(styleId,libraryRevision)=>textStyleAction('applyTextStyle',info.styleScope||'',{styleId,libraryRevision}),detach:()=>textStyleAction('detachTextStyle',info.styleScope||'',{})}:{});
+    note(sec,`${css.fontFamily} · ${css.fontSize} / ${css.lineHeight} · ${css.fontWeight}`,'computed-value');
+    typographyPreview(sec,el);
     if(!locked(sec,info)) {
       const names=catalog(d), current=tokens(info.className).filter(t=>names.includes(t));
       if(names.length && !info.styleScope) {
@@ -899,6 +904,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

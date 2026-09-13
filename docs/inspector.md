@@ -417,3 +417,25 @@ uses the direct axis disclosure rather than matching its outer popup, and opens
 that disclosure only when closed. These checks retain preview, responsive scope,
 reset and exact source history assertions; the non-variable fixture does not
 prove variable-font glyph rendering.
+
+
+### Shared typography preview for HTML (2026-09-13)
+
+HTML Type settings now includes the same sandboxed iframe preview as React and
+Liquid. `typographyPreview` is shared through the inspector API: it copies the
+selected text as text content, imports the site's stylesheet references with its
+document URL as the base, and applies the selected element's computed typography.
+It remains inside the floating panel above the category tabs. The HTML browser
+harness now checks preview font family, optical sizing and variable-axis values
+instead of excluding HTML from those assertions.
+
+Validation: 1,159 unit tests passed in
+`/private/tmp/retouch-shared-type-preview-units.log`. HTML Chromium passed optical
+sizing, axis edits, scoped reset, responsive isolation, popup keyboard/focus and
+exact source undo in `/private/tmp/retouch-html-type-preview.log`. Liquid WebKit
+passed the same regression flow in
+`/private/tmp/retouch-shared-type-preview-liquid.log`. The HTML panel screenshot
+was inspected at `/private/tmp/retouch-html-type-preview.png.regular.png`.
+The fixture uses a static font: computed axis propagation is verified, not a
+claim of visible variable-font glyph changes. Feature-specific hover samples,
+full OpenType controls and native desktop validation remain unfinished.
