@@ -42,10 +42,10 @@
   const position=axis==='x'?'left':'top',size=axis==='x'?'width':'height',sorted=rects.map((r,i)=>({position:r[position],size:r[size],i})).sort((a,b)=>a.position-b.position);
   return {sorted,values:sorted.slice(1).map((r,i)=>r.position-sorted[i].position-sorted[i].size)};
  }
- function setGaps(rects,axis,values,{anchor=null,start=null}={}){
-  arrange(rects,axis==='x'?'left':'top');const {sorted,values:original}=gaps(rects,axis);
+ function setGaps(rects,axis,values,{anchor=null,start=null,allowDegenerate=false}={}){
+  arrange(rects,axis==='x'?'left':'top',null,{allowDegenerate});const {sorted,values:original}=gaps(rects,axis);
   if(!Array.isArray(values)||values.length!==rects.length-1||Array.from(values).some(gap=>!Number.isFinite(gap)||Math.abs(gap)>100000))throw Error('Use a spacing value between -100,000 and 100,000 pixels for each gap.');
-  if(values.some((gap,i)=>gap!==original[i]&&gap<1/32-sorted[i].size))throw Error('Keep some forward distance between layers so their order stays intact.');
+  if(values.some((gap,i)=>gap!==original[i]&&gap<(allowDegenerate&&sorted[i].size===0?0:1/32-sorted[i].size)))throw Error('Keep some forward distance between layers so their order stays intact.');
   if(anchor!==null&&(!Number.isInteger(anchor)||anchor<0||anchor>=rects.length)||start!==null&&!Number.isFinite(start))throw Error('Choose a measurable spacing reference.');
   let cursor=0;const packed=sorted.map((r,i)=>{const item={...r,next:cursor};cursor+=r.size+(values[i]??0);return item;}),reference=packed.find(r=>r.i===(anchor??sorted[0].i)),offset=start??reference.position-reference.next,result=rects.map(()=>({x:0,y:0}));
   for(const r of packed)result[r.i][axis]=r.next+offset-r.position;return result;

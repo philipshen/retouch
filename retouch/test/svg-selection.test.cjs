@@ -70,3 +70,8 @@ test('SVG alignment can target viewport bounds individually or preserve group ar
  const group=S.alignmentMatrices(members,'center',target,true);assert.equal(group.a[4],50);assert.equal(group.b[4],50);
  const single=S.alignmentMatrices(members.slice(0,1),'bottom',target);assert.equal(single.a[5],140);
 });
+
+test('SVG spacing keeps first edge or viewport origin and preserves nested transforms',()=>{
+ const members=[{info:{id:'a',svgTransform:{matrix:A.identity()}},parent:A.identity(),rect:{left:10,top:20,width:30,height:0}},{info:{id:'b',svgTransform:{matrix:A.identity()}},parent:A.identity(),rect:{left:70,top:40,width:20,height:10}},{info:{id:'c',svgTransform:{matrix:A.identity()}},parent:A.identity(),covered:true}];
+ assert.equal(S.spacingMatrices(members,'y',0).b[5],-20);assert.equal(S.spacingMatrices(members,'x',12).a[4],0);assert.equal(S.spacingMatrices(members,'x',12).b[4],-18);assert.deepEqual(S.spacingMatrices(members,'x',12).c,A.identity());assert.equal(S.spacingMatrices(members,'x',12,0).b[4],-28);assert.throws(()=>S.spacingMatrices(members,'x',-50),/forward distance/);
+});

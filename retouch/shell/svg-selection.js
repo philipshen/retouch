@@ -11,6 +11,11 @@
   const result=Object.fromEntries(members.map(m=>{const delta=moves.get(m);return [m.info.id,delta?transform(m.parent,[1,0,0,1,delta.x,delta.y],m.info.svgTransform.matrix):m.info.svgTransform.matrix];}));
   if(Object.values(result).some(m=>!A().valid(m)))throw Error('Keep every aligned vector within the supported range.');return result;
  }
+ function spacingMatrices(members,axis,gap,start=null){
+  const outer=members.filter(m=>!m.covered),layout=root.RetouchSelectionLayout||require('./selection-layout.js'),deltas=layout.setSpacing(outer.map(m=>m.rect),axis,gap,{start,allowDegenerate:true}),moves=new Map(outer.map((m,i)=>[m,deltas[i]]));
+  const result=Object.fromEntries(members.map(m=>{const delta=moves.get(m);return [m.info.id,delta?transform(m.parent,[1,0,0,1,delta.x,delta.y],m.info.svgTransform.matrix):m.info.svgTransform.matrix];}));
+  if(Object.values(result).some(m=>!A().valid(m)))throw Error('Keep every spaced vector within the supported range.');return result;
+ }
  function resizeBounds(box,axis,value,locked=false){
   if(!['width','height'].includes(axis)||!Number.isFinite(value)||value<=0||value>100000||!box[axis]||(locked&&(!box.width||!box.height)))return null;
   const scale=value/box[axis],sx=axis==='width'||locked?scale:1,sy=axis==='height'||locked?scale:1;
@@ -110,26 +115,34 @@
   const count=initial.members.filter(m=>!m.covered).length,updateAlignment=()=>{for(const button of toolbar.querySelectorAll('button'))button.disabled=count<(button.dataset.distribution?3:alignTarget==='viewport'?1:2);};for(const button of toolbar.querySelectorAll('button'))button.title=button.title.replace('containing frame','SVG viewport');section.append(toolbar);
   const targetChoice=I.select(section,'Align to',[['selection','Selection'],['viewport','SVG viewport']],alignTarget,value=>{alignTarget=value;alignmentTargets.set(key,value);updateAlignment();});if(!viewport())targetChoice.querySelector('[value=viewport]').disabled=true;updateAlignment();
   const inputs={},rounded=value=>String(Math.round(value*10000)/10000);
-  function scrub(input,kind){
+  function scrub(input,kind,custom=null){
    I.numericLabelDrag(input,raw=>({value:root.RetouchNumericExpression.evaluate(raw),min:kind==='rotation'?-360:(['width','height'].includes(kind)?0.0001:-100000),max:kind==='rotation'?360:100000}));
    input.retouchNumericPreview=()=>{
     if(!current())throw Error('Re-select these vectors before transforming.');
     const {members,box,w}=capture(infos,elements),originals=members.map(m=>m.el.getAttribute('transform')),last=[...originals],values=Object.fromEntries(Object.entries(inputs).map(([k,el])=>[k,el.value]));
-    const screens=members.map(m=>array(m.el.getScreenCTM())),geometry=members.map(m=>{const g=m.el.getBBox();return [g.x,g.y,g.width,g.height];});let global=[1,0,0,1,0,0];
-    const valid=()=>{if(!current())return false;try{return members.every((m,i)=>{if(!m.el.isConnected||m.el.getAttribute('transform')!==last[i])return false;const screen=array(m.el.getScreenCTM()),expected=A().multiply(global,screens[i]),g=m.el.getBBox();return screen.every((v,j)=>Math.abs(v-expected[j])<.1)&&[g.x,g.y,g.width,g.height].every((v,j)=>Math.abs(v-geometry[i][j])<.01);});}catch{return false;}};
+    const screens=members.map(m=>array(m.el.getScreenCTM())),geometry=members.map(m=>{const g=m.el.getBBox();return [g.x,g.y,g.width,g.height];});let expectedScreens=screens;
+    const valid=()=>{if(!current())return false;try{return members.every((m,i)=>{if(!m.el.isConnected||m.el.getAttribute('transform')!==last[i])return false;const screen=array(m.el.getScreenCTM()),expected=expectedScreens[i],g=m.el.getBBox();return screen.every((v,j)=>Math.abs(v-expected[j])<.1)&&[g.x,g.y,g.width,g.height].every((v,j)=>Math.abs(v-geometry[i][j])<.01);});}catch{return false;}};
     return {current:valid,update(value){
      if(!valid())throw Error('The selection changed. Re-select it.');
-     const next=fieldMatrix(box,w,kind,value),matrices=matricesFor(members,next);
+     const matrices=custom?custom(members,value):matricesFor(members,fieldMatrix(box,w,kind,value));
      if(Object.values(matrices).some(m=>!A().valid(m)))throw Error('Keep every transformed vector within the supported range.');
-     global=next;members.forEach((m,i)=>{if(!m.covered){last[i]=A().format(matrices[m.info.id]);m.el.setAttribute('transform',last[i]);}});
+     expectedScreens=members.map((m,i)=>{const owner=members.find(o=>!o.covered&&(o===m||o.el.contains(m.el))),before=A().multiply(owner.parent,owner.info.svgTransform.matrix),after=A().multiply(owner.parent,matrices[owner.info.id]),delta=A().multiply(after,inverse(before));return A().multiply(delta,screens[i]);});members.forEach((m,i)=>{if(!m.covered){last[i]=A().format(matrices[m.info.id]);m.el.setAttribute('transform',last[i]);}});
      const rects=members.filter(m=>!m.covered).map(m=>m.el.getBoundingClientRect()),left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top)),right=Math.max(...rects.map(r=>r.right)),bottom=Math.max(...rects.map(r=>r.bottom));
+     for(const axis of ['x','y']){const key='gap-'+axis;if(inputs[key]&&key!==kind){const gaps=root.RetouchSelectionLayout.gaps(rects,axis).values;inputs[key].value=gaps.length&&!gaps.some(v=>Math.abs(v-gaps[0])>=.001)?rounded(gaps[0]):'';}}
      for(const [k,v]of Object.entries({x:left+w.scrollX,y:top+w.scrollY,width:right-left,height:bottom-top}))if(k!==kind)inputs[k].value=rounded(v);
     },restore(){members.forEach((m,i)=>{if(m.el.getAttribute('transform')===last[i]){if(originals[i]===null)m.el.removeAttribute('transform');else m.el.setAttribute('transform',originals[i]);}});for(const [k,v]of Object.entries(values))if(k!==kind)inputs[k].value=v;}};
    };
   }
   for(const [kind,label,value]of [['x','Selection X',initial.box.left+initial.w.scrollX],['y','Selection Y',initial.box.top+initial.w.scrollY],['width','Selection width',initial.box.width],['height','Selection height',initial.box.height],['rotation','Rotate selection (°)',0]]){const input=root.document.createElement('input');input.type='text';input.inputMode='decimal';input.value=String(Math.round(value*10000)/10000);input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{try{const value=root.RetouchNumericExpression.evaluate(input.value);apply(kind,value);input.value=String(Math.round(value*10000)/10000);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};root.RetouchNumericExpression.field(input);I.field(section,label,input);inputs[kind]=input;scrub(input,kind);}
+  const spacing=root.document.createElement('div');spacing.className='property-pair';section.append(spacing);
+  for(const [axis,label]of [['x','Horizontal gap (px)'],['y','Vertical gap (px)']]){
+   const gaps=root.RetouchSelectionLayout.gaps(initial.members.filter(m=>!m.covered).map(m=>m.rect),axis).values,mixed=gaps.some(v=>Math.abs(v-gaps[0])>=.001),input=root.document.createElement('input');input.type='text';input.inputMode='decimal';input.value=mixed||!gaps.length?'':rounded(gaps[0]);input.placeholder=mixed?'Mixed':'';input.disabled=count<2;input.oninput=()=>input.setCustomValidity('');
+   const calculate=(members,value)=>{const owner=viewport();if(alignTarget==='viewport'&&!owner)throw Error('Select vectors in the same SVG viewport.');return spacingMatrices(members,axis,value,alignTarget==='viewport'?owner.getBoundingClientRect()[axis==='x'?'left':'top']:null);};
+   input.onchange=()=>{try{if(!current())throw Error('Re-select these vectors before changing spacing.');const value=root.RetouchNumericExpression.evaluate(input.value),{members}=capture(infos,elements),matrices=calculate(members,value);if(members.some(m=>!A().equivalent(matrices[m.info.id],m.info.svgTransform.matrix)))save(matrices);input.value=rounded(value);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+   root.RetouchNumericExpression.field(input);I.field(spacing,label,input);input.parentElement.querySelector('span').textContent=axis==='x'?'H gap':'V gap';inputs['gap-'+axis]=input;scrub(input,'gap-'+axis,calculate);
+  }
   const lock=I.button('Lock selection proportions',()=>{locked=!locked;if(locked)sizeLocks.add(key);else sizeLocks.delete(key);lock.setAttribute('aria-pressed',String(locked));});lock.setAttribute('aria-pressed',String(locked));lock.setAttribute('aria-label','Lock selection proportions');lock.title='Lock selection proportions';lock.innerHTML='<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M8 6V4a3 3 0 0 1 6 0v4a3 3 0 0 1-3 3M12 14v2a3 3 0 0 1-6 0v-4a3 3 0 0 1 3-3M10 6v8"/></svg>';lock.disabled=!initial.box.width||!initial.box.height;section.append(lock);
   const flips=root.RetouchFlip.mount(elements[0],()=>{});for(const button of flips.querySelectorAll('button')){button.disabled=false;button.onclick=()=>{try{apply('flip-'+button.dataset.flipAxis);}catch(error){I.note(section,error.message,'refused');}};}section.append(flips);I.note(section,'Bounds in document pixels. Rotation and flips use the selection center. Changes apply to all screen sizes.');return section;
  }
- const api={inverse,transform,matricesFor,alignmentMatrices,resizeBounds,selectionKey,capture,controls,canvasResize,resizeSelection,canvasRotation,rotationPoints,isRotating:()=>rotatingSelection,nudge,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGSelection=api;
+ const api={inverse,transform,matricesFor,alignmentMatrices,spacingMatrices,resizeBounds,selectionKey,capture,controls,canvasResize,resizeSelection,canvasRotation,rotationPoints,isRotating:()=>rotatingSelection,nudge,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGSelection=api;
 })(typeof window==='object'?window:globalThis);
