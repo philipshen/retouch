@@ -193,7 +193,15 @@ function hookFrame(d, w) {
   w.addEventListener('pointerup',releasePanelPointer,true);
   w.addEventListener('pointercancel',releasePanelPointer,true);
   stopDrawing?.();
-  stopSVGDrag?.();stopSVGDrag=RetouchSVGDrag.mount({document:d,frame:iframe,candidate:node=>{if(mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active||sel?.multiple?.length>1||!sel?.info.svgTransform?.editable)return null;const targets=matchingEls(sel.info.id),target=targets.length===1?targets[0]:null;return target&&target.contains(node)&&!layerLocks.locked(target)?{info:sel.info,target}:null;},onStart:({info,target},event,move)=>resizeSVGOnCanvas(info,target,event,'se','move',{framePointer:true,initialMove:move})});
+  const vectorDragCandidate=node=>{
+    if(mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active||sel?.multiple?.length>1)return null;
+    const targets=sel?.info.svgTransform?.editable?matchingEls(sel.info.id):[],selected=targets.length===1?targets[0]:null;
+    if(selected?.contains(node)&&!layerLocks.locked(selected))return {info:sel.info,target:selected};
+    const target=layerLocks.pick(node);return target?.namespaceURI==='http://www.w3.org/2000/svg'&&/^(g|rect|circle|ellipse|line|path|polygon|polyline|text|image|use)$/.test(target.localName)&&!layerLocks.locked(target)?{target}:null;
+  };
+  stopSVGDrag?.();stopSVGDrag=RetouchSVGDrag.mount({document:d,frame:iframe,candidate:vectorDragCandidate,
+    prepare:async({target},current)=>{const selection=sel,valid=()=>current()&&sel===selection&&doc()===d&&!!vectorDragCandidate(target);await select(target,{current:valid});const result=current()&&vectorDragCandidate(target);return result?.info?result:null;},
+    onStart:({info,target},event,move,released)=>resizeSVGOnCanvas(info,target,event,'se','move',{framePointer:true,initialMove:move,initialReleased:released}),onError:error=>toast(error.message,'err')});
   stopMarquee?.();
   stopMarquee=RetouchMarquee.mount({document:d,frame:iframe,surface:canvasSurface,enabled:()=>window.__RT_RENDERING?.selectionStyling===true&&mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests,
     onChange:rect=>{selectionMarquee=rect?{document:d,rect}:null;},
@@ -451,7 +459,7 @@ function captureInspectorSelectionTarget(el,sourceId){
   const id=sourceId||el.getAttribute('data-rt-i')||el.getAttribute('data-rt'),context=renderContext(el),occurrence=matchingInDocument(el.ownerDocument,id,{context}).indexOf(el);
   return ()=>el.isConnected&&el.ownerDocument===doc()?el:occurrence>=0?matchingInDocument(doc(),id,{context})[occurrence]:null;
 }
-async function select(node,{toggle=false,sourceId}={}) {
+async function select(node,{toggle=false,sourceId,current=()=>true}={}) {
   stopDrawing?.();
   const componentToggle=toggle&&sel?.info.kind==='instance';
   if(componentToggle&&!sourceId){
@@ -460,7 +468,7 @@ async function select(node,{toggle=false,sourceId}={}) {
     node=root;sourceId=root.getAttribute('data-rt-i');
   }
   const c = await classify(node,sourceId);
-  if (c?.superseded) return;
+  if (!current()||c?.superseded) return;
   if (!c) return componentToggle?toast('This component is no longer available. Select it again.','err'):clearSelection();
   if(componentToggle&&(c.info.kind!=='instance'||c.info.file!==sel?.info.file||c.info.hash!==sel?.info.hash))return toast('Select components from one unchanged source file.','err');
   if(toggle&&(c.info.cssAuthoring&&sel?.info.cssAuthoring||c.info.classSelection&&sel?.info.classSelection||c.info.contextSelection&&sel?.info.contextSelection||c.info.kind==='instance'&&sel?.info.kind==='instance')&&c.info.file===sel.info.file&&c.info.hash===sel.info.hash){

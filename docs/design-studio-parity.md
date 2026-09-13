@@ -13805,3 +13805,37 @@ workflow were rerun; logs: /private/tmp/retouch-push-units.log and
 /private/tmp/retouch-push-combined.log. No desktop rebuild is included; the latest
 verified packaged candidate still predates the newer SVG transform tools.
 Full Figma and arbitrary-site parity remain open.
+
+## 2026-09-13 — Select and move vectors in one gesture
+
+An unlocked, source-backed SVG shape can now be dragged without selecting it
+first. Already-selected groups retain their existing group-drag behavior. The
+four-screen-pixel threshold preserves ordinary clicks. Source classification
+runs asynchronously, retaining the latest pointer position; even a release
+before classification finishes becomes one transform transaction. The shared
+transform tool handles released gestures without attempting pointer capture
+on an inactive pointer.
+
+Pending classification is canceled by Escape, pointer cancellation/lost capture,
+scrolling, resizing, navigation, zoom/screen changes, or a newer gesture. Selection
+application has a freshness callback so canceled work cannot replace the prior
+selection. Pointer capture keeps an unresolved drag attached to its source target.
+Moving focus from the shell into its iframe is distinguished from losing app focus.
+
+Validation: 1,015 unit tests passed, including delayed release, pointer ownership,
+capture cleanup and cancellation. Browser workflows cover the existing 13 SVG
+move/resize types, selected group dragging, unselected rectangle dragging,
+source unchanged during previews, deliberately delayed classification with a
+quick release or Escape, exact history, keyboard movement and proportions.
+Logs: /private/tmp/retouch-unselected-units-final.log,
+/private/tmp/retouch-unselected-liquid-final.log,
+/private/tmp/retouch-unselected-html.log and
+/private/tmp/retouch-unselected-react.log.
+
+HTML/WebKit 26, Liquid/Chromium and React/Chromium each reached a terminal
+zero exit on the final implementation.
+
+This remains single-selection SVG editing with existing source ownership and
+rendered-once checks. Multi-selection transforms, object snapping, full arbitrary-
+site/Figma parity and a trusted public macOS release remain open. No desktop
+rebuild or push is part of this increment.
