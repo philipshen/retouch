@@ -1275,6 +1275,7 @@ function renderPanelContents() {
   if(info.svgGradients?.length)mountSVGGradients(info,target);
   if(info.svgGeometry){
     const geometry=RetouchInspector.section('SVG geometry');
+    if(info.svgConversion?.arrow){const convert=RetouchInspector.button('Convert line to arrow',()=>convertSVGToPath(info,true));convert.dataset.arrowAction='convert';geometry.append(convert);}
     if(info.svgConversion)geometry.append(RetouchInspector.button('Convert to vector path',()=>convertSVGToPath(info)));
     const pointField=info.svgGeometry.fields.find(field=>['points','d'].includes(field.name));
     if(editableVectorField(info)){const editPoints=RetouchInspector.button('Edit vector points',()=>editSVGPoints(info));editPoints.dataset.canvasTool='vertices';editPoints.title='Edit vector points · Enter or double-click on the canvas';geometry.append(editPoints);}
@@ -2270,21 +2271,22 @@ async function setReactClassesSelection(classesById,expected=null){
   }catch(error){renderPanel();toast(error.message,'err');return false;}finally{busyPanel(false);}
 }
 function svgGeometryMatches(el,info){return info.svgGeometry?.fields.every(field=>field.editable===false||el.getAttribute(field.name)===field.value);}
-async function convertSVGToPath(info){
+async function convertSVGToPath(info,toArrow=false){
+  const conversion=toArrow?info.svgConversion?.arrow:info.svgConversion;if(!conversion)return;const targetTag=toArrow?'polyline':'path',operation=toArrow?'convertSVGToArrow':'convertSVGToPath';
   if(panelTasks||undoBusy||sourceRequests||editing||sel?.info!==info)return;
   const targets=matchingEls(info.id);if(targets.length!==1)return toast('Select a shape rendered once to convert it.','err');
-  const target=targets[0],w=target.ownerDocument.defaultView,probe=target.ownerDocument.createElementNS('http://www.w3.org/2000/svg','path');
-  for(const attr of target.attributes)if(!info.svgConversion.properties.includes(attr.name)&&!/^on/i.test(attr.name))probe.setAttribute(attr.name,attr.value);
+  const target=targets[0],w=target.ownerDocument.defaultView,probe=target.ownerDocument.createElementNS('http://www.w3.org/2000/svg',targetTag);
+  for(const attr of target.attributes)if(!conversion.properties.includes(attr.name)&&!/^on/i.test(attr.name))probe.setAttribute(attr.name,attr.value);
   for(const child of target.children)if(['title','desc'].includes(child.tagName.toLowerCase())){const copy=child.cloneNode(false);for(const attr of [...copy.attributes])if(/^on/i.test(attr.name))copy.removeAttribute(attr.name);copy.textContent=child.textContent;probe.append(copy);}
-  probe.setAttribute('d',info.svgConversion.path);probe.style.setProperty('visibility','hidden','important');
+  if(toArrow){probe.setAttribute('points',conversion.points);probe.setAttribute('fill','none');probe.setAttribute('data-rt-shape','arrow');}else probe.setAttribute('d',conversion.path);probe.style.setProperty('visibility','hidden','important');
   try{
     const before=w.getComputedStyle(target),paint=['fill','fill-opacity','fill-rule','stroke','stroke-width','stroke-opacity','stroke-linecap','stroke-linejoin','stroke-miterlimit','stroke-dasharray','stroke-dashoffset','opacity','transform','vector-effect','filter','clip-path','mask','marker-start','marker-mid','marker-end'],expected=Object.fromEntries(paint.map(p=>[p,before.getPropertyValue(p)]));
     if(target.querySelector('animate,set,animateTransform')||target.ownerSVGElement?.querySelector('animate,set,animateTransform'))return toast('Remove SVG animations before converting the shape.','err');
     const radii=Object.fromEntries(info.svgGeometry.fields.map(f=>[f.name,f.value==null?null:parseFloat(f.value)]));if(target.tagName.toLowerCase()==='rect')for(const axis of ['rx','ry']){const value=before.getPropertyValue(axis).trim();if(value&&value!=='auto'&&Math.abs(parseFloat(value)-(radii[axis]??radii[axis==='rx'?'ry':'rx']??0))>1e-6)return toast('This shape has CSS corner geometry. Edit those styles before converting.','err');}
-    target.after(probe);const actual=w.getComputedStyle(probe),a=target.getBBox(),b=probe.getBBox(),cssPath=actual.getPropertyValue('d').match(/^path\(["']([\s\S]*)["']\)$/);if(cssPath&&!RetouchSVGPath.equivalentCompound(RetouchSVGPath.parseCompound(cssPath[1]),RetouchSVGPath.parseCompound(info.svgConversion.path)))return toast('This shape has a CSS path override. Edit that style before converting.','err');if(target.tagName.toLowerCase()!=='line'&&['marker-start','marker-mid','marker-end'].some(p=>expected[p]&&expected[p]!=='none'))return toast('Remove SVG markers before converting this shape.','err');if(paint.some(p=>actual.getPropertyValue(p)!==expected[p])||['x','y','width','height'].some(p=>Math.abs(a[p]-b[p])>1e-5))return toast('CSS changes the appearance of this shape when converted. Conversion is unavailable for these styles.','err');
+    target.after(probe);const actual=w.getComputedStyle(probe),a=target.getBBox(),b=probe.getBBox(),cssPath=actual.getPropertyValue('d').match(/^path\(["']([\s\S]*)["']\)$/);if(!toArrow&&cssPath&&!RetouchSVGPath.equivalentCompound(RetouchSVGPath.parseCompound(cssPath[1]),RetouchSVGPath.parseCompound(info.svgConversion.path)))return toast('This shape has a CSS path override. Edit that style before converting.','err');if((toArrow||target.tagName.toLowerCase()!=='line')&&['marker-start','marker-mid','marker-end'].some(p=>expected[p]&&expected[p]!=='none'))return toast('Remove SVG markers before converting this shape.','err');if(toArrow&&actual.fill!=='none'||paint.some(p=>(!toArrow||p!=='fill')&&actual.getPropertyValue(p)!==expected[p])||!toArrow&&['x','y','width','height'].some(p=>Math.abs(a[p]-b[p])>1e-5))return toast('CSS changes the appearance of this shape when converted. Conversion is unavailable for these styles.','err');
   }finally{probe.remove();}
   busyPanel(true);
-  try{const result=await api('POST','/rt/__api/op',{type:'convertSVGToPath',id:info.id,fileHash:info.hash});if(!result?.ok)return toast(result?.reason||result?.error||'Could not convert shape','err');if(result.undoId)editorHistory.record({type:'convertSVGToPath',id:info.id,selectionBefore:[info.id],selectionAfter:[info.id],undoId:result.undoId});renderedSelection=null;sel.info=result.element;await refreshWrittenElement(sel.info,el=>el.tagName.toLowerCase()==='path'&&svgGeometryMatches(el,sel.info));await restoreLayerSelection([info.id]);renderPanel();toast('Converted to an editable vector path','ok');}finally{busyPanel(false);}
+  try{const result=await api('POST','/rt/__api/op',{type:operation,id:info.id,fileHash:info.hash});if(!result?.ok)return toast(result?.reason||result?.error||'Could not convert shape','err');if(result.undoId)editorHistory.record({type:operation,id:info.id,selectionBefore:[info.id],selectionAfter:[info.id],undoId:result.undoId});renderedSelection=null;sel.info=result.element;await refreshWrittenElement(sel.info,el=>el.tagName.toLowerCase()===targetTag&&svgGeometryMatches(el,sel.info));await restoreLayerSelection([info.id]);renderPanel();toast(toArrow?'Converted to an editable arrow':'Converted to an editable vector path','ok');}finally{busyPanel(false);}
 }
 function vectorNudgeShortcut(e){
   if(e.defaultPrevented||e.isComposing||e.ctrlKey||e.metaKey||e.altKey||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)||mode!=='edit'||editing||stopDrawing||panelTasks||sourceRequests||undoBusy||canvasPan.active||!sel?.info.svgTransform?.editable||document.querySelector('dialog[open]'))return false;
@@ -2773,7 +2775,7 @@ async function restoreHistory(direction,op) {
         if (op.type === 'setSVGGradient') return svgGradientsMatch(el,info);
         if (op.type === 'setSVGGeometry') return svgGeometryMatches(el,info);
         if (op.type === 'setSVGTransform') return el.getAttribute('transform')===info.svgTransform?.value;
-        if (op.type === 'convertSVGToPath') return el.tagName.toLowerCase()===info.tag&&svgGeometryMatches(el,info);
+        if (['convertSVGToPath','convertSVGToArrow'].includes(op.type)) return el.tagName.toLowerCase()===info.tag&&svgGeometryMatches(el,info);
         if (op.type === 'setTag') return el.tagName.toLowerCase() === info.tag;
         if (op.type === 'setClasses' && !info.classNameDynamic) {
           const tokens = value => (value || '').split(/\s+/).filter(Boolean).sort().join(' ');

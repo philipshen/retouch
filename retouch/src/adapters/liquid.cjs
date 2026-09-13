@@ -333,7 +333,7 @@ function escapeText(t) {
 function planOp(resolved, op) {
   if(op.type==='insertSVG')return require('../liquid-svg-insert.cjs').plan(resolved,op);
   if(op.type==='insertElement')return require('../native-insert.cjs').plan(resolved,op,'liquid');
-  if(op.type==='convertSVGToPath')return require('../svg-convert.cjs').plan(resolved,op);
+  if(['convertSVGToPath','convertSVGToArrow'].includes(op.type))return require('../svg-convert.cjs').plan(resolved,op);
   if(op.type==='setSVGTransforms')return require('../svg-transform.cjs').planSelection(resolved,op,'liquid');
   if(op.type==='setSVGTransform')return require('../svg-transform.cjs').plan(resolved,op,'liquid');
  if(op.type==='setSVGGradient')return require('../source-svg-gradient.cjs').plan(resolved,op,'liquid');
@@ -437,6 +437,6 @@ module.exports = {
   describeComponent: resolved=>resolved.element.theme?theme.describe(resolved):components.describe(resolved),
   hasReference: components.hasReference,
   assets: { directory: 'assets', urlPrefix: '/assets/', uploadDirectory: '' },
-  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['setSVGGradient','insertSVG','insertElement','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types] },
+  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['setSVGGradient','insertSVG','insertElement','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types] },
   _parse: parse, // exported for tests
 };

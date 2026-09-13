@@ -46,6 +46,7 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
           for(let i=states.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===states[i]);await settled();}for(let i=1;i<states.length;i++){await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===states[i]);await settled();}for(let i=states.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===states[i]);await settled();}
         }
         if(preset==='arrow'&&process.env.RT_E2E_SVG_ARROW_PARAMETERS)await require('./arrow-parameters.cjs')({page,shape,read,wait,settled});
+        if(preset==='line'&&process.env.RT_E2E_LINE_TO_ARROW)await require('./line-to-arrow.cjs')({page,shape,read,wait,settled});
         const saved=read();assert.equal(await app.locator('p').textContent(),'Keep this text');if(process.env.RT_E2E_SVG_CREATE_SCREENSHOT&&selector==='main'&&preset==='rectangle')await page.screenshot({path:process.env.RT_E2E_SVG_CREATE_SCREENSHOT});
         await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();await wait(async()=>await shape.count()===0);
         await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===saved);await settled();await shape.waitFor({state:'attached'});assert.equal(await shape.getAttribute('data-rt'),id);

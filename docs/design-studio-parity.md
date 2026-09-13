@@ -14347,3 +14347,41 @@ Logs: `/private/tmp/retouch-arrow-reverse-units.log`,
 No desktop rebuild or native launch in this increment. Independent start/end
 cap styles, broader imported arrows, full Figma parity and universal site
 support remain incomplete.
+
+## 2026-09-13 — Convert existing SVG lines to arrows
+
+Literal SVG lines now expose Convert line to arrow in Stroke. The action changes
+the line to an unfilled polyline with recognized arrow metadata, preserving
+shaft endpoints, stroke, transforms, accessibility children and source identity.
+Converted lines gain arrowhead dimensions, Reverse arrow and freeform point
+editing. HTML, React and Liquid share the existing primitive-conversion writer
+and atomic history flow. Conversion replaces the line's static fill with none,
+since the new open shape must not introduce an unintended filled area.
+
+Dynamic geometry, dynamic fill expressions, refs, non-metadata children, other
+primitive types and pre-existing shape metadata are not converted by this
+action. The runtime probe checks retained paint and requires an unfilled result;
+tag-dependent stroke/fill CSS overrides and existing SVG markers refuse the
+operation without source changes. Percentage geometry and arbitrary imported
+arrow/cap interpretation remain unsupported.
+
+All 1131 unit tests pass. The expanded conversion tests also pass on their own
+after adding non-line/custom-metadata refusal cases. HTML/Chromium, Liquid/
+WebKit and React/Chromium browser workflows verify conversion, unchanged shaft
+and stroke, head editing, reversal, freeform editing, stable selection identity
+and exact source Undo/Redo. They also verify refusal for CSS stroke/fill
+overrides and marker attributes. The React harness uses attached-state checks
+for restored horizontal lines, whose geometry box can have zero height despite
+a visible stroke. The existing HTML/WebKit rounded-rectangle-to-path workflow
+also passes with metadata and appearance retained. All processes exited 0.
+
+Logs: `/private/tmp/retouch-line-arrow-units.log`,
+`/private/tmp/retouch-line-arrow-convert-units.log`,
+`/private/tmp/retouch-line-arrow-html-final.log`,
+`/private/tmp/retouch-line-arrow-liquid-final.log`,
+`/private/tmp/retouch-line-arrow-react-final.log`,
+`/private/tmp/retouch-line-arrow-path-regression.log`.
+
+The latest desktop package predates this conversion action. No desktop rebuild,
+native launch or push in this increment. Full Figma parity and universal site
+support remain incomplete.

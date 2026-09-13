@@ -53,7 +53,7 @@ function planOp(resolved,op){
  if(op.type==='moveElement'&&resolved.element.node.namespaceURI==='http://www.w3.org/2000/svg')return require('../svg-move.cjs').plan(resolved,op);
  if(op.type==='deleteElement'&&resolved.element.node.namespaceURI==='http://www.w3.org/2000/svg')return require('../svg-delete.cjs').plan(resolved,op);
  if(op.type==='insertSVG')return require('../svg-insert.cjs').plan(resolved,op);
- if(op.type==='convertSVGToPath')return require('../svg-convert.cjs').plan(resolved,op);
+ if(['convertSVGToPath','convertSVGToArrow'].includes(op.type))return require('../svg-convert.cjs').plan(resolved,op);
  if(op.type==='setSVGTransforms')return require('../svg-transform.cjs').planSelection(resolved,op,'html');
   if(op.type==='setSVGTransform')return require('../svg-transform.cjs').plan(resolved,op,'html');
  if(op.type==='setSVGGradient')return require('../html-svg-gradient.cjs').plan(resolved,op);
@@ -97,4 +97,4 @@ function planOp(resolved,op){
 }
 module.exports={name:'html',matches:file=>/\.html?$/i.test(file),collect,stamp,contentHash:hash,describe,planOp,
  applyOp:(resolved,op)=>require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),planOp(resolved,op)),
- capabilities:{classAttr:'class',ops:['setSVGGradient','insertSVG','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath','reparentElement','renameElement','insertElement','setClasses','setText','setTag','setSrc',...structure.types]}};
+ capabilities:{classAttr:'class',ops:['setSVGGradient','insertSVG','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow','reparentElement','renameElement','insertElement','setClasses','setText','setTag','setSrc',...structure.types]}};

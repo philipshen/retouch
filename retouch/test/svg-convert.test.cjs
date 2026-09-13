@@ -1,5 +1,27 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),convert=require('../src/svg-convert.cjs'),ids=require('../src/id.cjs');
+for(const kind of ['html','react','liquid'])test(kind+' line conversion creates a parameterized arrow and retains paint, metadata and source identity',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),relPath='main.'+(kind==='react'?'jsx':kind==='liquid'?'liquid':'html');
+ const source=(kind==='react'?'export default()=>':'')+'<svg><line x1="10" y1="20" x2="90" y2="60" fill="red" stroke="#123456" transform="rotate(15)" aria-label="Keep"><title>Arrow</title></line><circle r="5"/></svg>',elements=adapter.collect(source,relPath).elements,element=elements.find(e=>(kind==='react'?ids.jsxElementName(e.node):e.tag)==='line'),r={source,elements,element,relPath,file:'/tmp/'+relPath,hash:ids.contentHash(source)};
+ assert.ok(convert.describe(r).arrow);const result=adapter.planOp(r,{type:'convertSVGToArrow',fileHash:r.hash});assert.equal(result.ok,true,result.reason);
+ const after=result.edits[0].after,next=adapter.collect(after,relPath).elements;assert.deepEqual(next.map(e=>e.id),elements.map(e=>e.id));
+ assert.ok(after.includes('stroke="#123456" transform="rotate(15)" aria-label="Keep"'));assert.ok(after.includes('<title>Arrow</title></polyline>'));assert.ok(after.includes('fill="none"'));assert.ok(!after.includes('fill="red"'));
+ const fresh={...r,source:after,elements:next,element:next.find(e=>e.id===element.id),hash:ids.contentHash(after)},model=adapter.describe(fresh).svgGeometry.parametric;
+ assert.equal(model.kind,'arrow');assert.deepEqual([model.x1,model.y1,model.x2,model.y2],[10,20,90,60]);assert.equal(adapter.planOp(r,{type:'convertSVGToArrow',fileHash:'stale'}).refused,true);
+});
+test('Arrow conversion refuses dynamic fill expressions and other primitive types',()=>{
+ for(const kind of ['html','react','liquid']){
+  const adapter=require('../src/adapters/'+kind+'.cjs'),relPath='main.'+(kind==='react'?'jsx':kind==='liquid'?'liquid':'html');
+  for(const markup of ['<rect width="20" height="30"/>','<line x2="100" data-rt-shape="custom"/>']){
+   const source=(kind==='react'?'export default()=>':'')+'<svg>'+markup+'</svg>',elements=adapter.collect(source,relPath).elements,element=elements.find(e=>['rect','line'].includes(kind==='react'?ids.jsxElementName(e.node):e.tag)),r={source,elements,element,relPath,hash:ids.contentHash(source)};
+   assert.equal(convert.describe(r).arrow,null);const result=adapter.planOp(r,{type:'convertSVGToArrow',fileHash:r.hash});assert.equal(result.refused,true);assert.equal(result.edits,undefined);
+  }
+ }
+ for(const kind of ['react','liquid']){
+  const adapter=require('../src/adapters/'+kind+'.cjs'),relPath='main.'+(kind==='react'?'jsx':'liquid'),source=(kind==='react'?'export default()=>':'')+'<svg><line x2="100" '+(kind==='react'?'fill={color}':'fill="{{ color }}"')+'/></svg>',elements=adapter.collect(source,relPath).elements,element=elements.find(e=>(kind==='react'?ids.jsxElementName(e.node):e.tag)==='line'),r={source,elements,element,relPath,hash:ids.contentHash(source)};
+  assert.equal(convert.describe(r).arrow,null);assert.equal(adapter.planOp(r,{type:'convertSVGToArrow',fileHash:r.hash}).refused,true);
+ }
+});
 for(const kind of ['html','react','liquid'])test(kind+' converts primitives with stable identities and styling',()=>{
  const adapter=require('../src/adapters/'+kind+'.cjs');
  for(const [tag,attrs]of [['rect','x="10" y="20" width="80" height="40" rx="8"'],['circle','cx="50" cy="60" r="25"'],['ellipse','cx="50" cy="60" rx="25" ry="15"'],['line','x1="10" y1="20" x2="80" y2="90"']]){

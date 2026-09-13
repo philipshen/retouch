@@ -33,22 +33,34 @@ function context(resolved){
  if(!metadataOnly(kind,node,resolved.source,start,end))return null;
  const d=pathFor(tag,geometry.fields);return d?{kind,node,tag,fields:geometry.fields,d}:null;
 }
-function describe(resolved){const c=context(resolved);return c?{path:c.d,properties:c.fields.map(f=>f.name)}:null;}
+function arrowFor(c){
+ if(!c||c.tag!=='line')return null;
+ const attrs=c.kind==='react'?c.node.openingElement.attributes:c.kind==='html'?c.node.attrs:c.node.attributes;
+ if(attrs.some(a=>(typeof a.name==='string'?a.name:a.name?.name)==='data-rt-shape'))return null;
+ const fill=attrs.find(a=>(typeof a.name==='string'?a.name:a.name?.name)==='fill');
+ if(fill){let value=fill.value;if(c.kind==='react'){if(value?.type==='JSXExpressionContainer')value=value.expression;if(value?.type!=='StringLiteral')return null;}else if(/\{[%{]/.test(value||''))return null;}
+ const values=Object.fromEntries(c.fields.map(f=>[f.name,parseFloat(f.value||0)])),{x1,y1,x2,y2}=values,head=Math.min(12,Math.hypot(x2-x1,y2-y1)*.3);
+ const points=require('../shell/svg-parametric.js').generate({kind:'arrow',x1,y1,x2,y2,headLength:head,headWidth:head});
+ return points?{points,properties:[...c.fields.map(f=>f.name),'fill']}:null;
+}
+function describe(resolved){const c=context(resolved);return c?{path:c.d,properties:c.fields.map(f=>f.name),arrow:arrowFor(c)}:null;}
 function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason}),c=context(resolved);if(!c)return refuse('Convert a literal SVG primitive without dynamic geometry or non-metadata child content.');if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the shape.');
+ const arrow=op.type==='convertSVGToArrow'?arrowFor(c):null;if(op.type==='convertSVGToArrow'&&!arrow)return refuse('Convert a literal line without dynamic fill or existing shape metadata.');
+ const targetTag=arrow?'polyline':'path',addition=arrow?' points="'+arrow.points+'" fill="none" data-rt-shape="arrow"':' d="'+c.d+'"',properties=arrow?arrow.properties:c.fields.map(f=>f.name);
  const out=new MagicString(resolved.source),{node,kind,tag}=c;let collect,name;
  if(kind==='react'){
   const ids=require('./id.cjs');collect=s=>ids.collectElements(s,resolved.relPath).elements;name=e=>ids.jsxElementName(e.node);
-  out.overwrite(node.openingElement.name.start,node.openingElement.name.end,'path');if(node.closingElement)out.overwrite(node.closingElement.name.start,node.closingElement.name.end,'path');
-  for(const attr of node.openingElement.attributes)if(c.fields.some(f=>f.name===attr.name?.name))out.remove(attr.start,attr.end);out.appendLeft(node.openingElement.name.end,' d="'+c.d+'"');
+  out.overwrite(node.openingElement.name.start,node.openingElement.name.end,targetTag);if(node.closingElement)out.overwrite(node.closingElement.name.start,node.closingElement.name.end,targetTag);
+  for(const attr of node.openingElement.attributes)if(properties.includes(attr.name?.name))out.remove(attr.start,attr.end);out.appendLeft(node.openingElement.name.end,addition);
  }else{
   const adapter=require('./adapters/'+kind+'.cjs');collect=s=>adapter.collect(s,resolved.relPath).elements;name=e=>e.tag;
   const start=kind==='html'?resolved.element.location.startTag.startOffset:node.tagStart,close=kind==='html'?resolved.element.location.endTag?.startOffset:node.selfClosing?null:node.closeStart;
-  out.overwrite(start+1,start+1+tag.length,'path');if(close!=null)out.overwrite(close+2,close+2+tag.length,'path');
-  for(const field of c.fields){const attr=kind==='html'?resolved.element.location.attrs?.[field.name]:node.attributes.find(a=>a.name===field.name);if(attr)out.remove(kind==='html'?attr.startOffset:attr.attrStart,kind==='html'?attr.endOffset:attr.attrEnd);}out.appendLeft(start+1+tag.length,' d="'+c.d+'"');
+  out.overwrite(start+1,start+1+tag.length,targetTag);if(close!=null)out.overwrite(close+2,close+2+tag.length,targetTag);
+  for(const name of properties){const attr=kind==='html'?resolved.element.location.attrs?.[name]:node.attributes.find(a=>a.name===name);if(attr)out.remove(kind==='html'?attr.startOffset:attr.attrStart,kind==='html'?attr.endOffset:attr.attrEnd);}out.appendLeft(start+1+tag.length,addition);
  }
  const after=out.toString(),before=collect(resolved.source),next=collect(after);
- if(before.length!==next.length||before.some((e,i)=>e.id!==next[i].id||name(next[i])!==(e.id===resolved.element.id?'path':name(e))))return refuse('Conversion would change neighboring source identities.');
+ if(before.length!==next.length||before.some((e,i)=>e.id!==next[i].id||name(next[i])!==(e.id===resolved.element.id?targetTag:name(e))))return refuse('Conversion would change neighboring source identities.');
  return {ok:true,hash:require('./id.cjs').contentHash(after),edits:[{file:resolved.file,before:resolved.source,after}]};
 }
 module.exports={pathFor,describe,plan};

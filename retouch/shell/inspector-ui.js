@@ -306,7 +306,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     if(field){field.querySelector(':scope > span').textContent=short;field.title=label;arrowStroke.append(field);}
    }
    pair(arrowStroke,['Arrowhead length','Arrowhead width']);
-   const reverse=panel.querySelector('[data-arrow-action="reverse"]');if(reverse)arrowStroke.append(reverse);
+   for(const action of panel.querySelectorAll('[data-arrow-action]'))arrowStroke.append(action);
   }
   // A gradient is the selected paint's editor, so keep it inside Fill or Stroke.
   // Preserve its wrapper: stop focus restoration and gesture handlers scope to it.
