@@ -11,7 +11,7 @@ exports.run=async({page,app,file,wait,settled})=>{
   p=await start();await page.mouse.move(p.x+p.width*.2,p.y,{steps:6});await wait(async()=>Math.abs(await value()-.7)<.005);assert.equal(read(),original);await page.mouse.up();await settled();await wait(()=>read()!==original);await history(read());
  }
  await handle().focus();await page.keyboard.down('ArrowRight');await page.keyboard.down('ArrowRight');await wait(async()=>Math.abs(await value()-.52)<.001);assert.equal(read(),original);await page.keyboard.up('ArrowRight');await settled();await wait(()=>read()!==original);assert.ok(await handle().evaluate(el=>el===document.activeElement));await history(read());
- // Stops remain between their neighbors, with precise keyboard modifiers.
+ // Stops remain within the gradient range, with precise keyboard modifiers.
  let bounded=await start();await page.mouse.move(bounded.x+bounded.width,bounded.y,{steps:5});await wait(async()=>await value()===1);assert.equal(read(),original);await page.keyboard.press('Escape');await page.mouse.up();await wait(async()=>Math.abs(await value()-.5)<.001);
  for(const [modifier,expected]of [['Shift',.6],['Alt',.501]]){await handle().focus();await page.keyboard.down(modifier);await page.keyboard.down('ArrowRight');await wait(async()=>Math.abs(await value()-expected)<.0001);assert.equal(read(),original);await page.keyboard.press('Escape');await page.keyboard.up('ArrowRight');await page.keyboard.up(modifier);await wait(async()=>Math.abs(await value()-.5)<.001);assert.equal(read(),original);}
  // External changes must survive cancellation; restore only the owned offset.

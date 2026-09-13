@@ -6,8 +6,10 @@ exports.run=async function({page,app,file,wait,settled,kind,errors}){
  const read=()=>fs.readFileSync(file,'utf8'),original=read();
  const edit=async(label,value)=>{const input=page.getByLabel(label,{exact:true});await input.fill(value);await input.press('Tab');await settled();};
  await app.locator('[aria-label="Gradient box"]').click();await settled();await wait(async()=>await page.getByLabel('Stop 1 color',{exact:true}).count()===1);
+  if(process.env.RT_E2E_SVG_REORDER_ONLY){await require('./svg-gradient-stop-reorder.cjs').run({page,app,file,wait,settled});assert.deepEqual(errors,[]);return;}
   await require('./svg-gradient-stop-editing.cjs').run({page,app,file,wait,settled});
   await require('./svg-gradient-stop-drag.cjs').run({page,app,file,wait,settled});
+  await require('./svg-gradient-stop-reorder.cjs').run({page,app,file,wait,settled});
   await require('./svg-gradient-stop-picker.cjs').run({page,app,file,wait,settled});
   await require('./svg-gradient-detach.cjs').run({page,app,file,wait,settled});
   for(const [label,value,selector,attribute]of [['Stop 1 color','#00ff00','#paint stop:first-child','stop-color'],['Stop 2 position','75%','#paint stop:last-child','offset'],['Stop 2 opacity','0.5','#paint stop:last-child','stop-opacity'],['Gradient x2','60%','#paint','x2']]){

@@ -56,7 +56,7 @@ function restorePanelFocus(){
   if(!pending.expires)pending.expires=Date.now()+3000;
   if(pending.selection!==panelSelectionKey()||Date.now()>pending.expires){pendingPanelFocus=null;return;}
   const candidates=[...panelBody.querySelectorAll('input,select,textarea,button,summary,[tabindex]')].filter(el=>pending.controlLabel?el.matches('input,select,textarea')&&el.getAttribute('aria-label')===pending.controlLabel:controlIdentity(el)===pending.identity);
-  const target=candidates[pending.index];
+  const target=(pending.gradientPaint?candidates.filter(el=>el.closest('[data-gradient-paint]')?.dataset.gradientPaint===pending.gradientPaint):candidates)[pending.index];
   if(target&&!target.matches(':disabled')&&target.getClientRects().length){if(!pending.retain)pendingPanelFocus=null;if(document.activeElement!==target)target.focus();}
 }
 panelBody.addEventListener('keydown',event=>{
@@ -2321,7 +2321,7 @@ function mountSVGGradientStopRail(section,info,target,gradient){
  const stops=nodes.map((node,index)=>{const css=w.getComputedStyle(node),offset=previous=Math.max(previous,Math.max(0,Math.min(1,node.offset.baseVal)));return {index,offset,color:css.stopColor,opacity:Math.max(0,Math.min(1,parseFloat(css.stopOpacity)/(css.stopOpacity.endsWith('%')?100:1)))};});
  const rail=document.createElement('div');rail.className='gradient-stop-rail';rail.setAttribute('aria-label','Gradient stops');
  const strip=RetouchInspector.button('',event=>{const rect=strip.getBoundingClientRect();add(event.detail===0 ? .5 : Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width)));});strip.className='gradient-stop-strip';strip.setAttribute('aria-label','Add gradient stop at position');strip.title='Click to add a color stop';strip.style.border='0';strip.style.cursor='crosshair';strip.disabled=stops.length>=64;
- const paintStrip=()=>{strip.style.backgroundImage='linear-gradient(to right,'+stops.map(stop=>'color-mix(in srgb,'+stop.color+' '+stop.opacity*100+'%,transparent) '+stop.offset*100+'%').join(',')+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)';};paintStrip();rail.append(strip);
+ let movingOrder=null;const paintStrip=()=>{strip.style.backgroundImage='linear-gradient(to right,'+(movingOrder?movingOrder.map(index=>stops[index]):stops.slice().sort((a,b)=>a.offset-b.offset||a.index-b.index)).map(stop=>'color-mix(in srgb,'+stop.color+' '+stop.opacity*100+'%,transparent) '+stop.offset*100+'%').join(',')+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)';};paintStrip();rail.append(strip);
  const add=offset=>{
   const right=stops.findIndex(stop=>stop.offset>offset),index=right<0?stops.length:right,left=stops[Math.max(0,index-1)],next=stops[Math.min(index,stops.length-1)],ratio=next.offset>left.offset?Math.max(0,Math.min(1,(offset-left.offset)/(next.offset-left.offset))):0;
   let color=left.color;
@@ -2333,19 +2333,34 @@ function mountSVGGradientStopRail(section,info,target,gradient){
  section.append(rail);const button=RetouchInspector.button('Add gradient stop',()=>{const positions=[0,...stops.map(stop=>stop.offset),1];let best=0;for(let i=1;i<positions.length-1;i++)if(positions[i+1]-positions[i]>positions[best+1]-positions[best])best=i;add((positions[best]+positions[best+1])/2);});button.disabled=stops.length>=64;section.append(button);
  return ()=>{
   for(const stop of stops){const input=section.querySelector('[aria-label="Stop '+(stop.index+1)+' position"]'),handle=handles[stop.index];if(!input)continue;
-   RetouchInspector.numericLabelDrag(input,raw=>{if(!/^[-+]?(?:\d+\.?\d*|\.\d+)%?$/.test(raw))return null;const value=parseFloat(raw)*(raw.endsWith('%')?1:100);return {value,min:(stops[stop.index-1]?.offset??0)*100,max:(stops[stop.index+1]?.offset??1)*100,format:value=>String(Math.round(value*1000000)/1000000)+'%'};});
+   RetouchInspector.numericLabelDrag(input,raw=>{if(!/^[-+]?(?:\d+\.?\d*|\.\d+)%?$/.test(raw))return null;const value=parseFloat(raw)*(raw.endsWith('%')?1:100),original=input.value,percent=original.trim().endsWith('%');return {value,min:0,max:100,format:next=>Math.abs(next-value)<.0000005?original:percent?String(Math.round(next*1000000)/1000000)+'%':String(Math.round(next*1000000)/100000000)};});
    input.retouchNumericPreview=()=>{
-    const node=nodes[stop.index],original=node.getAttribute('offset'),initial=stop.offset,rect=strip.getBoundingClientRect();let last=original,expected=definition.outerHTML;
+    const node=nodes[stop.index],original=nodes.map(node=>node.getAttribute('offset')),nextSibling=node.nextSibling,initial=stop.offset,rect=strip.getBoundingClientRect();let last=[...original],lastOrder=[...nodes],expected=definition.outerHTML;
     const current=()=>sel?.info===info&&!panelTasks&&!undoBusy&&!sourceRequests&&target.isConnected&&definition.isConnected&&definition.outerHTML===expected&&strip.isConnected&&Math.abs(strip.getBoundingClientRect().width-rect.width)<.1&&Math.abs(strip.getBoundingClientRect().left-rect.left)<.1;
-    return {current,update(value){if(!current())throw Error('The gradient changed during this gesture.');handle.retouchDragged=true;stop.offset=value/100;last=String(value)+'%';node.setAttribute('offset',last);expected=definition.outerHTML;handle.style.left=value+'%';paintStrip();},restore(){if(node.getAttribute('offset')===last){if(original===null)node.removeAttribute('offset');else node.setAttribute('offset',original);}stop.offset=initial;handle.style.left=initial*100+'%';paintStrip();}};
+    return {current,update(value){
+     if(!current())throw Error('The gradient changed during this gesture.');handle.retouchDragged=true;stop.offset=value/100;
+     for(const item of stops)if(item.index===stop.index||Math.abs(nodes[item.index].offset.baseVal-item.offset)>1e-8){last[item.index]=String(item.offset*100)+'%';nodes[item.index].setAttribute('offset',last[item.index]);}
+     movingOrder=RetouchSVGGradientOrder.move(stops.map(item=>({offset:String(item.index===stop.index?initial:item.offset)})),stop.index,String(value/100)).order;const ordered=movingOrder.map(index=>stops[index]),next=ordered[ordered.indexOf(stop)+1];definition.insertBefore(node,next?nodes[next.index]:null);lastOrder=[...definition.children].filter(child=>nodes.includes(child));expected=definition.outerHTML;handle.style.left=value+'%';paintStrip();
+    },restore(){
+     const order=[...definition.children].filter(child=>nodes.includes(child));if(node.parentNode===definition&&order.length===lastOrder.length&&order.every((child,index)=>child===lastOrder[index]))definition.insertBefore(node,nextSibling?.parentNode===definition?nextSibling:null);
+     nodes.forEach((node,index)=>{if(node.getAttribute('offset')===last[index]){if(original[index]===null)node.removeAttribute('offset');else node.setAttribute('offset',original[index]);}});stop.offset=initial;movingOrder=null;handle.style.left=initial*100+'%';paintStrip();
+    }};
    };
-   input.retouchNumericHandle(handle,{axis:'x',canvas:true,scale:()=>strip.getBoundingClientRect().width/100,initialValue:()=>stop.offset*100+'%',onCommit:()=>RetouchPanelFocus.queue(handle)});
+   const destination=()=>RetouchSVGGradientOrder.move(stops.map(stop=>({offset:String(stop.offset)})),stop.index,input.value.trim()||null)?.index??stop.index;
+   input.onchange=()=>{
+    if(sel?.info!==info||panelTasks||undoBusy||sourceRequests)return;
+    const index=destination(),prefix='Stop '+(stop.index+1)+' ',pendingLabel=pendingPanelFocus?.controlLabel||(pendingPanelFocus?.identity?JSON.parse(pendingPanelFocus.identity)[1]:null);
+    const oldLabel=pendingLabel?.startsWith(prefix)?prefix:pendingLabel?.startsWith('Edit '+prefix)?'Edit '+prefix:null;
+    if(index!==stop.index&&oldLabel){const label=(oldLabel.startsWith('Edit ')?'Edit ':'')+'Stop '+(index+1)+' '+pendingLabel.slice(oldLabel.length);if(pendingPanelFocus.identity){const identity=JSON.parse(pendingPanelFocus.identity);identity[1]=label;pendingPanelFocus.identity=JSON.stringify(identity);}else pendingPanelFocus.controlLabel=label;pendingPanelFocus.gradientPaint=gradient.paint;pendingPanelFocus.index=0;}
+    if(handle.retouchDragged&&!pendingPanelFocus){RetouchPanelFocus.queue(input,'Stop '+(index+1)+' position');if(pendingPanelFocus)pendingPanelFocus.gradientPaint=gradient.paint;}setSVGGradient(info,gradient.paint,undefined,stop.index,'moveStop',input.value.trim()||null);
+   };
+   input.retouchNumericHandle(handle,{axis:'x',canvas:true,scale:()=>strip.getBoundingClientRect().width/100,initialValue:()=>stop.offset*100+'%',onCommit:()=>{RetouchPanelFocus.queue(handle,'Select gradient stop '+(destination()+1));if(pendingPanelFocus)pendingPanelFocus.gradientPaint=gradient.paint;}});
   }
  };
 }
 function mountSVGGradients(info,target){
  for(const gradient of info.svgGradients){
-  const section=RetouchInspector.section(gradient.paint==='fill'?'Fill gradient':'Stroke gradient');
+  const section=RetouchInspector.section(gradient.paint==='fill'?'Fill gradient':'Stroke gradient');section.dataset.gradientPaint=gradient.paint;
   RetouchInspector.note(section,(gradient.type==='linearGradient'?'Linear':'Radial')+' · #'+gradient.id);
   const reason=gradient.reason; if(reason){RetouchInspector.note(section,reason,'refused');panelBody.append(section);continue;}
   const unique=RetouchInspector.button('Make unique',()=>setSVGGradient(info,gradient.paint,undefined,undefined,'detach'));unique.setAttribute('aria-label','Make '+gradient.paint+' gradient unique');section.append(unique);
