@@ -203,6 +203,11 @@
      save(changes,null,width);
     }else save(property,value,width);};
    const target=property.endsWith('radius')?corners:/^(font-|line-height|letter-spacing|text-)/.test(property)||property==='color'?typography:sec;
+   if(['line-height','letter-spacing'].includes(property)){
+    const authored=own[property]??inheritedVariables(info,width)[property],percent=I.spacingPercent(property,authored);
+    const expected=percent/100*parseFloat(css.fontSize),actual=parseFloat(css.getPropertyValue(property));
+    if(percent!==null&&!el.style.getPropertyValue(property)&&Number.isFinite(actual)&&Math.abs(expected-actual)<.02)input.retouchSpacingPercent=percent;
+   }
    I.field(target,label+' (CSS)',input);
    if(['width','height'].includes(property))input.retouchDimension={target:el,axis:property,box:'css'};
    if(input.tagName==='INPUT'&&/^(?:font-size|font-weight|line-height|letter-spacing|(?:min-|max-)?(?:width|height)|gap|(?:padding|margin)(?:-(?:top|right|bottom|left))?|border(?:-(?:top|right|bottom|left))?-width|border-(?:(?:top|bottom)-(?:left|right)-)?radius)$/.test(property)){

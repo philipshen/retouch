@@ -301,20 +301,32 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     const label=input.getAttribute('aria-label')||'';
     if(!/^(?:Font size|Line height|Letter spacing) \((?:px|CSS)\)$/.test(label))continue;
     const relative=section.querySelector('[aria-label="'+label.replace(/ \((?:px|CSS)\)$/,' (%)')+'"]');
-    const draftInitial=input.value;
+    const percentDisplay=Number.isFinite(input.retouchSpacingPercent),numeric=input.type==='number',absoluteCommit=input.onchange,absoluteMin=Number(input.min),absoluteMax=Number(input.max);
+    const draftInitial=percentDisplay?root.RetouchNumericExpression.decimal(input.retouchSpacingPercent)+'%':input.value;
     if(relative?.retouchCommitRelative)input.addEventListener('change',event=>{
-     if(input.value===draftInitial||!input.value.trim().endsWith('%'))return;
+     if(input.value===draftInitial)return;
+     let quantity;
+     try{quantity=root.RetouchNumericExpression.quantity(input.value,percentDisplay?'%':'');}
+     catch(error){event.stopImmediatePropagation();input.setCustomValidity(error.message);input.reportValidity();return;}
+     if(quantity?.unit!=='%'&&!(percentDisplay&&numeric&&quantity?.unit==='px'))return;
      event.stopImmediatePropagation();
      try{
-      const quantity=root.RetouchNumericExpression.quantity(input.value);
-      if(!quantity||quantity.unit!=='%'||quantity.value<Number(relative.min)||quantity.value>Number(relative.max))throw Error('Enter a percentage from '+relative.min+' to '+relative.max+'.');
+      if(quantity.unit==='px'){
+       if(quantity.value<absoluteMin||quantity.value>absoluteMax)throw Error('Enter pixels from '+absoluteMin+' to '+absoluteMax+'.');
+       input.value=root.RetouchNumericExpression.decimal(quantity.value);input.setCustomValidity('');absoluteCommit?.call(input,event);return;
+      }
+      if(quantity.value<Number(relative.min)||quantity.value>Number(relative.max))throw Error('Enter a percentage from '+relative.min+' to '+relative.max+'.');
       if(relative.disabled)throw Error('Relative spacing is unavailable for this layer.');
       relative.value=root.RetouchNumericExpression.decimal(quantity.value);relative.setCustomValidity('');
       input.setCustomValidity('');relative.retouchCommitRelative();
      }catch(error){input.setCustomValidity(error.message);input.reportValidity();}
     },true);
-    // CSS line-height may be a unitless multiplier; retain that authored meaning.
-    root.RetouchNumericExpression.calculation(input,{unit:label==='Line height (CSS)'?'':'px'});
+    if(percentDisplay){
+     input.retouchNumericRead=raw=>{try{const q=root.RetouchNumericExpression.quantity(raw,'%');return q?.unit==='%'?{value:q.value,min:Number(relative.min),max:Number(relative.max),format:value=>root.RetouchNumericExpression.decimal(value)+'%'}:null;}catch{return null;}};
+     if(input.retouchPreviewTarget)root.RetouchInspector.numericPreview(input,input.retouchPreviewTarget,label.startsWith('Line')?'line-height':'letter-spacing',value=>root.RetouchNumericExpression.decimal(value/100)+(label.startsWith('Line')?'':'em'));
+     if(numeric){input.min=relative.min;input.max=relative.max;}
+    }
+    root.RetouchNumericExpression.calculation(input,{unit:percentDisplay?'%':label==='Line height (CSS)'?'':'px',displayValue:draftInitial});
     root.RetouchInspector.fieldDraft(input);
     if(relative)input.title+=' Use % for spacing relative to font size, for example (100 + 50)%.';
    }

@@ -249,17 +249,26 @@ The primary line-height and letter-spacing fields accept percentages directly,
 including `(100 + 50)%` and `(5 + 5)%`, without opening Type settings. These
 use the same relative write and validation paths as the percentage controls:
 line height writes a unitless multiplier; letter spacing writes em. Enter
-commits one transaction, and Escape restores the original field value. After
-rebuild, the existing adapter display remains in effect (CSS values for HTML,
-computed pixels for React/Liquid); a consistent percentage display is still
-unfinished.
+commits one transaction, and Escape restores the original field value.
+Recognized authored relative declarations now remain visible as percentages
+after rebuilding the inspector. Bare numbers and calculations retain that
+displayed unit; an explicit `px` value switches back to fixed spacing. Dragging
+the label previews the percentage in the page; Escape restores the source and
+appearance without saving.
+
+The display recognizes literal unitless/em/% line height and em letter spacing
+from Retouch CSS rules or unambiguous utility declarations, including supported
+inherited breakpoint rules, only when they agree with the rendered value. It
+does not guess relative intent from pixels, resolve arbitrary CSS functions,
+or reinterpret rem as relative to the layer's own font size. Other declarations
+keep their existing CSS/pixel display.
 
 The interaction follows the pixel/percentage spacing support described in
 [Figma's typography reference](https://help.figma.com/hc/en-us/articles/360039956634-Explore-text-properties).
 The reference image was inspected against the light-theme inspector. This is
 an interaction improvement, not a claim that the whole typography panel now
-matches Figma: font-style selection, value presentation, and type-settings
-layout still differ.
+matches Figma: font-style selection, source units outside the recognized forms, and
+type-settings layout still differ.
 
 Verification: the expanded typography-calculations workflow passed on the
 final source for HTML/React with Chromium 145 and Liquid with WebKit 26,
@@ -267,3 +276,18 @@ including percentage range refusal, source writes, responsive isolation, and
 exact undo/redo. All three processes exited 0; 1,158 unit tests passed. The
 light-theme screenshot was inspected at
 `/private/tmp/retouch-primary-percent.png`.
+
+### Retaining percentage display (2026-09-13)
+
+The typography calculation workflow additionally checks saved `150%`/`10%`
+displays, bare-number calculations in the retained unit, explicit pixel
+conversion and conversion back, Escape from a percentage draft, and a live
+percentage scrub cancelled without a source write. The light-theme inspector
+screenshot was inspected at `/private/tmp/retouch-percent-display-final.png`.
+The source-unit parser separately rejects pixel/rem values, CSS functions,
+unknown properties, and missing values as evidence of percentage intent.
+
+Final-source verification passed on Chromium 145 for HTML and React and on
+WebKit 26 for Liquid, all with terminal exit 0. The full unit suite passed
+1,159 tests. Shared selection display and arbitrary external stylesheet
+provenance remain outside this display change.

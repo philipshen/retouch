@@ -24,10 +24,10 @@
   const [mantissa,power]=text.split('e'),negative=mantissa.startsWith('-'),unsigned=negative?mantissa.slice(1):mantissa,parts=unsigned.split('.'),digits=parts.join(''),point=parts[0].length+Number(power);
   return (negative?'-':'')+(point<=0?'0.'+'0'.repeat(-point)+digits:point>=digits.length?digits+'0'.repeat(point-digits.length):digits.slice(0,point)+'.'+digits.slice(point));
  }
- function calculation(input,{unit=''}={}){
-  const numeric=input.type==='number',initial=input.value,min=input.min===''?-Infinity:Number(input.min),max=input.max===''?Infinity:Number(input.max);
+ function calculation(input,{unit='',displayValue}={}){
+  const numeric=input.type==='number',initial=displayValue??input.value,min=input.min===''?-Infinity:Number(input.min),max=input.max===''?Infinity:Number(input.max);
   let currentUnit=unit,held=false;try{currentUnit=quantity(initial,unit)?.unit||unit;}catch{}
-  if(numeric){input.type='text';input.inputMode='decimal';}
+  if(numeric){input.type='text';input.inputMode='decimal';}input.value=initial;
   const parse=()=>{const result=quantity(input.value,currentUnit);if(!result){if(numeric)throw Error('Enter a number or a calculation.');return null;}if(numeric&&result.unit!==unit)throw Error('Use '+(unit==='%'?'percent':unit==='px'?'pixels':'a unitless value')+' in this field.');if(numeric&&(result.value<min||result.value>max))throw Error('Enter a value from '+min+' to '+max+'.');return result;};
   const format=result=>decimal(result.value)+(numeric?'':result.unit);
   input.addEventListener('input',()=>input.setCustomValidity(''));

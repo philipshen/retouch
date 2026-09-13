@@ -24,11 +24,24 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  }
  await edit('Line height','(100 + 50)%','line-height',60);
  await edit('Letter spacing','(5 + 5)%','letter-spacing',4);
+ assert.equal(await field('Line height').inputValue(),'150%');assert.equal(await field('Letter spacing').inputValue(),'10%');
+ for(const name of ['Line height','Letter spacing']){const before=read(),value=await field(name).inputValue();await field(name).fill('200%');await field(name).press('Escape');await settled();assert.equal(read(),before);assert.equal(await field(name).inputValue(),value);}
+ await edit('Line height','100 + 75','line-height',70);
+ await edit('Letter spacing','5 * 3','letter-spacing',6);
+ await edit('Line height','48px','line-height',48);
+ await edit('Letter spacing','2px','letter-spacing',2);
+ await edit('Line height','150%','line-height',60);
+ await edit('Letter spacing','10%','letter-spacing',4);
+ const beforeScrub=read(),scrub=field('Line height');await scrub.scrollIntoViewIfNeeded();
+ const box=await scrub.locator('..').locator(':scope > span').boundingBox();assert.ok(box);
+ await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+2,box.y+box.height/2);
+ await wait(async()=>Math.abs(parseFloat(await metric('line-height'))-60.8)<.01);assert.equal(read(),beforeScrub,'percentage scrub previews without a source write');
+ await page.keyboard.press('Escape');await page.mouse.up();await settled();assert.equal(read(),beforeScrub);await wait(async()=>await metric('line-height')==='60px');assert.equal(await scrub.inputValue(),'150%');
  if(process.env.RT_E2E_TYPOGRAPHY_SCREENSHOT)await page.locator('#panel').screenshot({path:process.env.RT_E2E_TYPOGRAPHY_SCREENSHOT});
  if(kind==='html'){
   const before=read();await field('Line height').fill('normal');await field('Line height').press('Enter');await wait(()=>read()!==before);await settled();states.push(read());
   await edit('Line height','3 / 2','line-height',60);
-  assert.equal(await field('Line height').inputValue(),'1.5','unitless CSS line height retains multiplier semantics');
+  assert.equal(await field('Line height').inputValue(),'150%','unitless CSS line height displays its percentage');
  }
  await scope.selectOption(kind==='html'?'min-[768px]:':'md:');await settled();
  await edit('Font size','24 * 2px','font-size',48);

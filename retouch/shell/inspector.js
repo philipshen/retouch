@@ -251,7 +251,7 @@
     const start=(event,keyboard=false)=>{
       const options=handles.get(event.currentTarget)||{},raw=options.initialValue?String(options.initialValue()):input.value;
       if((!keyboard&&event.button!==0)||drag||!input.isConnected||input.disabled||input.readOnly||raw===''||!input.checkValidity())return;
-      const parsed=read(raw);if(!parsed||!Number.isFinite(parsed.value))return;if(options.minimum)parsed.min=Math.max(parsed.min??-Infinity,options.minimum());
+      const parsed=input.retouchNumericRead?input.retouchNumericRead(raw):read(raw);if(!parsed||!Number.isFinite(parsed.value))return;if(options.minimum)parsed.min=Math.max(parsed.min??-Infinity,options.minimum());
       if(options.canvas)for(let parent=input.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;
       event.preventDefault();event.stopPropagation();(keyboard?event.currentTarget:input).focus({preventScroll:true});
       drag={keyboard,held:new Set(),options,id:keyboard?null:event.pointerId,target:event.currentTarget,inputDrag:event.currentTarget===input,y:event.clientY,x:options.axis==='y'?event.clientY:event.clientX,initial:input.value,value:parsed.value,format:parsed.format||String,min:parsed.min,max:parsed.max};
@@ -791,6 +791,13 @@
     }
     render();parent.append(browse);return quick;
   }
+  function spacingPercent(property,value){
+    if(!['line-height','letter-spacing'].includes(property))return null;
+    const match=/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))(em|%)?$/.exec(String(value??'').trim());
+    if(!match||property!=='line-height'&&match[2]!=='em')return null;
+    const percent=Number(match[1])*(match[2]==='%'?1:100);
+    return Number.isFinite(percent)?percent:null;
+  }
   function typography(info, el, save, changeTag, textStyleAction) {
     const sec=section('Typography'); if(!el)return sec;
     const d=el.ownerDocument, css=d.defaultView.getComputedStyle(el);
@@ -848,6 +855,15 @@
 
 
     }
+    for(const [property,label,test] of [['line-height','Line height (px)',lineHeightToken],['letter-spacing','Letter spacing (px)',letterSpacingToken]]){
+      const own=tokens(info.className).map(base).filter(t=>t&&test(t));
+      const candidates=own.length?own:tokens(info.anchorInheritedClasses||'').map(base).filter(t=>t&&test(t));
+      if(candidates.length!==1||el.style.getPropertyValue(property))continue;
+      const token=candidates[0],match=property==='line-height'?/^(?:\[line-height:|leading-\[)([^\]]+)\]$/.exec(token):/^(?:\[letter-spacing:|tracking-\[)([^\]]+)\]$/.exec(token);
+      const percent=spacingPercent(property,match?.[1]),expected=percent/100*parseFloat(css.fontSize),actual=parseFloat(css.getPropertyValue(property));
+      const input=sec.querySelector('[aria-label="'+label+'"]');
+      if(input&&percent!==null&&Number.isFinite(actual)&&Math.abs(expected-actual)<.02)input.retouchSpacingPercent=percent;
+    }
     if(info.canSetTag)select(sec,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label'].map(n=>[n,n]),info.tag,changeTag);
     return sec;
   }
@@ -883,6 +899,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

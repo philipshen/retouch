@@ -175,3 +175,9 @@ test('individual stroke widths preserve other edges, scopes, colors and inherite
  assert.equal(stroke('border-t border-t-red-500 border-b','width',null,'','top'),'border-t-red-500 border-b');
  assert.throws(()=>stroke('','width',3,'','bad'));
 });
+
+test('relative spacing display uses authored units rather than interpreting pixels as percentages',()=>{
+ const {spacingPercent}=require('../shell/inspector.js');
+ for(const [property,value,expected] of [['line-height','1.5',150],['line-height','150%',150],['line-height','1.5em',150],['letter-spacing','0.1em',10],['letter-spacing','-0.05em',-5],['line-height','0',0]])assert.equal(spacingPercent(property,value),expected);
+ for(const [property,value] of [['line-height','24px'],['line-height','normal'],['line-height','var(--leading)'],['line-height','calc(1.5)'],['letter-spacing','10%'],['letter-spacing','1.5'],['letter-spacing','0.1rem'],['font-size','1.5em'],['line-height',undefined]])assert.equal(spacingPercent(property,value),null);
+});
