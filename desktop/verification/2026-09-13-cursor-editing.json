@@ -1,0 +1,213 @@
+{
+  "sourceCommit": "d303a9070b481b3b149b059d42eb3a235ca9d53a",
+  "sourceTreeDirty": false,
+  "sourceFiles": 206,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "status": "Ad hoc development candidate; native editing and trusted distribution unverified",
+  "archive": "/private/tmp/retouch-desktop-editing-d303a90/Retouch-0.1.0-mac.zip",
+  "sha256": "dbc7dbdbf763ac965cb8c592d7e62eb18124b47193c557df4714608bdd5bf773",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "cask": {
+    "path": "/private/tmp/retouch-desktop-editing-d303a90/retouch-studio.rb",
+    "sha256": "1c9662c5a82c3a046846b08d52494098ef0b82fdab53188d347f5d4caca8ecfa",
+    "url": "file:///private/tmp/retouch-desktop-editing-d303a90/Retouch-0.1.0-mac.zip",
+    "public": false
+  },
+  "units": {
+    "passed": 1195,
+    "exitCode": 0,
+    "scope": "Tests import actual extracted packaged runtime",
+    "log": "/private/tmp/retouch-desktop-editing-d303a90/units.log"
+  },
+  "harness": {
+    "testFiles": 362,
+    "inventorySha256": "ad18ffbe3f0cb9adeb1eedb2a32e544f4e9d51be9bae2bb1f76240316b063441",
+    "archiveSha256": "18e0a2eea3d25a69f145592ffb4a999aedaac93fe4ba5ae8afd5643b12e8a612",
+    "runtime": "/private/tmp/retouch-desktop-editing-d303a90/extracted/Retouch.app/Contents/Resources/retouch",
+    "testsExternalToBundle": true,
+    "removedAfterAllProcessesExited": true
+  },
+  "workflows": [
+    {
+      "name": "editing-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editing-d303a90/editing-html.log",
+      "assertionGroups": [
+        "TEXT DECORATION PASS",
+        "MULTILINE PASTE PASS",
+        "INLINE LINE BREAK PASS",
+        "CARET SCRIPT PASS",
+        "CARET TYPOGRAPHY PASS",
+        "TEXT RANGE CASE PASS",
+        "TEXT RANGE SPACING PASS",
+        "RANGE INSPECTOR PASS",
+        "TEXT RANGE SIZE PASS"
+      ]
+    },
+    {
+      "name": "owned-script-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editing-d303a90/owned-script-html.log",
+      "assertionGroups": [
+        "OWNED SCRIPT TEXT PASS"
+      ]
+    },
+    {
+      "name": "split-formatting-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editing-d303a90/split-formatting-html.log",
+      "assertionGroups": [
+        "SPLIT FORMATTING PASS"
+      ]
+    },
+    {
+      "name": "editing-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editing-d303a90/editing-liquid.log",
+      "assertionGroups": [
+        "TEXT DECORATION PASS",
+        "MULTILINE PASTE PASS",
+        "INLINE LINE BREAK PASS",
+        "CARET SCRIPT PASS",
+        "CARET TYPOGRAPHY PASS",
+        "TEXT RANGE CASE PASS",
+        "TEXT RANGE SPACING PASS",
+        "RANGE INSPECTOR PASS",
+        "TEXT RANGE SIZE PASS"
+      ]
+    },
+    {
+      "name": "owned-script-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editing-d303a90/owned-script-liquid.log",
+      "assertionGroups": [
+        "OWNED SCRIPT TEXT PASS"
+      ]
+    },
+    {
+      "name": "split-formatting-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editing-d303a90/split-formatting-liquid.log",
+      "assertionGroups": [
+        "SPLIT FORMATTING PASS"
+      ]
+    },
+    {
+      "name": "editing-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editing-d303a90/editing-react.log",
+      "assertionGroups": [
+        "TEXT DECORATION PASS",
+        "MULTILINE PASTE PASS",
+        "INLINE LINE BREAK PASS",
+        "CARET SCRIPT PASS",
+        "CARET TYPOGRAPHY PASS",
+        "TEXT RANGE CASE PASS",
+        "TEXT RANGE SPACING PASS",
+        "RANGE INSPECTOR PASS",
+        "TEXT RANGE SIZE PASS"
+      ]
+    },
+    {
+      "name": "owned-script-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editing-d303a90/owned-script-react.log",
+      "assertionGroups": [
+        "OWNED SCRIPT TEXT PASS"
+      ]
+    },
+    {
+      "name": "split-formatting-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editing-d303a90/split-formatting-react.log",
+      "assertionGroups": [
+        "SPLIT FORMATTING PASS"
+      ]
+    }
+  ],
+  "installation": {
+    "verification": {
+      "sourceCommit": "d303a9070b481b3b149b059d42eb3a235ca9d53a",
+      "sourceTreeDirty": false,
+      "sourceFiles": 206,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesArchive": true,
+    "quarantinePreserved": true,
+    "quarantine": "0381;6aa70f0e;;A7C206D4-EA6F-400A-A5B7-13A18FEA4128",
+    "result": "isolated install and uninstall passed",
+    "caskInventoryUnchanged": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "automaticDependencyRemovalDisabled": true,
+    "exitCode": 0,
+    "log": "/private/tmp/retouch-desktop-editing-d303a90/homebrew.log"
+  },
+  "desktopChecks": {
+    "unitTests": {
+      "passed": 10,
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editing-d303a90/desktop-units.log"
+    },
+    "verifier": {
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-editing-d303a90/verifier.log"
+    },
+    "samplerPolicy": {
+      "exitCode": 0,
+      "scope": "Extracted pure Swift policy and color helpers; no app launch",
+      "log": "/private/tmp/retouch-desktop-editing-d303a90/sampler-policy.log"
+    },
+    "welcome": {
+      "exitCode": 0,
+      "scope": "Actual Swift-interpolated welcome HTML in Chromium/WebKit; not WKWebView or native window verification",
+      "testSha256": "679bb29935051ae3d30ccba0e5aecca077eac539c8094fffe954a6b755c05af4",
+      "logs": [
+        "/private/tmp/retouch-desktop-editing-d303a90/welcome-chromium.log",
+        "/private/tmp/retouch-desktop-editing-d303a90/welcome-webkit.log"
+      ]
+    }
+  },
+  "nativeLaunch": {
+    "result": "Not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "nativeSelfTests": "Not run",
+  "developerID": "Not attempted for this ad hoc candidate",
+  "notarization": "Not performed",
+  "published": false,
+  "remaining": [
+    "Native editing, sampler and shutdown workflows remain unverified",
+    "Developer ID signing, notarization, public cask and trusted upgrades remain incomplete",
+    "Intel runtime execution remains unverified",
+    "Older WebKit normal-flow block-axis Fill issue was not rerun on this archive",
+    "Broader paint/vector/layout matrices were not rerun on this archive",
+    "Full Figma Design parity and universal site support remain incomplete",
+    "Arbitrary attributed rich-text normalization, paragraph/list editing and responsive range overrides remain incomplete"
+  ]
+}

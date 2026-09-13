@@ -492,3 +492,31 @@ simulated replies; the standalone policy check does not launch the app.
 node --test desktop/test/color-sampler.test.cjs
 node desktop/test/color-sampler-policy.cjs
 ```
+
+### Current text-editing candidate (2026-09-13)
+
+The universal development candidate built from clean source commit `d303a90`
+includes the docked typography inspector, cursor formatting, multiline paste,
+line breaks, underline/strike, mixed selection states, and multi-run formatting
+removal. Its verification receipt is
+[`verification/2026-09-13-cursor-editing.json`](verification/2026-09-13-cursor-editing.json).
+
+Local archive:
+`/private/tmp/retouch-desktop-editing-d303a90/Retouch-0.1.0-mac.zip`
+
+SHA-256: `dbc7dbdbf763ac965cb8c592d7e62eb18124b47193c557df4714608bdd5bf773`
+
+The extracted package passed 1,195 unit tests and nine HTML/React/Liquid browser
+workflows covering the recent text-editing changes. Package tamper/relocation
+checks, ten desktop adapter/publication tests, pure Swift helper checks, and
+Swift-generated welcome HTML checks also passed. The exact ZIP was installed
+and uninstalled through an isolated Homebrew cask with quarantine retained;
+the original cask inventory was unchanged and temporary app/tap/trust state
+was removed. Test harness files were external to the signed bundle and removed
+after all test processes exited.
+
+This candidate is ad hoc signed and has not been notarized or published.
+Native UI access failed its preflight, so the app was not launched and native
+editing, sampling, shutdown, and Intel execution remain unverified. Browser
+checks do not establish WKWebView or native-window behavior. Full Figma parity,
+universal site support, and trusted public Homebrew distribution remain open.
