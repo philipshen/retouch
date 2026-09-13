@@ -75,3 +75,8 @@ test('SVG spacing keeps first edge or viewport origin and preserves nested trans
  const members=[{info:{id:'a',svgTransform:{matrix:A.identity()}},parent:A.identity(),rect:{left:10,top:20,width:30,height:0}},{info:{id:'b',svgTransform:{matrix:A.identity()}},parent:A.identity(),rect:{left:70,top:40,width:20,height:10}},{info:{id:'c',svgTransform:{matrix:A.identity()}},parent:A.identity(),covered:true}];
  assert.equal(S.spacingMatrices(members,'y',0).b[5],-20);assert.equal(S.spacingMatrices(members,'x',12).a[4],0);assert.equal(S.spacingMatrices(members,'x',12).b[4],-18);assert.deepEqual(S.spacingMatrices(members,'x',12).c,A.identity());assert.equal(S.spacingMatrices(members,'x',12,0).b[4],-28);assert.throws(()=>S.spacingMatrices(members,'x',-50),/forward distance/);
 });
+
+test('An individual SVG gap moves following layers while retaining all other gaps',()=>{
+ const members=[0,40,100].map((left,i)=>({info:{id:String(i),svgTransform:{matrix:A.identity()}},parent:A.identity(),rect:{left,top:0,width:20,height:20}}));
+ const result=S.spacingMatrices(members,'x',30,null,0);assert.equal(result['0'][4],0);assert.equal(result['1'][4],10);assert.equal(result['2'][4],10);assert.throws(()=>S.spacingMatrices(members,'x',10,null,2),/existing gap/);
+});

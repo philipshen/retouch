@@ -1,7 +1,7 @@
 (function(root){
  'use strict';
  let rotatingSelection=false;
- const alignmentTargets=new Map(),sizeLocks=new Set(),selectionKey=infos=>JSON.stringify(infos.map(i=>[i.file,i.id]).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))));
+ const individualGapSelections=new Set(),alignmentTargets=new Map(),sizeLocks=new Set(),selectionKey=infos=>JSON.stringify(infos.map(i=>[i.file,i.id]).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b))));
  const A=()=>root.RetouchSVGAffine||require('./svg-affine.js'),array=m=>[m.a,m.b,m.c,m.d,m.e,m.f];
  function inverse(m){const d=m[0]*m[3]-m[1]*m[2];return Math.abs(d)<1e-9?null:[m[3]/d,-m[1]/d,-m[2]/d,m[0]/d,(m[2]*m[5]-m[3]*m[4])/d,(m[1]*m[4]-m[0]*m[5])/d];}
  function transform(parent,global,own){const inv=inverse(parent);return inv&&A().multiply(A().multiply(A().multiply(inv,global),parent),own);}
@@ -11,8 +11,9 @@
   const result=Object.fromEntries(members.map(m=>{const delta=moves.get(m);return [m.info.id,delta?transform(m.parent,[1,0,0,1,delta.x,delta.y],m.info.svgTransform.matrix):m.info.svgTransform.matrix];}));
   if(Object.values(result).some(m=>!A().valid(m)))throw Error('Keep every aligned vector within the supported range.');return result;
  }
- function spacingMatrices(members,axis,gap,start=null){
-  const outer=members.filter(m=>!m.covered),layout=root.RetouchSelectionLayout||require('./selection-layout.js'),deltas=layout.setSpacing(outer.map(m=>m.rect),axis,gap,{start,allowDegenerate:true}),moves=new Map(outer.map((m,i)=>[m,deltas[i]]));
+ function spacingMatrices(members,axis,gap,start=null,index=null){
+  const outer=members.filter(m=>!m.covered),layout=root.RetouchSelectionLayout||require('./selection-layout.js'),rects=outer.map(m=>m.rect),values=layout.gaps(rects,axis).values;if(index!==null){if(!Number.isInteger(index)||index<0||index>=values.length)throw Error('Choose an existing gap.');values[index]=gap;}
+  const deltas=index===null?layout.setSpacing(rects,axis,gap,{start,allowDegenerate:true}):layout.setGaps(rects,axis,values,{start,allowDegenerate:true}),moves=new Map(outer.map((m,i)=>[m,deltas[i]]));
   const result=Object.fromEntries(members.map(m=>{const delta=moves.get(m);return [m.info.id,delta?transform(m.parent,[1,0,0,1,delta.x,delta.y],m.info.svgTransform.matrix):m.info.svgTransform.matrix];}));
   if(Object.values(result).some(m=>!A().valid(m)))throw Error('Keep every spaced vector within the supported range.');return result;
  }
@@ -114,7 +115,7 @@
   const toolbar=root.RetouchSelectionLayout.alignmentToolbar((mode,event,button)=>{try{if(!current())throw Error('Re-select these vectors before aligning.');const {members}=capture(infos,elements),asGroup=event.shiftKey&&!mode.startsWith('gap-'),owner=viewport(),target=alignTarget==='viewport'||asGroup?owner?.getBoundingClientRect():null;if((alignTarget==='viewport'||asGroup)&&!target)throw Error('Select vectors in the same SVG viewport.');const matrices=alignmentMatrices(members,mode,target,asGroup);if(members.some(m=>!A().equivalent(matrices[m.info.id],m.info.svgTransform.matrix))){root.RetouchPanelFocus?.queue(button);save(matrices);}}catch(error){I.note(section,error.message,'refused');}},true);
   const count=initial.members.filter(m=>!m.covered).length,updateAlignment=()=>{for(const button of toolbar.querySelectorAll('button'))button.disabled=count<(button.dataset.distribution?3:alignTarget==='viewport'?1:2);};for(const button of toolbar.querySelectorAll('button'))button.title=button.title.replace('containing frame','SVG viewport');section.append(toolbar);
   const targetChoice=I.select(section,'Align to',[['selection','Selection'],['viewport','SVG viewport']],alignTarget,value=>{alignTarget=value;alignmentTargets.set(key,value);updateAlignment();});if(!viewport())targetChoice.querySelector('[value=viewport]').disabled=true;updateAlignment();
-  const inputs={},rounded=value=>String(Math.round(value*10000)/10000);
+  const inputs={},individualInputs=[],rounded=value=>String(Math.round(value*10000)/10000);
   function scrub(input,kind,custom=null){
    I.numericLabelDrag(input,raw=>({value:root.RetouchNumericExpression.evaluate(raw),min:kind==='rotation'?-360:(['width','height'].includes(kind)?0.0001:-100000),max:kind==='rotation'?360:100000}));
    input.retouchNumericPreview=()=>{
@@ -128,6 +129,7 @@
      if(Object.values(matrices).some(m=>!A().valid(m)))throw Error('Keep every transformed vector within the supported range.');
      expectedScreens=members.map((m,i)=>{const owner=members.find(o=>!o.covered&&(o===m||o.el.contains(m.el))),before=A().multiply(owner.parent,owner.info.svgTransform.matrix),after=A().multiply(owner.parent,matrices[owner.info.id]),delta=A().multiply(after,inverse(before));return A().multiply(delta,screens[i]);});members.forEach((m,i)=>{if(!m.covered){last[i]=A().format(matrices[m.info.id]);m.el.setAttribute('transform',last[i]);}});
      const rects=members.filter(m=>!m.covered).map(m=>m.el.getBoundingClientRect()),left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top)),right=Math.max(...rects.map(r=>r.right)),bottom=Math.max(...rects.map(r=>r.bottom));
+     for(const item of individualInputs){if(item.key!==kind){const gaps=root.RetouchSelectionLayout.gaps(rects,item.axis).values;item.input.value=rounded(gaps[item.index]);}}
      for(const axis of ['x','y']){const key='gap-'+axis;if(inputs[key]&&key!==kind){const gaps=root.RetouchSelectionLayout.gaps(rects,axis).values;inputs[key].value=gaps.length&&!gaps.some(v=>Math.abs(v-gaps[0])>=.001)?rounded(gaps[0]):'';}}
      for(const [k,v]of Object.entries({x:left+w.scrollX,y:top+w.scrollY,width:right-left,height:bottom-top}))if(k!==kind)inputs[k].value=rounded(v);
     },restore(){members.forEach((m,i)=>{if(m.el.getAttribute('transform')===last[i]){if(originals[i]===null)m.el.removeAttribute('transform');else m.el.setAttribute('transform',originals[i]);}});for(const [k,v]of Object.entries(values))if(k!==kind)inputs[k].value=v;}};
@@ -140,6 +142,15 @@
    const calculate=(members,value)=>{const owner=viewport();if(alignTarget==='viewport'&&!owner)throw Error('Select vectors in the same SVG viewport.');return spacingMatrices(members,axis,value,alignTarget==='viewport'?owner.getBoundingClientRect()[axis==='x'?'left':'top']:null);};
    input.onchange=()=>{try{if(!current())throw Error('Re-select these vectors before changing spacing.');const value=root.RetouchNumericExpression.evaluate(input.value),{members}=capture(infos,elements),matrices=calculate(members,value);if(members.some(m=>!A().equivalent(matrices[m.info.id],m.info.svgTransform.matrix)))save(matrices);input.value=rounded(value);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
    root.RetouchNumericExpression.field(input);I.field(spacing,label,input);input.parentElement.querySelector('span').textContent=axis==='x'?'H gap':'V gap';inputs['gap-'+axis]=input;scrub(input,'gap-'+axis,calculate);
+  }
+  if(count>2){
+   const individual=root.document.createElement('details'),summary=root.document.createElement('summary');summary.textContent='Individual gaps';individual.append(summary);individual.open=individualGapSelections.has(key);individual.addEventListener('toggle',()=>{if(individual.isConnected){if(individual.open)individualGapSelections.add(key);else individualGapSelections.delete(key);}});section.append(individual);I.note(individual,'Individual gap edits keep the first layer fixed and preserve the other gaps.');
+   for(const axis of ['x','y']){const outer=initial.members.filter(m=>!m.covered),{sorted,values}=root.RetouchSelectionLayout.gaps(outer.map(m=>m.rect),axis);values.forEach((gap,index)=>{
+    const input=root.document.createElement('input'),fieldKey='gap-'+axis+'-'+index;input.type='text';input.inputMode='decimal';input.value=rounded(gap);input.title=[sorted[index],sorted[index+1]].map(item=>outer[item.i].el.getAttribute('aria-label')||outer[item.i].el.localName).join(' → ');input.oninput=()=>input.setCustomValidity('');
+    const calculate=(members,value)=>spacingMatrices(members,axis,value,null,index);
+    input.onchange=()=>{try{if(!current())throw Error('Re-select these vectors before changing a gap.');const value=root.RetouchNumericExpression.evaluate(input.value),{members}=capture(infos,elements),matrices=calculate(members,value);if(members.some(m=>!A().equivalent(matrices[m.info.id],m.info.svgTransform.matrix)))save(matrices);input.value=rounded(value);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+    root.RetouchNumericExpression.field(input);I.field(individual,(axis==='x'?'Horizontal':'Vertical')+' gap '+(index+1),input);inputs[fieldKey]=input;individualInputs.push({key:fieldKey,input,axis,index});scrub(input,fieldKey,calculate);
+   });}
   }
   const lock=I.button('Lock selection proportions',()=>{locked=!locked;if(locked)sizeLocks.add(key);else sizeLocks.delete(key);lock.setAttribute('aria-pressed',String(locked));});lock.setAttribute('aria-pressed',String(locked));lock.setAttribute('aria-label','Lock selection proportions');lock.title='Lock selection proportions';lock.innerHTML='<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M8 6V4a3 3 0 0 1 6 0v4a3 3 0 0 1-3 3M12 14v2a3 3 0 0 1-6 0v-4a3 3 0 0 1 3-3M10 6v8"/></svg>';lock.disabled=!initial.box.width||!initial.box.height;section.append(lock);
   const flips=root.RetouchFlip.mount(elements[0],()=>{});for(const button of flips.querySelectorAll('button')){button.disabled=false;button.onclick=()=>{try{apply('flip-'+button.dataset.flipAxis);}catch(error){I.note(section,error.message,'refused');}};}section.append(flips);I.note(section,'Bounds in document pixels. Rotation and flips use the selection center. Changes apply to all screen sizes.');return section;
