@@ -19,7 +19,9 @@
  function attributeReason(el,paint){
   if(!el?.isConnected||!['fill','stroke'].includes(paint))return 'Select a visible SVG layer.';
   const w=el.ownerDocument.defaultView,css=w.getComputedStyle(el),transitions=css.transitionProperty.split(',').map(s=>s.trim());
-  if(el.getAnimations?.().length||css.animationName!=='none'||transitions.some(p=>p==='all'||p===paint)&&css.transitionDuration.split(',').some(value=>parseFloat(value)>0))return 'Pause paint animations or transitions before creating a gradient.';
+  const durations=css.transitionDuration.split(','),animations=el.getAnimations?.();
+  const animated=animations?animations.some(animation=>{try{const frames=animation.effect?.getKeyframes();return !frames||frames.some(frame=>Object.hasOwn(frame,paint)||Object.hasOwn(frame,'all'));}catch{return true;}}):css.animationName!=='none';
+  if(animated||transitions.some((property,index)=>(property==='all'||property===paint)&&parseFloat(durations[index%durations.length])>0))return 'Pause paint animations or transitions before creating a gradient.';
   const original=el.getAttribute(paint);
   try{for(const [value,expected]of [['#010203','rgb(1, 2, 3)'],['#040506','rgb(4, 5, 6)']]){el.setAttribute(paint,value);if(w.getComputedStyle(el).getPropertyValue(paint).trim()!==expected)return 'Page styles control this '+paint+'. Edit its paint styles instead.';}return null;}
   finally{if(original===null)el.removeAttribute(paint);else el.setAttribute(paint,original);}

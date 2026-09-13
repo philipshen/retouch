@@ -14461,3 +14461,12 @@ Gradient creation no longer refuses an entire React shape because an unrelated i
 The React browser fixture now changes the solid shape's opacity between 0.8 and 0.6 with its existing click handler. Chromium verified gradient creation, subsequent state changes, preserved paint references and source identity, and exact undo/redo. The unit suite passed 1,132 tests, including dynamic unrelated styles and independent dynamic inline paint ownership. Both commands exited zero. Logs: `/private/tmp/retouch-gradient-dynamic-style.log` and `/private/tmp/retouch-gradient-dynamic-style-units.log`.
 
 This does not implement CSS-owned gradient creation, arbitrary framework ownership, or a new desktop package.
+
+
+### 2026-09-13 — Keep gradient creation available on animated layers
+
+The live paint ownership check formerly refused every layer with an active animation. It now inspects animation keyframes per paint, allowing unrelated opacity and transform animation while protecting animated fill/stroke independently. Transition duration lists are matched by property rather than treating any nonzero duration as applying to every transition.
+
+HTML/Chromium and Liquid/WebKit browser checks cover opacity/fill/stroke animation guards, gradient creation during an active opacity animation, subsequent stop editing and exact undo/redo. The existing 1,132-test suite passed; the added transition-list/probe-restoration test passed with the four existing SVG paint tests. Unknown effects remain refused. CSS-owned paint creation and animation timeline editing remain incomplete.
+
+Evidence: `/private/tmp/retouch-gradient-animation-html-final.log`, `/private/tmp/retouch-gradient-animation-webkit.log`, `/private/tmp/retouch-gradient-animation-units.log`.

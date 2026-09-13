@@ -27,3 +27,12 @@ test('Stroke settings validate signed dash offsets, miter limits and fixed-width
  }
  for(const [key,value]of [['stroke-dashoffset','1 2'],['stroke-dashoffset','Infinity'],['stroke-dashoffset','100001px'],['stroke-miterlimit','0'],['stroke-miterlimit','-1'],['stroke-miterlimit','2px'],['vector-effect','scale'],['vector-effect','non-scaling-stroke;fill:red']])assert.throws(()=>paint.update('',key,value));
 });
+
+test('Gradient creation matches transition durations to paint properties and restores probe attributes',()=>{
+ const attrs=new Map([['fill','red']]),css={animationName:'none',transitionProperty:'opacity, fill',transitionDuration:'2s, 0s',getPropertyValue:key=>({'#010203':'rgb(1, 2, 3)','#040506':'rgb(4, 5, 6)'})[attrs.get(key)]};
+ const el={isConnected:true,ownerDocument:{defaultView:{getComputedStyle:()=>css}},getAnimations:()=>[],getAttribute:key=>attrs.get(key)??null,setAttribute:(key,value)=>attrs.set(key,value),removeAttribute:key=>attrs.delete(key)};
+ assert.equal(paint.attributeReason(el,'fill'),null);assert.equal(attrs.get('fill'),'red');
+ css.transitionDuration='0s, 2s';assert.match(paint.attributeReason(el,'fill'),/Pause paint/);assert.equal(paint.attributeReason(el,'stroke'),null);assert.equal(attrs.has('stroke'),false);
+ css.transitionProperty='opacity, stroke, fill';css.transitionDuration='2s, 0s';assert.match(paint.attributeReason(el,'fill'),/Pause paint/);assert.equal(paint.attributeReason(el,'stroke'),null);
+ el.getAnimations=()=>[{effect:{getKeyframes:()=>{throw Error('unavailable');}}}];assert.match(paint.attributeReason(el,'stroke'),/Pause paint/);assert.equal(attrs.get('fill'),'red');
+});

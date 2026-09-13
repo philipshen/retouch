@@ -30,3 +30,6 @@ RT_INSPECTOR_FIXTURE=/path/to/playwright-fixture RT_E2E_RENDERER=liquid RT_E2E_S
 ```
 
 The browser workflow exercises shared linear paint, radial focus, stop colors/opacity/position, coordinates, invalid input, and exact source undo/redo. Set `RT_E2E_BROWSER=webkit` to run the same flow with WebKit and its installed browser path.
+
+
+Gradient creation checks active animation keyframes per paint property. An opacity or transform animation does not prevent creating fill or stroke gradients; an animation of fill protects fill while leaving stroke independently editable (and conversely). Unknown animation effects remain protected. Transition durations are matched to their corresponding properties, including repeated duration lists. This does not add timeline editing or guarantee that a site retains runtime animations across a source reload.
