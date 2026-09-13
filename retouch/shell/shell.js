@@ -1284,10 +1284,14 @@ function renderPanelContents() {
     RetouchSVGRadius.mount(geometry,info,target,changes=>setSVGGeometry(changes),input=>roundRectangleOnCanvas(target,input));
     const parametric=info.svgGeometry.parametric;
     if(parametric){
-      const change=updates=>{const points=RetouchSVGParametric.generate({...parametric,...updates});if(points)setSVGGeometry('points',points);else toast('Choose valid shape parameters.','err');};
+      const change=updates=>{const points=parametric.kind==='arrow'?RetouchSVGParametric.changeArrow(pointField.value,updates):RetouchSVGParametric.generate({...parametric,...updates});if(points)setSVGGeometry('points',points);else toast('Choose valid shape parameters.','err');};
       if(parametric.kind==='arrow'){
         const reverse=RetouchInspector.button('Reverse arrow',()=>{const points=RetouchSVGParametric.reverseArrow(pointField.value);if(points)setSVGGeometry('points',points);else toast('This arrow cannot be reversed within the supported coordinate range.','err');});reverse.dataset.arrowAction='reverse';geometry.append(reverse);
         RetouchInspector.select(geometry,'Start point',[['none','None'],['arrow','Line arrow']],parametric.startArrow?'arrow':'none',value=>change({startArrow:value==='arrow'}));
+        if(parametric.startArrow){
+          RetouchInspector.number(geometry,'Start arrowhead length',Math.round(parametric.startHeadLength*1000000)/1000000,0,Math.hypot(parametric.x2-parametric.x1,parametric.y2-parametric.y1),value=>change({startHeadLength:value})).step='any';
+          RetouchInspector.number(geometry,'Start arrowhead width',Math.round(parametric.startHeadWidth*1000000)/1000000,0,100000,value=>change({startHeadWidth:value})).step='any';
+        }
         RetouchInspector.number(geometry,'Arrowhead length',Math.round(parametric.headLength*1000000)/1000000,0,Math.hypot(parametric.x2-parametric.x1,parametric.y2-parametric.y1),value=>change({headLength:value})).step='any';
         RetouchInspector.number(geometry,'Arrowhead width',Math.round(parametric.headWidth*1000000)/1000000,0,100000,value=>change({headWidth:value})).step='any';
       }else RetouchInspector.number(geometry,parametric.kind==='star'?'Star points':'Polygon sides',parametric.count,3,parametric.kind==='star'?256:512,value=>change({count:value})).step='1';

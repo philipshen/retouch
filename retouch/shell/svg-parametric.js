@@ -2,13 +2,14 @@
  'use strict';
  const pointsAPI=()=>typeof module==='object'&&module.exports?require('./svg-points.js'):root.RetouchSVGPoints;
  const round=value=>Math.round(value*1000000)/1000000;
- function arrow({x1,y1,x2,y2,headLength,headWidth,startArrow=false}){
+ function arrow({x1,y1,x2,y2,headLength,headWidth,startArrow=false,startHeadLength=headLength,startHeadWidth=headWidth}){
   if(typeof startArrow!=='boolean'||![x1,y1,x2,y2,headLength,headWidth].every(Number.isFinite))return null;
   const length=Math.hypot(x2-x1,y2-y1);if(!length||headLength<0||headLength>length+.00001||headWidth<0||headWidth>100000)return null;
+  if(startArrow&&(![startHeadLength,startHeadWidth].every(Number.isFinite)||startHeadLength<0||startHeadLength>length+.00001||startHeadWidth<0||startHeadWidth>100000))return null;
   const ux=(x2-x1)/length,uy=(y2-y1)/length,tip={x:x2,y:y2};
-  const wing=side=>({x:x2-ux*headLength-uy*headWidth*.5*side,y:y2-uy*headLength+ux*headWidth*.5*side});
+  const wing=(side,l=headLength,w=headWidth)=>({x:x2-ux*l-uy*w*.5*side,y:y2-uy*l+ux*w*.5*side});
   const start={x:x1,y:y1},raw=[start,tip,wing(1),tip,wing(-1)],reflect=p=>({x:x1+x2-p.x,y:y1+y2-p.y});
-  if(startArrow)raw.push(tip,start,reflect(wing(1)),start,reflect(wing(-1)));
+  if(startArrow)raw.push(tip,start,reflect(wing(1,startHeadLength,startHeadWidth)),start,reflect(wing(-1,startHeadLength,startHeadWidth)));
   const points=raw.map(p=>({x:round(p.x),y:round(p.y)}));
   return points.some(p=>Math.abs(p.x)>100000||Math.abs(p.y)>100000)?null:pointsAPI().format(points);
  }
@@ -28,7 +29,7 @@
    const spec={kind,x1:a.x,y1:a.y,x2:b.x,y2:b.y,headLength:((b.x-left.x)+(b.x-right.x))*ux/2+((b.y-left.y)+(b.y-right.y))*uy/2,headWidth:(left.y-right.y)*ux-(left.x-right.x)*uy};
    if(spec.headLength<-.00001||spec.headLength>length+.00001||spec.headWidth<-.00001||spec.headWidth>100000.00001)return null;
    spec.headLength=Math.max(0,Math.min(length,spec.headLength));spec.headWidth=Math.max(0,Math.min(100000,spec.headWidth));
-   if(points.length===10)spec.startArrow=true;
+   if(points.length===10){const start=describe(pointsAPI().format(points.slice(5)),'arrow');if(!start)return null;Object.assign(spec,{startArrow:true,startHeadLength:start.headLength,startHeadWidth:start.headWidth});}
    const generated=generate(spec);if(!generated)return null;
    const expected=pointsAPI().parse(generated);return points.every((p,i)=>Math.abs(p.x-expected[i].x)<.00001&&Math.abs(p.y-expected[i].y)<.00001)?spec:null;
   }
@@ -43,11 +44,18 @@
   if(!generated)return null;const expected=pointsAPI().parse(generated);if(points.some((p,i)=>Math.abs(p.x-expected[i].x)>0.00001||Math.abs(p.y-expected[i].y)>0.00001))return null;
   return model;
  }
+ function changeArrow(value,changes){
+  const spec=describe(value,'arrow');if(!spec||!changes||Object.keys(changes).some(key=>!['headLength','headWidth','startArrow','startHeadLength','startHeadWidth'].includes(key)))return null;
+  const generated=generate({...spec,...changes});if(!generated)return null;const before=pointsAPI().parse(value),after=pointsAPI().parse(generated);
+  if(!Object.hasOwn(changes,'headLength')&&!Object.hasOwn(changes,'headWidth'))after.splice(0,5,...before.slice(0,5));
+  if(before.length===10&&after.length===10&&!['startArrow','startHeadLength','startHeadWidth'].some(key=>Object.hasOwn(changes,key)))after.splice(5,5,...before.slice(5));
+  return pointsAPI().format(after);
+ }
  function reverseArrow(value){
   if(!describe(value,'arrow'))return null;
   const original=pointsAPI().parse(value),[a,b]=original,reflect=p=>({x:round(a.x+b.x-p.x),y:round(a.y+b.y-p.y)});
   const points=original.map(reflect);
   return points.some(p=>Math.abs(p.x)>100000||Math.abs(p.y)>100000)?null:pointsAPI().format(points);
  }
- const api={generate,describe,reverseArrow};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGParametric=api;
+ const api={generate,describe,reverseArrow,changeArrow};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGParametric=api;
 })(typeof window==='object'?window:globalThis);

@@ -14512,3 +14512,13 @@ This adds a start line-arrowhead choice, not the complete Figma endpoint set. In
 
 
 Verification: 1,140 unit tests passed (`/private/tmp/retouch-double-arrow-units.log`), followed by the expanded adapter-specific parameter tests (`/private/tmp/retouch-double-arrow-adapters.log`). HTML/Chromium and Liquid/WebKit drawing/line-conversion workflows and React/Chromium native-container/self-closing SVG/group drawing passed with the shared double-ended parameter helper. These cover endpoint and paint preservation, reversal, exact undo/redo and freeform ownership guards. Logs: `/private/tmp/retouch-double-arrow-html.log`, `/private/tmp/retouch-double-arrow-liquid.log`, `/private/tmp/retouch-double-arrow-react.log`. Every process exited zero. The light-theme inspector and double-ended geometry were visually inspected in `/private/tmp/retouch-double-arrow.png`.
+
+
+### 2026-09-13 — Independent start arrowhead dimensions
+
+Double-ended arrows now expose paired Start length/width and End length/width controls in Stroke. The parametric model infers each head independently from its existing points, so differently sized symmetric heads remain editable. A dedicated parameter-update helper preserves the untouched head's exact coordinates rather than regenerating it from rounded measurements. Shaft endpoints stay fixed. Reverse arrow retains each head's relative dimensions, and exact undo/redo restores all point strings.
+
+The light-theme result was visually inspected at `/private/tmp/retouch-independent-heads.png`. Independent dimensions do not add the missing end-point type selector or the remaining Figma cap shapes. Removing a start head and adding it anew uses the end head's current dimensions; Undo restores its previous dimensions. The latest desktop package predates this change.
+
+
+Verification: all 1,142 unit tests passed (`/private/tmp/retouch-independent-heads-units.log`). HTML/Chromium and Liquid/WebKit drawing and line-conversion workflows, plus React/Chromium native-container and self-closing SVG/group workflows, passed with independent start edits, exact untouched end coordinates, reversed parameter values and full source undo/redo. Logs: `/private/tmp/retouch-independent-heads-html.log`, `/private/tmp/retouch-independent-heads-liquid.log`, `/private/tmp/retouch-independent-heads-react.log`. All processes exited zero. Focused model tests cover multiple shaft directions, invalid head dimensions and exact coordinate preservation (`/private/tmp/retouch-independent-heads-unit-final.log`).

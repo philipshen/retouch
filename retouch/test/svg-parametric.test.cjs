@@ -61,3 +61,21 @@ test('Double-ended arrows retain symmetric heads, reversibility and freeform own
  }
  assert.equal(model.generate({kind:'arrow',x1:0,y1:0,x2:100,y2:0,headLength:12,headWidth:20,startArrow:'yes'}),null);
 });
+
+
+test('Start arrowhead dimensions remain independent in every shaft direction',()=>{
+ for(const [x2,y2]of [[100,0],[0,100],[-60,40]]){
+  const spec={kind:'arrow',x1:0,y1:0,x2,y2,headLength:12,headWidth:20,startArrow:true,startHeadLength:5,startHeadWidth:8},value=model.generate(spec),parsed=model.describe(value,'arrow');
+  for(const key of ['headLength','headWidth','startHeadLength','startHeadWidth'])assert.ok(Math.abs(parsed[key]-spec[key])<.00001);
+  const changed=model.generate({...parsed,startHeadWidth:16});assert.deepEqual(changed.split(' ').slice(0,5),model.generate(parsed).split(' ').slice(0,5));assert.equal(model.reverseArrow(model.reverseArrow(value)),value);
+  for(const updates of [{startHeadLength:-1},{startHeadLength:200},{startHeadWidth:-1},{startHeadWidth:Infinity}])assert.equal(model.generate({...spec,...updates}),null);
+ }
+});
+
+
+test('Editing one rounded arrowhead preserves the other exact coordinates',()=>{
+ const value=model.generate({kind:'arrow',x1:0,y1:0,x2:-60,y2:40,headLength:12,headWidth:20,startArrow:true,startHeadLength:5,startHeadWidth:8});
+ const changed=model.changeArrow(value,{startHeadWidth:17});assert.deepEqual(changed.split(' ').slice(0,5),value.split(' ').slice(0,5));
+ const end=model.changeArrow(changed,{headLength:15});assert.deepEqual(end.split(' ').slice(5),changed.split(' ').slice(5));
+ assert.equal(model.changeArrow(value,{startArrow:false}),value.split(' ').slice(0,5).join(' '));assert.equal(model.changeArrow(value,{x1:100}),null);
+});
