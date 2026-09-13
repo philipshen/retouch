@@ -14056,3 +14056,33 @@ corrected gesture hint styling; /private/tmp/retouch-selection-nudge-final.png
 was visually inspected. Logs: /private/tmp/retouch-selection-nudge-react.log,
 /private/tmp/retouch-selection-nudge-{html,liquid,units}-final.log.
 No desktop rebuild or push was performed.
+
+## 2026-09-13 — Direct SVG selection dragging
+
+Dragging any selected SVG member now moves the complete selection after the
+existing four-screen-pixel threshold. The gesture previews source matrices,
+transforms only outermost selected ancestors, and saves a single transaction on
+release. The click following a drag is consumed so the multi-selection remains
+selected. Movement stays in document coordinates across zoom levels.
+
+Shift locks movement to the dominant document axis. Alignment and equal-spacing
+snapping reuse the shared canvas solver, with selected members, their ancestors
+and descendants excluded from sibling targets. Control disables snapping live.
+Guides are clipped to the canvas. Escape cancels the preview, including while
+Control is held; the keyboard-nudge transaction path remains shared.
+
+This covers editable, once-rendered SVG selections in one source file. Mixed
+CSS/SVG selections, cross-file dragging, and multi-vector canvas resize/rotation
+handles remain unfinished.
+
+Validation: 1,031 unit tests passed, including snap-target exclusion for selected
+siblings, ancestors and descendants. HTML/WebKit 26, React/Chromium and
+Liquid/Chromium selection workflows cover pointer thresholds, different parent
+transforms, nested selections, 50/100/200 percent zoom, live Shift and Control,
+snapping, selection retention, cancellation and exact Undo/Redo. A final Liquid
+run additionally covers Escape with Control held. Existing vector regressions
+remain covered. The clipped guide and light gesture hint were visually checked
+in /private/tmp/retouch-selection-drag.png. Logs:
+/private/tmp/retouch-selection-drag-{html,react,cancel}.log and
+/private/tmp/retouch-selection-drag-{liquid,units}-final.log.
+No desktop rebuild or push was performed.

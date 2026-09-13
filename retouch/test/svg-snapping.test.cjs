@@ -10,3 +10,9 @@ test('SVG snapping excludes self, definitions and hidden siblings, and includes 
  const node=(localName,extra={})=>({localName,contains:()=>false,getBoundingClientRect:()=>box,...extra}),target=node('rect');target.ownerDocument={defaultView:w};target.ownerSVGElement=node('svg');target.parentElement={children:[target,node('defs'),node('rect',{hidden:true}),node('line',{getBoundingClientRect:()=>({...box,width:0,right:10})}),node('circle')]};
  const result=targets(target);assert.equal(result.length,3);assert.equal(result[0].container,true);assert.equal(result[1].width,0);
 });
+
+test('SVG selection snapping excludes selected siblings, ancestors and descendants',()=>{
+ const box={left:10,top:10,width:20,height:20,right:30,bottom:30},w={innerWidth:500,innerHeight:500,getComputedStyle:()=>({display:'block',visibility:'visible'})},node=()=>({localName:'g',contains:()=>false,getBoundingClientRect:()=>box}),target=node(),selected=node(),ancestor=node(),child=node(),other=node();
+ selected.contains=el=>el===child;ancestor.contains=el=>el===selected;target.ownerDocument={defaultView:w};target.parentElement={children:[target,selected,ancestor,child,other]};
+ assert.equal(targets(target,[target,selected]).length,1);
+});

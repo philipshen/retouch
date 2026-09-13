@@ -1,10 +1,10 @@
 (function(root){
  'use strict';
- function targets(target){
+ function targets(target,excluded=[]){
   const w=target.ownerDocument.defaultView,result=[],svg=target.ownerSVGElement;
   if(svg){const r=svg.getBoundingClientRect();result.push({left:r.left,top:r.top,width:r.width,height:r.height,container:true});}
   for(const el of target.parentElement?.children||[]){
-   if(el===target||el.contains(target)||!['g','rect','circle','ellipse','line','path','polygon','polyline','text','image','use'].includes(el.localName))continue;
+   if(el===target||el.contains(target)||excluded.some(node=>node===el||node.contains(el)||el.contains(node))||!['g','rect','circle','ellipse','line','path','polygon','polyline','text','image','use'].includes(el.localName))continue;
    const css=w.getComputedStyle(el),r=el.getBoundingClientRect();if(css.display==='none'||css.visibility!=='visible'||r.width<0||r.height<0||!r.width&&!r.height||r.right<0||r.bottom<0||r.left>w.innerWidth||r.top>w.innerHeight)continue;
    result.push({left:r.left,top:r.top,width:r.width,height:r.height});
   }

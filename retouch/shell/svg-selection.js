@@ -16,29 +16,43 @@
   const members=infos.map((info,i)=>{const el=elements[i],reason=root.RetouchSVGResize.reason(el,info,true);if(reason)throw Error(reason);if(el.getAttribute('transform')!==info.svgTransform.value)throw Error('The vector changed. Re-select it.');const data=root.RetouchSVGResize.measure(el),parent=A().multiply(array(data.m),inverse(info.svgTransform.matrix));return {info,el,parent,covered:elements.some(ancestor=>ancestor!==el&&ancestor.contains(el)),rect:el.getBoundingClientRect()};});
   const outer=members.filter(m=>!m.covered);const left=Math.min(...outer.map(m=>m.rect.left)),top=Math.min(...outer.map(m=>m.rect.top)),right=Math.max(...outer.map(m=>m.rect.right)),bottom=Math.max(...outer.map(m=>m.rect.bottom));return {members,box:{left,top,width:right-left,height:bottom-top},w:elements[0].ownerDocument.defaultView};
  }
- function nudge(infos,elements,{initialKey,current,onCommit,onEnd,onError,canvas}){
+ function nudge(infos,elements,{initialKey,initialPointer,initialMove,pointerTarget,frame,current,onCommit,onEnd,onError,canvas}){
   let state;try{state=capture(infos,elements);}catch(error){onError(error.message);return null;}
   const members=state.members,w=state.w,cleanup=[],held=new Set(),original=members.map(m=>m.el.getAttribute('transform')),screens=members.map(m=>array(m.el.getScreenCTM())),geometry=members.map(m=>{const g=m.el.getBBox();return [g.x,g.y,g.width,g.height];});
   let ended=false,raf,x=0,y=0,next=matricesFor(members,A().identity()),last=original.slice();
-  const surface=root.document.createElement('div');surface.setAttribute('aria-label','Move SVG selection on canvas');Object.assign(surface.style,{position:'fixed',bottom:'116px',left:'50%',transform:'translateX(-50%)',zIndex:40});
-  const button=root.document.createElement('button');button.type='button';Object.assign(button.style,{padding:'8px 12px',border:'1px solid var(--line)',borderRadius:'6px',background:'var(--panel)',color:'var(--ink)',fontSize:'11px',fontFamily:'inherit'});button.textContent='Move selection · Arrows: 1 · Shift: 10 · Release applies · Escape cancels';surface.append(button);root.document.body.append(surface);
+  const surface=root.document.createElement('div');surface.setAttribute('aria-label',initialPointer?'Drag SVG selection on canvas':'Move SVG selection on canvas');Object.assign(surface.style,{position:'fixed',bottom:'116px',left:'50%',transform:'translateX(-50%)',zIndex:40});
+  const button=root.document.createElement('button');button.type='button';Object.assign(button.style,{padding:'8px 12px',border:'1px solid var(--line)',borderRadius:'6px',background:'var(--panel)',color:'var(--ink)',fontSize:'11px',fontFamily:'inherit'});button.textContent=initialPointer?'Move selection · Shift: lock axis · Control: no snapping · Release applies · Escape cancels':'Move selection · Arrows: 1 · Shift: 10 · Release applies · Escape cancels';surface.append(button);root.document.body.append(surface);
+  const guideSurface=initialPointer?root.document.createElement('div'):null,f=frame?.getBoundingClientRect(),scale=f?f.width/w.innerWidth:1;let paintGuides=()=>{},lastPointer=initialMove;
+  if(guideSurface){const c=canvas.getBoundingClientRect();Object.assign(guideSurface.style,{position:'fixed',left:c.left+'px',top:c.top+'px',width:c.width+'px',height:c.height+'px',overflow:'hidden',pointerEvents:'none',zIndex:39});root.document.body.append(guideSurface);paintGuides=root.RetouchSVGSnapping.mount(guideSurface,{f,scale,left:c.left,top:c.top});}
   function listen(el,type,fn,capture=false){el.addEventListener(type,fn,capture);cleanup.push(()=>el.removeEventListener(type,fn,capture));}
   function valid(){
    if(!current())return false;
    try{return members.every((m,i)=>{if(!m.el.isConnected||m.el.getAttribute('transform')!==last[i])return false;const screen=array(m.el.getScreenCTM()),expected=screens[i].slice();expected[4]+=x;expected[5]+=y;const g=m.el.getBBox();return screen.every((v,j)=>Math.abs(v-expected[j])<.1)&&[g.x,g.y,g.width,g.height].every((v,j)=>Math.abs(v-geometry[i][j])<.75);});}catch{return false;}
   }
-  function end(commit=false){if(ended)return;const save=commit&&valid()&&(x!==0||y!==0);ended=true;root.cancelAnimationFrame(raf);cleanup.forEach(fn=>fn());surface.remove();members.forEach((m,i)=>{if(m.el.getAttribute('transform')!==last[i])return;if(original[i]===null)m.el.removeAttribute('transform');else m.el.setAttribute('transform',original[i]);});onEnd();if(save)onCommit(next);}
+  function end(commit=false){if(ended)return;const save=commit&&valid()&&(x!==0||y!==0);ended=true;root.cancelAnimationFrame(raf);cleanup.forEach(fn=>fn());surface.remove();guideSurface?.remove();if(initialPointer&&pointerTarget?.hasPointerCapture(initialPointer.pointerId))pointerTarget.releasePointerCapture(initialPointer.pointerId);members.forEach((m,i)=>{if(m.el.getAttribute('transform')!==last[i])return;if(original[i]===null)m.el.removeAttribute('transform');else m.el.setAttribute('transform',original[i]);});onEnd();if(save)onCommit(next);}
   function keyDown(e){
-   if(e.isComposing||e.ctrlKey||e.metaKey||e.altKey||!['Escape','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;
-   e.preventDefault();e.stopImmediatePropagation();if(e.key==='Escape'){end();return;}if(!valid()){end();return;}
+   if(e.isComposing||(e.key!=='Escape'&&(e.ctrlKey||e.metaKey||e.altKey))||!['Escape','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;
+   e.preventDefault();e.stopImmediatePropagation();if(e.key==='Escape'){end();return;}if(initialPointer)return;if(!valid()){end();return;}
    held.add(e.key);const step=e.shiftKey?10:1,dx=e.key==='ArrowLeft'?-step:e.key==='ArrowRight'?step:0,dy=e.key==='ArrowUp'?-step:e.key==='ArrowDown'?step:0;
-   const matrices=matricesFor(members,[1,0,0,1,x+dx,y+dy]);if(Object.values(matrices).some(m=>!A().valid(m))){end();onError('Keep every transformed vector within the supported range.');return;}
-   x+=dx;y+=dy;next=matrices;members.forEach((m,i)=>{if(m.covered)return;last[i]=A().format(next[m.info.id]);m.el.setAttribute('transform',last[i]);});
+   translate(x+dx,y+dy);
+  }
+  function translate(dx,dy){
+   const matrices=matricesFor(members,[1,0,0,1,dx,dy]);if(Object.values(matrices).some(m=>!A().valid(m))){end();onError('Keep every transformed vector within the supported range.');return;}
+   x=dx;y=dy;next=matrices;members.forEach((m,i)=>{if(m.covered)return;last[i]=A().format(next[m.info.id]);m.el.setAttribute('transform',last[i]);});
+  }
+  function pointerMove(e,modifiers=e){
+   if(e.pointerId!==initialPointer.pointerId||ended)return;if(!valid()){end();return;}lastPointer=e;e.preventDefault();e.stopImmediatePropagation();
+   const movement=root.RetouchSVGSnapping.movement(A().identity(),e.clientX-initialPointer.clientX,e.clientY-initialPointer.clientY,modifiers.shiftKey),targets=members.filter(m=>!m.covered).flatMap(m=>root.RetouchSVGSnapping.targets(m.el,elements)),unique=[...new Map(targets.map(t=>[JSON.stringify(t),t])).values()],result=modifiers.ctrlKey?movement:root.RetouchCanvasMove.snap(state.box,movement,unique,{tolerance:6/scale,lock:movement.lock});paintGuides(result);translate(result.x,result.y);
+  }
+  if(initialPointer){
+   listen(w,'pointermove',pointerMove,true);listen(w,'pointerup',e=>{if(e.pointerId!==initialPointer.pointerId)return;e.preventDefault();e.stopImmediatePropagation();end(true);},true);
+   for(const event of ['pointercancel','lostpointercapture'])listen(w,event,e=>{if(e.pointerId===initialPointer.pointerId)end();},true);
+   for(const event of ['keydown','keyup'])listen(root,event,e=>{if(['Shift','Control'].includes(e.key)&&lastPointer)pointerMove(lastPointer,e);},true);
   }
   listen(surface,'keydown',keyDown,true);listen(root,'keyup',e=>{if(!held.delete(e.key))return;e.preventDefault();e.stopImmediatePropagation();if(!held.size)end(true);},true);
   for(const event of ['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'])listen(root,event,()=>end());
   listen(w,'scroll',()=>end(),true);listen(w,'pagehide',()=>end());listen(w,'pointerdown',()=>end(),true);listen(canvas,'scroll',()=>end(),true);listen(root.document,'pointerdown',()=>end(),true);
-  const tick=()=>{if(!valid()){end();return;}raf=root.requestAnimationFrame(tick);};button.focus({preventScroll:true});keyDown(initialKey);if(!ended)raf=root.requestAnimationFrame(tick);return ended?null:()=>end();
+  const tick=()=>{if(!valid()){end();return;}raf=root.requestAnimationFrame(tick);};button.focus({preventScroll:true});if(initialKey)keyDown(initialKey);if(initialPointer){try{pointerTarget.setPointerCapture(initialPointer.pointerId);if(initialMove)pointerMove(initialMove);}catch(error){end();onError(error.message);}}if(!ended)raf=root.requestAnimationFrame(tick);return ended?null:()=>end();
  }
  function mount(infos,elements,{save,current}){
   const I=root.RetouchInspector,section=I.section('Selection transform'),key=selectionKey(infos);let locked=sizeLocks.has(key);let initial;try{initial=capture(infos,elements);}catch(error){I.note(section,error.message,'refused').setAttribute('role','alert');return section;}

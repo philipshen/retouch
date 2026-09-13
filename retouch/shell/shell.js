@@ -194,14 +194,15 @@ function hookFrame(d, w) {
   w.addEventListener('pointercancel',releasePanelPointer,true);
   stopDrawing?.();
   const vectorDragCandidate=node=>{
-    if(mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active||sel?.multiple?.length>1)return null;
+    if(mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active)return null;
+    if(sel?.multiple?.length>1){const infos=sel.multiple;if(infos.some(info=>!info.svgTransform?.editable))return null;const elements=infos.map(info=>{const found=matchingEls(info.id);return found.length===1?found[0]:null;});if(elements.some(el=>!el||layerLocks.locked(el)))return null;const target=elements.find(el=>el.contains(node));return target?{info:sel.info,target,infos}:null;}
     const targets=sel?.info.svgTransform?.editable?matchingEls(sel.info.id):[],selected=targets.length===1?targets[0]:null;
     if(selected?.contains(node)&&!layerLocks.locked(selected))return {info:sel.info,target:selected};
     const target=layerLocks.pick(node);return target?.namespaceURI==='http://www.w3.org/2000/svg'&&/^(g|rect|circle|ellipse|line|path|polygon|polyline|text|image|use)$/.test(target.localName)&&!layerLocks.locked(target)?{target}:null;
   };
   stopSVGDrag?.();stopSVGDrag=RetouchSVGDrag.mount({document:d,frame:iframe,candidate:vectorDragCandidate,
     prepare:async({target},current)=>{const selection=sel,valid=()=>current()&&sel===selection&&doc()===d&&!!vectorDragCandidate(target);await select(target,{current:valid});const result=current()&&vectorDragCandidate(target);return result?.info?result:null;},
-    onStart:({info,target},event,move,released)=>resizeSVGOnCanvas(info,target,event,'se','move',{framePointer:true,initialMove:move,initialReleased:released}),onError:error=>toast(error.message,'err')});
+    onStart:({info,target,infos},event,move,released)=>infos?moveSVGSelection({initialPointer:event,initialMove:move,pointerTarget:target}):resizeSVGOnCanvas(info,target,event,'se','move',{framePointer:true,initialMove:move,initialReleased:released}),onError:error=>toast(error.message,'err')});
   stopMarquee?.();
   stopMarquee=RetouchMarquee.mount({document:d,frame:iframe,surface:canvasSurface,enabled:()=>window.__RT_RENDERING?.selectionStyling===true&&mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests,
     onChange:rect=>{selectionMarquee=rect?{document:d,rect}:null;},
@@ -2275,11 +2276,16 @@ function vectorNudgeShortcut(e){
   if(sel?.multiple?.length>1){
    const infos=sel.multiple,elements=infos.map(info=>{const found=matchingEls(info.id);return found.length===1?found[0]:null;});
    if(infos.some(info=>!info.svgTransform?.editable)||elements.some(el=>!el||layerLocks.locked(el)))return false;
-   const current=()=>mode==='edit'&&sel?.multiple===infos&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!document.querySelector('dialog[open]')&&elements.every(el=>!layerLocks.locked(el));
-   e.preventDefault();e.stopImmediatePropagation();stopDrawing=RetouchSVGSelection.nudge(infos,elements,{initialKey:e,current,canvas:canvasSurface,onCommit:matrices=>{if(current())void writeSVGSelection(matrices);},onError:message=>toast(message,'err'),onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();}});return true;
+   e.preventDefault();e.stopImmediatePropagation();moveSVGSelection({initialKey:e});return true;
   }
   const targets=matchingEls(sel.info.id),target=targets.length===1?targets[0]:null;if(!target||layerLocks.locked(target)||RetouchSVGResize.reason(target,sel.info))return false;
   e.preventDefault();e.stopImmediatePropagation();void resizeSVGOnCanvas(sel.info,target,null,'se','move',{initialKey:e});return true;
+}
+function moveSVGSelection(gesture){
+ const infos=sel?.multiple;if(!infos?.length)return;const elements=infos.map(info=>{const found=matchingEls(info.id);return found.length===1?found[0]:null;});
+ if(elements.some(el=>!el||layerLocks.locked(el)))return;
+ const current=()=>mode==='edit'&&sel?.multiple===infos&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!document.querySelector('dialog[open]')&&elements.every(el=>!layerLocks.locked(el));
+ stopDrawing=RetouchSVGSelection.nudge(infos,elements,{...gesture,current,frame:iframe,canvas:canvasSurface,onCommit:matrices=>{if(current())void writeSVGSelection(matrices);},onError:message=>toast(message,'err'),onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();}});
 }
 async function resizeSVGOnCanvas(info,target=null,initialPointer=null,handle='se',action='resize',gesture={}){
   if(panelTasks||undoBusy||sourceRequests||editing||!info?.svgTransform?.editable)return;stopDrawing?.();
