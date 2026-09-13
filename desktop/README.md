@@ -10,25 +10,25 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-caps-6c82b08/Retouch-0.1.0-mac.zip`
-(SHA-256 `ec1f202331b4cb0fb42ffe837166f3375388fef2906042a51eed8d3f5d9575a8`).
-It packages clean commit `6c82b08`: tabbed Type settings, shared HTML/React/Liquid
-previews, contextual samples, ligature controls, alternate capital forms,
-saved-style support and responsive source edits, alongside the existing editor.
-All 204 source hashes and native/build/verifier hashes match. The extracted
-runtime passed 1,161 unit tests and 14 browser workflows. Universal architecture
-and strict signatures verify before and after workflows.
+`/private/tmp/retouch-desktop-ranges-c25f59a/Retouch-0.1.0-mac.zip`
+(SHA-256 `4d1b2ffbc60dfd27424ae8d40f74243d1c4b9b39cce2f6309811cd3ee0057fbd`).
+It packages clean commit `c25f59a`, including selected-range formatting, nested
+emphasis preservation, explicit weight/style overrides, repeated saved edits,
+and plain style-run splitting/merging, alongside the existing editor.
+All 205 runtime source hashes and native/build/verifier hashes match. The
+extracted runtime passed 1,172 unit tests and 20 browser workflows. Universal
+architecture and strict signatures verify before and after workflows.
 
 The exact ZIP installed and uninstalled through Homebrew in an isolated app
 directory with quarantine retained and the original cask inventory unchanged.
 Temporary app, tap, trust configuration and external test harness were removed.
 Browser coverage includes HTML/React Chromium and Liquid WebKit typography,
-OpenType controls, CSS paints and border styles, plus HTML SVG strokes and the
-full HTML editing workflow. Checks retain responsive fallback/reset, source
-preservation and exact undo/redo assertions. Disposable-copy tamper checks pass.
-See [the candidate receipt](verification/2026-09-13-opentype.json),
-[the preceding typography candidate](verification/2026-09-13-typography.json),
-and [the border candidate](verification/2026-09-13-border-edges.json).
+OpenType controls, text-range formatting/styles, CSS paints and border styles,
+plus HTML SVG strokes and the full HTML editing workflow. Checks retain
+responsive fallback/reset, source preservation and exact undo/redo assertions.
+Disposable-copy tamper checks pass. See [the candidate receipt](verification/2026-09-13-text-ranges.json),
+[the preceding OpenType candidate](verification/2026-09-13-opentype.json),
+and [the typography candidate](verification/2026-09-13-typography.json).
 
 This is an ad hoc development build, not a trusted release. Native launch was
 not attempted because the fresh CUA native connection check failed. Developer

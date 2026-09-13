@@ -1,0 +1,236 @@
+{
+  "sourceCommit": "c25f59a848dfaa06e5eae18a9ea59f1edb79243f",
+  "sourceTreeDirty": false,
+  "sourceFiles": 205,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "status": "ad hoc development candidate; native editing and trusted distribution unverified",
+  "archive": "/private/tmp/retouch-desktop-ranges-c25f59a/Retouch-0.1.0-mac.zip",
+  "sha256": "4d1b2ffbc60dfd27424ae8d40f74243d1c4b9b39cce2f6309811cd3ee0057fbd",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "signatureAfterWorkflows": "strict verification passed on original and extracted bundles",
+  "units": {
+    "passed": 1172,
+    "exitCode": 0,
+    "scope": "tests import actual extracted packaged runtime",
+    "log": "/private/tmp/retouch-desktop-ranges-c25f59a/units.log"
+  },
+  "harness": {
+    "testFiles": 347,
+    "inventorySha256": "31569ce9b043fcb768338f99d204270e31b26f89ca2afd4b26901b9788440048",
+    "archiveSha256": "28f189872c5113f9f9d7e249312a337994e0de4811623da91bd269676ec0923f",
+    "runtime": "/private/tmp/retouch-desktop-ranges-c25f59a/extracted/Retouch.app/Contents/Resources/retouch",
+    "testsExternalToBundle": true,
+    "removedAfterAllProcessesExited": true
+  },
+  "workflows": [
+    {
+      "name": "typography-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/typography-html.log",
+      "scope": "Primary/shared calculations, percent spacing, named weights, category keyboard controls and contextual preview samples with exact history"
+    },
+    {
+      "name": "typography-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/typography-liquid.log",
+      "scope": "Primary/shared calculations, percent spacing, named weights, category keyboard controls and contextual preview samples with exact history"
+    },
+    {
+      "name": "opentype-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/opentype-html.log",
+      "scope": "Optical sizing, variable axes, number formatting, capital forms and ligatures, preview values, responsive fallback/reset and exact history"
+    },
+    {
+      "name": "scripts-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/scripts-html.log",
+      "scope": "OpenType script position, semantic range formatting, nested emphasis, saved script reopening, partial toggles and exact source undo/redo"
+    },
+    {
+      "name": "opentype-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/opentype-liquid.log",
+      "scope": "Optical sizing, variable axes, number formatting, capital forms and ligatures, preview values, responsive fallback/reset and exact history"
+    },
+    {
+      "name": "ranges-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/ranges-html.log",
+      "scope": "Computed range weight/style overrides, mixed ranges, ten saved changes without wrapper growth, partial splitting and neighbor merging with exact undo/redo"
+    },
+    {
+      "name": "typography-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/typography-react.log",
+      "scope": "Primary/shared calculations, percent spacing, named weights, category keyboard controls and contextual preview samples with exact history"
+    },
+    {
+      "name": "paints-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/paints-html.log",
+      "scope": "Compact CSS paints, bare hex entry, RGB/P3 and four-edge alpha preservation, invalid input, Escape, responsive overrides and exact history"
+    },
+    {
+      "name": "styles-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/styles-html.log",
+      "scope": "Missing-edge creation, individual styles, mixed state, screen fallback, reset and exact width/style history"
+    },
+    {
+      "name": "scripts-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/scripts-liquid.log",
+      "scope": "OpenType script position, semantic range formatting, nested emphasis, saved script reopening, partial toggles and exact source undo/redo"
+    },
+    {
+      "name": "svg-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/svg-html.log",
+      "scope": "SVG compact paints and advanced stroke settings, keyboard focus, responsive overrides, reset and exact history"
+    },
+    {
+      "name": "ranges-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/ranges-liquid.log",
+      "scope": "Computed range weight/style overrides, mixed ranges, ten saved changes without wrapper growth, partial splitting and neighbor merging with exact undo/redo"
+    },
+    {
+      "name": "paints-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/paints-liquid.log",
+      "scope": "Compact CSS paints, bare hex entry, RGB/P3 and four-edge alpha preservation, invalid input, Escape, responsive overrides and exact history"
+    },
+    {
+      "name": "opentype-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/opentype-react.log",
+      "scope": "Optical sizing, variable axes, number formatting, capital forms and ligatures, preview values, responsive fallback/reset and exact history"
+    },
+    {
+      "name": "site-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/site-html.log",
+      "scope": "Full HTML editing, responsive CSS, text/images/assets/navigation, effects, geometry, selection and source history"
+    },
+    {
+      "name": "styles-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/styles-liquid.log",
+      "scope": "Missing-edge creation, individual styles, mixed state, screen fallback, reset and exact width/style history"
+    },
+    {
+      "name": "scripts-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/scripts-react.log",
+      "scope": "OpenType script position, semantic range formatting, nested emphasis, saved script reopening, partial toggles and exact source undo/redo"
+    },
+    {
+      "name": "ranges-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/ranges-react.log",
+      "scope": "Computed range weight/style overrides, mixed ranges, ten saved changes without wrapper growth, partial splitting and neighbor merging with exact undo/redo"
+    },
+    {
+      "name": "paints-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/paints-react.log",
+      "scope": "Compact CSS paints, bare hex entry, RGB/P3 and four-edge alpha preservation, invalid input, Escape, responsive overrides and exact history"
+    },
+    {
+      "name": "styles-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-ranges-c25f59a/styles-react.log",
+      "scope": "Missing-edge creation, individual styles, mixed state, screen fallback, reset and exact width/style history"
+    }
+  ],
+  "tamperChecks": {
+    "result": "passed on disposable bundle copy",
+    "exitCode": 0,
+    "scope": "altered source, omitted manifest entry, unlisted source, restored copy and original signature",
+    "log": "/private/tmp/retouch-desktop-ranges-c25f59a/tamper.log"
+  },
+  "installation": {
+    "verification": {
+      "sourceCommit": "c25f59a848dfaa06e5eae18a9ea59f1edb79243f",
+      "sourceTreeDirty": false,
+      "sourceFiles": 205,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesArchive": true,
+    "quarantinePreserved": true,
+    "quarantine": "0381;6aa6e723;;5AADF3D7-2282-4409-9E74-042D795F7264",
+    "result": "isolated install and uninstall passed",
+    "caskInventoryUnchanged": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "automaticDependencyRemovalDisabled": true,
+    "exitCode": 0,
+    "log": "/private/tmp/retouch-desktop-ranges-c25f59a/homebrew.log"
+  },
+  "nativeLaunch": {
+    "result": "not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "nativeSelfTests": "not run",
+  "developerID": "Developer ID Application identity is available; signing not retried; private-key authorization remains unverified",
+  "notarization": "not performed",
+  "published": false,
+  "remaining": [
+    "Native full editing, sampler and shutdown workflows remain unverified",
+    "Developer ID signing, notarization, public cask and trusted upgrades remain incomplete",
+    "Intel runtime execution remains unverified",
+    "Older WebKit normal-flow block-axis Fill sizing remains incorrect; not rerun on this archive",
+    "Dedicated arrow pixel and gradient-canvas matrices were not rerun on this archive",
+    "Font-specific OpenType feature detection and alternate-glyph rendering across all fonts remain unverified",
+    "Full Figma Design parity and universal site support remain incomplete",
+    "General normalization across nested or attributed text styles and indirect rich-text bindings remains incomplete"
+  ]
+}
