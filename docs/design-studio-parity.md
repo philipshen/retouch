@@ -14627,3 +14627,21 @@ offset, phone isolation, reset, and exact undo/redo. The workflow passes HTML,
 React, and Liquid in Chromium 145.0.7632.6 and HTML in WebKit 26.0. The 1,211-test
 unit suite passes. These controls currently apply to the selected layer; mixed
 rich-text range detail editing and full Figma typography parity remain open.
+
+### Wrap styles (2026-09-13)
+
+Type settings → Basics now offers Auto, Balance, Pretty, and No wrap, limited to
+values supported by the current browser. The choice writes scoped `text-wrap`
+CSS/classes and participates in reusable text styles and local override tracking.
+Reset reveals inherited styling. Typography previews scale long samples to fit
+instead of clipping wrapped lines or horizontal overflow.
+
+`RT_E2E_TEXT_WRAP=1` verifies balanced line-width distribution, single-line
+nowrap behavior with unchanged layer width and text, pretty wrapping, tablet
+isolation from the phone view, reset, and exact source undo/redo. It also checks
+that balanced and unwrapped preview text fits its viewport. HTML/React/Liquid
+pass in Chromium 145.0.7632.6; HTML passes in WebKit 26.0. The 1,212-test unit
+suite passes. Per-paragraph rich-text wrap styles, truncation/max-lines, and
+full Figma text-layout parity remain open. Browser line breaks are not claimed
+to match Figma's renderer exactly; its own web handoff uses browser text-wrap:
+https://help.figma.com/hc/en-us/articles/360039956634-Explore-text-properties.

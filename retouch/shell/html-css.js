@@ -60,6 +60,7 @@
   I.fontPositionTypography(typography,css.fontVariantPosition,value=>save('font-variant-position',value,width),()=>save('font-variant-position',null,width),Object.hasOwn(own,'font-variant-position'));
   I.capsTypography(typography,css.fontVariantCaps,value=>save('font-variant-caps',value,width),()=>save('font-variant-caps',null,width),Object.hasOwn(own,'font-variant-caps'));
   I.ligatureTypography(typography,css.fontVariantLigatures,value=>save('font-variant-ligatures',value,width),()=>save('font-variant-ligatures',null,width),Object.hasOwn(own,'font-variant-ligatures'));
+  I.wrapTypography(typography,css,value=>save('text-wrap',value,width),()=>save('text-wrap',null,width),Object.hasOwn(own,'text-wrap'));
   I.underlineTypography(typography,css,(property,value)=>save(property,value,width),property=>save(property,null,width),property=>Object.hasOwn(own,property),el);
   I.numericTypography(typography,css.fontVariantNumeric,value=>save('font-variant-numeric',value,width),()=>save('font-variant-numeric',null,width),Object.hasOwn(own,'font-variant-numeric'));
   const visible=document.createElement('input');visible.type='checkbox';visible.checked=(own.visibility??css.visibility)==='visible';visible.onchange=()=>save('visibility',visible.checked?'visible':'hidden',width);I.field(appearance,'Visible layer',visible);

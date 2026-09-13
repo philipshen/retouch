@@ -99,7 +99,7 @@
       parentLabel: viewport ? 'Page viewport' : `<${parent.tagName.toLowerCase()}>${parent.id ? ' #' + parent.id : ''}`,
     };
   }
-  const typeProperties = ['font-family', 'font-size', 'font-weight', 'font-style', 'font-stretch', 'font-variation-settings', 'font-optical-sizing', 'font-variant-numeric', 'font-variant-ligatures', 'font-variant-caps', 'font-variant-position', 'line-height', 'letter-spacing', 'text-indent', 'text-transform', 'text-decoration-line','text-decoration-style','text-decoration-thickness','text-underline-offset','text-decoration-skip-ink','text-decoration-color'];
+  const typeProperties = ['font-family', 'font-size', 'font-weight', 'font-style', 'font-stretch', 'font-variation-settings', 'font-optical-sizing', 'font-variant-numeric', 'font-variant-ligatures', 'font-variant-caps', 'font-variant-position', 'line-height', 'letter-spacing', 'text-indent', 'text-wrap', 'text-transform', 'text-decoration-line','text-decoration-style','text-decoration-thickness','text-underline-offset','text-decoration-skip-ink','text-decoration-color'];
   function catalog(d) {
     const result = new Map();
     function scan(rules) {
@@ -304,6 +304,13 @@
     return input;
   }
   const fontPositionToken=t=>/^\[font-variant-position:.+\]$/.test(t);
+  function wrapTypography(parent,css,onChange,onReset,canReset){
+    const value=css.getPropertyValue('text-wrap'),choices=[['wrap','Auto'],['balance','Balance'],['pretty','Pretty'],['nowrap','No wrap']].filter(([key])=>CSS.supports('text-wrap',key));
+    if(!choices.length)return;
+    if(value&&!choices.some(([key])=>key===value))choices.unshift([value,'Custom']);
+    const input=select(parent,'Wrap style',choices,value,onChange);input.title='Auto fills each line. Balance evens out short text. Pretty improves line endings. No wrap keeps text on one line.';
+    const row=input.closest('.inspector-field'),holder=document.createElement('div');holder.className='property-row';holder.dataset.typeWrap='true';row.before(holder);const reset=button('↺',onReset);reset.setAttribute('aria-label','Reset wrap style');reset.title='Reset wrap style';reset.classList.add('property-reset');reset.disabled=!canReset;holder.append(row,reset);
+  }
   function underlineTypography(parent,css,onChange,onReset,hasOwn,el){
     const details=document.createElement('details'),summary=document.createElement('summary');details.className='underline-typography';details.open=underlineExpanded;details.ontoggle=()=>{if(details.isConnected)underlineExpanded=details.open;};summary.textContent='Underline details';details.append(summary);parent.append(details);
     const choices={'text-decoration-style':[['solid','Solid'],['dotted','Dotted'],['dashed','Dashed'],['double','Double'],['wavy','Wavy']],'text-decoration-skip-ink':[['auto','Auto'],['none','None'],['all','All']]};
@@ -728,6 +735,7 @@
   const fontWeightToken=t=>/^\[font-weight:.+\]$/.test(t)||/^font-(?:thin|extralight|light|normal|medium|semibold|bold|extrabold|black|\[\d+(?:\.\d+)?\])$/.test(t);
   const fontSizeToken=t=>/^\[font-size:.+\]$/.test(t)||/^text-(?:xs|sm|base|lg|[2-9]?xl|\[(?:length:[^\]]+|(?:[-.\d]|(?:calc|min|max|clamp)\()[^\]]*)\]|\(length:--[\w-]+\))(?:\/.*)?$/.test(t);
   const letterSpacingToken=t=>/^(?:-?tracking-.+|\[letter-spacing:.+\])$/.test(t);
+  const textWrapToken=t=>/^(?:text-(?:wrap|nowrap|balance|pretty)|\[text-wrap:.+\])$/.test(t);
   const textIndentToken=t=>/^(?:-?indent-.+|\[text-indent:.+\])$/.test(t);
   const textAlignToken=t=>/^(?:text-(?:left|center|right|justify|start|end)|\[text-align:.+\])$/.test(t);
   const fontStyleToken=t=>/^(?:italic|not-italic|\[font-style:.+\])$/.test(t);
@@ -746,7 +754,7 @@
   }).join(' ');
  }
   function replaceTypography(classes,match,additions){return replace(match===fontSizeToken||match===lineHeightToken?expandSizeLeading(classes):classes,match,additions);}
-  const textOverrideToken=t=>[fontSizeToken,fontWeightToken,fontFamilyToken,lineHeightToken,letterSpacingToken,textIndentToken,textAlignToken,fontStyleToken,decorationToken,caseToken,opticalToken,variationToken,numericToken,ligatureToken,capsToken,fontPositionToken,...Object.values(decorationMatchers)].some(match=>match(t));
+  const textOverrideToken=t=>[fontSizeToken,fontWeightToken,fontFamilyToken,lineHeightToken,letterSpacingToken,textIndentToken,textWrapToken,textAlignToken,fontStyleToken,decorationToken,caseToken,opticalToken,variationToken,numericToken,ligatureToken,capsToken,fontPositionToken,...Object.values(decorationMatchers)].some(match=>match(t));
   function fontWeightClass(value){return typeof value==='number'&&Number.isFinite(value)&&value>=1&&value<=1000?`font-[${value}]`:null;}
   function fontDisplayName(value){return value.trim().toLowerCase()==='-webkit-standard'?'Browser default':value.replace(/["']/g,'');}
   function fontFamilies(d,current){
@@ -839,15 +847,17 @@
   function typographyPreview(parent,el){
     const d=el.ownerDocument,css=d.defaultView.getComputedStyle(el);
     const preview=document.createElement('iframe');preview.className='type-preview';preview.title='Typography preview';preview.setAttribute('sandbox','allow-same-origin');parent.append(preview);
-    const originalText=el.textContent?.trim().slice(0,100)||'The quick brown fox · Aa 0123456789';let sampleText=originalText,sample=null;
-    preview.retouchSample=text=>{sampleText=text??originalText;if(sample)sample.textContent=sampleText;};
+    const originalText=el.textContent?.trim().slice(0,100)||'The quick brown fox · Aa 0123456789';let sampleText=originalText,sample=null,fit=()=>{};
+    preview.retouchSample=text=>{sampleText=text??originalText;if(sample){sample.textContent=sampleText;fit();}};
     preview.onload=()=>{
       const pd=preview.contentDocument;if(!pd||!preview.isConnected||!el.isConnected||!d.location)return;
       const base=pd.createElement('base');base.href=d.location.href;pd.head.append(base);
-      for(const s of d.querySelectorAll('link[rel="stylesheet"],style'))pd.head.append(pd.importNode(s,true));
-      pd.body.style.cssText='margin:0;padding:12px;background:#fff;color:#181818;overflow-wrap:anywhere;';
+      for(const s of d.querySelectorAll('link[rel="stylesheet"],style')){const copy=pd.importNode(s,true);copy.addEventListener('load',()=>fit());pd.head.append(copy);}
+      pd.documentElement.style.overflow='hidden';pd.body.style.cssText='margin:0;padding:12px;background:#fff;color:#181818;overflow-wrap:anywhere;';
       sample=pd.createElement('div');sample.textContent=sampleText;
-      for(const p of typeProperties)sample.style.setProperty(p,css.getPropertyValue(p));pd.body.append(sample);
+      for(const p of typeProperties)sample.style.setProperty(p,css.getPropertyValue(p));sample.style.transformOrigin='top left';pd.body.append(sample);
+      fit=()=>{if(!preview.isConnected||!sample)return;const width=pd.documentElement.clientWidth-24,height=pd.documentElement.clientHeight-24;if(width<=0||height<=0)return;sample.style.transform='scale('+Math.min(1,width/Math.max(1,sample.scrollWidth),height/Math.max(1,sample.scrollHeight))+')';};
+      const observer=new pd.defaultView.ResizeObserver(fit);observer.observe(sample);pd.defaultView.addEventListener('resize',fit);pd.fonts.ready.then(fit);fit();
     };
     preview.srcdoc='<!doctype html><html><head></head><body></body></html>';
     return preview;
@@ -890,6 +900,7 @@
       const indent=number(sec,'Paragraph indent (px)',/^-?[\d.]+px$/.test(css.textIndent)?parseFloat(css.textIndent):NaN,-10000,10000,v=>change(textIndentToken,`[text-indent:${v}px]`));
       if(!indent.value)indent.placeholder=css.textIndent;indent.title='Offsets the first line of each paragraph. Negative values create a hanging indent.';numericPreview(indent,el,'text-indent');
       const resetIndent=button('Reset paragraph indent',()=>save(replace(info.className,textIndentToken,'')));resetIndent.disabled=!tokens(info.className).map(base).some(t=>t&&textIndentToken(t));sec.append(resetIndent);
+      wrapTypography(sec,css,value=>change(textWrapToken,`[text-wrap:${value}]`),()=>save(replace(info.className,textWrapToken,'')),tokens(info.className).map(base).some(t=>t&&textWrapToken(t)));
       select(sec,'Text alignment',['left','center','right','justify','start','end'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.textAlign,v=>change(textAlignToken,'text-'+v)).dataset.textDirection=css.direction;
       select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(fontStyleToken,v==='italic'?'italic':'not-italic'));
       select(sec,'Text decoration',[['none','None'],['underline','Underline'],['line-through','Strikethrough'],['overline','Overline']],css.textDecorationLine,v=>change(decorationToken,v==='none'?'no-underline':v));
@@ -951,6 +962,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

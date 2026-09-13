@@ -1,9 +1,9 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {encode}=require('../src/text-style-classes.cjs'),tokens=require('../src/class-tokens.cjs'),responsive=require('../shell/responsive.js');
-const full={'font-family':'"标题_Font", sans-serif','font-size':'32px','font-weight':'537.5','font-style':'oblique','font-optical-sizing':'none','font-variation-settings':'"wght" 537.5, "GRAD" -30','font-variant-numeric':'tabular-nums slashed-zero','font-variant-ligatures':'no-common-ligatures discretionary-ligatures','font-variant-caps':'all-small-caps','font-variant-position':'super','line-height':'1.4','letter-spacing':'-0.02em','text-indent':'24px','text-align':'center','text-decoration-line':'underline line-through','text-decoration-style':'wavy','text-decoration-thickness':'3px','text-underline-offset':'-2px','text-decoration-skip-ink':'none','text-decoration-color':'#123456','text-transform':'uppercase'};
+const full={'font-family':'"标题_Font", sans-serif','font-size':'32px','font-weight':'537.5','font-style':'oblique','font-optical-sizing':'none','font-variation-settings':'"wght" 537.5, "GRAD" -30','font-variant-numeric':'tabular-nums slashed-zero','font-variant-ligatures':'no-common-ligatures discretionary-ligatures','font-variant-caps':'all-small-caps','font-variant-position':'super','line-height':'1.4','letter-spacing':'-0.02em','text-indent':'24px','text-wrap':'balance','text-align':'center','text-decoration-line':'underline line-through','text-decoration-style':'wavy','text-decoration-thickness':'3px','text-underline-offset':'-2px','text-decoration-skip-ink':'none','text-decoration-color':'#123456','text-transform':'uppercase'};
 test('every catalog typography property has a validated scoped class encoding',()=>{
- const encoded=encode(full);assert.equal(Object.keys(encoded).length,21);
+ const encoded=encode(full);assert.equal(Object.keys(encoded).length,22);
  assert.equal(encoded['font-family'],'![font-family:"标题\\_Font",_sans-serif]');assert.equal(encoded['font-variation-settings'],'![font-variation-settings:"wght"_537.5,_"GRAD"_-30]');
  const scoped=responsive.replaceScope('hover:text-red-500 md:p-4',Object.values(encoded).join(' '),'md:');
  for(const token of scoped.split(' '))assert.equal(tokens.valid(token),true,token);
@@ -64,4 +64,14 @@ test('underline detail tokens remain independent and support linked style overri
  for(const property of ['text-decoration-line','text-decoration-style','text-decoration-color','text-decoration-thickness']){assert.equal(css.overlaps('text-decoration',property),true);assert.equal(css.overlaps(property,'text-decoration'),true);}
  for(const [property,value]of [['text-decoration-style','wavy'],['text-decoration-thickness','auto'],['text-decoration-thickness','from-font'],['text-decoration-thickness','10%'],['text-underline-offset','-2px'],['text-underline-offset','auto'],['text-decoration-color','currentColor'],['text-decoration-skip-ink','none']])assert.ok(styles.encode({[property]:value}));
  for(const [property,value]of [['text-decoration-thickness','-1px'],['text-decoration-style','wavy;color:red'],['text-decoration-skip-ink','never'],['text-underline-offset','url(x)']])assert.throws(()=>styles.encode({[property]:value}));
+});
+test('wrap style tokens and text styles preserve unrelated type and screen properties',()=>{
+ const styles=require('../src/text-style-classes.cjs'),I=require('../shell/inspector.js'),css=require('../shell/html-css-values.js');
+ for(const token of ['text-wrap','text-nowrap','text-balance','text-pretty','[text-wrap:balance]'])assert.ok(I.textWrapToken(token));
+ for(const token of ['text-blue-500','text-2xl','whitespace-pre-wrap'])assert.equal(I.textWrapToken(token),false);
+ assert.equal(styles.compose('text-wrap text-lg md:text-nowrap md:tracking-wide hover:text-balance',{'text-wrap':'pretty'},'md:'),'text-wrap text-lg md:tracking-wide hover:text-balance md:![text-wrap:pretty]');
+ assert.deepEqual(styles.overrides('text-balance',{'text-wrap':'wrap'}),['text-wrap']);
+ for(const value of ['wrap','nowrap','balance','pretty'])assert.ok(styles.encode({'text-wrap':value}));
+ for(const value of ['auto','balance;color:red','inherit'])assert.throws(()=>styles.encode({'text-wrap':value}));
+ for(const property of ['text-wrap-mode','text-wrap-style'])assert.ok(css.overlaps('text-wrap',property));
 });
