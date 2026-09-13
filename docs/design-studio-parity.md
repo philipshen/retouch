@@ -13986,3 +13986,21 @@ Logs: /private/tmp/retouch-selection-units-final.log and
 Selections spanning files, nested parent/child transforms, multi-vector canvas
 handles/dragging/nudges, selection proportions locking, full Figma/any-site parity
 and a trusted native release remain open. No desktop rebuild or push.
+
+## 2026-09-13 — Nested SVG selections
+
+Selecting SVG groups together with their descendants now transforms only the
+outermost selected members. Children inherit the transformation once, while
+their authored transform lists and absent transform attributes remain intact.
+Selection bounds use the outermost members, and the batch remains one source
+transaction with the selection retained through Undo/Redo.
+
+Validation: 1,029 unit tests passed. Completed HTML/WebKit 26, React/Chromium
+and Liquid/Chromium browser logs report passing nested movement, width scaling,
+rotation, both flips, source preservation and atomic history, alongside existing
+vector regressions. Logs: /private/tmp/retouch-nested-{html,react,liquid}.log.
+
+Every selected member must still have an editable, measurable SVG transform in
+one source file. Dynamic or CSS-owned descendants, cross-file selections and
+multi-vector canvas gestures remain open. This change does not rebuild the Mac
+application.
