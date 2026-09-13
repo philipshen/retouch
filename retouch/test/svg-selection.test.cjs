@@ -42,3 +42,10 @@ test('Canvas selection resize honors opposite anchors, center and live proportio
  const free=S.canvasResize(b,'se',50,10,{ctrlKey:true},true);assert.notEqual(free[0],free[3]);
  assert.equal(S.canvasResize({...b,width:0},'se',10,10),null);
 });
+
+test('Selection canvas rotation wraps angles, snaps by 15 degrees and fixes the center',()=>{
+ const box={left:20,top:30,width:100,height:200},point=angle=>({x:70+100*Math.cos(angle*Math.PI/180),y:130+100*Math.sin(angle*Math.PI/180)}),free=S.canvasRotation(box,point(170),point(-163)),snap=S.canvasRotation(box,point(170),point(-163),true);
+ assert.ok(Math.abs(free.angle-27)<1e-8);assert.equal(snap.angle,30);const m=snap.matrix;assert.ok(Math.abs(m[0]*70+m[2]*130+m[4]-70)<1e-8);assert.ok(Math.abs(m[1]*70+m[3]*130+m[5]-130)<1e-8);
+ assert.equal(S.canvasRotation(box,point(0),point(-27),true).angle,-30);
+ const a=S.rotationPoints(box,1)[0],b=S.rotationPoints(box,2)[0];assert.ok(Math.abs(Math.hypot(a.x-20,a.y-30)-18)<1e-8);assert.ok(Math.abs(Math.hypot(b.x-20,b.y-30)-9)<1e-8);
+});

@@ -14114,3 +14114,29 @@ The shared selection drag/nudge and existing vector regressions are included.
 The active resize handle and light hint in /private/tmp/retouch-selection-resize.png
 were visually inspected. Logs: /private/tmp/retouch-selection-resize-{units,html,react}.log
 and /private/tmp/retouch-selection-resize-liquid-final.log.
+
+## 2026-09-13 — SVG selection canvas rotation
+
+Four rotation targets outside the selection corners now rotate SVG selections
+around their document-space center. Shift snaps the relative rotation to 15°;
+pressing or releasing Shift updates the same preview immediately. The angle hint
+uses positive counterclockwise values. Rotation target offsets remain constant
+in screen pixels across zoom levels.
+
+A rotated selection outline follows the gesture and is clipped to the canvas.
+Axis-aligned member boxes are temporarily hidden during rotation. Selected
+children inherit their selected ancestor's rotation once, and release creates
+one source transaction with exact selection history. Escape restores the preview.
+
+This remains limited to editable, once-rendered SVG selections in one file.
+Resize snapping, mixed CSS/SVG selections, cross-file transforms and trusted
+native release remain unfinished. No desktop rebuild or push.
+
+Validation: 1,033 unit tests passed. HTML/WebKit 26, React/Chromium and
+Liquid/Chromium browser workflows cover all four corner targets, different
+parent transforms, nested selections, 50/100/200 percent zoom, live Shift snap
+and release, cancellation and exact Undo/Redo. Existing resize, drag and nudge
+regressions remain included. The final Liquid run also verifies the simplified
+preview outline; /private/tmp/retouch-selection-rotate-final.png was visually
+inspected. Logs: /private/tmp/retouch-selection-rotate-{html,react}.log and
+/private/tmp/retouch-selection-rotate-{liquid,units}-final.log.

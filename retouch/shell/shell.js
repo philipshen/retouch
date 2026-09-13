@@ -902,7 +902,7 @@ componentBadge.querySelector('button').onclick=async()=>{
     await detachInstance(target.id,component,button,context);
   } finally {button.disabled=false;}
 };
-const svgSelectionCorners=RetouchSVGSelection.controls({frame:iframe,canvas:canvasSurface,onStart:(event,handle)=>moveSVGSelection({initialPointer:event,handle})});
+const svgSelectionCorners=RetouchSVGSelection.controls({frame:iframe,canvas:canvasSurface,onStart:(event,handle)=>moveSVGSelection({initialPointer:event,handle}),onRotate:(event,handle)=>moveSVGSelection({initialPointer:event,handle,rotating:true})});
 const svgResizeCorners=RetouchSVGResize.controls({frame:iframe,canvas:canvasSurface,onStart:resizeSVGOnCanvas,onRotate:(info,target,event,handle)=>resizeSVGOnCanvas(info,target,event,handle,'rotate')});
 const radiusCorners=RetouchSVGRadiusCanvas.controls({frame:iframe,canvas:canvasSurface,onStart:roundRectangleOnCanvas});
 const rotationCorners=RetouchCanvasRotate.cornerControls({frame:iframe,canvas:canvasSurface,onStart:rotateLayerOnCanvas});
@@ -910,7 +910,7 @@ function paintLoop() {
   overlayLayer.textContent = '';
   const d = doc();
   let badge=null;
-  if (d && sel && mode==='edit') {
+  if (d && sel && mode==='edit'&&!RetouchSVGSelection.isRotating()) {
     const id=activeId();
     let first=true;
     const targets=matchingInDocument(d,id,sel.info).filter(el=>inTextScope(el,sel.info));
@@ -922,12 +922,12 @@ function paintLoop() {
       first=false;
     }
   }
-  if(d&&sel?.multiple&&mode==='edit')for(const info of sel.multiple)if(info.id!==activeId()){
+  if(d&&sel?.multiple&&mode==='edit'&&!RetouchSVGSelection.isRotating())for(const info of sel.multiple)if(info.id!==activeId()){
     const targets=matchingEls(info.id).filter(el=>inTextScope(el,info));
     const groups=info.kind==='instance'?RetouchComponentInstances.group(targets,info.rootGroups):targets.map(el=>({element:el,elements:[el]}));
     for(const group of groups){const bounds=RetouchComponentInstances.bounds(group.elements);if(bounds){if(group.elements.length===1)drawBox(group.element,'co',outlineKind(group.element,info));else drawBounds(bounds,'co',outlineKind(group.element,info));}}
   }
-  if(d&&mode==='edit'&&sel?.multiple?.length>1&&sel.multiple.every(info=>info.svgTransform)){const groups=sel.multiple.map(info=>matchingEls(info.id));if(groups.every(group=>group.length===1)){const bounds=RetouchComponentInstances.bounds(groups.flat());if(bounds)drawBounds(bounds,'sel svg-selection-bounds','editable');}}
+  if(d&&mode==='edit'&&sel?.multiple?.length>1&&sel.multiple.every(info=>info.svgTransform)){const groups=sel.multiple.map(info=>matchingEls(info.id));if(groups.every(group=>group.length===1)){const bounds=RetouchComponentInstances.bounds(groups.flat());if(bounds&&!RetouchSVGSelection.isRotating())drawBounds(bounds,'sel svg-selection-bounds','editable');}}
   if(d && editing?.el.isConnected)drawBox(editing.el,'editing',outlineKind(editing.el,editing.info));
   if(d && hoverEl?.isConnected && mode==='edit' && !editing && !stopDrawing) {
     const hovered=hoverDescription(hoverEl),target=hovered.element,info=hovered.info,kind=outlineKind(target,info);
