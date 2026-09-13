@@ -182,5 +182,5 @@ handle.style.left=s*100+'%';handle.style.top=(1-v)*100+'%';plane.setAttribute('a
   dialog.addEventListener('close',()=>{libraryAbort.abort();sampling?.abort();resizeObserver.disconnect();observer.disconnect();draftPreview?.restore();root.removeEventListener('resize',position);dialog.remove();if(onClose){onClose({applied});return;}if(refreshAfterClose&&root.RetouchPanelFocus?.refreshSavedControl)root.RetouchPanelFocus.refreshSavedControl(input);else if(input.isConnected)input.focus();},{once:true});
   dialog.addEventListener('keydown',event=>{event.stopPropagation();if(event.key==='Enter'&&!event.isComposing&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&event.target.matches('input:not([type=range])')){event.preventDefault();apply();}});sync();dialog.showModal();position();root.addEventListener('resize',position);value.focus();return dialog;
  }
- root.RetouchPaintPicker={open,mountSelectionField,gradientPreview,shadowPreview,propertyPreview};
+ root.RetouchPaintPicker={open,parsePaint,mountSelectionField,gradientPreview,shadowPreview,propertyPreview};
 })(window);

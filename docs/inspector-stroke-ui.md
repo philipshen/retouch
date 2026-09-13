@@ -70,3 +70,27 @@ focus target could be rebuilt while its settings panel was still invisible.
 The panel now uses the `hidden` state until positioned, so the existing focus
 observer retries when the controls become available. Final browser logs are
 `/private/tmp/retouch-stroke-icons-{html,react,liquid}-final.log`.
+
+## Compact SVG paint rows
+
+SVG Fill and Stroke now combine the swatch, paint-type dropdown, color value
+and color opacity on one row. The former Type and Color label rows are removed.
+Standard sRGB colors show a short hex label at rest; Display P3 is identified
+explicitly. Focusing the value field still exposes its full CSS value. The
+swatch opens the existing color picker, and the type dropdown retains gradient
+creation and its source-ownership checks.
+
+The percentage field edits the color's alpha through the existing paint writer.
+It preserves sRGB/Display P3 channels and does not convert color spaces. Layer
+opacity and separate SVG fill-opacity/stroke-opacity still compose with that
+alpha; this control does not flatten those independent properties. Contextual
+colors that cannot be parsed retain their raw value and disable alpha editing.
+Existing inline-source restrictions are reflected by the new field.
+
+Validation: 1,152 unit tests; HTML/React Chromium and Liquid WebKit workflows
+cover fill/stroke alpha, invalid percentages, base/scoped values, screen fallback,
+reset, exact Undo/Redo and Display P3 channel preservation. HTML gradient creation
+still covers both paint types, linear/radial gradients and exact history cleanup.
+Screenshot inspected: `/private/tmp/retouch-compact-paints-final.png`.
+Logs: `/private/tmp/retouch-compact-paints-{html,react,liquid}-final.log` and
+`/private/tmp/retouch-compact-paints-gradients.log`.

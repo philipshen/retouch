@@ -7,6 +7,17 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
  function saveSectionPreferences(){try{root.localStorage.setItem(sectionPreferenceKey,JSON.stringify([...collapsedSections].slice(0,64)));}catch{}}
 
  function disclosure(title,key){const d=document.createElement('details'),s=document.createElement('summary');d.className='inspector-disclosure';s.textContent=title;d.append(s);d.open=openGroups.has(key);d.ontoggle=()=>d.open?openGroups.add(key):openGroups.delete(key);return d;}
+ function compactSVGPaint(section,input){
+  const paint=input.getAttribute('aria-label')?.match(/^SVG (fill|stroke)$/)?.[1];if(!paint||/^url\(/i.test(input.value.trim()))return;
+  const control=input.closest('.paint-field-control'),previous=input.closest('.inspector-field');if(!control||!previous)return;
+  const field=document.createElement('div');field.className=previous.className+' compact-svg-paint';field.append(...previous.childNodes);previous.replaceWith(field);input.classList.add('compact-paint-value');
+  const type=section.querySelector('[aria-label="'+(paint==='fill'?'Fill type':'Stroke type')+'"]');if(type){const row=type.closest('.property-row')||type.closest('.inspector-field');type.classList.add('compact-paint-type');if(!type.title)type.title='Paint type';control.append(type);row?.remove();control.classList.add('has-paint-type');}
+  const display=document.createElement('span');display.className='compact-paint-label';display.setAttribute('aria-hidden','true');control.append(display);
+  const opacity=document.createElement('input'),alpha=document.createElement('span'),unit=document.createElement('span');alpha.className='compact-paint-alpha';opacity.type='number';opacity.min=0;opacity.max=100;opacity.step='any';opacity.required=true;opacity.setAttribute('aria-label','SVG '+paint+' opacity (%)');unit.textContent='%';unit.setAttribute('aria-hidden','true');alpha.append(opacity,unit);control.append(alpha);
+  const color=()=>{try{return root.RetouchPaintPicker.parsePaint(input.value.trim());}catch{return null;}},sync=()=>{const value=color();control.classList.toggle('has-compact-label',!!value);display.textContent=value?(value.space==='display-p3'?'Display P3':value.channels.every(n=>Math.abs(n*255-Math.round(n*255))<1e-6)?value.channels.map(n=>Math.round(n*255).toString(16).padStart(2,'0')).join('').toUpperCase():'RGB'):'';opacity.disabled=input.disabled||!value;opacity.title=input.disabled?input.title:value?'Paint opacity':'Choose a literal color to edit its opacity.';opacity.value=value?String(Number((value.alpha*100).toFixed(8))):'';};
+  opacity.oninput=()=>opacity.setCustomValidity('');opacity.onchange=()=>{if(!opacity.checkValidity()||input.disabled)return;const current=color(),value=Number(opacity.value)/100;if(!current||Math.abs(current.alpha-value)<1e-10)return;root.RetouchPanelFocus?.queue(opacity);input.value=current.space==='display-p3'?root.RetouchPaletteValues.p3(current.channels,value):root.RetouchPaletteValues.srgb(current.channels,value);input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));};
+  input.addEventListener('input',sync);input.addEventListener('change',sync);new MutationObserver(sync).observe(input,{attributes:true,attributeFilter:['disabled','title']});sync();
+ }
  let strokeMode={key:null,custom:false};
  function strokePatternControls(settings,key){
   const raw=settings.querySelector('[aria-label="SVG dash pattern"]');if(!raw)return;
@@ -202,7 +213,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
 
     const swatch=document.createElement('button');swatch.type='button';swatch.className='gradient-stop-swatch';swatch.setAttribute('aria-label','Edit '+input.getAttribute('aria-label'));swatch.title='Edit color';swatch.disabled=input.disabled;swatch.onclick=()=>root.RetouchPaintPicker.open(input);input.parentElement.classList.add('gradient-stop-color');input.before(swatch);
     const paint=()=>{const color=input.retouchPaintValue?.()||input.value.trim();if(CSS.supports('color',color))swatch.style.backgroundImage='linear-gradient('+color+','+color+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)';};
-    input.addEventListener('input',paint);input.addEventListener('change',paint);input.addEventListener('keydown',event=>{if(event.key==='Escape')queueMicrotask(paint);});paint();
+    input.addEventListener('input',paint);input.addEventListener('change',paint);input.addEventListener('keydown',event=>{if(event.key==='Escape')queueMicrotask(paint);});paint();if(name==='Fill'||name==='Stroke')compactSVGPaint(section,input);
    }
    if(name==='Fill'||name==='Effects')for(const group of section.querySelectorAll(name==='Fill'?'.gradient-controls':'.shadow-controls')){
     const actions=document.createElement('span');actions.className='gradient-actions';
