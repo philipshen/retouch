@@ -4,6 +4,7 @@ module.exports=async function resizeWorkflow({page,app,kind,read,wait,settled}){
  const original=read(),surface=page.getByLabel('Resize SVG vector on canvas',{exact:true});
  const cases=[['rect','Box'],['circle','Circle'],['ellipse','Ellipse'],['line','Diagonal'],['line','Horizontal'],['line','Vertical'],['path','Curve'],['polygon','Polygon'],['polyline','Polyline'],['g','Group'],['text','Text'],['image','Picture'],['use','Symbol']];
  const select=async(tag,name)=>{await page.getByRole('treeitem',{name:tag+' · '+name,exact:true}).click();await settled();await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));};
+ if(process.env.RT_E2E_SVG_SELECTION_RESIZE_ONLY){const context={page,app,kind,read,wait,settled,select,original};await require('./svg-selection-resize.cjs')(context);await require('./svg-selection-resize-snap.cjs')(context);return;}
  for(const [tag,name]of cases){
   const target=app.locator('svg [aria-label="'+name+'"]');await select(tag,name);
   const snapshot=await target.evaluate(el=>{const g=el.getBBox(),m=el.getScreenCTM();return {g:{x:g.x,y:g.y,width:g.width,height:g.height},m:{a:m.a,b:m.b,c:m.c,d:m.d,e:m.e,f:m.f},transform:el.getAttribute('transform'),data:el.getAttribute('d')||el.getAttribute('points')||el.textContent};});

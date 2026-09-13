@@ -14140,3 +14140,32 @@ regressions remain included. The final Liquid run also verifies the simplified
 preview outline; /private/tmp/retouch-selection-rotate-final.png was visually
 inspected. Logs: /private/tmp/retouch-selection-rotate-{html,react}.log and
 /private/tmp/retouch-selection-rotate-{liquid,units}-final.log.
+
+## 2026-09-13 — SVG selection resize snapping
+
+Multi-selection resize handles now snap their dragged edges to nearby SVG
+bounds and centers. The shared constrained resize solver keeps proportions and
+Option/Alt center anchoring intact. Control temporarily disables snapping and
+unlocks proportions; releasing it restores both without another pointer move.
+Guide tolerance stays at six screen pixels across zoom levels, with guides
+clipped to the canvas and selected members excluded from targets.
+
+The browser fixtures now explicitly separate free-resize geometry checks from
+snapping checks. Earlier free-resize points fell within snapping distance of
+siblings or the SVG viewport center; isolated targets and deliberate unsnapped
+points preserve those checks. The new snapping workflow verifies the intended
+edge, lock and center behavior together. An optional focused resize runner helps
+debug these cases without replacing the normal full vector regression path.
+
+Single-vector resize snapping, mixed CSS/SVG selections, cross-file transforms
+and trusted native release remain unfinished. No desktop rebuild or push.
+
+Validation: 1,034 unit tests passed. Focused Liquid checks verify snapping at
+50/100/200 percent zoom, live Control override, proportions, center anchoring
+and exact Undo/Redo. Full HTML/WebKit 26, React/Chromium and Liquid/Chromium
+workflows include these checks alongside resize, rotation, drag, nudge and
+numeric-field regressions. The red guide and updated modifier hint were visually
+checked in /private/tmp/retouch-selection-resize-snap.png. Logs:
+/private/tmp/retouch-selection-resize-snap-{html,react,liquid}-pass.log,
+/private/tmp/retouch-selection-resize-snap-focused.log and
+/private/tmp/retouch-selection-resize-snap-units.log.

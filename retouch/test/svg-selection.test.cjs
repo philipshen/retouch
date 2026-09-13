@@ -49,3 +49,12 @@ test('Selection canvas rotation wraps angles, snaps by 15 degrees and fixes the 
  assert.equal(S.canvasRotation(box,point(0),point(-27),true).angle,-30);
  const a=S.rotationPoints(box,1)[0],b=S.rotationPoints(box,2)[0];assert.ok(Math.abs(Math.hypot(a.x-20,a.y-30)-18)<1e-8);assert.ok(Math.abs(Math.hypot(b.x-20,b.y-30)-9)<1e-8);
 });
+
+test('Selection resize snapping retains ratio/center constraints and supports a live Control override',()=>{
+ const box={left:10,top:20,width:100,height:50},targets=[{left:150,top:20,width:20,height:50}],snap=S.resizeSelection(box,'e',38,0,{},false,targets);
+ assert.equal(snap.matrix[0],1.4);assert.equal(snap.guides[0].value,150);
+ const free=S.resizeSelection(box,'e',38,0,{ctrlKey:true},true,targets);assert.equal(free.matrix[0],1.38);assert.equal(free.matrix[3],1);assert.deepEqual(free.guides,[]);
+ const locked=S.resizeSelection(box,'e',38,0,{},true,targets);assert.equal(locked.matrix[0],locked.matrix[3]);assert.equal(locked.guides[0].value,150);
+ const centered=S.resizeSelection(box,'e',38,0,{altKey:true},false,targets);assert.equal(centered.matrix[0],1.8);assert.ok(Math.abs(centered.matrix[0]*60+centered.matrix[4]-60)<1e-8);
+ assert.deepEqual(S.resizeSelection(box,'e',38,0,{},false,targets,1).guides,[],'screen tolerance limits snapping');
+});

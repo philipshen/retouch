@@ -19,7 +19,7 @@
  }
  const handles=['nw','n','ne','e','se','s','sw','w'],handleNames=['top left','top','top right','right','bottom right','bottom','bottom left','left'];
  function handleButton(i){
-  const b=root.document.createElement('button');b.type='button';b.tabIndex=-1;b.setAttribute('aria-label','Resize selection from '+handleNames[i]);b.title='Resize selection · Shift: proportions · Control: unlock · Option / Alt: center';
+  const b=root.document.createElement('button');b.type='button';b.tabIndex=-1;b.setAttribute('aria-label','Resize selection from '+handleNames[i]);b.title='Resize selection · Shift: proportions · Control: unlock / no snapping · Option / Alt: center';
   Object.assign(b.style,{position:'absolute',zIndex:2,width:'10px',height:'10px',padding:'0',border:'1px solid var(--accent)',background:'white',pointerEvents:'auto',touchAction:'none',transform:'translate(-50%,-50%)',cursor:['nwse-resize','ns-resize','nesw-resize','ew-resize','nwse-resize','ns-resize','nesw-resize','ew-resize'][i]});return b;
  }
  function points(box){return [[0,0],[.5,0],[1,0],[1,.5],[1,1],[.5,1],[0,1],[0,.5]].map(([x,y])=>({x:box.left+x*box.width,y:box.top+y*box.height}));}
@@ -32,19 +32,21 @@
   const rotations=[0,2,4,6].map(i=>{const b=rotationButton(i);b.onpointerdown=e=>{if(!active||e.button!==0)return;e.preventDefault();e.stopPropagation();onRotate(e,handles[i]);};host.append(b);return b;});
   return {update(infos,elements){active=null;host.hidden=true;if(!infos?.length)return;try{const {box}=capture(infos,elements,false);if(!box.width||!box.height)return;const f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/frame.contentWindow.innerWidth,left=Math.max(f.left,c.left),top=Math.max(f.top,c.top),right=Math.min(f.right,c.right),bottom=Math.min(f.bottom,c.bottom);Object.assign(host.style,{left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px'});const seen=[];points(box).forEach((p,i)=>{const x=f.left+p.x*scale-left,y=f.top+p.y*scale-top,b=buttons[i];b.hidden=x<6||y<6||x>right-left-6||y>bottom-top-6||seen.some(p=>Math.hypot(x-p.x,y-p.y)<9);if(!b.hidden)seen.push({x,y});b.style.left=x+'px';b.style.top=y+'px';});rotationPoints(box,scale).forEach((p,i)=>{const b=rotations[i],x=f.left+p.x*scale-left,y=f.top+p.y*scale-top;b.hidden=x<12||y<12||x>right-left-12||y>bottom-top-12;b.style.left=x+'px';b.style.top=y+'px';});active=infos;host.hidden=false;}catch{}}};
  }
- function canvasResize(box,handle,dx,dy,modifiers={},locked=false){
+ function resizeSelection(box,handle,dx,dy,modifiers={},locked=false,targets=[],tolerance=6){
   if(!box.width||!box.height)return null;
-  const C=root.RetouchCanvasMove||require('./canvas-move.js'),ratio=!modifiers.ctrlKey&&(locked||modifiers.shiftKey),d=C.resize(box.width,box.height,handle,dx,dy,{shiftKey:!!ratio,altKey:!!modifiers.altKey,minWidth:1,minHeight:1,maxWidth:100000,maxHeight:100000}),sx=d.width/box.width,sy=d.height/box.height;
-  return [sx,0,0,sy,box.left+d.x-box.left*sx,box.top+d.y-box.top*sy];
+  const C=root.RetouchCanvasMove||require('./canvas-move.js'),ratio=!modifiers.ctrlKey&&(locked||modifiers.shiftKey),options={shiftKey:!!ratio,altKey:!!modifiers.altKey,minWidth:1,minHeight:1,maxWidth:100000,maxHeight:100000,tolerance},d=modifiers.ctrlKey?C.resize(box.width,box.height,handle,dx,dy,options):C.snapResize(box,handle,dx,dy,targets,options),sx=d.width/box.width,sy=d.height/box.height;
+  return {matrix:[sx,0,0,sy,box.left+d.x-box.left*sx,box.top+d.y-box.top*sy],guides:d.guides||[]};
  }
+ function canvasResize(...args){return resizeSelection(...args)?.matrix||null;}
+
  function nudge(infos,elements,{initialKey,initialPointer,initialMove,pointerTarget,frame,handle,rotating=false,current,onCommit,onEnd,onError,canvas}){
   let state;try{state=capture(infos,elements);}catch(error){onError(error.message);return null;}
   rotatingSelection=rotating;
   const members=state.members,w=state.w,cleanup=[],held=new Set(),original=members.map(m=>m.el.getAttribute('transform')),screens=members.map(m=>array(m.el.getScreenCTM())),geometry=members.map(m=>{const g=m.el.getBBox();return [g.x,g.y,g.width,g.height];});
   let ended=false,raf,x=0,y=0,global=A().identity(),next=matricesFor(members,A().identity()),last=original.slice();
   const surface=root.document.createElement('div');surface.setAttribute('aria-label',rotating?'Rotate SVG selection on canvas':handle?'Resize SVG selection on canvas':initialPointer?'Drag SVG selection on canvas':'Move SVG selection on canvas');Object.assign(surface.style,{position:'fixed',bottom:'116px',left:'50%',transform:'translateX(-50%)',zIndex:40});
-  const button=root.document.createElement('button');button.type='button';Object.assign(button.style,{padding:'8px 12px',border:'1px solid var(--line)',borderRadius:'6px',background:'var(--panel)',color:'var(--ink)',fontSize:'11px',fontFamily:'inherit'});button.textContent=rotating?'Rotate selection · Shift: snap to 15° · Escape cancels':handle?'Resize selection · Shift: proportions · Control: unlock · Option / Alt: center · Escape cancels':initialPointer?'Move selection · Shift: lock axis · Control: no snapping · Release applies · Escape cancels':'Move selection · Arrows: 1 · Shift: 10 · Release applies · Escape cancels';surface.append(button);root.document.body.append(surface);
-  const guideSurface=initialPointer&&!handle?root.document.createElement('div'):null,f=frame?.getBoundingClientRect(),scale=f?f.width/w.innerWidth:1;let paintGuides=()=>{},lastPointer=initialMove;
+  const button=root.document.createElement('button');button.type='button';Object.assign(button.style,{padding:'8px 12px',border:'1px solid var(--line)',borderRadius:'6px',background:'var(--panel)',color:'var(--ink)',fontSize:'11px',fontFamily:'inherit'});button.textContent=rotating?'Rotate selection · Shift: snap to 15° · Escape cancels':handle?'Resize selection · Shift: proportions · Control: unlock / no snapping · Option / Alt: center · Escape cancels':initialPointer?'Move selection · Shift: lock axis · Control: no snapping · Release applies · Escape cancels':'Move selection · Arrows: 1 · Shift: 10 · Release applies · Escape cancels';surface.append(button);root.document.body.append(surface);
+  const guideSurface=initialPointer&&!rotating?root.document.createElement('div'):null,f=frame?.getBoundingClientRect(),scale=f?f.width/w.innerWidth:1;let paintGuides=()=>{},lastPointer=initialMove;
   if(guideSurface){const c=canvas.getBoundingClientRect();Object.assign(guideSurface.style,{position:'fixed',left:c.left+'px',top:c.top+'px',width:c.width+'px',height:c.height+'px',overflow:'hidden',pointerEvents:'none',zIndex:39});root.document.body.append(guideSurface);paintGuides=root.RetouchSVGSnapping.mount(guideSurface,{f,scale,left:c.left,top:c.top});}
   const activeHandle=handle?(rotating?rotationButton:handleButton)(handles.indexOf(handle)):null;
   const outline=rotating?root.document.createElementNS('http://www.w3.org/2000/svg','svg'):null;let polygon,clip;
@@ -73,7 +75,7 @@
   function pointerMove(e,modifiers=e){
    if(e.pointerId!==initialPointer.pointerId||ended)return;if(!valid()){end();return;}lastPointer=e;e.preventDefault();e.stopImmediatePropagation();
    if(rotating){const toPoint=e=>({x:(e.clientX-f.left)/scale,y:(e.clientY-f.top)/scale}),result=canvasRotation(state.box,toPoint(initialPointer),toPoint(e),modifiers.shiftKey);applyGlobal(result.matrix);button.textContent=Math.round(-result.angle*100)/100+'° · Shift: snap to 15° · Escape cancels';return;}
-   if(handle){applyGlobal(canvasResize(state.box,handle,(e.clientX-initialPointer.clientX)/scale,(e.clientY-initialPointer.clientY)/scale,modifiers,sizeLocks.has(selectionKey(infos))));return;}
+   if(handle){const targets=members.filter(m=>!m.covered).flatMap(m=>root.RetouchSVGSnapping.targets(m.el,elements)),result=resizeSelection(state.box,handle,(e.clientX-initialPointer.clientX)/scale,(e.clientY-initialPointer.clientY)/scale,modifiers,sizeLocks.has(selectionKey(infos)),targets,6/scale);paintGuides(result||{});applyGlobal(result?.matrix);return;}
    const movement=root.RetouchSVGSnapping.movement(A().identity(),e.clientX-initialPointer.clientX,e.clientY-initialPointer.clientY,modifiers.shiftKey),targets=members.filter(m=>!m.covered).flatMap(m=>root.RetouchSVGSnapping.targets(m.el,elements)),unique=[...new Map(targets.map(t=>[JSON.stringify(t),t])).values()],result=modifiers.ctrlKey?movement:root.RetouchCanvasMove.snap(state.box,movement,unique,{tolerance:6/scale,lock:movement.lock});paintGuides(result);translate(result.x,result.y);
   }
   if(initialPointer){
@@ -99,5 +101,5 @@
   const lock=I.button('Lock selection proportions',()=>{locked=!locked;if(locked)sizeLocks.add(key);else sizeLocks.delete(key);lock.setAttribute('aria-pressed',String(locked));});lock.setAttribute('aria-pressed',String(locked));lock.setAttribute('aria-label','Lock selection proportions');lock.title='Lock selection proportions';lock.innerHTML='<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M8 6V4a3 3 0 0 1 6 0v4a3 3 0 0 1-3 3M12 14v2a3 3 0 0 1-6 0v-4a3 3 0 0 1 3-3M10 6v8"/></svg>';lock.disabled=!initial.box.width||!initial.box.height;section.append(lock);
   const flips=root.RetouchFlip.mount(elements[0],()=>{});for(const button of flips.querySelectorAll('button')){button.disabled=false;button.onclick=()=>{try{apply('flip-'+button.dataset.flipAxis);}catch(error){I.note(section,error.message,'refused');}};}section.append(flips);I.note(section,'Bounds in document pixels. Rotation and flips use the selection center. Changes apply to all screen sizes.');return section;
  }
- const api={inverse,transform,matricesFor,resizeBounds,selectionKey,capture,controls,canvasResize,canvasRotation,rotationPoints,isRotating:()=>rotatingSelection,nudge,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGSelection=api;
+ const api={inverse,transform,matricesFor,resizeBounds,selectionKey,capture,controls,canvasResize,resizeSelection,canvasRotation,rotationPoints,isRotating:()=>rotatingSelection,nudge,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGSelection=api;
 })(typeof window==='object'?window:globalThis);
