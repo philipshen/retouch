@@ -21,6 +21,8 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  // Only the selected portions of separate runs lose underline.
  await edit(2,5);await underline().click();assert.deepEqual(await target.locator('u').allTextContents(),['He','i','ne']);await structure();
  assert.equal(await target.evaluate(el=>el.ownerDocument.getSelection().toString()),'adl');
+ const partialMarkup=await target.innerHTML();await target.evaluate(el=>el.focus());await page.keyboard.press('Control+z');assert.deepEqual(await target.locator('u').allTextContents(),['Head','li','ne']);await structure();assert.equal(read(),initial);
+ await page.keyboard.press('Control+Shift+z');assert.equal(await target.innerHTML(),partialMarkup);await structure();assert.equal(read(),initial);
  await done();const partial=read();assert.notEqual(partial,initial);await structure();await history(partial);
  // Whole-run removal retains nested emphasis and the structural line break.
  await edit(0,6);await underline().click();assert.deepEqual(await target.locator('u').allTextContents(),['ne']);await structure();

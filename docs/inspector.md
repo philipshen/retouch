@@ -1316,3 +1316,31 @@ The first React regression run passed its feature assertions but failed the
 browser-error gate after a Next.js HTTP 500 with an unexpected-end-of-JSON error.
 The complete repeat with network tracing passed without that error; its cause
 was not established, so this does not claim the transient runtime issue is fixed.
+
+### Local undo for text formatting commands (2026-09-13)
+
+Semantic formatting and range typography changes now enter the local text-editing
+history as one transaction per command. Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z restore
+original nodes, source metadata, and selected characters while editing remains
+open. The same shortcuts work when an inspector formatting button or select
+has focus. Text inputs retain their own native input undo behavior.
+
+Commands that leave the DOM unchanged do not add history entries. A new format
+command after Undo clears the redo branch. Multi-run formatting removal records
+one transaction, including the preserved nested styles and line breaks. Internal
+format normalization during typing, composition, and paste is suppressed from
+creating additional history entries; the owning insertion remains one step.
+Unexpected formatting exceptions restore the captured state before propagating.
+
+Source writes still occur through the existing Done/commit path with exact
+source undo/redo. This does not establish a fully unified native editing history
+for all browser commands, physical IME behavior, or every source-owned rich-text
+shape. The packaged desktop candidate based on d303a90 predates this change.
+
+Validation: 1,195 unit tests passed in
+`/private/tmp/retouch-format-history-units.log`. HTML/React Chromium 145 and
+Liquid WebKit 26 local-history checks passed in
+`/private/tmp/retouch-format-history-{html,react,liquid}.log`. React/Liquid also
+passed existing decoration, multiline-paste, and cursor-script regressions.
+The multi-run local/source history check passed in
+`/private/tmp/retouch-format-history-split-html.log`.
