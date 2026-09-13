@@ -822,7 +822,39 @@ exact authored alpha on reopen, Display P3, wrapper reuse, partial split/merge,
 unchanged parent color/text, and exact source undo/redo. The final light toolbar
 was inspected at `/private/tmp/retouch-range-color-verified.png`.
 
-Range color does not yet expose the full paint-picker UI, shared color-style
-links, variables, multiple text fills, or per-screen range overrides. General
+Range color now exposes the solid paint picker (see below). Shared color-style
+links, variables, multiple text fills, and per-screen range overrides remain incomplete. General
 nested/attributed range normalization remains incomplete. The latest desktop
 archive predates the range-size and range-color changes.
+
+
+### Selected-text visual color picker (2026-09-13)
+
+The selected-text toolbar swatch opens the existing light solid-color picker,
+including its color plane, hue, alpha, CSS/hex/RGB controls, and color profiles.
+The picker previews just the selected text without writing source. Apply restores
+the preview first, then saves through the range-style writer as one history step.
+Cancel, Escape, and closing the picker restore the selection and original nodes,
+including source-owned metadata on existing styled spans. Selections crossing
+several text nodes use the same preview transaction. Opaque source-owned text
+is rejected before preview begins.
+
+Focus guards retain the text-edit session through the native dialog's deferred
+close event. A changed editing document or unexpected DOM mutation invalidates
+the draft, avoiding a stale range write. Range color currently applies across
+screen sizes; the picker explicitly labels that scope instead of inheriting the
+inspector's breakpoint message. Opening the swatch uses the selected text's color
+and clears an invalid typed draft.
+
+Validation: 1,179 unit tests passed in
+`/private/tmp/retouch-range-picker-units-verified.log`. Color and size browser
+checks passed in `/private/tmp/retouch-range-picker-final-{html,react,liquid}.log`
+(HTML/React Chromium 145; Liquid WebKit 26.0). The color checks cover live preview,
+Cancel/Escape, selection restoration, original node identity across mixed runs,
+Apply with exact hex alpha, reopening saved colors, Display P3, partial split and
+merge, and exact source undo/redo. The light picker screenshot is
+`/private/tmp/retouch-range-picker-final.png`.
+
+This is a web-shell change. The last desktop archive still predates range size,
+range color, and this picker integration; native execution and release evidence
+must be refreshed for a new bundle.
