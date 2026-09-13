@@ -14,11 +14,13 @@ function plan(resolved,op){
  if(!cap||!presets.includes(op.preset)&&!['polygon','polyline','path'].includes(op.preset))return refuse('Select a content container, SVG canvas or group to add a shape.');
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the container.');
  if(['polygon','polyline'].includes(op.preset)&&op.points===undefined)return refuse('Place vector points before creating a line or polygon.');
- const drawn=op.preset==='path'?svg.pathShape(op.nodes,op.closed):op.points===undefined?null:svg.drawnShape(op.preset,op.points);
+ const native=op.nativeCanvas===true&&cap.createsViewport?svg.nativeDrawing(op.preset,op.points,false):null;
+ if(op.nativeCanvas!==undefined&&(!native||op.nativeCanvas!==true))return refuse('Draw a bounded shape into a native content container.');
+ const drawn=op.preset==='path'?svg.pathShape(op.nodes,op.closed):op.points===undefined?null:svg.drawnShape(op.preset,native?.points||op.points);
  if(op.preset==='path'&&(cap.createsViewport||!drawn))return refuse('Draw valid path anchors and handles inside an SVG canvas or group.');
- if(op.points!==undefined&&(cap.createsViewport||!drawn))return refuse('Draw a nonempty shape inside an existing SVG canvas or group.');
+ if(op.points!==undefined&&(cap.createsViewport&&!native||!drawn))return refuse('Draw a nonempty shape inside an existing SVG canvas or group.');
  const el=resolved.element,view=viewport(el),attrs=(view?.attributes||[]).map(a=>({name:a.name==='viewbox'?'viewBox':a.name,value:a.value}));
- const opening=cap.createsViewport?'<svg width="200" height="200" viewBox="0 0 200 200" aria-label="Shapes">':'';
+ const opening=native?.opening||(cap.createsViewport?'<svg width="200" height="200" viewBox="0 0 200 200" aria-label="Shapes">':'');
  const content=opening+(drawn||svg.shape({element:{node:{tagName:'svg',namespaceURI:'http://www.w3.org/2000/svg',attrs}}},op.preset))+(cap.createsViewport?'</svg>':'');
  const offset=el.closeStart,out=new MagicString(resolved.source);out.appendLeft(offset,content);
  const after=out.toString(),adapter=require('./adapters/liquid.cjs'),before=resolved.elements||adapter.collect(resolved.source,resolved.relPath).elements,next=adapter.collect(after,resolved.relPath).elements;

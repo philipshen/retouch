@@ -1254,9 +1254,9 @@ function renderPanelContents() {
   if(info.svgInsertion){
     const shapes=RetouchInspector.section('Add shape'),buttons=document.createElement('div');buttons.className='stack-presets';buttons.dataset.shapeOwner=info.id;
     for(const preset of info.svgInsertion.presets){const button=RetouchInspector.button('Add '+preset,()=>insertLayer(preset,info,'insertSVG'));button.dataset.shapeAction='add-'+preset;buttons.append(button);}
-    if(!info.svgInsertion.createsViewport)for(const preset of info.svgInsertion.presets){const button=RetouchInspector.button('Draw '+preset,()=>drawShape(preset,info));button.dataset.shapeAction='draw-'+preset;buttons.append(button);}
+    for(const preset of info.svgInsertion.presets){const button=RetouchInspector.button('Draw '+preset,()=>drawShape(preset,info));button.dataset.shapeAction='draw-'+preset;buttons.append(button);}
     if(info.svgInsertion.pen){const button=RetouchInspector.button('Pen',()=>drawVector(info));button.dataset.shapeAction='pen';buttons.append(button);}
-    shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Adds a shape in a new 200 × 200 canvas.':'Choose Draw and drag a shape, or Pen: click for straight segments, drag for curves. In Pen, click the first point to close; Enter finishes an open line. Shift constrains direction. Escape cancels.');panelBody.append(shapes);
+    shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Draw a shape at its canvas position, or Add a default 200 × 200 canvas.':'Choose Draw and drag a shape, or Pen: click for straight segments, drag for curves. In Pen, click the first point to close; Enter finishes an open line. Shift constrains direction. Escape cancels.');panelBody.append(shapes);
   }
   if(info.cssAuthoring){
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
@@ -2944,8 +2944,8 @@ function drawShape(preset,info){
   const target=matchingEls(info.id)[0];if(!target)return;
   if(mode!=='edit')modeBtn.click();
   canvasPan.cancel();
-  stopDrawing=RetouchSVGDraw.mount({target,frame:iframe,canvas:canvasSurface,preset,
-    onCommit:points=>insertLayer(preset,info,'insertSVG',{points}),
+  stopDrawing=RetouchSVGDraw.mount({target,frame:iframe,canvas:canvasSurface,preset,native:info.svgInsertion.createsViewport,
+    onCommit:points=>insertLayer(preset,info,'insertSVG',{points,...(info.svgInsertion.createsViewport?{nativeCanvas:true}:{})}),
     onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
   if(stopDrawing)toast('Drag to draw '+preset+'. Shift constrains; Option/Alt draws from center. Escape cancels.','ok');
 }

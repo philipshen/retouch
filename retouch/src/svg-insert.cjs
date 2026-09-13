@@ -33,6 +33,14 @@ function shape(resolved,preset){
  const fill=' fill="#a5b4fc"/>';
  return {rectangle:`<rect x="${n(x+w*.1)}" y="${n(y+h*.1)}" width="${n(w*.8)}" height="${n(h*.6)}"${fill}`,circle:`<circle cx="${cx}" cy="${cy}" r="${n(Math.min(w,h)*.3)}"${fill}`,ellipse:`<ellipse cx="${cx}" cy="${cy}" rx="${n(w*.4)}" ry="${n(h*.25)}"${fill}`,line:`<line x1="${n(x+w*.1)}" y1="${cy}" x2="${n(x+w*.9)}" y2="${cy}" stroke="#6366f1" stroke-width="${n(Math.min(w,h)*.02)}"/>`}[preset];
 }
+function nativeDrawing(preset,points,react=false){
+ if(!presets.includes(preset)||!drawnShape(preset,points))return null;
+ const [x1,y1,x2,y2]=points,pad=preset==='line'?1:0,x=Math.min(x1,x2)-pad,y=Math.min(y1,y2)-pad,width=Math.abs(x2-x1)+pad*2,height=Math.abs(y2-y1)+pad*2;
+ const n=v=>Math.round(v*1000000)/1000000,local=[n(x1-x),n(y1-y),n(x2-x),n(y2-y)];
+ const style=require('../shell/svg-draw.js').viewportStyle(n(x),n(y),n(width),n(height));
+ const attribute=react?'style={'+JSON.stringify(style)+'}':'style="'+Object.entries(style).map(([key,value])=>key+':'+value).join(';')+'"';
+ return {points:local,opening:'<svg width="'+n(width)+'" height="'+n(height)+'" viewBox="0 0 '+n(width)+' '+n(height)+'" aria-label="Shapes" '+attribute+'>'};
+}
 function describe(resolved){
  const el=resolved.element,svg=el.node.namespaceURI===namespace;
  if(!el.location.endTag)return null;
@@ -45,11 +53,13 @@ function plan(resolved,op){
  if(!cap||!presets.includes(op.preset)&&!['polygon','polyline','path'].includes(op.preset))return refuse('Select a content container, SVG canvas or group to add a shape.');
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the container.');
  if(['polygon','polyline'].includes(op.preset)&&op.points===undefined)return refuse('Place vector points before creating a line or polygon.');
- const drawn=op.preset==='path'?pathShape(op.nodes,op.closed):op.points===undefined?null:drawnShape(op.preset,op.points);
+ const native=op.nativeCanvas===true&&cap.createsViewport?nativeDrawing(op.preset,op.points):null;
+ if(op.nativeCanvas!==undefined&&(!native||op.nativeCanvas!==true))return refuse('Draw a bounded shape into a native content container.');
+ const drawn=op.preset==='path'?pathShape(op.nodes,op.closed):op.points===undefined?null:drawnShape(op.preset,native?.points||op.points);
  if(op.preset==='path'&&(cap.createsViewport||!drawn))return refuse('Draw valid path anchors and handles inside an SVG canvas or group.');
- if(op.points!==undefined&&(cap.createsViewport||!drawn))return refuse('Draw a nonempty shape inside an existing SVG canvas or group.');
+ if(op.points!==undefined&&(cap.createsViewport&&!native||!drawn))return refuse('Draw a nonempty shape inside an existing SVG canvas or group.');
  const html=require('./adapters/html.cjs'),el=resolved.element,offset=el.location.endTag.startOffset;
- const opening=cap.createsViewport?'<svg width="200" height="200" viewBox="0 0 200 200" aria-label="Shapes">':'';
+ const opening=native?.opening||(cap.createsViewport?'<svg width="200" height="200" viewBox="0 0 200 200" aria-label="Shapes">':'');
  const content=opening+(drawn||shape(resolved,op.preset))+(cap.createsViewport?'</svg>':'');
  const out=new MagicString(resolved.source);out.appendLeft(offset,content);const after=out.toString();
  const before=resolved.elements||html.collect(resolved.source,resolved.relPath).elements,next=html.collect(after,resolved.relPath).elements;
@@ -57,4 +67,4 @@ function plan(resolved,op){
  if(next.length!==before.length+(cap.createsViewport?2:1)||!created||created.node.namespaceURI!==namespace||created.node.parentNode!==container?.node||cap.createsViewport&&container.node.parentNode!==parent?.node||before.some(e=>!next.some(n=>n.id===e.id&&n.tag===e.tag&&n.location.startOffset===e.location.startOffset+(e.location.startOffset>=offset?content.length:0))))return refuse('The shape would change the surrounding document structure.');
  return {ok:true,hash:html.contentHash(after),parentId:el.id,createdId:created.id,structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
 }
-module.exports={describe,plan,drawnShape,shape,pathShape,presets};
+module.exports={describe,plan,drawnShape,shape,pathShape,presets,nativeDrawing};

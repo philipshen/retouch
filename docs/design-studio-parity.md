@@ -13303,3 +13303,50 @@ arrow shortcuts, persistent tool selection across arbitrary selections, or full
 Figma keyboard parity. No desktop rebuild or native launch was performed. The
 last packaged candidate still predates the dock, parametric shapes and shortcuts.
 The earlier requested push ended at bd142fd; this increment is committed locally.
+
+
+## 2026-09-13: drag shapes into native page containers
+
+The shape dock and R/O/L now enter drawing for supported native HTML, JSX and
+Liquid containers, including native JSX containers expanded from self-closing
+source. Dragging any of the six presets creates a sized SVG viewport with local
+shape coordinates and an absolute CSS position. The default Add actions remain
+available separately. Parent source styles and existing page content are retained;
+this does not change a static parent into a positioned containing block. Saved
+positions follow the site's actual absolute-position containing block.
+
+A short-lived set of three zero-size, hidden layout probes measures the affine
+coordinate basis; probes are removed synchronously before the drawing UI appears.
+The new SVG uses the same reset/absolute style model. This replaces an initial SVG
+getScreenCTM probe: WebKit omitted ancestor CSS transforms from that matrix and
+failed transformed-preview comparisons. Measured layout points pass rotation and
+nonuniform scale in WebKit and Chromium. Perspective transforms remain refused.
+Active native drawings cancel when ancestor bounds or positioning/transforms
+change, as well as on Escape, zoom, viewport changes and scrolling. Source writes
+happen only on a completed drag, through the existing structural transaction and
+history. Native Pen creation and complete responsive constraint authoring for
+these new viewports remain unfinished.
+
+Validation: 992 units passed, including all three adapters' source preservation,
+ID preservation, coordinate normalization, horizontal-line viewport sizing,
+malformed points and stale-file refusal
+(`/private/tmp/retouch-native-draw-final-units.log`). HTML WebKit and local Liquid
+Chromium each passed 30 drawn shapes across relative, static-inside-positioned,
+transformed, grid and flex layouts, with preview/render geometry, unchanged text
+and its position, removal of measurement DOM, exact Undo/Redo and four cancellation
+paths (Escape, live layout change, zoom and scroll).
+Logs: `/private/tmp/retouch-native-draw-webkit-final.log` and
+`/private/tmp/retouch-native-draw-liquid-final.log`.
+React Chromium passed six shortcut/dock drawings into a transformed native
+container plus 12 existing self-closing SVG/group Add cases, with rendered
+geometry, source preservation, created selection and exact history
+(`/private/tmp/retouch-native-draw-react-final.log`). The existing HTML WebKit
+SVG/Pen, modifiers, shortcuts and cancellation suite also passed
+(`/private/tmp/retouch-native-draw-existing-svg.log`). All processes exited
+successfully. The light-theme drag screenshot was inspected:
+`/private/tmp/retouch-native-draw.png`.
+
+The inspector still exposes a crowded Add/Draw button section; simplifying it
+around the dock remains visual-parity work. Arbitrary site CSS, dynamic DOM side
+effects and every containing-block/3D topology are not proven by these fixtures.
+No desktop rebuild, native launch or push was performed in this increment.

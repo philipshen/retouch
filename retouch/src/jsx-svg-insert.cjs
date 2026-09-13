@@ -14,9 +14,11 @@ function plan(resolved,op){
  if(!cap||!presets.includes(op.preset)&&!['polygon','polyline','path'].includes(op.preset))return refuse('Select a native JSX content container, SVG canvas or group without spread or children props.');
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the SVG container.');
  if(['polygon','polyline'].includes(op.preset)&&op.points===undefined)return refuse('Place vector points before creating a line or polygon.');
- const drawn=op.preset==='path'?svg.pathShape(op.nodes,op.closed):op.points===undefined?null:svg.drawnShape(op.preset,op.points);if(op.preset==='path'&&(cap.createsViewport||!drawn))return refuse('Draw valid path anchors and handles.');if(op.points!==undefined&&(cap.createsViewport||!drawn))return refuse('Draw a nonempty shape with bounded SVG coordinates.');
+ const native=op.nativeCanvas===true&&cap.createsViewport?svg.nativeDrawing(op.preset,op.points,true):null;
+ if(op.nativeCanvas!==undefined&&(!native||op.nativeCanvas!==true))return refuse('Draw a bounded shape into a native content container.');
+ const drawn=op.preset==='path'?svg.pathShape(op.nodes,op.closed):op.points===undefined?null:svg.drawnShape(op.preset,native?.points||op.points);if(op.preset==='path'&&(cap.createsViewport||!drawn))return refuse('Draw valid path anchors and handles.');if(op.points!==undefined&&(cap.createsViewport&&!native||!drawn))return refuse('Draw a nonempty shape with bounded SVG coordinates.');
  const view=viewport(resolved)?.node,attrs=(view?.openingElement.attributes||[]).filter(a=>a.type==='JSXAttribute').map(a=>({name:a.name.name,value:literal(a)})).filter(a=>a.value!==undefined&&a.value!==null);
- const opening=cap.createsViewport?'<svg width="200" height="200" viewBox="0 0 200 200" aria-label="Shapes">':'';
+ const opening=native?.opening||(cap.createsViewport?'<svg width="200" height="200" viewBox="0 0 200 200" aria-label="Shapes">':'');
  const content=opening+(drawn||svg.shape({element:{node:{tagName:'svg',namespaceURI:'http://www.w3.org/2000/svg',attrs:cap.createsViewport?[]:attrs}}},op.preset)).replace(/stroke-width=/g,'strokeWidth=')+(cap.createsViewport?'</svg>':'');
  const node=resolved.element.node,selfClosing=node.openingElement.selfClosing,offset=selfClosing?node.openingElement.end-2:node.closingElement.start;
  const prefix=selfClosing?'>':'',suffix=selfClosing?'</'+ids.jsxElementName(node)+'>':'',insertion=prefix+content+suffix,out=new MagicString(resolved.source);
