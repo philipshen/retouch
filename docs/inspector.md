@@ -992,3 +992,28 @@ sidebar capture is `/private/tmp/retouch-range-inspector-final.png`.
 Caret formatting for future inserted text, responsive range overrides, and the
 remaining Figma design/editing parity are incomplete. The latest desktop archive
 packages the preceding editor and does not yet include this inspector placement.
+
+### Selected-text spacing (2026-09-13)
+
+The Typography inspector now edits line height and letter spacing on selected
+text while preserving the other styles in the same source-owned run. Both accept
+Auto, pixels, and percentages; bare numbers mean pixels. Line height also accepts
+explicit multipliers such as `1.2x`. Percentage tracking is stored as an equivalent
+`em` value and displayed as a percentage when reopened. Authored line-height
+percentages remain percentages in source. Values are bounded literal numbers;
+expressions and unsupported precision are rejected.
+
+Partial edits split runs and matching adjacent runs merge. Escape cancels a field
+draft; commit, undo, and redo retain exact source snapshots. These controls apply
+across screen sizes. A phrase's line height does not independently determine the
+whole line's height, since surrounding text and inherited styles also contribute.
+Caret formatting and responsive range overrides remain incomplete. The existing
+desktop archive predates these controls.
+
+Validation: 1,188 unit tests passed. HTML and React Chromium 145 plus Liquid
+WebKit 26.0 browser checks passed, covering spacing input, font-size scaling,
+negative tracking, partial split/merge, authored-value reopening, and exact
+undo/redo. Additional checks covered inspector docking (HTML), combined range
+styles (React), and color-picker previews (Liquid). Logs are
+`/private/tmp/retouch-push-{units,html,react,liquid}.log`; the inspected light-theme
+capture is `/private/tmp/retouch-push-spacing.png`.

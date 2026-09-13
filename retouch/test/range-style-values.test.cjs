@@ -21,3 +21,11 @@ test('range font families accept literal lists and reject declarations and conte
  for(const value of ['serif','Georgia, serif','"Studio_Test", sans-serif',"'Page Face'",'Noto Sans CJK'])assert.equal(values.valid('font-family',value),true,value);
  for(const value of ['', 'inherit','var(--font)','Arial; color:red','"Arial" onmouseover="alert(1)"','url(x)','Arial,','123'])assert.equal(values.valid('font-family',value),false,value);
 });
+
+test('range spacing distinguishes pixels, percentages and line-height multipliers',()=>{
+ assert.equal(values.spacingValue('line-height','150%'),'150%');assert.equal(values.spacingValue('line-height','1.5x'),'1.5');assert.equal(values.spacingValue('line-height','32'),'32px');
+ assert.equal(values.spacingValue('letter-spacing','10%'),'0.1em');assert.equal(values.spacingValue('letter-spacing','1.1%'),'0.011em');assert.equal(values.spacingValue('letter-spacing','-2'),'-2px');assert.equal(values.spacingValue('letter-spacing','Auto'),'normal');
+ assert.equal(values.spacingDisplay('line-height','150%'),'150%');assert.equal(values.spacingDisplay('line-height','1.5'),'1.5x');assert.equal(values.spacingDisplay('letter-spacing','0.1em'),'10%');
+ for(const [property,value]of [['line-height','-1px'],['line-height','var(--height)'],['letter-spacing','1.2x'],['letter-spacing','1px;color:red'],['line-height','Infinity']])assert.throws(()=>values.spacingValue(property,value));
+ assert.equal(values.validProperties({'line-height':'150%','letter-spacing':'-0.01em'}),true);
+});

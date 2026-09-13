@@ -1937,6 +1937,7 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
    await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();
    console.log(engine+' '+kind+': PASS Tab retains next control after save/rebuild, Shift+Tab returns, unchanged Tab does not write, explicit click cancels queued focus, exact undo');
   }
+  if(process.env.RT_E2E_RANGE_SPACING)await require('./text-range-spacing.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_RANGE_INSPECTOR)await require('./range-inspector.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_COMBINED_RANGES)await require('./combined-range-styles.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_RANGE_FAMILY)await require('./text-range-family.cjs')({page,app,kind,read,wait,settled});

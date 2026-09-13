@@ -914,6 +914,8 @@ function showInlineFormatToolbar(){
   const customWeight=rangeInput('font-weight','Selected text custom weight',field=>{field.type='number';field.min='1';field.max='1000';field.step='any';field.placeholder='Weight';field.hidden=true;field.title='Custom font weight (1–1000). The available font determines the rendered result.';},value=>value.trim(),value=>value);
   bar.insertBefore(customWeight,bar.querySelector('select').nextSibling);
   rangeInput('font-size','Selected text size (px)',field=>{field.type='number';field.min='0.1';field.max='1000';field.step='0.1';field.placeholder='Size';},value=>value+'px',value=>String(Math.round(parseFloat(value)*1000)/1000));
+  const spacingFields={};
+  for(const [property,label]of [['line-height','Selected text line height'],['letter-spacing','Selected text letter spacing']])spacingFields[property]=rangeInput(property,label,field=>{field.type='text';field.spellcheck=false;field.placeholder='Auto';field.title=property==='line-height'?'Auto, pixels, percent, or a multiplier such as 1.2x.':'Auto, pixels, or percent of the font size.';},value=>RetouchRangeStyles.spacingValue(property,value),value=>RetouchRangeStyles.spacingDisplay(property,value));
   const colorField=rangeInput('color','Selected text color',field=>{field.type='text';field.spellcheck=false;field.placeholder='Color';field.className='range-color';field.title='Selected text color: hex, RGB, sRGB or Display P3';},value=>RetouchPaletteValues.fromComputed(/^(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})$/i.test(value.trim())?'#'+value.trim():value.trim()),value=>RetouchPaletteValues.fromComputed(value));
   const swatch=document.createElement('button');swatch.type='button';swatch.className='range-color-swatch';swatch.setAttribute('aria-label','Choose selected text color');swatch.title='Choose selected text color';bar.insertBefore(swatch,colorField);
   colorField.retouchPaintScopeLabel='Selected text · Applies across all screen sizes.';
@@ -972,7 +974,7 @@ function showInlineFormatToolbar(){
     selectionNote.textContent=valid?'Selected text':'Select text to format';
     if(!valid)return;savedRange=range.cloneRange();
     const values=new Map(fields.map(({property})=>[property,new Set()])),walker=d.createTreeWalker(editing.el,NodeFilter.SHOW_TEXT);
-    while(walker.nextNode()){const node=walker.currentNode;if(!node.textContent||!range.intersectsNode(node))continue;const style=d.defaultView.getComputedStyle(node.parentElement);for(const [property,set]of values){const css=style.getPropertyValue(property),parent=node.parentElement;set.add(property==='color'&&parent.__rtRangeStyleCSS===css&&parent.__rtRangeStyleValue?parent.__rtRangeStyleValue:css);}}
+    while(walker.nextNode()){const node=walker.currentNode;if(!node.textContent||!range.intersectsNode(node))continue;const style=d.defaultView.getComputedStyle(node.parentElement);for(const [property,set]of values){const css=style.getPropertyValue(property),parent=node.parentElement,authored=parent.__rtRangeStyleValues?.[property];set.add(authored?.css===parent.style.getPropertyValue(property)?authored.value:property==='color'&&parent.__rtRangeStyleCSS===css&&parent.__rtRangeStyleValue?parent.__rtRangeStyleValue:css);}}
     for(const {field,property,display}of fields){
       const set=values.get(property),value=set.size===1?[...set][0]:'';
       if(display){if(document.activeElement!==field){try{field.value=value?display(value):'';}catch{field.value='';}}if(property==='color'){swatch.dataset.color=value;swatch.style.backgroundImage=value?'linear-gradient('+value+','+value+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)':'';}}
@@ -993,7 +995,7 @@ function showInlineFormatToolbar(){
   const weight=fields.find(item=>item.property==='font-weight'&&item.field.tagName==='SELECT').field,style=fields.find(item=>item.property==='font-style').field,size=fields.find(item=>item.property==='font-size').field;
   const colorControls=document.createElement('div');colorControls.className='range-color-controls';colorControls.append(swatch,colorField);
   const scopeNote=document.createElement('small');scopeNote.className='range-scope-note';scopeNote.textContent='Applies across all screen sizes.';
-  bar.replaceChildren(header,row('Font',[familyButton],'range-family-field'),row('Weight',[weight,customWeight]),row('Size',[size]),row('Style',[style]),row('Color',[colorControls]),commands,scopeNote);
+  bar.replaceChildren(header,row('Font',[familyButton],'range-family-field'),row('Weight',[weight,customWeight]),row('Size',[size]),row('Line height',[spacingFields['line-height']]),row('Letter spacing',[spacingFields['letter-spacing']]),row('Style',[style]),row('Color',[colorControls]),commands,scopeNote);
   const mount=()=>{
     const docked=!!section?.isConnected&&!panel.hidden,focused=bar.contains(document.activeElement)?document.activeElement:null;
     bar.classList.toggle('range-inspector',docked);if(section)section.toggleAttribute('data-range-editing',docked);
