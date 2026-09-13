@@ -132,3 +132,8 @@ test('combined range serialization is canonical and retains authored alpha only 
  assert.deepStrictEqual(serializeChildren(root,new Map()),[{t:'styles',properties:{'font-weight':'537.25',color:'#11223380'},children:[{t:'text',value:'Text'}]}]);
  assert.deepStrictEqual(serializeChildren(root),[{t:'styles',properties:{'font-weight':'537.25',color:'rgba(17, 34, 51, 0.502)'},children:[{t:'text',value:'Text'}]}]);
 });
+
+test('line breaks serialize explicitly while editor-only trailing placeholders do not',()=>{
+ const placeholder=el('br');placeholder.__rtCaretPlaceholder=true;
+ assert.deepStrictEqual(serializeChildren(el('p',[text('one'),el('br'),text('two'),el('br'),placeholder])),[{t:'text',value:'one'},{t:'break'},{t:'text',value:'two'},{t:'break'}]);
+});

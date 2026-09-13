@@ -1127,3 +1127,38 @@ color, saved styled leaves, no nested opposite scripts, and local/source
 undo/redo. The preceding `retouch-caret-script-final-*` runs also passed the
 cursor-typography and selected/saved-script regressions. The inspected capture
 is `/private/tmp/retouch-caret-script.png`.
+
+### Explicit inline line breaks (2026-09-13)
+
+Shift+Enter now inserts a source-preserving line break while editing inline text.
+Enter and Done still finish the edit. The shortcut uses one explicit insertion
+path in Chromium and WebKit; the browser `insertLineBreak` input command uses the
+same path. This avoids WebKit's native Shift+Enter paragraph-container behavior.
+Middle, trailing, and consecutive breaks are represented by a validated `break`
+node, serialized as `<br>` for HTML/Liquid and `<br />` for JSX. Breaks no longer
+flatten into spaces when saving.
+
+An empty trailing editing line uses a temporary layout-only BR to keep the cursor
+visible. It is omitted from source, removed when text is inserted, and converted
+to a real break if later content makes it meaningful. Its metadata participates
+in local insertion undo/redo. Break insertion retains pending cursor typography,
+and Done uses the existing exact source-history and compiled-render verification
+path. A selection containing locked source tokens is not replaced. Sources that
+cannot preserve rich children report that line breaks are unsupported.
+
+This adds inline soft breaks, not a complete paragraph/list editing model.
+Multiline plain-text paste, every native editing command, and advanced script
+runs across line boundaries still need broader support and verification.
+Responsive range overrides, the remaining Figma parity, and trusted desktop
+distribution remain unfinished; the existing desktop archive predates this work.
+
+Validation: 1,193 unit tests passed in
+`/private/tmp/retouch-line-break-final-units.log`, covering explicit break
+serialization, placeholder omission, fixed HTML/JSX output, and rejection of
+break attributes/content. HTML/React Chromium 145 and Liquid WebKit 26.0 browser
+checks passed in `/private/tmp/retouch-line-break-final-{html,react,liquid}.log`.
+They verify middle/trailing/consecutive breaks, actual multiline layout, pending
+font size on the next line, no extra compiled placeholder, unchanged reopening,
+and exact local/source undo/redo. Cursor typography and script regressions also
+passed on Liquid and the preceding React run. The inspected saved rendering is
+`/private/tmp/retouch-line-break.png`.

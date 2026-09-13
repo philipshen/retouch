@@ -48,6 +48,7 @@ function rewrite(value,sourceId,children,options) {
   function build(items) {
     return items.map(item=>{
       if(item.t==='text')return escapeText(item.value);
+      if(item.t==='break')return '<br>';
       if(item.t==='style'||item.t==='styles')return styleMarkup(item,build(item.children));
       if(item.t==='wrap')return `<${item.tag}>${build(item.children)}</${item.tag}>`;
       const original=kept.get(item.id);

@@ -15,6 +15,7 @@
     var nodes = el.childNodes || [];
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
+      if (n.__rtCaretPlaceholder) continue;
       if (n.__rtKeep) { out.push({ t: 'keep', id: n.__rtKeep }); continue; }
       if (n.nodeType === 3) {
         if (n.textContent) out.push({ t: 'text', value: n.textContent });
@@ -52,7 +53,7 @@
         continue;
       }
       if (n.tagName === 'BR') {
-        out.push({ t: 'text', value: ' ' });
+        out.push({ t: 'break' });
         continue;
       }
       // Unknown element: flatten to its content.

@@ -389,6 +389,7 @@ function planOp(resolved, op) {
     const seen=new Set();
     const build=items=>items.map(c=>{
       if (c.t==='text') return escapeText(c.value);
+      if (c.t==='break') return '<br>';
       if (c.t==='style'||c.t==='styles') return styleMarkup(c,build(c.children));
       if (c.t==='wrap') return `<${c.tag}>${build(c.children)}</${c.tag}>`;
       const kept=descendants.get(c.id);

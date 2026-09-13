@@ -306,3 +306,8 @@ test('plain script proof includes literal styled leaves but excludes dynamic sty
  assert.ok(ids.includes(pick(index,root,'ScriptStyle.tsx','sup').el.id));
  for(const tag of ['sub','strong'])assert.ok(!ids.includes(pick(index,root,'ScriptStyle.tsx',tag).el.id));
 });
+
+test('line breaks write self-closing JSX without turning into literal whitespace',()=>{
+ const {resolved}=pick(index,root,'Card.tsx','p');const result=writer.applyOp(resolved,{type:'setChildren',fileHash:resolved.hash,children:[{t:'text',value:'one'},{t:'break'},{t:'text',value:'two'}]});
+ assert.ok(result.ok,JSON.stringify(result));assert.ok(read(root,'Card.tsx').includes('<p>one<br />two</p>'));
+});

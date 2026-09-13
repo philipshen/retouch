@@ -314,10 +314,11 @@ function hookFrame(d, w) {
     e.preventDefault();
     e.stopPropagation();
   }, true);
-  d.addEventListener('input',event=>{if(editing?.caretHistory&&editing.el.contains(event.target)&&!['historyUndo','historyRedo'].includes(event.inputType))editing.caretHistory.redo=[];},true);
+  d.addEventListener('input',event=>{if(editing)for(const node of caretPlaceholders(editing))if(hasInlineContentAfter(node,editing.el))delete node.__rtCaretPlaceholder;if(editing?.caretHistory&&editing.el.contains(event.target)&&!['historyUndo','historyRedo'].includes(event.inputType))editing.caretHistory.redo=[];},true);
   d.addEventListener('compositionstart',()=>beginCaretComposition(),true);
   d.addEventListener('compositionend',()=>finishCaretComposition(),true);
   d.addEventListener('beforeinput', (e) => {
+    if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertLineBreak'){e.preventDefault();e.stopPropagation();insertInlineBreak();return;}
     if(editing&&editing.el.contains(e.target)&&['historyUndo','historyRedo'].includes(e.inputType)&&caretHistoryStep(e.inputType==='historyRedo')){e.preventDefault();e.stopPropagation();return;}
     if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertText'&&typeof e.data==='string'&&insertCaretText(e.data)){e.preventDefault();e.stopPropagation();return;}
     if (editing && editing.el.contains(e.target) && e.inputType.startsWith('format')) {
@@ -332,6 +333,7 @@ function hookFrame(d, w) {
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if(e.isComposing)return;
+      if(e.key==='Enter'&&e.shiftKey){e.preventDefault();insertInlineBreak();return;}
       if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&caretHistoryStep(e.shiftKey)){e.preventDefault();return;}
       if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'i')) {
         e.preventDefault(); // never let the browser's own rich-edit commands run (R-5)
@@ -692,6 +694,7 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
 async function commitInlineEdit() {
   if (!editing) return;
   const ed = editing;
+  normalizeCaretPlaceholders(ed);
   inlineFormatCleanup();editing = null;
   ed.el.removeAttribute('contenteditable');
   const children = serializeChildren(ed.el, ed.snapshot);
@@ -923,7 +926,7 @@ function styleInsertedText(current,start,end,properties,script){
 }
 // Keep the actual nodes (and their source evidence) so restoring a local
 // insertion does not invalidate preceding native text undo transactions.
-const caretMetadataNames=['__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
+const caretMetadataNames=['__rtCaretPlaceholder','__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
 function captureCaretEdit(current){
   const d=current.el.ownerDocument,selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
   const capture=node=>({node,text:typeof node.data==='string'?node.data:null,attributes:node.nodeType===1?[...node.attributes].map(a=>[a.name,a.value]):null,metadata:Object.fromEntries(caretMetadataNames.filter(key=>Object.hasOwn(node,key)).map(key=>[key,structuredClone(node[key])])),children:[...node.childNodes].map(capture)});
@@ -945,10 +948,33 @@ function caretHistoryStep(redo=false){
   selection.removeAllRanges();selection.addRange(range);current.caretStyle=target.properties?{properties:{...target.properties},script:target.script,range:range.cloneRange()}:null;
   d.dispatchEvent(new Event('selectionchange'));return true;
 }
+function caretPlaceholders(current){return [...current.el.querySelectorAll('br')].filter(node=>node.__rtCaretPlaceholder);}
+function normalizeCaretPlaceholders(current){for(const node of caretPlaceholders(current))if(hasInlineContentAfter(node,current.el))delete node.__rtCaretPlaceholder;}
+function removeCaretPlaceholders(current){normalizeCaretPlaceholders(current);for(const node of caretPlaceholders(current))node.remove();}
+function hasInlineContentAfter(node,root){
+  for(let current=node;current&&current!==root;current=current.parentNode)for(let next=current.nextSibling;next;next=next.nextSibling)if(next.textContent||next.nodeType===1&&!next.__rtCaretPlaceholder)return true;
+  return false;
+}
+function insertInlineBreak(){
+  const current=editing,d=doc(),selection=d?.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
+  if(current?.info.canSetChildren===false){toast('This text source cannot preserve line breaks.','err');return;}
+  if(!current||!range||!current.el.contains(range.startContainer)||!current.el.contains(range.endContainer))return;
+  if([...current.el.querySelectorAll('[contenteditable="false"]')].some(node=>range.intersectsNode(node))){toast('This selection includes source-owned text.','err');return;}
+  const before=captureCaretEdit(current),draft=caretDraft(),properties=draft?.properties||{},script=draft?.script;
+  removeCaretPlaceholders(current);range.deleteContents();
+  const br=d.createElement('br'),text=d.createTextNode(''),fragment=d.createDocumentFragment();fragment.append(br,text);range.insertNode(fragment);
+  // A trailing layout-only BR lets browsers draw the cursor on the empty line.
+  // It is excluded from source and removed when actual text is inserted.
+  if(!hasInlineContentAfter(text,current.el)){const placeholder=d.createElement('br');placeholder.__rtCaretPlaceholder=true;text.after(placeholder);}
+  const caret=d.createRange();caret.setStart(text,0);caret.collapse(true);selection.removeAllRanges();selection.addRange(caret);
+  current.caretStyle={properties,script,range:caret.cloneRange()};recordCaretEdit(current,before);d.dispatchEvent(new Event('selectionchange'));
+}
+
 function insertCaretText(text){
   const draft=caretDraft();if(!draft||editing.caretComposition)return false;
   if(!text)return true;
   const {current,selection,range,properties,script}=draft,before=captureCaretEdit(current),d=current.el.ownerDocument,prefix=d.createRange();prefix.selectNodeContents(current.el);prefix.setEnd(range.startContainer,range.startOffset);const start=prefix.toString().length;
+  removeCaretPlaceholders(current);
   // Retain a plain source run's node identity so its existing styles can split
   // around the inserted text through the same proven range-editing path.
   if(range.startContainer.nodeType===3)range.startContainer.insertData(range.startOffset,text);

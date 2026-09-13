@@ -59,3 +59,8 @@ test('combined range styles write one escaped span and reject invalid properties
  assert.equal(rewrite('Text','source',[node]),'<span style="font-family: &quot;Page Face&quot;, serif; font-weight: 537.25; font-size: 24px; color: #11223380;">Text</span>');
  for(const properties of [{},[],{color:'#123456',position:'fixed'},{'font-weight':'400; color:red'},JSON.parse('{"__proto__":"x"}')])assert.throws(()=>rewrite('Text','source',[{...node,properties}]),/Unsupported text range style/);
 });
+
+test('line breaks use fixed HTML markup and cannot carry attributes or content',()=>{
+ assert.equal(rewrite('old','source',[{t:'text',value:'one'},{t:'break'},{t:'wrap',tag:'strong',children:[{t:'text',value:'two'},{t:'break'}]}]),'one<br><strong>two<br></strong>');
+ for(const node of [{t:'break',children:[]},{t:'break',onclick:'bad'}])assert.throws(()=>rewrite('old','source',[node]),/Bad line break/);
+});
