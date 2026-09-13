@@ -16,6 +16,17 @@
   const important=(inherited||'').split(/\s+/).some(token=>property(token)===key&&/^!|!$/.test(token));
   return I.replace(classes,t=>property(t)===key,next===null?'':`${important?'!':''}[${key}:${next.trim().replace(/\s+/g,'_')}]`);
  }
+ const dashLength=value=>typeof value==='string'&&value.length<=40&&/^(?:\d+\.?\d*|\.\d+)(?:px|%)?$/.test(value)&&parseFloat(value)<=100000;
+ function pattern(value){
+  if(!V.valid('stroke-dasharray',value)||value==null)return null;
+  if(value==='none')return {type:'solid',parts:[]};
+  const parts=value.trim().split(/[\s,]+/);return parts.every(dashLength)?{type:parts.length<=2?'dashed':'custom',parts}:null;
+ }
+ function dashPair(value,changes={}){
+  const parsed=pattern(value),parts=parsed?.parts||[],dash=changes.dash??parts[0]??'4',gap=changes.gap??parts[1]??parts[0]??'4';
+  if(!dashLength(dash)||!dashLength(gap))return null;
+  return dash+' '+gap;
+ }
  function attributeReason(el,paint,releaseInline=false){
   if(!el?.isConnected||!['fill','stroke'].includes(paint))return 'Select a visible SVG layer.';
   const w=el.ownerDocument.defaultView,css=w.getComputedStyle(el),transitions=css.transitionProperty.split(',').map(s=>s.trim());
@@ -40,5 +51,5 @@
   }
   I.note(sec,'Paint follows the selected screen scope through Tailwind classes. Reset reveals inherited paint or the original SVG attribute.');return sec;
  }
- const api={property,value,update,attributeReason,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPaint=api;
+ const api={property,value,update,pattern,dashPair,attributeReason,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPaint=api;
 })(typeof window==='object'?window:globalThis);

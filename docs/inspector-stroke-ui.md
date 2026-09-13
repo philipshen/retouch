@@ -27,3 +27,23 @@ The HTML arrow workflow covers both endpoint controls, dimensions, reverse,
 swap and exact history after legacy migration. Screenshots were inspected:
 `/private/tmp/retouch-stroke-popover.png` and
 `/private/tmp/retouch-arrow-controls.png`.
+
+## Stroke style controls
+
+Solid, Dashed and Custom now appear in Stroke settings. Dashed exposes separate
+Dash and Gap fields, preserving numeric, pixel and percentage lengths. A
+single-value SVG dash pattern supplies both initial fields. Switching a custom
+pattern to Dashed retains its first dash and gap; Solid writes `none`. Opening
+Custom only changes the editor view until a pattern is entered. Its editing
+preference resets when the selected layer or style screen scope changes.
+
+The controls use the existing SVG paint writer and reset action; they do not
+write extra markup or alter cap/join properties. Inline-owned fields retain
+the existing disabled state. Negative lengths and malformed multi-value input
+in either individual field are rejected before a source write.
+
+Validation: 1,152 unit tests. HTML/React Chromium and Liquid WebKit cover style
+changes, a four-value custom pattern, percentage gaps, invalid lengths, scoped
+patterns, screen fallback, reset and exact Undo/Redo. The HTML screenshot
+`/private/tmp/retouch-dash-controls.png` was inspected. This does not implement
+Figma's half-dash endpoint rendering rule or independently styled dash caps.

@@ -4,7 +4,7 @@ module.exports=async({page,shape,read,wait,settled,screenshot})=>{
  const initiallyPath=await shape.evaluate(el=>el.localName)==='path',converted=!!process.env.RT_E2E_ARROW_PATH&&!initiallyPath,dashStates=[];let beforeConversion=read();
  if(converted&&process.env.RT_E2E_ARROW_PATH_DASH){
   for(const [label,value]of [['SVG dash pattern','8 6'],['SVG dash offset','3']]){
-   dashStates.push(read());const field=page.getByLabel(label,{exact:true});for(const details of await field.locator('xpath=ancestor::details').all())if(await details.getAttribute('open')===null)await details.locator(':scope > summary').click();await field.fill(value);await field.press('Tab');await wait(()=>read()!==dashStates.at(-1));await settled();
+   dashStates.push(read());const field=page.getByLabel(label,{exact:true});for(const details of await field.locator('xpath=ancestor::details').all())if(await details.getAttribute('open')===null)await details.locator(':scope > summary').click();if(label==='SVG dash pattern')await page.getByLabel('Stroke style',{exact:true}).selectOption('custom');await field.fill(value);await field.press('Tab');await wait(()=>read()!==dashStates.at(-1));await settled();
   }
   beforeConversion=read();
  }

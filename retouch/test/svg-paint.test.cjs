@@ -36,3 +36,8 @@ test('Gradient creation matches transition durations to paint properties and res
  css.transitionProperty='opacity, stroke, fill';css.transitionDuration='2s, 0s';assert.match(paint.attributeReason(el,'fill'),/Pause paint/);assert.equal(paint.attributeReason(el,'stroke'),null);
  el.getAnimations=()=>[{effect:{getKeyframes:()=>{throw Error('unavailable');}}}];assert.match(paint.attributeReason(el,'stroke'),/Pause paint/);assert.equal(attrs.get('fill'),'red');
 });
+
+test('stroke patterns distinguish solid, regular and custom without dropping units',()=>{
+ assert.deepEqual(paint.pattern('none'),{type:'solid',parts:[]});assert.deepEqual(paint.pattern('8px, 2%'),{type:'dashed',parts:['8px','2%']});assert.equal(paint.pattern('1 2 3').type,'custom');assert.equal(paint.dashPair('5'),'5 5');assert.equal(paint.dashPair('none'),'4 4');assert.equal(paint.dashPair('1 2 3 4'),'1 2');assert.equal(paint.dashPair('8px 2%',{gap:'0'}),'8px 0');assert.equal(paint.dashPair('8px 2%',{dash:'.5%'}),'.5% 2%');
+ for(const value of ['-1','1,2','var(--dash)','100001','none','NaN','1;fill:red'])assert.equal(paint.dashPair('4 4',{dash:value}),null);for(const value of ['1,,2','1,','-1 2','var(--dash)'])assert.equal(paint.pattern(value),null);
+});

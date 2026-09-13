@@ -1154,7 +1154,7 @@ function renderPanelContents() {
   panelBody.innerHTML = '';
 
   const head = document.createElement('div');
-  head.className = 'sec';head.dataset.layerTag=info.kind==='instance'?'':info.tag;
+  head.className = 'sec';head.dataset.strokeContext=JSON.stringify([info.id,styleScope]);head.dataset.layerTag=info.kind==='instance'?'':info.tag;
   const badge = document.createElement('span');
   badge.className = 'kindbadge' + (info.kind === 'instance' ? ' instance' : '');
   badge.textContent = sel.multiple?.length>1?sel.multiple.length+(info.kind==='instance'?' components':' layers'):info.kind === 'instance' ? info.tag : info.tag.charAt(0).toUpperCase()+info.tag.slice(1);
