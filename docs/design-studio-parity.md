@@ -13562,3 +13562,31 @@ processes exited successfully. Logs: `/private/tmp/retouch-radius-canvas-` plus
 This rounds a rectangle's shared rx/ry geometry. Independent per-corner vector
 rounding, smoothing, arbitrary vector corner handles and full Figma/any-site parity
 remain unfinished. The desktop archive has not been rebuilt for this increment.
+
+### 2026-09-13 — Packaged stroke/radius tools and Homebrew verification
+
+Built a clean universal arm64/x86_64 development candidate from a8f185a:
+`/private/tmp/retouch-desktop-radius-a8f185a/Retouch-0.1.0-mac.zip`.
+SHA-256: `8a0a4913a13773ae6f279ae4107d56a3c8cf564d773ba67d6a7dff7e738ab6a3`.
+All 187 packaged source files plus native/build/verifier/Info.plist hashes match
+the checkout. Strict signature checks passed after extraction, after runtime
+workflows, and on the Homebrew-installed app.
+
+An external harness imported the actual extracted runtime: 1,003 unit tests and
+six browser workflows passed with terminal process exits. Coverage includes
+HTML/WebKit and Liquid/React Chromium radius gestures, responsive Liquid stroke
+settings, HTML native Pen, and comparison editing/history. Full evidence is in
+`desktop/verification/2026-09-13-radius-canvas.json`.
+
+Homebrew installed/uninstalled the exact ZIP in an isolated app directory, with
+quarantine retained and automatic dependency removal disabled. The installed
+manifest matched the extracted archive. Original cask inventory is unchanged;
+temporary app, registration, tap, scoped trust and external harness are removed.
+The archive, extracted app, logs and selected harness snapshots remain available.
+
+Native control preflight again returned the native pipe startup error, so no
+launch or native self-tests were attempted. This is ad hoc signed, not a Developer
+ID/notarized public release. Intel execution, native workflows, trusted upgrades,
+full Figma/any-site parity and public release remain open. Older startup-recovery
+and WebKit Fill-height checks were not rerun for this archive. No push or public
+release was performed.

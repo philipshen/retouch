@@ -1,0 +1,155 @@
+{
+  "sourceCommit": "a8f185a12aa9522de55b4a5e95ee5852fa980d44",
+  "sourceTreeDirty": false,
+  "sourceFiles": 187,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "archive": "/private/tmp/retouch-desktop-radius-a8f185a/Retouch-0.1.0-mac.zip",
+  "sha256": "8a0a4913a13773ae6f279ae4107d56a3c8cf564d773ba67d6a7dff7e738ab6a3",
+  "status": "development candidate; targeted packaged runtime and isolated cask install verified; native workflows and trusted distribution unverified",
+  "buildLog": "/private/tmp/retouch-desktop-radius-a8f185a-build.log",
+  "units": {
+    "passed": 1003,
+    "sourceCommit": "a8f185a12aa9522de55b4a5e95ee5852fa980d44",
+    "scope": "external test harness importing actual packaged runtime; development dependencies outside signed app",
+    "log": "/private/tmp/retouch-desktop-radius-a8f185a/bundled-units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "Radius canvas: zoom, transforms, preview, keyboard, cancellation and exact history",
+      "renderer": "liquid",
+      "engine": "chromium",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-radius-a8f185a/radius-canvas-liquid.log"
+    },
+    {
+      "name": "Radius canvas: zoom, transforms, preview, keyboard, cancellation and exact history",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-radius-a8f185a/radius-canvas-html.log"
+    },
+    {
+      "name": "Radius canvas in real Next/React",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-radius-a8f185a/radius-canvas-react.log"
+    },
+    {
+      "name": "Responsive stroke settings, fallback/reset and exact history",
+      "renderer": "liquid",
+      "engine": "chromium",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-radius-a8f185a/stroke-settings-liquid.log"
+    },
+    {
+      "name": "Native Pen: fitted viewports, editable vectors, content preservation, history and cancellation",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-radius-a8f185a/native-pen-html.log"
+    },
+    {
+      "name": "Comparison editing, names/dimensions/order/history, clipping and scoped source edits",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-radius-a8f185a/comparison-panel.log"
+    }
+  ],
+  "harness": {
+    "sources": [
+      {
+        "source": "retouch/test/e2e/page-fonts.cjs",
+        "sha256": "80c4cfd6015b59850ca12e20db3de57b7845f4dd8d0cc4f50c7175c1f05a79e7",
+        "snapshot": "/private/tmp/retouch-desktop-radius-a8f185a/harness-snapshots/page-fonts.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/svg-radius.cjs",
+        "sha256": "189b541c0e450e9b1aff2f05a186cc6c2b0439d8274332a68b0c0bf1875f2bc5",
+        "snapshot": "/private/tmp/retouch-desktop-radius-a8f185a/harness-snapshots/svg-radius.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/svg-radius-canvas.cjs",
+        "sha256": "37b58723d358d9aa6317bfb7a16ed7adfa4c1ad2ceb7403f627b789e72d2d92c",
+        "snapshot": "/private/tmp/retouch-desktop-radius-a8f185a/harness-snapshots/svg-radius-canvas.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/svg-stroke-settings.cjs",
+        "sha256": "74c8571dd310b34b4b6b3d407409a96ea73451dfd615d4876d8f55a5df2f722a",
+        "snapshot": "/private/tmp/retouch-desktop-radius-a8f185a/harness-snapshots/svg-stroke-settings.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/native-svg-draw.cjs",
+        "sha256": "c7418be54c0f5eb9ba7b16d433b3d3648adf833dc83610c8cd9b5ff4574d266c",
+        "snapshot": "/private/tmp/retouch-desktop-radius-a8f185a/harness-snapshots/native-svg-draw.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/native-pen-workflow.cjs",
+        "sha256": "b15de57ee1925a663caddb7caac2cb049722fd4ec63e93212e71c996e0b513e6",
+        "snapshot": "/private/tmp/retouch-desktop-radius-a8f185a/harness-snapshots/native-pen-workflow.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/shape-tools.cjs",
+        "sha256": "bbc9961f235fe3089775e25c671903988e7fa87c47045015725e9cac14fa8954",
+        "snapshot": "/private/tmp/retouch-desktop-radius-a8f185a/harness-snapshots/shape-tools.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/html-compare-edit.cjs",
+        "sha256": "5cf62705aa0b89c21f1d0734306e7dc1d381ffc938760ad7edada652c1eb8595",
+        "snapshot": "/private/tmp/retouch-desktop-radius-a8f185a/harness-snapshots/html-compare-edit.cjs"
+      }
+    ],
+    "externalHarnessRemoved": true
+  },
+  "installation": {
+    "result": "isolated Homebrew cask install and uninstall passed",
+    "verification": {
+      "sourceCommit": "a8f185a12aa9522de55b4a5e95ee5852fa980d44",
+      "sourceTreeDirty": false,
+      "sourceFiles": 187,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesExtractedArchive": true,
+    "quarantine": {
+      "preserved": true,
+      "value": "0381;6aa6193e;;44181552-8BFA-4DBD-BB06-0669F320A568"
+    },
+    "logs": [
+      "/private/tmp/retouch-desktop-radius-a8f185a/install.log",
+      "/private/tmp/retouch-desktop-radius-a8f185a/uninstall.log",
+      "/private/tmp/retouch-desktop-radius-a8f185a/untap.log"
+    ],
+    "cleanup": {
+      "caskInventoryUnchanged": true,
+      "appAndCaskRegistrationAbsent": true,
+      "temporaryTapAndTrustAbsent": true,
+      "externalHarnessRemoved": true,
+      "automaticDependencyRemoval": false
+    }
+  },
+  "nativeLaunch": {
+    "result": "not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "release": {
+    "signing": "ad hoc development build",
+    "developerID": false,
+    "notarization": false,
+    "publicRelease": false
+  },
+  "otherKnownLimits": [
+    "Native editing, sampler, shutdown, Intel execution and trusted upgrades remain unverified.",
+    "Earlier startup-recovery and older WebKit Fill-height scenarios were not rerun on this archive.",
+    "Full Figma Design and arbitrary-site parity remain unfinished."
+  ]
+}
