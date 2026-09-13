@@ -20,3 +20,15 @@ for(const kind of ['html','react','liquid'])test(kind+' nested selections preser
  const adapter=require('../src/adapters/'+kind+'.cjs'),relPath=kind==='react'?'app/page.jsx':kind==='liquid'?'sections/main.liquid':'index.html',source=(kind==='react'?'export default()=>':'')+'<svg><g transform="translate(10 20)"><g transform="rotate(12) scale(2)"><rect width="20"/></g></g></svg>',elements=kind==='react'?require('../src/id.cjs').collectElements(source,relPath).elements:adapter.collect(source,relPath).elements,chosen=elements.slice(1),ids=chosen.map(e=>e.id),r={source,relPath,elements,element:chosen[0],file:'/tmp/'+relPath,hash:adapter.contentHash(source)},matrices=Object.fromEntries(chosen.map(element=>[element.id,adapter.describe({...r,element}).svgTransform.matrix]));
  assert.deepEqual(adapter.planOp(r,{type:'setSVGTransforms',ids,matrices,fileHash:r.hash}).edits,[],'an unchanged selection has no source edits');matrices[ids[0]]=[1,0,0,1,30,40];const result=adapter.planOp(r,{type:'setSVGTransforms',ids,matrices,fileHash:r.hash});assert.equal(result.ok,true,result.reason);assert.equal(result.edits[0].after,source.replace('translate(10 20)','matrix(1 0 0 1 30 40)'));
 });
+
+test('Selection proportions scale both axes about the top left and enforce both size limits',()=>{
+ const box={left:20,top:-30,width:100,height:200};
+ assert.deepEqual(S.resizeBounds(box,'width',150,true),[1.5,0,0,1.5,-10,15]);
+ assert.deepEqual(S.resizeBounds(box,'height',100,true),[.5,0,0,.5,10,-15]);
+ assert.deepEqual(S.resizeBounds(box,'height',100,false),[1,0,0,.5,0,-15]);
+ for(const value of [0,-1,NaN,Infinity,100001])assert.equal(S.resizeBounds(box,'width',value,true),null);
+ assert.equal(S.resizeBounds(box,'width',60000,true),null,'derived height exceeds limit');
+ assert.equal(S.resizeBounds({...box,width:0},'height',100,true),null);
+ assert.equal(S.selectionKey([{file:'a',id:'1'},{file:'a',id:'2'}]),S.selectionKey([{file:'a',id:'2'},{file:'a',id:'1'}]));
+ assert.notEqual(S.selectionKey([{file:'a',id:'1'}]),S.selectionKey([{file:'b',id:'1'}]));
+});

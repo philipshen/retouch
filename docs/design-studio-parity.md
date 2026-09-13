@@ -14004,3 +14004,28 @@ Every selected member must still have an editable, measurable SVG transform in
 one source file. Dynamic or CSS-owned descendants, cross-file selections and
 multi-vector canvas gestures remain open. This change does not rebuild the Mac
 application.
+
+## 2026-09-13 — Selection proportions lock
+
+SVG multi-selections now place a proportions lock beside the paired W/H fields.
+When locked, entering either dimension (including a calculation) scales both
+axes about the selection's top-left corner. The preference follows the same
+set of selected source IDs regardless of selection order and survives inspector
+refreshes and Undo/Redo for the current editor session. Toggling the lock itself
+does not modify source or add a history step.
+
+Both resulting dimensions must stay within 100000 document pixels; zero-axis
+selections cannot enable the lock. Nested selected children continue to inherit
+one transformation without rewriting their own transform attributes. This
+control currently applies to inspector sizing; multi-vector canvas handles and
+gesture modifiers remain unfinished.
+
+Validation: 1,030 unit tests passed. HTML/WebKit 26, React/Chromium and
+Liquid/Chromium workflows reached terminal zero exits, checking locked W/H
+equations, geometry through different parent transforms, nested child source
+preservation, no-write toggles and lock retention through exact Undo/Redo.
+Existing vector resize, move, snapping, nudge and equation regressions passed.
+A further Liquid run captured /private/tmp/retouch-selection-ratio.png; the
+light inspector's lock placement beside W/H was visually verified. Logs:
+/private/tmp/retouch-selection-ratio-{units,html,react,liquid,visual}.log.
+No desktop rebuild or push was performed for this change.
