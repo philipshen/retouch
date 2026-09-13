@@ -317,7 +317,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
 
   const arrowStroke=[...panel.children].find(el=>el.dataset.section==='stroke');
   if(arrowStroke){
-   for(const [label,short]of [['Arrowhead length','Head length'],['Arrowhead width','Head width']]){
+   for(const [label,short]of [['Start point','Start point'],['Arrowhead length','Head length'],['Arrowhead width','Head width']]){
     const field=panel.querySelector('[aria-label="'+label+'"]')?.closest('.inspector-field');
     if(field){field.querySelector(':scope > span').textContent=short;field.title=label;arrowStroke.append(field);}
    }

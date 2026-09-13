@@ -2,12 +2,14 @@
  'use strict';
  const pointsAPI=()=>typeof module==='object'&&module.exports?require('./svg-points.js'):root.RetouchSVGPoints;
  const round=value=>Math.round(value*1000000)/1000000;
- function arrow({x1,y1,x2,y2,headLength,headWidth}){
-  if(![x1,y1,x2,y2,headLength,headWidth].every(Number.isFinite))return null;
+ function arrow({x1,y1,x2,y2,headLength,headWidth,startArrow=false}){
+  if(typeof startArrow!=='boolean'||![x1,y1,x2,y2,headLength,headWidth].every(Number.isFinite))return null;
   const length=Math.hypot(x2-x1,y2-y1);if(!length||headLength<0||headLength>length+.00001||headWidth<0||headWidth>100000)return null;
   const ux=(x2-x1)/length,uy=(y2-y1)/length,tip={x:x2,y:y2};
   const wing=side=>({x:x2-ux*headLength-uy*headWidth*.5*side,y:y2-uy*headLength+ux*headWidth*.5*side});
-  const points=[{x:x1,y:y1},tip,wing(1),tip,wing(-1)].map(p=>({x:round(p.x),y:round(p.y)}));
+  const start={x:x1,y:y1},raw=[start,tip,wing(1),tip,wing(-1)],reflect=p=>({x:x1+x2-p.x,y:y1+y2-p.y});
+  if(startArrow)raw.push(tip,start,reflect(wing(1)),start,reflect(wing(-1)));
+  const points=raw.map(p=>({x:round(p.x),y:round(p.y)}));
   return points.some(p=>Math.abs(p.x)>100000||Math.abs(p.y)>100000)?null:pointsAPI().format(points);
  }
  function generate(spec){
@@ -20,12 +22,13 @@
  }
  function describe(value,kind){
   if(kind==='arrow'){
-   const points=pointsAPI().parse(value);if(!points||points.length!==5)return null;
+   const points=pointsAPI().parse(value);if(!points||![5,10].includes(points.length))return null;
    const [a,b,left,,right]=points,length=Math.hypot(b.x-a.x,b.y-a.y);if(!length)return null;
    const ux=(b.x-a.x)/length,uy=(b.y-a.y)/length;
    const spec={kind,x1:a.x,y1:a.y,x2:b.x,y2:b.y,headLength:((b.x-left.x)+(b.x-right.x))*ux/2+((b.y-left.y)+(b.y-right.y))*uy/2,headWidth:(left.y-right.y)*ux-(left.x-right.x)*uy};
    if(spec.headLength<-.00001||spec.headLength>length+.00001||spec.headWidth<-.00001||spec.headWidth>100000.00001)return null;
    spec.headLength=Math.max(0,Math.min(length,spec.headLength));spec.headWidth=Math.max(0,Math.min(100000,spec.headWidth));
+   if(points.length===10)spec.startArrow=true;
    const generated=generate(spec);if(!generated)return null;
    const expected=pointsAPI().parse(generated);return points.every((p,i)=>Math.abs(p.x-expected[i].x)<.00001&&Math.abs(p.y-expected[i].y)<.00001)?spec:null;
   }
@@ -42,8 +45,8 @@
  }
  function reverseArrow(value){
   if(!describe(value,'arrow'))return null;
-  const [a,b,left,,right]=pointsAPI().parse(value),reflect=p=>({x:round(a.x+b.x-p.x),y:round(a.y+b.y-p.y)});
-  const points=[b,a,reflect(left),a,reflect(right)];
+  const original=pointsAPI().parse(value),[a,b]=original,reflect=p=>({x:round(a.x+b.x-p.x),y:round(a.y+b.y-p.y)});
+  const points=original.map(reflect);
   return points.some(p=>Math.abs(p.x)>100000||Math.abs(p.y)>100000)?null:pointsAPI().format(points);
  }
  const api={generate,describe,reverseArrow};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGParametric=api;

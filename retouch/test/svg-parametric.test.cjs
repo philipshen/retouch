@@ -27,8 +27,8 @@ for(const language of ['html','react','liquid'])test(language+' arrow parameters
  const source=(language==='react'?'export default()=>':'')+'<svg><polyline data-rt-shape="arrow" points="'+points+'" fill="none" stroke="#123456"/></svg>';
  const resolve=source=>{const elements=adapter.collect(source,relPath).elements;return {source,relPath,file:'/tmp/'+relPath,elements,element:elements.find(e=>(language==='react'?ids.jsxElementName(e.node):e.tag)==='polyline'),hash:adapter.contentHash(source)};};
  const r=resolve(source),modelBefore=adapter.describe(r).svgGeometry.parametric;assert.equal(modelBefore.kind,'arrow');
- const value=model.generate({...modelBefore,headLength:20,headWidth:30}),result=adapter.planOp(r,{type:'setSVGGeometry',property:'points',value,fileHash:r.hash});assert.equal(result.ok,true,result.reason);
- const next=resolve(result.edits[0].after),modelAfter=adapter.describe(next).svgGeometry.parametric;assert.ok(Math.abs(modelAfter.headLength-20)<.000002);assert.ok(Math.abs(modelAfter.headWidth-30)<.000002);assert.equal(next.element.id,r.element.id);assert.ok(next.source.includes('stroke="#123456"'));
+ const value=model.generate({...modelBefore,headLength:20,headWidth:30,startArrow:true}),result=adapter.planOp(r,{type:'setSVGGeometry',property:'points',value,fileHash:r.hash});assert.equal(result.ok,true,result.reason);
+ const next=resolve(result.edits[0].after),modelAfter=adapter.describe(next).svgGeometry.parametric;assert.equal(modelAfter.startArrow,true);assert.ok(Math.abs(modelAfter.headLength-20)<.000002);assert.ok(Math.abs(modelAfter.headWidth-30)<.000002);assert.equal(next.element.id,r.element.id);assert.ok(next.source.includes('stroke="#123456"'));
  const freeform=resolve(next.source.replace(value,'0,0 100,0 80,5 100,0 80,-9'));assert.equal(adapter.describe(freeform).svgGeometry.parametric,null);
 });
 test('Parametric shapes retain bounds, kind, count and ratio across supported point counts',()=>{
@@ -49,4 +49,15 @@ for(const language of ['html','react','liquid'])test(language+' shape parameters
   const updated=model.generate({...descriptor,count:7,ratio:1}),result=adapter.planOp(r,{type:'setSVGGeometry',property:'points',value:updated,fileHash:r.hash});assert.equal(result.ok,true,result.reason);const next=resolve(result.edits[0].after),fresh=adapter.describe(next).svgGeometry.parametric;assert.equal(fresh.kind,kind);assert.equal(fresh.count,7);assert.ok(Math.abs(fresh.ratio-1)<.000001);assert.equal(next.element.id,r.element.id);assert.ok(next.source.includes('fill="#abcdef"'));assert.ok(next.source.includes('data-rt-shape="'+kind+'"'));assert.equal(result.edits[0].before,source);
   const edited=adapter.planOp(next,{type:'setSVGGeometry',property:'points',value:'0,0 10,5 30,40 0,80',fileHash:next.hash});assert.equal(edited.ok,true);assert.equal(adapter.describe(resolve(edited.edits[0].after)).svgGeometry.parametric,null);
  }
+});
+
+
+test('Double-ended arrows retain symmetric heads, reversibility and freeform ownership',()=>{
+ for(const [x2,y2]of [[100,0],[0,100],[-60,40]]){
+  const spec={kind:'arrow',x1:0,y1:0,x2,y2,headLength:12,headWidth:20,startArrow:true},value=model.generate(spec),parsed=model.describe(value,'arrow');
+  assert.equal(value.split(' ').length,10);assert.equal(parsed.startArrow,true);assert.ok(model.describe(model.generate(parsed),'arrow'));const numbers=text=>text.split(/[ ,]/).map(Number);assert.ok(numbers(model.generate(parsed)).every((n,i)=>Math.abs(n-numbers(value)[i])<.00001));assert.equal(model.reverseArrow(model.reverseArrow(value)),value);
+  const single=model.generate({...parsed,startArrow:false});assert.equal(single.split(' ').length,5);assert.equal(model.describe(single,'arrow').startArrow,undefined);
+  const changed=value.split(' ');changed[7]='1,2';assert.equal(model.describe(changed.join(' '),'arrow'),null);
+ }
+ assert.equal(model.generate({kind:'arrow',x1:0,y1:0,x2:100,y2:0,headLength:12,headWidth:20,startArrow:'yes'}),null);
 });
