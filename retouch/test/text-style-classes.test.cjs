@@ -1,9 +1,9 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {encode}=require('../src/text-style-classes.cjs'),tokens=require('../src/class-tokens.cjs'),responsive=require('../shell/responsive.js');
-const full={'font-family':'"标题_Font", sans-serif','font-size':'32px','font-weight':'537.5','font-style':'oblique','font-optical-sizing':'none','font-variation-settings':'"wght" 537.5, "GRAD" -30','font-variant-numeric':'tabular-nums slashed-zero','font-variant-ligatures':'no-common-ligatures discretionary-ligatures','font-variant-caps':'all-small-caps','font-variant-position':'super','line-height':'1.4','letter-spacing':'-0.02em','text-align':'center','text-decoration-line':'underline line-through','text-transform':'uppercase'};
+const full={'font-family':'"标题_Font", sans-serif','font-size':'32px','font-weight':'537.5','font-style':'oblique','font-optical-sizing':'none','font-variation-settings':'"wght" 537.5, "GRAD" -30','font-variant-numeric':'tabular-nums slashed-zero','font-variant-ligatures':'no-common-ligatures discretionary-ligatures','font-variant-caps':'all-small-caps','font-variant-position':'super','line-height':'1.4','letter-spacing':'-0.02em','text-indent':'24px','text-align':'center','text-decoration-line':'underline line-through','text-transform':'uppercase'};
 test('every catalog typography property has a validated scoped class encoding',()=>{
- const encoded=encode(full);assert.equal(Object.keys(encoded).length,15);
+ const encoded=encode(full);assert.equal(Object.keys(encoded).length,16);
  assert.equal(encoded['font-family'],'![font-family:"标题\\_Font",_sans-serif]');assert.equal(encoded['font-variation-settings'],'![font-variation-settings:"wght"_537.5,_"GRAD"_-30]');
  const scoped=responsive.replaceScope('hover:text-red-500 md:p-4',Object.values(encoded).join(' '),'md:');
  for(const token of scoped.split(' '))assert.equal(tokens.valid(token),true,token);
@@ -43,4 +43,14 @@ test('override detection distinguishes canonical ownership, local resets and imp
  assert.deepEqual(overrides('![font-size:32px] !font-bold',baseline),['font-weight']);
  assert.deepEqual(overrides('![font-size:32px] ![font-weight:500] !text-lg',baseline),['font-size']);
  assert.deepEqual(overrides('md:![font-size:32px] md:![font-weight:500] !text-lg',baseline,'md:'),[]);
+});
+test('paragraph indentation replaces only its scoped tokens and remains a text style override',()=>{
+ const I=require('../shell/inspector.js'),styles=require('../src/text-style-classes.cjs');
+ for(const token of ['indent-4','-indent-2','indent-[12%]','[text-indent:-24px]'])assert.equal(I.textIndentToken(token),true,token);
+ assert.equal(I.textIndentToken('tracking-wide'),false);
+ const before='indent-4 md:-indent-2 md:tracking-wide hover:indent-8',after=styles.compose(before,{'text-indent':'24px'},'md:');
+ assert.equal(after,'indent-4 md:tracking-wide hover:indent-8 md:![text-indent:24px]');
+ assert.deepEqual(styles.overrides(after,{'text-indent':'12px'},'md:'),['text-indent']);
+ for(const value of ['-24px','0','10%','1.5em'])assert.ok(styles.encode({'text-indent':value}));
+ for(const value of ['12','normal','24px; color:red'])assert.throws(()=>styles.encode({'text-indent':value}));
 });

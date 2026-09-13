@@ -14596,3 +14596,18 @@ https://webkit.org/blog/17967/news-from-wwdc26-webkit-in-safari-27-beta/.
 The existing fallback-first production cascade already selects standard stretch
 when available. This verification does not claim a fix for older engines,
 universal site/layout support, trusted native distribution, or full Figma parity.
+
+### Paragraph indentation (2026-09-13)
+
+Type settings now includes paragraph indentation, using Figma's first-line
+indentation model as the reference:
+https://help.figma.com/hc/en-us/articles/360039956634-Explore-text-properties.
+React/Liquid write scoped `text-indent` utilities; HTML writes scoped CSS.
+Negative indentation, label-drag preview/cancel, reset to inherited values, and
+exact source undo/redo are supported. The property participates in reusable text
+styles and local override tracking. It applies to the selected text layer; this
+is not a claim of per-paragraph rich-text selection or list-editing parity.
+
+`RT_E2E_PARAGRAPH_INDENT=1` in `test/e2e/page-fonts.cjs` checks rendered first-line
+geometry against a second line, retained layer width, negative tablet overrides,
+phone isolation, scrub preview and cancellation, reset, and exact undo/redo.
