@@ -35,6 +35,7 @@
     const size=current();
     if(undoOrder)undoOrder.disabled=!orderUndo.length||removals>0||loadingSet;
     if(redoOrder)redoOrder.disabled=!orderRedo.length||removals>0||loadingSet;
+    if(undoOrder)undoOrder.parentElement.hidden=!orderUndo.length&&!orderRedo.length;
     if(pin){pin.disabled=sizes.length>=8||!valid(size.width)||!valid(size.height)||sizes.some(s=>s[1]===size.width&&s[2]===size.height);pin.title=sizes.length>=8?'Remove a comparison to add another':'Add the current canvas dimensions';}
     if(restore){
       const last=removed.at(-1);restore.hidden=!last;restore.disabled=!last||removals>0||sizes.length>=8||sizes.some(size=>size[1]===last.size[1]&&size[2]===last.size[2]||size[0].toLowerCase()===last.size[0].toLowerCase());
@@ -212,15 +213,16 @@
   function mount(){
     rail.replaceChildren();cards=[];
     rail.classList.toggle('focus-previews',focusPreviews);
-    const focus=document.createElement('button');focus.id='comparisonFocus';focus.type='button';focus.className='control-button';focus.textContent='Focus previews';focus.setAttribute('aria-pressed',String(focusPreviews));focus.title='Hide screen-management controls to give more space to previews. Toggle again to restore the controls.';
-    focus.onclick=()=>{focusPreviews=!focusPreviews;rail.classList.toggle('focus-previews',focusPreviews);focus.setAttribute('aria-pressed',String(focusPreviews));try{localStorage.setItem(storageKey+'.focus',String(focusPreviews));}catch{}layoutPreviews();};rail.append(focus);
-    const heading=document.createElement('h2');heading.textContent='Compare screens';rail.append(heading);
-    const hint=document.createElement('p');hint.className='hint';hint.id='comparisonNavigationHint';hint.textContent='Click a layer to edit on the main canvas; Shift-click to add or remove it. Drag from empty space to select a group. Style scope stays unchanged. Focus a preview and use arrow keys, Page Up/Down, or Home/End to scroll the panel at its center. Enter opens its size.';rail.append(hint);
-    scopeSummary=document.createElement('p');scopeSummary.className='hint';scopeSummary.setAttribute('aria-label','Comparison style scope');scopeSummary.textContent='Style scope: '+scope.label;rail.append(scopeSummary);
-    const files=document.createElement('div');files.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px';
+    const toolbar=document.createElement('div');toolbar.className='compare-toolbar';const heading=document.createElement('h2');heading.textContent='Compare screens';toolbar.append(heading);rail.append(toolbar);
+    const focus=document.createElement('button');focus.id='comparisonFocus';focus.type='button';focus.className='control-button';focus.setAttribute('aria-label','Focus previews');focus.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>';focus.setAttribute('aria-pressed',String(focusPreviews));focus.title='Hide screen-management controls to give more space to previews. Toggle again to restore the controls.';
+    focus.onclick=()=>{focusPreviews=!focusPreviews;rail.classList.toggle('focus-previews',focusPreviews);focus.setAttribute('aria-pressed',String(focusPreviews));try{localStorage.setItem(storageKey+'.focus',String(focusPreviews));}catch{}layoutPreviews();};toolbar.append(focus);
+    const hint=document.createElement('p');hint.className='hint';hint.id='comparisonNavigationHint';hint.hidden=true;hint.textContent='Click a layer to edit on the main canvas; Shift-click to add or remove it. Drag from empty space to select a group. Style scope stays unchanged. Focus a preview and use arrow keys, Page Up/Down, or Home/End to scroll the panel at its center. Enter opens its size.';rail.append(hint);
+    const help=document.createElement('button');help.type='button';help.className='control-button';help.textContent='?';help.setAttribute('aria-label','Comparison help');help.setAttribute('aria-controls',hint.id);help.setAttribute('aria-expanded','false');help.title='Selection and keyboard help';help.onclick=()=>{hint.hidden=!hint.hidden;help.setAttribute('aria-expanded',String(!hint.hidden));layoutPreviews();};help.onkeydown=e=>{if(e.key==='Escape'&&!hint.hidden){e.preventDefault();e.stopPropagation();hint.hidden=true;help.setAttribute('aria-expanded','false');layoutPreviews();}};toolbar.append(help);
+    scopeSummary=document.createElement('p');scopeSummary.className='hint compare-scope';scopeSummary.setAttribute('aria-label','Comparison style scope');scopeSummary.textContent='Style scope: '+scope.label;rail.append(scopeSummary);
+    const files=document.createElement('div');files.className='compare-files';
     allPreviews=document.createElement('button');allPreviews.id='comparisonVisibility';allPreviews.type='button';allPreviews.className='control-button';allPreviews.title='Collapse previews to manage screen sizes, or expand them again. Keeps each page loaded.';
     allPreviews.onclick=()=>{const hide=cards.some(card=>!card.previewBody.hidden);for(const card of cards)card.setCollapsed(hide);remember();updateControls();};files.append(allPreviews);
-    revealAll=document.createElement('button');revealAll.id='comparisonRevealAll';revealAll.type='button';revealAll.className='control-button';revealAll.textContent='Show selection in all previews';revealAll.title='Expand comparisons and scroll each page to the selected layer. Repeat to cycle repeated instances.';
+    revealAll=document.createElement('button');revealAll.id='comparisonRevealAll';revealAll.type='button';revealAll.className='control-button';revealAll.textContent='Show selection';revealAll.setAttribute('aria-label','Show selection in all previews');revealAll.title='Expand comparisons and scroll each page to the selected layer. Repeat to cycle repeated instances.';
     revealAll.onclick=()=>{if(!selected)return;for(const card of cards)card.setCollapsed(false);remember();updateControls();clearTimeout(timer);paint();for(const card of cards)card.reveal.click();};files.append(revealAll);
     const saveSet=document.createElement('button');saveSet.type='button';saveSet.className='control-button';saveSet.textContent='Save screen set';
     saveSet.onclick=()=>{
@@ -242,8 +244,8 @@
     undoLoad.onclick=()=>{if(previousSet&&!loadingSet)replaceSet(previousSet.sizes,previousSet.removed,null,'Restored previous screen set.');};
     setStatus=document.createElement('p');setStatus.className='hint';setStatus.setAttribute('role','status');setStatus.setAttribute('aria-label','Screen set status');setStatus.textContent=setMessage;
     files.append(saveSet,loadSet,undoLoad,file);rail.append(files,setStatus);
-    pin=document.createElement('button');pin.className='control-button';pin.textContent='Pin current size';
-    pin.onclick=()=>{const {width,height}=current();if(pin.disabled)return;const size=[`Custom ${width} × ${height}`,width,height];sizes.push(size);remember();addCard(size);cards.at(-1).frame.src=path()||'/';updateControls();};rail.append(pin);
+    pin=document.createElement('button');pin.className='control-button comparison-pin';pin.type='button';pin.textContent='+';pin.setAttribute('aria-label','Pin current size');
+    pin.onclick=()=>{const {width,height}=current();if(pin.disabled)return;const size=[`Custom ${width} × ${height}`,width,height];sizes.push(size);remember();addCard(size);cards.at(-1).frame.src=path()||'/';updateControls();};toolbar.insertBefore(pin,focus);
     restore=document.createElement('button');restore.className='control-button';restore.type='button';
     restore.onclick=()=>{
       updateControls();if(restore.disabled)return;
@@ -251,7 +253,7 @@
       sizes.splice(index,0,last.size);addCard(last.size,next);const item=cards.pop();cards.splice(index,0,item);
       item.frame.src=path()||'/';remember();updateControls();item.card.scrollIntoView({block:'nearest'});
     };rail.append(restore);
-    const orderHistory=document.createElement('div');orderHistory.className='compare-header';
+    const orderHistory=document.createElement('div');orderHistory.className='compare-header compare-order-history';
     undoOrder=document.createElement('button');redoOrder=document.createElement('button');
     for(const button of [undoOrder,redoOrder]){button.type='button';button.className='control-button';}
     undoOrder.textContent='Undo screen order';redoOrder.textContent='Redo screen order';
