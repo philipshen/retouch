@@ -14323,3 +14323,27 @@ Logs: `/private/tmp/retouch-arrow-params-units.log`,
 Arrowhead style choices, independent start/end caps and arbitrary imported-arrow
 recognition remain incomplete. No desktop rebuild or native launch here. Full
 Figma parity and universal site support remain unproven and incomplete.
+
+## 2026-09-13 — Reverse arrow direction
+
+Recognized arrows now expose Reverse arrow in Stroke. The action swaps the
+shaft endpoints and reflects the existing head points about the shaft midpoint,
+preserving head dimensions without re-inferring and regenerating them. Two
+reversals restore the canonical points exactly. It uses the existing atomic
+SVG geometry source edit and history path; paint and other attributes remain
+unchanged. Freeform shapes do not expose this action, and coordinate overflow
+is refused.
+
+All 1127 unit tests pass. Expanded HTML/Chromium, Liquid/WebKit and React/
+Chromium arrow workflows verify endpoint swapping, retained paint and head
+dimensions, two reversals, exact source Undo/Redo, and removal of the action
+after asymmetric freeform edits. React covers a transformed native container
+and self-closing SVG/group insertion. Every process exited 0.
+Logs: `/private/tmp/retouch-arrow-reverse-units.log`,
+`/private/tmp/retouch-arrow-reverse-html.log`,
+`/private/tmp/retouch-arrow-reverse-liquid.log`,
+`/private/tmp/retouch-arrow-reverse-react.log`.
+
+No desktop rebuild or native launch in this increment. Independent start/end
+cap styles, broader imported arrows, full Figma parity and universal site
+support remain incomplete.

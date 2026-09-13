@@ -1,5 +1,15 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),model=require('../shell/svg-parametric.js');
+test('Reversing an arrow swaps endpoints and reflects its head without losing dimensions',()=>{
+ for(const [x2,y2]of [[100,0],[-100,0],[0,100],[0,-100],[70,30],[-70,-30]]){
+  const value=model.generate({kind:'arrow',x1:10,y1:20,x2,y2,headLength:12,headWidth:20}),reversed=model.reverseArrow(value),before=model.describe(value,'arrow'),after=model.describe(reversed,'arrow');
+  assert.deepEqual([after.x1,after.y1,after.x2,after.y2],[before.x2,before.y2,before.x1,before.y1]);
+  for(const key of ['headLength','headWidth'])assert.ok(Math.abs(after[key]-before[key])<.000002);
+  assert.equal(model.reverseArrow(reversed),value);
+ }
+ assert.equal(model.reverseArrow('0,0 100,0 80,5 100,0 80,-9'),null);
+ const edge=model.generate({kind:'arrow',x1:100000,y1:0,x2:99900,y2:100,headLength:1,headWidth:40});assert.ok(edge);assert.equal(model.reverseArrow(edge),null);
+});
 test('Arrow parameters preserve endpoints and recognize symmetric heads in all directions',()=>{
  for(const [x2,y2]of [[100,0],[-100,0],[0,100],[0,-100],[70,30],[-70,-30]])for(const headLength of [0,5,30])for(const headWidth of [0,8,40]){
   const spec={kind:'arrow',x1:0,y1:0,x2,y2,headLength,headWidth},value=model.generate(spec),read=model.describe(value,'arrow');assert.ok(read,JSON.stringify(spec));

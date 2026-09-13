@@ -40,5 +40,11 @@
   if(!generated)return null;const expected=pointsAPI().parse(generated);if(points.some((p,i)=>Math.abs(p.x-expected[i].x)>0.00001||Math.abs(p.y-expected[i].y)>0.00001))return null;
   return model;
  }
- const api={generate,describe};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGParametric=api;
+ function reverseArrow(value){
+  if(!describe(value,'arrow'))return null;
+  const [a,b,left,,right]=pointsAPI().parse(value),reflect=p=>({x:round(a.x+b.x-p.x),y:round(a.y+b.y-p.y)});
+  const points=[b,a,reflect(left),a,reflect(right)];
+  return points.some(p=>Math.abs(p.x)>100000||Math.abs(p.y)>100000)?null:pointsAPI().format(points);
+ }
+ const api={generate,describe,reverseArrow};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGParametric=api;
 })(typeof window==='object'?window:globalThis);

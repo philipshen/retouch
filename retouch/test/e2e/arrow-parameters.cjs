@@ -8,6 +8,13 @@ module.exports=async({page,shape,read,wait,settled,screenshot})=>{
   assert.deepEqual(endpoints(await points()),before,'arrowhead edits preserve the shaft endpoints');states.push(read());
  }
  if(screenshot)await page.screenshot({path:screenshot});
+ const headBefore=await points(),paint=await shape.evaluate(el=>[el.getAttribute('stroke'),el.getAttribute('fill')]);
+ await page.getByRole('button',{name:'Reverse arrow',exact:true}).click();await wait(()=>read()!==states.at(-1));await settled();
+ assert.deepEqual(endpoints(await points()),before.slice().reverse());
+ assert.deepEqual(await shape.evaluate(el=>[el.getAttribute('stroke'),el.getAttribute('fill')]),paint);
+ for(const [label,value]of [['Arrowhead length',8],['Arrowhead width',20]])assert.ok(Math.abs(Number(await page.getByLabel(label,{exact:true}).inputValue())-value)<.00001);
+ states.push(read());
+ await page.getByRole('button',{name:'Reverse arrow',exact:true}).click();await wait(()=>read()!==states.at(-1));await settled();assert.equal(await points(),headBefore);states.push(read());
  for(let i=states.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===states[i]);await settled();}
  for(let i=1;i<states.length;i++){await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===states[i]);await settled();}
  for(let i=states.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===states[i]);await settled();}
@@ -16,5 +23,6 @@ module.exports=async({page,shape,read,wait,settled,screenshot})=>{
  for(const details of await raw.locator('xpath=ancestor::details').all())if(await details.getAttribute('open')===null)await details.locator(':scope > summary').click();
  await raw.fill('0,0 100,0 80,5 100,0 80,-9');await raw.press('Tab');await wait(()=>read()!==original);await settled();
  assert.equal(await page.getByLabel('Arrowhead length',{exact:true}).count(),0,'freeform points are not rewritten as a symmetric arrow');
+ assert.equal(await page.getByRole('button',{name:'Reverse arrow',exact:true}).count(),0);
  await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();await page.getByLabel('Arrowhead length',{exact:true}).waitFor();
 };
