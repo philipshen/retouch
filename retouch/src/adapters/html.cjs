@@ -46,6 +46,7 @@ function describe(resolved){
  const svgDuplication=require('../svg-duplicate.cjs').describe(resolved);
  return {svgGradientCreation:require('../svg-gradient-create.cjs').describe(resolved,'html'),svgGradients:require('../html-svg-gradient.cjs').describe(resolved),svgTransform:require('../svg-transform.cjs').describe(resolved,'html'),svgConversion:require('../svg-convert.cjs').describe(resolved),svgDuplication,svgMovement:require('../svg-move.cjs').describe(resolved),svgDeletion:require('../svg-delete.cjs').describe(resolved),svgInsertion:require('../svg-insert.cjs').describe(resolved),svgGeometry:require('../svg-geometry.cjs').describe(el),structure:{...structure.describe(resolved,'html'),...insertion.describe(resolved),...require('../svg-delete.cjs').describe(resolved),...require('../svg-move.cjs').describe(resolved),...svgDuplication},id:el.id,kind:'host',tag:el.tag,file:resolved.relPath,hash:resolved.hash,className:attr(el,'class')||'',classNameDynamic:false,
   ...require('../range-style-source.cjs').describe(resolved,'html'),
+  ...require('../link-source.cjs').describe(resolved,'html'),
   canRename:true,layerName:attr(el,'data-rt-name')||'',text:canText?el.node.childNodes.map(n=>n.value).join(''):null,textDynamic:!canText&&!rich,mixedText:!!rich&&!canText,canSetChildren:!!rich,richText:rich,
   textReason:canText?null:'This HTML region contains nested markup, comments, or an implicit closing tag.',
   src:attr(el,'src'),srcDynamic:false,canSetSrc:canSrc,srcReason:canSrc?null:'Select a plain image without responsive sources.',
@@ -83,6 +84,7 @@ function planOp(resolved,op){
   if(typeof op.text!=='string'||op.text.length>1000000)return refuse('Invalid text.');
   if(op.text!==el.node.childNodes.map(child=>child.value).join('')){const start=el.location.startTag.endOffset,end=el.location.endTag.startOffset;if(start===end)out.appendLeft(start,escapeText(op.text));else out.overwrite(start,end,escapeText(op.text));}
  }else if(op.type==='setChildren'){
+  if(el.node.tagName==='a'&&require('../rich-text.cjs').hasLink(op.children))return refuse('Text links cannot be nested.');
   if(!describe(resolved).canSetChildren)return refuse('This HTML region cannot preserve structured text edits.');
   const start=el.location.startTag.endOffset,end=el.location.endTag.startOffset;let replacement;try{replacement=richText.rewrite(resolved.source.slice(start,end),el.id,op.children);}catch(error){return refuse(error.message);}
   if(start===end)out.appendLeft(start,replacement);else out.overwrite(start,end,replacement);

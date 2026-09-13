@@ -18,7 +18,7 @@ const components = require('../liquid-components.cjs');
 const images = require('../liquid-images.cjs');
 const theme = require('../liquid-theme.cjs');
 const layerNames = require('../liquid-layer-name.cjs');
-const {validateChildrenTree,styleMarkup}=require('../rich-text.cjs');
+const {validateChildrenTree,styleMarkup,linkMarkup,hasLink}=require('../rich-text.cjs');
 
 const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
   'link', 'meta', 'param', 'source', 'track', 'wbr']);
@@ -309,6 +309,7 @@ function describeElement(resolved) {
     canSetTag: node.closeStart != null && (TEXT_TAGS.has(node.tag) || !!tagSource?.result.target && TEXT_TAGS.has(tagSource.result.target.value)),
     tagSource:tagSource?.result.descriptor||null,
     ...require('../range-style-source.cjs').describe(resolved,'liquid'),
+  ...require('../link-source.cjs').describe(resolved,'liquid'),
     text,
     textDynamic: text === null && (hasLiquid || node.textBinding),
     textSource: traced?.descriptor || null,
@@ -383,6 +384,7 @@ function planOp(resolved, op) {
     if(op.text!==text){if(node.childrenStart===node.childrenEnd)ms.appendLeft(node.childrenStart,escapeText(op.text));else ms.overwrite(node.childrenStart, node.childrenEnd, escapeText(op.text));}
   } else if (op.type === 'setChildren') {
     const err=validateChildrenTree(op.children,0); if (err) return refuse(err);
+    if(node.tag==='a'&&hasLink(op.children))return refuse('Text links cannot be nested.');
     if (describe(resolved).richText) return sources.planWriteChildren(resolved,op);
     if (!describe(resolved).canSetChildren) return refuse('The children contain expressions that cannot be rewritten as rich text.');
     const descendants=new Map(resolved.elements.filter(e=>e.tagStart>=node.openEnd&&e.closeEnd<=node.closeStart).map(e=>[e.id,e]));
@@ -391,11 +393,13 @@ function planOp(resolved, op) {
       if (c.t==='text') return escapeText(c.value);
       if (c.t==='break') return '<br>';
       if (c.t==='style'||c.t==='styles') return styleMarkup(c,build(c.children));
+      if(c.t==='link')return linkMarkup(c,build(c.children));
       if (c.t==='wrap') return `<${c.tag}>${build(c.children)}</${c.tag}>`;
       const kept=descendants.get(c.id);
       if (!kept||seen.has(c.id)) throw new Error('A kept element is not a unique descendant of this source.');
       seen.add(c.id);
       if (!c.children) return resolved.source.slice(kept.tagStart,kept.closeEnd);
+      if(kept.tag==='a'&&hasLink(c.children))throw Error('Text links cannot be nested.');
       if (kept.closeStart==null||kept.textBinding||/\{[%{]/.test(layerNames.strip(resolved.source.slice(kept.childrenStart,kept.childrenEnd)))) throw new Error('A kept child contains expressions.');
       return resolved.source.slice(kept.tagStart,kept.openEnd)+build(c.children)+resolved.source.slice(kept.closeStart,kept.closeEnd);
     }).join('');

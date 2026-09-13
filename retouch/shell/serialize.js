@@ -3,6 +3,7 @@
 // browser script (defines window.RetouchSerialize) and require()-d in tests.
 (function (root) {
   var rangeStyles = typeof module !== 'undefined' && module.exports ? require('./range-style-values.js') : root.RetouchRangeStyles;
+  var links=typeof module!=='undefined'&&module.exports?require('./link-values.js'):root.RetouchLinkValues;
   var FMT = { SUP: 'sup', SUB: 'sub', STRONG: 'strong', B: 'strong', EM: 'em', I: 'em', U: 'u', S: 's', STRIKE: 's', DEL: 's' };
 
   // root: a DOM element being edited. snapshot: Map(id -> original textContent)
@@ -47,6 +48,7 @@
           continue;
         }
       }
+      if(n.tagName==='A'&&links.valid(n.getAttribute('href'))){out.push({t:'link',href:n.getAttribute('href'),children:serializeChildren(n,snapshot)});continue;}
       var tag = FMT[n.tagName];
       if (tag) {
         out.push({ t: 'wrap', tag: tag, children: serializeChildren(n, snapshot) });

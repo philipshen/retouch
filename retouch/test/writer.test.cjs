@@ -324,3 +324,11 @@ test('plain formatting proof admits bare line breaks but preserves attributed br
  index.scanAll();const {resolved}=pick(index,root,'DecoratedBreak.tsx','p'),ids=writer.describeElement(resolved).plainFormattingIds;
  assert.ok(ids.includes(pick(index,root,'DecoratedBreak.tsx','u').el.id));assert.ok(!ids.includes(pick(index,root,'DecoratedBreak.tsx','s').el.id));
 });
+
+test('text links write literal JSX URLs and keep attributed anchors outside reconstruction proof',()=>{
+ fs.writeFileSync(path.join(root,'Links.tsx'),`export const Text=()=> <p>Read <a href="/old">plain</a><a href="/owned" id="owned">owned</a><a href={url}>dynamic</a></p>`);index.scanAll();
+ const {resolved}=pick(index,root,'Links.tsx','p'),ids=writer.describeElement(resolved).plainFormattingIds;
+ const anchors=resolved.elements.filter(e=>e.node.openingElement.name.name==='a');assert.ok(ids.includes(anchors[0].id));assert.ok(!ids.includes(anchors[1].id));assert.ok(!ids.includes(anchors[2].id));assert.deepEqual(writer.describeElement(resolved).plainLinkIds,[anchors[0].id]);
+ const result=writer.applyOp(resolved,{type:'setChildren',fileHash:resolved.hash,children:[{t:'link',href:'/docs?x="&y={{literal}}',children:[{t:'wrap',tag:'em',children:[{t:'text',value:'Read'}]}]}]});assert.ok(result.ok,JSON.stringify(result));
+ assert.match(read(root,'Links.tsx'),/<a href=\{"\/docs\?x=\\"&y=\{\{literal\}\}"\}><em>Read<\/em><\/a>/);
+});

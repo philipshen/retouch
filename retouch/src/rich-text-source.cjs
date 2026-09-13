@@ -4,7 +4,7 @@
 // interpret: interpolation ranges arrive as opaque, preserved tokens.
 const {parseFragment}=require('parse5');
 const crypto=require('node:crypto');
-const {validateChildrenTree,styleMarkup}=require('./rich-text.cjs');
+const {validateChildrenTree,styleMarkup,linkMarkup,hasLink}=require('./rich-text.cjs');
 const escapeText=value=>value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\{/g,'&#123;').replace(/\}/g,'&#125;');
 
 function describe(value,sourceId,{tokens=[]}={}) {
@@ -36,7 +36,7 @@ function describe(value,sourceId,{tokens=[]}={}) {
       if (!node.tagName) {kept.set(nodeId,{raw,opaque:true});return {t:'comment',id:nodeId};}
       const opaque=['script','style','svg','template','iframe'].includes(node.tagName);
       kept.set(nodeId,{raw,opaque,open:value.slice(loc.startOffset,loc.startTag.endOffset),close:loc.endTag?value.slice(loc.endTag.startOffset,loc.endOffset):null});
-      return {t:'element',id:nodeId,tag:node.tagName,opaque,children:opaque?[]:visit(node.childNodes,key)};
+      return {t:'element',id:nodeId,tag:node.tagName,opaque,plainLink:node.tagName==='a'&&node.attrs.length===1&&node.attrs[0].name==='href'&&require('../shell/link-values.js').valid(node.attrs[0].value)&&!/\{[%{]/.test(value.slice(loc.startOffset,loc.startTag.endOffset)),children:opaque?[]:visit(node.childNodes,key)};
     });
   }
   return {descriptor:{children:visit(tree.childNodes,'')},kept};
@@ -50,11 +50,13 @@ function rewrite(value,sourceId,children,options) {
       if(item.t==='text')return escapeText(item.value);
       if(item.t==='break')return '<br>';
       if(item.t==='style'||item.t==='styles')return styleMarkup(item,build(item.children));
+      if(item.t==='link')return linkMarkup(item,build(item.children));
       if(item.t==='wrap')return `<${item.tag}>${build(item.children)}</${item.tag}>`;
       const original=kept.get(item.id);
       if(!original||seen.has(item.id))throw new Error('A kept node is not unique to this text source.');
       seen.add(item.id);
       if(!item.children)return original.raw;
+      if(/^<a(?:\s|>)/i.test(original.open||original.raw)&&hasLink(item.children))throw Error('Text links cannot be nested.');
       if(original.opaque||!original.close)throw new Error('This preserved node cannot have editable children.');
       return original.open+build(item.children)+original.close;
     }).join('');

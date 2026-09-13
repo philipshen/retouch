@@ -960,7 +960,7 @@ function inlineFormattingTransaction(action){
   breakTextHistoryGroup();
   const before=captureCaretEdit(current),batch=current.caretHistoryBatch;let completed=false;
   current.caretHistoryBatch=true;
-  try{const result=action();completed=true;return result;}
+  try{const result=action();if(result===false&&editing===current)restoreCaretEdit(current,before);completed=true;return result;}
   catch(error){if(editing===current)restoreCaretEdit(current,before);throw error;}
   finally{
     current.caretHistoryBatch=batch;
@@ -1182,6 +1182,17 @@ function showInlineFormatToolbar(){
     dialog.addEventListener('keydown',event=>{event.stopPropagation();if(event.key==='Enter'&&event.target.matches('input[type=search]')){event.preventDefault();const first=dialog.querySelector('.font-results button');if(first){first.click();if(!apply.disabled)apply.click();}}});
     dialog.querySelector('details').open=true;dialog.showModal();const box=familyButton.getBoundingClientRect();dialog.style.left=Math.max(8,Math.min(innerWidth-dialog.offsetWidth-8,box.left))+'px';dialog.style.top=Math.max(8,Math.min(innerHeight-dialog.offsetHeight-8,box.top-dialog.offsetHeight-8))+'px';
   };
+  const linkField=document.createElement('input');linkField.type='text';linkField.inputMode='url';linkField.placeholder='Paste a URL';linkField.setAttribute('aria-label','Selected text link');
+  const changeLink=href=>{
+    if(!savedRange||!editing)return false;
+    if(href!==null&&!RetouchLinkValues.valid(href)){linkField.setAttribute('aria-invalid','true');return false;}
+    linkField.removeAttribute('aria-invalid');const selection=d.getSelection();selection.removeAllRanges();selection.addRange(savedRange.cloneRange());
+    const result=applyInlineLink(href);if(result&&href===null)linkField.value='';update();return result;
+  };
+  let cancelLinkChange=false;
+  linkField.onchange=()=>{if(!cancelLinkChange)changeLink(linkField.value.trim());};
+  linkField.onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();event.stopPropagation();if(changeLink(linkField.value.trim()))editing?.el.focus();}if(event.key==='Escape'){event.preventDefault();event.stopPropagation();cancelLinkChange=true;editing?.el.focus();update();linkField.removeAttribute('aria-invalid');cancelLinkChange=false;}};
+  const removeLink=document.createElement('button');removeLink.type='button';removeLink.textContent='Remove';removeLink.setAttribute('aria-label','Remove selected text link');removeLink.onpointerdown=event=>event.preventDefault();removeLink.onclick=()=>changeLink(null);
   const update=()=>{
     if(picker||fontDialog)return;
     const selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null,valid=editing&&range&&editing.el.contains(range.startContainer)&&editing.el.contains(range.endContainer)&&!(range.collapsed&&(range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer).closest('[contenteditable="false"]'));
@@ -1205,6 +1216,10 @@ function showInlineFormatToolbar(){
       button.setAttribute('aria-pressed',state);
       button.title=button.getAttribute('aria-label')+(state==='mixed'?' · Mixed':'');
     }
+    const linkParent=valid?(range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer):null;
+    const selectedLink=linkParent?.closest('a'),withinLink=selectedLink&&selectedLink!==editing?.el&&selectedLink.contains(range?.endContainer);
+    linkField.disabled=!valid||range.collapsed&&!withinLink;removeLink.disabled=!valid||!withinLink;
+    if(document.activeElement!==linkField)linkField.value=withinLink?selectedLink.getAttribute('href')||'':'';
     if(!valid)return;savedRange=range.cloneRange();
     colorField.retouchPaintScopeLabel=(range.collapsed?'Text you type next':'Selected text')+' · Applies across all screen sizes.';
     const values=new Map(fields.map(({property})=>[property,new Set()]));
@@ -1236,7 +1251,7 @@ function showInlineFormatToolbar(){
   const weight=fields.find(item=>item.property==='font-weight'&&item.field.tagName==='SELECT').field,style=fields.find(item=>item.property==='font-style').field,size=fields.find(item=>item.property==='font-size').field;
   const colorControls=document.createElement('div');colorControls.className='range-color-controls';colorControls.append(swatch,colorField);
   const scopeNote=document.createElement('small');scopeNote.className='range-scope-note';scopeNote.textContent='Applies across all screen sizes.';
-  bar.replaceChildren(header,row('Font',[familyButton],'range-family-field'),row('Weight',[weight,customWeight]),row('Size',[size]),row('Line height',[spacingFields['line-height']]),row('Letter spacing',[spacingFields['letter-spacing']]),row('Style',[style]),row('Color',[colorControls]),row('Case',[fields.find(item=>item.property==='text-transform').field]),row('Caps',[fields.find(item=>item.property==='font-variant-caps').field]),commands,scopeNote);
+  bar.replaceChildren(header,row('Font',[familyButton],'range-family-field'),row('Weight',[weight,customWeight]),row('Size',[size]),row('Line height',[spacingFields['line-height']]),row('Letter spacing',[spacingFields['letter-spacing']]),row('Style',[style]),row('Color',[colorControls]),row('Case',[fields.find(item=>item.property==='text-transform').field]),row('Caps',[fields.find(item=>item.property==='font-variant-caps').field]),row('Link',[linkField,removeLink],'range-link-field'),commands,scopeNote);
   const mount=()=>{
     const docked=!!section?.isConnected&&!panel.hidden,focused=bar.contains(document.activeElement)?document.activeElement:null;
     bar.classList.toggle('range-inspector',docked);if(section)section.toggleAttribute('data-range-editing',docked);
@@ -1250,6 +1265,31 @@ function showInlineFormatToolbar(){
   window.addEventListener('retouch:workspace-layout',mount);window.addEventListener('retouch:viewport',update);d.addEventListener('selectionchange',update);mount();update();
   inlineFormatCleanup=()=>{window.removeEventListener('pointerdown',preservePanelFocus,true);window.removeEventListener('retouch:workspace-layout',mount);window.removeEventListener('retouch:viewport',update);d.removeEventListener('selectionchange',update);bar.remove();section?.removeAttribute('data-range-editing');for(const {node,hidden}of originals)node.hidden=hidden;section?.querySelector(':scope > h3')?.removeEventListener('click',trackCollapse);if(!collapseChanged)section?.retouchSetCollapsed?.(collapsed);inlineFormatCleanup=()=>{};if(panelRenderDeferred)queueViewportPanelRefresh();};
 }
+
+function applyInlineLink(href){return inlineFormattingTransaction(()=>{
+  if(!editing||href!==null&&!RetouchLinkValues.valid(href))return false;
+  const current=editing,d=doc(),selection=d.getSelection();if(!selection?.rangeCount)return false;
+  let range=selection.getRangeAt(0).cloneRange();if(!current.el.contains(range.startContainer)||!current.el.contains(range.endContainer))return false;
+  const parent=range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer,anchor=parent.closest('a');
+  if(anchor===current.el){toast('Select the parent text layer to edit this link.','err');return false;}
+  if(anchor&&current.el.contains(anchor)&&anchor.contains(range.endContainer)){
+    if(!plainInlineFormatting(anchor)){toast('Edit this source-owned link in its source.','err');return false;}
+    if(href!==null&&href===anchor.getAttribute('href'))return true;
+    if(range.collapsed)range.selectNodeContents(anchor);
+    range=splitInlineFormatting(anchor,range,'a','a');if(!range)return false;
+    selection.removeAllRanges();selection.addRange(range);
+    if(href===null)return true;
+  }else{
+    if(href===null||range.collapsed){toast('Select text to add a link.','err');return false;}
+    if(parent.closest('a')||[...current.el.querySelectorAll('a,[contenteditable="false"]')].some(node=>range.intersectsNode(node))){toast('Select one link or unlinked text.','err');return false;}
+  }
+  const fragment=range.cloneContents();
+  const safe=node=>node.nodeType===3||node.nodeType===1&&node.tagName!=='A'&&(plainInlineFormatting(node)||node.tagName==='SPAN'&&!node.getAttribute('data-rt')&&[...node.attributes].every(a=>a.name==='style')&&RetouchRangeStyles.validProperties(Object.fromEntries([...node.style].map(name=>[name,node.style.getPropertyValue(name)])))&&[...node.childNodes].every(safe));
+  if(![...fragment.childNodes].every(safe)){toast('This selection contains source-owned formatting.','err');return false;}
+  const copy=node=>{if(node.nodeType===3)return d.createTextNode(node.data);const result=cloneInlineFormatting(node);for(const child of node.childNodes)result.append(copy(child));return result;};
+  const link=d.createElement('a');link.setAttribute('href',href);for(const child of fragment.childNodes)link.append(copy(child));
+  range.deleteContents();range.insertNode(link);range.selectNodeContents(link);selection.removeAllRanges();selection.addRange(range);return true;
+});}
 
 function applyTextRangeStyle(property,value){return inlineFormattingTransaction(()=>applyTextRangeStyleContent(property,value));}
 function applyTextRangeStyleContent(property,value){
@@ -1315,6 +1355,11 @@ function plainInlineFormatting(node){
   if(node.nodeType===3)return true;if(node.nodeType!==1||node.getAttribute('data-rt-i'))return false;
   const stamps=['data-rt','data-rt-keep','data-rt-revision','data-rt-client-revision','data-rt-client-mounted','data-rt-section','data-rt-block','data-rt-block-type','data-rt-template','data-rt-locale'];
   const id=node.getAttribute('data-rt'),span=node.tagName==='SPAN';
+  if(node.tagName==='A'){
+    const keepId=node.getAttribute('data-rt-keep'),sourceLink=nodes=>(nodes||[]).some(item=>item.id===keepId&&item.plainLink||sourceLink(item.children));
+    const proven=!id&&!keepId||editing.info.plainLinkIds?.includes(id)||keepId&&sourceLink(editing.info.richText?.children);
+    return proven&&RetouchLinkValues.valid(node.getAttribute('href'))&&[...node.attributes].every(attribute=>attribute.name==='href'||stamps.includes(attribute.name))&&[...node.childNodes].every(plainInlineFormatting);
+  }
   if(node.tagName==='BR')return !node.childNodes.length&&[...node.attributes].every(attribute=>stamps.includes(attribute.name))&&(!id||!editing.info.plainFormattingIds||editing.info.plainFormattingIds.includes(id));
   if(span){if(!node.__rtRangeStyle&&!editing.info.rangeStyleIds?.[id])return false;if(!RetouchRangeStyles.validProperties(Object.fromEntries([...node.style].map(name=>[name,node.style.getPropertyValue(name)]))))return false;}
   else if(!/^(STRONG|B|EM|I|U|S|SUP|SUB)$/.test(node.tagName)||id&&editing.info.plainFormattingIds&&!editing.info.plainFormattingIds.includes(id))return false;
@@ -1322,6 +1367,7 @@ function plainInlineFormatting(node){
 }
 function cloneInlineFormatting(node){
   const result=node.ownerDocument.createElement(node.tagName.toLowerCase());
+  if(node.tagName==='A')result.setAttribute('href',node.getAttribute('href'));
   if(node.tagName==='SPAN'){result.style.cssText=node.style.cssText;for(const name of caretMetadataNames.filter(name=>name!=='__rtKeep'))if(Object.hasOwn(node,name))result[name]=structuredClone(node[name]);result.__rtRangeStyle||=node.style[0];}
   return result;
 }

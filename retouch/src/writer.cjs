@@ -87,6 +87,7 @@ function describeElement(resolved) {
 
   // Rendered text alone cannot prove that replacing a wrapper preserves JSX.
   const plainFormatting = candidate => candidate.type === 'JSXText' ||
+    candidate.type === 'JSXElement' && tagOf(candidate)==='a' && candidate.openingElement.attributes.length===1 && candidate.openingElement.attributes[0].name?.name==='href' && require('../shell/link-values.js').valid(candidate.openingElement.attributes[0].value?.type==='StringLiteral'?candidate.openingElement.attributes[0].value.value:candidate.openingElement.attributes[0].value?.expression?.type==='StringLiteral'?candidate.openingElement.attributes[0].value.expression.value:null) && candidate.children.every(plainFormatting) ||
     candidate.type === 'JSXElement' && tagOf(candidate)==='br' && candidate.openingElement.attributes.length===0 && !candidate.children.length ||
     candidate.type === 'JSXElement' && tagOf(candidate)==='span' && !!require('./range-style-source.cjs').style({node:candidate},source,'react') ||
     candidate.type === 'JSXElement' && /^(strong|b|em|i|u|s|sup|sub)$/.test(tagOf(candidate)) &&
@@ -119,6 +120,7 @@ function describeElement(resolved) {
     canSetTag,
     ...require('./range-style-source.cjs').describe(resolved,'react'),
     plainFormattingIds,
+    ...require('./link-source.cjs').describe(resolved,'react'),
     text: textInfo ? textInfo.text : null,
     textDynamic: textInfo ? false : hasChildren(node),
     mixedText:
@@ -167,7 +169,7 @@ function literalTextRange(node, source) {
   return { start, end, text };
 }
 
-const {validateChildrenTree,styleMarkup}=require('./rich-text.cjs');
+const {validateChildrenTree,styleMarkup,linkMarkup,hasLink}=require('./rich-text.cjs');
 
 // True when every significant child is JSXText or JSXElement — the shape
 // rich editing can map back to source. Expressions refuse (R-6).
@@ -245,6 +247,7 @@ function planOp(resolved, op) {
     // attributes or expressions can be introduced by these nodes.
     const treeErr = validateChildrenTree(op.children, 0);
     if (treeErr) return refuse(treeErr);
+    if(tagOf(node)==='a'&&hasLink(op.children))return refuse('Text links cannot be nested.');
     if (!childrenAreMappable(node)) {
       return refuse(
         `The children of this element include expressions (${resolved.relPath}); they cannot be edited deterministically.`
@@ -261,6 +264,7 @@ function planOp(resolved, op) {
       children
         .map((c) => {
           if (c.t === 'text') return escapeJsxText(c.value);
+          if(c.t==='link')return linkMarkup(c,build(c.children),true);
           if (c.t === 'break') return '<br />';
           if (c.t === 'style' || c.t === 'styles') return styleMarkup(c,build(c.children),true);
           if (c.t === 'wrap') return `<${c.tag}>${build(c.children)}</${c.tag}>`;
@@ -269,6 +273,7 @@ function planOp(resolved, op) {
             throw refuseError('A kept element is not a descendant of the target in source; the edit cannot be mapped.');
           }
           if (!c.children) return source.slice(kept.start, kept.end);
+          if(tagOf(kept)==='a'&&hasLink(c.children))throw refuseError('Text links cannot be nested.');
           if (!childrenAreMappable(kept)) {
             throw refuseError('A styled child whose text was edited contains expressions; it cannot be edited deterministically.');
           }

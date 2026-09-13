@@ -137,3 +137,10 @@ test('line breaks serialize explicitly while editor-only trailing placeholders d
  const placeholder=el('br');placeholder.__rtCaretPlaceholder=true;
  assert.deepStrictEqual(serializeChildren(el('p',[text('one'),el('br'),text('two'),el('br'),placeholder])),[{t:'text',value:'one'},{t:'break'},{t:'text',value:'two'},{t:'break'}]);
 });
+
+test('new text links serialize a literal URL and preserved source links stay kept',()=>{
+ const a=el('a',[text('Read')],{href:'/docs?a=1&b=2'});
+ assert.deepEqual(serializeChildren(el('p',[a])),[{t:'link',href:'/docs?a=1&b=2',children:[{t:'text',value:'Read'}]}]);
+ const invalid=el('a',[text('Read')],{href:'javascript:alert(1)'});assert.deepEqual(serializeChildren(el('p',[invalid])),[{t:'text',value:'Read'}]);
+ const kept=el('a',[text('Read')],{href:'/source',id:'source-link','data-rt':'1234567890'});assert.deepEqual(serializeChildren(el('p',[kept]),new Map([['1234567890','Read']])),[{t:'keep',id:'1234567890'}]);
+});
