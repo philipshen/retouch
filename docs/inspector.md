@@ -1344,3 +1344,28 @@ Liquid WebKit 26 local-history checks passed in
 passed existing decoration, multiline-paste, and cursor-script regressions.
 The multi-run local/source history check passed in
 `/private/tmp/retouch-format-history-split-html.log`.
+
+### Visible history controls during text editing (2026-09-13)
+
+The main Undo and Redo buttons now use a matching local text-editing transaction
+before falling back to source history. A local undo/redo leaves editing open,
+retains the text selection, and does not write source. Pointer activation keeps
+the editor's focus/selection intact instead of committing on blur first. The
+buttons update after local commands, history steps, native input, and editing
+entry/exit. Redo from source history is unavailable while there are uncommitted
+text changes unless a matching local redo exists.
+
+The comparison baseline is captured after source-text preparation, so temporary
+editing markup is not mistaken for a user change. Existing busy/recovery guards
+continue to disable the controls. This integrates supported snapshot operations;
+it does not replace the browser's full native typing/composition history. When
+no matching local transaction exists, the existing commit/source-history path
+remains in use. The current desktop archive predates this source change.
+
+Validation: 1,195 unit tests passed in
+`/private/tmp/retouch-history-buttons-units.log`. HTML/React Chromium 145 and
+Liquid WebKit 26 browser checks passed in
+`/private/tmp/retouch-history-buttons-{html,react,liquid}.log`. They exercise
+visible Undo/Redo during formatting and typed insertion, open-edit and selection
+retention, disabled Redo after branching, and exact source history after Done.
+React/Liquid also passed multiline-paste and cursor-typography regressions.

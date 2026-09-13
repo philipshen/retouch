@@ -110,8 +110,9 @@ function syncHistoryControls() {
   undoBusy = editorHistory.busy;
   const busy = undoBusy || panelTasks > 0 || sourceRequests > 0;
   if(busy)canvasPan.cancel();
-  undoBtn.disabled = busy || historyRecoveryRequired || !editorHistory.canUndo;
-  redoBtn.disabled = busy || historyRecoveryRequired || !editorHistory.canRedo;
+  const textChanged=!!editing&&editing.el.innerHTML!==editing.historyBaselineHTML;
+  undoBtn.disabled = busy || historyRecoveryRequired || !(canStepInlineHistory(false)||textChanged||editorHistory.canUndo);
+  redoBtn.disabled = busy || historyRecoveryRequired || !(canStepInlineHistory(true)||!textChanged&&editorHistory.canRedo);
   undoBtn.setAttribute('aria-busy',String(busy));
   redoBtn.setAttribute('aria-busy',String(busy));
   pagePicker.disabled = busy;routeInput.disabled = busy;
@@ -303,7 +304,7 @@ function hookFrame(d, w) {
     e.preventDefault();
     e.stopPropagation();
   }, true);
-  d.addEventListener('input',event=>{if(editing)for(const node of caretPlaceholders(editing))if(hasInlineContentAfter(node,editing.el))delete node.__rtCaretPlaceholder;if(editing?.caretHistory&&editing.el.contains(event.target)&&!['historyUndo','historyRedo'].includes(event.inputType))editing.caretHistory.redo=[];},true);
+  d.addEventListener('input',event=>{if(editing)for(const node of caretPlaceholders(editing))if(hasInlineContentAfter(node,editing.el))delete node.__rtCaretPlaceholder;if(editing?.caretHistory&&editing.el.contains(event.target)&&!['historyUndo','historyRedo'].includes(event.inputType))editing.caretHistory.redo=[];syncHistoryControls();},true);
   d.addEventListener('compositionstart',()=>beginCaretComposition(),true);
   d.addEventListener('compositionend',()=>finishCaretComposition(),true);
   d.addEventListener('beforeinput', (e) => {
@@ -666,7 +667,9 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
   // plaintext-only forces pre-wrap in Chromium even over author !important
   // styles, exposing template indentation. Keep native layout; paste is plain
   // text through the frame hook below.
+  editing.historyBaselineHTML=el.innerHTML;
   el.setAttribute('contenteditable', 'true');
+  syncHistoryControls();
   el.focus();
   showInlineFormatToolbar();
   try {
@@ -684,7 +687,7 @@ async function commitInlineEdit() {
   if (!editing) return;
   const ed = editing;
   normalizeCaretPlaceholders(ed);
-  inlineFormatCleanup();editing = null;
+  inlineFormatCleanup();editing = null;syncHistoryControls();
   ed.el.removeAttribute('contenteditable');
   const children = serializeChildren(ed.el, ed.snapshot);
   if (JSON.stringify(children) === JSON.stringify(ed.originalTree)) { if(ed.info.richText)ed.el.innerHTML=ed.originalHTML;return; }
@@ -849,7 +852,7 @@ async function applyChildren(id, children) {
 
 function inlineTextUIFocused(){
   const active=document.activeElement;
-  return !!(['toggleInspector','toggleLayers'].includes(active?.id)||active?.closest('.inline-format-toolbar')||[...document.querySelectorAll('dialog.paint-picker')].some(dialog=>dialog.retouchSourceInput?.closest('.inline-format-toolbar')));
+  return !!(['toggleInspector','toggleLayers','undoBtn','redoBtn'].includes(active?.id)||active?.closest('.inline-format-toolbar')||[...document.querySelectorAll('dialog.paint-picker')].some(dialog=>dialog.retouchSourceInput?.closest('.inline-format-toolbar')));
 }
 
 // Preserve original nodes and source metadata while previewing selected text.
@@ -935,7 +938,7 @@ function captureCaretEdit(current){
 }
 function recordCaretEdit(current,before){
   if(current.caretHistoryBatch)return;
-  const history=current.caretHistory||={undo:[],redo:[]};history.undo.push({before,after:captureCaretEdit(current)});if(history.undo.length>100)history.undo.shift();history.redo=[];
+  const history=current.caretHistory||={undo:[],redo:[]};history.undo.push({before,after:captureCaretEdit(current)});if(history.undo.length>100)history.undo.shift();history.redo=[];syncHistoryControls();
 }
 function inlineFormattingTransaction(action){
   const current=editing;if(!current||current.caretHistoryBatch)return action();
@@ -948,6 +951,11 @@ function inlineFormattingTransaction(action){
     if(completed&&editing===current&&current.el.innerHTML!==before.html)recordCaretEdit(current,before);
   }
 }
+function canStepInlineHistory(redo=false){
+  const current=editing;if(!current?.caretHistory||current.caretComposition)return false;
+  const entry=(redo?current.caretHistory.redo:current.caretHistory.undo).at(-1);
+  return !!entry&&current.el.innerHTML===(redo?entry.before:entry.after).html;
+}
 function caretHistoryStep(redo=false){
   const current=editing,history=current?.caretHistory;if(!history||current.caretComposition)return false;
   const source=redo?history.redo:history.undo,destination=redo?history.undo:history.redo,entry=source.at(-1);if(!entry)return false;
@@ -955,7 +963,7 @@ function caretHistoryStep(redo=false){
   // A later native edit must undo through the browser first. Never restore a
   // stale custom snapshot over unrelated page or typing changes.
   if(current.el.innerHTML!==expected.html)return false;
-  restoreCaretEdit(current,target);source.pop();destination.push(entry);return true;
+  restoreCaretEdit(current,target);source.pop();destination.push(entry);syncHistoryControls();return true;
 }
 function restoreCaretEdit(current,target){
   const restore=state=>{const node=state.node;if(state.text!==null)node.data=state.text;else{if(state.attributes){for(const a of [...node.attributes])node.removeAttribute(a.name);for(const [name,value]of state.attributes)node.setAttribute(name,value);}node.replaceChildren(...state.children.map(restore));}for(const key of caretMetadataNames)delete node[key];Object.assign(node,structuredClone(state.metadata));return node;};
@@ -3215,6 +3223,7 @@ async function redo() { return restoreDirection('redo'); }
 async function restoreDirection(direction) {
   stopDrawing?.();
   if(undoBusy || panelTasks || sourceRequests)return;
+  if(caretHistoryStep(direction==='redo'))return;
   await commitInlineEdit();
   if(undoBusy || panelTasks || sourceRequests)return;
   try {
@@ -3339,6 +3348,7 @@ modeBtn.onclick = () => {
   modeBtn.classList.toggle('mode-edit', mode === 'edit');
   if (mode === 'interact') { hoverEl = null; }
 };
+for(const button of [undoBtn,redoBtn])button.addEventListener('pointerdown',event=>{if(editing)event.preventDefault();});
 undoBtn.onclick = () => undo();
 redoBtn.onclick = () => redo();
 routeInput.addEventListener('keydown', (e) => {
