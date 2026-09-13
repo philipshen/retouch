@@ -967,3 +967,10 @@ html, body { overflow:clip; }
 
 .stroke-pattern-controls [hidden] { display:none!important; }
 .stroke-pattern-controls { margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line); }
+
+.stroke-icon-field select[hidden] { display:none; }
+.stroke-icon-controls svg { width:20px;height:20px;stroke-width:1.5;stroke-linecap:butt;stroke-linejoin:miter; }
+.stroke-icon-controls button:focus-visible { outline:2px solid var(--accent);outline-offset:1px; }
+.stroke-icon-controls button:disabled { opacity:.4;cursor:default; }
+
+.stroke-settings-body[hidden] { display:none; }

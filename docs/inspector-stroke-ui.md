@@ -18,8 +18,7 @@ and swap remain available below them.
 
 This moves the layout toward the reference; it does not establish pixel parity.
 Figma's additional cap types, stroke positions, width profiles, brush/dynamic
-strokes, multiple stroke fills and per-point settings remain incomplete. The
-current cap/join controls are still selects rather than Figma's icon buttons.
+strokes, multiple stroke fills and per-point settings remain incomplete. Cap/join controls now use icon buttons for the supported standard values.
 
 Validation: 1,151 unit tests; HTML and React Chromium and Liquid WebKit stroke
 workflows cover base/scoped values, screen fallback, reset and exact Undo/Redo.
@@ -47,3 +46,27 @@ changes, a four-value custom pattern, percentage gaps, invalid lengths, scoped
 patterns, screen fallback, reset and exact Undo/Redo. The HTML screenshot
 `/private/tmp/retouch-dash-controls.png` was inspected. This does not implement
 Figma's half-dash endpoint rendering rule or independently styled dash caps.
+
+## Cap and join icon controls
+
+Caps now offers None, Square and Round as illustrated buttons. Join offers
+Miter, Bevel and Round. Each group has one tab stop; arrow keys and Home/End
+move focus, and Enter/Space apply the focused option. Accessible names and
+pressed states identify the options. Focus returns to the same option after
+the source refresh. Reset and screen-specific overrides retain their existing
+source operations and history.
+
+The underlying selects remain as event targets but are hidden from keyboard
+and accessibility navigation when the buttons are available. An unrecognized
+current value retains its select. Inline-owned properties disable the buttons.
+
+Verified with 1,152 unit tests and HTML/React Chromium plus Liquid WebKit stroke
+workflows. Browser coverage includes keyboard selection, focus after writes,
+base/scoped cap and join changes, screen fallback, reset and exact Undo/Redo.
+Screenshot inspected: `/private/tmp/retouch-stroke-icons.png`.
+
+The keyboard regression exposed a popup timing bug in React and WebKit: the
+focus target could be rebuilt while its settings panel was still invisible.
+The panel now uses the `hidden` state until positioned, so the existing focus
+observer retries when the controls become available. Final browser logs are
+`/private/tmp/retouch-stroke-icons-{html,react,liquid}-final.log`.
