@@ -14748,3 +14748,41 @@ All 1,215 unit tests pass (`/private/tmp/retouch-vertical-trim-units-final.log`)
 The desktop candidate still predates this change. Per-range trimming, arbitrary
 vertical-writing/CJK/font metric equivalence, older-engine fallback, full Figma
 Design parity and universal-site support remain unverified or incomplete.
+
+### Vertical text alignment (2026-09-14)
+
+Typography now has Top, Middle and Bottom buttons for text in an existing box,
+with a per-screen reset. Ordinary block/grid text uses align-content; a single
+flex row uses align-items; a flex column uses justify-content; wrapped flex rows
+use align-content. Column-reverse and wrap-reverse invert the physical top/bottom
+mapping. Writes change the alignment property, retaining the box dimensions,
+display mode, font metrics and source text. Increasing box height leaves space
+for the alignment to be visible. Unsupported inline/contents/vertical-writing
+contexts do not expose the control. Custom distribution values do not activate
+one of the three standard buttons.
+
+The buttons use keyboard toolbar navigation. Action search includes Edit vertical
+text alignment and reveals/focuses the visible active button instead of the
+hidden select used for property binding. The same reveal routing also handles
+horizontal alignment buttons. This is a layout property rather than part of a
+saved text style.
+
+All 1,216 unit tests pass (`/private/tmp/retouch-vertical-align-units-final.log`).
+Nine final browser workflows pass via `RT_E2E_VERTICAL_ALIGNMENT`: HTML block,
+grid, reversed column and reversed wrapping; React block and flex column; Liquid
+block and flex row; and WebKit 26.0 HTML block. Chromium is 145.0.7632.6. The logs
+are `/private/tmp/retouch-vertical-align-final-{renderer}-{mode}.log`. Checks
+measure top/middle/bottom positions in a 200px box with 40px line height, unchanged
+box/line metrics and horizontal position, action-search focus, keyboard activation,
+phone/tablet isolation, reset and exact source undo/redo. The HTML screenshot
+`/private/tmp/retouch-vertical-align-html.png` was visually inspected.
+
+Browser implementation references:
+https://developer.chrome.com/blog/align-content
+https://webkit.org/blog/15063/webkit-features-in-safari-17-4/
+
+Vertical writing, complex mixed inline content, overflowing scroll containers,
+legacy clamped boxes and arbitrary layout changes between breakpoints remain
+outside this verification. No desktop rebuild or native launch was performed;
+full Figma Design parity, universal-site support and trusted distribution remain
+incomplete.

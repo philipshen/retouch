@@ -311,6 +311,28 @@
     const input=select(parent,'Wrap style',choices,value,onChange);input.title='Auto fills each line. Balance evens out short text. Pretty improves line endings. No wrap keeps text on one line.';
     const row=input.closest('.inspector-field'),holder=document.createElement('div');holder.className='property-row';holder.dataset.typeWrap='true';row.before(holder);const reset=button('↺',onReset);reset.setAttribute('aria-label','Reset wrap style');reset.title='Reset wrap style';reset.classList.add('property-reset');reset.disabled=!canReset;holder.append(row,reset);
   }
+  function textVerticalLayout(css){
+    if(css.writingMode&&css.writingMode!=='horizontal-tb'||css.display==='inline'||css.display==='contents'||css.display==='none')return null;
+    if(/^(?:inline-)?flex$/.test(css.display)){
+      const column=css.flexDirection.startsWith('column');
+      return {property:column?'justify-content':css.flexWrap==='nowrap'?'align-items':'align-content',reverse:column?css.flexDirection==='column-reverse':css.flexWrap==='wrap-reverse'};
+    }
+    return ['block','inline-block','flow-root','grid','inline-grid','list-item','table-cell'].includes(css.display)?{property:'align-content',reverse:false}:null;
+  }
+  const verticalAlignmentMatchers={
+    'align-content':t=>/^(?:content-(?:normal|center|start|end|between|around|evenly|baseline|stretch)|\[align-content:.+\])$/.test(t),
+    'align-items':t=>/^(?:items-(?:start|end|center|baseline|stretch|baseline-last)|\[align-items:.+\])$/.test(t),
+    'justify-content':t=>/^(?:justify-(?:normal|start|end|center|between|around|evenly|stretch)|\[justify-content:.+\])$/.test(t)
+  };
+  function verticalAlignmentTypography(parent,css,onChange,onReset,hasOwn){
+    const layout=textVerticalLayout(css);if(!layout)return;
+    const {property,reverse}=layout,raw=css.getPropertyValue(property),start=reverse?'bottom':'top',end=reverse?'top':'bottom';
+    const current=raw==='center'?'center':['start','flex-start','normal','stretch'].includes(raw)?start:['end','flex-end'].includes(raw)?end:'custom';
+    const holder=document.createElement('div');holder.className='property-row';holder.dataset.textVerticalAlignment='true';parent.append(holder);
+    const choices=[['top','Top'],['center','Middle'],['bottom','Bottom']];if(current==='custom')choices.unshift(['custom','Custom']);
+    const input=select(holder,'Vertical text alignment',choices,current,value=>{if(value==='custom')return;onChange(property,value==='center'?'center':(value==='top')!==reverse?'flex-start':'flex-end');});input.title='Align text within its existing box. Increase the height to leave room above or below the text.';
+    const reset=button('↺',()=>onReset(property));reset.setAttribute('aria-label','Reset vertical text alignment');reset.title='Reset vertical text alignment';reset.classList.add('property-reset');reset.disabled=!hasOwn(property);holder.append(reset);
+  }
   const textBoxToken=t=>/^\[text-box(?:-trim|-edge)?:.+\]$/.test(t);
   function verticalTrimTypography(parent,css,onChange,onReset,canReset){
     if(!CSS.supports('text-box','trim-both cap alphabetic'))return;
@@ -930,6 +952,7 @@
       const indent=number(sec,'Paragraph indent (px)',/^-?[\d.]+px$/.test(css.textIndent)?parseFloat(css.textIndent):NaN,-10000,10000,v=>change(textIndentToken,`[text-indent:${v}px]`));
       if(!indent.value)indent.placeholder=css.textIndent;indent.title='Offsets the first line of each paragraph. Negative values create a hanging indent.';numericPreview(indent,el,'text-indent');
       const resetIndent=button('Reset paragraph indent',()=>save(replace(info.className,textIndentToken,'')));resetIndent.disabled=!tokens(info.className).map(base).some(t=>t&&textIndentToken(t));sec.append(resetIndent);
+      verticalAlignmentTypography(sec,css,(property,value)=>change(verticalAlignmentMatchers[property],`[${property}:${value}]`),property=>save(replace(info.className,verticalAlignmentMatchers[property],'')),property=>tokens(info.className).map(base).some(t=>t&&verticalAlignmentMatchers[property](t)));
       wrapTypography(sec,css,value=>change(textWrapToken,`[text-wrap:${value}]`),()=>save(replace(info.className,textWrapToken,'')),tokens(info.className).map(base).some(t=>t&&textWrapToken(t)));
       verticalTrimTypography(sec,css,value=>change(textBoxToken,`[text-box:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,textBoxToken,'')),tokens(info.className).map(base).some(t=>t&&textBoxToken(t)));
       truncationTypography(sec,css,value=>save(replace(info.className,truncationToken,'!line-clamp-'+(value===null?'none':value))),()=>save(replace(info.className,truncationToken,'')),tokens(info.className).map(base).some(t=>t&&truncationToken(t)));
@@ -998,6 +1021,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={verticalTrimTypography,truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textBoxToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={textVerticalLayout,verticalAlignmentMatchers,verticalAlignmentTypography,verticalTrimTypography,truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textBoxToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

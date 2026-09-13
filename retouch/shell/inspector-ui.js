@@ -157,9 +157,13 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
  function typographyPrimary(section){
   const find=labels=>labels.map(label=>section.querySelector('[aria-label="'+label+'"]')).find(Boolean),row=control=>control?.closest('.property-row')||control?.closest('.inspector-field');
   const font=row(find(['Page font'])),weight=find(['Font weight (1–1000)','Font weight (CSS)']),spacing=find(['Line height (px)','Line height (CSS)']),align=row(find(['Text alignment','Text alignment (CSS)']));
-  const sizePair=weight?.closest('.property-pair'),spacingPair=spacing?.closest('.property-pair'),parts=[font,sizePair,spacingPair,align].filter(part=>part?.parentElement===section);
+  const sizePair=weight?.closest('.property-pair'),spacingPair=spacing?.closest('.property-pair'),parts=[font,sizePair,spacingPair,align,section.querySelector(':scope > [data-text-vertical-alignment]')].filter(part=>part?.parentElement===section);
   if(!parts.length)return;
   const primary=document.createElement('div');primary.className='typography-primary';section.querySelector(':scope > h3').after(primary);parts.forEach(part=>primary.append(part));
+  const vertical=primary.querySelector('[aria-label="Vertical text alignment"]');
+  if(vertical){const field=vertical.closest('.inspector-field'),group=document.createElement('div');field.classList.add('vertical-text-modes');field.querySelector(':scope > span').textContent='Vertical';group.className='layout-mode-segments';
+   for(const [value,label,lines]of [['top','top','M4 3h12 M6 6h8 M6 9h8'],['center','middle','M4 10h2 M14 10h2 M7 7h6 M7 13h6'],['bottom','bottom','M6 11h8 M6 14h8 M4 17h12']]){const button=document.createElement('button');button.type='button';button.setAttribute('aria-label','Align text '+label);button.title='Align text '+label;button.setAttribute('aria-pressed',String(vertical.value===value));button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+lines+'"/></svg>';button.onclick=()=>{vertical.value=value;vertical.dispatchEvent(new Event('change',{bubbles:true}));};group.append(button);}field.insertBefore(group,vertical);keyboardToolbar(group,'Vertical text alignment buttons');
+  }
   font?.classList.add('typography-family');sizePair?.classList.add('typography-size');spacingPair?.classList.add('typography-spacing');
   if(weight&&sizePair){
    const weightRow=row(weight),settings=[...section.querySelectorAll('details')].find(details=>details.querySelector(':scope > summary')?.textContent==='Type settings');
@@ -585,6 +589,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   if(!control?.isConnected||control.matches(':disabled')||control.closest('[inert]'))return false;
   root.RetouchWorkspacePanels?.showInspector();
   for(let parent=control.parentElement;parent;parent=parent.parentElement){parent.retouchReveal?.();if(parent.retouchSetCollapsed)parent.retouchSetCollapsed(false,true);if(parent.tagName==='DETAILS'){if(parent.retouchSetOpen)parent.retouchSetOpen(true);else if(parent.retouchOpen)parent.retouchOpen();else parent.open=true;}}
+  if(control.matches('select')){const field=control.closest('.vertical-text-modes, .text-align-modes');if(field)control=field.querySelector('.layout-mode-segments button[aria-pressed="true"]')||field.querySelector('.layout-mode-segments button')||control;}
   control.scrollIntoView({block:'nearest',inline:'nearest'});control.focus({preventScroll:true});if(typeof control.select==='function')try{control.select();}catch{}return true;
  }
  root.RetouchInspectorUI={organize,reveal};

@@ -60,6 +60,7 @@
   I.fontPositionTypography(typography,css.fontVariantPosition,value=>save('font-variant-position',value,width),()=>save('font-variant-position',null,width),Object.hasOwn(own,'font-variant-position'));
   I.capsTypography(typography,css.fontVariantCaps,value=>save('font-variant-caps',value,width),()=>save('font-variant-caps',null,width),Object.hasOwn(own,'font-variant-caps'));
   I.ligatureTypography(typography,css.fontVariantLigatures,value=>save('font-variant-ligatures',value,width),()=>save('font-variant-ligatures',null,width),Object.hasOwn(own,'font-variant-ligatures'));
+  I.verticalAlignmentTypography(typography,css,(property,value)=>save(property,value,width),property=>save(property,null,width),property=>Object.hasOwn(own,property));
   I.wrapTypography(typography,css,value=>save('text-wrap',value,width),()=>save('text-wrap',null,width),Object.hasOwn(own,'text-wrap'));
   I.verticalTrimTypography(typography,css,value=>save('text-box',value,width),()=>save('text-box',null,width),Object.hasOwn(own,'text-box'));
   I.truncationTypography(typography,css,value=>save('line-clamp',value===null?'none':String(value),width),()=>save('line-clamp',null,width),Object.hasOwn(own,'line-clamp'));

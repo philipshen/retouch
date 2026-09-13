@@ -1048,3 +1048,6 @@ html, body { overflow:clip; }
 .range-link-field .range-field-label { grid-column:1 / -1; }
 
 .range-link-field button { font-size:11px; }
+
+.vertical-text-modes > select { display:none; }
+.vertical-text-modes .layout-mode-segments { min-width:0; }

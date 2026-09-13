@@ -34,6 +34,7 @@
   rows.push(...(window.RetouchShapeTools?.commands()||[]));
   const rename=document.getElementById('layerNameInput');if(rename)rows.push({id:'rename-layer',label:'Rename layer',keywords:'name selection instance',element:rename,reason:'Finish the current edit first.',run:()=>{window.RetouchWorkspacePanels?.showInspector();rename.focus();rename.select();}});
   const propertyCommands=[
+   ['vertical-text-alignment','vertical text alignment',['Vertical text alignment'],'typography top middle bottom'],
    ['text-content','text content',['Text content'],'copy label paragraph heading'],
    ['width','width',['Width (px)','Width (CSS)'],'layout dimensions'],['height','height',['Height (px)','Height (CSS)'],'layout dimensions'],['rotation','rotation',['Rotation (°)'],'position angle'],['opacity','opacity',['Opacity (%)'],'appearance transparency'],
    ['font-family','font family',['Page font'],'typography typeface'],['font-size','font size',['Font size (px)','Font size (CSS)'],'typography text'],['font-weight','font weight',['Font weight (1–1000)','Font weight (CSS)'],'typography bold'],['line-height','line height',['Line height (px)','Line height (CSS)'],'typography leading'],['letter-spacing','letter spacing',['Letter spacing (px)','Letter spacing (CSS)'],'typography tracking'],['relative-letter-spacing','relative letter spacing',['Letter spacing (%)'],'typography tracking percent'],['radius','corner radius',['Corner radius (px)','Corner radius (CSS)'],'appearance rounding']

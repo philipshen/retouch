@@ -215,3 +215,9 @@ test('font positions preserve text transforms and unrelated variant scopes',()=>
  assert.equal(i.replace('uppercase [font-variant-caps:small-caps] [font-variant-position:sub] md:[font-variant-position:normal]',i.fontPositionToken,'[font-variant-position:super]'),'uppercase [font-variant-caps:small-caps] md:[font-variant-position:normal] [font-variant-position:super]');
  assert.throws(()=>require('../src/text-style-classes.cjs').compose('[font-variant:normal]',{'font-variant-position':'super'}),/shorthand/);
 });
+test('vertical text alignment follows block and flex axes without changing display',()=>{
+ const {textVerticalLayout}=require('../shell/inspector.js'),base={writingMode:'horizontal-tb',display:'block'};
+ assert.deepEqual(textVerticalLayout(base),{property:'align-content',reverse:false});
+ for(const [direction,wrap,property,reverse]of [['row','nowrap','align-items',false],['row','wrap','align-content',false],['row','wrap-reverse','align-content',true],['column','nowrap','justify-content',false],['column-reverse','nowrap','justify-content',true]])assert.deepEqual(textVerticalLayout({...base,display:'flex',flexDirection:direction,flexWrap:wrap}),{property,reverse});
+ assert.equal(textVerticalLayout({...base,display:'inline'}),null);assert.equal(textVerticalLayout({...base,writingMode:'vertical-rl'}),null);
+});
