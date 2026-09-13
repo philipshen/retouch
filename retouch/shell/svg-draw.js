@@ -19,7 +19,7 @@
  }
  function mount({target,frame,canvas,preset,onCommit,onEnd,onError}){
   const d=target.ownerDocument,w=d.defaultView,viewport=target.tagName.toLowerCase()==='svg'?target:target.ownerSVGElement;
-  const surface=root.document.createElement('div');surface.className='svg-draw-surface';surface.setAttribute('aria-label','Draw '+preset);surface.tabIndex=0;
+  const surface=root.document.createElement('div');surface.className='svg-draw-surface';surface.dataset.shape=preset;surface.setAttribute('aria-label','Draw '+preset);surface.tabIndex=0;
   Object.assign(surface.style,{position:'fixed',zIndex:40,cursor:'crosshair',touchAction:'none'});
   const drawing=root.document.createElementNS(ns,'svg');Object.assign(drawing.style,{position:'absolute',inset:'0',width:'100%',height:'100%',pointerEvents:'none',overflow:'hidden'});surface.append(drawing);
   const preview=root.document.createElementNS(ns,{rectangle:'rect',circle:'circle',ellipse:'ellipse',line:'line',triangle:'polygon',star:'polygon'}[preset]);

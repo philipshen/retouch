@@ -67,6 +67,14 @@
   for(const id of ['layersPanel','panelBody','toolbar','screenPreset','screenUndo','screenRedo','screenAspect','screenComparisons']){const target=document.getElementById(id);if(target)observer.observe(target,{subtree:true,childList:true,attributes:true,attributeFilter:['disabled','hidden','title','aria-pressed','aria-label','aria-selected','inert']});}
   current.addEventListener('close',()=>{observer.disconnect();current.remove();if(dialog===current)dialog=null;});current.showModal();render();input.focus();
  }
- function shortcut(event){if(event.defaultPrevented||event.isComposing||!(event.metaKey||event.ctrlKey)||event.altKey||event.shiftKey||event.key.toLowerCase()!=='k'||event.target.isContentEditable||event.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||document.querySelector('dialog[open]'))return false;event.preventDefault();event.stopPropagation();open();return true;}
+ function shortcut(event){
+  if(event.defaultPrevented||event.isComposing||event.altKey||event.shiftKey||event.target.isContentEditable||event.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="menu"]')||document.querySelector('dialog[open]'))return false;
+  const key=event.key.toLowerCase();
+  if(event.metaKey||event.ctrlKey){if(key!=='k')return false;event.preventDefault();event.stopPropagation();open();return true;}
+  const preset={r:'rectangle',o:'ellipse',l:'line',p:'pen'}[key];if(!preset)return false;
+  const rows=commands(),row=preset==='pen'?rows.find(row=>row.id==='shape-pen'):rows.find(row=>row.id==='shape-draw-'+preset)||rows.find(row=>row.id==='shape-add-'+preset);
+  if(!enabled(row))return false;event.preventDefault();event.stopPropagation();if(!event.repeat)run(row.id);return true;
+ }
+
  trigger.onclick=open;window.addEventListener('keydown',shortcut);window.RetouchActions={open,shortcut,contextMenu,closeContext,run};
 })();

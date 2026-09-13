@@ -937,3 +937,5 @@ html, body { overflow:clip; }
 
 .design-tool-dock.drawing-active #modeBtn.mode-edit { background:white;color:var(--ink); }
 .design-tool-dock .creation-tool[aria-pressed="true"] { background:var(--accent);color:white; }
+
+.shape-tool-menu kbd { margin-left:auto; }

@@ -13267,3 +13267,39 @@ Use `RT_E2E_SVG_PARAMETERS=1` with the existing drawing/creation harness modes.
 No desktop rebuild/native launch or push in this increment. The last packaged
 candidate predates these shape controls. Full Figma Design and arbitrary-site
 parity remain unfinished.
+
+
+## 2026-09-13: shape and Pen keyboard shortcuts
+
+R selects rectangle, O ellipse, L line and P Pen through the same available
+source actions as the light canvas dock. Shortcuts work from the shell and the
+preview iframe in Edit mode. Existing SVG containers enter drawing; eligible
+native containers use the current Add action to create a shape and SVG viewport.
+Inputs, textareas, selects, editable text, menus, open dialogs, composition and
+modified keystrokes retain their existing behavior. Held keys do not restart a
+drawing. The dock exposes shortcut hints and updates its shape icon when a
+shortcut changes the drawing tool.
+
+Validation: all 989 units passed (`/private/tmp/retouch-shortcuts-final-units.log`).
+HTML WebKit and local Liquid Chromium passed the complete six-shape and curved
+Pen workflow with iframe R/O/L, shell P, repeated keys, editor search, preview
+input/contenteditable typing, menu protection, active dock icons, transformed
+geometry, Shift/Alt constraints, exact source Undo/Redo and cancellation.
+Logs: `/private/tmp/retouch-shortcuts-webkit-final.log` and
+`/private/tmp/retouch-shortcuts-liquid-final.log`. React Chromium passed all 18
+native/self-closing SVG/group creation cases, using R/O/L for the native
+container, with rendered geometry, created selection and exact source history
+(`/private/tmp/retouch-shortcuts-react-create.log`). The Actions regression also
+passed (`/private/tmp/retouch-shape-shortcuts-actions.log`). All processes exited
+successfully.
+
+WebKit tracing identified a harness focus issue after zoom: focusing the iframe
+body could scroll the outer canvas after the key event, correctly cancelling the
+new drawing. The harness now uses focus with preventScroll and waits for enabled
+actions. Production scroll/viewport cancellation remains active and tested.
+
+This increment does not add drawing directly into arbitrary native containers,
+arrow shortcuts, persistent tool selection across arbitrary selections, or full
+Figma keyboard parity. No desktop rebuild or native launch was performed. The
+last packaged candidate still predates the dock, parametric shapes and shortcuts.
+The earlier requested push ended at bd142fd; this increment is committed locally.
