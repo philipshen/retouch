@@ -1021,3 +1021,21 @@ html, body { overflow:clip; }
 .range-font-picker { width:300px;padding:12px; }
 .range-font-picker h3 { margin:0 0 12px;font-size:12px; }
 .range-font-picker .font-results { max-height:280px;overflow:auto; }
+
+/* Selected text uses the same Typography inspector as its parent layer. */
+.range-edit-heading { display:flex;align-items:center;justify-content:space-between;gap:8px;grid-column:1 / -1;font-size:11px;color:var(--muted); }
+.inline-format-toolbar .range-edit-heading button { min-width:0;height:24px;padding:0 8px;font-size:11px;color:var(--accent); }
+.range-format-field { display:flex;flex-direction:column;gap:4px;min-width:0; }
+.range-field-label { font-size:10px;color:var(--muted); }
+.range-family-field,.range-format-commands { grid-column:1 / -1; }
+.range-color-controls { display:flex;align-items:center;gap:4px;min-width:0; }
+.range-format-commands { display:flex;gap:4px; }
+.inline-format-toolbar.range-inspector { position:static;left:auto;bottom:auto;transform:none;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;width:100%;max-width:none;padding:0;border:0;border-radius:0;box-shadow:none;background:transparent; }
+.range-inspector input,.range-inspector select,.range-inspector .range-font-family { width:100%;max-width:none; }
+.range-inspector .range-font-family { text-align:left; }
+.range-inspector input.range-color { width:0;flex:1; }
+.range-inspector .range-format-commands button { flex:1; }
+.inline-format-toolbar:not(.range-inspector) .range-edit-heading { align-self:center; }
+
+[data-range-editing] > :not(h3):not(.inline-format-toolbar) { display:none !important; }
+.range-scope-note { grid-column:1 / -1;font-size:10px;color:var(--muted); }

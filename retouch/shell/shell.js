@@ -849,7 +849,7 @@ async function applyChildren(id, children) {
 
 function inlineTextUIFocused(){
   const active=document.activeElement;
-  return !!(active?.closest('.inline-format-toolbar')||[...document.querySelectorAll('dialog.paint-picker')].some(dialog=>dialog.retouchSourceInput?.closest('.inline-format-toolbar')));
+  return !!(['toggleInspector','toggleLayers'].includes(active?.id)||active?.closest('.inline-format-toolbar')||[...document.querySelectorAll('dialog.paint-picker')].some(dialog=>dialog.retouchSourceInput?.closest('.inline-format-toolbar')));
 }
 
 // Preserve original nodes and source metadata while previewing selected text.
@@ -968,7 +968,8 @@ function showInlineFormatToolbar(){
   const update=()=>{
     if(picker||fontDialog)return;
     const selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null,valid=editing&&range&&!range.collapsed&&editing.el.contains(range.startContainer)&&editing.el.contains(range.endContainer);
-    for(const control of bar.children)control.disabled=!valid;
+    for(const control of bar.querySelectorAll('button,input,select'))if(!control.dataset.rangeAlwaysEnabled)control.disabled=!valid;
+    selectionNote.textContent=valid?'Selected text':'Select text to format';
     if(!valid)return;savedRange=range.cloneRange();
     const values=new Map(fields.map(({property})=>[property,new Set()])),walker=d.createTreeWalker(editing.el,NodeFilter.SHOW_TEXT);
     while(walker.nextNode()){const node=walker.currentNode;if(!node.textContent||!range.intersectsNode(node))continue;const style=d.defaultView.getComputedStyle(node.parentElement);for(const [property,set]of values){const css=style.getPropertyValue(property),parent=node.parentElement;set.add(property==='color'&&parent.__rtRangeStyleCSS===css&&parent.__rtRangeStyleValue?parent.__rtRangeStyleValue:css);}}
@@ -980,7 +981,31 @@ function showInlineFormatToolbar(){
     }
   };
   bar.addEventListener('focusout',()=>{const current=editing;requestAnimationFrame(()=>{if(editing===current&&current&&document.activeElement!==iframe&&!inlineTextUIFocused())commitInlineEdit();});});
-  d.addEventListener('selectionchange',update);document.body.append(bar);update();inlineFormatCleanup=()=>{d.removeEventListener('selectionchange',update);bar.remove();inlineFormatCleanup=()=>{};};
+  const section=panelBody.querySelector('[data-section="typography"]'),panel=document.getElementById('panel');
+  const originals=section?[...section.children].filter(node=>node.tagName!=='H3').map(node=>({node,hidden:node.hidden})):[];
+  const collapsed=section?.dataset.collapsed==='true';let collapseChanged=false;
+  const trackCollapse=event=>{if(event.target.closest('.section-toggle'))collapseChanged=true;};section?.querySelector(':scope > h3')?.addEventListener('click',trackCollapse);
+  const selectionNote=document.createElement('span'),header=document.createElement('div');header.className='range-edit-heading';selectionNote.setAttribute('role','status');selectionNote.setAttribute('aria-label','Text formatting selection');
+  const done=document.createElement('button');done.type='button';done.textContent='Done';done.setAttribute('aria-label','Finish text editing');done.dataset.rangeAlwaysEnabled='true';done.onclick=()=>void commitInlineEdit();header.append(selectionNote,done);
+  const commands=document.createElement('div');commands.className='range-format-commands';commands.setAttribute('role','group');commands.setAttribute('aria-label','Text formatting');
+  for(const button of [...bar.children].filter(node=>node.tagName==='BUTTON'&&node!==familyButton&&node!==swatch))commands.append(button);
+  const row=(title,controls,className='')=>{const group=document.createElement('div');group.className='range-format-field '+className;const label=document.createElement('span');label.className='range-field-label';label.textContent=title;group.append(label,...controls);return group;};
+  const weight=fields.find(item=>item.property==='font-weight'&&item.field.tagName==='SELECT').field,style=fields.find(item=>item.property==='font-style').field,size=fields.find(item=>item.property==='font-size').field;
+  const colorControls=document.createElement('div');colorControls.className='range-color-controls';colorControls.append(swatch,colorField);
+  const scopeNote=document.createElement('small');scopeNote.className='range-scope-note';scopeNote.textContent='Applies across all screen sizes.';
+  bar.replaceChildren(header,row('Font',[familyButton],'range-family-field'),row('Weight',[weight,customWeight]),row('Size',[size]),row('Style',[style]),row('Color',[colorControls]),commands,scopeNote);
+  const mount=()=>{
+    const docked=!!section?.isConnected&&!panel.hidden,focused=bar.contains(document.activeElement)?document.activeElement:null;
+    bar.classList.toggle('range-inspector',docked);if(section)section.toggleAttribute('data-range-editing',docked);
+    for(const {node,hidden}of originals)node.hidden=docked||hidden;
+    if(docked){if(bar.parentNode!==section){section.retouchSetCollapsed?.(false);section.append(bar);section.scrollIntoView({block:'nearest'});}for(let parent=section.parentElement;parent&&parent!==panel;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;}
+    else if(bar.parentNode!==document.body)document.body.append(bar);
+    if(focused&&document.activeElement!==focused)focused.focus({preventScroll:true});
+  };
+  const preservePanelFocus=event=>{if(event.target.closest?.('#toggleInspector,#toggleLayers'))event.preventDefault();};
+  window.addEventListener('pointerdown',preservePanelFocus,true);
+  window.addEventListener('retouch:workspace-layout',mount);window.addEventListener('retouch:viewport',update);d.addEventListener('selectionchange',update);mount();update();
+  inlineFormatCleanup=()=>{window.removeEventListener('pointerdown',preservePanelFocus,true);window.removeEventListener('retouch:workspace-layout',mount);window.removeEventListener('retouch:viewport',update);d.removeEventListener('selectionchange',update);bar.remove();section?.removeAttribute('data-range-editing');for(const {node,hidden}of originals)node.hidden=hidden;section?.querySelector(':scope > h3')?.removeEventListener('click',trackCollapse);if(!collapseChanged)section?.retouchSetCollapsed?.(collapsed);inlineFormatCleanup=()=>{};if(panelRenderDeferred)queueViewportPanelRefresh();};
 }
 
 function applyTextRangeStyle(property,value){
@@ -1360,6 +1385,7 @@ function renderPanel() {
   // the current inspector until the frame load restores measurable content.
   const previewDocument=doc();
   if(!previewDocument?.documentElement||!previewDocument.body||!previewDocument.defaultView){panelRenderDeferred=true;return;}
+  if(editing){panelRenderDeferred=true;return;}
   // Selection is part of the completed edit, even before the next paint.
   syncLayerSelection();
   const panel=document.getElementById('panel');

@@ -1,0 +1,28 @@
+'use strict';
+const assert=require('node:assert/strict');
+module.exports=async({page,app,kind,read,wait,settled})=>{
+ const target=app.locator('h1'),initial=read(),viewport=page.viewportSize(),text=await target.textContent();
+ const toolbar=page.getByRole('toolbar',{name:'Selected text formatting',exact:true}),section=page.locator('#panelBody [data-section="typography"]');
+ const select=async()=>target.evaluate(el=>{const d=el.ownerDocument,r=d.createRange();r.setStart(el.firstChild,1);r.setEnd(el.firstChild,4);const s=d.getSelection();s.removeAllRanges();s.addRange(r);});
+ const edit=async()=>{await target.click({position:{x:12,y:18}});await wait(async()=>await target.getAttribute('contenteditable')==='true');await select();};
+ const docked=()=>toolbar.evaluate(el=>!!el.closest('#panelBody [data-section="typography"]'));
+ await edit();assert.equal(await docked(),true);
+ assert.equal(await section.locator(':scope > :not(h3):not(.inline-format-toolbar)').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).display==='none')),true);
+ await target.evaluate(el=>el.ownerDocument.getSelection().collapseToStart());
+ await wait(async()=>await page.getByLabel('Selected text weight',{exact:true}).isDisabled());assert.equal(await page.getByRole('button',{name:'Finish text editing',exact:true}).isEnabled(),true);
+ await page.getByRole('button',{name:'Finish text editing',exact:true}).click();await toolbar.waitFor({state:'detached'});assert.equal(read(),initial);assert.equal(await section.getByLabel('Page font',{exact:true}).isVisible(),true);
+ await edit();await page.getByRole('button',{name:'Toggle Inspector panel',exact:true}).click();await wait(async()=>!await docked());assert.equal(await toolbar.isVisible(),true);assert.equal(read(),initial);
+ await page.getByRole('button',{name:'Toggle Inspector panel',exact:true}).click();await wait(docked);assert.equal(await target.evaluate(el=>el.ownerDocument.getSelection().toString()),text.slice(1,4));
+ await page.setViewportSize({width:900,height:800});await wait(async()=>!await docked());assert.equal(await toolbar.isVisible(),true);
+ await page.getByRole('button',{name:'Toggle Inspector panel',exact:true}).click();await wait(docked);assert.equal(await toolbar.isVisible(),true);
+ await page.setViewportSize(viewport);await wait(docked);assert.equal(read(),initial);assert.equal(await target.evaluate(el=>el.ownerDocument.getSelection().toString()),text.slice(1,4));
+ const size=page.getByLabel('Selected text size (px)',{exact:true});await size.fill('26');await page.setViewportSize({width:viewport.width-80,height:viewport.height});await wait(async()=>await size.evaluate(el=>el===document.activeElement));assert.equal(await target.getAttribute('contenteditable'),'true');assert.equal(read(),initial);await page.setViewportSize(viewport);
+ await page.getByRole('button',{name:'Toggle Inspector panel',exact:true}).click();await wait(async()=>!await docked());assert.equal(await size.evaluate(el=>el===document.activeElement),true);assert.equal(read(),initial);await page.getByRole('button',{name:'Toggle Inspector panel',exact:true}).click();await wait(docked);assert.equal(await size.inputValue(),'26');assert.equal(read(),initial);
+ if(process.env.RT_E2E_RANGE_INSPECTOR_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_RANGE_INSPECTOR_SCREENSHOT});
+ await page.getByLabel('Selected text size (px)',{exact:true}).fill('24');await page.getByRole('button',{name:'Finish text editing',exact:true}).click();await wait(()=>read()!==initial);const changed=read();await settled();
+ assert.equal(await target.locator('span').evaluate(el=>getComputedStyle(el).fontSize),'24px');assert.equal(await section.getByLabel('Page font',{exact:true}).isVisible(),true);
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===initial);
+ await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===changed);
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===initial);
+ console.log('RANGE INSPECTOR PASS '+kind+': docked typography, parent fields hidden/restored, caret Done, panel hide/show, compact overlay, selection retention and exact Done/undo/redo');
+};

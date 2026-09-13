@@ -958,3 +958,37 @@ Existing nested or attributed source structures are preserved; this does not yet
 flatten arbitrary legacy rich-text trees. Responsive range styles, remaining
 Figma typography features, and fresh desktop packaging/native verification remain
 unfinished.
+
+
+### Selected text in the Typography inspector (2026-09-13)
+
+Selected-text font, weight, size, style, color, and semantic formatting now live
+in the existing Typography section while text editing is active. Parent-layer
+typography controls are hidden during the edit and restored afterward, so the
+sidebar no longer presents conflicting parent values beside the selected phrase.
+The controls use a compact two-column layout with an explicit all-screen-size
+scope note. Done remains enabled for a caret-only selection and uses the existing
+source commit/history path; unsupported range fields remain disabled until text
+is selected.
+
+Hiding the inspector retains the controls as a floating fallback. Showing it
+moves the same controls back into Typography; compact workspaces use the same
+behavior with the inspector overlay. Moving controls retains focused input values
+and the text selection. Panel toggles suppress the browser focus transition that
+otherwise caused WebKit to finish text editing prematurely. Panel re-renders are
+deferred while the edit is active, viewport changes refresh computed selection
+values, and cleanup restores hidden controls and the prior collapsed state unless
+the user changed it. A deferred refresh runs after editing finishes.
+
+Validation: 1,187 unit tests passed in
+`/private/tmp/retouch-range-inspector-units-final.log`. HTML/React Chromium 145 and
+Liquid WebKit 26.0 browser checks passed in
+`/private/tmp/retouch-range-inspector-verified-{html,react,liquid}.log`, covering
+parent-field visibility, caret Done, panel hide/show, compact overlays, input
+focus through resizing and moving between containers, selection retention,
+Done/undo/redo, combined styles, font search, and color previews. The inspected
+sidebar capture is `/private/tmp/retouch-range-inspector-final.png`.
+
+Caret formatting for future inserted text, responsive range overrides, and the
+remaining Figma design/editing parity are incomplete. The latest desktop archive
+packages the preceding editor and does not yet include this inspector placement.
