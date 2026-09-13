@@ -18,7 +18,7 @@ function drawnShape(preset,points){
  if(!Array.isArray(points)||points.length!==4||points.some(n=>typeof n!=='number'||!Number.isFinite(n)||Math.abs(n)>100000))return null;
  const [x1,y1,x2,y2]=points,x=Math.min(x1,x2),y=Math.min(y1,y2),w=Math.abs(x2-x1),h=Math.abs(y2-y1);
  if(w>100000||h>100000||(!w&&!h)||preset!=='line'&&(!w||!h))return null;
- if(['triangle','star'].includes(preset))return '<polygon points="'+require('../shell/svg-draw.js').geometry(preset,{x:x1,y:y1},{x:x2,y:y2}).points+'" fill="#a5b4fc"/>';
+ if(['triangle','star'].includes(preset))return '<polygon points="'+require('../shell/svg-draw.js').geometry(preset,{x:x1,y:y1},{x:x2,y:y2}).points+'" fill="#a5b4fc" data-rt-shape="'+(preset==='star'?'star':'polygon')+'"/>';
  const n=v=>String(Math.round(v*1000000)/1000000),fill=' fill="#a5b4fc"/>';
  return {rectangle:`<rect x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}"${fill}`,circle:`<circle cx="${n(x+w/2)}" cy="${n(y+h/2)}" r="${n(Math.min(w,h)/2)}"${fill}`,ellipse:`<ellipse cx="${n(x+w/2)}" cy="${n(y+h/2)}" rx="${n(w/2)}" ry="${n(h/2)}"${fill}`,line:`<line x1="${n(x1)}" y1="${n(y1)}" x2="${n(x2)}" y2="${n(y2)}" stroke="#6366f1" stroke-width="2"/>`}[preset]||null;
 }

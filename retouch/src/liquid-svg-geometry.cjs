@@ -4,7 +4,8 @@ function describe(resolved){
  const node=resolved.element;if(node.kind!=='host'||node.dynamicTag||node.generatedImage)return null;
  let boundary=node.parent;while(boundary&&!['svg','foreignobject'].includes(boundary.tag)){if(boundary.dynamicTag)return null;boundary=boundary.parent;}if(boundary?.tag!=='svg')return null;
  const shape=svg.describe({tag:node.tag,node:{namespaceURI:'http://www.w3.org/2000/svg',attrs:[]}});if(!shape)return null;
- return {fields:shape.fields.map(field=>{const attrs=(node.attributes||[]).filter(attr=>attr.name===field.name),attr=attrs[0],dynamic=attr&&/\{[%{]/.test(attr.value||''),editable=!node.attributeExpressions&&attrs.length<2&&!dynamic;return {...field,value:attr?.value??null,editable,reason:editable?null:node.attributeExpressions?'Liquid attribute expressions may control this value.':dynamic?'This coordinate is controlled by a Liquid expression.':'This coordinate has duplicate attributes.'};})};
+ const metadata=(node.attributes||[]).filter(a=>a.name==='data-rt-shape'),coordinates=(node.attributes||[]).filter(a=>a.name==='points');
+ return {parametric:node.tag==='polygon'&&!node.attributeExpressions&&metadata.length===1&&coordinates.length===1?require('../shell/svg-parametric.js').describe(coordinates[0].value,metadata[0].value):null,fields:shape.fields.map(field=>{const attrs=(node.attributes||[]).filter(attr=>attr.name===field.name),attr=attrs[0],dynamic=attr&&/\{[%{]/.test(attr.value||''),editable=!node.attributeExpressions&&attrs.length<2&&!dynamic;return {...field,value:attr?.value??null,editable,reason:editable?null:node.attributeExpressions?'Liquid attribute expressions may control this value.':dynamic?'This coordinate is controlled by a Liquid expression.':'This coordinate has duplicate attributes.'};})};
 }
 function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason}),field=describe(resolved)?.fields.find(field=>field.name===op.property);

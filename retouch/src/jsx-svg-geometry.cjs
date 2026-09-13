@@ -12,7 +12,8 @@ function describe(resolved){
  if(ids.jsxElementName(boundary?.node||node)!=='svg')return null;
  const attrs=node.openingElement.attributes,spread=attrs.some(a=>a.type==='JSXSpreadAttribute');
  const base=svg.describe({tag,node:{namespaceURI:'http://www.w3.org/2000/svg',attrs:[]}});if(!base)return null;
- return {fields:base.fields.map(field=>{const matches=attrs.filter(a=>a.type==='JSXAttribute'&&a.name.name===field.name),value=literal(matches[0]),editable=!spread&&matches.length<2&&value!==undefined;return {...field,value:value??null,editable,reason:editable?null:spread?'Spread props may control this value.':'This value is dynamic or duplicated in JSX.'};})};
+ const metadata=attrs.filter(a=>a.type==='JSXAttribute'&&a.name.name==='data-rt-shape'),coordinates=attrs.filter(a=>a.type==='JSXAttribute'&&a.name.name==='points');
+ return {parametric:tag==='polygon'&&!spread&&metadata.length===1&&coordinates.length===1?require('../shell/svg-parametric.js').describe(literal(coordinates[0]),literal(metadata[0])):null,fields:base.fields.map(field=>{const matches=attrs.filter(a=>a.type==='JSXAttribute'&&a.name.name===field.name),value=literal(matches[0]),editable=!spread&&matches.length<2&&value!==undefined;return {...field,value:value??null,editable,reason:editable?null:spread?'Spread props may control this value.':'This value is dynamic or duplicated in JSX.'};})};
 }
 function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason}),field=describe(resolved)?.fields.find(f=>f.name===op.property);

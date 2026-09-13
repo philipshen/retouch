@@ -1242,6 +1242,12 @@ function renderPanelContents() {
     if(info.svgConversion)geometry.append(RetouchInspector.button('Convert to vector path',()=>convertSVGToPath(info)));
     const pointField=info.svgGeometry.fields.find(field=>['points','d'].includes(field.name));
     if(editableVectorField(info)){const editPoints=RetouchInspector.button('Edit vector points',()=>editSVGPoints(info));editPoints.dataset.canvasTool='vertices';editPoints.title='Edit vector points · Enter or double-click on the canvas';geometry.append(editPoints);}
+    const parametric=info.svgGeometry.parametric;
+    if(parametric){
+      const change=updates=>{const points=RetouchSVGParametric.generate({...parametric,...updates});if(points)setSVGGeometry('points',points);else toast('Choose a valid shape count and ratio.','err');};
+      RetouchInspector.number(geometry,parametric.kind==='star'?'Star points':'Polygon sides',parametric.count,3,parametric.kind==='star'?256:512,value=>change({count:value})).step='1';
+      if(parametric.kind==='star')RetouchInspector.number(geometry,'Star inner ratio (%)',Math.round(parametric.ratio*1000000)/10000,0,100,value=>change({ratio:value/100})).step='any';
+    }
     for(const field of info.svgGeometry.fields){const input=document.createElement('input');input.type='text';input.value=field.value??'';input.placeholder=field.editable===false?'Dynamic value':'Default';input.disabled=field.editable===false;if(field.reason)input.title=field.reason;input.onchange=()=>setSVGGeometry(field.name,input.value.trim()||null);RetouchInspector.field(geometry,'Shape '+field.label,input);const reset=RetouchInspector.button('Reset shape '+field.label.toLowerCase(),()=>setSVGGeometry(field.name,null));reset.disabled=field.value===null||field.editable===false;geometry.append(reset);}
     RetouchInspector.note(geometry,pointField?'Drag empty space to select points. Shift-click or Shift-drag adds to the selection. Drag selected points or use arrows (Shift: 10 units). Click + to add; Delete removes selected points. Done/Enter saves; Escape cancels. Points are shared across screen sizes.':'Geometry is shared across screen sizes. Values use SVG coordinates, px or %. The SVG viewport and page CSS can affect the rendered result.');panelBody.append(geometry);
   }

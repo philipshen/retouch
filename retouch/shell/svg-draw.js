@@ -12,9 +12,8 @@
  function geometry(preset,a,b){
   const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x),h=Math.abs(b.y-a.y);
   if(preset==='triangle'||preset==='star'){
-   const count=preset==='star'?10:3,ratio=Math.sin(Math.PI/10)/Math.sin(3*Math.PI/10),points=Array.from({length:count},(_,i)=>{const angle=-Math.PI/2+i*2*Math.PI/count,r=preset==='star'&&i%2?ratio:1;return {x:Math.cos(angle)*r,y:Math.sin(angle)*r};});
-   const xs=points.map(p=>p.x),ys=points.map(p=>p.y),left=Math.min(...xs),top=Math.min(...ys),width=Math.max(...xs)-left,height=Math.max(...ys)-top,n=v=>String(Math.round(v*1000000)/1000000);
-   return {points:points.map(p=>n(x+(p.x-left)*w/width)+','+n(y+(p.y-top)*h/height)).join(' ')};
+   const api=typeof module==='object'&&module.exports?require('./svg-parametric.js'):root.RetouchSVGParametric;
+   return {points:api.generate({kind:preset==='star'?'star':'polygon',count:preset==='star'?5:3,ratio:Math.sin(Math.PI/10)/Math.sin(3*Math.PI/10),x,y,width:w,height:h})||''};
   }
   return {rectangle:{x,y,width:w,height:h},circle:{cx:x+w/2,cy:y+h/2,r:Math.min(w,h)/2},ellipse:{cx:x+w/2,cy:y+h/2,rx:w/2,ry:h/2},line:{x1:a.x,y1:a.y,x2:b.x,y2:b.y}}[preset];
  }

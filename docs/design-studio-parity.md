@@ -13226,3 +13226,44 @@ All processes exited cleanly. Screenshot inspected:
 No desktop rebuild/native launch or push in this increment. The packaged app
 predates the toolbar and triangle/star work. Full Figma Design and arbitrary-site
 parity remain incomplete.
+
+## 2026-09-13 — Polygon side count and star count/ratio controls
+
+Newly created triangles and stars retain their intended kind with a
+`data-rt-shape` attribute while rendering as ordinary SVG polygons. Geometry
+inspection derives count, inner ratio and bounds from their actual points and
+validates those points against the shared generator. Count/Ratio controls appear
+only for a matching shape. Thus a star remains a star at 100% inner ratio, while
+manual freeform vertex edits stop exposing controls that would replace that work.
+Undo restores both source geometry and parameter controls. No added page runtime
+is required for the saved SVG.
+
+The light Geometry section provides Polygon sides (3–512), Star points (3–256)
+and Star inner ratio (0–100%, including decimals). Changes retain the local SVG
+bounding rectangle and use the existing source geometry transaction/history.
+Count/Ratio fields are paired; raw point coordinates remain available under
+Vector data. Rounded corners, shape widgets on canvas, arbitrary rotated point
+lists, and automatic adoption of older/unmarked polygons remain incomplete.
+This is not full Figma parametric-shape parity.
+
+Validation: all 989 units passed (`/private/tmp/retouch-parametric-final-units.log`).
+Tests cover supported count extremes, ratio extremes, kind/bounds roundtrips,
+malformed values, manual vertex changes and all three source adapters. Browser
+checks passed Liquid Chromium and HTML WebKit: side/point count changes, 0/100/38.2
+percent star ratios, unchanged bounds, exact multi-step Undo/Redo, and continued
+vertex editing. The initial ratio input incorrectly used an integer step;
+fractional-percentage tests exposed it and the field now accepts decimals.
+Logs: `/private/tmp/retouch-parametric-liquid-final.log` and
+`/private/tmp/retouch-parametric-webkit-final.log`. React Chromium also passed
+parameter edits/history on newly created shapes alongside all 18 insertion cases
+(`/private/tmp/retouch-parametric-react.log`). WebKit freeform editing and Undo
+proved parameter controls disappear and return
+(`/private/tmp/retouch-parametric-freeform-webkit.log`). Final compact inspector
+and freeform flow passed Liquid Chromium
+(`/private/tmp/retouch-parametric-compact-liquid.log`); inspected screenshot
+`/private/tmp/retouch-star-parameters-compact.png`. All processes exited cleanly.
+Use `RT_E2E_SVG_PARAMETERS=1` with the existing drawing/creation harness modes.
+
+No desktop rebuild/native launch or push in this increment. The last packaged
+candidate predates these shape controls. Full Figma Design and arbitrary-site
+parity remain unfinished.
