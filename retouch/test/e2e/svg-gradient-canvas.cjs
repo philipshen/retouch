@@ -25,6 +25,7 @@ exports.run=async({page,app,file,wait,settled})=>{
   if(process.env.RT_E2E_GRADIENT_INNER_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_GRADIENT_INNER_SCREENSHOT});
   await page.getByRole('button',{name:'Finish gradient editing',exact:true}).click();await undo();await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===changed);await undo();
  }
+ await require('./svg-gradient-canvas-picker.cjs').run({page,app,file,wait,settled});
  await require('./svg-gradient-canvas-stop-actions.cjs').run({page,app,file,wait,settled});
  await require('./svg-gradient-canvas-stops.cjs').run({page,app,file,wait,settled});
  await require('./svg-gradient-canvas-move.cjs').run({page,app,file,wait,settled});

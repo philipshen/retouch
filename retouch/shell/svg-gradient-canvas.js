@@ -31,7 +31,7 @@
  function stopLine(type,v){const p=positions(type,v);return type==='linearGradient'?p:[p[3],p[1]];}
  function stopPosition(type,v,offset){const [a,b]=stopLine(type,v);return {x:a.x+(b.x-a.x)*offset,y:a.y+(b.y-a.y)*offset};}
  function stopDelta(type,v,dx,dy){const [a,b]=stopLine(type,v),x=b.x-a.x,y=b.y-a.y,length=x*x+y*y;return length<1e-12?0:(dx*x+dy*y)/length;}
- function mount({target,gradient,frame,canvas,current,save,saveStop,addStop,removeStop,onEnd,onError,focusLabel=null}){
+ function mount({target,gradient,frame,canvas,current,save,saveStop,addStop,removeStop,editStopColor,onEnd,onError,focusLabel=null}){
   let data;try{data=measure(target,gradient);}catch(error){onError(error.message);return null;}
   const w=target.ownerDocument.defaultView,f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/frame.contentWindow.innerWidth,left=Math.max(f.left,c.left),top=Math.max(f.top,c.top),right=Math.min(f.right,c.right),bottom=Math.min(f.bottom,c.bottom);
   if(right-left<20||bottom-top<20){onError('Bring the SVG canvas into view before editing its gradient.');return null;}
@@ -40,7 +40,7 @@
   const names=gradient.type==='linearGradient'?['start','end']:['center','radius','focus','inner radius'],buttons=names.map(name=>{const b=root.document.createElement('button');b.type='button';b.setAttribute('aria-label','Gradient '+name+' handle');b.title='Drag gradient '+name+' · Arrows move · Enter applies · Escape cancels';Object.assign(b.style,{position:'absolute',zIndex:name==='focus'?1:2,width:'14px',height:'14px',padding:'0',border:'2px solid var(--accent)',borderRadius:['focus','inner radius'].includes(name)?'2px':'50%',background:'white',transform:'translate(-50%,-50%)',touchAction:'none',cursor:'move'});host.append(b);return b;});
   const stopNodes=[...data.node.children].filter(node=>node.localName==='stop'),stopOffsets=stopNodes.map(node=>node.getAttribute('offset')),orderAPI=root.RetouchSVGGradientOrder;
   const stopOriginal=orderAPI?.move(stopOffsets.map(offset=>({offset})),0,'0')?.original||[],stopButtons=saveStop?stopNodes.map((node,index)=>{
-   const button=root.document.createElement('button');button.type='button';button.setAttribute('aria-label','Gradient color stop '+(index+1));button.title='Drag color stop · Delete removes · Arrows: 1% · Shift: 10% · Option: 0.1% · Enter applies · Escape cancels';
+   const button=root.document.createElement('button');button.type='button';button.setAttribute('aria-label','Gradient color stop '+(index+1));button.title='Double-click or F2 to edit color · Drag to move · Delete removes · Arrows: 1% · Shift: 10% · Option: 0.1% · Enter applies · Escape cancels';
    Object.assign(button.style,{position:'absolute',zIndex:3,width:'14px',height:'18px',padding:'0',border:'2px solid var(--accent)',borderRadius:'3px',background:w.getComputedStyle(node).stopColor,boxShadow:'0 0 0 1px white',transform:'translate(-50%,-50%)',touchAction:'none',cursor:'ew-resize'});host.append(button);return button;
   }):[];
   const stopLinks=root.document.createElementNS(line.namespaceURI,'path');stopLinks.setAttribute('fill','none');stopLinks.setAttribute('stroke','var(--accent)');stopLinks.setAttribute('stroke-width','1');stopLinks.setAttribute('stroke-dasharray','2 2');line.append(stopLinks);
@@ -101,6 +101,9 @@
   listen(move,'keydown',e=>{if(e.key==='Insert'&&!e.ctrlKey&&!e.metaKey){e.preventDefault();e.stopImmediatePropagation();insertStop(.5);}});
   move.setAttribute('aria-description','Drag to move the gradient. Double-click to add a color stop, or press Insert to add at the midpoint.');
   stopButtons.forEach((button,index)=>{
+   const color=()=>{if(!editStopColor)return;const bounds=button.getBoundingClientRect();stopAction(()=>editStopColor(index,bounds));};
+   listen(button,'dblclick',e=>{e.preventDefault();e.stopPropagation();color();});
+   listen(button,'keydown',e=>{if(e.key==='F2'||e.key===' '){e.preventDefault();e.stopImmediatePropagation();color();}});
    listen(button,'pointerdown',e=>{if(e.button!==0)return;e.preventDefault();e.stopPropagation();button.focus({preventScroll:true});if(!beginStop(index))return;drag={id:e.pointerId,start:toPoint(e),offset:stopEdit.offset};button.setPointerCapture(e.pointerId);});
    listen(button,'pointermove',e=>{if(!drag||drag.id!==e.pointerId||stopEdit?.index!==index)return;const p=toPoint(e);updateStop(drag.offset+stopDelta(gradient.type,values,p.x-drag.start.x,p.y-drag.start.y));});
    listen(button,'pointerup',e=>{if(drag?.id===e.pointerId){drag=null;end(true,true);}});listen(button,'pointercancel',()=>end());listen(button,'lostpointercapture',()=>{if(drag)end();});

@@ -2378,7 +2378,15 @@ function editSVGGradientOnCanvas(info,target,gradient,focusLabel=null){
  };
  const addStop=offset=>{const nodes=[...(target.ownerDocument.getElementById(gradient.id)?.children||[])].filter(node=>node.localName==='stop');if(nodes.length!==gradient.stops.length)return;const insertion=svgGradientStopInsertion(svgGradientStopValues(nodes),offset);return save(undefined,'Gradient color stop '+(insertion.index+1),true,insertion.index,'insertStop',insertion.value);};
  const removeStop=index=>save(undefined,'Gradient color stop '+(Math.min(index,gradient.stops.length-2)+1),true,index,'removeStop');
- stopDrawing=RetouchSVGGradientCanvas.mount({target,gradient,frame:iframe,canvas:canvasSurface,current,save,addStop,removeStop,saveStop:(stop,value,focus,keepEditing)=>save(undefined,focus,keepEditing,stop,'moveStop',value),focusLabel,onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
+ const editStopColor=(index,bounds)=>{
+  const section=panelBody.querySelector('[data-gradient-paint="'+gradient.paint+'"]'),input=section?.querySelector('[aria-label="Stop '+(index+1)+' color"]');if(!input)return;
+  const focus='Gradient color stop '+(index+1);let cancelled=false,dialog;
+  const events=['retouch:screen','retouch:viewport','retouch:before-zoom'],cancel=()=>{cancelled=true;dialog?.close();if(stopDrawing===cancel)stopDrawing=null;},cleanup=()=>{events.forEach(name=>window.removeEventListener(name,cancel));canvasSurface.removeEventListener('scroll',cancel);target.ownerDocument.defaultView.removeEventListener('scroll',cancel,true);if(stopDrawing===cancel)stopDrawing=null;};
+  dialog=RetouchPaintPicker.open(input,{anchor:{getBoundingClientRect:()=>bounds},onApply:value=>{cleanup();return save({'stop-color':value},focus,true,index);},onClose:({applied})=>{cleanup();if(!applied&&!cancelled&&current()&&target.isConnected&&target.ownerDocument===doc()&&svgGradientsMatch(target,info))editSVGGradientOnCanvas(info,target,gradient,focus);}});
+  if(!dialog)return;stopDrawing=cancel;events.forEach(name=>window.addEventListener(name,cancel));canvasSurface.addEventListener('scroll',cancel);target.ownerDocument.defaultView.addEventListener('scroll',cancel,true);
+ };
+
+ stopDrawing=RetouchSVGGradientCanvas.mount({target,gradient,frame:iframe,canvas:canvasSurface,current,save,addStop,removeStop,editStopColor,saveStop:(stop,value,focus,keepEditing)=>save(undefined,focus,keepEditing,stop,'moveStop',value),focusLabel,onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
 }
 function mountSVGGradientCreation(info,target){
  const creation=info.svgGradientCreation;if(!creation.paints.length||!target)return;

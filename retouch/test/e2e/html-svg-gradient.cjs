@@ -15,6 +15,7 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(require.
  const edit=async(label,value)=>{const input=page.getByLabel(label,{exact:true});await input.fill(value);await input.press('Tab');await settled();};
  try{
   await page.goto(`http://localhost:${server.address().port}/rt`);await app.locator('[aria-label="Gradient box"]').click();await settled();await wait(async()=>await page.getByLabel('Stop 1 color',{exact:true}).count()===1);
+  if(process.env.RT_E2E_SVG_CANVAS_PICKER_ONLY){await require('./svg-gradient-canvas-picker.cjs').run({page,app,file,wait,settled});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SVG_CANVAS_STOP_ACTIONS_ONLY){await require('./svg-gradient-canvas-stop-actions.cjs').run({page,app,file,wait,settled});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SVG_CANVAS_STOPS_ONLY){await require('./svg-gradient-canvas-stops.cjs').run({page,app,file,wait,settled});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SVG_SESSION_ONLY){await require('./svg-gradient-canvas-session.cjs').run({page,app,file,wait,settled});assert.deepEqual(errors,[]);return;}
