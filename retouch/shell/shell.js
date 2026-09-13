@@ -26,7 +26,7 @@ let editing = null; // { el, id, info, original, originalHTML, snapshot, origina
 let inspectorTextCommit=null,inspectorSelectionSerial=0;
 let hoverEl = null;
 let measuring = false;
-let selectionMarquee=null,stopMarquee=null,stopDrawing=null;
+let selectionMarquee=null,stopMarquee=null,stopDrawing=null,stopSVGDrag=null;
 const marqueeSurface=document.createElement('div');marqueeSurface.className='selection-marquee-surface';document.body.append(marqueeSurface);
 const canvasSurface=document.getElementById('frameWrap');
 let sourceRequests = 0;
@@ -193,6 +193,7 @@ function hookFrame(d, w) {
   w.addEventListener('pointerup',releasePanelPointer,true);
   w.addEventListener('pointercancel',releasePanelPointer,true);
   stopDrawing?.();
+  stopSVGDrag?.();stopSVGDrag=RetouchSVGDrag.mount({document:d,frame:iframe,candidate:node=>{if(mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active||sel?.multiple?.length>1||!sel?.info.svgTransform?.editable)return null;const targets=matchingEls(sel.info.id),target=targets.length===1?targets[0]:null;return target&&target.contains(node)&&!layerLocks.locked(target)?{info:sel.info,target}:null;},onStart:({info,target},event,move)=>resizeSVGOnCanvas(info,target,event,'se','move',{framePointer:true,initialMove:move})});
   stopMarquee?.();
   stopMarquee=RetouchMarquee.mount({document:d,frame:iframe,surface:canvasSurface,enabled:()=>window.__RT_RENDERING?.selectionStyling===true&&mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests,
     onChange:rect=>{selectionMarquee=rect?{document:d,rect}:null;},
@@ -2254,13 +2255,13 @@ async function convertSVGToPath(info){
   busyPanel(true);
   try{const result=await api('POST','/rt/__api/op',{type:'convertSVGToPath',id:info.id,fileHash:info.hash});if(!result?.ok)return toast(result?.reason||result?.error||'Could not convert shape','err');if(result.undoId)editorHistory.record({type:'convertSVGToPath',id:info.id,selectionBefore:[info.id],selectionAfter:[info.id],undoId:result.undoId});renderedSelection=null;sel.info=result.element;await refreshWrittenElement(sel.info,el=>el.tagName.toLowerCase()==='path'&&svgGeometryMatches(el,sel.info));await restoreLayerSelection([info.id]);renderPanel();toast('Converted to an editable vector path','ok');}finally{busyPanel(false);}
 }
-async function resizeSVGOnCanvas(info,target=null,initialPointer=null,handle='se',action='resize'){
+async function resizeSVGOnCanvas(info,target=null,initialPointer=null,handle='se',action='resize',gesture={}){
   if(panelTasks||undoBusy||sourceRequests||editing||!info?.svgTransform?.editable)return;stopDrawing?.();
   const targets=matchingEls(info.id);if(targets.length!==1)return toast('Select a vector rendered once to transform it.','err');target=target||targets[0];
   if(target!==targets[0]||target.getAttribute('transform')!==info.svgTransform.value)return toast('The vector changed. Re-select it before transforming.','err');
   if(!initialPointer&&!await prepareVectorCanvas(info,target))return;
   const key=JSON.stringify([info.id,info.hash,styleScope]),current=()=>mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&!(sel?.multiple?.length>1)&&!panelBody.inert&&!document.querySelector('dialog[open]')&&key===JSON.stringify([sel?.info.id,sel?.info.hash,styleScope]);if(!current())return;canvasPan.cancel();
-  stopDrawing=RetouchSVGResize.mount({target,info,frame:iframe,canvas:canvasSurface,current,initialPointer,handle,action,onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err'),onCommit:async matrix=>{
+  stopDrawing=RetouchSVGResize.mount({target,info,frame:iframe,canvas:canvasSurface,current,initialPointer,handle,action,...gesture,onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err'),onCommit:async matrix=>{
    if(current())await writeSVGTransform(info,target,matrix);
   }});
 }
@@ -3083,7 +3084,7 @@ window.RetouchShapeTools={
   const available=()=>mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!historyRecoveryRequired&&!panelBody.inert&&!(sel?.multiple?.length>1)&&owner===JSON.stringify([sel?.info.file,sel?.info.id,sel?.info.hash,sel?.instanceId,sel?.scope]);
   const command=(action,label,fn)=>({id:'shape-'+action,action,label,owner,element:panelBody,available,keywords:'shape vector canvas',reason:'Select an editable container or SVG canvas in Edit mode and finish the current edit.',run(){if(available())return fn(sel.info);}});
   const rows=(info.svgInsertion?.presets||[]).flatMap(preset=>[command('draw-'+preset,'Draw '+preset,current=>drawShape(preset,current)),command('add-'+preset,'Add '+preset,current=>insertLayer(preset,current,'insertSVG'))]);
-  if(info.svgTransform?.editable)rows.push(command('resize-vector','Resize vector on canvas',current=>resizeSVGOnCanvas(current)),command('rotate-vector','Rotate vector on canvas',current=>resizeSVGOnCanvas(current,null,null,'ne','rotate')));
+  if(info.svgTransform?.editable)rows.push(command('resize-vector','Resize vector on canvas',current=>resizeSVGOnCanvas(current)),command('rotate-vector','Rotate vector on canvas',current=>resizeSVGOnCanvas(current,null,null,'ne','rotate')),command('move-vector','Move vector on canvas',current=>resizeSVGOnCanvas(current,null,null,'se','move')));
   if(info.svgInsertion?.pen)rows.push(command('pen','Pen',current=>drawVector(current)));
   return rows;
  },

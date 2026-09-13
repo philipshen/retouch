@@ -13719,3 +13719,38 @@ copy changed from Vector resized to Vector updated after those runs.
 No desktop rebuild, push or public release was performed. Multi-selection
 vector transforms, direct movement, flips, responsive SVG geometry authoring,
 and full Figma/any-site parity remain open.
+
+## 2026-09-13 — Direct selected-vector movement
+
+A selected SVG vector can now be dragged from its painted content. The gesture
+starts after four screen pixels, preserves ordinary clicks, maps pointer deltas
+through the SVG parent, and writes one transform transaction on release. Shift
+locks the dominant parent axis; Escape restores the preview. A selected group
+can be dragged from a child. Size, rotation, skew and path content are retained.
+Move vector on canvas in Actions also provides explicit movement mode, with
+arrows (Shift: 10), Enter to apply, and Escape to cancel.
+
+The direct gesture owns capture in the iframe and receives release before the
+app-interaction guard. It consumes only the resulting drag click, retains the
+owning pointer ID, rejects released-pointer hover starts, and removes listeners
+when the preview document changes. The center marker is hidden for direct drag;
+the hint says Release applies. Existing transform ownership/cancellation guards
+remain shared with resizing and rotation.
+
+Validation: 1,012 unit tests passed, including direct-click retention, stale hover,
+selection replacement, pointer ownership and listener cleanup. HTML/WebKit 26,
+React/Chromium and Liquid/Chromium movement workflows passed with terminal zero
+exits: 13 moved vector types with exact Undo/Redo, linear-transform preservation,
+pointer-following translation, a source-authored transformed parent, direct
+rectangle drag, click threshold, axis locking, keyboard and cancellation.
+Liquid additionally verified direct group drag and the combined rotation suite;
+a final Liquid rerun passed after pointer lifecycle and preview refinements.
+The shared suites retain numeric size/pose and all 13 resize cases.
+
+Logs: /private/tmp/retouch-svg-move-{units,html,react,liquid}.log and
+/private/tmp/retouch-svg-move-liquid-final.log. The final direct-drag screenshot
+/private/tmp/retouch-svg-move-liquid.png was visually inspected.
+No desktop build or push was performed. Direct drag currently requires an
+already-selected, unlocked vector rendered once. Immediate drag of unselected
+vectors, multi-selection movement, default-mode held-key nudges, snapping to
+other layers, responsive geometry and full Figma/any-site parity remain open.
