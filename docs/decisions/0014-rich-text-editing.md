@@ -61,8 +61,14 @@ smooth optimistic + HMR path. The reload preserves scroll position.
 
 - OQ-E2 tier 1 gains: seamless deletion of styled runs, editing around inline
   styling, and bold/italic on a selection.
-- Not included (tier 3): adding arbitrary tags, links, or attributes from within
-  a text edit; those are markup authoring, not text editing.
+- Selected text supports links through the typography inspector. New links use
+  a validated URL node; existing literal, unadorned links can be updated or
+  removed, including partial selections. Dynamic URLs and attributed anchors
+  retain their original source identity. Their URL field is read-only and
+  copyable, while formatting inside the link remains editable.
+- During text editing, Cmd+K / Ctrl+K focuses the link field without losing the
+  selected range. Escape returns to text editing without applying a draft URL.
+- Arbitrary tags and attributes remain outside the rich-text command model.
 - Testing: `serializeChildren` and every `setChildren` branch are covered by the
   fast unit suite; the browser round-trip (including the reconciliation reload)
   is covered by the opt-in e2e suite.

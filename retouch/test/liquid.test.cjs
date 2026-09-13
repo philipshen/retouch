@@ -169,3 +169,9 @@ test('Liquid doc examples remain unstamped', () => {
   const source = '{% doc %}<p>Example</p>{% enddoc %}<p>Real</p>';
   assert.strictEqual(liquid.collect(source, 'x.liquid').elements.length, 1);
 });
+
+test('literal rich text remains editable around preserved attribute output',()=>{
+ const source='<p>Head<a href="{{ destination }}">line</a></p>',resolved=resolvedFor(source,elByTag(source,'p'));
+ assert.equal(liquid.describeElement(resolved).canSetChildren,true);
+ for(const blocked of ['<p>Head{{ text }}</p>','<p>{% if show %}<a href="/x">line</a>{% endif %}</p>','<p><a {% if show %}href="/x"{% endif %}>line</a></p>'])assert.equal(liquid.describeElement(resolvedFor(blocked,elByTag(blocked,'p'))).canSetChildren,false,blocked);
+});

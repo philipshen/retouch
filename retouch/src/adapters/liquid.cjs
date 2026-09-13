@@ -266,6 +266,16 @@ function literalText(node, source) {
   return require('parse5').parseFragment(text).childNodes.map(child=>child.value||'').join('');
 }
 
+// Attribute output stays in a kept opening tag; it does not make literal text
+// children dynamic. Control flow and dynamic tag structure still block editing.
+function hasTextBodyLiquid(resolved) {
+  const node=resolved.element,source=resolved.source;
+  let body=source.slice(node.childrenStart,node.childrenEnd);
+  const openings=(resolved.elements||[]).filter(e=>e.tagStart>=node.childrenStart&&e.openEnd<=node.childrenEnd&&!e.dynamicTag&&!e.attributeExpressions&&!/\{%/.test(source.slice(e.tagStart,e.openEnd))).sort((a,b)=>b.tagStart-a.tagStart);
+  for(const e of openings)body=body.slice(0,e.tagStart-node.childrenStart)+body.slice(e.openEnd-node.childrenStart);
+  return /\{[%{]/.test(layerNames.strip(body));
+}
+
 function describeElement(resolved) {
   const node = resolved.element;
   const source = resolved.source;
@@ -281,7 +291,7 @@ function describeElement(resolved) {
   if (traced?.target) text = traced.target.value;
   const inner = node.closeStart != null ? source.slice(node.childrenStart, node.childrenEnd) : '';
   const hasLiquid = /\{[%{]/.test(layerNames.strip(inner));
-  const canSetChildren=node.closeStart!=null&&!node.textBinding&&!hasLiquid&&inner.trim()!=='';
+  const canSetChildren=node.closeStart!=null&&!node.textBinding&&!hasTextBodyLiquid(resolved)&&inner.trim()!=='';
   const asset = node.srcAttr?.value?.match(/^\s*\{\{\s*['"]([\w.\/-]+)['"]\s*\|\s*asset_url\s*\}\}\s*$/);
   const imageUrl=!!node.srcAttr&&/^\s*\{\{[\s\S]*\|\s*image_url\s*:[\s\S]*\}\}\s*$/.test(node.srcAttr.value||'');
   const srcDynamic = !!node.srcAttr && /\{[%{]/.test(node.srcAttr.value || '') && !asset && !imageUrl;

@@ -325,6 +325,7 @@ function hookFrame(d, w) {
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if(e.isComposing)return;
+      if((e.metaKey||e.ctrlKey)&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='k'){e.preventDefault();editing.focusLink?.();return;}
       if(/^(Arrow|Home$|End$|PageUp$|PageDown$)/.test(e.key))breakTextHistoryGroup();
       if(e.key==='Enter'&&e.shiftKey){e.preventDefault();insertInlineBreak();return;}
       if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&inlineHistoryCommand(e.shiftKey)){e.preventDefault();return;}
@@ -1218,7 +1219,9 @@ function showInlineFormatToolbar(){
     }
     const linkParent=valid?(range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer):null;
     const selectedLink=linkParent?.closest('a'),withinLink=selectedLink&&selectedLink!==editing?.el&&selectedLink.contains(range?.endContainer);
-    linkField.disabled=!valid||range.collapsed&&!withinLink;removeLink.disabled=!valid||!withinLink;
+    const ownedLink=withinLink&&!plainInlineFormatting(selectedLink);
+    linkField.disabled=!valid||range.collapsed&&!withinLink;linkField.readOnly=!!ownedLink;removeLink.disabled=!valid||!withinLink||ownedLink;
+    linkField.title=ownedLink?'This link is controlled by the site. You can copy its URL.':'Edit link (⌘K / Ctrl+K)';
     if(document.activeElement!==linkField)linkField.value=withinLink?selectedLink.getAttribute('href')||'':'';
     if(!valid)return;savedRange=range.cloneRange();
     colorField.retouchPaintScopeLabel=(range.collapsed?'Text you type next':'Selected text')+' · Applies across all screen sizes.';
@@ -1261,6 +1264,7 @@ function showInlineFormatToolbar(){
     if(focused&&document.activeElement!==focused)focused.focus({preventScroll:true});
   };
   const preservePanelFocus=event=>{if(event.target.closest?.('#toggleInspector,#toggleLayers'))event.preventDefault();};
+  editing.focusLink=()=>{update();if(linkField.disabled)return;linkField.focus();linkField.select();};
   window.addEventListener('pointerdown',preservePanelFocus,true);
   window.addEventListener('retouch:workspace-layout',mount);window.addEventListener('retouch:viewport',update);d.addEventListener('selectionchange',update);mount();update();
   inlineFormatCleanup=()=>{window.removeEventListener('pointerdown',preservePanelFocus,true);window.removeEventListener('retouch:workspace-layout',mount);window.removeEventListener('retouch:viewport',update);d.removeEventListener('selectionchange',update);bar.remove();section?.removeAttribute('data-range-editing');for(const {node,hidden}of originals)node.hidden=hidden;section?.querySelector(':scope > h3')?.removeEventListener('click',trackCollapse);if(!collapseChanged)section?.retouchSetCollapsed?.(collapsed);inlineFormatCleanup=()=>{};if(panelRenderDeferred)queueViewportPanelRefresh();};
