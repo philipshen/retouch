@@ -1287,6 +1287,7 @@ function renderPanelContents() {
       const change=updates=>{const points=parametric.kind==='arrow'?RetouchSVGParametric.changeArrow(pointField.value,updates):RetouchSVGParametric.generate({...parametric,...updates});if(points)setSVGGeometry('points',points);else toast('Choose valid shape parameters.','err');};
       if(parametric.kind==='arrow'){
         const reverse=RetouchInspector.button('Reverse arrow',()=>{const points=RetouchSVGParametric.reverseArrow(pointField.value);if(points)setSVGGeometry('points',points);else toast('This arrow cannot be reversed within the supported coordinate range.','err');});reverse.dataset.arrowAction='reverse';geometry.append(reverse);
+        const swap=RetouchInspector.button('Swap arrowheads',()=>{const points=RetouchSVGParametric.swapArrowheads(pointField.value);if(points&&points!==pointField.value)setSVGGeometry('points',points);else if(!points)toast('These arrowheads cannot be swapped within the supported coordinate range.','err');});swap.dataset.arrowAction='swap';swap.disabled=parametric.endArrow===false&&!parametric.startArrow;geometry.append(swap);
         RetouchInspector.select(geometry,'Start point',[['none','None'],['arrow','Line arrow']],parametric.startArrow?'arrow':'none',value=>change({startArrow:value==='arrow'}));
         if(parametric.startArrow){
           RetouchInspector.number(geometry,'Start arrowhead length',Math.round(parametric.startHeadLength*1000000)/1000000,0,Math.hypot(parametric.x2-parametric.x1,parametric.y2-parametric.y1),value=>change({startHeadLength:value})).step='any';

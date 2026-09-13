@@ -90,3 +90,15 @@ test('Arrow endpoint selectors preserve existing heads across all four combinati
  const restored=model.changeArrow(start,{endArrow:true});assert.deepEqual(restored.split(' ').slice(-4),start.split(' ').slice(-4));
  assert.equal(model.changeArrow(original,{endArrow:'none'}),null);
 });
+
+
+test('Swapping arrowheads exchanges enabled ends and dimensions without moving the shaft',()=>{
+ for(const [x2,y2]of [[100,0],[0,100],[-60,40]])for(const startArrow of [false,true])for(const endArrow of [false,true]){
+  const spec={kind:'arrow',x1:0,y1:0,x2,y2,headLength:12,headWidth:20,startArrow,endArrow,startHeadLength:5,startHeadWidth:8},value=model.generate(spec),swapped=model.swapArrowheads(value),parsed=model.describe(swapped,'arrow');
+  assert.deepEqual(swapped.split(' ').slice(0,2),value.split(' ').slice(0,2));assert.equal(!!parsed.startArrow,endArrow);assert.equal(parsed.endArrow!==false,startArrow);
+  if(startArrow){assert.ok(Math.abs(parsed.headLength-5)<.00001);assert.ok(Math.abs(parsed.headWidth-8)<.00001);}if(endArrow){assert.ok(Math.abs(parsed.startHeadLength-12)<.00001);assert.ok(Math.abs(parsed.startHeadWidth-20)<.00001);}
+  assert.equal(model.swapArrowheads(swapped),value);
+ }
+ assert.equal(model.swapArrowheads('0,0 100,0 80,5 100,0 80,-9'),null);
+ const edge=model.generate({kind:'arrow',x1:100000,y1:0,x2:99900,y2:100,headLength:1,headWidth:40});assert.equal(model.swapArrowheads(edge),null);
+});

@@ -59,11 +59,18 @@
   if(spec.startArrow&&next.startArrow&&!['startHeadLength','startHeadWidth'].some(key=>Object.hasOwn(changes,key)))after.splice(after.length-4,4,...before.slice(-4));
   return pointsAPI().format(after);
  }
+ function swapArrowheads(value){
+  const spec=describe(value,'arrow');if(!spec)return null;
+  const original=pointsAPI().parse(value),[a,b]=original,reflect=p=>({x:round(a.x+b.x-p.x),y:round(a.y+b.y-p.y)}),points=[a,b];
+  if(spec.startArrow){const head=original.slice(-4);points.push(reflect(head[1]),b,reflect(head[3]));}
+  if(spec.endArrow!==false){if(spec.startArrow)points.push(b);points.push(a,reflect(original[2]),a,reflect(original[4]));}
+  return points.some(p=>Math.abs(p.x)>100000||Math.abs(p.y)>100000)?null:pointsAPI().format(points);
+ }
  function reverseArrow(value){
   if(!describe(value,'arrow'))return null;
   const original=pointsAPI().parse(value),[a,b]=original,reflect=p=>({x:round(a.x+b.x-p.x),y:round(a.y+b.y-p.y)});
   const points=original.map(reflect);
   return points.some(p=>Math.abs(p.x)>100000||Math.abs(p.y)>100000)?null:pointsAPI().format(points);
  }
- const api={generate,describe,reverseArrow,changeArrow};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGParametric=api;
+ const api={generate,describe,reverseArrow,changeArrow,swapArrowheads};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGParametric=api;
 })(typeof window==='object'?window:globalThis);

@@ -14532,3 +14532,13 @@ The light-theme control arrangement was visually inspected at `/private/tmp/reto
 
 
 Verification: 1,143 unit tests passed (`/private/tmp/retouch-arrow-endpoints-units.log`). HTML/Chromium and Liquid/WebKit drawing and line-conversion workflows, and React/Chromium native-container/self-closing SVG/group workflows, passed all four endpoint combinations, unchanged shaft endpoints, independent dimension edits, reversal, freeform guards and exact source undo/redo. Logs: `/private/tmp/retouch-arrow-endpoints-html.log`, `/private/tmp/retouch-arrow-endpoints-liquid.log`, `/private/tmp/retouch-arrow-endpoints-react.log`. All processes exited zero. Focused model tests additionally verify exact retained-head coordinates and reversibility of all representations (`/private/tmp/retouch-arrow-endpoints-unit.log`).
+
+
+### 2026-09-13 — Swap arrowheads without moving the shaft
+
+Recognized arrows now expose Swap arrowheads in Stroke. It exchanges enabled start/end heads and their dimensions while retaining the original shaft endpoints, paint and layer identity. Geometry is exchanged directly from the existing points so two swaps restore the exact original point string. The action is disabled when neither head is present, absent for freeform vectors and refused if reflected coordinates would exceed the supported range. Reverse arrow remains a separate direction-changing action.
+
+This does not implement the other Figma cap shapes or retained settings for disabled heads. Custom-marker and dashed-stroke rendering remain outside this new workflow's browser evidence. The latest macOS archive predates the action.
+
+
+Verification: all 1,144 unit tests passed (`/private/tmp/retouch-swap-heads-units.log`). HTML/Chromium and Liquid/WebKit drawing/line-conversion workflows and React/Chromium native-container/self-closing SVG/group workflows passed with the swap action, exchanged independent dimension values, preserved shaft/paint, exact double-swap restoration and full undo/redo. Logs: `/private/tmp/retouch-swap-heads-html.log`, `/private/tmp/retouch-swap-heads-liquid.log`, `/private/tmp/retouch-swap-heads-react.log`. Every process exited zero. Model tests cover all four endpoint combinations, multiple directions, freeform refusal and coordinate limits (`/private/tmp/retouch-swap-heads-unit.log`).
