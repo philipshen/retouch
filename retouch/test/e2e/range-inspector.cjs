@@ -9,7 +9,7 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  await edit();assert.equal(await docked(),true);
  assert.equal(await section.locator(':scope > :not(h3):not(.inline-format-toolbar)').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).display==='none')),true);
  await target.evaluate(el=>el.ownerDocument.getSelection().collapseToStart());
- await wait(async()=>await page.getByLabel('Selected text weight',{exact:true}).isDisabled());assert.equal(await page.getByRole('button',{name:'Finish text editing',exact:true}).isEnabled(),true);
+ await wait(async()=>await page.getByLabel('Selected text weight',{exact:true}).isEnabled());assert.equal(await page.getByRole('button',{name:'Finish text editing',exact:true}).isEnabled(),true);
  await page.getByRole('button',{name:'Finish text editing',exact:true}).click();await toolbar.waitFor({state:'detached'});assert.equal(read(),initial);assert.equal(await section.getByLabel('Page font',{exact:true}).isVisible(),true);
  await edit();await page.getByRole('button',{name:'Toggle Inspector panel',exact:true}).click();await wait(async()=>!await docked());assert.equal(await toolbar.isVisible(),true);assert.equal(read(),initial);
  await page.getByRole('button',{name:'Toggle Inspector panel',exact:true}).click();await wait(docked);assert.equal(await target.evaluate(el=>el.ownerDocument.getSelection().toString()),text.slice(1,4));

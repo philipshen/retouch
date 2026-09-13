@@ -299,6 +299,7 @@ function hookFrame(d, w) {
     if (!selection?.rangeCount) return;
     const range = selection.getRangeAt(0);
     if (!editing.el.contains(range.commonAncestorContainer)) return;
+    if(insertCaretText(e.clipboardData?.getData('text/plain') || ''))return;
     range.deleteContents();
     const text = d.createTextNode(e.clipboardData?.getData('text/plain') || '');
     range.insertNode(text);
@@ -313,7 +314,12 @@ function hookFrame(d, w) {
     e.preventDefault();
     e.stopPropagation();
   }, true);
+  d.addEventListener('input',event=>{if(editing?.caretHistory&&editing.el.contains(event.target)&&!['historyUndo','historyRedo'].includes(event.inputType))editing.caretHistory.redo=[];},true);
+  d.addEventListener('compositionstart',()=>beginCaretComposition(),true);
+  d.addEventListener('compositionend',()=>finishCaretComposition(),true);
   d.addEventListener('beforeinput', (e) => {
+    if(editing&&editing.el.contains(e.target)&&['historyUndo','historyRedo'].includes(e.inputType)&&caretHistoryStep(e.inputType==='historyRedo')){e.preventDefault();e.stopPropagation();return;}
+    if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertText'&&typeof e.data==='string'&&insertCaretText(e.data)){e.preventDefault();e.stopPropagation();return;}
     if (editing && editing.el.contains(e.target) && e.inputType.startsWith('format')) {
       e.preventDefault();
     }
@@ -325,6 +331,8 @@ function hookFrame(d, w) {
     if(vectorNudgeShortcut(e)||flipShortcut(e)||alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||layerNavigationShortcut(e)||canvasLayerShortcut(e))return;
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
+      if(e.isComposing)return;
+      if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&caretHistoryStep(e.shiftKey)){e.preventDefault();return;}
       if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'i')) {
         e.preventDefault(); // never let the browser's own rich-edit commands run (R-5)
         toggleWrap(e.key === 'b' ? 'strong' : 'em');
@@ -854,6 +862,7 @@ function inlineTextUIFocused(){
 
 // Preserve original nodes and source metadata while previewing selected text.
 function previewInlineStyle(current,range,property){
+  if(range.collapsed)return {get valid(){return editing===current&&current.el.isConnected;},update(){},restore(){}};
   const root=current.el,d=root.ownerDocument,runs=[],parents=new Map(),walker=d.createTreeWalker(root,NodeFilter.SHOW_TEXT);
   while(walker.nextNode()){
     const node=walker.currentNode;if(!range.intersectsNode(node))continue;
@@ -881,7 +890,78 @@ function previewInlineStyle(current,range,property){
 function inlineRangeAt(root,start,end){
   const d=root.ownerDocument,walker=d.createTreeWalker(root,NodeFilter.SHOW_TEXT),range=d.createRange();let offset=0,started=false;
   while(walker.nextNode()){const node=walker.currentNode,next=offset+node.length;if(!started&&start<next){range.setStart(node,start-offset);started=true;}if(started&&end<=next){range.setEnd(node,end-offset);return range;}offset=next;}
+  if(start===end&&start===offset){range.selectNodeContents(root);range.collapse(false);return range;}
   return null;
+}
+
+// Cursor styles are editor state until text is inserted. No placeholder text or
+// empty source wrapper is needed, and moving the cursor drops the draft.
+function sameCaret(a,b){return !!(a?.collapsed&&b?.collapsed&&a.startContainer===b.startContainer&&a.startOffset===b.startOffset);}
+function caretDraft(){
+  const d=doc(),selection=d?.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
+  if(!editing||!range||!sameCaret(range,editing.caretStyle?.range)||!editing.el.contains(range.startContainer))return null;
+  const parent=range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer;
+  if(parent.closest('[contenteditable="false"]'))return null;
+  return {current:editing,selection,range,properties:{...editing.caretStyle.properties}};
+}
+function styleInsertedText(current,start,end,properties){
+  if(editing!==current||!current.el.isConnected)return;
+  const d=current.el.ownerDocument,range=inlineRangeAt(current.el,start,end),selection=d.getSelection();if(!range)return;
+  selection.removeAllRanges();selection.addRange(range);
+  if(start!==end)for(const [property,value]of Object.entries(properties))applyTextRangeStyle(property,value);
+  const caret=selection.getRangeAt(0).cloneRange();caret.collapse(false);selection.removeAllRanges();selection.addRange(caret);
+  current.caretStyle={properties,range:caret.cloneRange()};
+  d.dispatchEvent(new Event('selectionchange'));
+}
+// Keep the actual nodes (and their source evidence) so restoring a local
+// insertion does not invalidate preceding native text undo transactions.
+const caretMetadataNames=['__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
+function captureCaretEdit(current){
+  const d=current.el.ownerDocument,selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
+  const capture=node=>({node,text:typeof node.data==='string'?node.data:null,attributes:node.nodeType===1?[...node.attributes].map(a=>[a.name,a.value]):null,metadata:Object.fromEntries(caretMetadataNames.filter(key=>Object.hasOwn(node,key)).map(key=>[key,structuredClone(node[key])])),children:[...node.childNodes].map(capture)});
+  return {html:current.el.innerHTML,nodes:[...current.el.childNodes].map(capture),range:range?{start:range.startContainer,from:range.startOffset,end:range.endContainer,to:range.endOffset}:null,properties:current.caretStyle?{...current.caretStyle.properties}:null};
+}
+function recordCaretEdit(current,before){
+  const history=current.caretHistory||={undo:[],redo:[]};history.undo.push({before,after:captureCaretEdit(current)});if(history.undo.length>100)history.undo.shift();history.redo=[];
+}
+function caretHistoryStep(redo=false){
+  const current=editing,history=current?.caretHistory;if(!history||current.caretComposition)return false;
+  const source=redo?history.redo:history.undo,destination=redo?history.undo:history.redo,entry=source.at(-1);if(!entry)return false;
+  const expected=redo?entry.before:entry.after,target=redo?entry.after:entry.before;
+  // A later native edit must undo through the browser first. Never restore a
+  // stale custom snapshot over unrelated page or typing changes.
+  if(current.el.innerHTML!==expected.html)return false;
+  const restore=state=>{const node=state.node;if(state.text!==null)node.data=state.text;else{if(state.attributes){for(const a of [...node.attributes])node.removeAttribute(a.name);for(const [name,value]of state.attributes)node.setAttribute(name,value);}node.replaceChildren(...state.children.map(restore));}for(const key of caretMetadataNames)delete node[key];Object.assign(node,structuredClone(state.metadata));return node;};
+  current.el.replaceChildren(...target.nodes.map(restore));source.pop();destination.push(entry);
+  const d=current.el.ownerDocument,selection=d.getSelection(),range=d.createRange();if(target.range){range.setStart(target.range.start,target.range.from);range.setEnd(target.range.end,target.range.to);}else{range.selectNodeContents(current.el);range.collapse(false);}
+  selection.removeAllRanges();selection.addRange(range);current.caretStyle=target.properties?{properties:{...target.properties},range:range.cloneRange()}:null;
+  d.dispatchEvent(new Event('selectionchange'));return true;
+}
+function insertCaretText(text){
+  const draft=caretDraft();if(!draft||editing.caretComposition)return false;
+  if(!text)return true;
+  const {current,selection,range,properties}=draft,before=captureCaretEdit(current),d=current.el.ownerDocument,prefix=d.createRange();prefix.selectNodeContents(current.el);prefix.setEnd(range.startContainer,range.startOffset);const start=prefix.toString().length;
+  // Retain a plain source run's node identity so its existing styles can split
+  // around the inserted text through the same proven range-editing path.
+  if(range.startContainer.nodeType===3)range.startContainer.insertData(range.startOffset,text);
+  else {const node=d.createTextNode(text);range.insertNode(node);}
+  styleInsertedText(current,start,start+text.length,properties);recordCaretEdit(current,before);return true;
+}
+function beginCaretComposition(){
+  const draft=caretDraft();if(!draft)return;
+  const {current,range,properties}=draft,prefix=current.el.ownerDocument.createRange();prefix.selectNodeContents(current.el);prefix.setEnd(range.startContainer,range.startOffset);
+  const start=prefix.toString().length,text=current.el.textContent;
+  current.caretComposition={start,before:text.slice(0,start),after:text.slice(start),properties,snapshot:captureCaretEdit(current)};
+}
+function finishCaretComposition(){
+  const current=editing,composition=current?.caretComposition;if(!composition)return;
+  requestAnimationFrame(()=>{
+    if(editing!==current||current.caretComposition!==composition)return;
+    current.caretComposition=null;
+    const text=current.el.textContent,{start,before,after,properties}=composition;
+    if(!text.startsWith(before)||!text.endsWith(after)||text.length<before.length+after.length){current.caretStyle=null;return;}
+    styleInsertedText(current,start,text.length-after.length,properties);if(text.length>before.length+after.length)recordCaretEdit(current,composition.snapshot);
+  });
 }
 
 function showInlineFormatToolbar(){
@@ -906,7 +986,7 @@ function showInlineFormatToolbar(){
     };
     let beforeFocus='',cancel=false;field.onfocus=()=>{beforeFocus=field.value;};field.onchange=()=>{if(!cancel)apply();};
     field.onkeydown=event=>{
-      if(event.key==='Enter'){event.preventDefault();event.stopPropagation();if(apply())void commitInlineEdit();}
+      if(event.key==='Enter'){event.preventDefault();event.stopPropagation();if(apply()){if(savedRange?.collapsed)editing?.el.focus();else void commitInlineEdit();}}
       if(event.key==='Escape'){event.preventDefault();event.stopPropagation();cancel=true;field.value=beforeFocus;field.blur();cancel=false;field.removeAttribute('aria-invalid');editing?.el.focus();update();}
     };
     fields.push({field,property,display});bar.append(field);return field;
@@ -928,14 +1008,14 @@ function showInlineFormatToolbar(){
     const start=prefix.toString().length,end=start+savedRange.toString().length;
     const preview=previewInlineStyle(current,savedRange,'color');
     if(!preview){toast('This selection includes source-owned text.','err');return;}
-    const restoreSelection=()=>{if(editing!==current||doc()!==d||!current.el.isConnected)return false;const range=inlineRangeAt(current.el,start,end);if(!range)return false;const selection=d.getSelection();selection.removeAllRanges();selection.addRange(range);savedRange=range.cloneRange();return true;};
+    const restoreSelection=()=>{if(editing!==current||doc()!==d||!current.el.isConnected)return false;const range=start===end?savedRange.cloneRange():inlineRangeAt(current.el,start,end);if(!range)return false;const selection=d.getSelection();selection.removeAllRanges();selection.addRange(range);savedRange=range.cloneRange();return true;};
     colorField.retouchPaintPreview=()=>preview;
     picker=RetouchPaintPicker.open(colorField,{anchor:swatch,
       onApply:async value=>{
         if(!preview.valid||!restoreSelection()){toast('Text changed while choosing a color. Select it again.','err');return;}
         const parsed=RetouchPaintPicker.parsePaint(value);if(!parsed)return;
         const normalized=parsed.space==='srgb'?RetouchPaletteValues.srgb(parsed.channels,parsed.alpha):RetouchPaletteValues.p3(parsed.channels,parsed.alpha);
-        applyTextRangeStyle('color',normalized);await commitInlineEdit();
+        applyTextRangeStyle('color',normalized);if(start!==end)await commitInlineEdit();
       },
       onClose:()=>{picker=null;delete colorField.retouchPaintPreview;if(restoreSelection()){current.el.focus();update();}}
     });
@@ -948,15 +1028,15 @@ function showInlineFormatToolbar(){
     const current=editing,prefix=d.createRange();prefix.selectNodeContents(current.el);prefix.setEnd(savedRange.startContainer,savedRange.startOffset);
     const start=prefix.toString().length,end=start+savedRange.toString().length;
     const preview=previewInlineStyle(current,savedRange,'font-family');if(!preview){toast('This selection includes source-owned text.','err');return;}
-    const restoreSelection=()=>{if(editing!==current||doc()!==d||!current.el.isConnected)return false;const range=inlineRangeAt(current.el,start,end);if(!range)return false;const selection=d.getSelection();selection.removeAllRanges();selection.addRange(range);savedRange=range.cloneRange();return true;};
+    const restoreSelection=()=>{if(editing!==current||doc()!==d||!current.el.isConnected)return false;const range=start===end?savedRange.cloneRange():inlineRangeAt(current.el,start,end);if(!range)return false;const selection=d.getSelection();selection.removeAllRanges();selection.addRange(range);savedRange=range.cloneRange();return true;};
     const dialog=document.createElement('dialog');fontDialog=dialog;dialog.className='paint-picker range-font-picker';dialog.retouchSourceInput=familyButton;dialog.setAttribute('aria-label','Selected text font');
     const heading=document.createElement('h3');heading.textContent='Font';dialog.append(heading);
-    RetouchInspector.note(dialog,'Selected text · Applies across all screen sizes.');
+    RetouchInspector.note(dialog,(savedRange.collapsed?'Text you type next':'Selected text')+' · Applies across all screen sizes.');
     let chosen=familyButton.value;
     const apply=RetouchInspector.button('Apply font',async()=>{
       if(!dialog.open||!RetouchRangeStyles.valid('font-family',chosen))return;preview.restore();
       if(!preview.valid||!restoreSelection()){dialog.close();toast('Text changed while choosing a font. Select it again.','err');return;}
-      dialog.close();if(chosen!==familyButton.value){applyTextRangeStyle('font-family',chosen);await commitInlineEdit();}
+      dialog.close();if(chosen!==familyButton.value){applyTextRangeStyle('font-family',chosen);if(start!==end)await commitInlineEdit();}
     });apply.disabled=true;
     document.body.append(dialog);
     RetouchInspector.fontPicker(dialog,d,chosen,value=>{if(!RetouchRangeStyles.valid('font-family',value))return;chosen=value;preview.update(value);apply.disabled=false;},{label:'Selected text font family',mixed:!chosen,preview:true});
@@ -969,12 +1049,16 @@ function showInlineFormatToolbar(){
   };
   const update=()=>{
     if(picker||fontDialog)return;
-    const selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null,valid=editing&&range&&!range.collapsed&&editing.el.contains(range.startContainer)&&editing.el.contains(range.endContainer);
+    const selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null,valid=editing&&range&&editing.el.contains(range.startContainer)&&editing.el.contains(range.endContainer)&&!(range.collapsed&&(range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer).closest('[contenteditable="false"]'));
     for(const control of bar.querySelectorAll('button,input,select'))if(!control.dataset.rangeAlwaysEnabled)control.disabled=!valid;
-    selectionNote.textContent=valid?'Selected text':'Select text to format';
+    selectionNote.textContent=valid?(range.collapsed?'Text you type next':'Selected text'):'Select text to format';
+    for(const button of commands.querySelectorAll('button'))button.disabled=!valid||range.collapsed&&['Superscript selected text','Subscript selected text'].includes(button.getAttribute('aria-label'));
+    if(valid&&!editing.caretComposition&&editing.caretStyle&&!sameCaret(range,editing.caretStyle.range))editing.caretStyle=null;
     if(!valid)return;savedRange=range.cloneRange();
+    colorField.retouchPaintScopeLabel=(range.collapsed?'Text you type next':'Selected text')+' · Applies across all screen sizes.';
     const values=new Map(fields.map(({property})=>[property,new Set()])),walker=d.createTreeWalker(editing.el,NodeFilter.SHOW_TEXT);
-    while(walker.nextNode()){const node=walker.currentNode;if(!node.textContent||!range.intersectsNode(node))continue;const style=d.defaultView.getComputedStyle(node.parentElement);for(const [property,set]of values){const css=style.getPropertyValue(property),parent=node.parentElement,authored=parent.__rtRangeStyleValues?.[property];set.add(authored?.css===parent.style.getPropertyValue(property)?authored.value:property==='color'&&parent.__rtRangeStyleCSS===css&&parent.__rtRangeStyleValue?parent.__rtRangeStyleValue:css);}}
+    if(range.collapsed){const parent=range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer,style=d.defaultView.getComputedStyle(parent);for(const [property,set]of values){const authored=parent.__rtRangeStyleValues?.[property];set.add(editing.caretStyle?.properties[property]??(authored?.css===parent.style.getPropertyValue(property)?authored.value:style.getPropertyValue(property)));}}
+    while(!range.collapsed&&walker.nextNode()){const node=walker.currentNode;if(!node.textContent||!range.intersectsNode(node))continue;const style=d.defaultView.getComputedStyle(node.parentElement);for(const [property,set]of values){const css=style.getPropertyValue(property),parent=node.parentElement,authored=parent.__rtRangeStyleValues?.[property];set.add(authored?.css===parent.style.getPropertyValue(property)?authored.value:property==='color'&&parent.__rtRangeStyleCSS===css&&parent.__rtRangeStyleValue?parent.__rtRangeStyleValue:css);}}
     for(const {field,property,display}of fields){
       const set=values.get(property),value=set.size===1?[...set][0]:'';
       if(display){if(document.activeElement!==field){try{field.value=value?display(value):'';}catch{field.value='';}}if(property==='color'){swatch.dataset.color=value;swatch.style.backgroundImage=value?'linear-gradient('+value+','+value+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)':'';}}
@@ -1013,7 +1097,8 @@ function showInlineFormatToolbar(){
 function applyTextRangeStyle(property,value){
   if(!editing||!RetouchRangeStyles.valid(property,value))return;
   const d=doc(),selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
-  if(!range||range.collapsed||!editing.el.contains(range.startContainer)||!editing.el.contains(range.endContainer))return;
+  if(!range||!editing.el.contains(range.startContainer)||!editing.el.contains(range.endContainer))return;
+  if(range.collapsed){if(!sameCaret(range,editing.caretStyle?.range))editing.caretStyle={properties:{},range:range.cloneRange()};editing.caretStyle.properties[property]=value;return;}
   const runs=[],walker=d.createTreeWalker(editing.el,NodeFilter.SHOW_TEXT);
   while(walker.nextNode()){
     const node=walker.currentNode;if(!range.intersectsNode(node))continue;
@@ -1076,7 +1161,8 @@ function toggleWrap(tag) {
   const s = d.getSelection();
   if (!s || !s.rangeCount) return;
   const r = s.getRangeAt(0);
-  if (r.collapsed||!editing.el.contains(r.startContainer)||!editing.el.contains(r.endContainer)) return;
+  if (!editing.el.contains(r.startContainer)||!editing.el.contains(r.endContainer)) return;
+  if(r.collapsed){const property=tag==='strong'?'font-weight':tag==='em'?'font-style':null;if(!property)return;const parent=r.startContainer.nodeType===3?r.startContainer.parentElement:r.startContainer,value=editing.caretStyle?.properties[property]||d.defaultView.getComputedStyle(parent).getPropertyValue(property);applyTextRangeStyle(property,tag==='strong'?(parseFloat(value)>=600?'400':'700'):(value==='italic'?'normal':'italic'));d.dispatchEvent(new Event('selectionchange'));return;}
   // Split only the selected portion when toggling existing formatting.
   const cac = r.commonAncestorContainer;
   const start = cac.nodeType === 1 ? cac : cac.parentElement;

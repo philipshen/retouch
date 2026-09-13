@@ -1047,3 +1047,44 @@ partial split/merge, draft/Done behavior, and exact source undo/redo. The same
 runs passed React spacing/combined-style regressions and Liquid inspector
 interaction checks. The inspected sidebar capture is
 `/private/tmp/retouch-range-case.png`.
+
+### Typography at the text cursor (2026-09-13)
+
+A collapsed cursor now enables the supported font, weight, size, spacing, style,
+case, caps, and color controls. The inspector identifies their scope as
+“Text you type next.” Choices remain editor state until text is inserted; an
+unused choice creates neither an empty span nor a source-history entry. Enter
+in a cursor field returns focus to the text instead of finishing the edit. Font
+and color picker Apply likewise retain the edit and pending choices. Selected
+ranges retain their existing preview and commit behavior.
+
+Typed text and plain-text paste receive the pending properties through the same
+source-aware range styling path. Existing plain styled runs split around new
+text while retaining their other properties. Moving the cursor resets the draft.
+Cmd/Ctrl+B and Cmd/Ctrl+I toggle the next text's weight/style. Composition events
+allow the browser to finish composing before the inserted text is styled; a
+composition that changes unrelated surrounding text drops the draft instead of
+applying it to a guessed range. Composing Enter does not finish editing.
+
+Styled insertion has a bounded in-edit undo/redo stack that retains original DOM
+nodes, source metadata, cursor positions, and pending styles. A snapshot is only
+restored when the current markup matches its expected state; intervening native
+edits continue through native undo first. New native input invalidates pending
+custom redo. Done still commits the full text edit through exact source history.
+This is not yet a unified history for every formatting action and native browser
+editing command.
+
+Superscript/subscript cursor formatting and full multiline editing remain
+unfinished. Physical IME workflows are not certified by the synthetic composition
+checks. Responsive range overrides, broader Figma parity, and trusted desktop
+distribution remain incomplete; the existing desktop archive predates this work.
+
+Validation: all 1,189 unit tests passed in
+`/private/tmp/retouch-caret-final-units.log`. HTML/React Chromium 145 and Liquid
+WebKit 26.0 browser checks passed in
+`/private/tmp/retouch-caret-final-{html,react,liquid}.log`. The new workflow checks
+unused drafts, successive styles while typing, in-edit undo/redo, reopening a
+saved styled run, movement reset, plain paste, synthetic composition, font/color
+pickers, keyboard italic, and exact committed source undo/redo. Additional
+workflows verified HTML/Liquid inspector interactions and React selected-range
+font/color pickers. The inspected capture is `/private/tmp/retouch-caret.png`.
