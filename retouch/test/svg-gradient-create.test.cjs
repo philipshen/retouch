@@ -15,6 +15,15 @@ for(const kind of ['html','react','liquid']){
   const name=kind==='react'?'className':'class',source=original.replace('<rect ','<rect '+name+'="layout-marker opacity-50 stroke-2" '),result=create(source);assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(name+'="layout-marker opacity-50 stroke-2"'));
   for(const token of ['fill-red-500','md:fill-red-500','hover:!fill-current','[&:hover]:[fill:blue]']){const source=original.replace('<rect ','<rect '+name+'="'+token+'" ');assert.equal(create(source).refused,true);const stroke=create(source,{paint:'stroke'});assert.equal(stroke.ok,true,stroke.reason);}
  });
+ test(kind+' inline empty paint supports solid addition, removal and gradient creation',()=>{
+  const style=kind==='react'?'style={{fill:"none",stroke:"blue",opacity:.8}}':'style="fill:none;stroke:blue;opacity:.8"',source=original.replace('<rect ','<rect '+style+' ');
+  for(const type of ['solid','linearGradient','radialGradient'])for(const color of type==='solid'?['#123456','none']:['#123456']){
+   const result=create(source,{value:{type,color}});assert.equal(result.ok,true,result.reason);const after=result.edits[0].after;
+   assert.ok(after.includes('opacity:.8'));assert.ok(after.includes(kind==='react'?'stroke:"blue"':'stroke:blue'));
+   if(type==='solid'){assert.ok(after.includes('fill="'+color+'"'));assert.ok(!after.includes('<defs>'));assert.equal(adapter.describe(resolve(after)).svgGradients.length,0);}else assert.equal(adapter.describe(resolve(after)).svgGradients[0].type,type);
+  }
+  assert.equal(create(original,{value:{type:'solid',color:'red'}}).refused,true);
+ });
  test(kind+' creation appends into the nearest nested SVG and preserves siblings',()=>{const source=wrap('<svg><svg><rect/></svg><circle r="10"/></svg>'),result=create(source);assert.equal(result.ok,true,result.reason);assert.match(result.edits[0].after,/<\/defs><\/svg><circle/);});
  test(kind+' creation preserves unrelated inline styles and guards paint ownership independently',()=>{
   const styles=kind==='react'?['style={{opacity:0.8,strokeWidth:3}}','style={{fill:null,stroke:"",opacity:0.5}}','style={null}']:['style="opacity:.8;stroke-width:3px"',`style="--note:'fill:red;stroke:blue';opacity:calc(1 - .2)"`,'style="/* fill:red */ opacity:.8;--tokens:{fill:red;stroke:blue}"'];

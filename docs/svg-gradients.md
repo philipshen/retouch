@@ -33,3 +33,6 @@ The browser workflow exercises shared linear paint, radial focus, stop colors/op
 
 
 Gradient creation checks active animation keyframes per paint property. An opacity or transform animation does not prevent creating fill or stroke gradients; an animation of fill protects fill while leaving stroke independently editable (and conversely). Unknown animation effects remain protected. Transition durations are matched to their corresponding properties, including repeated duration lists. This does not add timeline editing or guarantee that a site retains runtime animations across a source reload.
+
+
+Static inline `none` paint uses the compact Add paint menu in HTML, React and Liquid. In the base style scope, Solid opens the normal color picker and applies through the inline-to-attribute source transaction; Linear and Radial create normal editable gradients. Static inline solid colors also support base-scope color editing and removal through this path. Other declarations remain intact, and undo restores the original inline source exactly. Scoped edits retain the existing inline ownership restrictions. Add paint menus stay anchored through inspector scroll events and close when their opener leaves the panel view.

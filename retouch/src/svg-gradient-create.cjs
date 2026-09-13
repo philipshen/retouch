@@ -16,7 +16,7 @@ function inlinePaintOwnership(selected,kind,source){
   for(const paint of ['fill','stroke']){
    const matches=object.properties.filter(property=>(property.key.name??property.key.value)===paint);
    const value=matches.length===1?matches[0].value:null;
-   if(value?.type==='StringLiteral'&&!/\bvar\(/i.test(value.value)&&require('./html-svg-gradient.cjs').valid('stop-color',value.value))conversions[paint]={start:value.start,end:value.end,text:'null'};
+   if(value?.type==='StringLiteral'&&!/\bvar\(/i.test(value.value)&&(value.value==='none'||require('./html-svg-gradient.cjs').valid('stop-color',value.value)))conversions[paint]={start:value.start,end:value.end,text:'null'};
   }
   return {properties,conversions};
  }
@@ -39,7 +39,7 @@ function inlinePaintOwnership(selected,kind,source){
  const conversions={},raw=source.slice(style.start,style.end),quoted=/^style\s*=\s*(["'])([\s\S]*)\1$/i.exec(raw);
  for(const paint of ['fill','stroke']){
   const matches=declarations.filter(declaration=>declaration.name===paint),declaration=matches.length===1?matches[0]:null;
-  if(!declaration||/\bvar\(/i.test(declaration.value)||!require('./html-svg-gradient.cjs').valid('stop-color',declaration.value.replace(/\s*!important\s*$/i,'')))continue;
+  if(!declaration||/\bvar\(/i.test(declaration.value)||!(declaration.value.replace(/\s*!important\s*$/i,'')==='none'||require('./html-svg-gradient.cjs').valid('stop-color',declaration.value.replace(/\s*!important\s*$/i,''))))continue;
   if(quoted&&quoted[2]===style.value){const offset=style.start+raw.indexOf(quoted[1])+1;conversions[paint]={start:offset+declaration.start,end:offset+declaration.end,text:''};}
   else{const remaining=style.value.slice(0,declaration.start)+style.value.slice(declaration.end);conversions[paint]={start:style.start,end:style.end,text:'style="'+remaining.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'"'};}
  }
@@ -71,12 +71,13 @@ function describe(resolved,kind){const state=inspect(resolved,kind);if(!state)re
 function plan(resolved,op,kind){
  const refuse=reason=>({ok:false,refused:true,reason}),state=inspect(resolved,kind);if(!state)return refuse('Select an SVG shape to create a gradient.');if(state.reason)return refuse(state.reason);
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the SVG layer.');
- const value=op.value;if(!['fill','stroke'].includes(op.paint)||op.stop!==undefined||op.changes!==undefined||!value||Object.keys(value).sort().join(',')!=='color,type'||!['linearGradient','radialGradient'].includes(value.type)||typeof value.color!=='string'||!require('./html-svg-gradient.cjs').valid('stop-color',value.color))return refuse('Choose a gradient type and a valid starting color.');
+ const value=op.value;if(!['fill','stroke'].includes(op.paint)||op.stop!==undefined||op.changes!==undefined||!value||Object.keys(value).sort().join(',')!=='color,type'||!['solid','linearGradient','radialGradient'].includes(value.type)||typeof value.color!=='string'||!(value.type==='solid'&&value.color==='none'||require('./html-svg-gradient.cjs').valid('stop-color',value.color)))return refuse('Choose a gradient type and a valid starting color.');
+ if(value.type==='solid'&&!state.inlineConversions[op.paint])return refuse('Select a static inline paint to replace.');
  if(state.paintReasons[op.paint])return refuse(state.paintReasons[op.paint]);
  const {selected,viewport}=state,old=selected.attrs.find(a=>a.name===op.paint);if(/^url\(/.test(old?.value||''))return refuse('Edit the existing paint resource instead.');
  let id,serial=0;do{id='rt-gradient-'+contentHash(resolved.source+'|'+resolved.element.id+'|'+op.paint+'|'+serial++).slice(0,12);}while(resolved.source.includes(id));
  const escape=s=>s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'),color=kind==='react'?'stopColor':'stop-color',opacity=kind==='react'?'stopOpacity':'stop-opacity';
- const resource='<defs><'+value.type+' id="'+id+'"><stop offset="0" '+color+'="'+escape(value.color)+'"/><stop offset="1" '+color+'="'+escape(value.color)+'" '+opacity+'="0"/></'+value.type+'></defs>',token=op.paint+'="url(#'+id+')"',out=new MagicString(resolved.source);
+ const resource=value.type==='solid'?'':'<defs><'+value.type+' id="'+id+'"><stop offset="0" '+color+'="'+escape(value.color)+'"/><stop offset="1" '+color+'="'+escape(value.color)+'" '+opacity+'="0"/></'+value.type+'></defs>',token=op.paint+'="'+(value.type==='solid'?escape(value.color):'url(#'+id+')')+'"',out=new MagicString(resolved.source);
  let delta;if(old){if(!Number.isInteger(old.start)||!Number.isInteger(old.end))return refuse('The paint attribute has no source location.');out.overwrite(old.start,old.end,token);delta=token.length-(old.end-old.start);}else{out.appendLeft(selected.nameEnd,' '+token);delta=token.length+1;}
  const conversion=state.inlineConversions[op.paint];if(conversion){out.overwrite(conversion.start,conversion.end,conversion.text);delta+=conversion.text.length-(conversion.end-conversion.start);}
  out.appendLeft(viewport.close,resource);const after=out.toString(),at=viewport.close+delta,adapter=require('./adapters/'+kind+'.cjs'),location=el=>kind==='html'?el.location.startOffset:kind==='react'?el.node.start:el.tagStart;

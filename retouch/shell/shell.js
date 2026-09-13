@@ -1339,6 +1339,7 @@ function renderPanelContents() {
       tsec.appendChild(label);
     }
   }
+  configureSVGInlinePaint(info,target);
   if (info.text !== null) {
     const ta = document.createElement('textarea');
     ta.id = 'textEdit';
@@ -2396,11 +2397,21 @@ function editSVGGradientOnCanvas(info,target,gradient,focusLabel=null){
 
  stopDrawing=RetouchSVGGradientCanvas.mount({target,gradient,frame:iframe,canvas:canvasSurface,current,save,addStop,removeStop,editStopColor,saveStop:(stop,value,focus,keepEditing)=>save(undefined,focus,keepEditing,stop,'moveStop',value),focusLabel,onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
 }
+function configureSVGInlinePaint(info,target){
+ const creation=info.svgGradientCreation;if(!creation||creation.reason||!target)return;
+ for(const paint of creation.paints){
+  if(!styleScope&&creation.inlinePaints?.includes(paint)&&!creation.paintReasons?.[paint]&&!RetouchSVGPaint.attributeReason(target,paint,true)){
+   const input=panelBody.querySelector('[aria-label="SVG '+paint+'"]');
+   if(input){input.disabled=false;input.title='Edit this inline paint';input.onchange=()=>{const color=input.value.trim();if(color!=='none'&&!CSS.supports('color',color)){input.setCustomValidity('Enter a color or none.');input.reportValidity();return;}const blocked=RetouchSVGPaint.attributeReason(target,paint,true);if(blocked)return toast(blocked,'err');setSVGGradient(info,paint,undefined,undefined,'create',{type:'solid',color});};}
+  }
+ }
+}
 function mountSVGGradientCreation(info,target){
  const creation=info.svgGradientCreation;if(!creation.paints.length||!target)return;
  const section=RetouchInspector.section('Create gradient');
  if(creation.reason){RetouchInspector.note(section,creation.reason,'refused');panelBody.append(section);return;}
- for(const paint of creation.paints){const reason=creation.paintReasons?.[paint]||RetouchSVGPaint.attributeReason(target,paint,creation.inlinePaints?.includes(paint));const select=RetouchInspector.select(section,paint==='fill'?'Fill type':'Stroke type',[['solid','Solid'],['linearGradient','Linear'],['radialGradient','Radial']],'solid',type=>{
+ for(const paint of creation.paints){
+  const reason=creation.paintReasons?.[paint]||RetouchSVGPaint.attributeReason(target,paint,creation.inlinePaints?.includes(paint));const select=RetouchInspector.select(section,paint==='fill'?'Fill type':'Stroke type',[['solid','Solid'],['linearGradient','Linear'],['radialGradient','Radial']],'solid',type=>{
   if(type==='solid')return;const blocked=creation.paintReasons?.[paint]||RetouchSVGPaint.attributeReason(target,paint,creation.inlinePaints?.includes(paint));if(blocked){select.value='solid';toast(blocked,'err');return;}const color=target.ownerDocument.defaultView.getComputedStyle(target).getPropertyValue(paint).trim();
   setSVGGradient(info,paint,undefined,undefined,'create',{type,color:color==='none'?'#000000':color});
  });select.disabled=!!reason;select.title=reason||'Create a gradient from the current color to transparent';}
@@ -2440,7 +2451,7 @@ function mountSVGGradients(info,target){
 }
 async function setSVGGradient(info,paint,changes,stop,action,value,refreshOptions={}){
  if(sel?.info!==info||panelTasks||undoBusy||sourceRequests)return;busyPanel(true);
- try{const result=await api('POST','/rt/__api/op',{type:'setSVGGradient',id:info.id,fileHash:info.hash,paint,...(changes===undefined?{}:{changes}),...(stop===undefined?{}:{stop}),...(action===undefined?{}:{action,value})});if(!result?.ok)return toast(result?.reason||result?.error||'Could not update gradient','err');if(result.undoId)editorHistory.record({type:'setSVGGradient',id:info.id,undoId:result.undoId});sel.info=result.element;await refreshWrittenElement(sel.info,el=>svgGradientsMatch(el,sel.info),refreshOptions);renderPanel();toast('Gradient updated','ok');return true;}finally{busyPanel(false);}
+ try{const result=await api('POST','/rt/__api/op',{type:'setSVGGradient',id:info.id,fileHash:info.hash,paint,...(changes===undefined?{}:{changes}),...(stop===undefined?{}:{stop}),...(action===undefined?{}:{action,value})});if(!result?.ok)return toast(result?.reason||result?.error||'Could not update gradient','err');if(result.undoId)editorHistory.record({type:'setSVGGradient',id:info.id,undoId:result.undoId});sel.info=result.element;await refreshWrittenElement(sel.info,el=>svgGradientsMatch(el,sel.info),refreshOptions);renderPanel();toast(value?.type==='solid'?'Paint updated':'Gradient updated','ok');return true;}finally{busyPanel(false);}
 }
 async function setSVGGeometry(property,value){
   if(!sel||panelTasks||undoBusy||sourceRequests)return;const info=sel.info;busyPanel(true);
