@@ -37,13 +37,14 @@ function inspect(resolved,kind,paint){
   if(n.children.some(child=>!(n===node&&child.tag==='stop')))reason='This gradient contains animation or unsupported child elements.';
  }
  if(!stops.length||stops.length>64)reason='Choose a gradient with 1 to 64 color stops.';
- return {node,stops,id:reference[2],paint,reason};
+ return {node,stops,selected,id:reference[2],paint,reason};
 }
 function describe(resolved,kind){return ['fill','stroke'].flatMap(paint=>{const state=inspect(resolved,kind,paint);if(!state)return [];const {node,stops,id,reason}=state;return [{paint,id,type:node.tag,reason,fields:[...coordinates[node.tag],'gradientUnits','spreadMethod'].map(name=>({name,value:attr(node,name)})),stops:stops.map(stop=>({offset:attr(stop,'offset'),color:attr(stop,'stop-color'),opacity:attr(stop,'stop-opacity')}))}];});}
 function plan(resolved,op,kind){
  const refuse=reason=>({ok:false,refused:true,reason}),state=inspect(resolved,kind,op.paint);
  if(!state)return refuse('Select a layer with a local linear or radial gradient attribute.');if(state.reason)return refuse(state.reason);
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the gradient layer.');
+ if(op.action==='detach')return require('./svg-gradient-detach.cjs').plan(resolved,op,state,kind);
  if(op.action!==undefined)return require('./svg-gradient-stops.cjs').plan(resolved,op,state,kind);
  const stop=op.stop!==undefined;if(stop&&(!Number.isInteger(op.stop)||op.stop<0||op.stop>=state.stops.length))return refuse('Choose an existing gradient stop.');
  const node=stop?state.stops[op.stop]:state.node,allowed=stop?['offset','stop-color','stop-opacity']:[...coordinates[state.node.tag],'gradientUnits','spreadMethod'];

@@ -2314,7 +2314,7 @@ async function writeSVGTransform(info,target,matrix){
   const reason=RetouchSVGResize.reason(target,info,true);if(reason)return toast(reason,'err');busyPanel(true);
    try{const result=await api('POST','/rt/__api/op',{type:'setSVGTransform',id:info.id,fileHash:info.hash,matrix});if(!result?.ok)return toast(result?.reason||result?.error||'Could not update vector','err');if(result.undoId)editorHistory.record({type:'setSVGTransform',id:info.id,undoId:result.undoId});sel.info=result.element;await refreshWrittenElement(sel.info,el=>el.getAttribute('transform')===sel.info.svgTransform?.value);renderPanel();toast('Vector updated','ok');}finally{busyPanel(false);}
 }
-function svgGradientsMatch(el,info){return (info.svgGradients||[]).every(gradient=>{const node=el.ownerDocument.getElementById(gradient.id);if(!node)return false;const stops=[...node.children].filter(child=>child.localName==='stop');return gradient.fields.every(field=>node.getAttribute(field.name)===field.value)&&stops.length===gradient.stops.length&&gradient.stops.every((stop,i)=>stops[i].getAttribute('offset')===stop.offset&&stops[i].getAttribute('stop-color')===stop.color&&stops[i].getAttribute('stop-opacity')===stop.opacity);});}
+function svgGradientsMatch(el,info){return (info.svgGradients||[]).every(gradient=>{const node=el.ownerDocument.getElementById(gradient.id),reference=/^url\(\s*(['"]?)#([\w:.-]+)\1\s*\)$/.exec(el.getAttribute(gradient.paint)||'');if(!node||reference?.[2]!==gradient.id)return false;const stops=[...node.children].filter(child=>child.localName==='stop');return gradient.fields.every(field=>node.getAttribute(field.name)===field.value)&&stops.length===gradient.stops.length&&gradient.stops.every((stop,i)=>stops[i].getAttribute('offset')===stop.offset&&stops[i].getAttribute('stop-color')===stop.color&&stops[i].getAttribute('stop-opacity')===stop.opacity);});}
 function mountSVGGradientStopRail(section,info,target,gradient){
  const definition=target?.ownerDocument.getElementById(gradient.id),nodes=[...(definition?.children||[])].filter(node=>node.localName==='stop');if(nodes.length!==gradient.stops.length)return;
  const w=target.ownerDocument.defaultView;let previous=0;
@@ -2348,6 +2348,7 @@ function mountSVGGradients(info,target){
   const section=RetouchInspector.section(gradient.paint==='fill'?'Fill gradient':'Stroke gradient');
   RetouchInspector.note(section,(gradient.type==='linearGradient'?'Linear':'Radial')+' · #'+gradient.id);
   const reason=gradient.reason; if(reason){RetouchInspector.note(section,reason,'refused');panelBody.append(section);continue;}
+  const unique=RetouchInspector.button('Make unique',()=>setSVGGradient(info,gradient.paint,undefined,undefined,'detach'));unique.setAttribute('aria-label','Make '+gradient.paint+' gradient unique');section.append(unique);
   const bindStops=mountSVGGradientStopRail(section,info,target,gradient);
   const write=(changes,stop)=>setSVGGradient(info,gradient.paint,changes,stop);
   const field=(parent,label,value,property,stop,options)=>{let input;
