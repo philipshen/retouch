@@ -13,7 +13,7 @@ test('SVG duplicate remaps independent managed paint identities and copies every
  const edited=css.plan(two,{width:768,property:'fill',value:'green'});assert.equal(edited.ok,true);const changed=resolve(edited.edits[0].after);assert.deepEqual(css.describe(changed).cssRules,{0:{fill:'red'},768:{fill:'blue'}});
 });
 test('SVG duplicate refuses identity collisions, templates, unsupported descendants and stale writes',()=>{
- for(const [source,tag]of [[original.replace('<rect ','<rect id="box" '),'g'],[original.replace('<g>','<g v-if="shown">'),'rect'],[original.replace('<g>','<g><text>Hello</text>'),'g']]){const r=resolve(source,tag);assert.equal(duplicate.describe(r),null);assert.equal(duplicate.plan(r,{fileHash:r.hash}).refused,true);}
+ for(const [source,tag]of [[original.replace('<rect ','<rect id="box" '),'g'],[original.replace('<g>','<g v-if="shown">'),'rect'],[original.replace('<g>','<g><foreignObject><p>Hello</p></foreignObject>'),'g']]){const r=resolve(source,tag);assert.equal(duplicate.describe(r),null);assert.equal(duplicate.plan(r,{fileHash:r.hash}).refused,true);}
  const r=resolve();assert.equal(duplicate.plan(r,{fileHash:'stale'}).refused,true);assert.equal(duplicate.plan(r,{}).refused,true);
 });
 

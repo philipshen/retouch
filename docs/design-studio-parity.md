@@ -13590,3 +13590,43 @@ ID/notarized public release. Intel execution, native workflows, trusted upgrades
 full Figma/any-site parity and public release remain open. Older startup-recovery
 and WebKit Fill-height checks were not rerun for this archive. No push or public
 release was performed.
+
+
+## 2026-09-13 — Direct SVG bounds resizing
+
+Selected SVG vectors now expose eight canvas bounds handles and a Resize vector
+on canvas action. A drag previews a composed transform without rewriting curve,
+arc, point, text, image, reference, or group content. Release creates one source
+transaction; Undo/Redo restores exact source. Shift retains proportions,
+Option/Alt anchors the center, arrows adjust by 1 (Shift: 10), Enter applies,
+and Escape cancels. Horizontal/vertical lines can expand from a zero extent.
+HTML now indexes SVG text, images, and use references, matching the other
+renderers for this operation; definitions remain excluded from HTML indexing.
+
+Transform ownership uses rendered parent/child matrices because WebKit can
+report computed transform none for a rendered SVG attribute transform.
+Chromium re-hints transformed glyphs, so text ownership checks measure a hidden
+copy at the original transform. External geometry/transform changes cancel;
+cleanup preserves changes the tool does not own. CSS-owned, dynamic, repeated,
+animated, singular, and unmeasurable selections retain explicit guards.
+
+Validation: 1,008 unit tests passed with a terminal zero exit. Shared browser
+workflows passed on HTML/WebKit 26 and React/Liquid Chromium, covering 13 vector
+cases, authored transforms, untouched preview source, exact Undo/Redo, keyboard
+apply/cancel, centered proportional drag, concurrent changes, and CSS ownership.
+HTML/WebKit corner-radius canvas regression also passed. Browser geometry
+assertions allow one screen pixel for pointer rounding and two for re-hinted
+text, while source restoration remains exact. The Liquid screenshot was viewed.
+Logs: /private/tmp/retouch-svg-resize-{html,react,liquid,units}.log and
+/private/tmp/retouch-svg-resize-radius-regression.log.
+
+During verification, the worktree .git link and 108 previously present tracked
+files disappeared along with test fixture dependency files. Git worktree repair
+and restoration of only missing HEAD files recovered the checkout without
+replacing modified files. The isolated fixture dependencies were restored;
+the separate native iOS checkout was not edited. Recovery inventory is at
+/private/tmp/retouch-restored-missing-files.txt.
+
+This increment is local source work; no new desktop archive or push was made.
+Numeric transformed bounds, flipping through zero, multi-selection vector
+resizing, full Figma parity, and arbitrary-site coverage remain open.

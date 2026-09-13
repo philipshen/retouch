@@ -17,7 +17,7 @@ function collect(source,relPath){
   for(const node of parent.childNodes||[]){
    if(!node.tagName)continue;
    const here=route+'/'+index++;
-   if(skip.has(node.tagName)||node.namespaceURI!=='http://www.w3.org/1999/xhtml'&&!(node.namespaceURI==='http://www.w3.org/2000/svg'&&['svg','g','rect','circle','ellipse','line','path','polyline','polygon'].includes(node.tagName)))continue;
+   if(skip.has(node.tagName)||node.namespaceURI!=='http://www.w3.org/1999/xhtml'&&!(node.namespaceURI==='http://www.w3.org/2000/svg'&&['svg','g','rect','circle','ellipse','line','path','polyline','polygon','text','image','use'].includes(node.tagName)))continue;
    const start=node.sourceCodeLocation?.startTag;
    if(start&&!duplicateAttributes.some(offset=>offset>=start.startOffset&&offset<start.endOffset))elements.push({id:hash(relPath+'|'+here).slice(0,10),kind:'host',tag:node.tagName,node,location:node.sourceCodeLocation});
    walk(node,here);
@@ -42,7 +42,7 @@ function picture(el){for(let p=el.node.parentNode;p;p=p.parentNode)if(p.tagName=
 function describe(resolved){
  const el=resolved.element,canText=el.node.namespaceURI==='http://www.w3.org/1999/xhtml'&&!!plain(el),canSrc=el.tag==='img'&&attr(el,'srcset')===null&&!picture(el);
  const svgDuplication=require('../svg-duplicate.cjs').describe(resolved);
- return {svgConversion:require('../svg-convert.cjs').describe(resolved),svgDuplication,svgMovement:require('../svg-move.cjs').describe(resolved),svgDeletion:require('../svg-delete.cjs').describe(resolved),svgInsertion:require('../svg-insert.cjs').describe(resolved),svgGeometry:require('../svg-geometry.cjs').describe(el),structure:{...structure.describe(resolved,'html'),...insertion.describe(resolved),...require('../svg-delete.cjs').describe(resolved),...require('../svg-move.cjs').describe(resolved),...svgDuplication},id:el.id,kind:'host',tag:el.tag,file:resolved.relPath,hash:resolved.hash,className:attr(el,'class')||'',classNameDynamic:false,
+ return {svgTransform:require('../svg-transform.cjs').describe(resolved,'html'),svgConversion:require('../svg-convert.cjs').describe(resolved),svgDuplication,svgMovement:require('../svg-move.cjs').describe(resolved),svgDeletion:require('../svg-delete.cjs').describe(resolved),svgInsertion:require('../svg-insert.cjs').describe(resolved),svgGeometry:require('../svg-geometry.cjs').describe(el),structure:{...structure.describe(resolved,'html'),...insertion.describe(resolved),...require('../svg-delete.cjs').describe(resolved),...require('../svg-move.cjs').describe(resolved),...svgDuplication},id:el.id,kind:'host',tag:el.tag,file:resolved.relPath,hash:resolved.hash,className:attr(el,'class')||'',classNameDynamic:false,
   canRename:true,layerName:attr(el,'data-rt-name')||'',text:canText?el.node.childNodes.map(n=>n.value).join(''):null,textDynamic:!canText,mixedText:false,canSetChildren:false,
   textReason:canText?null:'This HTML region contains nested markup, comments, or an implicit closing tag.',
   src:attr(el,'src'),srcDynamic:false,canSetSrc:canSrc,srcReason:canSrc?null:'Select a plain image without responsive sources.',
@@ -54,6 +54,7 @@ function planOp(resolved,op){
  if(op.type==='deleteElement'&&resolved.element.node.namespaceURI==='http://www.w3.org/2000/svg')return require('../svg-delete.cjs').plan(resolved,op);
  if(op.type==='insertSVG')return require('../svg-insert.cjs').plan(resolved,op);
  if(op.type==='convertSVGToPath')return require('../svg-convert.cjs').plan(resolved,op);
+ if(op.type==='setSVGTransform')return require('../svg-transform.cjs').plan(resolved,op,'html');
  if(op.type==='setSVGGeometry')return require('../svg-geometry.cjs').plan(resolved,op);
  if(op.type==='reparentElement')return require('../html-reparent.cjs').plan(resolved,op);
  if(op.type==='insertElement')return insertion.plan(resolved,op);
@@ -94,4 +95,4 @@ function planOp(resolved,op){
 }
 module.exports={name:'html',matches:file=>/\.html?$/i.test(file),collect,stamp,contentHash:hash,describe,planOp,
  applyOp:(resolved,op)=>require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),planOp(resolved,op)),
- capabilities:{classAttr:'class',ops:['insertSVG','setSVGGeometry', 'convertSVGToPath','reparentElement','renameElement','insertElement','setClasses','setText','setTag','setSrc',...structure.types]}};
+ capabilities:{classAttr:'class',ops:['insertSVG','setSVGGeometry','setSVGTransform', 'convertSVGToPath','reparentElement','renameElement','insertElement','setClasses','setText','setTag','setSrc',...structure.types]}};

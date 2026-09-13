@@ -69,7 +69,7 @@ test('refresh refuses linked nodes omitted by the source index, including templa
  const variants=[
   linkedSource.replace('<h1 ','<h1 class="a" class="b" '),
   linkedSource.replace('<h1 ','<template><h1 ').replace('</h1>','</h1></template>'),
-  linkedSource.replace('<h1 ','<svg><text ').replace('</h1>','</text></svg>')
+  linkedSource.replace('<h1 ','<svg><defs><text ').replace('</h1>','</text></defs></svg>')
  ];
  for(const source of variants){const plan=linked.planFile('/tmp/index.html','index.html',source,{...style,properties:{'font-size':'48px'}});assert.equal(plan.ok,false);assert.match(plan.reason,/unsupported or ambiguous markup/);assert.equal(plan.edits,undefined);}
 });
