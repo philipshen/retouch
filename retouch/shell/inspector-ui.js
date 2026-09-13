@@ -11,8 +11,8 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
  let closePaintMenu=null;
  function addSVGPaint(input,type,opener,paint){
   closePaintMenu?.();root.RetouchActions?.closeContext();
-  const menu=document.createElement('div');menu.className='rt-context-menu';menu.setAttribute('role','menu');menu.setAttribute('aria-label','Add '+paint);
-  const close=(focus=false)=>{menu.remove();observer.disconnect();document.removeEventListener('pointerdown',outside,true);root.removeEventListener('resize',cancel);root.removeEventListener('scroll',cancel,true);opener.setAttribute('aria-expanded','false');closePaintMenu=null;if(focus&&opener.isConnected)opener.focus({preventScroll:true});};
+  const menu=document.createElement('div');menu.className='rt-context-menu svg-paint-menu';menu.retouchSourceInput=input;menu.setAttribute('role','menu');menu.setAttribute('aria-label','Add '+paint);
+  const close=(focus=false)=>{menu.remove();observer.disconnect();document.removeEventListener('pointerdown',outside,true);root.removeEventListener('resize',cancel);root.removeEventListener('scroll',cancel,true);opener.setAttribute('aria-expanded','false');closePaintMenu=null;if(focus&&opener.isConnected)opener.focus({preventScroll:true});root.dispatchEvent(new Event('retouch:paint-menu-close'));};
   const outside=event=>{if(!menu.contains(event.target))close();},cancel=()=>close(),observer=new MutationObserver(()=>{if(!opener.isConnected)close();});
   for(const [value,label]of [['solid','Solid'],['linearGradient','Linear gradient'],['radialGradient','Radial gradient']]){
    const item=document.createElement('button');item.type='button';item.setAttribute('role','menuitem');item.textContent=label;item.disabled=value==='solid'?input.disabled:!type||type.disabled;

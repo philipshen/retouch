@@ -1076,7 +1076,8 @@ function screenScopeSection() {
 }
 window.addEventListener('retouch:comparisons',()=>{const across=document.getElementById('compareBreakpointBoundary');if(across)across.disabled=!window.RetouchComparisons?.canShowSizes(JSON.parse(across.dataset.sizes));const button=document.getElementById('compareBreakpoint');if(button)button.disabled=!window.RetouchComparisons?.canShowSize({width:Number(button.dataset.width),height:Number(button.dataset.height)});});
 // Scope navigation needs fresh viewport choices even while its selector has focus.
-function panelPaintDraftFocused(){const picker=document.querySelector('.paint-picker[open]');return !!picker&&panelBody.contains(picker.retouchSourceInput);}
+// Paint menus live outside the panel, but their source control is still in use.
+function panelPaintDraftFocused(){const picker=document.querySelector('.paint-picker[open], .svg-paint-menu');return !!picker&&panelBody.contains(picker.retouchSourceInput);}
 function panelInteractionFocused(){return panelPaintDraftFocused()||panelBody.contains(document.activeElement)&&!document.activeElement.matches('[data-canvas-tool], [aria-label="Style screen scope"]');}
 let viewportRenderPending = false;
 function queueViewportPanelRefresh(){
@@ -1088,6 +1089,7 @@ function queueViewportPanelRefresh(){
   });
 }
 window.addEventListener('retouch:viewport',queueViewportPanelRefresh);
+window.addEventListener('retouch:paint-menu-close',queueViewportPanelRefresh);
 let renderedPanelSelection=null,panelPointer=null,panelRenderDeferred=false;
 window.addEventListener('pointerdown',event=>{
   if(event.button===0&&panelBody.contains(event.target))panelPointer={id:event.pointerId};

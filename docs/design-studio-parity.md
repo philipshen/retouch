@@ -14420,3 +14420,35 @@ Logs: `/private/tmp/retouch-empty-paint-html.log`,
 
 No desktop rebuild or native launch in this increment. Broader inspector
 fidelity, full Figma parity and universal site editing remain incomplete.
+
+## 2026-09-13 — Keep Add paint open through responsive inspector refreshes
+
+Screen-scoped browser verification reproduced an Add paint menu disappearing
+before the user could choose Solid. A delayed inspector refresh removed the
+menu's source control after phone/tablet switching. The menu now identifies its
+source input and participates in the existing paint-draft preservation guard.
+Closing it schedules the deferred refresh; opening the picker from the menu
+continues to preserve the same source control. Changed selections still remove
+the old control and dismiss the menu. Temporary tracing was removed.
+
+The shared empty-paint workflow now supports tablet-scoped validation. It checks
+that Remove and Add Solid affect the 768px range while the 390px phone retains
+its original fill/stroke, switching previews does not write source, returning
+to tablet restores the edited appearance, and source Undo/Redo remains exact.
+It also deterministically requests an inspector refresh while the menu is open
+and asserts that the menu survives.
+
+HTML/WebKit, React/Chromium and Liquid/WebKit scoped workflows pass after the
+fix; all three had failed at menu selection before it. The base HTML/WebKit
+workflow also passes direct gradient creation, preview cancellation and history.
+All 1131 unit tests pass. Every process exited 0. Logs:
+`/private/tmp/retouch-empty-paint-scope-html-fixed.log`,
+`/private/tmp/retouch-empty-paint-scope-react-fixed.log`,
+`/private/tmp/retouch-empty-paint-scope-liquid-fixed.log`,
+`/private/tmp/retouch-paint-menu-base-regression.log`,
+`/private/tmp/retouch-paint-menu-refresh-units.log`.
+The scoped HTML log predates its wording correction and mentions gradient
+creation; gradient creation was checked separately by the base regression.
+
+No desktop rebuild or native launch in this increment. Full Figma parity and
+universal site support remain incomplete.
