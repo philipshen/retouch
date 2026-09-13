@@ -7,6 +7,7 @@ exports.run=async function({page,app,file,wait,settled,kind,errors}){
  const edit=async(label,value)=>{const input=page.getByLabel(label,{exact:true});await input.fill(value);await input.press('Tab');await settled();};
  await app.locator('[aria-label="Gradient box"]').click();await settled();await wait(async()=>await page.getByLabel('Stop 1 color',{exact:true}).count()===1);
   await require('./svg-gradient-stop-editing.cjs').run({page,app,file,wait,settled});
+  await require('./svg-gradient-stop-drag.cjs').run({page,app,file,wait,settled});
   for(const [label,value,selector,attribute]of [['Stop 1 color','#00ff00','#paint stop:first-child','stop-color'],['Stop 2 position','75%','#paint stop:last-child','offset'],['Stop 2 opacity','0.5','#paint stop:last-child','stop-opacity'],['Gradient x2','60%','#paint','x2']]){
    await edit(label,value);await wait(async()=>await app.locator(selector).getAttribute(attribute)===value);if(attribute==='stop-color')assert.equal(await app.locator(selector).evaluate(el=>getComputedStyle(el).stopColor),'rgb(0, 255, 0)');const changed=read();assert.notEqual(changed,original);assert.equal(await app.locator('circle').getAttribute('fill'),'url(#paint)');
    await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(async()=>await app.locator(selector).getAttribute(attribute)!==value);

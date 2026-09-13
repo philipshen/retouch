@@ -2321,22 +2321,33 @@ function mountSVGGradientStopRail(section,info,target,gradient){
  const stops=nodes.map((node,index)=>{const css=w.getComputedStyle(node),offset=previous=Math.max(previous,Math.max(0,Math.min(1,node.offset.baseVal)));return {index,offset,color:css.stopColor,opacity:Math.max(0,Math.min(1,parseFloat(css.stopOpacity)/(css.stopOpacity.endsWith('%')?100:1)))};});
  const rail=document.createElement('div');rail.className='gradient-stop-rail';rail.setAttribute('aria-label','Gradient stops');
  const strip=RetouchInspector.button('',event=>{const rect=strip.getBoundingClientRect();add(event.detail===0 ? .5 : Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width)));});strip.className='gradient-stop-strip';strip.setAttribute('aria-label','Add gradient stop at position');strip.title='Click to add a color stop';strip.style.border='0';strip.style.cursor='crosshair';strip.disabled=stops.length>=64;
- strip.style.backgroundImage='linear-gradient(to right,'+stops.map(stop=>'color-mix(in srgb,'+stop.color+' '+stop.opacity*100+'%,transparent) '+stop.offset*100+'%').join(',')+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)';rail.append(strip);
+ const paintStrip=()=>{strip.style.backgroundImage='linear-gradient(to right,'+stops.map(stop=>'color-mix(in srgb,'+stop.color+' '+stop.opacity*100+'%,transparent) '+stop.offset*100+'%').join(',')+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)';};paintStrip();rail.append(strip);
  const add=offset=>{
   const right=stops.findIndex(stop=>stop.offset>offset),index=right<0?stops.length:right,left=stops[Math.max(0,index-1)],next=stops[Math.min(index,stops.length-1)],ratio=next.offset>left.offset?Math.max(0,Math.min(1,(offset-left.offset)/(next.offset-left.offset))):0;
   let color=left.color;
   try{const a=RetouchPaletteValues.parse(RetouchPaletteValues.convert(RetouchColorStyles.fromComputed(left.color),'srgb',true).value),b=RetouchPaletteValues.parse(RetouchPaletteValues.convert(RetouchColorStyles.fromComputed(next.color),'srgb',true).value);color=RetouchPaletteValues.srgb(a.channels.map((n,i)=>Math.round((n+(b.channels[i]-n)*ratio)*255)/255),a.alpha+(b.alpha-a.alpha)*ratio);}catch{}
   setSVGGradient(info,gradient.paint,undefined,index,'insertStop',{offset:String(Math.round(offset*1000000)/1000000),color,opacity:String(Math.round((left.opacity+(next.opacity-left.opacity)*ratio)*1000000)/1000000)});
  };
- for(const stop of stops){const handle=RetouchInspector.button('',()=>{const field=section.querySelector('[aria-label="Stop '+(stop.index+1)+' color"]');field?.focus();field?.select();});handle.className='gradient-stop-handle';handle.style.left=stop.offset*100+'%';handle.style.backgroundColor=stop.color;handle.style.cursor='pointer';handle.setAttribute('aria-label','Select gradient stop '+(stop.index+1));rail.append(handle);}
+ const handles=stops.map(stop=>{const handle=RetouchInspector.button('',()=>{if(handle.retouchDragged)return;const field=section.querySelector('[aria-label="Stop '+(stop.index+1)+' color"]');field?.focus();field?.select();});handle.addEventListener('pointerdown',()=>{handle.retouchDragged=false;});handle.className='gradient-stop-handle';handle.style.left=stop.offset*100+'%';handle.style.backgroundColor=stop.color;handle.setAttribute('aria-label','Select gradient stop '+(stop.index+1));handle.title='Drag to move stop · Arrow keys: 1% · Shift: 10% · Option: 0.1% · Escape cancels';rail.append(handle);return handle;});
  section.append(rail);const button=RetouchInspector.button('Add gradient stop',()=>{const positions=[0,...stops.map(stop=>stop.offset),1];let best=0;for(let i=1;i<positions.length-1;i++)if(positions[i+1]-positions[i]>positions[best+1]-positions[best])best=i;add((positions[best]+positions[best+1])/2);});button.disabled=stops.length>=64;section.append(button);
+ return ()=>{
+  for(const stop of stops){const input=section.querySelector('[aria-label="Stop '+(stop.index+1)+' position"]'),handle=handles[stop.index];if(!input)continue;
+   RetouchInspector.numericLabelDrag(input,raw=>{if(!/^[-+]?(?:\d+\.?\d*|\.\d+)%?$/.test(raw))return null;const value=parseFloat(raw)*(raw.endsWith('%')?1:100);return {value,min:(stops[stop.index-1]?.offset??0)*100,max:(stops[stop.index+1]?.offset??1)*100,format:value=>String(Math.round(value*1000000)/1000000)+'%'};});
+   input.retouchNumericPreview=()=>{
+    const node=nodes[stop.index],original=node.getAttribute('offset'),initial=stop.offset,rect=strip.getBoundingClientRect();let last=original,expected=definition.outerHTML;
+    const current=()=>sel?.info===info&&!panelTasks&&!undoBusy&&!sourceRequests&&target.isConnected&&definition.isConnected&&definition.outerHTML===expected&&strip.isConnected&&Math.abs(strip.getBoundingClientRect().width-rect.width)<.1&&Math.abs(strip.getBoundingClientRect().left-rect.left)<.1;
+    return {current,update(value){if(!current())throw Error('The gradient changed during this gesture.');handle.retouchDragged=true;stop.offset=value/100;last=String(value)+'%';node.setAttribute('offset',last);expected=definition.outerHTML;handle.style.left=value+'%';paintStrip();},restore(){if(node.getAttribute('offset')===last){if(original===null)node.removeAttribute('offset');else node.setAttribute('offset',original);}stop.offset=initial;handle.style.left=initial*100+'%';paintStrip();}};
+   };
+   input.retouchNumericHandle(handle,{axis:'x',canvas:true,scale:()=>strip.getBoundingClientRect().width/100,initialValue:()=>stop.offset*100+'%',onCommit:()=>RetouchPanelFocus.queue(handle)});
+  }
+ };
 }
 function mountSVGGradients(info,target){
  for(const gradient of info.svgGradients){
   const section=RetouchInspector.section(gradient.paint==='fill'?'Fill gradient':'Stroke gradient');
   RetouchInspector.note(section,(gradient.type==='linearGradient'?'Linear':'Radial')+' · #'+gradient.id);
   const reason=gradient.reason; if(reason){RetouchInspector.note(section,reason,'refused');panelBody.append(section);continue;}
-  mountSVGGradientStopRail(section,info,target,gradient);
+  const bindStops=mountSVGGradientStopRail(section,info,target,gradient);
   const write=(changes,stop)=>setSVGGradient(info,gradient.paint,changes,stop);
   const field=(parent,label,value,property,stop,options)=>{let input;
    if(options){input=RetouchInspector.select(parent,label,options.map(value=>[value,({objectBoundingBox:'Object bounds',userSpaceOnUse:'SVG viewport',pad:'Extend',reflect:'Reflect',repeat:'Repeat'})[value]||value||'Default']),value||'',value=>write({[property]:value||null},stop));}
@@ -2344,6 +2355,7 @@ function mountSVGGradients(info,target){
   };
   for(const item of gradient.fields)field(section,'Gradient '+item.name,item.value,item.name,undefined,item.name==='gradientUnits'?['','objectBoundingBox','userSpaceOnUse']:item.name==='spreadMethod'?['','pad','reflect','repeat']:null);
   gradient.stops.forEach((stop,index)=>{const group=document.createElement('div');group.className='svg-gradient-stop';const title=document.createElement('p');title.className='hint';title.textContent='Stop '+(index+1);group.append(title);field(group,'Stop '+(index+1)+' position',stop.offset,'offset',index);field(group,'Stop '+(index+1)+' color',stop.color,'stop-color',index);field(group,'Stop '+(index+1)+' opacity',stop.opacity,'stop-opacity',index);const remove=RetouchInspector.button('Remove gradient stop '+(index+1),()=>setSVGGradient(info,gradient.paint,undefined,index,'removeStop'));remove.setAttribute('aria-label','Remove gradient stop '+(index+1));remove.title='Remove stop';remove.textContent='−';remove.classList.add('svg-gradient-stop-remove');remove.disabled=gradient.stops.length<=2;group.append(remove);section.append(group);});
+  bindStops?.();
   RetouchInspector.note(section,'Shared gradient · Edits affect all referencing layers and screen sizes. Page styles can override stop colors.');section.lastElementChild.classList.add('gradient-scope');panelBody.append(section);
  }
 }
