@@ -1,0 +1,147 @@
+{
+  "sourceCommit": "78bbcd0aad1d4033313ae5b5ab7fd1fbdc0bae40",
+  "sourceTreeDirty": false,
+  "sourceFiles": 184,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "archive": "/private/tmp/retouch-desktop-vectors-78bbcd0/Retouch-0.1.0-mac.zip",
+  "sha256": "7007ed609ad045536e54060f5d957acc6bced56e3cb6ab63ab1e039008fe2411",
+  "status": "development candidate; targeted packaged workflows passed; native workflows and trusted distribution unverified",
+  "buildLog": "/private/tmp/retouch-desktop-vectors-78bbcd0-build.log",
+  "units": {
+    "passed": 980,
+    "scope": "external test harness importing actual packaged runtime; development test dependencies outside signed app",
+    "log": "/private/tmp/retouch-desktop-vectors-78bbcd0/bundled-units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "Webpack cold startup: two text edits, Phone removal/restoration and exact history",
+      "renderer": "react",
+      "engine": "chromium",
+      "engineVersion": "145.0.7632.6",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-vectors-78bbcd0/cold-webpack-removal.log"
+    },
+    {
+      "name": "Turbopack cold startup: two edits, three forced stale renders, convergence and exact history",
+      "renderer": "react",
+      "engine": "webkit",
+      "engineVersion": "26.0",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-vectors-78bbcd0/cold-turbopack-stale-webkit.log"
+    },
+    {
+      "name": "Turbopack timeout: explicit error, stopped retries, continued editing and exact history",
+      "renderer": "react",
+      "engine": "webkit",
+      "engineVersion": "26.0",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-vectors-78bbcd0/cold-timeout-webkit.log"
+    },
+    {
+      "name": "Ready comparisons: text editing, document identity, unsaved input and exact history",
+      "renderer": "react",
+      "engine": "webkit",
+      "engineVersion": "26.0",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-vectors-78bbcd0/ready-text-webkit.log"
+    },
+    {
+      "name": "Liquid primitive drawing and curved Pen: transformed coordinates, modifiers, cancellation and exact history",
+      "renderer": "liquid",
+      "engine": "chromium",
+      "engineVersion": "145.0.7632.6",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-vectors-78bbcd0/liquid-drawing.log"
+    },
+    {
+      "name": "React new viewport and self-closing SVG/group creation: four presets, rendered geometry, selection and exact history",
+      "renderer": "react",
+      "engine": "chromium",
+      "engineVersion": "145.0.7632.6",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-vectors-78bbcd0/react-creation.log"
+    },
+    {
+      "name": "Light comparison panel: help/focus controls, geometry, retained preview documents and drafts",
+      "renderer": "html",
+      "engine": "chromium",
+      "engineVersion": "145.0.7632.6",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-vectors-78bbcd0/comparison-panel.log"
+    }
+  ],
+  "harness": {
+    "sources": [
+      {
+        "source": "retouch/test/e2e/page-fonts.cjs",
+        "sha256": "627af792ee6241dcf8c7df8e209281afc1954c6dc2908f1740316193b6e2811d",
+        "snapshot": "/private/tmp/retouch-desktop-vectors-78bbcd0/harness-snapshots/page-fonts.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/svg-vertices.cjs",
+        "sha256": "5506eb78c807fa17ced4e470dfeec7e091904147c0310d8af352c35813f677e6",
+        "snapshot": "/private/tmp/retouch-desktop-vectors-78bbcd0/harness-snapshots/svg-vertices.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/html-svg-draw.cjs",
+        "sha256": "a5a9ab6c779cbdc2e36424a586bd2f8e51342ca44c4ecf8e00edc39f16aefe28",
+        "snapshot": "/private/tmp/retouch-desktop-vectors-78bbcd0/harness-snapshots/html-svg-draw.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/html-compare-edit.cjs",
+        "sha256": "5cf62705aa0b89c21f1d0734306e7dc1d381ffc938760ad7edada652c1eb8595",
+        "snapshot": "/private/tmp/retouch-desktop-vectors-78bbcd0/harness-snapshots/html-compare-edit.cjs"
+      }
+    ],
+    "externalHarnessRemoved": true
+  },
+  "installation": {
+    "result": "isolated Homebrew cask install and uninstall passed",
+    "verification": {
+      "sourceCommit": "78bbcd0aad1d4033313ae5b5ab7fd1fbdc0bae40",
+      "sourceTreeDirty": false,
+      "sourceFiles": 184,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesExtractedArchive": true,
+    "quarantine": {
+      "preserved": true,
+      "value": "0381;6aa5f8ca;;A3E97C64-830E-4699-A3C6-A331D20F5A1C"
+    },
+    "logs": [
+      "/private/tmp/retouch-desktop-vectors-78bbcd0/install.log",
+      "/private/tmp/retouch-desktop-vectors-78bbcd0/uninstall.log"
+    ],
+    "cleanup": {
+      "caskInventoryUnchanged": true,
+      "appAndCaskRegistrationAbsent": true,
+      "temporaryTapAndTrustAbsent": true,
+      "automaticDependencyRemoval": false
+    }
+  },
+  "nativeLaunch": {
+    "result": "not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "release": {
+    "signing": "ad hoc development build",
+    "developerID": false,
+    "notarization": false,
+    "publicRelease": false
+  },
+  "otherKnownLimits": [
+    "Prior 6b064a3 archive startup failure remains recorded in its original receipt. This newer archive contains the compiled-render retry fix and passes the corresponding workflow plus deterministic stale-render and timeout scenarios; this does not prove every startup timing.",
+    "Older WebKit 26.0 margin-aware Fill-height failure remains documented on the previous sizing candidate; not retested here.",
+    "Native editing, sampler, shutdown, Intel execution and trusted upgrades unverified.",
+    "Full Figma parity and universal-site support incomplete."
+  ]
+}

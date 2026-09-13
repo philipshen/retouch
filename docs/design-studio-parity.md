@@ -13105,3 +13105,38 @@ Logs: `/private/tmp/retouch-react-svg-create-chromium-verified.log` and
 its generated SVG canvas and the light geometry inspector. No desktop rebuild,
 native launch, or push in this increment. Full Figma Design parity and
 arbitrary-framework authoring remain incomplete.
+
+## 2026-09-13 — Packaged vector and startup-recovery candidate
+
+Built clean `78bbcd0` into
+`/private/tmp/retouch-desktop-vectors-78bbcd0/Retouch-0.1.0-mac.zip`, SHA-256
+`7007ed609ad045536e54060f5d957acc6bced56e3cb6ab63ab1e039008fe2411`.
+All 184 source files plus native/build/verifier hashes match the checkout.
+Extracted universal arm64/x86_64 and strict signature checks pass. All 980 units
+importing the actual bundled runtime pass from an external harness.
+
+Seven packaged browser workflows passed with clean process exits: Chromium
+Webpack two cold edits and preview removal/restoration; WebKit Turbopack two
+cold edits across three forced stale compiled renders; WebKit Turbopack bounded
+timeout/error and retry cessation; WebKit ready-preview text editing preserving
+document identity and unsaved input; Chromium Liquid primitive and curved Pen
+drawing with transforms/modifiers/cancellation/history; Chromium React 12 new
+viewport/self-closing creation cases with selection/history; and Chromium light
+comparison help/focus with retained preview state. The older startup archive's
+intermittent failure remains in its historical receipt; this candidate includes
+the subsequent retry fix and passes both the corresponding workflow and the
+deterministic stale-render checks. Universal startup correctness is not proven.
+
+Homebrew installed/uninstalled this exact ZIP into an isolated app directory.
+Installed strict verification and manifest comparison passed; quarantine remained
+intact. Cask inventory before/after is identical. Temporary app, cask registration,
+tap, trust configuration and external harness are removed; automatic dependency
+removal was disabled. Strict extracted-package verification passes after all
+workflows. Harness snapshots and logs remain beside the archive.
+
+Receipt: `desktop/verification/2026-09-13-vectors-recovery.json`.
+Native preflight returned `Sky Computer Use native pipe startup failed`; no app
+launch was attempted. Native editing/sampler/shutdown, Intel execution, Developer
+ID/notarization, public cask distribution and trusted upgrades remain unverified.
+The older WebKit 26.0 margin-aware Fill-height failure was not retested. No push
+or public release. Full Figma Design and arbitrary-site parity remain incomplete.

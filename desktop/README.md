@@ -10,27 +10,33 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-startup-6b064a3/Retouch-0.1.0-mac.zip`
-(SHA-256 `600d28e1d2c7ea4c82ed00c9cdb7fdb6abb0c1bd5e1c326ac5976998ad9a1d57`).
-It contains clean commit `6b064a3`, including queued Next startup refreshes and
-cold comparison text recovery. All 183 packaged source hashes and native/build/
-verifier hashes match. Universal architecture, strict signatures and all 975
-unit tests importing the bundled runtime pass.
+`/private/tmp/retouch-desktop-vectors-78bbcd0/Retouch-0.1.0-mac.zip`
+(SHA-256 `7007ed609ad045536e54060f5d957acc6bced56e3cb6ab63ab1e039008fe2411`).
+It contains clean commit `78bbcd0`: queued Next startup refreshes, compiled-render
+retry recovery, the light comparison panel, and Liquid/React vector creation.
+All 184 packaged source hashes and native/build/verifier hashes match. Universal
+architecture, strict signatures and all 980 tests importing the bundled runtime
+pass. Strict verification also passes after the browser workflows.
 
-Homebrew installed and uninstalled this exact archive in an isolated app
-directory, preserving quarantine and the original cask inventory. The temporary
-tap, trust configuration, installation and external test harness were removed.
-Strict package verification passes after the browser workflows.
+This exact archive installed and uninstalled through Homebrew in an isolated app
+directory with quarantine intact. The original cask inventory is unchanged; the
+temporary app, tap, trust configuration and external test harness were removed.
 
-Turbopack/WebKit passes two held-startup edits and exact history; ready-preview
-editing preserves document identity and unsaved input. Chromium/Webpack's
-cold-preview removal/restoration scenario failed once to reach the latest text.
-A diagnostic rerun passed, but the intermittent failure remains unresolved.
-This archive predates the subsequent retry-for-compiled-revision fix in the
-checkout; rebuild and reverify it before treating that recovery gap as resolved.
-This candidate is not a verified release. Native launch was not attempted because
-the CUA native connection failed; native editing, sampler and shutdown remain
-unverified. See [the candidate receipt](verification/2026-09-13-startup-workflows.json).
+Packaged workflows pass cold-startup text editing with preview removal/restoration,
+three deliberately stale compiled renders, bounded timeout/error recovery, and
+ready-preview document/input preservation with exact history. Liquid primitive
+and curved Pen drawing, React new-canvas/self-closing SVG creation, and the light
+comparison panel help/focus workflow also pass. These are targeted Chromium and
+WebKit checks, not a claim that every startup timing or native workflow is proven.
+See [the candidate receipt](verification/2026-09-13-vectors-recovery.json).
+
+This is an ad hoc development build, not a verified release. Native launch was
+not attempted because the CUA native connection failed; native editing, sampler,
+shutdown and Intel execution remain unverified. Developer ID signing,
+notarization, public distribution and trusted upgrades remain unfinished.
+The [previous startup candidate](verification/2026-09-13-startup-workflows.json)
+retains its intermittent stale-preview failure; it predates the compiled-render
+retry fix included and tested in this candidate.
 
 The [previous sizing candidate](verification/2026-09-13-sizing-workflows.json)
 records scaled/flipped sizing and rotation workflows, plus the older WebKit 26.0
