@@ -1,0 +1,200 @@
+{
+  "sourceCommit": "90ab1c6c06cf3edad886aedcb023c7f4eb2c92d5",
+  "sourceTreeDirty": false,
+  "sourceFiles": 204,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "status": "ad hoc development candidate; native editing and trusted distribution unverified",
+  "archive": "/private/tmp/retouch-desktop-type-90ab1c6/Retouch-0.1.0-mac.zip",
+  "sha256": "6e912eb5d182273ad292490823d70ecdffbee34db62704d682c29cbb1f8a2b38",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "signatureAfterWorkflows": "strict verification passed on original and extracted bundles",
+  "units": {
+    "passed": 1159,
+    "completionEvidence": "terminal TAP summary, no live process; original exec handle unavailable after context recovery",
+    "scope": "tests import actual extracted packaged runtime",
+    "log": "/private/tmp/retouch-desktop-type-90ab1c6/units.log"
+  },
+  "harness": {
+    "testFiles": 336,
+    "inventorySha256": "94dc9b7c003f882a9cb5ad78207dfec21bdca3dedfffdfe14fac8d41c99987d6",
+    "archiveSha256": "3a57ba5a1bd73ca8967c3c8406b1e157855e909f28f4e46792053f5eae0b0520",
+    "runtime": "/private/tmp/retouch-desktop-type-90ab1c6/extracted/Retouch.app/Contents/Resources/retouch",
+    "testsExternalToBundle": true,
+    "resizeRetry": {
+      "testsExternalToBundle": true,
+      "changedTestFiles": [
+        {
+          "path": "test/e2e/stroke-popover-layout.cjs",
+          "sha256": "04e41b94bd074dbb7c4851019a3445aadb5489de61a344ab5819461c919447d8"
+        },
+        {
+          "path": "test/e2e/type-settings-popover.cjs",
+          "sha256": "e9b36be77b3315dc6e6459989bae1f92bc7e5c6e4651b8bb30b5523b2f7380d3"
+        }
+      ],
+      "reason": "Wait for the ResizeObserver-driven compact layout before inspecting the panel toggle; initial HTML and Liquid style checks failed before this test synchronization fix",
+      "initialFailures": [
+        {
+          "name": "styles-html",
+          "renderer": "html",
+          "engine": "chromium",
+          "exitCode": 1,
+          "log": "/private/tmp/retouch-desktop-type-90ab1c6/styles-html.log"
+        },
+        {
+          "name": "styles-liquid",
+          "renderer": "liquid",
+          "engine": "webkit",
+          "exitCode": 1,
+          "log": "/private/tmp/retouch-desktop-type-90ab1c6/styles-liquid.log"
+        }
+      ]
+    },
+    "removedAfterAllProcessesExited": true
+  },
+  "workflows": [
+    {
+      "name": "typography-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-type-90ab1c6/typography-html.log",
+      "scope": "Primary and shared calculations, relative units, named weights, floating Type settings and exact history"
+    },
+    {
+      "name": "paints-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-type-90ab1c6/paints-html.log",
+      "scope": "Compact CSS paints, bare hex entry, RGB/P3 and four-edge alpha preservation, invalid input, Escape, responsive overrides and exact history"
+    },
+    {
+      "name": "typography-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-type-90ab1c6/typography-liquid.log",
+      "scope": "Primary and shared calculations, relative units, named weights, floating Type settings and exact history"
+    },
+    {
+      "name": "paints-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-type-90ab1c6/paints-liquid.log",
+      "scope": "Compact CSS paints, bare hex entry, RGB/P3 and four-edge alpha preservation, invalid input, Escape, responsive overrides and exact history"
+    },
+    {
+      "name": "typography-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-type-90ab1c6/typography-react.log",
+      "scope": "Primary and shared calculations, relative units, named weights, floating Type settings and exact history"
+    },
+    {
+      "name": "paints-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-type-90ab1c6/paints-react.log",
+      "scope": "Compact CSS paints, bare hex entry, RGB/P3 and four-edge alpha preservation, invalid input, Escape, responsive overrides and exact history"
+    },
+    {
+      "name": "styles-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-type-90ab1c6/styles-react.log",
+      "scope": "Missing-edge creation, individual styles, mixed state, screen fallback, reset and exact width/style history"
+    },
+    {
+      "name": "styles-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-type-90ab1c6/resize-styles-html.log",
+      "scope": "Missing-edge creation, individual styles, mixed state, screen fallback, reset and exact width/style history"
+    },
+    {
+      "name": "type-popup-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-type-90ab1c6/resize-type-popup-html.log",
+      "scope": "Type settings compact resize, scroll, dismissal and focus"
+    },
+    {
+      "name": "styles-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-type-90ab1c6/resize-styles-liquid.log",
+      "scope": "Missing-edge creation, individual styles, mixed state, screen fallback, reset and exact width/style history"
+    },
+    {
+      "name": "svg-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-type-90ab1c6/resize-svg-html.log",
+      "scope": "SVG compact paints and advanced stroke settings, keyboard focus, responsive overrides, reset and exact history"
+    },
+    {
+      "name": "site-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-type-90ab1c6/resize-site-html.log",
+      "scope": "Full HTML editing, assets, navigation, effects, geometry, selection and exact history"
+    }
+  ],
+  "tamperChecks": {
+    "result": "passed on disposable bundle copy",
+    "completionEvidence": "final PASS log; no live process",
+    "scope": "altered source, omitted manifest entry, unlisted source, restored copy and original signature",
+    "log": "/private/tmp/retouch-desktop-type-90ab1c6/tamper.log"
+  },
+  "installation": {
+    "verification": {
+      "sourceCommit": "90ab1c6c06cf3edad886aedcb023c7f4eb2c92d5",
+      "sourceTreeDirty": false,
+      "sourceFiles": 204,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesArchive": true,
+    "quarantinePreserved": true,
+    "quarantine": "0381;6aa6d098;;081D0D70-208A-4C5E-93BC-B1E825ECCB49",
+    "result": "isolated install and uninstall passed",
+    "caskInventoryUnchanged": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "automaticDependencyRemovalDisabled": true,
+    "completionEvidence": "final result written after cleanup assertions; no live process",
+    "log": "/private/tmp/retouch-desktop-type-90ab1c6/homebrew.log"
+  },
+  "nativeLaunch": {
+    "result": "not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "nativeSelfTests": "not run",
+  "developerID": "not retried",
+  "notarization": "not performed",
+  "published": false,
+  "remaining": [
+    "Native full editing, sampler and shutdown workflows remain unverified",
+    "Developer ID signing, notarization, public cask and trusted upgrades remain incomplete",
+    "Intel runtime execution remains unverified",
+    "Older WebKit normal-flow block-axis Fill sizing remains incorrect; not rerun on this archive",
+    "Arrow creation, pixel rendering and gradient-canvas workflows were not rerun on this archive",
+    "Full Figma Design parity and universal site support remain incomplete"
+  ]
+}

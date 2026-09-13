@@ -369,3 +369,16 @@ Validation: 1,158 unit tests in
 WebKit in `/private/tmp/retouch-calculation-decimal-liquid-final.log`.
 The initial WebKit numeric comparison failed on native serialization; the
 final check retains exact source assertions and uses the measured native result.
+
+
+### Compact-layout browser synchronization (2026-09-13)
+
+Stroke and Type settings resize checks now wait for `compact-workspace` before
+reading the inspector toggle. Source-request settlement does not imply that the
+workspace ResizeObserver has run; reading the old expanded state could skip
+opening the newly hidden inspector. The original packaged HTML and Liquid
+stroke checks failed at the hidden opener. Both corrected checks passed against
+the unchanged `90ab1c6` packaged runtime, retaining viewport bounds, scrolling,
+hit-testing, focus restoration, source preservation and exact border history
+assertions. Type settings and the remaining SVG/full HTML workflows also passed.
+See `desktop/verification/2026-09-13-typography.json` for results and log paths.

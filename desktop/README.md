@@ -10,24 +10,28 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-edges-efba078/Retouch-0.1.0-mac.zip`
-(SHA-256 `05614a2043d92eaf9cc754af42d17e5fc4061a5513681a19583030becb5e304e`).
-It packages clean commit `efba078`: compact CSS/SVG paint rows, direct hex entry,
-per-edge color-alpha preservation, individual border widths and styles, mixed
-style display, and atomic creation of missing edges.
-All 204 source hashes and native/build/verifier hashes match. All 1,156 tests
-importing the extracted bundled runtime pass. Universal architecture and strict
-signatures verify before and after workflows.
+`/private/tmp/retouch-desktop-type-90ab1c6/Retouch-0.1.0-mac.zip`
+(SHA-256 `6e912eb5d182273ad292490823d70ecdffbee34db62704d682c29cbb1f8a2b38`).
+It packages clean commit `90ab1c6`: primary and shared typography calculations,
+authored percentage spacing, named font weights, and floating Type settings,
+alongside the existing CSS/SVG paint and border controls.
+All 204 source hashes and native/build/verifier hashes match. The extracted
+runtime passed 1,159 unit tests and 12 browser workflows. Universal architecture
+and strict signatures verify before and after workflows.
 
 The exact ZIP installed and uninstalled through Homebrew in an isolated app
 directory with quarantine retained and the original cask inventory unchanged.
-Temporary app, tap, trust configuration and external test harness were removed.
-Eight packaged workflows pass: HTML/React Chromium and Liquid WebKit CSS paints
-and edge-style workflows, HTML individual-width controls, and HTML SVG stroke
-settings. Coverage includes direct hex editing, RGB/Display P3 and four-edge
-alpha preservation, invalid input and Escape, responsive overrides and fallback,
-mixed style transitions, resets and exact source Undo/Redo. Disposable-copy
-tamper checks pass. See [the candidate receipt](verification/2026-09-13-border-edges.json).
+Temporary app, tap, trust configuration and external test harnesses were removed.
+Browser coverage includes HTML/React Chromium and Liquid WebKit typography,
+CSS paints and border styles, compact Type settings, HTML SVG strokes, and the
+full HTML editing workflow including assets, navigation and exact source history.
+The first packaged HTML and Liquid stroke-layout checks failed because the test
+read the inspector toggle before the resize observer applied the compact layout.
+Both passed after synchronizing the external test with that layout transition;
+the packaged runtime was unchanged. The receipt preserves those initial failures
+and the corrected rerun results. Disposable-copy tamper checks passed.
+See [the candidate receipt](verification/2026-09-13-typography.json) and
+[the preceding border candidate](verification/2026-09-13-border-edges.json).
 
 This is an ad hoc development build, not a trusted release. Native launch was
 not attempted because the fresh CUA native connection check failed. Developer
