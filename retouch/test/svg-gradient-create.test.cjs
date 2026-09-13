@@ -28,4 +28,17 @@ for(const kind of ['html','react','liquid']){
   const styles=kind==='react'?['style={styles}','style={{...styles}}','style={{[key]:"red"}}','style={{opacity:value}}','style={{get fill(){return "red"}}}']:['style="opacity:calc(1"','style="opacity:.5;fill"','style="opacity:.5;/*"'];
   for(const style of styles)assert.equal(create(original.replace('<rect ','<rect '+style+' ')).refused,true,style);
  });
+ if(kind==='react'){
+  test('react creation preserves event handlers and dynamic non-paint attributes',()=>{
+   for(const attributes of ['onClick={() => onSelect(id)}','width={size} x={position.x} aria-label={label}','ref={shapeRef} tabIndex={active ? 0 : -1}']){
+    const source=original.replace('width="40"',attributes),result=create(source);assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(attributes));assert.equal(resolve(result.edits[0].after).element.id,resolve(source).element.id);
+   }
+  });
+  test('react dynamic paint protects its own property while allowing independent paint',()=>{
+   for(const paint of ['fill','stroke']){const source=original.replace('fill="red"',paint+'={paintColor}'),r=resolve(source),description=adapter.describe(r).svgGradientCreation;assert.equal(description.reason,null);assert.match(description.paintReasons[paint],/dynamic expression/);assert.equal(create(source,{paint}).refused,true);const other=paint==='fill'?'stroke':'fill',result=create(source,{paint:other});assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(paint+'={paintColor}'));}
+  });
+  test('react creation still refuses unresolved classes, spreads and dynamic markup',()=>{
+   for(const attributes of ['className={classes}','class={classes}','{...props}','dangerouslySetInnerHTML={{__html:markup}}'])assert.equal(create(original.replace('<rect ','<rect '+attributes+' ')).refused,true,attributes);
+  });
+ }
 }
