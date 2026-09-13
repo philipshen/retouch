@@ -1,0 +1,119 @@
+{
+  "sourceCommit": "c94524746afad53d36483e70324db87aaa72f204",
+  "sourceTreeDirty": false,
+  "sourceFiles": 194,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "archive": "/private/tmp/retouch-desktop-selection-c945247/Retouch-0.1.0-mac.zip",
+  "sha256": "2514510722a421ca7f947e090d72249e13f2f7afc0be44142cbd4c4f2377214d",
+  "status": "development candidate; packaged runtime and isolated cask installation verified; native workflows and trusted distribution unverified",
+  "buildLog": "/private/tmp/retouch-desktop-selection-build.log",
+  "units": {
+    "passed": 1034,
+    "scope": "external harness importing actual packaged runtime; development dependencies outside signed app",
+    "log": "/private/tmp/retouch-desktop-selection-c945247/units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "SVG selection and single-vector transforms, snapping and exact history",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed including terminal zero exit",
+      "log": "/private/tmp/retouch-desktop-selection-c945247/vectors-html.log"
+    },
+    {
+      "name": "SVG selection and single-vector transforms, snapping and exact history",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed including terminal zero exit",
+      "log": "/private/tmp/retouch-desktop-selection-c945247/vectors-react.log"
+    },
+    {
+      "name": "SVG selection and single-vector transforms, snapping and exact history",
+      "renderer": "liquid",
+      "engine": "chromium",
+      "result": "passed including terminal zero exit",
+      "log": "/private/tmp/retouch-desktop-selection-c945247/vectors-liquid.log"
+    },
+    {
+      "name": "Responsive comparison editing and persistence",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed including terminal zero exit",
+      "log": "/private/tmp/retouch-desktop-selection-c945247/comparison.log"
+    },
+    {
+      "name": "Responsive stroke settings and exact history",
+      "renderer": "liquid",
+      "engine": "chromium",
+      "result": "passed including terminal zero exit",
+      "log": "/private/tmp/retouch-desktop-selection-c945247/responsive-strokes.log"
+    },
+    {
+      "name": "On-canvas radius and exact history",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed including terminal zero exit",
+      "log": "/private/tmp/retouch-desktop-selection-c945247/radius-html.log"
+    }
+  ],
+  "harness": {
+    "sourceCommit": "c94524746afad53d36483e70324db87aaa72f204",
+    "sourceTreeDirty": false,
+    "sourceFiles": 194,
+    "allSourceNativeBuildVerifierHashesMatch": true,
+    "testFiles": 284,
+    "testInventorySha256": "5687adaea5752080d7642f1745bfe8548db31761336b456edf8dbbb9d7b433b5",
+    "testArchiveSha256": "d304a3d2dbb9f1c814f126dffb51c64bb90851e4aa617a0ca1a6a276c71880a7",
+    "inventory": "/private/tmp/retouch-desktop-selection-c945247/harness-inventory.json",
+    "testArchive": "/private/tmp/retouch-desktop-selection-c945247/harness-tests.tar.gz",
+    "externalHarnessRemoved": true
+  },
+  "integrity": {
+    "afterWorkflows": "/private/tmp/retouch-desktop-selection-c945247/verification-after-tests.json",
+    "tamperTests": "passed on disposable copy; original unchanged",
+    "tamperLog": "/private/tmp/retouch-desktop-selection-c945247/verifier-tamper.log"
+  },
+  "installation": {
+    "verification": {
+      "sourceCommit": "c94524746afad53d36483e70324db87aaa72f204",
+      "sourceTreeDirty": false,
+      "sourceFiles": 194,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesArchive": true,
+    "quarantinePreserved": true,
+    "quarantine": "0381;6aa6474d;;38673E0E-C2B4-4EF3-BE1E-D6EDC6FF4B80",
+    "result": "isolated cask install and uninstall passed",
+    "cleanup": {
+      "caskInventoryUnchanged": true,
+      "appAndCaskRegistrationAbsent": true,
+      "temporaryTapAndTrustAbsent": true,
+      "automaticDependencyRemoval": false
+    }
+  },
+  "nativeLaunch": {
+    "result": "not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "release": {
+    "signing": "ad hoc development build",
+    "developerID": false,
+    "notarization": false,
+    "publicRelease": false,
+    "developerIDAttempt": "not repeated; previous bounded attempt documented in 2026-09-13-vector-transforms.json"
+  },
+  "otherKnownLimits": [
+    "Native editing, startup/shutdown, Intel execution, trusted installation and upgrades remain unverified.",
+    "Native Pen and cold-start recovery workflows were not rerun on this archive.",
+    "Full Figma Design and arbitrary-site parity remain unfinished."
+  ]
+}

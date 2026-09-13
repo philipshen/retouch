@@ -10,26 +10,27 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-transform-04cf8fd/Retouch-0.1.0-mac.zip`
-(SHA-256 `d93c3cff06f6011a9b197420b4270ed48bdde4cb18046d7645d863cdafe1d4b8`).
-It packages clean commit `04cf8fd`, including SVG resizing, rotation, flips,
-one-gesture selection/dragging, grouped arrow-key nudges and alignment/spacing
-guides. All 192 source hashes and native/build/verifier hashes match. Universal
-architecture, strict signature verification and 1,018 tests importing the actual
-bundled runtime pass.
+`/private/tmp/retouch-desktop-selection-c945247/Retouch-0.1.0-mac.zip`
+(SHA-256 `2514510722a421ca7f947e090d72249e13f2f7afc0be44142cbd4c4f2377214d`).
+It packages clean commit `c945247`, including multi-vector inspector transforms,
+nested selections, proportions locking, arrow-key nudges, direct dragging,
+canvas resize/rotation handles and snapping. All 194 source hashes and the
+native/build/verifier hashes match. Universal architecture, strict signature
+verification before and after workflows, tamper checks on a disposable copy,
+and 1,034 tests importing the actual bundled runtime pass.
 
 The exact archive installed and uninstalled through Homebrew in an isolated app
-directory with quarantine intact. The original cask inventory is unchanged; the
-temporary app, tap, trust configuration and external harness were removed.
+directory with quarantine intact. The original cask inventory is unchanged;
+the temporary app, tap, trust configuration and external harness were removed.
 Packaged HTML/WebKit, React/Chromium and Liquid/Chromium vector workflows pass,
-including snapping at multiple zoom levels, keyboard gestures and exact history.
+including the new selection gestures, modifier changes, zoom and exact history.
 Responsive comparison editing, scoped stroke controls and on-canvas radius checks
-also pass. See [the candidate receipt](verification/2026-09-13-vector-transforms.json).
+also pass. See [the candidate receipt](verification/2026-09-13-selection-transforms.json).
 
 This is an ad hoc development build, not a trusted release. Native launch was
-not attempted because the CUA native connection failed. A single Developer ID
-signing attempt on a separate copy reached SecurityAgent and exceeded its
-45-second bound; the owned signing process was stopped and that copy removed.
+not attempted because the CUA native connection failed. Developer ID signing was
+not retried; the previous bounded attempt is recorded in the
+[vector candidate receipt](verification/2026-09-13-vector-transforms.json).
 Developer ID signing, notarization, public distribution, native editing, Intel
 execution and trusted upgrades remain unverified.
 

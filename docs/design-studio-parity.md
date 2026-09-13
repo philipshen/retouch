@@ -14169,3 +14169,32 @@ checked in /private/tmp/retouch-selection-resize-snap.png. Logs:
 /private/tmp/retouch-selection-resize-snap-{html,react,liquid}-pass.log,
 /private/tmp/retouch-selection-resize-snap-focused.log and
 /private/tmp/retouch-selection-resize-snap-units.log.
+
+## 2026-09-13 — Packaged selection tools and isolated cask verification
+
+A new universal development candidate packages clean commit c945247, bringing
+nested SVG selections, numeric equations, proportions locking, multi-vector
+nudges, dragging, resizing, rotation and snapping into the Mac bundle.
+All 194 packaged source hashes and native/build/verifier hashes match the
+checkout. Strict signatures pass before and after packaged workflows, and the
+archive hash remains unchanged. Disposable-copy tamper checks also pass.
+
+The extracted runtime passed 1,034 unit tests and six browser workflows:
+HTML/WebKit, React/Chromium and Liquid/Chromium vector suites; responsive
+comparison editing; scoped stroke settings; and on-canvas rectangle radius.
+All processes reached terminal zero exits. Development dependencies and tests
+stayed outside the signed app; the external harness was removed afterward,
+with its inventory and test archive retained for provenance.
+
+The exact ZIP installed and uninstalled through an isolated Homebrew cask with
+quarantine preserved. The original cask inventory is unchanged. The temporary
+app, registration, tap and scoped trust configuration were removed, with no
+automatic dependency removal. Native launch was not attempted because the CUA
+native pipe preflight failed; signing was not retried after the previous bounded
+Developer ID attempt. Native editing, notarization, Intel execution, public
+release and full Figma/any-site parity remain unverified or unfinished.
+
+Archive: /private/tmp/retouch-desktop-selection-c945247/Retouch-0.1.0-mac.zip
+SHA-256: 2514510722a421ca7f947e090d72249e13f2f7afc0be44142cbd4c4f2377214d
+Receipt: desktop/verification/2026-09-13-selection-transforms.json.
+No push was performed.
