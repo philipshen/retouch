@@ -14645,3 +14645,40 @@ suite passes. Per-paragraph rich-text wrap styles, truncation/max-lines, and
 full Figma text-layout parity remain open. Browser line breaks are not claimed
 to match Figma's renderer exactly; its own web handoff uses browser text-wrap:
 https://help.figma.com/hc/en-us/articles/360039956634-Explore-text-properties.
+
+### Text truncation and maximum lines (2026-09-13)
+
+Type settings → Basics now exposes Truncate text and Max lines, following the
+control pair in Figma's text-properties reference:
+https://help.figma.com/hc/en-us/articles/360039956634-Explore-text-properties.
+A positive whole-number limit clips visible lines with an ellipsis while keeping
+the complete source text. The selected screen scope supports independent limits,
+an explicit Off override, and Reset to reveal inherited styling. React/Liquid
+use important line-clamp utilities. HTML stores one line-clamp setting and emits
+the legacy box/orientation/overflow fallback together; existing managed layout
+properties remain stored and return on Reset. Off follows line-clamp-none's
+normal block/visible-overflow behavior. It is distinct from resetting authored
+layout. Important inline dependencies are refused instead of silently ignored.
+
+The typography preview uses the same limit and source width. Chromium reports
+legacy clamped boxes as computed display:flow-root; the preview explicitly keeps
+-webkit-box so reconstructing it does not lose clipping. The fallback follows
+https://www.w3.org/TR/css-overflow-4/ and uses no DOM content rewriting.
+
+`RT_E2E_TEXT_TRUNCATION=1` exercises three/two/one-line geometry, unchanged width
+and content, fractional input rejection and Escape cancellation, matching
+preview geometry, tablet/phone isolation, Off, Reset and exact source undo/redo.
+HTML, React and Liquid pass Chromium 145.0.7632.6; HTML passes WebKit 26.0.
+Logs: `/private/tmp/retouch-truncation-verified-{html,react,liquid,webkit}.log`.
+The HTML screenshot at `/private/tmp/retouch-truncation-verified-html.png` was
+visually inspected. Unit coverage checks source preservation of existing layout,
+bounded values, and inline-important conflicts. All 1,214 unit tests pass.
+An earlier concurrent suite run failed three server resolve tests; the isolated
+server suite and subsequent non-concurrent full suite passed. The cause of that
+transient failure is not established.
+
+This adds explicit line-count truncation, not automatic fitting of a line limit
+to a fixed text-box height. Per-paragraph/range truncation, arbitrary complex
+inline layout, saved truncation styles and full Figma text-layout parity remain
+open. Existing desktop candidate 015bffb predates this change; no new native
+launch or desktop rebuild was attempted for it.

@@ -311,6 +311,17 @@
     const input=select(parent,'Wrap style',choices,value,onChange);input.title='Auto fills each line. Balance evens out short text. Pretty improves line endings. No wrap keeps text on one line.';
     const row=input.closest('.inspector-field'),holder=document.createElement('div');holder.className='property-row';holder.dataset.typeWrap='true';row.before(holder);const reset=button('↺',onReset);reset.setAttribute('aria-label','Reset wrap style');reset.title='Reset wrap style';reset.classList.add('property-reset');reset.disabled=!canReset;holder.append(row,reset);
   }
+  const truncationToken=t=>/^(?:line-clamp-.+|\[-webkit-line-clamp:.+\])$/.test(t);
+  function truncationTypography(parent,css,onChange,onReset,canReset){
+    if(!CSS.supports('-webkit-line-clamp','3'))return;
+    const group=document.createElement('div');group.dataset.typeTruncation='true';parent.append(group);
+    const current=Number(css.getPropertyValue('-webkit-line-clamp')),active=Number.isInteger(current)&&current>0;
+    const toggle=document.createElement('input');toggle.type='checkbox';toggle.checked=active;toggle.onchange=()=>onChange(toggle.checked?3:null);field(group,'Truncate text',toggle);
+    toggle.title='Limit visible text without deleting its content.';
+    const maximum=number(group,'Max lines',active?current:3,1,1000,onChange);maximum.step='1';maximum.disabled=!active;fieldDraft(maximum);maximum.title='Maximum visible lines for the selected screen scope.';
+    const reset=button('↺',onReset);reset.setAttribute('aria-label','Reset text truncation');reset.title='Reset text truncation';reset.classList.add('property-reset');reset.disabled=!canReset;
+    const row=toggle.closest('.inspector-field'),holder=document.createElement('div');holder.className='property-row';row.before(holder);holder.append(row,reset);
+  }
   function underlineTypography(parent,css,onChange,onReset,hasOwn,el){
     const details=document.createElement('details'),summary=document.createElement('summary');details.className='underline-typography';details.open=underlineExpanded;details.ontoggle=()=>{if(details.isConnected)underlineExpanded=details.open;};summary.textContent='Underline details';details.append(summary);parent.append(details);
     const choices={'text-decoration-style':[['solid','Solid'],['dotted','Dotted'],['dashed','Dashed'],['double','Double'],['wavy','Wavy']],'text-decoration-skip-ink':[['auto','Auto'],['none','None'],['all','All']]};
@@ -855,8 +866,13 @@
       for(const s of d.querySelectorAll('link[rel="stylesheet"],style')){const copy=pd.importNode(s,true);copy.addEventListener('load',()=>fit());pd.head.append(copy);}
       pd.documentElement.style.overflow='hidden';pd.body.style.cssText='margin:0;padding:12px;background:#fff;color:#181818;overflow-wrap:anywhere;';
       sample=pd.createElement('div');sample.textContent=sampleText;
-      for(const p of typeProperties)sample.style.setProperty(p,css.getPropertyValue(p));sample.style.transformOrigin='top left';pd.body.append(sample);
-      fit=()=>{if(!preview.isConnected||!sample)return;const width=pd.documentElement.clientWidth-24,height=pd.documentElement.clientHeight-24;if(width<=0||height<=0)return;sample.style.transform='scale('+Math.min(1,width/Math.max(1,sample.scrollWidth),height/Math.max(1,sample.scrollHeight))+')';};
+      for(const p of typeProperties)sample.style.setProperty(p,css.getPropertyValue(p));
+      const clamped=Number(css.getPropertyValue('-webkit-line-clamp'))>0;
+      // Chromium reports a clamped legacy box as flow-root; copying that computed
+      // display loses the legacy clamp behavior in a fresh preview element.
+      if(clamped){for(const p of ['width','overflow','-webkit-box-orient','-webkit-line-clamp'])sample.style.setProperty(p,css.getPropertyValue(p));sample.style.display='-webkit-box';}
+      sample.style.transformOrigin='top left';pd.body.append(sample);
+      fit=()=>{if(!preview.isConnected||!sample)return;const width=pd.documentElement.clientWidth-24,height=pd.documentElement.clientHeight-24;if(width<=0||height<=0)return;sample.style.transform='scale('+Math.min(1,width/Math.max(1,sample.scrollWidth),height/Math.max(1,clamped?sample.offsetHeight:sample.scrollHeight))+')';};
       const observer=new pd.defaultView.ResizeObserver(fit);observer.observe(sample);pd.defaultView.addEventListener('resize',fit);pd.fonts.ready.then(fit);fit();
     };
     preview.srcdoc='<!doctype html><html><head></head><body></body></html>';
@@ -901,6 +917,7 @@
       if(!indent.value)indent.placeholder=css.textIndent;indent.title='Offsets the first line of each paragraph. Negative values create a hanging indent.';numericPreview(indent,el,'text-indent');
       const resetIndent=button('Reset paragraph indent',()=>save(replace(info.className,textIndentToken,'')));resetIndent.disabled=!tokens(info.className).map(base).some(t=>t&&textIndentToken(t));sec.append(resetIndent);
       wrapTypography(sec,css,value=>change(textWrapToken,`[text-wrap:${value}]`),()=>save(replace(info.className,textWrapToken,'')),tokens(info.className).map(base).some(t=>t&&textWrapToken(t)));
+      truncationTypography(sec,css,value=>save(replace(info.className,truncationToken,'!line-clamp-'+(value===null?'none':value))),()=>save(replace(info.className,truncationToken,'')),tokens(info.className).map(base).some(t=>t&&truncationToken(t)));
       select(sec,'Text alignment',['left','center','right','justify','start','end'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.textAlign,v=>change(textAlignToken,'text-'+v)).dataset.textDirection=css.direction;
       select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(fontStyleToken,v==='italic'?'italic':'not-italic'));
       select(sec,'Text decoration',[['none','None'],['underline','Underline'],['line-through','Strikethrough'],['overline','Overline']],css.textDecorationLine,v=>change(decorationToken,v==='none'?'no-underline':v));
@@ -962,6 +979,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

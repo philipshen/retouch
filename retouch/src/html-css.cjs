@@ -5,7 +5,9 @@ const escape=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/
 const attr=(node,name)=>node.attrs?.find(a=>a.name===name)?.value;
 function rule(id,width,values,legacy=false){
  const group=p=>Number(!families[p]||p==='border-radius'),key=p=>families['border-radius'].includes(p)?'border-radius-'+p:p;
- const body=`[data-rt-style="${id}"]{`+Object.entries(values).sort(([a],[b])=>legacy?a.localeCompare(b):group(a)-group(b)||key(a).localeCompare(key(b))).map(([k,v])=>`${k}:${v} !important;`).join('')+'}';
+ // Keep truncation as one stored setting, expanding the legacy browser fallback
+ // after authored declarations. Reset removes the expansion without losing them.
+ const body=`[data-rt-style="${id}"]{`+Object.entries(values).sort(([a],[b])=>legacy?a.localeCompare(b):group(a)-group(b)||key(a).localeCompare(key(b))).filter(([k])=>k!=='line-clamp').map(([k,v])=>`${k}:${v} !important;`).join('')+(values['line-clamp']===undefined?'':values['line-clamp']==='none'?'-webkit-line-clamp:unset !important;overflow:visible !important;display:block !important;-webkit-box-orient:horizontal !important;':`overflow:hidden !important;display:-webkit-box !important;-webkit-box-orient:vertical !important;-webkit-line-clamp:${values['line-clamp']} !important;`)+'}';
  return width?`@media (min-width: ${width}px){${body}}`:body;
 }
 function inspect(resolved){
