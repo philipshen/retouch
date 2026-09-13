@@ -4,6 +4,7 @@ module.exports=async function resizeWorkflow({page,app,kind,read,wait,settled}){
  const original=read(),surface=page.getByLabel('Resize SVG vector on canvas',{exact:true});
  const cases=[['rect','Box'],['circle','Circle'],['ellipse','Ellipse'],['line','Diagonal'],['line','Horizontal'],['line','Vertical'],['path','Curve'],['polygon','Polygon'],['polyline','Polyline'],['g','Group'],['text','Text'],['image','Picture'],['use','Symbol']];
  const select=async(tag,name)=>{await page.getByRole('treeitem',{name:tag+' · '+name,exact:true}).click();await settled();await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));};
+ if(process.env.RT_E2E_SVG_SINGLE_ALIGN_ONLY){await require('./svg-single-align.cjs')({page,app,kind,read,wait,settled,select,original});return;}
  if(process.env.RT_E2E_SVG_ALIGN_ONLY){await require('./svg-selection-align.cjs')({page,app,kind,read,wait,settled,select,original});return;}
  if(process.env.RT_E2E_SVG_ALL_SCRUB_ONLY){const context={page,app,kind,read,wait,settled,select,original};await require('./svg-scrub.cjs')(context);await require('./svg-selection-scrub.cjs')(context);return;}
  if(process.env.RT_E2E_SVG_SELECTION_SCRUB_ONLY){await require('./svg-selection-scrub.cjs')({page,app,kind,read,wait,settled,select,original});return;}
@@ -23,7 +24,7 @@ module.exports=async function resizeWorkflow({page,app,kind,read,wait,settled}){
  if(process.env.RT_E2E_SVG_FLIP)await require('./svg-flip.cjs')({page,app,cases,select,read,wait,settled,original,kind});
  if(process.env.RT_E2E_SVG_MOVE)await require('./svg-move-canvas.cjs')({page,app,cases,select,read,wait,settled,original,kind});
  if(process.env.RT_E2E_SVG_ROTATE)await require('./svg-rotate.cjs')({page,app,cases,select,read,wait,settled,original,kind});
- await require('./svg-scrub.cjs')({page,app,kind,read,wait,settled,select,original});
+ await require('./svg-single-align.cjs')({page,app,kind,read,wait,settled,select,original});await require('./svg-scrub.cjs')({page,app,kind,read,wait,settled,select,original});
  await select('rect','Box');const box=app.locator('[aria-label="Box"]'),initial=await box.getAttribute('transform');await require('./shape-tools.cjs').run(page,'Resize vector on canvas');await surface.waitFor();await page.keyboard.press('ArrowRight');await page.keyboard.press('Shift+ArrowDown');assert.notEqual(await box.getAttribute('transform'),initial);assert.equal(read(),original);await page.keyboard.press('Escape');await surface.waitFor({state:'detached'});assert.equal(await box.getAttribute('transform'),initial);assert.equal(read(),original);
  await require('./shape-tools.cjs').run(page,'Resize vector on canvas');await surface.waitFor();await page.keyboard.press('ArrowRight');await page.keyboard.press('Enter');await settled();await wait(()=>read()!==original);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);
  // Inspector dimensions follow the authored transform and share exact history.
