@@ -10,47 +10,41 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-stops-d4c9fb3/Retouch-0.1.0-mac.zip`
-(SHA-256 `5cd7c791df1b01763a387e678e92afba3726c60fe9eceee332a0bdab935ce2bb`).
-It packages clean commit `d4c9fb3`, including gradient controls inside Fill and
-Stroke, radial inner-radius handles, and canvas color-stop movement, reordering,
-insertion, deletion and color picking. All 204 source hashes and native/build/verifier
-hashes match. Universal architecture, strict signature verification before and
-after workflows, disposable-copy tamper checks, and 1,111 tests importing the
-actual bundled runtime pass.
+`/private/tmp/retouch-desktop-arrows-f63d1a2/Retouch-0.1.0-mac.zip`
+(SHA-256 `fe0a6998909d5f93327e24852dab0f08d3e4784e17807d7d843c11de687c45e3`).
+It packages clean commit `f63d1a2`, including V to return to Move, Arrow drawing
+with Shift+L, arrowhead dimensions and Reverse arrow, plus stateful React SVG
+gradient creation. All 204 source hashes and native/build/verifier hashes match.
+Universal architecture, strict signature verification before and after tests,
+disposable-copy tamper checks and 1,127 tests importing the bundled runtime pass.
 
-The exact archive installed and uninstalled through Homebrew in an isolated app
+The exact ZIP installed and uninstalled through Homebrew in an isolated app
 directory with quarantine intact. The original cask inventory is unchanged;
-the temporary app, tap, trust configuration and external harness were removed.
-Packaged HTML/WebKit, React/Chromium and Liquid/Chromium full gradient workflows
-pass, including exact source history, color preview cancellation, no-op Apply,
-and cancellation during a pending save. The combined canvas transform/viewport
-case and responsive comparison editing also pass.
-See [the candidate receipt](verification/2026-09-13-canvas-stop-controls.json).
-The [previous canvas candidate](verification/2026-09-13-canvas-gradients.json)
-records the earlier geometry-handle and persistent-session build.
-The [earlier gradient candidate](verification/2026-09-13-svg-gradients.json)
-records equal canvas-gap checks; those were not rerun on this archive.
-The [alignment candidate](verification/2026-09-13-alignment-scrubbing.json)
-records broader vector, scoped stroke and canvas radius workflows.
+temporary app, tap, trust configuration and external harness were removed.
+Packaged HTML/Chromium, Liquid/WebKit and React/Chromium drawing workflows pass,
+including arrowhead edits, reversal, freeform guards and exact source history.
+The full HTML/WebKit gradient workflow, stateful React gradient creation, and
+HTML responsive comparison editing also pass.
+See [the candidate receipt](verification/2026-09-13-arrow-controls.json).
 
 This is an ad hoc development build, not a trusted release. Native launch was
-not attempted because the CUA native connection failed. Developer ID signing was
-not retried; the previous bounded attempt is recorded in the
-[vector candidate receipt](verification/2026-09-13-vector-transforms.json).
-Developer ID signing, notarization, public distribution, native editing, Intel
-execution and trusted upgrades remain unverified.
+not attempted because the CUA native connection failed. Developer ID signing,
+notarization, public distribution, native editing, Intel execution and trusted
+upgrades remain unverified. No signing or launch retry was attempted.
 
-The [previous startup-recovery candidate](verification/2026-09-13-vectors-recovery.json)
-records targeted cold-start recovery and ready-preview preservation checks.
-Those startup scenarios and native Pen workflows were not rerun on this archive.
+The [previous stop-controls candidate](verification/2026-09-13-canvas-stop-controls.json)
+records the combined gradient-transform/viewport test, which was not repeated
+for this archive. Earlier [canvas](verification/2026-09-13-canvas-gradients.json),
+[gradient](verification/2026-09-13-svg-gradients.json),
+[alignment](verification/2026-09-13-alignment-scrubbing.json), and
+[startup-recovery](verification/2026-09-13-vectors-recovery.json) receipts retain
+scope-specific evidence; their other workflows are not implied to have run on
+this archive.
 
-The [previous sizing candidate](verification/2026-09-13-sizing-workflows.json)
-records scaled/flipped sizing and rotation workflows, plus the older WebKit 26.0
-margin-aware Fill-height failure. That Fill case was not rerun for this archive.
-Earlier candidates remain documented in the
-[transform workflow receipt](verification/2026-09-12-transform-workflows.json) and
-[text/comparison receipt](verification/2026-09-12-text-comparisons.json).
+The [sizing candidate](verification/2026-09-13-sizing-workflows.json) and
+[current engine investigation](../docs/fill-engine-compatibility.md) document
+the older WebKit normal-flow block-axis Fill failure. That failure remains
+unresolved and was not rerun on this archive.
 
 The previous archive with native workflow evidence is
 `/private/tmp/retouch-desktop-shared-e948266/Retouch-0.1.0-mac.zip`.

@@ -1,0 +1,115 @@
+{
+  "sourceCommit": "f63d1a283840b9b55f15ff380245d7dd16654395",
+  "sourceTreeDirty": false,
+  "sourceFiles": 204,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "status": "ad hoc development candidate; native editing and trusted distribution unverified",
+  "archive": "/private/tmp/retouch-desktop-arrows-f63d1a2/Retouch-0.1.0-mac.zip",
+  "sha256": "fe0a6998909d5f93327e24852dab0f08d3e4784e17807d7d843c11de687c45e3",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "signatureAfterWorkflows": "strict verification passed on extracted and original bundles",
+  "units": {
+    "passed": 1127,
+    "scope": "tests import the actual extracted packaged runtime",
+    "log": "/private/tmp/retouch-desktop-arrows-f63d1a2/units.log"
+  },
+  "harness": {
+    "testFiles": 323,
+    "inventorySha256": "5742fb925382c050731b7255edf5457b039b3b210e6ecf43a1800e69de4687ac",
+    "archiveSha256": "d27bfd46a06cf3a888fc937084df80b152b90d1cc16f14b967940ead44d3c161",
+    "runtimePaths": {
+      "bin": "/private/tmp/retouch-desktop-arrows-f63d1a2/extracted/Retouch.app/Contents/Resources/retouch/bin",
+      "src": "/private/tmp/retouch-desktop-arrows-f63d1a2/extracted/Retouch.app/Contents/Resources/retouch/src",
+      "shell": "/private/tmp/retouch-desktop-arrows-f63d1a2/extracted/Retouch.app/Contents/Resources/retouch/shell"
+    },
+    "sourceNativeBuildVerifierHashesMatch": true,
+    "removedAfterAllProcessesExited": true
+  },
+  "workflows": [
+    {
+      "name": "Move shortcut, seven drawing presets, arrow dimensions/reversal, freeform guards and exact history",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-arrows-f63d1a2/arrows-html.log"
+    },
+    {
+      "name": "Move shortcut, seven drawing presets, arrow dimensions/reversal, freeform guards and exact history",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-arrows-f63d1a2/arrows-liquid.log"
+    },
+    {
+      "name": "Transformed native container drawing, self-closing SVG/group insertion, arrow dimensions/reversal, freeform guards and exact history",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-arrows-f63d1a2/arrows-react.log"
+    },
+    {
+      "name": "Full SVG gradient inspector and canvas workflows, stop actions and persistent sessions",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-arrows-f63d1a2/gradients-html.log"
+    },
+    {
+      "name": "Stateful SVG gradient creation preserves React handlers and dynamic geometry",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-arrows-f63d1a2/gradients-react-stateful.log"
+    },
+    {
+      "name": "Responsive comparison picking, editing, screen management and exact history",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-arrows-f63d1a2/comparison.log"
+    }
+  ],
+  "tamperChecks": {
+    "result": "passed on disposable bundle copy",
+    "log": "/private/tmp/retouch-desktop-arrows-f63d1a2/tamper.log"
+  },
+  "installation": {
+    "verification": {
+      "sourceCommit": "f63d1a283840b9b55f15ff380245d7dd16654395",
+      "sourceTreeDirty": false,
+      "sourceFiles": 204,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesArchive": true,
+    "quarantinePreserved": true,
+    "quarantine": "0381;6aa68d64;;0EAA1BC6-10E0-4AA3-B1B2-95C49F6878CA",
+    "result": "isolated install and uninstall passed",
+    "caskInventoryUnchanged": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "automaticDependencyRemovalDisabled": true,
+    "log": "/private/tmp/retouch-desktop-arrows-f63d1a2/homebrew.log"
+  },
+  "nativeLaunch": {
+    "result": "not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "nativeSelfTests": "not run",
+  "developerID": "not retried",
+  "notarization": "not performed",
+  "published": false,
+  "remaining": [
+    "Native full editing, sampler and shutdown workflows remain unverified",
+    "Developer ID signing, notarization, public cask and trusted upgrades remain incomplete",
+    "Intel runtime execution remains unverified",
+    "Older WebKit normal-flow block-axis Fill sizing remains incorrect; not rerun on this archive",
+    "Full Figma Design parity and universal site support remain incomplete"
+  ]
+}
