@@ -10,21 +10,24 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-alignment-9b39c83/Retouch-0.1.0-mac.zip`
-(SHA-256 `e032bc3dd230b647667954f41ae6c4041f4a65d089e98c26843aa1b6f70ad68e`).
-It packages clean commit `9b39c83`, including single/selection alignment,
-parent and SVG viewport targets, variable-speed field scrubbing, synchronized
-pose fields, and cancellation when page geometry changes. All 194 source hashes
+`/private/tmp/retouch-desktop-gradients-2e06baf/Retouch-0.1.0-mac.zip`
+(SHA-256 `7feb344537ad9d09f85b15a8bf7eca96e7f69a7454477a42476e9f46da5c179f`).
+It packages clean commit `2e06baf`, including SVG gradient coordinates, stop
+insertion/removal, dragging and reordering, shared color previews, independent
+gradient copies, and equal canvas gaps from mixed spacing. All 199 source hashes
 and native/build/verifier hashes match. Universal architecture, strict signature
 verification before and after workflows, disposable-copy tamper checks, and
-1,037 tests importing the actual bundled runtime pass.
+1,069 tests importing the actual bundled runtime pass.
 
 The exact archive installed and uninstalled through Homebrew in an isolated app
 directory with quarantine intact. The original cask inventory is unchanged;
 the temporary app, tap, trust configuration and external harness were removed.
-Packaged HTML/WebKit, React/Chromium and Liquid/Chromium full vector workflows pass.
-Responsive comparison editing, scoped stroke controls and canvas radius checks
-also pass. See [the candidate receipt](verification/2026-09-13-alignment-scrubbing.json).
+Packaged HTML/WebKit, React/Chromium and Liquid/Chromium gradient workflows pass,
+including source Undo/Redo. Responsive comparison editing and equal canvas gaps
+also pass. See [the candidate receipt](verification/2026-09-13-svg-gradients.json).
+The [previous alignment candidate](verification/2026-09-13-alignment-scrubbing.json)
+records full vector, scoped stroke and canvas radius workflows; those broader
+workflows were not rerun on this archive.
 
 This is an ad hoc development build, not a trusted release. Native launch was
 not attempted because the CUA native connection failed. Developer ID signing was

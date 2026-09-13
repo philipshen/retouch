@@ -1,0 +1,103 @@
+{
+  "sourceCommit": "2e06baf8743b808b97effa388ce0916ff405a60e",
+  "sourceTreeDirty": false,
+  "sourceFiles": 199,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "allSourceNativeBuildVerifierHashesMatch": true,
+  "verifiedAt": "2026-09-13T09:27:48.603531+00:00",
+  "archive": "/private/tmp/retouch-desktop-gradients-2e06baf/Retouch-0.1.0-mac.zip",
+  "sha256": "7feb344537ad9d09f85b15a8bf7eca96e7f69a7454477a42476e9f46da5c179f",
+  "status": "development candidate; packaged runtime and isolated Homebrew install verified; native workflows and trusted distribution unverified",
+  "buildLog": "/private/tmp/retouch-desktop-gradients-build.log",
+  "units": {
+    "passed": 1069,
+    "scope": "actual packaged runtime with external development test harness",
+    "log": "/private/tmp/retouch-desktop-gradients-2e06baf/units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "SVG gradients: coordinates, stop insertion/removal, drag/reorder, picker, unique resources and exact history",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-gradients-2e06baf/gradients-html.log"
+    },
+    {
+      "name": "SVG gradients: coordinates, stop insertion/removal, drag/reorder, picker, unique resources and exact history",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-gradients-2e06baf/gradients-react.log"
+    },
+    {
+      "name": "SVG gradients: coordinates, stop insertion/removal, drag/reorder, picker, unique resources and exact history",
+      "renderer": "liquid",
+      "engine": "chromium",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-gradients-2e06baf/gradients-liquid.log"
+    },
+    {
+      "name": "Responsive comparison editing and persistence",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-gradients-2e06baf/comparison.log"
+    },
+    {
+      "name": "Equal canvas gaps from mixed spacing",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-gradients-2e06baf/gaps-html.log"
+    }
+  ],
+  "harness": {
+    "testFiles": 305,
+    "inventory": "/private/tmp/retouch-desktop-gradients-2e06baf/harness-inventory.json",
+    "inventorySha256": "6af547a35fc2d03c69cdbd07b49a312b2f919a1c95230a8a983413dcd9587e21",
+    "archive": "/private/tmp/retouch-desktop-gradients-2e06baf/harness-tests.tar.gz",
+    "archiveSha256": "684608424aee1fa93623ecae1c6fe1391e24dd0b5fa10abd4065fdf72c18216f",
+    "removedAfterTerminalResults": true
+  },
+  "homebrew": {
+    "verification": {
+      "sourceCommit": "2e06baf8743b808b97effa388ce0916ff405a60e",
+      "sourceTreeDirty": false,
+      "sourceFiles": 199,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesArchive": true,
+    "quarantinePreserved": true,
+    "quarantine": "0381;6aa66c2f;;19E8F71A-61F7-4360-837A-7D5D0BAEDEA5",
+    "result": "isolated install and uninstall passed",
+    "caskInventoryUnchanged": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "automaticDependencyRemovalDisabled": true
+  },
+  "tamperVerification": {
+    "result": "passed on disposable copy; original unchanged",
+    "log": "/private/tmp/retouch-desktop-gradients-2e06baf/verifier-tamper.log"
+  },
+  "native": {
+    "preflight": "Native apps: Error: Sky Computer Use native pipe startup failed",
+    "launchAttempted": false,
+    "tests": "unverified"
+  },
+  "signing": "ad hoc development build; Developer ID not retried",
+  "unverified": [
+    "native editing workflows",
+    "Developer ID signing",
+    "notarization",
+    "public cask distribution",
+    "Intel runtime execution",
+    "trusted upgrades"
+  ]
+}
