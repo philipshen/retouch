@@ -902,6 +902,7 @@ componentBadge.querySelector('button').onclick=async()=>{
     await detachInstance(target.id,component,button,context);
   } finally {button.disabled=false;}
 };
+const svgSelectionCorners=RetouchSVGSelection.controls({frame:iframe,canvas:canvasSurface,onStart:(event,handle)=>moveSVGSelection({initialPointer:event,handle})});
 const svgResizeCorners=RetouchSVGResize.controls({frame:iframe,canvas:canvasSurface,onStart:resizeSVGOnCanvas,onRotate:(info,target,event,handle)=>resizeSVGOnCanvas(info,target,event,handle,'rotate')});
 const radiusCorners=RetouchSVGRadiusCanvas.controls({frame:iframe,canvas:canvasSurface,onStart:roundRectangleOnCanvas});
 const rotationCorners=RetouchCanvasRotate.cornerControls({frame:iframe,canvas:canvasSurface,onStart:rotateLayerOnCanvas});
@@ -952,6 +953,9 @@ function paintLoop() {
   radiusCorners.update(radiusInput?.retouchRadiusTarget,radiusInput);
   const svgResizeInfo=mode==='edit'&&!editing&&!stopDrawing&&!canvasPan.active&&!panelTasks&&!undoBusy&&!sourceRequests&&!(sel?.multiple?.length>1)&&!document.querySelector('dialog[open]')?sel?.info:null;
   const svgResizeTargets=svgResizeInfo?.svgTransform?.editable?matchingEls(svgResizeInfo.id):[];svgResizeCorners.update(svgResizeTargets.length===1?svgResizeTargets[0]:null,svgResizeInfo);
+  const selectionResizeInfos=mode==='edit'&&!editing&&!stopDrawing&&!canvasPan.active&&!panelTasks&&!undoBusy&&!sourceRequests&&sel?.multiple?.length>1&&!document.querySelector('dialog[open]')?sel.multiple:null;
+  const selectionResizeElements=selectionResizeInfos?.map(info=>{const found=matchingEls(info.id);return found.length===1&&!layerLocks.locked(found[0])?found[0]:null;});
+  svgSelectionCorners.update(selectionResizeElements?.every(Boolean)?selectionResizeInfos:null,selectionResizeElements);
   rotationCorners.update(rotationInput?.retouchPreviewTarget,rotationInput,rotationInput&&!sel?.info.svgTransform?panelBody.querySelector('[data-canvas-tool=resize]'):null);
   if(d&&sel&&mode==='edit'&&!editing&&window.RetouchGridGuidesEnabled)RetouchInspector.drawGridGuides(overlayLayer,renderedSelection?.element||matchingEls(activeId())[0]);
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);

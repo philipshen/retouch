@@ -14086,3 +14086,31 @@ in /private/tmp/retouch-selection-drag.png. Logs:
 /private/tmp/retouch-selection-drag-{html,react,cancel}.log and
 /private/tmp/retouch-selection-drag-{liquid,units}-final.log.
 No desktop rebuild or push was performed.
+
+## 2026-09-13 — SVG selection canvas resize handles
+
+Editable SVG multi-selections now display eight canvas resize handles. Each
+handle resizes the document-space selection bounds around the opposite edge or
+corner, composing the resulting transform through each member's own parent.
+Selected descendants inherit the resize once. The inspector proportions lock
+also controls canvas resizing; Shift constrains proportions, Control temporarily
+unlocks them, and Option/Alt resizes around the selection center. Modifier
+changes update the preview without another pointer movement.
+
+The active handle follows the resized bounds. Release writes one atomic source
+transaction, while Escape restores authored transforms. The shared gesture
+validation and cancellation path also continues to serve nudging and dragging.
+Idle handles are clipped to the visible canvas and hidden for ambiguous,
+locked, unsupported or zero-extent selections.
+
+Selection rotation handles, resize snapping, mixed CSS/SVG selections and
+cross-file transforms remain unfinished. No desktop rebuild or push.
+
+Validation: 1,032 unit tests passed. HTML/WebKit 26, React/Chromium and
+Liquid/Chromium browser workflows verify all eight handles, different parent
+transforms, nested members, proportions locking, live Control overrides,
+Shift+Alt center resizing, 50/200 percent zoom, cancellation and exact Undo/Redo.
+The shared selection drag/nudge and existing vector regressions are included.
+The active resize handle and light hint in /private/tmp/retouch-selection-resize.png
+were visually inspected. Logs: /private/tmp/retouch-selection-resize-{units,html,react}.log
+and /private/tmp/retouch-selection-resize-liquid-final.log.

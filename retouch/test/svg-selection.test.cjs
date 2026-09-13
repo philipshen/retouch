@@ -32,3 +32,13 @@ test('Selection proportions scale both axes about the top left and enforce both 
  assert.equal(S.selectionKey([{file:'a',id:'1'},{file:'a',id:'2'}]),S.selectionKey([{file:'a',id:'2'},{file:'a',id:'1'}]));
  assert.notEqual(S.selectionKey([{file:'a',id:'1'}]),S.selectionKey([{file:'b',id:'1'}]));
 });
+
+test('Canvas selection resize honors opposite anchors, center and live proportion modifiers',()=>{
+ const b={left:20,top:30,width:100,height:200};
+ assert.deepEqual(S.canvasResize(b,'nw',10,20),[.9,0,0,.9,12,23]);
+ assert.deepEqual(S.canvasResize(b,'se',10,20,{altKey:true}),[1.2,0,0,1.2,-14,-26]);
+ const locked=S.canvasResize(b,'se',50,10,{},true);assert.equal(locked[0],locked[3]);
+ const shift=S.canvasResize(b,'se',50,10,{shiftKey:true});assert.equal(shift[0],shift[3]);
+ const free=S.canvasResize(b,'se',50,10,{ctrlKey:true},true);assert.notEqual(free[0],free[3]);
+ assert.equal(S.canvasResize({...b,width:0},'se',10,10),null);
+});

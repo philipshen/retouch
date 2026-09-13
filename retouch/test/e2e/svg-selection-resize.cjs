@@ -1,0 +1,27 @@
+'use strict';
+const assert=require('node:assert/strict'),A=require('../../shell/svg-affine.js');
+module.exports=async({page,app,select,read,wait,settled,original,kind})=>{
+ const surface=page.getByLabel('Resize SVG selection on canvas',{exact:true}),names=['top left','top','top right','right','bottom right','bottom','bottom left','left'],keys=['nw','n','ne','e','se','s','sw','w'];
+ const measure=async()=>{const ids=await page.evaluate(()=>sel.multiple.map(info=>info.id));return app.locator('body').evaluate((body,ids)=>{const nodes=ids.map(id=>body.querySelector('[data-rt="'+id+'"]'));return nodes.map(el=>{const m=el.getScreenCTM(),r=el.getBoundingClientRect();return {m:[m.a,m.b,m.c,m.d,m.e,m.f],covered:nodes.some(p=>p!==el&&p.contains(el)),r:{left:r.left,top:r.top,right:r.right,bottom:r.bottom}};});},ids);};
+ for(const [key,nested,locked]of [...keys.map(key=>[key,false,false]),['se',true,false],['se',false,true]]){
+  await select('g','Group');await page.getByRole('treeitem',{name:'circle · Circle',exact:true}).click({modifiers:[nested?'Shift':'Meta']});await settled();const lock=page.getByRole('button',{name:'Lock selection proportions',exact:true});if(locked)await lock.click();
+  const before=await measure(),outer=before.filter(m=>!m.covered),left=Math.min(...outer.map(m=>m.r.left)),right=Math.max(...outer.map(m=>m.r.right)),top=Math.min(...outer.map(m=>m.r.top)),bottom=Math.max(...outer.map(m=>m.r.bottom)),width=right-left,height=bottom-top;
+  const button=page.getByRole('button',{name:'Resize selection from '+names[keys.indexOf(key)],exact:true});await button.waitFor();const r=await button.boundingBox(),start={x:r.x+r.width/2,y:r.y+r.height/2};await page.mouse.move(start.x,start.y);await page.mouse.down();await page.mouse.move(start.x+20,start.y+12,{steps:4});await surface.waitFor();assert.equal(read(),original);
+  if(locked){await page.keyboard.down('Control');}
+  const sx=key.includes('e')?1+20/width:key.includes('w')?1-20/width:1,sy=key.includes('s')?1+12/height:key.includes('n')?1-12/height:1,global=[sx,0,0,sy,(key.includes('w')?right:left)*(1-sx),(key.includes('n')?bottom:top)*(1-sy)],after=await measure();before.forEach((m,i)=>A.multiply(global,m.m).forEach((v,j)=>assert.ok(Math.abs(v-after[i].m[j])<1,'resize '+key+' coefficient '+j)));
+  if(locked){await page.keyboard.up('Control');const proportional=await measure(),sx=proportional[0].m[0]/before[0].m[0],sy=proportional[0].m[3]/before[0].m[3];assert.ok(Math.abs(sx-sy)<.002,'lock resumes without another pointer movement');}
+  if(process.env.RT_E2E_SVG_SELECTION_RESIZE_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_SVG_SELECTION_RESIZE_SCREENSHOT});
+  await page.mouse.up();await surface.waitFor({state:'detached'});await settled();await wait(()=>read()!==original);const changed=read();await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===changed);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);if(locked)await page.getByRole('button',{name:'Lock selection proportions',exact:true}).click();
+ }
+
+ for(const zoom of ['50','200']){
+  const zi=page.getByLabel('Canvas zoom (%)',{exact:true});await zi.fill(zoom);await zi.press('Enter');await select('circle','Circle');await page.getByRole('treeitem',{name:'ellipse · Ellipse',exact:true}).click({modifiers:['Meta']});await app.locator('[aria-label="Circle"]').scrollIntoViewIfNeeded();await settled();
+  const before=await measure(),left=Math.min(...before.map(m=>m.r.left)),right=Math.max(...before.map(m=>m.r.right)),top=Math.min(...before.map(m=>m.r.top)),bottom=Math.max(...before.map(m=>m.r.bottom)),width=right-left,height=bottom-top,cx=(left+right)/2,cy=(top+bottom)/2,scale=Number(zoom)/100;
+  const b=await page.getByRole('button',{name:'Resize selection from bottom right',exact:true}).boundingBox();await page.mouse.move(b.x+b.width/2,b.y+b.height/2);await page.mouse.down();await page.keyboard.down('Shift');await page.mouse.move(b.x+b.width/2+20,b.y+b.height/2+12,{steps:4});await surface.waitFor();await page.keyboard.down('Alt');
+  let f=1+Math.max(40/scale/width,24/scale/height),expected=[f,0,0,f,cx*(1-f),cy*(1-f)],after=await measure();before.forEach((m,i)=>A.multiply(expected,m.m).forEach((v,j)=>assert.ok(Math.abs(v-after[i].m[j])<1,'Shift+Alt resize at '+zoom+'%')));
+  await page.keyboard.up('Shift');const sx=1+40/scale/width,sy=1+24/scale/height;expected=[sx,0,0,sy,cx*(1-sx),cy*(1-sy)];after=await measure();before.forEach((m,i)=>A.multiply(expected,m.m).forEach((v,j)=>assert.ok(Math.abs(v-after[i].m[j])<1,'live Alt resize retains selection center')));
+  await page.keyboard.press('Escape');await page.keyboard.up('Alt');await page.mouse.up();await surface.waitFor({state:'detached'});assert.equal(read(),original);after=await measure();before.forEach((m,i)=>m.m.forEach((v,j)=>assert.ok(Math.abs(v-after[i].m[j])<.1,'Escape restores selection')));
+ }
+ await page.getByLabel('Canvas zoom (%)',{exact:true}).fill('100');await page.getByLabel('Canvas zoom (%)',{exact:true}).press('Enter');
+ console.log('SVG SELECTION RESIZE: eight handles, nested members, proportions lock, live Control and atomic history PASS '+kind);
+};

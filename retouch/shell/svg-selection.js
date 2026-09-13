@@ -11,25 +11,44 @@
   if(box.width*sx>100000||box.height*sy>100000)return null;
   return [sx,0,0,sy,box.left*(1-sx),box.top*(1-sy)];
  }
- function capture(infos,elements){
+ function capture(infos,elements,probe=true){
   if(infos.length!==elements.length||elements.some(el=>!el?.isConnected)||new Set(infos.map(i=>i.file)).size!==1)throw Error('Select visible vectors from one source file.');
-  const members=infos.map((info,i)=>{const el=elements[i],reason=root.RetouchSVGResize.reason(el,info,true);if(reason)throw Error(reason);if(el.getAttribute('transform')!==info.svgTransform.value)throw Error('The vector changed. Re-select it.');const data=root.RetouchSVGResize.measure(el),parent=A().multiply(array(data.m),inverse(info.svgTransform.matrix));return {info,el,parent,covered:elements.some(ancestor=>ancestor!==el&&ancestor.contains(el)),rect:el.getBoundingClientRect()};});
+  const members=infos.map((info,i)=>{const el=elements[i],reason=root.RetouchSVGResize.reason(el,info,probe);if(reason)throw Error(reason);if(el.getAttribute('transform')!==info.svgTransform.value)throw Error('The vector changed. Re-select it.');const data=root.RetouchSVGResize.measure(el),parent=A().multiply(array(data.m),inverse(info.svgTransform.matrix));return {info,el,parent,covered:elements.some(ancestor=>ancestor!==el&&ancestor.contains(el)),rect:el.getBoundingClientRect()};});
   const outer=members.filter(m=>!m.covered);const left=Math.min(...outer.map(m=>m.rect.left)),top=Math.min(...outer.map(m=>m.rect.top)),right=Math.max(...outer.map(m=>m.rect.right)),bottom=Math.max(...outer.map(m=>m.rect.bottom));return {members,box:{left,top,width:right-left,height:bottom-top},w:elements[0].ownerDocument.defaultView};
  }
- function nudge(infos,elements,{initialKey,initialPointer,initialMove,pointerTarget,frame,current,onCommit,onEnd,onError,canvas}){
+ const handles=['nw','n','ne','e','se','s','sw','w'],handleNames=['top left','top','top right','right','bottom right','bottom','bottom left','left'];
+ function handleButton(i){
+  const b=root.document.createElement('button');b.type='button';b.tabIndex=-1;b.setAttribute('aria-label','Resize selection from '+handleNames[i]);b.title='Resize selection · Shift: proportions · Control: unlock · Option / Alt: center';
+  Object.assign(b.style,{position:'absolute',width:'10px',height:'10px',padding:'0',border:'1px solid var(--accent)',background:'white',pointerEvents:'auto',touchAction:'none',transform:'translate(-50%,-50%)',cursor:['nwse-resize','ns-resize','nesw-resize','ew-resize','nwse-resize','ns-resize','nesw-resize','ew-resize'][i]});return b;
+ }
+ function points(box){return [[0,0],[.5,0],[1,0],[1,.5],[1,1],[.5,1],[0,1],[0,.5]].map(([x,y])=>({x:box.left+x*box.width,y:box.top+y*box.height}));}
+ function controls({frame,canvas,onStart}){
+  const host=root.document.createElement('div');Object.assign(host.style,{position:'fixed',pointerEvents:'none',overflow:'hidden',zIndex:30});host.hidden=true;root.document.body.append(host);let active=null;
+  const buttons=handles.map((key,i)=>{const b=handleButton(i);b.onpointerdown=e=>{if(!active||e.button!==0)return;e.preventDefault();e.stopPropagation();onStart(e,key);};host.append(b);return b;});
+  return {update(infos,elements){active=null;host.hidden=true;if(!infos?.length)return;try{const {box}=capture(infos,elements,false);if(!box.width||!box.height)return;const f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/frame.contentWindow.innerWidth,left=Math.max(f.left,c.left),top=Math.max(f.top,c.top),right=Math.min(f.right,c.right),bottom=Math.min(f.bottom,c.bottom);Object.assign(host.style,{left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px'});const seen=[];points(box).forEach((p,i)=>{const x=f.left+p.x*scale-left,y=f.top+p.y*scale-top,b=buttons[i];b.hidden=x<6||y<6||x>right-left-6||y>bottom-top-6||seen.some(p=>Math.hypot(x-p.x,y-p.y)<9);if(!b.hidden)seen.push({x,y});b.style.left=x+'px';b.style.top=y+'px';});active=infos;host.hidden=false;}catch{}}};
+ }
+ function canvasResize(box,handle,dx,dy,modifiers={},locked=false){
+  if(!box.width||!box.height)return null;
+  const C=root.RetouchCanvasMove||require('./canvas-move.js'),ratio=!modifiers.ctrlKey&&(locked||modifiers.shiftKey),d=C.resize(box.width,box.height,handle,dx,dy,{shiftKey:!!ratio,altKey:!!modifiers.altKey,minWidth:1,minHeight:1,maxWidth:100000,maxHeight:100000}),sx=d.width/box.width,sy=d.height/box.height;
+  return [sx,0,0,sy,box.left+d.x-box.left*sx,box.top+d.y-box.top*sy];
+ }
+ function nudge(infos,elements,{initialKey,initialPointer,initialMove,pointerTarget,frame,handle,current,onCommit,onEnd,onError,canvas}){
   let state;try{state=capture(infos,elements);}catch(error){onError(error.message);return null;}
   const members=state.members,w=state.w,cleanup=[],held=new Set(),original=members.map(m=>m.el.getAttribute('transform')),screens=members.map(m=>array(m.el.getScreenCTM())),geometry=members.map(m=>{const g=m.el.getBBox();return [g.x,g.y,g.width,g.height];});
-  let ended=false,raf,x=0,y=0,next=matricesFor(members,A().identity()),last=original.slice();
-  const surface=root.document.createElement('div');surface.setAttribute('aria-label',initialPointer?'Drag SVG selection on canvas':'Move SVG selection on canvas');Object.assign(surface.style,{position:'fixed',bottom:'116px',left:'50%',transform:'translateX(-50%)',zIndex:40});
-  const button=root.document.createElement('button');button.type='button';Object.assign(button.style,{padding:'8px 12px',border:'1px solid var(--line)',borderRadius:'6px',background:'var(--panel)',color:'var(--ink)',fontSize:'11px',fontFamily:'inherit'});button.textContent=initialPointer?'Move selection · Shift: lock axis · Control: no snapping · Release applies · Escape cancels':'Move selection · Arrows: 1 · Shift: 10 · Release applies · Escape cancels';surface.append(button);root.document.body.append(surface);
-  const guideSurface=initialPointer?root.document.createElement('div'):null,f=frame?.getBoundingClientRect(),scale=f?f.width/w.innerWidth:1;let paintGuides=()=>{},lastPointer=initialMove;
+  let ended=false,raf,x=0,y=0,global=A().identity(),next=matricesFor(members,A().identity()),last=original.slice();
+  const surface=root.document.createElement('div');surface.setAttribute('aria-label',handle?'Resize SVG selection on canvas':initialPointer?'Drag SVG selection on canvas':'Move SVG selection on canvas');Object.assign(surface.style,{position:'fixed',bottom:'116px',left:'50%',transform:'translateX(-50%)',zIndex:40});
+  const button=root.document.createElement('button');button.type='button';Object.assign(button.style,{padding:'8px 12px',border:'1px solid var(--line)',borderRadius:'6px',background:'var(--panel)',color:'var(--ink)',fontSize:'11px',fontFamily:'inherit'});button.textContent=handle?'Resize selection · Shift: proportions · Control: unlock · Option / Alt: center · Escape cancels':initialPointer?'Move selection · Shift: lock axis · Control: no snapping · Release applies · Escape cancels':'Move selection · Arrows: 1 · Shift: 10 · Release applies · Escape cancels';surface.append(button);root.document.body.append(surface);
+  const guideSurface=initialPointer&&!handle?root.document.createElement('div'):null,f=frame?.getBoundingClientRect(),scale=f?f.width/w.innerWidth:1;let paintGuides=()=>{},lastPointer=initialMove;
   if(guideSurface){const c=canvas.getBoundingClientRect();Object.assign(guideSurface.style,{position:'fixed',left:c.left+'px',top:c.top+'px',width:c.width+'px',height:c.height+'px',overflow:'hidden',pointerEvents:'none',zIndex:39});root.document.body.append(guideSurface);paintGuides=root.RetouchSVGSnapping.mount(guideSurface,{f,scale,left:c.left,top:c.top});}
+  const activeHandle=handle?handleButton(handles.indexOf(handle)):null;
+  function paintHandle(){if(!activeHandle)return;const p=points(state.box)[handles.indexOf(handle)],px=global[0]*p.x+global[4],py=global[3]*p.y+global[5];activeHandle.style.left=f.left+px*scale+'px';activeHandle.style.top=f.top+py*scale+'px';}
+  if(activeHandle){Object.assign(activeHandle.style,{position:'fixed',zIndex:41});root.document.body.append(activeHandle);pointerTarget=activeHandle;paintHandle();}
   function listen(el,type,fn,capture=false){el.addEventListener(type,fn,capture);cleanup.push(()=>el.removeEventListener(type,fn,capture));}
   function valid(){
    if(!current())return false;
-   try{return members.every((m,i)=>{if(!m.el.isConnected||m.el.getAttribute('transform')!==last[i])return false;const screen=array(m.el.getScreenCTM()),expected=screens[i].slice();expected[4]+=x;expected[5]+=y;const g=m.el.getBBox();return screen.every((v,j)=>Math.abs(v-expected[j])<.1)&&[g.x,g.y,g.width,g.height].every((v,j)=>Math.abs(v-geometry[i][j])<.75);});}catch{return false;}
+   try{return members.every((m,i)=>{if(!m.el.isConnected||m.el.getAttribute('transform')!==last[i])return false;const screen=array(m.el.getScreenCTM()),expected=A().multiply(global,screens[i]);const g=m.el.getBBox();return screen.every((v,j)=>Math.abs(v-expected[j])<.1)&&[g.x,g.y,g.width,g.height].every((v,j)=>Math.abs(v-geometry[i][j])<.75);});}catch{return false;}
   }
-  function end(commit=false){if(ended)return;const save=commit&&valid()&&(x!==0||y!==0);ended=true;root.cancelAnimationFrame(raf);cleanup.forEach(fn=>fn());surface.remove();guideSurface?.remove();if(initialPointer&&pointerTarget?.hasPointerCapture(initialPointer.pointerId))pointerTarget.releasePointerCapture(initialPointer.pointerId);members.forEach((m,i)=>{if(m.el.getAttribute('transform')!==last[i])return;if(original[i]===null)m.el.removeAttribute('transform');else m.el.setAttribute('transform',original[i]);});onEnd();if(save)onCommit(next);}
+  function end(commit=false){if(ended)return;const save=commit&&valid()&&!A().equivalent(global,A().identity());ended=true;root.cancelAnimationFrame(raf);cleanup.forEach(fn=>fn());surface.remove();guideSurface?.remove();activeHandle?.remove();if(initialPointer&&pointerTarget?.hasPointerCapture(initialPointer.pointerId))pointerTarget.releasePointerCapture(initialPointer.pointerId);members.forEach((m,i)=>{if(m.el.getAttribute('transform')!==last[i])return;if(original[i]===null)m.el.removeAttribute('transform');else m.el.setAttribute('transform',original[i]);});onEnd();if(save)onCommit(next);}
   function keyDown(e){
    if(e.isComposing||(e.key!=='Escape'&&(e.ctrlKey||e.metaKey||e.altKey))||!['Escape','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;
    e.preventDefault();e.stopImmediatePropagation();if(e.key==='Escape'){end();return;}if(initialPointer)return;if(!valid()){end();return;}
@@ -37,17 +56,21 @@
    translate(x+dx,y+dy);
   }
   function translate(dx,dy){
-   const matrices=matricesFor(members,[1,0,0,1,dx,dy]);if(Object.values(matrices).some(m=>!A().valid(m))){end();onError('Keep every transformed vector within the supported range.');return;}
-   x=dx;y=dy;next=matrices;members.forEach((m,i)=>{if(m.covered)return;last[i]=A().format(next[m.info.id]);m.el.setAttribute('transform',last[i]);});
+   applyGlobal([1,0,0,1,dx,dy]);
+  }
+  function applyGlobal(matrix){
+   if(!matrix){end();return;}const matrices=matricesFor(members,matrix);if(Object.values(matrices).some(m=>!A().valid(m))){end();onError('Keep every transformed vector within the supported range.');return;}
+   global=matrix;x=matrix[4];y=matrix[5];next=matrices;members.forEach((m,i)=>{if(m.covered)return;last[i]=A().format(next[m.info.id]);m.el.setAttribute('transform',last[i]);});paintHandle();
   }
   function pointerMove(e,modifiers=e){
    if(e.pointerId!==initialPointer.pointerId||ended)return;if(!valid()){end();return;}lastPointer=e;e.preventDefault();e.stopImmediatePropagation();
+   if(handle){applyGlobal(canvasResize(state.box,handle,(e.clientX-initialPointer.clientX)/scale,(e.clientY-initialPointer.clientY)/scale,modifiers,sizeLocks.has(selectionKey(infos))));return;}
    const movement=root.RetouchSVGSnapping.movement(A().identity(),e.clientX-initialPointer.clientX,e.clientY-initialPointer.clientY,modifiers.shiftKey),targets=members.filter(m=>!m.covered).flatMap(m=>root.RetouchSVGSnapping.targets(m.el,elements)),unique=[...new Map(targets.map(t=>[JSON.stringify(t),t])).values()],result=modifiers.ctrlKey?movement:root.RetouchCanvasMove.snap(state.box,movement,unique,{tolerance:6/scale,lock:movement.lock});paintGuides(result);translate(result.x,result.y);
   }
   if(initialPointer){
-   listen(w,'pointermove',pointerMove,true);listen(w,'pointerup',e=>{if(e.pointerId!==initialPointer.pointerId)return;e.preventDefault();e.stopImmediatePropagation();end(true);},true);
-   for(const event of ['pointercancel','lostpointercapture'])listen(w,event,e=>{if(e.pointerId===initialPointer.pointerId)end();},true);
-   for(const event of ['keydown','keyup'])listen(root,event,e=>{if(['Shift','Control'].includes(e.key)&&lastPointer)pointerMove(lastPointer,e);},true);
+   listen(handle?root:w,'pointermove',pointerMove,true);listen(handle?root:w,'pointerup',e=>{if(e.pointerId!==initialPointer.pointerId)return;e.preventDefault();e.stopImmediatePropagation();end(true);},true);
+   for(const event of ['pointercancel','lostpointercapture'])listen(handle?root:w,event,e=>{if(e.pointerId===initialPointer.pointerId)end();},true);
+   for(const event of ['keydown','keyup'])listen(root,event,e=>{if(['Shift','Control','Alt'].includes(e.key)&&lastPointer)pointerMove(lastPointer,e);},true);
   }
   listen(surface,'keydown',keyDown,true);listen(root,'keyup',e=>{if(!held.delete(e.key))return;e.preventDefault();e.stopImmediatePropagation();if(!held.size)end(true);},true);
   for(const event of ['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'])listen(root,event,()=>end());
@@ -67,5 +90,5 @@
   const lock=I.button('Lock selection proportions',()=>{locked=!locked;if(locked)sizeLocks.add(key);else sizeLocks.delete(key);lock.setAttribute('aria-pressed',String(locked));});lock.setAttribute('aria-pressed',String(locked));lock.setAttribute('aria-label','Lock selection proportions');lock.title='Lock selection proportions';lock.innerHTML='<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M8 6V4a3 3 0 0 1 6 0v4a3 3 0 0 1-3 3M12 14v2a3 3 0 0 1-6 0v-4a3 3 0 0 1 3-3M10 6v8"/></svg>';lock.disabled=!initial.box.width||!initial.box.height;section.append(lock);
   const flips=root.RetouchFlip.mount(elements[0],()=>{});for(const button of flips.querySelectorAll('button')){button.disabled=false;button.onclick=()=>{try{apply('flip-'+button.dataset.flipAxis);}catch(error){I.note(section,error.message,'refused');}};}section.append(flips);I.note(section,'Bounds in document pixels. Rotation and flips use the selection center. Changes apply to all screen sizes.');return section;
  }
- const api={inverse,transform,matricesFor,resizeBounds,selectionKey,capture,nudge,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGSelection=api;
+ const api={inverse,transform,matricesFor,resizeBounds,selectionKey,capture,controls,canvasResize,nudge,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGSelection=api;
 })(typeof window==='object'?window:globalThis);
