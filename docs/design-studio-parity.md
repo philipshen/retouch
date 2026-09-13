@@ -14611,3 +14611,19 @@ is not a claim of per-paragraph rich-text selection or list-editing parity.
 `RT_E2E_PARAGRAPH_INDENT=1` in `test/e2e/page-fonts.cjs` checks rendered first-line
 geometry against a second line, retained layer width, negative tablet overrides,
 phone isolation, scrub preview and cancellation, reset, and exact undo/redo.
+
+### Underline details (2026-09-13)
+
+Type settings → Basics now places Underline details next to the decoration
+control. Style, thickness, offset, skip ink, and color write independent CSS or
+React/Liquid classes in the selected screen scope. Compact rows include reset;
+thickness and offset support drag preview/cancel, and color uses the shared
+picker. Text styles include all five properties and retain independent local
+overrides. Unsupported skip-ink options are omitted for the current browser.
+
+`RT_E2E_UNDERLINE_DETAILS=1` checks all five properties, unchanged foreground and
+decoration, picker and scrub cancellation without source writes, negative tablet
+offset, phone isolation, reset, and exact undo/redo. The workflow passes HTML,
+React, and Liquid in Chromium 145.0.7632.6 and HTML in WebKit 26.0. The 1,211-test
+unit suite passes. These controls currently apply to the selected layer; mixed
+rich-text range detail editing and full Figma typography parity remain open.

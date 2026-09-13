@@ -1,9 +1,9 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {encode}=require('../src/text-style-classes.cjs'),tokens=require('../src/class-tokens.cjs'),responsive=require('../shell/responsive.js');
-const full={'font-family':'"标题_Font", sans-serif','font-size':'32px','font-weight':'537.5','font-style':'oblique','font-optical-sizing':'none','font-variation-settings':'"wght" 537.5, "GRAD" -30','font-variant-numeric':'tabular-nums slashed-zero','font-variant-ligatures':'no-common-ligatures discretionary-ligatures','font-variant-caps':'all-small-caps','font-variant-position':'super','line-height':'1.4','letter-spacing':'-0.02em','text-indent':'24px','text-align':'center','text-decoration-line':'underline line-through','text-transform':'uppercase'};
+const full={'font-family':'"标题_Font", sans-serif','font-size':'32px','font-weight':'537.5','font-style':'oblique','font-optical-sizing':'none','font-variation-settings':'"wght" 537.5, "GRAD" -30','font-variant-numeric':'tabular-nums slashed-zero','font-variant-ligatures':'no-common-ligatures discretionary-ligatures','font-variant-caps':'all-small-caps','font-variant-position':'super','line-height':'1.4','letter-spacing':'-0.02em','text-indent':'24px','text-align':'center','text-decoration-line':'underline line-through','text-decoration-style':'wavy','text-decoration-thickness':'3px','text-underline-offset':'-2px','text-decoration-skip-ink':'none','text-decoration-color':'#123456','text-transform':'uppercase'};
 test('every catalog typography property has a validated scoped class encoding',()=>{
- const encoded=encode(full);assert.equal(Object.keys(encoded).length,16);
+ const encoded=encode(full);assert.equal(Object.keys(encoded).length,21);
  assert.equal(encoded['font-family'],'![font-family:"标题\\_Font",_sans-serif]');assert.equal(encoded['font-variation-settings'],'![font-variation-settings:"wght"_537.5,_"GRAD"_-30]');
  const scoped=responsive.replaceScope('hover:text-red-500 md:p-4',Object.values(encoded).join(' '),'md:');
  for(const token of scoped.split(' '))assert.equal(tokens.valid(token),true,token);
@@ -53,4 +53,15 @@ test('paragraph indentation replaces only its scoped tokens and remains a text s
  assert.deepEqual(styles.overrides(after,{'text-indent':'12px'},'md:'),['text-indent']);
  for(const value of ['-24px','0','10%','1.5em'])assert.ok(styles.encode({'text-indent':value}));
  for(const value of ['12','normal','24px; color:red'])assert.throws(()=>styles.encode({'text-indent':value}));
+});
+test('underline detail tokens remain independent and support linked style overrides',()=>{
+ const styles=require('../src/text-style-classes.cjs'),I=require('../shell/inspector.js'),css=require('../shell/html-css-values.js');
+ const baseline='underline decoration-wavy decoration-2 decoration-red-500 underline-offset-4 md:decoration-blue-500';
+ const changed=styles.compose(baseline,{'text-decoration-color':'#123456'});
+ assert.ok(changed.includes('decoration-wavy'));assert.ok(changed.includes('decoration-2'));assert.ok(changed.includes('underline-offset-4'));assert.ok(changed.includes('md:decoration-blue-500'));assert.ok(!changed.split(' ').includes('decoration-red-500'));
+ for(const token of ['decoration-2','decoration-[2px]','decoration-[length:2px]','decoration-[length:var(--line-width)]','decoration-[percentage:10%]','decoration-from-font']){assert.equal(I.decorationMatchers['text-decoration-thickness'](token),true);assert.equal(I.decorationMatchers['text-decoration-color'](token),false);}
+ assert.deepEqual(styles.overrides(changed,{'text-decoration-color':'#abcdef'}),['text-decoration-color']);
+ for(const property of ['text-decoration-line','text-decoration-style','text-decoration-color','text-decoration-thickness']){assert.equal(css.overlaps('text-decoration',property),true);assert.equal(css.overlaps(property,'text-decoration'),true);}
+ for(const [property,value]of [['text-decoration-style','wavy'],['text-decoration-thickness','auto'],['text-decoration-thickness','from-font'],['text-decoration-thickness','10%'],['text-underline-offset','-2px'],['text-underline-offset','auto'],['text-decoration-color','currentColor'],['text-decoration-skip-ink','none']])assert.ok(styles.encode({[property]:value}));
+ for(const [property,value]of [['text-decoration-thickness','-1px'],['text-decoration-style','wavy;color:red'],['text-decoration-skip-ink','never'],['text-underline-offset','url(x)']])assert.throws(()=>styles.encode({[property]:value}));
 });

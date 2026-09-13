@@ -1,6 +1,6 @@
 (function (root) {
   'use strict';
-  let cornersExpanded=false,fontPositionExpanded=false,capsExpanded=false,ligatureExpanded=false,numericExpanded=false,variationExpanded=false,shadowStackExpanded=false;
+  let cornersExpanded=false,fontPositionExpanded=false,capsExpanded=false,ligatureExpanded=false,numericExpanded=false,variationExpanded=false,shadowStackExpanded=false,underlineExpanded=false;
   const tokens = value => (value || '').split(/\s+/).filter(Boolean);
   // Colons inside arbitrary CSS values are not variant separators.
   function base(token) {
@@ -99,7 +99,7 @@
       parentLabel: viewport ? 'Page viewport' : `<${parent.tagName.toLowerCase()}>${parent.id ? ' #' + parent.id : ''}`,
     };
   }
-  const typeProperties = ['font-family', 'font-size', 'font-weight', 'font-style', 'font-stretch', 'font-variation-settings', 'font-optical-sizing', 'font-variant-numeric', 'font-variant-ligatures', 'font-variant-caps', 'font-variant-position', 'line-height', 'letter-spacing', 'text-indent', 'text-transform', 'text-decoration-line'];
+  const typeProperties = ['font-family', 'font-size', 'font-weight', 'font-style', 'font-stretch', 'font-variation-settings', 'font-optical-sizing', 'font-variant-numeric', 'font-variant-ligatures', 'font-variant-caps', 'font-variant-position', 'line-height', 'letter-spacing', 'text-indent', 'text-transform', 'text-decoration-line','text-decoration-style','text-decoration-thickness','text-underline-offset','text-decoration-skip-ink','text-decoration-color'];
   function catalog(d) {
     const result = new Map();
     function scan(rules) {
@@ -304,6 +304,20 @@
     return input;
   }
   const fontPositionToken=t=>/^\[font-variant-position:.+\]$/.test(t);
+  function underlineTypography(parent,css,onChange,onReset,hasOwn,el){
+    const details=document.createElement('details'),summary=document.createElement('summary');details.className='underline-typography';details.open=underlineExpanded;details.ontoggle=()=>{if(details.isConnected)underlineExpanded=details.open;};summary.textContent='Underline details';details.append(summary);parent.append(details);
+    const choices={'text-decoration-style':[['solid','Solid'],['dotted','Dotted'],['dashed','Dashed'],['double','Double'],['wavy','Wavy']],'text-decoration-skip-ink':[['auto','Auto'],['none','None'],['all','All']]};
+    for(const [property,label]of [['text-decoration-style','Underline style'],['text-decoration-thickness','Underline thickness'],['text-underline-offset','Underline offset'],['text-decoration-skip-ink','Underline skip ink'],['text-decoration-color','Underline color']]){
+      let input;const value=css.getPropertyValue(property);
+      if(choices[property])input=select(details,label,choices[property].filter(([choice])=>CSS.supports(property,choice)),value,next=>onChange(property,next));
+      else{input=document.createElement('input');input.type='text';input.value=value;input.spellcheck=false;input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{let next=input.value.trim();if(property!=='text-decoration-color'&&/^-?(?:\d*\.)?\d+$/.test(next))next+='px';if(!root.RetouchHTMLCSSValues.valid(property,next)||!CSS.supports(property,next)){input.setCustomValidity('Enter a supported '+(property==='text-decoration-color'?'color.':'length, auto'+(property==='text-decoration-thickness'?', or from-font.':'.')));input.reportValidity();return;}onChange(property,next);};field(details,label,input);fieldDraft(input);
+       if(property==='text-decoration-color'){input.dataset.paintProperty=property;input.retouchPaintPreview=()=>root.RetouchPaintPicker.propertyPreview({el,input,property});}
+       else{let unit='px';numericLabelDrag(input,raw=>{const match=/^(-?(?:\d*\.)?\d+)(px|em|rem|%)?$/.exec(raw);if(!match)return null;unit=match[2]||'px';return {value:Number(match[1]),format:v=>v+unit,min:property==='text-underline-offset'?-10000:0,max:10000};});numericPreview(input,el,property,v=>v+unit);}
+      }
+      input.title=property==='text-decoration-color'?'Use currentColor to follow the text color.':property==='text-decoration-thickness'?'Auto, from-font, pixels, or percent of the font size.':property==='text-underline-offset'?'Auto, pixels, or percent of the font size. Negative values move the line upward.':input.title;
+      const resetLabel='Reset '+label.toLowerCase(),reset=button('↺',()=>onReset(property));reset.setAttribute('aria-label',resetLabel);reset.title=resetLabel;reset.classList.add('property-reset');reset.disabled=!hasOwn(property);const row=input.closest('.inspector-field'),holder=document.createElement('div');holder.className='property-row';row.before(holder);holder.append(row,reset);row.querySelector('span').textContent=label.replace('Underline ','').replace(/^./,letter=>letter.toUpperCase());
+    }
+  }
   function fontPositionTypography(parent,current,onChange,onReset,canReset=true){
     const details=document.createElement('details'),summary=document.createElement('summary');details.className='font-position-typography';details.open=fontPositionExpanded;details.ontoggle=()=>{if(details.isConnected)fontPositionExpanded=details.open;};summary.textContent='Number position';details.append(summary);parent.append(details);
     select(details,'Number position',[['normal','Normal'],['super','Superscript'],['sub','Subscript']],current,onChange);
@@ -718,6 +732,9 @@
   const textAlignToken=t=>/^(?:text-(?:left|center|right|justify|start|end)|\[text-align:.+\])$/.test(t);
   const fontStyleToken=t=>/^(?:italic|not-italic|\[font-style:.+\])$/.test(t);
   const decorationToken=t=>/^(?:underline|line-through|overline|no-underline|\[text-decoration-line:.+\])$/.test(t);
+  const decorationStyleToken=t=>/^(?:decoration-(?:solid|double|dotted|dashed|wavy)|\[text-decoration-style:.+\])$/.test(t);
+  const decorationThicknessToken=t=>/^(?:decoration-(?:auto|from-font|\d+|\[(?:(?:length|percentage):[^\]]+|(?:[.\d]|(?:calc|min|max|clamp)\()[^\]]*)\]|\(length:--[\w-]+\))|\[text-decoration-thickness:.+\])$/.test(t);
+  const decorationMatchers={'text-decoration-style':decorationStyleToken,'text-decoration-thickness':decorationThicknessToken,'text-underline-offset':t=>/^(?:-?underline-offset-.+|\[text-underline-offset:.+\])$/.test(t),'text-decoration-skip-ink':t=>/^\[text-decoration-skip-ink:.+\]$/.test(t),'text-decoration-color':t=>/^\[text-decoration-color:.+\]$/.test(t)||/^decoration-/.test(t)&&!decorationStyleToken(t)&&!decorationThicknessToken(t)};
   const caseToken=t=>/^(?:uppercase|lowercase|capitalize|normal-case|\[text-transform:.+\])$/.test(t);
  function expandSizeLeading(projected){
   const I={base,fontSizeToken};return projected.split(/\s+/).filter(Boolean).flatMap(token=>{
@@ -729,7 +746,7 @@
   }).join(' ');
  }
   function replaceTypography(classes,match,additions){return replace(match===fontSizeToken||match===lineHeightToken?expandSizeLeading(classes):classes,match,additions);}
-  const textOverrideToken=t=>[fontSizeToken,fontWeightToken,fontFamilyToken,lineHeightToken,letterSpacingToken,textIndentToken,textAlignToken,fontStyleToken,decorationToken,caseToken,opticalToken,variationToken,numericToken,ligatureToken,capsToken,fontPositionToken].some(match=>match(t));
+  const textOverrideToken=t=>[fontSizeToken,fontWeightToken,fontFamilyToken,lineHeightToken,letterSpacingToken,textIndentToken,textAlignToken,fontStyleToken,decorationToken,caseToken,opticalToken,variationToken,numericToken,ligatureToken,capsToken,fontPositionToken,...Object.values(decorationMatchers)].some(match=>match(t));
   function fontWeightClass(value){return typeof value==='number'&&Number.isFinite(value)&&value>=1&&value<=1000?`font-[${value}]`:null;}
   function fontDisplayName(value){return value.trim().toLowerCase()==='-webkit-standard'?'Browser default':value.replace(/["']/g,'');}
   function fontFamilies(d,current){
@@ -876,6 +893,7 @@
       select(sec,'Text alignment',['left','center','right','justify','start','end'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.textAlign,v=>change(textAlignToken,'text-'+v)).dataset.textDirection=css.direction;
       select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(fontStyleToken,v==='italic'?'italic':'not-italic'));
       select(sec,'Text decoration',[['none','None'],['underline','Underline'],['line-through','Strikethrough'],['overline','Overline']],css.textDecorationLine,v=>change(decorationToken,v==='none'?'no-underline':v));
+      underlineTypography(sec,css,(property,value)=>change(decorationMatchers[property],`[${property}:${value.replace(/ /g,'_')}]`),property=>save(replace(info.className,decorationMatchers[property],'')),property=>tokens(info.className).map(base).some(t=>t&&decorationMatchers[property](t)),el);
       select(sec,'Text case',[['none','As written'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']],css.textTransform,v=>change(caseToken,v==='none'?'normal-case':v));
       opticalTypography(sec,css,value=>change(opticalToken,`[font-optical-sizing:${value}]`),()=>save(replace(info.className,opticalToken,'')),tokens(info.className).map(base).some(t=>t&&opticalToken(t)));
       variationTypography(sec,css,value=>change(variationToken,`[font-variation-settings:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,variationToken,'')),tokens(info.className).map(base).some(t=>t&&variationToken(t)),el);
@@ -933,6 +951,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

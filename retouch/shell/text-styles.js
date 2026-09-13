@@ -1,7 +1,7 @@
 (function(root){
  'use strict';
  let expanded=false,preferredStyle='';
- const properties=['font-family','font-size','font-weight','font-style','font-optical-sizing','font-variation-settings','font-variant-numeric','font-variant-ligatures','font-variant-caps','font-variant-position','line-height','letter-spacing','text-indent','text-align','text-decoration-line','text-transform'];
+ const properties=['font-family','font-size','font-weight','font-style','font-optical-sizing','font-variation-settings','font-variant-numeric','font-variant-ligatures','font-variant-caps','font-variant-position','line-height','letter-spacing','text-indent','text-align','text-decoration-line','text-decoration-style','text-decoration-thickness','text-underline-offset','text-decoration-skip-ink','text-decoration-color','text-transform'];
  function mount(parent,element,options={}){
   const I=root.RetouchInspector,details=document.createElement('details'),summary=document.createElement('summary');
   summary.textContent='Saved text styles';details.append(summary);parent.append(details);

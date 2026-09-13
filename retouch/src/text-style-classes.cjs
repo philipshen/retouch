@@ -19,7 +19,7 @@ function encode(input){
  }
  return result;
 }
-const matchers={
+const matchers={...inspector.decorationMatchers,
  'font-family':inspector.fontFamilyToken,'font-size':inspector.fontSizeToken,'font-weight':inspector.fontWeightToken,'font-style':inspector.fontStyleToken,
  'font-optical-sizing':inspector.opticalToken,'font-variation-settings':inspector.variationToken,'font-variant-numeric':inspector.numericToken,'font-variant-ligatures':inspector.ligatureToken,'font-variant-caps':inspector.capsToken,'font-variant-position':inspector.fontPositionToken,
  'line-height':inspector.lineHeightToken,'letter-spacing':inspector.letterSpacingToken,'text-indent':inspector.textIndentToken,'text-align':inspector.textAlignToken,'text-decoration-line':inspector.decorationToken,'text-transform':inspector.caseToken
