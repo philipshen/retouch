@@ -1282,3 +1282,37 @@ Liquid WebKit 26 checks passed in
 font-size editing, and React/Liquid cursor-script regressions. A focused HTML
 check verifies uniform versus mixed font-size values at adjacent text boundaries
 in `/private/tmp/retouch-mixed-size-boundaries-html.log`.
+
+### Removing formatting across separate runs (2026-09-13)
+
+A uniformly formatted selection can now toggle its semantic format off across
+multiple separate plain wrappers. Each run is split at the selected characters;
+unselected text, nested emphasis, and line breaks remain intact. The editor
+restores the complete selected character range after the command. Single-run
+and multi-run edits share the same formatting-slice implementation.
+
+Every affected wrapper is checked before mutation. If any wrapper carries
+source-owned attributes or otherwise lacks reconstruction proof, the whole
+command is refused without changing earlier runs. Unexpected application errors
+restore the captured DOM and selection. This does not yet provide arbitrary
+attributed-wrapper reconstruction, inherited CSS decoration overrides, or full
+mixed-script normalization.
+
+The new browser fixture covers partial and whole underline removal across
+separate source runs, retained strike/italic text and a line break, a protected
+later wrapper, selected text preservation, and exact source undo/redo on HTML,
+React, and Liquid. The rendering was inspected in
+`/private/tmp/retouch-split-formatting.png`.
+
+Validation: all 1,195 unit tests passed in
+`/private/tmp/retouch-split-formatting-units.log`. New multi-run browser checks
+passed in `/private/tmp/retouch-split-formatting-final-html.log`,
+`/private/tmp/retouch-split-formatting-react.log`, and
+`/private/tmp/retouch-split-formatting-final-liquid.log`. Decoration, cursor-script,
+and partial-range regressions passed in
+`/private/tmp/retouch-split-formatting-regression-html.log` and
+`/private/tmp/retouch-split-formatting-regression-final-react.log`.
+The first React regression run passed its feature assertions but failed the
+browser-error gate after a Next.js HTTP 500 with an unexpected-end-of-JSON error.
+The complete repeat with network tracing passed without that error; its cause
+was not established, so this does not claim the transient runtime issue is fixed.

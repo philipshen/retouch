@@ -1253,6 +1253,35 @@ function cloneInlineFormatting(node){
   return result;
 }
 
+function splitInlineFormatting(previous,r,tag,selector){
+  const d=previous.ownerDocument;
+  const prefix=d.createRange();prefix.selectNodeContents(previous);prefix.setEnd(r.startContainer,r.startOffset);
+  const from=prefix.toString().length,to=from+r.toString().length,total=previous.textContent.length;
+  if(from===to)return;
+  // Slice each text interval through the same tree, retaining other inline styles.
+  const slice=(from,to,remove)=>{
+    let offset=0;
+    const visit=node=>{
+      if(node.tagName==='BR')return offset>=from&&(offset<to||offset===total&&to===total)?d.createElement('br'):d.createDocumentFragment();
+      if(node.nodeType===3){const start=offset;offset+=node.textContent.length;return d.createTextNode(node.textContent.slice(Math.max(0,from-start),Math.max(0,Math.min(to,offset)-start)));}
+      const result=remove&&node.matches(selector)?d.createDocumentFragment():cloneInlineFormatting(node);
+      for(const child of node.childNodes){const next=visit(child);if(next.textContent||next.tagName==='BR'||next.querySelector?.('br'))result.append(next);}
+      return result;
+    };
+    return visit(previous);
+  };
+  const parts=d.createDocumentFragment();if(from)parts.append(slice(0,from,false));
+  let middle=slice(from,to,true);
+  if(!previous.matches(selector)){
+    // Superscript and subscript are mutually exclusive; retain nested emphasis.
+    const content=d.createDocumentFragment();while(middle.firstChild)content.append(middle.firstChild);
+    middle=d.createElement(tag);middle.append(content);
+  }
+  const selectedNodes=middle.nodeType===11?[...middle.childNodes]:[middle];
+  parts.append(middle);if(to<total)parts.append(slice(to,total,false));previous.replaceWith(parts);
+  const selected=d.createRange();if(selectedNodes.length===1)selected.selectNodeContents(selectedNodes[0]);else {selected.setStartBefore(selectedNodes[0]);selected.setEndAfter(selectedNodes.at(-1));}return selected;
+}
+
 /* ---------- bold / italic on selection (Cmd+B / Cmd+I) ---------- */
 function toggleWrap(tag) {
   const d = doc();
@@ -1267,6 +1296,31 @@ function toggleWrap(tag) {
   // endpoint being inside it. Normalize those boundaries before toggling off.
   const selector = tag === 'strong' ? 'strong,b' : tag === 'em' ? 'em,i' : tag;
   const textNodes=selectedInlineTextNodes(editing.el,r),first=textNodes[0],last=textNodes.at(-1);
+  // A uniform selection may span several independently authored runs. Plan
+  // every slice before mutating any wrapper so one owned run cannot leave a
+  // partially applied command behind.
+  const groups=new Map();let uniform=!!textNodes.length;
+  for(const node of textNodes){
+    let wrapper=node.parentElement.closest(selector);
+    if(!wrapper||wrapper===editing.el||!editing.el.contains(wrapper)){uniform=false;break;}
+    for(let parent=wrapper.parentElement;parent&&parent!==editing.el;parent=parent.parentElement)if(parent.matches(selector))wrapper=parent;
+    if(!groups.has(wrapper))groups.set(wrapper,[]);groups.get(wrapper).push(node);
+  }
+  if(uniform&&groups.size>1){
+    if([...groups.keys()].some(wrapper=>!plainInlineFormatting(wrapper))){toast('Edit this source-owned formatting in its source.','err');return false;}
+    const plans=[...groups].map(([wrapper,nodes])=>{
+      const range=d.createRange(),first=nodes[0],last=nodes.at(-1);
+      range.setStart(first,r.startContainer===first?r.startOffset:0);range.setEnd(last,r.endContainer===last?r.endOffset:last.length);
+      return {wrapper,range};
+    });
+    const prefix=d.createRange();prefix.selectNodeContents(editing.el);prefix.setEnd(r.startContainer,r.startOffset);
+    const from=prefix.toString().length,to=from+r.toString().length,snapshot=captureCaretEdit(editing);
+    try{
+      for(const {wrapper,range}of plans)if(!splitInlineFormatting(wrapper,range,tag,selector))throw Error('The selected formatting changed.');
+      const selected=inlineRangeAt(editing.el,from,to);if(!selected)throw Error('The selected text changed.');
+      s.removeAllRanges();s.addRange(selected);return true;
+    }catch{restoreCaretEdit(editing,snapshot);toast('The selected formatting could not be changed.','err');return false;}
+  }
   const enclosing=first?.parentElement.closest(tag==='sup'||tag==='sub'?'sup,sub':selector);
   if(enclosing&&enclosing!==editing.el&&textNodes.every(node=>enclosing.contains(node))&&(!enclosing.contains(r.startContainer)||!enclosing.contains(r.endContainer))){
     const normalized=d.createRange();normalized.setStart(first,r.startContainer===first?r.startOffset:0);normalized.setEnd(last,r.endContainer===last?r.endOffset:last.length);r=normalized;
@@ -1279,31 +1333,8 @@ function toggleWrap(tag) {
     if(previous&&previous!==editing.el&&editing.el.contains(previous)&&previous.contains(r.startContainer)&&previous.contains(r.endContainer)){
       // Reconstruct only plain formatting whose source ownership is known.
       if(!plainInlineFormatting(previous)){toast('Edit this source-owned formatting in its source.','err');return false;}
-      const prefix=d.createRange();prefix.selectNodeContents(previous);prefix.setEnd(r.startContainer,r.startOffset);
-      const from=prefix.toString().length,to=from+r.toString().length,total=previous.textContent.length;
-      if(from===to)return;
-      // Slice each text interval through the same tree, retaining other inline styles.
-      const slice=(from,to,remove)=>{
-        let offset=0;
-        const visit=node=>{
-          if(node.tagName==='BR')return offset>=from&&(offset<to||offset===total&&to===total)?d.createElement('br'):d.createDocumentFragment();
-          if(node.nodeType===3){const start=offset;offset+=node.textContent.length;return d.createTextNode(node.textContent.slice(Math.max(0,from-start),Math.max(0,Math.min(to,offset)-start)));}
-          const result=remove&&node.matches(selector)?d.createDocumentFragment():cloneInlineFormatting(node);
-          for(const child of node.childNodes){const next=visit(child);if(next.textContent||next.tagName==='BR'||next.querySelector?.('br'))result.append(next);}
-          return result;
-        };
-        return visit(previous);
-      };
-      const parts=d.createDocumentFragment();if(from)parts.append(slice(0,from,false));
-      let middle=slice(from,to,true);
-      if(!previous.matches(selector)){
-        // Superscript and subscript are mutually exclusive; retain nested emphasis.
-        const content=d.createDocumentFragment();while(middle.firstChild)content.append(middle.firstChild);
-        middle=d.createElement(tag);middle.append(content);
-      }
-      const selectedNodes=middle.nodeType===11?[...middle.childNodes]:[middle];
-      parts.append(middle);if(to<total)parts.append(slice(to,total,false));previous.replaceWith(parts);
-      const selected=d.createRange();if(selectedNodes.length===1)selected.selectNodeContents(selectedNodes[0]);else {selected.setStartBefore(selectedNodes[0]);selected.setEndAfter(selectedNodes.at(-1));}s.removeAllRanges();s.addRange(selected);return true;
+      const selected=splitInlineFormatting(previous,r,tag,selector);if(!selected)return false;
+      s.removeAllRanges();s.addRange(selected);return true;
     }
   }
   const w = d.createElement(tag);
