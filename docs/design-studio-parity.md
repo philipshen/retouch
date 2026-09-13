@@ -13431,3 +13431,33 @@ nested cancellation, pending edits, holes and exact Undo/Redo at 50/100/200% zoo
 Full vector-network, boolean, perspective-container, arbitrary-site and responsive
 constraint parity remain unproven or unfinished. No desktop rebuild, native launch
 or push was performed in this increment.
+
+
+## 2026-09-13: packaged native drawing and Pen candidate
+
+Built and extracted a fresh universal development app from clean source commit
+34704d8f16790fed966c3f4eb5be18dcc8761034. All 185 packaged source files and the
+native/build/verifier hashes match the checkout. Strict signatures passed after
+extraction, after packaged browser workflows, and on the isolated cask-installed
+app. Archive: `/private/tmp/retouch-desktop-pen-34704d8/Retouch-0.1.0-mac.zip`.
+SHA-256: `9e47dc092e50c2af63b5d550cecaf62cc82fef277b10fc1b48f7428789a883ac`.
+
+An external harness imported the extracted runtime and passed all 996 unit tests.
+Five packaged browser workflows passed: native Liquid Pen, HTML WebKit native
+shapes, React native Pen, HTML WebKit SVG dock/shortcuts/parametric shapes/Pen, and
+the light comparison panel. Their scope and logs are in
+`desktop/verification/2026-09-13-native-pen.json`. All processes exited cleanly;
+external test dependencies never entered the signed app.
+
+Homebrew installed the exact ZIP into a temporary app directory and uninstalled
+it successfully. Installed manifest/signature checks passed with quarantine
+preserved. Original cask inventory is unchanged; temporary tap, scoped trust,
+installation and external harness were removed. Automatic dependency removal was
+disabled throughout. Archive, extracted bundle, logs and harness source snapshots
+remain available for inspection.
+
+Native control preflight again failed with the computer-use native pipe error.
+No app launch or native self-tests were attempted. This is an ad hoc development
+candidate, not a Developer ID-signed/notarized public release. Native workflows,
+Intel execution, trusted upgrades and full Figma/any-site parity remain unverified
+or unfinished. No push or public release was performed.

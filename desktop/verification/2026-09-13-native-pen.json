@@ -1,0 +1,137 @@
+{
+  "sourceCommit": "34704d8f16790fed966c3f4eb5be18dcc8761034",
+  "sourceTreeDirty": false,
+  "sourceFiles": 185,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "archive": "/private/tmp/retouch-desktop-pen-34704d8/Retouch-0.1.0-mac.zip",
+  "sha256": "9e47dc092e50c2af63b5d550cecaf62cc82fef277b10fc1b48f7428789a883ac",
+  "status": "development candidate; targeted packaged runtime and isolated cask install verified; native workflows and trusted distribution unverified",
+  "buildLog": "/private/tmp/retouch-desktop-pen-34704d8-build.log",
+  "units": {
+    "passed": 996,
+    "sourceCommit": "34704d8f16790fed966c3f4eb5be18dcc8761034",
+    "scope": "external test harness importing actual packaged runtime; development dependencies outside signed app",
+    "log": "/private/tmp/retouch-desktop-pen-34704d8/bundled-units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "Native Pen: open lines, polygons, open/closed curves, fitted viewports, vector editing, exact history and cancellation",
+      "renderer": "liquid",
+      "engine": "chromium",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-pen-34704d8/native-pen-liquid.log"
+    },
+    {
+      "name": "Native drawing: 30 shapes across relative/static/transformed/grid/flex containers, geometry, content preservation, exact history and cancellation",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-pen-34704d8/native-shapes-webkit.log"
+    },
+    {
+      "name": "Native Pen in a transformed self-closing React container: four path kinds, editing, history and cancellation",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-pen-34704d8/native-pen-react.log"
+    },
+    {
+      "name": "SVG shapes and Pen: dock, shortcuts, hidden inspector, triangle/star parameters, freeform editing, source history and cancellation",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-pen-34704d8/svg-tools-webkit.log"
+    },
+    {
+      "name": "Light comparison panel: help, focus, geometry, retained documents and drafts",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-pen-34704d8/comparison-panel.log"
+    }
+  ],
+  "harness": {
+    "sources": [
+      {
+        "source": "retouch/test/e2e/native-svg-draw.cjs",
+        "sha256": "c7418be54c0f5eb9ba7b16d433b3d3648adf833dc83610c8cd9b5ff4574d266c",
+        "snapshot": "/private/tmp/retouch-desktop-pen-34704d8/harness-snapshots/native-svg-draw.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/native-pen-workflow.cjs",
+        "sha256": "b15de57ee1925a663caddb7caac2cb049722fd4ec63e93212e71c996e0b513e6",
+        "snapshot": "/private/tmp/retouch-desktop-pen-34704d8/harness-snapshots/native-pen-workflow.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/svg-vertices.cjs",
+        "sha256": "f4b59d6aa2fd2fe7218fd0beb69980aa2fba608094e2c10c5b074ca6f92312c2",
+        "snapshot": "/private/tmp/retouch-desktop-pen-34704d8/harness-snapshots/svg-vertices.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/shape-tools.cjs",
+        "sha256": "bbc9961f235fe3089775e25c671903988e7fa87c47045015725e9cac14fa8954",
+        "snapshot": "/private/tmp/retouch-desktop-pen-34704d8/harness-snapshots/shape-tools.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/html-svg-draw.cjs",
+        "sha256": "5bc73f24553203cccbfee2878bd1478e5eec7c9e05c09fc1870522dfb054f053",
+        "snapshot": "/private/tmp/retouch-desktop-pen-34704d8/harness-snapshots/html-svg-draw.cjs"
+      },
+      {
+        "source": "retouch/test/e2e/html-compare-edit.cjs",
+        "sha256": "5cf62705aa0b89c21f1d0734306e7dc1d381ffc938760ad7edada652c1eb8595",
+        "snapshot": "/private/tmp/retouch-desktop-pen-34704d8/harness-snapshots/html-compare-edit.cjs"
+      }
+    ],
+    "externalHarnessRemoved": true
+  },
+  "installation": {
+    "result": "isolated Homebrew cask install and uninstall passed",
+    "verification": {
+      "sourceCommit": "34704d8f16790fed966c3f4eb5be18dcc8761034",
+      "sourceTreeDirty": false,
+      "sourceFiles": 185,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesExtractedArchive": true,
+    "quarantine": {
+      "preserved": true,
+      "value": "0381;6aa60cf9;;552A9861-AB44-4A6C-A4B1-79938B6B4DEC"
+    },
+    "logs": [
+      "/private/tmp/retouch-desktop-pen-34704d8/install.log",
+      "/private/tmp/retouch-desktop-pen-34704d8/uninstall.log"
+    ],
+    "cleanup": {
+      "caskInventoryUnchanged": true,
+      "appAndCaskRegistrationAbsent": true,
+      "temporaryTapAndTrustAbsent": true,
+      "externalHarnessRemoved": true,
+      "automaticDependencyRemoval": false
+    }
+  },
+  "nativeLaunch": {
+    "result": "not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "release": {
+    "signing": "ad hoc development build",
+    "developerID": false,
+    "notarization": false,
+    "publicRelease": false
+  },
+  "otherKnownLimits": [
+    "Native editing, sampler, shutdown, Intel execution and trusted upgrades remain unverified.",
+    "Earlier startup-recovery and older WebKit Fill-height evidence remains in prior receipts; those scenarios were not rerun on this archive.",
+    "Full Figma Design and arbitrary-site parity remain unfinished."
+  ]
+}
