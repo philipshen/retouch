@@ -334,6 +334,7 @@ function planOp(resolved, op) {
   if(op.type==='insertSVG')return require('../liquid-svg-insert.cjs').plan(resolved,op);
   if(op.type==='insertElement')return require('../native-insert.cjs').plan(resolved,op,'liquid');
   if(op.type==='convertSVGToPath')return require('../svg-convert.cjs').plan(resolved,op);
+  if(op.type==='setSVGTransforms')return require('../svg-transform.cjs').planSelection(resolved,op,'liquid');
   if(op.type==='setSVGTransform')return require('../svg-transform.cjs').plan(resolved,op,'liquid');
  if(op.type==='setSVGGeometry')return require('../liquid-svg-geometry.cjs').plan(resolved,op);
   if(op.type==='renameElement')return layerNames.plan(resolved,op);
@@ -435,6 +436,6 @@ module.exports = {
   describeComponent: resolved=>resolved.element.theme?theme.describe(resolved):components.describe(resolved),
   hasReference: components.hasReference,
   assets: { directory: 'assets', urlPrefix: '/assets/', uploadDirectory: '' },
-  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['insertSVG','insertElement','setSVGGeometry','setSVGTransform', 'convertSVGToPath', 'renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types] },
+  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['insertSVG','insertElement','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types] },
   _parse: parse, // exported for tests
 };

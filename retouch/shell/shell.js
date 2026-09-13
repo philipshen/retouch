@@ -925,6 +925,7 @@ function paintLoop() {
     const groups=info.kind==='instance'?RetouchComponentInstances.group(targets,info.rootGroups):targets.map(el=>({element:el,elements:[el]}));
     for(const group of groups){const bounds=RetouchComponentInstances.bounds(group.elements);if(bounds){if(group.elements.length===1)drawBox(group.element,'co',outlineKind(group.element,info));else drawBounds(bounds,'co',outlineKind(group.element,info));}}
   }
+  if(d&&mode==='edit'&&sel?.multiple?.length>1&&sel.multiple.every(info=>info.svgTransform)){const groups=sel.multiple.map(info=>matchingEls(info.id));if(groups.every(group=>group.length===1)){const bounds=RetouchComponentInstances.bounds(groups.flat());if(bounds)drawBounds(bounds,'sel svg-selection-bounds','editable');}}
   if(d && editing?.el.isConnected)drawBox(editing.el,'editing',outlineKind(editing.el,editing.info));
   if(d && hoverEl?.isConnected && mode==='edit' && !editing && !stopDrawing) {
     const hovered=hoverDescription(hoverEl),target=hovered.element,info=hovered.info,kind=outlineKind(target,info);
@@ -1163,6 +1164,11 @@ function renderPanelContents() {
    const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,scope=info.classEffectStyles?styleScope:width,links=info.effectStyleLinks||{},inheritedWidth=Object.keys(links).map(Number).filter(value=>value<width).sort((a,b)=>b-a)[0];
    const inherited=info.classEffectStyles?RetouchResponsive.inheritedLink(links,styleScope,matchingEls(info.id)[0]?.ownerDocument):!links[width]&&inheritedWidth!==undefined?{link:links[inheritedWidth],label:inheritedWidth?inheritedWidth+'px and larger':'All sizes'}:null;
    RetouchEffectStyles.mount(panelBody,matchingEls(info.id)[0],{link:links[scope],overrides:info.effectStyleOverrides?.[scope]||[],inherited,apply:(styleId,libraryRevision)=>writeTextStyle('applyEffectStyle',width,{scope:styleScope,styleId,libraryRevision}),reset:(styleId,libraryRevision)=>writeTextStyle('resetEffectStyle',width,{scope:styleScope,styleId,libraryRevision}),detach:()=>writeTextStyle('detachEffectStyle',width,{scope:styleScope}),update:(styleId,libraryRevision,name,properties)=>writeTextStyle('updateEffectStyle',width,{scope:styleScope,styleId,libraryRevision,name,properties})});
+  }
+  if(sel.multiple?.length>1&&sel.multiple.every(item=>item.svgTransform)){
+   const infos=sel.multiple,elements=infos.map(item=>matchingEls(item.id).length===1?matchingEls(item.id)[0]:null),current=()=>sel?.multiple===infos&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&elements.every(el=>el&&!layerLocks.locked(el));
+   panelBody.append(RetouchSVGSelection.mount(infos,elements,{current,save:writeSVGSelection}));if(elements.some(el=>!el))return;mountSelectionEffectStyles();mountSelectionTextStyles();
+   const more=document.createElement('details'),summary=document.createElement('summary');summary.textContent='More properties';more.append(summary,info.classSelection?RetouchReactSelection.mount(infos,elements,styleScope,setReactClassesSelection,setSelectionColorOverride,id=>matchingEls(id)[0]):RetouchHTMLCSS.mountSelection(infos,elements,styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,setHTMLCSSSelection));panelBody.append(more);return;
   }
   if(sel.multiple?.length>1){mountSelectionEffectStyles();mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchClassSiteVariables.mountSelection(sel.multiple,elements,styleScope,setReactClassesSelection,message=>toast(message,'err')),RetouchFlip.mountSelection(sel.multiple,elements,0,null,strategy),RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection,setSelectionColorOverride,id=>matchingEls(id)[0]));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchFlip.mountSelection(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes)),RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
@@ -2279,6 +2285,11 @@ async function resizeSVGOnCanvas(info,target=null,initialPointer=null,handle='se
    if(current())await writeSVGTransform(info,target,matrix);
   }});
 }
+async function writeSVGSelection(matrices){
+ const infos=sel?.multiple;if(!infos||panelTasks||sourceRequests||undoBusy||editing)return;const ids=infos.map(info=>info.id),primary=sel.info;busyPanel(true);
+ try{const result=await api('POST','/rt/__api/op',{type:'setSVGTransforms',id:primary.id,ids,fileHash:primary.hash,matrices});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not transform the selected vectors.');if(result.undoId)editorHistory.record({type:'setSVGTransforms',id:primary.id,selectionIds:ids,undoId:result.undoId});await refreshWrittenElement(result.element,el=>svgSelectionMatches(result.selection,el.ownerDocument));await restoreLayerSelection(ids);if(sel)renderPanel();toast('Vectors updated','ok');}catch(error){toast(error.message,'err');}finally{busyPanel(false);}
+}
+function svgSelectionMatches(infos,d){return infos.every(info=>matchingInDocument(d,info.id,info).some(el=>el.getAttribute('transform')===info.svgTransform?.value));}
 async function writeSVGTransform(info,target,matrix){
   if(sel?.info!==info||panelTasks||undoBusy||sourceRequests||editing)return;
   const reason=RetouchSVGResize.reason(target,info,true);if(reason)return toast(reason,'err');busyPanel(true);
@@ -2608,10 +2619,10 @@ async function restoreHistory(direction,op) {
     else clearSelection();
     if (fresh?.ok) {
       const info = fresh.element;
-      const selectionResult=op.type==='setClassesSelection'?await Promise.all(op.selectionIds.map(id=>api('GET',resolveUrl(id)))):null;
+      const selectionResult=['setClassesSelection','setSVGTransforms'].includes(op.type)?await Promise.all(op.selectionIds.map(id=>api('GET',resolveUrl(id)))):null;
       const component = op.type === 'detachComponent'||op.type==='createComponent'&&direction==='redo' ? await api('GET', componentUrl(op.id,op.context)) : null;
       const refresh=()=>refreshWrittenElement(info, el => {
-        if(selectionResult)return selectionResult.every(result=>result?.ok)&&classSelectionMatches(selectionResult.map(result=>result.element),el.ownerDocument);
+        if(selectionResult)return selectionResult.every(result=>result?.ok)&&(op.type==='setSVGTransforms'?svgSelectionMatches:classSelectionMatches)(selectionResult.map(result=>result.element),el.ownerDocument);
         if(op.svgCreatedId){const found=matchingInDocument(el.ownerDocument,op.svgCreatedId,null).length>0;return direction==='undo'?!found:found;}
         if(op.type==='createComponent'&&direction==='undo')return el.getAttribute('data-rt')===op.id;
         if (component?.ok) return (component.definitionIds || [component.definitionId]).includes(el.getAttribute('data-rt'));

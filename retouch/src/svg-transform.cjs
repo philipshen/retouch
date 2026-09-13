@@ -24,4 +24,14 @@ function plan(r,op,kind){
  if(before.length!==next.length||before.some((el,i)=>el.id!==next[i].id||name(el)!==name(next[i])))return refuse('The transform changes the parsed document structure.');
  return {ok:true,hash:adapter.contentHash(after),edits:after===r.source?[]:[{file:r.file,before:r.source,after}]};
 }
-module.exports={describe,plan};
+function planSelection(r,op,kind){
+ const refuse=reason=>({ok:false,refused:true,reason}),selected=op.ids,matrices=op.matrices;
+ if(op.fileHash!==r.hash)return refuse('The file changed. Re-select the vectors.');
+ if(!Array.isArray(selected)||selected.length<2||selected.length>100||new Set(selected).size!==selected.length||!selected.includes(r.element.id)||selected.some(id=>typeof id!=='string'||!/^[a-f0-9]{10}$/.test(id)))return refuse('Select 2 to 100 distinct vectors from one source file.');
+ if(!matrices||typeof matrices!=='object'||Array.isArray(matrices)||Object.keys(matrices).length!==selected.length||selected.some(id=>!Object.hasOwn(matrices,id)||!A.valid(matrices[id])))return refuse('Provide one finite transform for every selected vector.');
+ const adapter=require('./adapters/'+kind+'.cjs'),collect=source=>kind==='react'?ids.collectElements(source,r.relPath).elements:adapter.collect(source,r.relPath).elements;let source=r.source;
+ for(const id of selected){const elements=collect(source),element=elements.find(el=>el.id===id);if(!element)return refuse('Every selected vector must resolve in the same source file.');const hash=adapter.contentHash(source),result=plan({...r,source,elements,element,hash},{matrix:matrices[id],fileHash:hash},kind);if(!result.ok)return result;source=result.edits[0]?.after||source;}
+ const hash=adapter.contentHash(source),elements=collect(source),selection=selected.map(id=>adapter.describe({...r,source,hash,elements,element:elements.find(el=>el.id===id)}));
+ return {ok:true,hash,selection,edits:source===r.source?[]:[{file:r.file,before:r.source,after:source}]};
+}
+module.exports={describe,plan,planSelection};

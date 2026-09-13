@@ -178,6 +178,7 @@ function planOp(resolved, op) {
   if(op.type==='setClassesSelection')return require('./jsx-class-selection.cjs').plan(resolved,op);
   if(op.type==='insertSVG')return require('./jsx-svg-insert.cjs').plan(resolved,op);
   if(op.type==='convertSVGToPath')return require('./svg-convert.cjs').plan(resolved,op);
+  if(op.type==='setSVGTransforms')return require('./svg-transform.cjs').planSelection(resolved,op,'react');
   if(op.type==='setSVGTransform')return require('./svg-transform.cjs').plan(resolved,op,'react');
   if(op.type==='setSVGGeometry')return require('./jsx-svg-geometry.cjs').plan(resolved,op);
   if (op.fileHash && op.fileHash !== resolved.hash) {

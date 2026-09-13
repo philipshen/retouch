@@ -13953,3 +13953,36 @@ Logs: /private/tmp/retouch-equations-{html,react,liquid}.log,
 Mixed-selection equations, consistent calculations throughout other inspector
 fields, scrubbing parity, full Figma/any-site behavior and trusted native release
 remain open. No desktop rebuild or push was performed.
+
+## 2026-09-13 — Atomic multi-vector inspector transforms
+
+Multiple SVG vectors now have a primary Position section with paired X/Y and
+W/H fields, a relative rotation field, and horizontal/vertical flips. A combined
+canvas outline matches the selection bounds. Bounds use document pixels; group
+rotation/flips use the selection center. Existing shared styles remain under
+More properties instead of using CSS geometry as the primary SVG controls.
+
+Each vector's matrix is derived through its own parent's coordinate system,
+so selections spanning rotated/scaled SVG parents move and transform together.
+The new setSVGTransforms operation validates 2–100 members from one source file,
+plans all edits in memory, and emits one file transaction. A bad final member
+refuses the whole batch. Shared history refreshes every matrix and retains the
+multi-selection across exact Undo/Redo.
+
+Validation: 1,025 unit tests passed, including matrix conjugation through rotated,
+scaled/reflected parents and batch refusal for HTML, React and Liquid. Browser
+workflows passed for movement, width scaling, rotation, both flips, invalid sizes,
+selection retention and exact source history in HTML/WebKit 26, React/Chromium
+and Liquid/Chromium. The final Liquid rerun additionally verifies the combined
+outline and a visible refusal for selecting a group together with its contents.
+Every workflow reached a terminal zero exit. Existing move, snap, nudge, ratio,
+equation and 13-type resize regressions remained passing. The final light
+inspector/selection outline screenshot /private/tmp/retouch-svg-selection.png
+was visually inspected.
+
+Logs: /private/tmp/retouch-selection-units-final.log and
+/private/tmp/retouch-selection-{liquid,html,react}-final.log.
+
+Selections spanning files, nested parent/child transforms, multi-vector canvas
+handles/dragging/nudges, selection proportions locking, full Figma/any-site parity
+and a trusted native release remain open. No desktop rebuild or push.
