@@ -14542,3 +14542,8 @@ This does not implement the other Figma cap shapes or retained settings for disa
 
 
 Verification: all 1,144 unit tests passed (`/private/tmp/retouch-swap-heads-units.log`). HTML/Chromium and Liquid/WebKit drawing/line-conversion workflows and React/Chromium native-container/self-closing SVG/group workflows passed with the swap action, exchanged independent dimension values, preserved shaft/paint, exact double-swap restoration and full undo/redo. Logs: `/private/tmp/retouch-swap-heads-html.log`, `/private/tmp/retouch-swap-heads-liquid.log`, `/private/tmp/retouch-swap-heads-react.log`. Every process exited zero. Model tests cover all four endpoint combinations, multiple directions, freeform refusal and coordinate limits (`/private/tmp/retouch-swap-heads-unit.log`).
+
+
+### 2026-09-13 — Reproduce dashed arrow shaft corruption
+
+A new browser pixel regression found that start-headed polylines change the shaft's dash pattern: 53 of 108 cases fail in both Chromium and WebKit, and every failure has a start head. Separate shaft/head geometry preserves the sampled shaft in all 108 cases in both browsers. Both regression commands exit 1 against current product output; this is an unresolved rendering defect, not a passing parity gate. The evidence redirects further cap work toward source-backed independent shaft/head geometry. See `docs/arrow-stroke-rendering.md` for the exact matrix, reproduction commands, source SHA, limits and next implementation requirements. No runtime behavior was changed in this investigation.
