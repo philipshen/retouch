@@ -1,0 +1,142 @@
+{
+  "sourceCommit": "efba0782d3ca3e527b49e5d7295c947408b02072",
+  "sourceTreeDirty": false,
+  "sourceFiles": 204,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "status": "ad hoc development candidate; native editing and trusted distribution unverified",
+  "archive": "/private/tmp/retouch-desktop-edges-efba078/Retouch-0.1.0-mac.zip",
+  "sha256": "05614a2043d92eaf9cc754af42d17e5fc4061a5513681a19583030becb5e304e",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "signatureAfterWorkflows": "strict verification passed on original and extracted bundles",
+  "units": {
+    "passed": 1156,
+    "exitCode": 0,
+    "scope": "tests import actual extracted packaged runtime",
+    "log": "/private/tmp/retouch-desktop-edges-efba078/units.log"
+  },
+  "harness": {
+    "testFiles": 330,
+    "inventorySha256": "7355ec7b547b72f60081776d12d51fafd1e9c15b8a3b68228654879a2b8f8d3d",
+    "archiveSha256": "d8a3cb401a9e20a705de6ec6097ec4219b46222dac0294a8d50f87284f5fb35e",
+    "sourceNativeBuildVerifierHashesMatch": true,
+    "runtimePaths": {
+      "bin": "/private/tmp/retouch-desktop-edges-efba078/extracted/Retouch.app/Contents/Resources/retouch/bin",
+      "src": "/private/tmp/retouch-desktop-edges-efba078/extracted/Retouch.app/Contents/Resources/retouch/src",
+      "shell": "/private/tmp/retouch-desktop-edges-efba078/extracted/Retouch.app/Contents/Resources/retouch/shell"
+    },
+    "removedAfterAllProcessesExited": true
+  },
+  "workflows": [
+    {
+      "name": "paints-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-edges-efba078/paints-html.log",
+      "scope": "Compact CSS paints, bare hex entry, RGB/P3 and four-edge alpha preservation, invalid input, Escape, responsive overrides and exact history"
+    },
+    {
+      "name": "paints-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-edges-efba078/paints-liquid.log",
+      "scope": "Compact CSS paints, bare hex entry, RGB/P3 and four-edge alpha preservation, invalid input, Escape, responsive overrides and exact history"
+    },
+    {
+      "name": "styles-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-edges-efba078/styles-html.log",
+      "scope": "Missing-edge creation, individual styles, mixed state, screen fallback, reset and exact width/style history"
+    },
+    {
+      "name": "widths-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-edges-efba078/widths-html.log",
+      "scope": "Individual widths, scoped reset and all-edge width replacement with exact history"
+    },
+    {
+      "name": "styles-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-edges-efba078/styles-liquid.log",
+      "scope": "Missing-edge creation, individual styles, mixed state, screen fallback, reset and exact width/style history"
+    },
+    {
+      "name": "paints-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-edges-efba078/paints-react.log",
+      "scope": "Compact CSS paints, bare hex entry, RGB/P3 and four-edge alpha preservation, invalid input, Escape, responsive overrides and exact history"
+    },
+    {
+      "name": "svg-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-edges-efba078/svg-html.log",
+      "scope": "SVG compact paints and advanced stroke settings, keyboard focus, responsive overrides, reset and exact history"
+    },
+    {
+      "name": "styles-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-edges-efba078/styles-react.log",
+      "scope": "Missing-edge creation, individual styles, mixed state, screen fallback, reset and exact width/style history"
+    }
+  ],
+  "tamperChecks": {
+    "result": "passed on disposable bundle copy",
+    "exitCode": 0,
+    "scope": "altered source, omitted manifest entry, unlisted source, restored copy and original signature",
+    "log": "/private/tmp/retouch-desktop-edges-efba078/tamper.log"
+  },
+  "installation": {
+    "verification": {
+      "sourceCommit": "efba0782d3ca3e527b49e5d7295c947408b02072",
+      "sourceTreeDirty": false,
+      "sourceFiles": 204,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesArchive": true,
+    "quarantinePreserved": true,
+    "quarantine": "0381;6aa6b8cc;;A9F26ED0-0A76-45CB-BB89-D2C4A7517F09",
+    "result": "isolated install and uninstall passed",
+    "caskInventoryUnchanged": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "automaticDependencyRemovalDisabled": true,
+    "exitCode": 0,
+    "log": "/private/tmp/retouch-desktop-edges-efba078/homebrew.log"
+  },
+  "nativeLaunch": {
+    "result": "not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "nativeSelfTests": "not run",
+  "developerID": "not retried",
+  "notarization": "not performed",
+  "published": false,
+  "remaining": [
+    "Native full editing, sampler and shutdown workflows remain unverified",
+    "Developer ID signing, notarization, public cask and trusted upgrades remain incomplete",
+    "Intel runtime execution remains unverified",
+    "Older WebKit normal-flow block-axis Fill sizing remains incorrect; not rerun on this archive",
+    "Arrow creation, pixel rendering and gradient-canvas workflows were not rerun on this archive",
+    "Full Figma Design parity and universal site support remain incomplete"
+  ]
+}

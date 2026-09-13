@@ -10,34 +10,34 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-inspector-812cfe6/Retouch-0.1.0-mac.zip`
-(SHA-256 `d463a9496b7a8e41c03e404e7a66dda11d43ad61375f232fb3b77ff0f8cc6e8e`).
-It packages clean commit `812cfe6`: compact Fill/Stroke rows with color alpha,
-floating stroke settings, keyboard-accessible cap/join icons, regular/custom
-stroke controls, independent arrowheads and automatic legacy-arrow migration.
-All 204 source hashes and native/build/verifier hashes match. All 1,152 tests
+`/private/tmp/retouch-desktop-edges-efba078/Retouch-0.1.0-mac.zip`
+(SHA-256 `05614a2043d92eaf9cc754af42d17e5fc4061a5513681a19583030becb5e304e`).
+It packages clean commit `efba078`: compact CSS/SVG paint rows, direct hex entry,
+per-edge color-alpha preservation, individual border widths and styles, mixed
+style display, and atomic creation of missing edges.
+All 204 source hashes and native/build/verifier hashes match. All 1,156 tests
 importing the extracted bundled runtime pass. Universal architecture and strict
 signatures verify before and after workflows.
 
 The exact ZIP installed and uninstalled through Homebrew in an isolated app
 directory with quarantine retained and the original cask inventory unchanged.
 Temporary app, tap, trust configuration and external test harness were removed.
-Packaged HTML/Chromium, React/Chromium and Liquid/WebKit workflows pass for
-compact paints, Display P3 alpha, stroke controls, keyboard focus, responsive
-scope/fallback, reset and exact history. HTML drawing/line-to-arrow workflows
-and Liquid legacy-arrow migration pass. Dashed arrow paths preserve shaft pixels
-in all 108 cases in each engine. Disposable-copy tamper checks pass.
-See [the candidate receipt](verification/2026-09-13-inspector-paints.json).
-
-The drawing harness initially expected a dimension field to be visible before
-opening its newly collapsed group. That test was corrected and rerun against
-the same unchanged archive. Both harness revisions and the failed log are
-retained with the receipt.
+Eight packaged workflows pass: HTML/React Chromium and Liquid WebKit CSS paints
+and edge-style workflows, HTML individual-width controls, and HTML SVG stroke
+settings. Coverage includes direct hex editing, RGB/Display P3 and four-edge
+alpha preservation, invalid input and Escape, responsive overrides and fallback,
+mixed style transitions, resets and exact source Undo/Redo. Disposable-copy
+tamper checks pass. See [the candidate receipt](verification/2026-09-13-border-edges.json).
 
 This is an ad hoc development build, not a trusted release. Native launch was
-not attempted because the CUA native connection failed. Developer ID signing,
-notarization, public distribution, native editing, Intel execution and trusted
-upgrades remain unverified. No signing or launch retry was attempted.
+not attempted because the fresh CUA native connection check failed. Developer
+ID signing, notarization, public distribution, native editing, Intel execution
+and trusted upgrades remain unverified. No signing or launch retry was attempted.
+
+The [previous inspector candidate](verification/2026-09-13-inspector-paints.json)
+records React/Liquid SVG stroke settings, HTML drawing/line-to-arrow workflows,
+Liquid legacy-arrow migration and the 108-case dashed-arrow pixel matrix in
+both engines. Those additional workflows were not repeated for this archive.
 
 The [previous inline-paints candidate](verification/2026-09-13-inline-paints.json)
 records packaged inline-gradient creation, stateful React geometry/paint and full
