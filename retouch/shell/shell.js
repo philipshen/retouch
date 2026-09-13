@@ -1267,6 +1267,7 @@ function renderPanelContents() {
   }
   if(info.svgTransform){const position=RetouchInspector.section('Vector position');RetouchSVGResize.positionFields(position,info,target,{onCanvas:()=>resizeSVGOnCanvas(info,target,null,'ne','rotate'),current:()=>sel?.info===info&&!panelTasks&&!undoBusy&&!sourceRequests&&!editing,save:matrix=>writeSVGTransform(info,target,matrix)});panelBody.append(position);}
   if(info.svgTransform){const size=RetouchInspector.section('Vector size');RetouchSVGResize.sizeFields(size,info,target,{current:()=>sel?.info===info&&!panelTasks&&!undoBusy&&!sourceRequests&&!editing,save:matrix=>writeSVGTransform(info,target,matrix)});panelBody.append(size);}
+  if(info.svgGradients?.length)mountSVGGradients(info,target);
   if(info.svgGeometry){
     const geometry=RetouchInspector.section('SVG geometry');
     if(info.svgConversion)geometry.append(RetouchInspector.button('Convert to vector path',()=>convertSVGToPath(info)));
@@ -2313,6 +2314,26 @@ async function writeSVGTransform(info,target,matrix){
   const reason=RetouchSVGResize.reason(target,info,true);if(reason)return toast(reason,'err');busyPanel(true);
    try{const result=await api('POST','/rt/__api/op',{type:'setSVGTransform',id:info.id,fileHash:info.hash,matrix});if(!result?.ok)return toast(result?.reason||result?.error||'Could not update vector','err');if(result.undoId)editorHistory.record({type:'setSVGTransform',id:info.id,undoId:result.undoId});sel.info=result.element;await refreshWrittenElement(sel.info,el=>el.getAttribute('transform')===sel.info.svgTransform?.value);renderPanel();toast('Vector updated','ok');}finally{busyPanel(false);}
 }
+function svgGradientsMatch(el,info){return (info.svgGradients||[]).every(gradient=>{const node=el.ownerDocument.getElementById(gradient.id);if(!node)return false;const stops=[...node.children].filter(child=>child.localName==='stop');return gradient.fields.every(field=>node.getAttribute(field.name)===field.value)&&stops.length===gradient.stops.length&&gradient.stops.every((stop,i)=>stops[i].getAttribute('offset')===stop.offset&&stops[i].getAttribute('stop-color')===stop.color&&stops[i].getAttribute('stop-opacity')===stop.opacity);});}
+function mountSVGGradients(info,target){
+ for(const gradient of info.svgGradients){
+  const section=RetouchInspector.section(gradient.paint==='fill'?'Fill gradient':'Stroke gradient');
+  RetouchInspector.note(section,(gradient.type==='linearGradient'?'Linear':'Radial')+' · #'+gradient.id);
+  const reason=gradient.reason; if(reason){RetouchInspector.note(section,reason,'refused');panelBody.append(section);continue;}
+  const write=(changes,stop)=>setSVGGradient(info,gradient.paint,changes,stop);
+  const field=(parent,label,value,property,stop,options)=>{let input;
+   if(options){input=RetouchInspector.select(parent,label,options.map(value=>[value,({objectBoundingBox:'Object bounds',userSpaceOnUse:'SVG viewport',pad:'Extend',reflect:'Reflect',repeat:'Repeat'})[value]||value||'Default']),value||'',value=>write({[property]:value||null},stop));}
+   else{input=document.createElement('input');input.type='text';input.value=value??'';input.placeholder='Default';input.onchange=()=>write({[property]:input.value.trim()||null},stop);RetouchInspector.field(parent,label,input);}
+  };
+  for(const item of gradient.fields)field(section,'Gradient '+item.name,item.value,item.name,undefined,item.name==='gradientUnits'?['','objectBoundingBox','userSpaceOnUse']:item.name==='spreadMethod'?['','pad','reflect','repeat']:null);
+  gradient.stops.forEach((stop,index)=>{const group=document.createElement('div');group.className='svg-gradient-stop';const title=document.createElement('p');title.className='hint';title.textContent='Stop '+(index+1);group.append(title);field(group,'Stop '+(index+1)+' position',stop.offset,'offset',index);field(group,'Stop '+(index+1)+' color',stop.color,'stop-color',index);field(group,'Stop '+(index+1)+' opacity',stop.opacity,'stop-opacity',index);section.append(group);});
+  RetouchInspector.note(section,'Shared gradient · Edits affect all referencing layers and screen sizes. Page styles can override stop colors.');section.lastElementChild.classList.add('gradient-scope');panelBody.append(section);
+ }
+}
+async function setSVGGradient(info,paint,changes,stop){
+ if(sel?.info!==info||panelTasks||undoBusy||sourceRequests)return;busyPanel(true);
+ try{const result=await api('POST','/rt/__api/op',{type:'setSVGGradient',id:info.id,fileHash:info.hash,paint,changes,...(stop===undefined?{}:{stop})});if(!result?.ok)return toast(result?.reason||result?.error||'Could not update gradient','err');if(result.undoId)editorHistory.record({type:'setSVGGradient',id:info.id,undoId:result.undoId});sel.info=result.element;await refreshWrittenElement(sel.info,el=>svgGradientsMatch(el,sel.info));renderPanel();toast('Gradient updated','ok');}finally{busyPanel(false);}
+}
 async function setSVGGeometry(property,value){
   if(!sel||panelTasks||undoBusy||sourceRequests)return;const info=sel.info;busyPanel(true);
   try{
@@ -2645,6 +2666,7 @@ async function restoreHistory(direction,op) {
         if(op.type==='createComponent'&&direction==='undo')return el.getAttribute('data-rt')===op.id;
         if (component?.ok) return (component.definitionIds || [component.definitionId]).includes(el.getAttribute('data-rt'));
         if (op.type === 'setSrc') return imageMatches(el,info.src,info.srcMatch);
+        if (op.type === 'setSVGGradient') return svgGradientsMatch(el,info);
         if (op.type === 'setSVGGeometry') return svgGeometryMatches(el,info);
         if (op.type === 'setSVGTransform') return el.getAttribute('transform')===info.svgTransform?.value;
         if (op.type === 'convertSVGToPath') return el.tagName.toLowerCase()===info.tag&&svgGeometryMatches(el,info);
