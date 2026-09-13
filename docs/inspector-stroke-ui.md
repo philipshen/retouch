@@ -289,3 +289,24 @@ the HTML SVG regression passes in
 `/private/tmp/retouch-stroke-popup-layout-svg.log`.
 All 1,156 unit tests pass in
 `/private/tmp/retouch-stroke-popup-layout-units-final.log`.
+
+## Stroke field keyboard drafts
+
+CSS border widths (all-edge and individual), SVG stroke width, dash pattern,
+dash/gap lengths, offset, miter limit and compact paint opacity now use the
+existing field-draft behavior. Enter commits by blurring the field. Escape
+restores its initial display value, clears custom validity and blurs without
+writing source. This includes a blank Mixed width or opacity. Existing drag
+cancellation and input validation remain in place.
+
+Browser coverage now cancels width and opacity drafts, commits width/opacity
+and dash edits with Enter, and verifies exact source Undo/Redo. CSS border
+width coverage includes cancelling a mixed all-edge width before replacing it.
+SVG coverage includes base/scoped widths and cancelling individual dash drafts.
+The desktop archive has not been rebuilt for these keyboard changes.
+Validation: 1,156 unit tests in `/private/tmp/retouch-stroke-keyboard-units.log`;
+HTML/React border widths in `/private/tmp/retouch-stroke-keyboard-html.log` and
+`/private/tmp/retouch-stroke-keyboard-widths-react.log`; HTML and Liquid/WebKit
+CSS paints in `/private/tmp/retouch-stroke-keyboard-paints-{html,liquid}.log`;
+HTML/React Chromium and Liquid WebKit SVG controls in
+`/private/tmp/retouch-stroke-keyboard-svg-{html,react,liquid}.log`.
