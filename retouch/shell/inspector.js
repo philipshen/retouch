@@ -249,9 +249,10 @@
     const abort=()=>stop(true);
     input.addEventListener('blur',abort);
     const start=(event,keyboard=false)=>{
-      if((!keyboard&&event.button!==0)||drag||!input.isConnected||input.disabled||input.readOnly||input.value===''||!input.checkValidity())return;
-      const parsed=read(input.value);if(!parsed||!Number.isFinite(parsed.value))return;
-      const options=handles.get(event.currentTarget)||{};if(options.canvas)for(let parent=input.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;
+      const options=handles.get(event.currentTarget)||{},raw=options.initialValue?String(options.initialValue()):input.value;
+      if((!keyboard&&event.button!==0)||drag||!input.isConnected||input.disabled||input.readOnly||raw===''||!input.checkValidity())return;
+      const parsed=read(raw);if(!parsed||!Number.isFinite(parsed.value))return;if(options.minimum)parsed.min=Math.max(parsed.min??-Infinity,options.minimum());
+      if(options.canvas)for(let parent=input.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;
       event.preventDefault();event.stopPropagation();(keyboard?event.currentTarget:input).focus({preventScroll:true});
       drag={keyboard,held:new Set(),options,id:keyboard?null:event.pointerId,target:event.currentTarget,inputDrag:event.currentTarget===input,y:event.clientY,x:options.axis==='y'?event.clientY:event.clientX,initial:input.value,value:parsed.value,format:parsed.format||String,min:parsed.min,max:parsed.max};
       try{drag.preview=input.retouchNumericPreview?.();}catch(error){drag=null;input.setCustomValidity(error.message);input.reportValidity();return;}

@@ -4,6 +4,7 @@ module.exports=async function resizeWorkflow({page,app,kind,read,wait,settled}){
  const original=read(),surface=page.getByLabel('Resize SVG vector on canvas',{exact:true});
  const cases=[['rect','Box'],['circle','Circle'],['ellipse','Ellipse'],['line','Diagonal'],['line','Horizontal'],['line','Vertical'],['path','Curve'],['polygon','Polygon'],['polyline','Polyline'],['g','Group'],['text','Text'],['image','Picture'],['use','Symbol']];
  const select=async(tag,name)=>{await page.getByRole('treeitem',{name:tag+' · '+name,exact:true}).click();await settled();await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));};
+ if(process.env.RT_E2E_SVG_GAP_EQUAL_ONLY){await require('./svg-gap-equal.cjs')({page,app,kind,read,wait,settled,select,original});return;}
  if(process.env.RT_E2E_SVG_GAP_KEYBOARD_ONLY){await require('./svg-gap-keyboard.cjs')({page,app,kind,read,wait,settled,select,original});return;}
  if(process.env.RT_E2E_SVG_GAP_CANVAS_ONLY){await require('./svg-gap-canvas.cjs')({page,app,kind,read,wait,settled,select,original});return;}
  if(process.env.RT_E2E_SVG_INDIVIDUAL_GAP_ONLY){await require('./svg-individual-gap.cjs')({page,app,kind,read,wait,settled,select,original});return;}
