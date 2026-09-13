@@ -11,3 +11,8 @@ test('range colors share solid sRGB/P3 parsing and reject contextual or executab
  for(const value of ['var(--brand)','currentColor','url(javascript:alert(1))','#123456;opacity:0','rgb(300 0 0)','color(display-p3 2 0 0)'])assert.equal(values.valid('color',value),false,value);
  assert.equal(values.camel('color'),'color');
 });
+
+test('range weights accept named steps and variable values within CSS bounds',()=>{
+ for(const value of ['1','100','200','300','400','500','537.25','600','700','800','900','1000'])assert.equal(values.valid('font-weight',value),true,value);
+ for(const value of ['0','-1','1000.1','1001','NaN','Infinity','1e2','400; color:red','var(--weight)','bold','bolder'])assert.equal(values.valid('font-weight',value),false,value);
+});

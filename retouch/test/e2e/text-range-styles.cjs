@@ -15,6 +15,33 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
   await page.getByLabel(label,{exact:true}).selectOption(value);await commit();
   assert.equal(await target.locator('span').last().evaluate((el,property)=>getComputedStyle(el)[property],property),value);
  }
+ // Named and variable weights preserve the selected run and its source value.
+ const variableWidths={};
+ for(const value of ['100','200','300','500','600','800','900']){
+  await edit();await select(target.locator('span').last(),true);
+  await page.getByLabel('Selected text weight',{exact:true}).selectOption(value);await commit();
+  assert.equal(await target.locator('span').last().evaluate(el=>getComputedStyle(el).fontWeight),value);
+  if(process.env.RT_E2E_VARIABLE_FONT&&['100','900'].includes(value))variableWidths[value]=await target.locator('span').last().evaluate(async el=>{const d=el.ownerDocument;await d.fonts.ready;const face=[...d.fonts].find(face=>face.family.replace(/["']/g,'')==='Variable Test');if(face?.status!=='loaded')throw Error('Variable font is not loaded');const range=d.createRange();range.selectNodeContents(el);return range.getBoundingClientRect().width;});
+ }
+ if(process.env.RT_E2E_VARIABLE_FONT){assert.ok(Math.abs(variableWidths['100']-variableWidths['900'])>.01,JSON.stringify(variableWidths));console.log('SELECTED VARIABLE GLYPH WIDTHS',variableWidths);}
+
+ const custom=()=>page.getByLabel('Selected text custom weight',{exact:true});
+ await edit();await select(target.locator('span').last(),true);
+ await page.getByLabel('Selected text weight',{exact:true}).selectOption('custom');
+ await custom().fill('537.25');await custom().press('Escape');assert.equal(read(),states.at(-1));
+ for(const value of ['0','1001']){
+  await page.getByLabel('Selected text weight',{exact:true}).selectOption('custom');await custom().fill(value);await custom().press('Enter');
+  assert.equal(await custom().getAttribute('aria-invalid'),'true');assert.equal(read(),states.at(-1));
+ }
+ await custom().fill('537.25');await custom().press('Enter');await wait(()=>read()!==states.at(-1));states.push(read());await settled();
+ assert.ok(read().includes('537.25'));assert.equal(await target.locator('span').last().evaluate(el=>getComputedStyle(el).fontWeight),'537.25');
+ await edit();await select(target.locator('span').last(),true);
+ await wait(async()=>await page.getByLabel('Selected text weight',{exact:true}).inputValue()==='custom');
+ assert.equal(await custom().inputValue(),'537.25');
+ if(process.env.RT_E2E_RANGE_WEIGHT_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_RANGE_WEIGHT_SCREENSHOT});
+ // Reapply to a partial run while preserving the unselected custom weight.
+ await target.locator('span').last().evaluate(el=>{const d=el.ownerDocument,r=d.createRange();r.setStart(el.firstChild,1);r.setEnd(el.firstChild,2);const selection=d.getSelection();selection.removeAllRanges();selection.addRange(r);});await custom().fill('600');await custom().press('Enter');await wait(()=>read()!==states.at(-1));states.push(read());await settled();
+ assert.ok(read().includes('537.25'));assert.ok(read().includes('600'));
  // Selecting the whole mixed range must override existing child weight as well.
  await edit();await select(target,true);await page.getByLabel('Selected text weight',{exact:true}).selectOption('400');
  await commit();
@@ -25,5 +52,5 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  for(let n=states.length-2;n>=0;n--){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states[n]);}
  for(let n=1;n<states.length;n++){await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===states[n]);}
  for(let n=states.length-2;n>=0;n--){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states[n]);}
- console.log('TEXT RANGE STYLES PASS '+kind+': inherited bold override, italic/upright, mixed ranges, reopen and exact undo/redo');
+ console.log('TEXT RANGE STYLES PASS '+kind+': named weights, custom fractional weight, invalid/Cancel, partial split, inherited bold override, italic/upright, mixed ranges, reopen and exact undo/redo');
 };

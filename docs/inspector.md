@@ -858,3 +858,32 @@ merge, and exact source undo/redo. The light picker screenshot is
 This is a web-shell change. The last desktop archive still predates range size,
 range color, and this picker integration; native execution and release evidence
 must be refreshed for a new bundle.
+
+
+### Selected-text named and custom weights (2026-09-13)
+
+The range weight menu now includes Thin through Black (100–900), plus Custom.
+Custom reveals a numeric field beside the menu and accepts 1–1000 with up to
+three decimal places. These bounds follow
+[CSS Fonts Level 4](https://www.w3.org/TR/css-fonts-4/#font-weight-prop).
+Enter saves; Escape cancels the field draft. Invalid values leave source intact.
+Reopening a nonstandard weight selects Custom and shows its saved value.
+The shared validator also enables source-proven wrapper reuse and partial-run
+splitting for these weights in HTML, React, and Liquid. The available font still
+determines which glyph weights can actually render; this control does not install
+missing font faces or infer a custom variable-font axis range.
+
+Validation: 1,180 unit tests passed (`/private/tmp/retouch-range-weights-units.log`).
+Combined range-style and color-picker checks passed on HTML/React Chromium 145
+and Liquid WebKit 26.0 (`/private/tmp/retouch-range-weights-final-*.log`), covering
+all named weights, fractional 537.25, invalid bounds, Cancel, reopening,
+partial splits, mixed ranges, and exact source undo/redo. Additional loaded Geist
+variable-font checks passed on HTML Chromium and Liquid WebKit
+(`/private/tmp/retouch-range-weights-variable-*.log`): the selected run width
+changed from about 53.09px at 100 to 60.68px at 900. A custom-weight toolbar capture
+is `/private/tmp/retouch-range-weights.png`; its run log is
+`/private/tmp/retouch-range-weights-visual.log`.
+
+Range font-family selection, general nested-style normalization, arbitrary font
+axes, and responsive range typography remain incomplete. The current desktop
+archive does not yet contain this web-shell change.

@@ -889,11 +889,11 @@ function showInlineFormatToolbar(){
   const d=doc(),bar=document.createElement('div');bar.className='inline-format-toolbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Selected text formatting');
   for(const [tag,label,text]of [['strong','Bold selected text','B'],['em','Italic selected text','I'],['sup','Superscript selected text','x²'],['sub','Subscript selected text','x₂']]){const button=document.createElement('button');button.type='button';button.textContent=text;button.setAttribute('aria-label',label);button.title=label;button.onpointerdown=event=>event.preventDefault();button.onclick=()=>{toggleWrap(tag);update();};bar.append(button);}
   let savedRange=null;const fields=[];
-  for(const [property,label,options] of [['font-weight','Selected text weight',[['400','Regular'],['700','Bold']]],['font-style','Selected text style',[['normal','Upright'],['italic','Italic']]]]){
+  for(const [property,label,options] of [['font-weight','Selected text weight',[['100','Thin'],['200','Extra light'],['300','Light'],['400','Regular'],['500','Medium'],['600','Semibold'],['700','Bold'],['800','Extra bold'],['900','Black'],['custom','Custom…']]],['font-style','Selected text style',[['normal','Upright'],['italic','Italic']]]]){
     const field=document.createElement('select');field.setAttribute('aria-label',label);field.title=label;
     field.append(new Option(property==='font-weight'?'Weight':'Style',''));field.options[0].disabled=true;
     for(const [value,label]of options)field.append(new Option(label,value));
-    field.onchange=()=>{if(savedRange&&editing){const selection=d.getSelection();selection.removeAllRanges();selection.addRange(savedRange.cloneRange());applyTextRangeStyle(property,field.value);update();}};
+    field.onchange=()=>{if(property==='font-weight'&&field.value==='custom'){const custom=bar.querySelector('[aria-label="Selected text custom weight"]');custom.hidden=false;custom.focus();custom.select();return;}if(savedRange&&editing){const selection=d.getSelection();selection.removeAllRanges();selection.addRange(savedRange.cloneRange());applyTextRangeStyle(property,field.value);update();}};
     fields.push({field,property});bar.append(field);
   }
   const rangeInput=(property,label,configure,normalize,display)=>{
@@ -911,6 +911,8 @@ function showInlineFormatToolbar(){
     };
     fields.push({field,property,display});bar.append(field);return field;
   };
+  const customWeight=rangeInput('font-weight','Selected text custom weight',field=>{field.type='number';field.min='1';field.max='1000';field.step='any';field.placeholder='Weight';field.hidden=true;field.title='Custom font weight (1–1000). The available font determines the rendered result.';},value=>value.trim(),value=>value);
+  bar.insertBefore(customWeight,bar.querySelector('select').nextSibling);
   rangeInput('font-size','Selected text size (px)',field=>{field.type='number';field.min='0.1';field.max='1000';field.step='0.1';field.placeholder='Size';},value=>value+'px',value=>String(Math.round(parseFloat(value)*1000)/1000));
   const colorField=rangeInput('color','Selected text color',field=>{field.type='text';field.spellcheck=false;field.placeholder='Color';field.className='range-color';field.title='Selected text color: hex, RGB, sRGB or Display P3';},value=>RetouchPaletteValues.fromComputed(/^(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})$/i.test(value.trim())?'#'+value.trim():value.trim()),value=>RetouchPaletteValues.fromComputed(value));
   const swatch=document.createElement('button');swatch.type='button';swatch.className='range-color-swatch';swatch.setAttribute('aria-label','Choose selected text color');swatch.title='Choose selected text color';bar.insertBefore(swatch,colorField);
@@ -946,7 +948,7 @@ function showInlineFormatToolbar(){
     for(const {field,property,display}of fields){
       const set=values.get(property),value=set.size===1?[...set][0]:'';
       if(display){if(document.activeElement!==field){try{field.value=value?display(value):'';}catch{field.value='';}}if(property==='color'){swatch.dataset.color=value;swatch.style.backgroundImage=value?'linear-gradient('+value+','+value+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)':'';}}
-      else field.value=[...field.options].some(option=>option.value===value)?value:'';
+      else {field.value=[...field.options].some(option=>option.value===value)?value:property==='font-weight'&&value?'custom':'';if(property==='font-weight'&&document.activeElement!==customWeight)customWeight.hidden=field.value!=='custom';}
     }
   };
   bar.addEventListener('focusout',()=>{const current=editing;requestAnimationFrame(()=>{if(editing===current&&current&&document.activeElement!==iframe&&!inlineTextUIFocused())commitInlineEdit();});});
