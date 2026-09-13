@@ -694,29 +694,33 @@ async function commitInlineEdit() {
   // clean from the new source. Text-only commits keep the smooth HMR path.
   const structural = op.type === 'setChildren',expectedFormatting=structural?JSON.stringify(serializeChildren(ed.el)):null;
   Object.assign(op, sourcePayload(ed.info));
-  const res = await api('POST', '/rt/__api/op', op);
-  if (res && res.ok) {
-    editorHistory.record(op.type === 'setText'
-      ? { type: 'setText', id: ed.id, text: ed.info.textSource ? ed.info.text : ed.original, undoId: res.undoId, context: ed.info.context, sourceId: ed.info.textSource?.id }
-      : { type: 'setChildren', id: ed.id, children: ed.originalTree, undoId: res.undoId, context: ed.info.context });
-    updateSource(ed.info, res);
-    if (op.type === 'setText') {
-      ed.info.text = op.text;
-      for (const m of (ed.info.textSource ? [] : matchingEls(ed.id))) if (m !== ed.el) m.textContent = op.text;
+  // Keep editing disabled until the structural write has mounted its new DOM.
+  if(structural)busyPanel(true);
+  try {
+    const res = await api('POST', '/rt/__api/op', op);
+    if (res && res.ok) {
+      editorHistory.record(op.type === 'setText'
+        ? { type: 'setText', id: ed.id, text: ed.info.textSource ? ed.info.text : ed.original, undoId: res.undoId, context: ed.info.context, sourceId: ed.info.textSource?.id }
+        : { type: 'setChildren', id: ed.id, children: ed.originalTree, undoId: res.undoId, context: ed.info.context });
+      updateSource(ed.info, res);
+      if (op.type === 'setText') {
+        ed.info.text = op.text;
+        for (const m of (ed.info.textSource ? [] : matchingEls(ed.id))) if (m !== ed.el) m.textContent = op.text;
+      }
+      if (structural) {
+        await reloadFrame();
+        await refreshWrittenElement(ed.info,el=>JSON.stringify(serializeChildren(el))===expectedFormatting);
+      } else if (window.__RT_RENDERING?.reloadAfterWrite) reloadFrame();
+      else if (sel && sel.info && sel.info.id === ed.id) {
+        sel.info.hash = res.hash;
+        renderPanel();
+      }
+      toast('Saved', 'ok');
+    } else {
+      ed.el.innerHTML = ed.originalHTML;
+      toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
     }
-    if (structural) {
-      await reloadFrame();
-      await refreshWrittenElement(ed.info,el=>JSON.stringify(serializeChildren(el))===expectedFormatting);
-    } else if (window.__RT_RENDERING?.reloadAfterWrite) reloadFrame();
-    else if (sel && sel.info && sel.info.id === ed.id) {
-      sel.info.hash = res.hash;
-      renderPanel();
-    }
-    toast('Saved', 'ok');
-  } else {
-    ed.el.innerHTML = ed.originalHTML;
-    toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
-  }
+  } finally { if(structural)busyPanel(false); }
 }
 
 // Reload the iframe to its current path, preserving scroll where possible.
@@ -853,10 +857,12 @@ function toggleWrap(tag) {
   if(tag==='sup'||tag==='sub'){
     const previous=start?.closest('sup,sub');
     if(previous&&previous!==editing.el&&editing.el.contains(previous)&&previous.contains(r.startContainer)&&previous.contains(r.endContainer)){
-      if(previous.childNodes.length!==1||previous.firstChild.nodeType!==3||previous.hasAttribute('data-rt-keep')||previous.hasAttribute('data-rt')||previous.hasAttribute('data-rt-i')){toast('Edit this nested script formatting in its source.','err');return;}
+      // Only location/revision stamps may be discarded when splitting a saved wrapper.
+      // Authored attributes, component instances and dynamic bindings retain their identity.
+      if(previous.childNodes.length!==1||previous.firstChild.nodeType!==3||previous.getAttribute('data-rt-i')||[...previous.attributes].some(attribute=>!['data-rt','data-rt-i','data-rt-keep','data-rt-revision','data-rt-client-revision','data-rt-client-mounted','data-rt-section','data-rt-block','data-rt-block-type','data-rt-template','data-rt-locale'].includes(attribute.name))){toast('Edit this nested script formatting in its source.','err');return;}
       const prefix=d.createRange();prefix.selectNodeContents(previous);prefix.setEnd(r.startContainer,r.startOffset);const suffix=d.createRange();suffix.selectNodeContents(previous);suffix.setStart(r.endContainer,r.endOffset);
       const parts=d.createDocumentFragment(),before=prefix.toString(),after=suffix.toString(),middle=previous.tagName.toLowerCase()===tag?d.createTextNode(r.toString()):d.createElement(tag);if(middle.nodeType===1)middle.textContent=r.toString();
-      if(before){const node=previous.cloneNode(false);node.textContent=before;parts.append(node);}parts.append(middle);if(after){const node=previous.cloneNode(false);node.textContent=after;parts.append(node);}previous.replaceWith(parts);
+      if(before){const node=d.createElement(previous.tagName.toLowerCase());node.textContent=before;parts.append(node);}parts.append(middle);if(after){const node=d.createElement(previous.tagName.toLowerCase());node.textContent=after;parts.append(node);}previous.replaceWith(parts);
       const selected=d.createRange();selected.selectNodeContents(middle);s.removeAllRanges();s.addRange(selected);return;
     }
   }

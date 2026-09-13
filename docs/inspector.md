@@ -586,3 +586,29 @@ revision wait; the final targeted HTML flow covers that wait. The final toolbar
 and rendered subscript screenshot was inspected at
 `/private/tmp/retouch-inline-format-toolbar-final.png`. Desktop packaging has not
 yet been rebuilt with these changes.
+
+### Reopen saved script formatting (2026-09-13)
+
+Simple saved `sup`/`sub` wrappers can now be reopened, partially switched, or
+partially toggled off. Splitting creates fresh formatting nodes instead of
+copying the saved wrapper's source identity onto multiple nodes. Known renderer
+location/revision metadata is accepted, including Liquid context stamps.
+Authored attributes, component-instance identities, dynamic binding metadata,
+and nested child structures still prevent this operation; support for editing
+those structures without losing their semantics remains unfinished.
+
+A React reopen test exposed a second structural-refresh race: the source request
+had completed but the new document was still mounting. Structural inline commits
+now retain the editor's busy state through the reload and compiled-content check,
+with cleanup in `finally`. Subsequent editing waits for that operation to finish.
+
+Validation: 1,164 unit tests passed in
+`/private/tmp/retouch-saved-script-units-final.log`. HTML and React Chromium
+145.0.7632.6 and Liquid WebKit 26.0 workflows all exited successfully in
+`/private/tmp/retouch-saved-script-{html,react,liquid}-verified.log`.
+`RT_E2E_SAVED_SCRIPT=1` covers save/reopen, partial switching, toggle off,
+unchanged surrounding text, and exact source undo/redo. It also injects authored
+class, component-instance, and dynamic-binding metadata into the rendered wrapper
+to verify that refused changes leave its DOM and source unchanged. These checks
+do not establish full component or dynamic-rich-text editing parity.
+Desktop packaging has not been rebuilt with this change.
