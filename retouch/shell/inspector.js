@@ -243,34 +243,42 @@
       if(!drag)return;const saved=drag;cancel=cancel||saved.preview?.current?.()===false;drag=null;root.cancelAnimationFrame(saved.raf);saved.hint.remove();
       for(const type of interruptions)root.removeEventListener(type,abort);saved.observer.disconnect();saved.preview?.restore();
       if(cancel)input.value=saved.initial;
-      if(saved.target.hasPointerCapture(saved.id))saved.target.releasePointerCapture(saved.id);
-      if(!cancel&&input.isConnected&&input.value!==saved.initial&&input.checkValidity())input.dispatchEvent(new Event('change',{bubbles:true}));
+      if(saved.id!==null&&saved.target.hasPointerCapture(saved.id))saved.target.releasePointerCapture(saved.id);
+      if(!cancel&&input.isConnected&&input.value!==saved.initial&&input.checkValidity()){if(saved.keyboard)saved.options.onCommit?.();input.dispatchEvent(new Event('change',{bubbles:true}));}
     };
     const abort=()=>stop(true);
     input.addEventListener('blur',abort);
-    const start=event=>{
-      if(event.button!==0||drag||!input.isConnected||input.disabled||input.readOnly||input.value===''||!input.checkValidity())return;
+    const start=(event,keyboard=false)=>{
+      if((!keyboard&&event.button!==0)||drag||!input.isConnected||input.disabled||input.readOnly||input.value===''||!input.checkValidity())return;
       const parsed=read(input.value);if(!parsed||!Number.isFinite(parsed.value))return;
       const options=handles.get(event.currentTarget)||{};if(options.canvas)for(let parent=input.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;
-      event.preventDefault();event.stopPropagation();input.focus({preventScroll:true});
-      drag={options,id:event.pointerId,target:event.currentTarget,inputDrag:event.currentTarget===input,y:event.clientY,x:options.axis==='y'?event.clientY:event.clientX,initial:input.value,value:parsed.value,format:parsed.format||String,min:parsed.min,max:parsed.max};
+      event.preventDefault();event.stopPropagation();(keyboard?event.currentTarget:input).focus({preventScroll:true});
+      drag={keyboard,held:new Set(),options,id:keyboard?null:event.pointerId,target:event.currentTarget,inputDrag:event.currentTarget===input,y:event.clientY,x:options.axis==='y'?event.clientY:event.clientX,initial:input.value,value:parsed.value,format:parsed.format||String,min:parsed.min,max:parsed.max};
       try{drag.preview=input.retouchNumericPreview?.();}catch(error){drag=null;input.setCustomValidity(error.message);input.reportValidity();return;}
       drag.hint=document.createElement('div');drag.hint.dataset.numericScrubSpeed='';drag.hint.setAttribute('role','status');Object.assign(drag.hint.style,{position:'fixed',bottom:'116px',left:'50%',transform:'translateX(-50%)',padding:'8px 12px',border:'1px solid var(--line)',borderRadius:'6px',background:'var(--panel)',color:'var(--ink)',fontSize:'11px',zIndex:41});drag.hint.textContent='1x';document.body.append(drag.hint);
       drag.observer=new MutationObserver(()=>{if(!input.isConnected||drag?.preview?.current?.()===false)abort();});drag.observer.observe(document.body,{childList:true,subtree:true});
-      drag.target.setPointerCapture(event.pointerId);for(const type of interruptions)root.addEventListener(type,abort);const tick=()=>{if(!drag)return;if(!input.isConnected||drag.preview?.current?.()===false){abort();return;}drag.raf=root.requestAnimationFrame(tick);};drag.raf=root.requestAnimationFrame(tick);
+      if(!keyboard)drag.target.setPointerCapture(event.pointerId);for(const type of interruptions)root.addEventListener(type,abort);const tick=()=>{if(!drag)return;if(!input.isConnected||drag.preview?.current?.()===false){abort();return;}drag.raf=root.requestAnimationFrame(tick);};drag.raf=root.requestAnimationFrame(tick);
     };
     label.addEventListener('pointerdown',start);input.addEventListener('pointerdown',event=>{if(event.altKey)start(event);});
+    const applyDelta=delta=>{if(!drag)return;if(drag.preview?.current?.()===false){abort();return;}const min=drag.min??(input.min===''?-Infinity:Number(input.min)),max=drag.max??(input.max===''?Infinity:Number(input.max));drag.value=Math.max(min,Math.min(max,Math.round((drag.value+delta)*1e6)/1e6));input.value=drag.format(drag.value);try{drag.preview?.update(drag.value);}catch(error){abort();input.setCustomValidity(error.message);input.reportValidity();}};
     const move=event=>{
       if(!drag||drag.id!==event.pointerId)return;event.preventDefault();event.stopPropagation();
       if(drag.preview?.current?.()===false){abort();return;}const coordinate=drag.options.axis==='y'?event.clientY:event.clientX,delta=(coordinate-drag.x)/(drag.options.scale?.()||1);drag.x=coordinate;const speed=drag.options.canvas?1:scrubSpeed(event.clientY-drag.y);drag.hint.textContent=({2:'2x',1:'1x',.5:'1/2',.25:'1/4'})[speed];
-      const min=drag.min??(input.min===''?-Infinity:Number(input.min)),max=drag.max??(input.max===''?Infinity:Number(input.max));
-      drag.value=Math.max(min,Math.min(max,Math.round((drag.value+delta*speed*(event.altKey&&!drag.inputDrag?0.1:event.shiftKey?10:1))*1e6)/1e6));input.value=drag.format(drag.value);try{drag.preview?.update(drag.value);}catch(error){abort();input.setCustomValidity(error.message);input.reportValidity();}
+      applyDelta(delta*speed*(event.altKey&&!drag.inputDrag?0.1:event.shiftKey?10:1));
     };
     label.addEventListener('pointermove',move);input.addEventListener('pointermove',move);
     for(const target of [label,input])target.addEventListener('pointerup',event=>{if(drag?.id===event.pointerId){event.preventDefault();event.stopPropagation();stop(false);}});
     for(const target of [label,input])for(const type of ['pointercancel','lostpointercapture'])target.addEventListener(type,event=>{if(drag?.id===event.pointerId)stop(true);});
     input.addEventListener('keydown',event=>{if(drag&&!event.isComposing&&['Escape','Enter'].includes(event.key)){event.preventDefault();event.stopImmediatePropagation();stop(event.key==='Escape');}},true);
-    input.retouchNumericHandle=(target,options={})=>{handles.set(target,options);const up=event=>{if(drag?.id===event.pointerId){event.preventDefault();event.stopPropagation();stop(false);}},cancel=event=>{if(drag?.id===event.pointerId)stop(true);};const events=[['pointerdown',start],['pointermove',move],['pointerup',up],['pointercancel',cancel],['lostpointercapture',cancel]];for(const [name,fn]of events)target.addEventListener(name,fn);return ()=>{for(const [name,fn]of events)target.removeEventListener(name,fn);handles.delete(target);};};
+    input.retouchNumericHandle=(target,options={})=>{
+      handles.set(target,options);const blocked=new Set(),up=event=>{if(drag?.id===event.pointerId){event.preventDefault();event.stopPropagation();stop(false);}},cancel=event=>{if(drag?.id===event.pointerId)stop(true);},blur=()=>{if(drag?.target===target)abort();};
+      const down=event=>{if(!options.canvas||event.isComposing)return;
+        if(drag?.keyboard&&drag.target===target&&['Escape','Enter'].includes(event.key)){event.preventDefault();event.stopPropagation();if(event.key==='Escape')for(const key of drag.held)blocked.add(key);stop(event.key==='Escape');return;}
+        if(event.metaKey||event.ctrlKey)return;const keys=options.axis==='y'?['ArrowUp','ArrowDown']:['ArrowLeft','ArrowRight'];if(!keys.includes(event.key))return;event.preventDefault();event.stopPropagation();if(blocked.has(event.key))return;if(!drag)start(event,true);if(!drag?.keyboard||drag.target!==target)return;drag.held.add(event.key);applyDelta((event.key===keys[0]?-1:1)*(event.shiftKey?10:event.altKey?0.1:1));
+      };
+      const release=event=>{blocked.delete(event.key);if(drag?.keyboard&&drag.target===target&&drag.held.has(event.key)){event.preventDefault();event.stopPropagation();drag.held.delete(event.key);if(!drag.held.size)stop(false);}};
+      const events=[['pointerdown',start],['pointermove',move],['pointerup',up],['pointercancel',cancel],['lostpointercapture',cancel],['keydown',down],['keyup',release],['blur',blur]];for(const [name,fn]of events)target.addEventListener(name,fn);return ()=>{for(const [name,fn]of events)target.removeEventListener(name,fn);handles.delete(target);};
+    };
     return input;
   }
   function number(parent, label, value, min, max, onChange) {
