@@ -1,0 +1,116 @@
+{
+  "sourceCommit": "1251b592244e324ed01e2879374ad05a6db86927",
+  "sourceTreeDirty": false,
+  "sourceFiles": 204,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "status": "ad hoc development candidate; native editing and trusted distribution unverified",
+  "archive": "/private/tmp/retouch-desktop-paints-1251b59/Retouch-0.1.0-mac.zip",
+  "sha256": "754d633a69c4dc195be6cb61ed9cc11ca27fe603357721150277fb2d9d91c37c",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "signatureAfterWorkflows": "strict verification passed on original and extracted bundles",
+  "units": {
+    "passed": 1136,
+    "scope": "tests import actual extracted packaged runtime",
+    "log": "/private/tmp/retouch-desktop-paints-1251b59/units.log"
+  },
+  "harness": {
+    "testFiles": 325,
+    "inventorySha256": "ff6153099bea480217a7a327ee12fd4aeb49c17074bc9dcd488527980828306c",
+    "archiveSha256": "9b0fbf95a65db2fa6f23f02dd8dba6b1bc5a344c1540e6c79ddb50199e409caa",
+    "sourceNativeBuildVerifierHashesMatch": true,
+    "runtimePaths": {
+      "bin": "/private/tmp/retouch-desktop-paints-1251b59/extracted/Retouch.app/Contents/Resources/retouch/bin",
+      "src": "/private/tmp/retouch-desktop-paints-1251b59/extracted/Retouch.app/Contents/Resources/retouch/src",
+      "shell": "/private/tmp/retouch-desktop-paints-1251b59/extracted/Retouch.app/Contents/Resources/retouch/shell"
+    },
+    "removedAfterAllProcessesExited": true
+  },
+  "workflows": [
+    {
+      "name": "Inline and attribute gradient creation, animation guards, stop editing and exact history",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-paints-1251b59/inline-html.log"
+    },
+    {
+      "name": "Inline and attribute gradient creation, underlying CSS guards, stop editing and exact history",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-paints-1251b59/inline-react.log"
+    },
+    {
+      "name": "Compact empty paint controls, tablet-scoped addition/removal, unchanged phone paint and menu refresh retention",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-paints-1251b59/empty-liquid.log"
+    },
+    {
+      "name": "Seven drawing presets, Move and Arrow shortcuts, line-to-arrow conversion, arrowhead parameters/reversal and exact history",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-paints-1251b59/arrows-html.log"
+    },
+    {
+      "name": "Gradient creation retains handlers, stateful opacity/geometry and independently controlled paint",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-paints-1251b59/stateful-react.log"
+    },
+    {
+      "name": "Full SVG gradient inspector and canvas workflows",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-paints-1251b59/canvas-gradients.log"
+    }
+  ],
+  "tamperChecks": {
+    "result": "passed on disposable bundle copy",
+    "scope": "altered source, omitted manifest entry, unlisted source, restored copy and original signature",
+    "log": "/private/tmp/retouch-desktop-paints-1251b59/tamper.log"
+  },
+  "installation": {
+    "verification": {
+      "sourceCommit": "1251b592244e324ed01e2879374ad05a6db86927",
+      "sourceTreeDirty": false,
+      "sourceFiles": 204,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesArchive": true,
+    "quarantinePreserved": true,
+    "quarantine": "0381;6aa698ab;;069FA4F1-2A27-4ED5-9B5B-627AEBCEDC99",
+    "result": "isolated install and uninstall passed",
+    "caskInventoryUnchanged": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "automaticDependencyRemovalDisabled": true,
+    "log": "/private/tmp/retouch-desktop-paints-1251b59/homebrew.log"
+  },
+  "nativeLaunch": {
+    "result": "not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "nativeSelfTests": "not run",
+  "developerID": "not retried",
+  "notarization": "not performed",
+  "published": false,
+  "remaining": [
+    "Native full editing, sampler and shutdown workflows remain unverified",
+    "Developer ID signing, notarization, public cask and trusted upgrades remain incomplete",
+    "Intel runtime execution remains unverified",
+    "Older WebKit normal-flow block-axis Fill sizing remains incorrect; not rerun on this archive",
+    "Full Figma Design parity and universal site support remain incomplete"
+  ]
+}

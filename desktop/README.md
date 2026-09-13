@@ -10,27 +10,32 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-arrows-f63d1a2/Retouch-0.1.0-mac.zip`
-(SHA-256 `fe0a6998909d5f93327e24852dab0f08d3e4784e17807d7d843c11de687c45e3`).
-It packages clean commit `f63d1a2`, including V to return to Move, Arrow drawing
-with Shift+L, arrowhead dimensions and Reverse arrow, plus stateful React SVG
-gradient creation. All 204 source hashes and native/build/verifier hashes match.
-Universal architecture, strict signature verification before and after tests,
-disposable-copy tamper checks and 1,127 tests importing the bundled runtime pass.
+`/private/tmp/retouch-desktop-paints-1251b59/Retouch-0.1.0-mac.zip`
+(SHA-256 `754d633a69c4dc195be6cb61ed9cc11ca27fe603357721150277fb2d9d91c37c`).
+It packages clean commit `1251b59`, including compact empty SVG paint controls,
+responsive Add paint menu retention, line-to-arrow conversion, and HTML/React/Liquid
+inline color conversion to editable gradients. All 204 source hashes and the
+native/build/verifier hashes match. The 1,136 tests importing the actual bundled
+runtime pass, with universal architecture and strict signatures verified before
+and after workflows.
 
 The exact ZIP installed and uninstalled through Homebrew in an isolated app
-directory with quarantine intact. The original cask inventory is unchanged;
-temporary app, tap, trust configuration and external harness were removed.
-Packaged HTML/Chromium, Liquid/WebKit and React/Chromium drawing workflows pass,
-including arrowhead edits, reversal, freeform guards and exact source history.
-The full HTML/WebKit gradient workflow, stateful React gradient creation, and
-HTML responsive comparison editing also pass.
-See [the candidate receipt](verification/2026-09-13-arrow-controls.json).
+directory with quarantine retained and the original cask inventory unchanged.
+Temporary app, tap, trust configuration and external harness were removed.
+Packaged HTML/Chromium and React/Chromium inline-gradient workflows pass, as do
+Liquid/WebKit tablet paint controls with unchanged phone paint, HTML drawing and
+line-to-arrow controls, stateful React opacity/geometry, and the full HTML/WebKit
+gradient canvas workflow. Disposable-copy tamper checks pass.
+See [the candidate receipt](verification/2026-09-13-inline-paints.json).
 
 This is an ad hoc development build, not a trusted release. Native launch was
 not attempted because the CUA native connection failed. Developer ID signing,
 notarization, public distribution, native editing, Intel execution and trusted
 upgrades remain unverified. No signing or launch retry was attempted.
+
+The [previous arrow-controls candidate](verification/2026-09-13-arrow-controls.json)
+records packaged React/Liquid drawing and HTML responsive comparison workflows,
+which were not repeated for this archive.
 
 The [previous stop-controls candidate](verification/2026-09-13-canvas-stop-controls.json)
 records the combined gradient-transform/viewport test, which was not repeated
