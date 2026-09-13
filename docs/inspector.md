@@ -1369,3 +1369,32 @@ Liquid WebKit 26 browser checks passed in
 visible Undo/Redo during formatting and typed insertion, open-edit and selection
 retention, disabled Redo after branching, and exact source history after Done.
 React/Liquid also passed multiline-paste and cursor-typography regressions.
+
+### Ordinary browser edits share formatting history (2026-09-13)
+
+Ordinary non-composing text insertion, replacement, backward/forward deletion,
+word/line deletion, and cut now capture their actual before/after DOM around
+browser input events. The browser still performs the editing operation; Retouch
+records the resulting nodes, selection, and source metadata alongside formatting,
+styled typing, and paste. Undo/Redo buttons can restore these transactions while
+keeping the edit open and source unchanged. A new native edit clears local redo.
+
+For fully tracked ordinary input, an exhausted local keyboard history no longer
+falls through to replay the browser's older native stack. The same protection
+applies when the bounded local history has no older entry. Untracked input types
+retain the existing native fallback behavior. Styled composition and paste keep
+their existing owning transactions rather than adding intermediate input records.
+This does not establish complete physical IME, spellcheck, accessibility input,
+or native word-grouping parity. The current desktop archive predates this work.
+
+The new browser test interleaves underline, ordinary insertion, Backspace,
+selection replacement, and Delete; it traverses all local states with both
+keyboard and visible controls, checks an extra Undo at the baseline, verifies
+redo branching, and then checks exact source Undo/Redo after Done.
+
+Validation: 1,195 unit tests passed in
+`/private/tmp/retouch-native-history-units.log`. HTML/React Chromium 145 and
+Liquid WebKit 26 checks passed in
+`/private/tmp/retouch-native-history-{html,react,liquid}.log`. React/Liquid also
+passed formatting-history, multiline-paste, and cursor-typography regressions,
+including simulated composition events. Physical IME input was not exercised.

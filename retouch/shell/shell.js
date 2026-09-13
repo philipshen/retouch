@@ -111,7 +111,7 @@ function syncHistoryControls() {
   const busy = undoBusy || panelTasks > 0 || sourceRequests > 0;
   if(busy)canvasPan.cancel();
   const textChanged=!!editing&&editing.el.innerHTML!==editing.historyBaselineHTML;
-  undoBtn.disabled = busy || historyRecoveryRequired || !(canStepInlineHistory(false)||textChanged||editorHistory.canUndo);
+  undoBtn.disabled = busy || historyRecoveryRequired || !(canStepInlineHistory(false)||(!textChanged||!ownsNativeTextHistory())&&(textChanged||editorHistory.canUndo));
   redoBtn.disabled = busy || historyRecoveryRequired || !(canStepInlineHistory(true)||!textChanged&&editorHistory.canRedo);
   undoBtn.setAttribute('aria-busy',String(busy));
   redoBtn.setAttribute('aria-busy',String(busy));
@@ -304,13 +304,14 @@ function hookFrame(d, w) {
     e.preventDefault();
     e.stopPropagation();
   }, true);
-  d.addEventListener('input',event=>{if(editing)for(const node of caretPlaceholders(editing))if(hasInlineContentAfter(node,editing.el))delete node.__rtCaretPlaceholder;if(editing?.caretHistory&&editing.el.contains(event.target)&&!['historyUndo','historyRedo'].includes(event.inputType))editing.caretHistory.redo=[];syncHistoryControls();},true);
+  d.addEventListener('input',event=>{finishNativeTextEdit(event);if(editing)for(const node of caretPlaceholders(editing))if(hasInlineContentAfter(node,editing.el))delete node.__rtCaretPlaceholder;if(editing?.caretHistory&&editing.el.contains(event.target)&&!['historyUndo','historyRedo'].includes(event.inputType))editing.caretHistory.redo=[];syncHistoryControls();},true);
   d.addEventListener('compositionstart',()=>beginCaretComposition(),true);
   d.addEventListener('compositionend',()=>finishCaretComposition(),true);
   d.addEventListener('beforeinput', (e) => {
     if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertLineBreak'){e.preventDefault();e.stopPropagation();insertInlineBreak();return;}
-    if(editing&&editing.el.contains(e.target)&&['historyUndo','historyRedo'].includes(e.inputType)&&caretHistoryStep(e.inputType==='historyRedo')){e.preventDefault();e.stopPropagation();return;}
+    if(editing&&editing.el.contains(e.target)&&['historyUndo','historyRedo'].includes(e.inputType)&&inlineHistoryCommand(e.inputType==='historyRedo')){e.preventDefault();e.stopPropagation();return;}
     if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertText'&&typeof e.data==='string'&&insertCaretText(e.data)){e.preventDefault();e.stopPropagation();return;}
+    beginNativeTextEdit(e);
     if (editing && editing.el.contains(e.target) && e.inputType.startsWith('format')) {
       e.preventDefault();
     }
@@ -324,7 +325,7 @@ function hookFrame(d, w) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if(e.isComposing)return;
       if(e.key==='Enter'&&e.shiftKey){e.preventDefault();insertInlineBreak();return;}
-      if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&caretHistoryStep(e.shiftKey)){e.preventDefault();return;}
+      if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&inlineHistoryCommand(e.shiftKey)){e.preventDefault();return;}
       if ((e.metaKey || e.ctrlKey) && ['b','i','u'].includes(e.key.toLowerCase())) {
         e.preventDefault(); // never let the browser's own rich-edit commands run (R-5)
         toggleWrap(e.key.toLowerCase()==='b'?'strong':e.key.toLowerCase()==='i'?'em':'u');
@@ -951,6 +952,30 @@ function inlineFormattingTransaction(action){
     if(completed&&editing===current&&current.el.innerHTML!==before.html)recordCaretEdit(current,before);
   }
 }
+// Let the browser perform ordinary insertion/deletion, but retain its exact
+// before/after nodes in the same history as formatting and styled insertion.
+function beginNativeTextEdit(event){
+  const current=editing;
+  if(!current||!current.el.contains(event.target)||event.defaultPrevented||event.isComposing||current.caretComposition)return;
+  current.nativeTextEdit=null;
+  if(!/^(insertText|insertReplacementText|deleteContentBackward|deleteContentForward|deleteWordBackward|deleteWordForward|deleteSoftLineBackward|deleteSoftLineForward|deleteHardLineBackward|deleteHardLineForward|deleteByCut)$/.test(event.inputType))return;
+  current.nativeTextEdit={type:event.inputType,before:captureCaretEdit(current)};
+}
+function finishNativeTextEdit(event){
+  const current=editing;if(!current||!current.el.contains(event.target)||current.caretComposition)return;
+  const pending=current.nativeTextEdit;current.nativeTextEdit=null;
+  if(pending&&pending.type===event.inputType){
+    current.nativeHistoryCaptured=true;
+    if(current.el.innerHTML!==pending.before.html)recordCaretEdit(current,pending.before);
+  }else if(!['historyUndo','historyRedo'].includes(event.inputType))current.nativeHistoryUntracked=true;
+}
+function ownsNativeTextHistory(){return !!editing?.nativeHistoryCaptured&&!editing.nativeHistoryUntracked;}
+function inlineHistoryCommand(redo=false){
+  if(caretHistoryStep(redo))return true;
+  // Native browser history still contains operations restored by snapshots.
+  // Do not replay those a second time when the tracked local stack is empty.
+  return ownsNativeTextHistory();
+}
 function canStepInlineHistory(redo=false){
   const current=editing;if(!current?.caretHistory||current.caretComposition)return false;
   const entry=(redo?current.caretHistory.redo:current.caretHistory.undo).at(-1);
@@ -1179,7 +1204,7 @@ function showInlineFormatToolbar(){
   };
   bar.addEventListener('keydown',event=>{
     if(event.isComposing||!(event.metaKey||event.ctrlKey)||event.key.toLowerCase()!=='z'||event.target.closest('input,textarea,[contenteditable="true"]'))return;
-    if(caretHistoryStep(event.shiftKey)){event.preventDefault();event.stopPropagation();update();}
+    if(inlineHistoryCommand(event.shiftKey)){event.preventDefault();event.stopPropagation();update();}
   });
   bar.addEventListener('focusout',()=>{const current=editing;requestAnimationFrame(()=>{if(editing===current&&current&&document.activeElement!==iframe&&!inlineTextUIFocused())commitInlineEdit();});});
   const section=panelBody.querySelector('[data-section="typography"]'),panel=document.getElementById('panel');
@@ -3224,6 +3249,7 @@ async function restoreDirection(direction) {
   stopDrawing?.();
   if(undoBusy || panelTasks || sourceRequests)return;
   if(caretHistoryStep(direction==='redo'))return;
+  if(ownsNativeTextHistory()&&editing.el.innerHTML!==editing.historyBaselineHTML)return;
   await commitInlineEdit();
   if(undoBusy || panelTasks || sourceRequests)return;
   try {
