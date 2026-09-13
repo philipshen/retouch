@@ -9,13 +9,14 @@ const file=path.join(root,'app/page.jsx'),original=fs.readFileSync(file,'utf8'),
  const wait=async(fn,label)=>{for(let i=0;i<120;i++){if(await fn())return;await page.waitForTimeout(100);}throw Error('Timed out: '+label);};
  const css=prop=>page.frameLocator('#app').locator('#anchor-target').evaluate((el,p)=>getComputedStyle(el)[p],prop);
  const number=async(name,value)=>{await page.getByLabel(name,{exact:true}).fill(value);await page.getByLabel(name,{exact:true}).press('Tab');};
+ const openStroke=async()=>{const summary=page.locator('summary[aria-label="Advanced stroke settings"]');if(!await summary.evaluate(el=>el.parentElement.open))await summary.click();};
  const snapshots=[];
  const action=async(fn,prop,value)=>{const before=read();snapshots.push(before);await fn();await wait(async()=>await css(prop)===value,prop);await wait(async()=>read()!==before&&await page.locator('#panelBody').getAttribute('aria-busy')==='false','source committed');};
  try {
   await page.goto((process.env.RT_E2E_URL||'http://localhost:3496')+'/rt');
   await page.getByRole('treeitem',{name:'div · anchor-target',exact:true}).click();
   await action(()=>number('Border width (px)','4'),'borderTopWidth','4px');
-  await action(()=>page.getByLabel('Border style',{exact:true}).selectOption('dashed'),'borderTopStyle','dashed');
+  await openStroke();await action(()=>page.getByLabel('Border style',{exact:true}).selectOption('dashed'),'borderTopStyle','dashed');
   await action(()=>page.getByLabel('Border color',{exact:true}).evaluate(el=>{el.value='#ff0000';el.dispatchEvent(new Event('change',{bubbles:true}));}),'borderTopColor','rgb(255, 0, 0)');
   assert.equal(await css('borderTopWidth'),'4px','color preserves width');
   assert.equal(await css('borderTopStyle'),'dashed','color preserves style');
@@ -25,7 +26,7 @@ const file=path.join(root,'app/page.jsx'),original=fs.readFileSync(file,'utf8'),
   assert.equal(await css('borderTopRightRadius'),'24px','one corner preserves others');
   await wait(async()=>await page.getByLabel('Corner radius (px)',{exact:true}).getAttribute('placeholder')==='Mixed','mixed radius display');
   assert.ok(await page.getByLabel('Top right radius (px)',{exact:true}).isVisible(),'corner controls remain open after edits');
-  await action(()=>page.getByLabel('Border style',{exact:true}).selectOption('none'),'borderTopStyle','none');
+  await openStroke();await action(()=>page.getByLabel('Border style',{exact:true}).selectOption('none'),'borderTopStyle','none');
   await action(()=>number('Border width (px)','6'),'borderTopWidth','6px');
   assert.equal(await css('borderTopStyle'),'solid','positive width restores visible stroke');
   await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');

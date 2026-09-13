@@ -7,6 +7,7 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  const check=async expected=>{await wait(async()=>JSON.stringify(await values())===JSON.stringify(expected));assert.deepEqual(await paint(),initialPaint);};
  const record=async()=>{await wait(()=>read()!==states.at(-1));states.push(read());};
  const field=side=>page.getByLabel('Border '+side+' width ('+(kind==='html'?'CSS':'px')+')',{exact:true});
+ const settings=page.locator('summary[aria-label="Advanced stroke settings"]'),dialog=page.getByRole('dialog',{name:'Stroke settings',exact:true});assert.equal(await dialog.isVisible(),false);await settings.click();await dialog.waitFor();await page.keyboard.press('Escape');assert.equal(await dialog.isVisible(),false);assert.equal(await settings.evaluate(el=>document.activeElement===el),true);await settings.click();await page.locator('.design-panel-tabs').click();assert.equal(await dialog.isVisible(),false);await settings.click();
  await page.locator('.border-edges > summary').click();await field('top').waitFor();await check([3,3,3,3]);
  await field('top').fill(kind==='html'?'-1px':'-1');await field('top').press('Tab');await settled();assert.equal(read(),states[0]);assert.equal(await field('top').evaluate(el=>el.checkValidity()),false);
  for(const [side,value,expected]of [['top',7,[7,3,3,3]],['right',0,[7,0,3,3]],['bottom',5,[7,0,5,3]]]){await field(side).fill(value+(kind==='html'?'px':''));await field(side).press('Tab');await settled();await record();await check(expected);}

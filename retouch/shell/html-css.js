@@ -195,6 +195,7 @@
    if(property==='text-align')input.dataset.textDirection=css.direction;
    if(property==='font-weight'){input.placeholder='400';input.inputMode='decimal';}
    input.value=value;input.oninput=()=>input.setCustomValidity('');
+   if(property==='border-width'&&new Set(['top','right','bottom','left'].map(side=>css.getPropertyValue('border-'+side+'-width'))).size>1){input.value='';input.placeholder='Mixed';}
    if(property==='border-style'&&new Set(['top','right','bottom','left'].map(side=>css.getPropertyValue('border-'+side+'-style'))).size>1){const mixed=document.createElement('option');mixed.value='';mixed.textContent='Mixed';mixed.disabled=true;input.prepend(mixed);input.value='';for(const option of [...input.options])if(/\s/.test(option.value))option.remove();}
    input.onchange=()=>{const value=input.value.trim();if(!CSS.supports(property,value)||!valid(property,value)){input.setCustomValidity('Use simple CSS lengths with units, keywords, or colors. Spacing accepts up to four values; gap accepts two.');input.reportValidity();return;}if(/^border(?:-(?:top|right|bottom|left))?-width$/.test(property)){
      const changes={[property]:value},sides=['top','right','bottom','left'],[a,b=a,c=a,d=b]=value.split(/\s+/),widths=[a,b,c,d];

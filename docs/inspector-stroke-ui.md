@@ -241,3 +241,29 @@ HTML/React Chromium and Liquid WebKit in
 `/private/tmp/retouch-edge-styles-{html,react,liquid}-final.log`.
 This changes CSS box-edge controls; vector stroke alignment, full Figma UI
 parity and a refreshed desktop archive remain unfinished.
+
+## Shared floating stroke layout
+
+Website Stroke now follows the same primary layout as SVG: paint first, followed
+by Weight and an advanced-settings icon. Style and Individual edges live in the
+floating Stroke settings panel. Existing controls are moved intact, retaining
+source writers, responsive scopes, reset actions and focus restoration. CSS
+and SVG panels use separate expansion preferences. Escape restores focus to
+the settings opener; an outside click dismisses the panel.
+
+Unequal HTML border widths now show Mixed in the primary Weight field, matching
+the class adapter instead of displaying a clipped shorthand. Individual widths
+remain visible in settings. Entering one primary width still replaces all edges.
+
+HTML/React Chromium and Liquid WebKit edge-style workflows pass, including
+paint-first order, panel dismissal/focus, screen fallback, mixed values, resets
+and exact source history. The HTML SVG stroke workflow passes after sharing the
+popup helper. Screenshot inspected:
+`/private/tmp/retouch-css-stroke-popup-final.png`.
+The current desktop archive predates this layout change.
+Logs: `/private/tmp/retouch-css-stroke-popup-html-final.log`,
+`/private/tmp/retouch-css-stroke-popup-{react,liquid}.log`,
+`/private/tmp/retouch-css-stroke-popup-svg.log`, and
+`/private/tmp/retouch-css-stroke-popup-widths.log`.
+All 1,156 unit tests pass in
+`/private/tmp/retouch-css-stroke-popup-units-final.log`.

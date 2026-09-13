@@ -7,6 +7,8 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  const record=async()=>{await wait(()=>read()!==states.at(-1));states.push(read());};
  const field=side=>page.getByLabel('Border '+(side?side+' ':'')+'width ('+(kind==='html'?'CSS':'px')+')',{exact:true});
  const write=async(side,value)=>{await field(side).fill(value+(kind==='html'?'px':''));await field(side).press('Tab');await settled();await record();};
+ const stroke=page.locator('[data-section="stroke"]');assert.equal(await stroke.evaluate(el=>!!(el.querySelector('[data-paint-property="border-color"]').compareDocumentPosition(el.querySelector('[aria-label^="Border width"]'))&Node.DOCUMENT_POSITION_FOLLOWING)),true);
+ const settings=page.locator('summary[aria-label="Advanced stroke settings"]'),dialog=page.getByRole('dialog',{name:'Stroke settings',exact:true});assert.equal(await dialog.isVisible(),false);await settings.click();await dialog.waitFor();await page.keyboard.press('Escape');assert.equal(await dialog.isVisible(),false);assert.equal(await settings.evaluate(el=>document.activeElement===el),true);await settings.click();await page.locator('.design-panel-tabs').click();assert.equal(await dialog.isVisible(),false);await settings.click();
  await page.locator('.border-edges > summary').click();await field('top').waitFor();const original=[[0,'none'],[3,'dashed'],[3,'double'],[0,'none']];await check(original);
  await field('top').fill(kind==='html'?'0px':'0');await field('top').press('Tab');await settled();assert.equal(read(),states[0]);await check(original);
  await write('top',7);await check([[7,'solid'],[3,'dashed'],[3,'double'],[0,'none']]);
@@ -16,6 +18,7 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  const allStyle=page.getByLabel('Border style'+(kind==='html'?' (CSS)':''),{exact:true}),rightStyle=page.getByLabel('Border right style'+(kind==='html'?' (CSS)':''),{exact:true});assert.equal(await allStyle.inputValue(),'');assert.equal(await allStyle.locator('option:checked').textContent(),'Mixed');
  await screen.focus();await screen.selectOption('768x1024');await settled();await scope.selectOption(kind==='html'?'min-[768px]:':'md:');await settled();
  await rightStyle.selectOption('dotted');await settled();await record();await check([[4,'solid'],[4,'dotted'],[4,'double'],[9,'solid']]);
+ assert.equal(await field('').inputValue(),'');assert.equal(await field('').getAttribute('placeholder'),'Mixed');
  if(process.env.RT_E2E_EDGE_STYLES_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_EDGE_STYLES_SCREENSHOT});
  await screen.focus();await screen.selectOption('390x844');await settled();await check([[4,'solid'],[4,'dashed'],[4,'double'],[4,'solid']]);await screen.focus();await screen.selectOption('768x1024');await settled();
  await page.getByRole('button',{name:'Reset border right style',exact:true}).click();await settled();await record();await check([[4,'solid'],[4,'dashed'],[4,'double'],[9,'solid']]);

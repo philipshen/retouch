@@ -46,18 +46,18 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    select.hidden=true;select.setAttribute('aria-hidden','true');select.tabIndex=-1;field.append(group);keyboardToolbar(group,name);
   }
  }
- function strokePopover(settings,weight){
+ function strokePopover(settings,weight,key='svg-stroke-settings'){
   const summary=settings.firstElementChild,body=document.createElement('div'),heading=document.createElement('header'),name=document.createElement('strong'),closeButton=document.createElement('button');
   settings.classList.add('stroke-settings-popover');summary.setAttribute('aria-label','Advanced stroke settings');summary.title='Advanced stroke settings';summary.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v7m0 4v7M17 3v3m0 4v11M4 12a3 3 0 1 0 6 0a3 3 0 1 0-6 0M14 8a3 3 0 1 0 6 0a3 3 0 1 0-6 0"/></svg>';
   body.className='stroke-settings-body';body.hidden=true;body.setAttribute('role','dialog');body.setAttribute('aria-label','Stroke settings');name.textContent='Stroke settings';closeButton.type='button';closeButton.className='control-button';closeButton.textContent='×';closeButton.setAttribute('aria-label','Close stroke settings');heading.append(name,closeButton);body.append(heading);
   for(const child of [...settings.children])if(child!==summary)body.append(child);settings.append(body);weight.append(settings);
   let cleanup=()=>{},observing=false;
-  const close=(focus=false)=>{settings.open=false;openGroups.delete('svg-stroke-settings');cleanup();if(focus&&summary.isConnected)summary.focus({preventScroll:true});};
+  const close=(focus=false)=>{settings.open=false;openGroups.delete(key);cleanup();if(focus&&summary.isConnected)summary.focus({preventScroll:true});};
   const position=()=>{if(!settings.isConnected){cleanup();return;}body.hidden=false;const box=summary.getBoundingClientRect(),panel=summary.closest('#panel')?.getBoundingClientRect();body.style.left=Math.max(8,Math.min(innerWidth-body.offsetWidth-8,(panel?.left??box.left)-body.offsetWidth-8))+'px';body.style.top=Math.max(8,Math.min(innerHeight-body.offsetHeight-8,box.top))+'px';};
   const outside=event=>{if(!settings.contains(event.target))close();};
   const watch=()=>{if(observing||!settings.isConnected||!settings.open)return;observing=true;const observer=new MutationObserver(()=>{if(!settings.isConnected)cleanup();else position();});observer.observe(document.body,{childList:true,subtree:true});document.addEventListener('pointerdown',outside,true);root.addEventListener('resize',position);root.addEventListener('scroll',position,true);cleanup=()=>{observer.disconnect();document.removeEventListener('pointerdown',outside,true);root.removeEventListener('resize',position);root.removeEventListener('scroll',position,true);observing=false;};position();};
-  summary.onclick=event=>{event.preventDefault();if(settings.open)close();else{settings.open=true;openGroups.add('svg-stroke-settings');watch();}};
-  settings.ontoggle=()=>{if(!settings.isConnected){cleanup();return;}if(settings.open){openGroups.add('svg-stroke-settings');watch();}else{openGroups.delete('svg-stroke-settings');cleanup();}};
+  summary.onclick=event=>{event.preventDefault();if(settings.open)close();else{settings.open=true;openGroups.add(key);watch();}};
+  settings.ontoggle=()=>{if(!settings.isConnected){cleanup();return;}if(settings.open){openGroups.add(key);watch();}else{openGroups.delete(key);cleanup();}};
   settings.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close(true);}});closeButton.onclick=()=>close(true);requestAnimationFrame(watch);
  }
  function title(section){return section.querySelector(':scope > h3')?.textContent||'';}
@@ -285,6 +285,11 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     if(previous?.classList.contains('inspector-field')){const row=document.createElement('div');row.className='property-row';previous.parentElement.insertBefore(row,previous);row.append(previous,button);}
    }
    if(name==='Stroke'){const edges=section.querySelector('.border-edges');if(edges)for(const side of ['top','right','bottom','left']){const width=edges.querySelector('[aria-label="Border '+side+' width (CSS)"], [aria-label="Border '+side+' width (px)"]'),style=edges.querySelector('[aria-label="Border '+side+' style (CSS)"], [aria-label="Border '+side+' style"]');if(width&&style){style.closest('.inspector-field').querySelector(':scope > span').textContent='';pair(edges,[width.getAttribute('aria-label'),style.getAttribute('aria-label')]);}}}
+   if(name==='Stroke'&&!section.querySelector('[aria-label="SVG stroke width"]')){
+    const weight=section.querySelector('[aria-label="Border width (CSS)"], [aria-label="Border width (px)"]')?.closest('.property-row'),style=section.querySelector('[aria-label="Border style (CSS)"], [aria-label="Border style"]')?.closest('.property-row'),edges=section.querySelector('.border-edges'),paint=section.querySelector('input[data-paint-property="border-color"]')?.closest('.property-row');
+    if(paint)section.insertBefore(paint,section.children[1]||null);
+    if(weight&&style){const settings=disclosure('Stroke settings','css-stroke-settings');settings.append(style);if(edges)settings.append(edges);strokePopover(settings,weight,'css-stroke-settings');}
+   }
    if(name==='Stroke'&&section.querySelector('[aria-label="SVG stroke width"]')){
     const labels={'SVG stroke width':'Weight','SVG line ends':'Caps','SVG line joins':'Join','SVG dash pattern':'Dashes','SVG dash offset':'Offset','SVG miter limit':'Miter limit','SVG stroke scaling':'Mode'},settings=disclosure('Stroke settings','svg-stroke-settings');
     for(const [label,short]of Object.entries(labels)){const input=section.querySelector('[aria-label="'+label+'"]'),field=input?.closest('.inspector-field');if(!field)continue;field.querySelector(':scope > span').textContent=short;if(label!=='SVG stroke width')settings.append(field.closest('.property-row')||field);if(label==='SVG stroke scaling')for(const option of input.options)option.textContent=option.value==='none'?'Scale':option.value==='non-scaling-stroke'?'Fixed':option.value;}
