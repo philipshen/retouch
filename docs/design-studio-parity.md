@@ -13140,3 +13140,53 @@ launch was attempted. Native editing/sampler/shutdown, Intel execution, Develope
 ID/notarization, public cask distribution and trusted upgrades remain unverified.
 The older WebKit 26.0 margin-aware Fill-height failure was not retested. No push
 or public release. Full Figma Design and arbitrary-site parity remain incomplete.
+
+## 2026-09-13 — Canvas shape menu and Pen entry point
+
+The light canvas dock now exposes Shape tools and a separate Pen tool. The shape
+menu offers rectangle, ellipse, circle and line: Draw actions for existing SVG
+canvases/groups, Add actions that create an SVG canvas under supported native
+content containers. Entries invoke the same inspector operations and history.
+They are also searchable through Actions. Tool availability follows Edit mode,
+selection capabilities and operation locks. Keyboard opening, arrow wrapping,
+Home/End, Escape focus restoration and outside dismissal are supported. Menu
+identity follows the selected source layer across inspector rerenders, and
+selection/capability changes close it. The active drawing tool is highlighted;
+the Move highlight is restored after drawing ends.
+
+Initial browser runs found an observer registered before the dock was attached;
+initialization now observes the connected controls. Keyboard checks also found
+routine workspace/inspector rerenders dismissing the menu; stable layer identity
+now preserves it. Drawing overlays are direct body children, so active-tool state
+observes their actual lifecycle. No frame-document mutation is needed.
+
+Validation: 980 units passed (`/private/tmp/retouch-shape-dock-final-units.log`).
+Liquid Chromium and HTML WebKit toolbar drawing passed four primitives and cubic
+Pen paths with transformed coordinates, modifier changes, exact Undo/Redo and
+cancellation. Logs: `/private/tmp/retouch-shape-dock-liquid-stable.log` and
+`/private/tmp/retouch-shape-dock-webkit-stable.log`. React new-canvas creation from
+the dock passed all four presets, alongside the existing self-closing SVG/group
+cases (`/private/tmp/retouch-shape-dock-react.log`). Screenshot inspected:
+`/private/tmp/retouch-shape-dock.png`. Test mode: `RT_E2E_SVG_DOCK=1` on
+`html-svg-draw.cjs`, or alongside `RT_E2E_SVG_CREATE=1` on `svg-vertices.cjs`.
+
+The older WebKit Fill-height investigation remains unresolved. A standalone probe
+with no editor, adapter or Tailwind confirms physical/logical/legacy logical
+fill-available height ignores vertical margins; changing display, containment or
+min/max sizing did not correct it. Switching box sizing changes the error rather
+than producing a margin-aware size. Evidence: `/private/tmp/retouch-fill-probe.cjs`
+and `/private/tmp/retouch-fill-probe.log`. No fixed pixel correction was added.
+
+No desktop rebuild, native launch or push in this increment. The latest packaged
+candidate predates these toolbar controls. Full Figma Design parity, broader
+shape tools/shortcuts and arbitrary-site authoring remain incomplete.
+
+Additional WebKit checks passed menu dismissal/disabled state after selecting an
+unsupported text layer, then Actions search activation and cancellation of Draw
+ellipse with unchanged source. Search testing found all shape names had been
+included in every action's keywords, allowing an Add action to rank first for a
+Draw query; keywords now retain generic category terms and each action's own
+label determines its shape/mode match. Shape search actions require Edit mode.
+Final expanded workflow: `/private/tmp/retouch-shape-dock-actions-webkit-verified.log`.
+All 980 units passed again on final code:
+`/private/tmp/retouch-shape-dock-release-units.log`. All test processes exited.

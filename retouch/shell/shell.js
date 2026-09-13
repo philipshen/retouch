@@ -1246,10 +1246,10 @@ function renderPanelContents() {
     RetouchInspector.note(geometry,pointField?'Drag empty space to select points. Shift-click or Shift-drag adds to the selection. Drag selected points or use arrows (Shift: 10 units). Click + to add; Delete removes selected points. Done/Enter saves; Escape cancels. Points are shared across screen sizes.':'Geometry is shared across screen sizes. Values use SVG coordinates, px or %. The SVG viewport and page CSS can affect the rendered result.');panelBody.append(geometry);
   }
   if(info.svgInsertion){
-    const shapes=RetouchInspector.section('Add shape'),buttons=document.createElement('div');buttons.className='stack-presets';
-    for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Add '+preset,()=>insertLayer(preset,info,'insertSVG')));
-    if(!info.svgInsertion.createsViewport)for(const preset of info.svgInsertion.presets)buttons.append(RetouchInspector.button('Draw '+preset,()=>drawShape(preset,info)));
-    if(info.svgInsertion.pen)buttons.append(RetouchInspector.button('Pen',()=>drawVector(info)));
+    const shapes=RetouchInspector.section('Add shape'),buttons=document.createElement('div');buttons.className='stack-presets';buttons.dataset.shapeOwner=info.id;
+    for(const preset of info.svgInsertion.presets){const button=RetouchInspector.button('Add '+preset,()=>insertLayer(preset,info,'insertSVG'));button.dataset.shapeAction='add-'+preset;buttons.append(button);}
+    if(!info.svgInsertion.createsViewport)for(const preset of info.svgInsertion.presets){const button=RetouchInspector.button('Draw '+preset,()=>drawShape(preset,info));button.dataset.shapeAction='draw-'+preset;buttons.append(button);}
+    if(info.svgInsertion.pen){const button=RetouchInspector.button('Pen',()=>drawVector(info));button.dataset.shapeAction='pen';buttons.append(button);}
     shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Adds a shape in a new 200 × 200 canvas.':'Choose Draw and drag a shape, or Pen: click for straight segments, drag for curves. In Pen, click the first point to close; Enter finishes an open line. Shift constrains direction. Escape cancels.');panelBody.append(shapes);
   }
   if(info.cssAuthoring){
