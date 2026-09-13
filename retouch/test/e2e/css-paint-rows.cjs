@@ -1,0 +1,23 @@
+'use strict';
+const assert=require('node:assert/strict');
+module.exports=async({page,app,kind,read,wait,settled})=>{
+ const initial=read(),states=[initial],shape=app.locator('h1'),screen=page.getByLabel('Screen size',{exact:true}),scope=page.getByLabel('Style screen scope',{exact:true});
+ await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await settled();
+ const fields=[['Fill','Background color','background-color',[.2,.4,.6],50,25],['Stroke','Border color','border-top-color',[52/255,86/255,120/255],40,75]],label=base=>base+(kind==='html'?' (CSS)':' with alpha');
+ const color=async property=>page.evaluate(value=>RetouchPaintPicker.parsePaint(value),await shape.evaluate((el,p)=>getComputedStyle(el).getPropertyValue(p),property));
+ const record=async()=>{await wait(()=>read()!==states.at(-1));states.push(read());};
+ assert.equal(await shape.evaluate(el=>getComputedStyle(el).borderTopWidth),'3px');
+ const fill=page.getByLabel(label('Background color'),{exact:true});await fill.fill('color(display-p3 0.2 0.4 0.6)');await fill.press('Tab');await settled();await record();await wait(async()=>(await color('background-color')).space==='display-p3');
+ for(const [section,base,property,channels,percent]of fields){
+  const input=page.getByLabel(section+' opacity (%)',{exact:true});assert.equal(await input.evaluate(el=>el.closest('[data-section]').dataset.section),section.toLowerCase());assert.equal(await input.evaluate(el=>el.closest('.compact-paint-row').querySelectorAll('.gradient-stop-swatch').length),1);await input.fill('101');await input.press('Tab');await settled();assert.equal(read(),states.at(-1));assert.equal(await input.evaluate(el=>el.checkValidity()),false);await input.fill(String(percent));await input.press('Tab');await settled();await record();await wait(async()=>Math.abs((await color(property)).alpha-percent/100)<1e-8);(await color(property)).channels.forEach((value,i)=>assert.ok(Math.abs(value-channels[i])<1e-6,'channels survive computed-style serialization to six decimals'));
+ }
+ await screen.focus();await screen.selectOption('768x1024');await settled();await scope.selectOption(kind==='html'?'min-[768px]:':'md:');await settled();
+ for(const [section,base,property,channels,,percent]of fields){const input=page.getByLabel(section+' opacity (%)',{exact:true});await input.fill(String(percent));await input.press('Tab');await settled();await record();await wait(async()=>Math.abs((await color(property)).alpha-percent/100)<1e-8);(await color(property)).channels.forEach((value,i)=>assert.ok(Math.abs(value-channels[i])<1e-6,'channels survive computed-style serialization to six decimals'));}
+ if(process.env.RT_E2E_CSS_PAINT_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_CSS_PAINT_SCREENSHOT});
+ await screen.focus();await screen.selectOption('390x844');await settled();for(const [,,property,,percent]of fields)await wait(async()=>Math.abs((await color(property)).alpha-percent/100)<1e-8);
+ await screen.focus();await screen.selectOption('768x1024');await settled();for(const [,base,property,,percent]of fields){await page.getByRole('button',{name:(kind==='html'?'Reset ':'Clear local ')+base.toLowerCase(),exact:true}).click();await settled();await record();await wait(async()=>Math.abs((await color(property)).alpha-percent/100)<1e-8);}
+ for(let i=states.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states[i]);}
+ for(let i=1;i<states.length;i++){await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===states[i]);}
+ for(let i=states.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states[i]);}
+ const originalColor=await color('background-color');await page.getByRole('button',{name:'Edit '+label('Background color'),exact:true}).click();const picker=page.getByRole('dialog',{name:'Edit '+label('Background color'),exact:true});await picker.getByLabel('Color value',{exact:true}).fill('#ff000080');assert.equal(read(),initial);await page.keyboard.press('Escape');await picker.waitFor({state:'detached'});assert.deepEqual(await color('background-color'),originalColor);assert.equal(read(),initial);
+};

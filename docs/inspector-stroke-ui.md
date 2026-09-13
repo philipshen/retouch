@@ -94,3 +94,25 @@ still covers both paint types, linear/radial gradients and exact history cleanup
 Screenshot inspected: `/private/tmp/retouch-compact-paints-final.png`.
 Logs: `/private/tmp/retouch-compact-paints-{html,react,liquid}-final.log` and
 `/private/tmp/retouch-compact-paints-gradients.log`.
+
+## Website background and border paint rows
+
+The same compact control now applies to CSS background and border colors on
+ordinary HTML, React and Liquid elements. Fill and Stroke expose color-alpha
+fields alongside the swatch/value, using the existing CSS and color-override
+writers. The full CSS value is available on focus, and picker preview/cancel
+continues through the existing handlers.
+
+The `RT_E2E_CSS_PAINT_ROWS=1` page-fonts workflow uses a visibly filled heading
+with a three-pixel border. It covers RGB border and Display P3 background alpha,
+invalid percentages, tablet-only overrides with phone fallback, scoped resets,
+exact source Undo/Redo and picker cancellation. Computed-channel comparisons
+allow the observed six-decimal browser serialization; source-history comparisons
+remain exact. HTML/React Chromium and Liquid WebKit pass. The existing HTML SVG
+stroke workflow also passes after sharing the implementation.
+
+Screenshot inspected: `/private/tmp/retouch-css-paints.png`.
+Logs: `/private/tmp/retouch-css-paints-{html,react,liquid}-verified.log`,
+`/private/tmp/retouch-css-paints-svg-regression.log`, and
+`/private/tmp/retouch-css-paints-units.log` (1,152 passing unit tests).
+The latest desktop archive predates this generalization.
