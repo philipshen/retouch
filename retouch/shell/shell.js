@@ -315,7 +315,7 @@ function hookFrame(d, w) {
   d.addEventListener('keydown', (e) => {
     if(e.key==='Escape'){vectorEntrySerial++;if(pendingVectorEntry){pendingVectorEntry=null;e.preventDefault();e.stopPropagation();return;}}
     if(mode==='edit'&&!editing&&window.RetouchActions?.shortcut(e)){cancelOpacityEntry();return;}
-    if(flipShortcut(e)||alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||layerNavigationShortcut(e)||canvasLayerShortcut(e))return;
+    if(vectorNudgeShortcut(e)||flipShortcut(e)||alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||layerNavigationShortcut(e)||canvasLayerShortcut(e))return;
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if ((e.metaKey || e.ctrlKey) && (e.key === 'b' || e.key === 'i')) {
@@ -2263,11 +2263,17 @@ async function convertSVGToPath(info){
   busyPanel(true);
   try{const result=await api('POST','/rt/__api/op',{type:'convertSVGToPath',id:info.id,fileHash:info.hash});if(!result?.ok)return toast(result?.reason||result?.error||'Could not convert shape','err');if(result.undoId)editorHistory.record({type:'convertSVGToPath',id:info.id,selectionBefore:[info.id],selectionAfter:[info.id],undoId:result.undoId});renderedSelection=null;sel.info=result.element;await refreshWrittenElement(sel.info,el=>el.tagName.toLowerCase()==='path'&&svgGeometryMatches(el,sel.info));await restoreLayerSelection([info.id]);renderPanel();toast('Converted to an editable vector path','ok');}finally{busyPanel(false);}
 }
+function vectorNudgeShortcut(e){
+  if(e.defaultPrevented||e.isComposing||e.ctrlKey||e.metaKey||e.altKey||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)||mode!=='edit'||editing||stopDrawing||panelTasks||sourceRequests||undoBusy||canvasPan.active||sel?.multiple?.length>1||!sel?.info.svgTransform?.editable||document.querySelector('dialog[open]'))return false;
+  if(e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||e.target.ownerDocument===document&&e.target.closest?.('button,summary,[role="treeitem"],[role="slider"],[role="tab"],[role="menuitem"]'))return false;
+  const targets=matchingEls(sel.info.id),target=targets.length===1?targets[0]:null;if(!target||layerLocks.locked(target)||RetouchSVGResize.reason(target,sel.info))return false;
+  e.preventDefault();e.stopImmediatePropagation();void resizeSVGOnCanvas(sel.info,target,null,'se','move',{initialKey:e});return true;
+}
 async function resizeSVGOnCanvas(info,target=null,initialPointer=null,handle='se',action='resize',gesture={}){
   if(panelTasks||undoBusy||sourceRequests||editing||!info?.svgTransform?.editable)return;stopDrawing?.();
   const targets=matchingEls(info.id);if(targets.length!==1)return toast('Select a vector rendered once to transform it.','err');target=target||targets[0];
   if(target!==targets[0]||target.getAttribute('transform')!==info.svgTransform.value)return toast('The vector changed. Re-select it before transforming.','err');
-  if(!initialPointer&&!await prepareVectorCanvas(info,target))return;
+  if(!initialPointer&&!gesture.initialKey&&!await prepareVectorCanvas(info,target))return;
   const key=JSON.stringify([info.id,info.hash,styleScope]),current=()=>mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&!(sel?.multiple?.length>1)&&!panelBody.inert&&!document.querySelector('dialog[open]')&&key===JSON.stringify([sel?.info.id,sel?.info.hash,styleScope]);if(!current())return;canvasPan.cancel();
   stopDrawing=RetouchSVGResize.mount({target,info,frame:iframe,canvas:canvasSurface,current,initialPointer,handle,action,...gesture,onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err'),onCommit:async matrix=>{
    if(current())await writeSVGTransform(info,target,matrix);
@@ -2654,7 +2660,7 @@ routeInput.addEventListener('keydown', (e) => {
 });
 window.addEventListener('keydown', (e) => {
   if(e.key==='Escape'){vectorEntrySerial++;if(pendingVectorEntry){pendingVectorEntry=null;e.preventDefault();return;}}
-  if(flipShortcut(e)||alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||((e.metaKey||e.ctrlKey)&&['[',']','{','}'].includes(e.key)&&canvasLayerShortcut(e)))return;
+  if(vectorNudgeShortcut(e)||flipShortcut(e)||alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||((e.metaKey||e.ctrlKey)&&['[',']','{','}'].includes(e.key)&&canvasLayerShortcut(e)))return;
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
   if(sourceHistoryShortcut(e))return;

@@ -49,3 +49,8 @@ test('Vector proportions follow the lock preference with temporary modifier over
  const {constrainRatio}=require('../shell/svg-resize.js');
  assert.equal(constrainRatio(false),false);assert.equal(constrainRatio(true),true);assert.equal(constrainRatio(false,{shiftKey:true}),true);assert.equal(constrainRatio(true,{shiftKey:true}),true);assert.equal(constrainRatio(true,{ctrlKey:true}),false);assert.equal(constrainRatio(true,{ctrlKey:true,shiftKey:true}),false);
 });
+test('Vector nudge maps document axes through transformed parents',()=>{
+ const {nudgeDelta}=require('../shell/svg-resize.js');
+ for(const m of [[1,0,0,1,5,6],[0,2,-3,0,10,20],[1,.5,.2,-2,0,0]]){const d=nudgeDelta(m,2,10);assert.ok(Math.abs(m[0]*d.x+m[2]*d.y-2)<1e-9);assert.ok(Math.abs(m[1]*d.x+m[3]*d.y-10)<1e-9);}
+ assert.equal(nudgeDelta([0,0,0,0,0,0],1,0),null);
+});

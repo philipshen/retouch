@@ -13839,3 +13839,29 @@ This remains single-selection SVG editing with existing source ownership and
 rendered-once checks. Multi-selection transforms, object snapping, full arbitrary-
 site/Figma parity and a trusted public macOS release remain open. No desktop
 rebuild or push is part of this increment.
+
+## 2026-09-13 — Canvas arrow-key vector movement
+
+Selected SVG vectors now move with the arrow keys from canvas/workspace focus,
+without opening an Actions command. Each keydown previews one document pixel,
+or ten with Shift. Repeats and overlapping arrow keys form one gesture; releasing
+the last arrow writes one transform transaction. Escape cancels the preview.
+The parent transform's inverse linear mapping keeps movement aligned with document
+axes inside rotated, scaled or reflected SVG ancestors. Editor zoom is preserved.
+
+The existing transform ownership, stale-geometry, rendered-once and locked-layer
+checks apply. Editable fields and shell controls retain their keyboard behavior.
+The shared move tool handles the gesture, including its cancellation rules and
+exact source history; the active move handle stays visually hidden while nudging.
+
+Validation: 1,016 unit tests passed. HTML/WebKit 26, React/Chromium and
+Liquid/Chromium browser workflows passed for repeated/overlapping keys, Shift,
+rectangle/group/text movement, transformed parent axes, one-step Undo/Redo,
+Escape and input guards. The existing 13-type resize/move suites also passed.
+A further Liquid workflow checks one document pixel per arrow at 50% and 200%
+editor zoom. Logs: /private/tmp/retouch-nudge-{units,html,react,liquid}.log and
+/private/tmp/retouch-nudge-liquid-zoom.log.
+
+This implements single-vector nudging; multi-selection nudges, custom nudge
+preferences, snapping and full Figma/any-site parity remain open. No desktop
+rebuild or push is included in this increment.
