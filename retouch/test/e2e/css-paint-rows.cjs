@@ -21,5 +21,19 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  for(let i=states.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states[i]);}
  for(let i=1;i<states.length;i++){await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===states[i]);}
  for(let i=states.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states[i]);}
+ // Direct hex entry keeps alpha independent, supports explicit alpha, and cancels drafts.
+ await scope.focus();await scope.selectOption('');await settled();
+ const hexField=page.getByLabel(label('Background color'),{exact:true}),beforeHex=read(),oldAlpha=(await color('background-color')).alpha;
+ await hexField.fill('1A2B3C');await hexField.press('Enter');await settled();await wait(()=>read()!==beforeHex);const hexSource=read();
+ const hexColor=await color('background-color');assert.equal(hexColor.space,'srgb');hexColor.channels.forEach((v,i)=>assert.ok(Math.abs(v-[26,43,60][i]/255)<1e-6));assert.equal(hexColor.alpha,oldAlpha);
+ await hexField.fill('BADHEX');await hexField.press('Tab');await settled();assert.equal(read(),hexSource);assert.equal(await hexField.evaluate(el=>el.checkValidity()),false);
+ await hexField.fill('F00');await hexField.press('Escape');await settled();assert.equal(read(),hexSource);
+ await hexField.fill('ABC');await hexField.press('Enter');await settled();await wait(()=>read()!==hexSource);const shortSource=read();assert.equal((await color('background-color')).alpha,oldAlpha);
+ await hexField.fill('10203080');await hexField.press('Enter');await settled();await wait(()=>read()!==shortSource);const alphaSource=read();assert.ok(alphaSource.includes('#10203080'));await wait(async()=>Math.abs((await color('background-color')).alpha-128/255)<.003);
+ for(const expected of [shortSource,hexSource,beforeHex]){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===expected);}
+ for(const expected of [hexSource,shortSource,alphaSource]){await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===expected);}
+ for(const expected of [shortSource,hexSource,beforeHex]){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===expected);}
+ const borderHex=page.getByLabel(label('Border color'),{exact:true});await borderHex.fill('INVALID');await borderHex.press('Tab');await settled();assert.equal(read(),beforeHex);await borderHex.fill('246');await borderHex.press('Enter');await settled();await wait(()=>read()!==beforeHex);const borderHexSource=read(),newSides=await sides();newSides.forEach((value,i)=>{assert.equal(value.space,'srgb');value.channels.forEach((channel,j)=>assert.ok(Math.abs(channel-[34,68,102][j]/255)<1e-6));assert.ok(Math.abs(value.alpha-originalSides[i].alpha)<1e-8);});
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===beforeHex);await checkSides();await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===borderHexSource);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===beforeHex);
  const originalColor=await color('background-color');await page.getByRole('button',{name:'Edit '+label('Background color'),exact:true}).click();const picker=page.getByRole('dialog',{name:'Edit '+label('Background color'),exact:true});await picker.getByLabel('Color value',{exact:true}).fill('#ff000080');assert.equal(read(),initial);await page.keyboard.press('Escape');await picker.waitFor({state:'detached'});assert.deepEqual(await color('background-color'),originalColor);assert.equal(read(),initial);await checkSides();
 };

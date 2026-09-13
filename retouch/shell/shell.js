@@ -70,6 +70,8 @@ panelBody.addEventListener('keydown',event=>{
 // A deliberate click or keyboard action during a save supersedes queued focus.
 window.addEventListener('pointerdown',()=>{pendingPanelFocus=null;},true);
 window.addEventListener('keydown',()=>{pendingPanelFocus=null;},true);
+// Paste, autofill and accessibility edits may arrive without a key or pointer event.
+window.addEventListener('input',event=>{if(event.isTrusted)pendingPanelFocus=null;},true);
 window.addEventListener('blur',()=>{pendingPanelFocus=null;});
 // Accessibility activation may change screen controls without a pointer/key event.
 window.addEventListener('change',event=>{if(!panelBody.contains(event.target)||event.target.getAttribute('aria-label')==='Style screen scope')pendingPanelFocus=null;},true);

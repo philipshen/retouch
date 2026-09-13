@@ -140,3 +140,27 @@ including real React API history and HTML shorthand validation.
 Screenshot inspected: `/private/tmp/retouch-border-sides.png`.
 Logs: `/private/tmp/retouch-border-sides-{html,react,liquid}.log` and
 `/private/tmp/retouch-border-sides-units.log`.
+
+## Direct hex entry
+
+Compact paint fields accept three- or six-digit hex without `#`, preserving
+color opacity. Border shorthand edits preserve the independent alpha of each
+edge while replacing its color channels. Eight-digit hex explicitly supplies
+alpha. Hex denotes sRGB; explicit CSS input (including `#`, RGB and Display P3)
+keeps its existing semantics. The full CSS value still appears on focus, so this
+is not yet Figma's complete color-format editing UI.
+
+Browser coverage exercises Enter to commit, invalid input refusal, Escape to
+cancel, shorthand/explicit-alpha entry, and exact source Undo/Redo. It also
+checks that a border edit following invalid input preserves all four edge
+opacities. This exposed queued Tab focus being restored during trusted input
+that had no preceding keyboard/pointer event. Trusted input now clears that
+queued destination; synthetic events used by inspector controls retain it.
+
+HTML/React Chromium and Liquid WebKit pass in
+`/private/tmp/retouch-hex-{html,react,liquid}-verified.log`.
+The HTML SVG stroke workflow also passes in
+`/private/tmp/retouch-hex-svg-verified.log`; the initial invocation omitted the
+SVG fixture flag and stopped before selecting a shape. All 1,154 unit tests
+pass in `/private/tmp/retouch-hex-units-final.log`. No desktop archive was rebuilt
+for this change.
