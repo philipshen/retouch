@@ -902,6 +902,7 @@ componentBadge.querySelector('button').onclick=async()=>{
     await detachInstance(target.id,component,button,context);
   } finally {button.disabled=false;}
 };
+const svgSelectionGaps=RetouchSVGSelection.gapControls({frame:iframe,canvas:canvasSurface});
 const svgSelectionCorners=RetouchSVGSelection.controls({frame:iframe,canvas:canvasSurface,onStart:(event,handle)=>moveSVGSelection({initialPointer:event,handle}),onRotate:(event,handle)=>moveSVGSelection({initialPointer:event,handle,rotating:true})});
 const svgResizeCorners=RetouchSVGResize.controls({frame:iframe,canvas:canvasSurface,onStart:resizeSVGOnCanvas,onRotate:(info,target,event,handle)=>resizeSVGOnCanvas(info,target,event,handle,'rotate')});
 const radiusCorners=RetouchSVGRadiusCanvas.controls({frame:iframe,canvas:canvasSurface,onStart:roundRectangleOnCanvas});
@@ -956,6 +957,7 @@ function paintLoop() {
   const selectionResizeInfos=mode==='edit'&&!editing&&!stopDrawing&&!canvasPan.active&&!panelTasks&&!undoBusy&&!sourceRequests&&sel?.multiple?.length>1&&!document.querySelector('dialog[open]')?sel.multiple:null;
   const selectionResizeElements=selectionResizeInfos?.map(info=>{const found=matchingEls(info.id);return found.length===1&&!layerLocks.locked(found[0])?found[0]:null;});
   svgSelectionCorners.update(selectionResizeElements?.every(Boolean)?selectionResizeInfos:null,selectionResizeElements);
+  svgSelectionGaps.update(selectionResizeElements?.every(Boolean)?selectionResizeInfos:null,selectionResizeElements);
   rotationCorners.update(rotationInput?.retouchPreviewTarget,rotationInput,rotationInput&&!sel?.info.svgTransform?panelBody.querySelector('[data-canvas-tool=resize]'):null);
   if(d&&sel&&mode==='edit'&&!editing&&window.RetouchGridGuidesEnabled)RetouchInspector.drawGridGuides(overlayLayer,renderedSelection?.element||matchingEls(activeId())[0]);
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
@@ -1172,7 +1174,7 @@ function renderPanelContents() {
   }
   if(sel.multiple?.length>1&&sel.multiple.every(item=>item.svgTransform)){
    const infos=sel.multiple,elements=infos.map(item=>matchingEls(item.id).length===1?matchingEls(item.id)[0]:null),current=()=>sel?.multiple===infos&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&elements.every(el=>el&&!layerLocks.locked(el));
-   panelBody.append(RetouchSVGSelection.mount(infos,elements,{current,save:writeSVGSelection}));if(elements.some(el=>!el))return;mountSelectionEffectStyles();mountSelectionTextStyles();
+   panelBody.append(RetouchSVGSelection.mount(infos,elements,{current,save:writeSVGSelection,onGaps:axis=>svgSelectionGaps.toggle(infos,axis),gapsActive:axis=>svgSelectionGaps.active(infos,axis)}));if(elements.some(el=>!el))return;mountSelectionEffectStyles();mountSelectionTextStyles();
    const more=document.createElement('details'),summary=document.createElement('summary');summary.textContent='More properties';more.append(summary,info.classSelection?RetouchReactSelection.mount(infos,elements,styleScope,setReactClassesSelection,setSelectionColorOverride,id=>matchingEls(id)[0]):RetouchHTMLCSS.mountSelection(infos,elements,styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,setHTMLCSSSelection));panelBody.append(more);return;
   }
   if(sel.multiple?.length>1){mountSelectionEffectStyles();mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchClassSiteVariables.mountSelection(sel.multiple,elements,styleScope,setReactClassesSelection,message=>toast(message,'err')),RetouchFlip.mountSelection(sel.multiple,elements,0,null,strategy),RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection,setSelectionColorOverride,id=>matchingEls(id)[0]));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchFlip.mountSelection(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes)),RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}

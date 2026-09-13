@@ -234,7 +234,7 @@
   }
   function scrubSpeed(dy){return dy < -40?2:dy>80?.25:dy>40?.5:1;}
   function numericLabelDrag(input,read=raw=>({value:Number(raw)})){
-    const label=input.parentElement.querySelector('span'),interruptions=['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'];let drag=null;
+    const label=input.parentElement.querySelector('span'),interruptions=['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'],handles=new WeakMap();let drag=null;
     label.style.cursor='ew-resize';label.style.touchAction='none';label.style.userSelect='none';
     label.title='Drag to adjust; move up for faster values or down for finer values. Shift: 10 units; Alt/Option on label: 0.1 units. Escape cancels.';
     input.title=(input.title?input.title+' ':'')+'Alt/Option-drag inside the field to scrub.';
@@ -249,10 +249,11 @@
     const abort=()=>stop(true);
     input.addEventListener('blur',abort);
     const start=event=>{
-      if(event.button!==0||drag||input.disabled||input.readOnly||input.value===''||!input.checkValidity())return;
+      if(event.button!==0||drag||!input.isConnected||input.disabled||input.readOnly||input.value===''||!input.checkValidity())return;
       const parsed=read(input.value);if(!parsed||!Number.isFinite(parsed.value))return;
+      const options=handles.get(event.currentTarget)||{};if(options.canvas)for(let parent=input.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;
       event.preventDefault();event.stopPropagation();input.focus({preventScroll:true});
-      drag={id:event.pointerId,target:event.currentTarget,inputDrag:event.currentTarget===input,y:event.clientY,x:event.clientX,initial:input.value,value:parsed.value,format:parsed.format||String,min:parsed.min,max:parsed.max};
+      drag={options,id:event.pointerId,target:event.currentTarget,inputDrag:event.currentTarget===input,y:event.clientY,x:options.axis==='y'?event.clientY:event.clientX,initial:input.value,value:parsed.value,format:parsed.format||String,min:parsed.min,max:parsed.max};
       try{drag.preview=input.retouchNumericPreview?.();}catch(error){drag=null;input.setCustomValidity(error.message);input.reportValidity();return;}
       drag.hint=document.createElement('div');drag.hint.dataset.numericScrubSpeed='';drag.hint.setAttribute('role','status');Object.assign(drag.hint.style,{position:'fixed',bottom:'116px',left:'50%',transform:'translateX(-50%)',padding:'8px 12px',border:'1px solid var(--line)',borderRadius:'6px',background:'var(--panel)',color:'var(--ink)',fontSize:'11px',zIndex:41});drag.hint.textContent='1x';document.body.append(drag.hint);
       drag.observer=new MutationObserver(()=>{if(!input.isConnected||drag?.preview?.current?.()===false)abort();});drag.observer.observe(document.body,{childList:true,subtree:true});
@@ -261,7 +262,7 @@
     label.addEventListener('pointerdown',start);input.addEventListener('pointerdown',event=>{if(event.altKey)start(event);});
     const move=event=>{
       if(!drag||drag.id!==event.pointerId)return;event.preventDefault();event.stopPropagation();
-      if(drag.preview?.current?.()===false){abort();return;}const delta=event.clientX-drag.x;drag.x=event.clientX;const speed=scrubSpeed(event.clientY-drag.y);drag.hint.textContent=({2:'2x',1:'1x',.5:'1/2',.25:'1/4'})[speed];
+      if(drag.preview?.current?.()===false){abort();return;}const coordinate=drag.options.axis==='y'?event.clientY:event.clientX,delta=(coordinate-drag.x)/(drag.options.scale?.()||1);drag.x=coordinate;const speed=drag.options.canvas?1:scrubSpeed(event.clientY-drag.y);drag.hint.textContent=({2:'2x',1:'1x',.5:'1/2',.25:'1/4'})[speed];
       const min=drag.min??(input.min===''?-Infinity:Number(input.min)),max=drag.max??(input.max===''?Infinity:Number(input.max));
       drag.value=Math.max(min,Math.min(max,Math.round((drag.value+delta*speed*(event.altKey&&!drag.inputDrag?0.1:event.shiftKey?10:1))*1e6)/1e6));input.value=drag.format(drag.value);try{drag.preview?.update(drag.value);}catch(error){abort();input.setCustomValidity(error.message);input.reportValidity();}
     };
@@ -269,6 +270,7 @@
     for(const target of [label,input])target.addEventListener('pointerup',event=>{if(drag?.id===event.pointerId){event.preventDefault();event.stopPropagation();stop(false);}});
     for(const target of [label,input])for(const type of ['pointercancel','lostpointercapture'])target.addEventListener(type,event=>{if(drag?.id===event.pointerId)stop(true);});
     input.addEventListener('keydown',event=>{if(drag&&!event.isComposing&&['Escape','Enter'].includes(event.key)){event.preventDefault();event.stopImmediatePropagation();stop(event.key==='Escape');}},true);
+    input.retouchNumericHandle=(target,options={})=>{handles.set(target,options);const up=event=>{if(drag?.id===event.pointerId){event.preventDefault();event.stopPropagation();stop(false);}},cancel=event=>{if(drag?.id===event.pointerId)stop(true);};const events=[['pointerdown',start],['pointermove',move],['pointerup',up],['pointercancel',cancel],['lostpointercapture',cancel]];for(const [name,fn]of events)target.addEventListener(name,fn);return ()=>{for(const [name,fn]of events)target.removeEventListener(name,fn);handles.delete(target);};};
     return input;
   }
   function number(parent, label, value, min, max, onChange) {
