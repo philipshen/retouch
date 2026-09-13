@@ -801,12 +801,14 @@
   function typographyPreview(parent,el){
     const d=el.ownerDocument,css=d.defaultView.getComputedStyle(el);
     const preview=document.createElement('iframe');preview.className='type-preview';preview.title='Typography preview';preview.setAttribute('sandbox','allow-same-origin');parent.append(preview);
+    const originalText=el.textContent?.trim().slice(0,100)||'The quick brown fox · Aa 0123456789';let sampleText=originalText,sample=null;
+    preview.retouchSample=text=>{sampleText=text??originalText;if(sample)sample.textContent=sampleText;};
     preview.onload=()=>{
       const pd=preview.contentDocument;if(!pd||!preview.isConnected||!el.isConnected||!d.location)return;
       const base=pd.createElement('base');base.href=d.location.href;pd.head.append(base);
       for(const s of d.querySelectorAll('link[rel="stylesheet"],style'))pd.head.append(pd.importNode(s,true));
       pd.body.style.cssText='margin:0;padding:12px;background:#fff;color:#181818;overflow-wrap:anywhere;';
-      const sample=pd.createElement('div');sample.textContent=el.textContent?.trim().slice(0,100)||'The quick brown fox · Aa 0123456789';
+      sample=pd.createElement('div');sample.textContent=sampleText;
       for(const p of typeProperties)sample.style.setProperty(p,css.getPropertyValue(p));pd.body.append(sample);
     };
     preview.srcdoc='<!doctype html><html><head></head><body></body></html>';

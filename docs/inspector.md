@@ -439,3 +439,22 @@ was inspected at `/private/tmp/retouch-html-type-preview.png.regular.png`.
 The fixture uses a static font: computed axis propagation is verified, not a
 claim of visible variable-font glyph changes. Feature-specific hover samples,
 full OpenType controls and native desktop validation remain unfinished.
+
+
+### Contextual number previews (2026-09-13)
+
+The Details tab previews numerals instead of the selected text. Hovering or
+focusing Number width, Number style, Fractions, Ordinals or Zero style shows a
+sample suited to that control. Keyboard focus receives the same samples as the
+pointer; leaving a control restores the focused control's sample or the category
+default. Returning to Basics restores the selected text. The iframe retains
+computed typography and font resources; only its sample text changes, without
+source writes. Pending samples also survive iframe load and inspector rebuild.
+
+HTML Chromium and Liquid WebKit browser checks cover all five focus samples,
+pointer enter/leave, category restoration, source preservation, popup keyboard
+behavior and compact scrolling. Both passed in
+`/private/tmp/retouch-type-samples-{html,liquid}.log`; all 1,159 unit tests passed
+in `/private/tmp/retouch-type-samples-units.log`. These samples demonstrate the
+currently applied font settings; they do not yet preview alternative dropdown
+choices before applying them or prove that the font supports every feature.
