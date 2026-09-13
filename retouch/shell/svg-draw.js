@@ -3,7 +3,7 @@
  function constrained(preset,a,b,{shiftKey=false,altKey=false}={}){
   let dx=b.x-a.x,dy=b.y-a.y;
   if(shiftKey){
-   if(preset==='line'){const length=Math.hypot(dx,dy),angle=Math.round(Math.atan2(dy,dx)/(Math.PI/4))*Math.PI/4;dx=Math.cos(angle)*length;dy=Math.sin(angle)*length;}
+   if(['line','arrow'].includes(preset)){const length=Math.hypot(dx,dy),angle=Math.round(Math.atan2(dy,dx)/(Math.PI/4))*Math.PI/4;dx=Math.cos(angle)*length;dy=Math.sin(angle)*length;}
    else{const size=Math.max(Math.abs(dx),Math.abs(dy));dx=(dx<0?-1:1)*size;dy=(dy<0?-1:1)*size;}
   }
   return [altKey?{x:a.x-dx,y:a.y-dy}:a,{x:a.x+dx,y:a.y+dy}];
@@ -11,6 +11,12 @@
  const ns='http://www.w3.org/2000/svg';
  function geometry(preset,a,b){
   const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x),h=Math.abs(b.y-a.y);
+  if(preset==='arrow'){
+   const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy),head=Math.min(12,length*.3),ux=length?dx/length:0,uy=length?dy/length:0;
+   const n=v=>Math.round(v*1000000)/1000000;
+   const wing=side=>({x:b.x-ux*head-uy*head*.5*side,y:b.y-uy*head+ux*head*.5*side});
+   return {points:[a,b,wing(1),b,wing(-1)].map(p=>n(p.x)+','+n(p.y)).join(' ')};
+  }
   if(preset==='triangle'||preset==='star'){
    const api=typeof module==='object'&&module.exports?require('./svg-parametric.js'):root.RetouchSVGParametric;
    return {points:api.generate({kind:preset==='star'?'star':'polygon',count:preset==='star'?5:3,ratio:Math.sin(Math.PI/10)/Math.sin(3*Math.PI/10),x,y,width:w,height:h})||''};
@@ -40,8 +46,8 @@
   const surface=root.document.createElement('div');surface.className='svg-draw-surface';surface.dataset.shape=preset;surface.setAttribute('aria-label','Draw '+preset);surface.tabIndex=0;
   Object.assign(surface.style,{position:'fixed',zIndex:40,cursor:'crosshair',touchAction:'none'});
   const drawing=root.document.createElementNS(ns,'svg');Object.assign(drawing.style,{position:'absolute',inset:'0',width:'100%',height:'100%',pointerEvents:'none',overflow:'hidden'});surface.append(drawing);
-  const preview=root.document.createElementNS(ns,{rectangle:'rect',circle:'circle',ellipse:'ellipse',line:'line',triangle:'polygon',star:'polygon'}[preset]);
-  preview.style.cssText='pointer-events:none!important;fill:#a5b4fc!important;stroke:#6366f1!important;stroke-width:1!important;opacity:.7!important;';preview.setAttribute('vector-effect','non-scaling-stroke');if(preset==='line')preview.style.setProperty('fill','none','important');
+  const preview=root.document.createElementNS(ns,{rectangle:'rect',circle:'circle',ellipse:'ellipse',line:'line',arrow:'polyline',triangle:'polygon',star:'polygon'}[preset]);
+  preview.style.cssText='pointer-events:none!important;fill:#a5b4fc!important;stroke:#6366f1!important;stroke-width:1!important;opacity:.7!important;';preview.setAttribute('vector-effect','non-scaling-stroke');if(['line','arrow'].includes(preset))preview.style.setProperty('fill','none','important');
   let state=null,ended=false;const cleanup=[];
   const current=()=>!space||space.current();
   if(native){let raf;const check=()=>{if(!current()){cancel();return;}raf=root.requestAnimationFrame(check);};raf=root.requestAnimationFrame(check);cleanup.push(()=>root.cancelAnimationFrame(raf));}

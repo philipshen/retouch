@@ -1,7 +1,7 @@
 'use strict';
 const MagicString=require('magic-string'),insertion=require('./html-insert.cjs');
 const namespace='http://www.w3.org/2000/svg';
-const presets=['rectangle','circle','ellipse','line','triangle','star'];
+const presets=['rectangle','circle','ellipse','line','arrow','triangle','star'];
 function pathShape(nodes,closed){
  const d=require('../shell/svg-path.js').serialize(nodes,closed);
  return d?'<path d="'+d+'" fill="'+(closed?'#a5b4fc':'none')+'" stroke="#6366f1" stroke-width="2"/>':null;
@@ -17,7 +17,8 @@ function drawnShape(preset,points){
 
  if(!Array.isArray(points)||points.length!==4||points.some(n=>typeof n!=='number'||!Number.isFinite(n)||Math.abs(n)>100000))return null;
  const [x1,y1,x2,y2]=points,x=Math.min(x1,x2),y=Math.min(y1,y2),w=Math.abs(x2-x1),h=Math.abs(y2-y1);
- if(w>100000||h>100000||(!w&&!h)||preset!=='line'&&(!w||!h))return null;
+ if(w>100000||h>100000||(!w&&!h)||!['line','arrow'].includes(preset)&&(!w||!h))return null;
+ if(preset==='arrow')return '<polyline points="'+require('../shell/svg-draw.js').geometry(preset,{x:x1,y:y1},{x:x2,y:y2}).points+'" fill="none" stroke="#6366f1" stroke-width="2"/>';
  if(['triangle','star'].includes(preset))return '<polygon points="'+require('../shell/svg-draw.js').geometry(preset,{x:x1,y:y1},{x:x2,y:y2}).points+'" fill="#a5b4fc" data-rt-shape="'+(preset==='star'?'star':'polygon')+'"/>';
  const n=v=>String(Math.round(v*1000000)/1000000),fill=' fill="#a5b4fc"/>';
  return {rectangle:`<rect x="${n(x)}" y="${n(y)}" width="${n(w)}" height="${n(h)}"${fill}`,circle:`<circle cx="${n(x+w/2)}" cy="${n(y+h/2)}" r="${n(Math.min(w,h)/2)}"${fill}`,ellipse:`<ellipse cx="${n(x+w/2)}" cy="${n(y+h/2)}" rx="${n(w/2)}" ry="${n(h/2)}"${fill}`,line:`<line x1="${n(x1)}" y1="${n(y1)}" x2="${n(x2)}" y2="${n(y2)}" stroke="#6366f1" stroke-width="2"/>`}[preset]||null;
@@ -28,6 +29,7 @@ function shape(resolved,preset){
  const raw=(attr('viewBox')||'').trim().split(/[\s,]+/).map(Number);
  const dimension=name=>{const value=attr(name)||'';return /^(?:\d+\.?\d*|\.\d+)(?:px)?$/.test(value)&&parseFloat(value)>0&&parseFloat(value)<=100000?parseFloat(value):200;};
  const [x,y,w,h]=raw.length===4&&raw.every(n=>Number.isFinite(n)&&Math.abs(n)<=100000)&&raw[2]>0&&raw[3]>0?raw:[0,0,dimension('width'),dimension('height')];
+ if(preset==='arrow')return drawnShape(preset,[x+w*.1,y+h*.5,x+w*.9,y+h*.5]);
  if(['triangle','star'].includes(preset))return drawnShape(preset,[x+w*.1,y+h*.1,x+w*.9,y+h*.9]);
  const n=value=>String(Math.round(value*1000000)/1000000),cx=n(x+w/2),cy=n(y+h/2);
  const fill=' fill="#a5b4fc"/>';
@@ -39,8 +41,9 @@ function nativeDrawing(preset,points,react=false,nodes,closed=false){
  if(preset==='path'){if(!pathShape(nodes,closed))return null;bounds=path.bounds(nodes,closed);}
  else if(vector){if(!drawnShape(preset,points))return null;bounds=path.bounds(Array.from({length:points.length/2},(_,i)=>({x:points[i*2],y:points[i*2+1]})),preset==='polygon');}
  else{if(!presets.includes(preset)||!drawnShape(preset,points))return null;bounds={x:Math.min(points[0],points[2]),y:Math.min(points[1],points[3]),width:Math.abs(points[2]-points[0]),height:Math.abs(points[3]-points[1])};}
+ if(preset==='arrow'&&bounds){const vertices=require('../shell/svg-draw.js').geometry(preset,{x:points[0],y:points[1]},{x:points[2],y:points[3]}).points.split(' ').map(pair=>{const [x,y]=pair.split(',').map(Number);return {x,y};});bounds=path.bounds(vertices,false);}
  if(!bounds||bounds.width>100000||bounds.height>100000)return null;
- const pad=vector||preset==='line'?1:0,n=v=>Math.round(v*1000000)/1000000,x=n(bounds.x-pad),y=n(bounds.y-pad),width=n(bounds.width+pad*2),height=n(bounds.height+pad*2);
+ const pad=vector||['line','arrow'].includes(preset)?1:0,n=v=>Math.round(v*1000000)/1000000,x=n(bounds.x-pad),y=n(bounds.y-pad),width=n(bounds.width+pad*2),height=n(bounds.height+pad*2);
  const local=preset==='path'?undefined:points.map((v,i)=>n(v-(i%2?y:x))),localNodes=preset==='path'?nodes.map(node=>path.translate(node,-x,-y)):undefined;
  const style=require('../shell/svg-draw.js').viewportStyle(x,y,width,height);
  const attribute=react?'style={'+JSON.stringify(style)+'}':'style="'+Object.entries(style).map(([key,value])=>key+':'+value).join(';')+'"';

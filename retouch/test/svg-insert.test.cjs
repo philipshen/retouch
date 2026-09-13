@@ -1,8 +1,18 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),html=require('../src/adapters/html.cjs'),insert=require('../src/svg-insert.cjs');
 function resolve(source,tag){const elements=html.collect(source,'index.html').elements;return {source,elements,element:elements.find(e=>e.tag===tag),hash:html.contentHash(source),file:'/tmp/index.html',relPath:'index.html'};}
+test('Native arrow viewports enclose both wings for horizontal, vertical and reverse draws',()=>{
+ for(const points of [[0,0,100,0],[0,0,0,100],[100,100,0,100],[100,100,100,0],[0,0,1,1]]){
+  const native=insert.nativeDrawing('arrow',points);assert.ok(native);
+  const [width,height]=native.opening.match(/viewBox="0 0 ([^ ]+) ([^"]+)"/).slice(1).map(Number);
+  const markup=insert.drawnShape('arrow',native.points),vertices=markup.match(/points="([^"]+)"/)[1].split(' ').map(pair=>pair.split(',').map(Number));
+  for(const [x,y]of vertices){assert.ok(x>=.999999&&x<=width-.999999);assert.ok(y>=.999999&&y<=height-.999999);}
+ }
+ assert.equal(insert.drawnShape('arrow',[0,0,0,0]),null);
+ assert.equal(insert.drawnShape('arrow',[0,0,Infinity,1]),null);
+});
 test('SVG insertion creates a selected shape in a new viewport without changing existing IDs',()=>{
- for(const preset of ['rectangle','circle','ellipse','line']){
+ for(const preset of ['rectangle','circle','ellipse','line','arrow']){
   const r=resolve('<html><head></head><body><div>Before</div><p>After</p></body></html>','div'),result=insert.plan(r,{preset,fileHash:r.hash});assert.equal(result.ok,true,result.reason);
   const fresh=resolve(result.edits[0].after,'div');assert.equal(fresh.elements.length,r.elements.length+2);assert.ok(r.elements.every(e=>fresh.elements.some(n=>n.id===e.id&&n.tag===e.tag)));
   const selected=fresh.elements.find(e=>e.id===result.createdId);assert.equal(selected.node.namespaceURI,'http://www.w3.org/2000/svg');assert.equal(selected.node.parentNode.tagName,'svg');assert.ok(fresh.source.includes('<p>After</p>'));

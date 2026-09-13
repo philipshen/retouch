@@ -30,11 +30,11 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
     if(process.env.RT_E2E_SVG_CREATE==='1'){
       assert.equal(kind,'react','self-closing HTML content is not a valid fixture');
       if(process.env.RT_E2E_SVG_NATIVE_PEN){await require('./native-pen-workflow.cjs')({page,app,target:app.locator('main'),select:()=>select('main · Empty frame'),read,original,wait,settled});assert.deepEqual(errors,[]);console.log(engine+' React: PASS native Pen in a transformed self-closing container, editable vectors and source history');return;}
-      for(const [name,selector]of [['main · Empty frame','main'],['svg · Empty canvas','svg[aria-label="Empty canvas"]'],['g · Empty group','g']])for(const [preset,tag]of [['rectangle','rect'],['circle','circle'],['ellipse','ellipse'],['line','line'],['triangle','polygon'],['star','polygon']]){
+      for(const [name,selector]of [['main · Empty frame','main'],['svg · Empty canvas','svg[aria-label="Empty canvas"]'],['g · Empty group','g']])for(const [preset,tag]of [['rectangle','rect'],['circle','circle'],['ellipse','ellipse'],['line','line'],['arrow','polyline'],['triangle','polygon'],['star','polygon']]){
         await select(name);let preview;
         if(nativeDraw&&selector==='main'){
           await wait(async()=>await page.getByRole('button',{name:'Shape tools',exact:true}).isEnabled());
-          if(['rectangle','ellipse','line'].includes(preset)){await page.getByRole('button',{name:'Shape tools',exact:true}).focus();await page.keyboard.press({rectangle:'r',ellipse:'o',line:'l'}[preset]);}
+          if(['rectangle','ellipse','line','arrow'].includes(preset)){await page.getByRole('button',{name:'Shape tools',exact:true}).focus();await page.keyboard.press({rectangle:'r',ellipse:'o',line:'l',arrow:'Shift+L'}[preset]);}
           else{await page.getByRole('button',{name:'Shape tools',exact:true}).click();await page.getByRole('menuitem',{name:'Draw '+preset,exact:true}).click();}
           await page.locator('.svg-draw-surface').waitFor();const box=await app.locator('main').boundingBox();await page.mouse.move(box.x+box.width*.25,box.y+box.height*.25);await page.mouse.down();await page.mouse.move(box.x+box.width*.65,box.y+box.height*.65,{steps:5});preview=await page.locator('.svg-draw-surface '+tag).evaluate(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};});assert.equal(read(),original);assert.equal(await app.locator('main svg').count(),0);await page.mouse.up();
         }else await require('./shape-tools.cjs').run(page,'Add '+preset);
@@ -50,7 +50,7 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
         await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===saved);await settled();await shape.waitFor({state:'attached'});assert.equal(await shape.getAttribute('data-rt'),id);
         await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();await wait(async()=>await shape.count()===0);
       }
-      assert.deepEqual(errors,[]);console.log(engine+' React: PASS new SVG viewport and self-closing SVG/group creation, six presets, rendered geometry, new layer selection and exact undo/redo');return;
+      assert.deepEqual(errors,[]);console.log(engine+' React: PASS new SVG viewport and self-closing SVG/group creation, seven presets, rendered geometry, new layer selection and exact undo/redo');return;
     }
     const start=async()=>{await page.getByRole('button',{name:'Edit vector points',exact:true}).click();try{await page.getByRole('group',{name:'Edit vector points',exact:true}).waitFor();}catch(error){console.log('POINT EDITOR DIAGNOSTIC',JSON.stringify({status:await page.locator('#status').textContent(),field:await page.locator('#panelBody input').evaluateAll(els=>els.map(el=>({label:el.getAttribute('aria-label'),value:el.value}))),rendered:await app.locator('main svg polygon,main svg polyline,main svg path').evaluateAll(els=>els.map(el=>({tag:el.tagName,points:el.getAttribute('points'),d:el.getAttribute('d'),css:el.ownerDocument.defaultView.getComputedStyle(el).getPropertyValue('d'),revision:el.getAttribute('data-rt-revision')}))),errors,source:read()}));throw error;}};
     const showVectorOptions=async()=>{const details=page.locator('.svg-vector-options');if(!await details.evaluate(el=>el.open))await details.locator('summary').click();};

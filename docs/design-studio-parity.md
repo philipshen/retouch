@@ -14254,3 +14254,39 @@ Logs: `/private/tmp/retouch-move-tool-chromium.log`,
 No desktop rebuild or native launch in this increment. The older WebKit Fill
 block-axis failure remains unresolved; see `fill-engine-compatibility.md`.
 Full Figma parity and arbitrary-site editing remain incomplete.
+
+## 2026-09-13 — Arrow drawing and Shift+L
+
+Arrow is now available in Shape tools and Actions, with Shift+L activation in
+the shell and preview. It uses the same drawing/source/history path as other
+shapes for HTML, React and Liquid. The arrow points toward the drag endpoint;
+Shift snaps direction to 45-degree increments and Option/Alt draws around the
+anchor. Its head scales down for short arrows. Drawing into page containers
+creates a fitted SVG viewport that includes both arrow wings and preserves
+existing page layout.
+
+Arrows save as ordinary unfilled SVG polylines, allowing existing vector-point
+and stroke editing. They do not yet provide Figma's separate start/end cap
+styles or parametric arrowhead controls. This is arrow creation support, not
+proof of complete stroke or vector parity. Figma reference:
+https://help.figma.com/hc/en-us/articles/360040450133-Basic-shape-tools-in-Figma-design
+
+Validation: all 1122 unit tests pass, including arrow direction, short-arrow
+geometry, modifier constraints, native viewport containment, and HTML/React/
+Liquid insertion with retained source identities. HTML/Chromium and Liquid/
+WebKit drawing workflows pass seven shapes and curved Pen paths, transformed
+preview matching, held shortcut behavior and exact Undo/Redo. HTML/WebKit
+passes drawing into relative, static, transformed, grid and flex containers.
+React/Chromium passes drawing into a transformed self-closing container and
+Add arrow into existing self-closing SVG/groups, with rendered geometry, new
+selection and exact history. All processes exited 0.
+
+Logs: `/private/tmp/retouch-arrow-units.log`,
+`/private/tmp/retouch-arrow-chromium-fixed.log`,
+`/private/tmp/retouch-arrow-liquid-webkit.log`,
+`/private/tmp/retouch-arrow-native-webkit.log`,
+`/private/tmp/retouch-arrow-react.log`, `/private/tmp/retouch-arrow-visual.log`.
+Screenshot inspected: `/private/tmp/retouch-arrow.png`.
+
+No desktop rebuild or native launch in this increment. Full Figma parity,
+arbitrary-site editing and the older WebKit Fill issue remain incomplete.

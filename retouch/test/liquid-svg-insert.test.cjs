@@ -3,7 +3,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),adapter=r
 function resolve(source,tag){const relPath='sections/main.liquid',elements=adapter.collect(source,relPath).elements;return {source,relPath,file:'/tmp/sections/main.liquid',elements,element:elements.find(e=>e.tag===tag),hash:adapter.contentHash(source)};}
 function insert(r,op){return adapter.planOp(r,{type:'insertSVG',fileHash:r.hash,...op});}
 test('Liquid shapes create selectable SVG canvases and preserve Liquid bindings and sibling identities',()=>{
- for(const tag of ['main','svg','g'])for(const preset of ['rectangle','circle','ellipse','line']){
+ for(const tag of ['main','svg','g'])for(const preset of ['rectangle','circle','ellipse','line','arrow']){
   const source='<main>{{ title }}<svg viewBox="50 100 20 10"><g>{% if visible %}<circle r="{{ radius }}"/>{% endif %}</g></svg></main><aside>Keep</aside>',r=resolve(source,tag),result=insert(r,{preset});
   assert.equal(result.ok,true,result.reason);const after=result.edits[0].after,next=adapter.collect(after,r.relPath).elements,created=next.find(e=>e.id===result.createdId);
   assert.equal(created.parent.tag,tag==='main'?'svg':tag);assert.equal(next.length,r.elements.length+(tag==='main'?2:1));

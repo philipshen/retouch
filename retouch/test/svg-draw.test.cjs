@@ -17,3 +17,16 @@ test('Constrained lines snap to 45-degree increments while preserving radial dis
   const [c,d]=constrained('line',a,b,{shiftKey:true,altKey:true});assert.ok(Math.abs((c.x+d.x)/2-a.x)<1e-8);assert.ok(Math.abs((c.y+d.y)/2-a.y)<1e-8);
  }
 });
+
+test('Arrows point toward the drag endpoint and keep symmetric bounded heads in every direction',()=>{
+ for(const [dx,dy]of [[100,0],[-100,0],[0,100],[0,-100],[50,30],[-50,-30],[1,.5]]){
+  const a={x:20,y:30},b={x:20+dx,y:30+dy};
+  const points=geometry('arrow',a,b).points.split(' ').map(pair=>pair.split(',').map(Number));
+  assert.deepEqual(points[0],[a.x,a.y]);assert.deepEqual(points[1],[b.x,b.y]);assert.deepEqual(points[3],points[1]);
+  const [left,right]=[points[2],points[4]],length=Math.hypot(dx,dy);
+  assert.ok((left[0]-b.x)*dx+(left[1]-b.y)*dy<0,'head stays behind the endpoint');
+  assert.ok(Math.abs(Math.hypot(left[0]-b.x,left[1]-b.y)-Math.hypot(right[0]-b.x,right[1]-b.y))<.000002);
+  assert.ok(Math.hypot(left[0]-b.x,left[1]-b.y)<length,'short arrows retain a shorter head');
+  assert.deepEqual(constrained('arrow',a,b,{shiftKey:true,altKey:true}),constrained('line',a,b,{shiftKey:true,altKey:true}));
+ }
+});
