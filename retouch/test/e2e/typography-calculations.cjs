@@ -19,6 +19,12 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  await edit('Font size','(16 + 4) * 2px','font-size',40);
  await edit('Line height','(20 + 4) * 2px','line-height',48);
  await edit('Letter spacing','(2 - 4) / 2px','letter-spacing',-1);
+ for(const name of ['Line height','Letter spacing']){
+  const input=field(name),before=read();await input.fill('2000%');await input.press('Enter');assert.equal(await input.evaluate(el=>el.validity.valid),false);assert.equal(read(),before);await input.press('Escape');
+ }
+ await edit('Line height','(100 + 50)%','line-height',60);
+ await edit('Letter spacing','(5 + 5)%','letter-spacing',4);
+ if(process.env.RT_E2E_TYPOGRAPHY_SCREENSHOT)await page.locator('#panel').screenshot({path:process.env.RT_E2E_TYPOGRAPHY_SCREENSHOT});
  if(kind==='html'){
   const before=read();await field('Line height').fill('normal');await field('Line height').press('Enter');await wait(()=>read()!==before);await settled();states.push(read());
   await edit('Line height','3 / 2','line-height',60);

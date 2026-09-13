@@ -242,3 +242,28 @@ mixed and uniform drafts, invalid arithmetic, one transaction for each shared
 edit, tablet/phone isolation, restoration of each original size, and exact
 source undo/redo. HTML and React passed on Chromium 145; Liquid passed on
 WebKit 26, all with exit 0. The full unit suite passed 1,158 tests.
+
+### Percentage entry in primary spacing fields
+
+The primary line-height and letter-spacing fields accept percentages directly,
+including `(100 + 50)%` and `(5 + 5)%`, without opening Type settings. These
+use the same relative write and validation paths as the percentage controls:
+line height writes a unitless multiplier; letter spacing writes em. Enter
+commits one transaction, and Escape restores the original field value. After
+rebuild, the existing adapter display remains in effect (CSS values for HTML,
+computed pixels for React/Liquid); a consistent percentage display is still
+unfinished.
+
+The interaction follows the pixel/percentage spacing support described in
+[Figma's typography reference](https://help.figma.com/hc/en-us/articles/360039956634-Explore-text-properties).
+The reference image was inspected against the light-theme inspector. This is
+an interaction improvement, not a claim that the whole typography panel now
+matches Figma: font-style selection, value presentation, and type-settings
+layout still differ.
+
+Verification: the expanded typography-calculations workflow passed on the
+final source for HTML/React with Chromium 145 and Liquid with WebKit 26,
+including percentage range refusal, source writes, responsive isolation, and
+exact undo/redo. All three processes exited 0; 1,158 unit tests passed. The
+light-theme screenshot was inspected at
+`/private/tmp/retouch-primary-percent.png`.

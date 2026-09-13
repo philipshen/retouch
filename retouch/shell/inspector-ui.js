@@ -300,9 +300,23 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    if(name==='Typography')for(const input of section.querySelectorAll('input')){
     const label=input.getAttribute('aria-label')||'';
     if(!/^(?:Font size|Line height|Letter spacing) \((?:px|CSS)\)$/.test(label))continue;
+    const relative=section.querySelector('[aria-label="'+label.replace(/ \((?:px|CSS)\)$/,' (%)')+'"]');
+    const draftInitial=input.value;
+    if(relative?.retouchCommitRelative)input.addEventListener('change',event=>{
+     if(input.value===draftInitial||!input.value.trim().endsWith('%'))return;
+     event.stopImmediatePropagation();
+     try{
+      const quantity=root.RetouchNumericExpression.quantity(input.value);
+      if(!quantity||quantity.unit!=='%'||quantity.value<Number(relative.min)||quantity.value>Number(relative.max))throw Error('Enter a percentage from '+relative.min+' to '+relative.max+'.');
+      if(relative.disabled)throw Error('Relative spacing is unavailable for this layer.');
+      relative.value=root.RetouchNumericExpression.decimal(quantity.value);relative.setCustomValidity('');
+      input.setCustomValidity('');relative.retouchCommitRelative();
+     }catch(error){input.setCustomValidity(error.message);input.reportValidity();}
+    },true);
     // CSS line-height may be a unitless multiplier; retain that authored meaning.
     root.RetouchNumericExpression.calculation(input,{unit:label==='Line height (CSS)'?'':'px'});
     root.RetouchInspector.fieldDraft(input);
+    if(relative)input.title+=' Use % for spacing relative to font size, for example (100 + 50)%.';
    }
    if(name==='Stroke')for(const input of section.querySelectorAll('input'))if(/^(?:Border(?: (?:top|right|bottom|left))? width \(.*\)|SVG (?:stroke width|dash pattern|dash offset|miter limit)|Dash length|Dash gap)$/.test(input.getAttribute('aria-label')||'')){const label=input.getAttribute('aria-label');if(label!=='SVG dash pattern')root.RetouchNumericExpression.calculation(input,{unit:label.startsWith('Border')?'px':''});root.RetouchInspector.fieldDraft(input);}
    if(name==='Vector size'){pair(section,['Vector width','Vector height']);const group=section.querySelector('.property-pair'),lock=section.querySelector('[aria-label="Lock vector proportions"]');if(group&&lock){group.style.gridTemplateColumns='minmax(0,1fr) minmax(0,1fr) 28px';lock.style.padding='4px';group.append(lock);}for(const input of section.querySelectorAll('input'))input.closest('.inspector-field').querySelector(':scope > span').textContent=input.getAttribute('aria-label')==='Vector width'?'W':'H';}

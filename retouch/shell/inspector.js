@@ -297,7 +297,7 @@
       const next=input.value===initial&&Number.isFinite(value)?value:Number(input.value);
       if(next===submitted)return;submitted=next;onChange(next);
     };
-    input.onchange=commit;fieldDraft(input);
+    input.onchange=commit;input.retouchCommitRelative=commit;fieldDraft(input);
     const action=button('Use %',commit);
     action.setAttribute('aria-label','Use relative '+label.replace(' (%)','').toLowerCase());
     action.title='Convert to spacing relative to the font size.';row.append(action);
