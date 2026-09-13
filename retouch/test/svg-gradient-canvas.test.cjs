@@ -8,4 +8,6 @@ test('endpoint edits retain untouched precision and returning to the start is a 
 
 test('offscreen gradient handles stay reachable at the canvas edge',()=>{assert.deepEqual(g.visiblePoint({x:200,y:-10},400,300),{x:200,y:8});assert.deepEqual(g.visiblePoint({x:500,y:310},400,300),{x:392,y:292});});
 
+test('inner radius is measured from the focus and survives center and whole-gradient movement',()=>{const v={cx:.5,cy:.5,r:.5,fx:.3,fy:.4,fr:.1};assert.deepEqual(g.positions('radialGradient',v)[3],{x:.4,y:.4});assert.deepEqual(g.change('radialGradient',v,3,{x:.6,y:.8}),{...v,fr:.5});assert.deepEqual(g.change('radialGradient',v,3,{x:.3,y:.4}),{...v,fr:0});assert.equal(g.change('radialGradient',v,0,{x:.7,y:.6}).fr,.1);assert.equal(g.translate(v,.2,.3).fr,.1);});
+
 test('whole-gradient translation preserves endpoint separation and radial shape',()=>{const linear={x1:0,y1:.1,x2:1,y2:.6};assert.deepEqual(g.translate(linear,.25,-.1),{x1:.25,y1:0,x2:1.25,y2:.5});const radial={cx:.5,cy:.5,r:.4,fx:.3,fy:.4};assert.deepEqual(g.translate(radial,.5,.5),{cx:1,cy:1,r:.4,fx:.8,fy:.9});assert.deepEqual(g.translate(radial,0,0),radial);});
