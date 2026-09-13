@@ -26,7 +26,7 @@ let editing = null; // { el, id, info, original, originalHTML, snapshot, origina
 let inspectorTextCommit=null,inspectorSelectionSerial=0;
 let hoverEl = null;
 let measuring = false;
-let selectionMarquee=null,stopMarquee=null,stopDrawing=null,stopSVGDrag=null;
+let selectionMarquee=null,stopMarquee=null,stopDrawing=null,stopSVGDrag=null,frameRefreshDrawing=null;
 const marqueeSurface=document.createElement('div');marqueeSurface.className='selection-marquee-surface';document.body.append(marqueeSurface);
 const canvasSurface=document.getElementById('frameWrap');
 let sourceRequests = 0;
@@ -192,7 +192,7 @@ function hookFrame(d, w) {
   d.addEventListener('scroll',()=>window.RetouchActions?.closeContext(),true);
   w.addEventListener('pointerup',releasePanelPointer,true);
   w.addEventListener('pointercancel',releasePanelPointer,true);
-  stopDrawing?.();
+  if(!frameRefreshDrawing||stopDrawing!==frameRefreshDrawing.cancel||iframe.contentWindow?.location.href!==frameRefreshDrawing.route)stopDrawing?.();
   const vectorDragCandidate=node=>{
     if(mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active)return null;
     if(sel?.multiple?.length>1){const infos=sel.multiple;if(infos.some(info=>!info.svgTransform?.editable))return null;const elements=infos.map(info=>{const found=matchingEls(info.id);return found.length===1?found[0]:null;});if(elements.some(el=>!el||layerLocks.locked(el)))return null;const target=elements.find(el=>el.contains(node));return target?{info:sel.info,target,infos}:null;}
@@ -716,8 +716,11 @@ async function commitInlineEdit() {
 function clientMountReady(d){return !!d?.body&&[...d.querySelectorAll('[data-rt-client-revision]')].every(el=>el.getAttribute('data-rt-client-mounted')===el.getAttribute('data-rt-client-revision'));}
 async function waitForClientMount(d){for(let attempt=0;attempt<80;attempt++){if(d!==doc())return false;if(clientMountReady(d))return true;await new Promise(resolve=>setTimeout(resolve,50));}return false;}
 window.RetouchClientMount={ready:clientMountReady};
-function reloadFrame() {
-  stopDrawing?.();
+// A committed gradient gesture can retain its re-entry token through its own
+// refresh. Live preview tools and unrelated navigations still cancel normally.
+function reloadFrame({keepDrawing=null}={}) {
+  if(stopDrawing!==keepDrawing)stopDrawing?.();
+  const preserved=keepDrawing?{cancel:keepDrawing,route:iframe.contentWindow?.location.href}:null;frameRefreshDrawing=preserved;
   const selectionBefore=sel,anchorBefore=renderedSelection,routeBefore=iframe.contentWindow?.location.href;
   const bookmark=sel&&!sel.multiple&&renderedSelection?.id===activeId()?RetouchComponentInstances.captureOccurrence(matchingInDocument(doc(),activeId(),sel.info),renderedSelection.element):null;
   return new Promise(resolve => {
@@ -729,6 +732,7 @@ function reloadFrame() {
     const done = async () => {
       if (finished) return;
       finished = true;
+      if(frameRefreshDrawing===preserved)frameRefreshDrawing=null;
       clearTimeout(timeout); iframe.removeEventListener('load', done);
       // Development renderers can retain a stylesheet URL after recompiling
       // its contents. Revalidate local CSS after a source write, even if the
@@ -768,7 +772,7 @@ function reloadFrame() {
 // A source write can finish before the framework invalidates its rendered
 // module. Wait for that revision, retaining the live session when HMR applies it.
 // Reload only when the renderer cannot confirm a matching live update.
-async function refreshWrittenElement(info, matches, {verifyText=false}={}) {
+async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null}={}) {
   const location = iframe.contentWindow.location.href;
   async function liveUpdateReady(expectedText=null){
     // Only compiler-stamped revisions can prove the live page reflects this write.
@@ -797,14 +801,14 @@ async function refreshWrittenElement(info, matches, {verifyText=false}={}) {
         if (el && (!info.renderRevisionAttribute||el.getAttribute(info.renderRevisionAttribute)===info.hash) && matches(el)) {
           // Use rendered text so JSX whitespace and HTML entities match the browser.
           if(await liveUpdateReady(verifyText?el.textContent:null))return;
-          if(iframe.contentWindow.location.href===location)await reloadFrame();
+          if(iframe.contentWindow.location.href===location)await reloadFrame({keepDrawing});
           return;
         }
       }
     } catch {}
     await new Promise(resolve => setTimeout(resolve, 150));
   }
-  await reloadFrame();
+  await reloadFrame({keepDrawing});
 }
 
 // DOM -> op children tree. Implemented in serialize.js (loaded first) so it
@@ -2359,9 +2363,15 @@ function mountSVGGradientStopRail(section,info,target,gradient){
   }
  };
 }
-function editSVGGradientOnCanvas(info,target,gradient){
+function editSVGGradientOnCanvas(info,target,gradient,focusLabel=null){
  stopDrawing?.();const current=()=>mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&sel?.info===info&&!sel?.multiple?.length&&!document.querySelector('dialog[open]');if(!current())return;canvasPan.cancel();
- stopDrawing=RetouchSVGGradientCanvas.mount({target,gradient,frame:iframe,canvas:canvasSurface,current,save:changes=>setSVGGradient(info,gradient.paint,changes),onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
+ const save=async(changes,focus,keepEditing)=>{
+  if(!keepEditing)return setSVGGradient(info,gradient.paint,changes);
+  let cancelled=false;const cancel=()=>{cancelled=true;if(stopDrawing===cancel)stopDrawing=null;},events=['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'];const pending=setSVGGradient(info,gradient.paint,changes,undefined,undefined,undefined,{keepDrawing:cancel});stopDrawing=cancel;events.forEach(name=>window.addEventListener(name,cancel));canvasSurface.addEventListener('scroll',cancel);
+  try{const saved=await pending;if(saved!==true||cancelled||stopDrawing!==cancel||sel?.info.id!==info.id)return;const fresh=sel.info,next=fresh.svgGradients?.find(item=>item.paint===gradient.paint&&item.id===gradient.id),element=target.isConnected&&target.ownerDocument===doc()?target:matchingEls(info.id)[0];if(!next||!element)return;stopDrawing=null;editSVGGradientOnCanvas(fresh,element,next,focus);}
+  finally{events.forEach(name=>window.removeEventListener(name,cancel));canvasSurface.removeEventListener('scroll',cancel);if(stopDrawing===cancel)stopDrawing=null;}
+ };
+ stopDrawing=RetouchSVGGradientCanvas.mount({target,gradient,frame:iframe,canvas:canvasSurface,current,save,focusLabel,onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
 }
 function mountSVGGradientCreation(info,target){
  const creation=info.svgGradientCreation;if(!creation.paints.length||!target)return;
@@ -2405,9 +2415,9 @@ function mountSVGGradients(info,target){
   RetouchInspector.note(section,'Shared gradient · Edits affect all referencing layers and screen sizes. Page styles can override stop colors.');section.lastElementChild.classList.add('gradient-scope');panelBody.append(section);
  }
 }
-async function setSVGGradient(info,paint,changes,stop,action,value){
+async function setSVGGradient(info,paint,changes,stop,action,value,refreshOptions={}){
  if(sel?.info!==info||panelTasks||undoBusy||sourceRequests)return;busyPanel(true);
- try{const result=await api('POST','/rt/__api/op',{type:'setSVGGradient',id:info.id,fileHash:info.hash,paint,...(changes===undefined?{}:{changes}),...(stop===undefined?{}:{stop}),...(action===undefined?{}:{action,value})});if(!result?.ok)return toast(result?.reason||result?.error||'Could not update gradient','err');if(result.undoId)editorHistory.record({type:'setSVGGradient',id:info.id,undoId:result.undoId});sel.info=result.element;await refreshWrittenElement(sel.info,el=>svgGradientsMatch(el,sel.info));renderPanel();toast('Gradient updated','ok');}finally{busyPanel(false);}
+ try{const result=await api('POST','/rt/__api/op',{type:'setSVGGradient',id:info.id,fileHash:info.hash,paint,...(changes===undefined?{}:{changes}),...(stop===undefined?{}:{stop}),...(action===undefined?{}:{action,value})});if(!result?.ok)return toast(result?.reason||result?.error||'Could not update gradient','err');if(result.undoId)editorHistory.record({type:'setSVGGradient',id:info.id,undoId:result.undoId});sel.info=result.element;await refreshWrittenElement(sel.info,el=>svgGradientsMatch(el,sel.info),refreshOptions);renderPanel();toast('Gradient updated','ok');return true;}finally{busyPanel(false);}
 }
 async function setSVGGeometry(property,value){
   if(!sel||panelTasks||undoBusy||sourceRequests)return;const info=sel.info;busyPanel(true);
