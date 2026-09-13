@@ -838,8 +838,45 @@ function showInlineFormatToolbar(){
   inlineFormatCleanup();if(!editing||editing.info.canSetChildren===false)return;
   const d=doc(),bar=document.createElement('div');bar.className='inline-format-toolbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Selected text formatting');
   for(const [tag,label,text]of [['strong','Bold selected text','B'],['em','Italic selected text','I'],['sup','Superscript selected text','x²'],['sub','Subscript selected text','x₂']]){const button=document.createElement('button');button.type='button';button.textContent=text;button.setAttribute('aria-label',label);button.title=label;button.onpointerdown=event=>event.preventDefault();button.onclick=()=>{toggleWrap(tag);update();};bar.append(button);}
-  const update=()=>{const selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null,valid=editing&&range&&!range.collapsed&&editing.el.contains(range.startContainer)&&editing.el.contains(range.endContainer);for(const button of bar.children)button.disabled=!valid;};
+  let savedRange=null;const fields=[];
+  for(const [property,label,options] of [['font-weight','Selected text weight',[['400','Regular'],['700','Bold']]],['font-style','Selected text style',[['normal','Upright'],['italic','Italic']]]]){
+    const field=document.createElement('select');field.setAttribute('aria-label',label);field.title=label;
+    field.append(new Option(property==='font-weight'?'Weight':'Style',''));field.options[0].disabled=true;
+    for(const [value,label]of options)field.append(new Option(label,value));
+    field.onchange=()=>{if(savedRange&&editing){const selection=d.getSelection();selection.removeAllRanges();selection.addRange(savedRange.cloneRange());applyTextRangeStyle(property,field.value);update();}};
+    fields.push({field,property});bar.append(field);
+  }
+  const update=()=>{
+    const selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null,valid=editing&&range&&!range.collapsed&&editing.el.contains(range.startContainer)&&editing.el.contains(range.endContainer);
+    for(const control of bar.children)control.disabled=!valid;
+    if(!valid)return;savedRange=range.cloneRange();
+    const values=new Map(fields.map(({property})=>[property,new Set()])),walker=d.createTreeWalker(editing.el,NodeFilter.SHOW_TEXT);
+    while(walker.nextNode()){const node=walker.currentNode;if(!node.textContent||!range.intersectsNode(node))continue;const style=d.defaultView.getComputedStyle(node.parentElement);for(const [property,set]of values)set.add(style.getPropertyValue(property));}
+    for(const {field,property}of fields){const set=values.get(property),value=set.size===1?[...set][0]:'';field.value=[...field.options].some(option=>option.value===value)?value:'';}
+  };
   d.addEventListener('selectionchange',update);document.body.append(bar);update();inlineFormatCleanup=()=>{d.removeEventListener('selectionchange',update);bar.remove();inlineFormatCleanup=()=>{};};
+}
+
+function applyTextRangeStyle(property,value){
+  if(!editing||!({'font-weight':['400','700'],'font-style':['normal','italic']}[property]?.includes(value)))return;
+  const d=doc(),selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
+  if(!range||range.collapsed||!editing.el.contains(range.startContainer)||!editing.el.contains(range.endContainer))return;
+  const runs=[],walker=d.createTreeWalker(editing.el,NodeFilter.SHOW_TEXT);
+  while(walker.nextNode()){
+    const node=walker.currentNode;if(!range.intersectsNode(node))continue;
+    const from=range.startContainer===node?range.startOffset:0,to=range.endContainer===node?range.endOffset:node.textContent.length;
+    if(from<to)runs.push({node,from,to});
+  }
+  if(!runs.length)return;
+  if(runs.some(({node})=>node.parentElement.closest('[contenteditable="false"]'))){toast('This selection includes source-owned text.','err');return;}
+  // Apply at text leaves, so existing child styles cannot override the choice.
+  // Each source-owned ancestor keeps its identity and untouched attributes.
+  const wrappers=[];
+  for(const {node,from,to}of runs){
+    const part=d.createRange();part.setStart(node,from);part.setEnd(node,to);
+    const wrapper=d.createElement('span');wrapper.__rtRangeStyle=property;wrapper.style.setProperty(property,value);part.surroundContents(wrapper);wrappers.push(wrapper);
+  }
+  const next=d.createRange();next.setStart(wrappers[0].firstChild,0);const last=wrappers.at(-1).firstChild;next.setEnd(last,last.textContent.length);selection.removeAllRanges();selection.addRange(next);
 }
 
 /* ---------- bold / italic on selection (Cmd+B / Cmd+I) ---------- */

@@ -32,3 +32,9 @@ test('text commits remove only retained renderer padding, preserving whitespace 
  assert.equal(storedText('  New heading  ','Old heading','Old heading'),'  New heading  ');
  assert.equal(storedText('\n      New heading  \n','\n      Old heading  \n','  Old heading  '),'  New heading  ');
 });
+
+test('range styles serialize only enumerated weight and style values',()=>{
+ const children=[{t:'style',property:'font-weight',value:'400',children:[{t:'style',property:'font-style',value:'normal',children:[{t:'text',value:'<regular>'}]}]}];
+ assert.equal(rewrite('Text','source',children),'<span style="font-weight: 400;"><span style="font-style: normal;">&lt;regular&gt;</span></span>');
+ for(const [property,value]of [['constructor','400'],['__proto__','normal'],['background','url(javascript:alert(1))'],['font-weight','400; color:red'],['font-style','expression(alert(1))']])assert.throws(()=>rewrite('Text','source',[{t:'style',property,value,children:[]}]),/Unsupported text range style/);
+});

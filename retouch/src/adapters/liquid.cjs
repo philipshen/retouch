@@ -18,7 +18,7 @@ const components = require('../liquid-components.cjs');
 const images = require('../liquid-images.cjs');
 const theme = require('../liquid-theme.cjs');
 const layerNames = require('../liquid-layer-name.cjs');
-const {validateChildrenTree}=require('../rich-text.cjs');
+const {validateChildrenTree,styleMarkup}=require('../rich-text.cjs');
 
 const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
   'link', 'meta', 'param', 'source', 'track', 'wbr']);
@@ -388,6 +388,7 @@ function planOp(resolved, op) {
     const seen=new Set();
     const build=items=>items.map(c=>{
       if (c.t==='text') return escapeText(c.value);
+      if (c.t==='style') return styleMarkup(c,build(c.children));
       if (c.t==='wrap') return `<${c.tag}>${build(c.children)}</${c.tag}>`;
       const kept=descendants.get(c.id);
       if (!kept||seen.has(c.id)) throw new Error('A kept element is not a unique descendant of this source.');

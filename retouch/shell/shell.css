@@ -1006,3 +1006,6 @@ html, body { overflow:clip; }
 
 .inline-format-toolbar { position:fixed;z-index:60;bottom:128px;left:50%;transform:translateX(-50%);display:flex;gap:4px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 4px 20px #0002; }
 .inline-format-toolbar button { min-width:32px;height:30px;background:var(--control);border:0;border-radius:5px;font-size:14px; }
+
+.inline-format-toolbar select { height:30px;max-width:88px;padding:0 6px;background:var(--control);color:var(--ink);border:0;border-radius:5px;font:inherit;font-size:11px; }
+.inline-format-toolbar { max-width:calc(100vw - 24px);flex-wrap:wrap;justify-content:center; }

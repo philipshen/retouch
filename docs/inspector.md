@@ -665,3 +665,43 @@ The unit suite passed 1,165 tests in
 `/private/tmp/retouch-nested-emphasis-units.log`, including source-identity
 exclusions for expressions, attributes, and components. Desktop packaging has
 not been rebuilt with this change.
+
+### Explicit weight and style on text ranges (2026-09-13)
+
+The selected-text toolbar now includes Regular/Bold weight and Upright/Italic
+style fields. These apply explicit local styles to the selected text, including
+when the parent layer supplies bold or italic. Each selected text leaf receives
+an override, so a selection spanning differently styled children becomes uniform
+without changing the parent or its unselected text. Toolbar fields reflect known
+computed values for the selection; mixed or other values show the field label.
+The existing semantic formatting buttons and shortcuts remain available.
+
+The constrained rich-text tree now accepts `style` nodes with `font-weight`
+(`400`, `700`) or `font-style` (`normal`, `italic`). Other properties and values,
+including inherited object keys and CSS injection strings, are rejected. Shared
+HTML/Liquid output uses a literal style attribute; React emits a literal style
+object. Existing source-owned ancestors retain their attributes and identities.
+Serialization recognizes mounted range styles for compiled-content verification.
+React also recognizes literal text nested entirely in host wrappers as mixed text,
+so a fully wrapped layer can reopen for editing.
+
+Validation: 1,168 unit tests passed in
+`/private/tmp/retouch-range-styles-units.log`; additional invalid-key validation
+passed in `/private/tmp/retouch-range-style-validation.log`. HTML/React Chromium
+and Liquid WebKit range-style workflows exited successfully in
+`/private/tmp/retouch-range-styles-{html,react,liquid}.log`. They verify computed
+regular weight under a bold parent, italic then upright, an existing child weight
+overridden across a whole mixed range, save/reopen, unchanged parent weight and
+text, and exact source undo/redo. The light toolbar was visually inspected at
+`/private/tmp/retouch-range-styles.png`.
+
+This is an initial range-style model, not complete Figma typography parity.
+Arbitrary weights, fonts, sizes, colors, text decorations, and source-aware
+normalization of repeated saved style wrappers remain outstanding. Repeated
+nesting still obeys the shared depth limit, and author `!important` declarations
+on the styled child can take precedence. The inspector remains layer-oriented;
+the toolbar handles the selected text. Desktop packaging has not been rebuilt.
+
+Nested emphasis, saved script formatting, and immediate script switching also
+passed on HTML/React Chromium and Liquid WebKit after the range-style change:
+`/private/tmp/retouch-range-style-regression-{html,react,liquid}.log`.

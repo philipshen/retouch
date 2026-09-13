@@ -263,3 +263,10 @@ test('plain formatting identities exclude JSX expressions, attributes and compon
   assert.ok(ids.includes(pick(index,root,'Formatting.tsx','em').el.id));
   for(const tag of ['sup','b','i'])assert.ok(!ids.includes(pick(index,root,'Formatting.tsx',tag).el.id));
 });
+
+test('range styles write constrained JSX and fully wrapped text remains editable', () => {
+  const {resolved}=pick(index,root,'Card.tsx','p');
+  const result=writer.applyOp(resolved,{type:'setChildren',id:resolved.element.id,fileHash:resolved.hash,children:[{t:'style',property:'font-weight',value:'400',children:[{t:'style',property:'font-style',value:'normal',children:[{t:'text',value:'Regular text'}]}]}]});
+  assert.ok(result.ok);assert.match(read(root,'Card.tsx'),/<span style=\{\{fontWeight:"400"\}\}><span style=\{\{fontStyle:"normal"\}\}>Regular text<\/span><\/span>/);
+  index.scanAll();assert.strictEqual(writer.describeElement(pick(index,root,'Card.tsx','p').resolved).mixedText,true);
+});

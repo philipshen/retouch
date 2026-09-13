@@ -92,6 +92,7 @@ function describeElement(resolved) {
     candidate.children.every(plainFormatting);
   const plainFormattingIds = (resolved.elements || []).filter(item =>
     item.node.start > node.start && item.node.end < node.end && plainFormatting(item.node)).map(item => item.id);
+  const literalDescendant = child => child.type === 'JSXText' ? child.value.trim() !== '' : child.type === 'JSXElement' && /^[a-z]/.test(tagOf(child)) && child.children.some(literalDescendant);
   const textInfo = literalTextRange(node, source);
   return {
     svgPaint: {reason:node.openingElement.attributes.some(a=>a.type==='JSXSpreadAttribute')?'Spread props may control this layer’s classes.':null},
@@ -120,7 +121,7 @@ function describeElement(resolved) {
     mixedText:
       !textInfo &&
       childrenAreMappable(node) &&
-      (node.children || []).some((c) => c.type === 'JSXText' && c.value.trim() !== ''),
+      (node.children || []).some(literalDescendant),
   };
 }
 
@@ -163,7 +164,7 @@ function literalTextRange(node, source) {
   return { start, end, text };
 }
 
-const {validateChildrenTree}=require('./rich-text.cjs');
+const {validateChildrenTree,styleMarkup}=require('./rich-text.cjs');
 
 // True when every significant child is JSXText or JSXElement — the shape
 // rich editing can map back to source. Expressions refuse (R-6).
@@ -237,7 +238,8 @@ function planOp(resolved, op) {
   } else if (op.type === 'setChildren') {
     // Rich in-place editing (DR-0014). The tree is constrained: escaped
     // text, kept stamped descendants written as verbatim source slices,
-    // and the fixed WRAP_TAGS vocabulary. No attributes, no expressions.
+    // fixed formatting tags, and enumerated range styles. No arbitrary
+    // attributes or expressions can be introduced by these nodes.
     const treeErr = validateChildrenTree(op.children, 0);
     if (treeErr) return refuse(treeErr);
     if (!childrenAreMappable(node)) {
@@ -256,6 +258,7 @@ function planOp(resolved, op) {
       children
         .map((c) => {
           if (c.t === 'text') return escapeJsxText(c.value);
+          if (c.t === 'style') return styleMarkup(c,build(c.children),true);
           if (c.t === 'wrap') return `<${c.tag}>${build(c.children)}</${c.tag}>`;
           const kept = descendants.get(c.id);
           if (!kept) {

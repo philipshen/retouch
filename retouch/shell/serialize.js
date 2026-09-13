@@ -28,6 +28,17 @@
         else out.push({ t: 'keep', id: id, children: serializeChildren(n, snapshot) });
         continue;
       }
+      // Only the two enumerated range styles can create new styled spans.
+      // Existing attributed nodes still use the source-preserving keep path above.
+      var property = n.__rtRangeStyle || (n.tagName === 'SPAN' && n.style && n.style.length === 1 ? n.style[0] : null);
+      if (n.tagName === 'SPAN' && property && n.style) {
+        var value = n.style.getPropertyValue(property);
+        if ((property === 'font-weight' && /^(400|700)$/.test(value)) ||
+            (property === 'font-style' && /^(normal|italic)$/.test(value))) {
+          out.push({t:'style',property:property,value:value,children:serializeChildren(n,snapshot)});
+          continue;
+        }
+      }
       var tag = FMT[n.tagName];
       if (tag) {
         out.push({ t: 'wrap', tag: tag, children: serializeChildren(n, snapshot) });

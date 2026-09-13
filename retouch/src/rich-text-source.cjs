@@ -4,7 +4,7 @@
 // interpret: interpolation ranges arrive as opaque, preserved tokens.
 const {parseFragment}=require('parse5');
 const crypto=require('node:crypto');
-const {validateChildrenTree}=require('./rich-text.cjs');
+const {validateChildrenTree,styleMarkup}=require('./rich-text.cjs');
 const escapeText=value=>value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\{/g,'&#123;').replace(/\}/g,'&#125;');
 
 function describe(value,sourceId,{tokens=[]}={}) {
@@ -48,6 +48,7 @@ function rewrite(value,sourceId,children,options) {
   function build(items) {
     return items.map(item=>{
       if(item.t==='text')return escapeText(item.value);
+      if(item.t==='style')return styleMarkup(item,build(item.children));
       if(item.t==='wrap')return `<${item.tag}>${build(item.children)}</${item.tag}>`;
       const original=kept.get(item.id);
       if(!original||seen.has(item.id))throw new Error('A kept node is not unique to this text source.');

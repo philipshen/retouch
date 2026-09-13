@@ -100,3 +100,11 @@ test('superscript and subscript retain selected text without attributes',()=>{
  assert.deepStrictEqual(tree,[{t:'text',value:'H'},{t:'wrap',tag:'sub',children:[{t:'text',value:'2'}]},{t:'text',value:'O x'},{t:'wrap',tag:'sup',children:[{t:'text',value:'2'}]}]);
  assert.equal(require('../src/rich-text.cjs').validateChildrenTree(tree,0),null);
 });
+
+test('new and mounted text range styles retain their constrained style tree',()=>{
+ for(const [property,value]of [['font-weight','400'],['font-style','normal']]){
+  const span=el('SPAN',[text('selected')]);span.style={length:1,0:property,getPropertyValue:key=>key===property?value:''};
+  const root=el('P',[span]);
+  assert.deepStrictEqual(serializeChildren(root),[{t:'style',property,value,children:[{t:'text',value:'selected'}]}]);
+ }
+});
