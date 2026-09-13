@@ -13350,3 +13350,34 @@ The inspector still exposes a crowded Add/Draw button section; simplifying it
 around the dock remains visual-parity work. Arbitrary site CSS, dynamic DOM side
 effects and every containing-block/3D topology are not proven by these fixtures.
 No desktop rebuild, native launch or push was performed in this increment.
+
+
+## 2026-09-13: keep shape creation in the canvas tools
+
+Removed the inspector's Add shape section and its redundant Add/Draw/Pen buttons.
+Position now leads directly into Layout and Appearance for native containers.
+A shared shape-command provider drives the canvas dock, R/O/L/P and Actions
+search. Default Add presets remain available in Actions. Creation availability
+and selected-source identity are checked at execution; command search refreshes
+when its source owner/revision changes. Shape commands no longer require hidden
+or visible inspector button nodes. They remain usable when the inspector is
+hidden, and clear/disable when selection is cleared.
+
+Validation: 992 unit tests passed (`/private/tmp/retouch-shape-registry-units.log`).
+HTML WebKit passed the six-shape/Pen/source-history workflow, including drawing
+with the inspector hidden, clearing selection, disabled dock state, shortcut
+repeats and typing safeguards (`/private/tmp/retouch-shape-registry-webkit.log`).
+Local Liquid Chromium passed all 30 native drawing cases plus cancellation
+(`/private/tmp/retouch-shape-registry-liquid.log`). React Chromium passed all 18
+native/self-closing SVG/group Add cases through Actions search, including created
+selection and exact Undo/Redo (`/private/tmp/retouch-shape-registry-react-add.log`).
+The Actions regression passed (`/private/tmp/retouch-shape-registry-actions.log`),
+as did Hand/Draw switching and the pan/typing/Interact regression
+(`/private/tmp/retouch-shape-registry-pan.log`). All processes exited successfully.
+Existing shape harnesses now exercise the public dock/search paths through a
+shared helper instead of removed inspector buttons. The light-theme screenshot
+was inspected: `/private/tmp/retouch-native-dock-clean.png`.
+
+This resolves the crowded shape-action section noted in the previous increment.
+It does not establish complete Figma visual or feature parity. No desktop rebuild,
+native launch or push was performed.

@@ -48,7 +48,7 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
   const insertionLocks=()=>page.evaluate(()=>['rect','circle'].every(tag=>[...doc().querySelectorAll(tag)].every((el,i)=>layerLocks.direct(el)===(i===0)))&&[...doc().querySelectorAll('ellipse,line,svg')].every(el=>!layerLocks.direct(el)));
   for(const [preset,tag]of [['rectangle','rect'],['circle','circle'],['ellipse','ellipse'],['line','line']]){
    await page.getByRole('treeitem',{name:'body',exact:true}).click();await settled();
-   await page.getByRole('button',{name:'Add '+preset,exact:true}).click();await settled();await wait(async()=>await app.locator('svg').count()===2);
+   await require('./shape-tools.cjs').run(page,'Add '+preset);await settled();await wait(async()=>await app.locator('svg').count()===2);
    const created=app.locator('svg').last().locator(tag);await wait(async()=>await created.count()===1);const id=await created.getAttribute('data-rt');await wait(insertionLocks);
    await wait(async()=>await page.locator('[role=treeitem][aria-selected=true]').count()===1&&await page.locator('[role=treeitem][aria-selected=true]').textContent()===tag);
    assert.ok(await created.evaluate(el=>{const r=el.getBoundingClientRect();return r.width>0;}));const added=read();

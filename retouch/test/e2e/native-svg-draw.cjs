@@ -16,7 +16,7 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   const settled=()=>wait(async()=>await page.locator('#panelBody').getAttribute('aria-busy')!=='true');
   await page.goto('http://localhost:'+server.address().port+'/rt');await app.locator('main').first().waitFor();await page.getByLabel('Screen size',{exact:true}).selectOption('1440x900');const zoom=page.getByLabel('Canvas zoom (%)',{exact:true});await zoom.fill('60');await zoom.press('Tab');
   for(const [name]of layouts)for(const [preset,tag]of [['rectangle','rect'],['ellipse','ellipse'],['line','line'],['circle','circle'],['triangle','polygon'],['star','polygon']]){
-   const target=app.locator('main[aria-label="'+name+'"]');await target.scrollIntoViewIfNeeded();await page.getByRole('treeitem',{name:'main · '+name,exact:true}).click();await settled();await wait(async()=>await page.locator('#panelBody [data-shape-action="draw-'+preset+'"]').isEnabled());
+   const target=app.locator('main[aria-label="'+name+'"]');await target.scrollIntoViewIfNeeded();await page.getByRole('treeitem',{name:'main · '+name,exact:true}).click();await settled();await wait(async()=>await page.getByRole('button',{name:'Shape tools',exact:true}).isEnabled());
    const before=await target.locator('p').boundingBox(),beforeDOM=await target.innerHTML();
    await page.getByRole('button',{name:'Shape tools',exact:true}).click();await page.getByRole('menuitem',{name:'Draw '+preset,exact:true}).click();await page.locator('.svg-draw-surface').waitFor();
    assert.equal(await app.locator('svg').count(),0,'coordinate probe is removed before drawing');assert.equal(await target.innerHTML(),beforeDOM,'measurement leaves no preview DOM changes');
@@ -29,7 +29,7 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
    console.log(name,preset,'PASS');
   }
   for(const cancel of ['escape','layout','zoom','scroll']){
-   const target=app.locator('main[aria-label="Relative"]');await target.scrollIntoViewIfNeeded();await page.getByRole('treeitem',{name:'main · Relative',exact:true}).click();await settled();await wait(async()=>await page.locator('#panelBody [data-shape-action="draw-rectangle"]').isEnabled());await page.getByRole('button',{name:'Shape tools',exact:true}).focus();await page.keyboard.press('r');await page.locator('.svg-draw-surface').waitFor();const box=await target.boundingBox();await page.mouse.move(box.x+40,box.y+30);await page.mouse.down();await page.mouse.move(box.x+100,box.y+70,{steps:3});
+   const target=app.locator('main[aria-label="Relative"]');await target.scrollIntoViewIfNeeded();await page.getByRole('treeitem',{name:'main · Relative',exact:true}).click();await settled();await wait(async()=>await page.getByRole('button',{name:'Shape tools',exact:true}).isEnabled());await page.getByRole('button',{name:'Shape tools',exact:true}).focus();await page.keyboard.press('r');await page.locator('.svg-draw-surface').waitFor();const box=await target.boundingBox();await page.mouse.move(box.x+40,box.y+30);await page.mouse.down();await page.mouse.move(box.x+100,box.y+70,{steps:3});
    const style=await target.getAttribute('style');
    if(cancel==='escape')await page.keyboard.press('Escape');
    if(cancel==='layout')await target.evaluate(el=>el.style.width='520px');

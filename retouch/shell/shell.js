@@ -1251,13 +1251,6 @@ function renderPanelContents() {
     for(const field of info.svgGeometry.fields){const input=document.createElement('input');input.type='text';input.value=field.value??'';input.placeholder=field.editable===false?'Dynamic value':'Default';input.disabled=field.editable===false;if(field.reason)input.title=field.reason;input.onchange=()=>setSVGGeometry(field.name,input.value.trim()||null);RetouchInspector.field(geometry,'Shape '+field.label,input);const reset=RetouchInspector.button('Reset shape '+field.label.toLowerCase(),()=>setSVGGeometry(field.name,null));reset.disabled=field.value===null||field.editable===false;geometry.append(reset);}
     RetouchInspector.note(geometry,pointField?'Drag empty space to select points. Shift-click or Shift-drag adds to the selection. Drag selected points or use arrows (Shift: 10 units). Click + to add; Delete removes selected points. Done/Enter saves; Escape cancels. Points are shared across screen sizes.':'Geometry is shared across screen sizes. Values use SVG coordinates, px or %. The SVG viewport and page CSS can affect the rendered result.');panelBody.append(geometry);
   }
-  if(info.svgInsertion){
-    const shapes=RetouchInspector.section('Add shape'),buttons=document.createElement('div');buttons.className='stack-presets';buttons.dataset.shapeOwner=info.id;
-    for(const preset of info.svgInsertion.presets){const button=RetouchInspector.button('Add '+preset,()=>insertLayer(preset,info,'insertSVG'));button.dataset.shapeAction='add-'+preset;buttons.append(button);}
-    for(const preset of info.svgInsertion.presets){const button=RetouchInspector.button('Draw '+preset,()=>drawShape(preset,info));button.dataset.shapeAction='draw-'+preset;buttons.append(button);}
-    if(info.svgInsertion.pen){const button=RetouchInspector.button('Pen',()=>drawVector(info));button.dataset.shapeAction='pen';buttons.append(button);}
-    shapes.append(buttons);RetouchInspector.note(shapes,info.svgInsertion.createsViewport?'Draw a shape at its canvas position, or Add a default 200 × 200 canvas.':'Choose Draw and drag a shape, or Pen: click for straight segments, drag for curves. In Pen, click the first point to close; Enter finishes an open line. Shift constrains direction. Escape cancels.');panelBody.append(shapes);
-  }
   if(info.cssAuthoring){
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
     const position=target?.namespaceURI!=='http://www.w3.org/2000/svg'?RetouchHTMLPosition.mount(info,target,width,setHTMLCSS,(g,action,opener,initial)=>moveHTMLLayer(info,target,width,g,action,opener,initial)):null;
@@ -3051,3 +3044,18 @@ async function structureAction(action) {
     toast('Layer updated','ok');
   } finally {busyPanel(false);}
 }
+
+// Shape commands belong to the canvas tools, independent of inspector markup.
+window.RetouchShapeTools={
+ commands(){
+  const info=sel?.info;if(!info?.svgInsertion||sel.multiple?.length>1||info.kind==='instance')return [];
+  const owner=JSON.stringify([info.file,info.id,info.hash,sel.instanceId,sel.scope]);
+  const available=()=>mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!historyRecoveryRequired&&!panelBody.inert&&!(sel?.multiple?.length>1)&&owner===JSON.stringify([sel?.info.file,sel?.info.id,sel?.info.hash,sel?.instanceId,sel?.scope]);
+  const command=(action,label,fn)=>({id:'shape-'+action,action,label,owner,element:panelBody,available,keywords:'shape vector canvas',reason:'Select an editable container or SVG canvas in Edit mode and finish the current edit.',run(){if(available())return fn(sel.info);}});
+  const rows=info.svgInsertion.presets.flatMap(preset=>[command('draw-'+preset,'Draw '+preset,current=>drawShape(preset,current)),command('add-'+preset,'Add '+preset,current=>insertLayer(preset,current,'insertSVG'))]);
+  if(info.svgInsertion.pen)rows.push(command('pen','Pen',current=>drawVector(current)));
+  return rows;
+ },
+ get(action){return this.commands().find(row=>row.action===action);}
+};
+window.dispatchEvent(new Event('retouch:shape-tools'));
