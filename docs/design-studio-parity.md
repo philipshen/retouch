@@ -13530,3 +13530,35 @@ CSS ownership, source/DOM preservation and exact single-step undo/redo. Screensh
 `/private/tmp/retouch-radius-{html,react,liquid}.log` and
 `/private/tmp/retouch-radius-units.log`. Desktop has not been rebuilt for this
 increment; full Figma/any-site parity remains unfinished.
+
+### 2026-09-13 — On-canvas SVG rectangle radius handles
+
+Selected editable SVG rectangles now expose corner handles that round all corners
+with a pointer drag. A compact icon beside Radius opens the same tool for keyboard
+editing. Preview updates both radii without writing source; release or Enter
+commits one atomic edit. Arrows step one SVG unit, Shift steps/snaps ten, and
+Home/End choose zero/the maximum shared radius. The active handle receives focus,
+and the hint sits above existing notifications. Hover outlines are suppressed
+while a canvas tool is active.
+
+Handles map through the SVG coordinate matrix and editor zoom, check the measured
+screen bounds, clip to the visible canvas and omit overlapping corner targets.
+Legacy SVGMatrix objects without is2D are accepted. Source/selection changes,
+geometry changes, Escape, pointer cancellation/lost capture, scrolling and viewport
+changes cancel the gesture. Cleanup restores only radius attributes still owned
+by its preview, preserving an external attribute change made mid-gesture.
+
+Validation: 1,003 unit tests passed, including legacy/singular/inconsistent matrix
+measurement cases. Real HTML/WebKit 26, Next/React Chromium 145 and compiled
+Liquid/Chromium 145 workflows passed at 50/100/200 percent zoom, transformed local
+pointer deltas, live previews without source writes, keyboard edits, exact single
+undo/redo, Escape, geometry/selection cancellation and external-radius preservation.
+The tests reveal the layer after zooming; off-screen handles intentionally remain
+clipped. WebKit transformed pointer rounding stayed below 0.1 SVG unit. All
+processes exited successfully. Logs: `/private/tmp/retouch-radius-canvas-` plus
+`{html,react,liquid}-final.log` or `units.log`. The final light-theme screenshot
+`/private/tmp/retouch-radius-canvas-liquid.png` was inspected.
+
+This rounds a rectangle's shared rx/ry geometry. Independent per-corner vector
+rounding, smoothing, arbitrary vector corner handles and full Figma/any-site parity
+remain unfinished. The desktop archive has not been rebuilt for this increment.

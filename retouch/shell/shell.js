@@ -892,6 +892,7 @@ componentBadge.querySelector('button').onclick=async()=>{
     await detachInstance(target.id,component,button,context);
   } finally {button.disabled=false;}
 };
+const radiusCorners=RetouchSVGRadiusCanvas.controls({frame:iframe,canvas:canvasSurface,onStart:roundRectangleOnCanvas});
 const rotationCorners=RetouchCanvasRotate.cornerControls({frame:iframe,canvas:canvasSurface,onStart:rotateLayerOnCanvas});
 function paintLoop() {
   overlayLayer.textContent = '';
@@ -915,7 +916,7 @@ function paintLoop() {
     for(const group of groups){const bounds=RetouchComponentInstances.bounds(group.elements);if(bounds){if(group.elements.length===1)drawBox(group.element,'co',outlineKind(group.element,info));else drawBounds(bounds,'co',outlineKind(group.element,info));}}
   }
   if(d && editing?.el.isConnected)drawBox(editing.el,'editing',outlineKind(editing.el,editing.info));
-  if(d && hoverEl?.isConnected && mode==='edit' && !editing) {
+  if(d && hoverEl?.isConnected && mode==='edit' && !editing && !stopDrawing) {
     const hovered=hoverDescription(hoverEl),target=hovered.element,info=hovered.info,kind=outlineKind(target,info);
     const group=kind==='instance'?RetouchComponentInstances.group(matchingInDocument(d,info.id,info),info.rootGroups).find(group=>group.elements.includes(target)):null;
     const elements=group?.elements||[target],bounds=RetouchComponentInstances.bounds(elements);
@@ -935,6 +936,8 @@ function paintLoop() {
     componentBadge.style.top=Math.max(0,r.top-22)+'px';
   }
   const rotationInput=mode==='edit'&&!editing&&!stopDrawing&&!canvasPan.active&&!panelTasks&&!undoBusy&&!sourceRequests&&!sel?.multiple?.length&&!document.querySelector('dialog[open]')&&document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false'?panelBody.querySelector('input[aria-label="Rotation (°)"]'):null;
+  const radiusInput=mode==='edit'&&!editing&&!stopDrawing&&!canvasPan.active&&!panelTasks&&!undoBusy&&!sourceRequests&&!sel?.multiple?.length&&!document.querySelector('dialog[open]')?panelBody.querySelector('[aria-label="Rectangle corner radius"]'):null;
+  radiusCorners.update(radiusInput?.retouchRadiusTarget,radiusInput);
   rotationCorners.update(rotationInput?.retouchPreviewTarget,rotationInput,rotationInput?panelBody.querySelector('[data-canvas-tool=resize]'):null);
   if(d&&sel&&mode==='edit'&&!editing&&window.RetouchGridGuidesEnabled)RetouchInspector.drawGridGuides(overlayLayer,renderedSelection?.element||matchingEls(activeId())[0]);
   if (d && measuring && hoverEl?.isConnected && mode === 'edit') RetouchInspector.measurements(overlayLayer, hoverEl, sel ? matchingEls(activeId())[0] : null);
@@ -1242,7 +1245,7 @@ function renderPanelContents() {
     if(info.svgConversion)geometry.append(RetouchInspector.button('Convert to vector path',()=>convertSVGToPath(info)));
     const pointField=info.svgGeometry.fields.find(field=>['points','d'].includes(field.name));
     if(editableVectorField(info)){const editPoints=RetouchInspector.button('Edit vector points',()=>editSVGPoints(info));editPoints.dataset.canvasTool='vertices';editPoints.title='Edit vector points · Enter or double-click on the canvas';geometry.append(editPoints);}
-    RetouchSVGRadius.mount(geometry,info,target,changes=>setSVGGeometry(changes));
+    RetouchSVGRadius.mount(geometry,info,target,changes=>setSVGGeometry(changes),input=>roundRectangleOnCanvas(target,input));
     const parametric=info.svgGeometry.parametric;
     if(parametric){
       const change=updates=>{const points=RetouchSVGParametric.generate({...parametric,...updates});if(points)setSVGGeometry('points',points);else toast('Choose a valid shape count and ratio.','err');};
@@ -2282,6 +2285,12 @@ async function writeReactBounds(info,classes,expected){
 function resizeFlowOnCanvas(target,control,save,initial=null){
   stopDrawing?.();const key=JSON.stringify([sel?.info.id,sel?.info.hash,styleScope]);const current=()=>mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&!sel?.multiple?.length&&!document.querySelector('dialog[open]')&&key===JSON.stringify([sel?.info.id,sel?.info.hash,styleScope])&&document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false';if(!current())return;canvasPan.cancel();
   stopDrawing=RetouchFlowResize.mount({target,frame:iframe,canvas:canvasSurface,control,save,current,initial,onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
+}
+function roundRectangleOnCanvas(target,input,initialPointer=null,corner=0){
+  stopDrawing?.();const key=JSON.stringify([sel?.info.id,sel?.info.hash,styleScope]);
+  const current=()=>mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&!sel?.multiple?.length&&!document.querySelector('dialog[open]')&&input.isConnected&&!input.disabled&&!input.closest('[inert]')&&key===JSON.stringify([sel?.info.id,sel?.info.hash,styleScope]);
+  if(!current())return;canvasPan.cancel();
+  stopDrawing=RetouchSVGRadiusCanvas.mount({target,input,frame:iframe,canvas:canvasSurface,current,initialPointer,corner,onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
 }
 function rotateLayerOnCanvas(target,input,initialPointer=null){
   stopDrawing?.();

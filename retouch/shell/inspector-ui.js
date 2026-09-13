@@ -206,6 +206,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     pair(settings,['SVG line ends','SVG line joins']);pair(settings,['SVG dash pattern','SVG dash offset']);pair(settings,['SVG miter limit','SVG stroke scaling']);section.append(settings);
    }
    if(name==='Geometry'&&section.querySelector('[aria-label="Rectangle corner radius"]')){
+    const radiusRow=section.querySelector('[aria-label="Rectangle corner radius"]').closest('.property-row'),canvasAction=section.querySelector('[data-canvas-tool="radius"]');if(radiusRow&&canvasAction)radiusRow.insertBefore(canvasAction,radiusRow.lastElementChild);
     const axes=disclosure('Elliptical corners','svg-radius-axes');
     for(const label of ['Shape Horizontal radius','Shape Vertical radius']){const field=section.querySelector('[aria-label="'+label+'"]')?.closest('.inspector-field');if(field)axes.append(field.closest('.property-row')||field);}
     pair(axes,['Shape Horizontal radius','Shape Vertical radius']);section.append(axes);
