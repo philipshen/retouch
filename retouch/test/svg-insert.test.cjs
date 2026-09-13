@@ -5,10 +5,10 @@ test('Native arrow viewports enclose both wings for horizontal, vertical and rev
  for(const points of [[0,0,100,0],[0,0,0,100],[100,100,0,100],[100,100,100,0],[0,0,1,1]]){
   const native=insert.nativeDrawing('arrow',points);assert.ok(native);
   const [width,height]=native.opening.match(/viewBox="0 0 ([^ ]+) ([^"]+)"/).slice(1).map(Number);
-  const markup=insert.drawnShape('arrow',native.points),vertices=markup.match(/points="([^"]+)"/)[1].split(' ').map(pair=>pair.split(',').map(Number));
+  const markup=insert.drawnShape('arrow',native.points),vertices=require('../shell/svg-parametric.js').pointsFromPath(markup.match(/d="([^"]+)"/)[1]).split(' ').map(pair=>pair.split(',').map(Number));
   for(const [x,y]of vertices){assert.ok(x>=.999999&&x<=width-.999999);assert.ok(y>=.999999&&y<=height-.999999);}
  }
- assert.equal(insert.drawnShape('arrow',[0,0,0,0]),null);
+ assert.equal(insert.drawnShape('arrow',[0,0,0,0]),null);assert.equal(insert.drawnShape('arrow',[0,0,.00000001,0]),null);
  assert.equal(insert.drawnShape('arrow',[0,0,Infinity,1]),null);
 });
 test('SVG insertion creates a selected shape in a new viewport without changing existing IDs',()=>{

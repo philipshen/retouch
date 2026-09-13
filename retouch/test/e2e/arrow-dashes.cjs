@@ -9,6 +9,7 @@ const engine=process.env.RT_E2E_BROWSER||'chromium';
   const page=await browser.newPage(),cases=[];
   for(const length of [100,113,150])for(const dash of ['8 6','3 5 9 4','5.5 2.5'])for(const offset of [0,3,7])for(const startArrow of [false,true])for(const endArrow of [false,true]){
    const spec={kind:'arrow',x1:20,y1:30,x2:20+length,y2:30,headLength:12,headWidth:16,startArrow,endArrow,startHeadLength:8,startHeadWidth:10};
+   const created=require('../../src/svg-insert.cjs').drawnShape('arrow',[spec.x1,spec.y1,spec.x2,spec.y2]);assert.match(created,/^<path /);assert.ok(model.pointsFromPath(created.match(/d="([^"]+)"/)[1]));
    cases.push({length,dash,offset,startArrow,endArrow,points:model.generate(spec),path:model.arrowPath(model.generate(spec))});
   }
   const results=await page.evaluate(async cases=>{
@@ -27,9 +28,9 @@ const engine=process.env.RT_E2E_BROWSER||'chromium';
    return results;
   },cases);
   const pathFailures=results.filter(row=>row.pathChangedPixels),failures=results.filter(row=>row.changedPixels),separatedFailures=results.filter(row=>row.separatedChangedPixels);
-  console.log(JSON.stringify({engine,version:browser.version(),total:results.length,pathPassed:results.length-pathFailures.length,currentPassed:results.length-failures.length,separatedPassed:results.length-separatedFailures.length,failures},null,2));
+  console.log(JSON.stringify({engine,version:browser.version(),total:results.length,pathPassed:results.length-pathFailures.length,legacyPolylinePassed:results.length-failures.length,separatedPassed:results.length-separatedFailures.length,failures},null,2));
   assert.equal(separatedFailures.length,0,'Independent head geometry must preserve shaft dashes');
   assert.equal(pathFailures.length,0,'Converted arrow paths must preserve shaft dashes');
-  if(!process.env.RT_E2E_ARROW_PATH)assert.equal(failures.length,0,'Changing arrowheads must preserve shaft dashes');
+  if(process.env.RT_E2E_LEGACY_ARROW)assert.equal(failures.length,0,'Changing arrowheads must preserve shaft dashes');
  }finally{await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -30,7 +30,7 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
     if(process.env.RT_E2E_SVG_CREATE==='1'){
       assert.equal(kind,'react','self-closing HTML content is not a valid fixture');
       if(process.env.RT_E2E_SVG_NATIVE_PEN){await require('./native-pen-workflow.cjs')({page,app,target:app.locator('main'),select:()=>select('main · Empty frame'),read,original,wait,settled});assert.deepEqual(errors,[]);console.log(engine+' React: PASS native Pen in a transformed self-closing container, editable vectors and source history');return;}
-      for(const [name,selector]of [['main · Empty frame','main'],['svg · Empty canvas','svg[aria-label="Empty canvas"]'],['g · Empty group','g']])for(const [preset,tag]of [['rectangle','rect'],['circle','circle'],['ellipse','ellipse'],['line','line'],['arrow','polyline'],['triangle','polygon'],['star','polygon']]){
+      for(const [name,selector]of [['main · Empty frame','main'],['svg · Empty canvas','svg[aria-label="Empty canvas"]'],['g · Empty group','g[aria-label="Empty group"]']])for(const [preset,tag]of [['rectangle','rect'],['circle','circle'],['ellipse','ellipse'],['line','line'],['arrow','path'],['triangle','polygon'],['star','polygon']]){
         await select(name);let preview;
         if(nativeDraw&&selector==='main'){
           await wait(async()=>await page.getByRole('button',{name:'Shape tools',exact:true}).isEnabled());

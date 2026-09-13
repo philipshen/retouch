@@ -52,7 +52,7 @@ function describe(resolved){const c=context(resolved);return c?{path:c.d,propert
 function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason}),c=context(resolved);if(!c)return refuse('Convert a literal SVG primitive without dynamic geometry or non-metadata child content.');if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the shape.');
  const arrow=op.type==='convertSVGToArrow'?arrowFor(c):null;if(op.type==='convertSVGToArrow'&&!arrow)return refuse('Convert a literal line without dynamic fill or existing shape metadata.');
- const targetTag=arrow?'polyline':'path',addition=arrow?' points="'+arrow.points+'" fill="none" data-rt-shape="arrow"':' d="'+c.d+'"',properties=arrow?arrow.properties:c.fields.map(f=>f.name);
+ const targetTag='path',addition=arrow?' d="'+require('../shell/svg-parametric.js').arrowPath(arrow.points)+'" fill="none" data-rt-shape="arrow"':' d="'+c.d+'"',properties=arrow?arrow.properties:c.fields.map(f=>f.name);
  const out=new MagicString(resolved.source),{node,kind,tag}=c;let collect,name;
  if(kind==='react'){
   const ids=require('./id.cjs');collect=s=>ids.collectElements(s,resolved.relPath).elements;name=e=>ids.jsxElementName(e.node);
