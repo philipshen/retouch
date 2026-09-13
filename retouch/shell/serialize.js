@@ -12,14 +12,24 @@
   // their text changed), the fixed formatting vocabulary, and nothing else —
   // unknown wrappers (paste artifacts) flatten to their content.
   function serializeChildren(el, snapshot) {
-    var out = [];
+    var out = [], afterNativeBlock=false, afterSourceBlock=false;
+    function block(node){
+      if(node.nodeType!==1)return false;
+      var view=node.ownerDocument&&node.ownerDocument.defaultView;
+      if(view&&view.getComputedStyle)return /^(block|flow-root|flex|grid|list-item|table)$/.test(view.getComputedStyle(node).display);
+      return /^(DIV|P|H[1-6]|BLOCKQUOTE|UL|OL|LI|SECTION|ARTICLE)$/.test(node.tagName||'');
+    }
+    function append(item,sourceBlock){
+      if(afterNativeBlock&&!sourceBlock&&out.length&&out[out.length-1].t!=='break')out.push({t:'break'});
+      afterNativeBlock=false;afterSourceBlock=!!sourceBlock;out.push(item);
+    }
     var nodes = el.childNodes || [];
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
       if (n.__rtCaretPlaceholder) continue;
-      if (n.__rtKeep) { out.push({ t: 'keep', id: n.__rtKeep }); continue; }
+      if (n.__rtKeep) { append({ t: 'keep', id: n.__rtKeep },block(n)); continue; }
       if (n.nodeType === 3) {
-        if (n.textContent) out.push({ t: 'text', value: n.textContent });
+        if (n.textContent) append({ t: 'text', value: n.textContent });
         continue;
       }
       if (n.nodeType !== 1) continue;
@@ -30,7 +40,7 @@
         var kept={t:'keep',id:id};
         if(!unchanged)kept.children=serializeChildren(n,snapshot);
         if(n.tagName==='A'&&Object.prototype.hasOwnProperty.call(n,'__rtLinkHref')&&(n.__rtLinkHref===null||links.valid(n.__rtLinkHref))&&!(before&&typeof before==='object'&&before.href===n.__rtLinkHref))kept.href=n.__rtLinkHref;
-        out.push(kept);
+        append(kept,block(n));
         continue;
       }
       // Only validated range styles can create new styled spans.
@@ -46,23 +56,35 @@
         if(rangeStyles.validProperties(properties)){
           properties=Object.fromEntries(rangeStyles.names.filter(function(name){return Object.prototype.hasOwnProperty.call(properties,name);}).map(function(name){return [name,properties[name]];}));
           var entries=Object.entries(properties),children=serializeChildren(n,snapshot);
-          out.push(entries.length===1?{t:'style',property:entries[0][0],value:entries[0][1],children:children}:{t:'styles',properties:properties,children:children});
+          append(entries.length===1?{t:'style',property:entries[0][0],value:entries[0][1],children:children}:{t:'styles',properties:properties,children:children});
           continue;
         }
       }
-      if(n.tagName==='A'&&links.valid(n.getAttribute('href'))){out.push({t:'link',href:n.getAttribute('href'),children:serializeChildren(n,snapshot)});continue;}
+      if(n.tagName==='A'&&links.valid(n.getAttribute('href'))){append({t:'link',href:n.getAttribute('href'),children:serializeChildren(n,snapshot)});continue;}
       var tag = FMT[n.tagName];
       if (tag) {
-        out.push({ t: 'wrap', tag: tag, children: serializeChildren(n, snapshot) });
+        append({ t: 'wrap', tag: tag, children: serializeChildren(n, snapshot) });
         continue;
       }
       if (n.tagName === 'BR') {
-        out.push({ t: 'break' });
+        append({ t: 'break' });
+        continue;
+      }
+      // Native paragraph input can introduce unstamped DIV/P containers.
+      // Preserve their visible boundaries in the inline source vocabulary.
+      // Source-owned blocks above retain their own original markup instead.
+      if((n.tagName==='DIV'||n.tagName==='P')&&block(n)){
+        var paragraph=serializeChildren(n,snapshot);
+        if(paragraph.length){
+          if(out.length&&!afterSourceBlock&&out[out.length-1].t!=='break')out.push({t:'break'});
+          for(var part of paragraph)out.push(part);
+          afterNativeBlock=true;afterSourceBlock=false;
+        }
         continue;
       }
       // Unknown element: flatten to its content.
       var inner = serializeChildren(n, snapshot);
-      for (var j = 0; j < inner.length; j++) out.push(inner[j]);
+      for (var j = 0; j < inner.length; j++) append(inner[j]);
     }
     return out;
   }

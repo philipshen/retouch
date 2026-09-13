@@ -14786,3 +14786,28 @@ legacy clamped boxes and arbitrary layout changes between breakpoints remain
 outside this verification. No desktop rebuild or native launch was performed;
 full Figma Design parity, universal-site support and trusted distribution remain
 incomplete.
+
+### Native paragraph boundary preservation (2026-09-14)
+
+Native paragraph input can introduce unstamped DIV/P containers during rich-text
+editing. Saving now translates their visible line boundaries into the existing
+line-break vocabulary instead of concatenating adjacent text. Blank lines and
+nested formatting survive; existing source-owned blocks retain their markup and
+supply their own boundaries. Computed display distinguishes inline wrappers from
+block containers. Opaque kept text nodes never enter element-only CSS inspection.
+
+Desktop Enter still finishes editing, and Shift+Enter inserts a line break. This
+change handles browser-native paragraph input; it does not introduce semantic
+paragraph/list source nodes or preserve arbitrary paragraph margins and styles.
+
+All 1,219 unit tests pass (`/private/tmp/retouch-native-paragraph-units-final.log`).
+`RT_E2E_NATIVE_PARAGRAPH=1` passes HTML/React/Liquid in Chromium 145.0.7632.6 and
+HTML in WebKit 26.0. Logs are
+`/private/tmp/retouch-native-geometry-{html,react,liquid,webkit}.log`.
+The workflow uses native insertParagraph to split text and add an empty line,
+compares every character's vertical position before/after saving, checks saved
+line breaks and unchanged source on reopen, and exercises exact source undo/redo.
+Geometry is checked because native empty DIVs can add an extra innerText newline
+without adding a visible text line. Physical IME/input-device behavior, semantic
+paragraph/list editing and arbitrary source-layout preservation remain unverified.
+The desktop archive has not been rebuilt for this change.

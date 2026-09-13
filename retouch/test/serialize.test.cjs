@@ -158,3 +158,25 @@ test('kept anchor href removal serializes null while unchanged absent href stays
  assert.deepStrictEqual(serializeChildren(el('p',[anchor]),new Map([[id,{html:'Read',href:'/old'}]])),[{t:'keep',id,href:null}]);
  assert.deepStrictEqual(serializeChildren(el('p',[anchor]),new Map([[id,{html:'Read',href:null}]])),[{t:'keep',id}]);
 });
+test('native paragraph wrappers preserve line boundaries and blank lines',()=>{
+ const run=nodes=>serializeChildren(el('h1',nodes)),t=value=>({t:'text',value}),br={t:'break'};
+ assert.deepStrictEqual(run([text('Head'),el('div',[text('line')])]),[t('Head'),br,t('line')]);
+ assert.deepStrictEqual(run([el('div',[text('First')]),el('div',[text('Second')]),text('Third')]),[t('First'),br,t('Second'),br,t('Third')]);
+ assert.deepStrictEqual(run([el('div',[text('First')]),el('div',[el('br')]),el('div',[text('Third')])]),[t('First'),br,br,t('Third')]);
+ assert.deepStrictEqual(run([el('div',[text('First'),el('br')]),el('div',[text('Second')])]),[t('First'),br,t('Second')]);
+ assert.deepStrictEqual(run([el('div',[]),text('Text')]),[t('Text')]);
+ assert.deepStrictEqual(run([text('A'),el('div',[el('strong',[text('B')])])]),[t('A'),br,{t:'wrap',tag:'strong',children:[t('B')]}]);
+});
+test('source-owned block markup supplies its own boundary beside native paragraphs',()=>{
+ const source=el('p',[text('Kept')],{'data-rt':'0123456789'}),snapshot=new Map([['0123456789','Kept']]);
+ assert.deepStrictEqual(serializeChildren(el('div',[el('div',[text('Before')]),source,el('div',[text('After')])]),snapshot),[{t:'text',value:'Before'},{t:'keep',id:'0123456789'},{t:'text',value:'After'}]);
+});
+
+test('block detection respects inline display and never reads computed styles for kept text',()=>{
+ const wrapper=el('div',[text('inline')]);
+ wrapper.ownerDocument={defaultView:{getComputedStyle:()=>({display:'inline'})}};
+ assert.deepStrictEqual(serializeChildren(el('p',[text('before'),wrapper,text('after')])),[{t:'text',value:'before'},{t:'text',value:'inline'},{t:'text',value:'after'}]);
+ const kept=text('literal');kept.__rtKeep='0123456789';
+ kept.ownerDocument={defaultView:{getComputedStyle:()=>{throw Error('Text is not an Element');}}};
+ assert.deepStrictEqual(serializeChildren(el('p',[kept])),[{t:'keep',id:'0123456789'}]);
+});
