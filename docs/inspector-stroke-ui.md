@@ -190,3 +190,34 @@ Validation: 1,155 unit tests in
 `/private/tmp/retouch-border-edges-units-final.log`; HTML/React Chromium and
 Liquid WebKit in `/private/tmp/retouch-border-edges-{html,react,liquid}-final.log`.
 Screenshot inspected: `/private/tmp/retouch-border-edges.png`.
+
+## Revealing missing border edges
+
+Entering a positive literal width on an edge whose computed style is `none`
+now also writes `solid` on that edge. HTML writes width and style in one CSS
+change set; React/Liquid use one class update. Undo restores both together.
+The all-edge Weight control enables only missing edges and preserves existing
+dashed, dotted or double styles. A zero width does not enable an edge.
+
+The HTML validator now accepts individual border styles, and a later
+`border-style` shorthand clears older managed style longhands in that scope.
+The browser fixture starts with missing top/left edges, a dashed right edge,
+and a double bottom edge. It checks zero as a no-op, visible top creation,
+tablet-only left creation with phone fallback, all-edge width changes retaining
+styles, a later all-edge style change, and exact source Undo/Redo.
+
+This does not infer the resolved width of arbitrary CSS variables before a
+write. Width reset continues to reset the width property; use Undo to reverse
+the complete creation transaction. Full inside/outside stroke alignment and
+native desktop verification remain separate unfinished work.
+
+The installed Tailwind compiler does not generate `border-t-solid` and related
+edge-style names. Class adapters now emit explicit property utilities such as
+`[border-top-style:solid]`, verified in the rendered React/Liquid fixtures.
+The initial class fixtures failed before editing because their edge-style names
+were unsupported; they now use the same supported explicit-property syntax.
+
+Validation: 1,156 unit tests in
+`/private/tmp/retouch-border-visibility-units-final.log`; HTML Chromium in
+`/private/tmp/retouch-border-visibility-html-final.log`; React Chromium and
+Liquid WebKit in `/private/tmp/retouch-border-visibility-{react,liquid}-verified.log`.

@@ -195,7 +195,11 @@
    if(property==='text-align')input.dataset.textDirection=css.direction;
    if(property==='font-weight'){input.placeholder='400';input.inputMode='decimal';}
    input.value=value;input.oninput=()=>input.setCustomValidity('');
-   input.onchange=()=>{const value=input.value.trim();if(!CSS.supports(property,value)||!valid(property,value)){input.setCustomValidity('Use simple CSS lengths with units, keywords, or colors. Spacing accepts up to four values; gap accepts two.');input.reportValidity();return;}save(property,value,width);};
+   input.onchange=()=>{const value=input.value.trim();if(!CSS.supports(property,value)||!valid(property,value)){input.setCustomValidity('Use simple CSS lengths with units, keywords, or colors. Spacing accepts up to four values; gap accepts two.');input.reportValidity();return;}if(/^border(?:-(?:top|right|bottom|left))?-width$/.test(property)){
+     const changes={[property]:value},sides=['top','right','bottom','left'],[a,b=a,c=a,d=b]=value.split(/\s+/),widths=[a,b,c,d];
+     for(const [i,side]of sides.entries())if((property==='border-width'||property==='border-'+side+'-width')&&parseFloat(property==='border-width'?widths[i]:value)>0&&css.getPropertyValue('border-'+side+'-style')==='none')changes['border-'+side+'-style']='solid';
+     save(changes,null,width);
+    }else save(property,value,width);};
    const target=property.endsWith('radius')?corners:/^(font-|line-height|letter-spacing|text-)/.test(property)||property==='color'?typography:sec;
    I.field(target,label+' (CSS)',input);
    if(['width','height'].includes(property))input.retouchDimension={target:el,axis:property,box:'css'};

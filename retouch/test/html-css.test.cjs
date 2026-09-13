@@ -257,3 +257,11 @@ test('border color shorthand preserves four literal colors and rejects malformed
  for(const invalid of ['red blue green black white','rgb(1 2 3 red','red;display:none','red url(test)','red var(--paint)'])assert.equal(values.valid('border-color',invalid),false,invalid);
  for(const valid of ['red','red blue','rgb(1 2 3) #fff red'])assert.ok(values.parseBorderColors(valid));
 });
+
+test('border width and visibility changes write atomically and style shorthand supersedes edges',()=>{
+ const changes={'border-top-width':'7px','border-top-style':'solid','border-left-style':'dashed'};
+ const result=css.plan(resolve(original),{width:768,changes});assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);
+ const source=result.edits[0].after;assert.deepEqual(css.describe(resolve(source)).cssRules[768],changes);
+ const reset=edit(source,768,'double','border-style');assert.equal(reset.ok,true,reset.reason);assert.deepEqual(css.describe(resolve(reset.edits[0].after)).cssRules[768],{'border-top-width':'7px','border-style':'double'});
+ const invalid=css.plan(resolve(original),{width:0,changes:{'border-top-width':'7px','border-top-style':'url(evil)'}});assert.equal(invalid.ok,false);
+});

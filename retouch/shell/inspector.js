@@ -519,7 +519,7 @@
     const matches=t=>(property==='width'?borderWidthToken(t):/^border(?:-[trblxyse])?-(solid|dashed|dotted|double|hidden|none)$/.test(t))||new RegExp('^\\[border(?:-[a-z]+(?:-[a-z]+)?)?-'+property+':').test(t);
     let addition=value===null?'':property==='width'?'border-['+value+'px]':'border-'+value;
     if(addition&&[...tokens(classes),...tokens(inherited)].some(token=>/^!|!$/.test(token)&&(matches(base(token)||'')||/^\[border(?:-[trblxyse]|-top|-right|-bottom|-left)?:/.test(base(token)||''))))addition='!'+addition;
-    if(side!==null){if(addition)addition=addition.replace('border-', 'border-'+edges[side]+'-');return replace(classes,t=>((t==='border-'+edges[side]||t.startsWith('border-'+edges[side]+'-'))&&matches(t))||t.startsWith('[border-'+side+'-'+property+':'),addition);}
+    if(side!==null){if(addition)addition=property==='style'?(addition.startsWith('!')?'!':'')+'[border-'+side+'-style:'+value+']':addition.replace('border-', 'border-'+edges[side]+'-');return replace(classes,t=>((t==='border-'+edges[side]||t.startsWith('border-'+edges[side]+'-'))&&matches(t))||t.startsWith('[border-'+side+'-'+property+':'),addition);}
     return replace(classes,matches,addition);
   }
   function cornerRadiusClasses(classes,corner,value,inherited=''){
@@ -574,7 +574,7 @@
     const borderWidths=['Top','Right','Bottom','Left'].map(side=>css['border'+side+'Width']);
     const borderWidth=number(sec,'Border width (px)',borderWidths.every(v=>v===borderWidths[0])?parseFloat(borderWidths[0]):NaN,0,100,v=>{
       let next=borderClasses(info.className,'width',v,info.anchorInheritedClasses);
-      if(v>0&&css.borderTopStyle==='none')next=borderClasses(next,'style','solid',info.anchorInheritedClasses);
+      if(v>0)for(const side of ['top','right','bottom','left'])if(css.getPropertyValue('border-'+side+'-style')==='none')next=borderClasses(next,'style','solid',info.anchorInheritedClasses,side);
       save(next);
     });
     borderWidth.placeholder='Mixed';

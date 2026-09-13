@@ -171,7 +171,7 @@ test('individual stroke widths preserve other edges, scopes, colors and inherite
  assert.equal(stroke(source,'width',7,'!border-2','top'),'border-4 border-b-8 border-red-500 border-dashed md:border-t-6 !border-t-[7px]');
  assert.equal(stroke(source,'width',null,'','top'),'border-4 border-b-8 border-red-500 border-dashed md:border-t-6');
  assert.equal(stroke('[border-left-width:2px] !border-x-4','width',5,'','left'),'!border-x-4 !border-l-[5px]');
- assert.equal(stroke('border-l-dashed border-r-double','style','solid','','left'),'border-r-double border-l-solid');
+ assert.equal(stroke('border-l-dashed border-r-double','style','solid','','left'),'border-r-double [border-left-style:solid]');
  assert.equal(stroke('border-t border-t-red-500 border-b','width',null,'','top'),'border-t-red-500 border-b');
  assert.throws(()=>stroke('','width',3,'','bad'));
 });

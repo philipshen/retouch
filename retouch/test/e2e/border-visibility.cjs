@@ -1,0 +1,21 @@
+'use strict';
+const assert=require('node:assert/strict');
+module.exports=async({page,app,kind,read,wait,settled})=>{
+ const states=[read()],shape=app.locator('h1'),screen=page.getByLabel('Screen size',{exact:true}),scope=page.getByLabel('Style screen scope',{exact:true});
+ const state=()=>shape.evaluate(el=>{const css=getComputedStyle(el);return ['Top','Right','Bottom','Left'].map(s=>[parseFloat(css['border'+s+'Width']),css['border'+s+'Style']]);});
+ const check=async expected=>wait(async()=>JSON.stringify(await state())===JSON.stringify(expected));
+ const record=async()=>{await wait(()=>read()!==states.at(-1));states.push(read());};
+ const field=side=>page.getByLabel('Border '+(side?side+' ':'')+'width ('+(kind==='html'?'CSS':'px')+')',{exact:true});
+ const write=async(side,value)=>{await field(side).fill(value+(kind==='html'?'px':''));await field(side).press('Tab');await settled();await record();};
+ await page.locator('.border-edges > summary').click();await field('top').waitFor();const original=[[0,'none'],[3,'dashed'],[3,'double'],[0,'none']];await check(original);
+ await field('top').fill(kind==='html'?'0px':'0');await field('top').press('Tab');await settled();assert.equal(read(),states[0]);await check(original);
+ await write('top',7);await check([[7,'solid'],[3,'dashed'],[3,'double'],[0,'none']]);
+ await screen.focus();await screen.selectOption('768x1024');await settled();await scope.selectOption(kind==='html'?'min-[768px]:':'md:');await settled();await write('left',9);await check([[7,'solid'],[3,'dashed'],[3,'double'],[9,'solid']]);
+ await screen.focus();await screen.selectOption('390x844');await settled();await check([[7,'solid'],[3,'dashed'],[3,'double'],[0,'none']]);await scope.selectOption('');await settled();
+ await write('',4);await check([[4,'solid'],[4,'dashed'],[4,'double'],[4,'solid']]);
+ await page.getByLabel('Border style'+(kind==='html'?' (CSS)':''),{exact:true}).selectOption('dotted');await settled();await record();await check([[4,'dotted'],[4,'dotted'],[4,'dotted'],[4,'dotted']]);
+ for(let i=states.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states[i]);}await check(original);
+ for(let i=1;i<states.length;i++){await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===states[i]);}await check([[4,'dotted'],[4,'dotted'],[4,'dotted'],[4,'dotted']]);
+ for(let i=states.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states[i]);}await check(original);
+ console.log('BORDER VISIBILITY PASS',kind);
+};
