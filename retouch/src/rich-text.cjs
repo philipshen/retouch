@@ -1,5 +1,5 @@
 'use strict';
-const WRAP_TAGS = new Set(['strong', 'em', 'u', 's']);
+const WRAP_TAGS = new Set(['strong', 'em', 'u', 's', 'sup', 'sub']);
 
 function validateChildrenTree(children, depth) {
   if (!Array.isArray(children)) return 'setChildren needs a children array.';

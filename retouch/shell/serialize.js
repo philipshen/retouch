@@ -2,7 +2,7 @@
 // so it can be unit-tested in Node with a tiny fake DOM. Loaded as a plain
 // browser script (defines window.RetouchSerialize) and require()-d in tests.
 (function (root) {
-  var FMT = { STRONG: 'strong', B: 'strong', EM: 'em', I: 'em', U: 'u', S: 's', STRIKE: 's', DEL: 's' };
+  var FMT = { SUP: 'sup', SUB: 'sub', STRONG: 'strong', B: 'strong', EM: 'em', I: 'em', U: 'u', S: 's', STRIKE: 's', DEL: 's' };
 
   // root: a DOM element being edited. snapshot: Map(id -> original textContent)
   // of stamped descendants captured when editing began. Produces the

@@ -22,6 +22,7 @@ let historyRecoveryRequired=!!window.__RT_RENDERING?.historyRecoveryRequired;
 let mode = historyRecoveryRequired?'interact':'edit'; // 'edit' | 'interact'
 let renderedSelection=null; // Live DOM anchor for the explicitly chosen occurrence.
 let sel = null; // { hostId, instanceId, scope: 'host'|'instance', info }
+let inlineFormatCleanup=()=>{};
 let editing = null; // { el, id, info, original, originalHTML, snapshot, originalTree } during inline text editing
 let inspectorTextCommit=null,inspectorSelectionSerial=0;
 let hoverEl = null;
@@ -152,7 +153,7 @@ iframe.addEventListener('load', () => {
   try {
     if (!iframe.contentDocument || iframe.contentWindow.location.origin !== location.origin) return;
     classificationSerial++;
-    if (editing?.el.ownerDocument !== iframe.contentDocument) editing = null;
+    if (editing?.el.ownerDocument !== iframe.contentDocument) {inlineFormatCleanup();editing = null;}
     hoverEl = null;
     hookFrame(iframe.contentDocument, iframe.contentWindow);
     layers.attach(iframe.contentDocument);
@@ -655,6 +656,7 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
   // text through the frame hook below.
   el.setAttribute('contenteditable', 'true');
   el.focus();
+  showInlineFormatToolbar();
   try {
     const d = doc();
     const range = evt && d.caretRangeFromPoint(evt.clientX, evt.clientY);
@@ -669,7 +671,7 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
 async function commitInlineEdit() {
   if (!editing) return;
   const ed = editing;
-  editing = null;
+  inlineFormatCleanup();editing = null;
   ed.el.removeAttribute('contenteditable');
   const children = serializeChildren(ed.el, ed.snapshot);
   if (JSON.stringify(children) === JSON.stringify(ed.originalTree)) { if(ed.info.richText)ed.el.innerHTML=ed.originalHTML;return; }
@@ -690,7 +692,7 @@ async function commitInlineEdit() {
   // our hand-mutated DOM crashes its committer (removeChild NotFoundError),
   // so a structural commit reloads the frame after the write: React remounts
   // clean from the new source. Text-only commits keep the smooth HMR path.
-  const structural = op.type === 'setChildren';
+  const structural = op.type === 'setChildren',expectedFormatting=structural?JSON.stringify(serializeChildren(ed.el)):null;
   Object.assign(op, sourcePayload(ed.info));
   const res = await api('POST', '/rt/__api/op', op);
   if (res && res.ok) {
@@ -702,7 +704,10 @@ async function commitInlineEdit() {
       ed.info.text = op.text;
       for (const m of (ed.info.textSource ? [] : matchingEls(ed.id))) if (m !== ed.el) m.textContent = op.text;
     }
-    if (structural || window.__RT_RENDERING?.reloadAfterWrite) reloadFrame();
+    if (structural) {
+      await reloadFrame();
+      await refreshWrittenElement(ed.info,el=>JSON.stringify(serializeChildren(el))===expectedFormatting);
+    } else if (window.__RT_RENDERING?.reloadAfterWrite) reloadFrame();
     else if (sel && sel.info && sel.info.id === ed.id) {
       sel.info.hash = res.hash;
       renderPanel();
@@ -727,7 +732,7 @@ function reloadFrame({keepDrawing=null}={}) {
   const bookmark=sel&&!sel.multiple&&renderedSelection?.id===activeId()?RetouchComponentInstances.captureOccurrence(matchingInDocument(doc(),activeId(),sel.info),renderedSelection.element):null;
   return new Promise(resolve => {
     classificationSerial++;
-    editing = null;
+    inlineFormatCleanup();editing = null;
     hoverEl = null;
     const y = iframe.contentWindow?.scrollY || 0;
     let timeout, finished = false;
@@ -825,6 +830,14 @@ async function applyChildren(id, children) {
   else toast((res && res.reason) || (res && res.error) || 'Undo failed', 'err');
 }
 
+function showInlineFormatToolbar(){
+  inlineFormatCleanup();if(!editing||editing.info.canSetChildren===false)return;
+  const d=doc(),bar=document.createElement('div');bar.className='inline-format-toolbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Selected text formatting');
+  for(const [tag,label,text]of [['strong','Bold selected text','B'],['em','Italic selected text','I'],['sup','Superscript selected text','x²'],['sub','Subscript selected text','x₂']]){const button=document.createElement('button');button.type='button';button.textContent=text;button.setAttribute('aria-label',label);button.title=label;button.onpointerdown=event=>event.preventDefault();button.onclick=()=>{toggleWrap(tag);update();};bar.append(button);}
+  const update=()=>{const selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null,valid=editing&&range&&!range.collapsed&&editing.el.contains(range.startContainer)&&editing.el.contains(range.endContainer);for(const button of bar.children)button.disabled=!valid;};
+  d.addEventListener('selectionchange',update);document.body.append(bar);update();inlineFormatCleanup=()=>{d.removeEventListener('selectionchange',update);bar.remove();inlineFormatCleanup=()=>{};};
+}
+
 /* ---------- bold / italic on selection (Cmd+B / Cmd+I) ---------- */
 function toggleWrap(tag) {
   const d = doc();
@@ -833,10 +846,20 @@ function toggleWrap(tag) {
   const s = d.getSelection();
   if (!s || !s.rangeCount) return;
   const r = s.getRangeAt(0);
-  if (r.collapsed) return;
+  if (r.collapsed||!editing.el.contains(r.startContainer)||!editing.el.contains(r.endContainer)) return;
   // Toggle off: the selection sits inside an unstamped wrapper of this tag.
   const cac = r.commonAncestorContainer;
   const start = cac.nodeType === 1 ? cac : cac.parentElement;
+  if(tag==='sup'||tag==='sub'){
+    const previous=start?.closest('sup,sub');
+    if(previous&&previous!==editing.el&&editing.el.contains(previous)&&previous.contains(r.startContainer)&&previous.contains(r.endContainer)){
+      if(previous.childNodes.length!==1||previous.firstChild.nodeType!==3||previous.hasAttribute('data-rt-keep')||previous.hasAttribute('data-rt')||previous.hasAttribute('data-rt-i')){toast('Edit this nested script formatting in its source.','err');return;}
+      const prefix=d.createRange();prefix.selectNodeContents(previous);prefix.setEnd(r.startContainer,r.startOffset);const suffix=d.createRange();suffix.selectNodeContents(previous);suffix.setStart(r.endContainer,r.endOffset);
+      const parts=d.createDocumentFragment(),before=prefix.toString(),after=suffix.toString(),middle=previous.tagName.toLowerCase()===tag?d.createTextNode(r.toString()):d.createElement(tag);if(middle.nodeType===1)middle.textContent=r.toString();
+      if(before){const node=previous.cloneNode(false);node.textContent=before;parts.append(node);}parts.append(middle);if(after){const node=previous.cloneNode(false);node.textContent=after;parts.append(node);}previous.replaceWith(parts);
+      const selected=d.createRange();selected.selectNodeContents(middle);s.removeAllRanges();s.addRange(selected);return;
+    }
+  }
   const selector = tag === 'strong' ? 'strong,b' : tag === 'em' ? 'em,i' : tag;
   const existing = start && start.closest(selector);
   if (

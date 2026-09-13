@@ -93,3 +93,10 @@ test('empty text nodes are dropped', () => {
   const tree = serializeChildren(el('p', [text(''), text('x')]));
   assert.deepStrictEqual(tree, [{ t: 'text', value: 'x' }]);
 });
+
+
+test('superscript and subscript retain selected text without attributes',()=>{
+ const tree=serializeChildren(el('p',[text('H'),el('sub',[text('2')],{onclick:'bad'}),text('O x'),el('sup',[text('2')])]));
+ assert.deepStrictEqual(tree,[{t:'text',value:'H'},{t:'wrap',tag:'sub',children:[{t:'text',value:'2'}]},{t:'text',value:'O x'},{t:'wrap',tag:'sup',children:[{t:'text',value:'2'}]}]);
+ assert.equal(require('../src/rich-text.cjs').validateChildrenTree(tree,0),null);
+});

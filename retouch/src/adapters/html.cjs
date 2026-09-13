@@ -2,6 +2,7 @@
 // HTML source documents form the editing foundation for renderer-independent
 // site imports. Locations come from the HTML parser, never from client mappings.
 const path=require('node:path'),crypto=require('node:crypto');
+const richText=require('../rich-text-source.cjs');
 const parse5=require('parse5'),MagicString=require('magic-string'),structure=require('../structure.cjs'),insertion=require('../html-insert.cjs');
 const hash=source=>crypto.createHash('sha1').update(source).digest('hex');
 const skip=new Set(['script','style','template']);
@@ -41,9 +42,10 @@ function plain(el){return el.location.endTag&&(el.node.childNodes||[]).every(n=>
 function picture(el){for(let p=el.node.parentNode;p;p=p.parentNode)if(p.tagName==='picture')return true;return false;}
 function describe(resolved){
  const el=resolved.element,canText=el.node.namespaceURI==='http://www.w3.org/1999/xhtml'&&!!plain(el),canSrc=el.tag==='img'&&attr(el,'srcset')===null&&!picture(el);
+ let rich=null;if(el.node.namespaceURI==='http://www.w3.org/1999/xhtml'&&textTags.has(el.tag)&&el.location.endTag&&typeof resolved.source==='string'){try{rich=richText.describe(resolved.source.slice(el.location.startTag.endOffset,el.location.endTag.startOffset),el.id).descriptor;}catch{}}
  const svgDuplication=require('../svg-duplicate.cjs').describe(resolved);
  return {svgGradientCreation:require('../svg-gradient-create.cjs').describe(resolved,'html'),svgGradients:require('../html-svg-gradient.cjs').describe(resolved),svgTransform:require('../svg-transform.cjs').describe(resolved,'html'),svgConversion:require('../svg-convert.cjs').describe(resolved),svgDuplication,svgMovement:require('../svg-move.cjs').describe(resolved),svgDeletion:require('../svg-delete.cjs').describe(resolved),svgInsertion:require('../svg-insert.cjs').describe(resolved),svgGeometry:require('../svg-geometry.cjs').describe(el),structure:{...structure.describe(resolved,'html'),...insertion.describe(resolved),...require('../svg-delete.cjs').describe(resolved),...require('../svg-move.cjs').describe(resolved),...svgDuplication},id:el.id,kind:'host',tag:el.tag,file:resolved.relPath,hash:resolved.hash,className:attr(el,'class')||'',classNameDynamic:false,
-  canRename:true,layerName:attr(el,'data-rt-name')||'',text:canText?el.node.childNodes.map(n=>n.value).join(''):null,textDynamic:!canText,mixedText:false,canSetChildren:false,
+  canRename:true,layerName:attr(el,'data-rt-name')||'',text:canText?el.node.childNodes.map(n=>n.value).join(''):null,textDynamic:!canText&&!rich,mixedText:!!rich&&!canText,canSetChildren:!!rich,richText:rich,
   textReason:canText?null:'This HTML region contains nested markup, comments, or an implicit closing tag.',
   src:attr(el,'src'),srcDynamic:false,canSetSrc:canSrc,srcReason:canSrc?null:'Select a plain image without responsive sources.',
   canSetTag:!!el.location.endTag&&textTags.has(el.tag),context:resolved.context||null};
@@ -79,6 +81,10 @@ function planOp(resolved,op){
   if(!plain(el))return refuse('Editing nested markup or implicit closing tags needs a structured HTML operation.');
   if(typeof op.text!=='string'||op.text.length>1000000)return refuse('Invalid text.');
   if(op.text!==el.node.childNodes.map(child=>child.value).join('')){const start=el.location.startTag.endOffset,end=el.location.endTag.startOffset;if(start===end)out.appendLeft(start,escapeText(op.text));else out.overwrite(start,end,escapeText(op.text));}
+ }else if(op.type==='setChildren'){
+  if(!describe(resolved).canSetChildren)return refuse('This HTML region cannot preserve structured text edits.');
+  const start=el.location.startTag.endOffset,end=el.location.endTag.startOffset;let replacement;try{replacement=richText.rewrite(resolved.source.slice(start,end),el.id,op.children);}catch(error){return refuse(error.message);}
+  if(start===end)out.appendLeft(start,replacement);else out.overwrite(start,end,replacement);
  }else if(op.type==='setTag'){
   if(!describe(resolved).canSetTag||!textTags.has(op.tag))return refuse('Unsupported HTML tag change.');
   out.overwrite(el.location.startTag.startOffset+1,el.location.startTag.startOffset+1+el.tag.length,op.tag);
@@ -92,9 +98,14 @@ function planOp(resolved,op){
  if(after===resolved.source)return {ok:true,hash:resolved.hash,edits:[]};
  const beforeElements=resolved.elements||collect(resolved.source,resolved.relPath).elements;
  const nextElements=collect(after,resolved.relPath).elements;
- if(beforeElements.length!==nextElements.length||beforeElements.some((before,i)=>before.id!==nextElements[i].id||nextElements[i].tag!==(before.id===el.id&&op.type==='setTag'?op.tag:before.tag)))return refuse('This edit changes the parsed HTML structure. Use a structured document operation.');
- return {ok:true,hash:hash(after),edits:[{file:resolved.file,before:resolved.source,after}]};
+ if(op.type==='setChildren'){
+  const nextRoot=nextElements.find(node=>node.id===el.id),descendant=(node,root)=>{for(let p=node.parentNode;p;p=p.parentNode)if(p===root)return true;return false;};
+  if(!nextRoot||nextRoot.tag!==el.tag||nextRoot.location.endTag?.startOffset!==el.location.endTag.startOffset+after.length-resolved.source.length)return refuse('The rich text would change the surrounding HTML structure.');
+  const beforeOutside=beforeElements.filter(item=>!descendant(item.node,el.node)),afterOutside=nextElements.filter(item=>!descendant(item.node,nextRoot.node));
+  if(beforeOutside.length!==afterOutside.length||beforeOutside.some((item,index)=>item.id!==afterOutside[index].id||item.tag!==afterOutside[index].tag))return refuse('The rich text would change the surrounding HTML structure.');
+ }else if(beforeElements.length!==nextElements.length||beforeElements.some((before,i)=>before.id!==nextElements[i].id||nextElements[i].tag!==(before.id===el.id&&op.type==='setTag'?op.tag:before.tag)))return refuse('This edit changes the parsed HTML structure. Use a structured document operation.');
+ return {ok:true,hash:hash(after),...(op.type==='setChildren'?{structural:true}:{}),edits:[{file:resolved.file,before:resolved.source,after}]};
 }
 module.exports={name:'html',matches:file=>/\.html?$/i.test(file),collect,stamp,contentHash:hash,describe,planOp,
  applyOp:(resolved,op)=>require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),planOp(resolved,op)),
- capabilities:{classAttr:'class',ops:['setSVGGradient','insertSVG','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow','reparentElement','renameElement','insertElement','setClasses','setText','setTag','setSrc',...structure.types]}};
+ capabilities:{classAttr:'class',ops:['setSVGGradient','insertSVG','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow','reparentElement','renameElement','insertElement','setClasses','setText','setChildren','setTag','setSrc',...structure.types]}};

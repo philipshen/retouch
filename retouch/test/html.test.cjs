@@ -60,3 +60,13 @@ test('HTML layer names preserve semantics and escape source markup',()=>{
  assert.ok(result.edits[0].after.includes('aria-label="Heading">Visible title</h1>'));
  assert.equal(html.planOp(resolved,{type:'renameElement',name:'Bad\nname'}).refused,true);
 });
+
+
+test('HTML structured text preserves nested markup and rejects foreign kept nodes',()=>withDocument(({file,resolve})=>{
+ const resolved=resolve('p'),info=html.describe(resolved),before=fs.readFileSync(file,'utf8');assert.equal(info.canSetChildren,true);assert.equal(info.mixedText,true);
+ const kept=info.richText.children.find(c=>c.t==='element');assert.equal(kept.tag,'b');
+ const children=[{t:'text',value:'Keep '},{t:'keep',id:kept.id,children:[{t:'wrap',tag:'sup',children:[{t:'text',value:'nested'}]}]},{t:'text',value:' text.'}];
+ assert.equal(html.applyOp(resolved,{type:'setChildren',children:[{t:'keep',id:'0000000000'}],fileHash:resolved.hash}).ok,false);assert.equal(fs.readFileSync(file,'utf8'),before);
+ const result=html.applyOp(resolved,{type:'setChildren',children,fileHash:resolved.hash});assert.equal(result.ok,true,JSON.stringify(result));assert.equal(fs.readFileSync(file,'utf8'),before.replace('<b>nested</b>','<b><sup>nested</sup></b>'));
+ const history=new SourceHistory(),token=history.record(result.edits);assert.ok(token);
+}));

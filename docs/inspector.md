@@ -540,3 +540,49 @@ the browser mechanism can render available glyphs, not automatic fallback or
 full text-position parity for arbitrary fonts. Reference:
 [CSS font position](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/font-variant-position).
 The desktop candidate has not been rebuilt with this change.
+
+
+### Selected-range rich text and script formatting (2026-09-13)
+
+Inline text editing now shows a toolbar for bold, italic, superscript and
+subscript. Pointer interaction preserves the iframe text selection. Superscript
+and subscript create semantic `sup`/`sub` wrappers using the constrained rich-text
+source tree, so ordinary browser styling can render them even when a font lacks
+OpenType script glyphs. Buttons require a nonempty selection inside the edited
+layer. The toolbar is removed when the edit commits or the frame reloads and sits
+above the tool dock/status toast. Text is saved through the existing Enter or
+click-away commit path.
+
+New, simple script wrappers can switch between superscript/subscript or toggle
+off for a partial text range without changing the surrounding characters.
+Switching nested or source-preserved script wrappers remains refused; full rich
+text normalization is unfinished. Author CSS can override native sup/sub styling.
+
+HTML now supports structured `setChildren` through the shared rich-text source
+writer. Nested elements retain raw source markup through kept-node identities;
+foreign IDs and invalid wrappers are rejected. The planner checks the edited
+root's closing boundary and unchanged parsed elements outside its subtree before
+allowing the structural transaction. This also enables inline bold/italic on
+supported HTML regions, beyond the old plain-text-only adapter.
+
+A React failure revealed that the old immediate structural reload could serve a
+stale compiled revision after a successful source write. The diagnostic contained
+saved `H<sup>ead</sup>line` but rendered `Headline` with the pre-edit revision.
+Structural text commits now follow the reload with compiled-revision and formatted
+content verification through `refreshWrittenElement`. This retains the existing
+structural-reload boundary; it is not a universal no-navigation guarantee.
+
+Validation: 1,164 unit tests passed in
+`/private/tmp/retouch-inline-format-units-complete.log`. HTML/React Chromium and
+Liquid WebKit formatting, actual smaller font size, switching, text preservation,
+cleanup and exact undo/redo passed in
+`/private/tmp/retouch-inline-script-{html,react,liquid}-settled.log`. Partial-range
+switching/toggling passed in `/private/tmp/retouch-inline-script-partial.log`.
+Liquid translation/setting JSON, nested attributes, dynamic placeholders and
+exact undo passed in `/private/tmp/retouch-inline-format-liquid-rich-final.log`.
+The full HTML editing regression passed in
+`/private/tmp/retouch-inline-format-html-site.log` before the additional structural
+revision wait; the final targeted HTML flow covers that wait. The final toolbar
+and rendered subscript screenshot was inspected at
+`/private/tmp/retouch-inline-format-toolbar-final.png`. Desktop packaging has not
+yet been rebuilt with these changes.
