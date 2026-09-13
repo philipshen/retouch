@@ -26,6 +26,7 @@ module.exports=async function resizeWorkflow({page,app,kind,read,wait,settled}){
  await page.getByRole('button',{name:'Lock vector proportions',exact:true}).click();await height.fill('80');await height.press('Tab');await settled();assert.equal(Number(await width.inputValue()),180);assert.equal(Number(await height.inputValue()),80);assert.equal(await page.getByRole('button',{name:'Lock vector proportions',exact:true}).getAttribute('aria-pressed'),'true');if(process.env.RT_E2E_SVG_SIZE_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_SVG_SIZE_SCREENSHOT});
  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(Number(await width.inputValue()),90);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);
  await require('./svg-ratio.cjs')({page,app,select,read,wait,settled,original,kind});
+ await require('./svg-equations.cjs')({page,select,read,wait,settled,original,kind});
  // Pose uses SVG transforms, with center-preserving rotation and parent coordinates.
  await select('rect','Box');const angle=page.getByRole('textbox',{name:'Vector rotation (°)',exact:true}),x=page.getByRole('textbox',{name:'Vector X',exact:true}),y=page.getByRole('textbox',{name:'Vector Y',exact:true});assert.equal(Number(await angle.inputValue()),-10);
  const center=()=>box.evaluate(el=>{const b=el.getBBox(),m=el.getScreenCTM();return {x:m.a*(b.x+b.width/2)+m.c*(b.y+b.height/2)+m.e,y:m.b*(b.x+b.width/2)+m.d*(b.y+b.height/2)+m.f};}),c0=await center();

@@ -13923,3 +13923,33 @@ Receipt: desktop/verification/2026-09-13-vector-transforms.json.
 Archive: /private/tmp/retouch-desktop-transform-04cf8fd/Retouch-0.1.0-mac.zip.
 SHA-256: d93c3cff06f6011a9b197420b4270ed48bdde4cb18046d7645d863cdafe1d4b8.
 No push was performed.
+
+## 2026-09-13 — Calculations in vector transform fields
+
+Vector X/Y, rotation and width/height fields now evaluate arithmetic using
++, -, *, /, parentheses and right-associative exponentiation. Enter evaluates
+and applies; Escape restores the original displayed value. Equations can be
+appended to the existing number (60*1.5) or replace it ((120-16)/2). A replaced
+signed number remains absolute, preserving negative coordinate entry. This follows
+the equation-entry behavior documented in Figma's inspector reference:
+https://help.figma.com/hc/en-us/articles/360039956914-Adjust-alignment-rotation-position-and-dimensions
+
+The reusable parser tokenizes a bounded expression without executing JavaScript.
+It rejects malformed/nonfinite calculations and division by zero; existing
+field-specific position, angle and size limits still apply. Locked dimensions
+retain their aspect ratio, each completed edit has exact source history, and
+no-op expressions do not create transactions. Canceling/restoring an unchanged
+rounded display value cannot quantize more precise source geometry.
+
+Validation: 1,021 unit tests passed. HTML/WebKit 26, React/Chromium and
+Liquid/Chromium equation workflows reached terminal zero exits, covering locked
+sizes, X/Y, rotation, Enter/Escape, invalid expressions, field limits and exact
+Undo/Redo. A final Liquid rerun also passed after the precision-preserving cancel
+guard. Existing ratio, numeric pose and 13 SVG resize cases remain covered.
+Logs: /private/tmp/retouch-equations-{html,react,liquid}.log,
+/private/tmp/retouch-equations-liquid-final.log and
+/private/tmp/retouch-equations-units-final.log.
+
+Mixed-selection equations, consistent calculations throughout other inspector
+fields, scrubbing parity, full Figma/any-site behavior and trusted native release
+remain open. No desktop rebuild or push was performed.
