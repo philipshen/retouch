@@ -6,6 +6,11 @@
  function inverse(m){const d=m[0]*m[3]-m[1]*m[2];return Math.abs(d)<1e-9?null:[m[3]/d,-m[1]/d,-m[2]/d,m[0]/d,(m[2]*m[5]-m[3]*m[4])/d,(m[1]*m[4]-m[0]*m[5])/d];}
  function transform(parent,global,own){const inv=inverse(parent);return inv&&A().multiply(A().multiply(A().multiply(inv,global),parent),own);}
  function matricesFor(members,global){return Object.fromEntries(members.map(m=>[m.info.id,m.covered?m.info.svgTransform.matrix:transform(m.parent,global,m.info.svgTransform.matrix)]));}
+ function alignmentMatrices(members,mode){
+  const outer=members.filter(m=>!m.covered),layout=root.RetouchSelectionLayout||require('./selection-layout.js'),deltas=layout.arrange(outer.map(m=>m.rect),mode,null,{allowDegenerate:true}),moves=new Map(outer.map((m,i)=>[m,deltas[i]]));
+  const result=Object.fromEntries(members.map(m=>{const delta=moves.get(m);return [m.info.id,delta?transform(m.parent,[1,0,0,1,delta.x,delta.y],m.info.svgTransform.matrix):m.info.svgTransform.matrix];}));
+  if(Object.values(result).some(m=>!A().valid(m)))throw Error('Keep every aligned vector within the supported range.');return result;
+ }
  function resizeBounds(box,axis,value,locked=false){
   if(!['width','height'].includes(axis)||!Number.isFinite(value)||value<=0||value>100000||!box[axis]||(locked&&(!box.width||!box.height)))return null;
   const scale=value/box[axis],sx=axis==='width'||locked?scale:1,sy=axis==='height'||locked?scale:1;
@@ -100,6 +105,8 @@
   function apply(kind,value){if(!current())throw Error('Re-select these vectors before transforming.');const {members,box,w}=capture(infos,elements),g=fieldMatrix(box,w,kind,value);
    const matrices=matricesFor(members,g);if(Object.values(matrices).some(m=>!A().valid(m)))throw Error('Keep every transformed vector within the supported range.');if(members.some(m=>!A().equivalent(matrices[m.info.id],m.info.svgTransform.matrix)))save(matrices);
   }
+  const toolbar=root.RetouchSelectionLayout.alignmentToolbar((mode,_event,button)=>{try{if(!current())throw Error('Re-select these vectors before aligning.');const {members}=capture(infos,elements),matrices=alignmentMatrices(members,mode);if(members.some(m=>!A().equivalent(matrices[m.info.id],m.info.svgTransform.matrix))){root.RetouchPanelFocus?.queue(button);save(matrices);}}catch(error){I.note(section,error.message,'refused');}},true);
+  const count=initial.members.filter(m=>!m.covered).length;for(const button of toolbar.querySelectorAll('button')){button.disabled=count<(button.dataset.distribution?3:2);button.title=button.title.replace(' · Shift: align group to containing frame','');}section.append(toolbar);
   const inputs={},rounded=value=>String(Math.round(value*10000)/10000);
   function scrub(input,kind){
    I.numericLabelDrag(input,raw=>({value:root.RetouchNumericExpression.evaluate(raw),min:kind==='rotation'?-360:(['width','height'].includes(kind)?0.0001:-100000),max:kind==='rotation'?360:100000}));
@@ -122,5 +129,5 @@
   const lock=I.button('Lock selection proportions',()=>{locked=!locked;if(locked)sizeLocks.add(key);else sizeLocks.delete(key);lock.setAttribute('aria-pressed',String(locked));});lock.setAttribute('aria-pressed',String(locked));lock.setAttribute('aria-label','Lock selection proportions');lock.title='Lock selection proportions';lock.innerHTML='<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M8 6V4a3 3 0 0 1 6 0v4a3 3 0 0 1-3 3M12 14v2a3 3 0 0 1-6 0v-4a3 3 0 0 1 3-3M10 6v8"/></svg>';lock.disabled=!initial.box.width||!initial.box.height;section.append(lock);
   const flips=root.RetouchFlip.mount(elements[0],()=>{});for(const button of flips.querySelectorAll('button')){button.disabled=false;button.onclick=()=>{try{apply('flip-'+button.dataset.flipAxis);}catch(error){I.note(section,error.message,'refused');}};}section.append(flips);I.note(section,'Bounds in document pixels. Rotation and flips use the selection center. Changes apply to all screen sizes.');return section;
  }
- const api={inverse,transform,matricesFor,resizeBounds,selectionKey,capture,controls,canvasResize,resizeSelection,canvasRotation,rotationPoints,isRotating:()=>rotatingSelection,nudge,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGSelection=api;
+ const api={inverse,transform,matricesFor,alignmentMatrices,resizeBounds,selectionKey,capture,controls,canvasResize,resizeSelection,canvasRotation,rotationPoints,isRotating:()=>rotatingSelection,nudge,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGSelection=api;
 })(typeof window==='object'?window:globalThis);

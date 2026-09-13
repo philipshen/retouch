@@ -1,8 +1,8 @@
 (function(root){
  'use strict';
  let targetChoice='selection',selectionKey='',gapMode='equal';
- function arrange(rects,mode,target=null){
-  if(rects.length<(target?1:2)||rects.length>100||rects.some(r=>!['left','top','width','height'].every(p=>Number.isFinite(r[p]))||r.width<=0||r.height<=0))throw Error('Choose between 2 and 100 visible layers.');
+ function arrange(rects,mode,target=null,{allowDegenerate=false}={}){
+  if(rects.length<(target?1:2)||rects.length>100||rects.some(r=>!['left','top','width','height'].every(p=>Number.isFinite(r[p]))||r.width<0||r.height<0||!allowDegenerate&&(r.width===0||r.height===0)))throw Error('Choose between 2 and 100 visible layers.');
   if(target&&(!['left','top','width','height'].every(p=>Number.isFinite(target[p]))||target.width<0||target.height<0))throw Error('The alignment target needs measurable bounds.');
   const modes={left:['x',0],center:['x',.5],right:['x',1],top:['y',0],middle:['y',.5],bottom:['y',1],'gap-x':['x','gap'],'gap-y':['y','gap']};
   if(!modes[mode])throw Error('Choose an alignment.');

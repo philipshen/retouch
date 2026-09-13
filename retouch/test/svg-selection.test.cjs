@@ -58,3 +58,8 @@ test('Selection resize snapping retains ratio/center constraints and supports a 
  const centered=S.resizeSelection(box,'e',38,0,{altKey:true},false,targets);assert.equal(centered.matrix[0],1.8);assert.ok(Math.abs(centered.matrix[0]*60+centered.matrix[4]-60)<1e-8);
  assert.deepEqual(S.resizeSelection(box,'e',38,0,{},false,targets,1).guides,[],'screen tolerance limits snapping');
 });
+
+test('SVG alignment handles transformed parents, nested children and zero-height lines',()=>{
+ const parent=A.parse('rotate(30) scale(2 3)'),own=A.parse('translate(4 6)'),members=[{info:{id:'a',svgTransform:{matrix:own}},parent,rect:{left:10,top:20,width:30,height:0}},{info:{id:'b',svgTransform:{matrix:own}},parent,rect:{left:70,top:40,width:20,height:10}},{info:{id:'child',svgTransform:{matrix:own}},parent,covered:true}];
+ const result=S.alignmentMatrices(members,'left');assert.deepEqual(result.child,own);assert.ok(A.equivalent(result.a,own));assert.ok(A.equivalent(A.multiply(parent,result.b),A.multiply([1,0,0,1,-60,0],A.multiply(parent,own))));assert.throws(()=>S.alignmentMatrices(members,'gap-x'),/three/);
+});
