@@ -10,7 +10,12 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  await size().fill('64');await size().press('Escape');assert.equal(read(),states[0]);assert.equal(await target.locator('span').count(),0);
  for(const invalid of ['-1','1001']){await size().fill(invalid);await size().press('Enter');assert.equal(await size().getAttribute('aria-invalid'),'true');assert.equal(read(),states[0]);assert.equal(await target.locator('span').count(),0);}
  await save('24.5');assert.equal(await target.locator('span').evaluate(el=>getComputedStyle(el).fontSize),'24.5px');assert.equal(await target.evaluate(el=>getComputedStyle(el).fontSize),originalSize);
- await edit(target.locator('span'),0,3);await wait(async()=>await size().inputValue()==='24.5');await save('48');assert.equal(await target.locator('span').count(),1);
+ await edit(target.locator('span'),0,3);await wait(async()=>await size().inputValue()==='24.5');
+ await target.evaluate(el=>{const span=el.querySelector('span'),range=el.ownerDocument.createRange();range.setStart(span.previousSibling,span.previousSibling.length);range.setEnd(span.nextSibling,0);const selection=el.ownerDocument.getSelection();selection.removeAllRanges();selection.addRange(range);});
+ await wait(async()=>await size().inputValue()==='24.5');
+ await target.evaluate(el=>{const range=el.ownerDocument.createRange();range.selectNodeContents(el);const selection=el.ownerDocument.getSelection();selection.removeAllRanges();selection.addRange(range);});
+ await wait(async()=>await size().inputValue()==='');
+ await select(target.locator('span'),0,3);await wait(async()=>await size().inputValue()==='24.5');await save('48');assert.equal(await target.locator('span').count(),1);
  await edit(target.locator('span'),1,2);await save('24');assert.equal(await target.locator('span span').count(),0);
  assert.deepEqual(await target.locator('span').allTextContents(),[text.slice(1,2),text.slice(2,3),text.slice(3,4)]);
  assert.deepEqual(await target.locator('span').evaluateAll(nodes=>nodes.map(el=>getComputedStyle(el).fontSize)),['48px','24px','48px']);

@@ -1254,3 +1254,31 @@ Liquid also passed multiline-paste and cursor-script regressions. The six-button
 inspector layout was visually inspected in `/private/tmp/retouch-decorations.png`.
 The existing desktop archive predates this work; full Figma parity remains
 unfinished.
+
+### Mixed formatting and text selection boundaries (2026-09-13)
+
+Underline, strikethrough, superscript, and subscript now report mixed selections
+with `aria-pressed="mixed"`, a distinct light-blue indicator, and a Mixed tooltip.
+The inspector evaluates the characters actually selected, including selections
+whose boundaries surround an element. Adjacent text that merely touches an
+endpoint no longer contributes a spurious mixed font, size, or color value.
+Cursor choices continue to override inherited semantic state.
+
+Toggling a single enclosed formatting run off now normalizes element-offset or
+adjacent-text boundaries to the selected characters. Previously such a selection
+could add another wrapper instead of removing the existing format. Authored
+wrapper protection remains enforced. This is not yet general normalization of
+multiple separate source-owned runs or arbitrary inherited CSS decorations.
+
+Browser regression coverage includes mixed/active decoration states, both forms
+of boundary selection, toggling an enclosed run off and back on, and exact source
+undo/redo. The mixed indicator was visually inspected in
+`/private/tmp/retouch-mixed-formatting.png`.
+
+Validation: 1,195 unit tests passed in
+`/private/tmp/retouch-mixed-formatting-units.log`; HTML/React Chromium 145 and
+Liquid WebKit 26 checks passed in
+`/private/tmp/retouch-mixed-formatting-{html,react,liquid}.log`. These also cover
+font-size editing, and React/Liquid cursor-script regressions. A focused HTML
+check verifies uniform versus mixed font-size values at adjacent text boundaries
+in `/private/tmp/retouch-mixed-size-boundaries-html.log`.

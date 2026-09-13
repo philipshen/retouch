@@ -1041,3 +1041,5 @@ html, body { overflow:clip; }
 .range-scope-note { grid-column:1 / -1;font-size:10px;color:var(--muted); }
 
 .range-format-commands button[aria-pressed="true"] { color:var(--accent);background:#e5f4ff; }
+
+.range-format-commands button[aria-pressed="mixed"] { background:#e5f4ff;color:var(--accent);box-shadow:inset 0 -2px var(--accent); }

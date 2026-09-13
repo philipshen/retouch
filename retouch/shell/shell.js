@@ -1018,6 +1018,21 @@ function finishCaretComposition(){
   });
 }
 
+// Range.intersectsNode includes text touching a selection boundary. Only
+// characters actually selected should contribute to mixed formatting values.
+function selectedInlineTextNodes(root,range){
+  if(!range||range.collapsed)return [];
+  const nodes=[],walker=root.ownerDocument.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  while(walker.nextNode()){
+    const node=walker.currentNode;if(!node.length||!range.intersectsNode(node))continue;
+    const overlap=range.cloneRange();
+    if(range.comparePoint(node,0)>=0)overlap.setStart(node,0);
+    if(range.comparePoint(node,node.length)<=0)overlap.setEnd(node,node.length);
+    if(overlap.toString().length)nodes.push(node);
+  }
+  return nodes;
+}
+
 function showInlineFormatToolbar(){
   inlineFormatCleanup();if(!editing||editing.info.canSetChildren===false)return;
   const d=doc(),bar=document.createElement('div');bar.className='inline-format-toolbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Selected text formatting');
@@ -1107,12 +1122,28 @@ function showInlineFormatToolbar(){
     for(const control of bar.querySelectorAll('button,input,select'))if(!control.dataset.rangeAlwaysEnabled)control.disabled=!valid;
     selectionNote.textContent=valid?(range.collapsed?'Text you type next':'Selected text'):'Select text to format';
     if(valid&&!editing.caretComposition&&editing.caretStyle&&!sameCaret(range,editing.caretStyle.range))editing.caretStyle=null;
-    for(const button of commands.querySelectorAll('button')){button.disabled=!valid;const tag=['sup','sub','u','s'].includes(button.dataset.formatTag)?button.dataset.formatTag:null;if(tag){const parent=valid?(range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer):null;const decoration=tag==='u'||tag==='s',ancestor=parent?.closest(decoration?tag:'sup,sub'),inherited=ancestor?.contains(range?.endContainer)?ancestor.tagName.toLowerCase():null;const active=valid?(range.collapsed?(decoration?(editing.caretStyle?.decorations?.[tag]??!!inherited):((editing.caretStyle?.script??inherited)===tag)):inherited===tag):false;button.setAttribute('aria-pressed',String(active));}}
+    const selectedText=valid?selectedInlineTextNodes(editing.el,range):[];
+    for(const button of commands.querySelectorAll('button')){
+      button.disabled=!valid;
+      const tag=button.dataset.formatTag;if(!['sup','sub','u','s'].includes(tag))continue;
+      const decoration=tag==='u'||tag==='s';
+      const inherited=parent=>decoration?!!parent.closest(tag):parent.closest('sup,sub')?.tagName.toLowerCase()===tag;
+      let state='false';
+      if(valid&&range.collapsed){
+        const parent=range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer;
+        state=String(decoration?(editing.caretStyle?.decorations?.[tag]??inherited(parent)):(editing.caretStyle?.script!==undefined?editing.caretStyle.script===tag:inherited(parent)));
+      }else if(valid&&selectedText.length){
+        const values=new Set(selectedText.map(node=>inherited(node.parentElement)));
+        state=values.size>1?'mixed':String([...values][0]);
+      }
+      button.setAttribute('aria-pressed',state);
+      button.title=button.getAttribute('aria-label')+(state==='mixed'?' · Mixed':'');
+    }
     if(!valid)return;savedRange=range.cloneRange();
     colorField.retouchPaintScopeLabel=(range.collapsed?'Text you type next':'Selected text')+' · Applies across all screen sizes.';
-    const values=new Map(fields.map(({property})=>[property,new Set()])),walker=d.createTreeWalker(editing.el,NodeFilter.SHOW_TEXT);
+    const values=new Map(fields.map(({property})=>[property,new Set()]));
     if(range.collapsed){const parent=range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer,style=d.defaultView.getComputedStyle(parent);for(const [property,set]of values){const authored=parent.__rtRangeStyleValues?.[property];set.add(editing.caretStyle?.properties[property]??(authored?.css===parent.style.getPropertyValue(property)?authored.value:style.getPropertyValue(property)));}}
-    while(!range.collapsed&&walker.nextNode()){const node=walker.currentNode;if(!node.textContent||!range.intersectsNode(node))continue;const style=d.defaultView.getComputedStyle(node.parentElement);for(const [property,set]of values){const css=style.getPropertyValue(property),parent=node.parentElement,authored=parent.__rtRangeStyleValues?.[property];set.add(authored?.css===parent.style.getPropertyValue(property)?authored.value:property==='color'&&parent.__rtRangeStyleCSS===css&&parent.__rtRangeStyleValue?parent.__rtRangeStyleValue:css);}}
+    for(const node of selectedText){const style=d.defaultView.getComputedStyle(node.parentElement);for(const [property,set]of values){const css=style.getPropertyValue(property),parent=node.parentElement,authored=parent.__rtRangeStyleValues?.[property];set.add(authored?.css===parent.style.getPropertyValue(property)?authored.value:property==='color'&&parent.__rtRangeStyleCSS===css&&parent.__rtRangeStyleValue?parent.__rtRangeStyleValue:css);}}
     for(const {field,property,display}of fields){
       const set=values.get(property),value=set.size===1?[...set][0]:'';
       if(display){if(document.activeElement!==field){try{field.value=value?display(value):'';}catch{field.value='';}}if(property==='color'){swatch.dataset.color=value;swatch.style.backgroundImage=value?'linear-gradient('+value+','+value+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)':'';}}
@@ -1229,13 +1260,20 @@ function toggleWrap(tag) {
   if (editing.info.canSetChildren === false) return toast('This source cannot preserve rich text formatting.', 'err');
   const s = d.getSelection();
   if (!s || !s.rangeCount) return;
-  const r = s.getRangeAt(0);
+  let r = s.getRangeAt(0);
   if (!editing.el.contains(r.startContainer)||!editing.el.contains(r.endContainer)) return;
   if(r.collapsed){if(tag==='u'||tag==='s'){const parent=r.startContainer.nodeType===3?r.startContainer.parentElement:r.startContainer,ancestor=parent.closest(tag);if(ancestor===editing.el||ancestor&&!plainInlineFormatting(ancestor)){toast('Select the parent text layer or edit this source-owned formatting in source.','err');return;}if(!sameCaret(r,editing.caretStyle?.range))editing.caretStyle={properties:{},range:r.cloneRange()};const decorations=editing.caretStyle.decorations||={};decorations[tag]=!(decorations[tag]??!!ancestor);d.dispatchEvent(new Event('selectionchange'));return;}if(tag==='sup'||tag==='sub'){const parent=r.startContainer.nodeType===3?r.startContainer.parentElement:r.startContainer,ancestor=parent.closest('sup,sub');if(ancestor===editing.el){toast('Select the parent text layer to change this script position.','err');return;}if(ancestor&&!plainInlineFormatting(ancestor)){toast('Edit this source-owned formatting in its source.','err');return;}if(!sameCaret(r,editing.caretStyle?.range))editing.caretStyle={properties:{},range:r.cloneRange()};const current=editing.caretStyle.script??(ancestor&&ancestor!==editing.el?ancestor.tagName.toLowerCase():'normal');editing.caretStyle.script=current===tag?'normal':tag;d.dispatchEvent(new Event('selectionchange'));return;}const property=tag==='strong'?'font-weight':tag==='em'?'font-style':null;if(!property)return;const parent=r.startContainer.nodeType===3?r.startContainer.parentElement:r.startContainer,value=editing.caretStyle?.properties[property]||d.defaultView.getComputedStyle(parent).getPropertyValue(property);applyTextRangeStyle(property,tag==='strong'?(parseFloat(value)>=600?'400':'700'):(value==='italic'?'normal':'italic'));d.dispatchEvent(new Event('selectionchange'));return;}
+  // Element-offset selections can enclose a formatted run without either
+  // endpoint being inside it. Normalize those boundaries before toggling off.
+  const selector = tag === 'strong' ? 'strong,b' : tag === 'em' ? 'em,i' : tag;
+  const textNodes=selectedInlineTextNodes(editing.el,r),first=textNodes[0],last=textNodes.at(-1);
+  const enclosing=first?.parentElement.closest(tag==='sup'||tag==='sub'?'sup,sub':selector);
+  if(enclosing&&enclosing!==editing.el&&textNodes.every(node=>enclosing.contains(node))&&(!enclosing.contains(r.startContainer)||!enclosing.contains(r.endContainer))){
+    const normalized=d.createRange();normalized.setStart(first,r.startContainer===first?r.startOffset:0);normalized.setEnd(last,r.endContainer===last?r.endOffset:last.length);r=normalized;
+  }
   // Split only the selected portion when toggling existing formatting.
   const cac = r.commonAncestorContainer;
   const start = cac.nodeType === 1 ? cac : cac.parentElement;
-  const selector = tag === 'strong' ? 'strong,b' : tag === 'em' ? 'em,i' : tag;
   {
     const previous=start?.closest(tag==='sup'||tag==='sub'?'sup,sub':selector);
     if(previous&&previous!==editing.el&&editing.el.contains(previous)&&previous.contains(r.startContainer)&&previous.contains(r.endContainer)){
