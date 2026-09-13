@@ -299,6 +299,14 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    if(name==='Typography')typographyPrimary(section);
   }
 
+  const arrowStroke=[...panel.children].find(el=>el.dataset.section==='stroke');
+  if(arrowStroke){
+   for(const [label,short]of [['Arrowhead length','Head length'],['Arrowhead width','Head width']]){
+    const field=panel.querySelector('[aria-label="'+label+'"]')?.closest('.inspector-field');
+    if(field){field.querySelector(':scope > span').textContent=short;field.title=label;arrowStroke.append(field);}
+   }
+   pair(arrowStroke,['Arrowhead length','Arrowhead width']);
+  }
   // A gradient is the selected paint's editor, so keep it inside Fill or Stroke.
   // Preserve its wrapper: stop focus restoration and gesture handlers scope to it.
   for(const gradient of panel.querySelectorAll(':scope > [data-gradient-paint]')){

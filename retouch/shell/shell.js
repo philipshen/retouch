@@ -1281,8 +1281,11 @@ function renderPanelContents() {
     RetouchSVGRadius.mount(geometry,info,target,changes=>setSVGGeometry(changes),input=>roundRectangleOnCanvas(target,input));
     const parametric=info.svgGeometry.parametric;
     if(parametric){
-      const change=updates=>{const points=RetouchSVGParametric.generate({...parametric,...updates});if(points)setSVGGeometry('points',points);else toast('Choose a valid shape count and ratio.','err');};
-      RetouchInspector.number(geometry,parametric.kind==='star'?'Star points':'Polygon sides',parametric.count,3,parametric.kind==='star'?256:512,value=>change({count:value})).step='1';
+      const change=updates=>{const points=RetouchSVGParametric.generate({...parametric,...updates});if(points)setSVGGeometry('points',points);else toast('Choose valid shape parameters.','err');};
+      if(parametric.kind==='arrow'){
+        RetouchInspector.number(geometry,'Arrowhead length',Math.round(parametric.headLength*1000000)/1000000,0,Math.hypot(parametric.x2-parametric.x1,parametric.y2-parametric.y1),value=>change({headLength:value})).step='any';
+        RetouchInspector.number(geometry,'Arrowhead width',Math.round(parametric.headWidth*1000000)/1000000,0,100000,value=>change({headWidth:value})).step='any';
+      }else RetouchInspector.number(geometry,parametric.kind==='star'?'Star points':'Polygon sides',parametric.count,3,parametric.kind==='star'?256:512,value=>change({count:value})).step='1';
       if(parametric.kind==='star')RetouchInspector.number(geometry,'Star inner ratio (%)',Math.round(parametric.ratio*1000000)/10000,0,100,value=>change({ratio:value/100})).step='any';
     }
     for(const field of info.svgGeometry.fields){const input=document.createElement('input');input.type='text';input.value=field.value??'';input.placeholder=field.editable===false?'Dynamic value':'Default';input.disabled=field.editable===false;if(field.reason)input.title=field.reason;input.onchange=()=>setSVGGeometry(field.name,input.value.trim()||null);RetouchInspector.field(geometry,'Shape '+field.label,input);const reset=RetouchInspector.button('Reset shape '+field.label.toLowerCase(),()=>setSVGGeometry(field.name,null));reset.disabled=field.value===null||field.editable===false;geometry.append(reset);}

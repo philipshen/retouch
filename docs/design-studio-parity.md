@@ -14290,3 +14290,36 @@ Screenshot inspected: `/private/tmp/retouch-arrow.png`.
 
 No desktop rebuild or native launch in this increment. Full Figma parity,
 arbitrary-site editing and the older WebKit Fill issue remain incomplete.
+
+## 2026-09-13 — Arrowhead length and width controls
+
+Newly created arrows now carry `data-rt-shape="arrow"` and expose paired Head
+length and Head width fields in Stroke. Both edit the ordinary SVG points while
+preserving the shaft endpoints, paint and source identity. The model infers
+parameters from the current points instead of storing a second geometry copy.
+Its recognition requires a symmetric head, repeated tip and bounded coordinates.
+Freeform edits that break this geometry remove the parameter controls; Undo
+restores them. Existing unmarked polylines remain ordinary vectors.
+
+Shared generation now drives preview, insertion and parameter edits across
+HTML, React and Liquid. Tests caught floating-point drift around zero-length
+heads on rotated arrows; recognition tolerates only the existing coordinate
+rounding precision and verifies regenerated geometry before offering controls.
+Invalid or out-of-bounds generated arrows are refused rather than saved empty.
+
+All 1126 unit tests pass, including cardinal/diagonal directions, zero dimensions,
+parameter changes, source preservation and freeform refusal across adapters.
+HTML/Chromium and Liquid/WebKit drawing suites pass the new fields and exact
+Undo/Redo. The final Liquid/WebKit and React/Chromium suites also exercise raw
+freeform editing, disappearance of the fields and restoration on Undo. React
+checks transformed native containers and self-closing SVG/groups. All processes
+exited 0. Screenshot inspected: `/private/tmp/retouch-arrow-params.png`.
+
+Logs: `/private/tmp/retouch-arrow-params-units.log`,
+`/private/tmp/retouch-arrow-params-html.log`,
+`/private/tmp/retouch-arrow-params-liquid-final.log`,
+`/private/tmp/retouch-arrow-params-react-final.log`.
+
+Arrowhead style choices, independent start/end caps and arbitrary imported-arrow
+recognition remain incomplete. No desktop rebuild or native launch here. Full
+Figma parity and universal site support remain unproven and incomplete.

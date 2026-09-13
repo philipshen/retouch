@@ -12,10 +12,9 @@
  function geometry(preset,a,b){
   const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x),h=Math.abs(b.y-a.y);
   if(preset==='arrow'){
-   const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy),head=Math.min(12,length*.3),ux=length?dx/length:0,uy=length?dy/length:0;
-   const n=v=>Math.round(v*1000000)/1000000;
-   const wing=side=>({x:b.x-ux*head-uy*head*.5*side,y:b.y-uy*head+ux*head*.5*side});
-   return {points:[a,b,wing(1),b,wing(-1)].map(p=>n(p.x)+','+n(p.y)).join(' ')};
+   const api=typeof module==='object'&&module.exports?require('./svg-parametric.js'):root.RetouchSVGParametric;
+   const head=Math.min(12,Math.hypot(b.x-a.x,b.y-a.y)*.3);
+   return {points:api.generate({kind:'arrow',x1:a.x,y1:a.y,x2:b.x,y2:b.y,headLength:head,headWidth:head})||''};
   }
   if(preset==='triangle'||preset==='star'){
    const api=typeof module==='object'&&module.exports?require('./svg-parametric.js'):root.RetouchSVGParametric;
