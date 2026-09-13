@@ -25,6 +25,7 @@ exports.run=async({page,app,file,wait,settled})=>{
   if(process.env.RT_E2E_GRADIENT_INNER_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_GRADIENT_INNER_SCREENSHOT});
   await page.getByRole('button',{name:'Finish gradient editing',exact:true}).click();await undo();await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===changed);await undo();
  }
+ await require('./svg-gradient-canvas-stops.cjs').run({page,app,file,wait,settled});
  await require('./svg-gradient-canvas-move.cjs').run({page,app,file,wait,settled});
  await require('./svg-gradient-canvas-session.cjs').run({page,app,file,wait,settled});
  await page.getByRole('treeitem',{name:'rect · Gradient box',exact:true}).click();await settled();await open();await page.getByRole('button',{name:'Gradient end handle',exact:true}).focus();await page.keyboard.press('ArrowLeft');await app.locator('#paint').evaluate(el=>el.setAttribute('spreadMethod','reflect'));await wait(async()=>await surface.count()===0);assert.equal(await app.locator('#paint').getAttribute('spreadMethod'),'reflect');assert.equal(await app.locator('#paint').getAttribute('x2'),null);assert.equal(read(),original);await app.locator('#paint').evaluate(el=>el.removeAttribute('spreadMethod'));

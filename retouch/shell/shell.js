@@ -2365,13 +2365,13 @@ function mountSVGGradientStopRail(section,info,target,gradient){
 }
 function editSVGGradientOnCanvas(info,target,gradient,focusLabel=null){
  stopDrawing?.();const current=()=>mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&sel?.info===info&&!sel?.multiple?.length&&!document.querySelector('dialog[open]');if(!current())return;canvasPan.cancel();
- const save=async(changes,focus,keepEditing)=>{
-  if(!keepEditing)return setSVGGradient(info,gradient.paint,changes);
-  let cancelled=false;const cancel=()=>{cancelled=true;if(stopDrawing===cancel)stopDrawing=null;},events=['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'];const pending=setSVGGradient(info,gradient.paint,changes,undefined,undefined,undefined,{keepDrawing:cancel});stopDrawing=cancel;events.forEach(name=>window.addEventListener(name,cancel));canvasSurface.addEventListener('scroll',cancel);
+ const save=async(changes,focus,keepEditing,stop,action,value)=>{
+  if(!keepEditing)return setSVGGradient(info,gradient.paint,changes,stop,action,value);
+  let cancelled=false;const cancel=()=>{cancelled=true;if(stopDrawing===cancel)stopDrawing=null;},events=['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'];const pending=setSVGGradient(info,gradient.paint,changes,stop,action,value,{keepDrawing:cancel});stopDrawing=cancel;events.forEach(name=>window.addEventListener(name,cancel));canvasSurface.addEventListener('scroll',cancel);
   try{const saved=await pending;if(saved!==true||cancelled||stopDrawing!==cancel||sel?.info.id!==info.id)return;const fresh=sel.info,next=fresh.svgGradients?.find(item=>item.paint===gradient.paint&&item.id===gradient.id),element=target.isConnected&&target.ownerDocument===doc()?target:matchingEls(info.id)[0];if(!next||!element)return;stopDrawing=null;editSVGGradientOnCanvas(fresh,element,next,focus);}
   finally{events.forEach(name=>window.removeEventListener(name,cancel));canvasSurface.removeEventListener('scroll',cancel);if(stopDrawing===cancel)stopDrawing=null;}
  };
- stopDrawing=RetouchSVGGradientCanvas.mount({target,gradient,frame:iframe,canvas:canvasSurface,current,save,focusLabel,onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
+ stopDrawing=RetouchSVGGradientCanvas.mount({target,gradient,frame:iframe,canvas:canvasSurface,current,save,saveStop:(stop,value,focus,keepEditing)=>save(undefined,focus,keepEditing,stop,'moveStop',value),focusLabel,onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
 }
 function mountSVGGradientCreation(info,target){
  const creation=info.svgGradientCreation;if(!creation.paints.length||!target)return;
