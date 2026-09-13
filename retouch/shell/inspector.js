@@ -232,36 +232,42 @@
     if(property==='rotate'){const control=button('Rotate on canvas',()=>root.rotateLayerOnCanvas?.(el,input));control.dataset.canvasTool='rotate';input.parentElement.after(control);}
     return input;
   }
+  function scrubSpeed(dy){return dy < -40?2:dy>80?.25:dy>40?.5:1;}
   function numericLabelDrag(input,read=raw=>({value:Number(raw)})){
     const label=input.parentElement.querySelector('span'),interruptions=['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'];let drag=null;
     label.style.cursor='ew-resize';label.style.touchAction='none';label.style.userSelect='none';
-    label.title='Drag to adjust. Shift: 10 units; Alt/Option: 0.1 units. Escape cancels.';
+    label.title='Drag to adjust; move up for faster values or down for finer values. Shift: 10 units; Alt/Option on label: 0.1 units. Escape cancels.';
+    input.title=(input.title?input.title+' ':'')+'Alt/Option-drag inside the field to scrub.';
     label.dataset.numericScrub='';
     const stop=cancel=>{
-      if(!drag)return;const saved=drag;drag=null;
+      if(!drag)return;const saved=drag;cancel=cancel||saved.preview?.current?.()===false;drag=null;root.cancelAnimationFrame(saved.raf);saved.hint.remove();
       for(const type of interruptions)root.removeEventListener(type,abort);saved.observer.disconnect();saved.preview?.restore();
       if(cancel)input.value=saved.initial;
-      if(label.hasPointerCapture(saved.id))label.releasePointerCapture(saved.id);
+      if(saved.target.hasPointerCapture(saved.id))saved.target.releasePointerCapture(saved.id);
       if(!cancel&&input.isConnected&&input.value!==saved.initial&&input.checkValidity())input.dispatchEvent(new Event('change',{bubbles:true}));
     };
     const abort=()=>stop(true);
     input.addEventListener('blur',abort);
-    label.addEventListener('pointerdown',event=>{
+    const start=event=>{
       if(event.button!==0||drag||input.disabled||input.readOnly||input.value===''||!input.checkValidity())return;
       const parsed=read(input.value);if(!parsed||!Number.isFinite(parsed.value))return;
       event.preventDefault();event.stopPropagation();input.focus({preventScroll:true});
-      drag={id:event.pointerId,x:event.clientX,initial:input.value,value:parsed.value,format:parsed.format||String,min:parsed.min,max:parsed.max};
-      drag.preview=input.retouchNumericPreview?.();drag.observer=new MutationObserver(()=>{if(!input.isConnected||drag?.preview?.current?.()===false)abort();});drag.observer.observe(document.body,{childList:true,subtree:true});
-      label.setPointerCapture(event.pointerId);for(const type of interruptions)root.addEventListener(type,abort);
-    });
-    label.addEventListener('pointermove',event=>{
+      drag={id:event.pointerId,target:event.currentTarget,inputDrag:event.currentTarget===input,y:event.clientY,x:event.clientX,initial:input.value,value:parsed.value,format:parsed.format||String,min:parsed.min,max:parsed.max};
+      try{drag.preview=input.retouchNumericPreview?.();}catch(error){drag=null;input.setCustomValidity(error.message);input.reportValidity();return;}
+      drag.hint=document.createElement('div');drag.hint.dataset.numericScrubSpeed='';drag.hint.setAttribute('role','status');Object.assign(drag.hint.style,{position:'fixed',bottom:'116px',left:'50%',transform:'translateX(-50%)',padding:'8px 12px',border:'1px solid var(--line)',borderRadius:'6px',background:'var(--panel)',color:'var(--ink)',fontSize:'11px',zIndex:41});drag.hint.textContent='1x';document.body.append(drag.hint);
+      drag.observer=new MutationObserver(()=>{if(!input.isConnected||drag?.preview?.current?.()===false)abort();});drag.observer.observe(document.body,{childList:true,subtree:true});
+      drag.target.setPointerCapture(event.pointerId);for(const type of interruptions)root.addEventListener(type,abort);const tick=()=>{if(!drag)return;if(!input.isConnected||drag.preview?.current?.()===false){abort();return;}drag.raf=root.requestAnimationFrame(tick);};drag.raf=root.requestAnimationFrame(tick);
+    };
+    label.addEventListener('pointerdown',start);input.addEventListener('pointerdown',event=>{if(event.altKey)start(event);});
+    const move=event=>{
       if(!drag||drag.id!==event.pointerId)return;event.preventDefault();event.stopPropagation();
-      const delta=event.clientX-drag.x;drag.x=event.clientX;
+      if(drag.preview?.current?.()===false){abort();return;}const delta=event.clientX-drag.x;drag.x=event.clientX;const speed=scrubSpeed(event.clientY-drag.y);drag.hint.textContent=({2:'2x',1:'1x',.5:'1/2',.25:'1/4'})[speed];
       const min=drag.min??(input.min===''?-Infinity:Number(input.min)),max=drag.max??(input.max===''?Infinity:Number(input.max));
-      drag.value=Math.max(min,Math.min(max,Math.round((drag.value+delta*(event.altKey?0.1:event.shiftKey?10:1))*1e6)/1e6));input.value=drag.format(drag.value);drag.preview?.update(drag.value);
-    });
-    label.addEventListener('pointerup',event=>{if(drag?.id===event.pointerId){event.preventDefault();event.stopPropagation();stop(false);}});
-    for(const type of ['pointercancel','lostpointercapture'])label.addEventListener(type,event=>{if(drag?.id===event.pointerId)stop(true);});
+      drag.value=Math.max(min,Math.min(max,Math.round((drag.value+delta*speed*(event.altKey&&!drag.inputDrag?0.1:event.shiftKey?10:1))*1e6)/1e6));input.value=drag.format(drag.value);try{drag.preview?.update(drag.value);}catch(error){abort();input.setCustomValidity(error.message);input.reportValidity();}
+    };
+    label.addEventListener('pointermove',move);input.addEventListener('pointermove',move);
+    for(const target of [label,input])target.addEventListener('pointerup',event=>{if(drag?.id===event.pointerId){event.preventDefault();event.stopPropagation();stop(false);}});
+    for(const target of [label,input])for(const type of ['pointercancel','lostpointercapture'])target.addEventListener(type,event=>{if(drag?.id===event.pointerId)stop(true);});
     input.addEventListener('keydown',event=>{if(drag&&!event.isComposing&&['Escape','Enter'].includes(event.key)){event.preventDefault();event.stopImmediatePropagation();stop(event.key==='Escape');}},true);
     return input;
   }
@@ -851,6 +857,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

@@ -14198,3 +14198,34 @@ Archive: /private/tmp/retouch-desktop-selection-c945247/Retouch-0.1.0-mac.zip
 SHA-256: 2514510722a421ca7f947e090d72249e13f2f7afc0be44142cbd4c4f2377214d
 Receipt: desktop/verification/2026-09-13-selection-transforms.json.
 No push was performed.
+
+## 2026-09-13 — Numeric field scrubbing and SVG previews
+
+The shared inspector scrubber now accepts Option/Alt-dragging inside inputs and
+supports four vertical speed bands: 2x, 1x, 1/2 and 1/4. A compact live speed
+indicator appears above the toolbar. Retouch retains its existing Shift/Alt
+label modifiers for coarse/fine steps. The 40/80-pixel band thresholds are local
+interaction tuning, not measurements of Figma's implementation.
+
+Single-vector X/Y, rotation and W/H fields now use the shared scrubber with live
+SVG transform previews. Locked W/H fields update together during the preview.
+Release dispatches one source edit; Escape or losing the field restores the
+preview. A frame check cancels when the selected target or owned transform is
+replaced, preserving external replacements. Existing CSS numeric preview and
+history behavior remains supported.
+
+Reference: https://help.figma.com/hc/en-us/articles/360039956914-Adjust-alignment-rotation-position-and-dimensions
+The reference describes label/input scrubbing and vertical speed selection.
+Multi-selection transform-field scrubbing, cursor-width changes and continuous
+off-screen scrubbing remain unfinished. No desktop rebuild or push.
+
+Validation: 1,035 unit tests passed. Full Liquid/Chromium, HTML/WebKit 26 and
+React/Chromium vector workflows reached terminal zero exits, including SVG
+scrubbing previews, four speeds, Alt input dragging, proportions, external
+transform preservation, cancellation and exact Undo/Redo. The existing React
+CSS numeric-scrub workflow also passed its coarse/fine modifiers, lower bounds,
+draft cancellation, responsive source, single undo, typing and live paint,
+typography, effect and gradient previews. The default light-inspector workflow
+passed as well. /private/tmp/retouch-svg-scrub.png was visually inspected.
+Logs: /private/tmp/retouch-svg-scrub-{liquid,html,react}-full.log,
+/private/tmp/retouch-svg-scrub-{css,inspector,units}.log.

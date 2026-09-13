@@ -159,3 +159,8 @@ test('scaled outlines retain all transformed corners without scaling the outline
  }
  assert.throws(()=>scaledOutline({layoutLeft:0,layoutTop:0,width:20,height:30,rotation:0,transformOrigin:'0px 0px',scaleX:0}));
 });
+
+test('Numeric scrubbing exposes four vertically selected speed bands',()=>{
+ const {scrubSpeed}=require('../shell/inspector.js');
+ assert.equal(scrubSpeed(-41),2);assert.equal(scrubSpeed(-40),1);assert.equal(scrubSpeed(0),1);assert.equal(scrubSpeed(40),1);assert.equal(scrubSpeed(41),.5);assert.equal(scrubSpeed(80),.5);assert.equal(scrubSpeed(81),.25);
+});
