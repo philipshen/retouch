@@ -13865,3 +13865,36 @@ editor zoom. Logs: /private/tmp/retouch-nudge-{units,html,react,liquid}.log and
 This implements single-vector nudging; multi-selection nudges, custom nudge
 preferences, snapping and full Figma/any-site parity remain open. No desktop
 rebuild or push is included in this increment.
+
+## 2026-09-13 — SVG drag alignment and spacing guides
+
+SVG movement now snaps to sibling bounds and the containing SVG viewport using
+six screen pixels of tolerance, adjusted for editor zoom. It reuses the existing
+alignment/equal-spacing solver, showing red alignment guides and labeled purple
+spacing guides. Targets exclude self, definitions and hidden/offscreen siblings;
+zero-width or zero-height lines can remain alignment targets. Shift axis locking
+now follows document axes through transformed parents. Keyboard nudges stay exact.
+
+Control temporarily disables snapping, including immediate preview updates when
+pressed or released without another pointer move. This follows Figma's documented
+Snap to objects override:
+https://help.figma.com/hc/en-us/articles/360039956914-Adjust-alignment-rotation-position-and-dimensions
+The existing HTML/CSS move tool's separate modifier convention is unchanged.
+
+Validation: 1,018 unit tests passed. Final HTML/WebKit 26, Liquid/Chromium and
+React/Chromium workflows reached terminal zero exits. They cover center guides
+at 50%, 100% and 200% zoom, live Control override, equal spacing, exact Undo/Redo,
+and the existing 13-type movement/resize, direct-drag and nudge regressions.
+The alignment test temporarily hides unrelated fixture siblings so a closer
+spacing candidate cannot replace its intended center target; a separate case
+checks the spacing guide and destination. A focus call in the nudge test now
+preserves iframe scroll, matching the product's existing focus behavior.
+
+Logs: /private/tmp/retouch-snap-units-final.log,
+/private/tmp/retouch-snap-liquid-final.log,
+/private/tmp/retouch-snap-html.log and /private/tmp/retouch-snap-react.log.
+The alignment screenshot /private/tmp/retouch-svg-snap.png was visually inspected.
+
+No desktop rebuild or push. Multi-selection snapping, snapping during SVG resize,
+vector-point snapping parity, persistent snapping preferences and arbitrary-site/
+full Figma parity remain open.
