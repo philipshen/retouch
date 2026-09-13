@@ -33,7 +33,7 @@ function validateChildrenTree(children, depth) {
 
 function styleMarkup(node,content,jsx=false) {
   if(!rangeStyles.valid(node.property,node.value))throw new Error('Unsupported text range style.');
-  const attribute=jsx?'style={{'+rangeStyles.camel(node.property)+':'+JSON.stringify(node.value)+'}}':'style="'+node.property+': '+node.value+';"';
+  const attribute=jsx?'style={{'+rangeStyles.camel(node.property)+':'+JSON.stringify(node.value)+'}}':'style="'+node.property+': '+node.value.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+';"';
   return '<span '+attribute+'>'+content+'</span>';
 }
 module.exports={validateChildrenTree,styleMarkup};

@@ -48,3 +48,8 @@ test('text range font size writes a constrained pixel style',()=>{
 test('range color styles preserve explicit alpha and gamut in source',()=>{
  for(const value of ['#12345680','color(display-p3 1 0.2 0.3 / 0.5)'])assert.equal(rewrite('Text','source',[{t:'style',property:'color',value,children:[{t:'text',value:'Color'}]}]),'<span style="color: '+value+';">Color</span>');
 });
+
+test('range font family quotes are escaped in HTML source',()=>{
+ const children=[{t:'style',property:'font-family',value:'"Page Face", serif',children:[{t:'text',value:'Text'}]}];
+ assert.equal(rewrite('Text','source',children),'<span style="font-family: &quot;Page Face&quot;, serif;">Text</span>');
+});

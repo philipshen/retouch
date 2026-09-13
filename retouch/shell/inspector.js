@@ -778,7 +778,8 @@
   }
   function fontPicker(parent,d,current,onChange,options={}){
     const choices=fontFamilies(d,current),supported=choices.some(([value])=>value===current);
-    const quick=select(parent,options.label||'Page font',supported?choices:[[current,options.mixed?'Mixed':fontDisplayName(current)],...choices],current,onChange);
+    const choose=value=>{if(options.preview){current=value;options.mixed=false;if(![...quick.options].some(option=>option.value===value))quick.add(new Option(fontDisplayName(value),value));quick.value=value;render();}onChange(value);};
+    const quick=select(parent,options.label||'Page font',supported?choices:[[current,options.mixed?'Mixed':fontDisplayName(current)],...choices],current,choose);
     if(!supported)quick.options[0].disabled=true;
     const currentStatus=note(parent,'');currentStatus.setAttribute('aria-label','Current font files');currentStatus.setAttribute('role','status');
     const browse=document.createElement('details');browse.className='font-browser';
@@ -795,14 +796,14 @@
       status.textContent=(matches.length?`${matches.length} font ${matches.length===1?'choice':'choices'}`:scanning?'No matches yet.':'No matching fonts. Try another name.')+(scanning?' · Scanning page…':'');status.dataset.scanning=String(scanning);
       pages.hidden=matches.length<=50;previous.disabled=offset===0;next.disabled=offset+50>=matches.length;
       if(matches.length>50)status.textContent+=` · Showing ${offset+1}–${Math.min(offset+50,matches.length)}`;
-      results.replaceChildren();for(const [value,label] of matches.slice(offset,offset+50)){const b=button(label,()=>onChange(value));const detail=document.createElement('small');detail.className='font-face-state';detail.textContent=fontFaceLabel(value,states);b.append(detail);b.dataset.font=value;b.setAttribute('aria-label','Use font '+label);b.setAttribute('aria-pressed',String(value===current));results.append(b);if(value===focused)b.focus({preventScroll:true});}
+      results.replaceChildren();for(const [value,label] of matches.slice(offset,offset+50)){const b=button(label,()=>choose(value));const detail=document.createElement('small');detail.className='font-face-state';detail.textContent=fontFaceLabel(value,states);b.append(detail);b.dataset.font=value;b.setAttribute('aria-label','Use font '+label);b.setAttribute('aria-pressed',String(value===current));results.append(b);if(value===focused)b.focus({preventScroll:true});}
     };
     search.oninput=()=>{offset=0;render();};browse.ontoggle=()=>{
       cancelScan?.();scanning=browse.open;
       if(browse.open){search.focus();choices.splice(0,choices.length,...fontFamilies(d,current));offset=0;const known=new Set(choices.map(([value])=>value));cancelScan=scanPageFonts(d,(batch,done)=>{let changed=false;for(const value of batch)if(!known.has(value)){known.add(value);choices.push([value,fontDisplayName(value)]);changed=true;}scanning=!done;if(changed||done)render();},()=>browse.isConnected&&browse.open);}
       render();
     };
-    browse.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();browse.open=false;summary.focus();}});
+    browse.addEventListener('keydown',event=>{if(event.key==='Escape'&&browse.open){event.preventDefault();event.stopPropagation();browse.open=false;summary.focus();}});
     note(browse,'Status is for declared font faces. Some characters or weights may still use a fallback.');
     if(d.fonts?.addEventListener){
       const events=['loading','loadingdone','loadingerror'];const update=()=>{if(parent.isConnected)render();};for(const event of events)d.fonts.addEventListener(event,update);

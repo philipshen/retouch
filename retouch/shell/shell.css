@@ -1016,3 +1016,8 @@ html, body { overflow:clip; }
 .inline-format-toolbar input.range-color { width:100px; }
 
 .inline-format-toolbar .range-color-swatch { min-width:24px;width:24px;height:24px;margin:3px;background-size:auto,8px 8px;border:1px solid var(--line);border-radius:4px; }
+
+.inline-format-toolbar .range-font-family { max-width:140px;padding:0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px; }
+.range-font-picker { width:300px;padding:12px; }
+.range-font-picker h3 { margin:0 0 12px;font-size:12px; }
+.range-font-picker .font-results { max-height:280px;overflow:auto; }

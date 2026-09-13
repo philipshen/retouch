@@ -16,3 +16,8 @@ test('range weights accept named steps and variable values within CSS bounds',()
  for(const value of ['1','100','200','300','400','500','537.25','600','700','800','900','1000'])assert.equal(values.valid('font-weight',value),true,value);
  for(const value of ['0','-1','1000.1','1001','NaN','Infinity','1e2','400; color:red','var(--weight)','bold','bolder'])assert.equal(values.valid('font-weight',value),false,value);
 });
+
+test('range font families accept literal lists and reject declarations and contextual CSS',()=>{
+ for(const value of ['serif','Georgia, serif','"Studio_Test", sans-serif',"'Page Face'",'Noto Sans CJK'])assert.equal(values.valid('font-family',value),true,value);
+ for(const value of ['', 'inherit','var(--font)','Arial; color:red','"Arial" onmouseover="alert(1)"','url(x)','Arial,','123'])assert.equal(values.valid('font-family',value),false,value);
+});

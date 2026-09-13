@@ -853,7 +853,7 @@ function inlineTextUIFocused(){
 }
 
 // Preserve original nodes and source metadata while previewing selected text.
-function previewInlineColor(current,range){
+function previewInlineStyle(current,range,property){
   const root=current.el,d=root.ownerDocument,runs=[],parents=new Map(),walker=d.createTreeWalker(root,NodeFilter.SHOW_TEXT);
   while(walker.nextNode()){
     const node=walker.currentNode;if(!range.intersectsNode(node))continue;
@@ -868,7 +868,7 @@ function previewInlineColor(current,range){
   const currentRoot=()=>editing===current&&doc()===d&&root.isConnected;
   return {
     get valid(){return valid&&currentRoot();},
-    update(value){if(restored)return;if(!currentRoot()||root.innerHTML!==expected){valid=false;return;}for(const span of wrappers)span.style.color=value;expected=root.innerHTML;},
+    update(value){if(restored)return;if(!currentRoot()||root.innerHTML!==expected){valid=false;return;}for(const span of wrappers)span.style.setProperty(property,value);expected=root.innerHTML;},
     restore(){
       if(restored)return;restored=true;
       if(!currentRoot()){valid=false;return;}
@@ -917,14 +917,14 @@ function showInlineFormatToolbar(){
   const colorField=rangeInput('color','Selected text color',field=>{field.type='text';field.spellcheck=false;field.placeholder='Color';field.className='range-color';field.title='Selected text color: hex, RGB, sRGB or Display P3';},value=>RetouchPaletteValues.fromComputed(/^(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})$/i.test(value.trim())?'#'+value.trim():value.trim()),value=>RetouchPaletteValues.fromComputed(value));
   const swatch=document.createElement('button');swatch.type='button';swatch.className='range-color-swatch';swatch.setAttribute('aria-label','Choose selected text color');swatch.title='Choose selected text color';bar.insertBefore(swatch,colorField);
   colorField.retouchPaintScopeLabel='Selected text · Applies across all screen sizes.';
-  let picker=null;
+  let picker=null,fontDialog=null;
   swatch.onpointerdown=event=>event.preventDefault();
   swatch.onclick=()=>{
     if(!editing||!savedRange||picker)return;
     colorField.value=swatch.dataset.color||'';colorField.removeAttribute('aria-invalid');
     const current=editing,prefix=d.createRange();prefix.selectNodeContents(current.el);prefix.setEnd(savedRange.startContainer,savedRange.startOffset);
     const start=prefix.toString().length,end=start+savedRange.toString().length;
-    const preview=previewInlineColor(current,savedRange);
+    const preview=previewInlineStyle(current,savedRange,'color');
     if(!preview){toast('This selection includes source-owned text.','err');return;}
     const restoreSelection=()=>{if(editing!==current||doc()!==d||!current.el.isConnected)return false;const range=inlineRangeAt(current.el,start,end);if(!range)return false;const selection=d.getSelection();selection.removeAllRanges();selection.addRange(range);savedRange=range.cloneRange();return true;};
     colorField.retouchPaintPreview=()=>preview;
@@ -938,8 +938,35 @@ function showInlineFormatToolbar(){
       onClose:()=>{picker=null;delete colorField.retouchPaintPreview;if(restoreSelection()){current.el.focus();update();}}
     });
   };
+  const familyButton=document.createElement('button');familyButton.type='button';familyButton.className='range-font-family';familyButton.setAttribute('aria-label','Choose selected text font');bar.prepend(familyButton);
+  fields.push({field:familyButton,property:'font-family',display:value=>value});
+  familyButton.onpointerdown=event=>event.preventDefault();
+  familyButton.onclick=()=>{
+    if(!editing||!savedRange||fontDialog)return;
+    const current=editing,prefix=d.createRange();prefix.selectNodeContents(current.el);prefix.setEnd(savedRange.startContainer,savedRange.startOffset);
+    const start=prefix.toString().length,end=start+savedRange.toString().length;
+    const preview=previewInlineStyle(current,savedRange,'font-family');if(!preview){toast('This selection includes source-owned text.','err');return;}
+    const restoreSelection=()=>{if(editing!==current||doc()!==d||!current.el.isConnected)return false;const range=inlineRangeAt(current.el,start,end);if(!range)return false;const selection=d.getSelection();selection.removeAllRanges();selection.addRange(range);savedRange=range.cloneRange();return true;};
+    const dialog=document.createElement('dialog');fontDialog=dialog;dialog.className='paint-picker range-font-picker';dialog.retouchSourceInput=familyButton;dialog.setAttribute('aria-label','Selected text font');
+    const heading=document.createElement('h3');heading.textContent='Font';dialog.append(heading);
+    RetouchInspector.note(dialog,'Selected text · Applies across all screen sizes.');
+    let chosen=familyButton.value;
+    const apply=RetouchInspector.button('Apply font',async()=>{
+      if(!dialog.open||!RetouchRangeStyles.valid('font-family',chosen))return;preview.restore();
+      if(!preview.valid||!restoreSelection()){dialog.close();toast('Text changed while choosing a font. Select it again.','err');return;}
+      dialog.close();if(chosen!==familyButton.value){applyTextRangeStyle('font-family',chosen);await commitInlineEdit();}
+    });apply.disabled=true;
+    document.body.append(dialog);
+    RetouchInspector.fontPicker(dialog,d,chosen,value=>{if(!RetouchRangeStyles.valid('font-family',value))return;chosen=value;preview.update(value);apply.disabled=false;},{label:'Selected text font family',mixed:!chosen,preview:true});
+    const actions=document.createElement('div');actions.className='paint-picker-actions';actions.append(RetouchInspector.button('Cancel',()=>{preview.restore();dialog.close();}),apply);dialog.append(actions);
+    const observer=new MutationObserver(()=>{if(!familyButton.isConnected){preview.restore();dialog.close();}});observer.observe(document.body,{childList:true,subtree:true});
+    dialog.addEventListener('cancel',()=>preview.restore());
+    dialog.addEventListener('close',()=>{observer.disconnect();preview.restore();dialog.remove();fontDialog=null;if(restoreSelection()){current.el.focus();update();}},{once:true});
+    dialog.addEventListener('keydown',event=>{event.stopPropagation();if(event.key==='Enter'&&event.target.matches('input[type=search]')){event.preventDefault();const first=dialog.querySelector('.font-results button');if(first){first.click();if(!apply.disabled)apply.click();}}});
+    dialog.querySelector('details').open=true;dialog.showModal();const box=familyButton.getBoundingClientRect();dialog.style.left=Math.max(8,Math.min(innerWidth-dialog.offsetWidth-8,box.left))+'px';dialog.style.top=Math.max(8,Math.min(innerHeight-dialog.offsetHeight-8,box.top-dialog.offsetHeight-8))+'px';
+  };
   const update=()=>{
-    if(picker)return;
+    if(picker||fontDialog)return;
     const selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null,valid=editing&&range&&!range.collapsed&&editing.el.contains(range.startContainer)&&editing.el.contains(range.endContainer);
     for(const control of bar.children)control.disabled=!valid;
     if(!valid)return;savedRange=range.cloneRange();
@@ -949,6 +976,7 @@ function showInlineFormatToolbar(){
       const set=values.get(property),value=set.size===1?[...set][0]:'';
       if(display){if(document.activeElement!==field){try{field.value=value?display(value):'';}catch{field.value='';}}if(property==='color'){swatch.dataset.color=value;swatch.style.backgroundImage=value?'linear-gradient('+value+','+value+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)':'';}}
       else {field.value=[...field.options].some(option=>option.value===value)?value:property==='font-weight'&&value?'custom':'';if(property==='font-weight'&&document.activeElement!==customWeight)customWeight.hidden=field.value!=='custom';}
+      if(field===familyButton){field.textContent=value?value.split(',')[0].replace(/["']/g,''):'Mixed fonts';field.title=value||'Mixed font families';}
     }
   };
   bar.addEventListener('focusout',()=>{const current=editing;requestAnimationFrame(()=>{if(editing===current&&current&&document.activeElement!==iframe&&!inlineTextUIFocused())commitInlineEdit();});});

@@ -887,3 +887,39 @@ is `/private/tmp/retouch-range-weights.png`; its run log is
 Range font-family selection, general nested-style normalization, arbitrary font
 axes, and responsive range typography remain incomplete. The current desktop
 archive does not yet contain this web-shell change.
+
+
+### Selected-text page fonts (2026-09-13)
+
+The range toolbar now shows the selected font family (or Mixed fonts). Clicking
+it opens the existing searchable page-font catalog in a light dialog. Choosing a
+font previews just the highlighted text. Apply saves one source/history edit;
+Cancel restores the original nodes and selection. Enter in search applies the
+first matching font; no matches leaves source unchanged. Escape closes the expanded
+font search first, then the dialog. The catalog retains the chosen preview font
+through search and font-status refreshes, including choices found by the extended
+page scan. The dialog explicitly states that range font edits apply across screen
+sizes and reports page font loading status.
+
+The shared range model accepts literal family names and fallback lists. HTML
+style attributes escape double quotes, React uses a string-valued `fontFamily`,
+and Liquid decodes the escaped attribute when recognizing a saved range wrapper.
+Reopening, changing part of a saved run, and merging equivalent neighbors retain
+source ownership. Dynamic font expressions and unsupported literal syntax remain
+outside this range writer. This uses fonts already declared or available on the
+page; it does not install missing fonts.
+
+Validation: 1,182 unit tests; HTML/React Chromium 145 and Liquid WebKit 26.0
+browser checks exercise search, no-match preservation, live preview, Cancel and
+Escape, quoted font lists, reopening, split/merge, and exact undo/redo. Combined
+family/color/weight regression logs are
+`/private/tmp/retouch-range-family-final-{html,react,liquid}.log`; focused checks for
+the final preview-selection update are
+`/private/tmp/retouch-range-family-verified-{html,react,liquid}.log`. Final keyboard
+search checks are `/private/tmp/retouch-range-family-keyboard-{html,react,liquid}.log`. Unit output is
+`/private/tmp/retouch-range-family-units-verified.log`. The inspected light font
+browser capture is `/private/tmp/retouch-range-family.png`.
+
+General nested-style normalization, responsive range overrides, arbitrary axes,
+and remaining Figma typography parity are incomplete. The latest desktop archive
+still predates these range-editor changes and needs fresh build/native evidence.
