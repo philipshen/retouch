@@ -308,6 +308,7 @@ function describeElement(resolved) {
     srcReason: node.srcSet || picture ? 'This image has authored responsive sources. Editing those choices is deferred.' : null,
     canSetTag: node.closeStart != null && (TEXT_TAGS.has(node.tag) || !!tagSource?.result.target && TEXT_TAGS.has(tagSource.result.target.value)),
     tagSource:tagSource?.result.descriptor||null,
+    ...require('../range-style-source.cjs').describe(resolved,'liquid'),
     text,
     textDynamic: text === null && (hasLiquid || node.textBinding),
     textSource: traced?.descriptor || null,

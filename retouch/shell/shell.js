@@ -612,6 +612,13 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
   if (c?.superseded) return;
   if (!c) return clearSelection(); // nothing editable here — no error
   const { el, info } = c;
+  // Plain range wrappers are text runs inside their parent text layer.
+  const textParent=info.textRangeStyle&&!c.instanceId&&el.parentElement?.closest('[data-rt]');
+  if(textParent&&/^(H[1-6]|P|SPAN|DIV|LABEL|BLOCKQUOTE|A|BUTTON)$/.test(textParent.tagName)){
+    const serial=classificationSerial,parent=await api('GET',resolveUrl(textParent.getAttribute('data-rt'),renderContext(textParent)));
+    if(serial!==classificationSerial)return;
+    if(parent?.ok&&parent.element.file===info.file&&parent.element.hash===info.hash)return startInlineEdit(textParent,evt,quiet,openVector);
+  }
   renderedSelection={id:c.info.id,element:c.el};
   sel = {
     hostId: c.hostId,
@@ -873,6 +880,11 @@ function applyTextRangeStyle(property,value){
   // Each source-owned ancestor keeps its identity and untouched attributes.
   const wrappers=[];
   for(const {node,from,to}of runs){
+    const parent=node.parentElement,id=parent.getAttribute('data-rt'),evidence=editing.info.rangeStyleIds?.[id];
+    const replaceable=parent!==editing.el&&parent.tagName==='SPAN'&&parent.childNodes.length===1&&from===0&&to===node.textContent.length&&
+      (parent.__rtRangeStyle===property||evidence?.property===property)&&parent.style.length===1&&parent.style[0]===property&&
+      !parent.getAttribute('data-rt-i')&&[...parent.attributes].every(attr=>['style','data-rt','data-rt-keep','data-rt-revision','data-rt-client-revision','data-rt-client-mounted','data-rt-section','data-rt-block','data-rt-block-type','data-rt-template','data-rt-locale'].includes(attr.name));
+    if(replaceable){parent.__rtRangeStyle=property;parent.__rtReplaceRangeStyle=true;parent.style.setProperty(property,value);wrappers.push(parent);continue;}
     const part=d.createRange();part.setStart(node,from);part.setEnd(node,to);
     const wrapper=d.createElement('span');wrapper.__rtRangeStyle=property;wrapper.style.setProperty(property,value);part.surroundContents(wrapper);wrappers.push(wrapper);
   }

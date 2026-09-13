@@ -115,6 +115,7 @@ function describeElement(resolved) {
     canSetSrc: !!image && !authoredSrcSet && !picture && (/^(img|source|video|image)$/i.test(tagOf(node)) || /Image$/.test(tagOf(node))),
     srcReason: authoredSrcSet || picture ? 'This image has authored responsive sources. Editing those choices is deferred.' : null,
     canSetTag,
+    ...require('./range-style-source.cjs').describe(resolved,'react'),
     plainFormattingIds,
     text: textInfo ? textInfo.text : null,
     textDynamic: textInfo ? false : hasChildren(node),

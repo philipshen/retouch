@@ -270,3 +270,9 @@ test('range styles write constrained JSX and fully wrapped text remains editable
   assert.ok(result.ok);assert.match(read(root,'Card.tsx'),/<span style=\{\{fontWeight:"400"\}\}><span style=\{\{fontStyle:"normal"\}\}>Regular text<\/span><\/span>/);
   index.scanAll();assert.strictEqual(writer.describeElement(pick(index,root,'Card.tsx','p').resolved).mixedText,true);
 });
+
+test('range wrapper reuse requires literal JSX styles and plain text',()=>{
+ fs.writeFileSync(path.join(root,'Range.tsx'),`export const Text=({weight,label})=><p><span style={{fontWeight:"400"}}>plain</span><span style={{fontStyle:"italic"}}>italic</span><span style={{fontWeight:weight}}>bound</span><span className="owned" style={{fontWeight:400}}>owned</span><span style={{fontWeight:400}}>{label}</span></p>`);
+ index.scanAll();const {resolved}=pick(index,root,'Range.tsx','p');
+ assert.deepStrictEqual(Object.values(writer.describeElement(resolved).rangeStyleIds),[{property:'font-weight',value:'400'},{property:'font-style',value:'italic'}]);
+});

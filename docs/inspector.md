@@ -705,3 +705,32 @@ the toolbar handles the selected text. Desktop packaging has not been rebuilt.
 Nested emphasis, saved script formatting, and immediate script switching also
 passed on HTML/React Chromium and Liquid WebKit after the range-style change:
 `/private/tmp/retouch-range-style-regression-{html,react,liquid}.log`.
+
+### Reuse plain saved range overrides (2026-09-13)
+
+A complete plain text run with an existing override for the same property can
+now update that wrapper. The serializer replaces only a source-approved range
+wrapper, keeping its text, instead of adding another span. A new shared source
+proof recognizes exactly one literal allowed style on a plain-text span. JSX
+bindings, spread/additional attributes, extra CSS declarations, nested contents,
+and Liquid expressions are excluded from reuse. Other structures continue
+through the existing preservation path.
+
+Clicking a recognized text-run wrapper re-enters its parent text layer when the
+parent belongs to the same unchanged source file and there is no component
+instance boundary. This allows repeated direct text clicks to retain the parent
+editing context. Parent resolution is guarded against a newer selection.
+
+`RT_E2E_REPEATED_RANGES=1` performs ten saved weight changes on the same word,
+reopening by clicking the text run each time. It asserts one rendered span and
+one source span after every save, actual computed weight, unchanged text, and
+exact undo/redo of every snapshot. Combined runs include the original range-style
+workflow. Logs: `/private/tmp/retouch-repeated-ranges-{html,react,liquid}.log`.
+The unit suite passed 1,172 tests in
+`/private/tmp/retouch-repeated-ranges-units.log`, including proof exclusions and
+serialization that distinguishes untouched source nodes from approved updates.
+
+Reuse currently requires a complete plain-text span for the same style property.
+Partial selections, differently nested properties, attributed spans, and rich
+text stored through indirect bindings still need broader normalization support.
+Desktop packaging has not been rebuilt with this change.

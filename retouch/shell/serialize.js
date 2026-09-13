@@ -21,7 +21,7 @@
       }
       if (n.nodeType !== 1) continue;
       var id = (n.getAttribute && (n.getAttribute('data-rt-keep') || n.getAttribute('data-rt') || n.getAttribute('data-rt-i'))) || null;
-      if (id && snapshot && snapshot.has(id)) {
+      if (id && snapshot && snapshot.has(id) && !n.__rtReplaceRangeStyle) {
         var before = snapshot.get(id);
         var unchanged = typeof before === 'string' ? n.textContent === before : n.innerHTML === before.html;
         if (unchanged) out.push({ t: 'keep', id: id });

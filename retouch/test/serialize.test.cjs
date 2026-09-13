@@ -108,3 +108,11 @@ test('new and mounted text range styles retain their constrained style tree',()=
   assert.deepStrictEqual(serializeChildren(root),[{t:'style',property,value,children:[{t:'text',value:'selected'}]}]);
  }
 });
+
+test('source-approved range wrapper changes bypass keep without losing its text',()=>{
+ const span=el('SPAN',[text('selected')],{'data-rt':'0123456789'});span.style={length:1,0:'font-weight',getPropertyValue:()=> '700'};
+ const snapshot=new Map([['0123456789','selected']]);
+ assert.deepStrictEqual(serializeChildren(el('P',[span]),snapshot),[{t:'keep',id:'0123456789'}]);
+ span.__rtReplaceRangeStyle=true;span.__rtRangeStyle='font-weight';
+ assert.deepStrictEqual(serializeChildren(el('P',[span]),snapshot),[{t:'style',property:'font-weight',value:'700',children:[{t:'text',value:'selected'}]}]);
+});
