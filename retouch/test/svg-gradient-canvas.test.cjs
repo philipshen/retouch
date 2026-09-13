@@ -7,3 +7,5 @@ test('radial center carries focus and radius drag measures Euclidean distance',(
 test('endpoint edits retain untouched precision and returning to the start is a no-op',()=>{const v={x1:.333333333333,y1:.123456789,x2:.987654321,y2:.222222222};assert.equal(g.change('linearGradient',v,1,{x:.8,y:.7}).x1,v.x1);assert.deepEqual(g.change('linearGradient',v,1,{x:v.x2,y:v.y2}),v);});
 
 test('offscreen gradient handles stay reachable at the canvas edge',()=>{assert.deepEqual(g.visiblePoint({x:200,y:-10},400,300),{x:200,y:8});assert.deepEqual(g.visiblePoint({x:500,y:310},400,300),{x:392,y:292});});
+
+test('whole-gradient translation preserves endpoint separation and radial shape',()=>{const linear={x1:0,y1:.1,x2:1,y2:.6};assert.deepEqual(g.translate(linear,.25,-.1),{x1:.25,y1:0,x2:1.25,y2:.5});const radial={cx:.5,cy:.5,r:.4,fx:.3,fy:.4};assert.deepEqual(g.translate(radial,.5,.5),{cx:1,cy:1,r:.4,fx:.8,fy:.9});assert.deepEqual(g.translate(radial,0,0),radial);});
