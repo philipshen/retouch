@@ -2365,6 +2365,7 @@ function mountSVGGradients(info,target){
   const reason=gradient.reason; if(reason){RetouchInspector.note(section,reason,'refused');panelBody.append(section);continue;}
   RetouchInspector.select(section,'Gradient type',[['linearGradient','Linear'],['radialGradient','Radial']],gradient.type,value=>setSVGGradient(info,gradient.paint,undefined,undefined,'setType',value));
   const unique=RetouchInspector.button('Make unique',()=>setSVGGradient(info,gradient.paint,undefined,undefined,'detach'));unique.setAttribute('aria-label','Make '+gradient.paint+' gradient unique');section.append(unique);
+  const reverse=RetouchInspector.button('Reverse gradient',()=>setSVGGradient(info,gradient.paint,undefined,undefined,'reverse'));reverse.setAttribute('aria-label','Reverse '+gradient.paint+' gradient');section.append(reverse);
   const bindStops=mountSVGGradientStopRail(section,info,target,gradient);
   const write=(changes,stop)=>setSVGGradient(info,gradient.paint,changes,stop);
   const field=(parent,label,value,property,stop,options)=>{let input;
