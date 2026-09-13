@@ -2359,6 +2359,10 @@ function mountSVGGradientStopRail(section,info,target,gradient){
   }
  };
 }
+function editSVGGradientOnCanvas(info,target,gradient){
+ stopDrawing?.();const current=()=>mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&sel?.info===info&&!sel?.multiple?.length&&!document.querySelector('dialog[open]');if(!current())return;canvasPan.cancel();
+ stopDrawing=RetouchSVGGradientCanvas.mount({target,gradient,frame:iframe,canvas:canvasSurface,current,save:changes=>setSVGGradient(info,gradient.paint,changes),onEnd:()=>{stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onError:message=>toast(message,'err')});
+}
 function mountSVGGradientCreation(info,target){
  const creation=info.svgGradientCreation;if(!creation.paints.length||!target)return;
  const section=RetouchInspector.section('Create gradient');
@@ -2380,6 +2384,7 @@ function mountSVGGradients(info,target){
     setSVGGradient(info,gradient.paint,undefined,undefined,'solid',color.space==='display-p3'?RetouchPaletteValues.p3(color.channels,alpha):RetouchPaletteValues.srgb(color.channels,alpha));
    }catch(error){type.value=gradient.type;toast(error.message,'err');}
   });type.title='Solid uses the first stop’s color and opacity for this layer';
+  const canvas=RetouchInspector.button('Edit gradient on canvas',()=>editSVGGradientOnCanvas(info,target,gradient));canvas.setAttribute('aria-label','Edit '+gradient.paint+' gradient on canvas');section.append(canvas);
   const unique=RetouchInspector.button('Make unique',()=>setSVGGradient(info,gradient.paint,undefined,undefined,'detach'));unique.setAttribute('aria-label','Make '+gradient.paint+' gradient unique');section.append(unique);
   const reverse=RetouchInspector.button('Reverse gradient',()=>setSVGGradient(info,gradient.paint,undefined,undefined,'reverse'));reverse.setAttribute('aria-label','Reverse '+gradient.paint+' gradient');section.append(reverse);
   const bindStops=mountSVGGradientStopRail(section,info,target,gradient);

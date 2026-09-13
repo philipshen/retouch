@@ -14,7 +14,9 @@ The current controls cover gradient type, coordinates, coordinate units, spread 
 
 Select a solid SVG shape and choose Linear or Radial under Fill type or Stroke type to create a gradient from its current computed color to transparent. Creation appends a uniquely named definition inside the nearest SVG viewport, keeps existing layer identities, and supports subsequent stop editing. One undo removes the definition and restores the original paint attribute. Source styles, classes and dynamic paint attributes currently prevent creation; CSS-owned paint creation still needs its own source-writing path.
 
-The controls do not yet follow inherited `href` chains or provide canvas gradient handles. CSS overrides can still control the rendered paint; the controls describe source attributes, not resolved CSS ownership. Dynamic, styled, animated and ambiguous definitions are refused.
+Edit gradient on canvas opens linear start/end handles or radial center/radius/focus handles. Drag a handle to preview the shared definition, then release to commit one source transaction. Arrow keys move by 1% of object bounds or 1 SVG viewport unit; Shift multiplies the step by 10 and Option/Alt divides it by 10. Enter applies keyboard changes; Escape cancels. The radial center carries its focus point. Canvas editing accounts for the painted bounds, SVG viewport, gradient transforms and editor zoom. Offscreen handles remain reachable at the canvas edge with a dashed outline and explanatory tooltip. Moving away and back to the original point does not create an undo entry. A page/gradient change, scrolling, resizing or zooming cancels the gesture and preserves unrelated DOM edits. Page CSS overriding the gradient paint prevents canvas editing.
+
+Coordinate mapping follows the [SVG gradient coordinate systems](https://www.w3.org/TR/SVG11/pservers.html). Inherited `href` chains remain unsupported. CSS overrides can still control the rendered paint; the controls describe source attributes, not resolved CSS ownership. Dynamic, styled, animated and ambiguous definitions are refused.
 
 Validation:
 
