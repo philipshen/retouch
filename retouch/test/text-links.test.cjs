@@ -31,7 +31,14 @@ test('kept HTML link URL changes preserve all other attributes and refuse dynami
  assert.equal(changed,`<a id='owned' href="/new?x=&quot;&amp;y=&#123;&#123;value&#125;&#125;" class="site" target="_blank">Read <em>more</em></a>`);
  assert.match(source.rewrite(original,'s',[{t:'keep',id:node.id,href:'/new',children:[{t:'text',value:'Changed'}]}]),/>Changed<\/a>$/);
  for(const html of ['<a href="{{ url }}">x</a>','<a href="/one" href="/two">x</a>','<span href="/old">x</span>']){
-  const kept=source.describe(html,'s').descriptor.children[0];assert.equal(kept.plainLink,false);assert.throws(()=>source.rewrite(html,'s',[{t:'keep',id:kept.id,href:'/new'}]),/controlled/);
+  const kept=source.describe(html,'s').descriptor.children[0];assert.equal(kept.plainLink,false);for(const href of ['/new',null])assert.throws(()=>source.rewrite(html,'s',[{t:'keep',id:kept.id,href}]),/controlled/);
  }
  assert.match(rich.validateChildrenTree([{t:'keep',id:node.id,href:'javascript:alert(1)'}],0),/Invalid/);
+});
+test('kept HTML links remove and restore href without replacing the anchor',()=>{
+ const initial=`<a id='owned' href='/old' class="site">Read</a>`,id=source.describe(initial,'s').descriptor.children[0].id;
+ const removed=source.rewrite(initial,'s',[{t:'keep',id,href:null}]);assert.equal(removed,`<a id='owned'  class="site">Read</a>`);
+ const next=source.describe(removed,'s').descriptor.children[0];assert.equal(next.editableLink,true);
+ assert.equal(source.rewrite(removed,'s',[{t:'keep',id:next.id,href:'/new'}]),`<a id='owned'  class="site" href="/new">Read</a>`);
+ assert.equal(source.rewrite(removed,'s',[{t:'keep',id:next.id,href:null}]),removed);
 });

@@ -153,3 +153,8 @@ test('returning a kept link to its initial href avoids rewriting original source
  const id='abcdef0123',anchor=el('a',[text('Read')],{'data-rt':id,href:'/old'});anchor.__rtLinkHref='/old';anchor.innerHTML='Read';
  assert.deepStrictEqual(serializeChildren(el('p',[anchor]),new Map([[id,{html:'Read',href:'/old'}]])),[{t:'keep',id}]);
 });
+test('kept anchor href removal serializes null while unchanged absent href stays a keep',()=>{
+ const id='abcdef0123',anchor=el('a',[text('Read')],{'data-rt':id});anchor.__rtLinkHref=null;anchor.innerHTML='Read';
+ assert.deepStrictEqual(serializeChildren(el('p',[anchor]),new Map([[id,{html:'Read',href:'/old'}]])),[{t:'keep',id,href:null}]);
+ assert.deepStrictEqual(serializeChildren(el('p',[anchor]),new Map([[id,{html:'Read',href:null}]])),[{t:'keep',id}]);
+});

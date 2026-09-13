@@ -338,3 +338,13 @@ test('kept JSX link href edits preserve attributes and refuse expressions or spr
   const result=writer.applyOp(resolved,{type:'setChildren',fileHash:resolved.hash,children:[{t:'keep',id,href:'/new'}]});assert.equal(!!result.ok,allowed,JSON.stringify(result));assert.equal(read(root,'OwnedLinks.tsx'),allowed?original.replace('href="/old"','href={"/new"}'):original);
  }
 });
+test('kept JSX anchor destination can be removed and restored without changing source attributes',()=>{
+ const initial=`export const Text=()=> <p><a id="owned" href="/old" className={style}>Read</a></p>`,file='Unlinked.tsx';fs.writeFileSync(path.join(root,file),initial);
+ for(const href of [null,'/restored']){
+  index.scanAll();const {resolved}=pick(index,root,file,'p'),id=pick(index,root,file,'a').el.id;
+  const result=writer.applyOp(resolved,{type:'setChildren',fileHash:resolved.hash,children:[{t:'keep',id,href}]});assert.ok(result.ok,JSON.stringify(result));
+  assert.equal(read(root,file),href===null?initial.replace('href="/old"',''):initial.replace('href="/old"','').replace('className={style}>','className={style} href={"/restored"}>'));
+ }
+ fs.writeFileSync(path.join(root,file),`export const Text=()=> <p><a id="owned" {...props}>Read</a></p>`);index.scanAll();const {resolved}=pick(index,root,file,'p'),id=pick(index,root,file,'a').el.id;
+ assert.equal(writer.planOp(resolved,{type:'setChildren',fileHash:resolved.hash,children:[{t:'keep',id,href:'/new'}]}).refused,true);
+});

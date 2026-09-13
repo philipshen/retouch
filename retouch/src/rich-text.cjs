@@ -25,7 +25,7 @@ function validateChildrenTree(children, depth, inLink=false) {
       if (err) return err;
     } else if (c.t === 'keep') {
       if(inLink)return 'Source-owned nodes cannot be moved inside a new text link.';
-      if(Object.hasOwn(c,'href')&&!links.valid(c.href))return 'Invalid kept link URL.';
+      if(Object.hasOwn(c,'href')&&c.href!==null&&!links.valid(c.href))return 'Invalid kept link URL.';
       if (!/^[0-9a-f]{10}$/.test(c.id || '')) return 'Bad keep id.';
       if (c.children) {
         const err = validateChildrenTree(c.children, depth + 1,inLink);

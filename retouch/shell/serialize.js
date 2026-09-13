@@ -29,7 +29,7 @@
         var unchanged = typeof before === 'string' ? n.textContent === before : n.innerHTML === before.html;
         var kept={t:'keep',id:id};
         if(!unchanged)kept.children=serializeChildren(n,snapshot);
-        if(n.tagName==='A'&&links.valid(n.__rtLinkHref)&&!(before&&typeof before==='object'&&before.href===n.__rtLinkHref))kept.href=n.__rtLinkHref;
+        if(n.tagName==='A'&&Object.prototype.hasOwnProperty.call(n,'__rtLinkHref')&&(n.__rtLinkHref===null||links.valid(n.__rtLinkHref))&&!(before&&typeof before==='object'&&before.href===n.__rtLinkHref))kept.href=n.__rtLinkHref;
         out.push(kept);
         continue;
       }

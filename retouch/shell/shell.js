@@ -1220,7 +1220,7 @@ function showInlineFormatToolbar(){
     const linkParent=valid?(range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer):null;
     const selectedLink=linkParent?.closest('a'),withinLink=selectedLink&&selectedLink!==editing?.el&&selectedLink.contains(range?.endContainer);
     const ownedLink=withinLink&&!plainInlineFormatting(selectedLink),editableOwned=ownedLink&&editableLinkURL(selectedLink);
-    linkField.disabled=!valid||range.collapsed&&!withinLink;linkField.readOnly=!!ownedLink&&!editableOwned;removeLink.disabled=!valid||!withinLink||ownedLink;
+    linkField.disabled=!valid||range.collapsed&&!withinLink;linkField.readOnly=!!ownedLink&&!editableOwned;removeLink.disabled=!valid||!withinLink||!selectedLink.hasAttribute('href')||ownedLink&&!editableOwned;
     linkField.title=ownedLink?(editableOwned?'Updates this whole link and preserves its attributes.':'This link is controlled by the site. You can copy its URL.'):'Edit link (⌘K / Ctrl+K)';
     if(document.activeElement!==linkField)linkField.value=withinLink?selectedLink.getAttribute('href')||'':'';
     if(!valid)return;savedRange=range.cloneRange();
@@ -1283,9 +1283,9 @@ function applyInlineLink(href){return inlineFormattingTransaction(()=>{
   const parent=range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer,anchor=parent.closest('a');
   if(anchor===current.el){toast('Select the parent text layer to edit this link.','err');return false;}
   if(anchor&&current.el.contains(anchor)&&anchor.contains(range.endContainer)){
-    if(href!==null&&href===anchor.getAttribute('href'))return true;
+    if(href===anchor.getAttribute('href'))return true;
     if(!plainInlineFormatting(anchor)){
-      if(href!==null&&editableLinkURL(anchor)){anchor.setAttribute('href',href);anchor.__rtLinkHref=href;range.selectNodeContents(anchor);selection.removeAllRanges();selection.addRange(range);return true;}
+      if(editableLinkURL(anchor)){if(href===null)anchor.removeAttribute('href');else anchor.setAttribute('href',href);anchor.__rtLinkHref=href;range.selectNodeContents(anchor);selection.removeAllRanges();selection.addRange(range);return true;}
       toast('Edit this source-owned link in its source.','err');return false;
     }
     if(range.collapsed)range.selectNodeContents(anchor);
