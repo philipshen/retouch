@@ -116,3 +116,27 @@ Logs: `/private/tmp/retouch-css-paints-{html,react,liquid}-verified.log`,
 `/private/tmp/retouch-css-paints-svg-regression.log`, and
 `/private/tmp/retouch-css-paints-units.log` (1,152 passing unit tests).
 The latest desktop archive predates this generalization.
+
+## Different colors on each border edge
+
+Border paint now reads the complete CSS shorthand rather than just the top
+edge. The field accepts one to four literal colors, including RGB and Display
+P3 functions. Its swatch shows the edge colors and its label shows Mixed when
+they differ. Different initial alpha values show a Mixed opacity placeholder.
+Entering one opacity preserves each edge's color channels and color space and
+writes one shorthand in one source transaction.
+
+The shared CSS validator, React/Liquid color-class writer and inspector accept
+this shorthand. The HTML writer uses the same validation. Malformed lists,
+more than four colors and mixed variable/literal lists are refused. Ordinary
+single-color behavior remains supported. This does not add independent
+per-edge opacity controls or full Figma individual-stroke authoring.
+
+`RT_E2E_CSS_PAINT_ROWS=1 RT_E2E_CSS_PAINT_SIDES=1` verifies four differently
+colored edges with different initial alpha values. HTML/React Chromium and
+Liquid WebKit pass channel/space preservation, shared alpha changes, responsive
+scope/fallback, reset and exact source Undo/Redo. All 1,154 unit tests pass,
+including real React API history and HTML shorthand validation.
+Screenshot inspected: `/private/tmp/retouch-border-sides.png`.
+Logs: `/private/tmp/retouch-border-sides-{html,react,liquid}.log` and
+`/private/tmp/retouch-border-sides-units.log`.

@@ -3,7 +3,7 @@ const colors=require('../shell/html-css-values.js'),responsive=require('../shell
 const properties=['color','background-color','border-color','fill','stroke'];
 function encode(property,value){
  if(!properties.includes(property))throw Error('Choose a supported color property.');
- if(typeof value!=='string'||!colors.valid('color',value,false))throw Error('Enter a supported literal CSS color.');
+ if(typeof value!=='string'||!colors.valid(property==='border-color'?'border-color':'color',value,false))throw Error('Enter a supported literal CSS color.');
  return '!['+property+':'+value.replace(/\s+/g,'_')+']';
 }
 function related(plain,property){

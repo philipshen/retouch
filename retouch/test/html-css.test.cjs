@@ -251,3 +251,9 @@ test('literal HSL supports signed hue units and alpha while rejecting mixed synt
  }
  for(const color of ['hsl(120deg, 100% 50%)','hsl(120 100 50)','hsl(120foo 100% 50%)','hsl(120 100% 50%);display:none','hsl(from red h s l)','hsl(var(--hue) 100% 50%)'])assert.equal(values.valid('color',color),false,color);
 });
+
+test('border color shorthand preserves four literal colors and rejects malformed lists',()=>{
+ const values=require('../shell/html-css-values.js'),value='#12345680 rgb(1 2 3 / .4) color(display-p3 1 .2 .1 / .6) #abcdef';assert.equal(values.parseBorderColors(value).length,4);assert.equal(values.valid('border-color',value),true);assert.equal(values.valid('color',value),false);const result=edit(original,768,value,'border-color');assert.equal(result.ok,true,result.reason);assert.equal(css.describe(resolve(result.edits[0].after)).cssRules[768]['border-color'],value);
+ for(const invalid of ['red blue green black white','rgb(1 2 3 red','red;display:none','red url(test)','red var(--paint)'])assert.equal(values.valid('border-color',invalid),false,invalid);
+ for(const valid of ['red','red blue','rgb(1 2 3) #fff red'])assert.ok(values.parseBorderColors(valid));
+});

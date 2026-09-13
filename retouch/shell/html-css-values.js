@@ -114,9 +114,11 @@
   return null;
  }
  function variableValue(value){return value===null||typeof value==='string'&&value.length<=150&&(/^(?:[+-]?(?:\d+(?:\.\d+)?|\.\d+))(?:px|rem|em|%|vw|vh)?$/.test(value)&&Math.abs(parseFloat(value))<=100000||/^var\(--[a-zA-Z_][a-zA-Z0-9_-]{0,127}\)$/.test(value)||valid('color',value,false));}
+ function parseBorderColors(value){if(typeof value!=='string'||!value.trim()||value.length>1024)return null;const parts=shadowTokens(value.trim());return parts&&parts.length>=1&&parts.length<=4&&parts.every(part=>valid('color',part,false))?parts:null;}
  function valid(property,value,allowVariable=true){
   if(variableName(property))return variableValue(value)&&value!=='var('+property+')';
   if(allowVariable&&[...fields,...svgFields].some(([name])=>name===property)&&typeof value==='string'&&/^var\(--[a-zA-Z_][a-zA-Z0-9_-]{0,127}\)$/.test(value))return valid(property,null);
+  if(property==='border-color')return value===null||parseBorderColors(value)!==null;
   if(['fill','stroke'].includes(property))return value===null||value==='none'||valid('color',value);
   if(property==='stroke-dashoffset')return value===null||typeof value==='string'&&value.length<=40&&/^[-+]?(?:\d+\.?\d*|\.\d+)(?:px|%)?$/.test(value)&&Math.abs(parseFloat(value))<=100000;
   if(property==='stroke-miterlimit')return value===null||typeof value==='string'&&value.length<=40&&/^(?:\d+\.?\d*|\.\d+)$/.test(value)&&Number(value)>=1&&Number(value)<=100000;
@@ -318,5 +320,5 @@
   return families[property]||[property];
  }
  function overlaps(a,b){if(a==='-webkit-backdrop-filter')a='backdrop-filter';if(b==='-webkit-backdrop-filter')b='backdrop-filter';return a==='all'||b==='all'||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(a)&&sides.includes(b)||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(b)&&sides.includes(a)||a==='background'&&b.startsWith('background-')||b==='background'&&a.startsWith('background-')||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')&&!b.endsWith('radius')||b==='border'&&a.startsWith('border-')&&!a.endsWith('radius')||['font','font-variant'].includes(a)&&b==='font-variant-numeric'||['font','font-variant'].includes(b)&&a==='font-variant-numeric'||a==='font'&&['font-family','font-weight','font-style','font-size','line-height','font-variation-settings','font-optical-sizing'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
- return {variableCycle,variableName,variableValue,parseVariations,serializeVariations,numericGroups,numericValid,numericChange,options,fields,svgFields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients,gradientColorSpaces};
+ return {parseBorderColors,variableCycle,variableName,variableValue,parseVariations,serializeVariations,numericGroups,numericValid,numericChange,options,fields,svgFields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients,gradientColorSpaces};
 });
