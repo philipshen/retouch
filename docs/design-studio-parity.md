@@ -14229,3 +14229,28 @@ typography, effect and gradient previews. The default light-inspector workflow
 passed as well. /private/tmp/retouch-svg-scrub.png was visually inspected.
 Logs: /private/tmp/retouch-svg-scrub-{liquid,html,react}-full.log,
 /private/tmp/retouch-svg-scrub-{css,inspector,units}.log.
+
+## 2026-09-13 — Return to Move with V
+
+The canvas now accepts V to return to Move in Edit mode. The command cancels an
+unfinished drawing and Hand mode while retaining selection, and is searchable
+as “Move tool” in Actions. It is available without an SVG selection; creation
+commands retain their existing source capability checks. Shape and Pen tooltips
+now expose the return shortcut. Native inputs, contenteditable fields, menus,
+dialogs, modifier combinations, composition and active source writes retain
+the existing keyboard guards.
+
+Browser verification explicitly cancels rectangle drawing and a Pen path with
+a placed point using V, checking unchanged source and retained selection. It
+also types V in inspector search, a preview input and preview contenteditable.
+The full six-shape and curved-Pen suites pass HTML/Chromium, HTML/WebKit 26.0 and
+Liquid/Chromium with transformed drawing, preview, modifier controls, exact
+Undo/Redo and cancellation. All processes exited 0. All 1120 unit tests pass.
+Logs: `/private/tmp/retouch-move-tool-chromium.log`,
+`/private/tmp/retouch-move-tool-webkit-final.log`,
+`/private/tmp/retouch-move-tool-liquid.log`,
+`/private/tmp/retouch-move-tool-units.log`.
+
+No desktop rebuild or native launch in this increment. The older WebKit Fill
+block-axis failure remains unresolved; see `fill-engine-compatibility.md`.
+Full Figma parity and arbitrary-site editing remain incomplete.

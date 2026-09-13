@@ -71,8 +71,8 @@
   if(event.defaultPrevented||event.isComposing||event.altKey||event.shiftKey||event.target.isContentEditable||event.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"],[role="menu"]')||document.querySelector('dialog[open]'))return false;
   const key=event.key.toLowerCase();
   if(event.metaKey||event.ctrlKey){if(key!=='k')return false;event.preventDefault();event.stopPropagation();open();return true;}
-  const preset={r:'rectangle',o:'ellipse',l:'line',p:'pen'}[key];if(!preset)return false;
-  const rows=commands(),row=preset==='pen'?rows.find(row=>row.id==='shape-pen'):rows.find(row=>row.id==='shape-draw-'+preset)||rows.find(row=>row.id==='shape-add-'+preset);
+  const preset={r:'rectangle',o:'ellipse',l:'line',p:'pen',v:'move'}[key];if(!preset)return false;
+  const rows=commands(),row=['pen','move'].includes(preset)?rows.find(row=>row.id==='shape-'+preset):rows.find(row=>row.id==='shape-draw-'+preset)||rows.find(row=>row.id==='shape-add-'+preset);
   if(!enabled(row))return false;event.preventDefault();event.stopPropagation();if(!event.repeat)run(row.id);return true;
  }
 

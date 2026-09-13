@@ -3244,14 +3244,16 @@ async function structureAction(action) {
 // Shape commands belong to the canvas tools, independent of inspector markup.
 window.RetouchShapeTools={
  commands(){
-  const info=sel?.info;if(!info||!info.svgInsertion&&!info.svgTransform?.editable||sel.multiple?.length>1||info.kind==='instance')return [];
+  const canMove=()=>mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!historyRecoveryRequired;
+  const move={id:'shape-move',action:'move',label:'Move tool',keywords:'select pointer canvas V',element:modeBtn,available:canMove,reason:'Finish the current edit and switch to Edit mode.',run(){if(canMove()){stopDrawing?.();canvasPan.cancel();}}};
+  const info=sel?.info;if(!info||!info.svgInsertion&&!info.svgTransform?.editable||sel.multiple?.length>1||info.kind==='instance')return [move];
   const owner=JSON.stringify([info.file,info.id,info.hash,sel.instanceId,sel.scope]);
   const available=()=>mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!historyRecoveryRequired&&!panelBody.inert&&!(sel?.multiple?.length>1)&&owner===JSON.stringify([sel?.info.file,sel?.info.id,sel?.info.hash,sel?.instanceId,sel?.scope]);
   const command=(action,label,fn)=>({id:'shape-'+action,action,label,owner,element:panelBody,available,keywords:'shape vector canvas',reason:'Select an editable container or SVG canvas in Edit mode and finish the current edit.',run(){if(available())return fn(sel.info);}});
   const rows=(info.svgInsertion?.presets||[]).flatMap(preset=>[command('draw-'+preset,'Draw '+preset,current=>drawShape(preset,current)),command('add-'+preset,'Add '+preset,current=>insertLayer(preset,current,'insertSVG'))]);
   if(info.svgTransform?.editable)rows.push(command('resize-vector','Resize vector on canvas',current=>resizeSVGOnCanvas(current)),command('rotate-vector','Rotate vector on canvas',current=>resizeSVGOnCanvas(current,null,null,'ne','rotate')),command('move-vector','Move vector on canvas',current=>resizeSVGOnCanvas(current,null,null,'se','move')));
   if(info.svgInsertion?.pen)rows.push(command('pen','Pen',current=>drawVector(current)));
-  return rows;
+  return [move,...rows];
  },
  get(action){return this.commands().find(row=>row.action===action);}
 };
