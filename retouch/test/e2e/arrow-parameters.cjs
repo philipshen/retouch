@@ -13,7 +13,7 @@ module.exports=async({page,shape,read,wait,settled,screenshot})=>{
  if(converted){await page.getByRole('button',{name:'Convert to vector path',exact:true}).click();await wait(()=>read()!==beforeConversion);await settled();await wait(async()=>await shape.evaluate(el=>el.localName)==='path');}
  const original=read(),points=async()=>await shape.evaluate(el=>el.localName)==='path'?require('../../shell/svg-parametric.js').pointsFromPath(await shape.getAttribute('d')):shape.getAttribute('points'),endpoints=value=>value.split(' ').slice(0,2),before=endpoints(await points()),states=[original];
  for(const [label,value]of [['Arrowhead length','8'],['Arrowhead width','20']]){
-  const field=page.getByLabel(label,{exact:true});await field.waitFor();assert.equal(await field.evaluate(el=>el.closest('[data-section="stroke"]')!==null),true);
+  const field=page.getByLabel(label,{exact:true});await field.waitFor({state:'attached'});for(const details of await field.locator('xpath=ancestor::details').all())if(await details.getAttribute('open')===null)await details.locator(':scope > summary').click();assert.equal(await field.evaluate(el=>el.closest('[data-section="stroke"]')!==null),true);
   await field.fill(value);await field.press('Tab');await wait(()=>read()!==states.at(-1));await settled();await wait(async()=>Math.abs(Number(await page.getByLabel(label,{exact:true}).inputValue())-Number(value))<.00001);
   assert.equal(await shape.evaluate(el=>el.localName),'path','parameter edits use independent path strokes, including legacy arrows');assert.deepEqual(endpoints(await points()),before,'arrowhead edits preserve the shaft endpoints');states.push(read());
  }
