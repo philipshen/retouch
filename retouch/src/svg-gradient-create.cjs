@@ -9,7 +9,8 @@ function inlinePaintOwnership(selected,kind){
   if(object?.type!=='ObjectExpression')return unsafe();const properties=[];
   for(const property of object.properties){
    if(property.type!=='ObjectProperty'||property.computed||!['Identifier','StringLiteral'].includes(property.key.type))return unsafe();
-   const value=property.value,literal=['StringLiteral','NumericLiteral','NullLiteral','BooleanLiteral'].includes(value.type)||value.type==='UnaryExpression'&&['+','-'].includes(value.operator)&&value.argument.type==='NumericLiteral';if(!literal)return unsafe();
+   // Values remain untouched; only the statically known property names determine paint ownership.
+   const value=property.value;
    if(value.type!=='NullLiteral'&&value.value!=='')properties.push(property.key.name??property.key.value);
   }
   return {properties};

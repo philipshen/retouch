@@ -25,7 +25,7 @@ for(const kind of ['html','react','liquid']){
   const all=kind==='react'?'style={{all:"inherit"}}':'style="all:inherit"';for(const paint of ['fill','stroke'])assert.equal(create(original.replace('<rect ','<rect '+all+' '),{paint}).refused,true);
  });
  test(kind+' creation refuses dynamic or malformed inline styles',()=>{
-  const styles=kind==='react'?['style={styles}','style={{...styles}}','style={{[key]:"red"}}','style={{opacity:value}}','style={{get fill(){return "red"}}}']:['style="opacity:calc(1"','style="opacity:.5;fill"','style="opacity:.5;/*"'];
+  const styles=kind==='react'?['style={styles}','style={{...styles}}','style={{[key]:"red"}}','style={{get fill(){return "red"}}}']:['style="opacity:calc(1"','style="opacity:.5;fill"','style="opacity:.5;/*"'];
   for(const style of styles)assert.equal(create(original.replace('<rect ','<rect '+style+' ')).refused,true,style);
  });
  if(kind==='react'){
@@ -36,6 +36,17 @@ for(const kind of ['html','react','liquid']){
   });
   test('react dynamic paint protects its own property while allowing independent paint',()=>{
    for(const paint of ['fill','stroke']){const source=original.replace('fill="red"',paint+'={paintColor}'),r=resolve(source),description=adapter.describe(r).svgGradientCreation;assert.equal(description.reason,null);assert.match(description.paintReasons[paint],/dynamic expression/);assert.equal(create(source,{paint}).refused,true);const other=paint==='fill'?'stroke':'fill',result=create(source,{paint:other});assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(paint+'={paintColor}'));}
+  });
+  test('react creation preserves dynamic unrelated styles and guards dynamic paint by property',()=>{
+   for(const style of ['style={{opacity:active?.8:.5,strokeWidth:weight}}','style={{transform:position(),filter:filters.join(" ")}}']){
+    const source=original.replace('<rect ','<rect '+style+' '),result=create(source);assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(style));
+   }
+   for(const paint of ['fill','stroke']){
+    const style='style={{'+paint+':paintColor,opacity:active?.8:.5}}',source=original.replace('<rect ','<rect '+style+' '),description=adapter.describe(resolve(source)).svgGradientCreation;
+    assert.equal(description.reason,null);assert.match(description.paintReasons[paint],/Inline styles/);assert.equal(create(source,{paint}).refused,true);
+    const result=create(source,{paint:paint==='fill'?'stroke':'fill'});assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(style));
+   }
+   assert.equal(create(original.replace('<rect ','<rect style={{all:reset}} ')).refused,true);
   });
   test('react creation still refuses unresolved classes, spreads and dynamic markup',()=>{
    for(const attributes of ['className={classes}','class={classes}','{...props}','dangerouslySetInnerHTML={{__html:markup}}'])assert.equal(create(original.replace('<rect ','<rect '+attributes+' ')).refused,true,attributes);

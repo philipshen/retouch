@@ -14452,3 +14452,12 @@ creation; gradient creation was checked separately by the base regression.
 
 No desktop rebuild or native launch in this increment. Full Figma parity and
 universal site support remain incomplete.
+
+
+### 2026-09-13 — Preserve stateful React styles during gradient creation
+
+Gradient creation no longer refuses an entire React shape because an unrelated inline style value is dynamic. The source writer inspects the explicit property names and preserves all values verbatim. Inline fill and stroke retain independent ownership guards; an all reset protects both. Computed keys, spreads, getters and unresolved style objects remain refused because their paint ownership is unknown.
+
+The React browser fixture now changes the solid shape's opacity between 0.8 and 0.6 with its existing click handler. Chromium verified gradient creation, subsequent state changes, preserved paint references and source identity, and exact undo/redo. The unit suite passed 1,132 tests, including dynamic unrelated styles and independent dynamic inline paint ownership. Both commands exited zero. Logs: `/private/tmp/retouch-gradient-dynamic-style.log` and `/private/tmp/retouch-gradient-dynamic-style-units.log`.
+
+This does not implement CSS-owned gradient creation, arbitrary framework ownership, or a new desktop package.
