@@ -1,0 +1,110 @@
+{
+  "sourceCommit": "c1216191c016eef48f360d0d6faf241d0c6a4c9f",
+  "sourceTreeDirty": false,
+  "sourceFiles": 204,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "allSourceNativeBuildVerifierHashesMatch": true,
+  "verifiedAt": "2026-09-13T10:19:13.776814+00:00",
+  "archive": "/private/tmp/retouch-desktop-canvas-c121619/Retouch-0.1.0-mac.zip",
+  "sha256": "918d6623dd9e5cc97ce14cccd615759c79faadda42abc48c7c2a8bb014e287dc",
+  "status": "development candidate; packaged runtime and isolated Homebrew install verified; native workflows and trusted distribution unverified",
+  "buildLog": "/private/tmp/retouch-desktop-canvas-build.log",
+  "units": {
+    "passed": 1105,
+    "scope": "actual packaged runtime with external development test harness",
+    "log": "/private/tmp/retouch-desktop-canvas-c121619/units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "Full SVG gradient editing including creation, solid conversion, canvas handles and persistent sessions",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-canvas-c121619/gradients-html.log"
+    },
+    {
+      "name": "Full SVG gradient editing including creation, solid conversion, canvas handles and persistent sessions",
+      "renderer": "react",
+      "engine": "chromium",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-canvas-c121619/gradients-react.log"
+    },
+    {
+      "name": "Full SVG gradient editing including creation, solid conversion, canvas handles and persistent sessions",
+      "renderer": "liquid",
+      "engine": "chromium",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-canvas-c121619/gradients-liquid.log"
+    },
+    {
+      "name": "Canvas gradients with shape and gradient transforms",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-canvas-c121619/canvas-transforms.log"
+    },
+    {
+      "name": "Canvas gradients using SVG viewport coordinates",
+      "renderer": "html",
+      "engine": "webkit",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-canvas-c121619/canvas-viewport.log"
+    },
+    {
+      "name": "Responsive comparison editing and persistence",
+      "renderer": "html",
+      "engine": "chromium",
+      "result": "passed; terminal exit 0",
+      "log": "/private/tmp/retouch-desktop-canvas-c121619/comparison.log"
+    }
+  ],
+  "harness": {
+    "testFiles": 317,
+    "inventory": "/private/tmp/retouch-desktop-canvas-c121619/harness-inventory.json",
+    "inventorySha256": "eff0c47fccfcd275e5c70f52f4574964249463b7f345b512a799b9828332f52e",
+    "archive": "/private/tmp/retouch-desktop-canvas-c121619/harness-tests.tar.gz",
+    "archiveSha256": "c7577ce2cec76f380b721e8a14cd6a53e31e2f4f1b1c6e9d85164819248eb22f",
+    "removedAfterTerminalResults": true
+  },
+  "homebrew": {
+    "verification": {
+      "sourceCommit": "c1216191c016eef48f360d0d6faf241d0c6a4c9f",
+      "sourceTreeDirty": false,
+      "sourceFiles": 204,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesArchive": true,
+    "quarantinePreserved": true,
+    "quarantine": "0381;6aa67810;;2F121261-CE56-4104-93DA-BABE9EAB1CC1",
+    "result": "isolated install and uninstall passed",
+    "caskInventoryUnchanged": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "automaticDependencyRemovalDisabled": true
+  },
+  "tamperVerification": {
+    "result": "passed on disposable copy; original unchanged",
+    "log": "/private/tmp/retouch-desktop-canvas-c121619/verifier-tamper.log"
+  },
+  "native": {
+    "preflight": "Native apps: Error: Sky Computer Use native pipe startup failed",
+    "launchAttempted": false,
+    "tests": "unverified"
+  },
+  "signing": "ad hoc development build; Developer ID not retried",
+  "unverified": [
+    "native editing workflows",
+    "Developer ID signing",
+    "notarization",
+    "public cask distribution",
+    "Intel runtime execution",
+    "trusted upgrades"
+  ]
+}
