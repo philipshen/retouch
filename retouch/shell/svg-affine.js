@@ -31,5 +31,7 @@
   else{result=matrix.slice();result[axis==='x'?4:5]+=value-before[axis];}return valid(result)?result:null;
  }
 
- const api={identity,valid,multiply,parse,format,equivalent,resize,dimensions,resizeDimension,pose,setPose};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGAffine=api;
+ function reflect(matrix,g,axis){if(!dimensions(matrix,g)||!['x','y'].includes(axis))return null;const local=axis==='x'?[-1,0,0,1,2*g.x+g.width,0]:[1,0,0,-1,0,2*g.y+g.height],result=multiply(matrix,local);return valid(result)?result:null;}
+
+ const api={identity,valid,multiply,parse,format,equivalent,resize,dimensions,resizeDimension,pose,setPose,reflect};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGAffine=api;
 })(typeof window==='object'?window:globalThis);

@@ -40,3 +40,8 @@ test('SVG rotation hit targets remain outside corners at every editor scale',()=
  const R=require('../shell/svg-resize.js'),g={x:10,y:20,width:60,height:40},m={a:1.2,b:.3,c:-.2,d:.8,e:25,f:17};
  for(const scale of [.5,1,2]){const bounds=R.positions(g,m,scale),handles=R.rotationPositions(g,m,scale);handles.forEach((p,i)=>{const corner=bounds[[0,2,4,6][i]];assert.ok(Math.abs(Math.hypot(p.x-corner.x,p.y-corner.y)*scale-18)<1e-8);});}
 });
+test('SVG flips reflect local axes without moving the center or changing scale and source geometry',()=>{
+ const g={x:12,y:23,width:60,height:40},m=A.parse('translate(8 -3) rotate(35) skewX(12) scale(2 3)'),center=matrix=>[matrix[0]*42+matrix[2]*43+matrix[4],matrix[1]*42+matrix[3]*43+matrix[5]];
+ for(const axis of ['x','y']){const next=A.reflect(m,g,axis);center(m).forEach((v,i)=>assert.ok(Math.abs(v-center(next)[i])<1e-8));for(const key of ['width','height'])assert.ok(Math.abs(A.dimensions(m,g)[key]-A.dimensions(next,g)[key])<1e-8);assert.ok(A.equivalent(A.reflect(next,g,axis),m));assert.ok(Math.abs((m[0]*m[3]-m[1]*m[2])+(next[0]*next[3]-next[1]*next[2]))<1e-8);}
+ assert.equal(A.reflect(m,g,'z'),null);
+});

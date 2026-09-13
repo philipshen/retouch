@@ -13754,3 +13754,36 @@ No desktop build or push was performed. Direct drag currently requires an
 already-selected, unlocked vector rendered once. Immediate drag of unselected
 vectors, multi-selection movement, default-mode held-key nudges, snapping to
 other layers, responsive geometry and full Figma/any-site parity remain open.
+
+## 2026-09-13 — SVG flips and Figma rotation sign
+
+The primary vector Position section now includes horizontal and vertical flip
+buttons. They use the existing Actions/context-menu commands and Shift+H/Shift+V
+shortcut routing. Each reflection composes around the local vector center,
+preserves axis lengths and content, and writes one transform transaction with
+exact source Undo/Redo. CSS flip controls are removed from the vector's alternate
+CSS section so command routing uses the SVG operation. Source/CSS ownership and
+stale geometry checks apply before each flip.
+
+The SVG rotation field and canvas hint now use positive counterclockwise values,
+converting to/from the opposite SVG/CSS matrix convention. This corrects the
+previous increment's display sign. Reference verified from Figma's current help:
+https://help.figma.com/hc/en-us/articles/360039956914-Adjust-alignment-rotation-position-and-dimensions
+The same reference documents Shift+H/Shift+V and matrix-based flip transforms.
+
+Validation: 1,013 unit tests passed, including center/scale/determinant preservation
+and double reflection for skewed, rotated vectors. HTML/WebKit 26, React/Chromium,
+and Liquid/Chromium workflows passed for both axes on 13 SVG types, exact history, retained
+path/point/child content, shortcuts, Actions and the editable-input guard. A
+combined Liquid resize/flip/rotation workflow passed with the corrected display
+convention. Every workflow reached a terminal zero exit. Logs are at
+/private/tmp/retouch-svg-flip-{units,html,react,liquid}.log and
+/private/tmp/retouch-svg-flip-combined.log.
+React content assertions omit only renderer revision stamps; stable IDs and
+all other child markup remain compared. The light inspector screenshot at
+/private/tmp/retouch-svg-flip-liquid.png was visually inspected.
+
+No desktop rebuild or push. Multi-selection SVG reflection, default-mode nudges,
+snapping, screen-specific geometry, and full Figma/any-site parity remain open.
+The aspect-ratio preference also still needs to govern canvas resizing, beyond
+its existing numeric-field behavior and Shift gesture constraint.
