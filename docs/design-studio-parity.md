@@ -13075,3 +13075,33 @@ Run with `RT_E2E_LIQUID_SVG=1` on `test/e2e/html-svg-draw.cjs`.
 These are local LiquidJS renderer checks, not live Shopify verification. No
 packaged desktop rebuild/native launch or push in this increment. Full Figma
 parity, vector networks/booleans, and arbitrary-site authoring remain incomplete.
+
+## 2026-09-13 — React SVG canvas creation from native containers
+
+React's shape insertion planner now creates a 200 × 200 SVG canvas under native
+content containers. Adding to self-closing JSX content containers, SVG canvases,
+or SVG groups expands the selected element into paired tags and preserves its
+identity and existing siblings/expressions. Presets retain JSX stroke attributes;
+existing canvases continue to use their literal viewport dimensions. A new canvas
+uses its own default coordinates, including when created inside foreignObject.
+Spread/children/innerHTML bindings, invalid containers, stale source hashes and
+invalid drawn geometry remain refused without writes. Freehand/pen insertion
+still requires an SVG canvas or group.
+
+Validation: all 980 unit tests passed (`/private/tmp/retouch-react-svg-create-final-units.log`).
+The new `RT_E2E_SVG_CREATE=1 RT_E2E_RENDERER=react` mode in
+`test/e2e/svg-vertices.cjs` exercises all four presets on an empty native frame,
+self-closing SVG and self-closing group in a real Next.js page, checking rendered
+geometry/stroke, created-layer selection, unchanged sibling text and exact source
+Undo/Redo. The initial harness needed SVG-specific readiness checks: an empty
+native container has no visible area, and a horizontal line has zero-height
+geometry even when its stroke paints. Tests now wait for attachment and check
+rendered geometry and stroke explicitly.
+
+The final Chromium and WebKit runs passed all 12 creation cases and exited cleanly.
+Logs: `/private/tmp/retouch-react-svg-create-chromium-verified.log` and
+`/private/tmp/retouch-react-svg-create-webkit.log`. Inspected screenshot:
+`/private/tmp/retouch-react-svg-create.png`, showing the selected new rectangle in
+its generated SVG canvas and the light geometry inspector. No desktop rebuild,
+native launch, or push in this increment. Full Figma Design parity and
+arbitrary-framework authoring remain incomplete.
