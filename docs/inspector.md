@@ -22,8 +22,12 @@ field's initial value without a source edit. A trailing unit applies to the
 whole calculation. React and Liquid pixel fields require pixels; HTML fields
 retain their authored CSS unit, including unitless line-height multipliers.
 Invalid arithmetic is refused before source writes. Mixed-unit arithmetic and
-unit conversion are not supported. Relative percentage and shared-selection
-fields retain their existing controls.
+unit conversion are not supported. Relative line-height and letter-spacing
+fields, including shared selections, also accept percentage calculations such
+as `(100 + 75)%`. Their conversion buttons validate calculations before saving;
+unchanged-value conversion retains the original precision. Held arrow keys
+change the draft and commit one source edit on release. Shared pixel/CSS fields
+retain their existing controls.
 
 Style controls follow the selected breakpoint scope. Other breakpoint and state
 classes stay intact and may override an edit at the current viewport. Authored
@@ -218,3 +222,13 @@ line height followed by a calculated unitless multiplier. Chromium 145 passed
 for HTML and React; WebKit 26 passed for Liquid. The accompanying full unit
 suite passed 1,158 tests. These runs exercise local source adapters, not native
 WKWebView or arbitrary remote-site source ownership.
+
+`RT_E2E_RELATIVE_CALCULATIONS=1` verifies percentage calculations through Enter
+and conversion buttons, division-by-zero/range/unit refusal, Escape, held-arrow
+transaction grouping, shared relative line height, and exact undo/redo. Runs
+with `RT_E2E_CONVERT_SPACING=1 RT_E2E_PANEL_TAB=1` also preserve appearance on
+unchanged-value conversion, scale spacing with font size, and retain keyboard
+focus across saves. HTML/React on Chromium 145 and Liquid on WebKit 26 passed;
+all processes exited 0. The first runs exposed an outdated harness that did
+not open Type settings; the harness now opens that disclosure through its
+summary before interacting. The full unit suite again passed 1,158 tests.

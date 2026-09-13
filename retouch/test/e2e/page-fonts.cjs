@@ -1909,6 +1909,10 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
    while(snapshots.length){const expected=snapshots.pop();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===expected);await settled();}await wait(async()=>same(await numeric(),initial));assert.equal(read(),original);
    console.log(engine+' '+kind+': PASS numeric feature composition, open controls survive edits, responsive isolation, reset and exact undo');
   }
+  if(process.env.RT_E2E_PANEL_TAB||process.env.RT_E2E_RELATIVE_CALCULATIONS||process.env.RT_E2E_CONVERT_SPACING){
+   const settings=page.locator('details').filter({has:page.locator('summary').filter({hasText:/^Type settings$/})}).last();
+   if(!await settings.evaluate(el=>el.open))await settings.locator(':scope > summary').click();
+  }
   if(process.env.RT_E2E_PANEL_TAB){
    await page.getByLabel('Style screen scope').selectOption('');await settled();
    const before=read(),input=page.getByLabel('Line height (%)',{exact:true}),next=page.getByRole('button',{name:'Use relative line height',exact:true});
@@ -1931,6 +1935,7 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
    console.log(engine+' '+kind+': PASS Tab retains next control after save/rebuild, Shift+Tab returns, unchanged Tab does not write, explicit click cancels queued focus, exact undo');
   }
   if(process.env.RT_E2E_TYPOGRAPHY_CALCULATIONS)await require('./typography-calculations.cjs')({page,app,kind,read,wait,settled});
+  if(process.env.RT_E2E_RELATIVE_CALCULATIONS)await require('./relative-typography-calculations.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_CONVERT_SPACING){
    await page.getByLabel('Style screen scope').selectOption('');await settled();
    const write=async action=>{snapshots.push(read());await action();await wait(()=>read()!==snapshots.at(-1));await settled();};

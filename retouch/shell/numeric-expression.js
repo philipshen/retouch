@@ -31,7 +31,12 @@
   const parse=()=>{const result=quantity(input.value,currentUnit);if(!result){if(numeric)throw Error('Enter a number or a calculation.');return null;}if(numeric&&result.unit!==unit)throw Error('Use '+(unit==='%'?'percent':unit==='px'?'pixels':'a unitless value')+' in this field.');if(numeric&&(result.value<min||result.value>max))throw Error('Enter a value from '+min+' to '+max+'.');return result;};
   const format=result=>decimal(result.value)+(numeric?'':result.unit);
   input.addEventListener('input',()=>input.setCustomValidity(''));
-  input.addEventListener('change',event=>{held=false;if(input.disabled||input.value===initial)return;try{const result=parse();if(result){input.value=format(result);currentUnit=result.unit;}input.setCustomValidity('');}catch(error){event.stopImmediatePropagation();input.setCustomValidity(error.message);input.reportValidity();}},true);
+  const normalize=()=>{
+   if(input.disabled)return false;
+   try{const result=parse();if(result){input.value=format(result);currentUnit=result.unit;}input.setCustomValidity('');return true;}
+   catch(error){input.setCustomValidity(error.message);input.reportValidity();return false;}
+  };
+  input.addEventListener('change',event=>{held=false;if(input.disabled||input.value===initial)return;if(!normalize())event.stopImmediatePropagation();},true);
   if(numeric){
    input.addEventListener('keydown',event=>{if(event.isComposing||event.ctrlKey||event.metaKey||event.altKey||!['ArrowUp','ArrowDown'].includes(event.key))return;try{const result=parse();if(!result)return;event.preventDefault();event.stopPropagation();held=true;result.value=Math.max(min,Math.min(max,result.value+(event.key==='ArrowUp'?1:-1)*(event.shiftKey?10:1)));input.value=format(result);input.dispatchEvent(new Event('input',{bubbles:true}));}catch{};});
    const finish=queue=>{if(!held)return;held=false;if(queue)root.RetouchPanelFocus?.queue(input);input.dispatchEvent(new Event('change',{bubbles:true}));};
@@ -39,6 +44,7 @@
    input.addEventListener('keydown',event=>{if(event.key==='Escape')held=false;});input.addEventListener('blur',()=>finish(false));
   }
   input.title=(input.title?input.title+' ':'')+'Calculations: 2 * 3 or (12 + 4) / 2. A trailing CSS unit applies to the result.';
+  return normalize;
  }
  function field(input){const original=input.value,change=input.onchange;input.onchange=e=>{if(input.value===original){input.setCustomValidity('');return;}change?.(e);};input.title='Calculations: append +24 or *1.5, or enter (120 - 16) / 2';input.onkeydown=e=>{if(e.isComposing||e.ctrlKey||e.metaKey||e.altKey)return;if(e.key==='Enter'){e.preventDefault();e.stopPropagation();input.blur();}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();input.value=original;input.setCustomValidity('');input.blur();}};}
  const api={evaluate,quantity,decimal,calculation,field};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchNumericExpression=api;

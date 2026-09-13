@@ -290,13 +290,14 @@
   function relativeNumber(parent,label,value,min,max,onChange) {
     const row=document.createElement('div');row.className='relative-field';parent.append(row);
     const input=number(row,label,value,min,max,()=>{}),initial=input.value;
+    const normalize=root.RetouchNumericExpression.calculation(input,{unit:'%'});
     let submitted=null;
     const commit=()=>{
-      if(input.value===''||!input.checkValidity())return;
+      if(input.value===''||!normalize()||!input.checkValidity())return;
       const next=input.value===initial&&Number.isFinite(value)?value:Number(input.value);
       if(next===submitted)return;submitted=next;onChange(next);
     };
-    input.onchange=commit;
+    input.onchange=commit;fieldDraft(input);
     const action=button('Use %',commit);
     action.setAttribute('aria-label','Use relative '+label.replace(' (%)','').toLowerCase());
     action.title='Convert to spacing relative to the font size.';row.append(action);
