@@ -901,6 +901,7 @@ body input[type="number"]::-webkit-outer-spin-button { appearance:none;margin:0;
 
 /* Reserve a reachable tool strip beneath compact overlay panels. */
 .compact-workspace .design-tool-dock { z-index:46; }
+.compact-workspace #panel:has(.stroke-settings-popover[open]) { z-index:47; }
 
 /* The editor viewport must not scroll when a focused tool moves on resize. */
 html, body { overflow:clip; }
@@ -959,7 +960,7 @@ html, body { overflow:clip; }
 .stroke-settings-popover > summary:hover { background:var(--hover); }
 .stroke-settings-popover > summary:focus-visible { outline:2px solid var(--accent);outline-offset:1px; }
 .stroke-settings-body { position:fixed;z-index:1000;width:280px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 32px #0003; }
-.stroke-settings-body > header { display:flex;align-items:center;justify-content:space-between;margin:-4px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line);font-size:12px; }
+.stroke-settings-body > header { position:sticky;top:0;z-index:1;background:var(--panel);display:flex;align-items:center;justify-content:space-between;margin:-4px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line);font-size:12px; }
 .stroke-settings-body > header button { width:28px;padding:0;font-size:20px;background:transparent; }
 .arrow-endpoints .inspector-field { display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:0;background:transparent; }
 .arrow-endpoints .inspector-field > span { font-size:11px;font-weight:400; }

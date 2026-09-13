@@ -1430,6 +1430,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   if(process.env.RT_E2E_SVG_RESIZE){await require('./svg-resize.cjs')({page,app,kind,read,wait,settled});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SVG_RADIUS_CANVAS){await require('./svg-radius-canvas.cjs')({page,app,kind,read,wait,settled});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SVG_RADIUS){await require('./svg-radius.cjs')({page,app,kind,read,wait,settled});assert.deepEqual(errors,[]);return;}
+  if(process.env.RT_E2E_STROKE_POPUP_LAYOUT)await require('./stroke-popover-layout.cjs')({page,read,wait,settled});
   if(process.env.RT_E2E_BORDER_VISIBILITY){await require('./border-visibility.cjs')({page,app,kind,read,wait,settled});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_BORDER_EDGES){await require('./border-edges.cjs')({page,app,kind,read,wait,settled});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_CSS_PAINT_ROWS){await require('./css-paint-rows.cjs')({page,app,kind,read,wait,settled});assert.deepEqual(errors,[]);console.log('CSS PAINT ROWS PASS '+kind+' '+engine);return;}

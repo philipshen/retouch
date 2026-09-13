@@ -267,3 +267,25 @@ Logs: `/private/tmp/retouch-css-stroke-popup-html-final.log`,
 `/private/tmp/retouch-css-stroke-popup-widths.log`.
 All 1,156 unit tests pass in
 `/private/tmp/retouch-css-stroke-popup-units-final.log`.
+
+## Small-window popup behavior
+
+Stroke settings observes its own size while open, so expanding edge controls
+repositions the panel inside the viewport. The size observer is disconnected
+with the existing popup listeners. The header stays visible while the contents
+scroll, keeping Close reachable. In the compact workspace, an open stroke
+panel is above the bottom tool dock so the dock cannot intercept its inputs.
+
+`RT_E2E_STROKE_POPUP_LAYOUT=1` exercises a 1000 x 280 workspace: open the compact
+Inspector, expand edges, verify panel bounds, force actual scrolling, verify
+Close remains visible, and hit-test the bottom input above the dock. Collapsing
+and closing restores opener focus without changing source. The workflow then
+returns to the larger window and runs responsive edge edits and exact history.
+Screenshot inspected: `/private/tmp/retouch-stroke-popup-small-final.png`.
+The current desktop archive predates these popup changes.
+Validation: HTML/React Chromium and Liquid WebKit pass in
+`/private/tmp/retouch-stroke-popup-layout-{html,react,liquid}-verified.log`;
+the HTML SVG regression passes in
+`/private/tmp/retouch-stroke-popup-layout-svg.log`.
+All 1,156 unit tests pass in
+`/private/tmp/retouch-stroke-popup-layout-units-final.log`.
