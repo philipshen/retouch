@@ -9,7 +9,7 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  const edit=async(action,expected)=>{const before=read();await action();await wait(()=>read()!==before);await settled();await wait(async()=>(await metrics()).weight===expected);states.push(read());assert.deepEqual({...await metrics(),weight:beforeMetrics.weight},beforeMetrics);};
  await styles.selectOption('custom');assert.equal(await raw.evaluate(el=>el===el.ownerDocument.activeElement),true);assert.equal(read(),initial);
  await raw.fill('900');await raw.press('Escape');await settled();assert.equal(read(),initial);
- await edit(()=>styles.selectOption('400'),'400');assert.equal(await styles.locator('option:checked').textContent(),'Regular');
+ await styles.focus();await edit(()=>styles.selectOption('400'),'400');await wait(()=>styles.evaluate(el=>el===el.ownerDocument.activeElement));assert.equal(await styles.locator('option:checked').textContent(),'Regular');
  await styles.selectOption('custom');await raw.fill('1001');await raw.press('Enter');assert.equal(await raw.evaluate(el=>el.validity.valid),false);assert.equal(read(),states.at(-1));await raw.press('Escape');
  await edit(async()=>{await styles.selectOption('custom');await raw.fill('(500 + 75)');await raw.press('Enter');},'575');assert.equal(await styles.locator('option:checked').textContent(),'575');
  await page.getByLabel('Style screen scope').selectOption(kind==='html'?'min-[768px]:':'md:');await settled();

@@ -318,3 +318,21 @@ existing variable-font/custom-weight workflow. Both exited 0 and retained
 The loaded variable-font canvas probe increased glyph alpha coverage from
 336,292 to 421,076 at the heavier weight. This proves a rendered variation for
 that fixture, not support for every font's named instances.
+
+### Broader typography regression checks (2026-09-13)
+
+After the primary weight and percentage-display changes, the HTML numeric
+editing workflow passed on Chromium 145 and WebKit 26. It covers live preview,
+cancel, commit, inline-style restoration, and exact undo for shadows, blur,
+opacity, rotation, dimensions, spacing, borders, font size, weight, and text
+spacing. The updated relative-spacing cases independently assert `151%`
+displays with a `1.51` source multiplier and `13.5%` with `0.135em` source.
+The initial failure was an obsolete pre-percentage-display expectation; an
+added source assertion was also corrected to accept the managed rule's
+`!important` suffix.
+
+React's canonical text-override workflow passed on Chromium. The named-weight
+workflow additionally proves that focused selection stays on the primary
+weight dropdown after its save/rebuild. The Liquid text-style library workflow
+passed on WebKit. All five final workflow processes exited 0. This pass changes
+regression coverage and documentation only; production code is unchanged.
