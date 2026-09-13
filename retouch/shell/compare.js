@@ -99,14 +99,21 @@
           if(!current()||frame.contentDocument!==d)return;
           if(!window.RetouchClientMount.ready(d))throw Error('Preview is still mounting.');
           if(matches(select(d)))return;
-          timeout=setTimeout(()=>controller.abort(),8000);
-          const response=await fetch(href,{cache:'no-store',signal:controller.signal});
-          if(!response.ok)throw Error('Could not render the saved page.');
-          const fresh=new DOMParser().parseFromString(await response.text(),'text/html');
-          if(!current()||frame.contentDocument!==d)return;
-          // A preview that connected after the write can miss the dev server's
-          // update entirely. Reload only a verified stale startup document.
-          if(matches(select(fresh))&&!matches(select(d)))frame.contentWindow.location.reload();
+          timeout=setTimeout(()=>controller.abort(new Error('The saved source revision did not finish rendering.')),8000);
+          while(current()&&frame.contentDocument===d){
+            if(matches(select(d)))return;
+            const response=await fetch(href,{cache:'no-store',signal:controller.signal});
+            if(!response.ok)throw Error('Could not render the saved page.');
+            const fresh=new DOMParser().parseFromString(await response.text(),'text/html');
+            if(!current()||frame.contentDocument!==d)return;
+            // A successful HTTP response can still contain the previous compiled
+            // revision. Keep waiting for the saved revision before reloading.
+            if(matches(select(fresh))){
+              if(!matches(select(d)))frame.contentWindow.location.reload();
+              return;
+            }
+            await new Promise(resolve=>setTimeout(resolve,150));
+          }
         }catch(error){if(current())card.textSyncError='Text saved; comparison refresh failed: '+error.message;}
         finally{clearTimeout(timeout);if(card.cancelColdText===cancel)delete card.cancelColdText;}
       }

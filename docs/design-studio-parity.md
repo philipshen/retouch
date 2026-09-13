@@ -13010,3 +13010,24 @@ The bundled Turbopack/WebKit two-edit cold-start scenario passes with a clean pr
 The package exercise also found a harness lifecycle flaw: inspecting frame elements during intercepted requests could fail as WebKit discarded a frame, and per-request evaluation could hang teardown. The harness now registers the three comparison Frame objects after opening the rail, uses navigation generations to identify obsolete requests, and releases registration/network gates in cleanup. It no longer queries disappearing documents in network handlers. Live-frame route failures and page errors remain assertions. The crash and manually stopped teardown attempt are retained separately in the receipt, not counted as passing runs. Final WebKit and Chromium diagnostic runs exited normally.
 
 Homebrew installation/uninstallation preserved quarantine and the original cask inventory. The installed app, cask registration, temporary tap/trust configuration and external harness were removed. Post-workflow package verification passes. Native CUA preflight again failed with `Sky Computer Use native pipe startup failed`; no native launch or security change was attempted. No new public release or push. The previous older-WebKit Fill regression was not rerun for this archive. See `desktop/verification/2026-09-13-startup-workflows.json` for exact source/harness hashes, logs and limits. Full Figma parity, universal-site behavior, native workflows and trusted distribution remain incomplete.
+
+### 2026-09-13 — Retry cold-preview recovery until the saved source revision renders
+
+A deterministic compiler-lag check now reproduces a recovery gap: after opening three cold comparison frames, the fixture serves previously rendered HTML for the first three recovery fetches. Before the fix, all three responses were HTTP 200, but Phone remained on `Headline` with the old source revision while the source and main canvas contained `Saved during preview startup`. The cold recovery callback checked the response once, found the wrong revision, and returned permanently. Evidence: `/private/tmp/retouch-cold-stale-render-before.log`.
+
+`compare.js` now keeps checking within the existing eight-second request deadline until the live document catches up or a fetched render contains the captured saved revision and text. A verified stale document is then reloaded. Recovery remains asynchronous with respect to main-canvas editing. Closing/removing previews or a superseding text check cancels its requests. If the source never reaches the expected revision, polling stops and the comparison reports that the saved source revision did not finish rendering.
+
+The opt-in cold-start test adds `RT_E2E_COMPARISON_COLD_STALE_RENDER=1` for temporary lag, `timeout` for a source that stays stale through the deadline, and `cancel` for closure during active retries. The injected HTML is captured from the real initial Next render. The test requires at least one stale response to have been exercised; it still checks real source writes, mounted previews, page/route errors and exact history. Deadline and cancellation cases assert that request counts stop, then verify recovery and history after reopening with fresh renders available.
+
+Validation with Next.js 16.2.5:
+
+- Chromium/Turbopack passes the same temporary-lag case that failed before the fix: `/private/tmp/retouch-cold-stale-render-after.log`.
+- WebKit/Turbopack passes two successive edits across temporary lag, convergence and full history: `/private/tmp/retouch-cold-stale-render-webkit.log`.
+- WebKit verifies the deadline, visible error, unblocked editing, stopped polling and recovery after reopening: `/private/tmp/retouch-cold-stale-render-timeout.log`.
+- Chromium verifies cancellation during retries and recovery after reopening: `/private/tmp/retouch-cold-stale-render-cancel.log`.
+- The original unforced Chromium/Webpack two-edit removal/restoration scenario passes in the checkout: `/private/tmp/retouch-cold-retry-removal.log`.
+- All 975 units pass: `/private/tmp/retouch-cold-render-retry-units.log`.
+
+This addresses a verified recovery gap. The original packaged intermittent failure did not capture its exact response timing and still needs verification on a rebuilt archive. The `6b064a3` desktop artifact remains unchanged and retains its recorded failure. Other edit types, dynamic text sources and arbitrary framework startup behavior remain outside this literal-host-text recovery check. No desktop rebuild, native launch, public release or push for this increment. Full Figma parity remains incomplete.
+
+The ready-preview WebKit control also passes `/private/tmp/retouch-cold-retry-ready-control.log`, preserving comparison document identity, unsaved input and exact source/text history. Syntax and diff checks pass.

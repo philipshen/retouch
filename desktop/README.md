@@ -26,6 +26,8 @@ Turbopack/WebKit passes two held-startup edits and exact history; ready-preview
 editing preserves document identity and unsaved input. Chromium/Webpack's
 cold-preview removal/restoration scenario failed once to reach the latest text.
 A diagnostic rerun passed, but the intermittent failure remains unresolved.
+This archive predates the subsequent retry-for-compiled-revision fix in the
+checkout; rebuild and reverify it before treating that recovery gap as resolved.
 This candidate is not a verified release. Native launch was not attempted because
 the CUA native connection failed; native editing, sampler and shutdown remain
 unverified. See [the candidate receipt](verification/2026-09-13-startup-workflows.json).
