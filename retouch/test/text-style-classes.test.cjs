@@ -1,9 +1,9 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {encode}=require('../src/text-style-classes.cjs'),tokens=require('../src/class-tokens.cjs'),responsive=require('../shell/responsive.js');
-const full={'font-family':'"标题_Font", sans-serif','font-size':'32px','font-weight':'537.5','font-style':'oblique','font-optical-sizing':'none','font-variation-settings':'"wght" 537.5, "GRAD" -30','font-variant-numeric':'tabular-nums slashed-zero','font-variant-ligatures':'no-common-ligatures discretionary-ligatures','font-variant-caps':'all-small-caps','font-variant-position':'super','line-height':'1.4','letter-spacing':'-0.02em','text-indent':'24px','text-wrap':'balance','text-align':'center','text-decoration-line':'underline line-through','text-decoration-style':'wavy','text-decoration-thickness':'3px','text-underline-offset':'-2px','text-decoration-skip-ink':'none','text-decoration-color':'#123456','text-transform':'uppercase'};
+const full={'font-family':'"标题_Font", sans-serif','font-size':'32px','font-weight':'537.5','font-style':'oblique','font-optical-sizing':'none','font-variation-settings':'"wght" 537.5, "GRAD" -30','font-variant-numeric':'tabular-nums slashed-zero','font-variant-ligatures':'no-common-ligatures discretionary-ligatures','font-variant-caps':'all-small-caps','font-variant-position':'super','line-height':'1.4','letter-spacing':'-0.02em','text-indent':'24px','text-wrap':'balance','text-box':'cap alphabetic','text-align':'center','text-decoration-line':'underline line-through','text-decoration-style':'wavy','text-decoration-thickness':'3px','text-underline-offset':'-2px','text-decoration-skip-ink':'none','text-decoration-color':'#123456','text-transform':'uppercase'};
 test('every catalog typography property has a validated scoped class encoding',()=>{
- const encoded=encode(full);assert.equal(Object.keys(encoded).length,22);
+ const encoded=encode(full);assert.equal(Object.keys(encoded).length,23);
  assert.equal(encoded['font-family'],'![font-family:"标题\\_Font",_sans-serif]');assert.equal(encoded['font-variation-settings'],'![font-variation-settings:"wght"_537.5,_"GRAD"_-30]');
  const scoped=responsive.replaceScope('hover:text-red-500 md:p-4',Object.values(encoded).join(' '),'md:');
  for(const token of scoped.split(' '))assert.equal(tokens.valid(token),true,token);
@@ -74,4 +74,13 @@ test('wrap style tokens and text styles preserve unrelated type and screen prope
  for(const value of ['wrap','nowrap','balance','pretty'])assert.ok(styles.encode({'text-wrap':value}));
  for(const value of ['auto','balance;color:red','inherit'])assert.throws(()=>styles.encode({'text-wrap':value}));
  for(const property of ['text-wrap-mode','text-wrap-style'])assert.ok(css.overlaps('text-wrap',property));
+});
+test('vertical trim replaces its longhands, validates style values and respects screen ownership',()=>{
+ const styles=require('../src/text-style-classes.cjs'),I=require('../shell/inspector.js'),css=require('../shell/html-css-values.js');
+ for(const token of ['[text-box:normal]','[text-box-trim:trim-both]','[text-box-edge:cap_alphabetic]'])assert.ok(I.textBoxToken(token));
+ for(const token of ['text-lg','[text-wrap:balance]','[text-shadow:none]'])assert.equal(I.textBoxToken(token),false);
+ assert.equal(styles.compose('[text-box:normal] md:[text-box-trim:trim-start] md:[text-box-edge:ex_alphabetic] md:tracking-wide hover:[text-box:normal]',{'text-box':'cap alphabetic'},'md:'),'[text-box:normal] md:tracking-wide hover:[text-box:normal] md:![text-box:cap_alphabetic]');
+ for(const value of ['normal','cap alphabetic','trim-both cap alphabetic','trim-start cap alphabetic','trim-end ex alphabetic'])assert.ok(styles.encode({'text-box':value}));
+ for(const value of ['','inherit','cap;display:none','trim-both  cap alphabetic','url(x)'])assert.throws(()=>styles.encode({'text-box':value}));
+ for(const property of ['text-box-trim','text-box-edge'])assert.ok(css.overlaps('text-box',property));
 });

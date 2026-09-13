@@ -1,7 +1,7 @@
 (function(root){
  'use strict';
  let expanded=false,preferredStyle='';
- const properties=['font-family','font-size','font-weight','font-style','font-optical-sizing','font-variation-settings','font-variant-numeric','font-variant-ligatures','font-variant-caps','font-variant-position','line-height','letter-spacing','text-indent','text-wrap','text-align','text-decoration-line','text-decoration-style','text-decoration-thickness','text-underline-offset','text-decoration-skip-ink','text-decoration-color','text-transform'];
+ const properties=['font-family','font-size','font-weight','font-style','font-optical-sizing','font-variation-settings','font-variant-numeric','font-variant-ligatures','font-variant-caps','font-variant-position','line-height','letter-spacing','text-indent','text-wrap','text-box','text-align','text-decoration-line','text-decoration-style','text-decoration-thickness','text-underline-offset','text-decoration-skip-ink','text-decoration-color','text-transform'];
  function mount(parent,element,options={}){
   const I=root.RetouchInspector,details=document.createElement('details'),summary=document.createElement('summary');
   summary.textContent='Saved text styles';details.append(summary);parent.append(details);
@@ -23,7 +23,7 @@
   function capture(){
    if(!element.isConnected)throw Error('Select the layer again before saving its typography.');
    const css=element.ownerDocument.defaultView.getComputedStyle(element),values={};
-   for(const property of properties){const value=css.getPropertyValue(property).trim();if(!root.RetouchHTMLCSSValues.valid(property,value))throw Error('This layer uses an unsupported '+property+' value: '+value);values[property]=value;}
+   for(const property of properties){const value=css.getPropertyValue(property).trim();if(property==='text-box'&&!value)continue;if(!root.RetouchHTMLCSSValues.valid(property,value))throw Error('This layer uses an unsupported '+property+' value: '+value);values[property]=value;}
    return values;
   }
   function render(){
@@ -77,7 +77,7 @@
    if(style){
     if(options.apply)controls.append(I.button('Apply text style',()=>run(()=>options.apply(style.id,library.revision),'Text style applied.')));
     if(options.update){controls.append(I.button('Update style from this layer',()=>run(()=>options.update(style.id,library.revision,style.name,capture()),'Text style updated.')));I.note(controls,'Updates linked layers across project source files. Local overrides are preserved.');}
-    const propertiesDetails=document.createElement('details'),propertiesTitle=document.createElement('summary');propertiesTitle.textContent='Style properties';propertiesDetails.append(propertiesTitle);const labels=['Font family','Font size','Font weight','Font style','Optical sizing','Variable font axes','Numeric styles','Line height','Letter spacing','Text alignment','Text decoration','Letter case'];const preview=document.createElement('dl');preview.className='text-style-properties';for(const [property,value]of Object.entries(style.properties)){const term=document.createElement('dt'),description=document.createElement('dd');term.textContent=labels[properties.indexOf(property)];description.textContent=value;preview.append(term,description);}propertiesDetails.append(preview);controls.append(propertiesDetails);
+    const propertiesDetails=document.createElement('details'),propertiesTitle=document.createElement('summary');propertiesTitle.textContent='Style properties';propertiesDetails.append(propertiesTitle);const labels={'font-family':'Font family','font-size':'Font size','font-weight':'Font weight','font-style':'Font style','font-optical-sizing':'Optical sizing','font-variation-settings':'Variable font axes','font-variant-numeric':'Numeric styles','font-variant-ligatures':'Ligatures','font-variant-caps':'Capital forms','font-variant-position':'Number position','line-height':'Line height','letter-spacing':'Letter spacing','text-indent':'Paragraph indent','text-wrap':'Wrap style','text-box':'Vertical trim','text-align':'Text alignment','text-decoration-line':'Text decoration','text-decoration-style':'Underline style','text-decoration-thickness':'Underline thickness','text-underline-offset':'Underline offset','text-decoration-skip-ink':'Underline skip ink','text-decoration-color':'Underline color','text-transform':'Letter case'};const preview=document.createElement('dl');preview.className='text-style-properties';for(const [property,value]of Object.entries(style.properties)){const term=document.createElement('dt'),description=document.createElement('dd');term.textContent=labels[property]||property;description.textContent=value;preview.append(term,description);}propertiesDetails.append(preview);controls.append(propertiesDetails);
     controls.append(I.button('Rename text style',()=>{const title=label();if(!title)return;run(async()=>{library=await request({type:'update',revision:library.revision,id:style.id,name:title,properties:style.properties});},'Text style renamed.');}));
     const remove=I.button('Delete text style',()=>{
      const confirm=I.button('Confirm delete '+style.name,()=>run(async()=>{library=await request({type:'delete',revision:library.revision,id:style.id});selected='';preferredStyle='';},'Text style deleted.'));

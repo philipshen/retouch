@@ -14712,3 +14712,39 @@ The HTML regular-window screenshot was visually inspected. All 1,214 unit tests
 passed (`/private/tmp/retouch-type-compact-units.log`). The desktop candidate
 predates these changes; full Figma UI/design parity and arbitrary-site support
 remain incomplete.
+
+### Vertical text trim (2026-09-14)
+
+Type settings → Basics now offers Vertical trim: None or Cap height. Cap height
+uses `text-box: trim-both cap alphabetic`, the shipped equivalent of the older
+leading-trim/text-edge draft terminology in Figma's reference. It trims the outer
+text box to the cap line and alphabetic baseline while leaving source text,
+font size, line height and the distance between text lines unchanged. Descenders
+remain visible; this is not overflow clipping. The control is shown only when
+the editing browser supports the CSS feature. Existing custom trim configurations
+remain identifiable as Custom until explicitly changed.
+
+HTML writes scoped text-box CSS; React/Liquid write a canonical arbitrary class.
+Reset and the global text-override reset account for the shorthand and its two
+longhands. Saved text styles capture, encode and apply trim. Browsers without the
+property omit it from capture rather than rejecting the rest of the text style.
+The saved-style property list now maps labels by property name, correcting older
+misaligned and missing labels as the typography catalog grew. The typography
+preview retains explicit line breaks instead of joining adjacent lines together.
+
+References:
+- https://help.figma.com/hc/en-us/articles/360039956634-Explore-text-properties
+- https://developer.chrome.com/blog/css-text-box-trim
+- https://webkit.org/blog/16301/webkit-features-in-safari-18-2/
+
+`RT_E2E_VERTICAL_TRIM=1` exercises multiline cap geometry, retained line spacing,
+width/content/overflow, trimmed preview with an explicit line break, saved-style
+capture/application and complete property labels, phone/tablet isolation, reset
+and exact source undo/redo including the separate catalog history entry.
+HTML/React/Liquid Chromium 145.0.7632.6 and HTML WebKit 26.0 logs are
+`/private/tmp/retouch-vertical-trim-final-{html,react,liquid,webkit}.log`.
+All 1,215 unit tests pass (`/private/tmp/retouch-vertical-trim-units-final.log`).
+
+The desktop candidate still predates this change. Per-range trimming, arbitrary
+vertical-writing/CJK/font metric equivalence, older-engine fallback, full Figma
+Design parity and universal-site support remain unverified or incomplete.
