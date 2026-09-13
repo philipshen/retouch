@@ -79,3 +79,14 @@ test('Editing one rounded arrowhead preserves the other exact coordinates',()=>{
  const end=model.changeArrow(changed,{headLength:15});assert.deepEqual(end.split(' ').slice(5),changed.split(' ').slice(5));
  assert.equal(model.changeArrow(value,{startArrow:false}),value.split(' ').slice(0,5).join(' '));assert.equal(model.changeArrow(value,{x1:100}),null);
 });
+
+
+test('Arrow endpoint selectors preserve existing heads across all four combinations',()=>{
+ const original=model.generate({kind:'arrow',x1:0,y1:0,x2:-60,y2:40,headLength:12,headWidth:20,startArrow:true,startHeadLength:5,startHeadWidth:8});
+ const start=model.changeArrow(original,{endArrow:false});assert.equal(start.split(' ').length,6);assert.deepEqual(start.split(' ').slice(-4),original.split(' ').slice(-4));assert.equal(model.describe(start,'arrow').endArrow,false);
+ const line=model.changeArrow(start,{startArrow:false});assert.equal(line,original.split(' ').slice(0,2).join(' '));assert.equal(model.describe(line,'arrow').endArrow,false);
+ const end=model.changeArrow(line,{endArrow:true});assert.equal(end.split(' ').length,5);assert.equal(model.describe(end,'arrow').startArrow,undefined);
+ for(const value of [original,start,line,end])assert.equal(model.reverseArrow(model.reverseArrow(value)),value);
+ const restored=model.changeArrow(start,{endArrow:true});assert.deepEqual(restored.split(' ').slice(-4),start.split(' ').slice(-4));
+ assert.equal(model.changeArrow(original,{endArrow:'none'}),null);
+});

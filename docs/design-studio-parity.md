@@ -14522,3 +14522,13 @@ The light-theme result was visually inspected at `/private/tmp/retouch-independe
 
 
 Verification: all 1,142 unit tests passed (`/private/tmp/retouch-independent-heads-units.log`). HTML/Chromium and Liquid/WebKit drawing and line-conversion workflows, plus React/Chromium native-container and self-closing SVG/group workflows, passed with independent start edits, exact untouched end coordinates, reversed parameter values and full source undo/redo. Logs: `/private/tmp/retouch-independent-heads-html.log`, `/private/tmp/retouch-independent-heads-liquid.log`, `/private/tmp/retouch-independent-heads-react.log`. All processes exited zero. Focused model tests cover multiple shaft directions, invalid head dimensions and exact coordinate preservation (`/private/tmp/retouch-independent-heads-unit-final.log`).
+
+
+### 2026-09-13 — Independent start/end line-arrow selectors
+
+Stroke now provides both Start point and End point selectors with None and Line arrow. Recognized arrow layers can retain an end head, a start head, both heads or neither while keeping the same polyline identity and shaft endpoints. The model recognizes two-, five-, six- and ten-point forms. Endpoint toggles preserve every coordinate of the head that remains enabled; reversal works for all forms. Dimension fields are shown only for enabled heads.
+
+The light-theme control arrangement was visually inspected at `/private/tmp/retouch-arrow-endpoints.png`. Re-adding a removed head initializes its dimensions from the remaining head, or the default size when neither exists; exact Undo restores removed dimensions. Other cap shapes, retained disabled-head settings, arbitrary imported-arrow recognition and vector-network endpoints remain unfinished. The macOS package predates these controls.
+
+
+Verification: 1,143 unit tests passed (`/private/tmp/retouch-arrow-endpoints-units.log`). HTML/Chromium and Liquid/WebKit drawing and line-conversion workflows, and React/Chromium native-container/self-closing SVG/group workflows, passed all four endpoint combinations, unchanged shaft endpoints, independent dimension edits, reversal, freeform guards and exact source undo/redo. Logs: `/private/tmp/retouch-arrow-endpoints-html.log`, `/private/tmp/retouch-arrow-endpoints-liquid.log`, `/private/tmp/retouch-arrow-endpoints-react.log`. All processes exited zero. Focused model tests additionally verify exact retained-head coordinates and reversibility of all representations (`/private/tmp/retouch-arrow-endpoints-unit.log`).

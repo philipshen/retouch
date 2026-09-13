@@ -1292,8 +1292,11 @@ function renderPanelContents() {
           RetouchInspector.number(geometry,'Start arrowhead length',Math.round(parametric.startHeadLength*1000000)/1000000,0,Math.hypot(parametric.x2-parametric.x1,parametric.y2-parametric.y1),value=>change({startHeadLength:value})).step='any';
           RetouchInspector.number(geometry,'Start arrowhead width',Math.round(parametric.startHeadWidth*1000000)/1000000,0,100000,value=>change({startHeadWidth:value})).step='any';
         }
+        RetouchInspector.select(geometry,'End point',[['none','None'],['arrow','Line arrow']],parametric.endArrow===false?'none':'arrow',value=>change({endArrow:value==='arrow'}));
+        if(parametric.endArrow!==false){
         RetouchInspector.number(geometry,'Arrowhead length',Math.round(parametric.headLength*1000000)/1000000,0,Math.hypot(parametric.x2-parametric.x1,parametric.y2-parametric.y1),value=>change({headLength:value})).step='any';
         RetouchInspector.number(geometry,'Arrowhead width',Math.round(parametric.headWidth*1000000)/1000000,0,100000,value=>change({headWidth:value})).step='any';
+        }
       }else RetouchInspector.number(geometry,parametric.kind==='star'?'Star points':'Polygon sides',parametric.count,3,parametric.kind==='star'?256:512,value=>change({count:value})).step='1';
       if(parametric.kind==='star')RetouchInspector.number(geometry,'Star inner ratio (%)',Math.round(parametric.ratio*1000000)/10000,0,100,value=>change({ratio:value/100})).step='any';
     }

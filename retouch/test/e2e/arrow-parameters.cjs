@@ -21,6 +21,9 @@ module.exports=async({page,shape,read,wait,settled,screenshot})=>{
  for(const [label,value]of [['Arrowhead length',8],['Arrowhead width',20],['Start arrowhead length',5],['Start arrowhead width',10]])assert.ok(Math.abs(Number(await page.getByLabel(label,{exact:true}).inputValue())-value)<.00001);
  states.push(read());
  await page.getByRole('button',{name:'Reverse arrow',exact:true}).click();await wait(()=>read()!==states.at(-1));await settled();assert.equal(await points(),headBefore);states.push(read());
+ for(const [label,value,count]of [['End point','none',6],['Start point','none',2],['End point','arrow',5],['Start point','arrow',10]]){
+  const control=page.getByLabel(label,{exact:true});assert.equal(await control.evaluate(el=>!!el.closest('[data-section="stroke"]')),true);await control.selectOption(value);await wait(()=>read()!==states.at(-1));await settled();assert.equal((await points()).split(' ').length,count);assert.deepEqual(endpoints(await points()),before);states.push(read());
+ }
  for(let i=states.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===states[i]);await settled();}
  for(let i=1;i<states.length;i++){await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===states[i]);await settled();}
  for(let i=states.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===states[i]);await settled();}
