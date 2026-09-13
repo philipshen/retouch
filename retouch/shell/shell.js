@@ -2400,8 +2400,8 @@ function mountSVGGradientCreation(info,target){
  const creation=info.svgGradientCreation;if(!creation.paints.length||!target)return;
  const section=RetouchInspector.section('Create gradient');
  if(creation.reason){RetouchInspector.note(section,creation.reason,'refused');panelBody.append(section);return;}
- for(const paint of creation.paints){const reason=creation.paintReasons?.[paint]||RetouchSVGPaint.attributeReason(target,paint);const select=RetouchInspector.select(section,paint==='fill'?'Fill type':'Stroke type',[['solid','Solid'],['linearGradient','Linear'],['radialGradient','Radial']],'solid',type=>{
-  if(type==='solid')return;const blocked=creation.paintReasons?.[paint]||RetouchSVGPaint.attributeReason(target,paint);if(blocked){select.value='solid';toast(blocked,'err');return;}const color=target.ownerDocument.defaultView.getComputedStyle(target).getPropertyValue(paint).trim();
+ for(const paint of creation.paints){const reason=creation.paintReasons?.[paint]||RetouchSVGPaint.attributeReason(target,paint,creation.inlinePaints?.includes(paint));const select=RetouchInspector.select(section,paint==='fill'?'Fill type':'Stroke type',[['solid','Solid'],['linearGradient','Linear'],['radialGradient','Radial']],'solid',type=>{
+  if(type==='solid')return;const blocked=creation.paintReasons?.[paint]||RetouchSVGPaint.attributeReason(target,paint,creation.inlinePaints?.includes(paint));if(blocked){select.value='solid';toast(blocked,'err');return;}const color=target.ownerDocument.defaultView.getComputedStyle(target).getPropertyValue(paint).trim();
   setSVGGradient(info,paint,undefined,undefined,'create',{type,color:color==='none'?'#000000':color});
  });select.disabled=!!reason;select.title=reason||'Create a gradient from the current color to transparent';}
  RetouchInspector.note(section,'Creates shared SVG paint from the current color to transparent. Page styles can override attribute paint.');panelBody.append(section);

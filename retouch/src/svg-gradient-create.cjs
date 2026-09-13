@@ -6,14 +6,19 @@ function inlinePaintOwnership(selected,kind){
  if(kind==='react'){
   const attribute=selected.node.openingElement.attributes.find(a=>a.type==='JSXAttribute'&&a.name.name==='style'),object=attribute?.value?.expression;
   if(object?.type==='NullLiteral')return {properties:[]};
-  if(object?.type!=='ObjectExpression')return unsafe();const properties=[];
+  if(object?.type!=='ObjectExpression')return unsafe();const properties=[],conversions={};
   for(const property of object.properties){
    if(property.type!=='ObjectProperty'||property.computed||!['Identifier','StringLiteral'].includes(property.key.type))return unsafe();
-   // Values remain untouched; only the statically known property names determine paint ownership.
+   // Inspect ownership without evaluating the source expressions.
    const value=property.value;
    if(value.type!=='NullLiteral'&&value.value!=='')properties.push(property.key.name??property.key.value);
   }
-  return {properties};
+  for(const paint of ['fill','stroke']){
+   const matches=object.properties.filter(property=>(property.key.name??property.key.value)===paint);
+   const value=matches.length===1?matches[0].value:null;
+   if(value?.type==='StringLiteral'&&require('./html-svg-gradient.cjs').valid('stop-color',value.value))conversions[paint]={start:value.start,end:value.end,text:'null'};
+  }
+  return {properties,conversions};
  }
  if(typeof style.value!=='string')return unsafe();
  const properties=[],stack=[];let text='',quote=null,comment=false;
@@ -49,11 +54,11 @@ function inspect(resolved,kind){
  if(inline.reason)reason=inline.reason;
  if(selected.attrs.some(a=>/\{[%{]|\b(?:v-bind|x-bind|v-for|v-if|x-for|x-if)\b/.test(a.name+' '+a.value)))reason='Template expressions control this SVG layer.';
  const classes=selected.attrs.filter(a=>['class','className'].includes(a.name)).map(a=>a.value||'').join(' '),paintReasons=Object.fromEntries(['fill','stroke'].map(paint=>[paint,classes.split(/\s+/).some(token=>require('../shell/svg-paint.js').property(require('../shell/responsive.js').split(token).value)===paint)?'Paint classes control this '+paint+', including responsive or state variants. Edit its paint styles instead.':null]));
- for(const paint of ['fill','stroke'])if(inline.properties.some(name=>name.toLowerCase()===paint||name.toLowerCase()==='all'))paintReasons[paint]='Inline styles control this '+paint+'. Edit its paint styles instead.';
+ for(const paint of ['fill','stroke'])if(inline.properties.some(name=>name.toLowerCase()==='all')||inline.properties.some(name=>name.toLowerCase()===paint)&&!inline.conversions?.[paint])paintReasons[paint]='Inline styles control this '+paint+'. Edit its paint styles instead.';
  for(const paint of ['fill','stroke'])if(selected.attrs.some(a=>a.name===paint&&a.value===undefined))paintReasons[paint]='A dynamic expression controls this '+paint+'. Edit its source expression instead.';
- return {selected,viewport,nodes,reason,paintReasons};
+ return {selected,viewport,nodes,reason,paintReasons,inlineConversions:inline.conversions||{}};
 }
-function describe(resolved,kind){const state=inspect(resolved,kind);if(!state)return null;return {reason:state.reason,paintReasons:state.paintReasons,values:['fill','stroke'].flatMap(paint=>{const value=state.selected.attrs.find(a=>a.name===paint)?.value;return value===undefined&&state.selected.attrs.some(a=>a.name===paint)?[]:[{paint,value:value??null}];}),paints:['fill','stroke'].filter(p=>!/^url\(/.test(state.selected.attrs.find(a=>a.name===p)?.value||''))};}
+function describe(resolved,kind){const state=inspect(resolved,kind);if(!state)return null;return {reason:state.reason,paintReasons:state.paintReasons,inlinePaints:Object.keys(state.inlineConversions),values:['fill','stroke'].flatMap(paint=>{const value=state.selected.attrs.find(a=>a.name===paint)?.value;return value===undefined&&state.selected.attrs.some(a=>a.name===paint)?[]:[{paint,value:value??null}];}),paints:['fill','stroke'].filter(p=>!/^url\(/.test(state.selected.attrs.find(a=>a.name===p)?.value||''))};}
 function plan(resolved,op,kind){
  const refuse=reason=>({ok:false,refused:true,reason}),state=inspect(resolved,kind);if(!state)return refuse('Select an SVG shape to create a gradient.');if(state.reason)return refuse(state.reason);
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the SVG layer.');
@@ -64,6 +69,7 @@ function plan(resolved,op,kind){
  const escape=s=>s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'),color=kind==='react'?'stopColor':'stop-color',opacity=kind==='react'?'stopOpacity':'stop-opacity';
  const resource='<defs><'+value.type+' id="'+id+'"><stop offset="0" '+color+'="'+escape(value.color)+'"/><stop offset="1" '+color+'="'+escape(value.color)+'" '+opacity+'="0"/></'+value.type+'></defs>',token=op.paint+'="url(#'+id+')"',out=new MagicString(resolved.source);
  let delta;if(old){if(!Number.isInteger(old.start)||!Number.isInteger(old.end))return refuse('The paint attribute has no source location.');out.overwrite(old.start,old.end,token);delta=token.length-(old.end-old.start);}else{out.appendLeft(selected.nameEnd,' '+token);delta=token.length+1;}
+ const conversion=state.inlineConversions[op.paint];if(conversion){out.overwrite(conversion.start,conversion.end,conversion.text);delta+=conversion.text.length-(conversion.end-conversion.start);}
  out.appendLeft(viewport.close,resource);const after=out.toString(),at=viewport.close+delta,adapter=require('./adapters/'+kind+'.cjs'),location=el=>kind==='html'?el.location.startOffset:kind==='react'?el.node.start:el.tagStart;
  const before=adapter.collect(resolved.source,resolved.relPath).elements,next=adapter.collect(after,resolved.relPath).elements.filter(el=>location(el)<at||location(el)>=at+resource.length);
  if(before.length!==next.length||before.some((el,i)=>el.id!==next[i].id||el.kind!==next[i].kind))return refuse('Creating this gradient changes existing layer identities.');

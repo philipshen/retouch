@@ -20,7 +20,7 @@ for(const kind of ['html','react','liquid']){
   const styles=kind==='react'?['style={{opacity:0.8,strokeWidth:3}}','style={{fill:null,stroke:"",opacity:0.5}}','style={null}']:['style="opacity:.8;stroke-width:3px"',`style="--note:'fill:red;stroke:blue';opacity:calc(1 - .2)"`,'style="/* fill:red */ opacity:.8;--tokens:{fill:red;stroke:blue}"'];
   for(const style of styles)for(const paint of ['fill','stroke']){const result=create(original.replace('<rect ','<rect '+style+' '),{paint});assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(style));}
   for(const paint of ['fill','stroke'])for(const style of kind==='react'?['style={{'+paint+':"red",opacity:.8}}']:['style="'+paint+':red;opacity:.8"','style="'+(paint==='fill'?'\\66 ill':'\\73 troke')+':red"']){
-   const source=original.replace('<rect ','<rect '+style+' '),description=adapter.describe(resolve(source)).svgGradientCreation;assert.equal(description.reason,null);assert.match(description.paintReasons[paint],/Inline styles/);assert.equal(create(source,{paint}).refused,true);const other=paint==='fill'?'stroke':'fill',result=create(source,{paint:other});assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(style));
+   const source=original.replace('<rect ','<rect '+style+' '),description=adapter.describe(resolve(source)).svgGradientCreation;assert.equal(description.reason,null);if(kind==='react'){assert.equal(description.paintReasons[paint],null);const converted=create(source,{paint});assert.equal(converted.ok,true,converted.reason);assert.ok(converted.edits[0].after.includes('style={{'+paint+':null,opacity:.8}}'));assert.equal(adapter.describe(resolve(converted.edits[0].after)).svgGradients[0].paint,paint);}else{assert.match(description.paintReasons[paint],/Inline styles/);assert.equal(create(source,{paint}).refused,true);}const other=paint==='fill'?'stroke':'fill',result=create(source,{paint:other});assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(style));
   }
   const all=kind==='react'?'style={{all:"inherit"}}':'style="all:inherit"';for(const paint of ['fill','stroke'])assert.equal(create(original.replace('<rect ','<rect '+all+' '),{paint}).refused,true);
  });
@@ -47,6 +47,11 @@ for(const kind of ['html','react','liquid']){
     const result=create(source,{paint:paint==='fill'?'stroke':'fill'});assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(style));
    }
    assert.equal(create(original.replace('<rect ','<rect style={{all:reset}} ')).refused,true);
+  });
+  test('react inline paint conversion preserves comments and other expressions but refuses ambiguous ownership',()=>{
+   const source=original.replace('<rect ','<rect style={{opacity:active?.8:.5, /* paint */ fill: "red", strokeWidth:weight}} '),result=create(source);
+   assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes('style={{opacity:active?.8:.5, /* paint */ fill: null, strokeWidth:weight}}'));
+   for(const style of ['style={{fill:"red",fill:"blue"}}','style={{fill:"red",all:reset}}','style={{fill:color}}','style={{fill:"url(#other)"}}'])assert.equal(create(original.replace('<rect ','<rect '+style+' ')).refused,true,style);
   });
   test('react creation still refuses unresolved classes, spreads and dynamic markup',()=>{
    for(const attributes of ['className={classes}','class={classes}','{...props}','dangerouslySetInnerHTML={{__html:markup}}'])assert.equal(create(original.replace('<rect ','<rect '+attributes+' ')).refused,true,attributes);

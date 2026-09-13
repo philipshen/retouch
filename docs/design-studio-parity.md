@@ -14470,3 +14470,12 @@ The live paint ownership check formerly refused every layer with an active anima
 HTML/Chromium and Liquid/WebKit browser checks cover opacity/fill/stroke animation guards, gradient creation during an active opacity animation, subsequent stop editing and exact undo/redo. The existing 1,132-test suite passed; the added transition-list/probe-restoration test passed with the four existing SVG paint tests. Unknown effects remain refused. CSS-owned paint creation and animation timeline editing remain incomplete.
 
 Evidence: `/private/tmp/retouch-gradient-animation-html-final.log`, `/private/tmp/retouch-gradient-animation-webkit.log`, `/private/tmp/retouch-gradient-animation-units.log`.
+
+
+### 2026-09-13 — Convert static React inline SVG colors to editable gradients
+
+Fill type and Stroke type now accept static color literals in explicit React style objects. One source transaction replaces only that paint value with null, writes an attribute gradient reference and appends its definition. Other style values, comments and source identities are preserved. The normal gradient inspector discovers the result, so stop editing and exact undo/redo work without a separate editing mode.
+
+Before enabling or applying conversion, the live ownership probe releases just that inline property, checks whether the attribute can control the rendered paint, then restores the original style attribute. Underlying CSS, class paint, dynamic or duplicate paint values, unknown style keys/spreads and all resets remain guarded.
+
+Evidence: 1,134 unit tests passed in `/private/tmp/retouch-inline-gradient-units.log`. React/Chromium passed linear and radial inline fill conversion, stop editing, restored paint/opacity and exact source undo/redo in `/private/tmp/retouch-inline-gradient-react-final.log`. React/WebKit 26 additionally checked the underlying-CSS refusal in `/private/tmp/retouch-inline-gradient-react-webkit.log`; all processes exited zero. React may normalize runtime CSS text after undo; assertions compare rendered paint/opacity and require exact source restoration. HTML/Liquid inline paint conversion remains incomplete; this is not a new desktop build.
