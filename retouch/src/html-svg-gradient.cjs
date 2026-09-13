@@ -38,6 +38,7 @@ function plan(resolved,op){
  if(!state)return refuse('Select a layer with a local linear or radial gradient attribute.');
  if(state.reason)return refuse(state.reason);
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the gradient layer.');
+ if(op.action!==undefined)return require('./svg-gradient-stops.cjs').plan(resolved,op,state,'html');
  const stop=op.stop!==undefined;
  if(stop&&(!Number.isInteger(op.stop)||op.stop<0||op.stop>=state.stops.length))return refuse('Choose an existing gradient stop.');
  const node=stop?state.stops[op.stop]:state.node,allowed=stop?['offset','stop-color','stop-opacity']:[...coordinates[state.node.tagName],'gradientUnits','spreadMethod'];

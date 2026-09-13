@@ -939,3 +939,10 @@ html, body { overflow:clip; }
 .design-tool-dock .creation-tool[aria-pressed="true"] { background:var(--accent);color:white; }
 
 .shape-tool-menu kbd { margin-left:auto; }
+
+.svg-gradient-stop { display:grid; grid-template-columns:52px minmax(0,1fr) 52px 24px; gap:6px; align-items:end; padding:6px 0; }
+.svg-gradient-stop > .hint { grid-column:1/-1; margin:0; }
+.svg-gradient-stop > .inspector-field { display:block; min-width:0; margin:0; }
+.svg-gradient-stop > .inspector-field > span { display:block; margin-bottom:4px; font-size:10px; }
+.svg-gradient-stop > .inspector-field input { width:100%; min-width:0; }
+.svg-gradient-stop-remove { width:24px; height:28px; padding:0; font-size:18px; }

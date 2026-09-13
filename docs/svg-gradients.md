@@ -4,7 +4,9 @@ For HTML, React and Liquid sites, select an SVG layer whose `fill` or `stroke` a
 
 Edits update the existing definition. Every referencing layer and every screen size uses that shared definition; the inspector displays this scope explicitly. React writes use JSX attribute names such as `stopColor`; Liquid edits preserve existing attribute quote styles. Dynamic expressions and spread attributes are preserved by refusing edits to definitions they control. Each committed field edit is one source transaction with exact undo/redo. Layer IDs and unrelated source remain unchanged.
 
-The current controls cover coordinates, coordinate units, spread mode, stop position, color and opacity. They do not yet create gradients, insert/delete/reorder stops, detach shared definitions, follow inherited `href` chains, or provide canvas gradient handles. CSS overrides can still control the rendered paint; the controls describe source attributes, not resolved CSS ownership. Dynamic, styled, animated and ambiguous definitions are refused.
+The current controls cover coordinates, coordinate units, spread mode, stop position, color and opacity. Click the gradient strip to insert a stop at that position, or use Add gradient stop to split the largest gap. New stops interpolate neighboring computed sRGB colors and opacity; this can differ from gradients using other interpolation spaces. Select a stop handle to focus its color field. Remove stops with the minus button; at least two stops remain. These edits support up to 64 stops.
+
+The controls do not yet create gradients, reorder stops, detach shared definitions, follow inherited `href` chains, or provide canvas gradient handles. CSS overrides can still control the rendered paint; the controls describe source attributes, not resolved CSS ownership. Dynamic, styled, animated and ambiguous definitions are refused.
 
 Validation:
 
