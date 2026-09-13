@@ -612,3 +612,26 @@ class, component-instance, and dynamic-binding metadata into the rendered wrappe
 to verify that refused changes leave its DOM and source unchanged. These checks
 do not establish full component or dynamic-rich-text editing parity.
 Desktop packaging has not been rebuilt with this change.
+
+### Partial bold and italic toggles (2026-09-13)
+
+Bold and italic now share the script formatter's range-splitting path. Turning
+off formatting for a character inside a simple wrapper preserves the formatted
+text on either side, both before saving and after reopening. The previous path
+unwrapped the entire unstamped element or added another wrapper around saved
+formatting. Toolbar and Cmd/Ctrl+B/I use the same operation; `b`/`i` aliases are
+recognized as bold/italic when deciding whether to toggle off.
+
+The source-preservation guard also applies to emphasis: nested children or
+meaningful attributes cannot be discarded to perform a toggle. Fully general
+mixed-range normalization, nested styling, and attributed-wrapper editing remain
+unfinished. This is not complete Figma text-editing parity.
+
+The `RT_E2E_SAVED_EMPHASIS=1` browser workflow exercises partial unsaved toggles,
+reapplying the selected character, saving, reopening, keyboard toggles, unchanged
+surrounding text, and exact undo/redo. Combined runs also exercise
+`RT_E2E_SAVED_SCRIPT=1` to check superscript/subscript switching and preservation
+of authored metadata. Validation logs are
+`/private/tmp/retouch-saved-emphasis-{html,react,liquid}.log`; unit validation is
+`/private/tmp/retouch-saved-emphasis-units.log` (1,164 passing tests).
+Desktop packaging has not been rebuilt with this change.

@@ -851,43 +851,21 @@ function toggleWrap(tag) {
   if (!s || !s.rangeCount) return;
   const r = s.getRangeAt(0);
   if (r.collapsed||!editing.el.contains(r.startContainer)||!editing.el.contains(r.endContainer)) return;
-  // Toggle off: the selection sits inside an unstamped wrapper of this tag.
+  // Split only the selected portion when toggling existing formatting.
   const cac = r.commonAncestorContainer;
   const start = cac.nodeType === 1 ? cac : cac.parentElement;
-  if(tag==='sup'||tag==='sub'){
-    const previous=start?.closest('sup,sub');
+  const selector = tag === 'strong' ? 'strong,b' : tag === 'em' ? 'em,i' : tag;
+  {
+    const previous=start?.closest(tag==='sup'||tag==='sub'?'sup,sub':selector);
     if(previous&&previous!==editing.el&&editing.el.contains(previous)&&previous.contains(r.startContainer)&&previous.contains(r.endContainer)){
       // Only location/revision stamps may be discarded when splitting a saved wrapper.
       // Authored attributes, component instances and dynamic bindings retain their identity.
-      if(previous.childNodes.length!==1||previous.firstChild.nodeType!==3||previous.getAttribute('data-rt-i')||[...previous.attributes].some(attribute=>!['data-rt','data-rt-i','data-rt-keep','data-rt-revision','data-rt-client-revision','data-rt-client-mounted','data-rt-section','data-rt-block','data-rt-block-type','data-rt-template','data-rt-locale'].includes(attribute.name))){toast('Edit this nested script formatting in its source.','err');return;}
+      if(previous.childNodes.length!==1||previous.firstChild.nodeType!==3||previous.getAttribute('data-rt-i')||[...previous.attributes].some(attribute=>!['data-rt','data-rt-i','data-rt-keep','data-rt-revision','data-rt-client-revision','data-rt-client-mounted','data-rt-section','data-rt-block','data-rt-block-type','data-rt-template','data-rt-locale'].includes(attribute.name))){toast('Edit this nested formatting in its source.','err');return;}
       const prefix=d.createRange();prefix.selectNodeContents(previous);prefix.setEnd(r.startContainer,r.startOffset);const suffix=d.createRange();suffix.selectNodeContents(previous);suffix.setStart(r.endContainer,r.endOffset);
-      const parts=d.createDocumentFragment(),before=prefix.toString(),after=suffix.toString(),middle=previous.tagName.toLowerCase()===tag?d.createTextNode(r.toString()):d.createElement(tag);if(middle.nodeType===1)middle.textContent=r.toString();
+      const parts=d.createDocumentFragment(),before=prefix.toString(),after=suffix.toString(),middle=previous.matches(selector)?d.createTextNode(r.toString()):d.createElement(tag);if(middle.nodeType===1)middle.textContent=r.toString();
       if(before){const node=d.createElement(previous.tagName.toLowerCase());node.textContent=before;parts.append(node);}parts.append(middle);if(after){const node=d.createElement(previous.tagName.toLowerCase());node.textContent=after;parts.append(node);}previous.replaceWith(parts);
       const selected=d.createRange();selected.selectNodeContents(middle);s.removeAllRanges();s.addRange(selected);return;
     }
-  }
-  const selector = tag === 'strong' ? 'strong,b' : tag === 'em' ? 'em,i' : tag;
-  const existing = start && start.closest(selector);
-  if (
-    existing &&
-    existing !== editing.el &&
-    editing.el.contains(existing) &&
-    !existing.getAttribute('data-rt') &&
-    !existing.getAttribute('data-rt-i')
-  ) {
-    const parent = existing.parentNode;
-    const moved = [...existing.childNodes];
-    for (const child of moved) parent.insertBefore(child, existing);
-    parent.removeChild(existing);
-    // Keep the just-unwrapped text selected so the highlight and toolbar stay.
-    if (moved.length) {
-      s.removeAllRanges();
-      const nr = d.createRange();
-      nr.setStartBefore(moved[0]);
-      nr.setEndAfter(moved[moved.length - 1]);
-      s.addRange(nr);
-    }
-    return;
   }
   const w = d.createElement(tag);
   try {
