@@ -1,0 +1,279 @@
+{
+  "sourceCommit": "015bffb74fe6570b470c4474bdf75ee06acde7a7",
+  "sourceTreeDirty": false,
+  "sourceFiles": 208,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "status": "Ad hoc development candidate; native editing and trusted distribution unverified",
+  "archive": "/private/tmp/retouch-desktop-typography-015bffb/Retouch-0.1.0-mac.zip",
+  "sha256": "5ebe86b9fd3034f01592f7596f6f13e301e00364cb6d7d13b9298c7ac967c5bf",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "cask": {
+    "path": "/private/tmp/retouch-desktop-typography-015bffb/retouch-studio.rb",
+    "sha256": "d1b51a85ccec5981522a59124e668eefe830444243ccf5c9ed879a38d23220aa",
+    "url": "file:///private/tmp/retouch-desktop-typography-015bffb/Retouch-0.1.0-mac.zip",
+    "public": false
+  },
+  "units": {
+    "passed": 1212,
+    "exitCode": 0,
+    "scope": "Tests import actual extracted packaged runtime",
+    "log": "/private/tmp/retouch-desktop-typography-015bffb/units.log"
+  },
+  "harness": {
+    "testFiles": 373,
+    "inventorySha256": "2e65fe6336c392499a9d977b9ac421b3c3f91efc9840f381049c9dcf3250d4b8",
+    "archiveSha256": "0f33e0910ded8431c42f10e2e4dd902b4b932465c9dc8fdcb996d91a4944a342",
+    "runtime": "/private/tmp/retouch-desktop-typography-015bffb/extracted/Retouch.app/Contents/Resources/retouch",
+    "testsExternalToBundle": true,
+    "removedAfterAllProcessesExited": true
+  },
+  "workflows": [
+    {
+      "name": "text-links-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/text-links-html.log",
+      "assertionGroups": [
+        "TEXT LINKS PASS"
+      ]
+    },
+    {
+      "name": "owned-link-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/owned-link-html.log",
+      "assertionGroups": [
+        "OWNED LINK TEXT PASS"
+      ]
+    },
+    {
+      "name": "text-links-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/text-links-liquid.log",
+      "assertionGroups": [
+        "TEXT LINKS PASS"
+      ]
+    },
+    {
+      "name": "attributed-link-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/attributed-link-html.log",
+      "assertionGroups": [
+        "ATTRIBUTED LINK TEXT PASS"
+      ]
+    },
+    {
+      "name": "owned-link-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/owned-link-liquid.log",
+      "assertionGroups": [
+        "OWNED LINK TEXT PASS"
+      ]
+    },
+    {
+      "name": "indent-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/indent-html.log",
+      "assertionGroups": [
+        "PARAGRAPH INDENT PASS"
+      ]
+    },
+    {
+      "name": "attributed-link-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/attributed-link-liquid.log",
+      "assertionGroups": [
+        "ATTRIBUTED LINK TEXT PASS"
+      ]
+    },
+    {
+      "name": "underline-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/underline-html.log",
+      "assertionGroups": [
+        "UNDERLINE DETAILS PASS"
+      ]
+    },
+    {
+      "name": "text-links-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/text-links-react.log",
+      "assertionGroups": [
+        "TEXT LINKS PASS"
+      ]
+    },
+    {
+      "name": "indent-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/indent-liquid.log",
+      "assertionGroups": [
+        "PARAGRAPH INDENT PASS"
+      ]
+    },
+    {
+      "name": "wrap-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/wrap-html.log",
+      "assertionGroups": [
+        "TEXT WRAP PASS"
+      ]
+    },
+    {
+      "name": "owned-link-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/owned-link-react.log",
+      "assertionGroups": [
+        "OWNED LINK TEXT PASS"
+      ]
+    },
+    {
+      "name": "underline-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/underline-liquid.log",
+      "assertionGroups": [
+        "UNDERLINE DETAILS PASS"
+      ]
+    },
+    {
+      "name": "wrap-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/wrap-liquid.log",
+      "assertionGroups": [
+        "TEXT WRAP PASS"
+      ]
+    },
+    {
+      "name": "attributed-link-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/attributed-link-react.log",
+      "assertionGroups": [
+        "ATTRIBUTED LINK TEXT PASS"
+      ]
+    },
+    {
+      "name": "indent-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/indent-react.log",
+      "assertionGroups": [
+        "PARAGRAPH INDENT PASS"
+      ]
+    },
+    {
+      "name": "underline-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/underline-react.log",
+      "assertionGroups": [
+        "UNDERLINE DETAILS PASS"
+      ]
+    },
+    {
+      "name": "wrap-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/wrap-react.log",
+      "assertionGroups": [
+        "TEXT WRAP PASS"
+      ]
+    }
+  ],
+  "installation": {
+    "verification": {
+      "sourceCommit": "015bffb74fe6570b470c4474bdf75ee06acde7a7",
+      "sourceTreeDirty": false,
+      "sourceFiles": 208,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesArchive": true,
+    "quarantinePreserved": true,
+    "quarantine": "0381;6aa7251b;;2126CD84-C376-44CF-BA71-59136696A064",
+    "result": "isolated install and uninstall passed",
+    "caskInventoryUnchanged": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "automaticDependencyRemovalDisabled": true,
+    "exitCode": 0,
+    "log": "/private/tmp/retouch-desktop-typography-015bffb/homebrew.log"
+  },
+  "desktopChecks": {
+    "unitTests": {
+      "passed": 10,
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/desktop-units.log"
+    },
+    "verifier": {
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/verifier.log"
+    },
+    "samplerPolicy": {
+      "exitCode": 0,
+      "scope": "Extracted pure Swift policy and color helpers; no app launch",
+      "log": "/private/tmp/retouch-desktop-typography-015bffb/sampler-policy.log"
+    },
+    "welcome": {
+      "exitCode": 0,
+      "scope": "Actual Swift-interpolated welcome HTML in Chromium/WebKit; not WKWebView or native window verification",
+      "testSha256": "679bb29935051ae3d30ccba0e5aecca077eac539c8094fffe954a6b755c05af4",
+      "logs": [
+        "/private/tmp/retouch-desktop-typography-015bffb/welcome-chromium.log",
+        "/private/tmp/retouch-desktop-typography-015bffb/welcome-webkit.log"
+      ]
+    }
+  },
+  "nativeLaunch": {
+    "result": "Not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "nativeSelfTests": "Not run",
+  "developerID": "Not attempted for this ad hoc candidate",
+  "notarization": "Not performed",
+  "published": false,
+  "remaining": [
+    "Native editing, sampler and shutdown workflows remain unverified",
+    "Developer ID signing, notarization, public cask and trusted upgrades remain incomplete",
+    "Intel runtime execution remains unverified",
+    "Older WebKit normal-flow block-axis Fill issue was not rerun on this archive",
+    "Broader paint/vector/layout matrices were not rerun on this archive",
+    "Full Figma Design parity and universal site support remain incomplete",
+    "Arbitrary attributed rich-text normalization, paragraph/list editing and responsive range overrides remain incomplete"
+  ]
+}

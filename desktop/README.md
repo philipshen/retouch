@@ -10,29 +10,32 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-text-b1bd479/Retouch-0.1.0-mac.zip`
-(SHA-256 `7ac77cb1fb67907b75fc11b866dadc13c19cbcb104f3e43d02f5f23522f77bbb`).
-It packages clean commit `b1bd479`, including selected-text size, named/custom
-weights, page font search, solid color preview, and combined style runs that
-preserve other properties during partial edits. All 206 runtime source hashes
-and native/build/verifier hashes match. The extracted runtime passed 1,187 unit
-tests and 23 browser workflows. Universal architecture and strict signatures
+`/private/tmp/retouch-desktop-typography-015bffb/Retouch-0.1.0-mac.zip`
+(SHA-256 `5ebe86b9fd3034f01592f7596f6f13e301e00364cb6d7d13b9298c7ac967c5bf`).
+It packages clean commit `015bffb`, including selected-text links, source-owned
+link destination editing, paragraph indentation, underline details, responsive
+text wrapping and fitted typography previews. All 208 runtime source hashes
+and native/build/verifier hashes match. The extracted runtime passed 1,212 unit
+tests and 18 browser workflows. Universal architecture and strict signatures
 verify before and after workflows.
 
 The exact ZIP installed and uninstalled through Homebrew in an isolated app
 directory with quarantine retained and the original cask inventory unchanged.
 Temporary app, tap, trust configuration and external test harness were removed.
-Browser coverage includes HTML/React Chromium and Liquid WebKit typography,
-OpenType controls, selected-text fonts/colors/size, composite text styles,
-semantic formatting, CSS paints and border styles, plus HTML SVG strokes and
-the full HTML editing workflow. Checks retain responsive fallback/reset,
-source preservation and exact undo/redo assertions. Disposable-copy tamper checks
-pass. Ten desktop JavaScript/publication tests, the full package-verifier
-mutation matrix, and extracted Swift sampler policy checks also pass. The welcome
-HTML is rendered from the actual Swift template for initial/stopped states and
-checked in Chromium/WebKit at two sizes; these are not native-window tests.
-See [the candidate receipt](verification/2026-09-13-combined-text.json)
-and [the preceding text-range candidate](verification/2026-09-13-text-ranges.json).
+Browser coverage includes HTML/React Chromium and Liquid WebKit link creation,
+source-bound URL protection, attributed-anchor URL update/removal/restoration,
+paragraph indent, five underline properties and text wrapping. Checks retain
+source preservation, preview cancellation, responsive isolation/reset where
+applicable, and exact undo/redo assertions. Ten desktop JavaScript/publication
+tests, the package-verifier mutation matrix, and extracted Swift sampler policy
+checks also pass. The welcome HTML is rendered from the actual Swift template
+for initial/stopped states and checked in Chromium/WebKit at two sizes; these
+are not native-window tests.
+See [the candidate receipt](verification/2026-09-13-typography-links.json).
+The [preceding cursor-editing candidate](verification/2026-09-13-cursor-editing.json)
+and [combined-text candidate](verification/2026-09-13-combined-text.json) retain
+other typography and formatting workflow evidence; those additional workflows
+were not repeated for this archive.
 
 This is an ad hoc development build, not a trusted release. Native launch was
 not attempted because a fresh CUA connection check failed before app inspection.
