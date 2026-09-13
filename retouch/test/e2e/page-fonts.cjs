@@ -1930,6 +1930,7 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
    await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();
    console.log(engine+' '+kind+': PASS Tab retains next control after save/rebuild, Shift+Tab returns, unchanged Tab does not write, explicit click cancels queued focus, exact undo');
   }
+  if(process.env.RT_E2E_TYPOGRAPHY_CALCULATIONS)await require('./typography-calculations.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_CONVERT_SPACING){
    await page.getByLabel('Style screen scope').selectOption('');await settled();
    const write=async action=>{snapshots.push(read());await action();await wait(()=>read()!==snapshots.at(-1));await settled();};

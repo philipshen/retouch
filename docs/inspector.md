@@ -16,6 +16,15 @@ Liquid parity work and its remaining verification gates are tracked in
 | Effects | Apply a shadow preset or set X/Y, blur, spread, color, opacity, and inner shadow. |
 | Opacity | Set a percentage or use the slider. |
 
+Font size, line height, and letter spacing accept calculations such as
+`(16 + 4) * 2px` and `(2 - 4) / 2px`. Enter saves; Escape restores the
+field's initial value without a source edit. A trailing unit applies to the
+whole calculation. React and Liquid pixel fields require pixels; HTML fields
+retain their authored CSS unit, including unitless line-height multipliers.
+Invalid arithmetic is refused before source writes. Mixed-unit arithmetic and
+unit conversion are not supported. Relative percentage and shared-selection
+fields retain their existing controls.
+
 Style controls follow the selected breakpoint scope. Other breakpoint and state
 classes stay intact and may override an edit at the current viewport. Authored
 responsive image source choices remain outside image replacement.
@@ -199,3 +208,13 @@ dimensions stay unchanged. A fixed-width item may therefore stay narrower than
 its spanned area; use Fill available to fill it. Spans follow the selected
 breakpoint scope and support undo/redo. Unrepresented explicit placements show
 Custom placement.
+
+### Typography calculation verification (2026-09-13)
+
+`RT_E2E_TYPOGRAPHY_CALCULATIONS=1` with `page-fonts.cjs` verifies Enter,
+Escape, division-by-zero refusal, negative letter spacing, phone/tablet font
+size isolation, and exact source undo/redo. HTML additionally verifies `normal`
+line height followed by a calculated unitless multiplier. Chromium 145 passed
+for HTML and React; WebKit 26 passed for Liquid. The accompanying full unit
+suite passed 1,158 tests. These runs exercise local source adapters, not native
+WKWebView or arbitrary remote-site source ownership.
