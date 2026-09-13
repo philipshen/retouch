@@ -891,6 +891,8 @@ body input[type="number"]::-webkit-outer-spin-button { appearance:none;margin:0;
 .section-toggle:hover { color:var(--ink);background:transparent; }
 .inspector-section[data-collapsed="true"] > :not(h3):not(.section-add) { display:none!important; }
 .inspector-section[data-collapsed="true"] > h3 { margin-bottom:0; }
+.inspector-section.empty-svg-paint > :not(h3):not(.section-add) { display:none!important; }
+.inspector-section.empty-svg-paint > h3 { margin-bottom:0; }
 .inspector-section:has(> .section-add) > h3 > .section-toggle { padding-right:30px; }
 
 .design-tool-dock .creation-tool { display:flex;align-items:center;justify-content:center; }

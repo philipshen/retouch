@@ -8,6 +8,21 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
 
  function disclosure(title,key){const d=document.createElement('details'),s=document.createElement('summary');d.className='inspector-disclosure';s.textContent=title;d.append(s);d.open=openGroups.has(key);d.ontoggle=()=>d.open?openGroups.add(key):openGroups.delete(key);return d;}
  function title(section){return section.querySelector(':scope > h3')?.textContent||'';}
+ let closePaintMenu=null;
+ function addSVGPaint(input,type,opener,paint){
+  closePaintMenu?.();root.RetouchActions?.closeContext();
+  const menu=document.createElement('div');menu.className='rt-context-menu';menu.setAttribute('role','menu');menu.setAttribute('aria-label','Add '+paint);
+  const close=(focus=false)=>{menu.remove();observer.disconnect();document.removeEventListener('pointerdown',outside,true);root.removeEventListener('resize',cancel);root.removeEventListener('scroll',cancel,true);opener.setAttribute('aria-expanded','false');closePaintMenu=null;if(focus&&opener.isConnected)opener.focus({preventScroll:true});};
+  const outside=event=>{if(!menu.contains(event.target))close();},cancel=()=>close(),observer=new MutationObserver(()=>{if(!opener.isConnected)close();});
+  for(const [value,label]of [['solid','Solid'],['linearGradient','Linear gradient'],['radialGradient','Radial gradient']]){
+   const item=document.createElement('button');item.type='button';item.setAttribute('role','menuitem');item.textContent=label;item.disabled=value==='solid'?input.disabled:!type||type.disabled;
+   if(item.disabled)item.title=value==='solid'?input.title:type?.title||'Gradient creation is unavailable for this paint.';
+   item.onclick=()=>{if(item.disabled)return;close();if(value==='solid')root.RetouchPaintPicker.open(input,{anchor:opener,onClose:()=>{if(opener.isConnected)opener.focus({preventScroll:true});}});else{type.value=value;type.dispatchEvent(new Event('change',{bubbles:true}));}};menu.append(item);
+  }
+  menu.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close(true);return;}if(event.key==='Tab'){close(true);return;}if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return;event.preventDefault();const items=[...menu.querySelectorAll('button:not(:disabled)')],at=items.indexOf(document.activeElement),next=event.key==='Home'?0:event.key==='End'?items.length-1:(at+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;items[next]?.focus();};
+  document.body.append(menu);const box=opener.getBoundingClientRect();menu.style.left=Math.max(8,Math.min(innerWidth-menu.offsetWidth-8,box.right-menu.offsetWidth))+'px';menu.style.top=Math.max(8,Math.min(innerHeight-menu.offsetHeight-8,box.bottom+4))+'px';
+  opener.setAttribute('aria-expanded','true');document.addEventListener('pointerdown',outside,true);root.addEventListener('resize',cancel);root.addEventListener('scroll',cancel,true);observer.observe(document.body,{subtree:true,childList:true});closePaintMenu=close;menu.querySelector('button:not(:disabled)')?.focus();
+ }
  // A paint swatch has its own accessible name but does not identify the property.
  function fieldControl(row){return row.querySelector('input[aria-label],select[aria-label],textarea[aria-label]')||row.querySelector('[aria-label]');}
  function pair(section,names){
@@ -329,6 +344,15 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    for(const group of groups){group.classList.add('sec');shared.before(group);}
    if(notes.children.length>1){notes.classList.add('shared-inspector-notes');shared.before(notes);}
    shared.remove();
+  }
+  if(!['svg','foreignobject'].includes((head.dataset.layerTag||'').toLowerCase()))for(const paint of ['fill','stroke']){
+   const section=[...panel.children].find(el=>el.dataset.section===paint),input=section?.querySelector('[aria-label="SVG '+paint+'"]');
+   if(!input||section.querySelector('[data-gradient-paint]')||section.querySelector(':scope > .section-add')||/^url\(/i.test(input.value.trim()))continue;
+   const empty=input.value.trim()==='none',action=document.createElement('button');action.type='button';action.className='control-button section-add svg-paint-action';action.textContent=empty?'+':'−';
+   action.setAttribute('aria-label',(empty?'Add ':'Remove ')+paint);action.title=input.disabled?input.title:(empty?'Add ':'Remove ')+paint;action.disabled=input.disabled;
+   if(empty){action.setAttribute('aria-haspopup','menu');action.setAttribute('aria-expanded','false');}
+   action.onclick=()=>{if(input.disabled||!input.isConnected)return;if(empty)return addSVGPaint(input,section.querySelector('[aria-label="'+(paint==='fill'?'Fill type':'Stroke type')+'"]'),action,paint);input.value='none';input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));};
+   section.classList.toggle('empty-svg-paint',empty);section.append(action);
   }
   for(const section of panel.querySelectorAll(':scope > .inspector-section'))collapsibleSection(section);
  }

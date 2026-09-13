@@ -14385,3 +14385,38 @@ Logs: `/private/tmp/retouch-line-arrow-units.log`,
 The latest desktop package predates this conversion action. No desktop rebuild,
 native launch or push in this increment. Full Figma parity and universal site
 support remain incomplete.
+
+## 2026-09-13 — Compact empty SVG Fill and Stroke sections
+
+Graphical SVG layers with `none` paint now show a compact section heading and
++ action instead of a misleading Solid/none editor. The addition menu offers
+Solid, Linear gradient and Radial gradient through existing paint handlers.
+Solid opens the existing picker with live preview and cancellation; gradient
+choices use the existing attribute-gradient creation capability and retain its
+source-ownership guards. Existing solid paints expose a minus action that sets
+none through the current scoped paint writer. SVG viewports/foreignObject and
+existing gradient editors retain their separate controls.
+
+The menu supports arrows, Home/End, Escape with focus restoration, outside
+dismissal and cleanup when the selected control disappears or the view scrolls.
+Disabled source-owned paint fields remain disabled, with their reason retained
+on the action. Source-controlled gradient limitations are unchanged: creating
+a gradient from CSS-owned paint is still unavailable.
+
+HTML/Chromium, HTML/WebKit, React/Chromium and Liquid/WebKit workflows pass
+compact layout, removal, addition, live preview, cancellation, menu focus and
+exact source Undo/Redo. The HTML/WebKit test explicitly adds a linear gradient
+from the original empty stroke. The existing HTML/WebKit SVG picker workflow
+now enters empty stroke through + / Solid and passes alpha/color-model editing,
+preview cancellation and exact history. All 1131 unit tests pass. Every test
+process exited 0. Screenshot inspected: `/private/tmp/retouch-empty-paint.png`.
+
+Logs: `/private/tmp/retouch-empty-paint-html.log`,
+`/private/tmp/retouch-empty-paint-webkit.log`,
+`/private/tmp/retouch-empty-paint-react.log`,
+`/private/tmp/retouch-empty-paint-liquid.log`,
+`/private/tmp/retouch-empty-paint-picker-regression.log`,
+`/private/tmp/retouch-empty-paint-units.log`.
+
+No desktop rebuild or native launch in this increment. Broader inspector
+fidelity, full Figma parity and universal site editing remain incomplete.
