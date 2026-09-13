@@ -13478,3 +13478,28 @@ coverage for the new stroke settings and a rebuilt desktop package remain pendin
 A subsequent React rerun timed out waiting for the existing line-drawing preview;
 the preceding full run passed. This intermittent drawing-test timeout is retained
 as a validation limitation.
+
+### 2026-09-13 — SVG paint hierarchy and responsive stroke verification
+
+Graphical SVG selections now expose a single Fill and Stroke paint set. Removed
+non-rendering CSS box background/border controls from those two sections while
+retaining box styling on SVG viewports, foreignObject containers and ordinary
+HTML elements. Shortened the stroke scaling caption to Mode so both Scale and
+Fixed fit in the paired settings row. The light-theme Liquid screenshot was
+inspected at `/private/tmp/retouch-strokes-liquid.png`.
+
+Added a shared real-browser stroke-settings workflow covering collapsed/expanded
+layout, invalid miter rejection without writes, signed offsets, miter limits,
+non-scaling strokes, responsive overrides, narrow-screen fallback, reset and
+exact undo/redo. It also checks that box controls remain available on SVG roots
+and ordinary HTML elements. The HTML test explicitly focuses the screen selector
+before resizing so the focused inspector field does not defer panel rendering.
+
+Validation on this source: 997 unit tests passed; HTML/WebKit 26 and real
+Next/React plus compiled Liquid/Chromium 145 stroke workflows passed. Existing
+SVG picker preview/cancel/commit/history workflows also passed on HTML/WebKit
+and Liquid/Chromium. All test processes exited successfully. Logs are
+`/private/tmp/retouch-strokes-{html,react,liquid}-final.log`,
+`/private/tmp/retouch-strokes-picker-{html,liquid}.log` and
+`/private/tmp/retouch-strokes-units.log`. The desktop archive has not been rebuilt
+for these changes. Full Figma/any-site parity and native release work remain open.

@@ -89,6 +89,15 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   }
   const svgPaint=[...panel.children].find(el=>title(el)==='SVG paint');if(svgPaint){for(const row of [...svgPaint.querySelectorAll(':scope > .inspector-field')]){const name=fieldControl(row)?.getAttribute('aria-label')==='SVG fill'?'Fill':'Stroke';let target=[...panel.children].find(el=>title(el)===name);if(!target){target=document.createElement('section');target.className='sec inspector-section';const h=document.createElement('h3');h.textContent=name;target.append(h);panel.append(target);}const reset=row.nextElementSibling;target.append(row);if(reset?.classList.contains('control-button'))target.append(reset);}if(!svgPaint.querySelector('.refused'))svgPaint.remove();}
   const fill=[...panel.children].find(el=>title(el)==='Fill');if(fill&&appearance){const gradients=[...appearance.children].find(el=>el.tagName==='DETAILS'&&el.querySelector('summary')?.textContent==='Gradient fills');if(gradients)fill.append(gradients);}
+  // Graphical SVG elements paint with fill/stroke, not CSS box backgrounds/borders.
+  // Keep box controls on SVG viewports and foreignObject containers.
+  if(svgPaint&&panel.querySelector('[aria-label="SVG fill"]')&&!['svg','foreignobject'].includes((head.dataset.layerTag||'').toLowerCase())){
+   for(const name of ['Fill','Stroke'])for(const section of [...panel.children].filter(el=>title(el)===name)){
+    const keep=new Set([...section.children].filter(el=>el.tagName==='H3'));
+    for(const row of section.querySelectorAll(':scope > .inspector-field'))if(fieldControl(row)?.getAttribute('aria-label')?.startsWith('SVG ')){keep.add(row);if(row.nextElementSibling?.classList.contains('control-button'))keep.add(row.nextElementSibling);const label=fieldControl(row).getAttribute('aria-label');if(['SVG fill','SVG stroke'].includes(label))row.querySelector(':scope > span').textContent='Color';}
+    for(const child of [...section.children])if(!keep.has(child))child.remove();
+   }
+  }
   const text=[...panel.children].find(el=>title(el)==='Text'),typography=[...panel.children].find(el=>title(el)==='Typography');if(text&&typography){[...text.children].filter(el=>el.tagName!=='H3').reverse().forEach(el=>typography.insertBefore(el,typography.children[1]||null));text.remove();}
   const position=[...panel.children].find(el=>title(el)==='Position'),sharedRotation=panel.querySelector('[aria-label="Shared Rotation (°)"]')?.closest('.inspector-field');
   if(position&&sharedRotation){const label=sharedRotation.querySelector(':scope > span');if(label)label.textContent='Rotation (°)';const row=sharedRotation.closest('.property-row')||sharedRotation,reset=row.nextElementSibling;position.append(row);if(reset?.classList.contains('control-button')&&reset.textContent.toLowerCase().startsWith('reset shared rotation'))position.append(reset);}
@@ -191,7 +200,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     if(previous?.classList.contains('inspector-field')){const row=document.createElement('div');row.className='property-row';previous.parentElement.insertBefore(row,previous);row.append(previous,button);}
    }
    if(name==='Stroke'&&section.querySelector('[aria-label="SVG stroke width"]')){
-    const labels={'SVG stroke width':'Width','SVG line ends':'Caps','SVG line joins':'Join','SVG dash pattern':'Dashes','SVG dash offset':'Offset','SVG miter limit':'Miter limit','SVG stroke scaling':'Scaling'},settings=disclosure('Stroke settings','svg-stroke-settings');
+    const labels={'SVG stroke width':'Width','SVG line ends':'Caps','SVG line joins':'Join','SVG dash pattern':'Dashes','SVG dash offset':'Offset','SVG miter limit':'Miter limit','SVG stroke scaling':'Mode'},settings=disclosure('Stroke settings','svg-stroke-settings');
     for(const [label,short]of Object.entries(labels)){const input=section.querySelector('[aria-label="'+label+'"]'),field=input?.closest('.inspector-field');if(!field)continue;field.querySelector(':scope > span').textContent=short;if(label!=='SVG stroke width')settings.append(field.closest('.property-row')||field);if(label==='SVG stroke scaling')for(const option of input.options)option.textContent=option.value==='none'?'Scale':option.value==='non-scaling-stroke'?'Fixed':option.value;}
     pair(settings,['SVG line ends','SVG line joins']);pair(settings,['SVG dash pattern','SVG dash offset']);pair(settings,['SVG miter limit','SVG stroke scaling']);section.append(settings);
    }
