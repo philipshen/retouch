@@ -52,3 +52,11 @@ test('conversion retains accessible SVG metadata, bindings and comments byte for
   assert.equal(convert.describe(resolve(metadata+'<g/>')),null);assert.equal(convert.describe(resolve(metadata+(kind==='react'?'{children}':kind==='liquid'?'{% render "child" %}':'unexpected text'))),null);
  }
 });
+
+for(const kind of ['html','react','liquid'])test(kind+' edits legacy arrows while converting in one source transaction',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),model=require('../shell/svg-parametric.js'),relPath='main.'+(kind==='react'?'jsx':kind==='liquid'?'liquid':'html'),points=model.generate({kind:'arrow',x1:10,y1:20,x2:90,y2:60,headLength:12,headWidth:12}),edited=model.changeArrow(points,{startArrow:true,headWidth:20});
+ const source=(kind==='react'?'export default()=>':'')+'<svg><polyline data-rt-shape="arrow" points="'+points+'" fill="none" stroke="#123456"><title>Keep</title></polyline></svg>',elements=adapter.collect(source,relPath).elements,element=elements.find(e=>(kind==='react'?ids.jsxElementName(e.node):e.tag)==='polyline'),r={source,elements,element,relPath,file:'/tmp/'+relPath,hash:ids.contentHash(source)},op={type:'convertSVGToPath',fileHash:r.hash,arrowPoints:edited},result=adapter.planOp(r,op);
+ assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);assert.equal(result.edits[0].before,source);const after=result.edits[0].after;assert.ok(after.includes('d="'+model.arrowPath(edited)+'"'));assert.ok(after.includes('<title>Keep</title></path>'));assert.ok(after.includes('stroke="#123456"'));assert.ok(!after.includes('points='));assert.deepEqual(adapter.collect(after,relPath).elements.map(e=>e.id),elements.map(e=>e.id));
+ for(const value of ['',null,[], '0,0 100,0 80,5 100,0 80,-9','NaN,0 1,1'])assert.equal(adapter.planOp(r,{...op,arrowPoints:value}).refused,true);
+ assert.equal(adapter.planOp(r,{...op,fileHash:'stale'}).refused,true);assert.equal(adapter.planOp(r,{...op,type:'convertSVGToArrow'}).refused,true);
+});

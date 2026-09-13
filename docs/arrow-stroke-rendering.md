@@ -4,8 +4,10 @@ The legacy polyline arrow model changes dashed shaft appearance when a start
 head is enabled. Existing arrows can now use **Convert to vector path** to
 separate the shaft and heads into path sections while retaining the arrow
 inspector. Drawing, Add arrow and Convert line to arrow now create paths directly.
-Existing legacy polylines still require conversion; editing them does not yet
-automatically migrate their representation.
+Editing a recognized legacy arrow through its endpoint, head dimension, reverse
+or swap controls now converts it and applies the edit in one source transaction.
+One Undo restores the exact original polyline and its previous settings. Raw
+point editing remains available without automatic conversion.
 
 The regression was run against source `9b8c0d6801f832c0a30285658a36f30936b19e10`.
 It renders the actual `svg-parametric.js` point output into an SVG image and
@@ -56,8 +58,10 @@ Conversion now preserves source layer identity, metadata children and unrelated
 attributes. All three adapters recognize the resulting path and retain endpoint
 selectors, dimensions, reversal and swap. The live conversion probe checks CSS
 path overrides using browser-normalized coordinates and refuses active fills
-or markers that would change appearance. Creation now uses this path representation. Legacy arrow edits still need
-automatic migration, and separately styled cap shapes remain unfinished. A preview-only overlay would leave
+or markers that would change appearance. Creation now uses this path
+representation. Automatic migration retains these checks; CSS-dependent or
+filled legacy arrows remain protected. Separately styled cap shapes remain
+unfinished. A preview-only overlay would leave
 the exported or served site incorrect. Additional cap shapes should build on
 that representation rather than extend the retraced polyline.
 
@@ -72,3 +76,17 @@ creates an editable path.
 
 Current logs: `/private/tmp/retouch-new-arrow-path-pixels-chromium.log` and
 `/private/tmp/retouch-new-arrow-path-pixels-webkit.log`.
+
+## Legacy edit migration gate
+
+`RT_E2E_SVG_COLORS=1 RT_E2E_LEGACY_ARROW_MIGRATION=1` with
+`test/e2e/page-fonts.cjs` starts with a dashed legacy polyline. It edits head
+sizes and endpoints, reverses and swaps heads, then checks exact source states
+through Undo, Redo and Undo again. It also verifies freeform point editing
+still removes the parametric controls and can be undone.
+
+Verified on HTML and React in Chromium 145.0.7632.6 and Liquid in WebKit 26.0,
+including an explicit assertion that the first parameter edit produces a path.
+Logs: `/private/tmp/retouch-legacy-arrow-{html,react,liquid}-final.log`.
+The accompanying unit suite passes 1,151 tests, including atomic conversion,
+source identity preservation, invalid geometry and stale-source refusals.
