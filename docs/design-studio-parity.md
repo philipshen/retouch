@@ -13190,3 +13190,39 @@ label determines its shape/mode match. Shape search actions require Edit mode.
 Final expanded workflow: `/private/tmp/retouch-shape-dock-actions-webkit-verified.log`.
 All 980 units passed again on final code:
 `/private/tmp/retouch-shape-dock-release-units.log`. All test processes exited.
+
+## 2026-09-13 — Triangle and star creation across source adapters
+
+The shape menu and inspector now include triangle and five-point star creation.
+HTML, React and Liquid share the preset inventory and emit ordinary SVG polygon
+points, so the created shapes use the existing vertex editor, paint controls,
+source selection and structural history. The client preview and source writers
+share the same point generation. Bounds normalization makes both shapes fit the
+drag rectangle in every quadrant; the existing Shift and center-draw constraints
+apply before point generation. Preset insertion uses the current SVG viewport,
+or a new default viewport under supported content containers.
+
+Reference: Figma's shape-tool documentation describes triangle as the initial
+polygon and a five-point, ten-edge default star:
+https://help.figma.com/hc/en-us/articles/360040450133-Basic-shape-tools-in-Figma-design
+This increment adds those shapes as editable polygons. Dedicated polygon side
+count, star point count/ratio controls and rounded star corners remain unfinished;
+this does not establish complete parametric-shape parity.
+
+Validation: all 984 units passed (`/private/tmp/retouch-star-units.log`). New
+cross-adapter tests cover preset/drawn insertion, new/existing SVG containers,
+source identities, editable polygon descriptors and invalid coordinates. Geometry
+checks cover quadrants, bounding extents, three/ten vertices and combined
+Shift/center constraints. Liquid Chromium and HTML WebKit passed toolbar drawing
+of all six shapes plus a cubic Pen path, including preview/render agreement under
+viewBox/group transforms at 50% zoom, triangle/star vertex-editor entry/cancel,
+and byte-exact source Undo/Redo. Logs: `/private/tmp/retouch-star-liquid.log` and
+`/private/tmp/retouch-star-webkit.log`. React Chromium passed all 18 preset creation
+cases across native containers, self-closing SVG canvases and groups, with new
+layer selection, rendered geometry and exact history (`/private/tmp/retouch-star-react.log`).
+All processes exited cleanly. Screenshot inspected:
+`/private/tmp/retouch-star-drawing.png`.
+
+No desktop rebuild/native launch or push in this increment. The packaged app
+predates the toolbar and triangle/star work. Full Figma Design and arbitrary-site
+parity remain incomplete.

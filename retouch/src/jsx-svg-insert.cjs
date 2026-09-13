@@ -1,6 +1,6 @@
 'use strict';
 const MagicString=require('magic-string'),ids=require('./id.cjs'),svg=require('./svg-insert.cjs'),{literal}=require('./jsx-svg-geometry.cjs');
-const presets=['rectangle','circle','ellipse','line'];
+const presets=svg.presets;
 function viewport(resolved){const node=resolved.element.node;return (resolved.elements||ids.collectElements(resolved.source,resolved.relPath).elements).filter(e=>e.node.start<=node.start&&e.node.end>=node.end).reverse().find(e=>['svg','foreignObject'].includes(ids.jsxElementName(e.node)));}
 function describe(resolved){
  const node=resolved.element.node,tag=ids.jsxElementName(node);

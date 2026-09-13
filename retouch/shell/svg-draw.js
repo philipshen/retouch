@@ -11,6 +11,11 @@
  const ns='http://www.w3.org/2000/svg';
  function geometry(preset,a,b){
   const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x),h=Math.abs(b.y-a.y);
+  if(preset==='triangle'||preset==='star'){
+   const count=preset==='star'?10:3,ratio=Math.sin(Math.PI/10)/Math.sin(3*Math.PI/10),points=Array.from({length:count},(_,i)=>{const angle=-Math.PI/2+i*2*Math.PI/count,r=preset==='star'&&i%2?ratio:1;return {x:Math.cos(angle)*r,y:Math.sin(angle)*r};});
+   const xs=points.map(p=>p.x),ys=points.map(p=>p.y),left=Math.min(...xs),top=Math.min(...ys),width=Math.max(...xs)-left,height=Math.max(...ys)-top,n=v=>String(Math.round(v*1000000)/1000000);
+   return {points:points.map(p=>n(x+(p.x-left)*w/width)+','+n(y+(p.y-top)*h/height)).join(' ')};
+  }
   return {rectangle:{x,y,width:w,height:h},circle:{cx:x+w/2,cy:y+h/2,r:Math.min(w,h)/2},ellipse:{cx:x+w/2,cy:y+h/2,rx:w/2,ry:h/2},line:{x1:a.x,y1:a.y,x2:b.x,y2:b.y}}[preset];
  }
  function mount({target,frame,canvas,preset,onCommit,onEnd,onError}){
@@ -18,7 +23,7 @@
   const surface=root.document.createElement('div');surface.className='svg-draw-surface';surface.setAttribute('aria-label','Draw '+preset);surface.tabIndex=0;
   Object.assign(surface.style,{position:'fixed',zIndex:40,cursor:'crosshair',touchAction:'none'});
   const drawing=root.document.createElementNS(ns,'svg');Object.assign(drawing.style,{position:'absolute',inset:'0',width:'100%',height:'100%',pointerEvents:'none',overflow:'hidden'});surface.append(drawing);
-  const preview=root.document.createElementNS(ns,{rectangle:'rect',circle:'circle',ellipse:'ellipse',line:'line'}[preset]);
+  const preview=root.document.createElementNS(ns,{rectangle:'rect',circle:'circle',ellipse:'ellipse',line:'line',triangle:'polygon',star:'polygon'}[preset]);
   preview.style.cssText='pointer-events:none!important;fill:#a5b4fc!important;stroke:#6366f1!important;stroke-width:1!important;opacity:.7!important;';preview.setAttribute('vector-effect','non-scaling-stroke');if(preset==='line')preview.style.setProperty('fill','none','important');
   let state=null,ended=false;const cleanup=[];
   function listen(el,event,fn,options){el.addEventListener(event,fn,options);cleanup.push(()=>el.removeEventListener(event,fn,options));}

@@ -1,6 +1,6 @@
 'use strict';
 const MagicString=require('magic-string'),svg=require('./svg-insert.cjs'),native=require('./native-insert.cjs');
-const presets=['rectangle','circle','ellipse','line'];
+const presets=svg.presets;
 function viewport(el){for(let node=el;node;node=node.parent){if(node.dynamicTag||node.tag==='foreignobject')return null;if(node.tag==='svg')return node;}return null;}
 function describe(resolved){
  const el=resolved.element;
