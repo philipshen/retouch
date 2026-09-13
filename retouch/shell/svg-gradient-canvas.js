@@ -31,7 +31,7 @@
  function stopLine(type,v){const p=positions(type,v);return type==='linearGradient'?p:[p[3],p[1]];}
  function stopPosition(type,v,offset){const [a,b]=stopLine(type,v);return {x:a.x+(b.x-a.x)*offset,y:a.y+(b.y-a.y)*offset};}
  function stopDelta(type,v,dx,dy){const [a,b]=stopLine(type,v),x=b.x-a.x,y=b.y-a.y,length=x*x+y*y;return length<1e-12?0:(dx*x+dy*y)/length;}
- function mount({target,gradient,frame,canvas,current,save,saveStop,onEnd,onError,focusLabel=null}){
+ function mount({target,gradient,frame,canvas,current,save,saveStop,addStop,removeStop,onEnd,onError,focusLabel=null}){
   let data;try{data=measure(target,gradient);}catch(error){onError(error.message);return null;}
   const w=target.ownerDocument.defaultView,f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/frame.contentWindow.innerWidth,left=Math.max(f.left,c.left),top=Math.max(f.top,c.top),right=Math.min(f.right,c.right),bottom=Math.min(f.bottom,c.bottom);
   if(right-left<20||bottom-top<20){onError('Bring the SVG canvas into view before editing its gradient.');return null;}
@@ -40,11 +40,11 @@
   const names=gradient.type==='linearGradient'?['start','end']:['center','radius','focus','inner radius'],buttons=names.map(name=>{const b=root.document.createElement('button');b.type='button';b.setAttribute('aria-label','Gradient '+name+' handle');b.title='Drag gradient '+name+' · Arrows move · Enter applies · Escape cancels';Object.assign(b.style,{position:'absolute',zIndex:name==='focus'?1:2,width:'14px',height:'14px',padding:'0',border:'2px solid var(--accent)',borderRadius:['focus','inner radius'].includes(name)?'2px':'50%',background:'white',transform:'translate(-50%,-50%)',touchAction:'none',cursor:'move'});host.append(b);return b;});
   const stopNodes=[...data.node.children].filter(node=>node.localName==='stop'),stopOffsets=stopNodes.map(node=>node.getAttribute('offset')),orderAPI=root.RetouchSVGGradientOrder;
   const stopOriginal=orderAPI?.move(stopOffsets.map(offset=>({offset})),0,'0')?.original||[],stopButtons=saveStop?stopNodes.map((node,index)=>{
-   const button=root.document.createElement('button');button.type='button';button.setAttribute('aria-label','Gradient color stop '+(index+1));button.title='Drag color stop · Arrows: 1% · Shift: 10% · Option: 0.1% · Enter applies · Escape cancels';
+   const button=root.document.createElement('button');button.type='button';button.setAttribute('aria-label','Gradient color stop '+(index+1));button.title='Drag color stop · Delete removes · Arrows: 1% · Shift: 10% · Option: 0.1% · Enter applies · Escape cancels';
    Object.assign(button.style,{position:'absolute',zIndex:3,width:'14px',height:'18px',padding:'0',border:'2px solid var(--accent)',borderRadius:'3px',background:w.getComputedStyle(node).stopColor,boxShadow:'0 0 0 1px white',transform:'translate(-50%,-50%)',touchAction:'none',cursor:'ew-resize'});host.append(button);return button;
   }):[];
   const stopLinks=root.document.createElementNS(line.namespaceURI,'path');stopLinks.setAttribute('fill','none');stopLinks.setAttribute('stroke','var(--accent)');stopLinks.setAttribute('stroke-width','1');stopLinks.setAttribute('stroke-dasharray','2 2');line.append(stopLinks);
-  const hint=root.document.createElement('div');hint.textContent='Drag the line to move the gradient · Arrows move · Shift: 10× · Enter finishes · Escape cancels';Object.assign(hint.style,{position:'fixed',bottom:'116px',left:'50%',transform:'translateX(-50%)',padding:'8px 12px',background:'var(--panel)',border:'1px solid var(--line)',borderRadius:'6px',fontSize:'11px',pointerEvents:'none'});const done=root.document.createElement('button');done.type='button';done.className='control-button';done.textContent='Done';done.setAttribute('aria-label','Finish gradient editing');Object.assign(done.style,{pointerEvents:'auto',marginLeft:'8px'});done.onclick=()=>end(true);hint.append(done);host.append(hint);root.document.body.append(host);
+  const hint=root.document.createElement('div');hint.textContent='Drag line to move · Double-click line to add stop · Delete removes stop · Enter finishes · Escape cancels';Object.assign(hint.style,{position:'fixed',bottom:'116px',left:'50%',transform:'translateX(-50%)',padding:'8px 12px',background:'var(--panel)',border:'1px solid var(--line)',borderRadius:'6px',fontSize:'11px',pointerEvents:'none'});const done=root.document.createElement('button');done.type='button';done.className='control-button';done.textContent='Done';done.setAttribute('aria-label','Finish gradient editing');Object.assign(done.style,{pointerEvents:'auto',marginLeft:'8px'});done.onclick=()=>end(true);hint.append(done);host.append(hint);root.document.body.append(host);
   const originalPaint=target.getAttribute(gradient.paint);
   const original=Object.fromEntries(Object.keys(data.values).map(key=>[key,data.node.getAttribute(key)]));let values={...data.values},last={...original},expected=data.node.outerHTML,ended=false,drag=null,raf,stopEdit=null;const cleanups=[];
   const listen=(el,name,fn,options)=>{el.addEventListener(name,fn,options);cleanups.push(()=>el.removeEventListener(name,fn,options));};
@@ -88,11 +88,23 @@
    stopEdit.offset=offset;stopNodes.forEach((node,index)=>{stopEdit.lastOffsets[index]=String(plan.positions[index]);node.setAttribute('offset',stopEdit.lastOffsets[index]);});
    const next=plan.order[plan.index+1];data.node.insertBefore(stopNodes[stopEdit.index],next===undefined?null:stopNodes[next]);stopEdit.lastOrder=[...data.node.children].filter(node=>stopNodes.includes(node));expected=data.node.outerHTML;paint();
   }
+  function stopAction(action,discardIndex=null){
+   if(!valid()){end();return;}
+   if(Object.keys(values).some(key=>Math.abs(values[key]-data.values[key])>1e-7)||stopEdit&&stopEdit.index!==discardIndex&&Math.abs(stopEdit.offset-stopOriginal[stopEdit.index])>1e-7){end(true,true);return;}
+   end();action();
+  }
+  function insertStop(offset){
+   if(!addStop)return;if(stopNodes.length>=64){onError('This gradient already has 64 stops.');return;}
+   stopAction(()=>addStop(round(Math.max(0,Math.min(1,offset)))));
+  }
+  listen(move,'dblclick',e=>{e.preventDefault();e.stopPropagation();const p=toPoint(e),[start]=stopLine(gradient.type,values);insertStop(stopDelta(gradient.type,values,p.x-start.x,p.y-start.y));});
+  listen(move,'keydown',e=>{if(e.key==='Insert'&&!e.ctrlKey&&!e.metaKey){e.preventDefault();e.stopImmediatePropagation();insertStop(.5);}});
+  move.setAttribute('aria-description','Drag to move the gradient. Double-click to add a color stop, or press Insert to add at the midpoint.');
   stopButtons.forEach((button,index)=>{
    listen(button,'pointerdown',e=>{if(e.button!==0)return;e.preventDefault();e.stopPropagation();button.focus({preventScroll:true});if(!beginStop(index))return;drag={id:e.pointerId,start:toPoint(e),offset:stopEdit.offset};button.setPointerCapture(e.pointerId);});
    listen(button,'pointermove',e=>{if(!drag||drag.id!==e.pointerId||stopEdit?.index!==index)return;const p=toPoint(e);updateStop(drag.offset+stopDelta(gradient.type,values,p.x-drag.start.x,p.y-drag.start.y));});
    listen(button,'pointerup',e=>{if(drag?.id===e.pointerId){drag=null;end(true,true);}});listen(button,'pointercancel',()=>end());listen(button,'lostpointercapture',()=>{if(drag)end();});
-   listen(button,'keydown',e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)||e.ctrlKey||e.metaKey)return;e.preventDefault();e.stopImmediatePropagation();if(!beginStop(index))return;const step=e.shiftKey?.1:e.altKey?.001:.01;updateStop(stopEdit.offset+(['ArrowLeft','ArrowDown'].includes(e.key)?-step:step));});
+   listen(button,'keydown',e=>{if(['Delete','Backspace'].includes(e.key)){e.preventDefault();e.stopImmediatePropagation();if(!removeStop)return;if(stopNodes.length<=2){onError('Keep at least two gradient stops.');return;}stopAction(()=>removeStop(index),index);return;}if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)||e.ctrlKey||e.metaKey)return;e.preventDefault();e.stopImmediatePropagation();if(!beginStop(index))return;const step=e.shiftKey?.1:e.altKey?.001:.01;updateStop(stopEdit.offset+(['ArrowLeft','ArrowDown'].includes(e.key)?-step:step));});
   });
   listen(host,'keydown',e=>{if(e.key==='Escape'||e.key==='Enter'){e.preventDefault();e.stopImmediatePropagation();end(e.key==='Enter');}},true);
   for(const event of ['blur','resize','retouch:screen','retouch:viewport','retouch:before-zoom'])listen(root,event,()=>end());listen(w,'scroll',()=>end(),true);listen(canvas,'scroll',()=>end(),true);
