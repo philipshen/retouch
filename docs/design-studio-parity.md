@@ -14029,3 +14029,30 @@ A further Liquid run captured /private/tmp/retouch-selection-ratio.png; the
 light inspector's lock placement beside W/H was visually verified. Logs:
 /private/tmp/retouch-selection-ratio-{units,html,react,liquid,visual}.log.
 No desktop rebuild or push was performed for this change.
+
+## 2026-09-13 — Multi-vector keyboard nudging
+
+Arrow keys now move an SVG multi-selection along document axes by one pixel,
+or ten with Shift. Repeats and overlapping held arrow keys preview all selected
+vectors without writing source; releasing the final arrow creates one atomic
+source transaction. Selected descendants inherit the movement once from their
+outermost selected ancestors. The existing selection history retains all IDs.
+
+Escape, selection changes, scrolling, viewport changes and loss of focus cancel
+the preview. A changed DOM transform cancels the gesture while preserving the
+external replacement. Native input and tree keyboard controls remain guarded.
+The gesture hint uses the existing light canvas hint styling above the toolbar.
+
+This currently requires editable SVG members rendered once from one source file.
+Multi-vector pointer dragging, canvas resize/rotation handles, mixed CSS/SVG
+selections and cross-file writes remain unfinished.
+
+Validation: 1,030 unit tests passed. HTML/WebKit 26, React/Chromium and
+Liquid/Chromium workflows reached terminal zero exits, covering ordinary and
+nested selections, repeated/overlapping arrows, Shift, 50/100/200 percent zoom,
+Escape, native input guards, external transform preservation, exact Undo/Redo,
+and the existing vector regressions. A final WebKit run also verified the
+corrected gesture hint styling; /private/tmp/retouch-selection-nudge-final.png
+was visually inspected. Logs: /private/tmp/retouch-selection-nudge-react.log,
+/private/tmp/retouch-selection-nudge-{html,liquid,units}-final.log.
+No desktop rebuild or push was performed.
