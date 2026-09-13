@@ -45,6 +45,7 @@ function plan(resolved,op,kind){
  const refuse=reason=>({ok:false,refused:true,reason}),state=inspect(resolved,kind,op.paint);
  if(!state)return refuse('Select a layer with a local linear or radial gradient attribute.');if(state.reason)return refuse(state.reason);
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the gradient layer.');
+ if(op.action==='solid')return require('./svg-gradient-solid.cjs').plan(resolved,op,state,kind);
  if(op.action==='reverse')return require('./svg-gradient-reverse.cjs').plan(resolved,op,state,kind);
  if(op.action==='setType')return require('./svg-gradient-type.cjs').plan(resolved,op,state,kind);
  if(op.action==='detach')return require('./svg-gradient-detach.cjs').plan(resolved,op,state,kind);

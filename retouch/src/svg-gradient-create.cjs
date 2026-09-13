@@ -17,7 +17,7 @@ function inspect(resolved,kind){
  if(selected.attrs.some(a=>/\{[%{]|\b(?:v-bind|x-bind|v-for|v-if|x-for|x-if)\b/.test(a.name+' '+a.value)))reason='Template expressions control this SVG layer.';
  return {selected,viewport,nodes,reason};
 }
-function describe(resolved,kind){const state=inspect(resolved,kind);if(!state)return null;return {reason:state.reason,paints:['fill','stroke'].filter(p=>!/^url\(/.test(state.selected.attrs.find(a=>a.name===p)?.value||''))};}
+function describe(resolved,kind){const state=inspect(resolved,kind);if(!state)return null;return {reason:state.reason,values:['fill','stroke'].flatMap(paint=>{const value=state.selected.attrs.find(a=>a.name===paint)?.value;return value===undefined&&state.selected.attrs.some(a=>a.name===paint)?[]:[{paint,value:value??null}];}),paints:['fill','stroke'].filter(p=>!/^url\(/.test(state.selected.attrs.find(a=>a.name===p)?.value||''))};}
 function plan(resolved,op,kind){
  const refuse=reason=>({ok:false,refused:true,reason}),state=inspect(resolved,kind);if(!state)return refuse('Select an SVG shape to create a gradient.');if(state.reason)return refuse(state.reason);
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the SVG layer.');

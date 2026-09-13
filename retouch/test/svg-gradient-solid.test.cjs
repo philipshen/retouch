@@ -1,0 +1,10 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),ids=require('../src/id.cjs');
+for(const kind of ['html','react','liquid']){
+ const adapter=require('../src/adapters/'+kind+'.cjs'),wrap=s=>kind==='react'?'export default()=>('+s+');':s;
+ const resource='<defs><linearGradient id="paint"><stop offset="0" '+(kind==='react'?'stopColor':'stop-color')+'="red"/><stop offset="1"/></linearGradient></defs>',original=wrap('<svg>'+resource+'<rect fill="url(#paint)" stroke="url(#paint)"/><circle fill="url(#paint)"/></svg>');
+ const resolve=source=>{const relPath=kind==='react'?'page.jsx':kind==='html'?'index.html':'main.liquid',elements=adapter.collect(source,relPath).elements;return {source,relPath,elements,element:elements.find(el=>(kind==='react'?ids.jsxElementName(el.node):el.tag)==='rect'),file:'/tmp/'+relPath,hash:ids.contentHash(source)};};
+ const solid=(source,extra={})=>{const r=resolve(source);return adapter.planOp(r,{type:'setSVGGradient',paint:'fill',fileHash:r.hash,action:'solid',value:'color(display-p3 1 0 0 / 0.25)',...extra});};
+ test(kind+' solid conversion changes only selected paint and preserves resource and identities',()=>{for(const paint of ['fill','stroke']){const result=solid(original,{paint});assert.equal(result.ok,true,result.reason);const after=result.edits[0].after;assert.equal(after,original.replace('<rect fill="url(#paint)" stroke="url(#paint)"','<rect '+(paint==='fill'?'fill="color(display-p3 1 0 0 / 0.25)" stroke="url(#paint)"':'fill="url(#paint)" stroke="color(display-p3 1 0 0 / 0.25)"')));assert.ok(after.includes(resource));assert.deepEqual(resolve(after).elements.map(e=>e.id),resolve(original).elements.map(e=>e.id));assert.equal(adapter.describe(resolve(after)).svgGradients.length,1);}});
+ test(kind+' solid conversion rejects stale, mixed and invalid changes',()=>{for(const extra of [{fileHash:'stale'},{stop:0},{changes:{x1:'0'}},{value:'url(#other)'},{value:'red" onclick="x'}])assert.equal(solid(original,extra).refused,true);});
+}
