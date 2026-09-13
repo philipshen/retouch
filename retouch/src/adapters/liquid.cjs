@@ -24,7 +24,7 @@ const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input'
   'link', 'meta', 'param', 'source', 'track', 'wbr']);
 const RAW_LIQUID = new Set(['comment', 'doc', 'raw', 'schema', 'javascript', 'stylesheet']);
 const RAW_HTML = new Set(['script', 'style']);
-const SKIP_TAGS = new Set(['script', 'style', 'svg', 'path', 'template']);
+const SKIP_TAGS = new Set(['script', 'style', 'path', 'template']);
 const TEXT_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'div', 'blockquote', 'label', 'a', 'li']);
 const CLASS_TOKEN_RE = {test:require('../class-tokens.cjs').liquid};
 
@@ -321,7 +321,7 @@ function describeElement(resolved) {
 }
 
 function describe(resolved) {
-  return {...describeElement(resolved),svgConversion:require('../svg-convert.cjs').describe(resolved),svgGeometry:require('../liquid-svg-geometry.cjs').describe(resolved),...layerNames.describe(resolved),...require('../liquid-text-styles.cjs').describe(resolved),...require('../liquid-color-styles.cjs').describe(resolved),...require('../liquid-effect-styles.cjs').describe(resolved),...require('../liquid-variable-bindings.cjs').describe(resolved),components:theme.ancestry(resolved),structure:{...structure.describe(resolved,'liquid'),...require('../native-insert.cjs').describe(resolved,'liquid')}};
+  return {...describeElement(resolved),svgInsertion:require('../liquid-svg-insert.cjs').describe(resolved),svgConversion:require('../svg-convert.cjs').describe(resolved),svgGeometry:require('../liquid-svg-geometry.cjs').describe(resolved),...layerNames.describe(resolved),...require('../liquid-text-styles.cjs').describe(resolved),...require('../liquid-color-styles.cjs').describe(resolved),...require('../liquid-effect-styles.cjs').describe(resolved),...require('../liquid-variable-bindings.cjs').describe(resolved),components:theme.ancestry(resolved),structure:{...structure.describe(resolved,'liquid'),...require('../native-insert.cjs').describe(resolved,'liquid')}};
 }
 
 function refuse(reason) { return { ok: false, refused: true, reason }; }
@@ -331,6 +331,7 @@ function escapeText(t) {
 }
 
 function planOp(resolved, op) {
+  if(op.type==='insertSVG')return require('../liquid-svg-insert.cjs').plan(resolved,op);
   if(op.type==='insertElement')return require('../native-insert.cjs').plan(resolved,op,'liquid');
   if(op.type==='convertSVGToPath')return require('../svg-convert.cjs').plan(resolved,op);
   if(op.type==='setSVGGeometry')return require('../liquid-svg-geometry.cjs').plan(resolved,op);
@@ -433,6 +434,6 @@ module.exports = {
   describeComponent: resolved=>resolved.element.theme?theme.describe(resolved):components.describe(resolved),
   hasReference: components.hasReference,
   assets: { directory: 'assets', urlPrefix: '/assets/', uploadDirectory: '' },
-  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['insertElement','setSVGGeometry', 'convertSVGToPath', 'renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types] },
+  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['insertSVG','insertElement','setSVGGeometry', 'convertSVGToPath', 'renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types] },
   _parse: parse, // exported for tests
 };

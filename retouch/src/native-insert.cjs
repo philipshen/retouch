@@ -10,6 +10,12 @@ function describe(resolved,language){
   const ancestry=resolved.elements.filter(e=>e.node.start<node.start&&e.node.end>node.end).reverse();
   if(ancestry.find(e=>['svg','foreignObject'].includes(e.node.openingElement.name.name))?.node.openingElement.name.name==='svg')return fail('Select an HTML container outside the SVG canvas.');
  }else{
+  const boundary=liquidContainer(resolved);if(!boundary.canInsert)return boundary;
+ }
+ return {canInsert:true,insertReason:null};
+}
+function liquidContainer(resolved,allowSVG=false){
+ const el=resolved.element,fail=insertReason=>({canInsert:false,insertReason});
   if(el.selfClosing||!Number.isInteger(el.closeNameStart)||resolved.source[el.closeEnd-1]!=='>')return fail('Select an explicitly closed content container.');
   // Appending at a closing tag must stay in the same Liquid branch as its opening tag.
   const scopes=[],blocks=new Set(['if','unless','for','tablerow','case','capture','form','paginate','raw','comment','schema','javascript','stylesheet']);
@@ -24,9 +30,8 @@ function describe(resolved,language){
   for(let ancestor=el;ancestor;ancestor=ancestor.parent){
    if(ancestor.textBinding||ancestor.attributes?.some(a=>['x-for','v-for','x-if','v-if'].includes(a.name)))return fail('This container is controlled by a client template.');
    if(ancestor.tag==='foreignobject')break;
-   if(ancestor.tag==='svg')return fail('Select an HTML container outside the SVG canvas.');
+   if(!allowSVG&&ancestor.tag==='svg')return fail('Select an HTML container outside the SVG canvas.');
   }
- }
  return {canInsert:true,insertReason:null};
 }
 function plan(resolved,op,language){
@@ -48,4 +53,4 @@ function plan(resolved,op,language){
   return {ok:true,hash:adapter.contentHash(after),parentId:parent.id,createdId:created.id,structural:true,edits:[{file:resolved.file,before:resolved.source,after}]};
  }catch(error){return refuse(error.message);}
 }
-module.exports={describe,plan};
+module.exports={describe,plan,liquidContainer};

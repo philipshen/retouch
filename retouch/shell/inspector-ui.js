@@ -93,7 +93,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   const position=[...panel.children].find(el=>title(el)==='Position'),sharedRotation=panel.querySelector('[aria-label="Shared Rotation (°)"]')?.closest('.inspector-field');
   if(position&&sharedRotation){const label=sharedRotation.querySelector(':scope > span');if(label)label.textContent='Rotation (°)';const row=sharedRotation.closest('.property-row')||sharedRotation,reset=row.nextElementSibling;position.append(row);if(reset?.classList.contains('control-button')&&reset.textContent.toLowerCase().startsWith('reset shared rotation'))position.append(reset);}
   const selectionFlips=[...panel.children].find(el=>title(el)==='Flip selection');if(position&&selectionFlips){position.append(...[...selectionFlips.children].filter(el=>el.tagName!=='H3'));selectionFlips.remove();}
-  const order=['Component','Shared component properties','Position','Geometry','Layout','Appearance',...(RetouchInspector.isTextLayer(head.dataset.layerTag||'')?['Typography']:[]),'Fill','Stroke','Effects','Image framing','Image','Export'];
+  const order=['Component','Shared component properties','Position','Geometry','Add shape','Layout','Appearance',...(RetouchInspector.isTextLayer(head.dataset.layerTag||'')?['Typography']:[]),'Fill','Stroke','Effects','Image framing','Image','Export'];
   const advanced=disclosure('More properties','advanced');advanced.classList.add('inspector-more');
   const children=[...panel.children].filter(el=>el!==head);
   for(const name of order)for(const el of children.filter(el=>title(el)===name)){el.classList.add('inspector-section');panel.append(el);}

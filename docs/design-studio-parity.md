@@ -13045,3 +13045,33 @@ Chromium and WebKit pass the help/focus/state browser check: the first preview b
 Broader comparison editing, explicit responsive styles, dimension/rotation edits, rename/remove/restore, screen-set round trips and exact source history pass Chromium and WebKit (`/private/tmp/retouch-comparison-panel-chromium.log`, `/private/tmp/retouch-comparison-panel-webkit-full.log`). Chromium order/persistence/nested scrolling passes `/private/tmp/retouch-comparison-panel-order.log`; WebKit additionally verifies panel resizing, width limits and keyboard cancellation in `/private/tmp/retouch-comparison-panel-resize.log`. Breakpoint comparison reuse, Actions-menu focus toggling, persisted focus state and source isolation pass `/private/tmp/retouch-comparison-panel-actions.log`. All 975 units pass `/private/tmp/retouch-comparison-panel-units.log`; syntax/diff checks pass.
 
 No desktop rebuild, native launch or push for this increment. The existing development archive predates these UI changes and the prior cold-render retry fix. Full Design parity, universal-site support and trusted native distribution remain incomplete.
+
+## 2026-09-13 — Liquid SVG creation and visible drawing tools
+
+Liquid now exposes indexed/stamped SVG canvases and the shared Add shape, Draw,
+and Pen controls. The new insertion planner supports rectangle, circle, ellipse,
+line, polygon, polyline and cubic path creation inside explicitly closed SVG
+canvases/groups, plus preset shapes in a new 200 × 200 SVG under native content
+containers. It preserves existing layer identities and Liquid expressions, checks
+source hashes, validates coordinates, and uses structural transaction history.
+Native child and vector insertion share the Liquid container boundary checks;
+ambiguous conditional boundaries and client-controlled children are refused.
+
+Browser verification exposed Add shape being hidden under More properties for
+class-based inspectors. It now appears in the main section order beside Geometry.
+The existing light panel treatment is retained. Screenshot inspected:
+`/private/tmp/retouch-liquid-svg-draw.png`.
+
+Validation: all 978 unit tests passed on the final code;
+final suite recorded in `/private/tmp/retouch-liquid-svg-final-units.log`.
+Liquid Chromium and WebKit browser workflows passed four primitive draws and a
+curved Pen path at 50% zoom with a translated viewBox/scaled group, preview/render
+geometry agreement, stationary Shift/Alt constraints, byte-exact source Undo/Redo,
+and Escape/zoom/screen-change cancellation. The HTML Chromium regression passed
+the same expanded workflow. Logs:
+`/private/tmp/retouch-liquid-svg-{chromium,webkit}.log` and
+`/private/tmp/retouch-html-svg-regression.log`.
+Run with `RT_E2E_LIQUID_SVG=1` on `test/e2e/html-svg-draw.cjs`.
+These are local LiquidJS renderer checks, not live Shopify verification. No
+packaged desktop rebuild/native launch or push in this increment. Full Figma
+parity, vector networks/booleans, and arbitrary-site authoring remain incomplete.
