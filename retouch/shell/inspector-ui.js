@@ -144,7 +144,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     if(name==='Effects'||input.dataset.paintProperty){const control=document.createElement('span');control.className='paint-field-control';input.replaceWith(control);control.append(input);}
 
     const swatch=document.createElement('button');swatch.type='button';swatch.className='gradient-stop-swatch';swatch.setAttribute('aria-label','Edit '+input.getAttribute('aria-label'));swatch.title='Edit color';swatch.disabled=input.disabled;swatch.onclick=()=>root.RetouchPaintPicker.open(input);input.parentElement.classList.add('gradient-stop-color');input.before(swatch);
-    const paint=()=>{const color=input.value.trim();if(CSS.supports('color',color))swatch.style.backgroundImage='linear-gradient('+color+','+color+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)';};
+    const paint=()=>{const color=input.retouchPaintValue?.()||input.value.trim();if(CSS.supports('color',color))swatch.style.backgroundImage='linear-gradient('+color+','+color+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)';};
     input.addEventListener('input',paint);input.addEventListener('change',paint);input.addEventListener('keydown',event=>{if(event.key==='Escape')queueMicrotask(paint);});paint();
    }
    if(name==='Fill'||name==='Effects')for(const group of section.querySelectorAll(name==='Fill'?'.gradient-controls':'.shadow-controls')){
