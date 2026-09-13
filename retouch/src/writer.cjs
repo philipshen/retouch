@@ -87,6 +87,7 @@ function describeElement(resolved) {
 
   // Rendered text alone cannot prove that replacing a wrapper preserves JSX.
   const plainFormatting = candidate => candidate.type === 'JSXText' ||
+    candidate.type === 'JSXElement' && tagOf(candidate)==='span' && !!require('./range-style-source.cjs').style({node:candidate},source,'react') ||
     candidate.type === 'JSXElement' && /^(strong|b|em|i|u|s|sup|sub)$/.test(tagOf(candidate)) &&
     candidate.openingElement.attributes.length === 0 && !!candidate.closingElement &&
     candidate.children.every(plainFormatting);

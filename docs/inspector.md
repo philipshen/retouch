@@ -1088,3 +1088,42 @@ saved styled run, movement reset, plain paste, synthetic composition, font/color
 pickers, keyboard italic, and exact committed source undo/redo. Additional
 workflows verified HTML/Liquid inspector interactions and React selected-range
 font/color pickers. The inspected capture is `/private/tmp/retouch-caret.png`.
+
+### Superscript and subscript at the cursor (2026-09-13)
+
+The script buttons now also apply to text typed at a collapsed cursor. Selecting
+one enables that script, selecting the other switches it, and selecting the
+active button returns subsequent text to normal. Active buttons have a light
+blue selected state and expose `aria-pressed`. An unused choice does not create
+source markup. Script state follows cursor-style snapshots through local
+insertion undo/redo and composition handling.
+
+Insertion retains the surrounding script run when its script and explicit
+properties agree, so consecutive typing does not create one script tag per
+character. Switching position splits the old run around the inserted text,
+retains its styles, and wraps the insertion in the new semantic position. Font
+size choices are applied before the script wrapper so the browser can render
+smaller script glyphs. Actual glyph scaling still follows the site's/browser's
+sup/sub styling.
+
+Plain formatting reconstruction now admits validated, source-proven styled span
+leaves and copies their literal styles and authored-value metadata when splitting.
+React source evidence accepts those literal leaves while excluding bindings,
+components, extra attributes, and dynamic style expressions. Attributed or
+otherwise unsupported source-owned wrappers remain protected. This does not
+normalize arbitrary nested rich-text structures or change a script element
+itself when that element is the root being edited; use its parent text layer.
+Full multiline editing, responsive range overrides, broader Figma parity, and
+trusted desktop distribution remain unfinished. The existing desktop archive
+predates these additions.
+
+Validation: 1,190 unit tests passed, including literal styled-script source proof
+and rejection of dynamic/attributed leaves. HTML/React Chromium 145 and Liquid
+WebKit 26.0 browser checks passed in
+`/private/tmp/retouch-caret-script-verified-{html,react,liquid}.log`; unit output is
+`/private/tmp/retouch-caret-script-verified-units.log`. Checks cover unused cursor
+choices, repeated script typing, sup/sub/normal switching, retained size and
+color, saved styled leaves, no nested opposite scripts, and local/source
+undo/redo. The preceding `retouch-caret-script-final-*` runs also passed the
+cursor-typography and selected/saved-script regressions. The inspected capture
+is `/private/tmp/retouch-caret-script.png`.

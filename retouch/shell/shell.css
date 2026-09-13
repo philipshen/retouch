@@ -1039,3 +1039,5 @@ html, body { overflow:clip; }
 
 [data-range-editing] > :not(h3):not(.inline-format-toolbar) { display:none !important; }
 .range-scope-note { grid-column:1 / -1;font-size:10px;color:var(--muted); }
+
+.range-format-commands button[aria-pressed="true"] { color:var(--accent);background:#e5f4ff; }

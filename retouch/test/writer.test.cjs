@@ -299,3 +299,10 @@ test('combined range JSX styles preserve provenance and reject dynamic or owned 
  assert.ok(writer.applyOp(resolved,{type:'setChildren',fileHash:resolved.hash,children:[{t:'styles',properties,children:[{t:'text',value:'Combined'}]}]}).ok);
  assert.match(read(root,'CombinedRange.tsx'),/<span style=\{\{fontWeight:"537.25",fontSize:"24px",color:"#11223380"\}\}>Combined<\/span>/);
 });
+
+test('plain script proof includes literal styled leaves but excludes dynamic styles',()=>{
+ fs.writeFileSync(path.join(root,'ScriptStyle.tsx'),`export const Text=({style})=><p><sup><span style={{color:"#123456",fontSize:"24px"}}>safe</span></sup><sub><span style={style}>dynamic</span></sub><strong><span className="owned" style={{color:"red"}}>owned</span></strong></p>`);
+ index.scanAll();const {resolved}=pick(index,root,'ScriptStyle.tsx','p'),ids=writer.describeElement(resolved).plainFormattingIds;
+ assert.ok(ids.includes(pick(index,root,'ScriptStyle.tsx','sup').el.id));
+ for(const tag of ['sub','strong'])assert.ok(!ids.includes(pick(index,root,'ScriptStyle.tsx',tag).el.id));
+});

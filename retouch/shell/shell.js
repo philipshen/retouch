@@ -902,15 +902,23 @@ function caretDraft(){
   if(!editing||!range||!sameCaret(range,editing.caretStyle?.range)||!editing.el.contains(range.startContainer))return null;
   const parent=range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer;
   if(parent.closest('[contenteditable="false"]'))return null;
-  return {current:editing,selection,range,properties:{...editing.caretStyle.properties}};
+  return {current:editing,selection,range,properties:{...editing.caretStyle.properties},script:editing.caretStyle.script};
 }
-function styleInsertedText(current,start,end,properties){
+function styleInsertedText(current,start,end,properties,script){
   if(editing!==current||!current.el.isConnected)return;
   const d=current.el.ownerDocument,range=inlineRangeAt(current.el,start,end),selection=d.getSelection();if(!range)return;
   selection.removeAllRanges();selection.addRange(range);
-  if(start!==end)for(const [property,value]of Object.entries(properties))applyTextRangeStyle(property,value);
+  if(start!==end){
+    const parent=range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer,previous=parent.closest('sup,sub'),inherited=previous&&previous!==current.el&&current.el.contains(previous)?previous.tagName.toLowerCase():null,desired=script===undefined?inherited:script;
+    const sameProperties=element=>!!element&&Object.entries(properties).every(([name,value])=>{const probe=d.createElement('span');probe.style.setProperty(name,value);return element.style.getPropertyValue(name)===probe.style.getPropertyValue(name);});
+    if(!(inherited===desired&&inherited&&sameProperties(previous.parentElement))){
+      if(inherited&&!toggleWrap(inherited)){current.caretStyle=null;return;}
+      for(const [property,value]of Object.entries(properties))applyTextRangeStyle(property,value);
+      if(desired&&desired!=='normal')toggleWrap(desired);
+    }
+  }
   const caret=selection.getRangeAt(0).cloneRange();caret.collapse(false);selection.removeAllRanges();selection.addRange(caret);
-  current.caretStyle={properties,range:caret.cloneRange()};
+  current.caretStyle={properties,script,range:caret.cloneRange()};
   d.dispatchEvent(new Event('selectionchange'));
 }
 // Keep the actual nodes (and their source evidence) so restoring a local
@@ -919,7 +927,7 @@ const caretMetadataNames=['__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtR
 function captureCaretEdit(current){
   const d=current.el.ownerDocument,selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
   const capture=node=>({node,text:typeof node.data==='string'?node.data:null,attributes:node.nodeType===1?[...node.attributes].map(a=>[a.name,a.value]):null,metadata:Object.fromEntries(caretMetadataNames.filter(key=>Object.hasOwn(node,key)).map(key=>[key,structuredClone(node[key])])),children:[...node.childNodes].map(capture)});
-  return {html:current.el.innerHTML,nodes:[...current.el.childNodes].map(capture),range:range?{start:range.startContainer,from:range.startOffset,end:range.endContainer,to:range.endOffset}:null,properties:current.caretStyle?{...current.caretStyle.properties}:null};
+  return {html:current.el.innerHTML,nodes:[...current.el.childNodes].map(capture),range:range?{start:range.startContainer,from:range.startOffset,end:range.endContainer,to:range.endOffset}:null,properties:current.caretStyle?{...current.caretStyle.properties}:null,script:current.caretStyle?.script};
 }
 function recordCaretEdit(current,before){
   const history=current.caretHistory||={undo:[],redo:[]};history.undo.push({before,after:captureCaretEdit(current)});if(history.undo.length>100)history.undo.shift();history.redo=[];
@@ -934,33 +942,33 @@ function caretHistoryStep(redo=false){
   const restore=state=>{const node=state.node;if(state.text!==null)node.data=state.text;else{if(state.attributes){for(const a of [...node.attributes])node.removeAttribute(a.name);for(const [name,value]of state.attributes)node.setAttribute(name,value);}node.replaceChildren(...state.children.map(restore));}for(const key of caretMetadataNames)delete node[key];Object.assign(node,structuredClone(state.metadata));return node;};
   current.el.replaceChildren(...target.nodes.map(restore));source.pop();destination.push(entry);
   const d=current.el.ownerDocument,selection=d.getSelection(),range=d.createRange();if(target.range){range.setStart(target.range.start,target.range.from);range.setEnd(target.range.end,target.range.to);}else{range.selectNodeContents(current.el);range.collapse(false);}
-  selection.removeAllRanges();selection.addRange(range);current.caretStyle=target.properties?{properties:{...target.properties},range:range.cloneRange()}:null;
+  selection.removeAllRanges();selection.addRange(range);current.caretStyle=target.properties?{properties:{...target.properties},script:target.script,range:range.cloneRange()}:null;
   d.dispatchEvent(new Event('selectionchange'));return true;
 }
 function insertCaretText(text){
   const draft=caretDraft();if(!draft||editing.caretComposition)return false;
   if(!text)return true;
-  const {current,selection,range,properties}=draft,before=captureCaretEdit(current),d=current.el.ownerDocument,prefix=d.createRange();prefix.selectNodeContents(current.el);prefix.setEnd(range.startContainer,range.startOffset);const start=prefix.toString().length;
+  const {current,selection,range,properties,script}=draft,before=captureCaretEdit(current),d=current.el.ownerDocument,prefix=d.createRange();prefix.selectNodeContents(current.el);prefix.setEnd(range.startContainer,range.startOffset);const start=prefix.toString().length;
   // Retain a plain source run's node identity so its existing styles can split
   // around the inserted text through the same proven range-editing path.
   if(range.startContainer.nodeType===3)range.startContainer.insertData(range.startOffset,text);
   else {const node=d.createTextNode(text);range.insertNode(node);}
-  styleInsertedText(current,start,start+text.length,properties);recordCaretEdit(current,before);return true;
+  styleInsertedText(current,start,start+text.length,properties,script);recordCaretEdit(current,before);return true;
 }
 function beginCaretComposition(){
   const draft=caretDraft();if(!draft)return;
-  const {current,range,properties}=draft,prefix=current.el.ownerDocument.createRange();prefix.selectNodeContents(current.el);prefix.setEnd(range.startContainer,range.startOffset);
+  const {current,range,properties,script}=draft,prefix=current.el.ownerDocument.createRange();prefix.selectNodeContents(current.el);prefix.setEnd(range.startContainer,range.startOffset);
   const start=prefix.toString().length,text=current.el.textContent;
-  current.caretComposition={start,before:text.slice(0,start),after:text.slice(start),properties,snapshot:captureCaretEdit(current)};
+  current.caretComposition={start,before:text.slice(0,start),after:text.slice(start),properties,script,snapshot:captureCaretEdit(current)};
 }
 function finishCaretComposition(){
   const current=editing,composition=current?.caretComposition;if(!composition)return;
   requestAnimationFrame(()=>{
     if(editing!==current||current.caretComposition!==composition)return;
     current.caretComposition=null;
-    const text=current.el.textContent,{start,before,after,properties}=composition;
+    const text=current.el.textContent,{start,before,after,properties,script}=composition;
     if(!text.startsWith(before)||!text.endsWith(after)||text.length<before.length+after.length){current.caretStyle=null;return;}
-    styleInsertedText(current,start,text.length-after.length,properties);if(text.length>before.length+after.length)recordCaretEdit(current,composition.snapshot);
+    styleInsertedText(current,start,text.length-after.length,properties,script);if(text.length>before.length+after.length)recordCaretEdit(current,composition.snapshot);
   });
 }
 
@@ -1052,8 +1060,8 @@ function showInlineFormatToolbar(){
     const selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null,valid=editing&&range&&editing.el.contains(range.startContainer)&&editing.el.contains(range.endContainer)&&!(range.collapsed&&(range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer).closest('[contenteditable="false"]'));
     for(const control of bar.querySelectorAll('button,input,select'))if(!control.dataset.rangeAlwaysEnabled)control.disabled=!valid;
     selectionNote.textContent=valid?(range.collapsed?'Text you type next':'Selected text'):'Select text to format';
-    for(const button of commands.querySelectorAll('button'))button.disabled=!valid||range.collapsed&&['Superscript selected text','Subscript selected text'].includes(button.getAttribute('aria-label'));
     if(valid&&!editing.caretComposition&&editing.caretStyle&&!sameCaret(range,editing.caretStyle.range))editing.caretStyle=null;
+    for(const button of commands.querySelectorAll('button')){button.disabled=!valid;const tag=button.getAttribute('aria-label')==='Superscript selected text'?'sup':button.getAttribute('aria-label')==='Subscript selected text'?'sub':null;if(tag){const parent=valid?(range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer):null;const ancestor=parent?.closest('sup,sub'),inherited=ancestor?.contains(range?.endContainer)?ancestor.tagName.toLowerCase():null;const active=valid?(range.collapsed?(editing.caretStyle?.script??inherited):inherited):null;button.setAttribute('aria-pressed',String(active===tag));}}
     if(!valid)return;savedRange=range.cloneRange();
     colorField.retouchPaintScopeLabel=(range.collapsed?'Text you type next':'Selected text')+' · Applies across all screen sizes.';
     const values=new Map(fields.map(({property})=>[property,new Set()])),walker=d.createTreeWalker(editing.el,NodeFilter.SHOW_TEXT);
@@ -1153,6 +1161,20 @@ function applyTextRangeStyle(property,value){
   selection.removeAllRanges();selection.addRange(next);
 }
 
+function plainInlineFormatting(node){
+  if(node.nodeType===3)return true;if(node.nodeType!==1||node.getAttribute('data-rt-i'))return false;
+  const stamps=['data-rt','data-rt-keep','data-rt-revision','data-rt-client-revision','data-rt-client-mounted','data-rt-section','data-rt-block','data-rt-block-type','data-rt-template','data-rt-locale'];
+  const id=node.getAttribute('data-rt'),span=node.tagName==='SPAN';
+  if(span){if(!node.__rtRangeStyle&&!editing.info.rangeStyleIds?.[id])return false;if(!RetouchRangeStyles.validProperties(Object.fromEntries([...node.style].map(name=>[name,node.style.getPropertyValue(name)]))))return false;}
+  else if(!/^(STRONG|B|EM|I|U|S|SUP|SUB)$/.test(node.tagName)||id&&editing.info.plainFormattingIds&&!editing.info.plainFormattingIds.includes(id))return false;
+  return [...node.attributes].every(attribute=>stamps.includes(attribute.name)||span&&attribute.name==='style')&&[...node.childNodes].every(plainInlineFormatting);
+}
+function cloneInlineFormatting(node){
+  const result=node.ownerDocument.createElement(node.tagName.toLowerCase());
+  if(node.tagName==='SPAN'){result.style.cssText=node.style.cssText;for(const name of caretMetadataNames.filter(name=>name!=='__rtKeep'))if(Object.hasOwn(node,name))result[name]=structuredClone(node[name]);result.__rtRangeStyle||=node.style[0];}
+  return result;
+}
+
 /* ---------- bold / italic on selection (Cmd+B / Cmd+I) ---------- */
 function toggleWrap(tag) {
   const d = doc();
@@ -1162,7 +1184,7 @@ function toggleWrap(tag) {
   if (!s || !s.rangeCount) return;
   const r = s.getRangeAt(0);
   if (!editing.el.contains(r.startContainer)||!editing.el.contains(r.endContainer)) return;
-  if(r.collapsed){const property=tag==='strong'?'font-weight':tag==='em'?'font-style':null;if(!property)return;const parent=r.startContainer.nodeType===3?r.startContainer.parentElement:r.startContainer,value=editing.caretStyle?.properties[property]||d.defaultView.getComputedStyle(parent).getPropertyValue(property);applyTextRangeStyle(property,tag==='strong'?(parseFloat(value)>=600?'400':'700'):(value==='italic'?'normal':'italic'));d.dispatchEvent(new Event('selectionchange'));return;}
+  if(r.collapsed){if(tag==='sup'||tag==='sub'){const parent=r.startContainer.nodeType===3?r.startContainer.parentElement:r.startContainer,ancestor=parent.closest('sup,sub');if(ancestor===editing.el){toast('Select the parent text layer to change this script position.','err');return;}if(ancestor&&!plainInlineFormatting(ancestor)){toast('Edit this source-owned formatting in its source.','err');return;}if(!sameCaret(r,editing.caretStyle?.range))editing.caretStyle={properties:{},range:r.cloneRange()};const current=editing.caretStyle.script??(ancestor&&ancestor!==editing.el?ancestor.tagName.toLowerCase():'normal');editing.caretStyle.script=current===tag?'normal':tag;d.dispatchEvent(new Event('selectionchange'));return;}const property=tag==='strong'?'font-weight':tag==='em'?'font-style':null;if(!property)return;const parent=r.startContainer.nodeType===3?r.startContainer.parentElement:r.startContainer,value=editing.caretStyle?.properties[property]||d.defaultView.getComputedStyle(parent).getPropertyValue(property);applyTextRangeStyle(property,tag==='strong'?(parseFloat(value)>=600?'400':'700'):(value==='italic'?'normal':'italic'));d.dispatchEvent(new Event('selectionchange'));return;}
   // Split only the selected portion when toggling existing formatting.
   const cac = r.commonAncestorContainer;
   const start = cac.nodeType === 1 ? cac : cac.parentElement;
@@ -1171,12 +1193,7 @@ function toggleWrap(tag) {
     const previous=start?.closest(tag==='sup'||tag==='sub'?'sup,sub':selector);
     if(previous&&previous!==editing.el&&editing.el.contains(previous)&&previous.contains(r.startContainer)&&previous.contains(r.endContainer)){
       // Reconstruct only plain formatting whose source ownership is known.
-      const stamps=['data-rt','data-rt-i','data-rt-keep','data-rt-revision','data-rt-client-revision','data-rt-client-mounted','data-rt-section','data-rt-block','data-rt-block-type','data-rt-template','data-rt-locale'];
-      const plain=node=>node.nodeType===3||node.nodeType===1&&/^(STRONG|B|EM|I|U|S|SUP|SUB)$/.test(node.tagName)&&
-        !node.getAttribute('data-rt-i')&&[...node.attributes].every(attribute=>stamps.includes(attribute.name))&&
-        (!node.getAttribute('data-rt')||!editing.info.plainFormattingIds||editing.info.plainFormattingIds.includes(node.getAttribute('data-rt')))&&
-        [...node.childNodes].every(plain);
-      if(!plain(previous)){toast('Edit this source-owned formatting in its source.','err');return;}
+      if(!plainInlineFormatting(previous)){toast('Edit this source-owned formatting in its source.','err');return false;}
       const prefix=d.createRange();prefix.selectNodeContents(previous);prefix.setEnd(r.startContainer,r.startOffset);
       const from=prefix.toString().length,to=from+r.toString().length,total=previous.textContent.length;
       if(from===to)return;
@@ -1185,7 +1202,7 @@ function toggleWrap(tag) {
         let offset=0;
         const visit=node=>{
           if(node.nodeType===3){const start=offset;offset+=node.textContent.length;return d.createTextNode(node.textContent.slice(Math.max(0,from-start),Math.max(0,Math.min(to,offset)-start)));}
-          const result=remove&&node.matches(selector)?d.createDocumentFragment():d.createElement(node.tagName.toLowerCase());
+          const result=remove&&node.matches(selector)?d.createDocumentFragment():cloneInlineFormatting(node);
           for(const child of node.childNodes){const next=visit(child);if(next.textContent)result.append(next);}
           return result;
         };
@@ -1200,7 +1217,7 @@ function toggleWrap(tag) {
       }
       const selectedNodes=middle.nodeType===11?[...middle.childNodes]:[middle];
       parts.append(middle);if(to<total)parts.append(slice(to,total,false));previous.replaceWith(parts);
-      const selected=d.createRange();if(selectedNodes.length===1)selected.selectNodeContents(selectedNodes[0]);else {selected.setStartBefore(selectedNodes[0]);selected.setEndAfter(selectedNodes.at(-1));}s.removeAllRanges();s.addRange(selected);return;
+      const selected=d.createRange();if(selectedNodes.length===1)selected.selectNodeContents(selectedNodes[0]);else {selected.setStartBefore(selectedNodes[0]);selected.setEndAfter(selectedNodes.at(-1));}s.removeAllRanges();s.addRange(selected);return true;
     }
   }
   const w = d.createElement(tag);
@@ -1214,7 +1231,7 @@ function toggleWrap(tag) {
   s.removeAllRanges();
   const nr = d.createRange();
   nr.selectNodeContents(w);
-  s.addRange(nr);
+  s.addRange(nr);return true;
 }
 
 /* ---------- overlays ---------- */
