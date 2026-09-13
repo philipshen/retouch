@@ -195,3 +195,13 @@ test('ligature controls preserve independent groups and none semantics',()=>{
  const c=require('../src/text-style-classes.cjs');assert.equal(c.encode({'font-variant-ligatures':'common-ligatures no-contextual'})['font-variant-ligatures'],'![font-variant-ligatures:common-ligatures_no-contextual]');
  assert.throws(()=>c.compose('[font-variant:none]',{'font-variant-ligatures':'normal'}),/shorthand/);
 });
+
+
+test('capital forms validate independently of text transformation and other scopes',()=>{
+ const v=require('../shell/html-css-values.js'),i=require('../shell/inspector.js');
+ for(const value of ['normal','small-caps','all-small-caps','petite-caps','all-petite-caps','unicase','titling-caps',null])assert.equal(v.valid('font-variant-caps',value),true);
+ for(const value of ['uppercase','small-caps unicase','url(x)',''])assert.equal(v.valid('font-variant-caps',value),false);
+ assert.equal(v.overlaps('font-variant','font-variant-caps'),true);assert.equal(v.overlaps('font-variant-caps','font'),true);assert.equal(v.overlaps('text-transform','font-variant-caps'),false);
+ assert.equal(i.replace('uppercase [font-variant-caps:small-caps] md:[font-variant-caps:normal]',i.capsToken,'[font-variant-caps:unicase]'),'uppercase md:[font-variant-caps:normal] [font-variant-caps:unicase]');
+ assert.throws(()=>require('../src/text-style-classes.cjs').compose('[font-variant:normal]',{'font-variant-caps':'small-caps'}),/shorthand/);
+});

@@ -1,9 +1,9 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {encode}=require('../src/text-style-classes.cjs'),tokens=require('../src/class-tokens.cjs'),responsive=require('../shell/responsive.js');
-const full={'font-family':'"标题_Font", sans-serif','font-size':'32px','font-weight':'537.5','font-style':'oblique','font-optical-sizing':'none','font-variation-settings':'"wght" 537.5, "GRAD" -30','font-variant-numeric':'tabular-nums slashed-zero','font-variant-ligatures':'no-common-ligatures discretionary-ligatures','line-height':'1.4','letter-spacing':'-0.02em','text-align':'center','text-decoration-line':'underline line-through','text-transform':'uppercase'};
+const full={'font-family':'"标题_Font", sans-serif','font-size':'32px','font-weight':'537.5','font-style':'oblique','font-optical-sizing':'none','font-variation-settings':'"wght" 537.5, "GRAD" -30','font-variant-numeric':'tabular-nums slashed-zero','font-variant-ligatures':'no-common-ligatures discretionary-ligatures','font-variant-caps':'all-small-caps','line-height':'1.4','letter-spacing':'-0.02em','text-align':'center','text-decoration-line':'underline line-through','text-transform':'uppercase'};
 test('every catalog typography property has a validated scoped class encoding',()=>{
- const encoded=encode(full);assert.equal(Object.keys(encoded).length,13);
+ const encoded=encode(full);assert.equal(Object.keys(encoded).length,14);
  assert.equal(encoded['font-family'],'![font-family:"标题\\_Font",_sans-serif]');assert.equal(encoded['font-variation-settings'],'![font-variation-settings:"wght"_537.5,_"GRAD"_-30]');
  const scoped=responsive.replaceScope('hover:text-red-500 md:p-4',Object.values(encoded).join(' '),'md:');
  for(const token of scoped.split(' '))assert.equal(tokens.valid(token),true,token);

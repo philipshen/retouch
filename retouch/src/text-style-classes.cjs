@@ -21,7 +21,7 @@ function encode(input){
 }
 const matchers={
  'font-family':inspector.fontFamilyToken,'font-size':inspector.fontSizeToken,'font-weight':inspector.fontWeightToken,'font-style':inspector.fontStyleToken,
- 'font-optical-sizing':inspector.opticalToken,'font-variation-settings':inspector.variationToken,'font-variant-numeric':inspector.numericToken,'font-variant-ligatures':inspector.ligatureToken,
+ 'font-optical-sizing':inspector.opticalToken,'font-variation-settings':inspector.variationToken,'font-variant-numeric':inspector.numericToken,'font-variant-ligatures':inspector.ligatureToken,'font-variant-caps':inspector.capsToken,
  'line-height':inspector.lineHeightToken,'letter-spacing':inspector.letterSpacingToken,'text-align':inspector.textAlignToken,'text-decoration-line':inspector.decorationToken,'text-transform':inspector.caseToken
 };
 function hasSizeLeading(token){
@@ -36,7 +36,7 @@ function compose(classes,values,prefix='',remove=[]){
   if(!classTokens.valid(token))throw Error('The source contains unsupported class syntax.');
   const part=responsive.split(token);if(part.prefix!==prefix){retained.push(token);continue;}
   const plain=inspector.base(part.value);
-  if(/^\[font:/.test(plain)||keys.some(key=>['font-variant-numeric','font-variant-ligatures'].includes(key))&&/^\[font-variant:/.test(plain))throw Error('Expand the font shorthand before applying a text style.');
+  if(/^\[font:/.test(plain)||keys.some(key=>['font-variant-numeric','font-variant-ligatures','font-variant-caps'].includes(key))&&/^\[font-variant:/.test(plain))throw Error('Expand the font shorthand before applying a text style.');
   if(hasSizeLeading(plain)&&keys.some(key=>key==='font-size'||key==='line-height')){
    if(!keys.includes('font-size')||!keys.includes('line-height')){
     for(const value of inspector.expandSizeLeading(part.value).split(/\s+/))if(!keys.some(property=>matchers[property](inspector.base(value))))retained.push(prefix+value);

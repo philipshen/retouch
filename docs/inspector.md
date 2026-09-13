@@ -489,3 +489,26 @@ source. The screenshot `/private/tmp/retouch-ligatures.png` was inspected.
 The initial React run lost the editor page during baseline font-family checks,
 before the ligature flow, and exited 1; the completed rerun passed. This does not
 establish a cause for that initial page loss or validate every font's rendering.
+
+
+### Capital forms (2026-09-13)
+
+Type settings > Details now includes Normal, Small caps, All small caps, Petite
+caps, All petite caps, Unicase and Titling caps. These use `font-variant-caps`
+without rewriting text or changing `text-transform`. They support HTML CSS and
+React/Liquid classes, responsive scope/fallback/reset, text-style encoding,
+override reset and computed typography previews. Focusing or hovering the field
+shows an alphabet sample. Font and font-variant shorthand conflicts are guarded.
+See [CSS capital forms](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/font-variant-caps)
+for the font features and browser fallback behavior; feature availability is not
+yet detected per font.
+
+Validation: 1,161 unit tests passed in `/private/tmp/retouch-caps-units.log`.
+HTML/React Chromium and Liquid WebKit passed all six non-default choices,
+computed preview updates, text/transform preservation, responsive fallback/reset
+and exact source undo/redo in `/private/tmp/retouch-caps-{html,react,liquid}.log`.
+The saved-style fixture now checks all 14 supported typography properties.
+The small-caps canvas and panel screenshot at
+`/private/tmp/retouch-capital-forms.png` was inspected. Computed values across all
+choices do not establish that each font provides distinct glyphs for every form.
+These changes have not yet been rebuilt into the desktop candidate.
