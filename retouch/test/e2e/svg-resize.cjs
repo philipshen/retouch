@@ -4,6 +4,7 @@ module.exports=async function resizeWorkflow({page,app,kind,read,wait,settled}){
  const original=read(),surface=page.getByLabel('Resize SVG vector on canvas',{exact:true});
  const cases=[['rect','Box'],['circle','Circle'],['ellipse','Ellipse'],['line','Diagonal'],['line','Horizontal'],['line','Vertical'],['path','Curve'],['polygon','Polygon'],['polyline','Polyline'],['g','Group'],['text','Text'],['image','Picture'],['use','Symbol']];
  const select=async(tag,name)=>{await page.getByRole('treeitem',{name:tag+' · '+name,exact:true}).click();await settled();await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));};
+ if(process.env.RT_E2E_SVG_SELECTION_SCRUB_ONLY){await require('./svg-selection-scrub.cjs')({page,app,kind,read,wait,settled,select,original});return;}
  if(process.env.RT_E2E_SVG_SCRUB_ONLY){await require('./svg-scrub.cjs')({page,app,kind,read,wait,settled,select,original});return;}
  if(process.env.RT_E2E_SVG_SELECTION_RESIZE_ONLY){const context={page,app,kind,read,wait,settled,select,original};await require('./svg-selection-resize.cjs')(context);await require('./svg-selection-resize-snap.cjs')(context);return;}
  for(const [tag,name]of cases){

@@ -90,14 +90,34 @@
  }
  function mount(infos,elements,{save,current}){
   const I=root.RetouchInspector,section=I.section('Selection transform'),key=selectionKey(infos);let locked=sizeLocks.has(key);let initial;try{initial=capture(infos,elements);}catch(error){I.note(section,error.message,'refused').setAttribute('role','alert');return section;}
-  function apply(kind,value){if(!current())throw Error('Re-select these vectors before transforming.');const {members,box,w}=capture(infos,elements),cx=box.left+box.width/2,cy=box.top+box.height/2;let g;
+  function fieldMatrix(box,w,kind,value){const cx=box.left+box.width/2,cy=box.top+box.height/2;let g;
    if(kind==='x'||kind==='y'){if(!Number.isFinite(value)||Math.abs(value)>100000)throw Error('Enter a position within 100000 pixels.');g=[1,0,0,1,kind==='x'?value-box.left-w.scrollX:0,kind==='y'?value-box.top-w.scrollY:0];}
    else if(kind==='width'||kind==='height'){g=resizeBounds(box,kind,value,locked);if(!g)throw Error('Keep both selection dimensions positive and at most 100000 pixels when proportions are locked.');}
    else if(kind==='rotation'){if(!Number.isFinite(value)||Math.abs(value)>360)throw Error('Enter an angle from -360 to 360 degrees.');g=A().parse('rotate('+(-value)+' '+cx+' '+cy+')');}
    else {const sx=kind==='flip-x'?-1:1,sy=kind==='flip-y'?-1:1;g=[sx,0,0,sy,cx*(1-sx),cy*(1-sy)];}
+   return g;
+  }
+  function apply(kind,value){if(!current())throw Error('Re-select these vectors before transforming.');const {members,box,w}=capture(infos,elements),g=fieldMatrix(box,w,kind,value);
    const matrices=matricesFor(members,g);if(Object.values(matrices).some(m=>!A().valid(m)))throw Error('Keep every transformed vector within the supported range.');if(members.some(m=>!A().equivalent(matrices[m.info.id],m.info.svgTransform.matrix)))save(matrices);
   }
-  for(const [kind,label,value]of [['x','Selection X',initial.box.left+initial.w.scrollX],['y','Selection Y',initial.box.top+initial.w.scrollY],['width','Selection width',initial.box.width],['height','Selection height',initial.box.height],['rotation','Rotate selection (°)',0]]){const input=root.document.createElement('input');input.type='text';input.inputMode='decimal';input.value=String(Math.round(value*10000)/10000);input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{try{const value=root.RetouchNumericExpression.evaluate(input.value);apply(kind,value);input.value=String(Math.round(value*10000)/10000);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};root.RetouchNumericExpression.field(input);I.field(section,label,input);}
+  const inputs={},rounded=value=>String(Math.round(value*10000)/10000);
+  function scrub(input,kind){
+   I.numericLabelDrag(input,raw=>({value:root.RetouchNumericExpression.evaluate(raw),min:kind==='rotation'?-360:(['width','height'].includes(kind)?0.0001:-100000),max:kind==='rotation'?360:100000}));
+   input.retouchNumericPreview=()=>{
+    if(!current())throw Error('Re-select these vectors before transforming.');
+    const {members,box,w}=capture(infos,elements),originals=members.map(m=>m.el.getAttribute('transform')),last=[...originals],values=Object.fromEntries(Object.entries(inputs).map(([k,el])=>[k,el.value]));
+    const valid=()=>current()&&members.every((m,i)=>m.el.isConnected&&m.el.getAttribute('transform')===last[i]);
+    return {current:valid,update(value){
+     if(!valid())throw Error('The selection changed. Re-select it.');
+     const matrices=matricesFor(members,fieldMatrix(box,w,kind,value));
+     if(Object.values(matrices).some(m=>!A().valid(m)))throw Error('Keep every transformed vector within the supported range.');
+     members.forEach((m,i)=>{if(!m.covered){last[i]=A().format(matrices[m.info.id]);m.el.setAttribute('transform',last[i]);}});
+     const rects=members.filter(m=>!m.covered).map(m=>m.el.getBoundingClientRect()),left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top)),right=Math.max(...rects.map(r=>r.right)),bottom=Math.max(...rects.map(r=>r.bottom));
+     for(const [k,v]of Object.entries({x:left+w.scrollX,y:top+w.scrollY,width:right-left,height:bottom-top}))if(k!==kind)inputs[k].value=rounded(v);
+    },restore(){members.forEach((m,i)=>{if(m.el.getAttribute('transform')===last[i]){if(originals[i]===null)m.el.removeAttribute('transform');else m.el.setAttribute('transform',originals[i]);}});for(const [k,v]of Object.entries(values))if(k!==kind)inputs[k].value=v;}};
+   };
+  }
+  for(const [kind,label,value]of [['x','Selection X',initial.box.left+initial.w.scrollX],['y','Selection Y',initial.box.top+initial.w.scrollY],['width','Selection width',initial.box.width],['height','Selection height',initial.box.height],['rotation','Rotate selection (°)',0]]){const input=root.document.createElement('input');input.type='text';input.inputMode='decimal';input.value=String(Math.round(value*10000)/10000);input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{try{const value=root.RetouchNumericExpression.evaluate(input.value);apply(kind,value);input.value=String(Math.round(value*10000)/10000);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};root.RetouchNumericExpression.field(input);I.field(section,label,input);inputs[kind]=input;scrub(input,kind);}
   const lock=I.button('Lock selection proportions',()=>{locked=!locked;if(locked)sizeLocks.add(key);else sizeLocks.delete(key);lock.setAttribute('aria-pressed',String(locked));});lock.setAttribute('aria-pressed',String(locked));lock.setAttribute('aria-label','Lock selection proportions');lock.title='Lock selection proportions';lock.innerHTML='<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M8 6V4a3 3 0 0 1 6 0v4a3 3 0 0 1-3 3M12 14v2a3 3 0 0 1-6 0v-4a3 3 0 0 1 3-3M10 6v8"/></svg>';lock.disabled=!initial.box.width||!initial.box.height;section.append(lock);
   const flips=root.RetouchFlip.mount(elements[0],()=>{});for(const button of flips.querySelectorAll('button')){button.disabled=false;button.onclick=()=>{try{apply('flip-'+button.dataset.flipAxis);}catch(error){I.note(section,error.message,'refused');}};}section.append(flips);I.note(section,'Bounds in document pixels. Rotation and flips use the selection center. Changes apply to all screen sizes.');return section;
  }
