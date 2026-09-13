@@ -316,6 +316,7 @@ function hookFrame(d, w) {
       e.preventDefault();
     }
   }, true);
+  d.addEventListener('pointerdown',breakTextHistoryGroup,true);
   d.addEventListener('pointerdown',cancelOpacityEntry,true);
   d.addEventListener('keydown', (e) => {
     if(e.key==='Escape'){vectorEntrySerial++;if(pendingVectorEntry){pendingVectorEntry=null;e.preventDefault();e.stopPropagation();return;}}
@@ -324,6 +325,7 @@ function hookFrame(d, w) {
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if(e.isComposing)return;
+      if(/^(Arrow|Home$|End$|PageUp$|PageDown$)/.test(e.key))breakTextHistoryGroup();
       if(e.key==='Enter'&&e.shiftKey){e.preventDefault();insertInlineBreak();return;}
       if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&inlineHistoryCommand(e.shiftKey)){e.preventDefault();return;}
       if ((e.metaKey || e.ctrlKey) && ['b','i','u'].includes(e.key.toLowerCase())) {
@@ -937,12 +939,25 @@ function captureCaretEdit(current){
   const capture=node=>({node,text:typeof node.data==='string'?node.data:null,attributes:node.nodeType===1?[...node.attributes].map(a=>[a.name,a.value]):null,metadata:Object.fromEntries(caretMetadataNames.filter(key=>Object.hasOwn(node,key)).map(key=>[key,structuredClone(node[key])])),children:[...node.childNodes].map(capture)});
   return {html:current.el.innerHTML,nodes:[...current.el.childNodes].map(capture),range:range?{start:range.startContainer,from:range.startOffset,end:range.endContainer,to:range.endOffset}:null,properties:current.caretStyle?{...current.caretStyle.properties}:null,script:current.caretStyle?.script,decorations:{...current.caretStyle?.decorations}};
 }
-function recordCaretEdit(current,before){
+function breakTextHistoryGroup(){if(editing)editing.textHistoryGroupSerial=(editing.textHistoryGroupSerial||0)+1;}
+function textHistoryGroup(current,type,text){
+  if(type==='insertText'&&(!text||/\s/.test(text)))return null;
+  if(type!=='insertText'&&!/^delete(?:Content|Word|SoftLine|HardLine)(?:Backward|Forward)$/.test(type))return null;
+  return {type,serial:current.textHistoryGroupSerial||0,time:performance.now()};
+}
+function recordCaretEdit(current,before,group=null){
   if(current.caretHistoryBatch)return;
-  const history=current.caretHistory||={undo:[],redo:[]};history.undo.push({before,after:captureCaretEdit(current)});if(history.undo.length>100)history.undo.shift();history.redo=[];syncHistoryControls();
+  const history=current.caretHistory||={undo:[],redo:[]},after=captureCaretEdit(current),previous=history.undo.at(-1);
+  const collapsed=range=>!!range&&range.start===range.end&&range.from===range.to;
+  if(!collapsed(before.range)||!collapsed(after.range))group=null;
+  const contiguous=previous&&collapsed(previous.after.range)&&collapsed(before.range)&&previous.after.range.start===before.range.start&&previous.after.range.from===before.range.from;
+  if(group&&previous?.group&&history.redo.length===0&&previous.group.type===group.type&&previous.group.serial===group.serial&&group.time-previous.group.time<=1000&&previous.after.html===before.html&&contiguous){previous.after=after;previous.group=group;}
+  else history.undo.push({before,after,group});
+  if(history.undo.length>100)history.undo.shift();history.redo=[];syncHistoryControls();
 }
 function inlineFormattingTransaction(action){
   const current=editing;if(!current||current.caretHistoryBatch)return action();
+  breakTextHistoryGroup();
   const before=captureCaretEdit(current),batch=current.caretHistoryBatch;let completed=false;
   current.caretHistoryBatch=true;
   try{const result=action();completed=true;return result;}
@@ -959,14 +974,14 @@ function beginNativeTextEdit(event){
   if(!current||!current.el.contains(event.target)||event.defaultPrevented||event.isComposing||current.caretComposition)return;
   current.nativeTextEdit=null;
   if(!/^(insertText|insertReplacementText|deleteContentBackward|deleteContentForward|deleteWordBackward|deleteWordForward|deleteSoftLineBackward|deleteSoftLineForward|deleteHardLineBackward|deleteHardLineForward|deleteByCut)$/.test(event.inputType))return;
-  current.nativeTextEdit={type:event.inputType,before:captureCaretEdit(current)};
+  current.nativeTextEdit={type:event.inputType,group:textHistoryGroup(current,event.inputType,event.data),before:captureCaretEdit(current)};
 }
 function finishNativeTextEdit(event){
   const current=editing;if(!current||!current.el.contains(event.target)||current.caretComposition)return;
   const pending=current.nativeTextEdit;current.nativeTextEdit=null;
   if(pending&&pending.type===event.inputType){
     current.nativeHistoryCaptured=true;
-    if(current.el.innerHTML!==pending.before.html)recordCaretEdit(current,pending.before);
+    if(current.el.innerHTML!==pending.before.html)recordCaretEdit(current,pending.before,pending.group);
   }else if(!['historyUndo','historyRedo'].includes(event.inputType))current.nativeHistoryUntracked=true;
 }
 function ownsNativeTextHistory(){return !!editing?.nativeHistoryCaptured&&!editing.nativeHistoryUntracked;}
@@ -988,7 +1003,7 @@ function caretHistoryStep(redo=false){
   // A later native edit must undo through the browser first. Never restore a
   // stale custom snapshot over unrelated page or typing changes.
   if(current.el.innerHTML!==expected.html)return false;
-  restoreCaretEdit(current,target);source.pop();destination.push(entry);syncHistoryControls();return true;
+  breakTextHistoryGroup();restoreCaretEdit(current,target);source.pop();destination.push(entry);syncHistoryControls();return true;
 }
 function restoreCaretEdit(current,target){
   const restore=state=>{const node=state.node;if(state.text!==null)node.data=state.text;else{if(state.attributes){for(const a of [...node.attributes])node.removeAttribute(a.name);for(const [name,value]of state.attributes)node.setAttribute(name,value);}node.replaceChildren(...state.children.map(restore));}for(const key of caretMetadataNames)delete node[key];Object.assign(node,structuredClone(state.metadata));return node;};
@@ -1050,7 +1065,7 @@ function insertCaretText(text){
   // around the inserted text through the same proven range-editing path.
   if(range.startContainer.nodeType===3)range.startContainer.insertData(range.startOffset,text);
   else {const node=d.createTextNode(text);range.insertNode(node);}
-  styleInsertedText(current,start,start+text.length,properties,script,decorations);recordCaretEdit(current,before);return true;
+  styleInsertedText(current,start,start+text.length,properties,script,decorations);recordCaretEdit(current,before,textHistoryGroup(current,'insertText',text));return true;
 }
 function beginCaretComposition(){
   const draft=caretDraft();if(!draft)return;
@@ -1202,6 +1217,8 @@ function showInlineFormatToolbar(){
       if(field===familyButton){field.textContent=value?value.split(',')[0].replace(/["']/g,''):'Mixed fonts';field.title=value||'Mixed font families';}
     }
   };
+  bar.addEventListener('focusin',breakTextHistoryGroup);
+  bar.addEventListener('pointerdown',breakTextHistoryGroup);
   bar.addEventListener('keydown',event=>{
     if(event.isComposing||!(event.metaKey||event.ctrlKey)||event.key.toLowerCase()!=='z'||event.target.closest('input,textarea,[contenteditable="true"]'))return;
     if(inlineHistoryCommand(event.shiftKey)){event.preventDefault();event.stopPropagation();update();}

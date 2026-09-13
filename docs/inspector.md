@@ -1398,3 +1398,33 @@ Liquid WebKit 26 checks passed in
 `/private/tmp/retouch-native-history-{html,react,liquid}.log`. React/Liquid also
 passed formatting-history, multiline-paste, and cursor-typography regressions,
 including simulated composition events. Physical IME input was not exercised.
+
+### Coherent typing and deletion undo groups (2026-09-13)
+
+Adjacent ordinary or styled character insertions now share an undo entry while
+the cursor and DOM remain continuous. Repeated deletions of the same input kind
+also join. Whitespace, a pause longer than one second, selection replacement,
+navigation keys, pointer interaction, inspector focus, formatting commands, and
+history navigation separate groups. Paste and composition retain their owning
+transactions. A group preserves its first before-state and latest after-state,
+including selection, node identity, and typography metadata; the history remains
+bounded to 100 entries.
+
+This grouping does not reconstruct words linguistically or establish physical
+IME parity. It requires a matching collapsed cursor and exact prior DOM, so
+unrelated changes cannot be silently absorbed. Browser-native trailing-space
+representation is retained exactly in local snapshots. The desktop archive
+based on d303a90 predates this change.
+
+The browser check types characters through keyboard events, checks whole-word
+undo for ordinary and styled text, whitespace boundaries, moving away and back
+to the same cursor, repeated deletion, independent paste, and a deliberate
+one-second pause. Saved edits also retain exact source Undo/Redo.
+
+Validation: 1,195 unit tests passed in
+`/private/tmp/retouch-history-groups-units.log`. HTML Chromium 145 grouping checks
+passed in `/private/tmp/retouch-history-groups-html.log`; React Chromium 145 and
+Liquid WebKit 26 passed the final grouping checks, including the strengthened
+pause assertion, in `/private/tmp/retouch-history-groups-{react,liquid}.log`.
+Both also passed ordinary-input history, formatting history, and cursor-script
+regressions. Physical IME input remains unverified.
