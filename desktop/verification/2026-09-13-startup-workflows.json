@@ -1,0 +1,111 @@
+{
+  "sourceCommit": "6b064a31bc4cb024b94b9a5426cb157e02c625be",
+  "sourceTreeDirty": false,
+  "sourceFiles": 183,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "archive": "/private/tmp/retouch-desktop-startup-6b064a3/Retouch-0.1.0-mac.zip",
+  "sha256": "600d28e1d2c7ea4c82ed00c9cdb7fdb6abb0c1bd5e1c326ac5976998ad9a1d57",
+  "status": "development candidate; intermittent cold-preview failure unresolved; native workflows and trusted release unverified",
+  "buildLog": "/private/tmp/retouch-desktop-startup-6b064a3-build.log",
+  "units": {
+    "passed": 975,
+    "scope": "external test harness importing actual bundled runtime; development test dependencies outside the signed app",
+    "log": "/private/tmp/retouch-desktop-startup-6b064a3/bundled-units.log"
+  },
+  "bundledWorkflows": [
+    {
+      "name": "Webpack two cold text edits, Phone removal/restoration, convergence and exact history",
+      "renderer": "react",
+      "engine": "chromium",
+      "engineVersion": "145.0.7632.6",
+      "result": "intermittent failure; unresolved",
+      "failure": "comparison text did not converge after releasing held scripts",
+      "log": "/private/tmp/retouch-desktop-startup-6b064a3/cold-webpack-chromium-stale-preview.log",
+      "diagnosticRerun": {
+        "result": "passed; does not resolve prior failure",
+        "log": "/private/tmp/retouch-desktop-startup-6b064a3/cold-webpack-chromium-diagnostic.log"
+      }
+    },
+    {
+      "name": "Turbopack two cold text edits, convergence and exact history",
+      "renderer": "react",
+      "engine": "webkit",
+      "engineVersion": "26.0",
+      "result": "passed including clean process exit",
+      "log": "/private/tmp/retouch-desktop-startup-6b064a3/cold-turbopack-webkit.log"
+    },
+    {
+      "name": "ready comparison text editing, preserved document identity and unsaved input, exact history",
+      "renderer": "react",
+      "engine": "webkit",
+      "engineVersion": "26.0",
+      "result": "passed",
+      "log": "/private/tmp/retouch-desktop-startup-6b064a3/ready-webkit.log"
+    }
+  ],
+  "harness": {
+    "source": "retouch/test/e2e/page-fonts.cjs",
+    "sha256": "2b4c5e7431142a7928013f97943370a4012e97d444582889b6710007c6e595ea",
+    "snapshot": "/private/tmp/retouch-desktop-startup-6b064a3/page-fonts-verification-source.cjs",
+    "note": "Frame registry and navigation generations replace per-request DOM inspection. Live route failures and page errors still fail. Application bundle was not changed.",
+    "supersededAttempts": [
+      {
+        "result": "harness frame lookup crash",
+        "log": "/private/tmp/retouch-desktop-startup-6b064a3/cold-turbopack-webkit-harness-failure.log"
+      },
+      {
+        "result": "application assertions passed but teardown hung; owned processes stopped; not a passing full run",
+        "log": "/private/tmp/retouch-desktop-startup-6b064a3/cold-turbopack-webkit-teardown-hang.log"
+      }
+    ]
+  },
+  "installation": {
+    "result": "isolated Homebrew cask install and uninstall passed",
+    "verification": {
+      "sourceCommit": "6b064a31bc4cb024b94b9a5426cb157e02c625be",
+      "sourceTreeDirty": false,
+      "sourceFiles": 183,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesExtractedArchive": true,
+    "quarantine": {
+      "preserved": true,
+      "value": "0381;6aa5eb2a;;B4757E51-0079-4CA1-9219-B02EA233BE2C"
+    },
+    "logs": [
+      "/private/tmp/retouch-desktop-startup-6b064a3/install.log",
+      "/private/tmp/retouch-desktop-startup-6b064a3/uninstall.log"
+    ],
+    "cleanup": {
+      "caskInventoryUnchanged": true,
+      "appAndCaskRegistrationAbsent": true,
+      "temporaryTapAndTrustAbsent": true,
+      "externalHarnessRemoved": true,
+      "automaticDependencyRemoval": false
+    }
+  },
+  "nativeLaunch": {
+    "result": "not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "release": {
+    "signing": "ad hoc development build",
+    "developerID": false,
+    "notarization": false,
+    "publicRelease": false
+  },
+  "otherKnownLimits": [
+    "Older WebKit 26.0 Fill-height failure documented on previous candidate; not retested in this archive.",
+    "Native editing, sampler, shutdown, Intel execution and trusted upgrades unverified.",
+    "Full Figma parity and universal-site support incomplete."
+  ]
+}

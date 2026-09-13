@@ -178,18 +178,23 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   }if(process.env.RT_E2E_SECTION_STORAGE_DENIED)await page.addInitScript(()=>{for(const name of ['getItem','setItem']){const original=Storage.prototype[name];Storage.prototype[name]=function(key,...args){if(key==='retouch.inspector.sections.v1')throw new DOMException('Storage unavailable','SecurityError');return original.call(this,key,...args);};}});await page.goto(url+'/rt',{timeout:90000});const app=page.frameLocator('#app');await app.locator('h1').waitFor({state:process.env.RT_E2E_SELFCLOSING_TEXT?'attached':'visible',timeout:90000});await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();const settled=()=>wait(async()=>await page.locator('#panelBody').getAttribute('aria-busy')!=='true'&&await page.evaluate(()=>!panelTasks&&!sourceRequests&&!undoBusy)),family=()=>app.locator('h1').evaluate(el=>getComputedStyle(el).fontFamily);await settled();
   if(process.env.RT_E2E_COMPARISON_COLD){
    assert.equal(kind,'react');const before=read(),originalHeading=await app.locator('h1').textContent(),names=['Phone','Tablet','Desktop'],held=new Set(),pattern='**/_next/static/chunks/**';let release;
-   const routeErrors=[],gate=new Promise(resolve=>release=resolve),handler=async route=>{
-    const frame=route.request().frame(),element=frame.parentFrame()&&await frame.frameElement(),title=element&&await element.getAttribute('title');
-    if(!title?.endsWith(' comparison preview'))return route.continue();
-    const documentId=await frame.evaluate(()=>window.__coldDocumentId||(window.__coldDocumentId=crypto.randomUUID()));
-    try{const response=await route.fetch();held.add(title);await gate;await route.fulfill({response});}
-    catch(error){if(!page.isClosed()&&!frame.isDetached()&&await frame.evaluate(()=>window.__coldDocumentId).catch(()=>null)===documentId)routeErrors.push(error.message);}
+   const routeErrors=[],previews=new Map(),generations=new Map(),gate=new Promise(resolve=>release=resolve);let register;
+   const registered=new Promise(resolve=>register=resolve),navigated=frame=>generations.set(frame,(generations.get(frame)||0)+1);
+   page.on('framenavigated',navigated);
+   const handler=async route=>{
+    const frame=route.request().frame();await registered;
+    const generation=generations.get(frame)||0,title=previews.get(frame);
+    try{
+     if(!title)return await route.continue();
+     const response=await route.fetch();held.add(title);await gate;await route.fulfill({response});
+    }catch(error){if(!page.isClosed()&&!frame.isDetached()&&(generations.get(frame)||0)===generation)routeErrors.push(error.message);}
    };
    // Fetch each response before holding it: release the actual pre-edit scripts,
    // not a fresh response from the source generation created by the edit.
    await page.route(pattern,handler);
    try{
-    await app.locator('[data-cold-mounted="true"]').waitFor();await page.getByRole('button',{name:'Compare screens',exact:true}).click();await wait(()=>held.size===3);
+    await app.locator('[data-cold-mounted="true"]').waitFor();await page.getByRole('button',{name:'Compare screens',exact:true}).click();
+    for(const name of names){const element=await page.locator('iframe[title="'+name+' comparison preview"]').elementHandle();previews.set(await element.contentFrame(),name+' comparison preview');await element.dispose();}register();await wait(()=>held.size===3);
     for(const name of names){const preview=page.frameLocator('iframe[title="'+name+' comparison preview"]');await preview.locator('h1').waitFor();assert.equal(await preview.locator('[data-cold-mounted]').getAttribute('data-cold-mounted'),'false');assert.notEqual(await preview.locator('body').evaluate(()=>document.readyState),'complete');}
     await page.locator('#quickActions').click();const search=page.getByRole('combobox',{name:'Search actions'});await search.fill('Edit text content');await search.press('Enter');await page.getByRole('dialog',{name:'Actions',exact:true}).waitFor({state:'detached'});const input=page.getByLabel('Text content',{exact:true});await input.fill('Saved during preview startup');await input.press('Tab');await wait(()=>read()!==before);await settled();await wait(async()=>await app.locator('h1').textContent()==='Saved during preview startup');const states=[[before,originalHeading],[read(),'Saved during preview startup']];
     if(process.env.RT_E2E_COMPARISON_COLD_CHAIN){const next='Latest edit during preview startup',prior=read();await input.fill(next);await input.press('Tab');await wait(()=>read()!==prior);await settled();await wait(async()=>await app.locator('h1').textContent()===next);states.push([read(),next]);}
@@ -199,13 +204,13 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
     release();
     if(process.env.RT_E2E_COMPARISON_COLD_REMOVE)await page.getByRole('button',{name:'Undo remove: Phone',exact:true}).click();
     if(process.env.RT_E2E_COMPARISON_COLD_CLOSE)await page.getByRole('button',{name:'Compare screens',exact:true}).click();
-    const expectText=async text=>{for(const name of names){const preview=page.frameLocator('iframe[title="'+name+' comparison preview"]');await wait(async()=>await preview.locator('body').evaluate(()=>document.readyState==='complete'));await preview.locator('[data-cold-mounted="true"]').waitFor();await wait(async()=>await preview.locator('h1').textContent()===text);}};
+    const expectText=async text=>{for(const name of names){const preview=page.frameLocator('iframe[title="'+name+' comparison preview"]');await wait(async()=>await preview.locator('body').evaluate(()=>document.readyState==='complete'));await preview.locator('[data-cold-mounted="true"]').waitFor();try{await wait(async()=>await preview.locator('h1').textContent()===text);}catch(error){console.error('COLD PREVIEW FAILURE',name,{expected:text,actual:await preview.locator('h1').evaluate(el=>({text:el.textContent,html:el.outerHTML,mounted:document.querySelector('[data-cold-mounted]')?.outerHTML,url:location.href})),main:await app.locator('h1').evaluate(el=>el.outerHTML),source:read()});throw error;}}};
     await expectText(states.at(-1)[1]);assert.deepEqual(routeErrors,[]);assert.deepEqual(errors,[],'Saving during preview startup must not crash the router');
     for(const [action,source,text]of [...states.slice(0,-1).reverse().map(state=>['Undo',...state]),...states.slice(1).map(state=>['Redo',...state]),...states.slice(0,-1).reverse().map(state=>['Undo',...state])]){await page.getByRole('button',{name:action,exact:true}).click();await settled();await wait(()=>read()===source);await wait(async()=>await app.locator('h1').textContent()===text);await expectText(text);}
     await page.screenshot({path:'/private/tmp/retouch-comparison-cold-'+engine+'.png'});assert.deepEqual(routeErrors,[]);assert.deepEqual(errors,[]);console.log('COLD COMPARISON EDIT PASS',kind,engine,{bundler:process.env.RT_E2E_TURBOPACK?'turbopack':'webpack',edits:states.length-1,reopened:!!process.env.RT_E2E_COMPARISON_COLD_CLOSE,removed:!!process.env.RT_E2E_COMPARISON_COLD_REMOVE,previews:[...held]});return;
    // Wait for held route handlers before browser teardown, preserving the
    // assertion failure instead of masking it with an already-handled route.
-   }finally{release();await page.unrouteAll({behavior:'wait'});}
+   }finally{register();release();await page.unrouteAll({behavior:'wait'});page.off('framenavigated',navigated);}
   }
   if(process.env.RT_E2E_COMPARISON_HOST_RELOAD){
    assert.equal(kind,'react');await page.getByRole('button',{name:'Compare screens',exact:true}).click();

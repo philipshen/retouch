@@ -10,29 +10,29 @@ approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
 The latest development candidate is
-`/private/tmp/retouch-desktop-sizing-23b15e9/Retouch-0.1.0-mac.zip`
-(SHA-256 `32505549b89affa4ff39a94effc48b328600033d28a30261451e8b55bfc92a1f`).
-It contains clean commit `23b15e9`, including scaled/flipped canvas resizing and
-rotation, live angle feedback, measured flow resizing, exact-flip flow handles,
-and corrected standard-stretch Fill precedence. All 182 packaged source hashes
-and native/build/verifier hashes match; universal architecture, strict extracted/
-installed signatures, and 968 matching-source unit tests pass.
+`/private/tmp/retouch-desktop-startup-6b064a3/Retouch-0.1.0-mac.zip`
+(SHA-256 `600d28e1d2c7ea4c82ed00c9cdb7fdb6abb0c1bd5e1c326ac5976998ad9a1d57`).
+It contains clean commit `6b064a3`, including queued Next startup refreshes and
+cold comparison text recovery. All 183 packaged source hashes and native/build/
+verifier hashes match. Universal architecture, strict signatures and all 975
+unit tests importing the bundled runtime pass.
 
-Eight packaged workflow suites pass: HTML/React scaled absolute resizing, React
-scaled rotation, HTML/Liquid exact-flip flow sizing and limits, newer-WebKit
-margin-aware Fill, and compact screen controls in Chromium/WebKit. Homebrew
-installed and uninstalled this exact archive in an isolated app directory,
-retaining quarantine and preserving the original cask inventory. The temporary
-tap, isolated trust configuration, app installation and external test harness
-were removed. Strict package verification passes after the browser workflows.
+Homebrew installed and uninstalled this exact archive in an isolated app
+directory, preserving quarantine and the original cask inventory. The temporary
+tap, trust configuration, installation and external test harness were removed.
+Strict package verification passes after the browser workflows.
 
-The older Playwright WebKit 26.0 Fill-height regression still reproduces in this
-archive: a layer with vertical margins renders 180px high where 170px is expected.
-The same packaged workflow passes in Playwright WebKit 26.6. This does not verify
-native Safari/WKWebView behavior. Native launch was not attempted because CUA's
-native connection failed; native editing, sampler and shutdown remain unverified.
-This is an installable development candidate, not a trusted or verified release.
-See [the candidate receipt](verification/2026-09-13-sizing-workflows.json).
+Turbopack/WebKit passes two held-startup edits and exact history; ready-preview
+editing preserves document identity and unsaved input. Chromium/Webpack's
+cold-preview removal/restoration scenario failed once to reach the latest text.
+A diagnostic rerun passed, but the intermittent failure remains unresolved.
+This candidate is not a verified release. Native launch was not attempted because
+the CUA native connection failed; native editing, sampler and shutdown remain
+unverified. See [the candidate receipt](verification/2026-09-13-startup-workflows.json).
+
+The [previous sizing candidate](verification/2026-09-13-sizing-workflows.json)
+records scaled/flipped sizing and rotation workflows, plus the older WebKit 26.0
+margin-aware Fill-height failure. That Fill case was not rerun for this archive.
 Earlier candidates remain documented in the
 [transform workflow receipt](verification/2026-09-12-transform-workflows.json) and
 [text/comparison receipt](verification/2026-09-12-text-comparisons.json).
