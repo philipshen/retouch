@@ -1,5 +1,35 @@
 'use strict';
 const MagicString=require('magic-string'),{contentHash}=require('./id.cjs');
+function inlinePaintOwnership(selected,kind){
+ const style=selected.attrs.find(a=>a.name==='style');if(!style)return {properties:[]};
+ const unsafe=()=>({reason:'Dynamic or malformed inline styles control this SVG layer.',properties:[]});
+ if(kind==='react'){
+  const attribute=selected.node.openingElement.attributes.find(a=>a.type==='JSXAttribute'&&a.name.name==='style'),object=attribute?.value?.expression;
+  if(object?.type==='NullLiteral')return {properties:[]};
+  if(object?.type!=='ObjectExpression')return unsafe();const properties=[];
+  for(const property of object.properties){
+   if(property.type!=='ObjectProperty'||property.computed||!['Identifier','StringLiteral'].includes(property.key.type))return unsafe();
+   const value=property.value,literal=['StringLiteral','NumericLiteral','NullLiteral','BooleanLiteral'].includes(value.type)||value.type==='UnaryExpression'&&['+','-'].includes(value.operator)&&value.argument.type==='NumericLiteral';if(!literal)return unsafe();
+   if(value.type!=='NullLiteral'&&value.value!=='')properties.push(property.key.name??property.key.value);
+  }
+  return {properties};
+ }
+ if(typeof style.value!=='string')return unsafe();
+ const properties=[],stack=[];let text='',quote=null,comment=false;
+ const declaration=()=>{const clean=text.trim();text='';if(!clean)return true;const colon=clean.indexOf(':');if(colon<1)return false;
+  const name=clean.slice(0,colon).trim().replace(/\\([a-f\d]{1,6})(?:\r\n|[\t\n\r\f ])?|\\([^\n\r\f])/gi,(_,hex,char)=>hex?String.fromCodePoint(Math.min(parseInt(hex,16)||0xfffd,0x10ffff)):char).toLowerCase();
+  if(!/^(?:--[\w-]+|[a-z-]+)$/.test(name))return false;properties.push(name);return true;
+ };
+ for(let i=0;i<style.value.length;i++){
+  const c=style.value[i],next=style.value[i+1];if(comment){if(c==='*'&&next==='/'){comment=false;i++;}continue;}
+  if(quote){text+=c;if(c==='\\'){if(next!==undefined)text+=style.value[++i];}else if(c===quote)quote=null;continue;}
+  if(c==='/'&&next==='*'){comment=true;i++;continue;}if(c==='"'||c==="'"){quote=c;text+=c;continue;}
+  if(c==='\\'){text+=c;if(next!==undefined)text+=style.value[++i];continue;}
+  if('([{'.includes(c))stack.push(c);else if(')]}'.includes(c)){if(stack.pop()!==({')':'(',']':'[','}':'{'})[c])return unsafe();}
+  if(c===';'&&!stack.length){if(!declaration())return unsafe();}else text+=c;
+ }
+ if(quote||comment||stack.length||!declaration())return unsafe();return {properties};
+}
 function inspect(resolved,kind){
  const tag=kind==='react'?require('./id.cjs').jsxElementName(resolved.element.node):resolved.element.tag;if(!['rect','circle','ellipse','line','path','polygon','polyline','text','g'].includes(tag))return null;
  let selected,viewport,nodes;
@@ -12,10 +42,12 @@ function inspect(resolved,kind){
  }else{const source=require('./source-svg-gradient.cjs'),records=source.records(resolved,kind);nodes=records.nodes;selected=records.selected;if(!selected||!source.svg(selected))return null;for(let n=selected.parent;n;n=n.parent)if(n.tag==='svg'){viewport={...n,close:kind==='react'?n.node.closingElement?.start:n.node.closeStart};break;}}
  if(!['rect','circle','ellipse','line','path','polygon','polyline','text','g'].includes(selected.tag))return null;
  let reason=null;if(!viewport||!Number.isInteger(viewport.close)||resolved.source.slice(viewport.close,viewport.close+2)!=='</')reason='This layer needs an explicit SVG viewport closing tag.';
- if(selected.unsafe||selected.attrs.some((a,i)=>a.value===undefined||selected.attrs.findIndex(b=>b.name===a.name)!==i))reason='Dynamic or duplicate attributes control this SVG layer.';
- if(selected.attrs.some(a=>a.name==='style'&&a.value))reason='This layer has inline source styles. Edit those paint styles before creating an attribute gradient.';
+ const inline=inlinePaintOwnership(selected,kind);
+ if(selected.unsafe||selected.attrs.some((a,i)=>a.value===undefined&&a.name!=='style'||selected.attrs.findIndex(b=>b.name===a.name)!==i))reason='Dynamic or duplicate attributes control this SVG layer.';
+ if(inline.reason)reason=inline.reason;
  if(selected.attrs.some(a=>/\{[%{]|\b(?:v-bind|x-bind|v-for|v-if|x-for|x-if)\b/.test(a.name+' '+a.value)))reason='Template expressions control this SVG layer.';
  const classes=selected.attrs.filter(a=>['class','className'].includes(a.name)).map(a=>a.value||'').join(' '),paintReasons=Object.fromEntries(['fill','stroke'].map(paint=>[paint,classes.split(/\s+/).some(token=>require('../shell/svg-paint.js').property(require('../shell/responsive.js').split(token).value)===paint)?'Paint classes control this '+paint+', including responsive or state variants. Edit its paint styles instead.':null]));
+ for(const paint of ['fill','stroke'])if(inline.properties.some(name=>name.toLowerCase()===paint||name.toLowerCase()==='all'))paintReasons[paint]='Inline styles control this '+paint+'. Edit its paint styles instead.';
  return {selected,viewport,nodes,reason,paintReasons};
 }
 function describe(resolved,kind){const state=inspect(resolved,kind);if(!state)return null;return {reason:state.reason,paintReasons:state.paintReasons,values:['fill','stroke'].flatMap(paint=>{const value=state.selected.attrs.find(a=>a.name===paint)?.value;return value===undefined&&state.selected.attrs.some(a=>a.name===paint)?[]:[{paint,value:value??null}];}),paints:['fill','stroke'].filter(p=>!/^url\(/.test(state.selected.attrs.find(a=>a.name===p)?.value||''))};}
