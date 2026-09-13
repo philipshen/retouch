@@ -164,3 +164,14 @@ test('Numeric scrubbing exposes four vertically selected speed bands',()=>{
  const {scrubSpeed}=require('../shell/inspector.js');
  assert.equal(scrubSpeed(-41),2);assert.equal(scrubSpeed(-40),1);assert.equal(scrubSpeed(0),1);assert.equal(scrubSpeed(40),1);assert.equal(scrubSpeed(41),.5);assert.equal(scrubSpeed(80),.5);assert.equal(scrubSpeed(81),.25);
 });
+
+test('individual stroke widths preserve other edges, scopes, colors and inherited priority',()=>{
+ const stroke=require('../shell/inspector.js').borderClasses;
+ const source='border-4 border-t-2 border-b-8 border-red-500 border-dashed md:border-t-6';
+ assert.equal(stroke(source,'width',7,'!border-2','top'),'border-4 border-b-8 border-red-500 border-dashed md:border-t-6 !border-t-[7px]');
+ assert.equal(stroke(source,'width',null,'','top'),'border-4 border-b-8 border-red-500 border-dashed md:border-t-6');
+ assert.equal(stroke('[border-left-width:2px] !border-x-4','width',5,'','left'),'!border-x-4 !border-l-[5px]');
+ assert.equal(stroke('border-l-dashed border-r-double','style','solid','','left'),'border-r-double border-l-solid');
+ assert.equal(stroke('border-t border-t-red-500 border-b','width',null,'','top'),'border-t-red-500 border-b');
+ assert.throws(()=>stroke('','width',3,'','bad'));
+});

@@ -512,12 +512,14 @@
     return '#'+[...ctx.getImageData(0,0,1,1).data].slice(0,3).map(v=>v.toString(16).padStart(2,'0')).join('');
   }
   const borderWidthToken=t=>/^border(?:-(?:[trblxyse]))?(?:-(?:\d+(?:\.\d+)?|\[(?:length:[^\]]+|[-.\d][^\]]*)\]))?$/.test(t);
-  function borderClasses(classes,property,value,inherited=''){
+  function borderClasses(classes,property,value,inherited='',side=null){
+    const edges={top:'t',right:'r',bottom:'b',left:'l'};if(side!==null&&!Object.hasOwn(edges,side))throw Error('Choose a border edge.');
     if(!['width','style'].includes(property))throw Error('Choose a stroke property.');
     if(value!==null&&(property==='width'? !Number.isFinite(value)||value<0||value>100:!['solid','dashed','dotted','double','none','hidden'].includes(value)))throw Error('Unsupported stroke value.');
     const matches=t=>(property==='width'?borderWidthToken(t):/^border(?:-[trblxyse])?-(solid|dashed|dotted|double|hidden|none)$/.test(t))||new RegExp('^\\[border(?:-[a-z]+(?:-[a-z]+)?)?-'+property+':').test(t);
     let addition=value===null?'':property==='width'?'border-['+value+'px]':'border-'+value;
     if(addition&&[...tokens(classes),...tokens(inherited)].some(token=>/^!|!$/.test(token)&&(matches(base(token)||'')||/^\[border(?:-[trblxyse]|-top|-right|-bottom|-left)?:/.test(base(token)||''))))addition='!'+addition;
+    if(side!==null){if(addition)addition=addition.replace('border-', 'border-'+edges[side]+'-');return replace(classes,t=>((t==='border-'+edges[side]||t.startsWith('border-'+edges[side]+'-'))&&matches(t))||t.startsWith('[border-'+side+'-'+property+':'),addition);}
     return replace(classes,matches,addition);
   }
   function cornerRadiusClasses(classes,corner,value,inherited=''){
@@ -577,6 +579,15 @@
     });
     borderWidth.placeholder='Mixed';
     const resetWidth=button('Reset border width',()=>save(borderClasses(info.className,'width',null)));resetWidth.disabled=borderClasses(info.className,'width',null)===info.className;sec.append(resetWidth);
+    for(const side of ['top','right','bottom','left']){
+      const name='Border '+side+' width',property='border-'+side+'-width';
+      const input=number(sec,name+' (px)',parseFloat(css.getPropertyValue(property)),0,100,v=>{
+        let next=borderClasses(info.className,'width',v,info.anchorInheritedClasses,side);
+        if(v>0&&css.getPropertyValue('border-'+side+'-style')==='none')next=borderClasses(next,'style','solid',info.anchorInheritedClasses,side);
+        save(next);
+      });numericPreview(input,el,property);
+      const reset=button('Reset '+name.toLowerCase(),()=>save(borderClasses(info.className,'width',null,'',side)));reset.disabled=borderClasses(info.className,'width',null,'',side)===info.className;sec.append(reset);
+    }
     select(sec,'Border style',['solid','dashed','dotted','double','none'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.borderTopStyle,v=>save(borderClasses(info.className,'style',v,info.anchorInheritedClasses)));
     const resetStyle=button('Reset border style',()=>save(borderClasses(info.className,'style',null)));resetStyle.disabled=borderClasses(info.className,'style',null)===info.className;sec.append(resetStyle);
     const borderColor=document.createElement('input');borderColor.type='color';borderColor.value='#000000';

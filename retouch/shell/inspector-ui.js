@@ -187,6 +187,10 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   if(advanced.children.length>1)panel.append(advanced);
   for(const section of panel.querySelectorAll('.inspector-section')){
    const name=title(section);section.dataset.section=name.toLowerCase().replace(/\s+/g,'-');
+   if(name==='Stroke'){
+    const rows=['top','right','bottom','left'].map(side=>section.querySelector('[aria-label="Border '+side+' width (CSS)"], [aria-label="Border '+side+' width (px)"]')?.closest('.inspector-field'));
+    if(rows.every(Boolean)){const edges=disclosure('Individual edges','border-edges');edges.classList.add('border-edges');for(const row of rows){const reset=row.nextElementSibling;edges.append(row);if(reset?.classList.contains('control-button'))edges.append(reset);row.querySelector(':scope > span').textContent=fieldControl(row).getAttribute('aria-label').split(' ')[1].replace(/^./,c=>c.toUpperCase());}section.append(edges);}
+   }
    if(name==='Fill gradient'||name==='Stroke gradient'){
     for(const names of [['x1','y1'],['x2','y2'],['cx','cy'],['fx','fy'],['r','fr']])pair(section,names.map(name=>'Gradient '+name));
     for(const row of section.querySelectorAll('.inspector-field')){const label=fieldControl(row)?.getAttribute('aria-label')||'';row.querySelector(':scope > span').textContent=label.replace(/^Gradient /,'').replace(/^Stop \d+ /,'').replace('gradientUnits','Units').replace('spreadMethod','Spread');}
@@ -276,7 +280,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    }
 
    const help=disclosure('Details',name+'-help');for(const hint of [...section.children].filter(el=>(el.classList.contains('hint')||el.classList.contains('computed-value'))&&el.getAttribute('role')!=='alert'&&!el.classList.contains('gradient-scope')))help.append(hint);if(help.children.length>1)section.append(help);
-   for(const button of [...section.querySelectorAll(':scope > .control-button, :scope > .radius-corners > .control-button')])if(/^(Reset |Clear local (?:text|background|border) color$)/.test(button.textContent)){
+   for(const button of [...section.querySelectorAll(':scope > .control-button, :scope > .radius-corners > .control-button, :scope > .border-edges > .control-button')])if(/^(Reset |Clear local (?:text|background|border) color$)/.test(button.textContent)){
     const label=button.textContent;button.setAttribute('aria-label',label);button.title=label;button.textContent='↺';button.classList.add('property-reset');const previous=button.previousElementSibling;
     if(previous?.classList.contains('inspector-field')){const row=document.createElement('div');row.className='property-row';previous.parentElement.insertBefore(row,previous);row.append(previous,button);}
    }

@@ -164,3 +164,29 @@ The HTML SVG stroke workflow also passes in
 SVG fixture flag and stopped before selecting a shape. All 1,154 unit tests
 pass in `/private/tmp/retouch-hex-units-final.log`. No desktop archive was rebuilt
 for this change.
+
+## Individual border widths
+
+CSS Stroke now offers an Individual edges group with Top, Right, Bottom and
+Left widths and independent reset buttons. HTML uses the existing longhand
+writer and CSS length validation. React/Liquid write physical edge utilities,
+retain unrelated edge/color/style classes and screen variants, and preserve
+important priority from the current or inherited border declarations. Editing
+an edge whose style is `none` in the class adapter adds a solid style on that
+edge. The existing all-edge Weight control replaces individual width overrides.
+The group remembers its expanded state during source refreshes.
+
+The browser fixture verifies unequal widths, a zero-width edge, invalid negative
+input, a tablet-only left edge with phone fallback, independent resets, replacing
+individual widths with one weight, and exact source Undo/Redo. React and Liquid
+start with an important width shorthand. Computed border colors and styles are
+checked after width edits. Source-level coverage also checks default-width edge
+utilities, arbitrary longhands, inherited priority and scope preservation.
+
+This provides physical CSS box edges, not Figma inside/outside stroke alignment
+or per-segment vector strokes. The desktop archive has not been rebuilt.
+
+Validation: 1,155 unit tests in
+`/private/tmp/retouch-border-edges-units-final.log`; HTML/React Chromium and
+Liquid WebKit in `/private/tmp/retouch-border-edges-{html,react,liquid}-final.log`.
+Screenshot inspected: `/private/tmp/retouch-border-edges.png`.
