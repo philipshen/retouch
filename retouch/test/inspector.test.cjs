@@ -205,3 +205,13 @@ test('capital forms validate independently of text transformation and other scop
  assert.equal(i.replace('uppercase [font-variant-caps:small-caps] md:[font-variant-caps:normal]',i.capsToken,'[font-variant-caps:unicase]'),'uppercase md:[font-variant-caps:normal] [font-variant-caps:unicase]');
  assert.throws(()=>require('../src/text-style-classes.cjs').compose('[font-variant:normal]',{'font-variant-caps':'small-caps'}),/shorthand/);
 });
+
+
+test('font positions preserve text transforms and unrelated variant scopes',()=>{
+ const v=require('../shell/html-css-values.js'),i=require('../shell/inspector.js');
+ for(const value of ['normal','sub','super',null])assert.equal(v.valid('font-variant-position',value),true);
+ for(const value of ['superscript','sub super','url(x)',''])assert.equal(v.valid('font-variant-position',value),false);
+ assert.equal(v.overlaps('font','font-variant-position'),true);assert.equal(v.overlaps('font-variant-position','font-variant'),true);assert.equal(v.overlaps('vertical-align','font-variant-position'),false);
+ assert.equal(i.replace('uppercase [font-variant-caps:small-caps] [font-variant-position:sub] md:[font-variant-position:normal]',i.fontPositionToken,'[font-variant-position:super]'),'uppercase [font-variant-caps:small-caps] md:[font-variant-position:normal] [font-variant-position:super]');
+ assert.throws(()=>require('../src/text-style-classes.cjs').compose('[font-variant:normal]',{'font-variant-position':'super'}),/shorthand/);
+});

@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict');
+module.exports=async({page,app,kind,read,wait,settled})=>{
+ const original=read(),states=[original],target=app.locator('h1'),text=await target.textContent(),transform=await target.evaluate(el=>getComputedStyle(el).textTransform),screen=page.getByLabel('Screen size',{exact:true}),scope=page.getByLabel('Style screen scope',{exact:true}),preview=page.frameLocator('iframe[title="Typography preview"]').locator('body div');
+ const value=()=>target.evaluate(el=>getComputedStyle(el).fontVariantPosition),initial=await value();await scope.selectOption('');await settled();const opener=page.locator('summary[aria-label="Type settings"]');if(!await opener.evaluate(el=>el.parentElement.open))await opener.click();await page.getByRole('tab',{name:'Details',exact:true}).click();await page.locator('.font-position-typography > summary').click();const control=page.getByLabel('Number position',{exact:true});await control.focus();await wait(async()=>await preview.textContent()==='123 abc');assert.equal(read(),original);
+ const write=async next=>{await control.selectOption(next);await wait(()=>read()!==states.at(-1));states.push(read());await settled();await wait(async()=>await value()===next);await wait(async()=>await preview.evaluate(el=>getComputedStyle(el).fontVariantPosition)===next);assert.equal(await target.textContent(),text);assert.equal(await target.evaluate(el=>getComputedStyle(el).textTransform),transform);};
+ await write('super');await write('sub');
+ await screen.selectOption('768x1024');await settled();await scope.selectOption(kind==='html'?'min-[768px]:':'md:');await settled();await write('super');await screen.selectOption('390x844');await settled();await wait(async()=>await value()==='sub');await screen.selectOption('768x1024');await settled();
+ if(process.env.RT_E2E_FONT_POSITION_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_FONT_POSITION_SCREENSHOT});
+ await page.getByRole('button',{name:'Reset number position',exact:true}).click();await wait(()=>read()!==states.at(-1));states.push(read());await settled();await wait(async()=>await value()==='sub');
+ for(let n=states.length-2;n>=0;n--){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states[n]);}assert.equal(await value(),initial);
+ for(let n=1;n<states.length;n++){await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===states[n]);}
+ for(let n=states.length-2;n>=0;n--){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states[n]);}assert.equal(read(),original);console.log('FONT POSITION PASS '+kind+': all forms, sample, preview, text preservation, scoped fallback/reset and exact history');
+};

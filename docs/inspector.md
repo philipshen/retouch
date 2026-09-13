@@ -512,3 +512,31 @@ The small-caps canvas and panel screenshot at
 `/private/tmp/retouch-capital-forms.png` was inspected. Computed values across all
 choices do not establish that each font provides distinct glyphs for every form.
 These changes have not yet been rebuilt into the desktop candidate.
+
+
+### OpenType number position (2026-09-13)
+
+Type settings > Details > Number position now offers Normal, Superscript and
+Subscript through `font-variant-position`. Source adapters, text-style encoding,
+preview properties, focused samples, scoped reset and override matching support
+the property. Font and font-variant shorthand conflicts are guarded. This uses
+OpenType glyph substitution; universal synthetic superscript/subscript fallback
+is not implemented. The control explains that it uses glyphs from the font.
+
+Validation: all 1,162 unit tests and HTML/React Chromium plus Liquid WebKit
+workflows passed in `/private/tmp/retouch-font-position-units.log` and
+`/private/tmp/retouch-font-position-{html,react,liquid}.log`. They check computed
+source/preview values, preserved text and case, responsive fallback/reset and
+exact undo/redo. Saved-style encoding now covers all 15 supported properties.
+
+Visual inspection of `/private/tmp/retouch-font-position.png` did not establish
+a visible superscript effect in Georgia. A separate native Chromium probe found
+unchanged digit widths for Georgia, Arial, Times New Roman and the fixture Geist,
+despite accepted computed values. Loading the local SF Compact font (whose GSUB
+table has sups/subs) changed `123` from 47.234375px to 23.828125px for both variants;
+assertions passed in `/private/tmp/retouch-position-native-rendering.log`.
+No system font was copied into the repository or distribution. This proves that
+the browser mechanism can render available glyphs, not automatic fallback or
+full text-position parity for arbitrary fonts. Reference:
+[CSS font position](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/font-variant-position).
+The desktop candidate has not been rebuilt with this change.

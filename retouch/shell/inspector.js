@@ -1,6 +1,6 @@
 (function (root) {
   'use strict';
-  let cornersExpanded=false,capsExpanded=false,ligatureExpanded=false,numericExpanded=false,variationExpanded=false,shadowStackExpanded=false;
+  let cornersExpanded=false,fontPositionExpanded=false,capsExpanded=false,ligatureExpanded=false,numericExpanded=false,variationExpanded=false,shadowStackExpanded=false;
   const tokens = value => (value || '').split(/\s+/).filter(Boolean);
   // Colons inside arbitrary CSS values are not variant separators.
   function base(token) {
@@ -99,7 +99,7 @@
       parentLabel: viewport ? 'Page viewport' : `<${parent.tagName.toLowerCase()}>${parent.id ? ' #' + parent.id : ''}`,
     };
   }
-  const typeProperties = ['font-family', 'font-size', 'font-weight', 'font-style', 'font-stretch', 'font-variation-settings', 'font-optical-sizing', 'font-variant-numeric', 'font-variant-ligatures', 'font-variant-caps', 'line-height', 'letter-spacing', 'text-transform', 'text-decoration-line'];
+  const typeProperties = ['font-family', 'font-size', 'font-weight', 'font-style', 'font-stretch', 'font-variation-settings', 'font-optical-sizing', 'font-variant-numeric', 'font-variant-ligatures', 'font-variant-caps', 'font-variant-position', 'line-height', 'letter-spacing', 'text-transform', 'text-decoration-line'];
   function catalog(d) {
     const result = new Map();
     function scan(rules) {
@@ -302,6 +302,13 @@
     action.setAttribute('aria-label','Use relative '+label.replace(' (%)','').toLowerCase());
     action.title='Convert to spacing relative to the font size.';row.append(action);
     return input;
+  }
+  const fontPositionToken=t=>/^\[font-variant-position:.+\]$/.test(t);
+  function fontPositionTypography(parent,current,onChange,onReset,canReset=true){
+    const details=document.createElement('details'),summary=document.createElement('summary');details.className='font-position-typography';details.open=fontPositionExpanded;details.ontoggle=()=>{if(details.isConnected)fontPositionExpanded=details.open;};summary.textContent='Number position';details.append(summary);parent.append(details);
+    select(details,'Number position',[['normal','Normal'],['super','Superscript'],['sub','Subscript']],current,onChange);
+    note(details,'Uses alternate glyphs provided by the selected font.');
+    const reset=button('Reset number position',onReset);reset.disabled=!canReset;details.append(reset);
   }
   const capsToken=t=>/^\[font-variant-caps:.+\]$/.test(t);
   function capsTypography(parent,current,onChange,onReset,canReset=true){
@@ -721,7 +728,7 @@
   }).join(' ');
  }
   function replaceTypography(classes,match,additions){return replace(match===fontSizeToken||match===lineHeightToken?expandSizeLeading(classes):classes,match,additions);}
-  const textOverrideToken=t=>[fontSizeToken,fontWeightToken,fontFamilyToken,lineHeightToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,opticalToken,variationToken,numericToken,ligatureToken,capsToken].some(match=>match(t));
+  const textOverrideToken=t=>[fontSizeToken,fontWeightToken,fontFamilyToken,lineHeightToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,opticalToken,variationToken,numericToken,ligatureToken,capsToken,fontPositionToken].some(match=>match(t));
   function fontWeightClass(value){return typeof value==='number'&&Number.isFinite(value)&&value>=1&&value<=1000?`font-[${value}]`:null;}
   function fontDisplayName(value){return value.trim().toLowerCase()==='-webkit-standard'?'Browser default':value.replace(/["']/g,'');}
   function fontFamilies(d,current){
@@ -867,6 +874,7 @@
       select(sec,'Text case',[['none','As written'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']],css.textTransform,v=>change(caseToken,v==='none'?'normal-case':v));
       opticalTypography(sec,css,value=>change(opticalToken,`[font-optical-sizing:${value}]`),()=>save(replace(info.className,opticalToken,'')),tokens(info.className).map(base).some(t=>t&&opticalToken(t)));
       variationTypography(sec,css,value=>change(variationToken,`[font-variation-settings:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,variationToken,'')),tokens(info.className).map(base).some(t=>t&&variationToken(t)),el);
+      fontPositionTypography(sec,css.fontVariantPosition,value=>change(fontPositionToken,`[font-variant-position:${value}]`),()=>save(replace(info.className,fontPositionToken,'')),tokens(info.className).map(base).some(t=>t&&fontPositionToken(t)));
       capsTypography(sec,css.fontVariantCaps,value=>change(capsToken,`[font-variant-caps:${value}]`),()=>save(replace(info.className,capsToken,'')),tokens(info.className).map(base).some(t=>t&&capsToken(t)));
       ligatureTypography(sec,css.fontVariantLigatures,value=>change(ligatureToken,`[font-variant-ligatures:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,ligatureToken,'')),tokens(info.className).map(base).some(t=>t&&ligatureToken(t)));
       numericTypography(sec,css.fontVariantNumeric,value=>change(numericToken,`[font-variant-numeric:${value.replace(/ /g,'_')}]`),()=>save(replace(info.className,numericToken,'')),tokens(info.className).map(base).some(t=>t&&numericToken(t)));
@@ -920,6 +928,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);

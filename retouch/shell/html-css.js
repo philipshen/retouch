@@ -57,6 +57,7 @@
   I.relativeNumber(typography,'Letter spacing (%)',(parseFloat(css.letterSpacing)||0)/parseFloat(css.fontSize)*100,-100,1000,value=>save('letter-spacing',`${Math.round(value*1e6)/1e8}em`,width)).title='Relative to this layer’s font size.';
   I.opticalTypography(typography,css,value=>save('font-optical-sizing',value,width),()=>save('font-optical-sizing',null,width),Object.hasOwn(own,'font-optical-sizing'));
   I.variationTypography(typography,css,value=>save('font-variation-settings',value,width),()=>save('font-variation-settings',null,width),Object.hasOwn(own,'font-variation-settings'),el);
+  I.fontPositionTypography(typography,css.fontVariantPosition,value=>save('font-variant-position',value,width),()=>save('font-variant-position',null,width),Object.hasOwn(own,'font-variant-position'));
   I.capsTypography(typography,css.fontVariantCaps,value=>save('font-variant-caps',value,width),()=>save('font-variant-caps',null,width),Object.hasOwn(own,'font-variant-caps'));
   I.ligatureTypography(typography,css.fontVariantLigatures,value=>save('font-variant-ligatures',value,width),()=>save('font-variant-ligatures',null,width),Object.hasOwn(own,'font-variant-ligatures'));
   I.numericTypography(typography,css.fontVariantNumeric,value=>save('font-variant-numeric',value,width),()=>save('font-variant-numeric',null,width),Object.hasOwn(own,'font-variant-numeric'));
