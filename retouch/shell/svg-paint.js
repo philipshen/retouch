@@ -16,6 +16,14 @@
   const important=(inherited||'').split(/\s+/).some(token=>property(token)===key&&/^!|!$/.test(token));
   return I.replace(classes,t=>property(t)===key,next===null?'':`${important?'!':''}[${key}:${next.trim().replace(/\s+/g,'_')}]`);
  }
+ function attributeReason(el,paint){
+  if(!el?.isConnected||!['fill','stroke'].includes(paint))return 'Select a visible SVG layer.';
+  const w=el.ownerDocument.defaultView,css=w.getComputedStyle(el),transitions=css.transitionProperty.split(',').map(s=>s.trim());
+  if(el.getAnimations?.().length||css.animationName!=='none'||transitions.some(p=>p==='all'||p===paint)&&css.transitionDuration.split(',').some(value=>parseFloat(value)>0))return 'Pause paint animations or transitions before creating a gradient.';
+  const original=el.getAttribute(paint);
+  try{for(const [value,expected]of [['#010203','rgb(1, 2, 3)'],['#040506','rgb(4, 5, 6)']]){el.setAttribute(paint,value);if(w.getComputedStyle(el).getPropertyValue(paint).trim()!==expected)return 'Page styles control this '+paint+'. Edit its paint styles instead.';}return null;}
+  finally{if(original===null)el.removeAttribute(paint);else el.setAttribute(paint,original);}
+ }
  function mount(info,el,save){
   const sec=I.section('SVG paint');if(!el)return sec;
   if(info.classNameDynamic||info.svgPaint?.reason){I.note(sec,info.svgPaint?.reason||'This layer has a dynamic class expression.','refused');return sec;}
@@ -30,5 +38,5 @@
   }
   I.note(sec,'Paint follows the selected screen scope through Tailwind classes. Reset reveals inherited paint or the original SVG attribute.');return sec;
  }
- const api={property,value,update,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPaint=api;
+ const api={property,value,update,attributeReason,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPaint=api;
 })(typeof window==='object'?window:globalThis);

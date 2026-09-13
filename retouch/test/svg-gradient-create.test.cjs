@@ -11,5 +11,9 @@ for(const kind of ['html','react','liquid']){
   for(const extra of [{fileHash:'stale'},{paint:'color'},{stop:0},{changes:{x1:'0'}},{value:{type:'conicGradient',color:'red'}},{value:{type:'linearGradient',color:'red" onclick="x'}}])assert.equal(create(original,extra).refused,true);
   assert.equal(create(original.replace('fill="red"','style="fill:red"')).refused,true);assert.equal(create(original.replace('fill="red"','class="fill-red"')).refused,true);
  });
+ test(kind+' creation preserves unrelated classes and distinguishes fill from stroke utilities',()=>{
+  const name=kind==='react'?'className':'class',source=original.replace('<rect ','<rect '+name+'="layout-marker opacity-50 stroke-2" '),result=create(source);assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes(name+'="layout-marker opacity-50 stroke-2"'));
+  for(const token of ['fill-red-500','md:fill-red-500','hover:!fill-current','[&:hover]:[fill:blue]']){const source=original.replace('<rect ','<rect '+name+'="'+token+'" ');assert.equal(create(source).refused,true);const stroke=create(source,{paint:'stroke'});assert.equal(stroke.ok,true,stroke.reason);}
+ });
  test(kind+' creation appends into the nearest nested SVG and preserves siblings',()=>{const source=wrap('<svg><svg><rect/></svg><circle r="10"/></svg>'),result=create(source);assert.equal(result.ok,true,result.reason);assert.match(result.edits[0].after,/<\/defs><\/svg><circle/);});
 }
