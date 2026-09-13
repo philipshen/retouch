@@ -1,10 +1,10 @@
 'use strict';
 // Source evidence for replacing a plain range-style wrapper. Runtime styles
 // alone cannot distinguish literal declarations from bindings or spread props.
-const values={'font-weight':['400','700'],'font-style':['normal','italic']};
+const rangeStyles=require('../shell/range-style-values.js');
 function css(value){
- const match=typeof value==='string'&&value.match(/^\s*(font-weight|font-style)\s*:\s*(400|700|normal|italic)\s*;?\s*$/);
- return match&&values[match[1]].includes(match[2])?{property:match[1],value:match[2]}:null;
+ const match=typeof value==='string'&&value.match(/^\s*(font-weight|font-style|font-size)\s*:\s*([^;]+?)\s*;?\s*$/);
+ return match&&rangeStyles.valid(match[1],match[2])?{property:match[1],value:match[2]}:null;
 }
 function style(element,source,kind){
  if(kind==='react'){
@@ -14,9 +14,9 @@ function style(element,source,kind){
   const attr=opening.attributes[0],expression=attr.value?.expression;
   if(attr.type!=='JSXAttribute'||attr.name.name!=='style'||expression?.type!=='ObjectExpression'||expression.properties.length!==1)return null;
   const item=expression.properties[0];if(item.type!=='ObjectProperty'||item.computed||item.shorthand)return null;
-  const name=item.key.type==='Identifier'?item.key.name:item.key.value,property=name==='fontWeight'?'font-weight':name==='fontStyle'?'font-style':null;
+  const name=item.key.type==='Identifier'?item.key.name:item.key.value,property=name==='fontWeight'?'font-weight':name==='fontStyle'?'font-style':name==='fontSize'?'font-size':null;
   const value=item.value.type==='StringLiteral'||item.value.type==='NumericLiteral'?String(item.value.value):null;
-  return property&&values[property].includes(value)?{property,value}:null;
+  return property&&rangeStyles.valid(property,value)?{property,value}:null;
  }
  if(element.tag!=='span')return null;
  if(kind==='html'){

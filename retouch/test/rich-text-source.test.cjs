@@ -38,3 +38,9 @@ test('range styles serialize only enumerated weight and style values',()=>{
  assert.equal(rewrite('Text','source',children),'<span style="font-weight: 400;"><span style="font-style: normal;">&lt;regular&gt;</span></span>');
  for(const [property,value]of [['constructor','400'],['__proto__','normal'],['background','url(javascript:alert(1))'],['font-weight','400; color:red'],['font-style','expression(alert(1))']])assert.throws(()=>rewrite('Text','source',[{t:'style',property,value,children:[]}]),/Unsupported text range style/);
 });
+
+test('text range font size writes a constrained pixel style',()=>{
+ const children=[{t:'style',property:'font-size',value:'24.5px',children:[{t:'text',value:'Sized'}]}];
+ assert.equal(rewrite('Text','source',children),'<span style="font-size: 24.5px;">Sized</span>');
+ assert.throws(()=>rewrite('Text','source',[{...children[0],value:'var(--size)'}]),/Unsupported text range style/);
+});

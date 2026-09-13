@@ -102,7 +102,7 @@ test('superscript and subscript retain selected text without attributes',()=>{
 });
 
 test('new and mounted text range styles retain their constrained style tree',()=>{
- for(const [property,value]of [['font-weight','400'],['font-style','normal']]){
+ for(const [property,value]of [['font-weight','400'],['font-style','normal'],['font-size','24.5px']]){
   const span=el('SPAN',[text('selected')]);span.style={length:1,0:property,getPropertyValue:key=>key===property?value:''};
   const root=el('P',[span]);
   assert.deepStrictEqual(serializeChildren(root),[{t:'style',property,value,children:[{t:'text',value:'selected'}]}]);

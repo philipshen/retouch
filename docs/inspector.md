@@ -760,3 +760,32 @@ mixed ranges and inherited styles. All 1,172 unit tests passed in
 Broader normalization across different properties, nested or attributed runs,
 and indirectly stored rich text remains unfinished. Desktop packaging has not
 been rebuilt with this change.
+
+### Font size for selected text (2026-09-13)
+
+The selected-text toolbar now has a pixel-size field. It accepts 0.1–1000 px
+with up to three decimal places. Enter applies and saves the value; Escape
+cancels the field draft and returns focus to the text. Invalid values leave
+both source and preview unchanged. Moving between text and toolbar controls
+retains the edit; leaving that editing area saves through the existing source
+transaction. This fixes a focus-transfer bug exposed by the new numeric field.
+
+A shared range-style validator now serves the toolbar, serializer, source proof,
+and HTML/Liquid/React writers. `font-size` uses the same source-approved reuse,
+partial splitting, and neighbor merging as weight/style. The selected text can
+change size while its parent and unselected text retain their original size.
+The serializer also recognizes mounted pixel-size wrappers for refresh checks.
+
+`RT_E2E_RANGE_SIZE=1` covers decimal rendering, Enter and blur saves, Escape and
+invalid-value preservation, toolbar focus retention, saved wrapper reuse,
+partial split/merge, unchanged parent size/text, and exact source undo/redo.
+Final browser logs are `/private/tmp/retouch-range-size-final-{html,react,liquid}.log`.
+The combined runs also cover explicit range styles, partial style normalization,
+and nested bold/italic. The final light-theme toolbar and selected text were
+visually inspected at `/private/tmp/retouch-range-size-final.png`.
+All 1,175 unit tests passed in `/private/tmp/retouch-range-size-units-final.log`.
+
+Relative units, expressions, per-screen range-size overrides, and general
+attributed/nested range normalization remain unfinished. Range styles currently
+apply across screen sizes. The latest desktop archive still contains `c25f59a`;
+this font-size change has not been packaged or verified in the native app.

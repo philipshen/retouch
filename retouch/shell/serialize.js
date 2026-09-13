@@ -2,6 +2,7 @@
 // so it can be unit-tested in Node with a tiny fake DOM. Loaded as a plain
 // browser script (defines window.RetouchSerialize) and require()-d in tests.
 (function (root) {
+  var rangeStyles = typeof module !== 'undefined' && module.exports ? require('./range-style-values.js') : root.RetouchRangeStyles;
   var FMT = { SUP: 'sup', SUB: 'sub', STRONG: 'strong', B: 'strong', EM: 'em', I: 'em', U: 'u', S: 's', STRIKE: 's', DEL: 's' };
 
   // root: a DOM element being edited. snapshot: Map(id -> original textContent)
@@ -28,13 +29,12 @@
         else out.push({ t: 'keep', id: id, children: serializeChildren(n, snapshot) });
         continue;
       }
-      // Only the two enumerated range styles can create new styled spans.
+      // Only validated range styles can create new styled spans.
       // Existing attributed nodes still use the source-preserving keep path above.
       var property = n.__rtRangeStyle || (n.tagName === 'SPAN' && n.style && n.style.length === 1 ? n.style[0] : null);
       if (n.tagName === 'SPAN' && property && n.style) {
         var value = n.style.getPropertyValue(property);
-        if ((property === 'font-weight' && /^(400|700)$/.test(value)) ||
-            (property === 'font-style' && /^(normal|italic)$/.test(value))) {
+        if (rangeStyles.valid(property,value)) {
           out.push({t:'style',property:property,value:value,children:serializeChildren(n,snapshot)});
           continue;
         }

@@ -276,3 +276,10 @@ test('range wrapper reuse requires literal JSX styles and plain text',()=>{
  index.scanAll();const {resolved}=pick(index,root,'Range.tsx','p');
  assert.deepStrictEqual(Object.values(writer.describeElement(resolved).rangeStyleIds),[{property:'font-weight',value:'400'},{property:'font-style',value:'italic'}]);
 });
+
+test('range font size writes JSX and can reuse its literal wrapper',()=>{
+ const {resolved}=pick(index,root,'Card.tsx','p');
+ assert.ok(writer.applyOp(resolved,{type:'setChildren',fileHash:resolved.hash,children:[{t:'style',property:'font-size',value:'24.5px',children:[{t:'text',value:'Sized'}]}]}).ok);
+ assert.match(read(root,'Card.tsx'),/<span style=\{\{fontSize:"24.5px"\}\}>Sized<\/span>/);
+ index.scanAll();assert.deepStrictEqual(Object.values(writer.describeElement(pick(index,root,'Card.tsx','p').resolved).rangeStyleIds),[{property:'font-size',value:'24.5px'}]);
+});

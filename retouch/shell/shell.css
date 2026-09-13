@@ -1009,3 +1009,6 @@ html, body { overflow:clip; }
 
 .inline-format-toolbar select { height:30px;max-width:88px;padding:0 6px;background:var(--control);color:var(--ink);border:0;border-radius:5px;font:inherit;font-size:11px; }
 .inline-format-toolbar { max-width:calc(100vw - 24px);flex-wrap:wrap;justify-content:center; }
+
+.inline-format-toolbar input { width:68px;height:30px;padding:0 6px;background:var(--control);color:var(--ink);border:1px solid transparent;border-radius:5px;font:inherit;font-size:11px; }
+.inline-format-toolbar input[aria-invalid="true"] { border-color:var(--danger); }
