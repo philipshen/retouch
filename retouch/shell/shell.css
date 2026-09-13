@@ -878,6 +878,7 @@ body input[type="number"]::-webkit-outer-spin-button { appearance:none;margin:0;
 .typography-family > span,.typography-family > .inspector-field > span { display:none; }
 .typography-family select { width:100%;height:28px; }
 .typography-size .inspector-field > span { flex:0 0 auto; }
+.typography-weight-style select { width:100%;height:28px;background:var(--panel);border:1px solid var(--line);padding:0 8px; }
 .typography-spacing { padding-top:18px; }
 .typography-spacing-cell { position:relative; }
 .typography-spacing-cell::before { content:attr(data-caption);position:absolute;left:0;top:-18px;color:var(--muted);font-size:11px;white-space:nowrap; }

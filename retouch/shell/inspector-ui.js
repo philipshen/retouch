@@ -105,6 +105,25 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   if(!parts.length)return;
   const primary=document.createElement('div');primary.className='typography-primary';section.querySelector(':scope > h3').after(primary);parts.forEach(part=>primary.append(part));
   font?.classList.add('typography-family');sizePair?.classList.add('typography-size');spacingPair?.classList.add('typography-spacing');
+  if(weight&&sizePair){
+   const weightRow=row(weight),settings=[...section.querySelectorAll('details')].find(details=>details.querySelector(':scope > summary')?.textContent==='Type settings');
+   if(weightRow&&settings){
+    const select=document.createElement('select'),cell=document.createElement('label');cell.className='inspector-field typography-weight-style';select.setAttribute('aria-label','Font weight style');
+    select.title='Choose a weight; use Custom for a numeric value.';select.disabled=weight.disabled;
+    const target=weight.retouchPreviewTarget,current=target?target.ownerDocument.defaultView.getComputedStyle(target).fontWeight:weight.value;
+    const names=[['100','Thin'],['200','Extra Light'],['300','Light'],['400','Regular'],['500','Medium'],['600','Semi Bold'],['700','Bold'],['800','Extra Bold'],['900','Black']];
+    for(const [value,name] of names){const option=document.createElement('option');option.value=value;option.textContent=name;select.append(option);}
+    if(!names.some(([value])=>value===current)){const option=document.createElement('option');option.value=current;option.textContent=current||'Custom';select.prepend(option);}
+    const custom=document.createElement('option');custom.value='custom';custom.textContent='Custom…';select.append(custom);select.value=current;
+    weightRow.before(cell);cell.append(select);settings.prepend(weightRow);
+    root.RetouchNumericExpression.calculation(weight);root.RetouchInspector.fieldDraft(weight);
+    select.onchange=()=>{
+     if(select.value==='custom'){select.value=current;settings.open=true;weight.focus();weight.select();return;}
+     weight.value=select.value;weight.dispatchEvent(new Event('change',{bubbles:true}));
+    };
+   }
+  }
+
   for(const [labels,title,path] of [[['Line height (px)','Line height (CSS)'],'Line height','M4 3h12 M4 17h12 M6 14l4-8 4 8 M8 11h4'],[['Letter spacing (px)','Letter spacing (CSS)'],'Letter spacing','M3 4v12 M17 4v12 M6 14l4-8 4 8 M8 11h4']]){
    const input=find(labels),field=input?.closest('.inspector-field');if(!field)continue;
    const icon=field.querySelector(':scope > span');icon.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><path d="'+path+'"/></svg>';

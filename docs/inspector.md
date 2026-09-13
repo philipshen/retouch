@@ -267,8 +267,8 @@ The interaction follows the pixel/percentage spacing support described in
 [Figma's typography reference](https://help.figma.com/hc/en-us/articles/360039956634-Explore-text-properties).
 The reference image was inspected against the light-theme inspector. This is
 an interaction improvement, not a claim that the whole typography panel now
-matches Figma: font-style selection, source units outside the recognized forms, and
-type-settings layout still differ.
+matches Figma: font-specific style discovery, source units outside the recognized forms,
+and type-settings layout still differ.
 
 Verification: the expanded typography-calculations workflow passed on the
 final source for HTML/React with Chromium 145 and Liquid with WebKit 26,
@@ -291,3 +291,30 @@ Final-source verification passed on Chromium 145 for HTML and React and on
 WebKit 26 for Liquid, all with terminal exit 0. The full unit suite passed
 1,159 tests. Shared selection display and arbitrary external stylesheet
 provenance remain outside this display change.
+
+### Primary named font weights (2026-09-13)
+
+The primary typography row pairs a named weight selector with font size.
+Choices use standard CSS weights from Thin (100) through Black (900), including
+Regular (400), Medium (500), Semi Bold (600), and Bold (700). Custom values stay
+visible as numbers. Custom… opens Type settings and focuses the numeric field;
+calculations, Enter to save, and Escape to cancel work there too. Changing the
+weight preserves font family, size, and slant and uses the selected breakpoint.
+
+These are CSS weight names, not an inventory of font files or a combined
+weight/slant style picker. The selected font determines which faces or variable
+weights actually render. The light-theme screenshot was inspected at
+`/private/tmp/retouch-weight-style.png`.
+
+`RT_E2E_WEIGHT_STYLE=1` verifies the primary dropdown, Custom focus without a
+source write, cancellation, custom calculation, range refusal, preservation
+of other typography properties, phone/tablet weights, and exact undo/redo.
+HTML/React passed on Chromium 145 and Liquid passed on WebKit 26, with terminal
+exit 0. The full unit suite passed 1,159 tests.
+
+Additional Chromium runs for HTML and React combined named weights with the
+existing variable-font/custom-weight workflow. Both exited 0 and retained
+537.5/725.5 fractional weights, responsive isolation, reset, and exact undo.
+The loaded variable-font canvas probe increased glyph alpha coverage from
+336,292 to 421,076 at the heavier weight. This proves a rendered variation for
+that fixture, not support for every font's named instances.
