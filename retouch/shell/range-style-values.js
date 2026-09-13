@@ -9,7 +9,8 @@
     if(property==='font-style')return value==='normal'||value==='italic';
     return property==='font-size'&&/^(?:0|[1-9]\d{0,3})(?:\.\d{1,3})?px$/.test(value)&&parseFloat(value)>=0.1&&parseFloat(value)<=1000;
   }
-  const api={valid,camel:property=>Object.hasOwn(names,property)?names[property]:null};
+  const validProperties=properties=>!!properties&&typeof properties==='object'&&!Array.isArray(properties)&&Object.keys(properties).length>0&&Object.keys(properties).length<=Object.keys(names).length&&Object.entries(properties).every(([property,value])=>valid(property,value));
+  const api={valid,validProperties,names:Object.freeze(Object.keys(names)),camel:property=>Object.hasOwn(names,property)?names[property]:null};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   if(root)root.RetouchRangeStyles=api;
 })(typeof window!=='undefined'?window:null);

@@ -123,3 +123,12 @@ test('source writes retain authored alpha while rendered comparisons use CSSOM v
  assert.equal(serializeChildren(el('P',[span]),new Map())[0].value,'#11223380');
  assert.equal(serializeChildren(el('P',[span]))[0].value,'rgba(17, 34, 51, 0.502)');
 });
+
+test('combined range serialization is canonical and retains authored alpha only for source writes',()=>{
+ const span=el('span',[text('Text')]);
+ span.style={length:2,0:'color',1:'font-weight',getPropertyValue:property=>property==='color'?'rgba(17, 34, 51, 0.502)':'537.25'};
+ span.__rtRangeStyleValues={color:{css:'rgba(17, 34, 51, 0.502)',value:'#11223380'}};
+ const root=el('p',[span]);
+ assert.deepStrictEqual(serializeChildren(root,new Map()),[{t:'styles',properties:{'font-weight':'537.25',color:'#11223380'},children:[{t:'text',value:'Text'}]}]);
+ assert.deepStrictEqual(serializeChildren(root),[{t:'styles',properties:{'font-weight':'537.25',color:'rgba(17, 34, 51, 0.502)'},children:[{t:'text',value:'Text'}]}]);
+});

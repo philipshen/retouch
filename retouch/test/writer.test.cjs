@@ -290,3 +290,12 @@ test('range color writes preserve explicit alpha and expose reusable source evid
  assert.match(read(root,'Card.tsx'),/<span style=\{\{color:"#11223380"\}\}>Color<\/span>/);
  index.scanAll();assert.deepStrictEqual(Object.values(writer.describeElement(pick(index,root,'Card.tsx','p').resolved).rangeStyleIds),[{property:'color',value:'#11223380'}]);
 });
+
+test('combined range JSX styles preserve provenance and reject dynamic or owned wrappers',()=>{
+ fs.writeFileSync(path.join(root,'CombinedRange.tsx'),`export const Text=({weight,other})=><p><span style={{fontWeight:537.25,color:"#11223380"}}>plain</span><span style={{fontWeight:weight,color:"#11223380"}}>bound</span><span style={{fontWeight:400,...other}}>spread</span><span className="owned" style={{fontWeight:400,color:"#11223380"}}>owned</span><span style={{fontWeight:400,position:"fixed"}}>unknown</span></p>`);
+ index.scanAll();const {resolved}=pick(index,root,'CombinedRange.tsx','p');
+ assert.deepStrictEqual(Object.values(writer.describeElement(resolved).rangeStyleIds),[{properties:{'font-weight':'537.25',color:'#11223380'}}]);
+ const properties={'font-size':'24px',color:'#11223380','font-weight':'537.25'};
+ assert.ok(writer.applyOp(resolved,{type:'setChildren',fileHash:resolved.hash,children:[{t:'styles',properties,children:[{t:'text',value:'Combined'}]}]}).ok);
+ assert.match(read(root,'CombinedRange.tsx'),/<span style=\{\{fontWeight:"537.25",fontSize:"24px",color:"#11223380"\}\}>Combined<\/span>/);
+});

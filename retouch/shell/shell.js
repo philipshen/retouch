@@ -658,7 +658,7 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
   };
   for (const c of el.querySelectorAll('[data-rt], [data-rt-i], [data-rt-keep]')) {
     const rangeStyle=info.rangeStyleIds?.[c.getAttribute('data-rt')];
-    if(rangeStyle){const probe=el.ownerDocument.createElement('span');probe.style.setProperty(rangeStyle.property,rangeStyle.value);const css=probe.style.getPropertyValue(rangeStyle.property);if(c.style.getPropertyValue(rangeStyle.property)===css){c.__rtRangeStyleValue=rangeStyle.value;c.__rtRangeStyleCSS=css;}}
+    if(rangeStyle){c.__rtRangeStyleValues={};for(const [property,value]of Object.entries(rangeStyle.properties||{[rangeStyle.property]:rangeStyle.value})){const probe=el.ownerDocument.createElement('span');probe.style.setProperty(property,value);const css=probe.style.getPropertyValue(property);if(c.style.getPropertyValue(property)===css){c.__rtRangeStyleValues[property]={value,css};if(property==='color'){c.__rtRangeStyleValue=value;c.__rtRangeStyleCSS=css;}}}}
 
     const cid = c.getAttribute('data-rt-keep') || c.getAttribute('data-rt') || c.getAttribute('data-rt-i');
     if (cid) editing.snapshot.set(cid, {html:c.innerHTML});
@@ -997,37 +997,36 @@ function applyTextRangeStyle(property,value){
   if(runs.some(({node})=>node.parentElement.closest('[contenteditable="false"]'))){toast('This selection includes source-owned text.','err');return;}
   const prefix=d.createRange();prefix.selectNodeContents(editing.el);prefix.setEnd(range.startContainer,range.startOffset);
   const selectionStart=prefix.toString().length,selectionEnd=selectionStart+range.toString().length;
+  const authored=wrapper=>Object.fromEntries([...wrapper.style].map(name=>{const css=wrapper.style.getPropertyValue(name),stored=wrapper.__rtRangeStyleValues?.[name];return [name,stored?.css===css?stored.value:name===wrapper.__rtRangeStyle&&wrapper.__rtRangeStyleCSS===css&&wrapper.__rtRangeStyleValue?wrapper.__rtRangeStyleValue:css];}));
   const reusable=element=>{
     if(!element||element===editing.el||element.tagName!=='SPAN'||element.childNodes.length!==1||element.firstChild.nodeType!==3)return false;
     const evidence=editing.info.rangeStyleIds?.[element.getAttribute('data-rt')];
-    return (element.__rtRangeStyle===property||evidence?.property===property)&&element.style.length===1&&element.style[0]===property&&
-      RetouchRangeStyles.valid(property,element.style.getPropertyValue(property))&&
+    return (element.__rtRangeStyle||evidence)&&RetouchRangeStyles.validProperties(authored(element))&&
       !element.getAttribute('data-rt-i')&&[...element.attributes].every(attr=>['style','data-rt','data-rt-keep','data-rt-revision','data-rt-client-revision','data-rt-client-mounted','data-rt-section','data-rt-block','data-rt-block-type','data-rt-template','data-rt-locale'].includes(attr.name));
   };
-  const assign=(wrapper,value)=>{wrapper.__rtRangeStyle=property;wrapper.style.setProperty(property,value);wrapper.__rtRangeStyleValue=value;wrapper.__rtRangeStyleCSS=wrapper.style.getPropertyValue(property);};
-  const authored=wrapper=>wrapper.__rtRangeStyleCSS===wrapper.style.getPropertyValue(property)&&wrapper.__rtRangeStyleValue?wrapper.__rtRangeStyleValue:wrapper.style.getPropertyValue(property);
-  const styled=(text,value)=>{const wrapper=d.createElement('span');assign(wrapper,value);wrapper.textContent=text;return wrapper;};
+  const assign=(wrapper,name,value)=>{wrapper.__rtRangeStyle=name;wrapper.style.setProperty(name,value);(wrapper.__rtRangeStyleValues||={})[name]={value,css:wrapper.style.getPropertyValue(name)};if(name==='color'){wrapper.__rtRangeStyleValue=value;wrapper.__rtRangeStyleCSS=wrapper.style.getPropertyValue(name);}};
+  const styled=(text,properties)=>{const wrapper=d.createElement('span');for(const [name,value]of Object.entries(properties))assign(wrapper,name,value);wrapper.textContent=text;return wrapper;};
   // Apply at text leaves, so existing child styles cannot override the choice.
   const wrappers=[];
   for(const {node,from,to}of runs){
     const parent=node.parentElement;
     if(reusable(parent)){
-      if(from===0&&to===node.textContent.length){parent.__rtReplaceRangeStyle=true;assign(parent,value);wrappers.push(parent);}
+      if(from===0&&to===node.textContent.length){parent.__rtReplaceRangeStyle=true;assign(parent,property,value);wrappers.push(parent);}
       else{
         const oldValue=authored(parent),fragment=d.createDocumentFragment(),text=node.textContent;
         if(from)fragment.append(styled(text.slice(0,from),oldValue));
-        const middle=styled(text.slice(from,to),value);fragment.append(middle);wrappers.push(middle);
+        const middle=styled(text.slice(from,to),{...oldValue,[property]:value});fragment.append(middle);wrappers.push(middle);
         if(to<text.length)fragment.append(styled(text.slice(to),oldValue));parent.replaceWith(fragment);
       }
       continue;
     }
     const part=d.createRange();part.setStart(node,from);part.setEnd(node,to);
-    const wrapper=styled('',value);part.surroundContents(wrapper);wrappers.push(wrapper);
+    const wrapper=styled('',{[property]:value});part.surroundContents(wrapper);wrappers.push(wrapper);
   }
   // Coalesce only equivalent plain neighbors touching a changed run.
   for(let wrapper of wrappers){
     if(!editing.el.contains(wrapper))continue;
-    const equivalent=other=>reusable(other)&&other.style.getPropertyValue(property)===wrapper.style.getPropertyValue(property)&&(property!=='color'||authored(other)===authored(wrapper));
+    const equivalent=other=>{if(!reusable(other))return false;const a=authored(wrapper),b=authored(other);return RetouchRangeStyles.names.every(name=>a[name]===b[name]);};
     if(equivalent(wrapper.previousSibling)){const previous=wrapper.previousSibling;previous.textContent+=wrapper.textContent;wrapper.remove();wrapper=previous;}
     while(equivalent(wrapper.nextSibling)){const next=wrapper.nextSibling;wrapper.textContent+=next.textContent;next.remove();}
     wrapper.__rtRangeStyle=property;wrapper.__rtReplaceRangeStyle=true;

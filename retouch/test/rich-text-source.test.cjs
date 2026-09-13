@@ -53,3 +53,9 @@ test('range font family quotes are escaped in HTML source',()=>{
  const children=[{t:'style',property:'font-family',value:'"Page Face", serif',children:[{t:'text',value:'Text'}]}];
  assert.equal(rewrite('Text','source',children),'<span style="font-family: &quot;Page Face&quot;, serif;">Text</span>');
 });
+
+test('combined range styles write one escaped span and reject invalid properties',()=>{
+ const node={t:'styles',properties:{color:'#11223380','font-size':'24px','font-family':'"Page Face", serif','font-weight':'537.25'},children:[{t:'text',value:'Text'}]};
+ assert.equal(rewrite('Text','source',[node]),'<span style="font-family: &quot;Page Face&quot;, serif; font-weight: 537.25; font-size: 24px; color: #11223380;">Text</span>');
+ for(const properties of [{},[],{color:'#123456',position:'fixed'},{'font-weight':'400; color:red'},JSON.parse('{"__proto__":"x"}')])assert.throws(()=>rewrite('Text','source',[{...node,properties}]),/Unsupported text range style/);
+});

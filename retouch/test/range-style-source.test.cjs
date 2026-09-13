@@ -11,3 +11,10 @@ for(const kind of ['html','liquid'])test(kind+' range style evidence excludes at
   const element=adapter.collect(markup,'test.liquid').elements.find(el=>el.tag==='span');assert.equal(proof.style(element,markup,kind),null);
  }
 });
+
+for(const kind of ['html','liquid'])test(kind+' recognizes literal composite styles but excludes unknown properties and duplicates',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs');
+ for(const [style,expected]of [['font-size:24px;color:#11223380',{properties:{'font-size':'24px',color:'#11223380'}}],['font-size:24px;position:fixed',null],['font-size:24px;font-size:32px',null]]){
+  const source='<span style="'+style+'">Text</span>',element=adapter.collect(source,'test.'+kind).elements.find(el=>el.tag==='span');assert.deepEqual(proof.style(element,source,kind),expected);
+ }
+});

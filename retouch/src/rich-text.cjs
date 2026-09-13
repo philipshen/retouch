@@ -13,8 +13,8 @@ function validateChildrenTree(children, depth) {
       if (!WRAP_TAGS.has(c.tag)) return `Formatting tag not allowed: ${String(c.tag)}`;
       const err = validateChildrenTree(c.children, depth + 1);
       if (err) return err;
-    } else if (c.t === 'style') {
-      if (!rangeStyles.valid(c.property,c.value)) return 'Unsupported text range style.';
+    } else if (c.t === 'style' || c.t === 'styles') {
+      if (!(c.t==='styles'?rangeStyles.validProperties(c.properties):rangeStyles.valid(c.property,c.value))) return 'Unsupported text range style.';
       const err = validateChildrenTree(c.children, depth + 1);
       if (err) return err;
     } else if (c.t === 'keep') {
@@ -32,8 +32,11 @@ function validateChildrenTree(children, depth) {
 
 
 function styleMarkup(node,content,jsx=false) {
-  if(!rangeStyles.valid(node.property,node.value))throw new Error('Unsupported text range style.');
-  const attribute=jsx?'style={{'+rangeStyles.camel(node.property)+':'+JSON.stringify(node.value)+'}}':'style="'+node.property+': '+node.value.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+';"';
+  const properties=node.t==='styles'?node.properties:{[node.property]:node.value};
+  if(!rangeStyles.validProperties(properties))throw new Error('Unsupported text range style.');
+  const entries=rangeStyles.names.filter(property=>Object.hasOwn(properties,property)).map(property=>[property,properties[property]]);
+  const attribute=jsx?'style={{'+entries.map(([property,value])=>rangeStyles.camel(property)+':'+JSON.stringify(value)).join(',')+'}}':'style="'+entries.map(([property,value])=>property+': '+value+';').join(' ').replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'"';
   return '<span '+attribute+'>'+content+'</span>';
 }
+
 module.exports={validateChildrenTree,styleMarkup};

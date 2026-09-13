@@ -259,7 +259,7 @@ function planOp(resolved, op) {
       children
         .map((c) => {
           if (c.t === 'text') return escapeJsxText(c.value);
-          if (c.t === 'style') return styleMarkup(c,build(c.children),true);
+          if (c.t === 'style' || c.t === 'styles') return styleMarkup(c,build(c.children),true);
           if (c.t === 'wrap') return `<${c.tag}>${build(c.children)}</${c.tag}>`;
           const kept = descendants.get(c.id);
           if (!kept) {

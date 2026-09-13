@@ -923,3 +923,38 @@ browser capture is `/private/tmp/retouch-range-family.png`.
 General nested-style normalization, responsive range overrides, arbitrary axes,
 and remaining Figma typography parity are incomplete. The latest desktop archive
 still predates these range-editor changes and needs fresh build/native evidence.
+
+
+### Combined selected-text styles (2026-09-13)
+
+Font family, size, weight, style, and color now compose on a single plain text
+span. Adding a different property to a reusable run updates its style set instead
+of adding another wrapper. A partial edit copies the full style set to the
+before/selected/after runs; equivalent adjacent sets merge again. Every property
+is retained when one changes, including the exact authored alpha value of colors.
+
+The operation tree supports a validated `styles` node alongside the existing
+single-property `style` node. HTML, React, and Liquid writers emit one span with
+properties in a canonical order. DOM serialization uses that same order for
+post-write comparisons, while source writes preserve authored values and compiled
+render checks use CSSOM values. Source evidence permits only literal supported
+style properties on plain text spans. Dynamic JSX values/spreads, extra source
+attributes, unknown CSS properties, and duplicate declarations are excluded from
+wrapper replacement.
+
+Validation: 1,187 unit tests passed in
+`/private/tmp/retouch-combined-ranges-units-verified.log`. New tests cover composite
+markup escaping, rejected property sets, canonical serialization, alpha fidelity,
+and source provenance for JSX/HTML/Liquid. Browser checks on HTML/React Chromium
+145 and Liquid WebKit 26.0 apply all five properties to one run, repeatedly update
+it, split and merge a middle character, retain all other styles, and verify exact
+source undo/redo. Color-picker, font-browser, and weight regressions also pass.
+Logs: `/private/tmp/retouch-combined-ranges-html-verified.log`,
+`/private/tmp/retouch-combined-ranges-react.log`, and
+`/private/tmp/retouch-combined-ranges-liquid.log`. The inspected combined toolbar
+capture is `/private/tmp/retouch-combined-ranges.png`.
+
+Existing nested or attributed source structures are preserved; this does not yet
+flatten arbitrary legacy rich-text trees. Responsive range styles, remaining
+Figma typography features, and fresh desktop packaging/native verification remain
+unfinished.

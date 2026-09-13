@@ -2,9 +2,19 @@
 // Source evidence for replacing a plain range-style wrapper. Runtime styles
 // alone cannot distinguish literal declarations from bindings or spread props.
 const rangeStyles=require('../shell/range-style-values.js');
+function describeProperties(properties){
+ if(!rangeStyles.validProperties(properties))return null;
+ const entries=Object.entries(properties);return entries.length===1?{property:entries[0][0],value:entries[0][1]}:{properties};
+}
 function css(value){
- const match=typeof value==='string'&&value.match(/^\s*(font-family|font-weight|font-style|font-size|color)\s*:\s*([^;]+?)\s*;?\s*$/);
- return match&&rangeStyles.valid(match[1],match[2])?{property:match[1],value:match[2]}:null;
+ if(typeof value!=='string')return null;
+ const properties={};
+ for(const declaration of value.split(';').filter(part=>part.trim())){
+  const match=declaration.match(/^\s*([a-z-]+)\s*:\s*(.+?)\s*$/);
+  if(!match||Object.hasOwn(properties,match[1])||!rangeStyles.valid(match[1],match[2]))return null;
+  properties[match[1]]=match[2];
+ }
+ return describeProperties(properties);
 }
 function style(element,source,kind){
  if(kind==='react'){
@@ -12,11 +22,16 @@ function style(element,source,kind){
   if(opening?.name.type!=='JSXIdentifier'||opening.name.name!=='span'||!node.closingElement||!node.children.every(child=>child.type==='JSXText'))return null;
   if(opening.attributes.length!==1)return null;
   const attr=opening.attributes[0],expression=attr.value?.expression;
-  if(attr.type!=='JSXAttribute'||attr.name.name!=='style'||expression?.type!=='ObjectExpression'||expression.properties.length!==1)return null;
-  const item=expression.properties[0];if(item.type!=='ObjectProperty'||item.computed||item.shorthand)return null;
-  const name=item.key.type==='Identifier'?item.key.name:item.key.value,property=name==='fontFamily'?'font-family':name==='fontWeight'?'font-weight':name==='fontStyle'?'font-style':name==='fontSize'?'font-size':name==='color'?'color':null;
-  const value=item.value.type==='StringLiteral'||item.value.type==='NumericLiteral'?String(item.value.value):null;
-  return property&&rangeStyles.valid(property,value)?{property,value}:null;
+  if(attr.type!=='JSXAttribute'||attr.name.name!=='style'||expression?.type!=='ObjectExpression'||!expression.properties.length)return null;
+  const properties={};
+  for(const item of expression.properties){
+   if(item.type!=='ObjectProperty'||item.computed||item.shorthand)return null;
+   const name=item.key.type==='Identifier'?item.key.name:item.key.value,property=rangeStyles.names.find(property=>rangeStyles.camel(property)===name);
+   const value=item.value.type==='StringLiteral'||item.value.type==='NumericLiteral'?String(item.value.value):null;
+   if(!property||Object.hasOwn(properties,property)||!rangeStyles.valid(property,value))return null;
+   properties[property]=value;
+  }
+  return describeProperties(properties);
  }
  if(element.tag!=='span')return null;
  if(kind==='html'){

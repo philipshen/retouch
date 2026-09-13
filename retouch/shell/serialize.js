@@ -31,12 +31,18 @@
       }
       // Only validated range styles can create new styled spans.
       // Existing attributed nodes still use the source-preserving keep path above.
-      var property = n.__rtRangeStyle || (n.tagName === 'SPAN' && n.style && n.style.length === 1 ? n.style[0] : null);
-      if (n.tagName === 'SPAN' && property && n.style) {
-        var value = n.style.getPropertyValue(property);
-        if(snapshot && n.__rtRangeStyleCSS === value && n.__rtRangeStyleValue) value = n.__rtRangeStyleValue;
-        if (rangeStyles.valid(property,value)) {
-          out.push({t:'style',property:property,value:value,children:serializeChildren(n,snapshot)});
+      if (n.tagName === 'SPAN' && n.style) {
+        var properties={},styleNames=n.style.length?Array.from({length:n.style.length},function(_,index){return n.style[index];}):n.__rtRangeStyle?[n.__rtRangeStyle]:[];
+        for(var property of styleNames){
+          var value=n.style.getPropertyValue(property),authored=n.__rtRangeStyleValues&&n.__rtRangeStyleValues[property];
+          if(snapshot&&authored&&authored.css===value)value=authored.value;
+          else if(snapshot&&property===n.__rtRangeStyle&&n.__rtRangeStyleCSS===value&&n.__rtRangeStyleValue)value=n.__rtRangeStyleValue;
+          properties[property]=value;
+        }
+        if(rangeStyles.validProperties(properties)){
+          properties=Object.fromEntries(rangeStyles.names.filter(function(name){return Object.prototype.hasOwnProperty.call(properties,name);}).map(function(name){return [name,properties[name]];}));
+          var entries=Object.entries(properties),children=serializeChildren(n,snapshot);
+          out.push(entries.length===1?{t:'style',property:entries[0][0],value:entries[0][1],children:children}:{t:'styles',properties:properties,children:children});
           continue;
         }
       }
