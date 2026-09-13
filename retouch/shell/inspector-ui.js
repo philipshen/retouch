@@ -188,7 +188,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   for(const section of panel.querySelectorAll('.inspector-section')){
    const name=title(section);section.dataset.section=name.toLowerCase().replace(/\s+/g,'-');
    if(name==='Stroke'){
-    const rows=['top','right','bottom','left'].map(side=>section.querySelector('[aria-label="Border '+side+' width (CSS)"], [aria-label="Border '+side+' width (px)"]')?.closest('.inspector-field'));
+    const rows=['top','right','bottom','left'].flatMap(side=>['width','style'].map(property=>section.querySelector('[aria-label="Border '+side+' '+property+' (CSS)"], [aria-label="Border '+side+' '+property+(property==='width'?' (px)':'')+'"]')?.closest('.inspector-field')));
     if(rows.every(Boolean)){const edges=disclosure('Individual edges','border-edges');edges.classList.add('border-edges');for(const row of rows){const reset=row.nextElementSibling;edges.append(row);if(reset?.classList.contains('control-button'))edges.append(reset);row.querySelector(':scope > span').textContent=fieldControl(row).getAttribute('aria-label').split(' ')[1].replace(/^./,c=>c.toUpperCase());}section.append(edges);}
    }
    if(name==='Fill gradient'||name==='Stroke gradient'){
@@ -284,6 +284,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     const label=button.textContent;button.setAttribute('aria-label',label);button.title=label;button.textContent='↺';button.classList.add('property-reset');const previous=button.previousElementSibling;
     if(previous?.classList.contains('inspector-field')){const row=document.createElement('div');row.className='property-row';previous.parentElement.insertBefore(row,previous);row.append(previous,button);}
    }
+   if(name==='Stroke'){const edges=section.querySelector('.border-edges');if(edges)for(const side of ['top','right','bottom','left']){const width=edges.querySelector('[aria-label="Border '+side+' width (CSS)"], [aria-label="Border '+side+' width (px)"]'),style=edges.querySelector('[aria-label="Border '+side+' style (CSS)"], [aria-label="Border '+side+' style"]');if(width&&style){style.closest('.inspector-field').querySelector(':scope > span').textContent='';pair(edges,[width.getAttribute('aria-label'),style.getAttribute('aria-label')]);}}}
    if(name==='Stroke'&&section.querySelector('[aria-label="SVG stroke width"]')){
     const labels={'SVG stroke width':'Weight','SVG line ends':'Caps','SVG line joins':'Join','SVG dash pattern':'Dashes','SVG dash offset':'Offset','SVG miter limit':'Miter limit','SVG stroke scaling':'Mode'},settings=disclosure('Stroke settings','svg-stroke-settings');
     for(const [label,short]of Object.entries(labels)){const input=section.querySelector('[aria-label="'+label+'"]'),field=input?.closest('.inspector-field');if(!field)continue;field.querySelector(':scope > span').textContent=short;if(label!=='SVG stroke width')settings.append(field.closest('.property-row')||field);if(label==='SVG stroke scaling')for(const option of input.options)option.textContent=option.value==='none'?'Scale':option.value==='non-scaling-stroke'?'Fixed':option.value;}

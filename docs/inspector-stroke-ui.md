@@ -221,3 +221,23 @@ Validation: 1,156 unit tests in
 `/private/tmp/retouch-border-visibility-units-final.log`; HTML Chromium in
 `/private/tmp/retouch-border-visibility-html-final.log`; React Chromium and
 Liquid WebKit in `/private/tmp/retouch-border-visibility-{react,liquid}-verified.log`.
+
+## Individual border styles and mixed values
+
+Individual edges now pairs each width with a style selector and separate reset
+buttons. HTML writes style longhands; React/Liquid use explicit CSS-property
+utilities. The all-edge Style selector shows a disabled Mixed placeholder when
+the computed edge styles differ, including when an authored all-edge style has
+been overridden on one edge. Choosing one style sets all edges; resetting an
+individual override reveals the broader style again.
+
+The border-visibility browser workflow now also covers a tablet-only right-edge
+style, phone fallback, scoped reset, uniform-to-mixed-to-uniform transitions,
+and exact source Undo/Redo across width and style changes. The light-theme
+layout was inspected in `/private/tmp/retouch-edge-styles.png`.
+
+Validation: 1,156 unit tests in `/private/tmp/retouch-edge-styles-units-final.log`;
+HTML/React Chromium and Liquid WebKit in
+`/private/tmp/retouch-edge-styles-{html,react,liquid}-final.log`.
+This changes CSS box-edge controls; vector stroke alignment, full Figma UI
+parity and a refreshed desktop archive remain unfinished.

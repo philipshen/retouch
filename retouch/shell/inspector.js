@@ -587,8 +587,11 @@
         save(next);
       });numericPreview(input,el,property);
       const reset=button('Reset '+name.toLowerCase(),()=>save(borderClasses(info.className,'width',null,'',side)));reset.disabled=borderClasses(info.className,'width',null,'',side)===info.className;sec.append(reset);
+      const style=css.getPropertyValue('border-'+side+'-style');select(sec,'Border '+side+' style',[...new Set([style,'solid','dashed','dotted','double','none'])].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),style,v=>save(borderClasses(info.className,'style',v,info.anchorInheritedClasses,side)));
+      const resetStyle=button('Reset border '+side+' style',()=>save(borderClasses(info.className,'style',null,'',side)));resetStyle.disabled=borderClasses(info.className,'style',null,'',side)===info.className;sec.append(resetStyle);
     }
-    select(sec,'Border style',['solid','dashed','dotted','double','none'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.borderTopStyle,v=>save(borderClasses(info.className,'style',v,info.anchorInheritedClasses)));
+    const styles=['top','right','bottom','left'].map(side=>css.getPropertyValue('border-'+side+'-style')),mixedStyles=styles.some(value=>value!==styles[0]);
+    const styleControl=select(sec,'Border style',[...(mixedStyles?[['','Mixed']]:[]),...[...new Set([...styles,'solid','dashed','dotted','double','none'])].map(v=>[v,v[0].toUpperCase()+v.slice(1)])],mixedStyles?'':styles[0],v=>{if(v)save(borderClasses(info.className,'style',v,info.anchorInheritedClasses));});if(mixedStyles)styleControl.options[0].disabled=true;
     const resetStyle=button('Reset border style',()=>save(borderClasses(info.className,'style',null)));resetStyle.disabled=borderClasses(info.className,'style',null)===info.className;sec.append(resetStyle);
     const borderColor=document.createElement('input');borderColor.type='color';borderColor.value='#000000';
     try {const c=colorHex(css.borderTopColor,el.ownerDocument);if(c)borderColor.value=c;} catch {}

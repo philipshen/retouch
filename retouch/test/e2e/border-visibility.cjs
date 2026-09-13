@@ -13,7 +13,16 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  await screen.focus();await screen.selectOption('768x1024');await settled();await scope.selectOption(kind==='html'?'min-[768px]:':'md:');await settled();await write('left',9);await check([[7,'solid'],[3,'dashed'],[3,'double'],[9,'solid']]);
  await screen.focus();await screen.selectOption('390x844');await settled();await check([[7,'solid'],[3,'dashed'],[3,'double'],[0,'none']]);await scope.selectOption('');await settled();
  await write('',4);await check([[4,'solid'],[4,'dashed'],[4,'double'],[4,'solid']]);
- await page.getByLabel('Border style'+(kind==='html'?' (CSS)':''),{exact:true}).selectOption('dotted');await settled();await record();await check([[4,'dotted'],[4,'dotted'],[4,'dotted'],[4,'dotted']]);
+ const allStyle=page.getByLabel('Border style'+(kind==='html'?' (CSS)':''),{exact:true}),rightStyle=page.getByLabel('Border right style'+(kind==='html'?' (CSS)':''),{exact:true});assert.equal(await allStyle.inputValue(),'');assert.equal(await allStyle.locator('option:checked').textContent(),'Mixed');
+ await screen.focus();await screen.selectOption('768x1024');await settled();await scope.selectOption(kind==='html'?'min-[768px]:':'md:');await settled();
+ await rightStyle.selectOption('dotted');await settled();await record();await check([[4,'solid'],[4,'dotted'],[4,'double'],[9,'solid']]);
+ if(process.env.RT_E2E_EDGE_STYLES_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_EDGE_STYLES_SCREENSHOT});
+ await screen.focus();await screen.selectOption('390x844');await settled();await check([[4,'solid'],[4,'dashed'],[4,'double'],[4,'solid']]);await screen.focus();await screen.selectOption('768x1024');await settled();
+ await page.getByRole('button',{name:'Reset border right style',exact:true}).click();await settled();await record();await check([[4,'solid'],[4,'dashed'],[4,'double'],[9,'solid']]);
+ await screen.focus();await screen.selectOption('390x844');await settled();await scope.selectOption('');await settled();
+ await page.getByLabel('Border style'+(kind==='html'?' (CSS)':''),{exact:true}).selectOption('dotted');await settled();await record();await check([[4,'dotted'],[4,'dotted'],[4,'dotted'],[4,'dotted']]);assert.equal(await allStyle.inputValue(),'dotted');
+ await rightStyle.selectOption('double');await settled();await record();await check([[4,'dotted'],[4,'double'],[4,'dotted'],[4,'dotted']]);assert.equal(await allStyle.inputValue(),'');assert.equal(await allStyle.locator('option:checked').textContent(),'Mixed');
+ await page.getByRole('button',{name:'Reset border right style',exact:true}).click();await settled();await record();await check([[4,'dotted'],[4,'dotted'],[4,'dotted'],[4,'dotted']]);assert.equal(await allStyle.inputValue(),'dotted');
  for(let i=states.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states[i]);}await check(original);
  for(let i=1;i<states.length;i++){await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===states[i]);}await check([[4,'dotted'],[4,'dotted'],[4,'dotted'],[4,'dotted']]);
  for(let i=states.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states[i]);}await check(original);
