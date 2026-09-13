@@ -30,3 +30,9 @@ test('Vector dimensions include authored scale, preserve rotation and lock propo
  for(const value of [0,-1,Infinity,100001])assert.equal(A.resizeDimension(m,g,'width',value),null);
  assert.equal(A.resizeDimension(m,{...g,height:0},'height',10,true),null);
 });
+test('Vector position and rotation preserve center, scale, skew and reflection',()=>{
+ const g={x:10,y:20,width:60,height:40},point=(m,x,y)=>[m[0]*x+m[2]*y+m[4],m[1]*x+m[3]*y+m[5]];
+ for(const source of ['translate(17 -9) rotate(10) scale(2 3)','rotate(-40) skewX(15) scale(-2 3)']){const m=A.parse(source),rotated=A.setPose(m,g,'rotation',55),size=A.dimensions(m,g),after=A.dimensions(rotated,g);assert.ok(Math.abs(A.pose(rotated,g).rotation-55)<1e-8);for(const key of ['width','height'])assert.ok(Math.abs(size[key]-after[key])<1e-8);point(m,40,40).forEach((v,i)=>assert.ok(Math.abs(v-point(rotated,40,40)[i])<1e-8));assert.ok(Math.abs((m[0]*m[3]-m[1]*m[2])-(rotated[0]*rotated[3]-rotated[1]*rotated[2]))<1e-8);
+ const translated=A.setPose(m,g,'x',-99);assert.ok(Math.abs(A.pose(translated,g).x+99)<1e-8);assert.equal(A.pose(translated,g).y,A.pose(m,g).y);assert.deepEqual(translated.slice(0,4),m.slice(0,4));}
+ for(const [axis,value]of [['x',Infinity],['y',100001],['rotation',361],['unknown',0]])assert.equal(A.setPose(A.identity(),g,axis,value),null);
+});

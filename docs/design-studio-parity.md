@@ -13656,3 +13656,31 @@ Final inspector presentation and lock persistence were reverified in Liquid;
 No desktop rebuild or push. Full Figma/any-site parity remains unproven; notably
 SVG position/rotation inspector consistency, multi-vector bounds editing, flips,
 and screen-specific SVG geometry authoring need further work.
+
+## 2026-09-13 — SVG position and rotation consistency
+
+The primary Position section now shows the transformed vector origin in its
+SVG parent's coordinates and the SVG matrix rotation, instead of a CSS rotation
+that could incorrectly show zero. X/Y edits translate one parent axis. Rotation
+edits rotate around the transformed center, preserving axis lengths, skew and
+reflection. These edits use setSVGTransform and its exact source history.
+Invalid inputs and stale/externally controlled geometry remain guarded.
+
+CSS position/rotation controls remain in More properties. Generic CSS rotation
+handles are suppressed for vectors with an SVG transform descriptor; they do
+not represent the new numeric SVG operation. Direct SVG rotation handles remain
+an explicit interaction gap, along with multi-selection transforms and flips.
+These SVG edits are shared across screen sizes, not responsive CSS overrides.
+
+Validation: 1,010 unit tests passed, including skewed/reflected matrix center,
+scale and determinant preservation. HTML/WebKit 26, React/Chromium and
+Liquid/Chromium shared browser workflows passed with terminal zero exits.
+Coverage adds 10-to-40-degree rotation with a fixed screen center and unchanged
+60x40 dimensions, independent X=77 and Y=-20 edits, invalid angle rejection,
+and exact three-step Undo plus Redo. Existing 13-vector resize, numeric size,
+proportion lock, concurrent cancellation and CSS ownership checks also passed.
+Logs: /private/tmp/retouch-svg-pose-{units,html,react,liquid}.log.
+The Liquid inspector screenshot was visually inspected at
+/private/tmp/retouch-svg-pose-liquid.png. The final cosmetic label change only
+capitalizes Rotation. No desktop build or push was performed. Full Figma Design
+and arbitrary-site parity remain incomplete.

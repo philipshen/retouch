@@ -25,5 +25,11 @@
  function dimensions(matrix,g){if(!valid(matrix)||!g)return null;const sx=Math.hypot(matrix[0],matrix[1]),sy=Math.hypot(matrix[2],matrix[3]);return sx>1e-9&&sy>1e-9?{width:g.width*sx,height:g.height*sy,sx,sy}:null;}
  function resizeDimension(matrix,g,axis,value,locked=false){const size=dimensions(matrix,g);if(!size||!['width','height'].includes(axis)||!Number.isFinite(value)||value<=0||value>100000)return null;const other=axis==='width'?'height':'width',after={...g,[axis]:value/size[axis==='width'?'sx':'sy']};if(locked){if(!size[axis]||!size[other])return null;after[other]=g[other]*value/size[axis];}return resize(matrix,g,after);}
 
- const api={identity,valid,multiply,parse,format,equivalent,resize,dimensions,resizeDimension};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGAffine=api;
+ function pose(matrix,g){if(!dimensions(matrix,g))return null;return {x:matrix[0]*g.x+matrix[2]*g.y+matrix[4],y:matrix[1]*g.x+matrix[3]*g.y+matrix[5],rotation:Math.atan2(matrix[1],matrix[0])*180/Math.PI};}
+ function setPose(matrix,g,axis,value){const before=pose(matrix,g);if(!before||!['x','y','rotation'].includes(axis)||!Number.isFinite(value)||Math.abs(value)>(axis==='rotation'?360:100000))return null;let result;
+  if(axis==='rotation'){const x=g.x+g.width/2,y=g.y+g.height/2,cx=matrix[0]*x+matrix[2]*y+matrix[4],cy=matrix[1]*x+matrix[3]*y+matrix[5],angle=(value-before.rotation)*Math.PI/180,c=Math.cos(angle),s=Math.sin(angle);result=multiply([c,s,-s,c,cx-c*cx+s*cy,cy-s*cx-c*cy],matrix);}
+  else{result=matrix.slice();result[axis==='x'?4:5]+=value-before[axis];}return valid(result)?result:null;
+ }
+
+ const api={identity,valid,multiply,parse,format,equivalent,resize,dimensions,resizeDimension,pose,setPose};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGAffine=api;
 })(typeof window==='object'?window:globalThis);
