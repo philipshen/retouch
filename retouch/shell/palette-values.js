@@ -9,6 +9,17 @@
   if(match){const parts=match[2].trim().split(/\s*\/\s*/),channels=parts[0].split(/\s+/),alpha=parts[1]??'1',values=[...channels,alpha];if(parts.length<=2&&channels.length===3&&values.every(v=>/^(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(v)&&Number.isFinite(Number(v))&&Number(v)>=0&&Number(v)<=1)){const numbers=values.map(Number);const space=match[1].toLowerCase();return {value:space==='srgb'?srgb(numbers.slice(0,3),numbers[3]):p3(numbers.slice(0,3),numbers[3]),space,channels:numbers.slice(0,3),alpha:numbers[3]};}}
   throw Error('Enter a hex color, color(srgb r g b / alpha) or color(display-p3 r g b / alpha), with channels from 0 to 1.');
  }
+ function fromComputed(value){
+  const refuse=()=>{throw Error('This paint is not a supported solid color. Enter hex or Display P3 explicitly.');};
+  if(typeof value!=='string')return refuse();value=value.trim();if(value.startsWith('#')||value.startsWith('color(display-p3 '))return parse(value).value;if(value==='transparent')return '#00000000';
+  const rgb=/^rgba?\(([^()]+)\)$/.exec(value),srgbMatch=/^color\(srgb\s+([^()]+)\)$/.exec(value);if(!rgb&&!srgbMatch)return refuse();
+  const raw=(rgb||srgbMatch)[1];let channels,alpha='1';
+  if(raw.includes(',')){if(!rgb||raw.includes('/'))return refuse();channels=raw.split(',').map(part=>part.trim());if(channels.length===4)alpha=channels.pop();}
+  else {const parts=raw.split('/');if(parts.length>2)return refuse();channels=parts[0].trim().split(/\s+/);if(parts.length===2)alpha=parts[1].trim();}
+  if(channels.length!==3)return refuse();
+  const number=(part,max)=>{if(!/^(?:\d+(?:\.\d*)?|\.\d+)%?$/.test(part))return refuse();const n=parseFloat(part),limit=part.endsWith('%')?100:max;if(n>limit)return refuse();return n/limit;};
+  return srgb(channels.map(part=>number(part,srgbMatch?1:255)),number(alpha,1));
+ }
  function srgb(channels,alpha){const values=[...channels,alpha];return values.every(n=>Math.abs(n*255-Math.round(n*255))<1e-8)?'#'+values.map(n=>Math.round(n*255).toString(16).padStart(2,'0')).join(''):'color(srgb '+channels.join(' ')+' / '+alpha+')';}
  function p3(channels,alpha){return 'color(display-p3 '+channels.join(' ')+' / '+alpha+')';}
  function valid(value){try{parse(value);return true;}catch{return false;}}
@@ -25,5 +36,5 @@
   const bounded=channels.map(n=>Math.max(0,Math.min(1,n)));
   return {value:space==='display-p3'?p3(bounded.map(n=>Number(n.toFixed(12))),original.alpha):srgb(bounded.map(n=>Math.round(n*255)/255),original.alpha),clipped};
  }
- const api={parse,p3,srgb,valid,convert};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPaletteValues=api;
+ const api={parse,p3,srgb,valid,convert,fromComputed};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPaletteValues=api;
 })(typeof window==='object'?window:globalThis);

@@ -1012,3 +1012,5 @@ html, body { overflow:clip; }
 
 .inline-format-toolbar input { width:68px;height:30px;padding:0 6px;background:var(--control);color:var(--ink);border:1px solid transparent;border-radius:5px;font:inherit;font-size:11px; }
 .inline-format-toolbar input[aria-invalid="true"] { border-color:var(--danger); }
+
+.inline-format-toolbar input.range-color { width:100px;border-left-width:10px;border-left-style:solid; }

@@ -286,7 +286,7 @@ function hookFrame(d, w) {
   d.addEventListener('focusout', (e) => {
     if (editing && e.target === editing.el) {
       const current=editing;
-      requestAnimationFrame(()=>{if(editing===current&&!document.activeElement?.closest('.inline-format-toolbar'))commitInlineEdit();});return;
+      requestAnimationFrame(()=>{if(editing===current&&!document.activeElement?.closest('.inline-format-toolbar')&&!(document.activeElement===iframe&&current.el.contains(d.activeElement)))commitInlineEdit();});return;
     }
     suppress(e);
   }, true);
@@ -657,6 +657,9 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
     originalTree: null,
   };
   for (const c of el.querySelectorAll('[data-rt], [data-rt-i], [data-rt-keep]')) {
+    const rangeStyle=info.rangeStyleIds?.[c.getAttribute('data-rt')];
+    if(rangeStyle){const probe=el.ownerDocument.createElement('span');probe.style.setProperty(rangeStyle.property,rangeStyle.value);const css=probe.style.getPropertyValue(rangeStyle.property);if(c.style.getPropertyValue(rangeStyle.property)===css){c.__rtRangeStyleValue=rangeStyle.value;c.__rtRangeStyleCSS=css;}}
+
     const cid = c.getAttribute('data-rt-keep') || c.getAttribute('data-rt') || c.getAttribute('data-rt-i');
     if (cid) editing.snapshot.set(cid, {html:c.innerHTML});
   }
@@ -856,27 +859,32 @@ function showInlineFormatToolbar(){
     field.onchange=()=>{if(savedRange&&editing){const selection=d.getSelection();selection.removeAllRanges();selection.addRange(savedRange.cloneRange());applyTextRangeStyle(property,field.value);update();}};
     fields.push({field,property});bar.append(field);
   }
-  const size=document.createElement('input');size.type='number';size.min='0.1';size.max='1000';size.step='0.1';size.placeholder='Size';size.setAttribute('aria-label','Selected text size (px)');size.title='Selected text size (px)';
-  const applySize=()=>{
-    const value=size.value+'px';if(!RetouchRangeStyles.valid('font-size',value)){size.setAttribute('aria-invalid','true');return false;}
-    if(!savedRange||!editing)return false;
-    size.removeAttribute('aria-invalid');const selection=d.getSelection();selection.removeAllRanges();selection.addRange(savedRange.cloneRange());applyTextRangeStyle('font-size',value);update();return true;
+  const rangeInput=(property,label,configure,normalize,display)=>{
+    const field=document.createElement('input');field.setAttribute('aria-label',label);field.title=label;configure(field);
+    const apply=()=>{
+      let value;try{value=normalize(field.value);}catch{field.setAttribute('aria-invalid','true');return false;}
+      if(!RetouchRangeStyles.valid(property,value)){field.setAttribute('aria-invalid','true');return false;}
+      if(!savedRange||!editing)return false;
+      field.removeAttribute('aria-invalid');const selection=d.getSelection();selection.removeAllRanges();selection.addRange(savedRange.cloneRange());applyTextRangeStyle(property,value);update();return true;
+    };
+    let beforeFocus='',cancel=false;field.onfocus=()=>{beforeFocus=field.value;};field.onchange=()=>{if(!cancel)apply();};
+    field.onkeydown=event=>{
+      if(event.key==='Enter'){event.preventDefault();event.stopPropagation();if(apply())void commitInlineEdit();}
+      if(event.key==='Escape'){event.preventDefault();event.stopPropagation();cancel=true;field.value=beforeFocus;field.blur();cancel=false;field.removeAttribute('aria-invalid');editing?.el.focus();update();}
+    };
+    fields.push({field,property,display});bar.append(field);
   };
-  let sizeBeforeFocus='',cancelSizeChange=false;size.onfocus=()=>{sizeBeforeFocus=size.value;};
-  size.onchange=()=>{if(!cancelSizeChange)applySize();};size.onkeydown=event=>{
-    if(event.key==='Enter'){event.preventDefault();event.stopPropagation();if(applySize())void commitInlineEdit();}
-    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();cancelSizeChange=true;size.value=sizeBeforeFocus;size.blur();cancelSizeChange=false;size.removeAttribute('aria-invalid');editing?.el.focus();update();}
-  };
-  fields.push({field:size,property:'font-size',numeric:true});bar.append(size);
+  rangeInput('font-size','Selected text size (px)',field=>{field.type='number';field.min='0.1';field.max='1000';field.step='0.1';field.placeholder='Size';},value=>value+'px',value=>String(Math.round(parseFloat(value)*1000)/1000));
+  rangeInput('color','Selected text color',field=>{field.type='text';field.spellcheck=false;field.placeholder='Color';field.className='range-color';field.title='Selected text color: hex, RGB, sRGB or Display P3';},value=>RetouchPaletteValues.fromComputed(/^(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})$/i.test(value.trim())?'#'+value.trim():value.trim()),value=>RetouchPaletteValues.fromComputed(value));
   const update=()=>{
     const selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null,valid=editing&&range&&!range.collapsed&&editing.el.contains(range.startContainer)&&editing.el.contains(range.endContainer);
     for(const control of bar.children)control.disabled=!valid;
     if(!valid)return;savedRange=range.cloneRange();
     const values=new Map(fields.map(({property})=>[property,new Set()])),walker=d.createTreeWalker(editing.el,NodeFilter.SHOW_TEXT);
-    while(walker.nextNode()){const node=walker.currentNode;if(!node.textContent||!range.intersectsNode(node))continue;const style=d.defaultView.getComputedStyle(node.parentElement);for(const [property,set]of values)set.add(style.getPropertyValue(property));}
-    for(const {field,property,numeric}of fields){
+    while(walker.nextNode()){const node=walker.currentNode;if(!node.textContent||!range.intersectsNode(node))continue;const style=d.defaultView.getComputedStyle(node.parentElement);for(const [property,set]of values){const css=style.getPropertyValue(property),parent=node.parentElement;set.add(property==='color'&&parent.__rtRangeStyleCSS===css&&parent.__rtRangeStyleValue?parent.__rtRangeStyleValue:css);}}
+    for(const {field,property,display}of fields){
       const set=values.get(property),value=set.size===1?[...set][0]:'';
-      if(numeric){if(document.activeElement!==field)field.value=value?String(Math.round(parseFloat(value)*1000)/1000):'';}
+      if(display){if(document.activeElement!==field){try{field.value=value?display(value):'';}catch{field.value='';}}if(property==='color')field.style.borderLeftColor=value||'transparent';}
       else field.value=[...field.options].some(option=>option.value===value)?value:'';
     }
   };
@@ -905,15 +913,17 @@ function applyTextRangeStyle(property,value){
       RetouchRangeStyles.valid(property,element.style.getPropertyValue(property))&&
       !element.getAttribute('data-rt-i')&&[...element.attributes].every(attr=>['style','data-rt','data-rt-keep','data-rt-revision','data-rt-client-revision','data-rt-client-mounted','data-rt-section','data-rt-block','data-rt-block-type','data-rt-template','data-rt-locale'].includes(attr.name));
   };
-  const styled=(text,value)=>{const wrapper=d.createElement('span');wrapper.__rtRangeStyle=property;wrapper.style.setProperty(property,value);wrapper.textContent=text;return wrapper;};
+  const assign=(wrapper,value)=>{wrapper.__rtRangeStyle=property;wrapper.style.setProperty(property,value);wrapper.__rtRangeStyleValue=value;wrapper.__rtRangeStyleCSS=wrapper.style.getPropertyValue(property);};
+  const authored=wrapper=>wrapper.__rtRangeStyleCSS===wrapper.style.getPropertyValue(property)&&wrapper.__rtRangeStyleValue?wrapper.__rtRangeStyleValue:wrapper.style.getPropertyValue(property);
+  const styled=(text,value)=>{const wrapper=d.createElement('span');assign(wrapper,value);wrapper.textContent=text;return wrapper;};
   // Apply at text leaves, so existing child styles cannot override the choice.
   const wrappers=[];
   for(const {node,from,to}of runs){
     const parent=node.parentElement;
     if(reusable(parent)){
-      if(from===0&&to===node.textContent.length){parent.__rtRangeStyle=property;parent.__rtReplaceRangeStyle=true;parent.style.setProperty(property,value);wrappers.push(parent);}
+      if(from===0&&to===node.textContent.length){parent.__rtReplaceRangeStyle=true;assign(parent,value);wrappers.push(parent);}
       else{
-        const oldValue=parent.style.getPropertyValue(property),fragment=d.createDocumentFragment(),text=node.textContent;
+        const oldValue=authored(parent),fragment=d.createDocumentFragment(),text=node.textContent;
         if(from)fragment.append(styled(text.slice(0,from),oldValue));
         const middle=styled(text.slice(from,to),value);fragment.append(middle);wrappers.push(middle);
         if(to<text.length)fragment.append(styled(text.slice(to),oldValue));parent.replaceWith(fragment);
@@ -926,7 +936,7 @@ function applyTextRangeStyle(property,value){
   // Coalesce only equivalent plain neighbors touching a changed run.
   for(let wrapper of wrappers){
     if(!editing.el.contains(wrapper))continue;
-    const equivalent=other=>reusable(other)&&other.style.getPropertyValue(property)===wrapper.style.getPropertyValue(property);
+    const equivalent=other=>reusable(other)&&other.style.getPropertyValue(property)===wrapper.style.getPropertyValue(property)&&(property!=='color'||authored(other)===authored(wrapper));
     if(equivalent(wrapper.previousSibling)){const previous=wrapper.previousSibling;previous.textContent+=wrapper.textContent;wrapper.remove();wrapper=previous;}
     while(equivalent(wrapper.nextSibling)){const next=wrapper.nextSibling;wrapper.textContent+=next.textContent;next.remove();}
     wrapper.__rtRangeStyle=property;wrapper.__rtReplaceRangeStyle=true;

@@ -283,3 +283,10 @@ test('range font size writes JSX and can reuse its literal wrapper',()=>{
  assert.match(read(root,'Card.tsx'),/<span style=\{\{fontSize:"24.5px"\}\}>Sized<\/span>/);
  index.scanAll();assert.deepStrictEqual(Object.values(writer.describeElement(pick(index,root,'Card.tsx','p').resolved).rangeStyleIds),[{property:'font-size',value:'24.5px'}]);
 });
+
+test('range color writes preserve explicit alpha and expose reusable source evidence',()=>{
+ const {resolved}=pick(index,root,'Card.tsx','p');
+ assert.ok(writer.applyOp(resolved,{type:'setChildren',fileHash:resolved.hash,children:[{t:'style',property:'color',value:'#11223380',children:[{t:'text',value:'Color'}]}]}).ok);
+ assert.match(read(root,'Card.tsx'),/<span style=\{\{color:"#11223380"\}\}>Color<\/span>/);
+ index.scanAll();assert.deepStrictEqual(Object.values(writer.describeElement(pick(index,root,'Card.tsx','p').resolved).rangeStyleIds),[{property:'color',value:'#11223380'}]);
+});

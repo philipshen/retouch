@@ -44,3 +44,7 @@ test('text range font size writes a constrained pixel style',()=>{
  assert.equal(rewrite('Text','source',children),'<span style="font-size: 24.5px;">Sized</span>');
  assert.throws(()=>rewrite('Text','source',[{...children[0],value:'var(--size)'}]),/Unsupported text range style/);
 });
+
+test('range color styles preserve explicit alpha and gamut in source',()=>{
+ for(const value of ['#12345680','color(display-p3 1 0.2 0.3 / 0.5)'])assert.equal(rewrite('Text','source',[{t:'style',property:'color',value,children:[{t:'text',value:'Color'}]}]),'<span style="color: '+value+';">Color</span>');
+});

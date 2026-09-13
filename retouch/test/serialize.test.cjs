@@ -116,3 +116,10 @@ test('source-approved range wrapper changes bypass keep without losing its text'
  span.__rtReplaceRangeStyle=true;span.__rtRangeStyle='font-weight';
  assert.deepStrictEqual(serializeChildren(el('P',[span]),snapshot),[{t:'style',property:'font-weight',value:'700',children:[{t:'text',value:'selected'}]}]);
 });
+
+test('source writes retain authored alpha while rendered comparisons use CSSOM values',()=>{
+ const span=el('SPAN',[text('color')]);span.style={length:1,0:'color',getPropertyValue:()=> 'rgba(17, 34, 51, 0.502)'};
+ span.__rtRangeStyle='color';span.__rtRangeStyleValue='#11223380';span.__rtRangeStyleCSS='rgba(17, 34, 51, 0.502)';
+ assert.equal(serializeChildren(el('P',[span]),new Map())[0].value,'#11223380');
+ assert.equal(serializeChildren(el('P',[span]))[0].value,'rgba(17, 34, 51, 0.502)');
+});

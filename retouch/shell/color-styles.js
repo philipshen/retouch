@@ -7,17 +7,7 @@
   const inherited=selection.filter(info=>!info.colorStyleLinks?.[width]?.[property]).map(info=>resolveInherited?resolveInherited(info,property):inheritedLink(info.colorStyleLinks,width,property)).filter(Boolean),common=inherited.length===selection.length&&inherited.length&&inherited.every(item=>item.link.id===inherited[0].link.id)?{link:inherited[0].link,label:inherited.every(item=>item.label===inherited[0].label)?inherited[0].label:'Multiple ranges'}:null;
   return {total:selection.length,inherited:common,inheritedCount:inherited.length,linked:links.length,distinct:new Set(links.map(link=>link.id)).size,overrides,link:links.length===selection.length&&links.length&&links.every(link=>link.id===links[0].id)?links[0]:null};
  }
- function fromComputed(value){
-  const refuse=()=>{throw Error('This paint is not a supported solid color. Enter hex or Display P3 explicitly.');};
-  if(typeof value!=='string')return refuse();value=value.trim();if(value.startsWith('#')||value.startsWith('color(display-p3 '))return normalize(value);if(value==='transparent')return '#00000000';
-  const rgb=/^rgba?\(([^()]+)\)$/.exec(value),srgb=/^color\(srgb\s+([^()]+)\)$/.exec(value);if(!rgb&&!srgb)return refuse();
-  const raw=(rgb||srgb)[1];let channels,alpha='1';
-  if(raw.includes(',')){if(!rgb||raw.includes('/'))return refuse();channels=raw.split(',').map(part=>part.trim());if(channels.length===4)alpha=channels.pop();}
-  else {const parts=raw.split('/');if(parts.length>2)return refuse();channels=parts[0].trim().split(/\s+/);if(parts.length===2)alpha=parts[1].trim();}
-  if(channels.length!==3)return refuse();
-  const number=(part,max)=>{if(!/^(?:\d+(?:\.\d*)?|\.\d+)%?$/.test(part))return refuse();const n=parseFloat(part),limit=part.endsWith('%')?100:max;if(n>limit)return refuse();return n/limit;};
-  return root.RetouchPaletteValues.srgb(channels.map(part=>number(part,srgb?1:255)),number(alpha,1));
- }
+ const fromComputed=value=>root.RetouchPaletteValues.fromComputed(value);
  // Resolve each paint property independently: an unrelated link at a nearer
  // breakpoint must not hide this property's narrower-scope connection.
  function inheritedLink(links,width,property){

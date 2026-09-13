@@ -789,3 +789,40 @@ Relative units, expressions, per-screen range-size overrides, and general
 attributed/nested range normalization remain unfinished. Range styles currently
 apply across screen sizes. The latest desktop archive still contains `c25f59a`;
 this font-size change has not been packaged or verified in the native app.
+
+### Solid color for selected text (2026-09-13)
+
+The range toolbar now includes a color field and swatch. It accepts hex (with
+or without `#`), RGB/rgba, explicit sRGB, and Display P3, including alpha. Enter
+saves the range color; Escape and invalid input preserve the existing edit.
+The selected word changes independently of its parent text layer. Approved
+plain color runs reuse, split, and merge through the shared range-style path.
+
+Solid-color parsing is shared with the palette editor. Source writes retain
+an authored color token when its browser style still matches, while rendered
+refresh comparisons use CSSOM values. This matters because WebKit and Chromium
+report different rounded alpha values for the same hex color. Reopening and
+splitting `#11223380` preserves that exact source alpha, including the unselected
+runs. Neighbor merging does not conflate distinct authored color values merely
+because their reported browser values round to the same result.
+
+Combined checks also exposed a deferred blur race after Escape: focus had already
+returned to the text when the scheduled blur handler ran. The handler now keeps
+that edit active instead of removing its toolbar.
+
+Validation: 1,179 unit tests passed in
+`/private/tmp/retouch-range-color-units-final.log`. The standalone CSS paint
+regression passed for HTML/React Chromium and Liquid WebKit in
+`/private/tmp/retouch-range-color-fixed-{html,react,liquid}.log`. That harness path
+returns early; it does not count as text-range validation. Separate combined
+color/size/style logs are
+`/private/tmp/retouch-range-color-verified-{html,react,liquid}.log`.
+`RT_E2E_RANGE_COLOR=1` verifies cancel/invalid preservation, rendered channels,
+exact authored alpha on reopen, Display P3, wrapper reuse, partial split/merge,
+unchanged parent color/text, and exact source undo/redo. The final light toolbar
+was inspected at `/private/tmp/retouch-range-color-verified.png`.
+
+Range color does not yet expose the full paint-picker UI, shared color-style
+links, variables, multiple text fills, or per-screen range overrides. General
+nested/attributed range normalization remains incomplete. The latest desktop
+archive predates the range-size and range-color changes.

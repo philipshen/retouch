@@ -34,6 +34,7 @@
       var property = n.__rtRangeStyle || (n.tagName === 'SPAN' && n.style && n.style.length === 1 ? n.style[0] : null);
       if (n.tagName === 'SPAN' && property && n.style) {
         var value = n.style.getPropertyValue(property);
+        if(snapshot && n.__rtRangeStyleCSS === value && n.__rtRangeStyleValue) value = n.__rtRangeStyleValue;
         if (rangeStyles.valid(property,value)) {
           out.push({t:'style',property:property,value:value,children:serializeChildren(n,snapshot)});
           continue;
