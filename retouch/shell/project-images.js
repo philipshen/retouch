@@ -26,7 +26,7 @@
    const known=new Set(items.map(item=>item.src));for(const asset of result.images)if(!known.has(asset.src)){known.add(asset.src);items.push(card(asset));}nextOffset=result.nextOffset??null;more.hidden=nextOffset===null;
    status.textContent=result.total?items.length+' of '+result.total+' image'+(result.total===1?'':'s'):query?'No matching images.':'No project images found. Choose a file to upload.';
   }catch(error){if(dialog.open&&epoch===generation&&!signal.aborted){status.textContent=error.message;retry.hidden=false;}}finally{if(epoch===generation){loading=false;more.disabled=saving;}}}
-  dialog.addEventListener('cancel',event=>{if(saving)event.preventDefault();});dialog.addEventListener('close',()=>{clearTimeout(timer);request?.abort();previews.abort();observer.disconnect();queue=[];for(const url of urls)URL.revokeObjectURL(url);dialog.remove();if(opener?.isConnected)opener.focus({preventScroll:true});});dialog.showModal();search.focus();await searchImages();
+  dialog.addEventListener('cancel',event=>{if(saving)event.preventDefault();});dialog.addEventListener('close',()=>{clearTimeout(timer);request?.abort();previews.abort();observer.disconnect();queue=[];for(const url of urls)URL.revokeObjectURL(url);dialog.remove();if(opener?.isConnected){opener.closest('[popover]')?.retouchOpen?.();opener.focus({preventScroll:true});}});dialog.showModal();search.focus();await searchImages();
  }
  root.RetouchProjectImages={open};
 })(window);

@@ -550,6 +550,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    while(backgroundRow&&backgroundRow.parentElement!==fillSection)backgroundRow=backgroundRow.parentElement;
    for(const child of [...fillSection.children])if(child.tagName!=='H3'&&child!==backgroundRow)advancedFills.append(child);
    for(const child of [...imageSection.children])if(child.tagName==='DETAILS'&&child.querySelector('summary')?.textContent==='Details')advancedFills.append(child);
+   for(const legacy of imageSection.querySelectorAll('[data-legacy-image-controls]'))advancedFills.append(legacy);
    imageSection.querySelector(':scope > h3')?.remove();imageSection.classList.remove('sec','inspector-section');imageSection.classList.add('paint-stack-fields');
    const addPaint=imageSection.querySelector(':scope > .section-add');if(addPaint)fillSection.append(addPaint);
    fillSection.insertBefore(imageSection,backgroundRow||fillSection.children[1]||null);

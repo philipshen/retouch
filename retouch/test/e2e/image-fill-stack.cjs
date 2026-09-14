@@ -95,14 +95,14 @@ await pixels([0,255,0]);if(process.env.RT_E2E_IMAGE_STACK_SCREENSHOT){await page
    const pickerImage=async()=>{await addMenu();await page.getByRole('button',{name:'Add image paint',exact:true}).click();const picker=page.getByRole('dialog',{name:'Project images',exact:true});await picker.getByLabel('Find a project image',{exact:true}).fill('stack-magenta');await picker.getByRole('button',{name:'Use project image '+(kind==='liquid'?'/assets/'+new URL(secondLayers[2].slice(5,-2)).pathname.split('/').pop():new URL(secondLayers[2].slice(5,-2)).pathname),exact:true}).click();await picker.waitFor({state:'hidden'});await record();};
    await pickerImage();assert.equal((await layers()).length,2);await pixels([255,0,255]);
    await page.getByRole('button',{name:'Remove paint 2',exact:true}).click();await record();
-   await page.getByRole('button',{name:'Remove image fill',exact:true}).click();await record();assert.equal(await target.evaluate(el=>getComputedStyle(el).backgroundImage),'none');
+   await page.getByRole('button',{name:'Remove paint 1',exact:true}).click();await record();assert.equal(await target.evaluate(el=>getComputedStyle(el).backgroundImage),'none');
    await addMenu();await page.getByRole('button',{name:'Add gradient paint',exact:true}).click();await record();assert.equal((await layers()).length,1);
    await pickerImage();assert.equal((await layers()).length,2);await pixels([255,0,255]);
    if(process.env.RT_E2E_PAINT_ADD_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_PAINT_ADD_SCREENSHOT});
    await page.getByRole('button',{name:'Remove paint 2',exact:true}).click();await record();
   }
-  const singleChoosing=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Replace image',exact:true}).click();await (await singleChoosing).setFiles({name:'stack-orange.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><path fill="orange" d="M0 0h40v20H0z"/></svg>')});await wait(async()=>(await layers())?.[0]?.includes('stack-orange.svg'));await record();
-  await page.getByRole('button',{name:'Reset image fill',exact:true}).click();await record();await wait(async()=>JSON.stringify(await layers())===JSON.stringify(initial));
+  await openPaint(1);const singleChoosing=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Replace image paint 1',exact:true}).click();await (await singleChoosing).setFiles({name:'stack-orange.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><path fill="orange" d="M0 0h40v20H0z"/></svg>')});await wait(async()=>(await layers())?.[0]?.includes('stack-orange.svg'));await record();
+  await page.getByText('More fill controls',{exact:true}).click();await page.getByRole('button',{name:'Reset image fill',exact:true}).click();await record();await wait(async()=>JSON.stringify(await layers())===JSON.stringify(initial));
   await size('390x844');assert.deepEqual(await layers(),initial);await size('768x1024');for(const expected of states.slice(0,-1).reverse()){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===expected);}assert.deepEqual(await layers(),secondLayers);assert.deepEqual(await sizes(),['cover','100% 100%','200% 200%']);
  }
  const gradientSection=page.locator('[data-section="image-fill"]');await openPaint(1,'gradient');
