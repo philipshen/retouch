@@ -81,6 +81,27 @@ module.exports=async({page,app,read,wait,original,retain=false,liveLiquid=false}
   }
   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===failedPreviewSource);await settled();await opacity([.4,.7]);
 
+  await page.evaluate(()=>{
+   window.restoreComparisonClassSync=RetouchRenderSync.syncClasses;
+   RetouchRenderSync.syncClasses=options=>window.restoreComparisonClassSync({...options,...(options.frame.title==='Tablet comparison preview'?{fetcher:async()=>new Response('Unavailable',{status:503})}:{})});
+  });
+  try{
+   const input=page.getByLabel('Opacity (%)',{exact:true});await input.fill('20');await input.press('Tab');
+   await wait(()=>read()!==failedPreviewSource);await settled();await opacity([.2,.7]);
+   const tablet=comparisons.find(item=>item.name==='Tablet').frame;
+   assert.equal(Number(await tablet.locator('[aria-label="A"]').evaluate(el=>getComputedStyle(el).opacity)),.4);
+   await page.getByRole('button',{name:'Retry preview refresh',exact:true}).waitFor();
+  }finally{await page.evaluate(()=>{RetouchRenderSync.syncClasses=window.restoreComparisonClassSync;delete window.restoreComparisonClassSync;});}
+  const comparisonFailureSource=read();
+  await page.getByRole('button',{name:'Retry preview refresh',exact:true}).click();await settled();
+  assert.equal(read(),comparisonFailureSource);
+  for(const {name,frame}of comparisons){
+   await wait(async()=>Number(await frame.locator('[aria-label="A"]').evaluate(el=>getComputedStyle(el).opacity))===(name==='Tablet'?.2:name==='Phone'?.8:.5));
+   assert.equal(await frame.locator('input').inputValue(),name);
+   assert.equal(await frame.locator('input').evaluate(()=>document===window.literalClassDocument),true);
+  }
+  assert.equal(await page.getByRole('button',{name:'Retry preview refresh',exact:true}).count(),0);
+
  }
  if(retain){assert.equal(await app.locator('input').inputValue(),'retained');assert.equal(await app.locator('input').evaluate(()=>document===window.classResetDocument),true);}
 };

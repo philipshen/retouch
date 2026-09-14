@@ -16528,3 +16528,15 @@ The Liquid browser workflow verifies a repeated outage, a successful retry with
 zero source-operation requests, unchanged source bytes, recovered responsive
 appearance, and retained document/input state. A subsequent Undo restores the
 pre-edit source, proving retry added no undo step.
+
+### Comparison-only class refresh recovery
+
+A failed comparison now reports its failure to the shared class refresh flow,
+while retaining its per-screen error message. This exposes **Retry preview
+refresh** even when the main canvas updated successfully. All comparison attempts
+settle before the shared result is reported.
+
+The Liquid workflow injects a failed fetch only for Tablet, verifies the main
+canvas has the new opacity while Tablet retains the previous value, then retries
+and checks that Tablet catches up without changing saved source or replacing
+comparison documents and form values.

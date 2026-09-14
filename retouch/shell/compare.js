@@ -579,14 +579,15 @@
   window.RetouchComparisons={
     outlineViews:()=>open?cards.filter(card=>!card.previewBody.hidden&&!card.card.inert).map(card=>({frame:card.frame,canvas:card.viewport,clip:rail})):[],
     async syncClasses(entries){
-      if(!open)return;const expectedRoute=path();
+      if(!open)return;const expectedRoute=path(),failures=[];
       await Promise.all([...cards].map(async card=>{
         card.styleSyncError=null;try{
           for(let attempt=0;attempt<80;attempt++){if(!open||!cards.includes(card)||path()!==expectedRoute)return;const d=card.frame.contentDocument;if(d?.body&&d.URL!=='about:blank')break;await new Promise(resolve=>setTimeout(resolve,50));}
           const d=card.frame.contentDocument;if(!d?.body||d.URL==='about:blank')throw Error('Preview is still loading.');const url=new URL(d.URL);if(url.pathname+url.search+url.hash!==expectedRoute)return;
           const ids=new Set([...d.querySelectorAll('[data-rt]')].map(el=>el.getAttribute('data-rt'))),present=entries.filter(item=>ids.has(item.id));if(present.length)await RetouchRenderSync.syncClasses({frame:card.frame,entries:present,revalidate:!!window.__RT_RENDERING?.revalidateStyles});
-        }catch(error){if(open&&cards.includes(card))card.styleSyncError='Classes saved; comparison refresh failed: '+error.message;}
+        }catch(error){if(open&&cards.includes(card)){card.styleSyncError='Classes saved; comparison refresh failed: '+error.message;failures.push(card.frame.title||'Comparison');}}
       }));
+      if(failures.length)throw Error('Could not refresh '+failures.join(', ')+'.');
     },
     async syncCSS(info){
       const infos=Array.isArray(info)?info:[info];if(!open||!infos.length||infos.some(item=>!item.cssAuthoring))return;
