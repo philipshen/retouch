@@ -1164,3 +1164,8 @@ html, body { overflow:clip; }
 .image-adjustment-controls input[type="range"]::-webkit-slider-thumb { appearance:none;width:12px;height:12px;margin-top:-5px;border:1px solid #999;border-radius:50%;background:white; }
 .image-adjustment-controls input[type="range"]::-moz-range-track { height:2px;background:#b3b3b3;border-radius:1px; }
 .image-adjustment-controls input[type="range"]::-moz-range-thumb { width:10px;height:10px;border:1px solid #999;border-radius:50%;background:white; }
+
+.image-crop-dialog[open] { display:flex;flex-direction:column;overflow:hidden; }
+.image-crop-dialog > header, .image-crop-dialog > .image-crop-stage, .image-crop-dialog > [role="status"], .image-crop-dialog > footer, .image-crop-dialog > button { flex:none; }
+.image-crop-dialog > .image-crop-controls { flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 2px; }
+.image-crop-controls fieldset { min-width:0; }

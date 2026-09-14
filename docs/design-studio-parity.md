@@ -16807,3 +16807,9 @@ Chromium/WebKit neutral-gray pixel checks cover both directions, combined previe
 Highlights and shadows now have separate sliders/numeric controls, saved recipe values, adjustment reset and local undo. A sampled monotonic RGB tone curve emphasizes the appropriate tonal range and preserves black/white endpoints. Neutral tone settings preserve the earlier filter structure.
 
 Chromium/WebKit dark/light-gray pixel checks verify both directions and tonal emphasis, combined preview/apply, slider values, reset undo, saved reopening and exact source undo. Curve tests cover bounds, monotonicity and endpoints across combinations; all 1,520 unit tests and the prior temperature/tint workflow pass. The dialog was visually inspected. These are global channel tone curves, not local contrast recovery or proven equivalents of Figma's adjustment algorithms. Full image-editor and broader Design parity remain unverified.
+
+### Image editor in short and narrow windows — 2026-09-14
+
+The image editor now keeps its header, frame-shaped preview, status and actions visible while the controls scroll independently. Preview height adapts to available window height, and resize listeners are removed when closing. A separate scroll container avoids Chromium fieldset scrolling differences while retaining disabled-fieldset behavior during loading and saving.
+
+Chromium/WebKit checks cover 1366×768, 900×600 and 480×500 windows, editing lower controls, fixed preview position, visible Apply/Cancel actions, and cancellation without source writes. The narrow layout was visually inspected. The tonal adjustment/apply/reopen/source-undo workflow also passes after the layout change.
