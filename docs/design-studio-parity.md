@@ -16788,3 +16788,10 @@ Gatekeeper still rejects the candidate as Unnotarized Developer ID. No native la
 The crop dialog now provides exposure (-3 to +3 stops), contrast and saturation (-100 to +100), with live preview and local history. Reset adjustments preserves crop framing. Values persist in the SVG recipe alongside original image bytes; recognized filters are validated against the generated filter tree before reopening. Neutral values omit the filter. Rendering uses sRGB component transfer for exposure/contrast and a saturation matrix.
 
 Chromium and WebKit pixel checks cover half exposure, flat contrast, grayscale, combined adjustments, reset undo/redo, saved-value reopening and exact source undo. The expanded light dialog was visually inspected; React crop/history regression and all 1,518 unit tests pass. These controls do not establish exact Figma adjustment-algorithm equivalence. Highlights, shadows, temperature, tint and wider format/animation coverage remain unfinished. The signed desktop candidate predates these controls.
+
+
+### Visual image adjustment sliders — 2026-09-14
+
+Exposure, contrast and saturation now pair light-theme sliders with numeric entry. Values stay synchronized through typing, slider movement, reset and local undo/redo. Drag changes commit on release; repeated slider arrow keys remain one history step until key release.
+
+Chromium/WebKit browser checks verify held-key and multi-move pointer grouping, numeric synchronization, rendered adjustment pixels, saved-value reopening and exact source undo. The slider layout was visually inspected in WebKit. Firefox styling is provided but Firefox behavior was not tested.
