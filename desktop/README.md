@@ -609,3 +609,32 @@ This is an ad hoc development archive. Native launch/editing, Intel execution,
 notarization, public hosting/cask distribution and upgrades remain unverified.
 The older Developer ID signing attempt remains pending; this build did not start
 another signing request or launch a native app.
+
+### Release versions and archive names
+
+`desktop/Info.plist` is the default release-version source. Update its
+`CFBundleShortVersionString` and the appropriate `CFBundleVersion` for a release.
+The builder reads the copied bundle metadata and names its ZIP
+`Retouch-<version>-mac.zip`. The cask generator uses the same default version:
+
+```sh
+node desktop/scripts/cask.cjs https://host/releases/0.2.0/Retouch-0.2.0-mac.zip SHA256 0.2.0
+```
+
+The optional third argument is the version of the actual archive, useful when
+preparing a cask for an older release. Always use that archive's checksum and
+version; the generator does not download the URL or establish its immutability.
+Without the third argument, it reads the current source plist. Release versions
+must contain three non-negative integers, consistent with
+[Apple's bundle version format](https://developer.apple.com/documentation/bundleresources/information-property-list/cfbundleshortversionstring).
+The generated version is the [Homebrew cask version](https://docs.brew.sh/Cask-Cookbook#stanza-version).
+
+On 2026-09-14, 25 desktop tests passed, including invalid/duplicate metadata and
+Ruby cask syntax for three versions. An isolated source fixture with plist
+version 0.2.0 built `/private/tmp/retouch-version-check-q1mjqi5p/output/Retouch-0.2.0-mac.zip`
+(SHA256 `5dd3b09f61a1b66022347b67bd1699882121e0e43504881d305b3b1fab8510f6`).
+The extracted app reports 0.2.0 and passed package integrity, arm64/x86_64 and
+strict ad hoc signature checks. This temporary fixture has no Git source receipt
+and is not a release. Native launch, Homebrew upgrade, Developer ID signing and
+notarization were not tested. The original signing process remained live and was
+not restarted; native UI access still failed its preflight.

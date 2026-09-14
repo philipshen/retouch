@@ -15687,3 +15687,13 @@ Logs: `/private/tmp/retouch-indexed-props-final-units.log`,
 `/private/tmp/retouch-indexed-props-webkit.log`. The original failed Chromium run
 and diagnostic capture are retained alongside these logs. No native build was
 produced; full Figma parity and trusted desktop distribution remain incomplete.
+
+### Desktop release-version consistency (2026-09-14)
+
+Removed hardcoded 0.1.0 from archive naming and cask generation. The copied app
+plist controls the build archive version; casks default to the source plist and
+accept an explicit archive version. See desktop/README.md for syntax, format and
+isolated 0.2.0 build evidence. All 25 desktop unit tests passed; the extracted
+universal ad hoc fixture passed signature/integrity and version checks. No app
+was launched. This does not prove a trusted Homebrew upgrade or public release;
+signing remains pending and full Figma parity is still incomplete.

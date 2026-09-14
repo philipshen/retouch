@@ -19,6 +19,7 @@ const app = path.join(out, 'Retouch.app');
 const macos = path.join(app, 'Contents/MacOS');
 fs.mkdirSync(macos, {recursive:true});
 fs.copyFileSync(path.join(root, 'Info.plist'), path.join(app, 'Contents/Info.plist'));
+const version=require('./release-version.cjs').read(path.join(app,'Contents/Info.plist'));
 // Install a locked, production-only CLI into app resources. Build from source
 // files, never the developer's node_modules or workspace symlinks.
 const resources = path.join(app, 'Contents/Resources');
@@ -69,7 +70,7 @@ if (nativeTests) run(executable, ['--self-test', '--launch-bundled'], {stdio:'in
 else console.log('SKIP native launch tests (set RETOUCH_RUN_NATIVE_TESTS=1 only when desktop launch testing is explicitly enabled)');
 const verification = require('./verify-package.cjs').verify(app);
 console.log(JSON.stringify({packageVerification:verification}));
-const zip = path.join(out, 'Retouch-0.1.0-mac.zip');
+const zip = path.join(out, 'Retouch-'+version+'-mac.zip');
 // This archive is new inside the isolated build directory.
 run('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', app, zip], {stdio:'inherit'});
 const sha = crypto.createHash('sha256').update(fs.readFileSync(zip)).digest('hex');
