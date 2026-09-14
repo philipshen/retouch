@@ -29,7 +29,7 @@
   for(const axis of ['x','y']){
    if(lock&&axis!==lock)continue;
    const position=axis==='x'?'left':'top',dimension=axis==='x'?'width':'height',cross=axis==='x'?'top':'left',extent=axis==='x'?'height':'width';let best=null;
-   for(const target of targets)for(const fraction of [0,.5,1])for(const other of [0,.5,1]){
+   for(const target of targets.filter(target=>!target.guideAxis||target.guideAxis===axis))for(const fraction of [0,.5,1])for(const other of [0,.5,1]){
     const value=target[position]+target[dimension]*other,adjustment=value-(rect[position]+movement[axis]+rect[dimension]*fraction);
     if(Math.abs(adjustment)<=tolerance&&(!best||Math.abs(adjustment)<Math.abs(best.adjustment)))best={adjustment,value,target};
    }
@@ -70,6 +70,7 @@
    if(css.visibility!=='visible'||css.display==='none'||r.width<=0||r.height<=0||r.right<=0||r.bottom<=0||r.left>=w.innerWidth||r.top>=w.innerHeight)continue;
    targets.push(r);
   }
+  targets.push(...(root.RetouchGuides?.targets(d)||[]));
   return targets;
  }
  function resize(width,height,handle,dx,dy,{shiftKey=false,altKey=false,minWidth=1,minHeight=1,maxWidth=Infinity,maxHeight=Infinity}={}){
@@ -90,7 +91,7 @@
   for(const axis of ['x','y']){
    const sign=directions[axis],size=dimension[axis],initial=rect[position[axis]]+(sign>0?rect[size]:0);
    if(!sign||Math.abs(edge(raw,axis)-initial)<1e-6)continue;
-   for(const target of targets)for(const fraction of [0,.5,1]){
+   for(const target of targets.filter(target=>!target.guideAxis||target.guideAxis===axis))for(const fraction of [0,.5,1]){
     const value=target[position[axis]]+target[size]*fraction,distance=Math.abs(value-edge(raw,axis));if(distance>tolerance)continue;
     const desired=rect[size]+sign*(value-initial)*m;
     let x=dx,y=dy;
@@ -103,7 +104,7 @@
   const result=shiftKey?(closest?.result||raw):resize(rect.width,rect.height,handle,best.x?.x??dx,best.y?.y??dy,options),guides=[];
   for(const axis of ['x','y']){
    if(!best[axis])continue;const cross=axis==='x'?'y':'x';
-   for(const target of targets){const value=edge(result,axis);if(![0,.5,1].some(f=>Math.abs(value-target[position[axis]]-target[dimension[axis]]*f)<1e-4))continue;
+   for(const target of targets){if(target.guideAxis&&target.guideAxis!==axis)continue;const value=edge(result,axis);if(![0,.5,1].some(f=>Math.abs(value-target[position[axis]]-target[dimension[axis]]*f)<1e-4))continue;
     guides.push({axis,value,start:Math.min(rect[position[cross]]+result[cross],target[position[cross]]),end:Math.max(rect[position[cross]]+result[cross]+result[dimension[cross]],target[position[cross]]+target[dimension[cross]])});break;
    }
   }

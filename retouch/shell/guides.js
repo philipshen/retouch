@@ -44,5 +44,8 @@
  document.addEventListener('pointermove',move,true);document.addEventListener('pointerup',event=>{if(gesture&&event.pointerId===gesture.pointerId){event.preventDefault();event.stopPropagation();finish(false,event);}},true);document.addEventListener('pointercancel',()=>finish(true),true);
  document.addEventListener('keydown',event=>{if(gesture&&event.key==='Escape'){event.preventDefault();event.stopPropagation();finish(true);}},true);
  for(const event of ['blur','retouch:before-zoom','retouch:screen'])root.addEventListener(event,()=>finish(true));root.addEventListener('retouch:rulers',render);frame.addEventListener('load',render);render();
- root.RetouchGuides={values:()=>copy(state?.items||[])};
+ root.RetouchGuides={values:()=>copy(state?.items||[]),targets(document){
+  if(!rulers.visible||gesture||document!==frame.contentDocument)return [];render();const w=document.defaultView;
+  return state.items.map(item=>item.axis==='x'?{guideAxis:'x',container:true,left:item.value-w.scrollX,top:0,width:0,height:w.innerHeight}:{guideAxis:'y',container:true,left:0,top:item.value-w.scrollY,width:w.innerWidth,height:0});
+ }};
 })(window);

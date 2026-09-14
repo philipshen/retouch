@@ -96,3 +96,10 @@ test('scaled and flipped resizing preserves opposite anchors and center across e
   assert.ok(Math.abs(origin[1]+before.y-(actual.y+next[1]+after.y))<1e-8);
  }
 });
+test('guide targets constrain only their own axis and never create equal-spacing neighbors',()=>{
+ const {snap,snapResize}=require('../shell/canvas-move.js'),rect={left:30,top:40,width:80,height:60},vertical={guideAxis:'x',container:true,left:200,top:0,width:0,height:400},horizontal={guideAxis:'y',container:true,left:0,top:160,width:400,height:0};
+ const moved=snap(rect,{x:87,y:57},[vertical,horizontal]);assert.equal(moved.x,90);assert.equal(moved.y,60);assert.equal(moved.spacing,undefined);assert.deepEqual(moved.guides.map(g=>[g.axis,g.value]),[['x',200],['y',160]]);
+ const onlyX=snap(rect,{x:87,y:-38},[vertical]);assert.equal(onlyX.x,90);assert.equal(onlyX.y,-38);assert.deepEqual(onlyX.guides.map(g=>g.axis),['x']);
+ const resized=snapResize(rect,'se',87,57,[vertical,horizontal]);assert.equal(resized.width,170);assert.equal(resized.height,120);assert.deepEqual(resized.guides.map(g=>[g.axis,g.value]),[['x',200],['y',160]]);
+ const bounded=snapResize(rect,'e',87,0,[vertical],{maxWidth:168});assert.equal(bounded.width,167);assert.equal(bounded.guides.length,0);
+});

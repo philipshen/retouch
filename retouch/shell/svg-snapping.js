@@ -8,6 +8,7 @@
    const css=w.getComputedStyle(el),r=el.getBoundingClientRect();if(css.display==='none'||css.visibility!=='visible'||r.width<0||r.height<0||!r.width&&!r.height||r.right<0||r.bottom<0||r.left>w.innerWidth||r.top>w.innerHeight)continue;
    result.push({left:r.left,top:r.top,width:r.width,height:r.height});
   }
+  result.push(...(root.RetouchGuides?.targets(target.ownerDocument)||[]));
   return result;
  }
  function movement(m,x,y,constrain){const result={x:m[0]*x+m[2]*y,y:m[1]*x+m[3]*y};if(constrain){result.lock=Math.abs(result.x)>=Math.abs(result.y)?'x':'y';result[result.lock==='x'?'y':'x']=0;}return result;}

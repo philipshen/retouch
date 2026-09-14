@@ -826,9 +826,9 @@ function reloadFrame({keepDrawing=null,expectedTag=null}={}) {
 // A source write can finish before the framework invalidates its rendered
 // module. Wait for that revision, retaining the live session when HMR applies it.
 // Reload only when the renderer cannot confirm a matching live update.
-async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null,expectedTag=null,maskGeometry=false}={}) {
+async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null,expectedTag=null,svgGeometry=false}={}) {
   const geometrySelection=[...new Map([info,...(sel?.multiple||[])].map(item=>[item.id,item])).values()];
-  if(maskGeometry&&/\.(?:html?|liquid)$/i.test(info.file)&&geometrySelection.some(item=>matchingEls(item.id).some(el=>el.closest('[data-rt-mask-group], [data-rt-boolean]')))){
+  if(svgGeometry&&/\.(?:html?|liquid)$/i.test(info.file)&&geometrySelection.every(item=>{const elements=matchingEls(item.id);return elements.length>0&&elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg');})){
     await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>{
       const selected=geometrySelection.flatMap(item=>matchingInDocument(d,item.id,item));
       // Reconcile all edited roots once; descendants follow their selected parent.
@@ -3162,13 +3162,13 @@ async function writeSVGBooleanSelection(path){
 }
 async function writeSVGSelection(matrices){
  const infos=sel?.multiple;if(!infos||panelTasks||sourceRequests||undoBusy||editing)return;const ids=infos.map(info=>info.id),primary=sel.info;busyPanel(true);
- try{const result=await api('POST','/rt/__api/op',{type:'setSVGTransforms',id:primary.id,ids,fileHash:primary.hash,matrices});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not transform the selected vectors.');if(result.undoId)editorHistory.record({type:'setSVGTransforms',id:primary.id,selectionIds:ids,undoId:result.undoId});await refreshWrittenElement(result.element,el=>svgSelectionMatches(result.selection,el.ownerDocument),{maskGeometry:true});await restoreLayerSelection(ids);if(sel)renderPanel();toast('Vectors updated','ok');}catch(error){toast(error.message,'err');}finally{busyPanel(false);}
+ try{const result=await api('POST','/rt/__api/op',{type:'setSVGTransforms',id:primary.id,ids,fileHash:primary.hash,matrices});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not transform the selected vectors.');if(result.undoId)editorHistory.record({type:'setSVGTransforms',id:primary.id,selectionIds:ids,undoId:result.undoId});await refreshWrittenElement(result.element,el=>svgSelectionMatches(result.selection,el.ownerDocument),{svgGeometry:true});await restoreLayerSelection(ids);if(sel)renderPanel();toast('Vectors updated','ok');}catch(error){toast(error.message,'err');}finally{busyPanel(false);}
 }
 function svgSelectionMatches(infos,d){return infos.every(info=>matchingInDocument(d,info.id,info).some(el=>el.getAttribute('transform')===info.svgTransform?.value));}
 async function writeSVGTransform(info,target,matrix){
   if(sel?.info!==info||panelTasks||undoBusy||sourceRequests||editing)return;
   const reason=RetouchSVGResize.reason(target,info,true);if(reason)return toast(reason,'err');busyPanel(true);
-   try{const result=await api('POST','/rt/__api/op',{type:'setSVGTransform',id:info.id,fileHash:info.hash,matrix});if(!result?.ok)return toast(result?.reason||result?.error||'Could not update vector','err');if(result.undoId)editorHistory.record({type:'setSVGTransform',id:info.id,undoId:result.undoId});sel.info=result.element;await refreshWrittenElement(sel.info,el=>el.getAttribute('transform')===sel.info.svgTransform?.value,{maskGeometry:true});renderPanel();toast('Vector updated','ok');}finally{busyPanel(false);}
+   try{const result=await api('POST','/rt/__api/op',{type:'setSVGTransform',id:info.id,fileHash:info.hash,matrix});if(!result?.ok)return toast(result?.reason||result?.error||'Could not update vector','err');if(result.undoId)editorHistory.record({type:'setSVGTransform',id:info.id,undoId:result.undoId});sel.info=result.element;await refreshWrittenElement(sel.info,el=>el.getAttribute('transform')===sel.info.svgTransform?.value,{svgGeometry:true});renderPanel();toast('Vector updated','ok');}finally{busyPanel(false);}
 }
 function svgGradientsMatch(el,info){return (info.svgGradientCreation?.values||[]).every(item=>el.getAttribute(item.paint)===item.value)&&(info.svgGradients||[]).every(gradient=>{const node=el.ownerDocument.getElementById(gradient.id),reference=/^url\(\s*(['"]?)#([\w:.-]+)\1\s*\)$/.exec(el.getAttribute(gradient.paint)||'');if(!node||node.localName!==gradient.type||reference?.[2]!==gradient.id)return false;const stops=[...node.children].filter(child=>child.localName==='stop');return gradient.fields.every(field=>node.getAttribute(field.name)===field.value)&&stops.length===gradient.stops.length&&gradient.stops.every((stop,i)=>stops[i].getAttribute('offset')===stop.offset&&stops[i].getAttribute('stop-color')===stop.color&&stops[i].getAttribute('stop-opacity')===stop.opacity);});}
 function svgGradientStopValues(nodes){
@@ -3301,7 +3301,7 @@ async function setSVGGeometry(property,value){
     const result=await api('POST','/rt/__api/op',{type:'setSVGGeometry',id:info.id,fileHash:info.hash,...(typeof property==='object'?{changes:property}:{property,value})});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not update shape','err');
     if(result.undoId)editorHistory.record({type:'setSVGGeometry',id:info.id,undoId:result.undoId});
-    sel.info=result.element;await refreshWrittenElement(sel.info,el=>svgGeometryMatches(el,sel.info),{maskGeometry:true});renderPanel();toast('Shape updated','ok');
+    sel.info=result.element;await refreshWrittenElement(sel.info,el=>svgGeometryMatches(el,sel.info),{svgGeometry:true});renderPanel();toast('Shape updated','ok');
   }finally{busyPanel(false);}
 }
 function reactGeometryReason(info,target){
@@ -3647,7 +3647,7 @@ async function restoreHistory(direction,op) {
           return tokens(el.getAttribute('class')) === tokens(info.className);
         }
         return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
-      },{verifyText:op.type==='setText'&&!info.textSource,maskGeometry:['setSVGGeometry','setSVGTransform','setSVGTransforms'].includes(op.type)});
+      },{verifyText:op.type==='setText'&&!info.textSource,svgGeometry:['setSVGGeometry','setSVGTransform','setSVGTransforms'].includes(op.type)});
       if(op.type==='setText'&&info.kind==='host'&&!info.textSource&&window.__RT_RENDERING?.reloadAfterWrite){
         await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info)});
       }else if(op.type==='setCSSSelection'&&op.managedCSS){if(!selectionResult?.every(item=>item?.ok&&item.element.cssAuthoring))throw Error('The restored CSS selection could not be resolved.');const infos=selectionResult.map(item=>item.element);await RetouchRenderSync.syncCSS({frame:iframe,entries:infos.map(item=>({id:item.id,rules:item.cssRules,texts:item.cssRuleTexts}))});await window.RetouchComparisons?.syncCSS(infos);}else if(op.type==='setCSS'&&op.managedCSS&&info.cssAuthoring)await RetouchRenderSync.syncCSS({frame:iframe,id:info.id,rules:info.cssRules,texts:info.cssRuleTexts});else await refresh();

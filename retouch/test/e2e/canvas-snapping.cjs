@@ -14,6 +14,17 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
  const undo=async()=>{await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();close((await box()).x,30);close((await box()).y,40);};
  try{
   await page.goto(`http://localhost:${server.address().port}/rt`);await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await wait(async()=>await app.locator('body').evaluate(()=>innerWidth)===768);await page.getByRole('treeitem',{name:'div · Box',exact:true}).click();await settled();
+  if(process.env.RT_E2E_GUIDE_SNAPPING){
+   await page.getByRole('button',{name:'Actions',exact:true}).click();const search=page.getByRole('combobox',{name:'Search actions',exact:true});await search.fill('rulers');await search.press('Enter');
+   for(const [axis,value]of [['x',250],['y',180]]){const r=await page.locator(axis==='x'?'.canvas-ruler-vertical':'.canvas-ruler-horizontal').boundingBox(),f=await page.locator('#app').boundingBox();await page.mouse.move(r.x+r.width/2,r.y+r.height/2);await page.mouse.down();await page.mouse.move(axis==='x'?f.x+value:f.x+200,axis==='y'?f.y+value:f.y+200,{steps:6});await page.mouse.up();}
+   assert.deepEqual(await page.evaluate(()=>RetouchGuides.values().map(({axis,value})=>({axis,value}))),[{axis:'x',value:250},{axis:'y',value:180}]);await app.locator('body').evaluate(el=>el.style.height='2500px');
+   for(const zoom of [50,100,200]){
+    await page.getByLabel('Canvas zoom (%)',{exact:true}).fill(String(zoom));await page.getByLabel('Canvas zoom (%)',{exact:true}).press('Enter');await app.locator('body').evaluate(()=>scrollTo(0,30));await page.locator('#frameWrap').evaluate(async el=>{el.scrollLeft=0;el.scrollTop=96;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));});const scale=zoom/100;
+    let point=await start();await page.mouse.move(point.x+110*scale-3,point.y+50*scale-3,{steps:5});assert.equal(read(),original);assert.equal(await page.locator('[data-snap-axis=x]').count(),1);assert.equal(await page.locator('[data-snap-axis=y]').count(),1);await page.mouse.up();await wait(()=>read()!==original);await settled();close((await box()).x,140);close((await box()).y,90);await undo();
+    point=await startResize();await page.mouse.move(point.x+110*scale-3,point.y+50*scale-3,{steps:5});assert.equal(read(),original);await page.mouse.up();await wait(()=>read()!==original);await settled();close((await box()).width,190);close((await box()).height,110);await undo();
+   }
+   assert.deepEqual(errors,[]);console.log(engine+': PASS guide movement/resize snapping with page scroll at 50/100/200 percent and exact undo');return;
+  }
   for(const zoom of [50,100,200]){
    await page.getByLabel('Canvas zoom (%)',{exact:true}).fill(String(zoom));await page.getByLabel('Canvas zoom (%)',{exact:true}).press('Enter');
    await app.locator('body').evaluate(()=>scrollTo(0,0));await page.locator('#frameWrap').evaluate(async el=>{el.scrollLeft=0;el.scrollTop=96;await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));});
