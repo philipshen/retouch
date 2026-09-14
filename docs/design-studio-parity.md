@@ -16059,3 +16059,11 @@ Release is also available when a mask child is selected, with source ownership c
 Verification: 1,307 unit tests passed. HTML Chromium/WebKit command workflows passed shell and iframe shortcut routing, context-menu creation/release, Actions search for shape editing, input exclusion, simulated Windows modifier/repeat handling, child-selected release, exact source Undo/Redo and retained preview state. The Next/React Chromium command workflow passed the same mask/history path. The existing Chromium Actions regression suite passed navigation, search, availability, source history, layer operations and panel/preset controls. Logs: `../recovery-2026-09-14/mask-commands-{chromium,webkit,react,units}.log` and `mask-actions-regression.log`.
 
 The command entry points do not extend the underlying mask ownership limits. Full Figma parity, arbitrary sites and trusted native distribution remain incomplete.
+
+### Mask outline view — 2026-09-14
+
+Show/Hide mask outlines is available in the Mask inspector, Actions search and context menu. It draws green, non-interactive guides for Retouch-created masks in the main preview. Geometry is captured from native computed SVG lengths and paths, cached until it changes, and positioned using the live screen transform. Guides follow zoom and preview movement, are clipped to the visible canvas, and stay outside the site's DOM and exported artwork. Turning the view off releases cached nodes; hidden or removed shapes stop drawing.
+
+Verification: 1,307 unit tests passed. Chromium and WebKit mask workflows verify outline geometry against the native mask shape at 75%, 100% and 150% zoom, hidden-shape removal/restoration, pointer-event pass-through, toggle behavior, unchanged source and the existing exact history workflow. The light inspector screenshot was visually inspected. Evidence: `../recovery-2026-09-14/mask-outlines.png` and `mask-outlines-{chromium,webkit,units}.log`.
+
+Remaining: text/image/symbol guides use bounding boxes rather than detailed outlines; comparison-screen guides, complete authored-mask discovery, direct mask manipulation and full Figma outline visibility semantics still need work. Full Figma parity and trusted macOS distribution remain incomplete.

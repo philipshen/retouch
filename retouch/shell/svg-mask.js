@@ -43,13 +43,39 @@
  function modeField(value,onChange){
   const label=root.document.createElement('label'),select=root.document.createElement('select'),caption=root.document.createElement('span');label.className='inspector-field';caption.textContent='Mask type';label.append(caption);Object.assign(label.style,{display:'grid',gridTemplateColumns:'1fr 1fr',alignItems:'center',gap:'8px',marginBottom:'8px'});Object.assign(select.style,{width:'100%',minWidth:'0',height:'28px',border:'0',borderRadius:'4px',padding:'4px 8px',background:'var(--control-bg,#f5f5f5)',color:'inherit',font:'inherit'});select.setAttribute('aria-label','Mask type');for(const [value,text]of [['alpha','Alpha'],['luminance','Luminance']]){const option=root.document.createElement('option');option.value=value;option.textContent=text;select.append(option);}select.value=value;select.onchange=onChange;label.append(select);return {label,select};
  }
+ let outlinesEnabled=false,outlineSurface=null;
+ const outlineCache=new Map(),shapeFields={rect:['x','y','width','height','rx','ry'],circle:['cx','cy','r'],ellipse:['cx','cy','rx','ry'],path:['d'],polygon:['points'],polyline:['points'],line:['x1','y1','x2','y2']};
+ function paintOutlines({frame,canvas,active}){
+  if(!outlinesEnabled||!active){if(outlineSurface)outlineSurface.style.display='none';if(outlineCache.size){outlineSurface.replaceChildren();outlineCache.clear();}return;}
+  const d=frame.contentDocument;if(!d){if(outlineSurface)outlineSurface.style.display='none';return;}
+  if(!outlineSurface){outlineSurface=root.document.createElementNS('http://www.w3.org/2000/svg','svg');outlineSurface.dataset.maskOutlines='';outlineSurface.setAttribute('aria-hidden','true');Object.assign(outlineSurface.style,{position:'fixed',pointerEvents:'none',zIndex:38,overflow:'hidden'});root.document.body.append(outlineSurface);}
+  const f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),left=Math.max(f.left,c.left),top=Math.max(f.top,c.top),width=Math.max(0,Math.min(f.right,c.right)-left),height=Math.max(0,Math.min(f.bottom,c.bottom)-top),sx=f.width/frame.contentWindow.innerWidth,sy=f.height/frame.contentWindow.innerHeight;
+  Object.assign(outlineSurface.style,{display:'block',left:left+'px',top:top+'px',width:width+'px',height:height+'px'});
+  const present=new Set();for(const cached of outlineCache.values())cached.path.style.display='none';
+  for(const mask of d.querySelectorAll('[data-rt-mask-group] > mask'))for(const el of mask.querySelectorAll('rect,circle,ellipse,path,polygon,polyline,line,text,image,use')){
+   if(el.closest('defs')||el.closest('mask')!==mask)continue;present.add(el);
+   try{
+    const css=d.defaultView.getComputedStyle(el),names=shapeFields[el.localName],bounds=names?null:el.getBBox(),signature=JSON.stringify([names?.map(name=>[el.getAttribute(name),css.getPropertyValue(name)]),css.fontSize,css.display,css.visibility,bounds&&[bounds.x,bounds.y,bounds.width,bounds.height]]),matrix=el.getScreenCTM();if(!matrix||css.display==='none'||css.visibility!=='visible')continue;
+    let cached=outlineCache.get(el);if(!cached||cached.signature!==signature){
+     let data;if(el.localName==='line')data='M'+el.x1.baseVal.value+' '+el.y1.baseVal.value+'L'+el.x2.baseVal.value+' '+el.y2.baseVal.value;
+     else if(names){const geometry=root.RetouchSVGBooleanSelection.renderedPath(el,{svgGeometry:{fields:names.map(name=>({name,value:el.getAttribute(name)}))}});data=geometry&&root.RetouchSVGPath.serializeCompound(geometry);}
+     else{const b=bounds;data='M'+b.x+' '+b.y+'h'+b.width+'v'+b.height+'h'+(-b.width)+'Z';}
+     if(!data)continue;
+     const path=cached?.path||root.document.createElementNS(outlineSurface.namespaceURI,'path');path.setAttribute('d',data);path.setAttribute('fill','none');path.setAttribute('stroke','#14ae5c');path.setAttribute('stroke-width','1');path.setAttribute('vector-effect','non-scaling-stroke');if(!cached)outlineSurface.append(path);cached={path,signature};outlineCache.set(el,cached);
+    }
+    cached.path.style.display='';cached.path.setAttribute('transform','matrix('+[sx*matrix.a,sy*matrix.b,sx*matrix.c,sy*matrix.d,f.left-left+sx*matrix.e,f.top-top+sy*matrix.f].join(' ')+')');
+   }catch{const cached=outlineCache.get(el);if(cached)cached.path.style.display='none';}
+  }
+  for(const [el,cached]of outlineCache)if(!present.has(el)){cached.path.remove();outlineCache.delete(el);}
+ }
  function mount(infos,elements,{current,save,edit}){
-  const button=(action,label,run)=>{const control=root.RetouchInspector.button(label,run);control.dataset.maskAction=action;return control;};
+  const button=(action,label,run)=>{const control=root.RetouchInspector.button(label,run);control.dataset.maskAction=action;if(action==='outlines')control.title='Vector outlines; bounding guides for text, images and symbols.';return control;};
   const I=root.RetouchInspector,section=I.section('Mask'),releaseMode=infos.length===1&&infos[0].svgMask?.canRelease;
+  if(infos.length===1&&(releaseMode||infos[0].svgMask?.ownerId))section.append(button('outlines',outlinesEnabled?'Hide mask outlines':'Show mask outlines',()=>{outlinesEnabled=!outlinesEnabled;for(const control of root.document.querySelectorAll('[data-mask-action="outlines"]'))control.textContent=outlinesEnabled?'Hide mask outlines':'Show mask outlines';}));
   if(infos.length===1&&infos[0].svgMask?.ownerId){section.append(button('back','Back to mask',()=>{if(current())edit([infos[0].svgMask.ownerId]);}));section.append(button('release','Release mask',()=>{if(!current())return;try{const group=elements[0]?.closest('[data-rt-mask-group]');if(group?.getAttribute('data-rt')!==infos[0].svgMask.ownerId)throw Error('Re-select the mask group.');release(group);if(current())save('releaseSVGMask',{id:infos[0].svgMask.ownerId});}catch(error){I.note(section,error.message,'refused').setAttribute('role','alert');}}));return section;}
   if(releaseMode){const field=modeField(infos[0].svgMask.mode,()=>{if(!current()){field.select.value=infos[0].svgMask.mode;return;}try{typeChange(elements[0],field.select.value);if(current())save('setSVGMaskType',{mode:field.select.value});}catch(error){field.select.value=infos[0].svgMask.mode;I.note(section,error.message,'refused').setAttribute('role','alert');}});section.append(field.label);boundsFields(section,infos[0],elements[0],{current,save});section.append(button('edit','Edit mask shape',()=>{if(current())edit(infos[0].svgMask.maskIds);}));section.append(button('release','Release mask',()=>{if(!current())return;try{release(elements[0]);if(current())save('releaseSVGMask',{});}catch(error){I.note(section,error.message,'refused').setAttribute('role','alert');}}));I.note(section,'Release keeps the original mask shape and content, including their edits.');}
   else{const {label,select}=modeField('alpha');section.append(label,button('create','Use as mask',()=>{if(!current())return;try{const op=prepare(infos,elements,select.value);if(current())save('createSVGMask',op);}catch(error){I.note(section,error.message,'refused').setAttribute('role','alert');}}));I.note(section,'The bottom selected layer becomes the mask. Shape and content stay editable.');}
   return section;
  }
- root.RetouchSVGMask={prepare,release,typeChange,mount};
+ root.RetouchSVGMask={prepare,release,typeChange,mount,paintOutlines};
 })(window);
