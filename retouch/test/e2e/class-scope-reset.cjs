@@ -18,6 +18,26 @@ module.exports=async({page,app,read,wait,original,retain=false,liveLiquid=false}
   const verifySingle=async reset=>{for(const {name,frame}of comparisons){const expected=name==='Phone'?[.8,.6]:name==='Tablet'?[reset?.8:.9,.7]:[.5,.7];await wait(async()=>JSON.stringify(await frame.locator('[aria-label="A"],[aria-label="B"]').evaluateAll(els=>els.map(el=>Number(getComputedStyle(el).opacity))))===JSON.stringify(expected));assert.equal(await frame.locator('input').inputValue(),name);assert.equal(await frame.locator('input').evaluate(()=>document===window.literalClassDocument),true);assert.equal(await frame.locator('[aria-label="A"]').evaluate(el=>el.classList.contains('runtime-open')),true);}assert.equal(await app.locator('[aria-label="A"]').evaluate(el=>el.classList.contains('runtime-open')),true);};
   await verifySingle(true);await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();await opacity([.9,.7]);await verifySingle(false);
   await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===single);await settled();await opacity([.8,.7]);await verifySingle(true);
+  const versions=[single];
+  for(const value of [40,30]){
+   const input=page.getByLabel('Opacity (%)',{exact:true});
+   await input.fill(String(value));await input.press('Tab');
+   await wait(()=>read()!==versions.at(-1));await settled();versions.push(read());
+   await opacity([value/100,.7]);
+   assert.equal(await app.locator('[aria-label="A"]').evaluate(el=>el.classList.contains('runtime-open')),true);
+  }
+  for(const [direction,indices]of [['Undo',[1,0]],['Redo',[1,2]]])for(const index of indices){
+   await page.getByRole('button',{name:direction,exact:true}).click();
+   await wait(()=>read()===versions[index]);await settled();
+   const value=[.8,.4,.3][index];await opacity([value,.7]);
+   for(const {name,frame}of comparisons){
+    const expected=name==='Tablet'?value:name==='Phone'?.8:.5;
+    await wait(async()=>Number(await frame.locator('[aria-label="A"]').evaluate(el=>getComputedStyle(el).opacity))===expected);
+    assert.equal(await frame.locator('input').inputValue(),name);
+    assert.equal(await frame.locator('input').evaluate(()=>document===window.literalClassDocument),true);
+    assert.equal(await frame.locator('[aria-label="A"]').evaluate(el=>el.classList.contains('runtime-open')),true);
+   }
+  }
  }
  if(retain){assert.equal(await app.locator('input').inputValue(),'retained');assert.equal(await app.locator('input').evaluate(()=>document===window.classResetDocument),true);}
 };

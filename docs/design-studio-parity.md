@@ -16489,3 +16489,10 @@ The Liquid breakpoint browser workflow now resets a single layer after restoring
 the multi-layer edit, verifies the other layer keeps its override, and checks
 exact source undo/redo, runtime-only classes, and independent form/document state
 in the main, phone, tablet, and desktop previews.
+
+The same browser workflow also changes the single-layer tablet opacity twice
+through the visible numeric field, then undoes both edits and redoes both edits.
+Each step verifies exact source history and the responsive result across all
+comparison screens, retaining their independent document and input state.
+This covers consecutive writes using the refreshed source hash, beyond the
+one-shot breakpoint reset path. Chromium and WebKit pass.
