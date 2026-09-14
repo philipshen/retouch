@@ -82,8 +82,13 @@ The selected originals must be consecutive and leave at least one other
 operand in the target. The source planner retains their bytes, maps all old
 identities, selects the new group, and updates the target's base index and all
 result transforms. An invalid final result discards the entire planned edit.
-Regrouping all originals into a single operand, browser geometry preparation,
-inspector controls, and browser/history verification remain unfinished.
+The Original shapes inspector provides selection checkboxes and Union,
+Subtract, Intersect, and Exclude controls when the group has at least three
+originals. The browser prepares the nested group temporarily, computes the
+containing outlines, and restores the live DOM before submitting one source
+transaction. Browser coverage includes regrouping, filled-area samples, exact
+undo/redo, retained document/input state, and refusal of CSS-controlled results.
+Regrouping all originals into a single operand remains unfinished.
 
 ## Verification
 
@@ -100,3 +105,14 @@ filled-area checks and exact undo/redo, exact undo and
 release, and retained document/input state. Chromium also checks atomic DOM
 and source restoration when CSS controls an outer result path. The existing
 flat boolean workflow remains a regression check.
+
+### Regrouping browser verification (2026-09-14)
+
+The nested workflow now releases an inner group, selects two of the three
+remaining originals in the inspector, and regroups them with Union. It checks
+native SVG filled-area samples, exact source undo/redo, and retained form and
+document state. HTML/Chromium and React/WebKit additionally exercise a CSS `d`
+override and verify the refused regroup restores the DOM and leaves source
+unchanged. HTML/WebKit and Liquid/Chromium passed the regroup/history workflow
+before the refusal assertion was added. Regrouping under additional ancestors
+has source-level coverage; that browser scenario still needs explicit coverage.
