@@ -211,8 +211,8 @@ group and uses `removeSVGBooleanOperand`. It retains the original layer in
 history's pre-edit selection, so Undo restores that selection as well as source.
 The parent descriptor must match the selected layer's source hash; changing
 selection during resolution cancels the action. Existing layer-lock checks
-apply before computation and before saving. Multi-selected original deletion
-still needs a dedicated atomic operation.
+apply before computation and before saving. Multi-selected direct originals from the same containing group use one atomic
+removal. Selections spanning different containing groups remain unsupported.
 
 Keyboard removal passes on HTML/Chromium, Liquid/Chromium, and React/WebKit for
 a selected primitive (Backspace) and nested group (Delete), including lock
@@ -220,3 +220,19 @@ refusal, rendered-region checks, exact source undo/redo, and restored original
 selection. An initial full unit run failed the session descendant-termination
 check; all seven session tests passed in isolation, then the full 1,434-test
 rerun passed with no browser processes from this verification still running.
+
+
+`removeSVGBooleanOperand` also accepts `operandIds` (one to 100 distinct direct
+original IDs) instead of `operandId`. The planner validates every ID before
+editing, composes survivor mappings across deletions, and recalculates the
+remaining group once. Selecting every original uses the empty-parent deletion
+path. Source tests cover nonadjacent selections, reversed selection order,
+base retention/reassignment, empty groups, invalid selections, and invalid
+ancestor results across all three adapters. The unit suite passes 1,470 tests.
+
+Multi-selection Delete passes browser verification on HTML/Chromium,
+Liquid/Chromium, and React/WebKit. The workflow deletes both inner primitives
+and, separately, a nested group together with its sibling. It checks one POST,
+lock refusal, retained outer filled regions, exact source undo/redo, and both
+original rows selected again on Undo. Existing single-removal, release,
+geometry, and preview-state checks also pass in the same workflow.

@@ -125,8 +125,9 @@
    const meta=info.svgBooleanGroup,result=element(meta.resultId);
    const updateParents=parents=>{const results=[];for(const parent of parents){const el=element(parent.id),meta=cache.get(parent.id).svgBooleanGroup,infos=[meta.baseId,...meta.operandIds.filter(id=>id!==meta.baseId)].map(id=>live(cache.get(id))),result=element(meta.resultId);put(result,'transform',root.RetouchSVGAffine.format(effective(element(meta.baseId))));const path=compute(el,infos,meta.operation);put(result,'d',path);put(el.querySelector(':scope > [data-rt-boolean-operands]'),'display','none');results.push({id:parent.id,path});changed.add(parent.id);}return results;};
    if(type==='removeSVGBooleanOperand'){
-    if(!meta.operandIds.includes(extra.operandId))throw Error('Choose an original in this group.');
-    if(meta.operandIds.length===1){
+    const removing=extra.operandIds===undefined?[extra.operandId]:extra.operandIds;
+    if(!Array.isArray(removing)||!removing.length||new Set(removing).size!==removing.length||removing.some(id=>!meta.operandIds.includes(id)))throw Error('Choose distinct originals in this group.');
+    if(removing.length===meta.operandIds.length){
      const survivors=[...chain],empty=[];let deletedInfo=info;
      while(survivors[0]?.svgBooleanGroup.operandIds.length===1){deletedInfo=survivors.shift();empty.push({id:deletedInfo.id,path:''});}
      const removed=element(deletedInfo.id),parent=removed.parentNode,next=removed.nextSibling,priorCache=new Map(cache),watched=[...parent.children].filter(el=>el!==removed).flatMap(el=>[el,...el.querySelectorAll('*')]).map(el=>({el,values:css(el,shape)}));
@@ -135,10 +136,10 @@
      if(survivors.length){const parentInfo=survivors[0],parentMeta=parentInfo.svgBooleanGroup,operandIds=parentMeta.operandIds.filter(id=>id!==deletedInfo.id);cache.set(parentInfo.id,{...parentInfo,svgBooleanGroup:{...parentMeta,operandIds,baseId:parentMeta.baseId===deletedInfo.id?operandIds[0]:parentMeta.baseId}});}
      return {path:'',results:[...empty,...updateParents(survivors)],render:[]};
     }
-    const removed=element(extra.operandId),parent=removed.parentNode,next=removed.nextSibling,priorCache=new Map(cache),remaining=meta.operandIds.filter(id=>id!==extra.operandId),watched=remaining.flatMap(id=>{const el=element(id);return [el,...el.querySelectorAll('*')];}).map(el=>({el,values:css(el,shape)}));
-    restoreStructure=()=>{parent.insertBefore(removed,next);cache.clear();for(const [id,item]of priorCache)cache.set(id,item);};removed.remove();
+    const parent=element(removing[0]).parentNode,removed=[...parent.children].filter(el=>removing.includes(el.getAttribute('data-rt'))).map(el=>({el,next:el.nextSibling})),priorCache=new Map(cache),remaining=meta.operandIds.filter(id=>!removing.includes(id)),watched=remaining.flatMap(id=>{const el=element(id);return [el,...el.querySelectorAll('*')];}).map(el=>({el,values:css(el,shape)}));
+    restoreStructure=()=>{for(const {el,next}of [...removed].reverse())parent.insertBefore(el,next?.parentNode===parent?next:null);cache.clear();for(const [id,item]of priorCache)cache.set(id,item);};for(const {el}of removed)el.remove();
     if(watched.some(({el,values})=>!same(values,css(el,shape))))throw Error('Removing this original would change CSS-controlled geometry or appearance.');
-    cache.set(info.id,{...info,svgBooleanGroup:{...meta,operandIds:remaining,baseId:meta.baseId===extra.operandId?remaining[0]:meta.baseId}});
+    cache.set(info.id,{...info,svgBooleanGroup:{...meta,operandIds:remaining,baseId:removing.includes(meta.baseId)?remaining[0]:meta.baseId}});
     const [own,...results]=updateParents([info,...chain]);return {path:own.path,results,render:[]};
    }
    if(type==='createSVGBooleanGroup'){

@@ -63,6 +63,10 @@ function combinedResult(r,op,kind,v,selected){
  const hash=v.adapter.contentHash(source),resolved={...r,source,hash,elements:fresh.elements,element:proxyElements[0]};
  return combine.plan(resolved,{...op,fileHash:hash,ids:proxyElements.map(item=>item.id)},kind);
 }
+function removalIds(op,c){
+ const ids=op.operandIds===undefined?[op.operandId]:op.operandIds;
+ return Array.isArray(ids)&&ids.length>=1&&ids.length<=100&&new Set(ids).size===ids.length&&!(op.operandIds!==undefined&&op.operandId!==undefined)&&ids.every(id=>c.roots.some(e=>e.id===id))?ids:null;
+}
 function plan(r,op,kind){
  const refuse=reason=>({ok:false,refused:true,reason});
  if(!['html','react','liquid'].includes(kind))return refuse('Choose a source-connected SVG document.');
@@ -78,7 +82,9 @@ function plan(r,op,kind){
   if(!chain.length||!Array.isArray(op.results)||op.results.length!==chain.length||op.results.some((item,i)=>item?.id!==chain[i].id))return refuse('Provide every containing boolean result in nesting order.');
   let working={...r,element:target,booleanCascadeEdit:true,booleanOperandEdit:true};
   const releasing=op.edit.type==='releaseSVGBooleanGroup',targetContext=context(working,kind),parentContext=context({...r,element:chain[0]},kind);
-  if(op.edit.type==='removeSVGBooleanOperand'&&targetContext.roots.length===1&&op.edit.operandId===targetContext.roots[0].id){
+  const removing=op.edit.type==='removeSVGBooleanOperand'?removalIds(op.edit,targetContext):null;
+  if(op.edit.type==='removeSVGBooleanOperand'&&!removing)return refuse('Select distinct direct originals in the group.');
+  if(removing?.length===targetContext.roots.length){
    if(op.edit.path!=='')return refuse('Removing the final original requires an empty result.');
    const parent=chain[0],edit={type:'removeSVGBooleanOperand',operandId:target.id,path:op.results[0].path},resolved={...r,element:parent};
    // Empty single-operand ancestors disappear in the same transaction. The
@@ -148,16 +154,21 @@ function plan(r,op,kind){
    removed=v.elements.filter(e=>!retainedGroup&&e===c.group||e===c.operands||v.start(e)>=v.start(c.result)&&v.end(e)<=v.end(c.result));
    cuts=retainedGroup?[...v.attrs(c.group).filter(a=>['data-rt-boolean','data-rt-boolean-base'].includes(a.name)).map(a=>({start:a.start,end:a.end})),{start:v.start(c.operands),end:v.opening(c.operands)},{start:v.closing(c.operands),end:v.end(c.result)}]:[{start:v.start(c.group),end:v.opening(c.operands)},{start:v.closing(c.operands),end:v.end(c.group)}];for(const cut of cuts)out.remove(cut.start,cut.end);
   }else if(op.type==='removeSVGBooleanOperand'){
-   const operand=c.roots.find(e=>e.id===op.operandId);if(!operand)return refuse('Choose an original shape in the group.');
-   if(c.roots.length===1){
+   const removing=removalIds(op,c);if(!removing)return refuse('Select distinct direct originals in the group.');
+   if(removing.length===c.roots.length){
     if(op.path!=='')return refuse('Removing the final original requires an empty result.');
     if(ancestor(r,kind))return refuse('Remove the final original through the containing boolean cascade.');
     const deleted=v.adapter.planOp({...r,booleanOperandEdit:true},{type:'deleteElement',fileHash:r.hash});if(!deleted.ok)return deleted;return {...deleted,selectionIds:[deleted.parentId]};
    }
-   const deleted=v.adapter.planOp({...r,element:operand,booleanOperandEdit:true},{type:'deleteElement',fileHash:r.hash});if(!deleted.ok)return deleted;
-   if(deleted.edits?.length!==1)return refuse('Removing an original must stay in one source document.');
-   const mapping=new Map(deleted.sourceIdMap||[]),mapped=id=>mapping.get(id)||id;let after=deleted.edits[0].after;
-   const fresh=view({...r,source:after,elements:null},kind),group=fresh.elements.find(e=>e.id===mapped(c.group.id)),container=fresh.elements.find(e=>e.id===mapped(c.operands.id)),roots=fresh.elements.filter(e=>fresh.parents.get(e.id)===container.id),baseId=operand.id===c.roots[c.base].id?roots[0]?.id:mapped(c.roots[c.base].id),base=roots.findIndex(e=>e.id===baseId);
+   let after=r.source;const mapping=new Map(v.elements.map(e=>[e.id,e.id])),removedOriginals=new Set();
+   for(const id of removing){
+    const elements=v.adapter.collect(after,r.relPath).elements,hash=v.adapter.contentHash(after),element=elements.find(e=>e.id===mapping.get(id));
+    const edit=v.adapter.planOp({...r,source:after,elements,hash,element,booleanOperandEdit:true},{type:'deleteElement',fileHash:hash});if(!edit.ok)return edit;
+    if(edit.edits?.length!==1)return refuse('Removing originals must stay in one source document.');
+    const stepMap=new Map(edit.sourceIdMap||[]),stepRemoved=new Set(edit.removedSourceIds||[]);for(const [old,current]of mapping){if(stepRemoved.has(current)){removedOriginals.add(old);mapping.delete(old);}else mapping.set(old,stepMap.get(current)||current);}after=edit.edits[0].after;
+   }
+   const deleted={sourceIdMap:[...mapping].filter(([a,b])=>a!==b),removedSourceIds:[...removedOriginals]},mapped=id=>mapping.get(id)||id;
+   const fresh=view({...r,source:after,elements:null},kind),group=fresh.elements.find(e=>e.id===mapped(c.group.id)),container=fresh.elements.find(e=>e.id===mapped(c.operands.id)),roots=fresh.elements.filter(e=>fresh.parents.get(e.id)===container.id),baseId=removing.includes(c.roots[c.base].id)?roots[0]?.id:mapped(c.roots[c.base].id),base=roots.findIndex(e=>e.id===baseId);
    if(base<0)return refuse('The remaining boolean base could not be resolved.');const baseAttr=fresh.attrs(group).find(a=>a.name==='data-rt-boolean-base'),patched=new MagicString(after);patched.overwrite(baseAttr.start,baseAttr.end,'data-rt-boolean-base="'+base+'"');after=patched.toString();
    let elements=v.adapter.collect(after,r.relPath).elements,hash=v.adapter.contentHash(after),working={...r,source:after,elements,hash,element:elements.find(e=>e.id===mapped(c.group.id))},next=context(working,kind);
    if(!next)return refuse('The remaining boolean group could not be resolved.');
