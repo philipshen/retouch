@@ -1121,3 +1121,10 @@ html, body { overflow:clip; }
 .canvas-guide[data-guide-axis="x"]::after { top:0;bottom:0;left:4px;width:1px; }
 .canvas-guide[data-guide-axis="y"]::after { left:0;right:0;top:4px;height:1px; }
 .canvas-guide:focus-visible::after { background:var(--accent);box-shadow:0 0 0 1px #0d99ff44; }
+
+.guide-editor { width:min(280px,calc(100vw - 24px)); }
+.guide-editor h2 { padding:4px 8px; }
+.guide-editor footer { display:flex;justify-content:flex-end;gap:8px;padding:8px; }
+
+.guide-editor input { height:28px; }
+.guide-editor .inspector-section { padding:4px 0 12px; }
