@@ -838,7 +838,7 @@ function reloadFrame({keepDrawing=null,expectedTag=null}={}) {
 // module. Wait for that revision, retaining the live session when HMR applies it.
 // Reload only when the renderer cannot confirm a matching live update.
 async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null,expectedTag=null,svgGeometry=false,imageSource=false}={}) {
-  if(imageSource&&/\.(?:html?|liquid)$/i.test(info.file)&&matchingEls(info.id).length&&matchingEls(info.id).every(el=>el.tagName==='IMG')){await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info),matches});return;}
+  if(imageSource&&/\.(?:html?|liquid)$/i.test(info.file)&&matchingEls(info.id).length&&matchingEls(info.id).every(el=>el.tagName==='IMG')){const select=d=>matchingInDocument(d,info.id,info);await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select,matches});await window.RetouchComparisons?.syncImage({select,matches});return;}
   const geometrySelection=[...new Map([info,...(sel?.multiple||[])].map(item=>[item.id,item])).values()];
   if(svgGeometry&&/\.(?:html?|liquid)$/i.test(info.file)&&geometrySelection.every(item=>{const elements=matchingEls(item.id);return elements.length>0&&elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg');})){
     await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>{

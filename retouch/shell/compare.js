@@ -196,7 +196,7 @@
           const left=Math.min(...rects.map(rect=>rect.left)),top=Math.min(...rects.map(rect=>rect.top));
           boxes.push({left:left*scale,top:top*scale,width:(Math.max(...rects.map(rect=>rect.left+rect.width))-left)*scale,height:(Math.max(...rects.map(rect=>rect.top+rect.height))-top)*scale});
         }
-        updateProperty(message,'textContent',card.styleSyncError||card.textSyncError|| (selected?(visible?(selectedIds.length>1?'Selection · ':'Selected layer · ')+visible+(visible===1?' instance':' instances'):offscreen?'Selected layer is outside this viewport':nodes.length?'Selected layer is hidden':'Selected layer is absent on this screen'):'Same page · independent viewport'));
+        updateProperty(message,'textContent',card.styleSyncError||card.imageSyncError||card.textSyncError|| (selected?(visible?(selectedIds.length>1?'Selection · ':'Selected layer · ')+visible+(visible===1?' instance':' instances'):offscreen?'Selected layer is outside this viewport':nodes.length?'Selected layer is hidden':'Selected layer is absent on this screen'):'Same page · independent viewport'));
       }catch{boxes.length=0;updateProperty(reveal,'disabled',true);updateScope(scopeMessage,'unknown','Scope coverage is unavailable for this page.');updateProperty(message,'textContent','Preview unavailable for this page');}finally{updateOutlines(card,boxes);}
     }
     timer=setTimeout(paint,100);
@@ -661,6 +661,19 @@
           await RetouchRenderSync.syncCSS({frame:card.frame,entries});
         }catch(error){if(open&&cards.includes(card))card.styleSyncError='Styles saved; comparison refresh failed: '+error.message;}
       }));
+    },
+    async syncImage({select,matches}){
+      if(!open)return;const expectedRoute=path(),failures=[];
+      await Promise.all([...cards].map(async card=>{
+        card.imageSyncError=null;
+        try{
+          for(let attempt=0;attempt<80;attempt++){if(!open||!cards.includes(card)||path()!==expectedRoute)return;const d=card.frame.contentDocument;if(d?.body&&d.URL!=='about:blank')break;await new Promise(resolve=>setTimeout(resolve,50));}
+          const d=card.frame.contentDocument;if(!d?.body||d.URL==='about:blank')throw Error('Preview is still loading.');const url=new URL(d.URL);if(url.pathname+url.search+url.hash!==expectedRoute)return;
+          if(!select(d).length)return;
+          await RetouchRenderSync.sync({frame:card.frame,serverRendered:true,select,matches});
+        }catch(error){if(open&&cards.includes(card)){card.imageSyncError='Image saved; comparison refresh failed: '+error.message;failures.push(card.frame.title||'Comparison');}}
+      }));
+      if(failures.length)throw Error('Could not refresh '+failures.join(', ')+'.');
     },
     async syncText(info){
       if(!open||info.kind!=='host'||info.textSource)return;

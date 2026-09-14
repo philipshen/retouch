@@ -16813,3 +16813,11 @@ Chromium/WebKit dark/light-gray pixel checks verify both directions and tonal em
 The image editor now keeps its header, frame-shaped preview, status and actions visible while the controls scroll independently. Preview height adapts to available window height, and resize listeners are removed when closing. A separate scroll container avoids Chromium fieldset scrolling differences while retaining disabled-fieldset behavior during loading and saving.
 
 Chromium/WebKit checks cover 1366×768, 900×600 and 480×500 windows, editing lower controls, fixed preview position, visible Apply/Cancel actions, and cancellation without source writes. The narrow layout was visually inspected. The tonal adjustment/apply/reopen/source-undo workflow also passes after the layout change.
+
+### Shared image sources across comparison screens — 2026-09-14
+
+A new browser check reproduced stale comparison images after a crop: the main HTML preview changed but Phone/Tablet/Desktop kept the old source. HTML/Liquid image-source refresh now reconciles matching images in all open same-route comparison documents. Source undo uses the same path. Per-comparison synchronization failures are surfaced in the card status and propagated to the caller.
+
+HTML Chromium/WebKit and local Liquid/WebKit pass apply/undo across all three comparisons while retaining their document identities and input values. All 1,520 unit tests pass.
+
+**Unresolved React case:** `RT_E2E_RENDERER=react RT_E2E_IMAGE_CROP=1 RT_E2E_CROP_COMPARISONS=1` with the page-fonts harness still fails. All three comparisons report complete documents and mounted client components, but retain the old image source and `data-rt-revision` after the main canvas updates. Two runs reproduced this; diagnostic evidence is in `/tmp/retouch-crop-comparisons-react-diagnostic.log`. This change does not fix or claim React comparison image parity. Retry recovery and live Shopify comparison behavior also remain unverified.
