@@ -1211,3 +1211,7 @@ html, body { overflow:clip; }
 .paint-order-row.paint-drop-before::before, .paint-order-row.paint-drop-after::after { content:'';position:absolute;left:0;right:0;height:2px;background:var(--accent,#0d99ff);pointer-events:none; }
 .paint-order-row.paint-drop-before::before { top:-3px; }
 .paint-order-row.paint-drop-after::after { bottom:-3px; }
+
+.paint-stack-fields { border:0;margin:0;padding:0;min-width:0; }
+.paint-stack-fields > .paint-order { margin:4px 0; }
+.background-paint-row { margin-top:4px; }

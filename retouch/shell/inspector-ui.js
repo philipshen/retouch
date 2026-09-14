@@ -204,7 +204,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
  function collapsibleSection(section){
   const heading=section.querySelector(':scope > h3');if(!heading)return;
   const name=heading.textContent,key=section.dataset.section||name,button=document.createElement('button');button.type='button';button.className='section-toggle';button.textContent=name;
-  const set=(collapsed,persist=false)=>{section.dataset.collapsed=String(collapsed);button.setAttribute('aria-expanded',String(!collapsed));button.setAttribute('aria-label',(collapsed?'Expand ':'Collapse ')+name+' section');if(persist){if(collapsed){collapsedSections.add(key);expandedEmptySections.delete(key);}else{collapsedSections.delete(key);expandedEmptySections.add(key);}saveSectionPreferences();}};
+  const set=(collapsed,persist=false)=>{if(collapsed)for(const popup of section.querySelectorAll('[popover]'))if(popup.matches(':popover-open'))popup.hidePopover();section.dataset.collapsed=String(collapsed);button.setAttribute('aria-expanded',String(!collapsed));button.setAttribute('aria-label',(collapsed?'Expand ':'Collapse ')+name+' section');if(persist){if(collapsed){collapsedSections.add(key);expandedEmptySections.delete(key);}else{collapsedSections.delete(key);expandedEmptySections.add(key);}saveSectionPreferences();}};
   section.retouchSetCollapsed=set;button.onclick=()=>set(section.dataset.collapsed!=='true',true);heading.setAttribute('aria-label',name);heading.replaceChildren(button);set(collapsedSections.has(key)||(section.dataset.emptyEffects==='true'&&!expandedEmptySections.has(key)));
   for(const action of section.querySelectorAll(':scope > .section-add'))action.addEventListener('click',()=>set(false,true),true);
  }
@@ -321,7 +321,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
      const button=buttons.find(item=>pattern.test(item.textContent));if(!button)continue;
      const label=button.textContent;button.setAttribute('aria-label',label);button.title=label;button.classList.add('gradient-action');button.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true">'+icons[action]+'</svg>';
      const activate=button.onclick;button.onclick=event=>{
-      const match=group.querySelector(':scope > legend').textContent.trim().match(/^(Gradient|Fill|Shadow) (\d+)$/),count=section.querySelectorAll(name==='Fill'?'.gradient-controls':'.shadow-controls').length;
+      const match=group.querySelector(':scope > legend').textContent.trim().match(/^(Gradient|Fill|Shadow) (\d+)$/),count=[...section.querySelectorAll(name==='Fill'?'.gradient-controls':'.shadow-controls')].filter(item=>!item.closest('.paint-stack-fields')).length;
       if(match){const index=Number(match[2]),next=action==='up'?index-1:action==='down'||action==='duplicate'?index+1:Math.min(index,count-1);if(next>0)root.RetouchPanelFocus?.queueControl(button,match[1]+' '+next+' type');else{const add=section.querySelector('.section-add');if(add)root.RetouchPanelFocus?.queue(add);}}
       return activate?.call(button,event);
      };actions.append(button);
@@ -543,6 +543,18 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    if(empty){action.setAttribute('aria-haspopup','menu');action.setAttribute('aria-expanded','false');}
    action.onclick=()=>{if(input.disabled||!input.isConnected)return;if(empty)return addSVGPaint(input,section.querySelector('[aria-label="'+(paint==='fill'?'Fill type':'Stroke type')+'"]'),action,paint);input.value='none';input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));};
    section.classList.toggle('empty-svg-paint',empty);section.append(action);
+  }
+  const fillSection=panel.querySelector(':scope > [data-section="fill"]'),imageSection=panel.querySelector(':scope > [data-section="image-fill"]');
+  if(fillSection&&imageSection&&!fillSection.querySelector('[aria-label="SVG fill"], [aria-label="Combined fill"]')){
+   const advancedFills=disclosure('More fill controls','more-fill-controls'),background=fillSection.querySelector('input[data-paint-property="background-color"]');let backgroundRow=background;
+   while(backgroundRow&&backgroundRow.parentElement!==fillSection)backgroundRow=backgroundRow.parentElement;
+   for(const child of [...fillSection.children])if(child.tagName!=='H3'&&child!==backgroundRow)advancedFills.append(child);
+   for(const child of [...imageSection.children])if(child.tagName==='DETAILS'&&child.querySelector('summary')?.textContent==='Details')advancedFills.append(child);
+   imageSection.querySelector(':scope > h3')?.remove();imageSection.classList.remove('sec','inspector-section');imageSection.classList.add('paint-stack-fields');
+   const addPaint=imageSection.querySelector(':scope > .section-add');if(addPaint)fillSection.append(addPaint);
+   fillSection.insertBefore(imageSection,backgroundRow||fillSection.children[1]||null);
+   if(backgroundRow){backgroundRow.classList.add('background-paint-row');backgroundRow.title='Background color · below all other fills';}
+   if(advancedFills.children.length>1)fillSection.append(advancedFills);
   }
   for(const section of panel.querySelectorAll(':scope > .inspector-section'))collapsibleSection(section);
  }
