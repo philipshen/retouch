@@ -564,6 +564,7 @@ Keychain profile (only the profile name is passed; never put credentials here):
 ```sh
 node desktop/scripts/notarize.cjs submit /path/to/Retouch.app /path/to/separate-notarization-directory profile-name
 node desktop/scripts/notarize.cjs status /path/to/separate-notarization-directory
+node desktop/scripts/notarize.cjs finish /path/to/separate-notarization-directory
 ```
 
 Submission retains a separate app snapshot, the exact submitted ZIP, its SHA256,
@@ -575,7 +576,16 @@ retrying. Do not delete the retained evidence to blindly resubmit. A failed
 preflight retains its app snapshot for inspection; use a new output directory
 when the signing problem is resolved.
 
-`Accepted` here records Apple's response only. These commands do not yet staple
-the app, recreate the final ZIP, verify Gatekeeper acceptance, launch the app, or
-publish a public Homebrew cask. The existing development archive remains ad hoc
-signed. Unit tests simulate Apple responses; they do not establish notarization.
+`finish` checks the same Apple job and its log, then extracts the submitted ZIP
+into fresh staging. It staples and validates the ticket, verifies the package
+and Gatekeeper assessment, and creates a new ZIP. The final ZIP is extracted
+and checked again before publication. Only after all checks pass does it replace
+`distribution/` with the app, `Retouch-mac.zip`, its SHA256 file, and a verification
+receipt including Apple's log. Prior distribution files survive ordinary failures;
+retries use the original submitted bytes. An in-progress job returns without
+publishing; rejection retains `apple-log.json`. Review any warnings in that log.
+
+These commands do not launch the app or publish a public Homebrew cask. The
+existing development archive remains ad hoc signed. Unit tests simulate Apple
+responses; they do not establish notarization. Actual notarization and Gatekeeper
+verification remain untested until signing and a Keychain profile are available.

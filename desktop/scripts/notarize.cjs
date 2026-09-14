@@ -42,7 +42,7 @@ function create(deps={}){
    }catch(error){state.phase='submission-unknown';state.error=error.message;write(dir,state);throw error;}
   });
  }
- function status(output){return locked(output,dir=>{
+ function observe(dir){
   const state=JSON.parse(fs.readFileSync(path.join(dir,'notarization.json'),'utf8'));
   if(state.schemaVersion!==1||!uuid.test(state.submissionId||'')||!['submitted','observed'].includes(state.phase)||!/^[a-f0-9]{64}$/.test(state.sha256||''))throw Error('No resumable submission ID; investigate the original upload before submitting again');
   profile(state.keychainProfile);
@@ -50,8 +50,46 @@ function create(deps={}){
   const result=JSON.parse(execute('xcrun',['notarytool','info',state.submissionId,'--keychain-profile',state.keychainProfile,'--output-format','json']).stdout);
   if(result.id!==state.submissionId||!['In Progress','Accepted','Invalid','Rejected'].includes(result.status))throw Error('Unexpected Apple submission response');
   state.phase='observed';state.appleStatus=result.status;state.checkedAt=new Date().toISOString();write(dir,state);return state;
+ }
+ function status(output){return locked(output,observe);}
+ function finish(output){return locked(output,dir=>{
+  const state=observe(dir);
+  if(state.appleStatus==='In Progress')return {pending:true,submissionId:state.submissionId};
+  const log=JSON.parse(execute('xcrun',['notarytool','log',state.submissionId,'--keychain-profile',state.keychainProfile]).stdout);
+  if(typeof log.jobId!=='string'||log.jobId.toLowerCase()!==state.submissionId.toLowerCase()||log.status!==state.appleStatus)throw Error('Notarization log does not match the submission');
+  if(log.sha256!==undefined&&log.sha256!==state.sha256)throw Error('Apple archive checksum does not match');
+  fs.writeFileSync(path.join(dir,'apple-log.json'),JSON.stringify(log,null,2)+'\n');
+  if(state.appleStatus!=='Accepted')throw Error('Apple rejected this archive; see apple-log.json');
+  const stage=fs.mkdtempSync(path.join(dir,'.notarization-finish-'));let preserve=false;
+  try{
+   const distribution=path.join(stage,'distribution');fs.mkdirSync(distribution);
+   const app=path.join(distribution,'Retouch.app');
+   // Extract the retained submitted bytes, never the independently editable app.
+   execute('ditto',['-x','-k',path.join(dir,'submission.zip'),distribution]);
+   if(fs.lstatSync(app).isSymbolicLink()||!fs.statSync(app).isDirectory())throw Error('Expected an extracted Retouch.app directory');
+   const before=verify(app);
+   if(JSON.stringify(before)!==JSON.stringify(state.packageVerification))throw Error('Extracted package verification differs from submission');
+   execute('xcrun',['stapler','staple',app]);
+   execute('xcrun',['stapler','validate',app]);
+   const after=verify(app);
+   execute('spctl',['--assess','--type','execute','-vv',app]);
+   const zipName='Retouch-mac.zip',zip=path.join(distribution,zipName);
+   execute('ditto',['-c','-k','--sequesterRsrc','--keepParent',app,zip]);
+   const extracted=path.join(stage,'archive-check');fs.mkdirSync(extracted);
+   execute('ditto',['-x','-k',zip,extracted]);
+   const archivedApp=path.join(extracted,'Retouch.app');
+   verify(archivedApp);
+   execute('xcrun',['stapler','validate',archivedApp]);
+   execute('spctl',['--assess','--type','execute','-vv',archivedApp]);
+   const sha256=hash(zip);
+   fs.writeFileSync(path.join(distribution,zipName+'.sha256'),sha256+'  '+zipName+'\n');
+   const receipt={schemaVersion:1,submissionId:state.submissionId,submittedSha256:state.sha256,sha256,packageVerification:after,appleLog:log,checks:['strict package verification','stapler validate','Gatekeeper assessment','final ZIP extraction and package, ticket, Gatekeeper verification'],nativeLaunch:'not tested',createdAt:new Date().toISOString()};
+   fs.writeFileSync(path.join(distribution,'verification.json'),JSON.stringify(receipt,null,2)+'\n');
+   (deps.publish||require('./publish-package.cjs'))(stage,dir,['distribution']);
+   return receipt;
+  }catch(error){preserve=!!error.preserveStaging;throw error;}finally{if(!preserve)fs.rmSync(stage,{recursive:true,force:true});}
  });}
- return {submit,status};
+ return {submit,status,finish};
 }
-if(require.main===module){try{const [command,...args]=process.argv.slice(2),api=create();if(command==='submit'&&args.length===3)console.log(JSON.stringify(api.submit(...args),null,2));else if(command==='status'&&args.length===1)console.log(JSON.stringify(api.status(...args),null,2));else throw Error('Usage: notarize.cjs submit <Retouch.app> <separate-output-dir> <keychain-profile> | status <output-dir>');}catch(error){console.error(error.message);process.exitCode=1;}}
+if(require.main===module){try{const [command,...args]=process.argv.slice(2),api=create();if(command==='submit'&&args.length===3)console.log(JSON.stringify(api.submit(...args),null,2));else if(['status','finish'].includes(command)&&args.length===1)console.log(JSON.stringify(api[command](...args),null,2));else throw Error('Usage: notarize.cjs submit <Retouch.app> <separate-output-dir> <keychain-profile> | status <output-dir> | finish <output-dir>');}catch(error){console.error(error.message);process.exitCode=1;}}
 module.exports={create};
