@@ -15344,3 +15344,22 @@ The isolated React retry then passed the complete workflow with unchanged code
 (`/private/tmp/retouch-list-boundary-react-retry.log`, exit 0). The original
 failure log is retained; a passing retry does not resolve the intermittent
 Next.js reload issue.
+
+### Next.js reload investigation (2026-09-14)
+
+Three isolated React/Chromium list-indentation runs passed while investigating
+the prior JSON parse/HTTP 500 failure. The first two used a temporary parsing
+probe; the third used the committed opt-in manifest-read probe. The last two
+retained full child-server logs, including successful requests:
+`/private/tmp/retouch-next-json-server-2.log` and
+`/private/tmp/retouch-next-manifest-server.log`. The final browser result is
+`/private/tmp/retouch-next-manifest-browser.log`. No malformed manifest read was
+captured, so the original failure's cause is still unconfirmed.
+
+Installed Next.js 16.2.5 reads manifests synchronously in
+`dist/server/load-manifest.external.js`; `load-components.js` explicitly retries
+some manifest loads to handle concurrent compilation writes. This supports a
+race hypothesis, not a diagnosis of the observed error. No runtime workaround
+or extra retry was added. The fixture probe and `RT_E2E_SERVER_LOG` option retain
+evidence for the next occurrence. Its focused test verifies that JSON parsing
+still succeeds/fails normally and diagnostic output omits JSON contents.

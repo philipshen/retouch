@@ -116,3 +116,19 @@ inspector button pressed during a real browser-window resize. They verify the
 button survives through release and activates its tool; the HTML workflow also
 checks that the deferred inspector rebuild runs afterward. Set
 `RT_TRACE_PAGE_ERRORS=1` for React page-error stacks when diagnosing failures.
+
+For intermittent Next.js manifest parse failures in the page-fonts workflow,
+retain child-server logs even on a passing run with `RT_E2E_SERVER_LOG=/absolute/path.log`.
+An optional diagnostic preload records failing `.next/*.json` reads by path,
+byte count and call stack, without logging JSON contents or changing exceptions:
+
+```sh
+NODE_OPTIONS="--require=$PWD/test/e2e/diagnostics/manifest-reads.cjs" \
+RT_E2E_SERVER_LOG=/tmp/retouch-next-server.log \
+RT_INSPECTOR_FIXTURE=/path/to/fixture RT_E2E_RENDERER=react RT_E2E_LIST_INDENT=1 \
+node test/e2e/page-fonts.cjs
+```
+
+Run from `retouch/`. This probe is for isolated fixtures only; it is not a runtime
+fix. A passing rerun does not resolve an earlier reload failure. Keep each run's
+log at a different path.
