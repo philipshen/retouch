@@ -16732,3 +16732,10 @@ The fixtures provide their adapter asset directories (`public/` or `assets/`); t
 Image uploads now create the adapter asset directory and upload subdirectory on demand. A React project no longer needs an existing `public/` folder before applying its first crop; the same applies to Liquid `assets/`. Each ancestor is checked before creating a child, refusing paths outside the project, external or dangling symlinks, and non-directory paths. Existing internal symlinks remain supported.
 
 All 1,515 unit tests pass. The React/Chromium and Liquid/WebKit crop workflows pass starting without those directories, including asset rendering, reopening, exact source undo and retained runtime state. Public Shopify verification and native distribution remain separate outstanding work.
+
+
+### Reset saved crop framing — 2026-09-14
+
+Reset crop returns zoom to 100%, rotation to zero and position to center using the embedded original image. It changes only the dialog preview until Apply; Cancel preserves the saved crop. The control is disabled while loading or saving.
+
+React/Chromium and Liquid/WebKit browser checks verify original red/blue preview pixels after reset, cancel and reopen preservation, applying and reopening the reset values, and two exact source undo steps back through the cropped image to the original source. Input/document state and the React counter remain intact. Reset still produces a self-contained crop copy on Apply; it does not recover the original asset URL.
