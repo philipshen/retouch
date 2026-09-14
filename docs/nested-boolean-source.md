@@ -212,7 +212,8 @@ history's pre-edit selection, so Undo restores that selection as well as source.
 The parent descriptor must match the selected layer's source hash; changing
 selection during resolution cancels the action. Existing layer-lock checks
 apply before computation and before saving. Multi-selected direct originals from the same containing group use one atomic
-removal. Selections spanning different containing groups remain unsupported.
+removal. Selections spanning different boolean parents use the cross-parent planner when
+all selected layers belong to boolean trees in the same source document.
 
 Keyboard removal passes on HTML/Chromium, Liquid/Chromium, and React/WebKit for
 a selected primitive (Backspace) and nested group (Delete), including lock
@@ -252,6 +253,17 @@ surviving affected groups, or the common source parent if none survive.
 Tests cover separate and shared outer groups, non-base/base removal, overlapping
 selections, complete deletion, stable survivor identities, invalid result paths,
 and incorrect result order across HTML, React, and Liquid. All 1,488 unit tests
-pass. Browser preparation, cross-parent Delete routing, and end-to-end history
-verification for this new operation remain unfinished; the existing same-parent
-Delete behavior is unchanged.
+pass. Browser preparation and cross-parent Delete routing now use this operation.
+The browser loads affected ancestors and originals, normalizes removed
+subtrees, calculates surviving groups in the required order, and restores all
+temporary DOM edits before posting. Same-parent selections keep their existing
+removal route. Mixed selections with ordinary non-boolean layers remain outside
+this operation.
+
+Cross-parent browser verification passes on HTML/Chromium, Liquid/Chromium,
+and React/WebKit. It covers inner/outer parent selections, complete deletion,
+separate sibling groups selected in reverse source order, native filled-region
+checks, independent paint retention, lock refusal, CSS-result refusal, one POST,
+exact source undo/redo, and restored multi-selection. The Delete layer button is
+also verified on HTML/Chromium and React/WebKit; React boolean multi-selection
+now exposes that supported action. The final full unit run passes 1,488 tests.
