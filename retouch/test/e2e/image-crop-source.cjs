@@ -1,0 +1,15 @@
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict'),path=require('node:path');
+exports.run=async({page,app,file,wait,settled,kind,errors})=>{
+ const read=()=>fs.readFileSync(file,'utf8'),before=read(),img=app.getByAltText('Color image',{exact:true});await img.evaluate(el=>el.decode());const original=await img.getAttribute('src');
+ if(kind==='react'){await page.locator('#modeBtn').click();await app.getByRole('button',{name:'Clicks 0',exact:true}).click();await app.getByRole('button',{name:'Clicks 1',exact:true}).waitFor();await page.locator('#modeBtn').click();}
+ await app.locator('input').evaluate(el=>{el.value='retained';window.cropOriginalIdentity=window.cropIdentity={};});
+ await page.getByRole('treeitem',{name:'img · Color image',exact:true}).click();await settled();
+ const dialog=page.getByRole('dialog',{name:'Crop image',exact:true}),open=async()=>{await page.getByRole('button',{name:'Crop image',exact:true}).click();await wait(()=>dialog.getByLabel('Image zoom (%)',{exact:true}).isEnabled());};
+ await open();await dialog.getByLabel('Image zoom (%)',{exact:true}).fill('200');await dialog.getByLabel('Image rotation (°)',{exact:true}).fill('90');await dialog.getByAltText('Crop preview').evaluate(el=>el.decode());await page.keyboard.press('Escape');assert.equal(read(),before);
+ await open();await dialog.getByLabel('Image zoom (%)',{exact:true}).fill('200');await dialog.getByLabel('Image rotation (°)',{exact:true}).fill('90');await dialog.getByRole('button',{name:'Apply crop',exact:true}).click();await dialog.waitFor({state:'hidden'}).catch(async error=>{throw Error(error.message+'; crop status: '+await dialog.getByRole('status').textContent());});await wait(()=>read()!==before);await settled();await wait(async()=>await img.getAttribute('src')!==original);await img.evaluate(el=>el.decode());
+ assert.deepEqual(await img.evaluate(el=>[el.naturalWidth,el.naturalHeight,el.getBoundingClientRect().width,el.getBoundingClientRect().height]),[400,200,200,200]);
+ const pixels=await require(path.join(process.env.RT_INSPECTOR_FIXTURE,'node_modules/sharp'))(await img.screenshot()).removeAlpha().raw().toBuffer();for(const [y,color]of [[40,[255,0,0]],[160,[0,0,255]]])assert.deepEqual([...pixels.subarray((y*200+100)*3,(y*200+100)*3+3)],color);
+ await open();assert.equal(await dialog.getByLabel('Image zoom (%)',{exact:true}).inputValue(),'200');assert.equal(await dialog.getByLabel('Image rotation (°)',{exact:true}).inputValue(),'90');await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===before);await settled();await wait(async()=>await img.getAttribute('src')===original);assert.deepEqual(await app.locator('input').evaluate(el=>[el.value,!!window.cropIdentity&&window.cropIdentity===window.cropOriginalIdentity]),['retained',true]);if(kind==='react')assert.equal(await app.getByRole('button',{name:'Clicks 1',exact:true}).count(),1);assert.deepEqual(errors,[]);console.log(kind+': PASS crop asset upload, rotated pixels, recipe reopening, cancellation, exact source undo and retained runtime state');
+};

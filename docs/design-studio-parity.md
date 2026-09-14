@@ -16710,7 +16710,7 @@ Crop image now opens a light-theme preview with 100–800% zoom, horizontal/vert
 
 Runtime checks found CSS object-view-box available in Chromium but unavailable in this WebKit build, so the portable asset does not depend on that property. Chromium/WebKit pixel tests verify a red/blue original becomes the expected blue crop, the original file remains unchanged, intrinsic/frame dimensions stay intact, saved crop values reopen correctly and source Undo is exact. HTML/Liquid image-source refresh now reconciles the image in place; the HTML crop test verifies retained input/document state through apply and Undo.
 
-The crop is a shared image-source change across screen sizes, disclosed in the dialog. It is not a breakpoint-specific crop. Original images must be fetchable from the editor and under 7 MB; output uses the existing 10 MB asset-upload limit. Undo restores source but retains the uploaded asset, consistent with existing image uploads. React/Liquid crop-asset workflows, remote CORS-restricted images, animations and free-aspect crop handles still need work. The native archive predates these controls.
+The crop is a shared image-source change across screen sizes, disclosed in the dialog. It is not a breakpoint-specific crop. Original images must be fetchable from the editor and under 7 MB; output uses the existing 10 MB asset-upload limit. Undo restores source but retains the uploaded asset, consistent with existing image uploads. Remote CORS-restricted images, animations and free-aspect crop handles still need work. React and local Liquid crop-asset workflows now have the coverage below. The native archive predates these controls.
 
 
 ### Rotation within portable image crops — 2026-09-14
@@ -16718,3 +16718,10 @@ The crop is a shared image-source change across screen sizes, disclosed in the d
 The crop dialog now supports independent image rotation from -180 to 180 degrees. Coverage adjusts automatically to keep crop corners inside the original image, and dragging follows the rotated image axes. Saved crops retain rotation alongside zoom and position; older crop copies reopen with zero rotation.
 
 Geometry tests cover landscape, portrait and square images, pan extremes, multiple zoom levels and positive/negative rotations. Chromium at 90 degrees and WebKit at 33 degrees verify rendered colors, drag direction, cancel without writes, saved values reopening, original asset retention and exact source undo. The zero-rotation Chromium workflow also passes. Free-aspect handles and the adapter limitations above remain.
+
+
+### Crop assets across React and Liquid — 2026-09-14
+
+Chromium and WebKit now verify the crop workflow against a Next.js React app and a local Liquid renderer: cancel without source edits, upload and apply a 90-degree rotated crop, rendered red/blue pixels, original intrinsic/frame dimensions, saved recipe reopening and exact source undo. Both retain input values and document identity; React also retains a client component counter.
+
+The fixtures provide their adapter asset directories (`public/` or `assets/`); the Liquid fixture serves assets and implements the Shopify `asset_url` filter. Projects missing their static asset directory still refuse uploads. This is local adapter evidence, not a connected Shopify check or proof for arbitrary remote sites. No runtime changes were needed for these workflows.
