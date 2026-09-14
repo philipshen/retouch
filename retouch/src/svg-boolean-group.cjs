@@ -100,5 +100,5 @@ function plan(r,op,kind){
 const types=new Set(['createSVGBooleanGroup','releaseSVGBooleanGroup','setSVGBooleanOperation','setSVGBooleanOperand']);
 function owner(r,kind){if(!r.source?.includes('data-rt-boolean'))return null;const v=view(r,kind);for(let id=r.element.id;id;id=v.parents.get(id)){const e=v.elements.find(e=>e.id===id);if(e&&v.attr(e,'data-rt-boolean')!==undefined)return e.id;}return null;}
 function describe(r,kind){const c=context(r,kind);return c?{operation:c.operation,operandIds:c.roots.map(e=>e.id),baseId:c.roots[c.base].id,resultId:c.result.id,canRelease:true}:null;}
-function guard(r,op,kind){if(r.booleanOperandEdit||types.has(op.type))return null;const id=owner(r,kind);return id&&!(id===r.element.id&&(op.type==='deleteElement'||op.type==='setSVGTransform'&&context(r,kind)))?{ok:false,refused:true,reason:'Edit the original shapes from the Boolean group section, or release the group first.'}:null;}
+function guard(r,op,kind){if(r.booleanOperandEdit||types.has(op.type))return null;const id=owner(r,kind);return id&&!(id===r.element.id&&(op.type==='deleteElement'||['setSVGTransform','setSVGTransforms'].includes(op.type)&&context(r,kind)))?{ok:false,refused:true,reason:'Edit the original shapes from the Boolean group section, or release the group first.'}:null;}
 module.exports={plan,context,describe,owner,guard,types};

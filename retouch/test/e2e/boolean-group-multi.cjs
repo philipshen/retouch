@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict');
+module.exports=async({page,app,read,wait,settled})=>{
+ for(const names of [['Base','Cut'],['Second base','Second cut']]){
+  await page.getByRole('treeitem',{name:'rect · '+names[0],exact:true}).click();await settled();await page.getByRole('treeitem',{name:'rect · '+names[1],exact:true}).click({modifiers:['Meta']});await settled();await page.getByRole('button',{name:'Union selected shapes',exact:true}).click();await settled();await page.getByLabel('Boolean operation',{exact:true}).waitFor();
+ }
+ const groups=app.locator('[data-rt-boolean]'),ids=await groups.evaluateAll(els=>els.map(el=>el.getAttribute('data-rt')));assert.equal(ids.length,2);
+ // Select through the layer list, preserving normal modifier behavior.
+ const rows=page.getByRole('treeitem',{name:'g · Union',exact:true});await rows.nth(0).click();await settled();await rows.nth(1).click({modifiers:['Meta']});await settled();
+ const original=read(),children=await groups.evaluateAll(els=>els.map(el=>{const copy=el.cloneNode(true);for(const node of copy.querySelectorAll('*'))for(const name of ['data-rt-revision','data-rt-client-revision','data-rt-client-mounted'])node.removeAttribute(name);return copy.innerHTML;})),boxes=await groups.evaluateAll(els=>els.map(el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};}));
+ const x=page.getByLabel('Selection X',{exact:true});await x.waitFor();await x.fill(String(Number(await x.inputValue())+20));await x.press('Tab');await settled();await wait(()=>read()!==original);const moved=read();
+ assert.deepEqual(await groups.evaluateAll(els=>els.map(el=>{const copy=el.cloneNode(true);for(const node of copy.querySelectorAll('*'))for(const name of ['data-rt-revision','data-rt-client-revision','data-rt-client-mounted'])node.removeAttribute(name);return copy.innerHTML;})),children);const after=await groups.evaluateAll(els=>els.map(el=>el.getBoundingClientRect().x));after.forEach((value,i)=>assert.ok(Math.abs(value-boxes[i].x-20)<1));
+ const width=page.getByLabel('Selection width',{exact:true});await width.fill(String(Number(await width.inputValue())*1.2));await width.press('Tab');await settled();await wait(()=>read()!==moved);const resized=read();assert.deepEqual(await groups.evaluateAll(els=>els.map(el=>{const copy=el.cloneNode(true);for(const node of copy.querySelectorAll('*'))for(const name of ['data-rt-revision','data-rt-client-revision','data-rt-client-mounted'])node.removeAttribute(name);return copy.innerHTML;})),children);
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===moved);await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===resized);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===moved);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);
+ assert.equal(await app.locator('input').inputValue(),'retained state');assert.equal(await app.locator('input').evaluate(()=>window.booleanDocumentToken),'same document');assert.equal(await page.locator('[role="treeitem"][aria-selected="true"]').count(),2);
+};

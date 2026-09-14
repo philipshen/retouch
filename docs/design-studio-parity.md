@@ -16176,3 +16176,30 @@ multi-group transforms, original-shape canvas handles, independent result paints
 and desktop packaging/native verification of these changes. No push or native
 launch occurred. Evidence is in
 `/Users/philipshen/Developer/retouch-worktrees/recovery-2026-09-14/boolean-group-transforms/`.
+
+
+### Boolean multi-selection transforms — 2026-09-14
+
+Multiple retained boolean groups now use the shared selection inspector for
+position, size, rotation, alignment and spacing. Batch source transforms apply
+to the outer groups and retain operand/result content. The batch planner checks
+every member, including unchanged matrices, so a protected original or result
+cannot bypass the ordinary edit guard or produce a partial source transaction.
+HTML/Liquid reconciliation now updates all selected roots in place, including
+history restoration; the first browser run exposed and fixed primary-only sync.
+
+Validation: 1,347 unit tests passed, including 27 boolean-group checks. Browser
+flows passed HTML Chromium, Liquid Chromium and React WebKit: create two groups,
+select through the layer list, change selection position and width, retain all
+child geometry/paint, restore exact source with undo/redo, preserve selection,
+and retain input/document state. React child comparisons exclude only compiler
+revision/mount attributes, which are expected to change on every source edit.
+The new browser flow does not yet cover mixed ordinary/group selections,
+alignment/spacing or multi-group pointer gestures. These use shared controls but
+are not claimed as freshly verified by this flow.
+
+Full Figma parity remains incomplete, including nested boolean networks,
+responsive result regeneration, original-shape canvas editing, general arbitrary
+site support, and trusted desktop distribution. The existing desktop archive
+predates these changes. No native launch or push occurred in this increment.
+Evidence: `/Users/philipshen/Developer/retouch-worktrees/recovery-2026-09-14/boolean-multi-selection/`.

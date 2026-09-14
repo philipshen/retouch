@@ -816,7 +816,14 @@ function reloadFrame({keepDrawing=null,expectedTag=null}={}) {
 // module. Wait for that revision, retaining the live session when HMR applies it.
 // Reload only when the renderer cannot confirm a matching live update.
 async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null,expectedTag=null,maskGeometry=false}={}) {
-  if(maskGeometry&&/\.(?:html?|liquid)$/i.test(info.file)&&matchingEls(info.id).some(el=>el.closest('[data-rt-mask-group], [data-rt-boolean]'))){await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info),matches});return;}
+  const geometrySelection=[...new Map([info,...(sel?.multiple||[])].map(item=>[item.id,item])).values()];
+  if(maskGeometry&&/\.(?:html?|liquid)$/i.test(info.file)&&geometrySelection.some(item=>matchingEls(item.id).some(el=>el.closest('[data-rt-mask-group], [data-rt-boolean]')))){
+    await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>{
+      const selected=geometrySelection.flatMap(item=>matchingInDocument(d,item.id,item));
+      // Reconcile all edited roots once; descendants follow their selected parent.
+      return selected.filter(el=>!selected.some(parent=>parent!==el&&parent.contains(el)));
+    },matches});return;
+  }
   const location = iframe.contentWindow.location.href,initialDocument=iframe.contentDocument;
   const current=()=>iframe.contentDocument===initialDocument&&iframe.contentWindow.location.href===location;
   async function liveUpdateReady(expectedText=null){
@@ -1867,7 +1874,11 @@ function renderPanelContents(textEditing=false) {
   if(!info.svgBooleanOwner&&!(sel.multiple||[]).some(i=>i.svgBooleanOwner))head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
   if(info.svgBooleanOwner||(sel.multiple||[]).some(i=>i.svgBooleanOwner)){
-   if(sel.multiple?.length>1){const section=RetouchInspector.section('Boolean group');RetouchInspector.note(section,'Select one boolean group to edit its original shapes.');panelBody.append(section);return;}
+   if(sel.multiple?.length>1){
+    const infos=sel.multiple,elements=infos.map(item=>matchingEls(item.id).length===1?matchingEls(item.id)[0]:null),current=()=>sel?.multiple===infos&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&elements.every(el=>el&&!layerLocks.locked(el));
+    if(infos.every(item=>item.svgTransform&&(!item.svgBooleanOwner||item.svgBooleanGroup)))panelBody.append(RetouchSVGSelection.mount(infos,elements,{current,save:writeSVGSelection,onGaps:axis=>svgSelectionGaps.toggle(infos,axis),gapsActive:axis=>svgSelectionGaps.active(infos,axis)}));
+    const section=RetouchInspector.section('Boolean group');RetouchInspector.note(section,'Select one boolean group to edit its original shapes.');panelBody.append(section);return;
+   }
    if(info.svgBooleanGroup){const target=matchingEls(info.id)[0];panelBody.append(RetouchSVGBooleanGroup.mount(info,target,{resolveTarget:()=>{const matches=matchingEls(info.id);return matches.length===1?matches[0]:null;},selected:()=>sel?.info.id===info.id&&sel.info.hash===info.hash,current:()=>sel?.info.id===info.id&&sel.info.hash===info.hash&&!sel.multiple?.length&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&matchingEls(info.id).length===1&&!layerLocks.locked(matchingEls(info.id)[0]),load:async ids=>{const responses=await Promise.all(ids.map(id=>api('GET',resolveUrl(id))));if(responses.some(r=>!r?.ok||r.element.hash!==info.hash))throw Error('The original shapes changed. Re-select the group.');return responses.map(r=>r.element);},save:writeSVGBooleanGroup}));}
    else {const section=RetouchInspector.section('Boolean group');section.append(RetouchInspector.button('Back to boolean group',async()=>{await restoreLayerSelection([info.svgBooleanOwner]);if(sel)renderPanel();}));panelBody.append(section);}
    if(info.svgBooleanGroup){const target=matchingEls(info.id)[0],current=()=>sel?.info===info&&!panelTasks&&!undoBusy&&!sourceRequests&&!editing;const position=RetouchInspector.section('Vector position');RetouchSVGResize.positionFields(position,info,target,{onCanvas:()=>resizeSVGOnCanvas(info,target,null,'ne','rotate'),current,save:matrix=>writeSVGTransform(info,target,matrix)});const size=RetouchInspector.section('Vector size');RetouchSVGResize.sizeFields(size,info,target,{current,save:matrix=>writeSVGTransform(info,target,matrix)});panelBody.append(position,size);}
@@ -3072,7 +3083,7 @@ async function writeSVGBooleanSelection(path){
 }
 async function writeSVGSelection(matrices){
  const infos=sel?.multiple;if(!infos||panelTasks||sourceRequests||undoBusy||editing)return;const ids=infos.map(info=>info.id),primary=sel.info;busyPanel(true);
- try{const result=await api('POST','/rt/__api/op',{type:'setSVGTransforms',id:primary.id,ids,fileHash:primary.hash,matrices});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not transform the selected vectors.');if(result.undoId)editorHistory.record({type:'setSVGTransforms',id:primary.id,selectionIds:ids,undoId:result.undoId});await refreshWrittenElement(result.element,el=>svgSelectionMatches(result.selection,el.ownerDocument));await restoreLayerSelection(ids);if(sel)renderPanel();toast('Vectors updated','ok');}catch(error){toast(error.message,'err');}finally{busyPanel(false);}
+ try{const result=await api('POST','/rt/__api/op',{type:'setSVGTransforms',id:primary.id,ids,fileHash:primary.hash,matrices});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not transform the selected vectors.');if(result.undoId)editorHistory.record({type:'setSVGTransforms',id:primary.id,selectionIds:ids,undoId:result.undoId});await refreshWrittenElement(result.element,el=>svgSelectionMatches(result.selection,el.ownerDocument),{maskGeometry:true});await restoreLayerSelection(ids);if(sel)renderPanel();toast('Vectors updated','ok');}catch(error){toast(error.message,'err');}finally{busyPanel(false);}
 }
 function svgSelectionMatches(infos,d){return infos.every(info=>matchingInDocument(d,info.id,info).some(el=>el.getAttribute('transform')===info.svgTransform?.value));}
 async function writeSVGTransform(info,target,matrix){
@@ -3550,7 +3561,7 @@ async function restoreHistory(direction,op) {
           return tokens(el.getAttribute('class')) === tokens(info.className);
         }
         return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
-      },{verifyText:op.type==='setText'&&!info.textSource,maskGeometry:['setSVGGeometry','setSVGTransform'].includes(op.type)});
+      },{verifyText:op.type==='setText'&&!info.textSource,maskGeometry:['setSVGGeometry','setSVGTransform','setSVGTransforms'].includes(op.type)});
       if(op.type==='setText'&&info.kind==='host'&&!info.textSource&&window.__RT_RENDERING?.reloadAfterWrite){
         await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info)});
       }else await refresh();

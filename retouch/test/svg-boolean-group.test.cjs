@@ -52,3 +52,14 @@ for(const kind of ['html','react','liquid'])test(kind+' transformed boolean grou
  const edited=resolve(kind,changed.edits[0].after,made.selectionIds[0]),released=adapter.planOp(edited,{type:'releaseSVGBooleanGroup',fileHash:edited.hash});assert.equal(released.ok,true,released.reason);assert.equal(released.selectionIds.length,1);const final=resolve(kind,released.edits[0].after,released.selectionIds[0]);assert.equal(tag(kind,final.element),'g');assert.ok(final.source.includes('transform="matrix(2 0 0 1.5 20 30)"'));assert.ok(final.source.includes('transform="translate(3 4)"'));assert.ok(!final.source.includes('data-rt-boolean'));assert.equal(released.removedSourceIds.length,2);
  const mapping=new Map(released.sourceIdMap),removed=new Set(released.removedSourceIds);for(const old of edited.elements.filter(e=>!removed.has(e.id))){const retained=final.elements.find(e=>e.id===(mapping.get(old.id)||old.id));assert.ok(retained);assert.equal(tag(kind,retained),tag(kind,old));}
 });
+for(const kind of ['html','react','liquid'])test(kind+' batch transforms preserve boolean originals and reject protected members atomically',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),r=resolve(kind),first=create(kind,r),one=resolve(kind,first.edits[0].after,first.selectionIds[0]);
+ const duplicated=one.source.replace('</svg>',one.source.slice(group.context(one,kind).start(one.element),group.context(one,kind).end(one.element))+'</svg>');
+ const all=resolve(kind,duplicated),groups=all.elements.filter(e=>group.describe({...all,element:e},kind)),primary={...all,element:groups[0]},selection=groups.map(e=>e.id);assert.equal(selection.length,2);
+ const matrices=Object.fromEntries(selection.map((id,i)=>[id,[1,0,0,1,20+i*30,10]])),op={type:'setSVGTransforms',fileHash:primary.hash,ids:selection,matrices};
+ const moved=adapter.planOp(primary,op);assert.equal(moved.ok,true,moved.reason);assert.equal(moved.edits.length,1);assert.equal(moved.edits[0].before,duplicated);
+ for(const id of selection){const before=group.context({...all,element:all.elements.find(e=>e.id===id)},kind),after=group.context(resolve(kind,moved.edits[0].after,id),kind);assert.equal(after.attr(after.group,'transform'),'matrix('+matrices[id].join(' ')+')');assert.equal(moved.edits[0].after.slice(after.opening(after.group),after.closing(after.group)),duplicated.slice(before.opening(before.group),before.closing(before.group)));}
+ const info=group.describe(primary,kind);for(const protectedId of [...info.operandIds,info.resultId]){const ids=[selection[1],protectedId],bad={type:'setSVGTransforms',fileHash:primary.hash,ids,matrices:Object.fromEntries(ids.map(id=>[id,[1,0,0,1,5,5]]))},result=adapter.planOp({...primary,element:groups[1]},bad);assert.equal(result.refused,true);assert.equal(result.edits,undefined);}
+ const stale=adapter.planOp(primary,{...op,fileHash:'stale'});assert.equal(stale.refused,true);assert.equal(stale.edits,undefined);
+
+});
