@@ -16760,3 +16760,10 @@ All 1,516 unit tests pass. React/Chromium and Liquid/WebKit verify flipped/rotat
 The crop dialog now maintains up to 100 local undo steps, with Undo/Redo buttons and Ctrl/Cmd-Z, Shift-Z and Y shortcuts. Numeric changes commit on change, held arrow keys on release, and drags on gesture end. Flip and reset actions are separate steps. New edits discard redo. This history is local to the open dialog; Apply still creates one source-history operation.
 
 React/Chromium and Liquid/WebKit verify held-arrow grouping, reverse/redo, redo invalidation, a multi-move pointer drag undone as one step, flip undo/redo, no premature source changes, crop reset, exact source undo and retained runtime state.
+
+
+### Crop loading recovery — 2026-09-14
+
+Crop loading now passes an abort signal to fetch, aborts when the dialog closes, and times out after 15 seconds. Failed or timed-out loads expose Retry image loading while Apply remains disabled. Retry checks the selected image before restarting; successful recovery restores the normal editing controls.
+
+Chromium/WebKit browser checks inject a failed response and a hanging fetch, verify cancel and timeout abort signals, then restore the actual fetch and verify successful retry, crop apply, original asset retention and exact source undo. Canceled/failed attempts create no asset or source edit. The injected failure checks validate lifecycle handling; they do not establish support for CORS-restricted remote images.
