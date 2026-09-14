@@ -16702,3 +16702,12 @@ Image repositioning now converts pointer and keyboard deltas through the compose
 Chromium checks cover a 30-degree image rotation and a horizontally reflected image inside a 90-degree rotated parent. WebKit covers a skew matrix. Each workflow runs at 50%, 100% and 200% zoom, checks cancellation, live position values, keyboard movement, exact source undo and retained preview state. The rotated crop and outline were visually inspected; a browser assertion verifies the outside-corner hit region. WebKit's mouse rounding requires integer screen deltas for the exact skew fixture.
 
 Perspective, motion paths, singular transforms and full image crop/zoom/rotation authoring remain unfinished. This extends movement inside already-transformed frames; it is not complete image-editor parity.
+
+
+### Portable image crop copies — 2026-09-14
+
+Crop image now opens a light-theme preview with 100–800% zoom, horizontal/vertical positioning and pointer dragging. Apply creates a self-contained SVG asset embedding the original image bytes, then writes the new source through the existing guarded image-source operation. The crop keeps the original intrinsic width, height and aspect ratio, preserving the tested frame layout. Crop metadata permits reopening and editing without nesting or resampling the original image. Cancel creates no asset or source edit.
+
+Runtime checks found CSS object-view-box available in Chromium but unavailable in this WebKit build, so the portable asset does not depend on that property. Chromium/WebKit pixel tests verify a red/blue original becomes the expected blue crop, the original file remains unchanged, intrinsic/frame dimensions stay intact, saved crop values reopen correctly and source Undo is exact. HTML/Liquid image-source refresh now reconciles the image in place; the HTML crop test verifies retained input/document state through apply and Undo.
+
+The crop is a shared image-source change across screen sizes, disclosed in the dialog. It is not a breakpoint-specific crop. Original images must be fetchable from the editor and under 7 MB; output uses the existing 10 MB asset-upload limit. Undo restores source but retains the uploaded asset, consistent with existing image uploads. React/Liquid crop-asset workflows, remote CORS-restricted images, animations, free-aspect crop handles and independent image rotation still need work. The native archive predates these controls.

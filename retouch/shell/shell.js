@@ -837,7 +837,8 @@ function reloadFrame({keepDrawing=null,expectedTag=null}={}) {
 // A source write can finish before the framework invalidates its rendered
 // module. Wait for that revision, retaining the live session when HMR applies it.
 // Reload only when the renderer cannot confirm a matching live update.
-async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null,expectedTag=null,svgGeometry=false}={}) {
+async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null,expectedTag=null,svgGeometry=false,imageSource=false}={}) {
+  if(imageSource&&/\.(?:html?|liquid)$/i.test(info.file)&&matchingEls(info.id).length&&matchingEls(info.id).every(el=>el.tagName==='IMG')){await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info),matches});return;}
   const geometrySelection=[...new Map([info,...(sel?.multiple||[])].map(item=>[item.id,item])).values()];
   if(svgGeometry&&/\.(?:html?|liquid)$/i.test(info.file)&&geometrySelection.every(item=>{const elements=matchingEls(item.id);return elements.length>0&&elements.every(el=>el.namespaceURI==='http://www.w3.org/2000/svg');})){
     await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>{
@@ -2846,6 +2847,7 @@ function imageSection(info) {
   img.src = target?.currentSrc || target?.src || info.src;
   img.alt = 'Selected image';
   sec.appendChild(img);
+  if(target?.tagName==='IMG')sec.append(RetouchInspector.button('Crop image',()=>{stopDrawing?.();const hash=info.hash,source=target.currentSrc;RetouchImageCrop.open({target,current:()=>sel?.info===info&&info.hash===hash&&target.currentSrc===source&&!panelTasks&&!sourceRequests&&!undoBusy,onError:message=>toast(message,'err'),onApply:async blob=>{const response=await fetch('/rt/__api/upload?name=cropped-image.svg',{method:'POST',headers:{'x-retouch-token':TOKEN},body:blob}),result=await response.json();if(!result.ok)throw Error(result.reason||result.error||'Crop upload failed.');if(sel?.info!==info||info.hash!==hash||target.currentSrc!==source)throw Error('The selected image changed before the crop was saved.');await setSrc(result.src,false,info);if(info.src!==result.src)throw Error('The cropped image could not be applied.');}});}));
   const pathEl = document.createElement('div');
   pathEl.className = 'filepath';
   pathEl.textContent = info.src;
@@ -2924,7 +2926,7 @@ async function writeSrc(src, isUndo, info) {
     info.hash = res.hash;
     toast('Saved', 'ok');
     info.srcMatch=res.element?.srcMatch;
-    await refreshWrittenElement(info, el => imageMatches(el,src,info.srcMatch));
+    await refreshWrittenElement(info, el => imageMatches(el,src,info.srcMatch),{imageSource:true});
     if (sel?.info === info) renderPanel();
   } else {
     toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
@@ -3658,7 +3660,7 @@ async function restoreHistory(direction,op) {
           return tokens(el.getAttribute('class')) === tokens(info.className);
         }
         return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
-      },{verifyText:op.type==='setText'&&!info.textSource,svgGeometry:['setSVGGeometry','setSVGTransform','setSVGTransforms'].includes(op.type)});
+      },{verifyText:op.type==='setText'&&!info.textSource,imageSource:op.type==='setSrc',svgGeometry:['setSVGGeometry','setSVGTransform','setSVGTransforms'].includes(op.type)});
       if(op.type==='setText'&&info.kind==='host'&&!info.textSource&&window.__RT_RENDERING?.reloadAfterWrite){
         await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info)});
       }else if(op.type==='setCSSSelection'&&op.managedCSS){if(!selectionResult?.every(item=>item?.ok&&item.element.cssAuthoring))throw Error('The restored CSS selection could not be resolved.');const infos=selectionResult.map(item=>item.element);await RetouchRenderSync.syncCSS({frame:iframe,entries:infos.map(item=>({id:item.id,rules:item.cssRules,texts:item.cssRuleTexts}))});await window.RetouchComparisons?.syncCSS(infos);}else if(op.type==='setCSS'&&op.managedCSS&&info.cssAuthoring)await RetouchRenderSync.syncCSS({frame:iframe,id:info.id,rules:info.cssRules,texts:info.cssRuleTexts});else await refresh();

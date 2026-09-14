@@ -1,0 +1,4 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),{box,markup}=require('../shell/image-crop.js');
+test('crop zoom preserves intrinsic aspect and positions the crop inside the original image',()=>{assert.deepEqual(box(400,200,1,50,50),[0,0,400,200]);assert.deepEqual(box(400,200,2,100,50),[200,50,200,100]);assert.deepEqual(box(400,200,4,0,100),[0,150,100,50]);for(const values of [[400,200,0,50,50],[400,200,2,-1,50],[400,200,2,50,101],[Infinity,200,2,50,50]])assert.throws(()=>box(...values));});
+test('crop SVG retains original image data and dimensions without resampling',()=>{const svg=markup({width:400,height:200,zoom:2,x:100,y:50,data:'data:image/png;base64,YWJj'});assert.match(svg,/width="400" height="200" viewBox="200 50 200 100"/);assert.match(svg,/href="data:image\/png;base64,YWJj"/);assert.throws(()=>markup({width:400,height:200,zoom:2,x:50,y:50,data:'https://example.com/image.png'}));});

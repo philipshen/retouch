@@ -1139,3 +1139,8 @@ html, body { overflow:clip; }
 
 .image-position-surface { position:fixed;z-index:30;border:0;background:transparent;padding:0;cursor:move;touch-action:none;border-radius:0; }
 .image-position-surface:focus-visible { outline:1px solid var(--accent);outline-offset:2px; }
+
+.image-crop-dialog { width:min(420px,calc(100vw - 24px)); }
+.image-crop-preview { display:block;width:100%;height:240px;object-fit:contain;background:var(--bg); }
+.image-crop-dialog footer { display:flex;justify-content:flex-end;padding:8px; }
+.image-crop-dialog input { height:28px; }
