@@ -15859,3 +15859,36 @@ integration, complete percentage/calculated geometry support, masks and vector
 networks, broader geometry/paint interactions, and the full parity and trusted
 desktop requirements elsewhere in this ledger. Empty-result source transactions
 have unit coverage; their complete inspector workflow still needs browser proof.
+
+## Percentage and calculated SVG boolean geometry — 2026-09-14
+
+Boolean capture now resolves computed percentage and calculated primitive lengths
+using temporary native SVG measurement elements in the original viewport. This
+covers differing horizontal/vertical bases, normalized circle radii, nested
+viewBoxes, and supported CSS calculations without implementing a separate CSS
+length evaluator. Measurement elements are always removed. Automatic ellipse
+radii and explicit zero rectangle corner radii are handled separately.
+
+Circle/ellipse capture uses four quarter arcs to avoid near-semicircle numeric
+instability in native SVG arc rendering. CSS path override detection now probes
+attribute control using an exact marker path instead of comparing rounded
+computed path strings. Active overrides are refused; unsupported CSS `d` does
+not cause a false refusal. Reference: [SVG coordinate and percentage rules](https://www.w3.org/TR/SVG/coords.html)
+and [SVG geometry properties](https://www.w3.org/TR/SVG2/geometry.html).
+
+Verification: 1,275 unit tests passed. Chromium and WebKit each passed 14,052
+native SVG fill checks across three viewport sizes, including nested viewports,
+percentage/calculated geometry, auto/zero radii, all four booleans and original
+DOM preservation. CSS override tests account for each browser's actual support.
+With `RT_E2E_RESPONSIVE_BOOLEAN=1`, the full four-operation control/source/history
+workflow passed in HTML Chromium, HTML WebKit and React Chromium, retaining
+preview state and exact source Undo/Redo. Evidence is in the sibling recovery
+folder's `boolean-responsive-{chromium,webkit,units}.log` and
+`boolean-percent-{html,webkit,react}.log` files.
+
+The inspector explains that combining percentage-based geometry currently makes
+a path with fixed SVG coordinates. This improves capture at the chosen size;
+it does not preserve all percentage relationships when a viewport without a
+stable viewBox changes size. Editable boolean operands with responsive
+recomputation remain required for full parity. Existing standalone primitive
+conversion paths outside this boolean capture need their own precision audit.
