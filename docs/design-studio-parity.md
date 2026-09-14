@@ -15232,3 +15232,32 @@ hanging controls remain open. Source attributes are retained, but arbitrary CSS
 selectors tied to the old LI tag are not universally appearance-equivalent after
 it becomes a SPAN. Desktop distribution and arbitrary-site ownership requirements
 remain unproven; no desktop rebuild or native launch was performed.
+
+### Primary Typography for rich-text containers (2026-09-14)
+
+The Design inspector now uses the atomic text-layer classification in addition to
+semantic text tags when ordering sections. Text-only list/paragraph DIVs keep
+Typography before Fill, Stroke and Effects instead of placing it under More
+properties. Entering inline text editing explicitly promotes Typography even
+before the container has a saved list or paragraph structure. This also lets the
+existing typography layout and range-edit toolbar use the normal main-section
+styling and docking path.
+
+Entering text editing scrolls the section heading into view. The inspector's
+scroll padding accounts for its sticky tabs, preventing the Typography title and
+Done controls from being hidden behind them. Source ownership and the controls'
+write behavior are unchanged.
+
+Browser checks: list-join/source-history workflows pass in HTML, React and Liquid
+on Chromium, and HTML on WebKit (`/private/tmp/retouch-text-inspector-{html,react,liquid,webkit}.log`).
+They now assert that active DIV text editing and saved text-only lists have one
+primary Typography section with the Done control, outside More properties.
+The final HTML run also passes the range-inspector workflow, including heading
+visibility below sticky tabs, panel hide/show, compact layout, selection/focus
+retention, editing and exact source undo/redo
+(`/private/tmp/retouch-text-inspector-html-final.log`). The screenshot
+`/private/tmp/retouch-text-inspector-final.png` was visually inspected.
+The final range-inspector runs also passed on React Chromium and HTML WebKit
+(`/private/tmp/retouch-text-inspector-{react,webkit}-scroll.log`).
+Syntax and diff checks passed. This is a UI classification and reveal correction;
+full Figma parity and desktop distribution requirements remain open.

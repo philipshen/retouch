@@ -506,7 +506,7 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .layer-tools { border-top:1px solid var(--line);padding:8px 4px; }
 .layer-tools > summary { font-size:11px;font-weight:500;cursor:pointer;padding:6px 4px; }
 .layer-tools .layer-actions { border:0; }
-#panel { width:280px;padding:0; }
+#panel { width:280px;padding:0;scroll-padding-top:48px; }
 .design-panel-tabs { position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:16px;height:48px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line); }
 .design-panel-tabs .active { font-weight:600;padding:7px 10px;background:var(--control);border-radius:5px; }
 .panel-caption { color:var(--muted);font-size:11px;margin-left:auto; }

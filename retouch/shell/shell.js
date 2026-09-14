@@ -655,7 +655,7 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
   if (info.textSource && info.textSource.format !== 'text' && !info.richText) { renderPanel(); return; }
   if(info.text===''&&!['h1','h2','h3','h4','h5','h6','p','span','blockquote','label','a','button'].includes(el.tagName.toLowerCase())){renderPanel();return;}
   const editId = info.id;
-  renderPanel();
+  renderPanel(true);
   const originalHTML=el.innerHTML;
   if (info.richText) {
     try { RetouchRichTextSource.prepare(el,info.richText); }
@@ -1325,7 +1325,7 @@ function showInlineFormatToolbar(){
     const docked=!!section?.isConnected&&!panel.hidden,focused=bar.contains(document.activeElement)?document.activeElement:null;
     bar.classList.toggle('range-inspector',docked);if(section)section.toggleAttribute('data-range-editing',docked);
     for(const {node,hidden}of originals)node.hidden=docked||hidden;
-    if(docked){if(bar.parentNode!==section){section.retouchSetCollapsed?.(false);section.append(bar);section.scrollIntoView({block:'nearest'});}for(let parent=section.parentElement;parent&&parent!==panel;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;}
+    if(docked){if(bar.parentNode!==section){section.retouchSetCollapsed?.(false);section.append(bar);section.scrollIntoView({block:'start'});}for(let parent=section.parentElement;parent&&parent!==panel;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;}
     else if(bar.parentNode!==document.body)document.body.append(bar);
     if(focused&&document.activeElement!==focused)focused.focus({preventScroll:true});
   };
@@ -1801,7 +1801,7 @@ window.addEventListener('click',()=>{
   });
 });
 window.addEventListener('blur',()=>releasePanelPointer());
-function renderPanel() {
+function renderPanel(textEditing=false) {
   // A completed source write can outlive selection cleared by the frame reload.
   if(!sel?.info)return;
   // A reload or document.open() can leave the preview without a root. Keep
@@ -1822,9 +1822,9 @@ function renderPanel() {
   renderedPanelSelection=key;
   // Rebuilding an empty fieldset can clamp its scroll container to zero.
   // Restore synchronously after all sections (including early returns) exist.
-  try { renderPanelContents(); panelBody.dataset.organized='false';RetouchInspectorUI.organize(panelBody); } finally { panel.scrollTop=top;if(focusedScope)panelBody.querySelector('[aria-label="Style screen scope"]')?.focus({preventScroll:true});if(focusedTool)[...panelBody.querySelectorAll('[data-canvas-tool]')].find(el=>el.dataset.canvasTool===focusedTool)?.focus({preventScroll:true}); }
+  try { renderPanelContents(textEditing===true); panelBody.dataset.organized='false';RetouchInspectorUI.organize(panelBody); } finally { panel.scrollTop=top;if(focusedScope)panelBody.querySelector('[aria-label="Style screen scope"]')?.focus({preventScroll:true});if(focusedTool)[...panelBody.querySelectorAll('[data-canvas-tool]')].find(el=>el.dataset.canvasTool===focusedTool)?.focus({preventScroll:true}); }
 }
-function renderPanelContents() {
+function renderPanelContents(textEditing=false) {
   window.dispatchEvent(new CustomEvent('retouch:selection',{detail:activeId()}));
   window.dispatchEvent(new CustomEvent('retouch:selection-set',{detail:(sel.multiple||[sel.info]).map(info=>info.id)}));
   window.dispatchEvent(new CustomEvent('retouch:selection-details',{detail:(sel.multiple||[sel.info]).map(({id,kind,rootGroups,renderScope})=>({id,kind,rootGroups,renderScope}))}));
@@ -1911,6 +1911,8 @@ function renderPanelContents() {
   }
 
   const target = (editing?.el.ownerDocument === doc() ? editing.el : null) || matchingEls(activeId()).find(el => inTextScope(el, info));
+  const textLayer=info.kind!=='instance'&&(textEditing||RetouchInspector.isTextLayer(info.tag)||RetouchLayers.atomicText(target));
+  head.dataset.textLayer=String(textLayer);
   if(target?.namespaceURI==='http://www.w3.org/2000/svg'){
     const exports=RetouchInspector.section('Export'),options=document.createElement('div');
     const canvas=target.closest('svg'),name=document.createElement('input'),preview=document.createElement('div');
@@ -1997,7 +1999,6 @@ function renderPanelContents() {
   }else{
   if(target)panelBody.appendChild(RetouchClassSiteVariables.mount(style,target,setClasses,message=>toast(message,'err')));
   if(target?.namespaceURI==='http://www.w3.org/2000/svg')panelBody.appendChild(RetouchSVGPaint.mount(style,target,setClasses));
-  const textLayer=RetouchInspector.isTextLayer(info.tag);
   if(textLayer) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag,(type,scope,extra)=>writeTextStyle(type,undefined,{scope,...extra})));
   panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err'),(info.renderRevisionAttribute||info.classSelection)&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(action,opener,initial)=>transformReactLayer(info,target,action,opener,initial):null,info.renderRevisionAttribute&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(classes,g)=>writeReactBounds(info,classes,g):null,info.classSelection&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(g,before,anchors)=>writeClassLayerGeometry(info,target,g,before,anchors):null));
   panelBody.appendChild(RetouchLayout.mount(style, target, setClasses));

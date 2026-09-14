@@ -6,7 +6,7 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  const select=async()=>target.evaluate(el=>{const d=el.ownerDocument,r=d.createRange();r.setStart(el.firstChild,1);r.setEnd(el.firstChild,4);const s=d.getSelection();s.removeAllRanges();s.addRange(r);});
  const edit=async()=>{await target.click({position:{x:12,y:18}});await wait(async()=>await target.getAttribute('contenteditable')==='true');await select();};
  const docked=()=>toolbar.evaluate(el=>!!el.closest('#panelBody [data-section="typography"]'));
- await edit();assert.equal(await docked(),true);
+ await edit();assert.equal(await docked(),true);const heading=await section.locator(':scope > h3').boundingBox(),tabs=await page.locator('.design-panel-tabs').boundingBox();assert.ok(heading.y>=tabs.y+tabs.height-1,'Typography heading is visible below sticky inspector tabs');
  assert.equal(await section.locator(':scope > :not(h3):not(.inline-format-toolbar)').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).display==='none')),true);
  await target.evaluate(el=>el.ownerDocument.getSelection().collapseToStart());
  await wait(async()=>await page.getByLabel('Selected text weight',{exact:true}).isEnabled());assert.equal(await page.getByRole('button',{name:'Finish text editing',exact:true}).isEnabled(),true);

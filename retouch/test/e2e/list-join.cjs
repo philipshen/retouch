@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 module.exports=async({page,target,read,wait,settled,states,kind})=>{
  const button=name=>page.getByRole('button',{name,exact:true}),items=()=>target.locator(':scope > ol > li').count();
- const open=async()=>{await target.locator('a').filter({hasText:/\S/}).first().click();await wait(async()=>await target.getAttribute('contenteditable')==='true');};
+ const open=async()=>{assert.equal(await page.locator('#panelBody > [data-section=typography]').count(),1,'saved text-only lists keep Typography primary');await target.locator('a').filter({hasText:/\S/}).first().click();await wait(async()=>await target.getAttribute('contenteditable')==='true');};
  const save=async()=>{await button('Finish text editing').click();await settled();await wait(()=>read()!==states.at(-1));states.push(read());};
  const select=async(text,offset,end=offset)=>{await target.focus();await target.evaluate((el,[text,offset,end])=>{const d=el.ownerDocument,w=d.createTreeWalker(el,4);let n;while(n=w.nextNode())if(n.data===text)break;if(!n)throw Error('Missing '+text);const range=d.createRange();range.setStart(n,offset);range.setEnd(n,end);d.getSelection().removeAllRanges();d.getSelection().addRange(range);},[text,offset,end]);};
  await select('Headline',0,8);const link=page.getByLabel('Selected text link',{exact:true});await link.fill('/kept');await link.press('Tab');await page.getByLabel('Text layer list style',{exact:true}).selectOption('ol');await save();await open();
