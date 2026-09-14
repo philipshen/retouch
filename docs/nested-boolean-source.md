@@ -72,8 +72,18 @@ identities through the structural change and selects the containing group.
 The normal transaction and history services save this as one snapshot.
 
 Direct nested operation, release, geometry, or transform writes are refused
-because they could leave a containing result stale. Nested regrouping is not
-part of the cascade operation yet.
+because they could leave a containing result stale.
+
+The source planner also accepts `edit.type: createSVGBooleanGroup`. For this
+edit, `targetId` is the existing group whose direct originals are being
+regrouped; `edit.ids`, `edit.operation`, and `edit.path` describe the new inner
+group. `results` starts with the target itself, then every ancestor outward.
+The selected originals must be consecutive and leave at least one other
+operand in the target. The source planner retains their bytes, maps all old
+identities, selects the new group, and updates the target's base index and all
+result transforms. An invalid final result discards the entire planned edit.
+Regrouping all originals into a single operand, browser geometry preparation,
+inspector controls, and browser/history verification remain unfinished.
 
 ## Verification
 

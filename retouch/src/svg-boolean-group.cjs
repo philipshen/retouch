@@ -69,11 +69,12 @@ function plan(r,op,kind){
  if(op.fileHash!==r.hash)return refuse('The file changed. Re-select the boolean group.');
  if(['createSVGBooleanGroup','setSVGBooleanOperation'].includes(op.type)&&!operations.has(op.operation))return refuse('Choose Union, Subtract, Intersect or Exclude.');
  if(op.type==='setSVGBooleanNested'){
-  const original=view(r,kind),target=original.elements.find(e=>e.id===op.targetId);
-  if(!target||!context({...r,element:target},kind)||!['setSVGBooleanOperation','setSVGBooleanOperand','setSVGBooleanPaint','setSVGTransform','releaseSVGBooleanGroup'].includes(op.edit?.type))return refuse('Choose a nested boolean operation, paint or geometry edit.');
+  const original=view(r,kind),target=original.elements.find(e=>e.id===op.targetId),regrouping=op.edit?.type==='createSVGBooleanGroup';
+  if(!target||!context({...r,element:target},kind)||!['setSVGBooleanOperation','setSVGBooleanOperand','setSVGBooleanPaint','setSVGTransform','releaseSVGBooleanGroup','createSVGBooleanGroup'].includes(op.edit?.type))return refuse('Choose a nested boolean operation, paint or geometry edit.');
   const chain=[];let child=target;
   for(let id=ancestor({...r,element:child},kind);id;id=ancestor({...r,element:child},kind)){child=original.elements.find(e=>e.id===id);if(!child||!context({...r,element:child},kind))return refuse('A containing boolean group no longer resolves.');chain.push(child);}
   if(![target,...chain].some(element=>element.id===r.element.id))return refuse('Select the nested boolean or one of its containing groups.');
+  if(regrouping)chain.unshift(target);
   if(!chain.length||!Array.isArray(op.results)||op.results.length!==chain.length||op.results.some((item,i)=>item?.id!==chain[i].id))return refuse('Provide every containing boolean result in nesting order.');
   let working={...r,element:target,booleanCascadeEdit:true,booleanOperandEdit:true};
   const releasing=op.edit.type==='releaseSVGBooleanGroup',targetContext=context(working,kind),parentContext=context({...r,element:chain[0]},kind);
@@ -85,12 +86,17 @@ function plan(r,op,kind){
    }
    const v=view({...r,source,elements:null},kind),element=v.elements.find(e=>e.id===target.id),attr=v.attrs(element).find(a=>a.name==='transform'),out=new MagicString(source);out.remove(attr.start,attr.end);source=out.toString();working={...working,source,hash:original.adapter.contentHash(source),elements:original.adapter.collect(source,r.relPath).elements};working.element=working.elements.find(e=>e.id===target.id);
   }
-  const edit=original.adapter.planOp(working,{...op.edit,id:target.id,fileHash:working.hash});if(!edit.ok)return edit;
+  if(regrouping){
+   if(!Array.isArray(op.edit.ids)||op.edit.ids.some(id=>!targetContext.roots.some(e=>e.id===id))||op.edit.ids.length>=targetContext.roots.length)return refuse('Regroup two or more direct originals while leaving another containing operand.');
+   working={...working,element:original.elements.find(e=>e.id===op.edit.ids[0]),booleanRegroupOwner:target.id};
+   if(!working.element)return refuse('Select original shapes to regroup.');
+  }
+  const edit=original.adapter.planOp(working,{...op.edit,id:working.element.id,fileHash:working.hash});if(!edit.ok)return edit;
   const mapping=new Map(edit.sourceIdMap||[]),mapped=id=>mapping.get(id)||id;
   let after=edit.unchanged||!edit.edits?.length?r.source:edit.edits.length===1?edit.edits[0].after:null;
   if(typeof after!=='string')return refuse('Nested boolean edits must stay in one source document.');
-  if(releasing){
-   const v=view({...r,source:after,elements:null},kind),parent=v.elements.find(e=>e.id===mapped(chain[0].id)),container=v.elements.find(e=>e.id===mapped(parentContext.operands.id)),roots=v.elements.filter(e=>v.parents.get(e.id)===container.id),baseId=mapped(parentContext.roots[parentContext.base].id===target.id?targetContext.roots[targetContext.base].id:parentContext.roots[parentContext.base].id),base=roots.findIndex(e=>e.id===baseId);
+  if(releasing||regrouping){
+   const v=view({...r,source:after,elements:null},kind),parent=v.elements.find(e=>e.id===mapped(chain[0].id)),container=v.elements.find(e=>e.id===mapped(parentContext.operands.id)),roots=v.elements.filter(e=>v.parents.get(e.id)===container.id),baseId=regrouping&&op.edit.ids.includes(parentContext.roots[parentContext.base].id)?edit.selectionIds[0]:mapped(parentContext.roots[parentContext.base].id===target.id?targetContext.roots[targetContext.base].id:parentContext.roots[parentContext.base].id),base=roots.findIndex(e=>e.id===baseId);
    if(base<0)return refuse('The containing boolean base could not be preserved.');const attr=v.attrs(parent).find(a=>a.name==='data-rt-boolean-base'),out=new MagicString(after);out.overwrite(attr.start,attr.end,'data-rt-boolean-base="'+base+'"');after=out.toString();
   }
   for(const supplied of op.results){const item={...supplied,id:mapped(supplied.id)};
@@ -104,14 +110,14 @@ function plan(r,op,kind){
    const result=plan(working,{type:'setSVGBooleanOperation',fileHash:hash,operation:c.operation,path:item.path},kind);if(!result.ok)return result;if(result.edits?.length)after=result.edits[0].after;
   }
   if(after===r.source)return {ok:true,unchanged:true,hash:r.hash,edits:[]};
-  const next=original.adapter.collect(after,r.relPath).elements,removed=new Set(edit.removedSourceIds||[]),retained=original.elements.filter(e=>!removed.has(e.id));if(next.length!==retained.length||next.some((e,i)=>e.id!==mapped(retained[i].id)))return refuse('The nested edit would change unrelated layer identities.');
-  return {ok:true,...(releasing?{structural:true}:{}),hash:original.adapter.contentHash(after),parentId:mapped(original.parents.get(chain.at(-1).id)),selectionIds:[releasing?mapped(chain[0].id):target.id],sourceIdMap:edit.sourceIdMap||[],removedSourceIds:[...removed],edits:[{file:r.file,before:r.source,after}]};
+  const next=original.adapter.collect(after,r.relPath).elements,removed=new Set(edit.removedSourceIds||[]),retained=original.elements.filter(e=>!removed.has(e.id));const preserved=regrouping?next.filter(e=>retained.some(old=>mapped(old.id)===e.id)):next;if(next.length!==retained.length+(regrouping?3:0)||preserved.length!==retained.length||preserved.some((e,i)=>e.id!==mapped(retained[i].id)))return refuse('The nested edit would change unrelated layer identities.');
+  return {ok:true,...(releasing||regrouping?{structural:true}:{}),hash:original.adapter.contentHash(after),parentId:mapped(original.parents.get(chain.at(-1).id)),selectionIds:[regrouping?edit.selectionIds[0]:releasing?mapped(chain[0].id):target.id],sourceIdMap:edit.sourceIdMap||[],removedSourceIds:[...removed],edits:[{file:r.file,before:r.source,after}]};
  }
  const v=view(r,kind),out=new MagicString(r.source);let insertions=[],cuts=[],selected=[],removed=[],parentId,created=false,retainedGroup=null;
  if(op.type==='createSVGBooleanGroup'){
   if(!Array.isArray(op.ids)||op.ids.length<2||op.ids.length>100||new Set(op.ids).size!==op.ids.length||!op.ids.includes(r.element.id))return refuse('Select two to 100 distinct SVG operands.');
   selected=op.ids.map(id=>v.elements.find(e=>e.id===id));if(selected.some(e=>!e))return refuse('Every boolean operand must resolve in this source file.');
-  if(selected.some(element=>ancestor({...r,element},kind)))return refuse('Edit nested original shapes through their containing boolean group.');
+  if(selected.some(element=>{const owner=ancestor({...r,element},kind);return owner&&(!r.booleanCascadeEdit||owner!==r.booleanRegroupOwner);}))return refuse('Edit nested original shapes through their containing boolean group.');
   const path=op.path===''?'M0 0L1 0L0 1Z':op.path,flattened=combinedResult(r,{...op,path},kind,v,selected);if(!flattened.ok)return flattened;
   const base=selected[0];selected.sort((a,b)=>v.start(a)-v.start(b));parentId=v.parents.get(base.id);
   const siblings=v.elements.filter(e=>v.parents.get(e.id)===parentId),positions=selected.map(e=>siblings.indexOf(e));
