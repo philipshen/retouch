@@ -6,7 +6,8 @@ const flow=new Set(['div','section','article','aside','nav','main','header','foo
 const phrasing=new Set(['span','a','strong','em','b','i','u','s','sup','sub','br','code','mark','small','abbr','time','img','input','label','button']);
 const contains=items=>Array.isArray(items)&&items.some(item=>item&&(item.t==='block'||item.t==='keep'&&item.tag||contains(item.children)));
 function validateNode(node){
- if(!tags.has(node.tag)||Object.keys(node).some(key=>!['t','tag','children','start','template'].includes(key)))return 'Unsupported paragraph or list node.';
+ if(!tags.has(node.tag)||Object.keys(node).some(key=>!['t','tag','children','start','template','marker'].includes(key)))return 'Unsupported paragraph or list node.';
+ if(Object.hasOwn(node,'marker')&&!require('./list-markers.cjs').valid(node.tag,node.marker))return 'Invalid list marker.';
  if(Object.hasOwn(node,'template')&&(!['ul','ol'].includes(node.tag)||!/^[0-9a-f]{10}$/.test(node.template||'')))return 'Invalid list appearance source.';
  if(Object.hasOwn(node,'start')&&(node.tag!=='ol'||!Number.isInteger(node.start)||node.start<1||node.start>1000000))return 'Invalid ordered list start.';
  return null;
@@ -43,7 +44,8 @@ function markup(node,content,jsx=false,template=null){
   const seen=new Set();for(const attr of template.attributes){if(!['class','className','style'].includes(attr.name)||seen.has(attr.name))throw Error('Ambiguous list appearance source.');seen.add(attr.name);appearance+=' '+attr.raw;}
   if(seen.has('style'))style='';
  }
- return '<'+node.tag+appearance+style+(Object.hasOwn(node,'start')?' start="'+node.start+'"':'')+'>'+content+'</'+node.tag+'>';
+ const raw='<'+node.tag+appearance+style+(Object.hasOwn(node,'start')?' start="'+node.start+'"':'')+'>'+content+'</'+node.tag+'>';
+ return node.marker?require('./list-markers.cjs').patch(raw,node.tag,node.marker,jsx):raw;
 }
 const inlineTag=tag=>tag==='#text'||tag==='#comment'||phrasing.has(tag);
 function patchTag(raw,from,to){

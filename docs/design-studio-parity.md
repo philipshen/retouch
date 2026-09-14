@@ -14935,3 +14935,38 @@ prefixes, exact nested marker/counter styling, list/paragraph spacing and hangin
 controls, and automatic phrasing-root conversion. Nested bullets currently follow
 browser marker conventions rather than Figma's uniform bullets. No desktop
 rebuild or native launch was performed. The full parity goal remains incomplete.
+
+### 2026-09-14: indentation-aware list markers
+
+List conversion and indentation now apply solid `disc` bullets at every level
+and cycle ordered markers through `decimal`, `lower-alpha`, `lower-roman`,
+`decimal`, `lower-alpha`. This follows the pictured marker sequence in
+[Figma's list reference](https://help.figma.com/hc/en-us/articles/360040449773-Create-bulleted-and-numbered-lists).
+Whole-layer list conversion normalizes all lists in the edited layer; indentation
+also recalculates their markers after moving or splitting items. Merely opening
+an authored list does not restyle it.
+
+A constrained marker field travels through new blocks and source-owned lists.
+HTML, React and Liquid writers patch the list's style while retaining its other
+attributes. Copied appearance templates receive the destination marker instead
+of inheriting the parent's marker. HTML CSS scanning preserves quoted values,
+comments and custom-property blocks, handles existing inline important marker
+rules, and replaces a trailing canonical override without accumulating copies.
+JSX style expressions remain present once, including object spreads; an existing
+marker before a spread is wrapped to avoid generating duplicate TypeScript
+object keys. Ambiguous attributes and dynamic Liquid style bindings are refused.
+Markers participate in the same grouped local and exact source undo history.
+
+Verification: 1,232 unit tests pass (`/private/tmp/retouch-markers-units-verified.log`).
+The extended list-indentation browser flow checks the five marker levels before
+and after source save/reopen, UL-to-OL conversion, middle-item splitting, ordered
+outdent, conversion back to uniform bullets and undo. It retains the existing
+text-order, geometry and exact source-history assertions. Browser evidence is in
+`/private/tmp/retouch-markers-{html,react,liquid,webkit}-verified.log`; the final
+HTML screenshot is `/private/tmp/retouch-markers-verified.png`.
+
+This closes the nested default-marker mismatch noted above. It does not establish
+custom `::marker`/`::before` or list-item CSS override parity, marker-color rules,
+list spacing/hanging behavior, or list Enter/Backspace behavior. Marker geometry
+still uses the site's font and browser list rendering. No desktop package was
+rebuilt or launched; full Figma Design and arbitrary-site parity remain incomplete.

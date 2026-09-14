@@ -56,8 +56,8 @@ for(const kind of ['react','html','liquid'])test(`${kind} paragraph/list writes 
   const current=resolve(),convertedInner=attributed.replace('<ul ','<ol ').replace('</ul>','</ol>');
   const listNode=kind==='html'?source.describe(convertedInner,current.element.id).descriptor.children[0]:current.elements.find(el=>kind==='react'?el.node.openingElement.name.name==='ol':el.tag==='ol');
   const childrenIds=kind==='html'?listNode.children.map(child=>child.id):current.elements.filter(el=>kind==='react'?el.node.openingElement.name.name==='li':el.tag==='li').map(el=>el.id);
-  const split=apply.applyOp(current,{type:'setChildren',children:[{t:'keep',id:listNode.id,children:[{t:'keep',id:childrenIds[0]}]},block('ol',[{t:'keep',id:childrenIds[1]}],{template:listNode.id})]});assert.equal(split.ok,true,JSON.stringify(split));
-  const splitSource=fs.readFileSync(file,'utf8');assert.equal((splitSource.match(/id="source-list"/g)||[]).length,1);assert.equal((splitSource.match(/title="Keep > me"/g)||[]).length,1);assert.equal((splitSource.match(/="items"/g)||[]).length,2);assert.equal((splitSource.match(kind==='react'?/style=\{\{color:"red"\}\}/g:/style="color: red;"/g)||[]).length,2);
+  const split=apply.applyOp(current,{type:'setChildren',children:[{t:'keep',id:listNode.id,marker:'decimal',children:[{t:'keep',id:childrenIds[0]}]},block('ol',[{t:'keep',id:childrenIds[1]}],{template:listNode.id,marker:'lower-alpha'})]});assert.equal(split.ok,true,JSON.stringify(split));
+  const splitSource=fs.readFileSync(file,'utf8');assert.equal((splitSource.match(/id="source-list"/g)||[]).length,1);assert.equal((splitSource.match(/title="Keep > me"/g)||[]).length,1);assert.equal((splitSource.match(/="items"/g)||[]).length,2);assert.equal((splitSource.match(kind==='react'?/color:"red"/g:/color: red;/g)||[]).length,2);assert.ok(splitSource.includes(kind==='react'?'listStyleType:"decimal"':'list-style-type: decimal;'));assert.ok(splitSource.includes(kind==='react'?'listStyleType:"lower-alpha"':'list-style-type: lower-alpha;'));
   const invalidTemplate=apply.applyOp(resolve(),{type:'setChildren',children:[block('ul',[block('li',[text('x')])],{template:'0000000000'})]});assert.equal(invalidTemplate.refused,true);assert.equal(fs.readFileSync(file,'utf8'),splitSource);
  }finally{cleanup(root);}
 });
@@ -80,7 +80,7 @@ test('list appearance templates are constrained to a unique source class/style',
  assert.ok(rich.validateChildrenTree([block('p',[],{template:'0123456789'})],0));
  assert.ok(rich.validateChildrenTree([block('ul',[],{template:'not-an-id'})],0));
  const original='<ul class="first" class="second"><li>A</li></ul>',listNode=source.describe(original,'id').descriptor.children[0];
- assert.throws(()=>source.rewrite(original,'id',[block('ul',[block('li',[text('A')])],{template:listNode.id})]),/appearance source/);
+ assert.throws(()=>source.rewrite(original,'id',[block('ul',[block('li',[text('A')])],{template:listNode.id,marker:'disc'})]),/appearance source/);
 });
 
 test('preserved source list containers use block depth without relaxing inline depth',()=>{

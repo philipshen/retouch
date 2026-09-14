@@ -22,6 +22,13 @@
   return {items,list,range};
  }
  function listDepth(list,el){let depth=0;for(let node=list;node&&node!==el;node=node.parentElement)if(/^(UL|OL)$/.test(node.tagName))depth++;return depth;}
+ function syncMarkers(el){
+  for(const list of el.querySelectorAll('ul,ol')){
+   const marker=list.tagName==='UL'?'disc':['decimal','lower-alpha','lower-roman'][(listDepth(list,el)-1)%3];
+   list.style.setProperty('list-style-type',marker,list.style.getPropertyPriority('list-style-type'));
+   list.__rtListMarker=marker;
+  }
+ }
  function canIndent(el,outdent=false){
   const context=listContext(el);if(!context)return false;const {items,list}=context;
   if(outdent){const parent=list.parentElement;return parent!==el&&parent?.tagName==='LI'&&el.contains(parent.parentElement)&&/^(UL|OL)$/.test(parent.parentElement.tagName);}
@@ -49,6 +56,7 @@
    if(nested?.tagName!==list.tagName||nested.nextSibling&&[...previous.childNodes].slice([...previous.childNodes].indexOf(nested)+1).some(node=>node.textContent.trim())){nested=copiedList(list);previous.append(nested);}
    nested.append(...items);
   }
+  syncMarkers(el);
   if(el.contains(caret.start)&&el.contains(caret.end)){const restored=d.createRange();restored.setStart(caret.start,caret.from);restored.setEnd(caret.end,caret.to);d.getSelection().removeAllRanges();d.getSelection().addRange(restored);}else restoreSelection(el,offsets);
   return true;
  }
@@ -79,7 +87,7 @@
     }
    }
   }
-  restoreSelection(el,offsets);return true;
+  syncMarkers(el);restoreSelection(el,offsets);return true;
  }
  const api={supported,state,apply,listContext,canIndent,indent};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
 })(typeof window!=='undefined'?window:null);

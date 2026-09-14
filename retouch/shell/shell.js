@@ -666,7 +666,7 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
     if(rangeStyle){c.__rtRangeStyleValues={};for(const [property,value]of Object.entries(rangeStyle.properties||{[rangeStyle.property]:rangeStyle.value})){const probe=el.ownerDocument.createElement('span');probe.style.setProperty(property,value);const css=probe.style.getPropertyValue(property);if(c.style.getPropertyValue(property)===css){c.__rtRangeStyleValues[property]={value,css};if(property==='color'){c.__rtRangeStyleValue=value;c.__rtRangeStyleCSS=css;}}}}
 
     const cid = c.getAttribute('data-rt-keep') || c.getAttribute('data-rt') || c.getAttribute('data-rt-i');
-    if (cid) editing.snapshot.set(cid, {html:c.innerHTML,tag:c.tagName.toLowerCase(),href:c.tagName==='A'?c.getAttribute('href'):undefined});
+    if (cid) editing.snapshot.set(cid, {html:c.innerHTML,marker:c.style.listStyleType,tag:c.tagName.toLowerCase(),href:c.tagName==='A'?c.getAttribute('href'):undefined});
   }
   editing.originalTree = serializeChildren(el, editing.snapshot);
   // plaintext-only forces pre-wrap in Chromium even over author !important
@@ -935,7 +935,7 @@ function styleInsertedTextContent(current,start,end,properties,script,decoration
 }
 // Keep the actual nodes (and their source evidence) so restoring a local
 // insertion does not invalidate preceding native text undo transactions.
-const caretMetadataNames=['__rtListTemplate','__rtBlockTag','__rtLinkHref','__rtCaretPlaceholder','__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
+const caretMetadataNames=['__rtListMarker','__rtListTemplate','__rtBlockTag','__rtLinkHref','__rtCaretPlaceholder','__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
 function captureCaretEdit(current){
   const d=current.el.ownerDocument,selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
   const capture=node=>({node,text:typeof node.data==='string'?node.data:null,attributes:node.nodeType===1?[...node.attributes].map(a=>[a.name,a.value]):null,metadata:Object.fromEntries(caretMetadataNames.filter(key=>Object.hasOwn(node,key)).map(key=>[key,structuredClone(node[key])])),children:[...node.childNodes].map(capture)});

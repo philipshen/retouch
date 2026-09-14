@@ -28,6 +28,7 @@ function validateChildrenTree(children, depth, inLink=false, blockDepth=0, keptT
       const err = validateChildrenTree(c.children, depth + 1,inLink,blockDepth,keptTag);
       if (err) return err;
     } else if (c.t === 'keep') {
+      if(Object.hasOwn(c,'marker')&&(!keptTag||!['ul','ol','div','p'].includes(keptTag(c.id))||!require('./list-markers.cjs').valid(c.tag||keptTag(c.id),c.marker)))return 'Invalid kept list marker.';
       if(Object.hasOwn(c,'tag')&&(!['p','ul','ol','li','div'].includes(c.tag)||Object.hasOwn(c,'href')))return 'Invalid kept paragraph/list tag.';
       if(inLink)return 'Source-owned nodes cannot be moved inside a new text link.';
       if(Object.hasOwn(c,'href')&&c.href!==null&&!links.valid(c.href))return 'Invalid kept link URL.';
