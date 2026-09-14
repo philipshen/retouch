@@ -16,3 +16,10 @@ test('image adjustment values are bounded and neutral settings emit no filter',(
 test('temperature and tint values are bounded and neutral balance preserves existing filter markup',()=>{const {adjustments}=require('../shell/image-crop.js');for(const values of [{temperature:101},{tint:-101},{temperature:Infinity}])assert.throws(()=>adjustments(values));assert.equal(adjustments({exposure:1}),adjustments({exposure:1,temperature:0,tint:0}));assert.match(adjustments({temperature:100}),/slope="1.4142135623730951"/);});
 
 test('highlight and shadow curves preserve endpoints, monotonicity and tonal emphasis',()=>{const {toneCurve}=require('../shell/image-crop.js');for(const shadows of [-100,-50,0,50,100])for(const highlights of [-100,-50,0,50,100]){const values=toneCurve(shadows,highlights);assert.equal(values[0],0);assert.equal(values[256],1);values.forEach((v,i)=>{assert.ok(v>=0&&v<=1);if(i)assert.ok(v>=values[i-1]);});}const shadow=toneCurve(100,0),highlight=toneCurve(0,100);assert.ok(shadow[64]-.25>shadow[192]-.75);assert.ok(highlight[192]-.75>highlight[64]-.25);assert.throws(()=>toneCurve(101,0));});
+
+test('image paint opacity retains source, crop and adjustment metadata without multiplying alpha',()=>{
+ const model={width:40,height:20,zoom:2,x:25,y:75,rotation:15,saturation:-20,data:'data:image/png;base64,YWJj'},half=markup({...model,opacity:.5});
+ assert.match(half,/data-opacity="0.5"/);assert.match(half,/<image[^>]* opacity="0.5"/);assert.match(half,/data-zoom="2"/);assert.match(half,/data-saturation="-20"/);assert.match(half,/href="data:image\/png;base64,YWJj"/);
+ assert.equal(markup({...model,opacity:1}),markup(model));assert.match(markup({...model,opacity:0}),/ opacity="0"/);
+ for(const opacity of [-.1,1.1,NaN,Infinity,'0.5'])assert.throws(()=>markup({...model,opacity}),/opacity/);
+});
