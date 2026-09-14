@@ -15728,3 +15728,22 @@ cancellation, fluid sizing/persistence and retained preview document identity.
 Fixture source remains unchanged. Syntax and diff checks passed. Comparison
 labels are not yet draggable; no native package was built for this change.
 Full Figma parity and trusted desktop distribution remain incomplete.
+
+### Drag comparison dimension labels (2026-09-14)
+
+Comparison W/H labels now use the same horizontal scrubbing interaction as the
+main preview: normal, Shift and Option/Alt increments, whole-pixel dimensions,
+ratio locking and existing size limits. Each drag produces one entry in that
+comparison's size history. Intermediate dimensions update the mounted preview
+without saving project settings. Escape, pointer cancellation/lost capture,
+window blur, page hide, removal and comparison disposal restore the starting
+size; cancellation retains the prior redo entries. New drags commit on release.
+
+Chromium and WebKit project-screen workflows passed, including actual iframe
+viewport sizes, per-comparison Undo/Redo, ratio locking, cancellation, unchanged
+main preview dimensions, unchanged persisted state during dragging, restored
+state after cancellation and retained preview document identity. Existing screen
+rename, ordering, removal/restoration, persistence and project isolation checks
+also passed. Logs: `/private/tmp/retouch-comparison-scrub-final-{chromium,webkit}.log`.
+Syntax/diff checks pass. No native archive was rebuilt, and full Figma parity
+and trusted desktop distribution remain unfinished.

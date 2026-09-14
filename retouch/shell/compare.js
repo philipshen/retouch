@@ -7,7 +7,10 @@
   let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore,allPreviews,revealAll;
   const collapsedScreens=new WeakSet(),sizeHistories=new WeakMap(),nameHistories=new WeakMap(),lockedRatios=new WeakSet();let previewSerial=0;
   const marqueeCleanup=new WeakMap();
-  let activeName=null;
+  let activeName=null,activeDimensionScrub=null;
+  for(const type of ['blur','pagehide'])window.addEventListener(type,()=>activeDimensionScrub?.cancel());
+  document.addEventListener('keydown',event=>{if(activeDimensionScrub&&event.key==='Escape'&&!event.isComposing){event.preventDefault();event.stopImmediatePropagation();activeDimensionScrub.cancel();}},true);
+  document.addEventListener('pointerdown',event=>{if(activeDimensionScrub&&!activeDimensionScrub.field.contains(event.target))activeDimensionScrub.cancel();},true);
   document.addEventListener('pointerdown',event=>{if(activeName&&!activeName.input.contains(event.target))activeName.finish();},true);
   const removed=[],orderUndo=[],orderRedo=[];let removals=0,undoOrder,redoOrder;
   function clearOrderHistory(){orderUndo.length=0;orderRedo.length=0;}
@@ -307,7 +310,7 @@
       const edit=document.createElement('button');edit.className='control-button';edit.textContent='Edit';edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');
       edit.onclick=()=>window.RetouchScreens.set({width,height});header.append(edit);
       const remove=document.createElement('button');remove.className='control-button';remove.textContent='×';remove.setAttribute('aria-label','Remove '+name+' comparison');header.append(remove);
-      remove.onclick=async()=>{if(activeName?.input===nameInput)activeName=null;remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;card.inert=true;clearOrderHistory();removals++;removed.push({size,index});if(removed.length>8)removed.shift();sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);item?.cancelColdText?.();cards=cards.filter(c=>c!==item);updateControls();await unload(frame);surface.remove();card.remove();removals--;updateControls();};
+      remove.onclick=async()=>{activeDimensionScrub?.cancel();if(activeName?.input===nameInput)activeName=null;remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;card.inert=true;clearOrderHistory();removals++;removed.push({size,index});if(removed.length>8)removed.shift();sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);item?.cancelColdText?.();cards=cards.filter(c=>c!==item);updateControls();await unload(frame);surface.remove();card.remove();removals--;updateControls();};
       const viewport=document.createElement('div');viewport.className='compare-viewport';viewport.tabIndex=0;viewport.setAttribute('role','button');viewport.setAttribute('aria-label','Edit from '+name+' comparison');viewport.title='Click a layer to select it on the main canvas at this size. Style scope stays unchanged.';viewport.setAttribute('aria-describedby','comparisonNavigationHint');viewport.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight PageUp PageDown Home End Enter Space');
       const frame=document.createElement('iframe');frame.title=name+' comparison preview';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');frame.style.width=width+'px';frame.style.height=height+'px';
       const surface=document.createElement('div');surface.className='compare-surface';surface.setAttribute('aria-hidden','true');surface.append(frame);rail.append(surface);
@@ -364,7 +367,9 @@
       for(const button of [undoSize,redoSize]){button.type='button';button.className='control-button';button.disabled=true;}
       undoSize.textContent='Undo size';redoSize.textContent='Redo size';sizeHistory.append(undoSize,redoSize);
       const updateSizeHistory=()=>{undoSize.disabled=!sizeUndo.length;redoSize.disabled=!sizeRedo.length;sizeHistory.hidden=!sizeUndo.length&&!sizeRedo.length;};
-      const applyDimensions=(nextWidth,nextHeight,record=true,axis)=>{
+      let dimensionScrub=null;
+      const applyDimensions=(nextWidth,nextHeight,record=true,axis,preview=false)=>{
+        if(dimensionScrub&&!preview)finishDimensionScrub(true);
         if(axis&&lockedRatios.has(size)){const next=window.RetouchScreens.constrain({width:nextWidth,height:nextHeight},axis,{width:history.ratio[0],height:history.ratio[1]},true);nextWidth=next.width;nextHeight=next.height;}
         if(!valid(nextWidth)||!valid(nextHeight))return;
         if(sizes.some(other=>other!==size&&other[1]===nextWidth&&other[2]===nextHeight)){
@@ -382,7 +387,7 @@
         frame.style.width=width+'px';frame.style.height=height+'px';
         inputs.width.value=width;inputs.height.value=height;
         scopeButton.textContent='Edit styles: '+width+' px and larger';scopeButton.setAttribute('aria-label','Edit styles from '+width+' px');
-        remember();updateControls();updateSizeHistory();return true;
+        if(!preview)remember();updateControls();updateSizeHistory();return true;
       };
       const replaySize=(from,to,undo,moveFocus=true)=>{const entry=from.at(-1);if(!entry)return;const target=undo?entry.before:entry.after;if(applyDimensions(...target,false)){history.ratio=[...(undo?entry.ratioBefore:entry.ratioAfter)];from.pop();to.push(entry);updateSizeHistory();const button=undo?undoSize:redoSize;if(moveFocus)(button.disabled?(undo?redoSize:undoSize):button).focus();}};
       undoSize.onclick=()=>replaySize(sizeUndo,sizeRedo,true);redoSize.onclick=()=>replaySize(sizeRedo,sizeUndo,false);
@@ -418,7 +423,26 @@
             }
           }
         };
+        field.dataset.comparisonScrub=axis;field.style.cursor='ew-resize';field.style.touchAction='none';field.style.userSelect='none';field.title='Drag to resize. Shift: 10 pixels; Option/Alt: 0.1 pixels. Escape cancels.';
+        field.addEventListener('pointerdown',event=>{
+          if(event.button!==0||event.target===input||dimensionScrub||loadingSet||removals)return;
+          event.preventDefault();activeDimensionScrub?.cancel();input.focus({preventScroll:true});dimensionGesture=null;
+          dimensionScrub={id:event.pointerId,field,axis,lastX:event.clientX,value:axis==='width'?width:height,before:[width,height],ratio:[...history.ratio]};activeDimensionScrub={field,cancel:()=>finishDimensionScrub(true)};input.value=String(dimensionScrub.value);field.setPointerCapture(event.pointerId);
+        });
+        field.addEventListener('pointermove',event=>{
+          if(!dimensionScrub||dimensionScrub.id!==event.pointerId)return;event.preventDefault();const saved=dimensionScrub,delta=event.clientX-saved.lastX;saved.lastX=event.clientX;if(!delta)return;
+          saved.value=Math.max(240,Math.min(7680,saved.value+delta*(event.altKey?0.1:event.shiftKey?10:1)));const next=Math.round(saved.value);
+          applyDimensions(axis==='width'?next:width,axis==='height'?next:height,false,axis,true);
+        });
+        field.addEventListener('pointerup',event=>{if(dimensionScrub?.id===event.pointerId){event.preventDefault();finishDimensionScrub(false);}});
+        for(const type of ['pointercancel','lostpointercapture'])field.addEventListener(type,event=>{if(dimensionScrub?.id===event.pointerId)finishDimensionScrub(true);});
         field.append(input);dimensions.append(field);
+      }
+      function finishDimensionScrub(cancelled){
+        if(!dimensionScrub)return;const saved=dimensionScrub;dimensionScrub=null;activeDimensionScrub=null;
+        if(cancelled){applyDimensions(...saved.before,false,undefined,true);history.ratio=[...saved.ratio];dimensionError.hidden=true;dimensionError.textContent='';}
+        else if(width!==saved.before[0]||height!==saved.before[1]){sizeUndo.push({before:saved.before,after:[width,height],ratioBefore:saved.ratio,ratioAfter:[...history.ratio]});if(sizeUndo.length>50)sizeUndo.shift();sizeRedo.length=0;}
+        remember();updateSizeHistory();if(saved.field.hasPointerCapture(saved.id))saved.field.releasePointerCapture(saved.id);
       }
       const order=document.createElement('div');order.className='compare-header';
       const up=document.createElement('button'),down=document.createElement('button');
@@ -513,7 +537,7 @@
     try{frame.contentWindow.stop();frame.src='about:blank';}catch{done();}
   });}
   async function dispose(){
-    clearOrderHistory();
+    activeDimensionScrub?.cancel();clearOrderHistory();
     // Unload each browsing context before detaching it, including frames whose
     // framework bootstrap is still awaiting scripts or network responses.
     await Promise.all(cards.map(({frame})=>unload(frame)));
