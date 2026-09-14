@@ -7,7 +7,9 @@
   let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore,allPreviews,revealAll,emptyState,emptyAdd;
   const collapsedScreens=new WeakSet(),sizeHistories=new WeakMap(),nameHistories=new WeakMap(),lockedRatios=new WeakSet();let previewSerial=0;
   const marqueeCleanup=new WeakMap();
-  let activeName=null,activeDimensionScrub=null;
+  let activeName=null,activeDimensionScrub=null,draggedScreen=null;
+  const clearScreenDrag=()=>{draggedScreen=null;rail.querySelectorAll('[data-screen-drop]').forEach(card=>delete card.dataset.screenDrop);};
+  window.addEventListener('blur',clearScreenDrag);
   for(const type of ['blur','pagehide'])window.addEventListener(type,()=>activeDimensionScrub?.cancel());
   document.addEventListener('keydown',event=>{if(activeDimensionScrub&&event.key==='Escape'&&!event.isComposing){event.preventDefault();event.stopImmediatePropagation();activeDimensionScrub.cancel();}},true);
   document.addEventListener('pointerdown',event=>{if(activeDimensionScrub&&!activeDimensionScrub.field.contains(event.target))activeDimensionScrub.cancel();},true);
@@ -285,6 +287,7 @@
       let name=size[0],width=size[1],height=size[2];
       const card=document.createElement('section');card.className='compare-card';card.setAttribute('aria-label',name+' comparison');
       const header=document.createElement('div');header.className='compare-header';
+      const reorder=document.createElement('button');reorder.type='button';reorder.className='control-button compare-reorder';reorder.draggable=true;reorder.title='Drag to reorder. Arrow Up/Down moves one screen; Home/End moves to the start/end.';reorder.innerHTML='<svg viewBox="0 0 16 20" aria-hidden="true"><path d="M5 5h.01 M11 5h.01 M5 10h.01 M11 10h.01 M5 15h.01 M11 15h.01"/></svg>';header.append(reorder);
       const label=document.createElement('button');label.type='button';label.className='control-button';label.style.cssText='flex:1;text-align:left;min-width:0;overflow-wrap:anywhere';label.title='Rename this comparison';
       const nameInput=document.createElement('input');nameInput.type='text';nameInput.maxLength=80;nameInput.hidden=true;nameInput.style.cssText='min-width:0;width:100%;box-sizing:border-box';
       const names=nameHistories.get(size)||{undo:[],redo:[]};nameHistories.set(size,names);
@@ -484,6 +487,31 @@
         const control=delta<0?up:down;if(control.disabled)(delta<0?down:up).focus();else control.focus();return true;
       }
       up.onclick=()=>move(-1);down.onclick=()=>move(1);
+      reorder.onkeydown=event=>{
+        if(!event.isComposing&&!event.altKey&&(event.metaKey||event.ctrlKey)&&['z','y'].includes(event.key.toLowerCase())){event.preventDefault();event.stopPropagation();const redo=event.key.toLowerCase()==='y'||event.shiftKey;(redo?redoOrder:undoOrder)?.click();reorder.focus({preventScroll:true});card.scrollIntoView({block:'nearest'});return;}
+        if(event.isComposing||event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||!['ArrowUp','ArrowDown','Home','End'].includes(event.key))return;
+        event.preventDefault();event.stopPropagation();if(activeName||activeDimensionScrub)return;
+        const index=sizes.indexOf(size),delta=event.key==='Home'?-index:event.key==='End'?sizes.length-1-index:event.key==='ArrowUp'?-1:1;
+        if(delta&&move(delta)){reorder.focus({preventScroll:true});card.scrollIntoView({block:'nearest'});}
+      };
+      reorder.ondragstart=event=>{
+        if(loadingSet||removals||activeName||activeDimensionScrub){event.preventDefault();return;}
+        draggedScreen={size,card,move,reorder};event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('application/x-retouch-screen','reorder');
+      };
+      reorder.ondragend=clearScreenDrag;
+      header.ondragover=event=>{
+        if(!draggedScreen||draggedScreen.card===card||loadingSet||removals)return;
+        event.preventDefault();event.dataTransfer.dropEffect='move';rail.querySelectorAll('[data-screen-drop]').forEach(item=>delete item.dataset.screenDrop);
+        const rect=header.getBoundingClientRect();card.dataset.screenDrop=event.clientY<rect.y+rect.height/2?'before':'after';
+      };
+      header.ondragleave=event=>{if(!header.contains(event.relatedTarget))delete card.dataset.screenDrop;};
+      header.ondrop=event=>{
+        const source=draggedScreen,edge=card.dataset.screenDrop;clearScreenDrag();if(!source||!edge||loadingSet||removals)return;
+        event.preventDefault();event.stopPropagation();const from=sizes.indexOf(source.size),to=sizes.indexOf(size);if(from<0||to<0||from===to)return;
+        const destination=to+(edge==='after'?1:0)-(from<to?1:0),delta=destination-from;
+        if(delta&&source.move(delta)){source.reorder.focus({preventScroll:true});source.card.scrollIntoView({block:'nearest'});}
+      };
+
       const aspect=document.createElement('button');aspect.type='button';aspect.className='control-button';aspect.title='Keep width and height proportional. Rotate establishes a new ratio.';
       const updateAspect=()=>{aspect.setAttribute('aria-label','Lock '+name+' comparison aspect ratio');aspect.setAttribute('aria-pressed',String(lockedRatios.has(size)));aspect.textContent=lockedRatios.has(size)?'Ratio locked':'Lock ratio';};
       aspect.onclick=()=>{if(lockedRatios.has(size))lockedRatios.delete(size);else lockedRatios.add(size);history.ratio=[width,height];updateAspect();remember();};updateAspect();dimensions.append(aspect);
@@ -498,7 +526,7 @@
         updateAspect();
         updateDisclosure();
         label.textContent=name===`Custom ${width} × ${height}`?name:`${name} · ${width} × ${height}`;
-        label.setAttribute('aria-label','Rename '+name+' comparison');nameInput.setAttribute('aria-label','Comparison name');
+        reorder.setAttribute('aria-label','Reorder '+name+' comparison');label.setAttribute('aria-label','Rename '+name+' comparison');nameInput.setAttribute('aria-label','Comparison name');
         card.setAttribute('aria-label',name+' comparison');edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');remove.setAttribute('aria-label','Remove '+name+' comparison');viewport.setAttribute('aria-label','Edit from '+name+' comparison');frame.title=name+' comparison preview';scopeMessage.setAttribute('aria-label',name+' scope coverage');
         for(const axis of ['width','height'])inputs[axis].setAttribute('aria-label',name+' comparison '+axis);
         up.setAttribute('aria-label','Move '+name+' comparison up');down.setAttribute('aria-label','Move '+name+' comparison down');

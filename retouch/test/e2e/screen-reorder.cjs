@@ -1,0 +1,21 @@
+'use strict';
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict'),{once}=require('node:events');
+const fixture=process.env.RT_INSPECTOR_FIXTURE,engine=process.env.RT_E2E_BROWSER||'chromium';if(!fixture)throw Error('Set RT_INSPECTOR_FIXTURE');
+(async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-screen-reorder-')),file=path.join(root,'index.html'),source='<html><body><h1>Screen order</h1><input value="initial"></body></html>';fs.writeFileSync(file,source);
+ const server=require('../../src/html-site.cjs').start({root,port:0,quiet:true});if(!server.listening)await once(server,'listening');let browser;
+ try{
+  browser=await require(path.join(fixture,'node_modules/playwright'))[engine].launch();const page=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await page.goto('http://localhost:'+server.address().port+'/rt');await page.frameLocator('#app').locator('h1').waitFor();await page.getByRole('button',{name:'Compare screens',exact:true}).click();
+  for(const name of ['Phone','Tablet','Desktop'])await page.frameLocator('iframe[title="'+name+' comparison preview"]').locator('input').evaluate(el=>{el.value='retained';window.reorderIdentity={};window.originalReorderIdentity=window.reorderIdentity;});
+  const order=()=>page.locator('.compare-card').evaluateAll(cards=>cards.map(card=>card.getAttribute('aria-label'))),expected=['Phone comparison','Tablet comparison','Desktop comparison'];
+  const retained=async()=>{for(const name of ['Phone','Tablet','Desktop'])assert.deepEqual(await page.frameLocator('iframe[title="'+name+' comparison preview"]').locator('input').evaluate(el=>[el.value,!!window.reorderIdentity&&window.reorderIdentity===window.originalReorderIdentity]),['retained',true]);assert.equal(fs.readFileSync(file,'utf8'),source);};
+  const handle=page.getByRole('button',{name:'Reorder Desktop comparison',exact:true});await handle.focus();await handle.press('Home');assert.deepEqual(await order(),[expected[2],expected[0],expected[1]]);assert.equal(await handle.evaluate(el=>el===document.activeElement),true);await retained();
+  await page.getByRole('button',{name:'Screen controls',exact:true}).click();await page.getByRole('button',{name:'Undo screen order',exact:true}).click();assert.deepEqual(await order(),expected);await page.getByRole('button',{name:'Redo screen order',exact:true}).click();assert.deepEqual(await order(),[expected[2],expected[0],expected[1]]);await retained();await page.getByRole('button',{name:'Undo screen order',exact:true}).click();
+  await page.getByRole('button',{name:'Hide all previews',exact:true}).click();await page.getByRole('button',{name:'Screen controls',exact:true}).click();
+  const destination=page.getByRole('region',{name:'Phone comparison',exact:true}).locator(':scope > .compare-header').first();await handle.dragTo(destination,{targetPosition:{x:12,y:2}});assert.deepEqual(await order(),[expected[2],expected[0],expected[1]]);await retained();assert.equal(await page.locator('[data-screen-drop]').count(),0);await handle.press('Control+z');assert.deepEqual(await order(),expected);await handle.press('Control+Shift+z');assert.deepEqual(await order(),[expected[2],expected[0],expected[1]]);await retained();
+  await handle.press('ArrowDown');assert.deepEqual(await order(),[expected[0],expected[2],expected[1]]);await handle.press('End');assert.deepEqual(await order(),expected);await retained();
+  await handle.press('Home');if(process.env.RT_E2E_REORDER_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_REORDER_SCREENSHOT});await page.reload();await page.frameLocator('#app').locator('h1').waitFor();await page.getByRole('button',{name:'Compare screens',exact:true}).click();assert.deepEqual(await order(),[expected[2],expected[0],expected[1]],'Order survives reload');assert.deepEqual(errors,[]);
+  console.log('SCREEN DRAG/KEYBOARD ORDER, UNDO/REDO, RETAINED DOCUMENTS AND PERSISTENCE PASS',engine);
+ }finally{if(browser)await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));fs.rmSync(root,{recursive:true,force:true});}
+})().catch(error=>{console.error(error);process.exitCode=1;});
