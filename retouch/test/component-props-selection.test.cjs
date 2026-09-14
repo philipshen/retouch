@@ -58,3 +58,13 @@ test('optional properties clear together and incompatible declared values refuse
   const refused=react.planOp(f.resolved,{...f.op,value:42,definitionHashes:hashes(f)});assert.equal(refused.refused,true);assert.equal(refused.edits,undefined);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),original);
  }finally{f.close();}
 });
+
+test('shared imported contracts deduplicate resolution checks while preserving stale path guards',()=>{
+ for(const stale of [false,true]){
+  const f=fixture('import Card from "./Card";function Page(){return <main><Card title="small"/><Card title="large"/></main>}',{'Card.tsx':'import type {System} from "./types";export default function Card({title}:{title:System["size"]}){return <h1>{title}</h1>}','types.ts':'export interface System {size:"small"|"large"}'},'page.tsx');try{
+   const plan=props.planSelection(f.resolved,{...f.op,value:'large',definitionHashes:hashes(f)});assert.ok(plan.ok,plan.reason);assert.ok(plan.pathChecks.length>0);assert.equal(new Set(plan.pathChecks.map(check=>check.file)).size,plan.pathChecks.length);
+   if(stale){fs.renameSync(path.join(f.root,'types.ts'),path.join(f.root,'renamed.ts'));fs.symlinkSync('./renamed.ts',path.join(f.root,'types.ts'));const result=applyPlan(f.root,plan);assert.equal(result.ok,false);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.resolved.source);}
+   else{const result=applyPlan(f.root,plan);assert.ok(result.ok,result.reason);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.resolved.source.replace('title="small"','title={"large"}'));}
+  }finally{f.close();}
+ }
+});

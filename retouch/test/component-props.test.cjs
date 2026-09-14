@@ -384,3 +384,36 @@ test('retargeting an imported type symlink invalidates pending writes even with 
   fs.unlinkSync(link);fs.symlinkSync(path.join(f.root,'b.ts'),link);assert.equal(props.plan(f.resolved,op).ok,false);assert.equal(require('../src/transactions.cjs').applyPlan(f.root,plan).ok,false);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.resolved.source);
  }finally{f.close();}
 });
+
+test('indexed design-system properties resolve nested contracts, key unions and inherited members',()=>{
+ const discover=require('../src/component-prop-choices.cjs').property;
+ for(const [type,expected] of [
+  ['Base["size"]',{type:'string',choices:['small','large']}],
+  ['Base["count"]',{type:'number'}],
+  ['Base["label"]',{type:'string'}],
+  ['Base["enabled"]',{type:'boolean',choices:[true,false]}],
+  ['Base["size"|"tone"]',{type:'string',choices:['small','large','calm','bold']}],
+  ['Pick<Base,"size"|"tone">[keyof Pick<Base,"size"|"tone">]',{type:'string',choices:['small','large','calm','bold']}],
+  ['Nested["button"]["size"]',{type:'string',choices:['small','large']}],
+  ['Extract<Base["size"],"large">',{type:'string',choices:['large']}],
+ ]){const source='interface Parent {size:"small"|"large"}interface Base extends Parent {count:number;label:string;enabled:boolean;tone:"calm"|"bold"}type Nested={button:Base};function Card(props:{value:'+type+'}){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),definition={source,fn:ast.program.body.find(n=>n.type==='FunctionDeclaration')},result=discover({},'value',definition);assert.ok(result,type);assert.equal(result.type,expected.type,type);assert.deepEqual(result.choices,expected.choices,type);}
+});
+test('indexed contracts reject missing, optional, conflicting, unbounded and recursive properties',()=>{
+ const discover=require('../src/component-prop-choices.cjs').property;
+ for(const [prefix,type] of [
+  ['type Base={size?:"small"};','Base["size"]'],
+  ['type Base={size:"small"};','Base["missing"]'],
+  ['type Base={size:"small"};','Base[string]'],
+  ['type Base={size:"small"}&{size:"large"};','Base["size"]'],
+  ['type Base={size:Base["size"]};','Base["size"]'],
+  ['type Base={size:Other["size"]};type Other={size:Base["size"]};','Base["size"]'],
+  ['type Base=Base["size"];','Base["size"]'],
+  ['type Base={size:"small";other:number};','Base[keyof Base]'],
+ ]){const source=prefix+'function Card(props:{value:'+type+'}){return <h1/>}',ast=require('../src/id.cjs').parseSource(source),definition={source,fn:ast.program.body.find(n=>n.type==='FunctionDeclaration')};assert.equal(discover({},'value',definition),null,type);}
+});
+
+test('indexed properties retain imported lexical scope and reject stale nested type dependencies',()=>{
+ const f=importedTypes({'contracts.ts':'import type {System} from "./system";type Size=number;export interface Props {title?:System["button"]["size"]}','system.ts':'import type {Button} from "./button";export interface System {button:Button}','button.ts':'type Size="small"|"large";export interface Button {size:Size}'});try{
+  const info=props.describe(f.resolved,'title');assert.deepEqual(info.choices,['small','large']);const plan=props.plan(f.resolved,{name:'title',value:'large',fileHash:f.resolved.hash,definitionHash:info.definitionHash});assert.ok(plan.ok,plan.reason);assert.ok(plan.edits.some(edit=>edit.file.endsWith('/button.ts')&&edit.before===edit.after));fs.writeFileSync(require('node:path').join(f.root,'button.ts'),'export interface Button {size:"small"|"medium"}');assert.equal(require('../src/transactions.cjs').applyPlan(f.root,plan).ok,false);assert.equal(fs.readFileSync(f.resolved.file,'utf8'),f.resolved.source);assert.equal(props.plan(f.resolved,{name:'title',value:'large',fileHash:f.resolved.hash,definitionHash:info.definitionHash}).ok,false);
+ }finally{f.close();}
+});

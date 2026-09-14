@@ -61,3 +61,9 @@ test('component insertion maps every existing source identity with imports and s
   const f=fixture(source);try{const plan=planner.plan(f.resolved,f.op);assert.equal(plan.ok,true,plan.reason);const after=require('../src/id.cjs').collectElements(plan.edits[0].after,f.resolved.relPath).elements,mapping=new Map(plan.insertedComponent.sourceIdMap);for(const element of f.resolved.elements){const next=after.find(e=>e.id===(mapping.get(element.id)||element.id));assert.ok(next);assert.equal(next.kind,element.kind);}assert.ok(!f.resolved.elements.some(e=>e.id===plan.insertedComponent.instanceId));}finally{f.close();}
  }
 });
+
+test('insertion exposes indexed design-system controls and guards the referenced schema',()=>{
+ const f=fixture(undefined,'import type {System} from "./types";export function Card({label,tone}:{label:System["label"];tone:System["tone"]}){return <article>{label}</article>}');try{
+  const file=path.join(f.root,'parts/types.ts');fs.writeFileSync(file,'export interface System {label:string;tone:"calm"|"bold"}');f.index.scanAll();const descriptor=definitions.describe(f.index.resolve(f.op.definitionId));assert.ok(descriptor.insertion.ok);assert.deepEqual(descriptor.insertion.properties.map(prop=>[prop.name,prop.type,prop.supported]),[['label','string',true],['tone','string',true]]);assert.deepEqual(descriptor.insertion.properties.find(prop=>prop.name==='tone').choices,['calm','bold']);const op={...f.op,contractHash:descriptor.insertion.revision,props:{label:'Hello',tone:'bold'}},plan=planner.plan(f.resolved,op);assert.ok(plan.ok,plan.reason);assert.equal(planner.plan(f.resolved,{...op,props:{label:'Hello',tone:'unknown'}}).ok,false);fs.writeFileSync(file,'export interface System {label:string;tone:"calm"}');assert.equal(tx.applyPlan(f.root,plan).ok,false);assert.match(planner.plan(f.resolved,op).reason,/properties changed/);
+ }finally{f.close();}
+});

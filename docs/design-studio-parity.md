@@ -15662,3 +15662,28 @@ pending preview, cancellation, exact source Undo/Redo, and existing individual
 arc/handle editing. Logs: `/private/tmp/retouch-contour-cubics-{all-units,html,react,webkit}.log`.
 No native package was rebuilt. Full vector networks, booleans, masks, broader
 Figma parity and trusted desktop distribution remain unfinished.
+
+### Indexed design-system properties and shared imported edits (2026-09-14)
+
+Component controls and insertion schemas now resolve types such as
+`ButtonProps["size"]`, nested references such as `System["button"]["size"]`,
+and finite unions of keys. Inherited members and imported lexical scopes are
+preserved. The existing primitive/finite-choice controls use these contracts;
+referenced files and import-resolution candidates remain transaction guards.
+Optional indexed members (which can include undefined), missing/conflicting
+members, recursive references and unbounded keys remain unsupported.
+
+The first Chromium workflow found an existing shared-property transaction bug:
+resolution checks from multiple usages were appended with duplicate paths, which
+the transaction verifier rejected. Shared planning now deduplicates identical
+checks and refuses conflicting snapshots. Tests prove successful source writes
+and rejection when an imported type path is retargeted.
+
+All 1,259 unit tests passed. Chromium and WebKit passed the indexed imported-type
+fixture through multi-selection, numeric/text/boolean/variant edits, cancellation,
+default reset, optional clearing, compiled rendering and exact source Undo.
+Logs: `/private/tmp/retouch-indexed-props-final-units.log`,
+`/private/tmp/retouch-indexed-props-chromium-fixed.log`, and
+`/private/tmp/retouch-indexed-props-webkit.log`. The original failed Chromium run
+and diagnostic capture are retained alongside these logs. No native build was
+produced; full Figma parity and trusted desktop distribution remain incomplete.

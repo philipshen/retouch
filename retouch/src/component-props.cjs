@@ -71,7 +71,7 @@ function planSelection(resolved,op){
   if(!hashes||typeof hashes!=='object'||Array.isArray(hashes)||Object.keys(hashes).some(id=>!ids.includes(id)||typeof hashes[id]!=='string'))return refuse('Provide definition hashes only for selected instances.');
   const elements=collectElements(resolved.source,resolved.relPath).elements,members=ids.map(id=>elements.find(element=>element.id===id));
   if(members.some(element=>element?.kind!=='instance'))return refuse('Select component usages from the same source file.');
-  const ranges=[],dependencies=new Map(),pathChecks=[];
+  const ranges=[],dependencies=new Map(),pathChecks=new Map();
   // Validate every usage against the SAME snapshot. Sequential planning would
   // change a local definition's revision after editing its first usage.
   for(const element of members){
@@ -84,7 +84,7 @@ function planSelection(resolved,op){
     const previous=dependencies.get(edit.file);if(previous&&previous.before!==edit.before)return refuse('A component dependency changed while planning the selection.');
     dependencies.set(edit.file,edit);
    }
-   pathChecks.push(...(result.pathChecks||[]));
+   for(const check of result.pathChecks||[]){const previous=pathChecks.get(check.file);if(previous&&JSON.stringify(previous)!==JSON.stringify(check))return refuse('Component import resolution changed while planning the selection.');pathChecks.set(check.file,check);}
    // Keep equivalent explicit literals byte-for-byte, but still validate their
    // contracts and include their dependency guards above.
    if(op.reset!==true&&op.clear!==true&&!info.inherited&&!info.unset&&info.value===op.value)continue;
@@ -104,7 +104,7 @@ function planSelection(resolved,op){
   for(const range of ranges)if(range.start===range.end)ms.appendLeft(range.start,range.text);else ms.overwrite(range.start,range.end,range.text);
   const source=ms.toString(),hash=contentHash(source),fresh=collectElements(source,resolved.relPath).elements;
   const selection=ids.map(id=>{const element=fresh.find(element=>element.id===id);if(element?.kind!=='instance')throw Error('A component usage lost its source identity.');return require('./adapters/react.cjs').describe({...resolved,source,hash,elements:fresh,element});});
-  return {ok:true,hash,selection,edits:[{file:resolved.file,before:resolved.source,after:source},...dependencies.values()],pathChecks};
+  return {ok:true,hash,selection,edits:[{file:resolved.file,before:resolved.source,after:source},...dependencies.values()],pathChecks:[...pathChecks.values()]};
  }catch(error){return refuse('Could not edit selected component properties: '+error.message);}
 }
 module.exports={describe,plan,planSelection,literal};

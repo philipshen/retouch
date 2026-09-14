@@ -10,10 +10,18 @@ function inspect(resolved,name,definition){
   const modules=require('./component-type-modules.cjs')(resolved,def,ast);
   function resolve(node,seen=new Set()){
    if(node?.type==='TSParenthesizedType')return resolve(node.typeAnnotation,seen);
+   if(node?.type==='TSIndexedAccessType'){
+    if(seen.has(node)||seen.size>=20)return null;const next=new Set(seen);next.add(node);
+    const members=contractMembers(node.objectType,next),keys=literalKeys(node.indexType,next,next);if(!members||!keys?.length)return null;
+    const values=[];for(const key of keys){const fields=[...new Set(members)].filter(field=>field.type==='TSPropertySignature'&&!field.computed&&(field.key.name??field.key.value)===key);if(fields.length!==1||fields[0].optional)return null;const value=resolve(fields[0].typeAnnotation?.typeAnnotation,next);if(!value)return null;values.push(value);}
+    return values.length===1?values[0]:{type:'TSUnionType',types:values};
+   }
    if(node?.type!=='TSTypeReference')return node;
    if(node.typeName.type==='Identifier'&&['Exclude','Extract'].includes(node.typeName.name)&&modules.builtin(node,node.typeName.name))return node;
    if(node.typeParameters||seen.size>=20)return null;
-   const declaration=modules.lookup(node);if(!declaration||seen.has(declaration)||declaration.typeParameters||declaration.extends?.length)return null;
+   const declaration=modules.lookup(node);if(!declaration||seen.has(declaration)||declaration.typeParameters)return null;
+   // Keep object references intact so indexed access can collect inherited members.
+   if(declaration.type==='TSInterfaceDeclaration')return node;
    const next=new Set(seen);next.add(declaration);return resolve(declaration.type==='TSTypeAliasDeclaration'?declaration.typeAnnotation:declaration.body,next);
   }
   let keyVisits=0;
@@ -34,6 +42,7 @@ function inspect(resolved,name,definition){
   function contractMembers(node,seen=new Set()){
    if(!node||++visits>1000||seen.size>=20)return null;
    if(node.type==='TSParenthesizedType')return contractMembers(node.typeAnnotation,seen);
+   if(node.type==='TSIndexedAccessType'){if(seen.has(node))return null;const value=resolve(node,seen),next=new Set(seen);next.add(node);return value?contractMembers(value,next):null;}
    if(node.type==='TSTypeLiteral')return node.members;
    if(node.type==='TSIntersectionType'){
     const groups=node.types.map(type=>contractMembers(type,seen));return groups.every(Boolean)?groups.flat():null;
