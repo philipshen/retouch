@@ -16274,3 +16274,39 @@ pre-fix deterministic input-reset failure and the intermediate Next JSON/500
 failure are preserved alongside final results. No desktop rebuild, native launch
 or push occurred; full Figma/arbitrary-site parity remains incomplete.
 Evidence: `/Users/philipshen/Developer/retouch-worktrees/recovery-2026-09-14/live-preview-first/`.
+
+
+### Continuous boolean preview while editing originals — 2026-09-14
+
+Moving, resizing or rotating an original now recomputes the combined result during
+the gesture. The combined paint remains visible; a blue outline follows the
+active original in canvas coordinates, including rotation. Operand geometry stays
+measurable but its paint is hidden in the preview. The preview recomputes against
+original authored appearance and restores its temporary display/style/result
+attributes before the single source transaction or cancellation. Base-operand
+transforms update the result coordinate space during the preview as well as save.
+
+The shared SVG gesture controller has an optional preview callback and outline.
+Preview errors cancel and restore the gesture rather than writing partial source.
+CSS result-path overrides are refused during the gesture. Direct attribute
+restoration avoids leaving an empty style attribute after cancellation.
+
+All 1,347 unit tests passed. HTML and Liquid Chromium check all four boolean
+operations using native point-in-fill samples against the operand geometry,
+including unchanged subtraction/intersection results when enlargement lies
+outside the base. Checks cover keyboard motion, real pointer resize, rotation,
+visible live output and outline, zero source writes during previews, exact Escape
+restoration, single-transaction undo/redo, release and retained input/document.
+React WebKit passed the union-gesture flow and the larger operation/history flow;
+CSS d refusal is tested only where that browser property is supported.
+The full shared HTML SVG resize suite also passed primitives, degenerate lines,
+curves/arcs, groups, text/image/use, pointer and keyboard gestures, alignment,
+scrubbing, ratio modifiers, numeric expressions, interruption and exact history.
+
+The active-drag screenshot was inspected; it shows Exclude overlap while resizing
+an original, alongside a retained intentional CSS-refusal toast from the prior
+operation test. Dense boolean path performance, nested networks, responsive
+regeneration and direct double-click entry remain incomplete or unverified.
+The signed desktop archive predates this change. No rebuild, native launch or
+push occurred. Evidence:
+`/Users/philipshen/Developer/retouch-worktrees/recovery-2026-09-14/live-boolean-preview/`.

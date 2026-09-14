@@ -3078,11 +3078,10 @@ function editBooleanOperandOnCanvas(info,operand,infos,action){
  stopDrawing?.();const groups=matchingEls(info.id);if(groups.length!==1||layerLocks.locked(groups[0]))return;
  const group=groups[0],container=group.querySelector(':scope > [data-rt-boolean-operands]'),result=group.querySelector(':scope > [data-rt-boolean-result]'),target=container?.querySelector('[data-rt="'+operand.id+'"]');
  if(!target||!result||layerLocks.locked(target))return;
- const display=container.getAttribute('display'),resultDisplay=result.getAttribute('display');
- const restore=()=>{if(display===null)container.removeAttribute('display');else container.setAttribute('display',display);if(resultDisplay===null)result.removeAttribute('display');else result.setAttribute('display',resultDisplay);};
+ const preview=RetouchSVGBooleanGroup.preview(group,infos,operand,info.svgBooleanGroup.operation),restore=()=>preview.restore();
  const current=()=>mode==='edit'&&sel?.info.id===info.id&&sel.info.hash===info.hash&&!sel.multiple?.length&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&group.isConnected&&!layerLocks.locked(target)&&!layerLocks.locked(group);
- container.removeAttribute('display');result.setAttribute('display','none');canvasPan.cancel();
- const cleanup=RetouchSVGResize.mount({target,info:{...operand,booleanOperandPreview:true},frame:iframe,canvas:canvasSurface,current,action,handle:action==='rotate'?'ne':'se',onError:message=>toast(message,'err'),onEnd:()=>{restore();stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onCommit:matrix=>{
+ canvasPan.cancel();
+ const cleanup=RetouchSVGResize.mount({target,info:{...operand,booleanOperandPreview:true},frame:iframe,canvas:canvasSurface,current,action,outline:true,onPreview:matrix=>preview.update(matrix),handle:action==='rotate'?'ne':'se',onError:message=>toast(message,'err'),onEnd:()=>{restore();stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onCommit:matrix=>{
   if(!current())return;const edit={operandId:operand.id,operandOp:{type:'setSVGTransform',matrix}};
   try{const path=RetouchSVGBooleanGroup.compute(group,infos,info.svgBooleanGroup.operation,edit);void writeSVGBooleanGroup('setSVGBooleanOperand',{...edit,path});}catch(error){toast(error.message,'err');}
  }});
