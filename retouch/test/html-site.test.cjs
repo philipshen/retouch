@@ -64,3 +64,21 @@ test('HTML page catalog uses navigable encoded routes and excludes private or re
 
  }finally{server.retouchIndex.close();server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});}
 });
+
+test('nested boolean API edits are one exact undo and redo snapshot with no partial cascade',async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-nested-boolean-api-')),file=path.join(root,'index.html'),source='<html><body><svg><rect width="100" height="80"/><circle cx="50" cy="40" r="30"/><ellipse rx="10" ry="20"/></svg></body></html>',adapter=require('../src/adapters/html.cjs'),groups=require('../src/svg-boolean-group.cjs');fs.writeFileSync(file,source);
+ const server=start({root,port:0,quiet:true});await once(server,'listening');const base='http://127.0.0.1:'+server.address().port;
+ try{
+  const shell=await (await fetch(base+'/rt')).text(),token=/__RT_TOKEN = "([a-f0-9]+)"/.exec(shell)[1];
+  const op=async value=>(await fetch(base+'/rt/__api/op',{method:'POST',headers:{'x-retouch-token':token},body:JSON.stringify(value)})).json();
+  const resolve=()=>{const source=fs.readFileSync(file,'utf8'),elements=adapter.collect(source,'index.html').elements;return {source,elements,hash:adapter.contentHash(source),file,relPath:'index.html'};};
+  let r=resolve(),ids=['rect','circle'].map(tag=>r.elements.find(e=>e.tag===tag).id),result=await op({type:'createSVGBooleanGroup',id:ids[0],ids,fileHash:r.hash,operation:'union',path:'M0 0H100V80H0Z'});assert.equal(result.ok,true,result.reason);
+  r=resolve();ids=[r.elements.find(e=>e.tag==='g').id,r.elements.find(e=>e.tag==='ellipse').id];result=await op({type:'createSVGBooleanGroup',id:ids[0],ids,fileHash:r.hash,operation:'subtract',path:'M0 0H100V80H0Z'});assert.equal(result.ok,true,result.reason);
+  r=resolve();const outer=groups.context({...r,element:r.elements.find(e=>e.tag==='g')},'html'),inner=groups.context({...r,element:outer.roots[0]},'html');
+  const request={type:'setSVGBooleanNested',id:outer.group.id,fileHash:r.hash,targetId:inner.group.id,edit:{type:'setSVGBooleanOperation',operation:'intersect',path:'M0 0H20V20H0Z'},results:[{id:outer.group.id,path:'M0 0H30V30H0Z'}]};
+  const rejected=await op({...request,results:[]});assert.equal(rejected.refused,true);assert.equal(resolve().source,r.source);
+  const saved=await op(request);assert.equal(saved.ok,true,saved.reason);assert.ok(saved.undoId);const after=resolve().source;assert.notEqual(after,r.source);assert.ok(after.includes('data-rt-boolean="intersect"'));assert.ok(after.includes('d="M 0 0 L 30 0 L 30 30 L 0 30 Z"'));
+  assert.equal((await op({type:'undo',undoId:saved.undoId})).ok,true);assert.equal(resolve().source,r.source);
+  assert.equal((await op({type:'redo',undoId:saved.undoId})).ok,true);assert.equal(resolve().source,after);
+ }finally{server.retouchIndex.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));fs.rmSync(root,{recursive:true,force:true});}
+});
