@@ -1,6 +1,27 @@
 # Retouch for macOS
 
-## Latest nested boolean candidate (2026-09-14, a163d5a)
+## Latest responsive-screen candidate (2026-09-14, 39a1635)
+
+The universal Developer ID signed archive now includes the responsive-screen UI,
+keyboard navigation, Actions search, Liquid class preview recovery, and opacity
+shortcut fixes through clean commit `39a1635`.
+
+Archive: `/Users/philipshen/Developer/retouch-worktrees/desktop-screens-39a1635/Retouch-0.1.0-mac.zip`
+
+SHA-256: `c4276a7910e3b130baa7313187ba4865026522967cfecebea3575b2baef75438`.
+All 225 source entries and native build inputs match the checkout. The extracted
+runtime passed 1,397 unit tests and six browser workflows: full HTML comparison
+editing, Liquid class editing/recovery, and Actions on Chromium and WebKit.
+All 25 desktop tests and package-tampering checks passed. An isolated Homebrew
+install/uninstall retained quarantine and restored the original inventories.
+A syntax-checked local cask is beside the ZIP.
+
+Gatekeeper rejects the archive as **Unnotarized Developer ID**. No native launch
+was attempted. Notarization, trusted public distribution, Intel execution and
+full Figma/arbitrary-site parity remain incomplete or unverified. See the
+[verification receipt](verification/2026-09-14-screens-developer-id.json).
+
+## Previous nested boolean candidate (2026-09-14, a163d5a)
 
 The universal Developer ID signed archive includes nested original canvas
 move/resize/rotate previews and direct double-click entry, plus the latest
@@ -20,7 +41,7 @@ execution remain unverified. See [the verification receipt](verification/2026-09
 for archive checksum and exact evidence.
 
 
-## Current Developer ID signed candidate — 2026-09-14
+## Earlier Developer ID signed candidate — 2026-09-14
 
 Clean commit `1a97caeccf653a081e852782964de5976c5b19d9` is packaged in
 `/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/Retouch-0.1.0-mac.zip`.
