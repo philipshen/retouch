@@ -17075,3 +17075,13 @@ The browser regression now delays a native upload response by 3.5 seconds and ex
 All 1,548 unit tests pass. The complete extended workflow passes on HTML/Chromium, React/Chromium and Liquid/WebKit.
 
 This is interaction reliability work within the existing image paint feature. Full Figma parity, primary-row image opacity, solid/gradient visibility, arbitrary-site support and trusted native/Homebrew distribution remain unfinished. No native app was rebuilt or published.
+
+### Image opacity on the primary Fill row — 2026-09-15
+
+Image paint rows now include an editable opacity percentage beside the swatch and name. The row and image popover share the same loaded recipe, pending state, write path and displayed value. A row edit applies without opening the popover; popover edits update the row. Hidden paints retain an editable percentage, and pending edits show the requested value while both fields are disabled.
+
+Move-up, move-down and duplicate commands now live in a Paint actions popover, freeing room for the percentage. Drag-to-reorder, image visibility and removal remain on the row. Escape returns focus to the actions opener without changing source, and move/duplicate operations queue focus to the corresponding actions button after the stack changes.
+
+All 1,548 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass inline opacity, hidden/crop/slow-upload behavior, keyboard visibility focus, stale-selection refusal, drag reordering, actions-based move/duplicate, neighboring framing preservation and exact source undo. The final HTML run also verifies actions-popover Escape/focus and popover-to-row percentage synchronization. The light-theme row and actions popover were visually inspected.
+
+Solid/gradient visibility and the wider Figma parity scope remain unfinished. Image opacity still uses the source-backed image recipe/upload path and its existing image-access and size limits. No native app or Homebrew release was rebuilt or published.
