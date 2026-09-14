@@ -60,6 +60,43 @@
   if(el.contains(caret.start)&&el.contains(caret.end)){const restored=d.createRange();restored.setStart(caret.start,caret.from);restored.setEnd(caret.end,caret.to);d.getSelection().removeAllRanges();d.getSelection().addRange(restored);}else restoreSelection(el,offsets);
   return true;
  }
+ function copyTextShell(node){
+  const copy=node.cloneNode(false),source=node.__rtSourceCopy||node.getAttribute('data-rt-keep')||node.getAttribute('data-rt')||node.getAttribute('data-rt-i');
+  for(const key of Object.keys(node))if(key.startsWith('__rt'))copy[key]=node[key];
+  if(source&&!node.__rtReplaceRangeStyle)copy.__rtSourceCopy=source;else delete copy.__rtSourceCopy;
+  for(const attr of [...copy.attributes])if(['id','key','ref','value'].includes(attr.name)||/^on/i.test(attr.name)||/^data-rt(?:-|$)/.test(attr.name))copy.removeAttribute(attr.name);
+  return copy;
+ }
+ function enter(el){
+  const context=listContext(el);if(!context)return false;
+  const {items,list,range}=context,d=el.ownerDocument,first=items[0],last=items.at(-1);
+  const caret=node=>{while(node.firstChild&&(node.firstChild.nodeType===3||node.firstChild.nodeType===1&&/^(SPAN|A|STRONG|B|EM|I|U|S|SUP|SUB|CODE|MARK|SMALL|ABBR)$/.test(node.firstChild.tagName)&&node.firstChild.getAttribute('contenteditable')!=='false'&&!node.firstChild.__rtKeep))node=node.firstChild;const r=d.createRange();r.setStart(node,0);r.collapse(true);d.getSelection().removeAllRanges();d.getSelection().addRange(r);};
+  const placeholder=node=>{if(!node.textContent&&!node.querySelector('img,input,ul,ol')){if(!node.querySelector('br'))node.append(d.createElement('br'));}};
+  if(range.collapsed&&!first.textContent.trim()&&!first.querySelector('img,input,ul,ol')){
+   if(canIndent(el,true)){indent(el,true);caret(first);return true;}
+   const following=[];for(let node=first.nextSibling;node;node=node.nextSibling)following.push(node);
+   const tail=following.some(node=>node.nodeType===1)?copiedList(list):null;if(tail)tail.append(...following);
+   const paragraph=rename(first,'p');delete paragraph.__rtSourceCopy;
+   list.after(paragraph);if(tail)paragraph.after(tail);
+   if(!list.children.length)list.remove();placeholder(paragraph);caret(paragraph);syncMarkers(el);return true;
+  }
+  // Merge selected sibling items into the first before splitting the remaining
+  // text. Fully retained descendants move as actual nodes, preserving identity.
+  const start=range.startContainer,offset=range.startOffset;
+  range.deleteContents();
+  if(items.length>1){first.append(...last.childNodes);for(const item of items.slice(1))item.remove();range.setStart(start,Math.min(offset,start.nodeType===3?start.length:start.childNodes.length));range.collapse(true);}
+  let parent=range.startContainer,after;
+  if(parent.nodeType===3){after=parent.splitText(range.startOffset);parent=parent.parentNode;}
+  else after=parent.childNodes[range.startOffset]||null;
+  let fragment=d.createDocumentFragment();while(after){const next=after.nextSibling;fragment.append(after);after=next;}
+  while(parent!==first){
+   const copy=copyTextShell(parent);copy.append(fragment);const next=d.createDocumentFragment();next.append(copy);
+   let sibling=parent.nextSibling;while(sibling){const following=sibling.nextSibling;next.append(sibling);sibling=following;}
+   fragment=next;parent=parent.parentNode;
+  }
+  const next=copyTextShell(first);next.append(fragment);first.after(next);
+  placeholder(first);placeholder(next);caret(next);syncMarkers(el);return true;
+ }
  function apply(el,kind){
   if(!supported(el)||!['none','ul','ol'].includes(kind))return false;
   const offsets=selectionOffsets(el),d=el.ownerDocument;
@@ -89,5 +126,5 @@
   }
   syncMarkers(el);restoreSelection(el,offsets);return true;
  }
- const api={supported,state,apply,listContext,canIndent,indent};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
+ const api={supported,state,apply,listContext,canIndent,indent,enter};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
 })(typeof window!=='undefined'?window:null);

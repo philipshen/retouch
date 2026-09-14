@@ -408,6 +408,7 @@ function planOp(resolved, op) {
       if (c.t==='block') return blocks.markup(c,build(c.children),false,c.template?listTemplate(c.template):null);
       if (c.t==='style'||c.t==='styles') return styleMarkup(c,build(c.children));
       if(c.t==='link')return linkMarkup(c,build(c.children));
+      if(c.t==='copy'){const original=descendants.get(c.id);if(!original||original.dynamicTag||original.attributeExpressions)throw Error('Unknown or dynamic split text source.');return require('../rich-text-copy.cjs').markup(resolved.source.slice(original.tagStart,original.closeEnd),build(c.children),false,c);}
       if (c.t==='wrap') return `<${c.tag}>${build(c.children)}</${c.tag}>`;
       const kept=descendants.get(c.id);
       if (!kept||seen.has(c.id)) throw new Error('A kept element is not a unique descendant of this source.');

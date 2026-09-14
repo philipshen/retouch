@@ -308,9 +308,10 @@ function hookFrame(d, w) {
   d.addEventListener('compositionstart',()=>beginCaretComposition(),true);
   d.addEventListener('compositionend',()=>finishCaretComposition(),true);
   d.addEventListener('beforeinput', (e) => {
+    if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertParagraph'&&insertListParagraph()){e.preventDefault();e.stopPropagation();return;}
     if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertLineBreak'){e.preventDefault();e.stopPropagation();insertInlineBreak();return;}
     if(editing&&editing.el.contains(e.target)&&['historyUndo','historyRedo'].includes(e.inputType)&&inlineHistoryCommand(e.inputType==='historyRedo')){e.preventDefault();e.stopPropagation();return;}
-    if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertText'&&typeof e.data==='string'&&insertCaretText(e.data)){e.preventDefault();e.stopPropagation();return;}
+    if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertText'&&typeof e.data==='string'&&(insertCaretText(e.data)||insertListCaretText(e.data))){e.preventDefault();e.stopPropagation();return;}
     beginNativeTextEdit(e);
     if (editing && editing.el.contains(e.target) && e.inputType.startsWith('format')) {
       e.preventDefault();
@@ -325,6 +326,7 @@ function hookFrame(d, w) {
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if(e.isComposing)return;
+      if(e.key==='Enter'&&!e.shiftKey&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&insertListParagraph()){e.preventDefault();return;}
       if(listIndentShortcut(e)||inlineListShortcut(e))return;
       if((e.metaKey||e.ctrlKey)&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='k'){e.preventDefault();editing.focusLink?.();return;}
       if(/^(Arrow|Home$|End$|PageUp$|PageDown$)/.test(e.key))breakTextHistoryGroup();
@@ -935,7 +937,7 @@ function styleInsertedTextContent(current,start,end,properties,script,decoration
 }
 // Keep the actual nodes (and their source evidence) so restoring a local
 // insertion does not invalidate preceding native text undo transactions.
-const caretMetadataNames=['__rtListMarker','__rtListTemplate','__rtBlockTag','__rtLinkHref','__rtCaretPlaceholder','__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
+const caretMetadataNames=['__rtSourceCopy','__rtListMarker','__rtListTemplate','__rtBlockTag','__rtLinkHref','__rtCaretPlaceholder','__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
 function captureCaretEdit(current){
   const d=current.el.ownerDocument,selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
   const capture=node=>({node,text:typeof node.data==='string'?node.data:null,attributes:node.nodeType===1?[...node.attributes].map(a=>[a.name,a.value]):null,metadata:Object.fromEntries(caretMetadataNames.filter(key=>Object.hasOwn(node,key)).map(key=>[key,structuredClone(node[key])])),children:[...node.childNodes].map(capture)});
@@ -1101,6 +1103,19 @@ function selectedInlineTextNodes(root,range){
   return nodes;
 }
 
+function insertListCaretText(text){
+  const current=editing;if(!current||!text)return false;
+  const d=current.el.ownerDocument,selection=d.getSelection();if(!selection.rangeCount)return false;
+  const range=selection.getRangeAt(0),node=range.startContainer;
+  if(!range.collapsed||node.nodeType!==3||node.length||!current.el.contains(node)||!node.parentElement.closest('li'))return false;
+  const before=captureCaretEdit(current);node.insertData(0,text);range.setStart(node,text.length);range.collapse(true);selection.removeAllRanges();selection.addRange(range);
+  recordCaretEdit(current,before,textHistoryGroup(current,'insertText',text));return true;
+}
+function insertListParagraph(){
+  const current=editing;if(!current||!RetouchListEditing.listContext(current.el))return false;
+  const result=inlineFormattingTransaction(()=>RetouchListEditing.enter(current.el));
+  current.el.ownerDocument.dispatchEvent(new Event('selectionchange'));return result;
+}
 function indentTextList(outdent=false){
   const current=editing;if(!current)return false;
   const result=inlineFormattingTransaction(()=>RetouchListEditing.indent(current.el,outdent));

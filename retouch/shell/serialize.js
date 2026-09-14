@@ -27,6 +27,7 @@
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
       if (n.__rtCaretPlaceholder) continue;
+      if(snapshot&&n.__rtSourceCopy&&!n.__rtReplaceRangeStyle){var copied={t:'copy',id:n.__rtSourceCopy,children:serializeChildren(n,snapshot)};if(n.tagName==='A'&&Object.prototype.hasOwnProperty.call(n,'__rtLinkHref'))copied.href=n.__rtLinkHref;append(copied,block(n));continue;}
       if (n.__rtKeep) { append({ t: 'keep', id: n.__rtKeep },block(n)); continue; }
       if (n.nodeType === 3) {
         if (n.textContent) append({ t: 'text', value: n.textContent });

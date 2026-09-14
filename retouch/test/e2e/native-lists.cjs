@@ -8,6 +8,7 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  assert.equal(await page.getByText('The page structure changed. Select the layer again.',{exact:true}).count(),0);
  const target=app.locator('main > div.type-editorial');
  await target.click();await wait(async()=>await target.getAttribute('contenteditable')==='true');
+ if(process.env.RT_E2E_LIST_ENTER){await require('./list-enter.cjs')({page,target,read,wait,settled,states,kind});return;}
  if(process.env.RT_E2E_LIST_INDENT){await require('./list-indentation.cjs')({page,target,read,wait,settled,states,kind});return;}
  if(process.env.RT_E2E_LIST_CONTROLS){await require('./list-controls.cjs')({page,target,read,wait,settled,states,kind});return;}
  await target.evaluate(el=>{const d=el.ownerDocument,r=d.createRange();r.selectNodeContents(el);const selection=d.getSelection();selection.removeAllRanges();selection.addRange(r);assertNative(d.execCommand('insertUnorderedList',false));function assertNative(ok){if(!ok)throw Error('Native list command failed');}});

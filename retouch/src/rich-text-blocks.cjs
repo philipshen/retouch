@@ -4,7 +4,7 @@
 const tags=new Set(['p','ul','ol','li']);
 const flow=new Set(['div','section','article','aside','nav','main','header','footer','blockquote','li','td','th','form','fieldset','figure','figcaption','details','dialog','body']);
 const phrasing=new Set(['span','a','strong','em','b','i','u','s','sup','sub','br','code','mark','small','abbr','time','img','input','label','button']);
-const contains=items=>Array.isArray(items)&&items.some(item=>item&&(item.t==='block'||item.t==='keep'&&item.tag||contains(item.children)));
+const contains=items=>Array.isArray(items)&&items.some(item=>item&&(item.t==='block'||item.t==='copy'||item.t==='keep'&&item.tag||contains(item.children)));
 function validateNode(node){
  if(!tags.has(node.tag)||Object.keys(node).some(key=>!['t','tag','children','start','template','marker'].includes(key)))return 'Unsupported paragraph or list node.';
  if(Object.hasOwn(node,'marker')&&!require('./list-markers.cjs').valid(node.tag,node.marker))return 'Invalid list marker.';
@@ -14,8 +14,8 @@ function validateNode(node){
 }
 function placement(items,parent,keptTag,level=0){
  for(const item of items){
-  const kept=item.t==='keep'?keptTag(item.id):null;
-  const tag=item.t==='block'||item.t==='wrap'?item.tag:item.t==='link'?'a':item.t==='style'||item.t==='styles'?'span':item.t==='break'?'br':item.t==='keep'?(item.tag||(typeof kept==='string'?kept:kept?.tag)):'#text';
+  const kept=['keep','copy'].includes(item.t)?keptTag(item.id):null;
+  const tag=item.t==='block'||item.t==='wrap'?item.tag:item.t==='link'?'a':item.t==='style'||item.t==='styles'?'span':item.t==='break'?'br':['keep','copy'].includes(item.t)?(item.tag||(typeof kept==='string'?kept:kept?.tag)):'#text';
   if(parent==='ul'||parent==='ol'){
    if(tag!=='li'&&tag!=='#comment'&&!(item.t==='text'&&!item.value.trim()))return 'Lists must contain list items.';
   }else if(tag==='li')return 'List items need an ordered or unordered list.';
@@ -23,7 +23,7 @@ function placement(items,parent,keptTag,level=0){
   // New paragraph boundaries must not move a preserved block/component into
   // phrasing content, where browsers could repair or rearrange the markup.
   if(parent==='p'&&tag!=='#text'&&tag!=='#comment'&&!phrasing.has(tag))return 'Paragraphs can contain only inline text content.';
-  if(item.t==='keep'&&(parent==='p'||phrasing.has(parent))&&typeof kept==='object'&&kept&&!kept.inline)return 'Paragraphs can contain only inline text content.';
+  if(['keep','copy'].includes(item.t)&&(parent==='p'||phrasing.has(parent))&&typeof kept==='object'&&kept&&!kept.inline)return 'Paragraphs can contain only inline text content.';
   if(item.tag&&item.t==='keep'&&!item.children&&kept&&typeof kept==='object'){
    if(['ul','ol'].includes(tag)!==['ul','ol'].includes(kept.tag))return 'Changing list structure requires mapped children.';
    if(tag==='p'&&!kept.inlineChildren)return 'Paragraphs can contain only inline text content.';

@@ -59,6 +59,7 @@ function rewrite(value,sourceId,children,options) {
       if(item.t==='block')return blocks.markup(item,build(item.children),false,item.template?kept.get(item.template)?.listTemplate:null);
       if(item.t==='style'||item.t==='styles')return styleMarkup(item,build(item.children));
       if(item.t==='link')return linkMarkup(item,build(item.children));
+      if(item.t==='copy'){const original=kept.get(item.id);if(!original||original.opaque)throw Error('Unknown split text source.');return require('./rich-text-copy.cjs').markup(original.raw,build(item.children),false,item);}
       if(item.t==='wrap')return `<${item.tag}>${build(item.children)}</${item.tag}>`;
       const original=kept.get(item.id);
       if(!original||seen.has(item.id))throw new Error('A kept node is not unique to this text source.');

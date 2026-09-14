@@ -14970,3 +14970,42 @@ custom `::marker`/`::before` or list-item CSS override parity, marker-color rule
 list spacing/hanging behavior, or list Enter/Backspace behavior. Marker geometry
 still uses the site's font and browser list rendering. No desktop package was
 rebuilt or launched; full Figma Design and arbitrary-site parity remain incomplete.
+
+### 2026-09-14: Enter continues and exits semantic lists
+
+Plain Enter while editing a list splits the current item at the caret, preserving
+inline formatting and the caret's position inside its copied wrappers. A selected
+range within one item or across sibling items is replaced by the new item
+boundary. An explicit initial insertion keeps typing inside an otherwise empty
+formatting/link wrapper, avoiding native boundary normalization. Enter at the end
+continues the list. Enter on an empty nested item
+outdents one level; at the outermost level it creates a paragraph after the list,
+splitting off any following items into another list. Empty paragraphs/items retain
+an explicit BR so they remain visible when saved. Shift+Enter remains a soft
+break; Command/Ctrl+Enter and the existing Done control finish text editing.
+
+The new constrained `copy` rich-text node lets source writers split an existing
+inline wrapper or list item. It copies source-owned class/style, title, language,
+direction and link attributes, omitting IDs, refs, keys, handlers and list-item
+counter overrides. JSX spreads, unsupported tags and unknown attributes are
+refused rather than guessed. It preserves edited link URLs and new range styles
+when those changes occur before splitting. Original source node identity appears
+once; copies reference its appearance without duplicating source IDs. The copy
+protocol participates in the existing placement and nesting checks.
+
+Unit validation: 1,236 tests pass in
+`/private/tmp/retouch-enter-units-complete.log`, including actual HTML, React and
+Liquid writes for split styled items, retained attributes and unique IDs.
+`RT_E2E_LIST_ENTER=1` verifies saved formatted/link text split in the middle,
+URL changes before splitting, inherited link formatting while typing the next
+item, sibling selection replacement, nested continuation, empty-item outdent
+and exit, save/reopen, grouped local undo and exact source undo/redo.
+Browser logs: `/private/tmp/retouch-enter-{html,react,liquid,webkit}-complete.log`.
+Screenshot: `/private/tmp/retouch-enter-final.png`.
+
+Remaining list/text gaps include cross-level range replacement, first-item
+indentation, Backspace/Delete marker behavior, automatic list prefixes,
+list/paragraph spacing, hanging controls and general paragraph Enter behavior
+outside lists. Unknown source attributes and opaque framework structures still
+need broader source ownership policies. No new desktop bundle or native launch
+was performed. Full Figma Design and arbitrary-site parity remain incomplete.
