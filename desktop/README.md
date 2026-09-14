@@ -1,6 +1,35 @@
 # Retouch for macOS
 
-## Latest mask and Liquid development archive — 2026-09-14
+## Current mask-canvas candidate — verification incomplete
+
+Clean commit `120ac836ffb3cc2c3fead5b70ae64d45b1a083aa` is packaged in
+`/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/Retouch-0.1.0-mac.zip`.
+SHA-256: `af9b86fd6b27dcef44621864da161d2f1f0f6bc79ef1cbb4c1f25f2ded165505`.
+
+The universal arm64/x86_64 app includes React/Liquid/HTML mask editing,
+independent mask duplication, canvas transforms, comparison outlines, and
+transform-preserving release. All 222 packaged source hashes and the native
+build inputs match the checkout. The extracted runtime passed 1,317 unit tests
+and eight browser workflows: HTML/Liquid combined masks, mask exports, and screen
+controls in Chromium/WebKit. All 25 desktop tests and package-integrity mutation
+checks also passed.
+
+The exact ZIP installed and uninstalled through an isolated local Homebrew tap.
+Quarantine remained intact, the installed manifest matched the archive, and
+original cask/formula/tap inventories were restored. The sibling
+`retouch-studio.rb` is a syntax-checked local cask bound to this archive.
+
+**Verification remains incomplete:** the combined React comparison/mask workflow
+lost main-preview document state in Chromium and WebKit. An instrumented Chromium
+retry passed, which does not resolve the intermittent failure. Investigate preview
+synchronization before treating this candidate as fully verified.
+
+This is an ad hoc development archive. Native launch, notarization, public
+Homebrew distribution, and Intel execution remain unverified.
+See the [candidate receipt](verification/2026-09-14-mask-canvas-candidate.json)
+for successful checks and failure logs.
+
+## Previous mask and Liquid development archive — 2026-09-14
 
 Source commit `631b70f054d80f09d10568a878de2013ca445430` is packaged in
 `/Users/philipshen/Developer/retouch-worktrees/desktop-masks-631b70f/Retouch-0.1.0-mac.zip`.
@@ -31,7 +60,7 @@ window, verified through accessibility and a screenshot without a manual
 approval step. Rebuilt bundles and complete native workflows remain unverified.
 Avoid repeated blocked launches; see [AGENTS.md](AGENTS.md).
 
-The latest development candidate is
+An earlier typography development candidate is
 `/private/tmp/retouch-desktop-typography-015bffb/Retouch-0.1.0-mac.zip`
 (SHA-256 `5ebe86b9fd3034f01592f7596f6f13e301e00364cb6d7d13b9298c7ac967c5bf`).
 It packages clean commit `015bffb`, including selected-text links, source-owned

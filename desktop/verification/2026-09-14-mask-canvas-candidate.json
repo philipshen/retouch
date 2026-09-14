@@ -1,0 +1,264 @@
+{
+  "sourceCommit": "120ac836ffb3cc2c3fead5b70ae64d45b1a083aa",
+  "sourceTreeDirty": false,
+  "sourceFiles": 222,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "status": "Development candidate: combined React comparison/mask workflow has an unresolved document reload regression",
+  "archive": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/Retouch-0.1.0-mac.zip",
+  "sha256": "af9b86fd6b27dcef44621864da161d2f1f0f6bc79ef1cbb4c1f25f2ded165505",
+  "sourceManifestMatchedCheckout": true,
+  "nativeBuildInputsMatchedCheckout": true,
+  "unitsPassed": 1317,
+  "desktopTestsPassed": 25,
+  "workflows": [
+    {
+      "name": "mask-liquid-webkit",
+      "args": [
+        "test/e2e/svg-mask-controls.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "liquid",
+        "RT_E2E_BROWSER": "webkit",
+        "RT_E2E_MASK_DUPLICATE": "1",
+        "RT_E2E_MASK_GROUP_TRANSFORM": "1",
+        "RT_E2E_MASK_CANVAS": "1",
+        "RT_E2E_MASK_OUTLINES": "1",
+        "RT_E2E_MASK_COMPARE": "1"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 20390,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/mask-liquid-webkit.log",
+      "logSha256": "c53f42086ae4254c01112a30866c5558d00585c34a9a7fa1792b0c9dcff225c0",
+      "testSha256": "4a7c7b30098b07183aee2d1cf76568d1ce2e9e568f3f7984dad855d3b9f5adfb"
+    },
+    {
+      "name": "mask-html-webkit",
+      "args": [
+        "test/e2e/svg-mask-controls.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "html",
+        "RT_E2E_BROWSER": "webkit",
+        "RT_E2E_MASK_DUPLICATE": "1",
+        "RT_E2E_MASK_GROUP_TRANSFORM": "1",
+        "RT_E2E_MASK_CANVAS": "1",
+        "RT_E2E_MASK_OUTLINES": "1",
+        "RT_E2E_MASK_COMPARE": "1"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 20458,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/mask-html-webkit.log",
+      "logSha256": "445ff0959f64efa59ad4056a05aa029b0e52112d6f5465db8f81828ca142ed27",
+      "testSha256": "4a7c7b30098b07183aee2d1cf76568d1ce2e9e568f3f7984dad855d3b9f5adfb"
+    },
+    {
+      "name": "mask-liquid-chromium",
+      "args": [
+        "test/e2e/svg-mask-controls.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "liquid",
+        "RT_E2E_BROWSER": "chromium",
+        "RT_E2E_MASK_DUPLICATE": "1",
+        "RT_E2E_MASK_GROUP_TRANSFORM": "1",
+        "RT_E2E_MASK_CANVAS": "1",
+        "RT_E2E_MASK_OUTLINES": "1",
+        "RT_E2E_MASK_COMPARE": "1"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 19439,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/mask-liquid-chromium.log",
+      "logSha256": "3787c151ded55a8f87d5b665f479dda62460ab5c3a6e3ed6e7b864a9bcea358c",
+      "testSha256": "4a7c7b30098b07183aee2d1cf76568d1ce2e9e568f3f7984dad855d3b9f5adfb"
+    },
+    {
+      "name": "mask-html-chromium",
+      "args": [
+        "test/e2e/svg-mask-controls.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "html",
+        "RT_E2E_BROWSER": "chromium",
+        "RT_E2E_MASK_DUPLICATE": "1",
+        "RT_E2E_MASK_GROUP_TRANSFORM": "1",
+        "RT_E2E_MASK_CANVAS": "1",
+        "RT_E2E_MASK_OUTLINES": "1",
+        "RT_E2E_MASK_COMPARE": "1"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 21066,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/mask-html-chromium.log",
+      "logSha256": "41319855b681a4f3262561b17f28ee0ed6c6f8541acfbacaee900f67f086bd25",
+      "testSha256": "4a7c7b30098b07183aee2d1cf76568d1ce2e9e568f3f7984dad855d3b9f5adfb"
+    },
+    {
+      "name": "screens-chromium",
+      "args": [
+        "test/e2e/compact-screens.cjs"
+      ],
+      "env": {
+        "RT_E2E_BROWSER": "chromium"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 2335,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/screens-chromium.log",
+      "logSha256": "28ddb0e6330ae526e5cf3fe442fd57c869c2be141a9097f0a73730de0ed13805",
+      "testSha256": "99f5f0c8f22ab4ed39906114c289c0131b9012d817aa5750dc8aca7b27cd89fb"
+    },
+    {
+      "name": "export-chromium",
+      "args": [
+        "test/e2e/svg-mask-export.cjs"
+      ],
+      "env": {
+        "RT_E2E_BROWSER": "chromium"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 2964,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/export-chromium.log",
+      "logSha256": "39f5d4797c43e1e0f9e3736a7ca2ffcd5ceda6acd58d0955ab84412dd6a859d1",
+      "testSha256": "020437338ccab37b93e80804ad444f9c1ecc65bf362b042f989559a2f60739fd"
+    },
+    {
+      "name": "export-webkit",
+      "args": [
+        "test/e2e/svg-mask-export.cjs"
+      ],
+      "env": {
+        "RT_E2E_BROWSER": "webkit"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 2987,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/export-webkit.log",
+      "logSha256": "dbcbdb126bf040c3910170fef1b37269c4e8649301f6f93b5549fff05b16900e",
+      "testSha256": "020437338ccab37b93e80804ad444f9c1ecc65bf362b042f989559a2f60739fd"
+    },
+    {
+      "name": "screens-webkit",
+      "args": [
+        "test/e2e/compact-screens.cjs"
+      ],
+      "env": {
+        "RT_E2E_BROWSER": "webkit"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 3020,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/screens-webkit.log",
+      "logSha256": "cfc3ab123a96e27216e46b11ebd47638acf27650e9dd52e0e8f4a46542f578ab",
+      "testSha256": "99f5f0c8f22ab4ed39906114c289c0131b9012d817aa5750dc8aca7b27cd89fb"
+    }
+  ],
+  "reactRegression": {
+    "symptom": "Main preview document marker disappears after comparison views and a subsequent mask-type edit",
+    "chromium": "Two uninstrumented runs failed; one instrumented run passed",
+    "webkit": "Combined workflow failed the same document-state assertion",
+    "evidence": [
+      {
+        "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/mask-react-chromium.log",
+        "sha256": "da84b34d95d76744e7dda3b8f615138bc52d05154491d062bfb5dbf456392f3c"
+      },
+      {
+        "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/react-investigation.log",
+        "sha256": "43c4bc5ed00b5e0e15d248a143a004a4ef3e1272c59e728d0af48767843dc03e"
+      },
+      {
+        "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/react-investigation-detailed.log",
+        "sha256": "a6be0ce86e0f49efdb2106c0c9874871740c0e08f907557005b2de73f9d8bb82"
+      },
+      {
+        "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/mask-react-webkit.log",
+        "sha256": "d7ff7b21d979b4a5296911e16d4c20181bb64e258d8bd51da2621cfb7a046e0f"
+      }
+    ]
+  },
+  "homebrew": {
+    "result": "passed",
+    "checks": [
+      {
+        "version": "0.1.0",
+        "sha256": "af9b86fd6b27dcef44621864da161d2f1f0f6bc79ef1cbb4c1f25f2ded165505",
+        "verification": {
+          "sourceCommit": "120ac836ffb3cc2c3fead5b70ae64d45b1a083aa",
+          "sourceTreeDirty": false,
+          "sourceFiles": 222,
+          "architectures": [
+            "arm64",
+            "x86_64"
+          ],
+          "signature": "strict verification passed; trust and notarization are separate checks"
+        },
+        "manifestMatchesArchive": true,
+        "quarantine": "0381;6aa796a5;;4159FD95-6261-48C3-BA33-4C42B94987CE",
+        "registered": "retouch-studio 0.1.0"
+      }
+    ],
+    "originalInventoriesRestored": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "nativeLaunch": "not attempted",
+    "trustedDistribution": "Not established; the archive is ad hoc signed",
+    "evidence": [
+      {
+        "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/verify-homebrew.cjs",
+        "sha256": "f30ec391838f83a847a451ae1a25ff58f3c7b2311f756f9a63a8f53f7ff8bf4b"
+      },
+      {
+        "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/homebrew.log",
+        "sha256": "0a429981f1757f981aac1c29c2dc2fa05755f686f9d2ac0b3be616a159dbe418"
+      },
+      {
+        "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/before.json",
+        "sha256": "648268e5c64cbaf9e12817a3eb25741e9e2acfde776970d0d80b46f53ecb8396"
+      },
+      {
+        "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/after.json",
+        "sha256": "648268e5c64cbaf9e12817a3eb25741e9e2acfde776970d0d80b46f53ecb8396"
+      },
+      {
+        "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/result.json",
+        "sha256": "a797a5d5b51f428dbf45b1f1f06c4275de443b5721bd11317d1d1001df7a51fd"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/packaged-units.log",
+      "sha256": "476585a80370b2586d0d7251fa7fb97caeaa4d7f79b01891cb55736119c0c886"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/desktop-tests.log",
+      "sha256": "7634fea61562780695617e1a8916af4e783daf56539f19e287da4883bebff2ce"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/package-verifier.log",
+      "sha256": "74b828d723af4fd2aedf9d9659f758c79ae68b1fb5ed392628c83904dc4abed2"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/verify-runtime.cjs",
+      "sha256": "2ed26038558f0d32f16e7fdc6cb2e8f15f5ba64ed8f589504cdb5e55e485c0e8"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/runtime-workflows.json",
+      "sha256": "663279c3709966b767bfd7ece4d04257f211b3eb638aada1e66202cfcce62655"
+    }
+  ],
+  "localCask": {
+    "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/retouch-studio.rb",
+    "sha256": "0871936074cd9ac224bf1abe9b9042d6b0af138b46a9f6158ba0117707a4d09b"
+  },
+  "nativeLaunch": "not run",
+  "notarization": "not performed",
+  "publicRelease": "not published",
+  "intelExecution": "not verified"
+}
