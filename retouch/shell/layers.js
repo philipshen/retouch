@@ -1,13 +1,50 @@
 (function(root){
   'use strict';
-  function label(el) {
+  function textLabel(el) {
+    return [...el.childNodes].map(node=>{
+      if(node.nodeType===3)return node.textContent;
+      if(node.nodeType!==1)return '';
+      const text=textLabel(node);
+      return node.tagName==='BR'||node.hasAttribute('data-retouch-paragraph')||['UL','OL','LI'].includes(node.tagName)?' '+text+' ':text;
+    }).join('');
+  }
+  function label(el, textLayer=false) {
     const tag=el.tagName.toLowerCase();
     const name=el.getAttribute('data-rt-layer-name') || el.getAttribute('data-rt-name') || el.getAttribute('aria-label') || el.getAttribute('alt') || el.id ||
-      [...el.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join(' ').trim().replace(/\s+/g,' ');
+      (textLayer?textLabel(el):[...el.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join(' ')).trim().replace(/\s+/g,' ');
     return tag+(name?' · '+name.slice(0,70):'');
+  }
+  // Formatting runs belong to a text layer; authored layout and component
+  // boundaries remain independently selectable source layers.
+  const inlineTags=new Set(['SPAN','A','STRONG','B','EM','I','U','S','SUP','SUB','CODE','MARK','SMALL','ABBR','BR']);
+  function atomicText(el,{preserve=()=>false}={}) {
+    if(!el||el.namespaceURI!=='http://www.w3.org/1999/xhtml')return false;
+    if(el.tagName!=='DIV'&&!/^(H[1-6]|P|BLOCKQUOTE|PRE|SPAN|A|LABEL|STRONG|B|EM|I|U|S|SUP|SUB|CODE|MARK|SMALL|ABBR)$/.test(el.tagName))return false;
+    const rootDisplay=(el.ownerDocument.defaultView?.getComputedStyle(el)||el.style)?.display;
+    if(rootDisplay&&/flex|grid|table/.test(rootDisplay))return false;
+    const paragraphs=el.querySelector('[data-retouch-paragraph]'),list=el.tagName==='DIV'&&[...el.children].some(n=>['UL','OL'].includes(n.tagName));
+    if(el.tagName==='DIV'&&!paragraphs&&!list)return false;
+    for(const child of el.querySelectorAll('*')) {
+      if(child.hasAttribute('data-rt-i')||child.hasAttribute('data-rt-layer-name')||child.hasAttribute('role')||child.getAttribute('contenteditable')==='false'||preserve(child))return false;
+      const paragraph=child.tagName==='SPAN'&&child.hasAttribute('data-retouch-paragraph'),listPart=list&&['UL','OL','LI'].includes(child.tagName);
+      if(!inlineTags.has(child.tagName)&&!listPart)return false;
+      const style=child.ownerDocument.defaultView?.getComputedStyle(child)||child.style,display=style?.display;
+      if(display&&!['inline','contents'].includes(display)&&!(paragraph&&display==='block')&&!(listPart&&['block','list-item'].includes(display)))return false;
+      if(style?.position&& !['static','relative'].includes(style.position)||style?.float&&style.float!=='none')return false;
+    }
+    return true;
+  }
+  function textOwner(el,options) {
+    let owner=el;
+    for(let node=el;node;node=node.parentElement){
+      if(node.matches?.('[data-rt], [data-rt-i]')&&atomicText(node,options))owner=node;
+      if(node.hasAttribute('data-rt-i'))break;
+    }
+    return owner;
   }
   function layerKind(item) {
     if(item.componentId)return 'component';
+    if(item.atomicText)return 'text';
     const tag=item.el.localName?.toLowerCase();
     if(['img','picture','video','canvas'].includes(tag))return 'image';
     if(item.el.namespaceURI==='http://www.w3.org/2000/svg')return 'vector';
@@ -15,12 +52,14 @@
     if(['body','main','div','section','article','aside','header','footer','nav','form','ul','ol','li','table'].includes(tag))return 'frame';
     return 'element';
   }
-  function collect(d) {
+  function collect(d,{showTextRuns=false,preserve=()=>false}={}) {
     const roots=[],map=new Map();
     for(const el of d.querySelectorAll('[data-rt], [data-rt-i]')) {
       if(['SCRIPT','STYLE','TEMPLATE','HEAD','META','LINK'].includes(el.tagName))continue;
       let parent=el.parentElement;while(parent&&!map.has(parent))parent=parent.parentElement;
-      const item={el,label:label(el),children:[],parent:parent?map.get(parent):null};
+      if(parent&&map.get(parent).atomicText&&!showTextRuns){map.set(el,map.get(parent));continue;}
+      const textLayer=atomicText(el,{preserve});
+      const item={el,atomicText:textLayer,label:label(el,textLayer),children:[],parent:parent?map.get(parent):null};
       (item.parent?item.parent.children:roots).push(item);map.set(el,item);
     }
     return roots;
@@ -34,7 +73,7 @@
     return fraction<.5?'before':'after';
   }
   function mount({host,onSelect,canSelectWhileBusy=()=>false,onAction,onContextMenu,getClipboard=()=>null,dragEnabled=false,multiSelectEnabled=dragEnabled,onMove,onMoveComponent,onSelectMany,locks,onLock,readComponents}) {
-    const header=document.createElement('h2');header.textContent='Layers';header.title='On the canvas: Enter selects a child, Shift+Enter selects its parent, and Tab/Shift+Tab selects siblings.';
+    const header=document.createElement('h2');header.textContent='Layers';header.title='On the canvas: Enter edits text or selects a child, Shift+Enter selects its parent, and Tab/Shift+Tab selects siblings.';
     const search=document.createElement('input');search.type='search';search.placeholder='Find a layer…';search.setAttribute('aria-label','Find a layer');
     const revealSelection=document.createElement('button');revealSelection.type='button';revealSelection.className='layer-reveal-selection';revealSelection.textContent='Show selected layer';revealSelection.hidden=true;
     const tree=document.createElement('div');tree.className='layer-tree';tree.setAttribute('role','tree');tree.setAttribute('aria-label','Site layers');
@@ -63,7 +102,8 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
     unlockShown.textContent='Unlock shown locks';unlockShown.className='layer-select-all';unlockShown.hidden=!locks||!onLock;unlockShown.disabled=true;
     unlockShown.title='Unlock direct locks shown in this filtered tree as one undoable action.';
     unlockShown.onclick=()=>onLock(rows.filter(row=>!row.item.componentId&&locks.direct(row.item.el)).map(row=>row.item.el),false);
-    const tools=document.createElement('details'),toolsTitle=document.createElement('summary');tools.className='layer-tools';toolsTitle.textContent='Layer actions';tools.append(toolsTitle,lockFilter,unlockShown,selectAll,actions,reason);
+    const textFilter=document.createElement('label'),showTextRuns=document.createElement('input');showTextRuns.type='checkbox';textFilter.className='layer-lock-filter';textFilter.append(showTextRuns,' Show text runs');textFilter.title='Show individual source elements inside formatted text.';
+    const tools=document.createElement('details'),toolsTitle=document.createElement('summary');tools.className='layer-tools';toolsTitle.textContent='Layer actions';tools.append(toolsTitle,textFilter,lockFilter,unlockShown,selectAll,actions,reason);
     host.append(header,search,revealSelection,tree,empty,tools);
     let components=[],componentRequest=0,componentLoad=null,selectedInfo=null,treeRoots=[],virtualItems=[];const componentKeys=new WeakMap();
     const key=item=>{if(!item.componentId)return item.el;let keys=componentKeys.get(item.el);if(!keys)componentKeys.set(item.el,keys=new Map());if(!keys.has(item.componentId))keys.set(item.componentId,{});return keys.get(item.componentId);};
@@ -183,7 +223,8 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
           if(expanded)walk(item.children,depth+1);
         }
       }
-      treeRoots=d?(readComponents?RetouchComponentInstances.tree(collect(d),components):collect(d)):[];virtualItems=[];function indexVirtual(items){for(const item of items){if(item.componentId)virtualItems.push(item);indexVirtual(item.children);}}indexVirtual(treeRoots);walk(treeRoots,1);
+      const options={showTextRuns:showTextRuns.checked,preserve:el=>selectedSet.has(el)||!!locks?.direct(el)};
+      treeRoots=d?(readComponents?RetouchComponentInstances.tree(collect(d,options),components):collect(d,options)):[];virtualItems=[];function indexVirtual(items){for(const item of items){if(item.componentId)virtualItems.push(item);indexVirtual(item.children);}}indexVirtual(treeRoots);walk(treeRoots,1);
       // Keep existing layer buttons attached while source updates arrive. Replacing
       // them between pointerdown and pointerup loses the browser's click target.
       const retained=new Set(rows.map(entry=>entry.row));
@@ -198,13 +239,16 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
     }
     function updateReveal(){const visible=new Set(rows.map(row=>key(row.item)));let count=0,hidden=0;function scan(items){for(const item of items){if(isSelected(item)){count++;if(!visible.has(key(item)))hidden++;}scan(item.children);}}scan(treeRoots);revealSelection.textContent=count>1?'Show selected layers':'Show selected layer';revealSelection.hidden=!selected||!(search.value.trim()||lockedOnly.checked)||!hidden;revealSelection.disabled=isBusy;}
     revealSelection.onclick=()=>{search.value='';lockedOnly.checked=false;function expand(items){let found=false;for(const item of items){const child=expand(item.children);if(child)collapsed.delete(key(item));if(child||isSelected(item))found=true;}return found;}expand(treeRoots);render();rows.find(row=>isSelected(row.item))?.button.focus();};
-    search.oninput=render;lockedOnly.onchange=render;
+    search.oninput=render;lockedOnly.onchange=render;showTextRuns.onchange=render;
     search.addEventListener('keydown',event=>{if(event.isComposing)return;if(event.key==='Escape'&&search.value){event.preventDefault();event.stopPropagation();search.value='';render();return;}if(!['ArrowDown','ArrowUp'].includes(event.key)||event.altKey||event.ctrlKey||event.metaKey)return;const query=search.value.trim().toLowerCase(),matches=rows.filter(row=>!row.button.disabled&&(!lockedOnly.checked||locks?.locked(row.item.el))&&(!query||row.item.label.toLowerCase().includes(query)));const target=event.key==='ArrowDown'?matches[0]:matches.at(-1);if(target){event.preventDefault();target.button.focus();}});
 
+    let layoutTimer=null;
+    function layoutChanged(){clearTimeout(layoutTimer);layoutTimer=setTimeout(render,100);}
     function attach(next) {
       if(d===next)return;
-      observer?.disconnect();clearTimeout(timer);endDrag();rangeAnchor=null;componentRangeAnchor=null;d=next;components=[];componentRequest++;collapsed=new WeakSet();render();void loadComponents();
-      if(d?.body){observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(()=>{render();void loadComponents();},100);});observer.observe(d.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['data-rt','data-rt-i','data-rt-revision','data-rt-name','data-rt-layer-name','id','aria-label','alt']});}
+      observer?.disconnect();d?.defaultView?.removeEventListener('resize',layoutChanged);clearTimeout(layoutTimer);clearTimeout(timer);endDrag();rangeAnchor=null;componentRangeAnchor=null;d=next;components=[];componentRequest++;collapsed=new WeakSet();render();void loadComponents();
+      d?.defaultView?.addEventListener('resize',layoutChanged);
+      if(d?.body){observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(()=>{render();void loadComponents();},100);});observer.observe(d.documentElement,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['data-rt','data-rt-i','data-rt-revision','data-rt-name','data-rt-layer-name','id','aria-label','alt','class','style','role','contenteditable','data-retouch-paragraph']});}
     }
     function selection(el,info,busy=false,multiple=[],readOnly=false) {
       const scopeChanged=selectedInfo?.kind!==info?.kind||selectedInfo?.id!==info?.id;selectedInfo=info;
@@ -213,6 +257,7 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
       if(isBusy!==busy){isBusy=busy;selectAll.disabled=busy||!selectionRows().length;for(const r of rows){r.button.disabled=busy&&!canSelectWhileBusy();r.toggle.disabled=busy||!r.item.children.length;if(r.lock)r.lock.disabled=busy||!locks.direct(r.item.el)&&locks.locked(r.item.el);}host.setAttribute('aria-busy',String(busy));}
       if(selected!==el||changed||scopeChanged){
         selected=el;
+        if(changed)render();
         let reveal=false;
         function selectedItem(items){for(const item of items){if(isSelected(item))return item;const child=selectedItem(item.children);if(child)return child;}return null;}
         for(let p=selectedItem(treeRoots)?.parent;p;p=p.parent)if(collapsed.has(key(p))){collapsed.delete(key(p));reveal=true;}
@@ -282,8 +327,8 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
       const destination=navigationTarget(direction);if(!destination)return false;
       search.value='';lockedOnly.checked=false;for(let parent=destination.parent;parent;parent=parent.parent)collapsed.delete(key(parent));render();await choose(destination);return true;
     }
-    return {attach,selection,navigate,selectSiblings,canSelectSiblings:()=>siblingTargets().length>1,canNavigate:direction=>!!navigationTarget(direction),refresh:async()=>{render();await loadComponents();}};
+    return {attach,selection,navigate,selectSiblings,textOwner:el=>showTextRuns.checked?el:textOwner(el,{preserve:child=>!!locks?.direct(child)}),isTextLayer:el=>atomicText(el,{preserve:child=>!!locks?.direct(child)}),canSelectSiblings:()=>siblingTargets().length>1,canNavigate:direction=>!!navigationTarget(direction),refresh:async()=>{render();await loadComponents();}};
   }
-  const api={label,collect,mount,canNest,canNestMany};
+  const api={label,collect,mount,canNest,canNestMany,atomicText,textOwner};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayers=api;
 })(typeof window==='object'?window:globalThis);

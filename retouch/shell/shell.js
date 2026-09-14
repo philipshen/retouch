@@ -102,7 +102,8 @@ function scopedInfo(info) { return {...info,styleScope,anchorInheritedClasses:Re
 
 let lockStorage;try{lockStorage=sessionStorage;}catch{}
 const layerLocks=RetouchLayerLocks.create({route:()=>currentPageRoute()||'',storage:lockStorage,scope:window.__RT_RENDERING?.stateScope});
-window.RetouchCanvasSelection={marqueeTargets:resolveMarqueeTargets,pick:(node,x,y)=>layerLocks.pick(node,x,y),selectable:node=>!layerLocks.locked(node),canMarquee:()=>window.__RT_RENDERING?.selectionStyling===true&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests};
+function pickLayer(node,x,y){const target=layerLocks.pick(node,x,y);return target?layers.textOwner(target):null;}
+window.RetouchCanvasSelection={marqueeTargets:resolveMarqueeTargets,pick:(node,x,y)=>pickLayer(node,x,y),selectable:node=>!layerLocks.locked(node),canMarquee:()=>window.__RT_RENDERING?.selectionStyling===true&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests};
 const historyRoutes = new Map();
 function currentPageRoute(){try{const loc=iframe.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
 const editorHistory = RetouchHistory.createHistory({apply:restoreHistory,onChange:syncHistoryControls,storage:lockStorage,scope:window.__RT_RENDERING?.stateScope,initialState:window.__RT_RENDERING?.history,capture:entry=>({route:historyRoutes.get(entry.undoId)||currentPageRoute()})});
@@ -179,7 +180,7 @@ async function canvasContextMenu(event,keyboard=false){
  if(event.defaultPrevented||event.isComposing||mode!=='edit'||editing||panelTasks||undoBusy||sourceRequests||document.querySelector('dialog[open]')||event.target.isContentEditable||event.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]'))return;
  if(keyboard&&!sel)return;
  event.preventDefault();event.stopPropagation();const serial=++canvasContextSerial;
- const target=keyboard?matchingEls(activeId())[0]:layerLocks.pick(event.target,event.clientX,event.clientY);
+ const target=keyboard?matchingEls(activeId())[0]:pickLayer(event.target,event.clientX,event.clientY);
  if(!target)return;
  const selectedTargets=!sel?[]:sel.multiple?sel.multiple.flatMap(info=>matchingEls(info.id)):sel.info.kind==='instance'?selectedComponentGroups(doc(),activeId(),sel.info)[0]?.elements||[]:matchingEls(activeId()).filter(el=>inTextScope(el,sel.info)).slice(0,1);
  if(!keyboard&&!selectedTargets.includes(target))await select(target);
@@ -202,7 +203,7 @@ function hookFrame(d, w) {
     if(sel?.multiple?.length>1){const infos=sel.multiple;if(infos.some(info=>!info.svgTransform?.editable))return null;const elements=infos.map(info=>{const found=matchingEls(info.id);return found.length===1?found[0]:null;});if(elements.some(el=>!el||layerLocks.locked(el)))return null;const target=elements.find(el=>el.contains(node));return target?{info:sel.info,target,infos}:null;}
     const targets=sel?.info.svgTransform?.editable?matchingEls(sel.info.id):[],selected=targets.length===1?targets[0]:null;
     if(selected?.contains(node)&&!layerLocks.locked(selected))return {info:sel.info,target:selected};
-    const target=layerLocks.pick(node);return target?.namespaceURI==='http://www.w3.org/2000/svg'&&/^(g|rect|circle|ellipse|line|path|polygon|polyline|text|image|use)$/.test(target.localName)&&!layerLocks.locked(target)?{target}:null;
+    const target=pickLayer(node);return target?.namespaceURI==='http://www.w3.org/2000/svg'&&/^(g|rect|circle|ellipse|line|path|polygon|polyline|text|image|use)$/.test(target.localName)&&!layerLocks.locked(target)?{target}:null;
   };
   stopSVGDrag?.();stopSVGDrag=RetouchSVGDrag.mount({document:d,frame:iframe,candidate:vectorDragCandidate,
     prepare:async({target},current)=>{const selection=sel,valid=()=>current()&&sel===selection&&doc()===d&&!!vectorDragCandidate(target);await select(target,{current:valid});const result=current()&&vectorDragCandidate(target);return result?.info?result:null;},
@@ -212,7 +213,7 @@ function hookFrame(d, w) {
     onChange:rect=>{selectionMarquee=rect?{document:d,rect}:null;},
     selectable:node=>!layerLocks.locked(node),
     onSelect:(nodes,options)=>selectMarquee(d,nodes,options),
-    onClick:(node,options)=>{if(panelTasks||undoBusy||sourceRequests)return;const target=layerLocks.pick(node,options.point?.x,options.point?.y);if(target)select(target,options);else if(!options.toggle)clearSelection();},
+    onClick:(node,options)=>{if(panelTasks||undoBusy||sourceRequests)return;const target=pickLayer(node,options.point?.x,options.point?.y);if(target)select(target,options);else if(!options.toggle)clearSelection();},
   });
   // The compiler may deliver CSS after the source-write response. Refresh
   // computed inspector values when that CSS lands, without interrupting input.
@@ -239,19 +240,19 @@ function hookFrame(d, w) {
   d.addEventListener('click', async (e) => {
     if (mode !== 'edit') return;
     if(inspectorTextCommit){
-      e.preventDefault();e.stopPropagation();const serial=++inspectorSelectionSerial,target=captureInspectorSelectionTarget(layerLocks.pick(e.target,e.clientX,e.clientY));
+      e.preventDefault();e.stopPropagation();const serial=++inspectorSelectionSerial,target=captureInspectorSelectionTarget(pickLayer(e.target,e.clientX,e.clientY));
       await inspectorTextCommit;if(serial!==inspectorSelectionSerial||mode!=='edit'||panelTasks||undoBusy||sourceRequests)return;
       const next=target();if(next&&!layerLocks.locked(next)){if((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection||sel?.info.contextSelection||sel?.info.kind==='instance'))await select(next,{toggle:true});else await startInlineEdit(next,e,true);}else if(!next)clearSelection();return;
     }
     if (panelTasks > 0 || undoBusy || sourceRequests) { e.preventDefault(); e.stopPropagation(); return; }
-    if ((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection||sel?.info.contextSelection||sel?.info.kind==='instance')){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=layerLocks.pick(e.target,e.clientX,e.clientY);if(target)await select(target,{toggle:true});return;}
+    if ((e.shiftKey||e.metaKey||e.ctrlKey)&&(sel?.info.cssAuthoring||sel?.info.classSelection||sel?.info.contextSelection||sel?.info.kind==='instance')){e.preventDefault();e.stopPropagation();await commitInlineEdit();const target=pickLayer(e.target,e.clientX,e.clientY);if(target)await select(target,{toggle:true});return;}
     if (editing) {
       if (editing.el.contains(e.target)) return;
       commitInlineEdit(); // clicking away commits (R-5)
     }
     e.preventDefault();
     e.stopPropagation();
-    const t = layerLocks.pick(e.target,e.clientX,e.clientY);
+    const t = pickLayer(e.target,e.clientX,e.clientY);
     // Single click selects AND, when the element has editable literal text,
     // enters in-place editing directly (user decision, 2026-09-02).
     if (t&&!layerLocks.locked(t)) startInlineEdit(t, e, true);
@@ -267,13 +268,13 @@ function hookFrame(d, w) {
     }
     e.preventDefault();
     e.stopPropagation();
-    const t = layerLocks.pick(e.target,e.clientX,e.clientY);
+    const t = pickLayer(e.target,e.clientX,e.clientY);
     if (t&&!layerLocks.locked(t)) startInlineEdit(t, e, false, true);
   }, true);
   d.addEventListener('mousemove', (e) => {
     if (mode !== 'edit') { hoverEl = null; return; }
     measuring = e.altKey;
-    hoverEl = layerLocks.pick(e.target,e.clientX,e.clientY);
+    hoverEl = pickLayer(e.target,e.clientX,e.clientY);
   }, true);
   d.addEventListener('mouseleave', () => { hoverEl = null; }, true);
   d.addEventListener('keydown', (e) => { if (e.key === 'Alt') measuring = true; }, true);
@@ -557,8 +558,9 @@ function componentMarqueeTargets(d,rect,library){
   }
   return candidates.filter(group=>!candidates.some(parent=>parent!==group&&parent.elements.some(root=>root!==group.element&&root.contains(group.element)))).map(group=>group.element);
 }
+function textMarqueeTargets(nodes,rect){return [...new Set(nodes.map(node=>layers.textOwner(node)))].filter(node=>!layerLocks.locked(node)&&RetouchMarquee.enclosed(rect,node.getBoundingClientRect()));}
 async function resolveMarqueeTargets(d,nodes,rect){
- if(sel?.info.kind!=='instance')return {nodes,component:false};
+ if(sel?.info.kind!=='instance')return {nodes:textMarqueeTargets(nodes,rect),component:false};
  const selection=sel,serial=classificationSerial;
  const library=await api('GET','/rt/__api/components');
  if(sel!==selection||serial!==classificationSerial||d.defaultView?.document!==d)return null;
@@ -567,7 +569,7 @@ async function resolveMarqueeTargets(d,nodes,rect){
 }
 
 async function selectMarquee(d,nodes,options){
- if(sel?.info.kind!=='instance')return selectMany(nodes,options);
+ if(sel?.info.kind!=='instance')return selectMany(textMarqueeTargets(nodes,options.rect),options);
  const serial=++classificationSerial,selection=sel;busyPanel(true);
  try{
   const library=await api('GET','/rt/__api/components');
@@ -3524,7 +3526,7 @@ routeInput.addEventListener('keydown', (e) => {
 });
 window.addEventListener('keydown', (e) => {
   if(e.key==='Escape'){vectorEntrySerial++;if(pendingVectorEntry){pendingVectorEntry=null;e.preventDefault();return;}}
-  if(vectorNudgeShortcut(e)||flipShortcut(e)||alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||((e.metaKey||e.ctrlKey)&&['[',']','{','}'].includes(e.key)&&canvasLayerShortcut(e)))return;
+  if(vectorNudgeShortcut(e)||flipShortcut(e)||alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||(e.key==='Enter'&&e.target.closest?.('[role=treeitem][aria-selected="true"]')&&layerNavigationShortcut(e))||((e.metaKey||e.ctrlKey)&&['[',']','{','}'].includes(e.key)&&canvasLayerShortcut(e)))return;
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
   if(sourceHistoryShortcut(e))return;
@@ -3632,6 +3634,8 @@ function layerNavigationShortcut(e){
   if(e.defaultPrevented||e.isComposing||e.metaKey||e.ctrlKey||e.altKey||!['Enter','Tab'].includes(e.key)||mode!=='edit'||editing||!sel||sel.multiple?.length>1||e.target.isContentEditable||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||document.querySelector('dialog[open]'))return false;
   e.preventDefault();e.stopPropagation();if(e.repeat||panelTasks||undoBusy||sourceRequests)return true;
   if(e.key==='Enter'&&!e.shiftKey&&editableVectorField(sel.info)){void editSVGPoints(sel.info).catch(error=>toast(error.message,'err'));return true;}
+  const textTarget=renderedSelection?.element;
+  if(e.key==='Enter'&&!e.shiftKey&&textTarget&&layers.isTextLayer(textTarget)&&!layerLocks.locked(textTarget)&&sel.scope!=='instance'){void startInlineEdit(textTarget,null,true).then(()=>{if(editing?.el===textTarget){const range=textTarget.ownerDocument.createRange();range.selectNodeContents(textTarget);const selection=textTarget.ownerDocument.getSelection();selection.removeAllRanges();selection.addRange(range);}}).catch(error=>toast(error.message,'err'));return true;}
   const direction=e.key==='Enter'?(e.shiftKey?'parent':'child'):(e.shiftKey?'previous':'next');void layers.navigate(direction).catch(error=>toast(error.message,'err'));return true;
 }
 function sourceHistoryShortcut(e,canvas=false){

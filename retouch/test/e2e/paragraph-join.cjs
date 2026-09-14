@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 module.exports=async({page,app,kind,read,wait,settled})=>{
  const target=app.locator('h1'),states=[read()],button=name=>page.getByRole('button',{name,exact:true});
- const open=async()=>{await target.dispatchEvent('dblclick');await wait(async()=>await target.getAttribute('contenteditable')==='true');};
+ const open=async()=>{const link=target.locator('a').filter({hasText:/\S/}).first();if(await link.count())await link.click();else await target.dispatchEvent('dblclick');await wait(async()=>await target.getAttribute('contenteditable')==='true');};
  const choose=async(text,from,to=from)=>{await target.focus();await target.evaluate((el,[text,from,to])=>{const d=el.ownerDocument,w=d.createTreeWalker(el,4);let n;while(n=w.nextNode())if(n.data===text)break;if(!n)throw Error('Missing '+text);const r=d.createRange();r.setStart(n,from);r.setEnd(n,to);d.getSelection().removeAllRanges();d.getSelection().addRange(r);},[text,from,to]);};
  const save=async()=>{await button('Finish text editing').click();await settled();await wait(()=>read()!==states.at(-1));states.push(read());};
  const count=()=>target.locator(':scope > [data-retouch-paragraph]').count();
@@ -20,6 +20,10 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  await button('Finish text editing').click();await settled();if(read()!==states.at(-1))states.push(read());await open();
  if(process.env.RT_E2E_PARAGRAPH_JOIN_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_PARAGRAPH_JOIN_SCREENSHOT});
  await button('Finish text editing').click();await settled();assert.equal(read(),states.at(-1));
+ const row=page.getByRole('treeitem',{name:'h1 · HeadlineTail',exact:true});await row.waitFor();assert.equal(await row.getAttribute('data-layer-kind'),'text');assert.equal(await row.getAttribute('aria-expanded'),null,'saved formatting stays inside one text layer');
+ const marquee=await page.evaluate(async()=>{const d=document.querySelector('#app').contentDocument,heading=d.querySelector('h1'),link=[...heading.querySelectorAll('a')].find(el=>el.textContent.trim()),box=heading.getBoundingClientRect(),small=link.getBoundingClientRect();const full=await RetouchCanvasSelection.marqueeTargets(d,[link],{left:box.left-1,top:box.top-1,width:box.width+2,height:box.height+2}),partial=await RetouchCanvasSelection.marqueeTargets(d,[link],{left:small.left,top:small.top,width:small.width,height:small.height});return {full:full.nodes.length===1&&full.nodes[0]===heading,partial:partial.nodes.length};});assert.deepEqual(marquee,{full:true,partial:0},'marquee selects complete text layers, never hidden runs');
+ await row.click();await settled();await row.focus();await page.keyboard.press('Enter');await wait(async()=>await target.getAttribute('contenteditable')==='true');assert.deepEqual(await target.evaluate(el=>{const range=el.ownerDocument.getSelection().getRangeAt(0);return {text:range.cloneContents().textContent,all:range.startContainer===el&&range.startOffset===0&&range.endContainer===el&&range.endOffset===el.childNodes.length};}),{text:'HeadlineTail',all:true},'Enter selects the complete text contents for editing');await button('Finish text editing').click();await settled();assert.equal(read(),states.at(-1));
+
  for(let i=states.length-2;i>=0;i--){await button('Undo').click();await settled();await wait(()=>read()===states[i]);}
  for(let i=1;i<states.length;i++){await button('Redo').click();await settled();await wait(()=>read()===states[i]);}
  for(let i=states.length-2;i>=0;i--){await button('Undo').click();await settled();await wait(()=>read()===states[i]);}

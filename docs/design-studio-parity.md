@@ -15139,3 +15139,48 @@ to preserve appearance and attributes; universal selector/layout equivalence and
 arbitrary framework ownership are unproven. Spacing/hanging controls, automatic
 list prefixes, desktop release completion and broader Figma Design parity remain
 open. No desktop rebuild or native launch was performed.
+
+### Atomic rich-text layers (2026-09-14)
+
+Formatted headings, paragraphs and text-only list containers now appear as one
+text layer. Paragraph, line-break, link and emphasis wrappers remain in source,
+with their text included in the layer label. Canvas click, hover, context-menu
+and modifier selection resolve to the containing text layer. Marquee selection
+requires the complete text layer bounds instead of selecting hidden text runs.
+Enter on a selected text layer, including a focused Layers row, starts editing
+and selects its contents; Shift+Enter retains parent navigation.
+
+“Show text runs” in Layer actions exposes the underlying source elements. A
+specifically selected run or a directly locked descendant remains visible even
+with that option off. Component-instance boundaries, explicitly named child
+layers, media, controls, positioned children and authored flex/grid/block layouts
+remain separate. Style mutations and iframe resize recompute grouping, including
+media-query changes. This is a presentation and selection model; it does not
+change source ownership or relax the rich-text writers' validation.
+
+Reference: Figma's guide to text documents Enter/Return to enter text edit mode:
+https://help.figma.com/hc/en-us/articles/360039956434-Guide-to-text-in-Figma-Design
+
+Verification: 1,241 unit tests pass in
+`/private/tmp/retouch-text-layers-units-final.log`. The new
+`test:e2e:text-layers` browser suite covers formatted/list grouping, component and
+layout boundaries, detailed source runs, selected and locked descendants, live
+labels, navigation and responsive regrouping. Existing layer click-across-refresh,
+focus, modifier selection, locks, marquee and offscreen reveal tests passed.
+Combined list-Enter and paragraph-join source workflows passed in HTML, React and
+Liquid on Chromium 145.0.7632.6 (`/private/tmp/retouch-text-layers-{html,react,liquid}-verified.log`)
+and HTML on WebKit 26.0 (`/private/tmp/retouch-text-layers-webkit-final.log`). These
+exercise real visible-link clicks, keyboard entry from Layers, whole-layer
+marquee resolution, retained formatting and exact saved-source undo/redo.
+WebKit includes a paragraph newline in Selection.toString(); the keyboard test
+asserts the actual range boundaries and cloned text instead.
+Final responsive model and refresh checks passed in
+`/private/tmp/retouch-text-layers-{responsive-model,model-webkit,refresh-regression}.log`;
+the final HTML source run passed in `/private/tmp/retouch-text-layers-final-html.log`.
+`/private/tmp/retouch-text-layers.png` was visually inspected: one heading row
+replaces the nested formatting tree while the linked text remains editable.
+
+This does not establish full Figma parity or arbitrary-site editability. Text-like
+structures that contain authored layout or component boundaries remain separate
+layers. General paragraph/list editing gaps and desktop distribution requirements
+listed above remain open. No desktop rebuild or native launch was performed.
