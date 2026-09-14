@@ -36,3 +36,14 @@ test('mixed Liquid gradient edits retain image bindings and reject image targets
  const result=liquid.planOp(resolved(source),op);assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes('linear-gradient(90deg,_lime_0%,_blue_100%)'));assert.ok(result.edits[0].after.includes("'rt-picture.svg' | asset_url"));assert.equal((result.edits[0].after.match(/asset_url/g)||[]).length,1);
  for(const stack of [{...op.stack,index:1},{...op.stack,value:'url("/not-a-gradient.svg")'},{...op.stack,value:'linear-gradient(red,blue);display:none'}])assert.equal(liquid.planOp(resolved(source),{...op,stack}).refused,true);
 });
+
+test('Liquid paint reordering and duplication keep image replacement attached to the correct binding',()=>{
+ const gradient='linear-gradient(0deg, red 0%, blue 100%)';
+ const apply=(source,layers,index,src)=>liquid.planOp(resolved(source),{type:'setImageFill',fileHash:liquid.contentHash(source),scope:'md:',src,stack:{layers,index}});
+ const one=apply(original,[gradient,'url("/a.svg")','url("/b.svg")'],1,'/assets/a.svg').edits[0].after,a=one.match(/var\((--rt-image-fill-[a-f0-9]{10})\)/)[1];
+ const two=apply(one,[gradient,'var('+a+')','url("/b.svg")'],2,'/assets/b.svg').edits[0].after,b=[...two.matchAll(/var\((--rt-image-fill-[a-f0-9]{10})\)/g)][1][1],layers=[gradient,'var('+a+')','var('+b+')'];
+ const ordered=liquid.planOp(resolved(two),{type:'setImageFill',fileHash:liquid.contentHash(two),scope:'md:',action:'order',stack:{layers,order:[0,2,1],framing:{'background-size':'auto, 20px 30px, contain'}}});assert.equal(ordered.ok,true,ordered.reason);assert.ok(ordered.edits[0].after.includes('[background-size:auto,_contain,_20px_30px]'));
+ const replaced=apply(ordered.edits[0].after,[gradient,'var('+b+')','var('+a+')'],1,'/assets/c.svg');assert.equal(replaced.ok,true,replaced.reason);assert.ok(replaced.edits[0].after.includes("'a.svg' | asset_url"));assert.ok(replaced.edits[0].after.includes("'c.svg' | asset_url"));assert.ok(!replaced.edits[0].after.includes("'b.svg' | asset_url"));
+ const duplicatedLayers=[gradient,'var('+b+')','var('+b+')','var('+a+')'],duplicated=liquid.planOp(resolved(replaced.edits[0].after),{type:'setImageFill',fileHash:liquid.contentHash(replaced.edits[0].after),scope:'md:',action:'order',stack:{layers:[gradient,'var('+b+')','var('+a+')'],order:[0,1,1,2],framing:{}}});assert.equal(duplicated.ok,true,duplicated.reason);
+ const separated=apply(duplicated.edits[0].after,duplicatedLayers,1,'/assets/d.svg');assert.equal(separated.ok,true,separated.reason);assert.ok(separated.edits[0].after.includes("'c.svg' | asset_url"));assert.ok(separated.edits[0].after.includes("'d.svg' | asset_url"));assert.equal((separated.edits[0].after.match(/asset_url/g)||[]).length,3);
+});

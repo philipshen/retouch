@@ -9,7 +9,7 @@ test('tile size uses original dimensions and keeps image/color classes intact',(
 });
 test('image framing validates bounded CSS while retaining existing image source',()=>{
  for(const mode of ['fill','fit','tile'])for(const [property,value]of Object.entries(F.framing(mode,400,200,25)))assert.equal(V.valid(property,value),true);
- for(const [property,value]of [['background-size','1px;display:none'],['background-size','-1px 10px'],['background-position','101% 0%'],['background-repeat','repeat; color:red']])assert.equal(V.valid(property,value),false);
+ for(const [property,value]of [['background-size','1px;display:none'],['background-size','-1px 10px'],['background-position','1000001% 0%'],['background-repeat','repeat; color:red']])assert.equal(V.valid(property,value),false);
  assert.equal(F.source('url("https://example.com/image.svg")'),'https://example.com/image.svg');assert.equal(F.source('url("one.svg"), url("two.svg")'),null);
 });
 

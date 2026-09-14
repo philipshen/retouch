@@ -1,6 +1,7 @@
 (function(root){
  'use strict';
  const V=typeof module==='object'&&module.exports?require('./html-css-values.js'):root.RetouchHTMLCSSValues;
+ const P=typeof module==='object'&&module.exports?require('./paint-order.js'):root.RetouchPaintOrder;
  const I=typeof module==='object'&&module.exports?require('./inspector.js'):root.RetouchInspector;
  function source(value){const match=/^url\("([^"\\]*)"\)$/.exec(value||'');return match?.[1]||null;}
  function paint(url){
@@ -25,11 +26,11 @@
   const contentWidth=px('width')-(css.boxSizing==='border-box'?paddingX+borderX:0),contentHeight=px('height')-(css.boxSizing==='border-box'?paddingY+borderY:0),origin=css.backgroundOrigin||'padding-box';
   return {width:contentWidth+(origin==='content-box'?0:paddingX)+(origin==='border-box'?borderX:0),height:contentHeight+(origin==='content-box'?0:paddingY)+(origin==='border-box'?borderY:0),objectFit:mode,objectPosition:css.backgroundPosition};
  }
- function reset(){return Object.fromEntries(['background-image','background-size','background-repeat','background-position'].map(property=>[property,null]));}
+ function reset(){return Object.fromEntries(['background-image',...P.properties].map(property=>[property,null]));}
  function classes(before,changes){
   let next=before;
   for(const [property,value]of Object.entries(changes)){
-   const kind=property.replace('background-','');if(kind==='image'){if(value!==null&&value!=='none'&&!V.imageURL(value))throw Error('Choose a supported image URL.');next=I.replace(next,token=>/^bg-(?:none|\[(?:image:)?(?:url|var)\(.*\)\])$/.test(token),value===null?'':value==='none'?'!bg-none':'!bg-[url('+source(value)+')]');continue;}const match=token=>kind==='size'?/^bg-(?:cover|contain|auto|\[length:.*\]|size-\[.*\])$/.test(token):kind==='repeat'?/^bg-(?:repeat(?:-x|-y|-round|-space)?|no-repeat)$/.test(token):/^bg-(?:center|top|bottom|left|right|(?:left|right)-(?:top|bottom)|\[position:.*\]|position-\[.*\])$/.test(token);
+   const kind=property.replace('background-','');if(!['image','size','repeat','position'].includes(kind)){next=P.frameClasses(next,{[property]:value});continue;}if(kind==='image'){if(value!==null&&value!=='none'&&!V.imageURL(value))throw Error('Choose a supported image URL.');next=I.replace(next,imageToken,value===null?'':value==='none'?'!bg-none':'!bg-[url('+source(value)+')]');continue;}const match=token=>token.startsWith('['+property+':')||(kind==='size'?/^bg-(?:cover|contain|auto|\[length:.*\]|size-\[.*\])$/.test(token):kind==='repeat'?/^bg-(?:repeat(?:-x|-y|-round|-space)?|no-repeat)$/.test(token):/^bg-(?:center|top|bottom|left|right|(?:left|right)-(?:top|bottom)|\[position:.*\]|position-\[.*\])$/.test(token));
    if(value===null){next=I.replace(next,match,'');continue;}
    const token=kind==='size'?(value==='cover'||value==='contain'?'bg-'+value:'bg-[length:'+value.replaceAll(' ','_')+']'):kind==='repeat'?'bg-'+value:'bg-[position:'+value.replaceAll(' ','_')+']';
    next=I.replace(next,match,token);
@@ -49,6 +50,9 @@
  }
  function mountStack(info,el,save,saveCSS,layers,upload,saveImage,browseImages){
   const section=I.section('Image fill'),css=el.ownerDocument.defaultView.getComputedStyle(el);if(info.classNameDynamic&&!saveCSS){I.note(section,info.classNameReason||'Image fill styles are computed.','refused');return section;}I.note(section,'Images are listed in paint order, front to back. Replacement preserves the other paints and framing.');
+  const order=document.createElement('div');order.className='paint-order';section.append(order);
+  const move=async indices=>{try{if(!saveCSS&&['background','background-image',...root.RetouchPaintOrder.properties].some(property=>el.style.getPropertyPriority(property)))throw Error('This paint stack has an important inline background. Edit that style in source first.');const framing=Object.fromEntries(root.RetouchPaintOrder.properties.map(property=>[property,css.getPropertyValue(property)])),changes=root.RetouchPaintOrder.reorder(layers,framing,indices);if(saveImage)await saveImage(null,false,'order',{layers:stackReferences(info,el,layers),order:indices,framing});else if(saveCSS)await saveCSS(changes);else await save(root.RetouchPaintOrder.frameClasses(stackClasses(info.className,indices.map(index=>layers[index])),changes));const actual=V.imageLayers(el.ownerDocument.defaultView.getComputedStyle(el).backgroundImage);if(!actual||actual.length!==indices.length||actual.some((value,index)=>value!==layers[indices[index]]))throw Error('The paint order could not be verified in the preview.');}catch(error){I.note(order,error.message,'refused');}};
+  layers.forEach((layer,index)=>{const row=document.createElement('div'),label=document.createElement('span');row.className='paint-order-row';label.textContent=(source(layer)?'Image':'Gradient')+' '+(index+1);row.append(label);for(const [action,text,disabled,indices]of [['up','↑',index===0,()=>{const next=layers.map((_,i)=>i);[next[index-1],next[index]]=[next[index],next[index-1]];return next;}],['down','↓',index===layers.length-1,()=>{const next=layers.map((_,i)=>i);[next[index],next[index+1]]=[next[index+1],next[index]];return next;}],['duplicate','+',layers.length>=8,()=>layers.flatMap((_,i)=>i===index?[i,i]:[i])],['remove','−',layers.length<=1,()=>layers.map((_,i)=>i).filter(i=>i!==index)]]){const name=(action==='up'||action==='down'?'Move paint '+(index+1)+' '+action:action[0].toUpperCase()+action.slice(1)+' paint '+(index+1)),button=I.button(name,()=>move(indices()));button.textContent=text;button.setAttribute('aria-label',name);button.title=name;button.disabled=disabled;row.append(button);}order.append(row);});
   const paints=layers.map(value=>V.parseGradients(value)?.[0]||{type:'image',value});
   if(paints.some(paint=>paint.type!=='image'))root.RetouchClassGradients.mount(section,info,el,save,{gradients:paints,fixedStack:true,write:async next=>{
    const index=next.findIndex((paint,i)=>V.serializeGradients([paint])!==V.serializeGradients([paints[i]]));if(index<0)return;
