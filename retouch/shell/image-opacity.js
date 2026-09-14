@@ -1,6 +1,6 @@
 (function(root){
  'use strict';
- function mount({popup,group,row,source,index,current,upload,replace}){
+ function mount({popup,group,row,source,index,current,currentPaint,upload,replace}){
   const I=root.RetouchInspector,C=root.RetouchImageCrop,controls=document.createElement('div'),status=document.createElement('p');controls.className='image-opacity-controls';status.className='image-fill-status';status.setAttribute('role','status');group.append(controls);
   let model=null,loading=null,saving=false;
   const eye=I.button('Toggle image paint '+(index+1)+' visibility',async()=>{if(!model){popup.retouchOpen();await load();return;}await apply({hidden:!model.hidden});});eye.classList.add('paint-visibility');row.insertBefore(eye,row.querySelector('[aria-label="Remove paint '+(index+1)+'"]'));
@@ -11,10 +11,12 @@
    eye.setAttribute('aria-label',name);eye.title=name;eye.disabled=saving||!!loading;eye.setAttribute('aria-pressed',String(hidden));eye.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>'+(hidden?'<path d="m3 3 18 18"/>':'')+'</svg>';row.classList.toggle('paint-hidden',hidden);input.disabled=!model||saving;if(model)input.value=String((model.opacity??1)*100);
   }
   async function apply(patch){
-   if(!model||saving||!current())return;saving=true;sync();status.textContent='Applying paint…';
-   try{const next={...model,...patch},blob=new Blob([C.markup(next)],{type:'image/svg+xml'}),url=await upload(new File([blob],'opacity-paint.svg',{type:'image/svg+xml'}));if(!current())throw Error('The paint changed before it could be applied.');await replace(url,true);model=next;status.textContent='';}
+   if(!model||saving||!current())return;
+   let keepFocus=Object.hasOwn(patch,'hidden')&&document.activeElement===eye;const focusEvents=['pointerdown','keydown','input','change','blur'],cancelFocus=event=>{if(event.type!=='blur'||event.target===root)keepFocus=false;};if(keepFocus)for(const event of focusEvents)root.addEventListener(event,cancelFocus,true);
+   saving=true;sync();status.textContent='Applying paint…';
+   try{const next={...model,...patch},blob=new Blob([C.markup(next)],{type:'image/svg+xml'}),url=await upload(new File([blob],'opacity-paint.svg',{type:'image/svg+xml'}));if(!currentPaint())throw Error('The paint changed before it could be applied.');if(keepFocus)root.RetouchPanelFocus?.queue(eye.isConnected?eye:document.querySelectorAll('.paint-stack-fields > .paint-order > .paint-order-row')[index]?.querySelector('.paint-visibility'),(patch.hidden?'Show':'Hide')+' image paint '+(index+1));await replace(url,true);model=next;status.textContent='';}
    catch(error){status.textContent=error.message;if(current())popup.retouchOpen();}
-   finally{saving=false;sync();}
+   finally{for(const event of focusEvents)root.removeEventListener(event,cancelFocus,true);saving=false;sync();}
   }
   async function load(){
    if(model||loading||!current())return;const controller=new AbortController();loading=controller;sync();let timedOut=false;const timer=setTimeout(()=>{timedOut=true;controller.abort();},15000),observer=new MutationObserver(()=>{if(!current())controller.abort();});observer.observe(document.body,{childList:true,subtree:true});retry.hidden=true;status.textContent='';input.placeholder='Loading';

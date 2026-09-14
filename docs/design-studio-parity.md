@@ -17065,3 +17065,13 @@ The crop editor shows a hidden image while editing it and preserves the hidden s
 All 1,548 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass hiding/showing at 50%, changing opacity while hidden, visible crop preview with hidden output, inspector rebuild persistence, original-byte preservation, neighboring paints and all seven framing properties, responsive inheritance, and exact undo through every source snapshot. The existing gradient, project-image, crop and retained-state checks also pass; gradient pixel assertions wait for both requested stop colors to render. The row and popover were visually inspected.
 
 This adds image-paint visibility only. Solid/gradient paint visibility, opacity on the primary image row, broader Figma fidelity and arbitrary-site support remain unfinished. Existing readable-image and size limits still apply. No native app or Homebrew release was rebuilt or published.
+
+### Paint visibility focus through uploads and panel refresh — 2026-09-15
+
+Activating an image paint's eye control with Enter or Space now restores keyboard focus to the corresponding Show/Hide control after a source update. The focus request starts after the upload finishes; deliberate input during the upload cancels it. A harmless inspector rebuild no longer invalidates an otherwise current paint edit. Upload validation still checks the selected element, source revision, screen scope and classification generation, and the selected paint stack must still match before replacement. Recipe loading continues to cancel when its own panel is detached.
+
+The browser regression now delays a native upload response by 3.5 seconds and explicitly rebuilds the inspector before returning it. It checks retained eye-button focus, then completes a separate native upload after selecting another layer and verifies that the original source is unchanged and the new selection remains active. The test delays the browser's native fetch response rather than forwarding a binary request through Playwright, which produced an empty SVG in WebKit. Existing opacity, hidden crop, responsive inheritance, neighboring-paint preservation, exact undo and retained-state checks remain in the workflow.
+
+All 1,548 unit tests pass. The complete extended workflow passes on HTML/Chromium, React/Chromium and Liquid/WebKit.
+
+This is interaction reliability work within the existing image paint feature. Full Figma parity, primary-row image opacity, solid/gradient visibility, arbitrary-site support and trusted native/Homebrew distribution remain unfinished. No native app was rebuilt or published.
