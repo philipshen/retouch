@@ -3809,20 +3809,21 @@ window.addEventListener('blur',cancelOpacityEntry);
 function opacityShortcut(e){
   if(opacityEntry&&(e.key==='Escape'||(e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z')){cancelOpacityEntry();e.preventDefault();e.stopImmediatePropagation();return true;}
   if(e.defaultPrevented||e.isComposing||e.metaKey||e.ctrlKey||e.altKey||e.shiftKey||!/^\d$/.test(e.key)){cancelOpacityEntry();return false;}
-  if(mode!=='edit'||editing||!sel||e.target.isContentEditable||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')){cancelOpacityEntry();return false;}
+  if(mode!=='edit'||editing||!sel||e.target.isContentEditable||document.querySelector('dialog[open]')||e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||e.target.ownerDocument===document&&e.target.closest?.('button,[role="button"],#screenToolbar')){cancelOpacityEntry();return false;}
   const input=panelBody.querySelector('input[aria-label="Shared Opacity (%)"],input[aria-label="Opacity (%)"]');
   if(!input||input.matches(':disabled')||input.closest('[inert]')){cancelOpacityEntry();return false;}
   e.preventDefault();e.stopImmediatePropagation();
   if(e.repeat||panelTasks||undoBusy||sourceRequests)return true;
-  const key=JSON.stringify([(sel.multiple||[sel.info]).map(info=>info.id).sort(),styleScope]);
-  let digits=opacityEntry?.input===input&&opacityEntry.key===key?opacityEntry.digits+e.key:e.key;
+  const key=JSON.stringify([(sel.multiple||[sel.info]).map(info=>[info.id,info.fileHash||info.hash]).sort(),styleScope]);
+  let digits=opacityEntry?.key===key?opacityEntry.digits+e.key:e.key;
   if(digits.length>3||Number(digits)>100)digits=e.key;
   cancelOpacityEntry();
-  const entry={input,key,digits};opacityEntry=entry;
+  const entry={key,digits};opacityEntry=entry;
   entry.timer=setTimeout(()=>{
     if(opacityEntry!==entry)return;opacityEntry=null;
-    if(!input.isConnected||input.matches(':disabled')||input.closest('[inert]')||mode!=='edit'||editing||!sel||panelTasks||undoBusy||sourceRequests||document.querySelector('dialog[open]')||key!==JSON.stringify([(sel.multiple||[sel.info]).map(info=>info.id).sort(),styleScope]))return;
-    input.value=String(digits.length===1?(digits==='0'?100:Number(digits)*10):Number(digits));input.dispatchEvent(new Event('change',{bubbles:true}));
+    const target=panelBody.querySelector('input[aria-label="Shared Opacity (%)"],input[aria-label="Opacity (%)"]');
+    if(!target||target.matches(':disabled')||target.closest('[inert]')||mode!=='edit'||editing||!sel||panelTasks||undoBusy||sourceRequests||document.querySelector('dialog[open]')||key!==JSON.stringify([(sel.multiple||[sel.info]).map(info=>[info.id,info.fileHash||info.hash]).sort(),styleScope]))return;
+    target.value=String(digits.length===1?(digits==='0'?100:Number(digits)*10):Number(digits));target.dispatchEvent(new Event('change',{bubbles:true}));
   },450);
   return true;
 }

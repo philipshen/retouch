@@ -18,6 +18,11 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    assert.equal(await focus.textContent(),'Controls');assert.equal(await focus.getAttribute('aria-expanded'),'true');
    await page.getByRole('separator',{name:'Resize comparison panel',exact:true}).press('Home');
    assert.equal(await page.locator('.compare-toolbar').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
+   for(const control of [focus,page.getByRole('button',{name:'Edit from Phone comparison',exact:true})]){
+    await control.focus();await control.press('2');
+    await page.waitForFunction(()=>opacityEntry===null&&!panelTasks&&!sourceRequests);
+    assert.equal(fs.readFileSync(file,'utf8'),original,'Digits on comparison controls must not change layer opacity');
+   }
    const compactTop=await firstTop();assert.ok(compactTop<350,'The first preview must start near the top of the panel: '+compactTop);
    await help.focus();await help.press('Enter');assert.equal(await hint.isVisible(),true);assert.equal(await help.getAttribute('aria-expanded'),'true');assert.ok(await firstTop()>compactTop+60);await help.press('Escape');assert.equal(await hint.isVisible(),false);assert.equal(await help.evaluate(el=>el===document.activeElement),true);
    await page.screenshot({path:'/private/tmp/retouch-comparison-panel-'+engine+'.png'});

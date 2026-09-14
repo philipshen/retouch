@@ -16625,3 +16625,16 @@ Undo remove now focuses the restored preview, or its visible Edit button when
 the screen was collapsed. The panel workflow verifies keyboard restoration of
 an expanded screen and restoration of a collapsed screen without expanding it,
 then returns to the empty state and adds another screen. Source stays unchanged.
+
+### Opacity shortcuts respect editor controls and inspector refreshes
+
+Digit shortcuts do not change source while an editor button or comparison preview
+control has keyboard focus. Canvas percentage entry now resolves the current
+inspector field when its delay expires, preserving a multi-digit entry through a
+benign inspector rerender. The selection, source revision and style scope must
+still match; existing busy/editing and cancellation checks remain.
+
+The action workflow exposed the pre-existing detached-input failure after history
+restoration, also reproduced without the control guard. It now passes and includes
+an explicit inspector rerender between the digits of 25%. Comparison-panel tests
+verify that digits on Controls and preview buttons leave source unchanged.
