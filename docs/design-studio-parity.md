@@ -15532,3 +15532,27 @@ reruns. Separate SVG joins, coincident-anchor merging, vector networks, booleans
 and full parity remain open; no native package was built.
 React/Chromium passed the same final closure and exact history workflow
 (`/private/tmp/retouch-close-picking-react-final.log`, exit 0).
+
+### Split contours at an anchor (2026-09-14)
+
+More vector actions now offers **Split at point** for one selected anchor.
+An interior anchor in an open contour produces two open contours with separate
+endpoint copies. An anchor in a closed contour opens that contour at the chosen
+point, retaining every segment and duplicating only the endpoint. Incoming and
+outgoing handles and arc parameters remain attached to their original segments.
+Open endpoints, multiple selections, handle selections and capacity-overflow
+results disable the action. Done saves; Escape retains the existing cancellation
+behavior. Separate open contours may have different implicit fill regions even
+though their path segments retain their geometry.
+
+All 1,250 unit tests pass (`/private/tmp/retouch-split-contour-all-units.log`).
+HTML Chromium and WebKit compound-vector workflows pass
+(`/private/tmp/retouch-split-contour-{html,webkit}.log`): closed-contour splitting,
+subdividing then splitting a cubic, unchanged total rendered path length,
+untouched contours, disabled endpoints and exact source Undo/Redo. The pure
+geometry test also covers arc preservation, independent endpoint copies,
+roundtrip serialization and invalid anchors. Full vector networks, booleans,
+separate-element joins and full Figma parity remain unfinished; no native build
+was produced.
+React/Chromium also passed the complete splitting and source-history workflow
+(`/private/tmp/retouch-split-contour-react.log`, exit 0).

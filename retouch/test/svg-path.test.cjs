@@ -206,3 +206,11 @@ test('Joining opposite ends of one contour closes it while preserving existing s
  for(const [from,to]of [['start','end'],['end','start']]){const result=path.joinContours(document,0,0,from,to);assert.equal(result.subpaths[0].closed,true);assert.deepEqual(result.subpaths[0].nodes,document.subpaths[0].nodes);assert.deepEqual(result.subpaths[1],document.subpaths[1]);assert.equal(result.selected,0);assert.ok(path.equivalentCompound(path.parseCompound(path.serializeCompound(result)),result));}
  assert.equal(path.joinContours(document,0,0,'start','start'),null);assert.equal(path.joinContours(document,1,1),null);assert.equal(JSON.stringify(document),before);
 });
+
+test('Splitting at an anchor retains cubic and arc segments with independent endpoint copies',()=>{
+ const document=path.parseCompound('M0 0C0 10 20 10 20 0A10 15 30 0 1 40 20L60 0 M80 0L90 0'),before=JSON.stringify(document),result=path.splitContour(document,0,1);
+ assert.equal(result.subpaths.length,3);assert.deepEqual(result.subpaths[0].nodes,document.subpaths[0].nodes.slice(0,2));assert.deepEqual(result.subpaths[1].nodes[1],document.subpaths[0].nodes[2]);assert.equal(result.subpaths[1].nodes[0].in,undefined);assert.deepEqual(result.subpaths[2],document.subpaths[1]);assert.notEqual(result.subpaths[0].nodes.at(-1),result.subpaths[1].nodes[0]);assert.equal(JSON.stringify(document),before);
+ for(const anchor of [0,3,-1,4,1.5])assert.equal(path.splitContour(document,0,anchor),null);
+ const closed=path.parseCompound('M0 0C0 10 20 10 20 0A10 15 30 0 1 40 20L0 0Z');
+ for(let anchor=0;anchor<closed.subpaths[0].nodes.length;anchor++){const opened=path.splitContour(closed,0,anchor);assert.equal(opened.subpaths.length,1);assert.equal(opened.subpaths[0].closed,false);assert.equal(opened.subpaths[0].nodes.length,closed.subpaths[0].nodes.length+1);assert.equal(opened.subpaths[0].nodes[0].in,undefined);assert.equal(opened.subpaths[0].nodes.at(-1).out,undefined);assert.ok(path.equivalentCompound(path.parseCompound(path.serializeCompound(opened)),opened));}
+});
