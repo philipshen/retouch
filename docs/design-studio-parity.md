@@ -16442,3 +16442,18 @@ width rule is refused without changing the preview head. The same check applies
 to single-layer edits, selections, comparisons, and their managed-CSS history.
 The source descriptor test and Chromium/WebKit multi-reset workflows cover this
 case; 1,396 unit tests pass.
+
+### Multi-layer breakpoint reset for React and Liquid classes
+
+**Reset overrides at this size** now handles supported literal class selections
+as well as HTML managed CSS. It removes only class tokens in the exact selected
+scope, preserving base classes, state variants (including nested `md:hover:`),
+and later breakpoints. Every selected layer is written through the existing
+atomic class-selection operation, producing one undo step. Dynamic or unsupported
+class selections do not expose the action.
+
+`RT_E2E_CLASS_SCOPE_RESET=1 react-selection.cjs` and `liquid-scope-reset.cjs`
+verify phone/tablet/desktop opacity, exact source undo/redo, and retained
+multi-selection. React/WebKit retains document and input state. Liquid/Chromium
+uses the existing context-selection reload path; retained Liquid application
+state is not established by this change. All 1,396 unit tests pass.

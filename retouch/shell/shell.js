@@ -1794,8 +1794,11 @@ function screenScopeSection() {
     const scopeWidth=/^min-\[(\d+)px\]:$/.exec(styleScope),width=scopeWidth?Number(scopeWidth[1]):null;
     if(width!==null&&(sel.multiple||[sel.info]).some(info=>Object.keys(info.cssRules?.[width]||{}).length)){const reset=RetouchInspector.button('Reset overrides at this size',()=>{stopDrawing?.();if(sel.multiple?.length)void setHTMLCSSSelection(undefined,undefined,width,undefined,true);else void setHTMLCSS(undefined,undefined,width,true);});reset.title='Remove the selected layers’ local styles at '+width+' px and larger. Base styles and other breakpoints stay in place. Undo restores these overrides.';section.append(reset);}
   }
-  if (!sel.multiple?.length && !sel.info.cssAuthoring && styleScope && RetouchResponsive.project(sel.info.className,styleScope)) {
-    section.append(RetouchInspector.button('Reset overrides at this size',()=>setClasses('')));
+  if(!sel.info.cssAuthoring&&styleScope){
+    const infos=sel.multiple||[sel.info],editable=infos.every(info=>!info.classNameDynamic&&(!sel.multiple?.length||info.classSelection));
+    if(editable&&infos.some(info=>RetouchResponsive.project(info.className,styleScope)))section.append(RetouchInspector.button('Reset overrides at this size',()=>{
+      if(sel.multiple?.length){const classes=Object.fromEntries(sel.multiple.map(info=>[info.id,RetouchResponsive.replaceScope(info.className,'',styleScope)]));void setReactClassesSelection(classes);}else void setClasses('');
+    }));
   }
   return section;
 }
