@@ -49,7 +49,7 @@ const file=path.join(root,'app/page.jsx'),original=fs.readFileSync(file,'utf8'),
   const custom='Custom 1120 × 844';
   await preview(custom).locator('#anchor-target').waitFor();
   assert.deepEqual(await preview(custom).locator('body').evaluate(el=>[el.ownerDocument.defaultView.innerWidth,el.ownerDocument.defaultView.innerHeight]),[1120,844]);
-  assert.equal(await page.getByRole('button',{name:'Pin current size',exact:true}).isDisabled(),true);
+  assert.equal(await page.getByRole('button',{name:'Show current size',exact:true}).isDisabled(),false);
   assert.equal(await page.getByRole('button',{name:'Edit styles from 1120 px',exact:true}).isDisabled(),true);await page.getByRole('treeitem',{name:'div · anchor-target',exact:true}).click();
   await page.getByRole('button',{name:'Edit styles from 1120 px',exact:true}).click();await wait(async()=>await page.getByLabel('Style screen scope').inputValue()==='min-[70rem]:','custom breakpoint units');assert.equal(read(),original);await wait(async()=>await page.getByLabel('Tablet scope coverage').getAttribute('data-scope-applies')==='false'&&await page.getByLabel(custom+' scope coverage').getAttribute('data-scope-applies')==='true','custom scope coverage');
   await page.getByRole('button',{name:'Remove Tablet comparison',exact:true}).click();

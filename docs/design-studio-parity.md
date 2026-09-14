@@ -16593,3 +16593,9 @@ Adding the current canvas size now uses the shared screen-creation flow, which
 reveals the new card, focuses its preview for keyboard interaction, and generates
 a distinct name if needed. The compact-panel workflow verifies the new preview
 is visible and focused while existing documents and input values are retained.
+
+When the current size already exists, the toolbar action becomes **Show current
+size** and reveals/focuses that preview instead of being disabled. It reopens a
+collapsed preview and creates no duplicate. Existing sizes remain reachable at
+the eight-screen limit; adding a ninth distinct size stays disabled. Chromium
+and WebKit panel workflows cover collapsed reuse, focus, and the capacity limit.

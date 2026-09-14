@@ -41,7 +41,13 @@
     if(undoOrder)undoOrder.disabled=!orderUndo.length||removals>0||loadingSet;
     if(redoOrder)redoOrder.disabled=!orderRedo.length||removals>0||loadingSet;
     if(undoOrder)undoOrder.parentElement.hidden=!orderUndo.length&&!orderRedo.length;
-    if(pin){pin.disabled=sizes.length>=8||!valid(size.width)||!valid(size.height)||sizes.some(s=>s[1]===size.width&&s[2]===size.height);pin.title=sizes.length>=8?'Remove a comparison to add another':'Add the current canvas dimensions';}
+    if(pin){
+      const exists=sizes.some(s=>s[1]===size.width&&s[2]===size.height);
+      pin.disabled=!valid(size.width)||!valid(size.height)||(!exists&&sizes.length>=8)||loadingSet||removals>0;
+      pin.setAttribute('aria-label',exists?'Show current size':'Pin current size');
+      pin.textContent=exists?'↗':'+';
+      pin.title=exists?'Reveal the existing preview at the current canvas size':sizes.length>=8?'Remove a comparison to add another':'Add the current canvas dimensions';
+    }
     if(restore){
       const last=removed.at(-1);restore.hidden=!last;restore.disabled=!last||removals>0||sizes.length>=8||sizes.some(size=>size[1]===last.size[1]&&size[2]===last.size[2]||size[0].toLowerCase()===last.size[0].toLowerCase());
       restore.textContent=last?'Undo remove: '+last.size[0]:'Undo remove';restore.title=restore.disabled?'Finish removing views, or free the name and dimensions before restoring.':'Restore the last removed comparison in its original position.';
