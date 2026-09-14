@@ -54,3 +54,21 @@ test('Liquid reconciliation uses fetched renderer output without a document navi
     assert.equal(result.method, 'server'); assert.equal(live.childNodes[0].nodeValue, 'new'); assert.equal(frame.contentDocument, d);
   } finally { globalThis.DOMParser = savedParser; }
 });
+
+test('superseded image refresh cannot overwrite a newer edit with a delayed response', async () => {
+  const live = node('img', [], { src: 'newest.svg' }), fresh = node('img', [], { src: 'older.svg' });
+  const d = { dispatchEvent() { assert.fail('superseded refresh must not dispatch'); } }, rendered = {};
+  const savedParser = globalThis.DOMParser;
+  globalThis.DOMParser = class { parseFromString() { return rendered; } };
+  const frame = { contentDocument: d, contentWindow: { location: { href: 'http://example.test/' } } };
+  let active = true, release;
+  const response = new Promise(resolve => { release = resolve; });
+  try {
+    const pending = sync({ frame, serverRendered: true, current: () => active, select: doc => [doc === rendered ? fresh : live], fetcher: () => response });
+    active = false;
+    release({ ok: true, text: async () => 'older response' });
+    await assert.rejects(pending, /synchronizing the saved edit/);
+    assert.equal(live.getAttribute('src'), 'newest.svg');
+    assert.equal(frame.contentDocument, d);
+  } finally { globalThis.DOMParser = savedParser; }
+});

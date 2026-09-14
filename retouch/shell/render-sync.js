@@ -55,9 +55,9 @@
       });
     }
   }
-  async function sync({ frame, serverRendered = false, select, matches = () => true, revalidate = false, timeout = 8000, fetcher = root.fetch.bind(root) }) {
+  async function sync({ frame, serverRendered = false, select, matches = () => true, current = () => true, revalidate = false, timeout = 8000, fetcher = root.fetch.bind(root) }) {
     const d = frame.contentDocument, href = frame.contentWindow.location.href, started = Date.now();
-    const unchanged = () => frame.contentDocument === d && frame.contentWindow.location.href === href;
+    const unchanged = () => current() && frame.contentDocument === d && frame.contentWindow.location.href === href;
     while (Date.now() - started < timeout) {
       if (!unchanged()) throw new Error('Preview navigated while synchronizing the saved edit');
       if (!serverRendered) {

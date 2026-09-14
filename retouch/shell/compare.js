@@ -85,7 +85,7 @@
     if(!open)return;
     const next=path();if(!next)return;
     if(!force&&next===route)return;route=next;
-    for(const card of cards){card.message.textContent='Loading…';card.frame.src=next;}
+    for(const card of cards){card.imageSyncToken=null;card.retryImage=null;card.imageSyncError=null;card.retryImageControl.hidden=true;card.message.textContent='Loading…';card.frame.src=next;}
   }
   function syncColdText(info){
     const {id,text,hash,renderRevisionAttribute}=info;
@@ -345,7 +345,7 @@
       const frame=document.createElement('iframe');frame.title=name+' comparison preview';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');frame.style.width=width+'px';frame.style.height=height+'px';
       const surface=document.createElement('div');surface.className='compare-surface';surface.setAttribute('aria-hidden','true');surface.append(frame);rail.append(surface);
       const overlay=document.createElement('div');overlay.className='compare-overlay';
-      const message=document.createElement('p');message.className='hint';
+      const message=document.createElement('p');message.className='hint';const retryImageControl=document.createElement('button');retryImageControl.type='button';retryImageControl.className='control-button';retryImageControl.textContent='Retry image';retryImageControl.hidden=true;retryImageControl.onclick=()=>{const item=cards.find(item=>item.frame===frame);void item?.retryImage?.();};header.append(retryImageControl);
       const marquee=document.createElement('div');marquee.className='selection-marquee';marquee.hidden=true;viewport.append(marquee);let stopMarquee=null,marqueeDocument=null,marqueeRequest=0;
       function attachMarquee(){
         try{
@@ -583,7 +583,7 @@
           scrollFrom(w,node,dx,dy);
         }catch{}
       },{passive:false});
-      cards.push({card,frame,surface,previewBody,setCollapsed,attachMarquee,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal,up,down,move});
+      cards.push({card,frame,surface,retryImageControl,previewBody,setCollapsed,attachMarquee,overlay,message,scopeMessage,scopeButton,viewport,width,height,edit,reveal,up,down,move});
   }
   function unload(frame){cards.find(card=>card.frame===frame)?.cancelColdText?.();marqueeCleanup.get(frame)?.();marqueeCleanup.delete(frame);return new Promise(resolve=>{
     let timeout;
@@ -662,14 +662,14 @@
         }catch(error){if(open&&cards.includes(card))card.styleSyncError='Styles saved; comparison refresh failed: '+error.message;}
       }));
     },
-    async syncImage({select,matches,serverRendered=true,revisionAttribute,hash}){
+    async syncImage({select,matches,serverRendered=true,revisionAttribute,hash,onlyFrame}){
       if(!open)return;const expectedRoute=path(),failures=[];
-      await Promise.all([...cards].map(async card=>{
-        card.imageSyncError=null;
+      await Promise.all(cards.filter(card=>!onlyFrame||card.frame===onlyFrame).map(async card=>{
+        const token=Symbol();card.imageSyncToken=token;card.retryImage=null;card.imageSyncError=null;card.retryImageControl.disabled=true;if(!onlyFrame)card.retryImageControl.hidden=true;
         try{
           for(let attempt=0;attempt<80;attempt++){if(!open||!cards.includes(card)||path()!==expectedRoute)return;const d=card.frame.contentDocument;if(d?.body&&d.URL!=='about:blank')break;await new Promise(resolve=>setTimeout(resolve,50));}
           const d=card.frame.contentDocument;if(!d?.body||d.URL==='about:blank')throw Error('Preview is still loading.');const url=new URL(d.URL);if(url.pathname+url.search+url.hash!==expectedRoute)return;
-          if(!select(d).length)return;
+          if(!select(d).length){card.retryImageControl.hidden=true;return;}
           const ready=el=>matches(el)&&(!revisionAttribute||el.getAttribute(revisionAttribute)===hash);
           if(!serverRendered){
             for(let attempt=0;attempt<80&&!window.RetouchClientMount.ready(d);attempt++){if(!open||!cards.includes(card)||card.frame.contentDocument!==d||path()!==expectedRoute)return;await new Promise(resolve=>setTimeout(resolve,50));}
@@ -679,10 +679,12 @@
             const next=card.frame.contentWindow.next;
             if(!select(d).every(ready)&&/^16\.2\./.test(next?.version||'')&&typeof next.router?.hmrRefresh==='function')next.router.hmrRefresh();
           }
-          await RetouchRenderSync.sync({frame:card.frame,serverRendered,select,matches:ready});
-        }catch(error){if(open&&cards.includes(card)){card.imageSyncError='Image saved; comparison refresh failed: '+error.message;failures.push(card.frame.title||'Comparison');}}
+          await RetouchRenderSync.sync({frame:card.frame,serverRendered,select,matches:ready,current:()=>card.imageSyncToken===token&&open&&cards.includes(card)&&path()===expectedRoute});
+          if(card.imageSyncToken===token)card.retryImageControl.hidden=true;
+        }catch(error){if(open&&cards.includes(card)&&card.imageSyncToken===token&&path()===expectedRoute){card.imageSyncError='Image saved; comparison refresh failed: '+error.message;failures.push(card.frame.title||'Comparison');card.retryImageControl.hidden=false;card.retryImageControl.setAttribute('aria-label','Retry image in '+card.frame.title.replace(/ preview$/,''));card.retryImage=()=>{if(card.imageSyncToken!==token||path()!==expectedRoute||!open)return;return window.RetouchComparisons.syncImage({select,matches,serverRendered,revisionAttribute,hash,onlyFrame:card.frame});};}}
+        finally{if(card.imageSyncToken===token)card.retryImageControl.disabled=false;}
       }));
-      if(failures.length)throw Error('Could not refresh '+failures.join(', ')+'.');
+      return {ok:!failures.length,failures};
     },
     async syncText(info){
       if(!open||info.kind!=='host'||info.textSource)return;
