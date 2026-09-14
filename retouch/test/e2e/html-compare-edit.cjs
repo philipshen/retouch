@@ -22,6 +22,12 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    await help.focus();await help.press('Enter');assert.equal(await hint.isVisible(),true);assert.equal(await help.getAttribute('aria-expanded'),'true');assert.ok(await firstTop()>compactTop+60);await help.press('Escape');assert.equal(await hint.isVisible(),false);assert.equal(await help.evaluate(el=>el===document.activeElement),true);
    await page.screenshot({path:'/private/tmp/retouch-comparison-panel-'+engine+'.png'});
    await focus.focus();await focus.press('Enter');assert.equal(await focus.getAttribute('aria-expanded'),'false');assert.equal(await page.getByLabel('Phone comparison width',{exact:true}).isVisible(),false);assert.equal(await page.getByRole('button',{name:'Save screen set',exact:true}).isVisible(),false);assert.ok(await firstTop()<compactTop-50);
+   const add=page.getByRole('button',{name:'Pin current size',exact:true});assert.equal(await add.isVisible(),true);
+   await page.getByLabel('Screen width',{exact:true}).fill('800');await page.getByLabel('Screen width',{exact:true}).press('Enter');
+   await wait(async()=>!await add.isDisabled());await add.click();await preview('Custom 800 × 900').locator('body').waitFor();
+   assert.equal(await page.locator('.compare-card').count(),4);
+   assert.equal(await focus.getAttribute('aria-expanded'),'false');
+   assert.equal(await page.locator('.compare-toolbar').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
    await page.screenshot({path:'/private/tmp/retouch-comparison-focus-'+engine+'.png'});await focus.click();assert.equal(await page.getByLabel('Phone comparison width',{exact:true}).isVisible(),true);assert.equal(await page.getByRole('button',{name:'Save screen set',exact:true}).isVisible(),true);
    for(const name of ['Phone','Tablet','Desktop']){assert.equal(await preview(name).locator('body').evaluate(()=>window.comparisonChromeDocument===document),true);assert.equal(await preview(name).locator('#chromeDraft').inputValue(),'Unsaved preview');}
    assert.equal(fs.readFileSync(file,'utf8'),original);assert.deepEqual(errors,[]);console.log('COMPARISON PANEL HELP/FOCUS/STATE PASS',engine,{firstPreviewTop:compactTop});return;

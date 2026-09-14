@@ -16575,3 +16575,11 @@ works from the keyboard without replacing preview documents or form state.
 Chromium and WebKit panel workflows cover the label, expanded state, narrow
 toolbar fit, keyboard toggle, and retained documents; the WebKit capture was
 visually inspected.
+
+### Add screens without expanding the rail
+
+The add-current-size button stays visible in compact view. The toolbar heading
+is shortened to **Screens** so the add button, labeled controls toggle, and help
+fit the narrow rail. Chromium and WebKit panel workflows add an 800 by 900 preview
+while controls remain collapsed, verify all existing preview documents and form
+values survive, and confirm source is unchanged.

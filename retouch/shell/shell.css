@@ -274,7 +274,7 @@ details.advanced > summary:hover { color: var(--ink); }
 .compare-files { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 8px; }
 .compare-files .control-button { min-width: 0; text-align: left; }
 .compare-card { border-top: 1px solid var(--line); padding-top: 12px; margin-bottom: 12px; }
-.focus-previews .compare-files, .focus-previews .compare-scope, .focus-previews .compare-order-history, .focus-previews .comparison-pin { display: none; }
+.focus-previews .compare-files, .focus-previews .compare-scope, .focus-previews .compare-order-history { display: none; }
 .compare-header { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 8px; font-size: 11px; }
 .compare-header[hidden] { display: none; }
 .focus-previews .compare-card > .compare-header:not(:first-child),

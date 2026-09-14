@@ -218,7 +218,7 @@
   function mount(){
     rail.replaceChildren();cards=[];
     rail.classList.toggle('focus-previews',focusPreviews);
-    const toolbar=document.createElement('div');toolbar.className='compare-toolbar';const heading=document.createElement('h2');heading.textContent='Compare screens';toolbar.append(heading);rail.append(toolbar);
+    const toolbar=document.createElement('div');toolbar.className='compare-toolbar';const heading=document.createElement('h2');heading.textContent='Screens';toolbar.append(heading);rail.append(toolbar);
     const focus=document.createElement('button');focus.id='comparisonFocus';focus.type='button';focus.className='control-button';focus.setAttribute('aria-label','Screen controls');focus.textContent='Controls';focus.setAttribute('aria-expanded',String(!focusPreviews));focus.title=focusPreviews?'Show screen controls':'Hide screen controls and focus previews';
     focus.onclick=()=>{focusPreviews=!focusPreviews;rail.classList.toggle('focus-previews',focusPreviews);focus.setAttribute('aria-expanded',String(!focusPreviews));focus.title=focusPreviews?'Show screen controls':'Hide screen controls and focus previews';try{localStorage.setItem(storageKey+'.focus',String(focusPreviews));}catch{}layoutPreviews();};toolbar.append(focus);
     const hint=document.createElement('p');hint.className='hint';hint.id='comparisonNavigationHint';hint.hidden=true;hint.textContent='Click a layer to edit on the main canvas; Shift-click to add or remove it. Drag from empty space to select a group. Style scope stays unchanged. Focus a preview and use arrow keys, Page Up/Down, or Home/End to scroll the panel at its center. Enter opens its size.';rail.append(hint);
