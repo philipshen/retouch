@@ -638,3 +638,20 @@ strict ad hoc signature checks. This temporary fixture has no Git source receipt
 and is not a release. Native launch, Homebrew upgrade, Developer ID signing and
 notarization were not tested. The original signing process remained live and was
 not restarted; native UI access still failed its preflight.
+
+### Isolated Homebrew upgrade verification (2026-09-14)
+
+Homebrew upgraded the retained 0.1.0 vector development archive to the isolated
+0.2.0 version fixture using a temporary local tap and separate app directory.
+Both installed versions matched their archive manifests, reported the expected
+bundle and cask versions, retained quarantine, and passed strict signatures and
+universal architecture checks. Homebrew removed the old version after upgrade.
+Uninstall, untap and temporary-config removal restored the original cask,
+formula-version and tap inventories. Automatic updates, dependency upgrades,
+autoremove and unrelated cleanup were disabled.
+
+See `verification/2026-09-14-homebrew-upgrade.json` for exact archive hashes,
+checks and log/script hashes. The first attempt failed in the harness's cask
+inventory query and cleaned up successfully; the corrected attempt passed.
+No native app was launched. These local ad hoc archives do not prove trusted
+public distribution, Intel runtime behavior or interrupted-upgrade recovery.

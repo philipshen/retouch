@@ -15697,3 +15697,15 @@ isolated 0.2.0 build evidence. All 25 desktop unit tests passed; the extracted
 universal ad hoc fixture passed signature/integrity and version checks. No app
 was launched. This does not prove a trusted Homebrew upgrade or public release;
 signing remains pending and full Figma parity is still incomplete.
+
+### Homebrew development upgrade verified (2026-09-14)
+
+A real isolated `brew upgrade --cask` replaced Retouch 0.1.0 with the 0.2.0
+metadata fixture. Both installed apps matched the exact archive manifests,
+retained quarantine and passed strict signature, universal-architecture and
+version checks. Uninstall and untap restored original cask/formula/tap
+inventories. The first harness attempt used an unsupported inventory query;
+it cleaned up, and the corrected workflow passed. Evidence is retained in
+`desktop/verification/2026-09-14-homebrew-upgrade.json`.
+Native launch, trusted public release and failed-upgrade recovery remain
+unverified. This advances desktop delivery without establishing full parity.

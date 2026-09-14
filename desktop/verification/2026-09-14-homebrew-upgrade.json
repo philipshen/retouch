@@ -1,0 +1,80 @@
+{
+  "date": "2026-09-14",
+  "scope": "Isolated local Homebrew upgrade with ad hoc development archives",
+  "repositoryCommit": "dbe667e",
+  "result": "passed",
+  "checks": [
+    {
+      "version": "0.1.0",
+      "sha256": "cdb0731c255f5a142db0d1aae937fd19ef91f5baf5e7e3a1082777a88275a0c9",
+      "verification": {
+        "sourceCommit": "b7e12a8a33e19bb5b50f360d65c7356c4d48da86",
+        "sourceTreeDirty": false,
+        "sourceFiles": 214,
+        "architectures": [
+          "arm64",
+          "x86_64"
+        ],
+        "signature": "strict verification passed; trust and notarization are separate checks"
+      },
+      "manifestMatchesArchive": true,
+      "quarantine": "0381;6aa765d7;;F48DAF05-312A-49FB-9FA9-AFDAB0CB8577",
+      "registered": "retouch-studio 0.1.0"
+    },
+    {
+      "version": "0.2.0",
+      "sha256": "5dd3b09f61a1b66022347b67bd1699882121e0e43504881d305b3b1fab8510f6",
+      "verification": {
+        "sourceCommit": null,
+        "sourceTreeDirty": null,
+        "sourceFiles": 214,
+        "architectures": [
+          "arm64",
+          "x86_64"
+        ],
+        "signature": "strict verification passed; trust and notarization are separate checks"
+      },
+      "manifestMatchesArchive": true,
+      "quarantine": "0381;6aa76c83;;240725F0-B22A-4E36-8FA2-499829DF2B8F",
+      "registered": "retouch-studio 0.2.0"
+    }
+  ],
+  "originalInventoriesRestored": true,
+  "temporaryAppTapTrustAndRegistrationRemoved": true,
+  "nativeLaunch": "not attempted",
+  "trustedDistribution": "not established; both archives are ad hoc signed development fixtures",
+  "evidence": [
+    {
+      "path": "/private/tmp/retouch-homebrew-upgrade-dbe667e/verify.cjs",
+      "sha256": "65fcb49cfee63834af131ef6efa3ff1d56f255d2af3f323421cb2aa6c6a9dedc"
+    },
+    {
+      "path": "/private/tmp/retouch-homebrew-upgrade-dbe667e/workflow.log",
+      "sha256": "1305d512c42d6c0fc6535fd43bb7ee6e0b5c5994aa9d161b2f6093ce89239b65"
+    },
+    {
+      "path": "/private/tmp/retouch-homebrew-upgrade-dbe667e/workflow-fixed.log",
+      "sha256": "802765bc02864a638f3c9f7bd8528d64dda476c380cabef938bab66b3942dfa5"
+    },
+    {
+      "path": "/private/tmp/retouch-homebrew-upgrade-dbe667e/before.json",
+      "sha256": "648268e5c64cbaf9e12817a3eb25741e9e2acfde776970d0d80b46f53ecb8396"
+    },
+    {
+      "path": "/private/tmp/retouch-homebrew-upgrade-dbe667e/after.json",
+      "sha256": "648268e5c64cbaf9e12817a3eb25741e9e2acfde776970d0d80b46f53ecb8396"
+    },
+    {
+      "path": "/private/tmp/retouch-homebrew-upgrade-dbe667e/result.json",
+      "sha256": "b0d29d65f73dc53c8cc9791e6582153b3ff87981b5e780bacfc6d87f364d4027"
+    }
+  ],
+  "initialAttempt": "The initial harness used a fully qualified cask name with brew list --versions, which returned no installed version. Installation had succeeded; cleanup restored original inventories. The corrected harness queried the complete cask version inventory and passed.",
+  "limits": [
+    "No native app launch",
+    "No Developer ID or notarization attestation",
+    "Local file URLs and a temporary tap, not public release hosting",
+    "The 0.2.0 archive is an isolated metadata fixture without a Git source receipt",
+    "Successful upgrade only; interrupted or failed upgrade recovery was not tested"
+  ]
+}
