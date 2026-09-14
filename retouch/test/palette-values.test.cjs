@@ -21,3 +21,13 @@ test('explicit sRGB preserves non-byte channels and alpha through palette valida
  const style={id:'11111111-1111-4111-8111-111111111111',name:'Exact opacity',properties:{color}};assert.equal(catalog.validate({version:1,styles:[style]}).styles[0].properties.color,color);for(const property of ['color','background-color','border-color','fill','stroke'])assert.ok(classes.encode(property,color).includes('0.2345'));
  for(const bad of ['color(srgb -1 0 0)','color(srgb 0 0 2)','color(srgb 0 0 0 / 1.1)','color(srgb 0 0)','color(srgb 0 0 0);display:none'])assert.equal(values.valid(bad),false,bad);
 });
+
+test('inline color edits preserve separate opacity when alpha is omitted',()=>{
+ for(const color of ['f00','#F00','FF0000','#ff0000','rgb(255, 0, 0)','RGB(100% 0% 0%)']){const parsed=values.parse(values.editColor(color,.375));assert.deepEqual(parsed.channels,[1,0,0]);assert.equal(parsed.alpha,.375);assert.equal(parsed.space,'srgb');}
+ const wide=values.parse(values.editColor('COLOR(DISPLAY-P3 0.2 0.4 0.6)',0));assert.equal(wide.space,'display-p3');assert.deepEqual(wide.channels,[.2,.4,.6]);assert.equal(wide.alpha,0);
+});
+test('inline color edits honor explicit alpha without losing transparent channels',()=>{
+ for(const [color,alpha]of [['f000',0],['#ff000080',128/255],['rgb(255 0 0 / 50%)',.5],['RGBA(255, 0, 0, 0.25)',.25]]){const parsed=values.parse(values.editColor(color,.75));assert.deepEqual(parsed.channels,[1,0,0]);assert.equal(parsed.alpha,alpha);}
+ const wide=values.parse(values.editColor('color(display-p3 .2 .4 .6 / .125)',.75));assert.equal(wide.space,'display-p3');assert.deepEqual(wide.channels,[.2,.4,.6]);assert.equal(wide.alpha,.125);
+ for(const color of ['',null,'not-a-color','#ff0000;display:none','rgb(999 0 0)'])assert.throws(()=>values.editColor(color,.5));for(const alpha of [-1,2,NaN,'0.5'])assert.throws(()=>values.editColor('ff0000',alpha));
+});

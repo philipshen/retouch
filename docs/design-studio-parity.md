@@ -17119,3 +17119,9 @@ Solid Fill rows now separate the color value from an editable opacity percentage
 All 1,548 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass 50/0/100% rendered sRGB pixels, restoration from full transparency, preserved color channels, Display P3 channel/alpha checks, unchanged neighboring paints and all seven framing properties, responsive inheritance and exact source undo. The direct picker and existing mixed-paint workflow also pass. The final light-theme row, separate alpha field and transparency checker were visually inspected.
 
 Solid/gradient visibility, broader gradient opacity, the wider Figma feature/fidelity scope, arbitrary-site support and trusted native/Homebrew distribution remain incomplete. No native app was rebuilt or published.
+
+### Editable solid-paint color values — 2026-09-15
+
+Solid Fill rows now accept direct hex, CSS RGB and Display P3 color entry beside the separate opacity field. Omitted alpha preserves current opacity; explicit alpha updates it. A settings icon retains access to the paint popover. Invalid input leaves source unchanged, and Escape restores the saved field value. Named colors, variables and other CSS color spaces are outside this inline parser's supported inputs.
+
+All 1,550 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass direct color entry, Display P3 preservation, explicit and omitted alpha, invalid-input refusal, Escape restoration, neighboring paint/framing preservation and exact source undo. The final light-theme inspector screenshot was inspected. Full Figma parity and trusted native/Homebrew distribution remain incomplete; no native app was rebuilt or published.

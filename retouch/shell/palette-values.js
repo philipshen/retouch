@@ -20,6 +20,12 @@
   const number=(part,max)=>{if(!/^(?:\d+(?:\.\d*)?|\.\d+)%?$/.test(part))return refuse();const n=parseFloat(part),limit=part.endsWith('%')?100:max;if(n>limit)return refuse();return n/limit;};
   return srgb(channels.map(part=>number(part,srgbMatch?1:255)),number(alpha,1));
  }
+ function editColor(value,alpha){
+  if(typeof value!=='string'||!Number.isFinite(alpha)||alpha<0||alpha>1)throw Error('Enter a supported color and opacity.');
+  let input=value.trim().toLowerCase();if(/^(?:[a-f\d]{3}|[a-f\d]{4}|[a-f\d]{6}|[a-f\d]{8})$/i.test(input))input='#'+input;
+  const explicit=/^#(?:[a-f\d]{4}|[a-f\d]{8})$/i.test(input)||input.includes('/')||/^rgba?\([^)]*,[^)]*,[^)]*,/i.test(input),color=parse(fromComputed(input));
+  return color.space==='display-p3'?p3(color.channels,explicit?color.alpha:alpha):srgb(color.channels,explicit?color.alpha:alpha);
+ }
  function srgb(channels,alpha){const values=[...channels,alpha];return values.every(n=>Math.abs(n*255-Math.round(n*255))<1e-8)?'#'+values.map(n=>Math.round(n*255).toString(16).padStart(2,'0')).join(''):'color(srgb '+channels.join(' ')+' / '+alpha+')';}
  function p3(channels,alpha){return 'color(display-p3 '+channels.join(' ')+' / '+alpha+')';}
  function valid(value){try{parse(value);return true;}catch{return false;}}
@@ -36,5 +42,5 @@
   const bounded=channels.map(n=>Math.max(0,Math.min(1,n)));
   return {value:space==='display-p3'?p3(bounded.map(n=>Number(n.toFixed(12))),original.alpha):srgb(bounded.map(n=>Math.round(n*255)/255),original.alpha),clipped};
  }
- const api={parse,p3,srgb,valid,convert,fromComputed};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPaletteValues=api;
+ const api={parse,p3,srgb,valid,convert,fromComputed,editColor};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPaletteValues=api;
 })(typeof window==='object'?window:globalThis);
