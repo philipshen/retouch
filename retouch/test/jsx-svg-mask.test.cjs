@@ -15,7 +15,7 @@ test('mask creation and release refuse stale, reordered, nonconsecutive and alte
  const r=resolve(),ids=r.elements.filter(e=>['circle','rect'].includes(e.tag)).map(e=>e.id),op={type:'createSVGMask',fileHash:r.hash,ids,maskId:ids[0]};
  for(const change of [{fileHash:'old'},{ids:[ids[0],ids[0]]},{maskId:ids[1]},{mode:'invalid'},{ids:[ids[0],r.elements.find(e=>e.tag==='path').id]}])assert.equal(mask.plan(r,{...op,...change}).refused,true);
  for(const text of [source.replace('<circle','{true && <circle').replace('/><rect','/>}<rect'),source.replace('<rect ','<g><rect ').replace('/><path','/></g><path')])assert.equal(create(resolve(text)).refused,true);
- const made=create(r),text=made.edits[0].after.replace('data-rt-mask-group=""','data-rt-mask-group="" transform="scale(2)"'),edited=resolve(text,made.selectionIds[0]);assert.equal(mask.plan(edited,{type:'releaseSVGMask',fileHash:edited.hash}).refused,true);
+ const made=create(r),text=made.edits[0].after.replace('data-rt-mask-group=""','data-rt-mask-group="" transform="scale(invalid)"'),edited=resolve(text,made.selectionIds[0]);assert.equal(mask.plan(edited,{type:'releaseSVGMask',fileHash:edited.hash}).refused,true);
 });
 test('create, edit and release masks restore exact source through transaction history',t=>{
  const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{SourceHistory}=require('../src/history.cjs'),root=fs.mkdtempSync(path.join(os.tmpdir(),'rt-mask-history-')),file=path.join(root,'page.jsx'),history=new SourceHistory(),states=[source],entries=[];t.after(()=>fs.rmSync(root,{recursive:true,force:true}));fs.writeFileSync(file,source);
@@ -50,4 +50,11 @@ test('React masks preserve shape names and comments and refuse dropping wrapper 
  const r=resolve(),named=html.planOp(r,{type:'renameElement',fileHash:r.hash,name:'Avatar shape'});assert.ok(named.ok,named.reason);
  const original=named.edits[0].after.replace('/><rect','/>{/* Keep this explanation */}<rect'),made=create(resolve(original));assert.ok(made.ok,made.reason);const group=resolve(made.edits[0].after,made.selectionIds[0]);assert.equal(mask.plan(group,{type:'releaseSVGMask',fileHash:group.hash}).edits[0].after,original);
  const edited=resolve(group.source.replace('</mask><g','</mask>{/* Wrapper comment */}<g'),group.element.id);assert.equal(mask.plan(edited,{type:'releaseSVGMask',fileHash:edited.hash}).refused,true);
+});
+
+test('transformed mask groups retain editable masks and release without losing their transform',()=>{
+ const made=create(resolve()),text=made.edits[0].after.replace('data-rt-mask-group=""','data-rt-mask-group="" transform="translate(20 10) scale(2)"'),r=resolve(text,made.selectionIds[0]);
+ assert.equal(mask.describe(r).canRelease,true);const changed=mask.plan(r,{type:'setSVGMaskType',fileHash:r.hash,mode:'luminance'});assert.equal(changed.ok,true,changed.reason);
+ const result=mask.plan(r,{type:'releaseSVGMask',fileHash:r.hash});assert.equal(result.ok,true,result.reason);const after=result.edits[0].after,fresh=resolve(after,result.selectionIds[0]);assert.equal(fresh.element.tag,'g');assert.equal(result.removedSourceIds.length,2);assert.ok(after.includes('transform="translate(20 10) scale(2)"'));assert.ok(!after.includes('<mask'));assert.ok(!after.includes('data-rt-mask-group'));assert.ok(after.includes('<circle cx="50" cy="50" r="35" fill="red"/>'));assert.ok(after.includes('<rect x="0" y="0" width="100" height="100" fill="blue"/>'));
+ const mapping=new Map(result.sourceIdMap);for(const old of r.elements.filter(e=>!result.removedSourceIds.includes(e.id))){const retained=fresh.elements.find(e=>e.id===(mapping.get(old.id)||old.id));assert.ok(retained);assert.equal(retained.tag,old.tag);}
 });

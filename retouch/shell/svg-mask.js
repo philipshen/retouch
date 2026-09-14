@@ -3,7 +3,7 @@
  const properties=['fill','fill-opacity','fill-rule','stroke','stroke-width','stroke-opacity','stroke-dasharray','stroke-dashoffset','stroke-linecap','stroke-linejoin','opacity','filter','clip-path','mask-image','mix-blend-mode','transform','transform-origin','display','visibility','pointer-events','font-family','font-size','font-weight','letter-spacing','x','y','cx','cy','r','rx','ry','width','height','d'];
  const snapshot=elements=>elements.flatMap(el=>[el,...el.querySelectorAll('*')]).map(el=>({el,values:properties.map(p=>el.ownerDocument.defaultView.getComputedStyle(el).getPropertyValue(p))}));
  function unchanged(before){if(before.some(({el,values})=>properties.some((p,i)=>el.ownerDocument.defaultView.getComputedStyle(el).getPropertyValue(p)!==values[i])))throw Error('This mask grouping would change CSS-controlled appearance or geometry.');}
- function neutral(el,allowMask=false){const css=el.ownerDocument.defaultView.getComputedStyle(el);if(!allowMask&&css.maskImage!=='none'||css.transform!=='none'||css.opacity!=='1'||css.filter!=='none'||css.clipPath!=='none'||css.display==='none'||css.visibility!=='visible'||css.mixBlendMode!=='normal')throw Error('CSS styles the mask wrapper. Normalize those styles before masking.');}
+ function neutral(el,allowMask=false,allowTransform=false){const css=el.ownerDocument.defaultView.getComputedStyle(el);if(!allowMask&&css.maskImage!=='none'||!allowTransform&&css.transform!=='none'||css.opacity!=='1'||css.filter!=='none'||css.clipPath!=='none'||css.display==='none'||css.visibility!=='visible'||css.mixBlendMode!=='normal')throw Error('CSS styles the mask wrapper. Normalize those styles before masking.');}
  function prepare(infos,elements,mode='alpha'){
   if(!['alpha','luminance'].includes(mode)||infos.length<2||infos.length!==elements.length||new Set(infos.map(i=>i.file)).size!==1||new Set(infos.map(i=>i.hash)).size!==1||elements.some(el=>!el?.isConnected||el.parentElement!==elements[0].parentElement))throw Error('Select sibling SVG layers in one source file.');
   const selected=elements.map((el,i)=>({el,info:infos[i]})).sort((a,b)=>a.el.compareDocumentPosition(b.el)&4?-1:1),parent=selected[0].el.parentNode,siblings=[...parent.children],positions=selected.map(m=>siblings.indexOf(m.el));if(positions.some((n,i)=>n!==positions[0]+i))throw Error('Select consecutive layers to mask.');
@@ -15,10 +15,11 @@
   return {ids:selected.map(m=>m.info.id),maskId:selected[0].info.id,mode};
  }
  function release(group){
-  const parent=group?.parentNode,mask=group?.querySelector(':scope > mask'),content=group?.querySelector(':scope > g[data-rt-mask-content]');if(!parent||!mask||!content)throw Error('Re-select the mask group.');neutral(group);neutral(content,true);
-  const nodes=[...mask.childNodes,...content.childNodes],originals=nodes.map(el=>({el,parent:el.parentNode})),before=snapshot(nodes.filter(n=>n.nodeType===1));
-  try{for(const node of nodes)parent.insertBefore(node,group);group.remove();unchanged(before);}
-  finally{parent.insertBefore(group,nodes[0]||null);for(const {el,parent:owner}of originals)owner.append(el);}
+  const parent=group?.parentNode,mask=group?.querySelector(':scope > mask'),content=group?.querySelector(':scope > g[data-rt-mask-content]');if(!parent||!mask||!content)throw Error('Re-select the mask group.');
+  const keep=group.hasAttribute('transform');if(keep&&!root.RetouchSVGAffine.parse(group.getAttribute('transform')))throw Error('The mask group transform cannot be preserved.');neutral(group,false,keep);neutral(content,true);
+  const nodes=[...mask.childNodes,...content.childNodes],originals=nodes.map(el=>({el,parent:el.parentNode})),before=snapshot(nodes.filter(n=>n.nodeType===1)),children=[...group.childNodes],marker=group.getAttribute('data-rt-mask-group');if(keep)before.push(snapshot([group])[0]);
+  try{if(keep){group.removeAttribute('data-rt-mask-group');for(const node of nodes)group.insertBefore(node,mask);mask.remove();content.remove();}else{for(const node of nodes)parent.insertBefore(node,group);group.remove();}unchanged(before);}
+  finally{if(keep){group.setAttribute('data-rt-mask-group',marker);group.replaceChildren(...children);}else parent.insertBefore(group,nodes[0]||null);for(const {el,parent:owner}of originals)owner.append(el);}
  }
  function typeChange(group,mode){
   const mask=group?.querySelector(':scope > mask'),content=group?.querySelector(':scope > g[data-rt-mask-content]');if(!mask||!content||!['alpha','luminance'].includes(mode))throw Error('Re-select the mask group.');
