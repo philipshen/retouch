@@ -47,9 +47,9 @@
   const swatch=root.RetouchInspector.button('',()=>open(input));swatch.className='gradient-stop-swatch';swatch.setAttribute('aria-label','Edit '+input.getAttribute('aria-label'));swatch.title='Edit selected colors';swatch.disabled=input.disabled;control.prepend(swatch);
   const paint=()=>{const color=input.value.trim();swatch.style.backgroundImage=CSS.supports('color',color)?'linear-gradient('+color+','+color+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)':'repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)';};input.addEventListener('input',paint);input.addEventListener('change',paint);input.addEventListener('keydown',event=>{if(event.key==='Escape')queueMicrotask(paint);});paint();
  }
- function open(input,{anchor=input,onApply=null,onClose=null}={}){
+ function open(input,{anchor=input,onApply=null,onClose=null,restorePopover=true}={}){
   if(!input.isConnected||input.matches(':disabled'))return;
-  const returnPopover=input.closest('[popover]');
+  const returnPopover=restorePopover?input.closest('[popover]'):null;
   let draftPreview=input.retouchPaintPreview?.(),applied=false;
   const original=input.value,I=root.RetouchInspector,dialog=document.createElement('dialog');dialog.className='paint-picker';dialog.retouchSourceInput=input;dialog.setAttribute('aria-label','Edit '+input.getAttribute('aria-label'));document.body.append(dialog);
   const styleOptions=input.closest('[data-retouch-color-style-scope]')?.retouchColorStyleOptions,styleProperty=input.dataset.paintProperty;let pickedStyle=null,styleRevision=null,styleBusy=false,refreshAfterClose=false;const libraryAbort=new AbortController();let updateStyleChoice=()=>{};

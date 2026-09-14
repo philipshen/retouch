@@ -1224,3 +1224,6 @@ html, body { overflow:clip; }
 .paint-row-opacity > span { order:2;flex:none;font-size:11px;color:var(--muted); }
 .paint-row-opacity > input { width:30px;min-width:0;flex:1;padding:0;text-align:right;border:0;background:transparent;font-size:11px; }
 .paint-row-editor > span:last-child { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+
+.paint-order-row > button.paint-row-color { opacity:1;flex:none;width:24px;min-width:24px;height:28px;padding:0;border:0;background:transparent; }
+.paint-row-color > .paint-row-swatch { display:block;margin:2px;background-size:cover,8px 8px; }

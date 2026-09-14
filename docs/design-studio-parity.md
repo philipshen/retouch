@@ -17101,3 +17101,13 @@ A failed image-opacity upload restores both percentage fields to the last saved 
 All 1,548 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass a simulated upload failure with no source operation, percentage restoration, error/retry persistence through panel rebuild, exactly one source operation on retry, clearing the recovered error, subsequent direct row edits, and the existing hidden/crop/slow-upload/stale-selection/drag/order/exact-undo workflow. The error and retry layout was visually inspected.
 
 This improves recovery within the existing image paint controls. Solid/gradient visibility and the broader Figma feature, arbitrary-site and trusted native/Homebrew requirements remain unfinished. No native app was rebuilt or published.
+
+### Solid paint values and direct swatch editing — 2026-09-15
+
+Solid Fill rows now show a color value instead of the generic Solid label. Exact sRGB hex values use compact uppercase notation; alpha-bearing and other supported CSS values retain their information rather than forcing a gamut conversion. The full computed color remains in the row's title. The separate swatch stays visible without hover and shows a checkerboard through transparent paint.
+
+Clicking the swatch opens the shared color picker directly. Its live preview restores on Cancel, Apply writes the existing solid-paint source operation, and closing this direct picker does not open the larger paint-settings popover. The value area still opens those settings for changing paint type or blend mode. Existing picker callers retain their parent-popover restoration behavior, and the swatch follows the existing color field's disabled state.
+
+All 1,548 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass direct swatch preview/cancel/apply, compact value updates, neighboring paints, responsive inheritance and exact source undo alongside the image paint and ordering workflow. The standalone Chromium color-picker suite passes HSV pointer/keyboard edits, alpha, cancellation/no-op apply, Display P3 channels, narrow-window bounds and preview cleanup. A final HTML run verifies the always-visible swatch rule; the final light-theme rows and transparency checker were visually inspected.
+
+Solid/gradient visibility, separate solid-row opacity, the wider Figma feature scope, arbitrary-site support and trusted native/Homebrew distribution remain incomplete. No native app was rebuilt or published.
