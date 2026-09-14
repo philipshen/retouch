@@ -40,3 +40,11 @@ test('HTML shared CSS edits retain linked typography metadata and updated overri
  const r=resolve(current),result=selection.plan(r,operation(r,{property:'line-height',value:'2'}));assert.equal(result.ok,true,result.reason);
  for(const info of result.selection){assert.equal(info.textStyleLinks[768].id,style.id);assert.deepEqual(info.textStyleOverrides[768],['line-height']);}
 });
+
+test('Whole-scope selection reset is atomic across distinct overrides and inert layers',()=>{
+ let r=resolve(source),made=selection.plan(r,operation(r));r=resolve(made.edits[0].after);const ids=operation(r).ids,base=selection.plan(r,{ids,fileHash:r.hash,width:0,property:'color',value:'red'});r=resolve(base.edits[0].after);
+ const op={ids,fileHash:r.hash,width:768,resetScope:true},result=selection.plan(r,op);assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);assert.equal(result.edits[0].before,r.source);for(const info of result.selection)assert.deepEqual(info.cssRules,{0:{color:'red'}});
+ const fresh=resolve(result.edits[0].after);assert.deepEqual(selection.plan(fresh,{...op,fileHash:fresh.hash}).edits,[]);
+ const last=r.source.lastIndexOf('width:240px'),broken=resolve(r.source.slice(0,last)+r.source.slice(last).replace('width:240px','width:241px')),failed=selection.plan(broken,{...op,fileHash:broken.hash});assert.equal(failed.refused,true);assert.equal(failed.edits,undefined);
+ for(const extra of [{changesById:Object.fromEntries(ids.map(id=>[id,{}]))},{property:'color',value:null},{changes:{}},{resetScope:false}])assert.equal(selection.plan(r,{...op,...extra}).refused,true);
+});

@@ -5,6 +5,7 @@ function plan(resolved,op){
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the layers.');
  if(!Array.isArray(op.ids)||op.ids.length<2||op.ids.length>100||new Set(op.ids).size!==op.ids.length||!op.ids.includes(resolved.element.id)||op.ids.some(id=>typeof id!=='string'||!/^[a-f0-9]{10}$/.test(id)))return refuse('Choose between 2 and 100 distinct layers in one HTML document.');
  if(!Number.isInteger(op.width)||op.width<0||op.width>7680)return refuse('Choose a supported screen width.');
+ if(op.resetScope!==undefined&&(op.resetScope!==true||['property','value','changes','changesById'].some(key=>Object.hasOwn(op,key))))return refuse('Reset selected screen scopes without additional property changes.');
  const individual=op.changesById;
  if(individual!==undefined&&(!individual||typeof individual!=='object'||Array.isArray(individual)||['property','value','changes'].some(key=>Object.hasOwn(op,key))||Object.keys(individual).length!==op.ids.length||Object.keys(individual).some(id=>!op.ids.includes(id))))return refuse('Provide exactly one CSS change set for every selected layer.');
  const initial=html.collect(resolved.source,resolved.relPath).elements;

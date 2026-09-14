@@ -16402,3 +16402,19 @@ including inherited values, property editing, reset, exact source undo/redo, and
 independent per-screen form/document retention. The Chromium
 `html-compare-edit.cjs` regression covers comparison selection, scrolling,
 responsive visibility, dimension editing, saved sets, and removal history.
+
+### Reset breakpoint overrides across selected HTML layers
+
+The style-scope picker now includes the union of managed breakpoints from the
+selected HTML layers. **Breakpoint options → Reset overrides at this size**
+removes each selected layer's local declarations at that breakpoint in one
+source transaction and one history step. Layers without overrides there remain
+unchanged. A conflicting managed rule on any selected layer refuses the whole
+source edit. Base styles and other breakpoint rules remain intact.
+
+Shared HTML CSS edits and their history now refresh owned styles in the main
+canvas and open comparisons without replacing their documents. Selection is
+restored after undo/redo. Browser coverage uses two layers with distinct scopes,
+checks both full and partial scope coverage at Phone/Tablet/Desktop sizes, and
+verifies exact source history and independent comparison form/document state
+in Chromium and WebKit (`RT_E2E_MULTI_RESET=1 html-scope-reset.cjs`).
