@@ -69,3 +69,15 @@ test('Liquid edits and duplicates a single remaining paint without requiring an 
  const duplicate=run('order',{layers:[paint],order:[0,0]});assert.equal(duplicate.ok,true,duplicate.reason);assert.ok(duplicate.edits[0].after.includes('linear-gradient(0deg,_red_0%,_red_100%),_linear-gradient'));
  for(const action of ['gradient','frame','order'])assert.equal(run(action,{layers:[],index:0,order:[],value:paint,changes:{'background-blend-mode':'multiply'}}).refused,true);
 });
+
+test('Liquid paint visibility writes framing and metadata atomically and follows hidden edits and order',()=>{
+ const P=require('../shell/paint-order.js'),V=require('../shell/html-css-values.js'),R=require('../shell/responsive.js'),key=V.paintVisibilityProperty;
+ let source=edit(original,'md:').edits[0].after;const variable=source.match(/--rt-image-fill-[a-f0-9]{10}/)[0],layers=['linear-gradient(0deg, red 0%, red 100%)','var('+variable+')'],framing={'background-size':'contain, cover'};
+ const apply=(action,stack)=>{const before=source,result=liquid.planOp(resolved(source),{type:'setImageFill',fileHash:liquid.contentHash(source),scope:'md:',action,stack});assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);assert.equal(result.edits[0].before,before);source=result.edits[0].after;assert.match(source,/asset_url/);return R.project(resolved(source).element.classAttr.value,'md:');};
+ const hidden=P.toggleVisibility(layers,framing,'none',0,true),local=apply('visibility',{layers,index:0,framing,visibility:'none',hidden:true});assert.ok(local.includes('!['+key+':'+hidden[key]+']'));assert.ok(local.includes('![background-size:0px_0px,_cover]'));
+ const current={...framing,...hidden},paint='radial-gradient(ellipse at 30% 40%, blue 0%, blue 100%)',edited=P.editVisibilityPaint(layers,current,hidden[key],0,paint);apply('gradient',{layers,index:0,value:paint,framing:current,visibility:hidden[key]});
+ const next=[paint,layers[1]],moved=P.reorderVisibility(next,current,edited[key],[1,0]);const movedClasses=apply('order',{layers:next,order:[1,0],framing:current,visibility:edited[key]});assert.ok(movedClasses.includes('!['+key+':'+moved[key]+']'));
+ const shown=apply('visibility',{layers:[next[1],next[0]],index:1,framing:moved,visibility:moved[key],hidden:false});assert.ok(shown.includes('![background-size:cover,_contain]'));assert.ok(shown.includes('!['+key+':none]'));
+ assert.equal(R.project(resolved(source).element.classAttr.value,''),R.project(resolved(original).element.classAttr.value,''));
+ for(const stack of [{layers,index:1,framing,visibility:'none',hidden:true},{layers,index:0,framing,visibility:'bad',hidden:true},{layers,index:0,framing,visibility:'none',hidden:'true'}])assert.equal(liquid.planOp(resolved(source),{type:'setImageFill',fileHash:liquid.contentHash(source),scope:'md:',action:'visibility',stack}).refused,true);
+});
