@@ -550,6 +550,14 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    while(backgroundRow&&backgroundRow.parentElement!==fillSection)backgroundRow=backgroundRow.parentElement;
    for(const child of [...fillSection.children])if(child.tagName!=='H3'&&child!==backgroundRow)advancedFills.append(child);
    for(const child of [...imageSection.children])if(child.tagName==='DETAILS'&&child.querySelector('summary')?.textContent==='Details')advancedFills.append(child);
+   const hiddenGradient=!!imageSection.retouchHasHiddenPaints;
+   if(hiddenGradient){for(const group of advancedFills.querySelectorAll('.gradient-controls'))group.hidden=true;root.RetouchInspector.note(advancedFills,'Edit hidden paints from the Fill rows above.');}
+   for(const button of advancedFills.querySelectorAll('button')){
+    const name=button.getAttribute('aria-label')||button.textContent;
+    if(hiddenGradient&&['Add gradient','Add gradient fill'].includes(name))button.hidden=true;
+    if(name==='Clear background images'&&imageSection.retouchClearPaints)button.onclick=imageSection.retouchClearPaints;
+    if(name==='Reset gradient fills'&&imageSection.retouchResetPaints){button.onclick=imageSection.retouchResetPaints;button.disabled=!imageSection.retouchCanResetPaints;button.title='Restore this screen’s inherited paint stack, framing and visibility.';}
+   }
    for(const legacy of imageSection.querySelectorAll('[data-legacy-image-controls]'))advancedFills.append(legacy);
    imageSection.querySelector(':scope > h3')?.remove();imageSection.classList.remove('sec','inspector-section');imageSection.classList.add('paint-stack-fields');
    const addPaint=imageSection.querySelector(':scope > .section-add');if(addPaint)fillSection.append(addPaint);

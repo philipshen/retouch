@@ -47,3 +47,10 @@ test('adding a paint carries hidden state and editing hidden colors updates thei
  const restored=P.toggleVisibility(editedLayers,added,edited[key],1,false);assert.equal(restored['background-size'],'cover, contain, 20px 40px, contain');assert.equal(restored[key],'none');
  assert.equal(P.prependVisibility([],{},'none',layers[0])[key],'none');assert.throws(()=>P.prependVisibility([],{},hidden[key],layers[0]));
 });
+
+test('clearing hidden paints releases saved sizes without changing other framing',()=>{
+ const hidden=P.toggleVisibility(layers,framing,'none',0,true),current={...framing,...hidden},changes=P.clearVisibility(layers,current,hidden[key]);
+ assert.deepEqual(changes,{'background-image':'none',[key]:'none','background-size':'contain, 20px 40px, contain'});assert.equal(changes['background-position'],undefined);assert.equal(changes['background-repeat'],undefined);
+ assert.deepEqual(P.clearVisibility(layers,framing,'none'),{'background-image':'none',[key]:'none'});
+ assert.throws(()=>P.clearVisibility(layers,framing,hidden[key]),/changed outside/);
+});

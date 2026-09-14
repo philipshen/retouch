@@ -121,7 +121,7 @@
  function mountStack(info,el,save,saveCSS,layers,upload,saveImage,browseImages){
   const section=I.section('Image fill'),css=el.ownerDocument.defaultView.getComputedStyle(el);if(info.classNameDynamic&&!saveCSS){I.note(section,info.classNameReason||'Image fill styles are computed.','refused');return section;}I.note(section,'Paints are listed from front to back. Edits preserve neighboring paints and framing.');
   let stored='none',visibilityError=null;try{stored=visibilityState(info,el,layers);}catch(error){visibilityError=error.message;I.note(section,error.message,'refused');}
-  const hidden=visibilityError?[]:V.parsePaintVisibility(stored),framing=()=>Object.fromEntries(P.properties.map(property=>[property,css.getPropertyValue(property)]));
+  const hidden=visibilityError?[]:V.parsePaintVisibility(stored),framing=()=>Object.fromEntries(P.properties.map(property=>[property,css.getPropertyValue(property)]));section.retouchHasHiddenPaints=!!visibilityError||hidden.length>0;
   additions(section,info,el,save,saveCSS,layers,upload,saveImage,browseImages);
   const order=document.createElement('div');order.className='paint-order';section.append(order);
   const currentPaint=()=>el.isConnected&&JSON.stringify(V.imageLayers(el.ownerDocument.defaultView.getComputedStyle(el).backgroundImage))===JSON.stringify(layers),currentOrder=()=>section.isConnected&&currentPaint()&&!visibilityError;
@@ -191,12 +191,23 @@
   }
   return section;
  }
+ function stackResetActions(section,info,el,save,saveCSS,own,saveImage){
+  if(!section)return section;
+  section.retouchClearPaints=async()=>{if(!section.isConnected||!el.isConnected)return;try{
+   const css=el.ownerDocument.defaultView.getComputedStyle(el),layers=V.imageLayers(css.backgroundImage),stored=layers?.length?visibilityState(info,el,layers):'none',framing=Object.fromEntries(P.properties.map(property=>[property,css.getPropertyValue(property)]));
+   const changes=layers?.length?P.clearVisibility(layers,framing,stored):{'background-image':'none',[V.paintVisibilityProperty]:'none'};
+   if(saveImage)await saveImage(null,false,'remove',layers?.length?{layers:stackReferences(info,el,layers),framing,visibility:stored}:null);else if(saveCSS)await saveCSS(changes);else await save(classes(info.className,changes));
+  }catch(error){I.note(section,error.message,'refused');}};
+  section.retouchResetPaints=async()=>{if(!section.isConnected||!el.isConnected)return;try{if(saveImage)await saveImage(null,false,'reset');else if(saveCSS)await saveCSS(reset());else await save(classes(info.className,reset()));}catch(error){I.note(section,error.message,'refused');}};
+  section.retouchCanResetPaints=saveCSS?Object.keys(reset()).some(property=>Object.hasOwn(own,property)):classes(info.className,reset())!==info.className;
+  return section;
+ }
  function mount(info,el,save,saveCSS,own={},upload=null,saveImage=null,browseImages=null){
   if(!el)return null;const layer=el.ownerDocument.defaultView.getComputedStyle(el).backgroundImage;
-  if(!source(layer))return mountOriginal(info,el,save,saveCSS,own,upload,saveImage,browseImages);
+  if(!source(layer))return stackResetActions(mountOriginal(info,el,save,saveCSS,own,upload,saveImage,browseImages),info,el,save,saveCSS,own,saveImage);
   const section=mountStack(info,el,save,saveCSS,[layer],upload,saveImage,browseImages);
   if(!section.querySelector('.paint-order'))return section;
-  const legacy=mountOriginal(info,el,save,saveCSS,own,upload,saveImage,browseImages,true);legacy.querySelector(':scope > h3')?.remove();legacy.className='legacy-image-controls';legacy.dataset.legacyImageControls='';section.append(legacy);return section;
+  const legacy=mountOriginal(info,el,save,saveCSS,own,upload,saveImage,browseImages,true);legacy.querySelector(':scope > h3')?.remove();legacy.className='legacy-image-controls';legacy.dataset.legacyImageControls='';section.append(legacy);return stackResetActions(section,info,el,save,saveCSS,own,saveImage);
  }
  function mountOriginal(info,el,save,saveCSS,own={},upload=null,saveImage=null,browseImages=null,legacy=false){
   if(!el)return null;const css=el.ownerDocument.defaultView.getComputedStyle(el),url=source(css.backgroundImage);if(!url&&css.backgroundImage!=='none'){const layers=V.imageLayers(css.backgroundImage);if(!layers)return null;if(layers.every(layer=>source(layer)||V.parseGradients(layer)?.length===1))return mountStack(info,el,save,saveCSS,layers,upload,saveImage,browseImages);const section=I.section('Image fill');if(info.classNameDynamic&&!saveCSS)I.note(section,info.classNameReason||'Image fill styles are computed.','refused');else additions(section,info,el,save,saveCSS,layers,upload,saveImage,browseImages);return section;}

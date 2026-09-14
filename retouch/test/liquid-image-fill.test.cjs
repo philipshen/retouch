@@ -81,3 +81,9 @@ test('Liquid paint visibility writes framing and metadata atomically and follows
  assert.equal(R.project(resolved(source).element.classAttr.value,''),R.project(resolved(original).element.classAttr.value,''));
  for(const stack of [{layers,index:1,framing,visibility:'none',hidden:true},{layers,index:0,framing,visibility:'bad',hidden:true},{layers,index:0,framing,visibility:'none',hidden:'true'}])assert.equal(liquid.planOp(resolved(source),{type:'setImageFill',fileHash:liquid.contentHash(source),scope:'md:',action:'visibility',stack}).refused,true);
 });
+
+test('Liquid clearing a hidden stack restores paint sizes and reset removes scoped visibility',()=>{
+ const P=require('../shell/paint-order.js'),V=require('../shell/html-css-values.js'),R=require('../shell/responsive.js'),layers=['linear-gradient(0deg, red 0%, red 100%)','url("/plain.svg")'],framing={'background-size':'contain, 20px 40px'},hidden=P.toggleVisibility(layers,framing,'none',0,true),classes=R.replaceScope('bg-cover',P.frameClasses('bg-cover',hidden),'md:'),source='<h1 class="'+classes+'">Headline</h1>',op={type:'setImageFill',fileHash:liquid.contentHash(source),scope:'md:'};
+ const cleared=liquid.planOp(resolved(source),{...op,action:'remove',stack:{layers,framing:{...framing,...hidden},visibility:hidden[V.paintVisibilityProperty]}});assert.equal(cleared.ok,true,cleared.reason);assert.match(cleared.edits[0].after,/md:!bg-\[length:contain,_20px_40px\]/);assert.match(cleared.edits[0].after,/md:!\[--rt-hidden-paints:none\]/);
+ const reset=liquid.planOp(resolved(source),{...op,action:'reset'});assert.equal(reset.ok,true,reset.reason);assert.equal(reset.edits[0].after,'<h1 class="bg-cover">Headline</h1>');
+});

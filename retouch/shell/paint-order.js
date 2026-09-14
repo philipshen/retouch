@@ -46,6 +46,11 @@
   order.forEach((oldIndex,index)=>{const entry=entries.find(item=>item.index===oldIndex);if(entry)next.push({...entry,index});});
   return {...changes,[V.paintVisibilityProperty]:V.serializePaintVisibility(next)};
  }
+ function clearVisibility(layers,framing,stored='none'){
+  const entries=visibility(layers,framing,stored),changes={'background-image':'none',[V.paintVisibilityProperty]:'none'};
+  if(entries.length){const sizes=V.splitLayers(framing['background-size']||defaults['background-size']);changes['background-size']=layers.map((_,index)=>entries.find(entry=>entry.index===index)?.size||sizes[index%sizes.length]).join(', ');}
+  return changes;
+ }
  function prependVisibility(layers,framing,stored,layer){
   const entries=layers.length?visibility(layers,framing,stored):V.parsePaintVisibility(stored);
   if(!layers.length&&entries.length)throw Error('The hidden paint changed outside Retouch.');
@@ -62,5 +67,5 @@
   if(Object.hasOwn(changes,V.paintVisibilityProperty)){const value=changes[V.paintVisibilityProperty];if(!V.valid(V.paintVisibilityProperty,value))throw Error('The stored paint visibility is invalid.');next=I.replace(next,token=>token.startsWith('['+V.paintVisibilityProperty+':'),value===null?'':'!['+V.paintVisibilityProperty+':'+value+']');}
   return next;
  }
- const api={properties,defaults,reorder,prepend,edit,frameClasses,visibility,toggleVisibility,reorderVisibility,prependVisibility,editVisibilityPaint};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPaintOrder=api;
+ const api={properties,defaults,reorder,prepend,edit,frameClasses,visibility,toggleVisibility,reorderVisibility,clearVisibility,prependVisibility,editVisibilityPaint};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPaintOrder=api;
 })(typeof window==='object'?window:globalThis);

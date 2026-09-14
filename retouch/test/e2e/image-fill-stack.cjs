@@ -99,7 +99,7 @@ await pixels([0,255,0]);if(process.env.RT_E2E_IMAGE_STACK_SCREENSHOT){await page
   if(process.env.RT_E2E_PAINT_VISIBILITY){
    await page.getByRole('button',{name:'Hide solid paint 1',exact:true}).click();await record();await pixels([0,255,0]);
    for(const type of ['linear','radial','conic','solid']){await openPaint(1,'gradient');await page.getByLabel('Paint 1 type',{exact:true}).selectOption(type);await record();await pixels([0,255,0]);assert.equal(await page.getByRole('button',{name:'Show '+(type==='solid'?'solid':'gradient')+' paint 1',exact:true}).getAttribute('aria-pressed'),'true');}
-   await size('390x844');assert.deepEqual(await layers(),initial);await size('768x1024');assert.equal(await page.getByRole('button',{name:'Show solid paint 1',exact:true}).count(),1);await pixels([0,255,0]);
+   await size('390x844');assert.deepEqual(await layers(),initial);await size('768x1024');await wait(async()=>await page.getByRole('button',{name:'Show solid paint 1',exact:true}).count()===1).catch(async error=>{throw Error(error.message+'; '+await fillSection.innerText());});await pixels([0,255,0]);
    const mutation=async action=>{await action();await settled();await wait(()=>read()!==states.at(-1));states.push(read());};
    const action=async(index,label)=>{await page.getByRole('button',{name:'Paint '+index+' actions',exact:true}).click();await page.getByRole('button',{name:label,exact:true}).click();};
    await mutation(()=>action(1,'Duplicate paint 1'));assert.equal(await page.getByRole('button',{name:'Show solid paint 2',exact:true}).count(),1);await pixels([0,255,0]);
@@ -112,6 +112,13 @@ await pixels([0,255,0]);if(process.env.RT_E2E_IMAGE_STACK_SCREENSHOT){await page
    await page.getByRole('button',{name:'Show solid paint 1',exact:true}).click();await record();await pixels([255,0,0]);console.log(kind+': PASS solid/gradient visibility, hidden edits, type conversion, scope, duplicate, order and prepend');
   }
   if(kind==='liquid'){assert.equal((read().match(/asset_url/g)||[]).length,2);assert.equal((read().match(/var\(--rt-image-fill-/g)||[]).length,2);}
+  if(process.env.RT_E2E_PAINT_VISIBILITY){
+   const mutation=async action=>{await action();await settled();await wait(()=>read()!==states.at(-1));states.push(read());};
+   const fillOptions=async()=>{const more=page.getByText('More fill controls',{exact:true});if(!await more.evaluate(node=>node.parentElement.open))await more.click();const options=page.getByText('Fill options',{exact:true});if(!await options.evaluate(node=>node.parentElement.open))await options.click();};
+   await mutation(()=>page.getByRole('button',{name:'Hide solid paint 1',exact:true}).click());await fillOptions();await mutation(()=>page.getByRole('button',{name:'Clear background images',exact:true}).click());assert.equal(await target.evaluate(el=>getComputedStyle(el).backgroundImage),'none');assert.ok(!await target.evaluate(el=>getComputedStyle(el).backgroundSize.includes('0px 0px')));
+   await mutation(async()=>{await addMenu();await page.getByRole('button',{name:'Add solid paint',exact:true}).click();});await pixels([217,217,217]);assert.equal(await page.getByRole('button',{name:'Hide solid paint 1',exact:true}).count(),1);
+   await mutation(()=>page.getByRole('button',{name:'Hide solid paint 1',exact:true}).click());await fillOptions();const legacyGroups=page.getByText('More fill controls',{exact:true}).locator('..').locator('.gradient-controls');assert.ok(await legacyGroups.count()>0);assert.equal(await legacyGroups.evaluateAll(groups=>groups.every(group=>group.hidden)),true);await mutation(()=>page.getByRole('button',{name:'Reset gradient fills',exact:true}).click());assert.deepEqual(await layers(),initial);assert.deepEqual(await target.evaluate(el=>{const css=getComputedStyle(el);return [css.backgroundSize,css.backgroundPosition,css.backgroundRepeat];}),framing);console.log(kind+': PASS hidden stack clear, visible replacement paint and scoped reset');
+  }
   await size('390x844');assert.deepEqual(await layers(),initial);await size('768x1024');for(const expected of states.slice(0,-1).reverse()){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===expected);}assert.deepEqual(await layers(),secondLayers);
  }
  if(process.env.RT_E2E_PAINT_ADD){
