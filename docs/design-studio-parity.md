@@ -16963,3 +16963,14 @@ Settings use native nonmodal popovers. Escape closes them and restores focus to 
 All 1,542 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass the extended workflow. The extended image-stack browser workflow includes add/remove/duplicate/order, gradient edits, image source/picker/upload/crop, rendering pixels, all framing properties, responsive inheritance, exact undo and retained document/input state. RT_E2E_PAINT_POPOVER=1 adds checks for Escape/focus, unchanged source on cancel, bounds at 1600x1100 and 1100x700, retained open settings after a write, and a forced panel rebuild while the native file chooser is open. The light-theme image popover screenshot was visually inspected.
 
 The Mac bundle was not rebuilt in this batch. Native notarization/Homebrew distribution, complete Figma fidelity and full arbitrary-site parity remain unverified.
+
+
+### Drag ordering for mixed paints — 2026-09-14
+
+Mixed paint rows now have drag handles that appear on hover or keyboard focus. A faded source row and blue insertion line show the pending position. Source is unchanged during the gesture; releasing applies the existing atomic paint/framing reorder operation. Dragging near the inspector edge scrolls the panel. Escape, pointer cancellation/loss, source-panel removal, resize and screen/zoom changes cancel the gesture. The stack is checked again before writing.
+
+Focused handles also support Arrow Up/Down and Home/End. Repeated keydown events are ignored; each deliberate key press produces one move, and focus follows the moved paint after the panel updates. Existing arrow, duplicate and remove actions remain available. All seven background framing lists and managed Liquid asset bindings use the previously verified reorder path.
+
+All 1,542 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass the extended workflow. The RT_E2E_PAINT_DRAG=1 workflow verifies edge scrolling without a write, Escape cleanup, unchanged source until release, exactly one source operation per drop, the expected image order and all seven framing lists, focused-handle restoration, keyboard Home ordering, and exact undo back to the original source. It then completes the existing add/replace/crop/gradient/responsive/state workflow. The drag screenshot was visually inspected.
+
+Solid/background row unification, per-paint opacity/visibility and full Figma fidelity remain incomplete. Native notarization/Homebrew distribution and arbitrary-site parity remain unverified; no native bundle was rebuilt.

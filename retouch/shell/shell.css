@@ -1204,3 +1204,10 @@ html, body { overflow:clip; }
 .paint-order-row:hover > button, .paint-order-row:focus-within > button { opacity:1; }
 
 .image-paint-popover .gradient-controls { border:0;margin:0;padding:0; }
+
+.paint-order-row { position:relative; }
+.paint-order-row > .paint-drag-handle { flex:none;min-width:12px;padding:0;background:none;border:0;cursor:grab;touch-action:none;font-size:16px;color:var(--muted); }
+.paint-order-row.paint-dragging { opacity:.45; }
+.paint-order-row.paint-drop-before::before, .paint-order-row.paint-drop-after::after { content:'';position:absolute;left:0;right:0;height:2px;background:var(--accent,#0d99ff);pointer-events:none; }
+.paint-order-row.paint-drop-before::before { top:-3px; }
+.paint-order-row.paint-drop-after::after { bottom:-3px; }
