@@ -46,6 +46,7 @@
         append(kept,block(n));
         continue;
       }
+      if(n.tagName==='SPAN'&&n.getAttribute&&n.getAttribute('data-retouch-paragraph')!==null){append({t:'paragraph',children:serializeChildren(n,snapshot)},true);continue;}
       // Only validated range styles can create new styled spans.
       // Existing attributed nodes still use the source-preserving keep path above.
       if (n.tagName === 'SPAN' && n.style) {

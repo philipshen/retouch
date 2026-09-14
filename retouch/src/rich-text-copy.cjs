@@ -2,7 +2,7 @@
 // Splitting text duplicates appearance, not identity or behavior. The source,
 // never a client-supplied attribute map, determines the copied markup.
 const tags=new Set(['li','p','div','span','a','strong','b','em','i','u','s','sup','sub','code','mark','small','abbr']);
-const attributes=new Set(['class','className','style','title','lang','dir','href','target','rel']);
+const attributes=new Set(['data-retouch-paragraph','class','className','style','title','lang','dir','href','target','rel']);
 function markup(raw,content,jsx=false,options={}){
  let tag,attrs;
  if(jsx){

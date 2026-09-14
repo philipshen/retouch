@@ -405,6 +405,7 @@ function planOp(resolved, op) {
     const build=items=>items.map(c=>{
       if (c.t==='text') return escapeText(c.value);
       if (c.t==='break') return '<br>';
+      if(c.t==='paragraph')return require('../text-paragraphs.cjs').markup(build(c.children));
       if (c.t==='block') return blocks.markup(c,build(c.children),false,c.template?listTemplate(c.template):null);
       if (c.t==='style'||c.t==='styles') return styleMarkup(c,build(c.children));
       if(c.t==='link')return linkMarkup(c,build(c.children));

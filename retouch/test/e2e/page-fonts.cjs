@@ -1954,6 +1954,7 @@ await page.getByText('2 of 2 layers linked in this screen scope.',{exact:true}).
   if(process.env.RT_E2E_OWNED_SCRIPT_TEXT)await require('./owned-script-text.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_MULTILINE_PASTE)await require('./multiline-paste.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_NATIVE_LISTS||process.env.RT_E2E_LIST_CONTROLS||process.env.RT_E2E_LIST_BACKSPACE||process.env.RT_E2E_LIST_ENTER||process.env.RT_E2E_LIST_INDENT)await require('./native-lists.cjs')({page,app,kind,read,wait,settled});
+  if(process.env.RT_E2E_PARAGRAPH_ENTER)await require('./paragraph-enter.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_NATIVE_PARAGRAPH)await require('./native-paragraph.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_LINE_BREAKS)await require('./inline-line-breaks.cjs')({page,app,kind,read,wait,settled});
   if(process.env.RT_E2E_CARET_SCRIPT)await require('./caret-script.cjs')({page,app,kind,read,wait,settled});

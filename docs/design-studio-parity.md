@@ -15049,3 +15049,48 @@ continuation across markerless items, custom pseudo-element markers, cross-level
 selection replacement, automatic list prefixes, spacing/hanging controls, and
 general paragraph Enter behavior outside lists. Desktop packaging/native testing
 was not repeated. The full Figma Design and arbitrary-site goal remains open.
+
+### 2026-09-14: Enter creates paragraphs outside lists
+
+Plain Enter now inserts a paragraph boundary in editable text instead of finishing
+editing. Command/Ctrl+Enter or Done finishes; Shift+Enter remains a soft line
+break. The Done tooltip explains these shortcuts. Unsupported structural ranges
+stay in editing with an explanation rather than silently falling through to an
+untracked native paragraph edit or committing the text.
+
+A constrained `paragraph` node writes a span with `data-retouch-paragraph=""`
+and `display: block`. This represents a logical text paragraph with phrasing
+markup: a source H1 remains an H1, avoiding invalid nested P elements or an
+implicit heading-to-DIV conversion. Existing source P/DIV paragraphs retain their
+source shells when split. Source-owned formatting wrappers are copied through
+the previously validated appearance-copy protocol, and typing into empty copied
+wrappers retains their formatting. The common splitting routine is shared with
+list Enter. Paragraph spans become individual list items when list formatting
+is applied to a compatible flow container, retaining the paragraph wrappers.
+
+Empty paragraphs retain BR content. Soft-break lookahead stops at the current
+explicit paragraph boundary; a trailing soft line in such a paragraph keeps its
+necessary BR in source so the line does not disappear after saving. Existing
+flat-text placeholder behavior remains separately covered by its regression
+workflow. The paragraph schema admits no arbitrary attributes or CSS, and
+placement rejects lists, tables, void elements and other incompatible parents.
+
+Verification: 1,240 unit tests pass in
+`/private/tmp/retouch-paragraph-units-verified.log`. Source tests cover real
+HTML/React/Liquid heading writes with retained heading identity and styled runs,
+plus invalid content models. Combined browser runs pass `RT_E2E_PARAGRAPH_ENTER`,
+`RT_E2E_LIST_ENTER`, `RT_E2E_LINE_BREAKS`, and `RT_E2E_TEXT_HISTORY_GROUPS` across
+HTML/React/Liquid Chromium 145.0.7632.6 and HTML WebKit 26.0. Logs are
+`/private/tmp/retouch-paragraph-{html,react,liquid,webkit}-verified.log`.
+The new flow exercises formatted splits, repeated/empty paragraphs, a trailing
+soft line before a following paragraph, subsequent text, save/reopen, measured
+paragraph geometry, heading retention, paragraph-to-list conversion and exact
+local/source undo/redo. `/private/tmp/retouch-paragraph-enter.png` was inspected.
+
+Still missing: paragraph boundary Backspace/Delete merging, cross-level or
+heterogeneous structural ranges, automatic list prefixes, paragraph/list spacing,
+hanging controls, complete source ownership for arbitrary attributes/frameworks,
+and Figma-equivalent behavior under arbitrary host flex/grid/inline layout and
+writing modes. New text paragraphs use explicit spans rather than changing the
+semantic role of the outer source layer. No desktop build or native run was made;
+the full Figma Design and arbitrary-site goal remains incomplete.

@@ -4,7 +4,7 @@
 const tags=new Set(['p','ul','ol','li']);
 const flow=new Set(['div','section','article','aside','nav','main','header','footer','blockquote','li','td','th','form','fieldset','figure','figcaption','details','dialog','body']);
 const phrasing=new Set(['span','a','strong','em','b','i','u','s','sup','sub','br','code','mark','small','abbr','time','img','input','label','button']);
-const contains=items=>Array.isArray(items)&&items.some(item=>item&&(item.t==='block'||item.t==='copy'||item.t==='keep'&&item.tag||contains(item.children)));
+const contains=items=>Array.isArray(items)&&items.some(item=>item&&(item.t==='paragraph'||item.t==='block'||item.t==='copy'||item.t==='keep'&&item.tag||contains(item.children)));
 function validateNode(node){
  if(!tags.has(node.tag)||Object.keys(node).some(key=>!['t','tag','children','start','template','marker'].includes(key)))return 'Unsupported paragraph or list node.';
  if(Object.hasOwn(node,'marker')&&!require('./list-markers.cjs').valid(node.tag,node.marker))return 'Invalid list marker.';
@@ -15,7 +15,8 @@ function validateNode(node){
 function placement(items,parent,keptTag,level=0){
  for(const item of items){
   const kept=['keep','copy'].includes(item.t)?keptTag(item.id):null;
-  const tag=item.t==='block'||item.t==='wrap'?item.tag:item.t==='link'?'a':item.t==='style'||item.t==='styles'?'span':item.t==='break'?'br':['keep','copy'].includes(item.t)?(item.tag||(typeof kept==='string'?kept:kept?.tag)):'#text';
+  const tag=item.t==='paragraph'?'span':item.t==='block'||item.t==='wrap'?item.tag:item.t==='link'?'a':item.t==='style'||item.t==='styles'?'span':item.t==='break'?'br':['keep','copy'].includes(item.t)?(item.tag||(typeof kept==='string'?kept:kept?.tag)):'#text';
+  if(item.t==='paragraph'&&(['br','img','input'].includes(parent)||!flow.has(parent)&&!phrasing.has(parent)&&parent!=='p'&&!/^h[1-6]$/.test(parent)))return 'This source element cannot contain text paragraphs.';
   if(parent==='ul'||parent==='ol'){
    if(tag!=='li'&&tag!=='#comment'&&!(item.t==='text'&&!item.value.trim()))return 'Lists must contain list items.';
   }else if(tag==='li')return 'List items need an ordered or unordered list.';

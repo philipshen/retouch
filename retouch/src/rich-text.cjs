@@ -12,6 +12,9 @@ function validateChildrenTree(children, depth, inLink=false, blockDepth=0, keptT
       if (typeof c.value !== 'string' || c.value.length > 10000) return 'Bad text node.';
     } else if (c.t === 'break') {
       if(Object.keys(c).some(key=>key!=='t'))return 'Bad line break node.';
+    } else if (c.t === 'paragraph') {
+      const error=require('./text-paragraphs.cjs').validate(c);if(error)return error;
+      const err=validateChildrenTree(c.children,depth,inLink,blockDepth+1,keptTag);if(err)return err;
     } else if (c.t === 'block') {
       if(inLink)return 'Text links cannot contain paragraphs or lists.';
       const blocks=require('./rich-text-blocks.cjs'),error=blocks.validateNode(c);if(error)return error;

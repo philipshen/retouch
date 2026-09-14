@@ -1,0 +1,26 @@
+'use strict';
+const assert=require('node:assert/strict');
+module.exports=async({page,app,kind,read,wait,settled})=>{
+ let target=app.locator('h1');const states=[read()],button=name=>page.getByRole('button',{name,exact:true});
+ const open=async()=>{await target.dispatchEvent('dblclick');await wait(async()=>await target.getAttribute('contenteditable')==='true');};
+ const choose=async(text,from,to=from)=>{await target.focus();await target.evaluate((el,[text,from,to])=>{const d=el.ownerDocument,w=d.createTreeWalker(el,4);let n;while(n=w.nextNode())if(n.data===text)break;if(!n)throw Error('Missing '+text);const r=d.createRange();r.setStart(n,from);r.setEnd(n,to);d.getSelection().removeAllRanges();d.getSelection().addRange(r);},[text,from,to]);};
+ const save=async()=>{await target.focus();await page.keyboard.press('Control+Enter');await settled();await wait(()=>read()!==states.at(-1));states.push(read());};
+ const paragraphs=()=>target.locator(':scope > [data-retouch-paragraph]').evaluateAll(nodes=>nodes.map(n=>n.textContent));
+ await open();await choose('Headline',0,8);await page.keyboard.press('Control+b');await button('Finish text editing').click();await settled();await wait(()=>read()!==states.at(-1));states.push(read());await open();
+ await choose('Headline',4);const before=await target.innerHTML();await page.keyboard.press('Enter');const split=await target.innerHTML();assert.deepEqual(await paragraphs(),['Head','line']);assert.equal(await target.getAttribute('contenteditable'),'true');assert.equal(read(),states.at(-1));
+ await button('Undo').click();assert.equal(await target.innerHTML(),before);await button('Redo').click();assert.equal(await target.innerHTML(),split);await save();await open();assert.deepEqual(await paragraphs(),['Head','line']);assert.equal(await target.evaluate(el=>el.tagName),'H1');
+ await choose('Head',4);const firstParagraph=target.locator(':scope > [data-retouch-paragraph]').first(),initialHeight=(await firstParagraph.boundingBox()).height;await page.keyboard.press('Shift+Enter');const softHeight=(await firstParagraph.boundingBox()).height;assert.ok(softHeight>initialHeight*1.8);await save();await open();assert.ok(Math.abs((await firstParagraph.boundingBox()).height-softHeight)<1);
+ await choose('line',4);await page.keyboard.press('Enter');await page.keyboard.insertText('Third');assert.deepEqual(await paragraphs(),['Head','line','Third']);
+ await page.keyboard.press('Enter');await page.keyboard.press('Enter');await page.keyboard.insertText('Fifth');assert.deepEqual(await paragraphs(),['Head','line','Third','','Fifth']);
+ await page.keyboard.press('Shift+Enter');await page.keyboard.insertText('Soft');assert.equal((await paragraphs()).length,5);assert.equal((await paragraphs()).at(-1),'FifthSoft');
+ await save();await open();assert.deepEqual(await paragraphs(),['Head','line','Third','','FifthSoft']);
+ const rects=await target.locator(':scope > [data-retouch-paragraph]').evaluateAll(nodes=>nodes.map(n=>{const b=n.getBoundingClientRect();return {top:b.top,height:b.height};}));assert.ok(rects[3].height>0);for(let i=1;i<rects.length;i++)assert.ok(rects[i].top>=rects[i-1].top+rects[i-1].height-1);
+ if(process.env.RT_E2E_PARAGRAPH_ENTER_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_PARAGRAPH_ENTER_SCREENSHOT});
+ await button('Finish text editing').click();await settled();assert.equal(read(),states.at(-1));
+ await page.getByLabel('HTML element',{exact:true}).evaluate(el=>window.RetouchInspectorUI.reveal(el));await page.getByLabel('HTML element',{exact:true}).selectOption('div');await settled();await wait(()=>read()!==states.at(-1));states.push(read());target=app.locator('main > div.type-editorial');await open();await choose('Head',0);
+ await page.getByLabel('Text layer list style',{exact:true}).selectOption('ol');assert.equal(await target.locator(':scope > ol > li').count(),5);await save();await open();assert.equal(await target.locator(':scope > ol > li').count(),5);await choose('Head',0);const listed=await target.innerHTML();await page.getByLabel('Text layer list style',{exact:true}).selectOption('none');assert.equal(await target.locator('ol,ul').count(),0);await button('Undo').click();assert.equal(await target.innerHTML(),listed);await button('Finish text editing').click();await settled();assert.equal(read(),states.at(-1));
+ for(let i=states.length-2;i>=0;i--){await button('Undo').click();await settled();await wait(()=>read()===states[i]);}
+ for(let i=1;i<states.length;i++){await button('Redo').click();await settled();await wait(()=>read()===states[i]);}
+ for(let i=states.length-2;i>=0;i--){await button('Undo').click();await settled();await wait(()=>read()===states[i]);}
+ console.log('PARAGRAPH ENTER PASS '+kind+': preserved heading semantics, formatted paragraph splitting, repeated/empty paragraphs, soft breaks, Ctrl+Enter save, geometry, save/reopen and exact undo/redo');
+};

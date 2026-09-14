@@ -270,6 +270,7 @@ function planOp(resolved, op) {
           if (c.t === 'text') return escapeJsxText(c.value);
           if(c.t==='link')return linkMarkup(c,build(c.children),true);
           if (c.t === 'break') return '<br />';
+          if(c.t==='paragraph')return require('./text-paragraphs.cjs').markup(build(c.children),true);
           if (c.t === 'block') return blocks.markup(c,build(c.children),true,c.template?listTemplate(c.template):null);
           if (c.t === 'style' || c.t === 'styles') return styleMarkup(c,build(c.children),true);
           if(c.t==='copy'){const original=descendants.get(c.id);if(!original)throw refuseError('Unknown split text source.');return require('./rich-text-copy.cjs').markup(source.slice(original.start,original.end),build(c.children),true,c);}

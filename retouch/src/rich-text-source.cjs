@@ -56,6 +56,7 @@ function rewrite(value,sourceId,children,options) {
     return items.map(item=>{
       if(item.t==='text')return escapeText(item.value);
       if(item.t==='break')return '<br>';
+      if(item.t==='paragraph')return require('./text-paragraphs.cjs').markup(build(item.children));
       if(item.t==='block')return blocks.markup(item,build(item.children),false,item.template?kept.get(item.template)?.listTemplate:null);
       if(item.t==='style'||item.t==='styles')return styleMarkup(item,build(item.children));
       if(item.t==='link')return linkMarkup(item,build(item.children));

@@ -309,7 +309,7 @@ function hookFrame(d, w) {
   d.addEventListener('compositionend',()=>finishCaretComposition(),true);
   d.addEventListener('beforeinput', (e) => {
     if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='deleteContentBackward'&&removeListMarker()){e.preventDefault();e.stopPropagation();return;}
-    if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertParagraph'&&insertListParagraph()){e.preventDefault();e.stopPropagation();return;}
+    if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertParagraph'){e.preventDefault();e.stopPropagation();if(!insertTextParagraph())toast('This text structure cannot create a paragraph yet.','err');return;}
     if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertLineBreak'){e.preventDefault();e.stopPropagation();insertInlineBreak();return;}
     if(editing&&editing.el.contains(e.target)&&['historyUndo','historyRedo'].includes(e.inputType)&&inlineHistoryCommand(e.inputType==='historyRedo')){e.preventDefault();e.stopPropagation();return;}
     if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertText'&&typeof e.data==='string'&&(insertCaretText(e.data)||insertListCaretText(e.data))){e.preventDefault();e.stopPropagation();return;}
@@ -329,7 +329,7 @@ function hookFrame(d, w) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if(e.isComposing)return;
       if(e.key==='Backspace'&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!e.shiftKey&&(e.repeat&&editing.listMarkerBackspace||removeListMarker())){editing.listMarkerBackspace=true;e.preventDefault();return;}
-      if(e.key==='Enter'&&!e.shiftKey&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&insertListParagraph()){e.preventDefault();return;}
+      if(e.key==='Enter'&&!e.shiftKey&&!e.metaKey&&!e.ctrlKey&&!e.altKey){e.preventDefault();if(!insertTextParagraph())toast('This text structure cannot create a paragraph yet.','err');return;}
       if(listIndentShortcut(e)||inlineListShortcut(e))return;
       if((e.metaKey||e.ctrlKey)&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='k'){e.preventDefault();editing.focusLink?.();return;}
       if(/^(Arrow|Home$|End$|PageUp$|PageDown$)/.test(e.key))breakTextHistoryGroup();
@@ -1023,6 +1023,7 @@ function caretPlaceholders(current){return [...current.el.querySelectorAll('br')
 function normalizeCaretPlaceholders(current){for(const node of caretPlaceholders(current))if(hasInlineContentAfter(node,current.el))delete node.__rtCaretPlaceholder;}
 function removeCaretPlaceholders(current){normalizeCaretPlaceholders(current);for(const node of caretPlaceholders(current))node.remove();}
 function hasInlineContentAfter(node,root){
+  const paragraph=node.parentElement?.closest('[data-retouch-paragraph]');if(paragraph&&root.contains(paragraph))root=paragraph;
   for(let current=node;current&&current!==root;current=current.parentNode)for(let next=current.nextSibling;next;next=next.nextSibling)if(next.textContent||next.nodeType===1&&!next.__rtCaretPlaceholder)return true;
   return false;
 }
@@ -1034,9 +1035,10 @@ function insertInlineBreak(){
   const before=current.caretHistoryBatch?null:captureCaretEdit(current),draft=caretDraft(),properties=draft?.properties||{},script=draft?.script,decorations=draft?.decorations||{};
   removeCaretPlaceholders(current);range.deleteContents();
   const br=d.createElement('br'),text=d.createTextNode(''),fragment=d.createDocumentFragment();fragment.append(br,text);range.insertNode(fragment);
-  // A trailing layout-only BR lets browsers draw the cursor on the empty line.
-  // It is excluded from source and removed when actual text is inserted.
-  if(!hasInlineContentAfter(text,current.el)){const placeholder=d.createElement('br');placeholder.__rtCaretPlaceholder=true;text.after(placeholder);}
+  // A trailing BR gives the empty line a box. Explicit paragraph spans keep
+  // it in source so a trailing soft line survives saving. Legacy flat text
+  // keeps the existing editor-only placeholder behavior.
+  if(!hasInlineContentAfter(text,current.el)){const placeholder=d.createElement('br');if(!text.parentElement?.closest('[data-retouch-paragraph]'))placeholder.__rtCaretPlaceholder=true;text.after(placeholder);}
   const caret=d.createRange();caret.setStart(text,0);caret.collapse(true);selection.removeAllRanges();selection.addRange(caret);
   current.caretStyle={properties,script,decorations,range:caret.cloneRange()};recordCaretEdit(current,before);d.dispatchEvent(new Event('selectionchange'));
 }
@@ -1115,13 +1117,13 @@ function insertListCaretText(text){
   const current=editing;if(!current||!text)return false;
   const d=current.el.ownerDocument,selection=d.getSelection();if(!selection.rangeCount)return false;
   const range=selection.getRangeAt(0),node=range.startContainer;
-  if(!range.collapsed||node.nodeType!==3||node.length||!current.el.contains(node)||!node.parentElement.closest('li'))return false;
+  if(!range.collapsed||node.nodeType!==3||node.length||!current.el.contains(node)||!node.parentElement.closest('li,[data-retouch-paragraph]'))return false;
   const before=captureCaretEdit(current);node.insertData(0,text);range.setStart(node,text.length);range.collapse(true);selection.removeAllRanges();selection.addRange(range);
   recordCaretEdit(current,before,textHistoryGroup(current,'insertText',text));return true;
 }
-function insertListParagraph(){
-  const current=editing;if(!current||!RetouchListEditing.listContext(current.el))return false;
-  const result=inlineFormattingTransaction(()=>RetouchListEditing.enter(current.el));
+function insertTextParagraph(){
+  const current=editing;if(!current)return false;
+  const result=inlineFormattingTransaction(()=>RetouchListEditing.listContext(current.el)?RetouchListEditing.enter(current.el):RetouchListEditing.paragraph(current.el));
   current.el.ownerDocument.dispatchEvent(new Event('selectionchange'));return result;
 }
 function indentTextList(outdent=false){
@@ -1301,7 +1303,7 @@ function showInlineFormatToolbar(){
   const collapsed=section?.dataset.collapsed==='true';let collapseChanged=false;
   const trackCollapse=event=>{if(event.target.closest('.section-toggle'))collapseChanged=true;};section?.querySelector(':scope > h3')?.addEventListener('click',trackCollapse);
   const selectionNote=document.createElement('span'),header=document.createElement('div');header.className='range-edit-heading';selectionNote.setAttribute('role','status');selectionNote.setAttribute('aria-label','Text formatting selection');
-  const done=document.createElement('button');done.type='button';done.textContent='Done';done.setAttribute('aria-label','Finish text editing');done.dataset.rangeAlwaysEnabled='true';done.onclick=()=>void commitInlineEdit();header.append(selectionNote,done);
+  const done=document.createElement('button');done.type='button';done.textContent='Done';done.setAttribute('aria-label','Finish text editing');done.title='Finish editing (Command/Ctrl+Enter). Enter adds a paragraph; Shift+Enter adds a line break.';done.dataset.rangeAlwaysEnabled='true';done.onclick=()=>void commitInlineEdit();header.append(selectionNote,done);
   const commands=document.createElement('div');commands.className='range-format-commands';commands.setAttribute('role','group');commands.setAttribute('aria-label','Text formatting');
   for(const button of [...bar.children].filter(node=>node.tagName==='BUTTON'&&node!==familyButton&&node!==swatch))commands.append(button);
   const row=(title,controls,className='')=>{const group=document.createElement('div');group.className='range-format-field '+className;const label=document.createElement('span');label.className='range-field-label';label.textContent=title;group.append(label,...controls);return group;};
