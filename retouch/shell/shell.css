@@ -1096,3 +1096,12 @@ html, body { overflow:clip; }
 .compare-reorder svg { width:16px;height:20px;fill:none;stroke:var(--muted);stroke-width:2.5;stroke-linecap:round;pointer-events:none; }
 .compare-card[data-screen-drop="before"] > .compare-header:first-child { box-shadow:0 -2px var(--accent); }
 .compare-card[data-screen-drop="after"] > .compare-header:first-child { box-shadow:0 2px var(--accent); }
+
+#panelEmpty { padding:0; }
+#panelEmpty > .inspector-section { padding:16px;border-bottom:1px solid var(--line); }
+.canvas-selection-guidance { padding:12px 16px; }
+.canvas-selection-guidance .hint { margin:0 0 12px; }
+.inspector-field > .canvas-background-control { display:flex;align-items:center;flex:1;min-width:0;background:var(--control);border-radius:5px;padding-left:6px; }
+.canvas-background-control .canvas-background-swatch { width:16px;height:16px;padding:0;border:1px solid #0002;border-radius:3px;flex-shrink:0;cursor:pointer; }
+.canvas-background-control input { min-width:0; }
+.canvas-background-swatch:focus-visible { outline:2px solid var(--accent);outline-offset:2px; }
