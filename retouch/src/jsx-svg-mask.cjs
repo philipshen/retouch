@@ -30,4 +30,4 @@ function context(r){
 }
 function plan(r,op){const resolved=context(r);if(!resolved)return {ok:false,refused:true,reason:'Select an editable SVG layer.'};return mask.plan(resolved,op);}
 function describe(r){const resolved=context(r);return resolved?mask.describe(resolved):null;}
-module.exports={plan,describe};
+module.exports={plan,describe,context};

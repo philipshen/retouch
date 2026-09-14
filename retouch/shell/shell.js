@@ -3952,10 +3952,10 @@ async function structureAction(action) {
       if(!result?.ok)return toast(result?.reason||result?.error||'Could not update SVG layer','err');
       const selectionAfter=[deleting?result.parentId:duplicating?result.createdId:result.movedId];
       const deletedLocks=result.removedSourceIds?layerLocks.removeSourceIds(result.removedSourceIds):null;
-      editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:[info.id],selectionAfter,undoId:result.undoId,...(result.sourceIdMap?{sourceIdMap:result.sourceIdMap}:{}),...(deletedLocks?{deletedLocks,removedSourceIds:result.removedSourceIds}:{})});
+      editorHistory.record({type:duplicating?'replaceSVGSelection':'structureSelection',id:result.parentId,selectionBefore:[info.id],selectionAfter,undoId:result.undoId,...(result.sourceIdMap?{sourceIdMap:result.sourceIdMap}:{}),...(deletedLocks?{deletedLocks,removedSourceIds:result.removedSourceIds}:{})});
       if(result.sourceIdMap)layerLocks.remap(result.sourceIdMap);
-      await restoreLayerSelection(selectionAfter);
-      if(sel?.info.renderRevisionAttribute)await refreshWrittenElement(sel.info,()=>true);else await reloadFrame();
+      if(duplicating)await refreshSVGBooleanSelection(result.parentId,selectionAfter);
+      else{await restoreLayerSelection(selectionAfter);if(sel?.info.renderRevisionAttribute)await refreshWrittenElement(sel.info,()=>true);else await reloadFrame();}
       renderPanel();toast(deleting?'Layer deleted':duplicating?'Layer duplicated':'Layer moved','ok');
     }finally{busyPanel(false);}
     return;

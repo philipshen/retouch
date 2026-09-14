@@ -1,9 +1,9 @@
 'use strict';
-const deletion=require('./svg-delete.cjs'),css=require('./html-css.cjs');
+const deletion=require('./svg-delete.cjs'),css=require('./html-css.cjs'),masks=require('./svg-mask-duplicate.cjs');
 function describe(resolved){
  if(!deletion.describe(resolved))return null;
- const known=new Set(resolved.elements.map(e=>e.node));
- function complete(node){return !node.tagName||known.has(node)&&!(node.attrs||[]).some(a=>['id','key','ref','v-for','v-if','x-for','x-if'].includes(a.name))&&(node.childNodes||[]).every(complete);}
+ const known=new Set(resolved.elements.map(e=>e.node)),allowed=masks.references(resolved);
+ function complete(node){return !node.tagName||known.has(node)&&!(node.attrs||[]).some(a=>(['id','key','ref','v-for','v-if','x-for','x-if'].includes(a.name)&&!(a.name==='id'&&allowed.has(a.value))))&&(node.childNodes||[]).every(complete);}
  if(!complete(resolved.element.node))return null;
  try{css.clone(resolved,{start:resolved.element.location.startOffset,end:resolved.element.location.endOffset});}catch{return null;}
  return {canDuplicate:true,canCopy:false};
@@ -15,6 +15,7 @@ function plan(resolved,op){
  try{
   const html=require('./adapters/html.cjs'),{startOffset:start,endOffset:end}=resolved.element.location;
   const copy=css.clone(resolved,{start,end}),source=resolved.source;
+  copy.chunk=masks.rewrite(copy.chunk,source,masks.references(resolved));
   const inserted=source.slice(0,end)+copy.chunk+source.slice(end),next=html.collect(inserted,resolved.relPath).elements;
   const originals=resolved.elements.filter(e=>e.location.startOffset>=start&&e.location.startOffset<end),mapped=new Map();
   for(const e of resolved.elements){const offset=e.location.startOffset+(e.location.startOffset>=end?copy.chunk.length:0),fresh=next.find(n=>n.location.startOffset===offset&&n.tag===e.tag&&n.node.namespaceURI===e.node.namespaceURI);if(!fresh)return refuse('The copy would change the surrounding document structure.');mapped.set(e.node,fresh);}

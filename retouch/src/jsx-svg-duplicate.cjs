@@ -1,17 +1,20 @@
 'use strict';
 const ids=require('./id.cjs'),deletion=require('./jsx-svg-delete.cjs'),{literal}=require('./jsx-svg-geometry.cjs');
+const masks=require('./svg-mask-duplicate.cjs');
+const maskContext=r=>require('./jsx-svg-mask.cjs').context(r);
 const tags=new Set(['svg','g','rect','circle','ellipse','line','path','polyline','polygon']);
 function describe(resolved){
  if(!deletion.describe(resolved))return null;
+ const allowed=masks.references(maskContext(resolved));
  function complete(node){
   if(node.type==='JSXText'||node.type==='JSXExpressionContainer'&&node.expression.type==='JSXEmptyExpression')return true;
-  return node.type==='JSXElement'&&tags.has(ids.jsxElementName(node))&&node.openingElement.attributes.every(a=>a.type==='JSXAttribute'&&!['id','key','ref','dangerouslySetInnerHTML'].includes(a.name.name)&&literal(a)!==undefined)&&node.children.every(complete);
+  return node.type==='JSXElement'&&(tags.has(ids.jsxElementName(node))||ids.jsxElementName(node)==='mask'&&node.openingElement.attributes.some(a=>a.name?.name==='id'&&allowed.has(literal(a))))&&node.openingElement.attributes.every(a=>a.type==='JSXAttribute'&&(!['id','key','ref','dangerouslySetInnerHTML'].includes(a.name.name)||a.name.name==='id'&&allowed.has(literal(a)))&&literal(a)!==undefined)&&node.children.every(complete);
  }
  return complete(resolved.element.node)?{canDuplicate:true,canCopy:false}:null;
 }
 function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason});if(!describe(resolved))return refuse('Choose a literal SVG subtree without authored IDs, refs, spreads or dynamic expressions.');if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the SVG layer.');
- const source=resolved.source,{start,end}=resolved.element.node,chunk=source.slice(start,end),after=source.slice(0,end)+chunk+source.slice(end),next=ids.collectElements(after,resolved.relPath).elements,mapping=new Map(),before=resolved.elements,originals=before.filter(e=>e.node.start>=start&&e.node.start<end),copies=next.filter(e=>e.node.start>=end&&e.node.start<end+chunk.length);
+ const source=resolved.source,{start,end}=resolved.element.node,chunk=masks.rewrite(source.slice(start,end),source,masks.references(maskContext(resolved))),after=source.slice(0,end)+chunk+source.slice(end),next=ids.collectElements(after,resolved.relPath).elements,mapping=new Map(),before=resolved.elements,originals=before.filter(e=>e.node.start>=start&&e.node.start<end),copies=next.filter(e=>e.node.start>=end&&e.node.start<end+chunk.length);
  for(const old of before){const offset=old.node.start+(old.node.start>=end?chunk.length:0),fresh=next.find(e=>e.node.start===offset&&ids.jsxElementName(e.node)===ids.jsxElementName(old.node));if(!fresh)return refuse('The copy would change surrounding JSX structure.');mapping.set(old.id,fresh.id);}
  const oldParents=deletion.parents(before),newParents=deletion.parents(next),copyMapping=new Map(originals.map((e,i)=>[e.id,copies[i]?.id]));
  if(next.length!==before.length+originals.length||copies.length!==originals.length||before.some(e=>newParents.get(mapping.get(e.id))!==(mapping.get(oldParents.get(e.id))??null))||originals.some((e,i)=>ids.jsxElementName(e.node)!==ids.jsxElementName(copies[i].node)||newParents.get(copies[i].id)!==(copyMapping.get(oldParents.get(e.id))??mapping.get(oldParents.get(e.id))??null)))return refuse('The copied SVG ancestry could not be preserved.');
