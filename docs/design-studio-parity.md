@@ -17111,3 +17111,11 @@ Clicking the swatch opens the shared color picker directly. Its live preview res
 All 1,548 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass direct swatch preview/cancel/apply, compact value updates, neighboring paints, responsive inheritance and exact source undo alongside the image paint and ordering workflow. The standalone Chromium color-picker suite passes HSV pointer/keyboard edits, alpha, cancellation/no-op apply, Display P3 channels, narrow-window bounds and preview cleanup. A final HTML run verifies the always-visible swatch rule; the final light-theme rows and transparency checker were visually inspected.
 
 Solid/gradient visibility, separate solid-row opacity, the wider Figma feature scope, arbitrary-site support and trusted native/Homebrew distribution remain incomplete. No native app was rebuilt or published.
+
+### Separate solid-paint opacity — 2026-09-15
+
+Solid Fill rows now separate the color value from an editable opacity percentage. Alpha changes use the existing solid-paint source writer while preserving the parsed sRGB or Display P3 channels. Setting opacity to zero keeps those channels so returning to 100% restores the same color. The row value displays opaque color channels, while its percentage represents alpha; the full computed paint remains available in the title and picker. Unsupported color notation leaves the opacity field unavailable instead of substituting a different gamut.
+
+All 1,548 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass 50/0/100% rendered sRGB pixels, restoration from full transparency, preserved color channels, Display P3 channel/alpha checks, unchanged neighboring paints and all seven framing properties, responsive inheritance and exact source undo. The direct picker and existing mixed-paint workflow also pass. The final light-theme row, separate alpha field and transparency checker were visually inspected.
+
+Solid/gradient visibility, broader gradient opacity, the wider Figma feature/fidelity scope, arbitrary-site support and trusted native/Homebrew distribution remain incomplete. No native app was rebuilt or published.
