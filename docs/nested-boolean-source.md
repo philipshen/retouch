@@ -170,7 +170,17 @@ selected. Invalid own or ancestor paths reject the entire source transaction.
 
 Source tests cover all three adapters, base/non-base removal, a nested target,
 retained-group subtree removal, and refusal to remove the final operand. The
-full unit suite passes 1,428 tests. Browser computation, removal controls,
-lock handling, and end-to-end history verification for this operation remain
-unfinished. Removing the final original will need a separate empty-group or
+full unit suite passes 1,428 tests. The inspector exposes a Remove control beside each original. Browser
+preparation recalculates the target and enclosing results, restoring the DOM
+before saving. Lock checks run before preparation and before the source POST.
+Browser tests cover primitive and retained-subtree removal, base reassignment,
+paint preservation, CSS refusal, exact undo/redo, and retained document state. Removing the final original will need a separate empty-group or
 group-deletion behavior.
+
+Removal browser verification passes on HTML/Chromium, Liquid/Chromium, and
+React/WebKit. The workflow removes the nested Union subtree from its top-level
+parent, then separately removes Base and Cut inside the restored nested group.
+It checks native filled-area samples, retained combined paint, disabled removal
+of the final original, lock refusal, outer CSS-result refusal with exact DOM
+restoration, source undo/redo, and retained document/input state. The full unit
+suite passes 1,428 tests.
