@@ -16565,3 +16565,13 @@ The Liquid workflow verifies the new default and hidden sizing controls. Existin
 management workflows explicitly expand controls before editing them. A rendered
 Chromium capture confirms the first preview moves higher and the next screen
 begins within the visible rail.
+
+### Discoverable screen controls
+
+The comparison toolbar now uses a visible **Controls** label with accessible name
+**Screen controls**, replacing the focus icon. `aria-expanded` describes whether
+the management controls are visible. The button fits the minimum rail width and
+works from the keyboard without replacing preview documents or form state.
+Chromium and WebKit panel workflows cover the label, expanded state, narrow
+toolbar fit, keyboard toggle, and retained documents; the WebKit capture was
+visually inspected.
