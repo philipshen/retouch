@@ -25,3 +25,12 @@ test('removing and resetting an image fill preserves other paint and screen vari
  const removed=F.classes(before,{'background-image':'none'});assert.ok(removed.endsWith('!bg-none'));assert.ok(removed.includes('bg-blue-500'));assert.ok(removed.includes('md:bg-contain'));assert.ok(!removed.includes('var('));
  assert.equal(F.classes(removed,F.reset()),'text-red-500 bg-blue-500 shadow-lg md:bg-contain');
 });
+
+test('crop preview uses the CSS background positioning area and preserves source framing for tiles',()=>{
+ const css={width:'240px',height:'160px',boxSizing:'border-box',paddingLeft:'10px',paddingRight:'10px',paddingTop:'20px',paddingBottom:'20px',borderLeftWidth:'2px',borderRightWidth:'2px',borderTopWidth:'3px',borderBottomWidth:'3px',backgroundSize:'cover',backgroundRepeat:'no-repeat',backgroundPosition:'25% 75%'};
+ assert.deepEqual(F.cropFrame(css,400,200),{width:236,height:154,objectFit:'cover',objectPosition:'25% 75%'});
+ assert.equal(F.cropFrame({...css,backgroundOrigin:'content-box'},400,200).width,216);
+ assert.equal(F.cropFrame({...css,backgroundOrigin:'border-box'},400,200).height,160);
+ assert.equal(F.cropFrame({...css,boxSizing:'content-box'},400,200).width,260);
+ assert.deepEqual(F.cropFrame({...css,backgroundRepeat:'repeat'},400,200),{width:400,height:200,objectFit:'contain',objectPosition:'50% 50%'});
+});

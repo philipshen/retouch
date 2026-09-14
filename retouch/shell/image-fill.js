@@ -18,6 +18,13 @@
   const px=value=>Number(value.toFixed(6))+'px';
   return {'background-size':mode==='tile'?px(width*percent/100)+' '+px(height*percent/100):mode==='fill'?'cover':'contain','background-repeat':mode==='tile'?'repeat':'no-repeat','background-position':mode==='tile'?'0% 0%':'50% 50%'};
  }
+ function cropFrame(css,width,height){
+  const mode=css.backgroundRepeat==='no-repeat'&&['cover','contain'].includes(css.backgroundSize)?css.backgroundSize:null;
+  if(!mode)return {width,height,objectFit:'contain',objectPosition:'50% 50%'};
+  const px=name=>parseFloat(css[name])||0,borderX=px('borderLeftWidth')+px('borderRightWidth'),borderY=px('borderTopWidth')+px('borderBottomWidth'),paddingX=px('paddingLeft')+px('paddingRight'),paddingY=px('paddingTop')+px('paddingBottom');
+  const contentWidth=px('width')-(css.boxSizing==='border-box'?paddingX+borderX:0),contentHeight=px('height')-(css.boxSizing==='border-box'?paddingY+borderY:0),origin=css.backgroundOrigin||'padding-box';
+  return {width:contentWidth+(origin==='content-box'?0:paddingX)+(origin==='border-box'?borderX:0),height:contentHeight+(origin==='content-box'?0:paddingY)+(origin==='border-box'?borderY:0),objectFit:mode,objectPosition:css.backgroundPosition};
+ }
  function reset(){return Object.fromEntries(['background-image','background-size','background-repeat','background-position'].map(property=>[property,null]));}
  function classes(before,changes){
   let next=before;
@@ -60,6 +67,17 @@
     const input=I.number(content,'Image tile scale (%)',percent,1,1000,value=>{if(value>=1&&value<=1000)write({'background-size':framing('tile',width,height,value)['background-size']});});input.step='any';input.value=String(Number(percent.toFixed(6)));
     I.note(content,'Scale is relative to the original image. Tiles repeat as the frame grows.');
    }
+   if(upload){
+    const crop=I.button('Crop image fill',event=>{
+     if(!allowed())return;event.currentTarget.focus({preventScroll:true});
+     const frame=cropFrame(css,width,height);
+     root.RetouchImageCrop.open({target:el,source:image,frame,scopeNote:'Applies to this screen scope and inheriting sizes. The original is kept.',current:()=>allowed()&&source(el.ownerDocument.defaultView.getComputedStyle(el).backgroundImage)===url,onError:message=>{status.textContent=message;},onApply:async blob=>{
+      const next=await upload(new File([blob],'cropped-fill.svg',{type:'image/svg+xml'}));await replace(next,true);
+      const rendered=source(el.ownerDocument.defaultView.getComputedStyle(el).backgroundImage),filename=new URL(next,el.ownerDocument.location.href).pathname.split('/').pop();
+      if(!rendered||!new URL(rendered,el.ownerDocument.location.href).pathname.endsWith('/'+filename))throw Error('The cropped fill could not be applied.');
+     }});
+    });content.append(crop);if(mode==='tile'||mode==='custom')I.note(content,'Edit the source image; existing size, position and repetition are preserved.');
+   }
    const coordinates=css.backgroundPosition.split(/\s+/),fields=[];
    for(const [index,label]of ['Image fill horizontal position (%)','Image fill vertical position (%)'].entries()){
     const input=document.createElement('input');input.type='number';input.min='0';input.max='100';input.step='any';input.required=true;input.value=/^[-\d.]+%$/.test(coordinates[index]||'')?parseFloat(coordinates[index]):'';input.placeholder=coordinates[index]||'Custom';I.field(content,label,input);fields.push(input);
@@ -71,5 +89,5 @@
   image.onerror=()=>{if(section.isConnected){content.replaceChildren();I.note(content,'The background image could not be loaded.');}};
   image.src=url;return section;
  }
- const api={source,paint,scale,framing,reset,classes,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchImageFill=api;
+ const api={source,paint,scale,framing,cropFrame,reset,classes,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchImageFill=api;
 })(typeof window==='object'?window:globalThis);

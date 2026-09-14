@@ -1,0 +1,20 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+exports.run=async({page,app,file,wait,settled,kind})=>{
+ const read=()=>fs.readFileSync(file,'utf8'),original=read(),target=app.locator('h1'),background=()=>target.evaluate(el=>getComputedStyle(el).backgroundImage),initial=await background();
+ await app.locator('input').evaluate(el=>{el.value='retained';window.fillCropIdentity=window.fillCropOriginal={};});
+ const size=async value=>{await page.getByLabel('Screen size',{exact:true}).selectOption(value);await wait(()=>app.locator('body').evaluate((el,width)=>innerWidth===width,Number(value.split('x')[0])));await settled();};
+ const initialFraming=await target.evaluate(el=>{const css=getComputedStyle(el);return [css.backgroundSize,css.backgroundPosition,css.backgroundRepeat];});
+ await size('768x1024');await page.getByLabel('Style screen scope').selectOption(kind==='html'?'min-[768px]:':'md:');
+ const open=async()=>{await page.getByRole('button',{name:'Crop image fill',exact:true}).click();await page.getByRole('button',{name:'Apply crop',exact:true}).waitFor();await wait(()=>page.getByRole('button',{name:'Apply crop',exact:true}).isEnabled());};
+ await open();await page.getByLabel('Image zoom (%)',{exact:true}).fill('200');await page.getByRole('button',{name:'Cancel',exact:true}).click();assert.equal(read(),original);
+ let uploads=0;page.on('request',request=>{if(request.url().includes('/rt/__api/upload?'))uploads++;});
+ await open();await page.getByLabel('Image zoom (%)',{exact:true}).fill('200');await page.getByLabel('Image saturation (%)',{exact:true}).fill('-100');if(process.env.RT_E2E_IMAGE_FILL_CROP_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_IMAGE_FILL_CROP_SCREENSHOT});await page.getByRole('button',{name:'Apply crop',exact:true}).click();await page.getByRole('dialog',{name:'Crop image',exact:true}).waitFor({state:'hidden'});await settled();await wait(async()=>(await background()).includes('cropped-fill.svg'));assert.equal(uploads,1);assert.notEqual(read(),original);assert.deepEqual(await target.evaluate(el=>{const css=getComputedStyle(el);return [css.backgroundSize,css.backgroundPosition,css.backgroundRepeat];}),initialFraming);
+ await target.evaluate(el=>new Promise((resolve,reject)=>{const image=new Image();image.onload=resolve;image.onerror=reject;image.src=getComputedStyle(el).backgroundImage.slice(5,-2);}));
+ const pixels=await require(path.join(process.env.RT_INSPECTOR_FIXTURE,'node_modules/sharp'))(await target.screenshot()).removeAlpha().raw().toBuffer({resolveWithObject:true}),offset=(100*pixels.info.width+30)*3,[r,g,b]=pixels.data.subarray(offset,offset+3);assert.ok(Math.abs(r-g)<=1&&Math.abs(g-b)<=1&&r>0&&r<250,'adjustment renders grayscale');
+ const changed=await background();await open();assert.equal(await page.getByLabel('Image zoom (%)',{exact:true}).inputValue(),'200');assert.equal(await page.getByLabel('Image saturation (%)',{exact:true}).inputValue(),'-100');await page.getByRole('button',{name:'Cancel',exact:true}).click();
+ await size('390x844');assert.equal(await background(),initial);await size('768x1024');assert.equal(await background(),changed);
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(async()=>await background()===initial);
+ assert.deepEqual(await app.locator('input').evaluate(el=>[el.value,window.fillCropIdentity===window.fillCropOriginal]),['retained',true]);
+ console.log(kind+': PASS background crop/adjustment pixels, canceled draft, recipe reopening, screen isolation, one upload and exact single undo with retained state');
+};
