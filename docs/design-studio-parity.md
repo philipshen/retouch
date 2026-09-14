@@ -17017,3 +17017,13 @@ The color picker previews both solid stops together and Cancel restores the orig
 The RT_E2E_PAINT_SOLID=1 browser workflow checks solid addition, rendered gray/red pixels, color editing, green draft preview and cancellation, solid/gradient conversion, preserved neighboring paints and Liquid asset bindings, phone inheritance, exact source undo and retained input/document identity. HTML/Chromium, React/Chromium and Liquid/WebKit pass. All 1,545 unit tests pass. The light-theme solid popover was visually inspected.
 
 This does not yet unify the separate background-color and image-stack sections, implement image-paint opacity/visibility, or establish complete Figma or arbitrary-site parity. The signed native candidate was not rebuilt; notarized Homebrew distribution remains incomplete.
+
+### Keep paint controls when only one fill remains — 2026-09-14
+
+Recognized gradient-only stacks now keep the same paint rows and popovers as mixed stacks, including when a solid is converted to a gradient. Solid-to-radial/angular conversion supplies valid center and shape defaults. The final solid or gradient can be removed directly from its row, producing an explicit scoped `background-image: none` while preserving framing. A new paint can then be added through the same menu. Liquid's gradient, framing and ordering operations now accept a one-paint stack, while still refusing empty stacks for those operations.
+
+Shared popover controls use Paint labels, keeping them distinct from the existing advanced Gradient controls. The legacy advanced controls remain available; consolidation of the background-color, gradient and image sections is still incomplete.
+
+RT_E2E_PAINT_SINGLE=1 removes both images, edits the remaining solid, converts through Linear/Radial/Angular/Solid, changes blend mode, removes the last paint, rebuilds it from empty and verifies the gradient popover remains open. It checks computed gradient type and stops, rendered colors, phone inheritance, exact source undo, and retained document/input state. WebKit's converted-gradient pixel check allows one channel level of raster rounding while requiring exact red computed stops. All 1,546 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass the combined single-paint, solid-paint, add/reorder and existing image/crop/source-state workflow. The advanced gradient workflow also passes on Liquid/Chromium. The screenshot confirms that the shared popover remains available after conversion; it also shows the still-duplicated advanced gradient section, so full visual consolidation is not claimed.
+
+No native bundle was rebuilt or published in this batch. Full Figma fidelity, arbitrary-site support and notarized Homebrew distribution remain incomplete.

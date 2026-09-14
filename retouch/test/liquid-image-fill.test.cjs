@@ -60,3 +60,12 @@ test('Liquid paint framing preserves asset declarations and image class bindings
  const base=edit(original).edits[0].after,reference=base.match(/var\(--rt-image-fill-[a-f0-9]+\)/)[0],result=liquid.planOp(resolved(base),{type:'setImageFill',fileHash:liquid.contentHash(base),scope:'md:',action:'frame',stack:{layers:['linear-gradient(red,blue)',reference],index:1,framing:{'background-size':'contain'},changes:{'background-size':'cover','background-blend-mode':'multiply'}}});
  assert.equal(result.ok,true,result.reason);const after=result.edits[0].after;assert.equal((after.match(/asset_url/g)||[]).length,1);assert.ok(after.includes(reference));assert.ok(after.includes('md:![background-size:contain,_cover]'));assert.ok(after.includes('md:![background-blend-mode:normal,_multiply]'));
 });
+
+test('Liquid edits and duplicates a single remaining paint without requiring an image neighbor',()=>{
+ const paint='linear-gradient(0deg, red 0%, red 100%)',source='<h1 class="bg-cover md:![background-image:linear-gradient(0deg,_red_0%,_red_100%)]">Headline</h1>';
+ const run=(action,stack)=>liquid.planOp(resolved(source),{type:'setImageFill',fileHash:liquid.contentHash(source),scope:'md:',action,stack});
+ const gradient=run('gradient',{layers:[paint],index:0,value:'radial-gradient(ellipse at 50% 50%, blue 0%, blue 100%)'});assert.equal(gradient.ok,true,gradient.reason);assert.ok(gradient.edits[0].after.includes('md:![background-image:radial-gradient('));assert.ok(gradient.edits[0].after.includes('bg-cover'));
+ const frame=run('frame',{layers:[paint],index:0,changes:{'background-blend-mode':'multiply'}});assert.equal(frame.ok,true,frame.reason);assert.ok(frame.edits[0].after.includes('md:![background-blend-mode:multiply]'));
+ const duplicate=run('order',{layers:[paint],order:[0,0]});assert.equal(duplicate.ok,true,duplicate.reason);assert.ok(duplicate.edits[0].after.includes('linear-gradient(0deg,_red_0%,_red_100%),_linear-gradient'));
+ for(const action of ['gradient','frame','order'])assert.equal(run(action,{layers:[],index:0,order:[],value:paint,changes:{'background-blend-mode':'multiply'}}).refused,true);
+});
