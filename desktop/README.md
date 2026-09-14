@@ -1,6 +1,34 @@
 # Retouch for macOS
 
-## Current mask-canvas candidate — verification incomplete
+## Current preview-state development archive — 2026-09-14
+
+Clean commit `df69eab7725eda86b90a9b5358bdc0edfa0a85af` is packaged in
+`/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/Retouch-0.1.0-mac.zip`.
+SHA-256: `8d56bc1ea2a5fa2f9ffc8f0e798d4e2ffbbb38c53b10ed92560ae63b1e8d7ecd`.
+
+The universal arm64/x86_64 app includes the Next preview fixes: bounded waiting
+for delayed hot updates and tracking completed build hashes when comparison
+frames connect. All 223 source hashes and native build inputs match the checkout.
+The extracted runtime passed 1,320 unit tests and ten browser workflows covering
+HTML/Liquid/React masks, comparison screens, canvas gestures, export and screen
+controls across Chromium/WebKit. React checks delay hot updates by two seconds
+while preserving WebSocket message order and assert retained document/input state.
+All 25 desktop tests and package-integrity mutation checks passed.
+
+The exact ZIP installed and uninstalled through an isolated local Homebrew tap,
+with quarantine intact and original cask/formula/tap inventories restored. The
+sibling `retouch-studio.rb` is a syntax-checked cask bound to this archive.
+
+An earlier Chromium failure is retained in the receipt: the original delay test
+could let new messages overtake queued messages. Both engines passed after the
+test preserved transport order. These checks establish the covered workflows,
+not universal editing or state preservation across arbitrary sites.
+
+This is an ad hoc development archive. Native launch, notarization, public
+Homebrew distribution and Intel execution remain unverified.
+See the [verification receipt](verification/2026-09-14-preview-state.json).
+
+## Previous mask-canvas candidate — verification incomplete
 
 Clean commit `120ac836ffb3cc2c3fead5b70ae64d45b1a083aa` is packaged in
 `/Users/philipshen/Developer/retouch-worktrees/desktop-masks-120ac83/Retouch-0.1.0-mac.zip`.

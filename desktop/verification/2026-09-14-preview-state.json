@@ -1,0 +1,307 @@
+{
+  "sourceCommit": "df69eab7725eda86b90a9b5358bdc0edfa0a85af",
+  "sourceFiles": 223,
+  "sourceTreeDirty": false,
+  "sourceManifestMatchedCheckout": true,
+  "nativeBuildInputsMatchedCheckout": true,
+  "status": "Development archive: scoped runtime and isolated Homebrew verification passed; native launch and trusted distribution remain unverified",
+  "archive": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/Retouch-0.1.0-mac.zip",
+  "sha256": "8d56bc1ea2a5fa2f9ffc8f0e798d4e2ffbbb38c53b10ed92560ae63b1e8d7ecd",
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "unitsPassed": 1320,
+  "desktopTestsPassed": 25,
+  "workflows": [
+    {
+      "name": "mask-liquid-chromium",
+      "args": [
+        "test/e2e/svg-mask-controls.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "liquid",
+        "RT_E2E_BROWSER": "chromium",
+        "RT_E2E_MASK_DUPLICATE": "1",
+        "RT_E2E_MASK_GROUP_TRANSFORM": "1",
+        "RT_E2E_MASK_CANVAS": "1",
+        "RT_E2E_MASK_OUTLINES": "1",
+        "RT_E2E_MASK_COMPARE": "1"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 18527,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/mask-liquid-chromium.log",
+      "logSha256": "3787c151ded55a8f87d5b665f479dda62460ab5c3a6e3ed6e7b864a9bcea358c",
+      "testSha256": "d6aae525bc5bc54d0519a92a019cb02b7d94872782f26c0fb7d2e921a19e0757"
+    },
+    {
+      "name": "mask-html-chromium",
+      "args": [
+        "test/e2e/svg-mask-controls.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "html",
+        "RT_E2E_BROWSER": "chromium",
+        "RT_E2E_MASK_DUPLICATE": "1",
+        "RT_E2E_MASK_GROUP_TRANSFORM": "1",
+        "RT_E2E_MASK_CANVAS": "1",
+        "RT_E2E_MASK_OUTLINES": "1",
+        "RT_E2E_MASK_COMPARE": "1"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 18878,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/mask-html-chromium.log",
+      "logSha256": "41319855b681a4f3262561b17f28ee0ed6c6f8541acfbacaee900f67f086bd25",
+      "testSha256": "d6aae525bc5bc54d0519a92a019cb02b7d94872782f26c0fb7d2e921a19e0757"
+    },
+    {
+      "name": "mask-html-webkit",
+      "args": [
+        "test/e2e/svg-mask-controls.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "html",
+        "RT_E2E_BROWSER": "webkit",
+        "RT_E2E_MASK_DUPLICATE": "1",
+        "RT_E2E_MASK_GROUP_TRANSFORM": "1",
+        "RT_E2E_MASK_CANVAS": "1",
+        "RT_E2E_MASK_OUTLINES": "1",
+        "RT_E2E_MASK_COMPARE": "1"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 22022,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/mask-html-webkit.log",
+      "logSha256": "445ff0959f64efa59ad4056a05aa029b0e52112d6f5465db8f81828ca142ed27",
+      "testSha256": "d6aae525bc5bc54d0519a92a019cb02b7d94872782f26c0fb7d2e921a19e0757"
+    },
+    {
+      "name": "mask-liquid-webkit",
+      "args": [
+        "test/e2e/svg-mask-controls.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "liquid",
+        "RT_E2E_BROWSER": "webkit",
+        "RT_E2E_MASK_DUPLICATE": "1",
+        "RT_E2E_MASK_GROUP_TRANSFORM": "1",
+        "RT_E2E_MASK_CANVAS": "1",
+        "RT_E2E_MASK_OUTLINES": "1",
+        "RT_E2E_MASK_COMPARE": "1"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 22217,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/mask-liquid-webkit.log",
+      "logSha256": "c53f42086ae4254c01112a30866c5558d00585c34a9a7fa1792b0c9dcff225c0",
+      "testSha256": "d6aae525bc5bc54d0519a92a019cb02b7d94872782f26c0fb7d2e921a19e0757"
+    },
+    {
+      "name": "screens-chromium",
+      "args": [
+        "test/e2e/compact-screens.cjs"
+      ],
+      "env": {
+        "RT_E2E_BROWSER": "chromium"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 2038,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/screens-chromium.log",
+      "logSha256": "28ddb0e6330ae526e5cf3fe442fd57c869c2be141a9097f0a73730de0ed13805",
+      "testSha256": "99f5f0c8f22ab4ed39906114c289c0131b9012d817aa5750dc8aca7b27cd89fb"
+    },
+    {
+      "name": "export-webkit",
+      "args": [
+        "test/e2e/svg-mask-export.cjs"
+      ],
+      "env": {
+        "RT_E2E_BROWSER": "webkit"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 2557,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/export-webkit.log",
+      "logSha256": "dbcbdb126bf040c3910170fef1b37269c4e8649301f6f93b5549fff05b16900e",
+      "testSha256": "020437338ccab37b93e80804ad444f9c1ecc65bf362b042f989559a2f60739fd"
+    },
+    {
+      "name": "screens-webkit",
+      "args": [
+        "test/e2e/compact-screens.cjs"
+      ],
+      "env": {
+        "RT_E2E_BROWSER": "webkit"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 2584,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/screens-webkit.log",
+      "logSha256": "cfc3ab123a96e27216e46b11ebd47638acf27650e9dd52e0e8f4a46542f578ab",
+      "testSha256": "99f5f0c8f22ab4ed39906114c289c0131b9012d817aa5750dc8aca7b27cd89fb"
+    },
+    {
+      "name": "export-chromium",
+      "args": [
+        "test/e2e/svg-mask-export.cjs"
+      ],
+      "env": {
+        "RT_E2E_BROWSER": "chromium"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 2629,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/export-chromium.log",
+      "logSha256": "39f5d4797c43e1e0f9e3736a7ca2ffcd5ceda6acd58d0955ab84412dd6a859d1",
+      "testSha256": "020437338ccab37b93e80804ad444f9c1ecc65bf362b042f989559a2f60739fd"
+    },
+    {
+      "name": "mask-react-chromium",
+      "exitCode": 0,
+      "env": {
+        "RT_E2E_RENDERER": "react",
+        "RT_E2E_BROWSER": "chromium",
+        "RT_E2E_MASK_DELAYED_HMR": "1",
+        "RT_E2E_MASK_DUPLICATE": "1",
+        "RT_E2E_MASK_GROUP_TRANSFORM": "1",
+        "RT_E2E_MASK_CANVAS": "1",
+        "RT_E2E_MASK_OUTLINES": "1",
+        "RT_E2E_MASK_COMPARE": "1"
+      },
+      "testHashes": {
+        "test/e2e/svg-mask-controls.cjs": "8d06b7a49dd0383129f02d1c6f8989df118190ec107fc6f5948df30b9bee1391",
+        "test/e2e/mask-canvas.cjs": "96ac802ca612dd8fd0c048e6ca8d3ef5460bfee6e230f4b88f5d923c3181f544",
+        "test/e2e/mask-group-transform.cjs": "43646afa643e8b775a296b90d97301c6d22da0ec03106e324a834c2628d2b231"
+      },
+      "evidence": {
+        "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/react-ordered-chromium.log",
+        "sha256": "565414f28c8165ebc4fe061b318b8b4178fbadb500bd0eacdf2f4d409924d28a"
+      }
+    },
+    {
+      "name": "mask-react-webkit",
+      "exitCode": 0,
+      "env": {
+        "RT_E2E_RENDERER": "react",
+        "RT_E2E_BROWSER": "webkit",
+        "RT_E2E_MASK_DELAYED_HMR": "1",
+        "RT_E2E_MASK_DUPLICATE": "1",
+        "RT_E2E_MASK_GROUP_TRANSFORM": "1",
+        "RT_E2E_MASK_CANVAS": "1",
+        "RT_E2E_MASK_OUTLINES": "1",
+        "RT_E2E_MASK_COMPARE": "1"
+      },
+      "testHashes": {
+        "test/e2e/svg-mask-controls.cjs": "8d06b7a49dd0383129f02d1c6f8989df118190ec107fc6f5948df30b9bee1391",
+        "test/e2e/mask-canvas.cjs": "96ac802ca612dd8fd0c048e6ca8d3ef5460bfee6e230f4b88f5d923c3181f544",
+        "test/e2e/mask-group-transform.cjs": "43646afa643e8b775a296b90d97301c6d22da0ec03106e324a834c2628d2b231"
+      },
+      "evidence": {
+        "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/react-ordered-webkit.log",
+        "sha256": "6e89291ac6dc2360317922b41332adf6c82ec20a6821a72b860a6ca57ac750a0"
+      }
+    }
+  ],
+  "homebrew": {
+    "result": "passed",
+    "checks": [
+      {
+        "version": "0.1.0",
+        "sha256": "8d56bc1ea2a5fa2f9ffc8f0e798d4e2ffbbb38c53b10ed92560ae63b1e8d7ecd",
+        "verification": {
+          "sourceCommit": "df69eab7725eda86b90a9b5358bdc0edfa0a85af",
+          "sourceTreeDirty": false,
+          "sourceFiles": 223,
+          "architectures": [
+            "arm64",
+            "x86_64"
+          ],
+          "signature": "strict verification passed; trust and notarization are separate checks"
+        },
+        "manifestMatchesArchive": true,
+        "quarantine": "0381;6aa79db9;;868D9247-07B3-4CFD-8915-8DCFEB5B4BB6",
+        "registered": "retouch-studio 0.1.0"
+      }
+    ],
+    "originalInventoriesRestored": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "nativeLaunch": "not attempted",
+    "trustedDistribution": "not established; the archive is an ad hoc signed development fixture"
+  },
+  "localCask": {
+    "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/retouch-studio.rb",
+    "sha256": "04f0c6543a479571c78a8c841fb45aee808b61e18b1efa47efcec58357247f8e"
+  },
+  "testCorrections": [
+    "Wait for the animation-frame mask outline to become visible.",
+    "Wait for comparison client mounts before test-only SVG width mutation.",
+    "Preserve WebSocket message order when artificial delivery delay ends."
+  ],
+  "earlierFailure": {
+    "symptom": "The initial packaged Chromium run lost an unsaved input value during transformed-mask history.",
+    "limitation": "The delay harness could reorder messages when disabled, unlike WebSocket transport. The corrected ordered-delivery workflow passed in both engines; this does not prove universal state preservation.",
+    "evidence": [
+      {
+        "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/mask-react-chromium.log",
+        "sha256": "90659361bc2634d65f279f7e47187e0f44fa09346750f88d7239106755c106d2"
+      },
+      {
+        "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/react-trace.log",
+        "sha256": "0a5c02f9f3c175db6d9cd9d40e4f26a8ac5af634ce6be903cdb21ab934bddd71"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/packaged-units.log",
+      "sha256": "0e72278ec75f2ea455dd8e51636db810eb5b804ca4b9dc5dd81b575445f662aa"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/desktop-tests.log",
+      "sha256": "d89f4fc8873d88dd5328b605b2052531f9b47f9ddd7d1797850216bf087873d2"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/package-verifier.log",
+      "sha256": "74b828d723af4fd2aedf9d9659f758c79ae68b1fb5ed392628c83904dc4abed2"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/homebrew.log",
+      "sha256": "bbdf43b72e00922fc0b95d68742105b8d4504ac7bae48f6c8550b6348d20949b"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/before.json",
+      "sha256": "648268e5c64cbaf9e12817a3eb25741e9e2acfde776970d0d80b46f53ecb8396"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/after.json",
+      "sha256": "648268e5c64cbaf9e12817a3eb25741e9e2acfde776970d0d80b46f53ecb8396"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/result.json",
+      "sha256": "972a4a4a1f3f6788444d6f83fc1d3af59982dfb46382cc3803037fda47bd1cf1"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/verify-runtime.cjs",
+      "sha256": "fa8b15a1fa21675c6c0a3affa44b9fc839daf8414423416286ea8368eb8b0ccc"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/verify-runtime-remaining.cjs",
+      "sha256": "f7225a8cbfe47c3441d9f8a28ef9a0a82857301a061da1c8021ba435a9411fc3"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/verify-homebrew.cjs",
+      "sha256": "07f100f1bf7dd5509190efe846c0fa815e3ff86b1896242161dc1c41dcc74e70"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/ordered-test-hashes.json",
+      "sha256": "62346050c630ec054d7b5a2056c4527bc8301771e46615cf7289ebf161206683"
+    }
+  ],
+  "nativeLaunch": "not run",
+  "notarization": "not performed",
+  "publicRelease": "not published",
+  "intelExecution": "not verified"
+}

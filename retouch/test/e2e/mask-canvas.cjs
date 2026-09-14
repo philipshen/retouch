@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 module.exports=async({page,app,read,wait,settled,masked,pixel})=>{
  const shape=app.locator('mask circle'),handle=page.getByRole('button',{name:'Resize vector from right',exact:true});
  await handle.waitFor({state:'visible'});assert.equal(await page.evaluate(()=>RetouchSVGResize.reason(doc().querySelector('mask circle'),sel.info,true)),null);
- assert.ok(await page.locator('[data-mask-outlines="app"] path').count());
+ await page.locator('[data-mask-outlines="app"] path').first().waitFor({state:'visible'});
  if(process.env.RT_E2E_MASK_CANVAS_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_MASK_CANVAS_SCREENSHOT});
  const box=await handle.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+20,box.y+box.height/2,{steps:4});assert.equal(read(),masked,'drag previews before committing one gesture');await page.mouse.up();await settled();await wait(()=>read()!==masked);const resized=read();assert.ok(await shape.getAttribute('transform'));assert.notDeepEqual(await pixel(90,40),[255,255,255]);
  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===masked);assert.deepEqual(await pixel(90,40),[255,255,255]);

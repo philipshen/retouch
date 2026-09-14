@@ -12,6 +12,6 @@ module.exports=async({page,app,read,wait,settled,masked,pixel})=>{
  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===moved);await page.getByRole('button',{name:'Release mask',exact:true}).waitFor();assert.deepEqual(await pixel(110,40),[255,255,255]);
  await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===released);assert.deepEqual(await pixel(110,40),[0,0,255]);
  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===moved);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===masked);
- assert.equal(await app.locator('input').inputValue(),'retained');assert.equal(await app.locator('input').evaluate(()=>window.maskDocument),'same');
+ assert.deepEqual(await app.locator('input').evaluate(el=>({value:el.value,document:window.maskDocument})),{value:'retained',document:'same'});
  console.log('Transformed mask: editable type, retained transform on release, exact history and rendered pixels PASS');
 };
