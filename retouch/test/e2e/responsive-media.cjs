@@ -55,5 +55,14 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
  await page.addStyleTag({content:'@media(min-width:768px){.alternate\\:opacity{opacity:.3}}'});assert.equal(await page.evaluate(()=>RetouchResponsive.atWidth(document,innerWidth).prefix),'min-[768px]:');
  await page.addStyleTag({content:'@media(50rem <= width){.reversed\\:opacity{opacity:.2}}'});await page.setViewportSize({width:800,height:844});assert.equal(await page.evaluate(()=>RetouchResponsive.atWidth(document,innerWidth).prefix),'reversed:');
  await page.evaluate(()=>{const style=document.createElement('style');style.media='screen';style.textContent='@media only screen and (min-width:900px){.screened\\:opacity{opacity:.1}}';document.head.append(style);});await page.setViewportSize({width:900,height:844});assert.equal(await page.evaluate(()=>RetouchResponsive.atWidth(document,innerWidth).prefix),'screened:');
+ const rangeQueries=['(max-width:768px)','(width < 768px)','(width > 768px)','(768px <= width < 1024px)','(1024px > width >= 768px)','(min-width:48rem) and (max-width:64rem)','(width:768px)','(768px = width)','(width > 768px) and (width >= 768px) and (width <= 1024px)','only screen and (max-width:8in)'];
+ for(const width of [767,768,769,1023,1024,1025]){
+  await page.setViewportSize({width,height:844});
+  const items=await page.evaluate(queries=>queries.map(condition=>{const choice={prefix:'range:',label:'Range',condition},range=RetouchResponsive.widthRange(choice);return {condition,label:RetouchResponsive.scopeLabel(document,choice),matches:matchMedia(condition).matches,covered:range&&(innerWidth>range.min||range.minInclusive&&innerWidth===range.min)&&(innerWidth<range.max||range.maxInclusive&&innerWidth===range.max)};}),rangeQueries);
+  for(const item of items)assert.equal(item.covered,item.matches,JSON.stringify({width,item}));
+ }
+ assert.equal(await page.evaluate(()=>RetouchResponsive.scopeLabel(document,{prefix:'tablet:',label:'Tablet',condition:'(48rem <= width < 64rem)'})),'768 px to under 1024 px · Tablet');
+ assert.equal(await page.evaluate(()=>RetouchResponsive.scopeLabel(document,{prefix:'phone:',label:'Phone',condition:'(width < 48rem)'})),'Below 768 px · Phone');
+ console.log(engine+': PASS readable phone and tablet ranges agree with native media matching at exact boundaries');
  console.log(engine+': PASS nested and repeated media alternatives, query lists, CSS nesting, runtime CSS agreement, initial rem units and conditional-breakpoint non-reuse');
 }finally{await browser.close();}})().catch(error=>{console.error(error);process.exitCode=1});

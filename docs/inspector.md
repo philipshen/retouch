@@ -99,9 +99,15 @@ The Screen toolbar switches the actual iframe viewport between phone (390 ×
 to 7680 CSS pixels. Rotate swaps dimensions; Fit workspace follows the editor
 window. The chosen size persists in this site's browser storage. Pinch zoom
 changes the visual scale without changing a fixed screen's media queries or
-viewport-height units. Choose **Style changes** in the inspector to edit base styles, a named loaded
+viewport-height units. Choose **Edit styles for** in the inspector to edit base styles, a named loaded
 breakpoint, or the current width and larger. Size previews and write scopes are
 independent; the inspector notes when the chosen breakpoint is outside the preview.
+Width-only scopes use readable labels such as **Below 768 px**, **Up to 768 px**,
+and **768 px to under 1024 px**, followed by the project breakpoint name.
+Phone and bounded tablet ranges sort by their covered widths. Inclusive and
+exclusive boundaries remain distinct; orientation, height, alternatives, and
+other compound conditions retain their full condition text. Labeling a bounded
+range does not turn it into a minimum-width scope for inheritance or authoring.
 Style controls and the advanced class editor operate on that scope, preserving
 other breakpoints and state variants. **Reset overrides at this size** returns to
 inherited styles. Text, image content and HTML tag changes remain shared.

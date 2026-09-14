@@ -130,3 +130,30 @@ test('scope labels describe simple width ranges without losing named identity or
  assert.equal(R.scopeLabel(d,{prefix:'min-[768px]:',condition:'(max-height:500px)'}),'min-[768px] · (max-height:500px)');
  assert.equal(R.scopeLabel(d,{prefix:'',label:'All sizes · base'}),'All sizes · base');
 });
+
+test('phone and bounded scope labels retain strict boundaries, units and named identity',()=>{
+ const d={createElement:()=>({style:{},remove(){}}),documentElement:{append(){}},defaultView:{getComputedStyle:()=>({fontSize:'16px'})}};
+ for(const [condition,label]of [
+  ['(max-width:48rem)','Up to 768 px'],['(width < 48rem)','Below 768 px'],['(48rem > width)','Below 768 px'],
+  ['(width > 768px)','Above 768 px'],['(width:768px)','768 px only'],['(768px = width)','768 px only'],
+  ['(768px <= width < 1024px)','768 px to under 1024 px'],['(1024px > width >= 768px)','768 px to under 1024 px'],
+  ['(min-width:48rem) and (max-width:64rem)','768 px to 1024 px'],['(768px < width <= 1024px)','Above 768 px to 1024 px'],
+  ['(width > 768px) and (width >= 768px) and (width <= 900px)','Above 768 px to 900 px'],
+  ['screen and (max-width:399.5px)','Up to 399.5 px'],['(max-width:6in)','Up to 576 px']
+ ])assert.equal(R.scopeLabel(d,{prefix:'range:',label:'Tablet',condition}),label+' · Tablet',condition);
+ assert.deepEqual(R.widthRange({queries:[['screen','(min-width:48rem)','(max-width:64rem)']]}),{min:768,max:1024,minInclusive:true,maxInclusive:true});
+ for(const condition of ['print and (max-width:600px)','not screen and (max-width:600px)','(width < 600px), (width > 900px)','(min-width:768px) and (orientation:portrait)','(600px < width > 900px)','(900px < width < 600px)','(width > 600px) and (width <= 600px)','(width:1e999px)','(width < var(--size))']){
+  assert.equal(R.widthRange({condition}),null,condition);assert.equal(R.scopeLabel(d,{prefix:'range:',label:'Range',condition}),'Range · '+condition);
+ }
+ assert.equal(R.widthRange({queries:[['(width < 600px)'],['(width > 900px)']]}),null);
+});
+test('phone and tablet ranges sort by covered sizes without changing minimum-width inheritance',()=>{
+ const d={createElement:()=>({style:{},remove(){}}),documentElement:{append(){}},defaultView:{getComputedStyle:()=>({fontSize:'16px'})}},choices=[
+  {prefix:'desktop:',condition:'(min-width:1024px)'},{prefix:'tablet:',condition:'(768px <= width < 1024px)'},
+  {prefix:'phone:',condition:'(width < 768px)'},{prefix:'',label:'All sizes'},
+  {prefix:'wide:',condition:'(min-width:768px)'},{prefix:'portrait:',condition:'(orientation:portrait)'}
+ ];
+ assert.deepEqual(R.orderedScopes(d,choices).map(item=>item.prefix),['','phone:','tablet:','wide:','desktop:','portrait:']);
+ assert.equal(R.inherited('left-0 phone:left-4 tablet:left-8 wide:left-12','desktop:',d,choices),'left-0 left-12');
+ assert.notEqual(R.atWidth(d,768,choices.filter(item=>item.prefix==='tablet:')).prefix,'tablet:');
+});

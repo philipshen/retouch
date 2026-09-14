@@ -66,18 +66,63 @@
   const absolutePixels={px:1,in:96,cm:96/2.54,mm:96/25.4,q:96/101.6,pt:96/72,pc:16};
   const lengthPixels=(value,unit,initial)=>Number(value)*(absolutePixels[unit.toLowerCase()]??initial);
   const minimumLength=item=>{const condition=minimumCondition(item);return condition?.match(/^\(\s*(?:min-width\s*:\s*|width\s*>=\s*)([\d.]+)(px|rem|em|in|cm|mm|q|pt|pc)\s*\)$/i)||condition?.match(/^\(\s*([\d.]+)(px|rem|em|in|cm|mm|q|pt|pc)\s*<=\s*width\s*\)$/i);};
+  // Presentation only: range labels must never broaden source edit scopes or
+  // the separate, minimum-width-only inheritance rules.
+  function widthRange(item,initial=16){
+    if(item?.queries&&item.queries.length!==1)return null;
+    let queries=item?.queries?.[0]||(item?.condition?[item.condition]:[]);
+    if(!queries.length){const arbitrary=/^min-\[(\d+(?:\.\d+)?)(px|rem|em)\]:$/.exec(item?.prefix||'');if(!arbitrary)return null;queries=[`(min-width:${arbitrary[1]}${arbitrary[2]})`];}
+    const length='(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:px|rem|em|in|cm|mm|q|pt|pc)|0';
+    const value=token=>{const match=/^(\d+(?:\.\d+)?|\.\d+)(px|rem|em|in|cm|mm|q|pt|pc)?$/i.exec(token);return match?lengthPixels(match[1],match[2]||'px',initial):null;};
+    const range={min:0,max:Infinity,minInclusive:true,maxInclusive:false};let found=false;
+    function bound(operator,n){
+      if(!Number.isFinite(n))return false;found=true;
+      const lower=operator.startsWith('>'),key=lower?'min':'max',inclusive=operator.includes('=');
+      if(lower?n>range.min:n<range.max){range[key]=n;range[key+'Inclusive']=inclusive;}
+      else if(n===range[key])range[key+'Inclusive']&&=inclusive;
+      return true;
+    }
+    const reverse={'<':'>','<=':'>=','>':'<','>=':'<=','=':'='};
+    for(let query of queries){
+      query=query.trim().replace(/^(?:only\s+)?(?:screen|all)\s+and\s*/i,'');
+      if(/^(?:only\s+)?(?:screen|all)$/i.test(query))continue;
+      for(const part of query.split(/\s+and\s+/i)){
+        let match=new RegExp('^\\(\\s*(min-|max-)?width\\s*:\\s*('+length+')\\s*\\)$','i').exec(part.trim());
+        if(match){const n=value(match[2]);if(!Number.isFinite(n))return null;if(!match[1]){bound('>=',n);bound('<=',n);}else bound(match[1].toLowerCase()==='min-'?'>=':'<=',n);continue;}
+        match=new RegExp('^\\(\\s*(width|'+length+')\\s*(<=|>=|<|>|=)\\s*(width|'+length+')(?:\\s*(<=|>=|<|>)\\s*('+length+'))?\\s*\\)$','i').exec(part.trim());
+        if(!match)return null;
+        const left=match[1].toLowerCase(),right=match[3].toLowerCase();
+        if((left==='width')===(right==='width'))return null;
+        if(match[4]&&(right!=='width'||match[2][0]!==match[4][0]||match[2]==='='))return null;
+        const operator=left==='width'?match[2]:reverse[match[2]],n=value(left==='width'?right:left);
+        if(!Number.isFinite(n))return null;
+        if(operator==='='){bound('>=',n);bound('<=',n);}else if(!bound(operator,n))return null;
+        if(match[4]&&!bound(match[4],value(match[5])))return null;
+      }
+    }
+    return found&&range.min<=range.max&&(range.min!==range.max||range.minInclusive&&range.maxInclusive)?range:null;
+  }
+  function initialFontSize(d){
+    const probe=d.createElement('span');probe.style.cssText='font-size:initial;position:absolute;visibility:hidden';d.documentElement.append(probe);
+    try{return parseFloat(d.defaultView.getComputedStyle(probe).fontSize)||16;}finally{probe.remove();}
+  }
   function scopeLabel(d,item){
     if(!item.prefix)return item.label||'All sizes · base';
-    const match=minimumLength(item)||(!item.condition&&!item.queries?/^min-\[(\d+(?:\.\d+)?)(px|rem|em)\]:$/.exec(item.prefix):null);
-    if(!match)return (item.label||item.prefix.slice(0,-1))+(item.condition?' · '+item.condition:'');
-    const probe=d.createElement('span');probe.style.cssText='font-size:initial;position:absolute;visibility:hidden';d.documentElement.append(probe);const initial=parseFloat(d.defaultView.getComputedStyle(probe).fontSize)||16;probe.remove();
-    const width=lengthPixels(match[1],match[2],initial),value=String(width);
-    return value+' px and larger'+(/^min-\[/.test(item.prefix)?'':' · '+(item.label||item.prefix.slice(0,-1)));
+    const range=widthRange(item,initialFontSize(d));
+    if(!range)return (item.label||item.prefix.slice(0,-1))+(item.condition?' · '+item.condition:'');
+    const number=n=>String(Number(n.toFixed(6))),lo=number(range.min),hi=number(range.max);let label;
+    if(range.min===range.max)label=lo+' px only';
+    else if(range.max===Infinity)label=(range.minInclusive?lo+' px and larger':'Above '+lo+' px');
+    else if(range.min===0&&range.minInclusive)label=(range.maxInclusive?'Up to ':'Below ')+hi+' px';
+    else label=(range.minInclusive?'':'Above ')+lo+' px to '+(range.maxInclusive?'':'under ')+hi+' px';
+    return label+(/^min-\[/.test(item.prefix)?'':' · '+(item.label||item.prefix.slice(0,-1)));
   }
   function orderedScopes(d,choices){
-    const probe=d.createElement('span');probe.style.cssText='font-size:initial;position:absolute;visibility:hidden';d.documentElement.append(probe);const initial=parseFloat(d.defaultView.getComputedStyle(probe).fontSize)||16;probe.remove();
-    const width=item=>{if(!item.prefix)return -Infinity;const match=minimumLength(item)||/^min-\[(\d+(?:\.\d+)?)(px|rem|em)\]:$/.exec(item.prefix);return match?lengthPixels(match[1],match[2],initial):Infinity;};
-    return choices.map(item=>({item,width:width(item)})).sort((a,b)=>a.width-b.width||(a.item.label||a.item.prefix).localeCompare(b.item.label||b.item.prefix)).map(entry=>entry.item);
+    const initial=initialFontSize(d);
+    return choices.map(item=>({item,range:widthRange(item,initial)})).sort((a,b)=>{
+      if(!a.item.prefix||!b.item.prefix)return Number(!!a.item.prefix)-Number(!!b.item.prefix);
+      return (a.range?.min??Infinity)-(b.range?.min??Infinity)||(a.range?.max??Infinity)-(b.range?.max??Infinity)||(a.item.label||a.item.prefix).localeCompare(b.item.label||b.item.prefix);
+    }).map(entry=>entry.item);
   }
   // Anchor fallback for distinct, ascending minimum-width scopes. Complex media
   // conditions and state variants are excluded rather than treated as breakpoints.
@@ -180,7 +225,7 @@
     if(!candidates.length||candidates.length>1&&candidates[0].width===candidates[1].width)return null;
     const {scope,link,label}=candidates[0];return {scope,link,label};
   }
-  const api={scopeLabel,split,project,replaceScope,discover,matches,inherited,atWidth,inheritedLink,previewSize,orderedScopes};
+  const api={widthRange,scopeLabel,split,project,replaceScope,discover,matches,inherited,atWidth,inheritedLink,previewSize,orderedScopes};
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.RetouchResponsive=api;
 })(typeof window==='object'?window:globalThis);
