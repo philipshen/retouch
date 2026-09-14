@@ -2850,7 +2850,7 @@ function imageFillBrowser(info){
  const scope=styleScope,hash=info.hash,serial=classificationSerial;
  return onSelect=>RetouchProjectImages.open({
   current:()=>sel?.info===info&&info.hash===hash&&styleScope===scope&&classificationSerial===serial,
-  list:()=>api('GET','/rt/__api/images'),
+  list:async({query,offset,signal})=>{const response=await fetch('/rt/__api/images?q='+encodeURIComponent(query)+'&offset='+offset+'&limit=60',{headers:{'x-retouch-token':TOKEN},signal});return response.json();},
   preview:async(src,signal)=>{const response=await fetch('/rt/__api/image-preview?src='+encodeURIComponent(src),{headers:{'x-retouch-token':TOKEN},signal});if(!response.ok)throw Error('Preview unavailable');return response.blob();},onSelect
  });
 }

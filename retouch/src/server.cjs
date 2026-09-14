@@ -169,25 +169,8 @@ function handle(req, res, ctx) {
   }
   if (p === '/rt/__api/images' && req.method === 'GET') {
     requireToken(req, ctx.token);
-    const assets = ctx.adapter.assets;
-    if (!assets) return json(res, 409, {ok:false,reason:'This adapter has no static asset directory.'});
-    const dir = path.join(ctx.appRoot, assets.directory);
-    const images = [];
-    function scan(folder, prefix) {
-      if (images.length >= 500 || !fs.existsSync(folder)) return;
-      for (const entry of fs.readdirSync(folder, { withFileTypes: true })) {
-        if (entry.name.startsWith('.') || entry.isSymbolicLink() || assets.excludeDirectories?.includes(entry.name)) continue;
-        const name = prefix + encodeURIComponent(entry.name);
-        if (entry.isDirectory()) scan(path.join(folder, entry.name), name + '/');
-        else if (/\.(png|jpe?g|gif|webp|avif|svg|ico)$/i.test(name)) images.push({ src: name, name: entry.name });
-        if (images.length >= 500) break;
-      }
-    }
-    if (fs.existsSync(dir)) {
-      const root = fs.realpathSync(ctx.appRoot), actual = fs.realpathSync(dir);
-      if (actual === root || actual.startsWith(root + path.sep)) scan(dir, assets.urlPrefix);
-    }
-    return json(res, 200, { ok: true, images });
+    try{return json(res,200,{ok:true,...require('./image-list.cjs').list(ctx.appRoot,ctx.adapter.assets,{query:url.searchParams.get('q')||'',offset:Number(url.searchParams.get('offset')||0),limit:Number(url.searchParams.get('limit')||500)})});}
+    catch(error){return json(res,409,{ok:false,reason:error.message});}
   }
 
   if (p === '/rt/__api/resolve' && req.method === 'GET') {

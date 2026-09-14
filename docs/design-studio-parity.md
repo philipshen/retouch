@@ -16874,3 +16874,13 @@ An authenticated preview endpoint reads contained project image files directly, 
 All 1,531 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit image-fill browser workflows verify loaded thumbnails, matching/empty search states, cancellation without writes, focus return, reuse without an upload request, exact source Undo and retained page state. A further Liquid/WebKit check holds preview requests and verifies they abort on close before successfully reopening and selecting an image. The initial WebKit run exposed missing focus return; the Browse control now explicitly takes focus before opening. The dialog was visually inspected in `/tmp/retouch-project-images.png`. Preview endpoint tests cover authentication, encoded filenames, traversal, external links and non-image files.
 
 This is local asset-picker evidence. It does not prove live Shopify behavior, full image-fill parity, arbitrary-site editing or native distribution readiness.
+
+### Search and page the full project-image catalog — 2026-09-14
+
+The fill picker now searches the full asset directory on the server and displays 60 matches per page, with Load more images and a visible loaded/total count. The old 500-image response size remains the default for existing API clients, but it no longer limits this picker's search. Results have deterministic path ordering; search is case-insensitive and normalizes Unicode so composed and decomposed accented filenames match.
+
+Changing the query cancels the prior list and thumbnail requests, clears the previous rows, and ignores late responses from an older search generation. A failed page can be retried without discarding earlier results. Closing cancels both the pending search timer and requests. This still scans the asset directory for each search; a persistent asset index and live snapshot updates remain future work.
+
+All 1,532 unit tests pass. Adding `RT_E2E_PROJECT_IMAGES_LARGE=1` to the project-image browser workflow creates 650 catalog images and passes HTML/Chromium, React/Chromium and Liquid/WebKit. The checks load the first two pages, find image 649 beyond the former cap, cancel an earlier search, release its delayed response and verify it cannot replace the current results. Existing thumbnail, empty-search, close/cancel, reuse-without-upload, undo and retained-state checks remain in the same workflow. Unit checks cover complete duplicate-free pagination across 650 files, case/Unicode search, excluded directories and invalid page inputs.
+
+The older img-source browser still needs integration with this picker; this batch does not prove full asset-library or Figma parity.
