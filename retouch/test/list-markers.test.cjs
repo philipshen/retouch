@@ -25,5 +25,8 @@ test('marker protocol rejects non-list sources and unbounded CSS',()=>{
  assert.match(validateChildrenTree([keep],0,false,0,()=> 'span'),/marker/);
  assert.equal(validateChildrenTree([keep],0,false,0,()=> 'ul'),null);
  assert.match(validateChildrenTree([{...keep,marker:'url(x)'}],0,false,0,()=> 'ul'),/marker/);
+ assert.equal(patch('<li id="keep">Text</li>','li','none'),'<li id="keep" style="list-style-type: none;">Text</li>');
+ assert.equal(css('list-style-type: none;','inherit'),'list-style-type: inherit;');
+ assert.throws(()=>patch('<li></li>','li','decimal'));
  assert.throws(()=>patch('<div></div>','div','disc'));
 });

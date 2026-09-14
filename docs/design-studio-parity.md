@@ -15009,3 +15009,43 @@ list/paragraph spacing, hanging controls and general paragraph Enter behavior
 outside lists. Unknown source attributes and opaque framework structures still
 need broader source ownership policies. No new desktop bundle or native launch
 was performed. Full Figma Design and arbitrary-site parity remain incomplete.
+
+### 2026-09-14: Backspace removes list markers without moving text
+
+At the beginning of a list item, Backspace now removes its marker while retaining
+its content, hierarchy and indentation. The handler accepts a collapsed caret
+before the first text content, including inside a formatting wrapper. It does
+not handle selected text or an ordinary character deletion within the item.
+A held Backspace removes the marker once; repeated keydown events do not cascade
+into a native list merge. Reapplying Bulleted/Numbered list restores item markers
+through inheritance from the list's depth-aware marker style.
+
+The constrained marker protocol now accepts only `none` or `inherit` on LI
+nodes, including saved source-owned and newly split/copied items. Source writers
+patch list-item CSS using the same attribute-preserving path as list containers.
+Markerless items remain semantic LI nodes, preserving indentation and nested
+children. The normal backward-deletion path is checked before opening a formatting
+transaction, so ordinary held-key deletion keeps its existing undo grouping.
+The equivalent cancellable `beforeinput: deleteContentBackward` event is handled
+as well; this is event-route evidence, not native mobile/IME coverage.
+
+Reference: the marker-removal behavior in
+[Figma's list indentation documentation](https://help.figma.com/hc/en-us/articles/360040449773-Create-bulleted-and-numbered-lists).
+
+All 1,236 unit tests pass (`/private/tmp/retouch-backspace-units.log`), including
+actual HTML/React/Liquid writes of kept and copied item markers, restoration,
+retained source attributes and unique IDs. `RT_E2E_LIST_BACKSPACE=1` verifies
+nested and first-item removal, held-key grouping, ordinary character deletion,
+list-style restoration, source save/reopen, and exact local/source undo/redo.
+It measures text positions before and after removal/save and asserts unchanged
+content and coordinates. Browser logs are
+`/private/tmp/retouch-backspace-{html,react}-final.log`,
+`/private/tmp/retouch-backspace-liquid.log`, and
+`/private/tmp/retouch-backspace-webkit.log` (Chromium 145.0.7632.6; WebKit 26.0).
+Screenshot: `/private/tmp/retouch-backspace.png`.
+
+Still incomplete: subsequent boundary deletion/merging behavior, ordered-counter
+continuation across markerless items, custom pseudo-element markers, cross-level
+selection replacement, automatic list prefixes, spacing/hanging controls, and
+general paragraph Enter behavior outside lists. Desktop packaging/native testing
+was not repeated. The full Figma Design and arbitrary-site goal remains open.

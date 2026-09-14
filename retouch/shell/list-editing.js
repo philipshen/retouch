@@ -60,6 +60,17 @@
   if(el.contains(caret.start)&&el.contains(caret.end)){const restored=d.createRange();restored.setStart(caret.start,caret.from);restored.setEnd(caret.end,caret.to);d.getSelection().removeAllRanges();d.getSelection().addRange(restored);}else restoreSelection(el,offsets);
   return true;
  }
+ function markerItem(el){
+  const context=listContext(el);if(!context||!context.range.collapsed)return false;
+  const item=context.items[0],d=el.ownerDocument,prefix=d.createRange();prefix.selectNodeContents(item);prefix.setEnd(context.range.startContainer,context.range.startOffset);
+  if(prefix.toString().length||prefix.cloneContents().querySelector('br,img,input,ul,ol')||d.defaultView.getComputedStyle(item).listStyleType==='none')return false;
+  return item;
+ }
+ function canRemoveMarker(el){return !!markerItem(el);}
+ function removeMarker(el){
+  const item=markerItem(el);if(!item)return false;
+  item.style.setProperty('list-style-type','none',item.style.getPropertyPriority('list-style-type'));item.__rtListMarker='none';return true;
+ }
  function copyTextShell(node){
   const copy=node.cloneNode(false),source=node.__rtSourceCopy||node.getAttribute('data-rt-keep')||node.getAttribute('data-rt')||node.getAttribute('data-rt-i');
   for(const key of Object.keys(node))if(key.startsWith('__rt'))copy[key]=node[key];
@@ -124,7 +135,8 @@
     }
    }
   }
+  if(kind!=='none')for(const item of el.querySelectorAll('li'))if(item.style.listStyleType){item.style.setProperty('list-style-type','inherit',item.style.getPropertyPriority('list-style-type'));item.__rtListMarker='inherit';}
   syncMarkers(el);restoreSelection(el,offsets);return true;
  }
- const api={supported,state,apply,listContext,canIndent,indent,enter};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
+ const api={supported,state,apply,listContext,canIndent,indent,enter,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
 })(typeof window!=='undefined'?window:null);

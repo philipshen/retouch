@@ -308,6 +308,7 @@ function hookFrame(d, w) {
   d.addEventListener('compositionstart',()=>beginCaretComposition(),true);
   d.addEventListener('compositionend',()=>finishCaretComposition(),true);
   d.addEventListener('beforeinput', (e) => {
+    if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='deleteContentBackward'&&removeListMarker()){e.preventDefault();e.stopPropagation();return;}
     if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertParagraph'&&insertListParagraph()){e.preventDefault();e.stopPropagation();return;}
     if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertLineBreak'){e.preventDefault();e.stopPropagation();insertInlineBreak();return;}
     if(editing&&editing.el.contains(e.target)&&['historyUndo','historyRedo'].includes(e.inputType)&&inlineHistoryCommand(e.inputType==='historyRedo')){e.preventDefault();e.stopPropagation();return;}
@@ -317,6 +318,7 @@ function hookFrame(d, w) {
       e.preventDefault();
     }
   }, true);
+  d.addEventListener('keyup',e=>{if(editing&&e.key==='Backspace')editing.listMarkerBackspace=false;},true);
   d.addEventListener('pointerdown',breakTextHistoryGroup,true);
   d.addEventListener('pointerdown',cancelOpacityEntry,true);
   d.addEventListener('keydown', (e) => {
@@ -326,6 +328,7 @@ function hookFrame(d, w) {
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if(e.isComposing)return;
+      if(e.key==='Backspace'&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!e.shiftKey&&(e.repeat&&editing.listMarkerBackspace||removeListMarker())){editing.listMarkerBackspace=true;e.preventDefault();return;}
       if(e.key==='Enter'&&!e.shiftKey&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&insertListParagraph()){e.preventDefault();return;}
       if(listIndentShortcut(e)||inlineListShortcut(e))return;
       if((e.metaKey||e.ctrlKey)&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='k'){e.preventDefault();editing.focusLink?.();return;}
@@ -1103,6 +1106,11 @@ function selectedInlineTextNodes(root,range){
   return nodes;
 }
 
+function removeListMarker(){
+  const current=editing;if(!current||!RetouchListEditing.canRemoveMarker(current.el))return false;
+  const result=inlineFormattingTransaction(()=>RetouchListEditing.removeMarker(current.el));
+  if(result)current.el.ownerDocument.dispatchEvent(new Event('selectionchange'));return result;
+}
 function insertListCaretText(text){
   const current=editing;if(!current||!text)return false;
   const d=current.el.ownerDocument,selection=d.getSelection();if(!selection.rangeCount)return false;

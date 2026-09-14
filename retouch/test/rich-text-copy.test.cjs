@@ -21,8 +21,8 @@ for(const kind of ['react','html','liquid'])test(kind+' saves split styled list 
   const tag=e=>kind==='react'?e.node.openingElement.name.name:e.tag,resolved=index.resolve(elements.find(e=>tag(e)==='div').id);
   const descriptors=kind==='html'?source.describe(inner,resolved.element.id).descriptor.children:null;
   const ol=kind==='html'?descriptors[0]:elements.find(e=>tag(e)==='ol'),li=kind==='html'?ol.children[0]:elements.find(e=>tag(e)==='li'),span=kind==='html'?li.children[0]:elements.find(e=>tag(e)==='span');
-  const children=[{t:'keep',id:ol.id,children:[{t:'keep',id:li.id,children:[{t:'keep',id:span.id,children:[text('Head')]}]},{t:'copy',id:li.id,children:[{t:'copy',id:span.id,children:[text('line')]}]}]}];
+  const children=[{t:'keep',id:ol.id,children:[{t:'keep',id:li.id,marker:'none',children:[{t:'keep',id:span.id,children:[text('Head')]}]},{t:'copy',id:li.id,marker:'inherit',children:[{t:'copy',id:span.id,children:[text('line')]}]}]}];
   const result=(kind==='react'?writer:adapter).applyOp(resolved,{type:'setChildren',children});assert.equal(result.ok,true,JSON.stringify(result));
-  const saved=fs.readFileSync(file,'utf8');assert.equal((saved.match(/id="first"/g)||[]).length,1);assert.equal((saved.match(/title="Keep > this"/g)||[]).length,2);assert.equal((saved.match(/="emphasis"/g)||[]).length,2);assert.ok(saved.includes('>Head</span></li><li><span'));
+  const saved=fs.readFileSync(file,'utf8');assert.equal((saved.match(/id="first"/g)||[]).length,1);assert.equal((saved.match(/title="Keep > this"/g)||[]).length,2);assert.equal((saved.match(/="emphasis"/g)||[]).length,2);assert.ok(saved.includes('>Head</span></li><li'));assert.ok(saved.includes(kind==='react'?'listStyleType:"none"':'list-style-type: none;'));assert.ok(saved.includes(kind==='react'?'listStyleType:"inherit"':'list-style-type: inherit;'));
  }finally{cleanup(root);}
 });

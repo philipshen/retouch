@@ -27,7 +27,7 @@
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
       if (n.__rtCaretPlaceholder) continue;
-      if(snapshot&&n.__rtSourceCopy&&!n.__rtReplaceRangeStyle){var copied={t:'copy',id:n.__rtSourceCopy,children:serializeChildren(n,snapshot)};if(n.tagName==='A'&&Object.prototype.hasOwnProperty.call(n,'__rtLinkHref'))copied.href=n.__rtLinkHref;append(copied,block(n));continue;}
+      if(snapshot&&n.__rtSourceCopy&&!n.__rtReplaceRangeStyle){var copied={t:'copy',id:n.__rtSourceCopy,children:serializeChildren(n,snapshot)};if(n.tagName==='A'&&Object.prototype.hasOwnProperty.call(n,'__rtLinkHref'))copied.href=n.__rtLinkHref;if(n.tagName==='LI'&&n.__rtListMarker)copied.marker=n.__rtListMarker;append(copied,block(n));continue;}
       if (n.__rtKeep) { append({ t: 'keep', id: n.__rtKeep },block(n)); continue; }
       if (n.nodeType === 3) {
         if (n.textContent) append({ t: 'text', value: n.textContent });
@@ -40,7 +40,7 @@
         var unchanged = typeof before === 'string' ? n.textContent === before : n.innerHTML === before.html;
         var kept={t:'keep',id:id};
         if(n.__rtBlockTag&&n.__rtBlockTag!==(before&&before.tag))kept.tag=n.__rtBlockTag;
-        if(/^(UL|OL)$/.test(n.tagName)&&n.__rtListMarker&&n.__rtListMarker!==before.marker)kept.marker=n.__rtListMarker;
+        if(/^(UL|OL|LI)$/.test(n.tagName)&&n.__rtListMarker&&n.__rtListMarker!==before.marker)kept.marker=n.__rtListMarker;
         if(!unchanged)kept.children=serializeChildren(n,snapshot);
         if(n.tagName==='A'&&Object.prototype.hasOwnProperty.call(n,'__rtLinkHref')&&(n.__rtLinkHref===null||links.valid(n.__rtLinkHref))&&!(before&&typeof before==='object'&&before.href===n.__rtLinkHref))kept.href=n.__rtLinkHref;
         append(kept,block(n));
@@ -76,6 +76,7 @@
       if(/^(UL|OL|LI)$/.test(n.tagName)||n.tagName==='P'&&n.__rtBlockTag==='p'){
         var list={t:'block',tag:n.tagName.toLowerCase(),children:serializeChildren(n,snapshot)};
         if(/^(UL|OL)$/.test(n.tagName)&&n.style&&['disc','decimal','lower-alpha','lower-roman'].includes(n.style.listStyleType))list.marker=n.style.listStyleType;
+        if(n.tagName==='LI'&&n.style&&['none','inherit'].includes(n.style.listStyleType))list.marker=n.style.listStyleType;
         if(snapshot&&n.__rtListTemplate)list.template=n.__rtListTemplate;
         if(n.tagName==='OL'&&n.getAttribute('start')!==null){
           var start=Number(n.getAttribute('start'));

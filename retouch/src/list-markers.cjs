@@ -1,5 +1,5 @@
 'use strict';
-const valid=(tag,value)=>tag==='ul'?value==='disc':tag==='ol'&&['decimal','lower-alpha','lower-roman'].includes(value);
+const valid=(tag,value)=>tag==='ul'?value==='disc':tag==='ol'?['decimal','lower-alpha','lower-roman'].includes(value):tag==='li'&&['none','inherit'].includes(value);
 // Split only at declaration boundaries; quoted URLs, comments, and custom
 // property blocks must remain intact when a marker override is appended.
 function css(value,marker){
@@ -20,7 +20,7 @@ function css(value,marker){
  const important=parts.some(part=>relevant(part)&&/!\s*important\s*;?\s*$/i.test(clean(part)));
  // Replace our trailing canonical override, keeping earlier author CSS exact.
  const last=parts.findLastIndex(part=>part.trim());
- if(last>=0&&/^ ?list-style-type: (?:disc|decimal|lower-alpha|lower-roman)(?: !important)?;$/.test(parts[last]))value=parts.slice(0,last).join('');
+ if(last>=0&&/^ ?list-style-type: (?:disc|decimal|lower-alpha|lower-roman|none|inherit)(?: !important)?;$/.test(parts[last]))value=parts.slice(0,last).join('');
  return value+(value.trim()&&!value.trimEnd().endsWith(';')?';':'')+(value?' ':'')+'list-style-type: '+marker+(important?' !important':'')+';';
 }
 function patch(raw,tag,marker,jsx=false){
