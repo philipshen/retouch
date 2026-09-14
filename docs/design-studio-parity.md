@@ -15487,3 +15487,26 @@ Separate SVG elements, coincident-anchor merging, vector networks/booleans and
 full Figma parity remain open. No new native package was built.
 The final HTML/Chromium workflow also passed after that refactor
 (`/private/tmp/retouch-endpoint-join-html-final.log`, exit 0).
+
+### Pick contour joins on the canvas (2026-09-14)
+
+**Pick endpoints on canvas** shows an accessible button at both endpoints of
+each open contour. Click or keyboard-activate the first endpoint, then one on
+another contour. Endpoints on the first contour become disabled, its chosen
+endpoint is highlighted, and focus advances to a different contour. Joining
+returns to point editing without saving until Done. Escape exits picking while
+retaining earlier pending path edits. Regular point insertion/curve handles are
+hidden during picking; keyboard arrows in endpoint dropdowns no longer leak
+into vector-point movement. The header hint now guides endpoint selection.
+
+HTML Chromium and WebKit passed the pointer/keyboard picking workflow, nested
+cancellation, source persistence and existing exact history checks. Final React
+Chromium and HTML WebKit runs after hiding unrelated handles also passed
+(`/private/tmp/retouch-pick-endpoints-{react,webkit}-final.log`). The React
+screenshot `/private/tmp/retouch-join-pick.png` was inspected; the header hint
+was subsequently corrected. These are single-path contour joins; separate SVG
+elements, coincident-anchor merging, vector networks, booleans and full parity
+remain unfinished. No new native package was produced.
+Final HTML/Chromium verification passed after the hint correction
+(`/private/tmp/retouch-pick-endpoints-html-final.log`); the updated screenshot
+`/private/tmp/retouch-join-pick-final.png` was inspected.

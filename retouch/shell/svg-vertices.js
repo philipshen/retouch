@@ -69,7 +69,7 @@
     listen(optionsToggle,'click',()=>{optionsPanel.style.maxHeight=Math.max(32,toolbar.getBoundingClientRect().top-surface.getBoundingClientRect().top-16)+'px';optionsPanel.style.overflowY='auto';optionsPanel.style.boxSizing='border-box';});
     listen(optionsPanel,'click',event=>{if(event.target.closest('button')){options.open=false;if(optionsPanel.contains(root.document.activeElement))optionsToggle.focus();}});
     listen(options,'keydown',event=>{if(event.key==='Escape'&&options.open){event.preventDefault();event.stopImmediatePropagation();options.open=false;optionsToggle.focus();}},true);
-    let joinTarget,joinFromEnd,joinToEnd,joinChosenButton,joinContourButton,handleMode,contourPicker,deleteContourButton,duplicateContourButton,closureButton,drawContourButton,moveContourButton,cornerButton,smoothButton;
+    let pickJoinButton,joinPicking=false,joinFirst=null,joinMarkers=[],joinTarget,joinFromEnd,joinToEnd,joinChosenButton,joinContourButton,handleMode,contourPicker,deleteContourButton,duplicateContourButton,closureButton,drawContourButton,moveContourButton,cornerButton,smoothButton;
     if(subpaths){
       const label=root.document.createElement('label');label.textContent='Contour ';label.style.cssText='font:12px Inter,system-ui;color:var(--ink, #1e1e1e);';
       contourPicker=root.document.createElement('select');contourPicker.setAttribute('aria-label','Path contour');contourPicker.style.cssText='padding:6px;background:var(--control, #f5f5f5);color:var(--ink, #1e1e1e);border:1px solid var(--line, #e6e6e6);border-radius:4px;';
@@ -99,11 +99,20 @@
       const joins=root.document.createElement('div');joins.setAttribute('role','group');joins.setAttribute('aria-label','Join contour endpoints');joins.style.cssText='display:grid;gap:6px;padding:8px 0;';
       const joinSelect=(label,values)=>{const row=root.document.createElement('label');row.textContent=label+' ';const select=root.document.createElement('select');select.setAttribute('aria-label',label);for(const [value,text]of values){const option=root.document.createElement('option');option.value=value;option.textContent=text;select.append(option);}row.append(select);joins.append(row);return select;};
       joinFromEnd=joinSelect('Join from endpoint',[['end','End'],['start','Start']]);joinTarget=joinSelect('Join to contour',[]);joinToEnd=joinSelect('Join to endpoint',[['start','Start'],['end','End']]);
+      pickJoinButton=root.document.createElement('button');pickJoinButton.type='button';pickJoinButton.textContent='Pick endpoints on canvas';pickJoinButton.onclick=()=>{if(drag||!verify())return;joinPicking=true;joinFirst=null;moveContourMode=false;joinHint('Join endpoints · Choose the first endpoint · Escape exits');rebuild();joinMarkers[0]?.button.focus({preventScroll:true});status.textContent='Choose an endpoint, then an endpoint on another open contour. Escape exits picking.';};joins.append(pickJoinButton);
       joinChosenButton=root.document.createElement('button');joinChosenButton.type='button';joinChosenButton.textContent='Join contours';joinChosenButton.onclick=()=>{
         if(drag||!verify())return;const result=root.RetouchSVGPath.joinContours({subpaths},contour,Number(joinTarget.value),joinFromEnd.value,joinToEnd.value);if(!result){announce('Choose endpoints on two different open contours.');return;}
         subpaths.splice(0,subpaths.length,...result.subpaths);selectContour(result.selected);announce('Endpoints connected. Done saves; Escape cancels.');
       };joins.append(joinChosenButton);optionsPanel.append(joins);
       closureButton=action('Close contour',()=>restructure(closed?'open':'close'));
+    }
+    function joinHint(text){clearHint();clearHint=root.RetouchCanvasHint?.show(text,'Choose endpoints on two different open contours. Escape exits picking without discarding path edits.')||(()=>{});}
+    function endJoinPicking(){joinPicking=false;joinFirst=null;joinHint('Vector editing · Enter to save · Escape to cancel');rebuild();optionsToggle.focus({preventScroll:true});}
+    function pickJoinEndpoint(index,end){
+      if(!joinPicking||!verify())return;
+      if(!joinFirst){joinFirst={index,end};joinHint('Join endpoints · Choose an endpoint on another contour');for(const marker of joinMarkers){marker.button.disabled=marker.index===index;const chosen=marker.index===index&&marker.end===end;marker.button.setAttribute('aria-pressed',String(chosen));marker.button.style.background=chosen?'var(--accent, #0d99ff)':'white';}joinMarkers.find(marker=>marker.index!==index)?.button.focus({preventScroll:true});status.textContent='Choose an endpoint on another open contour. Escape cancels picking.';return;}
+      const result=root.RetouchSVGPath.joinContours({subpaths},joinFirst.index,index,joinFirst.end,end);if(!result)return;
+      joinPicking=false;joinFirst=null;joinHint('Vector editing · Enter to save · Escape to cancel');subpaths.splice(0,subpaths.length,...result.subpaths);selectContour(result.selected);announce('Endpoints connected. Done saves; Escape cancels.');
     }
     function drawContour(){
       if(drag||!verify()||cancelPen)return;
@@ -225,6 +234,7 @@
     function refreshContours(){
       if(!contourPicker)return;contourPicker.replaceChildren();
       subpaths.forEach((part,i)=>{const option=root.document.createElement('option');option.value=String(i);option.textContent=`${i+1} of ${subpaths.length} · ${part.closed?'Closed':'Open'}`;contourPicker.append(option);});contourPicker.value=String(contour);
+      pickJoinButton.disabled=subpaths.filter(part=>!part.closed).length<2;
       const previousTarget=joinTarget.value;joinTarget.replaceChildren();subpaths.forEach((part,i)=>{if(i===contour||part.closed)return;const option=root.document.createElement('option');option.value=String(i);option.textContent='Contour '+(i+1);joinTarget.append(option);});if([...joinTarget.options].some(option=>option.value===previousTarget))joinTarget.value=previousTarget;
       for(const control of [joinTarget,joinFromEnd,joinToEnd,joinChosenButton])control.disabled=closed||!joinTarget.options.length;
       joinContourButton.disabled=closed||!subpaths[contour+1]||subpaths[contour+1].closed;drawContourButton.disabled=subpaths.length>=128||totalPoints()>510;deleteContourButton.disabled=subpaths.length===1;duplicateContourButton.disabled=subpaths.length>=128||totalPoints()+vertices.length>512;
@@ -234,6 +244,8 @@
     }
     function rebuild(resetSelection=true){
       if(resetSelection)selectedPoints=new Set([active]);
+      for(const marker of joinMarkers)marker.button.remove();joinMarkers=[];
+      if(joinPicking)subpaths.forEach((part,index)=>{if(part.closed)return;for(const end of ['start','end']){const button=root.document.createElement('button');button.type='button';button.dataset.joinEndpoint='true';button.setAttribute('aria-label','Join contour '+(index+1)+' '+end);button.title='Contour '+(index+1)+' · '+end;button.style.cssText='position:absolute;width:18px;height:18px;padding:0;border:2px solid var(--accent, #0d99ff);border-radius:50%;background:white;z-index:4;cursor:crosshair;';button.onclick=event=>{event.preventDefault();event.stopPropagation();pickJoinEndpoint(index,end);};surface.append(button);joinMarkers.push({button,index,end});}});
       refreshContours();
       for(const b of [...handles,...insertions,...curveHandles.map(h=>h.button)])b.remove();handles=[];insertions=[];curveHandles=[];
       vertices.forEach((_,i)=>{
@@ -248,7 +260,7 @@
           surface.append(add);insertions.push(add);
         }
       });
-      for(const button of [...handles,...insertions,...curveHandles.map(h=>h.button)])button.hidden=moveContourMode;
+      for(const button of [...handles,...insertions,...curveHandles.map(h=>h.button)])button.hidden=moveContourMode||joinPicking;
       tangentLines.style.display=moveContourMode?'none':'';preview.style.setProperty('stroke','var(--accent, #0d99ff)','important');preview.style.setProperty('stroke-width',moveContourMode?'2.5':'1.5','important');
       contourHit.style.display=moveContourMode?'':'none';contourHit.setAttribute('tabindex',moveContourMode?'0':'-1');
       announce(moveContourMode?'Drag this contour or use arrows. Shift: 10 units. Done or Enter saves.':undefined);paint();
@@ -283,7 +295,7 @@
       vertices.splice(0,vertices.length,...remaining);activeHandle=null;active=Math.min(active,vertices.length-1);rebuild();handles[active].focus({preventScroll:true});
     }
     listen(surface,'focusin',e=>{if(e.target.dataset.vertex!==undefined){active=Number(e.target.dataset.vertex);activeHandle=e.target.dataset.curveHandle||null;if(!selectedPoints.has(active))selectedPoints=new Set([active]);announce();paint();}});
-    listen(surface,'click',e=>{if(e.target.dataset.contour!==undefined){e.preventDefault();e.stopImmediatePropagation();selectContour(Number(e.target.dataset.contour));return;}if(e.target.dataset.insertVertex!==undefined){e.preventDefault();e.stopImmediatePropagation();insertPoint(Number(e.target.dataset.insertVertex));}});
+    listen(surface,'click',e=>{if(joinPicking&&e.target.dataset.contour!==undefined){e.preventDefault();e.stopImmediatePropagation();return;}if(e.target.dataset.contour!==undefined){e.preventDefault();e.stopImmediatePropagation();selectContour(Number(e.target.dataset.contour));return;}if(e.target.dataset.insertVertex!==undefined){e.preventDefault();e.stopImmediatePropagation();insertPoint(Number(e.target.dataset.insertVertex));}});
     function paint(){
       updateArcHint();refreshPosition();
       const f=frame.getBoundingClientRect(),r=surface.getBoundingClientRect(),scale=f.width/w.innerWidth,m=initialMatrix;
@@ -294,9 +306,10 @@
       subpaths?.forEach((part,i)=>{if(i===contour)return;const outline=root.document.createElementNS(ns,'path');outline.setAttribute('d',root.RetouchSVGPath.serialize(part.nodes,part.closed));outline.setAttribute('transform',preview.getAttribute('transform'));outline.setAttribute('vector-effect','non-scaling-stroke');outline.style.cssText='fill:none!important;stroke:#99d6ff!important;stroke-width:1.5!important;';otherContours.append(outline);
         const hit=outline.cloneNode();hit.dataset.contour=String(i);hit.style.cssText='fill:none!important;stroke:transparent!important;stroke-width:12!important;pointer-events:stroke;cursor:pointer;';const title=root.document.createElementNS(ns,'title');title.textContent='Edit contour '+(i+1);hit.append(title);otherContours.append(hit);});
       function position(b,p,half){const q=new w.DOMPoint(p.x,p.y).matrixTransform(m);Object.assign(b.style,{left:f.left+q.x*scale-r.left-half+'px',top:f.top+q.y*scale-r.top-half+'px'});}
+      for(const marker of joinMarkers){const nodes=subpaths[marker.index].nodes;position(marker.button,marker.end==='start'?nodes[0]:nodes.at(-1),9);}
       vertices.forEach((p,i)=>{position(handles[i],p,6);handles[i].style.background=selectedPoints.has(i)?'var(--accent, #0d99ff)':'white';handles[i].setAttribute('aria-pressed',String(selectedPoints.has(i)));});
-      insertions.forEach((b,i)=>{b.hidden=moveContourMode||!!pathData&&!selectedPoints.has(i)&&!selectedPoints.has((i+1)%vertices.length);const a=vertices[i],next=vertices[(i+1)%vertices.length];position(b,pathData?root.RetouchSVGPath.segmentMiddle(a,next):{x:(a.x+next.x)/2,y:(a.y+next.y)/2},9);});
-      tangentLines.replaceChildren();curveHandles.forEach(h=>{h.button.hidden=moveContourMode||!showAllHandles&&!selectedPoints.has(h.index);if(h.button.hidden)return;const a=vertices[h.index],b=a[h.key];const selected=h.index===active&&h.key===activeHandle;h.button.style.background=selected?'var(--accent, #0d99ff)':'white';h.button.setAttribute('aria-pressed',String(selected));position(h.button,b,5);const line=root.document.createElementNS(ns,'line'),p=new w.DOMPoint(a.x,a.y).matrixTransform(m),q=new w.DOMPoint(b.x,b.y).matrixTransform(m);line.setAttribute('x1',f.left+p.x*scale-r.left);line.setAttribute('y1',f.top+p.y*scale-r.top);line.setAttribute('x2',f.left+q.x*scale-r.left);line.setAttribute('y2',f.top+q.y*scale-r.top);line.style.cssText='stroke:var(--accent, #0d99ff)!important;stroke-width:1!important;';tangentLines.append(line);});
+      insertions.forEach((b,i)=>{b.hidden=moveContourMode||joinPicking||!!pathData&&!selectedPoints.has(i)&&!selectedPoints.has((i+1)%vertices.length);const a=vertices[i],next=vertices[(i+1)%vertices.length];position(b,pathData?root.RetouchSVGPath.segmentMiddle(a,next):{x:(a.x+next.x)/2,y:(a.y+next.y)/2},9);});
+      tangentLines.replaceChildren();curveHandles.forEach(h=>{h.button.hidden=moveContourMode||joinPicking||!showAllHandles&&!selectedPoints.has(h.index);if(h.button.hidden)return;const a=vertices[h.index],b=a[h.key];const selected=h.index===active&&h.key===activeHandle;h.button.style.background=selected?'var(--accent, #0d99ff)':'white';h.button.setAttribute('aria-pressed',String(selected));position(h.button,b,5);const line=root.document.createElementNS(ns,'line'),p=new w.DOMPoint(a.x,a.y).matrixTransform(m),q=new w.DOMPoint(b.x,b.y).matrixTransform(m);line.setAttribute('x1',f.left+p.x*scale-r.left);line.setAttribute('y1',f.top+p.y*scale-r.top);line.setAttribute('x2',f.left+q.x*scale-r.left);line.setAttribute('y2',f.top+q.y*scale-r.top);line.style.cssText='stroke:var(--accent, #0d99ff)!important;stroke-width:1!important;';tangentLines.append(line);});
 
     }
     function commit(){
@@ -327,7 +340,7 @@
         if(drag.contour){const translated=root.RetouchSVGPath.translateContour(drag.contour,dx,dy);if(translated)vertices.splice(0,vertices.length,...translated.nodes);else announce('Keep the contour within supported SVG coordinates.');}else if(activeHandle)changeHandle(drag.node,activeHandle,{x:drag.point.x+dx,y:drag.point.y+dy});else moveSelected(drag.nodes,dx,dy);paint();
       }catch(error){cancel();onError(error.message);}
     }
-    listen(surface,'pointerdown',e=>{
+    listen(surface,'pointerdown',e=>{if(joinPicking)return;
       const b=e.target;if(e.button!==0||drag)return;
       if(moveContourMode&&b===contourHit){e.preventDefault();e.stopImmediatePropagation();if(!verify())return;try{contourHit.focus({preventScroll:true});drag={id:e.pointerId,pointer:local(e),point:{...vertices[0]},contour:{closed,nodes:vertices.map(p=>root.RetouchSVGPath.translate(p,0,0))}};contourHit.setPointerCapture(e.pointerId);}catch(error){cancel();onError(error.message);}return;}
       if(!moveContourMode&&(b===surface||b===drawing)){e.preventDefault();e.stopImmediatePropagation();if(!verify())return;surface.focus({preventScroll:true});drag={id:e.pointerId,box:{x:e.clientX,y:e.clientY,previous:e.shiftKey?[...selectedPoints]:[]}};surface.setPointerCapture(e.pointerId);updateMarquee(e);return;}
@@ -342,13 +355,14 @@
     listen(surface,'pointerup',e=>{if(!drag||drag.id!==e.pointerId)return;e.preventDefault();e.stopImmediatePropagation();move(e);if(!ended&&drag.box){drag=null;selectionBox.hidden=true;announce();return;}if(!ended){const selected=drag.contour?vertices[0]:activeHandle?vertices[active][activeHandle]:vertices[active],moved=Math.hypot(selected.x-drag.point.x,selected.y-drag.point.y)>1e-9;const collapse=drag.collapse;drag=null;if(moved)commit();else if(collapse){selectedPoints=new Set([active]);announce();paint();}}});
     listen(surface,'pointercancel',cancel);listen(surface,'lostpointercapture',()=>{if(drag)cancel();});
     listen(surface,'keydown',e=>{
+      if(joinPicking){if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();endJoinPicking();}else if(!['Tab','Enter',' '].includes(e.key)){e.preventDefault();e.stopImmediatePropagation();}return;}
       if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();if(options.open){options.open=false;optionsToggle.focus();return;}cancel();return;}
       if(toolbar.contains(e.target)&&['BUTTON','SUMMARY'].includes(e.target.tagName)&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key)){
         const scope=options.open&&optionsPanel.contains(e.target)?optionsPanel:toolbar,items=[...scope.querySelectorAll('button:not(:disabled),summary')].filter(el=>el.getClientRects().length),index=items.indexOf(e.target);
         if(index>=0){e.preventDefault();e.stopImmediatePropagation();const next=e.key==='Home'?0:e.key==='End'?items.length-1:(index+(['ArrowLeft','ArrowUp'].includes(e.key)?-1:1)+items.length)%items.length;items[next]?.focus();}return;
       }
       if(arcPanel.contains(e.target)){if(e.key==='Enter'&&e.target.tagName==='INPUT'&&e.target.type==='number'){e.preventDefault();e.stopImmediatePropagation();commit();}return;}
-      if(e.target===handleMode||e.target===contourPicker||toolbar.contains(e.target)&&e.target.tagName==='INPUT')return;
+      if(e.target===handleMode||e.target===contourPicker||toolbar.contains(e.target)&&['INPUT','SELECT'].includes(e.target.tagName))return;
       if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='a'){e.preventDefault();e.stopImmediatePropagation();selectAllPoints();return;}
       if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();e.stopImmediatePropagation();if(moveContourMode)restructure('delete');else removePoint();return;}
       if(e.key==='Enter'&&(e.target.dataset.vertex!==undefined||e.target===contourHit||e.target===surface)){e.preventDefault();e.stopImmediatePropagation();commit();return;}
