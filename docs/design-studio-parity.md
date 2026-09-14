@@ -16830,3 +16830,15 @@ WebSocket tracing found comparisons starting with old server HTML while connecti
 The original Chromium cold-start case now passes. WebKit/webpack and Chromium/Turbopack also pass Phone/Tablet/Desktop apply and exact source undo while retaining input values, document identities and client-component counters. The counter test waits for its actual React handler before creating state. HTML comparison regression passes. The optional `RT_E2E_CROP_HMR_TRACE` harness captures per-frame build messages for future startup diagnostics.
 
 The explicit router recovery is guarded to Next 16.2; other frameworks continue to wait for their own hot update and report failure if it does not arrive. This is not evidence of arbitrary-framework or full Figma parity.
+
+### Retry comparison image refreshes — 2026-09-14
+
+A saved image whose comparison refresh fails now leaves the source edit complete and offers Retry image on the affected card. Retry does not upload another asset or repeat the source operation. Per-card operation identity prevents delayed refresh responses from overwriting newer edits. Chromium/WebKit failure-injection checks and a delayed-response unit test cover recovery and retained source/document state. Commit `e125f97` passed 1,521 unit tests and was pushed.
+
+### Background image Fill, Fit and Tile — 2026-09-14
+
+Existing single-image CSS backgrounds now expose Image fill beside Fill in the light inspector. Fill and Fit set the size and repetition together; Tile repeats at a percentage of the original image dimensions. Tile sizes remain fixed as the frame grows, instead of stretching a generated image. Position controls and HTML reset use the selected screen scope. React and local Liquid emit scoped Tailwind classes, preserving the image URL and unrelated paint classes. Each mode change is one source-history action.
+
+The behavior follows the [Figma image fill reference](https://help.figma.com/hc/en-us/articles/360041098433-Adjust-the-properties-of-an-image), including its original-dimension percentage for Tile. This is not complete image-fill parity: adding/replacing background assets, multiple mixed image/gradient layers, background crop handles, image adjustments for backgrounds, and arbitrary source frameworks remain unfinished. This batch does not rebuild the native archive or resolve notarization.
+
+All 1,524 unit tests pass. `RT_E2E_IMAGE_FILL=1` with the page-fonts harness passes HTML/Chromium, HTML/WebKit, React/Chromium and local Liquid/WebKit. Browser checks verify red/blue repeated pixels at tablet and desktop widths, unchanged phone Fit mode, saved scale reopening, HTML inherited reset, atomic mode undo, exact source restoration, retained input/document identity and React counter state. The light inspector and repeated image were visually inspected in `/tmp/retouch-image-fill.png`. These are local adapter checks, not live Shopify or arbitrary-site proof.

@@ -284,3 +284,11 @@ test('Resetting a breakpoint refuses an alias cycle exposed in a later range',()
 test('Managed CSS descriptors carry the exact validated rule text for preview synchronization',()=>{
  const source=edit(original,768,'320px').edits[0].after,r=resolve(source),info=css.describe(r),id=r.element.node.attrs.find(a=>a.name==='data-rt-style').value;assert.deepEqual(info.cssRuleTexts,{768:css.rule(id,768,{width:'320px'})});assert.deepEqual(css.describe(resolve(original)).cssRuleTexts,{});assert.ok(css.describe(resolve(source.replace('width:320px','width:321px'))).cssReason);
 });
+
+test('background image framing changes atomically without rewriting the image or other paint',()=>{
+ const changes=require('../shell/image-fill.js').framing('tile',400,200,25),input=original.replace('class="title"','class="title" style="background: url(/pattern.svg) center / cover no-repeat #abc"');
+ const result=css.plan(resolve(input),{width:768,changes});assert.equal(result.ok,true);assert.equal(result.edits.length,1);
+ const source=result.edits[0].after;assert.ok(source.includes('background: url(/pattern.svg) center / cover no-repeat #abc'));assert.deepEqual(css.describe(resolve(source)).cssRules[768],changes);
+ const reset=css.plan(resolve(source),{width:768,changes:Object.fromEntries(Object.keys(changes).map(key=>[key,null]))});assert.equal(reset.ok,true);assert.ok(!reset.edits[0].after.includes('data-rt-css='));
+ assert.equal(css.plan(resolve(input.replace('no-repeat #abc','no-repeat #abc !important')),{width:768,changes}).refused,true);
+});

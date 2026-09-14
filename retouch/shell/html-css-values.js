@@ -142,6 +142,9 @@
    return parts.length>=1&&parts.length<=(property==='stroke-width'?1:16)&&parts.every(n=>/^(?:\d+\.?\d*|\.\d+)(?:px|%)?$/.test(n)&&parseFloat(n)<=100000);
   }
   if(property==='aspect-ratio'){if(value===null||value==='auto')return true;if(typeof value!=='string'||value.length>60||! /^(?:auto )?(?:\d*\.)?\d+(?: *\/ *(?:\d*\.)?\d+)?$/.test(value))return false;return value.replace(/^auto /,'').split(/ *\/ */).every(n=>Number(n)>0&&Number(n)<=10000);}
+  if(property==='background-repeat')return value===null||['repeat','no-repeat','repeat-x','repeat-y','space','round'].includes(value);
+  if(property==='background-size'){if(value===null||['cover','contain','auto'].includes(value))return true;if(typeof value!=='string')return false;const parts=value.split(' ');return parts.length>=1&&parts.length<=2&&parts.every(part=>part==='auto'||/^(?:\d+(?:\.\d+)?|\.\d+)(?:px|%)$/.test(part)&&parseFloat(part)<=1000000);}
+  if(property==='background-position')return value===null||typeof value==='string'&&/^\d+(?:\.\d+)?% \d+(?:\.\d+)?%$/.test(value)&&value.split(' ').every(part=>parseFloat(part)<=100);
   if(property==='background-image')return value===null||parseGradients(value)!==null;
   if(['filter','backdrop-filter'].includes(property))return value===null||parseFilters(value)!==null;
   if(property==='font-variation-settings')return value===null||parseVariations(value)!==null;
