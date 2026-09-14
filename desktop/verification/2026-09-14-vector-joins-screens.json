@@ -1,0 +1,246 @@
+{
+  "sourceCommit": "b7e12a8a33e19bb5b50f360d65c7356c4d48da86",
+  "sourceTreeDirty": false,
+  "sourceFiles": 214,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "status": "Ad hoc development archive; native launch and trusted distribution unverified",
+  "archive": "/private/tmp/retouch-desktop-vectors-b7e12a8/Retouch-0.1.0-mac.zip",
+  "sha256": "cdb0731c255f5a142db0d1aae937fd19ef91f5baf5e7e3a1082777a88275a0c9",
+  "unitsPassed": 1252,
+  "workflows": [
+    {
+      "name": "desktop-units",
+      "args": [
+        "--test",
+        "desktop/test/*.test.cjs"
+      ],
+      "cwd": "/private/tmp/retouch-design-studio",
+      "environment": {},
+      "log": "/private/tmp/retouch-desktop-vectors-b7e12a8/desktop-units.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 378,
+      "logSha256": "52760853080e825df328bf7f287cadf5b35974037db60b547ecf4a4b1e04c05e"
+    },
+    {
+      "name": "verifier",
+      "args": [
+        "desktop/scripts/test-package-verifier.cjs",
+        "/private/tmp/retouch-desktop-vectors-b7e12a8/extracted/Retouch.app"
+      ],
+      "cwd": "/private/tmp/retouch-design-studio",
+      "environment": {},
+      "log": "/private/tmp/retouch-desktop-vectors-b7e12a8/verifier.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 2844,
+      "logSha256": "74b828d723af4fd2aedf9d9659f758c79ae68b1fb5ed392628c83904dc4abed2"
+    },
+    {
+      "name": "compact-screens-chromium",
+      "args": [
+        "test/e2e/compact-screens.cjs"
+      ],
+      "cwd": "/private/tmp/retouch-desktop-vectors-b7e12a8/harness",
+      "environment": {},
+      "log": "/private/tmp/retouch-desktop-vectors-b7e12a8/compact-screens-chromium.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 3277,
+      "logSha256": "28ddb0e6330ae526e5cf3fe442fd57c869c2be141a9097f0a73730de0ed13805"
+    },
+    {
+      "name": "compact-screens-webkit",
+      "args": [
+        "test/e2e/compact-screens.cjs"
+      ],
+      "cwd": "/private/tmp/retouch-desktop-vectors-b7e12a8/harness",
+      "environment": {
+        "RT_E2E_BROWSER": "webkit",
+        "PLAYWRIGHT_BROWSERS_PATH": "/private/tmp/retouch-playwright-browsers"
+      },
+      "log": "/private/tmp/retouch-desktop-vectors-b7e12a8/compact-screens-webkit.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 3282,
+      "logSha256": "cfc3ab123a96e27216e46b11ebd47638acf27650e9dd52e0e8f4a46542f578ab"
+    },
+    {
+      "name": "welcome-webkit",
+      "args": [
+        "desktop/test/welcome-view.cjs"
+      ],
+      "cwd": "/private/tmp/retouch-design-studio",
+      "environment": {
+        "RT_E2E_BROWSER": "webkit",
+        "PLAYWRIGHT_BROWSERS_PATH": "/private/tmp/retouch-playwright-browsers"
+      },
+      "log": "/private/tmp/retouch-desktop-vectors-b7e12a8/welcome-webkit.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 7260,
+      "logSha256": "5a4fefa07a284f9f5a141edebc2d88dd0d70a73e0f6a51f0ffe3bc265a86cd96"
+    },
+    {
+      "name": "welcome-chromium",
+      "args": [
+        "desktop/test/welcome-view.cjs"
+      ],
+      "cwd": "/private/tmp/retouch-design-studio",
+      "environment": {},
+      "log": "/private/tmp/retouch-desktop-vectors-b7e12a8/welcome-chromium.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 7277,
+      "logSha256": "b3396d77e0d8c1667a76a92397a92493eaad2b32ebd139094f4f4c22e01db312"
+    },
+    {
+      "name": "units",
+      "args": [
+        "--test",
+        "test/**/*.test.cjs"
+      ],
+      "cwd": "/private/tmp/retouch-desktop-vectors-b7e12a8/harness",
+      "environment": {},
+      "log": "/private/tmp/retouch-desktop-vectors-b7e12a8/units.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 9190,
+      "logSha256": "fb56518529c4fdc94c62e880d7134d3be2e01337a16227c8b993e87224b5b5f0"
+    },
+    {
+      "name": "project-screens-chromium",
+      "args": [
+        "test/e2e/project-screens.cjs"
+      ],
+      "cwd": "/private/tmp/retouch-desktop-vectors-b7e12a8/harness",
+      "environment": {},
+      "log": "/private/tmp/retouch-desktop-vectors-b7e12a8/project-screens-chromium.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 6515,
+      "logSha256": "404881e37fbb755f2577dc69fdf2ffd9783241fad0be7b2c3f851e2342232d78"
+    },
+    {
+      "name": "sampler-policy",
+      "args": [
+        "desktop/test/color-sampler-policy.cjs"
+      ],
+      "cwd": "/private/tmp/retouch-design-studio",
+      "environment": {},
+      "log": "/private/tmp/retouch-desktop-vectors-b7e12a8/sampler-policy.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 10229,
+      "logSha256": "6a7056c287e48207f600ae59660fcd85977fc77e6a374ed4c68a74a8b691c1b3"
+    },
+    {
+      "name": "project-screens-webkit",
+      "args": [
+        "test/e2e/project-screens.cjs"
+      ],
+      "cwd": "/private/tmp/retouch-desktop-vectors-b7e12a8/harness",
+      "environment": {
+        "RT_E2E_BROWSER": "webkit",
+        "PLAYWRIGHT_BROWSERS_PATH": "/private/tmp/retouch-playwright-browsers"
+      },
+      "log": "/private/tmp/retouch-desktop-vectors-b7e12a8/project-screens-webkit.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 7587,
+      "logSha256": "23b644aa00f2245167bf79fb4f5df3dd9b1a059265fb4718f76ba11af760ef8a"
+    },
+    {
+      "name": "vectors-chromium",
+      "args": [
+        "test/e2e/svg-vertices.cjs"
+      ],
+      "cwd": "/private/tmp/retouch-desktop-vectors-b7e12a8/harness",
+      "environment": {
+        "RT_E2E_COMPOUND": "1",
+        "RT_E2E_CONTOUR_ACTIONS": "1"
+      },
+      "log": "/private/tmp/retouch-desktop-vectors-b7e12a8/vectors-chromium.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 16353,
+      "logSha256": "8cf909f33d77749a45b8c926ecf72b43cacefca39d49abe50203131d4b293e70"
+    },
+    {
+      "name": "vectors-webkit",
+      "args": [
+        "test/e2e/svg-vertices.cjs"
+      ],
+      "cwd": "/private/tmp/retouch-desktop-vectors-b7e12a8/harness",
+      "environment": {
+        "RT_E2E_BROWSER": "webkit",
+        "PLAYWRIGHT_BROWSERS_PATH": "/private/tmp/retouch-playwright-browsers",
+        "RT_E2E_COMPOUND": "1",
+        "RT_E2E_CONTOUR_ACTIONS": "1"
+      },
+      "log": "/private/tmp/retouch-desktop-vectors-b7e12a8/vectors-webkit.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 20453,
+      "logSha256": "6422739973ecf2783eb19f60e7b09f661fbca43dcfef7316269dcc70fb0a14d0"
+    },
+    {
+      "name": "vectors-react",
+      "args": [
+        "test/e2e/svg-vertices.cjs"
+      ],
+      "cwd": "/private/tmp/retouch-desktop-vectors-b7e12a8/harness",
+      "environment": {
+        "RT_E2E_RENDERER": "react",
+        "RT_E2E_COMPOUND": "1",
+        "RT_E2E_CONTOUR_ACTIONS": "1"
+      },
+      "log": "/private/tmp/retouch-desktop-vectors-b7e12a8/vectors-react.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 43151,
+      "logSha256": "c3804b55eebe9ed73312fc8d5b75a4f9eb681d0d46e39b97a143bb6753326c46"
+    }
+  ],
+  "harness": {
+    "testFiles": 395,
+    "inventorySha256": "662286fba358a6ad7cf0f8e867fd75c52f9da9c58dac5b3339d19c1370f53639",
+    "archiveSha256": "865dac85975b416608d88d205af63ae590885c8c4d63566aaea1ab3cec530873",
+    "runtime": "/private/tmp/retouch-desktop-vectors-b7e12a8/extracted/Retouch.app/Contents/Resources/retouch",
+    "testsExternalToBundle": true,
+    "removedAfterTerminalTests": true
+  },
+  "homebrew": {
+    "verification": {
+      "sourceCommit": "b7e12a8a33e19bb5b50f360d65c7356c4d48da86",
+      "sourceTreeDirty": false,
+      "sourceFiles": 214,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesArchive": true,
+    "quarantinePreserved": true,
+    "quarantine": "0381;6aa765d7;;F48DAF05-312A-49FB-9FA9-AFDAB0CB8577",
+    "result": "isolated install and uninstall passed",
+    "caskInventoryUnchanged": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "automaticDependencyRemovalDisabled": true
+  },
+  "cask": {
+    "path": "/private/tmp/retouch-desktop-vectors-b7e12a8/retouch-studio.rb",
+    "sha256": "bcb73d47cbeb803d61692103a42554d3feb9751f4433e9156c2de4b166b6a679",
+    "public": false
+  },
+  "notarized": false,
+  "nativeLaunch": "not performed",
+  "intelRuntime": "not tested",
+  "signing": "ad hoc; older Developer ID signing process remains pending",
+  "buildLog": "/private/tmp/retouch-desktop-vectors-build.log"
+}

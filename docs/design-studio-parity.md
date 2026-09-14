@@ -15603,3 +15603,15 @@ tests retain tight tolerances. The search is numerical, not an exact global
 polynomial solution for pathological self-intersections. Full vector networks,
 booleans, separate-element joins and full parity remain unfinished. No native
 package was built.
+
+### Packaged vector and screen verification (2026-09-14)
+
+The editor through `b7e12a8` is in a fresh universal macOS development ZIP. Its
+extracted runtime passed 1,252 tests and the recent compound-vector and screen
+workflows across Chromium/WebKit, with React source verification. The exact ZIP
+also passed isolated Homebrew install/uninstall with quarantine preserved. All
+13 verification jobs completed successfully; the external harness was removed
+and package signatures/manifests rechecked. See
+`desktop/verification/2026-09-14-vector-joins-screens.json` for hashes and scopes.
+The bundle is ad hoc signed, with native/trusted distribution still unverified.
+This packages recent progress; it does not establish full Figma parity.

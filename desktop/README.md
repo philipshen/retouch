@@ -589,3 +589,23 @@ These commands do not launch the app or publish a public Homebrew cask. The
 existing development archive remains ad hoc signed. Unit tests simulate Apple
 responses; they do not establish notarization. Actual notarization and Gatekeeper
 verification remain untested until signing and a Keychain profile are available.
+
+### Latest vector and screen development archive (2026-09-14)
+
+`/private/tmp/retouch-desktop-vectors-b7e12a8/Retouch-0.1.0-mac.zip` contains clean
+source commit `b7e12a8a33e19bb5b50f360d65c7356c4d48da86` in a universal arm64/x86_64
+app. SHA256: `cdb0731c255f5a142db0d1aae937fd19ef91f5baf5e7e3a1082777a88275a0c9`.
+
+The exact extracted runtime passed 1,252 unit tests, compound-vector workflows
+on HTML/React Chromium and HTML WebKit, and compact/project-screen workflows on
+Chromium and WebKit. Desktop unit tests, package-tamper checks, Swift sampler
+policy and the Swift welcome template in both browsers also passed (13 recorded
+jobs). The app passed isolated Homebrew installation/uninstallation with
+quarantine retained and the original cask inventory restored. Temporary external
+tests were removed after all jobs ended; signatures/manifests were rechecked.
+Details and log hashes are in `verification/2026-09-14-vector-joins-screens.json`.
+
+This is an ad hoc development archive. Native launch/editing, Intel execution,
+notarization, public hosting/cask distribution and upgrades remain unverified.
+The older Developer ID signing attempt remains pending; this build did not start
+another signing request or launch a native app.
