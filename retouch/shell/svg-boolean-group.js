@@ -51,10 +51,11 @@
  function operandAtPoint(group,x,y,allow=()=>true){
   const container=group?.querySelector(':scope > [data-rt-boolean-operands]');if(!container||!Number.isFinite(x)||!Number.isFinite(y))return null;
   const display=container.getAttribute('display');
-  try{container.removeAttribute('display');for(const el of [...container.children].reverse()){
-   if(!allow(el)||!el.getAttribute('data-rt')||typeof el.isPointInFill!=='function')continue;
-   try{const m=el.getScreenCTM();if(m&&el.isPointInFill(new group.ownerDocument.defaultView.DOMPoint(x,y).matrixTransform(m.inverse())))return el.getAttribute('data-rt');}catch{}
-  }return null;}finally{if(display===null)container.removeAttribute('display');else container.setAttribute('display',display);}
+  return visibleAncestors(group,()=>{try{container.removeAttribute('display');for(const el of [...container.children].reverse()){
+   const shape=el.hasAttribute('data-rt-boolean')?el.querySelector(':scope > [data-rt-boolean-result]'):el;
+   if(!allow(el)||!el.getAttribute('data-rt')||typeof shape?.isPointInFill!=='function')continue;
+   try{const m=shape.getScreenCTM();if(m&&shape.isPointInFill(new group.ownerDocument.defaultView.DOMPoint(x,y).matrixTransform(m.inverse())))return el.getAttribute('data-rt');}catch{}
+  }return null;}finally{if(display===null)container.removeAttribute('display');else container.setAttribute('display',display);}});
  }
  function revealOriginals(info){openOriginals.add(info.file+'#'+info.id);}
  function preview(group,infos,operand,operation){

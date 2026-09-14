@@ -16,7 +16,10 @@ The Layers panel shows actual operands directly beneath their boolean group,
 without the generated operand-container and result-path rows.
 
 An inner group can be moved, resized, or rotated as an original of the outer
-selected group. The inner group's own originals also support move, resize, and
+selected group. Double-clicking its visible area on the canvas opens that
+original for movement, including when the original is itself a boolean group.
+Hit-testing uses the nested result geometry and respects locked originals.
+The inner group's own originals also support move, resize, and
 rotate gestures, with a live preview of the outermost result. Ancestor source
 descriptors load once before the gesture; preview frames compute locally.
 Escape restores the original DOM, and a committed gesture saves one undo step.
