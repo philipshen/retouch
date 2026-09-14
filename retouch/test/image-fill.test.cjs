@@ -41,3 +41,14 @@ test('mixed image layers preserve quoted punctuation, gradients and image utilit
  for(const value of ['url("javascript:alert(1)")','url("/a.svg"), garbage','url("/a.svg"),linear-gradient(red,blue);display:none','url("/unterminated)'])assert.equal(V.imageLayers(value),null);
  const next=F.stackClasses('bg-cover bg-red-500 bg-[url(/old.svg)] md:bg-none',values);assert.ok(next.includes('bg-cover bg-red-500 md:bg-none'));assert.ok(!next.includes('/old.svg'));assert.ok(next.includes('![background-image:'));
 });
+
+test('gradient previews serialize adjacent image paints without changing their positions',()=>{
+ const gradient=V.parseGradients('linear-gradient(90deg, red 0%, blue 100%)')[0],image={type:'image',value:'url("/image.svg")'};
+ assert.equal(V.serializeGradients([image,gradient,image]),'url("/image.svg"), linear-gradient(90deg, red 0%, blue 100%), url("/image.svg")');
+});
+
+test('mixed image references retain distinct variables for equal relative Liquid URLs',()=>{
+ const a='--rt-image-fill-0000000001',b='--rt-image-fill-0000000002',css={getPropertyValue:key=>'url(\\/theme\\/shared\\.svg)'},el={style:[a,b],ownerDocument:{baseURI:'https://shop.test/page',defaultView:{getComputedStyle:()=>css}}},layers=['linear-gradient(0deg, red 0%, blue 100%)','url("https://shop.test/theme/shared.svg")','url("https://shop.test/theme/shared.svg")'];
+ const info={className:'![background-image:linear-gradient(0deg,_red_0%,_blue_100%),_var('+b+'),_var('+a+')]'};
+ assert.deepEqual(F.stackReferences(info,el,layers),[layers[0],'var('+b+')','var('+a+')']);
+});

@@ -302,7 +302,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     for(const row of group.querySelectorAll(':scope > .inspector-field')){const label=fieldControl(row)?.getAttribute('aria-label');if(!label?.startsWith(prefix+' '))continue;const text=row.querySelector(':scope > span');if(text){const short=label.slice(prefix.length+1).replace(' (px)','');text.textContent=short[0].toUpperCase()+short.slice(1);}}
     pair(group,[prefix+' X (px)',prefix+' Y (px)']);pair(group,[prefix+' Blur (px)',prefix+' Spread (px)']);
    }
-   const paintInputs=name==='Fill'?[...section.querySelectorAll('.gradient-stop-row input:not([type="number"])')]:name==='Effects'?[...section.querySelectorAll('.shadow-controls input')].filter(input=>/^Shadow \d+ color$/.test(input.getAttribute('aria-label')||'')):[];
+   const paintInputs=['Fill','Image fill'].includes(name)?[...section.querySelectorAll('.gradient-stop-row input:not([type="number"])')]:name==='Effects'?[...section.querySelectorAll('.shadow-controls input')].filter(input=>/^Shadow \d+ color$/.test(input.getAttribute('aria-label')||'')):[];
    paintInputs.push(...section.querySelectorAll('input[data-paint-property]'));
    for(const input of paintInputs){
     if(input.parentElement.classList.contains('paint-field-control'))continue;

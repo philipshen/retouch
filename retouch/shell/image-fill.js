@@ -42,8 +42,20 @@
   const value=layers.join(', ');if(!V.imageLayers(value))throw Error('Choose a supported image and gradient stack.');
   return I.replace(before,imageToken,'![background-image:'+stackValue(layers)+']');
  }
+ function stackReferences(info,el,layers){
+  const css=el.ownerDocument.defaultView.getComputedStyle(el),url=value=>{value=value.replace(/\\([0-9a-f]{1,6})(?:\s)?|\\([^\r\n\f])/gi,(_,hex,char)=>hex?String.fromCodePoint(Math.min(parseInt(hex,16)||65533,1114111)):char);const match=/^url\((?:"([^"\\]*)"|'([^'\\]*)'|([^\s'"\\()]+))\)$/.exec(value.trim());try{return match?new URL(match[1]??match[2]??match[3],el.ownerDocument.baseURI).href:null;}catch{return null;}};
+  const token=(info.className||'').split(/\s+/).map(I.base).find(value=>value?.startsWith('[background-image:')),prior=token?V.splitLayers(token.slice('[background-image:'.length,-1).replace(/_/g,' ')):null;
+  return layers.map((value,i)=>{const reference=prior?.length===layers.length&&/^var\((--rt-image-fill-[a-f0-9]{10})\)$/.exec(prior[i]);if(reference&&url(css.getPropertyValue(reference[1]))===url(value)&&url(value))return prior[i];for(const key of el.style){if(/^--rt-image-fill-[a-f0-9]{10}$/.test(key)&&url(css.getPropertyValue(key))===url(value)&&url(value))return 'var('+key+')';}return value;});
+ }
  function mountStack(info,el,save,saveCSS,layers,upload,saveImage,browseImages){
   const section=I.section('Image fill'),css=el.ownerDocument.defaultView.getComputedStyle(el);if(info.classNameDynamic&&!saveCSS){I.note(section,info.classNameReason||'Image fill styles are computed.','refused');return section;}I.note(section,'Images are listed in paint order, front to back. Replacement preserves the other paints and framing.');
+  const paints=layers.map(value=>V.parseGradients(value)?.[0]||{type:'image',value});
+  if(paints.some(paint=>paint.type!=='image'))root.RetouchClassGradients.mount(section,info,el,save,{gradients:paints,fixedStack:true,write:async next=>{
+   const index=next.findIndex((paint,i)=>V.serializeGradients([paint])!==V.serializeGradients([paints[i]]));if(index<0)return;
+   const values=next.map(paint=>V.serializeGradients([paint]));
+   if(saveImage)await saveImage(null,false,'gradient',{layers:stackReferences(info,el,layers),index,value:values[index]});
+   else if(saveCSS)await saveCSS({'background-image':values.join(', ')});else await save(stackClasses(info.className,values));
+  }});
   for(const [index,layer]of layers.entries()){
    const url=source(layer);if(!url)continue;
    const group=document.createElement('fieldset'),legend=document.createElement('legend'),status=document.createElement('p');legend.textContent='Image paint '+(index+1);group.className='image-fill-stack-paint';group.append(legend);const preview=document.createElement('img');preview.className='image-fill-stack-preview';preview.src=url;preview.alt='Image paint '+(index+1)+' preview';group.append(preview);status.setAttribute('role','status');status.className='image-fill-status';
@@ -53,8 +65,7 @@
     if(!saveCSS&&(el.style.getPropertyPriority('background-image')||el.style.getPropertyPriority('background')))throw Error('This image has an important inline background. Edit that style in source first.');
     const updated=layers.map((value,i)=>i===index?paint(next):value);
     if(saveImage&&next.startsWith('/assets/')){
-     const token=(info.className||'').split(/\s+/).map(I.base).find(value=>value?.startsWith('[background-image:')),prior=token?V.splitLayers(token.slice('[background-image:'.length,-1).replace(/_/g,' ')):null;
-     const authored=layers.map((value,i)=>{const reference=prior?.length===layers.length&&/^var\((--rt-image-fill-[a-f0-9]{10})\)$/.exec(prior[i]);if(reference&&source(css.getPropertyValue(reference[1]).trim())===source(value))return prior[i];for(const key of el.style){if(/^--rt-image-fill-[a-f0-9]{10}$/.test(key)&&source(css.getPropertyValue(key).trim())===source(value)&&source(value))return 'var('+key+')';}return value;});
+     const authored=stackReferences(info,el,layers);
      await saveImage(next,false,'apply',{layers:authored,index});
     }else if(saveCSS)await saveCSS({'background-image':updated.join(', ')});else await save(stackClasses(info.className,updated));
     const actual=source(V.imageLayers(el.ownerDocument.defaultView.getComputedStyle(el).backgroundImage)?.[index]),expected=new URL(next,el.ownerDocument.location.href);
@@ -121,5 +132,5 @@
   image.onerror=()=>{if(section.isConnected){content.replaceChildren();I.note(content,'The background image could not be loaded.');}};
   image.src=url;return section;
  }
- const api={source,paint,scale,framing,cropFrame,reset,classes,imageToken,stackValue,stackClasses,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchImageFill=api;
+ const api={source,paint,scale,framing,cropFrame,reset,classes,imageToken,stackValue,stackClasses,stackReferences,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchImageFill=api;
 })(typeof window==='object'?window:globalThis);

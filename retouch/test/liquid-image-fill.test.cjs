@@ -29,3 +29,10 @@ test('mixed Liquid paint replacement preserves other asset references and gradie
  assert.match(second.edits[0].after,/paint-1.svg/);assert.match(second.edits[0].after,/paint-2.svg/);assert.equal((second.edits[0].after.match(/asset_url/g)||[]).length,2);assert.ok(second.edits[0].after.includes('linear-gradient(90deg,_red_0%,_blue_100%),_var('));
  assert.equal(replace(original,[gradient,'var(--rt-image-fill-0000000000)'],1).refused,true);assert.equal(replace(original,[gradient,'url("/first.svg")'],0).refused,true);
 });
+
+test('mixed Liquid gradient edits retain image bindings and reject image targets',()=>{
+ const source=edit(original,'md:').edits[0].after,variable=source.match(/--rt-image-fill-[a-f0-9]{10}/)[0],layers=['linear-gradient(0deg, red 0%, blue 100%)','var('+variable+')'];
+ const op={type:'setImageFill',fileHash:liquid.contentHash(source),scope:'md:',action:'gradient',stack:{layers,index:0,value:'linear-gradient(90deg, lime 0%, blue 100%)'}};
+ const result=liquid.planOp(resolved(source),op);assert.equal(result.ok,true,result.reason);assert.ok(result.edits[0].after.includes('linear-gradient(90deg,_lime_0%,_blue_100%)'));assert.ok(result.edits[0].after.includes("'rt-picture.svg' | asset_url"));assert.equal((result.edits[0].after.match(/asset_url/g)||[]).length,1);
+ for(const stack of [{...op.stack,index:1},{...op.stack,value:'url("/not-a-gradient.svg")'},{...op.stack,value:'linear-gradient(red,blue);display:none'}])assert.equal(liquid.planOp(resolved(source),{...op,stack}).refused,true);
+});
