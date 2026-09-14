@@ -32,3 +32,16 @@ for(const kind of ['html','react','liquid'])test(kind+' operand geometry and der
  const edited=resolve(kind,changed.edits[0].after,made.selectionIds[0]),released=group.plan(edited,{type:'releaseSVGBooleanGroup',fileHash:edited.hash},kind);assert.equal(released.ok,true,released.reason);assert.equal(released.edits[0].after,r.source.replace('width="100"','width="120"'));
  for(const extra of [{path:'M0 0L1 1'},{operandId:'missing'},{operandOp:{type:'deleteElement'}},{operandOp:{type:'setSVGGeometry',property:'width',value:'invalid'}}])assert.equal(group.plan(fresh,{type:'setSVGBooleanOperand',fileHash:fresh.hash,operandId:info.baseId,operandOp:{type:'setSVGGeometry',property:'width',value:'120'},path,...extra},kind).refused,true);
 });
+for(const kind of ['html','react','liquid'])test(kind+' adapter routes boolean transactions and blocks stale direct operand/result edits',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),r=resolve(kind),made=adapter.planOp(r,{type:'createSVGBooleanGroup',fileHash:r.hash,ids:['rect','circle'].map(t=>r.elements.find(e=>tag(kind,e)===t).id),path,operation:'union'});assert.equal(made.ok,true,made.reason);
+ const fresh=resolve(kind,made.edits[0].after,made.selectionIds[0]),info=adapter.describe(fresh);assert.equal(info.svgBooleanGroup.operation,'union');assert.equal(info.svgBooleanOwner,fresh.element.id);
+ for(const id of [...info.svgBooleanGroup.operandIds,info.svgBooleanGroup.resultId]){const child=resolve(kind,fresh.source,id);assert.equal(adapter.describe(child).svgBooleanOwner,fresh.element.id);assert.equal(adapter.planOp(child,{type:'setSVGGeometry',fileHash:child.hash,property:'d',value:path}).refused,true);assert.equal(adapter.planOp(child,{type:'deleteElement',fileHash:child.hash}).refused,true);}
+ const changed=adapter.planOp(fresh,{type:'setSVGBooleanOperand',fileHash:fresh.hash,operandId:info.svgBooleanGroup.baseId,operandOp:{type:'setSVGGeometry',property:'width',value:'120'},path});assert.equal(changed.ok,true,changed.reason);assert.equal(changed.edits.length,1);
+ const released=adapter.planOp(fresh,{type:'releaseSVGBooleanGroup',fileHash:fresh.hash});assert.equal(released.edits[0].after,r.source);
+});
+for(const kind of ['html','react','liquid'])test(kind+' changing the base transform also updates the derived path coordinate space',()=>{
+ const r=resolve(kind),made=create(kind,r),fresh=resolve(kind,made.edits[0].after,made.selectionIds[0]),info=group.describe(fresh,kind),matrix=[1,0,0,1,20,30];
+ const result=group.plan(fresh,{type:'setSVGBooleanOperand',fileHash:fresh.hash,operandId:info.baseId,operandOp:{type:'setSVGTransform',matrix},path},kind);assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);
+ const next=resolve(kind,result.edits[0].after,made.selectionIds[0]),c=group.context(next,kind);assert.equal(c.attr(c.roots[c.base],'transform'),'matrix(1 0 0 1 20 30)');assert.equal(c.attr(c.result,'transform'),'matrix(1 0 0 1 20 30)');
+ const released=group.plan(next,{type:'releaseSVGBooleanGroup',fileHash:next.hash},kind);assert.equal(released.edits[0].after,r.source.replace('translate(3 4)','matrix(1 0 0 1 20 30)'));
+});

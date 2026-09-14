@@ -102,7 +102,7 @@ function scopedInfo(info) { return {...info,styleScope,anchorInheritedClasses:Re
 
 let lockStorage;try{lockStorage=sessionStorage;}catch{}
 const layerLocks=RetouchLayerLocks.create({route:()=>currentPageRoute()||'',storage:lockStorage,scope:window.__RT_RENDERING?.stateScope});
-function pickLayer(node,x,y){const target=layerLocks.pick(node,x,y);return target?layers.textOwner(target):null;}
+function pickLayer(node,x,y){const target=layerLocks.pick(node,x,y);return target?target.closest('[data-rt-boolean-result]')?.closest('[data-rt-boolean]')||layers.textOwner(target):null;}
 window.RetouchCanvasSelection={marqueeTargets:resolveMarqueeTargets,pick:(node,x,y)=>pickLayer(node,x,y),selectable:node=>!layerLocks.locked(node),canMarquee:()=>window.__RT_RENDERING?.selectionStyling===true&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests};
 const historyRoutes = new Map();
 function currentPageRoute(){try{const loc=iframe.contentWindow.location;return loc.origin===location.origin?loc.pathname+loc.search+loc.hash:null;}catch{return null;}}
@@ -481,6 +481,7 @@ function captureInspectorSelectionTarget(el,sourceId){
 }
 async function select(node,{toggle=false,sourceId,current=()=>true}={}) {
   stopDrawing?.();
+  if(!sourceId&&node?.closest?.('[data-rt-boolean-result]'))node=node.closest('[data-rt-boolean]');
   const componentToggle=toggle&&sel?.info.kind==='instance';
   if(componentToggle&&!sourceId){
     const root=node?.closest?.('[data-rt-i]');
@@ -1855,15 +1856,22 @@ function renderPanelContents(textEditing=false) {
   head.className = 'sec';head.dataset.strokeContext=JSON.stringify([info.id,styleScope]);head.dataset.layerTag=info.kind==='instance'?'':info.tag;
   const badge = document.createElement('span');
   badge.className = 'kindbadge' + (info.kind === 'instance' ? ' instance' : '');
-  badge.textContent = sel.multiple?.length>1?sel.multiple.length+(info.kind==='instance'?' components':' layers'):info.kind === 'instance' ? info.tag : info.tag.charAt(0).toUpperCase()+info.tag.slice(1);
+  badge.textContent = info.svgBooleanGroup?'Boolean group':sel.multiple?.length>1?sel.multiple.length+(info.kind==='instance'?' components':' layers'):info.kind === 'instance' ? info.tag : info.tag.charAt(0).toUpperCase()+info.tag.slice(1);
   head.appendChild(badge);
   const file = document.createElement('div');
   file.className = 'filepath';
   file.textContent = info.file;
   head.appendChild(file);
   if(info.kind==='instance'&&sel.multiple?.length>1){panelBody.append(head,componentSelectionSection(sel.multiple));return;}
-  head.appendChild(screenScopeSection());
+  if(!info.svgBooleanOwner&&!(sel.multiple||[]).some(i=>i.svgBooleanOwner))head.appendChild(screenScopeSection());
   panelBody.appendChild(head);
+  if(info.svgBooleanOwner||(sel.multiple||[]).some(i=>i.svgBooleanOwner)){
+   if(sel.multiple?.length>1){const section=RetouchInspector.section('Boolean group');RetouchInspector.note(section,'Select one boolean group to edit its original shapes.');panelBody.append(section);return;}
+   if(info.svgBooleanGroup){const target=matchingEls(info.id)[0];panelBody.append(RetouchSVGBooleanGroup.mount(info,target,{selected:()=>sel?.info===info&&target?.isConnected,current:()=>sel?.info===info&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&target?.isConnected&&!layerLocks.locked(target),load:async ids=>{const responses=await Promise.all(ids.map(id=>api('GET',resolveUrl(id))));if(responses.some(r=>!r?.ok||r.element.hash!==info.hash))throw Error('The original shapes changed. Re-select the group.');return responses.map(r=>r.element);},save:writeSVGBooleanGroup}));}
+   else {const section=RetouchInspector.section('Boolean group');section.append(RetouchInspector.button('Back to boolean group',async()=>{await restoreLayerSelection([info.svgBooleanOwner]);if(sel)renderPanel();}));panelBody.append(section);}
+   return;
+  }
+
   {const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,scope=info.classColorStyles?styleScope:width;
    RetouchColorStyles.mount(panelBody,sel.multiple?.length>1?selectionColorOptions(scope):info.colorStyles||info.classColorStyles?{width:scope,readColor:property=>{const element=matchingEls(info.id)[0];if(!element)throw Error('Re-select the layer to read its color.');return element.ownerDocument.defaultView.getComputedStyle(element).getPropertyValue(property);},allLinks:info.colorStyleLinks,links:info.colorStyleLinks?.[scope],overrides:info.colorStyleOverrides?.[scope]||[],inherited:info.classColorStyles?property=>RetouchResponsive.inheritedLink(Object.fromEntries(Object.entries(info.colorStyleLinks||{}).filter(([,group])=>group[property]).map(([key,group])=>[key,group[property]])),styleScope,matchingEls(info.id)[0]?.ownerDocument):undefined,apply:(styleId,libraryRevision,property)=>writeTextStyle('applyColorStyle',width,{scope:styleScope,styleId,libraryRevision,property}),reset:(styleId,libraryRevision,property)=>writeTextStyle('resetColorStyle',width,{scope:styleScope,styleId,libraryRevision,property}),detach:property=>writeTextStyle('detachColorStyle',width,{scope:styleScope,property})}:{});
   }
@@ -1879,7 +1887,7 @@ function renderPanelContents(textEditing=false) {
   if(sel.multiple?.length>1&&sel.multiple.every(item=>item.svgTransform)){
    const infos=sel.multiple,elements=infos.map(item=>matchingEls(item.id).length===1?matchingEls(item.id)[0]:null),current=()=>sel?.multiple===infos&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&elements.every(el=>el&&!layerLocks.locked(el));
    panelBody.append(RetouchSVGSelection.mount(infos,elements,{current,save:writeSVGSelection,onGaps:axis=>svgSelectionGaps.toggle(infos,axis),gapsActive:axis=>svgSelectionGaps.active(infos,axis)}));if(elements.some(el=>!el))return;mountSelectionEffectStyles();mountSelectionTextStyles();
-   if(infos.every(item=>item.svgBooleanReplacement)&&new Set(infos.map(item=>item.svgBooleanReplacement.parentId)).size===1)panelBody.append(RetouchSVGBooleanSelection.mount(infos,elements,{current,save:writeSVGBooleanSelection}));
+   if(infos.every(item=>item.svgBooleanReplacement)&&new Set(infos.map(item=>item.svgBooleanReplacement.parentId)).size===1)panelBody.append(RetouchSVGBooleanSelection.mount(infos,elements,{current,save:writeSVGBooleanSelection,saveGroup:(path,operation)=>writeSVGBooleanGroup('createSVGBooleanGroup',{path,operation,ids:infos.map(i=>i.id)})}));
    if(infos.every(item=>item.svgMask?.canCreate)&&new Set(infos.map(item=>item.svgMask.parentId)).size===1)panelBody.append(RetouchSVGMask.mount(infos,elements,{current,save:writeSVGMask}));
    const more=document.createElement('details'),summary=document.createElement('summary');summary.textContent='More properties';more.append(summary,info.classSelection?RetouchReactSelection.mount(infos,elements,styleScope,setReactClassesSelection,setSelectionColorOverride,id=>matchingEls(id)[0]):RetouchHTMLCSS.mountSelection(infos,elements,styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,setHTMLCSSSelection));panelBody.append(more);return;
   }
@@ -3044,6 +3052,12 @@ async function writeSVGMask(type,extra){
  const infos=sel?.multiple||[sel?.info];if(!infos[0]||panelTasks||sourceRequests||undoBusy||editing)return;const primary=sel.info,ids=infos.map(i=>i.id);busyPanel(true);
  try{const result=await api('POST','/rt/__api/op',{type,id:primary.id,fileHash:primary.hash,...extra});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update the mask.');if(result.unchanged)return;
  const deletedLocks=layerLocks.removeSourceIds(result.removedSourceIds||[]);editorHistory.record({type:'replaceSVGSelection',id:result.parentId,selectionBefore:ids,selectionAfter:result.selectionIds,sourceIdMap:result.sourceIdMap,deletedLocks,removedSourceIds:result.removedSourceIds,undoId:result.undoId});layerLocks.remap(result.sourceIdMap);await refreshSVGBooleanSelection(result.parentId,result.selectionIds);toast(type==='createSVGMask'?'Mask created':type==='setSVGMaskType'?'Mask type updated':type==='setSVGMaskBounds'?'Mask bounds updated':'Mask released','ok');
+ }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
+}
+async function writeSVGBooleanGroup(type,extra){
+ const primary=sel?.info;if(!primary||panelTasks||sourceRequests||undoBusy||editing)return;const ids=(sel.multiple||[primary]).map(i=>i.id);busyPanel(true);
+ try{const result=await api('POST','/rt/__api/op',{type,id:primary.id,fileHash:primary.hash,...extra});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update the boolean group.');if(result.unchanged)return;
+ const selectionAfter=type==='setSVGBooleanOperand'?[primary.id]:result.selectionIds,removed=result.removedSourceIds||[],deletedLocks=layerLocks.removeSourceIds(removed);editorHistory.record({type:'replaceSVGSelection',id:result.parentId,selectionBefore:ids,selectionAfter,sourceIdMap:result.sourceIdMap,deletedLocks,removedSourceIds:removed,undoId:result.undoId});layerLocks.remap(result.sourceIdMap);await refreshSVGBooleanSelection(result.parentId,selectionAfter);toast(type==='releaseSVGBooleanGroup'?'Original shapes restored':'Boolean group updated','ok');
  }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
 }
 async function writeSVGBooleanSelection(path){

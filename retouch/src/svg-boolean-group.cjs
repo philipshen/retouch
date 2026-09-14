@@ -2,7 +2,7 @@
 // A boolean group retains operand source verbatim. The visible result is a
 // derived path supplied by the browser's geometry engine, in base-local space.
 const MagicString=require('magic-string'),combine=require('./svg-combine-selection.cjs'),ids=require('./id.cjs'),geometry=require('../shell/svg-path.js');
-const operations=new Set(['union','subtract','intersect','exclude']);
+const operationNames={union:'Union',subtract:'Subtract',intersect:'Intersect',exclude:'Exclude overlap'},operations=new Set(Object.keys(operationNames));
 function view(r,kind){
  const adapter=require('./adapters/'+kind+'.cjs'),elements=r.elements||adapter.collect(r.source,r.relPath).elements;
  const tag=e=>kind==='react'?ids.jsxElementName(e.node):e.tag;
@@ -15,10 +15,11 @@ function view(r,kind){
  return {adapter,elements,tag,start,end,opening,closing,attrs,parents,attr:(e,name)=>attrs(e).find(a=>a.name===name)?.value};
 }
 function context(r,kind){
+ if(!r.source?.includes('data-rt-boolean'))return null;
  const v=view(r,kind),group=r.element;if(v.tag(group)!=='g'||!operations.has(v.attr(group,'data-rt-boolean')))return null;
- if(v.attrs(group).some(a=>!['data-rt-boolean','data-rt-boolean-base'].includes(a.name)))return null;
+ if(v.attrs(group).some(a=>!['data-rt-boolean','data-rt-boolean-base','data-rt-name'].includes(a.name)))return null;
  const children=v.elements.filter(e=>v.parents.get(e.id)===group.id),[operands,result]=children;
- if(children.length!==2||v.tag(operands)!=='g'||v.attr(operands,'data-rt-boolean-operands')!==''||v.attr(operands,'display')!=='none'||v.attrs(operands).some(a=>!['display','data-rt-boolean-operands'].includes(a.name))||v.tag(result)!=='path'||v.attr(result,'data-rt-boolean-result')!=='')return null;
+ if(children.length!==2||v.tag(operands)!=='g'||v.attr(operands,'data-rt-boolean-operands')!==''||v.attr(operands,'display')!=='none'||v.attrs(operands).some(a=>!['display','data-rt-boolean-operands','data-rt-name'].includes(a.name))||v.tag(result)!=='path'||v.attr(result,'data-rt-boolean-result')!=='')return null;
  const roots=v.elements.filter(e=>v.parents.get(e.id)===operands.id),base=Number(v.attr(group,'data-rt-boolean-base'));
  if(roots.length<2||!Number.isInteger(base)||base<0||base>=roots.length||[group,operands].some(e=>!Number.isInteger(v.closing(e))))return null;
  // No authored content may be discarded on release, including comments.
@@ -32,6 +33,7 @@ function plan(r,op,kind){
  if(['createSVGBooleanGroup','setSVGBooleanOperation'].includes(op.type)&&!operations.has(op.operation))return refuse('Choose Union, Subtract, Intersect or Exclude.');
  const v=view(r,kind),out=new MagicString(r.source);let insertions=[],cuts=[],selected=[],removed=[],parentId,created=false;
  if(op.type==='createSVGBooleanGroup'){
+  if(Array.isArray(op.ids)&&op.ids.some(id=>{const element=v.elements.find(e=>e.id===id);return element&&owner({...r,element},kind);}))return refuse('Release the containing boolean group before regrouping its original shapes.');
   const path=op.path===''?'M0 0L1 0L0 1Z':op.path,flattened=combine.plan(r,{...op,path},kind);if(!flattened.ok)return flattened;
   selected=op.ids.map(id=>v.elements.find(e=>e.id===id));const base=selected[0];selected.sort((a,b)=>v.start(a)-v.start(b));parentId=v.parents.get(base.id);
   const siblings=v.elements.filter(e=>v.parents.get(e.id)===parentId),positions=selected.map(e=>siblings.indexOf(e));
@@ -43,8 +45,8 @@ function plan(r,op,kind){
   if(!result)return refuse('The boolean result could not be retained.');
   let resultSource=flatSource.slice(flat.start(result),flat.end(result));
   if(op.path==='')resultSource=resultSource.replace(/ d="[^"]*"/,' d=""');
-  resultSource=resultSource.replace('<path','<path data-rt-boolean-result=""');
-  insertions=[{at:v.start(selected[0]),text:'<g data-rt-boolean="'+op.operation+'" data-rt-boolean-base="'+selected.indexOf(base)+'"><g data-rt-boolean-operands="" display="none">'},{at:v.end(selected.at(-1)),text:'</g>'+resultSource+'</g>'}];
+  resultSource=resultSource.replace('<path','<path data-rt-boolean-result=""'+(/\bdata-rt-name\s*=/.test(resultSource)?'':' data-rt-name="Result"'));
+  insertions=[{at:v.start(selected[0]),text:'<g data-rt-boolean="'+op.operation+'" data-rt-name="'+operationNames[op.operation]+'" data-rt-boolean-base="'+selected.indexOf(base)+'"><g data-rt-boolean-operands="" data-rt-name="Original shapes" display="none">'},{at:v.end(selected.at(-1)),text:'</g>'+resultSource+'</g>'}];
   for(const e of insertions)out.appendLeft(e.at,e.text);created=true;
  }else{
   const c=context(r,kind);if(!c)return refuse('Select a boolean group with unchanged source wrappers.');
@@ -55,11 +57,16 @@ function plan(r,op,kind){
   }else if(op.type==='setSVGBooleanOperand'){
    const operand=c.roots.find(e=>e.id===op.operandId);
    if(!operand||!['setSVGGeometry','setSVGTransform'].includes(op.operandOp?.type))return refuse('Choose an original shape geometry or transform edit.');
-   const edit=v.adapter.planOp({...r,element:operand},{...op.operandOp,id:operand.id,fileHash:r.hash});
+   const edit=v.adapter.planOp({...r,element:operand,booleanOperandEdit:true},{...op.operandOp,id:operand.id,fileHash:r.hash});
    if(!edit.ok)return edit;
-   const intermediate=edit.unchanged?r.source:edit.edits?.[0]?.after;
+   let intermediate=edit.unchanged||edit.edits?.length===0?r.source:edit.edits?.[0]?.after;
    if(typeof intermediate!=='string'||edit.edits?.length>1)return refuse('The operand edit must remain inside this source document.');
-   const nextElements=v.adapter.collect(intermediate,r.relPath).elements;
+   let nextElements=v.adapter.collect(intermediate,r.relPath).elements;
+   if(op.operandId===c.roots[c.base].id&&op.operandOp.type==='setSVGTransform'){
+    const derivedResolved={...r,source:intermediate,hash:v.adapter.contentHash(intermediate),elements:nextElements,element:nextElements.find(e=>e.id===c.result.id),booleanOperandEdit:true};
+    const derived=v.adapter.planOp(derivedResolved,{...op.operandOp,id:c.result.id,fileHash:derivedResolved.hash});if(!derived.ok)return derived;
+    if(derived.edits?.length)intermediate=derived.edits[0].after;nextElements=v.adapter.collect(intermediate,r.relPath).elements;
+   }
    if(nextElements.length!==v.elements.length||nextElements.some((e,i)=>e.id!==v.elements[i].id))return refuse('The operand edit would change layer identities.');
    const nextResolved={...r,source:intermediate,hash:v.adapter.contentHash(intermediate),elements:nextElements,element:nextElements.find(e=>e.id===c.group.id)};
    const result=plan(nextResolved,{type:'setSVGBooleanOperation',fileHash:nextResolved.hash,operation:c.operation,path:op.path},kind);
@@ -72,7 +79,7 @@ function plan(r,op,kind){
    if(!document||document.subpaths.some(p=>!p.closed))return refuse('Provide a closed boolean path or an empty result.');
    const path=document.subpaths.length?geometry.serializeCompound(document):'';if(path===null)return refuse('The result exceeds editable geometry limits.');
    const mode=v.attrs(c.group).find(a=>a.name==='data-rt-boolean'),d=v.attrs(c.result).find(a=>a.name==='d');if(!d)return refuse('The result path is missing.');
-   out.overwrite(mode.start,mode.end,'data-rt-boolean="'+op.operation+'"');out.overwrite(d.start,d.end,'d="'+path+'"');
+   out.overwrite(mode.start,mode.end,'data-rt-boolean="'+op.operation+'"');const name=v.attrs(c.group).find(a=>a.name==='data-rt-name');if(name?.value===operationNames[c.operation])out.overwrite(name.start,name.end,'data-rt-name="'+operationNames[op.operation]+'"');out.overwrite(d.start,d.end,'d="'+path+'"');
    const after=out.toString();if(after===r.source)return {ok:true,unchanged:true,hash:r.hash,edits:[]};
    const next=v.adapter.collect(after,r.relPath).elements;if(next.length!==v.elements.length||next.some((e,i)=>e.id!==v.elements[i].id))return refuse('The operation would change layer identities.');
    return {ok:true,hash:v.adapter.contentHash(after),parentId,selectionIds:[c.group.id],sourceIdMap:[],removedSourceIds:[],edits:[{file:r.file,before:r.source,after}]};
@@ -88,4 +95,8 @@ function plan(r,op,kind){
  if(!created&&next.elements.length!==retained.length)return refuse('Releasing the group would discard source structure.');
  return {ok:true,structural:true,hash:v.adapter.contentHash(after),parentId:mapping.get(parentId),selectionIds:created?[group.id]:selected.map(e=>mapping.get(e.id)),sourceIdMap:[...mapping].filter(([a,b])=>a!==b),removedSourceIds:removed.map(e=>e.id),edits:[{file:r.file,before:r.source,after}]};
 }
-module.exports={plan,context,describe:(r,kind)=>{const c=context(r,kind);return c?{operation:c.operation,operandIds:c.roots.map(e=>e.id),baseId:c.roots[c.base].id,resultId:c.result.id,canRelease:true}:null;}};
+const types=new Set(['createSVGBooleanGroup','releaseSVGBooleanGroup','setSVGBooleanOperation','setSVGBooleanOperand']);
+function owner(r,kind){if(!r.source?.includes('data-rt-boolean'))return null;const v=view(r,kind);for(let id=r.element.id;id;id=v.parents.get(id)){const e=v.elements.find(e=>e.id===id);if(e&&v.attr(e,'data-rt-boolean')!==undefined)return e.id;}return null;}
+function describe(r,kind){const c=context(r,kind);return c?{operation:c.operation,operandIds:c.roots.map(e=>e.id),baseId:c.roots[c.base].id,resultId:c.result.id,canRelease:true}:null;}
+function guard(r,op,kind){if(r.booleanOperandEdit||types.has(op.type))return null;const id=owner(r,kind);return id&&!(op.type==='deleteElement'&&id===r.element.id)?{ok:false,refused:true,reason:'Edit the original shapes from the Boolean group section, or release the group first.'}:null;}
+module.exports={plan,context,describe,owner,guard,types};

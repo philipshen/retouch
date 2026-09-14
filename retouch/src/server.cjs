@@ -255,6 +255,7 @@ function handle(req, res, ctx) {
       if (!resolved.file.startsWith(ctx.appRoot + path.sep)) {
         return json(res, 400, { ok: false, error: 'path outside project root' });
       }
+      if(['html','react','liquid'].includes(ctx.adapter.name)){const groups=require('./svg-boolean-group.cjs'),targets=[resolved,...(Array.isArray(op.ids)?op.ids.filter(id=>typeof id==='string'&&id!==op.id).map(id=>ctx.index.resolve(id)).filter(Boolean):[])];for(const target of targets){const blocked=groups.guard(target,op,ctx.adapter.name);if(blocked)return json(res,409,blocked);}}
       let result;
       const applyPlan=(root,plan)=>ctx.history.commit(root,plan,{group:op.historyGroup,route:historyRoute(req)});
       try {

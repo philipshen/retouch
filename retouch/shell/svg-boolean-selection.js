@@ -40,11 +40,11 @@
   }
   return path;
  }
- function mount(infos,elements,{current,save}){
-  const I=root.RetouchInspector,section=I.section('Combine shapes'),row=root.document.createElement('div');Object.assign(row.style,{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:'4px'});section.append(row);
+ function mount(infos,elements,{current,save,saveGroup}){
+  const I=root.RetouchInspector,section=I.section('Combine shapes'),row=root.document.createElement('div');Object.assign(row.style,{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:'4px'});section.append(row);const keep=root.document.createElement('input');keep.type='checkbox';keep.checked=!!saveGroup;keep.setAttribute('aria-label','Keep original shapes');const label=root.document.createElement('label');label.append(keep,' Keep original shapes');section.append(label);
   const icons={union:'M4 4H14V10H20V20H10V14H4Z',subtract:'M4 4H14V10H10V14H4Z',intersect:'M10 10H14V14H10Z',exclude:'M4 4H14V10H10V14H4ZM14 10H20V20H10V14H14Z'};
-  for(const [operation,label]of [['union','Union'],['subtract','Subtract'],['intersect','Intersect'],['exclude','Exclude overlap']]){const button=I.button(label,()=>{if(!current())return;try{const path=prepare(infos,elements,operation);if(current())save(path);}catch(error){I.note(section,error.message,'refused').setAttribute('role','alert');}});button.setAttribute('aria-label',label+' selected shapes');button.title=label+' selected shapes';button.innerHTML='<svg width=20 height=20 viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4H14V14H4ZM10 10H20V20H10Z" fill="none" stroke="currentColor" opacity=".25"/><path d="'+icons[operation]+'" fill="currentColor"/></svg>';row.append(button);}
-  I.note(section,'Uses the first selected shape’s appearance. Subtract removes the other shapes from it. Percentage-based geometry becomes fixed SVG coordinates. Undo restores the original layers.');return section;
+  for(const [operation,label]of [['union','Union'],['subtract','Subtract'],['intersect','Intersect'],['exclude','Exclude overlap']]){const button=I.button(label,()=>{if(!current())return;try{const path=keep.checked?root.RetouchSVGBooleanGroup.prepare(infos,elements,operation):prepare(infos,elements,operation);if(current()){if(keep.checked)saveGroup(path,operation);else save(path);}}catch(error){I.note(section,error.message,'refused').setAttribute('role','alert');}});button.setAttribute('aria-label',label+' selected shapes');button.title=label+' selected shapes';button.innerHTML='<svg width=20 height=20 viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4H14V14H4ZM10 10H20V20H10Z" fill="none" stroke="currentColor" opacity=".25"/><path d="'+icons[operation]+'" fill="currentColor"/></svg>';row.append(button);}
+  I.note(section,'Uses the first selected shape’s appearance. Subtract removes the other shapes from it. The outline uses fixed SVG coordinates. Keep original shapes to edit or release them later.');return section;
  }
  const api={usedLength,renderedPath,prepare,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGBooleanSelection=api;
 })(typeof window==='object'?window:globalThis);
