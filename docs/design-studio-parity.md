@@ -16801,3 +16801,9 @@ Chromium/WebKit browser checks verify held-key and multi-move pointer grouping, 
 Image adjustments now include temperature and tint sliders/numeric values from -100 to +100. Temperature shifts red versus blue; tint shifts magenta versus green through bounded channel gains after the existing adjustments. Both are stored in the original-image recipe and participate in reset and local history. Zero values preserve the prior filter structure for saved adjustment compatibility.
 
 Chromium/WebKit neutral-gray pixel checks cover both directions, combined preview/apply, slider synchronization, reset undo, reopening and exact source undo. The earlier exposure/contrast/saturation workflow and all 1,519 unit tests pass. The light dialog was visually inspected. These are relative color controls, not calibrated Kelvin values or proven matches to Figma's proprietary adjustment algorithms. Highlights/shadows remain unfinished.
+
+### Image highlights and shadows — 2026-09-14
+
+Highlights and shadows now have separate sliders/numeric controls, saved recipe values, adjustment reset and local undo. A sampled monotonic RGB tone curve emphasizes the appropriate tonal range and preserves black/white endpoints. Neutral tone settings preserve the earlier filter structure.
+
+Chromium/WebKit dark/light-gray pixel checks verify both directions and tonal emphasis, combined preview/apply, slider values, reset undo, saved reopening and exact source undo. Curve tests cover bounds, monotonicity and endpoints across combinations; all 1,520 unit tests and the prior temperature/tint workflow pass. The dialog was visually inspected. These are global channel tone curves, not local contrast recovery or proven equivalents of Figma's adjustment algorithms. Full image-editor and broader Design parity remain unverified.
