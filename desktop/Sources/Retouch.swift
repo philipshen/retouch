@@ -142,11 +142,12 @@ final class Studio: NSObject, NSApplicationDelegate, WKNavigationDelegate, NSTex
 
     static func shellQuote(_ value: String) -> String { "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'" }
     static var bundledCLI: String { Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/retouch/bin/retouch.cjs").path }
+    static var bundledLauncher: String { Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/retouch/bin/desktop-launch.sh").path }
     static func launchArguments(_ command: String, cli: String? = nil) -> [String] {
-        ["-l", "-c", "exec " + shellQuote(cli ?? bundledCLI) + " -- /bin/zsh -l -c " + shellQuote(command)]
+        ["-l", "-c", "exec " + shellQuote(bundledLauncher) + " " + shellQuote(cli ?? bundledCLI) + " -- /bin/zsh -l -c " + shellQuote(command)]
     }
     static func htmlLaunchArguments(_ folder: URL, cli: String? = nil) -> [String] {
-        ["-l", "-c", "exec " + shellQuote(cli ?? bundledCLI) + " html " + shellQuote(folder.path) + " --port=0"]
+        ["-l", "-c", "exec " + shellQuote(bundledLauncher) + " " + shellQuote(cli ?? bundledCLI) + " html " + shellQuote(folder.path) + " --port=0"]
     }
     static func prefersHTML(_ folder: URL) -> Bool {
         let fm = FileManager.default
@@ -449,7 +450,7 @@ if CommandLine.arguments.contains("--self-test") {
     precondition(lines.append("Local: http://local").isEmpty)
     precondition(lines.append("host:3496\n").first?.port == 3496)
     let command = "printf '%s' \"literal $HOME and `ticks`\""
-    precondition(Studio.launchArguments(command).last == "exec " + Studio.shellQuote(Studio.bundledCLI) + " -- /bin/zsh -l -c " + Studio.shellQuote(command))
+    precondition(Studio.launchArguments(command).last == "exec " + Studio.shellQuote(Studio.bundledLauncher) + " " + Studio.shellQuote(Studio.bundledCLI) + " -- /bin/zsh -l -c " + Studio.shellQuote(command))
     let quotingTest = Process(), output = Pipe()
     quotingTest.executableURL = URL(fileURLWithPath: "/bin/zsh")
     quotingTest.arguments = ["-c", "printf '%s' " + Studio.shellQuote(command)]

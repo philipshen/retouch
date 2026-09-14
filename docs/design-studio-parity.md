@@ -16985,3 +16985,10 @@ HTML writes scoped CSS; React and Liquid write scoped framing classes. The Liqui
 All 1,544 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass the combined workflow. RT_E2E_PAINT_FRAME=1 covers Fill/Fit/Tile, 40x20 intrinsic tiles and 200% scale, X/Y positions, multiply/screen blending with black rendered pixels, unchanged neighboring paints and Liquid bindings, phone inheritance and exact undo. The run also includes paint addition, drag ordering and the existing image/gradient/crop/source-state workflow. The light-theme framing popover screenshot was visually inspected.
 
 Per-paint opacity/visibility, solid/image row unification and complete Figma fidelity remain unfinished. Native notarization/Homebrew distribution and arbitrary-site parity remain unverified; no native bundle was rebuilt.
+
+
+### Desktop Homebrew runtime discovery — 2026-09-14
+
+The native launcher now delegates through a bundled shell entry point that preserves the user's existing PATH and appends the standard Apple Silicon and Intel Homebrew bin directories. This supports launching a Homebrew-installed app from Finder when shell startup files have not configured Homebrew. Both HTML-folder and command-project startup use the same launcher; argument boundaries, working directory and exit status are preserved.
+
+All 28 desktop Node tests pass, including real Homebrew Node discovery with a Finder-like PATH, existing-tool precedence and literal arguments containing spaces, quotes and shell metacharacters. These are launcher/script tests and do not prove that the signed macOS app passes Gatekeeper or launches. Native launch testing remains governed by desktop/AGENTS.md. No notarization credentials were found in this repository's GitHub Actions secret inventory, and no submission or public release was performed.
