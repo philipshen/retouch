@@ -16781,3 +16781,10 @@ Chromium and WebKit each pass cover, contain, fill, none and scale-down cases co
 Clean commit `6c18995` is packaged as a universal Developer ID signed archive. All 232 source hashes and native build inputs match; the extracted runtime passes 1,517 unit tests and React/Chromium plus WebKit crop workflows. Desktop unit tests and package tamper checks pass. A local cask was generated and syntax-checked. See the [exact receipt](../desktop/verification/2026-09-14-crop-developer-id.json).
 
 Gatekeeper still rejects the candidate as Unnotarized Developer ID. No native launch or cask installation was attempted for this archive. Public release, trusted launch, upgrades and Intel execution remain unverified.
+
+
+### Editable image exposure, contrast and saturation — 2026-09-14
+
+The crop dialog now provides exposure (-3 to +3 stops), contrast and saturation (-100 to +100), with live preview and local history. Reset adjustments preserves crop framing. Values persist in the SVG recipe alongside original image bytes; recognized filters are validated against the generated filter tree before reopening. Neutral values omit the filter. Rendering uses sRGB component transfer for exposure/contrast and a saturation matrix.
+
+Chromium and WebKit pixel checks cover half exposure, flat contrast, grayscale, combined adjustments, reset undo/redo, saved-value reopening and exact source undo. The expanded light dialog was visually inspected; React crop/history regression and all 1,518 unit tests pass. These controls do not establish exact Figma adjustment-algorithm equivalence. Highlights, shadows, temperature, tint and wider format/animation coverage remain unfinished. The signed desktop candidate predates these controls.
