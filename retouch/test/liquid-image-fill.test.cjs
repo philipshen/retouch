@@ -13,3 +13,11 @@ test('Liquid refuses ambiguous attributes, stale source and unsupported asset pa
  for(const src of ['/assets/../bad.svg','https://example.com/image.png','/assets/image\'bad.svg'])assert.equal(edit(original,'',src).refused,true);
  assert.equal(liquid.planOp(resolved(original),{type:'setImageFill',fileHash:'old',src:'/assets/good.svg'}).refused,true);
 });
+
+test('Liquid remove and reset clean only the selected screen asset reference',()=>{
+ const base=edit(original).edits[0].after,tablet=edit(base,'md:','/assets/tablet.svg').edits[0].after;
+ const change=(source,action)=>liquid.planOp(resolved(source),{type:'setImageFill',fileHash:liquid.contentHash(source),scope:'md:',action});
+ const removed=change(tablet,'remove');assert.equal(removed.ok,true,removed.reason);const source=removed.edits[0].after;assert.match(source,/md:!bg-none/);assert.ok(!source.includes('tablet.svg'));assert.ok(source.includes('rt-picture.svg'));
+ const reset=change(source,'reset');assert.equal(reset.ok,true,reset.reason);assert.ok(!reset.edits[0].after.includes('md:'));assert.ok(reset.edits[0].after.includes('rt-picture.svg'));
+ const changed=tablet.replace('tablet.svg','tablet/subpath.svg');assert.equal(change(changed,'reset').refused,true);
+});

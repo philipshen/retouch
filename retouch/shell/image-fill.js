@@ -18,10 +18,12 @@
   const px=value=>Number(value.toFixed(6))+'px';
   return {'background-size':mode==='tile'?px(width*percent/100)+' '+px(height*percent/100):mode==='fill'?'cover':'contain','background-repeat':mode==='tile'?'repeat':'no-repeat','background-position':mode==='tile'?'0% 0%':'50% 50%'};
  }
+ function reset(){return Object.fromEntries(['background-image','background-size','background-repeat','background-position'].map(property=>[property,null]));}
  function classes(before,changes){
   let next=before;
   for(const [property,value]of Object.entries(changes)){
-   const kind=property.replace('background-','');if(kind==='image'){if(!V.imageURL(value))throw Error('Choose a supported image URL.');next=I.replace(next,token=>/^bg-(?:none|\[(?:image:)?(?:url|var)\(.*\)\])$/.test(token),'!bg-[url('+source(value)+')]');continue;}const match=token=>kind==='size'?/^bg-(?:cover|contain|auto|\[length:.*\]|size-\[.*\])$/.test(token):kind==='repeat'?/^bg-(?:repeat(?:-x|-y|-round|-space)?|no-repeat)$/.test(token):/^bg-(?:center|top|bottom|left|right|(?:left|right)-(?:top|bottom)|\[position:.*\]|position-\[.*\])$/.test(token);
+   const kind=property.replace('background-','');if(kind==='image'){if(value!==null&&value!=='none'&&!V.imageURL(value))throw Error('Choose a supported image URL.');next=I.replace(next,token=>/^bg-(?:none|\[(?:image:)?(?:url|var)\(.*\)\])$/.test(token),value===null?'':value==='none'?'!bg-none':'!bg-[url('+source(value)+')]');continue;}const match=token=>kind==='size'?/^bg-(?:cover|contain|auto|\[length:.*\]|size-\[.*\])$/.test(token):kind==='repeat'?/^bg-(?:repeat(?:-x|-y|-round|-space)?|no-repeat)$/.test(token):/^bg-(?:center|top|bottom|left|right|(?:left|right)-(?:top|bottom)|\[position:.*\]|position-\[.*\])$/.test(token);
+   if(value===null){next=I.replace(next,match,'');continue;}
    const token=kind==='size'?(value==='cover'||value==='contain'?'bg-'+value:'bg-[length:'+value.replaceAll(' ','_')+']'):kind==='repeat'?'bg-'+value:'bg-[position:'+value.replaceAll(' ','_')+']';
    next=I.replace(next,match,token);
   }
@@ -41,9 +43,13 @@
   if(upload){const picker=document.createElement('input');picker.type='file';picker.accept='image/*';picker.hidden=true;picker.setAttribute('aria-label','Upload image fill');asset.append(picker);const choose=I.button(url?'Replace image':'Choose image',()=>picker.click());asset.append(choose);picker.onchange=async()=>{
    const file=picker.files[0];if(!file||!allowed())return;
    if(!saveCSS&&el.style.getPropertyPriority('background-image')){status.textContent='This image has an important inline style. Edit that style in source first.';return;}
-   pending=true;choose.disabled=input.disabled=true;status.textContent='Uploading image…';
-   try{const next=await upload(file);pending=false;await replace(next,true);}catch(error){if(section.isConnected)status.textContent=error.message;}finally{pending=false;choose.disabled=input.disabled=false;picker.value='';}
+   pending=true;choose.disabled=input.disabled=actions.disabled=true;status.textContent='Uploading image…';
+   try{const next=await upload(file);pending=false;await replace(next,true);}catch(error){if(section.isConnected)status.textContent=error.message;}finally{pending=false;choose.disabled=input.disabled=actions.disabled=false;picker.value='';}
   };}
+  const actions=document.createElement('fieldset');actions.className='image-fill-actions';asset.append(actions);
+  const change=async action=>{if(!allowed())return;try{if(action==='remove'&&!saveCSS&&el.style.getPropertyPriority('background-image'))throw Error('This image has an important inline style. Edit that style in source first.');if(saveImage)await saveImage(null,false,action);else await write(action==='reset'?reset():{'background-image':'none'});}catch(error){status.textContent=error.message;}};
+  const remove=I.button('Remove image fill',()=>change('remove'));remove.disabled=!url;actions.append(remove);
+  const resetButton=I.button('Reset image fill',()=>change('reset'));resetButton.disabled=saveCSS?!Object.keys(reset()).some(key=>Object.hasOwn(own,key)):classes(info.className,reset())===info.className;resetButton.title='Remove this screen size’s image and framing overrides to reveal inherited styling.';actions.append(resetButton);
   if(!url)return section;
   image.onload=()=>{
    if(!section.isConnected)return;content.replaceChildren();const width=image.naturalWidth,height=image.naturalHeight;if(!width||!height){I.note(content,'Image dimensions are unavailable.');return;}
@@ -64,5 +70,5 @@
   image.onerror=()=>{if(section.isConnected){content.replaceChildren();I.note(content,'The background image could not be loaded.');}};
   image.src=url;return section;
  }
- const api={source,paint,scale,framing,classes,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchImageFill=api;
+ const api={source,paint,scale,framing,reset,classes,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchImageFill=api;
 })(typeof window==='object'?window:globalThis);

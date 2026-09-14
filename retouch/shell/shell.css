@@ -1172,3 +1172,5 @@ html, body { overflow:clip; }
 
 .image-fill-status { font-size:11px;color:var(--muted);margin:8px 0; }
 .image-fill-status:empty { display:none; }
+
+.image-fill-actions { display:flex;flex-wrap:wrap;gap:4px;border:0;padding:0;margin:8px 0;min-width:0; }

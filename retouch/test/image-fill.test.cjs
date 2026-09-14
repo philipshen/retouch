@@ -19,3 +19,9 @@ test('image source encoding cannot escape its CSS URL or select an executable sc
  assert.equal(V.valid('background-image','url("/image.svg");color:red'),false);assert.equal(V.valid('background-image','url("</style><script>")'),false);
  const classes=F.classes('bg-[url(/old.png)] bg-blue-500 md:bg-none',{'background-image':F.paint('/new.png')});assert.equal(classes,'bg-blue-500 md:bg-none !bg-[url(/new.png)]');
 });
+
+test('removing and resetting an image fill preserves other paint and screen variants',()=>{
+ const before='text-red-500 bg-blue-500 shadow-lg bg-cover bg-repeat bg-[position:20%_30%] !bg-[image:var(--rt-image-fill-demo)] md:bg-contain';
+ const removed=F.classes(before,{'background-image':'none'});assert.ok(removed.endsWith('!bg-none'));assert.ok(removed.includes('bg-blue-500'));assert.ok(removed.includes('md:bg-contain'));assert.ok(!removed.includes('var('));
+ assert.equal(F.classes(removed,F.reset()),'text-red-500 bg-blue-500 shadow-lg md:bg-contain');
+});

@@ -16854,3 +16854,13 @@ The upload checks bind to the selected layer, source hash, screen scope and sele
 All 1,527 unit tests pass. `RT_E2E_IMAGE_FILL=1 RT_E2E_IMAGE_FILL_UPLOAD=1` in the page-fonts harness verifies replacement pixels, phone isolation, exact source Undo and retained input/document state for HTML/Chromium, React/Chromium and Liquid/WebKit. Adding `RT_E2E_IMAGE_FILL_ADD=1` verifies first-fill creation for HTML/WebKit, React/Chromium and Liquid/Chromium/WebKit. The Liquid fixture deliberately maps `asset_url` to `/test-theme-assets/`, serving uploads there rather than `/assets/`; this checks that source references use the renderer's URL mapping. The final HTML/WebKit run also injects a failed upload, verifies a visible error, and retries through the actual file picker. The updated light inspector was visually inspected in `/tmp/retouch-image-fill-upload.png`.
 
 Live Shopify/CDN behavior, mixed image/gradient stacks, background image crop/adjustment controls and arbitrary framework adapters remain unverified or unfinished. The native archive was not rebuilt for this batch.
+
+### Remove image fills and reset screen overrides — 2026-09-14
+
+Image fill now exposes Remove image fill and Reset image fill. Remove stores an explicit empty image for the selected screen scope; Reset removes that scope's image, size, repeat and position overrides so inherited styling becomes visible. Both are atomic source-history actions. The controls remain available after removal, and reset disables when no recognized overrides remain. They are disabled during a pending upload.
+
+Liquid remove/reset operations also remove the selected scope's managed `asset_url` variable while preserving other scope variables and existing style attributes. Modified or ambiguous managed variables are refused before any write. React class edits preserve unrelated colors, shadows and screen variants. HTML resets only managed image-framing properties.
+
+All 1,529 unit tests pass. Adding `RT_E2E_IMAGE_FILL_REMOVE=1` to the image-fill upload browser workflow passes HTML/Chromium, HTML/WebKit, React/Chromium and local Liquid/WebKit. The checks remove the tablet image while the phone remains unchanged, reset to the inherited image, undo reset and removal back through exact saved source versions, then undo both uploads to the original source with retained input/document state. Unit cases verify that removing a Liquid tablet asset preserves a separate base asset and refuses externally modified variable content. The light controls were visually inspected in `/tmp/retouch-image-fill-remove.png`.
+
+This does not complete mixed paint stacks, background crop/adjustment editing, arbitrary-site support or native release verification.
