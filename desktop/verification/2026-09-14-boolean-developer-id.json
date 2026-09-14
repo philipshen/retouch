@@ -1,0 +1,375 @@
+{
+  "status": "Developer ID signed candidate; covered runtime and isolated Homebrew checks passed; notarization and native launch remain incomplete",
+  "sourceCommit": "1a97caeccf653a081e852782964de5976c5b19d9",
+  "sourceTreeDirty": false,
+  "sourceFiles": 225,
+  "sourceManifestMatchedCheckout": true,
+  "nativeBuildInputsMatchedCheckout": true,
+  "archive": "/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/Retouch-0.1.0-mac.zip",
+  "sha256": "758af8bccb7b4d59d09d0137bbda4d257ec53aaf97a5f6f17fec9367352b2d12",
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signing": {
+    "authority": "Developer ID Application: Philip Shen (2HN3MWMRX2)",
+    "hardenedRuntime": true,
+    "secureTimestamp": true,
+    "strictVerification": true
+  },
+  "gatekeeper": {
+    "exitCode": 3,
+    "stdout": "",
+    "stderr": "/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/extracted/Retouch.app: rejected\nsource=Unnotarized Developer ID\n"
+  },
+  "unitsPassed": 1347,
+  "desktopTestsPassed": 25,
+  "workflows": [
+    {
+      "name": "packaged-units",
+      "args": [
+        "--test",
+        "test/adapter.test.cjs",
+        "test/canvas-move.test.cjs",
+        "test/canvas-rotate.test.cjs",
+        "test/class-gradients.test.cjs",
+        "test/class-site-variables.test.cjs",
+        "test/collection-binding-inheritance.test.cjs",
+        "test/color-override-selection.test.cjs",
+        "test/color-palette-ui.test.cjs",
+        "test/color-style-selection.test.cjs",
+        "test/color-styles.test.cjs",
+        "test/component-definitions.test.cjs",
+        "test/component-instances.test.cjs",
+        "test/component-props-selection.test.cjs",
+        "test/component-props.test.cjs",
+        "test/component-usage.test.cjs",
+        "test/components.test.cjs",
+        "test/create-component.test.cjs",
+        "test/delete-component-selection.test.cjs",
+        "test/delete-component.test.cjs",
+        "test/duplicate-component-selection.test.cjs",
+        "test/effect-style-selection.test.cjs",
+        "test/effect-styles.test.cjs",
+        "test/empty-text.test.cjs",
+        "test/filter-stack.test.cjs",
+        "test/flip.test.cjs",
+        "test/flow-resize.test.cjs",
+        "test/font-axes.test.cjs",
+        "test/font-metadata-cache.test.cjs",
+        "test/history-render-revisions.test.cjs",
+        "test/history-root-alias.test.cjs",
+        "test/history-store.test.cjs",
+        "test/history.test.cjs",
+        "test/html-color-styles.test.cjs",
+        "test/html-css-selection.test.cjs",
+        "test/html-css.test.cjs",
+        "test/html-frame-selection.test.cjs",
+        "test/html-insert.test.cjs",
+        "test/html-layout.test.cjs",
+        "test/html-position.test.cjs",
+        "test/html-reparent-selection.test.cjs",
+        "test/html-reparent.test.cjs",
+        "test/html-site.test.cjs",
+        "test/html-structure-selection.test.cjs",
+        "test/html-svg-gradient.test.cjs",
+        "test/html-svg-mask.test.cjs",
+        "test/html-text-styles.test.cjs",
+        "test/html.test.cjs",
+        "test/id.test.cjs",
+        "test/image-style.test.cjs",
+        "test/indexer.test.cjs",
+        "test/insert-component.test.cjs",
+        "test/inspector-filter.test.cjs",
+        "test/inspector-shadow-stack.test.cjs",
+        "test/inspector.test.cjs",
+        "test/interactions.test.cjs",
+        "test/jsx-class-selection.test.cjs",
+        "test/jsx-color-styles.test.cjs",
+        "test/jsx-effect-styles.test.cjs",
+        "test/jsx-layer-name.test.cjs",
+        "test/jsx-literal-text.test.cjs",
+        "test/jsx-svg-delete.test.cjs",
+        "test/jsx-svg-duplicate.test.cjs",
+        "test/jsx-svg-geometry.test.cjs",
+        "test/jsx-svg-insert.test.cjs",
+        "test/jsx-svg-mask.test.cjs",
+        "test/jsx-svg-move.test.cjs",
+        "test/jsx-text-styles.test.cjs",
+        "test/jsx-variable-bindings.test.cjs",
+        "test/layer-locks.test.cjs",
+        "test/layout.test.cjs",
+        "test/liquid-class-selection.test.cjs",
+        "test/liquid-color-styles.test.cjs",
+        "test/liquid-effect-styles.test.cjs",
+        "test/liquid-images.test.cjs",
+        "test/liquid-layer-name.test.cjs",
+        "test/liquid-parity.test.cjs",
+        "test/liquid-sources.test.cjs",
+        "test/liquid-style-selection.test.cjs",
+        "test/liquid-svg-geometry.test.cjs",
+        "test/liquid-svg-insert.test.cjs",
+        "test/liquid-svg-mask.test.cjs",
+        "test/liquid-text-styles.test.cjs",
+        "test/liquid-theme.test.cjs",
+        "test/liquid-variable-api.test.cjs",
+        "test/liquid-variable-bindings.test.cjs",
+        "test/liquid.test.cjs",
+        "test/list-markers.test.cjs",
+        "test/literal-text-noop.test.cjs",
+        "test/manifest-diagnostic.test.cjs",
+        "test/max-width.test.cjs",
+        "test/move-component.test.cjs",
+        "test/native-insert.test.cjs",
+        "test/native-svg-draw.test.cjs",
+        "test/next-hmr-loader.test.cjs",
+        "test/next-websocket-loader.test.cjs",
+        "test/next.test.cjs",
+        "test/numeric-expression.test.cjs",
+        "test/palette-values.test.cjs",
+        "test/range-style-source.test.cjs",
+        "test/range-style-values.test.cjs",
+        "test/react-color-override.test.cjs",
+        "test/react-effect-api.test.cjs",
+        "test/react-selection-geometry.test.cjs",
+        "test/react-selection.test.cjs",
+        "test/react-variable-api.test.cjs",
+        "test/render-sync.test.cjs",
+        "test/reparent-component-selection.test.cjs",
+        "test/reparent-component.test.cjs",
+        "test/responsive.test.cjs",
+        "test/rich-text-blocks.test.cjs",
+        "test/rich-text-copy.test.cjs",
+        "test/rich-text-source.test.cjs",
+        "test/screen-resize.test.cjs",
+        "test/selection-layout.test.cjs",
+        "test/selection-marquee.test.cjs",
+        "test/serialize.test.cjs",
+        "test/server.test.cjs",
+        "test/session.test.cjs",
+        "test/shared-sizing.test.cjs",
+        "test/shopify.test.cjs",
+        "test/source-order.test.cjs",
+        "test/source-path-checks.test.cjs",
+        "test/source-svg-gradient.test.cjs",
+        "test/stamp.test.cjs",
+        "test/structure.test.cjs",
+        "test/svg-arrow-path.test.cjs",
+        "test/svg-boolean-group.test.cjs",
+        "test/svg-boolean.test.cjs",
+        "test/svg-combine-selection.test.cjs",
+        "test/svg-convert.test.cjs",
+        "test/svg-delete.test.cjs",
+        "test/svg-drag.test.cjs",
+        "test/svg-draw.test.cjs",
+        "test/svg-duplicate.test.cjs",
+        "test/svg-geometry.test.cjs",
+        "test/svg-gradient-canvas.test.cjs",
+        "test/svg-gradient-create.test.cjs",
+        "test/svg-gradient-detach.test.cjs",
+        "test/svg-gradient-reverse.test.cjs",
+        "test/svg-gradient-solid.test.cjs",
+        "test/svg-gradient-stops.test.cjs",
+        "test/svg-gradient-type.test.cjs",
+        "test/svg-insert.test.cjs",
+        "test/svg-mask-duplicate.test.cjs",
+        "test/svg-move.test.cjs",
+        "test/svg-paint.test.cjs",
+        "test/svg-parametric.test.cjs",
+        "test/svg-path.test.cjs",
+        "test/svg-points.test.cjs",
+        "test/svg-radius.test.cjs",
+        "test/svg-selection.test.cjs",
+        "test/svg-snapping.test.cjs",
+        "test/svg-star-triangle.test.cjs",
+        "test/svg-transform.test.cjs",
+        "test/swap-component.test.cjs",
+        "test/text-links.test.cjs",
+        "test/text-paragraphs.test.cjs",
+        "test/text-style-classes.test.cjs",
+        "test/text-style-selection.test.cjs",
+        "test/text-style-update.test.cjs",
+        "test/text-styles.test.cjs",
+        "test/text-truncation.test.cjs",
+        "test/variable-bindings.test.cjs",
+        "test/variable-collections.test.cjs",
+        "test/variable-library.test.cjs",
+        "test/variable-selection.test.cjs",
+        "test/writer.test.cjs"
+      ],
+      "env": {},
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 6421,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/packaged-units.log",
+      "logSha256": "1a53097e1adc11e9c3d8caa6fb437e1dbbcbc46a052ec902fe59698d2908f4ec"
+    },
+    {
+      "name": "html-originals",
+      "args": [
+        "test/e2e/svg-boolean-selection.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "html",
+        "RT_E2E_BOOLEAN_GROUP": "1",
+        "RT_E2E_BOOLEAN_OPERAND_CANVAS": "1",
+        "RT_E2E_BOOLEAN_GROUP_TRANSFORM": "1"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 13609,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/html-originals.log",
+      "logSha256": "dd75d454a3be6ef66a7fc3aa4cb930093aad173ba753aa49efbd8d1d4ee220ab"
+    },
+    {
+      "name": "html-multi",
+      "args": [
+        "test/e2e/svg-boolean-selection.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "html",
+        "RT_E2E_BOOLEAN_MULTI": "1"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 2757,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/html-multi.log",
+      "logSha256": "1e3feb2a925e91b6b6326b31b14b87d0931f580ec48fc85939d08d8b779a4865"
+    },
+    {
+      "name": "liquid-originals",
+      "args": [
+        "test/e2e/svg-boolean-selection.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "liquid",
+        "RT_E2E_BOOLEAN_GROUP": "1",
+        "RT_E2E_BOOLEAN_OPERAND_CANVAS": "1",
+        "RT_E2E_BOOLEAN_GROUP_TRANSFORM": "1"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 13458,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/liquid-originals.log",
+      "logSha256": "327e208a65a8f7373e616ec83dd96ac95e55f83539d1d699af23f973dad6506a"
+    },
+    {
+      "name": "liquid-multi",
+      "args": [
+        "test/e2e/svg-boolean-selection.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "liquid",
+        "RT_E2E_BOOLEAN_MULTI": "1"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 2638,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/liquid-multi.log",
+      "logSha256": "4e4f0d658692d3dbc3b0356ec2a9187bad4916e1d8802b3e7f0d4263c6b7238c"
+    },
+    {
+      "name": "react-chromium",
+      "args": [
+        "test/e2e/svg-boolean-selection.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "react",
+        "RT_E2E_BROWSER": "chromium",
+        "RT_E2E_BOOLEAN_GROUP": "1",
+        "RT_E2E_BOOLEAN_OPERAND_CANVAS": "1",
+        "RT_E2E_STALE_RENDER": "1",
+        "RT_E2E_PREVIEW_TRACE": "1"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 27171,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/react-chromium.log",
+      "logSha256": "3593ac767468061af6d05f3845c423207fc52a11505fdd12bf488c3bc1916404"
+    },
+    {
+      "name": "react-webkit",
+      "args": [
+        "test/e2e/svg-boolean-selection.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "react",
+        "RT_E2E_BROWSER": "webkit",
+        "RT_E2E_BOOLEAN_GROUP": "1",
+        "RT_E2E_BOOLEAN_OPERAND_CANVAS": "1",
+        "RT_E2E_STALE_RENDER": "1",
+        "RT_E2E_PREVIEW_TRACE": "1"
+      },
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 29767,
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/react-webkit.log",
+      "logSha256": "8feec118e2246ea8bb8067356b286e1805da6597cb825fb76169af4b0bfedcfd"
+    }
+  ],
+  "homebrew": {
+    "result": "passed",
+    "checks": [
+      {
+        "version": "0.1.0",
+        "sha256": "758af8bccb7b4d59d09d0137bbda4d257ec53aaf97a5f6f17fec9367352b2d12",
+        "verification": {
+          "sourceCommit": "1a97caeccf653a081e852782964de5976c5b19d9",
+          "sourceTreeDirty": false,
+          "sourceFiles": 225,
+          "architectures": [
+            "arm64",
+            "x86_64"
+          ],
+          "signature": "strict verification passed; trust and notarization are separate checks"
+        },
+        "manifestMatchesArchive": true,
+        "quarantine": "0381;6aa7b2e4;;013489C5-2F40-4EC6-B01E-6F394788A1F8",
+        "registered": "retouch-studio 0.1.0"
+      }
+    ],
+    "originalInventoriesRestored": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "nativeLaunch": "not attempted",
+    "trustedDistribution": "not established; Developer ID signed; notarization and native launch not verified"
+  },
+  "logs": [
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/build.log",
+      "sha256": "8f1a901f9ac7fe2b0b2390deaf27d9d18e90c33d6aa9e7b7f4c87103b99cf934"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/desktop-tests.log",
+      "sha256": "fbdb8e8d7b3b4a19052f4a69b8adf7a7f50eaf16836d6af4b4017638afbc4ac6"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/package-verifier.log",
+      "sha256": "74b828d723af4fd2aedf9d9659f758c79ae68b1fb5ed392628c83904dc4abed2"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/runtime-suite.log",
+      "sha256": "a2ca5fa3ae3260dfc7d5e6a7cc8dbc8315e1b1a7f7adddbe57e2736141d8cd64"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/homebrew.log",
+      "sha256": "bf7c5b8660837aadc936550de276142c85fa98ef0c756d7437cdb4e46b5bb6f9"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/signature.txt",
+      "sha256": "844cd42d99d5e389194da4b446802ab7cca02515221cf593c3352868238e0748"
+    },
+    {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/test-hashes.json",
+      "sha256": "f3201fbd65b6aa1dfe7ec2096451809d8e8df7dd8d69c469e8ad873331ffd49b"
+    }
+  ],
+  "notarization": "Not submitted; existing notarytool Keychain profile name requested",
+  "nativeLaunch": "Not attempted for this build",
+  "intelExecution": "Not verified",
+  "publicDistribution": "Not published",
+  "limitations": [
+    "Full Figma and arbitrary-site parity remain incomplete",
+    "Native workflows and trusted Homebrew distribution remain unverified",
+    "Earlier intermittent framework reloads remain documented; final covered runs do not establish universal state retention"
+  ]
+}

@@ -1,6 +1,35 @@
 # Retouch for macOS
 
-## Current preview-state development archive — 2026-09-14
+## Current Developer ID signed candidate — 2026-09-14
+
+Clean commit `1a97caeccf653a081e852782964de5976c5b19d9` is packaged in
+`/Users/philipshen/Developer/retouch-worktrees/desktop-boolean-1a97cae/Retouch-0.1.0-mac.zip`.
+SHA-256: `758af8bccb7b4d59d09d0137bbda4d257ec53aaf97a5f6f17fec9367352b2d12`.
+
+The universal arm64/x86_64 app has a valid Developer ID Application signature,
+hardened runtime and secure timestamp. All 225 packaged source hashes and native
+build inputs match the clean checkout. It includes retained boolean groups,
+multi-group transforms, original-shape canvas editing and live-first React
+preview synchronization. The older signed build job also completed; its signature
+was verified before this fresh build was started.
+
+The exact extracted runtime passed 1,347 unit tests and six browser workflows:
+HTML/Liquid original/group canvas transforms and multi-selection; React Chromium
+and WebKit original editing, stale server HTML, exact history, release and retained
+input/document state. All 25 desktop tests and package-tampering checks passed.
+The exact ZIP installed and uninstalled through an isolated local Homebrew tap,
+with quarantine retained and original cask/formula/tap inventories restored.
+The sibling `retouch-studio.rb` is a syntax-checked cask bound to this archive.
+
+**Not yet a trusted public release:** Gatekeeper explicitly reports
+`Unnotarized Developer ID`. Apple notarization awaits an existing notarytool
+Keychain profile name. No native launch was attempted for this build. Intel
+execution, native editing, public distribution and full Figma/arbitrary-site
+parity remain unverified or incomplete. Earlier intermittent framework reloads
+remain documented; the covered passes do not establish universal retention.
+See the [signed candidate receipt](verification/2026-09-14-boolean-developer-id.json).
+
+## Previous ad hoc preview-state development archive — 2026-09-14
 
 Clean commit `df69eab7725eda86b90a9b5358bdc0edfa0a85af` is packaged in
 `/Users/philipshen/Developer/retouch-worktrees/desktop-preview-df69eab/Retouch-0.1.0-mac.zip`.
