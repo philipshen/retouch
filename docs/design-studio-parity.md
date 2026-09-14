@@ -15437,3 +15437,28 @@ and duplicate validation, one visible rename field, focused draft retention,
 unchanged saved names, Escape cleanup, removal/recovery, plus existing name/size
 history, persistence and preview-state checks. Syntax and diff checks pass.
 No desktop rebuild or public distribution occurred; full parity remains open.
+
+### Join open path contours (2026-09-14)
+
+The vector point editor's contour options now include **Join next contour**.
+For two consecutive open contours, it connects the selected contour's final
+anchor to the next contour's first anchor with a straight segment. Existing
+cubic handles and arc parameters are retained, other contours are unchanged,
+and the joined contour stays open. Closed contours or a missing next contour
+disable the action; use Open contour or Reverse contour first when appropriate.
+Coincident endpoints remain distinct anchors. Done saves through the existing
+source adapter; Escape cancels the pending operation.
+
+All 1,247 unit tests pass (`/private/tmp/retouch-join-contours-all-units.log`),
+including curve/arc preservation, input immutability, untouched contours,
+coincident endpoints, serialization roundtrip and invalid targets. The expanded
+compound-contour browser workflow passes HTML on Chromium and WebKit
+(`/private/tmp/retouch-join-contours-{html,webkit}.log`), covering disabled closed
+contours, open/join, cancel, saved source, untouched geometry and exact Undo/Redo.
+This does not yet join separately owned SVG elements, merge coincident anchors,
+provide arbitrary endpoint-pair selection, or implement vector networks/booleans.
+Full parity and desktop distribution remain open.
+
+React/Chromium also passed the complete compound-contour workflow on the same
+implementation (`/private/tmp/retouch-join-contours-react.log`, exit 0), including
+source persistence and exact Undo/Redo for the new join action.

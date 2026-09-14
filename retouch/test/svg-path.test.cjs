@@ -182,3 +182,12 @@ test('Path bounds use curve extrema, include curved closure, and ignore unused e
  }
  const semi=path.bounds(path.parse('M0 0A50 50 0 0 1 100 0').nodes);assert.ok(Math.abs(semi.height-50)<1e-9);assert.equal(semi.width,100);
 });
+
+test('Joining open contours preserves curves, arcs and untouched contours without mutating input',()=>{
+ const original=path.parseCompound('M0 0C0 10 20 10 20 0 M40 0A10 15 30 0 1 60 20 M80 0L90 0L90 20Z'),before=JSON.stringify(original),joined=path.editContour(original,0,'join-next');
+ assert.equal(joined.subpaths.length,2);assert.equal(joined.selected,0);assert.deepEqual(joined.subpaths[0].nodes,[...original.subpaths[0].nodes,...original.subpaths[1].nodes]);assert.deepEqual(joined.subpaths[1],original.subpaths[2]);assert.equal(JSON.stringify(original),before);
+ assert.equal(path.serializeCompound(joined),'M 0 0 C 0 10 20 10 20 0 L 40 0 A 10 15 30 0 1 60 20 M 80 0 L 90 0 L 90 20 Z');
+ assert.equal(path.editContour(original,1,'join-next'),null);assert.equal(path.editContour(original,2,'join-next'),null);assert.equal(path.editContour(original,-1,'join-next'),null);
+ const closedFirst=path.parseCompound('M0 0L10 0L10 10Z M20 0L30 0');assert.equal(path.editContour(closedFirst,0,'join-next'),null);
+ const touching=path.editContour(path.parseCompound('M0 0L10 0 M10 0L20 0'),0,'join-next');assert.equal(touching.subpaths[0].nodes.length,4);assert.ok(path.equivalentCompound(path.parseCompound(path.serializeCompound(joined)),joined));
+});

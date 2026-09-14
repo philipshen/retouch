@@ -99,6 +99,13 @@
     if(!serializeCompound(document)||!Number.isInteger(index)||index<0||index>=document.subpaths.length)return null;
     const subpaths=document.subpaths.map(part=>({closed:part.closed,nodes:part.nodes.map(p=>translate(p,0,0))})),part=subpaths[index];let selected=index;
     if(action==='duplicate'){subpaths.splice(index+1,0,{closed:part.closed,nodes:part.nodes.map(p=>translate(p,10,10))});selected++;}
+    else if(action==='join-next'){
+      const next=subpaths[index+1];if(part.closed||!next||next.closed)return null;
+      // The new edge is straight; all existing segments retain their handles
+      // and arc parameters. Keep coincident endpoints as distinct anchors.
+      delete part.nodes.at(-1).out;delete next.nodes[0].in;delete next.nodes[0].arc;
+      part.nodes.push(...next.nodes);subpaths.splice(index+1,1);
+    }
     else if(action==='delete'){if(subpaths.length===1)return null;subpaths.splice(index,1);selected=Math.min(index,subpaths.length-1);}
     else if(action==='reverse'){
       const ordered=part.closed?[part.nodes[0],...part.nodes.slice(1).reverse()]:[...part.nodes].reverse();

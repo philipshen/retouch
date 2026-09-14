@@ -69,7 +69,7 @@
     listen(optionsToggle,'click',()=>{optionsPanel.style.maxHeight=Math.max(32,toolbar.getBoundingClientRect().top-surface.getBoundingClientRect().top-16)+'px';optionsPanel.style.overflowY='auto';optionsPanel.style.boxSizing='border-box';});
     listen(optionsPanel,'click',event=>{if(event.target.closest('button')){options.open=false;if(optionsPanel.contains(root.document.activeElement))optionsToggle.focus();}});
     listen(options,'keydown',event=>{if(event.key==='Escape'&&options.open){event.preventDefault();event.stopImmediatePropagation();options.open=false;optionsToggle.focus();}},true);
-    let handleMode,contourPicker,deleteContourButton,duplicateContourButton,closureButton,drawContourButton,moveContourButton,cornerButton,smoothButton;
+    let joinContourButton,handleMode,contourPicker,deleteContourButton,duplicateContourButton,closureButton,drawContourButton,moveContourButton,cornerButton,smoothButton;
     if(subpaths){
       const label=root.document.createElement('label');label.textContent='Contour ';label.style.cssText='font:12px Inter,system-ui;color:var(--ink, #1e1e1e);';
       contourPicker=root.document.createElement('select');contourPicker.setAttribute('aria-label','Path contour');contourPicker.style.cssText='padding:6px;background:var(--control, #f5f5f5);color:var(--ink, #1e1e1e);border:1px solid var(--line, #e6e6e6);border-radius:4px;';
@@ -95,6 +95,7 @@
       duplicateContourButton=action('Duplicate contour',()=>restructure('duplicate'));duplicateContourButton.title='Copy this contour with a 10-unit SVG offset';
       deleteContourButton=action('Delete contour',()=>restructure('delete'));deleteContourButton.title='Remove this contour, keeping the rest of the path';
       action('Reverse contour',()=>restructure('reverse')).title='Reverse drawing direction. This can change holes with the nonzero fill rule.';
+      joinContourButton=action('Join next contour',()=>restructure('join-next'));joinContourButton.title='Connect this open contour’s end to the next open contour’s start with a straight segment.';
       closureButton=action('Close contour',()=>restructure(closed?'open':'close'));
     }
     function drawContour(){
@@ -117,7 +118,7 @@
       const result=root.RetouchSVGPath.editContour({subpaths},contour,action);
       if(!result){announce('This contour change would exceed path limits or leave an invalid path.');return;}
       subpaths.splice(0,subpaths.length,...result.subpaths);selectContour(result.selected);
-      announce({duplicate:'Contour duplicated. Done saves; Escape cancels.',delete:'Contour removed from preview. Done saves; Escape cancels.',reverse:'Contour direction reversed. Done saves; Escape cancels.',open:'Closing edge removed. Done saves; Escape cancels.',close:'Endpoints joined. Done saves; Escape cancels.'}[action]);
+      announce({'join-next':'Contours joined. Done saves; Escape cancels.',duplicate:'Contour duplicated. Done saves; Escape cancels.',delete:'Contour removed from preview. Done saves; Escape cancels.',reverse:'Contour direction reversed. Done saves; Escape cancels.',open:'Closing edge removed. Done saves; Escape cancels.',close:'Endpoints joined. Done saves; Escape cancels.'}[action]);
     }
     const arcPanel=root.document.createElement('div');arcPanel.setAttribute('role','group');arcPanel.setAttribute('aria-label','Arc properties');arcPanel.style.cssText='display:none;flex-basis:100%;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line, #e6e6e6);padding-top:8px;color:var(--ink, #1e1e1e);font:12px Inter,system-ui;';
     const arcHeading=root.document.createElement('strong');arcHeading.textContent='Arc properties';arcHeading.style.cssText='flex-basis:100%;font-size:12px;';arcPanel.append(arcHeading);
@@ -208,7 +209,7 @@
     function selectAllPoints(){if(drag||moveContourMode||!verify())return;selectedPoints=new Set(vertices.map((_,i)=>i));activeHandle=null;announce();paint();handles[active].focus({preventScroll:true});}
     action('Select all points',selectAllPoints).title='Select every point in this contour. Drag a box for a smaller selection. Shift-click or Shift-drag adds points; drag selected points or use arrows to move them.';
     const removeButton=action('Delete point',removePoint);
-    for(const button of [...toolbar.children]){const label=button.textContent;if(actionIcons[label])compact(button,label);if(['Duplicate contour','Delete contour','Reverse contour','Close contour'].includes(label)){button.style.textAlign='left';optionsPanel.append(button);}}
+    for(const button of [...toolbar.children]){const label=button.textContent;if(actionIcons[label])compact(button,label);if(['Duplicate contour','Delete contour','Reverse contour','Close contour','Join next contour'].includes(label)){button.style.textAlign='left';optionsPanel.append(button);}}
     if(subpaths||pathData)toolbar.append(options);
     action('Done',commit);action('Cancel',cancel);surface.append(toolbar);
     function adjacentArc(){return [...selectedPoints].some(i=>vertices[i]?.arc||(vertices[i+1]||(closed?vertices[0]:null))?.arc);}
@@ -217,10 +218,10 @@
     function refreshContours(){
       if(!contourPicker)return;contourPicker.replaceChildren();
       subpaths.forEach((part,i)=>{const option=root.document.createElement('option');option.value=String(i);option.textContent=`${i+1} of ${subpaths.length} · ${part.closed?'Closed':'Open'}`;contourPicker.append(option);});contourPicker.value=String(contour);
-      drawContourButton.disabled=subpaths.length>=128||totalPoints()>510;deleteContourButton.disabled=subpaths.length===1;duplicateContourButton.disabled=subpaths.length>=128||totalPoints()+vertices.length>512;
+      joinContourButton.disabled=closed||!subpaths[contour+1]||subpaths[contour+1].closed;drawContourButton.disabled=subpaths.length>=128||totalPoints()>510;deleteContourButton.disabled=subpaths.length===1;duplicateContourButton.disabled=subpaths.length>=128||totalPoints()+vertices.length>512;
       closureButton.textContent=closed?'Open contour':'Close contour';closureButton.title=closed?'Remove the edge from the last anchor to the first':'Join the last anchor to the first with a straight edge';
       moveContourButton.setAttribute('aria-pressed',String(moveContourMode));moveContourButton.style.background=moveContourMode?'#e5f4ff':'var(--control, #f5f5f5)';cornerButton.disabled=moveContourMode;smoothButton.disabled=moveContourMode;handleMode.disabled=moveContourMode;
-      for(const button of [deleteContourButton,duplicateContourButton,drawContourButton,cornerButton,smoothButton])button.style.opacity=button.disabled?'.5':'1';
+      for(const button of [joinContourButton,deleteContourButton,duplicateContourButton,drawContourButton,cornerButton,smoothButton])button.style.opacity=button.disabled?'.5':'1';
     }
     function rebuild(resetSelection=true){
       if(resetSelection)selectedPoints=new Set([active]);
