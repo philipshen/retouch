@@ -36,3 +36,26 @@ test('paragraph joining preserves authored attributes and rejects unmarked sourc
  assert.throws(()=>inline('<span style="display:block">Text</span>'),/explicit text paragraphs/);
  assert.throws(()=>inline('<p data-retouch-paragraph="">Text</p>'),/explicit text paragraphs/);
 });
+
+for(const kind of ['react','html','liquid'])test(kind+' list joins retain source appearance and links in inline runs',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),name=kind==='react'?'Text.tsx':kind==='html'?'index.html':'text.liquid';
+ const inner='<ol><li>Head</li><li id="tail" '+(kind==='react'?'className="tail" style={{color:"red"}}':'class="tail" style="color:red"')+'><a href="/kept">line</a></li></ol>',original=(kind==='react'?'export const Text = () => ':'')+'<div>'+inner+'</div>'+(kind==='react'?';':'');
+ const root=makeApp({[name]:original}),file=path.join(root,name);
+ try{
+  const index=new Index(root,adapter);index.scanAll();const elements=kind==='react'?id.collectElements(original,name).elements:adapter.collect(original,name).elements,tag=e=>kind==='react'?e.node.openingElement.name.name:e.tag,resolved=index.resolve(elements.find(e=>tag(e)==='div').id);
+  const tree=kind==='html'?source.describe(inner,resolved.element.id).descriptor.children:null,list=tree?tree[0]:elements.find(e=>tag(e)==='ol'),items=tree?list.children:elements.filter(e=>tag(e)==='li'),link=tree?items[1].children[0]:elements.find(e=>tag(e)==='a');
+  const result=(kind==='react'?writer:adapter).applyOp(resolved,{type:'setChildren',children:[{t:'keep',id:list.id,children:[{t:'keep',id:items[0].id,children:[text('Head'),{t:'keep',id:items[1].id,paragraph:'inline',children:[{t:'keep',id:link.id}]}]}]}]});assert.equal(result.ok,true,JSON.stringify(result));
+  const saved=fs.readFileSync(file,'utf8');assert.equal((saved.match(/<li[ >]/g)||[]).length,1);assert.match(saved,/<span id="tail"/);assert.ok(saved.includes('href="/kept"'));assert.ok(saved.includes('color'));assert.ok(saved.includes(kind==='react'?'display:"inline"':'display: inline;'));
+ }finally{cleanup(root);}
+});
+test('list join patches use actual source tags and enforce inline content',()=>{
+ const jsx=require('../src/text-paragraphs.cjs').inline('<li {...attrs} style={theme}>Text</li>',true);assert.equal((jsx.match(/attrs/g)||[]).length,1);assert.equal((jsx.match(/theme/g)||[]).length,1);assert.match(jsx,/^<span /);assert.throws(()=>require('../src/text-paragraphs.cjs').inline('<li style={theme} {...attrs}>Text</li>',true),/explicit source style/);assert.throws(()=>require('../src/text-paragraphs.cjs').inline('<li {...attrs}>Text</li>',true),/explicit source style/);
+ const raw='<li class="copy" style="color: red"><strong>Text</strong></li>';
+ const {descriptor}=source.describe(raw,'join');const item=descriptor.children[0];
+ assert.match(source.rewrite(raw,'join',[{t:'keep',id:item.id,paragraph:'inline'}],{parentTag:'li'}),/^<span /);
+ assert.match(source.rewrite(raw,'join',[{t:'copy',id:item.id,paragraph:'inline',children:[text('Copy')]}],{parentTag:'li'}),/^<span /);
+ const nested='<li>Text<ul><li>Nested</li></ul></li>',nestedItem=source.describe(nested,'join').descriptor.children[0];
+ assert.throws(()=>source.rewrite(nested,'join',[{t:'keep',id:nestedItem.id,paragraph:'inline'}],{parentTag:'li'}),/inline text/);
+ assert.throws(()=>source.rewrite(raw,'join',[{t:'keep',id:item.id,paragraph:'inline'}],{parentTag:'ol'}),/Lists must/);
+ assert.throws(()=>source.rewrite(raw,'join',[{t:'copy',id:item.id,paragraph:'inline',children:[{t:'block',tag:'ul',children:[]}]}],{parentTag:'li'}),/cannot contain/);
+});

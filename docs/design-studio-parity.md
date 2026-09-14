@@ -15184,3 +15184,51 @@ This does not establish full Figma parity or arbitrary-site editability. Text-li
 structures that contain authored layout or component boundaries remain separate
 layers. General paragraph/list editing gaps and desktop distribution requirements
 listed above remain open. No desktop rebuild or native launch was performed.
+
+### Source-preserving adjacent list-item joins (2026-09-14)
+
+Forward Delete at the end of a list item now joins its adjacent sibling through
+the explicit rich-text transaction. Backspace at an item's start still removes
+its marker first, retaining indentation; a subsequent press joins it to the
+preceding sibling. `beforeinput` uses the same path, and a held deletion joins
+and deletes characters in one local undo group. Visible links can reopen the
+containing text layer. The existing marker-first behavior follows Figma's list
+guide: https://help.figma.com/hc/en-us/articles/360040449773-Create-bulleted-and-numbered-lists
+
+The `paragraph: inline` source patch now accepts an actual source LI as well as
+an explicitly marked SPAN paragraph. A retained LI becomes a SPAN with an inline
+display override, preserving its source attributes and descendants. Split-copy
+paths reuse the same transformation and retain their identity-copy restrictions.
+Source validation uses the resulting inline content model, checks depth, rejects
+nested blocks in the run and refuses inline runs directly inside UL/OL. Explicit
+paragraph wrappers at the joined boundaries also become inline, so the text
+actually shares a line before and after saving. Nested-list boundaries are not
+crossed by this explicit join path.
+
+The shared JSX property patcher accepts leading spread attributes when a later
+explicit style attribute determines the final style. It retains each source
+expression once. A spread after the style, or a spread without an explicit
+style, remains refused because the final style cannot be patched independently.
+
+Verification: 1,245 unit tests pass in
+`/private/tmp/retouch-list-join-units-verified.log`. New source tests exercise real
+React, HTML and Liquid writes, retained IDs/classes/style/link attributes,
+copy paths, JSX expression preservation, invalid list parents and nested-block
+refusal. `RT_E2E_LIST_JOIN=1` covers new and saved items, both deletion directions,
+marker removal, beforeinput, links, grouped held deletion, pointer reopening and
+exact saved-source undo/redo. HTML passed in
+`/private/tmp/retouch-list-join-html-final.log`; the combined list/paragraph-join
+runs passed in `/private/tmp/retouch-list-join-{react,liquid,webkit}.log`.
+Existing marker-removal and paragraph-Enter regressions passed in
+`/private/tmp/retouch-list-join-regression.log`. Explicit paragraph-in-list join
+geometry passed in `/private/tmp/retouch-list-join-paragraphs-html.log`.
+The final combined list-join and paragraph-Enter runs, including saved list-join
+geometry, passed in `/private/tmp/retouch-list-join-{react,liquid,webkit}-verified.log`.
+`/private/tmp/retouch-list-join.png` was visually inspected.
+
+This is not complete list or Figma parity. Cross-level and nested-list boundary
+merges, arbitrary authored block wrappers, automatic list prefixes, spacing and
+hanging controls remain open. Source attributes are retained, but arbitrary CSS
+selectors tied to the old LI tag are not universally appearance-equivalent after
+it becomes a SPAN. Desktop distribution and arbitrary-site ownership requirements
+remain unproven; no desktop rebuild or native launch was performed.

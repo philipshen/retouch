@@ -97,21 +97,38 @@
   const next=copyTextShell(first);next.append(fragment);first.after(next);
   placeholder(first);placeholder(next);caret(next);return next;
  }
+ function listJoinContext(el,backward=true){
+  const context=listContext(el);if(!context||!context.range.collapsed)return null;
+  const current=context.items[0],d=el.ownerDocument,edge=d.createRange();edge.selectNodeContents(current);
+  if(backward)edge.setEnd(context.range.startContainer,context.range.startOffset);else edge.setStart(context.range.startContainer,context.range.startOffset);
+  const fragment=edge.cloneContents();if(fragment.textContent.length||fragment.querySelector('img,input,svg,canvas,video,audio,iframe,object,embed,hr,button,select,textarea,ul,ol')||fragment.querySelectorAll('br').length>(backward?0:1))return null;
+  const other=backward?current.previousElementSibling:current.nextElementSibling;if(other?.tagName!=='LI')return null;
+  const left=backward?other:current,right=backward?current:other;
+  // A nested list is a separate sequence of text lines. Do not jump over it.
+  if(left.querySelector('ul,ol')||right.querySelector('ul,ol'))return null;
+  return {left,right,gap:[],listItem:true};
+ }
  function joinContext(el,backward=true){
   const d=el.ownerDocument,selection=d.getSelection();if(!selection.rangeCount)return null;
   const range=selection.getRangeAt(0);if(!range.collapsed||!el.contains(range.startContainer))return null;
   const node=range.startContainer.nodeType===1?range.startContainer:range.startContainer.parentElement;
-  const current=node.closest('span[data-retouch-paragraph]');if(!current||current===el||!el.contains(current))return null;
+  const current=node.closest('span[data-retouch-paragraph]');if(!current||current===el||!el.contains(current))return listJoinContext(el,backward);
   const edge=d.createRange();edge.selectNodeContents(current);if(backward)edge.setEnd(range.startContainer,range.startOffset);else edge.setStart(range.startContainer,range.startOffset);
   const fragment=edge.cloneContents();if(fragment.textContent.length||fragment.querySelector('img,input,svg,canvas,video,audio,iframe,object,embed,hr,button,select,textarea,ul,ol')||fragment.querySelectorAll('br').length>(backward?0:1))return null;
   const gap=[];let other=backward?current.previousSibling:current.nextSibling;
   while(other?.nodeType===3&&!other.textContent.trim()){gap.push(other);other=backward?other.previousSibling:other.nextSibling;}
-  if(other?.nodeType!==1||!other.matches('span[data-retouch-paragraph]'))return null;
+  if(other?.nodeType!==1||!other.matches('span[data-retouch-paragraph]'))return listJoinContext(el,backward);
   return {left:backward?other:current,right:backward?current:other,gap};
  }
  function join(el,backward=true){
   const context=joinContext(el,backward);if(!context)return false;
-  const {left,right,gap}=context,d=el.ownerDocument;
+  const {left,gap}=context,d=el.ownerDocument;let right=context.right;
+  if(context.listItem){
+   for(const [item,first]of [[left,false],[right,true]]){
+    const children=[...item.childNodes].filter(node=>node.nodeType!==3||node.textContent.trim()),edge=first?children[0]:children.at(-1);
+    if(edge?.nodeType===1&&edge.matches('span[data-retouch-paragraph]')){edge.removeAttribute('data-retouch-paragraph');edge.style.setProperty('display','inline',edge.style.getPropertyPriority('display'));edge.__rtParagraphInline=true;}
+   }
+  }
   const content=d.createTreeWalker(left,5);let finalContent=null;while(content.nextNode()){const node=content.currentNode;if(node.nodeType===3&&node.data.length||node.nodeType===1&&/^(BR|IMG|INPUT|SVG|CANVAS|VIDEO|AUDIO|IFRAME|OBJECT|EMBED|HR)$/.test(node.tagName))finalContent=node;}
   if(finalContent?.nodeType===1&&finalContent.tagName==='BR')finalContent.remove();
   const walker=d.createTreeWalker(left,4);let last=null;while(walker.nextNode())last=walker.currentNode;
@@ -120,6 +137,7 @@
   const appearance=node=>JSON.stringify([...node.attributes].filter(attr=>attr.name!=='id'&&!/^on/i.test(attr.name)&&!/^data-rt(?:-|$)/.test(attr.name)).map(attr=>[attr.name,attr.value]).sort(([a],[b])=>a.localeCompare(b)));
   const sameOrigin=source(left)?right.__rtSourceCopy===source(left):!source(right);
   const flatten=sameOrigin&&appearance(left)===appearance(right);
+  if(context.listItem&&!flatten){const span=d.createElement('span');for(const attr of right.attributes)span.setAttribute(attr.name,attr.value);for(const key of Object.keys(right))if(key.startsWith('__rt'))span[key]=right[key];span.append(...right.childNodes);right.replaceWith(span);right=span;delete right.__rtBlockTag;delete right.__rtListMarker;}
   for(const node of gap)node.remove();
   if(flatten){left.append(...right.childNodes);right.remove();}
   else {right.removeAttribute('data-retouch-paragraph');right.style.setProperty('display','inline',right.style.getPropertyPriority('display'));right.__rtParagraphInline=true;left.append(right);}

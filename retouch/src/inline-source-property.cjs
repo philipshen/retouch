@@ -27,9 +27,10 @@ function patch(raw,tag,marker,jsx=false,property='list-style-type'){
  if(!['display','list-style-type'].includes(property)||property==='display'&&!['inline','block'].includes(marker))throw Error('Unsupported inline property.');
  if(jsx){
   const node=require('@babel/parser').parseExpression(raw,{plugins:['jsx','typescript']}),opening=node.openingElement;
-  if(!opening||opening.name.name!==tag||opening.attributes.some(a=>a.type==='JSXSpreadAttribute'))throw Error('List markers need an explicit source style.');
-  const attrs=opening.attributes.filter(a=>a.name.name==='style');if(attrs.length>1)throw Error('Ambiguous list style.');
-  const attr=attrs[0];if(!attr)return raw.slice(0,opening.end-1)+' style={{'+camel+':'+JSON.stringify(marker)+'}}'+raw.slice(opening.end-1);
+  if(!opening||opening.name.name!==tag)throw Error('Inline properties need an explicit source style.');
+  const attrs=opening.attributes.filter(a=>a.type==='JSXAttribute'&&a.name.name==='style');if(attrs.length>1)throw Error('Ambiguous list style.');
+  const attr=attrs[0];if(opening.attributes.some(a=>a.type==='JSXSpreadAttribute'&&(!attr||a.start>attr.start)))throw Error('Inline properties need an explicit source style after spread attributes.');
+  if(!attr)return raw.slice(0,opening.end-1)+' style={{'+camel+':'+JSON.stringify(marker)+'}}'+raw.slice(opening.end-1);
   const expression=attr.value?.expression;if(!expression||expression.type==='JSXEmptyExpression')throw Error('List markers need a style expression.');
   if(expression.type==='ObjectExpression'){
    const properties=expression.properties,last=properties.at(-1);

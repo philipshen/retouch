@@ -8,6 +8,7 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  assert.equal(await page.getByText('The page structure changed. Select the layer again.',{exact:true}).count(),0);
  const target=app.locator('main > div.type-editorial');
  await target.click();await wait(async()=>await target.getAttribute('contenteditable')==='true');
+ if(process.env.RT_E2E_LIST_JOIN){await require('./list-join.cjs')({page,target,read,wait,settled,states,kind});return;}
  if(process.env.RT_E2E_LIST_BACKSPACE){await require('./list-backspace.cjs')({page,target,read,wait,settled,states,kind});return;}
  if(process.env.RT_E2E_LIST_ENTER){await require('./list-enter.cjs')({page,target,read,wait,settled,states,kind});return;}
  if(process.env.RT_E2E_LIST_INDENT){await require('./list-indentation.cjs')({page,target,read,wait,settled,states,kind});return;}
@@ -16,8 +17,7 @@ module.exports=async({page,app,kind,read,wait,settled})=>{
  assert.equal(await target.locator('ul > li').innerText(),'Headline');
  await page.getByRole('button',{name:'Finish text editing',exact:true}).click();await settled();await wait(()=>read()!==states.at(-1));states.push(read());
  assert.equal(await target.locator('ul > li').innerText(),'Headline');assert.match(read(),/<ul[^>]*><li>Headline<\/li><\/ul>/);
- // Dispatch directly to the text-layer root: pointer hit-testing an item would
- // select the newly created child layer rather than the containing text layer.
+ // Reopen the text layer after saving the native list structure.
  await target.dispatchEvent('dblclick');await wait(async()=>await target.getAttribute('contenteditable')==='true');
  await page.getByRole('button',{name:'Finish text editing',exact:true}).click();await settled();assert.equal(read(),states.at(-1));
  for(let i=states.length-2;i>=0;i--){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===states[i]);}
