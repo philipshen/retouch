@@ -15363,3 +15363,21 @@ race hypothesis, not a diagnosis of the observed error. No runtime workaround
 or extra retry was added. The fixture probe and `RT_E2E_SERVER_LOG` option retain
 evidence for the next occurrence. Its focused test verifies that JSON parsing
 still succeeds/fails normally and diagnostic output omits JSON contents.
+
+### Screen dimension keyboard gestures (2026-09-14)
+
+Holding ArrowUp/ArrowDown in a screen width or height field now resizes the
+preview immediately while recording one preview-history entry for that held
+key. Shift uses ten-pixel steps; ordinary arrows use one-pixel steps. Releasing
+the key or leaving the field ends the gesture, so separate presses retain
+separate undo entries. Ratio-locked resizing updates both dimensions and keeps
+the ratio anchor through Undo/Redo. This affects preview dimensions, not source
+style history or breakpoint scopes.
+
+The expanded compact-screens browser workflow passes Chromium 145.0.7632.6 and
+WebKit 26.0. It exercises held-key grouping, separate presses, ratio-locked
+height steps, exact preview Undo/Redo, persisted dimensions after reload and
+unchanged source, alongside its existing compact/desktop toolbar checks. The
+Chromium compact screenshot was inspected. Syntax and diff checks pass. No
+new desktop build was produced; fully editable comparison canvases and full
+Figma parity remain open.

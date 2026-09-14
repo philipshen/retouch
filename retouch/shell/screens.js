@@ -54,7 +54,8 @@
     if((target===width||target===height)&&target.value!==String((screen||viewport)?.[target===width?'width':'height']))return;
     event.preventDefault();event.stopPropagation();replay(key==='y'||event.shiftKey,target===undoButton||target===redoButton);
   });
-  function custom(axis) {
+  let keyResize=null;
+  function custom(axis,repeat=false) {
     const w = Number(width.value), h = Number(height.value);
     if (!valid(w) || !valid(h)) {
       const input = !valid(w) ? width : height;
@@ -62,23 +63,30 @@
       input.reportValidity();
       return;
     }
-    apply(constrainMain({ width: w, height: h },axis),{preserveRatio:!!axis});
+    apply(constrainMain({ width: w, height: h },axis),{preserveRatio:!!axis,history:!repeat});
+    if(repeat&&keyResize?.entry===undoStack.at(-1)){keyResize.entry.after=copy(committed);keyResize.entry.ratioAfter=copy(ratioBase);}
   }
   for (const input of [width, height]) {
     input.addEventListener('input', () => input.setCustomValidity(''));
     input.addEventListener('change',()=>custom(input===width?'width':'height'));
+    input.addEventListener('keyup',e=>{if(['ArrowUp','ArrowDown'].includes(e.key))keyResize=null;});
+    input.addEventListener('blur',()=>{keyResize=null;});
     input.addEventListener('keydown', e => {
+      if(e.isComposing)return;
       if(e.key==='Escape'){
         e.preventDefault();e.stopPropagation();
         const committed=screen||viewport;
         if(committed)input.value=input===width?committed.width:committed.height;
         input.setCustomValidity('');input.select();
-      }else if(e.shiftKey&&['ArrowUp','ArrowDown'].includes(e.key)){
+      }else if(!e.altKey&&!e.metaKey&&!e.ctrlKey&&['ArrowUp','ArrowDown'].includes(e.key)){
         e.preventDefault();
         const current=Number(input.value);
         if(Number.isFinite(current)&&input.value!==''){
-          input.value=Math.max(240,Math.min(7680,Math.round(current)+(e.key==='ArrowUp'?10:-10)));
-          input.setCustomValidity('');custom(input===width?'width':'height');
+          const repeat=e.repeat&&keyResize?.input===input&&keyResize.key===e.key&&keyResize.entry===undoStack.at(-1);
+          const previous=undoStack.at(-1);
+          input.value=Math.max(240,Math.min(7680,Math.round(current)+(e.key==='ArrowUp'?1:-1)*(e.shiftKey?10:1)));
+          input.setCustomValidity('');custom(input===width?'width':'height',repeat);
+          if(!repeat)keyResize=undoStack.at(-1)!==previous?{input,key:e.key,entry:undoStack.at(-1)}:null;
         }
       }else if(e.key==='Enter')input.blur();
     });
