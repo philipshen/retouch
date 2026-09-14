@@ -452,7 +452,7 @@ function serveAsset(name, res) {
     res.writeHead(400);
     return res.end();
   }
-  const file = path.join(SHELL_DIR, name);
+  const file = name==='paper-core.min.js'?require.resolve('paper/dist/paper-core.min.js'):path.join(SHELL_DIR, name);
   if (!fs.existsSync(file)) {
     res.writeHead(404);
     return res.end();

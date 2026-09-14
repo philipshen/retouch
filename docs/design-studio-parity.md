@@ -15,7 +15,7 @@ changing those files. The original checkout may continue to evolve independently
 | --- | --- | --- |
 | Canvas | Frames, pages, sections, zoom/pan, rulers/guides, grids, multiple selection, alignment/distribution, snapping, grouping, stacking, locking/hiding | Bounded canvas zoom/scrolling and linked screen comparisons exist. HTML supports multi-selection, range selection, gray/page marquee gestures and framing a consecutive sibling selection. HTML/React canvas locks include batch undo and editor-reload persistence within a live project session. Full document/pages/sections, guides, complete snapping/grouping, durable lock identity and cross-renderer equivalence remain. |
 | Layers | Complete searchable tree, nesting/reparenting, reorder, rename, duplicate, delete, copy/paste across contexts | Searchable live layer hierarchy, disclosure, keyboard navigation, canvas-linked selection and literal sibling duplicate/delete/reorder UI exist. HTML also supports rename and reparenting by picker or drag/drop. HTML multi-selection, shared CSS and group duplicate/delete/reparenting exist; cross-context clipboard and broader source structures remain. |
-| Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. HTML/React polygons and polylines now support direct vertex dragging and keyboard movement with source undo. Vertex insertion/deletion and Pen creation of straight segments and cubic curves in existing SVG canvases have browser/source verification. Compound SVG paths now support cubic handles, arcs, contour operations, multi-point and marquee selection, and canvas-axis alignment/distribution with source history. Vector networks, boolean operations, arbitrary masks and complete transforms remain. |
+| Geometry | Shapes, vector/pen editing, vector networks, boolean operations, masks, strokes, corners, transforms | HTML frame aspect ratios, content clipping, SVG primitive creation/geometry and responsive solid fill/stroke controls are verified. HTML/React polygons and polylines now support direct vertex dragging and keyboard movement with source undo. Vertex insertion/deletion and Pen creation of straight segments and cubic curves in existing SVG canvases have browser/source verification. Compound SVG paths now support cubic handles, arcs, contour operations, multi-point and marquee selection, and canvas-axis alignment/distribution with source history. Two closed contours within one SVG path now support Union, Subtract, Intersect and Exclude with source Undo/Redo. Vector networks, cross-layer/non-destructive boolean groups, arbitrary masks and complete transforms remain. |
 | Layout | Auto layout, grid, wrap, hug/fill/fixed, min/max, constraints, absolute children, padding/gaps, responsive behavior | HTML provides direct stack presets, physical nine-position flex alignment (including wrapped/RTL/vertical layouts), adaptive grids, equal tracks/spans, hug/fill, min/max, spacing and breakpoint-scoped writes. HTML absolute placement now supports edge, center, stretch and proportional anchors with screen-scoped writes. Transformed constraints, advanced grids, nested auto-layout equivalence and cross-framework coverage remain. |
 | Appearance | Multiple fills/strokes, gradients, images and cropping, blend modes, opacity, shadows, blur/effects | HTML, React and local Liquid support linear/radial/angular gradient stacks, repetition, color interpolation, explicit radial sizing, draggable stops/centers/rotation, keyboard editing and exact undo. HTML also supports shadow stacks, layer/backdrop blur, blend modes, opacity, borders/corners and image fit/position. Browser/source tests cover these scoped edits and undo. Multiple strokes, arbitrary paint/filter representations and full crop handles/zoom/rotation remain. |
 | Typography | Font selection, weights/styles, variable axes, text runs, paragraph controls, lists, decoration, sizing and resizing behavior | Inline formatting plus custom font size, line height, tracking, alignment, slant, decoration, case and scoped reset now exist. Browser tests cover named-style preservation, scoped sizes and exact undo. A searchable page-font picker now discovers declared and used families, with React/HTML and local Liquid browser coverage. Explicit variable-axis editing, declared-file range/default inspection and bounded axis sliders have HTML/React/local Liquid browser coverage. Full font browsing, actual glyph-font resolution, live Shopify font verification, full rich-text/paragraph/list controls and complete typography parity remain. |
@@ -15747,3 +15747,35 @@ rename, ordering, removal/restoration, persistence and project isolation checks
 also passed. Logs: `/private/tmp/retouch-comparison-scrub-final-{chromium,webkit}.log`.
 Syntax/diff checks pass. No native archive was rebuilt, and full Figma parity
 and trusted desktop distribution remain unfinished.
+
+### Boolean operations between SVG contours (2026-09-14)
+
+More vector actions now offers Union, Subtract, Intersect and Exclude overlap,
+with a target-contour selector. Operations combine the filled areas of two
+closed contours within the selected SVG path, preserve other contour geometry,
+and leave the result editable as ordinary vector points. Done saves through the
+existing source-history operation; Escape discards the pending result. Open
+contours cannot be operands. An empty result removes both operands when another
+contour remains; removing the entire path currently requires Delete layer.
+
+The curve engine is pinned to MIT-licensed Paper.js 0.12.18 in the npm lockfile;
+its production browser asset is served through the existing editor asset route.
+See [Paper.js boolean operations](https://paperjs.org/reference/pathitem/).
+Arc operands use the existing bounded 0.01 SVG-unit Bézier conversion; numerical
+boolean operations are not an exact symbolic guarantee for pathological paths.
+Temporary engine scopes are released after every operation, including failures.
+
+All 1,262 unit tests passed, including independently calculated rectangle/circle
+occupancy, holes, crossings, empty results, unchanged neighboring geometry and
+scope cleanup. HTML/Chromium, React/Chromium and HTML/WebKit compound-vector
+workflows passed, checking all four operations against rendered fill tests,
+source save, cancellation and exact Undo/Redo. Logs are retained at
+`/private/tmp/retouch-booleans-final-{all-units,html,react,webkit}.log`.
+The controls were visually inspected and the target selector spaced to fit the
+light menu. A final HTML visual workflow and screenshot are retained at
+`/private/tmp/retouch-booleans-visual-final.log` and
+`/private/tmp/retouch-boolean-controls-final.png`.
+
+This is contour-level destructive geometry with source Undo, not a live boolean
+operand group. Separate SVG-layer operations, arbitrary masks, universal-site
+support and full parity remain incomplete. No native archive was rebuilt.
