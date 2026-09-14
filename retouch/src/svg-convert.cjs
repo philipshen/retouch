@@ -7,7 +7,7 @@ function pathFor(tag,fields){
   const x=n('x'),y=n('y'),w=n('width'),h=n('height');if(w<=0||h<=0)return null;const rx=Math.min(values.rx??values.ry??0,w/2),ry=Math.min(values.ry??values.rx??0,h/2);if(rx<0||ry<0)return null;
   d=rx&&ry?`M ${x+rx} ${y} H ${x+w-rx} A ${rx} ${ry} 0 0 1 ${x+w} ${y+ry} V ${y+h-ry} A ${rx} ${ry} 0 0 1 ${x+w-rx} ${y+h} H ${x+rx} A ${rx} ${ry} 0 0 1 ${x} ${y+h-ry} V ${y+ry} A ${rx} ${ry} 0 0 1 ${x+rx} ${y} Z`:`M ${x} ${y} H ${x+w} V ${y+h} H ${x} Z`;
  }else if(tag==='circle'||tag==='ellipse'){
-  const cx=n('cx'),cy=n('cy'),rx=tag==='circle'?n('r'):n('rx'),ry=tag==='circle'?n('r'):n('ry');if(rx<=0||ry<=0)return null;d=`M ${cx+rx} ${cy} A ${rx} ${ry} 0 1 1 ${cx-rx} ${cy} A ${rx} ${ry} 0 1 1 ${cx+rx} ${cy} Z`;
+  const cx=n('cx'),cy=n('cy'),rx=tag==='circle'?n('r'):n('rx'),ry=tag==='circle'?n('r'):n('ry');if(rx<=0||ry<=0)return null;d=`M ${cx+rx} ${cy} A ${rx} ${ry} 0 0 1 ${cx} ${cy+ry} A ${rx} ${ry} 0 0 1 ${cx-rx} ${cy} A ${rx} ${ry} 0 0 1 ${cx} ${cy-ry} A ${rx} ${ry} 0 0 1 ${cx+rx} ${cy} Z`;
  }else if(tag==='line')d=`M ${n('x1')} ${n('y1')} L ${n('x2')} ${n('y2')}`;
  return d&&paths.parseCompound(d)?d:null;
 }

@@ -15892,3 +15892,29 @@ it does not preserve all percentage relationships when a viewport without a
 stable viewBox changes size. Editable boolean operands with responsive
 recomputation remain required for full parity. Existing standalone primitive
 conversion paths outside this boolean capture need their own precision audit.
+
+## Primitive conversion precision and empty boolean history — 2026-09-14
+
+The shared HTML/React/Liquid primitive conversion planner now constructs circles
+and ellipses from four quarter arcs. A browser regression reproduced the previous
+semicircle instability: a circle with radius 65.96968841552734 changed its native
+height by about 0.064 SVG units after conversion. The quarter-arc result preserves
+its bounds and provides four cardinal editing points.
+
+Chromium and WebKit each passed 12 source-conversion cases across HTML, React and
+Liquid planners, with 11,532 native SVG fill checks covering fractional/tiny
+circles and ellipses, bounds, retained paint/transforms/metadata, and stable source
+identities. These tests render planned output; they do not claim live Shopify or
+React runtime coverage. All 1,275 unit tests passed. Logs are in the sibling
+recovery directory as `convert-precision-{before,chromium,webkit,units}.log`.
+
+The previously pending empty-result inspector workflow now passes in HTML
+Chromium, HTML WebKit and React Chromium with `RT_E2E_EMPTY_BOOLEAN=1`. The test
+intersects disjoint shapes, verifies complete operand removal and parent
+selection, restores the exact source/multi-selection in one Undo, redoes the
+empty result, and confirms retained preview document/form state. Evidence is in
+`boolean-empty-{html,webkit,react}.log` in the same recovery directory.
+
+These checks close the specific primitive-conversion and empty-result gaps;
+editable boolean groups, responsive recomputation, masks, unrestricted site
+support, and trusted desktop delivery remain incomplete.
