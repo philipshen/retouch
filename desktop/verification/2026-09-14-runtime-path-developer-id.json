@@ -1,0 +1,100 @@
+{
+  "sourceCommit": "34494d43faee7664bdc30a55e662271942edd496",
+  "sourceTreeDirty": false,
+  "sourceFiles": 240,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/Users/philipshen/Developer/retouch-worktrees/desktop-runtime-34494d4/Retouch-0.1.0-mac.zip",
+  "sha256": "6ad6a3ad016194a639526e952a5e16f0c80b68259a8be7c5c839386b4428d03f",
+  "sourceManifestMatchedCheckout": true,
+  "nativeBuildInputsMatchedCheckout": true,
+  "testedRuntimeMatchedManifestAfterTests": true,
+  "signing": {
+    "authority": "Developer ID Application: Philip Shen (2HN3MWMRX2)",
+    "strictVerification": true,
+    "hardenedRuntime": true,
+    "secureTimestamp": true
+  },
+  "gatekeeper": {
+    "exitCode": 3,
+    "output": "/Users/philipshen/Developer/retouch-worktrees/desktop-runtime-34494d4/Retouch.app: rejected\nsource=Unnotarized Developer ID\norigin=Developer ID Application: Philip Shen (2HN3MWMRX2)"
+  },
+  "nativeLaunch": "not attempted; Gatekeeper rejected the unnotarized candidate",
+  "notarization": "not complete",
+  "publicRelease": "not published",
+  "desktopTestsPassed": 28,
+  "packagedRuntimeUnitsPassed": 1544,
+  "packageTamperChecks": "passed",
+  "archiveExtractionVerification": "passed",
+  "bundledCLIWithFinderPATH": "passed; CLI help only, not native GUI launch",
+  "packagedBrowserWorkflows": [
+    {
+      "browser": "chromium",
+      "renderer": "react",
+      "result": "passed",
+      "workflow": "paint framing/blending, drag/order/add, image replacement/crop, exact source undo and retained state"
+    },
+    {
+      "browser": "webkit",
+      "renderer": "liquid",
+      "result": "passed",
+      "workflow": "paint framing/blending, drag/order/add, managed image bindings/crop, exact source undo and retained state"
+    }
+  ],
+  "localCask": "/Users/philipshen/Developer/retouch-worktrees/desktop-runtime-34494d4/retouch-studio.rb",
+  "caskSyntax": "passed",
+  "caskInstallation": "not attempted for this candidate",
+  "intelExecution": "not verified",
+  "testHarness": {
+    "runtime": "/Users/philipshen/Developer/retouch-worktrees/desktop-runtime-34494d4/runtime-test",
+    "testsCopiedFrom": "/Users/philipshen/Developer/retouch-worktrees/figma-design-studio/retouch/test",
+    "additionalTestOnlyDependencies": [
+      "liquidjs"
+    ]
+  },
+  "logs": {
+    "build": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-runtime-34494d4/retouch-desktop-runtime-build.log",
+      "sha256": "4d0fbc38112f9081e7b3aa5f1c92a6a7d0bbfde9232d8db8ba1a7964496cbf22"
+    },
+    "gatekeeper": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-runtime-34494d4/retouch-desktop-runtime-gatekeeper.log",
+      "sha256": "8adbbe24050af455f4f588aa718244b6148b501b5f6320c6a957a46ae80efa2d"
+    },
+    "signing": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-runtime-34494d4/retouch-desktop-runtime-signing.log",
+      "sha256": "32646a4aad908a8a0089f88fdaf7e7e7788ede5a1acd075e491e78aa4ce1cea1"
+    },
+    "tamper": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-runtime-34494d4/retouch-desktop-runtime-tamper.log",
+      "sha256": "74b828d723af4fd2aedf9d9659f758c79ae68b1fb5ed392628c83904dc4abed2"
+    },
+    "unit": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-runtime-34494d4/retouch-desktop-runtime-unit.log",
+      "sha256": "77e5ba64ddfbf775b17da18ec92fff9054f9e1b34ff707560d75fb6c556d9e2b"
+    },
+    "react": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-runtime-34494d4/retouch-desktop-runtime-react.log",
+      "sha256": "43b70d61d3f701bb6d7358f2fed2c037d2ac603640100dd460891f8dc787559a"
+    },
+    "liquid": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-runtime-34494d4/retouch-desktop-runtime-liquid.log",
+      "sha256": "7606c03592bb448f4a6ee251fd507d052316d61bd79ccb86ba30b01eb75aaa8f"
+    },
+    "archive": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-runtime-34494d4/retouch-desktop-runtime-archive.log",
+      "sha256": "7bbcfb2c2e2150381c4f63b3fc6c44feedb8bf62808bfbfa6d64cca9d94cea0d"
+    },
+    "help": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-runtime-34494d4/retouch-desktop-runtime-help.log",
+      "sha256": "fe318e8d09b20a6fd6cde377fd3f3db38713e7aa478d9287e9a7d8f1d1502006"
+    },
+    "desktopTests": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-runtime-34494d4/retouch-desktop-path-tests.log",
+      "sha256": "a82d5e294bcdbc1e4eaca55362531a9ccf1a2617c6814944862863fa34abaa8f"
+    }
+  }
+}
