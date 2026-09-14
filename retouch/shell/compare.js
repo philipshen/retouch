@@ -291,13 +291,13 @@
         event.preventDefault();event.stopPropagation();replayName(key==='y'||event.shiftKey);
       });
       label.title='Rename this comparison. Command/Ctrl+Z undoes its name; Command/Ctrl+Shift+Z redoes it.';
-      label.onclick=()=>{activeName={input:nameInput,finish:finishName};nameInput.value=name;nameInput.hidden=false;label.hidden=true;nameInput.focus();nameInput.select();};
+      label.onclick=()=>{if(activeName&&activeName.input!==nameInput){activeName.finish();if(activeName){activeName.input.focus();return;}}activeName={input:nameInput,finish:finishName};nameInput.value=name;nameInput.hidden=false;label.hidden=true;nameInput.focus();nameInput.select();};
       function finishName(cancel=false){
         if(nameInput.hidden)return;
         const next=nameInput.value.trim().replace(/\s+/g,' ');
-        if(!cancel&&(!next||sizes.some(other=>other!==size&&other[0].toLowerCase()===next.toLowerCase()))){dimensionError.textContent=next?'Another comparison already has this name.':'Enter a comparison name.';dimensionError.hidden=false;return;}
+        if(!cancel&&(!next||sizes.some(other=>other!==size&&other[0].toLowerCase()===next.toLowerCase()))){nameInput.setAttribute('aria-invalid','true');dimensionError.textContent=next?'Another comparison already has this name.':'Enter a comparison name.';dimensionError.hidden=false;return;}
         if(!cancel&&next!==name){names.undo.push({before:name,after:next});if(names.undo.length>50)names.undo.shift();names.redo.length=0;name=next;size[0]=name;remember();}
-        dimensionError.hidden=true;nameInput.hidden=true;label.hidden=false;if(activeName?.input===nameInput)activeName=null;updateLabels();updateControls();
+        nameInput.removeAttribute('aria-invalid');dimensionError.hidden=true;nameInput.hidden=true;label.hidden=false;if(activeName?.input===nameInput)activeName=null;updateLabels();updateControls();
       }
       // A window/iframe focus loss may have no related target. Preserve the
       // draft until an explicit commit or deliberate focus change in this UI.
@@ -307,7 +307,7 @@
       const edit=document.createElement('button');edit.className='control-button';edit.textContent='Edit';edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');
       edit.onclick=()=>window.RetouchScreens.set({width,height});header.append(edit);
       const remove=document.createElement('button');remove.className='control-button';remove.textContent='×';remove.setAttribute('aria-label','Remove '+name+' comparison');header.append(remove);
-      remove.onclick=async()=>{remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;card.inert=true;clearOrderHistory();removals++;removed.push({size,index});if(removed.length>8)removed.shift();sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);item?.cancelColdText?.();cards=cards.filter(c=>c!==item);updateControls();await unload(frame);surface.remove();card.remove();removals--;updateControls();};
+      remove.onclick=async()=>{if(activeName?.input===nameInput)activeName=null;remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;card.inert=true;clearOrderHistory();removals++;removed.push({size,index});if(removed.length>8)removed.shift();sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);item?.cancelColdText?.();cards=cards.filter(c=>c!==item);updateControls();await unload(frame);surface.remove();card.remove();removals--;updateControls();};
       const viewport=document.createElement('div');viewport.className='compare-viewport';viewport.tabIndex=0;viewport.setAttribute('role','button');viewport.setAttribute('aria-label','Edit from '+name+' comparison');viewport.title='Click a layer to select it on the main canvas at this size. Style scope stays unchanged.';viewport.setAttribute('aria-describedby','comparisonNavigationHint');viewport.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight PageUp PageDown Home End Enter Space');
       const frame=document.createElement('iframe');frame.title=name+' comparison preview';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');frame.style.width=width+'px';frame.style.height=height+'px';
       const surface=document.createElement('div');surface.className='compare-surface';surface.setAttribute('aria-hidden','true');surface.append(frame);rail.append(surface);
@@ -357,7 +357,7 @@
       const scopeButton=document.createElement('button');scopeButton.className='control-button';scopeButton.textContent='Edit styles: '+width+' px and larger';scopeButton.setAttribute('aria-label','Edit styles from '+width+' px');scopeButton.title='Use this preview size and set the selected layer’s style scope to this width and larger. Does not change source until you edit a style.';scopeButton.disabled=!selected;
       scopeButton.onclick=()=>{if(!selected)return;window.dispatchEvent(new CustomEvent('retouch:comparison-edit',{detail:{width,height,occurrence:0,scopeAtWidth:true,route:path()}}));};
       const dimensions=document.createElement('div');dimensions.className='compare-dimensions';
-      const inputs={},dimensionError=document.createElement('p');dimensionError.className='compare-dimension-error';dimensionError.setAttribute('role','status');dimensionError.hidden=true;
+      const inputs={},dimensionError=document.createElement('p');dimensionError.className='compare-dimension-error';dimensionError.setAttribute('role','status');dimensionError.id='comparison-name-error-'+(++previewSerial);nameInput.setAttribute('aria-describedby',dimensionError.id);dimensionError.hidden=true;
       let history=sizeHistories.get(size);if(!history){history={undo:[],redo:[],ratio:[width,height]};sizeHistories.set(size,history);}
       const sizeUndo=history.undo,sizeRedo=history.redo,sizeHistory=document.createElement('div');sizeHistory.className='compare-header';
       const undoSize=document.createElement('button'),redoSize=document.createElement('button');

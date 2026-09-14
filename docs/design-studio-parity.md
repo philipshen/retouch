@@ -15421,3 +15421,19 @@ preview-document retention and project persistence checks also pass. The earlier
 intermittent WebKit Rename failure has not been causally reproduced; this fixes
 a demonstrated premature-dismissal path without claiming every focus race is
 resolved. Native launch and full Figma parity remain open.
+
+### Comparison rename validation and recovery (2026-09-14)
+
+An empty or duplicate comparison-name draft remains the only active rename
+field. Attempting to rename another comparison first validates the draft and
+returns focus to it on failure. The input exposes `aria-invalid` and references
+its visible status message; cancel or successful commit clears invalid state.
+Removing the comparison releases the active draft so other names remain editable.
+Undo removal restores the comparison's committed name.
+
+Chromium and WebKit pass the complete project-screens workflow on the final
+code (`/private/tmp/retouch-rename-validation-final-{chromium,webkit}.log`): empty
+and duplicate validation, one visible rename field, focused draft retention,
+unchanged saved names, Escape cleanup, removal/recovery, plus existing name/size
+history, persistence and preview-state checks. Syntax and diff checks pass.
+No desktop rebuild or public distribution occurred; full parity remains open.
