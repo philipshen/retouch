@@ -94,7 +94,7 @@
   const fail=error=>I.note(section,error.message,'refused').setAttribute('role','alert');let originals=null;
   const ready=async()=>{if(!originals)originals=await load([meta.baseId,...meta.operandIds.filter(id=>id!==meta.baseId)]);return originals;};
   select.onchange=async()=>{if(!current())return;const operation=select.value;try{const infos=await ready();if(current()){const saved=await save('setSVGBooleanOperation',{operation,path:compute(resolveTarget(),infos,operation)});if(saved===false)select.value=meta.operation;}}catch(error){select.value=meta.operation;fail(error);}};
-  const releaseButton=I.button('Release boolean group',()=>{if(!current())return;try{release(resolveTarget());save('releaseSVGBooleanGroup',{});}catch(error){fail(error);}});releaseButton.disabled=meta.canRelease===false;if(releaseButton.disabled)releaseButton.title='Release the containing boolean group first.';section.append(releaseButton);
+  const releaseButton=I.button('Release boolean group',()=>{if(!current())return;try{if(!meta.ancestorId)release(resolveTarget());save('releaseSVGBooleanGroup',{});}catch(error){fail(error);}});releaseButton.disabled=meta.canRelease===false;if(releaseButton.disabled)releaseButton.title='Release the containing boolean group first.';section.append(releaseButton);
   const strokeDetails=root.document.createElement('details'),strokeSummary=root.document.createElement('summary'),strokeKey=info.file+'#'+info.id;strokeSummary.textContent='Stroke settings';strokeDetails.append(strokeSummary);strokeDetails.open=openStrokes.has(strokeKey);strokeDetails.ontoggle=()=>{if(strokeDetails.open)openStrokes.add(strokeKey);else openStrokes.delete(strokeKey);};
   const fieldLabels={fill:'Fill',stroke:'Stroke','stroke-width':'Weight','stroke-linecap':'Ends','stroke-linejoin':'Joins','stroke-dasharray':'Dashes','stroke-dashoffset':'Offset','stroke-miterlimit':'Miter limit','vector-effect':'Scaling'};
   for(const [property,shortLabel]of Object.entries(fieldLabels)){const label='Combined '+({fill:'fill',stroke:'stroke','stroke-width':'stroke width','stroke-linecap':'stroke ends','stroke-linejoin':'stroke joins','stroke-dasharray':'dash pattern','stroke-dashoffset':'dash offset','stroke-miterlimit':'miter limit','vector-effect':'stroke scaling'})[property];
@@ -122,9 +122,18 @@
   const matrix=el=>{const value=root.RetouchSVGAffine.parse(el.getAttribute('transform'));if(!value)throw Error('A boolean transform is not literal.');return value;};
   const effective=el=>el.hasAttribute('data-rt-boolean')?root.RetouchSVGAffine.multiply(matrix(el),matrix(el.querySelector(':scope > [data-rt-boolean-result]'))):matrix(el);
   const live=item=>{if(!changed.has(item.id))return item;const el=element(item.id),result=el.querySelector(':scope > [data-rt-boolean-result]'),meta=item.svgBooleanGroup;return {...item,svgTransform:{...item.svgTransform,value:el.getAttribute('transform'),matrix:matrix(el)},svgBooleanGroup:{...meta,operation:el.getAttribute('data-rt-boolean'),result:{...meta.result,svgGeometry:{...meta.result.svgGeometry,fields:meta.result.svgGeometry.fields.map(field=>({...field,value:result.getAttribute(field.name)}))},svgTransform:{...meta.result.svgTransform,value:result.getAttribute('transform'),matrix:matrix(result)}}}};};
-  const run=(type,extra)=>{changes.length=0;changed.clear();changed.add(info.id);return visibleAncestors(group,()=>{try{
+  const run=(type,extra)=>{changes.length=0;changed.clear();changed.add(info.id);let restoreStructure=null;return visibleAncestors(group,()=>{try{
    const meta=info.svgBooleanGroup,result=element(meta.resultId);
-   if(type==='setSVGBooleanOperation'){put(group,'data-rt-boolean',extra.operation);if(group.getAttribute('data-rt-name')===labels[meta.operation])put(group,'data-rt-name',labels[extra.operation]);put(result,'d',extra.path);}
+   if(type==='releaseSVGBooleanGroup'){
+    const container=group.querySelector(':scope > [data-rt-boolean-operands]'),parent=group.parentNode,next=group.nextSibling,nodes=[...container.childNodes],parentInfo=chain[0],parentMeta=parentInfo.svgBooleanGroup,roots=meta.operandIds.map(element),priorCache=new Map(cache);
+    neutral(group,group.hasAttribute('transform'));neutral(container);put(container,'display',null);
+    const before=roots.flatMap(el=>[el,...el.querySelectorAll('*')]).map(el=>({el,values:css(el,shape.filter(key=>!['transform','transform-origin'].includes(key)))}));
+    restoreStructure=()=>{parent.insertBefore(group,next);container.append(...nodes);cache.clear();for(const [id,item]of priorCache)cache.set(id,item);};
+    for(const el of roots){const value=root.RetouchSVGAffine.multiply(matrix(group),matrix(el));put(el,'transform',root.RetouchSVGAffine.format(value));const item=cache.get(el.getAttribute('data-rt'));cache.set(item.id,{...item,svgTransform:{...item.svgTransform,value:el.getAttribute('transform'),matrix:value}});}
+    for(const node of nodes)parent.insertBefore(node,group);group.remove();
+    if(before.some(({el,values})=>!same(values,css(el,shape.filter(key=>!['transform','transform-origin'].includes(key))))))throw Error('Releasing this boolean group would change CSS-controlled geometry or appearance.');
+    cache.set(parentInfo.id,{...parentInfo,svgBooleanGroup:{...parentMeta,operandIds:parentMeta.operandIds.flatMap(id=>id===info.id?meta.operandIds:[id]),baseId:parentMeta.baseId===info.id?meta.baseId:parentMeta.baseId}});
+   }else if(type==='setSVGBooleanOperation'){put(group,'data-rt-boolean',extra.operation);if(group.getAttribute('data-rt-name')===labels[meta.operation])put(group,'data-rt-name',labels[extra.operation]);put(result,'d',extra.path);}
    else if(type==='setSVGBooleanOperand'){
     const operand=element(extra.operandId);if(!meta.operandIds.includes(extra.operandId))throw Error('Choose an original shape.');const edit=extra.operandOp;
     if(edit.type==='setSVGTransform'){put(operand,'transform',root.RetouchSVGAffine.format(edit.matrix));if(extra.operandId===meta.baseId)put(result,'transform',root.RetouchSVGAffine.format(effective(operand)));}
@@ -133,11 +142,11 @@
    else if(type==='setSVGTransform')put(group,'transform',root.RetouchSVGAffine.format(extra.matrix));
    else throw Error('This nested operation cannot update its containing groups yet.');
    const results=[];
-   for(const parent of chain){const el=element(parent.id),meta=parent.svgBooleanGroup,infos=[meta.baseId,...meta.operandIds.filter(id=>id!==meta.baseId)].map(id=>live(cache.get(id))),result=element(meta.resultId);
+   for(const parent of chain){const el=element(parent.id),meta=cache.get(parent.id).svgBooleanGroup,infos=[meta.baseId,...meta.operandIds.filter(id=>id!==meta.baseId)].map(id=>live(cache.get(id))),result=element(meta.resultId);
     put(result,'transform',root.RetouchSVGAffine.format(effective(element(meta.baseId))));const path=compute(el,infos,meta.operation);put(result,'d',path);results.push({id:parent.id,path});changed.add(parent.id);
    }
-   return {results,render:[info,...chain].map(item=>{const el=element(item.svgBooleanGroup.resultId);return {el,path:el.getAttribute('d'),transform:el.getAttribute('transform')};})};
-  }finally{for(const {el,name,value}of changes.reverse()){if(value===null)el.removeAttribute(name);else el.setAttribute(name,value);}}});};
+   return {results,render:(type==='releaseSVGBooleanGroup'?chain:[info,...chain]).map(item=>{const el=element(item.svgBooleanGroup.resultId);return {el,path:el.getAttribute('d'),transform:el.getAttribute('transform')};})};
+  }finally{restoreStructure?.();for(const {el,name,value}of changes.reverse()){if(value===null)el.removeAttribute(name);else el.setAttribute(name,value);}}});};
   return {run,groups:[group,...chain.map(item=>element(item.id))]};
  }
  async function cascade(info,group,type,extra,load){return (await prepareCascade(info,group,load)).run(type,extra).results;}

@@ -24,8 +24,12 @@ rotate gestures, with a live preview of the outermost result. Ancestor source
 descriptors load once before the gesture; preview frames compute locally.
 Escape restores the original DOM, and a committed gesture saves one undo step.
 External changes to the boolean tree cancel the gesture without overwriting
-those changes. Releasing an inner group remains unavailable; release its
-containing group first.
+those changes. **Release boolean group** also works inside a containing group:
+its originals become operands of the parent, whose current operation is then
+recomputed. A transform on the released group is composed onto each original.
+The containing group's paint stays unchanged and its base follows the released
+base original. This can change the combined shape (for example, releasing an
+inner union inside subtraction). One undo restores the entire nested group.
 
 ## Retained creation
 
@@ -53,7 +57,7 @@ Authored IDs and dynamic descendant attributes remain unsupported for creation.
 - `fileHash`: the original source hash.
 - `targetId`: the inner boolean group to edit.
 - `edit`: `setSVGBooleanOperation`, `setSVGBooleanOperand`,
-  `setSVGBooleanPaint`, or `setSVGTransform`.
+  `setSVGBooleanPaint`, `setSVGTransform`, or `releaseSVGBooleanGroup`.
 - `results`: `{id, path}` entries for every containing boolean group, ordered
   from nearest parent outward.
 
@@ -62,12 +66,14 @@ inner group's newly computed `path`. Every outer path must also be computed by
 the browser. The source planner validates the exact ancestor chain, updates
 base-result transforms, and applies every result in memory before returning one
 source-file edit. An invalid or missing result rejects the whole operation.
-All existing source identities must remain unchanged. The normal transaction
-and history services save this as one snapshot.
+Nonstructural edits keep all source identities unchanged. Release removes only
+the generated inner group, operand wrapper, and result; it maps retained layer
+identities through the structural change and selects the containing group.
+The normal transaction and history services save this as one snapshot.
 
 Direct nested operation, release, geometry, or transform writes are refused
-because they could leave a containing result stale. Nested structural release
-and regrouping are not part of the cascade operation yet.
+because they could leave a containing result stale. Nested regrouping is not
+part of the cascade operation yet.
 
 ## Verification
 
@@ -79,7 +85,8 @@ checks one saved snapshot with exact undo and redo. Browser workflows cover HTML
 creation, actual filled-area samples, operation changes, nested geometry and
 paint edits, empty-result propagation, outer operand movement, nested original
 move/rotation cancellation and undo/redo, pointer resizing, external result
-mutation cancellation, exact undo and
+mutation cancellation, transformed and untransformed inner release with native
+filled-area checks and exact undo/redo, exact undo and
 release, and retained document/input state. Chromium also checks atomic DOM
 and source restoration when CSS controls an outer result path. The existing
 flat boolean workflow remains a regression check.

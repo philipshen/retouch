@@ -70,16 +70,30 @@ function plan(r,op,kind){
  if(['createSVGBooleanGroup','setSVGBooleanOperation'].includes(op.type)&&!operations.has(op.operation))return refuse('Choose Union, Subtract, Intersect or Exclude.');
  if(op.type==='setSVGBooleanNested'){
   const original=view(r,kind),target=original.elements.find(e=>e.id===op.targetId);
-  if(!target||!context({...r,element:target},kind)||!['setSVGBooleanOperation','setSVGBooleanOperand','setSVGBooleanPaint','setSVGTransform'].includes(op.edit?.type))return refuse('Choose a nested boolean operation, paint or geometry edit.');
+  if(!target||!context({...r,element:target},kind)||!['setSVGBooleanOperation','setSVGBooleanOperand','setSVGBooleanPaint','setSVGTransform','releaseSVGBooleanGroup'].includes(op.edit?.type))return refuse('Choose a nested boolean operation, paint or geometry edit.');
   const chain=[];let child=target;
   for(let id=ancestor({...r,element:child},kind);id;id=ancestor({...r,element:child},kind)){child=original.elements.find(e=>e.id===id);if(!child||!context({...r,element:child},kind))return refuse('A containing boolean group no longer resolves.');chain.push(child);}
   if(![target,...chain].some(element=>element.id===r.element.id))return refuse('Select the nested boolean or one of its containing groups.');
   if(!chain.length||!Array.isArray(op.results)||op.results.length!==chain.length||op.results.some((item,i)=>item?.id!==chain[i].id))return refuse('Provide every containing boolean result in nesting order.');
   let working={...r,element:target,booleanCascadeEdit:true,booleanOperandEdit:true};
-  const edit=original.adapter.planOp(working,{...op.edit,id:target.id,fileHash:r.hash});if(!edit.ok)return edit;
+  const releasing=op.edit.type==='releaseSVGBooleanGroup',targetContext=context(working,kind),parentContext=context({...r,element:chain[0]},kind);
+  if(releasing&&targetContext.attr(target,'transform')!==undefined){
+   const affine=require('../shell/svg-affine.js'),matrix=affine.parse(targetContext.attr(target,'transform'));let source=r.source;
+   for(const root of targetContext.roots){const elements=original.adapter.collect(source,r.relPath).elements,element=elements.find(e=>e.id===root.id),hash=original.adapter.contentHash(source),v=view({...r,source,elements},kind),own=affine.parse(v.attr(element,'transform'));
+    if(!own)return refuse('An original transform is not literal.');
+    const transformed=original.adapter.planOp({...r,source,elements,element,hash,booleanOperandEdit:true,booleanCascadeEdit:true},{type:'setSVGTransform',fileHash:hash,matrix:affine.multiply(matrix,own)});if(!transformed.ok)return transformed;if(transformed.edits?.length)source=transformed.edits[0].after;
+   }
+   const v=view({...r,source,elements:null},kind),element=v.elements.find(e=>e.id===target.id),attr=v.attrs(element).find(a=>a.name==='transform'),out=new MagicString(source);out.remove(attr.start,attr.end);source=out.toString();working={...working,source,hash:original.adapter.contentHash(source),elements:original.adapter.collect(source,r.relPath).elements};working.element=working.elements.find(e=>e.id===target.id);
+  }
+  const edit=original.adapter.planOp(working,{...op.edit,id:target.id,fileHash:working.hash});if(!edit.ok)return edit;
+  const mapping=new Map(edit.sourceIdMap||[]),mapped=id=>mapping.get(id)||id;
   let after=edit.unchanged||!edit.edits?.length?r.source:edit.edits.length===1?edit.edits[0].after:null;
   if(typeof after!=='string')return refuse('Nested boolean edits must stay in one source document.');
-  for(const item of op.results){
+  if(releasing){
+   const v=view({...r,source:after,elements:null},kind),parent=v.elements.find(e=>e.id===mapped(chain[0].id)),container=v.elements.find(e=>e.id===mapped(parentContext.operands.id)),roots=v.elements.filter(e=>v.parents.get(e.id)===container.id),baseId=mapped(parentContext.roots[parentContext.base].id===target.id?targetContext.roots[targetContext.base].id:parentContext.roots[parentContext.base].id),base=roots.findIndex(e=>e.id===baseId);
+   if(base<0)return refuse('The containing boolean base could not be preserved.');const attr=v.attrs(parent).find(a=>a.name==='data-rt-boolean-base'),out=new MagicString(after);out.overwrite(attr.start,attr.end,'data-rt-boolean-base="'+base+'"');after=out.toString();
+  }
+  for(const supplied of op.results){const item={...supplied,id:mapped(supplied.id)};
    let elements=original.adapter.collect(after,r.relPath).elements,hash=original.adapter.contentHash(after);working={...r,source:after,hash,elements,element:elements.find(e=>e.id===item.id),booleanCascadeEdit:true,booleanOperandEdit:true};
    const c=context(working,kind);if(!c)return refuse('A containing boolean group changed during the edit.');
    const base=c.roots[c.base],nested=context({...working,element:base},kind),affine=require('../shell/svg-affine.js');
@@ -90,8 +104,8 @@ function plan(r,op,kind){
    const result=plan(working,{type:'setSVGBooleanOperation',fileHash:hash,operation:c.operation,path:item.path},kind);if(!result.ok)return result;if(result.edits?.length)after=result.edits[0].after;
   }
   if(after===r.source)return {ok:true,unchanged:true,hash:r.hash,edits:[]};
-  const next=original.adapter.collect(after,r.relPath).elements;if(next.length!==original.elements.length||next.some((e,i)=>e.id!==original.elements[i].id))return refuse('The nested edit would change layer identities.');
-  return {ok:true,hash:original.adapter.contentHash(after),parentId:original.parents.get(chain.at(-1).id),selectionIds:[target.id],sourceIdMap:[],removedSourceIds:[],edits:[{file:r.file,before:r.source,after}]};
+  const next=original.adapter.collect(after,r.relPath).elements,removed=new Set(edit.removedSourceIds||[]),retained=original.elements.filter(e=>!removed.has(e.id));if(next.length!==retained.length||next.some((e,i)=>e.id!==mapped(retained[i].id)))return refuse('The nested edit would change unrelated layer identities.');
+  return {ok:true,...(releasing?{structural:true}:{}),hash:original.adapter.contentHash(after),parentId:mapped(original.parents.get(chain.at(-1).id)),selectionIds:[releasing?mapped(chain[0].id):target.id],sourceIdMap:edit.sourceIdMap||[],removedSourceIds:[...removed],edits:[{file:r.file,before:r.source,after}]};
  }
  const v=view(r,kind),out=new MagicString(r.source);let insertions=[],cuts=[],selected=[],removed=[],parentId,created=false,retainedGroup=null;
  if(op.type==='createSVGBooleanGroup'){
@@ -177,7 +191,7 @@ function owner(r,kind){if(!r.source?.includes('data-rt-boolean'))return null;con
 function describe(r,kind){
  const c=context(r,kind);if(!c)return null;
  const resultResolved={...r,element:c.result},svgGeometry=kind==='react'?require('./jsx-svg-geometry.cjs').describe(resultResolved):kind==='liquid'?require('./liquid-svg-geometry.cjs').describe(resultResolved):require('./svg-geometry.cjs').describe(c.result);
- return {operation:c.operation,parentId:c.parentId,ancestorId:ancestor(r,kind),operandIds:c.roots.map(e=>e.id),baseId:c.roots[c.base].id,resultId:c.result.id,result:{id:c.result.id,tag:'path',file:r.relPath,hash:r.hash,svgGeometry,svgTransform:require('./svg-transform.cjs').describe(resultResolved,kind),booleanOperandPreview:true},paints:Object.fromEntries(Object.entries(paintNames).map(([property,name])=>[property,(kind==='react'?c.attr(c.result,name)??c.attr(c.result,property):c.attr(c.result,property))??null])),canRelease:!ancestor(r,kind)};
+ return {operation:c.operation,parentId:c.parentId,ancestorId:ancestor(r,kind),operandIds:c.roots.map(e=>e.id),baseId:c.roots[c.base].id,resultId:c.result.id,result:{id:c.result.id,tag:'path',file:r.relPath,hash:r.hash,svgGeometry,svgTransform:require('./svg-transform.cjs').describe(resultResolved,kind),booleanOperandPreview:true},paints:Object.fromEntries(Object.entries(paintNames).map(([property,name])=>[property,(kind==='react'?c.attr(c.result,name)??c.attr(c.result,property):c.attr(c.result,property))??null])),canRelease:true};
 }
 function guard(r,op,kind){if(r.booleanOperandEdit||types.has(op.type))return null;const id=owner(r,kind);return id&&!(id===r.element.id&&!ancestor(r,kind)&&(op.type==='deleteElement'||['setSVGTransform','setSVGTransforms'].includes(op.type)&&context(r,kind)))?{ok:false,refused:true,reason:'Edit the original shapes from the Boolean group section, or release the group first.'}:null;}
 module.exports={plan,context,describe,owner,ancestor,guard,types};
