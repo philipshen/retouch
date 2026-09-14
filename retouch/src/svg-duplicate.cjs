@@ -13,16 +13,16 @@ function plan(resolved,op){
  if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the SVG layer.');
  if(!describe(resolved))return refuse('Choose a complete SVG layer without authored IDs, template content or unsupported descendants.');
  try{
-  const html=require('./adapters/html.cjs'),{startOffset:start,endOffset:end}=resolved.element.location;
+  const html=require('./adapters/html.cjs'),collect=resolved.maskCollect||html.collect,{startOffset:start,endOffset:end}=resolved.element.location;
   const copy=css.clone(resolved,{start,end}),source=resolved.source;
   copy.chunk=masks.rewrite(copy.chunk,source,masks.references(resolved));
-  const inserted=source.slice(0,end)+copy.chunk+source.slice(end),next=html.collect(inserted,resolved.relPath).elements;
+  const inserted=source.slice(0,end)+copy.chunk+source.slice(end),next=collect(inserted,resolved.relPath).elements;
   const originals=resolved.elements.filter(e=>e.location.startOffset>=start&&e.location.startOffset<end),mapped=new Map();
   for(const e of resolved.elements){const offset=e.location.startOffset+(e.location.startOffset>=end?copy.chunk.length:0),fresh=next.find(n=>n.location.startOffset===offset&&n.tag===e.tag&&n.node.namespaceURI===e.node.namespaceURI);if(!fresh)return refuse('The copy would change the surrounding document structure.');mapped.set(e.node,fresh);}
   const copies=next.filter(e=>e.location.startOffset>=end&&e.location.startOffset<end+copy.chunk.length),created=copies[0];
   if(next.length!==resolved.elements.length+originals.length||copies.length!==originals.length||!created||created.node.parentNode!==mapped.get(resolved.element.node.parentNode)?.node||originals.some((e,i)=>e.tag!==copies[i].tag||e.node.namespaceURI!==copies[i].node.namespaceURI)||resolved.elements.some(e=>mapped.has(e.node.parentNode)&&mapped.get(e.node).node.parentNode!==mapped.get(e.node.parentNode).node))return refuse('The copied SVG structure could not be preserved.');
   for(let i=1;i<originals.length;i++){const parentIndex=originals.findIndex(e=>e.node===originals[i].node.parentNode);if(parentIndex<0||copies[i].node.parentNode!==copies[parentIndex].node)return refuse('The copied SVG nesting changed.');}
-  const after=copy.append(inserted),final=html.collect(after,resolved.relPath).elements;
+  const after=copy.append(inserted),final=collect(after,resolved.relPath).elements;
   if(final.length!==next.length||next.some((e,i)=>e.id!==final[i].id||e.tag!==final[i].tag))return refuse('The copied styles would change document identities.');
   const sourceIdMap=resolved.elements.flatMap(element=>{const id=mapped.get(element.node).id;return id===element.id?[]:[[element.id,id]];});
   return {ok:true,sourceIdMap,hash:html.contentHash(after),parentId:mapped.get(resolved.element.node.parentNode).id,createdId:created.id,structural:true,edits:[{file:resolved.file,before:source,after}]};
