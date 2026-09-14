@@ -21,6 +21,30 @@
   if(from<0||to<from||items.some(node=>node.tagName!=='LI'))return null;
   return {items,list,range};
  }
+ function prefixContext(el,withSpace=false){
+  if(!supported(el))return null;
+  const d=el.ownerDocument,selection=d.getSelection();if(!selection.rangeCount)return null;
+  const range=selection.getRangeAt(0);if(!range.collapsed||!el.contains(range.startContainer)||listContext(el))return null;
+  let top=range.startContainer.nodeType===1?range.startContainer:range.startContainer.parentElement;
+  while(top&&top!==el&&top.parentElement!==el)top=top.parentElement;
+  const block=top!==el&&top?.matches('p,div,span[data-retouch-paragraph]')?top:el;
+  if(block===el&&[...el.children].some(node=>!['SPAN','A','STRONG','B','EM','I','U','S','SUP','SUB','CODE','MARK','SMALL','ABBR'].includes(node.tagName)||node.hasAttribute('data-retouch-paragraph')))return null;
+  if(block!==el&&block.querySelector('p,div,ul,ol'))return null;
+  const prefix=d.createRange();prefix.selectNodeContents(block);prefix.setEnd(range.startContainer,range.startOffset);
+  const value=prefix.toString(),match=(withSpace?/^(-|\*|1[.)]) $/:/^(-|\*|1[.)])$/).exec(value);
+  if(!match||prefix.cloneContents().querySelector('br,img,input,svg,button,select,textarea,ul,ol,[contenteditable="false"]'))return null;
+  return {block,prefix,kind:match[1]==='-'||match[1]==='*'?'ul':'ol'};
+ }
+ function prefix(el){
+  const context=prefixContext(el,true);if(!context)return false;
+  const {block,prefix,kind}=context,d=el.ownerDocument;
+  prefix.deleteContents();
+  const list=d.createElement(kind);list.style.cssText='list-style: revert; margin: 0; padding-inline-start: 1.5em;';
+  if(block===el){const item=d.createElement('li');item.append(...el.childNodes);list.append(item);el.append(list);placeholder(item);syncMarkers(el);caret(item);return true;}
+  block.before(list);
+  let item;if(block.matches('span[data-retouch-paragraph]')){item=d.createElement('li');item.append(block);}else item=rename(block,'li');
+  list.append(item);placeholder(block.matches('span[data-retouch-paragraph]')?block:item);syncMarkers(el);caret(item);return true;
+ }
  function listDepth(list,el){let depth=0;for(let node=list;node&&node!==el;node=node.parentElement)if(/^(UL|OL)$/.test(node.tagName))depth++;return depth;}
  function syncMarkers(el){
   for(const list of el.querySelectorAll('ul,ol')){
@@ -209,5 +233,5 @@
   if(kind!=='none')for(const item of el.querySelectorAll('li'))if(item.style.listStyleType){item.style.setProperty('list-style-type','inherit',item.style.getPropertyPriority('list-style-type'));item.__rtListMarker='inherit';}
   syncMarkers(el);restoreSelection(el,offsets);return true;
  }
- const api={supported,state,apply,listContext,canIndent,indent,enter,paragraph,joinContext,join,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
+ const api={supported,state,apply,prefixContext,prefix,listContext,canIndent,indent,enter,paragraph,joinContext,join,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
 })(typeof window!=='undefined'?window:null);

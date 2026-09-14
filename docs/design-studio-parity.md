@@ -15261,3 +15261,41 @@ The final range-inspector runs also passed on React Chromium and HTML WebKit
 (`/private/tmp/retouch-text-inspector-{react,webkit}-scroll.log`).
 Syntax and diff checks passed. This is a UI classification and reveal correction;
 full Figma parity and desktop distribution requirements remain open.
+
+### Typed list prefixes (2026-09-14)
+
+Typing a space after `-`, `*`, `1.` or `1)` at the beginning of an editable flow
+paragraph creates a bulleted or numbered list. Conversion targets that paragraph,
+leaving neighboring explicit paragraphs intact. The typed space is recorded as
+ordinary input before a separate formatting transaction: immediate Undo restores
+the literal prefix and space, and Redo restores the list. New items retain the
+existing Enter/list-editing behavior and source serialization.
+
+The trigger only handles a single typed space outside composition. Multi-character
+insertion/paste, non-prefix text, leading text/whitespace, existing list items and
+sources that cannot preserve rich formatting do not trigger it. Source-connected
+paragraph wrappers and suffix content move into the list rather than being copied
+as plain text. Empty explicit paragraphs receive their placeholder inside the
+paragraph, avoiding an extra blank line after conversion.
+
+Reference: Figma documents these four typed creation prefixes in
+https://help.figma.com/hc/en-us/articles/360040449773-Create-bulleted-and-numbered-lists
+
+Verification: 1,245 unit tests pass (`/private/tmp/retouch-list-prefix-units.log`).
+`RT_E2E_LIST_PREFIX=1` passes HTML, React and Liquid on Chromium 145.0.7632.6 and
+HTML on WebKit 26.0 (`/private/tmp/retouch-list-prefix-{html,react,liquid,webkit}-final.log`).
+The browser helper checks all four prefixes, non-prefix input, multi-character
+insertion, Undo to literal text, Redo, continued typing/Enter, isolated paragraph
+conversion, save/reopen and exact source history. Native trailing spaces may be
+NBSP; negative-input comparisons account for that browser representation.
+
+A strengthened HTML suffix test passes in `/private/tmp/retouch-list-prefix-html-suffix.log`,
+checking that the retained link still contains the visible suffix after saving.
+`/private/tmp/retouch-list-prefix.png` was visually inspected.
+
+This currently uses the existing semantic-list support in flow containers such
+as DIV. Heading/P roots that cannot contain UL/OL remain literal; mixed authored
+block layouts and soft-break lines are not generalized to lists. Prefix-only
+formatting inheritance, automatic adjacent-list coalescing, nested-boundary joins,
+spacing/hanging controls and the remaining Figma/desktop requirements are still
+open. No desktop rebuild or native launch was performed.

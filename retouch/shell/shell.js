@@ -314,7 +314,7 @@ function hookFrame(d, w) {
     if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertParagraph'){e.preventDefault();e.stopPropagation();if(!insertTextParagraph())toast('This text structure cannot create a paragraph yet.','err');return;}
     if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertLineBreak'){e.preventDefault();e.stopPropagation();insertInlineBreak();return;}
     if(editing&&editing.el.contains(e.target)&&['historyUndo','historyRedo'].includes(e.inputType)&&inlineHistoryCommand(e.inputType==='historyRedo')){e.preventDefault();e.stopPropagation();return;}
-    if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertText'&&typeof e.data==='string'&&(insertCaretText(e.data)||insertListCaretText(e.data))){e.preventDefault();e.stopPropagation();return;}
+    if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertText'&&typeof e.data==='string'&&(autoListPrefix(e.data)||insertCaretText(e.data)||insertListCaretText(e.data))){e.preventDefault();e.stopPropagation();return;}
     beginNativeTextEdit(e);
     if (editing && editing.el.contains(e.target) && e.inputType.startsWith('format')) {
       e.preventDefault();
@@ -1130,6 +1130,18 @@ function insertListCaretText(text){
   if(!range.collapsed||node.nodeType!==3||node.length||!current.el.contains(node)||!node.parentElement.closest('li,[data-retouch-paragraph]'))return false;
   const before=captureCaretEdit(current);node.insertData(0,text);range.setStart(node,text.length);range.collapse(true);selection.removeAllRanges();selection.addRange(range);
   recordCaretEdit(current,before,textHistoryGroup(current,'insertText',text));return true;
+}
+function autoListPrefix(text){
+  const current=editing;if(text!==' '||!current||current.info.canSetChildren===false||current.caretComposition||!RetouchListEditing.prefixContext(current.el))return false;
+  // The typed space belongs to ordinary typing history. Undoing the separate
+  // formatting transaction restores the literal prefix, including that space.
+  if(!insertCaretText(text)&&!insertListCaretText(text)){
+    const before=captureCaretEdit(current),d=current.el.ownerDocument,selection=d.getSelection(),range=selection.getRangeAt(0);
+    if(range.startContainer.nodeType===3){const node=range.startContainer,offset=range.startOffset;node.insertData(offset,text);range.setStart(node,offset+1);}
+    else {const node=d.createTextNode(text);range.insertNode(node);range.setStartAfter(node);}
+    range.collapse(true);selection.removeAllRanges();selection.addRange(range);recordCaretEdit(current,before,textHistoryGroup(current,'insertText',text));
+  }
+  inlineFormattingTransaction(()=>RetouchListEditing.prefix(current.el));current.el.ownerDocument.dispatchEvent(new Event('selectionchange'));return true;
 }
 function insertTextParagraph(){
   const current=editing;if(!current)return false;
