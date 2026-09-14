@@ -241,3 +241,15 @@ test('Multiple anchor cuts retain all segments in order for open and closed cont
  }
  const open=path.parseCompound('M0 0L10 0L20 0L30 0');assert.deepEqual(path.splitContourAtPoints(open,0,[0,1,3]),path.splitContour(open,0,1));for(const anchors of [[],[0,3],[NaN],[-1],[4],null])assert.equal(path.splitContourAtPoints(open,0,anchors),null);
 });
+
+test('Whole contour arc conversion is atomic, preserves mixed segments and accounts for other contours',()=>{
+  for(const d of ['M0 0A30 20 0 0 1 60 0A30 20 0 0 1 0 0Z','M0 0L10 10C15 5 25 5 30 10A30 20 35 1 0 80 60L90 70A20 30 0 0 1 100 100']){
+    const document=path.parseCompound(d+' M150 150L160 160'),before=JSON.stringify(document),result=path.contourToCubics(document,0);
+    assert.ok(result);assert.equal(JSON.stringify(document),before);assert.equal(result.selected,0);assert.deepEqual(result.subpaths[1],document.subpaths[1]);assert.equal(result.subpaths[0].closed,document.subpaths[0].closed);assert.ok(result.subpaths[0].nodes.every(node=>!node.arc));
+    for(const node of document.subpaths[0].nodes){const match=result.subpaths[0].nodes.find(p=>p.x===node.x&&p.y===node.y);assert.ok(match);if(node.in)assert.deepEqual(match.in,node.in);if(node.out)assert.deepEqual(match.out,node.out);}
+    assert.deepEqual(path.parseCompound(path.serializeCompound(result)),{subpaths:result.subpaths});assert.equal(path.contourToCubics(result,0),null);
+  }
+  const document=path.parseCompound('M0 0A30 20 0 0 1 60 0A30 20 0 0 1 0 0Z');document.subpaths.push({closed:false,nodes:Array.from({length:509},(_,i)=>({x:i,y:100}))});const before=JSON.stringify(document);assert.ok(path.serializeCompound(document));assert.equal(path.contourToCubics(document,0),null);assert.equal(JSON.stringify(document),before);
+  for(const index of [-1,.5,2,NaN])assert.equal(path.contourToCubics(document,index),null);
+  for(const tolerance of [0,NaN,Infinity,2])assert.equal(path.contourToCubics(document,0,tolerance),null);
+});

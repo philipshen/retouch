@@ -15646,3 +15646,19 @@ compound-vector workflows passed, including multiple selection, pending preview,
 source save and exact Undo/Redo. Logs are at
 `/private/tmp/retouch-multi-split-{all-units,html,react,webkit}.log`.
 No native package was rebuilt for this change; full parity remains unfinished.
+
+### Whole-contour Bézier conversion (2026-09-14)
+
+More vector actions now includes Convert contour to Bézier. It converts every
+arc in the selected contour, including the closing edge, using the existing
+0.01 SVG-unit bounded approximation. Existing line/cubic segments and other
+contours are preserved. Conversion is atomic: precision or compound point-limit
+failure leaves the original unchanged. The action is disabled when no arcs
+remain, and invalid arc property drafts must be corrected before conversion.
+
+All 1,254 unit tests passed. HTML/Chromium, React/Chromium and HTML/WebKit arc
+workflows passed, including all three fixture contours, rendered path samples,
+pending preview, cancellation, exact source Undo/Redo, and existing individual
+arc/handle editing. Logs: `/private/tmp/retouch-contour-cubics-{all-units,html,react,webkit}.log`.
+No native package was rebuilt. Full vector networks, booleans, masks, broader
+Figma parity and trusted desktop distribution remain unfinished.

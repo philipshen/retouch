@@ -157,6 +157,17 @@
     return [rx,ry,cx,cy,start,delta].every(Number.isFinite)?{rx,ry,cx,cy,start,delta,c,s}:null;
   }
   function arcPoint(center,t){const angle=center.start+center.delta*t,x=center.rx*Math.cos(angle),y=center.ry*Math.sin(angle);return{x:center.c*x-center.s*y+center.cx,y:center.s*x+center.c*y+center.cy};}
+  function contourToCubics(document,index,tolerance=.01){
+    if(!serializeCompound(document)||!Number.isInteger(index)||!document.subpaths[index]||!Number.isFinite(tolerance)||tolerance<1e-6||tolerance>1)return null;
+    let part=document.subpaths[index];if(!part.nodes.some((node,i)=>node.arc&&(part.closed||i>0)))return null;
+    const otherPoints=document.subpaths.reduce((sum,p,i)=>sum+(i===index?0:p.nodes.length),0);
+    // Work on copies and publish only after every arc meets precision/capacity.
+    for(let arc=part.nodes.findIndex((node,i)=>node.arc&&(part.closed||i>0));arc!==-1;arc=part.nodes.findIndex((node,i)=>node.arc&&(part.closed||i>0))){
+      part=arcToCubics(part,arc,tolerance);if(!part||otherPoints+part.nodes.length>512)return null;
+    }
+    const subpaths=document.subpaths.map((original,i)=>({closed:original.closed,nodes:(i===index?part:original).nodes.map(node=>translate(node,0,0))}));
+    return serializeCompound({subpaths})?{subpaths,selected:index}:null;
+  }
   function arcToCubics(part,index,tolerance=.01){
     if(!part||!serialize(part.nodes,part.closed)||!Number.isInteger(index)||index<0||index>=part.nodes.length||!part.nodes[index].arc||!part.closed&&index===0||!Number.isFinite(tolerance)||tolerance<1e-6||tolerance>1)return null;
     const nodes=part.nodes.map(p=>translate(p,0,0)),a=nodes[(index+nodes.length-1)%nodes.length],b=nodes[index],center=arcCenter(a,b),arc=b.arc;
@@ -236,5 +247,5 @@
     const xs=points.map(p=>p.x),ys=points.map(p=>p.y),x=Math.min(...xs),y=Math.min(...ys),width=Math.max(...xs)-x,height=Math.max(...ys)-y;
     return [x,y,width,height].every(Number.isFinite)?{x,y,width,height}:null;
   }
-  const api={splitContourAtPoints,segmentPoint,nearestSegment,splitContour,joinContours,bounds,serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,translatePoints,arrangePoints,setArc,split,segmentMiddle,arcCenter,arcPoint,arcToCubics,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
+  const api={contourToCubics,splitContourAtPoints,segmentPoint,nearestSegment,splitContour,joinContours,bounds,serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,translatePoints,arrangePoints,setArc,split,segmentMiddle,arcCenter,arcPoint,arcToCubics,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
 })(typeof window==='object'?window:globalThis);
