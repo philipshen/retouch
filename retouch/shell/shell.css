@@ -565,8 +565,8 @@ body { font-size:12px;-webkit-font-smoothing:antialiased; }
 .layout-modes select option { font-size:12px; }
 #panel details.advanced { border:0;background:transparent;padding:0; }
 #panel details.advanced > summary { font-size:10px;text-transform:none;letter-spacing:0;color:var(--muted); }
-.design-tool-dock { position:absolute;z-index:41;bottom:16px;transform:translateX(-50%);display:flex;gap:4px;padding:6px;background:white;border:1px solid #e5e5e5;border-radius:13px;box-shadow:0 3px 12px #00000014; }
-.design-tool-dock button { width:36px;height:36px;border:0;border-radius:7px;background:white;color:var(--ink);font-size:0;cursor:pointer; }
+.design-tool-dock { max-width:calc(100% - 16px);width:max-content;flex-wrap:wrap;justify-content:center;position:absolute;z-index:41;bottom:16px;transform:translateX(-50%);display:flex;gap:4px;padding:6px;background:white;border:1px solid #e5e5e5;border-radius:13px;box-shadow:0 3px 12px #00000014; }
+.design-tool-dock button { flex-shrink:0;width:36px;height:36px;border:0;border-radius:7px;background:white;color:var(--ink);font-size:0;cursor:pointer; }
 .design-tool-dock button:hover { background:var(--control); }
 .design-tool-dock button:disabled { opacity:.3;cursor:default; }
 .design-tool-dock #modeBtn.mode-edit { background:#0d99ff;color:white; }
@@ -1079,3 +1079,14 @@ html, body { overflow:clip; }
 .boolean-original-heading > strong { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .boolean-original-heading > .boolean-icon-control { flex-shrink:0;background:transparent; }
 .boolean-transform-controls { margin-bottom:6px; }
+
+#toolbar .workspace-icon,#screenToolbar .workspace-icon { display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:28px;padding:4px;background:transparent; }
+.workspace-icon svg { width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round;pointer-events:none; }
+#toolbar .workspace-icon:hover,#screenToolbar .workspace-icon:hover:not(:disabled) { background:var(--hover); }
+#toolbar .workspace-icon[aria-expanded="true"],#screenToolbar .workspace-icon[aria-pressed="true"] { background:var(--control); }
+#screenToolbar .workspace-icon[aria-pressed="true"] { color:var(--accent);background:#e5f4ff; }
+.workspace-icon:focus-visible { outline:2px solid var(--accent);outline-offset:1px; }
+
+@media (max-width:420px) {
+ .design-tool-dock { display:grid;grid-template-columns:repeat(5,36px); }
+}

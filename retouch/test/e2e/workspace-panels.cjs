@@ -27,11 +27,12 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   await page.setViewportSize({width:360,height:800});
   for(const toggle of [inspector,layers]){
    if(await toggle.getAttribute('aria-expanded')==='false')await toggle.click();
+   if(process.env.RT_E2E_WORKSPACE_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_WORKSPACE_SCREENSHOT});
    await wait(async()=>await dock.evaluate(el=>{const r=el.getBoundingClientRect();return r.x>=0&&r.right<=innerWidth&&[...el.querySelectorAll('button')].every(button=>{const b=button.getBoundingClientRect();return button.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2));});}));
    assert.equal(await page.evaluate(()=>document.documentElement.scrollLeft),0);
    await page.locator('#quickActions').click();await page.getByRole('dialog',{name:'Actions',exact:true}).waitFor();await page.keyboard.press('Escape');
   }
   if(process.env.RT_E2E_WORKSPACE_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_WORKSPACE_SCREENSHOT});
-  await page.setViewportSize({width:1800,height:1000});await wait(async()=>await layerPanel.isVisible()&&await inspectorPanel.isVisible());assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.equal(fs.readFileSync(file,'utf8'),source);assert.deepEqual(errors,[]);console.log('WORKSPACE PANELS/PERSISTENCE/COMPACT DRAWERS/SELECTION/ESCAPE/SOURCE PASS',engine);
+  await page.setViewportSize({width:1800,height:1000});await wait(async()=>await layerPanel.isVisible()&&await inspectorPanel.isVisible());assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);assert.equal(fs.readFileSync(file,'utf8'),source);assert.deepEqual(errors,[]);if(process.env.RT_E2E_WORKSPACE_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_WORKSPACE_SCREENSHOT.replace('.png','-desktop.png')});console.log('WORKSPACE PANELS/PERSISTENCE/COMPACT DRAWERS/SELECTION/ESCAPE/SOURCE PASS',engine);
  }finally{if(browser)await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));fs.rmSync(root,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

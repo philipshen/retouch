@@ -586,7 +586,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
    if(!panel.hidden)right=Math.min(right,Math.max(left,panel.getBoundingClientRect().left));
   }
   const half=Math.min(dock.offsetWidth/2+8,m.width/2);dock.style.left=Math.max(half,Math.min(m.width-half,left-m.left+(right-left)/2))+'px';
- };new ResizeObserver(place).observe(canvas);window.addEventListener('retouch:workspace-layout',place);place();
+ };const dockResize=new ResizeObserver(place);dockResize.observe(canvas);dockResize.observe(dock);window.addEventListener('retouch:workspace-layout',place);place();
  function reveal(control){
   if(!control?.isConnected||control.matches(':disabled')||control.closest('[inert]'))return false;
   root.RetouchWorkspacePanels?.showInspector();

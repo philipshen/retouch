@@ -13,7 +13,7 @@
   const same=(a,b)=>a?.width===b?.width&&a?.height===b?.height;
   const updateHistory=()=>{undoButton.disabled=!undoStack.length;redoButton.disabled=!redoStack.length;};
   let ratioBase=null,linked=false;try{linked=localStorage.getItem(key+'.aspect')==='true';}catch{}
-  const updateAspect=()=>{aspect.setAttribute('aria-pressed',String(linked));aspect.textContent=linked?'Ratio locked':'Lock ratio';};updateAspect();
+  const updateAspect=()=>{aspect.setAttribute('aria-pressed',String(linked));aspect.title=linked?'Unlock screen aspect ratio':'Lock screen aspect ratio';};updateAspect();
   aspect.onclick=()=>{linked=!linked;ratioBase=copy(screen||viewport);updateAspect();try{localStorage.setItem(key+'.aspect',String(linked));localStorage.setItem(key+'.aspectBase',JSON.stringify(ratioBase));}catch{}};
   function constrain(next,axis,base=screen||viewport,enabled=linked){
     if(!enabled||!axis||!base||!base.width||!base.height)return next;
