@@ -127,3 +127,12 @@ The deeper regroup scenario passes on HTML/Chromium, Liquid/Chromium, and
 React/WebKit. The full unit suite passes 1,409 tests after the cascade and
 selection-preservation fixes. This does not establish arbitrary nesting depth,
 responsive outline regeneration, or full Figma parity.
+
+### Locked original shapes
+
+Boolean writes check the selected group and affected originals against the
+editor's layer locks before preparing geometry and again before posting source.
+This covers regrouping and original geometry edits, including a lock acquired
+while descriptors load. The nested browser workflow checks that an existing
+lock and a lock added during loading each produce no POST, source change, or
+DOM change. Unlocking allows the same selected originals to be regrouped.
