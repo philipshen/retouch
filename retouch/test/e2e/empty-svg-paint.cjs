@@ -12,6 +12,13 @@ module.exports=async({page,shape,read,wait,settled,screenshot,scoped=false,kind=
   await add.waitFor();assert.equal(await page.getByLabel('SVG '+paint,{exact:true}).isVisible(),false);assert.ok(await section.evaluate(el=>el.getBoundingClientRect().height)<75);
   if(paint==='fill'&&screenshot)await page.screenshot({path:screenshot});
   await add.click();await page.getByRole('menu',{name:'Add '+paint,exact:true}).waitFor();await page.evaluate(async()=>{queueViewportPanelRefresh();document.getElementById('panel').dispatchEvent(new Event('scroll'));await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});assert.equal(await page.getByRole('menu',{name:'Add '+paint,exact:true}).count(),1,'inspector refresh and delayed panel scroll preserve the open paint menu');await page.keyboard.press('Escape');assert.equal(read(),empty);assert.equal(await add.evaluate(el=>el===document.activeElement),true);
+  await add.click();const reset=page.getByRole('menuitem',{name:'Reset override',exact:true});
+  if(initial!=='none'){
+   assert.equal(await reset.count(),1);await reset.click();await settled();await wait(()=>read()!==empty);await wait(async()=>await appearance()===initial);const resetSource=read();
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===empty);await wait(async()=>await appearance()==='none');
+   await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===resetSource);
+   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===empty);
+  }else{assert.equal(await reset.count(),0,'authored empty paint has no local override to reset');await page.keyboard.press('Escape');}
   const open=async()=>{await add.click();await page.getByRole('menuitem',{name:'Solid',exact:true}).click();};
   await open();const picker=page.getByRole('dialog',{name:'Edit SVG '+paint,exact:true}),color=picker.getByLabel('Color value',{exact:true});await color.fill('#224466');assert.notEqual(await appearance(),'none');assert.equal(read(),empty);
   await page.keyboard.press('Escape');await picker.waitFor({state:'detached'});assert.equal(await appearance(),'none');assert.equal(read(),empty);
