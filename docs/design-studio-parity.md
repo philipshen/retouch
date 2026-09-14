@@ -16126,7 +16126,7 @@ originals, keep an operable group, and can become visible again by changing the
 operation.
 
 This remains partial boolean parity: nested groups, automatic responsive
-regeneration, group canvas transforms, original-shape canvas handles, independent
+regeneration, multi-group transforms, original-shape canvas handles, independent
 result paint editing, and general dynamic operands remain. The combined outline
 uses fixed SVG coordinates computed at the current SVG size. The current desktop
 archive predates this feature; no rebuild, native launch or push occurred here.
@@ -16141,3 +16141,38 @@ exact undo/redo, release, selection and retained preview input/document state.
 The final light inspector screenshot was inspected for paired field layout.
 
 Evidence and screenshot: `/Users/philipshen/Developer/retouch-worktrees/recovery-2026-09-14/boolean-group-inspector/`.
+
+
+### Boolean group transforms — 2026-09-14
+
+Single boolean groups now expose position, rotation and size fields, plus canvas
+move/resize/rotation controls through the shared SVG transform implementation.
+Transforms stay on the outer group; the original operands and derived path retain
+their own coordinate spaces. Changing the boolean operation still works after
+transforming the group. Releasing a transformed group retains an ordinary SVG
+group with its transform and original shapes. Untransformed groups still release
+to their exact pre-group source. The release planner explicitly preserves layer
+identity mappings and selects the retained group.
+
+Preflight rejects operation-dependent CSS changes and release-dependent CSS
+changes. HTML/Liquid group transform writes and history use in-document render
+synchronization. A Liquid canvas-selection regression was also fixed: boolean
+layers now stay in selection mode instead of entering inline text editing.
+Boolean inspector actions resolve the current DOM occurrence and validate source
+identity/revision before acting, so an equivalent DOM replacement does not leave
+the controls bound to a disconnected node.
+
+All 1,344 unit tests passed, including 24 boolean-group source/adapter tests.
+Final browser runs passed HTML Chromium, Liquid Chromium and React WebKit with
+position fields, actual canvas resize, keyboard canvas movement, Escape
+cancellation, rotation, operation switching, CSS refusal, exact source undo/redo,
+retained release world matrices and retained preview document/input state.
+HTML WebKit also passed the earlier resize/rotation flow. The inspected screenshot
+shows the rotated group and resize handles alongside the deliberately triggered
+CSS-release refusal used by the test.
+
+Remaining work includes nested booleans, automatic responsive regeneration,
+multi-group transforms, original-shape canvas handles, independent result paints,
+and desktop packaging/native verification of these changes. No push or native
+launch occurred. Evidence is in
+`/Users/philipshen/Developer/retouch-worktrees/recovery-2026-09-14/boolean-group-transforms/`.

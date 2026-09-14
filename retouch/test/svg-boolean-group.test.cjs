@@ -21,7 +21,7 @@ for(const kind of ['html','react','liquid']){
  });
  test(kind+' group operations reject stale, nonconsecutive, invalid and altered wrappers without edits',()=>{
   const r=resolve(kind);for(const changes of [{fileHash:'old'},{operation:'bad'},{path:'M0 0L1 1'},{ids:[r.element.id,r.elements.find(e=>tag(kind,e)==='ellipse').id]}])assert.equal(create(kind,r,changes).refused,true);
-  const made=create(kind,r);for(const replacement of ['data-rt-boolean="union" transform="translate(2)"','data-rt-boolean="union" class="custom"']){const fresh=resolve(kind,made.edits[0].after.replace('data-rt-boolean="union"',replacement),made.selectionIds[0]);assert.equal(group.plan(fresh,{type:'releaseSVGBooleanGroup',fileHash:fresh.hash},kind).refused,true);}
+  const made=create(kind,r);for(const replacement of ['data-rt-boolean="union" transform="translate(invalid)"','data-rt-boolean="union" class="custom"']){const fresh=resolve(kind,made.edits[0].after.replace('data-rt-boolean="union"',replacement),made.selectionIds[0]);assert.equal(group.plan(fresh,{type:'releaseSVGBooleanGroup',fileHash:fresh.hash},kind).refused,true);}
   const identified=resolve(kind,r.source.replace('<rect ','<rect id="authored" '));assert.equal(create(kind,identified).refused,true);
  });
 }
@@ -44,4 +44,11 @@ for(const kind of ['html','react','liquid'])test(kind+' changing the base transf
  const result=group.plan(fresh,{type:'setSVGBooleanOperand',fileHash:fresh.hash,operandId:info.baseId,operandOp:{type:'setSVGTransform',matrix},path},kind);assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);
  const next=resolve(kind,result.edits[0].after,made.selectionIds[0]),c=group.context(next,kind);assert.equal(c.attr(c.roots[c.base],'transform'),'matrix(1 0 0 1 20 30)');assert.equal(c.attr(c.result,'transform'),'matrix(1 0 0 1 20 30)');
  const released=group.plan(next,{type:'releaseSVGBooleanGroup',fileHash:next.hash},kind);assert.equal(released.edits[0].after,r.source.replace('translate(3 4)','matrix(1 0 0 1 20 30)'));
+});
+for(const kind of ['html','react','liquid'])test(kind+' transformed boolean groups release into an ordinary group without losing transforms or originals',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),r=resolve(kind),made=create(kind,r),fresh=resolve(kind,made.edits[0].after,made.selectionIds[0]);
+ const transformed=adapter.planOp(fresh,{type:'setSVGTransform',fileHash:fresh.hash,matrix:[2,0,0,1.5,20,30]});assert.equal(transformed.ok,true,transformed.reason);const moved=resolve(kind,transformed.edits[0].after,made.selectionIds[0]);assert.equal(adapter.describe(moved).svgBooleanGroup.operation,'union');
+ const changed=adapter.planOp(moved,{type:'setSVGBooleanOperation',fileHash:moved.hash,operation:'subtract',path});assert.equal(changed.ok,true,changed.reason);
+ const edited=resolve(kind,changed.edits[0].after,made.selectionIds[0]),released=adapter.planOp(edited,{type:'releaseSVGBooleanGroup',fileHash:edited.hash});assert.equal(released.ok,true,released.reason);assert.equal(released.selectionIds.length,1);const final=resolve(kind,released.edits[0].after,released.selectionIds[0]);assert.equal(tag(kind,final.element),'g');assert.ok(final.source.includes('transform="matrix(2 0 0 1.5 20 30)"'));assert.ok(final.source.includes('transform="translate(3 4)"'));assert.ok(!final.source.includes('data-rt-boolean'));assert.equal(released.removedSourceIds.length,2);
+ const mapping=new Map(released.sourceIdMap),removed=new Set(released.removedSourceIds);for(const old of edited.elements.filter(e=>!removed.has(e.id))){const retained=final.elements.find(e=>e.id===(mapping.get(old.id)||old.id));assert.ok(retained);assert.equal(tag(kind,retained),tag(kind,old));}
 });
