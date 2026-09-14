@@ -16496,3 +16496,21 @@ Each step verifies exact source history and the responsive result across all
 comparison screens, retaining their independent document and input state.
 This covers consecutive writes using the refreshed source hash, beyond the
 one-shot breakpoint reset path. Chromium and WebKit pass.
+
+### Recovering literal class previews after a failed fetch
+
+Class controls distinguish a successful source save from a failed preview
+refresh. The saved operation remains in history. Class synchronization remembers
+the last source classes applied to each preview document, so a later edit removes
+stale source tokens left by an intervening failed fetch. Each comparison document
+tracks its own applied state; runtime-only tokens remain preserved.
+
+The Liquid browser workflow intercepts the authoritative page fetch with HTTP
+503 after a successful save, verifies the explicit saved/refresh-failed message
+and unchanged live classes, then edits again. It verifies stale-token removal,
+exact undo/redo through the failed preview's saved source, and retained form and
+document state across all comparison screens.
+
+Main and comparison refresh attempts run independently and settle before controls
+unlock, so one failed preview cannot suppress another preview's transition.
+Chromium and WebKit pass the recovery workflow; all 1,397 unit tests pass.

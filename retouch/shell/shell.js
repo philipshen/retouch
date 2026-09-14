@@ -3022,19 +3022,25 @@ function classSelectionMatches(infos,document){
   return infos.every(info=>{const elements=matchingInDocument(document,info.id,info);return elements.length&&elements.every(el=>el.getAttribute(info.renderRevisionAttribute)===info.hash&&tokens(el.getAttribute('class'))===tokens(info.className));});
 }
 async function setReactClassesSelection(classesById,expected=null){
-  if(!sel?.multiple?.length||panelTasks||undoBusy||sourceRequests)return;stopDrawing?.();const selection=sel.multiple,info=sel.info;busyPanel(true);
+  if(!sel?.multiple?.length||panelTasks||undoBusy||sourceRequests)return;stopDrawing?.();const selection=sel.multiple,info=sel.info;let saved=false;busyPanel(true);
   try{
     const result=await api('POST','/rt/__api/op',{type:'setClassesSelection',id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash,...selectionSourceContexts(selection),classesById});
     if(!result?.ok){renderPanel();return toast(result?.reason||result?.error||'Could not style selected layers','err');}
-    const literalLiquid=info.contextSelection&&selection.every(item=>item.classSourceLiteral)&&result.selection.every(item=>item.classSourceLiteral),before=Object.fromEntries(selection.map(item=>[item.id,item.className])),after=Object.fromEntries(result.selection.map(item=>[item.id,item.className]));
+    saved=true;const literalLiquid=info.contextSelection&&selection.every(item=>item.classSourceLiteral)&&result.selection.every(item=>item.classSourceLiteral),before=Object.fromEntries(selection.map(item=>[item.id,item.className])),after=Object.fromEntries(result.selection.map(item=>[item.id,item.className]));
     if(result.undoId)editorHistory.record({type:literalLiquid?'setLiquidClassesSelection':info.contextSelection?'collectionSelection':'setClassesSelection',id:info.id,selectionIds:selection.map(item=>item.id),...(literalLiquid?{classesBefore:before,classesAfter:after}:{}),undoId:result.undoId});
     sel.info=result.element;sel.multiple=result.selection;if(literalLiquid){await refreshLiteralLiquidClasses(result.selection,before);}else if(info.contextSelection){await reloadFrame();await restoreLayerSelection(selection.map(item=>item.id));}else await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));
     if(expected){let ready=false;for(let attempt=0;attempt<50;attempt++){ready=Object.entries(expected).every(([id,g])=>{const el=matchingEls(id)[0];if(!el?.isConnected)return false;try{const actual=RetouchInspector.geometry(el,{allowRotation:Object.hasOwn(g,'rotation'),allowScale:Object.hasOwn(g,'scaleX')});return ['x','y','width','height'].every(key=>Math.abs(actual[key]-g[key])<.6);}catch{return false;}});if(ready)break;await new Promise(resolve=>setTimeout(resolve,100));}if(!ready){renderPanel();toast('Saved selection classes, but the bounds did not settle. Check responsive or inline overrides.','err');return false;}}
     renderPanel();toast('Selected layers updated','ok');return true;
-  }catch(error){renderPanel();toast(error.message,'err');return false;}finally{busyPanel(false);}
+  }catch(error){renderPanel();toast((saved?'Classes saved; preview refresh failed: ':'Could not save classes: ')+error.message,'err');return false;}finally{busyPanel(false);}
 }
 async function refreshLiteralLiquidClasses(infos,before){
- const entries=infos.map(info=>({id:info.id,before:before[info.id],classes:info.className}));await RetouchRenderSync.syncClasses({frame:iframe,entries,revalidate:!!window.__RT_RENDERING?.revalidateStyles});await window.RetouchComparisons?.syncClasses(entries);
+ const entries=infos.map(info=>({id:info.id,before:before[info.id],classes:info.className}));
+ // Each document must observe the transition even if another preview fails.
+ const results=await Promise.allSettled([
+  RetouchRenderSync.syncClasses({frame:iframe,entries,revalidate:!!window.__RT_RENDERING?.revalidateStyles}),
+  window.RetouchComparisons?.syncClasses(entries),
+ ]);
+ const failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;
 }
 function svgGeometryMatches(el,info){return info.svgGeometry?.fields.every(field=>field.editable===false||el.getAttribute(field.name)===field.value);}
 async function convertSVGToPath(info,toArrow=false,arrowPoints){
@@ -3435,8 +3441,12 @@ async function writeClasses(classes, isUndo) {
     info.hash = res.hash;
     if(info.classTextStyles&&res.element)for(const key of ['textStyleLinks','textStyleOverrides','classTextStyles','textStyleLinkReason'])info[key]=res.element[key];
     if(res.element)for(const key of ['colorStyleLinks','colorStyleOverrides','classColorStyles','colorStyleLinkReason','effectStyleLinks','effectStyleOverrides','classEffectStyles','effectStyleLinkReason','classVariables','variableLinks','variableOverrides','variableReason'])info[key]=res.element[key];
-    if (literalLiquid) await refreshLiteralLiquidClasses([res.element],{[info.id]:prev});
-    else if (window.__RT_RENDERING?.reloadAfterWrite||info.renderRevisionAttribute) await refreshWrittenElement(info, el => info.className.split(/\s+/).filter(Boolean).every(token => el.classList.contains(token)));
+    try {
+      if (literalLiquid) await refreshLiteralLiquidClasses([res.element],{[info.id]:prev});
+      else if (window.__RT_RENDERING?.reloadAfterWrite||info.renderRevisionAttribute) await refreshWrittenElement(info, el => info.className.split(/\s+/).filter(Boolean).every(token => el.classList.contains(token)));
+    } catch (error) {
+      renderPanel();toast('Classes saved; preview refresh failed: '+error.message,'err');return false;
+    }
     toast('Saved', 'ok');
     renderPanel();
   } else {

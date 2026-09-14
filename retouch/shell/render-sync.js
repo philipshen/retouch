@@ -117,15 +117,22 @@
       d.dispatchEvent(new frame.contentWindow.CustomEvent('retouch:render',{detail:{source:'server'}}));return {ok:true,method:'styles',layers:plans.length};
     }finally{clearTimeout(timer);}
   }
+  // A saved source write can outlive a failed preview fetch. Base the next
+  // token delta on the last source classes this document actually received.
+  const appliedClassSources = new WeakMap();
   async function syncClasses({frame,entries,revalidate=false,fetcher=root.fetch.bind(root)}) {
     if(!Array.isArray(entries)||!entries.length||entries.length>100||new Set(entries.map(item=>item.id)).size!==entries.length||entries.some(item=>typeof item.before!=='string'||typeof item.classes!=='string'))throw Error('Choose distinct literal class layers.');
     const d=frame.contentDocument,href=frame.contentWindow.location.href,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000),tokens=value=>(value||'').split(/\s+/).filter(Boolean),canonical=value=>[...new Set(tokens(value))].sort().join(' ');
+    let applied=appliedClassSources.get(d);
+    if(!applied){applied=new Map();appliedClassSources.set(d,applied);}
+    for(const item of entries)if(!applied.has(item.id))applied.set(item.id,item.before);
     try{
       const response=await fetcher(href,{cache:'no-store',signal:controller.signal});if(!response.ok)throw Error('The saved classes could not be loaded.');const fresh=new root.DOMParser().parseFromString(await response.text(),'text/html');
       const plans=entries.map(item=>{const select=doc=>[...doc.querySelectorAll('[data-rt]')].filter(el=>el.getAttribute('data-rt')===item.id),source=select(fresh),live=select(d);if(!source.length||!live.length||source.some(el=>canonical(el.getAttribute('class'))!==canonical(item.classes)))throw Error('The preview has not received the saved literal classes.');
-        const next=new Set(tokens(item.classes)),previous=new Set(tokens(item.before)),removed=new Set([...previous].filter(token=>!next.has(token))),added=[...next].filter(token=>!previous.has(token));return {live,removed,added};});
+        const next=new Set(tokens(item.classes)),previous=new Set(tokens(applied.get(item.id))),removed=new Set([...previous].filter(token=>!next.has(token))),added=[...next].filter(token=>!previous.has(token));return {live,removed,added};});
       if(frame.contentDocument!==d||frame.contentWindow.location.href!==href||plans.some(plan=>plan.live.some(el=>!el.isConnected)))throw Error('Preview navigated while synchronizing classes.');
       for(const {live,removed,added}of plans)for(const el of live){const classes=new Set(tokens(el.getAttribute('class')).filter(token=>!removed.has(token)));for(const token of added)classes.add(token);if(classes.size)el.setAttribute('class',[...classes].join(' '));else el.removeAttribute('class');}
+      for(const item of entries)applied.set(item.id,item.classes);
       if(revalidate)await revalidateStyles(d,Date.now().toString(36));
       d.dispatchEvent(new frame.contentWindow.CustomEvent('retouch:render',{detail:{source:'server'}}));return {ok:true,method:'classes'};
     }finally{clearTimeout(timer);}

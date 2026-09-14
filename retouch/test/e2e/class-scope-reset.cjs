@@ -38,6 +38,28 @@ module.exports=async({page,app,read,wait,original,retain=false,liveLiquid=false}
     assert.equal(await frame.locator('[aria-label="A"]').evaluate(el=>el.classList.contains('runtime-open')),true);
    }
   }
+  const beforeFailure=read(),liveBefore=await app.locator('[aria-label="A"]').getAttribute('class');
+  const siteURL=new URL('/',page.url()).href;
+  await page.route(siteURL,route=>route.fulfill({status:503,body:'Preview unavailable'}));
+  try{
+   const input=page.getByLabel('Opacity (%)',{exact:true});await input.fill('40');await input.press('Tab');
+   await wait(()=>read()!==beforeFailure);await settled();
+   await page.locator('#toasts').getByText('Classes saved; preview refresh failed: The saved classes could not be loaded.',{exact:true}).waitFor();
+   assert.equal(await app.locator('[aria-label="A"]').getAttribute('class'),liveBefore);
+  }finally{await page.unroute(siteURL);}
+  const failedPreviewSource=read();
+  const nextInput=page.getByLabel('Opacity (%)',{exact:true});await nextInput.fill('20');await nextInput.press('Tab');
+  await wait(()=>read()!==failedPreviewSource);await settled();await opacity([.2,.7]);
+  assert.equal(await app.locator('[aria-label="A"]').evaluate(el=>el.classList.contains('md:opacity-[0.3]')),false);
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===failedPreviewSource);await settled();await opacity([.4,.7]);
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===beforeFailure);await settled();await opacity([.3,.7]);
+  await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===failedPreviewSource);await settled();await opacity([.4,.7]);
+  for(const {name,frame}of comparisons){
+   await wait(async()=>Number(await frame.locator('[aria-label="A"]').evaluate(el=>getComputedStyle(el).opacity))===(name==='Tablet'?.4:name==='Phone'?.8:.5));
+   assert.equal(await frame.locator('input').inputValue(),name);
+   assert.equal(await frame.locator('input').evaluate(()=>document===window.literalClassDocument),true);
+  }
+
  }
  if(retain){assert.equal(await app.locator('input').inputValue(),'retained');assert.equal(await app.locator('input').evaluate(()=>document===window.classResetDocument),true);}
 };
