@@ -147,3 +147,12 @@ lock and CSS refusal/retry checks, and retained preview state. Source tests
 cover regroup-all and release through HTML, React, and Liquid. Geometry tests
 cover all four operations with one operand, transformed evenodd/nonzero holes,
 and empty regions. The full suite passes 1,413 unit tests.
+
+The single-operand lifecycle is also browser-verified: change the containing
+parent's operation to Exclude, release that parent while preserving its nested
+operand, then undo each operation to exact source snapshots. HTML/Chromium
+passes with and without another enclosing group; React/WebKit passes with the
+additional enclosing group. The outer outline remains unchanged throughout
+these parent-only operations, and the full workflow retains document/input
+state. These are additional browser checks; no runtime code changed for this
+verification step.
