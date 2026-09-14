@@ -26,3 +26,7 @@ test('create, edit and release masks restore exact source through transaction hi
  for(let i=entries.length-1;i>=0;i--){assert.equal(history.apply(root,'undo',entries[i],{}).ok,true);assert.equal(fs.readFileSync(file,'utf8'),states[i]);}
  for(let i=0;i<entries.length;i++){assert.equal(history.apply(root,'redo',entries[i],{}).ok,true);assert.equal(fs.readFileSync(file,'utf8'),states[i+1]);}
 });
+test('existing mask type changes preserve nodes and source identities and reject invalid or stale writes',()=>{
+ const created=create(resolve()),r=resolve(created.edits[0].after,created.selectionIds[0]),op={type:'setSVGMaskType',fileHash:r.hash,mode:'luminance'},result=html.planOp(r,op);assert.ok(result.ok,result.reason);assert.equal(result.edits[0].after,r.source.replace('mask-type="alpha"','mask-type="luminance"'));assert.deepEqual(result.sourceIdMap,[]);assert.deepEqual(result.removedSourceIds,[]);assert.deepEqual(result.selectionIds,[r.element.id]);assert.equal(html.describe(resolve(result.edits[0].after,r.element.id)).svgMask.mode,'luminance');assert.equal(html.planOp(r,{...op,mode:'alpha'}).unchanged,true);
+ for(const change of [{fileHash:'old'},{mode:'invalid'},{mode:null}]){const invalid=html.planOp(r,{...op,...change});assert.equal(invalid.refused,true);assert.equal(invalid.edits,undefined);}
+});

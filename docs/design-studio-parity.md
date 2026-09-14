@@ -16007,3 +16007,9 @@ Remaining: canvas overlays for mask editing, complete mask bounds/type updates,
 style/export/reference integration, normalization on release, React/Liquid mask
 parity, and broader CSS/animation behavior. This does not prove full Figma mask
 parity or the overall goal.
+
+### Existing HTML mask type editing — 2026-09-14
+
+The Mask type field now changes an existing mask between alpha and luminance. Source writes preserve node identities, reject stale hashes and invalid modes, and skip unchanged values. A temporary browser probe rejects CSS overrides and active animations before writing.
+
+Verification: 1,288 unit tests passed. Chromium and WebKit inspector workflows passed both type directions, rendered pixel checks, exact source Undo/Redo, retained selection and preview document state, shape edits, and lossless release. Complete mask bounds, canvas overlays, React/Liquid masks, and broader Figma parity remain incomplete.
