@@ -86,6 +86,15 @@ test('style undo restores exact source and refuses to overwrite a later external
   fs.unlinkSync(file);
   assert.strictEqual((await run({ type: 'undo', undoId: second.undoId })).ok, false, 'missing source refuses without stopping the server');
   fs.writeFileSync(file, original);
+  // The missing-file check can let the debounced watcher remove the ID map.
+  // Wait for the restored file to be indexed before later API tests use it.
+  let restored;
+  for(let attempt=0;attempt<100;attempt++){
+    restored=JSON.parse((await req(port,'GET','/rt/__api/resolve?id='+id,{headers:AUTH()})).body);
+    if(restored.element?.hash===resolved.hash)break;
+    await new Promise(resolve=>setTimeout(resolve,20));
+  }
+  assert.strictEqual(restored.element?.hash,resolved.hash,'restored fixture must be resolvable before the next test');
 });
 
 test('image browser lists project assets and requires authentication', async () => {

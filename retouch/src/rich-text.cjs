@@ -31,7 +31,8 @@ function validateChildrenTree(children, depth, inLink=false, blockDepth=0, keptT
       const err = validateChildrenTree(c.children, depth + 1,inLink,blockDepth,keptTag);
       if (err) return err;
     } else if (c.t === 'copy') {
-      if(!/^[0-9a-f]{10}$/.test(c.id||'')||!keptTag||!require('./rich-text-copy.cjs').tags.has(keptTag(c.id))||Object.keys(c).some(key=>!['t','id','children','href','marker'].includes(key)))return 'Invalid split text source.';
+      if(!/^[0-9a-f]{10}$/.test(c.id||'')||!keptTag||!require('./rich-text-copy.cjs').tags.has(keptTag(c.id))||Object.keys(c).some(key=>!['t','id','children','href','marker','paragraph'].includes(key)))return 'Invalid split text source.';
+      if(Object.hasOwn(c,'paragraph')&&(c.paragraph!=='inline'||!keptTag||keptTag(c.id)!=='span'||Object.hasOwn(c,'tag')))return 'Invalid paragraph join.';
       if(Object.hasOwn(c,'marker')&&!require('./list-markers.cjs').valid(keptTag(c.id),c.marker))return 'Invalid split list marker.';
       if(Object.hasOwn(c,'href')&&(keptTag(c.id)!=='a'||c.href!==null&&!links.valid(c.href)))return 'Invalid split link URL.';
       if(inLink&&keptTag(c.id)==='a')return 'Text links cannot be nested.';
@@ -40,6 +41,7 @@ function validateChildrenTree(children, depth, inLink=false, blockDepth=0, keptT
       const block=['li','p','div'].includes(keptTag(c.id));
       const err=validateChildrenTree(c.children,depth+(block?0:1),inLink,blockDepth+(block?1:0),keptTag);if(err)return err;
     } else if (c.t === 'keep') {
+      if(Object.hasOwn(c,'paragraph')&&(c.paragraph!=='inline'||!keptTag||keptTag(c.id)!=='span'||Object.hasOwn(c,'tag')))return 'Invalid paragraph join.';
       if(Object.hasOwn(c,'marker')&&(!keptTag||!['ul','ol','div','p','li'].includes(keptTag(c.id))||!require('./list-markers.cjs').valid(c.tag||keptTag(c.id),c.marker)))return 'Invalid kept list marker.';
       if(Object.hasOwn(c,'tag')&&(!['p','ul','ol','li','div'].includes(c.tag)||Object.hasOwn(c,'href')))return 'Invalid kept paragraph/list tag.';
       if(inLink)return 'Source-owned nodes cannot be moved inside a new text link.';

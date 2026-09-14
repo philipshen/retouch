@@ -20,5 +20,19 @@ for(const kind of ['react','html','liquid'])test(kind+' paragraph boundaries kee
   const strong=kind==='html'?source.describe(inner,resolved.element.id).descriptor.children[0]:elements.find(e=>tag(e)==='strong');
   const result=(kind==='react'?writer:adapter).applyOp(resolved,{type:'setChildren',children:[paragraph([{t:'keep',id:strong.id,children:[text('Head')]}]),paragraph([{t:'copy',id:strong.id,children:[text('line')]}])]});assert.equal(result.ok,true,JSON.stringify(result));
   const saved=fs.readFileSync(file,'utf8');assert.ok(saved.includes('<h1 id="heading">'));assert.ok(saved.includes('</h1>'));assert.equal((saved.match(/data-retouch-paragraph=""/g)||[]).length,2);assert.equal((saved.match(/title="Keep > this"/g)||[]).length,2);assert.ok(saved.includes('>Head</strong></span><span'));
+  index.indexFile(file);const records=kind==='react'?id.collectElements(saved,name).elements:adapter.collect(saved,name).elements,current=index.resolve(records.find(e=>tag(e)==='h1').id);
+  const contents=saved.slice(saved.indexOf('>',saved.indexOf('<h1'))+1,saved.lastIndexOf('</h1>'));
+  const spans=kind==='html'?source.describe(contents,current.element.id).descriptor.children:records.filter(e=>tag(e)==='span'),firstStrong=kind==='html'?spans[0].children[0]:records.find(e=>tag(e)==='strong');
+  const joined=(kind==='react'?writer:adapter).applyOp(current,{type:'setChildren',children:[{t:'keep',id:spans[0].id,children:[{t:'keep',id:firstStrong.id},{t:'keep',id:spans[1].id,paragraph:'inline'}]}]});assert.equal(joined.ok,true,JSON.stringify(joined));
+  const output=fs.readFileSync(file,'utf8');assert.equal((output.match(/data-retouch-paragraph/g)||[]).length,1);assert.equal((output.match(/title="Keep > this"/g)||[]).length,2);assert.ok(output.includes(kind==='react'?'display:"inline"':'display: inline;'));
  }finally{cleanup(root);}
+});
+
+test('paragraph joining preserves authored attributes and rejects unmarked source',()=>{
+ const {inline}=require('../src/text-paragraphs.cjs');
+ const html=inline('<span id="right" class="copy" data-retouch-paragraph="" style="display:block;color:red">Text</span>');
+ assert.ok(html.includes('id="right" class="copy"'));assert.ok(html.includes('color:red'));assert.ok(html.includes('display: inline;'));assert.ok(!html.includes('data-retouch-paragraph'));
+ const jsx=inline('<span data-retouch-paragraph="" className={styles.copy} style={{display:"block",...appearance}}>Text</span>',true);assert.ok(jsx.includes('className={styles.copy}'));assert.equal((jsx.match(/appearance/g)||[]).length,1);assert.ok(jsx.includes('display:"inline"'));
+ assert.throws(()=>inline('<span style="display:block">Text</span>'),/explicit text paragraphs/);
+ assert.throws(()=>inline('<p data-retouch-paragraph="">Text</p>'),/explicit text paragraphs/);
 });

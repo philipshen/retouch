@@ -15094,3 +15094,48 @@ and Figma-equivalent behavior under arbitrary host flex/grid/inline layout and
 writing modes. New text paragraphs use explicit spans rather than changing the
 semantic role of the outer source layer. No desktop build or native run was made;
 the full Figma Design and arbitrary-site goal remains incomplete.
+
+### 2026-09-14: explicit paragraph boundary joins
+
+Backspace at the start of an explicit text paragraph and forward Delete at its
+end now join adjacent paragraphs created by Retouch. The same operation handles
+cancellable backward/forward `beforeinput` events. It keeps the insertion point
+at the join and groups boundary removal with a continuous deletion gesture using
+the existing native-text history, rather than adding an intermediate undo step.
+
+The right paragraph becomes an inline wrapper inside the left paragraph, retaining
+its source-owned attributes and formatted/link descendants. Only its paragraph
+marker and display mode change. Matching split halves with the same source origin
+and appearance are joined without another wrapper. Whitespace between the two
+paragraph containers is removed, and the left paragraph's terminal layout BR is
+removed so the join removes exactly one boundary while retaining an authored
+trailing soft line. Empty-paragraph and repeated split/join cases are covered.
+
+A constrained `paragraph: inline` patch is accepted only for source-confirmed
+SPAN paragraphs bearing the explicit marker. Kept and copied source paths share
+the patch. The existing source style-property writer was extracted from list
+markers so display changes retain other CSS declarations, priorities, JSX style
+expressions and object spreads. General list-marker validation remains separate.
+
+Verification: 1,241 unit tests pass (`/private/tmp/retouch-join-units-verified.log`).
+Source tests join real HTML/React/Liquid heading paragraphs, retain formatting
+attributes, preserve JSX expressions once, and refuse unmarked source elements.
+An existing server fixture test exposed a reindexing race after deleting and
+recreating its file; it now waits for the restored hash to resolve before the
+next test. Its focused run also passed (`/private/tmp/retouch-join-server.log`).
+
+`RT_E2E_PARAGRAPH_JOIN=1` passes HTML Chromium 145.0.7632.6 in
+`/private/tmp/retouch-join-html-repeat.log`. Combined join, paragraph-Enter and
+list-Backspace runs use `/private/tmp/retouch-join-{react,liquid,webkit}-verified.log`
+(Chromium 145.0.7632.6; WebKit 26.0). They verify both deletion directions,
+`beforeinput`, links, empty paragraphs, trailing-soft-line geometry, held-key undo,
+six repeated split/join cycles without depth growth, save/reopen, and exact source
+undo/redo. `/private/tmp/retouch-paragraph-join.png` was visually inspected.
+
+This explicit join path does not yet cover arbitrary authored P/DIV boundaries,
+heterogeneous/cross-level ranges or list-item merging. Native behavior remains
+outside the explicit paragraph path. Distinct source wrappers remain when needed
+to preserve appearance and attributes; universal selector/layout equivalence and
+arbitrary framework ownership are unproven. Spacing/hanging controls, automatic
+list prefixes, desktop release completion and broader Figma Design parity remain
+open. No desktop rebuild or native launch was performed.

@@ -21,7 +21,8 @@ function markup(raw,content,jsx=false,options={}){
   else if(!['id','key','ref','value'].includes(attr.name)&&!/^on/i.test(attr.name)&&!/^data-rt(?:-|$)/.test(attr.name))throw Error('This text has source attributes that need an explicit split policy.');
  }
  if(Object.hasOwn(options,'href')){if(tag!=='a'||options.href!==null&&!require('../shell/link-values.js').valid(options.href))throw Error('Invalid split link URL.');if(options.href!==null)copied.push('href='+require('./rich-text.cjs').hrefMarkup(options.href,jsx));}
- const result='<'+tag+(copied.length?' '+copied.join(' '):'')+'>'+content+'</'+tag+'>';
+ let result='<'+tag+(copied.length?' '+copied.join(' '):'')+'>'+content+'</'+tag+'>';
+ if(options.paragraph==='inline')result=require('./text-paragraphs.cjs').inline(result,jsx);
  return Object.hasOwn(options,'marker')?require('./list-markers.cjs').patch(result,tag,options.marker,jsx):result;
 }
 module.exports={tags,markup};

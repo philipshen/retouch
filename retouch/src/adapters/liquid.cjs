@@ -414,7 +414,7 @@ function planOp(resolved, op) {
       const kept=descendants.get(c.id);
       if (!kept||seen.has(c.id)) throw new Error('A kept element is not a unique descendant of this source.');
       seen.add(c.id);
-      const hrefEdit=Object.hasOwn(c,'href'),patchBlock=raw=>{if(Object.hasOwn(c,'tag'))raw=blocks.patchTag(raw,kept.tag,c.tag);return c.marker?require('../list-markers.cjs').patch(raw,c.tag||kept.tag,c.marker):raw;};
+      const hrefEdit=Object.hasOwn(c,'href'),patchBlock=raw=>{if(Object.hasOwn(c,'tag'))raw=blocks.patchTag(raw,kept.tag,c.tag);if(c.paragraph==='inline')raw=require('../text-paragraphs.cjs').inline(raw);return c.marker?require('../list-markers.cjs').patch(raw,c.tag||kept.tag,c.marker):raw;};
       if (!c.children) return patchBlock(hrefEdit?require('../link-source.cjs').patch(resolved,kept,'liquid',c.href):resolved.source.slice(kept.tagStart,kept.closeEnd));
       if(kept.tag==='a'&&hasLink(c.children))throw Error('Text links cannot be nested.');
       if (kept.closeStart==null||kept.textBinding||/\{[%{]/.test(layerNames.strip(resolved.source.slice(kept.childrenStart,kept.childrenEnd)))) throw new Error('A kept child contains expressions.');

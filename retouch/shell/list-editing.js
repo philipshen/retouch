@@ -97,6 +97,34 @@
   const next=copyTextShell(first);next.append(fragment);first.after(next);
   placeholder(first);placeholder(next);caret(next);return next;
  }
+ function joinContext(el,backward=true){
+  const d=el.ownerDocument,selection=d.getSelection();if(!selection.rangeCount)return null;
+  const range=selection.getRangeAt(0);if(!range.collapsed||!el.contains(range.startContainer))return null;
+  const node=range.startContainer.nodeType===1?range.startContainer:range.startContainer.parentElement;
+  const current=node.closest('span[data-retouch-paragraph]');if(!current||current===el||!el.contains(current))return null;
+  const edge=d.createRange();edge.selectNodeContents(current);if(backward)edge.setEnd(range.startContainer,range.startOffset);else edge.setStart(range.startContainer,range.startOffset);
+  const fragment=edge.cloneContents();if(fragment.textContent.length||fragment.querySelector('img,input,svg,canvas,video,audio,iframe,object,embed,hr,button,select,textarea,ul,ol')||fragment.querySelectorAll('br').length>(backward?0:1))return null;
+  const gap=[];let other=backward?current.previousSibling:current.nextSibling;
+  while(other?.nodeType===3&&!other.textContent.trim()){gap.push(other);other=backward?other.previousSibling:other.nextSibling;}
+  if(other?.nodeType!==1||!other.matches('span[data-retouch-paragraph]'))return null;
+  return {left:backward?other:current,right:backward?current:other,gap};
+ }
+ function join(el,backward=true){
+  const context=joinContext(el,backward);if(!context)return false;
+  const {left,right,gap}=context,d=el.ownerDocument;
+  const content=d.createTreeWalker(left,5);let finalContent=null;while(content.nextNode()){const node=content.currentNode;if(node.nodeType===3&&node.data.length||node.nodeType===1&&/^(BR|IMG|INPUT|SVG|CANVAS|VIDEO|AUDIO|IFRAME|OBJECT|EMBED|HR)$/.test(node.tagName))finalContent=node;}
+  if(finalContent?.nodeType===1&&finalContent.tagName==='BR')finalContent.remove();
+  const walker=d.createTreeWalker(left,4);let last=null;while(walker.nextNode())last=walker.currentNode;
+  const caretNode=last||left,offset=last?last.length:left.childNodes.length;
+  const source=node=>node.__rtSourceCopy||node.getAttribute('data-rt-keep')||node.getAttribute('data-rt')||node.getAttribute('data-rt-i');
+  const appearance=node=>JSON.stringify([...node.attributes].filter(attr=>attr.name!=='id'&&!/^on/i.test(attr.name)&&!/^data-rt(?:-|$)/.test(attr.name)).map(attr=>[attr.name,attr.value]).sort(([a],[b])=>a.localeCompare(b)));
+  const sameOrigin=source(left)?right.__rtSourceCopy===source(left):!source(right);
+  const flatten=sameOrigin&&appearance(left)===appearance(right);
+  for(const node of gap)node.remove();
+  if(flatten){left.append(...right.childNodes);right.remove();}
+  else {right.removeAttribute('data-retouch-paragraph');right.style.setProperty('display','inline',right.style.getPropertyPriority('display'));right.__rtParagraphInline=true;left.append(right);}
+  const range=d.createRange();range.setStart(caretNode,offset);range.collapse(true);d.getSelection().removeAllRanges();d.getSelection().addRange(range);return true;
+ }
  function paragraph(el){
   const d=el.ownerDocument,selection=d.getSelection();if(!selection.rangeCount)return false;
   let range=selection.getRangeAt(0);if(!el.contains(range.startContainer)||!el.contains(range.endContainer))return false;
@@ -163,5 +191,5 @@
   if(kind!=='none')for(const item of el.querySelectorAll('li'))if(item.style.listStyleType){item.style.setProperty('list-style-type','inherit',item.style.getPropertyPriority('list-style-type'));item.__rtListMarker='inherit';}
   syncMarkers(el);restoreSelection(el,offsets);return true;
  }
- const api={supported,state,apply,listContext,canIndent,indent,enter,paragraph,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
+ const api={supported,state,apply,listContext,canIndent,indent,enter,paragraph,joinContext,join,removeMarker,canRemoveMarker};if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.RetouchListEditing=api;
 })(typeof window!=='undefined'?window:null);

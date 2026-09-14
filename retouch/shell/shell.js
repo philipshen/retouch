@@ -309,6 +309,7 @@ function hookFrame(d, w) {
   d.addEventListener('compositionend',()=>finishCaretComposition(),true);
   d.addEventListener('beforeinput', (e) => {
     if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='deleteContentBackward'&&removeListMarker()){e.preventDefault();e.stopPropagation();return;}
+    if(editing&&editing.el.contains(e.target)&&!e.isComposing&&['deleteContentBackward','deleteContentForward'].includes(e.inputType)&&joinTextParagraph(e.inputType==='deleteContentBackward')){e.preventDefault();e.stopPropagation();return;}
     if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertParagraph'){e.preventDefault();e.stopPropagation();if(!insertTextParagraph())toast('This text structure cannot create a paragraph yet.','err');return;}
     if(editing&&editing.el.contains(e.target)&&!e.isComposing&&e.inputType==='insertLineBreak'){e.preventDefault();e.stopPropagation();insertInlineBreak();return;}
     if(editing&&editing.el.contains(e.target)&&['historyUndo','historyRedo'].includes(e.inputType)&&inlineHistoryCommand(e.inputType==='historyRedo')){e.preventDefault();e.stopPropagation();return;}
@@ -329,6 +330,7 @@ function hookFrame(d, w) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if(e.isComposing)return;
       if(e.key==='Backspace'&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!e.shiftKey&&(e.repeat&&editing.listMarkerBackspace||removeListMarker())){editing.listMarkerBackspace=true;e.preventDefault();return;}
+      if(['Backspace','Delete'].includes(e.key)&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!e.shiftKey&&joinTextParagraph(e.key==='Backspace')){e.preventDefault();return;}
       if(e.key==='Enter'&&!e.shiftKey&&!e.metaKey&&!e.ctrlKey&&!e.altKey){e.preventDefault();if(!insertTextParagraph())toast('This text structure cannot create a paragraph yet.','err');return;}
       if(listIndentShortcut(e)||inlineListShortcut(e))return;
       if((e.metaKey||e.ctrlKey)&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='k'){e.preventDefault();editing.focusLink?.();return;}
@@ -940,7 +942,7 @@ function styleInsertedTextContent(current,start,end,properties,script,decoration
 }
 // Keep the actual nodes (and their source evidence) so restoring a local
 // insertion does not invalidate preceding native text undo transactions.
-const caretMetadataNames=['__rtSourceCopy','__rtListMarker','__rtListTemplate','__rtBlockTag','__rtLinkHref','__rtCaretPlaceholder','__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
+const caretMetadataNames=['__rtParagraphInline','__rtSourceCopy','__rtListMarker','__rtListTemplate','__rtBlockTag','__rtLinkHref','__rtCaretPlaceholder','__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
 function captureCaretEdit(current){
   const d=current.el.ownerDocument,selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
   const capture=node=>({node,text:typeof node.data==='string'?node.data:null,attributes:node.nodeType===1?[...node.attributes].map(a=>[a.name,a.value]):null,metadata:Object.fromEntries(caretMetadataNames.filter(key=>Object.hasOwn(node,key)).map(key=>[key,structuredClone(node[key])])),children:[...node.childNodes].map(capture)});
@@ -1108,6 +1110,12 @@ function selectedInlineTextNodes(root,range){
   return nodes;
 }
 
+function joinTextParagraph(backward=true){
+  const current=editing;if(!current||current.caretHistoryBatch||!RetouchListEditing.joinContext(current.el,backward))return false;
+  const before=captureCaretEdit(current);
+  try{if(!RetouchListEditing.join(current.el,backward))return false;}catch(error){restoreCaretEdit(current,before);throw error;}
+  recordCaretEdit(current,before,textHistoryGroup(current,backward?'deleteContentBackward':'deleteContentForward'));current.el.ownerDocument.dispatchEvent(new Event('selectionchange'));return true;
+}
 function removeListMarker(){
   const current=editing;if(!current||!RetouchListEditing.canRemoveMarker(current.el))return false;
   const result=inlineFormattingTransaction(()=>RetouchListEditing.removeMarker(current.el));
