@@ -86,7 +86,7 @@
    input.value=current;input.onchange=()=>save(property,input.value,width);I.field(appearance,label,input);
    const reset=I.button('Reset '+label.toLowerCase(),()=>save(property,null,width));reset.disabled=!Object.hasOwn(own,property);appearance.append(reset);
   }
-  const blur=I.section('Blur');
+  const blur=I.section('Blur');blur.dataset.emptyEffects=String(['filter','backdrop-filter','box-shadow'].every(property=>((own[property]??css.getPropertyValue(property))||'none').trim()==='none'));
   for(const [property,label]of [['filter','Layer blur'],['backdrop-filter','Background blur']]){
    const raw=own[property]??(css.getPropertyValue(property)||'none'),filters=parseFilters(raw),blurFilters=filters?.filter(f=>f.name==='blur');
    const input=document.createElement('input');input.type='number';input.min=0;input.max=1000;input.step='any';
