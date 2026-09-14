@@ -1652,7 +1652,7 @@ function paintLoop() {
   const selectionResizeInfos=mode==='edit'&&!editing&&!stopDrawing&&!canvasPan.active&&!panelTasks&&!undoBusy&&!sourceRequests&&sel?.multiple?.length>1&&!document.querySelector('dialog[open]')?sel.multiple:null;
   const selectionResizeElements=selectionResizeInfos?.map(info=>{const found=matchingEls(info.id);return found.length===1&&!layerLocks.locked(found[0])?found[0]:null;});
   svgSelectionCorners.update(selectionResizeElements?.every(Boolean)?selectionResizeInfos:null,selectionResizeElements);
-  RetouchSVGMask.paintOutlines({frame:iframe,canvas:canvasSurface,active:mode==='edit'});
+  RetouchSVGMask.paintOutlines({frame:iframe,canvas:canvasSurface,active:mode==='edit',comparisons:window.RetouchComparisons?.outlineViews()||[]});
   svgSelectionGaps.update(selectionResizeElements?.every(Boolean)?selectionResizeInfos:null,selectionResizeElements);
   rotationCorners.update(rotationInput?.retouchPreviewTarget,rotationInput,rotationInput&&!sel?.info.svgTransform?panelBody.querySelector('[data-canvas-tool=resize]'):null);
   if(d&&sel&&mode==='edit'&&!editing&&window.RetouchGridGuidesEnabled)RetouchInspector.drawGridGuides(overlayLayer,renderedSelection?.element||matchingEls(activeId())[0]);

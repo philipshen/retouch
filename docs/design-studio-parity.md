@@ -16067,3 +16067,11 @@ Show/Hide mask outlines is available in the Mask inspector, Actions search and c
 Verification: 1,307 unit tests passed. Chromium and WebKit mask workflows verify outline geometry against the native mask shape at 75%, 100% and 150% zoom, hidden-shape removal/restoration, pointer-event pass-through, toggle behavior, unchanged source and the existing exact history workflow. The light inspector screenshot was visually inspected. Evidence: `../recovery-2026-09-14/mask-outlines.png` and `mask-outlines-{chromium,webkit,units}.log`.
 
 Remaining: text/image/symbol guides use bounding boxes rather than detailed outlines; comparison-screen guides, complete authored-mask discovery, direct mask manipulation and full Figma outline visibility semantics still need work. Full Figma parity and trusted macOS distribution remain incomplete.
+
+### Mask outlines across comparison screens — 2026-09-14
+
+Mask outline view now includes each open comparison preview. Each iframe owns an independent geometry cache and clipped overlay; collapsed/closed previews remove their overlays and cached node references. Percentage geometry invalidates when its SVG viewport dimensions or viewBox change, avoiding stale outlines after responsive resizing.
+
+Verification: 1,307 unit tests passed. Chromium and WebKit workflows verify Phone/Tablet/Desktop guide geometry, scrolling comparisons into view, resizing Phone to 650px with retained document state, hiding/showing all previews, closing the comparison panel, source preservation and the existing mask/history flow. Main canvas zoom checks still pass at 75%, 100% and 150%. The screenshot `../recovery-2026-09-14/mask-comparison-outlines.png` was visually inspected; logs are `mask-outline-comparisons-{chromium,webkit,units}.log`.
+
+The original outline limits remain: text/image/symbol bounding guides, Retouch-created mask discovery, and incomplete Figma visibility semantics/direct manipulation. Full parity and trusted macOS distribution remain open.

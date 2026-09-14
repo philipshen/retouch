@@ -577,6 +577,7 @@
   window.addEventListener('retouch:screen',updateControls);
   new ResizeObserver(()=>{if(open)layoutPreviews();}).observe(rail);
   window.RetouchComparisons={
+    outlineViews:()=>open?cards.filter(card=>!card.previewBody.hidden&&!card.card.inert).map(card=>({frame:card.frame,canvas:card.viewport,clip:rail})):[],
     async syncText(info){
       if(!open||info.kind!=='host'||info.textSource)return;
       if(!window.__RT_RENDERING?.reloadAfterWrite){syncColdText(info);return;}

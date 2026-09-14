@@ -43,19 +43,26 @@
  function modeField(value,onChange){
   const label=root.document.createElement('label'),select=root.document.createElement('select'),caption=root.document.createElement('span');label.className='inspector-field';caption.textContent='Mask type';label.append(caption);Object.assign(label.style,{display:'grid',gridTemplateColumns:'1fr 1fr',alignItems:'center',gap:'8px',marginBottom:'8px'});Object.assign(select.style,{width:'100%',minWidth:'0',height:'28px',border:'0',borderRadius:'4px',padding:'4px 8px',background:'var(--control-bg,#f5f5f5)',color:'inherit',font:'inherit'});select.setAttribute('aria-label','Mask type');for(const [value,text]of [['alpha','Alpha'],['luminance','Luminance']]){const option=root.document.createElement('option');option.value=value;option.textContent=text;select.append(option);}select.value=value;select.onchange=onChange;label.append(select);return {label,select};
  }
- let outlinesEnabled=false,outlineSurface=null;
- const outlineCache=new Map(),shapeFields={rect:['x','y','width','height','rx','ry'],circle:['cx','cy','r'],ellipse:['cx','cy','rx','ry'],path:['d'],polygon:['points'],polyline:['points'],line:['x1','y1','x2','y2']};
- function paintOutlines({frame,canvas,active}){
-  if(!outlinesEnabled||!active){if(outlineSurface)outlineSurface.style.display='none';if(outlineCache.size){outlineSurface.replaceChildren();outlineCache.clear();}return;}
+ let outlinesEnabled=false;
+ const outlineViews=new Map();
+ const shapeFields={rect:['x','y','width','height','rx','ry'],circle:['cx','cy','r'],ellipse:['cx','cy','rx','ry'],path:['d'],polygon:['points'],polyline:['points'],line:['x1','y1','x2','y2']};
+ function paintOutlines({frame,canvas,active,comparisons=[]}){
+  const views=outlinesEnabled&&active?[{frame,canvas},...comparisons]:[],present=new Set(views.map(view=>view.frame));
+  for(const [frame,view]of outlineViews)if(!present.has(frame)){view.surface?.remove();view.cache.clear();outlineViews.delete(frame);}
+  for(const options of views){let view=outlineViews.get(options.frame);if(!view){view={surface:null,cache:new Map()};outlineViews.set(options.frame,view);}paintOutlineView(options,view);}
+ }
+ function paintOutlineView({frame,canvas,clip},view){
+  let outlineSurface=view.surface;const outlineCache=view.cache;
   const d=frame.contentDocument;if(!d){if(outlineSurface)outlineSurface.style.display='none';return;}
-  if(!outlineSurface){outlineSurface=root.document.createElementNS('http://www.w3.org/2000/svg','svg');outlineSurface.dataset.maskOutlines='';outlineSurface.setAttribute('aria-hidden','true');Object.assign(outlineSurface.style,{position:'fixed',pointerEvents:'none',zIndex:38,overflow:'hidden'});root.document.body.append(outlineSurface);}
-  const f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),left=Math.max(f.left,c.left),top=Math.max(f.top,c.top),width=Math.max(0,Math.min(f.right,c.right)-left),height=Math.max(0,Math.min(f.bottom,c.bottom)-top),sx=f.width/frame.contentWindow.innerWidth,sy=f.height/frame.contentWindow.innerHeight;
+  if(!outlineSurface){outlineSurface=root.document.createElementNS('http://www.w3.org/2000/svg','svg');outlineSurface.dataset.maskOutlines='';outlineSurface.setAttribute('aria-hidden','true');Object.assign(outlineSurface.style,{position:'fixed',pointerEvents:'none',zIndex:38,overflow:'hidden'});root.document.body.append(outlineSurface);view.surface=outlineSurface;}
+  outlineSurface.dataset.maskOutlines=frame.id||frame.title;
+  const f=frame.getBoundingClientRect(),bounds=canvas.getBoundingClientRect(),limit=clip?.getBoundingClientRect(),c=limit?{left:Math.max(bounds.left,limit.left),top:Math.max(bounds.top,limit.top),right:Math.min(bounds.right,limit.right),bottom:Math.min(bounds.bottom,limit.bottom)}:bounds,left=Math.max(f.left,c.left),top=Math.max(f.top,c.top),width=Math.max(0,Math.min(f.right,c.right)-left),height=Math.max(0,Math.min(f.bottom,c.bottom)-top),sx=f.width/frame.contentWindow.innerWidth,sy=f.height/frame.contentWindow.innerHeight;
   Object.assign(outlineSurface.style,{display:'block',left:left+'px',top:top+'px',width:width+'px',height:height+'px'});
   const present=new Set();for(const cached of outlineCache.values())cached.path.style.display='none';
   for(const mask of d.querySelectorAll('[data-rt-mask-group] > mask'))for(const el of mask.querySelectorAll('rect,circle,ellipse,path,polygon,polyline,line,text,image,use')){
    if(el.closest('defs')||el.closest('mask')!==mask)continue;present.add(el);
    try{
-    const css=d.defaultView.getComputedStyle(el),names=shapeFields[el.localName],bounds=names?null:el.getBBox(),signature=JSON.stringify([names?.map(name=>[el.getAttribute(name),css.getPropertyValue(name)]),css.fontSize,css.display,css.visibility,bounds&&[bounds.x,bounds.y,bounds.width,bounds.height]]),matrix=el.getScreenCTM();if(!matrix||css.display==='none'||css.visibility!=='visible')continue;
+    const css=d.defaultView.getComputedStyle(el),names=shapeFields[el.localName],viewport=el.ownerSVGElement,viewportStyle=viewport&&d.defaultView.getComputedStyle(viewport),bounds=names?null:el.getBBox(),signature=JSON.stringify([names?.map(name=>[el.getAttribute(name),css.getPropertyValue(name)]),css.fontSize,css.display,css.visibility,viewportStyle&&[viewportStyle.width,viewportStyle.height,viewport.getAttribute('viewBox')],bounds&&[bounds.x,bounds.y,bounds.width,bounds.height]]),matrix=el.getScreenCTM();if(!matrix||css.display==='none'||css.visibility!=='visible')continue;
     let cached=outlineCache.get(el);if(!cached||cached.signature!==signature){
      let data;if(el.localName==='line')data='M'+el.x1.baseVal.value+' '+el.y1.baseVal.value+'L'+el.x2.baseVal.value+' '+el.y2.baseVal.value;
      else if(names){const geometry=root.RetouchSVGBooleanSelection.renderedPath(el,{svgGeometry:{fields:names.map(name=>({name,value:el.getAttribute(name)}))}});data=geometry&&root.RetouchSVGPath.serializeCompound(geometry);}
