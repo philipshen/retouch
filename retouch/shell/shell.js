@@ -1879,7 +1879,7 @@ function renderPanelContents(textEditing=false) {
     if(infos.every(item=>item.svgTransform&&(!item.svgBooleanOwner||item.svgBooleanGroup)))panelBody.append(RetouchSVGSelection.mount(infos,elements,{current,save:writeSVGSelection,onGaps:axis=>svgSelectionGaps.toggle(infos,axis),gapsActive:axis=>svgSelectionGaps.active(infos,axis)}));
     const section=RetouchInspector.section('Boolean group');RetouchInspector.note(section,'Select one boolean group to edit its original shapes.');panelBody.append(section);return;
    }
-   if(info.svgBooleanGroup){const target=matchingEls(info.id)[0];panelBody.append(RetouchSVGBooleanGroup.mount(info,target,{resolveTarget:()=>{const matches=matchingEls(info.id);return matches.length===1?matches[0]:null;},selected:()=>sel?.info.id===info.id&&sel.info.hash===info.hash,current:()=>sel?.info.id===info.id&&sel.info.hash===info.hash&&!sel.multiple?.length&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&matchingEls(info.id).length===1&&!layerLocks.locked(matchingEls(info.id)[0]),load:async ids=>{const responses=await Promise.all(ids.map(id=>api('GET',resolveUrl(id))));if(responses.some(r=>!r?.ok||r.element.hash!==info.hash))throw Error('The original shapes changed. Re-select the group.');return responses.map(r=>r.element);},save:writeSVGBooleanGroup}));}
+   if(info.svgBooleanGroup){const target=matchingEls(info.id)[0];panelBody.append(RetouchSVGBooleanGroup.mount(info,target,{resolveTarget:()=>{const matches=matchingEls(info.id);return matches.length===1?matches[0]:null;},selected:()=>sel?.info.id===info.id&&sel.info.hash===info.hash,current:()=>sel?.info.id===info.id&&sel.info.hash===info.hash&&!sel.multiple?.length&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&matchingEls(info.id).length===1&&!layerLocks.locked(matchingEls(info.id)[0]),load:async ids=>{const responses=await Promise.all(ids.map(id=>api('GET',resolveUrl(id))));if(responses.some(r=>!r?.ok||r.element.hash!==info.hash))throw Error('The original shapes changed. Re-select the group.');return responses.map(r=>r.element);},save:writeSVGBooleanGroup,onCanvas:editBooleanOperandOnCanvas}));}
    else {const section=RetouchInspector.section('Boolean group');section.append(RetouchInspector.button('Back to boolean group',async()=>{await restoreLayerSelection([info.svgBooleanOwner]);if(sel)renderPanel();}));panelBody.append(section);}
    if(info.svgBooleanGroup){const target=matchingEls(info.id)[0],current=()=>sel?.info===info&&!panelTasks&&!undoBusy&&!sourceRequests&&!editing;const position=RetouchInspector.section('Vector position');RetouchSVGResize.positionFields(position,info,target,{onCanvas:()=>resizeSVGOnCanvas(info,target,null,'ne','rotate'),current,save:matrix=>writeSVGTransform(info,target,matrix)});const size=RetouchInspector.section('Vector size');RetouchSVGResize.sizeFields(size,info,target,{current,save:matrix=>writeSVGTransform(info,target,matrix)});panelBody.append(position,size);}
    return;
@@ -3066,6 +3066,21 @@ async function writeSVGMask(type,extra){
  try{const result=await api('POST','/rt/__api/op',{type,id:primary.id,fileHash:primary.hash,...extra});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update the mask.');if(result.unchanged)return;
  const deletedLocks=layerLocks.removeSourceIds(result.removedSourceIds||[]);editorHistory.record({type:'replaceSVGSelection',id:result.parentId,selectionBefore:ids,selectionAfter:result.selectionIds,sourceIdMap:result.sourceIdMap,deletedLocks,removedSourceIds:result.removedSourceIds,undoId:result.undoId});layerLocks.remap(result.sourceIdMap);await refreshSVGBooleanSelection(result.parentId,result.selectionIds);toast(type==='createSVGMask'?'Mask created':type==='setSVGMaskType'?'Mask type updated':type==='setSVGMaskBounds'?'Mask bounds updated':'Mask released','ok');
  }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
+}
+function editBooleanOperandOnCanvas(info,operand,infos,action){
+ if(panelTasks||sourceRequests||undoBusy||editing||sel?.info.id!==info.id)return;
+ stopDrawing?.();const groups=matchingEls(info.id);if(groups.length!==1||layerLocks.locked(groups[0]))return;
+ const group=groups[0],container=group.querySelector(':scope > [data-rt-boolean-operands]'),result=group.querySelector(':scope > [data-rt-boolean-result]'),target=container?.querySelector('[data-rt="'+operand.id+'"]');
+ if(!target||!result||layerLocks.locked(target))return;
+ const display=container.getAttribute('display'),resultDisplay=result.getAttribute('display');
+ const restore=()=>{if(display===null)container.removeAttribute('display');else container.setAttribute('display',display);if(resultDisplay===null)result.removeAttribute('display');else result.setAttribute('display',resultDisplay);};
+ const current=()=>mode==='edit'&&sel?.info.id===info.id&&sel.info.hash===info.hash&&!sel.multiple?.length&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&group.isConnected&&!layerLocks.locked(target)&&!layerLocks.locked(group);
+ container.removeAttribute('display');result.setAttribute('display','none');canvasPan.cancel();
+ const cleanup=RetouchSVGResize.mount({target,info:{...operand,booleanOperandPreview:true},frame:iframe,canvas:canvasSurface,current,action,handle:action==='rotate'?'ne':'se',onError:message=>toast(message,'err'),onEnd:()=>{restore();stopDrawing=null;if(panelRenderDeferred)queueViewportPanelRefresh();},onCommit:matrix=>{
+  if(!current())return;const edit={operandId:operand.id,operandOp:{type:'setSVGTransform',matrix}};
+  try{const path=RetouchSVGBooleanGroup.compute(group,infos,info.svgBooleanGroup.operation,edit);void writeSVGBooleanGroup('setSVGBooleanOperand',{...edit,path});}catch(error){toast(error.message,'err');}
+ }});
+ if(cleanup)stopDrawing=cleanup;else restore();
 }
 async function writeSVGBooleanGroup(type,extra){
  const primary=sel?.info;if(!primary||panelTasks||sourceRequests||undoBusy||editing)return;const ids=(sel.multiple||[primary]).map(i=>i.id);busyPanel(true);

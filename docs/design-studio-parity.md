@@ -16203,3 +16203,40 @@ responsive result regeneration, original-shape canvas editing, general arbitrary
 site support, and trusted desktop distribution. The existing desktop archive
 predates these changes. No native launch or push occurred in this increment.
 Evidence: `/Users/philipshen/Developer/retouch-worktrees/recovery-2026-09-14/boolean-multi-selection/`.
+
+
+### Original boolean shape canvas editing — 2026-09-14
+
+Each original shape now has compact Move, Resize and Rotate canvas controls in
+the original-shapes disclosure. During a gesture the original operands are
+visible and the combined result is temporarily hidden. Escape restores the
+original display and transform without a source write. Applying a gesture saves
+the original transform and recomputed result in one existing boolean transaction.
+Moving the base operand also updates the result coordinate transform. Selection,
+locks, revision changes and the shared gesture lifecycle guard the preview.
+
+Browser preflight now accepts original transform edits. Its result-path CSS check
+uses the browser's own CSS path serialization: Chromium rounds computed path
+coordinates, so exact comparison with authored precision incorrectly refused
+valid rotated operands. A separate hidden reference path normalizes that
+serialization without tolerating an actual different CSS path.
+
+All 1,347 unit tests passed. Final workflows passed HTML Chromium, Liquid
+Chromium and React WebKit: keyboard move, real pointer resize, rotation, Escape,
+no source writes during preview, base/result coordinate consistency, exact
+undo/redo, original visibility restoration, release, and retained document/input
+state. Chromium also checks that an actual CSS result-path override refuses the
+edit without source writes. The installed WebKit reports CSS d unsupported, so
+that conditional check is inapplicable there. The light inspector screenshot
+was inspected; it includes the intentional CSS-refusal toast from the test.
+
+An earlier React WebKit run lost retained input state later in the larger
+history/release sequence, after the operand-canvas helper passed. Subsequent
+full runs passed, but the original failure is preserved and its cause remains
+unresolved. These results do not establish universal preview-state retention.
+
+Still incomplete: direct double-click entry to original editing, continuous
+combined-result preview while dragging, nested boolean networks, automatic
+responsive regeneration and full arbitrary-site/Figma parity. The current
+macOS archive predates these controls; no rebuild, native launch or push occurred.
+Evidence: `/Users/philipshen/Developer/retouch-worktrees/recovery-2026-09-14/boolean-operand-canvas/`.
