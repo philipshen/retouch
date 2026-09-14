@@ -16049,3 +16049,13 @@ Fixed a reproduced export failure where CSS-controlled alpha masks became lumina
 Verification: the new export workflow failed before the fix on an alpha mask and now passes 72 SVG/PNG color checks each in Chromium and WebKit. It covers alpha/luminance CSS overriding source attributes, mask-mode overrides, internal/shared mask definitions, percentage bounds, PNG at 1x/2x, stripped editor metadata and unchanged live DOM. Native WebKit ignored mask-mode overrides in all four tested cases, while Chromium applied all four; exports match each renderer's measured appearance. The existing Chromium SVG/PNG/JPEG export regression suite also passed, including responsive styles, gradients/clipping, independent decoding, symbols and image/reference error handling.
 
 Logs: `../recovery-2026-09-14/mask-export-{chromium,webkit,regression}.log`. Run with `RT_INSPECTOR_FIXTURE=<fixture> node retouch/test/e2e/svg-mask-export.cjs`. Cross-browser identical interpretation of all mask CSS, arbitrary external resources, full Figma parity and trusted native distribution remain incomplete.
+
+### Mask commands and context menu — 2026-09-14
+
+Mask creation, release, Edit mask shape and Back to mask are now discoverable through Actions search and the canvas/layer context menu. Mask toggling follows [Figma's documented controls](https://help.figma.com/hc/en-us/articles/360040450253-Masks): Control–Command–M on Mac and Ctrl–Alt–M on Windows. The command invokes the current inspector handler, keeping source validation, CSS probes and exact history in one implementation. Repeated key events do not repeat the action; text inputs, IME and open dialogs retain their native behavior.
+
+Release is also available when a mask child is selected, with source ownership checked against its containing mask group. Undo retains the pre-release child selection. This avoids a required Back to mask step.
+
+Verification: 1,307 unit tests passed. HTML Chromium/WebKit command workflows passed shell and iframe shortcut routing, context-menu creation/release, Actions search for shape editing, input exclusion, simulated Windows modifier/repeat handling, child-selected release, exact source Undo/Redo and retained preview state. The Next/React Chromium command workflow passed the same mask/history path. The existing Chromium Actions regression suite passed navigation, search, availability, source history, layer operations and panel/preset controls. Logs: `../recovery-2026-09-14/mask-commands-{chromium,webkit,react,units}.log` and `mask-actions-regression.log`.
+
+The command entry points do not extend the underlying mask ownership limits. Full Figma parity, arbitrary sites and trusted native distribution remain incomplete.
