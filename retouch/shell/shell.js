@@ -1699,7 +1699,7 @@ function paintLoop() {
 }
 
 function syncLayerSelection() {
-  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent),selectionCanDelete:sel.multiple.every(info=>info.canDeleteComponent),selectionCanReparent:sharedComponentContainers(sel.multiple).length>0,selectionContainers:sharedComponentContainers(sel.multiple),selectionTargets:sharedComponentTargets(sel.multiple),selectionOrdering:sharedComponentOrdering(sel.multiple)}:sel?.multiple?.length>1&&sel.multiple.every(info=>info.svgBooleanOwner)&&new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1?{...sel.info,selectionBooleanDelete:true}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
+  layers.selection(sel ? matchingEls(activeId()).find(el=>inTextScope(el,sel.info)) : null, sel?.multiple?.length>1&&sel.info.kind==='instance'?{...sel.info,selectionIds:sel.multiple.map(info=>info.id),selectionCanDuplicate:sel.multiple.every(info=>info.canDuplicateComponent),selectionCanDelete:sel.multiple.every(info=>info.canDeleteComponent),selectionCanReparent:sharedComponentContainers(sel.multiple).length>0,selectionContainers:sharedComponentContainers(sel.multiple),selectionTargets:sharedComponentTargets(sel.multiple),selectionOrdering:sharedComponentOrdering(sel.multiple)}:sel?.multiple?.length>1&&sel.multiple.some(info=>info.svgBooleanOwner)&&sel.multiple.every(info=>info.svgBooleanOwner||info.svgTransform||info.svgGeometry)&&new Set(sel.multiple.map(info=>info.file+'#'+info.hash)).size===1?{...sel.info,selectionBooleanDelete:true}:sel?.info, !!panelTasks || undoBusy || !!sourceRequests,sel?.multiple?.flatMap(info=>matchingEls(info.id))||[],historyRecoveryRequired);
 }
 
 function inTextScope(el, info) {
@@ -4061,7 +4061,7 @@ async function structureAction(action) {
   if(action==='deleteElement'&&sel.multiple?.length>1){
     const selection=sel.multiple,owners=selection.map(info=>info.svgBooleanGroup?info.svgBooleanGroup.ancestorId:info.svgBooleanOwner);
     if(owners.every(Boolean)&&new Set(owners).size===1){const response=await api('GET',resolveUrl(owners[0]));if(sel?.multiple!==selection)return;if(!response?.ok||selection.some(info=>info.hash!==response.element.hash||!response.element.svgBooleanGroup?.operandIds.includes(info.id)))return toast('Re-select direct originals from the same boolean group.','err','boolean-edit');return writeSVGBooleanGroup('removeSVGBooleanOperand',{operandIds:selection.map(info=>info.id)},response.element);}
-    if(selection.every(info=>info.svgBooleanOwner))return writeSVGBooleanGroup('removeSVGBooleanSelection',{ids:selection.map(info=>info.id)});
+    if(selection.some(info=>info.svgBooleanOwner)&&selection.every(info=>info.svgBooleanOwner||info.svgTransform||info.svgGeometry))return writeSVGBooleanGroup('removeSVGBooleanSelection',{ids:selection.map(info=>info.id)});
   }
   if(sel.multiple?.length>1){if(action==='reparentElement')return chooseLayerParent(sel.info);if(['duplicateElement','deleteElement'].includes(action))return structureSelection(action);return toast('Choose one layer for this structural edit.','err');}
   await commitInlineEdit();

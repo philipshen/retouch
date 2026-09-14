@@ -10,7 +10,10 @@ function plan(r,op,kind){
  const contains=(a,b)=>v.start(a)<=v.start(b)&&v.end(a)>=v.end(b),contexts=new Map();
  for(const element of selected){
   const ancestor=group.ancestor({...r,element},kind);
-  if(!ancestor){if(!group.context({...r,element},kind))return refuse('Select boolean originals or retained boolean groups.');continue;}
+  if(!ancestor){
+   const tags=new Set(['svg','g','rect','circle','ellipse','line','path','polyline','polygon']);let node=element,inSVG=false;if(tags.has(v.tag(element)))while(node){if(v.tag(node)==='svg'){inSVG=true;break;}if(String(v.tag(node)).toLowerCase()==='foreignobject')break;node=v.elements.find(e=>e.id===v.parents.get(node.id));}
+   if(!inSVG)return refuse('Select SVG layers or direct boolean originals.');continue;
+  }
   const parent=v.elements.find(e=>e.id===ancestor),context=group.context({...r,element:parent},kind);
   if(!context?.roots.some(e=>e.id===element.id))return refuse('Select direct originals, not generated boolean wrappers or results.');
   let child=element;
