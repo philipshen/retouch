@@ -16013,3 +16013,13 @@ parity or the overall goal.
 The Mask type field now changes an existing mask between alpha and luminance. Source writes preserve node identities, reject stale hashes and invalid modes, and skip unchanged values. A temporary browser probe rejects CSS overrides and active animations before writing.
 
 Verification: 1,288 unit tests passed. Chromium and WebKit inspector workflows passed both type directions, rendered pixel checks, exact source Undo/Redo, retained selection and preview document state, shape edits, and lossless release. Complete mask bounds, canvas overlays, React/Liquid masks, and broader Figma parity remain incomplete.
+
+### Responsive HTML mask bounds — 2026-09-14
+
+Existing masks now expose X/Y and W/H percentage fields in a collapsed Mask bounds disclosure, using the light inspector's compact paired controls. Bare field values mean percentages; source fractions display as percentages. Enter or blur saves, Escape cancels, and Reset mask bounds removes all four overrides in one history entry. Bounds crop the mask without moving its editable shape.
+
+The source operation validates the entire change set before writing, preserves layer IDs, refuses stale hashes and invalid or negative sizes, skips no-op writes, and retains lossless release after bounds edits. The underlying coordinate system follows the [SVG mask specification](https://www.w3.org/TR/css-masking-1/#element-attrdef-mask-maskunits): bounds are relative to the masked content's box.
+
+Verification: 1,289 unit tests passed. Chromium and WebKit inspector workflows verify rendered cropping at SVG widths 200 and 400, reset, exact source Undo/Redo, Escape cancellation, retained preview document/form state, existing mask-type editing, shape editing and lossless release. Screenshot and logs are in `../recovery-2026-09-14/mask-bounds.png` and `mask-bounds-{chromium,webkit,units}.log`.
+
+Remaining: direct canvas bounds/shape overlays, other mask coordinate systems, complete style/export/reference support, React/Liquid masks, and the broader Figma/native distribution requirements.

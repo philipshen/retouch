@@ -3039,7 +3039,7 @@ async function refreshSVGBooleanSelection(parentId,ids){
 async function writeSVGMask(type,extra){
  const infos=sel?.multiple||[sel?.info];if(!infos[0]||panelTasks||sourceRequests||undoBusy||editing)return;const primary=sel.info,ids=infos.map(i=>i.id);busyPanel(true);
  try{const result=await api('POST','/rt/__api/op',{type,id:primary.id,fileHash:primary.hash,...extra});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update the mask.');if(result.unchanged)return;
- const deletedLocks=layerLocks.removeSourceIds(result.removedSourceIds||[]);editorHistory.record({type:'replaceSVGSelection',id:result.parentId,selectionBefore:ids,selectionAfter:result.selectionIds,sourceIdMap:result.sourceIdMap,deletedLocks,removedSourceIds:result.removedSourceIds,undoId:result.undoId});layerLocks.remap(result.sourceIdMap);await refreshSVGBooleanSelection(result.parentId,result.selectionIds);toast(type==='createSVGMask'?'Mask created':type==='setSVGMaskType'?'Mask type updated':'Mask released','ok');
+ const deletedLocks=layerLocks.removeSourceIds(result.removedSourceIds||[]);editorHistory.record({type:'replaceSVGSelection',id:result.parentId,selectionBefore:ids,selectionAfter:result.selectionIds,sourceIdMap:result.sourceIdMap,deletedLocks,removedSourceIds:result.removedSourceIds,undoId:result.undoId});layerLocks.remap(result.sourceIdMap);await refreshSVGBooleanSelection(result.parentId,result.selectionIds);toast(type==='createSVGMask'?'Mask created':type==='setSVGMaskType'?'Mask type updated':type==='setSVGMaskBounds'?'Mask bounds updated':'Mask released','ok');
  }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
 }
 async function writeSVGBooleanSelection(path){

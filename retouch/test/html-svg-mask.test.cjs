@@ -30,3 +30,12 @@ test('existing mask type changes preserve nodes and source identities and reject
  const created=create(resolve()),r=resolve(created.edits[0].after,created.selectionIds[0]),op={type:'setSVGMaskType',fileHash:r.hash,mode:'luminance'},result=html.planOp(r,op);assert.ok(result.ok,result.reason);assert.equal(result.edits[0].after,r.source.replace('mask-type="alpha"','mask-type="luminance"'));assert.deepEqual(result.sourceIdMap,[]);assert.deepEqual(result.removedSourceIds,[]);assert.deepEqual(result.selectionIds,[r.element.id]);assert.equal(html.describe(resolve(result.edits[0].after,r.element.id)).svgMask.mode,'luminance');assert.equal(html.planOp(r,{...op,mode:'alpha'}).unchanged,true);
  for(const change of [{fileHash:'old'},{mode:'invalid'},{mode:null}]){const invalid=html.planOp(r,{...op,...change});assert.equal(invalid.refused,true);assert.equal(invalid.edits,undefined);}
 });
+
+test('mask bounds edit, reset and release preserve content and reject invalid atomic edits',()=>{
+ const made=create(resolve()),r=resolve(made.edits[0].after,made.selectionIds[0]),changes={x:'-5%',y:'0',width:'0.5',height:'100%'},op={type:'setSVGMaskBounds',fileHash:r.hash,changes},changed=html.planOp(r,op);assert.ok(changed.ok,changed.reason);
+ const fresh=resolve(changed.edits[0].after,r.element.id);assert.deepEqual(html.describe(fresh).svgMask.bounds,changes);assert.deepEqual(changed.sourceIdMap,[]);assert.deepEqual(changed.selectionIds,[r.element.id]);assert.equal(html.planOp(fresh,{...op,fileHash:fresh.hash}).unchanged,true);
+ const released=html.planOp(fresh,{type:'releaseSVGMask',fileHash:fresh.hash});assert.equal(released.edits[0].after,source);
+ const reset=html.planOp(fresh,{type:'setSVGMaskBounds',fileHash:fresh.hash,changes:{x:null,y:null,width:null,height:null}});assert.ok(reset.ok,reset.reason);assert.deepEqual(html.describe(resolve(reset.edits[0].after,r.element.id)).svgMask.bounds,{x:null,y:null,width:null,height:null});
+ for(const changes of [{width:'-1%'},{height:'Infinity'},{x:'1px'},{x:'calc(1%)'},{width:'20%',onclick:'bad'},{x:'1" bad="'},{x:2},{height:'100001%'},{}])assert.equal(html.planOp(r,{...op,changes}).refused,true);
+ assert.equal(html.planOp(r,{...op,fileHash:'old'}).refused,true);
+});

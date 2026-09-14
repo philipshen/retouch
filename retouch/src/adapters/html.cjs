@@ -53,7 +53,7 @@ function describe(resolved){
   canSetTag:!!el.location.endTag&&textTags.has(el.tag),context:resolved.context||null};
 }
 function planOp(resolved,op){
- if(['createSVGMask','releaseSVGMask','setSVGMaskType'].includes(op.type))return require('../html-svg-mask.cjs').plan(resolved,op);
+ if(['createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds'].includes(op.type))return require('../html-svg-mask.cjs').plan(resolved,op);
  if(op.type==='replaceSVGSelection')return require('../svg-combine-selection.cjs').plan(resolved,op,'html');
  if(op.type==='duplicateElement'&&resolved.element.node.namespaceURI==='http://www.w3.org/2000/svg')return require('../svg-duplicate.cjs').plan(resolved,op);
  if(op.type==='moveElement'&&resolved.element.node.namespaceURI==='http://www.w3.org/2000/svg')return require('../svg-move.cjs').plan(resolved,op);
@@ -113,4 +113,4 @@ function planOp(resolved,op){
 }
 module.exports={name:'html',matches:file=>/\.html?$/i.test(file),collect,stamp,contentHash:hash,describe,planOp,
  applyOp:(resolved,op)=>require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),planOp(resolved,op)),
- capabilities:{classAttr:'class',ops:['createSVGMask','releaseSVGMask','setSVGMaskType','replaceSVGSelection','setSVGGradient','insertSVG','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow','reparentElement','renameElement','insertElement','setClasses','setText','setChildren','setTag','setSrc',...structure.types]}};
+ capabilities:{classAttr:'class',ops:['createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertSVG','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow','reparentElement','renameElement','insertElement','setClasses','setText','setChildren','setTag','setSrc',...structure.types]}};

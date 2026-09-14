@@ -6,7 +6,7 @@ function releaseContext(r){
  if((group.node.childNodes||[]).some(n=>!n.tagName&&(n.nodeName!=='#text'||n.value.trim())))return null;
  const children=(group.node.childNodes||[]).filter(n=>n.tagName),elements=r.elements||html.collect(r.source,r.relPath).elements,definition=elements.find(e=>e.node===children[0]),content=elements.find(e=>e.node===children[1]),parent=elements.find(e=>e.node===group.node.parentNode);
  if(children.length!==2||definition?.tag!=='mask'||content?.tag!=='g'||!parent||attr(content,'data-rt-mask-content')!==''||attr(content,'mask')!=='url(#'+attr(definition,'id')+')'||!/^rt-mask-[a-f0-9]{16}$/.test(attr(definition,'id')||'')||content.node.attrs.some(a=>!['mask','data-rt-mask-content'].includes(a.name)))return null;
- if(definition.node.attrs.some(a=>!['id','mask-type','maskContentUnits'].includes(a.name))||r.source.split(attr(definition,'id')).length!==3)return null;
+ if(definition.node.attrs.some(a=>!['id','mask-type','maskContentUnits','x','y','width','height'].includes(a.name))||r.source.split(attr(definition,'id')).length!==3)return null;
  if([group,definition,content].some(e=>!e.location.endTag))return null;
  if(!require('./svg-delete.cjs').describe({...r,elements,element:group}))return null;
  const roots=elements.filter(e=>e.node.parentNode===definition.node||e.node.parentNode===content.node);if(!roots.length)return null;
@@ -15,11 +15,19 @@ function releaseContext(r){
 function plan(r,op){
  const refuse=reason=>({ok:false,refused:true,reason});
  if(op.fileHash!==r.hash)return refuse('The file changed. Re-select the mask layers.');
- if(op.type==='setSVGMaskType'){
-  const c=releaseContext(r);if(!c||!['alpha','luminance'].includes(op.mode))return refuse('Select a Retouch mask and choose alpha or luminance.');
-  const original=attr(c.definition,'mask-type')??'luminance';if(original===op.mode)return {ok:true,unchanged:true,hash:r.hash,edits:[]};
-  const out=new MagicString(r.source),location=c.definition.location.attrs?.['mask-type'],token='mask-type="'+op.mode+'"';if(location)out.overwrite(location.startOffset,location.endOffset,token);else out.appendLeft(c.definition.location.startTag.startOffset+5,' '+token);
-  const after=out.toString(),next=html.collect(after,r.relPath).elements;if(next.length!==c.elements.length||next.some((e,i)=>e.id!==c.elements[i].id||e.tag!==c.elements[i].tag))return refuse('Changing mask type would change source identities.');
+ if(['setSVGMaskType','setSVGMaskBounds'].includes(op.type)){
+  const c=releaseContext(r);if(!c)return refuse('Select a Retouch mask group.');
+  const entries=op.type==='setSVGMaskType'?[['mask-type',op.mode]]:require('./svg-geometry.cjs').changes(op);
+  if(!entries||entries.some(([key,value])=>op.type==='setSVGMaskType'?!['alpha','luminance'].includes(value):!['x','y','width','height'].includes(key)||value!==null&&(typeof value!=='string'||value.endsWith('px')||!require('./svg-geometry.cjs').valid(key,value))))return refuse('Choose a mask type or enter bounds as percentages or fractions. Width and height cannot be negative.');
+  const out=new MagicString(r.source);
+  for(const [key,value]of entries){
+   const original=attr(c.definition,key)??null;if(original===value||key==='mask-type'&&original===null&&value==='luminance')continue;
+   const location=c.definition.location.attrs?.[key];
+   if(value===null){if(location)out.remove(location.startOffset,location.endOffset);}
+   else{const token=key+'="'+value+'"';if(location)out.overwrite(location.startOffset,location.endOffset,token);else out.appendLeft(c.definition.location.startTag.startOffset+5,' '+token);}
+  }
+  const after=out.toString();if(after===r.source)return {ok:true,unchanged:true,hash:r.hash,edits:[]};
+  const next=html.collect(after,r.relPath).elements;if(next.length!==c.elements.length||next.some((e,i)=>e.id!==c.elements[i].id||e.tag!==c.elements[i].tag))return refuse('Editing the mask would change source identities.');
   return {ok:true,hash:html.contentHash(after),parentId:c.parent.id,selectionIds:[r.element.id],sourceIdMap:[],removedSourceIds:[],edits:[{file:r.file,before:r.source,after}]};
  }
  const elements=r.elements||html.collect(r.source,r.relPath).elements,out=new MagicString(r.source);let parent,roots,removed=[],insertions=[],cuts=[],wrapperStart;
@@ -47,7 +55,7 @@ function plan(r,op){
  return {ok:true,hash:html.contentHash(after),structural:true,parentId:mapping.get(parent.node).id,selectionIds:wrapper?[wrapper.id]:roots.map(e=>mapping.get(e.node).id),sourceIdMap:retained.flatMap(e=>mapping.get(e.node).id===e.id?[]:[[e.id,mapping.get(e.node).id]]),removedSourceIds:removed.map(e=>e.id),edits:[{file:r.file,before:r.source,after}]};
 }
 module.exports={plan,describe:r=>{
- const group=releaseContext(r);if(group)return {canRelease:true,mode:attr(group.definition,'mask-type')??'luminance',maskIds:group.roots.filter(e=>e.node.parentNode===group.definition.node).map(e=>e.id)};
+ const group=releaseContext(r);if(group)return {canRelease:true,bounds:Object.fromEntries(['x','y','width','height'].map(key=>[key,attr(group.definition,key)??null])),mode:attr(group.definition,'mask-type')??'luminance',maskIds:group.roots.filter(e=>e.node.parentNode===group.definition.node).map(e=>e.id)};
  const e=r.element,cap=require('./svg-delete.cjs').describe(r),result=cap&&e.node.parentNode?.namespaceURI===namespace&&['g','svg','rect','circle','ellipse','path','polygon','polyline','line','text','image','use'].includes(e.tag)?{canCreate:true,parentId:cap.parentId}:{};
  for(let parent=e.node.parentNode;parent;parent=parent.parentNode){const owner=r.elements?.find(item=>item.node===parent);if(owner&&releaseContext({...r,element:owner})){result.ownerId=owner.id;break;}}
  return Object.keys(result).length?result:null;
