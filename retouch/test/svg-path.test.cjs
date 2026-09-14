@@ -200,3 +200,9 @@ test('Chosen contour endpoints join in every orientation and preserve other path
  }
  for(const args of [[0,0],[0,1],[-1,2],[0,5],[0,2,'bad'],[0,2,'end','bad']])assert.equal(path.joinContours(document,...args),null);
 });
+
+test('Joining opposite ends of one contour closes it while preserving existing segments',()=>{
+ const document=path.parseCompound('M0 0C0 10 20 10 20 0A10 15 30 0 1 40 20 M60 0L70 0'),before=JSON.stringify(document);
+ for(const [from,to]of [['start','end'],['end','start']]){const result=path.joinContours(document,0,0,from,to);assert.equal(result.subpaths[0].closed,true);assert.deepEqual(result.subpaths[0].nodes,document.subpaths[0].nodes);assert.deepEqual(result.subpaths[1],document.subpaths[1]);assert.equal(result.selected,0);assert.ok(path.equivalentCompound(path.parseCompound(path.serializeCompound(result)),result));}
+ assert.equal(path.joinContours(document,0,0,'start','start'),null);assert.equal(path.joinContours(document,1,1),null);assert.equal(JSON.stringify(document),before);
+});

@@ -113,7 +113,8 @@
     return serializeCompound({subpaths})?{subpaths,selected}:null;
   }
   function joinContours(document,from,to,fromEnd='end',toEnd='start'){
-    if(!serializeCompound(document)||!Number.isInteger(from)||!Number.isInteger(to)||from===to||![from,to].every(i=>i>=0&&i<document.subpaths.length)||![fromEnd,toEnd].every(end=>['start','end'].includes(end))||document.subpaths[from].closed||document.subpaths[to].closed)return null;
+    if(!serializeCompound(document)||!Number.isInteger(from)||!Number.isInteger(to)||![from,to].every(i=>i>=0&&i<document.subpaths.length)||![fromEnd,toEnd].every(end=>['start','end'].includes(end))||document.subpaths[from].closed||document.subpaths[to].closed)return null;
+    if(from===to)return fromEnd!==toEnd&&document.subpaths[from].nodes.length>=3?editContour(document,from,'close'):null;
     let next={subpaths:document.subpaths.map(part=>({closed:part.closed,nodes:part.nodes.map(node=>translate(node,0,0))}))};
     if(fromEnd==='start')next=editContour(next,from,'reverse');
     if(toEnd==='end')next=editContour(next,to,'reverse');

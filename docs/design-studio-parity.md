@@ -15510,3 +15510,25 @@ remain unfinished. No new native package was produced.
 Final HTML/Chromium verification passed after the hint correction
 (`/private/tmp/retouch-pick-endpoints-html-final.log`); the updated screenshot
 `/private/tmp/retouch-join-pick-final.png` was inspected.
+
+### Close an open contour by picking its endpoints (2026-09-14)
+
+The canvas endpoint picker now accepts the opposite endpoint of the same open
+contour, closing it with a straight segment while preserving its existing
+curve/arc segments. The initially picked endpoint remains disabled; its opposite
+is enabled when the contour has at least three anchors. Picking is also available
+when only one closable open contour exists. Same-endpoint picks and two-anchor
+closures remain invalid under the current closed-contour model. Choosing another
+contour still joins the two. Hints explain both actions.
+
+All 1,249 unit tests pass (`/private/tmp/retouch-close-picking-all-units.log`).
+HTML Chromium and WebKit workflows pass
+(`/private/tmp/retouch-close-picking-{html,webkit}-final.log`), exercising saved
+open-contour closure, geometry preservation, exact source Undo/Redo, and existing
+join/cancel workflows. Initial browser assertions incorrectly expected closure
+to restore the original shorthand path string; they were corrected to compare
+geometry and exact history snapshots. Implementation was unchanged for those
+reruns. Separate SVG joins, coincident-anchor merging, vector networks, booleans,
+and full parity remain open; no native package was built.
+React/Chromium passed the same final closure and exact history workflow
+(`/private/tmp/retouch-close-picking-react-final.log`, exit 0).
