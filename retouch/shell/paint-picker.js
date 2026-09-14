@@ -49,6 +49,7 @@
  }
  function open(input,{anchor=input,onApply=null,onClose=null}={}){
   if(!input.isConnected||input.matches(':disabled'))return;
+  const returnPopover=input.closest('[popover]');
   let draftPreview=input.retouchPaintPreview?.(),applied=false;
   const original=input.value,I=root.RetouchInspector,dialog=document.createElement('dialog');dialog.className='paint-picker';dialog.retouchSourceInput=input;dialog.setAttribute('aria-label','Edit '+input.getAttribute('aria-label'));document.body.append(dialog);
   const styleOptions=input.closest('[data-retouch-color-style-scope]')?.retouchColorStyleOptions,styleProperty=input.dataset.paintProperty;let pickedStyle=null,styleRevision=null,styleBusy=false,refreshAfterClose=false;const libraryAbort=new AbortController();let updateStyleChoice=()=>{};
@@ -180,7 +181,7 @@ handle.style.left=s*100+'%';handle.style.top=(1-v)*100+'%';plane.setAttribute('a
   const resizeObserver=new ResizeObserver(position);resizeObserver.observe(dialog);
   const observer=new MutationObserver(()=>{if(!input.isConnected){draftPreview?.restore();dialog.close();}});observer.observe(document.body,{childList:true,subtree:true});
   dialog.addEventListener('cancel',event=>{if(styleBusy){event.preventDefault();return;}draftPreview?.restore();});
-  dialog.addEventListener('close',()=>{libraryAbort.abort();sampling?.abort();resizeObserver.disconnect();observer.disconnect();draftPreview?.restore();root.removeEventListener('resize',position);dialog.remove();if(onClose){onClose({applied});return;}if(refreshAfterClose&&root.RetouchPanelFocus?.refreshSavedControl)root.RetouchPanelFocus.refreshSavedControl(input);else if(input.isConnected)input.focus();},{once:true});
+  dialog.addEventListener('close',()=>{libraryAbort.abort();sampling?.abort();resizeObserver.disconnect();observer.disconnect();draftPreview?.restore();root.removeEventListener('resize',position);dialog.remove();if(returnPopover?.isConnected)returnPopover.retouchOpen?.();if(onClose){onClose({applied});return;}if(refreshAfterClose&&root.RetouchPanelFocus?.refreshSavedControl)root.RetouchPanelFocus.refreshSavedControl(input);else if(input.isConnected)input.focus();},{once:true});
   dialog.addEventListener('keydown',event=>{event.stopPropagation();if(event.key==='Enter'&&!event.isComposing&&!event.altKey&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&event.target.matches('input:not([type=range])')){event.preventDefault();apply();}});sync();dialog.showModal();position();root.addEventListener('resize',position);value.focus();return dialog;
  }
  root.RetouchPaintPicker={open,parsePaint,mountSelectionField,gradientPreview,shadowPreview,propertyPreview};

@@ -7,6 +7,8 @@
   if((current||'').split(/\s+/).some(token=>/^!|!$/.test(token)&&/^\[(?:background|all):/.test(I().base(token)||'')))throw Error('Resolve the important background shorthand before editing gradients.');
   return I().replace(current,imageToken,value===null?'':'![background-image:'+value.replace(/\s/g,'_')+']');
  }
+ function solidColor(gradient){return gradient?.type==='linear'&&gradient.angle===0&&!gradient.repeat&&!gradient.colorSpace&&gradient.stops?.length===2&&gradient.stops[0].position===0&&gradient.stops[1].position===100&&gradient.stops[0].color===gradient.stops[1].color?gradient.stops[0].color:null;}
+ function solid(color){return {type:'linear',angle:0,stops:[{color,position:0},{color,position:100}]};}
  function mount(parent,info,element,save,options={}){
   const inspector=I(),d=parent.ownerDocument,details=d.createElement('details'),summary=d.createElement('summary');summary.textContent='Gradient fills';details.append(summary);details.open=expanded;details.retouchSetOpen=value=>{expanded=!!value;details.open=expanded;};details.ontoggle=()=>{if(details.isConnected)expanded=details.open;};parent.append(details);
   const gradients=options.gradients||V().parseGradients(element.ownerDocument.defaultView.getComputedStyle(element).backgroundImage);
@@ -14,10 +16,20 @@
   if(!gradients)inspector.note(details,V().imageLayers(element.ownerDocument.defaultView.getComputedStyle(element).backgroundImage)?.some(V().imageURL)?'Use Image fill to edit image paints in this stack.':'This background image cannot be edited as a gradient.');
   else{
    gradients.forEach((gradient,index)=>{if(gradient.type==='image')return;const group=d.createElement('fieldset'),legend=d.createElement('legend'),label='Gradient '+(index+1);legend.textContent=label;group.className='gradient-controls';group.append(legend);const update=next=>write(gradients.map((item,i)=>i===index?next:item));
+    const solidValue=options.fixedStack?solidColor(gradient):null;
+    if(options.fixedStack)inspector.select(group,label+' type',[['solid','Solid'],['linear','Linear'],['radial','Radial'],['conic','Angular']],solidValue?'solid':gradient.type,type=>update(type==='solid'?solid(gradient.stops[0].color):{...gradient,type,angle:solidValue?180:gradient.angle}));
+    if(solidValue){
+     const color=d.createElement('input');color.value=solidValue;color.setAttribute('aria-label','Solid paint '+(index+1)+' color');
+     color.retouchPaintPreview=()=>{const canvas=root.RetouchPaintPicker.propertyPreview({el:element,input:color,property:'background-image'});return {update:value=>canvas.update(V().serializeGradients(gradients.map((item,i)=>i===index?solid(value):item))),restore:()=>canvas.restore()};};
+     inspector.field(group,'Solid paint '+(index+1)+' color',color);
+     color.oninput=()=>color.setCustomValidity('');color.onchange=()=>{const value=color.value.trim();if(!V().valid('color',value)||!d.defaultView.CSS.supports('color',value)){color.setCustomValidity('Enter a supported color.');color.reportValidity();return;}update(solid(value));};
+     inspector.fieldDraft(color);const swatch=inspector.button('Edit solid paint '+(index+1)+' color',()=>root.RetouchPaintPicker.open(color));swatch.setAttribute('aria-label','Edit solid paint '+(index+1)+' color');swatch.textContent='';swatch.className='gradient-stop-swatch';swatch.style.backgroundColor=solidValue;
+     const control=d.createElement('span');control.className='paint-field-control gradient-stop-color';color.replaceWith(control);control.append(swatch,color);control.parentElement.querySelector(':scope > span').textContent='Color';details.append(group);return;
+    }
     const preview=d.createElement('div');preview.className='gradient-preview';preview.style.backgroundImage=V().serializeGradients([gradient]);preview.setAttribute('aria-label',label+' preview');group.append(preview,root.RetouchGradientStopRail({gradient,index,info,el:element,preview,gradients,update,label:'Gradient'}));
     const paintGeometry=root.RetouchGradientGeometry({gradient,index,el:element,preview,gradients,update,label:'Gradient'});
     const bind=root.RetouchGradientNumeric({element,group,preview,gradient,gradients,index,paintGeometry});
-    inspector.select(group,label+' type',[['linear','Linear'],['radial','Radial'],['conic','Angular']],gradient.type,type=>update({...gradient,type}));
+    if(!options.fixedStack)inspector.select(group,label+' type',[['linear','Linear'],['radial','Radial'],['conic','Angular']],gradient.type,type=>update({...gradient,type}));
     inspector.select(group,label+' Color blending',[['','Browser default'],...V().gradientColorSpaces.filter(space=>d.defaultView.CSS.supports('background-image',V().serializeGradients([{...gradient,colorSpace:space,hue:undefined}]))).map(space=>[space,space])],gradient.colorSpace||'',colorSpace=>update({...gradient,colorSpace,hue:undefined}));
     if(['hsl','hwb','lch','oklch'].includes(gradient.colorSpace))inspector.select(group,label+' Hue direction',[['','Default'],['shorter','Shorter'],['longer','Longer'],['increasing','Increasing'],['decreasing','Decreasing']],gradient.hue||'',hue=>update({...gradient,hue}));
     const repeat=d.createElement('input');repeat.type='checkbox';repeat.checked=!!gradient.repeat;inspector.field(group,label+' Repeat',repeat);repeat.onchange=()=>update({...gradient,repeat:repeat.checked});if(gradient.repeat)inspector.note(group,'The pattern repeats between the first and last stop. Bring them closer for more repeats.');
@@ -34,8 +46,8 @@
   }
   if(!options.fixedStack){const clear=inspector.button('Clear background images',()=>write([]));clear.disabled=gradients?.length===0;details.append(clear);const reset=inspector.button('Reset gradient fills',()=>write(null));try{reset.disabled=classes(info.className,null)===info.className;}catch(error){reset.disabled=true;reset.title=error.message;}details.append(reset);}
   if(element.style.getPropertyPriority('background-image')==='important'||element.style.getPropertyPriority('background')==='important'){for(const input of details.querySelectorAll('input,select,button'))input.disabled=true;inspector.note(details,'An inline important background controls this layer.');}
-  for(const label of details.querySelectorAll('.inspector-field > span'))label.textContent=label.textContent.replace(/^Gradient \d+(?: stop \d+)? /,'');
+  for(const label of details.querySelectorAll('.inspector-field > span:first-child'))label.textContent=label.textContent.replace(/^Gradient \d+(?: stop \d+)? /,'');
   inspector.note(details,'Fills are stacked from front to back. Edits follow the selected screen scope.');
  }
- const api={classes,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchClassGradients=api;
+ const api={classes,mount,solidColor,solid};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchClassGradients=api;
 })(typeof window==='object'?window:globalThis);

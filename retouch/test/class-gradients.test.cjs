@@ -49,3 +49,11 @@ test('radial sizing preserves extent keywords and explicit circular or elliptica
  }
  for(const header of ['circle 20%','circle 20px 30px','ellipse 20px','ellipse circle','circle -2px','ellipse 10% 20% 30%','circle 10001px','closest-side farthest-side'])assert.equal(V.parseGradients('radial-gradient('+header+', red, blue)'),null,header);
 });
+
+test('solid stack paints round-trip alpha and wide-gamut colors without gradient controls',()=>{
+ for(const color of ['#d9d9d9','rgba(255, 0, 0, 0.5)','color(display-p3 1 .2 .1 / .4)']){
+  const serialized=V.serializeGradients([G.solid(color)]),parsed=V.parseGradients(serialized)[0];assert.equal(G.solidColor(parsed),color);
+ }
+ const base=G.solid('red');
+ for(const gradient of [{...base,angle:180},{...base,repeat:true},{...base,colorSpace:'srgb'},{...base,type:'radial'},{...base,stops:[{color:'red',position:0},{color:'blue',position:100}]}])assert.equal(G.solidColor(gradient),null);
+});

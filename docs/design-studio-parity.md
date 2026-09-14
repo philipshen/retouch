@@ -17006,3 +17006,14 @@ Comparison selection now waits for both the requested width and height before re
 The deterministic RT_E2E_COMPARISON_DIMENSIONS=1 regression holds the old height until explicitly released. It checks that no selection or scope update happens early, verifies selection at 844px, verifies cancellation by a newer screen choice, preserves draft input/document identity, and leaves source unchanged. The pre-fix HTML run failed with a selection recorded at 1024px. The final regression passes on HTML/Chromium, React/Chromium and Liquid/WebKit. Existing comparison editing, multiselection and keyboard workflows and all 1,544 unit tests pass.
 
 This fixes comparison-to-main-canvas activation; direct editing inside independent comparison canvases and arbitrary framework equivalence remain incomplete. The current signed desktop candidate predates this shell fix and was not rebuilt in this batch.
+
+
+### Solid paints in mixed fill stacks — 2026-09-14
+
+The paint menu now adds a Solid paint. A solid row opens a compact popover with one color field, the shared color picker and blend mode. The type selector converts between Solid, Linear, Radial and Angular. Solid paints use a uniform two-stop CSS gradient so they participate in the same ordered stack as images without changing the element background color. Uniform non-repeating zero-degree two-stop gradients are recognized as solids; conversion back to a gradient exposes its stop controls. Alpha and Display P3 color strings round-trip through the parser.
+
+The color picker previews both solid stops together and Cancel restores the original canvas without writing source. Closing a nested picker restores the owning paint popover when it still exists, including Chromium where opening the modal closes the native popover. Label cleanup now targets label spans without deleting wrapped color controls.
+
+The RT_E2E_PAINT_SOLID=1 browser workflow checks solid addition, rendered gray/red pixels, color editing, green draft preview and cancellation, solid/gradient conversion, preserved neighboring paints and Liquid asset bindings, phone inheritance, exact source undo and retained input/document identity. HTML/Chromium, React/Chromium and Liquid/WebKit pass. All 1,545 unit tests pass. The light-theme solid popover was visually inspected.
+
+This does not yet unify the separate background-color and image-stack sections, implement image-paint opacity/visibility, or establish complete Figma or arbitrary-site parity. The signed native candidate was not rebuilt; notarized Homebrew distribution remains incomplete.
