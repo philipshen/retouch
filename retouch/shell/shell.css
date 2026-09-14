@@ -1169,3 +1169,6 @@ html, body { overflow:clip; }
 .image-crop-dialog > header, .image-crop-dialog > .image-crop-stage, .image-crop-dialog > [role="status"], .image-crop-dialog > footer, .image-crop-dialog > button { flex:none; }
 .image-crop-dialog > .image-crop-controls { flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 2px; }
 .image-crop-controls fieldset { min-width:0; }
+
+.image-fill-status { font-size:11px;color:var(--muted);margin:8px 0; }
+.image-fill-status:empty { display:none; }

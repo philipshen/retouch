@@ -1,4 +1,7 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchHTMLCSSValues=api;})(typeof window==='object'?window:globalThis,function(){
+ function imageURL(value){
+  if(typeof value!=='string'||value.length>8192)return false;const match=/^url\("([^"\\<>\x00-\x20]+)"\)$/.exec(value);if(!match)return false;const url=match[1];return !/^[a-z][a-z0-9+.-]*:/i.test(url)||/^https?:/i.test(url)||/^data:image\/(?:png|jpeg|webp|avif|gif|svg\+xml);/i.test(url);
+ }
  function gridPlacement(value){
   if(typeof value!=='string'||value.length>150)return false;
   const parts=value.split('/').map(v=>v.trim());if(parts.length>2)return false;
@@ -145,7 +148,7 @@
   if(property==='background-repeat')return value===null||['repeat','no-repeat','repeat-x','repeat-y','space','round'].includes(value);
   if(property==='background-size'){if(value===null||['cover','contain','auto'].includes(value))return true;if(typeof value!=='string')return false;const parts=value.split(' ');return parts.length>=1&&parts.length<=2&&parts.every(part=>part==='auto'||/^(?:\d+(?:\.\d+)?|\.\d+)(?:px|%)$/.test(part)&&parseFloat(part)<=1000000);}
   if(property==='background-position')return value===null||typeof value==='string'&&/^\d+(?:\.\d+)?% \d+(?:\.\d+)?%$/.test(value)&&value.split(' ').every(part=>parseFloat(part)<=100);
-  if(property==='background-image')return value===null||parseGradients(value)!==null;
+  if(property==='background-image')return value===null||imageURL(value)||parseGradients(value)!==null;
   if(['filter','backdrop-filter'].includes(property))return value===null||parseFilters(value)!==null;
   if(property==='font-variation-settings')return value===null||parseVariations(value)!==null;
   if(property==='font-variant-ligatures')return value===null||ligatureValid(value);
@@ -338,5 +341,5 @@
   return families[property]||[property];
  }
  function overlaps(a,b){if(a==='line-clamp'&&['display','overflow','overflow-x','overflow-y','-webkit-line-clamp','-webkit-box-orient'].includes(b)||b==='line-clamp'&&['display','overflow','overflow-x','overflow-y','-webkit-line-clamp','-webkit-box-orient'].includes(a))return true;if(a==='-webkit-backdrop-filter')a='backdrop-filter';if(b==='-webkit-backdrop-filter')b='backdrop-filter';return a==='all'||b==='all'||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(a)&&sides.includes(b)||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(b)&&sides.includes(a)||a==='background'&&b.startsWith('background-')||b==='background'&&a.startsWith('background-')||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')&&!b.endsWith('radius')||b==='border'&&a.startsWith('border-')&&!a.endsWith('radius')||['font','font-variant'].includes(a)&&['font-variant-numeric','font-variant-ligatures','font-variant-caps','font-variant-position'].includes(b)||['font','font-variant'].includes(b)&&['font-variant-numeric','font-variant-ligatures','font-variant-caps','font-variant-position'].includes(a)||a==='font'&&['font-family','font-weight','font-style','font-size','line-height','font-variation-settings','font-optical-sizing'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
- return {ligatureGroups,ligatureValid,ligatureChange,parseBorderColors,variableCycle,variableName,variableValue,parseVariations,serializeVariations,numericGroups,numericValid,numericChange,options,fields,svgFields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients,gradientColorSpaces};
+ return {imageURL,ligatureGroups,ligatureValid,ligatureChange,parseBorderColors,variableCycle,variableName,variableValue,parseVariations,serializeVariations,numericGroups,numericValid,numericChange,options,fields,svgFields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients,gradientColorSpaces};
 });

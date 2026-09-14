@@ -12,3 +12,10 @@ test('image framing validates bounded CSS while retaining existing image source'
  for(const [property,value]of [['background-size','1px;display:none'],['background-size','-1px 10px'],['background-position','101% 0%'],['background-repeat','repeat; color:red']])assert.equal(V.valid(property,value),false);
  assert.equal(F.source('url("https://example.com/image.svg")'),'https://example.com/image.svg');assert.equal(F.source('url("one.svg"), url("two.svg")'),null);
 });
+
+test('image source encoding cannot escape its CSS URL or select an executable scheme',()=>{
+ assert.equal(F.paint('/images/a b(1).png?x=1&y=2'),'url("/images/a%20b%281%29.png?x=1&y=2")');
+ for(const url of ['javascript:alert(1)','file:///etc/passwd','data:text/html;base64,abc','/x\n.png'])assert.throws(()=>F.paint(url));
+ assert.equal(V.valid('background-image','url("/image.svg");color:red'),false);assert.equal(V.valid('background-image','url("</style><script>")'),false);
+ const classes=F.classes('bg-[url(/old.png)] bg-blue-500 md:bg-none',{'background-image':F.paint('/new.png')});assert.equal(classes,'bg-blue-500 md:bg-none !bg-[url(/new.png)]');
+});
