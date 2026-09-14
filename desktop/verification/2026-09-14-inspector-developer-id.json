@@ -1,0 +1,79 @@
+{
+  "sourceCommit": "db5b5479758e6b4131b5656d2e7953a895c59ae6",
+  "sourceTreeDirty": false,
+  "sourceFiles": 226,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "sourceManifestMatchedCheckout": true,
+  "nativeBuildInputsMatchedCheckout": true,
+  "archive": "/Users/philipshen/Developer/retouch-worktrees/desktop-inspector-db5b547/Retouch-0.1.0-mac.zip",
+  "sha256": "fe416216cd5785cde6fe74f227c1115c7bd14ee477b2896eff4425f4b2786d3b",
+  "gatekeeper": {
+    "exitCode": 3,
+    "output": "/Users/philipshen/Developer/retouch-worktrees/desktop-inspector-db5b547/extracted/Retouch.app: rejected\nsource=Unnotarized Developer ID\n"
+  },
+  "nativeLaunch": "not attempted",
+  "notarization": "not complete",
+  "publicRelease": "not published",
+  "desktopTestsPassed": 25,
+  "packagedRuntimeUnitsPassed": 1503,
+  "packageTamperChecks": "passed",
+  "packagedBrowserWorkflows": [
+    {
+      "name": "workspace panels, compact drawers, effects editing and preference persistence",
+      "browser": "chromium",
+      "result": "passed"
+    },
+    {
+      "name": "workspace panels, compact drawers, effects editing and preference persistence",
+      "browser": "webkit",
+      "result": "passed"
+    }
+  ],
+  "testedRuntimeMatchedManifestAfterTests": true,
+  "testHarness": {
+    "runtime": "/Users/philipshen/Developer/retouch-worktrees/desktop-inspector-db5b547/runtime-test",
+    "testsCopiedFrom": "/Users/philipshen/Developer/retouch-worktrees/figma-design-studio/retouch/test",
+    "additionalTestOnlyDependencies": [
+      "liquidjs"
+    ]
+  },
+  "localCask": "/Users/philipshen/Developer/retouch-worktrees/desktop-inspector-db5b547/retouch-studio.rb",
+  "caskInstallation": "not rerun for this candidate",
+  "intelExecution": "not verified",
+  "logs": {
+    "retouch-desktop-inspector-build": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-inspector-db5b547/retouch-desktop-inspector-build.log",
+      "sha256": "0470426c6ed0ef34879adfdf7d851cc80627d6c129675606aca07fe214051982"
+    },
+    "retouch-desktop-inspector-tests": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-inspector-db5b547/retouch-desktop-inspector-tests.log",
+      "sha256": "52f6face7846296d1cbefdd3e4ebee455f9d3e93d17f16403bc11470c1ba35ad"
+    },
+    "retouch-packaged-inspector-unit": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-inspector-db5b547/retouch-packaged-inspector-unit.log",
+      "sha256": "28ca2d56feb4aa7ecefea9de603f8c12dcfab25b7ba19f2a7c5f4341b94106a5"
+    },
+    "retouch-packaged-inspector-tamper": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-inspector-db5b547/retouch-packaged-inspector-tamper.log",
+      "sha256": "74b828d723af4fd2aedf9d9659f758c79ae68b1fb5ed392628c83904dc4abed2"
+    },
+    "retouch-packaged-workspace-chromium": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-inspector-db5b547/retouch-packaged-workspace-chromium.log",
+      "sha256": "4311df753d7f3b73f03a0bc8e2cb39a8d1ca412a0cbcb5fbe0162cd9fcb1272c"
+    },
+    "retouch-packaged-workspace-webkit": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-inspector-db5b547/retouch-packaged-workspace-webkit.log",
+      "sha256": "67f20dc524fa3a5b94ffdf7206c92fd2e967139d34e201d0501d0f6c8591aad1"
+    }
+  },
+  "signing": {
+    "authority": "Developer ID Application: Philip Shen (2HN3MWMRX2)",
+    "strictVerification": true,
+    "hardenedRuntime": true,
+    "secureTimestamp": true
+  }
+}

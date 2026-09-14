@@ -1,5 +1,26 @@
 # Retouch for macOS
 
+## Latest inspector candidate (2026-09-14, db5b547)
+
+The universal Developer ID signed archive includes the compact boolean paint and
+geometry controls, workspace icons, narrow-window tool palette, and persistent
+empty-effects section preferences from clean commit `db5b547`.
+
+Archive: `/Users/philipshen/Developer/retouch-worktrees/desktop-inspector-db5b547/Retouch-0.1.0-mac.zip`
+
+SHA-256: `fe416216cd5785cde6fe74f227c1115c7bd14ee477b2896eff4425f4b2786d3b`
+
+All 226 source entries and native build inputs match the checkout. Strict signing,
+hardened runtime, secure timestamp, and package tamper checks passed. A separate
+copy of the extracted runtime passed all 1,503 unit tests and the Chromium/WebKit
+workspace workflows; its source hashes still match the manifest after testing.
+All 25 desktop unit tests passed. A local cask was generated; installation was not
+repeated for this candidate.
+
+Gatekeeper rejects this candidate as **Unnotarized Developer ID**. No native launch
+was attempted. Notarization, public distribution, and Intel execution remain
+unverified. See [the receipt](verification/2026-09-14-inspector-developer-id.json).
+
 ## Latest responsive-screen candidate (2026-09-14, 39a1635)
 
 The universal Developer ID signed archive now includes the responsive-screen UI,
