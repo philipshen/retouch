@@ -16514,3 +16514,17 @@ document state across all comparison screens.
 Main and comparison refresh attempts run independently and settle before controls
 unlock, so one failed preview cannot suppress another preview's transition.
 Chromium and WebKit pass the recovery workflow; all 1,397 unit tests pass.
+
+### Retry a saved literal class preview
+
+A failed main class refresh exposes **Retry preview refresh** beside the status
+message. Retry resolves the current saved layer descriptors, refreshes the main
+and comparison documents, and performs no source operation or history write.
+The control remains available after another failed attempt, retains pending
+layers across unrelated class refreshes, and disappears after recovery or a
+preview navigation. Controls stay guarded while the attempt settles.
+
+The Liquid browser workflow verifies a repeated outage, a successful retry with
+zero source-operation requests, unchanged source bytes, recovered responsive
+appearance, and retained document/input state. A subsequent Undo restores the
+pre-edit source, proving retry added no undo step.

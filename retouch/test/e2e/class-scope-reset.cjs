@@ -60,6 +60,27 @@ module.exports=async({page,app,read,wait,original,retain=false,liveLiquid=false}
    assert.equal(await frame.locator('input').evaluate(()=>document===window.literalClassDocument),true);
   }
 
+  await page.route(siteURL,route=>route.fulfill({status:503,body:'Preview unavailable'}));
+  try{
+   const input=page.getByLabel('Opacity (%)',{exact:true});await input.fill('20');await input.press('Tab');
+   await wait(()=>read()!==failedPreviewSource);await settled();
+   const retry=page.getByRole('button',{name:'Retry preview refresh',exact:true});await retry.waitFor();
+   await retry.click();await settled();await retry.waitFor();await opacity([.4,.7]);
+  }finally{await page.unroute(siteURL);}
+  const retrySource=read(),writes=[];
+  const recordWrite=request=>{if(request.method()==='POST'&&request.url().includes('/rt/__api/op'))writes.push(request.url());};
+  page.on('request',recordWrite);
+  try{await page.getByRole('button',{name:'Retry preview refresh',exact:true}).click();await settled();await opacity([.2,.7]);}
+  finally{page.off('request',recordWrite);}
+  assert.deepEqual(writes,[]);assert.equal(read(),retrySource);
+  assert.equal(await page.getByRole('button',{name:'Retry preview refresh',exact:true}).count(),0);
+  for(const {name,frame}of comparisons){
+   await wait(async()=>Number(await frame.locator('[aria-label="A"]').evaluate(el=>getComputedStyle(el).opacity))===(name==='Tablet'?.2:name==='Phone'?.8:.5));
+   assert.equal(await frame.locator('input').inputValue(),name);
+   assert.equal(await frame.locator('input').evaluate(()=>document===window.literalClassDocument),true);
+  }
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===failedPreviewSource);await settled();await opacity([.4,.7]);
+
  }
  if(retain){assert.equal(await app.locator('input').inputValue(),'retained');assert.equal(await app.locator('input').evaluate(()=>document===window.classResetDocument),true);}
 };

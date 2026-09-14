@@ -3040,8 +3040,34 @@ async function refreshLiteralLiquidClasses(infos,before){
   RetouchRenderSync.syncClasses({frame:iframe,entries,revalidate:!!window.__RT_RENDERING?.revalidateStyles}),
   window.RetouchComparisons?.syncClasses(entries),
  ]);
- const failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;
+ const failed=results.find(result=>result.status==='rejected');
+ if(failed){offerClassPreviewRetry(infos,before);throw failed.reason;}
+ const retry=document.getElementById('retryClassPreview'),pending=retry?.retouchRetry;
+ retry?.remove();
+ if(pending?.preview===iframe.contentDocument){const completed=new Set(infos.map(info=>info.id)),remaining=pending.infos.filter(info=>!completed.has(info.id));if(remaining.length)offerClassPreviewRetry(remaining,pending.before);}
 }
+function offerClassPreviewRetry(infos,before){
+ const previous=document.getElementById('retryClassPreview'),pending=previous?.retouchRetry;previous?.remove();
+ const preview=iframe.contentDocument,href=iframe.contentWindow.location.href;
+ if(pending?.preview===preview&&pending.href===href){infos=[...new Map([...pending.infos,...infos].map(info=>[info.id,info])).values()];before={...before,...pending.before};}
+ const retry=document.createElement('button');retry.id='retryClassPreview';retry.textContent='Retry preview refresh';
+ retry.title='Load the saved classes again without changing source or undo history.';
+ retry.retouchRetry={preview,href,infos,before};
+ statusEl.after(retry);
+ retry.onclick=async()=>{
+  if(panelTasks||sourceRequests||undoBusy)return;
+  if(iframe.contentDocument!==preview||iframe.contentWindow.location.href!==href){retry.remove();return;}
+  busyPanel(true);retry.disabled=true;
+  try{
+   const resolved=await Promise.all(infos.map(info=>api('GET',resolveUrl(info.id,info.context))));
+   if(!resolved.every(result=>result?.ok&&result.element.classSourceLiteral))throw Error('The literal class layers no longer resolve.');
+   await refreshLiteralLiquidClasses(resolved.map(result=>result.element),before);
+   renderPanel();toast('Preview refreshed','ok');
+  }catch(error){toast('Preview refresh failed: '+error.message,'err');}
+  finally{retry.disabled=false;busyPanel(false);}
+ };
+}
+iframe.addEventListener('load',()=>document.getElementById('retryClassPreview')?.remove());
 function svgGeometryMatches(el,info){return info.svgGeometry?.fields.every(field=>field.editable===false||el.getAttribute(field.name)===field.value);}
 async function convertSVGToPath(info,toArrow=false,arrowPoints){
   const conversion=toArrow?info.svgConversion?.arrow:info.svgConversion;if(!conversion)return toast('This arrow cannot be converted with its current source settings.','err');const editedArrow=arrowPoints!==undefined;if(editedArrow&&(toArrow||info.tag!=='polyline'||!RetouchSVGParametric.arrowPath(arrowPoints)))return;const targetTag='path',desiredPath=editedArrow?RetouchSVGParametric.arrowPath(arrowPoints):toArrow?RetouchSVGParametric.arrowPath(conversion.points):conversion.path,operation=toArrow?'convertSVGToArrow':'convertSVGToPath';
