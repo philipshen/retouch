@@ -662,7 +662,7 @@
         }catch(error){if(open&&cards.includes(card))card.styleSyncError='Styles saved; comparison refresh failed: '+error.message;}
       }));
     },
-    async syncImage({select,matches}){
+    async syncImage({select,matches,serverRendered=true,revisionAttribute,hash}){
       if(!open)return;const expectedRoute=path(),failures=[];
       await Promise.all([...cards].map(async card=>{
         card.imageSyncError=null;
@@ -670,7 +670,16 @@
           for(let attempt=0;attempt<80;attempt++){if(!open||!cards.includes(card)||path()!==expectedRoute)return;const d=card.frame.contentDocument;if(d?.body&&d.URL!=='about:blank')break;await new Promise(resolve=>setTimeout(resolve,50));}
           const d=card.frame.contentDocument;if(!d?.body||d.URL==='about:blank')throw Error('Preview is still loading.');const url=new URL(d.URL);if(url.pathname+url.search+url.hash!==expectedRoute)return;
           if(!select(d).length)return;
-          await RetouchRenderSync.sync({frame:card.frame,serverRendered:true,select,matches});
+          const ready=el=>matches(el)&&(!revisionAttribute||el.getAttribute(revisionAttribute)===hash);
+          if(!serverRendered){
+            for(let attempt=0;attempt<80&&!window.RetouchClientMount.ready(d);attempt++){if(!open||!cards.includes(card)||card.frame.contentDocument!==d||path()!==expectedRoute)return;await new Promise(resolve=>setTimeout(resolve,50));}
+            if(!window.RetouchClientMount.ready(d))throw Error('Preview is still mounting.');
+            // A comparison can mount after the source-change broadcast. Request fresh
+            // server components through the verified development router, retaining React state.
+            const next=card.frame.contentWindow.next;
+            if(!select(d).every(ready)&&/^16\.2\./.test(next?.version||'')&&typeof next.router?.hmrRefresh==='function')next.router.hmrRefresh();
+          }
+          await RetouchRenderSync.sync({frame:card.frame,serverRendered,select,matches:ready});
         }catch(error){if(open&&cards.includes(card)){card.imageSyncError='Image saved; comparison refresh failed: '+error.message;failures.push(card.frame.title||'Comparison');}}
       }));
       if(failures.length)throw Error('Could not refresh '+failures.join(', ')+'.');

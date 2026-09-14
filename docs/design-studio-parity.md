@@ -16820,4 +16820,13 @@ A new browser check reproduced stale comparison images after a crop: the main HT
 
 HTML Chromium/WebKit and local Liquid/WebKit pass apply/undo across all three comparisons while retaining their document identities and input values. All 1,520 unit tests pass.
 
-**Unresolved React case:** `RT_E2E_RENDERER=react RT_E2E_IMAGE_CROP=1 RT_E2E_CROP_COMPARISONS=1` with the page-fonts harness still fails. All three comparisons report complete documents and mounted client components, but retain the old image source and `data-rt-revision` after the main canvas updates. Two runs reproduced this; diagnostic evidence is in `/tmp/retouch-crop-comparisons-react-diagnostic.log`. This change does not fix or claim React comparison image parity. Retry recovery and live Shopify comparison behavior also remain unverified.
+**React failure reproduced before the recovery below:** `RT_E2E_RENDERER=react RT_E2E_IMAGE_CROP=1 RT_E2E_CROP_COMPARISONS=1` with the page-fonts harness failed before the recovery below. All three comparisons report complete documents and mounted client components, but retain the old image source and `data-rt-revision` after the main canvas updates. Two runs reproduced this; diagnostic evidence is in `/tmp/retouch-crop-comparisons-react-diagnostic.log`. This change does not fix or claim React comparison image parity. Retry recovery and live Shopify comparison behavior also remain unverified.
+
+
+### React comparison image refresh recovery — 2026-09-14
+
+WebSocket tracing found comparisons starting with old server HTML while connecting after the source-change broadcast, or receiving that broadcast during initialization. Their client components could mount while the image still carried the previous source revision. Image writes and source undo now also synchronize React comparisons. Next 16.2 previews with stale images request a development router HMR refresh and wait for the expected source revision and image URL. Comparison documents are not reloaded by this recovery.
+
+The original Chromium cold-start case now passes. WebKit/webpack and Chromium/Turbopack also pass Phone/Tablet/Desktop apply and exact source undo while retaining input values, document identities and client-component counters. The counter test waits for its actual React handler before creating state. HTML comparison regression passes. The optional `RT_E2E_CROP_HMR_TRACE` harness captures per-frame build messages for future startup diagnostics.
+
+The explicit router recovery is guarded to Next 16.2; other frameworks continue to wait for their own hot update and report failure if it does not arrive. This is not evidence of arbitrary-framework or full Figma parity.
