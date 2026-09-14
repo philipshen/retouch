@@ -534,29 +534,32 @@ window.addEventListener('retouch:comparison-edit',async event=>{
   if(!sameRoute())return toast('The page changed. Select the layer in the refreshed comparison.','err');
   if(mode!=='edit')modeBtn.click();
   window.RetouchScreens.set({width:detail.width,height:detail.height});
-  if(detail.scopeAtWidth){
+  const applyScope=()=>{
+    if(!detail.scopeAtWidth)return;
     if(!sel)return toast('Select a layer before choosing its style scope.','err');
     styleScope=sel.info.cssAuthoring?`min-[${detail.width}px]:`:RetouchResponsive.atWidth(doc(),detail.width).prefix;renderPanel();
-  }
+  };
   if(group?.length===0){if(!detail.append)clearSelection();return;}
-  if(!group&&!detail.hostId&&!detail.instanceId)return;
-  const classification=classificationSerial;
+  if(!group&&!detail.hostId&&!detail.instanceId&&!detail.scopeAtWidth)return;
+  const classification=classificationSerial;let viewportReady=false;
   for(let attempt=0;attempt<60;attempt++){
     await new Promise(resolve=>setTimeout(resolve,50));
     if(serial!==comparisonSelectionSerial||classification!==classificationSerial||!sameRoute())return;
+    if(iframe.contentWindow.innerWidth!==detail.width||iframe.contentWindow.innerHeight!==detail.height)continue;
+    viewportReady=true;
+    if(!group&&!detail.hostId&&!detail.instanceId){applyScope();return;}
     if(group){
-      if(iframe.contentWindow.innerWidth!==detail.width||iframe.contentWindow.innerHeight!==detail.height)continue;
       const nodes=[...doc().querySelectorAll('[data-rt],[data-rt-i]')],targets=group.map(item=>nodes.filter(el=>el.getAttribute('data-rt')===item.hostId&&el.getAttribute('data-rt-i')===item.instanceId)[item.occurrence]);
       if(targets.some(target=>!target))continue;
       if(targets.some(target=>layerLocks.locked(target)))return toast('A selected layer is now locked. Select the group again.','err');
-      await selectMany(targets,{append:detail.append===true,component:detail.component===true});return;
+      await selectMany(targets,{append:detail.append===true,component:detail.component===true});if(serial===comparisonSelectionSerial&&sameRoute())applyScope();return;
     }
     const matches=[...doc().querySelectorAll('[data-rt],[data-rt-i]')].filter(el=>el.getAttribute('data-rt')===detail.hostId&&el.getAttribute('data-rt-i')===detail.instanceId),target=matches[detail.occurrence];
-    if(!target||iframe.contentWindow.innerWidth!==detail.width)continue;
+    if(!target)continue;
     if(layerLocks.locked(target))return toast('This layer is locked. Select it in Layers to edit.','err');
-    await select(target,{toggle:detail.toggle===true});if(serial!==comparisonSelectionSerial||classificationSerial!==classification+1)return;target.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});return;
+    await select(target,{toggle:detail.toggle===true});if(serial!==comparisonSelectionSerial||classificationSerial!==classification+1)return;applyScope();target.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});return;
   }
-  toast('This layer is not present on the main canvas at this size.','err');
+  toast(viewportReady?'This layer is not present on the main canvas at this size.':'This comparison size did not become ready. Try selecting it again.','err');
 });
 
 function componentMarqueeTargets(d,rect,library){
