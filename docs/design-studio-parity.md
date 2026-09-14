@@ -4,7 +4,7 @@ The goal is full Figma Design feature parity on any site, an intuitive responsiv
 workflow, and a macOS app installable with Homebrew Cask. This ledger records
 progress; it does not redefine parity as the implemented subset.
 
-Active worktree: `/private/tmp/retouch-design-studio`
+Active worktree: `/Users/philipshen/Developer/retouch-worktrees/figma-design-studio`
 Branch: `feat/figma-design-studio`
 Baseline: `cf3b539`, copied from the original checkout's working files without
 changing those files. The original checkout may continue to evolve independently.
@@ -15779,3 +15779,25 @@ light menu. A final HTML visual workflow and screenshot are retained at
 This is contour-level destructive geometry with source Undo, not a live boolean
 operand group. Separate SVG-layer operations, arbitrary masks, universal-site
 support and full parity remain incomplete. No native archive was rebuilt.
+
+
+## Whole-shape boolean engine — 2026-09-14
+
+The geometry engine now combines multiple closed shapes with independent affine
+transforms and nonzero/evenodd fill rules. It preserves holes, bounds arc
+approximation in output coordinates, rejects unsupported or oversized input, and
+reports empty results explicitly. Inputs remain unchanged and temporary Paper
+scopes are released. This is engine groundwork: cross-layer inspector controls,
+atomic source replacement, and editable boolean operand groups remain pending.
+
+Validation: all 1,265 unit tests passed. Chromium and WebKit each passed 2,756
+native SVG fill checks against analytic regions, including transformed arcs,
+holes, and independent operand transforms. These checks do not establish
+cross-layer source editing or complete Figma parity.
+
+The worktree moved from temporary storage to the persistent path above after
+tracked files disappeared during verification. Missing tracked files were
+restored from HEAD while preserving the pending edits; the full unit suite then
+passed. The incomplete WebKit installation was recovered from its verified
+Playwright download before the successful browser check. Recovery evidence is
+stored locally in the sibling `recovery-2026-09-14` directory.
