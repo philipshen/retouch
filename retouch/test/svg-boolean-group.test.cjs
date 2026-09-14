@@ -63,3 +63,17 @@ for(const kind of ['html','react','liquid'])test(kind+' batch transforms preserv
  const stale=adapter.planOp(primary,{...op,fileHash:'stale'});assert.equal(stale.refused,true);assert.equal(stale.edits,undefined);
 
 });
+for(const kind of ['html','react','liquid'])test(kind+' combined paints retain original appearance and survive operation changes',()=>{
+ const adapter=require('../src/adapters/'+kind+'.cjs'),r=resolve(kind),made=create(kind,r);let fresh=resolve(kind,made.edits[0].after,made.selectionIds[0]);
+ for(const [property,value]of [['fill','#12abcd'],['stroke','navy'],['stroke-width','3.5']]){const before=fresh.source,changed=adapter.planOp(fresh,{type:'setSVGBooleanPaint',fileHash:fresh.hash,property,value});assert.equal(changed.ok,true,changed.reason);assert.equal(changed.edits.length,1);assert.equal(changed.edits[0].before,before);fresh=resolve(kind,changed.edits[0].after,made.selectionIds[0]);assert.equal(group.describe(fresh,kind).paints[property],value);const c=group.context(fresh,kind);assert.equal(c.attr(c.roots[c.base],'fill'),'red');assert.equal(c.attr(c.roots[c.base],'stroke'),undefined);}
+ const edited=adapter.planOp(fresh,{type:'setSVGBooleanOperation',fileHash:fresh.hash,operation:'subtract',path});assert.equal(edited.ok,true,edited.reason);fresh=resolve(kind,edited.edits[0].after,made.selectionIds[0]);assert.deepEqual(group.describe(fresh,kind).paints,{fill:'#12abcd',stroke:'navy','stroke-width':'3.5'});
+ assert.equal(adapter.planOp(fresh,{type:'releaseSVGBooleanGroup',fileHash:fresh.hash}).edits[0].after,r.source);
+ for(const extra of [{property:'d',value:path},{property:'constructor',value:null},{property:'fill',value:'red" onload="x'},{property:'stroke-width',value:'-1'},{property:'fill',value:'url(https://example.com)'},{property:'fill',value:'red',fileHash:'stale'}]){const result=adapter.planOp(fresh,{type:'setSVGBooleanPaint',fileHash:fresh.hash,...extra});assert.equal(result.refused,true);assert.equal(result.edits,undefined);}
+ const removed=adapter.planOp(fresh,{type:'setSVGBooleanPaint',fileHash:fresh.hash,property:'stroke',value:null});assert.equal(removed.ok,true,removed.reason);assert.equal(group.describe(resolve(kind,removed.edits[0].after,made.selectionIds[0]),kind).paints.stroke,null);
+});
+
+test('React combined stroke width preserves an existing JSX spelling and refuses conflicting aliases',()=>{
+ const r=resolve('react'),made=create('react',r),source=made.edits[0].after.replace('data-rt-boolean-result=""','data-rt-boolean-result="" stroke-width="2"'),fresh=resolve('react',source,made.selectionIds[0]);assert.equal(group.describe(fresh,'react').paints['stroke-width'],'2');
+ const changed=group.plan(fresh,{type:'setSVGBooleanPaint',fileHash:fresh.hash,property:'stroke-width',value:'4'},'react');assert.equal(changed.ok,true,changed.reason);assert.ok(changed.edits[0].after.includes('stroke-width="4"'));assert.ok(!changed.edits[0].after.includes('strokeWidth='));
+ const conflict=resolve('react',source.replace('stroke-width="2"','stroke-width="2" strokeWidth="3"'),made.selectionIds[0]),refused=group.plan(conflict,{type:'setSVGBooleanPaint',fileHash:conflict.hash,property:'stroke-width',value:'4'},'react');assert.equal(refused.refused,true);assert.equal(refused.edits,undefined);
+});

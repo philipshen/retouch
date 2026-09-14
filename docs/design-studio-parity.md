@@ -16333,3 +16333,35 @@ modifier cycling through overlaps, arbitrary nested boolean networks and full
 Figma/arbitrary-site parity remain incomplete. The signed desktop archive
 predates this change. No rebuild, native launch or push occurred.
 Evidence: `/Users/philipshen/Developer/retouch-worktrees/recovery-2026-09-14/boolean-direct-entry/`.
+
+
+### Independent combined-shape paints — 2026-09-14
+
+Boolean groups now expose combined fill, stroke and stroke width, using the
+shared color swatches/picker hook and compact visible labels. Source transactions
+write only the derived result's paint attributes, preserving original geometry
+and appearance. Paint survives operation changes and original-shape gestures,
+including continuous combined-result previews. Releasing the group restores the
+originals' own paints; the inspector explains this behavior. These attributes
+are shared across screen sizes.
+
+HTML, Liquid and JSX source plans validate property/value pairs, reject stale
+revisions, unsupported properties and unsafe values, and preserve layer IDs.
+JSX strokeWidth creation is supported; an existing stroke-width spelling is
+preserved, while conflicting aliases are refused. Attribute-controlled paint
+preflight refuses stylesheet-controlled fill/stroke or stroke width. Blank values
+remove the corresponding result attribute and reveal its inherited/default paint.
+
+All 1,351 unit tests passed, including 34 boolean-group checks. HTML Chromium,
+Liquid Chromium and React WebKit passed independent fill/stroke/weight edits,
+Escape cancellation, unchanged original colors, operation changes, live original
+movement, CSS fill refusal, release and exact undo history with retained page
+state. The light inspector screenshot was inspected; visible labels were then
+shortened to Fill, Stroke and Weight without changing accessible control names.
+The new picker hook reuses existing controls; a dedicated picker-dialog gesture
+workflow was not added in this increment.
+
+Gradients, the remaining stroke controls, nested booleans, responsive regeneration
+and full Figma/arbitrary-site parity remain incomplete. The signed desktop
+archive predates these controls. No rebuild, native launch or push occurred.
+Evidence: `/Users/philipshen/Developer/retouch-worktrees/recovery-2026-09-14/boolean-paints/`.
