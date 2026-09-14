@@ -17093,3 +17093,11 @@ Right-clicking a paint row now opens its actions popover. Shift+F10 and the Cont
 All 1,548 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass right-click, Shift+F10, initial focus, command navigation, disabled-command skipping, Escape focus restoration and keyboard activation of a paint move, followed by inline opacity, visibility, crop, slow upload, stale-selection refusal, drag/order/duplicate and exact-undo checks. The stale-upload regression waits for the replacement selection to finish classification before releasing the native upload response.
 
 This extends interaction access to the existing paint commands. The wider Figma feature and fidelity scope, solid/gradient visibility, arbitrary-site support and trusted native/Homebrew release remain incomplete. No native app was rebuilt or published.
+
+### Retry failed image paint edits — 2026-09-15
+
+A failed image-opacity upload restores both percentage fields to the last saved value and offers Retry edit in the image popover. The requested patch and error persist through a harmless inspector rebuild, scoped to the element, source revision, screen scope and paint slot. Retrying applies the requested patch to the unchanged source recipe. A successful edit clears the error and pending retry; a new source revision does not inherit an old retry.
+
+All 1,548 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass a simulated upload failure with no source operation, percentage restoration, error/retry persistence through panel rebuild, exactly one source operation on retry, clearing the recovered error, subsequent direct row edits, and the existing hidden/crop/slow-upload/stale-selection/drag/order/exact-undo workflow. The error and retry layout was visually inspected.
+
+This improves recovery within the existing image paint controls. Solid/gradient visibility and the broader Figma feature, arbitrary-site and trusted native/Homebrew requirements remain unfinished. No native app was rebuilt or published.
