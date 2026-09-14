@@ -119,7 +119,7 @@ const read = () => fs.readFileSync(file,'utf8');
 
    await select('#swap-image');
    await page.getByRole('button',{name:'Browse project images',exact:true}).click();
-   await page.getByRole('button',{name:'second.svg',exact:true}).click();
+   await page.getByRole('button',{name:'Use project image /second.svg',exact:true}).click();
    await until(async()=>String(await frame.locator('#swap-image').getAttribute('src')).includes('/second.svg'),'image replacement');
    assert.match(read(),/src="\/second.svg"/);
    assert.equal(await frame.locator('#swap-image').evaluate(el=>el.complete&&el.naturalWidth>0),true);
@@ -127,7 +127,7 @@ const read = () => fs.readFileSync(file,'utf8');
    await until(()=>read()===original,'image undo');
    await until(async()=>(await page.getByRole('button',{name:'Undo',exact:true}).getAttribute('aria-busy'))==='false','image undo refreshed');
    await select('#swap-image');
-   await page.locator('#panel input[type="file"]').setInputFiles({name:'upload.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="red"/></svg>')});
+   await page.getByLabel('Upload image source',{exact:true}).setInputFiles({name:'upload.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"><rect width="120" height="80" fill="red"/></svg>')});
    await until(async()=>String(await frame.locator('#swap-image').getAttribute('src')).startsWith('/rt-assets/'),'uploaded image rendered');
    const uploaded=await frame.locator('#swap-image').getAttribute('src');assert.ok(fs.existsSync(path.join(root,'public',uploaded)));
    await until(async()=>await frame.locator('#swap-image').evaluate(el=>el.complete&&el.naturalWidth===120),'uploaded image loaded');

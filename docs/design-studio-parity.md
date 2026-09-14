@@ -16884,3 +16884,14 @@ Changing the query cancels the prior list and thumbnail requests, clears the pre
 All 1,532 unit tests pass. Adding `RT_E2E_PROJECT_IMAGES_LARGE=1` to the project-image browser workflow creates 650 catalog images and passes HTML/Chromium, React/Chromium and Liquid/WebKit. The checks load the first two pages, find image 649 beyond the former cap, cancel an earlier search, release its delayed response and verify it cannot replace the current results. Existing thumbnail, empty-search, close/cancel, reuse-without-upload, undo and retained-state checks remain in the same workflow. Unit checks cover complete duplicate-free pagination across 650 files, case/Unicode search, excluded directories and invalid page inputs.
 
 The older img-source browser still needs integration with this picker; this batch does not prove full asset-library or Figma parity.
+
+
+### Shared image-layer and fill asset picker — 2026-09-14
+
+Ordinary image layers now use the same project-image dialog as background fills: authenticated thumbnails, full-catalog search, pagination, cancel, and focus restoration. Selecting an existing asset writes its source without uploading another copy. File uploads capture selection, source hash, screen scope, and classification generation; a response arriving after a new selection starts cannot modify the old layer. Uploads retain the 10 MB client limit and expose a distinct accessible source-upload label.
+
+The dialog explicitly handles Escape while search has focus. Chromium previously consumed Escape in the search input without closing the dialog. Saving remains protected against cancellation.
+
+All 1,532 unit tests pass. The new `RT_E2E_IMAGE_LAYER_PICKER=1` workflow passes React/Chromium, HTML/Chromium, and Liquid/WebKit: loaded thumbnails, search, cancel without writes, focus restoration, blue replacement pixels without uploads, exact source undo, retained document/input state, React counter state, and delayed-upload selection protection. Liquid uses an asset_url filter with a separate /test-theme-assets/ URL. WebKit retained the previous SVG naturalWidth despite rendering the correct replacement; verification checks decoded image pixels instead of assuming that metadata updates. The broader HTML browser suite passes responsive CSS, spacing, styling, export, text/image edits, asset search/upload, navigation, structure operations, and undo. Its font-settings and inserted-text interactions were updated to the current UI, including automatic inline editing after Add text.
+
+Connected Shopify and the standalone React inspector suite were not run in this batch. No native app rebuild, notarization, or distribution validation was performed. Full Figma Design parity and arbitrary-site coverage remain unproven.

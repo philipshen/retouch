@@ -2072,13 +2072,13 @@ function renderPanelContents(textEditing=false) {
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
     const position=target?.namespaceURI!=='http://www.w3.org/2000/svg'?RetouchHTMLPosition.mount(info,target,width,setHTMLCSS,(g,action,opener,initial)=>moveHTMLLayer(info,target,width,g,action,opener,initial)):null;
     panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS,position,writeTextStyle));
-    const imageFill=RetouchImageFill.mount(info,target,null,changes=>setHTMLCSS(changes,null,width),info.cssRules?.[width]||{},imageFillUpload(info),/\.liquid$/i.test(info.file)?(src,initialize,action)=>setLiquidImageFill(info,src,initialize,action):null,imageFillBrowser(info));if(imageFill)panelBody.append(imageFill);
+    const imageFill=RetouchImageFill.mount(info,target,null,changes=>setHTMLCSS(changes,null,width),info.cssRules?.[width]||{},imageFillUpload(info),/\.liquid$/i.test(info.file)?(src,initialize,action)=>setLiquidImageFill(info,src,initialize,action):null,projectImageBrowser(info));if(imageFill)panelBody.append(imageFill);
     if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{},(save,preview)=>repositionImage(target,save,preview)));
     if(info.canSetTag){const section=RetouchInspector.section('Element');RetouchInspector.select(section,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','li'].map(tag=>[tag,tag]),info.tag,setTag);panelBody.appendChild(section);}
     if(info.src!==null)panelBody.appendChild(imageSection(info));
   }else{
   if(target)panelBody.appendChild(RetouchClassSiteVariables.mount(style,target,setClasses,message=>toast(message,'err')));
-  const imageFill=RetouchImageFill.mount(style,target,setClasses,null,{},imageFillUpload(info),/\.liquid$/i.test(info.file)?(src,initialize,action)=>setLiquidImageFill(info,src,initialize,action):null,imageFillBrowser(info));if(imageFill)panelBody.append(imageFill);
+  const imageFill=RetouchImageFill.mount(style,target,setClasses,null,{},imageFillUpload(info),/\.liquid$/i.test(info.file)?(src,initialize,action)=>setLiquidImageFill(info,src,initialize,action):null,projectImageBrowser(info));if(imageFill)panelBody.append(imageFill);
   if(target?.namespaceURI==='http://www.w3.org/2000/svg')panelBody.appendChild(RetouchSVGPaint.mount(style,target,setClasses));
   if(textLayer) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag,(type,scope,extra)=>writeTextStyle(type,undefined,{scope,...extra})));
   panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err'),(info.renderRevisionAttribute||info.classSelection)&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(action,opener,initial)=>transformReactLayer(info,target,action,opener,initial):null,info.renderRevisionAttribute&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(classes,g)=>writeReactBounds(info,classes,g):null,info.classSelection&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(g,before,anchors)=>writeClassLayerGeometry(info,target,g,before,anchors):null));
@@ -2846,7 +2846,7 @@ async function setLiquidImageFill(info,src,initialize,action='apply'){
   sel.info=result.element;await refreshLiquidImageFill(result.element);renderPanel();toast('Saved','ok');
  }catch(error){toast(error.message,'err');renderPanel();}finally{busyPanel(false);}
 }
-function imageFillBrowser(info){
+function projectImageBrowser(info){
  const scope=styleScope,hash=info.hash,serial=classificationSerial;
  return onSelect=>RetouchProjectImages.open({
   current:()=>sel?.info===info&&info.hash===hash&&styleScope===scope&&classificationSerial===serial,
@@ -2857,6 +2857,7 @@ function imageFillBrowser(info){
 function imageFillUpload(info){
  const scope=styleScope,hash=info.hash,serial=classificationSerial;
  return async file=>{
+  if(file.size>10_000_000)throw Error('Image too large (max 10 MB)');
   if(sel?.info!==info||info.hash!==hash||styleScope!==scope||classificationSerial!==serial)throw Error('The selected image or screen scope changed.');
   const response=await fetch('/rt/__api/upload?name='+encodeURIComponent(file.name),{method:'POST',headers:{'x-retouch-token':TOKEN},body:file}),result=await response.json();
   if(!result.ok)throw Error(result.reason||result.error||'Image upload failed.');
@@ -2891,50 +2892,17 @@ function imageSection(info) {
   const pathInput = document.createElement('input'); pathInput.type = 'text'; pathInput.placeholder = '/images/example.png'; pathInput.value = info.srcImported ? '' : info.src;
   RetouchInspector.field(sec, 'Image path', pathInput);
   sec.append(RetouchInspector.button('Apply image path', () => setSrc(pathInput.value.trim(), false, info)));
-  const assets = document.createElement('div'); assets.className = 'image-assets'; assets.hidden = true;
-  const browse = RetouchInspector.button('Browse project images', async () => {
-    assets.hidden = !assets.hidden; if (assets.hidden || assets.childElementCount) return;
-    const result = await api('GET', '/rt/__api/images');
-    if (!result?.ok) return toast(result?.reason || result?.error || 'Could not list images', 'err');
-    const search = document.createElement('input');search.type='search';search.placeholder='Find an image…';search.setAttribute('aria-label','Find a project image');
-    assets.append(search);
-    const buttons=[];
-    for (const asset of result.images) {
-      const b = RetouchInspector.button('', () => setSrc(asset.src, false, info)); b.title = asset.src;
-      const preview=document.createElement('img');preview.src=asset.src;preview.alt='';preview.loading='lazy';
-      const label=document.createElement('span');label.textContent=asset.name;b.append(preview,label);assets.append(b);buttons.push({button:b,path:decodeURIComponent(asset.src).toLowerCase()});
-    }
-    const empty=document.createElement('p');empty.className='note';empty.textContent='No matching images';empty.hidden=true;assets.append(empty);
-    search.oninput=()=>{const query=search.value.trim().toLowerCase();let count=0;for(const item of buttons){item.button.hidden=!item.path.includes(query);if(!item.button.hidden)count++;}empty.hidden=count>0;};
-    if (!result.images.length) RetouchInspector.note(assets, 'No project images found. Choose a file to upload.');
-  });
-  sec.append(browse, assets);
+  const browse=RetouchInspector.button('Browse project images',event=>{event.currentTarget.focus({preventScroll:true});projectImageBrowser(info)(async src=>{await setSrc(src,false,info);if(info.src!==src)throw Error('The selected image could not be applied.');});});sec.append(browse);
   const pick = document.createElement('button');
   pick.id = 'imgPick';
   pick.textContent = 'Choose image…';
   const fileIn = document.createElement('input');
-  fileIn.type = 'file';
+  fileIn.type = 'file';fileIn.setAttribute('aria-label','Upload image source');
   fileIn.accept = 'image/*';
   fileIn.hidden = true;
   pick.onclick = () => fileIn.click();
-  fileIn.onchange = async () => {
-    const f = fileIn.files[0];
-    if (!f) return;
-    if (f.size > 10_000_000) return toast('Image too large (max 10 MB)', 'err');
-    toast('Uploading…');
-    let res;
-    try {
-      res = await fetch('/rt/__api/upload?name=' + encodeURIComponent(f.name), {
-        method: 'POST',
-        headers: { 'x-retouch-token': TOKEN },
-        body: f,
-      }).then((r) => r.json());
-    } catch (err) {
-      res = { ok: false, error: err.message };
-    }
-    if (!res.ok) return toast(res.reason || res.error || 'Upload failed', 'err');
-    setSrc(res.src, false, info);
-  };
+  const upload=imageFillUpload(info);
+  fileIn.onchange=async()=>{const file=fileIn.files[0];if(!file)return;pick.disabled=true;try{const src=await upload(file);await setSrc(src,false,info);}catch(error){toast(error.message,'err');}finally{pick.disabled=false;fileIn.value='';}};
   sec.appendChild(pick);
   sec.appendChild(fileIn);
   return sec;

@@ -99,6 +99,7 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
   for(let i=0;i<3;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'appearance exact undo');
   const typeOpener=page.locator('summary[aria-label="Type settings"]');if(!await typeOpener.evaluate(el=>el.parentElement.open))await typeOpener.click();
+  const moreFontSettings=page.getByText('More font settings',{exact:true});if(!await moreFontSettings.evaluate(el=>el.parentElement.open))await moreFontSettings.click();
   const family=page.getByLabel('Font family (CSS)',{exact:true});await family.fill('monospace');await family.press('Tab');
   await wait(async()=>await app.locator('h1').evaluate(el=>getComputedStyle(el).fontFamily)==='monospace','font family');await settled();
   const weight=page.getByLabel('Font weight (CSS)',{exact:true});await weight.fill('600');await weight.press('Tab');
@@ -112,7 +113,8 @@ const browserType=require(path.join(fixture,'node_modules/playwright'))[engine];
   await wait(()=>read()===original,'typography exact undo');
 
 
-  if(await page.locator('details:not([open])').filter({has:page.locator('summary', {hasText:/^Text content$/})}).count())await page.getByText('Text content',{exact:true}).click();
+  await page.getByLabel('Text content',{exact:true}).waitFor({state:'attached'});
+  {const textDisclosure=page.locator('summary').filter({hasText:/^Text content$/});if(await textDisclosure.count()&&!await textDisclosure.evaluate(el=>el.parentElement.open))await textDisclosure.click();}
   await page.locator('#panelBody textarea').fill('Saved & clear');await page.getByRole('button',{name:'Apply text',exact:true}).click();
   await wait(async()=>await app.locator('h1').textContent()==='Saved & clear','text rendered');assert.ok(fs.readFileSync(file,'utf8').includes('Saved &amp; clear'));
   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>fs.readFileSync(file,'utf8')===original,'text undo');
@@ -132,16 +134,16 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>fs.readFileSync(file,'utf8')===original,'image undo');
   await settled();await page.getByRole('button',{name:'Browse project images',exact:true}).click();
   await page.getByLabel('Find a project image',{exact:true}).fill('écran');
-  const accented=page.getByRole('button',{name:'Écran #1.svg',exact:true});await accented.waitFor();await accented.scrollIntoViewIfNeeded();
+  const accented=page.getByRole('button',{name:'Use project image /%C3%89cran%20%231.svg',exact:true});await accented.waitFor();await accented.scrollIntoViewIfNeeded();
   await wait(async()=>await accented.locator('img').evaluate(el=>el.complete&&el.naturalWidth>0),'encoded image preview');
   await page.getByLabel('Find a project image',{exact:true}).fill('second');
-  const choice=page.getByRole('button',{name:'second.svg',exact:true});await choice.waitFor();await choice.scrollIntoViewIfNeeded();
-  assert.equal(await page.getByRole('button',{name:'first.svg',exact:true}).count(),0);
+  const choice=page.getByRole('button',{name:'Use project image /second.svg',exact:true});await choice.waitFor();await choice.scrollIntoViewIfNeeded();
+  assert.equal(await page.getByRole('button',{name:'Use project image /first.svg',exact:true}).count(),0);
   await wait(async()=>await choice.locator('img').evaluate(el=>el.complete&&el.naturalWidth>0),'asset preview');
   await choice.click();await wait(async()=>await app.locator('img').evaluate(el=>el.complete&&el.currentSrc.endsWith('/second.svg')),'asset browser replacement');await settled();
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'asset browser undo');
   const upload='<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><rect width="50" height="50" fill="green"/></svg>';
-  await page.locator('#panelBody input[type=file]').setInputFiles({name:'uploaded.svg',mimeType:'image/svg+xml',buffer:Buffer.from(upload)});
+  await page.getByLabel('Upload image source',{exact:true}).setInputFiles({name:'uploaded.svg',mimeType:'image/svg+xml',buffer:Buffer.from(upload)});
   await wait(async()=>await app.locator('img').evaluate(el=>el.complete&&el.naturalWidth>0&&el.currentSrc.includes('/rt-assets/')),'uploaded image loaded').catch(async error=>{console.error('Upload state',await app.locator('img').evaluate(el=>({src:el.getAttribute('src'),currentSrc:el.currentSrc,complete:el.complete,naturalWidth:el.naturalWidth,naturalHeight:el.naturalHeight})));throw error;});await settled();
   const saved=fs.readdirSync(path.join(root,'rt-assets'));assert.equal(saved.length,1);assert.equal(fs.readFileSync(path.join(root,'rt-assets',saved[0]),'utf8'),upload);
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original,'uploaded source undo');
@@ -152,7 +154,8 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await page.getByLabel('Project page',{exact:true}).selectOption('/about%20us.html');
   await wait(async()=>await app.locator('h1').textContent()==='About this site','page navigation');
   await page.getByRole('treeitem',{name:'h1 · About this site',exact:true}).click();
-  if(await page.locator('details:not([open])').filter({has:page.locator('summary', {hasText:/^Text content$/})}).count())await page.getByText('Text content',{exact:true}).click();
+  await page.getByLabel('Text content',{exact:true}).waitFor({state:'attached'});
+  {const textDisclosure=page.locator('summary').filter({hasText:/^Text content$/});if(await textDisclosure.count()&&!await textDisclosure.evaluate(el=>el.parentElement.open))await textDisclosure.click();}
   await page.locator('#panelBody textarea').fill('Edited about page');await page.getByRole('button',{name:'Apply text',exact:true}).click();
   await wait(()=>fs.readFileSync(secondFile,'utf8').includes('Edited about page'),'second page edit');await settled();
   assert.equal(read(),original,'first page unchanged');
@@ -206,8 +209,7 @@ await page.getByLabel('Image path',{exact:true}).fill('/second.svg');await page.
   await wait(async()=>await app.locator('main > div[aria-label="Frame"]').count()===1,'create frame');await settled();
   assert.ok(await app.locator('div[aria-label="Frame"]').evaluate(el=>el.getBoundingClientRect().height)>=100);
   await page.getByRole('button',{name:'Add text',exact:true}).click();await wait(async()=>await app.locator('div[aria-label="Frame"] > p').textContent()==='New text','create text inside frame');await settled();
-  if(await page.locator('details:not([open])').filter({has:page.locator('summary', {hasText:/^Text content$/})}).count())await page.getByText('Text content',{exact:true}).click();
-  await page.locator('#panelBody textarea').fill('Inside my frame');await page.getByRole('button',{name:'Apply text',exact:true}).click();
+  const insertedText=app.locator('div[aria-label="Frame"] > p[contenteditable="true"]');await insertedText.fill('Inside my frame');await insertedText.press('Escape');
   await wait(async()=>await app.locator('div[aria-label="Frame"] > p').textContent()==='Inside my frame','edit new text');await settled();
   for(let i=0;i<3;i++){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();}
   await wait(()=>read()===original,'new frame and text exact undo');

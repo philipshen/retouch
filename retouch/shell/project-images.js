@@ -20,6 +20,7 @@
    generation++;clearTimeout(timer);request?.abort();previews.abort();previews=new AbortController();observer.disconnect();queue=[];items=[];grid.replaceChildren();for(const url of urls)URL.revokeObjectURL(url);urls.clear();query=search.value.trim();nextOffset=0;loading=false;more.hidden=retry.hidden=true;status.textContent='Loading images…';if(delay)timer=setTimeout(()=>load(),delay);else return load();
   }
   search.oninput=()=>searchImages(150);
+  dialog.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();if(!saving)dialog.close();}});
   async function load(){if(loading||!dialog.open||nextOffset===null)return;const epoch=generation;request=new AbortController();const signal=request.signal;loading=true;retry.hidden=true;more.disabled=true;status.textContent='Loading images…';try{
    const result=await list({query,offset:nextOffset,signal});if(!dialog.open||epoch!==generation)return;if(!result?.ok)throw Error(result?.reason||result?.error||'Images could not be loaded.');
    const known=new Set(items.map(item=>item.src));for(const asset of result.images)if(!known.has(asset.src)){known.add(asset.src);items.push(card(asset));}nextOffset=result.nextOffset??null;more.hidden=nextOffset===null;
