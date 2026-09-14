@@ -8,6 +8,7 @@ const path = require('node:path');
 const structure = require('../structure.cjs');
 const svgMove=require('../jsx-svg-move.cjs'),svgDelete=require('../jsx-svg-delete.cjs'),svgDuplicate=require('../jsx-svg-duplicate.cjs');
 function svgPlanner(resolved,op){
+ if(op.type==='replaceSVGSelection')return {plan:(r,o)=>require('../svg-combine-selection.cjs').plan(r,o,'react')};
  if(op.type==='moveElement'&&svgMove.describe(resolved))return svgMove;
  if(op.type==='deleteElement'&&svgDelete.describe(resolved))return svgDelete;
  if(op.type==='duplicateElement'&&svgDuplicate.describe(resolved))return svgDuplicate;
@@ -61,6 +62,6 @@ module.exports = {
   assets: { directory: 'public', urlPrefix: '/', uploadDirectory: 'rt-assets' },
   capabilities: {
     classAttr: 'className',
-    ops: ['setSVGGradient','insertElement','renameElement', 'insertSVG', 'setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'setClasses', 'setClassesSelection', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types],
+    ops: ['replaceSVGSelection','setSVGGradient','insertElement','renameElement', 'insertSVG', 'setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'setClasses', 'setClassesSelection', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types],
   },
 };

@@ -15801,3 +15801,28 @@ restored from HEAD while preserving the pending edits; the full unit suite then
 passed. The incomplete WebKit installation was recovered from its verified
 Playwright download before the successful browser check. Recovery evidence is
 stored locally in the sibling `recovery-2026-09-14` directory.
+
+## Atomic SVG selection replacement — 2026-09-14
+
+HTML and React adapters now expose `replaceSVGSelection`, the source transaction
+needed to commit a whole-shape boolean result. The caller supplies a closed,
+bounded compound path in the first selected operand's local coordinate space.
+The operation preserves that operand's paint, transform, naming and metadata,
+removes obsolete primitive geometry and parametric-shape metadata, and removes
+the other selected sibling shapes. An empty path removes all operands and selects
+the retained parent. Every retained source identity is mapped for selection and
+history consumers. Stale hashes, unresolved/duplicate selections, dynamic
+geometry, rendered expression boundaries and drawable child content are refused.
+
+All 1,275 unit tests passed. Ten focused tests cover both adapters, exact source
+preservation, empty results, survivor mappings, base selection order, transaction
+writes, exact Undo/Redo, and refusal after an external file change. The log is
+`../recovery-2026-09-14/boolean-source-all-units.log` relative to this worktree.
+
+This is source/API infrastructure, not a completed cross-layer inspector feature.
+The shell still needs to collect rendered operand geometry and fill rules, map
+it into the base layer's local space, account for CSS geometry overrides, invoke
+the engine, submit the transaction, and restore selection/history. Browser
+verification of that complete workflow, Liquid parity, non-destructive operand
+groups and masks remain pending. Full Figma parity and trusted desktop delivery
+remain incomplete.
