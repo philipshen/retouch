@@ -69,7 +69,7 @@
     listen(optionsToggle,'click',()=>{optionsPanel.style.maxHeight=Math.max(32,toolbar.getBoundingClientRect().top-surface.getBoundingClientRect().top-16)+'px';optionsPanel.style.overflowY='auto';optionsPanel.style.boxSizing='border-box';});
     listen(optionsPanel,'click',event=>{if(event.target.closest('button')){options.open=false;if(optionsPanel.contains(root.document.activeElement))optionsToggle.focus();}});
     listen(options,'keydown',event=>{if(event.key==='Escape'&&options.open){event.preventDefault();event.stopImmediatePropagation();options.open=false;optionsToggle.focus();}},true);
-    let splitContourButton,pickJoinButton,joinPicking=false,joinFirst=null,joinMarkers=[],joinTarget,joinFromEnd,joinToEnd,joinChosenButton,joinContourButton,handleMode,contourPicker,deleteContourButton,duplicateContourButton,closureButton,drawContourButton,moveContourButton,cornerButton,smoothButton;
+    let mergeJoinEndpoints,splitContourButton,pickJoinButton,joinPicking=false,joinFirst=null,joinMarkers=[],joinTarget,joinFromEnd,joinToEnd,joinChosenButton,joinContourButton,handleMode,contourPicker,deleteContourButton,duplicateContourButton,closureButton,drawContourButton,moveContourButton,cornerButton,smoothButton;
     if(subpaths){
       const label=root.document.createElement('label');label.textContent='Contour ';label.style.cssText='font:12px Inter,system-ui;color:var(--ink, #1e1e1e);';
       contourPicker=root.document.createElement('select');contourPicker.setAttribute('aria-label','Path contour');contourPicker.style.cssText='padding:6px;background:var(--control, #f5f5f5);color:var(--ink, #1e1e1e);border:1px solid var(--line, #e6e6e6);border-radius:4px;';
@@ -100,9 +100,10 @@
       const joins=root.document.createElement('div');joins.setAttribute('role','group');joins.setAttribute('aria-label','Join contour endpoints');joins.style.cssText='display:grid;gap:6px;padding:8px 0;';
       const joinSelect=(label,values)=>{const row=root.document.createElement('label');row.textContent=label+' ';const select=root.document.createElement('select');select.setAttribute('aria-label',label);for(const [value,text]of values){const option=root.document.createElement('option');option.value=value;option.textContent=text;select.append(option);}row.append(select);joins.append(row);return select;};
       joinFromEnd=joinSelect('Join from endpoint',[['end','End'],['start','Start']]);joinTarget=joinSelect('Join to contour',[]);joinToEnd=joinSelect('Join to endpoint',[['start','Start'],['end','End']]);
+      const mergeLabel=root.document.createElement('label');mergeJoinEndpoints=root.document.createElement('input');mergeJoinEndpoints.type='checkbox';mergeJoinEndpoints.checked=true;mergeJoinEndpoints.setAttribute('aria-label','Merge coincident endpoints');mergeLabel.append(mergeJoinEndpoints,root.document.createTextNode('Merge coincident endpoints'));mergeLabel.title='Use one anchor when endpoints have exactly the same SVG coordinates. Existing curve handles are preserved.';joins.append(mergeLabel);
       pickJoinButton=root.document.createElement('button');pickJoinButton.type='button';pickJoinButton.textContent='Pick endpoints on canvas';pickJoinButton.onclick=()=>{if(drag||!verify())return;joinPicking=true;joinFirst=null;moveContourMode=false;joinHint('Join endpoints · Choose the first endpoint · Escape exits');rebuild();joinMarkers[0]?.button.focus({preventScroll:true});status.textContent='Choose two endpoints to join contours or close an open contour. Escape exits picking.';};joins.append(pickJoinButton);
       joinChosenButton=root.document.createElement('button');joinChosenButton.type='button';joinChosenButton.textContent='Join contours';joinChosenButton.onclick=()=>{
-        if(drag||!verify())return;const result=root.RetouchSVGPath.joinContours({subpaths},contour,Number(joinTarget.value),joinFromEnd.value,joinToEnd.value);if(!result){announce('Choose ends of different contours to join, or both ends of one contour to close it.');return;}
+        if(drag||!verify())return;const result=root.RetouchSVGPath.joinContours({subpaths},contour,Number(joinTarget.value),joinFromEnd.value,joinToEnd.value,mergeJoinEndpoints.checked);if(!result){announce('Choose ends of different contours to join, or both ends of one contour to close it.');return;}
         subpaths.splice(0,subpaths.length,...result.subpaths);selectContour(result.selected);announce('Endpoints connected. Done saves; Escape cancels.');
       };joins.append(joinChosenButton);optionsPanel.append(joins);
       closureButton=action('Close contour',()=>restructure(closed?'open':'close'));
@@ -112,7 +113,7 @@
     function pickJoinEndpoint(index,end){
       if(!joinPicking||!verify())return;
       if(!joinFirst){joinFirst={index,end};joinHint('Join endpoints · Choose another endpoint');for(const marker of joinMarkers){marker.button.disabled=marker.index===index&&(marker.end===end||subpaths[index].nodes.length<3);const chosen=marker.index===index&&marker.end===end;marker.button.setAttribute('aria-pressed',String(chosen));marker.button.style.background=chosen?'var(--accent, #0d99ff)':'white';}joinMarkers.find(marker=>!marker.button.disabled)?.button.focus({preventScroll:true});status.textContent='Choose another endpoint. Both ends of this contour close it. Escape cancels picking.';return;}
-      const result=root.RetouchSVGPath.joinContours({subpaths},joinFirst.index,index,joinFirst.end,end);if(!result)return;
+      const result=root.RetouchSVGPath.joinContours({subpaths},joinFirst.index,index,joinFirst.end,end,mergeJoinEndpoints.checked);if(!result)return;
       joinPicking=false;joinFirst=null;joinHint('Vector editing · Enter to save · Escape to cancel');subpaths.splice(0,subpaths.length,...result.subpaths);selectContour(result.selected);announce('Endpoints connected. Done saves; Escape cancels.');
     }
     function drawContour(){
@@ -132,7 +133,7 @@
     }
     function restructure(action){
       if(drag||!verify())return;
-      const result=root.RetouchSVGPath.editContour({subpaths},contour,action);
+      const result=action==='join-next'?root.RetouchSVGPath.joinContours({subpaths},contour,contour+1,'end','start',mergeJoinEndpoints.checked):root.RetouchSVGPath.editContour({subpaths},contour,action);
       if(!result){announce('This contour change would exceed path limits or leave an invalid path.');return;}
       subpaths.splice(0,subpaths.length,...result.subpaths);selectContour(result.selected);
       announce({'join-next':'Contours joined. Done saves; Escape cancels.',duplicate:'Contour duplicated. Done saves; Escape cancels.',delete:'Contour removed from preview. Done saves; Escape cancels.',reverse:'Contour direction reversed. Done saves; Escape cancels.',open:'Closing edge removed. Done saves; Escape cancels.',close:'Endpoints joined. Done saves; Escape cancels.'}[action]);

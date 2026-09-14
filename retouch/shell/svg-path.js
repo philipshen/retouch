@@ -121,14 +121,23 @@
     else subpaths.splice(index,1,open(copy(part.nodes.slice(0,anchor+1))),open(copy(part.nodes.slice(anchor))));
     return serializeCompound({subpaths})?{subpaths,selected:index}:null;
   }
-  function joinContours(document,from,to,fromEnd='end',toEnd='start'){
-    if(!serializeCompound(document)||!Number.isInteger(from)||!Number.isInteger(to)||![from,to].every(i=>i>=0&&i<document.subpaths.length)||![fromEnd,toEnd].every(end=>['start','end'].includes(end))||document.subpaths[from].closed||document.subpaths[to].closed)return null;
-    if(from===to)return fromEnd!==toEnd&&document.subpaths[from].nodes.length>=3?editContour(document,from,'close'):null;
+  function joinContours(document,from,to,fromEnd='end',toEnd='start',mergeCoincident=false){
+    if(typeof mergeCoincident!=='boolean'||!serializeCompound(document)||!Number.isInteger(from)||!Number.isInteger(to)||![from,to].every(i=>i>=0&&i<document.subpaths.length)||![fromEnd,toEnd].every(end=>['start','end'].includes(end))||document.subpaths[from].closed||document.subpaths[to].closed)return null;
+    if(from===to){
+      if(fromEnd===toEnd||document.subpaths[from].nodes.length<3)return null;
+      const nodes=document.subpaths[from].nodes,first=nodes[0],last=nodes.at(-1);
+      if(!mergeCoincident||first.x!==last.x||first.y!==last.y)return editContour(document,from,'close');
+      const subpaths=document.subpaths.map(part=>({closed:part.closed,nodes:part.nodes.map(node=>translate(node,0,0))})),part=subpaths[from],head=part.nodes[0],tail=part.nodes.pop();
+      delete head.in;delete head.arc;if(tail.in)head.in={...tail.in};if(tail.arc)head.arc={...tail.arc};part.closed=true;
+      return serializeCompound({subpaths})?{subpaths,selected:from}:null;
+    }
     let next={subpaths:document.subpaths.map(part=>({closed:part.closed,nodes:part.nodes.map(node=>translate(node,0,0))}))};
     if(fromEnd==='start')next=editContour(next,from,'reverse');
     if(toEnd==='end')next=editContour(next,to,'reverse');
     const first=next.subpaths[from],second=next.subpaths[to];
     delete first.nodes.at(-1).out;delete second.nodes[0].in;delete second.nodes[0].arc;
+    const last=first.nodes.at(-1),head=second.nodes[0];
+    if(mergeCoincident&&last.x===head.x&&last.y===head.y){if(head.out)last.out={...head.out};second.nodes.shift();}
     first.nodes.push(...second.nodes);next.subpaths.splice(to,1);
     return serializeCompound(next)?{subpaths:next.subpaths,selected:from-(to<from?1:0)}:null;
   }

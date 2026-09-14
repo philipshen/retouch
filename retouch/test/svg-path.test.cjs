@@ -214,3 +214,12 @@ test('Splitting at an anchor retains cubic and arc segments with independent end
  const closed=path.parseCompound('M0 0C0 10 20 10 20 0A10 15 30 0 1 40 20L0 0Z');
  for(let anchor=0;anchor<closed.subpaths[0].nodes.length;anchor++){const opened=path.splitContour(closed,0,anchor);assert.equal(opened.subpaths.length,1);assert.equal(opened.subpaths[0].closed,false);assert.equal(opened.subpaths[0].nodes.length,closed.subpaths[0].nodes.length+1);assert.equal(opened.subpaths[0].nodes[0].in,undefined);assert.equal(opened.subpaths[0].nodes.at(-1).out,undefined);assert.ok(path.equivalentCompound(path.parseCompound(path.serializeCompound(opened)),opened));}
 });
+
+test('Coincident endpoint merging reverses splitting without losing curve or arc handles',()=>{
+ for(const d of ['M0 0C0 10 20 10 20 0C20 -10 40 -10 40 0','M0 0A10 10 0 0 1 20 0C20 -10 40 -10 40 0','M0 0C0 10 20 10 20 0A10 10 0 0 1 40 0']){
+  const document=path.parseCompound(d),split=path.splitContour(document,0,1),before=JSON.stringify(split),joined=path.joinContours(split,0,1,'end','start',true);assert.deepEqual(joined.subpaths,document.subpaths);assert.equal(JSON.stringify(split),before);assert.equal(path.joinContours(split,0,1).subpaths[0].nodes.length,4);
+ }
+ const closed=path.parseCompound('M0 0C0 10 20 10 20 0L20 20A20 20 0 0 1 0 0Z');
+ const cut=path.splitContour(closed,0,0),restored=path.joinContours(cut,0,0,'start','end',true);assert.deepEqual(restored.subpaths,closed.subpaths);
+ const near=path.parseCompound('M0 0L10 0 M10.0001 0L20 0');assert.equal(path.joinContours(near,0,1,'end','start',true).subpaths[0].nodes.length,4);assert.equal(path.joinContours(near,0,1,'end','start','true'),null);
+});

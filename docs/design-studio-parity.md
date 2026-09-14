@@ -15556,3 +15556,25 @@ separate-element joins and full Figma parity remain unfinished; no native build
 was produced.
 React/Chromium also passed the complete splitting and source-history workflow
 (`/private/tmp/retouch-split-contour-react.log`, exit 0).
+
+### Merge coincident join endpoints (2026-09-14)
+
+Contour joining now offers **Merge coincident endpoints**, enabled by default
+in the point editor. Next-contour joins, chosen-endpoint joins and canvas picking
+all use it. Exactly equal SVG coordinates become one anchor carrying the incoming
+segment's handle/arc and the outgoing segment's handle. Nearby coordinates are
+not snapped. Disable the option to keep separate anchors and a zero-length
+connecting edge. Closing a contour with duplicated start/end anchors similarly
+merges their segment data. The pure API defaults to retaining distinct endpoints
+for compatibility; the editor passes the explicit preference.
+
+All 1,251 unit tests pass (`/private/tmp/retouch-merge-endpoints-all-units.log`).
+Geometry checks cover split/rejoin inversion for cubic/cubic, arc/cubic and
+cubic/arc boundaries, closed-contour restoration, immutable inputs, near-but-not-
+equal endpoints and invalid options. HTML Chromium and WebKit workflows pass
+(`/private/tmp/retouch-merge-endpoints-{html,webkit}.log`), including enabled and
+disabled merging, exact saved handles, untouched contours and source Undo.
+Separate SVG elements, vector networks, boolean operations and full parity remain
+unfinished. No new desktop build was produced.
+React/Chromium also passed the complete merge-preference and source-history
+workflow (`/private/tmp/retouch-merge-endpoints-react.log`, exit 0).
