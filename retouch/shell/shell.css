@@ -1067,3 +1067,15 @@ html, body { overflow:clip; }
 .compare-empty { padding: 20px 0; }
 .compare-empty h3 { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
 .compare-empty p { font-size: 11px; line-height: 1.5; color: var(--muted); margin-bottom: 12px; }
+
+/* Boolean originals use the same compact control density as the Design panel. */
+.boolean-operation-controls,.boolean-transform-controls { display:flex;gap:2px;padding:2px;background:var(--control);border-radius:5px; }
+.boolean-operation-controls .boolean-icon-control,.boolean-transform-controls .boolean-icon-control { flex:1;background:transparent; }
+.boolean-icon-control { display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:4px;border-radius:4px; }
+.boolean-icon-control svg { width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round;pointer-events:none; }
+.boolean-icon-control:hover:not(:disabled) { background:var(--hover); }
+.boolean-icon-control:focus-visible { outline:2px solid var(--accent);outline-offset:1px; }
+.boolean-original + .boolean-original { margin-top:12px;padding-top:4px;border-top:1px solid var(--line); }
+.boolean-original-heading > strong { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.boolean-original-heading > .boolean-icon-control { flex-shrink:0;background:transparent; }
+.boolean-transform-controls { margin-bottom:6px; }
