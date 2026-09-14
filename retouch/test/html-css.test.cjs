@@ -280,3 +280,7 @@ test('Resetting a breakpoint refuses an alias cycle exposed in a later range',()
  let source=edit(original,0,'1px','--b').edits[0].after;source=edit(source,0,'var(--b)','--a').edits[0].after;source=edit(source,768,'2px','--a').edits[0].after;source=edit(source,1200,'var(--a)','--b').edits[0].after;
  const reset=css.plan(resolve(source),{width:768,resetScope:true});assert.equal(reset.refused,true);assert.match(reset.reason,/Variable alias cycle at 1200px/);assert.equal(reset.edits,undefined);
 });
+
+test('Managed CSS descriptors carry the exact validated rule text for preview synchronization',()=>{
+ const source=edit(original,768,'320px').edits[0].after,r=resolve(source),info=css.describe(r),id=r.element.node.attrs.find(a=>a.name==='data-rt-style').value;assert.deepEqual(info.cssRuleTexts,{768:css.rule(id,768,{width:'320px'})});assert.deepEqual(css.describe(resolve(original)).cssRuleTexts,{});assert.ok(css.describe(resolve(source.replace('width:320px','width:321px'))).cssReason);
+});

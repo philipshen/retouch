@@ -33,7 +33,7 @@ function inspect(resolved){
  walk(tree);if(owners.length>1||(owners.length===1&&!attr(resolved.element.node,'data-rt-style')))throw Error('This style identity is shared by multiple elements.');
  return {id,blocks,headEnd,used};
 }
-function describe(resolved){try{const state=inspect(resolved);return {cssAuthoring:true,cssRules:Object.fromEntries(state.blocks.map(b=>[b.width,b.values]))};}catch(e){return {cssAuthoring:true,cssReason:e.message,cssRules:{}};}}
+function describe(resolved){try{const state=inspect(resolved);return {cssAuthoring:true,cssRules:Object.fromEntries(state.blocks.map(b=>[b.width,b.values])),cssRuleTexts:Object.fromEntries(state.blocks.map(b=>[b.width,b.node.childNodes.map(n=>n.value||'').join('')]))};}catch(e){return {cssAuthoring:true,cssReason:e.message,cssRules:{}};}}
 function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason});
  try{

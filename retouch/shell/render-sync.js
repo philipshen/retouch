@@ -89,7 +89,7 @@
     }
     throw new Error('Source saved, but the preview did not update. Check the app dev server / HMR connection.');
   }
-  async function syncCSS({frame,id,rules,entries=[{id,rules}],fetcher=root.fetch.bind(root)}) {
+  async function syncCSS({frame,id,rules,texts,entries=[{id,rules,texts}],fetcher=root.fetch.bind(root)}) {
     if(!Array.isArray(entries)||!entries.length||entries.length>100||new Set(entries.map(item=>item.id)).size!==entries.length)throw Error('Choose distinct styled layers.');
     const d=frame.contentDocument,href=frame.contentWindow.location.href,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
     const index=(doc,selector,attribute)=>{const map=new Map();for(const el of doc.querySelectorAll(selector)){const key=el.getAttribute(attribute);if(!map.has(key))map.set(key,[]);map.get(key).push(el);}return map;};
@@ -97,13 +97,14 @@
     try{
       const response=await fetcher(href,{cache:'no-store',signal:controller.signal});if(!response.ok)throw Error('The saved styles could not be loaded.');
       const fresh=new root.DOMParser().parseFromString(await response.text(),'text/html'),sources=index(fresh,'[data-rt]','data-rt'),live=index(d,'[data-rt]','data-rt'),sourceOwners=index(fresh,'[data-rt-style]','data-rt-style'),liveOwners=index(d,'[data-rt-style]','data-rt-style'),sourceStyles=index(fresh,'style[data-rt-css]','data-rt-css'),liveStyles=index(d,'style[data-rt-css]','data-rt-css'),owners=new Set();
-      const plans=entries.map(({id,rules})=>{
+      const plans=entries.map(({id,rules,texts})=>{
         const source=sources.get(id)||[],nodes=live.get(id)||[];if(source.length!==1||nodes.length!==1)throw Error('The styled layer no longer resolves uniquely.');
         const owner=source[0].getAttribute('data-rt-style'),prior=nodes[0].getAttribute('data-rt-style'),styles=sourceStyles.get(owner)||[],actual={};
         if(owner!==null&&(sourceOwners.get(owner)||[]).length!==1||[...(liveOwners.get(owner)||[]),...(liveOwners.get(prior)||[])].some(el=>el!==nodes[0]))throw Error('The styled layer shares a changed style identity.');
         if(owner!==null&&owners.has(owner))throw Error('Selected layers share an ambiguous style identity.');if(owner!==null)owners.add(owner);
         for(const style of styles){const width=style.getAttribute('data-rt-width');if(Object.hasOwn(actual,width))throw Error('The saved screen styles are ambiguous.');actual[width]=JSON.parse(style.getAttribute('data-rt-values'));}
         if(canonical(actual)!==canonical(rules||{}))throw Error('The preview has not received the saved screen styles.');
+        if(Object.keys(actual).length!==Object.keys(texts||{}).length||styles.some(style=>style.textContent!==texts?.[style.getAttribute('data-rt-width')]))throw Error('The rendered CSS does not match the saved screen styles.');
         return {node:nodes[0],owner,existing:[...new Set([...(liveStyles.get(owner)||[]),...(liveStyles.get(prior)||[])])],replacements:styles.map(el=>d.importNode(el,true))};
       });
       if(frame.contentDocument!==d||frame.contentWindow.location.href!==href||plans.some(plan=>!plan.node.isConnected))throw Error('Preview navigated while synchronizing styles.');

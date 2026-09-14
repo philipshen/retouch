@@ -16432,3 +16432,13 @@ The multi-reset browser workflow counts exactly four source-page fetches for a
 two-layer edit with the main canvas and three comparisons. It also verifies
 no partial head mutation when the second layer is stale, refusal of a live
 style-identity collision, retained documents/forms, and exact source history.
+
+### Preview CSS text must match the saved source
+
+HTML style descriptors now include the exact validated text of each managed
+CSS rule. Preview synchronization compares both metadata and CSS text before
+applying a batch. A fetched response with unchanged metadata but an injected
+width rule is refused without changing the preview head. The same check applies
+to single-layer edits, selections, comparisons, and their managed-CSS history.
+The source descriptor test and Chromium/WebKit multi-reset workflows cover this
+case; 1,396 unit tests pass.
