@@ -16552,3 +16552,16 @@ and successful recovery clears that category while leaving unrelated errors.
 A Chromium capture of the Liquid comparison workflow was visually inspected before
 and after notification cleanup. The workflow asserts that recovered class errors
 are removed; optional `RT_E2E_SCREENSHOT` captures its final editor state.
+
+### Preview-first comparison rail
+
+New projects open comparisons in the existing focused view, showing screen
+headers and previews ahead of dimension, ordering, and screen-set controls.
+The focus toggle restores those controls and retains its preference per project;
+an explicitly saved expanded preference remains respected. Its tooltip describes
+the available action. Preview documents and form state stay loaded when toggled.
+
+The Liquid workflow verifies the new default and hidden sizing controls. Existing
+management workflows explicitly expand controls before editing them. A rendered
+Chromium capture confirms the first preview moves higher and the next screen
+begins within the visible rail.

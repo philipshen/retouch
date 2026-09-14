@@ -9,7 +9,7 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
  try{
   browser=await browserType.launch();const page=await browser.newPage({viewport:{width:1800,height:1200}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   const wait=async fn=>{for(let n=0;n<100;n++){if(await fn())return;await new Promise(r=>setTimeout(r,50));}throw Error('Comparison scroll did not settle');};
-  await page.goto('http://localhost:'+server.address().port+'/rt');await page.getByRole('button',{name:'Compare screens',exact:true}).click();
+  await page.goto('http://localhost:'+server.address().port+'/rt');await page.getByRole('button',{name:'Compare screens',exact:true}).click();await page.getByRole('button',{name:'Focus previews',exact:true}).click();
   const frame=page.frameLocator('iframe[title="Phone comparison preview"]'),viewport=page.getByRole('button',{name:'Edit from Phone comparison',exact:true});await frame.locator('#inner').waitFor();
   if(process.env.RT_E2E_COMPARE_RESIZE){
    const edge=page.getByRole('separator',{name:'Resize comparison panel',exact:true}),rail=page.locator('#screenComparisons'),width=()=>rail.evaluate(el=>el.offsetWidth);

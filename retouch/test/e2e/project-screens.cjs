@@ -12,7 +12,7 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   await start(roots[0],0);const port=server.address().port;browser=await browserType.launch();const page=await browser.newPage({viewport:{width:1600,height:1100}}),errors=[];page.on('pageerror',error=>errors.push(error.message));
   const open=async()=>{await page.goto('http://localhost:'+port+'/rt');await page.frameLocator('#app').locator('h1').waitFor();};await open();
   const picker=page.getByLabel('Screen size',{exact:true});await picker.selectOption('390x844');await page.getByLabel('Screen width',{exact:true}).fill('1120');await page.getByLabel('Screen width',{exact:true}).press('Tab');
-  await page.getByRole('button',{name:'Compare screens',exact:true}).click();await page.getByRole('button',{name:'Pin current size',exact:true}).click();
+  await page.getByRole('button',{name:'Compare screens',exact:true}).click();await page.getByRole('button',{name:'Focus previews',exact:true}).click();await page.getByRole('button',{name:'Pin current size',exact:true}).click();
   await page.getByRole('button',{name:'Rename Custom 1120 × 844 comparison',exact:true}).click();await page.getByLabel('Comparison name',{exact:true}).filter({visible:true}).fill('Reading view');await page.getByLabel('Comparison name',{exact:true}).filter({visible:true}).press('Enter');
   assert.equal(await picker.locator('option[value="saved:1120x844"]').textContent(),'Reading view · 1120 × 844');
   // Losing window focus must not dismiss a rename draft; composition Enter
