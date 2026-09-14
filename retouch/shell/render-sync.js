@@ -89,25 +89,31 @@
     }
     throw new Error('Source saved, but the preview did not update. Check the app dev server / HMR connection.');
   }
-  async function syncCSS({frame,id,rules,fetcher=root.fetch.bind(root)}) {
+  async function syncCSS({frame,id,rules,entries=[{id,rules}],fetcher=root.fetch.bind(root)}) {
+    if(!Array.isArray(entries)||!entries.length||entries.length>100||new Set(entries.map(item=>item.id)).size!==entries.length)throw Error('Choose distinct styled layers.');
     const d=frame.contentDocument,href=frame.contentWindow.location.href,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
-    const select=doc=>[...doc.querySelectorAll('[data-rt]')].filter(el=>el.getAttribute('data-rt')===id);
+    const index=(doc,selector,attribute)=>{const map=new Map();for(const el of doc.querySelectorAll(selector)){const key=el.getAttribute(attribute);if(!map.has(key))map.set(key,[]);map.get(key).push(el);}return map;};
     const canonical=value=>JSON.stringify(Object.entries(value).sort(([a],[b])=>Number(a)-Number(b)).map(([width,props])=>[width,Object.entries(props).sort(([a],[b])=>a.localeCompare(b))]));
     try{
       const response=await fetcher(href,{cache:'no-store',signal:controller.signal});if(!response.ok)throw Error('The saved styles could not be loaded.');
-      const fresh=new root.DOMParser().parseFromString(await response.text(),'text/html'),source=select(fresh),live=select(d);
-      if(source.length!==1||live.length!==1)throw Error('The styled layer no longer resolves uniquely.');
-      const owner=source[0].getAttribute('data-rt-style'),prior=live[0].getAttribute('data-rt-style'),styles=[...fresh.querySelectorAll('style[data-rt-css]')].filter(el=>el.getAttribute('data-rt-css')===owner),actual={};
-      for(const style of styles){const width=style.getAttribute('data-rt-width');if(Object.hasOwn(actual,width))throw Error('The saved screen styles are ambiguous.');actual[width]=JSON.parse(style.getAttribute('data-rt-values'));}
-      if(canonical(actual)!==canonical(rules||{}))throw Error('The preview has not received the saved screen styles.');
-      if(frame.contentDocument!==d||frame.contentWindow.location.href!==href||!live[0].isConnected)throw Error('Preview navigated while synchronizing styles.');
-      // Only Retouch-owned rules and their owner marker change. The live layer,
-      // its children, scripts, form values, focus, and page state remain intact.
-      const existing=[...d.querySelectorAll('style[data-rt-css]')].filter(el=>[owner,prior].includes(el.getAttribute('data-rt-css')));
-      const replacements=styles.map(el=>d.importNode(el,true));
-      for(const el of existing)el.remove();for(const el of replacements)d.head.append(el);
-      if(owner===null)live[0].removeAttribute('data-rt-style');else live[0].setAttribute('data-rt-style',owner);
-      d.dispatchEvent(new frame.contentWindow.CustomEvent('retouch:render',{detail:{source:'server'}}));return {ok:true,method:'styles'};
+      const fresh=new root.DOMParser().parseFromString(await response.text(),'text/html'),sources=index(fresh,'[data-rt]','data-rt'),live=index(d,'[data-rt]','data-rt'),sourceOwners=index(fresh,'[data-rt-style]','data-rt-style'),liveOwners=index(d,'[data-rt-style]','data-rt-style'),sourceStyles=index(fresh,'style[data-rt-css]','data-rt-css'),liveStyles=index(d,'style[data-rt-css]','data-rt-css'),owners=new Set();
+      const plans=entries.map(({id,rules})=>{
+        const source=sources.get(id)||[],nodes=live.get(id)||[];if(source.length!==1||nodes.length!==1)throw Error('The styled layer no longer resolves uniquely.');
+        const owner=source[0].getAttribute('data-rt-style'),prior=nodes[0].getAttribute('data-rt-style'),styles=sourceStyles.get(owner)||[],actual={};
+        if(owner!==null&&(sourceOwners.get(owner)||[]).length!==1||[...(liveOwners.get(owner)||[]),...(liveOwners.get(prior)||[])].some(el=>el!==nodes[0]))throw Error('The styled layer shares a changed style identity.');
+        if(owner!==null&&owners.has(owner))throw Error('Selected layers share an ambiguous style identity.');if(owner!==null)owners.add(owner);
+        for(const style of styles){const width=style.getAttribute('data-rt-width');if(Object.hasOwn(actual,width))throw Error('The saved screen styles are ambiguous.');actual[width]=JSON.parse(style.getAttribute('data-rt-values'));}
+        if(canonical(actual)!==canonical(rules||{}))throw Error('The preview has not received the saved screen styles.');
+        return {node:nodes[0],owner,existing:[...new Set([...(liveStyles.get(owner)||[]),...(liveStyles.get(prior)||[])])],replacements:styles.map(el=>d.importNode(el,true))};
+      });
+      if(frame.contentDocument!==d||frame.contentWindow.location.href!==href||plans.some(plan=>!plan.node.isConnected))throw Error('Preview navigated while synchronizing styles.');
+      // Validate the entire selection before any DOM mutation. One page response
+      // supplies all layers; live nodes, scripts and application state stay put.
+      for(const {node,owner,existing,replacements}of plans){
+        for(const el of existing)el.remove();for(const el of replacements)d.head.append(el);
+        if(owner===null)node.removeAttribute('data-rt-style');else node.setAttribute('data-rt-style',owner);
+      }
+      d.dispatchEvent(new frame.contentWindow.CustomEvent('retouch:render',{detail:{source:'server'}}));return {ok:true,method:'styles',layers:plans.length};
     }finally{clearTimeout(timer);}
   }
   const api = { capture, restore, reconcile, sync, syncCSS };

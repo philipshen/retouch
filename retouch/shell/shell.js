@@ -3011,7 +3011,7 @@ async function setHTMLCSSSelection(property,value,width,changesById,resetScope=f
     const result=await api('POST','/rt/__api/op',{type:'setCSSSelection',id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash,...(resetScope?{resetScope:true}:changesById?{changesById}:{property,value}),width});
     if(!result?.ok){renderPanel();return toast(result?.reason||result?.error||'Could not style selected layers','err');}
     saved=true;if(result.undoId)editorHistory.record({type:'setCSSSelection',managedCSS:true,id:info.id,selectionIds:selection.map(item=>item.id),undoId:result.undoId});
-    sel.info=result.element;sel.multiple=result.selection;for(const item of result.selection){await RetouchRenderSync.syncCSS({frame:iframe,id:item.id,rules:item.cssRules});await window.RetouchComparisons?.syncCSS(item);}renderPanel();toast('Selected layers updated','ok');
+    sel.info=result.element;sel.multiple=result.selection;await RetouchRenderSync.syncCSS({frame:iframe,entries:result.selection.map(item=>({id:item.id,rules:item.cssRules}))});await window.RetouchComparisons?.syncCSS(result.selection);renderPanel();toast('Selected layers updated','ok');
   }catch(error){toast((saved?'Styles saved; preview refresh failed: ':'Could not style selected layers: ')+error.message,'err');renderPanel();}finally{busyPanel(false);}
 }
 function classSelectionMatches(infos,document){
@@ -3602,7 +3602,7 @@ async function restoreHistory(direction,op) {
       },{verifyText:op.type==='setText'&&!info.textSource,maskGeometry:['setSVGGeometry','setSVGTransform','setSVGTransforms'].includes(op.type)});
       if(op.type==='setText'&&info.kind==='host'&&!info.textSource&&window.__RT_RENDERING?.reloadAfterWrite){
         await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info)});
-      }else if(op.type==='setCSSSelection'&&op.managedCSS){if(!selectionResult?.every(item=>item?.ok&&item.element.cssAuthoring))throw Error('The restored CSS selection could not be resolved.');for(const item of selectionResult){await RetouchRenderSync.syncCSS({frame:iframe,id:item.element.id,rules:item.element.cssRules});await window.RetouchComparisons?.syncCSS(item.element);}}else if(op.type==='setCSS'&&op.managedCSS&&info.cssAuthoring)await RetouchRenderSync.syncCSS({frame:iframe,id:info.id,rules:info.cssRules});else await refresh();
+      }else if(op.type==='setCSSSelection'&&op.managedCSS){if(!selectionResult?.every(item=>item?.ok&&item.element.cssAuthoring))throw Error('The restored CSS selection could not be resolved.');const infos=selectionResult.map(item=>item.element);await RetouchRenderSync.syncCSS({frame:iframe,entries:infos.map(item=>({id:item.id,rules:item.cssRules}))});await window.RetouchComparisons?.syncCSS(infos);}else if(op.type==='setCSS'&&op.managedCSS&&info.cssAuthoring)await RetouchRenderSync.syncCSS({frame:iframe,id:info.id,rules:info.cssRules});else await refresh();
       if(op.type==='setText')await window.RetouchComparisons?.syncText(info);
       if(op.type==='setCSS'&&op.managedCSS&&info.cssAuthoring)await window.RetouchComparisons?.syncCSS(info);
       if(op.type==='createComponent'&&component?.ok)sel={hostId:component.definitionId,instanceId:op.id,scope:'instance',info};

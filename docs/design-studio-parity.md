@@ -16418,3 +16418,17 @@ restored after undo/redo. Browser coverage uses two layers with distinct scopes,
 checks both full and partial scope coverage at Phone/Tablet/Desktop sizes, and
 verifies exact source history and independent comparison form/document state
 in Chromium and WebKit (`RT_E2E_MULTI_RESET=1 html-scope-reset.cjs`).
+
+### Batched, validated CSS preview updates
+
+A managed HTML selection now uses one authoritative page response per preview
+for all selected layers. The synchronizer indexes source/live layers and owned
+style blocks once, validates the complete requested set, then applies the style
+updates. A stale later layer or a changed/shared style identity refuses the
+preview update before any selected layer's styles are mutated. This reduces
+page reads from layers × previews to previews for the covered shared-CSS path.
+
+The multi-reset browser workflow counts exactly four source-page fetches for a
+two-layer edit with the main canvas and three comparisons. It also verifies
+no partial head mutation when the second layer is stale, refusal of a live
+style-identity collision, retained documents/forms, and exact source history.
