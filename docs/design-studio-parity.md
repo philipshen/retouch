@@ -16724,4 +16724,11 @@ Geometry tests cover landscape, portrait and square images, pan extremes, multip
 
 Chromium and WebKit now verify the crop workflow against a Next.js React app and a local Liquid renderer: cancel without source edits, upload and apply a 90-degree rotated crop, rendered red/blue pixels, original intrinsic/frame dimensions, saved recipe reopening and exact source undo. Both retain input values and document identity; React also retains a client component counter.
 
-The fixtures provide their adapter asset directories (`public/` or `assets/`); the Liquid fixture serves assets and implements the Shopify `asset_url` filter. Projects missing their static asset directory still refuse uploads. This is local adapter evidence, not a connected Shopify check or proof for arbitrary remote sites. No runtime changes were needed for these workflows.
+The fixtures provide their adapter asset directories (`public/` or `assets/`); the Liquid fixture serves assets and implements the Shopify `asset_url` filter. First uploads now create missing static asset directories, as verified below. This is local adapter evidence, not a connected Shopify check or proof for arbitrary remote sites. No runtime changes were needed for these workflows.
+
+
+### First upload without asset-folder setup — 2026-09-14
+
+Image uploads now create the adapter asset directory and upload subdirectory on demand. A React project no longer needs an existing `public/` folder before applying its first crop; the same applies to Liquid `assets/`. Each ancestor is checked before creating a child, refusing paths outside the project, external or dangling symlinks, and non-directory paths. Existing internal symlinks remain supported.
+
+All 1,515 unit tests pass. The React/Chromium and Liquid/WebKit crop workflows pass starting without those directories, including asset rendering, reopening, exact source undo and retained runtime state. Public Shopify verification and native distribution remain separate outstanding work.

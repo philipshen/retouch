@@ -331,23 +331,13 @@ function handle(req, res, ctx) {
       if (!buf) return json(res, 413, { ok: false, error: 'file too large (max 10 MB)' });
       const assets = ctx.adapter.assets;
       if (!assets) return json(res, 409, {ok:false,reason:'This adapter has no static asset directory.'});
-      const assetRoot = path.join(ctx.appRoot, assets.directory);
-      if (!fs.existsSync(assetRoot)) {
-        return json(res, 409, {
-          ok: false,
-          refused: true,
-          reason: `This app has no ${assets.directory}/ directory for static assets.`,
-        });
-      }
       const rawName = url.searchParams.get('name') || 'image';
       if (assets.imageOnly && !/\.(png|jpe?g|gif|webp|avif|svg|ico)$/i.test(rawName)) return json(res, 409, {ok:false,reason:'Choose a PNG, JPEG, GIF, WebP, AVIF, SVG or ICO image.'});
       const safe =
         rawName.toLowerCase().replace(/[^a-z0-9._-]/g, '-').replace(/^[.-]+/, '').slice(-80) || 'image';
-      const dir = path.join(assetRoot, assets.uploadDirectory);
-      const projectRoot = fs.realpathSync(ctx.appRoot), actualAssetRoot = fs.realpathSync(assetRoot);
-      if (actualAssetRoot !== projectRoot && !actualAssetRoot.startsWith(projectRoot + path.sep)) return json(res, 409, { ok: false, reason: 'Asset directory is outside the project.' });
-      fs.mkdirSync(dir, { recursive: true });
-      if (!fs.realpathSync(dir).startsWith(fs.realpathSync(ctx.appRoot) + path.sep)) return json(res, 409, { ok: false, reason: 'Asset directory is outside the project.' });
+      let dir;
+      try { dir = require('./asset-directory.cjs')(ctx.appRoot, assets.directory, assets.uploadDirectory); }
+      catch(error) { return json(res, 409, {ok:false,refused:true,reason:error.message}); }
       const name = 'rt-' + crypto.randomBytes(6).toString('hex') + '-' + safe;
       fs.writeFileSync(path.join(dir, name), buf);
       return json(res, 200, { ok: true, src: assets.urlPrefix + (assets.uploadDirectory ? assets.uploadDirectory + '/' : '') + name });

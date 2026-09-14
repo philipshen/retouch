@@ -175,7 +175,6 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   assert.equal(kind,'react');assert.ok(process.env.RT_E2E_SVG_GRADIENT);
   const source=fs.readFileSync(file,'utf8').replace('export default function Page(){return',"'use client';import {useState} from 'react';export default function Page(){const [active,setActive]=useState(false);return").replace(/(<rect aria-label="Solid box"[^>]*?)width="50"/,'$1width={active?60:50} onClick={()=>setActive(!active)}').replace('opacity:0.8','opacity:active?0.6:0.8').replace('</svg>','<rect aria-label="Dynamic paint box" x="280" y="225" width="30" height="10" fill={active?"#00ff00":"#0000ff"} stroke="#4466aa"/></svg>');fs.writeFileSync(file,source);
  }
- if(process.env.RT_E2E_IMAGE_CROP)fs.mkdirSync(path.join(root,kind==='liquid'?'assets':'public'),{recursive:true});
  if(process.env.RT_E2E_IMAGE_POSITION||process.env.RT_E2E_IMAGE_CROP){
   const attr=kind==='react'?'className':'class',svg='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><path fill="red" d="M0 0h200v200H0z"/><path fill="blue" d="M200 0h200v200H200z"/></svg>');
   let source=fs.readFileSync(file,'utf8');source=source.replace('</main>','<img alt="Color image" src="'+svg+'" '+attr+'="block w-[200px] h-[200px] object-cover object-[20%_50%] md:object-[75%_50%]" />'+(kind==='react'?'<ImageState />':'<input value="initial" />')+'</main>');
