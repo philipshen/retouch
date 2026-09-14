@@ -15976,3 +15976,34 @@ overlays, tag/ancestry-dependent CSS preflight, editable mask regions, full brow
 history workflows, React/Liquid source parity, and SVG export/reference handling
 remain to be integrated and verified. A transformed or styled wrapper currently
 must be normalized before release. Full mask and Figma parity are not achieved.
+
+## HTML mask inspector workflow — 2026-09-14
+
+HTML SVG selections now show a Mask section with Alpha/Luminance choice and
+Use as mask. Created groups have the default layer name Mask group. The group
+inspector offers Edit mask shape and Release mask; retained child layers offer
+Back to mask. Existing shape-coordinate fields edit the mask source directly.
+Creation, release and coordinate-field history reconcile the affected SVG nodes
+without navigating the HTML preview.
+
+Creation/release preflight temporarily checks the prospective hierarchy against
+computed descendant paint, geometry, typography and pointer behavior, then
+restores the original DOM nodes. Non-neutral wrapper effects, active animations,
+mask-type/reference overrides and ancestry-dependent CSS changes are refused.
+The server also requires an SVG parent and preserves its source-boundary guards.
+Renaming a mask group no longer prevents release; additional wrapper transforms
+or styles still require normalization.
+
+Verification: 1,287 unit tests passed. Chromium and WebKit mask-control workflows
+passed alpha/luminance rendered-pixel checks, radius editing through the inspector,
+lossless release, exact Undo/Redo, selection restoration, retained preview form
+and document state, and CSS ancestry refusal without source writes. An initial
+pixel assertion sampled a selection handle; the corrected test samples artwork
+away from editor handles. The final light-theme layout was visually inspected in
+`../recovery-2026-09-14/mask-controls-final.png`. Logs are the sibling
+`mask-controls-{chromium,webkit,units}.log` files.
+
+Remaining: canvas overlays for mask editing, complete mask bounds/type updates,
+style/export/reference integration, normalization on release, React/Liquid mask
+parity, and broader CSS/animation behavior. This does not prove full Figma mask
+parity or the overall goal.

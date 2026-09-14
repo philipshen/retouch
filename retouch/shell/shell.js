@@ -813,7 +813,8 @@ function reloadFrame({keepDrawing=null,expectedTag=null}={}) {
 // A source write can finish before the framework invalidates its rendered
 // module. Wait for that revision, retaining the live session when HMR applies it.
 // Reload only when the renderer cannot confirm a matching live update.
-async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null,expectedTag=null}={}) {
+async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null,expectedTag=null,maskGeometry=false}={}) {
+  if(maskGeometry&&/\.html?$/i.test(info.file)&&matchingEls(info.id).some(el=>el.closest('[data-rt-mask-group]'))){await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info),matches});return;}
   const location = iframe.contentWindow.location.href;
   async function liveUpdateReady(expectedText=null){
     // Only compiler-stamped revisions can prove the live page reflects this write.
@@ -1875,10 +1876,12 @@ function renderPanelContents(textEditing=false) {
    const infos=sel.multiple,elements=infos.map(item=>matchingEls(item.id).length===1?matchingEls(item.id)[0]:null),current=()=>sel?.multiple===infos&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&elements.every(el=>el&&!layerLocks.locked(el));
    panelBody.append(RetouchSVGSelection.mount(infos,elements,{current,save:writeSVGSelection,onGaps:axis=>svgSelectionGaps.toggle(infos,axis),gapsActive:axis=>svgSelectionGaps.active(infos,axis)}));if(elements.some(el=>!el))return;mountSelectionEffectStyles();mountSelectionTextStyles();
    if(infos.every(item=>item.svgBooleanReplacement)&&new Set(infos.map(item=>item.svgBooleanReplacement.parentId)).size===1)panelBody.append(RetouchSVGBooleanSelection.mount(infos,elements,{current,save:writeSVGBooleanSelection}));
+   if(infos.every(item=>item.svgMask?.canCreate)&&new Set(infos.map(item=>item.svgMask.parentId)).size===1)panelBody.append(RetouchSVGMask.mount(infos,elements,{current,save:writeSVGMask}));
    const more=document.createElement('details'),summary=document.createElement('summary');summary.textContent='More properties';more.append(summary,info.classSelection?RetouchReactSelection.mount(infos,elements,styleScope,setReactClassesSelection,setSelectionColorOverride,id=>matchingEls(id)[0]):RetouchHTMLCSS.mountSelection(infos,elements,styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0,setHTMLCSSSelection));panelBody.append(more);return;
   }
   if(sel.multiple?.length>1){mountSelectionEffectStyles();mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchClassSiteVariables.mountSelection(sel.multiple,elements,styleScope,setReactClassesSelection,message=>toast(message,'err')),RetouchFlip.mountSelection(sel.multiple,elements,0,null,strategy),RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection,setSelectionColorOverride,id=>matchingEls(id)[0]));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchFlip.mountSelection(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes)),RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
+  if(info.svgMask?.canRelease||info.svgMask?.ownerId){const target=matchingEls(info.id)[0];panelBody.append(RetouchSVGMask.mount([info],[target],{current:()=>sel?.info===info&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&target?.isConnected&&!layerLocks.locked(target),save:writeSVGMask,edit:async ids=>{await restoreLayerSelection(ids);if(sel)renderPanel();await layers.refresh();}}));}
   if(info.canCreateComponent)panelBody.append(createComponentSection(info));
 
   if(info.components?.length) {
@@ -3033,6 +3036,12 @@ async function refreshSVGBooleanSelection(parentId,ids){
  else await refreshWrittenElement(parent.element,matches);
  await restoreLayerSelection(ids);if(sel)renderPanel();await layers.refresh();
 }
+async function writeSVGMask(type,extra){
+ const infos=sel?.multiple||[sel?.info];if(!infos[0]||panelTasks||sourceRequests||undoBusy||editing)return;const primary=sel.info,ids=infos.map(i=>i.id);busyPanel(true);
+ try{const result=await api('POST','/rt/__api/op',{type,id:primary.id,fileHash:primary.hash,...extra});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update the mask.');
+ const deletedLocks=layerLocks.removeSourceIds(result.removedSourceIds||[]);editorHistory.record({type:'replaceSVGSelection',id:result.parentId,selectionBefore:ids,selectionAfter:result.selectionIds,sourceIdMap:result.sourceIdMap,deletedLocks,removedSourceIds:result.removedSourceIds,undoId:result.undoId});layerLocks.remap(result.sourceIdMap);await refreshSVGBooleanSelection(result.parentId,result.selectionIds);toast(type==='createSVGMask'?'Mask created':'Mask released','ok');
+ }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
+}
 async function writeSVGBooleanSelection(path){
  const infos=sel?.multiple;if(!infos||panelTasks||sourceRequests||undoBusy||editing)return;const ids=infos.map(info=>info.id),primary=sel.info;busyPanel(true);
  try{const result=await api('POST','/rt/__api/op',{type:'replaceSVGSelection',id:primary.id,ids,fileHash:primary.hash,path});if(!result?.ok)throw Error(result?.reason||result?.error||'Could not combine these shapes.');
@@ -3182,7 +3191,7 @@ async function setSVGGeometry(property,value){
     const result=await api('POST','/rt/__api/op',{type:'setSVGGeometry',id:info.id,fileHash:info.hash,...(typeof property==='object'?{changes:property}:{property,value})});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not update shape','err');
     if(result.undoId)editorHistory.record({type:'setSVGGeometry',id:info.id,undoId:result.undoId});
-    sel.info=result.element;await refreshWrittenElement(sel.info,el=>svgGeometryMatches(el,sel.info));renderPanel();toast('Shape updated','ok');
+    sel.info=result.element;await refreshWrittenElement(sel.info,el=>svgGeometryMatches(el,sel.info),{maskGeometry:true});renderPanel();toast('Shape updated','ok');
   }finally{busyPanel(false);}
 }
 function reactGeometryReason(info,target){
@@ -3521,7 +3530,7 @@ async function restoreHistory(direction,op) {
           return tokens(el.getAttribute('class')) === tokens(info.className);
         }
         return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
-      },{verifyText:op.type==='setText'&&!info.textSource});
+      },{verifyText:op.type==='setText'&&!info.textSource,maskGeometry:op.type==='setSVGGeometry'});
       if(op.type==='setText'&&info.kind==='host'&&!info.textSource&&window.__RT_RENDERING?.reloadAfterWrite){
         await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info)});
       }else await refresh();
