@@ -1128,3 +1128,11 @@ html, body { overflow:clip; }
 
 .guide-editor input { height:28px; }
 .guide-editor .inspector-section { padding:4px 0 12px; }
+
+.guide-manager { width:min(320px,calc(100vw - 24px)); }
+.guide-manager .guide-scope { color:var(--muted);padding:0 8px 8px; }
+.guide-list { max-height:min(360px,50vh);overflow:auto; }
+.guide-list-row { display:flex;gap:4px;padding:2px 4px; }
+.guide-list-row button:first-child { flex:1;text-align:left; }
+.guide-manager footer { display:flex;justify-content:flex-end;gap:4px;padding:12px 4px 4px; }
+.guide-list p { padding:8px;color:var(--muted); }

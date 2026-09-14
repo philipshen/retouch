@@ -2,7 +2,7 @@
  'use strict';
  const canvas=document.getElementById('frameWrap'),frame=document.getElementById('app'),main=document.getElementById('main'),rulers=root.RetouchRulers,project=root.__RT_RENDERING?.stateScope?.project||'local',states=new Map(),nodes=new Map();
  const layer=document.createElement('div');layer.className='canvas-guides';layer.tabIndex=-1;layer.setAttribute('role','group');layer.setAttribute('aria-label','Canvas guides');main.append(layer);
- let state=null,gesture=null,editor=null;
+ let state=null,gesture=null,editor=null,manager=null;
  const copy=items=>items.map(item=>({...item})),valid=item=>item&&typeof item.id==='string'&&/^[a-f\d-]{1,64}$/i.test(item.id)&&['x','y'].includes(item.axis)&&Number.isFinite(item.value)&&Math.abs(item.value)<=1e7;
  function geometry(){const bounds=canvas.getBoundingClientRect(),preview=frame.getBoundingClientRect(),scale=preview.width/frame.clientWidth;let x=0,y=0;try{x=frame.contentWindow.scrollX;y=frame.contentWindow.scrollY;}catch{}return {bounds,preview,scale,x,y};}
  function scope(){try{const url=new URL(frame.contentDocument.URL);if(url.protocol==='about:')return null;return 'retouch.canvas.guides.v1:'+project+':'+url.pathname+url.search+':'+frame.clientWidth;}catch{return null;}}
@@ -15,9 +15,9 @@
   else{if(!inside)state.items=state.items.filter(item=>item.id!==saved.id);record(saved.before);}
   if(saved.target.hasPointerCapture(saved.pointerId))saved.target.releasePointerCapture(saved.pointerId);render();const node=nodes.get(saved.id);if(!cancelled&&node)node.focus({preventScroll:true});
  }
- function edit(id=null){
+ function edit(id=null,returnFocus=document.activeElement){
   if(editor||gesture)return;render();if(!state||!id&&state.items.length>=100)return;
-  const owner=state,item=state.items.find(item=>item.id===id),opener=document.activeElement,I=root.RetouchInspector;
+  const owner=state,item=state.items.find(item=>item.id===id),opener=returnFocus,I=root.RetouchInspector;
   const dialog=document.createElement('dialog');editor=dialog;dialog.className='quick-actions guide-editor';dialog.setAttribute('aria-label',item?'Edit guide':'Add guide');
   const form=document.createElement('form'),heading=document.createElement('h2'),section=document.createElement('div'),axis=document.createElement('select'),position=document.createElement('input');heading.textContent=item?'Edit guide':'Add guide';section.className='inspector-section';
   for(const [value,label]of [['x','Vertical'],['y','Horizontal']]){const option=document.createElement('option');option.value=value;option.textContent=label;axis.append(option);}axis.value=item?.axis||'x';
@@ -26,13 +26,29 @@
   const close=()=>{dialog.close();cleanup();};
   const footer=document.createElement('footer'),cancel=I.button('Cancel',close),apply=I.button(item?'Apply':'Add',()=>{});apply.type='submit';footer.append(cancel,apply);form.append(heading,section,footer);dialog.append(form);document.body.append(dialog);
   form.onsubmit=event=>{event.preventDefault();if(state!==owner||scope()!==owner.key){close();return;}const value=Number(position.value);if(!position.reportValidity()||!Number.isFinite(value))return;const before=copy(state.items);let target=state.items.find(guide=>guide.id===id);if(target){target.axis=axis.value;target.value=value;}else{if(state.items.length>=100)return;id=crypto.randomUUID();state.items.push({id,axis:axis.value,value});}record(before);if(!rulers.visible)document.getElementById('toggleRulers').click();render();close();};
-  function cleanup(){if(!dialog.isConnected)return;dialog.remove();if(editor===dialog)editor=null;(nodes.get(id)||opener)?.focus({preventScroll:true});}
+  function cleanup(){if(!dialog.isConnected)return;dialog.remove();if(editor===dialog)editor=null;(manager&&opener.dataset.guideEdit?manager.list.querySelector('[data-guide-edit="'+opener.dataset.guideEdit+'"]')||manager.create:opener.closest?.('.guide-manager')?opener:nodes.get(id)||opener)?.focus({preventScroll:true});}
   dialog.addEventListener('cancel',event=>{event.preventDefault();close();});dialog.addEventListener('close',cleanup);dialog.showModal();position.focus();position.select();
  }
+ function manage(){
+  if(manager||editor||gesture)return;render();if(!state)return;const I=root.RetouchInspector,opener=document.activeElement,dialog=document.createElement('dialog'),header=document.createElement('header'),heading=document.createElement('h2'),scopeLabel=document.createElement('p'),list=document.createElement('div'),footer=document.createElement('footer');
+  dialog.className='quick-actions guide-manager';dialog.setAttribute('aria-label','Guides');heading.textContent='Guides';scopeLabel.className='guide-scope';list.className='guide-list';list.setAttribute('role','group');list.setAttribute('aria-label','Saved guides');
+  const dismiss=()=>{dialog.close();cleanup();},close=I.button('Close',dismiss),create=I.button('Add guide',()=>edit()),clear=I.button('Remove all',()=>{const before=copy(state.items);state.items=[];record(before);render();create.focus();}),undo=I.button('Undo',()=>restore(true,null,true)),redo=I.button('Redo',()=>restore(false,null,true));
+  clear.setAttribute('aria-label','Remove all guides');undo.setAttribute('aria-label','Undo guide edit');redo.setAttribute('aria-label','Redo guide edit');header.append(heading,close);footer.append(undo,redo,clear,create);dialog.append(header,scopeLabel,list,footer);document.body.append(dialog);manager={dialog,scopeLabel,list,create,clear,undo,redo,revision:null};
+  function cleanup(){if(!dialog.isConnected)return;dialog.remove();if(manager?.dialog===dialog)manager=null;opener?.focus({preventScroll:true});}
+  dialog.addEventListener('keydown',event=>historyKey(event));dialog.addEventListener('cancel',event=>{event.preventDefault();dismiss();});dialog.addEventListener('close',cleanup);renderManager();dialog.showModal();create.focus();
+ }
+ function renderManager(){
+  if(!manager)return;const m=manager,revision=JSON.stringify([state.key,state.items]);m.undo.disabled=!state.undo.length;m.redo.disabled=!state.redo.length;m.clear.disabled=!state.items.length;m.create.disabled=state.items.length>=100;if(m.revision===revision)return;m.revision=revision;
+  const focused=m.dialog.contains(document.activeElement)?document.activeElement.dataset.guideEdit:null;m.scopeLabel.textContent='This page · '+frame.clientWidth+' px screen';m.list.replaceChildren();
+  if(!state.items.length){const empty=document.createElement('p');empty.textContent='No guides on this screen.';m.list.append(empty);}
+  for(const item of state.items){const row=document.createElement('div'),label=(item.axis==='x'?'Vertical':'Horizontal')+' guide '+item.value+' px',editButton=root.RetouchInspector.button((item.axis==='x'?'X':'Y')+'  '+item.value+' px',()=>edit(item.id,editButton)),remove=root.RetouchInspector.button('−',()=>{const before=copy(state.items);state.items=state.items.filter(guide=>guide.id!==item.id);record(before);render();m.create.focus();});row.className='guide-list-row';editButton.dataset.guideEdit=item.id;editButton.setAttribute('aria-label','Edit '+label);remove.setAttribute('aria-label','Remove '+label);remove.title='Remove guide';row.append(editButton,remove);m.list.append(row);}
+  if(focused)m.list.querySelector('[data-guide-edit="'+focused+'"]')?.focus();
+ }
+ const manageButton=root.RetouchInspector.button('Guides',manage);manageButton.id='manageCanvasGuides';document.getElementById('panelEmpty').querySelector('.inspector-section').append(manageButton);
  const add=root.RetouchInspector.button('Add guide',()=>edit());add.id='addCanvasGuide';document.getElementById('panelEmpty').querySelector('.inspector-section').append(add);
  function render(){
   const key=scope();if(!key)return;if(state?.key!==key){editor?.close();finish(true);if(!states.has(key)){let items=[];try{const value=JSON.parse(localStorage.getItem(key));if(Array.isArray(value)&&value.length<=100&&value.every(valid)&&new Set(value.map(item=>item.id)).size===value.length)items=value;}catch{}states.set(key,{key,items,undo:[],redo:[]});if(states.size>20)states.delete(states.keys().next().value);}state=states.get(key);}
-  const visible=rulers.visible;layer.hidden=!visible;if(!visible){finish(true);return;}const g=geometry(),parent=main.getBoundingClientRect();if(!Number.isFinite(g.scale)||g.scale<=0)return;
+  renderManager();add.disabled=state.items.length>=100;const visible=rulers.visible;layer.hidden=!visible;if(!visible){finish(true);return;}const g=geometry(),parent=main.getBoundingClientRect();if(!Number.isFinite(g.scale)||g.scale<=0)return;
   Object.assign(layer.style,{left:g.bounds.left-parent.left+'px',top:g.bounds.top-parent.top+'px',width:canvas.clientWidth+'px',height:canvas.clientHeight+'px'});
   for(const [id,node]of nodes)if(!state.items.some(item=>item.id===id)){node.remove();nodes.delete(id);}
   for(const item of state.items){let node=nodes.get(item.id);if(!node){node=document.createElement('button');node.type='button';node.className='canvas-guide';node.dataset.guideId=item.id;node.onpointerdown=event=>start(event,state.items.find(guide=>guide.id===item.id)?.axis,item.id);node.ondblclick=()=>edit(item.id);node.onkeydown=event=>keyboard(event,item.id);layer.append(node);nodes.set(item.id,node);}
@@ -47,8 +63,12 @@
  function move(event){if(!gesture||event.pointerId!==gesture.pointerId)return;const g=geometry();if(!Number.isFinite(g.scale)||g.scale<=0)return;event.preventDefault();event.stopPropagation();gesture.last=event;gesture.moved ||= Math.hypot(event.clientX-gesture.startX,event.clientY-gesture.startY)>3;const item=state.items.find(item=>item.id===gesture.id);if(!item)return;const vertical=item.axis==='x';item.value=Math.max(-1e7,Math.min(1e7,Math.round(((vertical?event.clientX-g.preview.left:event.clientY-g.preview.top)/g.scale)+(vertical?g.x:g.y))));render();}
  function historyKey(event,id=null){
   if(event.isComposing||event.altKey||!(event.metaKey||event.ctrlKey)||!['z','y'].includes(event.key.toLowerCase()))return false;event.preventDefault();event.stopPropagation();
-  state.keyGesture=null;const back=event.key.toLowerCase()==='z'&&!event.shiftKey,from=back?state.undo:state.redo,to=back?state.redo:state.undo;if(from.length){to.push(copy(state.items));state.items=from.pop();save();render();(nodes.get(id)||nodes.values().next().value||layer).focus({preventScroll:true});}return true;
+  restore(event.key.toLowerCase()==='z'&&!event.shiftKey,id,!!manager?.dialog.contains(event.target));return true;
  }
+ function restore(back,id=null,inManager=false){
+  state.keyGesture=null;const from=back?state.undo:state.redo,to=back?state.redo:state.undo;if(from.length){to.push(copy(state.items));state.items=from.pop();save();render();(inManager?manager?.create:nodes.get(id)||nodes.values().next().value||layer)?.focus({preventScroll:true});}
+ }
+
  layer.addEventListener('keydown',event=>{if(event.target===layer&&state)historyKey(event);});
  function keyboard(event,id){
   if(event.isComposing||event.altKey)return;const item=state.items.find(item=>item.id===id);if(!item)return;
