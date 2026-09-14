@@ -1790,6 +1790,10 @@ function screenScopeSection() {
 
     }
   }
+  if(!sel.multiple?.length&&sel.info.cssAuthoring&&styleScope){
+    const scopeWidth=/^min-\[(\d+)px\]:$/.exec(styleScope),width=scopeWidth?Number(scopeWidth[1]):null;
+    if(width!==null&&Object.keys(sel.info.cssRules?.[width]||{}).length){const reset=RetouchInspector.button('Reset overrides at this size',()=>{stopDrawing?.();void setHTMLCSS(undefined,undefined,width,true);});reset.title='Remove this layer’s local styles at '+width+' px and larger. Base styles and other breakpoints stay in place. Undo restores these overrides.';section.append(reset);}
+  }
   if (!sel.multiple?.length && !sel.info.cssAuthoring && styleScope && RetouchResponsive.project(sel.info.className,styleScope)) {
     section.append(RetouchInspector.button('Reset overrides at this size',()=>setClasses('')));
   }
@@ -3392,14 +3396,14 @@ async function writeTextStyle(type,width,extra={}){
     }toast('Saved','ok');
   }finally{busyPanel(false);}
 }
-async function setHTMLCSS(property,value,width){
-  if(!sel)return;const info=sel.info;busyPanel(true);
+async function setHTMLCSS(property,value,width,resetScope=false){
+  if(!sel)return;const info=sel.info;let saved=false;busyPanel(true);
   try{
-    const result=await api('POST','/rt/__api/op',{type:'setCSS',id:info.id,fileHash:info.hash,width,...(typeof property==='object'?{changes:property}:{property,value})});
+    const result=await api('POST','/rt/__api/op',{type:'setCSS',id:info.id,fileHash:info.hash,width,...(resetScope?{resetScope:true}:typeof property==='object'?{changes:property}:{property,value})});
     if(!result?.ok){toast(result?.reason||result?.error||'Could not save CSS','err');renderPanel();return;}
-    if(result.undoId)editorHistory.record({type:'setCSS',id:info.id,undoId:result.undoId});
-    sel.info=result.element;await reloadFrame();renderPanel();toast('Saved','ok');
-  }finally{busyPanel(false);}
+    saved=true;if(result.undoId)editorHistory.record({type:'setCSS',managedCSS:true,id:info.id,undoId:result.undoId});
+    sel.info=result.element;await RetouchRenderSync.syncCSS({frame:iframe,id:info.id,rules:result.element.cssRules});renderPanel();toast('Saved','ok');
+  }catch(error){toast((saved?'Styles saved; preview refresh failed: ':'Could not save styles: ')+error.message,'err');renderPanel();}finally{busyPanel(false);}
 }
 async function setClasses(classes, isUndo) {
   busyPanel(true);
@@ -3598,7 +3602,7 @@ async function restoreHistory(direction,op) {
       },{verifyText:op.type==='setText'&&!info.textSource,maskGeometry:['setSVGGeometry','setSVGTransform','setSVGTransforms'].includes(op.type)});
       if(op.type==='setText'&&info.kind==='host'&&!info.textSource&&window.__RT_RENDERING?.reloadAfterWrite){
         await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info)});
-      }else await refresh();
+      }else if(op.type==='setCSS'&&op.managedCSS&&info.cssAuthoring)await RetouchRenderSync.syncCSS({frame:iframe,id:info.id,rules:info.cssRules});else await refresh();
       if(op.type==='setText')await window.RetouchComparisons?.syncText(info);
       if(op.type==='createComponent'&&component?.ok)sel={hostId:component.definitionId,instanceId:op.id,scope:'instance',info};
     } else await reloadFrame();

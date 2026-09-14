@@ -16365,3 +16365,25 @@ Gradients, the remaining stroke controls, nested booleans, responsive regenerati
 and full Figma/arbitrary-site parity remain incomplete. The signed desktop
 archive predates these controls. No rebuild, native launch or push occurred.
 Evidence: `/Users/philipshen/Developer/retouch-worktrees/recovery-2026-09-14/boolean-paints/`.
+
+### Whole-breakpoint HTML reset and retained CSS preview state
+
+For a source-connected HTML layer, choose a non-base style scope, open
+**Breakpoint options**, and choose **Reset overrides at this size**. The editor
+removes all of that layer's managed declarations at the selected breakpoint in
+one transaction. Base styles, later breakpoints, authored stylesheets, and other
+layers remain intact. Empty scopes are inert; stale or externally altered
+managed rules are refused. A reset also checks that exposing inherited custom
+properties would not create an alias cycle at a later breakpoint.
+
+Managed HTML CSS edits and their undo/redo now update the owner marker and
+managed style elements from the authoritative page response. They retain the
+live element, children, form values, document identity, and application state
+in the covered workflow. Other edit families and renderers retain their own
+refresh paths; this does not establish universal no-navigation behavior.
+
+Validation: 1,394 unit tests; `html-scope-reset.cjs` in Chromium and WebKit covers
+phone/tablet/desktop appearance, inherited values, whole-scope removal, exact
+source undo/redo, retained input/document state, and rejection of a stale style
+response before DOM changes. The existing Chromium `html-position.cjs` workflow
+also passes after the CSS refresh change.

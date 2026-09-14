@@ -265,3 +265,18 @@ test('border width and visibility changes write atomically and style shorthand s
  const reset=edit(source,768,'double','border-style');assert.equal(reset.ok,true,reset.reason);assert.deepEqual(css.describe(resolve(reset.edits[0].after)).cssRules[768],{'border-top-width':'7px','border-style':'double'});
  const invalid=css.plan(resolve(original),{width:0,changes:{'border-top-width':'7px','border-top-style':'url(evil)'}});assert.equal(invalid.ok,false);
 });
+
+test('Reset a complete HTML breakpoint preserves base, later ranges, authored CSS and layer identities',()=>{
+ let source=edit(original,0,'240px').edits[0].after;source=edit(source,768,'320px').edits[0].after;source=edit(source,768,'blue','color').edits[0].after;source=edit(source,1200,'480px').edits[0].after;
+ const r=resolve(source),result=css.plan(r,{width:768,resetScope:true,fileHash:r.hash});assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);assert.equal(result.edits[0].before,source);assert.deepEqual(css.describe(resolve(result.edits[0].after)).cssRules,{0:{width:'240px'},1200:{width:'480px'}});assert.ok(result.edits[0].after.includes('<style>.title{color:red}</style>'));assert.deepEqual(html.collect(source,'index.html').elements.map(e=>e.id),html.collect(result.edits[0].after,'index.html').elements.map(e=>e.id));
+ assert.deepEqual(css.plan(resolve(result.edits[0].after),{width:768,resetScope:true}).edits,[]);
+ for(const extra of [{fileHash:'stale'},{width:-1},{width:2.5},{property:'color',value:null},{changes:{color:null}},{resetScope:false}])assert.equal(css.plan(r,{width:768,resetScope:true,...extra}).refused,true);
+ assert.equal(css.plan(resolve(source.replace('width:320px','width:321px')),{width:768,resetScope:true}).refused,true);
+});
+test('Reset a full breakpoint is atomic even with more than 32 local variable declarations',()=>{
+ let source=original;for(let i=0;i<40;i++)source=edit(source,768,'1px','--space-'+i).edits[0].after;const result=css.plan(resolve(source),{width:768,resetScope:true});assert.equal(result.ok,true,result.reason);assert.deepEqual(css.describe(resolve(result.edits[0].after)).cssRules,{});
+});
+test('Resetting a breakpoint refuses an alias cycle exposed in a later range',()=>{
+ let source=edit(original,0,'1px','--b').edits[0].after;source=edit(source,0,'var(--b)','--a').edits[0].after;source=edit(source,768,'2px','--a').edits[0].after;source=edit(source,1200,'var(--a)','--b').edits[0].after;
+ const reset=css.plan(resolve(source),{width:768,resetScope:true});assert.equal(reset.refused,true);assert.match(reset.reason,/Variable alias cycle at 1200px/);assert.equal(reset.edits,undefined);
+});

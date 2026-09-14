@@ -39,13 +39,15 @@ function plan(resolved,op){
  try{
   if(op.fileHash&&op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the element.');
   if(op.changes!==undefined&&(op.changes===null||typeof op.changes!=='object'||Array.isArray(op.changes)||Object.hasOwn(op,'property')))return refuse('Provide a property or a CSS change set.');
-  const changes=op.changes===undefined?[[op.property,op.value]]:Object.entries(op.changes);
-  if(!Number.isInteger(op.width)||op.width<0||op.width>7680||!changes.length||changes.length>32||changes.some(([property,value])=>!valid(property,value)))return refuse('Unsupported CSS property, value or screen width.');
+  if(op.resetScope!==undefined&&(op.resetScope!==true||Object.hasOwn(op,'property')||Object.hasOwn(op,'value')||Object.hasOwn(op,'changes')))return refuse('Reset a screen scope without additional property changes.');
+  const state=inspect(resolved),block=state.blocks.find(b=>b.width===op.width),values={...block?.values};
+  const changes=op.resetScope?Object.keys(values).map(property=>[property,null]):op.changes===undefined?[[op.property,op.value]]:Object.entries(op.changes);
+  if(op.resetScope&&Number.isInteger(op.width)&&op.width>=0&&op.width<=7680&&!changes.length)return {ok:true,hash:resolved.hash,edits:[]};
+  if(!Number.isInteger(op.width)||op.width<0||op.width>7680||!changes.length||!op.resetScope&&changes.length>32||changes.some(([property,value])=>!valid(property,value)))return refuse('Unsupported CSS property, value or screen width.');
   const inline=attr(resolved.element.node,'style')||'';
   // Reset must remain possible even if an external inline rule now wins.
   const important=[...inline.replace(/\/\*[\s\S]*?\*\//g,'').matchAll(/(?:^|;)\s*([a-z-]+)\s*:[^;]*!\s*important\s*(?=;|$)/gi)].map(m=>m[1].toLowerCase());
   if(changes.some(([property,value])=>value!==null&&important.some(p=>overlaps(p,property))))return refuse('This property overlaps an important inline style. Edit that source rule first.');
-  const state=inspect(resolved),block=state.blocks.find(b=>b.width===op.width),values={...block?.values};
   for(const [property,value]of changes){
   if(value===null)delete values[property];else {
    values[property]=value;
@@ -57,7 +59,7 @@ function plan(resolved,op){
   if(!attr(resolved.element.node,'data-rt-style'))out.appendLeft(resolved.element.location.startTag.startOffset+1+resolved.element.tag.length,` data-rt-style="${state.id}"`);
   const rules=new Map(state.blocks.map(b=>[b.width,b.values]));
   if(Object.keys(values).length)rules.set(op.width,values);else rules.delete(op.width);
-  if(changes.some(([property,value])=>variableName(property)&&typeof value==='string'&&value.startsWith('var('))){
+  if(op.resetScope||changes.some(([property,value])=>variableName(property)&&typeof value==='string'&&value.startsWith('var('))){
    const effective={};for(const [width,props]of [...rules].sort(([a],[b])=>a-b)){Object.assign(effective,props);const cycle=variableCycle(effective);if(cycle)return refuse('Variable alias cycle at '+(width?width+'px and larger':'all sizes')+': '+cycle.join(' → '));}
   }
   for(const old of state.blocks)out.remove(old.node.sourceCodeLocation.startOffset,old.node.sourceCodeLocation.endOffset);
