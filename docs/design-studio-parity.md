@@ -15299,3 +15299,20 @@ block layouts and soft-break lines are not generalized to lists. Prefix-only
 formatting inheritance, automatic adjacent-list coalescing, nested-boundary joins,
 spacing/hanging controls and the remaining Figma/desktop requirements are still
 open. No desktop rebuild or native launch was performed.
+
+### Current desktop archive verification (2026-09-14)
+
+The editor through `31bdfc1` is now present in a fresh universal macOS development
+archive. The exact archive passed strict ad hoc signature/214-file manifest
+verification, 1,245 tests importing its extracted runtime, 16 packaged browser
+workflows, desktop/policy/welcome checks, and isolated Homebrew install/uninstall
+with quarantine preserved. The initial React lane encountered a Next.js empty
+manifest on reload; it passed on retry with unchanged packaged runtime. See
+`desktop/verification/2026-09-14-text-layers-lists.json` and the latest section in
+`desktop/README.md` for archive paths, checksum, scopes and limitations.
+
+Native UI tooling remains unavailable, so native launch was not attempted. A
+Developer ID Application certificate is available; a separate signing attempt is
+waiting for macOS Keychain access. Notarization credentials/profile, trusted
+launch, public cask hosting and upgrades remain unresolved. This is packaged
+editor progress, not completion of desktop delivery or full Figma parity.

@@ -523,3 +523,35 @@ Native UI access failed its preflight, so the app was not launched and native
 editing, sampling, shutdown, and Intel execution remain unverified. Browser
 checks do not establish WKWebView or native-window behavior. Full Figma parity,
 universal site support, and trusted public Homebrew distribution remain open.
+
+## 2026-09-14 text-layer and list-editing development candidate
+
+The current editor at clean source commit `31bdfc176ba0d67de307cae688d01e7f1d6e780e`
+was rebuilt as a universal macOS development archive:
+
+- ZIP: `/private/tmp/retouch-desktop-text-layers-31bdfc1/Retouch-0.1.0-mac.zip`
+- SHA-256: `45d7ec692490f762a3bf1f8a3ab58be15b0425c518985fea81fc2971a2dcafd8`
+- Verification receipt: `desktop/verification/2026-09-14-text-layers-lists.json`
+
+The archive includes atomic text layers, the primary Typography inspector,
+paragraph/list splitting and joining, indentation/marker editing and typed list
+prefixes. Its 214 source files match the clean source manifest; the universal
+arm64/x86_64 executable passes strict ad hoc signature verification.
+
+The extracted packaged runtime passed 1,245 unit tests and 16 browser workflows
+covering text history, paragraphs, lists, Layers, locks and inspector docking.
+Desktop tests, package-tampering rejection, extracted Swift sampler policy and
+welcome-template checks passed. The exact ZIP also passed isolated Homebrew
+installation, manifest verification and uninstall with quarantine preserved and
+the original cask inventory restored. An initial React workflow hit a Next.js
+empty-manifest/HTTP 500 reload failure; the React lane passed on retry against
+unchanged packaged bytes. The receipt retains this limitation.
+
+This completed archive is ad hoc signed, not notarized or publicly published.
+Native UI verification was unavailable (`Sky Computer Use native pipe startup
+failed`), so no native app launch was attempted. A valid Developer ID Application
+identity was found and a separate signed build was started, but its codesign
+process was awaiting macOS Keychain approval at this checkpoint. No successful
+Developer ID archive is claimed. Notarization also needs an identified keychain
+profile. Native editing, Intel execution, trusted launch/upgrade and full Figma
+parity remain unverified.

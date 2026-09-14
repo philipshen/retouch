@@ -1,0 +1,280 @@
+{
+  "sourceCommit": "31bdfc176ba0d67de307cae688d01e7f1d6e780e",
+  "sourceTreeDirty": false,
+  "sourceFiles": 214,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "initialReactFailure": {
+    "workflow": "prefix-react",
+    "exitCode": 1,
+    "observedErrors": [
+      "SyntaxError: Unexpected end of JSON input",
+      "Manifest file is empty",
+      "GET / 500",
+      "Timed out reopening list-prefix text layer"
+    ],
+    "response": "Confirmed the process exited; reran only the React lane against unchanged packaged runtime",
+    "originalLogOverwrittenByRetry": true
+  },
+  "status": "Ad hoc development candidate; native editing and trusted distribution unverified",
+  "archive": "/private/tmp/retouch-desktop-text-layers-31bdfc1/Retouch-0.1.0-mac.zip",
+  "sha256": "45d7ec692490f762a3bf1f8a3ab58be15b0425c518985fea81fc2971a2dcafd8",
+  "sourceNativeBuildVerifierHashesMatch": true,
+  "cask": {
+    "path": "/private/tmp/retouch-desktop-text-layers-31bdfc1/retouch-studio.rb",
+    "sha256": "5997582cf0b0b78bcfe7534a19948b951a20d568844ea2a8a7a8e6ce4a424433",
+    "url": "file:///private/tmp/retouch-desktop-text-layers-31bdfc1/Retouch-0.1.0-mac.zip",
+    "public": false
+  },
+  "units": {
+    "passed": 1245,
+    "exitCode": 0,
+    "scope": "Tests import actual extracted packaged runtime",
+    "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/units.log"
+  },
+  "harness": {
+    "testFiles": 392,
+    "inventorySha256": "621875395854e0788704af4011d6bea04bd92a050ba22afb447b7780df500804",
+    "archiveSha256": "b5aa611a01e784c17a6a4ff94c58838bed8b7c4d420285cc32c97bc4f6b124d3",
+    "runtime": "/private/tmp/retouch-desktop-text-layers-31bdfc1/extracted/Retouch.app/Contents/Resources/retouch",
+    "testsExternalToBundle": true,
+    "removedAfterAllProcessesExited": true
+  },
+  "workflows": [
+    {
+      "name": "prefix-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/prefix-html.log",
+      "assertionGroups": [
+        "LIST PREFIX PASS"
+      ]
+    },
+    {
+      "name": "prefix-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/prefix-liquid.log",
+      "assertionGroups": [
+        "LIST PREFIX PASS"
+      ]
+    },
+    {
+      "name": "joins-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/joins-html.log",
+      "assertionGroups": [
+        "LIST JOIN PASS",
+        "PARAGRAPH JOIN PASS",
+        "PARAGRAPH ENTER PASS"
+      ]
+    },
+    {
+      "name": "indent-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/indent-html.log",
+      "assertionGroups": [
+        "LIST INDENT"
+      ]
+    },
+    {
+      "name": "joins-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/joins-liquid.log",
+      "assertionGroups": [
+        "LIST JOIN PASS",
+        "PARAGRAPH JOIN PASS",
+        "PARAGRAPH ENTER PASS"
+      ]
+    },
+    {
+      "name": "backspace-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/backspace-html.log",
+      "assertionGroups": [
+        "LIST BACKSPACE PASS",
+        "RANGE INSPECTOR PASS"
+      ]
+    },
+    {
+      "name": "layers-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/layers-html.log",
+      "assertionGroups": [
+        "PASS atomic text layers"
+      ]
+    },
+    {
+      "name": "layer-locks-html",
+      "renderer": "html",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/layer-locks-html.log",
+      "assertionGroups": [
+        "PASS layer locks"
+      ]
+    },
+    {
+      "name": "indent-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/indent-liquid.log",
+      "assertionGroups": [
+        "LIST INDENT"
+      ]
+    },
+    {
+      "name": "backspace-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/backspace-liquid.log",
+      "assertionGroups": [
+        "LIST BACKSPACE PASS",
+        "RANGE INSPECTOR PASS"
+      ]
+    },
+    {
+      "name": "layers-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/layers-liquid.log",
+      "assertionGroups": [
+        "PASS atomic text layers"
+      ]
+    },
+    {
+      "name": "layer-locks-liquid",
+      "renderer": "liquid",
+      "engine": "webkit",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/layer-locks-liquid.log",
+      "assertionGroups": [
+        "PASS layer locks"
+      ]
+    },
+    {
+      "name": "prefix-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/prefix-react.log",
+      "assertionGroups": [
+        "LIST PREFIX PASS"
+      ]
+    },
+    {
+      "name": "joins-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/joins-react.log",
+      "assertionGroups": [
+        "LIST JOIN PASS",
+        "PARAGRAPH JOIN PASS",
+        "PARAGRAPH ENTER PASS"
+      ]
+    },
+    {
+      "name": "indent-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/indent-react.log",
+      "assertionGroups": [
+        "LIST INDENT"
+      ]
+    },
+    {
+      "name": "backspace-react",
+      "renderer": "react",
+      "engine": "chromium",
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/backspace-react.log",
+      "assertionGroups": [
+        "LIST BACKSPACE PASS",
+        "RANGE INSPECTOR PASS"
+      ]
+    }
+  ],
+  "installation": {
+    "verification": {
+      "sourceCommit": "31bdfc176ba0d67de307cae688d01e7f1d6e780e",
+      "sourceTreeDirty": false,
+      "sourceFiles": 214,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signature": "strict verification passed; trust and notarization are separate checks"
+    },
+    "manifestMatchesArchive": true,
+    "quarantinePreserved": true,
+    "quarantine": "0381;6aa756b8;;C212880C-5715-4D8A-BB19-FA1CB2D5D0BA",
+    "result": "isolated install and uninstall passed",
+    "caskInventoryUnchanged": true,
+    "temporaryAppTapTrustAndRegistrationRemoved": true,
+    "automaticDependencyRemovalDisabled": true,
+    "exitCode": 0,
+    "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/homebrew.log"
+  },
+  "desktopChecks": {
+    "unitTests": {
+      "passed": 10,
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/desktop-units.log"
+    },
+    "verifier": {
+      "exitCode": 0,
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/verifier.log"
+    },
+    "samplerPolicy": {
+      "exitCode": 0,
+      "scope": "Extracted pure Swift policy and color helpers; no app launch",
+      "log": "/private/tmp/retouch-desktop-text-layers-31bdfc1/sampler-policy.log"
+    },
+    "welcome": {
+      "exitCode": 0,
+      "scope": "Actual Swift-interpolated welcome HTML in Chromium/WebKit; not WKWebView or native window verification",
+      "testSha256": "679bb29935051ae3d30ccba0e5aecca077eac539c8094fffe954a6b755c05af4",
+      "logs": [
+        "/private/tmp/retouch-desktop-text-layers-31bdfc1/welcome-chromium.log",
+        "/private/tmp/retouch-desktop-text-layers-31bdfc1/welcome-webkit.log"
+      ]
+    }
+  },
+  "nativeLaunch": {
+    "result": "Not attempted; unverified",
+    "preflight": "CUA getState returned Native apps: Error: Sky Computer Use native pipe startup failed"
+  },
+  "nativeSelfTests": "Not run",
+  "developerID": "This archive is ad hoc signed. A separate Developer ID signing attempt is awaiting macOS Keychain access.",
+  "notarization": "Not performed",
+  "published": false,
+  "remaining": [
+    "Native editing, sampler and shutdown workflows remain unverified",
+    "Developer ID signing, notarization, public cask and trusted upgrades remain incomplete",
+    "Intel runtime execution remains unverified",
+    "Older WebKit normal-flow block-axis Fill issue was not rerun on this archive",
+    "Broader paint/vector/layout matrices were not rerun on this archive",
+    "Full Figma Design parity and universal site support remain incomplete",
+    "Heading-root lists, nested-list merging, spacing/hanging controls and responsive range overrides remain incomplete"
+  ]
+}
