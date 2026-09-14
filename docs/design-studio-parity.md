@@ -16774,3 +16774,10 @@ Chromium/WebKit browser checks inject a failed response and a hanging fetch, ver
 The crop dialog now previews the selected image content box at its authored aspect ratio, object-fit and object-position. A scaled stage preserves natural-pixel behavior for `none` and `scale-down`, while cover, contain and stretched fill retain their actual composition. Drag and keyboard movement use painted dimensions, including independent horizontal/vertical scaling for fill. The output still preserves intrinsic image dimensions.
 
 Chromium and WebKit each pass cover, contain, fill, none and scale-down cases comparing interior preview pixels with the original and applied crop, plus exact source undo. React/Chromium and Liquid/WebKit retain the full crop/history workflow. The square preview was visually inspected, and all 1,517 unit tests pass, including nonuniform fill movement. These checks cover image composition, not authored borders, CSS filters or transformed frame presentation.
+
+
+### Updated signed desktop crop candidate — 2026-09-14
+
+Clean commit `6c18995` is packaged as a universal Developer ID signed archive. All 232 source hashes and native build inputs match; the extracted runtime passes 1,517 unit tests and React/Chromium plus WebKit crop workflows. Desktop unit tests and package tamper checks pass. A local cask was generated and syntax-checked. See the [exact receipt](../desktop/verification/2026-09-14-crop-developer-id.json).
+
+Gatekeeper still rejects the candidate as Unnotarized Developer ID. No native launch or cask installation was attempted for this archive. Public release, trusted launch, upgrades and Intel execution remain unverified.

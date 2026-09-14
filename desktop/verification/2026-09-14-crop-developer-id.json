@@ -1,0 +1,82 @@
+{
+  "sourceCommit": "6c18995aecb739a804bcbc0d078a35c95e2a1aad",
+  "sourceTreeDirty": false,
+  "sourceFiles": 232,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "archive": "/Users/philipshen/Developer/retouch-worktrees/desktop-crop-6c18995/Retouch-0.1.0-mac.zip",
+  "sha256": "50ccbae680a4319ee5ea6c57bb3c0b4dab024ffdcb7744348055bac7858ed0b5",
+  "sourceManifestMatchedCheckout": true,
+  "nativeBuildInputsMatchedCheckout": true,
+  "testedRuntimeMatchedManifestAfterTests": true,
+  "signing": {
+    "authority": "Developer ID Application: Philip Shen (2HN3MWMRX2)",
+    "strictVerification": true,
+    "hardenedRuntime": true,
+    "secureTimestamp": true
+  },
+  "gatekeeper": {
+    "exitCode": 3,
+    "output": "rejected\nsource=Unnotarized Developer ID"
+  },
+  "nativeLaunch": "not attempted",
+  "notarization": "not complete",
+  "publicRelease": "not published",
+  "desktopTestsPassed": 25,
+  "packagedRuntimeUnitsPassed": 1517,
+  "packageTamperChecks": "passed",
+  "packagedBrowserWorkflows": [
+    {
+      "browser": "chromium",
+      "renderer": "react",
+      "name": "crop upload, rotation and flips, local grouped history, reset, source undo, retained state",
+      "result": "passed"
+    },
+    {
+      "browser": "webkit",
+      "renderer": "html",
+      "name": "crop cancellation, timeout and retry, rotated crop, source undo, retained state",
+      "result": "passed"
+    }
+  ],
+  "localCask": "/Users/philipshen/Developer/retouch-worktrees/desktop-crop-6c18995/retouch-studio.rb",
+  "caskSyntax": "passed",
+  "caskInstallation": "not rerun for this candidate",
+  "intelExecution": "not verified",
+  "testHarness": {
+    "runtime": "/Users/philipshen/Developer/retouch-worktrees/desktop-crop-6c18995/runtime-test",
+    "testsCopiedFrom": "/Users/philipshen/Developer/retouch-worktrees/figma-design-studio/retouch/test",
+    "additionalTestOnlyDependencies": [
+      "liquidjs"
+    ]
+  },
+  "logs": {
+    "retouch-desktop-crop-build": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-crop-6c18995/retouch-desktop-crop-build.log",
+      "sha256": "1e13b25729b55f4925db5b3d50cc9231f027744969200d68a446cb8027d10f53"
+    },
+    "retouch-desktop-crop-tests": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-crop-6c18995/retouch-desktop-crop-tests.log",
+      "sha256": "b579a1335595951195453ce6b0077f0b72ef79a23614725a3560a2492ddae281"
+    },
+    "retouch-packaged-crop-unit": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-crop-6c18995/retouch-packaged-crop-unit.log",
+      "sha256": "ecd345c71ba8b207db6c43a7007ffe1a1a4eacedc9740370c562bd4f658d5dff"
+    },
+    "retouch-packaged-crop-tamper": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-crop-6c18995/retouch-packaged-crop-tamper.log",
+      "sha256": "74b828d723af4fd2aedf9d9659f758c79ae68b1fb5ed392628c83904dc4abed2"
+    },
+    "retouch-packaged-crop-webkit": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-crop-6c18995/retouch-packaged-crop-webkit.log",
+      "sha256": "d016ac22e59f6f2e16fc5ed6ce5daf1db0e9fcbae156010212f6f25a0b959dd0"
+    },
+    "retouch-packaged-crop-react": {
+      "path": "/Users/philipshen/Developer/retouch-worktrees/desktop-crop-6c18995/retouch-packaged-crop-react.log",
+      "sha256": "5558d220cc9d37686b50a8ca7fe4bbc7d2bd1e1a900c5ff0c1f0dacf79d628b5"
+    }
+  }
+}

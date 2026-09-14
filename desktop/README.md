@@ -1,5 +1,24 @@
 # Retouch for macOS
 
+## Latest crop/editor candidate (2026-09-14, 6c18995)
+
+The universal Developer ID signed archive includes guide management, transformed
+image repositioning, frame-matched crop previews, rotation/flips, keyboard and
+local crop history, loading recovery, and first-upload asset-folder creation.
+
+Archive: `/Users/philipshen/Developer/retouch-worktrees/desktop-crop-6c18995/Retouch-0.1.0-mac.zip`
+
+SHA-256: `50ccbae680a4319ee5ea6c57bb3c0b4dab024ffdcb7744348055bac7858ed0b5`
+
+All 232 packaged source entries and native inputs match clean commit `6c18995`.
+The extracted runtime passed 1,517 unit tests, React/Chromium crop/history and
+WebKit crop/retry workflows. All 25 desktop unit tests and package tamper checks
+pass. A local cask was generated and syntax-checked; installation was not rerun.
+
+Gatekeeper reports **Unnotarized Developer ID**. Native launch was not attempted;
+notarization, trusted public distribution and Intel execution remain unverified.
+See [the receipt](verification/2026-09-14-crop-developer-id.json).
+
 ## Latest inspector candidate (2026-09-14, db5b547)
 
 The universal Developer ID signed archive includes the compact boolean paint and
