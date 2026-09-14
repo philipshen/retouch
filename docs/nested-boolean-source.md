@@ -16,9 +16,13 @@ The Layers panel shows actual operands directly beneath their boolean group,
 without the generated operand-container and result-path rows.
 
 An inner group can be moved, resized, or rotated as an original of the outer
-selected group. Canvas gestures for the inner group's own original shapes are
-not yet connected to the full cascade preview. Releasing an inner group is
-also still unavailable; release its containing group first.
+selected group. The inner group's own originals also support move, resize, and
+rotate gestures, with a live preview of the outermost result. Ancestor source
+descriptors load once before the gesture; preview frames compute locally.
+Escape restores the original DOM, and a committed gesture saves one undo step.
+External changes to the boolean tree cancel the gesture without overwriting
+those changes. Releasing an inner group remains unavailable; release its
+containing group first.
 
 ## Retained creation
 
@@ -70,7 +74,9 @@ unchanged identities, stale hashes, missing or reordered ancestor paths, and
 invalid final paths with no partial edits. An authenticated HTML API test
 checks one saved snapshot with exact undo and redo. Browser workflows cover HTML/Chromium, Liquid/Chromium, and React/WebKit nested
 creation, actual filled-area samples, operation changes, nested geometry and
-paint edits, empty-result propagation, outer operand movement, exact undo and
+paint edits, empty-result propagation, outer operand movement, nested original
+move/rotation cancellation and undo/redo, pointer resizing, external result
+mutation cancellation, exact undo and
 release, and retained document/input state. Chromium also checks atomic DOM
 and source restoration when CSS controls an outer result path. The existing
 flat boolean workflow remains a regression check.

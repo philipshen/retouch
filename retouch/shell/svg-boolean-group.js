@@ -110,7 +110,7 @@
   details.ontoggle=async()=>{if(details.open)openOriginals.add(key);else openOriginals.delete(key);if(!details.open||loaded)return;try{const infos=await ready();if(!selected())return;loaded=true;for(const operand of infos){const box=root.document.createElement('div'),name=root.document.createElement('strong');name.textContent=operand.layerName||resolveTarget()?.querySelector('[data-rt="'+operand.id+'"]')?.getAttribute('data-rt-name')||resolveTarget()?.querySelector('[data-rt="'+operand.id+'"]')?.getAttribute('aria-label')||operand.tag;Object.assign(name.style,{display:'block',fontSize:'12px',margin:'8px 0'});box.append(name);if(operand.svgBooleanGroup&&onNested){const edit=I.button('Edit boolean group',()=>onNested(operand));edit.setAttribute('aria-label','Edit nested '+name.textContent+' boolean group');box.append(edit);}if(onCanvas){const tools=root.document.createElement('div');tools.className='stack-presets';for(const action of ['move','resize','rotate']){const label=action[0].toUpperCase()+action.slice(1),button=I.button(label,()=>{if(current())onCanvas(info,operand,infos,action);});button.setAttribute('aria-label',label+' original '+name.textContent+' on canvas');button.title=label+' original on canvas';tools.append(button);}box.append(tools);}const rows=new Map();for(const field of operand.svgGeometry?.fields||[]){const input=root.document.createElement('input');input.type='text';input.value=field.value??'';input.disabled=field.editable===false;I.field(box,'Original '+operand.tag+' '+field.label,input);rows.set(field.name,input.closest('.inspector-field'));input.parentElement.querySelector('span').textContent=field.label;input.onchange=()=>{if(!current())return;const value=input.value.trim()||null,edit={operandId:operand.id,operandOp:{type:'setSVGGeometry',property:field.name,value}};try{const path=compute(resolveTarget(),infos,meta.operation,edit);save('setSVGBooleanOperand',{...edit,path});}catch(error){input.value=field.value??'';fail(error);}};I.fieldDraft(input);}for(const pair of [['x','y'],['cx','cy'],['width','height'],['rx','ry'],['x1','y1'],['x2','y2']]){if(!pair.every(key=>rows.has(key)))continue;const grid=root.document.createElement('div');grid.className='property-pair';rows.get(pair[0]).before(grid);for(const key of pair){const row=rows.get(key);row.querySelector('span').textContent=({width:'W',height:'H',rx:'Rx',ry:'Ry'})[key]||key.toUpperCase();grid.append(row);}}details.append(box);}}catch(error){fail(error);}};
   I.note(section,meta.ancestorId?'Edits here also update the containing boolean groups.':'Double-click the combined shape to move an original. Geometry edits apply to every screen size; the combined outline uses the current SVG size.');return section;
  }
- async function cascade(info,group,type,extra,load){
+ async function prepareCascade(info,group,load){
   const hash=info.hash,d=group.ownerDocument,chain=[],cache=new Map([[info.id,info]]);let next=info.svgBooleanGroup.ancestorId;
   while(next){if(chain.length>=100||cache.has(next))throw Error('The boolean nesting could not be resolved.');const [parent]=await load([next]);if(parent.hash!==hash||!parent.svgBooleanGroup)throw Error('The containing boolean changed. Re-select it.');cache.set(next,parent);chain.push(parent);next=parent.svgBooleanGroup.ancestorId;}
   if(!chain.length)throw Error('Choose a nested boolean group.');
@@ -121,7 +121,7 @@
   const matrix=el=>{const value=root.RetouchSVGAffine.parse(el.getAttribute('transform'));if(!value)throw Error('A boolean transform is not literal.');return value;};
   const effective=el=>el.hasAttribute('data-rt-boolean')?root.RetouchSVGAffine.multiply(matrix(el),matrix(el.querySelector(':scope > [data-rt-boolean-result]'))):matrix(el);
   const live=item=>{if(!changed.has(item.id))return item;const el=element(item.id),result=el.querySelector(':scope > [data-rt-boolean-result]'),meta=item.svgBooleanGroup;return {...item,svgTransform:{...item.svgTransform,value:el.getAttribute('transform'),matrix:matrix(el)},svgBooleanGroup:{...meta,operation:el.getAttribute('data-rt-boolean'),result:{...meta.result,svgGeometry:{...meta.result.svgGeometry,fields:meta.result.svgGeometry.fields.map(field=>({...field,value:result.getAttribute(field.name)}))},svgTransform:{...meta.result.svgTransform,value:result.getAttribute('transform'),matrix:matrix(result)}}}};};
-  return visibleAncestors(group,()=>{try{
+  const run=(type,extra)=>{changes.length=0;changed.clear();changed.add(info.id);return visibleAncestors(group,()=>{try{
    const meta=info.svgBooleanGroup,result=element(meta.resultId);
    if(type==='setSVGBooleanOperation'){put(group,'data-rt-boolean',extra.operation);if(group.getAttribute('data-rt-name')===labels[meta.operation])put(group,'data-rt-name',labels[extra.operation]);put(result,'d',extra.path);}
    else if(type==='setSVGBooleanOperand'){
@@ -135,8 +135,29 @@
    for(const parent of chain){const el=element(parent.id),meta=parent.svgBooleanGroup,infos=[meta.baseId,...meta.operandIds.filter(id=>id!==meta.baseId)].map(id=>live(cache.get(id))),result=element(meta.resultId);
     put(result,'transform',root.RetouchSVGAffine.format(effective(element(meta.baseId))));const path=compute(el,infos,meta.operation);put(result,'d',path);results.push({id:parent.id,path});changed.add(parent.id);
    }
-   return results;
-  }finally{for(const {el,name,value}of changes.reverse()){if(value===null)el.removeAttribute(name);else el.setAttribute(name,value);}}});
+   return {results,render:[info,...chain].map(item=>{const el=element(item.svgBooleanGroup.resultId);return {el,path:el.getAttribute('d'),transform:el.getAttribute('transform')};})};
+  }finally{for(const {el,name,value}of changes.reverse()){if(value===null)el.removeAttribute(name);else el.setAttribute(name,value);}}});};
+  return {run,groups:[group,...chain.map(item=>element(item.id))]};
  }
- root.RetouchSVGBooleanGroup={check:group=>{neutral(group,group.hasAttribute('transform'));const operands=group.querySelector(':scope > [data-rt-boolean-operands]');if(!operands)throw Error('The original shapes are missing.');neutral(operands);if(group.ownerDocument.defaultView.getComputedStyle(operands).display!=='none')throw Error('CSS exposes the nested original shapes.');},cascade,prepare,compute,operandAtPoint,revealOriginals,preview,release,mount};
+ async function cascade(info,group,type,extra,load){return (await prepareCascade(info,group,load)).run(type,extra).results;}
+ function nestedPreview(info,group,infos,operand,prepared){
+  const groups=prepared.groups,top=groups.at(-1),containers=groups.map(el=>el.querySelector(':scope > [data-rt-boolean-operands]')),target=[...group.querySelectorAll('[data-rt]')].find(el=>el.getAttribute('data-rt')===operand.id),states=[];
+  for(const el of containers)for(const name of ['display','style'])states.push({el,name,original:el.getAttribute(name),expected:el.getAttribute(name)});
+  for(const owner of groups){const el=owner.querySelector(':scope > [data-rt-boolean-result]');for(const name of ['d','transform'])states.push({el,name,original:el.getAttribute(name),expected:el.getAttribute(name)});}
+  const owned=(el,name)=>states.some(item=>item.el===el&&item.name===name)||el===target&&name==='transform';
+  const fingerprint=el=>JSON.stringify([...el.attributes].filter(attr=>!owned(el,attr.name)).map(attr=>[attr.name,attr.value]));
+  const nodes=[top,...top.querySelectorAll('*')].map(el=>({el,parent:el.parentNode,next:el.nextElementSibling,value:fingerprint(el)}));
+  const valid=()=>top.isConnected&&top.querySelectorAll('*').length===nodes.length-1&&nodes.every(({el,parent,next,value})=>el.isConnected&&el.parentNode===parent&&el.nextElementSibling===next&&fingerprint(el)===value)&&states.every(item=>item.el.getAttribute(item.name)===item.expected);
+  const assign=(el,name,value)=>{if(value===null)el.removeAttribute(name);else el.setAttribute(name,value);const state=states.find(item=>item.el===el&&item.name===name);state.expected=value;};
+  const restore=()=>{for(const state of states)if(state.el.getAttribute(state.name)===state.expected)assign(state.el,state.name,state.original);};
+  const conceal=()=>{for(const el of containers)assign(el,'display',null);const outer=containers.at(-1),style=states.find(item=>item.el===outer&&item.name==='style').original;assign(outer,'style',(style||'')+';opacity:0!important;');};
+  conceal();return {valid,restore,update(matrix){
+   if(!valid())throw Error('The boolean tree changed during this gesture.');restore();
+   try{
+    const edit={operandId:operand.id,operandOp:{type:'setSVGTransform',matrix}},path=compute(group,infos,info.svgBooleanGroup.operation,edit),result=prepared.run('setSVGBooleanOperand',{...edit,path});
+    for(const item of result.render){assign(item.el,'d',item.path);assign(item.el,'transform',item.transform);}
+   }finally{conceal();}
+  }};
+ }
+ root.RetouchSVGBooleanGroup={check:group=>{neutral(group,group.hasAttribute('transform'));const operands=group.querySelector(':scope > [data-rt-boolean-operands]');if(!operands)throw Error('The original shapes are missing.');neutral(operands);if(group.ownerDocument.defaultView.getComputedStyle(operands).display!=='none')throw Error('CSS exposes the nested original shapes.');},cascade,prepareCascade,nestedPreview,prepare,compute,operandAtPoint,revealOriginals,preview,release,mount};
 })(window);
