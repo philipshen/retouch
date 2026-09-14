@@ -6,3 +6,7 @@ test('image positioning follows cover, contain, natural and scale-down object si
 test('drag distances follow the painted image and clamp at frame edges without moving a filled axis',()=>{
  assert.deepEqual(offset([50,50],[-200,0],50,50),[25,50]);assert.deepEqual(offset([50,50],[0,100],50,25),[50,75]);assert.deepEqual(offset([50,50],[-200,100],1000,-1000),[0,0]);
 });
+
+test('screen deltas invert rotated, reflected and skewed image axes',()=>{
+ const {localDelta}=require('../shell/image-position.js');assert.deepEqual(localDelta([0,1,-1,0],0,50),[50,0]);assert.deepEqual(localDelta([-1,0,0,1],-50,0),[50,0]);const skew=localDelta([1,.25,.5,1],50,12.5);assert.equal(skew[0],50);assert.equal(skew[1],0);assert.throws(()=>localDelta([1,1,1,1],10,10));
+});

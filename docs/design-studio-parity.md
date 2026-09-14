@@ -16674,7 +16674,7 @@ Image framing now exposes Reposition image. It reveals the selected image at the
 
 Chromium/WebKit HTML tests verify drag behavior at 50%, 100% and 200% zoom, cancellation without writes, grouped keyboard movement, exact source undo and retained document/input state. The rendered red/blue crop and light-theme controls were inspected. Unit cases cover cover, contain, fill, none and scale-down sizing. React and local Liquid now also pass responsive gesture checks in Chromium/WebKit, including phone isolation and retained input/document state; React counter state is retained as well.
 
-Rotated/flipped/perspective image frames and non-percentage starting positions remain unsupported by this gesture. It cancels when the selected image, dimensions, source, fit or edit scope changes. Independent image zoom, crop-frame handles and image rotation remain unfinished; no new desktop archive was built.
+Rotated, flipped and skewed 2D image frames now support this gesture; perspective/motion-path frames and non-percentage starting positions remain unsupported. It cancels when the selected image, dimensions, source, fit or edit scope changes. Independent image zoom, crop-frame handles and image rotation remain unfinished; no new desktop archive was built.
 
 
 ### Image gestures across React and Liquid — 2026-09-14
@@ -16693,3 +16693,12 @@ Server-rendered previews now fetch a non-executing CSS baseline at frame load. A
 Browser checks cover startup CSSOM mutation in Chromium and startup text mutation in WebKit, including retained style-node identities and custom properties, generated image-position CSS, responsive isolation, source undo, later runtime conflicts and retry. A conflicting server response is explicitly refused without a partial class update. Existing Liquid single/multi-layer scope and history checks pass.
 
 This adds one same-origin read per server-rendered preview load. Ambiguous duplicate sheets, changed sheet structure, inaccessible CSSOM or baseline fetch failure do not establish ownership. Constructable stylesheet parsing does not support imported CSS ownership; those cases still require a broader solution. Live Shopify behavior and universal site coverage remain unverified.
+
+
+### Repositioning transformed image frames — 2026-09-14
+
+Image repositioning now converts pointer and keyboard deltas through the composed 2D transforms of the image and its ancestors. It supports rotation, reflection and skew while preserving the authored frame transform. The drag surface and blue outline follow the transformed quadrilateral, so the empty corners of a rotated bounding box do not intercept pointer input. Geometry is checked against browser bounds, and a transform change cancels the gesture.
+
+Chromium checks cover a 30-degree image rotation and a horizontally reflected image inside a 90-degree rotated parent. WebKit covers a skew matrix. Each workflow runs at 50%, 100% and 200% zoom, checks cancellation, live position values, keyboard movement, exact source undo and retained preview state. The rotated crop and outline were visually inspected; a browser assertion verifies the outside-corner hit region. WebKit's mouse rounding requires integer screen deltas for the exact skew fixture.
+
+Perspective, motion paths, singular transforms and full image crop/zoom/rotation authoring remain unfinished. This extends movement inside already-transformed frames; it is not complete image-editor parity.
