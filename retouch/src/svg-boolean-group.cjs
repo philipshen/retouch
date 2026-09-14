@@ -174,6 +174,10 @@ function plan(r,op,kind){
 }
 const types=new Set(['setSVGBooleanNested','createSVGBooleanGroup','releaseSVGBooleanGroup','setSVGBooleanOperation','setSVGBooleanOperand','setSVGBooleanPaint']);
 function owner(r,kind){if(!r.source?.includes('data-rt-boolean'))return null;const v=view(r,kind);for(let id=r.element.id;id;id=v.parents.get(id)){const e=v.elements.find(e=>e.id===id);if(e&&v.attr(e,'data-rt-boolean')!==undefined)return e.id;}return null;}
-function describe(r,kind){const c=context(r,kind);return c?{operation:c.operation,operandIds:c.roots.map(e=>e.id),baseId:c.roots[c.base].id,resultId:c.result.id,paints:Object.fromEntries(Object.entries(paintNames).map(([property,name])=>[property,(kind==='react'?c.attr(c.result,name)??c.attr(c.result,property):c.attr(c.result,property))??null])),canRelease:true}:null;}
+function describe(r,kind){
+ const c=context(r,kind);if(!c)return null;
+ const resultResolved={...r,element:c.result},svgGeometry=kind==='react'?require('./jsx-svg-geometry.cjs').describe(resultResolved):kind==='liquid'?require('./liquid-svg-geometry.cjs').describe(resultResolved):require('./svg-geometry.cjs').describe(c.result);
+ return {operation:c.operation,parentId:c.parentId,ancestorId:ancestor(r,kind),operandIds:c.roots.map(e=>e.id),baseId:c.roots[c.base].id,resultId:c.result.id,result:{id:c.result.id,tag:'path',file:r.relPath,hash:r.hash,svgGeometry,svgTransform:require('./svg-transform.cjs').describe(resultResolved,kind),booleanOperandPreview:true},paints:Object.fromEntries(Object.entries(paintNames).map(([property,name])=>[property,(kind==='react'?c.attr(c.result,name)??c.attr(c.result,property):c.attr(c.result,property))??null])),canRelease:!ancestor(r,kind)};
+}
 function guard(r,op,kind){if(r.booleanOperandEdit||types.has(op.type))return null;const id=owner(r,kind);return id&&!(id===r.element.id&&!ancestor(r,kind)&&(op.type==='deleteElement'||['setSVGTransform','setSVGTransforms'].includes(op.type)&&context(r,kind)))?{ok:false,refused:true,reason:'Edit the original shapes from the Boolean group section, or release the group first.'}:null;}
 module.exports={plan,context,describe,owner,ancestor,guard,types};

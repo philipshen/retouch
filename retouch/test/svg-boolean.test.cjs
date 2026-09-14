@@ -43,3 +43,13 @@ test('transformed arc operands match analytic elliptical regions with independen
  }
  for(const operand of [{document:circle,fillRule:''},{document:circle,matrix:false},{document:circle,matrix:[100000,0,0,100000,0,0]}])assert.equal(combineShapes([operand,{document:box}],'union').ok,false);
 });
+
+test('empty retained results obey boolean set identities without losing the other operand',()=>{
+ const {combineShapes}=require('../shell/svg-boolean.js'),empty={document:{subpaths:[]}},filled={document:geometry.parseCompound(rectangle(10,20,30,40))};
+ for(const operation of ['union','subtract','intersect','exclude'])for(const reversed of [false,true]){
+  const result=combineShapes(reversed?[filled,empty]:[empty,filled],operation);assert.equal(result.ok,true,result.reason);
+  const expectFilled=operation==='union'||operation==='exclude'||operation==='subtract'&&reversed;assert.equal(result.empty,!expectFilled,operation+' '+reversed);
+  if(expectFilled){const scope=new paper.PaperScope();scope.setup(new scope.Size(1,1));try{const shape=new scope.CompoundPath({pathData:geometry.serializeCompound(result.document),insert:false});assert.equal(shape.area,1200);}finally{scope.remove();}}
+ }
+ for(const operation of ['union','subtract','intersect','exclude'])assert.equal(combineShapes([empty,empty],operation).empty,true);
+});

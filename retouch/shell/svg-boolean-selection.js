@@ -18,7 +18,7 @@
   const css=el.ownerDocument.defaultView.getComputedStyle(el),fields=info.svgGeometry?.fields;if(!fields||fields.some(f=>f.editable===false))throw Error('Choose shapes with editable geometry.');
   for(const field of fields)if(el.getAttribute(field.name)!==field.value)throw Error('A shape changed. Re-select the layers.');
   if(el.localName==='path'){
-   const computed=css.getPropertyValue('d').trim();let d=el.getAttribute('d');if(computed==='none')return null;if(computed){const match=/^path\(("(?:[^"\\]|\\.)*")\)$/.exec(computed);if(!match)throw Error('This CSS path cannot be combined yet.');d=JSON.parse(match[1]);}return geometry().parseCompound(d);
+   const computed=css.getPropertyValue('d').trim();let d=el.getAttribute('d');if(d===''&&(!computed||computed==='none'))return {subpaths:[]};if(computed==='none')return null;if(computed){const match=/^path\(("(?:[^"\\]|\\.)*")\)$/.exec(computed);if(!match)throw Error('This CSS path cannot be combined yet.');d=JSON.parse(match[1]);}return d===''?{subpaths:[]}:geometry().parseCompound(d);
   }
   if(['polygon','polyline'].includes(el.localName)){const pts=[...el.points].map(p=>({x:p.x,y:p.y}));return pts.length>2?{subpaths:[{closed:true,nodes:pts}]}:null;}
   const values={};for(const f of fields){let value=css.getPropertyValue(f.name).trim();if(value&&value!=='auto'){values[f.name]=usedLength(el,f.name,value);}else values[f.name]=['rx','ry'].includes(f.name)&&['rect','ellipse'].includes(el.localName)?null:el[f.name]?.baseVal?.value??0;}
@@ -29,6 +29,12 @@
  }
  function prepare(infos,elements,operation){
   if(infos.length<2||infos.length!==elements.length||new Set(infos.map(i=>i.file)).size!==1||new Set(infos.map(i=>i.hash)).size!==1||elements.some(el=>!el?.isConnected||el.parentElement!==elements[0].parentElement))throw Error('Select sibling SVG shapes from one source file.');
+  elements=elements.map((el,i)=>{
+   if(!infos[i].svgBooleanGroup)return el;
+   root.RetouchSVGBooleanGroup.check(el);const reason=root.RetouchSVGResize.reason(el,infos[i],true);if(reason)throw Error(reason);
+   const result=el.querySelector(':scope > [data-rt-boolean-result]');if(!result||result.getAttribute('data-rt')!==infos[i].svgBooleanGroup.resultId)throw Error('The nested boolean result changed. Re-select the group.');return result;
+  });
+  infos=infos.map(info=>info.svgBooleanGroup?info.svgBooleanGroup.result:info);
   const base=elements[0],inv=base.getScreenCTM()?.inverse();if(!inv)throw Error('The base shape has no measurable transform.');
   const operands=elements.map((el,i)=>{const reason=root.RetouchSVGResize.reason(el,infos[i],true);if(reason)throw Error(reason);const document=renderedPath(el,infos[i]);if(!document)throw Error('Choose closed shapes with nonzero area.');return {document,fillRule:el.ownerDocument.defaultView.getComputedStyle(el).fillRule,matrix:array(inv.multiply(el.getScreenCTM()))};});
   const result=root.RetouchSVGBoolean.combineShapes(operands,operation);if(!result.ok)throw Error(result.reason);const path=result.empty?'':geometry().serializeCompound(result.document);
@@ -41,7 +47,7 @@
   return path;
  }
  function mount(infos,elements,{current,save,saveGroup}){
-  const I=root.RetouchInspector,section=I.section('Combine shapes'),row=root.document.createElement('div');Object.assign(row.style,{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:'4px'});section.append(row);const keep=root.document.createElement('input');keep.type='checkbox';keep.checked=!!saveGroup;keep.setAttribute('aria-label','Keep original shapes');const label=root.document.createElement('label');label.append(keep,' Keep original shapes');section.append(label);
+  const I=root.RetouchInspector,section=I.section('Combine shapes'),row=root.document.createElement('div');Object.assign(row.style,{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:'4px'});section.append(row);const keep=root.document.createElement('input');keep.type='checkbox';keep.checked=!!saveGroup;keep.disabled=infos.some(info=>info.svgBooleanGroup);keep.setAttribute('aria-label','Keep original shapes');const label=root.document.createElement('label');label.append(keep,' Keep original shapes');section.append(label);
   const icons={union:'M4 4H14V10H20V20H10V14H4Z',subtract:'M4 4H14V10H10V14H4Z',intersect:'M10 10H14V14H10Z',exclude:'M4 4H14V10H10V14H4ZM14 10H20V20H10V14H14Z'};
   for(const [operation,label]of [['union','Union'],['subtract','Subtract'],['intersect','Intersect'],['exclude','Exclude overlap']]){const button=I.button(label,()=>{if(!current())return;try{const path=keep.checked?root.RetouchSVGBooleanGroup.prepare(infos,elements,operation):prepare(infos,elements,operation);if(current()){if(keep.checked)saveGroup(path,operation);else save(path);}}catch(error){I.note(section,error.message,'refused').setAttribute('role','alert');}});button.setAttribute('aria-label',label+' selected shapes');button.title=label+' selected shapes';button.innerHTML='<svg width=20 height=20 viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4H14V14H4ZM10 10H20V20H10Z" fill="none" stroke="currentColor" opacity=".25"/><path d="'+icons[operation]+'" fill="currentColor"/></svg>';row.append(button);}
   I.note(section,'Uses the first selected shape’s appearance. Subtract removes the other shapes from it. The outline uses fixed SVG coordinates. Keep original shapes to edit or release them later.');return section;

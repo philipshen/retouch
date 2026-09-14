@@ -57,6 +57,8 @@
     for(const el of d.querySelectorAll('[data-rt], [data-rt-i]')) {
       if(['SCRIPT','STYLE','TEMPLATE','HEAD','META','LINK'].includes(el.tagName))continue;
       let parent=el.parentElement;while(parent&&!map.has(parent))parent=parent.parentElement;
+      if(el.closest?.('[data-rt-boolean-result]')?.parentElement?.hasAttribute('data-rt-boolean'))continue;
+      if(el.hasAttribute('data-rt-boolean-operands')&&el.parentElement?.hasAttribute('data-rt-boolean')&&parent){map.set(el,map.get(parent));continue;}
       if(parent&&map.get(parent).atomicText&&!showTextRuns){map.set(el,map.get(parent));continue;}
       const textLayer=atomicText(el,{preserve});
       const item={el,atomicText:textLayer,label:label(el,textLayer),children:[],parent:parent?map.get(parent):null};
