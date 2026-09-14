@@ -43,6 +43,15 @@
    return path;
   }finally{if(edit&&target){if(previous===null)target.removeAttribute(property);else target.setAttribute(property,previous);}if(display===null)operands.removeAttribute('display');else operands.setAttribute('display',display);}
  }
+ function operandAtPoint(group,x,y,allow=()=>true){
+  const container=group?.querySelector(':scope > [data-rt-boolean-operands]');if(!container||!Number.isFinite(x)||!Number.isFinite(y))return null;
+  const display=container.getAttribute('display');
+  try{container.removeAttribute('display');for(const el of [...container.children].reverse()){
+   if(!allow(el)||!el.getAttribute('data-rt')||typeof el.isPointInFill!=='function')continue;
+   try{const m=el.getScreenCTM();if(m&&el.isPointInFill(new group.ownerDocument.defaultView.DOMPoint(x,y).matrixTransform(m.inverse())))return el.getAttribute('data-rt');}catch{}
+  }return null;}finally{if(display===null)container.removeAttribute('display');else container.setAttribute('display',display);}
+ }
+ function revealOriginals(info){openOriginals.add(info.file+'#'+info.id);}
  function preview(group,infos,operand,operation){
   const container=group.querySelector(':scope > [data-rt-boolean-operands]'),result=group.querySelector(':scope > [data-rt-boolean-result]');if(!container||!result)throw Error('Re-select the boolean group.');
   const saved=[[container,'display'],[container,'style'],[result,'d'],[result,'transform']].map(([el,name])=>({el,name,value:el.getAttribute(name)}));
@@ -71,7 +80,7 @@
   section.append(I.button('Release boolean group',()=>{if(!current())return;try{release(resolveTarget());save('releaseSVGBooleanGroup',{});}catch(error){fail(error);}}));
   const details=root.document.createElement('details'),summary=root.document.createElement('summary');summary.textContent='Original shapes';Object.assign(summary.style,{fontSize:'12px',fontWeight:'600',padding:'8px 0',cursor:'pointer'});details.append(summary);const key=info.file+'#'+info.id;details.open=openOriginals.has(key);section.append(details);let loaded=false;
   details.ontoggle=async()=>{if(details.open)openOriginals.add(key);else openOriginals.delete(key);if(!details.open||loaded)return;try{const infos=await ready();if(!selected())return;loaded=true;for(const operand of infos){const box=root.document.createElement('div'),name=root.document.createElement('strong');name.textContent=operand.layerName||resolveTarget()?.querySelector('[data-rt="'+operand.id+'"]')?.getAttribute('aria-label')||operand.tag;Object.assign(name.style,{display:'block',fontSize:'12px',margin:'8px 0'});box.append(name);if(onCanvas){const tools=root.document.createElement('div');tools.className='stack-presets';for(const action of ['move','resize','rotate']){const label=action[0].toUpperCase()+action.slice(1),button=I.button(label,()=>{if(current())onCanvas(info,operand,infos,action);});button.setAttribute('aria-label',label+' original '+name.textContent+' on canvas');button.title=label+' original on canvas';tools.append(button);}box.append(tools);}const rows=new Map();for(const field of operand.svgGeometry.fields){const input=root.document.createElement('input');input.type='text';input.value=field.value??'';input.disabled=field.editable===false;I.field(box,'Original '+operand.tag+' '+field.label,input);rows.set(field.name,input.closest('.inspector-field'));input.parentElement.querySelector('span').textContent=field.label;input.onchange=()=>{if(!current())return;const value=input.value.trim()||null,edit={operandId:operand.id,operandOp:{type:'setSVGGeometry',property:field.name,value}};try{const path=compute(resolveTarget(),infos,meta.operation,edit);save('setSVGBooleanOperand',{...edit,path});}catch(error){input.value=field.value??'';fail(error);}};I.fieldDraft(input);}for(const pair of [['x','y'],['cx','cy'],['width','height'],['rx','ry'],['x1','y1'],['x2','y2']]){if(!pair.every(key=>rows.has(key)))continue;const grid=root.document.createElement('div');grid.className='property-pair';rows.get(pair[0]).before(grid);for(const key of pair){const row=rows.get(key);row.querySelector('span').textContent=({width:'W',height:'H',rx:'Rx',ry:'Ry'})[key]||key.toUpperCase();grid.append(row);}}details.append(box);}}catch(error){fail(error);}};
-  I.note(section,'Original shapes stay in the group. Geometry edits apply to every screen size; the combined outline uses the current SVG size.');return section;
+  I.note(section,'Double-click the combined shape to move an original. Geometry edits apply to every screen size; the combined outline uses the current SVG size.');return section;
  }
- root.RetouchSVGBooleanGroup={prepare,compute,preview,release,mount};
+ root.RetouchSVGBooleanGroup={prepare,compute,operandAtPoint,revealOriginals,preview,release,mount};
 })(window);

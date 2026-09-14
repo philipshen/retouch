@@ -16310,3 +16310,26 @@ regeneration and direct double-click entry remain incomplete or unverified.
 The signed desktop archive predates this change. No rebuild, native launch or
 push occurred. Evidence:
 `/Users/philipshen/Developer/retouch-worktrees/recovery-2026-09-14/live-boolean-preview/`.
+
+
+### Double-click entry to boolean originals — 2026-09-14
+
+Double-clicking a combined shape now opens the original under the pointer in
+canvas move mode, with the live combined preview and active-original outline.
+The original-shapes disclosure opens automatically and the inspector includes
+a short hint. Hit testing uses native SVG fill geometry and inverse screen
+transforms, checks originals in reverse paint order, and skips locked originals.
+Temporary visibility changes are restored even when the hit test misses.
+Descriptor reads validate the selection serial, vector-entry serial, mode and
+source revision before starting a gesture; later selections cannot activate an
+older pending entry. Boolean double-clicks do not enter inline text editing.
+
+All 1,347 unit tests passed. HTML Chromium verifies base-only, cut-only and
+overlap hits, exact cancellation/history and retained page state. Liquid Chromium
+and React WebKit also verify bypassing a locked topmost original and restoration
+after a missed hit. The surrounding full boolean inspector/history flows pass.
+This is direct entry to the existing move gesture; persistent nested selection,
+modifier cycling through overlaps, arbitrary nested boolean networks and full
+Figma/arbitrary-site parity remain incomplete. The signed desktop archive
+predates this change. No rebuild, native launch or push occurred.
+Evidence: `/Users/philipshen/Developer/retouch-worktrees/recovery-2026-09-14/boolean-direct-entry/`.

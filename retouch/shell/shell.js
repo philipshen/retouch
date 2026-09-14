@@ -258,7 +258,7 @@ function hookFrame(d, w) {
     if (t&&!layerLocks.locked(t)) startInlineEdit(t, e, true);
     else clearSelection();
   }, true);
-  // Double-click opens vector points or starts inline text editing.
+  // Double-click opens vector points, boolean originals, or inline text.
   d.addEventListener('dblclick', (e) => {
     if (mode !== 'edit') return;
     if(undoBusy||sourceRequests){e.preventDefault();e.stopPropagation();return;}
@@ -644,7 +644,17 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
     scope: c.instanceId && info.id === c.instanceId ? 'instance' : 'host',
     info,
   };
-  if(info.svgBooleanOwner){renderPanel();return;}
+  if(info.svgBooleanOwner){
+    if(openVector&&info.svgBooleanGroup){
+      RetouchSVGBooleanGroup.revealOriginals(info);renderPanel();
+      const operandId=RetouchSVGBooleanGroup.operandAtPoint(el,evt?.clientX,evt?.clientY,target=>!layerLocks.locked(target));
+      if(operandId){const serial=classificationSerial,meta=info.svgBooleanGroup,ids=[meta.baseId,...meta.operandIds.filter(id=>id!==meta.baseId)],responses=await Promise.all(ids.map(id=>api('GET',resolveUrl(id))));
+        if(serial!==classificationSerial||vectorRequest!==vectorEntrySerial||mode!=='edit'||sel?.info.id!==info.id||sel.info.hash!==info.hash)return;
+        if(responses.some(r=>!r?.ok||r.element.hash!==info.hash))return toast('The original shapes changed. Re-select the group.','err');
+        const infos=responses.map(r=>r.element),operand=infos.find(item=>item.id===operandId);if(operand)editBooleanOperandOnCanvas(info,operand,infos,'move');
+      }
+    }else renderPanel();return;
+  }
   if(openVector&&editableVectorField(info)){renderPanel();pendingVectorEntry={info,serial:classificationSerial};openPendingVectorEntry();return;}
   // Only literal or rich text can be edited in place; otherwise just select.
   if (info.text === null && !info.mixedText) {
