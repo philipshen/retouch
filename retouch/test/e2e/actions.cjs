@@ -74,6 +74,10 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   await run('toggle screen comparisons','Toggle screen comparisons');
   await run('add screen','Pin current size');await wait(async()=>await page.locator('.compare-card').count()===4);
   await run('show current','Show current size');assert.equal(await page.locator('.compare-card').count(),4);
+  await page.getByRole('button',{name:'Remove Phone comparison',exact:true}).click();await wait(async()=>await page.locator('.compare-card').count()===3);
+  await run('undo remove screen','Undo remove: Phone');await wait(async()=>await page.locator('.compare-card').count()===4);
+  assert.equal(await page.getByRole('button',{name:'Edit from Phone comparison',exact:true}).evaluate(el=>el===document.activeElement),true);
+  await open();await input().fill('undo remove screen');assert.equal(await dialog().getByRole('option').count(),0);await input().press('Escape');
   assert.equal(await page.evaluate(()=>[811,812,813,814].every(width=>RetouchComparisons.showSize({width,height:900}))),true);
   await page.getByLabel('Screen width',{exact:true}).fill('815');await page.getByLabel('Screen width',{exact:true}).press('Enter');
   await open();await input().fill('add screen');const full=dialog().getByRole('option',{name:/^Pin current size/});assert.equal(await full.getAttribute('aria-disabled'),'true');assert.ok((await full.textContent()).includes('Remove a comparison to add another'));await input().press('Escape');

@@ -258,7 +258,7 @@
     files.append(saveSet,loadSet,undoLoad,file);rail.append(files,setStatus);
     pin=document.createElement('button');pin.id='comparisonPin';pin.className='control-button comparison-pin';pin.type='button';pin.textContent='+';pin.setAttribute('aria-label','Pin current size');
     pin.onclick=()=>{if(!pin.disabled)window.RetouchComparisons.showSize(current());};toolbar.insertBefore(pin,focus);
-    restore=document.createElement('button');restore.className='control-button';restore.type='button';
+    restore=document.createElement('button');restore.id='comparisonRestore';restore.className='control-button';restore.type='button';
     restore.onclick=()=>{
       updateControls();if(restore.disabled)return;
       const last=removed.pop(),index=Math.min(last.index,sizes.length),next=cards[index]?.card;

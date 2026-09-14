@@ -16647,3 +16647,8 @@ open. Searches such as “add screen” find Pin current size; existing sizes ex
 Show current size. Availability and the capacity-limit explanation come from the
 actual toolbar control. The action workflow creates a screen, reveals it without
 a duplicate, and checks the disabled add action at capacity, with unchanged source.
+
+Actions search also exposes the visible Undo remove screen control, including
+the removed screen's name and current refusal reason. The entry disappears when
+no removed screen remains. The action workflow removes Phone, restores it through
+search, verifies preview focus, and checks the exhausted action is absent.
