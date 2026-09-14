@@ -16583,3 +16583,8 @@ is shortened to **Screens** so the add button, labeled controls toggle, and help
 fit the narrow rail. Chromium and WebKit panel workflows add an 800 by 900 preview
 while controls remain collapsed, verify all existing preview documents and form
 values survive, and confirm source is unchanged.
+
+The screen picker also avoids repeating dimensions already present in automatic
+`Custom W × H` names. Named screens retain `Name · W × H`. The compact-add browser
+workflow checks the automatic label, and the project-screen workflow covers
+renaming, dimensions, and persisted names.

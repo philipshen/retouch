@@ -26,6 +26,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    await page.getByLabel('Screen width',{exact:true}).fill('800');await page.getByLabel('Screen width',{exact:true}).press('Enter');
    await wait(async()=>!await add.isDisabled());await add.click();await preview('Custom 800 × 900').locator('body').waitFor();
    assert.equal(await page.locator('.compare-card').count(),4);
+   assert.equal(await page.locator('#screenPreset option:checked').textContent(),'Custom 800 × 900');
    assert.equal(await focus.getAttribute('aria-expanded'),'false');
    assert.equal(await page.locator('.compare-toolbar').evaluate(el=>el.scrollWidth<=el.clientWidth+1),true);
    await page.screenshot({path:'/private/tmp/retouch-comparison-focus-'+engine+'.png'});await focus.click();assert.equal(await page.getByLabel('Phone comparison width',{exact:true}).isVisible(),true);assert.equal(await page.getByRole('button',{name:'Save screen set',exact:true}).isVisible(),true);

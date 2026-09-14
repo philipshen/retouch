@@ -139,7 +139,7 @@
   document.addEventListener('pointerdown',event=>{if(compactToolbar.matches&&options.open&&!options.contains(event.target))options.open=false;},true);
   window.RetouchScreens = { constrain, constrainMain, isRatioLocked:()=>linked, setSaved(sizes) {
     savedGroup.replaceChildren();
-    for(const [label,w,h] of sizes){if(typeof label!=='string'||!valid(w)||!valid(h))continue;const option=document.createElement('option');option.value='saved:'+w+'x'+h;option.textContent=label+' · '+w+' × '+h;savedGroup.append(option);}
+    for(const [label,w,h] of sizes){if(typeof label!=='string'||!valid(w)||!valid(h))continue;const option=document.createElement('option');option.value='saved:'+w+'x'+h;option.textContent=label===`Custom ${w} × ${h}`?label:label+' · '+w+' × '+h;savedGroup.append(option);}
     const name=screen?screen.width+'x'+screen.height:'fluid';preset.value=[...preset.options].some(option=>option.value===name)?name:[...savedGroup.children].some(option=>option.value==='saved:'+name)?'saved:'+name:'custom';
   }, get() { return screen ? {...screen} : null; }, set(next, options) { if(next===null || next && valid(next.width) && valid(next.height))apply(next, options); }, restore() {
     try {
