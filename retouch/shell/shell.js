@@ -3059,7 +3059,7 @@ function svgSelectionMatches(infos,d){return infos.every(info=>matchingInDocumen
 async function writeSVGTransform(info,target,matrix){
   if(sel?.info!==info||panelTasks||undoBusy||sourceRequests||editing)return;
   const reason=RetouchSVGResize.reason(target,info,true);if(reason)return toast(reason,'err');busyPanel(true);
-   try{const result=await api('POST','/rt/__api/op',{type:'setSVGTransform',id:info.id,fileHash:info.hash,matrix});if(!result?.ok)return toast(result?.reason||result?.error||'Could not update vector','err');if(result.undoId)editorHistory.record({type:'setSVGTransform',id:info.id,undoId:result.undoId});sel.info=result.element;await refreshWrittenElement(sel.info,el=>el.getAttribute('transform')===sel.info.svgTransform?.value);renderPanel();toast('Vector updated','ok');}finally{busyPanel(false);}
+   try{const result=await api('POST','/rt/__api/op',{type:'setSVGTransform',id:info.id,fileHash:info.hash,matrix});if(!result?.ok)return toast(result?.reason||result?.error||'Could not update vector','err');if(result.undoId)editorHistory.record({type:'setSVGTransform',id:info.id,undoId:result.undoId});sel.info=result.element;await refreshWrittenElement(sel.info,el=>el.getAttribute('transform')===sel.info.svgTransform?.value,{maskGeometry:true});renderPanel();toast('Vector updated','ok');}finally{busyPanel(false);}
 }
 function svgGradientsMatch(el,info){return (info.svgGradientCreation?.values||[]).every(item=>el.getAttribute(item.paint)===item.value)&&(info.svgGradients||[]).every(gradient=>{const node=el.ownerDocument.getElementById(gradient.id),reference=/^url\(\s*(['"]?)#([\w:.-]+)\1\s*\)$/.exec(el.getAttribute(gradient.paint)||'');if(!node||node.localName!==gradient.type||reference?.[2]!==gradient.id)return false;const stops=[...node.children].filter(child=>child.localName==='stop');return gradient.fields.every(field=>node.getAttribute(field.name)===field.value)&&stops.length===gradient.stops.length&&gradient.stops.every((stop,i)=>stops[i].getAttribute('offset')===stop.offset&&stops[i].getAttribute('stop-color')===stop.color&&stops[i].getAttribute('stop-opacity')===stop.opacity);});}
 function svgGradientStopValues(nodes){
@@ -3531,7 +3531,7 @@ async function restoreHistory(direction,op) {
           return tokens(el.getAttribute('class')) === tokens(info.className);
         }
         return (info.className || '').split(/\s+/).filter(Boolean).every(t => el.classList.contains(t));
-      },{verifyText:op.type==='setText'&&!info.textSource,maskGeometry:op.type==='setSVGGeometry'});
+      },{verifyText:op.type==='setText'&&!info.textSource,maskGeometry:['setSVGGeometry','setSVGTransform'].includes(op.type)});
       if(op.type==='setText'&&info.kind==='host'&&!info.textSource&&window.__RT_RENDERING?.reloadAfterWrite){
         await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info)});
       }else await refresh();
@@ -3842,7 +3842,7 @@ async function moveLayerInto(info,destinationId,position='inside'){
 async function prepareVectorCanvas(info,target){
   if(mode!=='edit')modeBtn.click();canvasPan.cancel();
   // Keep handles away from the clipped canvas edge without changing site size or zoom.
-  const f=iframe.getBoundingClientRect(),c=canvasSurface.getBoundingClientRect(),r=target.getBoundingClientRect(),scale=f.width/iframe.contentWindow.innerWidth;
+  const f=iframe.getBoundingClientRect(),c=canvasSurface.getBoundingClientRect(),r=RetouchSVGResize.screenBounds(target),scale=f.width/iframe.contentWindow.innerWidth;
   const left=f.left+r.left*scale,top=f.top+r.top*scale,right=f.left+r.right*scale,bottom=f.top+r.bottom*scale;
   if(r.width*scale+24<c.width)canvasSurface.scrollLeft+=left<c.left+12?left-c.left-12:right>c.right-12?right-c.right+12:0;
   if(r.height*scale+24<c.height)canvasSurface.scrollTop+=top<c.top+12?top-c.top-12:bottom>c.bottom-12?bottom-c.bottom+12:0;

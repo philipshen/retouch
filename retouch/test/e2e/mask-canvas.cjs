@@ -1,0 +1,20 @@
+'use strict';
+const assert=require('node:assert/strict');
+module.exports=async({page,app,read,wait,settled,masked,pixel})=>{
+ const shape=app.locator('mask circle'),handle=page.getByRole('button',{name:'Resize vector from right',exact:true});
+ await handle.waitFor({state:'visible'});assert.equal(await page.evaluate(()=>RetouchSVGResize.reason(doc().querySelector('mask circle'),sel.info,true)),null);
+ assert.ok(await page.locator('[data-mask-outlines="app"] path').count());
+ if(process.env.RT_E2E_MASK_CANVAS_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_MASK_CANVAS_SCREENSHOT});
+ const box=await handle.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+20,box.y+box.height/2,{steps:4});assert.equal(read(),masked,'drag previews before committing one gesture');await page.mouse.up();await settled();await wait(()=>read()!==masked);const resized=read();assert.ok(await shape.getAttribute('transform'));assert.notDeepEqual(await pixel(90,40),[255,255,255]);
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===masked);assert.deepEqual(await pixel(90,40),[255,255,255]);
+ await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===resized);
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===masked);
+ await handle.waitFor({state:'visible'});const restored=await handle.boundingBox();await page.mouse.move(restored.x+restored.width/2,restored.y+restored.height/2);await page.mouse.down();await page.mouse.move(restored.x+restored.width/2+10,restored.y+restored.height/2);await page.keyboard.press('Escape');await page.mouse.up();await settled();assert.equal(read(),masked);assert.equal(await shape.getAttribute('transform'),null);
+ await page.getByRole('button',{name:'Actions',exact:true}).click();await page.getByRole('combobox',{name:'Search actions',exact:true}).fill('Move vector on canvas');await page.getByRole('option',{name:'Move vector on canvas',exact:true}).click();const move=page.getByRole('button',{name:'Move vector',exact:true});await move.waitFor();await move.press('ArrowRight');await move.press('Enter');await settled();await wait(()=>read()!==masked);const moved=read();assert.equal(await shape.getAttribute('transform'),'matrix(1 0 0 1 1 0)');
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===masked);await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===moved);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===masked);
+ await page.getByLabel('Align to',{exact:true}).selectOption('viewport');await page.getByRole('button',{name:'Align horizontal centers',exact:true}).click();await settled();await wait(()=>read()!==masked);assert.equal(await shape.getAttribute('transform'),'matrix(1 0 0 1 50 0)');const aligned=read();
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===masked);await page.getByRole('button',{name:'Redo',exact:true}).click();await settled();await wait(()=>read()===aligned);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===masked);
+ assert.equal(await app.locator('input').inputValue(),'retained');assert.equal(await app.locator('input').evaluate(()=>window.maskDocument),'same');
+ await shape.evaluate(el=>el.style.transform='translateX(2px)');assert.match(await page.evaluate(()=>RetouchSVGResize.reason(doc().querySelector('mask circle'),sel.info,true)),/CSS controls/);await shape.evaluate(el=>el.style.removeProperty('transform'));assert.equal(read(),masked);
+ console.log('Mask canvas: resize pixels, move command, cancellation, exact gesture history and retained document PASS');
+};
