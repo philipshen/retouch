@@ -15615,3 +15615,21 @@ and package signatures/manifests rechecked. See
 `desktop/verification/2026-09-14-vector-joins-screens.json` for hashes and scopes.
 The bundle is ad hoc signed, with native/trusted distribution still unverified.
 This packages recent progress; it does not establish full Figma parity.
+
+### Keyboard navigation while picking endpoints (2026-09-14)
+
+Endpoint-picking mode now uses arrow keys to move focus through available
+endpoint buttons in contour order, wrapping at either end. Home/End selects the
+first/last available endpoint. Disabled endpoints are skipped, including the
+already chosen first endpoint. Enter/Space activation and Escape cancellation
+remain available. Navigation does not move vector anchors; composition events
+are left alone. The picker help describes these keys.
+
+HTML Chromium and WebKit compound-vector workflows pass
+(`/private/tmp/retouch-endpoint-navigation-{html,webkit}.log`), checking wrapping,
+Home/End, disabled-endpoint skipping, unchanged preview geometry and source,
+then existing endpoint selection, cancellation and source-history behavior.
+Syntax and diff checks pass. No native build was produced for this interaction
+change; full parity remains unfinished.
+React/Chromium passed the same complete workflow
+(`/private/tmp/retouch-endpoint-navigation-react.log`, exit 0).

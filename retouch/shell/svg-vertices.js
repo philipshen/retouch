@@ -110,7 +110,7 @@
       };joins.append(joinChosenButton);optionsPanel.append(joins);
       closureButton=action('Close contour',()=>restructure(closed?'open':'close'));
     }
-    function joinHint(text){clearHint();clearHint=root.RetouchCanvasHint?.show(text,'Choose ends of different contours to join, or both ends of one contour to close it. Escape exits picking without discarding path edits.')||(()=>{});}
+    function joinHint(text){clearHint();clearHint=root.RetouchCanvasHint?.show(text,'Arrows or Home/End move between endpoints; Enter or Space selects. Choose ends of different contours to join, or both ends of one contour to close it. Escape exits picking without discarding path edits.')||(()=>{});}
     function endJoinPicking(){joinPicking=false;joinFirst=null;joinHint('Vector editing · Enter to save · Escape to cancel');rebuild();optionsToggle.focus({preventScroll:true});}
     function pickJoinEndpoint(index,end){
       if(!joinPicking||!verify())return;
@@ -360,7 +360,13 @@
     listen(surface,'pointerup',e=>{if(!drag||drag.id!==e.pointerId)return;e.preventDefault();e.stopImmediatePropagation();move(e);if(!ended&&drag.box){drag=null;selectionBox.hidden=true;announce();return;}if(!ended){const selected=drag.contour?vertices[0]:activeHandle?vertices[active][activeHandle]:vertices[active],moved=Math.hypot(selected.x-drag.point.x,selected.y-drag.point.y)>1e-9;const collapse=drag.collapse;drag=null;if(moved)commit();else if(collapse){selectedPoints=new Set([active]);announce();paint();}}});
     listen(surface,'pointercancel',cancel);listen(surface,'lostpointercapture',()=>{if(drag)cancel();});
     listen(surface,'keydown',e=>{
-      if(joinPicking){if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();endJoinPicking();}else if(!['Tab','Enter',' '].includes(e.key)){e.preventDefault();e.stopImmediatePropagation();}return;}
+      if(joinPicking){
+        if(e.isComposing)return;
+        if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();endJoinPicking();}
+        else if(!e.metaKey&&!e.ctrlKey&&!e.altKey&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key)){
+          e.preventDefault();e.stopImmediatePropagation();const buttons=joinMarkers.map(marker=>marker.button).filter(button=>!button.disabled),index=buttons.indexOf(e.target);if(buttons.length){const next=e.key==='Home'?0:e.key==='End'?buttons.length-1:index<0?0:(index+(['ArrowLeft','ArrowUp'].includes(e.key)?-1:1)+buttons.length)%buttons.length;buttons[next].focus({preventScroll:true});}
+        }else if(!['Tab','Enter',' '].includes(e.key)){e.preventDefault();e.stopImmediatePropagation();}return;
+      }
       if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();if(options.open){options.open=false;optionsToggle.focus();return;}cancel();return;}
       if(toolbar.contains(e.target)&&['BUTTON','SUMMARY'].includes(e.target.tagName)&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key)){
         const scope=options.open&&optionsPanel.contains(e.target)?optionsPanel:toolbar,items=[...scope.querySelectorAll('button:not(:disabled),summary')].filter(el=>el.getClientRects().length),index=items.indexOf(e.target);
