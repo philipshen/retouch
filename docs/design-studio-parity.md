@@ -16672,6 +16672,15 @@ The delayed-response test passes in Chromium and WebKit and confirms that a laye
 
 Image framing now exposes Reposition image. It reveals the selected image at the current canvas zoom and allows dragging the painted image inside the existing frame. Percentage positions follow the actual object-fit sizing and stop at the frame edges. Arrow keys move by one CSS pixel (Shift: ten); Enter commits the keyboard gesture, and Escape cancels. Inspector position fields and anchor buttons follow the live preview. Source is written only on commit, through the existing scoped CSS/class writer.
 
-Chromium/WebKit HTML tests verify drag behavior at 50%, 100% and 200% zoom, cancellation without writes, grouped keyboard movement, exact source undo and retained document/input state. The rendered red/blue crop and light-theme controls were inspected. Unit cases cover cover, contain, fill, none and scale-down sizing. React/class integration is wired but its new canvas gesture is not yet browser verified.
+Chromium/WebKit HTML tests verify drag behavior at 50%, 100% and 200% zoom, cancellation without writes, grouped keyboard movement, exact source undo and retained document/input state. The rendered red/blue crop and light-theme controls were inspected. Unit cases cover cover, contain, fill, none and scale-down sizing. React and local Liquid now also pass responsive gesture checks in Chromium/WebKit, including phone isolation and retained input/document state; React counter state is retained as well.
 
 Rotated/flipped/perspective image frames and non-percentage starting positions remain unsupported by this gesture. It cancels when the selected image, dimensions, source, fit or edit scope changes. Independent image zoom, crop-frame handles and image rotation remain unfinished; no new desktop archive was built.
+
+
+### Image gestures across React and Liquid — 2026-09-14
+
+The source-backed image gesture now has Chromium/WebKit coverage for React and local Liquid at 50%, 100% and 200% zoom. The checks create a tablet-only crop override, verify the phone keeps its original crop, cancel preview gestures, group keyboard edits, undo exact source and preserve an input/document identity. React also retains a client component counter.
+
+This exposed a Liquid preview bug: literal classes refreshed, but newly compiled inline CSS did not. Render sync now captures initial inline stylesheet ownership at frame load and refreshes those sheets alongside literal classes. Style nodes added after frame load are excluded. Styles modified by startup scripts before that baseline is captured are not yet distinguished reliably from server-authored CSS. Changed stylesheet structure, attributes, text or CSSOM rules cause a preview conflict before applying the class delta. Browser checks cover runtime style retention, CSSOM conflict, retry recovery and exact undo.
+
+WebKit additionally retained stale nested-media styling after class-only undo. Reapplying the unchanged owned stylesheet corrected the reproduced computed-style failure; sync now reapplies its text while preserving the stylesheet node. These local Liquid checks are not live Shopify verification.
