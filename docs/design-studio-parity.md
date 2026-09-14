@@ -16041,3 +16041,11 @@ React now exposes mask creation, alpha/luminance type editing, editable mask sha
 Verification: 1,307 unit tests passed, including nine React mask source/history cases. Chromium and WebKit Next/React workflows passed both mask modes, type changes, bounds cropping at two sizes, reset, Escape cancellation, editable shape radius, exact source Undo/Redo, selection restoration and retained preview document/input state. Logs: `../recovery-2026-09-14/react-mask-{chromium,webkit,units}.log`.
 
 This verifies the tested local Next/React workflow, not every framework or preservation of arbitrary component-local state during reparenting. Dynamic/repeated ownership, reusable-instance mask IDs, direct canvas mask overlays and complete Figma/export parity remain open. The latest desktop archive predates this React mask implementation.
+
+### CSS mask export fidelity — 2026-09-14
+
+Fixed a reproduced export failure where CSS-controlled alpha masks became luminance masks in standalone SVG/PNG output. The computed-style snapshot now explicitly retains `mask-type`, `mask-image` and `mask-mode`, including local references to shared mask definitions.
+
+Verification: the new export workflow failed before the fix on an alpha mask and now passes 72 SVG/PNG color checks each in Chromium and WebKit. It covers alpha/luminance CSS overriding source attributes, mask-mode overrides, internal/shared mask definitions, percentage bounds, PNG at 1x/2x, stripped editor metadata and unchanged live DOM. Native WebKit ignored mask-mode overrides in all four tested cases, while Chromium applied all four; exports match each renderer's measured appearance. The existing Chromium SVG/PNG/JPEG export regression suite also passed, including responsive styles, gradients/clipping, independent decoding, symbols and image/reference error handling.
+
+Logs: `../recovery-2026-09-14/mask-export-{chromium,webkit,regression}.log`. Run with `RT_INSPECTOR_FIXTURE=<fixture> node retouch/test/e2e/svg-mask-export.cjs`. Cross-browser identical interpretation of all mask CSS, arbitrary external resources, full Figma parity and trusted native distribution remain incomplete.
