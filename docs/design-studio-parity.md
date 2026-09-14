@@ -16795,3 +16795,9 @@ Chromium and WebKit pixel checks cover half exposure, flat contrast, grayscale, 
 Exposure, contrast and saturation now pair light-theme sliders with numeric entry. Values stay synchronized through typing, slider movement, reset and local undo/redo. Drag changes commit on release; repeated slider arrow keys remain one history step until key release.
 
 Chromium/WebKit browser checks verify held-key and multi-move pointer grouping, numeric synchronization, rendered adjustment pixels, saved-value reopening and exact source undo. The slider layout was visually inspected in WebKit. Firefox styling is provided but Firefox behavior was not tested.
+
+### Image temperature and tint — 2026-09-14
+
+Image adjustments now include temperature and tint sliders/numeric values from -100 to +100. Temperature shifts red versus blue; tint shifts magenta versus green through bounded channel gains after the existing adjustments. Both are stored in the original-image recipe and participate in reset and local history. Zero values preserve the prior filter structure for saved adjustment compatibility.
+
+Chromium/WebKit neutral-gray pixel checks cover both directions, combined preview/apply, slider synchronization, reset undo, reopening and exact source undo. The earlier exposure/contrast/saturation workflow and all 1,519 unit tests pass. The light dialog was visually inspected. These are relative color controls, not calibrated Kelvin values or proven matches to Figma's proprietary adjustment algorithms. Highlights/shadows remain unfinished.
