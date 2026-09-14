@@ -16023,3 +16023,13 @@ The source operation validates the entire change set before writing, preserves l
 Verification: 1,289 unit tests passed. Chromium and WebKit inspector workflows verify rendered cropping at SVG widths 200 and 400, reset, exact source Undo/Redo, Escape cancellation, retained preview document/form state, existing mask-type editing, shape editing and lossless release. Screenshot and logs are in `../recovery-2026-09-14/mask-bounds.png` and `mask-bounds-{chromium,webkit,units}.log`.
 
 Remaining: direct canvas bounds/shape overlays, other mask coordinate systems, complete style/export/reference support, React/Liquid masks, and the broader Figma/native distribution requirements.
+
+### Liquid mask workflow — 2026-09-14
+
+Liquid templates now expose the same mask creation, alpha/luminance type, editable mask shape, responsive bounds and release controls as HTML. Source edits reuse the lossless mask planner while translating every retained, removed and selected layer back to Liquid IDs. SVG geometry writes within masks reconcile the rendered selected shape, preserving the preview document and form values.
+
+The adapter checks Liquid structural ownership before editing. Named layers retain their encoded annotations without confusing the HTML parser; expressions, snippet calls and section schema outside the edited SVG remain unchanged. Repeated or conditional artwork and dynamic source inside the structural region still require ownership support; they are refused rather than rewritten across template boundaries.
+
+Verification: 1,298 unit tests passed, including nine Liquid mask source/history tests. Local LiquidJS Chromium and WebKit inspector workflows passed creation, both mask types, type changes, shape edits, responsive bounds at two sizes, reset, exact Undo/Redo, selection restoration and retained preview state. Evidence logs: `../recovery-2026-09-14/liquid-mask-{chromium,webkit,units}.log`.
+
+Live Shopify storefront verification remains outstanding. React masks, dynamic/repeated ownership, direct canvas mask overlays, complete export/reference support and trusted public macOS distribution are still incomplete.

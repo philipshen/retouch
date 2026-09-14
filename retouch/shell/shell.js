@@ -814,7 +814,7 @@ function reloadFrame({keepDrawing=null,expectedTag=null}={}) {
 // module. Wait for that revision, retaining the live session when HMR applies it.
 // Reload only when the renderer cannot confirm a matching live update.
 async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null,expectedTag=null,maskGeometry=false}={}) {
-  if(maskGeometry&&/\.html?$/i.test(info.file)&&matchingEls(info.id).some(el=>el.closest('[data-rt-mask-group]'))){await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info),matches});return;}
+  if(maskGeometry&&/\.(?:html?|liquid)$/i.test(info.file)&&matchingEls(info.id).some(el=>el.closest('[data-rt-mask-group]'))){await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info),matches});return;}
   const location = iframe.contentWindow.location.href;
   async function liveUpdateReady(expectedText=null){
     // Only compiler-stamped revisions can prove the live page reflects this write.

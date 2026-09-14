@@ -333,7 +333,7 @@ function describeElement(resolved) {
 }
 
 function describe(resolved) {
-  return {...describeElement(resolved),svgBooleanReplacement:require('../svg-combine-selection.cjs').describe(resolved,'liquid'),svgGradientCreation:require('../svg-gradient-create.cjs').describe(resolved,'liquid'),svgGradients:require('../source-svg-gradient.cjs').describe(resolved,'liquid'),svgTransform:require('../svg-transform.cjs').describe(resolved,'liquid'),svgInsertion:require('../liquid-svg-insert.cjs').describe(resolved),svgConversion:require('../svg-convert.cjs').describe(resolved),svgGeometry:require('../liquid-svg-geometry.cjs').describe(resolved),...layerNames.describe(resolved),...require('../liquid-text-styles.cjs').describe(resolved),...require('../liquid-color-styles.cjs').describe(resolved),...require('../liquid-effect-styles.cjs').describe(resolved),...require('../liquid-variable-bindings.cjs').describe(resolved),components:theme.ancestry(resolved),structure:{...structure.describe(resolved,'liquid'),...require('../native-insert.cjs').describe(resolved,'liquid')}};
+  return {...describeElement(resolved),svgMask:require('../liquid-svg-mask.cjs').describe(resolved),svgBooleanReplacement:require('../svg-combine-selection.cjs').describe(resolved,'liquid'),svgGradientCreation:require('../svg-gradient-create.cjs').describe(resolved,'liquid'),svgGradients:require('../source-svg-gradient.cjs').describe(resolved,'liquid'),svgTransform:require('../svg-transform.cjs').describe(resolved,'liquid'),svgInsertion:require('../liquid-svg-insert.cjs').describe(resolved),svgConversion:require('../svg-convert.cjs').describe(resolved),svgGeometry:require('../liquid-svg-geometry.cjs').describe(resolved),...layerNames.describe(resolved),...require('../liquid-text-styles.cjs').describe(resolved),...require('../liquid-color-styles.cjs').describe(resolved),...require('../liquid-effect-styles.cjs').describe(resolved),...require('../liquid-variable-bindings.cjs').describe(resolved),components:theme.ancestry(resolved),structure:{...structure.describe(resolved,'liquid'),...require('../native-insert.cjs').describe(resolved,'liquid')}};
 }
 
 function refuse(reason) { return { ok: false, refused: true, reason }; }
@@ -343,6 +343,7 @@ function escapeText(t) {
 }
 
 function planOp(resolved, op) {
+  if(['createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds'].includes(op.type))return require('../liquid-svg-mask.cjs').plan(resolved,op);
   if(op.type==='insertSVG')return require('../liquid-svg-insert.cjs').plan(resolved,op);
   if(op.type==='insertElement')return require('../native-insert.cjs').plan(resolved,op,'liquid');
   if(op.type==='replaceSVGSelection')return require('../svg-combine-selection.cjs').plan(resolved,op,'liquid');
@@ -462,6 +463,6 @@ module.exports = {
   describeComponent: resolved=>resolved.element.theme?theme.describe(resolved):components.describe(resolved),
   hasReference: components.hasReference,
   assets: { directory: 'assets', urlPrefix: '/assets/', uploadDirectory: '' },
-  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['replaceSVGSelection','setSVGGradient','insertSVG','insertElement','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types] },
+  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertSVG','insertElement','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types] },
   _parse: parse, // exported for tests
 };
