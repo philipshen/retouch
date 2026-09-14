@@ -30,9 +30,13 @@ function liquidRange(resolved) {
   // Control tags before the selection can enclose its parent despite the HTML
   // tokenizer ignoring Liquid syntax. Reject only open enclosing control scopes.
   const scopes=[];
-  for(const m of resolved.source.slice(0,node.tagStart).matchAll(/\{%-?\s*(\w+)[\s\S]*?-?%\}/g)) {
-    if(['if','unless','for','tablerow','case','capture','form','paginate','raw','comment'].includes(m[1])) scopes.push(m[1]);
-    else if(m[1].startsWith('end')) scopes.pop();
+  for(const m of resolved.source.slice(0,node.tagStart).matchAll(/\{%-?\s*([\s\S]*?)-?%\}/g)) {
+    const body=m[1].trim(),statements=/^liquid(?:\s|$)/.test(body)?body.replace(/^liquid\s*/,'').split(/\r?\n/):[body];
+    for(const statement of statements){const name=statement.trim().split(/\s+/)[0];
+      if(['raw','comment'].includes(scopes.at(-1))){if(name==='end'+scopes.at(-1))scopes.pop();continue;}
+      if(['if','unless','for','tablerow','case','capture','form','paginate','raw','comment'].includes(name))scopes.push(name);
+      else if(name.startsWith('end'))scopes.pop();
+    }
   }
   if(scopes.length) throw Error('Elements inside Liquid control scopes cannot be structurally edited.');
   const parent=node.parent;

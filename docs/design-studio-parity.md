@@ -15918,3 +15918,32 @@ empty result, and confirms retained preview document/form state. Evidence is in
 These checks close the specific primitive-conversion and empty-result gaps;
 editable boolean groups, responsive recomputation, masks, unrestricted site
 support, and trusted desktop delivery remain incomplete.
+
+## Liquid SVG boolean replacement — 2026-09-14
+
+Liquid now advertises and plans `replaceSVGSelection` and exposes the same four
+multi-selection boolean controls as HTML/React. Source replacement uses Liquid
+tag/attribute offsets, retains the base shape's appearance and metadata, maps
+surviving identities, and handles empty results. The shell reconciles the Liquid
+parent markup so these edits and their history preserve the preview document.
+
+The adapter uses the existing literal-sibling structural boundary. Incomplete
+markup, enclosing control scopes, dynamic geometry, and drawable child content
+are refused. The shared Liquid scope scanner now recognizes multiline
+`{% liquid %}` statements and ignores misleading control-tag text within raw or
+comment blocks. Completed scopes before the SVG remain supported. Comments or
+Liquid expressions mixed between sibling nodes still fall outside this
+structural boundary; this does not establish arbitrary dynamic theme parity.
+
+Validation: 1,282 unit tests passed, including all three adapters' exact source
+and transaction/Undo/Redo tests plus Liquid scope refusals. A local LiquidJS
+renderer passed the four-operation inspector workflow in Chromium and WebKit
+with percentage geometry, transformed fill checks, exact source Undo/Redo,
+selection restoration, and retained preview document/form state. Empty
+intersection/removal and parent selection passed in Liquid Chromium as well.
+Logs are in the sibling recovery directory:
+`boolean-liquid-{units,chromium,webkit,empty}.log`.
+
+These are local source-connected Liquid checks. Live Shopify development-theme
+verification, editable boolean groups, masks, responsive recomputation and full
+Figma parity remain incomplete. No production theme was modified.

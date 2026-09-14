@@ -3029,7 +3029,7 @@ async function refreshSVGBooleanSelection(parentId,ids){
  const parent=await api('GET',resolveUrl(parentId));
  if(!parent?.ok)throw Error('The combined shape parent no longer resolves.');
  const matches=el=>ids.every(id=>matchingInDocument(el.ownerDocument,id,null).length===1);
- if(/\.html?$/i.test(parent.element.file))await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,parentId,parent.element),matches});
+ if(/\.(?:html?|liquid)$/i.test(parent.element.file))await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,parentId,parent.element),matches});
  else await refreshWrittenElement(parent.element,matches);
  await restoreLayerSelection(ids);if(sel)renderPanel();await layers.refresh();
 }
