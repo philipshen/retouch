@@ -391,19 +391,26 @@
         event.preventDefault();event.stopPropagation();replaySize(redo?sizeRedo:sizeUndo,redo?sizeUndo:sizeRedo,!redo,!input);
       });
       undoSize.title='Undo this screen size: Command/Ctrl+Z in the size controls.';redoSize.title='Redo this screen size: Command/Ctrl+Shift+Z or Ctrl+Y in the size controls.';
+      let dimensionGesture=null;
       for(const axis of ['width','height']){
         const field=document.createElement('label');field.textContent=axis==='width'?'W':'H';
         const input=document.createElement('input');input.type='number';input.min=240;input.max=7680;input.step=1;input.value=axis==='width'?width:height;input.setAttribute('aria-label',name+' comparison '+axis);inputs[axis]=input;
         input.onchange=()=>{if(input.value!==''&&input.checkValidity())applyDimensions(axis==='width'?Number(input.value):width,axis==='height'?Number(input.value):height,true,axis);};
         input.title='Pixels. Shift+Up/Down steps 10 pixels; Enter applies; Escape discards typed changes; Command/Ctrl+Z undoes a committed size.';
+        input.onkeyup=event=>{if(['ArrowUp','ArrowDown'].includes(event.key))dimensionGesture=null;};
+        input.onblur=()=>{dimensionGesture=null;};
         input.onkeydown=event=>{
+          if(event.isComposing)return;
           if(event.key==='Escape'){input.value=axis==='width'?width:height;event.preventDefault();event.stopPropagation();input.select();}
           else if(event.key==='Enter'){event.preventDefault();input.blur();}
-          else if(event.shiftKey&&['ArrowUp','ArrowDown'].includes(event.key)){
+          else if(!event.altKey&&!event.metaKey&&!event.ctrlKey&&['ArrowUp','ArrowDown'].includes(event.key)){
             event.preventDefault();const value=Number(input.value);
             if(input.value!==''&&Number.isFinite(value)){
-              const next=Math.max(240,Math.min(7680,Math.round(value)+(event.key==='ArrowUp'?10:-10)));
-              applyDimensions(axis==='width'?next:width,axis==='height'?next:height,true,axis);
+              const repeat=event.repeat&&dimensionGesture?.input===input&&dimensionGesture.key===event.key&&dimensionGesture.entry===sizeUndo.at(-1),previous=sizeUndo.at(-1);
+              const next=Math.max(240,Math.min(7680,Math.round(value)+(event.key==='ArrowUp'?1:-1)*(event.shiftKey?10:1)));
+              const applied=applyDimensions(axis==='width'?next:width,axis==='height'?next:height,!repeat,axis);
+              if(repeat&&applied){dimensionGesture.entry.after=[width,height];dimensionGesture.entry.ratioAfter=[...history.ratio];}
+              else if(!repeat)dimensionGesture=sizeUndo.at(-1)!==previous?{input,key:event.key,entry:sizeUndo.at(-1)}:null;
             }
           }
         };

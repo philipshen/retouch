@@ -15381,3 +15381,25 @@ unchanged source, alongside its existing compact/desktop toolbar checks. The
 Chromium compact screenshot was inspected. Syntax and diff checks pass. No
 new desktop build was produced; fully editable comparison canvases and full
 Figma parity remain open.
+
+### Comparison dimension keyboard gestures (2026-09-14)
+
+Pinned comparison width/height fields now share the main preview's keyboard
+behavior: one-pixel arrows, ten-pixel Shift+arrows, and a single size-history
+entry for a held key. Separate presses remain separate entries. Ratio-locked
+resizing retains its original ratio anchor; release or blur ends the gesture.
+This changes preview dimensions without modifying source or style scope.
+
+The expanded project-screens workflow passes Chromium, checking held width and
+height steps, exact Undo/Redo, separate presses, ratio locking, retained preview
+documents, saved screen sets and project isolation
+(`/private/tmp/retouch-comparison-key-gestures-chromium.log`). The first WebKit
+run failed before the new resize assertions: the comparison-name field did not
+remain visible after Rename (`/private/tmp/retouch-comparison-key-gestures-webkit.log`).
+This is retained as an unresolved observed UI failure. No native build was
+performed; fully editable comparison canvases and full parity remain open.
+
+The unchanged-code WebKit retry passed the complete project-screens workflow
+(`/private/tmp/retouch-comparison-key-gestures-webkit-retry.log`, exit 0).
+This verifies the resize behavior in WebKit while leaving the initial rename
+focus failure unresolved.
