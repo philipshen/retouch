@@ -4,7 +4,7 @@
   const project=window.__RT_RENDERING?.stateScope?.project;
   const storageKey='retouch.comparisons.v1'+(typeof project==='string'&&/^[a-f0-9]{64}$/.test(project)?':'+project:'');
   let focusPreviews=true;try{focusPreviews=localStorage.getItem(storageKey+'.focus')!=='false';}catch{}
-  let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore,allPreviews,revealAll;
+  let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore,allPreviews,revealAll,emptyState,emptyAdd;
   const collapsedScreens=new WeakSet(),sizeHistories=new WeakMap(),nameHistories=new WeakMap(),lockedRatios=new WeakSet();let previewSerial=0;
   const marqueeCleanup=new WeakMap();
   let activeName=null,activeDimensionScrub=null;
@@ -48,6 +48,7 @@
       pin.textContent=exists?'↗':'+';
       pin.title=exists?'Reveal the existing preview at the current canvas size':sizes.length>=8?'Remove a comparison to add another':'Add the current canvas dimensions';
     }
+    if(emptyState){emptyState.hidden=cards.length>0;emptyAdd.disabled=!!pin?.disabled;}
     if(restore){
       const last=removed.at(-1);restore.hidden=!last;restore.disabled=!last||removals>0||sizes.length>=8||sizes.some(size=>size[1]===last.size[1]&&size[2]===last.size[2]||size[0].toLowerCase()===last.size[0].toLowerCase());
       restore.textContent=last?'Undo remove: '+last.size[0]:'Undo remove';restore.title=restore.disabled?'Finish removing views, or free the name and dimensions before restoring.':'Restore the last removed comparison in its original position.';
@@ -264,6 +265,11 @@
       sizes.splice(index,0,last.size);addCard(last.size,next);const item=cards.pop();cards.splice(index,0,item);
       item.frame.src=path()||'/';remember();updateControls();item.card.scrollIntoView({block:'nearest'});
     };rail.append(restore);
+    emptyState=document.createElement('div');emptyState.className='compare-empty';
+    const emptyTitle=document.createElement('h3');emptyTitle.textContent='No comparison screens';
+    const emptyDescription=document.createElement('p');emptyDescription.textContent='Add the current canvas size to compare this page across screens.';
+    emptyAdd=document.createElement('button');emptyAdd.type='button';emptyAdd.className='control-button';emptyAdd.textContent='Add current screen';emptyAdd.onclick=()=>pin.click();
+    emptyState.append(emptyTitle,emptyDescription,emptyAdd);rail.append(emptyState);
     const orderHistory=document.createElement('div');orderHistory.className='compare-header compare-order-history';
     undoOrder=document.createElement('button');redoOrder=document.createElement('button');
     for(const button of [undoOrder,redoOrder]){button.type='button';button.className='control-button';}

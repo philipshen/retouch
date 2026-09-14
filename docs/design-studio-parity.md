@@ -16605,3 +16605,9 @@ Removing a focused screen now places keyboard focus on a neighboring preview
 none remain. It does not reclaim focus if the user moves elsewhere while the
 iframe unloads. Browser coverage removes all screens using the keyboard and
 checks the empty-rail focus target; a separate step checks user-moved focus.
+
+An empty comparison rail now explains that no screens are present and offers
+**Add current screen**, while keeping Undo remove available. The message hides
+when a screen is added. Chromium/WebKit workflows remove all screens, add again
+from the empty state, and verify focus on the new preview and unchanged source.
+The Chromium empty-state capture was visually inspected.

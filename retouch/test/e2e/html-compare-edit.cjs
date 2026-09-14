@@ -53,6 +53,13 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
     await wait(async()=>page.evaluate(()=>document.activeElement?.matches('.compare-viewport,.comparison-pin')===true));
    }
    assert.equal(await page.getByRole('button',{name:'Pin current size',exact:true}).evaluate(el=>el===document.activeElement),true);
+   await page.getByRole('heading',{name:'No comparison screens',exact:true}).waitFor();
+   await page.screenshot({path:'/private/tmp/retouch-empty-screens-'+engine+'.png'});
+   await page.getByRole('button',{name:'Add current screen',exact:true}).click();
+   await preview('Custom 805 × 900').locator('body').waitFor();assert.equal(await page.locator('.compare-card').count(),1);
+   assert.equal(await page.getByRole('heading',{name:'No comparison screens',exact:true}).isVisible(),false);
+   assert.equal(await page.getByRole('button',{name:'Edit from Custom 805 × 900 comparison',exact:true}).evaluate(el=>el===document.activeElement),true);
+
    assert.equal(fs.readFileSync(file,'utf8'),original);assert.deepEqual(errors,[]);console.log('COMPARISON PANEL HELP/FOCUS/STATE PASS',engine,{firstPreviewTop:compactTop});return;
   }
   await page.getByRole('button',{name:'Edit mode',exact:true}).click();await clickLayer('Phone','a');await wait(async()=>await app.locator('body').evaluate(()=>innerWidth)===390&&await page.getByRole('treeitem',{name:'a · Open link',exact:true}).getAttribute('aria-selected')==='true');assert.equal(await page.getByRole('button',{name:'Edit mode',exact:true}).count(),1);assert.equal(await app.locator('body').evaluate(()=>location.pathname),'/');assert.equal(await page.getByLabel('Style screen scope').inputValue(),'min-[1440px]:');assert.equal(fs.readFileSync(file,'utf8'),original);

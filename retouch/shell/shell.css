@@ -1063,3 +1063,7 @@ html, body { overflow:clip; }
 .context-layer-choice > span:first-child { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px; }
 .context-layer-lock { font-size:10px;opacity:.6; }
 .rt-layer-menu { min-width:230px;max-width:min(360px,calc(100vw - 8px)); }
+
+.compare-empty { padding: 20px 0; }
+.compare-empty h3 { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+.compare-empty p { font-size: 11px; line-height: 1.5; color: var(--muted); margin-bottom: 12px; }
