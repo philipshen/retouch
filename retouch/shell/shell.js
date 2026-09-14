@@ -845,6 +845,9 @@ async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawin
     }
     return false;
   }
+  // The running framework can confirm an edit without a concurrent server render.
+  // Avoid forcing render requests while its development compiler is rebuilding.
+  if(!verifyText&&await liveUpdateReady())return;
   for (let attempt = 0; attempt < 20; attempt++) {
     if (!current()) return;
     try {
@@ -862,6 +865,9 @@ async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawin
     } catch {}
     await new Promise(resolve => setTimeout(resolve, 150));
   }
+  // A stale server render must not discard a live compiler-confirmed update.
+  // Text edits still require the server-rendered whitespace/entity comparison.
+  if(!verifyText&&await liveUpdateReady())return;
   if(current())await reloadFrame({keepDrawing,expectedTag});
 }
 

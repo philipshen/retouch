@@ -16240,3 +16240,37 @@ combined-result preview while dragging, nested boolean networks, automatic
 responsive regeneration and full arbitrary-site/Figma parity. The current
 macOS archive predates these controls; no rebuild, native launch or push occurred.
 Evidence: `/Users/philipshen/Developer/retouch-worktrees/recovery-2026-09-14/boolean-operand-canvas/`.
+
+
+### Stale server render versus live React preview — 2026-09-14
+
+A deterministic regression now keeps the server HTML response stale while
+allowing the actual Next/React hot update to arrive. Before the fix, the updated
+vector appeared but Retouch exhausted its server-render retries, reloaded the
+iframe and reset the retained input. `refreshWrittenElement` now checks the live
+compiler-stamped revision, expected geometry, stylesheet readiness and client
+mount state before requesting server HTML, and again before the final fallback. Text edits retain their separate
+server-rendered whitespace/entity verification. Missing or mismatched live
+revisions still do not count as a successful update.
+
+The fault-injection helper routes only non-navigation HTML requests, preserving
+normal hot updates and navigation behavior. It checks the saved transform,
+retained input and document identity, and exact source undo. This reproduces and
+fixes a concrete state-loss mechanism; it does not prove that this was the cause
+of every earlier intermittent React failure.
+
+A subsequent combined WebKit stress run passed the stale-HTML check but failed
+later with retained input lost; its server log contains transient Next JSON
+parsing errors and HTTP 500 responses. A traced rerun passed. Live-first checking
+also reduces render requests during compilation; this does not prove that all
+framework reload causes are eliminated. Opt-in `RT_E2E_PREVIEW_TRACE=1` records
+Retouch fallback reload stacks and revision/mount state in failure diagnostics.
+
+Final validation: all 1,347 unit tests passed. The combined retained-boolean,
+operand-canvas and stale-server-HTML workflow passed React Chromium and React
+WebKit after live-first synchronization. It verifies saved geometry, input and
+document retention, exact undo/redo, release and restored selection. The
+pre-fix deterministic input-reset failure and the intermediate Next JSON/500
+failure are preserved alongside final results. No desktop rebuild, native launch
+or push occurred; full Figma/arbitrary-site parity remains incomplete.
+Evidence: `/Users/philipshen/Developer/retouch-worktrees/recovery-2026-09-14/live-preview-first/`.
