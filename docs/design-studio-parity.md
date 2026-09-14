@@ -15826,3 +15826,36 @@ the engine, submit the transaction, and restore selection/history. Browser
 verification of that complete workflow, Liquid parity, non-destructive operand
 groups and masks remain pending. Full Figma parity and trusted desktop delivery
 remain incomplete.
+
+## Cross-layer boolean inspector — 2026-09-14
+
+The multi-selection inspector now exposes Union, Subtract, Intersect and Exclude
+for editable sibling SVG shapes in HTML and React. Four labeled icon buttons sit
+in a visible Combine shapes section. The first selected shape supplies appearance
+and local coordinates; subtract removes subsequent operands from it. The shell
+reads rendered geometry and fill rules, transforms operands into that local
+space, runs the boolean engine, and commits `replaceSVGSelection` atomically.
+
+The result retains the base layer's transform and paint. CSS path overrides and
+changes in tag-dependent paint/transform are checked before saving; unsupported
+percentage/calculated primitive geometry produces a visible refusal. Static HTML
+reconciles the parent SVG without navigating the preview. React uses the existing
+revision/HMR verification. Selection, lock identity mappings and exact source
+Undo/Redo use the normal editor history path.
+
+Verification: 1,275 unit tests passed. The complete four-operation inspector
+workflow passed in HTML Chromium, HTML WebKit and React Chromium, checking
+transformed native SVG fill occupancy, base appearance, exact source Undo/Redo,
+selection restoration, and retained preview document/form state. Browser checks
+also cover refusal of tag-dependent CSS appearance changes without source writes
+and reading a CSS-controlled width. The final light-theme icon row was inspected
+in `../recovery-2026-09-14/boolean-controls-final.png`. Logs are the sibling
+`boolean-selection-{chromium,webkit,react}.log` files. An initial React test
+incorrectly counted Next.js dev-overlay paths; the corrected check scopes to the
+edited artwork.
+
+Remaining: non-destructive boolean groups, cross-parent operations, Liquid
+integration, complete percentage/calculated geometry support, masks and vector
+networks, broader geometry/paint interactions, and the full parity and trusted
+desktop requirements elsewhere in this ledger. Empty-result source transactions
+have unit coverage; their complete inspector workflow still needs browser proof.

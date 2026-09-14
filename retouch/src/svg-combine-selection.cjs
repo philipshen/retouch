@@ -51,4 +51,4 @@ function plan(r,op,kind){
  const parentId=mapping.get(baseContext.parentId);
  return {ok:true,hash:adapter.contentHash(after),structural:true,sourceIdMap:[...mapping].filter(([a,b])=>a!==b),removedSourceIds:removed.map(e=>e.id),parentId,selectionIds:path?[mapping.get(base.id)]:[parentId],edits:[{file:r.file,before:r.source,after}]};
 }
-module.exports={plan};
+module.exports={plan,describe:(r,kind)=>{const c=context(r,kind);return c?{parentId:c.parentId}:null;}};
