@@ -1,5 +1,25 @@
 # Retouch for macOS
 
+## Latest nested boolean candidate (2026-09-14, a163d5a)
+
+The universal Developer ID signed archive includes nested original canvas
+move/resize/rotate previews and direct double-click entry, plus the latest
+responsive scope labels and layer-selection menu. Source manifest and native
+build inputs match the clean `a163d5a` checkout.
+
+Archive: `/Users/philipshen/Developer/retouch-worktrees/desktop-nested-a163d5a/Retouch-0.1.0-mac.zip`
+
+The exact extracted runtime passed 1,367 unit tests and nested boolean workflows
+on HTML/Chromium, Liquid/Chromium, and React/WebKit. All 25 desktop tests and
+package-tampering checks passed. The ZIP installed and uninstalled through an
+isolated local Homebrew tap, retaining quarantine and restoring inventories.
+
+Gatekeeper rejects this build as **Unnotarized Developer ID**. No native launch
+was attempted. Notarization, trusted public cask distribution, and Intel
+execution remain unverified. See [the verification receipt](verification/2026-09-14-nested-developer-id.json)
+for archive checksum and exact evidence.
+
+
 ## Current Developer ID signed candidate — 2026-09-14
 
 Clean commit `1a97caeccf653a081e852782964de5976c5b19d9` is packaged in
