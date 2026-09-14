@@ -15,6 +15,12 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   await page.getByRole('button',{name:'Compare screens',exact:true}).click();await page.getByRole('button',{name:'Pin current size',exact:true}).click();
   await page.getByRole('button',{name:'Rename Custom 1120 × 844 comparison',exact:true}).click();await page.getByLabel('Comparison name',{exact:true}).filter({visible:true}).fill('Reading view');await page.getByLabel('Comparison name',{exact:true}).filter({visible:true}).press('Enter');
   assert.equal(await picker.locator('option[value="saved:1120x844"]').textContent(),'Reading view · 1120 × 844');
+  // Losing window focus must not dismiss a rename draft; composition Enter
+  // must not accidentally accept an unfinished name.
+  await page.getByRole('button',{name:'Rename Reading view comparison',exact:true}).click();const draft=page.getByLabel('Comparison name',{exact:true}).filter({visible:true});await draft.fill('Draft view');await draft.evaluate(el=>el.blur());assert.equal(await draft.inputValue(),'Draft view');assert.equal(await picker.locator('option[value="saved:1120x844"]').textContent(),'Reading view · 1120 × 844');
+  await draft.focus();await draft.dispatchEvent('keydown',{key:'Enter',isComposing:true,bubbles:true});assert.equal(await draft.isVisible(),true);await draft.press('Escape');assert.equal(await page.getByRole('button',{name:'Rename Reading view comparison',exact:true}).isVisible(),true);
+  await page.getByRole('button',{name:'Rename Reading view comparison',exact:true}).click();await draft.fill('Outside commit');await page.locator('#screenComparisons').click({position:{x:3,y:3}});assert.equal(await picker.locator('option[value="saved:1120x844"]').textContent(),'Outside commit · 1120 × 844');await page.getByRole('button',{name:'Undo Outside commit comparison name',exact:true}).click();
+
   await page.frameLocator('iframe[title="Reading view comparison preview"]').locator('body').evaluate(()=>window.nameHistoryMarker='retained');
   await page.getByRole('button',{name:'Undo Reading view comparison name',exact:true}).click();assert.equal(await picker.locator('option[value="saved:1120x844"]').textContent(),'Custom 1120 × 844 · 1120 × 844');
   await page.getByRole('button',{name:'Rename Custom 1120 × 844 comparison',exact:true}).press('Meta+Shift+z');assert.equal(await page.frameLocator('iframe[title="Reading view comparison preview"]').locator('body').evaluate(()=>window.nameHistoryMarker),'retained','name history preserves the preview document');

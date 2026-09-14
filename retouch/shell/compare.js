@@ -7,6 +7,8 @@
   let sizes=[['Phone',390,844],['Tablet',768,1024],['Desktop',1440,900]],pin,restore,allPreviews,revealAll;
   const collapsedScreens=new WeakSet(),sizeHistories=new WeakMap(),nameHistories=new WeakMap(),lockedRatios=new WeakSet();let previewSerial=0;
   const marqueeCleanup=new WeakMap();
+  let activeName=null;
+  document.addEventListener('pointerdown',event=>{if(activeName&&!activeName.input.contains(event.target))activeName.finish();},true);
   const removed=[],orderUndo=[],orderRedo=[];let removals=0,undoOrder,redoOrder;
   function clearOrderHistory(){orderUndo.length=0;orderRedo.length=0;}
   const valid=v=>Number.isInteger(v)&&v>=240&&v<=7680;
@@ -289,16 +291,18 @@
         event.preventDefault();event.stopPropagation();replayName(key==='y'||event.shiftKey);
       });
       label.title='Rename this comparison. Command/Ctrl+Z undoes its name; Command/Ctrl+Shift+Z redoes it.';
-      label.onclick=()=>{nameInput.value=name;nameInput.hidden=false;label.hidden=true;nameInput.focus();nameInput.select();};
+      label.onclick=()=>{activeName={input:nameInput,finish:finishName};nameInput.value=name;nameInput.hidden=false;label.hidden=true;nameInput.focus();nameInput.select();};
       function finishName(cancel=false){
         if(nameInput.hidden)return;
         const next=nameInput.value.trim().replace(/\s+/g,' ');
         if(!cancel&&(!next||sizes.some(other=>other!==size&&other[0].toLowerCase()===next.toLowerCase()))){dimensionError.textContent=next?'Another comparison already has this name.':'Enter a comparison name.';dimensionError.hidden=false;return;}
         if(!cancel&&next!==name){names.undo.push({before:name,after:next});if(names.undo.length>50)names.undo.shift();names.redo.length=0;name=next;size[0]=name;remember();}
-        dimensionError.hidden=true;nameInput.hidden=true;label.hidden=false;updateLabels();updateControls();
+        dimensionError.hidden=true;nameInput.hidden=true;label.hidden=false;if(activeName?.input===nameInput)activeName=null;updateLabels();updateControls();
       }
-      nameInput.onblur=()=>finishName();
-      nameInput.onkeydown=event=>{if(event.key==='Enter'||event.key==='Escape'){event.preventDefault();event.stopPropagation();finishName(event.key==='Escape');if(nameInput.hidden)label.focus();}};
+      // A window/iframe focus loss may have no related target. Preserve the
+      // draft until an explicit commit or deliberate focus change in this UI.
+      nameInput.onblur=event=>{if(event.relatedTarget&&event.relatedTarget.tagName!=='IFRAME')finishName();};
+      nameInput.onkeydown=event=>{if(event.isComposing)return;if(event.key==='Enter'||event.key==='Escape'){event.preventDefault();event.stopPropagation();finishName(event.key==='Escape');if(nameInput.hidden)label.focus();}};
       header.append(label,nameInput);
       const edit=document.createElement('button');edit.className='control-button';edit.textContent='Edit';edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');
       edit.onclick=()=>window.RetouchScreens.set({width,height});header.append(edit);
@@ -513,7 +517,7 @@
     // Unload each browsing context before detaching it, including frames whose
     // framework bootstrap is still awaiting scripts or network responses.
     await Promise.all(cards.map(({frame})=>unload(frame)));
-    rail.replaceChildren();cards=[];route=null;
+    activeName=null;rail.replaceChildren();cards=[];route=null;
   }
   toggle.onclick=async()=>{
     loadRevision++;

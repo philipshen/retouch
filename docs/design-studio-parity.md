@@ -15403,3 +15403,21 @@ The unchanged-code WebKit retry passed the complete project-screens workflow
 (`/private/tmp/retouch-comparison-key-gestures-webkit-retry.log`, exit 0).
 This verifies the resize behavior in WebKit while leaving the initial rename
 focus failure unresolved.
+
+### Comparison rename focus retention (2026-09-14)
+
+Comparison rename fields no longer finish automatically on blur without a
+related focus target, or on focus entering an iframe. The draft remains visible
+and recoverable. Deliberate pointer clicks elsewhere in the editor commit the
+name; Tab to another editor control and Enter retain their commit behavior.
+Escape cancels. Enter/Escape during composition no longer finish the field.
+The single active draft reference is released when comparisons are disposed.
+
+The full project-screens workflow passes Chromium and WebKit
+(`/private/tmp/retouch-rename-focus-{chromium,webkit}.log`), with new checks for
+null-target blur draft retention, unchanged saved name before commit, composing
+Enter, Escape, outside-click commit and name Undo. Existing name/size histories,
+preview-document retention and project persistence checks also pass. The earlier
+intermittent WebKit Rename failure has not been causally reproduced; this fixes
+a demonstrated premature-dismissal path without claiming every focus race is
+resolved. Native launch and full Figma parity remain open.
