@@ -5,7 +5,9 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
  const openGroups=new Set(),collapsedSections=new Set(),expandedEmptySections=new Set();
  const sectionPreferenceKey='retouch.inspector.sections.v1';
  try{const saved=JSON.parse(root.localStorage.getItem(sectionPreferenceKey));if(Array.isArray(saved))for(const name of saved.slice(0,64))if(typeof name==='string'&&name.length<=64)collapsedSections.add(name);}catch{}
- function saveSectionPreferences(){try{root.localStorage.setItem(sectionPreferenceKey,JSON.stringify([...collapsedSections].slice(0,64)));}catch{}}
+ const expandedPreferenceKey='retouch.inspector.expanded-empty.v1';
+ try{const saved=JSON.parse(root.localStorage.getItem(expandedPreferenceKey));if(Array.isArray(saved))for(const name of saved.slice(0,64))if(typeof name==='string'&&name.length<=64)expandedEmptySections.add(name);}catch{}
+ function saveSectionPreferences(){try{root.localStorage.setItem(sectionPreferenceKey,JSON.stringify([...collapsedSections].slice(0,64)));root.localStorage.setItem(expandedPreferenceKey,JSON.stringify([...expandedEmptySections].slice(0,64)));}catch{}}
 
  function disclosure(title,key){const d=document.createElement('details'),s=document.createElement('summary');d.className='inspector-disclosure';s.textContent=title;d.append(s);d.open=openGroups.has(key);d.ontoggle=()=>d.open?openGroups.add(key):openGroups.delete(key);return d;}
  function compactPaint(section,input){
