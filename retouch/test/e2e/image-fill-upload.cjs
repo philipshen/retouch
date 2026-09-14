@@ -23,6 +23,17 @@ exports.run=async({page,app,file,wait,settled,kind})=>{
  }
 
  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===first);await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(async()=>await background()===initial);
+ if(process.env.RT_E2E_PROJECT_IMAGES){
+  let uploads=0;const count=request=>{if(request.url().includes('/rt/__api/upload?'))uploads++;};page.on('request',count);
+  const browse=page.getByRole('button',{name:'Browse images for fill',exact:true}),pickerDialog=page.getByRole('dialog',{name:'Project images',exact:true});
+  await browse.click();const search=pickerDialog.getByLabel('Find a project image',{exact:true});await search.fill('no-such-image');await pickerDialog.getByRole('status').filter({hasText:'No matching images.'}).waitFor();await search.fill('fill-lime');
+  const choice=pickerDialog.getByRole('button',{name:/Use project image .*fill-lime\.svg/});await choice.waitFor();await wait(()=>choice.locator('img').evaluate(el=>el.complete&&el.naturalWidth>0));assert.equal(await choice.locator('img').evaluate(el=>el.src.startsWith('blob:')),true);
+  if(process.env.RT_E2E_PROJECT_IMAGES_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_PROJECT_IMAGES_SCREENSHOT});await pickerDialog.getByRole('button',{name:'Close',exact:true}).click();assert.equal(read(),original);assert.equal(await browse.evaluate(el=>el===document.activeElement),true);
+  await page.evaluate(()=>{const native=window.fetch;window.pendingImagePreviews=0;window.abortedImagePreviews=0;window.restoreImagePreviewFetch=()=>{window.fetch=native;};window.fetch=(url,options)=>String(url).includes('/rt/__api/image-preview?')?new Promise((resolve,reject)=>{window.pendingImagePreviews++;options.signal.addEventListener('abort',()=>{window.abortedImagePreviews++;reject(new DOMException('Canceled','AbortError'));},{once:true});}):native(url,options);});
+  await browse.click();await wait(()=>page.evaluate(()=>window.pendingImagePreviews>0));await pickerDialog.getByRole('button',{name:'Close',exact:true}).click();await wait(()=>page.evaluate(()=>window.abortedImagePreviews>0));await page.evaluate(()=>window.restoreImagePreviewFetch());assert.equal(read(),original);
+  await browse.click();await pickerDialog.getByLabel('Find a project image',{exact:true}).fill('fill-lime');await choice.click();await pickerDialog.waitFor({state:'hidden'});await settled();await wait(async()=>(await background()).includes('fill-lime.svg'));assert.equal(uploads,0);
+  await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===original);await wait(async()=>await background()===initial);page.off('request',count);
+ }
  // Complete a real upload after the selection changed; the old target must not be edited.
  let held,release;const gate=new Promise(resolve=>{release=resolve;});
  await page.route('**/rt/__api/upload?*',async route=>{const response=await route.fetch();held=true;await gate;await route.fulfill({response});});

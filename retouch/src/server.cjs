@@ -162,6 +162,11 @@ function handle(req, res, ctx) {
     requireToken(req, ctx.token);
     return json(res, 200, {ok:true,available:!!ctx.adapter.pages,...(ctx.adapter.pages?.()||{pages:[]})});
   }
+  if(p==='/rt/__api/image-preview'&&req.method==='GET'){
+    requireToken(req,ctx.token);
+    try{const image=require('./image-preview.cjs').read(ctx.appRoot,ctx.adapter.assets,url.searchParams.get('src'));res.writeHead(200,{'content-type':image.type,'cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; sandbox"});return res.end(image.data);}
+    catch(error){return json(res,409,{ok:false,reason:error.code==='ENOENT'?'The image is no longer available.':error.message});}
+  }
   if (p === '/rt/__api/images' && req.method === 'GET') {
     requireToken(req, ctx.token);
     const assets = ctx.adapter.assets;

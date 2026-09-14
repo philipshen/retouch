@@ -270,3 +270,9 @@ test('unused component definition API authenticates and exposes declared default
   assert.equal((await req(port,'GET','/rt/__api/component-definition?id=../../etc/passwd',{headers:{'X-Retouch-Token':token}})).status,400);
  }finally{fs.unlinkSync(file);}
 });
+
+test('project image previews require authentication and return original image bytes',async()=>{
+ fs.writeFileSync(path.join(root,'public','preview.svg'),'<svg xmlns="http://www.w3.org/2000/svg"/>');
+ assert.equal((await req(port,'GET','/rt/__api/image-preview?src=%2Fpreview.svg')).status,401);
+ const result=await req(port,'GET','/rt/__api/image-preview?src=%2Fpreview.svg',{headers:AUTH()});assert.equal(result.status,200);assert.equal(result.body,'<svg xmlns="http://www.w3.org/2000/svg"/>');
+});

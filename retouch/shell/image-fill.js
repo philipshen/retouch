@@ -29,7 +29,7 @@
   }
   return next;
  }
- function mount(info,el,save,saveCSS,own={},upload=null,saveImage=null){
+ function mount(info,el,save,saveCSS,own={},upload=null,saveImage=null,browseImages=null){
   if(!el)return null;const css=el.ownerDocument.defaultView.getComputedStyle(el),url=source(css.backgroundImage);if(!url&&css.backgroundImage!=='none')return null;
   const section=I.section('Image fill'),image=new Image(),content=document.createElement('div');section.append(content);
   if(info.classNameDynamic&&!saveCSS){I.note(section,info.classNameReason||'Image fill styles are computed.','refused');return section;}
@@ -46,6 +46,7 @@
    pending=true;choose.disabled=input.disabled=actions.disabled=true;status.textContent='Uploading image…';
    try{const next=await upload(file);pending=false;await replace(next,true);}catch(error){if(section.isConnected)status.textContent=error.message;}finally{pending=false;choose.disabled=input.disabled=actions.disabled=false;picker.value='';}
   };}
+  if(browseImages){const browse=I.button('Browse project images',event=>{if(allowed()){event.currentTarget.focus({preventScroll:true});browseImages(src=>replace(src));}});browse.setAttribute('aria-label','Browse images for fill');asset.append(browse);}
   const actions=document.createElement('fieldset');actions.className='image-fill-actions';asset.append(actions);
   const change=async action=>{if(!allowed())return;try{if(action==='remove'&&!saveCSS&&el.style.getPropertyPriority('background-image'))throw Error('This image has an important inline style. Edit that style in source first.');if(saveImage)await saveImage(null,false,action);else await write(action==='reset'?reset():{'background-image':'none'});}catch(error){status.textContent=error.message;}};
   const remove=I.button('Remove image fill',()=>change('remove'));remove.disabled=!url;actions.append(remove);
