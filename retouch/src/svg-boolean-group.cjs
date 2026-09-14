@@ -23,7 +23,7 @@ function context(r,kind){
  const children=v.elements.filter(e=>v.parents.get(e.id)===group.id),[operands,result]=children;
  if(children.length!==2||v.tag(operands)!=='g'||v.attr(operands,'data-rt-boolean-operands')!==''||v.attr(operands,'display')!=='none'||v.attrs(operands).some(a=>!['display','data-rt-boolean-operands','data-rt-name'].includes(a.name))||v.tag(result)!=='path'||v.attr(result,'data-rt-boolean-result')!=='')return null;
  const roots=v.elements.filter(e=>v.parents.get(e.id)===operands.id),base=Number(v.attr(group,'data-rt-boolean-base'));
- if(roots.length<2||!Number.isInteger(base)||base<0||base>=roots.length||[group,operands].some(e=>!Number.isInteger(v.closing(e))))return null;
+ if(roots.length<1||!Number.isInteger(base)||base<0||base>=roots.length||[group,operands].some(e=>!Number.isInteger(v.closing(e))))return null;
  // No authored content may be discarded on release, including comments.
  if(r.source.slice(v.opening(group),v.start(operands)).trim()||r.source.slice(v.end(operands),v.start(result)).trim()||r.source.slice(v.end(result),v.closing(group)).trim())return null;
  return {...v,group,operands,result,roots,base,operation:v.attr(group,'data-rt-boolean'),parentId:v.parents.get(group.id)};
@@ -87,7 +87,7 @@ function plan(r,op,kind){
    const v=view({...r,source,elements:null},kind),element=v.elements.find(e=>e.id===target.id),attr=v.attrs(element).find(a=>a.name==='transform'),out=new MagicString(source);out.remove(attr.start,attr.end);source=out.toString();working={...working,source,hash:original.adapter.contentHash(source),elements:original.adapter.collect(source,r.relPath).elements};working.element=working.elements.find(e=>e.id===target.id);
   }
   if(regrouping){
-   if(!Array.isArray(op.edit.ids)||op.edit.ids.some(id=>!targetContext.roots.some(e=>e.id===id))||op.edit.ids.length>=targetContext.roots.length)return refuse('Regroup two or more direct originals while leaving another containing operand.');
+   if(!Array.isArray(op.edit.ids)||op.edit.ids.some(id=>!targetContext.roots.some(e=>e.id===id))||op.edit.ids.length>targetContext.roots.length)return refuse('Regroup two or more direct originals.');
    working={...working,element:original.elements.find(e=>e.id===op.edit.ids[0]),booleanRegroupOwner:target.id};
    if(!working.element)return refuse('Select original shapes to regroup.');
   }

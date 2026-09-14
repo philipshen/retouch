@@ -78,17 +78,18 @@ The source planner also accepts `edit.type: createSVGBooleanGroup`. For this
 edit, `targetId` is the existing group whose direct originals are being
 regrouped; `edit.ids`, `edit.operation`, and `edit.path` describe the new inner
 group. `results` starts with the target itself, then every ancestor outward.
-The selected originals must be consecutive and leave at least one other
-operand in the target. The source planner retains their bytes, maps all old
+The selected originals must be consecutive. Selecting every original leaves
+one nested operand in the target, which remains editable and releasable. The source planner retains their bytes, maps all old
 identities, selects the new group, and updates the target's base index and all
 result transforms. An invalid final result discards the entire planned edit.
 The Original shapes inspector provides selection checkboxes and Union,
-Subtract, Intersect, and Exclude controls when the group has at least three
+Subtract, Intersect, and Exclude controls when the group has at least two
 originals. The browser prepares the nested group temporarily, computes the
 containing outlines, and restores the live DOM before submitting one source
 transaction. Browser coverage includes regrouping, filled-area samples, exact
 undo/redo, retained document/input state, and refusal of CSS-controlled results.
-Regrouping all originals into a single operand remains unfinished.
+Single-operand retained groups derive the same filled region for each boolean
+operation, preserving the containing group paint and transform.
 
 ## Verification
 
@@ -136,3 +137,13 @@ This covers regrouping and original geometry edits, including a lock acquired
 while descriptors load. The nested browser workflow checks that an existing
 lock and a lock added during loading each produce no POST, source change, or
 DOM change. Unlocking allows the same selected originals to be regrouped.
+
+### Regrouping all originals (2026-09-14)
+
+`RT_E2E_ALL_REGROUP=1 RT_E2E_DEEP_REGROUP=1` selects all three target originals
+inside an enclosing group. HTML/Chromium, Liquid/Chromium, and React/WebKit pass
+filled-area checks, the single-operand parent assertion, exact undo/redo,
+lock and CSS refusal/retry checks, and retained preview state. Source tests
+cover regroup-all and release through HTML, React, and Liquid. Geometry tests
+cover all four operations with one operand, transformed evenodd/nonzero holes,
+and empty regions. The full suite passes 1,413 unit tests.

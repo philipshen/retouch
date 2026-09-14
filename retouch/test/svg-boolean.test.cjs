@@ -53,3 +53,13 @@ test('empty retained results obey boolean set identities without losing the othe
  }
  for(const operation of ['union','subtract','intersect','exclude'])assert.equal(combineShapes([empty,empty],operation).empty,true);
 });
+
+test('retained single-operand groups preserve filled regions for every operation',()=>{
+ const {combineShapes}=require('../shell/svg-boolean.js');
+ for(const fillRule of ['evenodd','nonzero'])for(const operation of ['union','subtract','intersect','exclude']){
+  const document=geometry.parseCompound(rectangle(0,0,100,100)+' '+rectangle(25,25,50,50)),operand={document,fillRule,matrix:[2,0,0,3,7,9]},before=JSON.stringify(operand),result=combineShapes([operand],operation,{allowSingle:true});assert.equal(result.ok,true,result.reason);assert.equal(JSON.stringify(operand),before);
+  const scope=new paper.PaperScope();scope.setup(new scope.Size(1,1));try{const shape=new scope.CompoundPath({pathData:geometry.serializeCompound(result.document),insert:false});assert.equal(shape.contains([27,39]),true);assert.equal(shape.contains([107,159]),fillRule==='nonzero');assert.equal(shape.contains([220,320]),false);}finally{scope.remove();}
+  assert.equal(combineShapes([{document:{subpaths:[]}}],operation,{allowSingle:true}).empty,true);
+ }
+ assert.equal(combineShapes([],'union',{allowSingle:true}).ok,false);
+});

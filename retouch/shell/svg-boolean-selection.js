@@ -27,8 +27,8 @@
   if(['circle','ellipse'].includes(el.localName)){const rx=el.localName==='circle'?values.r:(values.rx??values.ry??0),ry=el.localName==='circle'?values.r:(values.ry??values.rx??0);if(rx<=0||ry<=0)return null;d=`M${cx+rx} ${cy}A${rx} ${ry} 0 0 1 ${cx} ${cy+ry}A${rx} ${ry} 0 0 1 ${cx-rx} ${cy}A${rx} ${ry} 0 0 1 ${cx} ${cy-ry}A${rx} ${ry} 0 0 1 ${cx+rx} ${cy}Z`;}
   return geometry().parseCompound(d);
  }
- function prepare(infos,elements,operation){
-  if(infos.length<2||infos.length!==elements.length||new Set(infos.map(i=>i.file)).size!==1||new Set(infos.map(i=>i.hash)).size!==1||elements.some(el=>!el?.isConnected||el.parentElement!==elements[0].parentElement))throw Error('Select sibling SVG shapes from one source file.');
+ function prepare(infos,elements,operation,{allowSingle=false}={}){
+  if(infos.length<(allowSingle?1:2)||infos.length!==elements.length||new Set(infos.map(i=>i.file)).size!==1||new Set(infos.map(i=>i.hash)).size!==1||elements.some(el=>!el?.isConnected||el.parentElement!==elements[0].parentElement))throw Error('Select sibling SVG shapes from one source file.');
   elements=elements.map((el,i)=>{
    if(!infos[i].svgBooleanGroup)return el;
    root.RetouchSVGBooleanGroup.check(el);const reason=root.RetouchSVGResize.reason(el,infos[i],true);if(reason)throw Error(reason);
@@ -37,7 +37,7 @@
   infos=infos.map(info=>info.svgBooleanGroup?info.svgBooleanGroup.result:info);
   const base=elements[0],inv=base.getScreenCTM()?.inverse();if(!inv)throw Error('The base shape has no measurable transform.');
   const operands=elements.map((el,i)=>{const reason=root.RetouchSVGResize.reason(el,infos[i],true);if(reason)throw Error(reason);const document=renderedPath(el,infos[i]);if(!document)throw Error('Choose closed shapes with nonzero area.');return {document,fillRule:el.ownerDocument.defaultView.getComputedStyle(el).fillRule,matrix:array(inv.multiply(el.getScreenCTM()))};});
-  const result=root.RetouchSVGBoolean.combineShapes(operands,operation);if(!result.ok)throw Error(result.reason);const path=result.empty?'':geometry().serializeCompound(result.document);
+  const result=root.RetouchSVGBoolean.combineShapes(operands,operation,{allowSingle});if(!result.ok)throw Error(result.reason);const path=result.empty?'':geometry().serializeCompound(result.document);
   if(path){
    const clone=base.ownerDocument.createElementNS(base.namespaceURI,'path'),properties=new Set([...infos[0].svgGeometry.fields.map(f=>f.name),'data-rt-shape']);for(const attr of base.attributes)if(!properties.has(attr.name))clone.setAttributeNS(attr.namespaceURI,attr.name,attr.value);clone.setAttribute('d',path);
    const w=base.ownerDocument.defaultView,paint=['fill','fill-opacity','fill-rule','stroke','stroke-width','stroke-opacity','stroke-linecap','stroke-linejoin','stroke-dasharray','stroke-dashoffset','opacity','filter','clip-path','mask','mix-blend-mode','vector-effect'],before=Object.fromEntries(paint.map(k=>[k,w.getComputedStyle(base).getPropertyValue(k)]));

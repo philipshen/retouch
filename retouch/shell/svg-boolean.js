@@ -23,9 +23,9 @@
   finally{scope?.remove();}
  }
  // Whole shapes preserve their own fill rule and transform before boolean work.
- function combineShapes(operands,operation){
+ function combineShapes(operands,operation,{allowSingle=false}={}){
   const fail=reason=>({ok:false,reason}),methods={union:'unite',subtract:'subtract',intersect:'intersect',exclude:'exclude'},affine=root.RetouchSVGAffine||(typeof require==='function'?require('./svg-affine.js'):null);
-  if(!Array.isArray(operands)||operands.length<2||operands.length>100||!Object.hasOwn(methods,operation))return fail('Choose between two and 100 shapes and a boolean operation.');
+  if(!Array.isArray(operands)||operands.length<(allowSingle?1:2)||operands.length>100||!Object.hasOwn(methods,operation))return fail('Choose between two and 100 shapes and a boolean operation.');
   const prepared=[];let points=0,contours=0;
   for(const operand of operands){
    if(!operand?.document||!Array.isArray(operand.document.subpaths)||operand.document.subpaths.length&&!geometry.serializeCompound(operand.document)||!['nonzero','evenodd'].includes(operand.fillRule??'nonzero')||operand.document.subpaths.some(part=>!part.closed))return fail('Choose closed shapes with supported fill rules.');
@@ -40,7 +40,9 @@
   try{
    scope=new paper.PaperScope();scope.setup(new scope.Size(1,1));
    const items=prepared.map(operand=>{const item=new scope.CompoundPath({pathData:operand.document.subpaths.length?geometry.serializeCompound(operand.document):'',fillRule:operand.fillRule,insert:false});item.transform(new scope.Matrix(...operand.matrix));return item;});
-   let result=items[0];for(const item of items.slice(1)){result=result[methods[operation]](item,{insert:false});result.fillRule='nonzero';}
+   // Normalize a lone operand through the boolean engine so evenodd holes
+   // remain holes when the derived result uses nonzero winding.
+   let result=items.length===1?items[0].unite(new scope.CompoundPath({insert:false}),{insert:false}):items[0];for(const item of items.slice(1)){result=result[methods[operation]](item,{insert:false});result.fillRule='nonzero';}
    result.reorient(true,true);const text=result.pathData,document=text?geometry.parseCompound(text):{subpaths:[]};
    if(!document||document.subpaths.some(part=>!part.closed)||document.subpaths.length&&!geometry.serializeCompound(document))return fail('The boolean result exceeds editable geometry limits.');
    return {ok:true,document,fillRule:'nonzero',empty:!document.subpaths.length};
