@@ -7,7 +7,7 @@
   const project=window.__RT_RENDERING?.stateScope?.project;
   const key = 'retouch.screen.v1'+(typeof project==='string'&&/^[a-f0-9]{64}$/.test(project)?':'+project:'');
   const savedGroup=document.createElement('optgroup');savedGroup.label='Project screens';preset.append(savedGroup);
-  let screen = null, viewport = null, committed = null;
+  let screen = null, viewport = null, committed = null, fieldScrub = null;
   const undoStack=[],redoStack=[],undoButton=document.getElementById('screenUndo'),redoButton=document.getElementById('screenRedo');
   const copy=value=>value?{...value}:null;
   const same=(a,b)=>a?.width===b?.width&&a?.height===b?.height;
@@ -29,6 +29,7 @@
   }
   function valid(value) { return Number.isInteger(value) && value >= 240 && value <= 7680; }
   function apply(next, options = {}) {
+    if(fieldScrub&&options.persist!==false)finishScrub(true);
     if(options.persist!==false){
       const nextRatio=Object.hasOwn(options,'ratio')?options.ratio:options.preserveRatio?ratioBase:next;
       if(options.history!==false&&!same(committed,next)){undoStack.push({before:copy(committed),after:copy(next),ratioBefore:copy(ratioBase),ratioAfter:copy(nextRatio)});if(undoStack.length>50)undoStack.shift();redoStack.length=0;}
@@ -91,6 +92,30 @@
       }else if(e.key==='Enter')input.blur();
     });
   }
+  // Scrubbing previews continuously, but persists one history entry on release.
+  for(const [input,axis] of [[width,'width'],[height,'height']]){
+    const label=input.parentElement;label.dataset.screenScrub=axis;label.style.cursor='ew-resize';label.style.touchAction='none';label.style.userSelect='none';label.title='Drag to resize. Shift: 10 pixels; Option/Alt: 0.1 pixels. Escape cancels.';
+    label.addEventListener('pointerdown',event=>{
+      if(event.button!==0||event.target===input||fieldScrub)return;
+      event.preventDefault();input.focus({preventScroll:true});const base=copy(screen||viewport);if(!base||!valid(base.width)||!valid(base.height))return;
+      fieldScrub={id:event.pointerId,label,input,axis,lastX:event.clientX,value:base[axis],before:copy(screen),base,ratio:copy(ratioBase),linked};keyResize=null;input.value=String(base[axis]);input.setCustomValidity('');label.setPointerCapture(event.pointerId);
+    });
+    label.addEventListener('pointermove',event=>{
+      if(!fieldScrub||fieldScrub.id!==event.pointerId)return;event.preventDefault();const saved=fieldScrub,delta=event.clientX-saved.lastX;saved.lastX=event.clientX;if(!delta)return;
+      saved.value=Math.max(240,Math.min(7680,saved.value+delta*(event.altKey?0.1:event.shiftKey?10:1)));
+      const next=constrain({...saved.base,[axis]:Math.round(saved.value)},axis,saved.ratio||saved.base,saved.linked);apply(next,{persist:false,preservePan:true});
+    });
+    label.addEventListener('pointerup',event=>{if(fieldScrub?.id===event.pointerId){event.preventDefault();finishScrub(false);}});
+    for(const type of ['pointercancel','lostpointercapture'])label.addEventListener(type,event=>{if(fieldScrub?.id===event.pointerId)finishScrub(true);});
+  }
+  function finishScrub(cancelled){
+    if(!fieldScrub)return;const saved=fieldScrub,next=copy(screen);fieldScrub=null;
+    if(cancelled){apply(saved.before,{persist:false,preservePan:true});const restored=saved.before||viewport||saved.base;width.value=restored.width;height.value=restored.height;}
+    else if(!same(saved.before,next))apply(next,{preservePan:true,ratio:saved.ratio||saved.base});
+    if(saved.label.hasPointerCapture(saved.id))saved.label.releasePointerCapture(saved.id);
+  }
+  document.addEventListener('keydown',event=>{if(fieldScrub&&event.key==='Escape'&&!event.isComposing){event.preventDefault();event.stopImmediatePropagation();finishScrub(true);}},true);
+  for(const type of ['blur','pagehide'])window.addEventListener(type,()=>finishScrub(true));
   preset.addEventListener('change', () => {
     width.setCustomValidity(''); height.setCustomValidity('');
     if (preset.value === 'fluid') apply(null);

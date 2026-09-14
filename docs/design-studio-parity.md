@@ -15709,3 +15709,22 @@ it cleaned up, and the corrected workflow passed. Evidence is retained in
 `desktop/verification/2026-09-14-homebrew-upgrade.json`.
 Native launch, trusted public release and failed-upgrade recovery remain
 unverified. This advances desktop delivery without establishing full parity.
+
+### Drag screen dimension labels (2026-09-14)
+
+The main preview W/H labels now scrub their dimensions horizontally. Normal
+movement adjusts one pixel per pointer pixel, Shift adjusts ten, and Option/Alt
+adjusts one tenth before whole-pixel rounding. Existing ratio locking and screen
+limits apply. The viewport updates during dragging; pointer release persists
+one preview-history entry. Escape, pointer cancellation, lost capture, window
+blur and page hide restore the starting screen. Cancel preserves the redo stack,
+and a drag started in fluid mode can be undone back to fluid layout.
+
+Compact-screen and project-screen browser workflows passed in Chromium and
+WebKit (`/private/tmp/retouch-screen-scrub-final-{chromium,webkit}.log` and
+`/private/tmp/retouch-screen-scrub-project-{chromium,webkit}.log`). Checks cover
+modifiers, linked proportions, viewport dimensions, grouped Undo/Redo,
+cancellation, fluid sizing/persistence and retained preview document identity.
+Fixture source remains unchanged. Syntax and diff checks passed. Comparison
+labels are not yet draggable; no native package was built for this change.
+Full Figma parity and trusted desktop distribution remain incomplete.
