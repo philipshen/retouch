@@ -16540,3 +16540,15 @@ The Liquid workflow injects a failed fetch only for Tablet, verifies the main
 canvas has the new opacity while Tablet retains the previous value, then retries
 and checks that Tablet catches up without changing saved source or replacing
 comparison documents and form values.
+
+### Light-theme comparison and recovery cleanup
+
+Comparison scope messages use the shared muted text and Inter font tokens instead
+of an inline pale dark-theme color. The max-width popup now uses panel/ink tokens
+in place of white text on a nearly white background. Class preview failures have
+a shared notification category: repeated failures replace the prior message,
+and successful recovery clears that category while leaving unrelated errors.
+
+A Chromium capture of the Liquid comparison workflow was visually inspected before
+and after notification cleanup. The workflow asserts that recovered class errors
+are removed; optional `RT_E2E_SCREENSHOT` captures its final editor state.

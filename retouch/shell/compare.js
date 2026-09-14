@@ -343,7 +343,7 @@
       }
       frame.addEventListener('load',attachMarquee);marqueeCleanup.set(frame,()=>{stopMarquee?.();frame.removeEventListener('load',attachMarquee);});
 
-      const scopeMessage=document.createElement('p');scopeMessage.className='compare-scope-message';scopeMessage.style.cssText='font:11px/1.4 system-ui;color:#aeb3bd;margin:8px 0;';scopeMessage.setAttribute('aria-label',name+' scope coverage');
+      const scopeMessage=document.createElement('p');scopeMessage.className='compare-scope-message';scopeMessage.setAttribute('aria-label',name+' scope coverage');
       const reveal=document.createElement('button');reveal.type='button';reveal.className='control-button';reveal.textContent='Show selection';reveal.setAttribute('aria-label','Show selection in '+name+' comparison');reveal.disabled=true;
       let revealSelection=null,revealIndex=-1;
       reveal.onclick=()=>{

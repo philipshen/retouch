@@ -102,6 +102,7 @@ module.exports=async({page,app,read,wait,original,retain=false,liveLiquid=false}
   }
   assert.equal(await page.getByRole('button',{name:'Retry preview refresh',exact:true}).count(),0);
 
+  assert.equal(await page.locator('#toasts .toast[data-kind="class-preview"]').count(),0);
  }
  if(retain){assert.equal(await app.locator('input').inputValue(),'retained');assert.equal(await app.locator('input').evaluate(()=>document===window.classResetDocument),true);}
 };

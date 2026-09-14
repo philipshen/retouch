@@ -3031,7 +3031,7 @@ async function setReactClassesSelection(classesById,expected=null){
     sel.info=result.element;sel.multiple=result.selection;if(literalLiquid){await refreshLiteralLiquidClasses(result.selection,before);}else if(info.contextSelection){await reloadFrame();await restoreLayerSelection(selection.map(item=>item.id));}else await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));
     if(expected){let ready=false;for(let attempt=0;attempt<50;attempt++){ready=Object.entries(expected).every(([id,g])=>{const el=matchingEls(id)[0];if(!el?.isConnected)return false;try{const actual=RetouchInspector.geometry(el,{allowRotation:Object.hasOwn(g,'rotation'),allowScale:Object.hasOwn(g,'scaleX')});return ['x','y','width','height'].every(key=>Math.abs(actual[key]-g[key])<.6);}catch{return false;}});if(ready)break;await new Promise(resolve=>setTimeout(resolve,100));}if(!ready){renderPanel();toast('Saved selection classes, but the bounds did not settle. Check responsive or inline overrides.','err');return false;}}
     renderPanel();toast('Selected layers updated','ok');return true;
-  }catch(error){renderPanel();toast((saved?'Classes saved; preview refresh failed: ':'Could not save classes: ')+error.message,'err');return false;}finally{busyPanel(false);}
+  }catch(error){renderPanel();toast((saved?'Classes saved; preview refresh failed: ':'Could not save classes: ')+error.message,'err',saved?'class-preview':undefined);return false;}finally{busyPanel(false);}
 }
 async function refreshLiteralLiquidClasses(infos,before){
  const entries=infos.map(info=>({id:info.id,before:before[info.id],classes:info.className}));
@@ -3045,6 +3045,7 @@ async function refreshLiteralLiquidClasses(infos,before){
  const retry=document.getElementById('retryClassPreview'),pending=retry?.retouchRetry;
  retry?.remove();
  if(pending?.preview===iframe.contentDocument){const completed=new Set(infos.map(info=>info.id)),remaining=pending.infos.filter(info=>!completed.has(info.id));if(remaining.length)offerClassPreviewRetry(remaining,pending.before);}
+ if(!document.getElementById('retryClassPreview'))document.querySelectorAll('#toasts .toast[data-kind="class-preview"]').forEach(el=>el.remove());
 }
 function offerClassPreviewRetry(infos,before){
  const previous=document.getElementById('retryClassPreview'),pending=previous?.retouchRetry;previous?.remove();
@@ -3063,7 +3064,7 @@ function offerClassPreviewRetry(infos,before){
    if(!resolved.every(result=>result?.ok&&result.element.classSourceLiteral))throw Error('The literal class layers no longer resolve.');
    await refreshLiteralLiquidClasses(resolved.map(result=>result.element),before);
    renderPanel();toast('Preview refreshed','ok');
-  }catch(error){toast('Preview refresh failed: '+error.message,'err');}
+  }catch(error){toast('Preview refresh failed: '+error.message,'err','class-preview');}
   finally{retry.disabled=false;busyPanel(false);}
  };
 }
@@ -3471,7 +3472,7 @@ async function writeClasses(classes, isUndo) {
       if (literalLiquid) await refreshLiteralLiquidClasses([res.element],{[info.id]:prev});
       else if (window.__RT_RENDERING?.reloadAfterWrite||info.renderRevisionAttribute) await refreshWrittenElement(info, el => info.className.split(/\s+/).filter(Boolean).every(token => el.classList.contains(token)));
     } catch (error) {
-      renderPanel();toast('Classes saved; preview refresh failed: '+error.message,'err');return false;
+      renderPanel();toast('Classes saved; preview refresh failed: '+error.message,'err','class-preview');return false;
     }
     toast('Saved', 'ok');
     renderPanel();
@@ -3723,11 +3724,13 @@ async function api(method, url, body) {
   } finally {if(writes){sourceRequests--;syncHistoryControls();}}
 }
 
-function toast(msg, cls) {
+function toast(msg, cls, kind) {
+  if(kind)document.querySelectorAll('#toasts .toast').forEach(el=>{if(el.dataset.kind===kind)el.remove();});
   if (cls === 'ok') document.querySelectorAll('#toasts .toast.ok').forEach(el=>el.remove());
   const t = document.createElement('div');
   t.className = 'toast ' + (cls || '');
   t.textContent = msg;
+  if(kind)t.dataset.kind=kind;
   document.getElementById('toasts').appendChild(t);
   setTimeout(() => t.remove(), cls === 'err' ? 6000 : 1800);
   statusEl.textContent = msg;
