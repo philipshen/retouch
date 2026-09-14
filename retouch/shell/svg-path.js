@@ -97,15 +97,9 @@
   }
   function editContour(document,index,action){
     if(!serializeCompound(document)||!Number.isInteger(index)||index<0||index>=document.subpaths.length)return null;
+    if(action==='join-next')return joinContours(document,index,index+1);
     const subpaths=document.subpaths.map(part=>({closed:part.closed,nodes:part.nodes.map(p=>translate(p,0,0))})),part=subpaths[index];let selected=index;
     if(action==='duplicate'){subpaths.splice(index+1,0,{closed:part.closed,nodes:part.nodes.map(p=>translate(p,10,10))});selected++;}
-    else if(action==='join-next'){
-      const next=subpaths[index+1];if(part.closed||!next||next.closed)return null;
-      // The new edge is straight; all existing segments retain their handles
-      // and arc parameters. Keep coincident endpoints as distinct anchors.
-      delete part.nodes.at(-1).out;delete next.nodes[0].in;delete next.nodes[0].arc;
-      part.nodes.push(...next.nodes);subpaths.splice(index+1,1);
-    }
     else if(action==='delete'){if(subpaths.length===1)return null;subpaths.splice(index,1);selected=Math.min(index,subpaths.length-1);}
     else if(action==='reverse'){
       const ordered=part.closed?[part.nodes[0],...part.nodes.slice(1).reverse()]:[...part.nodes].reverse();
@@ -117,6 +111,16 @@
       delete part.nodes[0].in;delete part.nodes[0].arc;delete part.nodes.at(-1).out;
     }else return null;
     return serializeCompound({subpaths})?{subpaths,selected}:null;
+  }
+  function joinContours(document,from,to,fromEnd='end',toEnd='start'){
+    if(!serializeCompound(document)||!Number.isInteger(from)||!Number.isInteger(to)||from===to||![from,to].every(i=>i>=0&&i<document.subpaths.length)||![fromEnd,toEnd].every(end=>['start','end'].includes(end))||document.subpaths[from].closed||document.subpaths[to].closed)return null;
+    let next={subpaths:document.subpaths.map(part=>({closed:part.closed,nodes:part.nodes.map(node=>translate(node,0,0))}))};
+    if(fromEnd==='start')next=editContour(next,from,'reverse');
+    if(toEnd==='end')next=editContour(next,to,'reverse');
+    const first=next.subpaths[from],second=next.subpaths[to];
+    delete first.nodes.at(-1).out;delete second.nodes[0].in;delete second.nodes[0].arc;
+    first.nodes.push(...second.nodes);next.subpaths.splice(to,1);
+    return serializeCompound(next)?{subpaths:next.subpaths,selected:from-(to<from?1:0)}:null;
   }
   function equivalentCompound(a,b){return !!a&&!!b&&a.subpaths.length===b.subpaths.length&&a.subpaths.every((p,i)=>equivalent(p,b.subpaths[i]));}
   const midpoint=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
@@ -199,5 +203,5 @@
     const xs=points.map(p=>p.x),ys=points.map(p=>p.y),x=Math.min(...xs),y=Math.min(...ys),width=Math.max(...xs)-x,height=Math.max(...ys)-y;
     return [x,y,width,height].every(Number.isFinite)?{x,y,width,height}:null;
   }
-  const api={bounds,serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,translatePoints,arrangePoints,setArc,split,segmentMiddle,arcCenter,arcPoint,arcToCubics,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
+  const api={joinContours,bounds,serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,translatePoints,arrangePoints,setArc,split,segmentMiddle,arcCenter,arcPoint,arcToCubics,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
 })(typeof window==='object'?window:globalThis);

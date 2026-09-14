@@ -69,7 +69,7 @@
     listen(optionsToggle,'click',()=>{optionsPanel.style.maxHeight=Math.max(32,toolbar.getBoundingClientRect().top-surface.getBoundingClientRect().top-16)+'px';optionsPanel.style.overflowY='auto';optionsPanel.style.boxSizing='border-box';});
     listen(optionsPanel,'click',event=>{if(event.target.closest('button')){options.open=false;if(optionsPanel.contains(root.document.activeElement))optionsToggle.focus();}});
     listen(options,'keydown',event=>{if(event.key==='Escape'&&options.open){event.preventDefault();event.stopImmediatePropagation();options.open=false;optionsToggle.focus();}},true);
-    let joinContourButton,handleMode,contourPicker,deleteContourButton,duplicateContourButton,closureButton,drawContourButton,moveContourButton,cornerButton,smoothButton;
+    let joinTarget,joinFromEnd,joinToEnd,joinChosenButton,joinContourButton,handleMode,contourPicker,deleteContourButton,duplicateContourButton,closureButton,drawContourButton,moveContourButton,cornerButton,smoothButton;
     if(subpaths){
       const label=root.document.createElement('label');label.textContent='Contour ';label.style.cssText='font:12px Inter,system-ui;color:var(--ink, #1e1e1e);';
       contourPicker=root.document.createElement('select');contourPicker.setAttribute('aria-label','Path contour');contourPicker.style.cssText='padding:6px;background:var(--control, #f5f5f5);color:var(--ink, #1e1e1e);border:1px solid var(--line, #e6e6e6);border-radius:4px;';
@@ -96,6 +96,13 @@
       deleteContourButton=action('Delete contour',()=>restructure('delete'));deleteContourButton.title='Remove this contour, keeping the rest of the path';
       action('Reverse contour',()=>restructure('reverse')).title='Reverse drawing direction. This can change holes with the nonzero fill rule.';
       joinContourButton=action('Join next contour',()=>restructure('join-next'));joinContourButton.title='Connect this open contour’s end to the next open contour’s start with a straight segment.';
+      const joins=root.document.createElement('div');joins.setAttribute('role','group');joins.setAttribute('aria-label','Join contour endpoints');joins.style.cssText='display:grid;gap:6px;padding:8px 0;';
+      const joinSelect=(label,values)=>{const row=root.document.createElement('label');row.textContent=label+' ';const select=root.document.createElement('select');select.setAttribute('aria-label',label);for(const [value,text]of values){const option=root.document.createElement('option');option.value=value;option.textContent=text;select.append(option);}row.append(select);joins.append(row);return select;};
+      joinFromEnd=joinSelect('Join from endpoint',[['end','End'],['start','Start']]);joinTarget=joinSelect('Join to contour',[]);joinToEnd=joinSelect('Join to endpoint',[['start','Start'],['end','End']]);
+      joinChosenButton=root.document.createElement('button');joinChosenButton.type='button';joinChosenButton.textContent='Join contours';joinChosenButton.onclick=()=>{
+        if(drag||!verify())return;const result=root.RetouchSVGPath.joinContours({subpaths},contour,Number(joinTarget.value),joinFromEnd.value,joinToEnd.value);if(!result){announce('Choose endpoints on two different open contours.');return;}
+        subpaths.splice(0,subpaths.length,...result.subpaths);selectContour(result.selected);announce('Endpoints connected. Done saves; Escape cancels.');
+      };joins.append(joinChosenButton);optionsPanel.append(joins);
       closureButton=action('Close contour',()=>restructure(closed?'open':'close'));
     }
     function drawContour(){
@@ -218,6 +225,8 @@
     function refreshContours(){
       if(!contourPicker)return;contourPicker.replaceChildren();
       subpaths.forEach((part,i)=>{const option=root.document.createElement('option');option.value=String(i);option.textContent=`${i+1} of ${subpaths.length} · ${part.closed?'Closed':'Open'}`;contourPicker.append(option);});contourPicker.value=String(contour);
+      const previousTarget=joinTarget.value;joinTarget.replaceChildren();subpaths.forEach((part,i)=>{if(i===contour||part.closed)return;const option=root.document.createElement('option');option.value=String(i);option.textContent='Contour '+(i+1);joinTarget.append(option);});if([...joinTarget.options].some(option=>option.value===previousTarget))joinTarget.value=previousTarget;
+      for(const control of [joinTarget,joinFromEnd,joinToEnd,joinChosenButton])control.disabled=closed||!joinTarget.options.length;
       joinContourButton.disabled=closed||!subpaths[contour+1]||subpaths[contour+1].closed;drawContourButton.disabled=subpaths.length>=128||totalPoints()>510;deleteContourButton.disabled=subpaths.length===1;duplicateContourButton.disabled=subpaths.length>=128||totalPoints()+vertices.length>512;
       closureButton.textContent=closed?'Open contour':'Close contour';closureButton.title=closed?'Remove the edge from the last anchor to the first':'Join the last anchor to the first with a straight edge';
       moveContourButton.setAttribute('aria-pressed',String(moveContourMode));moveContourButton.style.background=moveContourMode?'#e5f4ff':'var(--control, #f5f5f5)';cornerButton.disabled=moveContourMode;smoothButton.disabled=moveContourMode;handleMode.disabled=moveContourMode;

@@ -15462,3 +15462,28 @@ Full parity and desktop distribution remain open.
 React/Chromium also passed the complete compound-contour workflow on the same
 implementation (`/private/tmp/retouch-join-contours-react.log`, exit 0), including
 source persistence and exact Undo/Redo for the new join action.
+
+### Chosen contour endpoint joins (2026-09-14)
+
+More vector actions now includes a **Join contour endpoints** group: choose the
+selected contour's Start/End, another open contour, and its Start/End, then
+**Join contours**. The target can occur before or after the selected contour.
+The operation reverses contour direction when needed while retaining cubic
+handles and reversing arc sweep, connects endpoints with a straight segment,
+and preserves other contours. Closed contours are excluded from the target
+list. Join next contour uses the same implementation. Existing save/cancel and
+source history apply. The controls currently choose endpoints by contour;
+clicking endpoint pairs directly on the canvas remains unimplemented.
+
+All 1,248 unit tests pass (`/private/tmp/retouch-endpoint-join-all-units.log`),
+covering every endpoint orientation in either contour order, curves/arcs,
+untouched closed contours, invalid choices, immutability and roundtrip geometry.
+HTML/React Chromium and HTML WebKit compound-contour workflows pass
+(`/private/tmp/retouch-endpoint-join-{html,react,webkit}.log`), including a join to
+an earlier contour, reversed endpoints, source persistence and exact Undo/Redo.
+Those browser runs preceded routing the older next-contour shortcut through the
+shared implementation; the full unit suite includes that refactor.
+Separate SVG elements, coincident-anchor merging, vector networks/booleans and
+full Figma parity remain open. No new native package was built.
+The final HTML/Chromium workflow also passed after that refactor
+(`/private/tmp/retouch-endpoint-join-html-final.log`, exit 0).

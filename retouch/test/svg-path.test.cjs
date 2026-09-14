@@ -191,3 +191,12 @@ test('Joining open contours preserves curves, arcs and untouched contours withou
  const closedFirst=path.parseCompound('M0 0L10 0L10 10Z M20 0L30 0');assert.equal(path.editContour(closedFirst,0,'join-next'),null);
  const touching=path.editContour(path.parseCompound('M0 0L10 0 M10 0L20 0'),0,'join-next');assert.equal(touching.subpaths[0].nodes.length,4);assert.ok(path.equivalentCompound(path.parseCompound(path.serializeCompound(joined)),joined));
 });
+
+test('Chosen contour endpoints join in every orientation and preserve other paths',()=>{
+ const document=path.parseCompound('M0 0C0 10 20 10 20 0 M40 0L50 10L60 0Z M80 0A10 15 30 0 1 100 20'),before=JSON.stringify(document);
+ for(const from of [0,2])for(const fromEnd of ['start','end'])for(const toEnd of ['start','end']){
+  const to=2-from,joined=path.joinContours(document,from,to,fromEnd,toEnd),a=(fromEnd==='start'?path.editContour(document,from,'reverse'):document).subpaths[from],b=(toEnd==='end'?path.editContour(document,to,'reverse'):document).subpaths[to];
+  assert.equal(joined.subpaths.length,2);assert.deepEqual(joined.subpaths[joined.selected].nodes,[...a.nodes,...b.nodes]);assert.deepEqual(joined.subpaths[1-joined.selected],document.subpaths[1]);assert.ok(path.equivalentCompound(path.parseCompound(path.serializeCompound(joined)),joined));assert.equal(JSON.stringify(document),before);
+ }
+ for(const args of [[0,0],[0,1],[-1,2],[0,5],[0,2,'bad'],[0,2,'end','bad']])assert.equal(path.joinContours(document,...args),null);
+});
