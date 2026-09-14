@@ -316,7 +316,22 @@
       const edit=document.createElement('button');edit.className='control-button';edit.textContent='Edit';edit.setAttribute('aria-label','Edit '+name.toLowerCase()+' size');
       edit.onclick=()=>window.RetouchScreens.set({width,height});header.append(edit);
       const remove=document.createElement('button');remove.className='control-button';remove.textContent='×';remove.setAttribute('aria-label','Remove '+name+' comparison');header.append(remove);
-      remove.onclick=async()=>{activeDimensionScrub?.cancel();if(activeName?.input===nameInput)activeName=null;remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;card.inert=true;clearOrderHistory();removals++;removed.push({size,index});if(removed.length>8)removed.shift();sizes.splice(index,1);remember();const item=cards.find(c=>c.frame===frame);item?.cancelColdText?.();cards=cards.filter(c=>c!==item);updateControls();await unload(frame);surface.remove();card.remove();removals--;updateControls();};
+      remove.onclick=async()=>{
+        const restoreFocus=card.contains(document.activeElement);
+        activeDimensionScrub?.cancel();if(activeName?.input===nameInput)activeName=null;
+        remove.disabled=true;const index=sizes.indexOf(size);if(index<0)return;
+        card.inert=true;clearOrderHistory();removals++;removed.push({size,index});
+        if(removed.length>8)removed.shift();sizes.splice(index,1);remember();
+        const item=cards.find(c=>c.frame===frame);item?.cancelColdText?.();
+        cards=cards.filter(c=>c!==item);updateControls();
+        await unload(frame);surface.remove();card.remove();removals--;updateControls();
+        // Do not take focus back if the user moved elsewhere during unload.
+        if(restoreFocus&&document.activeElement===document.body){
+          const next=cards[Math.min(index,cards.length-1)];
+          const target=next?(next.previewBody.hidden?next.edit:next.viewport):pin.disabled?focus:pin;
+          target.focus({preventScroll:true});target.scrollIntoView({block:'nearest',inline:'nearest'});
+        }
+      };
       const viewport=document.createElement('div');viewport.className='compare-viewport';viewport.tabIndex=0;viewport.setAttribute('role','button');viewport.setAttribute('aria-label','Edit from '+name+' comparison');viewport.title='Click a layer to select it on the main canvas at this size. Style scope stays unchanged.';viewport.setAttribute('aria-describedby','comparisonNavigationHint');viewport.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight PageUp PageDown Home End Enter Space');
       const frame=document.createElement('iframe');frame.title=name+' comparison preview';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');frame.style.width=width+'px';frame.style.height=height+'px';
       const surface=document.createElement('div');surface.className='compare-surface';surface.setAttribute('aria-hidden','true');surface.append(frame);rail.append(surface);

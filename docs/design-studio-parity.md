@@ -16599,3 +16599,9 @@ size** and reveals/focuses that preview instead of being disabled. It reopens a
 collapsed preview and creates no duplicate. Existing sizes remain reachable at
 the eight-screen limit; adding a ninth distinct size stays disabled. Chromium
 and WebKit panel workflows cover collapsed reuse, focus, and the capacity limit.
+
+Removing a focused screen now places keyboard focus on a neighboring preview
+(or its Edit button if collapsed), falling back to the add-screen action when
+none remain. It does not reclaim focus if the user moves elsewhere while the
+iframe unloads. Browser coverage removes all screens using the keyboard and
+checks the empty-rail focus target; a separate step checks user-moved focus.

@@ -43,6 +43,16 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    await page.getByRole('button',{name:'Show current size',exact:true}).click();assert.equal(await page.locator('.compare-card').count(),8);
    await page.getByLabel('Screen width',{exact:true}).fill('805');await page.getByLabel('Screen width',{exact:true}).press('Enter');
    assert.equal(await page.getByRole('button',{name:'Pin current size',exact:true}).isDisabled(),true);
+   await page.locator('.compare-card').first().getByRole('button',{name:/^Remove .* comparison$/}).evaluate(el=>{el.focus();el.click();document.getElementById('screenWidth').focus();});
+   await wait(async()=>await page.locator('.compare-card').count()===7);
+   assert.equal(await page.getByLabel('Screen width',{exact:true}).evaluate(el=>el===document.activeElement),true);
+   for(let remaining=7;remaining>0;remaining--){
+    const remove=page.locator('.compare-card').first().getByRole('button',{name:/^Remove .* comparison$/});
+    await remove.focus();await remove.press('Enter');
+    await wait(async()=>await page.locator('.compare-card').count()===remaining-1);
+    await wait(async()=>page.evaluate(()=>document.activeElement?.matches('.compare-viewport,.comparison-pin')===true));
+   }
+   assert.equal(await page.getByRole('button',{name:'Pin current size',exact:true}).evaluate(el=>el===document.activeElement),true);
    assert.equal(fs.readFileSync(file,'utf8'),original);assert.deepEqual(errors,[]);console.log('COMPARISON PANEL HELP/FOCUS/STATE PASS',engine,{firstPreviewTop:compactTop});return;
   }
   await page.getByRole('button',{name:'Edit mode',exact:true}).click();await clickLayer('Phone','a');await wait(async()=>await app.locator('body').evaluate(()=>innerWidth)===390&&await page.getByRole('treeitem',{name:'a · Open link',exact:true}).getAttribute('aria-selected')==='true');assert.equal(await page.getByRole('button',{name:'Edit mode',exact:true}).count(),1);assert.equal(await app.locator('body').evaluate(()=>location.pathname),'/');assert.equal(await page.getByLabel('Style screen scope').inputValue(),'min-[1440px]:');assert.equal(fs.readFileSync(file,'utf8'),original);
