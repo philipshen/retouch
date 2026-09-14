@@ -114,5 +114,16 @@ native SVG filled-area samples, exact source undo/redo, and retained form and
 document state. HTML/Chromium and React/WebKit additionally exercise a CSS `d`
 override and verify the refused regroup restores the DOM and leaves source
 unchanged. HTML/WebKit and Liquid/Chromium passed the regroup/history workflow
-before the refusal assertion was added. Regrouping under additional ancestors
-has source-level coverage; that browser scenario still needs explicit coverage.
+before the refusal assertion was added. The `RT_E2E_DEEP_REGROUP=1` scenario adds a fourth operand around the target,
+then regroups two originals inside it. It verifies that one operation request
+carries both enclosing results, checks filled-area samples and the separate
+fourth operand, refuses a CSS override on the outermost result without source
+or DOM changes, and restores exact source with one undo/redo. Preparing this
+scenario required hiding the target's temporary original-shapes container
+before computing its parent's result. Regroup selections now survive inspector
+refreshes at the same source hash, preserving retry choices after refusal.
+
+The deeper regroup scenario passes on HTML/Chromium, Liquid/Chromium, and
+React/WebKit. The full unit suite passes 1,409 tests after the cascade and
+selection-preservation fixes. This does not establish arbitrary nesting depth,
+responsive outline regeneration, or full Figma parity.
