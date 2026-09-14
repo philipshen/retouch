@@ -120,15 +120,27 @@
   const inlineStyles=new WeakMap();
   const styleAttributes=node=>JSON.stringify([...node.attributes].filter(attr=>attr.name!=='nonce').map(attr=>[attr.name,attr.value]).sort());
   const styleRules=node=>{try{return JSON.stringify([...node.sheet.cssRules].map(rule=>rule.cssText));}catch{return null;}};
-  function captureInlineStyles(d){if(!d||inlineStyles.has(d))return;inlineStyles.set(d,[...d.querySelectorAll('head style')].map(node=>({node,text:node.textContent,attrs:styleAttributes(node),rules:styleRules(node)})));}
-  // Capture the loaded document before edits. Later runtime style nodes are
-  // intentionally excluded, and runtime mutations to captured sheets conflict.
-  root.document?.addEventListener('load',event=>{if(event.target?.tagName==='IFRAME')try{captureInlineStyles(event.target.contentDocument);}catch{}},true);
-  function inlineStylePlans(d,fresh){
-    const source=[...fresh.querySelectorAll('head style')],baseline=inlineStyles.get(d);
+  function parsedStyleRules(text){try{const sheet=new root.CSSStyleSheet();sheet.replaceSync(text);return JSON.stringify([...sheet.cssRules].map(rule=>rule.cssText));}catch{return null;}}
+  function captureInlineStyles(d){
+    if(!d||inlineStyles.has(d)||!/^https?:/.test(d.URL))return;
+    const live=[...d.querySelectorAll('head style')].map(node=>({node,text:node.textContent,attrs:styleAttributes(node),rules:styleRules(node)})),state={entries:null,error:null},controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);inlineStyles.set(d,state);
+    // A non-executing response gives us the server's CSS, independently of
+    // startup scripts that ran before the iframe load event.
+    state.ready=(async()=>{try{
+      const response=await root.fetch(d.URL,{cache:'no-store',signal:controller.signal});if(!response.ok)throw Error('Could not identify the preview stylesheets.');
+      const fresh=new root.DOMParser().parseFromString(await response.text(),'text/html');
+      state.entries=[...fresh.querySelectorAll('head style')].map(source=>{const text=source.textContent,attrs=styleAttributes(source),rules=parsedStyleRules(text),matches=live.filter(item=>item.text===text&&item.attrs===attrs&&rules!==null&&item.rules===rules);return matches.length===1?{...matches[0],serverText:text}:{node:null,text,serverText:text,attrs,rules};});
+    }catch(error){state.error=error;}finally{clearTimeout(timer);}})();
+  }
+  root.document?.addEventListener('load',event=>{if(root.__RT_RENDERING?.reloadAfterWrite&&event.target?.tagName==='IFRAME')try{captureInlineStyles(event.target.contentDocument);}catch{}},true);
+  async function inlineStylePlans(d,fresh){
+    const source=[...fresh.querySelectorAll('head style')],state=inlineStyles.get(d);if(state)await state.ready;const baseline=state?.entries;
+    if(state?.error)throw state.error;
     if(!source.length&&!baseline?.length)return [];
     if(!baseline||source.length!==baseline.length)throw Error('The inline stylesheet structure changed. Reload the preview before applying these styles.');
-    return baseline.map((entry,i)=>{const next=source[i];if(!entry.node.isConnected||entry.node.ownerDocument!==d||entry.text!==entry.node.textContent||entry.attrs!==styleAttributes(entry.node)||entry.attrs!==styleAttributes(next)||entry.rules!==styleRules(entry.node))throw Error('A runtime stylesheet changed. Reload the preview before applying these styles.');return {entry,text:next.textContent};});
+    return baseline.flatMap((entry,i)=>{const next=source[i];if(entry.attrs!==styleAttributes(next))throw Error('The inline stylesheet structure changed. Reload the preview before applying these styles.');
+      if(!entry.node){if(next.textContent!==entry.serverText)throw Error('Startup scripts own a changed stylesheet. Reload the preview to apply the saved styles.');return [];}
+      if(!entry.node.isConnected||entry.node.ownerDocument!==d||entry.text!==entry.node.textContent||entry.attrs!==styleAttributes(entry.node)||entry.rules!==styleRules(entry.node))throw Error('A runtime stylesheet changed. Reload the preview before applying these styles.');return [{entry,text:next.textContent}];});
   }
   // A saved source write can outlive a failed preview fetch. Base the next
   // token delta on the last source classes this document actually received.
@@ -143,7 +155,7 @@
       const response=await fetcher(href,{cache:'no-store',signal:controller.signal});if(!response.ok)throw Error('The saved classes could not be loaded.');const fresh=new root.DOMParser().parseFromString(await response.text(),'text/html');
       const plans=entries.map(item=>{const select=doc=>[...doc.querySelectorAll('[data-rt]')].filter(el=>el.getAttribute('data-rt')===item.id),source=select(fresh),live=select(d);if(!source.length||!live.length||source.some(el=>canonical(el.getAttribute('class'))!==canonical(item.classes)))throw Error('The preview has not received the saved literal classes.');
         const next=new Set(tokens(item.classes)),previous=new Set(tokens(applied.get(item.id))),removed=new Set([...previous].filter(token=>!next.has(token))),added=[...next].filter(token=>!previous.has(token));return {live,removed,added};});
-      const stylePlans=inlineStylePlans(d,fresh);
+      const stylePlans=await inlineStylePlans(d,fresh);
       if(frame.contentDocument!==d||frame.contentWindow.location.href!==href||plans.some(plan=>plan.live.some(el=>!el.isConnected)))throw Error('Preview navigated while synchronizing classes.');
       for(const {live,removed,added}of plans)for(const el of live){const classes=new Set(tokens(el.getAttribute('class')).filter(token=>!removed.has(token)));for(const token of added)classes.add(token);if(classes.size)el.setAttribute('class',[...classes].join(' '));else el.removeAttribute('class');}
       // Reapply even identical CSS: WebKit can retain stale nested-media

@@ -16681,6 +16681,15 @@ Rotated/flipped/perspective image frames and non-percentage starting positions r
 
 The source-backed image gesture now has Chromium/WebKit coverage for React and local Liquid at 50%, 100% and 200% zoom. The checks create a tablet-only crop override, verify the phone keeps its original crop, cancel preview gestures, group keyboard edits, undo exact source and preserve an input/document identity. React also retains a client component counter.
 
-This exposed a Liquid preview bug: literal classes refreshed, but newly compiled inline CSS did not. Render sync now captures initial inline stylesheet ownership at frame load and refreshes those sheets alongside literal classes. Style nodes added after frame load are excluded. Styles modified by startup scripts before that baseline is captured are not yet distinguished reliably from server-authored CSS. Changed stylesheet structure, attributes, text or CSSOM rules cause a preview conflict before applying the class delta. Browser checks cover runtime style retention, CSSOM conflict, retry recovery and exact undo.
+This exposed a Liquid preview bug: literal classes refreshed, but newly compiled inline CSS did not. Render sync now captures initial inline stylesheet ownership at frame load and refreshes those sheets alongside literal classes. Style nodes added after frame load are excluded. Startup stylesheet ownership is now checked against a non-executing server response and parsed CSSOM, as described below. Changed stylesheet structure, attributes, text or CSSOM rules cause a preview conflict before applying the class delta. Browser checks cover runtime style retention, CSSOM conflict, retry recovery and exact undo.
 
 WebKit additionally retained stale nested-media styling after class-only undo. Reapplying the unchanged owned stylesheet corrected the reproduced computed-style failure; sync now reapplies its text while preserving the stylesheet node. These local Liquid checks are not live Shopify verification.
+
+
+### Startup stylesheet ownership — 2026-09-14
+
+Server-rendered previews now fetch a non-executing CSS baseline at frame load. An inline stylesheet is writable only when its initial text, attributes and parsed CSSOM uniquely match a live sheet. Startup-added sheets are excluded; startup text or CSSOM modifications remain runtime-owned. If later server CSS changes a runtime-owned sheet, preview synchronization refuses before changing the live class list.
+
+Browser checks cover startup CSSOM mutation in Chromium and startup text mutation in WebKit, including retained style-node identities and custom properties, generated image-position CSS, responsive isolation, source undo, later runtime conflicts and retry. A conflicting server response is explicitly refused without a partial class update. Existing Liquid single/multi-layer scope and history checks pass.
+
+This adds one same-origin read per server-rendered preview load. Ambiguous duplicate sheets, changed sheet structure, inaccessible CSSOM or baseline fetch failure do not establish ownership. Constructable stylesheet parsing does not support imported CSS ownership; those cases still require a broader solution. Live Shopify behavior and universal site coverage remain unverified.
