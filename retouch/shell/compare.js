@@ -263,7 +263,7 @@
       updateControls();if(restore.disabled)return;
       const last=removed.pop(),index=Math.min(last.index,sizes.length),next=cards[index]?.card;
       sizes.splice(index,0,last.size);addCard(last.size,next);const item=cards.pop();cards.splice(index,0,item);
-      item.frame.src=path()||'/';remember();updateControls();item.card.scrollIntoView({block:'nearest'});
+      item.frame.src=path()||'/';remember();updateControls();item.card.scrollIntoView({block:'nearest'});(item.previewBody.hidden?item.edit:item.viewport).focus({preventScroll:true});
     };rail.append(restore);
     emptyState=document.createElement('div');emptyState.className='compare-empty';
     const emptyTitle=document.createElement('h3');emptyTitle.textContent='No comparison screens';

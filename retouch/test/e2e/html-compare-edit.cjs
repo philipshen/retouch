@@ -55,6 +55,15 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
    assert.equal(await page.getByRole('button',{name:'Pin current size',exact:true}).evaluate(el=>el===document.activeElement),true);
    await page.getByRole('heading',{name:'No comparison screens',exact:true}).waitFor();
    await page.screenshot({path:'/private/tmp/retouch-empty-screens-'+engine+'.png'});
+   const restoreScreen=page.getByRole('button',{name:'Undo remove: Custom 804 × 900',exact:true});
+   await restoreScreen.focus();await restoreScreen.press('Enter');await preview('Custom 804 × 900').locator('body').waitFor();
+   assert.equal(await page.getByRole('button',{name:'Edit from Custom 804 × 900 comparison',exact:true}).evaluate(el=>el===document.activeElement),true);
+   await page.getByRole('button',{name:'Hide Custom 804 × 900 preview',exact:true}).click();
+   await page.getByRole('button',{name:'Remove Custom 804 × 900 comparison',exact:true}).click();await wait(async()=>await page.locator('.compare-card').count()===0);
+   await restoreScreen.click();await preview('Custom 804 × 900').locator('body').waitFor();
+   assert.equal(await page.getByRole('button',{name:'Show Custom 804 × 900 preview',exact:true}).isVisible(),true);
+   assert.equal(await page.getByRole('button',{name:'Edit custom 804 × 900 size',exact:true}).evaluate(el=>el===document.activeElement),true);
+   await page.getByRole('button',{name:'Remove Custom 804 × 900 comparison',exact:true}).click();await wait(async()=>await page.locator('.compare-card').count()===0);
    await page.getByRole('button',{name:'Add current screen',exact:true}).click();
    await preview('Custom 805 × 900').locator('body').waitFor();assert.equal(await page.locator('.compare-card').count(),1);
    assert.equal(await page.getByRole('heading',{name:'No comparison screens',exact:true}).isVisible(),false);

@@ -16611,3 +16611,8 @@ An empty comparison rail now explains that no screens are present and offers
 when a screen is added. Chromium/WebKit workflows remove all screens, add again
 from the empty state, and verify focus on the new preview and unchanged source.
 The Chromium empty-state capture was visually inspected.
+
+Undo remove now focuses the restored preview, or its visible Edit button when
+the screen was collapsed. The panel workflow verifies keyboard restoration of
+an expanded screen and restoration of a collapsed screen without expanding it,
+then returns to the empty state and adds another screen. Source stays unchanged.
