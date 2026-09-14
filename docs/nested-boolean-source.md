@@ -156,3 +156,21 @@ additional enclosing group. The outer outline remains unchanged throughout
 these parent-only operations, and the full workflow retains document/input
 state. These are additional browser checks; no runtime code changed for this
 verification step.
+
+### Removing originals: source planner
+
+`removeSVGBooleanOperand` accepts `operandId`, `fileHash`, and the newly computed
+parent `path`. For a nested target, use it as the `edit` in
+`setSVGBooleanNested`, with the usual complete ancestor `results` chain.
+Removal deletes the selected original subtree, retains other source bytes,
+remaps surviving identities, and preserves the independent combined paint.
+If the base is removed, the first surviving original becomes the base and its
+effective transform is applied to the result. The containing group remains
+selected. Invalid own or ancestor paths reject the entire source transaction.
+
+Source tests cover all three adapters, base/non-base removal, a nested target,
+retained-group subtree removal, and refusal to remove the final operand. The
+full unit suite passes 1,428 tests. Browser computation, removal controls,
+lock handling, and end-to-end history verification for this operation remain
+unfinished. Removing the final original will need a separate empty-group or
+group-deletion behavior.
