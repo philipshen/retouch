@@ -16075,3 +16075,30 @@ Mask outline view now includes each open comparison preview. Each iframe owns an
 Verification: 1,307 unit tests passed. Chromium and WebKit workflows verify Phone/Tablet/Desktop guide geometry, scrolling comparisons into view, resizing Phone to 650px with retained document state, hiding/showing all previews, closing the comparison panel, source preservation and the existing mask/history flow. Main canvas zoom checks still pass at 75%, 100% and 150%. The screenshot `../recovery-2026-09-14/mask-comparison-outlines.png` was visually inspected; logs are `mask-outline-comparisons-{chromium,webkit,units}.log`.
 
 The original outline limits remain: text/image/symbol bounding guides, Retouch-created mask discovery, and incomplete Figma visibility semantics/direct manipulation. Full parity and trusted macOS distribution remain open.
+
+### Retained boolean-group source foundation — 2026-09-14
+
+`src/svg-boolean-group.cjs` adds a shared source planner for HTML, React and
+Liquid. A group keeps the original operand markup in a hidden SVG group and a
+separate derived path. The planner supports all four operation labels, changing
+the result, releasing the originals, and atomic original-shape geometry/transform
+edits paired with an updated result. Original selection order identifies the
+base appearance while source stacking order remains unchanged. Source identities
+are remapped explicitly; release preserves operand edits and otherwise restores
+exact original bytes, including empty-result groups.
+
+This is a foundation, not a completed inspector feature: adapter/API routing,
+inspector controls, browser geometry capture and CSS-ancestry preflight, ordinary
+operand-edit interception, nested groups and responsive regeneration remain to
+be connected. The existing visible combine controls still flatten selections.
+The planner requires consecutive literal shapes; authored IDs, dynamic attributes
+and altered wrappers are refused. Existing Liquid structural restrictions apply.
+Group transforms and independent result-paint editing need their own preservation
+rules before those controls are enabled.
+
+Fifteen focused tests cover the three source adapters, operation changes,
+empty/nonempty results, selection order, atomic geometry edits, identity mapping,
+exact release and refusal cases. All 1,335 unit tests passed. The standalone SVG
+source output passed pixel checks for Union/Subtract/Intersect/Exclude in Chromium
+and WebKit using `test/e2e/svg-boolean-group-source.cjs`. These are source/render
+checks, not editor interaction or native-app verification.
