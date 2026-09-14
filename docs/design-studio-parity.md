@@ -16638,3 +16638,11 @@ The action workflow exposed the pre-existing detached-input failure after histor
 restoration, also reproduced without the control guard. It now passes and includes
 an explicit inspector rerender between the digits of 25%. Comparison-panel tests
 verify that digits on Controls and preview buttons leave source unchanged.
+
+### Screen creation and reveal through Actions
+
+Actions search now exposes the current-size toolbar action while comparisons are
+open. Searches such as “add screen” find Pin current size; existing sizes expose
+Show current size. Availability and the capacity-limit explanation come from the
+actual toolbar control. The action workflow creates a screen, reveals it without
+a duplicate, and checks the disabled add action at capacity, with unchanged source.

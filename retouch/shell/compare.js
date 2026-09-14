@@ -256,7 +256,7 @@
     undoLoad.onclick=()=>{if(previousSet&&!loadingSet)replaceSet(previousSet.sizes,previousSet.removed,null,'Restored previous screen set.');};
     setStatus=document.createElement('p');setStatus.className='hint';setStatus.setAttribute('role','status');setStatus.setAttribute('aria-label','Screen set status');setStatus.textContent=setMessage;
     files.append(saveSet,loadSet,undoLoad,file);rail.append(files,setStatus);
-    pin=document.createElement('button');pin.className='control-button comparison-pin';pin.type='button';pin.textContent='+';pin.setAttribute('aria-label','Pin current size');
+    pin=document.createElement('button');pin.id='comparisonPin';pin.className='control-button comparison-pin';pin.type='button';pin.textContent='+';pin.setAttribute('aria-label','Pin current size');
     pin.onclick=()=>{if(!pin.disabled)window.RetouchComparisons.showSize(current());};toolbar.insertBefore(pin,focus);
     restore=document.createElement('button');restore.className='control-button';restore.type='button';
     restore.onclick=()=>{
