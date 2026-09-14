@@ -1149,3 +1149,5 @@ html, body { overflow:clip; }
 .image-crop-flips { display:flex;gap:4px;margin:8px 0; }
 .image-crop-flips button { flex:1; }
 .image-crop-flips button[aria-pressed="true"] { color:var(--accent);background:#e5f4ff;border-color:var(--accent); }
+
+.image-crop-history { display:flex;gap:4px;margin-right:auto; }

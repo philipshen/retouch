@@ -16753,3 +16753,10 @@ React/Chromium and Liquid/WebKit checks verify the focus outline, rotated keyboa
 Crop image now has horizontal and vertical flip toggles with visible selected states. Reflections apply to image content before crop rotation, preserving the authored frame. Both values persist in the self-contained crop recipe; previous recipes default to unflipped. Reset clears both flips along with zoom, rotation and position.
 
 All 1,516 unit tests pass. React/Chromium and Liquid/WebKit verify flipped/rotated red-blue pixels, reopening both toggle values, reset preview and application, exact source undo and retained state. The light-theme dialog was visually inspected in WebKit. The fixture verifies horizontal reflection pixels and both persisted toggles; vertical reflection composition also has a unit assertion. Free-aspect crop handles and broader image editing remain unfinished.
+
+
+### Undo and redo within crop editing — 2026-09-14
+
+The crop dialog now maintains up to 100 local undo steps, with Undo/Redo buttons and Ctrl/Cmd-Z, Shift-Z and Y shortcuts. Numeric changes commit on change, held arrow keys on release, and drags on gesture end. Flip and reset actions are separate steps. New edits discard redo. This history is local to the open dialog; Apply still creates one source-history operation.
+
+React/Chromium and Liquid/WebKit verify held-arrow grouping, reverse/redo, redo invalidation, a multi-move pointer drag undone as one step, flip undo/redo, no premature source changes, crop reset, exact source undo and retained runtime state.
