@@ -1,0 +1,113 @@
+{
+  "sourceCommit": "631b70f054d80f09d10568a878de2013ca445430",
+  "sourceTreeDirty": false,
+  "sourceFiles": 220,
+  "architectures": [
+    "arm64",
+    "x86_64"
+  ],
+  "signature": "strict verification passed; trust and notarization are separate checks",
+  "status": "Ad hoc development archive; native launch and trusted distribution unverified",
+  "archive": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-631b70f/Retouch-0.1.0-mac.zip",
+  "sha256": "2ebc8b4d97944f605b9367219a98308c6a1bb54ddc2c7c7334e1cfd51fe51286",
+  "unitsPassed": 1298,
+  "unitLog": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-631b70f/packaged-units.log",
+  "unitLogSha256": "7a7fa9151f7187d19a5c253b3d2aa74da6701c9606ff6d7e82ac1258fddde722",
+  "desktopTestsPassed": 25,
+  "workflows": [
+    {
+      "name": "mask-html-chromium",
+      "args": [
+        "test/e2e/svg-mask-controls.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "html",
+        "RT_E2E_BROWSER": "chromium"
+      },
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-631b70f/mask-html-chromium.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 8891,
+      "logSha256": "a95b4c1c104f175a8d51e3b5615a5af65a5a96a413982a5731a00e2ef5bf3f15"
+    },
+    {
+      "name": "mask-liquid-chromium",
+      "args": [
+        "test/e2e/svg-mask-controls.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "liquid",
+        "RT_E2E_BROWSER": "chromium"
+      },
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-631b70f/mask-liquid-chromium.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 7422,
+      "logSha256": "efad5c385c63b3e9dfd9f7b010f56303d4cd009862f98053ba21c04921956837"
+    },
+    {
+      "name": "mask-html-webkit",
+      "args": [
+        "test/e2e/svg-mask-controls.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "html",
+        "RT_E2E_BROWSER": "webkit"
+      },
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-631b70f/mask-html-webkit.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 8400,
+      "logSha256": "b172689f82d5f42e673bff4766794c2905d047f31a44fec4866a8c3c2b100cce"
+    },
+    {
+      "name": "mask-liquid-webkit",
+      "args": [
+        "test/e2e/svg-mask-controls.cjs"
+      ],
+      "env": {
+        "RT_E2E_RENDERER": "liquid",
+        "RT_E2E_BROWSER": "webkit"
+      },
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-631b70f/mask-liquid-webkit.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 8314,
+      "logSha256": "62efd7bb1e9c519416d9dce7a7855c42eee92599bbe681c0f3155f23177da026"
+    },
+    {
+      "name": "screens-chromium",
+      "args": [
+        "test/e2e/compact-screens.cjs"
+      ],
+      "env": {
+        "RT_E2E_BROWSER": "chromium"
+      },
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-631b70f/screens-chromium.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 2064,
+      "logSha256": "28ddb0e6330ae526e5cf3fe442fd57c869c2be141a9097f0a73730de0ed13805"
+    },
+    {
+      "name": "screens-webkit",
+      "args": [
+        "test/e2e/compact-screens.cjs"
+      ],
+      "env": {
+        "RT_E2E_BROWSER": "webkit"
+      },
+      "log": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-631b70f/screens-webkit.log",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 2525,
+      "logSha256": "cfc3ab123a96e27216e46b11ebd47638acf27650e9dd52e0e8f4a46542f578ab"
+    }
+  ],
+  "localCask": "/Users/philipshen/Developer/retouch-worktrees/desktop-masks-631b70f/retouch-studio.rb",
+  "localCaskSha256": "95639692cc2e5f0b0469bd2a052df6afe4bbe3a2dcd398d76008eedd0a7e9f40",
+  "sourceManifestMatchedCheckout": true,
+  "nativeLaunch": "not run",
+  "notarization": "not performed",
+  "brewInstall": "not rerun for this archive"
+}

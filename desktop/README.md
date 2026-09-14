@@ -1,5 +1,27 @@
 # Retouch for macOS
 
+## Latest mask and Liquid development archive — 2026-09-14
+
+Source commit `631b70f054d80f09d10568a878de2013ca445430` is packaged in
+`/Users/philipshen/Developer/retouch-worktrees/desktop-masks-631b70f/Retouch-0.1.0-mac.zip`.
+SHA-256: `2ebc8b4d97944f605b9367219a98308c6a1bb54ddc2c7c7334e1cfd51fe51286`.
+
+This universal arm64/x86_64 development app includes current boolean operations,
+HTML and Liquid masks, editable mask types/shapes/bounds, and screen controls.
+All 220 source hashes match the checkout. The extracted runtime passed 1,298
+unit tests and six Chromium/WebKit mask and compact-screen workflows. All 25
+desktop tests passed, as did package integrity and tampering-rejection checks.
+The sibling `retouch-studio.rb` is a syntax-checked local-file cask bound to this
+archive's checksum. Homebrew installation was not rerun for this archive.
+
+Receipt: [2026-09-14-masks-liquid.json](verification/2026-09-14-masks-liquid.json).
+The runtime test harness references the extracted app's runtime directories;
+LiquidJS is supplied only as a test renderer. No native launch was attempted.
+This is ad hoc signed and is not a notarized or published trusted release.
+The older Developer ID signing process was confirmed live; native launch,
+notarization, public Homebrew delivery and Intel execution remain unverified.
+
+
 A native AppKit window hosts the same Retouch editor used in the browser.
 macOS 13 or later; universal Apple Silicon and Intel binary.
 
