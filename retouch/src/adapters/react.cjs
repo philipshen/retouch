@@ -8,6 +8,7 @@ const path = require('node:path');
 const structure = require('../structure.cjs');
 const svgMove=require('../jsx-svg-move.cjs'),svgDelete=require('../jsx-svg-delete.cjs'),svgDuplicate=require('../jsx-svg-duplicate.cjs');
 function svgPlanner(resolved,op){
+ if(['createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds'].includes(op.type))return require('../jsx-svg-mask.cjs');
  if(op.type==='replaceSVGSelection')return {plan:(r,o)=>require('../svg-combine-selection.cjs').plan(r,o,'react')};
  if(op.type==='moveElement'&&svgMove.describe(resolved))return svgMove;
  if(op.type==='deleteElement'&&svgDelete.describe(resolved))return svgDelete;
@@ -32,7 +33,7 @@ module.exports = {
   describe: resolved => {
     const svgDeletion=svgDelete.describe(resolved),svgMovement=svgMove.describe(resolved),svgDuplication=svgDuplicate.describe(resolved);
     const base={...structure.describe(resolved,'react'),...require('../native-insert.cjs').describe(resolved,'react'),...svgMovement};
-    return {svgBooleanReplacement:require('../svg-combine-selection.cjs').describe(resolved,'react'),componentMovement:resolved.element.kind==='instance'?require('../move-component.cjs').describe(resolved):null,...describeElement(resolved),...require('../jsx-layer-name.cjs').describe(resolved),...require('../jsx-text-styles.cjs').describe(resolved),...require('../jsx-color-styles.cjs').describe(resolved),...require('../jsx-effect-styles.cjs').describe(resolved),...require('../jsx-variable-bindings.cjs').describe(resolved),classSelection:resolved.element.kind==='host',canCreateComponent:resolved.element.kind==='host',canInsertComponent:require('../insert-component.cjs').canContain(resolved),svgDeletion,svgMovement,svgDuplication,context:resolved.context||null,
+    return {svgMask:require('../jsx-svg-mask.cjs').describe(resolved),svgBooleanReplacement:require('../svg-combine-selection.cjs').describe(resolved,'react'),componentMovement:resolved.element.kind==='instance'?require('../move-component.cjs').describe(resolved):null,...describeElement(resolved),...require('../jsx-layer-name.cjs').describe(resolved),...require('../jsx-text-styles.cjs').describe(resolved),...require('../jsx-color-styles.cjs').describe(resolved),...require('../jsx-effect-styles.cjs').describe(resolved),...require('../jsx-variable-bindings.cjs').describe(resolved),classSelection:resolved.element.kind==='host',canCreateComponent:resolved.element.kind==='host',canInsertComponent:require('../insert-component.cjs').canContain(resolved),svgDeletion,svgMovement,svgDuplication,context:resolved.context||null,
       structure:svgDeletion?{...base,canDelete:true,canDuplicate:!!svgDuplication||base.canDuplicate,canCopy:base.canDuplicate,canPaste:base.canPaste,parentId:svgDeletion.parentId,reason:base.reason?'SVG structural actions depend on the selected source subtree.':null}:base};
   },
   applyOp: (resolved,op) => {
@@ -62,6 +63,6 @@ module.exports = {
   assets: { directory: 'public', urlPrefix: '/', uploadDirectory: 'rt-assets' },
   capabilities: {
     classAttr: 'className',
-    ops: ['replaceSVGSelection','setSVGGradient','insertElement','renameElement', 'insertSVG', 'setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'setClasses', 'setClassesSelection', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types],
+    ops: ['createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertElement','renameElement', 'insertSVG', 'setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'setClasses', 'setClassesSelection', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types],
   },
 };

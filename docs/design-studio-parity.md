@@ -16033,3 +16033,11 @@ The adapter checks Liquid structural ownership before editing. Named layers reta
 Verification: 1,298 unit tests passed, including nine Liquid mask source/history tests. Local LiquidJS Chromium and WebKit inspector workflows passed creation, both mask types, type changes, shape edits, responsive bounds at two sizes, reset, exact Undo/Redo, selection restoration and retained preview state. Evidence logs: `../recovery-2026-09-14/liquid-mask-{chromium,webkit,units}.log`.
 
 Live Shopify storefront verification remains outstanding. React masks, dynamic/repeated ownership, direct canvas mask overlays, complete export/reference support and trusted public macOS distribution are still incomplete.
+
+### React mask workflow — 2026-09-14
+
+React now exposes mask creation, alpha/luminance type editing, editable mask shapes, responsive bounds/reset and release through the existing inspector. A location-preserving JSX view reuses the mask transaction planner with React source IDs and `maskType` spelling. The source planner retains original JSX expressions, numeric attributes, layer names and shape comments; it refuses structural expression gaps and dynamic wrappers, and refuses release when it would discard wrapper comments.
+
+Verification: 1,307 unit tests passed, including nine React mask source/history cases. Chromium and WebKit Next/React workflows passed both mask modes, type changes, bounds cropping at two sizes, reset, Escape cancellation, editable shape radius, exact source Undo/Redo, selection restoration and retained preview document/input state. Logs: `../recovery-2026-09-14/react-mask-{chromium,webkit,units}.log`.
+
+This verifies the tested local Next/React workflow, not every framework or preservation of arbitrary component-local state during reparenting. Dynamic/repeated ownership, reusable-instance mask IDs, direct canvas mask overlays and complete Figma/export parity remain open. The latest desktop archive predates this React mask implementation.
