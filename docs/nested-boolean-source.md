@@ -202,3 +202,21 @@ removing a nested empty group while another operand survives, and removing all
 three originals from a regrouped child so its empty single-operand parent is
 also deleted. Undo restores each exact source snapshot and the broader workflow
 retains preview document/input state. The source/unit suite passes 1,434 tests.
+
+### Delete from Layers
+
+For a single selected direct original or nested boolean group, the normal
+Delete action (including Delete/Backspace in Layers) resolves its containing
+group and uses `removeSVGBooleanOperand`. It retains the original layer in
+history's pre-edit selection, so Undo restores that selection as well as source.
+The parent descriptor must match the selected layer's source hash; changing
+selection during resolution cancels the action. Existing layer-lock checks
+apply before computation and before saving. Multi-selected original deletion
+still needs a dedicated atomic operation.
+
+Keyboard removal passes on HTML/Chromium, Liquid/Chromium, and React/WebKit for
+a selected primitive (Backspace) and nested group (Delete), including lock
+refusal, rendered-region checks, exact source undo/redo, and restored original
+selection. An initial full unit run failed the session descendant-termination
+check; all seven session tests passed in isolation, then the full 1,434-test
+rerun passed with no browser processes from this verification still running.
