@@ -1151,3 +1151,6 @@ html, body { overflow:clip; }
 .image-crop-flips button[aria-pressed="true"] { color:var(--accent);background:#e5f4ff;border-color:var(--accent); }
 
 .image-crop-history { display:flex;gap:4px;margin-right:auto; }
+
+.image-crop-stage { position:relative;width:100%;overflow:hidden; }
+.image-crop-stage .image-crop-preview { position:absolute;top:0;transform-origin:top left; }

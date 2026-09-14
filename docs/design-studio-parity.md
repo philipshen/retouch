@@ -16767,3 +16767,10 @@ React/Chromium and Liquid/WebKit verify held-arrow grouping, reverse/redo, redo 
 Crop loading now passes an abort signal to fetch, aborts when the dialog closes, and times out after 15 seconds. Failed or timed-out loads expose Retry image loading while Apply remains disabled. Retry checks the selected image before restarting; successful recovery restores the normal editing controls.
 
 Chromium/WebKit browser checks inject a failed response and a hanging fetch, verify cancel and timeout abort signals, then restore the actual fetch and verify successful retry, crop apply, original asset retention and exact source undo. Canceled/failed attempts create no asset or source edit. The injected failure checks validate lifecycle handling; they do not establish support for CORS-restricted remote images.
+
+
+### Crop preview matches the authored frame — 2026-09-14
+
+The crop dialog now previews the selected image content box at its authored aspect ratio, object-fit and object-position. A scaled stage preserves natural-pixel behavior for `none` and `scale-down`, while cover, contain and stretched fill retain their actual composition. Drag and keyboard movement use painted dimensions, including independent horizontal/vertical scaling for fill. The output still preserves intrinsic image dimensions.
+
+Chromium and WebKit each pass cover, contain, fill, none and scale-down cases comparing interior preview pixels with the original and applied crop, plus exact source undo. React/Chromium and Liquid/WebKit retain the full crop/history workflow. The square preview was visually inspected, and all 1,517 unit tests pass, including nonuniform fill movement. These checks cover image composition, not authored borders, CSS filters or transformed frame presentation.
