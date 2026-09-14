@@ -169,18 +169,36 @@ effective transform is applied to the result. The containing group remains
 selected. Invalid own or ancestor paths reject the entire source transaction.
 
 Source tests cover all three adapters, base/non-base removal, a nested target,
-retained-group subtree removal, and refusal to remove the final operand. The
+retained-group subtree removal, and removal of the final operand. The
 full unit suite passes 1,428 tests. The inspector exposes a Remove control beside each original. Browser
 preparation recalculates the target and enclosing results, restoring the DOM
 before saving. Lock checks run before preparation and before the source POST.
 Browser tests cover primitive and retained-subtree removal, base reassignment,
-paint preservation, CSS refusal, exact undo/redo, and retained document state. Removing the final original will need a separate empty-group or
-group-deletion behavior.
+paint preservation, CSS refusal, exact undo/redo, and retained document state. Removing the final original deletes its empty group. Empty single-operand
+ancestors are deleted in the same transaction; the first surviving boolean
+parent is recalculated, or the SVG parent is selected when no boolean survives.
 
 Removal browser verification passes on HTML/Chromium, Liquid/Chromium, and
 React/WebKit. The workflow removes the nested Union subtree from its top-level
 parent, then separately removes Base and Cut inside the restored nested group.
-It checks native filled-area samples, retained combined paint, disabled removal
-of the final original, lock refusal, outer CSS-result refusal with exact DOM
+It checks native filled-area samples, retained combined paint, removal
+of the final original and its empty group, lock refusal, outer CSS-result refusal with exact DOM
 restoration, source undo/redo, and retained document/input state. The full unit
 suite passes 1,428 tests.
+
+Final-original removal requires `path: ""` for the deleted target. Each deleted
+single-operand ancestor also supplies an empty path in its ordered `results`
+entry; surviving ancestors supply their recalculated paths. The source planner
+recursively removes empty parents, validates the full chain, and retains one
+file edit with survivor identity mappings. Source tests cover chains with and
+without a surviving parent across HTML, React, and Liquid. Top-level final
+removal selects the SVG container. Browser preparation restores temporary DOM
+structure and hides each computed operand container before measuring its next
+ancestor.
+
+Final-original deletion passes browser verification on HTML/Chromium,
+Liquid/Chromium, and React/WebKit. This includes deleting the top-level group,
+removing a nested empty group while another operand survives, and removing all
+three originals from a regrouped child so its empty single-operand parent is
+also deleted. Undo restores each exact source snapshot and the broader workflow
+retains preview document/input state. The source/unit suite passes 1,434 tests.

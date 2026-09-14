@@ -78,6 +78,13 @@ function plan(r,op,kind){
   if(!chain.length||!Array.isArray(op.results)||op.results.length!==chain.length||op.results.some((item,i)=>item?.id!==chain[i].id))return refuse('Provide every containing boolean result in nesting order.');
   let working={...r,element:target,booleanCascadeEdit:true,booleanOperandEdit:true};
   const releasing=op.edit.type==='releaseSVGBooleanGroup',targetContext=context(working,kind),parentContext=context({...r,element:chain[0]},kind);
+  if(op.edit.type==='removeSVGBooleanOperand'&&targetContext.roots.length===1&&op.edit.operandId===targetContext.roots[0].id){
+   if(op.edit.path!=='')return refuse('Removing the final original requires an empty result.');
+   const parent=chain[0],edit={type:'removeSVGBooleanOperand',operandId:target.id,path:op.results[0].path},resolved={...r,element:parent};
+   // Empty single-operand ancestors disappear in the same transaction. The
+   // first surviving parent receives its newly computed result and base.
+   return plan(resolved,chain.length===1?{...edit,fileHash:r.hash}:{type:'setSVGBooleanNested',fileHash:r.hash,targetId:parent.id,edit,results:op.results.slice(1)},kind);
+  }
   if(releasing&&targetContext.attr(target,'transform')!==undefined){
    const affine=require('../shell/svg-affine.js'),matrix=affine.parse(targetContext.attr(target,'transform'));let source=r.source;
    for(const root of targetContext.roots){const elements=original.adapter.collect(source,r.relPath).elements,element=elements.find(e=>e.id===root.id),hash=original.adapter.contentHash(source),v=view({...r,source,elements},kind),own=affine.parse(v.attr(element,'transform'));
@@ -141,7 +148,12 @@ function plan(r,op,kind){
    removed=v.elements.filter(e=>!retainedGroup&&e===c.group||e===c.operands||v.start(e)>=v.start(c.result)&&v.end(e)<=v.end(c.result));
    cuts=retainedGroup?[...v.attrs(c.group).filter(a=>['data-rt-boolean','data-rt-boolean-base'].includes(a.name)).map(a=>({start:a.start,end:a.end})),{start:v.start(c.operands),end:v.opening(c.operands)},{start:v.closing(c.operands),end:v.end(c.result)}]:[{start:v.start(c.group),end:v.opening(c.operands)},{start:v.closing(c.operands),end:v.end(c.group)}];for(const cut of cuts)out.remove(cut.start,cut.end);
   }else if(op.type==='removeSVGBooleanOperand'){
-   const operand=c.roots.find(e=>e.id===op.operandId);if(!operand||c.roots.length<2)return refuse('Choose an original shape and leave at least one operand in the group.');
+   const operand=c.roots.find(e=>e.id===op.operandId);if(!operand)return refuse('Choose an original shape in the group.');
+   if(c.roots.length===1){
+    if(op.path!=='')return refuse('Removing the final original requires an empty result.');
+    if(ancestor(r,kind))return refuse('Remove the final original through the containing boolean cascade.');
+    const deleted=v.adapter.planOp({...r,booleanOperandEdit:true},{type:'deleteElement',fileHash:r.hash});if(!deleted.ok)return deleted;return {...deleted,selectionIds:[deleted.parentId]};
+   }
    const deleted=v.adapter.planOp({...r,element:operand,booleanOperandEdit:true},{type:'deleteElement',fileHash:r.hash});if(!deleted.ok)return deleted;
    if(deleted.edits?.length!==1)return refuse('Removing an original must stay in one source document.');
    const mapping=new Map(deleted.sourceIdMap||[]),mapped=id=>mapping.get(id)||id;let after=deleted.edits[0].after;
