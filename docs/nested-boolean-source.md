@@ -236,3 +236,22 @@ and, separately, a nested group together with its sibling. It checks one POST,
 lock refusal, retained outer filled regions, exact source undo/redo, and both
 original rows selected again on Undo. Existing single-removal, release,
 geometry, and preview-state checks also pass in the same workflow.
+
+### Cross-parent deletion: source planner
+
+`removeSVGBooleanSelection` accepts `ids`, `fileHash`, and `results` for selected
+retained groups or direct originals across boolean parents in one source file.
+Ancestor/descendant selections are normalized before deleting subtrees. Empty
+boolean parents are removed from deepest outward. Every surviving affected
+group must have exactly one result, ordered deepest first and then by source
+position. Removed groups do not receive result entries. The planner composes
+identity mappings, preserves independent paint, updates surviving base indices
+and transforms, and returns one file edit. Selection moves to the outermost
+surviving affected groups, or the common source parent if none survive.
+
+Tests cover separate and shared outer groups, non-base/base removal, overlapping
+selections, complete deletion, stable survivor identities, invalid result paths,
+and incorrect result order across HTML, React, and Liquid. All 1,488 unit tests
+pass. Browser preparation, cross-parent Delete routing, and end-to-end history
+verification for this new operation remain unfinished; the existing same-parent
+Delete behavior is unchanged.

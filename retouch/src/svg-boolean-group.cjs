@@ -71,6 +71,7 @@ function plan(r,op,kind){
  const refuse=reason=>({ok:false,refused:true,reason});
  if(!['html','react','liquid'].includes(kind))return refuse('Choose a source-connected SVG document.');
  if(op.fileHash!==r.hash)return refuse('The file changed. Re-select the boolean group.');
+ if(op.type==='removeSVGBooleanSelection')return require('./svg-boolean-selection-remove.cjs').plan(r,op,kind);
  if(['createSVGBooleanGroup','setSVGBooleanOperation'].includes(op.type)&&!operations.has(op.operation))return refuse('Choose Union, Subtract, Intersect or Exclude.');
  if(op.type==='setSVGBooleanNested'){
   const original=view(r,kind),target=original.elements.find(e=>e.id===op.targetId),regrouping=op.edit?.type==='createSVGBooleanGroup';
@@ -228,7 +229,7 @@ function plan(r,op,kind){
  if(!created&&next.elements.length!==retained.length)return refuse('Releasing the group would discard source structure.');
  return {ok:true,structural:true,hash:v.adapter.contentHash(after),parentId:mapping.get(parentId),selectionIds:created?[group.id]:retainedGroup?[mapping.get(retainedGroup.id)]:selected.map(e=>mapping.get(e.id)),sourceIdMap:[...mapping].filter(([a,b])=>a!==b),removedSourceIds:removed.map(e=>e.id),edits:[{file:r.file,before:r.source,after}]};
 }
-const types=new Set(['setSVGBooleanNested','createSVGBooleanGroup','releaseSVGBooleanGroup','setSVGBooleanOperation','setSVGBooleanOperand','setSVGBooleanPaint','removeSVGBooleanOperand']);
+const types=new Set(['setSVGBooleanNested','createSVGBooleanGroup','releaseSVGBooleanGroup','setSVGBooleanOperation','setSVGBooleanOperand','setSVGBooleanPaint','removeSVGBooleanOperand','removeSVGBooleanSelection']);
 function owner(r,kind){if(!r.source?.includes('data-rt-boolean'))return null;const v=view(r,kind);for(let id=r.element.id;id;id=v.parents.get(id)){const e=v.elements.find(e=>e.id===id);if(e&&v.attr(e,'data-rt-boolean')!==undefined)return e.id;}return null;}
 function describe(r,kind){
  const c=context(r,kind);if(!c)return null;
@@ -236,4 +237,4 @@ function describe(r,kind){
  return {operation:c.operation,parentId:c.parentId,ancestorId:ancestor(r,kind),operandIds:c.roots.map(e=>e.id),baseId:c.roots[c.base].id,resultId:c.result.id,result:{id:c.result.id,tag:'path',file:r.relPath,hash:r.hash,svgGeometry,svgTransform:require('./svg-transform.cjs').describe(resultResolved,kind),booleanOperandPreview:true},paints:Object.fromEntries(Object.entries(paintNames).map(([property,name])=>[property,(kind==='react'?c.attr(c.result,name)??c.attr(c.result,property):c.attr(c.result,property))??null])),canRelease:true};
 }
 function guard(r,op,kind){if(r.booleanOperandEdit||types.has(op.type))return null;const id=owner(r,kind);return id&&!(id===r.element.id&&!ancestor(r,kind)&&(op.type==='deleteElement'||['setSVGTransform','setSVGTransforms'].includes(op.type)&&context(r,kind)))?{ok:false,refused:true,reason:'Edit the original shapes from the Boolean group section, or release the group first.'}:null;}
-module.exports={plan,context,describe,owner,ancestor,guard,types};
+module.exports={plan,context,describe,owner,ancestor,guard,types,view};
