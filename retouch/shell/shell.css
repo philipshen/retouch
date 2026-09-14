@@ -1145,3 +1145,7 @@ html, body { overflow:clip; }
 .image-crop-preview:focus-visible { outline:2px solid var(--accent);outline-offset:-2px; }
 .image-crop-dialog footer { display:flex;justify-content:flex-end;padding:8px; }
 .image-crop-dialog input { height:28px; }
+
+.image-crop-flips { display:flex;gap:4px;margin:8px 0; }
+.image-crop-flips button { flex:1; }
+.image-crop-flips button[aria-pressed="true"] { color:var(--accent);background:#e5f4ff;border-color:var(--accent); }

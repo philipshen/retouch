@@ -16746,3 +16746,10 @@ React/Chromium and Liquid/WebKit browser checks verify original red/blue preview
 The crop preview is keyboard-focusable with a visible accent outline and movement instructions. Arrow keys move the painted image by one preview pixel; Shift moves ten. Movement uses the same rotated-axis geometry and bounds as dragging. Pointer selection focuses the preview, and invalid numeric fields prevent either movement path from applying stale values. Adjustments remain local until Apply.
 
 React/Chromium and Liquid/WebKit checks verify the focus outline, rotated keyboard direction, ten-times Shift movement, reverse movement returning to the original position, no source writes before Apply, crop reset, exact source undo and retained runtime state.
+
+
+### Flip image content within a crop — 2026-09-14
+
+Crop image now has horizontal and vertical flip toggles with visible selected states. Reflections apply to image content before crop rotation, preserving the authored frame. Both values persist in the self-contained crop recipe; previous recipes default to unflipped. Reset clears both flips along with zoom, rotation and position.
+
+All 1,516 unit tests pass. React/Chromium and Liquid/WebKit verify flipped/rotated red-blue pixels, reopening both toggle values, reset preview and application, exact source undo and retained state. The light-theme dialog was visually inspected in WebKit. The fixture verifies horizontal reflection pixels and both persisted toggles; vertical reflection composition also has a unit assertion. Free-aspect crop handles and broader image editing remain unfinished.
