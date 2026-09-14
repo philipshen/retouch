@@ -2,6 +2,7 @@
 // A boolean group retains operand source verbatim. The visible result is a
 // derived path supplied by the browser's geometry engine, in base-local space.
 const MagicString=require('magic-string'),combine=require('./svg-combine-selection.cjs'),ids=require('./id.cjs'),geometry=require('../shell/svg-path.js');
+const paintNames={fill:'fill',stroke:'stroke','stroke-width':'strokeWidth','stroke-linecap':'strokeLinecap','stroke-linejoin':'strokeLinejoin','stroke-dasharray':'strokeDasharray','stroke-dashoffset':'strokeDashoffset','stroke-miterlimit':'strokeMiterlimit','vector-effect':'vectorEffect'};
 const operationNames={union:'Union',subtract:'Subtract',intersect:'Intersect',exclude:'Exclude overlap'},operations=new Set(Object.keys(operationNames));
 function view(r,kind){
  const adapter=require('./adapters/'+kind+'.cjs'),elements=r.elements||adapter.collect(r.source,r.relPath).elements;
@@ -57,10 +58,10 @@ function plan(r,op,kind){
    removed=v.elements.filter(e=>!retainedGroup&&e===c.group||e===c.operands||v.start(e)>=v.start(c.result)&&v.end(e)<=v.end(c.result));
    cuts=retainedGroup?[...v.attrs(c.group).filter(a=>['data-rt-boolean','data-rt-boolean-base'].includes(a.name)).map(a=>({start:a.start,end:a.end})),{start:v.start(c.operands),end:v.opening(c.operands)},{start:v.closing(c.operands),end:v.end(c.result)}]:[{start:v.start(c.group),end:v.opening(c.operands)},{start:v.closing(c.operands),end:v.end(c.group)}];for(const cut of cuts)out.remove(cut.start,cut.end);
   }else if(op.type==='setSVGBooleanPaint'){
-   const names={fill:'fill',stroke:'stroke','stroke-width':kind==='react'?'strokeWidth':'stroke-width'},name=Object.hasOwn(names,op.property)?names[op.property]:null;
-   if(!name||!require('../shell/html-css-values.js').valid(op.property,op.value))return refuse('Choose a supported combined fill, stroke or stroke width.');
+   const name=Object.hasOwn(paintNames,op.property)?(kind==='react'?paintNames[op.property]:op.property):null;
+   if(!name||!require('../shell/html-css-values.js').valid(op.property,op.value))return refuse('Choose a supported combined SVG paint value.');
    if(op.value!==null&&(typeof op.value!=='string'||op.value.length>512||/[<>\n\r]/.test(op.value)))return refuse('Use a literal combined paint value.');
-   const attributes=v.attrs(c.result).filter(a=>a.name===name||kind==='react'&&op.property==='stroke-width'&&a.name==='stroke-width');if(attributes.length>1)return refuse('Remove conflicting stroke width attributes before editing paint.');const attr=attributes[0],escape=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+   const attributes=v.attrs(c.result).filter(a=>a.name===name||kind==='react'&&a.name===op.property);if(attributes.length>1)return refuse('Remove conflicting paint attributes before editing paint.');const attr=attributes[0],escape=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
    if(op.value===null){if(attr)out.remove(attr.start,attr.end);}else{const token=(attr?.name||name)+'="'+escape(op.value.trim())+'"';if(attr)out.overwrite(attr.start,attr.end,token);else out.appendLeft(v.opening(c.result)-(r.source.slice(v.start(c.result),v.opening(c.result)).endsWith('/>')?2:1),' '+token);}
    const after=out.toString();if(after===r.source)return {ok:true,unchanged:true,hash:r.hash,edits:[]};
    const next=v.adapter.collect(after,r.relPath).elements;if(next.length!==v.elements.length||next.some((e,i)=>e.id!==v.elements[i].id))return refuse('The paint edit would change layer identities.');
@@ -108,6 +109,6 @@ function plan(r,op,kind){
 }
 const types=new Set(['createSVGBooleanGroup','releaseSVGBooleanGroup','setSVGBooleanOperation','setSVGBooleanOperand','setSVGBooleanPaint']);
 function owner(r,kind){if(!r.source?.includes('data-rt-boolean'))return null;const v=view(r,kind);for(let id=r.element.id;id;id=v.parents.get(id)){const e=v.elements.find(e=>e.id===id);if(e&&v.attr(e,'data-rt-boolean')!==undefined)return e.id;}return null;}
-function describe(r,kind){const c=context(r,kind);return c?{operation:c.operation,operandIds:c.roots.map(e=>e.id),baseId:c.roots[c.base].id,resultId:c.result.id,paints:{fill:c.attr(c.result,'fill')??null,stroke:c.attr(c.result,'stroke')??null,'stroke-width':(kind==='react'?c.attr(c.result,'strokeWidth')??c.attr(c.result,'stroke-width'):c.attr(c.result,'stroke-width'))??null},canRelease:true}:null;}
+function describe(r,kind){const c=context(r,kind);return c?{operation:c.operation,operandIds:c.roots.map(e=>e.id),baseId:c.roots[c.base].id,resultId:c.result.id,paints:Object.fromEntries(Object.entries(paintNames).map(([property,name])=>[property,(kind==='react'?c.attr(c.result,name)??c.attr(c.result,property):c.attr(c.result,property))??null])),canRelease:true}:null;}
 function guard(r,op,kind){if(r.booleanOperandEdit||types.has(op.type))return null;const id=owner(r,kind);return id&&!(id===r.element.id&&(op.type==='deleteElement'||['setSVGTransform','setSVGTransforms'].includes(op.type)&&context(r,kind)))?{ok:false,refused:true,reason:'Edit the original shapes from the Boolean group section, or release the group first.'}:null;}
 module.exports={plan,context,describe,owner,guard,types};
