@@ -3424,21 +3424,23 @@ async function writeClasses(classes, isUndo) {
   const info = sel.info;
   const prev = info.className || '';
   if(classes===prev)return true;
-  optimisticClasses(classes);
+  const literalLiquid = info.contextSelection && info.classSourceLiteral;
+  if (!literalLiquid) optimisticClasses(classes);
   const res = await api('POST', '/rt/__api/op', {
     type: 'setClasses', id: info.id, classes, fileHash: info.fileHash || info.hash, context: info.context,
   });
   if (res && res.ok) {
-    if (!isUndo) editorHistory.record({ type: 'setClasses', id: info.id, classes: prev, undoId: res.undoId, context: info.context });
+    if (!isUndo) editorHistory.record(literalLiquid ? {type:'setLiquidClassesSelection',id:info.id,selectionIds:[info.id],classesBefore:{[info.id]:prev},classesAfter:{[info.id]:res.element.className},undoId:res.undoId} : { type: 'setClasses', id: info.id, classes: prev, undoId: res.undoId, context: info.context });
     info.className = res.element?.className ?? classes;
     info.hash = res.hash;
     if(info.classTextStyles&&res.element)for(const key of ['textStyleLinks','textStyleOverrides','classTextStyles','textStyleLinkReason'])info[key]=res.element[key];
     if(res.element)for(const key of ['colorStyleLinks','colorStyleOverrides','classColorStyles','colorStyleLinkReason','effectStyleLinks','effectStyleOverrides','classEffectStyles','effectStyleLinkReason','classVariables','variableLinks','variableOverrides','variableReason'])info[key]=res.element[key];
-    if (window.__RT_RENDERING?.reloadAfterWrite||info.renderRevisionAttribute) await refreshWrittenElement(info, el => info.className.split(/\s+/).filter(Boolean).every(token => el.classList.contains(token)));
+    if (literalLiquid) await refreshLiteralLiquidClasses([res.element],{[info.id]:prev});
+    else if (window.__RT_RENDERING?.reloadAfterWrite||info.renderRevisionAttribute) await refreshWrittenElement(info, el => info.className.split(/\s+/).filter(Boolean).every(token => el.classList.contains(token)));
     toast('Saved', 'ok');
     renderPanel();
   } else {
-    optimisticClasses(prev);
+    if (!literalLiquid) optimisticClasses(prev);
     toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');
     loadScope();
   }

@@ -16475,3 +16475,17 @@ is rejected before changing an earlier layer's runtime marker. The source test
 checks the explicit literal-class capability independently of general class
 editability. This supersedes the preceding reload limitation for covered literal
 multi-layer class edits; single-layer/context-dependent workflows remain separate.
+
+### Single-layer literal Liquid classes retain preview state
+
+Single-layer class controls now use the same source-validated token updates as
+multi-layer literal Liquid edits. They no longer replace the full live class
+attribute before saving, preserving classes added by the running site. The main
+preview and open comparison screens update together; undo and redo use the saved
+class transition and preserve document identity and form values. Conditional
+Liquid class expressions still use their existing refresh path.
+
+The Liquid breakpoint browser workflow now resets a single layer after restoring
+the multi-layer edit, verifies the other layer keeps its override, and checks
+exact source undo/redo, runtime-only classes, and independent form/document state
+in the main, phone, tablet, and desktop previews.
