@@ -233,3 +233,11 @@ test('Off-center subdivision and transformed nearest points preserve original se
   for(const t of [0,1,-.1,NaN,'0.5'])assert.equal(path.split(part.nodes,0,false,t),null);
  }
 });
+
+test('Multiple anchor cuts retain all segments in order for open and closed contours',()=>{
+ for(const closed of [false,true]){
+  const document=path.parseCompound('M0 0C0 10 10 10 10 0A10 10 0 0 1 20 10L30 0L40 10'+(closed?'Z':'')+' M60 0L70 0'),before=JSON.stringify(document),result=path.splitContourAtPoints(document,0,[3,1,1]);assert.ok(result);assert.equal(result.subpaths.length,closed?3:4);assert.deepEqual(result.subpaths.at(-1),document.subpaths[1]);assert.equal(JSON.stringify(document),before);
+  const pairs=parts=>parts.flatMap(part=>Array.from({length:part.nodes.length-(part.closed?0:1)},(_,i)=>{const a=part.nodes[i],b=part.nodes[(i+1)%part.nodes.length];return JSON.stringify([a.x,a.y,a.out,b.x,b.y,b.in,b.arc]);})).sort();assert.deepEqual(pairs(result.subpaths.slice(0,-1)),pairs([document.subpaths[0]]));assert.ok(path.equivalentCompound(path.parseCompound(path.serializeCompound(result)),result));
+ }
+ const open=path.parseCompound('M0 0L10 0L20 0L30 0');assert.deepEqual(path.splitContourAtPoints(open,0,[0,1,3]),path.splitContour(open,0,1));for(const anchors of [[],[0,3],[NaN],[-1],[4],null])assert.equal(path.splitContourAtPoints(open,0,anchors),null);
+});

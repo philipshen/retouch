@@ -112,13 +112,15 @@
     }else return null;
     return serializeCompound({subpaths})?{subpaths,selected}:null;
   }
-  function splitContour(document,index,anchor){
-    if(!serializeCompound(document)||!Number.isInteger(index)||!Number.isInteger(anchor)||!document.subpaths[index])return null;
-    const part=document.subpaths[index];if(anchor<0||anchor>=part.nodes.length||!part.closed&&(anchor===0||anchor===part.nodes.length-1))return null;
-    const copy=nodes=>nodes.map(node=>translate(node,0,0)),open=nodes=>{delete nodes[0].in;delete nodes[0].arc;delete nodes.at(-1).out;return {nodes,closed:false};};
-    const subpaths=document.subpaths.map(part=>({closed:part.closed,nodes:copy(part.nodes)}));
-    if(part.closed){const nodes=copy([...part.nodes.slice(anchor),...part.nodes.slice(0,anchor),part.nodes[anchor]]);subpaths.splice(index,1,open(nodes));}
-    else subpaths.splice(index,1,open(copy(part.nodes.slice(0,anchor+1))),open(copy(part.nodes.slice(anchor))));
+  function splitContour(document,index,anchor){return splitContourAtPoints(document,index,[anchor]);}
+  function splitContourAtPoints(document,index,anchors){
+    if(!serializeCompound(document)||!Number.isInteger(index)||!document.subpaths[index]||!Array.isArray(anchors)||!anchors.length||anchors.length>512)return null;
+    const part=document.subpaths[index],count=part.nodes.length;if(anchors.some(anchor=>!Number.isInteger(anchor)||anchor<0||anchor>=count))return null;
+    const cuts=[...new Set(anchors)].filter(anchor=>part.closed||anchor>0&&anchor<count-1).sort((a,b)=>a-b);if(!cuts.length)return null;
+    const copy=nodes=>nodes.map(node=>translate(node,0,0)),open=nodes=>{delete nodes[0].in;delete nodes[0].arc;delete nodes.at(-1).out;return {nodes,closed:false};},pieces=[];
+    if(part.closed){for(let i=0;i<cuts.length;i++){const start=cuts[i],end=cuts[(i+1)%cuts.length]+(i===cuts.length-1?count:0),nodes=[];for(let at=start;at<=end;at++)nodes.push(part.nodes[at%count]);pieces.push(open(copy(nodes)));}}
+    else{const boundaries=[0,...cuts,count-1];for(let i=0;i<boundaries.length-1;i++)pieces.push(open(copy(part.nodes.slice(boundaries[i],boundaries[i+1]+1))));}
+    const subpaths=document.subpaths.map(part=>({closed:part.closed,nodes:copy(part.nodes)}));subpaths.splice(index,1,...pieces);
     return serializeCompound({subpaths})?{subpaths,selected:index}:null;
   }
   function joinContours(document,from,to,fromEnd='end',toEnd='start',mergeCoincident=false){
@@ -234,5 +236,5 @@
     const xs=points.map(p=>p.x),ys=points.map(p=>p.y),x=Math.min(...xs),y=Math.min(...ys),width=Math.max(...xs)-x,height=Math.max(...ys)-y;
     return [x,y,width,height].every(Number.isFinite)?{x,y,width,height}:null;
   }
-  const api={segmentPoint,nearestSegment,splitContour,joinContours,bounds,serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,translatePoints,arrangePoints,setArc,split,segmentMiddle,arcCenter,arcPoint,arcToCubics,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
+  const api={splitContourAtPoints,segmentPoint,nearestSegment,splitContour,joinContours,bounds,serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,translatePoints,arrangePoints,setArc,split,segmentMiddle,arcCenter,arcPoint,arcToCubics,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
 })(typeof window==='object'?window:globalThis);

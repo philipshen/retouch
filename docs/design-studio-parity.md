@@ -15633,3 +15633,16 @@ Syntax and diff checks pass. No native build was produced for this interaction
 change; full parity remains unfinished.
 React/Chromium passed the same complete workflow
 (`/private/tmp/retouch-endpoint-navigation-react.log`, exit 0).
+
+### Split contours at multiple selected anchors (2026-09-14)
+
+Shift-selected anchors can now split a contour in one operation. Closed contours
+produce open pieces between cuts; open contours ignore existing endpoints.
+Duplicate cuts are removed, every original segment retains its geometry, and
+unselected contours remain unchanged. Existing point and contour limits apply.
+
+All 1,253 unit tests passed. HTML/Chromium, React/Chromium and HTML/WebKit
+compound-vector workflows passed, including multiple selection, pending preview,
+source save and exact Undo/Redo. Logs are at
+`/private/tmp/retouch-multi-split-{all-units,html,react,webkit}.log`.
+No native package was rebuilt for this change; full parity remains unfinished.
