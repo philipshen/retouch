@@ -16739,3 +16739,10 @@ All 1,515 unit tests pass. The React/Chromium and Liquid/WebKit crop workflows p
 Reset crop returns zoom to 100%, rotation to zero and position to center using the embedded original image. It changes only the dialog preview until Apply; Cancel preserves the saved crop. The control is disabled while loading or saving.
 
 React/Chromium and Liquid/WebKit browser checks verify original red/blue preview pixels after reset, cancel and reopen preservation, applying and reopening the reset values, and two exact source undo steps back through the cropped image to the original source. Input/document state and the React counter remain intact. Reset still produces a self-contained crop copy on Apply; it does not recover the original asset URL.
+
+
+### Keyboard crop positioning — 2026-09-14
+
+The crop preview is keyboard-focusable with a visible accent outline and movement instructions. Arrow keys move the painted image by one preview pixel; Shift moves ten. Movement uses the same rotated-axis geometry and bounds as dragging. Pointer selection focuses the preview, and invalid numeric fields prevent either movement path from applying stale values. Adjustments remain local until Apply.
+
+React/Chromium and Liquid/WebKit checks verify the focus outline, rotated keyboard direction, ten-times Shift movement, reverse movement returning to the original position, no source writes before Apply, crop reset, exact source undo and retained runtime state.
