@@ -555,3 +555,27 @@ process was awaiting macOS Keychain approval at this checkpoint. No successful
 Developer ID archive is claimed. Notarization also needs an identified keychain
 profile. Native editing, Intel execution, trusted launch/upgrade and full Figma
 parity remain unverified.
+
+### Resumable notarization submission
+
+Once a Developer ID build has finished, submit it using an existing `notarytool`
+Keychain profile (only the profile name is passed; never put credentials here):
+
+```sh
+node desktop/scripts/notarize.cjs submit /path/to/Retouch.app /path/to/separate-notarization-directory profile-name
+node desktop/scripts/notarize.cjs status /path/to/separate-notarization-directory
+```
+
+Submission retains a separate app snapshot, the exact submitted ZIP, its SHA256,
+and Apple's submission ID. Status checks poll that ID without uploading again.
+Commands have bounded subprocess execution and an exclusive output lock. If an
+upload is interrupted before its ID is recorded, state becomes
+`submission-unknown`: investigate the original submission with Apple before
+retrying. Do not delete the retained evidence to blindly resubmit. A failed
+preflight retains its app snapshot for inspection; use a new output directory
+when the signing problem is resolved.
+
+`Accepted` here records Apple's response only. These commands do not yet staple
+the app, recreate the final ZIP, verify Gatekeeper acceptance, launch the app, or
+publish a public Homebrew cask. The existing development archive remains ad hoc
+signed. Unit tests simulate Apple responses; they do not establish notarization.
