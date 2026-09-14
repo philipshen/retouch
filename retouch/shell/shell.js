@@ -446,6 +446,14 @@ async function classify(node,sourceId) {
     busyPanel(false);
   }
 }
+async function repositionImage(target,save,onPreview){
+ stopDrawing?.();let cancelled=false;const info=sel?.info,scopeBefore=styleScope,canvas=document.getElementById('frameWrap'),current=()=>!cancelled&&styleScope===scopeBefore&&sel?.info===info&&mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&target.ownerDocument===doc()&&!document.querySelector('dialog[open]');if(!current())return;
+ stopDrawing=()=>{cancelled=true;stopDrawing=null;};target.scrollIntoView({block:'center',inline:'center',behavior:'instant'});
+ await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));if(!current())return;
+ const f=iframe.getBoundingClientRect(),r=target.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/iframe.clientWidth;canvas.scrollLeft+=f.left+(r.left+r.width/2)*scale-(c.left+canvas.clientWidth/2);canvas.scrollTop+=f.top+(r.top+r.height/2)*scale-(c.top+canvas.clientHeight/2);
+ await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));if(!current())return;
+ stopDrawing=RetouchImagePosition.mount({target,frame:iframe,canvas,current,onCommit:save,onPreview,onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});
+}
 function isStandaloneText(el, info) {
   if(!info || (info.text==null && !info.mixedText))return false;
   if(!/^(H[1-6]|P|SPAN|LABEL|BLOCKQUOTE|DIV)$/.test(el.tagName))return false;
@@ -2062,7 +2070,7 @@ function renderPanelContents(textEditing=false) {
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
     const position=target?.namespaceURI!=='http://www.w3.org/2000/svg'?RetouchHTMLPosition.mount(info,target,width,setHTMLCSS,(g,action,opener,initial)=>moveHTMLLayer(info,target,width,g,action,opener,initial)):null;
     panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS,position,writeTextStyle));
-    if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{}));
+    if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{},(save,preview)=>repositionImage(target,save,preview)));
     if(info.canSetTag){const section=RetouchInspector.section('Element');RetouchInspector.select(section,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','li'].map(tag=>[tag,tag]),info.tag,setTag);panelBody.appendChild(section);}
     if(info.src!==null)panelBody.appendChild(imageSection(info));
   }else{
@@ -2073,7 +2081,7 @@ function renderPanelContents(textEditing=false) {
   panelBody.appendChild(RetouchLayout.mount(style, target, setClasses));
   panelBody.appendChild(RetouchInspector.appearance(style, target, setClasses,info.classColorStyles?(property,value)=>writeTextStyle('setColorOverride',undefined,{scope:styleScope,property,value}):undefined));
   if (info.src !== null || info.srcDynamic) {
-    if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(style,target,setClasses));
+    if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(style,target,setClasses,null,{},(save,preview)=>repositionImage(target,save,preview)));
     panelBody.appendChild(imageSection(info));
   }
   if (!textLayer && (info.canSetTag || target?.textContent?.trim())) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag,(type,scope,extra)=>writeTextStyle(type,undefined,{scope,...extra})));

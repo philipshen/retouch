@@ -12,7 +12,7 @@
     if(own)return [Number(own[1]),Number(own[2])];
     return computed.split(/\s+/).map(p=>/^[-\d.]+%$/.test(p)?parseFloat(p):NaN);
   }
-  function mount(info,el,save,saveCSS,overrides={}){
+  function mount(info,el,save,saveCSS,overrides={},reposition=null){
     const sec=I.section('Image framing');if(!el||el.tagName!=='IMG')return sec;
     if(info.classNameDynamic&&!saveCSS){I.note(sec,info.classNameReason||'Image styles are computed.','refused');return sec;}
     const css=el.ownerDocument.defaultView.getComputedStyle(el);
@@ -36,6 +36,7 @@
       input.onchange=()=>{if(fields.every(f=>f.value!==''&&f.checkValidity()))writePosition(...fields.map(f=>Number(f.value)));};
     }
     if(saveCSS)for(const [property,label]of [['object-fit','Reset image fit'],['object-position','Reset image position']]){const reset=I.button(label,()=>saveCSS(property,null));reset.disabled=!Object.hasOwn(overrides,property);sec.append(reset);}
+    if(reposition){const move=I.button('Reposition image',()=>reposition(writePosition,values=>{fields.forEach((field,i)=>{const live=field.isConnected?field:document.querySelector('#panelBody [aria-label="'+field.getAttribute('aria-label')+'"]');if(live)live.value=String(values[i]);});[...(grid.isConnected?grid:document.querySelector('#panelBody [aria-label="Image position"]'))?.children||[]].forEach((button,i)=>button.setAttribute('aria-pressed',String(values[0]===(i%3)*50&&values[1]===Math.floor(i/3)*50)));})),blocked=root.RetouchImagePosition.reason(el);move.disabled=!!blocked;move.title=blocked||'Move the image inside its frame on the canvas';sec.append(move);}
     I.note(sec,'Position the image inside its frame.');
     return sec;
   }
