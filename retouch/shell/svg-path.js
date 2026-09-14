@@ -174,10 +174,22 @@
     return serialize(nodes,part.closed)?{nodes,closed:part.closed,selected:inserted.length?at:index}:null;
   }
   function segmentMiddle(a,b){if(b.arc){const center=arcCenter(a,b);return center?arcPoint(center,.5):midpoint(a,b);}const ab=midpoint(a,a.out||a),bc=midpoint(a.out||a,b.in||b),cd=midpoint(b.in||b,b);return midpoint(midpoint(ab,bc),midpoint(bc,cd));}
-  function split(nodes,index,closed){
-    if(!serialize(nodes,closed)||nodes.length>=512||!Number.isInteger(index)||index<0||index>=nodes.length-(closed?0:1))return null;
-    const next=nodes.map(p=>translate(p,0,0)),a=next[index],b=next[(index+1)%next.length];let point;
-    if(b.arc){const center=arcCenter(a,b);if(!center&&(b.arc.rx&&b.arc.ry)&&(a.x!==b.x||a.y!==b.y))return null;const arc=center?{...b.arc,rx:center.rx,ry:center.ry,large:0}:{...b.arc};point={...(center?arcPoint(center,.5):midpoint(a,b)),arc:{...arc}};b.arc=arc;}else if(a.out||b.in){const ab=midpoint(a,a.out||a),bc=midpoint(a.out||a,b.in||b),cd=midpoint(b.in||b,b),abc=midpoint(ab,bc),bcd=midpoint(bc,cd);a.out=ab;b.in=cd;point={...midpoint(abc,bcd),in:abc,out:bcd};}else point=midpoint(a,b);
+  function segmentPoint(a,b,t){if(b.arc){const center=arcCenter(a,b);if(center)return arcPoint(center,t);}if(!a.out&&!b.in)return {x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};const u=1-t,c=a.out||a,d=b.in||b;return {x:u*u*u*a.x+3*u*u*t*c.x+3*u*t*t*d.x+t*t*t*b.x,y:u*u*u*a.y+3*u*u*t*c.y+3*u*t*t*d.y+t*t*t*b.y};}
+  function nearestSegment(nodes,closed,point,matrix={a:1,b:0,c:0,d:1}){
+    if(!serialize(nodes,closed)||!coordinate(point)||!['a','b','c','d'].every(key=>Number.isFinite(matrix[key])))return null;
+    let best=null;
+    for(let index=0;index<nodes.length-(closed?0:1);index++){
+      const a=nodes[index],b=nodes[(index+1)%nodes.length],distance=t=>{const p=segmentPoint(a,b,t),x=p.x-point.x,y=p.y-point.y;return (matrix.a*x+matrix.c*y)**2+(matrix.b*x+matrix.d*y)**2;};let sample=0,min=Infinity;
+      for(let step=0;step<=64;step++){const value=distance(step/64);if(value<min){min=value;sample=step;}}
+      let lo=Math.max(0,(sample-1)/64),hi=Math.min(1,(sample+1)/64);for(let step=0;step<32;step++){const a=lo+(hi-lo)/3,b=hi-(hi-lo)/3;if(distance(a)<distance(b))hi=b;else lo=a;}
+      const t=(lo+hi)/2,value=distance(t);if(!best||value<best.distance)best={index,t,distance:value};
+    }
+    return best;
+  }
+  function split(nodes,index,closed,t=.5){
+    if(typeof t!=='number'||!Number.isFinite(t)||t<=0||t>=1||!serialize(nodes,closed)||nodes.length>=512||!Number.isInteger(index)||index<0||index>=nodes.length-(closed?0:1))return null;
+    const next=nodes.map(p=>translate(p,0,0)),a=next[index],b=next[(index+1)%next.length],mix=(a,b)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});let point;
+    if(b.arc){const center=arcCenter(a,b);if(!center&&(b.arc.rx&&b.arc.ry)&&(a.x!==b.x||a.y!==b.y))return null;const arc=center?{...b.arc,rx:center.rx,ry:center.ry}:{...b.arc};point={...(center?arcPoint(center,t):mix(a,b)),arc:{...arc,large:center&&Math.abs(center.delta*t)>Math.PI?1:0}};b.arc={...arc,large:center&&Math.abs(center.delta*(1-t))>Math.PI?1:0};}else if(a.out||b.in){const ab=mix(a,a.out||a),bc=mix(a.out||a,b.in||b),cd=mix(b.in||b,b),abc=mix(ab,bc),bcd=mix(bc,cd);a.out=ab;b.in=cd;point={...mix(abc,bcd),in:abc,out:bcd};}else point=mix(a,b);
     next.splice(index+1,0,point);return serialize(next,closed)?next:null;
   }
   function translate(node,dx,dy){return {...node,...(node.arc?{arc:{...node.arc}}:{}),x:node.x+dx,y:node.y+dy,...(node.in?{in:{x:node.in.x+dx,y:node.in.y+dy}}:{}),...(node.out?{out:{x:node.out.x+dx,y:node.out.y+dy}}:{})};}
@@ -222,5 +234,5 @@
     const xs=points.map(p=>p.x),ys=points.map(p=>p.y),x=Math.min(...xs),y=Math.min(...ys),width=Math.max(...xs)-x,height=Math.max(...ys)-y;
     return [x,y,width,height].every(Number.isFinite)?{x,y,width,height}:null;
   }
-  const api={splitContour,joinContours,bounds,serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,translatePoints,arrangePoints,setArc,split,segmentMiddle,arcCenter,arcPoint,arcToCubics,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
+  const api={segmentPoint,nearestSegment,splitContour,joinContours,bounds,serialize,curved,parse,parseCompound,serializeCompound,equivalentCompound,editContour,appendContour,translateContour,translatePoints,arrangePoints,setArc,split,segmentMiddle,arcCenter,arcPoint,arcToCubics,translate,equivalent,corner,smooth,moveHandle};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGPath=api;
 })(typeof window==='object'?window:globalThis);

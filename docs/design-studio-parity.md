@@ -15578,3 +15578,28 @@ Separate SVG elements, vector networks, boolean operations and full parity remai
 unfinished. No new desktop build was produced.
 React/Chromium also passed the complete merge-preference and source-history
 workflow (`/private/tmp/retouch-merge-endpoints-react.log`, exit 0).
+
+### Insert a point where a path is double-clicked (2026-09-14)
+
+Double-click the selected contour's stroke in vector editing to insert an
+anchor near that click. A transparent stroke hit target avoids interfering with
+point handles and is disabled in contour movement/endpoint-picking modes. The
+nearest segment search measures distance after the canvas transform, samples
+candidate parameters and refines the closest sample interval. Subdivision now
+accepts a parameter other than the midpoint: de Casteljau preserves cubics, and
+arc subdivision preserves corrected radii/sweep with independently computed
+large-arc flags. Midpoint insertion buttons remain available. Near-endpoint
+clicks do not insert an almost-duplicate anchor.
+
+All 1,252 unit tests pass (`/private/tmp/retouch-curve-insert-all-units.log`),
+including off-center linear/cubic/arc subdivision and transformed nearest-point
+queries. HTML/React Chromium and HTML WebKit compound workflows pass
+(`/private/tmp/retouch-curve-insert-{html,react,webkit}-final.log`), including a
+real double-click on a transformed cubic, saved anchor position and source Undo.
+Initial browser assertions used a subpixel SVG tolerance; a separate Chromium
+probe confirmed that the requested (735.595,398.639) double-click was dispatched
+as (735,398). The final assertion uses 1.5 screen pixels, while numerical geometry
+tests retain tight tolerances. The search is numerical, not an exact global
+polynomial solution for pathological self-intersections. Full vector networks,
+booleans, separate-element joins and full parity remain unfinished. No native
+package was built.

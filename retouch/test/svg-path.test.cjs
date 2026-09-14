@@ -223,3 +223,13 @@ test('Coincident endpoint merging reverses splitting without losing curve or arc
  const cut=path.splitContour(closed,0,0),restored=path.joinContours(cut,0,0,'start','end',true);assert.deepEqual(restored.subpaths,closed.subpaths);
  const near=path.parseCompound('M0 0L10 0 M10.0001 0L20 0');assert.equal(path.joinContours(near,0,1,'end','start',true).subpaths[0].nodes.length,4);assert.equal(path.joinContours(near,0,1,'end','start','true'),null);
 });
+
+test('Off-center subdivision and transformed nearest points preserve original segments',()=>{
+ for(const d of ['M0 0L100 30','M0 0C-20 120 120 -60 100 30','M0 0A60 40 35 1 1 100 30']){
+  const part=path.parse(d),a=part.nodes[0],b=part.nodes[1];for(const t of [.1,.25,.8,.95]){
+   const next=path.split(part.nodes,0,false,t);assert.ok(next);for(let i=0;i<=40;i++){const u=i/40,expected=path.segmentPoint(a,b,u),actual=u<=t?path.segmentPoint(next[0],next[1],u/t):path.segmentPoint(next[1],next[2],(u-t)/(1-t));assert.ok(Math.hypot(expected.x-actual.x,expected.y-actual.y)<1e-5);}
+   const point=path.segmentPoint(a,b,t),nearest=path.nearestSegment(part.nodes,false,point,{a:2,b:.4,c:.7,d:.5});assert.equal(nearest.index,0);assert.ok(Math.abs(nearest.t-t)<1e-5);
+  }
+  for(const t of [0,1,-.1,NaN,'0.5'])assert.equal(path.split(part.nodes,0,false,t),null);
+ }
+});

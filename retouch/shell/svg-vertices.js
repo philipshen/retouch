@@ -20,6 +20,8 @@
     preview.style.cssText='fill:none!important;stroke:var(--accent, #0d99ff)!important;stroke-width:1.5!important;';
     preview.setAttribute('vector-effect','non-scaling-stroke');drawing.append(preview);surface.append(drawing);
     const contourHit=root.document.createElementNS(ns,'path');contourHit.dataset.moveContour='true';contourHit.setAttribute('aria-label','Move selected contour');contourHit.setAttribute('role','button');contourHit.setAttribute('vector-effect','non-scaling-stroke');contourHit.style.cssText='fill:none!important;stroke:transparent!important;stroke-width:14!important;pointer-events:stroke;cursor:move;outline:none;';drawing.append(contourHit);
+    const insertHit=root.document.createElementNS(ns,'path');insertHit.dataset.insertOnCurve='true';insertHit.setAttribute('vector-effect','non-scaling-stroke');insertHit.style.cssText='fill:none!important;stroke:transparent!important;stroke-width:10!important;pointer-events:stroke;cursor:copy;';const insertTitle=root.document.createElementNS(ns,'title');insertTitle.textContent='Double-click to add a point here';insertHit.append(insertTitle);drawing.append(insertHit);
+    listen(insertHit,'dblclick',event=>{if(!pathData||moveContourMode||joinPicking||drag||!verify())return;event.preventDefault();event.stopPropagation();const scale=frame.getBoundingClientRect().width/w.innerWidth,m=initialMatrix,hit=root.RetouchSVGPath.nearestSegment(vertices,closed,local(event),{a:m.a*scale,b:m.b*scale,c:m.c*scale,d:m.d*scale});if(hit&&hit.distance<=144&&hit.t>1e-4&&hit.t<1-1e-4)insertPoint(hit.index,hit.t);});
     let ended=false,drag=null,active=0,activeHandle=null,raf,cancelPen=null,moveContourMode=false,showAllHandles=false,selectedPoints=new Set([0]);
     const initialMatrix=target.getScreenCTM(),matrixValues=m=>m&&[m.a,m.b,m.c,m.d,m.e,m.f];
     const initial=matrixValues(initialMatrix);
@@ -278,11 +280,11 @@
       const next=root.RetouchSVGPath.moveHandle(node,key,point,handleMovement);
       if(next)vertices[active]=next;else announce('Keep handles within supported SVG coordinates.');
     }
-    function insertPoint(index){
+    function insertPoint(index,t=.5){
       if(drag||!verify())return;
       if(totalPoints()>=512){announce('This vector has reached 512 points.');return;}
       const a=vertices[index],b=vertices[(index+1)%vertices.length];
-      if(pathData){const next=root.RetouchSVGPath.split(vertices,index,closed);if(!next)return;vertices.splice(0,vertices.length,...next);}else vertices.splice(index+1,0,{x:(a.x+b.x)/2,y:(a.y+b.y)/2});activeHandle=null;active=index+1;rebuild();(moveContourMode?contourHit:handles[active]).focus({preventScroll:true});
+      if(pathData){const next=root.RetouchSVGPath.split(vertices,index,closed,t);if(!next)return;vertices.splice(0,vertices.length,...next);}else vertices.splice(index+1,0,{x:(a.x+b.x)/2,y:(a.y+b.y)/2});activeHandle=null;active=index+1;rebuild();(moveContourMode?contourHit:handles[active]).focus({preventScroll:true});
     }
     function removePoint(){
       if(drag||!selectedPoints.size||!verify())return;
@@ -303,6 +305,7 @@
       const f=frame.getBoundingClientRect(),r=surface.getBoundingClientRect(),scale=f.width/w.innerWidth,m=initialMatrix;
       preview.setAttribute(property,pathData?root.RetouchSVGPath.serialize(vertices,closed)||'':root.RetouchSVGPoints.format(vertices));
       preview.setAttribute('transform',`matrix(${m.a*scale} ${m.b*scale} ${m.c*scale} ${m.d*scale} ${m.e*scale+f.left-r.left} ${m.f*scale+f.top-r.top})`);
+      insertHit.style.display=pathData&&!moveContourMode&&!joinPicking?'':'none';insertHit.setAttribute('d',preview.getAttribute('d')||'');insertHit.setAttribute('transform',preview.getAttribute('transform'));
       contourHit.setAttribute('d',preview.getAttribute('d')||'');contourHit.setAttribute('transform',preview.getAttribute('transform'));
       otherContours.replaceChildren();
       subpaths?.forEach((part,i)=>{if(i===contour)return;const outline=root.document.createElementNS(ns,'path');outline.setAttribute('d',root.RetouchSVGPath.serialize(part.nodes,part.closed));outline.setAttribute('transform',preview.getAttribute('transform'));outline.setAttribute('vector-effect','non-scaling-stroke');outline.style.cssText='fill:none!important;stroke:#99d6ff!important;stroke-width:1.5!important;';otherContours.append(outline);
