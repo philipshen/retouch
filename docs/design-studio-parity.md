@@ -16387,3 +16387,18 @@ phone/tablet/desktop appearance, inherited values, whole-scope removal, exact
 source undo/redo, retained input/document state, and rejection of a stale style
 response before DOM changes. The existing Chromium `html-position.cjs` workflow
 also passes after the CSS refresh change.
+
+### Managed HTML styles update linked comparisons without navigation
+
+Managed HTML property edits, whole-breakpoint reset, and their undo/redo now
+refresh the same layer's owned CSS rules in every open comparison. Each screen
+keeps its own live document, form values, scripts, and scroll state. A comparison
+that is still loading waits before refreshing; a changed route or removed card
+is skipped, and a failed update is reported on that comparison. Other source
+edit families keep their existing refresh paths.
+
+`html-scope-reset.cjs` checks Phone, Tablet, and Desktop at distinct widths,
+including inherited values, property editing, reset, exact source undo/redo, and
+independent per-screen form/document retention. The Chromium
+`html-compare-edit.cjs` regression covers comparison selection, scrolling,
+responsive visibility, dimension editing, saved sets, and removal history.

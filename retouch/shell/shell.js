@@ -3402,7 +3402,7 @@ async function setHTMLCSS(property,value,width,resetScope=false){
     const result=await api('POST','/rt/__api/op',{type:'setCSS',id:info.id,fileHash:info.hash,width,...(resetScope?{resetScope:true}:typeof property==='object'?{changes:property}:{property,value})});
     if(!result?.ok){toast(result?.reason||result?.error||'Could not save CSS','err');renderPanel();return;}
     saved=true;if(result.undoId)editorHistory.record({type:'setCSS',managedCSS:true,id:info.id,undoId:result.undoId});
-    sel.info=result.element;await RetouchRenderSync.syncCSS({frame:iframe,id:info.id,rules:result.element.cssRules});renderPanel();toast('Saved','ok');
+    sel.info=result.element;await RetouchRenderSync.syncCSS({frame:iframe,id:info.id,rules:result.element.cssRules});await window.RetouchComparisons?.syncCSS(result.element);renderPanel();toast('Saved','ok');
   }catch(error){toast((saved?'Styles saved; preview refresh failed: ':'Could not save styles: ')+error.message,'err');renderPanel();}finally{busyPanel(false);}
 }
 async function setClasses(classes, isUndo) {
@@ -3604,6 +3604,7 @@ async function restoreHistory(direction,op) {
         await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info)});
       }else if(op.type==='setCSS'&&op.managedCSS&&info.cssAuthoring)await RetouchRenderSync.syncCSS({frame:iframe,id:info.id,rules:info.cssRules});else await refresh();
       if(op.type==='setText')await window.RetouchComparisons?.syncText(info);
+      if(op.type==='setCSS'&&op.managedCSS&&info.cssAuthoring)await window.RetouchComparisons?.syncCSS(info);
       if(op.type==='createComponent'&&component?.ok)sel={hostId:component.definitionId,instanceId:op.id,scope:'instance',info};
     } else await reloadFrame();
 
