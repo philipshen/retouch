@@ -17085,3 +17085,11 @@ Move-up, move-down and duplicate commands now live in a Paint actions popover, f
 All 1,548 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass inline opacity, hidden/crop/slow-upload behavior, keyboard visibility focus, stale-selection refusal, drag reordering, actions-based move/duplicate, neighboring framing preservation and exact source undo. The final HTML run also verifies actions-popover Escape/focus and popover-to-row percentage synchronization. The light-theme row and actions popover were visually inspected.
 
 Solid/gradient visibility and the wider Figma parity scope remain unfinished. Image opacity still uses the source-backed image recipe/upload path and its existing image-access and size limits. No native app or Homebrew release was rebuilt or published.
+
+### Paint-row context actions and keyboard navigation — 2026-09-15
+
+Right-clicking a paint row now opens its actions popover. Shift+F10 and the Context Menu key do the same from row buttons. The actions button also opens with Up/Down, and the popover supports Up/Down wrapping plus Home/End while skipping disabled commands. Escape or the close button restores the original row control when it still exists. Numeric fields retain their native context menu.
+
+All 1,548 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass right-click, Shift+F10, initial focus, command navigation, disabled-command skipping, Escape focus restoration and keyboard activation of a paint move, followed by inline opacity, visibility, crop, slow upload, stale-selection refusal, drag/order/duplicate and exact-undo checks. The stale-upload regression waits for the replacement selection to finish classification before releasing the native upload response.
+
+This extends interaction access to the existing paint commands. The wider Figma feature and fidelity scope, solid/gradient visibility, arbitrary-site support and trusted native/Homebrew release remain incomplete. No native app was rebuilt or published.
