@@ -3026,11 +3026,15 @@ async function setReactClassesSelection(classesById,expected=null){
   try{
     const result=await api('POST','/rt/__api/op',{type:'setClassesSelection',id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash,...selectionSourceContexts(selection),classesById});
     if(!result?.ok){renderPanel();return toast(result?.reason||result?.error||'Could not style selected layers','err');}
-    if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':'setClassesSelection',id:info.id,selectionIds:selection.map(item=>item.id),undoId:result.undoId});
-    sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(selection.map(item=>item.id));}else await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));
+    const literalLiquid=info.contextSelection&&selection.every(item=>item.classSourceLiteral)&&result.selection.every(item=>item.classSourceLiteral),before=Object.fromEntries(selection.map(item=>[item.id,item.className])),after=Object.fromEntries(result.selection.map(item=>[item.id,item.className]));
+    if(result.undoId)editorHistory.record({type:literalLiquid?'setLiquidClassesSelection':info.contextSelection?'collectionSelection':'setClassesSelection',id:info.id,selectionIds:selection.map(item=>item.id),...(literalLiquid?{classesBefore:before,classesAfter:after}:{}),undoId:result.undoId});
+    sel.info=result.element;sel.multiple=result.selection;if(literalLiquid){await refreshLiteralLiquidClasses(result.selection,before);}else if(info.contextSelection){await reloadFrame();await restoreLayerSelection(selection.map(item=>item.id));}else await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));
     if(expected){let ready=false;for(let attempt=0;attempt<50;attempt++){ready=Object.entries(expected).every(([id,g])=>{const el=matchingEls(id)[0];if(!el?.isConnected)return false;try{const actual=RetouchInspector.geometry(el,{allowRotation:Object.hasOwn(g,'rotation'),allowScale:Object.hasOwn(g,'scaleX')});return ['x','y','width','height'].every(key=>Math.abs(actual[key]-g[key])<.6);}catch{return false;}});if(ready)break;await new Promise(resolve=>setTimeout(resolve,100));}if(!ready){renderPanel();toast('Saved selection classes, but the bounds did not settle. Check responsive or inline overrides.','err');return false;}}
     renderPanel();toast('Selected layers updated','ok');return true;
   }catch(error){renderPanel();toast(error.message,'err');return false;}finally{busyPanel(false);}
+}
+async function refreshLiteralLiquidClasses(infos,before){
+ const entries=infos.map(info=>({id:info.id,before:before[info.id],classes:info.className}));await RetouchRenderSync.syncClasses({frame:iframe,entries,revalidate:!!window.__RT_RENDERING?.revalidateStyles});await window.RetouchComparisons?.syncClasses(entries);
 }
 function svgGeometryMatches(el,info){return info.svgGeometry?.fields.every(field=>field.editable===false||el.getAttribute(field.name)===field.value);}
 async function convertSVGToPath(info,toArrow=false,arrowPoints){
@@ -3578,6 +3582,7 @@ async function restoreHistory(direction,op) {
     if(op.type==='setComponentProp'){await refreshComponentProperty(op.id,op.parentId);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='sourceHistory'){try{await refreshSourceHistory(result.renderRevisions);}finally{clearSelection();}toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='setComponentPropSelection'){await refreshComponentSelection(op.selectionIds);toast(direction==='undo'?'Undone':'Redone','ok');return result;}
+    if(op.type==='setLiquidClassesSelection'){const results=await Promise.all(op.selectionIds.map(id=>api('GET',resolveUrl(id))));if(!results.every(item=>item?.ok&&item.element.classSourceLiteral))throw Error('The literal class selection no longer resolves.');await refreshLiteralLiquidClasses(results.map(item=>item.element),direction==='undo'?op.classesAfter:op.classesBefore);await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     if(op.type==='collectionSelection'){await reloadFrame();await restoreLayerSelection(op.selectionIds);if(sel)renderPanel();toast(direction==='undo'?'Undone':'Redone','ok');return result;}
     const fresh = await api('GET', resolveUrl(op.id, op.context));
     if (fresh?.ok) { sel = { hostId: op.id, instanceId: null, scope: 'host', info: fresh.element }; renderPanel(); }

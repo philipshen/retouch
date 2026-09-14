@@ -16457,3 +16457,21 @@ verify phone/tablet/desktop opacity, exact source undo/redo, and retained
 multi-selection. React/WebKit retains document and input state. Liquid/Chromium
 uses the existing context-selection reload path; retained Liquid application
 state is not established by this change. All 1,396 unit tests pass.
+
+### Literal Liquid class selections retain the running page
+
+Multi-layer edits to literal Liquid class attributes now validate one fetched
+page, then apply only the source token additions/removals to existing live
+elements. Runtime-added class tokens remain present and are not written into
+source. Main and comparison documents, form values, and nodes remain loaded.
+The history entry records the class transition so undo/redo can apply the inverse
+change while preserving runtime-only tokens. Conditional Liquid class expressions
+and other context-dependent edit families retain their existing refresh path.
+
+Chromium and WebKit `liquid-scope-reset.cjs` verify breakpoint reset, inherited
+phone/tablet/desktop appearance, exact source undo/redo, retained multi-selection,
+and independent main/comparison input and document state. An invalid later layer
+is rejected before changing an earlier layer's runtime marker. The source test
+checks the explicit literal-class capability independently of general class
+editability. This supersedes the preceding reload limitation for covered literal
+multi-layer class edits; single-layer/context-dependent workflows remain separate.

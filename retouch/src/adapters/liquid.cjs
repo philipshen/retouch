@@ -308,6 +308,7 @@ function describeElement(resolved) {
     hash: resolved.hash,
     className: classEditable ? className : null,
     classNameDynamic: !classEditable,
+    classSourceLiteral: !node.classAttr?.dynamic&&!node.attributeExpressions,
     classSelection:classEditable&&!node.attributeExpressions&&(node.attributes||[]).filter(attr=>attr.name==='class').length<=1,
     contextSelection:classEditable&&!node.attributeExpressions&&(node.attributes||[]).filter(attr=>attr.name==='class').length<=1,
     classNameReason: !classEditable ? 'Reload the preview to read this element’s rendered classes.' : null,

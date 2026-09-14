@@ -16,3 +16,8 @@ test('Liquid class selection refuses stale, malformed and unsupported later laye
  for(const bad of [source.replace('<p class=','<p class="duplicate" class='),source.replace('<p class=','<p {{ attributes }} class=')]){const result=batch.plan(resolve(bad),op(bad));assert.equal(result.ok,false);assert.equal(result.edits,undefined);}
  const missing=op(source);missing.contexts[missing.ids[1]]={};const result=batch.plan(resolve(source),missing);assert.equal(result.ok,false);assert.equal(result.edits,undefined);
 });
+test('Liquid marks only literal source classes for live attribute synchronization',()=>{
+ const literal=resolve('<div class="opacity-50">Literal</div>');assert.equal(liquid.describe(literal).classSourceLiteral,true);
+ const dynamic=resolve(source),captured=liquid.describe({...dynamic,context:{className:'font-bold'}});assert.equal(captured.classNameDynamic,false);assert.equal(captured.classSourceLiteral,false);
+ const expressions=resolve('<div {{ attributes }} class="opacity-50">Attributes</div>');assert.equal(liquid.describe(expressions).classSourceLiteral,false);
+});
