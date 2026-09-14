@@ -16659,3 +16659,10 @@ search, verifies preview focus, and checks the exhausted action is absent.
 Canvas and Actions now open a compact Guides list scoped to the current page and screen width. Off-canvas guides remain editable through this list. Removing one guide or all guides records one local undo step. Numeric edits return keyboard focus to their guide row, including WebKit where mouse clicks do not automatically focus buttons.
 
 Chromium and WebKit verification covers editing a guide at 9,000 px, removal, bulk removal, undo/redo, source isolation and retained preview state. The full unit suite passed 1,506 tests. One WebKit run reported a resolve-request access-control error during reload; the unchanged rerun passed, so that intermittent reload error remains unexplained.
+
+
+### Selection requests across navigation — 2026-09-14
+
+A delayed hover/selection response could continue resolving ancestors from a preview document after navigation. A controlled browser test reproduced two initial lookups growing to eight requests after the old page was gone. Classification now checks document identity, node attachment and selection freshness after each response, and stops the stale ancestor walk. Direct source selections also reject results from detached or replaced documents.
+
+The delayed-response test passes in Chromium and WebKit and confirms that a layer on the new page remains selectable. The Chromium SVG guide/snapping regression also passes. This fixes the reproduced stale-request behavior; it does not establish that the previously observed intermittent WebKit reload access-control error is eliminated.

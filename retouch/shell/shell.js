@@ -434,14 +434,14 @@ function updateSource(info, result) {
 // frame that has not reloaded yet — so we climb rather than error. Returns
 // { el, info } or null. This is the single gate for what is selectable.
 async function classify(node,sourceId) {
-  const serial = ++classificationSerial;
+  const serial = ++classificationSerial,documentBefore=node?.ownerDocument;
   busyPanel(true);
   try {
     let result;
     if(sourceId&&[node?.getAttribute?.('data-rt'),node?.getAttribute?.('data-rt-i')].includes(sourceId)){
       const resolved=await api('GET',resolveUrl(sourceId,renderContext(node)));result=resolved?.ok?{el:node,info:resolved.element,...idsOf(node)}:null;
-    }else result = await classifyNode(node);
-    return serial === classificationSerial ? result : { superseded: true };
+    }else result = await classifyNode(node,()=>serial===classificationSerial);
+    return serial === classificationSerial && documentBefore===doc() && node?.isConnected ? result : { superseded: true };
   } finally {
     busyPanel(false);
   }
@@ -452,21 +452,24 @@ function isStandaloneText(el, info) {
   return !!el.textContent.trim() && [...el.querySelectorAll('*')].every(child=>
     /^(SPAN|STRONG|EM|B|I|U|S|DEL|BR|A|CODE|SMALL|SUB|SUP)$/.test(child.tagName));
 }
-async function classifyNode(node) {
+async function classifyNode(node,current=()=>true) {
+  const documentBefore=node?.ownerDocument,active=()=>current()&&documentBefore===doc()&&node?.isConnected;
   let el = node && node.closest ? node.closest('[data-rt], [data-rt-i]') : null;
   while (el) {
+    if(!active())return null;
     const { hostId, instanceId } = idsOf(el);
     let inlineComponent=false;
     if(hostId && instanceId) {
-      const host=await api('GET',resolveUrl(hostId,renderContext(el)));
+      const host=await api('GET',resolveUrl(hostId,renderContext(el)));if(!active())return null;
       if(host?.ok && isStandaloneText(el,host.element)) {
-        const usage=await api('GET',resolveUrl(instanceId,renderContext(el)));
+        const usage=await api('GET',resolveUrl(instanceId,renderContext(el)));if(!active())return null;
         return {el,info:{...host.element,textLeaf:true},hostId,instanceId:usage?.element?.inlineComponent?null:instanceId};
       }
     }
     for (const id of [instanceId, hostId]) {
       if (!id || !/^[0-9a-f]{10}$/.test(id)) continue;
-      const res = await api('GET', resolveUrl(id, renderContext(el)));
+      if(!active())return null;
+      const res = await api('GET', resolveUrl(id, renderContext(el)));if(!active())return null;
       if(res?.ok && res.element.inlineComponent&&!componentLibrarySelections.has(id)){inlineComponent=true;continue;}
       if (res && res.ok) return { el, info: res.element, hostId, instanceId:inlineComponent?null:instanceId };
     }
