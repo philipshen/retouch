@@ -40,12 +40,32 @@ for(const kind of ['react','html','liquid'])test(`${kind} paragraph/list writes 
   const children=[...list,block('p',[{t:'keep',id:linkId}])],history=new SourceHistory();
   const apply=kind==='react'?writer:adapter,result=apply.applyOp(resolved,{type:'setChildren',children,fileHash:resolved.hash});
   assert.equal(result.ok,true,JSON.stringify(result));
-  const changed=fs.readFileSync(file,'utf8');assert.ok(changed.includes('<ol start="3"><li><strong>First</strong><ul><li><a href='));assert.ok(changed.includes('<p>'+inner+'</p>'));assert.ok(changed.includes('Intro &amp; &lt;safe&gt;'));
+  const changed=fs.readFileSync(file,'utf8');assert.match(changed,/<ol[^>]+start="3"><li><strong>First<\/strong><ul[^>]*><li><a href=/);assert.ok(changed.includes((kind==='react'?'<p style={{margin:0}}>':'<p style="margin: 0;">')+inner+'</p>'));assert.ok(changed.includes(kind==='react'?'listStyle:"revert"':'list-style: revert'));assert.ok(changed.includes('Intro &amp; &lt;safe&gt;'));
   const token=history.record(result.edits);assert.equal(history.apply(root,'undo',token,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),original);assert.equal(history.apply(root,'redo',token,adapter).ok,true);assert.equal(fs.readFileSync(file,'utf8'),changed);
   const reopened=resolve();assert.ok(kind==='react'?writer.describeElement(reopened).mixedText:adapter.describe(reopened).canSetChildren);
   // Refusal must leave the original source and history untouched.
   assert.equal(history.apply(root,'undo',token,adapter).ok,true);
   const duplicate=apply.applyOp(resolve(),{type:'setChildren',children:[block('p',[{t:'keep',id:linkId},{t:'keep',id:linkId}])]});assert.equal(duplicate.refused,true);assert.equal(fs.readFileSync(file,'utf8'),original);
   const bad=apply.applyOp(resolve(),{type:'setChildren',children:[block('p',[block('ul',[block('li',[text('Bad')])])])]});assert.equal(bad.refused,true);assert.equal(fs.readFileSync(file,'utf8'),original);
+  const attributed='<ul '+(kind==='react'?'className':'class')+'="items" title="Keep > me"><li data-note="first">One</li><li>Two</li></ul>';
+  fs.writeFileSync(file,original.replace(inner,attributed));
+  const fresh=resolve();
+  const listId=kind==='html'?source.describe(attributed,fresh.element.id).descriptor.children[0].id:fresh.elements.find(el=>kind==='react'?el.node.openingElement.name.name==='ul':el.tag==='ul').id;
+  const converted=apply.applyOp(fresh,{type:'setChildren',children:[{t:'keep',id:listId,tag:'ol'}]});assert.equal(converted.ok,true,JSON.stringify(converted));
+  assert.equal(fs.readFileSync(file,'utf8'),original.replace(inner,attributed.replace('<ul ','<ol ').replace('</ul>','</ol>')));
  }finally{cleanup(root);}
+});
+
+test('kept list tag conversion preserves original attribute syntax and nested content',()=>{
+ const original='<UL class=items data-note="a > b"><li title=first>One</li><li class="last">Two</li></UL>',descriptor=source.describe(original,'id').descriptor.children[0];
+ assert.throws(()=>source.rewrite(original,'id',[{t:'keep',id:descriptor.id,tag:'p'}]),/mapped children|inline/);
+ assert.throws(()=>source.rewrite(original,'id',[{t:'keep',id:descriptor.id,tag:'div'}]),/mapped children/);
+ const numbered=source.rewrite(original,'id',[{t:'keep',id:descriptor.id,tag:'ol'}]);
+ assert.equal(numbered,original.replace('<UL','<ol').replace('</UL>','</ol>'));
+ const paragraphs=source.rewrite(original,'id',[{t:'keep',id:descriptor.id,tag:'div',children:descriptor.children.map(item=>({t:'keep',id:item.id,tag:'p'}))}]);
+ assert.equal(paragraphs,'<div class=items data-note="a > b"><p title=first>One</p><p class="last">Two</p></div>');
+ assert.throws(()=>blocks.patchTag('<a href="/">Link</a>','a','p'),/Only paragraph/);
+ assert.throws(()=>blocks.patchTag('<{{ tag }}>Text</{{ tag }}>','p','li'),/explicit static/);
+ assert.ok(rich.validateChildrenTree([{t:'keep',id:descriptor.id,tag:'script'}],0));
+ assert.ok(rich.validateChildrenTree([{t:'keep',id:descriptor.id,tag:'p',href:'/link'}],0));
 });

@@ -43,25 +43,26 @@
   const selected=groups.find(group=>group.elements.includes(target));
   return selected?[selected,...groups.filter(group=>group!==selected)]:groups;
  }
- function occurrenceShape(elements){
-  return JSON.stringify(elements.map(el=>{const path=[];for(let node=el;node;node=node.parentElement){const parent=node.parentElement;path.push([node.tagName,node.getAttribute('id'),node.getAttribute('data-rt'),node.getAttribute('data-rt-i'),parent?[...parent.children].indexOf(node):0]);}return path;}));
+ function occurrenceShape(elements,tag=node=>node.tagName){
+  return JSON.stringify(elements.map(el=>{const path=[];for(let node=el;node;node=node.parentElement){const parent=node.parentElement;path.push([tag(node),node.getAttribute('id'),node.getAttribute('data-rt'),node.getAttribute('data-rt-i'),parent?[...parent.children].indexOf(node):0]);}return path;}));
  }
- function occurrenceIdentity(el){
+ function occurrenceIdentity(el,tag=node=>node.tagName){
   const path=[];
   for(let node=el;node;node=node.parentElement){
-   const id=node.getAttribute('id'),source=[node.tagName,node.getAttribute('data-rt'),node.getAttribute('data-rt-i')];
+   const id=node.getAttribute('id'),source=[tag(node),node.getAttribute('data-rt'),node.getAttribute('data-rt-i')];
    if(id){
     const matches=[...(node.ownerDocument?.querySelectorAll('[id]')||[])].filter(other=>other.getAttribute('id')===id);
     if(matches.length!==1)return null;
     return JSON.stringify([id,source,path]);
    }
-   const parent=node.parentElement,siblings=parent?[...parent.children].filter(other=>other.tagName===source[0]&&other.getAttribute('data-rt')===source[1]&&other.getAttribute('data-rt-i')===source[2]):[node];
+   const parent=node.parentElement,siblings=parent?[...parent.children].filter(other=>tag(other)===source[0]&&other.getAttribute('data-rt')===source[1]&&other.getAttribute('data-rt-i')===source[2]):[node];
    path.push([...source,siblings.indexOf(node),siblings.length]);
   }
   return null;
  }
- function captureOccurrence(elements,target){
-  const index=elements.indexOf(target);return target?.isConnected&&index>=0?{index,shape:occurrenceShape(elements),identity:occurrenceIdentity(target)}:null;
+ function captureOccurrence(elements,target,expectedTag=null){
+  const changed=new Set(elements),tag=node=>expectedTag&&changed.has(node)?expectedTag.toUpperCase():node.tagName;
+  const index=elements.indexOf(target);return target?.isConnected&&index>=0?{index,shape:occurrenceShape(elements,tag),identity:occurrenceIdentity(target,tag)}:null;
  }
  function restoreOccurrence(elements,bookmark){
   if(!bookmark||!elements.every(el=>el.isConnected))return null;

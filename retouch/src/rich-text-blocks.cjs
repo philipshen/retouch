@@ -4,7 +4,7 @@
 const tags=new Set(['p','ul','ol','li']);
 const flow=new Set(['div','section','article','aside','nav','main','header','footer','blockquote','li','td','th','form','fieldset','figure','figcaption','details','dialog','body']);
 const phrasing=new Set(['span','a','strong','em','b','i','u','s','sup','sub','br','code','mark','small','abbr','time','img','input','label','button']);
-const contains=items=>Array.isArray(items)&&items.some(item=>item&&(item.t==='block'||contains(item.children)));
+const contains=items=>Array.isArray(items)&&items.some(item=>item&&(item.t==='block'||item.t==='keep'&&item.tag||contains(item.children)));
 function validateNode(node){
  if(!tags.has(node.tag)||Object.keys(node).some(key=>!['t','tag','children','start'].includes(key)))return 'Unsupported paragraph or list node.';
  if(Object.hasOwn(node,'start')&&(node.tag!=='ol'||!Number.isInteger(node.start)||node.start<1||node.start>1000000))return 'Invalid ordered list start.';
@@ -13,7 +13,7 @@ function validateNode(node){
 function placement(items,parent,keptTag,level=0){
  for(const item of items){
   const kept=item.t==='keep'?keptTag(item.id):null;
-  const tag=item.t==='block'||item.t==='wrap'?item.tag:item.t==='link'?'a':item.t==='style'||item.t==='styles'?'span':item.t==='break'?'br':item.t==='keep'?(typeof kept==='string'?kept:kept?.tag):'#text';
+  const tag=item.t==='block'||item.t==='wrap'?item.tag:item.t==='link'?'a':item.t==='style'||item.t==='styles'?'span':item.t==='break'?'br':item.t==='keep'?(item.tag||(typeof kept==='string'?kept:kept?.tag)):'#text';
   if(parent==='ul'||parent==='ol'){
    if(tag!=='li'&&tag!=='#comment'&&!(item.t==='text'&&!item.value.trim()))return 'Lists must contain list items.';
   }else if(tag==='li')return 'List items need an ordered or unordered list.';
@@ -22,15 +22,27 @@ function placement(items,parent,keptTag,level=0){
   // phrasing content, where browsers could repair or rearrange the markup.
   if(parent==='p'&&tag!=='#text'&&tag!=='#comment'&&!phrasing.has(tag))return 'Paragraphs can contain only inline text content.';
   if(item.t==='keep'&&(parent==='p'||phrasing.has(parent))&&typeof kept==='object'&&kept&&!kept.inline)return 'Paragraphs can contain only inline text content.';
+  if(item.tag&&item.t==='keep'&&!item.children&&kept&&typeof kept==='object'){
+   if(['ul','ol'].includes(tag)!==['ul','ol'].includes(kept.tag))return 'Changing list structure requires mapped children.';
+   if(tag==='p'&&!kept.inlineChildren)return 'Paragraphs can contain only inline text content.';
+  }
   const next=level+(tag==='ul'||tag==='ol'?1:0);
   if(next>5)return 'Lists support at most five indentation levels.';
   if(item.children){const error=placement(item.children,tag,keptTag,next);if(error)return error;}
  }
  return null;
 }
-function markup(node,content){
+function markup(node,content,jsx=false){
  const error=validateNode(node);if(error)throw Error(error);
- return '<'+node.tag+(Object.hasOwn(node,'start')?' start="'+node.start+'"':'')+'>'+content+'</'+node.tag+'>';
+ let style=node.tag==='ul'||node.tag==='ol'?' style="list-style: revert; margin: 0; padding-inline-start: 1.5em;"':node.tag==='p'?' style="margin: 0;"':'';
+ if(jsx&&style)style=node.tag==='p'?' style={{margin:0}}':' style={{listStyle:"revert",margin:0,paddingInlineStart:"1.5em"}}';
+ return '<'+node.tag+style+(Object.hasOwn(node,'start')?' start="'+node.start+'"':'')+'>'+content+'</'+node.tag+'>';
 }
 const inlineTag=tag=>tag==='#text'||tag==='#comment'||phrasing.has(tag);
-module.exports={contains,validateNode,placement,markup,inlineTag};
+function patchTag(raw,from,to){
+ if(!(tags.has(from)||from==='div')||!['p','ul','ol','li','div'].includes(to))throw Error('Only paragraph and list source tags can be converted.');
+ const opening=new RegExp('^<'+from+'(?=[\\s>])','i'),closing=new RegExp('</'+from+'\\s*>$','i');
+ if(!opening.test(raw)||!closing.test(raw))throw Error('The paragraph/list source needs explicit static opening and closing tags.');
+ return raw.replace(opening,'<'+to).replace(closing,'</'+to+'>');
+}
+module.exports={contains,validateNode,placement,markup,inlineTag,patchTag};

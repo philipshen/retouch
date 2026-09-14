@@ -325,6 +325,7 @@ function hookFrame(d, w) {
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if(e.isComposing)return;
+      if(inlineListShortcut(e))return;
       if((e.metaKey||e.ctrlKey)&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='k'){e.preventDefault();editing.focusLink?.();return;}
       if(/^(Arrow|Home$|End$|PageUp$|PageDown$)/.test(e.key))breakTextHistoryGroup();
       if(e.key==='Enter'&&e.shiftKey){e.preventDefault();insertInlineBreak();return;}
@@ -665,7 +666,7 @@ async function startInlineEdit(node, evt, quiet, openVector=false) {
     if(rangeStyle){c.__rtRangeStyleValues={};for(const [property,value]of Object.entries(rangeStyle.properties||{[rangeStyle.property]:rangeStyle.value})){const probe=el.ownerDocument.createElement('span');probe.style.setProperty(property,value);const css=probe.style.getPropertyValue(property);if(c.style.getPropertyValue(property)===css){c.__rtRangeStyleValues[property]={value,css};if(property==='color'){c.__rtRangeStyleValue=value;c.__rtRangeStyleCSS=css;}}}}
 
     const cid = c.getAttribute('data-rt-keep') || c.getAttribute('data-rt') || c.getAttribute('data-rt-i');
-    if (cid) editing.snapshot.set(cid, {html:c.innerHTML,href:c.tagName==='A'?c.getAttribute('href'):undefined});
+    if (cid) editing.snapshot.set(cid, {html:c.innerHTML,tag:c.tagName.toLowerCase(),href:c.tagName==='A'?c.getAttribute('href'):undefined});
   }
   editing.originalTree = serializeChildren(el, editing.snapshot);
   // plaintext-only forces pre-wrap in Chromium even over author !important
@@ -749,11 +750,11 @@ async function waitForClientMount(d){for(let attempt=0;attempt<80;attempt++){if(
 window.RetouchClientMount={ready:clientMountReady};
 // A committed gradient gesture can retain its re-entry token through its own
 // refresh. Live preview tools and unrelated navigations still cancel normally.
-function reloadFrame({keepDrawing=null}={}) {
+function reloadFrame({keepDrawing=null,expectedTag=null}={}) {
   if(stopDrawing!==keepDrawing)stopDrawing?.();
   const preserved=keepDrawing?{cancel:keepDrawing,route:iframe.contentWindow?.location.href}:null;frameRefreshDrawing=preserved;
   const selectionBefore=sel,anchorBefore=renderedSelection,routeBefore=iframe.contentWindow?.location.href;
-  const bookmark=sel&&!sel.multiple&&renderedSelection?.id===activeId()?RetouchComponentInstances.captureOccurrence(matchingInDocument(doc(),activeId(),sel.info),renderedSelection.element):null;
+  const bookmark=sel&&!sel.multiple&&renderedSelection?.id===activeId()?RetouchComponentInstances.captureOccurrence(matchingInDocument(doc(),activeId(),sel.info),renderedSelection.element,expectedTag):null;
   return new Promise(resolve => {
     classificationSerial++;
     inlineFormatCleanup();editing = null;
@@ -803,7 +804,7 @@ function reloadFrame({keepDrawing=null}={}) {
 // A source write can finish before the framework invalidates its rendered
 // module. Wait for that revision, retaining the live session when HMR applies it.
 // Reload only when the renderer cannot confirm a matching live update.
-async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null}={}) {
+async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null,expectedTag=null}={}) {
   const location = iframe.contentWindow.location.href;
   async function liveUpdateReady(expectedText=null){
     // Only compiler-stamped revisions can prove the live page reflects this write.
@@ -832,14 +833,14 @@ async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawin
         if (el && (!info.renderRevisionAttribute||el.getAttribute(info.renderRevisionAttribute)===info.hash) && matches(el)) {
           // Use rendered text so JSX whitespace and HTML entities match the browser.
           if(await liveUpdateReady(verifyText?el.textContent:null))return;
-          if(iframe.contentWindow.location.href===location)await reloadFrame({keepDrawing});
+          if(iframe.contentWindow.location.href===location)await reloadFrame({keepDrawing,expectedTag});
           return;
         }
       }
     } catch {}
     await new Promise(resolve => setTimeout(resolve, 150));
   }
-  await reloadFrame({keepDrawing});
+  await reloadFrame({keepDrawing,expectedTag});
 }
 
 // DOM -> op children tree. Implemented in serialize.js (loaded first) so it
@@ -934,7 +935,7 @@ function styleInsertedTextContent(current,start,end,properties,script,decoration
 }
 // Keep the actual nodes (and their source evidence) so restoring a local
 // insertion does not invalidate preceding native text undo transactions.
-const caretMetadataNames=['__rtLinkHref','__rtCaretPlaceholder','__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
+const caretMetadataNames=['__rtBlockTag','__rtLinkHref','__rtCaretPlaceholder','__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
 function captureCaretEdit(current){
   const d=current.el.ownerDocument,selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
   const capture=node=>({node,text:typeof node.data==='string'?node.data:null,attributes:node.nodeType===1?[...node.attributes].map(a=>[a.name,a.value]):null,metadata:Object.fromEntries(caretMetadataNames.filter(key=>Object.hasOwn(node,key)).map(key=>[key,structuredClone(node[key])])),children:[...node.childNodes].map(capture)});
@@ -1100,10 +1101,24 @@ function selectedInlineTextNodes(root,range){
   return nodes;
 }
 
+function inlineListShortcut(event){
+  if(event.isComposing||!(event.metaKey||event.ctrlKey)||!event.shiftKey||event.altKey||!editing||!RetouchListEditing.supported(editing.el))return false;
+  const kind=event.code==='Digit7'||event.key==='7'?'ol':event.code==='Digit8'||event.key==='8'?'ul':null;if(!kind)return false;
+  event.preventDefault();event.stopPropagation();applyTextList(kind);return true;
+}
+function applyTextList(kind){
+  const current=editing;if(!current||!RetouchListEditing.supported(current.el))return false;
+  const result=inlineFormattingTransaction(()=>RetouchListEditing.apply(current.el,kind));
+  current.el.ownerDocument.dispatchEvent(new Event('selectionchange'));return result;
+}
+
 function showInlineFormatToolbar(){
   inlineFormatCleanup();if(!editing||editing.info.canSetChildren===false)return;
   const d=doc(),bar=document.createElement('div');bar.className='inline-format-toolbar';bar.setAttribute('role','toolbar');bar.setAttribute('aria-label','Selected text formatting');
   for(const [tag,label,text]of [['strong','Bold selected text','B'],['em','Italic selected text','I'],['u','Underline selected text','U'],['s','Strikethrough selected text','S'],['sup','Superscript selected text','x²'],['sub','Subscript selected text','x₂']]){const button=document.createElement('button');button.type='button';button.textContent=text;button.dataset.formatTag=tag;if(tag==='u'||tag==='s')button.style.textDecoration=tag==='u'?'underline':'line-through';button.setAttribute('aria-label',label);button.title=label;button.onpointerdown=event=>event.preventDefault();button.onclick=()=>{toggleWrap(tag);update();};bar.append(button);}
+  const listStyle=document.createElement('select');listStyle.setAttribute('aria-label','Text layer list style');listStyle.title='Applies to all paragraphs in this text layer.';
+  for(const [value,label]of [['none','No list'],['ul','Bulleted list'],['ol','Numbered list'],['mixed','Mixed']]){const option=document.createElement('option');option.value=value;option.textContent=label;option.disabled=value==='mixed';listStyle.append(option);}
+  listStyle.onchange=()=>{if(savedRange&&editing){const selection=d.getSelection();selection.removeAllRanges();selection.addRange(savedRange.cloneRange());applyTextList(listStyle.value);update();}};
   let savedRange=null;const fields=[];
   for(const [property,label,options] of [['font-weight','Selected text weight',[['100','Thin'],['200','Extra light'],['300','Light'],['400','Regular'],['500','Medium'],['600','Semibold'],['700','Bold'],['800','Extra bold'],['900','Black'],['custom','Custom…']]],['font-style','Selected text style',[['normal','Upright'],['italic','Italic']]],['text-transform','Selected text case',[['none','As typed'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']]],['font-variant-caps','Selected text caps',[['normal','Normal'],['small-caps','Small caps'],['all-small-caps','All small caps']]]]){
     const field=document.createElement('select');field.setAttribute('aria-label',label);field.title=label;
@@ -1198,6 +1213,7 @@ function showInlineFormatToolbar(){
     if(picker||fontDialog)return;
     const selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null,valid=editing&&range&&editing.el.contains(range.startContainer)&&editing.el.contains(range.endContainer)&&!(range.collapsed&&(range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer).closest('[contenteditable="false"]'));
     for(const control of bar.querySelectorAll('button,input,select'))if(!control.dataset.rangeAlwaysEnabled)control.disabled=!valid;
+    listStyle.disabled=!valid||!RetouchListEditing.supported(editing?.el);listStyle.value=editing?RetouchListEditing.state(editing.el):'none';
     selectionNote.textContent=valid?(range.collapsed?'Text you type next':'Selected text'):'Select text to format';
     if(valid&&!editing.caretComposition&&editing.caretStyle&&!sameCaret(range,editing.caretStyle.range))editing.caretStyle=null;
     const selectedText=valid?selectedInlineTextNodes(editing.el,range):[];
@@ -1238,6 +1254,7 @@ function showInlineFormatToolbar(){
   bar.addEventListener('focusin',breakTextHistoryGroup);
   bar.addEventListener('pointerdown',breakTextHistoryGroup);
   bar.addEventListener('keydown',event=>{
+    if(inlineListShortcut(event)){update();return;}
     if(event.isComposing||!(event.metaKey||event.ctrlKey)||event.key.toLowerCase()!=='z'||event.target.closest('input,textarea,[contenteditable="true"]'))return;
     if(inlineHistoryCommand(event.shiftKey)){event.preventDefault();event.stopPropagation();update();}
   });
@@ -1254,7 +1271,7 @@ function showInlineFormatToolbar(){
   const weight=fields.find(item=>item.property==='font-weight'&&item.field.tagName==='SELECT').field,style=fields.find(item=>item.property==='font-style').field,size=fields.find(item=>item.property==='font-size').field;
   const colorControls=document.createElement('div');colorControls.className='range-color-controls';colorControls.append(swatch,colorField);
   const scopeNote=document.createElement('small');scopeNote.className='range-scope-note';scopeNote.textContent='Applies across all screen sizes.';
-  bar.replaceChildren(header,row('Font',[familyButton],'range-family-field'),row('Weight',[weight,customWeight]),row('Size',[size]),row('Line height',[spacingFields['line-height']]),row('Letter spacing',[spacingFields['letter-spacing']]),row('Style',[style]),row('Color',[colorControls]),row('Case',[fields.find(item=>item.property==='text-transform').field]),row('Caps',[fields.find(item=>item.property==='font-variant-caps').field]),row('Link',[linkField,removeLink],'range-link-field'),commands,scopeNote);
+  bar.replaceChildren(header,row('Font',[familyButton],'range-family-field'),row('Weight',[weight,customWeight]),row('Size',[size]),row('Line height',[spacingFields['line-height']]),row('Letter spacing',[spacingFields['letter-spacing']]),row('Style',[style]),row('Color',[colorControls]),row('Case',[fields.find(item=>item.property==='text-transform').field]),row('Caps',[fields.find(item=>item.property==='font-variant-caps').field]),row('Link',[linkField,removeLink],'range-link-field'),...(RetouchListEditing.supported(editing.el)?[row('List',[listStyle],'range-list-field')]:[]),commands,scopeNote);
   const mount=()=>{
     const docked=!!section?.isConnected&&!panel.hidden,focused=bar.contains(document.activeElement)?document.activeElement:null;
     bar.classList.toggle('range-inspector',docked);if(section)section.toggleAttribute('data-range-editing',docked);
@@ -2483,7 +2500,7 @@ async function writeTag(tag) {
     info.hash = res.hash;
     if (res.element?.tagSource) info.tagSource=res.element.tagSource;
     toast('Saved', 'ok');
-    await refreshWrittenElement(info, el => el.tagName.toLowerCase() === tag);
+    await refreshWrittenElement(info, el => el.tagName.toLowerCase() === tag, {expectedTag:tag});
     renderPanel();
   } else {
     toast((res && res.reason) || (res && res.error) || 'Write failed', 'err');

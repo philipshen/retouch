@@ -59,3 +59,13 @@ test('reload occurrence bookmarks retain position only for matching source struc
  const shifted=make();shifted[0].parentElement.children.unshift({});assert.equal(restoreOccurrence(shifted.slice(1),bookmark),null);
  const detached=make();detached[1].isConnected=false;assert.equal(restoreOccurrence(detached,bookmark),null);assert.equal(captureOccurrence(detached,detached[1]),null);
 });
+
+test('expected source tag changes retain occurrence identity without accepting unrelated changes',()=>{
+ const {captureOccurrence,restoreOccurrence}=require('../shell/component-instances.js');
+ const make=tag=>{const parent={tagName:'MAIN',parentElement:null,getAttribute:()=>null},elements=[0,1].map(()=>({tagName:tag,parentElement:parent,isConnected:true,getAttribute:name=>name==='data-rt'?'text-source':null}));parent.children=elements;return elements;};
+ const before=make('H1'),bookmark=captureOccurrence(before,before[1],'div'),after=make('DIV');
+ assert.equal(restoreOccurrence(after,bookmark),after[1]);
+ assert.equal(restoreOccurrence(make('P'),bookmark),null);
+ assert.equal(restoreOccurrence(after.slice(0,1),bookmark),null);
+ after[1].parentElement.tagName='ASIDE';assert.equal(restoreOccurrence(after,bookmark),null);
+});

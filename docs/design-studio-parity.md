@@ -14848,3 +14848,44 @@ markers; no marker appearance parity is claimed. New block structure is refused
 inside phrasing-only roots such as headings/paragraphs; an intuitive, atomic
 conversion path is still needed. Existing native DIV/P preservation still uses
 line breaks. No desktop rebuild/native launch or trusted distribution occurred.
+
+### List controls and preserved source conversion (2026-09-14)
+
+The inline Typography inspector now provides a List selector with No list,
+Bulleted list and Numbered list. It operates on the whole text layer, across
+screen sizes, for source containers that accept flow content. Cmd/Ctrl+Shift+7
+and Cmd/Ctrl+Shift+8 select numbered and bulleted lists while editing. List changes
+use the same local transaction history as formatting: undo restores exact DOM
+nodes, source metadata and selection, and repeating a style does not add a step.
+
+The source tree can change a kept paragraph/list tag while retaining its original
+attribute syntax and children. New lists use list-style: revert, zero margins and
+1.5em inline-start padding so ordinary CSS resets do not erase their markers.
+New paragraph nodes use zero margins. Converting existing lists retains their
+attributes and authored styles; No list converts containers/items to divs rather
+than introducing browser-default paragraph margins. Tag conversion requires
+explicit static source tags, valid parent/child placement, mapped children when
+changing list structure, and proven inline children for paragraph conversion.
+
+An intentional text-root tag change now supplies its expected tag to occurrence
+restoration. Source identity, sibling/ancestor structure and document checks still
+apply; the expected tag change no longer produces a false re-selection message.
+
+All 1,227 unit tests pass (`/private/tmp/retouch-list-controls-final-units.log`).
+`RT_E2E_LIST_CONTROLS=1` passes HTML/React/Liquid Chromium 145.0.7632.6 and HTML
+WebKit 26.0 (`/private/tmp/retouch-list-controls-final-{html,react,liquid,webkit}.log`).
+The final workflow creates two items from a line break, checks disc/decimal marker
+styles, keyboard conversion, grouped local undo/redo, all three list styles across
+save/reopen cycles, unchanged source on reopen, retained height without extra
+blank lines for No list, and exact source history. It also checks the absence of
+the false structure-change message after the initial tag change. The screenshot
+`/private/tmp/retouch-list-controls-final.png` was visually inspected.
+
+Still incomplete: selected-paragraph scope, automatic/atomic conversion of
+phrasing-only roots such as headings, Enter/Tab/Backspace list editing, automatic
+list prefixes, spacing/hanging controls, nested numbering matching Figma, and
+restoring arbitrary nested hierarchy after No list. Existing authored styles can
+still override marker/display behavior. Tests use the existing HTML element
+control to change the fixture heading to a compatible div first; this is not
+proof of an intuitive universal-root conversion flow. The desktop candidate has
+not been rebuilt, and full Design parity/universal-site support remain open.

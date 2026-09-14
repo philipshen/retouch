@@ -38,6 +38,7 @@
         var before = snapshot.get(id);
         var unchanged = typeof before === 'string' ? n.textContent === before : n.innerHTML === before.html;
         var kept={t:'keep',id:id};
+        if(n.__rtBlockTag&&n.__rtBlockTag!==(before&&before.tag))kept.tag=n.__rtBlockTag;
         if(!unchanged)kept.children=serializeChildren(n,snapshot);
         if(n.tagName==='A'&&Object.prototype.hasOwnProperty.call(n,'__rtLinkHref')&&(n.__rtLinkHref===null||links.valid(n.__rtLinkHref))&&!(before&&typeof before==='object'&&before.href===n.__rtLinkHref))kept.href=n.__rtLinkHref;
         append(kept,block(n));
@@ -70,7 +71,7 @@
         append({ t: 'break' });
         continue;
       }
-      if(/^(UL|OL|LI)$/.test(n.tagName)){
+      if(/^(UL|OL|LI)$/.test(n.tagName)||n.tagName==='P'&&n.__rtBlockTag==='p'){
         var list={t:'block',tag:n.tagName.toLowerCase(),children:serializeChildren(n,snapshot)};
         if(n.tagName==='OL'&&n.getAttribute('start')!==null){
           var start=Number(n.getAttribute('start'));

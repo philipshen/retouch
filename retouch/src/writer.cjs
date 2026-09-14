@@ -261,7 +261,7 @@ function planOp(resolved, op) {
     }
     const blocks=require('./rich-text-blocks.cjs');
     const inlineNode=element=>blocks.inlineTag(tagOf(element))&&(element.children||[]).every(child=>child.type==='JSXText'||child.type==='JSXElement'&&inlineNode(child));
-    if(blocks.contains(op.children)){const error=blocks.placement(op.children,tagOf(node),id=>{const kept=descendants.get(id);return kept?{tag:tagOf(kept),inline:inlineNode(kept)}:null;});if(error)return refuse(error);}
+    if(blocks.contains(op.children)){const error=blocks.placement(op.children,tagOf(node),id=>{const kept=descendants.get(id);return kept?{tag:tagOf(kept),inline:inlineNode(kept),inlineChildren:(kept.children||[]).every(child=>child.type==='JSXText'||child.type==='JSXElement'&&inlineNode(child))}:null;});if(error)return refuse(error);}
     const source = resolved.source,seen=new Set();
     const build = (children) =>
       children
@@ -269,7 +269,7 @@ function planOp(resolved, op) {
           if (c.t === 'text') return escapeJsxText(c.value);
           if(c.t==='link')return linkMarkup(c,build(c.children),true);
           if (c.t === 'break') return '<br />';
-          if (c.t === 'block') return blocks.markup(c,build(c.children));
+          if (c.t === 'block') return blocks.markup(c,build(c.children),true);
           if (c.t === 'style' || c.t === 'styles') return styleMarkup(c,build(c.children),true);
           if (c.t === 'wrap') return `<${c.tag}>${build(c.children)}</${c.tag}>`;
           const kept = descendants.get(c.id);
@@ -277,14 +277,14 @@ function planOp(resolved, op) {
             throw refuseError('A kept element is not a descendant of the target in source; the edit cannot be mapped.');
           }
           seen.add(c.id);
-          const hrefEdit=Object.hasOwn(c,'href'),keptElement={node:kept};
+          const hrefEdit=Object.hasOwn(c,'href'),keptElement={node:kept},patchBlock=raw=>Object.hasOwn(c,'tag')?blocks.patchTag(raw,tagOf(kept),c.tag):raw;
           if(hrefEdit&&!require('./link-source.cjs').literalHref(resolved,keptElement,'react'))throw refuseError('This link URL is controlled by its source.');
-          if (!c.children) return hrefEdit?require('./link-source.cjs').patch(resolved,keptElement,'react',c.href):source.slice(kept.start, kept.end);
+          if (!c.children) return patchBlock(hrefEdit?require('./link-source.cjs').patch(resolved,keptElement,'react',c.href):source.slice(kept.start, kept.end));
           if(tagOf(kept)==='a'&&hasLink(c.children))throw refuseError('Text links cannot be nested.');
           if (!childrenAreMappable(kept)) {
             throw refuseError('A styled child whose text was edited contains expressions; it cannot be edited deterministically.');
           }
-          return (
+          return patchBlock(
             (hrefEdit?require('./link-source.cjs').patch(resolved,keptElement,'react',c.href,true):source.slice(kept.start, kept.openingElement.end)) +
             build(c.children) +
             source.slice(kept.closingElement.start, kept.end)
@@ -296,6 +296,7 @@ function planOp(resolved, op) {
       builtStr = build(op.children);
     } catch (e) {
       if (e.refusal) return refuse(e.refusal);
+      if (blocks.contains(op.children)) return refuse(e.message);
       throw e;
     }
     if (builtStr.trim() === '') return refuse('The edit removed all content; delete the element instead.');
