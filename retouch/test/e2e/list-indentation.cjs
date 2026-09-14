@@ -12,6 +12,12 @@ module.exports=async({page,target,read,wait,settled,states,kind})=>{
  await target.evaluate(el=>{const d=el.ownerDocument,r=d.createRange();r.selectNodeContents(el);d.getSelection().removeAllRanges();d.getSelection().addRange(r);});
  for(const [i,char]of [...'ABCDEFG'].entries()){if(i)await page.keyboard.press('Shift+Enter');await page.keyboard.insertText(char);}
  await field.selectOption('ul');await save();await open();
+ // A range ending at C's start selects B only. Verify through keyboard,
+ // persistence and source undo before running the broader nesting workflow.
+ await target.focus();await target.evaluate(el=>{const d=el.ownerDocument,w=d.createTreeWalker(el,4),nodes={};for(let n;n=w.nextNode();)if(/^[BC]$/.test(n.data))nodes[n.data]=n;const r=d.createRange();r.setStart(nodes.B,0);r.setEnd(nodes.C,0);d.getSelection().removeAllRanges();d.getSelection().addRange(r);});
+ await page.keyboard.press('Tab');assert.equal((await positions()).B.depth,2);assert.equal((await positions()).C.depth,1);
+ await save();await open();assert.equal((await positions()).B.depth,2);assert.equal((await positions()).C.depth,1);
+ await button('Finish text editing').click();await settled();await button('Undo').click();await settled();await wait(()=>read()===states.at(-2));states.pop();await open();
  const baseline=await positions(),flat=await target.innerHTML();
  await choose('A');await page.keyboard.press('Tab');assert.equal(await target.innerHTML(),flat);await page.keyboard.press('Shift+Tab');assert.equal(await target.innerHTML(),flat);
  for(const [first,action]of [['B','Tab'],['C','button'],['D','Control+]'],['E','Tab']]){

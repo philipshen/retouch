@@ -14,7 +14,14 @@
  function listContext(el){
   const selection=el?.ownerDocument.getSelection();if(!selection?.rangeCount)return null;const range=selection.getRangeAt(0);
   const item=node=>(node.nodeType===1?node:node.parentElement)?.closest('li');
-  const first=item(range.startContainer),last=item(range.endContainer);
+  const first=item(range.startContainer);let last=item(range.endContainer);
+  // DOM ranges exclude their end boundary. Selecting through the start of the
+  // next item must not indent that untouched item (including nested text runs).
+  if(!range.collapsed&&last&&last!==first){
+   const before=el.ownerDocument.createRange();before.selectNodeContents(last);before.setEnd(range.endContainer,range.endOffset);
+   const fragment=before.cloneContents();
+   if(!fragment.textContent&&!fragment.querySelector('br,img,input,svg,video,audio,canvas,iframe,ul,ol,[contenteditable="false"]'))last=last.previousElementSibling;
+  }
   if(!first||!last||first===el||last===el||!el.contains(first)||!el.contains(last)||first.parentElement!==last.parentElement)return null;
   const list=first.parentElement;if(!/^(UL|OL)$/.test(list.tagName)||!el.contains(list))return null;
   const siblings=[...list.children],from=siblings.indexOf(first),to=siblings.indexOf(last),items=siblings.slice(from,to+1);

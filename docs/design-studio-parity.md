@@ -15316,3 +15316,31 @@ Developer ID Application certificate is available; a separate signing attempt is
 waiting for macOS Keychain access. Notarization credentials/profile, trusted
 launch, public cask hosting and upgrades remain unresolved. This is packaged
 editor progress, not completion of desktop delivery or full Figma parity.
+
+### List selection end boundaries (2026-09-14)
+
+Indentation now treats a range ending at the start of the next list item as an
+exclusive boundary, including starts inside nested inline formatting. That
+untouched item stays at its current level. A selection that includes any text
+from the next item still includes it. Empty text before a boundary does not hide
+media, breaks, nested lists or opaque content from selection handling.
+
+The dedicated `list-selection-boundaries.cjs` browser check passes Chromium
+145.0.7632.6 and WebKit 26.0: forward/reverse selections, partial next-item
+selection and nested outdenting. The existing indentation workflow now exercises
+the boundary through Tab, save/reopen and exact source Undo before its broader
+nesting/history checks. HTML/Chromium and Liquid/WebKit pass
+(`/private/tmp/retouch-list-boundary-html.log` and
+`/private/tmp/retouch-list-boundary-liquid-webkit.log`). All 1,245 unit tests pass
+(`/private/tmp/retouch-list-boundary-units.log`).
+
+The first React/Chromium run passed the indentation assertions but failed the
+overall no-browser-errors gate after a Next.js JSON parse error and HTTP 500
+(`/private/tmp/retouch-list-boundary-react.log`). This remains a real observed
+reload failure, separate from the selection assertions. No desktop rebuild or
+native verification was performed for this editor change; full parity remains open.
+
+The isolated React retry then passed the complete workflow with unchanged code
+(`/private/tmp/retouch-list-boundary-react-retry.log`, exit 0). The original
+failure log is retained; a passing retry does not resolve the intermittent
+Next.js reload issue.
