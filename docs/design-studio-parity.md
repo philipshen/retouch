@@ -16588,3 +16588,8 @@ The screen picker also avoids repeating dimensions already present in automatic
 `Custom W × H` names. Named screens retain `Name · W × H`. The compact-add browser
 workflow checks the automatic label, and the project-screen workflow covers
 renaming, dimensions, and persisted names.
+
+Adding the current canvas size now uses the shared screen-creation flow, which
+reveals the new card, focuses its preview for keyboard interaction, and generates
+a distinct name if needed. The compact-panel workflow verifies the new preview
+is visible and focused while existing documents and input values are retained.
