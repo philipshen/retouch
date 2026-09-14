@@ -53,10 +53,10 @@ function composeNext(nextConfig = {}, { port, appRoot }) {
     rules[pattern] = previous ? { ...previous, loaders: [...previous.loaders, loader] } : loaderRule;
   }
 
-  for (const pattern of ['**/next/dist/client/components/use-action-queue.js', '**/next/dist/esm/client/components/use-action-queue.js']) {
+  for (const [pattern,guardLoader] of [['**/next/dist/client/components/use-action-queue.js','./next-hmr-loader.cjs'], ['**/next/dist/esm/client/components/use-action-queue.js','./next-hmr-loader.cjs'], ['**/next/dist/client/dev/hot-reloader/app/web-socket.js','./next-websocket-loader.cjs'], ['**/next/dist/esm/client/dev/hot-reloader/app/web-socket.js','./next-websocket-loader.cjs']]) {
     const previous = rules[pattern];
     if (previous && (Array.isArray(previous) || !Array.isArray(previous.loaders))) throw new Error(`[retouch] Cannot safely compose Turbopack rule ${pattern}; use a supported loader rule object`);
-    const guard = { loader: require.resolve('./next-hmr-loader.cjs') };
+    const guard = { loader: require.resolve(guardLoader) };
     rules[pattern] = previous ? { ...previous, loaders: [...previous.loaders, guard] } : { loaders: [guard] };
   }
 
@@ -80,6 +80,11 @@ function composeNext(nextConfig = {}, { port, appRoot }) {
         test: /[\\/]next[\\/]dist[\\/](?:esm[\\/])?client[\\/]components[\\/]use-action-queue\.js$/,
         enforce: 'pre',
         use: [{ loader: require.resolve('./next-hmr-loader.cjs') }],
+      });
+      if (ctx.dev !== false) cfg.module.rules.push({
+        test: /[\\/]next[\\/]dist[\\/](?:esm[\\/])?client[\\/]dev[\\/]hot-reloader[\\/]app[\\/]web-socket\.js$/,
+        enforce: 'pre',
+        use: [{ loader: require.resolve('./next-websocket-loader.cjs') }],
       });
       return nextConfig.webpack ? nextConfig.webpack(cfg, ctx) : cfg;
     },

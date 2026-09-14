@@ -815,13 +815,16 @@ function reloadFrame({keepDrawing=null,expectedTag=null}={}) {
 // Reload only when the renderer cannot confirm a matching live update.
 async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawing=null,expectedTag=null,maskGeometry=false}={}) {
   if(maskGeometry&&/\.(?:html?|liquid)$/i.test(info.file)&&matchingEls(info.id).some(el=>el.closest('[data-rt-mask-group]'))){await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select:d=>matchingInDocument(d,info.id,info),matches});return;}
-  const location = iframe.contentWindow.location.href;
+  const location = iframe.contentWindow.location.href,initialDocument=iframe.contentDocument;
+  const current=()=>iframe.contentDocument===initialDocument&&iframe.contentWindow.location.href===location;
   async function liveUpdateReady(expectedText=null){
     // Only compiler-stamped revisions can prove the live page reflects this write.
     if(!info.renderRevisionAttribute)return false;
-    let stable=0;
-    for(let attempt=0;attempt<20;attempt++){
-      if(iframe.contentWindow.location.href!==location)return false;
+    // A fresh server response can precede delivery of the browser hot update.
+    // Use the same bounded window as RetouchRenderSync before falling back.
+    let stable=0;const deadline=performance.now()+8000;
+    while(performance.now()<deadline){
+      if(!current())return false;
       try{
         const d=doc(),el=matchingInDocument(d,info.id,info)[0];
         const stylesReady=[...d.querySelectorAll('link[rel="stylesheet"]')].every(link=>link.disabled||!!link.sheet);
@@ -834,7 +837,7 @@ async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawin
     return false;
   }
   for (let attempt = 0; attempt < 20; attempt++) {
-    if (iframe.contentWindow.location.href !== location) return;
+    if (!current()) return;
     try {
       const response = await fetch(location, { cache: 'no-store' });
       if (response.ok) {
@@ -843,14 +846,14 @@ async function refreshWrittenElement(info, matches, {verifyText=false,keepDrawin
         if (el && (!info.renderRevisionAttribute||el.getAttribute(info.renderRevisionAttribute)===info.hash) && matches(el)) {
           // Use rendered text so JSX whitespace and HTML entities match the browser.
           if(await liveUpdateReady(verifyText?el.textContent:null))return;
-          if(iframe.contentWindow.location.href===location)await reloadFrame({keepDrawing,expectedTag});
+          if(current())await reloadFrame({keepDrawing,expectedTag});
           return;
         }
       }
     } catch {}
     await new Promise(resolve => setTimeout(resolve, 150));
   }
-  await reloadFrame({keepDrawing,expectedTag});
+  if(current())await reloadFrame({keepDrawing,expectedTag});
 }
 
 // DOM -> op children tree. Implemented in serialize.js (loaded first) so it
