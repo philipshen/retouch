@@ -121,6 +121,14 @@ Run `node test/e2e/screens.cjs` from `retouch/` for the isolated browser check.
 
 ## Layers
 
+Right-click the canvas and open **Select layer** to choose an overlapping or
+nested layer. The submenu follows Layers panel order, shows layer icons and
+locks, and previews a layer outline on hover or keyboard focus. Locked layers
+remain selectable here; hidden layers are omitted. Text formatting runs follow
+the Layers panel’s text-run setting. Use Right Arrow to enter the submenu,
+Up/Down to navigate, Enter to select, and Left Arrow or Escape to return.
+
+
 The left panel shows the rendered hierarchy of source-connected elements. Search
 by tag, ID, label or direct text. Use disclosures to collapse groups; selecting an
 element on the canvas reveals its ancestors. Click a row or press Enter to select

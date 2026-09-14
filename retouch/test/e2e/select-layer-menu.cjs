@@ -1,0 +1,28 @@
+'use strict';
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict'),{once}=require('node:events');
+const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_INSPECTOR_FIXTURE');const engine=process.env.RT_E2E_BROWSER||'chromium';
+(async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'retouch-select-layer-')),file=path.join(root,'index.html');
+ const source='<html><body><main aria-label="Canvas" style="position:relative;width:500px;height:450px"><div aria-label="Back" style="position:absolute;left:30px;top:30px;width:300px;height:260px;background:#c8deff"></div><div aria-label="Front" style="position:absolute;left:90px;top:90px;width:300px;height:260px;background:#cbbcff"><p style="margin:30px">A <strong>nested</strong> label</p></div><div aria-label="Hidden" style="display:none">Hidden</div></main><input value="keep me"></body></html>';
+ fs.writeFileSync(file,source);const server=require('../../src/html-site.cjs').start({root,port:0,quiet:true});if(!server.listening)await once(server,'listening');let browser;
+ try{
+  browser=await require(path.join(fixture,'node_modules/playwright'))[engine].launch();const page=await browser.newPage({viewport:{width:1500,height:950}}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('http://localhost:'+server.address().port+'/rt');const app=page.frameLocator('#app'),menu=page.getByRole('menu',{name:'Canvas actions',exact:true}),submenu=page.getByRole('menu',{name:'Select layer',exact:true});await app.locator('strong').waitFor();await app.locator('input').fill('retained state');await app.locator('input').evaluate(()=>window.selectionDocumentToken='same document');
+  const settled=()=>page.waitForFunction(()=>!undoBusy&&!sourceRequests&&!panelTasks&&panelBody.getAttribute('aria-busy')!=='true');
+  const selected=async label=>{await page.waitForFunction(label=>[...document.querySelectorAll('[role=treeitem]')].some(el=>el.textContent===label&&el.getAttribute('aria-selected')==='true'),label);await settled();};
+  const open=async()=>{await app.locator('strong').click({button:'right'});await menu.waitFor();await menu.getByRole('menuitem',{name:'Select layer',exact:true}).hover();await submenu.waitFor();};
+  await open();assert.deepEqual(await submenu.getByRole('menuitem').allTextContents(),['main · Canvas','div · Back','div · Front','p · A nested label']);
+  await submenu.getByRole('menuitem',{name:'div · Back',exact:true}).hover();await page.waitForFunction(()=>hoverEl?.getAttribute('aria-label')==='Back');
+  await submenu.getByRole('menuitem',{name:'div · Back',exact:true}).click();await selected('div · Back');await menu.waitFor({state:'hidden'});assert.equal(await page.evaluate(()=>hoverEl),null);
+  await page.getByRole('treeitem',{name:'div · Front',exact:true}).click();await selected('div · Front');await page.getByRole('button',{name:'Lock div · Front',exact:true}).click();await settled();
+  await open();await submenu.getByRole('menuitem',{name:'div · Front · Locked',exact:true}).waitFor();assert.equal(await submenu.getByRole('menuitem',{name:'p · A nested label · Locked',exact:true}).isEnabled(),true);
+  if(process.env.RT_E2E_SELECT_LAYER_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_SELECT_LAYER_SCREENSHOT});
+  await submenu.getByRole('menuitem',{name:'div · Front · Locked',exact:true}).click();await selected('div · Front');assert.equal(await page.getByRole('button',{name:'Unlock div · Front',exact:true}).isEnabled(),true);
+  await open();await page.keyboard.press('ArrowRight');await page.keyboard.press('Escape');await submenu.waitFor({state:'hidden'});await menu.waitFor();assert.equal(await menu.getByRole('menuitem',{name:'Select layer',exact:true}).evaluate(el=>el===document.activeElement),true);await page.keyboard.press('ArrowRight');await submenu.waitFor();await page.keyboard.press('End');assert.equal(await page.evaluate(()=>document.activeElement.getAttribute('aria-label')),'p · A nested label · Locked');await page.keyboard.press('ArrowLeft');await submenu.waitFor({state:'hidden'});await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');await selected('div · Back');
+  await page.setViewportSize({width:900,height:650});await open();
+  for(const popup of [menu,submenu]){const box=await popup.boundingBox();assert.ok(box.x>=0&&box.y>=0&&box.x+box.width<=900&&box.y+box.height<=650,JSON.stringify(box));}
+  await submenu.getByRole('menuitem',{name:'div · Back',exact:true}).click();await selected('div · Back');
+  // A source document replacement cannot leave an actionable stale layer.
+  await open();await submenu.getByRole('menuitem',{name:'div · Back',exact:true}).hover();await app.locator('[aria-label="Back"]').evaluate(el=>el.remove());await submenu.getByRole('menuitem',{name:'div · Back',exact:true}).click();assert.equal(fs.readFileSync(file,'utf8'),source);await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  assert.equal(await app.locator('input').inputValue(),'retained state');assert.equal(await app.locator('input').evaluate(()=>window.selectionDocumentToken),'same document');assert.deepEqual(errors,[]);assert.equal(fs.readFileSync(file,'utf8'),source);console.log(engine+': PASS overlapping/nested layer menu, locked selection, text ownership, hover outline, keyboard navigation, stale target and retained source/document');
+ }finally{if(browser)await browser.close();server.retouchIndex.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));fs.rmSync(root,{recursive:true,force:true});}
+})().catch(error=>{console.error(error);process.exitCode=1;});

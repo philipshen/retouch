@@ -327,7 +327,26 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
       const destination=navigationTarget(direction);if(!destination)return false;
       search.value='';lockedOnly.checked=false;for(let parent=destination.parent;parent;parent=parent.parent)collapsed.delete(key(parent));render();await choose(destination);return true;
     }
-    return {attach,selection,navigate,selectSiblings,textOwner:el=>showTextRuns.checked?el:textOwner(el,{preserve:child=>!!locks?.direct(child)}),isTextLayer:el=>atomicText(el,{preserve:child=>!!locks?.direct(child)}),canSelectSiblings:()=>siblingTargets().length>1,canNavigate:direction=>!!navigationTarget(direction),refresh:async()=>{render();await loadComponents();}};
+    function atPoint(d,x,y){
+      if(!d||!Number.isFinite(x)||!Number.isFinite(y))return [];
+      const hit=new Set();
+      for(const node of d.elementsFromPoint(x,y))for(let el=node;el;el=el.parentElement){
+        if(!el.matches('[data-rt], [data-rt-i]'))continue;
+        const target=el.closest('[data-rt-boolean-result]')?.closest('[data-rt-boolean]')||el;
+        hit.add(showTextRuns.checked?target:textOwner(target,{preserve:child=>!!locks?.direct(child)}));
+      }
+      const found=[];
+      function walk(items){for(const item of items){
+        if(!['HTML','BODY'].includes(item.el.tagName)&&(item.componentRoots||[item.el]).some(el=>hit.has(el))){
+          found.push({label:item.label,kind:layerKind(item),locked:!!locks?.locked(item.el),el:item.el,run:async()=>{
+            if(isBusy||!item.el.isConnected||item.el.ownerDocument!==d)return;
+            search.value='';lockedOnly.checked=false;for(let parent=item.parent;parent;parent=parent.parent)collapsed.delete(key(parent));render();await choose(item);
+          }});
+        }
+        walk(item.children);
+      }}walk(treeRoots);return found;
+    }
+    return {attach,selection,navigate,selectSiblings,atPoint,textOwner:el=>showTextRuns.checked?el:textOwner(el,{preserve:child=>!!locks?.direct(child)}),isTextLayer:el=>atomicText(el,{preserve:child=>!!locks?.direct(child)}),canSelectSiblings:()=>siblingTargets().length>1,canNavigate:direction=>!!navigationTarget(direction),refresh:async()=>{render();await loadComponents();}};
   }
   const api={label,collect,mount,canNest,canNestMany,atomicText,textOwner};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayers=api;

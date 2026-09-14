@@ -180,7 +180,8 @@ async function canvasContextMenu(event,keyboard=false){
  if(event.defaultPrevented||event.isComposing||mode!=='edit'||editing||panelTasks||undoBusy||sourceRequests||document.querySelector('dialog[open]')||event.target.isContentEditable||event.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]'))return;
  if(keyboard&&!sel)return;
  event.preventDefault();event.stopPropagation();const serial=++canvasContextSerial;
- const target=keyboard?matchingEls(activeId())[0]:pickLayer(event.target,event.clientX,event.clientY);
+ const candidates=keyboard?[]:layers.atPoint(doc(),event.clientX,event.clientY);
+ const target=keyboard?matchingEls(activeId())[0]:pickLayer(event.target,event.clientX,event.clientY)||candidates[0]?.el;
  if(!target)return;
  const selectedTargets=!sel?[]:sel.multiple?sel.multiple.flatMap(info=>matchingEls(info.id)):sel.info.kind==='instance'?selectedComponentGroups(doc(),activeId(),sel.info)[0]?.elements||[]:matchingEls(activeId()).filter(el=>inTextScope(el,sel.info)).slice(0,1);
  if(!keyboard&&!selectedTargets.includes(target))await select(target);
@@ -188,7 +189,7 @@ async function canvasContextMenu(event,keyboard=false){
  if(serial!==canvasContextSerial||mode!=='edit'||!sel)return;
  const frame=iframe.getBoundingClientRect(),box=target.getBoundingClientRect(),x=keyboard?box.left:event.clientX,y=keyboard?box.bottom:event.clientY;
  const body=doc().body;body.tabIndex=-1;
- window.RetouchActions?.contextMenu({x:frame.left+x*frame.width/iframe.offsetWidth,y:frame.top+y*frame.height/iframe.offsetHeight,opener:body});
+ window.RetouchActions?.contextMenu({x:frame.left+x*frame.width/iframe.offsetWidth,y:frame.top+y*frame.height/iframe.offsetHeight,opener:body,layerChoices:candidates,onLayerError:error=>toast(error.message,'err'),onLayerPreview:el=>{hoverEl=el;},canSelectLayer:()=>doc()===body.ownerDocument&&mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy});
 }
 function hookFrame(d, w) {
   d.addEventListener('contextmenu',event=>void canvasContextMenu(event).catch(error=>toast(error.message,'err')),true);
@@ -3708,7 +3709,7 @@ async function setLayerLocks(el,value){
   editorHistory.record({type:'layerLock',undoId:'lock:'+crypto.randomUUID(),route:lockChanges[0].route,lockChanges});hoverEl=null;
   if(value)clearSelection();
   layers.refresh();
-  toast(value?'Selection locked on the canvas. Select it in Layers to edit.':'Selection unlocked.','ok');
+  toast(value?'Selection locked on the canvas. Use Layers or the Select layer menu to select it.':'Selection unlocked.','ok');
 }
 function flipShortcut(e){
  if(e.defaultPrevented||e.isComposing||!e.shiftKey||e.metaKey||e.ctrlKey||e.altKey||!['h','v'].includes(e.key.toLowerCase()))return false;
