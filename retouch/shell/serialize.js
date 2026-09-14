@@ -73,6 +73,7 @@
       }
       if(/^(UL|OL|LI)$/.test(n.tagName)||n.tagName==='P'&&n.__rtBlockTag==='p'){
         var list={t:'block',tag:n.tagName.toLowerCase(),children:serializeChildren(n,snapshot)};
+        if(snapshot&&n.__rtListTemplate)list.template=n.__rtListTemplate;
         if(n.tagName==='OL'&&n.getAttribute('start')!==null){
           var start=Number(n.getAttribute('start'));
           if(Number.isInteger(start)&&start>=1&&start<=1000000)list.start=start;

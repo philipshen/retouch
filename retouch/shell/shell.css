@@ -1051,3 +1051,8 @@ html, body { overflow:clip; }
 
 .vertical-text-modes > select { display:none; }
 .vertical-text-modes .layout-mode-segments { min-width:0; }
+
+.range-indent-controls { display:flex;gap:4px; }
+.range-indent-controls > button { flex:1; }
+
+.range-indent-controls svg { width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle; }

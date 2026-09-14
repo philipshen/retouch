@@ -47,12 +47,18 @@ for(const kind of ['react','html','liquid'])test(`${kind} paragraph/list writes 
   assert.equal(history.apply(root,'undo',token,adapter).ok,true);
   const duplicate=apply.applyOp(resolve(),{type:'setChildren',children:[block('p',[{t:'keep',id:linkId},{t:'keep',id:linkId}])]});assert.equal(duplicate.refused,true);assert.equal(fs.readFileSync(file,'utf8'),original);
   const bad=apply.applyOp(resolve(),{type:'setChildren',children:[block('p',[block('ul',[block('li',[text('Bad')])])])]});assert.equal(bad.refused,true);assert.equal(fs.readFileSync(file,'utf8'),original);
-  const attributed='<ul '+(kind==='react'?'className':'class')+'="items" title="Keep > me"><li data-note="first">One</li><li>Two</li></ul>';
+  const attributed='<ul '+(kind==='react'?'className':'class')+'="items" id="source-list" '+(kind==='react'?'style={{color:"red"}}':'style="color: red;"')+' title="Keep > me"><li data-note="first">One</li><li>Two</li></ul>';
   fs.writeFileSync(file,original.replace(inner,attributed));
   const fresh=resolve();
   const listId=kind==='html'?source.describe(attributed,fresh.element.id).descriptor.children[0].id:fresh.elements.find(el=>kind==='react'?el.node.openingElement.name.name==='ul':el.tag==='ul').id;
   const converted=apply.applyOp(fresh,{type:'setChildren',children:[{t:'keep',id:listId,tag:'ol'}]});assert.equal(converted.ok,true,JSON.stringify(converted));
   assert.equal(fs.readFileSync(file,'utf8'),original.replace(inner,attributed.replace('<ul ','<ol ').replace('</ul>','</ol>')));
+  const current=resolve(),convertedInner=attributed.replace('<ul ','<ol ').replace('</ul>','</ol>');
+  const listNode=kind==='html'?source.describe(convertedInner,current.element.id).descriptor.children[0]:current.elements.find(el=>kind==='react'?el.node.openingElement.name.name==='ol':el.tag==='ol');
+  const childrenIds=kind==='html'?listNode.children.map(child=>child.id):current.elements.filter(el=>kind==='react'?el.node.openingElement.name.name==='li':el.tag==='li').map(el=>el.id);
+  const split=apply.applyOp(current,{type:'setChildren',children:[{t:'keep',id:listNode.id,children:[{t:'keep',id:childrenIds[0]}]},block('ol',[{t:'keep',id:childrenIds[1]}],{template:listNode.id})]});assert.equal(split.ok,true,JSON.stringify(split));
+  const splitSource=fs.readFileSync(file,'utf8');assert.equal((splitSource.match(/id="source-list"/g)||[]).length,1);assert.equal((splitSource.match(/title="Keep > me"/g)||[]).length,1);assert.equal((splitSource.match(/="items"/g)||[]).length,2);assert.equal((splitSource.match(kind==='react'?/style=\{\{color:"red"\}\}/g:/style="color: red;"/g)||[]).length,2);
+  const invalidTemplate=apply.applyOp(resolve(),{type:'setChildren',children:[block('ul',[block('li',[text('x')])],{template:'0000000000'})]});assert.equal(invalidTemplate.refused,true);assert.equal(fs.readFileSync(file,'utf8'),splitSource);
  }finally{cleanup(root);}
 });
 
@@ -68,4 +74,19 @@ test('kept list tag conversion preserves original attribute syntax and nested co
  assert.throws(()=>blocks.patchTag('<{{ tag }}>Text</{{ tag }}>','p','li'),/explicit static/);
  assert.ok(rich.validateChildrenTree([{t:'keep',id:descriptor.id,tag:'script'}],0));
  assert.ok(rich.validateChildrenTree([{t:'keep',id:descriptor.id,tag:'p',href:'/link'}],0));
+});
+
+test('list appearance templates are constrained to a unique source class/style',()=>{
+ assert.ok(rich.validateChildrenTree([block('p',[],{template:'0123456789'})],0));
+ assert.ok(rich.validateChildrenTree([block('ul',[],{template:'not-an-id'})],0));
+ const original='<ul class="first" class="second"><li>A</li></ul>',listNode=source.describe(original,'id').descriptor.children[0];
+ assert.throws(()=>source.rewrite(original,'id',[block('ul',[block('li',[text('A')])],{template:listNode.id})]),/appearance source/);
+});
+
+test('preserved source list containers use block depth without relaxing inline depth',()=>{
+ const tree=descriptor=>descriptor.map(item=>item.t==='element'?{t:'keep',id:item.id,children:tree(item.children)}:text(item.value.replace('Leaf','Changed')));
+ let nested='Leaf';for(let i=0;i<5;i++)nested='<ul><li>'+nested+'</li></ul>';
+ assert.equal(source.rewrite(nested,'id',tree(source.describe(nested,'id').descriptor.children)),nested.replace('Leaf','Changed'));
+ let inline='Leaf';for(let i=0;i<9;i++)inline='<span>'+inline+'</span>';
+ assert.throws(()=>source.rewrite(inline,'id',tree(source.describe(inline,'id').descriptor.children)),/Nesting too deep/);
 });

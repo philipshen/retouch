@@ -393,18 +393,19 @@ function planOp(resolved, op) {
     if (text === null) return sources.planWrite(resolved, op);
     if(op.text!==text){if(node.childrenStart===node.childrenEnd)ms.appendLeft(node.childrenStart,escapeText(op.text));else ms.overwrite(node.childrenStart, node.childrenEnd, escapeText(op.text));}
   } else if (op.type === 'setChildren') {
-    const err=validateChildrenTree(op.children,0); if (err) return refuse(err);
     if(node.tag==='a'&&hasLink(op.children))return refuse('Text links cannot be nested.');
     if (describe(resolved).richText) return sources.planWriteChildren(resolved,op);
+    const err=validateChildrenTree(op.children,0,false,0,id=>resolved.elements.find(element=>element.id===id)?.tag);if(err)return refuse(err);
     if (!describe(resolved).canSetChildren) return refuse('The children contain expressions that cannot be rewritten as rich text.');
     const descendants=new Map(resolved.elements.filter(e=>e.tagStart>=node.openEnd&&e.closeEnd<=node.closeStart).map(e=>[e.id,e]));
     const blocks=require('../rich-text-blocks.cjs');
     if(blocks.contains(op.children)){const error=blocks.placement(op.children,node.tag,id=>{const kept=descendants.get(id);if(!kept)return null;const inlineChildren=![...descendants.values()].some(child=>child.tagStart>kept.tagStart&&child.closeEnd<=kept.closeEnd&&(!blocks.inlineTag(child.tag)||child.dynamicTag))&&!/\{[%{]/.test(resolved.source.slice(kept.childrenStart,kept.childrenEnd));return {tag:kept.tag,inline:blocks.inlineTag(kept.tag)&&!kept.dynamicTag&&inlineChildren,inlineChildren};});if(error)return refuse(error);}
+    const listTemplate=id=>{const element=descendants.get(id);if(!element||!['ul','ol'].includes(element.tag)||element.dynamicTag||element.attributeExpressions)return null;return {tag:element.tag,attributes:element.attributes.filter(attr=>['class','style'].includes(attr.name)).map(attr=>({name:attr.name,raw:resolved.source.slice(attr.attrStart,attr.attrEnd)}))};};
     const seen=new Set();
     const build=items=>items.map(c=>{
       if (c.t==='text') return escapeText(c.value);
       if (c.t==='break') return '<br>';
-      if (c.t==='block') return blocks.markup(c,build(c.children));
+      if (c.t==='block') return blocks.markup(c,build(c.children),false,c.template?listTemplate(c.template):null);
       if (c.t==='style'||c.t==='styles') return styleMarkup(c,build(c.children));
       if(c.t==='link')return linkMarkup(c,build(c.children));
       if (c.t==='wrap') return `<${c.tag}>${build(c.children)}</${c.tag}>`;

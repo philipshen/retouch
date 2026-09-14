@@ -325,7 +325,7 @@ function hookFrame(d, w) {
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if(e.isComposing)return;
-      if(inlineListShortcut(e))return;
+      if(listIndentShortcut(e)||inlineListShortcut(e))return;
       if((e.metaKey||e.ctrlKey)&&!e.altKey&&!e.shiftKey&&e.key.toLowerCase()==='k'){e.preventDefault();editing.focusLink?.();return;}
       if(/^(Arrow|Home$|End$|PageUp$|PageDown$)/.test(e.key))breakTextHistoryGroup();
       if(e.key==='Enter'&&e.shiftKey){e.preventDefault();insertInlineBreak();return;}
@@ -935,7 +935,7 @@ function styleInsertedTextContent(current,start,end,properties,script,decoration
 }
 // Keep the actual nodes (and their source evidence) so restoring a local
 // insertion does not invalidate preceding native text undo transactions.
-const caretMetadataNames=['__rtBlockTag','__rtLinkHref','__rtCaretPlaceholder','__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
+const caretMetadataNames=['__rtListTemplate','__rtBlockTag','__rtLinkHref','__rtCaretPlaceholder','__rtKeep','__rtRangeStyle','__rtRangeStyleCSS','__rtRangeStyleValue','__rtRangeStyleValues','__rtReplaceRangeStyle'];
 function captureCaretEdit(current){
   const d=current.el.ownerDocument,selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
   const capture=node=>({node,text:typeof node.data==='string'?node.data:null,attributes:node.nodeType===1?[...node.attributes].map(a=>[a.name,a.value]):null,metadata:Object.fromEntries(caretMetadataNames.filter(key=>Object.hasOwn(node,key)).map(key=>[key,structuredClone(node[key])])),children:[...node.childNodes].map(capture)});
@@ -1101,6 +1101,17 @@ function selectedInlineTextNodes(root,range){
   return nodes;
 }
 
+function indentTextList(outdent=false){
+  const current=editing;if(!current)return false;
+  const result=inlineFormattingTransaction(()=>RetouchListEditing.indent(current.el,outdent));
+  current.el.ownerDocument.dispatchEvent(new Event('selectionchange'));return result;
+}
+function listIndentShortcut(event,allowTab=true){
+  if(!editing||event.isComposing||event.altKey||!RetouchListEditing.listContext(editing.el))return false;
+  const tab=allowTab&&event.key==='Tab'&&!event.metaKey&&!event.ctrlKey,bracket=(event.metaKey||event.ctrlKey)&&!event.shiftKey&&['[',']'].includes(event.key);
+  if(!tab&&!bracket)return false;
+  event.preventDefault();event.stopPropagation();indentTextList(tab?event.shiftKey:event.key==='[');return true;
+}
 function inlineListShortcut(event){
   if(event.isComposing||!(event.metaKey||event.ctrlKey)||!event.shiftKey||event.altKey||!editing||!RetouchListEditing.supported(editing.el))return false;
   const kind=event.code==='Digit7'||event.key==='7'?'ol':event.code==='Digit8'||event.key==='8'?'ul':null;if(!kind)return false;
@@ -1119,6 +1130,8 @@ function showInlineFormatToolbar(){
   const listStyle=document.createElement('select');listStyle.setAttribute('aria-label','Text layer list style');listStyle.title='Applies to all paragraphs in this text layer.';
   for(const [value,label]of [['none','No list'],['ul','Bulleted list'],['ol','Numbered list'],['mixed','Mixed']]){const option=document.createElement('option');option.value=value;option.textContent=label;option.disabled=value==='mixed';listStyle.append(option);}
   listStyle.onchange=()=>{if(savedRange&&editing){const selection=d.getSelection();selection.removeAllRanges();selection.addRange(savedRange.cloneRange());applyTextList(listStyle.value);update();}};
+  const indentButtons=[['Decrease list indentation',true,'←'],['Increase list indentation',false,'→']].map(([label,outdent,text])=>{const button=document.createElement('button');button.type='button';button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18M12 10h9M12 14h9M3 19h18 '+(outdent?'M8 12H2m3-3-3 3 3 3':'M2 12h6M5 9l3 3-3 3')+'"/></svg>';button.title=label+(outdent?' (Shift+Tab)':' (Tab)');button.setAttribute('aria-label',label);button.onpointerdown=event=>event.preventDefault();button.onclick=()=>{if(savedRange&&editing){const selection=d.getSelection();selection.removeAllRanges();selection.addRange(savedRange.cloneRange());indentTextList(outdent);update();}};button.retouchOutdent=outdent;return button;});
+  const indentControls=document.createElement('div');indentControls.className='range-indent-controls';indentControls.setAttribute('role','group');indentControls.setAttribute('aria-label','List indentation');indentControls.append(...indentButtons);
   let savedRange=null;const fields=[];
   for(const [property,label,options] of [['font-weight','Selected text weight',[['100','Thin'],['200','Extra light'],['300','Light'],['400','Regular'],['500','Medium'],['600','Semibold'],['700','Bold'],['800','Extra bold'],['900','Black'],['custom','Custom…']]],['font-style','Selected text style',[['normal','Upright'],['italic','Italic']]],['text-transform','Selected text case',[['none','As typed'],['uppercase','Uppercase'],['lowercase','Lowercase'],['capitalize','Capitalize']]],['font-variant-caps','Selected text caps',[['normal','Normal'],['small-caps','Small caps'],['all-small-caps','All small caps']]]]){
     const field=document.createElement('select');field.setAttribute('aria-label',label);field.title=label;
@@ -1213,6 +1226,7 @@ function showInlineFormatToolbar(){
     if(picker||fontDialog)return;
     const selection=d.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null,valid=editing&&range&&editing.el.contains(range.startContainer)&&editing.el.contains(range.endContainer)&&!(range.collapsed&&(range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer).closest('[contenteditable="false"]'));
     for(const control of bar.querySelectorAll('button,input,select'))if(!control.dataset.rangeAlwaysEnabled)control.disabled=!valid;
+    for(const button of indentButtons)button.disabled=!valid||!RetouchListEditing.canIndent(editing?.el,button.retouchOutdent);
     listStyle.disabled=!valid||!RetouchListEditing.supported(editing?.el);listStyle.value=editing?RetouchListEditing.state(editing.el):'none';
     selectionNote.textContent=valid?(range.collapsed?'Text you type next':'Selected text'):'Select text to format';
     if(valid&&!editing.caretComposition&&editing.caretStyle&&!sameCaret(range,editing.caretStyle.range))editing.caretStyle=null;
@@ -1254,7 +1268,7 @@ function showInlineFormatToolbar(){
   bar.addEventListener('focusin',breakTextHistoryGroup);
   bar.addEventListener('pointerdown',breakTextHistoryGroup);
   bar.addEventListener('keydown',event=>{
-    if(inlineListShortcut(event)){update();return;}
+    if(listIndentShortcut(event,false)||inlineListShortcut(event)){update();return;}
     if(event.isComposing||!(event.metaKey||event.ctrlKey)||event.key.toLowerCase()!=='z'||event.target.closest('input,textarea,[contenteditable="true"]'))return;
     if(inlineHistoryCommand(event.shiftKey)){event.preventDefault();event.stopPropagation();update();}
   });
@@ -1271,7 +1285,7 @@ function showInlineFormatToolbar(){
   const weight=fields.find(item=>item.property==='font-weight'&&item.field.tagName==='SELECT').field,style=fields.find(item=>item.property==='font-style').field,size=fields.find(item=>item.property==='font-size').field;
   const colorControls=document.createElement('div');colorControls.className='range-color-controls';colorControls.append(swatch,colorField);
   const scopeNote=document.createElement('small');scopeNote.className='range-scope-note';scopeNote.textContent='Applies across all screen sizes.';
-  bar.replaceChildren(header,row('Font',[familyButton],'range-family-field'),row('Weight',[weight,customWeight]),row('Size',[size]),row('Line height',[spacingFields['line-height']]),row('Letter spacing',[spacingFields['letter-spacing']]),row('Style',[style]),row('Color',[colorControls]),row('Case',[fields.find(item=>item.property==='text-transform').field]),row('Caps',[fields.find(item=>item.property==='font-variant-caps').field]),row('Link',[linkField,removeLink],'range-link-field'),...(RetouchListEditing.supported(editing.el)?[row('List',[listStyle],'range-list-field')]:[]),commands,scopeNote);
+  bar.replaceChildren(header,row('Font',[familyButton],'range-family-field'),row('Weight',[weight,customWeight]),row('Size',[size]),row('Line height',[spacingFields['line-height']]),row('Letter spacing',[spacingFields['letter-spacing']]),row('Style',[style]),row('Color',[colorControls]),row('Case',[fields.find(item=>item.property==='text-transform').field]),row('Caps',[fields.find(item=>item.property==='font-variant-caps').field]),row('Link',[linkField,removeLink],'range-link-field'),...(RetouchListEditing.supported(editing.el)?[row('List',[listStyle],'range-list-field'),row('Indentation',[indentControls],'range-list-indent-field')]:[]),commands,scopeNote);
   const mount=()=>{
     const docked=!!section?.isConnected&&!panel.hidden,focused=bar.contains(document.activeElement)?document.activeElement:null;
     bar.classList.toggle('range-inspector',docked);if(section)section.toggleAttribute('data-range-editing',docked);

@@ -245,7 +245,7 @@ function planOp(resolved, op) {
     // text, kept stamped descendants written as verbatim source slices,
     // fixed formatting tags, and enumerated range styles. No arbitrary
     // attributes or expressions can be introduced by these nodes.
-    const treeErr = validateChildrenTree(op.children, 0);
+    const treeErr = validateChildrenTree(op.children, 0,false,0,id=>{const kept=resolved.elements.find(element=>element.id===id);return kept?tagOf(kept.node):null;});
     if (treeErr) return refuse(treeErr);
     if(tagOf(node)==='a'&&hasLink(op.children))return refuse('Text links cannot be nested.');
     if (!childrenAreMappable(node)) {
@@ -262,6 +262,7 @@ function planOp(resolved, op) {
     const blocks=require('./rich-text-blocks.cjs');
     const inlineNode=element=>blocks.inlineTag(tagOf(element))&&(element.children||[]).every(child=>child.type==='JSXText'||child.type==='JSXElement'&&inlineNode(child));
     if(blocks.contains(op.children)){const error=blocks.placement(op.children,tagOf(node),id=>{const kept=descendants.get(id);return kept?{tag:tagOf(kept),inline:inlineNode(kept),inlineChildren:(kept.children||[]).every(child=>child.type==='JSXText'||child.type==='JSXElement'&&inlineNode(child))}:null;});if(error)return refuse(error);}
+    const listTemplate=id=>{const element=descendants.get(id);if(!element||!['ul','ol'].includes(tagOf(element))||element.openingElement.attributes.some(attr=>attr.type==='JSXSpreadAttribute'))return null;return {tag:tagOf(element),attributes:element.openingElement.attributes.filter(attr=>attr.type==='JSXAttribute'&&['class','className','style'].includes(attr.name?.name)).map(attr=>({name:attr.name.name,raw:resolved.source.slice(attr.start,attr.end)}))};};
     const source = resolved.source,seen=new Set();
     const build = (children) =>
       children
@@ -269,7 +270,7 @@ function planOp(resolved, op) {
           if (c.t === 'text') return escapeJsxText(c.value);
           if(c.t==='link')return linkMarkup(c,build(c.children),true);
           if (c.t === 'break') return '<br />';
-          if (c.t === 'block') return blocks.markup(c,build(c.children),true);
+          if (c.t === 'block') return blocks.markup(c,build(c.children),true,c.template?listTemplate(c.template):null);
           if (c.t === 'style' || c.t === 'styles') return styleMarkup(c,build(c.children),true);
           if (c.t === 'wrap') return `<${c.tag}>${build(c.children)}</${c.tag}>`;
           const kept = descendants.get(c.id);

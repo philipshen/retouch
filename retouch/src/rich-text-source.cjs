@@ -10,7 +10,8 @@ const inlineNode=node=>blockValues.inlineTag(node.tagName||node.nodeName)&&(node
 const escapeText=value=>value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\{/g,'&#123;').replace(/\}/g,'&#125;');
 
 function describe(value,sourceId,{tokens=[]}={}) {
-  const tree=parseFragment(value,{sourceCodeLocationInfo:true}),kept=new Map();
+  const duplicates=[];
+  const tree=parseFragment(value,{sourceCodeLocationInfo:true,onParseError:error=>{if(error.code==='duplicate-attribute')duplicates.push(error.startOffset);}}),kept=new Map();
   const id=key=>crypto.createHash('sha1').update(sourceId+'|'+key).digest('hex').slice(0,10);
   function visit(nodes,prefix) {
     return nodes.map((node,i)=>{
@@ -38,7 +39,8 @@ function describe(value,sourceId,{tokens=[]}={}) {
       if (!node.tagName) {kept.set(nodeId,{tag:'#comment',inline:true,raw,opaque:true});return {t:'comment',id:nodeId};}
       const hrefSource=require('./link-source.cjs').htmlHref(value,node);
       const opaque=['script','style','svg','template','iframe'].includes(node.tagName);
-      kept.set(nodeId,{tag:node.tagName,inline:inlineNode(node),inlineChildren:(node.childNodes||[]).every(inlineNode),raw,opaque,hrefSource:hrefSource?{missing:!!hrefSource.missing,start:hrefSource.start-loc.startOffset,end:hrefSource.end-loc.startOffset}:null,open:value.slice(loc.startOffset,loc.startTag.endOffset),close:loc.endTag?value.slice(loc.endTag.startOffset,loc.endOffset):null});
+      const listTemplate=['ul','ol'].includes(node.tagName)&&!duplicates.some(offset=>offset>=loc.startOffset&&offset<loc.startTag.endOffset)?{tag:node.tagName,attributes:node.attrs.filter(attr=>['class','style'].includes(attr.name)).map(attr=>({name:attr.name,raw:value.slice(loc.attrs[attr.name].startOffset,loc.attrs[attr.name].endOffset)}))}:null;
+      kept.set(nodeId,{listTemplate,tag:node.tagName,inline:inlineNode(node),inlineChildren:(node.childNodes||[]).every(inlineNode),raw,opaque,hrefSource:hrefSource?{missing:!!hrefSource.missing,start:hrefSource.start-loc.startOffset,end:hrefSource.end-loc.startOffset}:null,open:value.slice(loc.startOffset,loc.startTag.endOffset),close:loc.endTag?value.slice(loc.endTag.startOffset,loc.endOffset):null});
       return {t:'element',id:nodeId,tag:node.tagName,opaque,editableLink:!!hrefSource,plainLink:!!hrefSource&&node.tagName==='a'&&node.attrs.length===1&&node.attrs[0].name==='href'&&require('../shell/link-values.js').valid(node.attrs[0].value)&&!/\{[%{]/.test(value.slice(loc.startOffset,loc.startTag.endOffset)),children:opaque?[]:visit(node.childNodes,key)};
     });
   }
@@ -46,15 +48,15 @@ function describe(value,sourceId,{tokens=[]}={}) {
 }
 
 function rewrite(value,sourceId,children,options) {
-  const error=validateChildrenTree(children,0);if(error)throw new Error(error);
   const {kept}=describe(value,sourceId,options),seen=new Set();
+  const error=validateChildrenTree(children,0,false,0,id=>kept.get(id)?.tag);if(error)throw new Error(error);
   const blocks=require('./rich-text-blocks.cjs');
   if(blocks.contains(children)){const error=blocks.placement(children,options?.parentTag||'div',id=>kept.get(id));if(error)throw Error(error);}
   function build(items) {
     return items.map(item=>{
       if(item.t==='text')return escapeText(item.value);
       if(item.t==='break')return '<br>';
-      if(item.t==='block')return blocks.markup(item,build(item.children));
+      if(item.t==='block')return blocks.markup(item,build(item.children),false,item.template?kept.get(item.template)?.listTemplate:null);
       if(item.t==='style'||item.t==='styles')return styleMarkup(item,build(item.children));
       if(item.t==='link')return linkMarkup(item,build(item.children));
       if(item.t==='wrap')return `<${item.tag}>${build(item.children)}</${item.tag}>`;

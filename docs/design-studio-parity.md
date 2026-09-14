@@ -14889,3 +14889,49 @@ still override marker/display behavior. Tests use the existing HTML element
 control to change the fixture heading to a compatible div first; this is not
 proof of an intuitive universal-root conversion flow. The desktop candidate has
 not been rebuilt, and full Design parity/universal-site support remain open.
+
+### List indentation and source-aware splitting (2026-09-14)
+
+While editing a compatible text container, Tab indents the current item or a
+contiguous selection of sibling items under the previous item; Shift+Tab outdents
+one level. Cmd/Ctrl+] and Cmd/Ctrl+[ provide the same operations, and compact
+Increase/Decrease list indentation buttons appear beside the List control.
+The action retains the selection and forms one local undo transaction. Indenting
+stops before any selected subtree would exceed five list levels. Root-level
+outdent and indenting a first item are currently no-ops.
+
+Outdenting a middle item keeps preceding items under the original parent and
+moves following items into a nested list under the last outdented item. This
+preserves document order. New containers copy only class/style attributes from a
+source-verified list in the same text layer: source expressions and literal syntax
+are retained, while IDs, refs, event bindings and other container attributes are
+not duplicated. Existing containers/items keep their source-owned attributes.
+Unknown templates, duplicate appearance attributes, JSX spreads and conditional
+Liquid attribute structures are refused where appearance cannot be mapped.
+
+Deep save/reopen revealed that preserved UL/LI nodes were counted against the
+inline formatting depth limit. Validation now counts source-confirmed block tags
+separately, retaining the eight-level inline formatting limit and the independent
+block-depth bound. Client-supplied tags do not determine this classification.
+
+Reference: Figma's list indentation controls and five-level model:
+https://help.figma.com/hc/en-us/articles/360040449773-Create-bulleted-and-numbered-lists
+
+All 1,229 unit tests pass (`/private/tmp/retouch-list-indent-units-final.log`).
+`RT_E2E_LIST_INDENT=1` passes HTML/React/Liquid Chromium 145.0.7632.6 and HTML
+WebKit 26.0 (`/private/tmp/retouch-list-indent-final-{html,react,liquid,webkit}.log`).
+The browser workflow creates seven items, uses keys and buttons to reach five
+levels, verifies that the limit adds no undo entry, saves/reopens, outdents a middle
+item with a following sibling, and checks exact source and local history. It
+measures every item's vertical position, hierarchy depth and relevant horizontal
+positions, ensuring indentation introduces no blank lines or text reordering.
+Source tests verify copied appearance, non-duplicated IDs/other attributes,
+refused unknown/ambiguous templates and deep preserved lists without relaxing
+inline nesting. `/private/tmp/retouch-list-indent-final.png` was visually inspected.
+
+Still missing: first-item indentation without a preceding semantic parent,
+selections spanning different list levels, Enter/Backspace list behavior, automatic
+prefixes, exact nested marker/counter styling, list/paragraph spacing and hanging
+controls, and automatic phrasing-root conversion. Nested bullets currently follow
+browser marker conventions rather than Figma's uniform bullets. No desktop
+rebuild or native launch was performed. The full parity goal remains incomplete.

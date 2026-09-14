@@ -3,7 +3,7 @@ const rangeStyles=require('../shell/range-style-values.js');
 const links=require('../shell/link-values.js');
 const WRAP_TAGS = new Set(['strong', 'em', 'u', 's', 'sup', 'sub']);
 
-function validateChildrenTree(children, depth, inLink=false, blockDepth=0) {
+function validateChildrenTree(children, depth, inLink=false, blockDepth=0, keptTag=null) {
   if (!Array.isArray(children)) return 'setChildren needs a children array.';
   if (depth > 8 || blockDepth > 16) return 'Nesting too deep.';
   for (const c of children) {
@@ -15,17 +15,17 @@ function validateChildrenTree(children, depth, inLink=false, blockDepth=0) {
     } else if (c.t === 'block') {
       if(inLink)return 'Text links cannot contain paragraphs or lists.';
       const blocks=require('./rich-text-blocks.cjs'),error=blocks.validateNode(c);if(error)return error;
-      const err=validateChildrenTree(c.children,depth,inLink,blockDepth+1);if(err)return err;
+      const err=validateChildrenTree(c.children,depth,inLink,blockDepth+1,keptTag);if(err)return err;
     } else if (c.t === 'link') {
       if(inLink||!links.valid(c.href))return 'Invalid or nested text link.';
-      const err=validateChildrenTree(c.children,depth+1,true,blockDepth);if(err)return err;
+      const err=validateChildrenTree(c.children,depth+1,true,blockDepth,keptTag);if(err)return err;
     } else if (c.t === 'wrap') {
       if (!WRAP_TAGS.has(c.tag)) return `Formatting tag not allowed: ${String(c.tag)}`;
-      const err = validateChildrenTree(c.children, depth + 1,inLink,blockDepth);
+      const err = validateChildrenTree(c.children, depth + 1,inLink,blockDepth,keptTag);
       if (err) return err;
     } else if (c.t === 'style' || c.t === 'styles') {
       if (!(c.t==='styles'?rangeStyles.validProperties(c.properties):rangeStyles.valid(c.property,c.value))) return 'Unsupported text range style.';
-      const err = validateChildrenTree(c.children, depth + 1,inLink,blockDepth);
+      const err = validateChildrenTree(c.children, depth + 1,inLink,blockDepth,keptTag);
       if (err) return err;
     } else if (c.t === 'keep') {
       if(Object.hasOwn(c,'tag')&&(!['p','ul','ol','li','div'].includes(c.tag)||Object.hasOwn(c,'href')))return 'Invalid kept paragraph/list tag.';
@@ -33,7 +33,8 @@ function validateChildrenTree(children, depth, inLink=false, blockDepth=0) {
       if(Object.hasOwn(c,'href')&&c.href!==null&&!links.valid(c.href))return 'Invalid kept link URL.';
       if (!/^[0-9a-f]{10}$/.test(c.id || '')) return 'Bad keep id.';
       if (c.children) {
-        const err = validateChildrenTree(c.children, depth + 1,inLink,blockDepth);
+        const block=keptTag&&['p','ul','ol','li','div'].includes(keptTag(c.id));
+        const err = validateChildrenTree(c.children, depth+(block?0:1),inLink,blockDepth+(block?1:0),keptTag);
         if (err) return err;
       }
     } else {
