@@ -18,7 +18,7 @@ function collect(source,relPath){
   for(const node of parent.childNodes||[]){
    if(!node.tagName)continue;
    const here=route+'/'+index++;
-   if(skip.has(node.tagName)||node.namespaceURI!=='http://www.w3.org/1999/xhtml'&&!(node.namespaceURI==='http://www.w3.org/2000/svg'&&['svg','g','rect','circle','ellipse','line','path','polyline','polygon','text','image','use'].includes(node.tagName)))continue;
+   if(skip.has(node.tagName)||node.namespaceURI!=='http://www.w3.org/1999/xhtml'&&!(node.namespaceURI==='http://www.w3.org/2000/svg'&&['svg','g','mask','rect','circle','ellipse','line','path','polyline','polygon','text','image','use'].includes(node.tagName)))continue;
    const start=node.sourceCodeLocation?.startTag;
    if(start&&!duplicateAttributes.some(offset=>offset>=start.startOffset&&offset<start.endOffset))elements.push({id:hash(relPath+'|'+here).slice(0,10),kind:'host',tag:node.tagName,node,location:node.sourceCodeLocation});
    walk(node,here);
@@ -44,7 +44,7 @@ function describe(resolved){
  const el=resolved.element,canText=el.node.namespaceURI==='http://www.w3.org/1999/xhtml'&&!!plain(el),canSrc=el.tag==='img'&&attr(el,'srcset')===null&&!picture(el);
  let rich=null;if(el.node.namespaceURI==='http://www.w3.org/1999/xhtml'&&textTags.has(el.tag)&&el.location.endTag&&typeof resolved.source==='string'){try{rich=richText.describe(resolved.source.slice(el.location.startTag.endOffset,el.location.endTag.startOffset),el.id).descriptor;}catch{}}
  const svgDuplication=require('../svg-duplicate.cjs').describe(resolved);
- return {svgBooleanReplacement:require('../svg-combine-selection.cjs').describe(resolved,'html'),svgGradientCreation:require('../svg-gradient-create.cjs').describe(resolved,'html'),svgGradients:require('../html-svg-gradient.cjs').describe(resolved),svgTransform:require('../svg-transform.cjs').describe(resolved,'html'),svgConversion:require('../svg-convert.cjs').describe(resolved),svgDuplication,svgMovement:require('../svg-move.cjs').describe(resolved),svgDeletion:require('../svg-delete.cjs').describe(resolved),svgInsertion:require('../svg-insert.cjs').describe(resolved),svgGeometry:require('../svg-geometry.cjs').describe(el),structure:{...structure.describe(resolved,'html'),...insertion.describe(resolved),...require('../svg-delete.cjs').describe(resolved),...require('../svg-move.cjs').describe(resolved),...svgDuplication},id:el.id,kind:'host',tag:el.tag,file:resolved.relPath,hash:resolved.hash,className:attr(el,'class')||'',classNameDynamic:false,
+ return {svgMask:require('../html-svg-mask.cjs').describe(resolved),svgBooleanReplacement:require('../svg-combine-selection.cjs').describe(resolved,'html'),svgGradientCreation:require('../svg-gradient-create.cjs').describe(resolved,'html'),svgGradients:require('../html-svg-gradient.cjs').describe(resolved),svgTransform:require('../svg-transform.cjs').describe(resolved,'html'),svgConversion:require('../svg-convert.cjs').describe(resolved),svgDuplication,svgMovement:require('../svg-move.cjs').describe(resolved),svgDeletion:require('../svg-delete.cjs').describe(resolved),svgInsertion:require('../svg-insert.cjs').describe(resolved),svgGeometry:require('../svg-geometry.cjs').describe(el),structure:{...structure.describe(resolved,'html'),...insertion.describe(resolved),...require('../svg-delete.cjs').describe(resolved),...require('../svg-move.cjs').describe(resolved),...svgDuplication},id:el.id,kind:'host',tag:el.tag,file:resolved.relPath,hash:resolved.hash,className:attr(el,'class')||'',classNameDynamic:false,
   ...require('../range-style-source.cjs').describe(resolved,'html'),
   ...require('../link-source.cjs').describe(resolved,'html'),
   canRename:true,layerName:attr(el,'data-rt-name')||'',text:canText?el.node.childNodes.map(n=>n.value).join(''):null,textDynamic:!canText&&!rich,mixedText:!!rich&&!canText,canSetChildren:!!rich,richText:rich,
@@ -53,6 +53,7 @@ function describe(resolved){
   canSetTag:!!el.location.endTag&&textTags.has(el.tag),context:resolved.context||null};
 }
 function planOp(resolved,op){
+ if(['createSVGMask','releaseSVGMask'].includes(op.type))return require('../html-svg-mask.cjs').plan(resolved,op);
  if(op.type==='replaceSVGSelection')return require('../svg-combine-selection.cjs').plan(resolved,op,'html');
  if(op.type==='duplicateElement'&&resolved.element.node.namespaceURI==='http://www.w3.org/2000/svg')return require('../svg-duplicate.cjs').plan(resolved,op);
  if(op.type==='moveElement'&&resolved.element.node.namespaceURI==='http://www.w3.org/2000/svg')return require('../svg-move.cjs').plan(resolved,op);
@@ -112,4 +113,4 @@ function planOp(resolved,op){
 }
 module.exports={name:'html',matches:file=>/\.html?$/i.test(file),collect,stamp,contentHash:hash,describe,planOp,
  applyOp:(resolved,op)=>require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),planOp(resolved,op)),
- capabilities:{classAttr:'class',ops:['replaceSVGSelection','setSVGGradient','insertSVG','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow','reparentElement','renameElement','insertElement','setClasses','setText','setChildren','setTag','setSrc',...structure.types]}};
+ capabilities:{classAttr:'class',ops:['createSVGMask','releaseSVGMask','replaceSVGSelection','setSVGGradient','insertSVG','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow','reparentElement','renameElement','insertElement','setClasses','setText','setChildren','setTag','setSrc',...structure.types]}};

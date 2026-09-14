@@ -15947,3 +15947,32 @@ Logs are in the sibling recovery directory:
 These are local source-connected Liquid checks. Live Shopify development-theme
 verification, editable boolean groups, masks, responsive recomputation and full
 Figma parity remain incomplete. No production theme was modified.
+
+## SVG mask source model — 2026-09-14
+
+HTML now has atomic `createSVGMask` and `releaseSVGMask` source operations. Mask
+creation wraps consecutive sibling graphics in a group containing a standard
+SVG mask definition and a masked content group. The bottom selected layer becomes
+the mask. Both alpha and luminance modes are supported. Original source nodes,
+attributes and percentage geometry are retained rather than converted to paths;
+mask definitions are indexed so their child shapes remain source-addressable.
+Release unwraps the retained nodes and preserves edits made to them.
+
+The planner maps every original source identity and refuses stale hashes,
+nonconsecutive selections, invalid mask ordering, template-controlled graphics,
+and release of wrappers with extra transformations/styles or external mask
+references. The representation follows [CSS Masking Level 1](https://www.w3.org/TR/css-masking-1/)
+with user-space mask content and the standard default mask region.
+
+Validation: all 1,287 unit tests passed. Transaction tests create a mask, edit its
+source shape, release it, then restore each exact state through Undo/Redo.
+Chromium and WebKit each passed 36 rendered-pixel checks for alpha/luminance,
+two viewport sizes, percentage-based mask geometry edits and lossless release.
+Evidence is in the sibling recovery folder's
+`mask-source-{units,chromium,webkit}.log` files.
+
+This is source/API groundwork. Mask creation/release controls, mask-shape editing
+overlays, tag/ancestry-dependent CSS preflight, editable mask regions, full browser
+history workflows, React/Liquid source parity, and SVG export/reference handling
+remain to be integrated and verified. A transformed or styled wrapper currently
+must be normalized before release. Full mask and Figma parity are not achieved.
