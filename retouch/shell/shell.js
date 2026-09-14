@@ -2072,13 +2072,13 @@ function renderPanelContents(textEditing=false) {
     const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;
     const position=target?.namespaceURI!=='http://www.w3.org/2000/svg'?RetouchHTMLPosition.mount(info,target,width,setHTMLCSS,(g,action,opener,initial)=>moveHTMLLayer(info,target,width,g,action,opener,initial)):null;
     panelBody.appendChild(RetouchHTMLCSS.mount(info,target,width,setHTMLCSS,position,writeTextStyle));
-    const imageFill=RetouchImageFill.mount(info,target,null,changes=>setHTMLCSS(changes,null,width),info.cssRules?.[width]||{},imageFillUpload(info),/\.liquid$/i.test(info.file)?(src,initialize,action)=>setLiquidImageFill(info,src,initialize,action):null,projectImageBrowser(info));if(imageFill)panelBody.append(imageFill);
+    const imageFill=RetouchImageFill.mount(info,target,null,changes=>setHTMLCSS(changes,null,width),info.cssRules?.[width]||{},imageFillUpload(info),/\.liquid$/i.test(info.file)?(src,initialize,action,stack)=>setLiquidImageFill(info,src,initialize,action,stack):null,projectImageBrowser(info));if(imageFill)panelBody.append(imageFill);
     if(target?.tagName==='IMG')panelBody.appendChild(RetouchImageStyle.mount(info,target,null,(property,value)=>setHTMLCSS(property,value,width),info.cssRules?.[width]||{},(save,preview)=>repositionImage(target,save,preview)));
     if(info.canSetTag){const section=RetouchInspector.section('Element');RetouchInspector.select(section,'HTML element',['h1','h2','h3','h4','h5','h6','p','span','div','blockquote','label','a','li'].map(tag=>[tag,tag]),info.tag,setTag);panelBody.appendChild(section);}
     if(info.src!==null)panelBody.appendChild(imageSection(info));
   }else{
   if(target)panelBody.appendChild(RetouchClassSiteVariables.mount(style,target,setClasses,message=>toast(message,'err')));
-  const imageFill=RetouchImageFill.mount(style,target,setClasses,null,{},imageFillUpload(info),/\.liquid$/i.test(info.file)?(src,initialize,action)=>setLiquidImageFill(info,src,initialize,action):null,projectImageBrowser(info));if(imageFill)panelBody.append(imageFill);
+  const imageFill=RetouchImageFill.mount(style,target,setClasses,null,{},imageFillUpload(info),/\.liquid$/i.test(info.file)?(src,initialize,action,stack)=>setLiquidImageFill(info,src,initialize,action,stack):null,projectImageBrowser(info));if(imageFill)panelBody.append(imageFill);
   if(target?.namespaceURI==='http://www.w3.org/2000/svg')panelBody.appendChild(RetouchSVGPaint.mount(style,target,setClasses));
   if(textLayer) panelBody.appendChild(RetouchInspector.typography(style, target, setClasses, setTag,(type,scope,extra)=>writeTextStyle(type,undefined,{scope,...extra})));
   panelBody.appendChild(RetouchInspector.position(style, target, setClasses, message => toast(message, 'err'),(info.renderRevisionAttribute||info.classSelection)&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(action,opener,initial)=>transformReactLayer(info,target,action,opener,initial):null,info.renderRevisionAttribute&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(classes,g)=>writeReactBounds(info,classes,g):null,info.classSelection&&target?.namespaceURI==='http://www.w3.org/1999/xhtml'?(g,before,anchors)=>writeClassLayerGeometry(info,target,g,before,anchors):null));
@@ -2837,10 +2837,10 @@ async function refreshLiquidImageFill(info){
  await RetouchRenderSync.sync({frame:iframe,serverRendered:true,select});
  await window.RetouchComparisons?.syncImage({select,matches:()=>true});
 }
-async function setLiquidImageFill(info,src,initialize,action='apply'){
+async function setLiquidImageFill(info,src,initialize,action='apply',stack=null){
  if(sel?.info!==info)return;busyPanel(true);
  try{
-  const result=await api('POST','/rt/__api/op',{type:'setImageFill',id:info.id,fileHash:info.hash,context:info.context,scope:styleScope,src,initialize,action});
+  const result=await api('POST','/rt/__api/op',{type:'setImageFill',id:info.id,fileHash:info.hash,context:info.context,scope:styleScope,src,initialize,action,stack});
   if(!result?.ok)throw Error(result?.reason||result?.error||'Could not save the image fill.');
   if(result.undoId)editorHistory.record({type:'setImageFill',id:info.id,context:info.context,undoId:result.undoId});
   sel.info=result.element;await refreshLiquidImageFill(result.element);renderPanel();toast('Saved','ok');

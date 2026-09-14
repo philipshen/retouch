@@ -148,7 +148,7 @@
   if(property==='background-repeat')return value===null||['repeat','no-repeat','repeat-x','repeat-y','space','round'].includes(value);
   if(property==='background-size'){if(value===null||['cover','contain','auto'].includes(value))return true;if(typeof value!=='string')return false;const parts=value.split(' ');return parts.length>=1&&parts.length<=2&&parts.every(part=>part==='auto'||/^(?:\d+(?:\.\d+)?|\.\d+)(?:px|%)$/.test(part)&&parseFloat(part)<=1000000);}
   if(property==='background-position')return value===null||typeof value==='string'&&/^\d+(?:\.\d+)?% \d+(?:\.\d+)?%$/.test(value)&&value.split(' ').every(part=>parseFloat(part)<=100);
-  if(property==='background-image')return value===null||imageURL(value)||parseGradients(value)!==null;
+  if(property==='background-image')return value===null||imageLayers(value)!==null||parseGradients(value)!==null;
   if(['filter','backdrop-filter'].includes(property))return value===null||parseFilters(value)!==null;
   if(property==='font-variation-settings')return value===null||parseVariations(value)!==null;
   if(property==='font-variant-ligatures')return value===null||ligatureValid(value);
@@ -255,9 +255,13 @@
   return result.join(' ')||'none';
  }
  function splitLayers(value){
-  const parts=[];let depth=0,start=0;
-  for(let i=0;i<value.length;i++){if(value[i]==='(')depth++;if(value[i]===')'&&--depth<0)return null;if(value[i]===','&&!depth){parts.push(value.slice(start,i).trim());start=i+1;}}
-  if(depth)return null;parts.push(value.slice(start).trim());return parts;
+  const parts=[];let depth=0,start=0,quote=null,escaped=false;
+  for(let i=0;i<value.length;i++){const c=value[i];if(escaped){escaped=false;continue;}if(c==='\\'){escaped=true;continue;}if(quote){if(c===quote)quote=null;continue;}if(c==='"'||c==="'"){quote=c;continue;}if(c==='(')depth++;if(c===')'&&--depth<0)return null;if(c===','&&!depth){parts.push(value.slice(start,i).trim());start=i+1;}}
+  if(depth||quote||escaped)return null;parts.push(value.slice(start).trim());return parts;
+ }
+ function imageLayers(value){
+  if(typeof value!=='string'||value.length>8192)return null;
+  const layers=splitLayers(value);return layers?.length<=8&&layers.every(layer=>layer==='none'||imageURL(layer)||parseGradients(layer)?.length===1)?layers:null;
  }
  const gradientColorSpaces=['srgb','srgb-linear','display-p3','display-p3-linear','a98-rgb','prophoto-rgb','rec2020','lab','oklab','xyz','xyz-d50','xyz-d65','hsl','hwb','lch','oklch'];
  function parseGradients(value){
@@ -341,5 +345,5 @@
   return families[property]||[property];
  }
  function overlaps(a,b){if(a==='line-clamp'&&['display','overflow','overflow-x','overflow-y','-webkit-line-clamp','-webkit-box-orient'].includes(b)||b==='line-clamp'&&['display','overflow','overflow-x','overflow-y','-webkit-line-clamp','-webkit-box-orient'].includes(a))return true;if(a==='-webkit-backdrop-filter')a='backdrop-filter';if(b==='-webkit-backdrop-filter')b='backdrop-filter';return a==='all'||b==='all'||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(a)&&sides.includes(b)||/^inset-(?:inline|block)(?:-(?:start|end))?$/.test(b)&&sides.includes(a)||a==='background'&&b.startsWith('background-')||b==='background'&&a.startsWith('background-')||a==='flex'&&['flex-grow','flex-shrink','flex-basis'].includes(b)||a==='grid'&&b.startsWith('grid-')||a==='grid-template'&&b.startsWith('grid-template-')||a==='grid-area'&&['grid-row','grid-column'].includes(b)||affected(a).some(p=>affected(b).includes(p))||a==='border'&&b.startsWith('border-')&&!b.endsWith('radius')||b==='border'&&a.startsWith('border-')&&!a.endsWith('radius')||['font','font-variant'].includes(a)&&['font-variant-numeric','font-variant-ligatures','font-variant-caps','font-variant-position'].includes(b)||['font','font-variant'].includes(b)&&['font-variant-numeric','font-variant-ligatures','font-variant-caps','font-variant-position'].includes(a)||a==='font'&&['font-family','font-weight','font-style','font-size','line-height','font-variation-settings','font-optical-sizing'].includes(b)||a==='text-decoration'&&b==='text-decoration-line';}
- return {imageURL,ligatureGroups,ligatureValid,ligatureChange,parseBorderColors,variableCycle,variableName,variableValue,parseVariations,serializeVariations,numericGroups,numericValid,numericChange,options,fields,svgFields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients,gradientColorSpaces};
+ return {imageURL,imageLayers,splitLayers,ligatureGroups,ligatureValid,ligatureChange,parseBorderColors,variableCycle,variableName,variableValue,parseVariations,serializeVariations,numericGroups,numericValid,numericChange,options,fields,svgFields,families,adaptiveColumns,parseAdaptiveColumns,stackLayout,flexAlignment,valid,overlaps,parseShadows,serializeShadows,parseFilters,withBlur,parseGradients,serializeGradients,gradientColorSpaces};
 });

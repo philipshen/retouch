@@ -36,8 +36,40 @@
   }
   return next;
  }
+ const imageToken=token=>/^\[background-image:/.test(token)||/^bg-(?:none|gradient-to-|linear-|radial|conic|\[(?:image:|url\(|(?:repeating-)?(?:linear|radial|conic)-gradient\())/.test(token);
+ function stackValue(layers){return layers.map(layer=>layer.replace(/url\("([^"\\]*)"\)/g,(_,url)=>'url('+source(paint(url))+')')).join(', ').replace(/\s/g,'_');}
+ function stackClasses(before,layers){
+  const value=layers.join(', ');if(!V.imageLayers(value))throw Error('Choose a supported image and gradient stack.');
+  return I.replace(before,imageToken,'![background-image:'+stackValue(layers)+']');
+ }
+ function mountStack(info,el,save,saveCSS,layers,upload,saveImage,browseImages){
+  const section=I.section('Image fill'),css=el.ownerDocument.defaultView.getComputedStyle(el);if(info.classNameDynamic&&!saveCSS){I.note(section,info.classNameReason||'Image fill styles are computed.','refused');return section;}I.note(section,'Images are listed in paint order, front to back. Replacement preserves the other paints and framing.');
+  for(const [index,layer]of layers.entries()){
+   const url=source(layer);if(!url)continue;
+   const group=document.createElement('fieldset'),legend=document.createElement('legend'),status=document.createElement('p');legend.textContent='Image paint '+(index+1);group.className='image-fill-stack-paint';group.append(legend);const preview=document.createElement('img');preview.className='image-fill-stack-preview';preview.src=url;preview.alt='Image paint '+(index+1)+' preview';group.append(preview);status.setAttribute('role','status');status.className='image-fill-status';
+   let pending=false;const current=()=>section.isConnected&&el.isConnected&&!pending;
+   const replace=async(next,confirmed=false)=>{
+    if(!el.isConnected||!confirmed&&!current())throw Error('The selected image changed.');
+    if(!saveCSS&&(el.style.getPropertyPriority('background-image')||el.style.getPropertyPriority('background')))throw Error('This image has an important inline background. Edit that style in source first.');
+    const updated=layers.map((value,i)=>i===index?paint(next):value);
+    if(saveImage&&next.startsWith('/assets/')){
+     const token=(info.className||'').split(/\s+/).map(I.base).find(value=>value?.startsWith('[background-image:')),prior=token?V.splitLayers(token.slice('[background-image:'.length,-1).replace(/_/g,' ')):null;
+     const authored=layers.map((value,i)=>{const reference=prior?.length===layers.length&&/^var\((--rt-image-fill-[a-f0-9]{10})\)$/.exec(prior[i]);if(reference&&source(css.getPropertyValue(reference[1]).trim())===source(value))return prior[i];for(const key of el.style){if(/^--rt-image-fill-[a-f0-9]{10}$/.test(key)&&source(css.getPropertyValue(key).trim())===source(value)&&source(value))return 'var('+key+')';}return value;});
+     await saveImage(next,false,'apply',{layers:authored,index});
+    }else if(saveCSS)await saveCSS({'background-image':updated.join(', ')});else await save(stackClasses(info.className,updated));
+    const actual=source(V.imageLayers(el.ownerDocument.defaultView.getComputedStyle(el).backgroundImage)?.[index]),expected=new URL(next,el.ownerDocument.location.href);
+    if(!actual||!(actual===expected.href||saveImage&&next.startsWith('/assets/')&&new URL(actual,expected).pathname.endsWith('/'+expected.pathname.split('/').pop())))throw Error('The image paint could not be applied.');
+   };
+   const field=document.createElement('input');field.type='text';field.value=url;I.field(group,'Image paint '+(index+1)+' source',field);field.parentElement.querySelector('span').textContent='Image';field.onchange=async()=>{try{await replace(field.value);}catch(error){status.textContent=error.message;}};I.fieldDraft(field);
+   if(browseImages){const browse=I.button('Browse image paint '+(index+1),event=>{event.currentTarget.focus({preventScroll:true});browseImages(next=>replace(next,true));});browse.setAttribute('aria-label','Browse image paint '+(index+1));browse.textContent='Browse images';group.append(browse);}
+   if(upload){const input=document.createElement('input');input.type='file';input.accept='image/*';input.hidden=true;input.setAttribute('aria-label','Upload image paint '+(index+1));const choose=I.button('Replace image paint '+(index+1),()=>input.click());choose.setAttribute('aria-label','Replace image paint '+(index+1));choose.textContent='Replace image';group.append(choose,input);input.onchange=async()=>{const file=input.files[0];if(!file||!current())return;pending=true;group.disabled=choose.disabled=true;status.textContent='Uploading image…';try{const next=await upload(file);pending=false;await replace(next,true);}catch(error){status.textContent=error.message;}finally{pending=false;group.disabled=choose.disabled=false;input.value='';}};}
+   if(upload){const crop=I.button('Crop image paint '+(index+1),event=>{event.currentTarget.focus({preventScroll:true});root.RetouchImageCrop.open({target:el,source:preview,frame:{width:preview.naturalWidth,height:preview.naturalHeight,objectFit:'contain',objectPosition:'50% 50%'},scopeNote:'Edits this image paint in the selected screen scope. Other paints are kept.',current:()=>el.isConnected&&V.imageLayers(el.ownerDocument.defaultView.getComputedStyle(el).backgroundImage)?.[index]===layer,onError:message=>{status.textContent=message;},onApply:async blob=>{const next=await upload(new File([blob],'cropped-stack.svg',{type:'image/svg+xml'}));await replace(next,true);}});});crop.setAttribute('aria-label','Crop image paint '+(index+1));crop.textContent='Crop image';crop.disabled=true;preview.onload=()=>{crop.disabled=!preview.naturalWidth;};if(preview.complete&&preview.naturalWidth)crop.disabled=false;group.append(crop);}
+   group.append(status);section.append(group);
+  }
+  return section;
+ }
  function mount(info,el,save,saveCSS,own={},upload=null,saveImage=null,browseImages=null){
-  if(!el)return null;const css=el.ownerDocument.defaultView.getComputedStyle(el),url=source(css.backgroundImage);if(!url&&css.backgroundImage!=='none')return null;
+  if(!el)return null;const css=el.ownerDocument.defaultView.getComputedStyle(el),url=source(css.backgroundImage);if(!url&&css.backgroundImage!=='none'){const layers=V.imageLayers(css.backgroundImage);return layers?.some(source)?mountStack(info,el,save,saveCSS,layers,upload,saveImage,browseImages):null;}
   const section=I.section('Image fill'),image=new Image(),content=document.createElement('div');section.append(content);
   if(info.classNameDynamic&&!saveCSS){I.note(section,info.classNameReason||'Image fill styles are computed.','refused');return section;}
   if(url)I.note(content,'Loading image dimensions…');
@@ -89,5 +121,5 @@
   image.onerror=()=>{if(section.isConnected){content.replaceChildren();I.note(content,'The background image could not be loaded.');}};
   image.src=url;return section;
  }
- const api={source,paint,scale,framing,cropFrame,reset,classes,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchImageFill=api;
+ const api={source,paint,scale,framing,cropFrame,reset,classes,imageToken,stackValue,stackClasses,mount};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchImageFill=api;
 })(typeof window==='object'?window:globalThis);

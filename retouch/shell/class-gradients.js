@@ -11,7 +11,7 @@
   const inspector=I(),d=parent.ownerDocument,details=d.createElement('details'),summary=d.createElement('summary');summary.textContent='Gradient fills';details.append(summary);details.open=expanded;details.retouchSetOpen=value=>{expanded=!!value;details.open=expanded;};details.ontoggle=()=>{if(details.isConnected)expanded=details.open;};parent.append(details);
   const gradients=V().parseGradients(element.ownerDocument.defaultView.getComputedStyle(element).backgroundImage);
   const write=async next=>{try{await save(classes(info.className,next===null?null:V().serializeGradients(next)));}catch(error){inspector.note(details,error.message,'refused');}};
-  if(!gradients)inspector.note(details,'This background image cannot be edited as a gradient. Clear background images to start a gradient fill.');
+  if(!gradients)inspector.note(details,V().imageLayers(element.ownerDocument.defaultView.getComputedStyle(element).backgroundImage)?.some(V().imageURL)?'Use Image fill to edit image paints in this stack.':'This background image cannot be edited as a gradient.');
   else{
    gradients.forEach((gradient,index)=>{const group=d.createElement('fieldset'),legend=d.createElement('legend'),label='Gradient '+(index+1);legend.textContent=label;group.className='gradient-controls';group.append(legend);const update=next=>write(gradients.map((item,i)=>i===index?next:item));
     const preview=d.createElement('div');preview.className='gradient-preview';preview.style.backgroundImage=V().serializeGradients([gradient]);preview.setAttribute('aria-label',label+' preview');group.append(preview,root.RetouchGradientStopRail({gradient,index,info,el:element,preview,gradients,update,label:'Gradient'}));

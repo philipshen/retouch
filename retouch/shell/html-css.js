@@ -124,7 +124,7 @@
   I.note(effects,'Shadows are stacked from front to back. Reset restores this screen size’s inherited styling.');
   const fills=I.section('Gradient fills'),gradients=parseGradients(own['background-image']??css.backgroundImage);
   const writeGradients=next=>{const value=serializeGradients(next);if(valid('background-image',value)&&CSS.supports('background-image',value))return save('background-image',value,width);};
-  if(gradients===null)I.note(fills,'The existing background image cannot be represented by these gradient controls. Clear background images to start a new fill.');
+  if(gradients===null)I.note(fills,RetouchHTMLCSSValues.imageLayers(css.backgroundImage)?.some(RetouchHTMLCSSValues.imageURL)?'Use Image fill to edit image paints in this stack.':'The existing background image cannot be represented by these gradient controls.');
   else {
    gradients.forEach((gradient,index)=>{
     const group=document.createElement('fieldset');group.className='gradient-controls';const legend=document.createElement('legend');legend.textContent='Fill '+(index+1);group.append(legend);

@@ -21,3 +21,11 @@ test('Liquid remove and reset clean only the selected screen asset reference',()
  const reset=change(source,'reset');assert.equal(reset.ok,true,reset.reason);assert.ok(!reset.edits[0].after.includes('md:'));assert.ok(reset.edits[0].after.includes('rt-picture.svg'));
  const changed=tablet.replace('tablet.svg','tablet/subpath.svg');assert.equal(change(changed,'reset').refused,true);
 });
+
+test('mixed Liquid paint replacement preserves other asset references and gradient order',()=>{
+ const replace=(source,layers,index)=>liquid.planOp(resolved(source),{type:'setImageFill',fileHash:liquid.contentHash(source),scope:'md:',src:'/assets/paint-'+index+'.svg',stack:{layers,index}});
+ const gradient='linear-gradient(90deg, red 0%, blue 100%)',first=replace(original,[gradient,'url("/first.svg")','url("/second.svg")'],1);assert.equal(first.ok,true,first.reason);
+ const source=first.edits[0].after,variable=source.match(/--rt-image-fill-[a-f0-9]{10}/)[0],second=replace(source,[gradient,'var('+variable+')','url("/second.svg")'],2);assert.equal(second.ok,true,second.reason);
+ assert.match(second.edits[0].after,/paint-1.svg/);assert.match(second.edits[0].after,/paint-2.svg/);assert.equal((second.edits[0].after.match(/asset_url/g)||[]).length,2);assert.ok(second.edits[0].after.includes('linear-gradient(90deg,_red_0%,_blue_100%),_var('));
+ assert.equal(replace(original,[gradient,'var(--rt-image-fill-0000000000)'],1).refused,true);assert.equal(replace(original,[gradient,'url("/first.svg")'],0).refused,true);
+});

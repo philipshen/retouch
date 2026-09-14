@@ -34,3 +34,10 @@ test('crop preview uses the CSS background positioning area and preserves source
  assert.equal(F.cropFrame({...css,boxSizing:'content-box'},400,200).width,260);
  assert.deepEqual(F.cropFrame({...css,backgroundRepeat:'repeat'},400,200),{width:400,height:200,objectFit:'contain',objectPosition:'50% 50%'});
 });
+
+test('mixed image layers preserve quoted punctuation, gradients and image utility scope',()=>{
+ const values=['linear-gradient(90deg, rgb(1, 2, 3) 0%, transparent 100%)','url("/a,(b).svg")','none'];
+ assert.deepEqual(V.imageLayers(values.join(', ')),values);assert.equal(V.valid('background-image',values.join(', ')),true);
+ for(const value of ['url("javascript:alert(1)")','url("/a.svg"), garbage','url("/a.svg"),linear-gradient(red,blue);display:none','url("/unterminated)'])assert.equal(V.imageLayers(value),null);
+ const next=F.stackClasses('bg-cover bg-red-500 bg-[url(/old.svg)] md:bg-none',values);assert.ok(next.includes('bg-cover bg-red-500 md:bg-none'));assert.ok(!next.includes('/old.svg'));assert.ok(next.includes('![background-image:'));
+});
