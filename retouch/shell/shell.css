@@ -1215,3 +1215,7 @@ html, body { overflow:clip; }
 .paint-stack-fields { border:0;margin:0;padding:0;min-width:0; }
 .paint-stack-fields > .paint-order { margin:4px 0; }
 .background-paint-row { margin-top:4px; }
+
+.paint-order-row > .paint-visibility { display:flex;align-items:center;justify-content:center;padding:3px; }
+.paint-order-row.paint-hidden > .paint-row-editor { opacity:.45; }
+.paint-order-row.paint-hidden > .paint-visibility { opacity:1; }

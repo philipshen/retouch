@@ -17055,3 +17055,13 @@ Image paint popovers now provide an Opacity (%) field. Changes reuse the editabl
 All 1,547 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass failed-load/retry without a source write, 0/50/100% rendered pixels, original-byte preservation, crop/opacity round trips, responsive inheritance and exact source undo, followed by the existing mixed-paint replacement, gradient, picker and crop workflow. React checks wait for the expected rendered neighboring paints after stylesheet updates. The light-theme image popover was visually inspected.
 
 Opacity currently lives in the image popover and commits through the existing image upload pipeline. Readable image access and existing crop/upload size limits apply; arbitrary remote or animated image behavior is not established. Per-image visibility, full Figma fidelity and arbitrary-site parity remain incomplete. No native app was rebuilt or notarized in this batch.
+
+### Image paint visibility — 2026-09-15
+
+Image paints now have an eye button on the primary Fill row. Hiding an image preserves its independently editable opacity, original embedded bytes, crop and image adjustments in the source-backed recipe. Showing it restores that opacity instead of forcing 100%. The hidden row is dimmed and keeps its crossed-eye control visible. Recipe loading now starts when the image controls mount so the row can display the saved visibility; loading remains bounded, cancelable on stale selection/source, and retryable. These controls follow the separate opacity and visibility behavior documented in Figma's [Guide to fills](https://help.figma.com/hc/en-us/articles/360041003694-Guide-to-fills).
+
+The crop editor shows a hidden image while editing it and preserves the hidden state when applying the crop. Escape closes an open paint popover even when a source refresh moved keyboard focus outside it, preventing an unintended selection clear.
+
+All 1,548 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass hiding/showing at 50%, changing opacity while hidden, visible crop preview with hidden output, inspector rebuild persistence, original-byte preservation, neighboring paints and all seven framing properties, responsive inheritance, and exact undo through every source snapshot. The existing gradient, project-image, crop and retained-state checks also pass; gradient pixel assertions wait for both requested stop colors to render. The row and popover were visually inspected.
+
+This adds image-paint visibility only. Solid/gradient paint visibility, opacity on the primary image row, broader Figma fidelity and arbitrary-site support remain unfinished. Existing readable-image and size limits still apply. No native app or Homebrew release was rebuilt or published.

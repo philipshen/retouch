@@ -23,3 +23,9 @@ test('image paint opacity retains source, crop and adjustment metadata without m
  assert.equal(markup({...model,opacity:1}),markup(model));assert.match(markup({...model,opacity:0}),/ opacity="0"/);
  for(const opacity of [-.1,1.1,NaN,Infinity,'0.5'])assert.throws(()=>markup({...model,opacity}),/opacity/);
 });
+
+test('image visibility keeps independent opacity and all editable recipe data',()=>{
+ const model={width:40,height:20,zoom:2,x:25,y:75,opacity:.5,saturation:-20,data:'data:image/png;base64,YWJj'},hidden=markup({...model,hidden:true});
+ assert.match(hidden,/data-hidden="true"/);assert.match(hidden,/data-opacity="0.5"/);assert.match(hidden,/<image[^>]* opacity="0"/);assert.match(hidden,/data-zoom="2"/);assert.match(hidden,/data-saturation="-20"/);assert.match(hidden,/href="data:image\/png;base64,YWJj"/);
+ assert.equal(markup({...model,hidden:false}),markup(model));for(const value of ['true',1,null])assert.throws(()=>markup({...model,hidden:value}),/visibility/);
+});
