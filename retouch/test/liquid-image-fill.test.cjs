@@ -55,3 +55,8 @@ test('Liquid adds images and gradients atomically without changing existing asse
  const refs=[...b.matchAll(/var\(--rt-image-fill-[a-f0-9]+\)/g)].map(match=>match[0]),gradient=add(b,refs,null,'linear-gradient(red,blue)');assert.equal(gradient.ok,true,gradient.reason);assert.equal((gradient.edits[0].after.match(/asset_url/g)||[]).length,2);
  assert.equal(add(b,refs,null,'none').refused,true);assert.equal(add(b,Array(8).fill(reference),'/assets/third.svg').refused,true);
 });
+
+test('Liquid paint framing preserves asset declarations and image class bindings',()=>{
+ const base=edit(original).edits[0].after,reference=base.match(/var\(--rt-image-fill-[a-f0-9]+\)/)[0],result=liquid.planOp(resolved(base),{type:'setImageFill',fileHash:liquid.contentHash(base),scope:'md:',action:'frame',stack:{layers:['linear-gradient(red,blue)',reference],index:1,framing:{'background-size':'contain'},changes:{'background-size':'cover','background-blend-mode':'multiply'}}});
+ assert.equal(result.ok,true,result.reason);const after=result.edits[0].after;assert.equal((after.match(/asset_url/g)||[]).length,1);assert.ok(after.includes(reference));assert.ok(after.includes('md:![background-size:contain,_cover]'));assert.ok(after.includes('md:![background-blend-mode:normal,_multiply]'));
+});

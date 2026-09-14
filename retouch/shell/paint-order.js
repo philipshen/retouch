@@ -16,10 +16,19 @@
   for(const property of properties)changes[property]=added[property]+(layers.length?', '+changes[property]:'');
   return changes;
  }
+ function edit(layers,framing,index,patch){
+  if(!Array.isArray(layers)||!layers.length||layers.length>8||!Number.isInteger(index)||index<0||index>=layers.length||!patch||typeof patch!=='object'||Array.isArray(patch)||!Object.keys(patch).length)throw Error('Choose a paint property to change.');
+  const changes={};
+  for(const [property,value]of Object.entries(patch)){
+   const before=framing[property]||defaults[property];if(!properties.includes(property)||typeof value!=='string'||V.splitLayers(value).length!==1||!V.valid(property,value)||!V.valid(property,before))throw Error('Choose a supported paint property value.');
+   const values=V.splitLayers(before);changes[property]=layers.map((_,slot)=>slot===index?value:values[slot%values.length]).join(', ');
+  }
+  return changes;
+ }
  function frameClasses(before,changes){
   let next=before;
   for(const property of properties){if(!Object.hasOwn(changes,property))continue;const value=changes[property];if(!V.valid(property,value))throw Error('Choose supported paint framing.');const kind=property.slice(11),match=token=>token.startsWith('['+property+':')||({size:/^bg-(?:(?:cover|contain|auto)$|\[length:|size-\[)/,position:/^bg-(?:(?:center|top|bottom|left|right|(?:left|right)-(?:top|bottom))$|\[position:|position-\[)/,repeat:/^bg-(?:repeat(?:-x|-y|-round|-space)?|no-repeat)$/,origin:/^bg-origin-(?:border|padding|content)$/,clip:/^bg-clip-(?:border|padding|content|text)$/,attachment:/^bg-(?:fixed|local|scroll)$/, 'blend-mode':/^bg-blend-(?:normal|multiply|screen|overlay|darken|lighten|color-dodge|color-burn|hard-light|soft-light|difference|exclusion|hue|saturation|color|luminosity)$/}[kind]?.test(token));next=I.replace(next,match,value===null?'':'!['+property+':'+value.replace(/\s/g,'_')+']');}
   return next;
  }
- const api={properties,defaults,reorder,prepend,frameClasses};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPaintOrder=api;
+ const api={properties,defaults,reorder,prepend,edit,frameClasses};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPaintOrder=api;
 })(typeof window==='object'?window:globalThis);

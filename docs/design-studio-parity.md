@@ -16974,3 +16974,14 @@ Focused handles also support Arrow Up/Down and Home/End. Repeated keydown events
 All 1,542 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass the extended workflow. The RT_E2E_PAINT_DRAG=1 workflow verifies edge scrolling without a write, Escape cleanup, unchanged source until release, exactly one source operation per drop, the expected image order and all seven framing lists, focused-handle restoration, keyboard Home ordering, and exact undo back to the original source. It then completes the existing add/replace/crop/gradient/responsive/state workflow. The drag screenshot was visually inspected.
 
 Solid/background row unification, per-paint opacity/visibility and full Figma fidelity remain incomplete. Native notarization/Homebrew distribution and arbitrary-site parity remain unverified; no native bundle was rebuilt.
+
+
+### Per-paint image framing and blending — 2026-09-14
+
+Image paints in mixed stacks now expose Fill, Fit and Tile modes, tile scale, and X/Y positioning in their settings popover. Custom CSS framing remains represented as Custom until the user changes it. Image and gradient paints expose the sixteen supported CSS background blend modes. Only the requested framing properties are written; shorter CSS lists are expanded cyclically so neighbors retain their effective values. Percentage positions retain their displayed precision, including values outside the frame. Non-percentage positions use a validated position field.
+
+HTML writes scoped CSS; React and Liquid write scoped framing classes. The Liquid frame action retains all image classes, variable references and asset_url declarations. Source/hash/selection checks remain active, important inline overrides are refused, and the resulting image stack and framing properties are checked against the rendered preview. Tile scale waits for intrinsic image dimensions. WebKit's visible SVG thumbnail reported its rendered width as naturalWidth; a detached image now supplies intrinsic dimensions for Tile and the mixed-paint Crop dialog.
+
+All 1,544 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit pass the combined workflow. RT_E2E_PAINT_FRAME=1 covers Fill/Fit/Tile, 40x20 intrinsic tiles and 200% scale, X/Y positions, multiply/screen blending with black rendered pixels, unchanged neighboring paints and Liquid bindings, phone inheritance and exact undo. The run also includes paint addition, drag ordering and the existing image/gradient/crop/source-state workflow. The light-theme framing popover screenshot was visually inspected.
+
+Per-paint opacity/visibility, solid/image row unification and complete Figma fidelity remain unfinished. Native notarization/Homebrew distribution and arbitrary-site parity remain unverified; no native bundle was rebuilt.

@@ -14,3 +14,9 @@ test('adding a paint gives it independent framing and expands existing short lis
  assert.equal(P.prepend([],{},'linear-gradient(red,blue)')['background-position'],'50% 50%');
  assert.throws(()=>P.prepend(Array(8).fill(layers[0]),{},layers[0]));assert.throws(()=>P.prepend(layers,{},'url("javascript:bad")'));
 });
+
+test('per-paint framing changes only the requested property and preserves cyclic neighbors',()=>{
+ const result=P.edit(['url("/a")','url("/b")','url("/c")'],{'background-size':'contain, 10px 20px','background-repeat':'no-repeat'},1,{'background-size':'cover'});
+ assert.deepEqual(result,{'background-size':'contain, cover, contain'});
+ for(const patch of [{color:'red'},{'background-size':'cover, contain'},{'background-size':null},{}])assert.throws(()=>P.edit(['url("/a")'],{},0,patch));
+});

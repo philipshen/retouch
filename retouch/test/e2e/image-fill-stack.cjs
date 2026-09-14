@@ -19,6 +19,19 @@ exports.run=async({page,app,file,wait,settled,kind})=>{
 await pixels([0,255,0]);if(process.env.RT_E2E_IMAGE_STACK_SCREENSHOT){await page.getByLabel('Image paint 2 source',{exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:process.env.RT_E2E_IMAGE_STACK_SCREENSHOT});}const first=read(),firstLayers=await layers();assert.equal(firstLayers[0],initial[0]);assert.equal(firstLayers[2],initial[2]);
 
  await upload(3,'magenta');const second=read(),secondLayers=await layers();assert.equal(secondLayers[0],initial[0]);assert.equal(secondLayers[1],firstLayers[1]);if(kind==='liquid'){assert.equal((second.match(/asset_url/g)||[]).length,2);assert.equal((second.match(/var\(--rt-image-fill-/g)||[]).length,2);assert.ok(secondLayers[1].includes('/test-theme-assets/'));}
+ if(process.env.RT_E2E_PAINT_FRAME){
+  const states=[second],record=async()=>{await settled();await wait(()=>read()!==states.at(-1));states.push(read());assert.deepEqual(await layers(),secondLayers);},property=name=>target.evaluate((el,name)=>parent.RetouchHTMLCSSValues.splitLayers(getComputedStyle(el).getPropertyValue(name)),name);
+  await openPaint(2);await page.getByLabel('Paint 2 image mode',{exact:true}).selectOption('fill');await record();assert.deepEqual(await property('background-size'),['cover','cover','200% 200%']);
+  await page.getByLabel('Paint 2 image mode',{exact:true}).selectOption('fit');await record();assert.deepEqual(await property('background-size'),['cover','contain','200% 200%']);
+  await page.getByLabel('Paint 2 image mode',{exact:true}).selectOption('tile');await record();assert.deepEqual(await property('background-size'),['cover','40px 20px','200% 200%']);
+  for(const [label,value]of [['tile scale (%)','200'],['position X (%)','25'],['position Y (%)','75']]){const input=page.getByLabel('Paint 2 '+label,{exact:true});await input.fill(value);await input.press('Tab');await record();}
+  assert.deepEqual(await property('background-size'),['cover','80px 40px','200% 200%']);assert.deepEqual(await property('background-position'),['0% 0%','25% 75%','100% 50%']);
+  await page.getByLabel('Paint 2 blend mode',{exact:true}).selectOption('multiply');await record();await pixels([0,0,0]);assert.deepEqual(await property('background-blend-mode'),['normal','multiply','screen']);
+  if(process.env.RT_E2E_PAINT_FRAME_SCREENSHOT)await page.screenshot({path:process.env.RT_E2E_PAINT_FRAME_SCREENSHOT});
+  await openPaint(1,'gradient');await page.getByLabel('Paint 1 blend mode',{exact:true}).selectOption('screen');await record();assert.deepEqual(await property('background-blend-mode'),['screen','multiply','screen']);
+  if(kind==='liquid'){assert.equal((read().match(/asset_url/g)||[]).length,2);assert.equal((read().match(/var\(--rt-image-fill-/g)||[]).length,2);}
+  await size('390x844');assert.deepEqual(await layers(),initial);await size('768x1024');for(const expected of states.slice(0,-1).reverse()){await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();await wait(()=>read()===expected);}assert.deepEqual(await layers(),secondLayers);
+ }
  if(process.env.RT_E2E_PAINT_DRAG){
   const frames=()=>target.evaluate(el=>Object.fromEntries(parent.RetouchPaintOrder.properties.map(property=>[property,parent.RetouchHTMLCSSValues.splitLayers(getComputedStyle(el).getPropertyValue(property))]))),beforeFrames=await frames();
   const start=async()=>{const handle=page.getByRole('button',{name:'Drag paint 2',exact:true});await handle.click();await page.locator('.paint-order').evaluate(el=>el.scrollIntoView({block:'center'}));const a=await handle.boundingBox(),b=await page.getByRole('button',{name:'Drag paint 3',exact:true}).boundingBox();await page.mouse.move(a.x+a.width/2,a.y+a.height/2);await page.mouse.down();await page.mouse.move(b.x+b.width/2,b.y+b.height+6,{steps:5});};
