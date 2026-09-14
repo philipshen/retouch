@@ -19,15 +19,15 @@
   }
  }
  function update(){
-  toggle.setAttribute('aria-pressed',String(visible));horizontal.style.display=vertical.style.display=visible?'block':'none';if(!visible)return;
+  toggle.setAttribute('aria-pressed',String(visible));horizontal.style.display=vertical.style.display=visible?'block':'none';if(!visible){root.dispatchEvent(new Event('retouch:rulers'));return;}
   const bounds=canvas.getBoundingClientRect(),parent=main.getBoundingClientRect(),preview=frame.getBoundingClientRect(),scale=preview.width/frame.clientWidth;if(!Number.isFinite(scale)||scale<=0)return;
   let x=0,y=0;try{x=frame.contentWindow.scrollX;y=frame.contentWindow.scrollY;}catch{}
   Object.assign(horizontal.style,{left:(bounds.left-parent.left+20)+'px',top:(bounds.top-parent.top)+'px',width:Math.max(0,canvas.clientWidth-20)+'px',height:'20px'});
   Object.assign(vertical.style,{left:(bounds.left-parent.left)+'px',top:(bounds.top-parent.top+20)+'px',width:'20px',height:Math.max(0,canvas.clientHeight-20)+'px'});
-  draw(horizontal,Math.max(0,canvas.clientWidth-20),preview.left-bounds.left-20-x*scale,scale,false);draw(vertical,Math.max(0,canvas.clientHeight-20),preview.top-bounds.top-20-y*scale,scale,true);
+  draw(horizontal,Math.max(0,canvas.clientWidth-20),preview.left-bounds.left-20-x*scale,scale,false);draw(vertical,Math.max(0,canvas.clientHeight-20),preview.top-bounds.top-20-y*scale,scale,true);root.dispatchEvent(new Event('retouch:rulers'));
  }
  const schedule=()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;update();});};
  canvas.addEventListener('scroll',schedule,{passive:true});for(const event of ['retouch:zoom','retouch:viewport','retouch:workspace-layout'])root.addEventListener(event,schedule);
  const observed=new WeakSet();function hook(){try{const w=frame.contentWindow,d=frame.contentDocument;if(d&&!observed.has(d)){observed.add(d);w.addEventListener('scroll',schedule,{passive:true});}}catch{}schedule();}frame.addEventListener('load',hook);new ResizeObserver(schedule).observe(canvas);new ResizeObserver(schedule).observe(frame);hook();update();
- root.RetouchRulers={ticks};
+ root.RetouchRulers={ticks,get visible(){return visible;},horizontal,vertical};
 })(typeof window==='object'?window:globalThis);

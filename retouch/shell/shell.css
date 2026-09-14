@@ -1113,3 +1113,11 @@ html, body { overflow:clip; }
 .canvas-ruler text { fill:var(--muted);font:9px var(--font); }
 #toggleRulers { margin-left:6px; }
 #toggleRulers[aria-pressed="true"] { background:#e5f4ff;color:#007be5; }
+.canvas-guides { position:absolute;z-index:21;pointer-events:none;overflow:hidden; }
+.canvas-guide { position:absolute;pointer-events:auto;touch-action:none;background:transparent;border:0;padding:0; }
+.canvas-guide::after { content:'';position:absolute;background:#f24822;pointer-events:none; }
+.canvas-guide[data-guide-axis="x"] { cursor:col-resize; }
+.canvas-guide[data-guide-axis="y"] { cursor:row-resize; }
+.canvas-guide[data-guide-axis="x"]::after { top:0;bottom:0;left:4px;width:1px; }
+.canvas-guide[data-guide-axis="y"]::after { left:0;right:0;top:4px;height:1px; }
+.canvas-guide:focus-visible::after { background:var(--accent);box-shadow:0 0 0 1px #0d99ff44; }
