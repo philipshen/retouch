@@ -8,10 +8,18 @@
   for(const property of properties){const value=framing[property]||defaults[property],values=typeof value==='string'?V.splitLayers(value):null;if(!values?.length||values.length>8||!V.valid(property,value))throw Error('This paint stack uses unsupported '+property+' values.');changes[property]=order.map(index=>values[index%values.length]).join(', ');}
   return changes;
  }
+ function prepend(layers,framing,layer){
+  if(!Array.isArray(layers)||layers.length>=8||typeof layer!=='string'||!(V.imageLayers(layer)?.length===1||/^var\(--rt-image-fill-[a-f0-9]{10}\)$/.test(layer)))throw Error('Choose a supported paint. A stack can contain up to eight paints.');
+  const changes=layers.length?reorder(layers,framing,layers.map((_,index)=>index)):{};
+  changes['background-image']=[layer,...layers].join(', ');
+  const added={...defaults,'background-size':'cover','background-position':'50% 50%','background-repeat':'no-repeat'};
+  for(const property of properties)changes[property]=added[property]+(layers.length?', '+changes[property]:'');
+  return changes;
+ }
  function frameClasses(before,changes){
   let next=before;
   for(const property of properties){if(!Object.hasOwn(changes,property))continue;const value=changes[property];if(!V.valid(property,value))throw Error('Choose supported paint framing.');const kind=property.slice(11),match=token=>token.startsWith('['+property+':')||({size:/^bg-(?:(?:cover|contain|auto)$|\[length:|size-\[)/,position:/^bg-(?:(?:center|top|bottom|left|right|(?:left|right)-(?:top|bottom))$|\[position:|position-\[)/,repeat:/^bg-(?:repeat(?:-x|-y|-round|-space)?|no-repeat)$/,origin:/^bg-origin-(?:border|padding|content)$/,clip:/^bg-clip-(?:border|padding|content|text)$/,attachment:/^bg-(?:fixed|local|scroll)$/, 'blend-mode':/^bg-blend-(?:normal|multiply|screen|overlay|darken|lighten|color-dodge|color-burn|hard-light|soft-light|difference|exclusion|hue|saturation|color|luminosity)$/}[kind]?.test(token));next=I.replace(next,match,value===null?'':'!['+property+':'+value.replace(/\s/g,'_')+']');}
   return next;
  }
- const api={properties,defaults,reorder,frameClasses};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPaintOrder=api;
+ const api={properties,defaults,reorder,prepend,frameClasses};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchPaintOrder=api;
 })(typeof window==='object'?window:globalThis);

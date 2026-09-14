@@ -47,3 +47,11 @@ test('Liquid paint reordering and duplication keep image replacement attached to
  const duplicatedLayers=[gradient,'var('+b+')','var('+b+')','var('+a+')'],duplicated=liquid.planOp(resolved(replaced.edits[0].after),{type:'setImageFill',fileHash:liquid.contentHash(replaced.edits[0].after),scope:'md:',action:'order',stack:{layers:[gradient,'var('+b+')','var('+a+')'],order:[0,1,1,2],framing:{}}});assert.equal(duplicated.ok,true,duplicated.reason);
  const separated=apply(duplicated.edits[0].after,duplicatedLayers,1,'/assets/d.svg');assert.equal(separated.ok,true,separated.reason);assert.ok(separated.edits[0].after.includes("'c.svg' | asset_url"));assert.ok(separated.edits[0].after.includes("'d.svg' | asset_url"));assert.equal((separated.edits[0].after.match(/asset_url/g)||[]).length,3);
 });
+
+test('Liquid adds images and gradients atomically without changing existing asset bindings',()=>{
+ const add=(source,layers,src,value)=>liquid.planOp(resolved(source),{type:'setImageFill',fileHash:liquid.contentHash(source),scope:'md:',action:'add',src,stack:{layers,value,framing:{'background-size':'contain','background-position':'25% 75%'}}});
+ const first=add(original,[],'/assets/first.svg');assert.equal(first.ok,true,first.reason);const a=first.edits[0].after,reference=a.match(/var\((--rt-image-fill-[a-f0-9]+)\)/)[0];
+ const second=add(a,[reference],'/assets/second.svg');assert.equal(second.ok,true,second.reason);const b=second.edits[0].after;assert.equal((b.match(/asset_url/g)||[]).length,2);assert.ok(b.includes(reference));assert.ok(b.includes('background-size:cover,_contain'));
+ const refs=[...b.matchAll(/var\(--rt-image-fill-[a-f0-9]+\)/g)].map(match=>match[0]),gradient=add(b,refs,null,'linear-gradient(red,blue)');assert.equal(gradient.ok,true,gradient.reason);assert.equal((gradient.edits[0].after.match(/asset_url/g)||[]).length,2);
+ assert.equal(add(b,refs,null,'none').refused,true);assert.equal(add(b,Array(8).fill(reference),'/assets/third.svg').refused,true);
+});

@@ -7,3 +7,10 @@ test('paint ordering carries repeated CSS lists, clipping, attachment and blendi
  const next=P.frameClasses('text-red-500 bg-autocomplete bg-left-label bg-origin-brand bg-blend-brand bg-cover bg-top bg-repeat bg-origin-border bg-clip-content bg-fixed bg-blend-multiply md:bg-contain',changes);assert.ok(next.includes('text-red-500'));for(const token of ['bg-autocomplete','bg-left-label','bg-origin-brand','bg-blend-brand'])assert.ok(next.includes(token));assert.ok(next.includes('md:bg-contain'));assert.ok(!next.includes('bg-cover'));assert.ok(!next.includes('bg-fixed'));assert.ok(next.includes('![background-size:contain,_10px_20px,_10px_20px,_contain]'));
  for(const order of [[],[-1],[3],Array(9).fill(0)])assert.throws(()=>P.reorder(layers,framing,order));assert.throws(()=>P.reorder(layers,{'background-size':'10px;display:none'},[1,0]));
 });
+
+test('adding a paint gives it independent framing and expands existing short lists',()=>{
+ const layers=['url("/a.svg")','linear-gradient(red,blue)','url("/b.svg")'],next=P.prepend(layers,{'background-size':'10px 20px, contain','background-blend-mode':'screen'},'url("/new.svg")');
+ assert.equal(next['background-size'],'cover, 10px 20px, contain, 10px 20px');assert.equal(next['background-blend-mode'],'normal, screen, screen, screen');assert.equal(next['background-image'],'url("/new.svg"), '+layers.join(', '));
+ assert.equal(P.prepend([],{},'linear-gradient(red,blue)')['background-position'],'50% 50%');
+ assert.throws(()=>P.prepend(Array(8).fill(layers[0]),{},layers[0]));assert.throws(()=>P.prepend(layers,{},'url("javascript:bad")'));
+});
