@@ -2955,7 +2955,7 @@ async function renameLayer(name){
 async function setSelectionColorOverride(property,value){
  const selection=sel?.multiple,info=sel?.info;if(!selection?.length)return;const ids=selection.map(item=>item.id);busyPanel(true);
  try{
-  const result=await api('POST','/rt/__api/op',{type:'setColorOverrideSelection',id:info.id,ids,fileHash:info.hash,...selectionSourceContexts(selection),scope:styleScope,property,value});
+  const result=await api('POST','/rt/__api/op',{type:'setColorOverrideSelection',id:info.id,ids,fileHash:info.hash,...selectionSourceContexts(selection),scope:styleScope,property,value,...(value===null?{}:selectionBackgroundStates(selection,property))});
   if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update selected paint.');
   if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':'setClassesSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
   sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));renderPanel();
@@ -2981,7 +2981,7 @@ function selectionColorOptions(width){
   async function write(type,property,styleId,libraryRevision){
     const info=sel.info,ids=selection.map(item=>item.id),react=!!info.classColorStyles;busyPanel(true);
     try{
-      const result=await api('POST','/rt/__api/op',{type,id:info.id,ids,fileHash:info.hash,...selectionSourceContexts(selection),width:react?0:width,scope:react?width:undefined,property,styleId,libraryRevision});
+      const result=await api('POST','/rt/__api/op',{type,id:info.id,ids,fileHash:info.hash,...selectionSourceContexts(selection),width:react?0:width,scope:react?width:undefined,property,styleId,libraryRevision,...(type.startsWith('detach')?{}:selectionBackgroundStates(selection,property))});
       if(!result?.ok)throw Error(result?.reason||result?.error||'Could not update selected colors.');
       if(result.undoId)editorHistory.record({type:info.contextSelection?'collectionSelection':react?'setClassesSelection':'setCSSSelection',id:info.id,selectionIds:ids,undoId:result.undoId});
       sel.info=result.element;sel.multiple=result.selection;if(info.contextSelection){await reloadFrame();await restoreLayerSelection(ids);}else if(react)await refreshWrittenElement(result.element,el=>classSelectionMatches(result.selection,el.ownerDocument));else await reloadFrame();renderPanel();toast('Selected colors updated','ok');
@@ -3443,6 +3443,10 @@ async function refreshTextStyleElement(info){
   if(info.classTextStyles||info.classVariables)await refreshWrittenElement(info,el=>{
     try{return JSON.stringify(JSON.parse(el.getAttribute('data-rt-text-styles')||'{}'))===JSON.stringify(info.textStyleLinks||{})&&JSON.stringify(JSON.parse(el.getAttribute('data-rt-color-styles')||'{}'))===JSON.stringify(info.colorStyleLinks||{})&&JSON.stringify(JSON.parse(el.getAttribute('data-rt-effect-styles')||'{}'))===JSON.stringify(info.effectStyleLinks||{})&&(!info.classVariables||JSON.stringify(JSON.parse(el.getAttribute('data-rt-variables')||'{}'))===JSON.stringify(info.variableLinks||{}))&&(info.className||'').split(/\s+/).filter(Boolean).every(token=>el.classList.contains(token));}catch{return false;}
   });else await reloadFrame();
+}
+function selectionBackgroundStates(selection,property){
+ if(property!=='background-color'||document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false')return {};
+ return {backgroundPaints:Object.fromEntries(selection.map(info=>[info.id,backgroundStyleState(info,property).backgroundPaint]))};
 }
 function backgroundStyleState(info,property){
  if(property!=='background-color'||document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false')return {};

@@ -17261,3 +17261,11 @@ The background Fill reader now recovers explicit literal colors from owned HTML 
 The formerly failing strict #33669980 hidden-color assertion now passes in HTML/Chromium, React/Chromium and Liquid/WebKit saved-style flows. Focused Chromium and WebKit checks cover exact fractional sRGB/P3 channels and alpha, inactive scopes, an external inline override, ambiguous fallback, HTML metadata and unchanged DOM after probing. All 1,568 unit tests and the HTML compact Fill/Stroke/mixed-border browser flow pass.
 
 Recovery is deliberately limited to a uniquely matching literal candidate. Theme utilities, arbitrary author CSS, contextual colors and ambiguous cascades can still use computed precision; this does not prove universal authored-color recovery. Out-of-range inherited visibility, multi-selection and broader Figma/native/Homebrew parity remain incomplete.
+
+### Mixed hidden/visible background selections — 2026-09-15
+
+Shared background color fields and picker selection swatches now read each layer's stored original paint instead of its transparent rendered color. Preview sessions capture each layer's visibility separately: hidden fills stay transparent and visible fills preview normally; cancellation restores their inline state. Both single and shared hidden previews normalize supported named colors before making them transparent. React/Liquid grouped color edits and saved-color application/reset pass each layer's effective paint into the source planner, preserving hidden state across a newly authored screen scope. Clear/detach do not require a new paint observation.
+
+All 1,569 unit tests pass. New source tests verify React/Liquid grouped direct and saved-color writes, mixed visibility, custom scopes, unchanged base colors, one combined source transaction and refusal without partial edits. HTML/Chromium, React/Chromium and Liquid/WebKit browser workflows verify mixed values, hidden/visible picker preview, cancellation, P3 application and exact grouped source undo/redo. HTML/Chromium and Liquid/WebKit additionally exercise named-color previews.
+
+A shared visibility toggle is not implemented yet. Broader selection saved-library browser coverage, out-of-range inheritance and general cascade/precision limits remain open, as do full Figma parity and trusted native/Homebrew distribution.

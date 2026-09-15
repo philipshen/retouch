@@ -35,7 +35,7 @@
   const fail=e=>{input.setCustomValidity(e.message);input.reportValidity();};
   input.retouchPaintPreview=()=>{
    const state=read(info,el),preview=root.RetouchPaintPicker.propertyPreview({el,input,property:'background-color'});
-   return {update:color=>preview.update(state.hidden?B.transparent(color):color),restore:()=>preview.restore()};
+   return {update:color=>{const parsed=state.hidden?root.RetouchPaintPicker.parsePaint(color):null;if(state.hidden&&!parsed)return;preview.update(state.hidden?B.transparent(parsed.value):color);},restore:()=>preview.restore()};
   };
   const originalChange=input.onchange;
   input.onchange=()=>{

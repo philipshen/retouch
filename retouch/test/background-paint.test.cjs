@@ -93,3 +93,14 @@ test('React and Liquid saved colors capture effective hidden paint for custom sc
   const bad=links.plan(resolve(source),{...op,backgroundPaint:{current:'#ff0000',stored:hidden[key]}},style);assert.equal(bad.ok,false);assert.equal(bad.edits,undefined);
  }
 });
+test('mixed hidden selection edits and saved colors preserve per-layer visibility atomically',()=>{
+ const C=require('../src/color-style-classes.cjs'),hidden=B.toggle('#33669980','none',true),first=C.composeBackground('',hidden),second='![background-color:#abcdef80]',style={id:'11111111-1111-4111-8111-111111111111',name:'Brand',properties:{color:'#12345678'}};
+ for(const kind of ['react','liquid']){
+  const adapter=require('../src/adapters/'+kind+'.cjs'),relPath=kind==='react'?'Page.jsx':'main.liquid',source=kind==='react'?'export default function Page(){return <main><h1 className="'+first+'">Title</h1><p className="'+second+'">Other</p></main>}':'<main><h1 class="'+first+'">Title</h1><p class="'+second+'">Other</p></main>',resolve=source=>{const elements=adapter.collect(source,relPath).elements;return {source,file:'/tmp/'+relPath,relPath,hash:adapter.contentHash(source),elements,element:elements.find(el=>kind==='react'?el.node.openingElement.name.name==='h1':el.tag==='h1')};},r=resolve(source),selected=r.elements.filter(el=>['h1','p'].includes(kind==='react'?el.node.openingElement.name.name:el.tag)),ids=selected.map(el=>el.id),backgroundPaints={[ids[0]]:{current:hidden['background-color'],stored:hidden[key]},[ids[1]]:{current:'#abcdef80',stored:'none'}},op={ids,fileHash:r.hash,property:'background-color',value:'#12345678',scope:'tablet:',backgroundPaints,contexts:Object.fromEntries(ids.map(id=>[id,{}]))};
+  for(const result of [require('../src/color-override-selection.cjs').plan(r,op,adapter),require('../src/text-style-selection.cjs').plan(r,{...op,type:'applyColorStyleSelection'},style,adapter,'color')]){
+   assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);assert.equal(result.edits[0].before,source);const next=resolve(result.edits[0].after);
+   const classes=ids.map(id=>adapter.describe({...next,element:next.elements.find(el=>el.id===id)}).className);assert.equal(C.overridden(classes[0],'background-color','#12345678','tablet:'),false);assert.equal(C.overridden(classes[1],'background-color','#12345678','tablet:'),false);assert.ok(classes[0].includes('tablet:!['+key+':'));assert.ok(!classes[1].includes('tablet:!['+key+':'));assert.equal(C.overridden(classes[0],'background-color','#33669980',''),false);
+  }
+  const invalid=require('../src/color-override-selection.cjs').plan(r,{...op,backgroundPaints:{...backgroundPaints,[ids[1]]:{current:'#ff0000',stored:hidden[key]}}},adapter);assert.equal(invalid.ok,false);assert.equal(invalid.edits,undefined);
+ }
+});

@@ -29,7 +29,7 @@ function plan(resolved,op,style,adapter,family='text'){
     if(!link)continue;
     if(type.startsWith('reset')){selectedStyle=style?.styles?.find(item=>item.id===link.id);if(!selectedStyle)return refuse('A selected layer uses an unavailable style. Restore its library or detach the link.');}
    }
-   const result=linked.plan(current,{type,scope:op.scope,width:op.width,property:op.property,fileHash:hash},selectedStyle);
+   const result=linked.plan(current,{type,scope:op.scope,width:op.width,property:op.property,fileHash:hash,...(color?{backgroundPaint:op.backgroundPaints?.[id]}:{})},selectedStyle);
    if(!result.ok)return result;source=result.edits[0]?.after||source;
   }
   const elements=adapter.collect(source,resolved.relPath).elements,hash=adapter.contentHash(source),selection=ids.map(id=>{
