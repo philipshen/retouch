@@ -1,0 +1,11 @@
+'use strict';
+const assert=require('node:assert/strict');
+exports.run=async({page,app,stacks,read,record,settled,open})=>{
+ const input=page.getByLabel('Shared Shadow 1 color',{exact:true}),edit=async value=>{await input.fill(value);await input.press('Enter');await record();},action=async name=>{await page.getByRole('button',{name,exact:true}).click();await record();},alpha=async()=>page.evaluate(stacks=>stacks.map(stack=>RetouchPaintPicker.parsePaint(stack[0].color)?.alpha),await stacks()),before=await stacks();
+ await edit('oklch(0.7 0.2 140 / 0.6)');assert.equal(await input.inputValue(),'oklch(0.7 0.2 140 / 0.6)');(await stacks()).forEach((stack,i)=>assert.deepEqual(stack.slice(1),before[i].slice(1)));
+ await action('Hide shared shadow 1');assert.deepEqual(await alpha(),[0,0]);await edit('hsl(210 50% 40% / 0.6)');assert.deepEqual(await alpha(),[0,0]);assert.equal(await input.inputValue(),'hsl(210 50% 40% / 0.6)');await action('Show shared shadow 1');assert.deepEqual(await alpha(),[.6,.6]);
+ await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await settled();await open();await action('Hide Shadow 1');await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click({modifiers:['Shift']});await settled();assert.equal(await page.getByRole('button',{name:'Hide shared shadow 1',exact:true}).getAttribute('aria-pressed'),'mixed');await action('Hide shared shadow 1');assert.deepEqual(await alpha(),[0,0]);await action('Show shared shadow 1');assert.deepEqual(await alpha(),[.6,.6]);
+ await edit('currentColor');assert.equal(await app.locator('h1,p').evaluateAll(els=>els.slice(0,2).every(el=>{const css=getComputedStyle(el);return parent.RetouchHTMLCSSValues.parseShadows(css.boxShadow)[0].color===css.color;})),true);assert.ok(read().includes('currentColor'));
+ const saved=read();await input.fill('inherit');await input.press('Enter');await settled();assert.equal(read(),saved);assert.equal(await input.evaluate(el=>el.checkValidity()),false);await input.press('Escape');await input.fill('currentColor');await input.press('Tab');await settled();assert.equal(read(),saved);
+ console.log('PASS shared CSS shadow colors, hidden HSL edits, mixed visibility, currentColor, sibling preservation and invalid-color refusal');
+};
