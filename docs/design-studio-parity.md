@@ -20119,3 +20119,24 @@ value and undo the reset. Logs: `/tmp/retouch-logical-flow-units.log`,
 
 Full arbitrary-site/Figma parity and trusted Homebrew distribution remain
 incomplete. No native rebuild or push in this continuation.
+
+### Ordinary inline flex sizing
+
+Flow resize now accepts ordinary inline flex shorthand and grow/shrink/basis
+properties. Native sizing writes promote main-axis size/flex utilities to
+important when inline flex would otherwise win. Cross-axis sizing leaves inline
+flex behavior alone. Reset removes the managed size and flex utilities, exposing
+the original inline rule. Inline important sizing remains guarded.
+
+Validation: 1,685 unit tests passed. React/Chromium inline flex shorthand and
+HTML/Chromium plus Liquid/WebKit inline grow/shrink/basis browser fixtures passed
+pointer/corner/proportional/keyboard sizing, live dimension display, sibling
+reflow, responsive breakpoint isolation, cancellation and exact source undo.
+React and Liquid also reset the saved height to its original flex layout and
+undo the reset. Inspected `/private/tmp/retouch-flow-resize-react.png` during live
+resizing. Logs: `/tmp/retouch-inline-flex-units.log` and
+`/tmp/retouch-inline-flex-{react,html,liquid}.log`.
+
+These checks do not establish full flex/grid or arbitrary-site coverage. Full
+Figma parity and trusted Homebrew distribution remain incomplete. No native
+rebuild or push in this continuation.

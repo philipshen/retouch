@@ -404,3 +404,14 @@ test('inline logical dimensions follow the selected layer writing mode',()=>{
   assert.equal(L.sizeClasses('',inline,'fixed',120,{inlineDimensions:L.inlineDimensions(el({'inline-size':'50%'}),{writingMode})}),inline==='width'?'!w-[120px]':'!h-[120px]');
  }
 });
+
+test('inline flex sizing gets main-axis overrides and removable reset',()=>{
+ const parent={display:'flex',direction:'column',inlineFlex:true};
+ assert.equal(L.sizeClasses('w-20','height','fixed',120,parent),'w-20 !h-[120px] !flex-none');
+ assert.equal(L.sizeClasses('w-20','height','fill',0,parent),'w-20 !h-auto !flex-1');
+ assert.equal(L.sizeClasses('w-20','height','hug',0,parent),'w-20 !h-fit !flex-none');
+ assert.equal(L.sizeClasses('w-20 !h-[120px] !flex-none','height','reset',0,parent),'w-20');
+ assert.equal(L.sizeClasses('h-20','width','fixed',100,parent),'h-20 w-[100px]');
+ assert.equal(L.sizeClasses('','width','fixed',100,{...parent,writingMode:'vertical-rl'}),'!w-[100px] !flex-none');
+ assert.equal(L.sizeClasses('','height','fixed',100,{...parent,display:'block'}),'h-[100px]');
+});
