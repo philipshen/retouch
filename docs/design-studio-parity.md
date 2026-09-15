@@ -20337,3 +20337,28 @@ passed. Logs: `/tmp/retouch-resize-style-before.log`,
 
 Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
 incomplete. No native rebuild or push.
+
+
+### Shared sizing over ordinary inline dimensions
+
+React/Liquid shared Width and Height fields and Fixed/Hug/Fill/Auto choices now
+accept ordinary inline physical and logical dimensions. The sizing context maps
+logical dimensions through each layer's writing mode and emits scoped important
+utilities when needed; flex main-axis edits also override ordinary inline flex
+sizing. Auto emits an important auto dimension over inline dimensions. Reset
+removes scoped utilities without modifying original inline source. Important
+inline dimensions remain guarded; existing inline logical min/max and item
+alignment restrictions remain.
+
+Validation: 1,694 unit tests passed. New browser coverage passed for mixed
+physical/logical dimensions and mixed content/border box sizing on
+React/Chromium and Liquid/WebKit: numeric width/height, Hug text geometry, Fill
+and Auto parent bounds, phone isolation, exact source undo and original inline
+attributes, plus important-inline disabled controls. An additional Liquid/WebKit
+phase verified fixed width overrides inline flex basis/grow/shrink. Logs:
+`/tmp/retouch-shared-inline-size-units-final.log`,
+`/tmp/retouch-shared-inline-size-react.log`,
+`/tmp/retouch-shared-inline-size-flex.log`.
+
+Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
+incomplete. No native rebuild or push.

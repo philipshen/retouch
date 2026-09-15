@@ -1,0 +1,24 @@
+'use strict';
+const assert=require('node:assert/strict');
+module.exports=async({page,app,read,wait,settled,kind})=>{
+ const source=read(),targets=app.locator('h1,p.other-font'),styles=await targets.evaluateAll(els=>els.map(el=>el.getAttribute('style'))),sizes=()=>targets.evaluateAll(els=>els.map(el=>{const r=el.getBoundingClientRect();return [r.width,r.height];}));
+ const screen=page.getByLabel('Screen size',{exact:true});await screen.selectOption('390x844');await settled();const phone=await sizes();
+ await screen.selectOption('768x1024');await page.getByLabel('Style screen scope',{exact:true}).selectOption('md:');await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click({modifiers:['Shift']});await settled();const original=await sizes();
+ const undo=async()=>{await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===source);await settled();assert.deepEqual(await sizes(),original);assert.deepEqual(await targets.evaluateAll(els=>els.map(el=>el.getAttribute('style'))),styles);};
+ for(const [axis,index]of [['Width',0],['Height',1]]){
+  const input=page.getByLabel('Shared '+axis+' (px)',{exact:true});assert.equal(await input.isEnabled(),true);await input.fill('200');await input.press('Enter');await wait(()=>read()!==source);await settled();await wait(async()=>(await sizes()).every(size=>Math.abs(size[index]-200)<.1));
+  assert.deepEqual((await sizes()).map(size=>size[1-index]),original.map(size=>size[1-index]));assert.deepEqual(await targets.evaluateAll(els=>els.map(el=>el.getAttribute('style'))),styles);
+  await screen.selectOption('390x844');await settled();assert.deepEqual(await sizes(),phone);await screen.selectOption('768x1024');await settled();await undo();
+ }
+ for(const mode of ['hug','fill','auto']){
+  await page.getByLabel('Shared Width sizing',{exact:true}).selectOption(mode);await wait(()=>read()!==source);await settled();
+  await wait(async()=>await targets.evaluateAll((els,mode)=>els.every(el=>{if(mode!=='hug')return Math.abs(el.getBoundingClientRect().width-768)<1;const r=el.ownerDocument.createRange();r.selectNodeContents(el);const css=getComputedStyle(el),extra=['padding-left','padding-right','border-left-width','border-right-width'].reduce((sum,key)=>sum+(parseFloat(css.getPropertyValue(key))||0),0);return Math.abs(el.getBoundingClientRect().width-r.getBoundingClientRect().width-extra)<1;}),mode));
+  assert.deepEqual(await targets.evaluateAll(els=>els.map(el=>el.getAttribute('style'))),styles);await undo();
+ }
+ const main=app.locator('main'),mainStyle=await main.getAttribute('style');await main.evaluate(el=>{el.style.display='flex';el.style.width='768px';});await targets.evaluateAll(els=>els.forEach(el=>el.style.flex='1 1 0px'));
+ await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click({modifiers:['Shift']});await settled();
+ await page.getByLabel('Shared Width (px)',{exact:true}).fill('200');await page.getByLabel('Shared Width (px)',{exact:true}).press('Enter');await wait(()=>read()!==source);await settled();await wait(async()=>(await sizes()).every(size=>Math.abs(size[0]-200)<.1));
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===source);await settled();await main.evaluate((el,style)=>{el.setAttribute('style',style||'');if(style===null)el.removeAttribute('style');},mainStyle);await targets.evaluateAll((els,styles)=>els.forEach((el,i)=>el.setAttribute('style',styles[i])),styles);
+ await targets.nth(1).evaluate(el=>el.style.setProperty('width','140px','important'));await page.getByRole('treeitem',{name:'h1 · Headline',exact:true}).click();await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click({modifiers:['Shift']});await settled();assert.equal(await page.getByLabel('Shared Width (px)',{exact:true}).isDisabled(),true);assert.equal(await page.getByLabel('Shared Width sizing',{exact:true}).isDisabled(),true);assert.equal(read(),source);await targets.nth(1).evaluate((el,style)=>el.setAttribute('style',style),styles[1]);
+ console.log(kind+': PASS shared inline physical/logical dimensions, mixed box sizing, fixed/hug/fill/auto, responsive isolation and exact undo');
+};
