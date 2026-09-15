@@ -374,3 +374,9 @@ test('alignment reset removes item longhands while preserving grid distribution 
  assert.equal(L.resetAlignmentClasses(source,{display:'flex'}),'!place-items-end justify-items-center md:items-start');
  assert.equal(L.resetAlignmentClasses('before:content-[a] content-end [align-content:center] place-content-start',{display:'flex'}),'before:content-[a] place-content-start');
 });
+
+
+test('gap scrubbing starts normal at zero and preserves supported units',()=>{
+ for(const raw of ['normal','12','12px','1.5rem','10%','.5em','1vw','1vh','2ch']){const parsed=L.gapScrubValue(raw);assert.ok(parsed,raw);assert.equal(parsed.min,0);assert.equal(parsed.max,10000);assert.equal(L.gapValue(parsed.format(parsed.value)),raw==='normal'?'0px':raw==='12'?'12px':raw==='.5em'?'0.5em':raw);}
+ for(const raw of ['Mixed','','-1','10001px','calc(10px + 2px)','var(--gap)','1px;display:none'])assert.equal(L.gapScrubValue(raw),null);
+});

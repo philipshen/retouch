@@ -126,6 +126,11 @@
     const inline=/^(vertical|sideways)-/.test(parent.writingMode||'')?'height':'width',block=inline==='width'?'height':'width';
     return {inline,block,main:/^column/.test(parent.direction||'')?block:inline};
   }
+  function gapScrubValue(raw){
+    if(raw.trim()==='normal')return {value:0,min:0,max:10000,format:String};
+    const match=/^(\d+(?:\.\d*)?|\.\d+)(px|%|rem|em|vw|vh|ch)?$/.exec(raw.trim());
+    return match&&Number(match[1])<=10000?{value:Number(match[1]),min:0,max:10000,format:value=>String(value)+(match[2]||'')}:null;
+  }
   function gapValue(value){
     value=String(value).trim();
     if(/^(?:\d+\.?\d*|\.\d+)$/.test(value))value+='px';
@@ -282,6 +287,9 @@
         input.onchange=()=>{if(input.value===initial)return;try{save(gapClasses(classes,axis,input.value,css.writingMode,info.styleScope?info.anchorInheritedClasses||'':''));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
         input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};
         const row=document.createElement('div');row.className='property-row';sec.append(row);I.field(row,label,input);
+        const property=prop==='columnGap'?'column-gap':'row-gap',writingMode=css.writingMode;
+        I.numericLabelDrag(input,raw=>['gap',property].some(name=>el.style.getPropertyValue(name))?null:gapScrubValue(raw));
+        input.retouchNumericPreview=()=>{const parsed=gapScrubValue(input.value),preview=root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true});return {current:()=>el.isConnected&&el.ownerDocument.defaultView.getComputedStyle(el).writingMode===writingMode&&preview.current(),update:value=>preview.update(gapValue(parsed.format(value))),restore:()=>preview.restore()};};
         const resetLabel='Reset '+label.toLowerCase(),reset=I.button('↺',()=>save(gapClasses(classes,axis,null,css.writingMode)));reset.setAttribute('aria-label',resetLabel);reset.title=resetLabel;reset.classList.add('property-reset');
         reset.disabled=gapClasses(classes,axis,null,css.writingMode)===classes;row.append(reset);
       }
@@ -370,6 +378,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={gapScrubValue,resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

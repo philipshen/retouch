@@ -199,12 +199,12 @@
    const reset=I.button('Reset shared clip content',()=>write(null));reset.disabled=input.disabled||infos.every(info=>changeClip(info.className,scope,null)===info.className);groups.layout.append(reset);
   }
   I.note(groups.layout,'Row and column follow each container’s writing direction. Flex supports wrapping; flex and grid support child alignment. Reset reveals inherited layout styles.');
-  const lengthDrag=(input,properties)=>{
-   const parse=raw=>{const match=/^(\d+(?:\.\d+)?|\.\d+)(px|%|rem|em|vw|vh|ch)?$/.exec(raw.trim());return match?{value:Number(match[1]),min:0,max:10000,format:value=>String(value)+(match[2]||'')}:null;};
+  const lengthDrag=(input,properties,normal=false)=>{
+   const parse=raw=>{if(normal)return root.RetouchLayout.gapScrubValue(raw);const match=/^(\d+(?:\.\d+)?|\.\d+)(px|%|rem|em|vw|vh|ch)?$/.exec(raw.trim());return match?{value:Number(match[1]),min:0,max:10000,format:value=>String(value)+(match[2]||'')}:null;};
    I.numericLabelDrag(input,parse);
    input.retouchNumericPreview=()=>{
     const parsed=parse(input.value),targets=infos.map((_,i)=>liveElement(i)),previews=targets.flatMap(el=>properties(el).map(property=>root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true})));
-    return {current:()=>targets.every((el,i)=>el.isConnected&&(!resolveElement||resolveElement(infos[i].id)===el)),update:value=>{const raw=parsed.format(value),css=/[a-z%]$/i.test(raw)?raw:raw+'px';previews.forEach(preview=>preview.update(css));},restore:()=>previews.forEach(preview=>preview.restore())};
+    const writingModes=targets.map(el=>el.ownerDocument.defaultView.getComputedStyle(el).writingMode);return {current:()=>targets.every((el,i)=>el.isConnected&&(!resolveElement||resolveElement(infos[i].id)===el)&&el.ownerDocument.defaultView.getComputedStyle(el).writingMode===writingModes[i])&&previews.every(preview=>preview.current()),update:value=>{const raw=parsed.format(value),css=/[a-z%]$/i.test(raw)?raw:raw+'px';previews.forEach(preview=>preview.update(css));},restore:()=>previews.forEach(preview=>preview.restore())};
    };
   };
 
@@ -232,7 +232,7 @@
     const values=computed.map(css=>css.getPropertyValue(L.layoutAxes({writingMode:css.writingMode}).inline===axis?'column-gap':'row-gap').replace(/px$/,'')),mixed=values.some(value=>value!==values[0]),initial=mixed?'':values[0],input=root.document.createElement('input');input.type='text';input.value=initial;input.placeholder=mixed?'Mixed':'normal';input.disabled=blocked;input.title=blocked?'A selected layer has an inline gap. Edit that source style first.':label+'; px, %, rem, em, vw, vh, ch or normal.';
     const write=value=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(inlineGap(el)||!gapApplies(el.ownerDocument.defaultView.getComputedStyle(el),axis))throw Error('Select compatible containers without inline gap overrides.');return [info.id,changeGap(info.className,scope,axis,value,el.ownerDocument,el.ownerDocument.defaultView.getComputedStyle(el).writingMode)];})));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
     input.oninput=()=>input.setCustomValidity('');input.onchange=()=>write(input.value);input.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();input.value=initial;input.setCustomValidity('');input.blur();}else if(event.key==='Enter'){event.preventDefault();event.stopPropagation();input.blur();}};
-    const row=root.document.createElement('div');row.className='property-row';pair.append(row);I.field(row,'Shared '+label,input);input.parentElement.querySelector('span').textContent=icon;lengthDrag(input,el=>[L.layoutAxes({writingMode:el.ownerDocument.defaultView.getComputedStyle(el).writingMode}).inline===axis?'column-gap':'row-gap']);
+    const row=root.document.createElement('div');row.className='property-row';pair.append(row);I.field(row,'Shared '+label,input);input.parentElement.querySelector('span').textContent=icon;lengthDrag(input,el=>[L.layoutAxes({writingMode:el.ownerDocument.defaultView.getComputedStyle(el).writingMode}).inline===axis?'column-gap':'row-gap'],true);
     const reset=I.button('Reset selected '+label.toLowerCase(),()=>write(null));reset.disabled=blocked||infos.every((info,i)=>changeGap(info.className,scope,axis,null,elements[i].ownerDocument,computed[i].writingMode)===info.className);reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');row.append(reset);
    }
    if(!pair.children.length)pair.remove();
