@@ -44,6 +44,17 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   for(const [input,key]of [[dash,'dash'],[gap,'gap']]){input.type='text';input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{const next=P.dashPair(raw.value,{[key]:input.value.trim()});if(next===null){input.setCustomValidity('Enter a nonnegative dash length in pixels or percent.');input.reportValidity();return;}write(next);};}
   settings.insertBefore(group,settings.children[1]||null);group.append(rawRow);sync();
  }
+ function sharedStrokePattern(settings){
+  const raw=settings.querySelector('[data-svg-stroke="stroke-dasharray"]');if(!raw?.retouchDashValues)return;
+  const I=root.RetouchInspector,P=root.RetouchSVGPaint,row=raw.closest('.property-row')||raw.closest('.inspector-field'),group=document.createElement('div'),style=document.createElement('select'),dash=document.createElement('input'),gap=document.createElement('input');group.className='stroke-pattern-controls';
+  for(const [value,label]of [['mixed','Mixed'],['solid','Solid'],['dashed','Dashed'],['custom','Custom']]){const option=document.createElement('option');option.value=value;option.textContent=label;option.disabled=value==='mixed';style.append(option);}
+  I.field(group,'Shared Stroke style',style);style.closest('.inspector-field').querySelector('span').textContent='Style';const reset=row.querySelector('.property-reset');if(reset){const wrapper=document.createElement('div'),field=style.closest('.inspector-field');wrapper.className='property-row';field.before(wrapper);wrapper.append(field,reset);}I.field(group,'Shared Dash length',dash);I.field(group,'Shared Dash gap',gap);dash.closest('.inspector-field').querySelector('span').textContent='Dash';gap.closest('.inspector-field').querySelector('span').textContent='Gap';
+  const patterns=()=>raw.retouchDashValues().map(value=>P.pattern(value)),sync=()=>{const parsed=patterns(),types=parsed.map(value=>value?.type||'custom');style.value=types.every(value=>value===types[0])?types[0]:'mixed';for(const [input,index]of [[dash,0],[gap,1]]){const values=parsed.map(value=>value?.parts[index]||value?.parts[0]||'4');input.value=values.every(value=>value===values[0])?values[0]:'';input.placeholder=input.value?'':'Mixed';input.disabled=raw.disabled||!parsed.every(value=>value?.type==='dashed');input.closest('.inspector-field').hidden=style.value==='solid'||style.value==='custom';}style.disabled=raw.disabled;row.hidden=style.value!=='custom';};
+  const write=values=>{if(raw.disabled)return;Promise.resolve(raw.retouchSetDashValues(values)).catch(error=>{raw.setCustomValidity(error.message);raw.reportValidity();});};
+  style.onchange=()=>{if(style.value==='custom'){row.hidden=false;dash.closest('.inspector-field').hidden=true;gap.closest('.inspector-field').hidden=true;raw.focus();return;}write(raw.retouchDashValues().map(value=>style.value==='solid'?'none':P.dashPair(value)));};
+  for(const [input,key]of [[dash,'dash'],[gap,'gap']]){input.type='text';input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(input.disabled)return;const values=raw.retouchDashValues().map(value=>P.dashPair(value,{[key]:input.value.trim()}));if(values.some(value=>value===null)){input.setCustomValidity('Enter a nonnegative dash length in pixels or percent.');input.reportValidity();return;}root.RetouchPanelFocus?.queue(input);write(values);};}
+  row.before(group);group.append(row);sync();for(const input of [dash,gap])I.fieldDraft(input);
+ }
  function strokeIconControls(settings){
   const configurations=[['SVG line ends','Stroke caps',[['butt','No caps','M3 6h10v12H3 M13 3v18'],['square','Square caps','M3 6h15v12H3 M13 3v18'],['round','Round caps','M3 6h10a6 6 0 0 1 0 12H3 M13 3v18']]],['SVG line joins','Stroke joins',[['miter','Miter join','M4 4h16v16 M4 10h10v10'],['bevel','Bevel join','M4 4h10l6 6v10 M4 10h10v10'],['round','Round join','M4 4h10a6 6 0 0 1 6 6v10 M4 10h10v10']]]];
   for(const [label,name,choices]of configurations){
@@ -553,6 +564,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     }
     group.classList.add('sec');shared.before(group);for(const input of group.querySelectorAll('input[data-paint-property]'))if(['background-color','border-color','fill','stroke'].includes(input.dataset.paintProperty))compactPaint(group,input);
    }
+   if(svg){const stroke=groups.find(group=>group.dataset.sharedSection==='stroke');if(stroke)sharedStrokePattern(stroke);}
    if(css&&css.querySelector('input,select,button')){css.classList.add('shared-inspector-notes');shared.before(css);}
    if(notes.children.length>1){notes.classList.add('shared-inspector-notes');shared.before(notes);}
    shared.remove();

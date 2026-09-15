@@ -17321,3 +17321,11 @@ The primary shared Stroke section now edits width, caps, joins, dash pattern/off
 All 1,571 existing unit tests passed; the expanded 21-test shared-style suite also passes, including a new test for scoped SVG stroke edits, important inherited widths, paint preservation, reset and invalid values. Browser flows cover all seven controls on HTML/Chromium, React/Chromium and Liquid/WebKit, unselected sibling preservation, invalid negative width, and exact grouped undo/redo. Additional HTML and Liquid flows cover tablet-only width versus phone and draft cancellation. No new server operation was needed.
 
 This provides shared literal stroke-property editing. Figma-equivalent stroke alignment, richer dash controls and per-edge vector behavior, broader responsive fidelity, arbitrary-site coverage and trusted native/Homebrew release remain incomplete.
+
+### Shared dash and gap editing — 2026-09-15
+
+Shared SVG strokes now offer Solid, Dashed and Custom styles, with separate Dash and Gap fields for simple patterns. Mixed dash/gap values are explicit. Editing one dimension preserves the other dimension on each selected source layer; each change remains one atomic selection transaction. Complex patterns retain the raw Custom field. Invalid negative lengths refuse writes, Escape restores the initial field value, and dash reset stays accessible while the raw pattern field is hidden.
+
+HTML/Chromium, React/Chromium and Liquid/WebKit flows verify differing initial patterns, per-layer gap preservation, common gap edits, invalid draft cancellation, Solid/Dashed transitions and exact source undo/redo. The existing HTML stroke-property and responsive-width browser regression passes through the new Custom mode. The light-theme layout was inspected.
+
+Out-of-range per-layer dash authoring, richer multi-segment pattern editing, stroke alignment and the broader Figma/native/Homebrew parity requirements remain open.

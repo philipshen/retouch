@@ -17,9 +17,16 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
   const input=page.getByLabel('Shared SVG '+property+(kind==='html'?'':' with alpha'),{exact:true});await input.fill('ABCDEF');await input.press('Enter');await record();const changed=await paints(property);assert.ok(changed.slice(0,2).every(p=>Math.abs(p.alpha-.35)<1e-6));assert.ok(changed.slice(0,2).every(p=>p.channels.map(n=>Math.round(n*255)).join(',')==='171,205,239'));assert.deepEqual(changed[2],untouched[property]);
   const unchanged=read();await input.focus();assert.equal(await input.inputValue(),'ABCDEF');await input.press('Tab');await settled();assert.equal(read(),unchanged);
  }
+ if(process.env.RT_E2E_SHARED_SVG_DASH){
+  const values=()=>app.locator('main > svg > rect,main > svg > circle').evaluateAll(els=>els.map(el=>getComputedStyle(el).strokeDasharray));const style=page.getByLabel('Shared Stroke style',{exact:true}),dash=page.getByLabel('Shared Dash length',{exact:true}),gap=page.getByLabel('Shared Dash gap',{exact:true});assert.equal(await style.inputValue(),'dashed');assert.equal(await dash.getAttribute('placeholder'),'Mixed');assert.equal(await gap.getAttribute('placeholder'),'Mixed');
+  await dash.fill('3');await dash.press('Enter');await record();assert.deepEqual(await values(),['3px, 2px','3px, 6px']);await gap.fill('9');await gap.press('Enter');await record();assert.deepEqual(await values(),['3px, 9px','3px, 9px']);
+  const unchanged=read();await dash.fill('-2');await dash.press('Enter');assert.equal(await dash.evaluate(el=>el.checkValidity()),false);assert.equal(read(),unchanged);await dash.press('Escape');assert.equal(parseFloat(await dash.inputValue()),3);
+  await style.selectOption('solid');await record();assert.deepEqual(await values(),['none','none']);await style.selectOption('dashed');await record();assert.deepEqual(await values(),['4px, 4px','4px, 4px']);
+ }
  if(process.env.RT_E2E_SHARED_SVG_STROKES){
   const strokeState=()=>app.locator('main > svg > *').evaluateAll(els=>els.map(el=>{const css=getComputedStyle(el);return Object.fromEntries(['stroke-width','stroke-linecap','stroke-linejoin','stroke-dasharray','stroke-dashoffset','stroke-miterlimit','vector-effect'].map(key=>[key,css.getPropertyValue(key)]));})),initial=await strokeState();
   for(const [label,value,property,expected]of [['SVG stroke width','7','stroke-width','7px'],['SVG line ends','round','stroke-linecap','round'],['SVG line joins','bevel','stroke-linejoin','bevel'],['SVG dash pattern','4 2','stroke-dasharray','4px, 2px'],['SVG dash offset','2','stroke-dashoffset','2px'],['SVG miter limit','8','stroke-miterlimit','8'],['SVG stroke scaling','non-scaling-stroke','vector-effect','non-scaling-stroke']]){
+   if(label==='SVG dash pattern')await page.getByLabel('Shared Stroke style',{exact:true}).selectOption('custom');
    const input=page.getByLabel('Shared '+label,{exact:true});await wait(async()=>input.evaluate(el=>!!el.closest('#panelBody > [data-shared-section=stroke]')));
    if(await input.evaluate(el=>el.tagName==='SELECT'))await input.selectOption(value);else{await input.fill(value);await input.press('Enter');}await record();await wait(async()=>{const values=await strokeState();return values.slice(0,2).every(item=>item[property]===expected);});assert.deepEqual((await strokeState())[2],initial[2]);
   }
