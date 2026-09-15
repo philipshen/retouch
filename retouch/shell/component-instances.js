@@ -70,7 +70,13 @@
   return occurrenceShape(elements)===bookmark.shape?elements[bookmark.index]||null:null;
  }
  function bounds(elements){
-  const rects=elements.map(el=>el.getBoundingClientRect()).filter(r=>r.width||r.height);if(!rects.length)return null;
+  const rects=[];
+  function visit(el){
+   if(el.ownerDocument?.defaultView?.getComputedStyle(el).display==='contents'){
+    for(const child of el.childNodes){if(child.nodeType===1)visit(child);else if(child.nodeType===3&&child.textContent.trim()){const range=el.ownerDocument.createRange();range.selectNodeContents(child);rects.push(...range.getClientRects());}}
+   }else rects.push(el.getBoundingClientRect());
+  }
+  elements.forEach(visit);const visible=rects.filter(r=>r.width||r.height);rects.length=0;rects.push(...visible);if(!rects.length)return null;
   const left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top));return {left,top,width:Math.max(...rects.map(r=>r.right))-left,height:Math.max(...rects.map(r=>r.bottom))-top};
  }
  const api={group,tree,prioritize,bounds,captureOccurrence,restoreOccurrence};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.RetouchComponentInstances=api;

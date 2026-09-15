@@ -349,7 +349,7 @@ function planOp(resolved, op) {
   if(op.type==='duplicateElement'&&require('../liquid-svg-mask.cjs').describeDuplicate(resolved))return require('../liquid-svg-mask.cjs').plan(resolved,op);
   if(['createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds'].includes(op.type))return require('../liquid-svg-mask.cjs').plan(resolved,op);
   if(op.type==='insertSVG')return require('../liquid-svg-insert.cjs').plan(resolved,op);
-  if(['frameSelection','removeFrame'].includes(op.type))return require('../native-frame-selection.cjs').plan(resolved,op,'liquid');
+  if(['frameSelection','groupSelection','removeFrame'].includes(op.type))return require('../native-frame-selection.cjs').plan(resolved,op,'liquid');
   if(op.type==='insertElement')return require('../native-insert.cjs').plan(resolved,op,'liquid');
   if(op.type==='replaceSVGSelection')return require('../svg-combine-selection.cjs').plan(resolved,op,'liquid');
   if(['convertSVGToPath','convertSVGToArrow'].includes(op.type))return require('../svg-convert.cjs').plan(resolved,op);
@@ -471,6 +471,6 @@ module.exports = {
   describeComponent: resolved=>resolved.element.theme?theme.describe(resolved):components.describe(resolved),
   hasReference: components.hasReference,
   assets: { directory: 'assets', urlPrefix: '/assets/', uploadDirectory: '' },
-  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['frameSelection','removeFrame','reparentElement','reparentSelection','duplicateSelection','deleteSelection','moveSelection',...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertSVG','insertElement','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', 'setImageFill', ...structure.types] },
+  capabilities: { collectionSelection:true, classAttr: 'class', ops: ['frameSelection','groupSelection','removeFrame','reparentElement','reparentSelection','duplicateSelection','deleteSelection','moveSelection',...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertSVG','insertElement','setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'renameElement', 'setClassesSelection', 'setClasses', 'setText', 'setChildren', 'setTag', 'setSrc', 'setImageFill', ...structure.types] },
   _parse: parse, // exported for tests
 };

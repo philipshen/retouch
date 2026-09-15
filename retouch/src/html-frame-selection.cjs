@@ -9,21 +9,21 @@ function describe(resolved){
 function plan(resolved,op){
  const refuse=reason=>({ok:false,refused:true,reason});
  try{
-  if(!['frameSelection','removeFrame'].includes(op.type))return refuse('Choose frame selection or remove frame.');
+  if(!['frameSelection','groupSelection','removeFrame'].includes(op.type))return refuse('Choose group selection, frame selection or remove frame.');
   if(op.fileHash!==resolved.hash)return refuse('The file changed. Re-select the layers.');
   const elements=resolved.elements||html.collect(resolved.source,resolved.relPath).elements;
   let roots,parent,start,end,opening='',closing='',removed=null;
-  if(op.type==='frameSelection'){
+  if(op.type!=='removeFrame'){
    if(!Array.isArray(op.ids)||!op.ids.length||op.ids.length>100||new Set(op.ids).size!==op.ids.length||!op.ids.includes(resolved.element.id))return refuse('Choose 1–100 distinct layers in the same HTML document.');
    const selected=op.ids.map(id=>elements.find(e=>e.id===id));if(selected.some(e=>!e))return refuse('A selected layer no longer resolves.');
    roots=selected.filter(e=>!selected.some(other=>other!==e&&contains(other.node,e.node))).sort((a,b)=>a.location.startOffset-b.location.startOffset);
    parent=elements.find(e=>e.node===roots[0].node.parentNode);
-   if(!parent||roots.some(e=>e.node.parentNode!==parent.node))return refuse('Frame selection requires sibling layers in one container.');
+   if(!parent||roots.some(e=>e.node.parentNode!==parent.node))return refuse('Grouping and framing require sibling layers in one container.');
    const capability=insertion.describe({...resolved,element:parent});if(!capability.canInsert)return refuse(capability.insertReason);
    const ranges=structure.htmlRange({...resolved,elements,element:roots[0]}),indices=roots.map(e=>ranges.findIndex(r=>r.start===e.location.startOffset));
-   if(indices.some((at,index)=>at<0||at!==indices[0]+index))return refuse('Select consecutive sibling layers to frame without reordering other content.');
+   if(indices.some((at,index)=>at<0||at!==indices[0]+index))return refuse('Select consecutive sibling layers without reordering other content.');
    start=ranges[indices[0]].start;end=ranges[indices.at(-1)].end;
-   opening='<div data-rt-frame="" aria-label="Frame">';closing='</div>';
+   opening=op.type==='groupSelection'?'<div data-rt-frame="" data-rt-group="" aria-label="Group" style="display: contents">':'<div data-rt-frame="" aria-label="Frame">';closing='</div>';
   }else{
    removed=resolved.element;if(!isFrame(removed))return refuse('Choose a frame created from a layer selection.');
    structure.htmlRange({...resolved,elements});parent=elements.find(e=>e.node===removed.node.parentNode);

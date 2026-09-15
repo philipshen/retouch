@@ -1727,6 +1727,7 @@ function inTextScope(el, info) {
 }
 function drawBox(el, cls, kind) {
   const css=el.ownerDocument.defaultView.getComputedStyle(el);
+  if(css.display==='contents'){const bounds=RetouchComponentInstances.bounds([el]);if(bounds)drawBounds(bounds,cls,kind);return;}
   if(css.rotate&&css.rotate!=='none'&&css.rotate!=='0deg'||css.scale&&css.scale!=='none')try{const g=RetouchInspector.outlineGeometry(el);if(g.rotation||g.scaleX!==1||g.scaleY!==1){drawBounds({left:g.layoutLeft,top:g.layoutTop,width:g.width,height:g.height},cls,kind,{rotation:g.rotation,origin:g.transformOrigin});return;}}catch{}
   drawBounds(el.getBoundingClientRect(),cls,kind);
 }
@@ -4094,23 +4095,23 @@ async function restoreLayerSelection(ids){
   const infos=selected.map(result=>result.element),first=infos[0];sel={hostId:first.id,instanceId:first.kind==='instance'?first.id:null,scope:first.kind==='instance'?'instance':'host',info:first,multiple:infos.length>1?infos:undefined};
 }
 async function structureSelection(action,extra={}){
-  if(sel.multiple?.length>1&&!sel.info.cssAuthoring&&!['duplicateElement','deleteElement','moveSelection','reparentElement','frameSelection'].includes(action))return toast('This structural action is not available for these source layers yet.','err');
+  if(sel.multiple?.length>1&&!sel.info.cssAuthoring&&!['duplicateElement','deleteElement','moveSelection','reparentElement','frameSelection','groupSelection'].includes(action))return toast('This structural action is not available for these source layers yet.','err');
   const selection=sel.multiple||[sel.info],info=sel.info;busyPanel(true);
   try{
-    const type=['frameSelection','removeFrame','moveSelection'].includes(action)?action:action==='duplicateElement'?'duplicateSelection':action==='deleteElement'?'deleteSelection':'reparentSelection';
+    const type=['frameSelection','groupSelection','removeFrame','moveSelection'].includes(action)?action:action==='duplicateElement'?'duplicateSelection':action==='deleteElement'?'deleteSelection':'reparentSelection';
     const result=await api('POST','/rt/__api/op',{type,id:info.id,ids:selection.map(item=>item.id),fileHash:info.hash,...extra});
     if(!result?.ok)return toast(result?.reason||result?.error||'Could not update selected layers','err');
     const deletedLocks=result.removedSourceIds?layerLocks.removeSourceIds(result.removedSourceIds):null;
     editorHistory.record({type:'structureSelection',id:result.parentId,selectionBefore:selection.map(item=>item.id),selectionAfter:result.selectionIds,undoId:result.undoId,...(result.sourceIdMap?{sourceIdMap:result.sourceIdMap}:{}),...(deletedLocks?{deletedLocks,removedSourceIds:result.removedSourceIds}:{})});
     if(result.sourceIdMap)layerLocks.remap(result.sourceIdMap);
     if(/\.[jt]sx$/i.test(info.file)){const parent=await api('GET',resolveUrl(result.parentId));if(!parent?.ok)throw Error('The edited source parent no longer resolves.');await refreshWrittenElement(parent.element,()=>true);}else await reloadFrame();await restoreLayerSelection(result.selectionIds);if(sel)renderPanel();
-    toast(result.rootCount+' layer'+(result.rootCount===1?'':'s')+(action==='duplicateElement'?' duplicated':action==='deleteElement'?' deleted':action==='frameSelection'?' framed':action==='removeFrame'?' released from frame':' moved'),'ok');
+    toast(result.rootCount+' layer'+(result.rootCount===1?'':'s')+(action==='duplicateElement'?' duplicated':action==='deleteElement'?' deleted':action==='frameSelection'?' framed':action==='groupSelection'?' grouped':action==='removeFrame'?' released from frame':' moved'),'ok');
   }finally{busyPanel(false);}
 }
 async function structureAction(action) {
   if(!sel || panelTasks || undoBusy || sourceRequests)return;
   if(sel.info.kind==='instance'&&sel.multiple?.length>1){if(action==='duplicateElement')return duplicateComponentSelection();if(action==='deleteElement')return deleteComponentSelection();if(action==='reparentElement')return chooseComponentParent(sel.info);if(['before','after','first','last'].includes(action)&&sharedComponentOrdering(sel.multiple)[action])return reparentComponentSelection(sel.multiple,undefined,action);return toast('Choose one component for this structural edit.','err');}
-  if(['frameSelection','removeFrame'].includes(action)){await commitInlineEdit();if(sel)return structureSelection(action);return;}
+  if(['frameSelection','groupSelection','removeFrame'].includes(action)){await commitInlineEdit();if(sel)return structureSelection(action);return;}
   if(action==='deleteElement'&&sel.multiple?.length>1){
     const selection=sel.multiple,owners=selection.map(info=>info.svgBooleanGroup?info.svgBooleanGroup.ancestorId:info.svgBooleanOwner);
     if(owners.every(Boolean)&&new Set(owners).size===1){const response=await api('GET',resolveUrl(owners[0]));if(sel?.multiple!==selection)return;if(!response?.ok||selection.some(info=>info.hash!==response.element.hash||!response.element.svgBooleanGroup?.operandIds.includes(info.id)))return toast('Re-select direct originals from the same boolean group.','err','boolean-edit');return writeSVGBooleanGroup('removeSVGBooleanOperand',{operandIds:selection.map(info=>info.id)},response.element);}

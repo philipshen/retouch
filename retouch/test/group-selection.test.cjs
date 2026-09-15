@@ -1,0 +1,8 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+for(const language of ['html','react','liquid']){
+ const adapter=require('../src/adapters/'+language+'.cjs'),tag=e=>language==='react'?e.node.openingElement.name.name:e.tag,plan=(r,op)=>language==='html'?require('../src/html-frame-selection.cjs').plan(r,op):adapter.planOp(r,op);
+ test(language+' groups literal siblings and releases the group without changing child source',()=>{
+  const source=(language==='react'?'const v=':'')+'<main><b id="bold">B</b>\n<i>I</i><u>U</u></main>',relPath=language==='react'?'view.jsx':'view.'+language,elements=adapter.collect(source,relPath).elements,element=elements.find(e=>tag(e)==='b'),r={source,relPath,elements,element,file:'/p/'+relPath,hash:adapter.contentHash(source)},result=plan(r,{type:'groupSelection',ids:elements.filter(e=>['b','i'].includes(tag(e))).map(e=>e.id),fileHash:r.hash});assert.equal(result.ok,true,result.reason);const grouped=result.edits[0].after;assert.match(grouped,/data-rt-group="" aria-label="Group"/);assert.match(grouped,language==='html'?/style="display: contents"/:language==='react'?/className="contents"/:/class="contents"/);assert.match(grouped,/<b id="bold">B<\/b>\n<i>I<\/i><\/div><u>U<\/u>/);const next=adapter.collect(grouped,relPath).elements,group=next.find(e=>e.id===result.selectionIds[0]),released=plan({...r,source:grouped,elements:next,element:group,hash:result.hash},{type:'removeFrame',fileHash:result.hash});assert.equal(released.ok,true,released.reason);assert.equal(released.edits[0].after,source);assert.deepEqual(released.removedSourceIds,[group.id]);
+ });
+}

@@ -52,7 +52,8 @@
   });
   async function toSelection(elements){
     const w=frame.contentWindow,d=frame.contentDocument;
-    const visible=elements.filter(el=>el?.isConnected&&el.ownerDocument===d&&el.getBoundingClientRect().width>0&&el.getBoundingClientRect().height>0&&!['hidden','collapse'].includes(w.getComputedStyle(el).visibility));
+    const measure=el=>{const b=window.RetouchComponentInstances?.bounds([el]);return b?{...b,right:b.left+b.width,bottom:b.top+b.height}:el.getBoundingClientRect();};
+    const visible=elements.filter(el=>el?.isConnected&&el.ownerDocument===d&&measure(el).width>0&&measure(el).height>0&&!['hidden','collapse'].includes(w.getComputedStyle(el).visibility));
     if(!visible.length)return {ok:false,reason:'The selection has no visible bounds.'};
     window.dispatchEvent(new Event('retouch:before-zoom'));
     if(!screen){
@@ -65,7 +66,7 @@
     if(revision!==viewRevision)return {ok:false,reason:'The view changed while revealing the selection.'};
     if(visible.some(el=>!el.isConnected)||frame.contentDocument!==d)return {ok:false,reason:'The page changed before the selection could be revealed.'};
     visible[0].scrollIntoView({block:'center',inline:'center',behavior:'instant'});
-    const bounds=()=>{const rects=visible.map(el=>el.getBoundingClientRect()),left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top));return {left,top,width:Math.max(...rects.map(r=>r.right))-left,height:Math.max(...rects.map(r=>r.bottom))-top};};
+    const bounds=()=>{const rects=visible.map(measure),left=Math.min(...rects.map(r=>r.left)),top=Math.min(...rects.map(r=>r.top));return {left,top,width:Math.max(...rects.map(r=>r.right))-left,height:Math.max(...rects.map(r=>r.bottom))-top};};
     let rect=bounds();const p=center();change(Math.min((canvas.clientWidth-64)/rect.width,(canvas.clientHeight-64)/rect.height,maxScale),p.x,p.y);layout();revision=viewRevision;
     const snapshot=()=>{const r=bounds();return [w.scrollX,w.scrollY,r.left,r.top,r.width,r.height,canvas.scrollLeft,canvas.scrollTop,canvas.clientWidth,canvas.clientHeight];};
     const position=()=>{

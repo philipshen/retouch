@@ -38,7 +38,7 @@ module.exports = {
       structure:svgDeletion?{...base,canDelete:true,canDuplicate:!!svgDuplication||base.canDuplicate,canCopy:base.canDuplicate,canPaste:base.canPaste,parentId:svgDeletion.parentId,reason:base.reason?'SVG structural actions depend on the selected source subtree.':null}:base};
   },
   applyOp: (resolved,op) => {
-    if(['frameSelection','removeFrame'].includes(op.type))return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../native-frame-selection.cjs').plan(resolved,op,'react'));
+    if(['frameSelection','groupSelection','removeFrame'].includes(op.type))return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../native-frame-selection.cjs').plan(resolved,op,'react'));
     if(['reparentElement','reparentSelection'].includes(op.type))return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../native-reparent.cjs').plan(resolved,op,'react'));
     if(['duplicateSelection','deleteSelection','moveSelection'].includes(op.type))return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../native-structure-selection.cjs').plan(resolved,op,'react'));
     if(op.type==='insertElement')return require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),require('../native-insert.cjs').plan(resolved,op,'react'));
@@ -57,7 +57,7 @@ module.exports = {
     return svg||structure.types.has(op.type)?require('../transactions.cjs').applyPlan(resolved.appRoot||path.dirname(resolved.file),svg?svg.plan(resolved,op):structure.planOp(resolved,op,'react')):applyOp(resolved,op);
   },
   planOp: (resolved,op) => {
-    if(['frameSelection','removeFrame'].includes(op.type))return require('../native-frame-selection.cjs').plan(resolved,op,'react');
+    if(['frameSelection','groupSelection','removeFrame'].includes(op.type))return require('../native-frame-selection.cjs').plan(resolved,op,'react');
     if(['reparentElement','reparentSelection'].includes(op.type))return require('../native-reparent.cjs').plan(resolved,op,'react');
     if(['duplicateSelection','deleteSelection','moveSelection'].includes(op.type))return require('../native-structure-selection.cjs').plan(resolved,op,'react');
     if(op.type==='insertElement')return require('../native-insert.cjs').plan(resolved,op,'react');
@@ -70,6 +70,6 @@ module.exports = {
   assets: { directory: 'public', urlPrefix: '/', uploadDirectory: 'rt-assets' },
   capabilities: {
     classAttr: 'className',
-    ops: ['frameSelection','removeFrame','reparentElement','reparentSelection','duplicateSelection','deleteSelection','moveSelection',...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertElement','renameElement', 'insertSVG', 'setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'setClasses', 'setClassesSelection', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types],
+    ops: ['frameSelection','groupSelection','removeFrame','reparentElement','reparentSelection','duplicateSelection','deleteSelection','moveSelection',...require('../svg-boolean-group.cjs').types,'createSVGMask','releaseSVGMask','setSVGMaskType','setSVGMaskBounds','replaceSVGSelection','setSVGGradient','insertElement','renameElement', 'insertSVG', 'setSVGGeometry','setSVGTransform','setSVGTransforms', 'convertSVGToPath', 'convertSVGToArrow', 'setClasses', 'setClassesSelection', 'setText', 'setChildren', 'setTag', 'setSrc', ...structure.types],
   },
 };
