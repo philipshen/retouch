@@ -19867,3 +19867,29 @@ movement, resize and alignment checks passed in the same runs. Logs:
 
 Full arbitrary-site/Figma parity and trusted Homebrew distribution remain
 incomplete. No native rebuild or push in this checkpoint.
+
+
+### Transformed image geometry coverage
+
+Added a real image variant of the transformed-layer browser fixture, with
+object-fit cover, an off-center object position, percentage/calc translation,
+content-box transform reference, padding, borders, nested matrices, rotation
+and reflection. HTML/Chromium, React/Chromium and Liquid/WebKit passed X/Y
+scrubbing, canvas movement, resize handles, centered proportional resize, size
+limits, keyboard input, alignment, cancellation and exact undo. Image source
+and crop settings remain unchanged during resize previews and after saving.
+The HTML text fixture also passed with the shared measurement helper.
+
+The test oracle uses a temporary ordinary box for image corner probes, since
+replaced elements do not lay out their children. It verifies that the surrogate
+matches the actual image bounds before using its corner measurements. The helper
+is evaluated afresh across document reloads. An initial Liquid run exposed and
+led to removal of a document-lifetime assumption in the test harness.
+
+Inspected `/tmp/retouch-matrix-image.png`: transformed handles follow the border
+and the width readout updates during the gesture. Passing logs:
+`/tmp/retouch-matrix-image-{html,react,liquid}-verified.log` and
+`/tmp/retouch-matrix-image-text-regression.log`. This checkpoint changes browser
+coverage only; it does not establish coverage for every replaced element,
+transform reference or site. Full Figma/arbitrary-site parity and trusted
+Homebrew distribution remain incomplete. No native rebuild or push.
