@@ -18155,3 +18155,32 @@ Logs: `/tmp/retouch-group-position-units.log`,
 Group resize/rotation, viewport handling for negative-position groups, full
 Figma parity and trusted public Homebrew distribution remain incomplete. No
 desktop rebuild or push for this checkpoint.
+
+### Separate-parent group position verification
+
+Added a fixture with the ordinary selected layer inside a separately rotated and
+nonuniformly scaled side panel, while the selected group remains under the main
+container. This closes the previously unverified page-coordinate fallback for
+this concrete same-file case. The test independently computes page X/Y from
+rendered bounds and document scroll, checks the field values and page-coordinate
+tooltip, and confirms Parent bounds is absent for the mixed selection.
+
+HTML/Chromium, React/Chromium and Liquid/WebKit workflows pass typed X/Y changes,
+live label scrubbing, no source write before release, Escape restoration,
+unchanged dimensions and exact undo/redo. Their common ancestors are transformed
+as well. Responsive grouping/ungrouping checks still pass. Visually inspected the
+HTML screenshot with the distinct side-panel ancestor in the layer tree.
+
+The first run used a descendant locator for the layer expansion toggle, which is
+a sibling of the tree-item button. Correcting the locator allowed the checks to
+run; no editor implementation change was needed. Unit tests were not repeated
+because only browser fixtures/assertions and this checkpoint changed.
+
+Logs: `/tmp/retouch-group-separate-html-final.log`,
+`/tmp/retouch-group-separate-react-final.log`, and
+`/tmp/retouch-group-separate-webkit-final.log`.
+
+This does not establish arbitrary cross-file, repeated-instance or unsupported
+3D-transform editing. Group resize/rotation, viewport handling for negative
+positions, full Figma parity and trusted Homebrew distribution remain incomplete.
+No desktop rebuild or push for this checkpoint.
