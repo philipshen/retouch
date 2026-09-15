@@ -18468,3 +18468,25 @@ Logs: `/tmp/retouch-shared-flex-alignment-html-final.log`,
 
 Full Figma fidelity, arbitrary-site editing and trusted public Homebrew
 installation remain incomplete. No desktop rebuild or push.
+
+### Compact shared flex alignment and gap controls (2026-09-15)
+
+The shared HTML flex inspector now places the 3-by-3 alignment grid and Gap in
+one compact row. Align items, Align lines and Distribute items remain editable
+under Layout options. Direction, wrapping and padding stay prominent, and the
+original field/reset elements and handlers are preserved when regrouped.
+
+Chromium and WebKit passed all nine physical alignment positions, keyboard
+navigation, shared gap edit/reset with exact undo, detailed distribution editing
+and retained disclosure state. The contextual block/flex/grid layout regression
+and all 1,652 unit tests passed. Inspected
+`/tmp/retouch-shared-flex-alignment-html.png`: the grid and gap share a row and
+three redundant alignment rows are collapsed.
+
+Logs: `/tmp/retouch-shared-flex-compact-html.log`,
+`/tmp/retouch-shared-flex-compact-webkit.log`,
+`/tmp/retouch-shared-flex-compact-layout.log`, and
+`/tmp/retouch-shared-flex-compact-units.log`.
+
+Full Figma visual/interaction parity, arbitrary-site editing and trusted public
+Homebrew installation remain incomplete. No desktop rebuild or push.
