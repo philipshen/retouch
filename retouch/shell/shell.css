@@ -1239,3 +1239,5 @@ html, body { overflow:clip; }
 .background-visibility svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; }
 .background-color-hidden > .paint-field-control, .background-color-hidden > .paint-swatch { opacity: .5; }
 .shared-inspector-group .hint { color: var(--muted); font-size: 11px; line-height: 1.5; margin: 6px 0; }
+
+.shared-range-notice{position:sticky;top:48px;z-index:3;margin:8px 12px;padding:10px 12px;border:1px solid var(--border,#e5e5e5);border-radius:6px;background:var(--bg-secondary,#f5f5f5);font-size:11px;line-height:1.5;display:grid;gap:8px}.shared-range-notice[hidden]{display:none}.shared-range-notice .control-button{justify-self:start}

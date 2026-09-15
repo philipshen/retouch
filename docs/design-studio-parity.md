@@ -17343,3 +17343,9 @@ Shared compact opacity and bare-hex edits, plus per-layer dash/gap edits, now ch
 HTML/Chromium, React/Chromium and Liquid/WebKit flows verify disabled controls outside the tablet range, direct handler refusal, rejected bare hex, re-enabled controls on returning to tablet, and exact undo/redo. An additional HTML flow verifies explicit CSS color authoring while viewing the phone: phone paint is unchanged and the tablet receives the new color. The normal shared CSS paint regression passes.
 
 This closes the outside-range computed-value leak; it does not resolve all cascade inheritance. Editing base styles while a narrower override is active, overlapping active ranges, and independently inspecting inactive-range values still need source-aware or range-specific resolution. The full parity goal remains open.
+
+### Direct preview action for shared edit ranges — 2026-09-15
+
+An outside-range shared selection now shows a sticky notice with a Preview edit range action. It uses the existing responsive preview-size resolver, including the range's media conditions, and changes only the preview size. The chosen editing range and site source stay intact. The action explains the target dimensions; ranges that cannot be reached by resizing remain explicitly unavailable. Returning to a matching size hides the notice and re-enables per-layer paint controls.
+
+HTML/Chromium, React/Chromium and Liquid/WebKit flows verify the direct action, preserved source and scope, enabled controls on arrival, and correct scoped colors following explicit off-screen authoring. The HTML scroll check verifies the notice stays in the visible inspector area. This improves navigation to a range; it does not solve overlapping-cascade resolution or prove complete responsive/Figma/native distribution parity.

@@ -1779,6 +1779,8 @@ function screenScopeSection() {
   const chosen = options.find(o=>o.prefix===styleScope);
   const arbitrary = /^(min|max)-\[([\d.]+(?:px|rem|em))\]:$/.exec(styleScope);
   const condition = chosen?.condition || (arbitrary ? `(${arbitrary[1]}-width: ${arbitrary[2]})` : null);
+  section.retouchPreviewSize=()=>{const size={width:iframe.contentWindow.innerWidth,height:iframe.contentWindow.innerHeight};return condition?RetouchResponsive.previewSize({condition,queries:chosen?.queries},document,size):null;};
+  section.retouchPreviewRange=()=>{const size=section.retouchPreviewSize();if(!size)return false;stopDrawing?.();window.RetouchScreens?.set(size);return true;};
   const scopeStatus=document.createElement('div');scopeStatus.className='scope-status';scopeStatus.setAttribute('role','status');scopeStatus.setAttribute('aria-label','Edit range status');
   const matchesPreview=styleScope?(condition?RetouchResponsive.matches({condition,queries:chosen?.queries},iframe.contentWindow):null):true;
   scopeStatus.dataset.match=matchesPreview===null?'unknown':String(matchesPreview);
