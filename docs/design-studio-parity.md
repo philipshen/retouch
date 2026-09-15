@@ -18515,3 +18515,30 @@ Logs: `/tmp/retouch-shared-stack-html.log`,
 
 Full Figma fidelity, arbitrary-site support and trusted public Homebrew
 installation remain incomplete. No desktop rebuild or push.
+
+### Shared adaptive grid (2026-09-15)
+
+Shared HTML layout now includes Adaptive grid beside the physical stack presets.
+One atomic edit enables auto-fitting columns on every selected container, retaining
+recognized per-layer minimums or starting at 240px. The compact Min column field
+edits all selected minimums together and supports inherited breakpoint values.
+Columns can shrink below the minimum when the available space is narrower. The
+controls are disabled outside the selected pixel edit range; the field also checks
+connected elements, current grid display and preview width before writing.
+
+Chromium and WebKit passed responsive three-to-one-column geometry at 1100, 390
+and 240px, narrow overflow checks, minimum edits, inherited values, desktop-only
+overrides, disabled inactive-range controls and exact atomic undo/redo. Resizing
+did not change source. The existing shared stack preset regression and all 1,652
+unit tests passed. The expanded WebKit test initially raced the inspector's
+breakpoint-option refresh; it now waits for that actual UI state. Inspected
+`/tmp/retouch-shared-adaptive-grid-html.png`, including the shortened field label.
+
+Logs: `/tmp/retouch-shared-adaptive-html-final.log`,
+`/tmp/retouch-shared-adaptive-webkit-final.log`,
+`/tmp/retouch-shared-adaptive-stack-regression.log`, and
+`/tmp/retouch-shared-adaptive-units-final.log`.
+
+This increment covers shared HTML CSS authoring. Full Figma fidelity, arbitrary
+site editing and trusted public Homebrew distribution remain incomplete. No
+desktop rebuild or push for this increment.
