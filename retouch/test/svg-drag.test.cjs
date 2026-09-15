@@ -19,3 +19,13 @@ test('Unselected vector drag retains quick release and cancels stale asynchronou
  for(const cancel of [()=>emit(w,'keydown',{key:'Escape'}),()=>emit(w,'pointercancel'),()=>emit(w,'blur'),()=>emit(w,'resize'),()=>emit(w,'scroll'),()=>emit(w,'lostpointercapture'),()=>emit(d,'pointerdown')]){emit(d,'pointerdown');emit(w,'pointermove',{clientX:30});await settle();assert.equal(captured,1);cancel();assert.equal(captured,null);ready();await settle();assert.equal(starts.length,1,'canceled preparation cannot start a late drag');}
  stop();
 });
+test('Shape gestures can opt into Alt without changing movement or command-modifier guards',()=>{
+ for(const allowAlt of [false,true]){
+  const d=new EventTarget(),w=new EventTarget();d.defaultView=w;w.innerWidth=100;const info={},target={},starts=[];
+  const stop=mount({document:d,frame:{getBoundingClientRect:()=>({width:100})},candidate:()=>({info,target}),allowAlt,onStart:(...args)=>starts.push(args)});
+  const emit=(host,type,extra={})=>{const e=new Event(type,{cancelable:true});Object.assign(e,{button:0,buttons:1,isPrimary:true,pointerId:1,clientX:10,clientY:10,...extra});host.dispatchEvent(e);};
+  emit(d,'pointerdown',{altKey:true});emit(w,'pointermove',{clientX:30,altKey:true});emit(w,'pointerup',{clientX:30});assert.equal(starts.length,allowAlt?1:0);
+  for(const key of ['ctrlKey','metaKey']){emit(d,'pointerdown',{altKey:true,[key]:true});emit(w,'pointermove',{clientX:30});emit(w,'pointerup',{clientX:30});assert.equal(starts.length,allowAlt?1:0);}
+  stop();
+ }
+});

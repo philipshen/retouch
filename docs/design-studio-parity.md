@@ -19232,3 +19232,22 @@ and `/tmp/retouch-draw-parent-units.log`.
 
 No desktop rebuild or push. Direct Pen entry, arbitrary-site support, full
 Figma parity and trusted Homebrew distribution remain incomplete.
+
+### 2026-09-15 — Initial modifiers for direct shape gestures
+
+Shape gestures now opt into Alt/Option pointerdown in the shared drag handler.
+Previously that handler rejected Alt before a shape could start. Movement
+handlers retain their default Alt exclusion and Ctrl/Command remain excluded.
+The existing drawing geometry receives the modifiers through buffered lookup
+and release, enabling center-based drawing and combined Shift constraints.
+
+All 1,665 unit tests passed, including opt-in versus default modifier routing.
+HTML and React Chromium plus Liquid WebKit browser checks passed using the
+source-incompatible child fixture and writable-parent fallback. They verify
+initial Alt with a held pointer and initial Alt+Shift released during lookup,
+actual centered/constrained geometry, exact undo, and existing direct/armed
+cancellation flows. Logs: `/tmp/retouch-direct-modifiers-{html,react,liquid}.log`
+and `/tmp/retouch-direct-modifiers-units.log`.
+
+No desktop rebuild or push. Direct Pen entry, arbitrary-site support, full
+Figma parity and trusted Homebrew distribution remain incomplete.

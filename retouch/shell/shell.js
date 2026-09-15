@@ -210,7 +210,7 @@ function hookFrame(d, w) {
   w.addEventListener('pointerup',releasePanelPointer,true);
   w.addEventListener('pointercancel',releasePanelPointer,true);
   if(!frameRefreshDrawing||stopDrawing!==frameRefreshDrawing.cancel||iframe.contentWindow?.location.href!==frameRefreshDrawing.route)stopDrawing?.();
-  stopShapeDrag?.();stopShapeDrag=RetouchSVGDrag.mount({document:d,frame:iframe,
+  stopShapeDrag?.();stopShapeDrag=RetouchSVGDrag.mount({document:d,frame:iframe,allowAlt:true,
    candidate:node=>{
     if(!armedCanvasTool?.startsWith('draw-')||mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active||layerLocks.locked(node))return null;
     for(let target=node?.closest?.('[data-rt]');target;target=target.parentElement?.closest('[data-rt]'))if(/^(body|div|main|section|article|aside|header|footer|nav|form|fieldset|dialog|figure|details|blockquote|li|td|th|svg|g)$/.test(target.localName)&&!layerLocks.locked(target))return {target,action:armedCanvasTool};
