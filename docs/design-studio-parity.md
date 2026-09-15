@@ -20385,3 +20385,29 @@ Logs: `/tmp/retouch-shared-scrub-foreign-before.log`,
 
 Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
 incomplete. No native rebuild or push.
+
+
+### Drag mixed shared dimensions while preserving differences
+
+React/Liquid shared Width and Height fields can now start a numeric label drag
+from Mixed. The gesture captures each layer's border-box size and applies one
+delta to all selected layers; typing a value still sets a common size. For
+example, widths 120 and 164 become 130 and 174 after a +10 drag. Bounds account
+for each layer's padding/border floor and the supported maximum. A no-op drag
+does not write source, Escape restores Mixed and the original attributes, and
+commit saves each dimension in one source operation for one-step undo. A tooltip
+explains the shared delta. The generic numeric gesture supports an initial value
+and a preview-owned commit callback for this case.
+
+Validation: React/Chromium and Liquid/WebKit mixed-inline sizing browser suites
+passed with +10 preview/cancel/commit/undo, zero movement, and a negative drag
+clamped to widths 0 and 44 while retaining the difference. Existing same-size
+flex scrubbing, external-change cancellation, sizing modes, responsive isolation
+and important-inline guards also passed. All 1,694 unit tests passed. Logs:
+`/tmp/retouch-mixed-scrub-react.log`,
+`/tmp/retouch-mixed-scrub-liquid-final.log`,
+`/tmp/retouch-mixed-scrub-units-final.log`.
+
+Mixed-dimension dragging for the HTML authoring inspector and mixed typography
+fields remains separate work. Full Figma/arbitrary-site parity and trusted
+Homebrew distribution remain incomplete. No native rebuild or push.

@@ -280,12 +280,12 @@
       for(const type of interruptions)root.removeEventListener(type,abort);saved.observer.disconnect();saved.preview?.restore();
       if(cancel)input.value=saved.initial;
       if(saved.id!==null&&saved.target.hasPointerCapture(saved.id))saved.target.releasePointerCapture(saved.id);
-      if(!cancel&&input.isConnected&&input.value!==saved.initial&&input.checkValidity()){if(saved.keyboard)saved.options.onCommit?.();input.dispatchEvent(new Event('change',{bubbles:true}));}
+      if(!cancel&&input.isConnected&&input.value!==saved.initial&&input.checkValidity()){if(saved.keyboard)saved.options.onCommit?.();if(saved.preview?.commit)saved.preview.commit(saved.value);else input.dispatchEvent(new Event('change',{bubbles:true}));}
     };
     const abort=()=>stop(true);
     input.addEventListener('blur',abort);
     const start=(event,keyboard=false)=>{
-      const options=handles.get(event.currentTarget)||{},raw=options.initialValue?String(options.initialValue()):input.value;
+      const options=handles.get(event.currentTarget)||{},raw=options.initialValue?String(options.initialValue()):input.retouchNumericInitialValue?String(input.retouchNumericInitialValue()):input.value;
       if((!keyboard&&event.button!==0)||drag||!input.isConnected||input.disabled||input.readOnly||raw===''||!input.checkValidity())return;
       const parsed=input.retouchNumericRead?input.retouchNumericRead(raw):read(raw);if(!parsed||!Number.isFinite(parsed.value))return;if(options.minimum)parsed.min=Math.max(parsed.min??-Infinity,options.minimum());
       if(options.canvas)for(let parent=input.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;
