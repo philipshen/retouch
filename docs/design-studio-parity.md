@@ -19181,3 +19181,31 @@ zero repeated rearming. Logs: `/tmp/retouch-drawing-incompatible-units.log`,
 
 No desktop rebuild or push. Direct drag-to-create, full Figma parity,
 arbitrary-site support and trusted Homebrew distribution remain incomplete.
+
+### 2026-09-15 — Direct shape dragging before container selection
+
+An armed shape tool can now start a drag over site content. The shell finds the
+nearest candidate native/SVG container and validates its source insertion
+capability through selection resolution. The existing buffered drag coordinator
+preserves pointer movement while metadata loads, including release before the
+lookup completes. The drawing surface accepts that initial iframe gesture and
+continues it through capture-phase listeners. Move/group/marquee gestures defer
+to the armed drawing tool. Cancellation prevents late creation; replay failures
+clean up the drawing surface and listeners.
+
+Fresh final verification: 1,664 unit tests passed, plus HTML and React Chromium
+and Liquid WebKit browser checks. Direct rectangle tests cover held and already
+released pointers during delayed lookup, exact screen geometry, one Undo back
+to identical source, and Escape during lookup without late insertion. Existing
+Scale and armed Shape/Pen checks also passed. Logs:
+`/tmp/retouch-direct-shape-{html,react,liquid,units}-final.log`.
+Existing SVG and native drawing browser regressions also passed (before the
+final failed-handoff cleanup guard), covering seven shapes, curved Pen paths,
+zoom/viewBox/group transforms, relative/static/transformed/grid/flex native
+containers, previews, constraints, cancellation and history. Logs:
+`/tmp/retouch-direct-regression-{html-svg-draw,native-svg-draw}.log`.
+
+Pen still requires destination selection before placing points. Candidate
+selection does not search past a source-incompatible nearest container. This
+is not proof of arbitrary-site drawing, full Figma parity or trusted Homebrew
+distribution. No desktop rebuild or push for this checkpoint.

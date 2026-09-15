@@ -20,6 +20,7 @@ const SPACING_STEPS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11,
 
 let historyRecoveryRequired=!!window.__RT_RENDERING?.historyRecoveryRequired;
 let armedCanvasTool=null;
+let stopShapeDrag=null,preparingShapeDrag=false;
 let mode = historyRecoveryRequired?'interact':'edit'; // 'edit' | 'interact'
 let renderedSelection=null; // Live DOM anchor for the explicitly chosen occurrence.
 let sel = null; // { hostId, instanceId, scope: 'host'|'instance', info }
@@ -209,8 +210,21 @@ function hookFrame(d, w) {
   w.addEventListener('pointerup',releasePanelPointer,true);
   w.addEventListener('pointercancel',releasePanelPointer,true);
   if(!frameRefreshDrawing||stopDrawing!==frameRefreshDrawing.cancel||iframe.contentWindow?.location.href!==frameRefreshDrawing.route)stopDrawing?.();
+  stopShapeDrag?.();stopShapeDrag=RetouchSVGDrag.mount({document:d,frame:iframe,
+   candidate:node=>{
+    if(!armedCanvasTool?.startsWith('draw-')||mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active||layerLocks.locked(node))return null;
+    for(let target=node?.closest?.('[data-rt]');target;target=target.parentElement?.closest('[data-rt]'))if(/^(body|div|main|section|article|aside|header|footer|nav|form|fieldset|dialog|figure|details|blockquote|li|td|th|svg|g)$/.test(target.localName)&&!layerLocks.locked(target))return {target,action:armedCanvasTool};
+    return null;
+   },
+   prepare:async({target,action},current)=>{
+    preparingShapeDrag=true;
+    try{const valid=()=>current()&&doc()===d&&armedCanvasTool===action&&mode==='edit'&&!canvasPan.active;await select(target,{current:valid});if(!valid()||!sel?.info.svgInsertion?.presets.includes(action.slice(5)))return null;return {target,action,info:sel.info};}
+    finally{preparingShapeDrag=false;}
+   },
+   onStart:({target,action,info},event,move,released)=>{if(armedCanvasTool!==action)return;setArmedCanvasTool(null);stopDrawing=RetouchSVGDraw.mount({target,frame:iframe,canvas:canvasSurface,preset:action.slice(5),native:info.svgInsertion.createsViewport,initialPointer:event,initialMove:move,initialReleased:released,pointerTarget:target,onCommit:points=>{if(sel?.info===info)insertLayer(action.slice(5),info,'insertSVG',{points,...(info.svgInsertion.createsViewport?{nativeCanvas:true}:{})});},onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});},
+   onError:error=>toast(error.message,'err')});
   const vectorDragCandidate=node=>{
-    if(mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active)return null;
+    if(armedCanvasTool||mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active)return null;
     if(sel?.multiple?.length>1){const infos=sel.multiple;if(infos.some(info=>!info.svgTransform?.editable))return null;const elements=infos.map(info=>{const found=matchingEls(info.id);return found.length===1?found[0]:null;});if(elements.some(el=>!el||layerLocks.locked(el)))return null;const target=elements.find(el=>el.contains(node));return target?{info:sel.info,target,infos}:null;}
     const targets=sel?.info.svgTransform?.editable?matchingEls(sel.info.id):[],selected=targets.length===1?targets[0]:null;
     if(selected?.contains(node)&&!layerLocks.locked(selected))return {info:sel.info,target:selected};
@@ -220,7 +234,7 @@ function hookFrame(d, w) {
     prepare:async({target},current)=>{const selection=sel,valid=()=>current()&&sel===selection&&doc()===d&&!!vectorDragCandidate(target);await select(target,{current:valid});const result=current()&&vectorDragCandidate(target);return result?.info?result:null;},
     onStart:({info,target,infos},event,move,released)=>infos?moveSVGSelection({initialPointer:event,initialMove:move,pointerTarget:target}):resizeSVGOnCanvas(info,target,event,'se','move',{framePointer:true,initialMove:move,initialReleased:released}),onError:error=>toast(error.message,'err')});
   const groupDragCandidate=node=>{
-   if(mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active)return null;
+   if(armedCanvasTool||mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active)return null;
    const roots=groupMovementRoots(),selected=roots?.find(el=>el.contains(node));
    if(selected&&roots.every(el=>!layerLocks.locked(el)))return {target:selected,selectionInfo:sel.info,selection:sel,scope:styleScope};
    if(sel?.multiple?.length)return null;
@@ -240,7 +254,7 @@ function hookFrame(d, w) {
    },
    onStart:({target,selectionInfo,prepared},event,move,released)=>void moveGroupOnCanvas(selectionInfo,null,{prepared,event,move,released,framePointer:true,target}),onError:error=>toast(error.message,'err')});
   stopMarquee?.();
-  stopMarquee=RetouchMarquee.mount({document:d,frame:iframe,surface:canvasSurface,enabled:()=>window.__RT_RENDERING?.selectionStyling===true&&mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests,
+  stopMarquee=RetouchMarquee.mount({document:d,frame:iframe,surface:canvasSurface,enabled:()=>!armedCanvasTool&&window.__RT_RENDERING?.selectionStyling===true&&mode==='edit'&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests,
     onChange:rect=>{selectionMarquee=rect?{document:d,rect}:null;},
     selectable:node=>!layerLocks.locked(node),
     onSelect:(nodes,options)=>selectMarquee(d,nodes,options),
@@ -4362,7 +4376,7 @@ function setArmedCanvasTool(value){
 function advanceArmedCanvasTool(){
  if(!armedCanvasTool)return;
  if(mode!=='edit'||historyRecoveryRequired||canvasPan.active){setArmedCanvasTool(null);return;}
- if(!sel?.info||editing||panelTasks||sourceRequests||undoBusy||stopDrawing||document.querySelector('dialog[open]'))return;
+ if(preparingShapeDrag||!sel?.info||editing||panelTasks||sourceRequests||undoBusy||stopDrawing||document.querySelector('dialog[open]'))return;
  const action=armedCanvasTool,source=window.RetouchShapeTools?.get(action);if(source?.available()&&!source.requiresTarget){setArmedCanvasTool(null);source.run(action==='scale'?document.getElementById('canvasScale'):undefined);}
 }
 window.addEventListener('keydown',event=>{if(armedCanvasTool&&event.key==='Escape'&&!event.isComposing){setArmedCanvasTool(null);event.preventDefault();}});

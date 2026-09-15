@@ -38,7 +38,7 @@
   function current(){return nativeSnapshots.every(({el,rect,metrics,css})=>{if(!el.isConnected)return false;const now=el.getBoundingClientRect(),style=w.getComputedStyle(el);return [el.clientLeft,el.clientTop,el.clientWidth,el.clientHeight].every((value,i)=>value===metrics[i])&&['x','y','width','height'].every(key=>Math.abs(now[key]-rect[key])<.1)&&css===[style.position,style.transform,style.rotate,style.scale,style.translate,style.zoom,style.contain,style.willChange,style.filter,style.backdropFilter,style.perspective].join('|');});}
   return {matrix,current};
  }
- function mount({target,frame,canvas,preset,onCommit,onEnd,onError,native=false}){
+ function mount({target,frame,canvas,preset,onCommit,onEnd,onError,native=false,initialPointer=null,initialMove=null,initialReleased=false,pointerTarget=null}){
   const d=target.ownerDocument,w=d.defaultView,viewport=native?null:target.tagName.toLowerCase()==='svg'?target:target.ownerSVGElement;
   let space;try{space=native?nativeSpace(target):null;}catch(error){onError(error.message);onEnd();return null;}
   const matrix=()=>space?.matrix||target.getScreenCTM();
@@ -54,10 +54,12 @@
   function cancel(){if(ended)return;ended=true;preview.remove();surface.remove();cleanup.forEach(f=>f());onEnd();}
   function point(e){const f=frame.getBoundingClientRect(),scale=f.width/w.innerWidth,m=matrix()?.inverse();if(!m)throw Error('This SVG transform cannot be drawn into.');const p=new w.DOMPoint((e.clientX-f.left)/scale,(e.clientY-f.top)/scale).matrixTransform(m);if(!Number.isFinite(p.x)||!Number.isFinite(p.y))throw Error('This SVG transform cannot be drawn into.');return p;}
   function paint(modifiers){state.points=constrained(preset,state.a,state.b,modifiers);const values=geometry(preset,...state.points),attributes=preset==='arrow'?{d:root.RetouchSVGParametric.arrowPath(values.points)||''}:values;for(const [key,value]of Object.entries(attributes))preview.setAttribute(key,String(value));const m=matrix(),f=frame.getBoundingClientRect(),r=surface.getBoundingClientRect(),scale=f.width/w.innerWidth;preview.setAttribute('transform',`matrix(${m.a*scale} ${m.b*scale} ${m.c*scale} ${m.d*scale} ${m.e*scale+f.left-r.left} ${m.f*scale+f.top-r.top})`);if(!preview.isConnected)drawing.append(preview);}
-  function move(e){if(!state||e.pointerId!==state.id)return;if(!current()){cancel();return;}try{state.b=point(e);state.distance=Math.hypot(e.clientX-state.x,e.clientY-state.y);paint(e);}catch(error){cancel();onError(error.message);}}
-  listen(surface,'pointerdown',e=>{if(state||e.button!==0)return;e.preventDefault();e.stopImmediatePropagation();try{const a=point(e);state={id:e.pointerId,a,b:a,x:e.clientX,y:e.clientY,distance:0};surface.setPointerCapture(e.pointerId);}catch(error){cancel();onError(error.message);}});
+  function move(e){if(ended||!state||e.pointerId!==state.id)return;if(!current()){cancel();return;}try{state.b=point(e);state.distance=Math.hypot(e.clientX-state.x,e.clientY-state.y);paint(e);}catch(error){cancel();onError(error.message);}}
+  const down=e=>{if(state||e.button!==0)return;e.preventDefault();e.stopImmediatePropagation();try{const a=point(e);state={id:e.pointerId,a,b:a,x:e.clientX,y:e.clientY,distance:0};(pointerTarget||surface).setPointerCapture(e.pointerId);}catch(error){cancel();onError(error.message);}};
+  listen(surface,'pointerdown',down);
   listen(surface,'pointermove',move);
-  listen(surface,'pointerup',e=>{if(!state||e.pointerId!==state.id)return;e.preventDefault();move(e);if(!state||ended)return;const {points:[a,b],distance}=state;cancel();if(distance>=4)onCommit([a.x,a.y,b.x,b.y]);});
+  const up=e=>{if(!state||e.pointerId!==state.id)return;e.preventDefault();move(e);if(!state||ended)return;const {points:[a,b],distance}=state;cancel();if(distance>=4)onCommit([a.x,a.y,b.x,b.y]);};
+  listen(surface,'pointerup',up);
   listen(surface,'pointercancel',cancel);listen(surface,'lostpointercapture',cancel);
   listen(root,'keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancel();}},true);
   for(const type of ['keydown','keyup'])listen(root,type,e=>{if(state&&['Shift','Alt'].includes(e.key)){e.preventDefault();e.stopImmediatePropagation();paint(e);}},true);
@@ -66,7 +68,17 @@
   const f=frame.getBoundingClientRect(),r=viewport?viewport.getBoundingClientRect():{left:0,top:0,right:w.innerWidth,bottom:w.innerHeight},c=canvas.getBoundingClientRect(),scale=f.width/w.innerWidth;
   const left=Math.max(f.left+r.left*scale,f.left,c.left),top=Math.max(f.top+r.top*scale,f.top,c.top),right=Math.min(f.left+r.right*scale,f.right,c.right),bottom=Math.min(f.top+r.bottom*scale,f.bottom,c.bottom);
   if(right<=left||bottom<=top){cancel();onError('Bring the SVG canvas into view before drawing.');return null;}
-  Object.assign(surface.style,{left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px'});root.document.body.append(surface);surface.focus({preventScroll:true});return cancel;
+  Object.assign(surface.style,{left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px'});root.document.body.append(surface);surface.focus({preventScroll:true});
+  if(initialPointer){try{
+   const fromFrame=e=>{const f=frame.getBoundingClientRect(),scale=f.width/w.innerWidth;return {clientX:f.left+e.clientX*scale,clientY:f.top+e.clientY*scale,pointerId:e.pointerId,button:e.button,shiftKey:e.shiftKey,altKey:e.altKey,preventDefault:()=>e.preventDefault(),stopImmediatePropagation:()=>e.stopImmediatePropagation()};};
+   // A released pointer cannot be captured, but its buffered gesture still commits.
+   const first=fromFrame(initialPointer);
+   if(initialReleased){const a=point(first);state={id:first.pointerId,a,b:a,x:first.clientX,y:first.clientY,distance:0};}else down(first);
+   if(initialMove)move(fromFrame(initialMove));
+   if(initialReleased)up(fromFrame(initialMove||initialPointer));
+   else if(!ended){listen(w,'pointermove',e=>move(fromFrame(e)),true);listen(w,'pointerup',e=>up(fromFrame(e)),true);listen(w,'pointercancel',cancel,true);listen(w,'lostpointercapture',cancel,true);}
+  }catch(error){cancel();onError(error.message);}}
+  return ended?null:cancel;
  }
  const api={mount,geometry,constrained,viewportStyle,nativeSpace};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGDraw=api;
 })(typeof window==='object'?window:globalThis);
