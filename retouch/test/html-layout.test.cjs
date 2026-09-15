@@ -1,5 +1,5 @@
 'use strict';
-const {test}=require('node:test'),assert=require('node:assert/strict'),{stackLayout,flexAlignment,adaptiveColumns,parseAdaptiveColumns,valid,overlaps}=require('../shell/html-css-values.js'),html=require('../src/adapters/html.cjs'),css=require('../src/html-css.cjs');
+const {test}=require('node:test'),assert=require('node:assert/strict'),{stackLayout,flexAlignment,childAlignment,adaptiveColumns,parseAdaptiveColumns,valid,overlaps}=require('../shell/html-css-values.js'),html=require('../src/adapters/html.cjs'),css=require('../src/html-css.cjs');
 test('Stack controls choose physical horizontal and vertical axes across writing modes',()=>{
  for(const mode of ['horizontal-tb','vertical-rl','vertical-lr','sideways-rl','sideways-lr'])for(const axis of ['horizontal','vertical']){
   const changes=stackLayout(axis,mode);assert.equal(changes.display,'flex');assert.equal(changes['flex-wrap'],'nowrap');assert.equal(changes['flex-direction'],(axis==='horizontal')===(mode==='horizontal-tb')?'row':'column');
@@ -68,4 +68,21 @@ test('grid item placement accepts bounded numeric and named lines',()=>{
   for(const value of ['2 / 4','2 / span 2','-2 / -1','content_start / content_end','auto','middle','span 3 / span 3'])assert.equal(valid(property,value),true,value);
   for(const value of ['0 / 2','129 / 130','span 0','span -2','2 / 3 / 4','x;display:none','span','inherit / end','2 /','span 2 / span 3'])assert.equal(valid(property,value),false,value);
  }
+});
+
+
+test('Grid child alignment maps physical corners through writing direction without changing tracks',()=>{
+ for(const [state,expected]of [[{},['start','start']],[{direction:'rtl'},['end','start']],[{writingMode:'vertical-rl'},['start','end']],[{writingMode:'vertical-lr',direction:'rtl'},['end','start']],[{writingMode:'sideways-lr'},['end','start']]]){
+  const grid={display:'grid',...state};assert.deepEqual(Object.values(childAlignment(0,0,grid)),expected);assert.deepEqual(childAlignment(1,1,grid),{'justify-items':'center','align-items':'center'});assert.deepEqual(Object.values(childAlignment(2,2,grid)),expected.map(value=>value==='start'?'end':'start'));
+  for(const [property,value]of Object.entries(childAlignment(0,0,grid)))assert.equal(valid(property,value),true);
+ }
+ assert.deepEqual(childAlignment(2,0,{display:'flex',direction:'rtl'}),flexAlignment(2,0,{direction:'rtl'}));
+});
+
+test('Grid item alignment writes atomically and refuses important alignment shorthands',()=>{
+ const source='<html><head></head><body><main style="display:grid;grid-template-columns:1fr 1fr"><p>One</p><p>Two</p></main></body></html>',resolve=source=>{const elements=html.collect(source,'index.html').elements;return {source,elements,element:elements.find(e=>e.tag==='main'),hash:html.contentHash(source),file:'/tmp/index.html',relPath:'index.html'};},changes=childAlignment(2,2,{display:'grid'}),result=css.plan(resolve(source),{changes,width:768});
+ assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);assert.ok(result.edits[0].after.includes('grid-template-columns:1fr 1fr'));assert.deepEqual(css.describe(resolve(result.edits[0].after)).cssRules,{768:changes});
+ const refusal=css.plan(resolve(source.replace('display:grid;','place-items:center !important;display:grid;')),{changes,width:768});assert.equal(refusal.refused,true);assert.equal(refusal.edits,undefined);
+ for(const [shorthand,properties]of [['place-items',['align-items','justify-items']],['place-content',['align-content','justify-content']]])for(const property of properties){assert.equal(overlaps(shorthand,property),true);assert.equal(overlaps(property,shorthand),true);}
+ assert.equal(valid('justify-items','end;display:none'),false);
 });

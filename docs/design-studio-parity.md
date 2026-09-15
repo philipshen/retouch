@@ -18542,3 +18542,37 @@ Logs: `/tmp/retouch-shared-adaptive-html-final.log`,
 This increment covers shared HTML CSS authoring. Full Figma fidelity, arbitrary
 site editing and trusted public Homebrew distribution remain incomplete. No
 desktop rebuild or push for this increment.
+
+### Visual alignment for shared grids and mixed containers (2026-09-15)
+
+The shared nine-position alignment control now accepts grid containers and mixed
+flex/grid selections. Grid children align inside their own grid areas through
+justify-items and align-items, mapped through each container's writing mode and
+RTL direction. Flex containers retain the existing physical-axis mapping. One
+click writes all selected containers atomically. Grid tracks remain unchanged.
+The compact alignment/gap row now appears for grids too, with raw alignment fields
+and an individually resettable Align columns field under Layout options.
+
+Chromium and WebKit verified all nine positions on grid containers, including RTL
+and vertical writing. Two-column cases measured each child relative to its own
+cell. Chromium also verified mixed flex/grid selections. Expanded WebKit cell and
+Chromium mixed runs passed desktop-only alignment, unchanged phone geometry,
+inactive edit-range guards, gap/reset, keyboard navigation and exact source
+undo/redo. The contextual block/flex/grid regression passed. All 1,654 unit tests
+passed, including atomic grid alignment edits and refusal of conflicting important
+inline place-items declarations. The overlap model now recognizes place-items and
+place-content shorthands in both directions.
+
+Inspected `/tmp/retouch-shared-grid-cells-alignment-html.png`: alignment and gap
+share one row, with advanced fields collapsed. The geometry fixture deliberately
+uses small fixed child boxes; its heading text overflows those authored boxes.
+Logs: `/tmp/retouch-shared-grid-alignment-cells-final.log`,
+`/tmp/retouch-shared-grid-alignment-cells-webkit-final.log`,
+`/tmp/retouch-shared-grid-alignment-mixed-final.log`,
+`/tmp/retouch-shared-grid-alignment-context.log`, and
+`/tmp/retouch-shared-grid-alignment-units.log`.
+
+Reference: https://www.w3.org/TR/css-align-3/#overview. This increment covers shared
+HTML CSS authoring; individual child self-alignment overrides remain authoritative.
+Full Figma fidelity, arbitrary-site support and trusted public Homebrew distribution
+remain incomplete. No desktop rebuild or push for this increment.

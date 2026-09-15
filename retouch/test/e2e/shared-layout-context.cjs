@@ -8,7 +8,7 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
  await options.locator(':scope > summary').click();assert.equal(await page.getByLabel('Shared Direction',{exact:true}).isVisible(),true);await options.locator(':scope > summary').click();assert.equal(read(),original);
  for(const mode of ['flex','grid']){
   await display.selectOption(mode);await wait(()=>read()!==original);await settled();await wait(async()=>await app.locator('h1,p').evaluateAll((nodes,mode)=>nodes.slice(0,2).every(el=>getComputedStyle(el).display===mode),mode));
-  for(const name of ['Align items','Align lines','Distribute items','Gap'])assert.equal(await page.getByLabel('Shared '+name,{exact:true}).isVisible(),mode==='grid'||name==='Gap',name+' visibility for '+mode);
+  for(const name of ['Align items','Align lines','Distribute items','Gap'])assert.equal(await page.getByLabel('Shared '+name,{exact:true}).isVisible(),name==='Gap',name+' visibility for '+mode);
   assert.equal(await page.getByLabel('Shared Direction',{exact:true}).isVisible(),mode==='flex');assert.equal(await page.getByLabel('Shared Wrap',{exact:true}).isVisible(),mode==='flex');
   if(mode==='flex'){const beforeDirection=read();await page.getByLabel('Shared Direction',{exact:true}).selectOption('column');await wait(()=>read()!==beforeDirection);await settled();assert.deepEqual(await app.locator('h1,p').evaluateAll(nodes=>nodes.slice(0,2).map(el=>getComputedStyle(el).flexDirection)),['column','column']);await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===beforeDirection);await settled();}
   await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();await wait(async()=>await display.inputValue()==='block');
