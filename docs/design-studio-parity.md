@@ -20362,3 +20362,26 @@ phase verified fixed width overrides inline flex basis/grow/shrink. Logs:
 
 Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
 incomplete. No native rebuild or push.
+
+
+### Shared numeric drags cancel on external style changes
+
+Shared React/Liquid numeric previews now verify ownership of each property
+preview, including flex grow/shrink/basis used by dimension drags. Previously
+they only checked layer identity and connectivity, leaving a drag active after
+page code changed the edited style. Cancellation restores the other previews
+and retains the external property value without writing source.
+
+Extended the mixed inline sizing browser suite with flex-item width scrubbing:
+live 200-to-210px previews without source writes, Escape restoration, committed
+sizes and one-step undo, plus external width and flex-basis changes during drag.
+The external-width cancellation assertion timed out before the fix.
+React/Chromium and Liquid/WebKit passed width cancellation; the additional
+flex-basis cancellation passed on Liquid/WebKit. All 1,694 unit tests passed.
+Logs: `/tmp/retouch-shared-scrub-foreign-before.log`,
+`/tmp/retouch-shared-scrub-foreign-react.log`,
+`/tmp/retouch-shared-scrub-foreign-flex.log`,
+`/tmp/retouch-shared-scrub-foreign-units.log`.
+
+Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
+incomplete. No native rebuild or push.

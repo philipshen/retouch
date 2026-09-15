@@ -312,7 +312,7 @@
     input.retouchNumericPreview=()=>{
      const targets=infos.map((_,i)=>liveElement(i)),previews=targets.map(el=>root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true}));
      const flexPreviews=dimension?targets.flatMap(el=>{const {context}=sizeContext(el,property);return /flex/.test(context.display||'')&&root.RetouchLayout.layoutAxes(context).main===property?[['flex-grow','0'],['flex-shrink','0'],['flex-basis','auto']].map(([property,value])=>({preview:root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true}),value})):[];}):[];
-     return {current:()=>targets.every((el,i)=>el.isConnected&&(!resolveElement||resolveElement(infos[i].id)===el)),update:value=>{
+     return {current:()=>targets.every((el,i)=>el.isConnected&&(!resolveElement||resolveElement(infos[i].id)===el))&&previews.every(preview=>preview.current())&&flexPreviews.every(({preview})=>preview.current()),update:value=>{
       const amount=Number(format(value));
       const values=targets.map(el=>sizing?dimensionValue(el.ownerDocument.defaultView.getComputedStyle(el),property,amount)+'px':property==='opacity'?String(amount/100):property==='rotate'?amount+'deg':['font-size','line-height','letter-spacing'].includes(property)?amount+'px':String(amount));
       flexPreviews.forEach(({preview,value})=>preview.update(value));previews.forEach((preview,i)=>preview.update(values[i]));
