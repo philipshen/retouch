@@ -144,13 +144,18 @@
     }
     return groups;
   }
-  function rendered(el){const rect=el.getBoundingClientRect(),css=el.ownerDocument.defaultView.getComputedStyle(el);return rect.width>0&&rect.height>0&&!['hidden','collapse'].includes(css.visibility);}
+  function rendered(el){const rect=RetouchComponentInstances.bounds([el]),css=el.ownerDocument.defaultView.getComputedStyle(el);return !!rect&&rect.width>0&&rect.height>0&&!['hidden','collapse'].includes(css.visibility);}
   function visibleBounds(el,width,height){
-    const w=el.ownerDocument.defaultView,raw=el.getBoundingClientRect();
+    const w=el.ownerDocument.defaultView;
+    if(w.getComputedStyle(el).display==='contents'){
+      const boxes=[...el.children].filter(rendered).map(child=>visibleBounds(child,width,height)).filter(Boolean);if(!boxes.length)return null;
+      const left=Math.min(...boxes.map(b=>b.left)),top=Math.min(...boxes.map(b=>b.top));return {left,top,width:Math.max(...boxes.map(b=>b.left+b.width))-left,height:Math.max(...boxes.map(b=>b.top+b.height))-top};
+    }
+    const raw=el.getBoundingClientRect();
     let left=Math.max(0,raw.left),top=Math.max(0,raw.top),right=Math.min(width,raw.right),bottom=Math.min(height,raw.bottom);
     const positioned=[];
     for(let node=el;node;node=node.parentElement){
-      const style=w.getComputedStyle(node);
+      const style=w.getComputedStyle(node);if(style.display==='contents')continue;
       if(node!==el){
         // Out-of-flow descendants can escape an intermediate overflow container.
         const escapes=positioned.some(item=>!item.parent||!node.contains(item.parent));
@@ -384,7 +389,8 @@
           if(revealSelection!==selected){revealSelection=selected;revealIndex=-1;}
           revealIndex=(revealIndex+1)%nodes.length;
           // Native scrolling reveals the layer through nested scroll containers.
-          nodes[revealIndex].scrollIntoView({block:'center',inline:'center',behavior:'instant'});
+          const node=nodes[revealIndex],target=d.defaultView.getComputedStyle(node).display==='contents'?[...node.querySelectorAll('*')].find(el=>rendered(el)&&d.defaultView.getComputedStyle(el).display!=='contents'):node;
+          target?.scrollIntoView({block:'center',inline:'center',behavior:'instant'});
         }catch{message.textContent='Could not reveal the selected layer in this preview.';}
       };
       const scopeButton=document.createElement('button');scopeButton.className='control-button';scopeButton.textContent='Edit styles: '+width+' px and larger';scopeButton.setAttribute('aria-label','Edit styles from '+width+' px');scopeButton.title='Use this preview size and set the selected layer’s style scope to this width and larger. Does not change source until you edit a style.';scopeButton.disabled=!selected;

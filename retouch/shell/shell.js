@@ -107,7 +107,7 @@ function pickLayer(node,x,y,{deep=false}={}){
  const target=picked.closest('[data-rt-boolean-result]')?.closest('[data-rt-boolean]')||layers.textOwner(picked);if(deep||!target)return target;return groupSelectionTarget(target);
 }
 function groupSelectionTarget(target){
- const selected=sel?matchingEls(activeId()).find(el=>el.ownerDocument===target.ownerDocument):null;
+ const selected=sel?matchingInDocument(target.ownerDocument,activeId(),sel.info).find(el=>inTextScope(el,sel.info)):null;
  let result=target;for(let group=target.closest('[data-rt-group][data-rt]');group;group=group.parentElement?.closest('[data-rt-group][data-rt]')){if(selected&&selected!==group&&group.contains(selected))continue;if(!layerLocks.locked(group))result=group;}
  return result;
 }
