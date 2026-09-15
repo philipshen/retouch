@@ -65,6 +65,7 @@ test('parent alignment skips transparent ancestors and requires one visible pare
 
 test('group scaling validates its ratio and replaces only active scale utilities',()=>{
  assert.throws(()=>move.scalePlan([],2),/source layers/);
+ for(const offset of [{x:NaN,y:0},{x:0,y:Infinity},{x:1}])assert.throws(()=>move.scalePlan([],2,offset),/finite scale anchor/);
  for(const value of [0,-1,Infinity,NaN,.001,101])assert.throws(()=>move.scalePlan([],value),/scale/);
  assert.equal(move.scaleClasses('rotate-12 scale-x-125 md:scale-50 hover:opacity-50','','2 -1'),'md:scale-50 hover:opacity-50 rotate-12 ![scale:2_-1]');
  assert.equal(move.scaleClasses('scale-75 md:scale-125 md:translate-x-2','md:','1.5 1.5'),'scale-75 md:translate-x-2 md:![scale:1.5_1.5]');

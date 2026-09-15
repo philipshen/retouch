@@ -3478,7 +3478,12 @@ function groupMovementSection(info){
   }
  }catch(error){I.note(section,error.message,'refused');}
  const scaling=I.number(section,'Scale selection (%)',100,1,10000,value=>void scaleGroup(info,value,scaling));scaling.title='Scale selected content proportionally from its top-left corner. Layout slots stay unchanged.';I.fieldDraft(scaling);scaling.retouchNumericPreview=()=>{const selection=sel,scope=styleScope,hash=info.hash,preview=RetouchGroupMove.scalePreview(RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el)));return {current:()=>sel===selection&&info.hash===hash&&styleScope===scope&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&preview.current(),update:value=>preview.update(value/100),restore:preview.restore};};
+ const scaleCanvas=I.button('Scale selection on canvas',event=>void scaleGroupOnCanvas(info,event.currentTarget));scaleCanvas.dataset.canvasTool='scale';section.append(scaleCanvas);
  const button=I.button(sel.multiple?.length?'Move selection on canvas':'Move group on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';button.title='Drag selected groups and layers on the canvas. Arrow keys move 1 px; Shift moves 10 px.';section.append(button);return section;
+}
+
+async function scaleGroupOnCanvas(info,opener){
+ stopDrawing?.();try{const context=await moveGroupOnCanvas(info,null,{prepareOnly:true});if(!context||!context.current())return;RetouchGroupMove.scalePlan(context.members,1);const rect=RetouchCanvasMove.union(context.members.map(item=>item.rect)),preview=RetouchGroupMove.scalePreview(context.members);canvasPan.cancel();stopDrawing=RetouchCanvasMove.mount({target:context.members[0].el,targets:context.members.map(item=>item.el),selectionId:info.id,frame:iframe,canvas:canvasSurface,mode:'scale',opener,current:context.current,contentPreview:preview,onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err'),onCommit:result=>{try{const plan=RetouchGroupMove.scalePlan(context.members,result.width/rect.width,{x:result.x,y:result.y});return writeGroupMove(context,plan.deltas,plan);}catch(error){toast(error.message,'err');}}});}catch(error){toast(error.message,'err');}
 }
 
 async function scaleGroup(info,percent,input){

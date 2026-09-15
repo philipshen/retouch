@@ -18269,3 +18269,39 @@ and `/tmp/retouch-scale-preview-webkit.log`.
 Canvas scaling handles, group layout resizing/rotation, complex fixed-position
 descendant behavior, full Figma parity and trusted public Homebrew distribution
 remain incomplete. No desktop rebuild or push for this checkpoint.
+
+### Canvas proportional scaling handles (2026-09-15)
+
+The Group inspector now offers “Scale selection on canvas.” Eight corner/edge
+handles scale rendered group contents and mixed group/layer selections in fixed
+proportion, with Alt/Option selecting a center anchor. Pointer previews update
+actual content; keyboard arrows adjust handles, Enter applies, and Escape
+restores the original inline properties. Source changes reuse the atomic group
+write/history path. Layout slots stay unchanged, matching the existing numeric
+content-scaling operation rather than layout-box resizing or text reflow.
+
+The scale planner accepts an explicit anchor offset, preserving existing
+reflections, individual scales, custom origins and supported 2D ancestor
+transforms. The shared resize gesture keeps its existing layout resize path;
+only scale mode uses rendered content previews and proportional bounds.
+
+Validation: 1,652 unit tests passed; the nine group-move tests passed again after
+adding invalid anchor coverage. Existing selection movement and resize browser
+regressions passed at 50/100/200 percent zoom. New browser assertions cover single
+and mixed selections, corner/edge/center keyboard anchors, live geometry without
+early source writes, Escape, exact undo/redo, and real pointer drag/release.
+Inspected `/tmp/retouch-group-scale-canvas-html.png` with the mixed selection and
+eight handles visible in the light editor.
+
+Logs: `/tmp/retouch-scale-canvas-units.log`,
+`/tmp/retouch-scale-canvas-anchor-units.log`,
+`/tmp/retouch-scale-canvas-move.log`, `/tmp/retouch-scale-canvas-resize.log`,
+`/tmp/retouch-scale-canvas-html-verified.log`,
+`/tmp/retouch-scale-canvas-react-verified.log`, and
+`/tmp/retouch-scale-canvas-webkit-final.log`. The latter runs verify transformed
+React in Chromium and transformed Liquid in WebKit, including existing
+responsive grouping checks at 390/768/1100 pixels.
+
+Full Figma fidelity, group layout resizing/rotation, arbitrary-site source
+coverage, complex fixed-position descendants and trusted public Homebrew
+installation remain incomplete. No desktop rebuild or push for this checkpoint.
