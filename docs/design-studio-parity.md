@@ -18635,3 +18635,35 @@ Logs: `/tmp/retouch-class-grid-react.log`, `/tmp/retouch-class-grid-liquid.log`,
 This verifies literal-class React/Liquid editing through the supported adapters.
 Full Figma fidelity, arbitrary-site/framework support and trusted public Homebrew
 distribution remain incomplete. No desktop rebuild or push for this increment.
+
+### Adaptive grids through React and Liquid classes (2026-09-15)
+
+React/Liquid single and shared selections now offer Adaptive grid with a minimum
+column size. The single-container preset occupies the grid segment alongside flow
+and physical stacks; fixed grid settings remain in the layout menu and track
+fields. The preset writes grid display, auto-fitting columns and automatic rows in
+one source transaction. Generated layout utilities are important so ordinary
+stylesheet declarations do not defeat the requested layout. Other source variants
+and unrelated classes remain intact. Minimum edits change only columns. Recognized
+own/inherited adaptive values populate the field; fixed own tracks do not
+incorrectly reuse an inherited adaptive minimum. Inline overrides and inactive
+edit ranges disable the new controls.
+
+React/Chromium, Liquid/Chromium and Liquid/WebKit passed single-container minimum
+edits and exact history, plus shared responsive column counts at 1100/390/240px,
+narrow fit, inherited values, desktop-only overrides, inactive-range controls and
+exact atomic undo/redo. Resizing left source unchanged. The first single-selection
+test incorrectly assumed its unselected sibling was horizontal; the corrected
+check preserves that sibling's measured original column count. HTML's existing
+shared adaptive workflow passed unchanged. All 1,658 unit tests passed, including
+bounded integer minimums, inherited-value recognition, priority and scoped class
+replacement. Inspected `/tmp/retouch-single-adaptive-grid-liquid.png`.
+
+Logs: `/tmp/retouch-class-adaptive-react-verified.log`,
+`/tmp/retouch-class-adaptive-liquid-final.log`,
+`/tmp/retouch-class-adaptive-liquid-webkit-final.log`,
+`/tmp/retouch-class-adaptive-html-regression.log`, and
+`/tmp/retouch-class-adaptive-units.log`.
+
+Full Figma fidelity, arbitrary-site/framework support and trusted public Homebrew
+distribution remain incomplete. No desktop rebuild or push for this increment.

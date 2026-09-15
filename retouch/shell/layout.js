@@ -64,6 +64,18 @@
     return token.slice(token.startsWith(prefix)?prefix.length:property.length,-1).replace(/\\_|_/g,t=>t==='\\_'?'_':' ');
   }
 
+  function adaptiveMinimum(classes,inherited=''){
+    const V=root.RetouchHTMLCSSValues||require('./html-css-values.js');
+    const own=classes.split(/\s+/).some(token=>/^(?:grid-cols-|\[grid-template-columns:)/.test(I.base(token)||''));
+    return V.parseAdaptiveColumns(ownGridTemplate(own?classes:inherited,'columns'));
+  }
+  function adaptiveGridClasses(classes,size=240,inherited=''){
+    const V=root.RetouchHTMLCSSValues||require('./html-css-values.js'),columns=V.adaptiveColumns(size);
+    if(!columns)throw Error('Choose a whole minimum column size from 1 to 2000 pixels.');
+    const next=gridTemplateClasses(gridTemplateClasses(modeClasses(classes,'grid',inherited),'columns',columns,inherited),'rows','none',inherited);
+    return next.split(/\s+/).map(token=>/^(?:grid$|grid-cols-|grid-rows-)/.test(I.base(token)||'')?'!'+token.replace(/^!|!$/g,''):token).join(' ');
+  }
+
   function gridTrackCount(value){
     return String(value||'').replace(/\[[^\]]*\]/g,' ').trim().split(/\s+/).filter(t=>t&&!['none','subgrid','masonry'].includes(t)).length;
   }
@@ -209,6 +221,10 @@
     const verticalInline=layoutAxes({writingMode:css.writingMode}).inline==='height',rowLabel=verticalInline?'Vertical':'Horizontal',columnLabel=verticalInline?'Horizontal':'Vertical';
     const modeSelect=I.select(sec,'Arrange children',[['flow','Normal flow'],['row',rowLabel],['column',columnLabel],['row-reverse',rowLabel+' · reverse'],['column-reverse',columnLabel+' · reverse'],['grid','Grid']],mode,value=>save(modeClasses(classes,value,info.styleScope?info.anchorInheritedClasses||'':'')));
     modeSelect.dataset.inlineAxis=verticalInline?'vertical':'horizontal';
+    const adaptiveSize=adaptiveMinimum(classes,inherited),adaptiveActive=mode==='grid'&&adaptiveSize!==null,adaptiveRange=()=>!info.styleScope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',adaptiveBlocked=()=>!el.isConnected||!adaptiveRange()||['display','grid','grid-template','grid-template-columns','grid-template-rows'].some(property=>el.style.getPropertyValue(property));
+    const adaptive=I.button('Adaptive grid',()=>{if(!adaptiveBlocked())save(adaptiveGridClasses(classes,adaptiveSize||240,inherited));});adaptive.setAttribute('aria-label','Adaptive grid');adaptive.setAttribute('aria-pressed',String(adaptiveActive));adaptive.disabled=adaptiveBlocked();adaptive.title=adaptive.disabled?'Preview this edit range and remove inline grid overrides to arrange children.':'Fit columns automatically to the available space.';sec.append(adaptive);
+    if(adaptiveActive){const minimum=I.number(sec,'Minimum column size (px)',adaptiveSize,1,2000,value=>{const columns=(root.RetouchHTMLCSSValues||require('./html-css-values.js')).adaptiveColumns(value);if(columns&&!adaptiveBlocked())save(gridTemplateClasses(classes,'columns',columns,inherited));});minimum.step='1';minimum.disabled=adaptiveBlocked();minimum.closest('.inspector-field').querySelector('span').textContent='Min column';}
+
     function numeric(label,value,min,max,change) {
       const input=document.createElement('input');input.type='number';input.min=min;input.max=max;input.step='any';
       input.value=Number.isFinite(value)?Math.round(value*100)/100:0;
@@ -334,6 +350,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

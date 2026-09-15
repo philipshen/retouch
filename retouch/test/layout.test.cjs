@@ -350,3 +350,11 @@ test('grid alignment replaces item utilities with physical alignment while prese
  assert.equal(L.alignmentClasses('!justify-items-start items-end',1,1,{display:'grid'},'!place-items-end'),'![justify-items:center] ![align-items:center]');
  assert.equal(L.alignmentClasses('place-items-center md:justify-items-end',2,2,{display:'grid'}),'place-items-center md:justify-items-end [justify-items:end] [align-items:end]');
 });
+
+
+test('adaptive grid classes retain unrelated styles and override authored layout declarations',()=>{
+ const next=L.adaptiveGridClasses('flex flex-row grid-cols-3 grid-rows-2 hover:grid-cols-4 p-4',240);
+ assert.equal(next,'hover:grid-cols-4 p-4 !grid !grid-cols-[repeat(auto-fit,_minmax(min(100%,_240px),_1fr))] !grid-rows-[none]');
+ assert.equal(L.adaptiveMinimum(next),240);assert.equal(L.adaptiveMinimum('',next),240);assert.equal(L.adaptiveMinimum('grid-cols-2',next),null);assert.equal(L.adaptiveMinimum('grid-cols-[80px_1fr]',next),null);
+ for(const value of [0,2001,1.5,NaN])assert.throws(()=>L.adaptiveGridClasses('',value));
+});

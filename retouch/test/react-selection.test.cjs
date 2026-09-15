@@ -184,3 +184,9 @@ test('shared responsive grid alignment preserves other scopes and promotes inher
  const {changeContainerAlignment}=require('../shell/react-selection.js');
  assert.equal(changeContainerAlignment('grid !place-items-center md:justify-items-start hover:items-end','md:',0,2,{display:'grid',direction:'rtl'}),'grid !place-items-center hover:items-end md:![justify-items:end] md:![align-items:end]');
 });
+
+
+test('shared adaptive grid changes only the selected responsive scope',()=>{
+ const {changeAdaptiveGrid}=require('../shell/react-selection.js'),R=require('../shell/responsive.js'),L=require('../shell/layout.js');
+ const source='flex grid-cols-2 md:grid-cols-4 hover:grid-cols-6';const next=changeAdaptiveGrid(source,'md:',180);assert.equal(R.project(next,''),'flex grid-cols-2');assert.ok(next.includes('hover:grid-cols-6'));assert.equal(L.adaptiveMinimum(R.project(next,'md:')),180);assert.ok(next.includes('md:!grid'));assert.equal(L.ownGridTemplate(R.project(next,'md:'),'rows'),'none');
+});

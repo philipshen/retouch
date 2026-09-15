@@ -103,6 +103,10 @@
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
   return R.replaceScope(classes,L.gridTemplateClasses(R.project(classes,scope),axis,value,R.inherited(classes,scope,document)),scope);
  }
+ function changeAdaptiveGrid(classes,scope,size,document=null){
+  const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
+  return R.replaceScope(classes,L.adaptiveGridClasses(R.project(classes,scope),size,R.inherited(classes,scope,document)),scope);
+ }
  let sharedGridTracksOpen=false,sharedSizeLimitsOpen=false;
  function changeContainer(classes,scope,property,value,document=null){
   if(!containerRules[property])throw Error('Unknown container layout control');
@@ -127,6 +131,14 @@
   I.note(sec,'Shift-click a range in Layers; Cmd/Ctrl-click toggles layers. On the canvas, Shift-click toggles. Each edit updates these source layers and undoes together, including every rendered instance.');
   const liveElement=i=>{const el=resolveElement?resolveElement(infos[i].id):elements[i];if(!el?.isConnected||!el.ownerDocument.defaultView)throw Error('The preview changed. Select the layers again.');return el;};
   const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el)),groups=sharedGroups(sec,elements),flex=css=>['flex','inline-flex'].includes(css.display),layout=css=>flex(css)||['grid','inline-grid'].includes(css.display),arrangementApplies=(property,css)=>property==='mode'||(property==='wrap'?flex(css):layout(css));
+  {
+   const R=root.RetouchResponsive,L=root.RetouchLayout,V=root.RetouchHTMLCSSValues,minimums=infos.map((info,i)=>L.adaptiveMinimum(R.project(info.className,scope),R.inherited(info.className,scope,elements[i].ownerDocument))),active=()=>!scope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',blocked=el=>!active()||['display','grid','grid-template','grid-template-columns','grid-template-rows'].some(property=>el.style.getPropertyValue(property));
+   const write=value=>{try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(blocked(el))throw Error('Preview this edit range and select containers without inline grid overrides.');return [info.id,changeAdaptiveGrid(info.className,scope,value??minimums[i]??240,el.ownerDocument)];})));}catch(error){I.note(groups.layout,error.message,'refused');}};
+   const button=I.button('Adaptive grid',()=>write(null));button.setAttribute('aria-label','Shared Adaptive grid');button.disabled=elements.some(blocked);button.setAttribute('aria-pressed',String(computed.every((css,i)=>['grid','inline-grid'].includes(css.display)&&minimums[i]!==null)));groups.layout.append(button);
+   if(computed.every((css,i)=>['grid','inline-grid'].includes(css.display)&&minimums[i]!==null)){
+    const mixed=minimums.some(value=>value!==minimums[0]),minimum=I.number(groups.layout,'Shared Minimum column size (px)',mixed?NaN:minimums[0],1,2000,value=>{const columns=V.adaptiveColumns(value);if(!columns)return;try{save(Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(blocked(el)||!['grid','inline-grid'].includes(el.ownerDocument.defaultView.getComputedStyle(el).display))throw Error('Preview this edit range and select grid containers without inline overrides.');return [info.id,changeGridTracks(info.className,scope,'columns',columns,el.ownerDocument)];})));}catch(error){I.note(groups.layout,error.message,'refused');}});minimum.step='1';minimum.disabled=elements.some(blocked);minimum.placeholder=mixed?'Mixed':'';minimum.closest('.inspector-field').querySelector('span').textContent='Min column';
+   }
+  }
   for(const [property,label,choices,read,inline]of [
    ['mode','Arrange children',[['flow','Normal flow'],['row','Row'],['column','Column'],['row-reverse','Row reversed'],['column-reverse','Column reversed'],['grid','Grid']],css=>/grid/.test(css.display)?'grid':/flex/.test(css.display)?css.flexDirection:'flow',['display','flex-direction','flex-flow']],
    ['wrap','Wrap children',['nowrap','wrap','wrap-reverse'],css=>css.flexWrap,['flex-wrap','flex-flow']],
@@ -334,5 +346,5 @@
   }
   I.note(sec,'Values show the current preview. Edits follow the selected style scope; reset removes that scope’s matching classes.');return sec;
  }
- const api={sharedGroups,rotationDegrees,changeSizeMode,changeClip,changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
+ const api={changeAdaptiveGrid,sharedGroups,rotationDegrees,changeSizeMode,changeClip,changeContainerAlignment,changeGridTracks,changeContainer,changeGap,changePadding,change,changeRatio,changeBlur,dimensionSize,dimensionValue,mount,changeRelative:(classes,scope,property,value,document=null)=>change(classes,scope,property,value,document,true)};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchReactSelection=api;
 })(typeof window==='object'?window:globalThis);
