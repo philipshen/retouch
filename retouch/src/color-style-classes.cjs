@@ -1,4 +1,5 @@
 'use strict';
+const background=require('../shell/background-paint.js');
 const colors=require('../shell/html-css-values.js'),responsive=require('../shell/responsive.js'),inspector=require('../shell/inspector.js'),tokens=require('./class-tokens.cjs');
 const properties=['color','background-color','border-color','fill','stroke'];
 function encode(property,value){
@@ -41,23 +42,46 @@ function own(plain,property){
  const named=(['fill','stroke'].includes(property)?'(?:none|':'(?:')+'inherit|current|transparent|black|white|(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(?:50|[1-9]00|950))';
  return new RegExp('^'+named+alpha+'$').test(value)||new RegExp('^\\[(?:#[a-fA-F0-9]{3,8}|color:[^\\]]+|(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color|color-mix)\\([^\\]]+\\))\\]'+alpha+'$').test(value)||new RegExp('^\\(color:[^)]+\\)'+alpha+'$').test(value);
 }
+function hiddenBackground(className,scope){
+ const parts=className.split(/\s+/).filter(Boolean).map(token=>responsive.split(token)).filter(part=>part.prefix===scope).map(part=>inspector.base(part.value));
+ const prefix='['+background.property+':',metadata=parts.filter(part=>part.startsWith(prefix));
+ if(!metadata.length)return null;
+ if(metadata.length!==1)throw Error('The hidden background color settings are ambiguous.');
+ const stored=metadata[0].slice(prefix.length,-1).replace(/_/g,' ');
+ if(stored==='none')return {stored,hidden:false};
+ const declarations=parts.filter(part=>own(part,'background-color'));
+ if(declarations.length!==1||!declarations[0].startsWith('[background-color:'))throw Error('The hidden background color settings are ambiguous.');
+ const current=declarations[0].slice('[background-color:'.length,-1).replace(/_/g,' ');
+ return {...background.state(current,stored),current,stored};
+}
 function compose(className,property,value,scope=''){
  if(!properties.includes(property))throw Error('Choose a supported color property.');
- const encoded=value===null?null:encode(property,value);if(typeof className!=='string')throw Error('Color styles require literal classes.');responsive.replaceScope('','',scope);
+ if(typeof className!=='string')throw Error('Color styles require literal classes.');responsive.replaceScope('','',scope);
+ const hidden=property==='background-color'?hiddenBackground(className,scope):null;
+ let metadata;
+ if(hidden){
+  if(value===null)metadata=null;
+  else if(hidden.hidden){const changes=background.edit(hidden.current,hidden.stored,value);value=changes[property];metadata=changes[background.property];}
+ }
+ const encoded=value===null?null:encode(property,value);
  const kept=[];
  for(const token of className.split(/\s+/).filter(Boolean)){
   if(!tokens.valid(token))throw Error('The source contains unsupported class syntax.');
   const part=responsive.split(token),plain=inspector.base(part.value);
   if(part.prefix!==scope){kept.push(token);continue;}
+  if(metadata!==undefined&&plain.startsWith('['+background.property+':'))continue;
   if(own(plain,property))continue;
   // Ordinary utilities remain intact underneath the explicit linked property.
   // Important shorthands may own geometry or images too, so never delete them.
   if(/^!|!$/.test(part.value)&&related(plain,property))throw Error('Resolve the important '+property+' utility before linking this color.');
   kept.push(token);
  }
+ if(metadata)kept.push(scope+'!['+background.property+':'+metadata+']');
  return (encoded===null?kept:kept.concat(scope+encoded)).join(' ');
 }
 function overridden(className,property,value,scope=''){
+ const hidden=property==='background-color'?hiddenBackground(className,scope):null;
+ if(hidden?.hidden){if(hidden.color!==background.state(value).color)return true;value=hidden.current;}
  const encoded=encode(property,value),projected=responsive.project(className,scope).split(/\s+/).filter(Boolean);
  return !projected.includes(encoded)||projected.some(token=>token!==encoded&&/^!|!$/.test(token)&&related(inspector.base(token),property));
 }

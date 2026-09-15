@@ -1,4 +1,5 @@
 'use strict';
+const background=require('../shell/background-paint.js');
 const parse5=require('parse5'),MagicString=require('magic-string'),html=require('./adapters/html.cjs');
 const {valid,families,overlaps,variableName,variableCycle}=require('../shell/html-css-values.js');
 const escape=value=>value.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
@@ -41,9 +42,16 @@ function plan(resolved,op){
   if(op.changes!==undefined&&(op.changes===null||typeof op.changes!=='object'||Array.isArray(op.changes)||Object.hasOwn(op,'property')))return refuse('Provide a property or a CSS change set.');
   if(op.resetScope!==undefined&&(op.resetScope!==true||Object.hasOwn(op,'property')||Object.hasOwn(op,'value')||Object.hasOwn(op,'changes')))return refuse('Reset a screen scope without additional property changes.');
   const state=inspect(resolved),block=state.blocks.find(b=>b.width===op.width),values={...block?.values};
-  const changes=op.resetScope?Object.keys(values).map(property=>[property,null]):op.changes===undefined?[[op.property,op.value]]:Object.entries(op.changes);
+  let changes=op.resetScope?Object.keys(values).map(property=>[property,null]):op.changes===undefined?[[op.property,op.value]]:Object.entries(op.changes);
   if(op.resetScope&&Number.isInteger(op.width)&&op.width>=0&&op.width<=7680&&!changes.length)return {ok:true,hash:resolved.hash,edits:[]};
   if(!Number.isInteger(op.width)||op.width<0||op.width>7680||!changes.length||!op.resetScope&&changes.length>32||changes.some(([property,value])=>!valid(property,value)))return refuse('Unsupported CSS property, value or screen width.');
+  // Color edits and resets must update the hidden original in the same source
+  // transaction. Explicit visibility change sets already carry both properties.
+  const colorChange=changes.find(([property])=>property==='background-color');
+  if(colorChange&&!changes.some(([property])=>property===background.property)&&Object.hasOwn(values,background.property)&&(colorChange[1]===null||values[background.property]!=='none')){
+   const replacement=colorChange[1]===null?background.reset():background.edit(values['background-color'],values[background.property],colorChange[1]);
+   changes=changes.filter(([property])=>property!=='background-color').concat(Object.entries(replacement));
+  }
   const inline=attr(resolved.element.node,'style')||'';
   // Reset must remain possible even if an external inline rule now wins.
   const important=[...inline.replace(/\/\*[\s\S]*?\*\//g,'').matchAll(/(?:^|;)\s*([a-z-]+)\s*:[^;]*!\s*important\s*(?=;|$)/gi)].map(m=>m[1].toLowerCase());

@@ -26,3 +26,45 @@ test('React and Liquid source writers retain hidden background metadata with ind
  assert.ok(classes.includes('bg-blue-500'));assert.ok(classes.includes('md:bg-cover'));assert.ok(!classes.includes('md:bg-red-500'));assert.ok(classes.includes('md:!['+key+':'));
  for(const kind of ['react','liquid']){const adapter=require('../src/adapters/'+kind+'.cjs'),relPath=kind==='react'?'app/Page.jsx':'sections/main.liquid',source=kind==='react'?'export default function Page(){return <h1 className="'+before+'">Headline</h1>}':'<h1 class="'+before+'">Headline</h1>',find=source=>adapter.collect(source,relPath).elements.find(el=>(kind==='react'?require('../src/id.cjs').jsxElementName(el.node):el.tag)==='h1'),resolved={source,file:'/tmp/'+relPath,relPath,hash:adapter.contentHash(source),element:find(source)},result=adapter.planOp(resolved,{type:'setClasses',classes,fileHash:resolved.hash});assert.equal(result.ok,true,result.reason);assert.equal(result.edits[0].before,source);const next=find(result.edits[0].after);assert.equal(kind==='react'?next.node.openingElement.attributes.find(attr=>attr.name?.name==='className').value.value:next.classAttr.value,classes);}
 });
+test('HTML hidden background edits, saved style refresh and resets stay atomic and scoped',()=>{
+ const html=require('../src/adapters/html.cjs'),css=require('../src/html-css.cjs'),styles=require('../src/html-color-styles.cjs');
+ const initial='<html><head></head><body><h1>Headline</h1></body></html>',resolve=source=>({source,file:'/tmp/index.html',relPath:'index.html',hash:html.contentHash(source),element:html.collect(source,'index.html').elements.find(el=>el.tag==='h1')});
+ let source=initial;
+ const apply=(planner,op,style)=>{const before=source,result=planner(resolve(source),op,style);assert.equal(result.ok,true,result.reason);assert.equal(result.edits.length,1);assert.equal(result.edits[0].before,before);source=result.edits[0].after;return css.describe(resolve(source)).cssRules;};
+ const style={id:'11111111-1111-4111-8111-111111111111',name:'Brand',properties:{color:'#33669980'}};
+ apply(styles.plan,{type:'applyColorStyle',width:768,property:'background-color'},style);
+ apply(css.plan,{width:0,property:'background-color',value:'#ffffff'});
+ let rules=apply(css.plan,{width:768,changes:B.toggle(style.properties.color,'none',true)});
+ assert.deepEqual(styles.describe(resolve(source)).colorStyleOverrides[768],[]);
+ rules=apply(styles.plan,{type:'refreshColorStyle',width:768,property:'background-color'},{...style,properties:{color:'#abcdef80'}});
+ assert.equal(B.state(rules[768]['background-color'],rules[768][key]).color,'#abcdef80');assert.equal(rules[0]['background-color'],'#ffffff');
+ assert.deepEqual(styles.describe(resolve(source)).colorStyleOverrides[768],[]);
+ rules=apply(css.plan,{width:768,property:'background-color',value:'color(display-p3 0.8 0.1 0.2 / 0.25)'});
+ assert.equal(B.state(rules[768]['background-color'],rules[768][key]).color,'color(display-p3 0.8 0.1 0.2 / 0.25)');
+ assert.deepEqual(styles.describe(resolve(source)).colorStyleOverrides[768],['background-color']);
+ rules=apply(styles.plan,{type:'resetColorStyle',width:768,property:'background-color'},{...style,properties:{color:'#abcdef80'}});
+ assert.equal(B.state(rules[768]['background-color'],rules[768][key]).hidden,true);
+ rules=apply(css.plan,{width:768,changes:B.toggle(rules[768]['background-color'],rules[768][key],false)});
+ assert.equal(rules[768]['background-color'],'#abcdef80');assert.equal(rules[768][key],'none');
+ rules=apply(css.plan,{width:768,property:'background-color',value:null});assert.equal(rules[768],undefined);assert.equal(rules[0]['background-color'],'#ffffff');
+});
+test('React and Liquid hidden backgrounds keep saved links through refresh and local overrides',()=>{
+ const C=require('../src/color-style-classes.cjs'),hidden=B.toggle('#33669980','none',true),initialClasses=C.compose('bg-white md:bg-cover','background-color',hidden['background-color'],'md:')+' md:!['+key+':'+hidden[key]+']';
+ assert.equal(C.overridden(initialClasses,'background-color','#33669980','md:'),false);
+ assert.throws(()=>C.compose(initialClasses+' md:bg-red-500','background-color','#fff','md:'),/ambiguous/);
+ assert.throws(()=>C.compose(initialClasses.replace(hidden['background-color'].replace(/ /g,'_'),'#ff000000'),'background-color','#fff','md:'),/changed outside/);
+ for(const kind of ['react','liquid']){
+  const adapter=require('../src/adapters/'+kind+'.cjs'),links=require('../src/'+(kind==='react'?'jsx':'liquid')+'-color-styles.cjs'),relPath=kind==='react'?'Page.jsx':'main.liquid',resolve=source=>({source,file:'/tmp/'+relPath,relPath,hash:adapter.contentHash(source),element:adapter.collect(source,relPath).elements.find(el=>kind==='react'?el.node.openingElement.name.name==='h1':el.tag==='h1')});
+  let source=kind==='react'?'export default function Page(){return <h1 className="'+initialClasses+'">Title</h1>}':'<h1 class="'+initialClasses+'">Title</h1>';
+  const style={id:'11111111-1111-4111-8111-111111111111',name:'Brand',properties:{color:'#33669980'}},op={type:'applyColorStyle',property:'background-color',scope:'md:'};
+  const apply=(planner,operation,value)=>{const before=source,result=planner(resolve(source),operation,value);assert.equal(result.ok,true,result.reason);if(result.edits.length){assert.equal(result.edits.length,1);assert.equal(result.edits[0].before,before);source=result.edits[0].after;}return adapter.describe(resolve(source)).className;};
+  apply(links.plan,op,style);assert.deepEqual(links.describe(resolve(source)).colorStyleOverrides['md:'],[]);
+  let classes=apply(links.plan,{...op,type:'refreshColorStyle'},{...style,properties:{color:'#abcdef80'}});
+  assert.equal(C.overridden(classes,'background-color','#abcdef80','md:'),false);assert.ok(classes.includes('bg-white'));assert.ok(classes.includes('md:bg-cover'));
+  classes=apply(adapter.planOp,{type:'setClasses',classes:C.compose(classes,'background-color','#12345678','md:')});
+  assert.deepEqual(links.describe(resolve(source)).colorStyleOverrides['md:'],['background-color']);
+  classes=apply(links.plan,{...op,type:'resetColorStyle'},style);assert.equal(C.overridden(classes,'background-color','#33669980','md:'),false);
+  classes=apply(adapter.planOp,{type:'setClasses',classes:C.compose(classes,'background-color',null,'md:')});
+  assert.ok(!classes.includes(key));assert.ok(!classes.includes('[background-color:'));assert.ok(classes.includes('bg-white'));assert.ok(classes.includes('md:bg-cover'));
+ }
+});

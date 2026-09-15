@@ -1,4 +1,5 @@
 'use strict';
+const background=require('../shell/background-paint.js');
 const MagicString=require('magic-string'),html=require('./adapters/html.cjs'),css=require('./html-css.cjs'),catalog=require('./color-styles.cjs');
 const attribute='data-rt-color-styles',properties=['color','background-color','border-color','fill','stroke'],refuse=reason=>({ok:false,refused:true,reason});
 function links({element}){
@@ -13,9 +14,16 @@ function links({element}){
   }
  }return state;
 }
+function matches(values,property,value){
+ if(property==='background-color'&&values?.[background.property]&&values[background.property]!=='none'){
+  const original=background.state(values[property],values[background.property]).color;
+  return original===background.state(value).color;
+ }
+ return values?.[property]===value;
+}
 function describe(resolved){try{
  const state=links(resolved),info=css.describe(resolved);if(info.cssReason)throw Error(info.cssReason);
- return {colorStyles:true,colorStyleLinks:state,colorStyleOverrides:Object.fromEntries(Object.entries(state).map(([width,group])=>[width,Object.entries(group).filter(([p,link])=>link.override||info.cssRules[width]?.[p]!==link.value).map(([p])=>p)]))};
+ return {colorStyles:true,colorStyleLinks:state,colorStyleOverrides:Object.fromEntries(Object.entries(state).map(([width,group])=>[width,Object.entries(group).filter(([p,link])=>link.override||!matches(info.cssRules[width],p,link.value)).map(([p])=>p)]))};
 }catch(error){return {colorStyles:false,colorStyleReason:error.message};}}
 function plan(resolved,op,style){try{
  if(op.fileHash&&op.fileHash!==resolved.hash)return refuse('The source changed. Re-select the layer.');
@@ -26,7 +34,7 @@ function plan(resolved,op,style){try{
   const value=catalog.validate({version:1,styles:[style]}).styles[0].properties.color;
   if(op.type!=='applyColorStyle'&&oldLink?.id!==style.id)return refuse('The layer is no longer linked to this color style.');
   const info=css.describe(resolved);if(info.cssReason)return refuse(info.cssReason);
-  const override=op.type==='refreshColorStyle'&&(oldLink.override||info.cssRules[op.width]?.[op.property]!==oldLink.value);
+  const override=op.type==='refreshColorStyle'&&(oldLink.override||!matches(info.cssRules[op.width],op.property,oldLink.value));
   if(!override){const result=css.plan(resolved,{width:op.width,property:op.property,value});if(!result.ok)return result;source=result.edits[0]?.after||source;}
   (state[op.width]??={})[op.property]={id:style.id,value,...(override?{override:true}:{})};
  }else return refuse('Unsupported color style operation.');
