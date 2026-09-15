@@ -17643,3 +17643,13 @@ Added Group selection alongside Frame selection for HTML, React, and Liquid. A g
 Validation: 1,639 unit tests passed (`/tmp/retouch-group-units-final.log`), with nine focused group/frame tests passing again after action-label polish. HTML, React, and Liquid browser flows passed grouping and ungrouping, exact undo/redo, restored selections, nonzero group outlines, and zoom-to-group (`/tmp/retouch-group-html-bounds.log`, `/tmp/retouch-group-react-bounds.log`, `/tmp/retouch-group-liquid-bounds.log`). At 390, 768, and 1100 pixels, selected-child and untouched-sibling positions and sizes remained within 0.1px of their pre-group values across column flex, row flex, and grid layouts. Screen changes did not write source.
 
 This does not prove arbitrary selector/cascade invariance: DOM-ancestry selectors can still change when a wrapper is inserted, and native utilities require the site's supported class compiler. Groups do not yet implement complete Figma transform/resize behavior; automatic geometry-preserving frames, arbitrary dynamic/cross-file structural edits, and trusted notarized desktop distribution remain incomplete.
+
+### Group/frame keyboard actions — 2026-09-15
+
+Added Cmd/Ctrl+G for Group selection, Cmd/Ctrl+Shift+G for Ungroup/Remove frame, and Cmd+Option+G or Ctrl+Alt+G for Frame selection. The bindings use the existing command capability checks and transactions, work from the layer tree and preview canvas, expose menu hints and aria-keyshortcuts, and ignore text fields, IME composition, repeated keydowns, unsupported modifier combinations, and unavailable structural actions. Physical KeyG supports Option-modified keyboard characters.
+
+Reference: Figma's official frame shortcut documentation at https://help.figma.com/hc/en-us/articles/360041539473-Frames-in-Figma-Design and groups/frame guidance at https://www.figma.com/best-practices/groups-versus-frames/ .
+
+Validation: all 1,639 unit tests passed (`/tmp/retouch-group-keys-units.log`). Browser flows passed for HTML, React, and Liquid grouping/ungrouping and framing/release, exact history, source selection restoration, and typing isolation (`/tmp/retouch-group-keys-html.log`, `/tmp/retouch-group-keys-react.log`, `/tmp/retouch-group-keys-liquid.log`). Additional Liquid checks cover held/composing/unsupported chords and unavailable release (`/tmp/retouch-group-keys-guards.log`). The Windows modifier branch passed in Chromium with navigator.platform overridden to Win32 (`/tmp/retouch-group-keys-windows.log`); this is not a native Windows system-shortcut test.
+
+Full design parity, group transforms, geometry-preserving frames, arbitrary-site support, and trusted Homebrew desktop distribution remain incomplete.

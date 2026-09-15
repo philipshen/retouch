@@ -84,6 +84,7 @@
     const actionButtons={};
     for(const [action,name] of [['insertText','Add text'],['insertFrame','Add frame'],['copyElement','Copy layer'],['pasteElement','Paste layer'],['reparentElement','Move into…'],['groupSelection','Group selection'],['frameSelection','Frame selection'],['removeFrame','Remove frame'],['duplicateElement','Duplicate layer'],['before','Move layer up'],['after','Move layer down'],['first','Send to back'],['last','Bring to front'],['deleteElement','Delete layer']]) {
       const b=document.createElement('button');b.textContent=name;b.dataset.designAction=action;b.disabled=true;
+      if(['groupSelection','frameSelection','removeFrame'].includes(action)){const extra=action==='frameSelection'?'Alt+':action==='removeFrame'?'Shift+':'';b.setAttribute('aria-keyshortcuts','Meta+'+extra+'G Control+'+extra+'G');}
       if(['before','after','first','last'].includes(action)){const start=['before','first'].includes(action),edge=['first','last'].includes(action),key=start?'[':']';b.setAttribute('aria-keyshortcuts','Meta+'+(edge?'Shift+':'')+key+' Control+'+(edge?'Shift+':'')+key);b.title=(edge?(start?'Move to the start':'Move to the end'):(start?'Move earlier':'Move later'))+' in source order ('+(/Mac|iPhone|iPad/.test(navigator.platform)?'⌘':'Ctrl+')+(edge?'Shift+':'')+key+').';}
 b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
     }

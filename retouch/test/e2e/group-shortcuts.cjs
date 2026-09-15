@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict');
+exports.run=async({page,app,read,wait,settled,kind})=>{
+ if(process.env.RT_E2E_GROUP_KEYS_WINDOWS)await page.evaluate(()=>Object.defineProperty(navigator,'platform',{configurable:true,value:'Win32'}));
+ const original=read(),mod=await page.evaluate(()=>/Mac|iPhone|iPad/.test(navigator.platform)?'Meta':'Control');await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click({modifiers:['Shift']});await settled();
+ const search=page.getByLabel('Find a layer',{exact:true});await search.focus();await search.press(mod+'+g');assert.equal(read(),original,'Typing focus keeps shortcuts native');
+ await page.evaluate(()=>{const target=document.querySelector('#layersPanel [role=treeitem]');const base={key:'g',code:'KeyG',metaKey:/Mac|iPhone|iPad/.test(navigator.platform),ctrlKey:!/Mac|iPhone|iPad/.test(navigator.platform),bubbles:true,cancelable:true};for(const extra of [{repeat:true},{isComposing:true},{altKey:true,shiftKey:true}])target.dispatchEvent(new KeyboardEvent('keydown',{...base,...extra}));});await settled();assert.equal(read(),original,'Held, composing and unsupported chords do not write');
+ const row=page.getByRole('treeitem',{name:'h1 · Headline',exact:true});await row.focus();await row.press(mod+'+Shift+g');await settled();assert.equal(read(),original,'Unavailable release does not write');await row.press(mod+'+g');await wait(()=>read()!==original);await settled();const grouped=read();assert.equal(await app.locator('[data-rt-group]').count(),1);
+ await page.getByRole('treeitem',{name:'div · Group',exact:true}).focus();await page.keyboard.press(mod+'+Shift+g');await wait(()=>read()===original);await settled();assert.equal(await page.getByRole('treeitem',{selected:true}).count(),2);
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===grouped);await settled();await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===original);await settled();
+ await app.locator('body').evaluate(el=>{el.tabIndex=-1;el.focus();});await app.locator('body').press(mod+'+Alt+g');await wait(()=>read()!==original);await settled();const framed=read();assert.equal(await app.locator('[data-rt-frame]').count(),1);assert.equal(await app.locator('[data-rt-group]').count(),0);
+ await app.locator('body').evaluate(el=>{el.tabIndex=-1;el.focus();});await app.locator('body').press(mod+'+Shift+g');await wait(()=>read()===original);await settled();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===framed);await settled();await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===original);await settled();assert.equal(await page.getByRole('treeitem',{selected:true}).count(),2);
+ console.log(kind+': PASS group/ungroup and frame/release keyboard shortcuts from layers and canvas, typing isolation and exact history');
+};
