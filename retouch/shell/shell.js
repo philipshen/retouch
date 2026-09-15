@@ -3408,7 +3408,7 @@ async function moveGroupOnCanvas(info,opener){
  try{
   if(matchingEls(info.id).length!==1)throw Error('Select a group with one rendered occurrence.');
   const width=scope?Number(/^min-\[(\d+)px\]:$/.exec(scope)?.[1]):0;
-  if(!Number.isInteger(width)||width>doc().defaultView.innerWidth)throw Error('Choose an active pixel screen scope for group movement.');
+  if(info.cssAuthoring?(!Number.isInteger(width)||width>doc().defaultView.innerWidth):(scope&&document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='true'))throw Error('Choose a screen where the group edit range is active.');
   const members=RetouchGroupMove.measure(group,el=>layerLocks.locked(el)),responses=await Promise.all(members.map(item=>api('GET',resolveUrl(item.id))));
   if(!current())return;
   if(!responses.every(r=>r?.ok&&r.element.hash===info.hash&&r.element.file===info.file))throw Error('Re-select group contents from the same source file.');
@@ -3421,8 +3421,8 @@ async function moveGroupOnCanvas(info,opener){
     if(!current())return;
     try{
      const fresh=RetouchGroupMove.measure(group,el=>layerLocks.locked(el));
-     if(fresh.length!==members.length||fresh.some((item,i)=>item.el!==members[i].el||item.translate!==members[i].translate||['x','y','width','height'].some(key=>Math.abs(item.rect[key]-members[i].rect[key])>.1)))throw Error('The group changed during movement. Re-select it.');
-     const changesById=Object.fromEntries(members.map(item=>[item.id,{translate:RetouchGroupMove.translation(item.translate,delta)}])),classesById=Object.fromEntries(infos.map(item=>[item.id,RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate)])),first=infos[0],multi=infos.length>1;
+     if(fresh.length!==members.length||fresh.some((item,i)=>item.el!==members[i].el||item.translate!==members[i].translate||item.matrix.some((n,j)=>Math.abs(n-members[i].matrix[j])>1e-9)||['x','y','width','height'].some(key=>Math.abs(item.rect[key]-members[i].rect[key])>.1)))throw Error('The group changed during movement. Re-select it.');
+     const changesById=Object.fromEntries(members.map(item=>[item.id,{translate:RetouchGroupMove.translation(item.translate,RetouchGroupMove.localDelta(item.matrix,delta))}])),classesById=Object.fromEntries(infos.map(item=>[item.id,RetouchGroupMove.classes(item.className,scope,changesById[item.id].translate)])),first=infos[0],multi=infos.length>1;
      busyPanel(true);
      const result=await api('POST','/rt/__api/op',{type:css?(multi?'setCSSSelection':'setCSS'):(multi?'setClassesSelection':'setClasses'),id:first.id,fileHash:first.hash,...(multi?{ids:infos.map(item=>item.id)}:{}),...(css?{width,...(multi?{changesById}:{changes:changesById[first.id]})}:multi?{classesById,...selectionSourceContexts(infos)}:{classes:classesById[first.id],context:first.context})});
      if(!result?.ok)throw Error(result?.reason||result?.error||'Could not move group.');

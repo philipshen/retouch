@@ -17744,3 +17744,42 @@ refuse before a source write. Cascade overrides can still prevent a saved offset
 from rendering; the post-write geometry check reports that discrepancy. Full
 Figma parity and universal site support remain incomplete. No desktop rebuild or
 notarization is claimed for these editor changes.
+
+### Responsive offsets inside transformed containers (2026-09-15)
+
+Group movement now retains percentage terms in authored translations and composes
+pixel displacement using a bounded shared length/percentage parser. Canonical
+`calc(percent +/- pixels)` values work in both managed HTML CSS and class writes.
+Ancestor matrices convert the requested canvas displacement into each child's
+local coordinates; nested 2D rotation, nonuniform scale, skew, and CSS zoom retain
+the expected movement. Matrix changes during a gesture invalidate the operation.
+Composition follows the CSS Transforms specification:
+https://www.w3.org/TR/css-transforms-2/#ctm
+
+Class translation writes use an important utility for that property so normal
+authored styles cannot silently override the edit. Other class properties and
+scopes are retained. This is an explicit translation override in the selected
+range; it does not add a dynamic offset to every possible authored media/state
+translation. Class scopes now accept the active range exposed by the inspector,
+including rem-based ranges, instead of requiring a pixel-only prefix.
+
+Validation: 1,644 unit tests pass. HTML/Chromium proves transformed base movement
+with percentages, skew and CSS zoom; React/Chromium and Liquid/WebKit prove scoped
+movement through nested rotation/scaling/skew/zoom. A large-screen-only move leaves
+390px and 768px geometry unchanged while moving both children at 1100px. Tests
+include repeated pointer/keyboard movement, sibling and size preservation, exact
+undo/redo, group selection, Escape cancellation, and subsequent ungrouping. The
+pointer assertion uses delivered browser coordinates to account for WebKit input
+rounding. An untransformed HTML workflow also passes.
+
+Evidence logs: `/tmp/retouch-group-transform-units-final.log`,
+`/tmp/retouch-group-transform-zoom.log`,
+`/tmp/retouch-group-transform-react-scope-final.log`,
+`/tmp/retouch-group-transform-webkit-final.log`, and
+`/tmp/retouch-group-transform-regression.log`. Inspected the transformed
+Liquid/WebKit screenshot `/tmp/retouch-group-move-liquid.png`.
+
+Remaining: perspective/3D and motion-path containers, nonliteral/ambiguous source
+ownership, hidden/direct-text/SVG children, group resize/rotation and full Figma
+parity. Native app rebuild, notarization and trusted distribution remain separate
+and were not performed in this checkpoint.

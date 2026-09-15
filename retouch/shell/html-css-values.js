@@ -210,7 +210,7 @@
   if(property==='font-family')return value.split(',').every(part=>{const name=part.trim();return /^(?:[\p{L}\p{N}_-]+(?: +[\p{L}\p{N}_-]+)*|"[\p{L}\p{N} _-]+"|'[\p{L}\p{N} _-]+')$/u.test(name);});
   if(property==='font-weight')return ['normal','bold'].includes(value)||/^(?:\d*\.)?\d+$/.test(value)&&Number(value)>=1&&Number(value)<=1000;
   if(property==='opacity')return /^(?:\d*\.)?\d+$/.test(value)&&Number(value)>=0&&Number(value)<=1;
-  if(property==='translate')return typeof value==='string'&&/^-?(?:\d*\.)?\d+px -?(?:\d*\.)?\d+px$/.test(value)&&value.split(' ').every(part=>Math.abs(parseFloat(part))<=100000);
+  if(property==='translate')return (typeof module==='object'&&module.exports?require('./translate-values.js'):window.RetouchTranslateValues).valid(value);
   if(property==='scale')return typeof value==='string'&&value.split(' ').length>=2&&value.split(' ').length<=3&&value.split(' ').every(part=>/^-?(?:\d*\.)?\d+(?:e[-+]?\d+)?$/i.test(part)&&Number.isFinite(Number(part))&&Math.abs(Number(part))<=10000);
   if(property==='rotate')return /^-?(?:\d*\.)?\d+deg$/.test(value)&&Math.abs(parseFloat(value))<=360;
   if(property==='object-position'){const parts=value.split(/\s+/);return parts.length===2&&parts.every(p=>/^(?:\d*\.)?\d+%$/.test(p)&&parseFloat(p)>=0&&parseFloat(p)<=100);}
