@@ -19520,3 +19520,23 @@ All 1,666 unit tests passed. Logs:
 
 No push or native rebuild. Full Figma parity, arbitrary-site support and trusted
 Homebrew distribution remain incomplete.
+
+
+### Hidden image framing verification
+
+Extended the mixed-paint opacity/visibility browser workflow to edit a hidden
+image's Tile mode, X/Y position and tile scale before cropping and showing it.
+Assertions check the entire framing map after each operation, unchanged adjacent
+paints, hidden metadata and rendered pixels, retained settings after showing,
+responsive inheritance and exact source restoration through undo.
+
+HTML/Chromium, React/Chromium and Liquid/WebKit passed using
+`RT_E2E_IMAGE_FILL=1 RT_E2E_IMAGE_FILL_UPLOAD=1 RT_E2E_IMAGE_FILL_STACK=1
+RT_E2E_PAINT_ORDER=1 RT_E2E_PAINT_OPACITY=1`.
+Logs: `/tmp/retouch-hidden-image-framing-{html,react,liquid}.log`.
+No product code change was needed for this interaction; the new assertions
+protect the mode/scale fixes in combination with hidden image editing.
+Unit tests were not rerun for this browser-test-only change.
+
+No push or native rebuild. Full Figma parity, arbitrary-site support and trusted
+Homebrew distribution remain incomplete.
