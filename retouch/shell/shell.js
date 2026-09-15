@@ -1792,7 +1792,7 @@ function inTextScope(el, info) {
   return Object.entries(info.renderScope || {}).every(([name,value])=>el.getAttribute(name)===value);
 }
 function drawBox(el, cls, kind) {
-  if(cls==='sel'&&document.querySelector('.canvas-move-surface[data-local-move]')?.dataset.localMove===el.getAttribute('data-rt'))return;
+  if(cls==='sel'&&document.querySelector('.canvas-move-surface[data-local-move], .canvas-local-rotate-surface[data-local-move]')?.dataset.localMove===el.getAttribute('data-rt'))return;
   const css=el.ownerDocument.defaultView.getComputedStyle(el);
   if(css.display==='contents'){const bounds=RetouchComponentInstances.bounds([el]);if(bounds)drawBounds(bounds,cls,kind);return;}
   if(css.rotate&&css.rotate!=='none'&&css.rotate!=='0deg'||css.scale&&css.scale!=='none')try{const g=RetouchInspector.outlineGeometry(el);if(g.rotation||g.scaleX!==1||g.scaleY!==1){drawBounds({left:g.layoutLeft,top:g.layoutTop,width:g.width,height:g.height},cls,kind,{rotation:g.rotation,origin:g.transformOrigin});return;}}catch{}

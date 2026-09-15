@@ -10,7 +10,7 @@
  }
  function mount({target,frame,canvas,input,current,onEnd,onError,initialPointer=null}){
   const doc=root.document,w=target.ownerDocument.defaultView,measure=()=>geometry(target,true);let g;
-  try{g=measure();}catch(error){onError(error.message);return null;}
+  try{g=measure();}catch(error){return root.RetouchLocalRotate.mount({target,frame,canvas,input,current,onEnd,onError,initialPointer});}
   const origin=g.transformOrigin.split(/\s+/).map(parseFloat),f=frame.getBoundingClientRect(),c=canvas.getBoundingClientRect(),scale=f.width/w.innerWidth;
   if(origin.length<2||origin.some(n=>!Number.isFinite(n))||origin[2]||!Number.isFinite(scale)||scale<=0){onError('This layer’s rotation origin cannot be edited on canvas yet.');return null;}
   const pivot={x:f.left+(g.layoutLeft+origin[0])*scale,y:f.top+(g.layoutTop+origin[1])*scale};

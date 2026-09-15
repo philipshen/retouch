@@ -19893,3 +19893,36 @@ and the width readout updates during the gesture. Passing logs:
 coverage only; it does not establish coverage for every replaced element,
 transform reference or site. Full Figma/arbitrary-site parity and trusted
 Homebrew distribution remain incomplete. No native rebuild or push.
+
+
+### Canvas rotation inside transformed frames
+
+Rotate on canvas now falls back to local HTML layer geometry when the existing
+page-coordinate path cannot represent the containing frame. A synchronous
+quarter-turn preview measures the actual rotation pivot and is restored before
+the gesture. Pointer positions are mapped through the containing frame's inverse
+affine transform, including different scales on the two axes. The gesture paints
+the actual transformed outline and updates the rotation field immediately.
+Release or Enter writes through the existing source editor; Escape and changed
+screens or containing-frame transforms restore the preview.
+
+All 1,678 unit tests passed. HTML/Chromium, React/Chromium and Liquid/WebKit
+image fixtures passed pointer rotation, keyboard increments, source unchanged
+during preview, preserved authored matrix/scale/translation/layout, cancellation
+and exact undo. Fixtures include content-box origins, borders/padding, nested
+rotation, nonuniform parent scaling and reflected layers. Existing move, resize,
+position-field and alignment checks passed in those runs. The existing HTML
+canvas rotation/corner-control regression passed after waiting for refreshed
+controls to be visible before measuring their presentation.
+
+Logs: `/tmp/retouch-local-rotate-{html,react,liquid}-final.log`,
+`/tmp/retouch-local-rotate-units.log`,
+`/tmp/retouch-local-rotate-regression-final.log`. Inspected
+`/tmp/retouch-local-rotate.png`; the rotation readout and outline update during
+the gesture, with off-canvas content clipped at the viewport boundary.
+
+The new fallback uses the explicit Rotate on canvas action; persistent corner
+controls in transformed frames remain incomplete. Existing inline-rotation
+source restrictions remain, as do 3D/own-zoom limitations and unsupported flow
+coordinate systems. Full Figma/arbitrary-site parity and trusted Homebrew
+distribution remain incomplete. No native rebuild or push.
