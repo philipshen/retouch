@@ -17299,3 +17299,11 @@ Shared Fill and Stroke rows now reuse the compact hex/opacity presentation. Mixe
 All 1,571 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit browser flows verify mixed alpha, hex changes with per-layer opacity, hidden paint, mixed sRGB/P3 Stroke opacity, invalid drafts and exact grouped undo/redo. Existing HTML single-layer Fill/Stroke/mixed-side and Liquid/WebKit gradient-stop compact-control regressions pass. The compact shared rows were visually inspected.
 
 General out-of-range mixed-paint authoring, unsupported computed color recovery, broader SVG paint controls and full Figma/native/Homebrew parity remain incomplete.
+
+### Shared SVG compact paints — 2026-09-15
+
+Multi-selected SVG layers now expose the shared design sections directly instead of nesting them under More properties. SVG fill and stroke use compact hex and opacity controls, including mixed alpha and per-layer sRGB/Display P3 colors. SVG selections retain their vector geometry controls. The shared controls do not adopt a single-layer paint-type selector.
+
+HTML/Chromium, React/Chromium and Liquid/WebKit browser flows verify fill and stroke alpha changes preserve distinct color channels/spaces, hex changes preserve alpha, unchanged hex focus does not write, unselected siblings remain unchanged, and grouped undo/redo restores exact source bytes. The light-theme layout was inspected. No source planner changed in this batch.
+
+The screenshot also exposes remaining inspector work: SVG shape selections still show irrelevant CSS box and typography fields. Context-sensitive shared SVG sections, gradient-reference editing, out-of-range mixed paint authoring, full Figma parity and trusted native/Homebrew distribution remain incomplete.
