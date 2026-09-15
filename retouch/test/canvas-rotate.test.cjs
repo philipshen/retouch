@@ -23,3 +23,12 @@ test('rotation corner hit areas follow signed scale with a fixed screen-space of
   corners.forEach((p,i)=>{const edge=handles[i],a=rotation*Math.PI/180,dx=p.x-edge.x,dy=p.y-edge.y,localX=dx*Math.cos(a)+dy*Math.sin(a),localY=-dx*Math.sin(a)+dy*Math.cos(a);assert.ok(Math.abs(Math.abs(localX)-10)<1e-8);assert.ok(Math.abs(Math.abs(localY)-10)<1e-8);assert.equal(Math.sign(localX),(i===0||i===3?-1:1)*Math.sign(scaleX));assert.equal(Math.sign(localY),(i<2?-1:1)*Math.sign(scaleY));});
  }
 });
+
+test('affine controls follow skewed reflected edges with screen-space hit offsets',()=>{
+ const points=[{x:100,y:20},{x:20,y:60},{x:50,y:120},{x:130,y:80}],result=R.affineControls(points);
+ assert.deepEqual(result.positions.find(p=>p.handle==='e'),{handle:'e',x:35,y:90,cursor:'nesw-resize'});
+ assert.deepEqual(result.positions.find(p=>p.handle==='n'),{handle:'n',x:60,y:40,cursor:'nwse-resize'});
+ const u={x:-80/Math.hypot(80,40),y:40/Math.hypot(80,40)},v={x:30/Math.hypot(30,60),y:60/Math.hypot(30,60)};
+ assert.ok(Math.abs(result.corners[0].x-(100-10*u.x-10*v.x))<1e-9);assert.ok(Math.abs(result.corners[0].y-(20-10*u.y-10*v.y))<1e-9);
+ assert.throws(()=>R.affineControls(points.map(()=>({x:0,y:0}))),/nonzero/);
+});

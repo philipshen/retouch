@@ -19926,3 +19926,31 @@ controls in transformed frames remain incomplete. Existing inline-rotation
 source restrictions remain, as do 3D/own-zoom limitations and unsupported flow
 coordinate systems. Full Figma/arbitrary-site parity and trusted Homebrew
 distribution remain incomplete. No native rebuild or push.
+
+
+### Direct selection handles in transformed frames
+
+Selected absolute layers inside transformed frames now expose persistent edge
+and corner resize handles plus the existing outside-corner rotation hit areas.
+Their positions follow the actual affine border, including skew and reflection.
+Corner offsets stay in screen pixels and resize cursors follow the transformed
+axes. The idle selection outline now follows that same border rather than its
+axis-aligned bounding rectangle. Pointer-down on the handles enters the existing
+local resize/rotation gestures directly.
+
+All 1,679 unit tests passed. HTML/Chromium, React/Chromium and Liquid/WebKit
+image fixtures verified the outline and handle coordinates against independent
+DOM measurements, direct edge resizing and corner rotation, unchanged source
+during preview, exact undo, Escape restoration and hidden handles in Hand mode.
+Those runs also passed the existing local movement, resize, rotation and X/Y
+checks. The untransformed HTML corner-control regression passed.
+
+Inspected `/tmp/retouch-local-handles.png`: the eight resize handles and outline
+follow the skewed reflected image border. Logs:
+`/tmp/retouch-local-handles-{html,react,liquid}-final.log`,
+`/tmp/retouch-local-handles-units.log`,
+`/tmp/retouch-local-handles-regression.log`.
+
+Inline rotation source restrictions, unsupported flow/3D coordinate systems,
+transformed resize snapping guides, full arbitrary-site/Figma parity and trusted
+Homebrew distribution remain incomplete. No native rebuild or push.
