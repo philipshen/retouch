@@ -20311,3 +20311,29 @@ passed on React/Chromium and Liquid/WebKit. Logs:
 initial-selection assertion. This verifies these selection and stack flows, not
 every temporary style probe in the editor. Full Figma/arbitrary-site parity and
 trusted Homebrew distribution remain incomplete. No native rebuild or push.
+
+
+### Rotated resize measurement preserves absent styles
+
+The rotated resize origin probe had the same deferred CSSOM serialization issue
+as selection geometry. A new browser assertion failed with an empty style
+attribute instead of null during a pointer resize, before screenshot capture.
+The probe now resets through the attribute API before removing an originally
+absent style. Existing authored style strings still restore verbatim.
+
+The percentage-origin rotated-resize suite checks attribute preservation before
+capture and after keyboard edits, undo and viewport cancellation. It passed on
+HTML/WebKit and React/Chromium, alongside all 1,693 unit tests. Added HTML/WebKit
+coverage also confirms converting a mixed flow/absolute selection to absolute
+positioning and undo preserves inline attributes; that path already passed and
+needed no production change.
+
+Two WebKit runs stopped at the earlier numeric scrub because its label detached
+while Playwright scrolled to it. The test now scrolls and waits for the field to
+remain attached across two animation frames before dragging. Final WebKit run
+passed. Logs: `/tmp/retouch-resize-style-before.log`,
+`/tmp/retouch-resize-style-html-final.log`, `/tmp/retouch-resize-style-react.log`,
+`/tmp/retouch-resize-style-units.log`, `/tmp/retouch-absolute-style-before.log`.
+
+Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
+incomplete. No native rebuild or push.
