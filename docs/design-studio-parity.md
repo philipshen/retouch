@@ -18034,3 +18034,32 @@ Logs: `/tmp/retouch-group-gap-preview-units.log`,
 Containing-frame alignment, group resize/rotation, full Figma parity and trusted
 public Homebrew distribution remain incomplete. No desktop rebuild or push for
 this checkpoint.
+
+### Live group drag preview checkpoint
+
+Direct group dragging and the explicit group canvas move action now translate
+actual page contents during the gesture. Mixed selections use the same preview.
+The shared canvas observer accounts for the expected move offset while checking
+live bounds and preview ownership. Restoration happens before the single source
+write or on cancellation; foreign translation changes remain untouched.
+
+Validation: 1,650 unit tests pass. HTML/Chromium, transformed React/Chromium and
+transformed Liquid/WebKit direct-drag workflows pass selected/unselected picking,
+release during delayed resolution, rendered movement before any source write,
+Escape geometry restoration, foreign translation preservation, and exact history.
+The HTML mixed-selection workflow verifies that all selected children/layers
+preview the same displacement without changing their sizes; alignment, reference
+source exclusion, nudging and responsive grouping regressions also pass. Ordinary
+selection movement passes at 50/100/200 percent zoom with snapping, scope, history,
+and cancellation.
+
+Logs: `/tmp/retouch-group-drag-preview-units.log`,
+`/tmp/retouch-group-drag-preview-html.log`,
+`/tmp/retouch-group-drag-preview-react.log`,
+`/tmp/retouch-group-drag-preview-webkit.log`,
+`/tmp/retouch-group-drag-preview-mixed.log`, and
+`/tmp/retouch-group-drag-preview-regression.log`.
+
+Containing-frame alignment, group resize/rotation, full Figma parity and trusted
+public Homebrew distribution remain incomplete. No desktop rebuild or push for
+this checkpoint.

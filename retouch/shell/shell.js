@@ -3450,7 +3450,7 @@ async function moveGroupOnCanvas(info,opener,gesture={}){
   if(members.some(item=>matchingEls(item.id).length!==1))throw Error('Group movement needs one rendered occurrence of each child.');
   if(gesture.prepareOnly)return {info,roots,selectionIds,members,infos,scope,width,css,current,preview:()=>RetouchGroupMove.preview(members)};
   canvasPan.cancel();
-  stopDrawing=RetouchCanvasMove.mount({initial:gesture.event?gesture:null,target:members[0].el,targets:members.map(item=>item.el),selectionId:info.id,frame:iframe,canvas:canvasSurface,mode:'move',opener,
+  stopDrawing=RetouchCanvasMove.mount({initial:gesture.event?gesture:null,target:members[0].el,targets:members.map(item=>item.el),selectionId:info.id,frame:iframe,canvas:canvasSurface,mode:'move',opener,current,contentPreview:RetouchGroupMove.preview(members),
    onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err'),onCommit:delta=>writeGroupMove({info,roots,selectionIds,members,infos,scope,width,css,current},delta)
    });
  }catch(error){toast(error.message,'err');}
