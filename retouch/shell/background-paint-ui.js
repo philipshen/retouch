@@ -1,16 +1,37 @@
 (function(root){
  'use strict';
  const B=root.RetouchBackgroundPaint;
+ // Recover a literal source value only when its browser rendering agrees with
+ // the current paint. Ambiguous declarations retain the computed fallback.
+ function preciseColor(info,el,current){
+  const d=el.ownerDocument,w=d.defaultView,candidates=[],rules=[];
+  const inline=el.style.getPropertyValue('background-color');if(inline)candidates.push(inline);
+  for(const style of d.querySelectorAll('style[data-rt-css]'))if(style.dataset.rtCss===el.getAttribute('data-rt-style')){
+   try{const width=Number(style.dataset.rtWidth),values=JSON.parse(style.dataset.rtValues);if(Number.isFinite(width)&&width<=w.innerWidth)rules.push({width,values});}catch{}
+  }
+  const effective=Object.assign({},...rules.sort((a,b)=>a.width-b.width).map(rule=>rule.values));
+  if(effective['background-color'])candidates.push(effective['background-color']);
+  const R=root.RetouchResponsive;let choices;
+  for(const token of (el.getAttribute('class')||'').split(/\s+/).filter(Boolean)){
+   const part=R.split(token),plain=root.RetouchInspector.base(part.value),match=/^\[background-color:(.+)\]$/.exec(plain);if(!match)continue;
+   if(part.prefix){const arbitrary=/^(min|max)-\[([\d.]+)(px|rem|em)\]:$/.exec(part.prefix),active=arbitrary?w.matchMedia('('+arbitrary[1]+'-width: '+arbitrary[2]+arbitrary[3]+')').matches:R.matches((choices??=R.discover(d)).find(choice=>choice.prefix===part.prefix),w);if(active!==true)continue;}
+   candidates.push(match[1].replace(/_/g,' '));
+  }
+  if(!candidates.length)return current;
+  const probe=d.createElement('span'),matches=new Set();probe.style.cssText='position:fixed;visibility:hidden;pointer-events:none';d.documentElement.append(probe);
+  try{for(const value of candidates){try{const literal=B.state(value).color;probe.style.setProperty('background-color',value,'important');if(w.getComputedStyle(probe).backgroundColor===current)matches.add(literal);}catch{}}}finally{probe.remove();}
+  return matches.size===1?[...matches][0]:current;
+ }
  function read(info,el){
   const css=el.ownerDocument.defaultView.getComputedStyle(el),stored=css.getPropertyValue(B.property).trim()||'none';
   const owned=(el.getAttribute('class')||'').includes('['+B.property+':'+stored+']')||Object.values(info.cssRules||{}).some(values=>values[B.property]===stored)||[...el.ownerDocument.querySelectorAll('style[data-rt-css]')].some(style=>style.dataset.rtCss===el.getAttribute('data-rt-style')&&style.textContent.includes(B.property+':'+stored+' '));
-  const metadata=owned?stored:'none',current=css.backgroundColor;
+  const metadata=owned?stored:'none',current=metadata==='none'?preciseColor(info,el,css.backgroundColor):css.backgroundColor;
   return {...B.state(current,metadata),current,stored:metadata};
  }
  function bind(info,el,input,save){
   let value,error;try{value=read(info,el);}catch(e){error=e.message;}
   if(error){input.disabled=true;input.title=error;return;}
-  if(value.hidden)input.value=value.color;
+  if(value.hidden||root.RetouchPaintPicker.parsePaint(input.value.trim()))input.value=value.color;
   const fail=e=>{input.setCustomValidity(e.message);input.reportValidity();};
   input.retouchPaintPreview=()=>{
    const state=read(info,el),preview=root.RetouchPaintPicker.propertyPreview({el,input,property:'background-color'});

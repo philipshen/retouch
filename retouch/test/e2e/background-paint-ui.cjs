@@ -6,7 +6,7 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
  const rendered=()=>target.evaluate(el=>parent.RetouchPaintPicker.parsePaint(getComputedStyle(el).backgroundColor));
  await color.fill('#33669980');await color.press('Enter');await record();await wait(async()=>Math.abs((await rendered()).alpha-128/255)<.003);
  const images=await target.evaluate(el=>[getComputedStyle(el).backgroundImage,getComputedStyle(el).backgroundSize]);
- await page.getByRole('button',{name:'Hide background color',exact:true}).click();await record();await page.getByRole('button',{name:'Show background color',exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Show background color',exact:true}).evaluate(el=>el===document.activeElement),true);assert.equal((await rendered()).alpha,0);
+ await page.getByRole('button',{name:'Hide background color',exact:true}).click();await record();await page.getByRole('button',{name:'Show background color',exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Show background color',exact:true}).evaluate(el=>el===document.activeElement),true);assert.equal((await rendered()).alpha,0);assert.equal(await target.evaluate(el=>parent.RetouchBackgroundPaintUI.read({},el).color),'#33669980');
  assert.ok(Math.abs(Number(await alpha.inputValue())-128/255*100)<.3);
  await color.fill('ABCDEF');await color.press('Enter');await record();assert.equal((await rendered()).alpha,0);
  await alpha.fill('37.5');await alpha.press('Enter');await record();assert.equal((await rendered()).alpha,0);assert.equal(await alpha.inputValue(),'37.5');
