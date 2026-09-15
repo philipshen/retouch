@@ -3478,9 +3478,10 @@ async function spaceGroupsOnCanvas(axis,opener){
  stopDrawing?.();const info=sel?.info,choice=groupAlignmentTarget,gapMode=groupGapMode;if(!info)return;
  try{const context=await moveGroupOnCanvas(info,null,{prepareOnly:true});if(!context||!context.current()||choice!==groupAlignmentTarget||gapMode!==groupGapMode)return;
   const bounds=RetouchGroupMove.selectionBounds(context.roots,context.members),targets=bounds.map(bound=>bound.el),anchor=choice==='selection'?null:bounds.findIndex(bound=>'layer:'+bound.el.getAttribute('data-rt')===choice);if(anchor===-1)throw Error('Choose a selected reference layer.');
-  const spacing={axis,independent:gapMode==='individual',anchor};canvasPan.cancel();
+  const spacing={axis,independent:gapMode==='individual',anchor},preview=context.preview();canvasPan.cancel();
   stopDrawing=RetouchCanvasMove.mount({target:targets[0],targets,selectionId:info.id,frame:iframe,canvas:canvasSurface,mode:'spacing-'+axis,spacing,opener,current:()=>context.current()&&choice===groupAlignmentTarget&&gapMode===groupGapMode,
    measureBounds:el=>RetouchGroupMove.selectionBounds([el],RetouchGroupMove.measureSelection([el],node=>layerLocks.locked(node)))[0],
+   contentPreview:{current:preview.current,restore:preview.restore,update:deltas=>preview.update(RetouchGroupMove.memberDeltas(bounds,context.members,deltas))},
    onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err'),onCommit:result=>writeGroupMove(context,RetouchGroupMove.memberDeltas(bounds,context.members,result.deltas))});
  }catch(error){toast(error.message,'err');}
 }

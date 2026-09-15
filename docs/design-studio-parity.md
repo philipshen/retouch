@@ -18004,3 +18004,33 @@ Logs: `/tmp/retouch-group-gap-canvas-units.log`,
 Containing-frame alignment, group resize/rotation, full Figma parity and trusted
 public Homebrew distribution remain incomplete. No desktop rebuild or push for
 this checkpoint.
+
+### Live group gap preview checkpoint
+
+Canvas gap gestures now translate the rendered page children during pointer and
+keyboard previews. Each child uses its own ancestor transform; the group keeps
+its internal geometry. Preview values are computed before any inline changes,
+and each translated property is tracked by value and priority. Cancellation
+restores only properties still owned by the gesture. Foreign style changes
+cancel the gesture and are preserved. The shared canvas observer compares live
+bounds against the expected preview offsets, then restores the preview before
+the single source transaction and history entry.
+
+Validation: 1,650 unit tests pass. HTML/Chromium, transformed React/Chromium and
+transformed Liquid/WebKit workflows verify actual rendered gaps while source is
+unchanged, pointer-preview movement, Escape geometry restoration, foreign
+translation/color preservation, exact history and the previous spacing checks.
+Ordinary selection movement at 50/100/200 percent zoom and group held-arrow nudge
+regressions also pass. Visually inspected the updated gap-preview screenshot;
+the previously documented above-viewport group case remains unresolved.
+
+Logs: `/tmp/retouch-group-gap-preview-units.log`,
+`/tmp/retouch-group-gap-preview-html.log`,
+`/tmp/retouch-group-gap-preview-react.log`,
+`/tmp/retouch-group-gap-preview-webkit.log`,
+`/tmp/retouch-group-gap-preview-move-regression.log`, and
+`/tmp/retouch-group-gap-preview-nudge-regression.log`.
+
+Containing-frame alignment, group resize/rotation, full Figma parity and trusted
+public Homebrew distribution remain incomplete. No desktop rebuild or push for
+this checkpoint.

@@ -59,7 +59,7 @@
   const entries=members.map(member=>({...member,value:member.el.style.getPropertyValue('translate'),priority:member.el.style.getPropertyPriority('translate'),hadStyle:member.el.hasAttribute('style'),written:null}));
   const owned=item=>item.written!==null&&item.el.style.getPropertyValue('translate')===item.written&&item.el.style.getPropertyPriority('translate')==='important';
   return {current:()=>entries.every(item=>item.el.isConnected&&(item.written===null||owned(item))&&parentMatrix(item.el).every((value,i)=>Math.abs(value-item.matrix[i])<1e-9)),
-   update:delta=>{for(const item of entries){item.el.style.setProperty('translate',translation(item.translate,localDelta(item.matrix,delta)),'important');item.written=item.el.style.getPropertyValue('translate');}},
+   update:delta=>{const deltas=Array.isArray(delta)?delta:entries.map(()=>delta);if(deltas.length!==entries.length)throw Error('Resolve every preview offset.');const values=entries.map((item,i)=>translation(item.translate,localDelta(item.matrix,deltas[i])));for(const [i,item]of entries.entries()){item.el.style.setProperty('translate',values[i],'important');item.written=item.el.style.getPropertyValue('translate');}},
    restore:()=>{for(const item of entries){if(!owned(item))continue;if(item.value)item.el.style.setProperty('translate',item.value,item.priority);else item.el.style.removeProperty('translate');if(!item.hadStyle&&!item.el.getAttribute('style'))item.el.removeAttribute('style');}}
   };
  }
