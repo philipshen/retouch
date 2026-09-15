@@ -330,3 +330,13 @@ test('inline spacing overrides preserve percentage semantics and guard important
   assert.equal(change('md:!['+property+':2px]','md:',property,null,null,false,el('important')),'');
  }
 });
+
+test('inline font face changes override only their longhand and retain reset under important inline rules',()=>{
+ const el=priority=>({style:{getPropertyValue:()=> 'inline',getPropertyPriority:()=>priority}});
+ for(const [property,value,token]of [['font-family','monospace','[font-family:monospace]'],['font-weight',500,'[font-weight:500]'],['font-style','normal','[font-style:normal]']]){
+  const changed=change('text-lg','md:',property,value,null,false,el(''));
+  assert.equal(changed,'text-lg md:!'+token);
+  assert.throws(()=>change('text-lg','md:',property,value,null,false,el('important')),/important inline/);
+  assert.equal(change(changed,'md:',property,null,null,false,el('important')),'text-lg');
+ }
+});

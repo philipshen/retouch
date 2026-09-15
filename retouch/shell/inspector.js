@@ -889,13 +889,13 @@
   }
   function fontPicker(parent,d,current,onChange,options={}){
     const choices=fontFamilies(d,current),supported=choices.some(([value])=>value===current);
-    const choose=value=>{if(options.preview){current=value;options.mixed=false;if(![...quick.options].some(option=>option.value===value))quick.add(new Option(fontDisplayName(value),value));quick.value=value;render();}onChange(value);};
+    const choose=value=>{if(options.disabled)return;if(options.preview){current=value;options.mixed=false;if(![...quick.options].some(option=>option.value===value))quick.add(new Option(fontDisplayName(value),value));quick.value=value;render();}onChange(value);};
     const quick=select(parent,options.label||'Page font',supported?choices:[[current,options.mixed?'Mixed':fontDisplayName(current)],...choices],current,choose);
-    if(!supported)quick.options[0].disabled=true;
+    quick.disabled=!!options.disabled;if(!supported)quick.options[0].disabled=true;
     const currentStatus=note(parent,'');currentStatus.setAttribute('aria-label','Current font files');currentStatus.setAttribute('role','status');
     const browse=document.createElement('details');browse.className='font-browser';
     const summary=document.createElement('summary');summary.textContent='Browse page fonts';browse.append(summary);
-    const search=document.createElement('input');search.type='search';search.placeholder='Search font names';search.setAttribute('aria-label','Search page fonts');browse.append(search);
+    const search=document.createElement('input');search.type='search';search.placeholder='Search font names';search.setAttribute('aria-label','Search page fonts');search.disabled=!!options.disabled;browse.append(search);
     const status=note(browse,'');status.setAttribute('role','status');
     const results=document.createElement('div');results.className='font-results';results.setAttribute('role','group');results.setAttribute('aria-label','Matching fonts');browse.append(results);
     const pages=document.createElement('div');pages.className='font-pages';let offset=0,scanning=false,cancelScan;
@@ -907,7 +907,7 @@
       status.textContent=(matches.length?`${matches.length} font ${matches.length===1?'choice':'choices'}`:scanning?'No matches yet.':'No matching fonts. Try another name.')+(scanning?' · Scanning page…':'');status.dataset.scanning=String(scanning);
       pages.hidden=matches.length<=50;previous.disabled=offset===0;next.disabled=offset+50>=matches.length;
       if(matches.length>50)status.textContent+=` · Showing ${offset+1}–${Math.min(offset+50,matches.length)}`;
-      results.replaceChildren();for(const [value,label] of matches.slice(offset,offset+50)){const b=button(label,()=>choose(value));const detail=document.createElement('small');detail.className='font-face-state';detail.textContent=fontFaceLabel(value,states);b.append(detail);b.dataset.font=value;b.setAttribute('aria-label','Use font '+label);b.setAttribute('aria-pressed',String(value===current));results.append(b);if(value===focused)b.focus({preventScroll:true});}
+      results.replaceChildren();for(const [value,label] of matches.slice(offset,offset+50)){const b=button(label,()=>choose(value));b.disabled=!!options.disabled;const detail=document.createElement('small');detail.className='font-face-state';detail.textContent=fontFaceLabel(value,states);b.append(detail);b.dataset.font=value;b.setAttribute('aria-label','Use font '+label);b.setAttribute('aria-pressed',String(value===current));results.append(b);if(value===focused)b.focus({preventScroll:true});}
     };
     search.oninput=()=>{offset=0;render();};browse.ontoggle=()=>{
       cancelScan?.();scanning=browse.open;
@@ -975,13 +975,14 @@
       // other font properties. Scope wrapping is handled by the shell afterward.
       const styled=[...el.classList].some(t=>names.includes(t));
       const fontSizeBlocked=()=>el.style.getPropertyPriority('font-size')==='important';
-      const inlineTypeProperty=match=>match===fontSizeToken?'font-size':match===lineHeightToken?'line-height':match===letterSpacingToken?'letter-spacing':null;
+      const inlineTypeProperty=match=>match===fontSizeToken?'font-size':match===lineHeightToken?'line-height':match===letterSpacingToken?'letter-spacing':match===fontFamilyToken?'font-family':match===fontWeightToken?'font-weight':match===fontStyleToken?'font-style':null;
       const change=(match,value)=>{const property=inlineTypeProperty(match);if(property&&el.style.getPropertyPriority(property)==='important')return;return save(replaceTypography(info.className,match,styled||property&&el.style.getPropertyValue(property)?'!'+value:value));};
       const resetProperty=(label,match)=>{const reset=button(label,()=>save(replaceTypography(info.className,match,'')));try{reset.disabled=replaceTypography(info.className,match,'')===info.className;}catch{reset.disabled=true;}sec.append(reset);};
-      fontPicker(sec,d,css.fontFamily,value=>{const token=fontFamilyClass(value);if(token)change(fontFamilyToken,token);});
+      fontPicker(sec,d,css.fontFamily,value=>{const token=fontFamilyClass(value);if(token)change(fontFamilyToken,token);},{disabled:el.style.getPropertyPriority('font-family')==='important'});
       const resetFamily=button('Reset font family',()=>save(replace(info.className,fontFamilyToken,'')));resetFamily.disabled=!tokens(info.className).map(base).some(t=>t&&fontFamilyToken(t));sec.append(resetFamily);
-      for(const [label,re,choices] of controls){const token=tokens(info.className).map(base).find(t=>re.test(t));const control=select(sec,label,[['','Inherited / custom'],...choices],choices.some(([value])=>value===token)?token:'',value=>{if(value)change(re.test,value);});if(label==='Font size'&&fontSizeBlocked()){control.disabled=true;control.title='An important inline rule controls this font size.';}}
-      numericPreview(number(sec,'Font weight (1–1000)',parseFloat(css.fontWeight),1,1000,v=>{const token=fontWeightClass(v);if(token)change(fontWeightToken,token);}),el,'font-weight',String);
+      for(const [label,re,choices] of controls){const token=tokens(info.className).map(base).find(t=>re.test(t));const control=select(sec,label,[['','Inherited / custom'],...choices],choices.some(([value])=>value===token)?token:'',value=>{if(value)change(re.test,value);});if(el.style.getPropertyPriority(label==='Font size'?'font-size':'font-weight')==='important'){control.disabled=true;control.title='An important inline rule controls this typography property.';}}
+      const fontWeight=numericPreview(number(sec,'Font weight (1–1000)',parseFloat(css.fontWeight),1,1000,v=>{const token=fontWeightClass(v);if(token)change(fontWeightToken,token);}),el,'font-weight',String);
+      if(el.style.getPropertyPriority('font-weight')==='important'){fontWeight.disabled=true;fontWeight.title='An important inline rule controls this font weight.';}
       const resetWeight=button('Reset font weight',()=>save(replace(info.className,fontWeightToken,'')));resetWeight.disabled=!tokens(info.className).map(base).some(t=>t&&fontWeightToken(t));sec.append(resetWeight);
       const fontSize=numericPreview(number(sec,'Font size (px)',parseFloat(css.fontSize),1,1000,v=>change(fontSizeToken,`text-[${v}px]`)),el,'font-size');
       if(fontSizeBlocked()){fontSize.disabled=true;fontSize.title='An important inline rule controls this font size.';}
@@ -1005,7 +1006,7 @@
       truncationTypography(sec,css,value=>save(replace(info.className,truncationToken,'!line-clamp-'+(value===null?'none':value))),()=>save(replace(info.className,truncationToken,'')),tokens(info.className).map(base).some(t=>t&&truncationToken(t)));
       select(sec,'Text alignment',['left','center','right','justify','start','end'].map(v=>[v,v[0].toUpperCase()+v.slice(1)]),css.textAlign,v=>change(textAlignToken,'text-'+v)).dataset.textDirection=css.direction;
       resetProperty('Reset text alignment',textAlignToken);
-      select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(fontStyleToken,v==='italic'?'italic':'not-italic'));
+      const fontSlant=select(sec,'Font slant',[['normal','Normal'],['italic','Italic']],css.fontStyle==='italic'?'italic':'normal',v=>change(fontStyleToken,v==='italic'?'italic':'not-italic'));fontSlant.disabled=el.style.getPropertyPriority('font-style')==='important';
       resetProperty('Reset font style',fontStyleToken);
       select(sec,'Text decoration',[['none','None'],['underline','Underline'],['line-through','Strikethrough'],['overline','Overline']],css.textDecorationLine,v=>change(decorationToken,v==='none'?'no-underline':v));
       resetProperty('Reset text decoration',decorationToken);

@@ -20658,3 +20658,26 @@ percentage field. Logs: `/tmp/retouch-inline-spacing-react-final.log`,
 Inline font family/weight and other typography properties, full Figma fidelity,
 arbitrary-site compatibility and trusted Homebrew distribution remain
 incomplete. No native rebuild or push.
+
+### Inline font family, weight and slant
+
+Single/shared React and Liquid controls now override ordinary inline font
+family, weight and slant with removable important longhand utilities. This
+preserves other properties in inline font shorthands. Important inline rules
+remain guarded in both controls and write callbacks. The reusable font picker
+now accepts a disabled state for its dropdown, search and selectable results;
+shared family reset is no longer inside a disabled fieldset.
+
+Validation: React/Chromium and Liquid/WebKit passed single/shared family, weight
+and slant edits, unchanged size/leading and neighboring text, exact inline
+attributes, phone fallback, reset and exact source undo. The final Liquid run
+also verifies that font results are disabled and programmatically dispatching a
+disabled family change cannot write source. The test now reveals reset controls
+inside Type settings before interacting with them. All 1,701 unit tests passed.
+Logs: `/tmp/retouch-inline-face-react-final.log`,
+`/tmp/retouch-inline-face-liquid-verified.log`,
+`/tmp/retouch-inline-face-units.log`.
+
+This covers the six core inline font properties, not arbitrary typography
+cascade behavior. Full Figma fidelity, arbitrary-site compatibility and trusted
+Homebrew distribution remain incomplete. No native rebuild or push.
