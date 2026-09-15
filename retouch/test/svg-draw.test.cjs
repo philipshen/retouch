@@ -30,3 +30,11 @@ test('Arrows point toward the drag endpoint and keep symmetric bounded heads in 
   assert.deepEqual(constrained('arrow',a,b,{shiftKey:true,altKey:true}),constrained('line',a,b,{shiftKey:true,altKey:true}));
  }
 });
+test('Click placement creates 100-unit shapes and preserves the center with Alt',()=>{
+ const {placement}=require('../shell/svg-draw.js');
+ for(const preset of ['rectangle','ellipse','circle','triangle','star','line','arrow']){
+  const height=['line','arrow'].includes(preset)?0:100;
+  assert.deepEqual(placement(preset,{x:20,y:30}),[{x:20,y:30},{x:120,y:30+height}]);
+  const [a,b]=placement(preset,{x:20,y:30},{altKey:true});assert.equal(b.x-a.x,100);assert.equal(b.y-a.y,height);assert.equal((a.x+b.x)/2,20);assert.equal((a.y+b.y)/2,30);
+ }
+});

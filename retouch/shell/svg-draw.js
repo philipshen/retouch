@@ -8,6 +8,7 @@
   }
   return [altKey?{x:a.x-dx,y:a.y-dy}:a,{x:a.x+dx,y:a.y+dy}];
  }
+ function placement(preset,p,{altKey=false}={}){const height=['line','arrow'].includes(preset)?0:100;return [{x:p.x-(altKey?50:0),y:p.y-(altKey?height/2:0)},{x:p.x+(altKey?50:100),y:p.y+(altKey?height/2:height)}];}
  const ns='http://www.w3.org/2000/svg';
  function geometry(preset,a,b){
   const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(b.x-a.x),h=Math.abs(b.y-a.y);
@@ -38,7 +39,7 @@
   function current(){return nativeSnapshots.every(({el,rect,metrics,css})=>{if(!el.isConnected)return false;const now=el.getBoundingClientRect(),style=w.getComputedStyle(el);return [el.clientLeft,el.clientTop,el.clientWidth,el.clientHeight].every((value,i)=>value===metrics[i])&&['x','y','width','height'].every(key=>Math.abs(now[key]-rect[key])<.1)&&css===[style.position,style.transform,style.rotate,style.scale,style.translate,style.zoom,style.contain,style.willChange,style.filter,style.backdropFilter,style.perspective].join('|');});}
   return {matrix,current};
  }
- function mount({target,frame,canvas,preset,onCommit,onEnd,onError,native=false,initialPointer=null,initialMove=null,initialReleased=false,pointerTarget=null}){
+ function mount({target,frame,canvas,preset,onCommit,onEnd,onError,native=false,initialPointer=null,initialMove=null,initialReleased=false,pointerTarget=null,initialPoint=null}){
   const d=target.ownerDocument,w=d.defaultView,viewport=native?null:target.tagName.toLowerCase()==='svg'?target:target.ownerSVGElement;
   let space;try{space=native?nativeSpace(target):null;}catch(error){onError(error.message);onEnd();return null;}
   const matrix=()=>space?.matrix||target.getScreenCTM();
@@ -58,7 +59,7 @@
   const down=e=>{if(state||e.button!==0)return;e.preventDefault();e.stopImmediatePropagation();try{const a=point(e);state={id:e.pointerId,a,b:a,x:e.clientX,y:e.clientY,pointerX:e.clientX,pointerY:e.clientY,distance:0};surface.setAttribute('data-canvas-space-owner','');(pointerTarget||surface).setPointerCapture(e.pointerId);}catch(error){cancel();onError(error.message);}};
   listen(surface,'pointerdown',down);
   listen(surface,'pointermove',move);
-  const up=e=>{if(!state||e.pointerId!==state.id)return;e.preventDefault();move(e);if(!state||ended)return;const {points:[a,b],distance}=state;cancel();if(distance>=4)onCommit([a.x,a.y,b.x,b.y]);};
+  const up=e=>{if(!state||e.pointerId!==state.id)return;e.preventDefault();move(e);if(!state||ended)return;const [a,b]=state.distance>=4?state.points:placement(preset,state.a,e);cancel();onCommit([a.x,a.y,b.x,b.y]);};
   listen(surface,'pointerup',up);
   listen(surface,'pointercancel',cancel);listen(surface,'lostpointercapture',cancel);
   listen(root,'keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();cancel();}},true);
@@ -69,6 +70,7 @@
   const left=Math.max(f.left+r.left*scale,f.left,c.left),top=Math.max(f.top+r.top*scale,f.top,c.top),right=Math.min(f.left+r.right*scale,f.right,c.right),bottom=Math.min(f.top+r.bottom*scale,f.bottom,c.bottom);
   if(right<=left||bottom<=top){cancel();onError('Bring the SVG canvas into view before drawing.');return null;}
   Object.assign(surface.style,{left:left+'px',top:top+'px',width:right-left+'px',height:bottom-top+'px'});root.document.body.append(surface);surface.focus({preventScroll:true});
+  if(initialPoint){try{const f=frame.getBoundingClientRect(),scale=f.width/w.innerWidth,p=point({clientX:f.left+initialPoint.x*scale,clientY:f.top+initialPoint.y*scale}),[a,b]=placement(preset,p,initialPoint);cancel();onCommit([a.x,a.y,b.x,b.y]);}catch(error){cancel();onError(error.message);}return null;}
   if(initialPointer){try{
    const fromFrame=e=>{const f=frame.getBoundingClientRect(),scale=f.width/w.innerWidth;return {clientX:f.left+e.clientX*scale,clientY:f.top+e.clientY*scale,pointerId:e.pointerId,button:e.button,shiftKey:e.shiftKey,altKey:e.altKey,preventDefault:()=>e.preventDefault(),stopImmediatePropagation:()=>e.stopImmediatePropagation()};};
    // A released pointer cannot be captured, but its buffered gesture still commits.
@@ -80,5 +82,5 @@
   }catch(error){cancel();onError(error.message);}}
   return ended?null:cancel;
  }
- const api={mount,geometry,constrained,viewportStyle,nativeSpace};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGDraw=api;
+ const api={mount,geometry,constrained,placement,viewportStyle,nativeSpace};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchSVGDraw=api;
 })(typeof window==='object'?window:globalThis);

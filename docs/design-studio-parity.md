@@ -19427,3 +19427,29 @@ reference screenshot saved as `/tmp/retouch-figma-shape-reference.png`.
 
 No desktop rebuild or push. Full Figma parity, arbitrary-site support and
 trusted Homebrew distribution remain incomplete.
+
+### 2026-09-15 — Click to place a default-size shape
+
+An armed shape tool now resolves a writable destination and places a shape on
+the first canvas click. Clicking an already-open drawing surface also places
+a shape instead of doing nothing. Filled presets use 100 by 100 local units;
+line/arrow presets use a 100-unit horizontal span. Alt centers the default
+placement around the click. Dragging retains explicit dimensions and all prior
+modifier/repositioning behavior. Pen and shape click entry share the same
+cancellable destination lookup; selecting containers through Layers remains
+available for opening a tool without creating a shape.
+
+The Figma tutorial inspected in the previous checkpoint documents click-to-place
+an ellipse with default 100 by 100 dimensions:
+https://help.figma.com/hc/en-us/articles/30928855233175-FD4B-Create-your-avatar-using-shapes-and-fills
+
+All 1,666 unit tests passed, including placement geometry for all seven presets.
+HTML and React Chromium plus Liquid WebKit browser checks passed for armed
+Alt-centered ellipse placement, rectangle placement in an already-selected
+container, 100 by 100 source geometry, screen position, exact undo and Escape
+during delayed lookup without creation. Existing direct shape/Pen and armed
+tool checks passed, as did the standalone SVG drawing regression.
+Logs: `/tmp/retouch-shape-click-{html,react,liquid,units,svg}-final.log`.
+
+No desktop rebuild or push. Full Figma parity, arbitrary-site support and
+trusted Homebrew distribution remain incomplete.
