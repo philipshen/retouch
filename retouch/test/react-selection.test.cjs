@@ -312,3 +312,11 @@ test('adaptive grid refuses important inline layout rules and overrides ordinary
  const el={style:{getPropertyPriority:()=>''}},next=changeAdaptiveGrid('flex','md:',180,null,el);
  assert.match(next,/md:!grid\b/);assert.match(next,/md:!grid-cols-/);assert.match(next,/md:!grid-rows-/);
 });
+
+test('shared font size overrides ordinary inline values and allows reset beneath important inline values',()=>{
+ const normal={style:{getPropertyValue:()=> '24px',getPropertyPriority:()=>''}},important={style:{getPropertyValue:()=> '24px',getPropertyPriority:()=> 'important'}};
+ const next=change('font-bold text-sm md:text-lg hover:text-xl','md:','font-size',40,null,false,normal);
+ assert.equal(next,'font-bold text-sm hover:text-xl md:![font-size:40px]');
+ assert.throws(()=>change(next,'md:','font-size',50,null,false,important),/important inline/);
+ assert.equal(change(next,'md:','font-size',null,null,false,important),'font-bold text-sm hover:text-xl');
+});

@@ -263,7 +263,7 @@
     input.retouchPreviewTarget=el;
     input.retouchNumericPreview=()=>{
       const preview=root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true});
-      return {current:()=>el.isConnected,update:value=>{preview.update(format(value));render?.(value);},restore:()=>{preview.restore();render?.(null);}};
+      return {current:()=>el.isConnected&&preview.current(),update:value=>{preview.update(format(value));render?.(value);},restore:()=>{preview.restore();render?.(null);}};
     };
     if(property==='rotate'){const control=button('Rotate on canvas',()=>root.rotateLayerOnCanvas?.(el,input));control.dataset.canvasTool='rotate';input.parentElement.after(control);}
     return input;
@@ -974,14 +974,16 @@
       // An explicit property override must still win without dropping the style's
       // other font properties. Scope wrapping is handled by the shell afterward.
       const styled=[...el.classList].some(t=>names.includes(t));
-      const change=(match,value)=>save(replaceTypography(info.className,match,styled?'!'+value:value));
+      const fontSizeBlocked=()=>el.style.getPropertyPriority('font-size')==='important';
+      const change=(match,value)=>{if(match===fontSizeToken&&fontSizeBlocked())return;return save(replaceTypography(info.className,match,styled||match===fontSizeToken&&el.style.getPropertyValue('font-size')?'!'+value:value));};
       const resetProperty=(label,match)=>{const reset=button(label,()=>save(replaceTypography(info.className,match,'')));try{reset.disabled=replaceTypography(info.className,match,'')===info.className;}catch{reset.disabled=true;}sec.append(reset);};
       fontPicker(sec,d,css.fontFamily,value=>{const token=fontFamilyClass(value);if(token)change(fontFamilyToken,token);});
       const resetFamily=button('Reset font family',()=>save(replace(info.className,fontFamilyToken,'')));resetFamily.disabled=!tokens(info.className).map(base).some(t=>t&&fontFamilyToken(t));sec.append(resetFamily);
-      for(const [label,re,choices] of controls){const token=tokens(info.className).map(base).find(t=>re.test(t));select(sec,label,[['','Inherited / custom'],...choices],choices.some(([value])=>value===token)?token:'',value=>{if(value)change(re.test,value);});}
+      for(const [label,re,choices] of controls){const token=tokens(info.className).map(base).find(t=>re.test(t));const control=select(sec,label,[['','Inherited / custom'],...choices],choices.some(([value])=>value===token)?token:'',value=>{if(value)change(re.test,value);});if(label==='Font size'&&fontSizeBlocked()){control.disabled=true;control.title='An important inline rule controls this font size.';}}
       numericPreview(number(sec,'Font weight (1–1000)',parseFloat(css.fontWeight),1,1000,v=>{const token=fontWeightClass(v);if(token)change(fontWeightToken,token);}),el,'font-weight',String);
       const resetWeight=button('Reset font weight',()=>save(replace(info.className,fontWeightToken,'')));resetWeight.disabled=!tokens(info.className).map(base).some(t=>t&&fontWeightToken(t));sec.append(resetWeight);
-      numericPreview(number(sec,'Font size (px)',parseFloat(css.fontSize),1,1000,v=>change(fontSizeToken,`text-[${v}px]`)),el,'font-size');
+      const fontSize=numericPreview(number(sec,'Font size (px)',parseFloat(css.fontSize),1,1000,v=>change(fontSizeToken,`text-[${v}px]`)),el,'font-size');
+      if(fontSizeBlocked()){fontSize.disabled=true;fontSize.title='An important inline rule controls this font size.';}
       resetProperty('Reset font size',fontSizeToken);
       const relativeLineHeight=relativeNumber(sec,'Line height (%)',parseFloat(css.lineHeight)/parseFloat(css.fontSize)*100,0,1000,v=>change(lineHeightToken,`[line-height:${Math.round(v*1e6)/1e8}]`));relativeLineHeight.title='Relative to this layer’s font size.';
       const lineHeight=number(sec,'Line height (px)',parseFloat(css.lineHeight),0,2000,v=>change(lineHeightToken,`leading-[${v}px]`));

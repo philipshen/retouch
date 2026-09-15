@@ -20608,3 +20608,27 @@ All 1,698 unit tests passed. Logs: `/tmp/retouch-mixed-font-units.log`,
 
 Full Figma fidelity, arbitrary-site support and trusted Homebrew distribution
 remain incomplete. No native rebuild or push.
+
+### Font-size edits over ordinary inline styles
+
+Single and shared React/Liquid font-size edits now emit removable important
+utilities when an ordinary inline font size controls the element. This also
+works with sizes supplied by an inline font shorthand. Original inline text is
+preserved. Important inline font sizes disable the single numeric/preset and
+shared numeric controls; mutation callbacks refuse important-inline writes while
+reset can remove the editor override. Shared mixed-size scrubbing uses the same
+priority-aware write path. Generic numeric previews now consult the property's
+current-state guard, allowing single-layer drags to cancel on foreign changes.
+
+Validation: React/Chromium and Liquid/WebKit passed single inline edits, reset,
+exact undo and unchanged neighboring text. Final runs also cancel a single drag
+when an external important font-size appears, retaining that foreign value.
+The shared mixed-size suite passed with 24px inline longhand and 32px inline font
+shorthand fixtures, including source/inline preservation, preview, Escape,
+clamping, responsive isolation, exact undo/redo, typed absolute sizes, shared
+reset, no-op clicks and foreign-change cancellation. All 1,699 unit tests passed.
+Logs: `/tmp/retouch-inline-font-react-final.log`,
+`/tmp/retouch-inline-font-liquid-final.log`, `/tmp/retouch-inline-font-units.log`.
+
+Other inline typography properties, full Figma fidelity/arbitrary-site support
+and trusted Homebrew distribution remain incomplete. No native rebuild or push.
