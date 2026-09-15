@@ -70,9 +70,9 @@
     return points.map(([x,y])=>{const tx=matrix[0]*(x-ox)+matrix[2]*(y-oy)+matrix[4],ty=matrix[1]*(x-ox)+matrix[3]*(y-oy)+matrix[5];return {x:g.x+(g.translateX||0)+ox+tx*sx*c-ty*sy*s,y:g.y+(g.translateY||0)+oy+tx*sx*s+ty*sy*c};});
   }
   function positionGeometry(el){try{return geometry(el,{allowRotation:true,allowScale:true});}catch(error){return localPositionGeometry(el);}}
-  function localPositionGeometry(el){
+  function localPositionGeometry(el,{allowFlow=false}={}){
     const d=el.ownerDocument,w=d.defaultView,css=w.getComputedStyle(el),parent=el.offsetParent;
-    if(el.namespaceURI!=='http://www.w3.org/1999/xhtml'||css.position!=='absolute'||!parent)throw Error('Local position requires an absolute HTML layer with a containing frame.');
+    const flow=css.position!=='absolute';if(el.namespaceURI!=='http://www.w3.org/1999/xhtml'||!parent||flow&&(!allowFlow||!['static','relative','sticky'].includes(css.position)||['inline','contents','none'].includes(css.display)||el.getClientRects().length!==1))throw Error('Choose a single measurable HTML layout box with a containing frame.');
     if(css.zoom&&Number(css.zoom)!==1)throw Error('Local position for zoom on the layer is not available yet.');
     let matrix;if(css.transform!=='none'){const m=new w.DOMMatrix(css.transform);if(!m.is2D||![m.a,m.b,m.c,m.d,m.e,m.f].every(Number.isFinite)||Math.abs(m.a*m.d-m.b*m.c)<1e-9)throw Error('Local positioning requires a nonzero two-dimensional transform matrix.');matrix=[m.a,m.b,m.c,m.d,m.e,m.f];}
     const rotation=(root.RetouchReactSelection||require('./react-selection.js')).rotationDegrees(css.rotate||'none'),scale=(root.RetouchFlip||require('./flip.js')).parse(css.scale||'none');
@@ -80,10 +80,10 @@
     for(let node=el;node;node=node.parentElement)if(node.namespaceURI!=='http://www.w3.org/1999/xhtml')throw Error('Local HTML position inside SVG is not available yet.');
     const pixel=property=>{const value=css.getPropertyValue(property);if(!/^-?(?:\d*\.)?\d+px$/.test(value))throw Error('Local position requires resolved pixel dimensions and insets.');return parseFloat(value);};
     const dimension=axis=>pixel(axis)+(css.boxSizing==='content-box'?(axis==='width'?['left','right']:['top','bottom']).reduce((sum,edge)=>sum+pixel('padding-'+edge)+pixel('border-'+edge+'-width'),0):0);
-    const g={localCoordinates:true,x:pixel('left')+pixel('margin-left'),y:pixel('top')+pixel('margin-top'),width:dimension('width'),height:dimension('height'),parentWidth:parent.clientWidth,parentHeight:parent.clientHeight,parentLabel:'<'+parent.localName+'>'};
+    const g={localCoordinates:true,...(flow?{localFlow:true}:{}),x:flow?el.offsetLeft:pixel('left')+pixel('margin-left'),y:flow?el.offsetTop:pixel('top')+pixel('margin-top'),width:dimension('width'),height:dimension('height'),parentWidth:parent.clientWidth,parentHeight:parent.clientHeight,parentLabel:'<'+parent.localName+'>'};
     const contentReference=['content-box','fill-box'].includes(css.transformBox);
     if(css.translate&&css.translate!=='none'){const values=(root.RetouchTranslateValues||require('./translate-values.js')).parse(css.translate),sizes=[g.width,g.height];if(contentReference)for(const [i,edges]of [[0,['left','right']],[1,['top','bottom']]])sizes[i]-=edges.reduce((sum,edge)=>sum+pixel('padding-'+edge)+pixel('border-'+edge+'-width'),0);g.translate=css.translate;[g.translateX,g.translateY]=values.map((value,i)=>value.pixels+value.percent*sizes[i]/100);}
-    if(contentReference){
+    if(contentReference||flow){
       // Computed origins can lose the reference-box offset. Recover the border
       // origin from the rendered bounds and affine axes without probing inside
       // the layer, which also works for replaced elements such as images.

@@ -4,7 +4,7 @@
  // fixed point also handles content-box origins and authored matrix offsets.
  function pivot(before,after){return {x:(after.x+before.y-after.y+before.x)/2,y:(after.x+before.y+after.y-before.x)/2};}
  function mount({target,frame,canvas,input,current,onEnd,onError,initialPointer=null}){
-  const I=root.RetouchInspector,C=root.RetouchCanvasRotate,w=target.ownerDocument.defaultView,doc=root.document,measure=()=>{const g=I.localPositionGeometry(target);return {...g,rotation:g.rotation||0};};let g,space,center;
+  const I=root.RetouchInspector,C=root.RetouchCanvasRotate,w=target.ownerDocument.defaultView,doc=root.document,measure=()=>{const g=I.localPositionGeometry(target,{allowFlow:true});return {...g,rotation:g.rotation||0};};let g,space,center;
   try{
    g=measure();space=root.RetouchSVGDraw.nativeSpace(target.offsetParent);
    const calibration=root.RetouchPaintPicker.propertyPreview({el:target,input,property:'rotate',respectScope:true});

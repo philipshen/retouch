@@ -20009,3 +20009,34 @@ Logs: `/tmp/retouch-frame-cache-baseline.log`,
 probe insertions, not a general CPU or frame-rate benchmark. Full
 Figma/arbitrary-site parity and trusted Homebrew distribution remain incomplete.
 No native rebuild or push.
+
+
+### Rotate flow layers inside transformed frames
+
+The local rotation geometry path now accepts single measurable flow-layout
+boxes. It reconstructs the rendered border while retaining the layer's layout
+offsets, enabling both Rotate on canvas and outside-corner rotation without
+converting the layer to absolute positioning. Idle outlines use the same
+geometry. The existing absolute positioning APIs retain their original guard;
+flow support is explicitly requested only for outlines and rotation.
+
+All 1,680 unit tests passed. HTML/Chromium and Liquid/WebKit static-position
+fixtures and a React/Chromium relative-position fixture passed direct corner
+rotation, pointer angles, keyboard changes, cancellation, exact undo and
+preservation of position, margins, dimensions and the following sibling's layout.
+Fixtures use nested nonuniform scaling, reflection, an authored matrix and
+content-box translation. The HTML Text tool and full absolute-image handle/
+rotation/resize/position regression also passed.
+
+Inspected `/tmp/retouch-flow-rotate.png`, including the unchanged Auto / flow
+positioning control and following sibling. Logs:
+`/tmp/retouch-flow-rotate-{html,react,liquid}-verified.log`,
+`/tmp/retouch-flow-rotate-units.log`,
+`/tmp/retouch-flow-rotate-text-regression.log`,
+`/tmp/retouch-flow-rotate-absolute-regression.log`.
+
+Transformed flow resizing, multi-fragment inline boxes, fixed positioning,
+3D/own-zoom geometry and full arbitrary-site/Figma parity remain incomplete.
+Sticky flow geometry is accepted but has not received dedicated browser
+coverage. Trusted Homebrew distribution remains incomplete. No native rebuild
+or push.
