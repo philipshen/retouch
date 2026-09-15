@@ -39,6 +39,22 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
  const drag=async()=>{const a=await point(10,10),b=await point(60,40);await page.mouse.move(a.x,a.y);await page.mouse.down();await page.mouse.move(b.x,b.y,{steps:5});};
  try{
   await page.goto(`http://localhost:${server.address().port}/rt`);await app.locator('svg').waitFor();await page.getByLabel('Screen size',{exact:true}).selectOption('1440x900');const zoom=page.getByLabel('Canvas zoom (%)',{exact:true});await zoom.fill('50');await zoom.press('Tab');
+  await page.getByRole('treeitem',{name:'g · Drawing',exact:true}).click();await settled();
+  for(const name of ['vector-position','vector-size']){
+   const section=page.locator('#panelBody [data-section="'+name+'"]');
+   assert.equal(await section.getByRole('status').isVisible(),true,'unavailable vector explanation is visible');
+   assert.match(await section.getByRole('status').textContent(),/visible vector/);
+   assert.equal(await section.locator('summary').filter({hasText:'Details'}).count(),0);
+  }
+  const emptyImage=page.locator('#panelBody > [data-section="image-fill"]');
+  assert.equal(await emptyImage.getAttribute('data-collapsed'),'true','empty image fills start compact');
+  assert.equal(await page.getByLabel('Image fill source',{exact:true}).isVisible(),false);
+  await emptyImage.getByRole('button',{name:'Add paint',exact:true}).click();
+  assert.equal(await emptyImage.getAttribute('data-collapsed'),'false','adding paint opens the empty section');
+  await page.keyboard.press('Escape');
+  assert.equal(await page.getByLabel('Image fill source',{exact:true}).isVisible(),true);
+  await emptyImage.getByRole('button',{name:'Collapse Image fill section',exact:true}).click();
+  assert.equal(fs.readFileSync(file,'utf8'),original,'opening image controls leaves source unchanged');
   if(process.env.RT_E2E_SVG_DOCK){
    const trigger=page.getByRole('button',{name:'Shape tools',exact:true});
    await page.getByRole('treeitem',{name:'g · Drawing',exact:true}).click();await settled();assert.equal(await page.locator('#panelBody').getByText('Add shape',{exact:true}).count(),0);assert.equal(await page.locator('#panelBody [data-shape-action]').count(),0);

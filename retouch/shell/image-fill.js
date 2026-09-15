@@ -207,7 +207,9 @@
   if(layer!=='none'&&!source(layer))return stackResetActions(mountOriginal(info,el,save,saveCSS,own,upload,saveImage,browseImages),info,el,save,saveCSS,own,saveImage);
   const section=mountStack(info,el,save,saveCSS,layer==='none'?[]:[layer],upload,saveImage,browseImages);
   if(!section.querySelector('.paint-order'))return section;
-  const legacy=mountOriginal(info,el,save,saveCSS,own,upload,saveImage,browseImages,true);legacy.querySelector(':scope > h3')?.remove();legacy.className='legacy-image-controls';legacy.dataset.legacyImageControls='';section.append(legacy);return stackResetActions(section,info,el,save,saveCSS,own,saveImage);
+  const legacy=mountOriginal(info,el,save,saveCSS,own,upload,saveImage,browseImages,true);legacy.querySelector(':scope > h3')?.remove();legacy.className='legacy-image-controls';legacy.dataset.legacyImageControls='';section.append(legacy);
+  if(legacy.dataset.emptyImageFill==='true'&&![...section.querySelectorAll('[role="status"],.refused')].some(el=>el.textContent.trim()))section.dataset.emptyImageFill='true';
+  return stackResetActions(section,info,el,save,saveCSS,own,saveImage);
  }
  function mountOriginal(info,el,save,saveCSS,own={},upload=null,saveImage=null,browseImages=null,legacy=false){
   if(!el)return null;const css=el.ownerDocument.defaultView.getComputedStyle(el),url=source(css.backgroundImage);if(!url&&css.backgroundImage!=='none'){const layers=V.imageLayers(css.backgroundImage);if(!layers)return null;if(layers.every(layer=>source(layer)||V.parseGradients(layer)?.length===1))return mountStack(info,el,save,saveCSS,layers,upload,saveImage,browseImages);const section=I.section('Image fill');if(info.classNameDynamic&&!saveCSS)I.note(section,info.classNameReason||'Image fill styles are computed.','refused');else additions(section,info,el,save,saveCSS,layers,upload,saveImage,browseImages);return section;}
@@ -233,7 +235,7 @@
   const change=async action=>{if(!allowed())return;try{if(action==='remove'&&!saveCSS&&el.style.getPropertyPriority('background-image'))throw Error('This image has an important inline style. Edit that style in source first.');if(saveImage)await saveImage(null,false,action);else await write(action==='reset'?reset():{'background-image':'none',[V.paintVisibilityProperty]:'none'});}catch(error){feedback(error.message);}};
   const remove=I.button('Remove image fill',()=>change('remove'));remove.disabled=!url;actions.append(remove);
   const resetButton=I.button('Reset image fill',()=>change('reset'));resetButton.disabled=saveCSS?!Object.keys(reset()).some(key=>Object.hasOwn(own,key)):classes(info.className,reset())===info.className;resetButton.title='Remove this screen size’s image and framing overrides to reveal inherited styling.';actions.append(resetButton);
-  if(!url)return section;
+  if(!url){section.dataset.emptyImageFill=String(resetButton.disabled&&!feedback.state.message);return section;}
   image.onload=()=>{
    if(!section.isConnected)return;content.replaceChildren();const width=image.naturalWidth,height=image.naturalHeight;if(!width||!height){I.note(content,'Image dimensions are unavailable.');return;}
    const percent=scale(css.backgroundSize,width,height),mode=css.backgroundRepeat==='no-repeat'&&css.backgroundSize==='cover'?'fill':css.backgroundRepeat==='no-repeat'&&css.backgroundSize==='contain'?'fit':css.backgroundRepeat==='repeat'&&percent!==null?'tile':'custom';

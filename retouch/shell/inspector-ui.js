@@ -226,7 +226,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
   const heading=section.querySelector(':scope > h3');if(!heading)return;
   const name=heading.textContent,key=section.dataset.section||name,button=document.createElement('button');button.type='button';button.className='section-toggle';button.textContent=name;
   const set=(collapsed,persist=false)=>{if(collapsed)for(const popup of section.querySelectorAll('[popover]'))if(popup.matches(':popover-open'))popup.hidePopover();section.dataset.collapsed=String(collapsed);button.setAttribute('aria-expanded',String(!collapsed));button.setAttribute('aria-label',(collapsed?'Expand ':'Collapse ')+name+' section');if(persist){if(collapsed){collapsedSections.add(key);expandedEmptySections.delete(key);}else{collapsedSections.delete(key);expandedEmptySections.add(key);}saveSectionPreferences();}};
-  section.retouchSetCollapsed=set;button.onclick=()=>set(section.dataset.collapsed!=='true',true);heading.setAttribute('aria-label',name);heading.replaceChildren(button);set(collapsedSections.has(key)||(section.dataset.emptyEffects==='true'&&!expandedEmptySections.has(key)));
+  section.retouchSetCollapsed=set;button.onclick=()=>set(section.dataset.collapsed!=='true',true);heading.setAttribute('aria-label',name);heading.replaceChildren(button);set(collapsedSections.has(key)||((section.dataset.emptyEffects==='true'||section.dataset.emptyImageFill==='true')&&!expandedEmptySections.has(key)));
   for(const action of section.querySelectorAll(':scope > .section-add'))action.addEventListener('click',()=>set(false,true),true);
  }
  function organize(panel){

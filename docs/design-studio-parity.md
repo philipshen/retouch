@@ -19453,3 +19453,29 @@ Logs: `/tmp/retouch-shape-click-{html,react,liquid,units,svg}-final.log`.
 
 No desktop rebuild or push. Full Figma parity, arbitrary-site support and
 trusted Homebrew distribution remain incomplete.
+
+
+### Empty image fill inspector checkpoint
+
+Empty standalone Image fill sections now start collapsed, keeping the add-paint
+button available and exposing Stroke and Effects sooner. Adding paint expands
+the section; explicit section preferences persist. Existing image fills,
+resettable overrides and status messages do not receive the empty default.
+The change also adds browser assertions that unavailable vector position and
+size explanations remain visible without opening a Details disclosure.
+
+Validation: all 1,666 unit tests passed. HTML/Chromium and Liquid/WebKit SVG
+drawing suites passed, including empty-section expansion and unchanged source.
+Inspected `/tmp/retouch-compact-image-preview.png` at 1600 by 1100.
+Logs: `/tmp/retouch-compact-image-{html,liquid,units}.log`.
+
+An additional existing-image regression timed out after selecting Fit in
+`image-fill.cjs:10`. The identical test against pushed HEAD `90dd4078` failed
+at the same step. This is an unresolved pre-existing regression, not a passing
+image-framing gate; investigate next. Logs:
+`/tmp/retouch-compact-image-existing.log` and
+`/tmp/retouch-compact-image-baseline.log`. Baseline comparison restored pending
+implementation files after the process terminated.
+
+No push or desktop rebuild. Full Figma parity, arbitrary-site support and
+trusted Homebrew distribution remain incomplete.
