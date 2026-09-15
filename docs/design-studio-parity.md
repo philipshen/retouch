@@ -18771,3 +18771,23 @@ Logs: `/tmp/retouch-alignment-reset-react-verified.log`,
 
 Full Figma fidelity, arbitrary-site/framework support and trusted public Homebrew
 distribution remain incomplete. No desktop rebuild or push for this increment.
+
+
+### Gap scrubbing browser verification — 2026-09-15
+
+Verified the gap label scrubbing introduced in `ad270a98` using real pointer
+input in the React source editor. Chromium covered horizontal writing and pixel
+gaps; WebKit covered vertical-rl writing and percentage gaps. Each run exercised
+row flex, column flex and both grid axes, checking actual child geometry during
+preview, unchanged source while dragging, Escape restoration, preservation of
+unrelated inline writes, cancellation on foreign gap writes, release commits and
+exact single-step Undo/Redo. Existing typed edits, reset, important shorthand,
+other-axis preservation and phone isolation checks also passed in both runs.
+
+Logs: `/tmp/retouch-gap-scrub-browser.log` and
+`/tmp/retouch-gap-scrub-webkit.log`. The preceding implementation push passed all
+1,663 unit tests. This increment changes browser coverage and this checkpoint
+only; shared-selection scrubbing and normal-to-numeric browser coverage remain
+to be exercised. No desktop rebuild or push for this verification increment.
+Full Figma parity, arbitrary-site support and trusted Homebrew distribution
+remain incomplete.
