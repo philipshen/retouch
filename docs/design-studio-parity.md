@@ -19028,3 +19028,24 @@ Logs: `/tmp/retouch-single-layout-precedence-react.log`,
 `/tmp/retouch-single-layout-precedence-units.log`. No desktop rebuild or push.
 Full Figma parity, arbitrary-site support and trusted Homebrew distribution
 remain incomplete.
+
+
+### Advanced class layout screen-range guards — 2026-09-15
+
+Single React/Liquid arrangement, wrapping, alignment, distribution and grid-flow
+selects now disable outside the selected screen range, with a screen-switch
+hint and a fresh range check before saving. Shared arrangement controls and
+resets also check range and live target connectivity. This brings the advanced
+controls into line with preset, alignment-picker and spacing behavior.
+
+React/Chromium single-selection and Liquid/WebKit shared-selection tests passed
+inactive dropdown checks for arrangement, wrapping, alignment and distribution,
+plus shared reset guards. Existing advanced edits, scoped preset geometry,
+keyboard navigation and exact history checks also passed. All 1,664 unit tests
+passed. HTML advanced dropdown range behavior remains to be brought into line.
+
+Logs: `/tmp/retouch-layout-range-single.log`,
+`/tmp/retouch-layout-range-shared.log`, and
+`/tmp/retouch-layout-range-units.log`. No desktop rebuild or push.
+Full Figma parity, arbitrary-site support and trusted Homebrew distribution
+remain incomplete.

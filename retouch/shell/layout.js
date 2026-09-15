@@ -240,10 +240,11 @@
     const parentElement=I.layoutParent(el),parent=parentElement&&el.ownerDocument.defaultView.getComputedStyle(parentElement);
     const classes=info.className||'',inherited=info.styleScope?info.anchorInheritedClasses||'':'';
     const spacingActive=()=>el.isConnected&&(!info.styleScope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false'),saveSpacing=next=>{if(spacingActive())save(next);};
+    const layoutSelect=(label,choices,value,change)=>{const input=I.select(sec,label,choices,value,next=>{if(spacingActive())change(next);});input.disabled=!spacingActive();if(input.disabled)input.title='Switch to a screen inside the selected edit range.';return input;};
     const flowControl=root.RetouchFlowResize?.control(el,sizes=>{const context={display:parent?.display,direction:parent?.flexDirection,writingMode:parent?.writingMode,inheritedClasses:inherited};save(Object.entries(sizes).reduce((next,[axis,value])=>sizeClasses(next,axis,'fixed',root.RetouchReactSelection.dimensionValue(css,axis,value),context),classes));});if(flowControl)sec.append(flowControl);
     const mode=/grid/.test(css.display)?'grid':/flex/.test(css.display)?css.flexDirection:'flow';
     const verticalInline=layoutAxes({writingMode:css.writingMode}).inline==='height',rowLabel=verticalInline?'Vertical':'Horizontal',columnLabel=verticalInline?'Horizontal':'Vertical';
-    const modeSelect=I.select(sec,'Arrange children',[['flow','Normal flow'],['row',rowLabel],['column',columnLabel],['row-reverse',rowLabel+' · reverse'],['column-reverse',columnLabel+' · reverse'],['grid','Grid']],mode,value=>save(explicitLayoutClasses(classes,'mode',value,inherited)));
+    const modeSelect=layoutSelect('Arrange children',[['flow','Normal flow'],['row',rowLabel],['column',columnLabel],['row-reverse',rowLabel+' · reverse'],['column-reverse',columnLabel+' · reverse'],['grid','Grid']],mode,value=>save(explicitLayoutClasses(classes,'mode',value,inherited)));
     modeSelect.dataset.inlineAxis=verticalInline?'vertical':'horizontal';
     modeSelect.retouchPreset={
       blocked:axis=>!el.isConnected||(info.styleScope&&root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false')||(axis==='flow'?['display']:['display','flex-direction','flex-wrap','flex-flow']).some(property=>el.style.getPropertyValue(property)),
@@ -282,10 +283,10 @@
         I.note(custom,'Separate tracks with spaces: 160px 1fr makes a fixed track and a flexible track. auto fits content; minmax(80px, 1fr) sets a minimum.');sec.append(custom);
 
         const flow=css.gridAutoFlow==='dense'?'row-dense':css.gridAutoFlow.replace('column','col').replace(/\s+/g,'-');
-        I.select(sec,'Place grid items',[['row','Across rows'],['col','Down columns'],['row-dense','Across rows · fill gaps'],['col-dense','Down columns · fill gaps']],flow,v=>save(arrangementClasses(classes,'flow',v,inherited)));
+        layoutSelect('Place grid items',[['row','Across rows'],['col','Down columns'],['row-dense','Across rows · fill gaps'],['col-dense','Down columns · fill gaps']],flow,v=>save(arrangementClasses(classes,'flow',v,inherited)));
         I.note(sec,'Fill gaps can move later items into earlier empty spaces.');
       } else {
-        I.select(sec,'Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>save(explicitLayoutClasses(classes,'wrap',v,inherited)));
+        layoutSelect('Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>save(explicitLayoutClasses(classes,'wrap',v,inherited)));
       }
       for(const [prop,label,axis] of [['columnGap',verticalInline?'Vertical gap':'Horizontal gap',verticalInline?'height':'width'],['rowGap',verticalInline?'Horizontal gap':'Vertical gap',verticalInline?'width':'height']]) {
         const input=document.createElement('input');input.type='text';input.value=ownGap(classes,axis,css.writingMode,inherited)??css[prop].replace(/px$/,'');input.disabled=!spacingActive();input.placeholder='0';input.title='Pixels by default; also accepts %, rem, em, vw, vh, ch or normal. Enter saves. Escape cancels.';const initial=input.value;
@@ -313,9 +314,9 @@
         sec.append(picker);
         const reset=I.button('Reset child alignment',()=>{if(!el.isConnected||info.styleScope&&root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false')return;save(resetAlignmentClasses(classes,css));});reset.dataset.alignmentReset='true';reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');reset.disabled=resetAlignmentClasses(classes,css)===classes||!!info.styleScope&&root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false';sec.append(reset);
       }
-      I.select(sec,'Align children',[['start','Start'],['center','Center'],['end','End'],['stretch','Stretch'],['baseline','Baseline']],(css.alignItems==='normal'?'stretch':css.alignItems.replace('flex-','')),v=>save(arrangementClasses(classes,'align',v,inherited)));
+      layoutSelect('Align children',[['start','Start'],['center','Center'],['end','End'],['stretch','Stretch'],['baseline','Baseline']],(css.alignItems==='normal'?'stretch':css.alignItems.replace('flex-','')),v=>save(arrangementClasses(classes,'align',v,inherited)));
       const justify=css.justifyContent==='normal'?'start':css.justifyContent.replace('flex-','').replace('space-','');
-      I.select(sec,'Distribute children',[['start','Start'],['center','Center'],['end','End'],['between','Space between'],['around','Space around'],['evenly','Space evenly']],justify,v=>save(arrangementClasses(classes,'justify',v,inherited)));
+      layoutSelect('Distribute children',[['start','Start'],['center','Center'],['end','End'],['between','Space between'],['around','Space around'],['evenly','Space evenly']],justify,v=>save(arrangementClasses(classes,'justify',v,inherited)));
     }
     if(/grid/.test(css.display)||parent&&/grid/.test(parent.display))I.gridGuideControl(sec);
     if(parent&&/grid/.test(parent.display)&&!['absolute','fixed'].includes(css.position)) {
