@@ -43,7 +43,7 @@
   const background=property==='background-color'&&root.RetouchBackgroundPaintUI;
   const paintState=el=>background?background.read({},el):{hidden:false,color:el.ownerDocument.defaultView.getComputedStyle(el).getPropertyValue(property)};
   if(background)try{const values=elements.map(el=>paintState(el).color);input.value=values.every(value=>value===values[0])?values[0]:'';input.placeholder=input.value?'CSS color':'Mixed · enter CSS color';}catch(error){input.disabled=true;input.title=error.message;}
-  input.dataset.paintProperty=property;if(saveValues)input.retouchSetPaintValues=saveValues;root.RetouchInspector.fieldDraft(input);
+  input.retouchPreviewDocument=elements[0].ownerDocument;input.dataset.paintProperty=property;if(saveValues)input.retouchSetPaintValues=saveValues;root.RetouchInspector.fieldDraft(input);
   input.retouchSelectionColors=()=>elements.filter(el=>el.isConnected).map(el=>paintState(el).color);
   input.retouchPaintPreview=()=>{const previews=elements.map(el=>({preview:propertyPreview({el,input,property}),hidden:paintState(el).hidden}));return {update:value=>previews.forEach(({preview,hidden})=>{const parsed=hidden?parsePaint(value):null;if(hidden&&!parsed)return;preview.update(hidden?root.RetouchBackgroundPaint.transparent(parsed.value):value);}),restore:()=>previews.forEach(({preview})=>preview.restore())};};
   const control=document.createElement('span');control.className='paint-field-control gradient-stop-color';input.replaceWith(control);control.append(input);

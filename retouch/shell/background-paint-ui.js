@@ -78,5 +78,5 @@
    try{const current=elements.map(el=>read({},el)),hidden=current.every(state=>state.hidden),mixed=current.some(state=>state.hidden)!==hidden;button.setAttribute('aria-label',label(hidden));button.setAttribute('aria-pressed',mixed?'mixed':String(!hidden));button.disabled=input.disabled||!active();button.title=!active()?'Preview this screen range to change fill visibility.':mixed?'Mixed visibility · hide all selected backgrounds':label(hidden);button.innerHTML=visibilityIcon(hidden,mixed);}catch(error){button.disabled=true;button.title=error.message;}
   };watchVisibility(input,elements[0],sync);
  }
- root.RetouchBackgroundPaintUI={read,bind,mountSelection};
+ root.RetouchBackgroundPaintUI={read,bind,mountSelection,rangeActive};
 })(window);
