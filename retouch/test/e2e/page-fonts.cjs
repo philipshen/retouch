@@ -238,6 +238,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   if(process.env.RT_E2E_SINGLE_COLOR_SCOPE){await require('./single-color-scope.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SHARED_SVG_PAINTS){await require('./shared-svg-paints.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_SHARED_COMPACT_PAINTS){await require('./shared-compact-paints.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
+  if(process.env.RT_E2E_SHARED_LAYOUT_CONTEXT){await require('./shared-layout-context.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_HTML_SHARED_GROUPS){await require('./html-shared-groups.cjs').run({page,app,read,wait,settled});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_BACKGROUND_SELECTION){await require('./background-selection.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}
   if(process.env.RT_E2E_BACKGROUND_STYLE_SCOPE){await require('./background-style-scope.cjs').run({page,app,read,wait,settled,kind});assert.deepEqual(errors,[]);return;}

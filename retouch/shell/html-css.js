@@ -247,6 +247,7 @@
   I.note(section,'Shift-click a range in Layers; Cmd/Ctrl-click toggles layers. On the canvas, Shift-click toggles. Mixed values stay unchanged until edited. Each shared edit is one undo step.');
   section.append(RetouchSiteVariables.mount(elements,width,save,infos.map(info=>info.cssRules?.[width]||{}),changes=>save(null,null,width,Object.fromEntries(infos.map((info,index)=>[info.id,changes[index]]))),infos.map(info=>inheritedVariables(info,width))));
   const computed=elements.map(el=>el.ownerDocument.defaultView.getComputedStyle(el));
+  const displays=infos.map((info,i)=>info.cssRules?.[width]?.display??computed[i].display),hasFlex=displays.some(value=>/^(inline-)?flex$/.test(value)),hasGrid=displays.some(value=>/^(inline-)?grid$/.test(value));
   const groups=RetouchReactSelection.sharedGroups(section,elements),typography=groups.typography,disclosures=new Map(),rows=new Map();
   const details=(parent,key,title)=>{if(disclosures.has(key))return disclosures.get(key);const group=document.createElement('details'),summary=document.createElement('summary');group.className='inspector-disclosure';group.setAttribute('aria-label','Shared '+title.toLowerCase());group.open=sharedDetailsOpen.has(key);summary.textContent=title;group.append(summary);group.ontoggle=()=>{if(group.isConnected){if(group.open)sharedDetailsOpen.add(key);else sharedDetailsOpen.delete(key);}};parent.append(group);disclosures.set(key,group);return group;};
   const families=computed.map(css=>css.fontFamily),mixedFamilies=families.some(value=>value!==families[0]);
@@ -268,6 +269,7 @@
    else if(/^border-(?:top|right|bottom|left)-(?:width|style)$/.test(property))target=details(groups.stroke,'borders','Individual borders');
    else if(/^border-.+-radius$/.test(property))target=details(groups.appearance,'corners','Individual corners');
    else if(['font-family','line-height','letter-spacing','text-indent'].includes(property))target=details(groups.typography,'type-options','Typography options');
+   else if(!hasFlex&&(['flex-direction','flex-wrap'].includes(property)||!hasGrid&&['align-items','align-content','justify-content','gap'].includes(property)))target=details(groups.layout,'layout-options','Layout options');
 
    const values=infos.map((info,i)=>{const raw=info.cssRules?.[width]?.[property]??computed[i].getPropertyValue(property);return property==='rotate'?String(RetouchReactSelection.rotationDegrees(raw)):raw;}),mixed=values.some(value=>value!==values[0]),numeric=['opacity','rotate'].includes(property);
    const input=document.createElement(options[property]?'select':'input');
@@ -290,6 +292,7 @@
   for(const [a,b]of [['width','height'],['min-width','min-height'],['max-width','max-height']]){const first=rows.get(a),second=rows.get(b);if(!first||!second)continue;const pair=document.createElement('div');pair.className='property-pair';first.before(pair);pair.append(first,second);for(const [property,row]of [[a,first],[b,second]])row.querySelector('.inspector-field > span').textContent=property.replace('min-','Min ').replace('max-','Max ').replace('width','W').replace('height','H');}
   for(const property of ['filter','backdrop-filter'])for(const mount of ['mountSharedBlur','mountSharedFilters'])RetouchFilterStack[mount](groups.effects,infos,elements,width?'min-['+width+'px]:':'',property,values=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,values[i]===undefined?{}:values[i]]))));
   RetouchFilterStack.mountSharedShadows(groups.effects,infos,elements,width?'min-['+width+'px]:':'',values=>save(null,null,width,Object.fromEntries(infos.map((info,i)=>[info.id,values[i]===undefined?{}:values[i]]))));
+  if(disclosures.has('layout-options'))groups.layout.append(disclosures.get('layout-options'));
   for(const body of Object.values(groups))if(!body.querySelector('.inspector-field'))body.parentElement.remove();
   return section;
  }

@@ -18416,3 +18416,31 @@ Logs: `/tmp/retouch-scale-scope-html-verified.log`,
 
 Full responsive/Figma parity, arbitrary-site source support and trusted public
 Homebrew installation remain incomplete. No desktop rebuild or push.
+
+### Contextual shared HTML layout controls (2026-09-15)
+
+Shared HTML style editing now keeps Display and Padding prominent for ordinary
+block layers and places inactive flex/grid controls in “Layout options.” Flex
+selections show direction, wrapping, alignment and gaps directly; grid selections
+keep alignment/gaps direct and move flex-only direction/wrapping into the
+disclosure. Relevant controls remain visible when any selected layer uses that
+layout. Classification uses authored display values at the current edit scope
+when present, otherwise computed display. Secondary fields remain editable and
+retain their existing save/reset handlers and disclosure state.
+
+Chromium and WebKit browser checks passed for block/flex/grid control placement,
+opening secondary controls without source changes, live mode changes, shared
+direction editing and exact source undo. The shared inspector grouping regression
+also passed after its stale expected section list was updated to include the
+already-existing Effects section. All 1,652 unit tests passed. Inspected
+`/tmp/retouch-shared-layout-context-html.png`; the block Layout section now shows
+Display, Padding, Individual padding and Layout options instead of six inactive
+rows.
+
+Logs: `/tmp/retouch-shared-layout-context-html-final.log`,
+`/tmp/retouch-shared-layout-context-webkit-final.log`,
+`/tmp/retouch-shared-layout-groups-final.log`, and
+`/tmp/retouch-shared-layout-context-units.log`.
+
+Full Figma visual/interaction parity, arbitrary-site editing and trusted public
+Homebrew installation remain incomplete. No desktop rebuild or push.

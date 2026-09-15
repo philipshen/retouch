@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 exports.run=async({page,app,read,wait,settled})=>{
  await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click({modifiers:['Shift']});await settled();const initial=read();
- const group=key=>page.locator('#panelBody > [data-shared-section="'+key+'"]');assert.deepEqual(await page.locator('#panelBody > [data-shared-section]').evaluateAll(els=>els.map(el=>el.dataset.sharedSection)),['size','layout','item','appearance','typography','fill','stroke']);
+ const group=key=>page.locator('#panelBody > [data-shared-section="'+key+'"]');assert.deepEqual(await page.locator('#panelBody > [data-shared-section]').evaluateAll(els=>els.map(el=>el.dataset.sharedSection)),['size','layout','item','appearance','typography','fill','stroke','effects']);
  for(const [key,label]of [['size','Shared Width'],['layout','Shared Padding'],['item','Shared Margin'],['appearance','Shared Opacity (%)'],['typography','Shared Font size'],['fill','Shared Background color'],['stroke','Shared Border color']])assert.equal(await group(key).getByLabel(label,{exact:true}).count(),1);
  assert.equal(await group('size').locator('.property-pair').first().getByLabel('Shared Width',{exact:true}).count(),1);assert.equal(await group('size').locator('.property-pair').first().getByLabel('Shared Height',{exact:true}).count(),1);
  for(const label of ['Shared individual padding','Shared individual margins','Shared individual borders','Shared individual corners','Shared typography options','Shared size limits'])assert.equal(await page.getByLabel(label,{exact:true}).evaluate(el=>el.open),false);
