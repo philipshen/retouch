@@ -19317,3 +19317,24 @@ Pen curves, shapes, cancellation and armed-tool tests also passed. Logs:
 
 No desktop rebuild or push. Full Figma parity, arbitrary-site support and
 trusted Homebrew distribution remain incomplete.
+
+### 2026-09-15 — Independent outgoing Pen handles and stationary modifiers
+
+Option/Alt during a Pen handle drag now leaves an outgoing handle without a
+mirrored incoming handle. Releasing Alt while still dragging restores the
+mirror. Shift/Alt key changes update the preview from the last pointer position
+without requiring mouse movement. Initial iframe gesture replay carries Alt,
+and the Pen hint explains the independent-handle control.
+
+All 1,665 unit tests passed. HTML and React Chromium and Liquid WebKit checks
+passed for stationary Alt toggling, Alt release behavior, initial Alt with a
+quickly released gesture, closed-path persistence of the independent handle,
+exact undo and existing entry/cancellation flows. A final HTML extension also
+verified stationary Shift direction constraints. The existing SVG drawing
+regression passed for seven shapes, curved paths, transforms, constraints and
+history. Logs: `/tmp/retouch-pen-independent-{html,react,liquid,units}-final.log`,
+`/tmp/retouch-pen-independent-shift.log`, and
+`/tmp/retouch-pen-independent-existing-svg.log`.
+
+No desktop rebuild or push. Full Figma parity, arbitrary-site support and
+trusted Homebrew distribution remain incomplete.
