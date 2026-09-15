@@ -45,6 +45,7 @@
   const colors=()=>elements.map((el,i)=>sourceColor?.(i)??paintState(el).color);
   if(background||sourceColor)try{const values=colors();input.value=values.every(value=>value===values[0])?values[0]:'';input.placeholder=input.value?'CSS color':'Mixed · enter CSS color';}catch(error){input.disabled=true;input.title=error.message;}
   input.retouchPreviewDocument=elements[0].ownerDocument;input.dataset.paintProperty=property;if(saveValues)input.retouchSetPaintValues=saveValues;root.RetouchInspector.fieldDraft(input);
+  input.retouchHasScopedValues=()=>!!sourceColor&&elements.every((_,i)=>sourceColor(i)!==null);
   input.retouchSelectionColors=()=>{if(elements.some(el=>!el.isConnected))throw Error('Re-select the layers after the preview changed.');return colors();};
   input.retouchPaintPreview=()=>{const previews=elements.map(el=>({preview:propertyPreview({el,input,property}),hidden:paintState(el).hidden}));return {update:value=>previews.forEach(({preview,hidden})=>{const parsed=hidden?parsePaint(value):null;if(hidden&&!parsed)return;preview.update(hidden?root.RetouchBackgroundPaint.transparent(parsed.value):value);}),restore:()=>previews.forEach(({preview})=>preview.restore())};};
   const control=document.createElement('span');control.className='paint-field-control gradient-stop-color';input.replaceWith(control);control.append(input);

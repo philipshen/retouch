@@ -17367,3 +17367,11 @@ HTML/Chromium, React/Chromium and Liquid/WebKit flows verify a base opacity edit
 The change resolves explicit selected-scope declarations. Ambiguous cascades, inheritance without a selected-scope declaration, overlapping media conditions and preview behavior while editing an overridden base value remain broader work. Full Figma/native/Homebrew parity is still incomplete.
 
 The existing Liquid/WebKit mixed hidden-fill picker/selection flow and React inherited hidden-fill saved-color capture/apply/refresh flow also pass, including mobile isolation and exact undo/redo.
+
+### Edit explicit inactive-range paints directly — 2026-09-15
+
+Shared opacity, bare hex and simple dash/gap controls can now edit an inactive range when every selected layer has an explicit usable declaration in that scope. The fields use those source values and preserve the existing per-layer channels, alpha or complementary dash dimension without moving the canvas. When source values are missing, the preview requirement remains. The outside-range notice now offers to preview the changes, rather than implying all edits require a screen switch. Resize refreshes preserve focused opacity and dash/gap drafts.
+
+HTML/Chromium, React/Chromium and Liquid/WebKit flows verify inactive tablet opacity edits, unchanged phone appearance, hidden-fill preservation, correct tablet results and exact undo/redo. HTML and Liquid flows also cover inactive dash-gap edits and subsequent base edits without copying tablet spacing. The missing-source range guard regression remains green. Explicit resize-event assertions check that in-progress derived values survive preview notifications.
+
+This enables declared source values across screens. General inherited/cascade resolution, comparison-canvas editing and the broader full-parity/native distribution requirements remain open.
