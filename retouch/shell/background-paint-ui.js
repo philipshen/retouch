@@ -42,6 +42,7 @@
   return {...state,current,stored:stored??'none'};
  }
  function sourceColor(info,scope,property){if(property==='background-color')return sourceState(info,scope)?.color??null;const value=sourceValue(info,scope,property);if(value===null)return null;const parts=property==='border-color'?root.RetouchHTMLCSSValues.parseBorderColors(value):[value];return parts?.length&&parts.every(part=>root.RetouchPaintPicker.parsePaint(part))?value:null;}
+ function sourceEffect(info,scope,property){if(!['filter','backdrop-filter','box-shadow'].includes(property))return null;const value=sourceValue(info,scope,property);return value!==null&&(property==='box-shadow'?root.RetouchHTMLCSSValues.parseShadows(value):root.RetouchHTMLCSSValues.parseFilters(value))!==null?value:null;}
  function sourceShadows(info,scope){const value=sourceValue(info,scope,'box-shadow');return value===null?null:root.RetouchHTMLCSSValues.parseShadows(value);}
  function bindSource(input,info,scope,property,el){input.retouchPreviewDocument=el.ownerDocument;input.retouchHasScopedValues=()=>sourceColor(info,scope,property)!==null;}
  function rangeActive(input,el){
@@ -96,5 +97,5 @@
    try{const current=selectedStates(),hidden=current.every(state=>state.hidden),mixed=current.some(state=>state.hidden)!==hidden;button.setAttribute('aria-label',label(hidden));button.setAttribute('aria-pressed',mixed?'mixed':String(!hidden));button.disabled=input.disabled||!active();button.title=!active()?'Preview this screen range to change fill visibility.':mixed?'Mixed visibility · hide all selected backgrounds':label(hidden);button.innerHTML=visibilityIcon(hidden,mixed);}catch(error){button.disabled=true;button.title=error.message;}
   };watchVisibility(input,elements[0],sync);
  }
- root.RetouchBackgroundPaintUI={read,bind,mountSelection,rangeActive,sourceColor,sourceState,sourceShadows,bindSource};
+ root.RetouchBackgroundPaintUI={read,bind,mountSelection,rangeActive,sourceColor,sourceState,sourceEffect,sourceShadows,bindSource};
 })(window);

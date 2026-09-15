@@ -737,9 +737,10 @@
     const sec = section('Effects');
     if (!el || locked(sec,info)) return sec;
     const css=el.ownerDocument.defaultView.getComputedStyle(el);
-    sec.dataset.emptyEffects=String(['filter','backdrop-filter','box-shadow'].every(property=>(css.getPropertyValue(property)||'none').trim()==='none'));
+    const effectValue=property=>root.RetouchBackgroundPaintUI.sourceEffect(info,'',property)??css.getPropertyValue(property);
+    sec.dataset.emptyEffects=String(['filter','backdrop-filter','box-shadow'].every(property=>(effectValue(property)||'none').trim()==='none'));
     for(const [property,label]of [['filter','Layer blur (px)'],['backdrop-filter','Backdrop blur (px)']]){
-      const value=css.getPropertyValue(property).trim(),parsed=root.RetouchHTMLCSSValues.parseFilters(value),blurs=parsed?.filter(item=>item.name==='blur');
+      const value=effectValue(property).trim(),parsed=root.RetouchHTMLCSSValues.parseFilters(value),blurs=parsed?.filter(item=>item.name==='blur');
       const input=number(sec,label,blurs?.length===1?parseFloat(blurs[0].arg):blurs?.length===0?0:NaN,0,1000,amount=>{
         const next=root.RetouchHTMLCSSValues.withBlur(value,amount);if(next===null)return notify('This filter stack cannot be edited with a single blur control.');
         try{save(filterClasses(info.className,property,next));}catch(error){notify(error.message);}
