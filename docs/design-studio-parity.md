@@ -18332,3 +18332,33 @@ check is `/tmp/retouch-layer-scale-html-layout.log`; the rendered canvas is
 This remains visual content scaling with preserved layout slots. Arbitrary
 framework/source coverage, layout reflow scaling, full Figma fidelity and trusted
 public Homebrew installation remain incomplete. No desktop rebuild or push.
+
+### Scale tool keyboard and Actions access (2026-09-15)
+
+K activates proportional scaling for a selected editable layer or selection,
+matching the entry shortcut in [Figma's scale tool documentation](https://help.figma.com/hc/en-us/articles/360040451453-Scale-layers-while-maintaining-proportions).
+“Scale tool” is also searchable in Actions and available in the canvas context
+menu with its K hint. The inspector action exposes `aria-keyshortcuts="K"`.
+Typing targets, composition, modified shortcuts and active gestures keep their
+existing behavior; Ctrl/Cmd+K still opens Actions. V returns to Move and cancels
+the preview.
+
+A pending scale launch is now cancellable while source resolution is in flight.
+Escape works from both the shell and the page iframe, repeated activation cannot
+create overlapping tools, and a late response cannot mount a cancelled overlay.
+Pending iframe key listeners are removed on cancellation or completion.
+
+Verified K from Layers and page focus, Actions search, context menus, native
+input/layer-search typing, composition/Shift guards, repeated activation,
+delayed resolution cancellation from both documents, and V cancellation in
+HTML/Chromium, React/Chromium and Liquid/WebKit. Existing group scaling and the
+Actions browser regression passed; 1,652 unit tests passed.
+
+Logs: `/tmp/retouch-scale-shortcuts-html-final.log`,
+`/tmp/retouch-scale-shortcuts-react.log`, `/tmp/retouch-scale-shortcuts-webkit.log`,
+`/tmp/retouch-scale-shortcuts-group.log`, `/tmp/retouch-scale-shortcuts-actions.log`,
+and `/tmp/retouch-scale-shortcuts-units.log`.
+
+Tool activation without a selection, full Figma interaction/visual parity,
+arbitrary-site editing and trusted public Homebrew distribution remain
+incomplete. No desktop rebuild or push at this checkpoint.

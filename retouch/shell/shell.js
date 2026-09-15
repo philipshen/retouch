@@ -3485,11 +3485,27 @@ function groupMovementSection(info){
 function appendSelectionScaleControls(section,info,roots){
  const I=RetouchInspector;
  const scaling=I.number(section,'Scale selection (%)',100,1,10000,value=>void scaleGroup(info,value,scaling));scaling.title='Scale selected content proportionally from its top-left corner. Layout slots stay unchanged.';I.fieldDraft(scaling);scaling.retouchNumericPreview=()=>{const selection=sel,scope=styleScope,hash=info.hash,preview=RetouchGroupMove.scalePreview(RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el)));return {current:()=>sel===selection&&info.hash===hash&&styleScope===scope&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&preview.current(),update:value=>preview.update(value/100),restore:preview.restore};};
- const scaleCanvas=I.button('Scale selection on canvas',event=>void scaleGroupOnCanvas(info,event.currentTarget));scaleCanvas.dataset.canvasTool='scale';section.append(scaleCanvas);
+ const scaleCanvas=I.button('Scale selection on canvas',event=>void scaleGroupOnCanvas(info,event.currentTarget));scaleCanvas.dataset.canvasTool='scale';scaleCanvas.setAttribute('aria-keyshortcuts','K');scaleCanvas.title='Scale selection on canvas · K';section.append(scaleCanvas);
 }
 
 async function scaleGroupOnCanvas(info,opener){
- stopDrawing?.();try{const context=await moveGroupOnCanvas(info,null,{prepareOnly:true,allowLayers:true});if(!context||!context.current())return;RetouchGroupMove.scalePlan(context.members,1);const rect=RetouchCanvasMove.union(context.members.map(item=>item.rect)),preview=RetouchGroupMove.scalePreview(context.members);canvasPan.cancel();stopDrawing=RetouchCanvasMove.mount({target:context.members[0].el,targets:context.members.map(item=>item.el),selectionId:info.id,frame:iframe,canvas:canvasSurface,mode:'scale',opener,current:context.current,contentPreview:preview,onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err'),onCommit:result=>{try{const plan=RetouchGroupMove.scalePlan(context.members,result.width/rect.width,{x:result.x,y:result.y});return writeGroupMove(context,plan.deltas,plan);}catch(error){toast(error.message,'err');}}});}catch(error){toast(error.message,'err');}
+ stopDrawing?.();
+ let cancelled=false;
+ const frameDocument=doc(),onKey=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();cancel();}};
+ const cancel=()=>{cancelled=true;frameDocument.removeEventListener('keydown',onKey,true);if(stopDrawing===cancel)stopDrawing=null;};
+ stopDrawing=cancel;frameDocument.addEventListener('keydown',onKey,true);
+ try{
+  const context=await moveGroupOnCanvas(info,null,{prepareOnly:true,allowLayers:true});
+  if(cancelled||!context||!context.current())return;
+  RetouchGroupMove.scalePlan(context.members,1);
+  const rect=RetouchCanvasMove.union(context.members.map(item=>item.rect)),preview=RetouchGroupMove.scalePreview(context.members);
+  canvasPan.cancel();
+  stopDrawing=RetouchCanvasMove.mount({target:context.members[0].el,targets:context.members.map(item=>item.el),selectionId:info.id,frame:iframe,canvas:canvasSurface,mode:'scale',opener,current:context.current,contentPreview:preview,
+   onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err'),
+   onCommit:result=>{try{const plan=RetouchGroupMove.scalePlan(context.members,result.width/rect.width,{x:result.x,y:result.y});return writeGroupMove(context,plan.deltas,plan);}catch(error){toast(error.message,'err');}}
+  });
+ }catch(error){if(!cancelled)toast(error.message,'err');}
+ finally{frameDocument.removeEventListener('keydown',onKey,true);if(stopDrawing===cancel)cancel();}
 }
 
 async function scaleGroup(info,percent,input){
@@ -4339,14 +4355,16 @@ window.RetouchShapeTools={
  commands(){
   const canMove=()=>mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!historyRecoveryRequired;
   const move={id:'shape-move',action:'move',label:'Move tool',keywords:'select pointer canvas V',element:modeBtn,available:canMove,reason:'Finish the current edit and switch to Edit mode.',run(){if(canMove()){stopDrawing?.();canvasPan.cancel();}}};
-  const info=sel?.info;if(!info||!info.svgInsertion&&!info.svgTransform?.editable||sel.multiple?.length>1||info.kind==='instance')return [move];
+  const scaleControl=panelBody.querySelector('[data-canvas-tool=scale]'),common=[move];
+  if(scaleControl)common.push({id:'shape-scale',action:'scale',label:'Scale tool',keywords:'resize proportional selection canvas K',element:scaleControl,available:()=>canMove()&&!stopDrawing&&!canvasPan.active,reason:'Select editable layers and finish the current gesture.',run(){if(canMove()&&!stopDrawing&&!canvasPan.active)scaleControl.click();}});
+  const info=sel?.info;if(!info||!info.svgInsertion&&!info.svgTransform?.editable||sel.multiple?.length>1||info.kind==='instance')return common;
   const owner=JSON.stringify([info.file,info.id,info.hash,sel.instanceId,sel.scope]);
   const available=()=>mode==='edit'&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!historyRecoveryRequired&&!panelBody.inert&&!(sel?.multiple?.length>1)&&owner===JSON.stringify([sel?.info.file,sel?.info.id,sel?.info.hash,sel?.instanceId,sel?.scope]);
   const command=(action,label,fn)=>({id:'shape-'+action,action,label,owner,element:panelBody,available,keywords:'shape vector canvas',reason:'Select an editable container or SVG canvas in Edit mode and finish the current edit.',run(){if(available())return fn(sel.info);}});
   const rows=(info.svgInsertion?.presets||[]).flatMap(preset=>[command('draw-'+preset,'Draw '+preset,current=>drawShape(preset,current)),command('add-'+preset,'Add '+preset,current=>insertLayer(preset,current,'insertSVG'))]);
   if(info.svgTransform?.editable)rows.push(command('resize-vector','Resize vector on canvas',current=>resizeSVGOnCanvas(current)),command('rotate-vector','Rotate vector on canvas',current=>resizeSVGOnCanvas(current,null,null,'ne','rotate')),command('move-vector','Move vector on canvas',current=>resizeSVGOnCanvas(current,null,null,'se','move')));
   if(info.svgInsertion?.pen)rows.push(command('pen','Pen',current=>drawVector(current)));
-  return [move,...rows];
+  return [...common,...rows];
  },
  get(action){return this.commands().find(row=>row.action===action);}
 };
