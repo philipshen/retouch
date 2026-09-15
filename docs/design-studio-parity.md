@@ -17677,3 +17677,11 @@ Group entry now resolves the selected layer in the document being picked, so com
 Validation: all 1,639 unit tests passed (`/tmp/retouch-group-compare-units.log`). HTML, React, and Liquid browser flows passed the Phone comparison's own group outline, enabled reveal action, entered-child picking, actual pointer selection in the comparison, restored whole-group picking after selecting outside, and unchanged source (`/tmp/retouch-group-compare-html-final.log`, `/tmp/retouch-group-compare-react-final.log`, `/tmp/retouch-group-compare-liquid-final.log`). Initial test attempts looked for controls hidden by the current Screen controls toggle; final checks open that toggle through the UI.
 
 This does not establish independently editable comparison documents, complete repeated-instance or nested-group behavior, group transformations, arbitrary CSS/source support, or trusted desktop distribution. Full parity remains incomplete.
+
+### Group identity in the layer tree — 2026-09-15
+
+Retouch groups now have their own dashed-outline icon in the layer tree and context layer chooser, distinct from the frame icon. Tree rows expose an accessible layer-kind description without changing their names. Explicit group/frame wrappers are excluded from atomic-text classification, keeping contained lists and nested groups independently visible and selectable instead of collapsing the container into one text layer.
+
+Validation: all 1,639 unit tests passed (`/tmp/retouch-group-layer-units.log`). The real browser text-layer suite passed its existing formatting, lock, source-run, responsive regrouping, and keyboard checks plus new nested-group/list-container checks (`/tmp/retouch-group-layer-icons.log`). It verifies different rendered icon masks, accessible group description, preserved list children, text-owner boundaries, and child navigation. Screenshot `/tmp/retouch-group-layer-icons.png` was visually inspected in the light theme.
+
+This establishes these layer-tree distinctions, not complete nested-group interaction or transformation parity. Full design parity, arbitrary source/compiler coverage, and trusted desktop distribution remain incomplete.

@@ -18,7 +18,7 @@
   // boundaries remain independently selectable source layers.
   const inlineTags=new Set(['SPAN','A','STRONG','B','EM','I','U','S','SUP','SUB','CODE','MARK','SMALL','ABBR','BR']);
   function atomicText(el,{preserve=()=>false}={}) {
-    if(!el||el.namespaceURI!=='http://www.w3.org/1999/xhtml')return false;
+    if(!el||el.namespaceURI!=='http://www.w3.org/1999/xhtml'||el.hasAttribute('data-rt-frame')||el.hasAttribute('data-rt-group'))return false;
     if(el.tagName!=='DIV'&&!/^(H[1-6]|P|BLOCKQUOTE|PRE|SPAN|A|LABEL|STRONG|B|EM|I|U|S|SUP|SUB|CODE|MARK|SMALL|ABBR)$/.test(el.tagName))return false;
     const rootDisplay=(el.ownerDocument.defaultView?.getComputedStyle(el)||el.style)?.display;
     if(rootDisplay&&/flex|grid|table/.test(rootDisplay))return false;
@@ -44,6 +44,7 @@
   }
   function layerKind(item) {
     if(item.componentId)return 'component';
+    if(item.el.hasAttribute('data-rt-group'))return 'group';
     if(item.atomicText)return 'text';
     const tag=item.el.localName?.toLowerCase();
     if(['img','picture','video','canvas'].includes(tag))return 'image';
@@ -171,7 +172,7 @@ b.onclick=()=>onAction(action);actions.append(b);actionButtons[action]=b;
           toggle.textContent=item.children.length?(expanded?'▾':'▸'):'';
           toggle.disabled=isBusy||!item.children.length;toggle.setAttribute('aria-label',(expanded?'Collapse ':'Expand ')+item.label);
           toggle.onclick=()=>{if(expanded)collapsed.add(key(item));else collapsed.delete(key(item));render();};
-          const b=prior?.button||document.createElement('button');b.className='layer-item';if(b.textContent!==item.label)b.textContent=item.label;b.title=item.label;b.dataset.layerKind=layerKind(item);
+          const b=prior?.button||document.createElement('button');b.className='layer-item';if(b.textContent!==item.label)b.textContent=item.label;b.title=item.label;b.dataset.layerKind=layerKind(item);b.setAttribute('aria-description',b.dataset.layerKind+' layer');
           b.setAttribute('role','treeitem');b.setAttribute('aria-level',depth);b.setAttribute('aria-selected',String(isSelected(item)));
           b.tabIndex=isSelected(item)?0:-1;b.disabled=isBusy&&!canSelectWhileBusy();
           if(item.children.length)b.setAttribute('aria-expanded',String(expanded));else b.removeAttribute('aria-expanded');
