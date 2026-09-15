@@ -354,7 +354,7 @@ function hookFrame(d, w) {
   d.addEventListener('keydown', (e) => {
     if(e.key==='Escape'){vectorEntrySerial++;if(pendingVectorEntry){pendingVectorEntry=null;e.preventDefault();e.stopPropagation();return;}}
     if(mode==='edit'&&!editing&&window.RetouchActions?.shortcut(e)){cancelOpacityEntry();return;}
-    if(vectorNudgeShortcut(e)||flipShortcut(e)||alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||layerNavigationShortcut(e)||canvasLayerShortcut(e))return;
+    if(groupNudgeShortcut(e)||vectorNudgeShortcut(e)||flipShortcut(e)||alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||layerNavigationShortcut(e)||canvasLayerShortcut(e))return;
     if (editing) {
       e.stopPropagation(); // typing stays native; app shortcuts stay out
       if(e.isComposing)return;
@@ -1986,7 +1986,7 @@ function renderPanelContents(textEditing=false) {
   if(sel.multiple?.length>1){mountSelectionEffectStyles();mountSelectionTextStyles();if(info.classSelection){const elements=sel.multiple.map(item=>matchingEls(item.id)[0]),strategy=RetouchReactSelectionGeometry.strategy(sel.multiple,elements,styleScope,{reason:reactGeometryReason,matches:matchingEls,save:setReactClassesSelection});panelBody.append(RetouchClassSiteVariables.mountSelection(sel.multiple,elements,styleScope,setReactClassesSelection,message=>toast(message,'err')),RetouchFlip.mountSelection(sel.multiple,elements,0,null,strategy),RetouchSelectionLayout.mount(sel.multiple,elements,0,null,transformLayerSelection,strategy),RetouchReactSelection.mount(sel.multiple,elements,styleScope,setReactClassesSelection,(property,value,values)=>setSelectionColorOverride(property,value,undefined,values),id=>matchingEls(id)[0],changes=>setSelectionColorOverride('background-color',undefined,changes)));return;}const width=styleScope?Number(/^min-\[(\d+)px\]:$/.exec(styleScope)?.[1]):0;const elements=sel.multiple.map(info=>matchingEls(info.id)[0]);panelBody.append(RetouchFlip.mountSelection(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes)),RetouchSelectionLayout.mount(sel.multiple,elements,width,(changes,w)=>setHTMLCSSSelection(null,null,w,changes),transformLayerSelection),RetouchHTMLCSS.mountSelection(sel.multiple,elements,width,setHTMLCSSSelection));return;}
 
   if(info.svgMask?.canRelease||info.svgMask?.ownerId){const target=matchingEls(info.id)[0];panelBody.append(RetouchSVGMask.mount([info],[target],{current:()=>sel?.info===info&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests&&target?.isConnected&&!layerLocks.locked(target),save:writeSVGMask,edit:async ids=>{await restoreLayerSelection(ids);if(sel)renderPanel();await layers.refresh();}}));}
-  if(!sel.multiple?.length&&matchingEls(info.id)[0]?.hasAttribute('data-rt-group')){const section=RetouchInspector.section('Group');const button=RetouchInspector.button('Move group on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';button.title='Drag a group directly on the canvas, or use this action for keyboard movement.';section.append(button);panelBody.append(section);}
+  if(!sel.multiple?.length&&matchingEls(info.id)[0]?.hasAttribute('data-rt-group')){const section=RetouchInspector.section('Group');const button=RetouchInspector.button('Move group on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';button.title='Drag a group directly on the canvas. Arrow keys move 1 px; Shift moves 10 px. Use this action for explicit keyboard movement.';section.append(button);panelBody.append(section);}
   if(info.canCreateComponent)panelBody.append(createComponentSection(info));
 
   if(info.components?.length) {
@@ -3147,6 +3147,14 @@ async function convertSVGToPath(info,toArrow=false,arrowPoints){
   busyPanel(true);
   try{const result=await api('POST','/rt/__api/op',{type:operation,id:info.id,fileHash:info.hash,...(editedArrow?{arrowPoints}:{})});if(!result?.ok)return toast(result?.reason||result?.error||'Could not convert shape','err');if(result.undoId)editorHistory.record({type:operation,id:info.id,selectionBefore:[info.id],selectionAfter:[info.id],undoId:result.undoId});renderedSelection=null;sel.info=result.element;await refreshWrittenElement(sel.info,el=>el.tagName.toLowerCase()===targetTag&&svgGeometryMatches(el,sel.info));await restoreLayerSelection([info.id]);renderPanel();toast(editedArrow?'Arrow updated':toArrow?'Converted to an editable arrow':'Converted to an editable vector path','ok');}finally{busyPanel(false);}
 }
+function groupNudgeShortcut(e){
+ if(e.defaultPrevented||e.repeat||e.isComposing||e.ctrlKey||e.metaKey||e.altKey||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)||mode!=='edit'||editing||stopDrawing||panelTasks||sourceRequests||undoBusy||canvasPan.active||!sel?.info||sel.multiple?.length||document.querySelector('dialog[open]'))return false;
+ if(e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||e.target.ownerDocument===document&&e.target.closest?.('button,summary,[role="treeitem"],[role="slider"],[role="tab"],[role="menuitem"]'))return false;
+ const info=sel.info,matches=matchingEls(info.id),group=matches.length===1?matches[0]:null;if(!group?.hasAttribute('data-rt-group')||layerLocks.locked(group))return false;
+ const selection=sel,hash=info.hash,scope=styleScope,d=doc(),current=()=>mode==='edit'&&sel===selection&&sel.info.hash===hash&&styleScope===scope&&doc()===d&&group.isConnected&&!layerLocks.locked(group)&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy;
+ e.preventDefault();e.stopImmediatePropagation();
+ stopDrawing=RetouchGroupNudge.mount({document:d,initialKey:e,current,prepare:()=>moveGroupOnCanvas(info,null,{prepareOnly:true,valid:current}),onCommit:writeGroupMove,onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});return true;
+}
 function vectorNudgeShortcut(e){
   if(e.defaultPrevented||e.isComposing||e.ctrlKey||e.metaKey||e.altKey||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)||mode!=='edit'||editing||stopDrawing||panelTasks||sourceRequests||undoBusy||canvasPan.active||!sel?.info.svgTransform?.editable||document.querySelector('dialog[open]'))return false;
   if(e.target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"]')||e.target.ownerDocument===document&&e.target.closest?.('button,summary,[role="treeitem"],[role="slider"],[role="tab"],[role="menuitem"]'))return false;
@@ -3422,7 +3430,7 @@ async function refreshGroupMove(infos,before){
  else await refreshWrittenElement(infos[0],el=>classSelectionMatches(infos,el.ownerDocument));
 }
 async function moveGroupOnCanvas(info,opener,gesture={}){
- stopDrawing?.();if(panelTasks||sourceRequests||undoBusy||editing||sel?.info!==info)return;
+ if(!gesture.prepareOnly)stopDrawing?.();if(panelTasks||sourceRequests||undoBusy||editing||sel?.info!==info)return;
  const scope=styleScope,hash=info.hash,group=matchingEls(info.id)[0],current=()=>mode==='edit'&&sel?.info.id===info.id&&sel.info.hash===hash&&styleScope===scope&&!sel.multiple?.length&&!editing&&!panelTasks&&!sourceRequests&&!undoBusy&&!document.querySelector('dialog[open]');
  try{
   if(matchingEls(info.id).length!==1)throw Error('Select a group with one rendered occurrence.');
@@ -3434,10 +3442,15 @@ async function moveGroupOnCanvas(info,opener,gesture={}){
   const infos=responses.map(r=>r.element),css=infos.every(item=>item.cssAuthoring);
   if(!css&&!infos.every(item=>item.classSelection&&!item.classNameDynamic))throw Error('Group movement needs editable child styles.');
   if(members.some(item=>matchingEls(item.id).length!==1))throw Error('Group movement needs one rendered occurrence of each child.');
-  if(gesture.prepareOnly)return {members,infos};
+  if(gesture.prepareOnly)return {info,group,members,infos,scope,width,css,current,preview:()=>RetouchGroupMove.preview(members)};
   canvasPan.cancel();
   stopDrawing=RetouchCanvasMove.mount({initial:gesture.event?gesture:null,target:members[0].el,targets:members.map(item=>item.el),selectionId:info.id,frame:iframe,canvas:canvasSurface,mode:'move',opener,
-   onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err'),onCommit:async delta=>{
+   onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err'),onCommit:delta=>writeGroupMove({info,group,members,infos,scope,width,css,current},delta)
+   });
+ }catch(error){toast(error.message,'err');}
+}
+
+async function writeGroupMove({info,group,members,infos,scope,width,css,current},delta){
     if(!current())return;
     try{
      const fresh=RetouchGroupMove.measure(group,el=>layerLocks.locked(el));
@@ -3450,8 +3463,6 @@ async function moveGroupOnCanvas(info,opener,gesture={}){
      if(result.undoId)editorHistory.record({type:'moveGroup',id:first.id,groupId:info.id,childIds:infos.map(item=>item.id),classesBefore:before,classesAfter:after,undoId:result.undoId});
      await refreshGroupMove(updated,before);await restoreLayerSelection([info.id]);if(sel)renderPanel();let settled=false;for(let attempt=0;attempt<50;attempt++){settled=members.every(item=>{const el=matchingEls(item.id)[0],r=el?.getBoundingClientRect();return r&&Math.abs(r.x-item.rect.x-delta.x)<.6&&Math.abs(r.y-item.rect.y-delta.y)<.6&&Math.abs(r.width-item.rect.width)<.6&&Math.abs(r.height-item.rect.height)<.6;});if(settled)break;await new Promise(resolve=>setTimeout(resolve,100));}if(!settled)throw Error('Group offsets saved, but the canvas did not match. Check style overrides.');toast('Group moved','ok');
     }catch(error){toast(error.message,'err');}finally{busyPanel(false);}
-   }});
- }catch(error){toast(error.message,'err');}
 }
 
 function transformLayerSelection(elements,commit,opener,action='move',spacing=null){
@@ -3792,7 +3803,7 @@ routeInput.addEventListener('keydown', (e) => {
 });
 window.addEventListener('keydown', (e) => {
   if(e.key==='Escape'){vectorEntrySerial++;if(pendingVectorEntry){pendingVectorEntry=null;e.preventDefault();return;}}
-  if(vectorNudgeShortcut(e)||flipShortcut(e)||alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||(e.key==='Enter'&&e.target.closest?.('[role=treeitem][aria-selected="true"]')&&layerNavigationShortcut(e))||((e.metaKey||e.ctrlKey)&&['[',']','{','}'].includes(e.key)&&canvasLayerShortcut(e)))return;
+  if(groupNudgeShortcut(e)||vectorNudgeShortcut(e)||flipShortcut(e)||alignmentShortcut(e)||opacityShortcut(e)||visibilityShortcut(e)||canvasZoomShortcut(e)||lockShortcut(e)||(e.key==='Enter'&&e.target.closest?.('[role=treeitem][aria-selected="true"]')&&layerNavigationShortcut(e))||((e.metaKey||e.ctrlKey)&&['[',']','{','}'].includes(e.key)&&canvasLayerShortcut(e)))return;
   if (document.querySelector('dialog[open]')) return;
   if (e.key === 'Alt') measuring = true;
   if(sourceHistoryShortcut(e))return;

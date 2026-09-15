@@ -17836,3 +17836,32 @@ Logs: `/tmp/retouch-group-unselected-{html,react,webkit}.log`,
 Multi-selection containing groups, group resizing/rotation, remaining complex
 source/transform cases, full Figma parity and trusted desktop distribution remain
 incomplete. No desktop rebuild or GitHub push in this checkpoint.
+
+### Group arrow-key nudging with grouped history (2026-09-15)
+
+Selected groups can now be nudged from the canvas with arrow keys (1px) and Shift
+(10px). Repeated and simultaneously held arrows accumulate into one source
+transaction after the held keys are released. Key input survives delayed child
+resolution. Prepared gestures preview the actual child translations, then restore
+only their owned inline property before the shared group write/geometry check.
+Escape, pointer interaction, invalid selection/source/viewport context and lost
+preview ownership cancel the gesture. Form and tree-navigation focus retain their
+own keyboard behavior.
+
+Validation: 1,648 unit tests pass, including held-key accumulation, delayed
+resolution, cancellation, zero-net movement and one final commit. HTML/Chromium,
+React/Chromium and Liquid/WebKit browser workflows cover live preview, repeated
+and overlapping held keys, Shift increments, one-step exact undo/redo, Escape,
+foreign style preservation, release before resolution and input guarding. React
+and WebKit use transformed/percentage fixtures. Existing selected/unselected
+direct drag and subsequent grouping/ungrouping workflows also pass.
+
+Logs: `/tmp/retouch-group-nudge-units.log`,
+`/tmp/retouch-group-nudge-html-final.log`,
+`/tmp/retouch-group-nudge-react.log`,
+`/tmp/retouch-group-nudge-webkit.log`, and
+`/tmp/retouch-group-nudge-drag-regression.log`.
+
+This covers one selected group. Multi-selection containing groups, group
+resizing/rotation, other unsupported source/transform cases, full Figma parity and
+trusted desktop distribution remain incomplete. No desktop rebuild or push.

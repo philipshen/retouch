@@ -45,10 +45,18 @@
   if(w.getComputedStyle(group).display!=='contents')throw Error('Choose a layout-transparent group.');
   visit(group);if(!targets.length||targets.length>100||new Set(targets.map(item=>item.id)).size!==targets.length)throw Error('Choose a group with 1–100 distinct source children.');return targets;
  }
+ function preview(members){
+  const entries=members.map(member=>({...member,value:member.el.style.getPropertyValue('translate'),priority:member.el.style.getPropertyPriority('translate'),hadStyle:member.el.hasAttribute('style'),written:null}));
+  const owned=item=>item.written!==null&&item.el.style.getPropertyValue('translate')===item.written&&item.el.style.getPropertyPriority('translate')==='important';
+  return {current:()=>entries.every(item=>item.el.isConnected&&(item.written===null||owned(item))&&parentMatrix(item.el).every((value,i)=>Math.abs(value-item.matrix[i])<1e-9)),
+   update:delta=>{for(const item of entries){item.el.style.setProperty('translate',translation(item.translate,localDelta(item.matrix,delta)),'important');item.written=item.el.style.getPropertyValue('translate');}},
+   restore:()=>{for(const item of entries){if(!owned(item))continue;if(item.value)item.el.style.setProperty('translate',item.value,item.priority);else item.el.style.removeProperty('translate');if(!item.hadStyle&&!item.el.getAttribute('style'))item.el.removeAttribute('style');}}
+  };
+ }
  function classes(value,scope,translate){
   const R=root.RetouchResponsive||require('./responsive.js');
   const scoped=R.project(value,scope).split(/\s+/).filter(Boolean).filter(token=>!/^!?-?translate(?:-|\[)/.test(token)&&!/^!?\[translate:/.test(token));
   scoped.push('![translate:'+translate.replace(/ /g,'_')+']');return R.replaceScope(value,scoped.join(' '),scope);
  }
- const api={translation,measure,classes,multiply,localDelta,parentMatrix};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchGroupMove=api;
+ const api={translation,measure,classes,multiply,localDelta,parentMatrix,preview};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchGroupMove=api;
 })(typeof window==='object'?window:globalThis);
