@@ -19739,3 +19739,28 @@ scopes/reset and pointer/keyboard movement/resizing. Inspected
 Canvas resizing and layer-owned transforms within transformed frames remain
 incomplete. Full arbitrary-site/Figma parity and trusted Homebrew distribution
 remain incomplete. No push or native rebuild.
+
+
+### Nested rotation and reflection in local positioning
+
+Local position geometry now preserves a layer's own two-dimensional rotation
+and nonzero scale within transformed frames. Frame alignment uses the rotated
+and scaled visible bounds. Canvas movement previews follow the transformed
+corners, retaining the authored transform origin and reflection. A changed
+layer rotation/scale/origin cancels an active movement gesture.
+
+Validation: all 1,673 unit tests passed, including an offset-origin rotation
+combined with reflection and nonuniform scale, plus zero-scale/3D refusals.
+HTML/Chromium, React/Chromium and Liquid/WebKit Text-tool suites passed a rotated
+and horizontally flipped text box inside the existing rotated/scaled frame:
+live pointer movement, keyboard nudging, cancellation, left-frame alignment and
+exact source undo. Changing the layer's own rotation cancels the open gesture.
+Inspected `/tmp/retouch-nested-transform.png`. Logs:
+`/tmp/retouch-nested-transform-{html,react,liquid}-verified.log` and
+`/tmp/retouch-nested-transform-units-verified.log`. The browser fixture tests
+reflection; nonuniform scale and offset transform origins have unit coverage.
+
+Layer-owned matrix transforms, translation, zoom, 3D transforms and canvas
+resizing in transformed frames remain incomplete. Full arbitrary-site/Figma
+parity and trusted Homebrew distribution remain incomplete. No push or native
+rebuild.

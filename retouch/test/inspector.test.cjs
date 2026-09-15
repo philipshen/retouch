@@ -231,6 +231,16 @@ test('local position retains fractional insets, margins and content-box dimensio
  assert.deepEqual(localPositionGeometry(el),{localCoordinates:true,x:17.75,y:33.375,width:112.25,height:47.25,parentWidth:800,parentHeight:600,parentLabel:'<main>'});
  css.boxSizing='border-box';assert.equal(localPositionGeometry(el).width,100.5);
  values.left='auto';assert.throws(()=>localPositionGeometry(el),/resolved pixel/);values.left='20.25px';
- css.transform='matrix(1,0,0,1,10,0)';assert.throws(()=>localPositionGeometry(el),/transformed layers/);css.transform='none';
+ css.transform='matrix(1,0,0,1,10,0)';assert.throws(()=>localPositionGeometry(el),/matrix transforms/);css.transform='none';
+ css.rotate='x 45deg';assert.throws(()=>localPositionGeometry(el),/two-dimensional/);css.rotate='none';css.scale='0 1';assert.throws(()=>localPositionGeometry(el),/nonzero/);css.scale='none';
  parent.namespaceURI='http://www.w3.org/2000/svg';assert.throws(()=>localPositionGeometry(el),/inside SVG/);
+});
+
+
+test('local corners rotate reflected dimensions around the authored origin',()=>{
+ const {localPositionCorners}=require('../shell/inspector.js');
+ const points=localPositionCorners({x:10,y:20,width:100,height:40,rotation:90,scaleX:-1,scaleY:2,transformOrigin:'20px 10px'});
+ const expected=[[50,50],[50,-50],[-30,-50],[-30,50]];
+ points.forEach((p,i)=>{assert.ok(Math.abs(p.x-expected[i][0])<1e-9);assert.ok(Math.abs(p.y-expected[i][1])<1e-9);});
+ assert.throws(()=>localPositionCorners({x:0,y:0,width:10,height:20,transformOrigin:'5px 10px 2px'}),/two-dimensional/);
 });

@@ -92,7 +92,7 @@
    if(root.document.activeElement===control)root.RetouchPanelFocus?.queue(control);return save(next,before);
   }
   group.append(alignmentToolbar((mode,event,button)=>{try{
-   const before=measure(),delta=before.localCoordinates?arrange([{left:before.x,top:before.y,width:before.width,height:before.height}],mode,{left:0,top:0,width:before.parentWidth,height:before.parentHeight})[0]:arrange([el.getBoundingClientRect()],mode,frameBounds(el))[0];write({...before,x:before.x+delta.x,y:before.y+delta.y},before,button);
+   const before=measure(),corners=before.localCoordinates?I.localPositionCorners(before):null,localRect=corners?{left:Math.min(...corners.map(p=>p.x)),top:Math.min(...corners.map(p=>p.y)),width:Math.max(...corners.map(p=>p.x))-Math.min(...corners.map(p=>p.x)),height:Math.max(...corners.map(p=>p.y))-Math.min(...corners.map(p=>p.y))}:null,delta=before.localCoordinates?arrange([localRect],mode,{left:0,top:0,width:before.parentWidth,height:before.parentHeight})[0]:arrange([el.getBoundingClientRect()],mode,frameBounds(el))[0];write({...before,x:before.x+delta.x,y:before.y+delta.y},before,button);
   }catch(error){report(error.message);}}),fields);
   const initial=measure();
   for(const [axis,label]of [['x','X'],['y','Y']]){

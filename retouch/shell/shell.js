@@ -3460,10 +3460,10 @@ function layerMovementSpace(target,g,action,opener){
  if(!g.localCoordinates)return {current:()=>true,convert:delta=>delta};
  if(action!=='move')throw Error('Canvas resizing inside transformed frames is not available yet.');
  const space=RetouchSVGDraw.nativeSpace(target.offsetParent),m=space.matrix,inverse=m.inverse(),w=target.ownerDocument.defaultView;
- const outlinePoints=[[g.x,g.y],[g.x+g.width,g.y],[g.x+g.width,g.y+g.height],[g.x,g.y+g.height]].map(([x,y])=>new w.DOMPoint(x,y).matrixTransform(m));
+ const outlinePoints=RetouchInspector.localPositionCorners(g).map(({x,y})=>new w.DOMPoint(x,y).matrixTransform(m)),transformState=()=>{const css=w.getComputedStyle(target);return [css.transform,css.rotate,css.scale,css.transformOrigin,css.zoom].join('|');},originalTransform=transformState();
  const convert=delta=>({...delta,x:inverse.a*delta.x+inverse.c*delta.y,y:inverse.b*delta.x+inverse.d*delta.y});let preview;
  const contentPreview={current:()=>!preview||preview.current(),update:delta=>{preview??=RetouchPaintPicker.propertyPreview({el:target,input:opener||document.body,property:'translate'});const local=convert(delta);preview.update(local.x+'px '+local.y+'px');},restore:()=>preview?.restore()};
- return {current:space.current,outlinePoints,convert,contentPreview};
+ return {current:()=>space.current()&&transformState()===originalTransform,outlinePoints,convert,contentPreview};
 }
 
 function transformReactLayer(info,target,action,opener,initial=null){

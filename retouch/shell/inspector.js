@@ -62,15 +62,24 @@
     return {...g,layoutLeft:g.layoutLeft+x,layoutTop:g.layoutTop+y,width:Math.abs(g.width*sx),height:Math.abs(g.height*sy),sourceTransformOrigin:g.transformOrigin,transformOrigin:(origin[0]-x)+'px '+(origin[1]-y)+'px'};
   }
   function outlineGeometry(el){const g=geometry(el,{allowRotation:true,allowScale:true,layoutOnly:true});return {...scaledOutline(g),sourceScale:el.ownerDocument.defaultView.getComputedStyle(el).scale};}
+  function localPositionCorners(g){
+    const origin=(g.transformOrigin||'0px 0px').split(/\s+/);if(origin.length>2&&parseFloat(origin[2])!==0)throw Error('Use a two-dimensional transform origin.');
+    const [ox,oy]=origin.slice(0,2).map(value=>/^-?(?:\d*\.)?\d+px$/.test(value)?parseFloat(value):NaN),angle=(g.rotation||0)*Math.PI/180,c=Math.cos(angle),s=Math.sin(angle),sx=g.scaleX??1,sy=g.scaleY??1;
+    if(![g.x,g.y,g.width,g.height,ox,oy,sx,sy,angle].every(Number.isFinite))throw Error('Use resolved local bounds and transform origin.');
+    return [[0,0],[g.width,0],[g.width,g.height],[0,g.height]].map(([x,y])=>({x:g.x+ox+(x-ox)*sx*c-(y-oy)*sy*s,y:g.y+oy+(x-ox)*sx*s+(y-oy)*sy*c}));
+  }
   function positionGeometry(el){try{return geometry(el,{allowRotation:true,allowScale:true});}catch(error){return localPositionGeometry(el);}}
   function localPositionGeometry(el){
     const d=el.ownerDocument,w=d.defaultView,css=w.getComputedStyle(el),parent=el.offsetParent;
     if(el.namespaceURI!=='http://www.w3.org/1999/xhtml'||css.position!=='absolute'||!parent)throw Error('Local position requires an absolute HTML layer with a containing frame.');
-    if(css.transform!=='none'||['rotate','scale','translate'].some(key=>css[key]&&!['none','0deg'].includes(css[key]))||css.zoom&&Number(css.zoom)!==1)throw Error('Local position for transformed layers is not available yet.');
+    if(css.transform!=='none'||css.translate&&css.translate!=='none'||css.zoom&&Number(css.zoom)!==1)throw Error('Local position for matrix transforms, translation or zoom on the layer is not available yet.');
+    const rotation=(root.RetouchReactSelection||require('./react-selection.js')).rotationDegrees(css.rotate||'none'),scale=(root.RetouchFlip||require('./flip.js')).parse(css.scale||'none');
+    if(!Number.isFinite(rotation)||!scale||scale.length!==2||scale.some(value=>value===0))throw Error('Local positioning requires a nonzero two-dimensional rotation and scale.');
     for(let node=el;node;node=node.parentElement)if(node.namespaceURI!=='http://www.w3.org/1999/xhtml')throw Error('Local HTML position inside SVG is not available yet.');
     const pixel=property=>{const value=css.getPropertyValue(property);if(!/^-?(?:\d*\.)?\d+px$/.test(value))throw Error('Local position requires resolved pixel dimensions and insets.');return parseFloat(value);};
     const dimension=axis=>pixel(axis)+(css.boxSizing==='content-box'?(axis==='width'?['left','right']:['top','bottom']).reduce((sum,edge)=>sum+pixel('padding-'+edge)+pixel('border-'+edge+'-width'),0):0);
     const g={localCoordinates:true,x:pixel('left')+pixel('margin-left'),y:pixel('top')+pixel('margin-top'),width:dimension('width'),height:dimension('height'),parentWidth:parent.clientWidth,parentHeight:parent.clientHeight,parentLabel:'<'+parent.localName+'>'};
+    if(rotation||scale.some(value=>value!==1)){g.rotation=rotation;g.scaleX=scale[0];g.scaleY=scale[1];g.transformOrigin=css.transformOrigin;localPositionCorners(g);}
     if(!['x','y','width','height','parentWidth','parentHeight'].every(key=>Number.isFinite(g[key])&&Math.abs(g[key])<=100000)||g.width<=0||g.height<=0)throw Error('The layer needs measurable bounds within 100,000 pixels.');return g;
   }
   function geometry(el,{allowRotation=false,allowScale=false,layoutOnly=false}={}) {
@@ -1044,6 +1053,6 @@
       if(a.top>=r.bottom)line(x,r.bottom,x,a.top,`${round(a.top-r.bottom)} px`);
     }
   }
-  const api={positionGeometry,localPositionGeometry,textResizing,textVerticalLayout,verticalAlignmentMatchers,verticalAlignmentTypography,verticalTrimTypography,truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textBoxToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
+  const api={localPositionCorners,positionGeometry,localPositionGeometry,textResizing,textVerticalLayout,verticalAlignmentMatchers,verticalAlignmentTypography,verticalTrimTypography,truncationTypography,truncationToken,wrapTypography,decorationMatchers,underlineTypography,fontPositionToken,fontPositionTypography,capsToken,capsTypography,ligatureToken,ligatureTypography,typographyPreview,spacingPercent,canvasTool,layoutParent,gridAxisEdges,gridGuideControl,drawGridGuides,gridPlacementSuggestions,suggestGridPlacement,borderClasses,cornerRadiusClasses,shadowClasses,filterClasses,expandSizeLeading,replaceTypography,fontSizeToken,letterSpacingToken,textIndentToken,textWrapToken,textBoxToken,textAlignToken,fontStyleToken,decorationToken,caseToken,textOverrideToken,base,replace,nearestAnchor,inferredAnchor,axisClasses,anchorClasses,geometry,rotationLayoutRect,scaledOutline,outlineGeometry,catalog,fontFamilies,fontFamilyClass,fontFamilyToken,fontWeightToken,fontWeightClass,lineHeightToken,isTextLayer,filterFonts,fontPicker,scanPageFonts,fontFaceStates,fontFaceLabel,position,appearance,effects,typography,measurements,section,field,fieldDraft,note,button,select,number,scrubSpeed,numericLabelDrag,numericPreview,relativeNumber,opticalTypography,opticalToken,variationTypography,variationToken,numericTypography,numericToken};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchInspector=api;
 })(typeof window==='object'?window:globalThis);
