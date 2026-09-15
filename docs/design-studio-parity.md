@@ -20438,3 +20438,26 @@ external width cancellation and unrelated external color preservation. All
 
 Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
 incomplete. No native rebuild or push.
+
+
+### HTML dimension fields respect the previewed edit range
+
+Single and shared HTML CSS width, height and min/max dimension fields now use
+the existing edit-range guard. Outside the selected breakpoint, their inputs
+and reset controls are disabled and their change/reset handlers refuse writes.
+This matches the existing spacing/layout controls and scoped dimension previews.
+
+Extended the HTML mixed-sizing browser suite to edit at 768px, preview 390px
+without applying desktop widths, reject a programmatically dispatched inactive
+change, check both single and shared disabled width/reset controls, jump with
+Preview edit range, and Undo preview size while preserving the selected scope
+and exact source. The full test passed on Chromium and WebKit; all 1,694 unit
+tests passed. Screen selection explicitly focuses the picker because focused
+inspector drafts intentionally defer panel rebuilding. The test also opens the
+size section before dragging after a panel rebuild. Logs:
+`/tmp/retouch-html-size-scope-webkit-verified.log`,
+`/tmp/retouch-html-size-scope-chromium-verified.log`,
+`/tmp/retouch-html-size-scope-units.log`.
+
+Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
+incomplete. No native rebuild or push.

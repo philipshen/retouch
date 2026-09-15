@@ -204,7 +204,7 @@
 
   for(const [property,label] of [...fields,...(isGrid?[['justify-items','Align columns']]:[])]){
    const value=own[property]??css.getPropertyValue(property),input=document.createElement(options[property]?'select':'input');
-   const spacing=/^(?:gap|padding(?:-(?:top|right|bottom|left))?)$/.test(property),rangeGuarded=spacing||['display','flex-direction','flex-wrap','align-items','align-content','justify-content','justify-items','grid-auto-flow'].includes(property),spacingActive=()=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth;
+   const spacing=/^(?:gap|padding(?:-(?:top|right|bottom|left))?)$/.test(property),rangeGuarded=spacing||/^(?:min-|max-)?(?:width|height)$/.test(property)||['display','flex-direction','flex-wrap','align-items','align-content','justify-content','justify-items','grid-auto-flow'].includes(property),spacingActive=()=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth;
    if(options[property])for(const item of new Set([value,...options[property]])){const option=document.createElement('option');option.value=item;option.textContent=item;input.append(option);}
    else input.type='text';
    if(property==='font-family'){input.placeholder='Inter, sans-serif';input.title='Use a font loaded by this page or installed on your computer.';}
@@ -288,7 +288,7 @@
    else if(['display','flex-direction','flex-wrap'].includes(property)||!hasFlex&&!hasGrid&&['align-items','align-content','justify-content','gap'].includes(property))target=details(groups.layout,'layout-options','Layout options');
 
    const values=infos.map((info,i)=>{const raw=info.cssRules?.[width]?.[property]??computed[i].getPropertyValue(property);return property==='rotate'?String(RetouchReactSelection.rotationDegrees(raw)):raw;}),mixed=values.some(value=>value!==values[0]),numeric=['opacity','rotate'].includes(property);
-   const spacing=/^(?:gap|padding(?:-(?:top|right|bottom|left))?)$/.test(property),rangeGuarded=spacing||['display','flex-direction','flex-wrap','align-items','align-content','justify-content','justify-items','grid-auto-flow'].includes(property),spacingActive=()=>elements.every(el=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth);
+   const spacing=/^(?:gap|padding(?:-(?:top|right|bottom|left))?)$/.test(property),rangeGuarded=spacing||/^(?:min-|max-)?(?:width|height)$/.test(property)||['display','flex-direction','flex-wrap','align-items','align-content','justify-content','justify-items','grid-auto-flow'].includes(property),spacingActive=()=>elements.every(el=>el.isConnected&&width<=el.ownerDocument.defaultView.innerWidth);
    const input=document.createElement(options[property]?'select':'input');
    if(options[property]){if(mixed){const option=document.createElement('option');option.value='';option.textContent='Mixed';option.disabled=true;input.append(option);}for(const value of new Set([...values,...options[property]])){const option=document.createElement('option');option.value=value;option.textContent=value;input.append(option);}}
    else {input.type=numeric?'number':'text';input.placeholder=mixed?'Mixed':'';if(numeric){input.min=property==='opacity'?0:-360;input.max=property==='opacity'?100:360;input.step='any';}}
