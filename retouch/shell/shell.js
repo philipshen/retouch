@@ -96,7 +96,7 @@ function busyPanel(start) {
 }
 let lastAppPath = null;
 let styleScope = '';
-let groupAlignmentKey='',groupAlignmentTarget='selection';
+let groupAlignmentKey='',groupAlignmentTarget='selection',groupGapMode='equal';
 const svgExportNames=new WeakMap();
 let svgExportScale=1,svgEmbedImages=true,svgExportFormat='svg',jpegQuality=92,jpegBackground='#ffffff';
 function scopedInfo(info) { return {...info,styleScope,anchorInheritedClasses:RetouchResponsive.inherited(info.className,styleScope,doc()),className:RetouchResponsive.project(info.className,styleScope)}; }
@@ -3466,11 +3466,23 @@ function groupMovementSection(info){
   const update=()=>{for(const control of toolbar.querySelectorAll('button')){control.title=control.getAttribute('aria-label');if(control.dataset.distribution)control.disabled=outer.length<3||groupAlignmentTarget!=='selection';}};
   section.append(toolbar);I.select(section,'Align to',choices,groupAlignmentTarget,value=>{groupAlignmentTarget=value;update();});update();
   try{const bounds=RetouchGroupMove.selectionBounds(roots,RetouchGroupMove.measureSelection(roots,el=>layerLocks.locked(el)));
-   for(const [axis,label]of [['x','Horizontal gap (px)'],['y','Vertical gap (px)']]){const values=RetouchSelectionLayout.gaps(bounds,axis).values,mixed=values.some(value=>Math.abs(value-values[0])>=1/32),input=I.number(section,label,mixed?NaN:values[0],-100000,100000,value=>void alignGroupSelection('spacing-'+axis,input,value));input.placeholder=mixed?'Mixed':'';input.title='Space the selected groups and layers without changing their internal layout. The first layer stays fixed, or the chosen reference layer.';I.fieldDraft(input);}
+   I.select(section,'Canvas gap adjustment',[['equal','All gaps equally'],['individual','Only the dragged gap']],groupGapMode,value=>{groupGapMode=value;window.dispatchEvent(new Event('retouch:selection-layout'));});
+   for(const [axis,label]of [['x','Horizontal gap (px)'],['y','Vertical gap (px)']]){const values=RetouchSelectionLayout.gaps(bounds,axis).values,mixed=values.some(value=>Math.abs(value-values[0])>=1/32),input=I.number(section,label,mixed?NaN:values[0],-100000,100000,value=>void alignGroupSelection('spacing-'+axis,input,value));input.placeholder=mixed?'Mixed':'';input.title='Space the selected groups and layers without changing their internal layout. The first layer stays fixed, or the chosen reference layer.';I.fieldDraft(input);const control=I.button('Adjust '+(axis==='x'?'horizontal':'vertical')+' gaps on canvas',event=>void spaceGroupsOnCanvas(axis,event.currentTarget));control.dataset.canvasTool='spacing-'+axis;section.append(control);}
   }catch(error){I.note(section,error.message,'refused');}
 
  }
  const button=I.button(sel.multiple?.length?'Move selection on canvas':'Move group on canvas',event=>void moveGroupOnCanvas(info,event.currentTarget));button.dataset.canvasTool='move-group';button.title='Drag selected groups and layers on the canvas. Arrow keys move 1 px; Shift moves 10 px.';section.append(button);return section;
+}
+
+async function spaceGroupsOnCanvas(axis,opener){
+ stopDrawing?.();const info=sel?.info,choice=groupAlignmentTarget,gapMode=groupGapMode;if(!info)return;
+ try{const context=await moveGroupOnCanvas(info,null,{prepareOnly:true});if(!context||!context.current()||choice!==groupAlignmentTarget||gapMode!==groupGapMode)return;
+  const bounds=RetouchGroupMove.selectionBounds(context.roots,context.members),targets=bounds.map(bound=>bound.el),anchor=choice==='selection'?null:bounds.findIndex(bound=>'layer:'+bound.el.getAttribute('data-rt')===choice);if(anchor===-1)throw Error('Choose a selected reference layer.');
+  const spacing={axis,independent:gapMode==='individual',anchor};canvasPan.cancel();
+  stopDrawing=RetouchCanvasMove.mount({target:targets[0],targets,selectionId:info.id,frame:iframe,canvas:canvasSurface,mode:'spacing-'+axis,spacing,opener,current:()=>context.current()&&choice===groupAlignmentTarget&&gapMode===groupGapMode,
+   measureBounds:el=>RetouchGroupMove.selectionBounds([el],RetouchGroupMove.measureSelection([el],node=>layerLocks.locked(node)))[0],
+   onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err'),onCommit:result=>writeGroupMove(context,RetouchGroupMove.memberDeltas(bounds,context.members,result.deltas))});
+ }catch(error){toast(error.message,'err');}
 }
 
 async function alignGroupSelection(mode,control,gap){

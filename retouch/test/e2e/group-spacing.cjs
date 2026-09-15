@@ -17,6 +17,7 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
   assert.equal(await page.getByRole('treeitem',{selected:true}).count(),3);if(anchor!==null)assert.deepEqual(current[anchor],initial[anchor]);
   const changed=read();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===changed);await settled();await wait(async()=>expected(await measure()));await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();
  }
+ await require('./group-spacing-canvas.cjs').run({page,app,read,wait,settled,kind,measure,bounds,original,choices});
  await page.getByLabel('Align to',{exact:true}).selectOption('selection');await page.screenshot({path:'/tmp/retouch-group-spacing-'+kind+'.png'});await group.click();await settled();
  console.log(kind+': PASS three-root group distribution, positive/negative exact gaps on both axes, pinned reference, unchanged child dimensions and exact undo/redo');
 };

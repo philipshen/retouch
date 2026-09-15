@@ -17971,3 +17971,36 @@ Logs: `/tmp/retouch-group-spacing-units.log`,
 Containing-frame alignment, direct canvas gap handles for groups, group
 resize/rotation, full Figma parity and trusted public Homebrew distribution
 remain incomplete. No desktop rebuild or push for this checkpoint.
+
+### Canvas gap handles for groups checkpoint
+
+Group spacing now has horizontal/vertical canvas actions and an equal/individual
+gap mode. The shared canvas gesture accepts live measured bounds so transparent
+groups get one union outline and one spacing participant. Group children receive
+the root displacement when the gesture commits. Existing pointer threshold,
+keyboard increments, ghost previews, Escape, viewport cancellation and atomic
+history apply. Reference/mode changes invalidate an active group spacing gesture.
+Live measurement failures cancel instead of leaving a stale overlay.
+
+Validation: 1,650 unit tests pass. HTML/Chromium, transformed React/Chromium and
+transformed Liquid/WebKit browser checks pass equal and individual keyboard gaps
+on both axes, Shift increments, pinned references, pointer dragging, no source
+writes during preview, Escape and exact history. HTML additionally verifies
+reference-change cancellation. Existing numeric gap/distribution and responsive
+grouping checks pass. The ordinary selection-movement browser regression passes
+50/100/200 percent zoom, snapping, dimensions/gaps, scope, history and cancellation.
+Visually inspected `/tmp/retouch-group-gap-canvas-html.png`: the selected gap shows
+35 px while the untouched gap shows 24 px. The preview uses outlines; it does not
+live-translate the rendered page contents. A group can extend above the visible
+canvas when spacing around a fixed lower reference; viewport handling still needs
+improvement for that case.
+
+Logs: `/tmp/retouch-group-gap-canvas-units.log`,
+`/tmp/retouch-group-gap-canvas-html-final.log`,
+`/tmp/retouch-group-gap-canvas-react.log`,
+`/tmp/retouch-group-gap-canvas-webkit.log`, and
+`/tmp/retouch-group-gap-canvas-regression.log`.
+
+Containing-frame alignment, group resize/rotation, full Figma parity and trusted
+public Homebrew distribution remain incomplete. No desktop rebuild or push for
+this checkpoint.
