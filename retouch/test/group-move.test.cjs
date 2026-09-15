@@ -55,3 +55,10 @@ test('distribution treats each group as one bound while preserving internal chil
  assert.equal(next[1].left-next[0].left-next[0].width,45);assert.equal(next[2].left-next[1].left-next[1].width,45);
  assert.equal(moved[3].rect.x-moved[2].rect.x,20);
 });
+
+test('parent alignment skips transparent ancestors and requires one visible parent',()=>{
+ const d={defaultView:{getComputedStyle:el=>({display:el.transparent?'contents':'block'})}},parent={isConnected:true,getBoundingClientRect:()=>({left:12,top:34,width:500,height:200})},transparent={transparent:true,parentElement:parent},a={ownerDocument:d,parentElement:transparent,contains:el=>el===a},b={ownerDocument:d,parentElement:parent,contains:el=>el===b};
+ assert.deepEqual(move.parentBounds([a,b]),{el:parent,left:12,top:34,width:500,height:200});
+ b.parentElement={...parent};assert.equal(move.parentBounds([a,b]),null);
+ b.parentElement=parent;parent.getBoundingClientRect=()=>({left:0,top:0,width:0,height:0});assert.equal(move.parentBounds([a,b]),null);
+});

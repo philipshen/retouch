@@ -51,6 +51,11 @@
   const outer=[...new Set(roots)].filter(el=>!roots.some(parent=>parent!==el&&parent.contains(el)));
   return outer.map(el=>{const items=members.filter(item=>el.contains(item.el));if(!items.length)throw Error('Choose visible selection bounds.');const left=Math.min(...items.map(item=>item.rect.x)),top=Math.min(...items.map(item=>item.rect.y)),right=Math.max(...items.map(item=>item.rect.x+item.rect.width)),bottom=Math.max(...items.map(item=>item.rect.y+item.rect.height));return {el,left,top,width:right-left,height:bottom-top};});
  }
+ function parentBounds(roots){
+  const outer=[...new Set(roots)].filter(el=>!roots.some(parent=>parent!==el&&parent.contains(el))),parents=outer.map(el=>{let parent=el.parentElement;while(parent&&el.ownerDocument.defaultView.getComputedStyle(parent).display==='contents')parent=parent.parentElement;return parent;});
+  const el=parents[0];if(!el?.isConnected||parents.some(parent=>parent!==el))return null;
+  const rect=el.getBoundingClientRect();if(!['left','top','width','height'].every(key=>Number.isFinite(rect[key]))||rect.width<=0||rect.height<=0)return null;return {el,left:rect.left,top:rect.top,width:rect.width,height:rect.height};
+ }
  function memberDeltas(bounds,members,deltas){
   if(bounds.length!==deltas.length||deltas.some(d=>!Number.isFinite(d.x)||!Number.isFinite(d.y)))throw Error('Choose finite selection offsets.');
   return members.map(item=>{const owners=bounds.map((bound,i)=>bound.el.contains(item.el)?i:-1).filter(i=>i>=0);if(owners.length!==1)throw Error('Resolve one selection root for each layer.');return deltas[owners[0]];});
@@ -68,5 +73,5 @@
   const scoped=R.project(value,scope).split(/\s+/).filter(Boolean).filter(token=>!/^!?-?translate(?:-|\[)/.test(token)&&!/^!?\[translate:/.test(token));
   scoped.push('![translate:'+translate.replace(/ /g,'_')+']');return R.replaceScope(value,scoped.join(' '),scope);
  }
- const api={translation,measure,measureSelection,selectionBounds,memberDeltas,classes,multiply,localDelta,parentMatrix,preview};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchGroupMove=api;
+ const api={translation,measure,measureSelection,selectionBounds,parentBounds,memberDeltas,classes,multiply,localDelta,parentMatrix,preview};if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchGroupMove=api;
 })(typeof window==='object'?window:globalThis);

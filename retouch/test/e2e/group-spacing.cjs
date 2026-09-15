@@ -6,7 +6,7 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
  const measure=()=>app.locator('h1,p').evaluateAll(nodes=>nodes.map(el=>{const r=el.getBoundingClientRect();return {left:r.x,top:r.y,width:r.width,height:r.height};}));
  const bounds=boxes=>[{left:Math.min(boxes[0].left,boxes[1].left),top:Math.min(boxes[0].top,boxes[1].top),width:Math.max(boxes[0].left+boxes[0].width,boxes[1].left+boxes[1].width)-Math.min(boxes[0].left,boxes[1].left),height:Math.max(boxes[0].top+boxes[0].height,boxes[1].top+boxes[1].height)-Math.min(boxes[0].top,boxes[1].top)},...boxes.slice(2)];
  await group.click();await page.getByRole('treeitem',{name:'p · Named text',exact:true}).click({modifiers:['Meta']});await page.getByRole('treeitem',{name:'p · Extra text',exact:true}).click({modifiers:['Meta']});await settled();assert.equal(await page.getByRole('treeitem',{selected:true}).count(),3);
- const choices=await page.getByLabel('Align to',{exact:true}).locator('option').evaluateAll(options=>options.map(option=>option.value));assert.equal(choices.length,4);
+ const choices=await page.getByLabel('Align to',{exact:true}).locator('option').evaluateAll(options=>options.map(option=>option.value));assert.equal(choices.length,5);
  for(const axis of ['x','y'])for(const operation of ['distribute',24,-4,'reference']){
   const start=await measure(),initial=bounds(start),anchor=operation==='reference'?1:null,gap=typeof operation==='number'?operation:18;
   await page.getByLabel('Align to',{exact:true}).selectOption(anchor===null?'selection':choices[anchor+1]);assert.equal(await page.locator('[data-distribution]:disabled').count(),anchor===null?0:2);
@@ -17,6 +17,14 @@ exports.run=async({page,app,read,wait,settled,kind})=>{
   assert.equal(await page.getByRole('treeitem',{selected:true}).count(),3);if(anchor!==null)assert.deepEqual(current[anchor],initial[anchor]);
   const changed=read();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===changed);await settled();await wait(async()=>expected(await measure()));await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();
  }
+
+ for(const axis of ['x','y'])for(const distribute of [false,true]){
+  await page.getByLabel('Align to',{exact:true}).selectOption('parent');const start=await measure(),frame=await app.locator('main').evaluate(el=>{const r=el.getBoundingClientRect();return {left:r.x,top:r.y,width:r.width,height:r.height};}),deltas=distribute?layout.arrange(bounds(start),'gap-'+axis,frame):layout.setSpacing(bounds(start),axis,20,{start:frame[axis==='x'?'left':'top']});
+  if(distribute)await page.locator('[data-align="gap-'+axis+'"]').click();else{const input=page.getByLabel((axis==='x'?'Horizontal':'Vertical')+' gap (px)',{exact:true});await input.fill('20');await input.press('Tab');}
+  await wait(()=>read()!==original);await settled();await wait(async()=>{const current=await measure();return current.every((box,i)=>Object.entries(box).every(([key,n])=>Math.abs(n-start[i][key]-(key==='left'?deltas[i<2?0:i-1].x:key==='top'?deltas[i<2?0:i-1].y:0))<.1));});
+  const changed=read();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===changed);await settled();await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===original);await settled();
+ }
+ console.log(kind+': PASS numeric group spacing and distribution inside parent bounds on both axes');
  await require('./group-spacing-canvas.cjs').run({page,app,read,wait,settled,kind,measure,bounds,original,choices});
  await page.getByLabel('Align to',{exact:true}).selectOption('selection');await page.screenshot({path:'/tmp/retouch-group-spacing-'+kind+'.png'});await group.click();await settled();
  console.log(kind+': PASS three-root group distribution, positive/negative exact gaps on both axes, pinned reference, unchanged child dimensions and exact undo/redo');

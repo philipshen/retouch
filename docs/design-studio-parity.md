@@ -18063,3 +18063,41 @@ Logs: `/tmp/retouch-group-drag-preview-units.log`,
 Containing-frame alignment, group resize/rotation, full Figma parity and trusted
 public Homebrew distribution remain incomplete. No desktop rebuild or push for
 this checkpoint.
+
+### Parent bounds for groups checkpoint
+
+Single groups now expose alignment controls with Parent bounds as the default.
+Mixed selections can choose Parent bounds when their outer roots share the same
+visible parent. Transparent ancestors are skipped. The target is the parent's
+axis-aligned rendered border bounds, including transformed parents; alignment
+does not follow a rotated parent's local axes. Different immediate visible
+parents do not offer this target.
+
+Distribution can span the parent bounds. Numeric and canvas gap edits start at
+the parent's leading edge. Existing selected-layer reference behavior and
+selection-bounds behavior remain available for mixed selections.
+
+Validation: 1,651 unit tests pass, including transparent-parent traversal,
+different-parent refusal and invisible bounds. HTML/Chromium, transformed
+React/Chromium and transformed Liquid/WebKit verify single and mixed parent
+alignment at 390/768/1100, unchanged dimensions, selection and exact undo/redo.
+All three also pass parent numeric spacing/distribution on both axes and the
+previous live gap-handle workflows. HTML additionally verifies a canvas gap edit
+anchored at the parent edge. Visually inspected the single-group light inspector
+screenshot `/tmp/retouch-group-parent-html.png`.
+
+Logs: `/tmp/retouch-group-parent-units.log`,
+`/tmp/retouch-group-parent-html.log`, `/tmp/retouch-group-parent-react.log`,
+`/tmp/retouch-group-parent-webkit.log`,
+`/tmp/retouch-group-parent-spacing-html-final.log`,
+`/tmp/retouch-group-parent-spacing-react.log`, and
+`/tmp/retouch-group-parent-spacing-webkit.log`.
+
+Group resize/rotation, viewport handling for negative-position groups, full
+Figma parity and trusted public Homebrew distribution remain incomplete. No
+desktop rebuild or push for this checkpoint.
+
+The first parent canvas assertion measured the parent's viewport edge before
+zoom-to-selection (8 px), then compared it after zoom/scroll (-170 px). The
+corrected test captures the edge at gesture start and passes. This was a test
+coordinate-lifetime correction, not an editor change.
