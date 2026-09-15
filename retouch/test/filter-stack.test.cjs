@@ -11,3 +11,8 @@ test('drop shadow controls retain color space and neighboring filter functions',
  const value='blur(2px) drop-shadow(1px 2px 3px color(display-p3 1 .2 .1 / .4)) contrast(80%)',next=F.dropShadow(value,1,{x:-3,blur:7});assert.equal(next,'blur(2px) drop-shadow(-3px 2px 7px color(display-p3 1 .2 .1 / .4)) contrast(80%)');assert.equal(F.dropShadow(next,1,{color:'oklch(.7 .2 30 / .5)'}),'blur(2px) drop-shadow(-3px 2px 7px oklch(.7 .2 30 / .5)) contrast(80%)');
  for(const changes of [{spread:2},{inset:true},{blur:-1},{x:NaN},{color:'red); opacity(0'},{x:'4'}])assert.throws(()=>F.dropShadow(value,1,changes));assert.throws(()=>F.dropShadow(value,0,{x:2}));assert.throws(()=>F.change('blur(2px)','value',0,'2px) blur(3px'));
 });
+
+test('filter duplication copies the exact expression adjacent to its original and respects stack capacity',()=>{
+ const source='brightness(80%) drop-shadow(1px 2px 3px color(display-p3 1 .2 .1 / .4)) blur(2px)';assert.equal(F.change(source,'duplicate',1),'brightness(80%) drop-shadow(1px 2px 3px color(display-p3 1 .2 .1 / .4)) drop-shadow(1px 2px 3px color(display-p3 1 .2 .1 / .4)) blur(2px)');
+ assert.equal(F.change('blur(2px)','duplicate',0),'blur(2px) blur(2px)');for(const index of [-1,1,.5])assert.throws(()=>F.change('blur(2px)','duplicate',index));assert.throws(()=>F.change(Array(16).fill('blur(2px)').join(' '),'duplicate',0));
+});
