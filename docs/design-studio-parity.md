@@ -19540,3 +19540,23 @@ Unit tests were not rerun for this browser-test-only change.
 
 No push or native rebuild. Full Figma parity, arbitrary-site support and trusted
 Homebrew distribution remain incomplete.
+
+
+### Imported tile sizing by height
+
+The inspector now resolves proportional tile scale from either explicit pixel
+axis. CSS such as `background-size: auto 10px` on a 40 by 20 image displays
+50% instead of an empty Custom scale. Fractional pixel sizes are supported;
+unavailable intrinsic dimensions, non-proportional sizing and unresolved
+percentage sizing do not produce a fabricated percentage.
+
+The added unit regression failed for height-only sizing before the fix.
+All 1,667 unit tests pass. HTML/Chromium, React/Chromium and Liquid/WebKit
+browser runs import height-only tiles, verify Tile mode and 50% without source
+mutation, then exercise mode changes, intrinsic tile pixels, responsive
+inheritance, exact undo and retained runtime state. Fixture flags:
+`RT_E2E_IMAGE_FILL=1 RT_E2E_IMAGE_FILL_AUTO_HEIGHT=1`.
+Logs: `/tmp/retouch-auto-height-{before,unit,units,html,react,liquid}.log`.
+
+No push or native rebuild. Full Figma parity, arbitrary-site support and trusted
+Homebrew distribution remain incomplete.

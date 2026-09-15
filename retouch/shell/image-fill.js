@@ -9,8 +9,13 @@
   const escaped=url.trim().replace(/[\s"'()\\<>\[\]`]/g,char=>char.charCodeAt(0)<128?'%'+char.charCodeAt(0).toString(16).toUpperCase():encodeURIComponent(char)),value='url("'+escaped+'")';if(!V.imageURL(value))throw Error('Use an image path or an HTTP image URL.');return value;
  }
  function scale(size,width,height){
+  if(![width,height].every(value=>Number.isFinite(value)&&value>0))return null;
   if(size==='auto'||size==='auto auto')return 100;
-  const parts=size.split(/\s+/),number=value=>/^\d+(?:\.\d+)?px$/.test(value)?parseFloat(value):NaN,w=number(parts[0]),h=parts[1]===undefined||parts[1]==='auto'?w*height/width:number(parts[1]);
+  const parts=size.trim().split(/\s+/);if(parts.length>2)return null;
+  const number=value=>/^(?:\d+\.?\d*|\.\d+)px$/.test(value)?parseFloat(value):NaN;
+  let w=number(parts[0]),h=number(parts[1]);
+  if(parts[0]==='auto')w=h*width/height;
+  if(parts[1]===undefined||parts[1]==='auto')h=w*height/width;
   return w>0&&h>0&&Math.abs(w/width-h/height)<1e-6?w/width*100:null;
  }
  function framing(mode,width,height,percent=100){

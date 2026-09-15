@@ -7,6 +7,14 @@ test('tile size uses original dimensions and keeps image/color classes intact',(
  assert.equal(F.scale('100px 50px',400,200),25);assert.equal(F.scale('100px auto',400,200),25);assert.equal(F.scale('100px 30px',400,200),null);assert.equal(F.scale('cover',400,200),null);
  for(const percent of [0,1001,NaN])assert.throws(()=>F.framing('tile',400,200,percent));
 });
+test('tile scale reads either explicit axis and rejects distorted or unresolved sizes',()=>{
+ assert.equal(F.scale('auto 50px',400,200),25);
+ assert.equal(F.scale('auto .5px',400,200),.25);
+ assert.equal(F.scale('100px',400,200),25);
+ assert.equal(F.scale('auto auto',400,200),100);
+ for(const size of ['auto 50%','50% auto','100px 30px','100px 50px 1px','0px auto'])assert.equal(F.scale(size,400,200),null);
+ for(const dimensions of [[0,200],[400,0],[Infinity,200]])assert.equal(F.scale('auto',...dimensions),null);
+});
 test('image framing validates bounded CSS while retaining existing image source',()=>{
  for(const mode of ['fill','fit','tile'])for(const [property,value]of Object.entries(F.framing(mode,400,200,25)))assert.equal(V.valid(property,value),true);
  for(const [property,value]of [['background-size','1px;display:none'],['background-size','-1px 10px'],['background-position','1000001% 0%'],['background-repeat','repeat; color:red']])assert.equal(V.valid(property,value),false);
