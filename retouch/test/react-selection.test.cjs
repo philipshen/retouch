@@ -225,3 +225,11 @@ test('shared inline gaps use per-element writing axes, scoped priority and remov
  assert.throws(()=>changeGap('flex','md:','width','12',null,'horizontal-tb',el({gap:'4px'},{gap:'important'})),/important inline gap/);
  assert.equal(changeGap('flex md:!gap-x-[12px]','md:','width',null,null,'horizontal-tb',el({gap:'4px'},{gap:'important'})),'flex');
 });
+
+test('shared inline padding preserves source priority and supports reset',()=>{
+ const {changePadding}=require('../shell/react-selection.js'),el={style:{getPropertyValue:p=>p==='padding'?'4px':'',getPropertyPriority:()=>''}};
+ assert.equal(changePadding('block','md:','all',12,null,{},el),'block md:!pt-[12px] md:!pr-[12px] md:!pb-[12px] md:!pl-[12px]');
+ el.style.getPropertyPriority=p=>p==='padding'?'important':'';
+ assert.throws(()=>changePadding('block','md:','left',12,null,{},el),/important inline/);
+ assert.equal(changePadding('block md:!pl-[12px]','md:','all',null,null,{},el),'block');
+});

@@ -101,30 +101,37 @@
     if(typeof value!=='number'&&typeof value!=='string')throw Error('Enter a padding length.');
     try{const parsed=gapValue(value);if(parsed==='normal')throw Error();return parsed;}catch{throw Error('Use nonnegative padding up to 10000, with px, %, rem, em, vw, vh or ch.');}
   }
-  function ownPadding(classes,side,inherited='',css={}){
+  function paddingLogical(side,{writingMode='horizontal-tb',direction='ltr'}={}){
+    const vertical=/^(vertical|sideways)-/.test(writingMode),reverseInline=(direction==='rtl')!==(writingMode==='sideways-lr');
+    const inlineStart=vertical?(reverseInline?'bottom':'top'):(reverseInline?'right':'left'),blockStart=vertical?(writingMode.endsWith('-rl')?'right':'left'):'top',opposite={top:'bottom',bottom:'top',left:'right',right:'left'};
+    return Object.entries({'inline-start':inlineStart,'inline-end':opposite[inlineStart],'block-start':blockStart,'block-end':opposite[blockStart]}).find(([,edge])=>edge===side)[0];
+  }
+  function inlinePadding(el,side,css={},important=false){
+    const logical=paddingLogical(side,css),properties=['padding','padding-'+side,'padding-'+logical.split('-')[0],'padding-'+logical];
+    return properties.some(property=>important?el.style.getPropertyPriority(property)==='important':!!el.style.getPropertyValue(property));
+  }
+  function ownPadding(classes,side,inherited='',css={},inlineOverride=false){
     const short={top:'t',right:'r',bottom:'b',left:'l'}[side];
     const candidates=classes.split(/\s+/).map(token=>({token,base:I.base(token)})).filter(({base})=>base&&(base.startsWith('p'+short+'-[')||base.startsWith('[padding-'+side+':')));
     const own=candidates.find(({token})=>/^!|!$/.test(token))||candidates[0];if(!own)return null;
-    if(!/^!|!$/.test(own.token)&&paddingClasses('',side,0,classes+' '+inherited,css).startsWith('!'))return null;
+    if(!/^!|!$/.test(own.token)&&(inlineOverride||paddingClasses('',side,0,classes+' '+inherited,css).startsWith('!')))return null;
     const value=own.base.startsWith('[')?own.base.slice(('['+'padding-'+side+':').length,-1):own.base.slice(('p'+short+'-[').length,-1);
     try{return paddingValue(value).replace(/px$/,'');}catch{return null;}
   }
   function resetPaddingClasses(classes){
     return I.replace(classes,token=>/^p(?:[xytrblse]|b[se])?-/.test(token)||/^\[padding(?:-(?:top|right|bottom|left|(?:inline|block)(?:-(?:start|end))?))?:/.test(token),'');
   }
-  function paddingClasses(classes,side,value,inherited='',{writingMode='horizontal-tb',direction='ltr'}={}){
+  function paddingClasses(classes,side,value,inherited='',{writingMode='horizontal-tb',direction='ltr'}={},inlineOverride=false){
     const short={top:'t',right:'r',bottom:'b',left:'l'}[side];
     if(!short)throw Error('Choose a padding edge.');
     if(value!==null)value=paddingValue(value);
-    const vertical=/^(vertical|sideways)-/.test(writingMode),reverseInline=(direction==='rtl')!==(writingMode==='sideways-lr');
-    const inlineStart=vertical?(reverseInline?'bottom':'top'):(reverseInline?'right':'left'),blockStart=vertical?(writingMode.endsWith('-rl')?'right':'left'):'top',opposite={top:'bottom',bottom:'top',left:'right',right:'left'};
-    const logical=Object.entries({'inline-start':inlineStart,'inline-end':opposite[inlineStart],'block-start':blockStart,'block-end':opposite[blockStart]}).find(([,edge])=>edge===side)[0];
+    const logical=paddingLogical(side,{writingMode,direction});
     const logicalShort={'inline-start':'s','inline-end':'e','block-start':'bs','block-end':'be'}[logical],axis=logical.startsWith('inline')?'x':'y',family=logical.split('-')[0];
     const matches=t=>t.startsWith('p'+short+'-')||t.startsWith('[padding-'+side+':')||t.startsWith('p'+logicalShort+'-')||t.startsWith('[padding-'+logical+':');
     let addition=value===null?'':'p'+short+'-['+value+']';
-    if(addition&&[...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>{
+    if(addition&&(inlineOverride||[...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>{
       const base=I.base(token)||'';return /^!|!$/.test(token)&&(matches(base)||base.startsWith('p-')||base.startsWith('p'+axis+'-')||base.startsWith('[padding:')||base.startsWith('[padding-'+family+':'));
-    }))addition='!'+addition;
+    })))addition='!'+addition;
     return I.replace(classes,matches,addition);
   }
   function layoutAxes(parent={}){
@@ -340,19 +347,19 @@
       sec.append(custom);I.note(custom,'Choose start and end lines, such as 2 / 4 or content_start / content_end.');
       I.note(sec,'Choosing a span replaces line placement on that axis. Reset removes this scope’s axis override, retaining any shared grid area.');
     }
-    const paddingEdges=['top','right','bottom','left'],paddingValues=paddingEdges.map(edge=>ownPadding(classes,edge,inherited,css)??css.getPropertyValue('padding-'+edge).replace(/px$/,''));
+    const paddingEdges=['top','right','bottom','left'],paddingValues=paddingEdges.map(edge=>ownPadding(classes,edge,inherited,css,inlinePadding(el,edge,css))??css.getPropertyValue('padding-'+edge).replace(/px$/,''));
     function paddingInput(label,value,change,edges=paddingEdges){
-      const input=document.createElement('input');input.type='text';input.value=value??'';input.disabled=!spacingActive()||Array.from(el.style).some(property=>property==='padding'||property.startsWith('padding-'));input.placeholder=value===null?'Mixed':'0';I.field(sec,label,input);
-      const initial=input.value;input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(input.value===initial||input.value.trim()==='')return;try{if(spacingActive())change(paddingValue(input.value));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+      const input=document.createElement('input');input.type='text';input.value=value??'';input.disabled=!spacingActive()||edges.some(edge=>inlinePadding(el,edge,css,true));input.placeholder=value===null?'Mixed':'0';I.field(sec,label,input);
+      const initial=input.value;input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{if(input.value===initial||input.value.trim()==='')return;try{if(edges.some(edge=>inlinePadding(el,edge,css,true)))throw Error('An important inline rule controls this padding.');if(spacingActive())change(paddingValue(input.value));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
       I.numericLabelDrag(input,raw=>raw.trim()==='normal'?null:gapScrubValue(raw));
       input.retouchNumericPreview=()=>{const parsed=gapScrubValue(input.value),writingMode=css.writingMode,previews=(edges.length===4?['padding']:edges.map(edge=>'padding-'+edge)).map(property=>root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true}));return {current:()=>spacingActive()&&el.ownerDocument.defaultView.getComputedStyle(el).writingMode===writingMode&&previews.every(preview=>preview.current()),update:value=>previews.forEach(preview=>preview.update(paddingValue(parsed.format(value)))),restore:()=>previews.forEach(preview=>preview.restore())};};
       input.title='Pixels by default; also accepts %, rem, em, vw, vh or ch. Enter saves. Escape cancels.';input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};return input;
     }
-    paddingInput('Padding',paddingValues.every(value=>value===paddingValues[0])?paddingValues[0]:null,value=>saveSpacing(paddingEdges.reduce((next,edge)=>paddingClasses(next,edge,value,inherited,css),classes)));
+    paddingInput('Padding',paddingValues.every(value=>value===paddingValues[0])?paddingValues[0]:null,value=>saveSpacing(paddingEdges.reduce((next,edge)=>paddingClasses(next,edge,value,inherited,css,inlinePadding(el,edge,css)),classes)));
     const resetPadding=I.button('Reset padding',()=>saveSpacing(resetPaddingClasses(classes)));resetPadding.disabled=!spacingActive()||resetPaddingClasses(classes)===classes;resetPadding.title='Remove padding overrides at this edit range';sec.append(resetPadding);
     for(const side of ['Top','Right','Bottom','Left']) {
       const edge=side.toLowerCase();
-      paddingInput('Padding '+edge,paddingValues[paddingEdges.indexOf(edge)],v=>saveSpacing(paddingClasses(classes,edge,v,inherited,css)),[edge]);
+      paddingInput('Padding '+edge,paddingValues[paddingEdges.indexOf(edge)],v=>saveSpacing(paddingClasses(classes,edge,v,inherited,css,inlinePadding(el,edge,css))),[edge]);
       const reset=I.button('Reset padding '+edge,()=>saveSpacing(paddingClasses(classes,edge,null,'',css)));
       reset.disabled=!spacingActive()||paddingClasses(classes,edge,null,'',css)===classes;sec.append(reset);
     }
@@ -392,6 +399,6 @@
     sec.append(limits);
     return sec;
   }
-  const api={inlineDimensions,explicitLayoutClasses,gapScrubValue,resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
+  const api={inlinePadding,paddingLogical,inlineDimensions,explicitLayoutClasses,gapScrubValue,resetAlignmentClasses,stackClasses,adaptiveMinimum,adaptiveGridClasses,gridPlacementClasses,ownGridPlacement,gridTemplateClasses,ownGridTemplate,alignmentClasses,clipClasses,gridTrackCount,paddingClasses,paddingValue,ownPadding,resetPaddingClasses,arrangementClasses,gapValue,gapClasses,ownGap,layoutAxes,modeClasses,sizeClasses,spanClasses,spanValue,limitValue,limitClasses,ownLimit,mount};
   if(typeof module==='object'&&module.exports)module.exports=api;else root.RetouchLayout=api;
 })(typeof window==='object'?window:globalThis);

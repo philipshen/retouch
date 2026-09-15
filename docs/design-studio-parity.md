@@ -20165,3 +20165,25 @@ a detached label during scroll. Passing logs:
 HTML's existing scoped gap writer is unchanged. Inline padding and other layout
 restrictions, full Figma/arbitrary-site parity, and trusted Homebrew distribution
 remain incomplete. No native rebuild or push in this continuation.
+
+### Ordinary inline padding in single and shared controls
+
+Native padding controls now accept ordinary inline shorthand, physical edges,
+and logical padding. A shared physical/logical edge mapper determines which
+inline declaration overlaps each edge, and scoped important utilities override
+it without modifying the authored style. Readouts defer ordinary class values
+to winning inline padding. Single/all-edge label dragging is enabled. Important
+inline padding remains guarded, while reset can remove managed overrides.
+
+Validation: 1,689 unit tests passed. React/Chromium and Liquid/WebKit browser
+fixtures combine inline shorthand with logical padding on a vertical RTL layer.
+Checks cover single-layer live scrubbing/cancellation/reset, shared uniform and
+individual-edge edits, relative-unit scrubbing, mixed values, responsive scope,
+reset and exact source undo/redo. Final inline style attributes match their
+original strings. WebKit additionally passed viewport-change cancellation and
+inactive-range drag guards. Logs: `/tmp/retouch-inline-padding-units.log`,
+`/tmp/retouch-inline-padding-react.log`, `/tmp/retouch-inline-padding-liquid.log`.
+
+HTML's existing padding writer is unchanged. Other inline layout restrictions,
+full Figma/arbitrary-site parity, and trusted Homebrew distribution remain
+incomplete. No native rebuild or push in this continuation.

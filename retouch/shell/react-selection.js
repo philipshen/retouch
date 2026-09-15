@@ -63,11 +63,11 @@
   if(next===null)throw Error('A selected filter cannot be adjusted with a single blur value.');
   return R.replaceScope(classes,inspector().filterClasses(R.project(classes,scope),property,next),scope);
  }
- function changePadding(classes,scope,edge,value,document=null,css={}){
+ function changePadding(classes,scope,edge,value,document=null,css={},el=null){
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js');
   let active=R.project(classes,scope),inherited=R.inherited(classes,scope,document);
   if(edge==='all'&&value===null)active=L.resetPaddingClasses(active);
-  else for(const side of edge==='all'?['top','right','bottom','left']:[edge])active=L.paddingClasses(active,side,value,inherited,css);
+  else for(const side of edge==='all'?['top','right','bottom','left']:[edge]){if(value!==null&&el&&L.inlinePadding(el,side,css,true))throw Error('An important inline rule controls this padding.');active=L.paddingClasses(active,side,value,inherited,css,!!el&&L.inlinePadding(el,side,css));}
   return R.replaceScope(classes,active,scope);
  }
  const containerRules={columns:/^grid-cols-|^\[grid-template-columns:/,rows:/^grid-rows-|^\[grid-template-rows:/,flow:/^grid-flow-|^\[grid-auto-flow:/,mode:/^(?:block|inline|inline-block|flex|inline-flex|grid|inline-grid|hidden|contents|flow-root)$|^flex-(?:row|col)(?:-reverse)?$|^\[(?:display|flex-direction):/,wrap:/^flex-(?:wrap|wrap-reverse|nowrap)$|^\[flex-wrap:/,align:/^items-|^\[align-items:/,justify:/^justify-(?!items-|self-)|^\[justify-content:/};
@@ -218,18 +218,18 @@
 
   {
    const sides=['top','right','bottom','left'],L=root.RetouchLayout;
-   const active=()=>!scope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',inlinePadding=el=>Array.from(el.style).some(property=>property==='padding'||property.startsWith('padding-')),blocked=!active()||elements.some(inlinePadding);
-   const write=(edge,value,input)=>{try{if(!active())throw Error('Switch to a screen inside the selected edit range.');const changes=Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(inlinePadding(el))throw Error('A selected layer has inline padding. Edit that source style first.');return [info.id,changePadding(info.className,scope,edge,value,el.ownerDocument,el.ownerDocument.defaultView.getComputedStyle(el))];}));save(changes);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+   const active=()=>!scope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',inlinePadding=el=>Array.from(el.style).some(property=>(property==='padding'||property.startsWith('padding-'))&&el.style.getPropertyPriority(property)==='important'),blocked=!active()||elements.some(inlinePadding);
+   const write=(edge,value,input)=>{try{if(!active())throw Error('Switch to a screen inside the selected edit range.');const changes=Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(value!==null&&inlinePadding(el))throw Error('An important inline rule controls a selected layer’s padding.');return [info.id,changePadding(info.className,scope,edge,value,el.ownerDocument,el.ownerDocument.defaultView.getComputedStyle(el),el)];}));save(changes);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
    const edges=root.document.createElement('div');edges.className='property-pair';
    for(const edge of ['all','top','bottom','left','right']){
-    const R=root.RetouchResponsive,values=computed.flatMap((css,i)=>(edge==='all'?sides:[edge]).map(side=>L.ownPadding(R.project(infos[i].className,scope),side,R.inherited(infos[i].className,scope,elements[i].ownerDocument),css)??css.getPropertyValue('padding-'+side).replace(/px$/,''))),mixed=values.some(value=>value!==values[0]),initial=mixed?'':values[0],input=root.document.createElement('input');
-    input.type='text';input.value=initial;input.placeholder=mixed?'Mixed':'0';input.disabled=blocked;input.title=!active()?'Switch to a screen inside the selected edit range.':blocked?'A selected layer has inline padding. Edit that source style first.':'Nonnegative padding: px, %, rem, em, vw, vh or ch.';
+    const R=root.RetouchResponsive,values=computed.flatMap((css,i)=>(edge==='all'?sides:[edge]).map(side=>L.ownPadding(R.project(infos[i].className,scope),side,R.inherited(infos[i].className,scope,elements[i].ownerDocument),css,L.inlinePadding(elements[i],side,css))??css.getPropertyValue('padding-'+side).replace(/px$/,''))),mixed=values.some(value=>value!==values[0]),initial=mixed?'':values[0],input=root.document.createElement('input');
+    input.type='text';input.value=initial;input.placeholder=mixed?'Mixed':'0';input.disabled=blocked;input.title=!active()?'Switch to a screen inside the selected edit range.':blocked?'An important inline rule controls a selected layer’s padding.':'Nonnegative padding: px, %, rem, em, vw, vh or ch.';
     input.oninput=()=>input.setCustomValidity('');input.onchange=()=>{try{write(edge,L.paddingValue(input.value),input);}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
     input.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();input.value=initial;input.setCustomValidity('');input.blur();}else if(event.key==='Enter'){event.preventDefault();event.stopPropagation();input.blur();}};
     const row=root.document.createElement('div');row.className='property-row';
     if(edge==='all')groups.layout.append(row);else{if(!edges.parentElement)groups.layout.append(edges);edges.append(row);}
     I.field(row,edge==='all'?'Shared Padding':'Shared Padding '+edge,input);input.parentElement.querySelector('span').textContent=edge==='all'?'Padding':edge[0].toUpperCase()+edge.slice(1);lengthDrag(input,()=>edge==='all'?['padding']:['padding-'+edge]);
-    const reset=I.button(edge==='all'?'Reset selected padding':'Reset selected padding '+edge,()=>write(edge,null,input));reset.disabled=blocked||infos.every((info,i)=>changePadding(info.className,scope,edge,null,elements[i].ownerDocument,computed[i])===info.className);reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');row.append(reset);
+    const reset=I.button(edge==='all'?'Reset selected padding':'Reset selected padding '+edge,()=>write(edge,null,input));reset.disabled=!active()||infos.every((info,i)=>changePadding(info.className,scope,edge,null,elements[i].ownerDocument,computed[i])===info.className);reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');row.append(reset);
    }
   }
   {

@@ -423,3 +423,14 @@ test('gap readouts defer ordinary utilities to inline values but retain importan
  assert.equal(L.gapClasses('gap-2','width','12','horizontal-tb','',true),'gap-2 !gap-x-[12px]');
  assert.equal(L.gapClasses('gap-2 !gap-x-[12px]','width',null,'horizontal-tb','',true),'gap-2');
 });
+
+test('inline padding maps logical edges and prioritizes only matching physical overrides',()=>{
+ const el=(values={},priority={})=>({style:{getPropertyValue:p=>values[p]||'',getPropertyPriority:p=>priority[p]||''}}),css={writingMode:'vertical-rl',direction:'rtl'},node=el({'padding-inline-start':'8px'});
+ assert.equal(L.paddingLogical('bottom',css),'inline-start');
+ assert.equal(L.inlinePadding(node,'bottom',css),true);assert.equal(L.inlinePadding(node,'top',css),false);
+ assert.equal(L.inlinePadding(el({'padding-inline':'8px'}),'top',css),true);
+ assert.equal(L.inlinePadding(el({}, {'padding-block':'important'}),'right',css,true),true);
+ assert.equal(L.paddingClasses('p-2','bottom',12,'',css,true),'p-2 !pb-[12px]');
+ assert.equal(L.ownPadding('pb-[12px]','bottom','',css,true),null);
+ assert.equal(L.ownPadding('!pb-[12px]','bottom','',css,true),'12');
+});
