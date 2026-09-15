@@ -18981,3 +18981,28 @@ Logs: `/tmp/retouch-class-compact-layout-react-verified.log`,
 `/tmp/retouch-class-compact-layout-final-units.log`. No desktop rebuild or push.
 Single React/Liquid layout dropdown placement remains to be aligned. Full Figma
 parity, arbitrary-site support and trusted Homebrew distribution remain incomplete.
+
+
+### Compact single React/Liquid layout controls — 2026-09-15
+
+Single class-backed selections now expose the preset toolbar independently of
+the raw arrangement dropdown. Arrange children, Wrap children, Align children
+and Distribute children live in persistent Layout options, while dimensions,
+clipping, visual alignment, gaps and padding stay in the main Layout section.
+The alignment dropdown is selected explicitly by element type because the
+visual alignment group shares its accessible name.
+
+React/Chromium and Liquid/WebKit passed collapsed/expanded control visibility,
+preset geometry, keyboard navigation, screen guards and exact Undo/Redo.
+Chromium also passed detailed layout mode/priority/wrapping tests and the full
+light-inspector regression. All 1,663 unit tests passed. Inspected the Liquid
+screenshot. Updated setup waits to wait for mounted rather than visible raw
+controls, and advanced-control tests now open the actual disclosure.
+
+Logs: `/tmp/retouch-single-compact-layout-react-verified.log`,
+`/tmp/retouch-single-compact-layout-liquid-verified.log`,
+`/tmp/retouch-single-compact-layout-priority-verified.log`,
+`/tmp/retouch-single-compact-layout-light.log`, and
+`/tmp/retouch-single-compact-layout-final-units.log`. No desktop rebuild or push.
+Full Figma parity, arbitrary-site support and trusted Homebrew distribution
+remain incomplete.

@@ -14,7 +14,7 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
  const wait=async fn=>{for(let i=0;i<300;i++){try{if(await fn())return;}catch(error){if(!/ECONNREFUSED|fetch failed|Execution context was destroyed/.test(error.message))throw error;}if(exited)throw Error(logs);await new Promise(resolve=>setTimeout(resolve,100));}throw Error('Timed out: '+logs.slice(-3000));};
  try{
   await wait(()=>url);await wait(async()=>(await fetch(url+'/rt/__api/health')).ok);browser=await browserType.launch();const page=await browser.newPage({viewport:{width:1500,height:1100}}),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.goto(url+'/rt',{timeout:90000});const parent=page.frameLocator('#app').locator('#layout');await parent.waitFor({timeout:90000});const settled=()=>page.waitForFunction(()=>!panelTasks&&!sourceRequests&&!undoBusy);
-  await page.getByLabel('Screen size',{exact:true}).focus();await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await page.getByRole('treeitem',{name:'section · layout',exact:true}).click();const mode=page.getByLabel('Arrange children',{exact:true});await mode.waitFor();await settled();await page.getByLabel('Style screen scope',{exact:true}).selectOption('md:');await settled();
+  await page.getByLabel('Screen size',{exact:true}).focus();await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await page.getByRole('treeitem',{name:'section · layout',exact:true}).click();const mode=page.getByLabel('Arrange children',{exact:true});await mode.waitFor({state:'attached'});await settled();await page.getByLabel('Style screen scope',{exact:true}).selectOption('md:');await settled();
   assert.equal(await page.getByLabel('Style screen scope',{exact:true}).locator('option:checked').textContent(),'768 px and larger · md');
   const rangeStatus=page.getByRole('status',{name:'Edit range status',exact:true});assert.equal(await rangeStatus.getAttribute('data-match'),'true');
   const beforePreview=read();await page.getByLabel('Screen size',{exact:true}).selectOption('390x844');await settled();
@@ -90,7 +90,7 @@ const engine=process.env.RT_E2E_BROWSER||'chromium',browserType=require(path.joi
   assert.equal(await page.getByRole('button',{name:'Vertical stack',exact:true}).getAttribute('aria-pressed'),'true');
   await page.getByRole('button',{name:'Undo',exact:true}).click();await settled();assert.equal(read(),originalSource);
   for(const direction of ['row','column','row-reverse','column-reverse']){
-   await page.getByLabel('Arrange children',{exact:true}).selectOption(direction);await settled();const beforeAlignment=read();
+   if(!await mode.isVisible())await page.getByLabel('Layout options',{exact:true}).locator(':scope > summary').click();await page.getByLabel('Arrange children',{exact:true}).selectOption(direction);await settled();const beforeAlignment=read();
    for(const corner of ['top left','bottom right']){
     await page.getByRole('button',{name:'Align children '+corner,exact:true}).click();await settled();
     await wait(async()=>parent.evaluate((el,corner)=>{const p=el.getBoundingClientRect(),r=[...el.children].map(child=>child.getBoundingClientRect());return corner==='top left'?Math.abs(Math.min(...r.map(r=>r.left))-p.left)<1&&Math.abs(Math.min(...r.map(r=>r.top))-p.top)<1:Math.abs(Math.max(...r.map(r=>r.right))-p.right)<1&&Math.abs(Math.max(...r.map(r=>r.bottom))-p.bottom)<1;},corner));
