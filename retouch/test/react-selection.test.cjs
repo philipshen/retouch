@@ -216,3 +216,12 @@ test('inline rotation overrides are important and scoped while reset reveals the
  assert.throws(()=>changeRotation('p-4','',45,important),/important inline/);
  assert.equal(changeRotation('p-4 ![rotate:45deg]','',null,important),'p-4');
 });
+
+test('shared inline gaps use per-element writing axes, scoped priority and removable resets',()=>{
+ const {changeGap}=require('../shell/react-selection.js'),el=(values={},priority={})=>({style:{getPropertyValue:p=>values[p]||'',getPropertyPriority:p=>priority[p]||''}});
+ assert.equal(changeGap('flex','md:','width','12',null,'horizontal-tb',el({gap:'4px'})),'flex md:!gap-x-[12px]');
+ assert.equal(changeGap('grid','md:','width','12',null,'vertical-rl',el({'row-gap':'8px'})),'grid md:!gap-y-[12px]');
+ assert.equal(changeGap('grid','md:','height','12',null,'vertical-rl',el({'row-gap':'8px'})),'grid md:gap-x-[12px]');
+ assert.throws(()=>changeGap('flex','md:','width','12',null,'horizontal-tb',el({gap:'4px'},{gap:'important'})),/important inline gap/);
+ assert.equal(changeGap('flex md:!gap-x-[12px]','md:','width',null,null,'horizontal-tb',el({gap:'4px'},{gap:'important'})),'flex');
+});

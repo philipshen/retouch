@@ -147,21 +147,21 @@
     if(!/^(?:\d+\.?\d*|\.\d+)(?:px|%|rem|em|vw|vh|ch)$/.test(value)||parseFloat(value)>10000)throw Error('Use a nonnegative gap up to 10000, with px, %, rem, em, vw, vh or ch, or normal.');
     return value;
   }
-  function ownGap(classes,axis,writingMode,inherited=''){
+  function ownGap(classes,axis,writingMode,inherited='',inlineOverride=false){
     const inline=layoutAxes({writingMode}).inline===axis,kind=inline?'x':'y',property=inline?'column-gap':'row-gap';
     const candidates=classes.split(/\s+/).map(token=>({token,base:I.base(token)})).filter(({base})=>base&&(base.startsWith('gap-'+kind+'-[')||base.startsWith('['+property+':')));
     const own=candidates.find(({token})=>/^!|!$/.test(token))||candidates[0];if(!own)return null;
-    if(!/^!|!$/.test(own.token)&&gapClasses('',axis,0,writingMode,classes+' '+inherited).startsWith('!'))return null;
+    if(!/^!|!$/.test(own.token)&&(inlineOverride||gapClasses('',axis,0,writingMode,classes+' '+inherited).startsWith('!')))return null;
     const value=own.base.startsWith('[')?own.base.slice(('['+property+':').length,-1):own.base.slice(('gap-'+kind+'-[').length,-1);
     try{return gapValue(value).replace(/px$/,'');}catch{return null;}
   }
-  function gapClasses(classes,axis,value,writingMode,inherited=''){
+  function gapClasses(classes,axis,value,writingMode,inherited='',inlineOverride=false){
     if(!['width','height'].includes(axis))throw Error('Choose a horizontal or vertical gap.');
     if(value!==null)value=gapValue(value);
     const inline=layoutAxes({writingMode}).inline===axis,kind=inline?'x':'y',property=inline?'column-gap':'row-gap';
     let addition=value===null?'':'gap-'+kind+'-['+value+']';
     const matches=token=>token.startsWith('gap-'+kind+'-')||token.startsWith('['+property+':');
-    if(addition&&[...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(/^(?:gap-(?![xy]-)|\[gap:)/.test(I.base(token)||'')||matches(I.base(token)||''))))addition='!'+addition;
+    if(addition&&(inlineOverride||[...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(/^(?:gap-(?![xy]-)|\[gap:)/.test(I.base(token)||'')||matches(I.base(token)||'')))))addition='!'+addition;
     return I.replace(classes,matches,addition);
   }
   function sizeClasses(classes,axis,mode,value,parent={}) {
@@ -293,13 +293,14 @@
         layoutSelect('Wrap children',[['nowrap','No wrap'],['wrap','Wrap'],['wrap-reverse','Wrap · reverse']],css.flexWrap,v=>save(explicitLayoutClasses(classes,'wrap',v,inherited)));
       }
       for(const [prop,label,axis] of [['columnGap',verticalInline?'Vertical gap':'Horizontal gap',verticalInline?'height':'width'],['rowGap',verticalInline?'Horizontal gap':'Vertical gap',verticalInline?'width':'height']]) {
-        const input=document.createElement('input');input.type='text';input.value=ownGap(classes,axis,css.writingMode,inherited)??css[prop].replace(/px$/,'');input.disabled=!spacingActive();input.placeholder='0';input.title='Pixels by default; also accepts %, rem, em, vw, vh, ch or normal. Enter saves. Escape cancels.';const initial=input.value;
+        const inlineGap=()=>['gap',prop==='columnGap'?'column-gap':'row-gap'].some(property=>el.style.getPropertyValue(property)),importantGap=()=>['gap',prop==='columnGap'?'column-gap':'row-gap'].some(property=>el.style.getPropertyPriority(property)==='important');
+        const input=document.createElement('input');input.type='text';input.value=ownGap(classes,axis,css.writingMode,inherited,inlineGap())??css[prop].replace(/px$/,'');input.disabled=!spacingActive()||importantGap();input.placeholder='0';input.title=importantGap()?'An important inline gap controls this layer.':'Pixels by default; also accepts %, rem, em, vw, vh, ch or normal. Enter saves. Escape cancels.';const initial=input.value;
         input.oninput=()=>input.setCustomValidity('');
-        input.onchange=()=>{if(input.value===initial)return;try{saveSpacing(gapClasses(classes,axis,input.value,css.writingMode,info.styleScope?info.anchorInheritedClasses||'':''));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
+        input.onchange=()=>{if(input.value===initial)return;try{if(importantGap())throw Error('An important inline gap controls this layer.');saveSpacing(gapClasses(classes,axis,input.value,css.writingMode,info.styleScope?info.anchorInheritedClasses||'':'',inlineGap()));}catch(error){input.setCustomValidity(error.message);input.reportValidity();}};
         input.onkeydown=event=>{if(event.isComposing||!['Enter','Escape'].includes(event.key))return;event.preventDefault();event.stopPropagation();if(event.key==='Escape'){input.value=initial;input.setCustomValidity('');}input.blur();};
         const row=document.createElement('div');row.className='property-row';sec.append(row);I.field(row,label,input);
         const property=prop==='columnGap'?'column-gap':'row-gap',writingMode=css.writingMode;
-        I.numericLabelDrag(input,raw=>['gap',property].some(name=>el.style.getPropertyValue(name))?null:gapScrubValue(raw));
+        I.numericLabelDrag(input,raw=>importantGap()?null:gapScrubValue(raw));
         input.retouchNumericPreview=()=>{const parsed=gapScrubValue(input.value),preview=root.RetouchPaintPicker.propertyPreview({el,input,property,respectScope:true});return {current:()=>el.isConnected&&el.ownerDocument.defaultView.getComputedStyle(el).writingMode===writingMode&&preview.current(),update:value=>preview.update(gapValue(parsed.format(value))),restore:()=>preview.restore()};};
         const resetLabel='Reset '+label.toLowerCase(),reset=I.button('↺',()=>saveSpacing(gapClasses(classes,axis,null,css.writingMode)));reset.setAttribute('aria-label',resetLabel);reset.title=resetLabel;reset.classList.add('property-reset');
         reset.disabled=!spacingActive()||gapClasses(classes,axis,null,css.writingMode)===classes;row.append(reset);

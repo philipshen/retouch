@@ -20140,3 +20140,28 @@ resizing. Logs: `/tmp/retouch-inline-flex-units.log` and
 These checks do not establish full flex/grid or arbitrary-site coverage. Full
 Figma parity and trusted Homebrew distribution remain incomplete. No native
 rebuild or push in this continuation.
+
+### Ordinary inline gaps in single and shared layout controls
+
+Native gap controls now edit over ordinary inline gap shorthand and row/column
+gap declarations using scoped important utilities, preserving authored styles.
+Single-layer label dragging is enabled; shared controls map horizontal/vertical
+gaps per selected container's writing mode. Readouts defer ordinary utilities to
+winning inline values. Reset removes the managed axis override, and remains
+available when an important inline rule blocks further edits.
+
+Validation: 1,687 unit tests passed. React/Chromium and Liquid/WebKit fixtures
+cover a horizontal flex container with inline gap shorthand and a vertical grid
+with inline row/column gaps. Single-layer scrubbing checks live preview, source
+preservation, Escape, reset and exact undo. Shared checks cover typed values,
+relative-unit scrubbing, mixed values, actual child gaps, responsive isolation,
+reset, undo and redo. The new single-layer test waits for the inspector to settle
+after screen/scope changes before dragging its label; its first WebKit run hit
+a detached label during scroll. Passing logs:
+`/tmp/retouch-inline-gap-units.log`,
+`/tmp/retouch-inline-gap-react-final.log`,
+`/tmp/retouch-inline-gap-liquid-final.log`.
+
+HTML's existing scoped gap writer is unchanged. Inline padding and other layout
+restrictions, full Figma/arbitrary-site parity, and trusted Homebrew distribution
+remain incomplete. No native rebuild or push in this continuation.

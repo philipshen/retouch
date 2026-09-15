@@ -415,3 +415,11 @@ test('inline flex sizing gets main-axis overrides and removable reset',()=>{
  assert.equal(L.sizeClasses('','width','fixed',100,{...parent,writingMode:'vertical-rl'}),'!w-[100px] !flex-none');
  assert.equal(L.sizeClasses('','height','fixed',100,{...parent,display:'block'}),'h-[100px]');
 });
+
+test('gap readouts defer ordinary utilities to inline values but retain important overrides',()=>{
+ assert.equal(L.ownGap('gap-x-[20px]','width','horizontal-tb','',true),null);
+ assert.equal(L.ownGap('!gap-x-[20px]','width','horizontal-tb','',true),'20');
+ assert.equal(L.ownGap('gap-x-[20px]','width','horizontal-tb','',false),'20');
+ assert.equal(L.gapClasses('gap-2','width','12','horizontal-tb','',true),'gap-2 !gap-x-[12px]');
+ assert.equal(L.gapClasses('gap-2 !gap-x-[12px]','width',null,'horizontal-tb','',true),'gap-2');
+});
