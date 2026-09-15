@@ -312,7 +312,7 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
     const paint=()=>{const color=input.retouchPaintValue?.()||input.value.trim();if(input.dataset.paintProperty==='border-color'){const parts=root.RetouchHTMLCSSValues.parseBorderColors(color);if(parts?.length>1&&parts.every(part=>CSS.supports('color',part))){const [a,b=a,c=a,d=b]=parts;swatch.style.backgroundImage='conic-gradient('+[a,b,c,d].map((part,i)=>part+' '+i*25+'% '+(i+1)*25+'%').join(',')+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)';return;}}if(CSS.supports('color',color))swatch.style.backgroundImage='linear-gradient('+color+','+color+'),repeating-conic-gradient(#ddd 0% 25%,white 0% 50%)';};
     input.addEventListener('input',paint);input.addEventListener('change',paint);input.addEventListener('keydown',event=>{if(event.key==='Escape')queueMicrotask(paint);});paint();if(name==='Fill'||name==='Stroke')compactPaint(section,input);
    }
-   if(name==='Fill'||name==='Effects')for(const group of section.querySelectorAll(name==='Fill'?'.gradient-controls':'.shadow-controls')){
+   if(['Fill','Image fill','Effects'].includes(name))for(const group of section.querySelectorAll(name==='Effects'?'.shadow-controls':'.gradient-controls')){
     const actions=document.createElement('span');actions.className='gradient-actions';
     const icons={up:'<path d="M5 12l5-5 5 5"/>',down:'<path d="M5 8l5 5 5-5"/>',duplicate:'<rect x="7" y="7" width="9" height="9" rx="1"/><path d="M12 5V4H4v8h1"/>',remove:'<path d="M5 10h10"/>'};
     const buttons=[...group.querySelectorAll(':scope > button')];
@@ -334,13 +334,13 @@ const layoutIcons={flow:'M3 3h5v5H3z M12 3h5v5h-5z M3 12h5v5H3z M12 12h5v5h-5z',
      actions.addEventListener('keydown',event=>{if(event.altKey||event.ctrlKey||event.metaKey||event.shiftKey||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;const items=enabled(),index=items.indexOf(document.activeElement);if(index<0)return;event.preventDefault();event.stopPropagation();const next=event.key==='Home'?0:event.key==='End'?items.length-1:(index+(event.key==='ArrowRight'?1:-1)+items.length)%items.length;items[next].focus();});
      legend.append(actions);
     }
-    if(name!=='Fill')continue;
-    const rows=[...group.querySelectorAll(':scope > .inspector-field')].filter(row=>/^(?:Gradient|Fill) \d+ (?:Color blending|Hue direction|Repeat)$/.test(fieldControl(row)?.getAttribute('aria-label')||''));
+    if(!['Fill','Image fill'].includes(name))continue;
+    const rows=[...group.querySelectorAll(':scope > .inspector-field')].filter(row=>/^(?:Gradient|Fill|Paint) \d+ (?:Color blending|Hue direction|Repeat)$/.test(fieldControl(row)?.getAttribute('aria-label')||''));
     if(!rows.length)continue;
     const prefix=fieldControl(rows[0]).getAttribute('aria-label').replace(/ (?:Color blending|Hue direction|Repeat)$/,''),options=disclosure('Gradient options','gradient-options-'+prefix);
     options.querySelector('summary').setAttribute('aria-label',prefix+' options');
     for(const row of rows){const hint=row.nextElementSibling,label=fieldControl(row).getAttribute('aria-label');options.append(row);row.querySelector('span').textContent=label.slice(prefix.length+1);if(label.endsWith(' Repeat')&&hint?.classList.contains('hint'))options.append(hint);}
-    const reverse=[...group.querySelectorAll(':scope > button')].find(button=>/^Reverse (?:fill|gradient) \d+ stops$/.test(button.textContent));
+    const reverse=[...group.querySelectorAll(':scope > button')].find(button=>/^Reverse (?:fill|gradient|paint) \d+ stops$/.test(button.textContent));
     if(reverse){const label=reverse.textContent;reverse.setAttribute('aria-label',label);reverse.title=label;reverse.textContent='Reverse stops';const activate=reverse.onclick;reverse.onclick=event=>{root.RetouchPanelFocus?.queue(reverse);return activate?.call(reverse,event);};options.append(reverse);}
     group.append(options);
    }
