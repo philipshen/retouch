@@ -93,4 +93,14 @@ function composeBackground(className,changes,scope=''){
  const composed=compose(kept,'background-color',changes['background-color'],scope);
  return composed+(changes[background.property]===null?'':' '+scope+'!['+background.property+':'+changes[background.property]+']');
 }
-module.exports={properties,encode,compose,overridden,composeBackground};
+function composeStyle(className,property,value,scope='',observed){
+ if(property==='background-color'&&observed!==undefined){
+  if(!observed||typeof observed!=='object'||Array.isArray(observed)||Object.keys(observed).length!==2||typeof observed.current!=='string'||typeof observed.stored!=='string')throw Error('Re-select the layer to read its background paint.');
+  const state=background.state(observed.current,observed.stored);
+  // Named screen ranges are defined by the site's CSS. The live inspector
+  // supplies the effective paint instead of guessing their cascade in Node.
+  if(state.hidden)return composeBackground(className,background.edit(observed.current,observed.stored,value),scope);
+ }
+ return compose(className,property,value,scope);
+}
+module.exports={properties,encode,compose,overridden,composeBackground,composeStyle};

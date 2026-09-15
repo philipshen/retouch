@@ -75,3 +75,21 @@ test('explicit class visibility changes restore paint atomically and validate pa
  const reset=C.composeBackground(classes,B.reset(),'md:');assert.equal(reset,'bg-blue-500 md:bg-cover');
  for(const changes of [{}, {'background-color':'#fff'}, {...hidden,opacity:'0'}, {...hidden,'background-color':'#ff0000'}, {'background-color':null,[key]:'none'}])assert.throws(()=>C.composeBackground(before,changes,'md:'));
 });
+test('HTML saved colors inherit hidden state into larger scopes without changing smaller scopes',()=>{
+ const html=require('../src/adapters/html.cjs'),css=require('../src/html-css.cjs'),links=require('../src/html-color-styles.cjs'),resolve=source=>({source,file:'/tmp/index.html',relPath:'index.html',hash:html.contentHash(source),element:html.collect(source,'index.html').elements.find(el=>el.tag==='h1')});
+ const source='<html><head></head><body><h1>Title</h1></body></html>',hidden=B.toggle('#33669980','none',true),base=css.plan(resolve(source),{width:0,changes:hidden}).edits[0].after,style={id:'11111111-1111-4111-8111-111111111111',name:'Brand',properties:{color:'#abcdef80'}};
+ const applied=links.plan(resolve(base),{type:'applyColorStyle',width:768,property:'background-color'},style);assert.equal(applied.ok,true,applied.reason);assert.equal(applied.edits[0].before,base);
+ let next=resolve(applied.edits[0].after),rules=css.describe(next).cssRules;assert.deepEqual(rules[0],hidden);assert.equal(B.state(rules[768]['background-color'],rules[768][key]).color,'#abcdef80');assert.deepEqual(links.describe(next).colorStyleOverrides[768],[]);
+ const refresh=links.plan(next,{type:'refreshColorStyle',width:768,property:'background-color'},{...style,properties:{color:'#12345678'}});assert.equal(refresh.ok,true,refresh.reason);next=resolve(refresh.edits[0].after);rules=css.describe(next).cssRules;assert.deepEqual(rules[0],hidden);assert.equal(B.state(rules[768]['background-color'],rules[768][key]).color,'#12345678');
+ const reset=css.plan(next,{width:768,property:'background-color',value:null});assert.equal(reset.ok,true,reset.reason);assert.deepEqual(css.describe(resolve(reset.edits[0].after)).cssRules,{0:hidden});
+});
+test('React and Liquid saved colors capture effective hidden paint for custom screen scopes',()=>{
+ const hidden=B.toggle('#33669980','none',true),C=require('../src/color-style-classes.cjs'),initial=C.composeBackground('tablet:bg-cover',hidden),style={id:'11111111-1111-4111-8111-111111111111',name:'Brand',properties:{color:'#abcdef80'}};
+ for(const kind of ['react','liquid']){
+  const adapter=require('../src/adapters/'+kind+'.cjs'),links=require('../src/'+(kind==='react'?'jsx':'liquid')+'-color-styles.cjs'),relPath=kind==='react'?'Page.jsx':'main.liquid',resolve=source=>({source,file:'/tmp/'+relPath,relPath,hash:adapter.contentHash(source),element:adapter.collect(source,relPath).elements.find(el=>kind==='react'?el.node.openingElement.name.name==='h1':el.tag==='h1')});
+  const source=kind==='react'?'export default function Page(){return <h1 className="'+initial+'">Title</h1>}':'<h1 class="'+initial+'">Title</h1>',op={type:'applyColorStyle',property:'background-color',scope:'tablet:',backgroundPaint:{current:hidden['background-color'],stored:hidden[key]}},applied=links.plan(resolve(source),op,style);assert.equal(applied.ok,true,applied.reason);assert.equal(applied.edits[0].before,source);
+  let next=resolve(applied.edits[0].after),classes=adapter.describe(next).className;assert.equal(C.overridden(classes,'background-color','#33669980',''),false);assert.equal(C.overridden(classes,'background-color','#abcdef80','tablet:'),false);assert.ok(classes.includes('tablet:bg-cover'));
+  const refreshed=links.plan(next,{type:'refreshColorStyle',property:'background-color',scope:'tablet:'},{...style,properties:{color:'#12345678'}});assert.equal(refreshed.ok,true,refreshed.reason);classes=adapter.describe(resolve(refreshed.edits[0].after)).className;assert.equal(C.overridden(classes,'background-color','#12345678','tablet:'),false);assert.equal(C.overridden(classes,'background-color','#33669980',''),false);
+  const bad=links.plan(resolve(source),{...op,backgroundPaint:{current:'#ff0000',stored:hidden[key]}},style);assert.equal(bad.ok,false);assert.equal(bad.edits,undefined);
+ }
+});

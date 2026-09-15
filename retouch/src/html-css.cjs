@@ -48,8 +48,9 @@ function plan(resolved,op){
   // Color edits and resets must update the hidden original in the same source
   // transaction. Explicit visibility change sets already carry both properties.
   const colorChange=changes.find(([property])=>property==='background-color');
-  if(colorChange&&!changes.some(([property])=>property===background.property)&&Object.hasOwn(values,background.property)&&(colorChange[1]===null||values[background.property]!=='none')){
-   const replacement=colorChange[1]===null?background.reset():background.edit(values['background-color'],values[background.property],colorChange[1]);
+  const effective=Object.assign({},...state.blocks.filter(item=>item.width<=op.width).sort((a,b)=>a.width-b.width).map(item=>item.values));
+  if(colorChange&&!changes.some(([property])=>property===background.property)&&Object.hasOwn(effective,background.property)&&(colorChange[1]===null||effective[background.property]!=='none')){
+   const replacement=colorChange[1]===null?background.reset():background.edit(effective['background-color'],effective[background.property],colorChange[1]);
    changes=changes.filter(([property])=>property!=='background-color').concat(Object.entries(replacement));
   }
   const inline=attr(resolved.element.node,'style')||'';

@@ -41,7 +41,7 @@ function plan(resolved,op,style){
    if(info.classNameDynamic)return refuse('Reload the preview to read this layer’s rendered classes.');
    if(op.type!=='applyColorStyle'&&oldLink?.id!==validated.id)return refuse('The layer is no longer linked to this color style.');
    const override=op.type==='refreshColorStyle'&&(oldLink.override||classes.overridden(info.className||'',op.property,oldLink.value,scope));
-   if(!override){const composed=classes.compose(info.className||'',op.property,value,scope),result=liquid.planOp(resolved,{type:'setClasses',classes:composed,fileHash:resolved.hash});if(!result.ok)return result;source=result.edits[0]?.after||source;}
+   if(!override){const composed=classes.composeStyle(info.className||'',op.property,value,scope,op.backgroundPaint),result=liquid.planOp(resolved,{type:'setClasses',classes:composed,fileHash:resolved.hash});if(!result.ok)return result;source=result.edits[0]?.after||source;}
    (current[scope]??={})[op.property]={id:validated.id,value,...(override?{override:true}:{})};
   }else if(op.type==='detachColorStyle'){if(oldLink){delete current[scope][op.property];if(!Object.keys(current[scope]).length)delete current[scope];}}else return refuse('Unsupported Liquid color style operation.');
   if(Object.keys(current).length>32)return refuse('A layer supports up to 32 color style scopes.');

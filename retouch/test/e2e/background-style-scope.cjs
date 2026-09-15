@@ -1,0 +1,20 @@
+'use strict';
+const assert=require('node:assert/strict');
+exports.run=async({page,app,read,wait,settled,kind})=>{
+ const color=page.locator('#panelBody input[data-paint-property="background-color"]'),target=app.locator('h1'),paint=()=>target.evaluate(el=>parent.RetouchBackgroundPaintUI.read({},el));
+ const sourceChange=async(before,action)=>{await action();await wait(()=>read()!==before);await settled();};
+ await sourceChange(read(),async()=>{await color.fill('#33669980');await color.press('Enter');});
+ await sourceChange(read(),()=>page.getByRole('button',{name:'Hide background color',exact:true}).click());const base=read(),baseColor=(await paint()).color;assert.equal((await paint()).hidden,true);
+ const library=async()=>{const summary=page.getByText('Saved color styles',{exact:true}),parents=summary.locator('xpath=ancestor::details');for(let i=0;i<await parents.count();i++){const group=parents.nth(i);if(!await group.evaluate(el=>el.open))await group.locator(':scope > summary').click();}await page.getByLabel('Color style name',{exact:true}).waitFor();};
+ await library();await page.getByLabel('Color target',{exact:true}).selectOption('background-color');await page.getByRole('button',{name:'Use selected layer color',exact:true}).click();assert.equal(await page.getByLabel('Color value with alpha',{exact:true}).inputValue(),baseColor);
+ await page.getByLabel('Color style name',{exact:true}).fill('Tablet fill');await page.getByLabel('Color value with alpha',{exact:true}).fill('#abcdef80');await page.getByRole('button',{name:'Create color style',exact:true}).click();await page.getByRole('button',{name:'Update color style',exact:true}).waitFor();await settled();assert.equal(read(),base);
+ const size=async value=>{await page.getByLabel('Screen size',{exact:true}).selectOption(value);await wait(()=>target.evaluate((el,width)=>innerWidth===width,Number(value.split('x')[0])));await settled();};
+ await size('768x1024');await page.getByLabel('Style screen scope',{exact:true}).selectOption(kind==='html'?'min-[768px]:':'md:');await settled();await library();await page.getByLabel('Color target',{exact:true}).selectOption('background-color');
+ await sourceChange(base,()=>page.getByRole('button',{name:'Apply color style',exact:true}).click());const applied=read();assert.equal((await paint()).hidden,true);assert.equal((await paint()).color,'#abcdef80');
+ await size('390x844');assert.equal((await paint()).hidden,true);assert.equal((await paint()).color,baseColor);await size('768x1024');assert.equal((await paint()).color,'#abcdef80');
+ await library();await page.getByLabel('Color value with alpha',{exact:true}).fill('#12345678');await sourceChange(applied,()=>page.getByRole('button',{name:'Update color style',exact:true}).click());const refreshed=read();assert.equal((await paint()).hidden,true);assert.equal((await paint()).color,'#12345678');
+ await size('390x844');assert.equal((await paint()).color,baseColor);await size('768x1024');
+ await page.getByRole('button',{name:'Undo',exact:true}).click();await wait(()=>read()===applied);await settled();assert.equal((await paint()).color,'#abcdef80');
+ await page.getByRole('button',{name:'Redo',exact:true}).click();await wait(()=>read()===refreshed);await settled();assert.equal((await paint()).color,'#12345678');assert.equal((await paint()).hidden,true);
+ console.log(kind+': PASS inherited hidden fill, saved-color capture/application/refresh, mobile isolation and exact palette undo/redo');
+};
