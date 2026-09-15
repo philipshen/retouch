@@ -1300,6 +1300,7 @@ const fixture=process.env.RT_INSPECTOR_FIXTURE;if(!fixture)throw Error('Set RT_I
   }
   if(process.env.RT_E2E_SHARED_ALIGNMENT_GEOMETRY){
    await page.getByLabel('Screen size',{exact:true}).selectOption('768x1024');await settled();await page.getByLabel('Style screen scope',{exact:true}).selectOption('md:');await settled();await page.getByRole('treeitem',{name:'p · Other text',exact:true}).click({modifiers:['Meta']});await settled();assert.equal(await page.evaluate(()=>sel.multiple.length),2);
+   if(process.env.RT_E2E_INLINE_ALIGNMENT_OPTIONS){await require('./inline-alignment-options.cjs')({page,app,read,wait,settled});assert.deepEqual(errors,[]);return;}
    if(process.env.RT_E2E_SHARED_INLINE_ALIGNMENT)await require('./inline-alignment.cjs')({page,app,read,wait,settled});
    const bounds=()=>app.locator('h1,p.other-font').evaluateAll(nodes=>nodes.map(el=>{const r=el.getBoundingClientRect(),children=[...el.children].map(child=>child.getBoundingClientRect()),left=Math.min(...children.map(c=>c.left)),right=Math.max(...children.map(c=>c.right)),top=Math.min(...children.map(c=>c.top)),bottom=Math.max(...children.map(c=>c.bottom));return {x:left-r.left,y:top-r.top,width:right-left,height:bottom-top,containerWidth:r.width,containerHeight:r.height};}));
    for(const [direction,wrap]of [['row','nowrap'],['column','wrap'],['row-reverse','wrap-reverse'],['column-reverse','wrap']]){

@@ -20231,3 +20231,27 @@ Logs: `/tmp/retouch-inline-alignment-units-final.log`,
 The separate alignment/distribution dropdowns still have inline-style parity
 gaps. Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
 incomplete. No native rebuild or push in this continuation.
+
+### Alignment and distribution menus over ordinary inline styles
+
+Single-layer and shared alignment/distribution menus now generate scoped
+important overrides when inline align-items/justify-content or their
+place-items/place-content shorthands would otherwise win. This includes stretch,
+baseline and space-between/around/evenly. Managed overrides remain removable;
+important inline rules block new edits while shared reset stays available.
+Layout mode, wrapping and grid-track inline restrictions are unchanged.
+
+Validation: 1,692 unit tests passed. React/Chromium and Liquid/WebKit fixtures
+exercise every menu option on single and mixed flex/grid selections. Checks
+cover unaffected alignment properties, original inline style strings, mobile
+breakpoint isolation and disabled fields outside the edit range, reset and exact
+source undo. A browser case places important inline alignment on the second
+selected layer to verify that selection order cannot bypass the disabled guard.
+The test locator explicitly selects dropdowns (including collapsed controls)
+to avoid matching the separate alignment picker group.
+Logs: `/tmp/retouch-inline-alignment-options-units-final.log`,
+`/tmp/retouch-inline-alignment-options-react-complete.log`,
+`/tmp/retouch-inline-alignment-options-liquid-final.log`.
+
+Full Figma/arbitrary-site parity and trusted Homebrew distribution remain
+incomplete. No native rebuild or push in this continuation.

@@ -23,7 +23,7 @@
     next=arrangementClasses(next,'wrap','nowrap',inherited);
     return next.split(/\s+/).map(token=>/^(?:flex|flex-(?:row|col|nowrap))$/.test(I.base(token)||'')?'!'+token.replace(/^!|!$/g,''):token).join(' ');
   }
-  function arrangementClasses(classes,property,value,inherited=''){
+  function arrangementClasses(classes,property,value,inherited='',inlineOverride=false){
     const options={flow:['row','col','row-dense','col-dense'],wrap:['nowrap','wrap','wrap-reverse'],align:['start','center','end','stretch','baseline'],justify:['start','center','end','between','around','evenly']};
     if(['columns','rows'].includes(property)?!Number.isInteger(value)||value<1||value>24:!options[property]?.includes(value))throw Error('Unknown arrangement value');
     const rules={
@@ -35,7 +35,7 @@
       rows:{match:t=>/^grid-rows-|^\[grid-template-rows:/.test(t),shorthand:t=>/^\[grid(?:-template)?:/.test(t),addition:'grid-rows-'+value}
     };
     const rule=rules[property];let addition=rule.addition;
-    if([...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(rule.match(I.base(token)||'')||rule.shorthand(I.base(token)||''))))addition='!'+addition;
+    if(inlineOverride||[...classes.split(/\s+/),...inherited.split(/\s+/)].some(token=>/^!|!$/.test(token)&&(rule.match(I.base(token)||'')||rule.shorthand(I.base(token)||''))))addition='!'+addition;
     return I.replace(classes,rule.match,addition);
   }
   function alignmentMatch(property,token){return token.startsWith('['+property+':')||(property==='justify-content'?/^justify-(?!items-|self-)/.test(token):property==='align-items'?/^items-/.test(token):property==='justify-items'?/^justify-items-/.test(token):/^content-(normal|center|start|end|between|around|evenly|baseline|stretch)$/.test(token));}
@@ -329,9 +329,9 @@
         sec.append(picker);
         const reset=I.button('Reset child alignment',()=>{if(!el.isConnected||info.styleScope&&root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false')return;save(resetAlignmentClasses(classes,css));});reset.dataset.alignmentReset='true';reset.setAttribute('aria-label',reset.textContent);reset.title=reset.textContent;reset.textContent='↺';reset.classList.add('property-reset');reset.disabled=resetAlignmentClasses(classes,css)===classes||!!info.styleScope&&root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match==='false';sec.append(reset);
       }
-      layoutSelect('Align children',[['start','Start'],['center','Center'],['end','End'],['stretch','Stretch'],['baseline','Baseline']],(css.alignItems==='normal'?'stretch':css.alignItems.replace('flex-','')),v=>save(arrangementClasses(classes,'align',v,inherited)));
+      const alignInput=layoutSelect('Align children',[['start','Start'],['center','Center'],['end','End'],['stretch','Stretch'],['baseline','Baseline']],(css.alignItems==='normal'?'stretch':css.alignItems.replace('flex-','')),v=>{if(!inlineAlignment(el,'align-items',true))save(arrangementClasses(classes,'align',v,inherited,inlineAlignment(el,'align-items')));});alignInput.disabled||=inlineAlignment(el,'align-items',true);
       const justify=css.justifyContent==='normal'?'start':css.justifyContent.replace('flex-','').replace('space-','');
-      layoutSelect('Distribute children',[['start','Start'],['center','Center'],['end','End'],['between','Space between'],['around','Space around'],['evenly','Space evenly']],justify,v=>save(arrangementClasses(classes,'justify',v,inherited)));
+      const justifyInput=layoutSelect('Distribute children',[['start','Start'],['center','Center'],['end','End'],['between','Space between'],['around','Space around'],['evenly','Space evenly']],justify,v=>{if(!inlineAlignment(el,'justify-content',true))save(arrangementClasses(classes,'justify',v,inherited,inlineAlignment(el,'justify-content')));});justifyInput.disabled||=inlineAlignment(el,'justify-content',true);
     }
     if(/grid/.test(css.display)||parent&&/grid/.test(parent.display))I.gridGuideControl(sec);
     if(parent&&/grid/.test(parent.display)&&!['absolute','fixed'].includes(css.position)) {

@@ -254,3 +254,14 @@ test('inline child alignment preserves shorthand source priority and scoped rese
  el.style.getPropertyPriority=p=>p==='place-items'?'important':'';
  assert.throws(()=>changeContainerAlignment('flex','md:',2,2,context,null,el),/important inline/);
 });
+
+test('alignment menus override inline shorthands per property and leave reset available',()=>{
+ const {changeContainer}=require('../shell/react-selection.js'),el={style:{getPropertyValue:p=>p==='place-items'?'center':'',getPropertyPriority:()=>''}};
+ assert.equal(changeContainer('flex','md:','align','baseline',null,el),'flex md:!items-baseline');
+ assert.equal(changeContainer('flex','md:','justify','between',null,el),'flex md:justify-between');
+ el.style.getPropertyValue=p=>p==='place-content'?'center':'';
+ assert.equal(changeContainer('flex','md:','justify','evenly',null,el),'flex md:!justify-evenly');
+ el.style.getPropertyPriority=p=>p==='place-content'?'important':'';
+ assert.throws(()=>changeContainer('flex','md:','justify','between',null,el),/important inline/);
+ assert.equal(changeContainer('flex md:!justify-evenly','md:','justify',null,null,el),'flex');
+});

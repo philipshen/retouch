@@ -123,10 +123,12 @@
   return R.replaceScope(classes,L.adaptiveGridClasses(R.project(classes,scope),size,R.inherited(classes,scope,document)),scope);
  }
  let sharedGridTracksOpen=false,sharedSizeLimitsOpen=false,sharedLayoutOptionsOpen=false;
- function changeContainer(classes,scope,property,value,document=null){
+ function changeContainer(classes,scope,property,value,document=null,el=null){
   if(!containerRules[property])throw Error('Unknown container layout control');
   const R=root.RetouchResponsive||require('./responsive.js'),L=root.RetouchLayout||require('./layout.js'),active=R.project(classes,scope),inherited=R.inherited(classes,scope,document);
-  const next=value===null?inspector().replace(active,token=>containerRules[property].test(token),''):['mode','wrap'].includes(property)?L.explicitLayoutClasses(active,property,value,inherited):L.arrangementClasses(active,property,value,inherited);
+  const alignment=property==='align'?'align-items':property==='justify'?'justify-content':null;
+  if(value!==null&&el&&alignment&&L.inlineAlignment(el,alignment,true))throw Error('An important inline rule controls child alignment.');
+  const next=value===null?inspector().replace(active,token=>containerRules[property].test(token),''):['mode','wrap'].includes(property)?L.explicitLayoutClasses(active,property,value,inherited):L.arrangementClasses(active,property,value,inherited,!!el&&!!alignment&&L.inlineAlignment(el,alignment));
   return R.replaceScope(classes,next,scope);
  }
  function changeGap(classes,scope,axis,value,document=null,writingMode='horizontal-tb',el=null){
@@ -170,9 +172,9 @@
   ]){
    if(!computed.every(css=>arrangementApplies(property,css)))continue;
    const values=computed.map(read),mixed=values.some(value=>value!==values[0]),options=choices.map(choice=>Array.isArray(choice)?choice:[choice,({nowrap:'No wrap',wrap:'Wrap','wrap-reverse':'Wrap reversed',between:'Space between',around:'Space around',evenly:'Space evenly'})[choice]||choice[0].toUpperCase()+choice.slice(1)]);if(mixed)options.unshift(['','Mixed']);else if(!options.some(([value])=>value===values[0]))options.unshift([values[0],values[0]]);
-   const active=()=>!scope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',blocked=el=>!el.isConnected||!active()||inline.some(key=>el.style.getPropertyValue(key)),write=value=>{try{const changes=Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(blocked(el)||!arrangementApplies(property,el.ownerDocument.defaultView.getComputedStyle(el)))throw Error('Select compatible containers without inline layout overrides.');return [info.id,changeContainer(info.className,scope,property,value,el.ownerDocument)];}));save(changes);}catch(error){I.note(groups.layout,error.message,'refused');}};
-   const target=layoutOptions,input=I.select(target,'Shared '+label,options,mixed?'':values[0],write);input.disabled=elements.some(blocked);if(!active())input.title='Switch to a screen inside the selected edit range.';if(mixed)input.options[0].disabled=true;
-   const reset=I.button('Reset shared '+label.toLowerCase(),()=>write(null));reset.disabled=input.disabled||infos.every(info=>changeContainer(info.className,scope,property,null)===info.className);target.append(reset);
+   const active=()=>!scope||root.document.querySelector('[aria-label="Edit range status"]')?.dataset.match!=='false',inlineEditable=['align','justify'].includes(property),blocked=(el,reset=false)=>!el.isConnected||!active()||inline.some(key=>inlineEditable?!reset&&el.style.getPropertyPriority(key)==='important':el.style.getPropertyValue(key)),write=value=>{try{const changes=Object.fromEntries(infos.map((info,i)=>{const el=liveElement(i);if(blocked(el,value===null)||!arrangementApplies(property,el.ownerDocument.defaultView.getComputedStyle(el)))throw Error('Select compatible containers without inline layout overrides.');return [info.id,changeContainer(info.className,scope,property,value,el.ownerDocument,el)];}));save(changes);}catch(error){I.note(groups.layout,error.message,'refused');}};
+   const target=layoutOptions,input=I.select(target,'Shared '+label,options,mixed?'':values[0],write);input.disabled=elements.some(el=>blocked(el));if(!active())input.title='Switch to a screen inside the selected edit range.';if(mixed)input.options[0].disabled=true;
+   const reset=I.button('Reset shared '+label.toLowerCase(),()=>write(null));reset.disabled=elements.some(el=>blocked(el,true))||infos.every(info=>changeContainer(info.className,scope,property,null)===info.className);target.append(reset);
   }
   if(computed.every(layout)){
    const picker=root.document.createElement('div'),V=root.RetouchHTMLCSSValues;picker.className='layout-alignment';picker.setAttribute('role','group');picker.setAttribute('aria-label','Shared child alignment');groups.layout.append(picker);
