@@ -20287,3 +20287,27 @@ fixtures do not establish its resolution. Earlier failure logs:
 
 Grid-track inline restrictions, full Figma/arbitrary-site parity and trusted
 Homebrew distribution remain incomplete. No native rebuild or push.
+
+
+### Selection preserves absent inline style attributes
+
+Fixed the geometry probe used by selection and outlines: restoring a layer that
+originally lacked a style attribute now resets through the attribute API before
+removing it. A minimal WebKit reproduction showed CSSOM lazy serialization could
+otherwise recreate `style=""` after removal. Reading the attribute before removal
+fixed initial selection but still failed a later Liquid undo/redo checkpoint; the
+attribute reset passed the complete flow.
+
+Added a mixed inline/stylesheet stack fixture (`RT_E2E_INLINE_STACKS=partial`)
+and assertions after every settled shared-stack interaction, including initial
+selection, presets, responsive scopes, resets and undo/redo. Screenshot capture
+uses `caret: initial` because Playwright caret hiding independently adds empty
+style attributes to contenteditable elements. Assertions also run before capture.
+
+Validation: all 1,693 unit tests passed, and the mixed-style shared-stack suite
+passed on React/Chromium and Liquid/WebKit. Logs:
+`/tmp/retouch-style-final-units.log`, `/tmp/retouch-style-final-react.log`,
+`/tmp/retouch-style-fix-liquid2.log`. The unmodified geometry cleanup failed the
+initial-selection assertion. This verifies these selection and stack flows, not
+every temporary style probe in the editor. Full Figma/arbitrary-site parity and
+trusted Homebrew distribution remain incomplete. No native rebuild or push.
