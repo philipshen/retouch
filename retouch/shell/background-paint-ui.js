@@ -55,8 +55,9 @@
   const resize=()=>{if(frame!==undefined)w.cancelAnimationFrame(frame);frame=w.requestAnimationFrame(()=>{frame=undefined;if(!input.isConnected){cleanup();return;}sync();});};
   w.addEventListener('resize',resize);resizeCleanup=cleanup;resize();
  }
- function bind(info,el,input,save){
-  let value,error;try{value=read(info,el);}catch(e){error=e.message;}
+ function bind(info,el,input,save,sourceState){
+  const selectedState=()=>sourceState?.()??read(info,el);
+  let value,error;try{value=selectedState();}catch(e){error=e.message;}
   if(error){input.disabled=true;input.title=error;return;}
   if(value.hidden||root.RetouchPaintPicker.parsePaint(input.value.trim()))input.value=value.color;
   const fail=e=>{input.setCustomValidity(e.message);input.reportValidity();};
@@ -67,7 +68,7 @@
   const originalChange=input.onchange;
   input.onchange=()=>{
    try{
-    const state=read(info,el);
+    const state=selectedState();
     if(!state.hidden&&originalChange){originalChange.call(input);return;}
     const parsed=root.RetouchPaintPicker.parsePaint(input.value.trim());if(!parsed){fail(Error('Enter a supported literal CSS color.'));return;}
     input.setCustomValidity('');const changes=B.edit(state.current,state.stored,parsed.value);if(!Object.hasOwn(changes,B.property))changes[B.property]='none';Promise.resolve(save(changes)).catch(fail);
@@ -75,8 +76,8 @@
   };
   input.retouchMountVisibility=field=>{
    const button=document.createElement('button');button.type='button';button.className='background-visibility';
-   const active=()=>rangeActive(input,el),sync=()=>{try{const state=read(info,el);button.setAttribute('aria-label',(state.hidden?'Show':'Hide')+' background color');button.setAttribute('aria-pressed',String(!state.hidden));button.innerHTML=visibilityIcon(state.hidden);field.classList.toggle('background-color-hidden',state.hidden);button.disabled=input.disabled||!active();button.title=active()?button.getAttribute('aria-label'):'Preview this screen range to change fill visibility.';}catch(error){button.disabled=true;button.title=error.message;}};
-   button.onclick=async()=>{if(!active()||input.disabled)return;button.disabled=true;try{const state=read(info,el);root.RetouchPanelFocus?.queue(button,(state.hidden?'Hide':'Show')+' background color');await save(B.toggle(state.current,state.stored,!state.hidden));}catch(e){fail(e);}finally{if(button.isConnected)sync();}};
+   const active=()=>{try{return rangeActive(input,el)||sourceState?.()!=null;}catch{return false;}},sync=()=>{try{const state=selectedState();button.setAttribute('aria-label',(state.hidden?'Show':'Hide')+' background color');button.setAttribute('aria-pressed',String(!state.hidden));button.innerHTML=visibilityIcon(state.hidden);field.classList.toggle('background-color-hidden',state.hidden);button.disabled=input.disabled||!active();button.title=active()?button.getAttribute('aria-label'):'Preview this screen range to change fill visibility.';}catch(error){button.disabled=true;button.title=error.message;}};
+   button.onclick=async()=>{if(!active()||input.disabled)return;button.disabled=true;try{const state=selectedState();root.RetouchPanelFocus?.queue(button,(state.hidden?'Hide':'Show')+' background color');await save(B.toggle(state.current,state.stored,!state.hidden));}catch(e){fail(e);}finally{if(button.isConnected)sync();}};
    field.append(button);sync();watchVisibility(input,el,sync);
   };
  }

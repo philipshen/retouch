@@ -17381,3 +17381,11 @@ This enables declared source values across screens. General inherited/cascade re
 Shared Fill visibility now reads the selected scope's explicit background state, matching the shared color/opacity fields. When every selected layer has a resolvable source state, hide/show works while another range is previewed. Mixed visibility reflects the edited scope rather than the current canvas. The existing preview requirement remains when source state is incomplete, and disabled paint fields cannot invoke visibility writes.
 
 HTML/Chromium, React/Chromium and Liquid/WebKit flows verify mixed tablet fills, hide-all/show-all from the phone preview, unchanged phone rendering, preserved tablet colors/alpha, later base edits, and exact undo/redo. The Liquid inherited hidden-fill picker/selection regression passes, including its unresolved-scope preview guard. All 1,573 unit tests pass. Complete cascade inheritance, Figma feature coverage and native/Homebrew distribution remain open.
+
+### Single-layer Fill follows its source scope — 2026-09-15
+
+Single-layer background Fill now uses the same explicit scoped source-state resolution as shared Fill. The color, hidden-state writes and visibility eye follow the selected source declaration; explicit fills can be shown/hidden from an inactive preview. Picker previews still read actual canvas visibility. HTML supplies the selected CSS width, while React/Liquid supply the already-projected class scope. Missing source state keeps the existing observed fallback.
+
+HTML/Chromium, React/Chromium and Liquid/WebKit flows pass the background-eye, hidden hex/opacity, picker cancellation, framing and exact undo/redo checks with inactive tablet visibility edits. Additional HTML and Liquid checks show the base opacity and visible eye while the tablet's rendered fill is hidden, with no source change from focusing/leaving the base color field. The phone remains unchanged when tablet visibility is edited.
+
+The explicit-declaration behavior now agrees for single and shared backgrounds. General cascade inheritance, other single-layer paint types and full Figma/native/Homebrew parity remain unfinished.
