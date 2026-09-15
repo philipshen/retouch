@@ -17685,3 +17685,11 @@ Retouch groups now have their own dashed-outline icon in the layer tree and cont
 Validation: all 1,639 unit tests passed (`/tmp/retouch-group-layer-units.log`). The real browser text-layer suite passed its existing formatting, lock, source-run, responsive regrouping, and keyboard checks plus new nested-group/list-container checks (`/tmp/retouch-group-layer-icons.log`). It verifies different rendered icon masks, accessible group description, preserved list children, text-owner boundaries, and child navigation. Screenshot `/tmp/retouch-group-layer-icons.png` was visually inspected in the light theme.
 
 This establishes these layer-tree distinctions, not complete nested-group interaction or transformation parity. Full design parity, arbitrary source/compiler coverage, and trusted desktop distribution remain incomplete.
+
+### Enter nested groups one level at a time — 2026-09-15
+
+Double-clicking a grouped child now enters the outermost unopened group boundary, selecting the next inner group when present. A subsequent double-click reaches its child. Ordinary click/marquee selection still uses the outermost unopened group, and layer-tree child selection still establishes the current group context. Group containers remain excluded from text editing.
+
+Validation: 1,639 unit tests passed (`/tmp/retouch-nested-group-units.log`). HTML, React, and Liquid browser flows passed outer/inner/leaf double-click entry, Shift+Enter parent navigation, Enter child navigation, Tab sibling navigation, restoration of outer-group selection after leaving, and unchanged source (`/tmp/retouch-nested-group-html.log`, `/tmp/retouch-nested-group-react.log`, `/tmp/retouch-nested-group-liquid.log`). The earlier single-group picking/editing/ungroup flow also passed (`/tmp/retouch-nested-group-regression.log`).
+
+This covers the tested nested selection hierarchy, not complete group transforms or arbitrary repeated instances. Full design parity, geometry-preserving frames, arbitrary source/compiler support, and trusted desktop distribution remain incomplete.

@@ -102,14 +102,14 @@ function scopedInfo(info) { return {...info,styleScope,anchorInheritedClasses:Re
 
 let lockStorage;try{lockStorage=sessionStorage;}catch{}
 const layerLocks=RetouchLayerLocks.create({route:()=>currentPageRoute()||'',storage:lockStorage,scope:window.__RT_RENDERING?.stateScope});
-function pickLayer(node,x,y,{deep=false}={}){
+function pickLayer(node,x,y,{enter=false}={}){
  const picked=layerLocks.pick(node,x,y);if(!picked)return null;
- const target=picked.closest('[data-rt-boolean-result]')?.closest('[data-rt-boolean]')||layers.textOwner(picked);if(deep||!target)return target;return groupSelectionTarget(target);
+ const target=picked.closest('[data-rt-boolean-result]')?.closest('[data-rt-boolean]')||layers.textOwner(picked);if(!target)return target;return groupSelectionTarget(target,{enter});
 }
-function groupSelectionTarget(target){
+function groupSelectionTarget(target,{enter=false}={}){
  const selected=sel?matchingInDocument(target.ownerDocument,activeId(),sel.info).find(el=>inTextScope(el,sel.info)):null;
- let result=target;for(let group=target.closest('[data-rt-group][data-rt]');group;group=group.parentElement?.closest('[data-rt-group][data-rt]')){if(selected&&selected!==group&&group.contains(selected))continue;if(!layerLocks.locked(group))result=group;}
- return result;
+ const closed=[];for(let group=target.closest('[data-rt-group][data-rt]');group;group=group.parentElement?.closest('[data-rt-group][data-rt]')){if(selected&&selected!==group&&group.contains(selected))continue;if(!layerLocks.locked(group))closed.push(group);}
+ if(enter)closed.pop();return closed.at(-1)||target;
 }
 window.RetouchCanvasSelection={marqueeTargets:resolveMarqueeTargets,pick:(node,x,y)=>pickLayer(node,x,y),selectable:node=>!layerLocks.locked(node),canMarquee:()=>window.__RT_RENDERING?.selectionStyling===true&&!editing&&!panelTasks&&!undoBusy&&!sourceRequests};
 const historyRoutes = new Map();
@@ -277,7 +277,7 @@ function hookFrame(d, w) {
     }
     e.preventDefault();
     e.stopPropagation();
-    const t = pickLayer(e.target,e.clientX,e.clientY,{deep:true});
+    const t = pickLayer(e.target,e.clientX,e.clientY,{enter:true});
     if (t&&!layerLocks.locked(t)) startInlineEdit(t, e, false, true);
   }, true);
   d.addEventListener('mousemove', (e) => {
