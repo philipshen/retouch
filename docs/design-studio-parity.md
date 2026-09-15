@@ -20040,3 +20040,39 @@ Transformed flow resizing, multi-fragment inline boxes, fixed positioning,
 Sticky flow geometry is accepted but has not received dedicated browser
 coverage. Trusted Homebrew distribution remains incomplete. No native rebuild
 or push.
+
+
+### Resize flow layers inside transformed frames
+
+Flow resizing now falls back to local geometry for transformed containing
+frames. Its measured handle-response solver works in page coordinates, so
+pointer drags account for nested transforms, separate translation and the
+parent's own reflow. Persistent flow handles use the same geometry. Keyboard
+edits still change local dimensions, and source writes preserve flow positioning
+and the authored transforms. The hint stays above the tool dock.
+
+Gesture snapshots refresh after intentional layout changes and cancel if the
+frame changes externally. Fixed preview restoration to restore the exact
+original inline style when the gesture owns it; sequential width/height previews
+could otherwise leave a temporary width behind after a proportional resize.
+
+All 1,680 unit tests passed. HTML/Chromium, React/Chromium and Liquid/WebKit
+fixtures passed measured bottom-edge dragging, Shift proportional corner
+resizing, keyboard dimensions, sibling reflow, auto-height parent reflow,
+Escape/frame cancellation and exact source undo. The HTML parent also crosses
+a minimum-height bound, so its expected growth is measured independently rather
+than assumed to equal the child's growth. Existing HTML constrained proportional
+resizing and Liquid/WebKit vertical-layout regressions passed after the preview
+restoration fix.
+
+Inspected `/tmp/retouch-flow-resize.png`, including the live dimension field,
+transformed handles and reflowed sibling. Passing logs:
+`/tmp/retouch-flow-resize-{html,react,liquid}-complete.log`,
+`/tmp/retouch-flow-resize-units-final.log`,
+`/tmp/retouch-flow-resize-constraints-fixed.log`,
+`/tmp/retouch-flow-resize-vertical-debug.log`.
+
+Inline size restrictions, zero-response/piecewise layout edge cases, transformed
+snapping, unsupported multi-fragment/fixed/3D geometry and full arbitrary-site/
+Figma parity remain incomplete. Trusted Homebrew distribution remains
+incomplete. No native rebuild or push.
