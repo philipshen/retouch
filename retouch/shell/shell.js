@@ -212,7 +212,7 @@ function hookFrame(d, w) {
   if(!frameRefreshDrawing||stopDrawing!==frameRefreshDrawing.cancel||iframe.contentWindow?.location.href!==frameRefreshDrawing.route)stopDrawing?.();
   stopShapeDrag?.();stopShapeDrag=RetouchSVGDrag.mount({document:d,frame:iframe,allowAlt:true,
    candidate:node=>{
-    if(!armedCanvasTool?.startsWith('draw-')||mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active||layerLocks.locked(node))return null;
+    if(!(armedCanvasTool==='pen'||armedCanvasTool?.startsWith('draw-'))||mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active||layerLocks.locked(node))return null;
     for(let target=node?.closest?.('[data-rt]');target;target=target.parentElement?.closest('[data-rt]'))if(/^(body|div|main|section|article|aside|header|footer|nav|form|fieldset|dialog|figure|details|blockquote|li|td|th|svg|g)$/.test(target.localName)&&!layerLocks.locked(target))return {target,action:armedCanvasTool};
     return null;
    },
@@ -224,14 +224,14 @@ function hookFrame(d, w) {
       if(layerLocks.locked(candidate))return null;
       await select(candidate,{current:valid});if(!valid())return null;
       const destination=renderedSelection?.element;
-      if(sel?.info.svgInsertion?.presets.includes(action.slice(5))&&destination?.isConnected&&destination.contains(target)&&!layerLocks.locked(destination))return {target:destination,pointerTarget:target,action,info:sel.info};
+      if((action==='pen'?sel?.info.svgInsertion?.pen:sel?.info.svgInsertion?.presets.includes(action.slice(5)))&&destination?.isConnected&&destination.contains(target)&&!layerLocks.locked(destination))return {target:destination,pointerTarget:target,action,info:sel.info};
      }
      if(valid())toast('Choose an editable container to draw into.','err');
      return null;
     }
     finally{preparingShapeDrag=false;}
    },
-   onStart:({target,pointerTarget,action,info},event,move,released)=>{if(armedCanvasTool!==action)return;setArmedCanvasTool(null);stopDrawing=RetouchSVGDraw.mount({target,frame:iframe,canvas:canvasSurface,preset:action.slice(5),native:info.svgInsertion.createsViewport,initialPointer:event,initialMove:move,initialReleased:released,pointerTarget,onCommit:points=>{if(sel?.info===info)insertLayer(action.slice(5),info,'insertSVG',{points,...(info.svgInsertion.createsViewport?{nativeCanvas:true}:{})});},onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});},
+   onStart:({target,pointerTarget,action,info},event,move,released)=>{if(armedCanvasTool!==action)return;setArmedCanvasTool(null);if(action==='pen'){stopDrawing=RetouchSVGPen.mount({target,frame:iframe,canvas:canvasSurface,native:info.svgInsertion.createsViewport,initialPointer:event,initialMove:move,initialReleased:released,pointerTarget,isCurrent:()=>sel?.info===info,onCommit:(points,closed,nodes)=>{if(sel?.info===info)insertLayer(nodes?'path':closed?'polygon':'polyline',info,'insertSVG',{...(nodes?{nodes,closed}:{points}),...(info.svgInsertion.createsViewport?{nativeCanvas:true}:{})});},onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});return;}stopDrawing=RetouchSVGDraw.mount({target,frame:iframe,canvas:canvasSurface,preset:action.slice(5),native:info.svgInsertion.createsViewport,initialPointer:event,initialMove:move,initialReleased:released,pointerTarget,onCommit:points=>{if(sel?.info===info)insertLayer(action.slice(5),info,'insertSVG',{points,...(info.svgInsertion.createsViewport?{nativeCanvas:true}:{})});},onEnd:()=>{stopDrawing=null;},onError:message=>toast(message,'err')});},
    onError:error=>toast(error.message,'err')});
   const vectorDragCandidate=node=>{
     if(armedCanvasTool||mode!=='edit'||editing||stopDrawing||panelTasks||undoBusy||sourceRequests||canvasPan.active)return null;

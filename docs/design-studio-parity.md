@@ -19275,3 +19275,26 @@ checks passed in the same runs. Logs:
 The initial Pen click creates a corner anchor; direct first-anchor curve
 handles are not implemented. Full Figma parity, arbitrary-site support and
 trusted Homebrew distribution remain incomplete. No desktop rebuild or push.
+
+### 2026-09-15 — Drag the first Pen anchor to create curve handles
+
+The direct drawing coordinator now accepts Pen gestures and resolves their
+writable destination before handing off the original pointer and buffered
+movement. Pen initializes the anchor at pointerdown and creates mirrored curve
+handles from that movement. Held gestures continue through iframe capture
+listeners; already-released gestures finish the initial handle drag immediately
+and leave Pen ready for the next anchor. Source stays unchanged until Finish.
+Cancellation and failed replay clean up the surface and listeners.
+
+All 1,665 unit tests passed. HTML and React Chromium plus Liquid WebKit checks
+passed with source-incompatible children and delayed writable-parent lookup.
+They verify outgoing handle placement, held/quick-release replay, curved path
+creation, exact source undo and Escape during lookup. Existing first-click
+Pen, direct shape and armed-tool checks also passed. The existing HTML SVG
+drawing regression passed for seven shapes and curved Pen paths with zoom,
+viewBox/group transforms, previews, constraints, undo/redo and cancellation.
+Logs: `/tmp/retouch-pen-drag-{html,react,liquid,units}.log` and
+`/tmp/retouch-pen-drag-existing-svg.log`.
+
+No desktop rebuild or push. Full Figma parity, arbitrary-site support and
+trusted Homebrew distribution remain incomplete.

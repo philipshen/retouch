@@ -1,7 +1,7 @@
 (function(root){
   'use strict';
   const ns='http://www.w3.org/2000/svg';
-  function mount({target,frame,canvas,onCommit,onEnd,onError,maxPoints=512,isCurrent=()=>true,contextPath=null,native=false,initialPoint=null}){
+  function mount({target,frame,canvas,onCommit,onEnd,onError,maxPoints=512,isCurrent=()=>true,contextPath=null,native=false,initialPoint=null,initialPointer=null,initialMove=null,initialReleased=false,pointerTarget=null}){
     let clearHint=()=>{};
     const w=target.ownerDocument.defaultView,viewport=native?null:target.tagName.toLowerCase()==='svg'?target:target.ownerSVGElement;
     let space;try{space=native?root.RetouchSVGDraw.nativeSpace(target):null;}catch(error){onError(error.message);onEnd();return null;}
@@ -64,6 +64,7 @@
       try{const p=point(event),last=points.at(-1);if(last&&Math.hypot(p.x-last.x,p.y-last.y)<1e-6)return;points.push(p);drag={id:event.pointerId,x:event.clientX,y:event.clientY,curved:false};hover=null;surface.setPointerCapture(event.pointerId);update();surface.focus({preventScroll:true});}catch(error){onError(error.message);}
     });
     function move(event){
+      if(ended)return;
       if(drag){
         if(event.pointerId!==drag.id||!verify())return;
         try{const anchor=points.at(-1),p=point(event,anchor);drag.curved ||= Math.hypot(event.clientX-drag.x,event.clientY-drag.y)>=3;
@@ -73,7 +74,8 @@
       if(toolbar.contains(event.target))return;if(!inside(event)){hover=null;paint();return;}try{hover=point(event);paint();}catch{hover=null;}
     }
     listen(surface,'pointermove',move);
-    listen(surface,'pointerup',event=>{if(!drag||event.pointerId!==drag.id)return;event.preventDefault();event.stopImmediatePropagation();move(event);if(ended)return;drag=null;hover=null;if(surface.hasPointerCapture(event.pointerId))surface.releasePointerCapture(event.pointerId);paint();});
+    const up=event=>{if(!drag||event.pointerId!==drag.id)return;event.preventDefault();event.stopImmediatePropagation();move(event);if(ended)return;drag=null;hover=null;for(const owner of [surface,pointerTarget])if(owner?.hasPointerCapture(event.pointerId))owner.releasePointerCapture(event.pointerId);paint();};
+    listen(surface,'pointerup',up);
     listen(surface,'pointercancel',cancel);listen(surface,'lostpointercapture',()=>{if(drag)cancel();});
     listen(surface,'dblclick',event=>{if(event.target.closest('button')||toolbar.contains(event.target))return;event.preventDefault();event.stopImmediatePropagation();finish(false);});
     const keydown=event=>{
@@ -95,7 +97,16 @@
     root.document.body.append(surface,toolbar);update();surface.focus({preventScroll:true});
     clearHint=root.RetouchCanvasHint?.show('Pen · Click for corners, drag for curves · Enter to finish','Shift constrains direction. Click the first point to close. Enter finishes; Backspace removes the last point; Escape cancels.')||(()=>{});
     function watch(){if(!ended&&verify())raf=root.requestAnimationFrame(watch);}raf=root.requestAnimationFrame(watch);
-    return cancel;
+    if(initialPointer){try{
+      const fromFrame=e=>{const f=frame.getBoundingClientRect(),scale=f.width/w.innerWidth;return {clientX:f.left+e.clientX*scale,clientY:f.top+e.clientY*scale,pointerId:e.pointerId,target:e.target,shiftKey:e.shiftKey,preventDefault:()=>e.preventDefault(),stopImmediatePropagation:()=>e.stopImmediatePropagation()};};
+      const first=fromFrame(initialPointer);if(!inside(first)||!verify())throw Error('Place the first point inside the drawing canvas.');
+      points.push(point(first));drag={id:first.pointerId,x:first.clientX,y:first.clientY,curved:false};
+      if(!initialReleased)pointerTarget.setPointerCapture(first.pointerId);update();
+      if(initialMove)move(fromFrame(initialMove));
+      if(initialReleased)up(fromFrame(initialMove||initialPointer));
+      else if(!ended){listen(w,'pointermove',e=>move(fromFrame(e)),true);listen(w,'pointerup',e=>up(fromFrame(e)),true);listen(w,'pointercancel',cancel,true);listen(w,'lostpointercapture',()=>{if(drag)cancel();},true);}
+    }catch(error){cancel();onError(error.message);}}
+    return ended?null:cancel;
   }
   root.RetouchSVGPen={mount};
 })(window);
